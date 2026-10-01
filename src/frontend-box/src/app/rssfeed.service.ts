@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core'
 import { type Observable, of } from 'rxjs'
 import { catchError, map, mergeAll, toArray } from 'rxjs/operators'
 import { environment } from 'src/environments/environment'
+import { newestFirst, pickEpisodes } from './episode-pick'
 import type { CategoryType, Media } from './media'
 import type { RssFeed } from './rssfeed'
 import { ExtraDataMedia, Utils } from './utils'
@@ -17,7 +18,8 @@ export class RssFeedService {
   constructor(private http: HttpClient) {}
 
   getRssFeed(id: string, category: CategoryType, index: number, extraDataSource: ExtraDataMedia): Observable<Media[]> {
-    this.url = `${environment.backend.apiUrl}/rssfeed/cached?url=${id}`
+    // (encoded: a feed address with its own query - "?api_key=…&podcast_id=5" - lost everything from the "&" on)
+    this.url = `${environment.backend.apiUrl}/rssfeed/cached?url=${encodeURIComponent(id)}`
     return this.http.get(this.url).pipe(
       map((response: RssFeed) => {
         return response.rss.channel.item.map((item) => {
@@ -40,6 +42,7 @@ export class RssFeedService {
             episodeNew: item._new === true,
             episodeProgress: typeof item._pct === 'number' ? item._pct : undefined,
             episodeDone: item._done === true,
+            ...(response.rss?._offline === true ? { offlineView: true } : {}),
           }
           Utils.copyExtraMediaData(extraDataSource, media)
           return media
@@ -47,6 +50,13 @@ export class RssFeedService {
       }),
       mergeAll(),
       toArray(),
+      // (with a choice of episodes only a chosen one is "new" - the tile's dot is not for one the box does not show)
+      map((episodes) => {
+        if (!extraDataSource?.episodePick || episodes.some((e) => e.offlineView)) return episodes
+        const chosen = new Set(pickEpisodes(newestFirst(episodes), extraDataSource.episodePick))
+        for (const e of episodes) if (!chosen.has(e)) e.episodeNew = false
+        return episodes
+      }),
       // LOW-7: previously a feed-fetch error rejected the observable, so
       // upstream callers got an error and the medialist crashed. Return
       // an empty array on error so the page just shows "no episodes" and

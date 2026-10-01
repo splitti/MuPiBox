@@ -19,6 +19,7 @@ import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs'
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
 import { CoverFlipService } from '../cover-flip.service'
+import { newestFirst, pickEpisodes } from '../episode-pick'
 import { LoadingComponent } from '../loading/loading.component'
 import { CategoryType, isSyncManaged, Media, MediaSorting } from '../media'
 import { MediaService } from '../media.service'
@@ -183,6 +184,11 @@ export class MedialistPage extends SwiperIonicEventsHelper {
           // for filesystem audiobooks), THEN sort the slice for display. Same
           // semantics for both categories, no offsetByOne flag needed.
           const slicePart = (media: Media[]): Media[] => {
+            // a podcast's choice of episodes (web app: the newest / oldest N, episodes A to B - counted by date)
+            // (offline the box gives only the episodes on the SD card: the chosen ones already)
+            if (artist.coverMedia?.type === 'rss' && artist.coverMedia.episodePick && !media.some((m) => m.offlineView)) {
+              return pickEpisodes(newestFirst(media), artist.coverMedia.episodePick)
+            }
             if (!artist.coverMedia?.aPartOfAll) return media
             const min = Math.max(0, (artist.coverMedia?.aPartOfAllMin ?? 1) - 1) // 1-indexed → 0-indexed
             const max = artist.coverMedia?.aPartOfAllMax ?? Number.parseInt(artist.albumCount, 10) // 1-indexed inclusive → exclusive end for slice

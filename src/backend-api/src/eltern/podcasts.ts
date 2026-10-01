@@ -10,6 +10,7 @@ import { promises as fsp } from 'node:fs'
 import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { ardKidsShows, ardSearch, ardShowIdFromUrl, type ArdShow } from '../ard-sounds'
+import { isEpisodePick } from '../episode-pick'
 import { MAX_KEEP, mayKeep, type PodcastOffline } from '../podcast-offline'
 import { CONTENT_LANGUAGES, mergeHits, type PodcastHit, searchPodcasts, topKidsPodcasts } from '../podcast-search'
 import { kidsRadio, radioLanguageKnown, searchRadio } from '../radio-search'
@@ -155,13 +156,13 @@ export function registerPodcastRoutes(router: Router, deps: PodcastRouteDeps): v
   })
 
   // The podcast of the library with this feed (its entry's id), or null - nothing else is downloaded
-  const podcastAt = async (feed: unknown): Promise<{ feed: string; keep: number } | null> => {
+  const podcastAt = async (feed: unknown): Promise<{ feed: string; keep: number; pick?: string } | null> => {
     if (typeof feed !== 'string' || !feed) return null
     try {
       const library = JSON.parse(await fsp.readFile(deps.activeDataPath, 'utf8')) as Record<string, unknown>[]
       const item = library.find((e) => e?.type === 'rss' && e.id === feed)
       if (!item) return null
-      return { feed, keep: Math.max(0, Math.min(MAX_KEEP, Number(item.offline) || 0)) }
+      return { feed, keep: Math.max(0, Math.min(MAX_KEEP, Number(item.offline) || 0)), ...(isEpisodePick(item.episodePick) ? { pick: item.episodePick } : {}) }
     } catch {
       return null
     }
@@ -235,7 +236,7 @@ export function registerPodcastRoutes(router: Router, deps: PodcastRouteDeps): v
       res.status(400).json({ error: 'invalid_request' })
       return
     }
-    await offline.syncFeed(podcast.feed, podcast.keep)
+    await offline.syncFeed(podcast.feed, podcast.keep, podcast.pick)
     res.json({ ...(await offline.status(podcast.feed)), keep: podcast.keep })
   })
 }

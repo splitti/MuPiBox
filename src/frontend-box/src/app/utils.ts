@@ -2,7 +2,7 @@ import type { Media } from './media'
 
 export type ExtraDataMedia = Pick<
   Media,
-  'artistcover' | 'shuffle' | 'aPartOfAll' | 'aPartOfAllMin' | 'aPartOfAllMax' | 'sorting' | 'lastPlayedAt'
+  'artistcover' | 'shuffle' | 'aPartOfAll' | 'aPartOfAllMin' | 'aPartOfAllMax' | 'episodePick' | 'sorting' | 'lastPlayedAt'
 >
 
 /**
@@ -53,6 +53,7 @@ export namespace Utils {
       'aPartOfAll',
       'aPartOfAllMin',
       'aPartOfAllMax',
+      'episodePick',
       'sorting',
       'lastPlayedAt',
     ]

@@ -31,6 +31,10 @@ export interface Media {
   aPartOfAll?: boolean
   aPartOfAllMin?: number
   aPartOfAllMax?: number
+  /** a podcast's choice of episodes: 'newest:N', 'oldest:N' or 'range:A-B' (see episode-pick.ts) */
+  episodePick?: string
+  /** from a feed the box gave while offline (only the episodes on the SD card - the chosen ones already) */
+  offlineView?: boolean
   sorting?: MediaSorting
   duration?: string
   spotify_url?: string

@@ -379,6 +379,8 @@ async function renderPage(page, reload = true) {
     console.error(err)
     toast('Ein Teil der Seite ließ sich nicht einrichten', 'info')
   }
+  // (a pin on each card with a heading, see pinInject)
+  pinInject(main, page)
   balanceCols(main)
   if (keepScroll != null) window.scrollTo(0, keepScroll)
 }
@@ -504,7 +506,8 @@ function renderSection(sec) {
       ? `<div class="card-head"><h2>${esc(sec.title)}</h2><span class="chip ${esc(sec.badge.kind ?? '')}">${esc(sec.badge.text)}</span></div>`
       : `<h2>${esc(sec.title)}</h2>`
     : ''
-  return `<section class="card${wide ? ' wide' : ''}${onlyNav && !sec.title ? ' nav-card' : ''}${sec.cls ? ` ${esc(sec.cls)}` : ''}"${sec.col ? ` data-col="${sec.col}"` : ''}>
+  // (data-card: the card's id for pinning it to the start page, from the heading as the schema has it - see pinInject)
+  return `<section class="card${wide ? ' wide' : ''}${onlyNav && !sec.title ? ' nav-card' : ''}${sec.cls ? ` ${esc(sec.cls)}` : ''}"${sec.col ? ` data-col="${sec.col}"` : ''}${sec.title ? ` data-card="${esc(pinSlug(sec.title))}"` : ''}>
     ${head}${sec.help ? `<p class="help">${esc(sec.help)}</p>` : ''}${items}</section>`
 }
 
@@ -864,6 +867,8 @@ function startSkeleton() {
         <button class="qbtn" id="q-say">${icon('vol', 22)}<span>Durchsage</span></button>
       </div>
     </div>`,
+    // (the pinned cards: see drawPins)
+    `<div class="pins-area" id="pins" hidden></div>`,
     `<div class="update-note" id="update-note"></div>`,
     `<section class="card nav-card start-more"><div class="navlist">
       ${navRow('g-aussehen', 'Aussehen des Displays', 'Theme, Start- und Wartungsbilder', 'pal')}
@@ -892,6 +897,13 @@ function statusSoon(root) {
 }
 
 function mountStart(root) {
+  drawPins(root)
+  loadOutput(root)
+  every(15000, () => loadOutput(root))
+  root.addEventListener('click', (e) => {
+    const b = e.target.closest?.('[data-out]')
+    if (b) chooseOutput(root, b.dataset.out)
+  })
   loadNow(root)
   loadStatus(root)
   loadVolumeCap(root)
@@ -1001,8 +1013,41 @@ async function playbackAction(root, action) {
   setTimeout(() => loadNow(root), 600)
 }
 
+// Where the box plays (backend-api audio-output.ts), for the row above the volume: kept here, the card is drawn anew
+// every few seconds (see loadNow); read again every 15 s and after a change
+const outState = { data: null, busy: null }
+
+function outputRow() {
+  const o = outState.data
+  if (!o?.devices?.length) return ''
+  const btn = (target, ic, label) =>
+    `<button data-out="${esc(target)}" aria-pressed="${o.current === target}" ${outState.busy ? 'disabled' : ''}>${outState.busy === target ? '<span class="spin sm"></span>' : icon(ic, 16)}<span translate="${target === 'box' ? 'yes' : 'no'}">${esc(label)}</span></button>`
+  return `<div class="out-row"><span class="out-label">Ausgabe</span><div class="seg out-seg">${btn('box', 'vol', 'Lautsprecher')}${o.devices.map((d) => btn(d.mac, 'phones', d.name)).join('')}</div></div>`
+}
+
+async function loadOutput(root) {
+  const r = await api('/api/audio-output')
+  if (!r.ok) return
+  outState.data = r.body
+  const row = $('#out-slot', root)
+  if (row) row.innerHTML = outputRow()
+}
+
+// A tap on an output: the box switches (connecting a device takes some seconds)
+async function chooseOutput(root, target) {
+  if (outState.busy || outState.data?.current === target) return
+  outState.busy = target
+  const slot = $('#out-slot', root)
+  if (slot) slot.innerHTML = outputRow()
+  const r = await api('/api/audio-output', { method: 'POST', body: { target } })
+  outState.busy = null
+  const name = target === 'box' ? tr('Lautsprecher') : (outState.data?.devices ?? []).find((d) => d.mac === target)?.name ?? ''
+  toast(r.ok ? `${tr('Ausgabe')}: ${name}` : r.status === 504 ? `${name}: ${tr('nicht gefunden – ist es an?')}` : 'Das ging nicht', r.ok ? 'ok' : 'info')
+  await loadOutput(root)
+}
+
 function volumeRow() {
-  return `<div class="now-vol">${icon('vol', 20)}<div class="vol-wrap"><input type="range" id="vol" min="0" max="100" step="1" value="0" aria-label="Lautstärke"><i class="vol-cap" hidden></i></div><span class="value-pill" id="vol-out">–</span></div>`
+  return `<div id="out-slot">${outputRow()}</div><div class="now-vol">${icon('vol', 20)}<div class="vol-wrap"><input type="range" id="vol" min="0" max="100" step="1" value="0" aria-label="Lautstärke"><i class="vol-cap" hidden></i></div><span class="value-pill" id="vol-out">–</span></div>`
 }
 
 async function loadVolumeCap(root) {
@@ -2232,10 +2277,81 @@ function entryPlayFields(item) {
   const part = item.aPartOfAll === true
   return `<div class="field"><label for="e-sort">Sortierung</label><select class="input" id="e-sort">${opts}</select></div>
     ${item.type === 'spotify' ? `<div class="row"><span class="lbl"><b>Zufällig abspielen</b></span><label class="switch"><input type="checkbox" id="e-shuffle" ${item.shuffle ? 'checked' : ''} aria-label="Zufällig abspielen"><span></span></label></div>` : ''}
-    <div class="field"><label>Nur einen Teil (Nr. von – bis, leer = alle)</label><div class="rule-times"><input class="input" id="e-from" type="number" min="1" inputmode="numeric" value="${part ? esc(item.aPartOfAllMin ?? 1) : ''}" placeholder="von" aria-label="von"><input class="input" id="e-to" type="number" min="1" inputmode="numeric" value="${part ? esc(item.aPartOfAllMax ?? '') : ''}" placeholder="bis" aria-label="bis"></div></div>`
+    ${
+      item.type === 'rss'
+        ? episodePickFields('e', item)
+        : `<div class="field"><label>Nur einen Teil (Nr. von – bis, leer = alle)</label><div class="rule-times"><input class="input" id="e-from" type="number" min="1" inputmode="numeric" value="${part ? esc(item.aPartOfAllMin ?? 1) : ''}" placeholder="von" aria-label="von"><input class="input" id="e-to" type="number" min="1" inputmode="numeric" value="${part ? esc(item.aPartOfAllMax ?? '') : ''}" placeholder="bis" aria-label="bis"></div></div>`
+    }`
 }
 
-// How many of a podcast's newest episodes stay on the SD card (entry field "offline"; see podcast-offline.ts)
+// Which episodes of a podcast come on the box (entry field "episodePick", see ../episode-pick.ts): counted by date,
+// episode 1 is the oldest the feed has. The display, the lists here and the SD card follow it.
+const EPISODE_PICKS = [
+  ['', 'Alle Folgen'],
+  ['newest:10', 'Die 10 neuesten'],
+  ['newest:20', 'Die 20 neuesten'],
+  ['newest:50', 'Die 50 neuesten'],
+  ['oldest:10', 'Die ersten 10'],
+  ['oldest:20', 'Die ersten 20'],
+  ['oldest:50', 'Die ersten 50'],
+  ['range', 'Eigener Bereich …'],
+]
+
+// The chosen ones of a list that is newest first, in its order (as pickEpisodes of ../episode-pick.ts)
+function pickEpisodes(newestFirst, pick) {
+  const n = newestFirst.length
+  let m = /^(newest|oldest):(\d{1,4})$/.exec(pick ?? '')
+  if (m) return m[1] === 'newest' ? newestFirst.slice(0, Number(m[2])) : newestFirst.slice(Math.max(0, n - Number(m[2])))
+  m = /^range:(\d{1,5})-(\d{1,5})$/.exec(pick ?? '')
+  if (!m) return newestFirst
+  const from = Math.min(Number(m[1]), Number(m[2]))
+  const to = Math.max(Number(m[1]), Number(m[2]))
+  return newestFirst.slice(Math.max(0, n - to), Math.max(0, n - from + 1))
+}
+
+// The choice's fields (p: the prefix of their ids). An entry with a part as before ("Nur einen Teil", counted in the
+// feed's order) keeps it until another choice is made.
+function episodePickFields(p, item) {
+  const pick = typeof item.episodePick === 'string' ? item.episodePick : ''
+  const range = /^range:(\d+)-(\d+)$/.exec(pick)
+  const other = /^(newest|oldest):(\d+)$/.exec(pick)
+  const legacy = !pick && item.aPartOfAll === true
+  const opts = [
+    ...(legacy ? [['legacy', `Wie bisher (Nr. ${item.aPartOfAllMin ?? 1} – ${item.aPartOfAllMax ?? '…'} im Feed)`]] : []),
+    ...EPISODE_PICKS,
+    ...(other && !EPISODE_PICKS.some(([v]) => v === pick) ? [[pick, other[1] === 'newest' ? `Die ${other[2]} neuesten` : `Die ersten ${other[2]}`]] : []),
+  ]
+  const chosen = legacy ? 'legacy' : range ? 'range' : pick
+  return `<div class="field"><label for="${p}-pick">Welche Folgen auf die Box</label><select class="input" id="${p}-pick">${opts
+    .map(([v, l]) => `<option value="${v}"${v === chosen ? ' selected' : ''}>${esc(l)}</option>`)
+    .join('')}</select></div>
+    <div class="field" id="${p}-range"${range ? '' : ' hidden'}><label>Folge von – bis</label><div class="rule-times"><input class="input" id="${p}-from" type="number" min="1" inputmode="numeric" value="${range ? range[1] : ''}" placeholder="von" aria-label="von"><input class="input" id="${p}-to" type="number" min="1" inputmode="numeric" value="${range ? range[2] : ''}" placeholder="bis" aria-label="bis"></div>
+      <small>Gezählt nach Datum: Folge 1 ist die älteste.</small></div>`
+}
+
+// The choice as its fields say it: '' (all), 'legacy', 'newest:N' …, or null (a range that does not fit)
+function episodePickOf(sheet, p) {
+  const v = sheet.querySelector(`#${p}-pick`).value
+  if (v !== 'range') return v
+  const from = Number(sheet.querySelector(`#${p}-from`).value) || 0
+  const to = Number(sheet.querySelector(`#${p}-to`).value) || 0
+  return Number.isInteger(from) && Number.isInteger(to) && from >= 1 && to >= from && to <= 99999 ? `range:${from}-${to}` : null
+}
+
+// A change of the choice: the range's fields shown or not, then `changed`
+function wireEpisodePick(sheet, p, changed) {
+  const select = sheet.querySelector(`#${p}-pick`)
+  select.addEventListener('change', () => {
+    sheet.querySelector(`#${p}-range`).hidden = select.value !== 'range'
+    changed()
+  })
+  for (const k of ['from', 'to']) sheet.querySelector(`#${p}-${k}`).addEventListener('input', changed)
+}
+
+const BAD_RANGE = 'Bitte beide Nummern eintragen (ab 1, die zweite nicht kleiner als die erste)'
+
+// How many of a podcast's newest episodes stay on the SD card (entry field "offline"; see podcast-offline.ts); with a
+// choice of episodes the newest of the chosen ones - or all of them (at most 50, as the box keeps)
 const OFFLINE_KEEP = [
   [0, 'Aus'],
   [1, 'Die neueste Folge'],
@@ -2244,13 +2360,22 @@ const OFFLINE_KEEP = [
   [10, 'Die 10 neuesten Folgen'],
   [20, 'Die 20 neuesten Folgen'],
 ]
+const OFFLINE_ALL_PICKED = 50
+
+function offlineOptions(keep, picked) {
+  const opts = [...OFFLINE_KEEP, ...(picked ? [[OFFLINE_ALL_PICKED, 'Die gewählten Folgen (höchstens 50)']] : [])]
+  if (!opts.some(([n]) => n === keep)) opts.push([keep, `Die ${keep} neuesten Folgen`])
+  return opts.map(([n, l]) => `<option value="${n}"${n === keep ? ' selected' : ''}>${esc(l)}</option>`).join('')
+}
+
+// The SD card's choice again after the choice of episodes changed (what was chosen there stays)
+function refreshOfflineOptions(select, picked) {
+  if (select) select.innerHTML = offlineOptions(Number(select.value) || 0, picked)
+}
 
 function offlineField(item) {
   const keep = Number(item.offline) || 0
-  const opts = [...OFFLINE_KEEP, ...(OFFLINE_KEEP.some(([n]) => n === keep) ? [] : [[keep, `Die ${keep} neuesten Folgen`]])]
-  return `<div class="field"><label for="e-offline">Auf der Box speichern (ohne Internet hören)</label><select class="input" id="e-offline">${opts
-    .map(([n, l]) => `<option value="${n}"${n === keep ? ' selected' : ''}>${esc(l)}</option>`)
-    .join('')}</select></div>
+  return `<div class="field"><label for="e-offline">Auf der Box speichern (ohne Internet hören)</label><select class="input" id="e-offline">${offlineOptions(keep, !!item.episodePick)}</select></div>
     <p class="help" id="e-offline-status" style="margin:0">${esc('Neue Folgen kommen von selbst, ältere gehen wieder. Einzelne Folgen merkst du dir unter Hören.')}</p>${
       String(item.id ?? '').startsWith('ard:')
         ? `<p class="help" style="margin:0">${esc('Nur Folgen, die die ARD zum Herunterladen freigibt. Nimmt die ARD eine Folge aus ihrem Angebot, wird sie auch auf der Box gelöscht.')}</p>`
@@ -2343,6 +2468,11 @@ function openEntrySheet(item, back = null) {
       sheet.querySelector('[data-back]')?.addEventListener('click', back?.open)
       if (wholeArtist) loadArtistAlbums(item, sheet.querySelector('#e-albums'))
       if (item.type === 'rss') loadOfflineStatus(item.id, sheet.querySelector('#e-offline-status'))
+      if (playOptions && item.type === 'rss') {
+        wireEpisodePick(sheet, 'e', () =>
+          refreshOfflineOptions(sheet.querySelector('#e-offline'), !['', 'legacy'].includes(sheet.querySelector('#e-pick').value)),
+        )
+      }
       // A chosen picture lands among the own pictures and is saved into the entry right away (the picker takes the
       // sheet's place, what was typed here and not saved yet stays as it was on the box)
       for (const b of sheet.querySelectorAll('[data-pick]')) {
@@ -2372,6 +2502,7 @@ function openEntrySheet(item, back = null) {
             sheet.querySelector('#e-id').focus()
             return toast('Bitte eine Adresse eintragen, die mit http:// oder https:// beginnt.', 'info')
           }
+          if (item.type === 'rss' && address !== item.id && !(await allowLanFeed(address))) return
         }
         const updated = { ...item }
         for (const [k] of fields) {
@@ -2386,9 +2517,19 @@ function openEntrySheet(item, back = null) {
           else delete updated.sorting
           const shuffle = sheet.querySelector('#e-shuffle')
           if (shuffle) updated.shuffle = shuffle.checked
-          const from = Number(sheet.querySelector('#e-from').value) || 0
-          const to = Number(sheet.querySelector('#e-to').value) || 0
-          if (from || to) {
+          const pick = item.type === 'rss' ? episodePickOf(sheet, 'e') : undefined
+          const from = Number(sheet.querySelector('#e-from')?.value) || 0
+          const to = Number(sheet.querySelector('#e-to')?.value) || 0
+          if (pick === null) return toast(BAD_RANGE, 'info')
+          if (pick === 'legacy') {
+            // (the part as before stays)
+          } else if (pick !== undefined) {
+            if (pick) updated.episodePick = pick
+            else delete updated.episodePick
+            updated.aPartOfAll = false
+            delete updated.aPartOfAllMin
+            delete updated.aPartOfAllMax
+          } else if (from || to) {
             if ((to && to < (from || 1)) || from < 0) return toast('Der Bereich passt nicht (von 1 an, „bis“ nicht vor „von“)', 'info')
             Object.assign(updated, { aPartOfAll: true, aPartOfAllMin: from || 1 })
             if (to) updated.aPartOfAllMax = to
@@ -2412,7 +2553,9 @@ function openEntrySheet(item, back = null) {
         close()
         toast('Gespeichert')
         // (the episodes on the SD card follow the setting now, not only at the next hourly round)
-        if (item.type === 'rss' && keep !== (Number(item.offline) || 0)) api(`${API}/podcast-offline/sync`, { method: 'POST', body: { feed: updated.id } })
+        // (the choice of episodes too: other episodes to keep)
+        const changedKeep = keep !== (Number(item.offline) || 0) || (updated.episodePick ?? '') !== (item.episodePick ?? '')
+        if (item.type === 'rss' && changedKeep) api(`${API}/podcast-offline/sync`, { method: 'POST', body: { feed: updated.id } })
         libReload()
       }
       sheet.querySelector('[data-del]')?.addEventListener('click', () => {
@@ -3136,21 +3279,87 @@ async function openPodShow(s) {
   const have = Array.isArray(data.body) && data.body.some((it) => it?.type === 'rss' && same(it.id))
   openSheet(
     `<div class="ard-head">${s.image ? `<img src="${esc(s.image)}" alt="">` : ''}<span class="lbl"><h2 translate="no" style="margin:0">${esc(s.title)}</h2><small translate="no">${esc([s.author, s.genre].filter(Boolean).join(' · '))}</small></span></div>
-     <div class="section-label" style="margin:0">${esc('Neueste Folgen')}</div><div id="pod-eps"><p class="help">Lade die Folgen …</p></div>
      ${
        have
-         ? `<p class="help" style="margin:0">${esc('Schon in der Bibliothek.')}</p><div class="btns"><button class="btn" data-close>Schließen</button></div>`
+         ? `<div class="section-label" style="margin:0">${esc('Neueste Folgen')}</div><div id="pod-eps"><p class="help">Lade die Folgen …</p></div>
+            <p class="help" style="margin:0">${esc('Schon in der Bibliothek.')}</p><div class="btns"><button class="btn" data-close>Schließen</button></div>`
          : `<div class="field"><label for="pod-cat">Hinzufügen als</label>${catSelect('pod-cat', 'audiobook', false)}</div>
-            <div class="field"><label for="pod-off">Auf der Box speichern (ohne Internet hören)</label><select class="input" id="pod-off">${OFFLINE_KEEP.map(([n, l]) => `<option value="${n}">${esc(l)}</option>`).join('')}</select></div>
+            ${episodePickFields('pod', {})}
+            <div class="field"><label for="pod-sort">Reihenfolge auf der Box</label><select class="input" id="pod-sort"><option value="${SORT_VALUES[4]}">Neueste zuerst</option><option value="${SORT_VALUES[3]}">Älteste zuerst</option></select></div>
+            <div class="section-label" style="margin:0">${esc('Folgen auf der Box')}</div><div id="pod-eps"><p class="help">Lade die Folgen …</p></div>
+            <div class="field"><label for="pod-off">Auf der Box speichern (ohne Internet hören)</label><select class="input" id="pod-off">${offlineOptions(0, false)}</select></div>
             <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-add>${icon('plus', 18)}Hinzufügen</button></div>`
      }`,
     async (sheet, close) => {
       for (const b of sheet.querySelectorAll('[data-close]')) b.onclick = close
+      // the feed's episodes, newest first (by date; without one in the feed's order), numbered by date: 1 = the oldest
+      let episodes = null
+      const preview = () => {
+        const box = sheet.querySelector('#pod-eps')
+        if (!box?.isConnected || !episodes) return
+        if (!episodes.length) {
+          box.innerHTML = `<p class="help">${esc('Die Folgen ließen sich nicht laden.')}</p>`
+          return
+        }
+        const row = (e, out) =>
+          `<div class="entry${out ? ' out' : ''}"><span class="lbl"><b translate="no">${esc(e.title)}</b><small>${esc([`Folge ${e.no}`, e.when ? new Date(e.when).toLocaleDateString(LOCALE) : '', durationText(e.duration)].filter(Boolean).join(' · '))}</small></span></div>`
+        if (have) {
+          box.innerHTML = `<div class="rows">${episodes.slice(0, 5).map((e) => row(e, false)).join('')}</div>`
+          return
+        }
+        const pick = episodePickOf(sheet, 'pod')
+        if (pick === null) {
+          box.innerHTML = `<p class="help">${esc(BAD_RANGE)}</p>`
+          return
+        }
+        // in the box's order: the chosen ones (the first few), then the next ones that are not on the box, greyed
+        const asc = sheet.querySelector('#pod-sort').value === SORT_VALUES[3]
+        const chosen = new Set(pickEpisodes(episodes, pick))
+        const ordered = asc ? [...episodes].reverse() : episodes
+        const inBox = ordered.filter((e) => chosen.has(e))
+        const lastAt = ordered.indexOf(inBox[inBox.length - 1])
+        const outside = [...ordered.slice(lastAt + 1), ...ordered.slice(0, lastAt + 1)].filter((e) => !chosen.has(e))
+        const n = episodes.length
+        box.innerHTML = `<p class="help" style="margin:0"><b>${esc(inBox.length === n ? `Alle ${n} Folgen kommen auf die Box` : `${inBox.length} von ${n} Folgen kommen auf die Box`)}</b></p>
+          <div class="rows">${inBox
+            .slice(0, 4)
+            .map((e) => row(e, false))
+            .join('')}${inBox.length > 4 ? `<p class="help" style="margin:4px 0">${esc(`… und ${inBox.length - 4} weitere`)}</p>` : ''}${outside
+            .slice(0, 2)
+            .map((e) => row(e, true))
+            .join('')}</div>${outside.length ? `<p class="help" style="margin:0">${esc(`Grau: nicht auf der Box (${outside.length} Folgen)`)}</p>` : ''}`
+      }
+      if (!have) {
+        // "the first N" and a range read from the oldest on, the newest N from the newest - until the order is chosen
+        let sortTouched = false
+        sheet.querySelector('#pod-sort').addEventListener('change', () => {
+          sortTouched = true
+          preview()
+        })
+        wireEpisodePick(sheet, 'pod', () => {
+          const v = sheet.querySelector('#pod-pick').value
+          if (!sortTouched) sheet.querySelector('#pod-sort').value = /^(oldest|range)/.test(v) ? SORT_VALUES[3] : SORT_VALUES[4]
+          refreshOfflineOptions(sheet.querySelector('#pod-off'), v !== '')
+          preview()
+        })
+      }
       sheet.querySelector('[data-add]')?.addEventListener('click', async (e) => {
         const btn = e.currentTarget
+        const pick = episodePickOf(sheet, 'pod')
+        if (pick === null) return toast(BAD_RANGE, 'info')
         btn.disabled = true
         const keep = Number(sheet.querySelector('#pod-off').value) || 0
-        const body = { type: 'rss', id: s.feedUrl, artist: s.title, category: sheet.querySelector('#pod-cat').value, source: 'manual', ...(keep ? { offline: keep } : {}) }
+        const asc = sheet.querySelector('#pod-sort').value === SORT_VALUES[3]
+        const body = {
+          type: 'rss',
+          id: s.feedUrl,
+          artist: s.title,
+          category: sheet.querySelector('#pod-cat').value,
+          source: 'manual',
+          ...(pick ? { episodePick: pick } : {}),
+          ...(asc ? { sorting: SORT_VALUES[3] } : {}),
+          ...(keep ? { offline: keep } : {}),
+        }
         const r = await api('/api/add', { method: 'POST', body })
         btn.disabled = false
         if (!libWriteOk(r)) return
@@ -3166,15 +3375,16 @@ async function openPodShow(s) {
       if (!box?.isConnected) return
       const raw = r.body?.rss?.channel?.item
       const text = (v) => (typeof v === 'string' ? v : (v?._cdata ?? v?._text ?? ''))
-      const eps = (Array.isArray(raw) ? raw : raw ? [raw] : []).filter((it) => it?.enclosure?._attributes?.url).slice(0, 5)
-      box.innerHTML = eps.length
-        ? `<div class="rows">${eps
-            .map((it) => {
-              const when = Date.parse(text(it.pubDate))
-              return `<div class="entry"><span class="lbl"><b translate="no">${esc(text(it.title) || 'Folge')}</b><small>${esc([Number.isFinite(when) ? new Date(when).toLocaleDateString(LOCALE) : '', durationText(text(it['itunes:duration']))].filter(Boolean).join(' · '))}</small></span></div>`
-            })
-            .join('')}</div>`
-        : `<p class="help">${esc('Die Folgen ließen sich nicht laden.')}</p>`
+      const list = (Array.isArray(raw) ? raw : raw ? [raw] : [])
+        .filter((it) => it?.enclosure?._attributes?.url)
+        .map((it, i) => {
+          const when = Date.parse(text(it.pubDate))
+          return { title: text(it.title) || 'Folge', when: Number.isFinite(when) ? when : null, duration: text(it['itunes:duration']), i }
+        })
+        // (as the box counts: one without a date after all dated ones, in the feed's order)
+        .sort((a, b) => (b.when ?? -b.i) - (a.when ?? -a.i))
+      episodes = list.map((e, i) => ({ ...e, no: list.length - i }))
+      preview()
     },
   )
 }
@@ -3326,6 +3536,27 @@ function linkExtras(body, kind) {
   return ''
 }
 
+// A feed in the home network (e.g. Pinepods on 192.168.…): the box fetches no address there unless its server is
+// allowed (see lan-feeds.ts) - asked once per server. True when the feed may be added.
+async function allowLanFeed(url) {
+  const r = await api(`${API}/feed-hosts/check`, { method: 'POST', body: { url } })
+  if (!r.ok || !r.body?.lan || r.body.allowed) return true
+  if (r.body.never) {
+    toast('Diese Adresse ist die Box selbst – von dort holt sie keine Feeds.', 'info')
+    return false
+  }
+  const host = r.body.host
+  const ok = await ask(
+    'Server im Heimnetz',
+    `Der Feed liegt im Heimnetz (${host}). Adressen im Heimnetz ruft die Box sonst nicht ab, damit niemand sie als Umweg zu anderen Geräten nutzen kann. Diesen Server für Feeds erlauben? Das gilt nur für ${host}; ansehen und entfernen unter Einstellungen › Dienste.`,
+    'Erlauben',
+  )
+  if (!ok) return false
+  const a = await api(`${API}/feed-hosts`, { method: 'POST', body: { url, allow: true } })
+  if (!a.ok) toast(a.body?.error === 'too_many' ? 'Es sind schon 20 Server erlaubt' : 'Nicht gespeichert', 'info')
+  return a.ok
+}
+
 async function addLink(page) {
   const type = state.values.get('lType') ?? 'Spotify-Link'
   const url = String(state.values.get('lUrl') ?? '').trim()
@@ -3375,6 +3606,7 @@ async function addLink(page) {
       const ardLink = type !== 'Radio-Stream' && /^https:\/\/(www\.)?(ardsounds|ardaudiothek)\.de\/sendung\//i.test(url)
       const ardId = ardLink ? (await api(`${API}/ard/resolve`, { method: 'POST', body: { url } })).body?.id : null
       if (ardLink && !ardId) return toast('Diese Sendung kennt die ARD Audiothek nicht – ist der Link richtig?', 'info')
+      if (type !== 'Radio-Stream' && !ardLink && !(await allowLanFeed(id))) return
       if (type === 'Radio-Stream') Object.assign(body, { type: 'radio', id, artist: label || 'Radio', title: title || 'Stream' })
       else Object.assign(body, { type: 'rss', id: ardId ? `ard:${ardId}` : id, artist: label || 'Podcast' })
     }
@@ -5623,6 +5855,7 @@ async function loadControls() {
   state.values.set('listTimer', o.listviewTimer)
   state.values.set('setTimer', o.settingsAccessTimer)
   state.values.set('epResume', o.episodeResume !== false)
+  state.values.set('outPick', o.outputPicker !== false)
   state.values.set('epDays', EP_DAYS.find(([, d]) => d === o.episodeResumeDays)?.[0] ?? `${o.episodeResumeDays} Tage`)
   state.values.set('epNew', o.newEpisodes !== false)
   state.values.set('epNewDays', `${o.newEpisodeDays ?? 7} Tage`)
@@ -5713,18 +5946,6 @@ function mountLive(root) {
   })
 }
 
-// The name of a language in the language of the app (the box keeps the English names)
-const ttsNames = (() => {
-  try {
-    return new Intl.DisplayNames([LOCALE], { type: 'language' })
-  } catch {
-    return null
-  }
-})()
-const ttsName = (code) => {
-  const n = ttsNames?.of(code)
-  return n && n !== code ? n : disp.opts?.ttsLanguages?.find((l) => l.code === code)?.name ?? code
-}
 const fmtSec = (v) => `${Number(v).toLocaleString(LOCALE)} s`
 
 /* Einstellungen › Audio and › Akku & Strom */
@@ -5798,7 +6019,7 @@ function btTop() {
     ${sw('bt-on', 'Bluetooth', 'Für Kopfhörer oder Lautsprecher.', b.powered, noHw)}${sw('bt-auto', 'Automatisch verbinden', 'Verbindet ein bekanntes Gerät von selbst, sobald es an ist.', b.autoconnect, noHw)}
     <div class="navlist">${navRow('lautstaerke', 'Lautstärkegrenze für Kopfhörer', 'Eigenes Maximum, solange Bluetooth-Audio läuft', 'vol')}</div></section>`
   const paired = b.powered
-    ? `<section class="card" data-col="1"><h2>Gekoppelte Geräte</h2>${
+    ? `<section class="card" data-col="1" data-card="gekoppelte-gerate"><h2>Gekoppelte Geräte</h2>${
         devices.length
           ? `<div class="rows">${devices
               .map(
@@ -5912,6 +6133,11 @@ function mountBluetooth(root, page) {
     const d = hw.bt.devices[Number(b.dataset.btRm)]
     b.onclick = () =>
       confirmSheet('Entfernen', `„${d.name}“ entfernen? Zum erneuten Verbinden muss es wieder gekoppelt werden.`, async () => {
+        // (at once: the row greyed out and its buttons off, until the list comes again)
+        const row = b.closest('.entry')
+        row?.classList.add('out')
+        for (const x of row?.querySelectorAll('button') ?? []) x.disabled = true
+        toast('Wird entfernt …')
         const r = await api(`${API}/bluetooth/remove`, { method: 'POST', body: { mac: d.mac } })
         again(r.ok ? 'Entfernt' : 'Das Gerät ließ sich nicht entfernen', r.ok ? 'ok' : 'info')
       })
@@ -6858,7 +7084,7 @@ function mountSystem(root) {
 /* Einstellungen › Audio › Sprachausgabe: the voice (Piper on the box, Google, silent), the voices per language, the
    automatic announcements and the parents' ones (speech.ts, eltern/speech-routes.ts) */
 
-const speech = { data: null, lang: null, voices: {}, licenses: {}, showAll: false, poll: null }
+const speech = { data: null, lang: null, voices: {}, known: {}, licenses: {}, showAll: false, poll: null }
 const SPEECH_QUALITY = { x_low: 'sehr niedrig', low: 'niedrig', medium: 'mittel', high: 'hoch' }
 const SPEECH_LEVELS = [
   [0.4, 'leise'],
@@ -6875,8 +7101,13 @@ async function loadSpeech() {
   if (!speech.voices[speech.lang]) {
     const v = await api(`${API}/speech/voices?lang=${speech.lang}`)
     speech.voices[speech.lang] = v.ok ? v.body.voices : []
+    // (the list of voices was there: an empty one means no voice of this language runs on the box)
+    speech.known[speech.lang] = v.ok && v.body.known === true
   }
 }
+
+// The languages the box speaks (speech.ts SPEECH_LANGS): the app's and four more, each by its own name
+const SPEECH_NAMES = { ...LANGS, ar: 'العربية', zh: '中文', hi: 'हिन्दी', ja: '日本語' }
 
 // the voice the box speaks a language with: the chosen one if loaded, else the first loaded one
 const speechActive = (lang) => {
@@ -6925,7 +7156,7 @@ function speechTop() {
     return `<div class="entry voice"><button type="button" class="icon-btn soft" data-v-hear="${esc(v.key)}" aria-label="Anhören">${icon('vol', 16)}</button>
       <span class="lbl"><b translate="no">${esc(voiceName(v.key))}</b><small>${esc([`Qualität ${SPEECH_QUALITY[v.quality] ?? v.quality}`, fmtMB(v.size), regions ? v.region : ''].filter(Boolean).join(' · '))}${v.quality === 'high' ? ` · <span class="slow">${esc('langsam: einige Sekunden je Name')}</span>` : ''}${lic?.license && !/^see /i.test(lic.license) ? ` · <span translate="no">${esc(lic.license.replace(/^https?:\/\/creativecommons\.org\/licenses\/([a-z-]+)\/([\d.]+)\/?$/i, (_m, k, n) => `CC ${k.toUpperCase()} ${n}`))}</span>` : ''}</small></span>${right}</div>`
   }
-  const langOptions = Object.entries(LANGS)
+  const langOptions = Object.entries(SPEECH_NAMES)
     .map(([code, name]) => {
       const n = d.installed[code]?.length ?? 0
       return `<option value="${code}"${code === lang ? ' selected' : ''}>${esc(name)}${n ? ` · ${n} ✓` : ''}${code === box ? ' ★' : ''}</option>`
@@ -6933,7 +7164,7 @@ function speechTop() {
     .join('')
   const t = d.texts
   const text = (id, value, hint) =>
-    `<div class="field"><div class="field-pick"><input class="input" id="${id}" value="${esc(value)}" maxlength="300" ${NO_PW_MANAGER}><button type="button" class="btn sm" data-sp-test="${id}">${icon('vol', 14)}Probe</button></div>${hint ? `<small>${esc(hint)}</small>` : ''}</div>`
+    `<div class="field"><div class="field-pick"><input class="input" id="${id}" value="${esc(value)}" maxlength="300" dir="auto" ${NO_PW_MANAGER}><button type="button" class="btn sm" data-sp-test="${id}">${icon('vol', 14)}Probe</button></div>${hint ? `<small>${esc(hint)}</small>` : ''}</div>`
   return [
     `<section class="card" data-col="1"><div class="card-head"><h2>Stimme</h2><span class="chip ${c.engine === 'off' ? '' : 'ok'}">${c.engine === 'piper' && active ? 'offline' : c.engine === 'off' ? 'stumm' : 'online'}</span></div>
       <div class="status-line">${status}</div>
@@ -6943,16 +7174,16 @@ function speechTop() {
         ${choice('off', 'Stumm', 'Keine Ansagen, keine vorgelesenen Namen.')}
       </div>
       ${c.engine === 'piper' ? `<div class="field"><label>Ohne geladene Stimme für die Sprache der Box</label><div class="seg" id="sp-fallback"><button aria-pressed="${c.fallback === 'google'}" data-v="google">Google nehmen</button><button aria-pressed="${c.fallback === 'off'}" data-v="off">Stumm bleiben</button></div></div>` : ''}
-      <div class="field"><label for="sp-speak">Die Box spricht</label><select class="input" id="sp-speak" translate="no">${Object.entries(LANGS).map(([code, name]) => `<option value="${code}"${code === box ? ' selected' : ''}>${esc(name)}</option>`).join('')}</select>
-        <small>Für Ansagen, Durchsagen und „Namen vorlesen“ am Display.</small></div></section>`,
+      <div class="field"><label for="sp-speak">Die Box spricht</label><select class="input" id="sp-speak" translate="no">${Object.entries(SPEECH_NAMES).map(([code, name]) => `<option value="${code}"${code === box ? ' selected' : ''}>${esc(name)}</option>`).join('')}</select>
+        <small>Für Ansagen, Durchsagen und vorgelesene Namen (einschalten unter Aussehen › Ansicht).</small></div></section>`,
     `<section class="card" data-col="1"><div class="card-head"><h2>Stimmen</h2><span class="chip">${esc(`${fmtMB(d.bytes)} belegt`)}</span></div>
       <div class="field"><label for="sp-lang">Sprache</label><select class="input" id="sp-lang" translate="no">${langOptions}</select></div>
-      ${list.length ? `<div class="rows">${shown.map(voiceRow).join('')}</div>` : '<p class="help" style="margin:0">Die Liste der Stimmen ließ sich nicht laden (keine Verbindung zu Hugging Face?).</p>'}
+      ${list.length ? `<div class="rows">${shown.map(voiceRow).join('')}</div>` : `<p class="help" style="margin:0">${esc(speech.known?.[lang] ? `Für ${SPEECH_NAMES[lang] ?? lang} gibt es noch keine Stimme, die auf der Box läuft. Mit Google spricht die Box die Sprache trotzdem.` : 'Die Liste der Stimmen ließ sich nicht laden (keine Verbindung zu Hugging Face?).')}</p>`}
       ${list.length > shown.length ? `<button class="btn" id="sp-all">${esc(`Alle ${list.length} Stimmen zeigen`)}</button>` : ''}
-      ${speechTry(d, lang, activeHere, voiceName)}
+      ${list.length ? speechTry(d, lang, activeHere, voiceName) : ''}
       ${job?.state === 'failed' ? `<div class="note warn">${icon('info', 18)}<span>${esc('Die Stimme ließ sich nicht laden. Bitte noch einmal versuchen.')}</span></div>` : ''}
       <p class="help" style="margin:0">${esc(`Stimmen von Piper (rhasspy/piper-voices); die Lizenz steht bei jeder Stimme. ${d.free != null ? `Noch ${(d.free / 1e9).toLocaleString(LOCALE, { maximumFractionDigits: 1 })} GB frei.` : ''}`)}</p><audio id="sp-audio" hidden></audio></section>`,
-    `<section class="card" data-col="2"><div class="card-head"><h2>Automatische Ansagen</h2><span class="chip" translate="no">${esc(LANGS[box] ?? box)}</span></div><p class="help">${esc('Die Box sagt selbst etwas, während etwas läuft.')}</p>
+    `<section class="card" data-col="2"><div class="card-head"><h2>Automatische Ansagen</h2><span class="chip" translate="no">${esc(SPEECH_NAMES[box] ?? box)}</span></div><p class="help">${esc('Die Box sagt selbst etwas, während etwas läuft.')}</p>
       ${sw('sp-rest', 'Restzeit ansagen', 'Bevor die Spielzeit für heute endet.', c.rest.on)}
       <div class="dep" data-dep-id="sp-rest"${c.rest.on ? '' : ' hidden'}><div class="field"><label>Wie lange vorher</label><div class="seg" id="sp-rest-min">${[2, 5, 10, 15].map((m) => `<button aria-pressed="${c.rest.minutes === m}" data-v="${m}">${m} min</button>`).join('')}</div></div>
         ${text('sp-t-rest', t.rest, '{min} setzt die Box ein.')}</div>
@@ -6961,11 +7192,11 @@ function speechTop() {
       ${sw('sp-sleep', 'Ende des Schlaftimers ansagen', 'Eine Minute bevor der Schlaftimer die Wiedergabe beendet.', c.sleepEnd.on)}
       <div class="dep" data-dep-id="sp-sleep"${c.sleepEnd.on ? '' : ' hidden'}>${text('sp-t-sleepEnd', t.sleepEnd, '')}</div>
       <div class="field"><label>Lautstärke der Ansagen</label><div class="seg" id="sp-level">${SPEECH_LEVELS.map(([v, l]) => `<button aria-pressed="${c.level === v}" data-v="${v}">${esc(l)}</button>`).join('')}</div><small>Nie lauter als die Box gerade ist (Hörschutz).</small></div></section>`,
-    `<section class="card" data-col="2"><div class="card-head"><h2>Eltern-Durchsagen</h2><span class="chips"><span class="chip" translate="no">${esc(LANGS[box] ?? box)}</span><span class="chip ${c.parents.on ? 'ok' : ''}">${c.parents.on ? 'an' : 'aus'}</span></span></div>
+    `<section class="card" data-col="2" data-card="eltern-durchsagen"><div class="card-head"><h2>Eltern-Durchsagen</h2><span class="chips"><span class="chip" translate="no">${esc(SPEECH_NAMES[box] ?? box)}</span><span class="chip ${c.parents.on ? 'ok' : ''}">${c.parents.on ? 'an' : 'aus'}</span></span></div>
       <p class="help">${esc('Vom Handy etwas auf der Box sagen lassen: über „Durchsage“ auf der Startseite oder per Telegram (/sag Text).')}</p>
       ${sw('sp-parents', 'Durchsagen erlauben', '', c.parents.on)}
-      <div class="rows" id="sp-templates">${t.templates.map((x, i) => `<div class="entry"><span class="avatar">${icon('vol', 16)}</span><span class="lbl"><b>${esc(x)}</b></span><button class="btn sm primary" data-tpl-say="${i}">Jetzt</button><button class="btn sm" data-tpl-rm="${i}">Entfernen</button></div>`).join('')}</div>
-      <div class="field-pick"><input class="input" id="sp-tpl-new" maxlength="300" placeholder="${esc('Neue Vorlage, z. B. „Oma ist da!“')}" ${NO_PW_MANAGER}><button type="button" class="btn" id="sp-tpl-add">${icon('plus', 16)}Hinzufügen</button></div>
+      <div class="rows" id="sp-templates">${t.templates.map((x, i) => `<div class="entry"><span class="avatar">${icon('vol', 16)}</span><span class="lbl"><b dir="auto">${esc(x)}</b></span><button class="btn sm primary" data-tpl-say="${i}">Jetzt</button><button class="btn sm" data-tpl-rm="${i}">Entfernen</button></div>`).join('')}</div>
+      <div class="field-pick"><input class="input" id="sp-tpl-new" maxlength="300" dir="auto" placeholder="${esc('Neue Vorlage, z. B. „Oma ist da!“')}" ${NO_PW_MANAGER}><button type="button" class="btn" id="sp-tpl-add">${icon('plus', 16)}Hinzufügen</button></div>
       ${sw('sp-gong', 'Gong vorher', 'Ein kurzer Ton, damit das Kind aufhorcht.', c.parents.gong)}
       ${sw('sp-pause', 'Wiedergabe anhalten und danach weiter', 'Sonst wird die Musik während der Durchsage nur leiser.', c.parents.pause)}</section>`,
   ]
@@ -6976,7 +7207,7 @@ function speechTry(d, lang, activeHere, voiceName) {
   const loaded = d.installed[lang] ?? []
   if (!loaded.length) return `<p class="help" style="margin:0">${esc('Zum Anhören auf der Box erst eine Stimme laden. Die Hörprobe am Handy (Lautsprecher-Knopf) geht auch so.')}</p>`
   const quality = (key) => SPEECH_QUALITY[key.slice(key.lastIndexOf('-') + 1)] ?? ''
-  return `<div class="speech-try"><div class="field"><label for="sp-try-text">Probe auf der Box</label><textarea class="input" id="sp-try-text" rows="2" maxlength="300">${esc(d.hello ?? '')}</textarea></div>
+  return `<div class="speech-try"><div class="field"><label for="sp-try-text">Probe auf der Box</label><textarea class="input" id="sp-try-text" rows="2" maxlength="300" dir="auto">${esc(d.hello ?? '')}</textarea></div>
     <div class="field-pick"><select class="input" id="sp-try-voice" aria-label="Stimme">${loaded.map((k) => `<option value="${esc(k)}"${k === activeHere ? ' selected' : ''} translate="no">${esc(`${voiceName(k)} · ${tr(quality(k))}`)}</option>`).join('')}</select>
     <button type="button" class="btn primary" id="sp-try">${icon('vol', 16)}Auf der Box anhören</button></div></div>`
 }
@@ -7092,7 +7323,7 @@ function mountSpeech(root, page) {
   // the language the box speaks (the reading-out language of the display too): the player starts again with it
   const speakIn = async (code) => {
     const r = await api(`${API}/display-options`, { method: 'POST', body: { ttsLanguage: code === 'nb' ? 'no' : code } })
-    toast(r.ok ? `Die Box spricht jetzt ${LANGS[code] ?? code}` : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+    toast(r.ok ? `Die Box spricht jetzt ${SPEECH_NAMES[code] ?? code}` : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
     return r.ok
   }
   $('#sp-speak', root).onchange = async (e) => {
@@ -7105,7 +7336,7 @@ function mountSpeech(root, page) {
     b.onclick = async () => {
       if (!(await speechSave({ voice: { lang: speech.lang, key: b.dataset.vUse } }, 'Stimme gewählt'))) return
       // a voice of another language: the box to speak that language too? (else it stays with the old one)
-      if (speech.lang !== d.boxLanguage && (await ask('Sprache der Box', `Die Box spricht gerade ${LANGS[d.boxLanguage] ?? d.boxLanguage}. Soll sie ab jetzt ${LANGS[speech.lang] ?? speech.lang} sprechen – Ansagen, Durchsagen und vorgelesene Namen?`, 'Umstellen'))) await speakIn(speech.lang)
+      if (speech.lang !== d.boxLanguage && (await ask('Sprache der Box', `Die Box spricht gerade ${SPEECH_NAMES[d.boxLanguage] ?? d.boxLanguage}. Soll sie ab jetzt ${SPEECH_NAMES[speech.lang] ?? speech.lang} sprechen – Ansagen, Durchsagen und vorgelesene Namen?`, 'Umstellen'))) await speakIn(speech.lang)
       again()
     }
   }
@@ -7174,7 +7405,7 @@ async function saySheet() {
   openSheet(
     `<h2>Durchsage</h2><p class="help" style="margin:0">${esc(r.body.config.parents.pause ? 'Die Box sagt es sofort – die Musik hält dafür kurz an.' : 'Die Box sagt es sofort – die Musik wird dafür leiser.')}</p>
      ${templates.length ? `<div class="say-grid">${templates.map((t, i) => `<button type="button" class="say-tile" data-say="${i}">${icon('vol', 18)}<span>${esc(t)}</span></button>`).join('')}</div>` : ''}
-     <div class="field"><label for="say-text">Oder eigener Text</label><textarea class="input" id="say-text" rows="2" maxlength="300" placeholder="${esc('z. B. „Papa kommt gleich hoch.“')}"></textarea></div>
+     <div class="field"><label for="say-text">Oder eigener Text</label><textarea class="input" id="say-text" rows="2" maxlength="300" dir="auto" placeholder="${esc('z. B. „Papa kommt gleich hoch.“')}"></textarea></div>
      <div class="btns"><button class="btn primary" id="say-go">${icon('vol', 18)}Jetzt durchsagen</button><button class="btn" data-close>Schließen</button></div>`,
     (sheet, close) => {
       sheet.querySelector('[data-close]').onclick = close
@@ -8499,6 +8730,44 @@ const CONTROLLERS = {
       await loadServices()
       state.values.set('svcPod', svc.podcasts)
       state.values.set('svcRadio', svc.radio)
+      const h = await api(`${API}/feed-hosts`)
+      svc.feedHosts = h.ok ? (h.body?.hosts ?? []) : []
+    },
+    // the podcast servers of the home network the box may fetch feeds from (see allowLanFeed)
+    sections: (page) => [
+      ...page.sections,
+      {
+        title: 'Server im Heimnetz',
+        help: 'Podcast-Server im eigenen Netz, z. B. Pinepods oder Audiobookshelf. Andere Adressen im Heimnetz ruft die Box nicht ab. Ein Feed im Heimnetz fragt beim Hinzufügen selbst danach.',
+        items: [
+          {
+            type: 'html',
+            html: `${
+              svc.feedHosts?.length
+                ? `<div class="rows">${svc.feedHosts.map((h, i) => `<div class="entry"><span class="avatar">${icon('server', 16)}</span><span class="lbl"><b translate="no">${esc(h)}</b></span><button class="btn sm" data-fh-rm="${i}">Entfernen</button></div>`).join('')}</div>`
+                : `<p class="help" style="margin:0">${esc('Noch keiner erlaubt.')}</p>`
+            }
+            <div class="field-pick"><input class="input" id="fh-new" placeholder="${esc('z. B. 192.168.1.20:8040')}" autocomplete="off" spellcheck="false" translate="no" ${NO_PW_MANAGER}><button type="button" class="btn" id="fh-add">${icon('plus', 16)}Erlauben</button></div>`,
+          },
+        ],
+      },
+    ],
+    mount(root, page) {
+      const save = async (body, done) => {
+        const r = await api(`${API}/feed-hosts`, { method: 'POST', body })
+        if (!r.ok) return toast(r.body?.error === 'never_allowed' ? 'Das ist die Box selbst – nicht möglich' : r.body?.error === 'too_many' ? 'Es sind schon 20 Server erlaubt' : 'Die Adresse passt nicht', 'info')
+        svc.feedHosts = r.body.hosts
+        toast(done)
+        renderPage(page, false)
+      }
+      for (const b of root.querySelectorAll('[data-fh-rm]')) b.onclick = () => save({ host: svc.feedHosts[Number(b.dataset.fhRm)], allow: false }, 'Entfernt')
+      const add = () => {
+        const v = $('#fh-new', root).value.trim()
+        if (!v) return toast('Bitte eine Adresse eintragen', 'info')
+        save({ url: /^https?:\/\//i.test(v) ? v : `http://${v}`, allow: true }, 'Erlaubt')
+      }
+      $('#fh-add', root).onclick = add
+      $('#fh-new', root).onkeydown = (e) => e.key === 'Enter' && add()
     },
     async change(key, v) {
       const field = { svcPod: 'podcastSearch', svcRadio: 'radioSearch' }[key]
@@ -8608,6 +8877,7 @@ const CONTROLLERS = {
     async load() {
       await Promise.all([loadTheme(), loadDisplayOptions()])
       state.values.set('stage', disp.theme.stage === true)
+      state.values.set('tts', disp.theme.stageAutoRead === true)
       state.values.set('names', disp.opts.coverflowShowNames)
       state.values.set('hideScroll', disp.opts.hideScrollbar)
     },
@@ -8617,6 +8887,8 @@ const CONTROLLERS = {
         items: sec.items.map((it) => {
           const cur = themeLabel(disp.theme?.current ?? '')
           if (it.key === 'stage') return { ...it, help: `Große Cover in der Mitte, für die Kinder-Themes${isKidsTheme(disp.theme?.current) ? '' : ` – das aktive Theme (${cur}) nutzt sie nicht`}.` }
+          // (reading names out works only with the cover flow: shown under it while it is on)
+          if (it.key === 'tts') return { ...it, dep: 'stage' }
           if (it.key === 'names' || it.key === 'hideScroll') return { ...it, help: disp.theme?.current === 'coverflow' ? 'Nur beim Theme „coverflow“.' : `Nur beim Theme „coverflow“ – aktiv ist gerade „${cur}“.` }
           return it
         }),
@@ -8626,43 +8898,12 @@ const CONTROLLERS = {
         const r = await api(`${API}/theme-stage`, { method: 'POST', body: { stage: v } })
         return toast(r.ok ? (v ? 'Cover-Flow-Ansicht an' : 'Cover-Flow-Ansicht aus') : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
       }
-      if (key === 'names') return saveDisplayOptions({ coverflowShowNames: v })
-      if (key === 'hideScroll') return saveDisplayOptions({ hideScrollbar: v })
-    },
-  },
-  vorlesen: {
-    async load() {
-      await Promise.all([loadTheme(), loadDisplayOptions()])
-      state.values.set('tts', disp.theme.stageAutoRead === true)
-      state.values.set('ttsLang', ttsName(disp.opts.ttsLanguage))
-    },
-    sections: (page) =>
-      page.sections.map((sec) => ({
-        ...sec,
-        items: sec.items.map((it) =>
-          it.key === 'ttsLang'
-            ? { ...it, options: disp.opts.ttsLanguages.map((l) => ttsName(l.code)).sort((a, b) => a.localeCompare(b, 'de')), help: 'Die Sprache, in der die Box Namen vorliest. Der Player startet dafür neu.' }
-            : it.key === 'tts'
-              ? // (it works only with the cover flow of the children's themes: said when that is off)
-                { ...it, help: disp.theme?.stage ? 'Liest den Namen vor, wenn beim Wischen ein Cover in der Mitte stehen bleibt (nur bei den Kinder-Themes).' : 'Wirkt nur mit der Cover-Flow-Ansicht – die ist unter Aussehen › Ansicht gerade aus.' }
-              : it,
-        ),
-      })),
-    async change(key, v, page) {
       if (key === 'tts') {
         const r = await api(`${API}/theme-stage`, { method: 'POST', body: { autoRead: v } })
         return toast(r.ok ? (v ? 'Vorlesen an' : 'Vorlesen aus') : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
       }
-      if (key === 'ttsLang') {
-        const code = disp.opts.ttsLanguages.find((l) => ttsName(l.code) === v)?.code
-        if (!code || code === disp.opts.ttsLanguage) return
-        const ok = await ask('Sprache ändern', 'Der Player startet dafür neu – was gerade läuft, stoppt kurz.', 'Ändern')
-        if (!ok) {
-          state.values.set('ttsLang', ttsName(disp.opts.ttsLanguage))
-          return renderPage(page, false)
-        }
-        if (await saveDisplayOptions({ ttsLanguage: code }, `Vorlese-Sprache: ${v}`)) disp.opts.ttsLanguage = code
-      }
+      if (key === 'names') return saveDisplayOptions({ coverflowShowNames: v })
+      if (key === 'hideScroll') return saveDisplayOptions({ hideScrollbar: v })
     },
   },
   startbilder: { load: loadBootscreens, top: bootTop, sections: () => [], ownNav: true, mount: mountBoot },
@@ -8804,6 +9045,17 @@ const CONTROLLERS = {
           help: 'Was neu ist und wie weit gehört – auf dem Display und in der App.',
           items: [it('epNew'), it('epNewDays', { dep: 'epNew' }), it('epProgress')],
         },
+        {
+          title: 'Kopfhörer',
+          items: [
+            {
+              type: 'toggle',
+              key: 'outPick',
+              label: 'Box oder Kopfhörer am Display wählen',
+              help: 'Ein Tipp auf die Lautstärke oben im Player öffnet „Hören mit“ – nur wenn ein Bluetooth-Gerät gekoppelt ist. In der App geht es immer.',
+            },
+          ],
+        },
       ]
     },
     async change(key, v, page) {
@@ -8834,6 +9086,7 @@ const CONTROLLERS = {
       if (key === 'resume') return saveDisplayOptions({ resume: v }, `${v} Fortsetzen-Einträge`)
       if (key === 'listTimer') return saveDisplayOptions({ listviewTimer: v }, `Titelliste nach ${fmtSec(v)}`)
       if (key === 'setTimer') return saveDisplayOptions({ settingsAccessTimer: v }, `Einstellungen nach ${fmtSec(v)}`)
+      if (key === 'outPick') return saveDisplayOptions({ outputPicker: !!v }, v ? 'Kinder können am Display umschalten' : 'Umschalten nur in der App')
       if (key === 'epResume') return saveDisplayOptions({ episodeResume: !!v }, v ? 'Folgen gehen an der letzten Stelle weiter' : 'Folgen beginnen immer von vorn')
       if (key === 'epDays') {
         const days = EP_DAYS.find(([l]) => l === v)?.[1]
@@ -9935,3 +10188,323 @@ boot().catch((err) => {
   console.error(err)
   $('#content').innerHTML = `<div class="loading"><p>Die App konnte nicht geladen werden.</p></div>`
 })
+
+/* ---------- Start › "Angepinnt" (see eltern/pinned-cards.ts) ----------
+ * Every card with a heading gets a pin. Pinned, it is on the start page
+ *   - as a link (any card): a tile with its heading and page; a tap opens the page, goes to the card and marks it for
+ *     a moment - the card is always the real one, nothing is copied;
+ *   - as a whole card (only the cards in LIVE_CARDS): a small version of its own, to see and use on the start page.
+ * A card is known by its page and an id (data-card, else made from its heading as written in the app - the
+ * translation comes later), not by the heading shown. Idea and first version: Andreas (Lippsson), wowa1990/MuPiBox#11.
+ */
+
+const pins = { list: null, jump: null }
+const pinSlug = (s) =>
+  String(s)
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 64)
+const pinKey = (p) => `${p.page}:${p.card}`
+
+// The list as the box has it now - read before it is shown or changed: another phone (or another window) may have
+// changed it, and a list kept since the app was opened undid that when it was saved whole
+async function pinsFetch() {
+  const r = await api(`${API}/pinned-cards`)
+  if (r.ok && Array.isArray(r.body?.items)) pins.list = r.body.items
+  else pins.list ??= []
+  return pins.list
+}
+
+// A change, made by the box on its list (see pinned-cards.ts): {add: pin}, {remove: {page, card}} or {items} (order)
+async function pinsChange(body) {
+  const r = await api(`${API}/pinned-cards`, { method: 'POST', body })
+  if (r.ok && Array.isArray(r.body?.items)) pins.list = r.body.items
+  else toast('Nicht gespeichert', 'info')
+  return r.ok
+}
+
+// The whole cards for the start page: what they show and how they are wired
+const LIVE_CARDS = {
+  // the chart of the battery's page (hatChart), to look at; the values are changed on that page
+  'mupihat:ladekurve': {
+    title: 'Ladekurve',
+    async html() {
+      await loadHat()
+      return `<div class="hat-chart">${hatChart()}</div>${hatNowLine()}
+        <div class="btns"><button class="btn sm" data-pin-edit>${icon('sliders', 16)}Werte ändern</button></div>`
+    },
+    mount(el) {
+      el.querySelector('[data-pin-edit]').onclick = () => pinGo({ page: 'mupihat', card: 'ladekurve' })
+    },
+  },
+  // the parents' messages: a template at a tap, or an own text
+  'sprachausgabe:eltern-durchsagen': {
+    title: 'Durchsagen',
+    async html() {
+      const r = await api(`${API}/speech`)
+      if (!r.ok || !r.body?.configured) return `<p class="help" style="margin:0">${esc('Die Sprachausgabe ist noch nicht eingerichtet.')}</p>`
+      const t = r.body.texts?.templates ?? []
+      return `${t.length ? `<div class="pin-say">${t.map((x, i) => `<button type="button" class="pin-chip" data-pin-say="${i}">${icon('vol', 16)}<span dir="auto">${esc(x)}</span></button>`).join('')}</div>` : ''}
+        <div class="btns"><button class="btn sm" data-pin-own>${icon('plus', 16)}Eigener Text …</button></div>
+        ${r.body.config?.parents?.on ? '' : `<p class="help" style="margin:0">${esc('Durchsagen sind gerade ausgeschaltet.')}</p>`}`
+    },
+    mount(el) {
+      for (const b of el.querySelectorAll('[data-pin-say]')) b.onclick = () => speechSay(b.querySelector('span').textContent)
+      el.querySelector('[data-pin-own]')?.addEventListener('click', () => saySheet())
+    },
+  },
+  // headphones and speakers: connect or disconnect at a tap
+  'bluetooth:gekoppelte-gerate': {
+    title: 'Kopfhörer',
+    async html() {
+      const r = await api(`${API}/bluetooth`)
+      const b = r.body ?? {}
+      if (!r.ok) return `<p class="help" style="margin:0">${esc('Bluetooth antwortet gerade nicht.')}</p>`
+      if (!b.powered) return `<p class="help" style="margin:0">${esc('Bluetooth ist aus.')}</p>`
+      pins.btDevices = b.devices ?? []
+      return pins.btDevices.length
+        ? `<div class="rows">${pins.btDevices
+            .map(
+              (d, i) =>
+                `<div class="entry"><span class="avatar">${icon('phones', 16)}</span><span class="lbl"><b translate="no">${esc(d.name)}</b><small>${d.connected ? 'verbunden' : 'nicht verbunden'}</small></span>${d.connected ? `<button class="btn sm" data-pin-bt="disconnect" data-i="${i}">Trennen</button>` : `<button class="btn sm primary" data-pin-bt="connect" data-i="${i}">Verbinden</button>`}</div>`,
+            )
+            .join('')}</div>`
+        : `<p class="help" style="margin:0">${esc('Noch kein Gerät gekoppelt.')}</p>`
+    },
+    mount(el, refresh) {
+      for (const b of el.querySelectorAll('[data-pin-bt]')) {
+        b.onclick = async () => {
+          const d = pins.btDevices[Number(b.dataset.i)]
+          const connect = b.dataset.pinBt === 'connect'
+          b.disabled = true
+          const r = await api(`${API}/bluetooth/${b.dataset.pinBt}`, { method: 'POST', body: { mac: d.mac } })
+          toast(r.body?.ok ? `${d.name} ${connect ? 'verbunden' : 'getrennt'}` : `${d.name} ${connect ? 'ließ sich nicht verbinden – ist es an?' : 'ließ sich nicht trennen'}`, r.body?.ok ? 'ok' : 'info')
+          refresh()
+        }
+      }
+    },
+  },
+}
+
+// A pinned card's page, scrolled to the card, which is marked for a moment (see pinInject)
+function pinGo(p) {
+  pins.jump = p
+  go(p.page)
+}
+
+// A settings page just drawn: a pin in the head of each card with a heading; a card asked for (pinGo) marked
+function pinInject(main, page) {
+  if (page.id === 'start') return
+  for (const card of main.querySelectorAll(':scope > section.card, :scope > .card')) {
+    const h2 = card.querySelector(':scope > .card-head > h2, :scope > h2')
+    if (!h2 || !h2.textContent.trim()) continue
+    const id = card.dataset.card || pinSlug(h2.textContent.trim())
+    if (!id) continue
+    const p = { page: page.id, card: id, title: h2.textContent.trim() }
+    card.dataset.pinKey = pinKey(p)
+    let head = card.querySelector(':scope > .card-head')
+    if (!head) {
+      head = document.createElement('div')
+      head.className = 'card-head'
+      h2.replaceWith(head)
+      head.appendChild(h2)
+    }
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.className = 'icon-btn soft pin-btn'
+    b.dataset.pinFor = pinKey(p)
+    b.innerHTML = icon('pin', 16)
+    b.onclick = () => pinToggle(p)
+    head.appendChild(b)
+  }
+  pinsFetch().then(() => main.isConnected && pinButtons(main))
+  const want = pins.jump
+  if (want && want.page === page.id) {
+    pins.jump = null
+    const card = main.querySelector(`[data-pin-key="${CSS.escape(pinKey(want))}"]`)
+    if (card) {
+      setTimeout(() => {
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        card.classList.add('pin-flash')
+        setTimeout(() => card.classList.remove('pin-flash'), 2400)
+      }, 80)
+    }
+  }
+}
+
+// The pins' state as the list has it
+function pinButtons(root) {
+  for (const b of root.querySelectorAll('[data-pin-for]')) {
+    const on = (pins.list ?? []).some((p) => pinKey(p) === b.dataset.pinFor)
+    b.classList.toggle('on', on)
+    b.setAttribute('aria-pressed', String(on))
+    b.setAttribute('aria-label', on ? 'Von der Startseite lösen' : 'An die Startseite heften')
+  }
+}
+
+// A tap on a pin: off when it is pinned; else on - a card with a version of its own asks how
+async function pinToggle(p) {
+  const list = await pinsFetch()
+  const done = (msg) => {
+    pinButtons(document)
+    toast(msg, 'ok')
+  }
+  if (list.some((x) => pinKey(x) === pinKey(p))) {
+    if (await pinsChange({ remove: { page: p.page, card: p.card } })) done('Von der Startseite gelöst')
+    return
+  }
+  if (!LIVE_CARDS[pinKey(p)]) {
+    if (await pinsChange({ add: { ...p, view: 'link' } })) done('Auf der Startseite – als Verknüpfung')
+    return
+  }
+  openSheet(
+    `<h2>An die Startseite</h2><p class="help" style="margin:0">${esc(`„${p.title}“ auf der Startseite zeigen als:`)}</p>
+    <div class="choices">
+      <button type="button" class="choice on" data-view="card" aria-pressed="true"><span class="radio"></span><span class="lbl"><b>Ganze Karte</b><small>Direkt auf der Startseite sehen und bedienen.</small></span></button>
+      <button type="button" class="choice" data-view="link" aria-pressed="false"><span class="radio"></span><span class="lbl"><b>Verknüpfung</b><small>Eine kleine Kachel; ein Tipp springt zur Karte.</small></span></button>
+    </div>
+    <p class="help" style="margin:0">Umstellen geht später unter Start › Angepinnt › Anordnen.</p>
+    <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>${icon('pin', 16)}Anheften</button></div>`,
+    (sheet, close) => {
+      let view = 'card'
+      for (const c of sheet.querySelectorAll('[data-view]')) {
+        c.onclick = () => {
+          view = c.dataset.view
+          for (const x of sheet.querySelectorAll('[data-view]')) {
+            x.classList.toggle('on', x === c)
+            x.setAttribute('aria-pressed', String(x === c))
+          }
+        }
+      }
+      sheet.querySelector('[data-close]').onclick = close
+      sheet.querySelector('[data-ok]').onclick = async () => {
+        close()
+        if (await pinsChange({ add: { ...p, view } })) done(view === 'card' ? 'Auf der Startseite – als ganze Karte' : 'Auf der Startseite – als Verknüpfung')
+      }
+    },
+  )
+}
+
+// The page's place for a link: "Audio › Sprachausgabe"
+function pinWhere(p) {
+  const pg = state.pages.get(p.page)
+  const parent = pg?.parent && state.pages.get(pg.parent)
+  return [parent?.parent ? parent.title : '', pg?.title].filter(Boolean).join(' › ')
+}
+
+// Start: the whole cards in two columns as the player and the tiles above (on a phone one, in the order chosen),
+// the links below
+async function drawPins(root) {
+  await pinsFetch()
+  const box = $('#pins', root)
+  if (!box?.isConnected) return
+  const list = (pins.list ?? []).filter((p) => state.pages.has(p.page))
+  if (!list.length) {
+    box.hidden = true
+    box.innerHTML = ''
+    return
+  }
+  box.hidden = false
+  const asCard = (p) => !!LIVE_CARDS[pinKey(p)] && p.view !== 'link'
+  const cards = list.filter(asCard)
+  const links = list.filter((p) => !asCard(p))
+  const cardHtml = (p, i) =>
+    `<section class="card pin-card" data-live="${i}" style="order:${i}"><div class="card-head"><h2>${esc(LIVE_CARDS[pinKey(p)].title)}</h2><button class="icon-btn soft pin-btn on" data-unpin="${esc(pinKey(p))}" aria-label="${esc(tr('Von der Startseite lösen'))}">${icon('pin', 16)}</button></div><div class="pin-body"><p class="help" style="margin:0">Lade …</p></div></section>`
+  const col = (rest) => `<div class="pin-col">${cards.map((p, i) => (i % 2 === rest ? cardHtml(p, i) : '')).join('')}</div>`
+  box.innerHTML = `<div class="pin-label"><span class="section-label" style="margin:0">Angepinnt</span><button class="btn sm ghost" id="pin-arrange">${icon('sliders', 16)}Anordnen</button></div>
+    ${cards.length ? `<div class="pin-live">${col(0)}${col(1)}</div>` : ''}
+    ${
+      links.length
+        ? `<div class="pin-links">${links
+            .map(
+              (p) =>
+                `<button class="pin-link" data-pin-go="${esc(pinKey(p))}"><span class="tile">${icon(state.pages.get(p.page)?.icon || 'chevron', 18)}</span><span class="lbl"><b>${esc(p.title || LIVE_CARDS[pinKey(p)]?.title || '')}</b><small>${esc(pinWhere(p))}</small></span><span class="chev">${icon('chevron', 16)}</span></button>`,
+            )
+            .join('')}</div>`
+        : ''
+    }`
+  for (const b of box.querySelectorAll('[data-pin-go]')) b.onclick = () => pinGo(list.find((p) => pinKey(p) === b.dataset.pinGo))
+  for (const b of box.querySelectorAll('[data-unpin]')) {
+    b.onclick = async () => {
+      const [page, card] = b.dataset.unpin.split(':')
+      if (await pinsChange({ remove: { page, card } })) {
+        toast('Von der Startseite gelöst', 'ok')
+        drawPins(root)
+      }
+    }
+  }
+  $('#pin-arrange', box).onclick = () => pinArrange(root)
+  for (const [i, p] of cards.entries()) {
+    const el = box.querySelector(`[data-live="${i}"] .pin-body`)
+    const fill = async () => {
+      try {
+        const html = await LIVE_CARDS[pinKey(p)].html()
+        if (!el.isConnected) return
+        el.innerHTML = html
+        LIVE_CARDS[pinKey(p)].mount(el, fill)
+      } catch {
+        if (el.isConnected) el.innerHTML = `<p class="help" style="margin:0">${esc(tr('Ließ sich nicht laden'))}</p>`
+      }
+    }
+    fill()
+  }
+}
+
+// The order of the pinned cards, card or link, taking one off
+async function pinArrange(root) {
+  await pinsFetch()
+  const draw = (sheet) => {
+    const list = pins.list ?? []
+    sheet.querySelector('#pin-rows').innerHTML = list.length
+      ? list
+          .map((p, i) => {
+            const live = !!LIVE_CARDS[pinKey(p)]
+            return `<div class="entry pin-row"><span class="avatar">${icon(live && p.view !== 'link' ? 'grid' : 'link', 16)}</span><span class="lbl"><b>${esc(p.title)}</b><small>${esc(pinWhere(p))}</small>${
+              live
+                ? `<div class="seg sm" data-view-of="${i}"><button aria-pressed="${p.view !== 'link'}" data-v="card">Ganze Karte</button><button aria-pressed="${p.view === 'link'}" data-v="link">Verknüpfung</button></div>`
+                : `<small>Verknüpfung</small>`
+            }</span>
+          <button class="icon-btn soft" data-up="${i}" aria-label="${esc(tr('Nach oben'))}" ${i ? '' : 'disabled'}>${icon('up', 16)}</button><button class="btn sm" data-rm="${i}">Lösen</button></div>`
+          })
+          .join('')
+      : `<p class="help" style="margin:0">${esc(tr('Nichts angepinnt.'))}</p>`
+    // (order and view: the whole list, read when the sheet opened and after every change; taking one off: by itself)
+    const change = async (next) => {
+      if (await pinsChange(next)) draw(sheet)
+    }
+    for (const s of sheet.querySelectorAll('[data-view-of]')) {
+      s.onclick = (e) => {
+        const btn = e.target.closest('button')
+        if (!btn) return
+        change({ items: (pins.list ?? []).map((p, i) => (i === Number(s.dataset.viewOf) ? { ...p, view: btn.dataset.v } : p)) })
+      }
+    }
+    for (const b of sheet.querySelectorAll('[data-up]')) {
+      b.onclick = () => {
+        const next = [...(pins.list ?? [])]
+        const i = Number(b.dataset.up)
+        const moved = next[i]
+        next[i] = next[i - 1]
+        next[i - 1] = moved
+        change({ items: next })
+      }
+    }
+    for (const b of sheet.querySelectorAll('[data-rm]')) {
+      b.onclick = () => {
+        const p = (pins.list ?? [])[Number(b.dataset.rm)]
+        if (p) change({ remove: { page: p.page, card: p.card } })
+      }
+    }
+  }
+  openSheet(
+    `<h2>Angepinnt</h2><p class="help" style="margin:0">${esc('Ganze Karten stehen oben, Verknüpfungen darunter. Neues heftest du mit dem Pin oben rechts an einer Karte an.')}</p><div class="rows" id="pin-rows"></div><div class="btns"><button class="btn primary" data-close>Fertig</button></div>`,
+    (sheet, close) => {
+      draw(sheet)
+      sheet.querySelector('[data-close]').onclick = close
+    },
+    () => root.isConnected && drawPins(root),
+  )
+}

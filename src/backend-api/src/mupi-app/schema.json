@@ -41,7 +41,7 @@
    "id": "g-aussehen",
    "title": "Aussehen",
    "icon": "pal",
-   "description": "Theme, Ansicht, Vorlesen, Start- & Wartungsbilder, Display-Texte"
+   "description": "Theme, Ansicht, Start- & Wartungsbilder, Display-Texte"
   },
   {
    "id": "g-display",
@@ -1865,7 +1865,7 @@
    "area": "einstellungen",
    "parent": "g-aussehen",
    "title": "Ansicht",
-   "description": "Cover Flow, Namen, Scrollleiste",
+   "description": "Cover Flow, Namen vorlesen, Scrollleiste",
    "icon": "grid",
    "sections": [
     {
@@ -1881,6 +1881,13 @@
       },
       {
        "type": "toggle",
+       "label": "Namen vorlesen, wenn das Cover stehen bleibt",
+       "key": "tts",
+       "default": false,
+       "help": "Liest den Namen vor, wenn beim Wischen ein Cover in der Mitte stehen bleibt. Stimme und Sprache: Audio › Sprachausgabe."
+      },
+      {
+       "type": "toggle",
        "label": "Ordner- und Albumnamen anzeigen",
        "key": "names",
        "default": true
@@ -1890,59 +1897,6 @@
        "label": "Horizontale Scrollleiste ausblenden",
        "key": "hideScroll",
        "default": true
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "vorlesen",
-   "slug": "read-aloud",
-   "area": "einstellungen",
-   "parent": "g-aussehen",
-   "title": "Vorlesen",
-   "description": "Namen vorlesen, Sprache",
-   "icon": "vol",
-   "sections": [
-    {
-     "title": "",
-     "help": "",
-     "items": [
-      {
-       "type": "toggle",
-       "label": "Namen vorlesen, wenn das Cover stehen bleibt",
-       "key": "tts",
-       "default": false,
-       "help": "In der Cover-Flow-Ansicht wird der Name des mittleren Covers vorgelesen."
-      },
-      {
-       "type": "select",
-       "label": "Vorlese-Sprache",
-       "key": "ttsLang",
-       "default": "Deutsch",
-       "options": [
-        "Arabisch",
-        "Chinesisch",
-        "Dänisch",
-        "Deutsch",
-        "Englisch",
-        "Finnisch",
-        "Französisch",
-        "Griechisch",
-        "Hindi",
-        "Italienisch",
-        "Japanisch",
-        "Niederländisch",
-        "Norwegisch",
-        "Polnisch",
-        "Portugiesisch",
-        "Russisch",
-        "Schwedisch",
-        "Spanisch",
-        "Tschechisch",
-        "Türkisch",
-        "Ukrainisch"
-       ]
       }
      ]
     }
@@ -4528,9 +4482,9 @@
      "items": [
       {
        "type": "nav",
-       "label": "Vorlese-Sprache",
-       "target": "vorlesen",
-       "subtitle": "Eigene Einstellung mit 21 Sprachen · Aussehen › Vorlesen"
+       "label": "Sprachausgabe",
+       "target": "sprachausgabe",
+       "subtitle": "Stimme und gesprochene Sprache · Audio › Sprachausgabe"
       }
      ]
     }
@@ -4542,7 +4496,7 @@
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "Aussehen",
-   "description": "Theme, Ansicht, Vorlesen, Start- & Wartungsbilder, Display-Texte",
+   "description": "Theme, Ansicht, Start- & Wartungsbilder, Display-Texte",
    "icon": "pal",
    "sections": [
     {
@@ -4565,13 +4519,7 @@
        "type": "nav",
        "label": "Ansicht",
        "target": "ansicht",
-       "subtitle": "Cover Flow, Namen, Scrollleiste"
-      },
-      {
-       "type": "nav",
-       "label": "Vorlesen",
-       "target": "vorlesen",
-       "subtitle": "Namen vorlesen, Sprache"
+       "subtitle": "Cover Flow, Namen vorlesen, Scrollleiste"
       },
       {
        "type": "nav",
@@ -5453,19 +5401,9 @@
    "id": "ansicht"
   },
   {
-   "l": "Vorlesen",
-   "where": "Aussehen › Vorlesen",
-   "id": "vorlesen"
-  },
-  {
    "l": "Namen beim Anhalten vorlesen",
-   "where": "Aussehen › Vorlesen",
-   "id": "vorlesen"
-  },
-  {
-   "l": "Vorlese-Sprache",
-   "where": "Aussehen › Vorlesen",
-   "id": "vorlesen"
+   "where": "Aussehen › Ansicht",
+   "id": "ansicht"
   },
   {
    "l": "Start- und Wartungsbilder",
@@ -5726,6 +5664,31 @@
    "l": "Neue Geräte koppeln",
    "where": "Audio › Bluetooth",
    "id": "bluetooth"
+  },
+  {
+   "l": "Sprachausgabe",
+   "where": "Audio › Sprachausgabe",
+   "id": "sprachausgabe"
+  },
+  {
+   "l": "Stimmen (Piper)",
+   "where": "Audio › Sprachausgabe",
+   "id": "sprachausgabe"
+  },
+  {
+   "l": "Die Box spricht",
+   "where": "Audio › Sprachausgabe",
+   "id": "sprachausgabe"
+  },
+  {
+   "l": "Automatische Ansagen",
+   "where": "Audio › Sprachausgabe",
+   "id": "sprachausgabe"
+  },
+  {
+   "l": "Eltern-Durchsagen",
+   "where": "Audio › Sprachausgabe",
+   "id": "sprachausgabe"
   },
   {
    "l": "Akku",

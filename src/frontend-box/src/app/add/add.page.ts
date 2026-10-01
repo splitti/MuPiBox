@@ -484,6 +484,13 @@ export class AddPage implements OnInit, AfterViewInit {
     }
 
     if (this.edit) {
+      // (what this page does not show stays: a podcast's choice of episodes and how many of them are kept on the SD
+      // card - both set in the web app)
+      if (media.type === 'rss') {
+        const was = this.editMedia as Media & { offline?: number }
+        if (was.episodePick) media.episodePick = was.episodePick
+        if (was.offline) (media as Media & { offline?: number }).offline = was.offline
+      }
       this.mediaService.editRawMediaAtIndex(this.editMedia.index, media)
       setTimeout(async () => {
         const check = this.mediaService.getResponse()

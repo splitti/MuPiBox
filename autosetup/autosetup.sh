@@ -47,7 +47,7 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	#   autoconf - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
 	#   automake - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
 	# libwidevinecdm0 stays: the display plays Spotify through the Web Playback SDK in Chromium, which needs Widevine
-	packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa preload python3-smbus2 pigpio libjson-c-dev libi2c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh rfkill"
+	packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip bluez zip unzip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa preload python3-smbus2 pigpio libjson-c-dev libi2c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh rfkill"
 
 	###############################################################################################
 
@@ -86,6 +86,12 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 		echo -e "## apt-get install ${package} ## finished after $((after - before)) seconds" >&3 2>&3
 		STEP=$((STEP + 1))
 	done
+
+	# pinctrl for the OnOff SHIM on Debian 13 "Trixie" (libgpiod 2, see scripts/OnOffShim): in raspberrypi-utils there.
+	# Debian 12 "Bookworm" has no such package and keeps using the tools of gpiod.
+	if apt-cache show raspberrypi-utils >/dev/null 2>&1 && ! dpkg -l raspberrypi-utils 2>/dev/null | grep -q '^ii'; then
+		apt-get --yes install raspberrypi-utils >&3 2>&3
+	fi
 
 	###############################################################################################
 
@@ -142,15 +148,6 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 		echo -e "## pip install telepot ## finished after $((after - before)) seconds" >&3 2>&3
 		STEP=$((STEP + 1))
 	fi
-
-	###############################################################################################
-
-	echo -e "XXX\n${STEP}\nInstall DietPi software dependencies ...\nXXX"
-	before=$(date +%s)
-	su - -c "yes '' | /boot/dietpi/dietpi-software install 200" >&3 2>&3
-	after=$(date +%s)
-	echo -e "## DietPi software dependencies ## finished after $((after - before)) seconds" >&3 2>&3
-	STEP=$((STEP + 1))
 
 	###############################################################################################
 
@@ -307,13 +304,24 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 
 	###############################################################################################
 
+	# The release of DietPi-Dashboard from GitHub (one program, port 5252, as the app links it). DietPi's own installer
+	# (dietpi-software install 200) is not used: until a release from v0.7.0 on it installs a nightly build from
+	# nightly.link - not always there (404) - as a second dashboard with its own services on the same port.
+	# A fixed version, program and config.toml of the same release: from v0.7.0 on the dashboard is two programs
+	# (backend, frontend) with another config - "latest" would pair a new program with the old config. The download
+	# goes to a temporary file and is taken only when it is a program (ELF); without it the dashboard is left out.
+	DD_VERSION="v0.6.2"
 	echo -e "XXX\n${STEP}\nSetup DietPi-Dashboard... \nXXX"
 	before=$(date +%s)
 	mkdir -p /opt/dietpi-dashboard >&3 2>&3
-	rm -f /opt/dietpi-dashboard/dietpi-dashboard >&3 2>&3
-	curl -fL "$(curl -sSf 'https://api.github.com/repos/nonnorm/DietPi-Dashboard/releases/latest' | mawk -F\" "/\"browser_download_url\": \".*dietpi-dashboard-$(uname -m)\"/{print \$4}")" -o /opt/dietpi-dashboard/dietpi-dashboard >&3 2>&3
-	chmod +x /opt/dietpi-dashboard/dietpi-dashboard >&3 2>&3
-	curl -sSfL https://raw.githubusercontent.com/nonnorm/DietPi-Dashboard/v0.6.2/config.toml -o /opt/dietpi-dashboard/config.toml >&3 2>&3
+	DD_TMP=$(mktemp /tmp/dietpi-dashboard.XXXXXX)
+	if curl -fL --retry 3 --retry-delay 3 -m 180 -o "${DD_TMP}" "https://github.com/nonnorm/DietPi-Dashboard/releases/download/${DD_VERSION}/dietpi-dashboard-$(uname -m)" >&3 2>&3 && [ "$(head -c 4 "${DD_TMP}" | od -An -c | tr -d ' ')" = "177ELF" ]; then
+		install -m 755 "${DD_TMP}" /opt/dietpi-dashboard/dietpi-dashboard >&3 2>&3
+	else
+		echo "DietPi-Dashboard ${DD_VERSION} download failed - the box runs without it" >&3 2>&3
+	fi
+	rm -f "${DD_TMP}"
+	curl -sSfL --retry 3 --retry-delay 3 -m 60 "https://raw.githubusercontent.com/nonnorm/DietPi-Dashboard/${DD_VERSION}/config.toml" -o /opt/dietpi-dashboard/config.toml >&3 2>&3
 	sed -i 's/#terminal_user = "root"/terminal_user = "dietpi"/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Setup DietPi-Dashboard ## finished after $((after - before)) seconds" >&3 2>&3
@@ -608,6 +616,8 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	systemctl disable --now samba-ad-dc.service >&3 2>&3
 	systemctl daemon-reload >&3 2>&3
 	for service in mupi_wifi mupi_check_internet mupi_check_monitor mupi_idle_shutdown smbd mupi_startstop pulseaudio mupi_splash mupi_powerled dietpi-dashboard mupi_ethernet mupi_goodbye; do
+		# (the dashboard only when its program came - see "Setup DietPi-Dashboard")
+		[ "${service}" = "dietpi-dashboard" ] && [ ! -x /opt/dietpi-dashboard/dietpi-dashboard ] && continue
 		systemctl enable ${service}.service >&3 2>&3
 		systemctl start ${service}.service >&3 2>&3
 	done

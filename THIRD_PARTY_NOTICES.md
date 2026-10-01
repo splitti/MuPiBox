@@ -212,9 +212,9 @@ Marvel, Star Trek, Wall-E). These names, characters and trademarks belong to the
 (e.g. the Pixabay Content License) covers the picture, not the rights in what it shows. MuPiBox is not affiliated
 with or endorsed by these owners.
 
-## B. Downloaded by the installer or updater (not part of the MuPiBox packages)
+## B. Downloaded by the installer, the updater or the box itself (not part of the MuPiBox packages)
 
-The installer makes the box fetch these from their own sources; MuPiBox does not redistribute them.
+The installer (or the box, when a function needs them) fetches these from their own sources; MuPiBox does not redistribute them.
 
 | Component | How | License | Source / notes |
 | --- | --- | --- | --- |
@@ -224,6 +224,8 @@ The installer makes the box fetch these from their own sources; MuPiBox does not
 | @ionic/cli | npm, global (autosetup) | MIT | https://github.com/ionic-team/ionic-cli |
 | requests, pyserial, telepot | Python packages from PyPI (autosetup) | Apache-2.0, BSD-3-Clause, MIT | Telegram bot and serial access |
 | noVNC | only when remote control is switched on (git clone to /usr/share/novnc) | MPL-2.0 (parts under other licenses) | https://github.com/novnc/noVNC |
+| Piper | 2023.11.14-2 (piper_linux_aarch64.tar.gz from github.com/rhasspy/piper), only when the first voice is loaded under Speech output | MIT; the archive also holds espeak-ng and its data (GPL-3.0-or-later), ONNX Runtime 1.14.1 (MIT), piper-phonemize (MIT) and the libtashkeel model (MIT) | https://github.com/rhasspy/piper - speaks announcements and names offline |
+| Piper voices | each one when it is loaded under Speech output (huggingface.co/rhasspy/piper-voices) | per voice (e.g. CC0, CC BY 4.0, MIT) - the app shows each voice's licence and source | https://huggingface.co/rhasspy/piper-voices |
 
 ### Loaded at runtime from CDNs (admin interface)
 

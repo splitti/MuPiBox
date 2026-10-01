@@ -13,9 +13,21 @@ done
 
 /usr/bin/bluetoothctl power on
 /usr/bin/bluetoothctl agent on
-/usr/bin/bluetoothctl defaut-agent
+/usr/bin/bluetoothctl default-agent
 
-for MAC in $(/usr/bin/bluetoothctl paired-devices | cut -d" " -f2)
+# The paired devices: "devices Paired" from bluetoothctl 5.65 on (Debian 12 has 5.66 - "paired-devices" is gone there
+# and found nothing, so no device was connected at the start); older ones still know "paired-devices". Only what
+# "info" calls paired (an old bluetoothctl lists every known device for "devices Paired").
+paired_devices() {
+	local list
+	list=$(/usr/bin/bluetoothctl devices Paired 2>/dev/null | grep "^Device")
+	[ -n "${list}" ] || list=$(/usr/bin/bluetoothctl paired-devices 2>/dev/null | grep "^Device")
+	for MAC in $(echo "${list}" | cut -d" " -f2); do
+		/usr/bin/bluetoothctl info "${MAC}" 2>/dev/null | grep -q "Paired: yes" && echo "${MAC}"
+	done
+}
+
+for MAC in $(paired_devices)
 do
 	/usr/bin/bluetoothctl connect ${MAC}
 	CONN_STATE=$(/usr/bin/bluetoothctl info)

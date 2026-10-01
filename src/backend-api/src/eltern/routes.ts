@@ -48,6 +48,8 @@ import { registerCustomCoverRoutes } from './covers'
 import { registerDisplayRoutes } from './display'
 import { registerSpeechRoutes } from './speech-routes'
 import { registerCustomBootRoutes } from './bootscreen-custom'
+import { registerFeedHostRoutes } from './feed-hosts'
+import { registerPinnedCardRoutes } from './pinned-cards'
 import { registerHardwareRoutes } from './hardware'
 import { registerServicesRoutes } from './services'
 import { registerSystemRoutes } from './system'
@@ -61,6 +63,7 @@ import { registerHealthRoutes } from './health'
 import { playlogSummary } from './playlog'
 import { weeklySummaryOn } from './weekly-summary'
 import { isArdFeed } from '../ard-sounds'
+import { pickEpisodes } from '../episode-pick'
 import { episodeKey, mayKeep, type PodcastOffline } from '../podcast-offline'
 import { pbkdf2Sync, randomBytes } from 'node:crypto'
 import { localOnly } from '../request-guard'
@@ -286,7 +289,9 @@ type RssEpisode = { url: string; title: string; date: string | null; duration: s
 // The episodes of a podcast feed, newest first (by date; without dates in the feed's order), from the feed as the
 // display reads it (xml-js: a text is {_text} or {_cdata}, one item comes as an object instead of a list), or null.
 // cover: the episode's picture, else the show's, through the box's picture proxy (a local copy is /rss-covers/…).
-async function rssEpisodes(feed: string): Promise<RssEpisode[] | null> {
+// offlineView: the box is offline and the feed holds only the episodes on the SD card (server.ts offlineFeedView) -
+// those are the chosen ones already, a choice of episodes is not applied to them again.
+async function rssEpisodes(feed: string): Promise<(RssEpisode[] & { offlineView?: boolean }) | null> {
   const text = (v: unknown): string => {
     if (typeof v === 'string') return v
     const o = v as { _text?: unknown; _cdata?: unknown } | undefined
@@ -301,7 +306,8 @@ async function rssEpisodes(feed: string): Promise<RssEpisode[] | null> {
   try {
     const r = await fetch(`http://127.0.0.1:8200/api/rssfeed/cached?url=${encodeURIComponent(feed)}`, { signal: AbortSignal.timeout(15000) })
     if (!r.ok) return null
-    const channel = ((await r.json()) as { rss?: { channel?: Record<string, unknown> } }).rss?.channel
+    const body = (await r.json()) as { rss?: { channel?: Record<string, unknown>; _offline?: unknown } }
+    const channel = body.rss?.channel
     const raw = channel?.item
     const items = (Array.isArray(raw) ? raw : raw ? [raw] : []) as Record<string, unknown>[]
     const show = text(channel?.title)
@@ -333,7 +339,8 @@ async function rssEpisodes(feed: string): Promise<RssEpisode[] | null> {
         at: Number.isFinite(when) ? when : -i,
       })
     }
-    return list.sort((x, y) => y.at - x.at).map(({ at: _at, ...e }) => e)
+    const sorted = list.sort((x, y) => y.at - x.at).map(({ at: _at, ...e }) => e)
+    return body.rss?._offline === true ? Object.assign(sorted, { offlineView: true }) : sorted
   } catch {
     return null
   }
@@ -362,6 +369,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   registerDisplayRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerSpeechRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerCustomBootRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  registerFeedHostRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  registerPinnedCardRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerHardwareRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerServicesRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerSystemRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
@@ -1737,11 +1746,13 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(404).json({ error: 'item_not_found' })
       return
     }
-    const episodes = await rssEpisodes(item.id)
-    if (!episodes) {
+    const all = await rssEpisodes(item.id)
+    if (!all) {
       res.status(502).json({ error: 'feed_unavailable' })
       return
     }
+    // (only the chosen ones - the box shows no others; total: how many the feed has)
+    const episodes = all.offlineView ? all : pickEpisodes(all, item.episodePick)
     // (saved: on the SD card - it plays without internet too; pos/len/done: where it was left, from the player's
     // episode-positions.json next to the library)
     const saved = deps.podcastOffline ? await deps.podcastOffline.list(item.id) : {}
@@ -1758,6 +1769,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         const p = positions[key] ?? positions[e.url]
         return { ...e, saved: !!saved[key], ...(p ? { pos: p.pos ?? 0, len: p.len ?? 0, done: !!p.done } : {}) }
       }),
+      total: all.length,
     })
   })
 
@@ -1844,7 +1856,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         // As a tap on the box's episode list: the newest episode (by its date) - read from the feed as the display
         // reads it (/api/rssfeed/cached, the box's own address).
         const feed = String(item.id ?? '')
-        const episodes = await rssEpisodes(feed)
+        const all = await rssEpisodes(feed)
+        const episodes = all && !all.offlineView ? pickEpisodes(all, item.episodePick) : all
         // (a chosen one only when it is one of this feed's episodes)
         const episode = typeof body.episode === 'string' && body.episode ? episodes?.find((e) => e.url === body.episode) : episodes?.[0]
         if (!episode) {
@@ -2427,6 +2440,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       }
       for (const d of parsed) {
         const info = await execCapture('sudo', ['-u', 'dietpi', 'bluetoothctl', 'info', d.mac])
+        // (only paired ones: "devices" also names what a search found nearby - phones, watches, trackers with
+        // changing addresses - for some minutes after it, and they showed up here as "paired" without a name)
+        if (!/Paired:\s*yes/i.test(info.stdout)) continue
         devices.push({ ...d, connected: /Connected:\s*yes/i.test(info.stdout) })
       }
     }
@@ -2506,18 +2522,23 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     })
   }
 
-  /** POST /api/app/bluetooth/remove  — {mac} → remove_bt.sh + bt restart. */
+  /** POST /api/app/bluetooth/remove  — {mac}: disconnected, untrusted and removed (bluetoothctl). */
   router.post('/bluetooth/remove', requireSession, requireCsrf, noController, async (req, res) => {
     const mac = String((req.body as { mac?: unknown } | undefined)?.mac ?? '').trim()
     if (!BT_MAC_RE.test(mac)) {
       res.status(400).json({ error: 'invalid MAC' })
       return
     }
-    const r = await execCapture('sudo', ['-u', 'dietpi', '/usr/local/bin/mupibox/remove_bt.sh', mac], 15000)
-    await execCapture('sudo', ['-u', 'dietpi', '/usr/local/bin/mupibox/stop_bt.sh'], 15000)
-    await execCapture('sudo', ['-u', 'dietpi', '/usr/local/bin/mupibox/start_bt.sh'], 15000)
-    // (a device the controller did not let go is an error the app shows, not "removed")
-    res.status(r.ok ? 200 : 500).json({ ok: r.ok })
+    // bluetoothctl's own commands, one at a time (they wait for their answer). Before, remove_bt.sh slept 4 s and then
+    // stop_bt.sh / start_bt.sh switched the radio off and at once on again - the "on" came while the "off" was still
+    // going and failed: after every removal Bluetooth stayed off.
+    const ctl = (...args: string[]) => execCapture('sudo', ['-u', 'dietpi', 'bluetoothctl', ...args], 10000)
+    await ctl('disconnect', mac)
+    await ctl('untrust', mac)
+    const r = await ctl('remove', mac)
+    // (gone, or it was not known at all: removed either way; a device the controller did not let go is an error)
+    const gone = !/Paired:\s*yes/i.test((await ctl('info', mac)).stdout)
+    res.status(gone ? 200 : 500).json({ ok: gone, detail: gone ? undefined : r.stdout.trim().slice(0, 200) })
   })
 
   /** POST /api/app/bluetooth/autoconnect  — {enable:boolean}. */

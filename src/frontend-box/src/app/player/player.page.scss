@@ -743,3 +743,161 @@ ion-content.player-content.tracklist-active {
         opacity: 0.35;
     }
 }
+
+// "Hören mit" (see openOutput): the volume chip is a button then; the choice over the whole page, in the colours of the
+// children's theme (with plain fallbacks for the others)
+.out-tap {
+  cursor: pointer;
+}
+
+.out-dim {
+  position: absolute;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(16, 40, 64, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.out-panel {
+  position: relative;
+  width: min(600px, 92vw);
+  box-sizing: border-box;
+  padding: 24px 28px 28px;
+  border-radius: 30px;
+  background: var(--km-night-2, #fff);
+  color: var(--km-lavender, #1d3f5e);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+
+  h2 {
+    margin: 4px 0 20px;
+    font-size: 28px;
+    font-weight: 600;
+  }
+}
+
+.out-close {
+  position: absolute;
+  right: 18px;
+  top: 16px;
+  width: 52px;
+  height: 52px;
+  border: 0;
+  border-radius: 26px;
+  background: var(--km-night, #eaf3fb);
+  color: inherit;
+  font-size: 26px;
+  display: grid;
+  place-items: center;
+}
+
+.out-tiles {
+  --out-gap: 16px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - (var(--out-cols) - 1) * var(--out-gap)) / var(--out-cols));
+  gap: var(--out-gap);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.out-tile {
+  position: relative;
+  height: 190px;
+  border: 0;
+  border-radius: 26px;
+  background: var(--km-night, #eaf3fb);
+  color: var(--km-lavender, #1d3f5e);
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 10px;
+  min-width: 0;
+
+  b {
+    font-size: 22px;
+    font-weight: 600;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  small {
+    font-size: 16px;
+    opacity: 0.75;
+  }
+
+  &.on {
+    background: var(--km-night-3, #2f7fc0);
+    color: var(--km-cream, #fff);
+    box-shadow: 0 6px 0 var(--km-night-4, #1f5f96);
+  }
+}
+
+.out-icon {
+  width: 72px;
+  height: 72px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  .fill {
+    fill: currentColor;
+  }
+}
+
+.out-check {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  width: 34px;
+  height: 34px;
+  border-radius: 17px;
+  background: var(--km-apricot, #ff8a4c);
+  display: grid;
+  place-items: center;
+
+  svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: #fff;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}
+
+.out-spin {
+  width: 44px;
+  height: 44px;
+  margin: 14px;
+  border-radius: 50%;
+  border: 5px solid currentColor;
+  border-top-color: transparent;
+  opacity: 0.6;
+  animation: out-spin 0.9s linear infinite;
+}
+
+@keyframes out-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.out-toast {
+  margin-top: 18px;
+  padding: 12px 18px;
+  border-radius: 18px;
+  background: var(--km-lavender, #1d3f5e);
+  color: var(--km-night-2, #fff);
+  font-size: 18px;
+  text-align: center;
+}

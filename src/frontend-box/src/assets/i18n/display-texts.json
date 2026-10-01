@@ -18,7 +18,14 @@
         "closeShort": "Close",
         "nasUnavailable": "NAS not reachable",
         "offlineLabel": "No connection",
-        "resumeTitle": "Continue listening"
+        "resumeTitle": "Continue listening",
+        "outputTitle": "Listen with",
+        "outputBox": "Box",
+        "outputBoxSub": "Speaker",
+        "outputConnected": "connected",
+        "outputOff": "off",
+        "outputConnecting": "switching on …",
+        "outputNotFound": "Not found – is it switched on?"
       }
     },
     "de": {
@@ -38,7 +45,14 @@
         "closeShort": "Zu",
         "nasUnavailable": "NAS nicht erreichbar",
         "offlineLabel": "Keine Verbindung",
-        "resumeTitle": "Weiterhören"
+        "resumeTitle": "Weiterhören",
+        "outputTitle": "Hören mit",
+        "outputBox": "Box",
+        "outputBoxSub": "Lautsprecher",
+        "outputConnected": "verbunden",
+        "outputOff": "aus",
+        "outputConnecting": "einschalten …",
+        "outputNotFound": "Nicht gefunden – ist es an?"
       }
     },
     "fr": {
@@ -58,7 +72,14 @@
         "closeShort": "Fermer",
         "nasUnavailable": "NAS inaccessible",
         "offlineLabel": "Pas de connexion",
-        "resumeTitle": "Reprendre l'écoute"
+        "resumeTitle": "Reprendre l'écoute",
+        "outputTitle": "Écouter avec",
+        "outputBox": "Box",
+        "outputBoxSub": "Haut-parleur",
+        "outputConnected": "connecté",
+        "outputOff": "éteint",
+        "outputConnecting": "allumage …",
+        "outputNotFound": "Introuvable – est-il allumé ?"
       }
     },
     "es": {
@@ -78,7 +99,14 @@
         "closeShort": "Cerrar",
         "nasUnavailable": "NAS no disponible",
         "offlineLabel": "Sin conexión",
-        "resumeTitle": "Seguir escuchando"
+        "resumeTitle": "Seguir escuchando",
+        "outputTitle": "Escuchar con",
+        "outputBox": "Caja",
+        "outputBoxSub": "Altavoz",
+        "outputConnected": "conectado",
+        "outputOff": "apagado",
+        "outputConnecting": "encendiendo …",
+        "outputNotFound": "No encontrado – ¿está encendido?"
       }
     },
     "it": {
@@ -98,7 +126,14 @@
         "closeShort": "Chiudi",
         "nasUnavailable": "NAS non raggiungibile",
         "offlineLabel": "Nessuna connessione",
-        "resumeTitle": "Continua ad ascoltare"
+        "resumeTitle": "Continua ad ascoltare",
+        "outputTitle": "Ascolta con",
+        "outputBox": "Box",
+        "outputBoxSub": "Altoparlante",
+        "outputConnected": "connesso",
+        "outputOff": "spento",
+        "outputConnecting": "accensione …",
+        "outputNotFound": "Non trovato – è acceso?"
       }
     },
     "nl": {
@@ -118,7 +153,14 @@
         "closeShort": "Sluiten",
         "nasUnavailable": "NAS niet bereikbaar",
         "offlineLabel": "Geen verbinding",
-        "resumeTitle": "Verder luisteren"
+        "resumeTitle": "Verder luisteren",
+        "outputTitle": "Luisteren met",
+        "outputBox": "Box",
+        "outputBoxSub": "Luidspreker",
+        "outputConnected": "verbonden",
+        "outputOff": "uit",
+        "outputConnecting": "inschakelen …",
+        "outputNotFound": "Niet gevonden – staat het aan?"
       }
     },
     "sv": {
@@ -138,7 +180,14 @@
         "closeShort": "Stäng",
         "nasUnavailable": "NAS går inte att nå",
         "offlineLabel": "Ingen anslutning",
-        "resumeTitle": "Fortsätt lyssna"
+        "resumeTitle": "Fortsätt lyssna",
+        "outputTitle": "Lyssna med",
+        "outputBox": "Box",
+        "outputBoxSub": "Högtalare",
+        "outputConnected": "ansluten",
+        "outputOff": "av",
+        "outputConnecting": "slås på …",
+        "outputNotFound": "Hittades inte – är den på?"
       }
     },
     "da": {
@@ -158,7 +207,14 @@
         "closeShort": "Luk",
         "nasUnavailable": "NAS kan ikke nås",
         "offlineLabel": "Ingen forbindelse",
-        "resumeTitle": "Lyt videre"
+        "resumeTitle": "Lyt videre",
+        "outputTitle": "Lyt med",
+        "outputBox": "Boks",
+        "outputBoxSub": "Højttaler",
+        "outputConnected": "forbundet",
+        "outputOff": "slukket",
+        "outputConnecting": "tænder …",
+        "outputNotFound": "Ikke fundet – er den tændt?"
       }
     },
     "nb": {
@@ -178,7 +234,14 @@
         "closeShort": "Lukk",
         "nasUnavailable": "NAS er ikke tilgjengelig",
         "offlineLabel": "Ingen tilkobling",
-        "resumeTitle": "Fortsett å lytte"
+        "resumeTitle": "Fortsett å lytte",
+        "outputTitle": "Lytt med",
+        "outputBox": "Boks",
+        "outputBoxSub": "Høyttaler",
+        "outputConnected": "tilkoblet",
+        "outputOff": "av",
+        "outputConnecting": "slås på …",
+        "outputNotFound": "Ikke funnet – er den på?"
       }
     },
     "fi": {
@@ -198,7 +261,14 @@
         "closeShort": "Sulje",
         "nasUnavailable": "NAS ei ole tavoitettavissa",
         "offlineLabel": "Ei yhteyttä",
-        "resumeTitle": "Jatka kuuntelua"
+        "resumeTitle": "Jatka kuuntelua",
+        "outputTitle": "Kuuntele",
+        "outputBox": "Laatikko",
+        "outputBoxSub": "Kaiutin",
+        "outputConnected": "yhdistetty",
+        "outputOff": "pois",
+        "outputConnecting": "käynnistyy …",
+        "outputNotFound": "Ei löytynyt – onko se päällä?"
       }
     },
     "pl": {
@@ -218,7 +288,14 @@
         "closeShort": "Zamknij",
         "nasUnavailable": "NAS jest niedostępny",
         "offlineLabel": "Brak połączenia",
-        "resumeTitle": "Słuchaj dalej"
+        "resumeTitle": "Słuchaj dalej",
+        "outputTitle": "Słuchaj przez",
+        "outputBox": "Box",
+        "outputBoxSub": "Głośnik",
+        "outputConnected": "połączono",
+        "outputOff": "wyłączone",
+        "outputConnecting": "włączanie …",
+        "outputNotFound": "Nie znaleziono – czy jest włączone?"
       }
     },
     "pt": {
@@ -238,7 +315,14 @@
         "closeShort": "Fechar",
         "nasUnavailable": "NAS indisponível",
         "offlineLabel": "Sem ligação",
-        "resumeTitle": "Continuar a ouvir"
+        "resumeTitle": "Continuar a ouvir",
+        "outputTitle": "Ouvir com",
+        "outputBox": "Caixa",
+        "outputBoxSub": "Altifalante",
+        "outputConnected": "ligado",
+        "outputOff": "desligado",
+        "outputConnecting": "a ligar …",
+        "outputNotFound": "Não encontrado – está ligado?"
       }
     },
     "tr": {
@@ -258,7 +342,14 @@
         "closeShort": "Kapat",
         "nasUnavailable": "NAS erişilemiyor",
         "offlineLabel": "Bağlantı yok",
-        "resumeTitle": "Dinlemeye devam et"
+        "resumeTitle": "Dinlemeye devam et",
+        "outputTitle": "Dinle",
+        "outputBox": "Kutu",
+        "outputBoxSub": "Hoparlör",
+        "outputConnected": "bağlı",
+        "outputOff": "kapalı",
+        "outputConnecting": "açılıyor …",
+        "outputNotFound": "Bulunamadı – açık mı?"
       }
     },
     "uk": {
@@ -278,7 +369,14 @@
         "closeShort": "Закрити",
         "nasUnavailable": "NAS недоступний",
         "offlineLabel": "Немає з’єднання",
-        "resumeTitle": "Слухати далі"
+        "resumeTitle": "Слухати далі",
+        "outputTitle": "Слухати через",
+        "outputBox": "Бокс",
+        "outputBoxSub": "Динамік",
+        "outputConnected": "підключено",
+        "outputOff": "вимкнено",
+        "outputConnecting": "вмикається …",
+        "outputNotFound": "Не знайдено – чи ввімкнено?"
       }
     },
     "ru": {
@@ -298,7 +396,14 @@
         "closeShort": "Закрыть",
         "nasUnavailable": "NAS недоступен",
         "offlineLabel": "Нет соединения",
-        "resumeTitle": "Слушать дальше"
+        "resumeTitle": "Слушать дальше",
+        "outputTitle": "Слушать через",
+        "outputBox": "Бокс",
+        "outputBoxSub": "Динамик",
+        "outputConnected": "подключено",
+        "outputOff": "выключено",
+        "outputConnecting": "включается …",
+        "outputNotFound": "Не найдено – включено ли?"
       }
     },
     "cs": {
@@ -318,7 +423,14 @@
         "closeShort": "Zavřít",
         "nasUnavailable": "NAS není dostupný",
         "offlineLabel": "Bez připojení",
-        "resumeTitle": "Poslouchat dál"
+        "resumeTitle": "Poslouchat dál",
+        "outputTitle": "Poslouchat přes",
+        "outputBox": "Box",
+        "outputBoxSub": "Reproduktor",
+        "outputConnected": "připojeno",
+        "outputOff": "vypnuto",
+        "outputConnecting": "zapíná se …",
+        "outputNotFound": "Nenalezeno – je zapnuté?"
       }
     },
     "el": {
@@ -338,7 +450,14 @@
         "closeShort": "Κλείσιμο",
         "nasUnavailable": "Το NAS δεν είναι διαθέσιμο",
         "offlineLabel": "Χωρίς σύνδεση",
-        "resumeTitle": "Συνέχεια ακρόασης"
+        "resumeTitle": "Συνέχεια ακρόασης",
+        "outputTitle": "Ακρόαση με",
+        "outputBox": "Κουτί",
+        "outputBoxSub": "Ηχείο",
+        "outputConnected": "συνδεδεμένο",
+        "outputOff": "κλειστό",
+        "outputConnecting": "ενεργοποίηση …",
+        "outputNotFound": "Δεν βρέθηκε – είναι ανοιχτό;"
       }
     }
   }

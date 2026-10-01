@@ -25,9 +25,13 @@ const CACHE_DIR = '/home/dietpi/MuPiBox/tts_files/piper'
 const HF = 'https://huggingface.co/rhasspy/piper-voices/resolve/main'
 const PIPER_RELEASE = 'https://github.com/rhasspy/piper/releases/download/2023.11.14-2'
 
-/** The languages of the app, with the family Piper files their voices under (Norwegian: "no"). */
+/**
+ * The languages the box speaks, with the family Piper files their voices under (Norwegian: "no"): the app's and four
+ * more Google speaks (the box's language for reading out names had them before)
+ */
 export const SPEECH_LANGS: Record<string, string> = {
   de: 'de', en: 'en', fr: 'fr', es: 'es', it: 'it', nl: 'nl', da: 'da', sv: 'sv', nb: 'no', fi: 'fi', pl: 'pl', cs: 'cs', tr: 'tr', pt: 'pt', el: 'el', ru: 'ru', uk: 'uk',
+  ar: 'ar', zh: 'zh', hi: 'hi', ja: 'ja',
 }
 
 export type SpeechEngine = 'piper' | 'google' | 'off'
@@ -72,6 +76,10 @@ export const SPEECH_DEFAULTS: Record<string, SpeechTexts & { templates: string[]
   el: {rest: "Ακόμα {min} λεπτά και μετά τελειώνουμε για σήμερα.",bedtime: "Καληνύχτα! Τώρα είναι ώρα για: {name}.",sleepEnd: "Σε λίγο τελειώνει. Όνειρα γλυκά!",templates: ["Το φαγητό είναι έτοιμο!","Πλύνε τα δόντια σου, σε παρακαλώ.","Φεύγουμε σε 10 λεπτά.","Μάζεψε τα πράγματά σου, σε παρακαλώ."]},
   ru: {rest: "Ещё {min} минут, и на сегодня всё.",bedtime: "Спокойной ночи! Теперь время для: {name}.",sleepEnd: "Скоро конец. Спи сладко!",templates: ["Еда готова!","Почисти зубки, пожалуйста.","Выходим через 10 минут.","Приберись, пожалуйста."]},
   uk: {rest: "Ще {min} хвилин, і на сьогодні все.",bedtime: "На добраніч! Тепер час для: {name}.",sleepEnd: "Скоро кінець. Солодких снів!",templates: ["Їжа готова!","Почисть зубки, будь ласка.","Виходимо через 10 хвилин.","Прибери, будь ласка."]},
+  ar: {rest: "بقيت {min} دقائق، ثم ينتهي الوقت لهذا اليوم.",bedtime: "تصبح على خير! حان الآن وقت: {name}.",sleepEnd: "سننتهي بعد قليل. نومًا هنيئًا!",templates: ["الطعام جاهز!","نظّف أسنانك من فضلك.","سنخرج بعد 10 دقائق.","رتّب أغراضك من فضلك."]},
+  zh: {rest: "还有 {min} 分钟，今天就到这里了。",bedtime: "晚安！现在是{name}时间。",sleepEnd: "马上就结束了。睡个好觉！",templates: ["饭做好了！","请去刷牙。","我们 10 分钟后出发。","请收拾一下东西。"]},
+  hi: {rest: "बस {min} मिनट और, फिर आज के लिए बस।",bedtime: "शुभ रात्रि! अब {name} का समय है।",sleepEnd: "बस थोड़ी देर में खत्म। अच्छे से सोना!",templates: ["खाना तैयार है!","कृपया दाँत साफ़ करो।","हम 10 मिनट में निकल रहे हैं।","कृपया सामान समेट लो।"]},
+  ja: {rest: "あと {min} 分で、きょうはおしまいだよ。",bedtime: "おやすみなさい！{name}の時間だよ。",sleepEnd: "もうすぐおしまい。ぐっすりおやすみ！",templates: ["ごはんができたよ！","歯をみがいてね。","10 分後に出かけるよ。","おかたづけしてね。"]},
 }
 
 export const SPEECH_DEFAULT_CONFIG: SpeechConfig = {
@@ -199,6 +207,10 @@ export const SPEECH_HELLO: Record<string, string> = {
   el: 'Γεια σου! Είμαι το MuPiBox σου. Χαίρομαι που είσαι εδώ.',
   ru: 'Привет! Я твой MuPiBox. Как хорошо, что ты здесь.',
   uk: 'Привіт! Я твій MuPiBox. Як добре, що ти тут.',
+  ar: 'مرحبًا! أنا صندوق MuPiBox الخاص بك. يسعدني أنك هنا.',
+  zh: '你好！我是你的 MuPiBox。很高兴你在这里。',
+  hi: 'नमस्ते! मैं तुम्हारा MuPiBox हूँ। अच्छा लगा कि तुम यहाँ हो।',
+  ja: 'こんにちは！ぼくはきみの MuPiBox だよ。来てくれてうれしいな。',
 }
 
 export function speechTexts(sp: SpeechConfig, lang: string): SpeechTexts & { templates: string[]; hello: string } {
@@ -237,6 +249,8 @@ async function loadCatalog(): Promise<NonNullable<typeof catalog>> {
   } catch (err) {
     // (offline: the copy on the box)
     if (!catalog) catalog = JSON.parse(await fsp.readFile(CATALOG_FILE, 'utf8').catch(() => '{}'))
+    // (tried again in 5 minutes, not at every request - each attempt can wait 15 s)
+    catalogAt = Date.now() - 24 * 3600e3 + 5 * 60e3
     console.warn(`${new Date().toLocaleString()}: [speech] voices list: ${(err as Error).message}`)
   }
   return catalog ?? {}
@@ -244,14 +258,49 @@ async function loadCatalog(): Promise<NonNullable<typeof catalog>> {
 
 const voiceFile = (key: string) => `${VOICE_DIR}/${key}.onnx`
 
+// The Piper on the box (2023.11) speaks voices whose sounds come from eSpeak (or plain text). Some newer voices of
+// Chinese and Japanese need their own (pinyin, japanese) and stay silent with it: those are left out, found in each
+// voice's .onnx.json (kept once read; not readable now: offered, the install checks again).
+const OWN_PHONEMES = new Set(['zh', 'ja'])
+const phonemeTypes = new Map<string, string>()
+const PLAYABLE_PHONEMES = ['espeak', 'text']
+
+async function phonemeType(jsonFile: string): Promise<string | null> {
+  const known = phonemeTypes.get(jsonFile)
+  if (known) return known
+  try {
+    const r = await fetch(`${HF}/${jsonFile}`, { signal: AbortSignal.timeout(10000) })
+    if (!r.ok) return null
+    const type = String(((await r.json()) as { phoneme_type?: unknown }).phoneme_type ?? 'espeak')
+    phonemeTypes.set(jsonFile, type)
+    return type
+  } catch {
+    return null
+  }
+}
+
+/** Whether the list of Piper's voices could be read (from the internet or the copy on the box) */
+export async function voiceCatalogKnown(): Promise<boolean> {
+  return Object.keys(await loadCatalog()).length > 0
+}
+
 /** The voices of a language (the app's code), the installed ones marked. */
 export async function listVoices(lang: string): Promise<VoiceInfo[]> {
   const family = SPEECH_LANGS[lang]
   if (!family) return []
   const cat = await loadCatalog()
   const order = ['high', 'medium', 'low', 'x_low']
-  return Object.values(cat)
-    .filter((v) => v.language?.family === family && VOICE_KEY.test(v.key))
+  const voices = Object.values(cat).filter((v) => v.language?.family === family && VOICE_KEY.test(v.key))
+  const playable = new Set<string>()
+  await Promise.all(
+    voices.map(async (v) => {
+      const json = Object.keys(v.files).find((f) => f.endsWith('.onnx.json'))
+      const type = OWN_PHONEMES.has(family) && json ? await phonemeType(json) : null
+      if (type === null || PLAYABLE_PHONEMES.includes(type)) playable.add(v.key)
+    }),
+  )
+  return voices
+    .filter((v) => playable.has(v.key))
     .map((v) => ({
       key: v.key,
       name: v.name,
@@ -355,6 +404,12 @@ export async function installVoice(key: string): Promise<boolean> {
       await ensurePiper()
       await fsp.mkdir(VOICE_DIR, { recursive: true })
       await download(`${HF}/${json}`, `${voiceFile(key)}.json`)
+      // (a voice the Piper on the box cannot speak: not loaded, see PLAYABLE_PHONEMES)
+      const type = String((JSON.parse(await fsp.readFile(`${voiceFile(key)}.json`, 'utf8')) as { phoneme_type?: unknown }).phoneme_type ?? 'espeak')
+      if (!PLAYABLE_PHONEMES.includes(type)) {
+        await fsp.rm(`${voiceFile(key)}.json`, { force: true })
+        throw new Error(`phoneme type ${type} not supported`)
+      }
       await download(`${HF}/${onnx}`, voiceFile(key), (n) => (job.bytes = n))
       job.state = 'done'
       if (afterInstall) void afterInstall().catch(() => undefined)

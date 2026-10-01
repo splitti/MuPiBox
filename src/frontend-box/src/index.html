@@ -59,6 +59,25 @@
         window.mupiBootDone = function (what) { done[what] = done[what] || Date.now(); check() }
         var timer = setInterval(function () { check(); if (document.documentElement.classList.contains('mupi-ready')) clearInterval(timer) }, 500)
         setTimeout(ready, 30000)
+        // The app never came up - the page was there, its scripts not (after an update the box's server started again
+        // while the display loaded): a white screen until the kiosk was restarted by hand. The page loads again after
+        // 25 s instead, at most 3 times in 5 minutes (a lasting fault does not turn into a loop).
+        setTimeout(function () {
+          var root = document.querySelector('app-root')
+          if (done.list || (root && root.children.length)) return
+          var s = {}
+          try { s = JSON.parse(sessionStorage.getItem('mupi-reload') || '{}') } catch (e) {}
+          if (!s.since || Date.now() - s.since > 300000) s = { n: 0, since: Date.now() }
+          if (s.n >= 3) return
+          s.n++
+          try { sessionStorage.setItem('mupi-reload', JSON.stringify(s)) } catch (e) {}
+          try {
+            fetch('/api/logs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entries: [{
+              level: 'warn', source: 'Boot', timestamp: new Date().toISOString(), message: 'the app did not come up within 25 s: the page loads again (' + s.n + '/3)'
+            }] }) })
+          } catch (e) {}
+          setTimeout(function () { location.reload() }, 300)
+        }, 25000)
       })()
     </script>
 </head>

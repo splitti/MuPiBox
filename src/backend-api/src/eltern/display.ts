@@ -101,6 +101,8 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
       // podcast episodes go on where they were left (the player, spotify-control.js), remembered for so many days
       // (0: without end)
       episodeResume: mb.episodeResume !== false,
+      // ("Hören mit" on the display's player: a tap on the volume chooses speaker or Bluetooth - audio-output.ts)
+      outputPicker: mb.outputPicker !== false,
       episodeResumeDays: num(mb.episodeResumeDays, 0, 3650) ?? 180,
       // new episodes marked (for so many days) and how far an episode was heard shown on the display (episode-state.ts)
       ...episodeStateSettings(mb),
@@ -125,7 +127,7 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
     const mb: Record<string, unknown> = {}
     const chromium: Record<string, unknown> = {}
     const bad = (what: string) => res.status(400).json({ error: `invalid ${what}` })
-    for (const key of ['coverflowShowNames', 'hideScrollbar', 'episodeResume', 'newEpisodes', 'episodeProgress']) {
+    for (const key of ['coverflowShowNames', 'hideScrollbar', 'episodeResume', 'newEpisodes', 'episodeProgress', 'outputPicker']) {
       if (body[key] === undefined) continue
       if (typeof body[key] !== 'boolean') return bad(key)
       mb[key] = body[key]

@@ -1,3 +1,57 @@
+<h3>DEV 5.0.5 - changes compared to 5.0.4</h3>
+<b>Highlights</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'><b>Choose the episodes of a podcast:</b> all, the newest or the first 10 / 20 / 50, or an own range – already when adding, with a preview of what ends up on the box.</li>
+<li id='linews' class='linews'><b>Speech output in 21 languages:</b> Arabic, Chinese and Hindi now with Piper voices on the box, Japanese through Google.</li>
+<li id='linews' class='linews'><b>No more white screen after an update:</b> the display loads again by itself when the app did not come up.</li>
+<li id='linews' class='linews'><b>Podcast servers in your own network</b> such as Pinepods or Audiobookshelf can be added: the web app asks once to allow the server.</li>
+<li id='linews' class='linews'><b>Pin cards to the start page</b> – as a whole card (e.g. the charge curve or the announcements) or as a link.</li>
+<li id='linews' class='linews'><b>Listen with:</b> switch between the box and Bluetooth headphones right on the display or in the web app.</li>
+</ul>
+<b>Web app</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Pin cards to the start page: every card with a heading has a pin. Some cards come as a whole card you can use right on the start page (charge curve, announcements, headphones), all others as a link that opens the page at that card. Order, card or link, and unpinning under Start &gt; Pinned &gt; Arrange. The pins are kept in the box, so every phone shows the same. Idea and first version by Andreas (Lippsson).</li>
+<li id='linews' class='linews'>Bluetooth: the list of paired devices no longer shows devices a search found nearby (phones, watches and trackers without a name appeared there for a few minutes). "Connect automatically" finds the paired devices again on Debian 12 (bluetoothctl 5.66 no longer knows "paired-devices" - no device was connected at the start).</li>
+<li id='linews' class='linews'>Bluetooth: removing a device no longer leaves Bluetooth switched off (it was switched off and at once on again, which failed), takes a moment instead of several seconds and shows at once that it is being removed.</li>
+<li id='linews' class='linews'><b>Listen with:</b> a tap on the volume at the top of the display's player chooses between the box's speaker and a paired Bluetooth device (headphones, speaker) - it connects the device, plays only there and keeps each output's own volume (a device connected the first time is not louder than the box). Not found: said on the display. The same choice is in the web app's "Now playing". Can be switched off for the display under Controls on the display. Only shown when a Bluetooth device is paired.</li>
+<li id='linews' class='linews'>The box's sound card comes back by itself when it dropped out of PulseAudio (seen after headphones were disconnected: nothing was audible until a restart).</li>
+<li id='linews' class='linews'>Children's themes: the volume and the track number at the top of the player are on one line again (the track number sat 2 px lower).</li>
+</ul>
+<b>Podcasts</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Which episodes of a podcast go on the box: all, the newest 10 / 20 / 50, the first 10 / 20 / 50 or an own range (counted by date, episode 1 is the oldest), with the order (newest or oldest first). Set when adding from the podcast search or later when editing; a preview shows which episodes end up on the box.</li>
+<li id='linews' class='linews'>The choice applies everywhere: the display, the episode lists of the web app, playing from the phone and the SD card, which can keep exactly the chosen episodes. The "new" dot only shows for chosen episodes.</li>
+<li id='linews' class='linews'>Without internet the box shows the episodes saved on the SD card – those are the chosen ones already, the choice is not applied a second time.</li>
+<li id='linews' class='linews'>Editing a podcast on the display keeps its choice of episodes and how many episodes stay on the SD card (the setting for the SD card used to get lost there).</li>
+<li id='linews' class='linews'>Podcast servers in your own network (e.g. Pinepods, Audiobookshelf): the box fetches no addresses of the home network by itself, so nobody can use it as a detour to other devices. When a feed of the home network is added, the web app asks once whether to allow that server (host and port only); the list is under Settings &gt; Services &gt; Servers in the home network. The box itself and loopback addresses are never allowed.</li>
+<li id='linews' class='linews'>Feeds whose address has its own query (e.g. ?api_key=…&amp;podcast_id=5, as Pinepods uses) are read completely on the display – before, everything from the "&amp;" on was lost and the display showed another feed.</li>
+</ul>
+<b>Speech output</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>The box also speaks Arabic, Chinese, Hindi and Japanese (announcements, messages from the parents, names on the display), with texts of their own. Before, these languages fell back to German.</li>
+<li id='linews' class='linews'>Only Piper voices the box can play are offered (some newer Chinese and Japanese voices need a newer Piper); without a voice the page says so, and Google speaks the language.</li>
+<li id='linews' class='linews'>The page Appearance &gt; Read aloud is gone: the switch for reading names aloud is under Appearance &gt; View below the cover flow it belongs to, the language under Audio &gt; Speech output ("The box speaks").</li>
+</ul>
+<b>Display</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>When the app has not come up 25 seconds after the page loaded (e.g. the box's server restarted during an update from the console), the display loads the page again – at most three times in five minutes.</li>
+</ul>
+<b>Installation and system</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>OnOff SHIM on Debian 13 "Trixie" (libgpiod 2): the power button and the power cut at shutdown work there too (pinctrl from raspberrypi-utils, installed where the system has it). Debian 12 "Bookworm" keeps the calls it always had.</li>
+<li id='linews' class='linews'>The installation no longer calls DietPi's own installer for the DietPi-Dashboard: it fetched a nightly build from nightly.link, which is not always there (the installation failed with a 404), as a second dashboard on the same port. The dashboard is installed from its GitHub release as before; unzip is part of the package list now. Installation and update fetch a fixed version of the dashboard (v0.6.2, program and configuration of the same release, checked before it replaces the installed one): later releases split it into two programs with another configuration and could not break it this way.</li>
+</ul>
+<b>Legal</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>The third-party notices also name Piper and its voices, which the box downloads itself when speech output is set up.</li>
+</ul>
 <h3>DEV 5.0.4 - changes compared to 5.0.3</h3>
 <b>Highlights</b>
 </ul>

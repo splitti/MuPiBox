@@ -240,6 +240,8 @@ body.km {
       align-items: center;
       gap: 6px;
       margin-left: 8px;
+      // (both on one line: aligned on the text's baseline, "2/21" sat 2 px lower than the volume with its icon)
+      vertical-align: middle;
     }
   }
 }
