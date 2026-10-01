@@ -302,9 +302,11 @@ rm -f /tmp/mupibox-update-failed
 	mkdir -p /opt/dietpi-dashboard >&3 2>&3
 	# Download to a temporary file first and replace the installed program only if that worked
 	# (before, a failed download - e.g. a DNS problem - left the dashboard without its program).
+	# A fixed version, program and config.toml of the same release (as autosetup.sh): from v0.7.0 on the dashboard is two
+	# programs (backend, frontend) with another config - "latest" would pair a new program with the old config.
+	DD_VERSION="v0.6.2"
 	DD_TMP=$(mktemp /tmp/dietpi-dashboard.XXXXXX)
-	DD_URL="$(curl -sSf --retry 3 --retry-delay 2 -m 30 'https://api.github.com/repos/nonnorm/DietPi-Dashboard/releases/latest' 2>&3 | mawk -F\" "/\"browser_download_url\": \".*dietpi-dashboard-$(uname -m)\"/{print \$4}")"
-	[ -z "${DD_URL}" ] && DD_URL="https://github.com/nonnorm/DietPi-Dashboard/releases/download/v0.6.2/dietpi-dashboard-$(uname -m)"
+	DD_URL="https://github.com/nonnorm/DietPi-Dashboard/releases/download/${DD_VERSION}/dietpi-dashboard-$(uname -m)"
 	if curl -fL --retry 3 --retry-delay 3 -m 180 -o "${DD_TMP}" "${DD_URL}" >&3 2>&3 && [ "$(head -c 4 "${DD_TMP}" | od -An -c | tr -d ' ')" = "177ELF" ]; then
 		install -m 755 "${DD_TMP}" /opt/dietpi-dashboard/dietpi-dashboard >&3 2>&3
 	else
@@ -312,7 +314,7 @@ rm -f /tmp/mupibox-update-failed
 	fi
 	rm -f "${DD_TMP}"
 	DD_CONF_TMP=$(mktemp /tmp/dietpi-dashboard-conf.XXXXXX)
-	if curl -sSfL --retry 3 --retry-delay 3 -m 60 https://raw.githubusercontent.com/nonnorm/DietPi-Dashboard/v0.6.2/config.toml -o "${DD_CONF_TMP}" >&3 2>&3 && [ -s "${DD_CONF_TMP}" ]; then
+	if curl -sSfL --retry 3 --retry-delay 3 -m 60 "https://raw.githubusercontent.com/nonnorm/DietPi-Dashboard/${DD_VERSION}/config.toml" -o "${DD_CONF_TMP}" >&3 2>&3 && [ -s "${DD_CONF_TMP}" ]; then
 		cp -f "${DD_CONF_TMP}" /opt/dietpi-dashboard/config.toml >&3 2>&3
 	fi
 	rm -f "${DD_CONF_TMP}"

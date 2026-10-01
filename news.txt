@@ -33,7 +33,7 @@
 </ul>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>OnOff SHIM on Debian 13 "Trixie" (libgpiod 2): the power button and the power cut at shutdown work there too (pinctrl from raspberrypi-utils, installed where the system has it). Debian 12 "Bookworm" keeps the calls it always had.</li>
-<li id='linews' class='linews'>The installation no longer calls DietPi's own installer for the DietPi-Dashboard: it fetched a nightly build from nightly.link, which is not always there (the installation failed with a 404), as a second dashboard on the same port. The dashboard is installed from its GitHub release as before; unzip is part of the package list now.</li>
+<li id='linews' class='linews'>The installation no longer calls DietPi's own installer for the DietPi-Dashboard: it fetched a nightly build from nightly.link, which is not always there (the installation failed with a 404), as a second dashboard on the same port. The dashboard is installed from its GitHub release as before; unzip is part of the package list now. Installation and update fetch a fixed version of the dashboard (v0.6.2, program and configuration of the same release, checked before it replaces the installed one): later releases split it into two programs with another configuration and could not break it this way.</li>
 </ul>
 <b>Legal</b>
 </ul>
