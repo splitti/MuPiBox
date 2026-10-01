@@ -1,3 +1,9 @@
+<h3>DEV 5.0.6 - changes compared to 5.0.5</h3>
+<b>Player</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>A new playback starts unpaused and without the picture of the one before: after a pause, a title started next showed the play button on the display while it played, and a local album could show the picture of a podcast episode played before it.</li>
+</ul>
 <h3>DEV 5.0.5 - changes compared to 5.0.4</h3>
 <b>Highlights</b>
 </ul>
@@ -44,7 +50,6 @@
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>When the app has not come up 25 seconds after the page loaded (e.g. the box's server restarted during an update from the console), the display loads the page again – at most three times in five minutes.</li>
 <li id='linews' class='linews'>Children's themes: the volume and the track number at the top of the player are on one line again (the track number sat 2 px lower).</li>
-<li id='linews' class='linews'>A new playback starts unpaused and without the picture of the one before: after a pause, a title started next showed the play button on the display while it played, and a local album could show the picture of a podcast episode played before it.</li>
 </ul>
 <b>Installation and system</b>
 </ul>
