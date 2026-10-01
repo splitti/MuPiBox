@@ -8,6 +8,17 @@ OFFLINE_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/o
 RESUME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/resume.json"
 ACTIVERESUME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/active_resume.json"
 OFFLINERESUME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/offline_resume.json"
+
+# The library without what needs the internet. Podcasts with episodes on the SD card stay (their list then shows
+# those only, see podcast-offline.ts; a resume tile of a kept episode too, by its address); the list is made again
+# when that changes too.
+PODCAST_INDEX="/home/dietpi/MuPiBox/podcasts/index.json"
+offline_filter() {
+	local index="${PODCAST_INDEX}"
+	/usr/bin/jq -e 'type == "object"' "${index}" > /dev/null 2>&1 || index=/dev/null
+	/usr/bin/jq --slurpfile off "${index}" '([$off[0].files[]?.feed] + [$off[0].files[]?.url]) as $feeds | .[] | select(.type != "spotify" and .type != "radio" and (.type != "rss" or (.id as $i | any($feeds[]; . == $i))))' < "$1"
+}
+
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 NETWORKCONFIG="/tmp/network.json"
 #FRONTENDCONFIG="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json"
@@ -58,26 +69,26 @@ fi
 
 if [ ! -f ${OFFLINE_FILE} ]; then
         echo -n "[" > ${OFFLINE_FILE}
-        echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio") | select(.type != "rss")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
+        echo -n $(offline_filter ${DATA_FILE}) >> ${OFFLINE_FILE}
         echo -n "]" >> ${OFFLINE_FILE}
         sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
         chown dietpi:dietpi ${OFFLINE_FILE}
-elif [ $(stat --format='%Y' "${DATA_FILE}") -gt $(stat --format='%Y' "${OFFLINE_FILE}") ]; then
+elif [ $(stat --format='%Y' "${DATA_FILE}") -gt $(stat --format='%Y' "${OFFLINE_FILE}") ] || [ "${PODCAST_INDEX}" -nt "${OFFLINE_FILE}" ]; then
         echo -n "[" > ${OFFLINE_FILE}
-        echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio") | select(.type != "rss")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
+        echo -n $(offline_filter ${DATA_FILE}) >> ${OFFLINE_FILE}
         echo -n "]" >> ${OFFLINE_FILE}
         sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
 fi
 
 if [ ! -f ${OFFLINERESUME_FILE} ]; then
         echo -n "[" > ${OFFLINERESUME_FILE}
-        echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio") | select(.type != "rss")' < ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
+        echo -n $(offline_filter ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
         echo -n "]" >> ${OFFLINERESUME_FILE}
         sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
         chown dietpi:dietpi ${OFFLINERESUME_FILE}
-elif [ $(stat --format='%Y' "${RESUME_FILE}") -gt $(stat --format='%Y' "${OFFLINERESUME_FILE}") ]; then
+elif [ $(stat --format='%Y' "${RESUME_FILE}") -gt $(stat --format='%Y' "${OFFLINERESUME_FILE}") ] || [ "${PODCAST_INDEX}" -nt "${OFFLINERESUME_FILE}" ]; then
         echo -n "[" > ${OFFLINERESUME_FILE}
-        echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio") | select(.type != "rss")' < ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
+        echo -n $(offline_filter ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
         echo -n "]" >> ${OFFLINERESUME_FILE}
         sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
 fi

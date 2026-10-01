@@ -84,6 +84,9 @@ export class MedialistPage extends SwiperIonicEventsHelper {
             ? ('folder' as const)
             : ('album' as const),
         synced: isSyncManaged(media),
+        isNew: media.episodeNew === true,
+        progress: media.episodeProgress,
+        done: media.episodeDone === true,
       }
     })
   })

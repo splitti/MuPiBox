@@ -37,6 +37,9 @@ export class RssFeedService {
             type: 'rss',
             category,
             index,
+            episodeNew: item._new === true,
+            episodeProgress: typeof item._pct === 'number' ? item._pct : undefined,
+            episodeDone: item._done === true,
           }
           Utils.copyExtraMediaData(extraDataSource, media)
           return media

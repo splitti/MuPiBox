@@ -14,6 +14,7 @@
 import { execFile, execFileSync, spawn } from 'node:child_process'
 import { promises as fsp, readdirSync, readFileSync } from 'node:fs'
 import * as os from 'node:os'
+import * as path from 'node:path'
 import { type Request, Router } from 'express'
 import QRCode from 'qrcode'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
@@ -37,20 +38,31 @@ import {
   restampSession,
   usePasswordStamp,
   newSignOutEpoch,
+  describeDevice,
+  listSessions,
+  destroySessionByRef,
+  mayResetPassword,
 } from './auth'
 import { ipRateLimit, localNetworkOnly, parseCookie, requireCsrf, requireSession } from './middleware'
 import { registerCustomCoverRoutes } from './covers'
 import { registerDisplayRoutes } from './display'
+import { registerSpeechRoutes } from './speech-routes'
+import { registerCustomBootRoutes } from './bootscreen-custom'
 import { registerHardwareRoutes } from './hardware'
 import { registerServicesRoutes } from './services'
 import { registerSystemRoutes } from './system'
 import { registerAdminRoutes } from './admin'
 import { registerNetworkRoutes } from './network'
 import { registerUpdateRoutes } from './updates'
-import { registerSpotifyConnectRoutes } from './spotify-connect'
 import { registerTlsRoutes, tlsOf } from './tls'
 import { type LocalLibraryDeps, registerLocalUploadRoutes } from './upload'
-import { randomBytes } from 'node:crypto'
+import { registerPodcastRoutes } from './podcasts'
+import { registerHealthRoutes } from './health'
+import { playlogSummary } from './playlog'
+import { weeklySummaryOn } from './weekly-summary'
+import { isArdFeed } from '../ard-sounds'
+import { episodeKey, mayKeep, type PodcastOffline } from '../podcast-offline'
+import { pbkdf2Sync, randomBytes } from 'node:crypto'
 import { localOnly } from '../request-guard'
 import { spotifyLoginAge } from './spotify-auth-age'
 import {
@@ -82,6 +94,8 @@ export interface ElternRouterDeps {
   nasCover?: (folder: string, bytes: Buffer, ext: '.jpg' | '.png') => Promise<'ok' | 'not_selected' | 'offline' | 'denied' | 'failed'>
   /** Whether a NAS folder is one the parents selected (server.ts nasPathSelected). */
   nasSelected?: (folder: string) => Promise<boolean>
+  /** The podcast episodes kept on the SD card (see ../podcast-offline.ts). */
+  podcastOffline?: PodcastOffline
 }
 
 /** Build a Set-Cookie header value. HttpOnly + SameSite=Strict; no Secure
@@ -148,6 +162,14 @@ function readDisplayLanguages(): Record<string, { name?: string }> {
  * only the number was taken, so after a save in MuPi-Conf the hearing protection (maxVolume) was ignored here.
  * undefined when missing or not 0..100.
  */
+// Bluetooth audio now: PulseAudio's default output is a Bluetooth device (headphones, a speaker) - then its own
+// maximum volume counts (mupibox.btMaxVolume), see the player's volumeCap()
+function bluetoothAudio(): Promise<boolean> {
+  return new Promise((resolve) =>
+    execFile('/usr/bin/pactl', ['get-default-sink'], { timeout: 3000 }, (err, stdout) => resolve(!err && String(stdout).trim().startsWith('bluez_'))),
+  )
+}
+
 function volumePercent(value: unknown): number | undefined {
   const n = typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : Number.NaN
   return Number.isFinite(n) && n >= 0 && n <= 100 ? Math.floor(n) : undefined
@@ -259,7 +281,7 @@ const adminTickets = new Map<string, number>()
 // The box's name as the browser uses it, without a port: Spotify's redirect address is https://<box>/…, through the
 // web server on port 443 (as the admin interface's https://<box>/spotify.php) - Spotify takes no http addresses any
 // more except 127.0.0.1, so http://<box>:8200 was refused after the login
-type RssEpisode = { url: string; title: string; date: string | null; duration: string; cover: string; show: string }
+type RssEpisode = { url: string; title: string; date: string | null; duration: string; cover: string; show: string; isNew: boolean; saveable: boolean }
 
 // The episodes of a podcast feed, newest first (by date; without dates in the feed's order), from the feed as the
 // display reads it (xml-js: a text is {_text} or {_cdata}, one item comes as an object instead of a list), or null.
@@ -297,6 +319,16 @@ async function rssEpisodes(feed: string): Promise<RssEpisode[] | null> {
         duration: text(it['itunes:duration']),
         cover: proxied(typeof image === 'string' && image ? image : showPicture),
         show,
+        // (new: see episode-state.ts, set by /api/rssfeed/cached)
+        isNew: it._new === true,
+        // (may be kept on the SD card: a podcast feed's episode always, an ARD episode only with the ARD's download
+        // release and before the end of its time online - see podcast-offline.ts mayKeep)
+        saveable: mayKeep({
+          url,
+          title: '',
+          ...(isArdFeed(feed) ? { download: typeof it._download === 'string' ? it._download : null } : {}),
+          until: typeof it._until === 'string' ? Date.parse(it._until) || null : null,
+        }),
         // (no date: the order of the feed, the first one being the newest as usual)
         at: Number.isFinite(when) ? when : -i,
       })
@@ -328,6 +360,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
 
   if (deps.localLibrary) registerLocalUploadRoutes(router, deps.localLibrary)
   registerDisplayRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  registerSpeechRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  registerCustomBootRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerHardwareRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerServicesRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerSystemRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
@@ -335,8 +369,14 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   registerAdminRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig, serverDir: process.cwd() })
   registerNetworkRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerUpdateRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig })
-  registerSpotifyConnectRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerTlsRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  registerHealthRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig })
+  registerPodcastRoutes(router, {
+    activeDataPath: deps.activeDataPath,
+    podcastOffline: deps.podcastOffline,
+    getMupiboxConfig: deps.getMupiboxConfig,
+    updateMupiboxConfig: deps.updateMupiboxConfig,
+  })
   registerCustomCoverRoutes(router, {
     dir: '/home/dietpi/MuPiBox/media/cover',
     host: () => String((deps.getMupiboxConfig()?.mupibox as { host?: string } | undefined)?.host || os.hostname()),
@@ -468,7 +508,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     // "Anmeldung verlangen" off (as the admin interface's switch): no login on the home network (localNetworkOnly
     // above), the app gets its session and CSRF token right away
     if (appLoginRequired(deps.getMupiboxConfig()) || validateSession(parseCookie(req, SESSION_COOKIE))) return next()
-    const session = issueSession(req.ip ?? req.socket.remoteAddress ?? '', false, true)
+    const session = issueSession(req.ip ?? req.socket.remoteAddress ?? '', false, true, { device: describeDevice(req.headers['user-agent']) })
     res.setHeader('Set-Cookie', buildSessionCookie(session.sessionId, 24 * 60 * 60))
     res.json({ authenticated: true, open: true, csrf_header: CSRF_HEADER, csrf_token: session.csrf, passwordConfigured: hasAppPassword(deps.getMupiboxConfig()) })
   }, requireSession, (req, res) => {
@@ -511,7 +551,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     const ip = req.ip ?? req.socket.remoteAddress ?? ''
     // "Angemeldet bleiben": the session survives the box's restarts (see auth.ts)
     const remember = body.remember === true
-    const session = issueSession(ip, remember)
+    const session = issueSession(ip, remember, false, { device: describeDevice(req.headers['user-agent']) })
     res.setHeader('Set-Cookie', buildSessionCookie(session.sessionId, remember ? PERSISTENT_COOKIE_SECONDS : 24 * 60 * 60))
     res.json({ ok: true, csrf_header: CSRF_HEADER, csrf_token: session.csrf })
   })
@@ -521,15 +561,32 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
 
   /** GET /api/app/auth-state - the Sicherheit page: is a password set, is the login required, is it still the
    *  admin interface's well-known default password. */
-  router.get('/auth-state', requireSession, async (_req, res) => {
+  router.get('/auth-state', requireSession, async (req, res) => {
     const cfg = deps.getMupiboxConfig()
     res.json({
+      // (signed in with the display's QR code or the Telegram link a moment ago: a new password without the old)
+      resetOpen: hasAppPassword(cfg) && mayResetPassword(req.elternSessionId),
       passwordSet: hasAppPassword(cfg),
       loginRequired: appLoginRequired(cfg),
       loginSwitch: (cfg as { interfacelogin?: { state?: unknown } } | undefined)?.interfacelogin?.state === true,
       defaultPassword: await verifyAppPassword('MuP1B0x', cfg),
       keptDevices: keptSessionCount(),
     })
+  })
+
+  /** GET /api/app/auth/sessions - the devices signed in (browser and system as they name themselves, last use). */
+  router.get('/auth/sessions', requireSession, (req, res) => {
+    res.json({ sessions: listSessions(req.elternSessionId) })
+  })
+
+  /** POST /api/app/auth/sign-out {id} - one other device signed out (id: its name in the list, not its session). */
+  router.post('/auth/sign-out', requireSession, requireCsrf, (req, res) => {
+    const id = (req.body as { id?: unknown } | undefined)?.id
+    if (typeof id !== 'string' || !/^[0-9a-f]{16}$/.test(id)) {
+      res.status(400).json({ error: 'invalid_id' })
+      return
+    }
+    res.json({ ok: destroySessionByRef(id, req.elternSessionId) })
   })
 
   /** POST /api/app/auth/sign-out-others - every other device is signed out (also those kept signed in); this stays. */
@@ -547,7 +604,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     const current = typeof body.current === 'string' ? body.current : ''
     const next = typeof body.password === 'string' ? body.password : ''
     const cfg = deps.getMupiboxConfig()
-    if (hasAppPassword(cfg) && !(await verifyAppPassword(current, cfg))) {
+    if (hasAppPassword(cfg) && !mayResetPassword(req.elternSessionId) && !(await verifyAppPassword(current, cfg))) {
       res.status(403).json({ error: 'wrong_password' })
       return
     }
@@ -1150,7 +1207,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       const maxVolume = volumePercent(mb.maxVolume) ?? 100
       // (the admin interface only writes startVolume)
       const startupVolume = volumePercent(mb.startupVolume) ?? volumePercent(mb.startVolume) ?? null
-      res.json({ current, maxVolume, startupVolume })
+      // (with Bluetooth audio: an own maximum, null = the same as without)
+      const btMaxVolume = volumePercent(mb.btMaxVolume) ?? null
+      bluetoothAudio().then((bluetooth) => res.json({ current, maxVolume, startupVolume, btMaxVolume, bluetooth }))
     })
   })
 
@@ -1160,7 +1219,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * so a parent in the WebApp can't go above the hearing-protection limit
    * (matches the player's own cap enforcement for touchscreen volume-up).
    */
-  router.post('/audio/volume', requireSession, requireCsrf, (req, res) => {
+  router.post('/audio/volume', requireSession, requireCsrf, async (req, res) => {
     const body = (req.body as { volume?: unknown } | undefined) ?? {}
     const raw = Number(body.volume)
     if (!Number.isFinite(raw) || raw < 0 || raw > 100) {
@@ -1175,7 +1234,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       return
     }
     const mb = (cfg.mupibox as Record<string, unknown> | undefined) ?? {}
-    const cap = volumePercent(mb.maxVolume) ?? 100
+    const btMax = volumePercent(mb.btMaxVolume)
+    const cap = btMax !== undefined && (await bluetoothAudio()) ? btMax : (volumePercent(mb.maxVolume) ?? 100)
     const requested = Math.floor(raw)
     const applied = Math.min(requested, cap)
     execFile('/usr/bin/amixer', ['sset', 'Master', `${applied}%`], { timeout: 3000 }, (err) => {
@@ -1195,8 +1255,17 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * accidentally-muted box that looks broken.
    */
   router.post('/audio/config', requireSession, requireCsrf, async (req, res) => {
-    const body = (req.body as { maxVolume?: unknown; startupVolume?: unknown } | undefined) ?? {}
-    const mutations: { maxVolume?: number; startupVolume?: number | null } = {}
+    const body = (req.body as { maxVolume?: unknown; startupVolume?: unknown; btMaxVolume?: unknown } | undefined) ?? {}
+    const mutations: { maxVolume?: number; startupVolume?: number | null; btMaxVolume?: number | null } = {}
+    // the maximum while Bluetooth audio is on (headphones); null: the same as without
+    if (body.btMaxVolume !== undefined) {
+      const v = Number(body.btMaxVolume)
+      if (body.btMaxVolume !== null && (!Number.isFinite(v) || v < 10 || v > 100)) {
+        res.status(400).json({ error: 'btMaxVolume must be a number between 10 and 100, or null' })
+        return
+      }
+      mutations.btMaxVolume = body.btMaxVolume === null ? null : Math.floor(v)
+    }
     if (body.maxVolume !== undefined) {
       const v = Number(body.maxVolume)
       if (!Number.isFinite(v) || v < 10 || v > 100) {
@@ -1224,6 +1293,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     await deps.updateMupiboxConfig((cfg) => {
       const mb = ((cfg.mupibox as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
       if (mutations.maxVolume !== undefined) mb.maxVolume = mutations.maxVolume
+      if (mutations.btMaxVolume === null) delete mb.btMaxVolume
+      else if (mutations.btMaxVolume !== undefined) mb.btMaxVolume = mutations.btMaxVolume
       // The scripts that set the volume at start and shutdown (chromium-autostart.sh, mupi_shutdown.sh,
       // off_trigger.sh, shutdown_sound.sh) and the admin interface read startVolume: this app's startupVolume alone
       // had no effect. Both are written; without a fixed value both go, and the scripts leave the volume as it was.
@@ -1379,6 +1450,46 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       return
     }
     res.json({ ok: true, queued_position: queue.length })
+  })
+
+  /**
+   * POST /api/app/wifi/password {ssid, password} - a new password for a saved network that is not the one connected
+   * now (the router got a new one). Set as the network's key (WPA-PSK, worked out here as wpa_passphrase does: no
+   * character of the password can break the configuration), then saved.
+   */
+  router.post('/wifi/password', requireSession, requireCsrf, async (req, res) => {
+    const body = (req.body as { ssid?: unknown; password?: unknown } | undefined) ?? {}
+    const ssid = typeof body.ssid === 'string' ? body.ssid : ''
+    const password = typeof body.password === 'string' ? body.password : ''
+    if (!ssid || password.length < 8 || password.length > 63) {
+      res.status(400).json({ error: 'password must be 8-63 chars' })
+      return
+    }
+    const cli = (args: string[]) =>
+      new Promise<string>((resolve) => execFile('sudo', ['/usr/sbin/wpa_cli', '-i', wifiIface(), ...args], { timeout: 5000 }, (err, out) => resolve(err ? '' : out)))
+    let id: string | null = null
+    let active = false
+    for (const ln of (await cli(['list_networks'])).split('\n')) {
+      const parts = ln.split('\t')
+      if (ln.startsWith('network id') || parts[1] !== ssid) continue
+      id = parts[0]
+      active = (parts[3] ?? '').includes('[CURRENT]')
+      break
+    }
+    if (id === null || !/^\d+$/.test(id)) {
+      res.status(404).json({ error: 'ssid not in saved networks' })
+      return
+    }
+    if (active) {
+      res.status(409).json({ error: 'connected_network' })
+      return
+    }
+    const psk = pbkdf2Sync(password, ssid, 4096, 32, 'sha1').toString('hex')
+    if (!/OK/.test(await cli(['set_network', id, 'psk', psk])) || !/OK/.test(await cli(['save_config']))) {
+      res.status(500).json({ error: 'not_set' })
+      return
+    }
+    res.json({ ok: true })
   })
 
   /**
@@ -1631,7 +1742,23 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(502).json({ error: 'feed_unavailable' })
       return
     }
-    res.json({ episodes })
+    // (saved: on the SD card - it plays without internet too; pos/len/done: where it was left, from the player's
+    // episode-positions.json next to the library)
+    const saved = deps.podcastOffline ? await deps.podcastOffline.list(item.id) : {}
+    let positions: Record<string, { pos?: number; len?: number; done?: boolean }> = {}
+    try {
+      positions = JSON.parse(await fsp.readFile(path.join(path.dirname(deps.activeDataPath), 'episode-positions.json'), 'utf8'))
+    } catch {
+      positions = {}
+    }
+    res.json({
+      episodes: episodes.map((e) => {
+        // (by the episode's key, see episodeKey; positions written before the keys by the address)
+        const key = episodeKey(e.url)
+        const p = positions[key] ?? positions[e.url]
+        return { ...e, saved: !!saved[key], ...(p ? { pos: p.pos ?? 0, len: p.len ?? 0, done: !!p.done } : {}) }
+      }),
+    })
   })
 
   router.post('/library/play', requireSession, requireCsrf, async (req, res) => {
@@ -1830,132 +1957,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(400).json({ error: 'range must be today or week' })
       return
     }
-    const now = new Date()
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    // The week: today and the six days before, from midnight on - the same days as the bars below (the last 168 hours
-    // counted plays in the total that no bar showed). setDate keeps the days right across a clock change.
-    const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6)
-    const cutoffMs = range === 'today' ? todayStart.getTime() : weekStart.getTime()
-
-    let raw = ''
-    try {
-      // Bewusst asynchron: die Datei liegt im MB-Bereich, und readFileSync
-      // hätte den einzigen Thread des Backends blockiert -- also auch
-      // Wiedergabesteuerung und Display-Sync, während jemand den
-      // Hör-Verlauf öffnet.
-      raw = await fsp.readFile('/home/dietpi/.mupibox/play_log.jsonl', 'utf8')
-    } catch {
-      // file may not exist yet — return empty result
-    }
-    type Entry = {
-      ts: string
-      event: 'start' | 'stop'
-      source?: string
-      title?: string
-      artist?: string
-      album?: string
-      duration_seconds?: number
-    }
-    const entries: Entry[] = []
-    for (const ln of raw.split('\n')) {
-      if (!ln) continue
-      try {
-        const e = JSON.parse(ln) as Entry
-        if (Date.parse(e.ts) >= cutoffMs) entries.push(e)
-      } catch {
-        /* skip malformed line */
-      }
-    }
-
-    type Play = { tsMs: number; source: string; title: string; artist: string; album: string; duration: number }
-    const plays: Play[] = []
-    let pending: { tsMs: number; source: string; title: string; artist: string; album: string } | null = null
-    // A start without a stop (box switched off, backend killed): how long it really played is unknown.
-    // Counting it up to the next start put hours of a switched-off box on the history, so it counts at
-    // most this long.
-    const ORPHAN_MAX_S = 10 * 60
-    const orphanSeconds = (fromMs: number, toMs: number) =>
-      Math.min(ORPHAN_MAX_S, Math.max(0, Math.round((toMs - fromMs) / 1000)))
-    for (const e of entries) {
-      if (e.event === 'start') {
-        if (pending !== null) {
-          plays.push({ ...pending, duration: orphanSeconds(pending.tsMs, Date.parse(e.ts)) })
-        }
-        pending = {
-          tsMs: Date.parse(e.ts),
-          source: e.source ?? '',
-          title: e.title ?? '',
-          artist: e.artist ?? '',
-          album: e.album ?? '',
-        }
-      } else if (e.event === 'stop' && pending !== null) {
-        plays.push({ ...pending, duration: e.duration_seconds ?? 0 })
-        pending = null
-      }
-    }
-    if (pending !== null) {
-      // Currently still playing (the poller times exactly this start) — count up to now so today's
-      // number reflects reality. Otherwise it's a start left over from before a restart.
-      const running = deps.currentPlayLogStart?.()
-      const isRunning = running != null && Math.abs(running - pending.tsMs) < 2000
-      const duration = isRunning
-        ? Math.max(0, Math.round((Date.now() - pending.tsMs) / 1000))
-        : orphanSeconds(pending.tsMs, Date.now())
-      plays.push({ ...pending, duration })
-    }
-
-    const totalSeconds = plays.reduce((s, p) => s + p.duration, 0)
-    const totalMinutes = Math.round(totalSeconds / 60)
-    const trackCount = plays.length
-
-    const artistMap = new Map<string, { name: string; seconds: number; count: number }>()
-    for (const p of plays) {
-      // (no artist, e.g. a radio stream or a local file without tags: an empty name, the app words it)
-      const key = p.artist || ''
-      const cur = artistMap.get(key) ?? { name: key, seconds: 0, count: 0 }
-      cur.seconds += p.duration
-      cur.count += 1
-      artistMap.set(key, cur)
-    }
-    const topArtists = [...artistMap.values()]
-      .sort((a, b) => b.seconds - a.seconds)
-      .slice(0, 5)
-      .map((a) => ({ name: a.name, minutes: Math.round(a.seconds / 60), count: a.count }))
-
-    const titleMap = new Map<string, { title: string; artist: string; seconds: number; count: number }>()
-    for (const p of plays) {
-      const key = `${p.artist}|${p.title}`
-      const cur = titleMap.get(key) ?? { title: p.title, artist: p.artist, seconds: 0, count: 0 }
-      cur.seconds += p.duration
-      cur.count += 1
-      titleMap.set(key, cur)
-    }
-    const topTitles = [...titleMap.values()]
-      .sort((a, b) => b.seconds - a.seconds)
-      .slice(0, 5)
-      .map((t) => ({ title: t.title, artist: t.artist, minutes: Math.round(t.seconds / 60), count: t.count }))
-
-    const dateKey = (d: Date): string =>
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-    const timeline: Array<{ date: string; minutes: number }> = []
-    if (range === 'today') {
-      timeline.push({ date: dateKey(todayStart), minutes: totalMinutes })
-    } else {
-      const dayBuckets = new Map<string, number>()
-      for (let i = 6; i >= 0; i--) {
-        dayBuckets.set(dateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)), 0)
-      }
-      for (const p of plays) {
-        const d = new Date(p.tsMs)
-        const key = dateKey(new Date(d.getFullYear(), d.getMonth(), d.getDate()))
-        if (dayBuckets.has(key)) dayBuckets.set(key, (dayBuckets.get(key) ?? 0) + p.duration / 60)
-      }
-      for (const [date, mins] of dayBuckets) {
-        timeline.push({ date, minutes: Math.round(mins) })
-      }
-    }
-
-    res.json({ range, totalMinutes, trackCount, topArtists, topTitles, timeline })
+    res.json(await playlogSummary(range, deps.currentPlayLogStart))
   })
 
   /**
@@ -2149,10 +2151,12 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     const maint = typeof mb.maintenanceScreen === 'string' && ids.includes(mb.maintenanceScreen) ? mb.maintenanceScreen : 'same'
     const languages = readDisplayLanguages()
     const lang = typeof mb.bootscreenLanguage === 'string' && languages[mb.bootscreenLanguage] ? mb.bootscreenLanguage : 'en'
+    // own pictures chosen ("custom"): the design stays what the pictures without an own one come from
+    const custom = mb.bootscreenCustom === true
     res.json({
       screens,
       languages,
-      current: { bootscreen: boot, maintenanceScreen: maint, boxName: typeof mb.boxName === 'string' ? mb.boxName : '', bootscreenLanguage: lang },
+      current: { bootscreen: custom ? 'custom' : boot, base: boot, maintenanceScreen: maint, boxName: typeof mb.boxName === 'string' ? mb.boxName : '', bootscreenLanguage: lang },
     })
   })
 
@@ -2170,6 +2174,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     }
     const body = (req.body ?? {}) as Record<string, unknown>
     const ids = bootscreenIds(screens)
+    // "custom": the own pictures (bootscreen-custom.ts) - the design stays as it is, for what has no own picture
+    const custom = body.bootscreen === 'custom'
     let boot = typeof body.bootscreen === 'string' ? body.bootscreen : ''
     if (boot !== 'random' && !ids.includes(boot)) boot = ''
     if (boot === screens.defaultBootscreen) boot = ''
@@ -2186,7 +2192,10 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     const has = (key: string) => body[key] !== undefined
     await deps.updateMupiboxConfig((c) => {
       const m = ((c.mupibox as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
-      if (has('bootscreen')) m.bootscreen = boot
+      if (has('bootscreen')) {
+        m.bootscreenCustom = custom
+        if (!custom) m.bootscreen = boot
+      }
       if (has('maintenanceScreen')) m.maintenanceScreen = maint
       if (has('boxName')) m.boxName = name
       if (has('bootscreenLanguage')) m.bootscreenLanguage = lang
@@ -2201,7 +2210,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     res.json({
       ok: true,
       current: {
-        bootscreen: has('bootscreen') ? boot : str('bootscreen', ''),
+        bootscreen: saved.bootscreenCustom === true ? 'custom' : str('bootscreen', ''),
+        base: str('bootscreen', ''),
         maintenanceScreen: has('maintenanceScreen') ? maint : str('maintenanceScreen', 'same'),
         boxName: has('boxName') ? name : str('boxName', ''),
         bootscreenLanguage: has('bootscreenLanguage') ? lang : str('bootscreenLanguage', 'en'),
@@ -2291,6 +2301,36 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       // since when the login holds and until when (6 months), or that Spotify refused it (see spotify-auth-age.ts)
       login: await spotifyLoginAge(cfg),
     })
+  })
+
+  /** GET /api/app/spotify-access/account - the Spotify account signed in (Premium: the display's player needs it) and
+   *  whether Spotify lists the display as a device now. Asked with the player's token; {} when that is not possible. */
+  router.get('/spotify-access/account', requireSession, async (_req, res) => {
+    const json = (r: Response) => (r.ok ? r.json() : null)
+    try {
+      const token = (await (await fetch('http://127.0.0.1:5005/spotify/token', { signal: AbortSignal.timeout(3000) })).text()).trim()
+      if (!token || token.startsWith('{')) {
+        res.json({})
+        return
+      }
+      const get = (url: string) => fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(6000) }).then(json).catch(() => null)
+      const [me, devices, display] = await Promise.all([
+        get('https://api.spotify.com/v1/me') as Promise<{ display_name?: string; id?: string; product?: string } | null>,
+        get('https://api.spotify.com/v1/me/player/devices') as Promise<{ devices?: { id?: string; name?: string }[] } | null>,
+        fetch('http://127.0.0.1:5005/display/spotify-device', { signal: AbortSignal.timeout(3000) })
+          .then(json)
+          .catch(() => null) as Promise<{ id?: string | null } | null>,
+      ])
+      const mine = display?.id ? devices?.devices?.find((d) => d.id === display.id) : undefined
+      res.json({
+        name: me?.display_name || me?.id || '',
+        premium: me?.product ? me.product === 'premium' : null,
+        deviceVisible: devices ? !!mine : null,
+        deviceName: mine?.name ?? '',
+      })
+    } catch {
+      res.json({})
+    }
   })
 
   /** POST /api/app/spotify-access/redirect {mode: app|legacy} - which Redirect URI the next login uses (the one the
@@ -2449,6 +2489,23 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     res.json({ ok: r.ok })
   })
 
+  /** POST /api/app/bluetooth/connect|disconnect  — {mac}: a paired device connected or let go (bluetoothctl, as the
+   *  admin interface's buttons). ok: bluetoothctl said so ("Connection successful", "Successful disconnected"). */
+  for (const [path, cmd, done] of [
+    ['connect', 'connect', /Connection successful/i],
+    ['disconnect', 'disconnect', /Successful disconnected/i],
+  ] as const) {
+    router.post(`/bluetooth/${path}`, requireSession, requireCsrf, noController, async (req, res) => {
+      const mac = String((req.body as { mac?: unknown } | undefined)?.mac ?? '').trim()
+      if (!BT_MAC_RE.test(mac)) {
+        res.status(400).json({ error: 'invalid MAC' })
+        return
+      }
+      const r = await execCapture('sudo', ['-u', 'dietpi', 'bluetoothctl', cmd, mac], 20000)
+      res.json({ ok: done.test(r.stdout) })
+    })
+  }
+
   /** POST /api/app/bluetooth/remove  — {mac} → remove_bt.sh + bt restart. */
   router.post('/bluetooth/remove', requireSession, requireCsrf, noController, async (req, res) => {
     const mac = String((req.body as { mac?: unknown } | undefined)?.mac ?? '').trim()
@@ -2493,6 +2550,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     res.json({
       active: tg.active === true,
       notifyPlayback: tg.notifyPlayback === true,
+      weeklySummary: weeklySummaryOn(cfg),
       token_configured: typeof tg.token === 'string' && tg.token.length > 0,
       chatIds,
     })
@@ -2506,7 +2564,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * is restarted afterwards to apply changes immediately.
    */
   router.post('/telegram-config', requireSession, requireCsrf, async (req, res) => {
-    const body = (req.body ?? {}) as { active?: unknown; notifyPlayback?: unknown; token?: unknown; chatIds?: unknown }
+    const body = (req.body ?? {}) as { active?: unknown; notifyPlayback?: unknown; weeklySummary?: unknown; token?: unknown; chatIds?: unknown }
     let validatedChats: Array<{ id: string; label: string }> | undefined
     if (body.chatIds !== undefined) {
       if (!Array.isArray(body.chatIds)) {
@@ -2559,6 +2617,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       if (typeof body.active === 'boolean') tg.active = body.active
       // playback messages (every start, track, pause, stop): off unless the parents turn them on
       if (typeof body.notifyPlayback === 'boolean') tg.notifyPlayback = body.notifyPlayback
+      // the week in a message on Sunday evening (weekly-summary.ts): on unless switched off
+      if (typeof body.weeklySummary === 'boolean') tg.weeklySummary = body.weeklySummary
       if (validatedChats !== undefined) tg.chatId = validatedChats
       if (newToken !== undefined) tg.token = newToken
       cfg.telegram = tg
@@ -2800,7 +2860,7 @@ export function buildElternLandingHandler(): import('express').RequestHandler {
       return
     }
     const ip = req.ip ?? req.socket.remoteAddress ?? ''
-    const session = redeemMagicLink(token, ip)
+    const session = redeemMagicLink(token, ip, describeDevice(req.headers['user-agent']))
     if (!session) {
       res.status(401).send('Magic link invalid or expired / Magic-Link ungültig oder abgelaufen')
       return

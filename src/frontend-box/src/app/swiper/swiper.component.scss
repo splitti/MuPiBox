@@ -481,3 +481,56 @@ swiper-container.coverflow {
         left: calc(50% - 100px);
     }
 }
+
+// A podcast (episode) with something new: a dot at the top left; an episode's progress: a bar at the bottom; heard
+// to its end: a tick (see SwiperData.isNew / progress / done)
+.ep-anchor {
+    position: relative;
+}
+
+.ep-new {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #e5484d;
+    border: 3px solid #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+    z-index: 3;
+}
+
+.ep-progress {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    height: 8px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    z-index: 3;
+
+    i {
+        display: block;
+        height: 100%;
+        border-radius: 4px;
+        background: var(--ion-color-primary, #56b6ea);
+    }
+}
+
+.ep-done {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-size: 22px;
+    z-index: 3;
+}

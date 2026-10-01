@@ -236,6 +236,7 @@ player.on('time_pos', (seconds) => {
   if (!isCuePlayback()) {
     pendingCueSeek = null
     currentMeta.positionSeconds = seconds
+    noteEpisodePosition(seconds)
     return
   }
   if (pendingCueSeek) {
@@ -316,6 +317,43 @@ player.on('metadata', (val) => {
 })
 player.on('track-change', () => player.getProps(['metadata']))
 
+// --- Going on where it was left, for streams (the NAS, podcasts) ---
+// A stream plays only once mplayer's buffer is filled (a second or two after the load); until then mplayer takes
+// neither the volume nor a seek - both were sent with the load, came to nothing, and the beginning was heard before
+// a later retry jumped. So they wait for "Starting playback..." (the wrapper's track-change), and the sound comes
+// back once the playing time shows the position (or after maxMs at the latest).
+let onPlaybackStart = null // { generation, run } for the next start of the current playback
+function atPlaybackStart(run) {
+  onPlaybackStart = { generation: playbackGeneration, run }
+}
+player.on('track-change', () => {
+  const next = onPlaybackStart
+  if (!next) return
+  onPlaybackStart = null
+  if (next.generation !== playbackGeneration) return
+  player.setVolume(0)
+  next.run()
+})
+let silence = null // { reached, timer } while playback is on its way to where it was left
+function silentUntil(reached, maxMs) {
+  if (silence) clearTimeout(silence.timer)
+  player.setVolume(0)
+  silence = { reached, timer: setTimeout(() => endSilence(), maxMs) }
+}
+function endSilence(delayMs = 0) {
+  const s = silence
+  if (!s) return
+  clearTimeout(s.timer)
+  silence = null
+  // (a moment after arriving, so what is still in the audio buffer from before is not heard)
+  setTimeout(() => {
+    if (!silence) player.setVolume(volumeStart)
+  }, delayMs)
+}
+function checkSilence() {
+  if (silence?.reached()) endSilence(400)
+}
+
 // --- Buffering of streams before playback starts ---
 // mplayer starts once cache-min percent of the cache are filled (see the wrapper).
 const cachePrefillPercent = 10
@@ -341,6 +379,8 @@ player.on('cache-fill', (percent) => {
   }
 })
 player.on('track-change', stopLoading)
+player.on('percent_pos', checkSilence)
+player.on('time_pos', checkSilence)
 
 //player.on('length', console.log)
 //player.on('track-change', () => player.getProps(['length']))
@@ -406,6 +446,9 @@ player.on('playlist-finish', () => {
   if (quietHoursState.state === 'grace') {
     finalizeQuietHoursBlock('playlist finished during grace period')
   }
+  // A podcast episode that ended long before its end: the connection to its server broke (mplayer takes that as
+  // the end of the file) - it is opened again where it stopped
+  if (reconnectEpisode()) return
   // Library album finished naturally — drop its resume entry so the user
   // isn't offered "weiterhören" at the very end next time. Spotify and RSS
   // are skipped: Spotify gives no clean end-of-album signal via the
@@ -474,6 +517,16 @@ setInterval(() => {
     const match = /\[(\d+)%\]/.exec(stdout)
     if (match) {
       currentMeta.volume = Number.parseInt(match[1], 10)
+      // headphones just connected, the box louder than their maximum: down to it (whoever set the volume)
+      const btMax = muPiBoxConfig.mupibox?.btMaxVolume
+      if (Number.isInteger(btMax) && currentMeta.volume > btMax) {
+        bluetoothAudio().then((on) => {
+          if (!on) return
+          log.info(`${now()}: [Spotify Control] Bluetooth audio: volume ${currentMeta.volume} % down to its maximum ${btMax} %`)
+          _volumeOpQueue = _volumeOpQueue.then(() => cmdCall(`/usr/bin/amixer sset Master ${btMax}%`)).catch(() => {})
+          currentMeta.volume = btMax
+        })
+      }
     }
   })
 }, 5000)
@@ -870,11 +923,14 @@ function finalizePlaytimeBlock(reason) {
   console.log(`${new Date().toLocaleString()}: [Playtime] Finalizing block (${reason})`)
   playtimeState.state = 'blocked'
   playtimeState.graceEndsAt = null
-  try {
-    stop()
-  } catch (e) {
-    console.error(`${new Date().toLocaleString()}: [Playtime] Error stopping playback:`, e)
-  }
+  // (faded out, not cut: see fadeOutThen)
+  fadeOutThen(() => {
+    try {
+      stop()
+    } catch (e) {
+      console.error(`${new Date().toLocaleString()}: [Playtime] Error stopping playback:`, e)
+    }
+  })
   writePlaytimeCheckpoint()
   // Notify parents that today's listening time is up. telegram_send_message.py
   // loops over all configured chatIds, so both Family group and individual DMs
@@ -901,11 +957,13 @@ function finalizeQuietHoursBlock(reason) {
       (e) => e && console.error(`${new Date().toLocaleString()}: [QuietHours] Telegram message failed: ${e.message}`),
     )
   }
-  try {
-    stop()
-  } catch (e) {
-    console.error(`${new Date().toLocaleString()}: [QuietHours] Error stopping playback:`, e)
-  }
+  fadeOutThen(() => {
+    try {
+      stop()
+    } catch (e) {
+      console.error(`${new Date().toLocaleString()}: [QuietHours] Error stopping playback:`, e)
+    }
+  })
 }
 
 // Spotify: the player does not get track events from it, so while a limit is in its grace period the playback
@@ -1828,32 +1886,46 @@ function playListAtTrack(playedList, trackNr, progressPct) {
     `${now()}: [Spotify Control] Library resume — track ${trackNr}, pct ${progressPct}, list ${playedList}`,
   )
   playList(playedList)
+  scheduleResumeJumps(trackNr, progressPct, 1200)
+}
+
+// The jumps of a resume after an album was loaded: to track trackNr (a moment after the start), then to
+// progressPct % of it; silent until they are done. firstJumpMs: when mplayer has the first track open (the NAS takes
+// longer than the SD card). The NAS's CUE albums are one file: there both are a seek inside it.
+function scheduleResumeJumps(trackNr, progressPct, firstJumpMs) {
   const jumps = trackNr > 1 || progressPct > 1
-  if (jumps) {
-    // silent until the jump is done; set again once mplayer has opened its audio output
-    libraryResumeMuted = true
-    player.setVolume(0)
-    libraryResumeTimers.push(setTimeout(() => player.setVolume(0), 300))
-  }
+  if (!jumps) return
+  // silent until the jump is done; set again once mplayer has opened its audio output
+  libraryResumeMuted = true
+  player.setVolume(0)
+  libraryResumeTimers.push(setTimeout(() => player.setVolume(0), 300))
+  const seekAt = trackNr > 1 ? firstJumpMs * 2 : firstJumpMs
   if (trackNr > 1) {
     libraryResumeTimers.push(
       setTimeout(() => {
+        if (isCuePlayback()) return seekToCueTrack(trackNr)
         // The 'metadata' handler adds exactly 1 per track change, however far pt_step jumps (see
         // jumpToTrack). Without this the counter stood at 2 after the jump, the player page saved
         // track 2 as the resume position, and every further resume lost more of the progress.
         currentMeta.currentTracknr = trackNr - 1
         player.exec('pt_step', [trackNr - 1])
-      }, 1200),
+      }, firstJumpMs),
     )
   }
   if (progressPct > 1) {
-    libraryResumeTimers.push(setTimeout(() => player.seekPercent(progressPct), trackNr > 1 ? 2400 : 1200))
+    libraryResumeTimers.push(
+      setTimeout(() => {
+        if (!isCuePlayback()) return player.seekPercent(progressPct)
+        const index = Math.max(0, Math.min(currentCue.tracks.length, trackNr) - 1)
+        const start = currentCue.tracks[index].startSeconds
+        const end = cueTrackEnd(index)
+        if (end > start) cueSeek(start + ((end - start) * progressPct) / 100)
+      }, seekAt),
+    )
   }
-  if (jumps) {
-    // a moment after the last jump, so the old position is no longer in the audio buffer
-    const lastJump = progressPct > 1 ? (trackNr > 1 ? 2400 : 1200) : 1200
-    libraryResumeTimers.push(setTimeout(unmuteLibraryResume, lastJump + 400))
-  }
+  // a moment after the last jump, so the old position is no longer in the audio buffer
+  const lastJump = progressPct > 1 ? seekAt : firstJumpMs
+  libraryResumeTimers.push(setTimeout(unmuteLibraryResume, lastJump + 400))
 }
 
 function playList(playedList) {
@@ -1891,10 +1963,12 @@ function playList(playedList) {
 // m3u file whose lines are HTTP(S) stream-proxy URLs - mplayer already plays
 // remote URLs from an m3u today for radio/rss, so this reuses the exact same
 // player.playList() path (and with it, track-jump/track-count handling).
-async function playNasList(nasPath) {
+// resume: {trackNr, progressPct} to go on where it was left (the display's resume tile; see scheduleResumeJumps)
+async function playNasList(nasPath, resume = null) {
   const decodedPath = decodeURIComponent(nasPath)
   log.debug(`${now()}: [Spotify Control] Starting NAS playback: ${decodedPath}`)
   const generation = ++playbackGeneration
+  clearLibraryResumeTimers()
 
   try {
     // The NAS may not answer at the first try (waking up, WiFi hiccup): one more try after 3 s. An empty or failed
@@ -1949,9 +2023,71 @@ async function playNasList(nasPath) {
     player.setVolume(volumeStart)
     currentMeta.currentTracknr = 0
     currentMeta.totalTracks = tracks.length
+    if (resume) resumeNasAt(Math.min(resume.trackNr, tracks.length), resume.progressPct)
   } catch (error) {
     log.debug(`${now()}: [Spotify Control] Error starting NAS playback: ${error}`)
   }
+}
+
+// A NAS album where it was left: when its first track starts, on to track trackNr (another start, it is a stream too)
+// and then to progressPct % of it; silent until the playing time shows it. A CUE album is one file: one seek.
+function resumeNasAt(trackNr, progressPct) {
+  if (trackNr <= 1 && progressPct <= 1) return
+  player.setVolume(0)
+  silentUntil(() => false, 30000)
+  const reached = () => currentMeta.currentTracknr === trackNr && (progressPct <= 1 || Number(currentMeta.progressTime) >= progressPct - 3)
+  const seekInTrack = () => {
+    if (progressPct > 1) player.seekPercent(progressPct)
+    silentUntil(reached, 15000)
+    checkSilence()
+  }
+  atPlaybackStart(() => {
+    if (isCuePlayback()) {
+      const index = Math.max(0, Math.min(currentCue.tracks.length, trackNr) - 1)
+      const start = currentCue.tracks[index].startSeconds
+      const end = cueTrackEnd(index)
+      currentMeta.currentTracknr = index + 1
+      currentMeta.currentTrackname = currentCue.tracks[index].name
+      cueSeek(end > start ? start + ((end - start) * progressPct) / 100 : start)
+      silentUntil(reached, 15000)
+      return
+    }
+    if (trackNr > 1) {
+      player.exec('pt_step', [trackNr - 1])
+      // (the 'metadata' handler adds 1 at each track change - see jumpToTrack. Set at the start of the target track,
+      // not before the step: the first track's metadata answer arrives after this start and would count one on top)
+      atPlaybackStart(() => {
+        currentMeta.currentTracknr = trackNr - 1
+        seekInTrack()
+      })
+    } else seekInTrack()
+  })
+}
+
+// A name read out with the voice chosen in the app (Sprachausgabe): a Piper voice on the box, Google as before, or
+// nothing at all (stumm). The backend works the Piper sound out (speech.ts).
+async function sayName(text) {
+  try {
+    const r = await fetch('http://127.0.0.1:8200/api/app/speech/render', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+      signal: AbortSignal.timeout(20000),
+    })
+    const b = await r.json()
+    if (b.off) return
+    if (b.file) {
+      writeplayerstatePlay()
+      player.play(b.file)
+      player.setVolume(volumeStart)
+      return
+    }
+  } catch (err) {
+    log.debug(`${now()}: [Spotify Control] Piper not asked: ${err?.message || err}`)
+  }
+  const filename = `/home/dietpi/MuPiBox/tts_files/${text}.mp3`
+  if (fs.existsSync(filename)) playFile(text)
+  else downloadTTS(text)
 }
 
 function playFile(playedFile) {
@@ -1993,14 +2129,214 @@ function playRadioURL(radioURL) {
     })
 }
 
-function playURL(playedURL) {
+// --- Where each podcast episode was left ---
+// Every episode that was played is remembered with its position (mupibox.episodeResume, on unless switched off),
+// for mupibox.episodeResumeDays days after it was last heard (0: without end). Started again - from the episode
+// list, the app or a resume tile - it goes on there. An episode heard to its last half minute counts as heard and
+// starts from the beginning next time. The backend reads the file for the app's episode list.
+const EPISODE_POSITIONS_FILE = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/episode-positions.json'
+const EPISODE_POSITIONS_MAX = 5000
+let episodePositions = null // { [episode key]: { pos, len, at, done } } (by the address, from before the keys)
+// What stays the same of an episode's address from one fetch of its feed to the next - the same as backend-api's
+// episodeKey (podcast-offline.ts): the query of an address whose path names the audio file is left out (values for
+// statistics or ads, new at every fetch - the position and the kept file were lost with them).
+function episodeKey(url) {
+  try {
+    const u = new URL(url)
+    if (/\.(mp3|m4a|mp4|aac|ogg|oga|opus|wav|flac)$/i.test(u.pathname)) return `${u.host.toLowerCase()}${u.pathname}`
+  } catch {
+    // no URL: as it is
+  }
+  return url
+}
+const positionOf = (url) => {
+  const all = loadEpisodePositions()
+  return all[episodeKey(url)] ?? all[url]
+}
+// The length of an episode as its feed gives it (backend-api /api/rssfeed/episode-duration): mplayer only estimates
+// the length of an MP3 with a changing bitrate - an episode counted as heard too early, or a broken connection was
+// not seen as one. 0: not known.
+let episodeFeedLength = { url: '', seconds: 0 }
+function loadEpisodeFeedLength(url) {
+  episodeFeedLength = { url, seconds: 0 }
+  fetch(`http://127.0.0.1:8200/api/rssfeed/episode-duration?url=${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(10000) })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((body) => {
+      if (episodeFeedLength.url === url && Number(body?.seconds) > 60) episodeFeedLength.seconds = Number(body.seconds)
+    })
+    .catch(() => undefined)
+}
+// The feed's length if it gave one, else mplayer's
+function episodeLength() {
+  return (episodeFeedLength.url === playingEpisode && episodeFeedLength.seconds) || Number(currentMeta.durationSeconds) || 0
+}
+let episodePositionsDirty = false
+let playingEpisode = null // the address of the episode mplayer plays, while it plays one
+function episodeResumeOn() {
+  return muPiBoxConfig?.mupibox?.episodeResume !== false
+}
+function loadEpisodePositions() {
+  if (episodePositions) return episodePositions
+  try {
+    episodePositions = JSON.parse(fs.readFileSync(EPISODE_POSITIONS_FILE, 'utf8')) ?? {}
+  } catch {
+    episodePositions = {}
+  }
+  return episodePositions
+}
+// Written at most once a minute while an episode plays (and when it ends), not every second: the SD card
+function saveEpisodePositions() {
+  if (!episodePositionsDirty || !episodePositions) return
+  episodePositionsDirty = false
+  const days = Number(muPiBoxConfig?.mupibox?.episodeResumeDays ?? 180)
+  const oldest = days > 0 ? Date.now() - days * 24 * 3600 * 1000 : 0
+  const kept = Object.entries(episodePositions)
+    .filter(([, p]) => p && p.at >= oldest)
+    .sort((a, b) => b[1].at - a[1].at)
+    .slice(0, EPISODE_POSITIONS_MAX)
+  episodePositions = Object.fromEntries(kept)
+  const tmp = `${EPISODE_POSITIONS_FILE}.tmp`
+  try {
+    fs.writeFileSync(tmp, JSON.stringify(episodePositions))
+    fs.renameSync(tmp, EPISODE_POSITIONS_FILE)
+  } catch (err) {
+    log.debug(`${now()}: [Spotify Control] Episode positions not saved: ${err}`)
+  }
+}
+setInterval(saveEpisodePositions, 60 * 1000)
+// The play of an episode starts: the one before is written away. Returns where it goes on (seconds), or null to
+// start from the beginning.
+function startEpisode(url) {
+  saveEpisodePositions()
+  if (pendingEpisodeSeek) endEpisodeSeek()
+  playingEpisode = url
+  loadEpisodeFeedLength(url)
+  if (!episodeResumeOn()) return null
+  const p = positionOf(url)
+  if (!p || p.done || !(p.pos > 10) || (p.len && p.pos > p.len - 30)) return null
+  const target = Math.max(0, p.pos - 5)
+  // (the sound comes back when mplayer got there - or after 8 s at the latest, see playURL)
+  pendingEpisodeSeek = { url, target, sent: 0, tries: 0, timer: setTimeout(() => endEpisodeSeek(), 20000) }
+  log.debug(`${now()}: [Spotify Control] Episode goes on at ${Math.round(target)}s`)
+  episodeResumedAt = Date.now()
+  return target
+}
+// The episode mplayer plays: { url, generation (of the playback), retries, endedAt (where it ended before) }. A stop,
+// another start or a block changes playbackGeneration - then its end is no broken connection.
+let episodeRun = null
+function reconnectEpisode() {
+  const run = episodeRun
+  if (!run || run.generation !== playbackGeneration || currentMeta.currentType !== 'rss' || playingEpisode !== run.url) return false
+  const pos = Number(currentMeta.positionSeconds) || 0
+  const len = episodeLength()
+  if (!(len > 60) || pos < 5 || pos >= len - 30 || run.retries >= 3 || isPlaybackBlocked()) return false
+  // Opened again and ended at the same place: that is the real end (a feed that gives the episode as longer than it
+  // is) - not opened a third time, and the episode counts as heard
+  if (run.endedAt !== undefined && Math.abs(pos - run.endedAt) < 10) {
+    noteEpisodeDone(run.url, pos)
+    return false
+  }
+  run.endedAt = pos
+  run.retries++
+  const target = Math.max(0, pos - 3)
+  console.warn(`${now()}: [Spotify Control] Episode ended at ${Math.round(pos)}s of ${Math.round(len)}s - opened again (${run.retries}/3)`)
+  if (pendingEpisodeSeek) endEpisodeSeek()
+  pendingEpisodeSeek = { url: run.url, target, sent: 0, tries: 0, timer: setTimeout(() => endEpisodeSeek(), 20000) }
+  episodeResumedAt = Date.now()
+  playURL(offlineEpisodeFile(run.url) ?? run.url, target)
+  run.generation = playbackGeneration
+  return true
+}
+// (the display's resume tile seeks 2 s after the start to its own position, up to 30 s older: not after this did)
+let episodeResumedAt = 0
+let pendingEpisodeSeek = null // { url, target, sent, tries, timer } while an episode is on its way to where it was left
+function endEpisodeSeek(delayMs = 0) {
+  const s = pendingEpisodeSeek
+  if (!s) return
+  clearTimeout(s.timer)
+  pendingEpisodeSeek = null
+  if (!delayMs) return player.setVolume(volumeStart)
+  // (a moment after the jump, so the beginning still in the audio buffer is not heard)
+  setTimeout(() => {
+    if (!pendingEpisodeSeek) player.setVolume(volumeStart)
+  }, delayMs)
+}
+// (from mplayer's playing time, every second)
+function continueEpisodeSeek(seconds) {
+  const s = pendingEpisodeSeek
+  if (!s) return
+  if (s.url !== playingEpisode || currentMeta.currentType !== 'rss') return endEpisodeSeek()
+  if (seconds >= s.target - 3) return endEpisodeSeek(400) // there
+  // (sent again when mplayer dropped it while still buffering, as with the CUE albums)
+  if (s.sent && Date.now() - s.sent > 2500) {
+    // a server that does not let mplayer seek (no range requests): after the retries on where it is - silent for
+    // up to 20 s before
+    if (s.tries >= 2) {
+      console.warn(`${now()}: [Spotify Control] Episode could not go on at ${Math.round(s.target)}s (the server does not seek), plays on from ${Math.round(seconds)}s`)
+      return endEpisodeSeek()
+    }
+    s.tries++
+    s.sent = Date.now()
+    player.exec('pausing_keep seek', [s.target, 2])
+  }
+}
+function noteEpisodePosition(seconds) {
+  continueEpisodeSeek(seconds)
+  // (not while it is still on its way: the beginning would overwrite the position)
+  if (pendingEpisodeSeek) return
+  // (noted also with going on switched off: an episode once started is no longer "new", see backend-api episode-state.ts)
+  if (!playingEpisode || currentMeta.currentType !== 'rss' || !(seconds > 0)) return
+  const len = episodeLength()
+  const done = len > 60 && seconds >= len - 30
+  const all = loadEpisodePositions()
+  if (all[playingEpisode] && episodeKey(playingEpisode) !== playingEpisode) delete all[playingEpisode] // (the entry of before the keys)
+  all[episodeKey(playingEpisode)] = { pos: done ? 0 : Math.round(seconds), len: Math.round(len), at: Date.now(), done }
+  episodePositionsDirty = true
+}
+// An episode heard to its end although its feed gave it as longer (see reconnectEpisode): its real length is where it ended
+function noteEpisodeDone(url, seconds) {
+  const all = loadEpisodePositions()
+  all[episodeKey(url)] = { pos: 0, len: Math.round(seconds), at: Date.now(), done: true }
+  episodePositionsDirty = true
+  saveEpisodePositions()
+}
+
+// A podcast episode kept on the SD card (backend-api podcast-offline.ts): <sha1 of its address>.<ext> in this folder.
+// Played from there - also without internet - instead of being streamed; the address stays what the rest knows.
+const podcastOfflineDir = '/home/dietpi/MuPiBox/podcasts'
+const podcastOfflineExtensions = ['.mp3', '.m4a', '.mp4', '.aac', '.ogg', '.opus']
+function offlineEpisodeFile(url) {
+  if (typeof url !== 'string' || !/^https?:\/\//.test(url)) return undefined
+  const sha1 = (text) => require('node:crypto').createHash('sha1').update(text).digest('hex')
+  for (const hash of new Set([sha1(episodeKey(url)), sha1(url)])) {
+    for (const ext of podcastOfflineExtensions) {
+      const file = path.join(podcastOfflineDir, `${hash}${ext}`)
+      if (fs.existsSync(file)) {
+        log.debug(`${now()}: [Spotify Control] Episode from the SD card: ${file}`)
+        return file
+      }
+    }
+  }
+  return undefined
+}
+
+// resumeAt: a podcast episode goes on there (seconds). The seek is sent right behind the loadfile, so mplayer takes it
+// with its first round, and the volume stays at 0 until it got there (endEpisodeSeek): the beginning played for a
+// second or so before the jump.
+function playURL(playedURL, resumeAt = null) {
   playbackGeneration++
   startLoading()
   log.debug(`${now()}: [Spotify Control] Starting currentMeta.playing:${playedURL}`)
   //currentMeta.playing = true;
   writeplayerstatePlay()
   player.play(playedURL)
-  player.setVolume(volumeStart)
+  if (resumeAt != null) {
+    player.setVolume(0)
+    atPlaybackStart(() => {
+      if (pendingEpisodeSeek) pendingEpisodeSeek.sent = Date.now()
+      player.exec('pausing_keep seek', [resumeAt, 2])
+    })
+  } else player.setVolume(volumeStart)
   log.debug(`${now()}: ${playedURL}`)
   if (telegramPlaybackNotices())
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing stream"')
@@ -2178,12 +2514,27 @@ const _execAsync = (cmd) =>
     })
   })
 
+// Bluetooth audio on (PulseAudio's default output is a Bluetooth device, e.g. headphones): its own maximum volume
+// counts (mupibox.btMaxVolume), else the box's (maxVolume). Asked at most every 3 seconds.
+let btAudio = { at: 0, on: false }
+async function bluetoothAudio() {
+  if (Date.now() - btAudio.at < 3000) return btAudio.on
+  const on = await _execAsync('/usr/bin/pactl get-default-sink')
+    .then(({ stdout }) => String(stdout).trim().startsWith('bluez_'))
+    .catch(() => false)
+  btAudio = { at: Date.now(), on }
+  return on
+}
+async function volumeCap() {
+  const mb = muPiBoxConfig.mupibox
+  return Number.isInteger(mb.btMaxVolume) && (await bluetoothAudio()) ? mb.btMaxVolume : mb.maxVolume
+}
+
 /*gets available devices, searches for the active one and returns its volume*/
 async function setVolume(volume, step = 5) {
   // step: percent per change (5 for the +5 / -5 commands, 1..10 for the rotary encoder)
   const volumeUp = `/usr/bin/amixer sset Master ${step}%+`
   const volumeDown = `/usr/bin/amixer sset Master ${step}%-`
-  const volumeMax = `/usr/bin/amixer sset Master ${muPiBoxConfig.mupibox.maxVolume}%`
   const cmdVolume = "/usr/bin/amixer sget Master | grep 'Right:'"
 
   // Chain onto the queue so concurrent invocations run strictly serially.
@@ -2203,14 +2554,16 @@ async function setVolume(volume, step = 5) {
       return
     }
     currentMeta.volume = actualVolume
+    const cap = await volumeCap()
+    const volumeMax = `/usr/bin/amixer sset Master ${cap}%`
 
     if (volume) {
-      if (actualVolume < muPiBoxConfig.mupibox.maxVolume) {
+      if (actualVolume < cap) {
         // never above the max volume, also when the step does not divide the remaining room
-        await cmdCall(actualVolume + step > muPiBoxConfig.mupibox.maxVolume ? volumeMax : volumeUp)
-        currentMeta.volume = Math.min(actualVolume + step, muPiBoxConfig.mupibox.maxVolume)
+        await cmdCall(actualVolume + step > cap ? volumeMax : volumeUp)
+        currentMeta.volume = Math.min(actualVolume + step, cap)
       } else {
-        currentMeta.volume = muPiBoxConfig.mupibox.maxVolume
+        currentMeta.volume = cap
         await cmdCall(volumeMax)
       }
     } else {
@@ -2223,6 +2576,44 @@ async function setVolume(volume, step = 5) {
   })
 
   return _volumeOpQueue
+}
+
+// Ends playback gently: the box's volume (amixer Master - every source, Spotify too) goes down over FADE_OUT_MS,
+// then `done` runs (the stop) and the volume is set back - silently, for the next playback. The end of the playing
+// time and of a quiet time came as a hard cut before.
+const FADE_OUT_MS = 20_000
+const FADE_OUT_STEPS = 40
+let fadingOut = false
+function fadeOutThen(done) {
+  if (fadingOut) return
+  fadingOut = true
+  _volumeOpQueue = _volumeOpQueue.then(async () => {
+    let start = Number.NaN
+    try {
+      const { stdout } = await _execAsync("/usr/bin/amixer sget Master | grep 'Right:'")
+      start = Number.parseInt(stdout.split('[')[1].split('%')[0], 10)
+    } catch {
+      // not readable: stopped at once
+    }
+    const nothingToFade = !Number.isFinite(start) || start <= 0 || !isActuallyPlaying()
+    if (!nothingToFade) {
+      log.debug(`${now()}: [Spotify Control] Fading out from ${start}% over ${FADE_OUT_MS / 1000}s`)
+      for (let i = 1; i <= FADE_OUT_STEPS; i++) {
+        await new Promise((r) => setTimeout(r, FADE_OUT_MS / FADE_OUT_STEPS))
+        await _execAsync(`/usr/bin/amixer sset Master ${Math.round(start * (1 - i / FADE_OUT_STEPS))}%`).catch(() => undefined)
+      }
+    }
+    try {
+      done()
+    } finally {
+      if (!nothingToFade) {
+        // (a moment after the stop, so nothing plays at the old volume any more)
+        await new Promise((r) => setTimeout(r, 1500))
+        await _execAsync(`/usr/bin/amixer sset Master ${start}%`).catch(() => undefined)
+      }
+      fadingOut = false
+    }
+  })
 }
 
 async function transferPlayback(id) {
@@ -2363,6 +2754,15 @@ app.get('/state', (_req, res) => {
 
 // The display reports its Spotify device (the Web Playback SDK in the kiosk) when it connects. Starts that
 // don't come from the display (/current/..., e.g. the parents' web app or Telegram) play there.
+// Whether something plays now (the backend's announcements pause it and go on afterwards, speech.ts)
+app.get('/playing', (_req, res) => {
+  res.json({ playing: isActuallyPlaying() })
+})
+
+// Which device the display reported (the app's page "Zugangsdaten" asks Spotify whether it still knows it)
+app.get('/display/spotify-device', (_req, res) => {
+  res.json({ id: displaySpotifyDevice })
+})
 app.get('/display/spotify-device/:id', (req, res) => {
   if (!/^[A-Za-z0-9]{20,64}$/.test(req.params.id)) {
     res.status(400).json({ error: 'bad device id' })
@@ -2523,7 +2923,12 @@ app.use((req, res) => {
   if (hasDirSegment(command, 'nas')) {
     switchToMplayer()
     currentMeta.currentType = 'nas'
-    playNasList(command.base)
+    // /musicsearch/nas/resume/<encoded path>:<trackNr>:<progressPct> (the path is encoded: no ":" of its own)
+    const parts = hasDirSegment(command, 'resume') ? command.base.split(':') : []
+    const trackNr = Number.parseInt(parts[1], 10)
+    const progressPct = Number.parseFloat(parts[2])
+    if (parts.length === 3 && trackNr >= 1 && Number.isFinite(progressPct)) playNasList(parts[0], { trackNr, progressPct })
+    else playNasList(command.base)
   }
 
   if (hasDirSegment(command, 'radio')) {
@@ -2549,7 +2954,8 @@ app.use((req, res) => {
     const dir = command.dir
     let rssURL = dir.split('rss/').pop()
     rssURL = decodeURIComponent(rssURL)
-    playURL(rssURL)
+    playURL(offlineEpisodeFile(rssURL) ?? rssURL, startEpisode(rssURL))
+    episodeRun = { url: rssURL, generation: playbackGeneration, retries: 0 }
   }
 
   if (hasDirSegment(command, 'say')) {
@@ -2558,18 +2964,7 @@ app.use((req, res) => {
     nameTTS = decodeURIComponent(nameTTS)
     nameTTS = nameTTS.replace(/\//g, ' ')
     log.debug(`${now()}: [Spotify Control] Say: ${nameTTS}`)
-    const filename = `/home/dietpi/MuPiBox/tts_files/${nameTTS}.mp3`
-    try {
-      if (fs.existsSync(filename)) {
-        console.log('The file exists.')
-        playFile(nameTTS)
-      } else {
-        console.log('The file does not exist.')
-        downloadTTS(nameTTS)
-      }
-    } catch (err) {
-      console.error(err)
-    }
+    sayName(nameTTS).catch((err) => console.error(err))
   }
 
   if (hasDirSegment(command, 'deletelocal')) {
@@ -2596,7 +2991,9 @@ app.use((req, res) => {
   else if (command.name === 'seek-30') seek(0)
   else if (command.name.includes('seekpos:')) {
     const pos = command.name.split(':')[1]
-    seek(pos)
+    if (currentMeta.currentType === 'rss' && Date.now() - episodeResumedAt < 5000) {
+      log.debug(`${now()}: [Spotify Control] seekpos ${pos} skipped: the episode already went on where it was left`)
+    } else seek(pos)
   } else if (command.name === 'albumstop') cmdCall('bash /usr/local/bin/mupibox/albumstop.sh')
   else if (command.name === 'enablewifi')
     cmdCall(

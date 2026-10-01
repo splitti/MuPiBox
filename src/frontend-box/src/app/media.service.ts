@@ -589,6 +589,9 @@ export class MediaService {
             return tempCovers
           }, {})
 
+        // (a podcast with a new episode: a dot on its tile)
+        const hasNew = new Set(regularMedia.filter((m) => m.episodeNew).map(groupOf))
+
         const coverMedia = regularMedia
           .sort((a, b) => (a.title <= b.title ? -1 : 1))
           .reduce<Record<string, Media>>((tempMedia, currentMedia) => {
@@ -608,6 +611,7 @@ export class MediaService {
               albumCount: mediaCounts[key].toString(),
               cover: covers[key],
               coverMedia: coverMedia[key],
+              ...(hasNew.has(key) ? { hasNew: true } : {}),
             }
             return artist
           })

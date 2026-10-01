@@ -307,6 +307,21 @@ def on_chat_message(msg):
     elif command == '/finishalbum':
         bot.sendMessage(chat_id, tr('finishalbum'))
         subprocess.run(["sudo", "/usr/local/bin/mupibox/./albumstop_activator.sh"])
+    elif command.split(' ', 1)[0] in ('/sag', '/say'):
+        # a parents' announcement: the box says the text now (Sprachausgabe in the app)
+        text = command.split(' ', 1)[1].strip() if ' ' in command else ''
+        if not text:
+            bot.sendMessage(chat_id, tr('usage_say'))
+        else:
+            status_code, body = call_api_post('/app/speech/say-local', {'text': text[:300]})
+            if status_code == 200:
+                bot.sendMessage(chat_id, tr('say_ok'))
+            elif isinstance(body, dict) and body.get('error') == 'announcements_off':
+                bot.sendMessage(chat_id, tr('say_off'))
+            elif isinstance(body, dict) and body.get('error') == 'speech_off':
+                bot.sendMessage(chat_id, tr('say_silent'))
+            else:
+                bot.sendMessage(chat_id, tr('error', detail=failure_detail(status_code, body)))
     elif command == '/pause':
         bot.sendMessage(chat_id, tr('pause'))
         url = 'http://127.0.0.1:5005//pause'  # local: the player only takes commands from the box itself or its own pages

@@ -1,3 +1,73 @@
+<h3>DEV 5.0.4 - changes compared to 5.0.3</h3>
+<b>Highlights</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'><b>Find podcasts and radio stations in the web app:</b> one search across all podcast providers, including the ARD Audiothek (ARD Sounds), with a language filter and suggestions of popular kids' podcasts for each language; radio stations from radio-browser.info, also with suggestions.</li>
+<li id='linews' class='linews'><b>Podcast episodes on the SD card:</b> per podcast the newest 1 to 20 episodes can be kept on the box, so they also play without internet.</li>
+<li id='linews' class='linews'><b>Continue where you stopped:</b> every podcast episode continues at its last position, NAS albums too – without hearing the beginning first. Switchable, and how long a position is kept can be chosen.</li>
+<li id='linews' class='linews'><b>New episodes and progress on the display:</b> a dot marks new episodes, a bar shows how far an episode was heard and a tick marks finished ones (both switchable).</li>
+<li id='linews' class='linews'><b>Gentle end:</b> sleep timer, end of the playtime and start of a quiet time fade the sound out over 20 seconds instead of stopping hard.</li>
+<li id='linews' class='linews'><b>Box health at a glance</b> and a <b>weekly summary</b> in Telegram on Sunday evening.</li>
+<li id='linews' class='linews'><b>Natural voices on the box:</b> Piper speaks offline with voices for all 17 languages – names on the display, announcements of the remaining playtime, bedtime and the end of the sleep timer, and announcements from the parents ("Dinner is ready!") from the web app or Telegram.</li>
+<li id='linews' class='linews'><b>Evening dimming:</b> the display gets darker in the evening (and during quiet hours, if you like) and bright again in the morning.</li>
+<li id='linews' class='linews'><b>Own volume limit for Bluetooth headphones</b>, and a <b>tidier web app</b>: settings pages in two columns without gaps, with more in them (charge curve, signed-in devices, test message …).</li>
+</ul>
+<b>Podcasts and radio</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Add content: one podcast search for all providers (Apple Podcasts directory and ARD Audiothek) in the language of your choice; only shows in that language are offered. Without a search term the page suggests popular kids' podcasts of that language.</li>
+<li id='linews' class='linews'>ARD Audiothek shows can be added as podcasts (ard:&lt;id&gt;); their episodes come straight from the ARD Audiothek.</li>
+<li id='linews' class='linews'>Radio station search (radio-browser.info) with suggestions of kids' stations for the chosen language.</li>
+<li id='linews' class='linews'>Podcast and radio search can be switched off under Settings &gt; Services; adding content only offers services that are set up (Spotify only when signed in).</li>
+<li id='linews' class='linews'>Episodes on the SD card: per podcast "Off" or the newest 1, 3, 5, 10 or 20 episodes; single episodes can be saved or removed by hand. Saved episodes play without internet.</li>
+<li id='linews' class='linews'>ARD Audiothek: an episode is only saved when the ARD itself releases it for download (from the ARD's download address); all others are streamed only and show a lock. Saved ARD episodes are deleted when their time online at the ARD ends.</li>
+<li id='linews' class='linews'>Every episode keeps its own position (Settings &gt; Controls on the display &gt; Podcasts): on, and kept for 1 month to unlimited. The app shows how far each episode was heard.</li>
+<li id='linews' class='linews'>New episodes are marked on the display and in the app for 3, 7 or 14 days (only episodes that appeared after the podcast was added; gone once played). Started episodes show a progress bar, finished ones a tick.</li>
+<li id='linews' class='linews'>More robust podcasts: very large feeds load, an episode keeps its identity when the feed changes its links, the length comes from the feed, and slow feeds no longer hold up the display.</li>
+</ul>
+<b>Player</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Continuing podcast episodes and NAS albums starts at the saved position without an audible beginning.</li>
+<li id='linews' class='linews'>Long podcast episodes: the display no longer returns to the overview after pauses, and a dropped connection is opened again at the same position.</li>
+<li id='linews' class='linews'>Sleep timer, end of the playtime and start of a quiet time fade out over 20 seconds; the volume is back afterwards (also when the sleep timer is stopped while fading).</li>
+<li id='linews' class='linews'>Spotify: librespot is gone. The display's player is the box's device in the Spotify app on the phone (choose it under "Devices" and play from the phone); the update removes librespot and its cache, which frees up to several GB on the SD card. New installations get Widevine again, which the display's player needs.</li>
+<li id='linews' class='linews'>Telegram "Report playback" now also reports Spotify tracks played on the display.</li>
+<li id='linews' class='linews'>Spotify: the display's player could lose its connection to Spotify without noticing – it counted as ready, but every start went nowhere. It now checks with Spotify before a start and every 3 minutes and connects again when needed.</li>
+<li id='linews' class='linews'>Volume: an own maximum while Bluetooth headphones or a speaker are connected (Settings &gt; Audio &gt; Volume); a louder box goes down to it as soon as they connect.</li>
+</ul>
+<b>Speech output</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New page Settings &gt; Audio &gt; Speech output: Piper on the box (offline, recommended), Google (online) or silent. Without a Piper voice for the box's language Google or silence takes over, as chosen. The choice also applies to reading names aloud on the display.</li>
+<li id='linews' class='linews'>Voices for all 17 languages (Piper voices from Hugging Face): listen to a sample on the phone, download, use, delete, and try any downloaded voice on the box itself. Quality, size and licence are shown; Piper itself is downloaded with the first voice.</li>
+<li id='linews' class='linews'>The names of the library are prepared in the background (after choosing a voice and whenever the library changes), so the display reads them without delay.</li>
+<li id='linews' class='linews'>Automatic announcements: the remaining playtime 2–15 minutes before its end, the start of a quiet time and the end of the sleep timer – with your own texts and a volume of their own (never above the box's volume).</li>
+<li id='linews' class='linews'>Parents' announcements: templates and your own text, from the start page ("Announcement") or Telegram (/say text), with a gong, and playback paused and continued afterwards (or only quieter).</li>
+</ul>
+<b>Display</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Evening dimming (Settings &gt; Display): from / until, brightness in the evening, dimming gradually over up to 60 minutes, optionally also during quiet hours.</li>
+<li id='linews' class='linews'>Own pictures for the start, the goodbye and the empty battery (Settings &gt; Appearance &gt; Boot screens &gt; "Own pictures"): a photo or logo from the phone or PC, fitted to the display (fill or show whole); the console takes its colour, so nothing flashes. The design stays for the maintenance screens and every picture without an own one.</li>
+<li id='linews' class='linews'>Rotation as tiles, the usual resolutions to choose from, "Display off after" in fixed steps.</li>
+<li id='linews' class='linews'>Shutting down no longer shows texts of the console between the goodbye pictures.</li>
+<li id='linews' class='linews'>Themes Super Mario and Steampunk: new name fonts (Titan One, Rye) under a free licence. The unused initramfs splash screen is removed by the update.</li>
+</ul>
+<b>Web app</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Library: filter by source (Spotify, Smart Sync, podcasts, radio, SD card, NAS).</li>
+<li id='linews' class='linews'>iPhone/iPad: the web app on the home screen no longer loads itself again at every change of page ("Verbinde mit der Box …").</li>
+<li id='linews' class='linews'>New page Settings &gt; System &gt; Box health: storage, temperature, power supply (under-voltage), SD card errors, memory, services, internet, NAS, Spotify sign-in, certificate and saved episodes – with what to do and a link to the right page when something is off.</li>
+<li id='linews' class='linews'>Listening history: the minutes of each day above its bar, and audiobooks and podcasts without an artist are counted by their album or show.</li>
+<li id='linews' class='linews'>Telegram: weekly summary on Sunday evening (how long and what was played), switchable under Telegram.</li>
+<li id='linews' class='linews'>Settings pages in two columns without gaps on the PC, save buttons below both columns, settings that belong to a switch only shown with it.</li>
+<li id='linews' class='linews'>Reworked pages: System (in groups, with version, health and updates), MQTT, WLED, Telegram (test message, list of commands), controls on the display (tabs switched on instead of hidden), MuPiHAT (charge curve as a chart, checked while typing), Bluetooth (connect and disconnect paired devices), WiFi (search and add in one place, change the password of a saved network), Spotify access (account, Premium, whether the display is visible), password (signed-in devices, sign out one of them), HTTPS (step by step, guides for Windows and Mac), restart, logs, browser and experts.</li>
+<li id='linews' class='linews'>Forgotten password: after signing in with the QR code on the display or the Telegram link, a new password can be set for 10 minutes without the old one.</li>
+<li id='linews' class='linews'>Cover search also finds covers at Spotify (with the box's Spotify sign-in).</li>
+<li id='linews' class='linews'>New page Settings &gt; System &gt; Legal: licence, third-party notices of all components, pictures and fonts of the themes, privacy and the external services the box uses.</li>
+</ul>
 <h3>DEV 5.0.3 - changes compared to 5.0.2</h3>
 <b>Highlights</b>
 </ul>
