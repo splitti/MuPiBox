@@ -210,7 +210,13 @@ rm -f /tmp/mupibox-update-failed
 		after=$(date +%s)
 		echo -e "## apt-get install ${package}  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	done
-	
+
+	# pinctrl for the OnOff SHIM on Debian 13 "Trixie" (libgpiod 2, see scripts/OnOffShim): in raspberrypi-utils there.
+	# Debian 12 "Bookworm" has no such package and keeps using the tools of gpiod.
+	if apt-cache show raspberrypi-utils >/dev/null 2>&1 && ! dpkg -l raspberrypi-utils 2>/dev/null | grep -q '^ii'; then
+		apt-get --yes install raspberrypi-utils >&3 2>&3
+	fi
+
 	for package in ${packages2remove}
 	do
 		before=$(date +%s)

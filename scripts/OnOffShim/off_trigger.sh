@@ -32,12 +32,36 @@ else
     echo "$(date) - INFO:  GPIO chip found -> ${GPIO_CHIP}" >> ${LOGFILE}	
 fi
 
+# The tools of libgpiod changed with version 2 (Debian 13 "Trixie"): other options for gpioget and gpiomon. Debian 12
+# "Bookworm" (libgpiod 1) keeps the calls it always had.
+GPIOD_V2=0
+gpiomon --version 2>/dev/null | grep -q ' v2\.' && GPIOD_V2=1
+echo "$(date) - INFO:  libgpiod $([ ${GPIOD_V2} = 1 ] && echo 2 || echo 1)" >> ${LOGFILE}
+
+# The pin's level: 0 or 1
+read_pin() {
+    if [ ${GPIOD_V2} = 1 ]; then
+        sudo gpioget --chip ${GPIO_CHIP} --numeric ${TRIGGER_PIN}
+    else
+        sudo gpioget ${GPIO_CHIP} ${TRIGGER_PIN}
+    fi
+}
+
+# Waits for one press (a falling edge) of the button
+wait_for_press() {
+    if [ ${GPIOD_V2} = 1 ]; then
+        sudo gpiomon --chip ${GPIO_CHIP} --num-events=1 --edges=falling ${TRIGGER_PIN}
+    else
+        sudo gpiomon --num-events=1 --falling-edge ${GPIO_CHIP} ${TRIGGER_PIN}
+    fi
+}
+
 # Check GPIO status
-gpio_status=$(sudo gpioget ${GPIO_CHIP} ${TRIGGER_PIN})
+gpio_status=$(read_pin)
 echo "$(date) - INFO:  GPIO${TRIGGER_PIN} status: ${gpio_status}" >> ${LOGFILE}
 
 check_button_pressed() {
-    local button_state=$(sudo gpioget ${GPIO_CHIP} ${TRIGGER_PIN})
+    local button_state=$(read_pin)
     if [ "$button_state" = "0" ]; then
         return 0  # Button is pressed
     else
@@ -48,7 +72,7 @@ check_button_pressed() {
 # Main monitoring loop
 while true; do
     echo "$(date) - INFO:  Waiting for button press..." >> ${LOGFILE}
-    sudo gpiomon --num-events=1 --falling-edge ${GPIO_CHIP} ${TRIGGER_PIN} &>> ${LOGFILE} &
+    wait_for_press &>> ${LOGFILE} &
     GPIOMON_PID=$!
     if [ $? -ne 0 ]; then
         echo "$(date) - ERROR: Failed to start gpiomon for GPIO${TRIGGER_PIN}" >> ${LOGFILE}

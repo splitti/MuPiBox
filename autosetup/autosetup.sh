@@ -47,7 +47,7 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	#   autoconf - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
 	#   automake - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
 	# libwidevinecdm0 stays: the display plays Spotify through the Web Playback SDK in Chromium, which needs Widevine
-	packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa preload python3-smbus2 pigpio libjson-c-dev libi2c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh rfkill"
+	packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip bluez zip unzip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa preload python3-smbus2 pigpio libjson-c-dev libi2c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh rfkill"
 
 	###############################################################################################
 
@@ -86,6 +86,12 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 		echo -e "## apt-get install ${package} ## finished after $((after - before)) seconds" >&3 2>&3
 		STEP=$((STEP + 1))
 	done
+
+	# pinctrl for the OnOff SHIM on Debian 13 "Trixie" (libgpiod 2, see scripts/OnOffShim): in raspberrypi-utils there.
+	# Debian 12 "Bookworm" has no such package and keeps using the tools of gpiod.
+	if apt-cache show raspberrypi-utils >/dev/null 2>&1 && ! dpkg -l raspberrypi-utils 2>/dev/null | grep -q '^ii'; then
+		apt-get --yes install raspberrypi-utils >&3 2>&3
+	fi
 
 	###############################################################################################
 
@@ -142,15 +148,6 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 		echo -e "## pip install telepot ## finished after $((after - before)) seconds" >&3 2>&3
 		STEP=$((STEP + 1))
 	fi
-
-	###############################################################################################
-
-	echo -e "XXX\n${STEP}\nInstall DietPi software dependencies ...\nXXX"
-	before=$(date +%s)
-	su - -c "yes '' | /boot/dietpi/dietpi-software install 200" >&3 2>&3
-	after=$(date +%s)
-	echo -e "## DietPi software dependencies ## finished after $((after - before)) seconds" >&3 2>&3
-	STEP=$((STEP + 1))
 
 	###############################################################################################
 
@@ -307,6 +304,9 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 
 	###############################################################################################
 
+	# The release of DietPi-Dashboard from GitHub (one program, port 5252, as the app links it). DietPi's own installer
+	# (dietpi-software install 200) is not used: until a release from v0.7.0 on it installs a nightly build from
+	# nightly.link - not always there (404) - as a second dashboard with its own services on the same port.
 	echo -e "XXX\n${STEP}\nSetup DietPi-Dashboard... \nXXX"
 	before=$(date +%s)
 	mkdir -p /opt/dietpi-dashboard >&3 2>&3
