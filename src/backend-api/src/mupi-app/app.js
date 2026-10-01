@@ -1686,7 +1686,8 @@ function serviceCover(it) {
   const ref = it.id ? ['album', it.id] : it.playlistid ? ['playlist', it.playlistid] : it.showid ? ['show', it.showid] : it.audiobookid ? ['audiobook', it.audiobookid] : it.artistid ? ['artist', it.artistid] : null
   return ref ? `/api/spotify/cover-for/${ref[0]}/${encodeURIComponent(ref[1])}` : ''
 }
-const coverOf = (it) => it.cover_override ?? it.cover ?? serviceCover(it) ?? ''
+// (no cover of its own and none from the service - a radio station, a local entry: the artist's cover, if one is set)
+const coverOf = (it) => it.cover_override ?? it.cover ?? (serviceCover(it) || it.artistcover_override || it.artistcover || '')
 
 // Spotify entries that only name an artist are not playable on their own (the box looks their albums up itself)
 // Entries that subscribe a whole Spotify artist (only artistid): a folder of that artist's albums (as on the box)
@@ -6380,7 +6381,7 @@ function wlanTop() {
     `<section class="card" data-col="1"><div class="card-head"><h2>Verbindung</h2><button class="icon-btn soft" id="w-refresh" aria-label="Aktualisieren">${icon('sync', 18)}</button></div>
       <div class="wifi-now"><span class="avatar">${icon('wifi', 18)}</span><span class="lbl"><b translate="no">${esc(name || 'Nicht verbunden')}</b>
         <small>${Number.isFinite(dbm) ? `${signalBars(dbm)} Empfang ${signalWord(dbm)}` : ''}</small></span><span class="chip ${online ? 'ok' : 'warn'}">${online ? 'online' : 'offline'}</span></div>
-      <dl class="kv">${row('IP-Adresse', n.ip)}</dl>
+      <dl class="kv">${row('IP-Adresse', n.ip)}${(Array.isArray(n.ipv6) ? n.ipv6 : []).map((a) => row('IPv6-Adresse', a)).join('')}</dl>
       <details class="more"><summary>Details</summary><dl class="kv">${row('Signal', n.wifisignal)}${row('Gateway', n.gateway)}${row('DNS', n.dns)}${row('MAC', n.mac)}</dl></details></section>`,
     `<section class="card" data-col="1"><h2>Gespeicherte Netze</h2>${
       net.saved

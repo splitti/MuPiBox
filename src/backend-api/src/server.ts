@@ -2516,11 +2516,19 @@ app.get('/api/activeresume', (_req, res) => {
   })
 })
 
+/** The IPv6 addresses of an adapter that other devices can reach (global and ULA - not fe80:: link-local) */
+function ipv6AddressesOf(name: string): string[] {
+  return (os.networkInterfaces()[name] ?? []).filter((a) => a.family === 'IPv6' && !a.internal && !/^fe[89ab]/i.test(a.address)).map((a) => a.address)
+}
+
 app.get('/api/network', (_req, res) => {
   if (fs.existsSync(networkFile)) {
     tryReadFile(networkFile)
       .then((data) => {
-        res.json(data)
+        // (plus the adapter's IPv6 addresses as they are now - not the link-local fe80:: ones, which every adapter has)
+        const n = data as { interface?: unknown } | null
+        const ipv6 = typeof n?.interface === 'string' ? ipv6AddressesOf(n.interface) : []
+        res.json(n && typeof n === 'object' && ipv6.length ? { ...n, ipv6 } : data)
       })
       .catch((error) => {
         console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/network read network.json`)

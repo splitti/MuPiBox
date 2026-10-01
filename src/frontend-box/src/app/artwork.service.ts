@@ -23,8 +23,9 @@ export class ArtworkService {
   // subscription that's only released when the component is destroyed.
   // `of(value)` is the idiomatic single-emit-then-complete observable, and it
   // composes with the radio-cover cache above.
+  // (only one of the two pictures set: it is used for both - the artist's for an entry without a cover of its own)
   getArtwork(media: Media): Observable<string> {
-    const coverUrl = this.cachedCoverUrl(media, media.cover || '../assets/images/nocover_mupi.png')
+    const coverUrl = this.cachedCoverUrl(media, media.cover || media.artistcover || '../assets/images/nocover_mupi.png')
     return of(coverUrl)
   }
 

@@ -4,6 +4,16 @@
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>When the box cannot read a podcast's feed, the app says why instead of "No episodes found": server not found, reachable over IPv6 only (the box has no IPv6), not reachable, a server in the home network that is not allowed yet (with a button to allow it), an error answer, or no feed at the address.</li>
 </ul>
+<b>Covers</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Only one of cover and artist cover set: it is used for both - an entry without a cover of its own shows the artist's picture on its tile, in the resume list and in the player (the artist tile already took the cover).</li>
+</ul>
+<b>Network</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>The WiFi page shows the box's IPv6 address too, when it has one.</li>
+</ul>
 <h3>DEV 5.0.6 - changes compared to 5.0.5</h3>
 <b>Player</b>
 </ul>

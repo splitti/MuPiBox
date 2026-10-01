@@ -231,12 +231,17 @@ export class PlayerPage implements OnInit, AfterViewInit {
     img.src = url
   }
 
+  /** The entry's cover - or, with only the artist's picture set, that one (as on its tile, see ArtworkService) */
+  private get mediaCover(): string | undefined {
+    return this.media?.cover || this.media?.artistcover || undefined
+  }
+
   private useTrackCover(url: string): void {
     this.trackCover = url
     if (url) {
       this.cover = url
-    } else if (this.media?.cover) {
-      this.cover = this.artworkService.cachedCoverUrl(this.media, this.media.cover)
+    } else if (this.mediaCover) {
+      this.cover = this.artworkService.cachedCoverUrl(this.media, this.mediaCover)
     }
   }
   playing = true
@@ -289,8 +294,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
     if (navState.media) {
       this.media = navState.media
       // Known right away, so the cover is there when the page opens (see CoverFlipService).
-      if (this.media.cover && this.media.type !== 'spotify') {
-        this.cover = this.artworkService.cachedCoverUrl(this.media, this.media.cover)
+      if (this.mediaCover && this.media.type !== 'spotify') {
+        this.cover = this.artworkService.cachedCoverUrl(this.media, this.mediaCover)
       }
       // isResumeEntry() instead of a bare category check: it also recognises
       // legacy entries written before the isResume flag existed.
@@ -349,8 +354,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
         this.cover = spotify.item.album.images[0].url
       } else if (this.trackCover) {
         this.cover = this.trackCover
-      } else if (this.media?.cover) {
-        this.cover = this.artworkService.cachedCoverUrl(this.media, this.media.cover)
+      } else if (this.mediaCover) {
+        this.cover = this.artworkService.cachedCoverUrl(this.media, this.mediaCover)
       } else {
         this.cover = '../assets/images/nocover_mupi.png'
       }
