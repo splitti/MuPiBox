@@ -379,6 +379,8 @@ async function renderPage(page, reload = true) {
     console.error(err)
     toast('Ein Teil der Seite ließ sich nicht einrichten', 'info')
   }
+  // (a pin on each card with a heading, see pinInject)
+  pinInject(main, page)
   balanceCols(main)
   if (keepScroll != null) window.scrollTo(0, keepScroll)
 }
@@ -504,7 +506,8 @@ function renderSection(sec) {
       ? `<div class="card-head"><h2>${esc(sec.title)}</h2><span class="chip ${esc(sec.badge.kind ?? '')}">${esc(sec.badge.text)}</span></div>`
       : `<h2>${esc(sec.title)}</h2>`
     : ''
-  return `<section class="card${wide ? ' wide' : ''}${onlyNav && !sec.title ? ' nav-card' : ''}${sec.cls ? ` ${esc(sec.cls)}` : ''}"${sec.col ? ` data-col="${sec.col}"` : ''}>
+  // (data-card: the card's id for pinning it to the start page, from the heading as the schema has it - see pinInject)
+  return `<section class="card${wide ? ' wide' : ''}${onlyNav && !sec.title ? ' nav-card' : ''}${sec.cls ? ` ${esc(sec.cls)}` : ''}"${sec.col ? ` data-col="${sec.col}"` : ''}${sec.title ? ` data-card="${esc(pinSlug(sec.title))}"` : ''}>
     ${head}${sec.help ? `<p class="help">${esc(sec.help)}</p>` : ''}${items}</section>`
 }
 
@@ -864,6 +867,8 @@ function startSkeleton() {
         <button class="qbtn" id="q-say">${icon('vol', 22)}<span>Durchsage</span></button>
       </div>
     </div>`,
+    // (the pinned cards: see drawPins)
+    `<div class="pins-area" id="pins" hidden></div>`,
     `<div class="update-note" id="update-note"></div>`,
     `<section class="card nav-card start-more"><div class="navlist">
       ${navRow('g-aussehen', 'Aussehen des Displays', 'Theme, Start- und Wartungsbilder', 'pal')}
@@ -892,6 +897,7 @@ function statusSoon(root) {
 }
 
 function mountStart(root) {
+  drawPins(root)
   loadNow(root)
   loadStatus(root)
   loadVolumeCap(root)
@@ -5973,7 +5979,7 @@ function btTop() {
     ${sw('bt-on', 'Bluetooth', 'Für Kopfhörer oder Lautsprecher.', b.powered, noHw)}${sw('bt-auto', 'Automatisch verbinden', 'Verbindet ein bekanntes Gerät von selbst, sobald es an ist.', b.autoconnect, noHw)}
     <div class="navlist">${navRow('lautstaerke', 'Lautstärkegrenze für Kopfhörer', 'Eigenes Maximum, solange Bluetooth-Audio läuft', 'vol')}</div></section>`
   const paired = b.powered
-    ? `<section class="card" data-col="1"><h2>Gekoppelte Geräte</h2>${
+    ? `<section class="card" data-col="1" data-card="gekoppelte-gerate"><h2>Gekoppelte Geräte</h2>${
         devices.length
           ? `<div class="rows">${devices
               .map(
@@ -7141,7 +7147,7 @@ function speechTop() {
       ${sw('sp-sleep', 'Ende des Schlaftimers ansagen', 'Eine Minute bevor der Schlaftimer die Wiedergabe beendet.', c.sleepEnd.on)}
       <div class="dep" data-dep-id="sp-sleep"${c.sleepEnd.on ? '' : ' hidden'}>${text('sp-t-sleepEnd', t.sleepEnd, '')}</div>
       <div class="field"><label>Lautstärke der Ansagen</label><div class="seg" id="sp-level">${SPEECH_LEVELS.map(([v, l]) => `<button aria-pressed="${c.level === v}" data-v="${v}">${esc(l)}</button>`).join('')}</div><small>Nie lauter als die Box gerade ist (Hörschutz).</small></div></section>`,
-    `<section class="card" data-col="2"><div class="card-head"><h2>Eltern-Durchsagen</h2><span class="chips"><span class="chip" translate="no">${esc(SPEECH_NAMES[box] ?? box)}</span><span class="chip ${c.parents.on ? 'ok' : ''}">${c.parents.on ? 'an' : 'aus'}</span></span></div>
+    `<section class="card" data-col="2" data-card="eltern-durchsagen"><div class="card-head"><h2>Eltern-Durchsagen</h2><span class="chips"><span class="chip" translate="no">${esc(SPEECH_NAMES[box] ?? box)}</span><span class="chip ${c.parents.on ? 'ok' : ''}">${c.parents.on ? 'an' : 'aus'}</span></span></div>
       <p class="help">${esc('Vom Handy etwas auf der Box sagen lassen: über „Durchsage“ auf der Startseite oder per Telegram (/sag Text).')}</p>
       ${sw('sp-parents', 'Durchsagen erlauben', '', c.parents.on)}
       <div class="rows" id="sp-templates">${t.templates.map((x, i) => `<div class="entry"><span class="avatar">${icon('vol', 16)}</span><span class="lbl"><b dir="auto">${esc(x)}</b></span><button class="btn sm primary" data-tpl-say="${i}">Jetzt</button><button class="btn sm" data-tpl-rm="${i}">Entfernen</button></div>`).join('')}</div>
@@ -10125,3 +10131,318 @@ boot().catch((err) => {
   console.error(err)
   $('#content').innerHTML = `<div class="loading"><p>Die App konnte nicht geladen werden.</p></div>`
 })
+
+/* ---------- Start › "Angepinnt" (see eltern/pinned-cards.ts) ----------
+ * Every card with a heading gets a pin. Pinned, it is on the start page
+ *   - as a link (any card): a tile with its heading and page; a tap opens the page, goes to the card and marks it for
+ *     a moment - the card is always the real one, nothing is copied;
+ *   - as a whole card (only the cards in LIVE_CARDS): a small version of its own, to see and use on the start page.
+ * A card is known by its page and an id (data-card, else made from its heading as written in the app - the
+ * translation comes later), not by the heading shown. Idea and first version: Andreas (Lippsson), wowa1990/MuPiBox#11.
+ */
+
+const pins = { list: null, loading: null, jump: null }
+const pinSlug = (s) =>
+  String(s)
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 64)
+const pinKey = (p) => `${p.page}:${p.card}`
+
+function pinsReady() {
+  pins.loading ??= api(`${API}/pinned-cards`).then((r) => {
+    pins.list = r.ok && Array.isArray(r.body?.items) ? r.body.items : []
+  })
+  return pins.loading
+}
+
+async function pinsSave(list) {
+  const before = pins.list
+  pins.list = list
+  const r = await api(`${API}/pinned-cards`, { method: 'POST', body: { items: list } })
+  if (r.ok) pins.list = r.body.items
+  else {
+    pins.list = before
+    toast('Nicht gespeichert', 'info')
+  }
+  return r.ok
+}
+
+// The whole cards for the start page: what they show and how they are wired
+const LIVE_CARDS = {
+  // the chart of the battery's page (hatChart), to look at; the values are changed on that page
+  'mupihat:ladekurve': {
+    title: 'Ladekurve',
+    async html() {
+      await loadHat()
+      return `<div class="hat-chart">${hatChart()}</div>${hatNowLine()}
+        <div class="btns"><button class="btn sm" data-pin-edit>${icon('sliders', 16)}Werte ändern</button></div>`
+    },
+    mount(el) {
+      el.querySelector('[data-pin-edit]').onclick = () => pinGo({ page: 'mupihat', card: 'ladekurve' })
+    },
+  },
+  // the parents' messages: a template at a tap, or an own text
+  'sprachausgabe:eltern-durchsagen': {
+    title: 'Durchsagen',
+    async html() {
+      const r = await api(`${API}/speech`)
+      if (!r.ok || !r.body?.configured) return `<p class="help" style="margin:0">${esc('Die Sprachausgabe ist noch nicht eingerichtet.')}</p>`
+      const t = r.body.texts?.templates ?? []
+      return `${t.length ? `<div class="pin-say">${t.map((x, i) => `<button type="button" class="pin-chip" data-pin-say="${i}">${icon('vol', 16)}<span dir="auto">${esc(x)}</span></button>`).join('')}</div>` : ''}
+        <div class="btns"><button class="btn sm" data-pin-own>${icon('plus', 16)}Eigener Text …</button></div>
+        ${r.body.config?.parents?.on ? '' : `<p class="help" style="margin:0">${esc('Durchsagen sind gerade ausgeschaltet.')}</p>`}`
+    },
+    mount(el) {
+      for (const b of el.querySelectorAll('[data-pin-say]')) b.onclick = () => speechSay(b.querySelector('span').textContent)
+      el.querySelector('[data-pin-own]')?.addEventListener('click', () => saySheet())
+    },
+  },
+  // headphones and speakers: connect or disconnect at a tap
+  'bluetooth:gekoppelte-gerate': {
+    title: 'Kopfhörer',
+    async html() {
+      const r = await api(`${API}/bluetooth`)
+      const b = r.body ?? {}
+      if (!r.ok) return `<p class="help" style="margin:0">${esc('Bluetooth antwortet gerade nicht.')}</p>`
+      if (!b.powered) return `<p class="help" style="margin:0">${esc('Bluetooth ist aus.')}</p>`
+      pins.btDevices = b.devices ?? []
+      return pins.btDevices.length
+        ? `<div class="rows">${pins.btDevices
+            .map(
+              (d, i) =>
+                `<div class="entry"><span class="avatar">${icon('phones', 16)}</span><span class="lbl"><b translate="no">${esc(d.name)}</b><small>${d.connected ? 'verbunden' : 'nicht verbunden'}</small></span>${d.connected ? `<button class="btn sm" data-pin-bt="disconnect" data-i="${i}">Trennen</button>` : `<button class="btn sm primary" data-pin-bt="connect" data-i="${i}">Verbinden</button>`}</div>`,
+            )
+            .join('')}</div>`
+        : `<p class="help" style="margin:0">${esc('Noch kein Gerät gekoppelt.')}</p>`
+    },
+    mount(el, refresh) {
+      for (const b of el.querySelectorAll('[data-pin-bt]')) {
+        b.onclick = async () => {
+          const d = pins.btDevices[Number(b.dataset.i)]
+          const connect = b.dataset.pinBt === 'connect'
+          b.disabled = true
+          const r = await api(`${API}/bluetooth/${b.dataset.pinBt}`, { method: 'POST', body: { mac: d.mac } })
+          toast(r.body?.ok ? `${d.name} ${connect ? 'verbunden' : 'getrennt'}` : `${d.name} ${connect ? 'ließ sich nicht verbinden – ist es an?' : 'ließ sich nicht trennen'}`, r.body?.ok ? 'ok' : 'info')
+          refresh()
+        }
+      }
+    },
+  },
+}
+
+// A pinned card's page, scrolled to the card, which is marked for a moment (see pinInject)
+function pinGo(p) {
+  pins.jump = p
+  go(p.page)
+}
+
+// A settings page just drawn: a pin in the head of each card with a heading; a card asked for (pinGo) marked
+function pinInject(main, page) {
+  if (page.id === 'start') return
+  for (const card of main.querySelectorAll(':scope > section.card, :scope > .card')) {
+    const h2 = card.querySelector(':scope > .card-head > h2, :scope > h2')
+    if (!h2 || !h2.textContent.trim()) continue
+    const id = card.dataset.card || pinSlug(h2.textContent.trim())
+    if (!id) continue
+    const p = { page: page.id, card: id, title: h2.textContent.trim() }
+    card.dataset.pinKey = pinKey(p)
+    let head = card.querySelector(':scope > .card-head')
+    if (!head) {
+      head = document.createElement('div')
+      head.className = 'card-head'
+      h2.replaceWith(head)
+      head.appendChild(h2)
+    }
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.className = 'icon-btn soft pin-btn'
+    b.dataset.pinFor = pinKey(p)
+    b.innerHTML = icon('pin', 16)
+    b.onclick = () => pinToggle(p)
+    head.appendChild(b)
+  }
+  pinsReady().then(() => main.isConnected && pinButtons(main))
+  const want = pins.jump
+  if (want && want.page === page.id) {
+    pins.jump = null
+    const card = main.querySelector(`[data-pin-key="${CSS.escape(pinKey(want))}"]`)
+    if (card) {
+      setTimeout(() => {
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        card.classList.add('pin-flash')
+        setTimeout(() => card.classList.remove('pin-flash'), 2400)
+      }, 80)
+    }
+  }
+}
+
+// The pins' state as the list has it
+function pinButtons(root) {
+  for (const b of root.querySelectorAll('[data-pin-for]')) {
+    const on = (pins.list ?? []).some((p) => pinKey(p) === b.dataset.pinFor)
+    b.classList.toggle('on', on)
+    b.setAttribute('aria-pressed', String(on))
+    b.setAttribute('aria-label', on ? 'Von der Startseite lösen' : 'An die Startseite heften')
+  }
+}
+
+// A tap on a pin: off when it is pinned; else on - a card with a version of its own asks how
+async function pinToggle(p) {
+  await pinsReady()
+  const list = pins.list ?? []
+  const done = (msg) => {
+    pinButtons(document)
+    toast(msg, 'ok')
+  }
+  if (list.some((x) => pinKey(x) === pinKey(p))) {
+    if (await pinsSave(list.filter((x) => pinKey(x) !== pinKey(p)))) done('Von der Startseite gelöst')
+    return
+  }
+  if (!LIVE_CARDS[pinKey(p)]) {
+    if (await pinsSave([...list, { ...p, view: 'link' }])) done('Auf der Startseite – als Verknüpfung')
+    return
+  }
+  openSheet(
+    `<h2>An die Startseite</h2><p class="help" style="margin:0">${esc(`„${p.title}“ auf der Startseite zeigen als:`)}</p>
+    <div class="choices">
+      <button type="button" class="choice on" data-view="card" aria-pressed="true"><span class="radio"></span><span class="lbl"><b>Ganze Karte</b><small>Direkt auf der Startseite sehen und bedienen.</small></span></button>
+      <button type="button" class="choice" data-view="link" aria-pressed="false"><span class="radio"></span><span class="lbl"><b>Verknüpfung</b><small>Eine kleine Kachel; ein Tipp springt zur Karte.</small></span></button>
+    </div>
+    <p class="help" style="margin:0">Umstellen geht später unter Start › Angepinnt › Anordnen.</p>
+    <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>${icon('pin', 16)}Anheften</button></div>`,
+    (sheet, close) => {
+      let view = 'card'
+      for (const c of sheet.querySelectorAll('[data-view]')) {
+        c.onclick = () => {
+          view = c.dataset.view
+          for (const x of sheet.querySelectorAll('[data-view]')) {
+            x.classList.toggle('on', x === c)
+            x.setAttribute('aria-pressed', String(x === c))
+          }
+        }
+      }
+      sheet.querySelector('[data-close]').onclick = close
+      sheet.querySelector('[data-ok]').onclick = async () => {
+        close()
+        if (await pinsSave([...(pins.list ?? []), { ...p, view }])) done(view === 'card' ? 'Auf der Startseite – als ganze Karte' : 'Auf der Startseite – als Verknüpfung')
+      }
+    },
+  )
+}
+
+// The page's place for a link: "Audio › Sprachausgabe"
+function pinWhere(p) {
+  const pg = state.pages.get(p.page)
+  const parent = pg?.parent && state.pages.get(pg.parent)
+  return [parent?.parent ? parent.title : '', pg?.title].filter(Boolean).join(' › ')
+}
+
+// Start: the whole cards in two columns as the player and the tiles above (on a phone one, in the order chosen),
+// the links below
+async function drawPins(root) {
+  await pinsReady()
+  const box = $('#pins', root)
+  if (!box?.isConnected) return
+  const list = (pins.list ?? []).filter((p) => state.pages.has(p.page))
+  if (!list.length) {
+    box.hidden = true
+    box.innerHTML = ''
+    return
+  }
+  box.hidden = false
+  const asCard = (p) => !!LIVE_CARDS[pinKey(p)] && p.view !== 'link'
+  const cards = list.filter(asCard)
+  const links = list.filter((p) => !asCard(p))
+  const cardHtml = (p, i) =>
+    `<section class="card pin-card" data-live="${i}" style="order:${i}"><div class="card-head"><h2>${esc(LIVE_CARDS[pinKey(p)].title)}</h2><button class="icon-btn soft pin-btn on" data-unpin="${esc(pinKey(p))}" aria-label="${esc(tr('Von der Startseite lösen'))}">${icon('pin', 16)}</button></div><div class="pin-body"><p class="help" style="margin:0">Lade …</p></div></section>`
+  const col = (rest) => `<div class="pin-col">${cards.map((p, i) => (i % 2 === rest ? cardHtml(p, i) : '')).join('')}</div>`
+  box.innerHTML = `<div class="pin-label"><span class="section-label" style="margin:0">Angepinnt</span><button class="btn sm ghost" id="pin-arrange">${icon('sliders', 16)}Anordnen</button></div>
+    ${cards.length ? `<div class="pin-live">${col(0)}${col(1)}</div>` : ''}
+    ${
+      links.length
+        ? `<div class="pin-links">${links
+            .map(
+              (p) =>
+                `<button class="pin-link" data-pin-go="${esc(pinKey(p))}"><span class="tile">${icon(state.pages.get(p.page)?.icon || 'chevron', 18)}</span><span class="lbl"><b>${esc(p.title || LIVE_CARDS[pinKey(p)]?.title || '')}</b><small>${esc(pinWhere(p))}</small></span><span class="chev">${icon('chevron', 16)}</span></button>`,
+            )
+            .join('')}</div>`
+        : ''
+    }`
+  for (const b of box.querySelectorAll('[data-pin-go]')) b.onclick = () => pinGo(list.find((p) => pinKey(p) === b.dataset.pinGo))
+  for (const b of box.querySelectorAll('[data-unpin]')) {
+    b.onclick = async () => {
+      if (await pinsSave((pins.list ?? []).filter((p) => pinKey(p) !== b.dataset.unpin))) {
+        toast('Von der Startseite gelöst', 'ok')
+        drawPins(root)
+      }
+    }
+  }
+  $('#pin-arrange', box).onclick = () => pinArrange(root)
+  for (const [i, p] of cards.entries()) {
+    const el = box.querySelector(`[data-live="${i}"] .pin-body`)
+    const fill = async () => {
+      try {
+        const html = await LIVE_CARDS[pinKey(p)].html()
+        if (!el.isConnected) return
+        el.innerHTML = html
+        LIVE_CARDS[pinKey(p)].mount(el, fill)
+      } catch {
+        if (el.isConnected) el.innerHTML = `<p class="help" style="margin:0">${esc(tr('Ließ sich nicht laden'))}</p>`
+      }
+    }
+    fill()
+  }
+}
+
+// The order of the pinned cards, card or link, taking one off
+function pinArrange(root) {
+  const draw = (sheet) => {
+    const list = pins.list ?? []
+    sheet.querySelector('#pin-rows').innerHTML = list.length
+      ? list
+          .map((p, i) => {
+            const live = !!LIVE_CARDS[pinKey(p)]
+            return `<div class="entry pin-row"><span class="avatar">${icon(live && p.view !== 'link' ? 'grid' : 'link', 16)}</span><span class="lbl"><b>${esc(p.title)}</b><small>${esc(pinWhere(p))}</small>${
+              live
+                ? `<div class="seg sm" data-view-of="${i}"><button aria-pressed="${p.view !== 'link'}" data-v="card">Ganze Karte</button><button aria-pressed="${p.view === 'link'}" data-v="link">Verknüpfung</button></div>`
+                : `<small>Verknüpfung</small>`
+            }</span>
+          <button class="icon-btn soft" data-up="${i}" aria-label="${esc(tr('Nach oben'))}" ${i ? '' : 'disabled'}>${icon('up', 16)}</button><button class="btn sm" data-rm="${i}">Lösen</button></div>`
+          })
+          .join('')
+      : `<p class="help" style="margin:0">${esc(tr('Nichts angepinnt.'))}</p>`
+    const change = async (next) => {
+      if (await pinsSave(next)) draw(sheet)
+    }
+    for (const s of sheet.querySelectorAll('[data-view-of]')) {
+      s.onclick = (e) => {
+        const btn = e.target.closest('button')
+        if (!btn) return
+        change((pins.list ?? []).map((p, i) => (i === Number(s.dataset.viewOf) ? { ...p, view: btn.dataset.v } : p)))
+      }
+    }
+    for (const b of sheet.querySelectorAll('[data-up]')) {
+      b.onclick = () => {
+        const next = [...(pins.list ?? [])]
+        const i = Number(b.dataset.up)
+        const moved = next[i]
+        next[i] = next[i - 1]
+        next[i - 1] = moved
+        change(next)
+      }
+    }
+    for (const b of sheet.querySelectorAll('[data-rm]')) b.onclick = () => change((pins.list ?? []).filter((_p, i) => i !== Number(b.dataset.rm)))
+  }
+  openSheet(
+    `<h2>Angepinnt</h2><p class="help" style="margin:0">${esc('Ganze Karten stehen oben, Verknüpfungen darunter. Neues heftest du mit dem Pin oben rechts an einer Karte an.')}</p><div class="rows" id="pin-rows"></div><div class="btns"><button class="btn primary" data-close>Fertig</button></div>`,
+    (sheet, close) => {
+      draw(sheet)
+      sheet.querySelector('[data-close]').onclick = close
+    },
+    () => root.isConnected && drawPins(root),
+  )
+}

@@ -49,6 +49,7 @@ import { registerDisplayRoutes } from './display'
 import { registerSpeechRoutes } from './speech-routes'
 import { registerCustomBootRoutes } from './bootscreen-custom'
 import { registerFeedHostRoutes } from './feed-hosts'
+import { registerPinnedCardRoutes } from './pinned-cards'
 import { registerHardwareRoutes } from './hardware'
 import { registerServicesRoutes } from './services'
 import { registerSystemRoutes } from './system'
@@ -369,6 +370,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   registerSpeechRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerCustomBootRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerFeedHostRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  registerPinnedCardRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerHardwareRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerServicesRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerSystemRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })

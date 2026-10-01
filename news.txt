@@ -6,6 +6,12 @@
 <li id='linews' class='linews'><b>Speech output in 21 languages:</b> Arabic, Chinese and Hindi now with Piper voices on the box, Japanese through Google.</li>
 <li id='linews' class='linews'><b>No more white screen after an update:</b> the display loads again by itself when the app did not come up.</li>
 <li id='linews' class='linews'><b>Podcast servers in your own network</b> such as Pinepods or Audiobookshelf can be added: the web app asks once to allow the server.</li>
+<li id='linews' class='linews'><b>Pin cards to the start page</b> – as a whole card (e.g. the charge curve or the announcements) or as a link.</li>
+</ul>
+<b>Web app</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Pin cards to the start page: every card with a heading has a pin. Some cards come as a whole card you can use right on the start page (charge curve, announcements, headphones), all others as a link that opens the page at that card. Order, card or link, and unpinning under Start &gt; Pinned &gt; Arrange. The pins are kept in the box, so every phone shows the same. Idea and first version by Andreas (Lippsson).</li>
 </ul>
 <b>Podcasts</b>
 </ul>
