@@ -47,7 +47,7 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	#   autoconf - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
 	#   automake - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
 	# libwidevinecdm0 stays: the display plays Spotify through the Web Playback SDK in Chromium, which needs Widevine
-	packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip bluez zip unzip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa preload python3-smbus2 pigpio libjson-c-dev libi2c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh rfkill"
+	packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip bluez zip unzip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa preload python3-smbus2 pigpio libjson-c-dev libi2c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh rfkill xdotool"
 
 	###############################################################################################
 
@@ -642,17 +642,24 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	# The web server's certificate: the box's own, from its small authority for the home network (the app offers it to
 	# install on the phones; an own one uploaded in the app stays) - no longer a new self-signed one on every run, which
 	# no phone can trust and every browser asked about again. Checked at every start too (mupi_tls.service).
-	/usr/local/bin/mupibox/tls_cert.sh ensure >&3 2>&3
-	systemctl enable mupi_tls.service >&3 2>&3
-	systemctl daemon-reload >&3 2>&3
-	systemctl enable --now mupi_tls.timer >&3 2>&3
+	if [ -x /usr/local/bin/mupibox/tls_cert.sh ]; then
+		/usr/local/bin/mupibox/tls_cert.sh ensure >&3 2>&3
+		systemctl enable mupi_tls.service >&3 2>&3
+		systemctl daemon-reload >&3 2>&3
+		systemctl enable --now mupi_tls.timer >&3 2>&3
+	elif [ ! -s /etc/lighttpd/server.pem ]; then
+		# a version without tls_cert.sh (stable 4.x): the simple self-signed certificate as before - without one the web
+		# server does not start with SSL on
+		openssl req -new -x509 -keyout /etc/lighttpd/server.pem -out /etc/lighttpd/server.pem -days 3650 -nodes -subj "/C=DE/CN=mupibox" >&3 2>&3
+	fi
 	# no scripts or pages from the media folder behind /cover (see the file)
 	cp -f ${MUPI_SRC}/config/lighttpd/99-mupibox-media-noexec.conf /etc/lighttpd/conf-enabled/99-mupibox-media-noexec.conf >&3 2>&3
 	# the app on port 80/443 too: its login at /, the app at /app (see the file)
 	cp -f ${MUPI_SRC}/config/lighttpd/90-mupibox-app.conf /etc/lighttpd/conf-enabled/90-mupibox-app.conf >&3 2>&3
 	lighty-enable-mod proxy >&3 2>&3
 	lighty-enable-mod ssl >&3 2>&3
-	service lighttpd force-reload >&3 2>&3
+	# restart, not reload: new modules and the new certificate (root only) are only taken over by a new start
+	systemctl restart lighttpd >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Activate SSL ## finished after $((after - before)) seconds" >&3 2>&3
 	STEP=$((STEP + 1))
