@@ -23,12 +23,24 @@ export interface PinnedCard {
 const MAX_PINNED = 30
 const ID = /^[a-z0-9][a-z0-9-]{0,63}$/
 
+// Cards that moved to another page (or were renamed): a pin of the old place points to the new one.
+// 5.0.7: Netzwerk-Optionen split up - WLAN hardware and the watchdog to WLAN, the cable to its own page LAN.
+const MOVED: Record<string, [string, string]> = {
+  'wlanopt:wlan-hardware': ['wlan', 'wlan-hardware'],
+  'wlanopt:verbindung': ['wlan', 'wlan-wachter'],
+}
+function movedPin(page: string, card: string): [string, string] {
+  if (page === 'wlanopt' && card.startsWith('lan-')) return ['lan', card]
+  return MOVED[`${page}:${card}`] ?? [page, card]
+}
+
 function cleanPin(v: unknown): PinnedCard | null {
   const p = v as Record<string, unknown> | null
   if (!p || typeof p !== 'object') return null
   if (typeof p.page !== 'string' || !ID.test(p.page) || typeof p.card !== 'string' || !ID.test(p.card)) return null
   const title = typeof p.title === 'string' ? p.title.trim().slice(0, 80) : ''
-  return { page: p.page, card: p.card, title, view: p.view === 'link' ? 'link' : 'card' }
+  const [page, card] = movedPin(p.page, p.card)
+  return { page, card, title, view: p.view === 'link' ? 'link' : 'card' }
 }
 
 /** The pinned cards, well-formed and each once */

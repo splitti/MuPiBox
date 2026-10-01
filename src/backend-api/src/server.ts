@@ -3085,6 +3085,7 @@ app.get('/api/network/ethernet', async (_req, res) => {
       gateway: parsed.gateway,
       dns: parsed.dns,
       currentIp,
+      currentIpv6: ipv6AddressesOf(parsed.iface),
       currentGateway,
       linkUp,
       // switched off (POST /power): stays down, also after a restart

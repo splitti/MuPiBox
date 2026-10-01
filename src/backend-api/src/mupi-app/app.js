@@ -8001,7 +8001,7 @@ async function loadNetOptions() {
   }
 }
 
-function netSections() {
+function wlanNetSections() {
   const o = nopt.opts
   const d = netDriver()
   const job = d?.job ?? {}
@@ -8027,37 +8027,53 @@ function netSections() {
   if (d?.installed) {
     hardware.push({ type: 'select', label: 'Stromsparen des USB-Adapters', key: 'usbPm', options: ['Aus', 'Minimal', 'Maximal'], help: 'Aus = stabilere Verbindung bei manchen Adaptern. Gilt nach einem Neustart.' })
   }
-  const sections = [
-    { title: 'WLAN-Hardware', items: hardware },
+  return [
     {
-      title: 'Verbindung',
+      title: 'WLAN-Wächter',
+      col: 1,
       items: [
-        { type: 'toggle', label: 'DHCP-Timeout', key: 'dhcpTo', help: 'Beim Start höchstens 10 Sekunden auf eine IP-Adresse warten.' },
         { type: 'toggle', label: 'WLAN-Wächter (DietPi-WiFi-Monitor)', key: 'wMon', help: 'Baut die Verbindung neu auf, wenn sie abreißt.' },
         { type: 'toggle', label: 'Beste Verbindung suchen', key: 'wBest', help: 'Wechselt bei mehreren gespeicherten Netzen zum stärksten.' },
-        { type: 'buttons', buttons: [['WLAN neu starten', 'ghost', 'wifirestart'], ['DHCP erneuern', 'ghost', 'dhcprenew']] },
+        { type: 'buttons', buttons: [['WLAN neu starten', 'ghost', 'wifirestart']] },
       ],
     },
+    { title: 'WLAN-Hardware', col: 2, items: hardware },
   ]
-  if (nopt.lan) {
-    const l = nopt.lan
-    const lan = [
-      { type: 'toggle', label: 'LAN an', key: 'lanOn', help: l.off ? 'Ausgeschaltet – bleibt aus, bis es hier wieder eingeschaltet wird.' : 'Mit Kabel hat LAN Vorrang vor dem WLAN.' },
-      { type: 'kv', rows: [['Adresse', l.currentIp ?? '–'], ['Router', l.currentGateway ?? '–']] },
-      { type: 'seg', label: 'Adresse beziehen', key: 'lanMode', options: ['DHCP', 'Statisch'] },
-    ]
-    if (state.values.get('lanMode') === 'Statisch') {
-      for (const [key, , label, placeholder] of LAN_FIELDS) lan.push({ type: 'text', label, key, placeholder })
-    }
-    lan.push({ type: 'buttons', buttons: [['Speichern', 'primary', 'lansave'], ['LAN neu starten', 'ghost', 'lanrestart']] })
-    sections.push({ title: `LAN (${l.interface})`, help: 'Der Kabelanschluss der Box.', items: lan })
+}
+
+// Netzwerk › LAN: the cable
+function lanSections() {
+  const l = nopt.lan
+  if (!l) return [{ title: 'LAN', items: [{ type: 'note', text: 'Diese Box hat keinen LAN-Anschluss, oder er ließ sich nicht lesen.' }] }]
+  const now = [['Adresse', l.currentIp ?? '–'], ...(l.currentIpv6 ?? []).map((a) => ['IPv6-Adresse', a]), ['Router', l.currentGateway ?? '–']]
+  const lan = [
+    { type: 'toggle', label: 'LAN an', key: 'lanOn', help: l.off ? 'Ausgeschaltet – bleibt aus, bis es hier wieder eingeschaltet wird.' : 'Mit Kabel hat LAN Vorrang vor dem WLAN.' },
+    { type: 'kv', rows: now },
+    { type: 'seg', label: 'Adresse beziehen', key: 'lanMode', options: ['DHCP', 'Statisch'] },
+  ]
+  if (state.values.get('lanMode') === 'Statisch') {
+    for (const [key, , label, placeholder] of LAN_FIELDS) lan.push({ type: 'text', label, key, placeholder })
   }
-  sections.push({
-    title: 'Fernsteuerung per IP',
-    help: 'Falls die Box sich über den Hostnamen nicht richtig erreicht, stattdessen die IP-Adresse verwenden.',
-    items: [{ type: 'toggle', label: 'Backend-Steuerung per IP', key: 'ipCtl', help: 'Der Server startet dafür kurz neu.' }],
-  })
-  return sections
+  lan.push({ type: 'buttons', buttons: [['Speichern', 'primary', 'lansave'], ['LAN neu starten', 'ghost', 'lanrestart']] })
+  return [{ title: `LAN (${l.interface})`, help: l.currentIp || l.off ? 'Der Kabelanschluss der Box.' : 'Der Kabelanschluss der Box. Im Moment ohne Verbindung – steckt ein Kabel?', items: lan }]
+}
+
+// Netzwerk › Erweitert: what is for WLAN and LAN alike
+function netAdvancedSections() {
+  return [
+    {
+      title: 'Adresse vom Router (DHCP)',
+      items: [
+        { type: 'toggle', label: 'DHCP-Timeout', key: 'dhcpTo', help: 'Beim Start höchstens 10 Sekunden auf eine IP-Adresse warten.' },
+        { type: 'buttons', buttons: [['DHCP erneuern', 'ghost', 'dhcprenew']] },
+      ],
+    },
+    {
+      title: 'Fernsteuerung per IP',
+      help: 'Falls die Box sich über den Hostnamen nicht richtig erreicht, stattdessen die IP-Adresse verwenden.',
+      items: [{ type: 'toggle', label: 'Backend-Steuerung per IP', key: 'ipCtl', help: 'Der Server startet dafür kurz neu.' }],
+    },
+  ]
 }
 
 // while a driver is built or removed: its state every 5 s, the page again when it is done
@@ -8139,12 +8155,11 @@ async function saveLan(page) {
   }, 5000)
 }
 
+// Netzwerk › Erweitert (the page "wlanopt" - its id kept, for pins and links); its options and actions serve the
+// pages WLAN and LAN too (see wlanCtrl, lanCtrl)
 const netOptionsCtrl = {
   load: loadNetOptions,
-  sections: netSections,
-  mount(_root, page) {
-    if (nopt.opts?.drivers?.some((x) => x.job.running)) pollDriverJob(page)
-  },
+  sections: netAdvancedSections,
   change: changeNetOption,
   act: {
     async driver(_arg, _label, page) {
@@ -8180,6 +8195,23 @@ const netOptionsCtrl = {
     },
   },
 }
+
+// Netzwerk › WLAN: the connection and networks (wlanTop), below them the WLAN's hardware and watchdog
+// (without the options - they did not load - the networks are still there)
+const wlanCtrl = {
+  load: () => Promise.all([loadWlan(), loadNetOptions().catch(() => (nopt.opts = null))]),
+  top: wlanTop,
+  sections: () => (nopt.opts ? wlanNetSections() : []),
+  mount(root, page) {
+    mountWlan(root, page)
+    if (nopt.opts?.drivers?.some((x) => x.job.running)) pollDriverJob(page)
+  },
+  change: changeNetOption,
+  act: netOptionsCtrl.act,
+}
+
+// Netzwerk › LAN: the cable - on, its address now, DHCP or a fixed one
+const lanCtrl = { load: loadNetOptions, sections: lanSections, change: changeNetOption, act: netOptionsCtrl.act }
 
 /* Experten */
 
@@ -9439,7 +9471,8 @@ const CONTROLLERS = {
       },
     },
   },
-  wlan: { load: loadWlan, top: wlanTop, sections: () => [], mount: mountWlan },
+  wlan: wlanCtrl,
+  lan: lanCtrl,
   freigaben: {
     load: loadShares,
     sections: (page) =>

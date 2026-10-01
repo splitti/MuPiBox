@@ -65,7 +65,7 @@
    "id": "g-netz",
    "title": "Netzwerk",
    "icon": "wifi",
-   "description": "WLAN, Optionen, Freigaben"
+   "description": "WLAN, LAN, Erweitert, Freigaben"
   },
   {
    "id": "g-dienste",
@@ -3037,7 +3037,7 @@
    "area": "einstellungen",
    "parent": "g-netz",
    "title": "WLAN",
-   "description": "Verbindung, Netze, hinzufügen",
+   "description": "Verbindung, Netze, Hardware, Wächter",
    "icon": "wifi",
    "sections": [
     {
@@ -3181,18 +3181,37 @@
        ]
       }
      ]
-    }
-   ]
-  },
-  {
-   "id": "wlanopt",
-   "slug": "network-options",
-   "area": "einstellungen",
-   "parent": "g-netz",
-   "title": "Netzwerk-Optionen",
-   "description": "Onboard-WLAN, USB-WLAN, DHCP, Wächter, Fernsteuerung per IP",
-   "icon": "sliders",
-   "sections": [
+    },
+    {
+     "title": "WLAN-Wächter",
+     "help": "",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "WLAN-Wächter (DietPi-WiFi-Monitor)",
+       "key": "wMon",
+       "default": true,
+       "help": "Baut die Verbindung neu auf, wenn sie abreißt."
+      },
+      {
+       "type": "toggle",
+       "label": "Beste Verbindung suchen",
+       "key": "wBest",
+       "default": false,
+       "help": "Wechselt bei mehreren Netzen automatisch zum stärksten."
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "WLAN neu starten",
+         "ghost",
+         "toast:WLAN startet neu"
+        ]
+       ]
+      }
+     ]
+    },
     {
      "title": "WLAN-Hardware",
      "help": "",
@@ -3231,9 +3250,52 @@
        "help": "Aus = stabilere Verbindung bei manchen Adaptern."
       }
      ]
-    },
+    }
+   ]
+  },
+  {
+   "id": "lan",
+   "slug": "lan",
+   "area": "einstellungen",
+   "parent": "g-netz",
+   "title": "LAN",
+   "description": "Kabelanschluss, Adresse, DHCP oder fest",
+   "icon": "plug",
+   "sections": [
     {
-     "title": "Verbindung",
+     "title": "LAN",
+     "help": "Der Kabelanschluss der Box.",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "LAN an",
+       "key": "lanOn",
+       "default": true
+      },
+      {
+       "type": "seg",
+       "label": "Adresse beziehen",
+       "key": "lanMode",
+       "options": [
+        "DHCP",
+        "Statisch"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "wlanopt",
+   "slug": "network-options",
+   "area": "einstellungen",
+   "parent": "g-netz",
+   "title": "Erweitert",
+   "description": "DHCP, Fernsteuerung per IP",
+   "icon": "sliders",
+   "sections": [
+    {
+     "title": "Adresse vom Router (DHCP)",
      "help": "",
      "items": [
       {
@@ -3244,27 +3306,8 @@
        "help": "Beim Start nicht ewig auf eine IP-Adresse warten."
       },
       {
-       "type": "toggle",
-       "label": "WLAN-Wächter (DietPi-WiFi-Monitor)",
-       "key": "wMon",
-       "default": true,
-       "help": "Baut die Verbindung neu auf, wenn sie abreißt."
-      },
-      {
-       "type": "toggle",
-       "label": "Beste Verbindung suchen",
-       "key": "wBest",
-       "default": false,
-       "help": "Wechselt bei mehreren Netzen automatisch zum stärksten."
-      },
-      {
        "type": "buttons",
        "buttons": [
-        [
-         "WLAN neu starten",
-         "ghost",
-         "toast:WLAN startet neu"
-        ],
         [
          "DHCP erneuern",
          "ghost",
@@ -4672,7 +4715,7 @@
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "Netzwerk",
-   "description": "WLAN, Optionen, Freigaben",
+   "description": "WLAN, LAN, Erweitert, Freigaben",
    "icon": "wifi",
    "sections": [
     {
@@ -4683,13 +4726,19 @@
        "type": "nav",
        "label": "WLAN",
        "target": "wlan",
-       "subtitle": "Verbindung, Netze, hinzufügen"
+       "subtitle": "Verbindung, Netze, Hardware, Wächter"
       },
       {
        "type": "nav",
-       "label": "Netzwerk-Optionen",
+       "label": "LAN",
+       "target": "lan",
+       "subtitle": "Kabelanschluss, Adresse, DHCP oder fest"
+      },
+      {
+       "type": "nav",
+       "label": "Erweitert",
        "target": "wlanopt",
-       "subtitle": "Onboard-WLAN, USB-WLAN, DHCP, Wächter, Fernsteuerung per IP"
+       "subtitle": "DHCP, Fernsteuerung per IP"
       },
       {
        "type": "nav",
@@ -5871,58 +5920,103 @@
    "id": "wlan"
   },
   {
-   "l": "Netzwerk-Optionen",
-   "where": "Netzwerk › Netzwerk-Optionen",
+   "l": "Erweitert",
+   "where": "Netzwerk › Erweitert",
    "id": "wlanopt"
   },
   {
    "l": "WLAN-Hardware",
-   "where": "Netzwerk › Netzwerk-Optionen",
-   "id": "wlanopt"
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
   },
   {
    "l": "Onboard-WLAN an",
-   "where": "Netzwerk › Netzwerk-Optionen",
-   "id": "wlanopt"
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
   },
   {
    "l": "USB-WLAN-Treiber",
-   "where": "Netzwerk › Netzwerk-Optionen",
-   "id": "wlanopt"
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
   },
   {
    "l": "Stromsparen des USB-Adapters",
-   "where": "Netzwerk › Netzwerk-Optionen",
-   "id": "wlanopt"
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
   },
   {
-   "l": "Verbindung",
-   "where": "Netzwerk › Netzwerk-Optionen",
+   "l": "Adresse vom Router (DHCP)",
+   "where": "Netzwerk › Erweitert",
    "id": "wlanopt"
   },
   {
    "l": "DHCP-Timeout",
-   "where": "Netzwerk › Netzwerk-Optionen",
+   "where": "Netzwerk › Erweitert",
    "id": "wlanopt"
   },
   {
    "l": "WLAN-Wächter (DietPi-WiFi-Monitor)",
-   "where": "Netzwerk › Netzwerk-Optionen",
-   "id": "wlanopt"
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
   },
   {
    "l": "Beste Verbindung suchen",
-   "where": "Netzwerk › Netzwerk-Optionen",
-   "id": "wlanopt"
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
+  },
+  {
+   "l": "WLAN-Wächter",
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
+  },
+  {
+   "l": "WLAN neu starten",
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
+  },
+  {
+   "l": "LAN",
+   "where": "Netzwerk › LAN",
+   "id": "lan"
+  },
+  {
+   "l": "LAN an",
+   "where": "Netzwerk › LAN",
+   "id": "lan"
+  },
+  {
+   "l": "Kabelanschluss",
+   "where": "Netzwerk › LAN",
+   "id": "lan"
+  },
+  {
+   "l": "Feste IP-Adresse",
+   "where": "Netzwerk › LAN",
+   "id": "lan"
+  },
+  {
+   "l": "Statische IP",
+   "where": "Netzwerk › LAN",
+   "id": "lan"
   },
   {
    "l": "Fernsteuerung per IP",
-   "where": "Netzwerk › Netzwerk-Optionen",
+   "where": "Netzwerk › Erweitert",
    "id": "wlanopt"
   },
   {
    "l": "Backend-Steuerung per IP",
-   "where": "Netzwerk › Netzwerk-Optionen",
+   "where": "Netzwerk › Erweitert",
+   "id": "wlanopt"
+  },
+  {
+   "l": "Netzwerk-Optionen",
+   "where": "Netzwerk › Erweitert",
+   "id": "wlanopt"
+  },
+  {
+   "l": "DHCP erneuern",
+   "where": "Netzwerk › Erweitert",
    "id": "wlanopt"
   },
   {
