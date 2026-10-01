@@ -949,7 +949,10 @@ async function refreshRssCacheNow(rssUrl: string, cacheKey: string): Promise<any
   // A cache written by an older version holds every tag of the feed; rewrite it slim.
   const previousIsSlim = previousFeed?._slim === RSS_SLIM_VERSION
 
-  if (previousFeed && !hasNewEpisode && !coverMissing && previousIsSlim) {
+  // (the episodes themselves compared as well: the ARD takes a download release back or sets another end date, a
+  // feed moves an episode's file - the first episode stays the same, and the old data was served for good)
+  const itemsChanged = previousFeed ? JSON.stringify(feed?.rss?.channel?.item ?? null) !== JSON.stringify(previousFeed?.rss?.channel?.item ?? null) : true
+  if (previousFeed && !hasNewEpisode && !coverMissing && previousIsSlim && !itemsChanged) {
     // Nothing changed and the cached cover file is still there - keep serving as-is.
     return previousFeed
   }
@@ -2999,7 +3002,8 @@ function parseEthernetStanza(text: string): (EthernetConfig & { blockStart: numb
   }
   const blockStart = ifaceMatch.index
   const rest = text.slice(blockStart + ifaceMatch[0].length)
-  const bodyMatch = /^((?:\n[ \t]*#?[ \t]*(?:address|netmask|gateway|dns-nameservers)[ \t]+\S+)*)/.exec(rest)
+  // (the resolver line of a static stanza belongs to it too - else it stayed behind as a stray line at every save)
+  const bodyMatch = /^((?:\n[ \t]*#?[ \t]*(?:(?:address|netmask|gateway|dns-nameservers)[ \t]+\S+|up printf 'nameserver %s\\n' \S+ > \/etc\/resolv\.conf))*)/.exec(rest)
   const body = bodyMatch?.[0] ?? ''
   const field = (name: string) => new RegExp(`^[ \t]*#?[ \t]*${name}[ \t]+(\\S+)`, 'm').exec(body)?.[1] ?? ''
   return {
@@ -3021,6 +3025,9 @@ function renderEthernetStanza(cfg: EthernetConfig): string {
   if (cfg.gateway) lines.push(`gateway ${cfg.gateway}`)
   // Kept but commented out under dhcp, same as DietPi does, so a later switch to static recalls it.
   if (cfg.dns) lines.push(`${cfg.dhcp ? '#' : ''}dns-nameservers ${cfg.dns}`)
+  // (dns-nameservers alone does nothing on the box - there is no resolvconf; the resolver is written when the cable
+  // comes up, as the WiFi does it for a fixed address. cfg.dns is a checked IPv4 address.)
+  if (!cfg.dhcp && cfg.dns) lines.push(`up printf 'nameserver %s\\n' ${cfg.dns} > /etc/resolv.conf`)
   return lines.join('\n')
 }
 
@@ -3115,23 +3122,24 @@ app.post('/api/network/ethernet', localOrElternSession, async (req, res) => {
     const mask = String(req.body?.mask ?? '').trim()
     const gateway = String(req.body?.gateway ?? '').trim()
     const dns = String(req.body?.dns ?? '').trim()
-    if (!dhcp) {
-      // (the router is optional: a PC plugged straight into the box is none - without it the box sets no default route
-      // over the cable, and the internet stays with the WiFi; with one, all its traffic would go to the PC)
-      const required: [string, string][] = [
-        ['Static IP', ip],
-        ['Static mask', mask],
-        ...(gateway ? [['Static gateway', gateway] as [string, string]] : []),
-      ]
-      for (const [label, value] of required) {
-        if (!IPV4_PATTERN.test(value)) {
-          res.status(400).send(`${label} is not a valid IPv4 address`)
-          return
-        }
+    // Every field given is checked - under DHCP too: the stanza keeps the static values (DietPi's way, a later switch
+    // to static recalls them), and one not checked there could carry a line break, which made a line of its own in
+    // /etc/network/interfaces - run as root at the next ifup. The router is optional: a PC plugged straight into the
+    // box is none - without it the box sets no default route over the cable, and the internet stays with the WiFi.
+    const given: [string, string][] = [
+      ['Static IP', ip],
+      ['Static mask', mask],
+      ['Static gateway', gateway],
+      ['Static DNS', dns],
+    ]
+    for (const [label, value] of given) {
+      if (value && !IPV4_PATTERN.test(value)) {
+        res.status(400).send(`${label} is not a valid IPv4 address`)
+        return
       }
     }
-    if (dns && !IPV4_PATTERN.test(dns)) {
-      res.status(400).send('Static DNS is not a valid IPv4 address')
+    if (!dhcp && (!ip || !mask)) {
+      res.status(400).send('Static IP and mask are needed')
       return
     }
     const parsed = parseEthernetStanza(await readInterfacesFile())

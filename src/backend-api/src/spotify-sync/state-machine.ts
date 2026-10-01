@@ -169,10 +169,11 @@ export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<
     }
     const accessToken = tokenResult.token
 
-    // 4. Discovery
+    // 4. Discovery (failures: a source skipped in this run - nothing is removed then, see computeSyncDiff)
+    const failures: string[] = []
     let playlistsDiscovered
     try {
-      playlistsDiscovered = await discoverPlaylists(accessToken, config)
+      playlistsDiscovered = await discoverPlaylists(accessToken, config, failures)
     } catch (err) {
       return mapSpotifyError(err, (kind) => { failureCounters = bumpFailureCounter(failureCounters, kind) }, finalise)
     }
@@ -180,7 +181,7 @@ export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<
     // 5. Resolve tracks
     let resolved
     try {
-      resolved = await resolveSyncItems(playlistsDiscovered, accessToken, config)
+      resolved = await resolveSyncItems(playlistsDiscovered, accessToken, config, failures)
     } catch (err) {
       return mapSpotifyError(err, (kind) => { failureCounters = bumpFailureCounter(failureCounters, kind) }, finalise)
     }
@@ -206,7 +207,8 @@ export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<
         return finalise('INTERNAL_ERROR', undefined, { reason: 'data.json root is not an array' })
       }
       const library = parsed as BoxLibraryEntry[]
-      diff = computeSyncDiff(resolved.items, library)
+      if (failures.length) console.warn(`${new Date().toLocaleString()}: [spotify-sync] not read in this run (${failures.join(', ')}) - nothing is removed`)
+      diff = computeSyncDiff(resolved.items, library, { noRemovals: failures.length > 0 })
       applyResult = await applyDiff(diff, library, deps.dataFile, new Date())
     } catch (err) {
       deps.releaseDataLock()

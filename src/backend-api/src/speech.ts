@@ -738,21 +738,33 @@ export async function announce(getConfig: () => unknown, text: string, opts: { g
   // (a test of one loaded voice: that one, whatever the box speaks with otherwise)
   const file = opts.voice ? (VOICE_KEY.test(opts.voice) && existsSync(voiceFile(opts.voice)) && existsSync(PIPER_BIN) ? await piperWav(text.slice(0, MAX_TEXT), opts.voice) : null) : await speechFile(sp, text.slice(0, MAX_TEXT), lang)
   if (!file) return false
-  queue = queue.then(async () => {
+  const run = queue.then(async () => {
     const wasPlaying = await playingNow()
     const pause = opts.pause ?? sp.parents.pause
     let restore: (() => Promise<void>) | null = null
-    if (wasPlaying && pause) {
-      await player('pause')
-      await new Promise((r) => setTimeout(r, 400))
-    } else if (wasPlaying) restore = await duck()
-    if (opts.gong ?? sp.parents.gong) await playFile(await gong(), sp.level)
-    await playFile(file, sp.level)
-    if (restore) await restore()
-    if (wasPlaying && pause) await player('play')
+    try {
+      if (wasPlaying && pause) {
+        await player('pause')
+        await new Promise((r) => setTimeout(r, 400))
+      } else if (wasPlaying) restore = await duck()
+      if (opts.gong ?? sp.parents.gong) await playFile(await gong(), sp.level)
+      await playFile(file, sp.level)
+    } finally {
+      // (the music comes back whatever happened - a gong that could not be written left it paused)
+      if (restore) await restore().catch(() => undefined)
+      if (wasPlaying && pause) await player('play').catch(() => undefined)
+    }
   })
-  await queue.catch(() => undefined)
-  return true
+  // (a failed one must not block every one after it: the queue goes on from a settled state - a rejected promise
+  // kept as the queue ran nothing more until the server started again)
+  queue = run.catch(() => undefined)
+  return run.then(
+    () => true,
+    (e) => {
+      console.warn(`${new Date().toLocaleString()}: [speech] could not say it: ${e instanceof Error ? e.message : e}`)
+      return false
+    },
+  )
 }
 
 /** The language the box speaks in (mupibox.ttsLanguage, as the names it reads out). */

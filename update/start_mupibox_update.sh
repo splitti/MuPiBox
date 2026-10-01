@@ -69,6 +69,8 @@ fail_update() {
 	local msg=$1
 	echo "## UPDATE ABORTED: ${msg}" >&3 2>&3
 	echo "## (no destructive operation performed yet — your installation is intact)" >&3 2>&3
+	# (the box's programs are stopped before the backup of the user data: started again, so the box goes on running)
+	sudo -H -u dietpi bash -c "pm2 start server; pm2 start spotify-control" >&3 2>&3
 	# Surface to dialog/whiptail so the user actually sees the failure
 	echo -e "XXX\n100\nUpdate aborted: ${msg}\nXXX"
 	exit 1
@@ -414,7 +416,11 @@ rm -f /tmp/mupibox-update-failed
 	# besides data.json it holds resume.json, albumstop.json, wlan.json, the offline lists and the
 	# RSS cache, which were all lost on every update before.
 	USERDATA_BAK="/home/dietpi/.mupibox/userdata.upd-bak"
-	rm -rf "${USERDATA_BAK}" >&3 2>&3
+	# The box's programs stop before the copy: a change the app saved or the player's progress after the copy was
+	# replaced by the older copy when the data came back (the server was stopped only after the backup before)
+	sudo -H -u dietpi bash -c "pm2 stop server; pm2 stop spotify-control" >&3 2>&3
+	# A backup left from a restore that failed (see "Restore Userdata") is kept under its own name, never thrown away
+	[ -e "${USERDATA_BAK}" ] && mv "${USERDATA_BAK}" "${USERDATA_BAK}.$(date +%Y%m%d-%H%M%S)" >&3 2>&3
 	mkdir -p "${USERDATA_BAK}/www" >&3 2>&3
 	# Every copy is checked (a full card copied part of it, and the old install was deleted all the same); what is not
 	# there (a box without covers yet) is not an error. The podcast pictures (rss-covers) come along: without them every
@@ -447,7 +453,8 @@ rm -f /tmp/mupibox-update-failed
 	# so the box keeps running on the previous version. The .upd-bak
 	# directory is removed after a successful extract.
 	BAK_DIR="/home/dietpi/.mupibox/Sonos-Kids-Controller-master.upd-bak"
-	rm -rf "${BAK_DIR}" >&3 2>&3
+	# (the old install of a restore that failed stays, under its own name)
+	[ -e "${BAK_DIR}" ] && mv "${BAK_DIR}" "${BAK_DIR}.$(date +%Y%m%d-%H%M%S)" >&3 2>&3
 	if [ -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master ]; then
 		mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master "${BAK_DIR}" >&3 2>&3 || \
 			fail_update "Could not move old install aside (filesystem full?)"
@@ -978,6 +985,8 @@ rm -f /tmp/mupibox-update-failed
 		rm -rf "${BAK_DIR}" >&3 2>&3
 	else
 		echo "## Restore incomplete - user data kept in ${USERDATA_BAK} (old install in ${BAK_DIR})" >&3 2>&3
+		# (said at the end, outside the progress dialog - the update used to report success all the same)
+		touch /tmp/mupibox-restore-failed
 	fi
 	chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	sleep 1 >&3 2>&3
@@ -1026,6 +1035,13 @@ if [ -f /tmp/mupibox-update-failed ]; then
 	rm -rf ${PREFLIGHT_DIR}
 	echo "Update FAILED: the MuPiBox archive could not be downloaded completely (see ${LOG})."
 	echo "Nothing was replaced. Please check the network connection and run the update again."
+	exit 1
+fi
+if [ -f /tmp/mupibox-restore-failed ]; then
+	rm -f /tmp/mupibox-restore-failed
+	echo "Update installed, but the USER DATA COULD NOT BE PUT BACK COMPLETELY (card full?) - see ${LOG}."
+	echo "Your data is kept in /home/dietpi/.mupibox/userdata.upd-bak (the old install in Sonos-Kids-Controller-master.upd-bak)."
+	echo "Please make room on the card and copy the missing files back from there (a new update keeps these folders under a dated name)."
 	exit 1
 fi
 

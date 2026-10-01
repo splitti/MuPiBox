@@ -81,7 +81,9 @@ async function spotifyGet<T>(path: string, accessToken: string): Promise<T> {
 }
 
 /** Discover all sync-managed playlists for the active user. */
-export async function discoverPlaylists(accessToken: string, config: SpotifySyncConfig): Promise<DiscoveredPlaylist[]> {
+// failures: what could not be read in this run (an explicit playlist, a pinned album, an artist) - the diff removes
+// nothing then, see computeSyncDiff
+export async function discoverPlaylists(accessToken: string, config: SpotifySyncConfig, failures: string[] = []): Promise<DiscoveredPlaylist[]> {
   if (config.playlist_explicit_ids.length > 0) {
     // Mode A: explicit IDs. Skip /me/playlists scan.
     const out: DiscoveredPlaylist[] = []
@@ -94,7 +96,8 @@ export async function discoverPlaylists(accessToken: string, config: SpotifySync
         out.push(buildDiscoveredPlaylist(p))
       } catch (err) {
         if (err instanceof SpotifyApiException && err.detail.kind === 'auth') throw err
-        // Skip individually-failing playlists; sync over what we got.
+        // Skip individually-failing playlists; sync over what we got (adding and updating - not removing).
+        failures.push(`playlist ${id}`)
         console.warn(`${new Date().toLocaleString()}: [spotify-sync] discover: explicit playlist ${id} failed: ${(err as Error).message}`)
       }
     }
@@ -232,6 +235,7 @@ export async function resolveSyncItems(
   playlists: DiscoveredPlaylist[],
   accessToken: string,
   config: SpotifySyncConfig,
+  failures: string[] = [],
 ): Promise<{ items: Map<string, SyncItem>; perPlaylistCounts: Map<string, number> }> {
   const items = new Map<string, SyncItem>()
   const perPlaylistCounts = new Map<string, number>()
@@ -268,6 +272,7 @@ export async function resolveSyncItems(
       const item = buildExplicitAlbumItem(album, pin.category)
       if (item) items.set(item.groupKey, item)
     } catch (err) {
+      failures.push(`album ${albumId}`)
       console.warn(
         `${new Date().toLocaleString()}: [spotify-sync] explicit album ${albumId} fetch failed: ${(err as Error).message}`,
       )
@@ -291,6 +296,7 @@ export async function resolveSyncItems(
         if (item) items.set(item.groupKey, item)
       }
     } catch (err) {
+      failures.push(`artist ${sub.id}`)
       console.warn(
         `${new Date().toLocaleString()}: [spotify-sync] artist subscription ${sub.id} failed: ${(err as Error).message}`,
       )

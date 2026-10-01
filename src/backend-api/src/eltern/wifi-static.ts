@@ -128,14 +128,25 @@ function render(entries: Entry[]): string {
   return [...head, ...blocks].join('\n')
 }
 
+// One change of the list at a time - saving from the app and from the display, a network taken out, the watch taking
+// one back: two at once read the same file, and the second one's write undid the first (the id_str of that network
+// stayed in the WPA profile, pointing at nothing)
+let chain: Promise<unknown> = Promise.resolve()
+function serialized<T>(fn: () => Promise<T>): Promise<T> {
+  const run = chain.then(fn)
+  chain = run.catch(() => undefined)
+  return run
+}
+let writeSeq = 0
+
 // Written as the box writes /etc/network/interfaces: a new file next to it, then renamed (a power cut mid-write
 // leaves the old one)
 async function writeStatic(entries: Entry[]): Promise<boolean> {
   if (!entries.length) return (await run('sudo', ['rm', '-f', FILE])).ok
-  const tmp = `/tmp/.mupibox-wifi.${process.pid}.${Date.now()}`
+  const tmp = `/tmp/.mupibox-wifi.${process.pid}.${Date.now()}.${++writeSeq}`
   await fsp.writeFile(tmp, render(entries), { mode: 0o644 })
   try {
-    const next = `${FILE}.mupibox-new`
+    const next = `${FILE}.mupibox-new.${process.pid}.${writeSeq}`
     return (await run('sudo', ['cp', tmp, next])).ok && (await run('sudo', ['chmod', '644', next])).ok && (await run('sudo', ['mv', '-f', next, FILE])).ok
   } finally {
     await fsp.rm(tmp, { force: true })
@@ -195,14 +206,16 @@ async function switchTo(iface: string, entry: Entry | null): Promise<boolean> {
 const reachable = async (iface: string, gateway: string) => (await run('ping', ['-c', '2', '-W', '2', '-I', iface, gateway], 8000)).ok
 
 /** A network taken out entirely (removed from the saved networks) */
-export async function dropStatic(iface: string, ssid: string): Promise<void> {
-  const all = await readStatic()
-  const id = idStrOf(ssid)
-  if (!all.has(id)) return
-  all.delete(id)
-  await writeStatic([...all.values()])
-  const n = await networkOf(iface, ssid)
-  if (n) await setIdStr(iface, n.id, '')
+export function dropStatic(iface: string, ssid: string): Promise<void> {
+  return serialized(async () => {
+    const all = await readStatic()
+    const id = idStrOf(ssid)
+    if (!all.has(id)) return
+    all.delete(id)
+    await writeStatic([...all.values()])
+    const n = await networkOf(iface, ssid)
+    if (n) await setIdStr(iface, n.id, '')
+  })
 }
 
 // the last time a network was taken back to DHCP - shown by the app until it is read
@@ -213,11 +226,14 @@ let busy = false
 /** Back to DHCP for this network, its address kept paused */
 async function revert(iface: string, entry: Entry, why: string): Promise<void> {
   console.warn(`${new Date().toLocaleString()}: [wifi-static] ${entry.ssid}: ${why} with ${entry.ip} - back to DHCP`)
-  const all = await readStatic()
-  all.set(entry.id, { ...entry, paused: true })
-  await writeStatic([...all.values()])
-  const n = await networkOf(iface, entry.ssid)
-  if (n) await setIdStr(iface, n.id, '')
+  const n = await serialized(async () => {
+    const all = await readStatic()
+    all.set(entry.id, { ...entry, paused: true })
+    await writeStatic([...all.values()])
+    const net = await networkOf(iface, entry.ssid)
+    if (net) await setIdStr(iface, net.id, '')
+    return net
+  })
   reverted = { ssid: entry.ssid, at: Date.now() }
   if (n?.active) await switchTo(iface, null)
 }
@@ -249,7 +265,19 @@ async function watch(iface: string): Promise<void> {
     return
   }
   const entry = (await readStatic()).get(idStr)
-  if (!entry || entry.paused) return
+  if (!entry) {
+    // The network's id_str points at no stanza (saved and taken out at nearly the same moment, the file gone): the
+    // box got no address with it - ifup of an interface it does not know. The id_str taken off, DHCP instead.
+    const ssid = /^ssid=(.*)$/m.exec(status)?.[1] ?? ''
+    console.warn(`${new Date().toLocaleString()}: [wifi-static] ${ssid || idStr}: no fixed address for its id_str - back to DHCP`)
+    await serialized(async () => {
+      const n = ssid ? await networkOf(iface, ssid) : null
+      if (n) await setIdStr(iface, n.id, '')
+    })
+    await switchTo(iface, null)
+    return
+  }
+  if (entry.paused) return
   // (most routers answer a ping; three misses in a row, and an address from DHCP is the safe side)
   if (await reachable(iface, entry.gateway)) {
     misses = 0
@@ -379,18 +407,9 @@ export function registerWifiStaticRoutes(router: Router, deps: WifiStaticDeps, a
       res.status(409).json({ error: 'busy' })
       return
     }
-    const all = await readStatic()
     const id = idStrOf(ssid)
     let entry: Entry | undefined
-    // (a fixed address in use now - a paused one is DHCP already, nothing to switch)
-    const wasFixed = !!all.get(id) && !all.get(id)?.paused
-    if (body.dhcp === true) {
-      if (!all.has(id)) {
-        res.json({ ok: true, active: n.active })
-        return
-      }
-      all.delete(id)
-    } else {
+    if (body.dhcp !== true) {
       const s = { ip: body.ip, mask: body.mask, gateway: body.gateway, dns: body.dns ?? '' }
       const problem = checkStatic(s)
       if (problem) {
@@ -398,12 +417,23 @@ export function registerWifiStaticRoutes(router: Router, deps: WifiStaticDeps, a
         return
       }
       entry = { ssid, id, ip: s.ip as string, mask: s.mask as string, gateway: s.gateway as string, dns: s.dns as string, paused: false }
-      all.set(id, entry)
     }
-    if (!(await writeStatic([...all.values()])) || !(await setIdStr(iface, n.id, entry ? id : ''))) {
+    // (read, changed, written and the id_str set as one step - see serialized)
+    const saved = await serialized(async () => {
+      const all = await readStatic()
+      // (a fixed address in use now - a paused one is DHCP already, nothing to switch)
+      const wasFixed = !!all.get(id) && !all.get(id)?.paused
+      if (entry) all.set(id, entry)
+      else if (all.has(id)) all.delete(id)
+      else return { ok: true, wasFixed }
+      const ok = (await writeStatic([...all.values()])) && (await setIdStr(iface, n.id, entry ? id : ''))
+      return { ok, wasFixed }
+    })
+    if (!saved.ok) {
       res.status(500).json({ error: 'not_saved' })
       return
     }
+    const wasFixed = saved.wasFixed
     if (reverted?.ssid === ssid) reverted = null
     res.json({ ok: true, active: n.active })
     // (after the answer has gone out: the connection is gone for a moment)

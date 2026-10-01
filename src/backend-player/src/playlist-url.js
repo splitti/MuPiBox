@@ -100,10 +100,19 @@ function ipv4Internal(address) {
 }
 
 function isInternalAddress(address) {
-  const ip = address.toLowerCase()
+  let ip = address.toLowerCase().replace(/^\[|\]$/g, '')
   if (net.isIPv4(ip)) return ipv4Internal(ip)
-  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(ip)
+  // an IPv4 address inside an IPv6 one: mapped (::ffff:127.0.0.1 - or ::ffff:7f00:1 as the URL parser writes it),
+  // NAT64 (64:ff9b::7f00:1), IPv4-compatible (::7f00:1) - checked as that IPv4 address (the same as lan-feeds.ts)
+  const mapped = /^(?:::ffff:|64:ff9b::|::)(\d+\.\d+\.\d+\.\d+)$/.exec(ip)
   if (mapped) return ipv4Internal(mapped[1])
+  const hex = /^(?:::ffff:|64:ff9b::|::)([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(ip)
+  if (hex) {
+    const hi = Number.parseInt(hex[1], 16)
+    const lo = Number.parseInt(hex[2], 16)
+    return ipv4Internal(`${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`)
+  }
+  if (/^(::ffff:|64:ff9b:)/.test(ip)) return true // any other form of these prefixes is nothing a stream lives on
   return ip === '::' || ip === '::1' || /^f[cd]/.test(ip) || /^fe[89ab]/.test(ip) // unspecified, loopback, ULA, link-local
 }
 

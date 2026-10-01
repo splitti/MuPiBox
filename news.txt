@@ -31,6 +31,15 @@
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>"WiFi settings" is now "Network settings": WiFi or LAN chosen at the top (the LAN settings also without the cable in use), "Renew address" for WiFi and LAN, and "Address" for every saved WiFi network - DHCP or fixed, with an onscreen keypad and the test. A way back when the box cannot be reached over the network.</li>
 </ul>
+<b>Review fixes</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Security: the LAN settings check every address given, also under DHCP (an unchecked one could carry a line break and so a line of its own into /etc/network/interfaces); addresses of the box itself written as IPv6 (::ffff:7f00:1, as a URL parser writes 127.0.0.1) are recognised by the player's playlist check and the home-network feed check.</li>
+<li id='linews' class='linews'>Spotify Smart Sync removes nothing from the library in a run in which a playlist, a pinned album or an artist could not be read (timeout, rate limit) - their entries and overrides stay, the next complete run tidies up.</li>
+<li id='linews' class='linews'>Fixed WiFi addresses: saving from the app and the display at the same time no longer loses one of them; a network whose profile points at a missing address goes back to DHCP by itself.</li>
+<li id='linews' class='linews'>Update: the box's programs stop before the user data is copied (a change saved meanwhile was replaced by the older copy); a backup of a restore that failed is kept under a dated name instead of being thrown away by the next update, and the failure is said at the end.</li>
+<li id='linews' class='linews'>A fixed LAN address with its own DNS server applies that server now (there is no resolvconf on the box). Offline podcasts: a download that finished while the folder was tidied is no longer deleted, and two changes of the list at once no longer collide. A failed announcement no longer blocks every one after it, and the music comes back in any case. A feed's episode data (ARD download release, end date, moved files) is refreshed even when its first episode is unchanged.</li>
+</ul>
 <h3>DEV 5.0.6 - changes compared to 5.0.5</h3>
 <b>Player</b>
 </ul>
