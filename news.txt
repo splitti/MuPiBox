@@ -17,7 +17,7 @@
 <li id='linews' class='linews'>"Get a new address" on the WiFi and on the LAN page renews only that connection's address (before: all of them were released, but only the WiFi was started again). The DHCP timeout is on both pages - one value for both.</li>
 <li id='linews' class='linews'>The switch "Remote control via IP" is gone from the app: nothing read its value any more (the display always reaches the player on the box itself).</li>
 <li id='linews' class='linews'>A fixed IP address per saved WiFi network (the others keep DHCP), in the app and on the display. Before saving, a test checks it in the network the box is in, without dropping the connection: router and range, the address free, the router answering the new address (tried as a second address for a few seconds), the DNS server. The box switches at once, the WiFi connection stays. If it does not reach its router with the fixed address - right after saving or later in that network - it goes back to DHCP by itself and keeps the values paused to correct them; the app and the display say so.</li>
-<li id='linews' class='linews'>LAN for a PC plugged straight into the box: the router is optional for a fixed address (without one the internet stays with the WiFi), and the cable always has a second address of its own, 169.254.10.10 - a PC without DHCP reaches the box there with nothing to set up.</li>
+<li id='linews' class='linews'>LAN for a PC plugged straight into the box: the router is optional for a fixed address (without one the internet stays with the WiFi).</li>
 </ul>
 <b>Display</b>
 </ul>

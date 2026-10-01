@@ -3048,7 +3048,6 @@ function saveEthernetConfig(next: EthernetConfig): Promise<void> {
 }
 
 const IPV4_PATTERN = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/
-const LINK_LOCAL_LAN = '169.254.10.10'
 
 app.get('/api/network/ethernet', async (_req, res) => {
   try {
@@ -3059,13 +3058,9 @@ app.get('/api/network/ethernet', async (_req, res) => {
     }
     let currentIp: string | undefined
     let currentGateway: string | undefined
-    // the fixed second address for a PC plugged straight in (config/network/mupibox-linklocal) - not the address
-    let directIp: string | undefined
     try {
       const { stdout } = await execFileAsync('ip', ['-4', 'addr', 'show', parsed.iface])
-      const all = [...stdout.matchAll(/inet (\S+)\//g)].map((m) => m[1])
-      currentIp = all.find((a) => a !== LINK_LOCAL_LAN)
-      directIp = all.find((a) => a === LINK_LOCAL_LAN)
+      currentIp = /inet (\S+)\//.exec(stdout)?.[1]
     } catch {
       // interface down or unknown
     }
@@ -3092,7 +3087,6 @@ app.get('/api/network/ethernet', async (_req, res) => {
       currentIp,
       currentIpv6: ipv6AddressesOf(parsed.iface),
       currentGateway,
-      directIp,
       linkUp,
       // switched off (POST /power): stays down, also after a restart
       off: fs.existsSync(LAN_OFF_FILE),

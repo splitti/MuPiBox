@@ -130,9 +130,6 @@
           <div class="ip-label">Box IP address</div>
           <div class="ip-value">{{ ethernet()?.currentIp ?? '—' }}</div>
           <div class="gateway-value">Router: {{ ethernet()?.currentGateway ?? '—' }}</div>
-          @if (ethernet()?.directIp; as direct) {
-            <div class="gateway-value">PC on the cable: {{ direct }}</div>
-          }
         </div>
       </div>
     </ion-card>

@@ -55,8 +55,6 @@ export interface EthernetConfig {
   /** The live address/gateway, may differ from ip/gateway right after a config change until restart. */
   currentIp?: string
   currentGateway?: string
-  /** The fixed second address of the cable for a PC plugged straight in (169.254.10.10), when it is set. */
-  directIp?: string
   /** Whether the port itself is administratively up (see /api/network/ethernet/power). */
   linkUp?: boolean
 }

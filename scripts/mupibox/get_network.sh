@@ -114,7 +114,7 @@ case "${WIFISIGNAL}" in
 		;;
 esac
 HOSTN=$(/usr/bin/hostname)
-# (not the cable's fixed link-local address for a PC plugged straight in, see config/network/mupibox-linklocal)
+# (not a link-local 169.254.x.x address, which an adapter without DHCP may give itself)
 IPA=$(/usr/bin/hostname -I | tr ' ' '\n' | grep -v '^169\.254\.' | grep . | head -n 1)
 DNS=$(echo $(sudo cat /etc/resolv.conf | grep 'nameserver ') | sed 's/nameserver //g')
 SUBNET=$(/sbin/ifconfig ${WIFI_IF} | awk '/netmask/{split($4,a,":"); print a[1]}')
