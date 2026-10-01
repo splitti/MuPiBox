@@ -696,10 +696,14 @@ export class MediaService {
   private remakeHomeList(category: CategoryType, version: string): Observable<Media[]> {
     let run = this.homeListRuns.get(category)
     if (!run) {
+      // (a lookup that failed meanwhile - Spotify blocking requests, a timeout: the list has placeholders or lacks
+      // entries. Shown, but not kept as the current one: it is made again at the next chance, see SpotifyService.failures)
+      const failuresBefore = this.spotifyService.failures
       run = this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category).pipe(
         tap((media) => {
-          this.homeLists.set(category, { version, at: Date.now(), media })
-          if (version !== '') {
+          const complete = this.spotifyService.failures === failuresBefore
+          this.homeLists.set(category, { version: complete ? version : '', at: Date.now(), media })
+          if (version !== '' && complete) {
             this.http.put(`${this.getApiBackendUrl()}/home-lists/${category}`, { version, media }).subscribe({ error: () => undefined })
           }
         }),

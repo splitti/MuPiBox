@@ -958,6 +958,18 @@ rm -f /tmp/mupibox-update-failed
 		mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data >&3 2>&3
 		cp -an "${USERDATA_BAK}/www/theme-data/." /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/ >&3 2>&3 || RESTORE_OK=0
 	fi
+	# The caches of the old install (Spotify answers, covers, the NAS index) come along - moved, not copied (same card,
+	# at once). Without them the box asked Spotify for every entry again after an update: with a big library minutes of
+	# loading dots on the display, and a long way into Spotify's rate limit.
+	if [ -d "${BAK_DIR}/cache" ]; then
+		mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/cache >&3 2>&3
+		for item in "${BAK_DIR}"/cache/*; do
+			[ -e "${item}" ] || continue
+			[ -e "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/cache/$(basename "${item}")" ] && continue
+			mv "${item}" /home/dietpi/.mupibox/Sonos-Kids-Controller-master/cache/ >&3 2>&3
+		done
+		chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/cache >&3 2>&3
+	fi
 	chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config >&3 2>&3
 	# only now that everything is back
 	if [ "${RESTORE_OK}" = 1 ] && /usr/bin/jq -e . /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json > /dev/null 2>&1; then

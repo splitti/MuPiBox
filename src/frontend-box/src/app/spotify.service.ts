@@ -14,6 +14,9 @@ import { ExtraDataMedia, localizeCoverUrl, pickCoverUrl, Utils } from './utils'
 })
 export class SpotifyService {
   deviceName: string | undefined = undefined
+  // how often a lookup of the lists failed (a timeout, Spotify blocking requests): a list made with failures is not
+  // kept as complete, see MediaService.remakeHomeList
+  failures = 0
 
   constructor(
     private http: HttpClient,
@@ -98,7 +101,8 @@ export class SpotifyService {
   /**
    * Helper method to fetch all paginated results from the backend API using total count
    */
-  private fetchAllPaginatedResults<T>(url: string, baseParams: any, pageSize = 10): Observable<T[]> {
+  // maxPages: a search of Spotify says total = all its hits (a thousand): only the first pages are fetched then
+  private fetchAllPaginatedResults<T>(url: string, baseParams: any, pageSize = 10, maxPages = Number.POSITIVE_INFINITY): Observable<T[]> {
     const fetchPage = (offset: number): Observable<{ items: T[]; total: number; limit: number; offset: number }> => {
       const params = { ...baseParams, limit: pageSize.toString(), offset: offset.toString() }
       return this.http.get<{ items: T[]; total: number; limit: number; offset: number }>(url, { params })
@@ -116,7 +120,7 @@ export class SpotifyService {
 
         // Calculate how many more pages we need
         const remainingItems = total - firstPageItems.length
-        const additionalPagesNeeded = Math.ceil(remainingItems / pageSize)
+        const additionalPagesNeeded = Math.min(Math.ceil(remainingItems / pageSize), maxPages - 1)
 
         if (additionalPagesNeeded <= 0) {
           return of(firstPageItems)
@@ -139,6 +143,7 @@ export class SpotifyService {
             fetchPage(offset).pipe(
               map((response) => response.items),
               catchError((error) => {
+                this.failures++
                 this.logService.warn(`Failed to fetch page at offset ${offset}:`, error?.message || error)
                 return of([] as T[])
               }),
@@ -161,6 +166,7 @@ export class SpotifyService {
         )
       }),
       catchError((error) => {
+        this.failures++
         this.logService.warn('Pagination fetch failed:', error?.message || error)
         return of([])
       }),
@@ -179,7 +185,9 @@ export class SpotifyService {
   ): Observable<Media[]> {
     const searchUrl = `${environment.backend.apiUrl}/spotify/search/albums`
 
-    return this.fetchAllPaginatedResults<any>(searchUrl, { query }).pipe(
+    // (the first 100 hits: a search for an artist's name found a thousand albums, and every page of them was asked
+    // for - a hundred requests to Spotify for one entry, well into its rate limit)
+    return this.fetchAllPaginatedResults<any>(searchUrl, { query }, 10, 10).pipe(
       map((albums: any[]) => {
         return albums.map((album) => {
           const media: Media = {
@@ -197,6 +205,7 @@ export class SpotifyService {
         })
       }),
       catchError((err) => {
+        this.failures++
         this.logService.warn(
           `Search query failed for "${query}" due to API error, returning empty results:`,
           err?.message || err,
@@ -244,6 +253,7 @@ export class SpotifyService {
         )
       }),
       catchError((err) => {
+        this.failures++
         this.logService.warn(
           `Artist albums query failed for artist ${id} due to API error, returning empty results:`,
           err?.message || err,
@@ -291,6 +301,7 @@ export class SpotifyService {
         )
       }),
       catchError((err) => {
+        this.failures++
         this.logService.warn(
           `Show episodes query failed for show ${id} due to API error, returning empty results:`,
           err?.message || err,
@@ -343,6 +354,7 @@ export class SpotifyService {
         return media
       }),
       catchError((err) => {
+        this.failures++
         this.logService.warn(
           `Album info query failed for album ${id} due to API error, returning unavailable placeholder:`,
           err?.message || err,
@@ -399,6 +411,7 @@ export class SpotifyService {
         return media
       }),
       catchError((err) => {
+        this.failures++
         this.logService.warn(
           `Audiobook info query failed for audiobook ${id} due to API error, returning unavailable placeholder:`,
           err?.message || err,
@@ -457,6 +470,7 @@ export class SpotifyService {
         return media
       }),
       catchError((err) => {
+        this.failures++
         this.logService.warn(
           `Episode info query failed for episode ${id} due to API error, returning unavailable placeholder:`,
           err?.message || err,
@@ -513,6 +527,7 @@ export class SpotifyService {
         return media
       }),
       catchError((err) => {
+        this.failures++
         this.logService.error(
           `Failed to fetch playlist ${id}, returning unavailable placeholder:`,
           err?.message || err,

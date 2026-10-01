@@ -14,6 +14,7 @@
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>A category with a big library shows what is there after a few seconds, the rest follows - before, it showed only loading dots until every Spotify entry was looked up (minutes after an update), and after a minute the page was even loaded again, which started it over.</li>
 <li id='linews' class='linews'>The lists of the categories the box keeps survive an update (now in server/config, which the update keeps) - the first tap after an update no longer makes them from scratch.</li>
+<li id='linews' class='linews'>Spotify: the box's cache of Spotify's answers (and of the covers) survives an update as well - every entry was asked for again after an update, with a big library minutes of loading and a long way into Spotify's rate limit. The cache holds 4000 answers now (1000 before: a big library threw out its own entries while being made). A list made while Spotify blocked requests or a lookup failed is shown but not kept as complete - it is made again later instead of showing placeholders for hours. A Spotify search entry fetches its first 100 hits (before: every page of a thousand, a hundred requests for one entry).</li>
 </ul>
 <b>Network</b>
 </ul>

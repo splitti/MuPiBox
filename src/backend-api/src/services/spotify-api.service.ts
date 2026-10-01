@@ -31,8 +31,10 @@ export class SpotifyApiService {
   // H7: Hard upper bound on cache-file count. With unbounded user-controlled
   // pagination cache-keys could fill the SD-card. Limits: at 1000 files the
   // pruner runs and evicts the oldest 200 by mtime.
-  private static readonly CACHE_MAX_FILES = 1000
-  private static readonly CACHE_PRUNE_BATCH = 200
+  // (a big library needs more than 1000: with the cap below it, the oldest answers of the very rebuild in progress were
+  // thrown out, and the next rebuild was slow all over again - ~30 KB each, 4000 are ~120 MB on the card)
+  private static readonly CACHE_MAX_FILES = 4000
+  private static readonly CACHE_PRUNE_BATCH = 400
 
   // M4: In-memory LRU layer sitting in front of the SD-backed JSON cache.
   // getFromCache used to cost 3 sync syscalls (existsSync + statSync +
