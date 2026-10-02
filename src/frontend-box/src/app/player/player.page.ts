@@ -253,6 +253,11 @@ export class PlayerPage implements OnInit, AfterViewInit {
   goBackTimer = 0
   // Spotify paused in the middle of a track by someone other than the box (see updateProgress)
   private externallyPaused = false
+  // The album (or playlist) that was started, seen playing in the SDK's state; and how many ticks in a row something
+  // else played instead - Spotify's autoplay went on after the end (see updateProgress)
+  private contextSeenFor = ''
+  private contextGone = 0
+  private albumEnded = false
   progress = 0
   shufflechanged = 0
   tmpProgressTime = 0
@@ -475,6 +480,32 @@ export class PlayerPage implements OnInit, AfterViewInit {
         this.progress = (seek / sp?.item.duration_ms) * 100 || 0
       }
       if (sp?.is_playing) this.externallyPaused = false
+      // The end of an album with Spotify's autoplay on (a setting of the account): the SDK never reports it paused,
+      // it goes straight on with tracks of other albums - in the same context, so only the track tells. Once a track
+      // of this album was seen playing, three ticks in a row with one that is not in it are its end: back to the
+      // list, which stops the playback (ionViewWillLeave). Only for albums and playlists - a podcast or audiobook
+      // plays in its show's context, which the entry does not name.
+      let expected = this.media.playlistid
+        ? `spotify:playlist:${this.media.playlistid}`
+        : !this.media.showid && !this.media.audiobookid && this.media.id
+          ? `spotify:album:${this.media.id}`
+          : ''
+      // (started from the parents' app or Telegram: the page knows only title and artist, not the album - the first
+      // album or playlist seen playing is the one)
+      if (!expected && !this.media.showid && !this.media.audiobookid && /^spotify:(album|playlist):/.test(sp?.context_uri ?? '')) {
+        expected = this.contextSeenFor || (sp?.context_uri as string)
+      }
+      if (expected && sp?.context_uri === expected && sp.in_context !== undefined) {
+        if (sp.in_context) {
+          this.contextSeenFor = expected
+          this.contextGone = 0
+        } else if (this.contextSeenFor === expected && ++this.contextGone >= 3) {
+          this.contextSeenFor = ''
+          this.contextGone = 0
+          this.albumEnded = true
+          this.navController.back()
+        }
+      }
       if (!this.currentPlayedLocal?.pause && !sp?.is_playing) {
         // Not playing although the box did not pause: at the end of the album (the SDK reports it paused at the
         // start of the last track, or at its end) the way back to the list; but paused in the middle of a track -
@@ -576,7 +607,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
     if (
       (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'rss') &&
       !this.media.shuffle &&
-      this.playing
+      this.playing &&
+      !this.albumEnded // (the SDK's position belongs to what autoplay went on with, not to this album)
     ) {
       // saveResumeFiles itself enforces the listening-time threshold via
       // CurrentMediaService.shouldPersistResume(); the local resumeTimer > 30

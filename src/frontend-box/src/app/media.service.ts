@@ -97,6 +97,9 @@ export class MediaService {
                   // Get enhanced media information if context is available
                   let mediaInfo = null
                   let trackPosition = 1
+                  // whether the track belongs to the album or playlist that plays (Spotify's autoplay goes on with
+                  // others in the same context); only told when the list of tracks is complete
+                  let inContext: boolean | undefined
 
                   if (contextUri) {
                     mediaInfo = await this.getMediaInfo(contextUri)
@@ -109,6 +112,7 @@ export class MediaService {
                       if (currentTrackIndex !== -1) {
                         trackPosition = currentTrackIndex + 1
                       }
+                      if (mediaInfo.tracks.length >= (mediaInfo.total_tracks ?? 0)) inContext = currentTrackIndex !== -1
                     } else if (contextUri.includes('spotify:playlist:') && mediaInfo && mediaInfo.tracks) {
                       const currentTrackIndex = mediaInfo.tracks.findIndex(
                         (track: any) => track.id === currentTrack.id || track.uri === currentTrack.uri,
@@ -116,6 +120,7 @@ export class MediaService {
                       if (currentTrackIndex !== -1) {
                         trackPosition = currentTrackIndex + 1
                       }
+                      if (mediaInfo.tracks.length >= (mediaInfo.total_tracks ?? 0)) inContext = currentTrackIndex !== -1
                     } else if (contextUri.includes('spotify:show:')) {
                       // Both shows and audiobooks use spotify:show: URIs
                       if (mediaInfo?.episodes) {
@@ -141,6 +146,8 @@ export class MediaService {
                   const contextType = contextUri ? contextUri.split(':')[1] : undefined
 
                   return {
+                    context_uri: contextUri || undefined,
+                    in_context: inContext,
                     progress_ms: state.position,
                     is_playing: !state.paused,
                     item: {
