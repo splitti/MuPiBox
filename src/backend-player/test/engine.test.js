@@ -330,3 +330,29 @@ test(`${ENGINE}: a pause sent while nothing plays does not leave the next file p
   const t = await prop('time_pos')
   assert.ok(t > 0.6, `did not play after a pause in idle: ${t}`)
 })
+
+test(`${ENGINE}: "next" on the last track (an album of one track) keeps it playing, "previous" on the first too`, async () => {
+  await settle()
+  // (mplayer's pt_step without "force" does nothing at the end of the list - a child pressing "next" on the last or
+  // only track did not stop the story)
+  let finished = false
+  const onFinish = () => {
+    finished = true
+  }
+  const tc = waitFor('track-change', 6000)
+  player.playList(path.join(dir, 'playlist.m3u'))
+  await tc
+  await sleep(300)
+  player.exec('pt_step', [2])
+  await waitFor('track-change', 4000)
+  player.on('playlist-finish', onFinish)
+  await sleep(500)
+  const t1 = await prop('time_pos')
+  player.next()
+  await sleep(1200)
+  assert.equal(finished, false, 'next on the last track ended the playback')
+  assert.equal(await prop('filename'), path.basename(files[2]))
+  const t2 = await prop('time_pos')
+  assert.ok(t2 > t1 + 0.5, `the last track did not go on: ${t1} -> ${t2}`)
+  player.off('playlist-finish', onFinish)
+})

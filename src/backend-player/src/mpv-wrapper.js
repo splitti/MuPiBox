@@ -141,9 +141,10 @@ const createPlayer = (options = {}) => {
       case 'pt_step': {
         const step = Number.parseInt(String(a[0] ?? '1'), 10) || 0
         // one step: mpv's own next/prev count on from where they stand at once, so two of them in a row land two
-        // further (a jump worked out here from the reported place did not - the report lags); "force": the next
-        // after the last track ends the playback, as mplayer did
-        if (step === 1) return send(['playlist-next', 'force'])
+        // further (a jump worked out here from the reported place did not - the report lags); "weak": at the end of
+        // the list nothing happens, as with mplayer's pt_step without "force" - "next" on the last (or only) track
+        // ended the story before (seen on the box; engine test 15)
+        if (step === 1) return send(['playlist-next', 'weak'])
         if (step === -1) return send(['playlist-prev', 'weak'])
         if (step === 0) return
         const target = Math.max(0, (playlistPos < 0 ? 0 : playlistPos) + step)
