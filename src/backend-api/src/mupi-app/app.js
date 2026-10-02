@@ -5942,7 +5942,7 @@ function liveTop() {
     `<section class="card wide"><h2>Aktuelles Bild</h2><p class="help">So sieht das Display gerade aus. Aktualisiert sich alle 5 Sekunden, solange die Seite offen ist.</p>
       <div class="live-shot"><img id="lv-img" alt="Bild des Displays"></div><p class="help" id="lv-note" style="margin:0"></p>
       <div class="btns"><button class="btn" id="lv-refresh">Aktualisieren</button></div></section>`,
-    `<section class="card" id="lv-card"><h2>Fernsteuerung (VNC)</h2><p class="help">Das Display im Browser bedienen – mit der Anmeldung der App, ohne eigenes Passwort. Dafür muss VNC unter Netzwerk › Freigaben & Fernzugriff an sein.</p>
+    `<section class="card" id="lv-card"><h2>Fernsteuerung (VNC)</h2><p class="help">Das Display im Browser bedienen – mit der Anmeldung der App, ohne eigenes Passwort. Dafür muss VNC unter Dienste › Freigaben & Fernzugriff an sein.</p>
       <p class="help" id="lv-vnc" style="margin:0"></p><div class="btns"><button class="btn primary" id="lv-open" disabled>Fernsteuerung öffnen</button><button class="btn" id="lv-shares" hidden>Zu Freigaben & Fernzugriff</button></div>
       <div class="vnc-frame" id="lv-frame" hidden><iframe title="Fernsteuerung" allow="fullscreen; clipboard-read; clipboard-write"></iframe>
         <div class="btns"><button class="btn" id="lv-full">${icon('ext', 18)}Vollbild</button><button class="btn" id="lv-tab">In neuem Tab</button><button class="btn" id="lv-close">Schließen</button></div></div></section>`,
@@ -8707,6 +8707,8 @@ function mountUpdates(root, page) {
   if (jobRunning()) pollUpdate(page)
 }
 
+// Einstellungen › Dienste: the block with the box's own shares (Samba, FTP, VNC)
+const isSharesSection = (s) => (s.items ?? []).some((it) => it.target === 'freigaben')
 
 /* the controllers: load(page) reads the box before drawing, mount(root, page) runs after it, change(key, value)
    saves a setting, act / byLabel run the buttons, sections(page) gives the building blocks with the box's values,
@@ -8979,9 +8981,10 @@ const CONTROLLERS = {
       const h = await api(`${API}/feed-hosts`)
       svc.feedHosts = h.ok ? (h.body?.hosts ?? []) : []
     },
-    // the podcast servers of the home network the box may fetch feeds from (see allowLanFeed)
+    // the podcast servers of the home network the box may fetch feeds from (see allowLanFeed) - below the other
+    // services, above the box's own shares (Samba, FTP, VNC), which stay last
     sections: (page) => [
-      ...page.sections,
+      ...page.sections.filter((s) => !isSharesSection(s)),
       {
         title: 'Server im Heimnetz',
         help: 'Podcast-Server im eigenen Netz, z. B. Pinepods oder Audiobookshelf. Andere Adressen im Heimnetz ruft die Box nicht ab. Ein Feed im Heimnetz fragt beim Hinzufügen selbst danach.',
@@ -8997,6 +9000,7 @@ const CONTROLLERS = {
           },
         ],
       },
+      ...page.sections.filter(isSharesSection),
     ],
     mount(root, page) {
       const save = async (body, done) => {
