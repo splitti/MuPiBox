@@ -232,7 +232,11 @@ export class SpotifyService {
       switchMap((artist) => {
         const artistcover = localizeCoverUrl(pickCoverUrl(artist.images))
 
-        return this.fetchAllPaginatedResults<any>(artistAlbumsUrl, {}).pipe(
+        // the whole list in one call: the server keeps it and checks it with one page (all=1) - asked page by page,
+        // a big artist was 30 Spotify requests whenever the kept pages got old. The first time it can take a while.
+        return this.http.get<{ items?: any[] }>(artistAlbumsUrl, { params: { all: '1' } }).pipe(
+          timeout(90000),
+          map((response) => response?.items ?? []),
           map((albums) => {
             return albums.map((album) => {
               const media: Media = {

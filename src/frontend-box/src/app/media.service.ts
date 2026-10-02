@@ -51,7 +51,17 @@ import type { Network } from './network'
 import { NetworkService } from './network.service'
 import { RssFeedService } from './rssfeed.service'
 import { SpotifyService } from './spotify.service'
-import type { ExtraDataMedia } from './utils'
+import { type ExtraDataMedia, localizeCoverUrl } from './utils'
+
+// A Spotify album the library already describes (title and cover - the sync and the app store them): its tile is
+// built from the entry. Asking Spotify for every album whenever the list is built (hundreds for one artist
+// subscription, and again when the kept answers got old) ran Spotify apps under its 2026 rules into blocks of many
+// hours. The album's tracks are still asked for when it is opened or played. Entries without title or cover go on
+// asking Spotify (getMediaByID).
+function storedSpotifyAlbum(item: Media): Media | undefined {
+  if (!item.title || !item.cover) return undefined
+  return { ...item, type: 'spotify', artist: item.artist || 'Unknown Artist', cover: localizeCoverUrl(item.cover) }
+}
 import type { WLAN } from './wlan'
 
 @Injectable({
@@ -979,21 +989,23 @@ export class MediaService {
                       iif(
                         // Get media by album (resume).
                         () => !!(item.type === 'spotify' && item.id && item.id.length > 0),
-                        this.spotifyService
-                          .getMediaByID(
-                            item.id,
-                            item.category,
-                            item.index,
-                            item.shuffle,
-                            item.artistcover,
-                            item.resumespotifyduration_ms,
-                            item.resumespotifyprogress_ms,
-                            item.resumespotifytrack_number,
-                          )
-                          .pipe(
-                            map((currentItem) => [currentItem]),
-                            overwriteArtist(item),
-                          ),
+                        storedSpotifyAlbum(item)
+                          ? of([storedSpotifyAlbum(item) as Media]).pipe(overwriteArtist(item))
+                          : this.spotifyService
+                              .getMediaByID(
+                                item.id,
+                                item.category,
+                                item.index,
+                                item.shuffle,
+                                item.artistcover,
+                                item.resumespotifyduration_ms,
+                                item.resumespotifyprogress_ms,
+                                item.resumespotifytrack_number,
+                              )
+                              .pipe(
+                                map((currentItem) => [currentItem]),
+                                overwriteArtist(item),
+                              ),
                         iif(
                           // Get media by audiobook (resume).
                           () => !!(item.type === 'spotify' && item.audiobookid && item.audiobookid.length > 0),

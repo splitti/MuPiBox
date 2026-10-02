@@ -16,6 +16,7 @@ import { Router } from 'express'
 import { loadSpotifySyncConfig, loadSpotifyTokenStore } from './config-loader'
 import { getValidAccessToken, requiresReAuth, tokenStillValid } from './auth'
 import { fetchArtistAlbums } from './playlists'
+import { spotifyBlock } from '../spotify-block'
 import { readStateFile } from './state-file'
 import { triggerManualSync } from './scheduler'
 import type { RunSyncDeps } from './state-machine'
@@ -46,6 +47,12 @@ export function createSpotifySyncRouter(deps: RunSyncDeps): Router {
         expires_at: tokenStore?.tokenExpiresAt,
       },
       state,
+      // Spotify blocking this box's requests (429) - told to the sync or the display's lists, see spotify-block.ts:
+      // the app shows until when
+      spotify_block: (() => {
+        const block = spotifyBlock()
+        return block ? { until: new Date(block.until).toISOString(), source: block.source, reason: block.reason } : null
+      })(),
     })
   })
 

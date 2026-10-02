@@ -65,6 +65,8 @@ function syncEntryDiffersFromItem(entry: BoxLibraryEntry, item: SyncItem): boole
   if (entry.category !== item.category) return true
   if (entry.cover !== item.cover) return true
   if (entry.artistcover !== item.artistCover) return true
+  // (the release date came later: entries without it get it once)
+  if (item.releaseDate && entry.release_date !== item.releaseDate) return true
   if (entry.spotify_sync_mode !== item.mode) return true
   // Playlist-membership: compare as sets.
   const existingPlaylists = new Set(entry.spotify_sync_playlists ?? [])

@@ -5,6 +5,8 @@ import os from 'node:os'
 import path from 'node:path'
 import { SpotifyApi } from '@spotify/web-api-ts-sdk'
 import type { ServerConfig } from '../models/server.model'
+import { artistAlbums } from '../artist-albums-store'
+import { noteSpotifyBlock, spotifyBlock } from '../spotify-block'
 import type {
   CachedSpotifyData,
   SpotifyApiAlbumDetails,
@@ -306,14 +308,15 @@ export class SpotifyApiService {
   private static readonly RATE_LIMIT_WAIT_MAX_MS = 10000
   private rateLimitedUntil = 0
 
-  /** Until when Spotify refuses requests (0: not blocked). */
+  /** Until when Spotify refuses requests (0: not blocked) - also a block the Smart-Sync was told (spotify-block.ts). */
   public get spotifyBlockedUntil(): number {
-    return this.rateLimitedUntil > Date.now() ? this.rateLimitedUntil : 0
+    return Math.max(this.rateLimitedUntil > Date.now() ? this.rateLimitedUntil : 0, spotifyBlock()?.until ?? 0)
   }
 
   private async rateLimitedRequest<T>(operation: () => Promise<T>, attempt = 0): Promise<T> {
-    if (Date.now() < this.rateLimitedUntil) {
-      throw Object.assign(new Error(`Spotify API blocked (rate limit) until ${new Date(this.rateLimitedUntil).toLocaleString()}`), {
+    const blockedUntil = this.spotifyBlockedUntil
+    if (blockedUntil) {
+      throw Object.assign(new Error(`Spotify API blocked (rate limit) until ${new Date(blockedUntil).toLocaleString()}`), {
         statusCode: 429,
       })
     }
@@ -338,6 +341,8 @@ export class SpotifyApiService {
           return this.rateLimitedRequest(operation, attempt + 1)
         }
         this.rateLimitedUntil = Date.now() + retryAfter
+        // (the same block for the Smart-Sync - same Spotify app - and kept over a restart of the server)
+        noteSpotifyBlock(this.rateLimitedUntil, 'display', `429 (Spotify: wait ${Math.round(retryAfter / 1000)} s)`)
         console.warn(
           `Spotify API blocks requests for ${Math.round(retryAfter / 60000)} min (until ${new Date(this.rateLimitedUntil).toLocaleString()}) - using cached data meanwhile`,
         )
@@ -644,6 +649,32 @@ export class SpotifyApiService {
         offset: result.offset || o,
       }
     })
+  }
+
+  /**
+   * All albums of an artist at once, for the display's artist entries: kept on the SD card and checked with one page
+   * (artist-albums-store.ts) - the display asked every page of the artist (30 for a big one) each time its kept pages
+   * got old. During a Spotify block (or without network) the kept list is handed out.
+   */
+  async getAllArtistAlbums(artistId: string, albumTypes = 'album,single,compilation'): Promise<SpotifyApiArtistAlbumsResult[]> {
+    const albums = await artistAlbums(
+      artistId,
+      albumTypes,
+      async (offset) => {
+        const result = await this.rateLimitedRequest(() =>
+          this.spotifyApi.artists.albums(artistId, albumTypes as any, 'DE', 10 as any, offset),
+        )
+        return { items: result.items as any, total: result.total, next: result.next }
+      },
+      { staleOnError: true },
+    )
+    return albums.map((item) => ({
+      id: item.id ?? '',
+      name: item.name ?? '',
+      artists: (item.artists ?? []) as any,
+      images: (item.images ?? []) as any,
+      release_date: item.release_date ?? '',
+    }))
   }
 
   async getShowEpisodes(

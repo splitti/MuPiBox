@@ -95,6 +95,7 @@ function applyUpdate(target: BoxLibraryEntry, item: SyncItem, isoNow: string): v
   target.category = item.category
   target.cover = item.cover
   target.artistcover = item.artistCover
+  if (item.releaseDate) target.release_date = item.releaseDate
   target.spotify_sync_last_seen = isoNow
   target.spotify_sync_playlists = [...item.playlistIds]
   target.spotify_sync_mode = item.mode
@@ -117,6 +118,7 @@ function buildLibraryEntry(item: SyncItem, isoNow: string): BoxLibraryEntry {
     title: item.title,
     cover: item.cover,
     artistcover: item.artistCover,
+    ...(item.releaseDate ? { release_date: item.releaseDate } : {}),
     spotify_sync_added: isoNow,
     spotify_sync_last_seen: isoNow,
     spotify_sync_playlists: [...item.playlistIds],
