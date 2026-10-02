@@ -103,6 +103,7 @@ export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<
       last_sync_duration_ms: result.durationMs,
       last_sync_trigger: trigger,
       last_sync_status: state,
+      last_sync_reason: extras.reason ?? null,
       playlists_seen: previousState.playlists_seen, // overridden on success below
       additions_count: result.additions,
       updates_count: result.updates,
@@ -113,6 +114,9 @@ export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<
       current_state: 'IDLE',
     }
     writeStateFile(persisted, deps.stateFilePath)
+    // (the reason of a failed run was only in the result - the log and the state file did not say why)
+    if (state !== 'IDLE' && state !== 'COMPLETED')
+      console.warn(`${new Date().toLocaleString()}: [spotify-sync] run ended ${state}: ${extras.reason ?? 'no reason given'}`)
     // Phase 14d: send Telegram push for AUTH_FAILED (immediate), and for
     // NETWORK/INTERNAL failures crossing the configured threshold.
     try {
@@ -232,6 +236,8 @@ export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<
       last_sync_duration_ms: endedAt.getTime() - startedAt.getTime(),
       last_sync_trigger: trigger,
       last_sync_status: 'COMPLETED',
+      last_sync_reason: null,
+      last_sync_skipped: failures,
       playlists_seen: playlistsSeen,
       additions_count: applyResult.appliedAdditions,
       updates_count: applyResult.appliedUpdates,

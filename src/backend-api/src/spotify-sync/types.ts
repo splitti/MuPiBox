@@ -221,6 +221,10 @@ export interface SyncStateFile {
   last_sync_duration_ms: number | null
   last_sync_trigger: SyncTrigger | null
   last_sync_status: SyncState
+  /** why the last run did not complete (Spotify's answer, a lock, …) - shown by the app and the bot */
+  last_sync_reason?: string | null
+  /** what a completed run could not read (a playlist, an album, an artist): nothing was removed then */
+  last_sync_skipped?: string[]
   playlists_seen: Array<{ id: string; name: string; items: number }>
   additions_count: number
   updates_count: number
