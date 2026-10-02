@@ -715,14 +715,14 @@ export class SpotifyApiService {
     return this.executeWithCache(
       cacheKey,
       async () => {
-        const result = await this.spotifyApi.playlists.getPlaylistItems(
-          playlistId,
-          'DE',
-          'items(track(id,uri,name))',
-          Math.min(l, 10) as any,
-          o,
+        // /playlists/{id}/items with `item` per entry (Spotify's February 2026 changes: the SDK's getPlaylistItems
+        // still asks /tracks, which Spotify apps under the new rules do not have) - handed on as `track`, as before
+        const query = new URLSearchParams({ market: 'DE', fields: 'items(item(id,uri,name))', limit: String(Math.min(l, 10)), offset: String(o) })
+        const result = await this.spotifyApi.makeRequest<{ items?: Array<{ item?: any; track?: any }> }>(
+          'GET',
+          `playlists/${encodeURIComponent(playlistId)}/items?${query}`,
         )
-        return result.items
+        return (result.items ?? []).map((entry) => ({ track: entry?.item ?? entry?.track ?? null }))
       },
       forceBackgroundRefresh,
     )

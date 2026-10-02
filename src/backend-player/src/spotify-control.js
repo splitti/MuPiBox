@@ -297,7 +297,7 @@ setInterval(() => {
 }, 1000)
 
 player.on('metadata', (val) => {
-  console.log('track metadata is', val)
+  log.debug('track metadata is', val)
   //currentMeta.currentTracknr = parseInt(val.Comment?.split(',').pop(), 10);
   currentMeta.currentTracknr = currentMeta.currentTracknr + 1
   log.debug(`${now()}: [Spotify Control] Current Tracknr: ${currentMeta.currentTracknr}`)
@@ -386,7 +386,7 @@ player.on('time_pos', checkSilence)
 //player.on('track-change', () => player.getProps(['length']))
 
 player.on('filename', (val) => {
-  console.log('track name is', val)
+  log.debug('track name is', val)
   if (!currentMeta.currentTrackname) {
     currentMeta.currentTrackname = val
       .split('.mp3')[0]
@@ -399,7 +399,7 @@ player.on('filename', (val) => {
 player.on('track-change', () => player.getProps(['filename']))
 
 player.on('path', (val) => {
-  console.log('track path is', val)
+  log.debug('track path is', val)
   // A local file that plays (NAS: set from the track list, see 'metadata'): its embedded picture is shown.
   const mediaRoot = '/home/dietpi/MuPiBox/media/'
   if (currentMeta.currentType !== 'nas') {

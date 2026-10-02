@@ -89,8 +89,8 @@ export async function discoverPlaylists(accessToken: string, config: SpotifySync
     const out: DiscoveredPlaylist[] = []
     for (const id of config.playlist_explicit_ids) {
       try {
-        const p = await spotifyGet<{ id: string; name: string; description?: string; tracks?: { total?: number } }>(
-          `/playlists/${id}?fields=id,name,description,tracks(total)`,
+        const p = await spotifyGet<{ id: string; name: string; description?: string; items?: { total?: number }; tracks?: { total?: number } }>(
+          `/playlists/${id}?fields=id,name,description,items(total)`,
           accessToken,
         )
         out.push(buildDiscoveredPlaylist(p))
@@ -114,7 +114,7 @@ export async function discoverPlaylists(accessToken: string, config: SpotifySync
   }
   while (next) {
     const page = await spotifyGet<{
-      items: Array<{ id: string; name: string; description?: string; tracks?: { total?: number } }>
+      items: Array<{ id: string; name: string; description?: string; items?: { total?: number }; tracks?: { total?: number } }>
       next: string | null
     }>(`/me/playlists?limit=${PLAYLISTS_PAGE_LIMIT}&offset=${offset}`, accessToken)
     for (const item of page.items ?? []) {
@@ -135,6 +135,7 @@ function buildDiscoveredPlaylist(p: {
   id: string
   name: string
   description?: string
+  items?: { total?: number }
   tracks?: { total?: number }
 }): DiscoveredPlaylist {
   const overrides = parseDescriptionOverrides(p.description)
@@ -144,7 +145,8 @@ function buildDiscoveredPlaylist(p: {
     description: p.description,
     categoryOverride: overrides.categoryOverride,
     episodeOnly: overrides.episodeOnly,
-    trackCount: p.tracks?.total ?? 0,
+    // (`tracks` is named `items` since Spotify's February 2026 changes)
+    trackCount: p.items?.total ?? p.tracks?.total ?? 0,
   }
 }
 
@@ -173,19 +175,21 @@ interface SpotifyTrackResponse {
 /** All tracks for one playlist, paginated. */
 async function fetchPlaylistTracks(playlistId: string, accessToken: string): Promise<SpotifyTrackResponse[]> {
   const out: SpotifyTrackResponse[] = []
-  // The fields= projection keeps the response small — Spotify enforces a
-  // depth limit, but the shape below is well within it. `null` track
-  // entries occur for removed/unavailable items; skip them in the caller.
+  // Spotify's February 2026 changes: a playlist's entries come from /playlists/{id}/items (/tracks is gone for
+  // Spotify apps created since, and for the others it follows), and each entry carries the track as `item` (was
+  // `track`). Apps under the old rules answer both, so the new names work for every app; `track` is still read as a
+  // fallback. The fields= projection keeps the response small. `null` entries occur for removed/unavailable items.
   const fields =
-    'items(track(id,uri,type,name,artists(id,name),album(id,name,album_type,images,artists(id,name)),show(id,name,publisher,images))),next'
+    'items(item(id,uri,type,name,artists(id,name),album(id,name,album_type,images,artists(id,name)),show(id,name,publisher,images))),next'
   let offset = 0
   while (true) {
-    const page = await spotifyGet<{ items: Array<{ track: SpotifyTrackResponse | null }>; next: string | null }>(
-      `/playlists/${playlistId}/tracks?fields=${encodeURIComponent(fields)}&limit=${TRACKS_PAGE_LIMIT}&offset=${offset}`,
-      accessToken,
-    )
+    const page = await spotifyGet<{
+      items: Array<{ item?: SpotifyTrackResponse | null; track?: SpotifyTrackResponse | null }>
+      next: string | null
+    }>(`/playlists/${playlistId}/items?fields=${encodeURIComponent(fields)}&limit=${TRACKS_PAGE_LIMIT}&offset=${offset}`, accessToken)
     for (const i of page.items ?? []) {
-      if (i.track) out.push(i.track)
+      const track = i?.item ?? i?.track
+      if (track) out.push(track)
     }
     if (!page.next || (page.items?.length ?? 0) < TRACKS_PAGE_LIMIT) break
     offset += TRACKS_PAGE_LIMIT
@@ -216,7 +220,22 @@ async function fetchArtistCovers(artistIds: string[], accessToken: string): Prom
         if (a?.id && url) out.set(a.id, url)
       }
     } catch (err) {
-      console.warn(`${new Date().toLocaleString()}: [spotify-sync] artist-cover fetch failed: ${(err as Error).message}`)
+      if (err instanceof SpotifyApiException && err.detail.kind !== 'internal') {
+        console.warn(`${new Date().toLocaleString()}: [spotify-sync] artist-cover fetch failed: ${(err as Error).message}`)
+        continue
+      }
+      // Spotify's February 2026 changes removed the request for several artists at once (GET /artists?ids=) for
+      // Spotify apps under the new rules: one by one then
+      for (const id of batch) {
+        try {
+          const a = await spotifyGet<{ id?: string; images?: Array<{ url?: string }> }>(`/artists/${encodeURIComponent(id)}`, accessToken)
+          const url = pickImage(a?.images)
+          if (a?.id && url) out.set(a.id, url)
+        } catch (one) {
+          console.warn(`${new Date().toLocaleString()}: [spotify-sync] artist-cover fetch failed: ${(one as Error).message}`)
+          if (one instanceof SpotifyApiException && one.detail.kind !== 'internal') break
+        }
+      }
     }
   }
   return out
@@ -241,7 +260,18 @@ export async function resolveSyncItems(
   const perPlaylistCounts = new Map<string, number>()
 
   for (const playlist of playlists) {
-    const tracks = await fetchPlaylistTracks(playlist.id, accessToken)
+    // One playlist that cannot be read is skipped (the run adds and updates, but removes nothing - see
+    // computeSyncDiff); it used to end the whole run with INTERNAL_ERROR, and then nothing at all came in - also not
+    // the artists and albums below. A login, rate-limit or network failure still ends the run.
+    let tracks: SpotifyTrackResponse[]
+    try {
+      tracks = await fetchPlaylistTracks(playlist.id, accessToken)
+    } catch (err) {
+      if (err instanceof SpotifyApiException && err.detail.kind !== 'internal') throw err
+      failures.push(`playlist ${playlist.name || playlist.id}`)
+      console.warn(`${new Date().toLocaleString()}: [spotify-sync] playlist ${playlist.id} (${playlist.name}) not read: ${(err as Error).message}`)
+      continue
+    }
     perPlaylistCounts.set(playlist.id, tracks.length)
     for (const track of tracks) {
       const resolved = resolveSingleTrack(track, playlist, config)

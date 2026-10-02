@@ -4146,6 +4146,11 @@ function spotifyTop() {
             ? [
                 ['Letzter Sync', running ? 'läuft gerade …' : relTime(st.last_sync_end)],
                 ['Ergebnis', result],
+                // why it failed (Spotify's answer), and what a completed run could not read - nothing removed then
+                st.last_sync_status !== 'COMPLETED' && st.last_sync_reason ? ['Grund', st.last_sync_reason] : null,
+                st.last_sync_status === 'COMPLETED' && st.last_sync_skipped?.length
+                  ? ['Nicht gelesen', `${st.last_sync_skipped.join(', ')} – darum wurde nichts entfernt`]
+                  : null,
                 ['Nächster Sync', relTime(st.next_scheduled_sync)],
               ]
             : [['Smart-Sync', 'aus – Playlists werden nicht übernommen']],
