@@ -255,6 +255,12 @@ export class PlayerPage implements OnInit, AfterViewInit {
   private externallyPaused = false
   // The album (or playlist) that was started, seen playing in the SDK's state; and how many ticks in a row something
   // else played instead - Spotify's autoplay went on after the end (see updateProgress)
+  // the box's player was seen busy on this page / how many ticks it is empty again / the page is on its way out /
+  // it goes because of a stop from outside (no STOP and no resume save on the way out)
+  private playerWasBusy = false
+  private idleTicks = 0
+  private isLeaving = false
+  private stoppedFromOutside = false
   private contextSeenFor = ''
   private contextGone = 0
   private albumEnded = false
@@ -438,11 +444,32 @@ export class PlayerPage implements OnInit, AfterViewInit {
     }
   }
 
+  // Back to the list, with the reason in the box's log (why a player page closed was never to be seen)
+  private leavePage(reason: string): void {
+    this.logService.log(`[PlayerPage] back to the list: ${reason}`)
+    this.navController.back()
+  }
+
   updateProgress() {
     // currentPlayedSpotify / currentPlayedLocal are kept fresh by the
     // takeUntilDestroyed-bound subscriptions in ngOnInit — read them
     // directly here instead of re-subscribing on every tick.
-    this.playing = !this.currentPlayedLocal?.pause && !this.externallyPaused
+    // Stopped from outside (the parents' app, Telegram, the sleep timer): the box's player is empty again after it
+    // was busy. A stop clears the pause flag too, so the page took the stopped player for a playing one - the pause
+    // button stayed, the page stayed open (an episode 100 s, an album for ever) and kept saving "Weiterhören" with
+    // the empty player's zeros. Two ticks in a row, so a moment between two tracks does not count; the stop is
+    // done already, so the page leaves without sending one (see ionViewWillLeave).
+    const busy = !!this.currentPlayedLocal?.currentPlayer
+    if (busy) {
+      this.playerWasBusy = true
+      this.idleTicks = 0
+    } else if (this.playerWasBusy && !this.isLeaving && ++this.idleTicks >= 2) {
+      this.isLeaving = true
+      this.stoppedFromOutside = true
+      this.leavePage('stopped from outside')
+      return
+    }
+    this.playing = !this.currentPlayedLocal?.pause && !this.externallyPaused && (busy || !this.playerWasBusy)
     // Drive CurrentMediaService's active-listening counter from here —
     // determined per-tick from the actual SDK state for Spotify or mplayer
     // state for local content. The service used to subscribe to current$/
@@ -503,7 +530,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
           this.contextSeenFor = ''
           this.contextGone = 0
           this.albumEnded = true
-          this.navController.back()
+          this.leavePage('album end (Spotify autoplay went on with another album)')
         }
       }
       if (!this.currentPlayedLocal?.pause && !sp?.is_playing) {
@@ -518,7 +545,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
         } else {
           this.goBackTimer++
           if (this.goBackTimer > 10) {
-            this.navController.back()
+            this.leavePage('Spotify not playing for 10 s')
           }
         }
       }
@@ -538,13 +565,13 @@ export class PlayerPage implements OnInit, AfterViewInit {
       ) {
         this.goBackTimer++
         if (this.goBackTimer > 10) {
-          this.navController.back()
+          this.leavePage('last track of the album ended')
         }
       }
       if (this.media.type === 'rss' && this.playing && !this.currentPlayedLocal?.playing) {
         this.goBackTimer++
         if (this.goBackTimer > 100) {
-          this.navController.back()
+          this.leavePage('podcast episode ended')
         }
       }
       setTimeout(() => {
@@ -571,7 +598,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
         // Mark as not playing and navigate back
         this.playing = false
         this.updateProgression = false
-        this.navController.back()
+        this.leavePage('Spotify playback could not start')
         return
       }
     } else {
@@ -604,7 +631,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
     // Left only because something else was started from the phone and the page opens again for it: the
     // player already switched, so no STOP (it would stop the new playback) and no resume save (the progress
     // belongs to the new media by now).
-    if (this.externalNavigator.replacingPlayerPage) {
+    if (this.externalNavigator.replacingPlayerPage || this.stoppedFromOutside) {
       this.updateProgression = false
       this.resumePlay = false
       return
@@ -645,7 +672,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
         // Mark as not playing and navigate back
         this.playing = false
         this.updateProgression = false
-        this.navController.back()
+        this.leavePage('Spotify resume could not start')
         return
       }
     } else if (this.media.type === 'library') {
@@ -720,7 +747,9 @@ export class PlayerPage implements OnInit, AfterViewInit {
     if (!this.currentMediaService.shouldPersistResume()) return
     // Stopped from the app or Telegram before the page is left: the box's player is empty by now (no track, no
     // position) - the entry of the last periodic save stands, it is not overwritten with zeros
-    if ((this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'rss') && !this.currentPlayedLocal?.currentPlayer) return
+    // (and for local media only while mplayer/mpv plays: Spotify started meanwhile wrote this page's NAS entry with
+    // the zeros of the empty local player)
+    if ((this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'rss') && this.currentPlayedLocal?.currentPlayer !== 'mplayer') return
 
     this.resumemedia = Object.assign({}, this.media)
     if (this.resumemedia.type === 'spotify' && this.resumemedia?.showid) {
