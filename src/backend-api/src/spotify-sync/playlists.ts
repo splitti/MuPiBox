@@ -25,7 +25,9 @@ import type { DiscoveredPlaylist, SpotifySyncConfig, SyncItem } from './types'
 
 const API_BASE = 'https://api.spotify.com/v1'
 const HTTP_TIMEOUT_MS = 10_000
-const TRACKS_PAGE_LIMIT = 100
+// (entries of a playlist per page: 50 is the most Spotify allows since its February 2026 changes - was 100, which
+// Spotify apps under the new rules refuse)
+const TRACKS_PAGE_LIMIT = 50
 const PLAYLISTS_PAGE_LIMIT = 50
 
 /** What a 401 / 429 / 5xx / network failure should look like to callers. */
@@ -191,9 +193,11 @@ async function fetchPlaylistTracks(playlistId: string, accessToken: string): Pro
       const track = i?.item ?? i?.track
       if (track) out.push(track)
     }
-    if (!page.next || (page.items?.length ?? 0) < TRACKS_PAGE_LIMIT) break
-    offset += TRACKS_PAGE_LIMIT
-    if (offset > 50 * TRACKS_PAGE_LIMIT) break
+    // (Spotify's own paging decides - a page it shortened still has a next one)
+    const got = page.items?.length ?? 0
+    if (!page.next || got === 0) break
+    offset += got
+    if (offset > 5000) break
   }
   return out
 }
@@ -494,15 +498,33 @@ export async function fetchArtistAlbums(
   accessToken: string,
   albumTypes = 'album',
 ): Promise<SimpleAlbum[]> {
+  // The list of an artist changes seldom (a new episode now and then): kept for some hours, so the sync every 15
+  // minutes and the app's album list do not ask Spotify for ~30 pages of the same artist each time - that ran
+  // Spotify apps into their rate limit.
+  const key = `${artistId}|${albumTypes}`
+  const kept = artistAlbumsCache.get(key)
+  if (kept && Date.now() - kept.at < ARTIST_ALBUMS_KEEP_MS) return kept.albums
   const out: SimpleAlbum[] = []
   const seen = new Set<string>()
   let offset = 0
-  const LIMIT = 50
   while (out.length < 300) {
-    const page = await spotifyGet<{ items?: SimpleAlbum[] }>(
-      `/artists/${encodeURIComponent(artistId)}/albums?include_groups=${encodeURIComponent(albumTypes)}&market=DE&limit=${LIMIT}&offset=${offset}`,
-      accessToken,
-    )
+    const limit = artistAlbumsPageLimit
+    let page: { items?: SimpleAlbum[]; limit?: number; next?: string | null }
+    try {
+      page = await spotifyGet<{ items?: SimpleAlbum[]; limit?: number; next?: string | null }>(
+        `/artists/${encodeURIComponent(artistId)}/albums?include_groups=${encodeURIComponent(albumTypes)}&market=DE&limit=${limit}&offset=${offset}`,
+        accessToken,
+      )
+    } catch (err) {
+      // Spotify apps under the February 2026 rules get at most 10 albums per page (older apps 50): refused with
+      // 400, the page is asked again with 10 - and every page after it (the app does not change while the box runs)
+      if (limit > 10 && err instanceof SpotifyApiException && err.detail.kind === 'internal' && err.detail.reason.startsWith('400')) {
+        artistAlbumsPageLimit = 10
+        console.warn(`${new Date().toLocaleString()}: [spotify-sync] artist albums: Spotify allows 10 per page for this app (was asked ${limit})`)
+        continue
+      }
+      throw err
+    }
     const its = page.items ?? []
     for (const a of its) {
       if (a?.id && !seen.has(a.id)) {
@@ -510,11 +532,18 @@ export async function fetchArtistAlbums(
         out.push(a)
       }
     }
-    if (its.length < LIMIT) break
-    offset += LIMIT
+    // (Spotify's own paging decides - a page it shortened to fewer than asked for still has a next one)
+    if (!page.next || its.length === 0) break
+    if (typeof page.limit === 'number' && page.limit > 0 && page.limit < limit) artistAlbumsPageLimit = page.limit
+    offset += its.length
   }
+  artistAlbumsCache.set(key, { at: Date.now(), albums: out })
   return out
 }
+// (see fetchArtistAlbums: albums per page Spotify allows this app, and the lists kept)
+let artistAlbumsPageLimit = 50
+const ARTIST_ALBUMS_KEEP_MS = 6 * 60 * 60 * 1000
+const artistAlbumsCache = new Map<string, { at: number; albums: SimpleAlbum[] }>()
 
 /** Build an album-promotion SyncItem from a fetched Spotify album object
  *  (Phase 17b explicit-album pins). Category is the parent's pick from the
