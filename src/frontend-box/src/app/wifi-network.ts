@@ -57,6 +57,10 @@ export interface EthernetConfig {
   currentGateway?: string
   /** Whether the port itself is administratively up (see /api/network/ethernet/power). */
   linkUp?: boolean
+  /** A cable with a link (null: not known, the port is down). */
+  carrier?: boolean | null
+  /** Switched off with /api/network/ethernet/power: stays down, also after a restart. */
+  off?: boolean
 }
 
 /** Whether the onboard WiFi radio is on or off (rfkill), independent of a USB WiFi adapter. */

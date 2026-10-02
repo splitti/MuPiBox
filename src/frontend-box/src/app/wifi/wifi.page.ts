@@ -158,6 +158,16 @@ export class WifiPage {
   private onboardWifiPolling?: Subscription
   protected ethernetAvailable = signal(false)
   protected ethernetLinkUp = signal(false)
+  // the switch as it is set (/api/network/ethernet/power) - not whether a cable has a link: a port without a cable
+  // showed as "off" although nothing was switched off
+  protected ethernetOff = signal(false)
+  protected cableText = computed(() => {
+    const eth = this.ethernet()
+    if (this.ethernetOff()) return 'Port switched off'
+    if (eth?.carrier === true) return 'Cable connected'
+    if (eth?.carrier === false) return 'No cable'
+    return '—'
+  })
   protected ethernetInterfaceName = signal<string | undefined>(undefined)
   private ethernetPowerPolling?: Subscription
   protected lanDhcp = signal(true)
@@ -221,7 +231,10 @@ export class WifiPage {
         this.ethernetAvailable.set(result.ok)
         if (result.ok) {
           this.ethernetLinkUp.set(result.config.linkUp ?? false)
+          this.ethernetOff.set(result.config.off === true)
           this.ethernetInterfaceName.set(result.config.interface)
+          // (the LAN card shows the cable: kept fresh while the page is open)
+          if (this.ethernet()) this.ethernet.set({ ...(this.ethernet() as EthernetConfig), carrier: result.config.carrier, off: result.config.off, currentIp: result.config.currentIp, currentGateway: result.config.currentGateway })
         }
       })
   }
@@ -674,11 +687,11 @@ export class WifiPage {
   // Turning it off while connected through that same cable cuts the connection with no way to undo it
   // remotely, so it always asks first.
   protected lanTooltip = computed(() =>
-    this.ethernetLinkUp() ? 'LAN (ethernet) is on - tap to turn it off' : 'LAN (ethernet) is off - tap to turn it on',
+    !this.ethernetOff() ? 'LAN (ethernet) is on - tap to turn it off' : 'LAN (ethernet) is off - tap to turn it on',
   )
 
   async lanPowerButtonPressed() {
-    if (!this.ethernetLinkUp()) {
+    if (this.ethernetOff()) {
       this.setLanPower(true)
       return
     }
@@ -702,6 +715,9 @@ export class WifiPage {
   }
 
   private setLanPower(enabled: boolean) {
-    this.wifiService.setEthernetPower(enabled).subscribe(() => this.ethernetLinkUp.set(enabled))
+    this.wifiService.setEthernetPower(enabled).subscribe(() => {
+      this.ethernetOff.set(!enabled)
+      this.ethernetLinkUp.set(enabled)
+    })
   }
 }

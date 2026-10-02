@@ -39,7 +39,7 @@
     @if (ethernetAvailable()) {
       <ion-buttons slot="end">
         <ion-button (click)="lanPowerButtonPressed()" [title]="lanTooltip()">
-          <ion-icon slot="icon-only" name="git-network-outline" class="power-icon" [class.on]="ethernetLinkUp()"></ion-icon>
+          <ion-icon slot="icon-only" name="git-network-outline" class="power-icon" [class.on]="!ethernetOff()"></ion-icon>
         </ion-button>
       </ion-buttons>
     }
@@ -123,7 +123,7 @@
           <ion-icon name="git-network-outline"></ion-icon>
           <div>
             <div class="ssid-name">LAN</div>
-            <div class="ssid-detail">{{ ethernet()?.interface }}@if (ethernet(); as eth) { &middot; {{ eth.dhcp ? 'DHCP' : 'STATIC' }}}</div>
+            <div class="ssid-detail">{{ ethernet()?.interface }}@if (ethernet(); as eth) { &middot; {{ eth.dhcp ? 'DHCP' : 'STATIC' }}} &middot; {{ cableText() }}</div>
           </div>
         </div>
         <div class="status-ip">

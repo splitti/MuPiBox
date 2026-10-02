@@ -3097,9 +3097,12 @@ app.get('/api/network/ethernet', async (_req, res) => {
       // no default route on this interface
     }
     let linkUp = false
+    let carrier: boolean | null = null
     try {
       const { stdout } = await execFileAsync('ip', ['link', 'show', parsed.iface])
       linkUp = /<[^>]*\bUP\b[^>]*>/.test(stdout)
+      // (a cable with a link: LOWER_UP - only told while the port is up; a port switched off sees no cable)
+      if (linkUp) carrier = /<[^>]*\bLOWER_UP\b[^>]*>/.test(stdout)
     } catch {
       // interface unknown
     }
@@ -3114,6 +3117,8 @@ app.get('/api/network/ethernet', async (_req, res) => {
       currentIpv6: ipv6AddressesOf(parsed.iface),
       currentGateway,
       linkUp,
+      // a cable plugged in (null: not known - the port is down)
+      carrier,
       // switched off (POST /power): stays down, also after a restart
       off: fs.existsSync(LAN_OFF_FILE),
     })

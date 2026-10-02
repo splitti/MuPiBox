@@ -8155,7 +8155,9 @@ async function loadNetOptions() {
   v.set('usbDrv', nopt.drv)
   v.set('usbPm', POWER_LABEL[netDriver()?.power] ?? 'Standard')
   if (nopt.lan) {
-    v.set('lanOn', !nopt.lan.off && nopt.lan.linkUp)
+    // (the switch as it is set, not whether a cable has a link: without a cable it read "off" although nothing was
+    // switched off - the cable has a line of its own on the page)
+    v.set('lanOn', !nopt.lan.off)
     v.set('lanMode', nopt.lan.dhcp ? 'DHCP' : 'Statisch')
     for (const [key, field] of LAN_FIELDS) v.set(key, nopt.lan[field] ?? '')
   }
@@ -8216,7 +8218,8 @@ function dhcpItems(which) {
 function lanSections() {
   const l = nopt.lan
   if (!l) return [{ title: 'LAN', items: [{ type: 'note', text: 'Diese Box hat keinen LAN-Anschluss, oder er ließ sich nicht lesen.' }] }]
-  const now = [['Adresse', l.currentIp ?? '–'], ...(l.currentIpv6 ?? []).map((a) => ['IPv6-Adresse', a]), ['Router', l.currentGateway ?? '–']]
+  const cable = l.off ? 'Anschluss ausgeschaltet' : l.carrier === true ? 'verbunden' : l.carrier === false ? 'kein Kabel' : '–'
+  const now = [['Kabel', cable], ['Adresse', l.currentIp ?? '–'], ...(l.currentIpv6 ?? []).map((a) => ['IPv6-Adresse', a]), ['Router', l.currentGateway ?? '–']]
   const lan = [
     { type: 'toggle', label: 'LAN an', key: 'lanOn', help: l.off ? 'Ausgeschaltet – bleibt aus, bis es hier wieder eingeschaltet wird.' : 'Mit Kabel hat LAN Vorrang vor dem WLAN.' },
     { type: 'kv', rows: now },
@@ -8226,7 +8229,7 @@ function lanSections() {
     for (const [key, , label, placeholder] of LAN_FIELDS) lan.push({ type: 'text', label, key, placeholder })
   }
   lan.push({ type: 'buttons', buttons: [['Speichern', 'primary', 'lansave'], ['LAN neu starten', 'ghost', 'lanrestart']] })
-  const sections = [{ title: `LAN (${l.interface})`, help: l.currentIp || l.off ? 'Der Kabelanschluss der Box.' : 'Der Kabelanschluss der Box. Im Moment ohne Verbindung – steckt ein Kabel?', items: lan }]
+  const sections = [{ title: `LAN (${l.interface})`, help: l.currentIp || l.off || l.carrier !== false ? 'Der Kabelanschluss der Box.' : 'Der Kabelanschluss der Box. Im Moment steckt kein Kabel.', items: lan }]
   // (with a fixed address as saved: no DHCP)
   if (l.dhcp) sections.push({ title: 'Adresse (DHCP)', items: dhcpItems('lan') })
   return sections
