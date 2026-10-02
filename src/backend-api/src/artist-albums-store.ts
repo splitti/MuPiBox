@@ -85,6 +85,14 @@ const slim = (a: StoredAlbum): StoredAlbum => ({
   release_date: a.release_date,
 })
 
+// the whole lists queue up: many pages of several artists at the same moment is what Spotify answers with a block
+let queue: Promise<unknown> = Promise.resolve()
+function oneAtATime<T>(work: () => Promise<T>): Promise<T> {
+  const next = queue.then(work, work)
+  queue = next.catch(() => undefined)
+  return next
+}
+
 async function wholeList(fetchPage: FetchAlbumPage): Promise<{ albums: StoredAlbum[]; total: number }> {
   const albums: StoredAlbum[] = []
   const seen = new Set<string>()
@@ -139,7 +147,8 @@ export async function artistAlbums(
           return albums
         }
       }
-      const whole = await wholeList(fetchPage)
+      // one whole list after the other (the display asks all its artists at once when it starts)
+      const whole = await oneAtATime(() => wholeList(fetchPage))
       keep(key, { albums: whole.albums, total: whole.total, fullAt: now }, true)
       console.log(`${new Date().toLocaleString()}: [artist-albums] ${artistId}: whole list asked, ${whole.albums.length} albums`)
       return whole.albums
