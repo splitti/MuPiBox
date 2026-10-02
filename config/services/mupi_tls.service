@@ -9,6 +9,10 @@ After=network-online.target lighttpd.service
 [Service]
 Type=oneshot
 ExecStart=/usr/local/bin/mupibox/tls_cert.sh ensure
+# (nothing waits for it: CPU and card only when the display, the backend and the player do not need them - it ran
+# alongside the kiosk's start before)
+Nice=10
+IOSchedulingClass=idle
 
 [Install]
 WantedBy=multi-user.target
