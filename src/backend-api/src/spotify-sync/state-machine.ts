@@ -17,6 +17,7 @@ import { maybeNotifyAfterRun } from './notify'
 import { discoverPlaylists, resolveSyncItems, SpotifyApiException } from './playlists'
 import { readStateFile, writeStateFile } from './state-file'
 import { acquireSyncLock, releaseSyncLock } from './sync-lock'
+import { noteSpotifyBlock, spotifyBlock } from '../spotify-block'
 import {
   type BoxLibraryEntry,
   type SyncDiff,
@@ -72,8 +73,10 @@ export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<
   // transitions (first AUTH_FAILED, threshold-crossing for network/internal).
   const previousFailureCounters = { ...previousState.failure_counters }
   // (a block Spotify set in an earlier run, see finalise and 0b)
-  const blockedUntil = Date.parse(previousState.rate_limited_until ?? '')
-  const stillBlocked = Number.isFinite(blockedUntil) && blockedUntil > startedAt.getTime()
+  // (or one the display's lists were told - the same Spotify app, see spotify-block.ts)
+  const sharedBlock = spotifyBlock()
+  const blockedUntil = Math.max(Date.parse(previousState.rate_limited_until ?? '') || 0, sharedBlock?.until ?? 0)
+  const stillBlocked = blockedUntil > startedAt.getTime()
 
   const finalise = (
     state: SyncState,
@@ -106,6 +109,8 @@ export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<
     if (state === 'RATE_LIMITED' && wait > 0) {
       const until = new Date(endedAt.getTime() + wait * 1000)
       rateLimitedUntil = until.toISOString()
+      // (the display's lists wait for it too)
+      noteSpotifyBlock(until.getTime(), 'sync', extras.reason ?? '429')
       extras = { ...extras, nextScheduled: extras.nextScheduled ?? rateLimitedUntil }
       if (!stillBlocked)
         console.warn(
@@ -157,7 +162,10 @@ export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<
   //     "sync now" in the app or the bot; every request in a block only keeps it going
   if (stillBlocked) {
     return finalise('RATE_LIMITED', undefined, {
-      reason: previousState.last_sync_reason ?? 'Spotify blocks the requests',
+      reason:
+        (previousState.last_sync_status === 'RATE_LIMITED' ? previousState.last_sync_reason : null) ??
+        (sharedBlock ? `${sharedBlock.reason} (told to the ${sharedBlock.source === 'sync' ? 'sync' : "display's lists"})` : null) ??
+        'Spotify blocks the requests',
       retryAfterSeconds: Math.ceil((blockedUntil - Date.now()) / 1000),
     })
   }

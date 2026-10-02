@@ -144,6 +144,9 @@ export interface SyncItem {
   title?: string
   cover?: string
   artistCover?: string
+  /** Spotify's release date of the album (YYYY, YYYY-MM or YYYY-MM-DD): the display sorts by it without asking
+   *  Spotify for every album */
+  releaseDate?: string
   /** Box-side category resolved by the categorizer (see §6.3). */
   category: CategoryType
   /** Playlists that reference this item — used for multi-playlist tracking (§6.5). */
@@ -184,6 +187,7 @@ export interface BoxLibraryEntry {
   title?: string
   cover?: string
   artistcover?: string
+  release_date?: string
   id?: string
   artistid?: string
   showid?: string

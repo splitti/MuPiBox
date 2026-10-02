@@ -22,6 +22,7 @@ import {
 } from './categorizer'
 import type { CategoryType } from './category-types'
 import type { DiscoveredPlaylist, SpotifySyncConfig, SyncItem } from './types'
+import { type AlbumPage, artistAlbums } from '../artist-albums-store'
 
 const API_BASE = 'https://api.spotify.com/v1'
 const HTTP_TIMEOUT_MS = 10_000
@@ -170,6 +171,7 @@ interface SpotifyTrackResponse {
     album_type?: 'album' | 'single' | 'compilation' | 'audiobook' | string
     images?: Array<{ url?: string }>
     artists?: Array<{ id?: string; name?: string }>
+    release_date?: string
   }
   show?: {
     id?: string
@@ -187,7 +189,7 @@ async function fetchPlaylistTracks(playlistId: string, accessToken: string): Pro
   // `track`). Apps under the old rules answer both, so the new names work for every app; `track` is still read as a
   // fallback. The fields= projection keeps the response small. `null` entries occur for removed/unavailable items.
   const fields =
-    'items(item(id,uri,type,name,artists(id,name),album(id,name,album_type,images,artists(id,name)),show(id,name,publisher,images))),next'
+    'items(item(id,uri,type,name,artists(id,name),album(id,name,album_type,images,artists(id,name),release_date),show(id,name,publisher,images))),next'
   let offset = 0
   while (true) {
     const page = await spotifyGet<{
@@ -306,6 +308,7 @@ export async function resolveSyncItems(
         album_type?: string
         artists?: Array<{ id?: string; name?: string }>
         images?: Array<{ url?: string }>
+        release_date?: string
       }>(`/albums/${encodeURIComponent(albumId)}`, accessToken)
       const item = buildExplicitAlbumItem(album, pin.category)
       if (item) items.set(item.groupKey, item)
@@ -454,6 +457,7 @@ function resolveSingleTrack(
       artist: track.album.artists?.[0]?.name ?? '',
       artistId: track.album.artists?.[0]?.id,
       cover: pickImage(track.album.images),
+      releaseDate: track.album.release_date,
       artistCover: undefined,
       playlistIds: [playlist.id],
     }
@@ -472,6 +476,7 @@ function resolveSingleTrack(
       artist: trackArtist.name ?? '',
       artistId: trackArtist.id,
       cover: pickImage(track.album.images),
+      releaseDate: track.album.release_date,
       artistCover: undefined,
       playlistIds: [playlist.id],
     }
@@ -489,6 +494,7 @@ function resolveSingleTrack(
       artist: track.album.artists?.[0]?.name ?? track.artists?.[0]?.name ?? '',
       artistId: track.album.artists?.[0]?.id ?? track.artists?.[0]?.id,
       cover: pickImage(track.album.images),
+      releaseDate: track.album.release_date,
       artistCover: undefined,
       playlistIds: [playlist.id],
     }
@@ -513,59 +519,40 @@ export async function fetchArtistAlbums(
   accessToken: string,
   albumTypes = 'album',
 ): Promise<SimpleAlbum[]> {
-  // The list of an artist changes seldom (a new episode now and then): kept for some hours, so the sync every 15
-  // minutes and the app's album list do not ask Spotify for ~30 pages of the same artist each time - that ran
-  // Spotify apps into their rate limit.
-  const key = `${artistId}|${albumTypes}`
-  const kept = artistAlbumsCache.get(key)
-  if (kept && Date.now() - kept.at < ARTIST_ALBUMS_KEEP_MS) return kept.albums
-  const out: SimpleAlbum[] = []
-  const seen = new Set<string>()
-  let offset = 0
-  while (out.length < 300) {
+  // Kept on the SD card and afterwards checked with one page (artist-albums-store.ts): the sync every 15 minutes and the
+  // app's album list asked Spotify for all ~30 pages of a big artist each time - that ran Spotify apps into blocks.
+  const fetchPage = async (offset: number): Promise<AlbumPage> => {
     const limit = artistAlbumsPageLimit
-    let page: { items?: SimpleAlbum[]; limit?: number; next?: string | null }
     try {
-      page = await spotifyGet<{ items?: SimpleAlbum[]; limit?: number; next?: string | null }>(
+      const page = await spotifyGet<AlbumPage & { limit?: number }>(
         `/artists/${encodeURIComponent(artistId)}/albums?include_groups=${encodeURIComponent(albumTypes)}&market=DE&limit=${limit}&offset=${offset}`,
         accessToken,
       )
+      if (typeof page.limit === 'number' && page.limit > 0 && page.limit < limit) artistAlbumsPageLimit = page.limit
+      return page
     } catch (err) {
       // Spotify apps under the February 2026 rules get at most 10 albums per page (older apps 50): refused with
       // 400, the page is asked again with 10 - and every page after it (the app does not change while the box runs)
       if (limit > 10 && err instanceof SpotifyApiException && err.detail.kind === 'internal' && err.detail.reason.startsWith('400')) {
         artistAlbumsPageLimit = 10
         console.warn(`${new Date().toLocaleString()}: [spotify-sync] artist albums: Spotify allows 10 per page for this app (was asked ${limit})`)
-        continue
+        return fetchPage(offset)
       }
       throw err
     }
-    const its = page.items ?? []
-    for (const a of its) {
-      if (a?.id && !seen.has(a.id)) {
-        seen.add(a.id)
-        out.push(a)
-      }
-    }
-    // (Spotify's own paging decides - a page it shortened to fewer than asked for still has a next one)
-    if (!page.next || its.length === 0) break
-    if (typeof page.limit === 'number' && page.limit > 0 && page.limit < limit) artistAlbumsPageLimit = page.limit
-    offset += its.length
   }
-  artistAlbumsCache.set(key, { at: Date.now(), albums: out })
-  return out
+  // (a copy: the callers sort it)
+  return [...(await artistAlbums(artistId, albumTypes, fetchPage))] as SimpleAlbum[]
 }
-// (see fetchArtistAlbums: albums per page Spotify allows this app, and the lists kept)
+// (see fetchArtistAlbums: albums per page Spotify allows this app)
 let artistAlbumsPageLimit = 50
-const ARTIST_ALBUMS_KEEP_MS = 6 * 60 * 60 * 1000
-const artistAlbumsCache = new Map<string, { at: number; albums: SimpleAlbum[] }>()
 
 /** Build an album-promotion SyncItem from a fetched Spotify album object
  *  (Phase 17b explicit-album pins). Category is the parent's pick from the
  *  WebApp, falling back to 'music' when none was stored. artistCover is filled
  *  by the fetchArtistCovers step like for playlist items. */
 function buildExplicitAlbumItem(
-  album: { id?: string; name?: string; artists?: Array<{ id?: string; name?: string }>; images?: Array<{ url?: string }> },
+  album: { id?: string; name?: string; artists?: Array<{ id?: string; name?: string }>; images?: Array<{ url?: string }>; release_date?: string },
   pinCategory: CategoryType | undefined,
 ): SyncItem | undefined {
   if (!album?.id) return undefined
@@ -579,6 +566,7 @@ function buildExplicitAlbumItem(
     artist: album.artists?.[0]?.name ?? '',
     artistId: album.artists?.[0]?.id,
     cover: pickImage(album.images),
+    releaseDate: album.release_date,
     artistCover: undefined,
     playlistIds: [],
   }

@@ -4026,6 +4026,13 @@ app.get('/api/spotify/artist/:artistId/albums', async (req, res) => {
   }
 
   try {
+    // ?all=1: the whole list at once (the display's artist entries), kept and checked with one page - see
+    // getAllArtistAlbums
+    if (req.query.all === '1') {
+      const items = await spotifyApiService.getAllArtistAlbums(artistId, albumTypes)
+      res.status(200).json({ items, total: items.length, limit: items.length, offset: 0 })
+      return
+    }
     const results = await spotifyApiService.getArtistAlbums(artistId, albumTypes, limit, offset)
     res.status(200).json(results)
   } catch (error) {

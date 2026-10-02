@@ -1243,6 +1243,11 @@ async function loadNotices(root) {
   } else if (sync.body?.enabled && tok?.configured && tok.scopes_ok === false) {
     notes.push(['sync', 'Spotify-Anmeldung abgelaufen', 'Bitte neu verbinden, damit der Sync weiterläuft.', 'spotify'])
   }
+  // Spotify blocks the box's requests (too many - see spotify-block.ts): until when, without reading logs
+  const block = sync.body?.spotify_block
+  if (block?.until && Date.parse(block.until) > Date.now()) {
+    notes.push(['sync', 'Spotify sperrt die Box gerade', `Zu viele Anfragen – bis ${untilWhen(Date.parse(block.until))} zeigt die Box gespeicherte Spotify-Inhalte, Neues kommt danach.`, 'spotify'])
+  }
   const box = $('#notices', root)
   if (!box) return
   drawNotices(box, notes)
@@ -1380,6 +1385,11 @@ const DAY_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 const DAY_LONG = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag']
 
 const hhmm = (ms) => new Date(ms).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' })
+// a time that may be on another day (a Spotify block lasts up to a day): with the day then
+const untilWhen = (ms) =>
+  new Date(ms).toDateString() === new Date().toDateString()
+    ? hhmm(ms)
+    : new Date(ms).toLocaleString(LOCALE, { weekday: 'short', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' })
 
 // Friendly words for the errors of the play and save endpoints
 function errorText(r, fallback = 'Das hat nicht geklappt') {
@@ -4144,6 +4154,10 @@ function spotifyTop() {
         <div>${spKv(
           s.enabled
             ? [
+                // Spotify blocks the box (too many requests): until when - the sync and the display's lists wait
+                s.spotify_block?.until && Date.parse(s.spotify_block.until) > Date.now()
+                  ? ['Spotify-Sperre', `bis ${untilWhen(Date.parse(s.spotify_block.until))} (zu viele Anfragen)`]
+                  : null,
                 ['Letzter Sync', running ? 'läuft gerade …' : relTime(st.last_sync_end)],
                 ['Ergebnis', result],
                 // why it failed (Spotify's answer), and what a completed run could not read - nothing removed then
