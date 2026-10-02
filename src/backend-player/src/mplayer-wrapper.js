@@ -229,6 +229,7 @@ const createPlayer = () => {
   out.startsAt = false
   out.cachePrefillPercent = 10
   out.trackIndex = () => -1 // (not known: the player counts the files that start)
+  out.setLoudness = () => undefined // (the levelling of the loudness is mpv's, see mpv-wrapper.js)
   out.engine = 'mplayer'
   out.queue = queue
   out.next = next

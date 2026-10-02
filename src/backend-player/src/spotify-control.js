@@ -117,6 +117,7 @@ function setupMupiBoxConfigWatch() {
       if (fresh) {
         muPiBoxConfig = fresh
         console.log(`${new Date().toLocaleString()}: [Config] Reloaded mupiboxconfig.json (live)`)
+        if (typeof applyLoudness === 'function') applyLoudness()
       }
       // On parse failure we keep the old in-memory copy. fs.watch can still fire
       // mid-write occasionally even with debounce, so a parse error here is normal
@@ -171,6 +172,20 @@ const server = http.createServer(app)
 const playerEngine = process.env.MUPIBOX_PLAYER || (muPiBoxConfig?.mupibox?.playerEngine === 'mpv' ? 'mpv' : 'mplayer')
 const player = playerEngine === 'mpv' ? createMpv() : createMplayer()
 console.log(`${new Date().toLocaleString()}: [Player] engine: ${playerEngine}`)
+// The levelling of the loudness (mupibox.loudness: off | soft | strong, the app's "Lautstärke angleichen"): set when
+// the engine is up and whenever the config changes; only mpv has it
+let loudnessApplied = null
+function applyLoudness() {
+  const mode = ['soft', 'strong'].includes(muPiBoxConfig?.mupibox?.loudness) ? muPiBoxConfig.mupibox.loudness : 'off'
+  if (mode === loudnessApplied) return
+  loudnessApplied = mode
+  player.setLoudness?.(mode)
+  console.log(`${new Date().toLocaleString()}: [Player] loudness levelling: ${mode}`)
+}
+player.on('ready', () => {
+  loudnessApplied = null // (a new mpv process after a respawn starts without the filter)
+  applyLoudness()
+})
 
 // Refuse commands a foreign web page sends through a visitor's browser; CORS only for the box's
 // own pages (was: Access-Control-Allow-Origin * for everyone). See request-guard.js.

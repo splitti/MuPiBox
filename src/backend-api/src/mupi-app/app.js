@@ -6036,6 +6036,9 @@ async function loadVolume() {
   // (with Bluetooth audio: an own maximum - for headphones)
   state.values.set('volBtOn', r.body.btMaxVolume != null)
   state.values.set('volBtMax', Number(r.body.btMaxVolume ?? Math.min(60, Number(r.body.maxVolume ?? 100))))
+  // the levelling of the loudness (off | soft | strong): a switch and, with it on, the strength
+  state.values.set('loudOn', r.body.loudness === 'soft' || r.body.loudness === 'strong')
+  state.values.set('loudMode', r.body.loudness === 'strong' ? 'Kräftig' : 'Sanft')
 }
 
 /* Soundkarte, Drehregler */
@@ -9350,8 +9353,8 @@ const CONTROLLERS = {
   displaylive: { top: liveTop, sections: () => [], mount: mountLive },
   lautstaerke: {
     load: loadVolume,
-    sections: (page) =>
-      withoutSave(page).map((sec) => ({
+    sections: (page) => [
+      ...withoutSave(page).map((sec) => ({
         ...sec,
         items: sec.items.flatMap((it) =>
           it.key === 'vol'
@@ -9374,7 +9377,26 @@ const CONTROLLERS = {
                 : it,
         ),
       })),
+      // (the player levels everything that is not Spotify - that plays through its own program)
+      {
+        title: 'Lautstärke angleichen',
+        help: 'Hörspiele, Musik, Podcasts und Radio werden auf eine gemeinsame Lautheit gebracht – ein leises Hörspiel ist dann nicht leiser als das Album davor. Spotify spielt über sein eigenes Programm und bleibt, wie es ist.',
+        items: [
+          { type: 'toggle', key: 'loudOn', label: 'Lautstärke angleichen', help: 'Standard aus. Braucht etwas Rechenleistung – auf einem Pi 3 kann es beim Start eines Titels kurz ruckeln.' },
+          ...(state.values.get('loudOn') ? [{ type: 'seg', key: 'loudMode', label: 'Stärke', options: ['Sanft', 'Kräftig'], help: 'Sanft lässt der Dynamik eines Hörspiels mehr Raum, kräftig gleicht stärker an.' }] : []),
+        ],
+      },
+    ],
     async change(key, v, page) {
+      if (key === 'loudOn' || key === 'loudMode') {
+        const on = key === 'loudOn' ? !!v : !!state.values.get('loudOn')
+        const strong = (key === 'loudMode' ? v : state.values.get('loudMode')) === 'Kräftig'
+        const r = await api(`${API}/audio/config`, { method: 'POST', body: { loudness: on ? (strong ? 'strong' : 'soft') : 'off' } })
+        if (!r.ok) return toast('Nicht gespeichert', 'info')
+        toast('Gespeichert')
+        if (key === 'loudOn') renderPage(page, false)
+        return
+      }
       if (key === 'vol') {
         const r = await api(`${API}/audio/volume`, { method: 'POST', body: { volume: v } })
         if (!r.ok) return toast('Lautstärke ließ sich nicht setzen', 'info')

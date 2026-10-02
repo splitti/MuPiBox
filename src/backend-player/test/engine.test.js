@@ -297,3 +297,22 @@ test(`${ENGINE}: two "next" in a row land on the third track, and the engine kno
   if (STARTS_AT) assert.equal(idx, 2, `trackIndex ${idx}`)
   else assert.equal(idx, -1)
 })
+
+test(`${ENGINE}: the levelling of the loudness is set and taken off while playing`, { skip: !STARTS_AT && 'mplayer has no levelling' }, async () => {
+  await settle()
+  const tc = waitFor('track-change', 6000)
+  player.play(files[0])
+  await tc
+  player.setLoudness('soft')
+  await sleep(700)
+  const t1 = await prop('time_pos')
+  await sleep(1000)
+  const t2 = await prop('time_pos')
+  assert.ok(t2 > t1 + 0.5, `playback stalled with the filter: ${t1} -> ${t2}`)
+  player.setLoudness('strong')
+  await sleep(700)
+  player.setLoudness('off')
+  await sleep(700)
+  const t3 = await prop('time_pos')
+  assert.ok(t3 > t2, `playback stalled after the filter: ${t2} -> ${t3}`)
+})

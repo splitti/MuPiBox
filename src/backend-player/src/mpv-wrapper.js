@@ -344,6 +344,12 @@ const createPlayer = (options = {}) => {
     exec('loadlist', [fileOrUrl])
     if (opts?.track > 1) send(['playlist-play-index', Math.trunc(opts.track) - 1])
   }
+  // Levelling of the loudness (mupibox.loudness): 'soft' = EBU R128 loudnorm, leaves an audiobook its dynamics;
+  // 'strong' = dynaudnorm, evens out more (music, radio); 'off' = no filter in the chain. Set live, playback goes on.
+  out.setLoudness = (mode) => {
+    const filter = { soft: 'lavfi=[loudnorm=I=-16:TP=-1.5:LRA=11]', strong: 'lavfi=[dynaudnorm=f=250:g=15:p=0.9]' }[mode]
+    send(['set_property', 'af', filter ?? ''])
+  }
   out.startsAt = true
   out.cachePrefillPercent = 100
   // The place in the playlist of the file that plays (0-based; -1: none). mpv reports it before the file is loaded,

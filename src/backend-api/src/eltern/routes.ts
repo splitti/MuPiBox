@@ -1238,7 +1238,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       const startupVolume = volumePercent(mb.startupVolume) ?? volumePercent(mb.startVolume) ?? null
       // (with Bluetooth audio: an own maximum, null = the same as without)
       const btMaxVolume = volumePercent(mb.btMaxVolume) ?? null
-      bluetoothAudio().then((bluetooth) => res.json({ current, maxVolume, startupVolume, btMaxVolume, bluetooth }))
+      // loudness: off | soft | strong - the player's levelling of what is not Spotify (mupibox.loudness, mpv only)
+      const loudness = mb.loudness === 'soft' || mb.loudness === 'strong' ? mb.loudness : 'off'
+      bluetoothAudio().then((bluetooth) => res.json({ current, maxVolume, startupVolume, btMaxVolume, bluetooth, loudness }))
     })
   })
 
@@ -1284,8 +1286,15 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * accidentally-muted box that looks broken.
    */
   router.post('/audio/config', requireSession, requireCsrf, async (req, res) => {
-    const body = (req.body as { maxVolume?: unknown; startupVolume?: unknown; btMaxVolume?: unknown } | undefined) ?? {}
-    const mutations: { maxVolume?: number; startupVolume?: number | null; btMaxVolume?: number | null } = {}
+    const body = (req.body as { maxVolume?: unknown; startupVolume?: unknown; btMaxVolume?: unknown; loudness?: unknown } | undefined) ?? {}
+    const mutations: { maxVolume?: number; startupVolume?: number | null; btMaxVolume?: number | null; loudness?: 'off' | 'soft' | 'strong' } = {}
+    if (body.loudness !== undefined) {
+      if (body.loudness !== 'off' && body.loudness !== 'soft' && body.loudness !== 'strong') {
+        res.status(400).json({ error: 'loudness must be off, soft or strong' })
+        return
+      }
+      mutations.loudness = body.loudness
+    }
     // the maximum while Bluetooth audio is on (headphones); null: the same as without
     if (body.btMaxVolume !== undefined) {
       const v = Number(body.btMaxVolume)
@@ -1324,6 +1333,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       if (mutations.maxVolume !== undefined) mb.maxVolume = mutations.maxVolume
       if (mutations.btMaxVolume === null) delete mb.btMaxVolume
       else if (mutations.btMaxVolume !== undefined) mb.btMaxVolume = mutations.btMaxVolume
+      if (mutations.loudness !== undefined) mb.loudness = mutations.loudness
       // The scripts that set the volume at start and shutdown (chromium-autostart.sh, mupi_shutdown.sh,
       // off_trigger.sh, shutdown_sound.sh) and the admin interface read startVolume: this app's startupVolume alone
       // had no effect. Both are written; without a fixed value both go, and the scripts leave the volume as it was.
