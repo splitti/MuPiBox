@@ -432,23 +432,26 @@ player.on('track-change', () => {
 // finish" mode songs simply run on until the playlist is over.
 function graceSongBoundary() {
   if (playtimeState.state === 'grace' && playtimeState.graceMode === 'track') {
-    finalizePlaytimeBlock('next track would start during grace period')
+    finalizePlaytimeBlock('next track would start during grace period', true)
   }
   if (quietHoursState.state === 'grace' && quietHoursState.graceMode === 'track') {
-    finalizeQuietHoursBlock('next track would start during grace period')
+    finalizeQuietHoursBlock('next track would start during grace period', true)
   }
 }
 player.on('track-change', graceSongBoundary)
 player.on('playlist-finish', () => {
   if (playtimeState.state === 'grace') {
-    finalizePlaytimeBlock('playlist finished during grace period')
+    finalizePlaytimeBlock('playlist finished during grace period', true)
   }
   if (quietHoursState.state === 'grace') {
-    finalizeQuietHoursBlock('playlist finished during grace period')
+    finalizeQuietHoursBlock('playlist finished during grace period', true)
   }
   // A podcast episode that ended long before its end: the connection to its server broke (mplayer takes that as
   // the end of the file) - it is opened again where it stopped
   if (reconnectEpisode()) return
+  // the album or episode played to its end (not a stop: that empties currentPlayer first) - the display goes back
+  // to its list at once instead of waiting 10 s for the player to stay silent
+  if (currentMeta.currentPlayer === 'mplayer') currentMeta.finished = true
   // Library album finished naturally — drop its resume entry so the user
   // isn't offered "weiterhören" at the very end next time. Spotify and RSS
   // are skipped: Spotify gives no clean end-of-album signal via the
@@ -533,6 +536,8 @@ setInterval(() => {
 
 let activeDevice = null
 let displaySpotifyDevice = null // the display's Web Playback SDK device, as reported by the display
+let displayDeviceReportedAt = 0 // when the display last reported it (see playOnDevice)
+let displayRecoveryAt = 0 // when the display was last asked to sign in to Spotify anew
 // AR5-4: was `const nowDate = new Date()` evaluated once at module-load.
 // All 86 log templates that used `${now()}` printed
 // the boot timestamp on every line, making production debugging useless.
@@ -572,6 +577,7 @@ const currentMeta = {
   pause: false,
   album: '',
   path: '',
+  finished: false, // the local album or episode played to its end (see playlist-finish)
   episode: '', // the address of the podcast episode that plays (rss) - the display's id of it, see the rss command
   currentTrackname: '',
   currentTracknr: 0,
@@ -927,19 +933,22 @@ function isPlaybackBlocked() {
 // mplayer track-change/playlist-finish handlers, or directly when grace=0.
 // While allowUntil-override is active, transitions are suppressed — the parent has
 // explicitly green-lit playback for this window, so neither grace nor stop fire.
-function finalizePlaytimeBlock(reason) {
+// immediate: the song is over (the next one is starting) - stopped at once; else faded out, as a cut into a song
+function finalizePlaytimeBlock(reason, immediate = false) {
   if (isAllowOverrideActive()) return
   console.log(`${new Date().toLocaleString()}: [Playtime] Finalizing block (${reason})`)
   playtimeState.state = 'blocked'
   playtimeState.graceEndsAt = null
-  // (faded out, not cut: see fadeOutThen)
-  fadeOutThen(() => {
+  const stopNow = () => {
     try {
       stop()
     } catch (e) {
       console.error(`${new Date().toLocaleString()}: [Playtime] Error stopping playback:`, e)
     }
-  })
+  }
+  // (faded out when it cuts into a song: see fadeOutThen)
+  if (immediate) stopNow()
+  else fadeOutThen(stopNow)
   writePlaytimeCheckpoint()
   // Notify parents that today's listening time is up. telegram_send_message.py
   // loops over all configured chatIds, so both Family group and individual DMs
@@ -949,7 +958,7 @@ function finalizePlaytimeBlock(reason) {
   }
 }
 
-function finalizeQuietHoursBlock(reason) {
+function finalizeQuietHoursBlock(reason, immediate = false) {
   if (isAllowOverrideActive()) return
   console.log(`${new Date().toLocaleString()}: [QuietHours] Finalizing block (${reason})`)
   const label = quietHoursState.activeWindow?.label
@@ -966,13 +975,15 @@ function finalizeQuietHoursBlock(reason) {
       (e) => e && console.error(`${new Date().toLocaleString()}: [QuietHours] Telegram message failed: ${e.message}`),
     )
   }
-  fadeOutThen(() => {
+  const stopNow = () => {
     try {
       stop()
     } catch (e) {
       console.error(`${new Date().toLocaleString()}: [QuietHours] Error stopping playback:`, e)
     }
-  })
+  }
+  if (immediate) stopNow()
+  else fadeOutThen(stopNow)
 }
 
 // Spotify: the player does not get track events from it, so while a limit is in its grace period the playback
@@ -1002,8 +1013,8 @@ async function spotifyLastTrackOfAlbum(album) {
   return last
 }
 function spotifyGraceFinalize(reason) {
-  if (playtimeState.state === 'grace') finalizePlaytimeBlock(reason)
-  if (quietHoursState.state === 'grace') finalizeQuietHoursBlock(reason)
+  if (playtimeState.state === 'grace') finalizePlaytimeBlock(reason, true)
+  if (quietHoursState.state === 'grace') finalizeQuietHoursBlock(reason, true)
   spotifyGraceItemId = null
   spotifyGracePos = null
   spotifyGraceMisses = 0
@@ -1569,10 +1580,12 @@ function pauseSpotifyQuietly(why) {
 function switchToMplayer() {
   if (currentMeta.currentPlayer !== 'mplayer') pauseSpotifyQuietly('switch to mplayer')
   currentMeta.currentPlayer = 'mplayer'
+  currentMeta.finished = false
 }
 
 function stop() {
   playbackGeneration++
+  currentMeta.finished = false
   clearLibraryResumeTimers()
   if (telegramPlaybackNotices())
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Stop"')
@@ -1764,9 +1777,38 @@ function shuffleoff() {
 
 // Spotify's play on the chosen device; when that device is gone (404: the display reported it, then its page
 // was reloaded), once more without a device, i.e. on the currently active one - as before.
+// Spotify does not know the display's player (it lost its sign-in, e.g. when the token could not be renewed at
+// start-up without network): the display is reloaded - it signs in anew and reports its device - and the start is
+// tried once more there. Only when a start failed, so a normal start takes no longer; at most once a minute.
+const DISPLAY_RECOVERY_WAIT_MS = 25_000
+async function recoverDisplayDevice() {
+  if (Date.now() - displayRecoveryAt < 60_000) return null
+  displayRecoveryAt = Date.now()
+  const askedAt = Date.now()
+  console.warn(`${now()}: [Spotify Control] Spotify does not know the display's player - the display signs in anew`)
+  currentMeta.pageReloadAt = askedAt
+  while (Date.now() - askedAt < DISPLAY_RECOVERY_WAIT_MS) {
+    await new Promise((r) => setTimeout(r, 250))
+    if (displayDeviceReportedAt > askedAt && displaySpotifyDevice) return displaySpotifyDevice
+  }
+  console.warn(`${now()}: [Spotify Control] The display did not report a Spotify player within ${DISPLAY_RECOVERY_WAIT_MS / 1000} s`)
+  return null
+}
+
 function playOnDevice(playOptions) {
-  return spotifyApi.play(playOptions).catch((err) => {
-    if (!playOptions.device_id || err?.statusCode !== 404) throw err
+  return spotifyApi.play(playOptions).catch(async (err) => {
+    if (err?.statusCode !== 404) throw err
+    // the display's device (or, without one, no active device at all): the display signs in anew first
+    if (!playOptions.device_id || playOptions.device_id === displaySpotifyDevice) {
+      const fresh = await recoverDisplayDevice()
+      if (fresh) {
+        activeDevice = fresh
+        // (a moment for Spotify to list the new device)
+        await new Promise((r) => setTimeout(r, 1500))
+        return spotifyApi.play({ ...playOptions, device_id: fresh })
+      }
+    }
+    if (!playOptions.device_id) throw err
     log.debug(`${now()}: [Spotify Control] Device ${playOptions.device_id} not found, playing on the active device`)
     if (activeDevice === playOptions.device_id) activeDevice = null
     const { device_id: _gone, ...withoutDevice } = playOptions
@@ -2670,6 +2712,7 @@ function downloadTTS(name) {
 
 async function useSpotify(command) {
   playbackGeneration++
+  currentMeta.finished = false
   if (currentMeta.currentPlayer !== 'spotify') {
     clearLibraryResumeTimers()
     player.stop() // local media, radio or a podcast may still be playing in mplayer
@@ -2789,6 +2832,7 @@ app.get('/display/spotify-device/:id', (req, res) => {
     return
   }
   displaySpotifyDevice = req.params.id
+  displayDeviceReportedAt = Date.now()
   log.debug(`${now()}: [Spotify Control] Display device: ${displaySpotifyDevice}`)
   res.json({ ok: true })
 })

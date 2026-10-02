@@ -13,9 +13,11 @@ PLAYERSTATE="/tmp/playerstate"
 # the goodbye picture first (the display's window is hidden, the picture drawn over it)
 /usr/local/bin/mupibox/show_goodbye.sh "$1"
 
-if [ "$(head -n1 ${PLAYERSTATE} 2>/dev/null)" = "play" ]; then
-  curl -s http://127.0.0.1:5005/pause
-fi
+# Whatever plays is stopped before the goodbye sound sets the volume for it - always: /tmp/playerstate does not say
+# "play" for every kind of playback (Spotify, a stream started from the app), and the music went on, louder, under
+# the goodbye sound (reported by hyperbit and on the own box)
+curl -s -m 2 -o /dev/null http://127.0.0.1:5005/stop
+sleep 0.3
 
 # The goodbye sound starts right away and plays while Chromium is ended and the goodbye picture is shown (ending
 # Chromium takes about 2 s; the sound used to wait for it). Waited for at the end, so it is not cut off.
