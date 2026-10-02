@@ -59,10 +59,14 @@ async function spotifyGet<T>(path: string, accessToken: string): Promise<T> {
     throw new SpotifyApiException({ kind: 'auth', reason: `401 from ${path}` })
   }
   if (response.status === 429) {
-    const retryAfter = Number.parseInt(response.headers.get('retry-after') ?? '60', 10)
+    // (how long Spotify blocks this app: its Retry-After header, in seconds - in the reason, so the log and the app
+    // say it)
+    const header = response.headers.get('retry-after')
+    const parsed = Number.parseInt(header ?? '', 10)
+    const retryAfter = Number.isFinite(parsed) && parsed > 0 ? parsed : 60
     throw new SpotifyApiException({
       kind: 'rate-limit',
-      reason: `429 from ${path}`,
+      reason: `429 from ${path} (Spotify: wait ${retryAfter} s${header ? '' : ', no Retry-After given'})`,
       retryAfterSeconds: retryAfter,
     })
   }
@@ -97,7 +101,8 @@ export async function discoverPlaylists(accessToken: string, config: SpotifySync
         )
         out.push(buildDiscoveredPlaylist(p))
       } catch (err) {
-        if (err instanceof SpotifyApiException && err.detail.kind === 'auth') throw err
+        // (a login failure, Spotify blocking the app or no network end the run - see resolveSyncItems)
+        if (err instanceof SpotifyApiException && err.detail.kind !== 'internal') throw err
         // Skip individually-failing playlists; sync over what we got (adding and updating - not removing).
         failures.push(`playlist ${id}`)
         console.warn(`${new Date().toLocaleString()}: [spotify-sync] discover: explicit playlist ${id} failed: ${(err as Error).message}`)
@@ -224,10 +229,9 @@ async function fetchArtistCovers(artistIds: string[], accessToken: string): Prom
         if (a?.id && url) out.set(a.id, url)
       }
     } catch (err) {
-      if (err instanceof SpotifyApiException && err.detail.kind !== 'internal') {
-        console.warn(`${new Date().toLocaleString()}: [spotify-sync] artist-cover fetch failed: ${(err as Error).message}`)
-        continue
-      }
+      // a block (429), a login or network failure ends the run: applied without the pictures, the entries would lose
+      // the artist pictures they have
+      if (err instanceof SpotifyApiException && err.detail.kind !== 'internal') throw err
       // Spotify's February 2026 changes removed the request for several artists at once (GET /artists?ids=) for
       // Spotify apps under the new rules: one by one then
       for (const id of batch) {
@@ -236,8 +240,8 @@ async function fetchArtistCovers(artistIds: string[], accessToken: string): Prom
           const url = pickImage(a?.images)
           if (a?.id && url) out.set(a.id, url)
         } catch (one) {
+          if (one instanceof SpotifyApiException && one.detail.kind !== 'internal') throw one
           console.warn(`${new Date().toLocaleString()}: [spotify-sync] artist-cover fetch failed: ${(one as Error).message}`)
-          if (one instanceof SpotifyApiException && one.detail.kind !== 'internal') break
         }
       }
     }
@@ -306,6 +310,9 @@ export async function resolveSyncItems(
       const item = buildExplicitAlbumItem(album, pin.category)
       if (item) items.set(item.groupKey, item)
     } catch (err) {
+      // Spotify blocking the app (429), a login or network failure: the run ends here - asking on for the next albums
+      // and artists only kept the block going (state-machine: RATE_LIMITED waits for Spotify's time)
+      if (err instanceof SpotifyApiException && err.detail.kind !== 'internal') throw err
       failures.push(`album ${albumId}`)
       console.warn(
         `${new Date().toLocaleString()}: [spotify-sync] explicit album ${albumId} fetch failed: ${(err as Error).message}`,
@@ -336,6 +343,8 @@ export async function resolveSyncItems(
         items.set(item.groupKey, item)
       }
     } catch (err) {
+      // (as for the albums above: a block, a login or network failure ends the run)
+      if (err instanceof SpotifyApiException && err.detail.kind !== 'internal') throw err
       failures.push(`artist ${sub.name || sub.id}`)
       console.warn(
         `${new Date().toLocaleString()}: [spotify-sync] artist subscription ${sub.id} failed: ${(err as Error).message}`,

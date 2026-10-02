@@ -225,6 +225,8 @@ export interface SyncStateFile {
   last_sync_reason?: string | null
   /** what a completed run could not read (a playlist, an album, an artist): nothing was removed then */
   last_sync_skipped?: string[]
+  /** Spotify blocks the app's requests (429) until then (ISO): no run asks Spotify before - also not "sync now" */
+  rate_limited_until?: string | null
   playlists_seen: Array<{ id: string; name: string; items: number }>
   additions_count: number
   updates_count: number
