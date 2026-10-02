@@ -57,6 +57,11 @@
 <li id='linews' class='linews'>A big podcast feed (more than 2 MB) without a readable item list is no longer handed to the slow parser (it blocked the backend for a long time on a Pi 3). The m3u generator's lock keeper ends with its script (killed, it kept the library lock for ever). Piper's input stream closing early no longer ends the server.</li>
 <li id='linews' class='linews'>A fixed LAN address with its own DNS server applies that server now (there is no resolvconf on the box). Offline podcasts: a download that finished while the folder was tidied is no longer deleted, and two changes of the list at once no longer collide. A failed announcement no longer blocks every one after it, and the music comes back in any case. A feed's episode data (ARD download release, end date, moved files) is refreshed even when its first episode is unchanged.</li>
 </ul>
+<b>Web app</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Shares & remote access (Samba, FTP, VNC) moved from Settings › Network to Settings › Services, as the last block "Access to the box". Network shows the connection only: WiFi and LAN (suggested by hyperbit).</li>
+</ul>
 <h3>DEV 5.0.6 - changes compared to 5.0.5</h3>
 <b>Player</b>
 </ul>
