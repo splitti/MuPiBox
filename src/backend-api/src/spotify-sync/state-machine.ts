@@ -71,6 +71,9 @@ export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<
   // Phase 14d: snapshot of pre-run counters so notify can detect
   // transitions (first AUTH_FAILED, threshold-crossing for network/internal).
   const previousFailureCounters = { ...previousState.failure_counters }
+  // (a block Spotify set in an earlier run, see finalise and 0b)
+  const blockedUntil = Date.parse(previousState.rate_limited_until ?? '')
+  const stillBlocked = Number.isFinite(blockedUntil) && blockedUntil > startedAt.getTime()
 
   const finalise = (
     state: SyncState,
@@ -96,6 +99,19 @@ export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<
       reason: extras.reason,
       retryAfterSeconds: extras.retryAfterSeconds,
     }
+    // Spotify blocks the app (429): until when (its Retry-After) - the next run waits for it (scheduler), a run before
+    // asks Spotify nothing (see the start of runSync), and the app shows it as the next sync
+    let rateLimitedUntil: string | null = null
+    const wait = extras.retryAfterSeconds ?? 0
+    if (state === 'RATE_LIMITED' && wait > 0) {
+      const until = new Date(endedAt.getTime() + wait * 1000)
+      rateLimitedUntil = until.toISOString()
+      extras = { ...extras, nextScheduled: extras.nextScheduled ?? rateLimitedUntil }
+      if (!stillBlocked)
+        console.warn(
+          `${new Date().toLocaleString()}: [spotify-sync] Spotify blocks this app's requests for ${Math.ceil(wait / 60)} min (until ${until.toLocaleString()}) - the sync waits until then`,
+        )
+    }
     // Persist to state file.
     const persisted: SyncStateFile = {
       last_sync_start: result.startedAt,
@@ -104,6 +120,7 @@ export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<
       last_sync_trigger: trigger,
       last_sync_status: state,
       last_sync_reason: extras.reason ?? null,
+      rate_limited_until: rateLimitedUntil,
       playlists_seen: previousState.playlists_seen, // overridden on success below
       additions_count: result.additions,
       updates_count: result.updates,
@@ -115,7 +132,7 @@ export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<
     }
     writeStateFile(persisted, deps.stateFilePath)
     // (the reason of a failed run was only in the result - the log and the state file did not say why)
-    if (state !== 'IDLE' && state !== 'COMPLETED')
+    if (state !== 'IDLE' && state !== 'COMPLETED' && !stillBlocked)
       console.warn(`${new Date().toLocaleString()}: [spotify-sync] run ended ${state}: ${extras.reason ?? 'no reason given'}`)
     // Phase 14d: send Telegram push for AUTH_FAILED (immediate), and for
     // NETWORK/INTERNAL failures crossing the configured threshold.
@@ -134,6 +151,15 @@ export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<
   if (!config.enabled) {
     failureCounters = {} // reset on disable
     return finalise('IDLE', undefined, { reason: 'spotify_sync.enabled is false' })
+  }
+
+  // 0b. Spotify still blocks this app (429 with its Retry-After): nothing is asked before that time - also not by
+  //     "sync now" in the app or the bot; every request in a block only keeps it going
+  if (stillBlocked) {
+    return finalise('RATE_LIMITED', undefined, {
+      reason: previousState.last_sync_reason ?? 'Spotify blocks the requests',
+      retryAfterSeconds: Math.ceil((blockedUntil - Date.now()) / 1000),
+    })
   }
 
   // 1. Sync-lock — single-instance guarantee
@@ -238,6 +264,7 @@ export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<
       last_sync_status: 'COMPLETED',
       last_sync_reason: null,
       last_sync_skipped: failures,
+      rate_limited_until: null,
       playlists_seen: playlistsSeen,
       additions_count: applyResult.appliedAdditions,
       updates_count: applyResult.appliedUpdates,
