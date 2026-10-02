@@ -6274,6 +6274,9 @@ function batteryTop() {
 
 const BATTERY_NAMES = { 'USB-C mode (no battery)': 'USB-C-Betrieb (ohne Akku)', Custom: 'Eigenes Profil' }
 const batteryLabel = (n) => BATTERY_NAMES[n] ?? n
+// The profiles as offered: the batteries in the order of the config, the two special ones (no battery, own
+// profile) at the end - a profile added later stood behind them (the 2S3P after "Custom")
+const batteryOptions = (names) => [...names.filter((n) => !(n in BATTERY_NAMES)), ...names.filter((n) => n in BATTERY_NAMES)].map(batteryLabel)
 const PROFILE_KEYS = [
   ['v100', 'v_100'],
   ['v75', 'v_75'],
@@ -9457,7 +9460,7 @@ const CONTROLLERS = {
           col: 1,
           items: [
             it('hatOn', { help: 'Umschalten stellt auch die Soundkarte um und startet die Box neu.' }),
-            it('battery', { options: hw.data.mupihat.batteries.map(batteryLabel), help: 'Die Spannungen gehören zu diesem Profil.' }),
+            it('battery', { options: batteryOptions(hw.data.mupihat.batteries), help: 'Die Spannungen gehören zu diesem Profil.' }),
             { type: 'html', html: hatNowLine() },
           ],
         },
