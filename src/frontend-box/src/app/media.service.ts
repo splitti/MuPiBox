@@ -971,7 +971,8 @@ export class MediaService {
                       // the resume tile (title, cover, artistcover, release
                       // date, duration, progress) is already on disk; no
                       // network round-trip needed for resume rendering.
-                      () => !!(item.type === 'rss' && item.id.length > 0 && !isResumeEntry(item)),
+                      // (an entry without an id - a resume entry written without the feed - must not end the whole list)
+                      () => !!(item.type === 'rss' && item.id && item.id.length > 0 && !isResumeEntry(item)),
                       this.rssFeedService
                         .getRssFeed(item.id, item.category, item.index, item)
                         .pipe(overwriteArtist(item)),

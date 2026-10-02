@@ -3496,6 +3496,23 @@ function writeJsonAtomic(file: string, data: unknown, callback: (error: Error | 
 // playback (playlistid/showid/audiobookid/id), and fall back to artist::title
 // as a last resort.
 // (a podcast episode by its key: an address that changes with every fetch of the feed gave a second tile for it)
+// whether an entry has what it takes to be found again (see /api/addresume)
+function resumeEntryKeyed(m: { type?: string; id?: string; playlistid?: string; showid?: string; audiobookid?: string; artist?: string; title?: string; nasPath?: string; libraryPath?: string }): boolean {
+  const has = (v: unknown) => typeof v === 'string' && v.length > 0
+  switch (m?.type) {
+    case 'rss':
+      return has(m.id)
+    case 'nas':
+      return has(m.nasPath) || has(m.id)
+    case 'library':
+      return has(m.libraryPath) || (has(m.artist) && has(m.title))
+    case 'spotify':
+      return has(m.id) || has(m.playlistid) || has(m.showid) || has(m.audiobookid)
+    default:
+      return has(m?.id) || (has(m?.artist) && has(m?.title))
+  }
+}
+
 const resumeKeyOf = (m: { type?: string; id?: string; playlistid?: string; showid?: string; audiobookid?: string; artist?: string; title?: string }) =>
   [
     m?.type || '',
@@ -3610,6 +3627,15 @@ app.post('/api/addresume', (req, res) => {
   readResumeOrRecover('/api/addresume', (data) => {
     const now = Date.now()
     const incomingKey = resumeKeyOf(req.body)
+    // An entry nothing can be found by again (a podcast without its feed, a NAS album without its path, a Spotify
+    // entry without any id) is not kept: it could never be played from the list, and one such rss entry ended the
+    // display's whole resume list
+    if (!resumeEntryKeyed(req.body)) {
+      releaseLock(resumeLock, '/api/addresume')
+      console.warn(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/addresume refused: entry without a key (${incomingKey})`)
+      res.status(400).send('resume entry without a key')
+      return
+    }
     // AR5-18: if backend-player just told us this album finished naturally
     // (POST /api/deleteresume within the last RESUME_REJECT_AFTER_DELETE_MS),
     // refuse to recreate the entry that the frontend's paused-state observer
