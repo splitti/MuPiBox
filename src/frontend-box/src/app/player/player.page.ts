@@ -257,6 +257,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   // else played instead - Spotify's autoplay went on after the end (see updateProgress)
   // the box's player was seen busy on this page / how many ticks it is empty again / the page is on its way out /
   // it goes because of a stop from outside (no STOP and no resume save on the way out)
+  private albumEndTimer: ReturnType<typeof setTimeout> | undefined
   private playerWasBusy = false
   private idleTicks = 0
   private isLeaving = false
@@ -526,11 +527,45 @@ export class PlayerPage implements OnInit, AfterViewInit {
         if (sp.in_context) {
           this.contextSeenFor = expected
           this.contextGone = 0
-        } else if (this.contextSeenFor === expected && ++this.contextGone >= 3) {
+        } else if (this.contextSeenFor === expected && !this.isLeaving) {
+          // (a track of another album: autoplay went on - at once, a second of it is enough)
           this.contextSeenFor = ''
           this.contextGone = 0
           this.albumEnded = true
+          this.isLeaving = true
           this.leavePage('album end (Spotify autoplay went on with another album)')
+        }
+      }
+      // The album's last track coming to its end: the box stops there itself, before Spotify's autoplay (an account
+      // setting) goes on - with another album, or once with a track of this one (seen: track 3 after the last). The
+      // last track and its length are known, so a timer for its end; not with shuffle (no "last" track then).
+      const position = sp?.playlist?.current_track_position ?? sp?.item?.track_number
+      const total = sp?.playlist?.total_tracks ?? sp?.item?.album?.total_tracks
+      const duration = sp?.item?.duration_ms
+      if (
+        expected &&
+        sp?.is_playing &&
+        sp.in_context === true &&
+        !this.media.shuffle &&
+        this.shufflechanged % 2 === 0 &&
+        position &&
+        total &&
+        position >= total &&
+        duration &&
+        !this.albumEndTimer &&
+        !this.isLeaving
+      ) {
+        const left = duration - (sp.progress_ms ?? 0)
+        if (left < 4000) {
+          // (stopped 1.2 s before the end: the SDK's position is up to a second old, and the stop takes its way to
+          // Spotify - at 0.4 s autoplay had loaded the next album's track already; the end of a track is mostly silence)
+          this.albumEndTimer = setTimeout(() => {
+            this.albumEndTimer = undefined
+            if (this.isLeaving) return
+            this.isLeaving = true
+            this.albumEnded = true
+            this.leavePage('album end (last track finished)')
+          }, Math.max(0, left - 1200))
         }
       }
       if (!this.currentPlayedLocal?.pause && !sp?.is_playing) {
@@ -555,6 +590,14 @@ export class PlayerPage implements OnInit, AfterViewInit {
         }
       }, 1000)
     } else if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'rss') {
+      // The player says the album or episode played to its end: back to the list at once (it waited 10 s for the
+      // player to stay silent - the page looked stuck meanwhile). No resume save on the way out: the album is done.
+      if (this.currentPlayedLocal?.finished && !this.isLeaving) {
+        this.isLeaving = true
+        this.albumEnded = true
+        this.leavePage(this.media.type === 'rss' ? 'episode ended' : 'album ended')
+        return
+      }
       const seek = this.currentPlayedLocal?.progressTime || 0
       this.progress = seek || 0
       if (
@@ -624,6 +667,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
     // (left within the first seconds: shuffle must not be switched on after the page is gone - the next audiobook
     // played in random order then)
     clearTimeout(this.shuffleTimer)
+    clearTimeout(this.albumEndTimer)
     clearTimeout(this.longPressTimer)
     clearInterval(this.outputTimer)
     this.outputOpen.set(false)
