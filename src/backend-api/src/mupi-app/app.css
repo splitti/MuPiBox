@@ -104,6 +104,10 @@ a { color: var(--mp-primary-text); }
 }
 
 .loading { margin: 18vh auto 0; text-align: center; color: var(--mp-muted); }
+/* the ways out when the start takes too long (see bootWatch in app.js) */
+.loading .help { margin: 4px 0 0; }
+.loading .boot-actions { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
+.loading > .btn { margin-top: 14px; }
 
 /* ---------- cards and page parts ---------- */
 .card {

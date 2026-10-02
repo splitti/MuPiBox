@@ -47,13 +47,21 @@ const esc = (s) =>
 
 /* ---------- start ---------- */
 
+// (a request the box never answers - its backend busy or restarting - ends after this long instead of leaving the
+// start screen there for ever; see bootWatch)
+const BOOT_REQUEST_MS = 15_000
+const withinBoot = (p) => Promise.race([p, new Promise((_, reject) => setTimeout(() => reject(new Error('Die Box hat nicht geantwortet.')), BOOT_REQUEST_MS))])
+
 async function boot() {
+  window.mupiBootStep = 'language'
   await loadAppLanguage()
   watchDocument()
+  window.mupiBootStep = 'box'
   const [schema, session] = await Promise.all([
-    fetch('schema.json', { cache: 'no-cache' }).then((r) => r.json()),
-    fetch(`${API}/session`, { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    withinBoot(fetch('schema.json', { cache: 'no-cache' }).then((r) => r.json())),
+    withinBoot(fetch(`${API}/session`, { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null))).catch(() => null),
   ])
+  window.mupiBootStep = 'page'
   state.schema = schema
   for (const p of schema.pages) {
     state.pages.set(p.id, p)
@@ -65,6 +73,7 @@ async function boot() {
     if (page) Object.assign(page, { icon: page.icon || g.icon, description: page.description || g.description })
   }
   if (!session?.csrf_token || new URLSearchParams(location.search).has('portal')) {
+    window.mupiBootStep = ''
     renderLogin(!!session?.csrf_token)
     return
   }
@@ -84,7 +93,29 @@ async function boot() {
   window.addEventListener('hashchange', routeIfMoved)
   refreshOnReturn()
   route()
+  window.mupiBootStep = ''
 }
+
+// "Verbinde mit der Box …" stayed for ever when the start got stuck (a request the box did not answer): after a
+// while the screen says which step it is at, and offers the two ways out - loading again, or the login page
+// (/app/?portal), which got people in when the page itself did not.
+const BOOT_STEPS = { language: 'Schritt: Sprache laden', box: 'Schritt: Antwort der Box', page: 'Schritt: Seite aufbauen' }
+function bootWays() {
+  return `<div class="boot-actions"><button type="button" class="btn primary" data-boot="reload">Neu laden</button><button type="button" class="btn" data-boot="login">Zur Anmeldung</button></div>`
+}
+function wireBootWays() {
+  $('[data-boot="reload"]')?.addEventListener('click', () => location.reload())
+  $('[data-boot="login"]')?.addEventListener('click', () => {
+    location.href = `${location.pathname.replace(/\/?$/, '/')}?portal`
+  })
+}
+setTimeout(() => {
+  const p = $('#content .loading p')
+  if (!p || !window.mupiBootStep) return
+  p.textContent = 'Das dauert länger als gewohnt.'
+  p.insertAdjacentHTML('afterend', `<p class="help">${esc(BOOT_STEPS[window.mupiBootStep] ?? window.mupiBootStep)}</p>${bootWays()}`)
+  wireBootWays()
+}, 12_000)
 
 // On the phone the app stays open in the background (home screen: no reload, no pull to refresh). Back after a while:
 // the page shown is loaded afresh, unless something is being typed or a sheet is open.
@@ -10375,7 +10406,9 @@ async function logout() {
 
 boot().catch((err) => {
   console.error(err)
-  $('#content').innerHTML = `<div class="loading"><p>Die App konnte nicht geladen werden.</p></div>`
+  window.mupiBootStep = ''
+  $('#content').innerHTML = `<div class="loading"><p>Die App konnte nicht geladen werden.</p><p class="help">${esc(String(err?.message ?? err))}</p>${bootWays()}</div>`
+  wireBootWays()
 })
 
 /* ---------- Start › "Angepinnt" (see eltern/pinned-cards.ts) ----------

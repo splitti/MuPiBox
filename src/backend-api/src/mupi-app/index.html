@@ -22,6 +22,21 @@
     // (the bars of the phone around the app in its background colour, see themeColor in app.js)
     var light = t === 'light' || (t === 'auto' && matchMedia('(prefers-color-scheme: light)').matches)
     if (light) document.querySelector('meta[name="theme-color"]').content = '#F3F6F9'
+    // (app.js itself not loaded or not run - a broken download, an old browser: it sets mupiBootStep at once. Without
+    // it the start screen stayed for ever; the app's own watchdog cannot run then, so this one says it.)
+    setTimeout(function () {
+      if (window.mupiBootStep !== undefined) return
+      var p = document.querySelector('#content .loading p')
+      if (!p) return
+      var de = /^de/i.test(navigator.language || '')
+      p.textContent = de ? 'Die App konnte nicht geladen werden.' : 'The app could not be loaded.'
+      var b = document.createElement('button')
+      b.type = 'button'
+      b.className = 'btn primary'
+      b.textContent = de ? 'Neu laden' : 'Reload'
+      b.onclick = function () { location.reload() }
+      p.parentNode.appendChild(b)
+    }, 20000)
   </script>
   <link rel="stylesheet" href="fonts.css">
   <link rel="stylesheet" href="tokens.css">
