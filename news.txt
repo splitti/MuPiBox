@@ -62,6 +62,13 @@
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Shares & remote access (Samba, FTP, VNC) moved from Settings › Network to Settings › Services, as the last block "Access to the box". Network shows the connection only: WiFi and LAN (suggested by hyperbit).</li>
 </ul>
+<b>Spotify</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Smart-Sync with a Spotify app created since February 2026: every run ended with INTERNAL_ERROR, so artist subscriptions and albums never came in and old entries were not removed. Spotify gives such apps a playlist's entries only at a new address (/items instead of /tracks) - the sync reads it there now, which works for older apps too. A playlist that cannot be read is skipped instead of ending the run, and artist pictures are fetched one by one where Spotify no longer allows several at once (reported by hyperbit).</li>
+<li id='linews' class='linews'>A failed sync says why: the reason is in the log, in the app (Bibliothek › Spotify, "Grund") and in the bot's /syncstatus, and a run that could not read a playlist, an album or an artist names it ("Nicht gelesen").</li>
+<li id='linews' class='linews'>The player no longer writes three lines per file (title, path, tags - also for every announcement) into its log; they come with the debug log level only.</li>
+</ul>
 <h3>DEV 5.0.6 - changes compared to 5.0.5</h3>
 <b>Player</b>
 </ul>
