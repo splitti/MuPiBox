@@ -5,8 +5,13 @@ JSON_FILE="/tmp/mupihat.json"
 BATTERY_LOW="/home/dietpi/MuPiBox/sysmedia/images/battery_low.jpg"
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 
+# (with mpv; mplayer where mpv is missing)
 play_sound() {
-    mplayer -nolirc "$SOUND_FILE" > /dev/null
+    if command -v mpv >/dev/null 2>&1; then
+        mpv --no-video --really-quiet --no-config --ao=pulse,alsa "$SOUND_FILE" > /dev/null 2>&1
+    else
+        mplayer -nolirc "$SOUND_FILE" > /dev/null
+    fi
 }
 
 echo $! > /run/mupi_hat_control.pid

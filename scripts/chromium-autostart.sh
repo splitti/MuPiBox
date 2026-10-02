@@ -115,11 +115,16 @@ AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
 # chromium-autostart.sh runs from two paths that can fire in quick
 # succession: (1) restart_kiosk.sh after the admin "Restart services"
 # click, and (2) dietpi-login auto-respawn on tty2 once chromium dies.
-# Without this pkill both invocations spawn their own mplayer & overlay
+# Without this pkill both invocations spawn their own player & overlay
 # the welcome wav. Match by the wav path so the regex never collides
-# with mplayer's slave-mode instance held by the backend-player.
-pkill -f "mplayer.*${START_SOUND}" 2>/dev/null
-/usr/bin/mplayer -volume 100 ${START_SOUND} &
+# with the player instance held by the backend-player.
+# Played with mpv (mplayer where mpv is missing).
+pkill -f "(mpv|mplayer).*${START_SOUND}" 2>/dev/null
+if command -v mpv >/dev/null 2>&1; then
+	/usr/bin/mpv --no-video --really-quiet --no-config --ao=pulse,alsa --volume=100 "${START_SOUND}" >/dev/null 2>&1 &
+else
+	/usr/bin/mplayer -volume 100 ${START_SOUND} &
+fi
 pgrep -f "chromium-browser" | while read -r pid; do
     # Setze die Priorität für jeden Prozess neu
     sudo renice -n -10 -p "$pid"

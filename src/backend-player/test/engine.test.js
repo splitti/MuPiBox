@@ -85,7 +85,17 @@ before(async () => {
       res.writeHead(404).end()
       return
     }
-    res.writeHead(200, { 'Content-Type': 'audio/wav', 'Content-Length': fs.statSync(f).size })
+    // with HTTP Range, as the box's NAS stream (/api/nas/stream) - a CUE album seeks in its one file
+    const size = fs.statSync(f).size
+    const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? '')
+    if (range && (range[1] || range[2])) {
+      const start = range[1] ? Number(range[1]) : size - Number(range[2])
+      const end = range[1] && range[2] ? Math.min(Number(range[2]), size - 1) : size - 1
+      res.writeHead(206, { 'Content-Type': 'audio/wav', 'Accept-Ranges': 'bytes', 'Content-Range': `bytes ${start}-${end}/${size}`, 'Content-Length': end - start + 1 })
+      fs.createReadStream(f, { start, end }).pipe(res)
+      return
+    }
+    res.writeHead(200, { 'Content-Type': 'audio/wav', 'Accept-Ranges': 'bytes', 'Content-Length': size })
     fs.createReadStream(f).pipe(res)
   })
   await new Promise((r) => server.listen(0, '127.0.0.1', r))
@@ -355,4 +365,39 @@ test(`${ENGINE}: "next" on the last track (an album of one track) keeps it playi
   const t2 = await prop('time_pos')
   assert.ok(t2 > t1 + 0.5, `the last track did not go on: ${t1} -> ${t2}`)
   player.off('playlist-finish', onFinish)
+})
+
+test(`${ENGINE}: a CUE album (one file over HTTP) starts inside it and seeks to its tracks forward and back`, async () => {
+  await settle()
+  // as spotify-control.js plays a CUE album from the NAS: a list with the one file (the stream of the box's NAS proxy),
+  // tracks found by the playing time, "next"/"previous" and the track list seek to a track's start time
+  const cueFile = path.join(dir, 'cue-album.wav')
+  writeWav(cueFile, 30, 330)
+  const list = path.join(dir, 'cue.m3u')
+  fs.writeFileSync(list, `http://127.0.0.1:${port}/${encodeURIComponent(path.basename(cueFile))}\n`)
+  const near = async (want, label) => {
+    let t = 0
+    // (a seek over HTTP takes a moment: up to 4 s, as the player's pendingCueSeek waits and repeats)
+    for (let i = 0; i < 8; i++) {
+      await sleep(500)
+      t = await prop('time_pos')
+      if (t >= want - 0.5 && t < want + 3) return t
+    }
+    assert.fail(`${label}: position ${t}, wanted about ${want}`)
+  }
+  const tc = waitFor('track-change', 10000)
+  // going on in track 2 (it starts at 10 s) at 12 s - an engine without the start option seeks after the start
+  if (STARTS_AT) player.playList(list, { track: 1, startSeconds: 12 })
+  else player.playList(list)
+  await tc
+  if (!STARTS_AT) player.exec('pausing_keep seek', [12, 2])
+  await near(12, 'resume inside the file')
+  const len = await prop('length')
+  assert.ok(len > 29 && len < 31, `length ${len}`)
+  player.exec('pausing_keep seek', [20, 2]) // "next": track 3
+  await near(20, 'seek forward to track 3')
+  player.exec('pausing_keep seek', [0, 2]) // track list: track 1
+  await near(0, 'seek back to track 1')
+  player.exec('pausing_keep seek', [10, 2]) // "next": track 2
+  await near(10, 'seek forward to track 2')
 })

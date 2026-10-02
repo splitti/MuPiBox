@@ -166,10 +166,19 @@ const log = require('console-log-level')({ level: config.server.logLevel })
 /*set up express router and set headers for cross origin requests*/
 const app = express()
 const server = http.createServer(app)
-// The engine for everything that is not Spotify: mplayer (as always) or mpv - mupibox.playerEngine in
-// mupiboxconfig.json, or MUPIBOX_PLAYER in the environment for a test; read at the start (a change needs a restart
-// of the player). Both wrappers offer the same interface, see mpv-wrapper.js.
-const playerEngine = process.env.MUPIBOX_PLAYER || (muPiBoxConfig?.mupibox?.playerEngine === 'mpv' ? 'mpv' : 'mplayer')
+// The engine for everything that is not Spotify: mpv, or mplayer as before - mupibox.playerEngine "mplayer" in
+// mupiboxconfig.json keeps the old one, MUPIBOX_PLAYER in the environment chooses for a test; read at the start (a
+// change needs a restart of the player). A box without mpv (an update that could not install it) plays with
+// mplayer. Both wrappers offer the same interface, see mpv-wrapper.js.
+const installed = (bin) =>
+  (process.env.PATH || '/usr/bin:/bin')
+    .split(':')
+    .some((dir) => dir && fs.existsSync(`${dir}/${bin}`))
+const playerEngine =
+  process.env.MUPIBOX_PLAYER ||
+  (muPiBoxConfig?.mupibox?.playerEngine === 'mplayer' || !installed('mpv') ? 'mplayer' : 'mpv')
+if (playerEngine === 'mplayer' && muPiBoxConfig?.mupibox?.playerEngine !== 'mplayer' && !process.env.MUPIBOX_PLAYER)
+  console.warn(`${new Date().toLocaleString()}: [Player] mpv is not installed - playing with mplayer`)
 const player = playerEngine === 'mpv' ? createMpv() : createMplayer()
 console.log(`${new Date().toLocaleString()}: [Player] engine: ${playerEngine}`)
 // The levelling of the loudness (mupibox.loudness: off | soft | strong, the app's "Lautstärke angleichen"): set when
