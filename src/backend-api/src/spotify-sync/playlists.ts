@@ -327,10 +327,16 @@ export async function resolveSyncItems(
       for (const album of albums.slice(from - 1, to)) {
         if (!album?.id || items.has(`album:${album.id}`) || excluded.has(album.id)) continue
         const item = buildExplicitAlbumItem(album, sub.category)
-        if (item) items.set(item.groupKey, item)
+        if (!item) continue
+        // The album belongs to the subscribed artist, also where Spotify names someone else first (a choir, a speaker,
+        // a publisher before him): it was filed under that other artist and missing from the subscribed one.
+        const own = album.artists?.find((a) => a?.id === sub.id)
+        item.artist = own?.name || sub.name || item.artist
+        item.artistId = sub.id
+        items.set(item.groupKey, item)
       }
     } catch (err) {
-      failures.push(`artist ${sub.id}`)
+      failures.push(`artist ${sub.name || sub.id}`)
       console.warn(
         `${new Date().toLocaleString()}: [spotify-sync] artist subscription ${sub.id} failed: ${(err as Error).message}`,
       )
