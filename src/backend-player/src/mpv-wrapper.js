@@ -86,9 +86,18 @@ const createPlayer = (options = {}) => {
   // Set by the start of a file, cleared when mpv goes idle after it: only then the idle is "the playlist finished"
   let playbackActive = false
   let playlistPos = -1
+  let playlistCount = 0
   // nothing loaded (before the first file, after a stop or the end): mplayer answered no property then - and
   // "pause" as yes, which the player reads as "not playing"
   let idleActive = true
+  // A start position for the next file (loadfile/loadlist with start=): mpv's "start" option applies to every file
+  // loaded while it is set, so it is taken off again once the intended file is open (file-loaded). A playlist entry
+  // skipped by playlist-play-index right after loadlist never gets to file-loaded (seen on the box).
+  let startPending = false
+  const setStart = (value) => {
+    startPending = value !== 'none'
+    send(['set_property', 'start', value])
+  }
   // (the end of the previous file is followed by the start of the next one in a playlist; "idle" comes only when
   // nothing follows)
 
@@ -126,8 +135,14 @@ const createPlayer = (options = {}) => {
         return send(['loadlist', String(a[0]), 'replace'])
       case 'pt_step': {
         const step = Number.parseInt(String(a[0] ?? '1'), 10) || 0
+        // one step: mpv's own next/prev count on from where they stand at once, so two of them in a row land two
+        // further (a jump worked out here from the reported place did not - the report lags); "force": the next
+        // after the last track ends the playback, as mplayer did
+        if (step === 1) return send(['playlist-next', 'force'])
+        if (step === -1) return send(['playlist-prev', 'weak'])
+        if (step === 0) return
         const target = Math.max(0, (playlistPos < 0 ? 0 : playlistPos) + step)
-        return send(['playlist-play-index', target])
+        return send(['playlist-play-index', playlistCount > 0 ? Math.min(playlistCount - 1, target) : target])
       }
       case 'pause':
         return send(['cycle', 'pause'])
@@ -168,6 +183,7 @@ const createPlayer = (options = {}) => {
       case 'file-loaded':
         // (mplayer said "Starting playback..." here: the file is open, its tags are known, the sound follows)
         playbackActive = true
+        if (startPending) setStart('none')
         out.emit('track-change')
         break
       case 'idle':
@@ -183,12 +199,12 @@ const createPlayer = (options = {}) => {
         break
       case 'property-change':
         if (msg.name === 'playlist-pos') playlistPos = typeof msg.data === 'number' ? msg.data : -1
+        else if (msg.name === 'playlist-count') playlistCount = typeof msg.data === 'number' ? msg.data : 0
         else if (msg.name === 'idle-active') idleActive = msg.data === true
         else if (msg.name === 'cache-buffering-state' && typeof msg.data === 'number') {
-          // mplayer reported the fill of its cache in percent and started at 10 % of it (cache-min); the player
-          // scales the loading bar by that (cachePrefillPercent) - so mpv's 0-100 of its buffering goal is handed
-          // over as 0-10
-          out.emit('cache-fill', msg.data / 10)
+          // 0-100 of mpv's buffering goal before a stream starts (the player scales its loading bar by
+          // cachePrefillPercent below - 100 here, 10 with mplayer's cache-min)
+          out.emit('cache-fill', msg.data)
         }
         break
       default:
@@ -223,6 +239,7 @@ const createPlayer = (options = {}) => {
       send(['observe_property', 1, 'playlist-pos'])
       send(['observe_property', 2, 'cache-buffering-state'])
       send(['observe_property', 3, 'idle-active'])
+      send(['observe_property', 4, 'playlist-count'])
       debug('connected')
       out.emit('ready')
     })
@@ -314,8 +331,25 @@ const createPlayer = (options = {}) => {
   out.getProps = getProps
   out.seek = (pos) => exec('seek', [pos, '0'])
   out.seekPercent = (pos) => exec('seek', [pos, '1'])
-  out.play = (fileOrUrl) => exec('loadfile', [fileOrUrl])
-  out.playList = (fileOrUrl) => exec('loadlist', [fileOrUrl])
+  // opts.startSeconds: the file begins there (a podcast episode, a CUE album where it was left) - no seek after the
+  // start, nothing of the beginning is heard. opts.track (1-based) and opts.percent for a playlist: the album goes
+  // on with that track at that part of it; only that track is opened (see setStart).
+  out.play = (fileOrUrl, opts) => {
+    if (opts?.startSeconds > 0) setStart(String(opts.startSeconds))
+    exec('loadfile', [fileOrUrl])
+  }
+  out.playList = (fileOrUrl, opts) => {
+    if (opts?.startSeconds > 0) setStart(String(opts.startSeconds))
+    else if (opts?.percent > 1) setStart(`${Math.min(99, opts.percent)}%`)
+    exec('loadlist', [fileOrUrl])
+    if (opts?.track > 1) send(['playlist-play-index', Math.trunc(opts.track) - 1])
+  }
+  out.startsAt = true
+  out.cachePrefillPercent = 100
+  // The place in the playlist of the file that plays (0-based; -1: none). mpv reports it before the file is loaded,
+  // so the player reads the track number from it - counting the loaded files (as with mplayer) misses a track
+  // that was skipped before it was open (two "next" in a row).
+  out.trackIndex = () => playlistPos
   out.queue = (fileOrUrl) => exec('loadfile', [fileOrUrl, '1'])
   out.next = () => exec('pt_step', ['1'])
   out.previous = () => exec('pt_step', ['-1'])

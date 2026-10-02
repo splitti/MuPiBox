@@ -305,7 +305,9 @@ setInterval(() => {
 player.on('metadata', (val) => {
   console.log('track metadata is', val)
   //currentMeta.currentTracknr = parseInt(val.Comment?.split(',').pop(), 10);
-  currentMeta.currentTracknr = currentMeta.currentTracknr + 1
+  // (an engine that knows its place in the playlist says it; else every file that starts counts one up)
+  const trackIndex = player.trackIndex?.() ?? -1
+  currentMeta.currentTracknr = trackIndex >= 0 ? trackIndex + 1 : currentMeta.currentTracknr + 1
   log.debug(`${now()}: [Spotify Control] Current Tracknr: ${currentMeta.currentTracknr}`)
   if (currentMeta.currentType === 'nas') {
     // Mplayer would report the stream-proxy URL as "filename"/"path" for NAS
@@ -361,8 +363,8 @@ function checkSilence() {
 }
 
 // --- Buffering of streams before playback starts ---
-// mplayer starts once cache-min percent of the cache are filled (see the wrapper).
-const cachePrefillPercent = 10
+// mplayer starts once cache-min percent of the cache are filled (see the wrapper); mpv reports 0-100 of its goal.
+const cachePrefillPercent = player.cachePrefillPercent ?? 10
 let loadingTimer = null
 
 function startLoading() {
@@ -1909,6 +1911,13 @@ function playListAtTrack(playedList, trackNr, progressPct) {
   log.debug(
     `${now()}: [Spotify Control] Library resume — track ${trackNr}, pct ${progressPct}, list ${playedList}`,
   )
+  if (player.startsAt) {
+    // mpv opens that track at that part of it right away (nothing to mute, no jumps); the metadata handler counts
+    // the one track that starts
+    playList(playedList, { track: trackNr, percent: progressPct })
+    currentMeta.currentTracknr = Math.max(0, trackNr - 1)
+    return
+  }
   playList(playedList)
   scheduleResumeJumps(trackNr, progressPct, 1200)
 }
@@ -1952,7 +1961,8 @@ function scheduleResumeJumps(trackNr, progressPct, firstJumpMs) {
   libraryResumeTimers.push(setTimeout(unmuteLibraryResume, lastJump + 400))
 }
 
-function playList(playedList) {
+// resume: { track, percent } - where the album goes on (only an engine that starts there takes it, see playListAtTrack)
+function playList(playedList, resume) {
   playbackGeneration++
   currentMeta.trackFile = undefined // the new album's first file sets it (see the path event)
   clearLibraryResumeTimers()
@@ -1963,7 +1973,7 @@ function playList(playedList) {
   log.debug(`${now()}: [Spotify Control] Starting currentMeta.playing:${playedTitelmod}`)
   //currentMeta.playing = true;
   writeplayerstatePlay()
-  player.playList(`/home/dietpi/MuPiBox/media/${playedTitelmod}/playlist.m3u`)
+  player.playList(`/home/dietpi/MuPiBox/media/${playedTitelmod}/playlist.m3u`, resume)
   player.setVolume(volumeStart)
   log.debug(`${now()}: /home/dietpi/MuPiBox/media/${playedTitelmod}/playlist.m3u`)
   currentMeta.currentTracknr = 0
@@ -2043,14 +2053,28 @@ async function playNasList(nasPath, resume = null) {
     fs.writeFileSync(tmpPlaylistPath, playlistLines.join('\n'))
 
     writeplayerstatePlay()
-    player.playList(tmpPlaylistPath)
+    // An engine that starts where it was left (mpv): the track and the part of it with the list; a CUE album is one
+    // file, there the position in it. The CUE's track and name follow from the playing time (see the time_pos handler).
+    const startAt = resume && player.startsAt ? nasStartOptions(Math.min(resume.trackNr, tracks.length), resume.progressPct) : null
+    player.playList(tmpPlaylistPath, startAt ?? undefined)
     player.setVolume(volumeStart)
-    currentMeta.currentTracknr = 0
+    currentMeta.currentTracknr = startAt ? Math.max(0, startAt.track - 1) : 0
     currentMeta.totalTracks = tracks.length
-    if (resume) resumeNasAt(Math.min(resume.trackNr, tracks.length), resume.progressPct)
+    if (resume && !startAt) resumeNasAt(Math.min(resume.trackNr, tracks.length), resume.progressPct)
   } catch (error) {
     log.debug(`${now()}: [Spotify Control] Error starting NAS playback: ${error}`)
   }
+}
+
+// Where a NAS album goes on, for an engine that starts there: { track, percent } - or for a CUE album (one file)
+// { track: 1, startSeconds } at the part of the track in the file
+function nasStartOptions(trackNr, progressPct) {
+  if (trackNr <= 1 && progressPct <= 1) return null
+  if (!isCuePlayback()) return { track: trackNr, percent: progressPct }
+  const index = Math.max(0, Math.min(currentCue.tracks.length, trackNr) - 1)
+  const start = currentCue.tracks[index].startSeconds
+  const end = cueTrackEnd(index)
+  return { track: 1, startSeconds: end > start ? start + ((end - start) * progressPct) / 100 : start }
 }
 
 // A NAS album where it was left: when its first track starts, on to track trackNr (another start, it is a stream too)
@@ -2353,6 +2377,17 @@ function playURL(playedURL, resumeAt = null) {
   log.debug(`${now()}: [Spotify Control] Starting currentMeta.playing:${playedURL}`)
   //currentMeta.playing = true;
   writeplayerstatePlay()
+  if (resumeAt != null && player.startsAt) {
+    // mpv begins at the position itself; the seek logic of the episode (pendingEpisodeSeek) only watches that it
+    // got there, and tries a seek when the server did not let it start there
+    player.play(playedURL, { startSeconds: resumeAt })
+    player.setVolume(volumeStart)
+    if (pendingEpisodeSeek) pendingEpisodeSeek.sent = Date.now()
+    log.debug(`${now()}: ${playedURL} from ${resumeAt}s`)
+    if (telegramPlaybackNotices())
+      cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing stream"')
+    return
+  }
   player.play(playedURL)
   if (resumeAt != null) {
     player.setVolume(0)

@@ -12,6 +12,7 @@ const path = require('node:path')
 
 const ENGINE = process.env.ENGINE || 'mpv'
 const createPlayer = ENGINE === 'mplayer' ? require('../src/mplayer-wrapper.js') : require('../src/mpv-wrapper.js')
+const STARTS_AT = ENGINE !== 'mplayer' // (mplayer-wrapper.js seeks after the start; see out.startsAt)
 
 const TRACK_SECONDS = 4
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mupibox-engine-test-'))
@@ -245,4 +246,54 @@ test(`${ENGINE}: a file that does not exist does not kill the player; the next o
   player.play(files[0])
   await tc
   assert.equal(await prop('filename'), path.basename(files[0]))
+})
+
+test(`${ENGINE}: a file starts at a position (play with startSeconds)`, { skip: !STARTS_AT && 'this engine seeks after the start' }, async () => {
+  await settle()
+  const tc = waitFor('track-change', 6000)
+  player.play(files[0], { startSeconds: 2 })
+  await tc
+  await sleep(250)
+  const t = await prop('time_pos')
+  assert.ok(t >= 1.9 && t < 3.2, `started at ${t}`)
+  // the next file begins at 0 again
+  await settle()
+  const tc2 = waitFor('track-change', 6000)
+  player.play(files[1])
+  await tc2
+  await sleep(250)
+  const t2 = await prop('time_pos')
+  assert.ok(t2 < 1.2, `next file started at ${t2}`)
+})
+
+test(`${ENGINE}: a playlist goes on with a track at a part of it (playList with track and percent)`, { skip: !STARTS_AT && 'this engine seeks after the start' }, async () => {
+  await settle()
+  let changes = 0
+  const count = () => changes++
+  player.on('track-change', count)
+  const tc = waitFor('track-change', 6000)
+  player.playList(path.join(dir, 'playlist.m3u'), { track: 3, percent: 50 })
+  await tc
+  await sleep(400)
+  assert.equal(await prop('filename'), path.basename(files[2]))
+  const t = await prop('time_pos')
+  assert.ok(t >= TRACK_SECONDS * 0.5 - 0.3 && t < TRACK_SECONDS, `position ${t}`)
+  await sleep(300)
+  player.off('track-change', count)
+  assert.equal(changes, 1, `track-change fired ${changes} times (the skipped first track must not count)`)
+})
+
+test(`${ENGINE}: two "next" in a row land on the third track, and the engine knows the place (trackIndex)`, async () => {
+  await settle()
+  const first = waitFor('track-change', 6000)
+  player.playList(path.join(dir, 'playlist.m3u'))
+  await first
+  await sleep(300)
+  player.next()
+  player.next()
+  await sleep(2500)
+  assert.equal(await prop('filename'), path.basename(files[2]))
+  const idx = player.trackIndex()
+  if (STARTS_AT) assert.equal(idx, 2, `trackIndex ${idx}`)
+  else assert.equal(idx, -1)
 })
