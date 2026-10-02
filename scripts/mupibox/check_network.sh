@@ -151,7 +151,11 @@ do
 		ensure_symlink "${OFFLINERESUME_FILE}" "${ACTIVERESUME_FILE}"
 	fi
 
-	if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
+	# Compared with what the file says, not with the last round: get_network.sh rewrites the whole file every
+	# 30 s from the same old content, so a write of this loop that lands in between can be lost - and then the
+	# display showed "offline" (no WiFi in the status bar) for good, because nothing wrote the state again.
+	FILESTATE=$(/usr/bin/jq -r '.onlinestate // empty' "${NETWORKCONFIG}" 2>/dev/null)
+	if [ "${ONLINESTATE}" != "${FILESTATE}" ]; then
 		# Atomic-update (HIGH-8).
 		_TMP="${NETWORKCONFIG}.tmp.$$"
 		/usr/bin/jq --arg v "${ONLINESTATE}" '.onlinestate = $v' "${NETWORKCONFIG}" > "${_TMP}" && mv "${_TMP}" "${NETWORKCONFIG}" || rm -f "${_TMP}"
