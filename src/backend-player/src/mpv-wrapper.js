@@ -129,9 +129,14 @@ const createPlayer = (options = {}) => {
   const exec = (cmd, args = []) => {
     const a = args.map(decodeArg)
     switch (cmd) {
+      // mpv keeps its pause flag across files and while idle - mplayer did not, a new file always played. So every
+      // load takes the flag off (a pause sent after the end of a playback left every later file standing paused
+      // and silent, seen on the box), and a pause while nothing plays is ignored.
       case 'loadfile':
+        send(['set_property', 'pause', false])
         return send(['loadfile', String(a[0]), a[1] === 1 || a[1] === '1' ? 'append-play' : 'replace'])
       case 'loadlist':
+        send(['set_property', 'pause', false])
         return send(['loadlist', String(a[0]), 'replace'])
       case 'pt_step': {
         const step = Number.parseInt(String(a[0] ?? '1'), 10) || 0
@@ -145,6 +150,7 @@ const createPlayer = (options = {}) => {
         return send(['playlist-play-index', playlistCount > 0 ? Math.min(playlistCount - 1, target) : target])
       }
       case 'pause':
+        if (idleActive) return
         return send(['cycle', 'pause'])
       case 'seek':
       case 'pausing_keep seek': {

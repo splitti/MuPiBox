@@ -316,3 +316,17 @@ test(`${ENGINE}: the levelling of the loudness is set and taken off while playin
   const t3 = await prop('time_pos')
   assert.ok(t3 > t2, `playback stalled after the filter: ${t2} -> ${t3}`)
 })
+
+test(`${ENGINE}: a pause sent while nothing plays does not leave the next file paused`, async () => {
+  await settle()
+  // (a pause after the end of a playback: mpv kept the flag and every later file stood paused)
+  player.playPause()
+  await sleep(300)
+  const tc = waitFor('track-change', 6000)
+  player.play(files[0])
+  await tc
+  await sleep(1200)
+  assert.equal(await prop('pause'), false)
+  const t = await prop('time_pos')
+  assert.ok(t > 0.6, `did not play after a pause in idle: ${t}`)
+})
