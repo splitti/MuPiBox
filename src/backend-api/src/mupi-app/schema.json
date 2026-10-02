@@ -65,13 +65,13 @@
    "id": "g-netz",
    "title": "Netzwerk",
    "icon": "wifi",
-   "description": "WLAN, LAN, Freigaben"
+   "description": "WLAN, LAN"
   },
   {
    "id": "g-dienste",
    "title": "Dienste",
    "icon": "plug",
-   "description": "Spotify, NAS, Podcast- und Radiosuche · Telegram, MQTT, WLED"
+   "description": "Spotify, NAS, Podcast- und Radiosuche · Telegram, MQTT, WLED · Samba, FTP, VNC"
   },
   {
    "id": "g-sicherheit",
@@ -2311,7 +2311,7 @@
     },
     {
      "title": "Fernsteuerung (VNC)",
-     "help": "Das Display im Browser bedienen. VNC muss unter Netzwerk › Freigaben an sein.",
+     "help": "Das Display im Browser bedienen. VNC muss unter Dienste › Freigaben & Fernzugriff an sein.",
      "items": [
       {
        "type": "buttons",
@@ -3335,7 +3335,7 @@
    "id": "freigaben",
    "slug": "shares",
    "area": "einstellungen",
-   "parent": "g-netz",
+   "parent": "g-dienste",
    "title": "Freigaben & Fernzugriff",
    "description": "Samba, FTP, VNC",
    "icon": "share",
@@ -4715,7 +4715,7 @@
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "Netzwerk",
-   "description": "WLAN, LAN, Freigaben",
+   "description": "WLAN, LAN",
    "icon": "wifi",
    "sections": [
     {
@@ -4733,12 +4733,6 @@
        "label": "LAN",
        "target": "lan",
        "subtitle": "Kabelanschluss, Adresse, DHCP oder fest"
-      },
-      {
-       "type": "nav",
-       "label": "Freigaben & Fernzugriff",
-       "target": "freigaben",
-       "subtitle": "Samba, FTP, VNC"
       }
      ]
     }
@@ -4750,7 +4744,7 @@
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "Dienste",
-   "description": "Spotify, NAS, Podcast- und Radiosuche · Telegram, MQTT, WLED",
+   "description": "Spotify, NAS, Podcast- und Radiosuche · Telegram, MQTT, WLED · Samba, FTP, VNC",
    "icon": "plug",
    "sections": [
     {
@@ -4806,6 +4800,18 @@
        "label": "WLED",
        "target": "wled",
        "subtitle": "LED-Streifen per serieller Schnittstelle"
+      }
+     ]
+    },
+    {
+     "title": "Freigaben & Fernzugriff",
+     "help": "",
+     "items": [
+      {
+       "type": "nav",
+       "label": "Freigaben & Fernzugriff",
+       "target": "freigaben",
+       "subtitle": "Samba, FTP, VNC"
       }
      ]
     }
@@ -6010,22 +6016,22 @@
   },
   {
    "l": "Freigaben & Fernzugriff",
-   "where": "Netzwerk › Freigaben & Fernzugriff",
+   "where": "Dienste › Freigaben & Fernzugriff",
    "id": "freigaben"
   },
   {
    "l": "Samba (Windows-Freigabe)",
-   "where": "Netzwerk › Freigaben & Fernzugriff",
+   "where": "Dienste › Freigaben & Fernzugriff",
    "id": "freigaben"
   },
   {
    "l": "FTP-Server",
-   "where": "Netzwerk › Freigaben & Fernzugriff",
+   "where": "Dienste › Freigaben & Fernzugriff",
    "id": "freigaben"
   },
   {
    "l": "VNC (Display fernsteuern)",
-   "where": "Netzwerk › Freigaben & Fernzugriff",
+   "where": "Dienste › Freigaben & Fernzugriff",
    "id": "freigaben"
   },
   {
