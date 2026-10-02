@@ -13,5 +13,6 @@ export interface Mupihat {
   // these via piecewise-linear interpolation over the same v_100..v_0 config
   // thresholds, smoothed over a ~32 s VBAT window.
   Bat_Percent?: number
-  Bat_PercentSource?: 'voltage' | 'charging'
+  // 'none': the profile "USB-C mode (no battery)" - nothing to show, whatever the charger reads
+  Bat_PercentSource?: 'voltage' | 'charging' | 'none'
 }

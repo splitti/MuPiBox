@@ -1140,7 +1140,8 @@ async function loadStatus(root) {
   let pct = hat.body?.Bat_Percent
   if (!Number.isFinite(pct)) pct = Number.parseInt(String(hat.body?.Bat_SOC ?? ''), 10)
   const charging = batteryCharging(hat.body)
-  setTile(root, 'tile-akku', Number.isFinite(pct) ? `${pct} %${charging ? ' ⚡' : ''}` : '–', Number.isFinite(pct) ? pct : null, pct <= 15 ? 'danger' : pct <= 30 ? 'warn' : 'ok')
+  if (hat.ok && noBattery(hat.body)) setTile(root, 'tile-akku', 'Netzbetrieb', null, 'ok')
+  else setTile(root, 'tile-akku', Number.isFinite(pct) ? `${pct} %${charging ? ' ⚡' : ''}` : '–', Number.isFinite(pct) ? pct : null, pct <= 15 ? 'danger' : pct <= 30 ? 'warn' : 'ok')
   // listened today
   const p = pt.body?.playtime ?? {}
   // (bonus minutes go onto today's limit: without one they do nothing)
@@ -1223,9 +1224,10 @@ async function loadNotices(root) {
   const [hat, sync, access] = await Promise.all([api('/api/mupihat'), api('/api/spotify-sync/status'), api(`${API}/spotify-access`)])
   const notes = []
   const pct = hat.body?.Bat_Percent
-  if (hat.body?.ChargeProblemSince) notes.push(['plug', 'Akku lädt nicht', NOT_CHARGING, 'akku'])
+  const battery = hat.ok && !noBattery(hat.body)
+  if (battery && hat.body?.ChargeProblemSince) notes.push(['plug', 'Akku lädt nicht', NOT_CHARGING, 'akku'])
   if (hat.body?.BatteryStaleSince) notes.push(['bat', 'Akku-Werte veraltet', BATTERY_STALE, 'akku'])
-  if (Number.isFinite(pct) && pct <= 15 && !batteryCharging(hat.body)) {
+  if (battery && Number.isFinite(pct) && pct <= 15 && !batteryCharging(hat.body)) {
     notes.push(['bat', 'Akku fast leer', `Noch ${pct} % – bitte bald laden.`, 'akku'])
   }
   // the Spotify login: refused by Spotify, or its 6 months end within two weeks (see spotifyLogin)
@@ -6219,6 +6221,13 @@ function batteryTop() {
   const h = hw.hat
   if (h === null) return [`<section class="card"><h2>Akku-Stand</h2><p class="help" style="margin:0">Die Akku-Werte ließen sich gerade nicht laden.</p></section>`]
   if (!h || !Object.keys(h).length) return [`<section class="card"><h2>Akku-Stand</h2><p class="help" style="margin:0">Kein MuPiHAT gefunden – die Box läuft ohne Akku-Anzeige.</p></section>`]
+  const volt = (mv) => (Number.isFinite(mv) && mv > 0 ? `${(mv / 1000).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} V` : '–')
+  if (noBattery(h)) {
+    return [
+      `<section class="card"><h2>Akku-Stand</h2><div class="bat-now"><div class="bat-pct">Netzbetrieb</div><small>${esc(NO_BATTERY_TEXT)}</small></div>
+      <dl class="kv"><div><dt>USB-Spannung</dt><dd>${volt(h.Vbus)}</dd></div><div><dt>Temperatur Lade-Chip</dt><dd>${Number.isFinite(h.Temp) ? `${h.Temp.toLocaleString(LOCALE)} °C` : '–'}</dd></div></dl></section>`,
+    ]
+  }
   let pct = h.Bat_Percent
   if (!Number.isFinite(pct)) pct = Number.parseInt(String(h.Bat_SOC ?? ''), 10)
   const charging = batteryCharging(h)
@@ -6274,6 +6283,13 @@ function batteryTop() {
 
 const BATTERY_NAMES = { 'USB-C mode (no battery)': 'USB-C-Betrieb (ohne Akku)', Custom: 'Eigenes Profil' }
 const batteryLabel = (n) => BATTERY_NAMES[n] ?? n
+// No battery: the charger sees none (VBAT_PRESENT), or the profile "USB-C mode" is chosen - the box runs from the
+// USB-C plug (a power supply or a power bank). Then no percent, no "nearly empty", no curve: the HAT reports 0 %
+// with the placeholder profile, which read as an empty battery before.
+const USB_C_PROFILE = Object.keys(BATTERY_NAMES).find((n) => /^USB-C/.test(n))
+// (Bat_PercentSource "none": the HAT runs with the placeholder profile, see v_100 <= 10 in mupihat_bq25792.py)
+const noBattery = (h) => h?.BatteryConnected === 0 || h?.Bat_PercentSource === 'none' || hw.data?.mupihat?.battery === USB_C_PROFILE
+const NO_BATTERY_TEXT = 'Kein Akku – die Box läuft über USB-C (Netzteil oder Powerbank).'
 // The profiles as offered: the batteries in the order of the config, the two special ones (no battery, own
 // profile) at the end - a profile added later stood behind them (the 2S3P after "Custom")
 const batteryOptions = (names) => [...names.filter((n) => !(n in BATTERY_NAMES)), ...names.filter((n) => n in BATTERY_NAMES)].map(batteryLabel)
@@ -6301,6 +6317,10 @@ async function loadHat() {
 // What the battery reads now, under the choice of the profile: "7,85 V · 82 % · lädt"
 function hatNowLine() {
   const h = hw.hat
+  if (h && noBattery(h)) {
+    const usb = Number.isFinite(h.Vbus) && h.Vbus > 0 ? `${(h.Vbus / 1000).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} V` : '–'
+    return `<div class="status-line"><span class="dot ok"></span><span><span>Jetzt</span> <b>${esc(`USB ${usb} · kein Akku`)}</b></span></div>`
+  }
   if (!h || !Number.isFinite(h.Vbat)) return ''
   const pct = Number.isFinite(h.Bat_Percent) ? h.Bat_Percent : Number.parseInt(String(h.Bat_SOC ?? ''), 10)
   const what = batteryCharging(h) ? 'lädt' : Number.isFinite(h.Ibat) && h.Ibat < -50 ? 'entlädt' : 'Ruhezustand'
@@ -9454,16 +9474,20 @@ const CONTROLLERS = {
     sections: (page) => {
       const it = (key, over) => schemaItem(page, key, over)
       const field = (key, label, sub) => it(key, { label, sub, help: '' })
+      const usbOnly = hw.data.mupihat.battery === USB_C_PROFILE
+      const hat = {
+        title: 'MuPiHAT',
+        col: 1,
+        items: [
+          it('hatOn', { help: 'Umschalten stellt auch die Soundkarte um und startet die Box neu.' }),
+          it('battery', { options: batteryOptions(hw.data.mupihat.batteries), help: usbOnly ? NO_BATTERY_TEXT : 'Die Spannungen gehören zu diesem Profil.' }),
+          { type: 'html', html: hatNowLine() },
+        ],
+      }
+      // (the placeholder profile has no voltages to show or to save - its values are 1 and 0)
+      if (usbOnly) return [hat, { title: 'Ladekurve', col: 2, items: [{ type: 'note', text: 'Ohne Akku gibt es keine Ladekurve und keine Schwellen. Ein anderes Profil wählen, sobald ein Akku eingebaut ist.' }] }]
       return [
-        {
-          title: 'MuPiHAT',
-          col: 1,
-          items: [
-            it('hatOn', { help: 'Umschalten stellt auch die Soundkarte um und startet die Box neu.' }),
-            it('battery', { options: batteryOptions(hw.data.mupihat.batteries), help: 'Die Spannungen gehören zu diesem Profil.' }),
-            { type: 'html', html: hatNowLine() },
-          ],
-        },
+        hat,
         {
           title: 'Ladekurve',
           help: 'Welche Spannung welchem Ladestand entspricht (mV). Die Werte steigen von „Leer“ nach „Voll“.',
@@ -9510,7 +9534,8 @@ const CONTROLLERS = {
         }
         const save = root.querySelector('[data-label="Profil speichern"]')
         if (save) save.disabled = Object.keys(errs).length > 0
-        $('#hat-chart', root).innerHTML = hatChart()
+        const chart = $('#hat-chart', root)
+        if (chart) chart.innerHTML = hatChart() // (none with the profile "USB-C mode")
       }
       for (const [key] of PROFILE_KEYS) $(`#k-${key}`, root)?.addEventListener('input', check)
       check()

@@ -376,7 +376,9 @@ class bq25792:
         # report any percent in that case — the icon will fall back to its
         # plug-symbol mode.
         if v_100 <= 10:
-            return (0, "voltage")
+            # "none": the display and the app show no battery then (a battery that is there but runs
+            # under this profile read as 0 % before)
+            return (0, "none")
 
         v = self.smoothed_vbat()
 
