@@ -1665,7 +1665,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         if ((source === 'rss' || source === 'radio') && typeof local.cover === 'string' && local.cover) coverUrl = local.cover
         if ((source === 'nas' || source === 'local') && folder) {
           const parts = folder.split('/').filter(Boolean)
-          artist = parts[parts.length - 2] ?? ''
+          // (<category>/<artist>/<album>: the artist is the folder above the album; an album with its files right in
+          // <category>/<album> has none - the category's name is not its artist)
+          artist = source === 'local' ? (parts.length >= 3 ? parts[parts.length - 2] : '') : (parts[parts.length - 2] ?? '')
           // the track's own picture (a playlist of different stories) before the album's
           const trackFile = typeof local.trackFile === 'string' ? local.trackFile : ''
           coverUrl =

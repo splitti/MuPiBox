@@ -738,10 +738,14 @@ export class SpotifyPlayerService {
    * Create a Media object from Spotify Web Playback SDK track information
    */
   createMediaFromSpotifyTrack(track: SpotifyWebPlaybackTrack): Media {
+    // (the album as the display's own entries name it: its id, so a resume entry has a key - one without was
+    // refused; the page shows the track and the artist from the SDK's state anyway)
+    const albumId = /^spotify:album:([A-Za-z0-9]+)$/.exec(track.album?.uri ?? '')?.[1]
     return {
       type: 'spotify',
       category: 'other',
-      title: track.name,
+      ...(albumId ? { id: albumId } : {}),
+      title: track.album?.name || track.name,
       artist: track.artists?.[0]?.name || 'Unknown Artist',
       cover: track.album?.images?.[0]?.url || '../assets/images/nocover_mupi.png',
     }

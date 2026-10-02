@@ -252,23 +252,24 @@ export class ExternalPlaybackNavigatorService {
         media.artistcover = own.artistcover || own.cover
       }
     }
-    // A podcast: the library's entry of its feed carries category, title, artist and cover - the page shows and
-    // saves (resume) what the library knows, not what the player could tell
-    if (media?.type === 'rss' && media.id) {
+    // A podcast: the library's entry of the podcast (found by its name - the player knows no feed address) carries
+    // the category and the podcast's picture; the episode's own picture is the one the app passed on, if any
+    if (media?.type === 'rss' && media.artist) {
       const entries = await firstValueFrom(
         this.http.get<Media[]>(`${environment.backend.apiUrl}/data`).pipe(
           timeout(3000),
           catchError(() => of([] as Media[])),
         ),
       )
-      const own = entries.find((e) => e.type === 'rss' && e.id === media.id)
+      // (the feed's title and the entry's name may differ in case - "Anna und die Wilden Tiere" vs. "wilden")
+      const name = media.artist.trim().toLowerCase()
+      const own = entries.find((e) => e.type === 'rss' && (e.artist ?? '').trim().toLowerCase() === name)
       if (own) {
         media.category = own.category
-        media.artist = own.artist ?? media.artist
-        media.title = own.title ?? media.title
-        if (own.cover || own.artistcover) {
-          media.cover = own.cover || own.artistcover
-          media.artistcover = own.artistcover || own.cover
+        const picture = own.artistcover || own.cover
+        if (picture) {
+          media.artistcover = picture
+          if (!media.cover) media.cover = picture
         }
       }
     }
@@ -339,13 +340,14 @@ export class ExternalPlaybackNavigatorService {
       media.cover = data.cover
       media.artistcover = data.cover
     }
-    // A podcast episode: the feed is the entry's id - a resume entry without it broke the resume list, and the
-    // path of the last local album is not its artist. The library's own entry of the feed (category, title, cover)
-    // is looked up in navigateToPlayerExternal.
+    // A podcast episode, as the display's own pages build it (rssfeed.service): id = the episode's address, artist =
+    // the podcast, title = the episode. A resume entry without the id broke the resume list, and the path of the
+    // last local album is not its artist. The podcast's library entry (category, cover) is looked up in
+    // navigateToPlayerExternal.
     if (type === 'rss') {
-      media.id = String(data.feed ?? '')
+      media.id = String(data.episode ?? '')
       media.artist = String(data.album ?? '')
-      media.title = String(data.album ?? '')
+      media.title = String(data.currentTrackname ?? data.album ?? '')
     }
     // A local album: path is its folder in the library (e.g. audiobook/<artist>/<album>), as the box's own
     // library pages know it - the cover is looked up there (see navigateToPlayerExternal).

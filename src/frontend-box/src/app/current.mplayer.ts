@@ -36,8 +36,8 @@ export interface CurrentMPlayer {
   activeSpotifyId?: string
   currentType?: string
   path?: string
-  /** The podcast feed (as in the library: a URL or ard:<id>) of the episode that plays - for a resume entry. */
-  feed?: string
+  /** The address of the podcast episode that plays (rss) - its id on the display (rssfeed.service), for a resume entry. */
+  episode?: string
   // The file that plays (nas:<NAS path> / local:<library path>): its embedded picture is shown (/api/track-cover).
   trackFile?: string
 }

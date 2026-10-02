@@ -574,6 +574,11 @@ export class PlayerPage implements OnInit, AfterViewInit {
         this.navController.back()
         return
       }
+    } else {
+      // Started from the parents' app or Telegram: the box plays already, but the listening counter and the resume
+      // saving go by the current media of CurrentMediaService, which only playMedia/resumeMedia set - without this
+      // an episode or album started from the app never got a "Weiterhören" entry
+      this.currentMediaService.set(this.media)
     }
 
     this.updateProgress()
@@ -713,6 +718,9 @@ export class PlayerPage implements OnInit, AfterViewInit {
     // updateProgress cadence, the on-leave save, and the cap-transition save.
     // Resets on every new playMedia/resumeMedia, counts only active playback.
     if (!this.currentMediaService.shouldPersistResume()) return
+    // Stopped from the app or Telegram before the page is left: the box's player is empty by now (no track, no
+    // position) - the entry of the last periodic save stands, it is not overwritten with zeros
+    if ((this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'rss') && !this.currentPlayedLocal?.currentPlayer) return
 
     this.resumemedia = Object.assign({}, this.media)
     if (this.resumemedia.type === 'spotify' && this.resumemedia?.showid) {
