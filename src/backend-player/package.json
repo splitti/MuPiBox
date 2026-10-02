@@ -6,10 +6,11 @@
   "scripts": {
     "serve": "cross-env NODE_ENV=development node src/spotify-control.js",
     "build": "esbuild src/spotify-control.js --bundle --minify --platform=node --target=node22 --metafile=backend-player.esbuild-meta.json --outfile=../deploy/spotify-control.js",
-    "test": "",
+    "test": "node --test test/",
     "lint": "npx @biomejs/biome check .",
     "lint:fix": "npx @biomejs/biome check --fix .",
-    "build-proto": "npx pbjs -t static-module -w commonjs -p proto -o src/spotify-proto.js proto/spotify/login5/v3/login5.proto"
+    "build-proto": "npx pbjs -t static-module -w commonjs -p proto -o src/spotify-proto.js proto/spotify/login5/v3/login5.proto",
+    "build:test": "esbuild test/engine.test.js --bundle --platform=node --target=node22 --outfile=../deploy/engine-test.js"
   },
   "dependencies": {
     "body-parser": "^1.19.0",

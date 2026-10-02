@@ -4,7 +4,8 @@ const bodyParser = require('body-parser')
 const path = require('node:path')
 const dns = require('node:dns')
 const SpotifyWebApi = require('spotify-web-api-node')
-const createPlayer = require('./mplayer-wrapper.js')
+const createMplayer = require('./mplayer-wrapper.js')
+const createMpv = require('./mpv-wrapper.js')
 const { isPlaylistUrl, resolveStreamUrl } = require('./playlist-url.js')
 const googleTTS = require('google-tts-api')
 const fs = require('node:fs')
@@ -164,7 +165,12 @@ const log = require('console-log-level')({ level: config.server.logLevel })
 /*set up express router and set headers for cross origin requests*/
 const app = express()
 const server = http.createServer(app)
-const player = createPlayer()
+// The engine for everything that is not Spotify: mplayer (as always) or mpv - mupibox.playerEngine in
+// mupiboxconfig.json, or MUPIBOX_PLAYER in the environment for a test; read at the start (a change needs a restart
+// of the player). Both wrappers offer the same interface, see mpv-wrapper.js.
+const playerEngine = process.env.MUPIBOX_PLAYER || (muPiBoxConfig?.mupibox?.playerEngine === 'mpv' ? 'mpv' : 'mplayer')
+const player = playerEngine === 'mpv' ? createMpv() : createMplayer()
+console.log(`${new Date().toLocaleString()}: [Player] engine: ${playerEngine}`)
 
 // Refuse commands a foreign web page sends through a visitor's browser; CORS only for the box's
 // own pages (was: Access-Control-Allow-Origin * for everyone). See request-guard.js.
