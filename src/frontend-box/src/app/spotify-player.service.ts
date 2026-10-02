@@ -676,7 +676,13 @@ export class SpotifyPlayerService {
     const id = this.deviceId
     if (!id || !this.isOnline) return null
     try {
-      const tokenRes = await fetch(`${environment.backend.playerUrl}/spotify/token`, { signal: AbortSignal.timeout(4000) })
+      // (fetch, not HttpClient: the header the player asks of the box's own pages is set here by hand - without it
+      // the player refused the request every few minutes, the check never ran, and a player Spotify had dropped
+      // was never noticed: "Refused GET /spotify/token (no X-Requested-With ...)" in the player's log)
+      const tokenRes = await fetch(`${environment.backend.playerUrl}/spotify/token`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        signal: AbortSignal.timeout(4000),
+      })
       const token = (await tokenRes.text()).trim()
       if (!tokenRes.ok || !token) return null
       const res = await fetch('https://api.spotify.com/v1/me/player/devices', {
