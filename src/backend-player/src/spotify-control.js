@@ -572,6 +572,7 @@ const currentMeta = {
   pause: false,
   album: '',
   path: '',
+  feed: '', // the podcast feed of the episode that plays (rss), see the rss command
   currentTrackname: '',
   currentTracknr: 0,
   totalTracks: '',
@@ -1614,6 +1615,7 @@ function stop() {
     currentMeta.durationSeconds = 0
     currentMeta.album = ''
     currentMeta.path = ''
+    currentMeta.feed = ''
     currentMeta.currentTracknr = ''
     currentMeta.totalTracks = ''
     currentMeta.currentPlayer = ''
@@ -2969,6 +2971,8 @@ app.use((req, res) => {
     let radioURL = dir.split('radio/').pop()
     radioURL = decodeURIComponent(radioURL)
     playRadioURL(radioURL)
+    currentMeta.path = '' // (not the last local album's folder, see the rss command)
+    currentMeta.feed = ''
   }
 
   if (hasDirSegment(command, 'rss')) {
@@ -2981,6 +2985,11 @@ app.use((req, res) => {
     const dir = command.dir
     let rssURL = dir.split('rss/').pop()
     rssURL = decodeURIComponent(rssURL)
+    // the feed the episode belongs to, for the display's player page when the episode was started from the
+    // parents' app (it builds its media from /local): the resume entry needs it; the path of the last local album
+    // must not stay here - it was read as the podcast's artist
+    currentMeta.feed = rssURL
+    currentMeta.path = ''
     playURL(offlineEpisodeFile(rssURL) ?? rssURL, startEpisode(rssURL))
     episodeRun = { url: rssURL, generation: playbackGeneration, retries: 0 }
   }
