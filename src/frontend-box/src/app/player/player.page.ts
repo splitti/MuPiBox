@@ -251,6 +251,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
   currentPlayedLocal: CurrentMPlayer
   showTrackNr = 0
   goBackTimer = 0
+  // Spotify paused in the middle of a track by someone other than the box (see updateProgress)
+  private externallyPaused = false
   progress = 0
   shufflechanged = 0
   tmpProgressTime = 0
@@ -435,7 +437,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
     // currentPlayedSpotify / currentPlayedLocal are kept fresh by the
     // takeUntilDestroyed-bound subscriptions in ngOnInit — read them
     // directly here instead of re-subscribing on every tick.
-    this.playing = !this.currentPlayedLocal?.pause
+    this.playing = !this.currentPlayedLocal?.pause && !this.externallyPaused
     // Drive CurrentMediaService's active-listening counter from here —
     // determined per-tick from the actual SDK state for Spotify or mplayer
     // state for local content. The service used to subscribe to current$/
@@ -467,14 +469,26 @@ export class PlayerPage implements OnInit, AfterViewInit {
       this.goBackTimer = 0
     }
     if (this.media.type === 'spotify') {
-      const seek = this.currentPlayedSpotify?.progress_ms || 0
-      if (this.currentPlayedSpotify?.item != null) {
-        this.progress = (seek / this.currentPlayedSpotify?.item.duration_ms) * 100 || 0
+      const sp = this.currentPlayedSpotify
+      const seek = sp?.progress_ms || 0
+      if (sp?.item != null) {
+        this.progress = (seek / sp?.item.duration_ms) * 100 || 0
       }
-      if (this.playing && !this.currentPlayedSpotify?.is_playing) {
-        this.goBackTimer++
-        if (this.goBackTimer > 10) {
-          this.navController.back()
+      if (sp?.is_playing) this.externallyPaused = false
+      if (!this.currentPlayedLocal?.pause && !sp?.is_playing) {
+        // Not playing although the box did not pause: at the end of the album (the SDK reports it paused at the
+        // start of the last track, or at its end) the way back to the list; but paused in the middle of a track -
+        // from another Spotify client, the parents' phone over Connect, or a stall - it stays here as paused, and
+        // the play button goes on. Before, that went back to the list after ten seconds, with a STOP.
+        const midTrack = seek > 1500 && !!sp?.item?.duration_ms && seek < sp.item.duration_ms - 1500
+        if (midTrack) {
+          this.externallyPaused = true
+          this.goBackTimer = 0
+        } else {
+          this.goBackTimer++
+          if (this.goBackTimer > 10) {
+            this.navController.back()
+          }
         }
       }
       setTimeout(() => {
