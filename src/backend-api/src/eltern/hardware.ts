@@ -158,7 +158,8 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
     }
     // Is it there? DietPi's entry and - for the amplifier - the driver (asked by Andreas: "saved" said nothing)
     const written = await soundcardWritten(bootConfig)
-    if (written.card !== id || (amp && !written.ampDriver)) {
+    // (DietPi keeps the name in small letters: "max98357a bcm2835-i2s-hifi hifi-0")
+    if (written.card.toLowerCase() !== id.toLowerCase() || (amp && !written.ampDriver)) {
       console.warn(`${new Date().toLocaleString()}: [MuPiBox-Server] sound card ${id} not applied: dietpi.txt "${written.card}", driver ${written.ampDriver}`)
       res.status(500).json({ ok: false, error: 'not_applied', card: written.card, driver: written.ampDriver })
       return
