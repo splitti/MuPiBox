@@ -76,6 +76,10 @@ export class HomePage extends SwiperIonicEventsHelper {
 
   // The top bar is folded away by a two-finger swipe (HeaderVisibilityService): the covers are then drawn larger
   protected readonly headerHidden = inject(HeaderVisibilityService).hidden
+  // two fingers in from the edge: the next / the previous category, round and round (the tabs are folded away)
+  private readonly categorySwipes = inject(HeaderVisibilityService)
+    .categorySwipe.pipe(takeUntilDestroyed())
+    .subscribe((step) => this.switchCategory(step))
 
   // Category tabs at the top, in display order; some can be hidden in the admin.
   protected readonly categories: { key: CategoryType; icon: string }[] = [
@@ -233,6 +237,16 @@ export class HomePage extends SwiperIonicEventsHelper {
         }
       })
     })
+  }
+
+  private switchCategory(step: 1 | -1): void {
+    const visible = this.visibleCategories()
+    if (visible.length < 2) return
+    const index = Math.max(
+      0,
+      visible.findIndex((c) => c.key === this.category()),
+    )
+    this.category.set(visible[(index + step + visible.length) % visible.length].key)
   }
 
   protected categoryChanged(event: any): void {

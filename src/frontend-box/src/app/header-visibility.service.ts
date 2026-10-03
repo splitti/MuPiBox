@@ -1,5 +1,6 @@
 import { effect, Injectable, inject, signal } from '@angular/core'
 import { Router } from '@angular/router'
+import { Subject } from 'rxjs'
 
 interface Point {
   x: number
@@ -11,6 +12,9 @@ interface Point {
  * same on all of them: two fingers swiping up hide it, two fingers swiping down show it again. With it gone, one finger
  * swiping up from the bottom edge goes one level back - what the bar's back button does (it is not there to tap).
  * The state is kept in this browser, so it stays after a page change or a reload.
+ * On the start page two fingers swiping in from the right edge to the left go to the next category, from the left
+ * edge to the right to the one before - round and round, the last one leads to the first and the other way (the tabs of
+ * the bar are not there to tap with it folded away).
  */
 @Injectable({ providedIn: 'root' })
 export class HeaderVisibilityService {
@@ -21,11 +25,16 @@ export class HeaderVisibilityService {
   // the back swipe starts in the lowest strip of the display and goes this far up
   private static readonly BACK_EDGE_PX = 48
   private static readonly BACK_SWIPE_PX = 80
+  // the category swipe: two fingers that start this close to the edge (px, their middle) and go this far sideways
+  private static readonly CATEGORY_EDGE_PX = 120
+  private static readonly CATEGORY_SWIPE_PX = 100
 
   /** Whether the top bar is folded away (the style sheet does it, by the class on the body; the covers use it too). */
   readonly hidden = signal(HeaderVisibilityService.read())
 
   private readonly router = inject(Router)
+  /** A category swipe on the start page: 1 = the next category, -1 = the one before. */
+  readonly categorySwipe = new Subject<1 | -1>()
   private twoFingerStart: Point | null = null
   private backStart: Point | null = null
 
@@ -92,6 +101,17 @@ export class HeaderVisibilityService {
       const now = HeaderVisibilityService.center(e)
       const dx = now.x - this.twoFingerStart.x
       const dy = now.y - this.twoFingerStart.y
+      // sideways, from the right or the left edge: another category (on the start page)
+      if (Math.abs(dx) >= HeaderVisibilityService.CATEGORY_SWIPE_PX && Math.abs(dx) >= Math.abs(dy) * 1.5) {
+        const start = this.twoFingerStart
+        this.twoFingerStart = null
+        const path = this.path()
+        if (path !== '/' && path !== '/home') return
+        if (dx < 0 && start.x >= window.innerWidth - HeaderVisibilityService.CATEGORY_EDGE_PX)
+          this.categorySwipe.next(1)
+        else if (dx > 0 && start.x <= HeaderVisibilityService.CATEGORY_EDGE_PX) this.categorySwipe.next(-1)
+        return
+      }
       if (Math.abs(dy) < HeaderVisibilityService.SWIPE_PX || Math.abs(dy) < Math.abs(dx) * 1.5) return
       // once per gesture: up hides, down shows
       this.twoFingerStart = null

@@ -65,11 +65,11 @@ export interface SwiperData<T> {
 })
 export class SwiperComponent<T> {
   public data = input.required<SwiperData<T>[]>()
-  // The start page's top bar is folded away: the row of covers is drawn larger and moves up to 10 px below the top of
-  // the display. All of it is one scaling of the whole row (the Cover Flow, the few-covers and the flat layouts are
+  // The start page's top bar is folded away: the row of covers is drawn larger and moves up to 60 px below the top of
+  // the display (the covers sit lower than the bar was high: 60 px, so the picture does not crowd the edge). All of it is one scaling of the whole row (the Cover Flow, the few-covers and the flat layouts are
   // worked out for the row's own width, so they follow the narrower width it is laid out in - see swiper.component.scss).
   public compact = input<boolean>(false)
-  private static readonly COMPACT_TOP = 10
+  private static readonly COMPACT_TOP = 60
   private static readonly HEADER_HEIGHT = 70
   // (not the children's themes: their covers sit in a layout of their own)
   protected readonly compactActive = computed(() => this.compact() && !this.km())
