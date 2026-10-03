@@ -2471,7 +2471,7 @@ async function loadArtistAlbums(item, box) {
   const r = await api(`${SYNC_API}/artist-albums?artistId=${encodeURIComponent(item.artistid)}`)
   if (!box.isConnected) return
   if (!r.ok) {
-    box.innerHTML = `<p class="help">${r.status === 409 ? 'Spotify ist nicht verbunden.' : 'Die Alben ließen sich nicht laden.'}</p>`
+    box.innerHTML = `<p class="help">${r.status === 409 ? 'Spotify ist nicht verbunden.' : r.status === 429 ? 'Spotify sperrt die Box gerade – die Alben lassen sich erst danach laden.' : 'Die Alben ließen sich nicht laden.'}</p>`
     return
   }
   const albums = r.body?.albums ?? []
@@ -3117,7 +3117,10 @@ async function loadSubAlbums(a, box) {
   box.innerHTML = `<p class="help">Lade die Alben von Spotify …</p>`
   const r = await api(`${SYNC_API}/artist-albums?artistId=${encodeURIComponent(a.id)}`)
   if (!r.ok) {
-    box.innerHTML = `<p class="help">Die Alben ließen sich nicht laden${r.status === 409 ? ' (Spotify ist nicht verbunden)' : ''}.</p>`
+    box.innerHTML =
+      r.status === 429
+        ? '<p class="help">Spotify sperrt die Box gerade – die Alben lassen sich erst danach laden.</p>'
+        : `<p class="help">Die Alben ließen sich nicht laden${r.status === 409 ? ' (Spotify ist nicht verbunden)' : ''}.</p>`
     return
   }
   const albums = r.body?.albums ?? []

@@ -1,6 +1,7 @@
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
+import { noteSpotifyBlock, spotifyBlock } from './spotify-block'
 
 /**
  * Covers from the internet for albums (NAS or local folders) that have no picture of their own.
@@ -99,13 +100,21 @@ export async function searchDeezer(q: string, limit = 10, large = false): Promis
  * token; none without a login.
  */
 export async function searchSpotify(q: string, limit = 10): Promise<CoverCandidate[]> {
+  // (Spotify blocks the box: not asked - each request only keeps the block going, see spotify-block.ts)
+  if (spotifyBlock()) return []
   const t = await fetch('http://127.0.0.1:5005/spotify/token', { signal: AbortSignal.timeout(3000) })
   const token = (await t.text()).trim()
   if (!t.ok || !token || token.startsWith('{')) return []
-  const r = await fetch(`https://api.spotify.com/v1/search?${new URLSearchParams({ q, type: 'album', limit: String(limit), market: 'DE' })}`, {
+  // (at most 10 hits per search for Spotify apps under the February 2026 rules - more is refused with 400)
+  const r = await fetch(`https://api.spotify.com/v1/search?${new URLSearchParams({ q, type: 'album', limit: String(Math.min(10, limit)), market: 'DE' })}`, {
     headers: { Authorization: `Bearer ${token}` },
     signal: AbortSignal.timeout(8000),
   })
+  if (r.status === 429) {
+    const wait = Number.parseInt(r.headers.get('retry-after') ?? '', 10)
+    const seconds = Number.isFinite(wait) && wait > 0 ? wait : 60
+    noteSpotifyBlock(Date.now() + seconds * 1000, 'display', `429 from /search (Spotify: wait ${seconds} s)`)
+  }
   if (!r.ok) throw new Error(`Spotify ${r.status}`)
   const body = (await r.json()) as {
     albums?: { items?: Array<{ name?: string; artists?: Array<{ name?: string }>; images?: Array<{ url?: string; width?: number }> }> }

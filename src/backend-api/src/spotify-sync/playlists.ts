@@ -23,6 +23,7 @@ import {
 import type { CategoryType } from './category-types'
 import type { DiscoveredPlaylist, SpotifySyncConfig, SyncItem } from './types'
 import { type AlbumPage, artistAlbums } from '../artist-albums-store'
+import { noteSpotifyBlock, spotifyBlock } from '../spotify-block'
 
 const API_BASE = 'https://api.spotify.com/v1'
 const HTTP_TIMEOUT_MS = 10_000
@@ -44,8 +45,17 @@ export class SpotifyApiException extends Error {
   }
 }
 
-/** GET helper with 401/429/timeout handling. Throws SpotifyApiException. */
+/**
+ * GET helper with 401/429/timeout handling. Throws SpotifyApiException. Keeps to the box's one Spotify block
+ * (spotify-block.ts) - every request of the sync and of the app's album lists comes through here: during a block
+ * Spotify is not asked (each request only keeps it going), and a 429 sets it for the display's lists too.
+ */
 async function spotifyGet<T>(path: string, accessToken: string): Promise<T> {
+  const block = spotifyBlock()
+  if (block) {
+    const left = Math.max(1, Math.ceil((block.until - Date.now()) / 1000))
+    throw new SpotifyApiException({ kind: 'rate-limit', reason: `${path} not asked: Spotify blocks for ${left} s more (${block.reason})`, retryAfterSeconds: left })
+  }
   let response: Response
   try {
     response = await fetch(`${API_BASE}${path}`, {
@@ -65,11 +75,9 @@ async function spotifyGet<T>(path: string, accessToken: string): Promise<T> {
     const header = response.headers.get('retry-after')
     const parsed = Number.parseInt(header ?? '', 10)
     const retryAfter = Number.isFinite(parsed) && parsed > 0 ? parsed : 60
-    throw new SpotifyApiException({
-      kind: 'rate-limit',
-      reason: `429 from ${path} (Spotify: wait ${retryAfter} s${header ? '' : ', no Retry-After given'})`,
-      retryAfterSeconds: retryAfter,
-    })
+    const reason = `429 from ${path} (Spotify: wait ${retryAfter} s${header ? '' : ', no Retry-After given'})`
+    noteSpotifyBlock(Date.now() + retryAfter * 1000, 'sync', reason)
+    throw new SpotifyApiException({ kind: 'rate-limit', reason, retryAfterSeconds: retryAfter })
   }
   if (!response.ok) {
     throw new SpotifyApiException({

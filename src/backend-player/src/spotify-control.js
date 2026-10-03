@@ -1427,6 +1427,10 @@ function setAccessToken(token) {
 /*called in all error cases*/
 /*token expired and no_device error are handled explicitly*/
 function handleSpotifyError(err, from) {
+  if (err?.overtaken) {
+    log.debug(`${now()}: [Spotify Control] ${from}: ${err.message}`)
+    return
+  }
   if (err?.body?.error?.status === 401) {
     log.debug(`${now()}: access token expired, refreshing...`)
     log.debug(`${now()}: Error from: ${from}`)
@@ -1827,16 +1831,28 @@ async function recoverDisplayDevice() {
   return null
 }
 
+// A start overtaken while it waited for the display (a stop, another start, the play time or a quiet time): it must
+// not play after all - its callers' error handling knows it by this flag and leaves the state alone
+function overtakenStart() {
+  const e = new Error('Spotify start overtaken by a stop or another start')
+  e.overtaken = true
+  return e
+}
+
 function playOnDevice(playOptions) {
+  const generation = playbackGeneration
+  const overtaken = () => generation !== playbackGeneration || isPlaybackBlocked()
   return spotifyApi.play(playOptions).catch(async (err) => {
     if (err?.statusCode !== 404) throw err
     // the display's device (or, without one, no active device at all): the display signs in anew first
     if (!playOptions.device_id || playOptions.device_id === displaySpotifyDevice) {
       const fresh = await recoverDisplayDevice()
+      if (overtaken()) throw overtakenStart()
       if (fresh) {
         activeDevice = fresh
         // (a moment for Spotify to list the new device)
         await new Promise((r) => setTimeout(r, 1500))
+        if (overtaken()) throw overtakenStart()
         return spotifyApi.play({ ...playOptions, device_id: fresh })
       }
     }

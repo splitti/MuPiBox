@@ -438,7 +438,15 @@ export class PlayerPage implements OnInit, AfterViewInit {
     return 20 - 17 * (this.loadProgress / 100)
   }
 
+  // The timer for the end of the album's last track (see updateProgress) taken off: a seek, a pause or a step to
+  // another track - the next tick sets it anew if the end is still near
+  private cancelAlbumEnd() {
+    clearTimeout(this.albumEndTimer)
+    this.albumEndTimer = undefined
+  }
+
   seek() {
+    this.cancelAlbumEnd()
     const newValue = +this.range.value
     this.seekHold = { value: newValue, until: Date.now() + 3000 }
     if (this.media.type === 'spotify') {
@@ -574,9 +582,14 @@ export class PlayerPage implements OnInit, AfterViewInit {
         if (left < 4000) {
           // (stopped 1.2 s before the end: the SDK's position is up to a second old, and the stop takes its way to
           // Spotify - at 0.4 s autoplay had loaded the next album's track already; the end of a track is mostly silence)
+          const trackId = sp.item?.id
           this.albumEndTimer = setTimeout(() => {
             this.albumEndTimer = undefined
             if (this.isLeaving) return
+            // (still this track near its end, playing - a seek back, a pause or another track meanwhile: no end; the
+            // controls take the timer off too, see cancelAlbumEnd)
+            const nowSp = this.currentPlayedSpotify
+            if (!nowSp?.is_playing || nowSp.item?.id !== trackId || (nowSp.item?.duration_ms ?? 0) - (nowSp.progress_ms ?? 0) > 4000) return
             this.isLeaving = true
             this.albumEnded = true
             this.leavePage('album end (last track finished)')
@@ -865,6 +878,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   }
 
   skipPrev() {
+    this.cancelAlbumEnd()
     if (this.playing) {
       this.playerService.sendCmd(PlayerCmds.PREVIOUS)
     } else {
@@ -874,6 +888,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   }
 
   skipNext() {
+    this.cancelAlbumEnd()
     if (this.playing) {
       this.playerService.sendCmd(PlayerCmds.NEXT)
     } else {
@@ -883,6 +898,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   }
 
   toggleshuffle() {
+    this.cancelAlbumEnd()
     if (this.media.shuffle) {
       this.shufflechanged++
       this.media.shuffle = false
@@ -895,6 +911,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   }
 
   playPause() {
+    this.cancelAlbumEnd()
     if (this.playing) {
       //this.playing = false;
       this.playerService.sendCmd(PlayerCmds.PAUSE)
@@ -912,6 +929,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   }
 
   seekBack() {
+    this.cancelAlbumEnd()
     this.playerService.sendCmd(PlayerCmds.SEEKBACK)
   }
 

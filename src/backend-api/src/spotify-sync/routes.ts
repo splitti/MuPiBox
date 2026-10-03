@@ -15,7 +15,7 @@ import { promises as fsPromises } from 'node:fs'
 import { Router } from 'express'
 import { loadSpotifySyncConfig, loadSpotifyTokenStore } from './config-loader'
 import { getValidAccessToken, requiresReAuth, tokenStillValid } from './auth'
-import { fetchArtistAlbums } from './playlists'
+import { fetchArtistAlbums, SpotifyApiException } from './playlists'
 import { spotifyBlock } from '../spotify-block'
 import { readStateFile } from './state-file'
 import { triggerManualSync } from './scheduler'
@@ -217,6 +217,11 @@ export function createSpotifySyncRouter(deps: RunSyncDeps): Router {
     try {
       albums = await fetchArtistAlbums(artistId, tok.token, sub?.album_types ?? 'album')
     } catch (err) {
+      // (Spotify blocks the box: the app says so - see spotify-block.ts)
+      if (err instanceof SpotifyApiException && err.detail.kind === 'rate-limit') {
+        res.status(429).json({ error: 'spotify_blocked', retryAfterSeconds: err.detail.retryAfterSeconds })
+        return
+      }
       res.status(502).json({ error: `artist albums fetch failed: ${(err as Error).message}` })
       return
     }
