@@ -2312,8 +2312,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(400).json({ error: 'clientSecret must be 16-64 alphanumeric characters when provided' })
       return
     }
-    // Another Spotify app: Spotify's block of the old one (spotify-block.ts) does not hold for it - asked again at once.
-    // (A new login with the same app keeps the block: Spotify blocks the app, not the login.)
+    // Another Spotify app: asked again at once instead of waiting for the old app's block (spotify-block.ts). It does not
+    // always help - in a test (03.10.) Spotify blocked the new app of the same account at once, so the block seems to
+    // hold for the account; the box then has the new time from that answer. (A new login with the same app keeps it.)
     if (clientId !== deps.getMupiboxConfig()?.spotify?.clientId) clearSpotifyBlock('another Spotify app (Client ID)')
     await deps.updateMupiboxConfig((cfg) => {
       const spotify = ((cfg.spotify as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>

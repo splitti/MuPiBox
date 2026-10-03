@@ -3,8 +3,9 @@
 // Smart-Sync (spotify-sync/state-machine.ts) use the same Spotify app, and each request during a block only keeps it
 // going. Kept on the SD card (cache/spotify-block.json, written only when Spotify sets a block): it outlasts a restart
 // of the box too - kept in RAM before, the box asked Spotify again right after booting and was blocked anew.
-// It ends with its time (nothing asks Spotify before - the first answer after it is the sign), or when another
-// Spotify app (Client ID) is entered in the app.
+// It ends with its time (nothing asks Spotify before - the first answer after it is the sign). Another Spotify app
+// (Client ID) entered in the app lets the box ask again at once - Spotify may block that one too (seen 03.10.: the
+// block seems to hold for the account), then its answer sets the block anew.
 
 import * as fs from 'node:fs'
 import * as path from 'node:path'
