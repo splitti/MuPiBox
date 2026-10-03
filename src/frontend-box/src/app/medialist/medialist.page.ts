@@ -14,7 +14,7 @@ import {
 } from '@ionic/angular/standalone'
 import { addIcons } from 'ionicons'
 import { arrowBackOutline } from 'ionicons/icons'
-import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs'
+import { catchError, combineLatest, EMPTY, filter, map, of, switchMap, tap } from 'rxjs'
 
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
@@ -60,6 +60,10 @@ export class MedialistPage extends SwiperIonicEventsHelper {
   private levelsAbove: Record<string, string>[] = []
   private currentLevel: Record<string, string> = {}
   protected media: Signal<Media[]>
+  // the list on the screen (as JSON) and what it is of: a quiet reload that brings the same list changes nothing
+  private shownListJson = ''
+  private shownArtist: Artist | undefined
+  private shownCategory: CategoryType | undefined
   // A podcast or NAS folder that came back with nothing: the load failed (a real one always has entries)
   protected unavailable: Signal<boolean> = computed(() => {
     const type = this.artist()?.coverMedia?.type
@@ -165,8 +169,18 @@ export class MedialistPage extends SwiperIonicEventsHelper {
         // updates without leaving and re-entering the artist.
         this.mediaService.getLibraryVersion(),
       ]).pipe(
-        tap(() => this.isLoading.set(true)),
-        switchMap(([category, artist, version]) => {
+        // The same list again because the library changed (Smart-Sync, upload): loaded quietly - no loading dots,
+        // nothing when it looks the same, the list stays on an error (as on the start page)
+        map(([category, artist, version]) => ({
+          category,
+          artist,
+          version,
+          background: artist !== undefined && artist === this.shownArtist && category === this.shownCategory,
+        })),
+        tap(({ background }) => {
+          if (!background) this.isLoading.set(true)
+        }),
+        switchMap(({ category, artist, version, background }) => {
           if (artist === undefined) {
             return of([])
           }
@@ -202,7 +216,7 @@ export class MedialistPage extends SwiperIonicEventsHelper {
           return this.mediaService.fetchMediaFromArtist(artist, category, version).pipe(
             catchError((error) => {
               console.error(error)
-              return of([])
+              return background ? EMPTY : of([])
             }),
             map((media) => {
               return this.sortMedia(
@@ -211,6 +225,14 @@ export class MedialistPage extends SwiperIonicEventsHelper {
                 isShow ? MediaSorting.ReleaseDateDescending : MediaSorting.AlphabeticalAscending,
               )
             }),
+            map((media) => ({ media, json: JSON.stringify(media) })),
+            filter(({ json }) => !background || json !== this.shownListJson),
+            tap(({ json }) => {
+              this.shownListJson = json
+              this.shownArtist = artist
+              this.shownCategory = category
+            }),
+            map(({ media }) => media),
           )
         }),
         tap(() => this.isLoading.set(false)),

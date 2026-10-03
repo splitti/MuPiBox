@@ -2,7 +2,7 @@
   @if (coverflow()) {
   <!-- Cover Flow: the centered cover faces front, all others are tilted towards it (see applyCoverflow). -->
     <swiper-container #swiper class="coverflow" (click)="slideClicked($event)" (pointerdown)="fewPointerDown($event)" (pointermove)="fewPointerMove($event)" (pointerup)="fewPointerUp($event)" (pointercancel)="fewPointerUp($event)" (swiperprogress)="applyCoverflow()" (swipersettranslate)="applyCoverflow()" (swiperinit)="applyCoverflow()" watch-slides-progress="true" centered-slides="true" slides-per-view="auto" space-between="-272" grab-cursor="true" touch-ratio="0.67" [attr.scrollbar]="!hideScrollbar()" scrollbar-hide="false" scrollbar-draggable="true" scrollbar-drag-size="auto" scrollbar-snap-on-release="true">
-      @for (currentData of shownData(); track $index + ":" + currentData.name) {
+      @for (currentData of shownData(); track currentData.trackKey) {
         <swiper-slide>
           <ion-grid>
             <ion-row class="img-row">
@@ -82,7 +82,7 @@
   <swiper-container #swiper slides-per-view="3" [class.km-few]="km() && shownData().length < 3" [attr.scrollbar]="!hideScrollbar()" scrollbar-hide="false" scrollbar-draggable="true" scrollbar-drag-size="auto" scrollbar-snap-on-release="true" free-mode="false" css-mode="true"
     speed="900" touch-ratio="0.5" slides-per-group="1" resistance="true" resistance-ratio="0.85"
     (swiperslidechange)="onSlideChange($event)">
-      @for (currentData of shownData(); track $index + ":" + currentData.name) {
+      @for (currentData of shownData(); track currentData.trackKey) {
         <swiper-slide>
           <ion-grid>
             <ion-row class="img-row">

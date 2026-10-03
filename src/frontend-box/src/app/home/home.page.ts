@@ -21,7 +21,7 @@ import {
   serverOutline,
   timerOutline,
 } from 'ionicons/icons'
-import { catchError, combineLatest, distinctUntilChanged, map, of, switchMap, tap } from 'rxjs'
+import { catchError, combineLatest, distinctUntilChanged, EMPTY, filter, map, type Observable, of, switchMap, tap } from 'rxjs'
 import { environment } from 'src/environments/environment'
 
 import type { Artist } from '../artist'
@@ -81,6 +81,8 @@ export class HomePage extends SwiperIonicEventsHelper {
   protected artists: Signal<Artist[]>
   // Category of the list currently shown; a reload of the same category keeps the scroll position.
   private lastShownCategory: string | undefined
+  // the list on the screen as JSON: a reload in the background that brings the same list changes nothing
+  private shownListJson = ''
   protected swiperData: Signal<SwiperData<Artist>[]>
   protected isOnline: Signal<boolean>
   protected isLoading: WritableSignal<boolean> = signal(false)
@@ -156,29 +158,39 @@ export class HomePage extends SwiperIonicEventsHelper {
         // add/remove shows up without a manual reload), but never on bare
         // online/offline flips.
         distinctUntilChanged((a, b) => a.category === b.category && a.version === b.version && a.tick === b.tick),
-        tap(() => this.isLoading.set(true)),
-        switchMap(({ category }) => {
-          return this.mediaService.fetchArtistData(category).pipe(
-            catchError((error) => {
+        // The list of this tab is on the screen already and the library changed (Smart-Sync, NAS, upload): it is
+        // loaded again quietly - no loading dots, only the finished list, nothing at all when the start page looks
+        // the same as before, and on an error the list stays. Each step used to rebuild the covers and made them jump.
+        map((request) => ({ ...request, background: request.category === this.lastShownCategory })),
+        tap(({ background }) => {
+          if (!background) this.isLoading.set(true)
+        }),
+        switchMap(({ category, background }) => {
+          return this.mediaService.fetchArtistData(category, background).pipe(
+            catchError((error): Observable<Artist[]> => {
               console.error(error)
-              return of([])
+              return background ? EMPTY : of([])
             }),
-            map((artists) => ({ category, artists })),
+            map((artists) => ({ category, artists, json: JSON.stringify(artists) })),
+            filter(({ json }) => !background || json !== this.shownListJson),
           )
         }),
         // Back to the first artist only when the tab changed. A reload because the library changed
         // (Smart-Sync) keeps the position - it used to throw the child back to the start.
-        tap(({ category }) => {
+        tap(({ category, json }) => {
+          this.shownListJson = json
           if (category !== this.lastShownCategory) {
             this.lastShownCategory = category
             this.resetSwiperPosition()
           }
         }),
         map(({ artists }) => artists),
-        tap(() => this.isLoading.set(false)),
-        // the first list is there: the boot screen of index.html may give way to the page (a moment later, when the
-        // first covers are drawn - else the page showed empty for an instant)
-        tap(() => window.setTimeout(() => (window as unknown as { mupiBootDone?: (what: string) => void }).mupiBootDone?.('list'), 250)),
+        tap(() => {
+          this.isLoading.set(false)
+          // the first list is there: the boot screen of index.html may give way to the page (a moment later, when the
+          // first covers are drawn - else the page showed empty for an instant)
+          window.setTimeout(() => (window as unknown as { mupiBootDone?: (what: string) => void }).mupiBootDone?.('list'), 250)
+        }),
       ),
     )
 

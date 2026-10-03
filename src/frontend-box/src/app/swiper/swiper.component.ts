@@ -46,6 +46,8 @@ export interface SwiperData<T> {
   isNew?: boolean
   progress?: number
   done?: boolean
+  // (set by the swiper itself: what the list keeps a slide by - its name, see entryKeys)
+  trackKey?: string
 }
 
 @Component({
@@ -214,10 +216,19 @@ export class SwiperComponent<T> {
       // on SwiperData.imgSrc aren't cloneable so keep them by reference.
       const src = this.data() ?? [] // the list can still be undefined while a tab (e.g. NAS) is loading
       const limit = Math.min(this.renderableLimit(), src.length)
-      const cloned = src
-        .slice(0, limit)
-        .map((d) => ({ name: d.name, imgSrc: d.imgSrc, data: structuredClone(d.data), kind: d.kind, synced: d.synced }))
+      const keys = SwiperComponent.entryKeys(src)
+      // (all fields of the entry - isNew, progress, done of a podcast's episodes were lost here)
+      const cloned = src.slice(0, limit).map((d, i) => ({ ...d, data: structuredClone(d.data), trackKey: keys[i] }))
       return cloned
+    })
+
+    // The list was loaded again while it is shown (or while the page is away, e.g. in the player) because the library
+    // changed: it stays on the cover it stood on - found by its name, not by its number. An entry added or removed
+    // before it moved the list to another cover, and that looked like the covers jumping on their own.
+    effect(() => {
+      const data = this.data() ?? []
+      const key = this.positionKey()
+      untracked(() => this.keepPlaceOnNewList(data, key))
     })
 
     // Restore cached scroll position when page becomes visible. Tracks
@@ -423,7 +434,54 @@ export class SwiperComponent<T> {
     }
   }
 
+  // A key per entry that stays the same when entries are added or removed elsewhere in the list: its name, and how
+  // often that name came before (two tiles can have the same name - a NAS folder next to the one on the SD card).
+  private static entryKeys<D>(list: SwiperData<D>[]): string[] {
+    const seen = new Map<string, number>()
+    return list.map((entry) => {
+      const n = seen.get(entry.name) ?? 0
+      seen.set(entry.name, n + 1)
+      return `${entry.name}#${n}`
+    })
+  }
+
+  // the list the remembered position belongs to, and its positionKey (a folder level change is not a new list of the
+  // same level: the positionKey effect above handles it)
+  private placeList: SwiperData<T>[] = []
+  private placeListKey: string | undefined
+
+  private keepPlaceOnNewList(data: SwiperData<T>[], key: string | undefined): void {
+    const before = this.placeList
+    const sameLevel = key === this.placeListKey
+    this.placeList = data
+    this.placeListKey = key
+    if (!sameLevel || before.length === 0 || data.length === 0 || before === data) return
+    const shown = this.pageIsShown()
+    // (a restore that has not happened yet still goes to the remembered number: that one is moved instead)
+    const position = shown && !this.pendingRestore ? this.currentPosition() : this.cachedSwiperPosition
+    const oldKeys = SwiperComponent.entryKeys(before)
+    const newKeys = SwiperComponent.entryKeys(data)
+    const found = position < oldKeys.length ? newKeys.indexOf(oldKeys[position]) : -1
+    const target = found >= 0 ? found : Math.min(position, data.length - 1)
+    this.cachedSwiperPosition = target
+    if (key) SwiperComponent.positions.set(key, target)
+    this.selectedIndex = target
+    this.stageIndex.set(target)
+    if (!shown || this.pendingRestore) return
+    this.renderableLimit.set(Math.max(this.renderableLimit(), target + 12))
+    // once the new slides are in the DOM: the swiper counts them again and stands where it stood, without gliding
+    setTimeout(() => {
+      const sw = this.swiper()
+      if (!sw || !this.pageIsShown()) return
+      ;(sw as unknown as { update?: () => void }).update?.()
+      if (!this.kmStage() && !this.isFewCovers() && sw.activeIndex !== target) sw.slideTo(target, 0)
+      this.applyCoverflow()
+    }, 0)
+  }
+
   public resetSwiperPosition(): void {
+    // (another tab: its list starts at the first cover, it does not look for the cover of the list before)
+    this.placeList = []
     this.swiper()?.slideTo(0, 0)
     this.cachedSwiperPosition = 0
     this.pendingRestore = false

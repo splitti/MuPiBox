@@ -30,6 +30,7 @@ import {
   mergeAll,
   mergeMap,
   retry,
+  scan,
   share,
   shareReplay,
   startWith,
@@ -355,6 +356,7 @@ export class MediaService {
     if (!this.libraryVersion$) {
       this.libraryVersion$ = this.versions().pipe(
         map((v) => (v.version === '' ? '' : `${v.version}|${v.local}`)),
+        MediaService.keepLastVersion(),
         distinctUntilChanged(),
       )
     }
@@ -365,10 +367,18 @@ export class MediaService {
     if (!this.dataVersion$) {
       this.dataVersion$ = this.versions().pipe(
         map((v) => v.version),
+        MediaService.keepLastVersion(),
         distinctUntilChanged(),
       )
     }
     return this.dataVersion$
+  }
+
+  // A poll without an answer ('': the box was busy, e.g. with a Smart-Sync) is no change of the library: the last
+  // version stays. It used to count as one - and the next answer as another, so the pages loaded their lists twice
+  // for nothing, and the covers on the start page jumped. Only as long as no answer came at all, '' goes through.
+  private static keepLastVersion() {
+    return scan<string, string>((last, version) => (version === '' ? last : version), '')
   }
 
   /** Whether the NAS tab is wanted: shown NAS folders are left that have no category (older backends: always). */
@@ -570,8 +580,10 @@ export class MediaService {
   }
 
   // The home page: the kept list at once and, when it is out of date, the new one after it (see homeListMedia).
-  public fetchArtistData(category: CategoryType): Observable<Artist[]> {
-    return this.fetchMedia(category, undefined, true).pipe(
+  // background: the list is already on the screen and is loaded again because the library changed - only the
+  // finished list then, no steps on the way (they made the covers jump or the list shrink for a moment).
+  public fetchArtistData(category: CategoryType, background = false): Observable<Artist[]> {
+    return this.fetchMedia(category, undefined, !background, background).pipe(
       map((media: Media[]) => {
         // Separate playlists without artists from regular media
         const regularMedia: Media[] = []
@@ -805,7 +817,7 @@ export class MediaService {
     })
   }
 
-  private fetchMedia(category: CategoryType, onlyArtist?: string, showKept = false): Observable<Media[]> {
+  private fetchMedia(category: CategoryType, onlyArtist?: string, showKept = false, background = false): Observable<Media[]> {
     if (category === 'nas') {
       // NAS media is fetched live from the NAS on every call (never cached
       // into data.json), so it bypasses the Spotify-oriented updateMedia pipeline
@@ -840,14 +852,19 @@ export class MediaService {
         .pipe(catchError(() => of([] as Media[])))
       // NAS folders the parents put into this category (app: NAS › "Anzeigen"). The NAS may answer slowly or not at
       // all: the list shows at once with the NAS folders of last time, the new ones follow.
-      const nasFolders = this.http.get<Media[]>(`${this.getApiBackendUrl()}/nas/artists?category=${category}`).pipe(
+      // (loaded again in the background: only the NAS's answer, not last time's list first)
+      const nasAnswer = this.http.get<Media[]>(`${this.getApiBackendUrl()}/nas/artists?category=${category}`).pipe(
         timeout(20000),
         retry({ count: 2, delay: () => timer(5000) }),
         tap((list) => this.nasInCategory.set(category, list)),
         catchError(() => of(this.nasInCategory.get(category) ?? [])),
-        startWith(this.nasInCategory.get(category) ?? []),
-        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
       )
+      const nasFolders = background
+        ? nasAnswer
+        : nasAnswer.pipe(
+            startWith(this.nasInCategory.get(category) ?? []),
+            distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+          )
       // combineLatest: the data.json part may come twice (kept list, then the new one), each time with the folders.
       // Home page (showKept): a part not there after a few seconds is shown empty first, the rest follows - a big
       // library made from scratch (after an update: many Spotify entries) showed only loading dots for minutes, and
