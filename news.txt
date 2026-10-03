@@ -74,6 +74,7 @@
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Shares & remote access (Samba, FTP, VNC) moved from Settings › Network to Settings › Services, as the last block "Access to the box". Network shows the connection only: WiFi and LAN (suggested by hyperbit).</li>
 <li id='linews' class='linews'>A power button at the top of every page, next to light/dark: restart or switch off the box, each after a confirmation (suggested by hyperbit). On a narrow phone the buttons at the top are a little smaller, so a page's title still fits.</li>
+<li id='linews' class='linews'>Start page, quick actions: without a daily limit "+15 min" is not shown (it adds to the limit, so it did nothing) - the other three share the row, on the phone and on the desktop; switching the limit on brings it back.</li>
 </ul>
 <b>Sound card, NAS, player</b>
 </ul>

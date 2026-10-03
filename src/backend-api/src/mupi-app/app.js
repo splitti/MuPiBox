@@ -893,8 +893,8 @@ function startSkeleton() {
         ${tile('spielzeit', 'moon', 'Ruhezeit', '–', 'quiet')}${tile('wlan', 'wifi', 'WLAN', '–')}
       </div>
       <div class="section-label">Sofort-Aktionen</div>
-      <div class="quick">
-        <button class="qbtn accent" id="q-plus">${icon('plus', 22)}<span>+15 min</span></button>
+      <div class="quick${startState.playtimeEnabled === false ? ' three' : ''}" id="quick">
+        <button class="qbtn accent" id="q-plus"${startState.playtimeEnabled === false ? ' hidden' : ''}>${icon('plus', 22)}<span>+15 min</span></button>
         <button class="qbtn blue" id="q-quiet">${icon('moon', 22)}<span id="q-quiet-label">Ruhe sofort</span></button>
         <button class="qbtn" id="q-sleep">${icon('time', 22)}<span id="q-sleep-label">Schlaftimer</span></button>
         <button class="qbtn" id="q-say">${icon('vol', 22)}<span>Durchsage</span></button>
@@ -921,7 +921,9 @@ function tile(target, ic, label, val, id) {
     <span class="tile-head">${icon(ic, 16)}${label}</span><b class="tile-val">${val}</b><span class="tile-bar" hidden><i></i></span></button>`
 }
 
-const startState = { maxVolume: 100, volTimer: null, sleep: null, quietUntil: 0 }
+// (playtimeEnabled: the daily limit as last seen - the start page is drawn with or without "+15 min" before its status
+// has come, so the button does not show up and go again on every visit)
+const startState = { maxVolume: 100, volTimer: null, sleep: null, quietUntil: 0, playtimeEnabled: null }
 
 // After a quick action: the start page's state now and twice more (the player takes a change over within seconds)
 function statusSoon(root) {
@@ -1146,11 +1148,13 @@ async function loadStatus(root) {
   else setTile(root, 'tile-akku', Number.isFinite(pct) ? `${pct} %${charging ? ' ⚡' : ''}` : '–', Number.isFinite(pct) ? pct : null, pct <= 15 ? 'danger' : pct <= 30 ? 'warn' : 'ok')
   // listened today
   const p = pt.body?.playtime ?? {}
-  // (bonus minutes go onto today's limit: without one they do nothing)
+  // (bonus minutes go onto today's limit: without one they do nothing - the button is not shown then, the other three
+  // take the row; the limit switched on or off shows at the next status)
   const plus = $('#q-plus', root)
-  if (plus) {
-    plus.disabled = !p.enabled
-    plus.title = p.enabled ? '' : 'Nur mit Tageslimit'
+  if (plus && pt.ok) {
+    startState.playtimeEnabled = !!p.enabled
+    plus.hidden = !p.enabled
+    $('#quick', root)?.classList.toggle('three', !p.enabled)
   }
   if (p.enabled && Number.isFinite(p.limitMinutes)) {
     const used = Math.floor((p.usedSeconds ?? 0) / 60)
