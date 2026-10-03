@@ -10,5 +10,5 @@
 
 <ion-content class="resume-content">
   <mupi-loading [loading]="isLoading()"></mupi-loading>
-  <mupi-swiper [data]="swiperData()" (elementClicked)="this.coverClicked($event.data)"></mupi-swiper>
+  <mupi-swiper [data]="swiperData()" [compact]="headerHidden()" (elementClicked)="this.coverClicked($event.data)"></mupi-swiper>
 </ion-content>

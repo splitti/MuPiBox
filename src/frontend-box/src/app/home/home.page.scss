@@ -1,16 +1,3 @@
-// Two-finger swipe up hides the top bar, swipe down shows it again (see HomePage): it folds up to nothing, the covers
-// below move up and get the room
-.home-header {
-    max-height: 200px;
-    overflow: hidden;
-    transition: max-height 0.25s ease, opacity 0.2s ease;
-}
-.home-header.header-hidden {
-    max-height: 0;
-    opacity: 0;
-    pointer-events: none;
-}
-
 ion-toolbar {
     ion-button {
         height: 70px !important;

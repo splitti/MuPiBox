@@ -7,6 +7,7 @@ import { take } from 'rxjs/operators'
 import { environment } from 'src/environments/environment'
 import { CurrentMediaService } from './current-media.service'
 import { DisplayManagerService } from './display-manager.service'
+import { HeaderVisibilityService } from './header-visibility.service'
 import { ExternalPlaybackNavigatorService } from './external-playback-navigator.service'
 import { MediaService } from './media.service'
 import { Monitor } from './monitor'
@@ -46,6 +47,7 @@ export class AppComponent {
     _displayManager: DisplayManagerService,
     _stalePageReload: StalePageReloadService,
     _kmTheme: KmThemeService,
+    _headerVisibility: HeaderVisibilityService,
     playtimeService: PlaytimeService,
     private mediaService: MediaService,
     private currentMediaService: CurrentMediaService,

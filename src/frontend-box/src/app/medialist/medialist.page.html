@@ -28,5 +28,5 @@
   @if (unavailable()) {
     <mupi-media-unavailable [nas]="artist()?.coverMedia?.type === 'nas'" [spotify]="spotifyUnavailable()"></mupi-media-unavailable>
   }
-  <mupi-swiper [data]="swiperData()" [positionKey]="category() + '|' + (artist()?.name ?? '') + '|' + (artist()?.coverMedia?.libraryPath ?? artist()?.coverMedia?.nasPath ?? '')" (elementClicked)="this.coverClicked($event.data)"></mupi-swiper>
+  <mupi-swiper [data]="swiperData()" [compact]="headerHidden()" [positionKey]="category() + '|' + (artist()?.name ?? '') + '|' + (artist()?.coverMedia?.libraryPath ?? artist()?.coverMedia?.nasPath ?? '')" (elementClicked)="this.coverClicked($event.data)"></mupi-swiper>
 </ion-content>

@@ -96,3 +96,18 @@ html {
 @import "./theme/km-round2";
 /* coverflow: the round-2 header, player and track list in its own look - see theme/cf-round2.scss */
 @import "./theme/cf-round2";
+
+// The top bar folded away (HeaderVisibilityService puts the class on the body): on the start page, the lists, the player
+// and "continue listening" it folds up to nothing and the content gets the room.
+body.mupi-header-hidden {
+    app-home ion-header,
+    app-medialist ion-header,
+    app-player ion-header,
+    app-resume ion-header {
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+        pointer-events: none;
+        transition: max-height 0.25s ease, opacity 0.2s ease;
+    }
+}
