@@ -618,6 +618,8 @@ rm -f /tmp/mupibox-update-failed
 	chown dietpi:dietpi /home/dietpi/.bashrc >&3 2>&3
 	chmod 755 /usr/local/bin/mupibox/* >&3 2>&3
 	chmod 755 /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
+	# the WiFi guard in front of Debian's wpa_action (a late "disconnected" took a working WiFi down at the start)
+	/usr/local/bin/mupibox/mupi_wpa_guard.sh install >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Copy MuPiBox-Files  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
