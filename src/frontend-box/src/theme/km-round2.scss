@@ -593,9 +593,6 @@ body.km {
     box-sizing: border-box;
   }
 
-  &.km-light .player-content .kt {
-    box-shadow: 0 6px 0 var(--km-shadow);
-  }
 
   // left 200: cover 160 (radius 20), "Zu" 160 × 64 (radius 32)
   .kt-side {
@@ -690,10 +687,6 @@ body.km {
     }
   }
 
-  &.km-light .kt-row:not(.kt-on) {
-    background: #eaf4fa;
-    color: var(--km-ink);
-  }
 
   .kt-num {
     flex: 0 0 44px;
@@ -798,5 +791,22 @@ body.km.km-legacy {
 
   .kp-radio .kp-ctrl {
     top: 80px;
+  }
+}
+
+// themes with a white panel (--km-night-2 white): the track list panel gets a shadow, its rows a light blue (§5);
+// Tag & Nacht only by day (at night its panel is dark)
+$km-white-panel: bastelpapier einhorn eisenbahn eiswelt feuerwehr kaetzchen light meerjungfrau pferdehof piratenbucht
+  prinzessin ritterburg safari schmetterlinge sonnenhof tagundnacht zuckerland;
+@each $id in $km-white-panel {
+  body.km.km-theme-#{$id}:not(.km-night) {
+    .player-content .kt {
+      box-shadow: 0 6px 0 var(--km-shadow);
+    }
+
+    .kt-row:not(.kt-on) {
+      background: #eaf4fa;
+      color: var(--km-ink);
+    }
   }
 }
