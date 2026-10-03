@@ -167,10 +167,17 @@ async function networkOf(iface: string, ssid: string): Promise<{ id: string; act
   return null
 }
 
-/** The network's id_str set (or, with '', taken off) and saved */
+/**
+ * The network's id_str set (or, with '', taken off) and saved. A fixed address set but not saved: the id_str before is
+ * put back in the running wpa_supplicant too - else it would use the new one at the next connection while the file
+ * (and the app) keep it paused. Taken off but not saved, it stays off while the box runs: DHCP is the safe side.
+ */
 async function setIdStr(iface: string, id: string, idStr: string): Promise<boolean> {
-  const r = await cli(iface, 'set_network', id, 'id_str', `"${idStr}"`)
-  return /OK/.test(r.stdout) && /OK/.test((await cli(iface, 'save_config')).stdout)
+  const before = idStr ? (await cli(iface, 'get_network', id, 'id_str')).stdout.trim() : ''
+  if (!/OK/.test((await cli(iface, 'set_network', id, 'id_str', `"${idStr}"`)).stdout)) return false
+  if (/OK/.test((await cli(iface, 'save_config')).stdout)) return true
+  if (idStr) await cli(iface, 'set_network', id, 'id_str', /^"[^"]*"$/.test(before) ? before : '""')
+  return false
 }
 
 /**
@@ -286,7 +293,18 @@ async function watch(iface: string): Promise<void> {
     await switchTo(iface, null)
     return
   }
-  if (entry.paused) return
+  if (entry.paused) {
+    // Paused, but wpa_supplicant still names the network by its id_str (taking it off failed - a full card while
+    // saving, or when it was taken back): the box would run the paused fixed address, unwatched. Taken off, DHCP.
+    const ssid = /^ssid=(.*)$/m.exec(status)?.[1] ?? entry.ssid
+    console.warn(`${new Date().toLocaleString()}: [wifi-static] ${ssid}: fixed address paused but still in use - back to DHCP`)
+    await serialized(async () => {
+      const n = await networkOf(iface, entry.ssid)
+      if (n) await setIdStr(iface, n.id, '')
+    })
+    await switchTo(iface, null)
+    return
+  }
   // (most routers answer a ping; three misses in a row, and an address from DHCP is the safe side)
   if (await reachable(iface, entry.gateway)) {
     misses = 0

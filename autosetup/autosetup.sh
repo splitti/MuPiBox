@@ -436,7 +436,7 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ /home/dietpi/MuPiBox /home/dietpi/.bashrc >&3 2>&3
 	chmod 755 /usr/local/bin/mupibox/* /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	# the WiFi guard in front of Debian's wpa_action (a late "disconnected" took a working WiFi down at the start)
-	/usr/local/bin/mupibox/mupi_wpa_guard.sh install >&3 2>&3
+	/usr/local/bin/mupibox/mupi_wpa_guard.sh install >&3 2>&3 || echo "## WiFi guard not installed - Debian's wpa_action stays as it was ##" >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Copy MuPiBox files and themes ## finished after $((after - before)) seconds" >&3 2>&3
 	STEP=$((STEP + 1))

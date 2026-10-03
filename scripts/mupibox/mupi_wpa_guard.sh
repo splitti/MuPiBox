@@ -17,12 +17,23 @@ DIVERTED="${REG}.distrib"
 case "$1" in
 	install)
 		[ -f "${GUARD}" ] || { echo "${GUARD} missing"; exit 1; }
+		# The guard is put next to it first and takes the name only by a rename: a step that fails (a full card) never
+		# leaves the path without a working script - Debian's is put back then. Without wpa_action the WiFi gets no
+		# address at all.
+		NEW="${REG}.mupibox-new"
+		install -m 755 -o root -g root "${GUARD}" "${NEW}" || { rm -f "${NEW}"; echo "guard not installed"; exit 1; }
+		fresh=0
 		if ! dpkg-divert --list "${REG}" | grep -q .; then
-			dpkg-divert --local --rename --divert "${DIVERTED}" --add "${REG}" || exit 1
+			dpkg-divert --local --rename --divert "${DIVERTED}" --add "${REG}" || { rm -f "${NEW}"; exit 1; }
+			fresh=1
 		fi
 		# Debian's script must be in place before the guard takes its name - else it would be gone
-		[ -x "${DIVERTED}" ] || { echo "${DIVERTED} missing - guard not installed"; exit 1; }
-		install -m 755 -o root -g root "${GUARD}" "${REG}" || exit 1
+		if [ ! -x "${DIVERTED}" ] || ! mv -f "${NEW}" "${REG}"; then
+			rm -f "${NEW}"
+			[ ${fresh} = 1 ] && dpkg-divert --local --rename --remove "${REG}"
+			echo "${DIVERTED} missing or guard not moved in - guard not installed"
+			exit 1
+		fi
 		echo "WiFi guard in front of ${DIVERTED}"
 		;;
 	remove)
