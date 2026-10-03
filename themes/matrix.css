@@ -6,9 +6,13 @@
 @font-face { font-family: "Fredoka"; src: url("/theme-data/_fonts/Fredoka-Variable.ttf") format("truetype"); font-weight: 300 700; font-display: block; }
 @font-face { font-family: "Pixolletta 8px"; src: url("/theme-data/matrix/Pixolletta8px.ttf") format("truetype"); font-display: block; }
 
+/* Runde 2 (§9): eigene Schrift auch für die Oberfläche - Ziffern und Zeichen bleiben Fredoka (unicode-range) */
+@font-face { font-family: 'Pixolletta UI'; src: url('/theme-data/matrix/Pixolletta8px.ttf'); size-adjust:86%;ascent-override:92%;descent-override:26%; unicode-range: U+0020-0024, U+0026-002E, U+003B-10FFFF; }
+body.km.km-theme-matrix { --ion-font-family: 'Pixolletta UI', 'Fredoka', sans-serif; font-family: 'Pixolletta UI', 'Fredoka', sans-serif; font-synthesis: none; }
+
 :root {
   --km-night: #000000;
-  --km-night-2: rgba(0,0,0,.72);
+  --km-night-2: rgba(0,10,0,.86);
   --km-night-3: #0A2A0A;
   --km-night-4: #0F3F0F;
   --km-stack-1: #607560;
@@ -42,10 +46,15 @@
 }
 
 /* Hintergrund: eigenes Bild, oben ein weicher Verlauf für Statusleiste und Reiter */
+/* Runde 2 (Aufgabe A): Verläufe über dem Bild */
 .ion-page {
-  background: linear-gradient(to bottom, rgba(0,0,0,.5) 0, rgba(0,0,0,0) 120px),
+  background: linear-gradient(180deg, rgba(0,0,0,.82) 0, rgba(0,0,0,.35) 96px, rgba(0,0,0,.35) 330px, rgba(0,0,0,.85) 480px),
+              radial-gradient(ellipse 60% 45% at 50% 48%, rgba(0,0,0,.55), transparent),
               var(--km-night) url("/theme-data/matrix/matrix-bg.png") center / cover no-repeat !important;
 }
+/* Runde 2 (Aufgabe A): Namensleisten schwarz mit grünem Rand */
+body.km .title-row ion-card, body.km.km-stage .km-stage-name { background: #000000 !important; border: 2px solid #05FD00 !important; box-sizing: border-box; }
+body.km .title-row ion-card-title, body.km .title-row .truncate-text, body.km.km-stage .km-stage-name, body.km.km-stage .km-stage-name span { color: #9CFF9A !important; }
 .playtime-blocked-overlay, body.km mupi-media-unavailable {
   background: linear-gradient(var(--km-overlay), var(--km-overlay)), var(--km-night) url("/theme-data/matrix/matrix-bg.png") center / cover no-repeat !important;
 }

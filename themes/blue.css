@@ -15,11 +15,11 @@
   --km-shadow: #2C7293;
   --km-overlay: #44AFE2;
   --km-cream: #E6EDEF;
-  --km-ring: #054B61;
+  --km-ring: #FFFFFF;
   --km-ink: #02222C;
   --km-lavender: #B4C9D0;
-  --km-apricot: #44AFE2;
-  --km-apricot-shadow: #2A6D8C;
+  --km-apricot: #FFD27A;
+  --km-apricot-shadow: #C9962A;
   --km-moon: #ABDBF2;
   --km-rose: #E5484D;
   --km-on-bg: #02222C;
@@ -39,7 +39,8 @@
 }
 
 /* Hintergrund: eigene Grundfarbe, ohne Bild */
-.ion-page { background: var(--km-night) !important; }
+/* Runde 2 (Aufgabe A): eigener Hintergrund */
+.ion-page { background: var(--km-night) url("/theme-data/blue/background.svg") center bottom / cover no-repeat !important; }
 .playtime-blocked-overlay { background: var(--km-overlay) !important; }
 
 /* ==== gemeinsamer km-Teil (aus den km-Theme-Dateien, unverändert) ==== */

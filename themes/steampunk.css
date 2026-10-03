@@ -6,6 +6,10 @@
 @font-face { font-family: "Fredoka"; src: url("/theme-data/_fonts/Fredoka-Variable.ttf") format("truetype"); font-weight: 300 700; font-display: block; }
 @font-face { font-family: "Rye"; src: url("/theme-data/steampunk/Rye-Regular.ttf") format("truetype"); font-display: block; }
 
+/* Runde 2 (§9): eigene Schrift auch für die Oberfläche - Ziffern und Zeichen bleiben Fredoka (unicode-range) */
+@font-face { font-family: 'Rye UI'; src: url('/theme-data/steampunk/Rye-Regular.ttf'); size-adjust:84%;ascent-override:96%;descent-override:26%; unicode-range: U+0020-0024, U+0026-002E, U+003B-10FFFF; }
+body.km.km-theme-steampunk { --ion-font-family: 'Rye UI', 'Fredoka', sans-serif; font-family: 'Rye UI', 'Fredoka', sans-serif; font-synthesis: none; }
+
 :root {
   --km-night: #2A1A10;
   --km-night-2: rgba(30,18,10,.72);
@@ -43,8 +47,7 @@
 
 /* Hintergrund: eigenes Bild, oben ein weicher Verlauf für Statusleiste und Reiter */
 .ion-page {
-  background: linear-gradient(to bottom, rgba(0,0,0,.5) 0, rgba(0,0,0,0) 120px),
-              var(--km-night) url("/theme-data/steampunk/steampunk-bg.jpg") center / cover no-repeat !important;
+  background: var(--km-night) url("/theme-data/steampunk/steampunk-bg.jpg") center / cover no-repeat !important;
 }
 .playtime-blocked-overlay, body.km mupi-media-unavailable {
   background: linear-gradient(var(--km-overlay), var(--km-overlay)), var(--km-night) url("/theme-data/steampunk/steampunk-bg.jpg") center / cover no-repeat !important;
@@ -59,6 +62,9 @@ body.km .playtime-blocked-overlay h1 { font-family: var(--km-name-font) !importa
 /* Ring um die runden Bilder: eigenes Rahmenbild statt Farbring */
 body.km .home-content .circle-card { border: 0 !important; padding: 16px !important; background: url("/theme-data/steampunk/steampunk-gear.png") center / contain no-repeat !important; box-shadow: none !important; }
 body.km.km-stage .km-stage .circle-card { border: 0 !important; padding: 18px !important; background: url("/theme-data/steampunk/steampunk-gear.png") center / contain no-repeat !important; }
+/* Runde 2: die Bühne nutzt .km-stage-card.km-round - das Zahnrad auch dort */
+body.km.km-stage .km-stage-card.km-round { border: 0 !important; padding: 18px !important; background: url("/theme-data/steampunk/steampunk-gear.png") center / contain no-repeat !important; }
+body.km.km-stage .km-stage-card.km-round > img { border-radius: 50%; }
 
 /* Reiter-Pille und Titelliste mit der alten Metall-Textur */
 body.km .home-header ion-segment, body.km .player-content .tracklist { background: var(--km-night-2) url("/theme-data/steampunk/steampunk-header.jpg") center / cover !important; background-blend-mode: multiply; }

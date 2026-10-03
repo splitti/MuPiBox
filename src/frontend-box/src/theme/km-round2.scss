@@ -768,3 +768,35 @@ body.km {
     }
   }
 }
+
+// ---------- the old themes (§7): a band under the header on every page, a panel behind the player's controls ----------
+// (the picture themes' dark gradient at the top is gone from their files; the band takes its place - no blur, the
+// picture shows through)
+body.km.km-legacy {
+  .km-r2 .km-bar {
+    background: var(--km-band);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  }
+
+  .kp-panel {
+    display: block;
+    position: absolute;
+    left: 368px;
+    right: 14px;
+    top: 40px;
+    bottom: 12px;
+    border-radius: 28px;
+    background: var(--km-band);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+  }
+
+  // the controls move down a bit on the panel: top 132, gap 10
+  .kp-ctrl {
+    top: 60px;
+    gap: 10px;
+  }
+
+  .kp-radio .kp-ctrl {
+    top: 80px;
+  }
+}

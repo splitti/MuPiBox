@@ -115,6 +115,8 @@ export class KmThemeService {
     const theme = this.theme()
     if (!theme) return
     body.classList.add('km', `km-theme-${theme.id}`)
+    // an old theme of the box in the km layout: header band and player panel (design round 2, §7)
+    if (theme.legacy) body.classList.add('km-legacy')
     const night = this.night()
     if (theme.light && !(night && theme.dayNight && !theme.dayNight.lightAtNight)) body.classList.add('km-light')
     if (this.stage()) body.classList.add('km-stage')

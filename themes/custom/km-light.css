@@ -3,3 +3,5 @@
 .ion-page { background-image: linear-gradient(to bottom, rgba(255,255,255,.6) 0, rgba(255,255,255,0) 120px), url("/theme-data/custom/custom-bg.jpg") !important; }
 /* Bei heller Variante zusätzlich body.km-light setzen (light: true). Achtung: --km-apricot ist hier dunkel → Symbole auf Akzent in Weiß: */
 body.km .km-tab.active ion-icon, body.km .player-content .controls ion-button.km-play { --color: #FFFFFF; color: #FFFFFF; }
+/* Runde 2: Kopfband, Knöpfe, Reiter, Pille (helle Variante) */
+:root { --km-band: rgba(255,255,255,.6); --km-on-band: #1A1A1A; --km-on-band-2: #4A4A4A; --km-btn: #FFFFFF; --km-on-btn: #1A1A1A; --km-tab-idle: #1A1A1A; --km-on-pill: #1A1A1A; }
