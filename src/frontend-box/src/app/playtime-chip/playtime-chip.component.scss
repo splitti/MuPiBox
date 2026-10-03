@@ -66,3 +66,30 @@
     color: #2a1520;
   }
 }
+
+// km themes, design round 2: in the header's status group under WiFi and battery (see km-status-group), 32 high
+:host-context(body.km) .playtime-chip.playtime-chip--inline {
+  position: static;
+  height: 32px;
+  padding: 0 12px;
+  gap: 6px;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 600;
+  background: var(--km-btn);
+  color: var(--km-on-btn);
+
+  ion-icon {
+    font-size: 16px;
+  }
+
+  &[data-level='warning'] {
+    background: var(--km-apricot);
+    color: var(--km-ink);
+  }
+
+  &[data-level='critical'] {
+    background: var(--km-rose);
+    color: #2a1520;
+  }
+}

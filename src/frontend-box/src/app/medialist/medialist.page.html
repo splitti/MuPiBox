@@ -1,4 +1,16 @@
-<ion-header class="medialist-header">
+<ion-header class="medialist-header" [class.km-r2]="km()">
+  @if (km()) {
+    <!-- km themes, design round 2: back (always "back to the choice"), the title, "Läuft gerade" between title and
+         status, WiFi/battery with the listening time -->
+    <div class="km-bar">
+      <button class="km-hbtn" type="button" (click)="goBack()">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6" /></svg>
+      </button>
+      <div class="km-htitle"><span class="km-ht1">{{ artist()?.name }}</span></div>
+      <mupi-now-playing-pill></mupi-now-playing-pill>
+      <mupi-km-status-group></mupi-km-status-group>
+    </div>
+  } @else {
   <ion-toolbar color="light">
     <ion-buttons slot="start">
       <ion-button (click)="goBack()">
@@ -8,6 +20,7 @@
     <ion-title>{{artist()?.name}}</ion-title>
     <span slot="end" class="mupihat-icon-container"><mupi-status></mupi-status></span>
   </ion-toolbar>
+  }
 </ion-header>
 
 <ion-content class="medialist-content">

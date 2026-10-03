@@ -25,7 +25,9 @@
         "outputConnected": "connected",
         "outputOff": "off",
         "outputConnecting": "switching on …",
-        "outputNotFound": "Not found – is it switched on?"
+        "outputNotFound": "Not found – is it switched on?",
+        "pausedLabel": "Paused",
+        "stopLabel": "Stop"
       }
     },
     "de": {
@@ -52,7 +54,9 @@
         "outputConnected": "verbunden",
         "outputOff": "aus",
         "outputConnecting": "einschalten …",
-        "outputNotFound": "Nicht gefunden – ist es an?"
+        "outputNotFound": "Nicht gefunden – ist es an?",
+        "pausedLabel": "Pause",
+        "stopLabel": "Stopp"
       }
     },
     "fr": {
@@ -79,7 +83,9 @@
         "outputConnected": "connecté",
         "outputOff": "éteint",
         "outputConnecting": "allumage …",
-        "outputNotFound": "Introuvable – est-il allumé ?"
+        "outputNotFound": "Introuvable – est-il allumé ?",
+        "pausedLabel": "Pause",
+        "stopLabel": "Arrêter"
       }
     },
     "es": {
@@ -106,7 +112,9 @@
         "outputConnected": "conectado",
         "outputOff": "apagado",
         "outputConnecting": "encendiendo …",
-        "outputNotFound": "No encontrado – ¿está encendido?"
+        "outputNotFound": "No encontrado – ¿está encendido?",
+        "pausedLabel": "En pausa",
+        "stopLabel": "Detener"
       }
     },
     "it": {
@@ -133,7 +141,9 @@
         "outputConnected": "connesso",
         "outputOff": "spento",
         "outputConnecting": "accensione …",
-        "outputNotFound": "Non trovato – è acceso?"
+        "outputNotFound": "Non trovato – è acceso?",
+        "pausedLabel": "In pausa",
+        "stopLabel": "Stop"
       }
     },
     "nl": {
@@ -160,7 +170,9 @@
         "outputConnected": "verbonden",
         "outputOff": "uit",
         "outputConnecting": "inschakelen …",
-        "outputNotFound": "Niet gevonden – staat het aan?"
+        "outputNotFound": "Niet gevonden – staat het aan?",
+        "pausedLabel": "Gepauzeerd",
+        "stopLabel": "Stop"
       }
     },
     "sv": {
@@ -187,7 +199,9 @@
         "outputConnected": "ansluten",
         "outputOff": "av",
         "outputConnecting": "slås på …",
-        "outputNotFound": "Hittades inte – är den på?"
+        "outputNotFound": "Hittades inte – är den på?",
+        "pausedLabel": "Pausad",
+        "stopLabel": "Stoppa"
       }
     },
     "da": {
@@ -214,7 +228,9 @@
         "outputConnected": "forbundet",
         "outputOff": "slukket",
         "outputConnecting": "tænder …",
-        "outputNotFound": "Ikke fundet – er den tændt?"
+        "outputNotFound": "Ikke fundet – er den tændt?",
+        "pausedLabel": "Pause",
+        "stopLabel": "Stop"
       }
     },
     "nb": {
@@ -241,7 +257,9 @@
         "outputConnected": "tilkoblet",
         "outputOff": "av",
         "outputConnecting": "slås på …",
-        "outputNotFound": "Ikke funnet – er den på?"
+        "outputNotFound": "Ikke funnet – er den på?",
+        "pausedLabel": "Pause",
+        "stopLabel": "Stopp"
       }
     },
     "fi": {
@@ -268,7 +286,9 @@
         "outputConnected": "yhdistetty",
         "outputOff": "pois",
         "outputConnecting": "käynnistyy …",
-        "outputNotFound": "Ei löytynyt – onko se päällä?"
+        "outputNotFound": "Ei löytynyt – onko se päällä?",
+        "pausedLabel": "Tauko",
+        "stopLabel": "Pysäytä"
       }
     },
     "pl": {
@@ -295,7 +315,9 @@
         "outputConnected": "połączono",
         "outputOff": "wyłączone",
         "outputConnecting": "włączanie …",
-        "outputNotFound": "Nie znaleziono – czy jest włączone?"
+        "outputNotFound": "Nie znaleziono – czy jest włączone?",
+        "pausedLabel": "Pauza",
+        "stopLabel": "Stop"
       }
     },
     "pt": {
@@ -322,7 +344,9 @@
         "outputConnected": "ligado",
         "outputOff": "desligado",
         "outputConnecting": "a ligar …",
-        "outputNotFound": "Não encontrado – está ligado?"
+        "outputNotFound": "Não encontrado – está ligado?",
+        "pausedLabel": "Em pausa",
+        "stopLabel": "Parar"
       }
     },
     "tr": {
@@ -349,7 +373,9 @@
         "outputConnected": "bağlı",
         "outputOff": "kapalı",
         "outputConnecting": "açılıyor …",
-        "outputNotFound": "Bulunamadı – açık mı?"
+        "outputNotFound": "Bulunamadı – açık mı?",
+        "pausedLabel": "Duraklatıldı",
+        "stopLabel": "Durdur"
       }
     },
     "uk": {
@@ -376,7 +402,9 @@
         "outputConnected": "підключено",
         "outputOff": "вимкнено",
         "outputConnecting": "вмикається …",
-        "outputNotFound": "Не знайдено – чи ввімкнено?"
+        "outputNotFound": "Не знайдено – чи ввімкнено?",
+        "pausedLabel": "Пауза",
+        "stopLabel": "Стоп"
       }
     },
     "ru": {
@@ -403,7 +431,9 @@
         "outputConnected": "подключено",
         "outputOff": "выключено",
         "outputConnecting": "включается …",
-        "outputNotFound": "Не найдено – включено ли?"
+        "outputNotFound": "Не найдено – включено ли?",
+        "pausedLabel": "Пауза",
+        "stopLabel": "Стоп"
       }
     },
     "cs": {
@@ -430,7 +460,9 @@
         "outputConnected": "připojeno",
         "outputOff": "vypnuto",
         "outputConnecting": "zapíná se …",
-        "outputNotFound": "Nenalezeno – je zapnuté?"
+        "outputNotFound": "Nenalezeno – je zapnuté?",
+        "pausedLabel": "Pozastaveno",
+        "stopLabel": "Zastavit"
       }
     },
     "el": {
@@ -457,7 +489,9 @@
         "outputConnected": "συνδεδεμένο",
         "outputOff": "κλειστό",
         "outputConnecting": "ενεργοποίηση …",
-        "outputNotFound": "Δεν βρέθηκε – είναι ανοιχτό;"
+        "outputNotFound": "Δεν βρέθηκε – είναι ανοιχτό;",
+        "pausedLabel": "Παύση",
+        "stopLabel": "Διακοπή"
       }
     }
   }

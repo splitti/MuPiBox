@@ -1,0 +1,141 @@
+// km themes, design round 2 (Claude Design handoff "design_handoff_mupibox_runde2"): the parts all 67 km themes share -
+// one piece for all of them, coloured only by the theme's --km-* variables (THEME_WERTE.md wrote the new ones into
+// every theme file: --km-band, --km-on-band, --km-on-band-2, --km-btn, --km-on-btn, --km-tab-idle, --km-on-pill).
+// Not for "coverflow" (no km theme, no body.km).
+
+body.km {
+  // WiFi and battery on the header's colour (the old themes have their band behind it, see below)
+  --st-on: var(--km-on-band, var(--km-on-bg));
+
+  // ---------- header (§1): left 14, right 14, top 4, 64 high, gap 12 - everything 64 px, one line ----------
+  .km-r2 {
+    box-shadow: none !important;
+
+    &::after {
+      display: none;
+    }
+  }
+
+  .km-bar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 72px;
+    padding: 4px 14px;
+    box-sizing: border-box;
+    color: var(--km-on-band);
+  }
+
+  // the round button on the left (history, back, minimise): 64, the button colours of the theme
+  .km-hbtn {
+    flex: 0 0 64px;
+    width: 64px;
+    height: 64px;
+    border-radius: 32px;
+    border: 0;
+    padding: 0;
+    background: var(--km-btn);
+    color: var(--km-on-btn);
+    display: grid;
+    place-items: center;
+    box-shadow: 0 4px 0 var(--km-shadow);
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 150ms var(--km-spring);
+
+    &:active {
+      transform: scale(0.9);
+    }
+
+    svg,
+    ion-icon {
+      width: 28px;
+      height: 28px;
+      font-size: 28px;
+    }
+
+    svg {
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+  }
+
+  // categories: group 4 px padding, radius 34; tabs 96 × 56 (80 with the pill), radius 28; idle tabs --km-tab-idle
+  .km-tabs-wrap {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    justify-content: center;
+
+    &.km-mini {
+      flex: 0 0 auto;
+    }
+  }
+
+  .km-tabs {
+    display: flex;
+    padding: 4px;
+    border-radius: 34px;
+    background: var(--km-night-2);
+  }
+
+  .km-tab {
+    width: 96px;
+    height: 56px;
+    border-radius: 28px;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--km-tab-idle);
+    display: grid;
+    place-items: center;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      transform 150ms var(--km-spring),
+      background-color 200ms;
+
+    &.km-on {
+      background: var(--km-apricot);
+      color: var(--km-ink);
+    }
+
+    &:active {
+      transform: scale(0.92);
+    }
+
+    ion-icon {
+      font-size: 28px;
+    }
+  }
+
+  .km-mini .km-tab {
+    width: 80px;
+  }
+
+  // page title in the header (album list, player): next to the round button
+  .km-htitle {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    .km-ht1 {
+      font-size: 26px;
+      font-weight: 600;
+      color: var(--km-on-band);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  // status group: WiFi + battery 24 high, the listening time below (see km-status-group)
+  .km-status-group mupi-status .st {
+    height: 24px;
+    padding: 0;
+  }
+}

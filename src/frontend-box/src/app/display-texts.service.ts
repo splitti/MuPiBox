@@ -34,6 +34,9 @@ export const DEFAULT_DISPLAY_TEXTS = {
   outputOff: 'off',
   outputConnecting: 'switching on …',
   outputNotFound: 'Not found – is it switched on?',
+  // "Läuft gerade" pill in the header (km themes, design round 2)
+  pausedLabel: 'Paused',
+  stopLabel: 'Stop',
 }
 export type DisplayTextKey = keyof typeof DEFAULT_DISPLAY_TEXTS
 type TextSet = Partial<Record<DisplayTextKey, string>>

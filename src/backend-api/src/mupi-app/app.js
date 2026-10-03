@@ -6067,6 +6067,8 @@ async function loadVolume() {
   // the levelling of the loudness (off | soft | strong): a switch and, with it on, the strength
   state.values.set('loudOn', r.body.loudness === 'soft' || r.body.loudness === 'strong')
   state.values.set('loudMode', r.body.loudness === 'strong' ? 'Kräftig' : 'Sanft')
+  // the display's back button in the player: minimise (the music goes on, "Läuft gerade" in the header) or stop
+  state.values.set('playerBack', r.body.playerBack === 'stop' ? 'Beenden' : 'Minimieren')
 }
 
 /* Soundkarte, Drehregler */
@@ -9441,8 +9443,32 @@ const CONTROLLERS = {
           ...(state.values.get('loudOn') ? [{ type: 'seg', key: 'loudMode', label: 'Stärke', options: ['Sanft', 'Kräftig'], help: 'Sanft lässt der Dynamik eines Hörspiels mehr Raum, kräftig gleicht stärker an.' }] : []),
         ],
       },
+      // (the display's back button in the player - the kids' themes; its symbol shows which of the two it does)
+      {
+        title: 'Zurück im Player',
+        help: 'Was der Zurück-Knopf oben links im Player auf dem Display macht.',
+        items: [
+          {
+            type: 'seg',
+            key: 'playerBack',
+            label: 'Zurück im Player',
+            options: ['Minimieren', 'Beenden'],
+            help:
+              state.values.get('playerBack') === 'Beenden'
+                ? 'Beenden: Die Musik stoppt, das Display geht eine Ebene zurück (Pfeil nach links).'
+                : 'Minimieren: Die Musik läuft weiter, oben zeigt „Läuft gerade“, was spielt – mit einem Stopp-Knopf (Pfeil nach unten).',
+          },
+        ],
+      },
     ],
     async change(key, v, page) {
+      if (key === 'playerBack') {
+        const r = await api(`${API}/audio/config`, { method: 'POST', body: { playerBack: v === 'Beenden' ? 'stop' : 'minimize' } })
+        if (!r.ok) return toast('Nicht gespeichert', 'info')
+        toast('Gespeichert')
+        renderPage(page, false)
+        return
+      }
       if (key === 'loudOn' || key === 'loudMode') {
         const on = key === 'loudOn' ? !!v : !!state.values.get('loudOn')
         const strong = (key === 'loudMode' ? v : state.values.get('loudMode')) === 'Kräftig'

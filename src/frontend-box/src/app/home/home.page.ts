@@ -33,6 +33,9 @@ import { MediaService } from '../media.service'
 import { MediaUnavailableComponent } from '../media-unavailable/media-unavailable.component'
 import type { MupiboxConfig } from '../mupibox-config.model'
 import { StatusComponent } from '../status/status.component'
+import { BackgroundPlaybackService } from '../background-playback.service'
+import { KmStatusGroupComponent } from '../km-header/km-status-group.component'
+import { NowPlayingPillComponent } from '../now-playing-pill/now-playing-pill.component'
 import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
 import { KmThemeService } from '../theme/km-theme.service'
@@ -43,6 +46,8 @@ import { KmThemeService } from '../theme/km-theme.service'
   styleUrls: ['home.page.scss'],
   imports: [
     StatusComponent,
+    KmStatusGroupComponent,
+    NowPlayingPillComponent,
     LoadingComponent,
     MediaUnavailableComponent,
     IonHeader,
@@ -62,6 +67,9 @@ export class HomePage extends SwiperIonicEventsHelper {
   private settingsPressTimer = 0
   // km themes: the resume button has the design's clock-with-arrow symbol
   protected readonly km = inject(KmThemeService).isKm
+  // "Läuft gerade" in the header (design round 2): the categories take 80 instead of 96 px each while it is there
+  private readonly background = inject(BackgroundPlaybackService)
+  protected readonly pillShown = computed(() => this.km() && this.background.media() !== null)
 
   // Category tabs at the top, in display order; some can be hidden in the admin.
   protected readonly categories: { key: CategoryType; icon: string }[] = [

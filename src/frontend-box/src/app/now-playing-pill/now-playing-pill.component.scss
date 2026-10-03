@@ -1,0 +1,212 @@
+// "Läuft gerade" (design round 2, §2): 64 high, radius 32, takes the rest of the header's width (never below ~200 px)
+:host {
+  // (the pill itself is the flex item of the header - an empty host takes no room while nothing plays)
+  display: contents;
+}
+
+.np-pill {
+  flex: 1 1 0;
+  min-width: 200px;
+  height: 64px;
+  border-radius: 32px;
+  background: var(--km-night-2);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px 0 6px;
+  box-sizing: border-box;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 150ms var(--km-spring);
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+.np-cover {
+  position: relative;
+  flex: 0 0 52px;
+  width: 52px;
+  height: 52px;
+  border-radius: 26px;
+  overflow: hidden;
+  background: #000;
+  display: grid;
+  place-items: center;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+  }
+
+  svg {
+    width: 28px;
+    height: 28px;
+    fill: none;
+    stroke: #fff;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  &[data-kind='radio'] {
+    background: #e0344e;
+  }
+
+  &[data-kind='podcast'] {
+    background: #6b4fd6;
+  }
+}
+
+// paused: the cover darkened with a pause sign
+.np-cover-pause {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: grid;
+  place-items: center;
+
+  svg {
+    width: 24px;
+    height: 24px;
+    stroke-width: 3;
+  }
+}
+
+.np-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--km-on-pill);
+}
+
+.np-title {
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// playing: three bars hopping (14 / 8 / 18 px), the accent colour
+.np-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 18px;
+
+  i {
+    display: block;
+    width: 4px;
+    border-radius: 2px;
+    background: var(--km-apricot);
+    transform-origin: bottom;
+    animation: np-hop 900ms ease-in-out infinite;
+  }
+
+  i:nth-child(1) {
+    height: 14px;
+  }
+
+  i:nth-child(2) {
+    height: 8px;
+    animation-delay: -300ms;
+  }
+
+  i:nth-child(3) {
+    height: 18px;
+    animation-delay: -600ms;
+  }
+}
+
+@keyframes np-hop {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0.45);
+  }
+}
+
+.np-sub {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--km-lavender);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+// loading: three dots, "Verbinde …"
+.np-loading i {
+  display: block;
+  flex: 0 0 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--km-moon);
+  animation: np-dot 1200ms ease-in-out infinite;
+
+  & + i {
+    margin-left: -3px;
+    animation-delay: 200ms;
+  }
+
+  & + i + i {
+    animation-delay: 400ms;
+  }
+}
+
+@keyframes np-dot {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+// radio: "Live" with a red dot
+.np-live i {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--km-rose);
+}
+
+.np-stop {
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  border: 0;
+  padding: 0;
+  background: var(--km-btn);
+  color: var(--km-on-btn);
+  display: grid;
+  place-items: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 150ms var(--km-spring);
+
+  &:active {
+    transform: scale(0.9);
+  }
+
+  svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+  }
+}

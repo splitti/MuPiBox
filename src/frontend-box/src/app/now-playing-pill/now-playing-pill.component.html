@@ -1,0 +1,36 @@
+@if (visible()) {
+  <div class="np-pill" role="button" tabindex="0" [attr.data-state]="state()" (click)="open()" (keydown.enter)="open()">
+    <span class="np-cover" [attr.data-kind]="kind()">
+      @if (kind() === 'radio') {
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2" /><path d="M8 8a5.6 5.6 0 0 0 0 8M16 8a5.6 5.6 0 0 1 0 8M5 5a10 10 0 0 0 0 14M19 5a10 10 0 0 1 0 14" /></svg>
+      } @else if (kind() === 'podcast') {
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8" /></svg>
+      } @else if (cover()) {
+        <img [src]="cover()" alt="" draggable="false" />
+      }
+      @if (state() === 'paused') {
+        <span class="np-cover-pause"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14" /></svg></span>
+      }
+    </span>
+    <span class="np-text">
+      <span class="np-title">{{ title() }}</span>
+      @switch (state()) {
+        @case ('paused') {
+          <span class="np-sub">{{ texts.text('pausedLabel') }}</span>
+        }
+        @case ('loading') {
+          <span class="np-sub np-loading"><i></i><i></i><i></i><span>{{ texts.text('connectingLabel') }}</span></span>
+        }
+        @case ('radio') {
+          <span class="np-sub np-live"><i></i>{{ texts.text('liveLabel') }}</span>
+        }
+        @default {
+          <span class="np-bars" aria-hidden="true"><i></i><i></i><i></i></span>
+        }
+      }
+    </span>
+    <button class="np-stop" type="button" [disabled]="stopping()" (click)="stop($event)" [attr.aria-label]="texts.text('stopLabel')">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="3" /></svg>
+    </button>
+  </div>
+}

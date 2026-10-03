@@ -1,4 +1,27 @@
-<ion-header class="home-header">
+<ion-header class="home-header" [class.km-r2]="km()">
+  @if (km()) {
+    <!-- km themes, design round 2: everything 64 px high on one line - history, categories, "Läuft gerade" (when
+         something plays on), WiFi/battery with the listening time below; a long press on that group opens the
+         settings as before -->
+    <div class="km-bar">
+      <button class="km-hbtn" type="button" (click)="resume()">
+        <svg class="km-resume-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3" /><path d="M4 3.5v4h4" /><path d="M12 8v4.2l2.8 1.8" /></svg>
+      </button>
+      @if (configLoaded()) {
+        <div class="km-tabs-wrap" [class.km-mini]="pillShown()">
+          <div class="km-tabs" role="tablist">
+            @for (cat of visibleCategories(); track cat.key) {
+              <button class="km-tab" type="button" role="tab" [class.km-on]="cat.key === category()" [attr.aria-selected]="cat.key === category()" (click)="category.set(cat.key)">
+                <ion-icon [name]="cat.icon"></ion-icon>
+              </button>
+            }
+          </div>
+        </div>
+      }
+      <mupi-now-playing-pill class="km-pill-slot"></mupi-now-playing-pill>
+      <mupi-km-status-group (pointerdown)="settingsButtonPointerDown()" (pointerup)="settingsButtonPointerUp()" (pointerleave)="settingsButtonPointerUp()" (pointercancel)="settingsButtonPointerUp()"></mupi-km-status-group>
+    </div>
+  } @else {
   <ion-toolbar color="light">
     <ion-buttons slot="start">
       <ion-button (click)="resume()">
@@ -27,6 +50,7 @@
         </ion-button>
       </ion-buttons>
   </ion-toolbar>
+  }
 </ion-header>
 
 <ion-content class="home-content">
