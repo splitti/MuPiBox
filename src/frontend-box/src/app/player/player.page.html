@@ -280,7 +280,7 @@
   <ion-grid>
     <ion-row>
       <ion-col size="6">
-        <ion-card class="cover-card" [class.km-pressing]="km() && pressingCover" (pointerdown)="coverPointerDown()" (pointerup)="coverPointerUp()" (pointerleave)="coverPointerUp()" (pointercancel)="coverPointerUp()">
+        <ion-card class="cover-card" [class.reflect]="coverflowTheme" [class.km-pressing]="km() && pressingCover" (pointerdown)="coverPointerDown()" (pointerup)="coverPointerUp()" (pointerleave)="coverPointerUp()" (pointercancel)="coverPointerUp()">
           @if (coverMissing()) {
             <div class="mupi-no-cover" [style.background]="noCoverStyle(coverTitle()).background" [style.color]="noCoverStyle(coverTitle()).color"><span>{{ coverTitle() }}</span></div>
           } @else {

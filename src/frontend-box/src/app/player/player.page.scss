@@ -13,6 +13,11 @@ ion-back-button {
     margin-right: auto !important;
 }
 
+// Cover Flow theme: the cover is mirrored below it, fading out - the same reflection as in its lists (swiper.component.scss)
+.cover-card.reflect {
+    -webkit-box-reflect: below 2px linear-gradient(transparent 68%, rgba(255, 255, 255, 0.3));
+}
+
 .cover-card img {
     display: block;
     width: 350px;

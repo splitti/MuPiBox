@@ -350,6 +350,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
   protected readonly backAction = signal<'minimize' | 'stop'>('minimize')
   // the page left by itself (end of the album, stopped from outside, nothing playing): never handed to the pill
   private leftByPage = false
+  // The Cover Flow theme (Mupi-conf > Theme) mirrors the cover below it, as its lists do
+  protected coverflowTheme = false
   listFontFamily = ''
   private longPressTimer: ReturnType<typeof setTimeout> | undefined
   private shuffleTimer: ReturnType<typeof setTimeout> | undefined
@@ -430,6 +432,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
           this.listViewTimerMs = configuredSeconds * 1000
         }
         this.backAction.set(config?.mupibox?.playerBack === 'stop' ? 'stop' : 'minimize')
+        this.coverflowTheme = config?.mupibox?.theme === 'coverflow'
       },
       error: () => {
         // Keep default listViewTimerMs if config could not be loaded.
