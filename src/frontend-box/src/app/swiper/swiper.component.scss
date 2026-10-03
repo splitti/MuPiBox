@@ -1,3 +1,12 @@
+// The top bar of the start page is folded away (compact): the whole row is scaled up from its top left corner and moved
+// up (--swiper-k, --swiper-shift come from the component), laid out 1/k as wide so that it still fills the display.
+:host(.compact) {
+    display: block;
+    width: calc(100% / var(--swiper-k, 1));
+    transform-origin: 0 0;
+    transform: translateY(var(--swiper-shift, 0px)) scale(var(--swiper-k, 1));
+}
+
 swiper-container {
     --swiper-scrollbar-bg-color: rgba(255, 255, 255, 0.2);
     --swiper-scrollbar-drag-bg-color: rgba(255, 255, 255, 0.8);

@@ -57,9 +57,41 @@ export interface SwiperData<T> {
   imports: [AsyncPipe, IonCard, IonCardHeader, IonCardTitle, IonCol, IonGrid, IonIcon, IonRow],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '[class.compact]': 'compactActive()',
+    '[style.--swiper-k]': 'compactScale()',
+    '[style.--swiper-shift]': 'compactShift()',
+  },
 })
 export class SwiperComponent<T> {
   public data = input.required<SwiperData<T>[]>()
+  // The start page's top bar is folded away: the row of covers is drawn larger and moves up to 10 px below the top of
+  // the display. All of it is one scaling of the whole row (the Cover Flow, the few-covers and the flat layouts are
+  // worked out for the row's own width, so they follow the narrower width it is laid out in - see swiper.component.scss).
+  public compact = input<boolean>(false)
+  private static readonly COMPACT_TOP = 10
+  private static readonly HEADER_HEIGHT = 70
+  // (not the children's themes: their covers sit in a layout of their own)
+  protected readonly compactActive = computed(() => this.compact() && !this.km())
+  // A rectangle in the row's own pixels: while the row is scaled (compact) the screen shows it k times larger, and the
+  // layouts below are worked out in the width Swiper has (the screen's width divided by k).
+  private layoutRect(el: Element): DOMRect {
+    const r = el.getBoundingClientRect()
+    const k = this.compactActive() ? Number(this.compactScale()) : 1
+    return k === 1 ? r : new DOMRect(r.left / k, r.top / k, r.width / k, r.height / k)
+  }
+  // the row's own padding above the covers: 20 px in Cover Flow, 35 px in the other themes
+  private compactRowTop(): number {
+    return this.coverflow() ? 20 : 35
+  }
+  // the covers' area ran from row top to the bottom of the display (height - header) and now runs from 10 px to the
+  // bottom: that is the factor, capped so a tall screen does not blow the covers up
+  protected readonly compactScale = computed(() => {
+    const h = window.innerHeight
+    const k = (h - SwiperComponent.COMPACT_TOP) / (h - SwiperComponent.HEADER_HEIGHT - this.compactRowTop())
+    return Number.isFinite(k) ? Math.min(1.3, Math.max(1, k)).toFixed(4) : '1'
+  })
+  protected readonly compactShift = computed(() => `${(SwiperComponent.COMPACT_TOP - this.compactRowTop() * Number(this.compactScale())).toFixed(1)}px`)
   // Identifies the list (e.g. category + artist). A page can be rebuilt when the player opens (the album
   // list is), which lost the remembered position with the component; kept per key it survives that.
   public positionKey = input<string | undefined>(undefined)
@@ -193,6 +225,17 @@ export class SwiperComponent<T> {
     http: HttpClient,
   ) {
     addIcons({ checkmark, folder, link, play })
+    // the row is laid out in another width now (or again in the old one): Swiper measures it anew
+    effect(() => {
+      this.compactActive()
+      untracked(() => {
+        setTimeout(() => {
+          ;(this.swiperContainer()?.nativeElement?.swiper as Swiper | undefined)?.update()
+          this.coverflowCoverWidth = 0
+          this.applyCoverflow()
+        }, 60)
+      })
+    })
     http.get<MupiboxConfig>(`${environment.backend.apiUrl}/config`).subscribe({
       next: (config) => {
         this.coverflow.set(config?.mupibox?.theme === 'coverflow')
@@ -710,7 +753,7 @@ export class SwiperComponent<T> {
       slide.style.transform = 'none'
     })
     const naturalCenters = slides.map((slide) => {
-      const rect = slide.getBoundingClientRect()
+      const rect = this.layoutRect(slide)
       return rect.left + rect.width / 2
     })
     slides.forEach((slide, index) => {
@@ -772,11 +815,11 @@ export class SwiperComponent<T> {
       slide.style.transform = 'none'
     })
     const naturalCenters = slides.map((slide) => {
-      const rect = slide.getBoundingClientRect()
+      const rect = this.layoutRect(slide)
       return rect.left + rect.width / 2
     })
     const cardRects = (): DOMRect[] =>
-      slides.map((slide) => (slide.querySelector('ion-card') ?? slide).getBoundingClientRect())
+      slides.map((slide) => this.layoutRect(slide.querySelector('ion-card') ?? slide))
 
     const layouts: { shift: number; rotate: number; z: number }[][] = []
     for (let selected = 0; selected < count; selected++) {

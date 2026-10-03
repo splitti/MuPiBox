@@ -1,4 +1,4 @@
-<ion-header class="home-header" [class.km-r2]="r2()">
+<ion-header class="home-header" [class.km-r2]="r2()" [class.header-hidden]="headerHidden()">
   @if (r2()) {
     <!-- km themes, design round 2: everything 64 px high on one line - history, categories, "Läuft gerade" (when
          something plays on), WiFi/battery with the listening time below; a long press on that group opens the
@@ -58,5 +58,5 @@
   @if (unavailable()) {
     <mupi-media-unavailable [nas]="category() === 'nas'"></mupi-media-unavailable>
   }
-  <mupi-swiper [data]="swiperData()" roundImages="true" (elementClicked)="this.artistCoverClicked($event.data)"></mupi-swiper>
+  <mupi-swiper [data]="swiperData()" [compact]="headerHidden()" roundImages="true" (elementClicked)="this.artistCoverClicked($event.data)"></mupi-swiper>
 </ion-content>

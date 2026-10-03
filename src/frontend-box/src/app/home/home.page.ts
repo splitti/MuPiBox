@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http'
-import { ChangeDetectionStrategy, Component, computed, effect, inject, Signal, signal, WritableSignal } from '@angular/core'
+import { ChangeDetectionStrategy, Component, computed, effect, HostListener, inject, Signal, signal, WritableSignal } from '@angular/core'
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { NavigationExtras, Router } from '@angular/router'
 import {
@@ -72,6 +72,61 @@ export class HomePage extends SwiperIonicEventsHelper {
   // "Läuft gerade" in the header (design round 2): the categories take 80 instead of 96 px each while it is there
   private readonly background = inject(BackgroundPlaybackService)
   protected readonly pillShown = computed(() => this.r2() && this.background.media() !== null)
+
+  // The top bar (resume button, category tabs, status symbols) goes away with a two-finger swipe up and comes back with
+  // a two-finger swipe down - more room for the covers. Kept in this browser, so it stays after a page change or reload.
+  private static readonly HEADER_KEY = 'mupibox.homeHeaderHidden'
+  // how far the two fingers have to move (px), and how much more vertical than horizontal
+  private static readonly SWIPE_PX = 60
+  protected readonly headerHidden = signal(HomePage.readHeaderHidden())
+  private twoFingerStart: { x: number; y: number } | null = null
+
+  private static readHeaderHidden(): boolean {
+    try {
+      return localStorage.getItem(HomePage.HEADER_KEY) === '1'
+    } catch {
+      return false
+    }
+  }
+
+  private static twoFingerCenter(e: TouchEvent): { x: number; y: number } {
+    const [a, b] = [e.touches[0], e.touches[1]]
+    return { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 }
+  }
+
+  private setHeaderHidden(hidden: boolean): void {
+    if (this.headerHidden() === hidden) return
+    this.headerHidden.set(hidden)
+    try {
+      localStorage.setItem(HomePage.HEADER_KEY, hidden ? '1' : '0')
+    } catch {
+      // no storage: it stays for this page load
+    }
+  }
+
+  @HostListener('touchstart', ['$event'])
+  protected onTouchStart(e: TouchEvent): void {
+    // exactly two fingers; a third one (or a lifted one) ends the gesture
+    this.twoFingerStart = e.touches.length === 2 ? HomePage.twoFingerCenter(e) : null
+  }
+
+  @HostListener('touchmove', ['$event'])
+  protected onTouchMove(e: TouchEvent): void {
+    if (!this.twoFingerStart || e.touches.length !== 2) return
+    const now = HomePage.twoFingerCenter(e)
+    const dx = now.x - this.twoFingerStart.x
+    const dy = now.y - this.twoFingerStart.y
+    if (Math.abs(dy) < HomePage.SWIPE_PX || Math.abs(dy) < Math.abs(dx) * 1.5) return
+    // once per gesture: up hides, down shows
+    this.twoFingerStart = null
+    this.setHeaderHidden(dy < 0)
+  }
+
+  @HostListener('touchend')
+  @HostListener('touchcancel')
+  protected onTouchEnd(): void {
+    this.twoFingerStart = null
+  }
 
   // Category tabs at the top, in display order; some can be hidden in the admin.
   protected readonly categories: { key: CategoryType; icon: string }[] = [
