@@ -301,10 +301,12 @@ function renderChrome(page) {
     <div class="title">${esc(title)}</div>
     ${langButton()}
     ${themeButton()}
+    <button class="icon-btn soft" id="power-btn" aria-label="Neu starten oder ausschalten">${icon('power')}</button>
     ${state.open ? '' : `<button class="icon-btn" id="logout-btn" aria-label="Abmelden">${icon('logout')}</button>`}`
   $('#back')?.addEventListener('click', () => go(backTarget(page)))
   $('#lang-btn').addEventListener('click', openLangSheet)
   $('#theme-btn').addEventListener('click', toggleTheme)
+  $('#power-btn').addEventListener('click', openPowerSheet)
   $('#logout-btn')?.addEventListener('click', () => confirmSheet('Abmelden', 'Von der App abmelden? Danach fragt sie wieder nach dem Passwort.', logout))
 
   $('#tabbar').innerHTML = AREAS.map(
@@ -7834,17 +7836,40 @@ function restartTop() {
   ]
 }
 
+// Restarting and switching off the box, each after a question: from this page and from the power button at the top
+const askReboot = () =>
+  confirmSheet('Neu starten', 'Die Box jetzt neu starten? Das dauert etwa eine Minute.', async () => {
+    const r = await api('/api/reboot', { method: 'POST', body: {} })
+    toast(r.ok ? 'Die Box startet neu …' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+  })
+const askShutdown = () =>
+  confirmSheet('Ausschalten', 'Die Box jetzt ausschalten? Einschalten geht dann nur noch am Taster.', async () => {
+    const r = await api('/api/shutdown', { method: 'POST', body: {} })
+    toast(r.ok ? 'Die Box schaltet aus …' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+  })
+
+// The power button at the top (next to light/dark): restart or switch off without going through the settings - with
+// the hardware button unplugged that was a long way (asked for by hyperbit)
+function openPowerSheet() {
+  openSheet(
+    `<h2>${esc('Box neu starten oder ausschalten')}</h2>
+     <div class="rows">
+       <div class="entry"><span class="avatar">${icon('sync', 16)}</span><span class="lbl"><b>Neu starten</b><small>Dauert etwa eine Minute; die Wiedergabe endet.</small></span><button class="btn sm" data-pw="reboot">Neu starten</button></div>
+       <div class="entry"><span class="avatar">${icon('power', 16)}</span><span class="lbl"><b>Ausschalten</b><small>Wieder einschalten geht nur über den Taster an der Box.</small></span><button class="btn danger sm" data-pw="off">Ausschalten</button></div>
+     </div>
+     <div class="btns"><button class="btn" data-close>Abbrechen</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      // (the question replaces this sheet)
+      sheet.querySelector('[data-pw="reboot"]').onclick = askReboot
+      sheet.querySelector('[data-pw="off"]').onclick = askShutdown
+    },
+  )
+}
+
 function mountRestart(root) {
-  $('#rs-reboot', root).onclick = () =>
-    confirmSheet('Neu starten', 'Die Box jetzt neu starten? Das dauert etwa eine Minute.', async () => {
-      const r = await api('/api/reboot', { method: 'POST', body: {} })
-      toast(r.ok ? 'Die Box startet neu …' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
-    })
-  $('#rs-off', root).onclick = () =>
-    confirmSheet('Ausschalten', 'Die Box jetzt ausschalten? Einschalten geht dann nur noch am Taster.', async () => {
-      const r = await api('/api/shutdown', { method: 'POST', body: {} })
-      toast(r.ok ? 'Die Box schaltet aus …' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
-    })
+  $('#rs-reboot', root).onclick = askReboot
+  $('#rs-off', root).onclick = askShutdown
   for (const b of root.querySelectorAll('[data-rs]')) {
     b.onclick = () => {
       const what = b.dataset.rs
