@@ -34,7 +34,7 @@ body.km.km-theme-steampunk { --ion-font-family: 'Rye UI', 'Fredoka', sans-serif;
   --km-ease: cubic-bezier(.2, .7, .2, 1);
   --ion-font-family: "Fredoka", sans-serif;
   --km-name-font: "Rye", "Fredoka", sans-serif;
-  --km-name-size: 25px;
+  --km-name-size: 22px;
   /* Runde 2: Kopfzeile, Pille, Knöpfe (Werte aus THEME_WERTE.md) */
   --km-band: rgba(30,18,10,.72);
   --km-on-band: #FFFFFF;
@@ -55,19 +55,20 @@ body.km.km-theme-steampunk { --ion-font-family: 'Rye UI', 'Fredoka', sans-serif;
 
 /* Eigene Schrift: Namensleisten, Bühnen-Name, Titel (Größe an die Schrift angepasst; Leiste bleibt 232 × 60) */
 body.km .title-row ion-card-title, body.km .title-row .truncate-text { font-family: var(--km-name-font) !important; font-size: var(--km-name-size) !important; font-weight: 400 !important; line-height: 1.1; }
-body.km.km-stage .km-stage-name { font-family: var(--km-name-font) !important; font-size: calc(var(--km-name-size) + 1px) !important; font-weight: 400 !important; }
+body.km.km-stage .km-stage-name, body.km.km-stage .km-stage-name span, body.km.km-stage .km-stage-name * { font-family: var(--km-name-font) !important; font-size: calc(var(--km-name-size) + 1px) !important; font-weight: 400 !important; }
 body.km .medialist-header ion-title, body.km .player-header .toolbar-album { font-family: var(--km-name-font) !important; font-weight: 400 !important; }
 body.km .playtime-blocked-overlay h1 { font-family: var(--km-name-font) !important; font-weight: 400 !important; }
 
 /* Ring um die runden Bilder: eigenes Rahmenbild statt Farbring */
 body.km .home-content .circle-card { border: 0 !important; padding: 16px !important; background: url("/theme-data/steampunk/steampunk-gear.png") center / contain no-repeat !important; box-shadow: none !important; }
-body.km.km-stage .km-stage .circle-card { border: 0 !important; padding: 18px !important; background: url("/theme-data/steampunk/steampunk-gear.png") center / contain no-repeat !important; }
-/* Runde 2: die Bühne nutzt .km-stage-card.km-round - das Zahnrad auch dort */
-body.km.km-stage .km-stage-card.km-round { border: 0 !important; padding: 18px !important; background: url("/theme-data/steampunk/steampunk-gear.png") center / contain no-repeat !important; }
-body.km.km-stage .km-stage-card.km-round > img { border-radius: 50%; }
+body.km.km-stage .km-stage .km-stage-card.km-round, body.km.km-stage .km-stage .circle-card { border: 0 !important; border-radius: 50% !important; padding: 18px !important; background: url("/theme-data/steampunk/steampunk-gear.png") center / contain no-repeat !important; box-shadow: none !important; }
+body.km.km-stage .km-stage .km-stage-card.km-round img { border-radius: 50% !important; }
 
 /* Reiter-Pille und Titelliste mit der alten Metall-Textur */
 body.km .home-header ion-segment, body.km .player-content .tracklist { background: var(--km-night-2) url("/theme-data/steampunk/steampunk-header.jpg") center / cover !important; background-blend-mode: multiply; }
+
+/* Sperr-/Ruhebildschirm und „Nicht erreichbar“ deckend: kein Durchscheinen der Auswahl */
+body.km .playtime-blocked-overlay, body.km mupi-media-unavailable { opacity: 1 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; z-index: 1000; }
 
 /* ==== gemeinsamer km-Teil (aus den km-Theme-Dateien, unverändert) ==== */
 body .home-content, body .medialist-content, body .player-content { --ion-background-color: transparent !important; }
