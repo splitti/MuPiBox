@@ -6158,7 +6158,12 @@ app.get('/api/nas/browse', localOrElternSession, async (req, res) => {
       const hiddenFolders = new Set(nasSettings(config)?.hiddenFolders ?? [])
 
       const files = await nasListFilesLive(session, folderPath || '/')
-      const entries = files.filter((f) => f.isdir).map((f) => ({ name: f.name, path: f.path, isDirectory: true }))
+      // alphabetically, as people look for a folder ("Folge 2" before "Folge 10", upper and lower case alike) - the NAS
+      // hands them out in its own order (reported by Andreas)
+      const entries = files
+        .filter((f) => f.isdir)
+        .map((f) => ({ name: f.name, path: f.path, isDirectory: true }))
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
 
       return entries.map((e) => ({
         ...e,
