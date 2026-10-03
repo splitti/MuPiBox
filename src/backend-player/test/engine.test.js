@@ -401,3 +401,28 @@ test(`${ENGINE}: a CUE album (one file over HTTP) starts inside it and seeks to 
   player.exec('pausing_keep seek', [10, 2]) // "next": track 2
   await near(10, 'seek forward to track 2')
 })
+
+test(`${ENGINE}: the start position of a file that never opened does not carry over to the next file`, { skip: !STARTS_AT && 'this engine seeks after the start' }, async () => {
+  await settle()
+  player.play(path.join(dir, 'gibt-es-nicht.wav'), { startSeconds: 2 })
+  await sleep(1500)
+  const tc = waitFor('track-change', 6000)
+  player.play(files[1])
+  await tc
+  await sleep(250)
+  const t = await prop('time_pos')
+  assert.ok(t < 1.2, `next file started at ${t}`)
+})
+
+test(`${ENGINE}: a file chosen while the engine is started anew (after a crash) plays once it is up`, { skip: ENGINE !== 'mpv' && 'mplayer-wrapper.js has no queue' }, async () => {
+  await settle()
+  const closed = waitFor('close', 4000)
+  // (pkill without a shell: a shell's own command line would hold the pattern - see pgrep matching itself)
+  require('node:child_process').execFileSync('pkill', ['-f', `mupibox-mpv-${process.pid}.sock`])
+  await closed
+  const tc = waitFor('track-change', 10000)
+  player.play(files[2])
+  await tc
+  assert.equal(await prop('filename'), path.basename(files[2]))
+  player.setVolume(5)
+})

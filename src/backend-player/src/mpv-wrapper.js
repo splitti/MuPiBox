@@ -101,10 +101,20 @@ const createPlayer = (options = {}) => {
   // (the end of the previous file is followed by the start of the next one in a playlist; "idle" comes only when
   // nothing follows)
 
+  // the loudness filter in use - set again on a new mpv (one that crashed and was started anew has none)
+  let audioFilter = ''
+  // Commands while mpv is not reachable (starting, started anew after a crash, its socket lost): kept and sent once it
+  // is - a child's choice in those seconds was lost before. Questions for a value are not kept (asked again anyway).
+  const MAX_QUEUED = 20
+  const queued = []
+
   // ---- mpv <- wrapper ----
   const send = (command, meta) => {
     if (!sock || sock.destroyed) {
-      debug(`dropped (no mpv): ${JSON.stringify(command)}`)
+      if (meta) return
+      if (queued.length >= MAX_QUEUED) queued.shift()
+      queued.push(command)
+      debug(`kept until mpv is reachable: ${JSON.stringify(command)}`)
       return
     }
     const id = ++requestId
@@ -234,8 +244,9 @@ const createPlayer = (options = {}) => {
     }
   }
 
-  const connect = (startedAt) => {
-    if (shutdown || !proc) return
+  // (for this mpv process only: a retry of one that is gone meanwhile stops)
+  const connect = (startedAt, forProc) => {
+    if (shutdown || !proc || proc !== forProc) return
     const s = net.createConnection(socketPath)
     s.setEncoding('utf8')
     s.on('connect', () => {
@@ -247,6 +258,8 @@ const createPlayer = (options = {}) => {
       send(['observe_property', 2, 'cache-buffering-state'])
       send(['observe_property', 3, 'idle-active'])
       send(['observe_property', 4, 'playlist-count'])
+      if (audioFilter) send(['set_property', 'af', audioFilter])
+      for (const command of queued.splice(0)) send(command)
       debug('connected')
       out.emit('ready')
     })
@@ -257,14 +270,22 @@ const createPlayer = (options = {}) => {
         return
       }
       // not up yet: mpv creates the socket a moment after its start
-      if (Date.now() - startedAt < CONNECT_GIVE_UP_MS) setTimeout(() => connect(startedAt), CONNECT_RETRY_MS).unref()
+      if (Date.now() - startedAt < CONNECT_GIVE_UP_MS) setTimeout(() => connect(startedAt, forProc), CONNECT_RETRY_MS).unref()
       else {
-        debug('mpv socket did not appear - giving up until the next spawn')
+        // mpv runs but cannot be reached: started anew (its close starts the next one) - else every command was lost
+        debug('mpv socket did not appear - mpv started anew')
         out.emit('mplayer-error', new Error('mpv socket did not appear'))
+        if (proc === forProc && forProc.exitCode === null) forProc.kill()
       }
     })
     s.on('close', () => {
-      if (sock === s) sock = null
+      if (sock !== s) return
+      sock = null
+      // The connection lost while mpv goes on running: connected again (mpv's close handles a mpv that ended)
+      if (!shutdown && proc === forProc && forProc.exitCode === null) {
+        debug('mpv socket closed - connecting again')
+        setTimeout(() => connect(Date.now(), forProc), CONNECT_RETRY_MS).unref()
+      }
     })
   }
 
@@ -277,6 +298,9 @@ const createPlayer = (options = {}) => {
     }
     playbackActive = false
     playlistPos = -1
+    playlistCount = 0
+    idleActive = true
+    startPending = false
     proc = spawn(
       binary,
       [
@@ -329,7 +353,7 @@ const createPlayer = (options = {}) => {
       healthyTimer = null
     }, HEALTHY_RUN_MS)
     healthyTimer.unref()
-    connect(Date.now())
+    connect(Date.now(), proc)
   }
 
   spawnMpv()
@@ -341,13 +365,17 @@ const createPlayer = (options = {}) => {
   // opts.startSeconds: the file begins there (a podcast episode, a CUE album where it was left) - no seek after the
   // start, nothing of the beginning is heard. opts.track (1-based) and opts.percent for a playlist: the album goes
   // on with that track at that part of it; only that track is opened (see setStart).
+  // Every start sets its start position - also "from the beginning": a start position whose file never opened (not
+  // found, a stream that did not answer) was still set, and the next file began there too.
   out.play = (fileOrUrl, opts) => {
     if (opts?.startSeconds > 0) setStart(String(opts.startSeconds))
+    else if (startPending) setStart('none')
     exec('loadfile', [fileOrUrl])
   }
   out.playList = (fileOrUrl, opts) => {
     if (opts?.startSeconds > 0) setStart(String(opts.startSeconds))
     else if (opts?.percent > 1) setStart(`${Math.min(99, opts.percent)}%`)
+    else if (startPending) setStart('none')
     exec('loadlist', [fileOrUrl])
     if (opts?.track > 1) send(['playlist-play-index', Math.trunc(opts.track) - 1])
   }
@@ -355,7 +383,9 @@ const createPlayer = (options = {}) => {
   // 'strong' = dynaudnorm, evens out more (music, radio); 'off' = no filter in the chain. Set live, playback goes on.
   out.setLoudness = (mode) => {
     const filter = { soft: 'lavfi=[loudnorm=I=-16:TP=-1.5:LRA=11]', strong: 'lavfi=[dynaudnorm=f=250:g=15:p=0.9]' }[mode]
-    send(['set_property', 'af', filter ?? ''])
+    audioFilter = filter ?? ''
+    // (not reachable now: set when it is - see connect)
+    if (sock && !sock.destroyed) send(['set_property', 'af', audioFilter])
   }
   out.startsAt = true
   out.cachePrefillPercent = 100
