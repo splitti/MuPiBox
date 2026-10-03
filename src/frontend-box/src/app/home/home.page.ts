@@ -67,9 +67,11 @@ export class HomePage extends SwiperIonicEventsHelper {
   private settingsPressTimer = 0
   // km themes: the resume button has the design's clock-with-arrow symbol
   protected readonly km = inject(KmThemeService).isKm
+  /** the round-2 header (categories, "Läuft gerade", WiFi/battery): km themes and coverflow */
+  protected readonly r2 = inject(KmThemeService).roundTwo
   // "Läuft gerade" in the header (design round 2): the categories take 80 instead of 96 px each while it is there
   private readonly background = inject(BackgroundPlaybackService)
-  protected readonly pillShown = computed(() => this.km() && this.background.media() !== null)
+  protected readonly pillShown = computed(() => this.r2() && this.background.media() !== null)
 
   // Category tabs at the top, in display order; some can be hidden in the admin.
   protected readonly categories: { key: CategoryType; icon: string }[] = [

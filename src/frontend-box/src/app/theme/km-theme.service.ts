@@ -10,7 +10,8 @@ import { type KmTheme, kmTheme } from './km-themes'
  *
  * The theme's stylesheet itself comes as before (active_theme.css); the parts of the km look that need their own
  * markup are switched on here by classes on <body>: km, km-theme-<id>, km-light (light background), km-stage
- * (stage view switched on in MuPi-Conf) and km-night (Tag & Nacht at night). Any other theme: no km class at all.
+ * (stage view switched on in MuPi-Conf) and km-night (Tag & Nacht at night). coverflow: only cf (the round-2 parts in
+ * its colours). Any other theme: no km class at all.
  */
 @Injectable({ providedIn: 'root' })
 export class KmThemeService {
@@ -21,6 +22,11 @@ export class KmThemeService {
 
   readonly theme = computed<KmTheme | undefined>(() => kmTheme(this.themeId()))
   readonly isKm = computed(() => this.theme() !== undefined)
+  /** Andreas' "coverflow": its own look and cover band, no km theme - but the header, "Läuft gerade", the player,
+   *  "Hören mit" and the track list of design round 2 in its colours (body.cf) */
+  readonly isCoverflow = computed(() => this.themeId() === 'coverflow')
+  /** the round-2 layout of header, player and track list: every km theme and coverflow */
+  readonly roundTwo = computed(() => this.isKm() || this.isCoverflow())
   /** the stage view (big cover in the middle) of a km theme */
   readonly stage = computed(() => this.isKm() && this.stageOn())
   /** read the name aloud when the stage stops on a cover */
@@ -110,8 +116,9 @@ export class KmThemeService {
   private applyBodyClasses(): void {
     const body = document.body
     for (const cls of Array.from(body.classList)) {
-      if (cls === 'km' || cls.startsWith('km-')) body.classList.remove(cls)
+      if (cls === 'km' || cls === 'cf' || cls.startsWith('km-')) body.classList.remove(cls)
     }
+    if (this.isCoverflow()) body.classList.add('cf')
     const theme = this.theme()
     if (!theme) return
     body.classList.add('km', `km-theme-${theme.id}`)

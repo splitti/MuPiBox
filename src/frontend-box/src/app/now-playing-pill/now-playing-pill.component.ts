@@ -12,7 +12,7 @@ type PillState = 'playing' | 'paused' | 'loading' | 'radio'
 /**
  * "Läuft gerade" (design round 2, §2): the player made small, as a pill in the header next to the categories - while
  * something plays on after the player page was left (settings "Zurück im Player": minimise). A tap opens the player
- * again (it does not start anew), the round button stops. Only for km themes; not there while nothing plays.
+ * again (it does not start anew), the round button stops. km themes and coverflow; not there while nothing plays.
  */
 @Component({
   selector: 'mupi-now-playing-pill',
@@ -24,11 +24,11 @@ export class NowPlayingPillComponent {
   private readonly background = inject(BackgroundPlaybackService)
   private readonly router = inject(Router)
   private readonly artwork = inject(ArtworkService)
-  private readonly km = inject(KmThemeService).isKm
+  private readonly r2 = inject(KmThemeService).roundTwo
   protected readonly texts = inject(DisplayTextsService)
   protected readonly stopping = signal(false)
 
-  protected readonly visible = computed(() => this.km() && this.background.media() !== null)
+  protected readonly visible = computed(() => this.r2() && this.background.media() !== null)
 
   protected readonly kind = computed<'cover' | 'radio' | 'podcast'>(() => {
     const media = this.background.media()

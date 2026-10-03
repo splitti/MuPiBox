@@ -39,7 +39,8 @@
 
 // km themes, design round 2 ("Vorschlag D"): 30 high at top 74 / right 14 below the header on every page - it ends
 // at y 104, before the right cover ring of the start page (from y 106); > 10 min the button colours, 5-10 accent, < 5 red
-:host-context(body.km) .playtime-chip {
+:host-context(body.km) .playtime-chip,
+:host-context(body.cf) .playtime-chip {
   top: 74px;
   right: 14px;
   height: 30px;
@@ -73,4 +74,9 @@
     background: var(--km-rose);
     color: #2a1520;
   }
+}
+
+// hidden while the player's "Hören mit" window is open (the chip lies above every page, the window only above the player)
+:host-context(body.kp-out-open) .playtime-chip {
+  visibility: hidden;
 }

@@ -56,6 +56,7 @@ export class MedialistPage extends SwiperIonicEventsHelper {
   protected isLoading: WritableSignal<boolean> = signal(false)
   // km themes, design round 2: header with the back button, the title, "Läuft gerade" and the status group
   protected readonly km = inject(KmThemeService).isKm
+  protected readonly r2 = inject(KmThemeService).roundTwo
   protected category: WritableSignal<CategoryType> = signal('audiobook')
   protected artist: WritableSignal<Artist | undefined> = signal(undefined)
 

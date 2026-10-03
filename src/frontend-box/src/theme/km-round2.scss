@@ -1,9 +1,11 @@
 // km themes, design round 2 (design handoff "design_handoff_mupibox_runde2"): the parts all 67 km themes share -
 // one piece for all of them, coloured only by the theme's --km-* variables (THEME_WERTE.md wrote the new ones into
 // every theme file: --km-band, --km-on-band, --km-on-band-2, --km-btn, --km-on-btn, --km-tab-idle, --km-on-pill).
-// Not for "coverflow" (no km theme, no body.km).
+// coverflow (no km theme): header, player, "Hören mit" and track list apply to body.cf too, in its colours
+// (cf-round2.scss).
 
-body.km {
+body.km,
+body.cf {
   // WiFi and battery on the header's colour (the old themes have their band behind it, see below)
   --st-on: var(--km-on-band, var(--km-on-bg));
 
@@ -136,7 +138,8 @@ body.km {
 }
 
 // ---------- player (§3) - positions in the page's content (it starts below the 72 px header: screen y - 72) ----------
-body.km {
+body.km,
+body.cf {
   .km-bar-player {
     gap: 10px;
   }
@@ -433,7 +436,8 @@ body.km {
 }
 
 // ---------- "Hören mit" window (§4) and the headset message ----------
-body.km {
+body.km,
+body.cf {
   // (the window's background: the theme's panel colour; the old themes' half-transparent one would let the player show
   // through - their opaque page colour instead)
   --km-sheet: var(--km-night-2);
@@ -533,10 +537,11 @@ body.km {
     border-radius: 15px;
     background: var(--km-cream);
 
+    // (!important: the player's own rule draws it white, which vanished on the light circle)
     svg {
       width: 18px;
       height: 18px;
-      stroke: var(--km-ink);
+      stroke: var(--km-ink) !important;
     }
   }
 
@@ -576,7 +581,8 @@ body.km {
 }
 
 // ---------- track list (§5): panel left 16, right 16, top 114, bottom 14 - content y = screen y - 72 ----------
-body.km {
+body.km,
+body.cf {
   .player-content .kt {
     position: absolute;
     left: 16px;

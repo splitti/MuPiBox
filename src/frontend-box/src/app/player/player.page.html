@@ -81,8 +81,8 @@
       }
 </ng-template>
 
-<ion-header class="player-header" [class.km-r2]="km()">
-  @if (km()) {
+<ion-header class="player-header" [class.km-r2]="r2()">
+  @if (r2()) {
     <!-- km themes, design round 2 (§3): minimise/back, album and track, "Hören mit" (only with a paired headset),
          the volume, WiFi/battery with the listening time -->
     <div class="km-bar km-bar-player">
@@ -123,12 +123,12 @@
 </ion-header>
 
 <!-- km themes: the headset switch did not reach the device (one headset, no window) - below the header, fades out -->
-@if (km() && outputNotFound() && !outputOpen()) {
+@if (r2() && outputNotFound() && !outputOpen()) {
   <div class="kp-toast">{{ displayTexts.text('outputHeadsetNotFound') }}</div>
 }
 
 <ion-content class="player-content" [class.tracklist-active]="showTrackList">
-  @if (showTrackList && km()) {
+  @if (showTrackList && r2()) {
     <!-- km themes, design round 2 (§5): cover and "Zu" on the left, the titles in the middle (58 px rows, the current one
          in the accent colour), big buttons on the right that turn a page instead of fine scrolling -->
     <div class="kt">
@@ -207,7 +207,7 @@
       }
     </ion-list>
     </div>
-  } @else if (km()) {
+  } @else if (r2()) {
     <!-- km themes, design round 2 (§3): cover left with the track button below it like a handle, the controls on the
          right (on the old themes' panel). Radio: a bigger cover, "Live" instead of the bar, no track buttons. -->
     @let radio = media.type === 'radio';
@@ -429,7 +429,7 @@
               <svg class="out-icon" viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0 1 16 0v3" /><path class="fill" d="M4 15h3v6H5a1 1 0 0 1-1-1zM20 15h-3v6h2a1 1 0 0 0 1-1z" /></svg>
             }
             <b translate="no">{{ d.name }}</b>
-            <small>{{ outputBusy() === d.mac ? displayTexts.text('outputConnecting') : outputMissing() === d.mac && km() ? displayTexts.text('outputNotFound') : output()?.current === d.mac && km() ? '● ' + displayTexts.text('outputPlaying') : d.connected ? displayTexts.text('outputConnected') : displayTexts.text('outputOff') }}</small>
+            <small>{{ outputBusy() === d.mac ? displayTexts.text('outputConnecting') : outputMissing() === d.mac && r2() ? displayTexts.text('outputNotFound') : output()?.current === d.mac && km() ? '● ' + displayTexts.text('outputPlaying') : d.connected ? displayTexts.text('outputConnected') : displayTexts.text('outputOff') }}</small>
           </button>
         }
       </div>

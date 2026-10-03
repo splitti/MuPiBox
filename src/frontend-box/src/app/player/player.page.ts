@@ -1,6 +1,6 @@
 import { AsyncPipe, NgTemplateOutlet } from '@angular/common'
 import { HttpClient } from '@angular/common/http'
-import { AfterViewInit, Component, DestroyRef, ElementRef, inject, OnInit, signal, ViewChild } from '@angular/core'
+import { AfterViewInit, Component, DestroyRef, ElementRef, effect, inject, OnInit, signal, ViewChild } from '@angular/core'
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { FormsModule } from '@angular/forms'
 import { ActivatedRoute, Router } from '@angular/router'
@@ -126,6 +126,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
   // km themes (children's themes): their own markup in the template (see theme/km-theme.service.ts)
   private readonly kmTheme = inject(KmThemeService)
   protected readonly km = this.kmTheme.isKm
+  /** header, controls, track list and "Hören mit" of design round 2: the km themes and coverflow */
+  protected readonly r2 = this.kmTheme.roundTwo
   protected readonly displayTexts = inject(DisplayTextsService)
 
   // "Hören mit": the box's speaker or a paired Bluetooth device (backend-api audio-output.ts). A tap on the volume opens
@@ -353,6 +355,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
   ) {
     this.spotify$ = this.mediaService.current$
     this.local$ = this.mediaService.local$
+    // the listening-time chip lies above every page: hidden while the "Hören mit" window dims the player
+    effect(() => document.body.classList.toggle('kp-out-open', this.outputOpen()))
 
     // navState is read once into a local because the external-playback flag
     // (Phase 19 Stufe B) is read from the same state object further down.
@@ -782,7 +786,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
     // Left with the back button while it plays and set to minimise: the playback goes on and is handed to the
     // "Läuft gerade" pill (it stops it later, with the same clean-up as below). Left by the page itself - the end of
     // the album (Spotify's autoplay would go on with another one), nothing playing - it stops as always.
-    const keepPlaying = this.km() && this.backAction() === 'minimize' && this.playing && !this.leftByPage && !this.albumEnded
+    const keepPlaying = this.r2() && this.backAction() === 'minimize' && this.playing && !this.leftByPage && !this.albumEnded
     if (keepPlaying) {
       this.backgroundPlayback.begin(this.media, { shuffled: !!(this.media.shuffle || this.shufflechanged), albumStop: this.albumStop?.albumStop === 'On' })
     } else {
@@ -1084,7 +1088,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
       }
     } finally {
       this.loadingTrackList = false
-      if (this.km()) this.showCurrentTrack()
+      if (this.r2()) this.showCurrentTrack()
     }
   }
 
