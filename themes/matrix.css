@@ -31,6 +31,14 @@
   --ion-font-family: "Fredoka", sans-serif;
   --km-name-font: "Pixolletta 8px", "Fredoka", sans-serif;
   --km-name-size: 21px;
+  /* Runde 2: Kopfzeile, Pille, Knöpfe (Werte aus THEME_WERTE.md) */
+  --km-band: rgba(0,10,0,.86);
+  --km-on-band: #FFFFFF;
+  --km-on-band-2: #9CFF9A;
+  --km-btn: #193719;
+  --km-on-btn: #FFFFFF;
+  --km-tab-idle: #FFFFFF;
+  --km-on-pill: #FFFFFF;
 }
 
 /* Hintergrund: eigenes Bild, oben ein weicher Verlauf für Statusleiste und Reiter */

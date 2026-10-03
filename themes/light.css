@@ -28,6 +28,14 @@
   --km-spring: cubic-bezier(.3, 1.4, .6, 1);
   --km-ease: cubic-bezier(.2, .7, .2, 1);
   --ion-font-family: "Fredoka", sans-serif;
+  /* Runde 2: Kopfzeile, Pille, Knöpfe (Werte aus THEME_WERTE.md) */
+  --km-band: rgba(115,115,115,0.82);
+  --km-on-band: #FFFFFF;
+  --km-on-band-2: #FFFFFF;
+  --km-btn: #989898;
+  --km-on-btn: #3D3D3D;
+  --km-tab-idle: #3D3D3D;
+  --km-on-pill: #3D3D3D;
 }
 
 /* Hintergrund: eigene Grundfarbe, ohne Bild */

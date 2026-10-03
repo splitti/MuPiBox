@@ -20,6 +20,13 @@
   --km-spring: cubic-bezier(.3, 1.4, .6, 1);
   --km-ease: cubic-bezier(.2, .7, .2, 1);
   --ion-font-family: "Fredoka", sans-serif;
+  /* Runde 2: Kopfzeile, Pille, Knöpfe (Werte aus THEME_WERTE.md) */
+  --km-on-band: #1E2A33;
+  --km-on-band-2: #245468;
+  --km-btn: #1F6F8B;
+  --km-on-btn: #FFFFFF;
+  --km-tab-idle: #1E2A33;
+  --km-on-pill: #1E2A33;
 }
 /* Nacht-Variante: body.km-night { --km-night:#17132A; --km-night-3:#2A2447; --km-cream:#E6D9C3; --km-apricot:#E0995A; --km-moon:#E8CF95; } */
 

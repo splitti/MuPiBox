@@ -20,6 +20,13 @@
   --km-spring: cubic-bezier(.3, 1.4, .6, 1);
   --km-ease: cubic-bezier(.2, .7, .2, 1);
   --ion-font-family: "Fredoka", sans-serif;
+  /* Runde 2: Kopfzeile, Pille, Knöpfe (Werte aus THEME_WERTE.md) */
+  --km-on-band: #2C2838;
+  --km-on-band-2: #4E4668;
+  --km-btn: #7A5CB8;
+  --km-on-btn: #FFFFFF;
+  --km-tab-idle: #2C2838;
+  --km-on-pill: #2C2838;
 }
 
 /* Hintergrund */
