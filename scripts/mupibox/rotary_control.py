@@ -3,6 +3,10 @@
 #   GPIO 26 = encoder A (CLK), GPIO 24 = encoder B (DT), GPIO 10 = push button (to GND)
 # Turning changes the volume by rotary.step percent per detent (the player keeps the max volume and the display in sync), the push button
 # does what is chosen in the admin interface (rotary.button in mupiboxconfig.json, read again when it changed).
+# With "next track" chosen the button works as a switch: the first press turns the knob into a track selector (every
+# detent clockwise = next track, counter clockwise = previous track) for TRACK_MODE_S seconds - each turn starts the
+# time anew, so it lasts as long as the knob is being turned - and the second press (or the time running out) brings
+# the volume back.
 
 import json
 import os
@@ -32,6 +36,9 @@ TRANSITIONS = {
 }
 STEPS_PER_DETENT = 4
 
+# How long the knob stays a track selector after the last press or turn (button "next track")
+TRACK_MODE_S = 10.0
+
 # The pins are polled: every millisecond while the knob is being used, every 5 ms while it rests (a fifth of the
 # wake-ups, the box runs on battery). A turn is caught at the first change and sampled fast from then on.
 FAST_POLL_S = 0.001
@@ -42,6 +49,7 @@ FAST_FOR_S = 2.0
 # config, so a slow answer never makes the loop miss steps of a turn.
 events = queue.Queue()
 _config = {"mtime": None, "value": {}}
+track_mode_until = 0.0  # monotonic time until which the knob selects tracks (0 = it sets the volume); worker thread only
 
 
 def player(command):
@@ -88,21 +96,38 @@ def playing():
     return False
 
 
+def track_mode():
+    # the knob selects tracks: only while the button is still set to "next track" and the time has not run out
+    global track_mode_until
+    if rotary_config().get("button", "off") != "next":
+        track_mode_until = 0.0  # another function chosen meanwhile: the mode ends, also if it is chosen again later
+    return time.monotonic() < track_mode_until
+
+
 def button_pressed():
+    global track_mode_until
     action = rotary_config().get("button", "off")
+    if action == "next":
+        # a switch: on the first press the knob selects tracks, on the second one it sets the volume again
+        track_mode_until = 0.0 if track_mode() else time.monotonic() + TRACK_MODE_S
+        print("rotary: %s" % ("track selection" if track_mode_until else "volume"), flush=True)
+        return
+    track_mode_until = 0.0
     if action == "playpause":
         player("pause" if playing() else "play")
-    elif action == "next":
-        player("next")
     elif action == "ffwd":
         player("seek+30")
 
 
 def worker():
+    global track_mode_until
     while True:
         event = events.get()
         if event == "button":
             button_pressed()
+        elif track_mode():
+            track_mode_until = time.monotonic() + TRACK_MODE_S  # turning keeps the mode alive
+            player("next" if event > 0 else "previous")
         else:
             player("%+d" % (event * volume_step()))
 
