@@ -71,6 +71,9 @@ export class SwiperComponent<T> {
   public compact = input<boolean>(false)
   private static readonly COMPACT_TOP = 60
   private static readonly HEADER_HEIGHT = 70
+  // Cover Flow without the bar: the covers are as large as the player's cover (px), whatever the display's height
+  private static readonly COMPACT_COVER = 350
+  private static readonly COVERFLOW_COVER = 300
   // (not the children's themes: their covers sit in a layout of their own)
   protected readonly compactActive = computed(() => this.compact() && !this.km())
   // A rectangle in the row's own pixels: while the row is scaled (compact) the screen shows it k times larger, and the
@@ -87,6 +90,7 @@ export class SwiperComponent<T> {
   // the covers' area ran from row top to the bottom of the display (height - header) and now runs from 10 px to the
   // bottom: that is the factor, capped so a tall screen does not blow the covers up
   protected readonly compactScale = computed(() => {
+    if (this.coverflow()) return (SwiperComponent.COMPACT_COVER / SwiperComponent.COVERFLOW_COVER).toFixed(4)
     const h = window.innerHeight
     const k = (h - SwiperComponent.COMPACT_TOP) / (h - SwiperComponent.HEADER_HEIGHT - this.compactRowTop())
     return Number.isFinite(k) ? Math.min(1.3, Math.max(1, k)).toFixed(4) : '1'

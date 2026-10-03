@@ -129,6 +129,13 @@ swiper-container.coverflow {
         -webkit-box-reflect: below 2px linear-gradient(transparent 68%, rgba(255, 255, 255, 0.3));
     }
 
+    // Without the bar the row is scaled by --swiper-k and moved by --swiper-shift (see the component): the room below
+    // the covers is then what is left of the display, divided by the scale, minus the 20 px padding and the 300 px cover
+    // (the row ends at the bottom edge, so the mirror image runs down to it and the scrollbar stays on the display)
+    :host(.compact) & ion-grid {
+        margin-bottom: calc((100vh - var(--swiper-shift, 0px)) / var(--swiper-k, 1) - 320px);
+    }
+
     ion-grid,
     ion-col {
         padding: 0;
