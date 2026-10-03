@@ -1,4 +1,11 @@
 <h3>DEV 5.0.7 - changes compared to 5.0.6</h3>
+<b>New player: mpv</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Local albums, NAS, podcasts and radio play with mpv instead of mplayer, which has hardly been maintained for years: streams reconnect after a drop, going on where you left off starts right there (no audible seek after the start), tracks follow each other without a gap, and the track number comes from the playlist itself. The update installs mpv; mplayer stays installed as a fallback - "playerEngine": "mplayer" in mupiboxconfig.json brings it back, and a box without mpv plays with mplayer.</li>
+<li id='linews' class='linews'>New: Settings › Audio › Volume › "Level the loudness" (soft or strong) - a quiet audio play is no longer quieter than the album before it. Changed while playing, without a break. Spotify plays through its own player and stays as it is.</li>
+<li id='linews' class='linews'>The start sound, the low battery sound of the MuPiHAT and MP3 announcements play with mpv too.</li>
+</ul>
 <b>Podcasts</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
