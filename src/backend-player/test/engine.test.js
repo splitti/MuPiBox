@@ -426,3 +426,49 @@ test(`${ENGINE}: a file chosen while the engine is started anew (after a crash) 
   assert.equal(await prop('filename'), path.basename(files[2]))
   player.setVolume(5)
 })
+
+// a property asked of mpv directly over its socket (one the wrapper does not hand out, e.g. "af")
+function mpvGet(name) {
+  return new Promise((resolve, reject) => {
+    const s = require('node:net').createConnection(path.join(os.tmpdir(), `mupibox-mpv-${process.pid}.sock`))
+    let buf = ''
+    const timer = setTimeout(() => {
+      s.destroy()
+      reject(new Error(`no answer for ${name}`))
+    }, 3000)
+    s.on('connect', () => s.write(`${JSON.stringify({ command: ['get_property', name], request_id: 991 })}\n`))
+    s.on('data', (d) => {
+      buf += d
+      for (const line of buf.split('\n')) {
+        try {
+          const msg = JSON.parse(line)
+          if (msg.request_id === 991) {
+            clearTimeout(timer)
+            s.destroy()
+            resolve(msg.data)
+          }
+        } catch {
+          // a part of a line
+        }
+      }
+    })
+    s.on('error', reject)
+  })
+}
+
+test(`${ENGINE}: the levelling of the loudness is set again on an mpv started anew after a crash`, { skip: ENGINE !== 'mpv' && 'mpv only' }, async () => {
+  await settle()
+  player.setLoudness('soft')
+  await sleep(300)
+  assert.match(JSON.stringify(await mpvGet('af')), /loudnorm/)
+  const closed = waitFor('close', 4000)
+  require('node:child_process').execFileSync('pkill', ['-f', `mupibox-mpv-${process.pid}.sock`])
+  await closed
+  await waitFor('ready', 10000)
+  await sleep(300)
+  assert.match(JSON.stringify(await mpvGet('af')), /loudnorm/, 'filter after the restart')
+  player.setLoudness('off')
+  await sleep(300)
+  assert.doesNotMatch(JSON.stringify(await mpvGet('af')), /loudnorm/)
+  player.setVolume(5)
+})
