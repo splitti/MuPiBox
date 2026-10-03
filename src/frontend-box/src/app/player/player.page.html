@@ -277,7 +277,7 @@
       <ion-col size="6">
         <ion-card class="cover-card" [class.km-pressing]="km() && pressingCover" (pointerdown)="coverPointerDown()" (pointerup)="coverPointerUp()" (pointerleave)="coverPointerUp()" (pointercancel)="coverPointerUp()">
           @if (coverMissing()) {
-            <div class="mupi-no-cover"><span>{{ coverTitle() }}</span></div>
+            <div class="mupi-no-cover" [style.background]="noCoverStyle(coverTitle()).background" [style.color]="noCoverStyle(coverTitle()).color"><span>{{ coverTitle() }}</span></div>
           } @else {
             <img [src]="shownCover()" (error)="coverFailed()" draggable="false" style="-moz-user-select: none;" ondragstart="return false;">
           }

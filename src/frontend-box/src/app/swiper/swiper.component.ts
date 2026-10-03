@@ -25,6 +25,7 @@ import { environment } from '../../environments/environment'
 import type { MupiboxConfig } from '../mupibox-config.model'
 import { CoverFlipService } from '../cover-flip.service'
 import { DisplayTextsService } from '../display-texts.service'
+import { noCoverStyle } from '../no-cover'
 import { PlayerService } from '../player.service'
 import { KmThemeService } from '../theme/km-theme.service'
 
@@ -1051,6 +1052,9 @@ export class SwiperComponent<T> {
 
   // The other themes show a dark to mid grey card with the folder's name when there is no picture - the default
   // picture ("nocover") or one that does not load. (The picture's address arrives at once; null: not known yet.)
+  // (the colours of the card: one per folder name, see no-cover.ts)
+  protected readonly noCoverStyle = noCoverStyle
+
   protected noCover(name: string, src: string | null | undefined): boolean {
     if (this.km()) return false
     return this.missingCovers().has(name) || (typeof src === 'string' && (src === '' || src.includes('nocover')))

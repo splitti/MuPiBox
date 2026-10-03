@@ -11,7 +11,7 @@
                   @let src = currentData.imgSrc | async;
                   @if (noCover(currentData.name, src)) {
                     <!-- no picture (or it does not load): dark to mid grey with the folder's name -->
-                    <div class="mupi-no-cover"><span>{{ currentData.name }}</span></div>
+                    <div class="mupi-no-cover" [style.background]="noCoverStyle(currentData.name).background" [style.color]="noCoverStyle(currentData.name).color"><span>{{ currentData.name }}</span></div>
                   } @else {
                     <img draggable="false" ondragstart="return false;" [attr.data-src]="src" (error)="onCoverError(currentData.name)">
                   }
@@ -118,7 +118,7 @@
                   } @else {
                     @let plainSrc = currentData.imgSrc | async;
                     @if (noCover(currentData.name, plainSrc)) {
-                      <div class="mupi-no-cover"><span>{{ currentData.name }}</span></div>
+                      <div class="mupi-no-cover" [style.background]="noCoverStyle(currentData.name).background" [style.color]="noCoverStyle(currentData.name).color"><span>{{ currentData.name }}</span></div>
                     } @else {
                       <img draggable="false" ondragstart="return false;" loading="lazy" src="{{plainSrc}}" (error)="onCoverError(currentData.name)">
                     }
