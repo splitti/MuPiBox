@@ -28,14 +28,39 @@ async function bootConfigPath(): Promise<string> {
   }
 }
 
-// What is written: DietPi's sound card and whether the amplifier's driver is in the boot configuration
+// The lines of the boot configuration that count for every Pi: before the first [section] and under [all] - one under
+// [pi5] (or [cm4], [gpio4=1], ...) does nothing on a Pi 4. And the section a line added at the end would land in.
+function bootLinesInForce(config: string): { lines: Set<string>; lastSection: string } {
+  const lines = new Set<string>()
+  let section = ''
+  for (const raw of config.split('\n')) {
+    const line = raw.trim()
+    const header = /^(\[[^\]]*\])/.exec(line)?.[1]
+    if (header) section = header
+    else if (section === '' || section === '[all]') lines.add(line)
+  }
+  return { lines, lastSection: section }
+}
+
+// What is written: DietPi's sound card and whether the amplifier's driver is in force in the boot configuration
 async function soundcardWritten(bootConfig: string): Promise<{ card: string; ampDriver: boolean }> {
   const read = (file: string) => fsp.readFile(file, 'utf8').catch(() => '')
   const [dietpi, config] = await Promise.all([read('/boot/dietpi.txt'), read(bootConfig)])
+  const inForce = bootLinesInForce(config).lines
   return {
     card: /^CONFIG_SOUNDCARD=(.*)$/m.exec(dietpi)?.[1]?.trim() ?? '',
-    ampDriver: AMP_DRIVER.every((line) => new RegExp(`^${line.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'm').test(config)),
+    ampDriver: AMP_DRIVER.every((line) => inForce.has(line)),
   }
+}
+
+// The amplifier's driver lines added where they count for every Pi (under an [all] of their own when the file ends in
+// another section)
+async function addAmpDriver(bootConfig: string): Promise<void> {
+  const { lines, lastSection } = bootLinesInForce(await fsp.readFile(bootConfig, 'utf8').catch(() => ''))
+  const missing = AMP_DRIVER.filter((line) => !lines.has(line))
+  if (!missing.length) return
+  const add = [...(lastSection && lastSection !== '[all]' ? ['[all]'] : []), ...missing]
+  await run('sudo', ['sh', '-c', 'f="$0"; shift; printf \'%s\\n\' "$@" >> "$f"', bootConfig, ...add])
 }
 
 // The sound cards the system has found (after the restart a new card needs): their names from ALSA
@@ -152,7 +177,7 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
     const bootConfig = await bootConfigPath()
     const amp = id.startsWith('MAX98357A')
     if (amp) {
-      for (const line of AMP_DRIVER) await run('sudo', ['sh', '-c', `grep -qx '${line}' ${bootConfig} || echo '${line}' >> ${bootConfig}`])
+      await addAmpDriver(bootConfig)
     } else if (section(deps, 'mupihat').hat_active !== true) {
       await run('sudo', ['sed', '-i', '/^dtoverlay=max98357a/d;/^dtoverlay=i2s-mmap$/d', bootConfig])
     }

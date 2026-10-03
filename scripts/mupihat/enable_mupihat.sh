@@ -18,12 +18,27 @@ CARD='MAX98357A bcm2835-i2s-HiFi HiFi-0'
 ERR=0
 
 add_line() { grep -qxF "$1" "$2" || echo "$1" >> "$2"; }
+# The line is in the boot configuration where it counts for every Pi: before the first [section] or under [all]. One
+# under [pi5] (or [cm4], [gpio4=1], ...) does nothing on a Pi 4 - and a line added to the end of the file lands in the
+# last section there is.
+effective() {
+	awk -v want="$1" '
+		/^[[:blank:]]*\[/ { s = $0; sub(/^[[:blank:]]*/, "", s); sub(/\].*/, "]", s); next }
+		{ l = $0; sub(/[[:blank:]]+$/, "", l); sub(/^[[:blank:]]+/, "", l) }
+		l == want && (s == "" || s == "[all]") { found = 1 }
+		END { exit !found }' "$2"
+}
+DRIVER=('dtparam=i2c_arm=on' 'dtparam=i2c1=on' 'dtparam=i2c_arm_baudrate=50000' 'dtoverlay=max98357a,sdmode-pin=16' 'dtoverlay=i2s-mmap')
 
-# boot configuration (a line already there is not added again)
-for line in '#--------MuPiHAT--------' 'dtparam=i2c_arm=on' 'dtparam=i2c1=on' 'dtparam=i2c_arm_baudrate=50000' \
-	'dtoverlay=max98357a,sdmode-pin=16' 'dtoverlay=i2s-mmap'; do
-	add_line "${line}" "${BOOT_CONFIG}"
-done
+# boot configuration (a line already in force is not added again)
+missing=()
+for line in "${DRIVER[@]}"; do effective "${line}" "${BOOT_CONFIG}" || missing+=("${line}"); done
+if [ ${#missing[@]} -gt 0 ]; then
+	last=$(sed -n 's/^[[:blank:]]*\(\[[^]]*\]\).*/\1/p' "${BOOT_CONFIG}" | tail -n 1)
+	[ -z "${last}" ] || [ "${last}" = "[all]" ] || echo '[all]' >> "${BOOT_CONFIG}"
+	add_line '#--------MuPiHAT--------' "${BOOT_CONFIG}"
+	for line in "${missing[@]}"; do echo "${line}" >> "${BOOT_CONFIG}"; done
+fi
 
 if [ "${DRY_RUN}" != "1" ]; then
 	add_line 'i2c-dev' /etc/modules
@@ -37,23 +52,23 @@ if [ "${DRY_RUN}" != "1" ]; then
 fi
 
 # the sound card in mupiboxconfig.json (the app and the admin interface show this one), under the config lock the
-# server and the admin interface take; written in place, so owner and rights stay
+# server and the admin interface take. Written next to it and renamed (as the server does): a failed write or a power
+# cut leaves the old file, never an empty one; owner and rights taken over.
 LOCK=/tmp/.mupiboxconfig.lock
 [ -e "${LOCK}" ] || { : > "${LOCK}"; chmod 666 "${LOCK}"; }
 (
 	flock -w 15 9 || exit 1
-	TMP=$(mktemp)
-	if jq --arg c "${CARD}" '.mupibox.physicalDevice = $c' "${MUPIBOX_CONFIG}" > "${TMP}" && [ -s "${TMP}" ]; then
-		cat "${TMP}" > "${MUPIBOX_CONFIG}"
-	else
-		rm -f "${TMP}"
-		exit 1
+	TMP="${MUPIBOX_CONFIG}.mupihat-new"
+	if jq --arg c "${CARD}" '.mupibox.physicalDevice = $c' "${MUPIBOX_CONFIG}" > "${TMP}" && [ -s "${TMP}" ] &&
+		chown --reference="${MUPIBOX_CONFIG}" "${TMP}" && chmod --reference="${MUPIBOX_CONFIG}" "${TMP}" && mv -f "${TMP}" "${MUPIBOX_CONFIG}"; then
+		exit 0
 	fi
 	rm -f "${TMP}"
+	exit 1
 ) 9<"${LOCK}" || ERR=1
 
-# arrived? the driver lines, and DietPi's card (which DietPi keeps in small letters)
-grep -qxF 'dtoverlay=max98357a,sdmode-pin=16' "${BOOT_CONFIG}" && grep -qxF 'dtoverlay=i2s-mmap' "${BOOT_CONFIG}" || ERR=1
+# arrived? the driver lines (in force for this Pi), and DietPi's card (which DietPi keeps in small letters)
+effective 'dtoverlay=max98357a,sdmode-pin=16' "${BOOT_CONFIG}" && effective 'dtoverlay=i2s-mmap' "${BOOT_CONFIG}" || ERR=1
 if [ "${DRY_RUN}" != "1" ]; then
 	written=$(sed -n '/^[[:blank:]]*CONFIG_SOUNDCARD=/{s/^[^=]*=//p;q}' "${DIETPI_TXT}")
 	[ "${written,,}" = "${CARD,,}" ] || ERR=1

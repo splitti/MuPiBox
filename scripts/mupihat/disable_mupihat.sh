@@ -34,19 +34,19 @@ if [ "${DRY_RUN}" != "1" ]; then
 fi
 
 # the sound card in mupiboxconfig.json (the app and the admin interface show this one), under the config lock the
-# server and the admin interface take; written in place, so owner and rights stay
+# server and the admin interface take. Written next to it and renamed (as the server does): a failed write or a power
+# cut leaves the old file, never an empty one; owner and rights taken over.
 LOCK=/tmp/.mupiboxconfig.lock
 [ -e "${LOCK}" ] || { : > "${LOCK}"; chmod 666 "${LOCK}"; }
 (
 	flock -w 15 9 || exit 1
-	TMP=$(mktemp)
-	if jq --arg c "${CARD}" '.mupibox.physicalDevice = $c' "${MUPIBOX_CONFIG}" > "${TMP}" && [ -s "${TMP}" ]; then
-		cat "${TMP}" > "${MUPIBOX_CONFIG}"
-	else
-		rm -f "${TMP}"
-		exit 1
+	TMP="${MUPIBOX_CONFIG}.mupihat-new"
+	if jq --arg c "${CARD}" '.mupibox.physicalDevice = $c' "${MUPIBOX_CONFIG}" > "${TMP}" && [ -s "${TMP}" ] &&
+		chown --reference="${MUPIBOX_CONFIG}" "${TMP}" && chmod --reference="${MUPIBOX_CONFIG}" "${TMP}" && mv -f "${TMP}" "${MUPIBOX_CONFIG}"; then
+		exit 0
 	fi
 	rm -f "${TMP}"
+	exit 1
 ) 9<"${LOCK}" || ERR=1
 
 # arrived? no driver line left, and DietPi's card
