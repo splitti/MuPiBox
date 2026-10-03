@@ -186,6 +186,9 @@ export function registerAudioOutputRoutes(app: Express, deps: AudioOutputDeps): 
 export function startAudioWatch(): void {
   setInterval(async () => {
     if (switching) return
+    // (PulseAudio not there - starting, restarting: no sinks to see, but the card is fine; binding its driver anew
+    // every 20 s meanwhile cut the sound for a second each time)
+    if (!(await pactl('info')).ok) return
     const list = await sinks()
     if (list.some((s) => s.startsWith('alsa_output') || s.startsWith('bluez_'))) return
     await ensureBoxSink().catch(() => null)

@@ -1,10 +1,24 @@
 <ion-header class="wifi-header">
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button icon="arrow-back-outline" defaultHref="/settings"></ion-back-button>
+      @if (address()) {
+        <!-- (in the address form: back to the list, not out of the page) -->
+        <ion-button class="form-back" (click)="closeAddress()"><ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon></ion-button>
+      } @else {
+        <ion-back-button icon="arrow-back-outline" defaultHref="/settings"></ion-back-button>
+      }
     </ion-buttons>
     <ion-title>
-      @if (linkType() === 'ethernet') {
+      @if (address(); as a) {
+        Address<span class="wifi-interface">{{ a.ssid }}</span>
+      } @else if (ethernetAvailable()) {
+        <!-- WiFi or LAN: the LAN settings also when the cable is not the link in use (set up before plugging in) -->
+        <span class="view-toggle" role="group" aria-label="View">
+          <button type="button" [class.on]="view() === 'wifi'" (click)="chooseView('wifi')">WiFi</button>
+          <button type="button" [class.on]="view() === 'lan'" (click)="chooseView('lan')">LAN</button>
+        </span>
+        @if (view() === 'lan' ? (ethernet()?.interface ?? ethernetInterfaceName()) : card().interface; as iface) {<span class="wifi-interface">{{ iface }}</span>}
+      } @else if (linkType() === 'ethernet') {
         LAN@if (ethernet()?.interface) {<span class="wifi-interface">{{ ethernet()?.interface }}</span>}
       } @else {
         WiFi@if (card().interface) {<span class="wifi-interface">{{ card().interface }}</span>}
@@ -25,7 +39,7 @@
     @if (ethernetAvailable()) {
       <ion-buttons slot="end">
         <ion-button (click)="lanPowerButtonPressed()" [title]="lanTooltip()">
-          <ion-icon slot="icon-only" name="git-network-outline" class="power-icon" [class.on]="ethernetLinkUp()"></ion-icon>
+          <ion-icon slot="icon-only" name="git-network-outline" class="power-icon" [class.on]="!ethernetOff()"></ion-icon>
         </ion-button>
       </ion-buttons>
     }
@@ -33,14 +47,83 @@
 </ion-header>
 
 <ion-content class="wifi-content">
-  @if (linkType() === 'ethernet') {
+  @if (address(); as a) {
+    <!-- The address of a saved WiFi network: DHCP or fixed - fields left, keypad (or the test's list) right -->
+    <div class="lan-config address-form">
+      <div class="address-top">
+        <div class="mode-toggle" role="group" aria-label="Mode">
+          <button type="button" [class.on]="a.dhcp" (click)="setAddressMode(true)">DHCP</button>
+          <button type="button" [class.on]="!a.dhcp" (click)="setAddressMode(false)">STATIC</button>
+        </div>
+        <span class="address-hint">
+          @if (a.active) {
+            connected · the test runs without dropping the connection
+          } @else {
+            not connected · testing only works in the network the box is in
+          }
+        </span>
+      </div>
+      @if (a.dhcp) {
+        <p class="address-dhcp">
+          The box gets its address from the router.
+          @if (fixed()[a.ssid]?.paused) {
+            The fixed address {{ fixed()[a.ssid]?.ip }} is paused - choose STATIC to correct it and try again.
+          }
+        </p>
+      } @else {
+        <div class="lan-static-row">
+          <div class="lan-fields">
+            <ion-item>
+              <ion-label position="stacked">IP address</ion-label>
+              <ion-input name="wa_ip" type="text" inputmode="decimal" placeholder="192.168.1.50" [value]="a.ip" (ionInput)="lanInputChanged($event)" (ionFocus)="lanFocusChanged($event)"></ion-input>
+            </ion-item>
+            <ion-item>
+              <ion-label position="stacked">Mask</ion-label>
+              <ion-input name="wa_mask" type="text" inputmode="decimal" placeholder="255.255.255.0" [value]="a.mask" (ionInput)="lanInputChanged($event)" (ionFocus)="lanFocusChanged($event)"></ion-input>
+            </ion-item>
+            <ion-item>
+              <ion-label position="stacked">Router (gateway)</ion-label>
+              <ion-input name="wa_gateway" type="text" inputmode="decimal" placeholder="192.168.1.1" [value]="a.gateway" (ionInput)="lanInputChanged($event)" (ionFocus)="lanFocusChanged($event)"></ion-input>
+            </ion-item>
+            <ion-item>
+              <ion-label position="stacked">DNS (optional)</ion-label>
+              <ion-input name="wa_dns" type="text" inputmode="decimal" placeholder="empty = the router" [value]="a.dns" (ionInput)="lanInputChanged($event)" (ionFocus)="lanFocusChanged($event)"></ion-input>
+            </ion-item>
+          </div>
+          @if (addressChecks(); as checks) {
+            <div class="address-checks">
+              <div class="checks-title">Test with {{ a.ip }}</div>
+              @for (c of checks; track c.id) {
+                <div class="check"><span class="mark" [class.ok]="c.ok" [class.warn]="!c.ok && c.warn">{{ c.ok ? '✓' : c.warn ? '!' : '✗' }}</span>{{ addressChecksText[c.id]?.[c.ok ? 0 : 1] ?? c.id }}</div>
+              } @empty {
+                <div class="check">The box is not in this network - nothing to test.</div>
+              }
+              <div class="checks-hint">Tap a field to change it - the keypad comes back.</div>
+            </div>
+          } @else {
+            <div class="lan-simple-keyboard"></div>
+          }
+        </div>
+      }
+      @if (addressNote()) {
+        <p class="address-note">{{ addressNote() }}</p>
+      }
+      <div class="lan-actions">
+        @if (!a.dhcp && a.active) {
+          <ion-button fill="outline" (click)="testAddress()" [disabled]="addressBusy()">Test</ion-button>
+        }
+        <ion-button (click)="saveAddress()" [disabled]="addressBusy()">Save</ion-button>
+        <ion-button fill="outline" (click)="closeAddress()">Cancel</ion-button>
+      </div>
+    </div>
+  } @else if (view() === 'lan') {
     <ion-card class="status-card">
       <div class="status-row">
         <div class="status-ssid">
-          <ion-icon name="wifi-outline"></ion-icon>
+          <ion-icon name="git-network-outline"></ion-icon>
           <div>
             <div class="ssid-name">LAN</div>
-            <div class="ssid-detail">{{ ethernet()?.interface }}@if (ethernet(); as eth) { &middot; {{ eth.dhcp ? 'DHCP' : 'STATIC' }}}</div>
+            <div class="ssid-detail">{{ ethernet()?.interface }}@if (ethernet(); as eth) { &middot; {{ eth.dhcp ? 'DHCP' : 'STATIC' }}} &middot; {{ cableText() }}</div>
           </div>
         </div>
         <div class="status-ip">
@@ -91,12 +174,12 @@
                 ></ion-input>
               </ion-item>
               <ion-item>
-                <ion-label position="stacked">Static Gateway</ion-label>
+                <ion-label position="stacked">Static Gateway (optional)</ion-label>
                 <ion-input
                   name="lan_gateway"
                   type="text"
                   inputmode="decimal"
-                  placeholder="192.168.1.1"
+                  placeholder="empty = a PC on the cable"
                   [value]="lanGateway()"
                   (ionInput)="lanInputChanged($event)"
                   (ionFocus)="lanFocusChanged($event)"
@@ -122,17 +205,28 @@
         <div class="lan-actions">
           <ion-button (click)="saveEthernetConfig()" [disabled]="ethernetSaving()">Save</ion-button>
           <ion-button fill="outline" (click)="ethernetRestartButtonPressed()">Apply &amp; restart</ion-button>
+          @if (ethernet()?.dhcp && lanDhcp()) {
+            <ion-button fill="outline" (click)="renewAddressButtonPressed(ethernet()?.interface)">Renew address</ion-button>
+          }
         </div>
       </ion-list>
     }
   } @else {
+    @if (reverted(); as r) {
+      <!-- The box took a fixed address back to DHCP (it did not reach its router with it) -->
+      <div class="reverted-note">
+        <span><b>Back to DHCP:</b> with the fixed address {{ fixed()[r.ssid]?.ip }} the box did not reach its router in “{{ r.ssid }}”. It gets its address from the router there again.</span>
+        <ion-button size="small" fill="outline" color="warning" (click)="revertedCorrect()">Correct</ion-button>
+        <ion-button size="small" fill="outline" (click)="revertedOk()">OK</ion-button>
+      </div>
+    }
     <ion-card class="status-card">
       <div class="status-row">
         <div class="status-ssid">
           <ion-icon name="wifi-outline"></ion-icon>
           <div>
             <div class="ssid-name">{{ card().name }}</div>
-            <div class="ssid-detail">{{ card().detail }}</div>
+            <div class="ssid-detail">{{ card().detail }}@if (fixedNow()) { · <span class="fixed-text">fixed address</span>}</div>
           </div>
         </div>
         <div class="status-ip">
@@ -140,6 +234,9 @@
           <div class="ip-value">{{ card().ip }}</div>
           <div class="gateway-value">Router: {{ card().gateway }}</div>
         </div>
+        @if (!fixedNow() && card().ip !== '—') {
+          <ion-button class="renew-button" fill="outline" size="small" (click)="renewAddressButtonPressed()">Renew address</ion-button>
+        }
       </div>
     </ion-card>
 
@@ -188,6 +285,7 @@
                 } @else {
                   Not in range
                 }
+                @if (fixed()[wifi.ssid]; as f) { &nbsp;&middot;&nbsp;<span class="fixed-text">fixed address {{ f.ip }}{{ f.paused ? ' paused' : '' }}</span>}
               </p>
             </ion-label>
             @if (wifi.id !== undefined) {
@@ -199,6 +297,7 @@
                   <button type="button" [class.on]="wifi.band === '5'" (click)="setBand(wifi, '5')">5 GHz</button>
                 </div>
               }
+              <ion-button fill="outline" size="small" (click)="openAddress(wifi)">Address</ion-button>
               <ion-button fill="outline" size="small" (click)="changeNetworkButtonPressed(wifi)">Change</ion-button>
               <ion-button fill="outline" color="danger" size="small" (click)="deleteNetworkButtonPressed(wifi)">Delete</ion-button>
               </div>

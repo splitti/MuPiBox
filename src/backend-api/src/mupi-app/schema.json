@@ -65,13 +65,13 @@
    "id": "g-netz",
    "title": "Netzwerk",
    "icon": "wifi",
-   "description": "WLAN, Optionen, Freigaben"
+   "description": "WLAN, LAN"
   },
   {
    "id": "g-dienste",
    "title": "Dienste",
    "icon": "plug",
-   "description": "Spotify, NAS, Podcast- und Radiosuche · Telegram, MQTT, WLED"
+   "description": "Spotify, NAS, Podcast- und Radiosuche · Telegram, MQTT, WLED · Samba, FTP, VNC"
   },
   {
    "id": "g-sicherheit",
@@ -2311,7 +2311,7 @@
     },
     {
      "title": "Fernsteuerung (VNC)",
-     "help": "Das Display im Browser bedienen. VNC muss unter Netzwerk › Freigaben an sein.",
+     "help": "Das Display im Browser bedienen. VNC muss unter Dienste › Freigaben & Fernzugriff an sein.",
      "items": [
       {
        "type": "buttons",
@@ -3037,7 +3037,7 @@
    "area": "einstellungen",
    "parent": "g-netz",
    "title": "WLAN",
-   "description": "Verbindung, Netze, hinzufügen",
+   "description": "Verbindung, Netze, Adresse, Hardware, Wächter",
    "icon": "wifi",
    "sections": [
     {
@@ -3181,18 +3181,60 @@
        ]
       }
      ]
-    }
-   ]
-  },
-  {
-   "id": "wlanopt",
-   "slug": "network-options",
-   "area": "einstellungen",
-   "parent": "g-netz",
-   "title": "Netzwerk-Optionen",
-   "description": "Onboard-WLAN, USB-WLAN, DHCP, Wächter, Fernsteuerung per IP",
-   "icon": "sliders",
-   "sections": [
+    },
+    {
+     "title": "WLAN-Wächter",
+     "help": "",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "WLAN-Wächter (DietPi-WiFi-Monitor)",
+       "key": "wMon",
+       "default": true,
+       "help": "Baut die Verbindung neu auf, wenn sie abreißt."
+      },
+      {
+       "type": "toggle",
+       "label": "Beste Verbindung suchen",
+       "key": "wBest",
+       "default": false,
+       "help": "Wechselt bei mehreren Netzen automatisch zum stärksten."
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "WLAN neu starten",
+         "ghost",
+         "toast:WLAN startet neu"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Adresse (DHCP)",
+     "help": "",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "DHCP-Timeout",
+       "key": "dhcpTo",
+       "default": true,
+       "help": "Beim Start nicht ewig auf eine IP-Adresse warten."
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Adresse neu holen",
+         "ghost",
+         "toast:Wird neu geholt"
+        ]
+       ]
+      }
+     ]
+    },
     {
      "title": "WLAN-Hardware",
      "help": "",
@@ -3231,9 +3273,41 @@
        "help": "Aus = stabilere Verbindung bei manchen Adaptern."
       }
      ]
+    }
+   ]
+  },
+  {
+   "id": "lan",
+   "slug": "lan",
+   "area": "einstellungen",
+   "parent": "g-netz",
+   "title": "LAN",
+   "description": "Kabelanschluss, Adresse, DHCP oder fest",
+   "icon": "plug",
+   "sections": [
+    {
+     "title": "LAN",
+     "help": "Der Kabelanschluss der Box.",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "LAN an",
+       "key": "lanOn",
+       "default": true
+      },
+      {
+       "type": "seg",
+       "label": "Adresse beziehen",
+       "key": "lanMode",
+       "options": [
+        "DHCP",
+        "Statisch"
+       ]
+      }
+     ]
     },
     {
-     "title": "Verbindung",
+     "title": "Adresse (DHCP)",
      "help": "",
      "items": [
       {
@@ -3244,45 +3318,14 @@
        "help": "Beim Start nicht ewig auf eine IP-Adresse warten."
       },
       {
-       "type": "toggle",
-       "label": "WLAN-Wächter (DietPi-WiFi-Monitor)",
-       "key": "wMon",
-       "default": true,
-       "help": "Baut die Verbindung neu auf, wenn sie abreißt."
-      },
-      {
-       "type": "toggle",
-       "label": "Beste Verbindung suchen",
-       "key": "wBest",
-       "default": false,
-       "help": "Wechselt bei mehreren Netzen automatisch zum stärksten."
-      },
-      {
        "type": "buttons",
        "buttons": [
         [
-         "WLAN neu starten",
+         "Adresse neu holen",
          "ghost",
-         "toast:WLAN startet neu"
-        ],
-        [
-         "DHCP erneuern",
-         "ghost",
-         "toast:Erneuert"
+         "toast:Wird neu geholt"
         ]
        ]
-      }
-     ]
-    },
-    {
-     "title": "Fernsteuerung per IP",
-     "help": "Falls die Box sich über den Hostnamen nicht richtig erreicht, stattdessen die IP-Adresse verwenden.",
-     "items": [
-      {
-       "type": "toggle",
-       "label": "Backend-Steuerung per IP",
-       "key": "ipCtl",
-       "default": false
       }
      ]
     }
@@ -3292,7 +3335,7 @@
    "id": "freigaben",
    "slug": "shares",
    "area": "einstellungen",
-   "parent": "g-netz",
+   "parent": "g-dienste",
    "title": "Freigaben & Fernzugriff",
    "description": "Samba, FTP, VNC",
    "icon": "share",
@@ -4672,7 +4715,7 @@
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "Netzwerk",
-   "description": "WLAN, Optionen, Freigaben",
+   "description": "WLAN, LAN",
    "icon": "wifi",
    "sections": [
     {
@@ -4683,19 +4726,13 @@
        "type": "nav",
        "label": "WLAN",
        "target": "wlan",
-       "subtitle": "Verbindung, Netze, hinzufügen"
+       "subtitle": "Verbindung, Netze, Adresse, Hardware, Wächter"
       },
       {
        "type": "nav",
-       "label": "Netzwerk-Optionen",
-       "target": "wlanopt",
-       "subtitle": "Onboard-WLAN, USB-WLAN, DHCP, Wächter, Fernsteuerung per IP"
-      },
-      {
-       "type": "nav",
-       "label": "Freigaben & Fernzugriff",
-       "target": "freigaben",
-       "subtitle": "Samba, FTP, VNC"
+       "label": "LAN",
+       "target": "lan",
+       "subtitle": "Kabelanschluss, Adresse, DHCP oder fest"
       }
      ]
     }
@@ -4707,7 +4744,7 @@
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "Dienste",
-   "description": "Spotify, NAS, Podcast- und Radiosuche · Telegram, MQTT, WLED",
+   "description": "Spotify, NAS, Podcast- und Radiosuche · Telegram, MQTT, WLED · Samba, FTP, VNC",
    "icon": "plug",
    "sections": [
     {
@@ -4763,6 +4800,18 @@
        "label": "WLED",
        "target": "wled",
        "subtitle": "LED-Streifen per serieller Schnittstelle"
+      }
+     ]
+    },
+    {
+     "title": "Zugriff auf die Box",
+     "help": "",
+     "items": [
+      {
+       "type": "nav",
+       "label": "Freigaben & Fernzugriff",
+       "target": "freigaben",
+       "subtitle": "Samba, FTP, VNC"
       }
      ]
     }
@@ -5871,78 +5920,118 @@
    "id": "wlan"
   },
   {
-   "l": "Netzwerk-Optionen",
-   "where": "Netzwerk › Netzwerk-Optionen",
-   "id": "wlanopt"
-  },
-  {
    "l": "WLAN-Hardware",
-   "where": "Netzwerk › Netzwerk-Optionen",
-   "id": "wlanopt"
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
   },
   {
    "l": "Onboard-WLAN an",
-   "where": "Netzwerk › Netzwerk-Optionen",
-   "id": "wlanopt"
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
   },
   {
    "l": "USB-WLAN-Treiber",
-   "where": "Netzwerk › Netzwerk-Optionen",
-   "id": "wlanopt"
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
   },
   {
    "l": "Stromsparen des USB-Adapters",
-   "where": "Netzwerk › Netzwerk-Optionen",
-   "id": "wlanopt"
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
   },
   {
-   "l": "Verbindung",
-   "where": "Netzwerk › Netzwerk-Optionen",
-   "id": "wlanopt"
+   "l": "Adresse (DHCP)",
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
   },
   {
    "l": "DHCP-Timeout",
-   "where": "Netzwerk › Netzwerk-Optionen",
-   "id": "wlanopt"
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
   },
   {
    "l": "WLAN-Wächter (DietPi-WiFi-Monitor)",
-   "where": "Netzwerk › Netzwerk-Optionen",
-   "id": "wlanopt"
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
   },
   {
    "l": "Beste Verbindung suchen",
-   "where": "Netzwerk › Netzwerk-Optionen",
-   "id": "wlanopt"
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
   },
   {
-   "l": "Fernsteuerung per IP",
-   "where": "Netzwerk › Netzwerk-Optionen",
-   "id": "wlanopt"
+   "l": "WLAN-Wächter",
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
   },
   {
-   "l": "Backend-Steuerung per IP",
-   "where": "Netzwerk › Netzwerk-Optionen",
-   "id": "wlanopt"
+   "l": "WLAN neu starten",
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
+  },
+  {
+   "l": "LAN",
+   "where": "Netzwerk › LAN",
+   "id": "lan"
+  },
+  {
+   "l": "LAN an",
+   "where": "Netzwerk › LAN",
+   "id": "lan"
+  },
+  {
+   "l": "Kabelanschluss",
+   "where": "Netzwerk › LAN",
+   "id": "lan"
+  },
+  {
+   "l": "Feste IP-Adresse",
+   "where": "Netzwerk › LAN",
+   "id": "lan"
+  },
+  {
+   "l": "Statische IP",
+   "where": "Netzwerk › LAN",
+   "id": "lan"
+  },
+  {
+   "l": "DHCP-Timeout",
+   "where": "Netzwerk › LAN",
+   "id": "lan"
+  },
+  {
+   "l": "Adresse neu holen",
+   "where": "Netzwerk › LAN",
+   "id": "lan"
+  },
+  {
+   "l": "DHCP erneuern",
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
+  },
+  {
+   "l": "Adresse neu holen",
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
   },
   {
    "l": "Freigaben & Fernzugriff",
-   "where": "Netzwerk › Freigaben & Fernzugriff",
+   "where": "Dienste › Freigaben & Fernzugriff",
    "id": "freigaben"
   },
   {
    "l": "Samba (Windows-Freigabe)",
-   "where": "Netzwerk › Freigaben & Fernzugriff",
+   "where": "Dienste › Freigaben & Fernzugriff",
    "id": "freigaben"
   },
   {
    "l": "FTP-Server",
-   "where": "Netzwerk › Freigaben & Fernzugriff",
+   "where": "Dienste › Freigaben & Fernzugriff",
    "id": "freigaben"
   },
   {
    "l": "VNC (Display fernsteuern)",
-   "where": "Netzwerk › Freigaben & Fernzugriff",
+   "where": "Dienste › Freigaben & Fernzugriff",
    "id": "freigaben"
   },
   {

@@ -102,6 +102,8 @@ TEXTS = {
     'ss_prefix': {'de': 'Playlist-Präfix: <code>{prefix}</code>', 'en': 'Playlist prefix: <code>{prefix}</code>'},
     'ss_interval': {'de': 'Abfrage alle {mins} min', 'en': 'Checks every {mins} min'},
     'ss_last': {'de': 'Letzter Sync: {status}', 'en': 'Last sync: {status}'},
+    'ss_reason': {'de': 'Grund: {reason}', 'en': 'Reason: {reason}'},
+    'ss_skipped': {'de': 'Nicht gelesen (darum nichts entfernt): {what}', 'en': 'Not read (so nothing was removed): {what}'},
     'ss_time': {'de': 'Zeitpunkt: {time}', 'en': 'Time: {time}'},
     'ss_counts': {'de': '+{adds}  ↻{upds}  −{rems}  Konflikte: {confs}', 'en': '+{adds}  ↻{upds}  −{rems}  conflicts: {confs}'},
     'playlists_failed': {'de': 'Playlist-Abfrage fehlgeschlagen: {detail}', 'en': 'Playlist request failed: {detail}'},

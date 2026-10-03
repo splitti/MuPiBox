@@ -235,7 +235,7 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
   /** GET /api/app/json-file?key= - one of the files of the admin interface's JSON editor, as text. */
   router.get('/json-file', requireSession, async (req, res) => {
     const key = String(req.query.key ?? '')
-    const file = JSON_FILES[key]
+    const file = Object.hasOwn(JSON_FILES, key) ? JSON_FILES[key] : undefined
     if (!file) {
       res.status(400).json({ error: 'unknown file' })
       return
@@ -259,7 +259,7 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
    */
   router.post('/json-file', requireSession, requireCsrf, async (req, res) => {
     const { key, text } = (req.body ?? {}) as { key?: unknown; text?: unknown }
-    const file = JSON_FILES[String(key ?? '')]
+    const file = Object.hasOwn(JSON_FILES, String(key ?? '')) ? JSON_FILES[String(key)] : undefined
     if (!file || typeof text !== 'string') {
       res.status(400).json({ error: 'unknown file' })
       return

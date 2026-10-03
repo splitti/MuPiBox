@@ -33,7 +33,7 @@ import { SpotifyMediaInfo } from './services/spotify-media-info.service'
 import { createSpotifySyncRouter } from './spotify-sync/routes'
 import { startScheduler } from './spotify-sync/scheduler'
 import type { RunSyncDeps } from './spotify-sync/state-machine'
-import { buildElternLandingHandler, createElternApiRouter } from './eltern/routes'
+import { buildElternLandingHandler, createElternApiRouter, registerDisplayNetworkRoutes } from './eltern/routes'
 import { startSpotifyLoginWatch } from './eltern/spotify-auth-age'
 import { startTlsWatch } from './eltern/tls'
 import { startWeeklySummary } from './eltern/weekly-summary'
@@ -51,6 +51,7 @@ import { OnlineCovers } from './online-covers'
 import { ardFeed, isArdFeed } from './ard-sounds'
 import { isEpisodePick } from './episode-pick'
 import { feedHostKey, feedHostsOf, isPrivateHost, neverFetched } from './lan-feeds'
+import { decodeWpaSsid } from './wpa-ssid'
 import { registerAudioOutputRoutes, startAudioWatch } from './audio-output'
 import { episodeKey, MAX_KEEP, type OfflineEpisode, PodcastOffline } from './podcast-offline'
 import { setFeedHeadReader } from './podcast-search'
@@ -398,13 +399,24 @@ app.use('/api/player', (req, res) => {
 // them again in the background when data.json changed or they are old. They are kept here as well, so a display
 // that starts (or is reloaded) has them from the first tap. Only the display writes them; one file on the SD,
 // written when a list was made again (not on every switch).
-const homeCacheFile = path.join(process.cwd(), 'cache', 'home-lists.json')
+// In server/config, which the update keeps and puts back: in cache/ it was gone after every update, and a big library
+// (many Spotify entries) was made from scratch at the first tap - minutes of loading dots.
+const homeCacheFile = path.join(configBasePath, 'home-lists.json')
+const homeCacheFileBefore = path.join(process.cwd(), 'cache', 'home-lists.json')
 const homeCacheCategories = ['audiobook', 'music', 'other']
 let homeCache: Record<string, { version: string; at: number; media: unknown[] }> = {}
-try {
-  homeCache = JSON.parse(fs.readFileSync(homeCacheFile, 'utf8'))
-} catch {
-  // none yet
+for (const file of [homeCacheFile, homeCacheFileBefore]) {
+  try {
+    homeCache = JSON.parse(fs.readFileSync(file, 'utf8'))
+    // (from the place of before: moved over at once, so the next update keeps it already)
+    if (file === homeCacheFileBefore) {
+      fs.writeFileSync(homeCacheFile, JSON.stringify(homeCache))
+      fs.rmSync(homeCacheFileBefore, { force: true })
+    }
+    break
+  } catch {
+    // none yet (there)
+  }
 }
 let homeCacheWrite: Promise<void> = Promise.resolve()
 
@@ -848,8 +860,40 @@ const rssRefreshing = new Set<string>()
 /** A minimal, well-formed empty feed, used as a last-resort fallback so a single
  * unreachable podcast never breaks the whole category listing (the frontend
  * merges all podcasts' feeds into one Observable with no per-item error handling). */
-function emptyRssFeed(): any {
-  return { rss: { channel: { title: { _text: '' }, image: { url: { _text: '' } }, item: [] } } }
+function emptyRssFeed(failure?: FeedFailure): any {
+  return { rss: { channel: { title: { _text: '' }, image: { url: { _text: '' } }, item: [] }, ...(failure ? { _error: failure } : {}) } }
+}
+
+/** Why a feed could not be read - for the app's message instead of "no episodes" (the display ignores it): its server's
+ * name is not known, the server is not reached, a server of the home network that is not allowed (lan-feeds.ts), an
+ * error answer, no feed in the answer, or still loading (slower than rssFetchTimeoutMs, it goes on in the background).
+ * ipv6_only: the name has only an IPv6 address and the box none of its own - the system does not even give that
+ * address out then (getaddrinfo: "not found"), so a server reached only over IPv6 looked like a wrong address. */
+type FeedFailure = 'not_found' | 'ipv6_only' | 'unreachable' | 'blocked' | 'http' | 'invalid' | 'slow'
+
+// The last failure of a feed without a cache (by its cache key), until it is fetched once
+const rssLastFailure = new Map<string, FeedFailure>()
+
+async function feedFailureFor(error: unknown, rssUrl: string): Promise<FeedFailure> {
+  const failure = feedFailureOf(error)
+  if (failure !== 'not_found') return failure
+  try {
+    const host = new URL(rssUrl).hostname.replace(/^\[|\]$/g, '')
+    const v6 = await Promise.race([dns.promises.resolve6(host), new Promise<string[]>((resolve) => setTimeout(() => resolve([]), 3000))])
+    return v6.length ? 'ipv6_only' : failure
+  } catch {
+    return failure
+  }
+}
+function feedFailureOf(error: unknown): FeedFailure {
+  // (fetch() - the ARD's shows - has the system's code in its cause)
+  const e = error as { code?: unknown; cause?: { code?: unknown } } | null
+  const code = String(e?.code ?? e?.cause?.code ?? '')
+  if (code === 'ENOTFOUND' || code === 'EAI_AGAIN' || code === 'EAI_NONAME') return 'not_found'
+  if (/^(ECONNREFUSED|ECONNRESET|EHOSTUNREACH|ENETUNREACH|EHOSTDOWN|ETIMEDOUT|EADDRNOTAVAIL)$/.test(code)) return 'unreachable'
+  if ((error as Error | null)?.name === 'TimeoutError' || (error as Error | null)?.name === 'AbortError') return 'unreachable'
+  if (error instanceof RemoteFetchError) return error.status === 403 ? 'blocked' : error.status === 502 ? 'http' : 'invalid'
+  return 'invalid'
 }
 
 /**
@@ -872,6 +916,31 @@ function refreshRssCache(rssUrl: string, cacheKey: string): Promise<any> {
   return running
 }
 
+// (a file of its own first, then renamed: the feed's file was written in place - by the refresh and, a moment later,
+// by the cover download - and a power cut left half a file, an empty podcast until the next refresh)
+let rssCacheWriteSeq = 0
+async function writeRssCacheFile(cacheFile: string, feed: unknown): Promise<void> {
+  const tmp = `${cacheFile}.${process.pid}.${++rssCacheWriteSeq}.tmp`
+  await writeFile(tmp, JSON.stringify(feed), 'utf8')
+  await rename(tmp, cacheFile)
+}
+
+// The full parser only for a feed the fast one does not understand (no <item>) - and only for a small one: xml-js on
+// a text of many MB blocked the whole backend for a long time and took hundreds of MB on a Pi 3
+const RSS_FULL_PARSE_MAX_BYTES = 2_000_000
+function parseRssFull(xml: string): any {
+  if (xml.length > RSS_FULL_PARSE_MAX_BYTES) throw new Error(`feed too large for the full parser (${xml.length} bytes)`)
+  return JSON.parse(
+    xmlparser.xml2json(
+      xml.replace(/<(description|content:encoded|itunes:summary|itunes:subtitle)(\s[^>]*)?>[\s\S]*?<\/\1>/g, ''),
+      {
+        compact: true,
+        nativeType: true,
+      },
+    ),
+  )
+}
+
 async function refreshRssCacheNow(rssUrl: string, cacheKey: string): Promise<any> {
   const cacheFile = rssCacheFilePath(cacheKey)
   let previousFeed: any = null
@@ -890,14 +959,7 @@ async function refreshRssCacheNow(rssUrl: string, cacheKey: string): Promise<any
   } else {
     // Checked on every hop and capped while streaming (this path had no URL check at all, see fetchRemote)
     const xml = (await fetchRemote(rssUrl, { maxBytes: RSS_MAX_BYTES, timeoutMs: rssRefreshTimeoutMs })).body.toString('utf8')
-    feed =
-      parseRssFeedFast(xml) ??
-      JSON.parse(
-        xmlparser.xml2json(
-          xml.replace(/<(description|content:encoded|itunes:summary|itunes:subtitle)(\s[^>]*)?>[\s\S]*?<\/\1>/g, ''),
-          { compact: true, nativeType: true },
-        ),
-      )
+    feed = parseRssFeedFast(xml) ?? parseRssFull(xml)
   }
 
   const hasNewEpisode = latestEpisodeFingerprint(feed) !== latestEpisodeFingerprint(previousFeed)
@@ -906,7 +968,10 @@ async function refreshRssCacheNow(rssUrl: string, cacheKey: string): Promise<any
   // A cache written by an older version holds every tag of the feed; rewrite it slim.
   const previousIsSlim = previousFeed?._slim === RSS_SLIM_VERSION
 
-  if (previousFeed && !hasNewEpisode && !coverMissing && previousIsSlim) {
+  // (the episodes themselves compared as well: the ARD takes a download release back or sets another end date, a
+  // feed moves an episode's file - the first episode stays the same, and the old data was served for good)
+  const itemsChanged = previousFeed ? JSON.stringify(feed?.rss?.channel?.item ?? null) !== JSON.stringify(previousFeed?.rss?.channel?.item ?? null) : true
+  if (previousFeed && !hasNewEpisode && !coverMissing && previousIsSlim && !itemsChanged) {
     // Nothing changed and the cached cover file is still there - keep serving as-is.
     return previousFeed
   }
@@ -921,7 +986,7 @@ async function refreshRssCacheNow(rssUrl: string, cacheKey: string): Promise<any
   }
 
   await mkdir(rssCacheDataDir, { recursive: true })
-  await writeFile(cacheFile, JSON.stringify(feed), 'utf8')
+  await writeRssCacheFile(cacheFile, feed)
   void warmRssEpisodeCovers(feed, 12)
 
   if (remoteCoverUrl) {
@@ -931,7 +996,7 @@ async function refreshRssCacheNow(rssUrl: string, cacheKey: string): Promise<any
           return
         }
         feed.rss.channel.image.url = { _text: localCoverUrl }
-        await writeFile(cacheFile, JSON.stringify(feed), 'utf8')
+        await writeRssCacheFile(cacheFile, feed)
       })
       .catch((error) => {
         console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to refresh RSS cover in background: ${error}`)
@@ -1155,17 +1220,26 @@ app.get('/api/rssfeed/cached', async (req, res) => {
   // every visit gave up after the same 5 s).
   try {
     const refresh = refreshRssCache(rssUrl, cacheKey)
-    refresh.catch(() => undefined)
+    refresh.then(
+      () => rssLastFailure.delete(cacheKey),
+      async (error) => {
+        const failure = await feedFailureFor(error, rssUrl)
+        // (a few hundred at most - the oldest goes first)
+        if (rssLastFailure.size >= 200 && !rssLastFailure.has(cacheKey)) rssLastFailure.delete(rssLastFailure.keys().next().value as string)
+        rssLastFailure.set(cacheKey, failure)
+      },
+    )
     const feed = await Promise.race([refresh, new Promise((resolve) => setTimeout(() => resolve(null), rssFetchTimeoutMs))])
     // (a copy: the feed object is the cache's, written again when its cover arrives)
-    res.json(feed ? episodeState.annotateFeed(rssUrl, JSON.parse(JSON.stringify(feed))) : emptyRssFeed())
+    // (not there yet: why it failed the last time - a server that never answers was "still loading" at every visit)
+    res.json(feed ? episodeState.annotateFeed(rssUrl, JSON.parse(JSON.stringify(feed))) : emptyRssFeed(rssLastFailure.get(cacheKey) ?? 'slow'))
   } catch (error) {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] RSS fetch failed: ${error}`)
     // Respond with a valid-but-empty feed rather than an HTTP error: the frontend
     // merges every podcast's feed into one Observable with no per-item error
     // handling, so a single unreachable/slow feed would otherwise blank the whole
-    // category listing instead of just this one tile.
-    res.json(emptyRssFeed())
+    // category listing instead of just this one tile. (_error: why, for the app)
+    res.json(emptyRssFeed(await feedFailureFor(error, rssUrl)))
   }
 })
 
@@ -2152,6 +2226,8 @@ function trimBatteryLog(): void {
         /* skip malformed */
       }
     }
+    // (nothing expired: nothing written - the whole file of ~2 MB went to the card every hour before)
+    if (kept.length === raw.split('\n').filter(Boolean).length) return
     const tmp = `${BATTERY_LOG_PATH}.tmp.${process.pid}`
     fs.writeFileSync(tmp, kept.length ? `${kept.join('\n')}\n` : '', 'utf8')
     fs.renameSync(tmp, BATTERY_LOG_PATH)
@@ -2475,11 +2551,19 @@ app.get('/api/activeresume', (_req, res) => {
   })
 })
 
+/** The IPv6 addresses of an adapter that other devices can reach (global and ULA - not fe80:: link-local) */
+function ipv6AddressesOf(name: string): string[] {
+  return (os.networkInterfaces()[name] ?? []).filter((a) => a.family === 'IPv6' && !a.internal && !/^fe[89ab]/i.test(a.address)).map((a) => a.address)
+}
+
 app.get('/api/network', (_req, res) => {
   if (fs.existsSync(networkFile)) {
     tryReadFile(networkFile)
       .then((data) => {
-        res.json(data)
+        // (plus the adapter's IPv6 addresses as they are now - not the link-local fe80:: ones, which every adapter has)
+        const n = data as { interface?: unknown } | null
+        const ipv6 = typeof n?.interface === 'string' ? ipv6AddressesOf(n.interface) : []
+        res.json(n && typeof n === 'object' && ipv6.length ? { ...n, ipv6 } : data)
       })
       .catch((error) => {
         console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/network read network.json`)
@@ -2727,21 +2811,6 @@ app.get('/api/wifi/status', async (_req, res) => {
 })
 
 // wpa_cli prints SSIDs with non-ASCII / special bytes as \xNN escapes.
-function decodeWpaSsid(raw: string): string {
-  const bytes: number[] = []
-  for (let i = 0; i < raw.length; i++) {
-    if (raw[i] === '\\' && raw[i + 1] === 'x' && /^[0-9a-fA-F]{2}$/.test(raw.slice(i + 2, i + 4))) {
-      bytes.push(Number.parseInt(raw.slice(i + 2, i + 4), 16))
-      i += 3
-    } else if (raw[i] === '\\' && raw[i + 1] === '\\') {
-      bytes.push(0x5c)
-      i += 1
-    } else {
-      bytes.push(...Buffer.from(raw[i]))
-    }
-  }
-  return Buffer.from(bytes).toString('utf8')
-}
 
 interface WifiScanEntry {
   signalDbm: number
@@ -2939,9 +3008,11 @@ function parseEthernetStanza(text: string): (EthernetConfig & { blockStart: numb
   }
   const blockStart = ifaceMatch.index
   const rest = text.slice(blockStart + ifaceMatch[0].length)
-  const bodyMatch = /^((?:\n[ \t]*#?[ \t]*(?:address|netmask|gateway|dns-nameservers)[ \t]+\S+)*)/.exec(rest)
+  // (the resolver line of a static stanza belongs to it too - else it stayed behind as a stray line at every save)
+  const bodyMatch = /^((?:\n[ \t]*#?[ \t]*(?:(?:address|netmask|gateway|dns-nameservers)[ \t]+\S+|up printf 'nameserver %s\\n' \S+(?:[ \t]+\S+)* > \/etc\/resolv\.conf))*)/.exec(rest)
   const body = bodyMatch?.[0] ?? ''
-  const field = (name: string) => new RegExp(`^[ \t]*#?[ \t]*${name}[ \t]+(\\S+)`, 'm').exec(body)?.[1] ?? ''
+  // (dns-nameservers may name several servers - all of them kept, as written)
+  const field = (name: string) => new RegExp(`^[ \t]*#?[ \t]*${name}[ \t]+(\\S+(?:[ \t]+\\S+)*)`, 'm').exec(body)?.[1]?.trim() ?? ''
   return {
     iface: ifaceMatch[1],
     dhcp: ifaceMatch[2] === 'dhcp',
@@ -2961,6 +3032,10 @@ function renderEthernetStanza(cfg: EthernetConfig): string {
   if (cfg.gateway) lines.push(`gateway ${cfg.gateway}`)
   // Kept but commented out under dhcp, same as DietPi does, so a later switch to static recalls it.
   if (cfg.dns) lines.push(`${cfg.dhcp ? '#' : ''}dns-nameservers ${cfg.dns}`)
+  // (dns-nameservers alone does nothing on the box - there is no resolvconf; the resolver is written when the cable
+  // comes up, as the WiFi does it for a fixed address. cfg.dns is one to three checked IPv4 addresses - printf
+  // repeats its format for each of them, a line per server.)
+  if (!cfg.dhcp && cfg.dns) lines.push(`up printf 'nameserver %s\\n' ${cfg.dns} > /etc/resolv.conf`)
   return lines.join('\n')
 }
 
@@ -3022,9 +3097,12 @@ app.get('/api/network/ethernet', async (_req, res) => {
       // no default route on this interface
     }
     let linkUp = false
+    let carrier: boolean | null = null
     try {
       const { stdout } = await execFileAsync('ip', ['link', 'show', parsed.iface])
       linkUp = /<[^>]*\bUP\b[^>]*>/.test(stdout)
+      // (a cable with a link: LOWER_UP - only told while the port is up; a port switched off sees no cable)
+      if (linkUp) carrier = /<[^>]*\bLOWER_UP\b[^>]*>/.test(stdout)
     } catch {
       // interface unknown
     }
@@ -3036,8 +3114,11 @@ app.get('/api/network/ethernet', async (_req, res) => {
       gateway: parsed.gateway,
       dns: parsed.dns,
       currentIp,
+      currentIpv6: ipv6AddressesOf(parsed.iface),
       currentGateway,
       linkUp,
+      // a cable plugged in (null: not known - the port is down)
+      carrier,
       // switched off (POST /power): stays down, also after a restart
       off: fs.existsSync(LAN_OFF_FILE),
     })
@@ -3049,26 +3130,36 @@ app.get('/api/network/ethernet', async (_req, res) => {
 
 app.post('/api/network/ethernet', localOrElternSession, async (req, res) => {
   try {
-    const dhcp = Boolean(req.body?.dhcp)
+    // (the string 'false' is DHCP off, not on)
+    const dhcp = req.body?.dhcp === true || req.body?.dhcp === 'true' || req.body?.dhcp === 1 || req.body?.dhcp === '1'
     const ip = String(req.body?.ip ?? '').trim()
     const mask = String(req.body?.mask ?? '').trim()
     const gateway = String(req.body?.gateway ?? '').trim()
-    const dns = String(req.body?.dns ?? '').trim()
-    if (!dhcp) {
-      const required: [string, string][] = [
-        ['Static IP', ip],
-        ['Static mask', mask],
-        ['Static gateway', gateway],
-      ]
-      for (const [label, value] of required) {
-        if (!IPV4_PATTERN.test(value)) {
-          res.status(400).send(`${label} is not a valid IPv4 address`)
-          return
-        }
+    // (several DNS servers, separated by spaces - as dietpi-config writes them - are kept as they are)
+    const dns = String(req.body?.dns ?? '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 3)
+      .join(' ')
+    // Every field given is checked - under DHCP too: the stanza keeps the static values (DietPi's way, a later switch
+    // to static recalls them), and one not checked there could carry a line break, which made a line of its own in
+    // /etc/network/interfaces - run as root at the next ifup. The router is optional: a PC plugged straight into the
+    // box is none - without it the box sets no default route over the cable, and the internet stays with the WiFi.
+    const given: [string, string][] = [
+      ['Static IP', ip],
+      ['Static mask', mask],
+      ['Static gateway', gateway],
+      ['Static DNS', dns],
+    ]
+    for (const [label, value] of given) {
+      if (value && !value.split(' ').every((v) => IPV4_PATTERN.test(v))) {
+        res.status(400).send(`${label} is not a valid IPv4 address`)
+        return
       }
     }
-    if (dns && !IPV4_PATTERN.test(dns)) {
-      res.status(400).send('Static DNS is not a valid IPv4 address')
+    if (!dhcp && (!ip || !mask)) {
+      res.status(400).send('Static IP and mask are needed')
       return
     }
     const parsed = parseEthernetStanza(await readInterfacesFile())
@@ -3112,6 +3203,10 @@ app.post('/api/network/ethernet/power', localOrElternSession, async (req, res) =
     res.status(500).send('error')
   }
 })
+
+// The display's WiFi page: a fixed address per WiFi network (/api/wifi/static*), fetching the address anew
+// (/api/network/dhcp/renew) - see eltern/wifi-static.ts and eltern/network.ts
+registerDisplayNetworkRoutes(app, localOrElternSession)
 
 // Restarts the ethernet interface so a saved config takes effect, mirroring the WiFi "Restart" button.
 app.post('/api/network/ethernet/restart', localOrElternSession, async (_req, res) => {
@@ -3298,14 +3393,20 @@ app.post('/api/wifi/configured/:id/band', async (req, res) => {
 
 app.post('/api/wifi/configured/:id/password', async (req, res) => {
   const id = Number.parseInt(req.params.id, 10)
-  const password: string = req.body?.password ?? ''
+  const password: string = typeof req.body?.password === 'string' ? req.body.password : ''
   if (Number.isNaN(id) || password.length < 8 || password.length > 63) {
     res.status(400).send('invalid request')
     return
   }
 
   try {
-    await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'set_network', String(id), 'psk', `"${password}"`])
+    // The key worked out here as wpa_passphrase does, from the network's name: no character of the password can
+    // break the command (a quote in it ended the quoted value before)
+    const rawSsid = (await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'get_network', String(id), 'ssid'])).stdout.trim()
+    const ssid = rawSsid.startsWith('"') ? Buffer.from(decodeWpaSsid(rawSsid.slice(1, -1)), 'utf8') : Buffer.from(rawSsid, 'hex')
+    if (ssid.length === 0 || ssid.length > 32) throw new Error(`network ${id}: ssid not readable (${rawSsid})`)
+    const psk = crypto.pbkdf2Sync(password, ssid, 4096, 32, 'sha1').toString('hex')
+    await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'set_network', String(id), 'psk', psk])
     await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'enable_network', String(id)])
     await wifiSaveConfig(await wifiInterface())
     console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Updated password for wifi network ${id}`)
@@ -3333,6 +3434,13 @@ app.post('/api/add', (req, res) => {
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
       releaseLock(dataLock, '/api/add')
       res.status(200).send('error')
+      return
+    }
+    // (a data.json that is not a list: said, not thrown - a throw in this callback ended the server, pm2 started it
+    // again, and the next attempt did the same)
+    if (!Array.isArray(data)) {
+      releaseLock(dataLock, '/api/add')
+      res.status(500).send('data.json is not a list')
       return
     }
     // Phase 14a: stamp every Add-Page / Telegram / Admin entry with
@@ -3388,6 +3496,23 @@ function writeJsonAtomic(file: string, data: unknown, callback: (error: Error | 
 // playback (playlistid/showid/audiobookid/id), and fall back to artist::title
 // as a last resort.
 // (a podcast episode by its key: an address that changes with every fetch of the feed gave a second tile for it)
+// whether an entry has what it takes to be found again (see /api/addresume)
+function resumeEntryKeyed(m: { type?: string; id?: string; playlistid?: string; showid?: string; audiobookid?: string; artist?: string; title?: string; nasPath?: string; libraryPath?: string }): boolean {
+  const has = (v: unknown) => typeof v === 'string' && v.length > 0
+  switch (m?.type) {
+    case 'rss':
+      return has(m.id)
+    case 'nas':
+      return has(m.nasPath) || has(m.id)
+    case 'library':
+      return has(m.libraryPath) || (has(m.artist) && has(m.title))
+    case 'spotify':
+      return has(m.id) || has(m.playlistid) || has(m.showid) || has(m.audiobookid)
+    default:
+      return has(m?.id) || (has(m?.artist) && has(m?.title))
+  }
+}
+
 const resumeKeyOf = (m: { type?: string; id?: string; playlistid?: string; showid?: string; audiobookid?: string; artist?: string; title?: string }) =>
   [
     m?.type || '',
@@ -3502,6 +3627,15 @@ app.post('/api/addresume', (req, res) => {
   readResumeOrRecover('/api/addresume', (data) => {
     const now = Date.now()
     const incomingKey = resumeKeyOf(req.body)
+    // An entry nothing can be found by again (a podcast without its feed, a NAS album without its path, a Spotify
+    // entry without any id) is not kept: it could never be played from the list, and one such rss entry ended the
+    // display's whole resume list
+    if (!resumeEntryKeyed(req.body)) {
+      releaseLock(resumeLock, '/api/addresume')
+      console.warn(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/addresume refused: entry without a key (${incomingKey})`)
+      res.status(400).send('resume entry without a key')
+      return
+    }
     // AR5-18: if backend-player just told us this album finished naturally
     // (POST /api/deleteresume within the last RESUME_REJECT_AFTER_DELETE_MS),
     // refuse to recreate the entry that the frontend's paused-state observer
@@ -3628,6 +3762,11 @@ app.post('/api/delete', (req, res) => {
       res.status(200).send('error')
       return
     }
+    if (!Array.isArray(data)) {
+      releaseLock(dataLock, '/api/delete')
+      res.status(500).send('data.json is not a list')
+      return
+    }
     const problem = libraryIndexProblem(data, req.body?.index, req.body?.original)
     if (problem) {
       releaseLock(dataLock, '/api/delete')
@@ -3674,6 +3813,11 @@ app.post('/api/edit', (req, res) => {
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
       releaseLock(dataLock, '/api/edit')
       res.status(200).send('error')
+      return
+    }
+    if (!Array.isArray(data)) {
+      releaseLock(dataLock, '/api/edit')
+      res.status(500).send('data.json is not a list')
       return
     }
     const problem = libraryIndexProblem(data, req.body.index, req.body.original)
@@ -3882,6 +4026,13 @@ app.get('/api/spotify/artist/:artistId/albums', async (req, res) => {
   }
 
   try {
+    // ?all=1: the whole list at once (the display's artist entries), kept and checked with one page - see
+    // getAllArtistAlbums
+    if (req.query.all === '1') {
+      const items = await spotifyApiService.getAllArtistAlbums(artistId, albumTypes)
+      res.status(200).json({ items, total: items.length, limit: items.length, offset: 0 })
+      return
+    }
     const results = await spotifyApiService.getArtistAlbums(artistId, albumTypes, limit, offset)
     res.status(200).json(results)
   } catch (error) {
@@ -5722,6 +5873,17 @@ app.post('/api/nas/login', localOrElternSession, async (req, res) => {
   }
 
   const base = nasResolveBase(address, Boolean(useHttps))
+  // (the box itself is no NAS: its own services got the requests with the NAS's login otherwise)
+  let nasHost = ''
+  try {
+    nasHost = new URL(base).hostname.replace(/^\[|\]$/g, '')
+  } catch {
+    nasHost = ''
+  }
+  if (!nasHost || neverFetched(nasHost)) {
+    res.status(400).json({ success: false, error: 'address is not a NAS address.' })
+    return
+  }
   // A certificate fingerprint the parents confirmed in the admin interface (SHA-256, "AB:CD:..."): only for https.
   const fingerprint =
     base.startsWith('https:') && typeof certFingerprint === 'string' && /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/i.test(certFingerprint)
@@ -5996,7 +6158,12 @@ app.get('/api/nas/browse', localOrElternSession, async (req, res) => {
       const hiddenFolders = new Set(nasSettings(config)?.hiddenFolders ?? [])
 
       const files = await nasListFilesLive(session, folderPath || '/')
-      const entries = files.filter((f) => f.isdir).map((f) => ({ name: f.name, path: f.path, isDirectory: true }))
+      // alphabetically, as people look for a folder ("Folge 2" before "Folge 10", upper and lower case alike) - the NAS
+      // hands them out in its own order (reported by Andreas)
+      const entries = files
+        .filter((f) => f.isdir)
+        .map((f) => ({ name: f.name, path: f.path, isDirectory: true }))
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
 
       return entries.map((e) => ({
         ...e,

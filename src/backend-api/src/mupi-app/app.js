@@ -47,13 +47,21 @@ const esc = (s) =>
 
 /* ---------- start ---------- */
 
+// (a request the box never answers - its backend busy or restarting - ends after this long instead of leaving the
+// start screen there for ever; see bootWatch)
+const BOOT_REQUEST_MS = 15_000
+const withinBoot = (p) => Promise.race([p, new Promise((_, reject) => setTimeout(() => reject(new Error('Die Box hat nicht geantwortet.')), BOOT_REQUEST_MS))])
+
 async function boot() {
+  window.mupiBootStep = 'language'
   await loadAppLanguage()
   watchDocument()
+  window.mupiBootStep = 'box'
   const [schema, session] = await Promise.all([
-    fetch('schema.json', { cache: 'no-cache' }).then((r) => r.json()),
-    fetch(`${API}/session`, { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    withinBoot(fetch('schema.json', { cache: 'no-cache' }).then((r) => r.json())),
+    withinBoot(fetch(`${API}/session`, { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null))).catch(() => null),
   ])
+  window.mupiBootStep = 'page'
   state.schema = schema
   for (const p of schema.pages) {
     state.pages.set(p.id, p)
@@ -65,6 +73,7 @@ async function boot() {
     if (page) Object.assign(page, { icon: page.icon || g.icon, description: page.description || g.description })
   }
   if (!session?.csrf_token || new URLSearchParams(location.search).has('portal')) {
+    window.mupiBootStep = ''
     renderLogin(!!session?.csrf_token)
     return
   }
@@ -84,7 +93,29 @@ async function boot() {
   window.addEventListener('hashchange', routeIfMoved)
   refreshOnReturn()
   route()
+  window.mupiBootStep = ''
 }
+
+// "Verbinde mit der Box …" stayed for ever when the start got stuck (a request the box did not answer): after a
+// while the screen says which step it is at, and offers the two ways out - loading again, or the login page
+// (/app/?portal), which got people in when the page itself did not.
+const BOOT_STEPS = { language: 'Schritt: Sprache laden', box: 'Schritt: Antwort der Box', page: 'Schritt: Seite aufbauen' }
+function bootWays() {
+  return `<div class="boot-actions"><button type="button" class="btn primary" data-boot="reload">Neu laden</button><button type="button" class="btn" data-boot="login">Zur Anmeldung</button></div>`
+}
+function wireBootWays() {
+  $('[data-boot="reload"]')?.addEventListener('click', () => location.reload())
+  $('[data-boot="login"]')?.addEventListener('click', () => {
+    location.href = `${location.pathname.replace(/\/?$/, '/')}?portal`
+  })
+}
+setTimeout(() => {
+  const p = $('#content .loading p')
+  if (!p || !window.mupiBootStep) return
+  p.textContent = 'Das dauert länger als gewohnt.'
+  p.insertAdjacentHTML('afterend', `<p class="help">${esc(BOOT_STEPS[window.mupiBootStep] ?? window.mupiBootStep)}</p>${bootWays()}`)
+  wireBootWays()
+}, 12_000)
 
 // On the phone the app stays open in the background (home screen: no reload, no pull to refresh). Back after a while:
 // the page shown is loaded afresh, unless something is being typed or a sheet is open.
@@ -270,10 +301,12 @@ function renderChrome(page) {
     <div class="title">${esc(title)}</div>
     ${langButton()}
     ${themeButton()}
+    <button class="icon-btn soft" id="power-btn" aria-label="Neu starten oder ausschalten">${icon('power')}</button>
     ${state.open ? '' : `<button class="icon-btn" id="logout-btn" aria-label="Abmelden">${icon('logout')}</button>`}`
   $('#back')?.addEventListener('click', () => go(backTarget(page)))
   $('#lang-btn').addEventListener('click', openLangSheet)
   $('#theme-btn').addEventListener('click', toggleTheme)
+  $('#power-btn').addEventListener('click', openPowerSheet)
   $('#logout-btn')?.addEventListener('click', () => confirmSheet('Abmelden', 'Von der App abmelden? Danach fragt sie wieder nach dem Passwort.', logout))
 
   $('#tabbar').innerHTML = AREAS.map(
@@ -860,8 +893,8 @@ function startSkeleton() {
         ${tile('spielzeit', 'moon', 'Ruhezeit', '–', 'quiet')}${tile('wlan', 'wifi', 'WLAN', '–')}
       </div>
       <div class="section-label">Sofort-Aktionen</div>
-      <div class="quick">
-        <button class="qbtn accent" id="q-plus">${icon('plus', 22)}<span>+15 min</span></button>
+      <div class="quick${startState.playtimeEnabled === false ? ' three' : ''}" id="quick">
+        <button class="qbtn accent" id="q-plus"${startState.playtimeEnabled === false ? ' hidden' : ''}>${icon('plus', 22)}<span>+15 min</span></button>
         <button class="qbtn blue" id="q-quiet">${icon('moon', 22)}<span id="q-quiet-label">Ruhe sofort</span></button>
         <button class="qbtn" id="q-sleep">${icon('time', 22)}<span id="q-sleep-label">Schlaftimer</span></button>
         <button class="qbtn" id="q-say">${icon('vol', 22)}<span>Durchsage</span></button>
@@ -888,7 +921,9 @@ function tile(target, ic, label, val, id) {
     <span class="tile-head">${icon(ic, 16)}${label}</span><b class="tile-val">${val}</b><span class="tile-bar" hidden><i></i></span></button>`
 }
 
-const startState = { maxVolume: 100, volTimer: null, sleep: null, quietUntil: 0 }
+// (playtimeEnabled: the daily limit as last seen - the start page is drawn with or without "+15 min" before its status
+// has come, so the button does not show up and go again on every visit)
+const startState = { maxVolume: 100, volTimer: null, sleep: null, quietUntil: 0, playtimeEnabled: null }
 
 // After a quick action: the start page's state now and twice more (the player takes a change over within seconds)
 function statusSoon(root) {
@@ -1109,14 +1144,17 @@ async function loadStatus(root) {
   let pct = hat.body?.Bat_Percent
   if (!Number.isFinite(pct)) pct = Number.parseInt(String(hat.body?.Bat_SOC ?? ''), 10)
   const charging = batteryCharging(hat.body)
-  setTile(root, 'tile-akku', Number.isFinite(pct) ? `${pct} %${charging ? ' ⚡' : ''}` : '–', Number.isFinite(pct) ? pct : null, pct <= 15 ? 'danger' : pct <= 30 ? 'warn' : 'ok')
+  if (hat.ok && noBattery(hat.body)) setTile(root, 'tile-akku', 'Netzbetrieb', null, 'ok')
+  else setTile(root, 'tile-akku', Number.isFinite(pct) ? `${pct} %${charging ? ' ⚡' : ''}` : '–', Number.isFinite(pct) ? pct : null, pct <= 15 ? 'danger' : pct <= 30 ? 'warn' : 'ok')
   // listened today
   const p = pt.body?.playtime ?? {}
-  // (bonus minutes go onto today's limit: without one they do nothing)
+  // (bonus minutes go onto today's limit: without one they do nothing - the button is not shown then, the other three
+  // take the row; the limit switched on or off shows at the next status)
   const plus = $('#q-plus', root)
-  if (plus) {
-    plus.disabled = !p.enabled
-    plus.title = p.enabled ? '' : 'Nur mit Tageslimit'
+  if (plus && pt.ok) {
+    startState.playtimeEnabled = !!p.enabled
+    plus.hidden = !p.enabled
+    $('#quick', root)?.classList.toggle('three', !p.enabled)
   }
   if (p.enabled && Number.isFinite(p.limitMinutes)) {
     const used = Math.floor((p.usedSeconds ?? 0) / 60)
@@ -1192,9 +1230,10 @@ async function loadNotices(root) {
   const [hat, sync, access] = await Promise.all([api('/api/mupihat'), api('/api/spotify-sync/status'), api(`${API}/spotify-access`)])
   const notes = []
   const pct = hat.body?.Bat_Percent
-  if (hat.body?.ChargeProblemSince) notes.push(['plug', 'Akku lädt nicht', NOT_CHARGING, 'akku'])
+  const battery = hat.ok && !noBattery(hat.body)
+  if (battery && hat.body?.ChargeProblemSince) notes.push(['plug', 'Akku lädt nicht', NOT_CHARGING, 'akku'])
   if (hat.body?.BatteryStaleSince) notes.push(['bat', 'Akku-Werte veraltet', BATTERY_STALE, 'akku'])
-  if (Number.isFinite(pct) && pct <= 15 && !batteryCharging(hat.body)) {
+  if (battery && Number.isFinite(pct) && pct <= 15 && !batteryCharging(hat.body)) {
     notes.push(['bat', 'Akku fast leer', `Noch ${pct} % – bitte bald laden.`, 'akku'])
   }
   // the Spotify login: refused by Spotify, or its 6 months end within two weeks (see spotifyLogin)
@@ -1209,6 +1248,11 @@ async function loadNotices(root) {
     notes.push(['sync', 'Spotify: Ablauf der Anmeldung unbekannt', 'Einmal neu anmelden, dann erinnert die Box rechtzeitig. Antippen zum Anmelden.', connectSpotify, () => remember('mupi-spotify-unknown-dismissed', '1')])
   } else if (sync.body?.enabled && tok?.configured && tok.scopes_ok === false) {
     notes.push(['sync', 'Spotify-Anmeldung abgelaufen', 'Bitte neu verbinden, damit der Sync weiterläuft.', 'spotify'])
+  }
+  // Spotify blocks the box's requests (too many - see spotify-block.ts): until when, without reading logs
+  const block = sync.body?.spotify_block
+  if (block?.until && Date.parse(block.until) > Date.now()) {
+    notes.push(['sync', 'Spotify sperrt die Box gerade', `Zu viele Anfragen – bis ${untilWhen(Date.parse(block.until))} zeigt die Box gespeicherte Spotify-Inhalte, Neues kommt danach.`, 'spotify'])
   }
   const box = $('#notices', root)
   if (!box) return
@@ -1347,6 +1391,11 @@ const DAY_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 const DAY_LONG = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag']
 
 const hhmm = (ms) => new Date(ms).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' })
+// a time that may be on another day (a Spotify block lasts up to a day): with the day then
+const untilWhen = (ms) =>
+  new Date(ms).toDateString() === new Date().toDateString()
+    ? hhmm(ms)
+    : new Date(ms).toLocaleString(LOCALE, { weekday: 'short', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' })
 
 // Friendly words for the errors of the play and save endpoints
 function errorText(r, fallback = 'Das hat nicht geklappt') {
@@ -1686,7 +1735,8 @@ function serviceCover(it) {
   const ref = it.id ? ['album', it.id] : it.playlistid ? ['playlist', it.playlistid] : it.showid ? ['show', it.showid] : it.audiobookid ? ['audiobook', it.audiobookid] : it.artistid ? ['artist', it.artistid] : null
   return ref ? `/api/spotify/cover-for/${ref[0]}/${encodeURIComponent(ref[1])}` : ''
 }
-const coverOf = (it) => it.cover_override ?? it.cover ?? serviceCover(it) ?? ''
+// (no cover of its own and none from the service - a radio station, a local entry: the artist's cover, if one is set)
+const coverOf = (it) => it.cover_override ?? it.cover ?? (serviceCover(it) || it.artistcover_override || it.artistcover || '')
 
 // Spotify entries that only name an artist are not playable on their own (the box looks their albums up itself)
 // Entries that subscribe a whole Spotify artist (only artistid): a folder of that artist's albums (as on the box)
@@ -1896,6 +1946,17 @@ function heardText(e) {
   return left ? `noch ${left} min` : 'Angefangen'
 }
 
+// Why a podcast's feed could not be read (reason of /library/episodes, see feedFailureOf in server.ts)
+const FEED_FAILURES = {
+  not_found: 'Server nicht gefunden: Die Box kennt den Namen dieses Servers nicht. Stimmt die Adresse?',
+  ipv6_only: 'Der Server ist nur über IPv6 erreichbar, die Box hat aber kein IPv6. Trag eine IPv4-Adresse des Servers ein – im Heimnetz z. B. 192.168.…',
+  unreachable: 'Server nicht erreichbar: Er antwortet der Box nicht. Ist er an und aus dem Netz der Box erreichbar?',
+  blocked: 'Der Server liegt im Heimnetz. Die Box ruft ihn erst ab, wenn du ihn erlaubst.',
+  http: 'Der Server hat mit einem Fehler geantwortet. Stimmt die Adresse?',
+  invalid: 'Unter dieser Adresse liegt kein Podcast-Feed, den die Box lesen kann.',
+  slow: 'Der Feed lädt noch. Öffne ihn gleich noch einmal.',
+}
+
 // The episodes of a podcast (newest first, from its feed as the box reads it); a tap plays one on the box
 async function openEpisodes(t) {
   let shown = 40
@@ -1909,7 +1970,18 @@ async function openEpisodes(t) {
       const r = await api(`${API}/library/episodes?index=${t.index}`)
       if (!box.isConnected) return
       if (!r.ok) {
-        box.innerHTML = `<p class="help">${esc('Die Folgen ließen sich nicht laden.')}</p>`
+        // (why the box could not read the feed - see feedFailureOf in server.ts; a server of the home network that is
+        // not allowed yet can be allowed right here)
+        const reason = r.body?.reason
+        box.innerHTML = `<p class="help">${esc(FEED_FAILURES[reason] ?? 'Die Folgen ließen sich nicht laden.')}</p>`
+        if (reason === 'blocked') {
+          sheet.querySelector('[data-close]').insertAdjacentHTML('beforebegin', `<button class="btn primary" data-allow>${esc('Erlauben')}</button>`)
+          sheet.querySelector('[data-allow]').onclick = async () => {
+            if (!(await allowLanFeed(t.ident?.id))) return
+            close()
+            openEpisodes(t)
+          }
+        }
         return
       }
       episodes = r.body?.episodes ?? []
@@ -2403,7 +2475,7 @@ async function loadArtistAlbums(item, box) {
   const r = await api(`${SYNC_API}/artist-albums?artistId=${encodeURIComponent(item.artistid)}`)
   if (!box.isConnected) return
   if (!r.ok) {
-    box.innerHTML = `<p class="help">${r.status === 409 ? 'Spotify ist nicht verbunden.' : 'Die Alben ließen sich nicht laden.'}</p>`
+    box.innerHTML = `<p class="help">${r.status === 409 ? 'Spotify ist nicht verbunden.' : r.status === 429 ? 'Spotify sperrt die Box gerade – die Alben lassen sich erst danach laden.' : 'Die Alben ließen sich nicht laden.'}</p>`
     return
   }
   const albums = r.body?.albums ?? []
@@ -3049,7 +3121,10 @@ async function loadSubAlbums(a, box) {
   box.innerHTML = `<p class="help">Lade die Alben von Spotify …</p>`
   const r = await api(`${SYNC_API}/artist-albums?artistId=${encodeURIComponent(a.id)}`)
   if (!r.ok) {
-    box.innerHTML = `<p class="help">Die Alben ließen sich nicht laden${r.status === 409 ? ' (Spotify ist nicht verbunden)' : ''}.</p>`
+    box.innerHTML =
+      r.status === 429
+        ? '<p class="help">Spotify sperrt die Box gerade – die Alben lassen sich erst danach laden.</p>'
+        : `<p class="help">Die Alben ließen sich nicht laden${r.status === 409 ? ' (Spotify ist nicht verbunden)' : ''}.</p>`
     return
   }
   const albums = r.body?.albums ?? []
@@ -4088,8 +4163,17 @@ function spotifyTop() {
         <div>${spKv(
           s.enabled
             ? [
+                // Spotify blocks the box (too many requests): until when - the sync and the display's lists wait
+                s.spotify_block?.until && Date.parse(s.spotify_block.until) > Date.now()
+                  ? ['Spotify-Sperre', `bis ${untilWhen(Date.parse(s.spotify_block.until))} (zu viele Anfragen)`]
+                  : null,
                 ['Letzter Sync', running ? 'läuft gerade …' : relTime(st.last_sync_end)],
                 ['Ergebnis', result],
+                // why it failed (Spotify's answer), and what a completed run could not read - nothing removed then
+                st.last_sync_status !== 'COMPLETED' && st.last_sync_reason ? ['Grund', st.last_sync_reason] : null,
+                st.last_sync_status === 'COMPLETED' && st.last_sync_skipped?.length
+                  ? ['Nicht gelesen', `${st.last_sync_skipped.join(', ')} – darum wurde nichts entfernt`]
+                  : null,
                 ['Nächster Sync', relTime(st.next_scheduled_sync)],
               ]
             : [['Smart-Sync', 'aus – Playlists werden nicht übernommen']],
@@ -5886,7 +5970,7 @@ function liveTop() {
     `<section class="card wide"><h2>Aktuelles Bild</h2><p class="help">So sieht das Display gerade aus. Aktualisiert sich alle 5 Sekunden, solange die Seite offen ist.</p>
       <div class="live-shot"><img id="lv-img" alt="Bild des Displays"></div><p class="help" id="lv-note" style="margin:0"></p>
       <div class="btns"><button class="btn" id="lv-refresh">Aktualisieren</button></div></section>`,
-    `<section class="card" id="lv-card"><h2>Fernsteuerung (VNC)</h2><p class="help">Das Display im Browser bedienen – mit der Anmeldung der App, ohne eigenes Passwort. Dafür muss VNC unter Netzwerk › Freigaben & Fernzugriff an sein.</p>
+    `<section class="card" id="lv-card"><h2>Fernsteuerung (VNC)</h2><p class="help">Das Display im Browser bedienen – mit der Anmeldung der App, ohne eigenes Passwort. Dafür muss VNC unter Dienste › Freigaben & Fernzugriff an sein.</p>
       <p class="help" id="lv-vnc" style="margin:0"></p><div class="btns"><button class="btn primary" id="lv-open" disabled>Fernsteuerung öffnen</button><button class="btn" id="lv-shares" hidden>Zu Freigaben & Fernzugriff</button></div>
       <div class="vnc-frame" id="lv-frame" hidden><iframe title="Fernsteuerung" allow="fullscreen; clipboard-read; clipboard-write"></iframe>
         <div class="btns"><button class="btn" id="lv-full">${icon('ext', 18)}Vollbild</button><button class="btn" id="lv-tab">In neuem Tab</button><button class="btn" id="lv-close">Schließen</button></div></div></section>`,
@@ -5980,6 +6064,9 @@ async function loadVolume() {
   // (with Bluetooth audio: an own maximum - for headphones)
   state.values.set('volBtOn', r.body.btMaxVolume != null)
   state.values.set('volBtMax', Number(r.body.btMaxVolume ?? Math.min(60, Number(r.body.maxVolume ?? 100))))
+  // the levelling of the loudness (off | soft | strong): a switch and, with it on, the strength
+  state.values.set('loudOn', r.body.loudness === 'soft' || r.body.loudness === 'strong')
+  state.values.set('loudMode', r.body.loudness === 'strong' ? 'Kräftig' : 'Sanft')
 }
 
 /* Soundkarte, Drehregler */
@@ -6165,6 +6252,13 @@ function batteryTop() {
   const h = hw.hat
   if (h === null) return [`<section class="card"><h2>Akku-Stand</h2><p class="help" style="margin:0">Die Akku-Werte ließen sich gerade nicht laden.</p></section>`]
   if (!h || !Object.keys(h).length) return [`<section class="card"><h2>Akku-Stand</h2><p class="help" style="margin:0">Kein MuPiHAT gefunden – die Box läuft ohne Akku-Anzeige.</p></section>`]
+  const volt = (mv) => (Number.isFinite(mv) && mv > 0 ? `${(mv / 1000).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} V` : '–')
+  if (noBattery(h)) {
+    return [
+      `<section class="card"><h2>Akku-Stand</h2><div class="bat-now"><div class="bat-pct">Netzbetrieb</div><small>${esc(NO_BATTERY_TEXT)}</small></div>
+      <dl class="kv"><div><dt>USB-Spannung</dt><dd>${volt(h.Vbus)}</dd></div><div><dt>Temperatur Lade-Chip</dt><dd>${Number.isFinite(h.Temp) ? `${h.Temp.toLocaleString(LOCALE)} °C` : '–'}</dd></div></dl></section>`,
+    ]
+  }
   let pct = h.Bat_Percent
   if (!Number.isFinite(pct)) pct = Number.parseInt(String(h.Bat_SOC ?? ''), 10)
   const charging = batteryCharging(h)
@@ -6220,6 +6314,16 @@ function batteryTop() {
 
 const BATTERY_NAMES = { 'USB-C mode (no battery)': 'USB-C-Betrieb (ohne Akku)', Custom: 'Eigenes Profil' }
 const batteryLabel = (n) => BATTERY_NAMES[n] ?? n
+// No battery: the charger sees none (VBAT_PRESENT), or the profile "USB-C mode" is chosen - the box runs from the
+// USB-C plug (a power supply or a power bank). Then no percent, no "nearly empty", no curve: the HAT reports 0 %
+// with the placeholder profile, which read as an empty battery before.
+const USB_C_PROFILE = Object.keys(BATTERY_NAMES).find((n) => /^USB-C/.test(n))
+// (Bat_PercentSource "none": the HAT runs with the placeholder profile, see v_100 <= 10 in mupihat_bq25792.py)
+const noBattery = (h) => h?.BatteryConnected === 0 || h?.Bat_PercentSource === 'none' || hw.data?.mupihat?.battery === USB_C_PROFILE
+const NO_BATTERY_TEXT = 'Kein Akku – die Box läuft über USB-C (Netzteil oder Powerbank).'
+// The profiles as offered: the batteries in the order of the config, the two special ones (no battery, own
+// profile) at the end - a profile added later stood behind them (the 2S3P after "Custom")
+const batteryOptions = (names) => [...names.filter((n) => !(n in BATTERY_NAMES)), ...names.filter((n) => n in BATTERY_NAMES)].map(batteryLabel)
 const PROFILE_KEYS = [
   ['v100', 'v_100'],
   ['v75', 'v_75'],
@@ -6244,6 +6348,10 @@ async function loadHat() {
 // What the battery reads now, under the choice of the profile: "7,85 V · 82 % · lädt"
 function hatNowLine() {
   const h = hw.hat
+  if (h && noBattery(h)) {
+    const usb = Number.isFinite(h.Vbus) && h.Vbus > 0 ? `${(h.Vbus / 1000).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} V` : '–'
+    return `<div class="status-line"><span class="dot ok"></span><span><span>Jetzt</span> <b>${esc(`USB ${usb} · kein Akku`)}</b></span></div>`
+  }
   if (!h || !Number.isFinite(h.Vbat)) return ''
   const pct = Number.isFinite(h.Bat_Percent) ? h.Bat_Percent : Number.parseInt(String(h.Bat_SOC ?? ''), 10)
   const what = batteryCharging(h) ? 'lädt' : Number.isFinite(h.Ibat) && h.Ibat < -50 ? 'entlädt' : 'Ruhezustand'
@@ -6332,9 +6440,124 @@ const net = { status: null, scan: null, scanning: false, saved: null, shares: nu
 /* WLAN */
 
 async function loadWlan() {
-  const [st, saved] = await Promise.all([api('/api/network'), api(`${API}/wifi/saved`)])
+  const [st, saved, fixed] = await Promise.all([api('/api/network'), api(`${API}/wifi/saved`), api(`${API}/wifi/static`)])
   net.status = st.ok ? st.body : null
   net.saved = saved.ok ? saved.body?.networks ?? [] : null
+  // (the networks with a fixed address, by name - see eltern/wifi-static.ts; reverted: one the box took back to DHCP)
+  net.fixed = fixed.ok ? fixed.body?.networks ?? {} : {}
+  net.reverted = fixed.ok ? fixed.body?.reverted ?? null : null
+}
+
+// Gespeicherte Netze › Adresse: DHCP or a fixed address for this network (the box's address in it)
+const WIFI_STATIC_ERRORS = {
+  ip: 'Die IP-Adresse stimmt nicht (Form 192.168.1.50)',
+  mask: 'Die Netzmaske stimmt nicht (z. B. 255.255.255.0)',
+  gateway: 'Die Adresse des Routers stimmt nicht',
+  dns: 'Die Adresse des DNS-Servers stimmt nicht',
+  subnet: 'Adresse und Router liegen nicht im selben Netz',
+  same: 'Die Adresse ist die des Routers',
+  host: 'Diese Adresse ist im Netz reserviert – bitte eine andere',
+}
+// The checks of the test before saving (see test in eltern/wifi-static.ts): [text when fine, text when not]
+const WIFI_TESTS = {
+  network: ['Router und Adressbereich wie im Netz jetzt', 'Router oder Adressbereich anders als im Netz jetzt – Tippfehler?'],
+  own: ['Die Adresse hat die Box gerade selbst', ''],
+  free: ['Die Adresse ist frei', 'Die Adresse nutzt schon ein anderes Gerät'],
+  router: ['Der Router antwortet unter der neuen Adresse', 'Der Router antwortet unter der neuen Adresse nicht'],
+  dns: ['Der DNS-Server antwortet', 'Der DNS-Server antwortet nicht'],
+}
+const wifiTestHtml = (checks) =>
+  `<div class="rows">${checks
+    .map((c) => `<div class="entry"><span class="chip ${c.ok ? 'ok' : 'warn'}">${c.ok ? '✓' : c.warn ? '!' : '✗'}</span><span class="lbl">${esc(WIFI_TESTS[c.id]?.[c.ok ? 0 : 1] ?? c.id)}</span></div>`)
+    .join('')}</div>`
+
+function openWifiAddress(w, page) {
+  const fixed = net.fixed?.[w.ssid]
+  const s = net.status ?? {}
+  // (a suggestion from now: in the network the box is in, the address and router it has from DHCP)
+  const pre = fixed ?? (w.active ? { ip: s.ip, mask: s.subnet, gateway: s.gateway, dns: String(s.dns ?? '').split(/\s+/)[0] } : {})
+  let mode = fixed && !fixed.paused ? 'Statisch' : 'DHCP'
+  // the values last tested and whether all was fine (saving asks again when not)
+  let tested = null
+  const field = (k, label, placeholder, v) =>
+    `<div class="field"><label for="wa-${k}">${esc(label)}</label><div class="input-wrap"><input class="input mono" id="wa-${k}" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="${esc(placeholder)}" value="${esc(v ?? '')}"></div></div>`
+  const when = w.active ? 'Die Box wechselt danach gleich auf diese Adresse, die WLAN-Verbindung bleibt bestehen.' : 'Gilt, sobald die Box sich das nächste Mal mit diesem Netz verbindet.'
+  openSheet(
+    `<h2 translate="no">${esc(w.ssid)}</h2>
+     <div class="field"><label>${esc('Adresse beziehen')}</label><div class="seg" id="wa-mode">${['DHCP', 'Statisch'].map((o) => `<button aria-pressed="${o === mode}" data-v="${o}">${esc(o)}</button>`).join('')}</div></div>
+     <div id="wa-fields"${mode === 'DHCP' ? ' hidden' : ''}>
+       ${field('ip', 'IP-Adresse', 'z. B. 192.168.1.50', pre.ip)}${field('mask', 'Netzmaske', '255.255.255.0', pre.mask || '255.255.255.0')}
+       ${field('gw', 'Router (Gateway)', 'z. B. 192.168.1.1', pre.gateway)}${field('dns', 'DNS-Server (optional)', 'leer = der Router', pre.dns && pre.dns !== pre.gateway ? pre.dns : '')}
+       <p class="help">${esc(when)} ${esc('Erreicht sie damit ihren Router nicht, nimmt sie wieder DHCP und behält die Werte hier zum Korrigieren.')}</p>
+       <p class="help">${esc('Die Adresse sollte außerhalb des Bereichs liegen, den der Router selbst vergibt – oder im Router für die Box reserviert sein.')}</p>
+       ${w.active ? `<div class="btns"><button class="btn" data-test>${icon('check', 16)}${esc('Testen')}</button></div><div id="wa-test"></div>` : `<p class="help">${esc('Testen geht nur im Netz, in dem die Box gerade ist.')}</p>`}
+     </div>
+     <p class="help" id="wa-dhcp"${mode === 'DHCP' ? '' : ' hidden'}>${esc(fixed?.paused ? `Die Adresse kommt vom Router. Die feste Adresse ${fixed.ip} ist pausiert – „Statisch" wählen, um sie zu korrigieren und neu zu probieren.` : 'Die Adresse kommt vom Router.')}</p>
+     <div class="btns"><button class="btn primary" data-save>${esc('Speichern')}</button><button class="btn" data-close>${esc('Abbrechen')}</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      for (const b of sheet.querySelectorAll('#wa-mode button')) {
+        b.onclick = () => {
+          mode = b.dataset.v
+          for (const x of sheet.querySelectorAll('#wa-mode button')) x.setAttribute('aria-pressed', String(x === b))
+          sheet.querySelector('#wa-fields').hidden = mode === 'DHCP'
+          sheet.querySelector('#wa-dhcp').hidden = mode !== 'DHCP'
+        }
+      }
+      const val = (k) => sheet.querySelector(`#wa-${k}`).value.trim()
+      const values = () => ({ ssid: w.ssid, ip: val('ip'), mask: val('mask'), gateway: val('gw'), dns: val('dns') })
+      // the test: its list in the sheet; true when all is fine
+      const runTest = async () => {
+        const body = values()
+        const box = sheet.querySelector('#wa-test')
+        box.innerHTML = `<p class="help">${esc('Wird getestet – die Verbindung bleibt dabei bestehen …')}</p>`
+        const r = await api(`${API}/wifi/static/test`, { method: 'POST', body })
+        if (!r.ok) {
+          box.innerHTML = `<p class="help">${esc(WIFI_STATIC_ERRORS[r.body?.field] ?? (r.status === 409 ? 'Die Box ändert gerade die Adresse – gleich noch einmal' : 'Der Test ließ sich nicht ausführen'))}</p>`
+          tested = null
+          return null
+        }
+        if (r.body?.active === false) {
+          // (the box left this network meanwhile: nothing was tested - saved without the switch, see the backend)
+          box.innerHTML = `<p class="help">${esc('Die Box ist gerade nicht in diesem Netz – nichts zu testen. Die Adresse gilt, sobald sie wieder drin ist.')}</p>`
+          tested = null
+          return true
+        }
+        box.innerHTML = wifiTestHtml(r.body.checks ?? [])
+        tested = { key: JSON.stringify(body), ok: (r.body.checks ?? []).every((c) => c.ok) }
+        return tested.ok
+      }
+      const testBtn = sheet.querySelector('[data-test]')
+      if (testBtn) testBtn.onclick = runTest
+      sheet.querySelector('[data-save]').onclick = async () => {
+        const body = mode === 'DHCP' ? { ssid: w.ssid, dhcp: true } : values()
+        if (mode === 'DHCP' && !fixed) return close()
+        if (w.active && mode !== 'DHCP') {
+          // (in the network the box is in: tested first - with these values - and asked again when something failed)
+          const ok = tested?.key === JSON.stringify(body) ? tested.ok : await runTest()
+          if (ok === null) return
+          if (!ok && !(await ask('Trotzdem speichern?', 'Beim Test ist etwas nicht gut gegangen (siehe Liste). Erreicht die Box mit der neuen Adresse ihren Router nicht, nimmt sie nach etwa 30 Sekunden wieder DHCP.', 'Trotzdem speichern'))) return
+        }
+        if (w.active) {
+          const text = mode === 'DHCP' ? 'Die Box holt sich ihre Adresse wieder vom Router. Die App ist danach eventuell unter einer anderen Adresse erreichbar.' : `Die Box wechselt auf ${body.ip}. Erreicht sie dort ihren Router nicht, nimmt sie nach etwa 30 Sekunden wieder DHCP.`
+          if (!(await ask('Adresse ändern?', text, 'Ändern'))) return
+        }
+        const r = await api(`${API}/wifi/static`, { method: 'POST', body })
+        if (!r.ok) return toast(WIFI_STATIC_ERRORS[r.body?.field] ?? (r.status === 409 ? 'Die Box ändert gerade die Adresse – gleich noch einmal' : 'Nicht gespeichert'), 'info')
+        close()
+        if (r.body?.active && mode !== 'DHCP') {
+          toast(`Gespeichert – die Box ist gleich unter ${body.ip} erreichbar`)
+          // (the app opened by the old address: on to the new one)
+          if (s.ip && location.hostname === s.ip && body.ip !== s.ip) setTimeout(() => location.assign(location.href.replace(s.ip, body.ip)), 9000)
+        } else {
+          toast(r.body?.active ? 'Gespeichert – die Box holt sich ihre Adresse vom Router' : 'Gespeichert')
+        }
+        // (the list shows the saved address at once - also for the network the box is in)
+        await loadWlan().catch(() => undefined)
+        if (currentPage()?.id === page.id) renderPage(page, false)
+      }
+    },
+  )
 }
 
 const signalWord = (dbm) => (dbm >= -55 ? 'sehr gut' : dbm >= -67 ? 'gut' : dbm >= -75 ? 'mittel' : 'schwach')
@@ -6358,17 +6581,23 @@ function wlanTop() {
     `<section class="card" data-col="1"><div class="card-head"><h2>Verbindung</h2><button class="icon-btn soft" id="w-refresh" aria-label="Aktualisieren">${icon('sync', 18)}</button></div>
       <div class="wifi-now"><span class="avatar">${icon('wifi', 18)}</span><span class="lbl"><b translate="no">${esc(name || 'Nicht verbunden')}</b>
         <small>${Number.isFinite(dbm) ? `${signalBars(dbm)} Empfang ${signalWord(dbm)}` : ''}</small></span><span class="chip ${online ? 'ok' : 'warn'}">${online ? 'online' : 'offline'}</span></div>
-      <dl class="kv">${row('IP-Adresse', n.ip)}</dl>
+      <dl class="kv">${row('IP-Adresse', n.ip)}${(Array.isArray(n.ipv6) ? n.ipv6 : []).map((a) => row('IPv6-Adresse', a)).join('')}</dl>
       <details class="more"><summary>Details</summary><dl class="kv">${row('Signal', n.wifisignal)}${row('Gateway', n.gateway)}${row('DNS', n.dns)}${row('MAC', n.mac)}</dl></details></section>`,
     `<section class="card" data-col="1"><h2>Gespeicherte Netze</h2>${
+      net.reverted
+        ? `<div class="note warn">${icon('info', 18)}<span>${esc(`Mit der festen Adresse hat die Box im Netz „${net.reverted.ssid}“ ihren Router nicht erreicht. Dort holt sie sich ihre Adresse jetzt wieder vom Router (DHCP).`)}</span><button class="btn sm" id="w-rev-ok">OK</button></div>`
+        : ''
+    }${
       net.saved
         ? net.saved.length
           ? `<div class="rows">${net.saved
               .map((w, i) => {
                 const sig = inRange.get(w.ssid)
                 const where = w.active ? 'verbunden' : sig !== undefined ? `in Reichweite · ${signalWord(sig)}` : net.scan ? 'nicht in Reichweite' : ''
-                return `<div class="entry"><span class="avatar">${icon('wifi', 16)}</span><span class="lbl"><b translate="no">${esc(w.ssid)}</b>${where ? `<small>${sig !== undefined && !w.active ? signalBars(sig) : ''} ${esc(where)}</small>` : ''}</span>
-                  ${w.active ? '<span class="chip ok">aktiv</span>' : `<button class="btn sm" data-wpw="${i}">Passwort</button><button class="btn danger sm" data-wrm="${i}">Entfernen</button>`}</div>`
+                const fixed = net.fixed?.[w.ssid]
+                // (the buttons in a group of their own: on a phone it goes below the name, see .wifi-net)
+                return `<div class="entry wifi-net"><span class="avatar">${icon('wifi', 16)}</span><span class="lbl"><b translate="no">${esc(w.ssid)}</b>${where ? `<small>${sig !== undefined && !w.active ? signalBars(sig) : ''} ${esc(where)}</small>` : ''}${fixed ? `<small>${esc(fixed.paused ? `feste Adresse ${fixed.ip} pausiert` : `feste Adresse ${fixed.ip}`)}</small>` : ''}</span>
+                  <span class="wifi-acts">${w.active ? '<span class="chip ok">aktiv</span>' : ''}<button class="btn sm" data-wip="${i}">Adresse</button>${w.active ? '' : `<button class="btn sm" data-wpw="${i}">Passwort</button><button class="btn danger sm" data-wrm="${i}">Entfernen</button>`}</span></div>`
               })
               .join('')}</div><p class="help" style="margin:0">Das verbundene Netz lässt sich nicht entfernen – die Box wäre sonst offline.</p>`
           : '<p class="help" style="margin:0">Keine.</p>'
@@ -6433,6 +6662,15 @@ function mountWlan(root, page) {
     }
   }
   // a saved network's new password (the router got a new one)
+  for (const b of root.querySelectorAll('[data-wip]')) b.onclick = () => openWifiAddress(net.saved[Number(b.dataset.wip)], page)
+  const revOk = $('#w-rev-ok', root)
+  if (revOk) {
+    revOk.onclick = async () => {
+      await api(`${API}/wifi/static/seen`, { method: 'POST' })
+      net.reverted = null
+      renderPage(page, false)
+    }
+  }
   for (const b of root.querySelectorAll('[data-wpw]')) {
     b.onclick = () => {
       const w = net.saved[Number(b.dataset.wpw)]
@@ -7605,17 +7843,40 @@ function restartTop() {
   ]
 }
 
+// Restarting and switching off the box, each after a question: from this page and from the power button at the top
+const askReboot = () =>
+  confirmSheet('Neu starten', 'Die Box jetzt neu starten? Das dauert etwa eine Minute.', async () => {
+    const r = await api('/api/reboot', { method: 'POST', body: {} })
+    toast(r.ok ? 'Die Box startet neu …' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+  })
+const askShutdown = () =>
+  confirmSheet('Ausschalten', 'Die Box jetzt ausschalten? Einschalten geht dann nur noch am Taster.', async () => {
+    const r = await api('/api/shutdown', { method: 'POST', body: {} })
+    toast(r.ok ? 'Die Box schaltet aus …' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+  })
+
+// The power button at the top (next to light/dark): restart or switch off without going through the settings - with
+// the hardware button unplugged that was a long way (asked for by hyperbit)
+function openPowerSheet() {
+  openSheet(
+    `<h2>${esc('Box neu starten oder ausschalten')}</h2>
+     <div class="rows">
+       <div class="entry"><span class="avatar">${icon('sync', 16)}</span><span class="lbl"><b>Neu starten</b><small>Dauert etwa eine Minute; die Wiedergabe endet.</small></span><button class="btn sm" data-pw="reboot">Neu starten</button></div>
+       <div class="entry"><span class="avatar">${icon('power', 16)}</span><span class="lbl"><b>Ausschalten</b><small>Wieder einschalten geht nur über den Taster an der Box.</small></span><button class="btn danger sm" data-pw="off">Ausschalten</button></div>
+     </div>
+     <div class="btns"><button class="btn" data-close>Abbrechen</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      // (the question replaces this sheet)
+      sheet.querySelector('[data-pw="reboot"]').onclick = askReboot
+      sheet.querySelector('[data-pw="off"]').onclick = askShutdown
+    },
+  )
+}
+
 function mountRestart(root) {
-  $('#rs-reboot', root).onclick = () =>
-    confirmSheet('Neu starten', 'Die Box jetzt neu starten? Das dauert etwa eine Minute.', async () => {
-      const r = await api('/api/reboot', { method: 'POST', body: {} })
-      toast(r.ok ? 'Die Box startet neu …' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
-    })
-  $('#rs-off', root).onclick = () =>
-    confirmSheet('Ausschalten', 'Die Box jetzt ausschalten? Einschalten geht dann nur noch am Taster.', async () => {
-      const r = await api('/api/shutdown', { method: 'POST', body: {} })
-      toast(r.ok ? 'Die Box schaltet aus …' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
-    })
+  $('#rs-reboot', root).onclick = askReboot
+  $('#rs-off', root).onclick = askShutdown
   for (const b of root.querySelectorAll('[data-rs]')) {
     b.onclick = () => {
       const what = b.dataset.rs
@@ -7953,7 +8214,7 @@ const POWER_LABEL = { 0: 'Aus', 1: 'Minimal', 2: 'Maximal' }
 const LAN_FIELDS = [
   ['lanIp', 'ip', 'IP-Adresse', 'z. B. 192.168.1.50'],
   ['lanMask', 'mask', 'Netzmaske', '255.255.255.0'],
-  ['lanGw', 'gateway', 'Router (Gateway)', 'z. B. 192.168.1.1'],
+  ['lanGw', 'gateway', 'Router (optional)', 'leer = PC direkt am Kabel'],
   ['lanDns', 'dns', 'DNS-Server (optional)', 'leer = der Router'],
 ]
 const netDriver = () => nopt.opts?.drivers?.find((d) => d.id === nopt.drv)
@@ -7968,17 +8229,18 @@ async function loadNetOptions() {
   v.set('dhcpTo', r.body.dhcpTimeout)
   v.set('wMon', r.body.wifiMonitor)
   v.set('wBest', r.body.bestConnection)
-  v.set('ipCtl', r.body.ipControl)
   v.set('usbDrv', nopt.drv)
   v.set('usbPm', POWER_LABEL[netDriver()?.power] ?? 'Standard')
   if (nopt.lan) {
-    v.set('lanOn', !nopt.lan.off && nopt.lan.linkUp)
+    // (the switch as it is set, not whether a cable has a link: without a cable it read "off" although nothing was
+    // switched off - the cable has a line of its own on the page)
+    v.set('lanOn', !nopt.lan.off)
     v.set('lanMode', nopt.lan.dhcp ? 'DHCP' : 'Statisch')
     for (const [key, field] of LAN_FIELDS) v.set(key, nopt.lan[field] ?? '')
   }
 }
 
-function netSections() {
+function wlanNetSections() {
   const o = nopt.opts
   const d = netDriver()
   const job = d?.job ?? {}
@@ -8004,36 +8266,49 @@ function netSections() {
   if (d?.installed) {
     hardware.push({ type: 'select', label: 'Stromsparen des USB-Adapters', key: 'usbPm', options: ['Aus', 'Minimal', 'Maximal'], help: 'Aus = stabilere Verbindung bei manchen Adaptern. Gilt nach einem Neustart.' })
   }
-  const sections = [
-    { title: 'WLAN-Hardware', items: hardware },
+  return [
     {
-      title: 'Verbindung',
+      title: 'WLAN-Wächter',
+      col: 1,
       items: [
-        { type: 'toggle', label: 'DHCP-Timeout', key: 'dhcpTo', help: 'Beim Start höchstens 10 Sekunden auf eine IP-Adresse warten.' },
         { type: 'toggle', label: 'WLAN-Wächter (DietPi-WiFi-Monitor)', key: 'wMon', help: 'Baut die Verbindung neu auf, wenn sie abreißt.' },
         { type: 'toggle', label: 'Beste Verbindung suchen', key: 'wBest', help: 'Wechselt bei mehreren gespeicherten Netzen zum stärksten.' },
-        { type: 'buttons', buttons: [['WLAN neu starten', 'ghost', 'wifirestart'], ['DHCP erneuern', 'ghost', 'dhcprenew']] },
+        { type: 'buttons', buttons: [['WLAN neu starten', 'ghost', 'wifirestart']] },
       ],
     },
+    { title: 'Adresse (DHCP)', col: 2, items: dhcpItems('wifi') },
+    { title: 'WLAN-Hardware', col: 2, items: hardware },
   ]
-  if (nopt.lan) {
-    const l = nopt.lan
-    const lan = [
-      { type: 'toggle', label: 'LAN an', key: 'lanOn', help: l.off ? 'Ausgeschaltet – bleibt aus, bis es hier wieder eingeschaltet wird.' : 'Mit Kabel hat LAN Vorrang vor dem WLAN.' },
-      { type: 'kv', rows: [['Adresse', l.currentIp ?? '–'], ['Router', l.currentGateway ?? '–']] },
-      { type: 'seg', label: 'Adresse beziehen', key: 'lanMode', options: ['DHCP', 'Statisch'] },
-    ]
-    if (state.values.get('lanMode') === 'Statisch') {
-      for (const [key, , label, placeholder] of LAN_FIELDS) lan.push({ type: 'text', label, key, placeholder })
-    }
-    lan.push({ type: 'buttons', buttons: [['Speichern', 'primary', 'lansave'], ['LAN neu starten', 'ghost', 'lanrestart']] })
-    sections.push({ title: `LAN (${l.interface})`, help: 'Der Kabelanschluss der Box.', items: lan })
+}
+
+// The address from the router, on the pages WLAN and LAN: the timeout at the start (one value for both - a line of
+// dhclient.conf) and fetching the address anew (only that connection's)
+const DHCP_TIMEOUT_HELP = 'Beim Start höchstens 10 Sekunden auf eine Adresse warten – gilt für WLAN und LAN.'
+function dhcpItems(which) {
+  return [
+    { type: 'toggle', label: 'DHCP-Timeout', key: 'dhcpTo', help: DHCP_TIMEOUT_HELP },
+    { type: 'buttons', buttons: [['Adresse neu holen', 'ghost', which === 'lan' ? 'dhcprenewlan' : 'dhcprenew']] },
+  ]
+}
+
+// Netzwerk › LAN: the cable
+function lanSections() {
+  const l = nopt.lan
+  if (!l) return [{ title: 'LAN', items: [{ type: 'note', text: 'Diese Box hat keinen LAN-Anschluss, oder er ließ sich nicht lesen.' }] }]
+  const cable = l.off ? 'Anschluss ausgeschaltet' : l.carrier === true ? 'verbunden' : l.carrier === false ? 'kein Kabel' : '–'
+  const now = [['Kabel', cable], ['Adresse', l.currentIp ?? '–'], ...(l.currentIpv6 ?? []).map((a) => ['IPv6-Adresse', a]), ['Router', l.currentGateway ?? '–']]
+  const lan = [
+    { type: 'toggle', label: 'LAN an', key: 'lanOn', help: l.off ? 'Ausgeschaltet – bleibt aus, bis es hier wieder eingeschaltet wird.' : 'Mit Kabel hat LAN Vorrang vor dem WLAN.' },
+    { type: 'kv', rows: now },
+    { type: 'seg', label: 'Adresse beziehen', key: 'lanMode', options: ['DHCP', 'Statisch'] },
+  ]
+  if (state.values.get('lanMode') === 'Statisch') {
+    for (const [key, , label, placeholder] of LAN_FIELDS) lan.push({ type: 'text', label, key, placeholder })
   }
-  sections.push({
-    title: 'Fernsteuerung per IP',
-    help: 'Falls die Box sich über den Hostnamen nicht richtig erreicht, stattdessen die IP-Adresse verwenden.',
-    items: [{ type: 'toggle', label: 'Backend-Steuerung per IP', key: 'ipCtl', help: 'Der Server startet dafür kurz neu.' }],
-  })
+  lan.push({ type: 'buttons', buttons: [['Speichern', 'primary', 'lansave'], ['LAN neu starten', 'ghost', 'lanrestart']] })
+  const sections = [{ title: `LAN (${l.interface})`, help: l.currentIp || l.off || l.carrier !== false ? 'Der Kabelanschluss der Box.' : 'Der Kabelanschluss der Box. Im Moment steckt kein Kabel.', items: lan }]
+  // (with a fixed address as saved: no DHCP)
+  if (l.dhcp) sections.push({ title: 'Adresse (DHCP)', items: dhcpItems('lan') })
   return sections
 }
 
@@ -8052,7 +8327,7 @@ function pollDriverJob(page) {
   })
 }
 
-const NET_OPTION = { wOnboard: 'onboard', dhcpTo: 'dhcpTimeout', wMon: 'wifiMonitor', wBest: 'bestConnection', ipCtl: 'ipControl' }
+const NET_OPTION = { wOnboard: 'onboard', dhcpTo: 'dhcpTimeout', wMon: 'wifiMonitor', wBest: 'bestConnection' }
 
 async function changeNetOption(key, v, page) {
   const back = async () => {
@@ -8088,7 +8363,7 @@ async function changeNetOption(key, v, page) {
     return back()
   }
   if (r.body?.rebootNeeded) rebootHint('Eingeschaltet.')
-  else toast(key === 'ipCtl' ? 'Gespeichert – der Server startet neu' : 'Gespeichert')
+  else toast('Gespeichert')
   if (key === 'wOnboard') back()
 }
 
@@ -8103,8 +8378,12 @@ async function saveLan(page) {
   const dhcp = state.values.get('lanMode') !== 'Statisch'
   const body = { dhcp }
   for (const [key, field] of LAN_FIELDS) body[field] = dhcp ? '' : String(state.values.get(key) ?? '').trim()
-  // (a typo in a fixed address makes the box unreachable over the cable: asked first, with the address)
-  if (!dhcp && !(await ask('Feste Adresse', `Die Box ist über das Kabel danach unter ${body.ip || '?'} erreichbar – die LAN-Verbindung startet dafür neu. Übernehmen?`, 'Übernehmen'))) return
+  // (a typo in a fixed address makes the box unreachable over the cable: asked first, with the address; without a
+  // router - a PC plugged straight in - the internet stays with the WiFi)
+  const text = body.gateway
+    ? `Die Box ist über das Kabel danach unter ${body.ip || '?'} erreichbar – die LAN-Verbindung startet dafür neu. Übernehmen?`
+    : `Ohne Router ist die Box über das Kabel nur aus diesem Netz erreichbar, unter ${body.ip || '?'} – etwa von einem PC direkt am Kabel. Ins Internet geht sie weiter über das WLAN. Die LAN-Verbindung startet dafür neu. Übernehmen?`
+  if (!dhcp && !(await ask('Feste Adresse', text, 'Übernehmen'))) return
   const r = await api('/api/network/ethernet', { method: 'POST', body })
   if (!r.ok) return toast(LAN_ERROR[r.text] ?? 'Nicht gespeichert', 'info')
   // the new config only takes effect with the port taken down and up
@@ -8116,12 +8395,19 @@ async function saveLan(page) {
   }, 5000)
 }
 
+// The address of the WiFi (lan: of the cable) fetched anew from the router (see dhcp/renew in eltern/network.ts)
+async function renewAddress(lan) {
+  const text = lan
+    ? 'Die Box holt sich ihre Adresse am Kabel neu vom Router. Die Verbindung ist dabei für einen Moment weg.'
+    : 'Die Box holt sich ihre Adresse im WLAN neu vom Router. Die Verbindung ist dabei für einen Moment weg.'
+  if (!(await ask('Adresse neu holen?', text, 'Neu holen'))) return
+  const r = await api(`${API}/dhcp/renew`, { method: 'POST', body: lan ? { lan } : {} })
+  toast(r.ok ? 'Wird neu geholt' : r.status === 409 ? 'Hier gibt es gerade keine Adresse per DHCP' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+}
+
+// The options and actions of the network pages WLAN and LAN (see wlanCtrl, lanCtrl)
 const netOptionsCtrl = {
   load: loadNetOptions,
-  sections: netSections,
-  mount(_root, page) {
-    if (nopt.opts?.drivers?.some((x) => x.job.running)) pollDriverJob(page)
-  },
   change: changeNetOption,
   act: {
     async driver(_arg, _label, page) {
@@ -8145,11 +8431,8 @@ const netOptionsCtrl = {
       const r = await api(`${API}/wifi/restart`, { method: 'POST' })
       toast(r.ok ? 'WLAN startet neu' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
     },
-    async dhcprenew() {
-      if (!(await ask('DHCP erneuern?', 'Die Box holt sich ihre Adresse neu vom Router. Die Verbindung ist für einen Moment weg.', 'Erneuern'))) return
-      const r = await api(`${API}/dhcp/renew`, { method: 'POST' })
-      toast(r.ok ? 'Wird erneuert' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
-    },
+    dhcprenew: () => renewAddress(),
+    dhcprenewlan: () => renewAddress(nopt.lan?.interface),
     lansave: (_arg, _label, page) => saveLan(page),
     async lanrestart() {
       const r = await api('/api/network/ethernet/restart', { method: 'POST' })
@@ -8157,6 +8440,23 @@ const netOptionsCtrl = {
     },
   },
 }
+
+// Netzwerk › WLAN: the connection and networks (wlanTop), below them the WLAN's hardware and watchdog
+// (without the options - they did not load - the networks are still there)
+const wlanCtrl = {
+  load: () => Promise.all([loadWlan(), loadNetOptions().catch(() => (nopt.opts = null))]),
+  top: wlanTop,
+  sections: () => (nopt.opts ? wlanNetSections() : []),
+  mount(root, page) {
+    mountWlan(root, page)
+    if (nopt.opts?.drivers?.some((x) => x.job.running)) pollDriverJob(page)
+  },
+  change: changeNetOption,
+  act: netOptionsCtrl.act,
+}
+
+// Netzwerk › LAN: the cable - on, its address now, DHCP or a fixed one
+const lanCtrl = { load: loadNetOptions, sections: lanSections, change: changeNetOption, act: netOptionsCtrl.act }
 
 /* Experten */
 
@@ -8461,6 +8761,8 @@ function mountUpdates(root, page) {
   if (jobRunning()) pollUpdate(page)
 }
 
+// Einstellungen › Dienste: the block with the box's own shares (Samba, FTP, VNC)
+const isSharesSection = (s) => (s.items ?? []).some((it) => it.target === 'freigaben')
 
 /* the controllers: load(page) reads the box before drawing, mount(root, page) runs after it, change(key, value)
    saves a setting, act / byLabel run the buttons, sections(page) gives the building blocks with the box's values,
@@ -8733,9 +9035,10 @@ const CONTROLLERS = {
       const h = await api(`${API}/feed-hosts`)
       svc.feedHosts = h.ok ? (h.body?.hosts ?? []) : []
     },
-    // the podcast servers of the home network the box may fetch feeds from (see allowLanFeed)
+    // the podcast servers of the home network the box may fetch feeds from (see allowLanFeed) - below the other
+    // services, above the box's own shares (Samba, FTP, VNC), which stay last
     sections: (page) => [
-      ...page.sections,
+      ...page.sections.filter((s) => !isSharesSection(s)),
       {
         title: 'Server im Heimnetz',
         help: 'Podcast-Server im eigenen Netz, z. B. Pinepods oder Audiobookshelf. Andere Adressen im Heimnetz ruft die Box nicht ab. Ein Feed im Heimnetz fragt beim Hinzufügen selbst danach.',
@@ -8751,6 +9054,7 @@ const CONTROLLERS = {
           },
         ],
       },
+      ...page.sections.filter(isSharesSection),
     ],
     mount(root, page) {
       const save = async (body, done) => {
@@ -9104,8 +9408,8 @@ const CONTROLLERS = {
   displaylive: { top: liveTop, sections: () => [], mount: mountLive },
   lautstaerke: {
     load: loadVolume,
-    sections: (page) =>
-      withoutSave(page).map((sec) => ({
+    sections: (page) => [
+      ...withoutSave(page).map((sec) => ({
         ...sec,
         items: sec.items.flatMap((it) =>
           it.key === 'vol'
@@ -9128,7 +9432,26 @@ const CONTROLLERS = {
                 : it,
         ),
       })),
+      // (the player levels everything that is not Spotify - that plays through its own program)
+      {
+        title: 'Lautstärke angleichen',
+        help: 'Hörspiele, Musik, Podcasts und Radio werden auf eine gemeinsame Lautheit gebracht – ein leises Hörspiel ist dann nicht leiser als das Album davor. Spotify spielt über sein eigenes Programm und bleibt, wie es ist.',
+        items: [
+          { type: 'toggle', key: 'loudOn', label: 'Lautstärke angleichen', help: 'Standard aus. Braucht etwas Rechenleistung – auf einem Pi 3 kann es beim Start eines Titels kurz ruckeln.' },
+          ...(state.values.get('loudOn') ? [{ type: 'seg', key: 'loudMode', label: 'Stärke', options: ['Sanft', 'Kräftig'], help: 'Sanft lässt der Dynamik eines Hörspiels mehr Raum, kräftig gleicht stärker an.' }] : []),
+        ],
+      },
+    ],
     async change(key, v, page) {
+      if (key === 'loudOn' || key === 'loudMode') {
+        const on = key === 'loudOn' ? !!v : !!state.values.get('loudOn')
+        const strong = (key === 'loudMode' ? v : state.values.get('loudMode')) === 'Kräftig'
+        const r = await api(`${API}/audio/config`, { method: 'POST', body: { loudness: on ? (strong ? 'strong' : 'soft') : 'off' } })
+        if (!r.ok) return toast('Nicht gespeichert', 'info')
+        toast('Gespeichert')
+        if (key === 'loudOn') renderPage(page, false)
+        return
+      }
       if (key === 'vol') {
         const r = await api(`${API}/audio/volume`, { method: 'POST', body: { volume: v } })
         if (!r.ok) return toast('Lautstärke ließ sich nicht setzen', 'info')
@@ -9167,7 +9490,14 @@ const CONTROLLERS = {
     sections: (page) =>
       withoutSave(page).map((sec) => ({
         ...sec,
-        help: `${hw.data.mupihat.active ? 'Mit dem MuPiHAT gehört die Soundkarte zum HAT (MAX98357A). ' : ''}Wird nach einem Neustart übernommen.`,
+        // (and what the system has found: a card chosen but not found here has no driver, or wants the restart)
+        help: [
+          hw.data.mupihat.active ? 'Mit dem MuPiHAT gehört die Soundkarte zum HAT (MAX98357A).' : '',
+          'Wird nach einem Neustart übernommen.',
+          hw.data.soundcard.detected?.length ? `Vom System erkannt: ${hw.data.soundcard.detected.join(', ')}.` : 'Das System erkennt gerade keine Soundkarte.',
+        ]
+          .filter(Boolean)
+          .join(' '),
         items: sec.items.map((it) => (it.key === 'sound' ? { ...it, options: hw.data.soundcard.options.map((o) => o.name) } : it)),
       })),
     async change(key, v, page) {
@@ -9180,6 +9510,8 @@ const CONTROLLERS = {
       }
       toast('Wird umgestellt …')
       const r = await api(`${API}/soundcard`, { method: 'POST', body: { id: opt.id } })
+      // (the box checks what was written: DietPi's entry and, for the MAX98357A, its driver)
+      if (r.body?.error === 'not_applied') return toast('Die Soundkarte wurde nicht übernommen – bitte noch einmal versuchen', 'info')
       if (!r.ok || r.body?.ok === false) return toast('Das hat nicht geklappt', 'info')
       hw.data.soundcard.current = opt.id
       offerReboot('Die neue Soundkarte gilt nach einem Neustart.')
@@ -9228,16 +9560,20 @@ const CONTROLLERS = {
     sections: (page) => {
       const it = (key, over) => schemaItem(page, key, over)
       const field = (key, label, sub) => it(key, { label, sub, help: '' })
+      const usbOnly = hw.data.mupihat.battery === USB_C_PROFILE
+      const hat = {
+        title: 'MuPiHAT',
+        col: 1,
+        items: [
+          it('hatOn', { help: 'Umschalten stellt auch die Soundkarte um und startet die Box neu.' }),
+          it('battery', { options: batteryOptions(hw.data.mupihat.batteries), help: usbOnly ? NO_BATTERY_TEXT : 'Die Spannungen gehören zu diesem Profil.' }),
+          { type: 'html', html: hatNowLine() },
+        ],
+      }
+      // (the placeholder profile has no voltages to show or to save - its values are 1 and 0)
+      if (usbOnly) return [hat, { title: 'Ladekurve', col: 2, items: [{ type: 'note', text: 'Ohne Akku gibt es keine Ladekurve und keine Schwellen. Ein anderes Profil wählen, sobald ein Akku eingebaut ist.' }] }]
       return [
-        {
-          title: 'MuPiHAT',
-          col: 1,
-          items: [
-            it('hatOn', { help: 'Umschalten stellt auch die Soundkarte um und startet die Box neu.' }),
-            it('battery', { options: hw.data.mupihat.batteries.map(batteryLabel), help: 'Die Spannungen gehören zu diesem Profil.' }),
-            { type: 'html', html: hatNowLine() },
-          ],
-        },
+        hat,
         {
           title: 'Ladekurve',
           help: 'Welche Spannung welchem Ladestand entspricht (mV). Die Werte steigen von „Leer“ nach „Voll“.',
@@ -9284,7 +9620,8 @@ const CONTROLLERS = {
         }
         const save = root.querySelector('[data-label="Profil speichern"]')
         if (save) save.disabled = Object.keys(errs).length > 0
-        $('#hat-chart', root).innerHTML = hatChart()
+        const chart = $('#hat-chart', root)
+        if (chart) chart.innerHTML = hatChart() // (none with the profile "USB-C mode")
       }
       for (const [key] of PROFILE_KEYS) $(`#k-${key}`, root)?.addEventListener('input', check)
       check()
@@ -9416,7 +9753,8 @@ const CONTROLLERS = {
       },
     },
   },
-  wlan: { load: loadWlan, top: wlanTop, sections: () => [], mount: mountWlan },
+  wlan: wlanCtrl,
+  lan: lanCtrl,
   freigaben: {
     load: loadShares,
     sections: (page) =>
@@ -9636,7 +9974,6 @@ const CONTROLLERS = {
       else toast('Gespeichert')
     },
   },
-  wlanopt: netOptionsCtrl,
   experten: { load: loadExperts, top: expertsTop, sections: () => [], ownNav: true, mount: mountExperts },
   backup: { top: backupTop, sections: () => [], mount: mountBackup },
   updates: { load: loadUpdates, top: updatesTop, sections: () => [], ownNav: true, mount: mountUpdates },
@@ -10186,7 +10523,9 @@ async function logout() {
 
 boot().catch((err) => {
   console.error(err)
-  $('#content').innerHTML = `<div class="loading"><p>Die App konnte nicht geladen werden.</p></div>`
+  window.mupiBootStep = ''
+  $('#content').innerHTML = `<div class="loading"><p>Die App konnte nicht geladen werden.</p><p class="help">${esc(String(err?.message ?? err))}</p>${bootWays()}</div>`
+  wireBootWays()
 })
 
 /* ---------- Start › "Angepinnt" (see eltern/pinned-cards.ts) ----------

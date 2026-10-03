@@ -57,6 +57,10 @@ export interface EthernetConfig {
   currentGateway?: string
   /** Whether the port itself is administratively up (see /api/network/ethernet/power). */
   linkUp?: boolean
+  /** A cable with a link (null: not known, the port is down). */
+  carrier?: boolean | null
+  /** Switched off with /api/network/ethernet/power: stays down, also after a restart. */
+  off?: boolean
 }
 
 /** Whether the onboard WiFi radio is on or off (rfkill), independent of a USB WiFi adapter. */
@@ -64,4 +68,26 @@ export interface OnboardWifiStatus {
   /** False when the box has no onboard WiFi adapter at all. */
   available: boolean
   enabled: boolean
+}
+
+/** A fixed address for one saved WiFi network (see backend eltern/wifi-static.ts); paused: taken back to DHCP. */
+export interface WifiStaticAddress {
+  ip: string
+  mask: string
+  gateway: string
+  dns: string
+  paused?: boolean
+}
+
+/** GET /api/wifi/static: the networks with a fixed address by name, and the one last taken back to DHCP */
+export interface WifiStaticState {
+  networks: Record<string, WifiStaticAddress>
+  reverted?: { ssid: string; at: number }
+}
+
+/** One check of the test before saving a fixed address (network, own, free, router, dns) */
+export interface WifiStaticCheck {
+  id: string
+  ok: boolean
+  warn?: boolean
 }

@@ -104,6 +104,10 @@ a { color: var(--mp-primary-text); }
 }
 
 .loading { margin: 18vh auto 0; text-align: center; color: var(--mp-muted); }
+/* the ways out when the start takes too long (see bootWatch in app.js) */
+.loading .help { margin: 4px 0 0; }
+.loading .boot-actions { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
+.loading > .btn { margin-top: 14px; }
 
 /* ---------- cards and page parts ---------- */
 .card {
@@ -696,6 +700,12 @@ a.btn { text-decoration: none; color: inherit; }
   .topbar .lang-btn { width: var(--mp-hit); padding: 0; justify-content: center; }
   .topbar .lang-btn span { display: none; }
 }
+/* a narrow phone: the buttons at the top a bit smaller - with the power button there were five of them, and the title
+   of a page was cut to a few letters */
+@media (max-width: 400px) {
+  .topbar { gap: 6px; padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
+  .topbar .icon-btn, .topbar .lang-btn { width: 38px; height: 38px; }
+}
 /* a slider that does nothing now (e.g. the start volume without a fixed start value) */
 input[type="range"]:disabled { opacity: .4; cursor: default; }
 /* the phone: a segment's words may wrap (two lines instead of cut off), two fields side by side go below each other */
@@ -958,6 +968,11 @@ textarea[hidden] { display: none; }
 .sheet textarea.input { height: 76px; min-height: 0; }
 .quick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (min-width: 700px) { .quick { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+/* without a daily limit "+15 min" is not shown: the other three in one row, on the phone too - their words may take
+   two lines there instead of being cut off */
+.qbtn[hidden] { display: none; }
+.quick.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.quick.three .qbtn span { white-space: normal; text-align: center; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; hyphens: auto; overflow-wrap: anywhere; }
 [data-dep-id][hidden] { display: none; }
 .speech-try { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: var(--mp-r); background: var(--mp-primary-soft); }
 .speech-try .field-pick select { flex: 1; min-width: 0; }
@@ -1011,3 +1026,12 @@ textarea[hidden] { display: none; }
 .out-seg button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; }
 .out-seg button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .spin.sm { width: 14px; height: 14px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; display: inline-block; animation: mp-spin .9s linear infinite; }
+
+/* WLAN › Gespeicherte Netze: up to three buttons per network - on a phone in a line of their own below the name */
+.wifi-net { flex-wrap: wrap; }
+.wifi-net .wifi-acts { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+@media (max-width: 560px) {
+  .wifi-net .wifi-acts { flex-basis: 100%; justify-content: flex-end; }
+}
+/* the address form of a network: its hints below the fields, not on them */
+#wa-fields .help, #wa-dhcp { margin: 10px 0 0; }

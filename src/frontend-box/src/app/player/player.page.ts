@@ -231,12 +231,17 @@ export class PlayerPage implements OnInit, AfterViewInit {
     img.src = url
   }
 
+  /** The entry's cover - or, with only the artist's picture set, that one (as on its tile, see ArtworkService) */
+  private get mediaCover(): string | undefined {
+    return this.media?.cover || this.media?.artistcover || undefined
+  }
+
   private useTrackCover(url: string): void {
     this.trackCover = url
     if (url) {
       this.cover = url
-    } else if (this.media?.cover) {
-      this.cover = this.artworkService.cachedCoverUrl(this.media, this.media.cover)
+    } else if (this.mediaCover) {
+      this.cover = this.artworkService.cachedCoverUrl(this.media, this.mediaCover)
     }
   }
   playing = true
@@ -246,7 +251,24 @@ export class PlayerPage implements OnInit, AfterViewInit {
   currentPlayedLocal: CurrentMPlayer
   showTrackNr = 0
   goBackTimer = 0
+  // Spotify paused in the middle of a track by someone other than the box (see updateProgress)
+  private externallyPaused = false
+  // The album (or playlist) that was started, seen playing in the SDK's state; and how many ticks in a row something
+  // else played instead - Spotify's autoplay went on after the end (see updateProgress)
+  // the box's player was seen busy on this page / how many ticks it is empty again / the page is on its way out /
+  // it goes because of a stop from outside (no STOP and no resume save on the way out)
+  private albumEndTimer: ReturnType<typeof setTimeout> | undefined
+  private playerWasBusy = false
+  private idleTicks = 0
+  private isLeaving = false
+  private stoppedFromOutside = false
+  private contextSeenFor = ''
+  private contextGone = 0
+  private albumEnded = false
   progress = 0
+  // The place just chosen on the progress bar (percent), until the player reports it: the next reports still had the
+  // old place for a moment, and the dot jumped back before it moved to the new one (reported by Andreas)
+  private seekHold: { value: number; until: number } | null = null
   shufflechanged = 0
   tmpProgressTime = 0
   // Tracks the playtime state across ticks so we can detect transitions
@@ -265,6 +287,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   listViewTimerMs = 2500
   listFontFamily = ''
   private longPressTimer: ReturnType<typeof setTimeout> | undefined
+  private shuffleTimer: ReturnType<typeof setTimeout> | undefined
 
   constructor(
     private logService: LogService,
@@ -289,8 +312,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
     if (navState.media) {
       this.media = navState.media
       // Known right away, so the cover is there when the page opens (see CoverFlipService).
-      if (this.media.cover && this.media.type !== 'spotify') {
-        this.cover = this.artworkService.cachedCoverUrl(this.media, this.media.cover)
+      if (this.mediaCover && this.media.type !== 'spotify') {
+        this.cover = this.artworkService.cachedCoverUrl(this.media, this.mediaCover)
       }
       // isResumeEntry() instead of a bare category check: it also recognises
       // legacy entries written before the isResume flag existed.
@@ -349,8 +372,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
         this.cover = spotify.item.album.images[0].url
       } else if (this.trackCover) {
         this.cover = this.trackCover
-      } else if (this.media?.cover) {
-        this.cover = this.artworkService.cachedCoverUrl(this.media, this.media.cover)
+      } else if (this.mediaCover) {
+        this.cover = this.artworkService.cachedCoverUrl(this.media, this.mediaCover)
       } else {
         this.cover = '../assets/images/nocover_mupi.png'
       }
@@ -415,8 +438,17 @@ export class PlayerPage implements OnInit, AfterViewInit {
     return 20 - 17 * (this.loadProgress / 100)
   }
 
+  // The timer for the end of the album's last track (see updateProgress) taken off: a seek, a pause or a step to
+  // another track - the next tick sets it anew if the end is still near
+  private cancelAlbumEnd() {
+    clearTimeout(this.albumEndTimer)
+    this.albumEndTimer = undefined
+  }
+
   seek() {
+    this.cancelAlbumEnd()
     const newValue = +this.range.value
+    this.seekHold = { value: newValue, until: Date.now() + 3000 }
     if (this.media.type === 'spotify') {
       const duration = this.currentPlayedSpotify?.item.duration_ms
       this.playerService.seekPosition(duration * (newValue / 100))
@@ -425,11 +457,43 @@ export class PlayerPage implements OnInit, AfterViewInit {
     }
   }
 
+  // A reported place (percent) - or the one just chosen, while the report has not reached it yet (see seekHold)
+  private heldProgress(reported: number): number {
+    const hold = this.seekHold
+    if (!hold) return reported
+    if (Math.abs(reported - hold.value) <= 2 || Date.now() > hold.until) {
+      this.seekHold = null
+      return reported
+    }
+    return hold.value
+  }
+
+  // Back to the list, with the reason in the box's log (why a player page closed was never to be seen)
+  private leavePage(reason: string): void {
+    this.logService.log(`[PlayerPage] back to the list: ${reason}`)
+    this.navController.back()
+  }
+
   updateProgress() {
     // currentPlayedSpotify / currentPlayedLocal are kept fresh by the
     // takeUntilDestroyed-bound subscriptions in ngOnInit — read them
     // directly here instead of re-subscribing on every tick.
-    this.playing = !this.currentPlayedLocal?.pause
+    // Stopped from outside (the parents' app, Telegram, the sleep timer): the box's player is empty again after it
+    // was busy. A stop clears the pause flag too, so the page took the stopped player for a playing one - the pause
+    // button stayed, the page stayed open (an episode 100 s, an album for ever) and kept saving "Weiterhören" with
+    // the empty player's zeros. Two ticks in a row, so a moment between two tracks does not count; the stop is
+    // done already, so the page leaves without sending one (see ionViewWillLeave).
+    const busy = !!this.currentPlayedLocal?.currentPlayer
+    if (busy) {
+      this.playerWasBusy = true
+      this.idleTicks = 0
+    } else if (this.playerWasBusy && !this.isLeaving && ++this.idleTicks >= 2) {
+      this.isLeaving = true
+      this.stoppedFromOutside = true
+      this.leavePage('stopped from outside')
+      return
+    }
+    this.playing = !this.currentPlayedLocal?.pause && !this.externallyPaused && (busy || !this.playerWasBusy)
     // Drive CurrentMediaService's active-listening counter from here —
     // determined per-tick from the actual SDK state for Spotify or mplayer
     // state for local content. The service used to subscribe to current$/
@@ -461,14 +525,91 @@ export class PlayerPage implements OnInit, AfterViewInit {
       this.goBackTimer = 0
     }
     if (this.media.type === 'spotify') {
-      const seek = this.currentPlayedSpotify?.progress_ms || 0
-      if (this.currentPlayedSpotify?.item != null) {
-        this.progress = (seek / this.currentPlayedSpotify?.item.duration_ms) * 100 || 0
+      const sp = this.currentPlayedSpotify
+      const seek = sp?.progress_ms || 0
+      if (sp?.item != null) {
+        this.progress = this.heldProgress((seek / sp?.item.duration_ms) * 100 || 0)
       }
-      if (this.playing && !this.currentPlayedSpotify?.is_playing) {
-        this.goBackTimer++
-        if (this.goBackTimer > 10) {
-          this.navController.back()
+      if (sp?.is_playing) this.externallyPaused = false
+      // The end of an album with Spotify's autoplay on (a setting of the account): the SDK never reports it paused,
+      // it goes straight on with tracks of other albums - in the same context, so only the track tells. Once a track
+      // of this album was seen playing, three ticks in a row with one that is not in it are its end: back to the
+      // list, which stops the playback (ionViewWillLeave). Only for albums and playlists - a podcast or audiobook
+      // plays in its show's context, which the entry does not name.
+      let expected = this.media.playlistid
+        ? `spotify:playlist:${this.media.playlistid}`
+        : !this.media.showid && !this.media.audiobookid && this.media.id
+          ? `spotify:album:${this.media.id}`
+          : ''
+      // (started from the parents' app or Telegram: the page knows only title and artist, not the album - the first
+      // album or playlist seen playing is the one)
+      if (!expected && !this.media.showid && !this.media.audiobookid && /^spotify:(album|playlist):/.test(sp?.context_uri ?? '')) {
+        expected = this.contextSeenFor || (sp?.context_uri as string)
+      }
+      if (expected && sp?.context_uri === expected && sp.in_context !== undefined) {
+        if (sp.in_context) {
+          this.contextSeenFor = expected
+          this.contextGone = 0
+        } else if (this.contextSeenFor === expected && !this.isLeaving) {
+          // (a track of another album: autoplay went on - at once, a second of it is enough)
+          this.contextSeenFor = ''
+          this.contextGone = 0
+          this.albumEnded = true
+          this.isLeaving = true
+          this.leavePage('album end (Spotify autoplay went on with another album)')
+        }
+      }
+      // The album's last track coming to its end: the box stops there itself, before Spotify's autoplay (an account
+      // setting) goes on - with another album, or once with a track of this one (seen: track 3 after the last). The
+      // last track and its length are known, so a timer for its end; not with shuffle (no "last" track then).
+      const position = sp?.playlist?.current_track_position ?? sp?.item?.track_number
+      const total = sp?.playlist?.total_tracks ?? sp?.item?.album?.total_tracks
+      const duration = sp?.item?.duration_ms
+      if (
+        expected &&
+        sp?.is_playing &&
+        sp.in_context === true &&
+        !this.media.shuffle &&
+        this.shufflechanged % 2 === 0 &&
+        position &&
+        total &&
+        position >= total &&
+        duration &&
+        !this.albumEndTimer &&
+        !this.isLeaving
+      ) {
+        const left = duration - (sp.progress_ms ?? 0)
+        if (left < 4000) {
+          // (stopped 1.2 s before the end: the SDK's position is up to a second old, and the stop takes its way to
+          // Spotify - at 0.4 s autoplay had loaded the next album's track already; the end of a track is mostly silence)
+          const trackId = sp.item?.id
+          this.albumEndTimer = setTimeout(() => {
+            this.albumEndTimer = undefined
+            if (this.isLeaving) return
+            // (still this track near its end, playing - a seek back, a pause or another track meanwhile: no end; the
+            // controls take the timer off too, see cancelAlbumEnd)
+            const nowSp = this.currentPlayedSpotify
+            if (!nowSp?.is_playing || nowSp.item?.id !== trackId || (nowSp.item?.duration_ms ?? 0) - (nowSp.progress_ms ?? 0) > 4000) return
+            this.isLeaving = true
+            this.albumEnded = true
+            this.leavePage('album end (last track finished)')
+          }, Math.max(0, left - 1200))
+        }
+      }
+      if (!this.currentPlayedLocal?.pause && !sp?.is_playing) {
+        // Not playing although the box did not pause: at the end of the album (the SDK reports it paused at the
+        // start of the last track, or at its end) the way back to the list; but paused in the middle of a track -
+        // from another Spotify client, the parents' phone over Connect, or a stall - it stays here as paused, and
+        // the play button goes on. Before, that went back to the list after ten seconds, with a STOP.
+        const midTrack = seek > 1500 && !!sp?.item?.duration_ms && seek < sp.item.duration_ms - 1500
+        if (midTrack) {
+          this.externallyPaused = true
+          this.goBackTimer = 0
+        } else {
+          this.goBackTimer++
+          if (this.goBackTimer > 10) {
+            this.leavePage('Spotify not playing for 10 s')
+          }
         }
       }
       setTimeout(() => {
@@ -477,8 +618,16 @@ export class PlayerPage implements OnInit, AfterViewInit {
         }
       }, 1000)
     } else if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'rss') {
+      // The player says the album or episode played to its end: back to the list at once (it waited 10 s for the
+      // player to stay silent - the page looked stuck meanwhile). No resume save on the way out: the album is done.
+      if (this.currentPlayedLocal?.finished && !this.isLeaving) {
+        this.isLeaving = true
+        this.albumEnded = true
+        this.leavePage(this.media.type === 'rss' ? 'episode ended' : 'album ended')
+        return
+      }
       const seek = this.currentPlayedLocal?.progressTime || 0
-      this.progress = seek || 0
+      this.progress = this.heldProgress(seek || 0)
       if (
         (this.media.type === 'library' || this.media.type === 'nas') &&
         this.playing &&
@@ -487,13 +636,13 @@ export class PlayerPage implements OnInit, AfterViewInit {
       ) {
         this.goBackTimer++
         if (this.goBackTimer > 10) {
-          this.navController.back()
+          this.leavePage('last track of the album ended')
         }
       }
       if (this.media.type === 'rss' && this.playing && !this.currentPlayedLocal?.playing) {
         this.goBackTimer++
         if (this.goBackTimer > 100) {
-          this.navController.back()
+          this.leavePage('podcast episode ended')
         }
       }
       setTimeout(() => {
@@ -520,17 +669,22 @@ export class PlayerPage implements OnInit, AfterViewInit {
         // Mark as not playing and navigate back
         this.playing = false
         this.updateProgression = false
-        this.navController.back()
+        this.leavePage('Spotify playback could not start')
         return
       }
+    } else {
+      // Started from the parents' app or Telegram: the box plays already, but the listening counter and the resume
+      // saving go by the current media of CurrentMediaService, which only playMedia/resumeMedia set - without this
+      // an episode or album started from the app never got a "Weiterhören" entry
+      this.currentMediaService.set(this.media)
     }
 
     this.updateProgress()
 
     if (this.media?.shuffle && !this.isExternalPlayback) {
-      setTimeout(() => {
+      this.shuffleTimer = setTimeout(() => {
         this.playerService.sendCmd(PlayerCmds.SHUFFLEON)
-        setTimeout(() => {
+        this.shuffleTimer = setTimeout(() => {
           this.skipNext()
         }, 1000)
       }, 5000)
@@ -538,6 +692,10 @@ export class PlayerPage implements OnInit, AfterViewInit {
   }
 
   ionViewWillLeave() {
+    // (left within the first seconds: shuffle must not be switched on after the page is gone - the next audiobook
+    // played in random order then)
+    clearTimeout(this.shuffleTimer)
+    clearTimeout(this.albumEndTimer)
     clearTimeout(this.longPressTimer)
     clearInterval(this.outputTimer)
     this.outputOpen.set(false)
@@ -545,7 +703,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
     // Left only because something else was started from the phone and the page opens again for it: the
     // player already switched, so no STOP (it would stop the new playback) and no resume save (the progress
     // belongs to the new media by now).
-    if (this.externalNavigator.replacingPlayerPage) {
+    if (this.externalNavigator.replacingPlayerPage || this.stoppedFromOutside) {
       this.updateProgression = false
       this.resumePlay = false
       return
@@ -553,7 +711,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
     if (
       (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'rss') &&
       !this.media.shuffle &&
-      this.playing
+      this.playing &&
+      !this.albumEnded // (the SDK's position belongs to what autoplay went on with, not to this album)
     ) {
       // saveResumeFiles itself enforces the listening-time threshold via
       // CurrentMediaService.shouldPersistResume(); the local resumeTimer > 30
@@ -585,7 +744,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
         // Mark as not playing and navigate back
         this.playing = false
         this.updateProgression = false
-        this.navController.back()
+        this.leavePage('Spotify resume could not start')
         return
       }
     } else if (this.media.type === 'library') {
@@ -658,6 +817,11 @@ export class PlayerPage implements OnInit, AfterViewInit {
     // updateProgress cadence, the on-leave save, and the cap-transition save.
     // Resets on every new playMedia/resumeMedia, counts only active playback.
     if (!this.currentMediaService.shouldPersistResume()) return
+    // Stopped from the app or Telegram before the page is left: the box's player is empty by now (no track, no
+    // position) - the entry of the last periodic save stands, it is not overwritten with zeros
+    // (and for local media only while mplayer/mpv plays: Spotify started meanwhile wrote this page's NAS entry with
+    // the zeros of the empty local player)
+    if ((this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'rss') && this.currentPlayedLocal?.currentPlayer !== 'mplayer') return
 
     this.resumemedia = Object.assign({}, this.media)
     if (this.resumemedia.type === 'spotify' && this.resumemedia?.showid) {
@@ -714,6 +878,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   }
 
   skipPrev() {
+    this.cancelAlbumEnd()
     if (this.playing) {
       this.playerService.sendCmd(PlayerCmds.PREVIOUS)
     } else {
@@ -723,6 +888,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   }
 
   skipNext() {
+    this.cancelAlbumEnd()
     if (this.playing) {
       this.playerService.sendCmd(PlayerCmds.NEXT)
     } else {
@@ -732,6 +898,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   }
 
   toggleshuffle() {
+    this.cancelAlbumEnd()
     if (this.media.shuffle) {
       this.shufflechanged++
       this.media.shuffle = false
@@ -744,6 +911,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   }
 
   playPause() {
+    this.cancelAlbumEnd()
     if (this.playing) {
       //this.playing = false;
       this.playerService.sendCmd(PlayerCmds.PAUSE)
@@ -761,6 +929,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   }
 
   seekBack() {
+    this.cancelAlbumEnd()
     this.playerService.sendCmd(PlayerCmds.SEEKBACK)
   }
 

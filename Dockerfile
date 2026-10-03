@@ -14,6 +14,7 @@ RUN apt-get update && \
     cron \
     jq \
     mplayer \
+    mpv \
     nodejs \
     npm \
     git \

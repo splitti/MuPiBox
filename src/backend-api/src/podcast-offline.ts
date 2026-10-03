@@ -141,12 +141,26 @@ export class PodcastOffline {
     return this.loading
   }
 
+  // The list could not be read although it is there (cut off after a power cut): nothing in the folder is tidied away
+  // then - with an empty list every kept episode counted as a stray and was deleted, the pinned ones too
+  private indexBroken = false
+
   private async readIndex(): Promise<void> {
+    let raw: string | undefined
     try {
-      const data = JSON.parse(await readFile(this.indexFile, 'utf8')) as { files?: Record<string, OfflineFile> }
-      this.files = data.files && typeof data.files === 'object' ? data.files : {}
+      raw = await readFile(this.indexFile, 'utf8')
     } catch {
+      raw = undefined // (none yet)
+    }
+    try {
+      const data = raw === undefined ? {} : (JSON.parse(raw) as { files?: Record<string, OfflineFile> })
+      this.files = data.files && typeof data.files === 'object' ? data.files : {}
+    } catch (e) {
       this.files = {}
+      this.indexBroken = true
+      console.error(
+        `${new Date().toLocaleString()}: [MuPiBox-Server] podcast offline list unreadable - the kept episodes stay in the folder, nothing is tidied: ${e}`,
+      )
     }
     let changed = false
     for (const [k, f] of Object.entries(this.files)) {
@@ -175,11 +189,19 @@ export class PodcastOffline {
     return this.files[episodeKey(url)]
   }
 
-  private async save(): Promise<void> {
-    await mkdir(this.deps.dir, { recursive: true })
-    const tmp = `${this.indexFile}.tmp`
-    await writeFile(tmp, JSON.stringify({ files: this.files }))
-    await rename(tmp, this.indexFile)
+  // (one write after the other, each to a file of its own: two at once - a download ending while an episode is deleted
+  // in the app - shared index.json.tmp, and one of them failed at the rename although its file was done)
+  private saveChain: Promise<void> = Promise.resolve()
+  private saveSeq = 0
+  private save(): Promise<void> {
+    const run = this.saveChain.then(async () => {
+      await mkdir(this.deps.dir, { recursive: true })
+      const tmp = `${this.indexFile}.${process.pid}.${++this.saveSeq}.tmp`
+      await writeFile(tmp, JSON.stringify({ files: this.files }))
+      await rename(tmp, this.indexFile)
+    })
+    this.saveChain = run.catch(() => undefined)
+    return run
   }
 
   /** A podcast's episodes, newest first, as the downloads see them */
@@ -396,10 +418,14 @@ export class PodcastOffline {
 
   // Files in the folder that the list does not know (a crash between writing and noting it): gone
   private async cleanStrays(): Promise<void> {
-    const known = new Set(Object.values(this.files).map((f) => f.name))
-    const busy = this.current ? `${offlineName(this.current.url)}.part` : ''
-    for (const name of await readdir(this.deps.dir).catch(() => [] as string[])) {
-      if (name === 'index.json' || known.has(name) || name === busy) continue
+    if (this.indexBroken) return
+    const names = await readdir(this.deps.dir).catch(() => [] as string[])
+    for (const name of names) {
+      // (the list as it is now, not as it was before readdir: a download finished meanwhile is in it already; the
+      // current download is kept under both its names - between its rename and its note in the list it has the final one)
+      const known = new Set(Object.values(this.files).map((f) => f.name))
+      const current = this.current ? offlineName(this.current.url) : ''
+      if (name === 'index.json' || name.endsWith('.tmp') || known.has(name) || (current && (name === current || name === `${current}.part`))) continue
       if (OFFLINE_EXTENSIONS.some((e) => name.endsWith(e) || name.endsWith(`${e}.part`))) await rm(path.join(this.deps.dir, name), { force: true })
     }
   }

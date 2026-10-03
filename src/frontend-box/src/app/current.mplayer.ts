@@ -36,6 +36,10 @@ export interface CurrentMPlayer {
   activeSpotifyId?: string
   currentType?: string
   path?: string
+  /** The local album or podcast episode played to its end (not stopped) - the display goes back to its list at once. */
+  finished?: boolean
+  /** The address of the podcast episode that plays (rss) - its id on the display (rssfeed.service), for a resume entry. */
+  episode?: string
   // The file that plays (nas:<NAS path> / local:<library path>): its embedded picture is shown (/api/track-cover).
   trackFile?: string
 }

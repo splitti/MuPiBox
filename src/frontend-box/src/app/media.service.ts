@@ -10,8 +10,10 @@ import {
   from,
   iif,
   interval,
+  merge,
   Observable,
   of,
+  ReplaySubject,
   Subject,
   type Subscription,
   throwError,
@@ -28,9 +30,11 @@ import {
   mergeAll,
   mergeMap,
   retry,
+  share,
   shareReplay,
   startWith,
   switchMap,
+  takeUntil,
   take,
   tap,
   timeout,
@@ -47,7 +51,17 @@ import type { Network } from './network'
 import { NetworkService } from './network.service'
 import { RssFeedService } from './rssfeed.service'
 import { SpotifyService } from './spotify.service'
-import type { ExtraDataMedia } from './utils'
+import { type ExtraDataMedia, localizeCoverUrl } from './utils'
+
+// A Spotify album the library already describes (title and cover - the sync and the app store them): its tile is
+// built from the entry. Asking Spotify for every album whenever the list is built (hundreds for one artist
+// subscription, and again when the kept answers got old) ran Spotify apps under its 2026 rules into blocks of many
+// hours. The album's tracks are still asked for when it is opened or played. Entries without title or cover go on
+// asking Spotify (getMediaByID).
+function storedSpotifyAlbum(item: Media): Media | undefined {
+  if (!item.title || !item.cover) return undefined
+  return { ...item, type: 'spotify', artist: item.artist || 'Unknown Artist', cover: localizeCoverUrl(item.cover) }
+}
 import type { WLAN } from './wlan'
 
 @Injectable({
@@ -93,6 +107,9 @@ export class MediaService {
                   // Get enhanced media information if context is available
                   let mediaInfo = null
                   let trackPosition = 1
+                  // whether the track belongs to the album or playlist that plays (Spotify's autoplay goes on with
+                  // others in the same context); only told when the list of tracks is complete
+                  let inContext: boolean | undefined
 
                   if (contextUri) {
                     mediaInfo = await this.getMediaInfo(contextUri)
@@ -105,6 +122,7 @@ export class MediaService {
                       if (currentTrackIndex !== -1) {
                         trackPosition = currentTrackIndex + 1
                       }
+                      if (mediaInfo.tracks.length >= (mediaInfo.total_tracks ?? 0)) inContext = currentTrackIndex !== -1
                     } else if (contextUri.includes('spotify:playlist:') && mediaInfo && mediaInfo.tracks) {
                       const currentTrackIndex = mediaInfo.tracks.findIndex(
                         (track: any) => track.id === currentTrack.id || track.uri === currentTrack.uri,
@@ -112,6 +130,7 @@ export class MediaService {
                       if (currentTrackIndex !== -1) {
                         trackPosition = currentTrackIndex + 1
                       }
+                      if (mediaInfo.tracks.length >= (mediaInfo.total_tracks ?? 0)) inContext = currentTrackIndex !== -1
                     } else if (contextUri.includes('spotify:show:')) {
                       // Both shows and audiobooks use spotify:show: URIs
                       if (mediaInfo?.episodes) {
@@ -137,6 +156,8 @@ export class MediaService {
                   const contextType = contextUri ? contextUri.split(':')[1] : undefined
 
                   return {
+                    context_uri: contextUri || undefined,
+                    in_context: inContext,
                     progress_ms: state.position,
                     is_playing: !state.paused,
                     item: {
@@ -457,7 +478,13 @@ export class MediaService {
       return hit.media.pipe(copy)
     }
     // shareReplay: a second caller during the first load waits for it instead of loading twice
+    // (a lookup that failed meanwhile - Spotify blocking requests, a timeout - leaves the list short or empty; it is
+    // shown, but not kept: the next tap loads it anew instead of showing the gap for ten minutes)
+    const failuresBefore = this.spotifyService.failures
     const media = this.loadMediaFromArtist(artist, category).pipe(
+      tap(() => {
+        if (this.spotifyService.failures !== failuresBefore) this.artistMediaCache.delete(key)
+      }),
       catchError((error) => {
         this.artistMediaCache.delete(key) // don't keep a failed load
         throw error
@@ -557,7 +584,7 @@ export class MediaService {
             standalonePlaylistsData.push({
               name: currentMedia.title || (currentMedia.type === 'radio' ? 'Radio' : 'Unknown Playlist'),
               albumCount: '1', // Playlists have 1 "album" (themselves)
-              cover: currentMedia.cover || '../assets/images/nocover_mupi.png',
+              cover: currentMedia.cover || currentMedia.artistcover || '../assets/images/nocover_mupi.png',
               coverMedia: currentMedia,
             })
           } else if (currentMedia.artist) {
@@ -658,7 +685,8 @@ export class MediaService {
   private static readonly HOME_LIST_CATEGORIES: CategoryType[] = ['audiobook', 'music', 'other']
   private homeLists = new Map<CategoryType, { version: string; at: number; media: Media[] }>()
   private homeListsLoaded$?: Observable<void>
-  private homeListRuns = new Map<CategoryType, Observable<Media[]>>()
+  // (keyed by category and data.json version: a run for an older version does not stand in for the new one)
+  private homeListRuns = new Map<string, Observable<Media[]>>()
   private homeListsWarming?: Subscription
 
   // the lists the box kept (once per start of the display)
@@ -676,7 +704,12 @@ export class MediaService {
               }
             }
           }),
-          catchError(() => of(undefined)),
+          catchError(() => {
+            // (not answered this time - the backend still starting: asked again at the next chance, else every
+            // category was made from scratch for the whole session)
+            this.homeListsLoaded$ = undefined
+            return of(undefined)
+          }),
           shareReplay({ bufferSize: 1, refCount: false }),
         )
     }
@@ -690,19 +723,24 @@ export class MediaService {
 
   // made again from data.json (one run per category at a time), then kept here and on the box
   private remakeHomeList(category: CategoryType, version: string): Observable<Media[]> {
-    let run = this.homeListRuns.get(category)
+    const runKey = `${category}|${version}`
+    let run = this.homeListRuns.get(runKey)
     if (!run) {
+      // (a lookup that failed meanwhile - Spotify blocking requests, a timeout: the list has placeholders or lacks
+      // entries. Shown, but not kept as the current one: it is made again at the next chance, see SpotifyService.failures)
+      const failuresBefore = this.spotifyService.failures
       run = this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category).pipe(
         tap((media) => {
-          this.homeLists.set(category, { version, at: Date.now(), media })
-          if (version !== '') {
+          const complete = this.spotifyService.failures === failuresBefore
+          this.homeLists.set(category, { version: complete ? version : '', at: Date.now(), media })
+          if (version !== '' && complete) {
             this.http.put(`${this.getApiBackendUrl()}/home-lists/${category}`, { version, media }).subscribe({ error: () => undefined })
           }
         }),
-        finalize(() => this.homeListRuns.delete(category)),
+        finalize(() => this.homeListRuns.delete(runKey)),
         shareReplay({ bufferSize: 1, refCount: false }),
       )
-      this.homeListRuns.set(category, run)
+      this.homeListRuns.set(runKey, run)
     }
     return run
   }
@@ -757,6 +795,16 @@ export class MediaService {
       .subscribe()
   }
 
+  // A part of the home page's list: as it comes - or, when it is not there after PARTIAL_AFTER_MS, empty first and then
+  // itself (replayed: a kept list comes at once, before the second subscription of merge below)
+  private static readonly PARTIAL_AFTER_MS = 4000
+  private shownAfter(source: Observable<Media[]>): Observable<Media[]> {
+    return defer(() => {
+      const shared = source.pipe(share({ connector: () => new ReplaySubject<Media[]>(1), resetOnRefCountZero: true }))
+      return merge(timer(MediaService.PARTIAL_AFTER_MS).pipe(map(() => [] as Media[]), takeUntil(shared)), shared)
+    })
+  }
+
   private fetchMedia(category: CategoryType, onlyArtist?: string, showKept = false): Observable<Media[]> {
     if (category === 'nas') {
       // NAS media is fetched live from the NAS on every call (never cached
@@ -764,12 +812,14 @@ export class MediaService {
       // below entirely - the backend already returns ready-to-use Media[].
       // The backend answers 503 while marked folders cannot be read (NAS not reachable yet, e.g. right after
       // boot before the network is up): try again a few times instead of showing an empty tab for good.
-      // (About 40 s in all: a list that loads for a minute makes the loading component reload the page.)
+      // (50 s in all at most: a list that loads for a minute makes the loading component reload the page - and an
+      // attempt at a NAS that is asleep takes the backend's 15 s login timeout each)
       return defer(() => {
         this.nasUnavailable.set(false)
         return this.http.get<Media[]>(`${this.getApiBackendUrl()}/nas/artists?category=nas`)
       }).pipe(
         retry({ count: 8, delay: () => timer(5000) }),
+        timeout(50_000),
         catchError(() => {
           this.nasUnavailable.set(true)
           return of([] as Media[])
@@ -798,7 +848,15 @@ export class MediaService {
         startWith(this.nasInCategory.get(category) ?? []),
         distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
       )
-      // combineLatest: the data.json part may come twice (kept list, then the new one), each time with the folders
+      // combineLatest: the data.json part may come twice (kept list, then the new one), each time with the folders.
+      // Home page (showKept): a part not there after a few seconds is shown empty first, the rest follows - a big
+      // library made from scratch (after an update: many Spotify entries) showed only loading dots for minutes, and
+      // after a minute the page was even loaded again (LoadingComponent), which started it all over.
+      if (showKept) {
+        return combineLatest([this.shownAfter(dataMedia), this.shownAfter(localFolders), nasFolders]).pipe(
+          map(([data, local, nas]) => [...data.filter((item) => item.type !== 'library'), ...local, ...nas]),
+        )
+      }
       return combineLatest([dataMedia, localFolders, nasFolders]).pipe(
         map(([data, local, nas]) => [...data.filter((item) => item.type !== 'library'), ...local, ...nas]),
       )
@@ -923,28 +981,31 @@ export class MediaService {
                       // the resume tile (title, cover, artistcover, release
                       // date, duration, progress) is already on disk; no
                       // network round-trip needed for resume rendering.
-                      () => !!(item.type === 'rss' && item.id.length > 0 && !isResumeEntry(item)),
+                      // (an entry without an id - a resume entry written without the feed - must not end the whole list)
+                      () => !!(item.type === 'rss' && item.id && item.id.length > 0 && !isResumeEntry(item)),
                       this.rssFeedService
                         .getRssFeed(item.id, item.category, item.index, item)
                         .pipe(overwriteArtist(item)),
                       iif(
                         // Get media by album (resume).
                         () => !!(item.type === 'spotify' && item.id && item.id.length > 0),
-                        this.spotifyService
-                          .getMediaByID(
-                            item.id,
-                            item.category,
-                            item.index,
-                            item.shuffle,
-                            item.artistcover,
-                            item.resumespotifyduration_ms,
-                            item.resumespotifyprogress_ms,
-                            item.resumespotifytrack_number,
-                          )
-                          .pipe(
-                            map((currentItem) => [currentItem]),
-                            overwriteArtist(item),
-                          ),
+                        storedSpotifyAlbum(item)
+                          ? of([storedSpotifyAlbum(item) as Media]).pipe(overwriteArtist(item))
+                          : this.spotifyService
+                              .getMediaByID(
+                                item.id,
+                                item.category,
+                                item.index,
+                                item.shuffle,
+                                item.artistcover,
+                                item.resumespotifyduration_ms,
+                                item.resumespotifyprogress_ms,
+                                item.resumespotifytrack_number,
+                              )
+                              .pipe(
+                                map((currentItem) => [currentItem]),
+                                overwriteArtist(item),
+                              ),
                         iif(
                           // Get media by audiobook (resume).
                           () => !!(item.type === 'spotify' && item.audiobookid && item.audiobookid.length > 0),
@@ -984,10 +1045,10 @@ export class MediaService {
       mergeAll(), // merge everything together
       toArray(), // convert to array
       map((media) => {
-        // add dummy image for missing covers
+        // add dummy image for missing covers (the artist's picture first, when only that one is set - as on the tiles)
         return media.map((currentMedia) => {
           if (!currentMedia.cover) {
-            currentMedia.cover = '../assets/images/nocover_mupi.png'
+            currentMedia.cover = currentMedia.artistcover || '../assets/images/nocover_mupi.png'
           }
           return currentMedia
         })

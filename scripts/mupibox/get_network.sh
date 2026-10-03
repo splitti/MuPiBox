@@ -69,26 +69,26 @@ fi
 
 if [ ! -f ${OFFLINE_FILE} ]; then
         echo -n "[" > ${OFFLINE_FILE}
-        echo -n $(offline_filter ${DATA_FILE}) >> ${OFFLINE_FILE}
+        printf '%s' "$(offline_filter ${DATA_FILE} | /usr/bin/jq -c . | paste -sd,)" >> ${OFFLINE_FILE}
         echo -n "]" >> ${OFFLINE_FILE}
         sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
         chown dietpi:dietpi ${OFFLINE_FILE}
 elif [ $(stat --format='%Y' "${DATA_FILE}") -gt $(stat --format='%Y' "${OFFLINE_FILE}") ] || [ "${PODCAST_INDEX}" -nt "${OFFLINE_FILE}" ]; then
         echo -n "[" > ${OFFLINE_FILE}
-        echo -n $(offline_filter ${DATA_FILE}) >> ${OFFLINE_FILE}
+        printf '%s' "$(offline_filter ${DATA_FILE} | /usr/bin/jq -c . | paste -sd,)" >> ${OFFLINE_FILE}
         echo -n "]" >> ${OFFLINE_FILE}
         sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
 fi
 
 if [ ! -f ${OFFLINERESUME_FILE} ]; then
         echo -n "[" > ${OFFLINERESUME_FILE}
-        echo -n $(offline_filter ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
+        printf '%s' "$(offline_filter ${RESUME_FILE} | /usr/bin/jq -c . | paste -sd,)" >> ${OFFLINERESUME_FILE}
         echo -n "]" >> ${OFFLINERESUME_FILE}
         sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
         chown dietpi:dietpi ${OFFLINERESUME_FILE}
 elif [ $(stat --format='%Y' "${RESUME_FILE}") -gt $(stat --format='%Y' "${OFFLINERESUME_FILE}") ] || [ "${PODCAST_INDEX}" -nt "${OFFLINERESUME_FILE}" ]; then
         echo -n "[" > ${OFFLINERESUME_FILE}
-        echo -n $(offline_filter ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
+        printf '%s' "$(offline_filter ${RESUME_FILE} | /usr/bin/jq -c . | paste -sd,)" >> ${OFFLINERESUME_FILE}
         echo -n "]" >> ${OFFLINERESUME_FILE}
         sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
 fi
@@ -114,7 +114,8 @@ case "${WIFISIGNAL}" in
 		;;
 esac
 HOSTN=$(/usr/bin/hostname)
-IPA=$(/usr/bin/hostname -I | awk '{print $1}')
+# (not a link-local 169.254.x.x address, which an adapter without DHCP may give itself)
+IPA=$(/usr/bin/hostname -I | tr ' ' '\n' | grep -v '^169\.254\.' | grep . | head -n 1)
 DNS=$(echo $(sudo cat /etc/resolv.conf | grep 'nameserver ') | sed 's/nameserver //g')
 SUBNET=$(/sbin/ifconfig ${WIFI_IF} | awk '/netmask/{split($4,a,":"); print a[1]}')
 

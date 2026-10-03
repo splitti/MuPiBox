@@ -223,8 +223,14 @@ const createPlayer = () => {
   out.exec = exec
   out.getProps = getProps
   out.seek = seek
+  // (a start position is only known to mpv-wrapper.js; here the player seeks after the start, as always)
   out.play = play
   out.playList = playList
+  out.startsAt = false
+  out.cachePrefillPercent = 10
+  out.trackIndex = () => -1 // (not known: the player counts the files that start)
+  out.setLoudness = () => undefined // (the levelling of the loudness is mpv's, see mpv-wrapper.js)
+  out.engine = 'mplayer'
   out.queue = queue
   out.next = next
   out.previous = previous

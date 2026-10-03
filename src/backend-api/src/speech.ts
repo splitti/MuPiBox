@@ -6,7 +6,7 @@
  *   - Ansagen: automatische (Restzeit der Spielzeit, Beginn einer Ruhezeit, Ende des Schlaftimers) und Durchsagen der
  *     Eltern (Vorlagen oder eigener Text, aus der App oder per Telegram /sag). Mit Gong vorher; die Wiedergabe wird
  *     dafür angehalten und läuft danach weiter, oder nur leiser.
- * Gespielt über PulseAudio (paplay/mplayer) - also auch über Bluetooth-Kopfhörer, und nie lauter als die Box gerade
+ * Gespielt über PulseAudio (paplay/mpv) - also auch über Bluetooth-Kopfhörer, und nie lauter als die Box gerade
  * ist (der Hörschutz gilt für die Box selbst).
  */
 
@@ -502,6 +502,8 @@ class PiperWorker {
 
   private start(): void {
     const child = spawn('nice', ['-n', '5', PIPER_BIN, '--model', voiceFile(this.key), '--json-input', '--output_dir', CACHE_DIR], { stdio: 'pipe' })
+    // (Piper gone before a write drained: EPIPE on stdin - without a listener an error of the stream ended the server)
+    child.stdin.on('error', () => undefined)
     this.child = child
     this.out = ''
     // (Piper names each file it wrote on a line of its own)
@@ -679,23 +681,32 @@ async function gong(): Promise<string> {
   return GONG_FILE
 }
 
-// Plays a file over PulseAudio (a WAV with paplay, an MP3 with mplayer), `level` of the box's volume
+// Plays a file over PulseAudio (a WAV with paplay, an MP3 with mpv - with mplayer where mpv is missing), `level` of
+// the box's volume
 function playFile(file: string, level: number): Promise<void> {
-  const args = file.endsWith('.wav')
-    ? ['paplay', [`--volume=${Math.round(level * 65536)}`, file]]
-    : ['mplayer', ['-really-quiet', '-nolirc', '-ao', 'pulse', '-softvol', '-volume', String(Math.round(level * 100)), file]]
-  return new Promise((resolve) => {
-    const child = spawn(args[0] as string, args[1] as string[], { stdio: 'ignore' })
-    const timer = setTimeout(() => child.kill(), 60000)
-    child.on('exit', () => {
-      clearTimeout(timer)
-      resolve()
+  const percent = String(Math.round(level * 100))
+  const tries: [string, string[]][] = file.endsWith('.wav')
+    ? [['paplay', [`--volume=${Math.round(level * 65536)}`, file]]]
+    : [
+        ['mpv', ['--no-video', '--really-quiet', '--no-config', '--ao=pulse', `--volume=${percent}`, file]],
+        ['mplayer', ['-really-quiet', '-nolirc', '-ao', 'pulse', '-softvol', '-volume', percent, file]],
+      ]
+  const attempt = (i: number): Promise<void> =>
+    new Promise((resolve) => {
+      const [cmd, args] = tries[i]
+      const child = spawn(cmd, args, { stdio: 'ignore' })
+      const timer = setTimeout(() => child.kill(), 60000)
+      child.on('exit', () => {
+        clearTimeout(timer)
+        resolve()
+      })
+      // (not installed: the next one)
+      child.on('error', () => {
+        clearTimeout(timer)
+        resolve(i + 1 < tries.length ? attempt(i + 1) : undefined)
+      })
     })
-    child.on('error', () => {
-      clearTimeout(timer)
-      resolve()
-    })
-  })
+  return attempt(0)
 }
 
 // What plays now (the box's player): true while something plays
@@ -738,21 +749,33 @@ export async function announce(getConfig: () => unknown, text: string, opts: { g
   // (a test of one loaded voice: that one, whatever the box speaks with otherwise)
   const file = opts.voice ? (VOICE_KEY.test(opts.voice) && existsSync(voiceFile(opts.voice)) && existsSync(PIPER_BIN) ? await piperWav(text.slice(0, MAX_TEXT), opts.voice) : null) : await speechFile(sp, text.slice(0, MAX_TEXT), lang)
   if (!file) return false
-  queue = queue.then(async () => {
+  const run = queue.then(async () => {
     const wasPlaying = await playingNow()
     const pause = opts.pause ?? sp.parents.pause
     let restore: (() => Promise<void>) | null = null
-    if (wasPlaying && pause) {
-      await player('pause')
-      await new Promise((r) => setTimeout(r, 400))
-    } else if (wasPlaying) restore = await duck()
-    if (opts.gong ?? sp.parents.gong) await playFile(await gong(), sp.level)
-    await playFile(file, sp.level)
-    if (restore) await restore()
-    if (wasPlaying && pause) await player('play')
+    try {
+      if (wasPlaying && pause) {
+        await player('pause')
+        await new Promise((r) => setTimeout(r, 400))
+      } else if (wasPlaying) restore = await duck()
+      if (opts.gong ?? sp.parents.gong) await playFile(await gong(), sp.level)
+      await playFile(file, sp.level)
+    } finally {
+      // (the music comes back whatever happened - a gong that could not be written left it paused)
+      if (restore) await restore().catch(() => undefined)
+      if (wasPlaying && pause) await player('play').catch(() => undefined)
+    }
   })
-  await queue.catch(() => undefined)
-  return true
+  // (a failed one must not block every one after it: the queue goes on from a settled state - a rejected promise
+  // kept as the queue ran nothing more until the server started again)
+  queue = run.catch(() => undefined)
+  return run.then(
+    () => true,
+    (e) => {
+      console.warn(`${new Date().toLocaleString()}: [speech] could not say it: ${e instanceof Error ? e.message : e}`)
+      return false
+    },
+  )
 }
 
 /** The language the box speaks in (mupibox.ttsLanguage, as the names it reads out). */

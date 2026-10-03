@@ -22,10 +22,14 @@ import {
 } from './categorizer'
 import type { CategoryType } from './category-types'
 import type { DiscoveredPlaylist, SpotifySyncConfig, SyncItem } from './types'
+import { type AlbumPage, artistAlbums } from '../artist-albums-store'
+import { noteSpotifyBlock, spotifyBlock } from '../spotify-block'
 
 const API_BASE = 'https://api.spotify.com/v1'
 const HTTP_TIMEOUT_MS = 10_000
-const TRACKS_PAGE_LIMIT = 100
+// (entries of a playlist per page: 50 is the most Spotify allows since its February 2026 changes - was 100, which
+// Spotify apps under the new rules refuse)
+const TRACKS_PAGE_LIMIT = 50
 const PLAYLISTS_PAGE_LIMIT = 50
 
 /** What a 401 / 429 / 5xx / network failure should look like to callers. */
@@ -41,8 +45,17 @@ export class SpotifyApiException extends Error {
   }
 }
 
-/** GET helper with 401/429/timeout handling. Throws SpotifyApiException. */
+/**
+ * GET helper with 401/429/timeout handling. Throws SpotifyApiException. Keeps to the box's one Spotify block
+ * (spotify-block.ts) - every request of the sync and of the app's album lists comes through here: during a block
+ * Spotify is not asked (each request only keeps it going), and a 429 sets it for the display's lists too.
+ */
 async function spotifyGet<T>(path: string, accessToken: string): Promise<T> {
+  const block = spotifyBlock()
+  if (block) {
+    const left = Math.max(1, Math.ceil((block.until - Date.now()) / 1000))
+    throw new SpotifyApiException({ kind: 'rate-limit', reason: `${path} not asked: Spotify blocks for ${left} s more (${block.reason})`, retryAfterSeconds: left })
+  }
   let response: Response
   try {
     response = await fetch(`${API_BASE}${path}`, {
@@ -57,12 +70,14 @@ async function spotifyGet<T>(path: string, accessToken: string): Promise<T> {
     throw new SpotifyApiException({ kind: 'auth', reason: `401 from ${path}` })
   }
   if (response.status === 429) {
-    const retryAfter = Number.parseInt(response.headers.get('retry-after') ?? '60', 10)
-    throw new SpotifyApiException({
-      kind: 'rate-limit',
-      reason: `429 from ${path}`,
-      retryAfterSeconds: retryAfter,
-    })
+    // (how long Spotify blocks this app: its Retry-After header, in seconds - in the reason, so the log and the app
+    // say it)
+    const header = response.headers.get('retry-after')
+    const parsed = Number.parseInt(header ?? '', 10)
+    const retryAfter = Number.isFinite(parsed) && parsed > 0 ? parsed : 60
+    const reason = `429 from ${path} (Spotify: wait ${retryAfter} s${header ? '' : ', no Retry-After given'})`
+    noteSpotifyBlock(Date.now() + retryAfter * 1000, 'sync', reason)
+    throw new SpotifyApiException({ kind: 'rate-limit', reason, retryAfterSeconds: retryAfter })
   }
   if (!response.ok) {
     throw new SpotifyApiException({
@@ -81,20 +96,24 @@ async function spotifyGet<T>(path: string, accessToken: string): Promise<T> {
 }
 
 /** Discover all sync-managed playlists for the active user. */
-export async function discoverPlaylists(accessToken: string, config: SpotifySyncConfig): Promise<DiscoveredPlaylist[]> {
+// failures: what could not be read in this run (an explicit playlist, a pinned album, an artist) - the diff removes
+// nothing then, see computeSyncDiff
+export async function discoverPlaylists(accessToken: string, config: SpotifySyncConfig, failures: string[] = []): Promise<DiscoveredPlaylist[]> {
   if (config.playlist_explicit_ids.length > 0) {
     // Mode A: explicit IDs. Skip /me/playlists scan.
     const out: DiscoveredPlaylist[] = []
     for (const id of config.playlist_explicit_ids) {
       try {
-        const p = await spotifyGet<{ id: string; name: string; description?: string; tracks?: { total?: number } }>(
-          `/playlists/${id}?fields=id,name,description,tracks(total)`,
+        const p = await spotifyGet<{ id: string; name: string; description?: string; items?: { total?: number }; tracks?: { total?: number } }>(
+          `/playlists/${id}?fields=id,name,description,items(total)`,
           accessToken,
         )
         out.push(buildDiscoveredPlaylist(p))
       } catch (err) {
-        if (err instanceof SpotifyApiException && err.detail.kind === 'auth') throw err
-        // Skip individually-failing playlists; sync over what we got.
+        // (a login failure, Spotify blocking the app or no network end the run - see resolveSyncItems)
+        if (err instanceof SpotifyApiException && err.detail.kind !== 'internal') throw err
+        // Skip individually-failing playlists; sync over what we got (adding and updating - not removing).
+        failures.push(`playlist ${id}`)
         console.warn(`${new Date().toLocaleString()}: [spotify-sync] discover: explicit playlist ${id} failed: ${(err as Error).message}`)
       }
     }
@@ -111,7 +130,7 @@ export async function discoverPlaylists(accessToken: string, config: SpotifySync
   }
   while (next) {
     const page = await spotifyGet<{
-      items: Array<{ id: string; name: string; description?: string; tracks?: { total?: number } }>
+      items: Array<{ id: string; name: string; description?: string; items?: { total?: number }; tracks?: { total?: number } }>
       next: string | null
     }>(`/me/playlists?limit=${PLAYLISTS_PAGE_LIMIT}&offset=${offset}`, accessToken)
     for (const item of page.items ?? []) {
@@ -132,6 +151,7 @@ function buildDiscoveredPlaylist(p: {
   id: string
   name: string
   description?: string
+  items?: { total?: number }
   tracks?: { total?: number }
 }): DiscoveredPlaylist {
   const overrides = parseDescriptionOverrides(p.description)
@@ -141,7 +161,8 @@ function buildDiscoveredPlaylist(p: {
     description: p.description,
     categoryOverride: overrides.categoryOverride,
     episodeOnly: overrides.episodeOnly,
-    trackCount: p.tracks?.total ?? 0,
+    // (`tracks` is named `items` since Spotify's February 2026 changes)
+    trackCount: p.items?.total ?? p.tracks?.total ?? 0,
   }
 }
 
@@ -158,6 +179,7 @@ interface SpotifyTrackResponse {
     album_type?: 'album' | 'single' | 'compilation' | 'audiobook' | string
     images?: Array<{ url?: string }>
     artists?: Array<{ id?: string; name?: string }>
+    release_date?: string
   }
   show?: {
     id?: string
@@ -170,23 +192,27 @@ interface SpotifyTrackResponse {
 /** All tracks for one playlist, paginated. */
 async function fetchPlaylistTracks(playlistId: string, accessToken: string): Promise<SpotifyTrackResponse[]> {
   const out: SpotifyTrackResponse[] = []
-  // The fields= projection keeps the response small — Spotify enforces a
-  // depth limit, but the shape below is well within it. `null` track
-  // entries occur for removed/unavailable items; skip them in the caller.
+  // Spotify's February 2026 changes: a playlist's entries come from /playlists/{id}/items (/tracks is gone for
+  // Spotify apps created since, and for the others it follows), and each entry carries the track as `item` (was
+  // `track`). Apps under the old rules answer both, so the new names work for every app; `track` is still read as a
+  // fallback. The fields= projection keeps the response small. `null` entries occur for removed/unavailable items.
   const fields =
-    'items(track(id,uri,type,name,artists(id,name),album(id,name,album_type,images,artists(id,name)),show(id,name,publisher,images))),next'
+    'items(item(id,uri,type,name,artists(id,name),album(id,name,album_type,images,artists(id,name),release_date),show(id,name,publisher,images))),next'
   let offset = 0
   while (true) {
-    const page = await spotifyGet<{ items: Array<{ track: SpotifyTrackResponse | null }>; next: string | null }>(
-      `/playlists/${playlistId}/tracks?fields=${encodeURIComponent(fields)}&limit=${TRACKS_PAGE_LIMIT}&offset=${offset}`,
-      accessToken,
-    )
+    const page = await spotifyGet<{
+      items: Array<{ item?: SpotifyTrackResponse | null; track?: SpotifyTrackResponse | null }>
+      next: string | null
+    }>(`/playlists/${playlistId}/items?fields=${encodeURIComponent(fields)}&limit=${TRACKS_PAGE_LIMIT}&offset=${offset}`, accessToken)
     for (const i of page.items ?? []) {
-      if (i.track) out.push(i.track)
+      const track = i?.item ?? i?.track
+      if (track) out.push(track)
     }
-    if (!page.next || (page.items?.length ?? 0) < TRACKS_PAGE_LIMIT) break
-    offset += TRACKS_PAGE_LIMIT
-    if (offset > 50 * TRACKS_PAGE_LIMIT) break
+    // (Spotify's own paging decides - a page it shortened still has a next one)
+    const got = page.items?.length ?? 0
+    if (!page.next || got === 0) break
+    offset += got
+    if (offset > 5000) break
   }
   return out
 }
@@ -213,7 +239,21 @@ async function fetchArtistCovers(artistIds: string[], accessToken: string): Prom
         if (a?.id && url) out.set(a.id, url)
       }
     } catch (err) {
-      console.warn(`${new Date().toLocaleString()}: [spotify-sync] artist-cover fetch failed: ${(err as Error).message}`)
+      // a block (429), a login or network failure ends the run: applied without the pictures, the entries would lose
+      // the artist pictures they have
+      if (err instanceof SpotifyApiException && err.detail.kind !== 'internal') throw err
+      // Spotify's February 2026 changes removed the request for several artists at once (GET /artists?ids=) for
+      // Spotify apps under the new rules: one by one then
+      for (const id of batch) {
+        try {
+          const a = await spotifyGet<{ id?: string; images?: Array<{ url?: string }> }>(`/artists/${encodeURIComponent(id)}`, accessToken)
+          const url = pickImage(a?.images)
+          if (a?.id && url) out.set(a.id, url)
+        } catch (one) {
+          if (one instanceof SpotifyApiException && one.detail.kind !== 'internal') throw one
+          console.warn(`${new Date().toLocaleString()}: [spotify-sync] artist-cover fetch failed: ${(one as Error).message}`)
+        }
+      }
     }
   }
   return out
@@ -232,12 +272,24 @@ export async function resolveSyncItems(
   playlists: DiscoveredPlaylist[],
   accessToken: string,
   config: SpotifySyncConfig,
+  failures: string[] = [],
 ): Promise<{ items: Map<string, SyncItem>; perPlaylistCounts: Map<string, number> }> {
   const items = new Map<string, SyncItem>()
   const perPlaylistCounts = new Map<string, number>()
 
   for (const playlist of playlists) {
-    const tracks = await fetchPlaylistTracks(playlist.id, accessToken)
+    // One playlist that cannot be read is skipped (the run adds and updates, but removes nothing - see
+    // computeSyncDiff); it used to end the whole run with INTERNAL_ERROR, and then nothing at all came in - also not
+    // the artists and albums below. A login, rate-limit or network failure still ends the run.
+    let tracks: SpotifyTrackResponse[]
+    try {
+      tracks = await fetchPlaylistTracks(playlist.id, accessToken)
+    } catch (err) {
+      if (err instanceof SpotifyApiException && err.detail.kind !== 'internal') throw err
+      failures.push(`playlist ${playlist.name || playlist.id}`)
+      console.warn(`${new Date().toLocaleString()}: [spotify-sync] playlist ${playlist.id} (${playlist.name}) not read: ${(err as Error).message}`)
+      continue
+    }
     perPlaylistCounts.set(playlist.id, tracks.length)
     for (const track of tracks) {
       const resolved = resolveSingleTrack(track, playlist, config)
@@ -264,10 +316,15 @@ export async function resolveSyncItems(
         album_type?: string
         artists?: Array<{ id?: string; name?: string }>
         images?: Array<{ url?: string }>
+        release_date?: string
       }>(`/albums/${encodeURIComponent(albumId)}`, accessToken)
       const item = buildExplicitAlbumItem(album, pin.category)
       if (item) items.set(item.groupKey, item)
     } catch (err) {
+      // Spotify blocking the app (429), a login or network failure: the run ends here - asking on for the next albums
+      // and artists only kept the block going (state-machine: RATE_LIMITED waits for Spotify's time)
+      if (err instanceof SpotifyApiException && err.detail.kind !== 'internal') throw err
+      failures.push(`album ${albumId}`)
       console.warn(
         `${new Date().toLocaleString()}: [spotify-sync] explicit album ${albumId} fetch failed: ${(err as Error).message}`,
       )
@@ -288,9 +345,18 @@ export async function resolveSyncItems(
       for (const album of albums.slice(from - 1, to)) {
         if (!album?.id || items.has(`album:${album.id}`) || excluded.has(album.id)) continue
         const item = buildExplicitAlbumItem(album, sub.category)
-        if (item) items.set(item.groupKey, item)
+        if (!item) continue
+        // The album belongs to the subscribed artist, also where Spotify names someone else first (a choir, a speaker,
+        // a publisher before him): it was filed under that other artist and missing from the subscribed one.
+        const own = album.artists?.find((a) => a?.id === sub.id)
+        item.artist = own?.name || sub.name || item.artist
+        item.artistId = sub.id
+        items.set(item.groupKey, item)
       }
     } catch (err) {
+      // (as for the albums above: a block, a login or network failure ends the run)
+      if (err instanceof SpotifyApiException && err.detail.kind !== 'internal') throw err
+      failures.push(`artist ${sub.name || sub.id}`)
       console.warn(
         `${new Date().toLocaleString()}: [spotify-sync] artist subscription ${sub.id} failed: ${(err as Error).message}`,
       )
@@ -399,6 +465,7 @@ function resolveSingleTrack(
       artist: track.album.artists?.[0]?.name ?? '',
       artistId: track.album.artists?.[0]?.id,
       cover: pickImage(track.album.images),
+      releaseDate: track.album.release_date,
       artistCover: undefined,
       playlistIds: [playlist.id],
     }
@@ -417,6 +484,7 @@ function resolveSingleTrack(
       artist: trackArtist.name ?? '',
       artistId: trackArtist.id,
       cover: pickImage(track.album.images),
+      releaseDate: track.album.release_date,
       artistCover: undefined,
       playlistIds: [playlist.id],
     }
@@ -434,6 +502,7 @@ function resolveSingleTrack(
       artist: track.album.artists?.[0]?.name ?? track.artists?.[0]?.name ?? '',
       artistId: track.album.artists?.[0]?.id ?? track.artists?.[0]?.id,
       cover: pickImage(track.album.images),
+      releaseDate: track.album.release_date,
       artistCover: undefined,
       playlistIds: [playlist.id],
     }
@@ -458,34 +527,40 @@ export async function fetchArtistAlbums(
   accessToken: string,
   albumTypes = 'album',
 ): Promise<SimpleAlbum[]> {
-  const out: SimpleAlbum[] = []
-  const seen = new Set<string>()
-  let offset = 0
-  const LIMIT = 50
-  while (out.length < 300) {
-    const page = await spotifyGet<{ items?: SimpleAlbum[] }>(
-      `/artists/${encodeURIComponent(artistId)}/albums?include_groups=${encodeURIComponent(albumTypes)}&market=DE&limit=${LIMIT}&offset=${offset}`,
-      accessToken,
-    )
-    const its = page.items ?? []
-    for (const a of its) {
-      if (a?.id && !seen.has(a.id)) {
-        seen.add(a.id)
-        out.push(a)
+  // Kept on the SD card and afterwards checked with one page (artist-albums-store.ts): the sync every 15 minutes and the
+  // app's album list asked Spotify for all ~30 pages of a big artist each time - that ran Spotify apps into blocks.
+  const fetchPage = async (offset: number): Promise<AlbumPage> => {
+    const limit = artistAlbumsPageLimit
+    try {
+      const page = await spotifyGet<AlbumPage & { limit?: number }>(
+        `/artists/${encodeURIComponent(artistId)}/albums?include_groups=${encodeURIComponent(albumTypes)}&market=DE&limit=${limit}&offset=${offset}`,
+        accessToken,
+      )
+      if (typeof page.limit === 'number' && page.limit > 0 && page.limit < limit) artistAlbumsPageLimit = page.limit
+      return page
+    } catch (err) {
+      // Spotify apps under the February 2026 rules get at most 10 albums per page (older apps 50): refused with
+      // 400, the page is asked again with 10 - and every page after it (the app does not change while the box runs)
+      if (limit > 10 && err instanceof SpotifyApiException && err.detail.kind === 'internal' && err.detail.reason.startsWith('400')) {
+        artistAlbumsPageLimit = 10
+        console.warn(`${new Date().toLocaleString()}: [spotify-sync] artist albums: Spotify allows 10 per page for this app (was asked ${limit})`)
+        return fetchPage(offset)
       }
+      throw err
     }
-    if (its.length < LIMIT) break
-    offset += LIMIT
   }
-  return out
+  // (a copy: the callers sort it)
+  return [...(await artistAlbums(artistId, albumTypes, fetchPage))] as SimpleAlbum[]
 }
+// (see fetchArtistAlbums: albums per page Spotify allows this app)
+let artistAlbumsPageLimit = 50
 
 /** Build an album-promotion SyncItem from a fetched Spotify album object
  *  (Phase 17b explicit-album pins). Category is the parent's pick from the
  *  WebApp, falling back to 'music' when none was stored. artistCover is filled
  *  by the fetchArtistCovers step like for playlist items. */
 function buildExplicitAlbumItem(
-  album: { id?: string; name?: string; artists?: Array<{ id?: string; name?: string }>; images?: Array<{ url?: string }> },
+  album: { id?: string; name?: string; artists?: Array<{ id?: string; name?: string }>; images?: Array<{ url?: string }>; release_date?: string },
   pinCategory: CategoryType | undefined,
 ): SyncItem | undefined {
   if (!album?.id) return undefined
@@ -499,6 +574,7 @@ function buildExplicitAlbumItem(
     artist: album.artists?.[0]?.name ?? '',
     artistId: album.artists?.[0]?.id,
     cover: pickImage(album.images),
+    releaseDate: album.release_date,
     artistCover: undefined,
     playlistIds: [],
   }

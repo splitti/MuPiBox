@@ -3,6 +3,7 @@
 import sys
 import time
 import telepot
+import html
 import json
 import subprocess
 import requests
@@ -359,6 +360,13 @@ def on_chat_message(msg):
                 tr('ss_interval', mins=body.get('polling_interval_seconds', 0) // 60),
                 '',
                 tr('ss_last', status=state_info.get('last_sync_status', '—')),
+            ]
+            # why a run failed, and what a completed run could not read (HTML: Spotify's answer is escaped)
+            if state_info.get('last_sync_status') != 'COMPLETED' and state_info.get('last_sync_reason'):
+                lines.append(tr('ss_reason', reason=html.escape(str(state_info.get('last_sync_reason')))))
+            if state_info.get('last_sync_status') == 'COMPLETED' and state_info.get('last_sync_skipped'):
+                lines.append(tr('ss_skipped', what=html.escape(', '.join(str(x) for x in state_info.get('last_sync_skipped')))))
+            lines += [
                 tr('ss_time', time=state_info.get('last_sync_end') or '—'),
                 tr('ss_counts', adds=state_info.get('additions_count', 0), upds=state_info.get('updates_count', 0),
                    rems=state_info.get('removals_count', 0), confs=len(state_info.get('conflicts', []) or [])),

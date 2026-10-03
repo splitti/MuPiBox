@@ -27,11 +27,13 @@ const PRIVATE_IP_REGEXES = [
   /^f[cd][0-9a-f]{2}:/i, // IPv6 unique local fc00::/7 (was only the literal prefixes fc00:/fd00:)
 ]
 /** An address of the home network, loopback or link-local (as written - a name is resolved by the caller) */
-export const isPrivateHost = (host: string): boolean => {
-  // Strip brackets from IPv6 literals
-  let h = host.replace(/^\[|\]$/g, '').toLowerCase()
-  // IPv4-mapped IPv6 (::ffff:10.0.0.1) is checked as the IPv4 address it maps to - also in the form the URL parser
-  // writes it (::ffff:a00:1), as NAT64 (64:ff9b::a00:1) or IPv4-compatible (::a00:1): these passed as "public" before
+/**
+ * An IPv6 address that carries an IPv4 one as the IPv4 address: IPv4-mapped (::ffff:10.0.0.1 - also as the URL parser
+ * writes it, ::ffff:a00:1), NAT64 (64:ff9b::a00:1) or IPv4-compatible (::a00:1). Anything else as it is (lower case,
+ * without brackets). Every check of an address goes through this - one that did not let ::ffff:7f00:1 pass as "public".
+ */
+export function unmapIpv4(address: string): string {
+  let h = address.replace(/^\[|\]$/g, '').toLowerCase()
   h = h.replace(/^(?:::ffff:|64:ff9b::|::)(\d+\.\d+\.\d+\.\d+)$/, '$1')
   const hex = /^(?:::ffff:|64:ff9b::|::)([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(h)
   if (hex) {
@@ -39,6 +41,11 @@ export const isPrivateHost = (host: string): boolean => {
     const lo = Number.parseInt(hex[2], 16)
     h = `${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`
   }
+  return h
+}
+
+export const isPrivateHost = (host: string): boolean => {
+  const h = unmapIpv4(host)
   // any other form of these prefixes is nothing a feed lives on
   if (/^(::ffff:|64:ff9b:)/.test(h)) return true
   if (h === 'localhost' || h.endsWith('.localhost') || h === '0.0.0.0' || h === '::') return true
@@ -72,10 +79,8 @@ function ownAddresses(): Set<string> {
  * addresses (its player and settings answer there).
  */
 export function neverFetched(address: string): boolean {
-  const a = address
-    .toLowerCase()
-    .replace(/^\[|\]$/g, '')
-    .replace(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/, '$1')
+  const a = unmapIpv4(address)
+  if (/^(::ffff:|64:ff9b:)/.test(a)) return true
   if (a === 'localhost' || a.endsWith('.localhost') || a === '0.0.0.0' || a === '::' || a === '::1') return true
   if (/^127\./.test(a) || /^0\./.test(a) || /^169\.254\./.test(a) || /^fe[89ab][0-9a-f]:/.test(a)) return true
   return ownAddresses().has(a)

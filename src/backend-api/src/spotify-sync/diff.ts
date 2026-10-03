@@ -65,6 +65,8 @@ function syncEntryDiffersFromItem(entry: BoxLibraryEntry, item: SyncItem): boole
   if (entry.category !== item.category) return true
   if (entry.cover !== item.cover) return true
   if (entry.artistcover !== item.artistCover) return true
+  // (the release date came later: entries without it get it once)
+  if (item.releaseDate && entry.release_date !== item.releaseDate) return true
   if (entry.spotify_sync_mode !== item.mode) return true
   // Playlist-membership: compare as sets.
   const existingPlaylists = new Set(entry.spotify_sync_playlists ?? [])
@@ -84,7 +86,12 @@ function syncEntryDiffersFromItem(entry: BoxLibraryEntry, item: SyncItem): boole
  * wins). The conflict report surfaces them in the Eltern-WebApp so
  * parents can choose to "let sync manage" or "ignore".
  */
-export function computeSyncDiff(syncItems: Map<string, SyncItem>, library: BoxLibraryEntry[]): SyncDiff {
+/**
+ * noRemovals: a source could not be read in this run (a playlist, a pinned album, an artist - timeout, 503, rate
+ * limit): nothing is removed then. Its entries were not in the items only because of that, and a removal would have
+ * thrown away their overrides; the next complete run tidies up.
+ */
+export function computeSyncDiff(syncItems: Map<string, SyncItem>, library: BoxLibraryEntry[], opts: { noRemovals?: boolean } = {}): SyncDiff {
   const additions: SyncItem[] = []
   const updates: SyncDiff['updates'] = []
   const conflicts: ConflictReport[] = []
@@ -122,10 +129,12 @@ export function computeSyncDiff(syncItems: Map<string, SyncItem>, library: BoxLi
   // Orphan-removal: sync-managed library entries that no longer appear
   // in any MuPiBox-playlist.
   const removals: BoxLibraryEntry[] = []
-  for (const entry of library) {
-    if ((entry.source ?? 'manual') !== 'spotify-sync') continue
-    if (matchedLibrary.has(entry)) continue
-    removals.push(entry)
+  if (!opts.noRemovals) {
+    for (const entry of library) {
+      if ((entry.source ?? 'manual') !== 'spotify-sync') continue
+      if (matchedLibrary.has(entry)) continue
+      removals.push(entry)
+    }
   }
 
   return { additions, updates, removals, conflicts }

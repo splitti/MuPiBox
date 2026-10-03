@@ -1,7 +1,7 @@
 // Network options of the app (the admin interface's network.php and admin.php): onboard WiFi at boot, USB WiFi
-// drivers and their power saving, DHCP timeout, WiFi watchdog, "best connection", restarting WiFi, renewing DHCP,
-// control by IP. The LAN itself (on/off, DHCP/static) has its routes in server.ts (/api/network/ethernet*), the
-// onboard radio's quick switch too (/api/network/onboard-wifi). The driver scripts are loaded from the official
+// drivers and their power saving, DHCP timeout, WiFi watchdog, "best connection", restarting WiFi, renewing DHCP
+// (WiFi or LAN), control by IP. The LAN itself (on/off, DHCP/static) has its routes in server.ts (/api/network/ethernet*),
+// the onboard radio's quick switch too (/api/network/onboard-wifi). The driver scripts are loaded from the official
 // repository each time (as the admin interface and the updates do): they fetch the drivers from the internet anyway,
 // and stay current without a new version of the box.
 
@@ -120,7 +120,7 @@ export function registerNetworkRoutes(router: Router, deps: NetworkDeps): void {
   /** POST /api/app/usb-wifi-power {driver, level} - power saving of a USB WiFi driver (0 off, 1 minimal, 2 max). */
   router.post('/usb-wifi-power', requireSession, requireCsrf, async (req, res) => {
     const { driver, level } = (req.body ?? {}) as { driver?: unknown; level?: unknown }
-    const d = DRIVERS[String(driver)]
+    const d = Object.hasOwn(DRIVERS, String(driver)) ? DRIVERS[String(driver)] : undefined
     if (!d || !['0', '1', '2'].includes(String(level))) {
       res.status(400).json({ error: 'invalid driver or level' })
       return
@@ -145,7 +145,7 @@ export function registerNetworkRoutes(router: Router, deps: NetworkDeps): void {
    */
   router.post('/usb-wifi-driver', requireSession, requireCsrf, async (req, res) => {
     const { driver, action } = (req.body ?? {}) as { driver?: unknown; action?: unknown }
-    const d = DRIVERS[String(driver)]
+    const d = Object.hasOwn(DRIVERS, String(driver)) ? DRIVERS[String(driver)] : undefined
     if (!d || (action !== 'install' && action !== 'remove')) {
       res.status(400).json({ error: 'invalid driver or action' })
       return
@@ -190,9 +190,27 @@ export function registerNetworkRoutes(router: Router, deps: NetworkDeps): void {
     detached(`sleep 1; sudo service ifup@${iface} stop; sudo service ifup@${iface} start`)
     res.json({ ok: true })
   })
-  router.post('/dhcp/renew', requireSession, requireCsrf, async (_req, res) => {
-    const iface = await wifiIface()
-    detached(`sleep 1; sudo dhclient -r; sudo service ifup@${iface} stop; sudo service ifup@${iface} start; sudo dhclient`)
-    res.json({ ok: true })
+  /**
+   * POST /api/app/dhcp/renew {lan?: 'eth0'} - the address of one connection fetched anew from the router: the WiFi's,
+   * or with lan the cable's. Only that connection's DHCP client (as ifupdown runs it) gives its address back and asks
+   * again - it was all of them before, and then only the WiFi was started again (409: it gets no address by DHCP).
+   */
+  router.post('/dhcp/renew', requireSession, requireCsrf, async (req, res) => {
+    const r = await renewDhcp((req.body as { lan?: unknown } | undefined)?.lan)
+    res.status(r.status).json(r.body)
   })
+}
+
+/** The address of the WiFi (lan: of that cable adapter) fetched anew - for the app and the display (see server.ts) */
+export async function renewDhcp(lan: unknown): Promise<{ status: number; body: Record<string, unknown> }> {
+  // (an adapter of the system - also without an address, so not by os.networkInterfaces)
+  const known = typeof lan === 'string' && /^(eth|en)[\w.-]{0,12}$/.test(lan) && (await fsp.stat(`/sys/class/net/${lan}`).catch(() => null))
+  if (lan !== undefined && !known) return { status: 400, body: { error: 'invalid_interface' } }
+  const iface = typeof lan === 'string' ? lan : await wifiIface()
+  if (!/^[\w.-]{1,15}$/.test(iface)) return { status: 400, body: { error: 'invalid_interface' } }
+  const pid = `/run/dhclient.${iface}.pid`
+  if (!(await exists(pid))) return { status: 409, body: { error: 'no_dhcp' } }
+  const files = `-pf ${pid} -lf /var/lib/dhcp/dhclient.${iface}.leases`
+  detached(`sleep 1; sudo dhclient -4 -r -v ${files} ${iface}; sudo dhclient -4 -v -i ${files} -I -df /var/lib/dhcp/dhclient6.${iface}.leases ${iface}`)
+  return { status: 200, body: { ok: true } }
 }

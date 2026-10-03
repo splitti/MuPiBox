@@ -110,39 +110,39 @@ do
 		ONLINESTATE=${FALSESTATE}
 		if [ ! -f ${OFFLINE_FILE} ]; then
 			echo -n "[" > ${OFFLINE_FILE}
-			echo -n $(offline_filter ${DATA_FILE}) >> ${OFFLINE_FILE}
+			printf '%s' "$(offline_filter ${DATA_FILE} | /usr/bin/jq -c . | paste -sd,)" >> ${OFFLINE_FILE}
 			echo -n "]" >> ${OFFLINE_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
 			chown dietpi:dietpi ${OFFLINE_FILE}
 		elif [ ! -s ${OFFLINE_FILE} ]; then
 			rm ${OFFLINE_FILE}
 			echo -n "[" > ${OFFLINE_FILE}
-			echo -n $(offline_filter ${DATA_FILE}) >> ${OFFLINE_FILE}
+			printf '%s' "$(offline_filter ${DATA_FILE} | /usr/bin/jq -c . | paste -sd,)" >> ${OFFLINE_FILE}
 			echo -n "]" >> ${OFFLINE_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
 			chown dietpi:dietpi ${OFFLINE_FILE}
 		elif [ $(stat --format='%Y' "${DATA_FILE}") -gt $(stat --format='%Y' "${OFFLINE_FILE}") ] || [ "${PODCAST_INDEX}" -nt "${OFFLINE_FILE}" ]; then
 			echo -n "[" > ${OFFLINE_FILE}
-			echo -n $(offline_filter ${DATA_FILE}) >> ${OFFLINE_FILE}
+			printf '%s' "$(offline_filter ${DATA_FILE} | /usr/bin/jq -c . | paste -sd,)" >> ${OFFLINE_FILE}
 			echo -n "]" >> ${OFFLINE_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
 		fi
 		if [ ! -f ${OFFLINERESUME_FILE} ]; then
 			echo -n "[" > ${OFFLINERESUME_FILE}
-			echo -n $(offline_filter ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
+			printf '%s' "$(offline_filter ${RESUME_FILE} | /usr/bin/jq -c . | paste -sd,)" >> ${OFFLINERESUME_FILE}
 			echo -n "]" >> ${OFFLINERESUME_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
 			chown dietpi:dietpi ${OFFLINERESUME_FILE}
 		elif [ ! -s ${OFFLINERESUME_FILE} ]; then
 			rm ${OFFLINERESUME_FILE}
 			echo -n "[" > ${OFFLINERESUME_FILE}
-			echo -n $(offline_filter ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
+			printf '%s' "$(offline_filter ${RESUME_FILE} | /usr/bin/jq -c . | paste -sd,)" >> ${OFFLINERESUME_FILE}
 			echo -n "]" >> ${OFFLINERESUME_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
 			chown dietpi:dietpi ${OFFLINERESUME_FILE}
 		elif [ $(stat --format='%Y' "${RESUME_FILE}") -gt $(stat --format='%Y' "${OFFLINERESUME_FILE}") ] || [ "${PODCAST_INDEX}" -nt "${OFFLINERESUME_FILE}" ]; then
 			echo -n "[" > ${OFFLINERESUME_FILE}
-			echo -n $(offline_filter ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
+			printf '%s' "$(offline_filter ${RESUME_FILE} | /usr/bin/jq -c . | paste -sd,)" >> ${OFFLINERESUME_FILE}
 			echo -n "]" >> ${OFFLINERESUME_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
 		fi
@@ -151,7 +151,11 @@ do
 		ensure_symlink "${OFFLINERESUME_FILE}" "${ACTIVERESUME_FILE}"
 	fi
 
-	if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
+	# Compared with what the file says, not with the last round: get_network.sh rewrites the whole file every
+	# 30 s from the same old content, so a write of this loop that lands in between can be lost - and then the
+	# display showed "offline" (no WiFi in the status bar) for good, because nothing wrote the state again.
+	FILESTATE=$(/usr/bin/jq -r '.onlinestate // empty' "${NETWORKCONFIG}" 2>/dev/null)
+	if [ "${ONLINESTATE}" != "${FILESTATE}" ]; then
 		# Atomic-update (HIGH-8).
 		_TMP="${NETWORKCONFIG}.tmp.$$"
 		/usr/bin/jq --arg v "${ONLINESTATE}" '.onlinestate = $v' "${NETWORKCONFIG}" > "${_TMP}" && mv "${_TMP}" "${NETWORKCONFIG}" || rm -f "${_TMP}"

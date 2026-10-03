@@ -15,7 +15,7 @@ import { execFile, execFileSync, spawn } from 'node:child_process'
 import { promises as fsp, readdirSync, readFileSync } from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { type Request, Router } from 'express'
+import { type Request, type RequestHandler, Router } from 'express'
 import QRCode from 'qrcode'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import {
@@ -50,11 +50,13 @@ import { registerSpeechRoutes } from './speech-routes'
 import { registerCustomBootRoutes } from './bootscreen-custom'
 import { registerFeedHostRoutes } from './feed-hosts'
 import { registerPinnedCardRoutes } from './pinned-cards'
+import { dropStatic, registerWifiStaticRoutes, startWifiStaticWatch } from './wifi-static'
+import { decodeWpaSsid } from '../wpa-ssid'
 import { registerHardwareRoutes } from './hardware'
 import { registerServicesRoutes } from './services'
 import { registerSystemRoutes } from './system'
 import { registerAdminRoutes } from './admin'
-import { registerNetworkRoutes } from './network'
+import { registerNetworkRoutes, renewDhcp } from './network'
 import { registerUpdateRoutes } from './updates'
 import { registerTlsRoutes, tlsOf } from './tls'
 import { type LocalLibraryDeps, registerLocalUploadRoutes } from './upload'
@@ -67,6 +69,7 @@ import { pickEpisodes } from '../episode-pick'
 import { episodeKey, mayKeep, type PodcastOffline } from '../podcast-offline'
 import { pbkdf2Sync, randomBytes } from 'node:crypto'
 import { localOnly } from '../request-guard'
+import { clearSpotifyBlock } from '../spotify-block'
 import { spotifyLoginAge } from './spotify-auth-age'
 import {
   REQUESTED_SCOPES,
@@ -235,7 +238,7 @@ async function clearSpotifyCache(): Promise<boolean> {
 // mupi_wifi_iface.sh). These routes had wlan0 hard-coded: with a USB adapter the scan, the list
 // of saved networks and "remove" looked at the wrong adapter. Asked at most every 3 s.
 let wifiIfaceCache: { name: string; at: number } | undefined
-function wifiIface(): string {
+export function wifiIface(): string {
   if (wifiIfaceCache && Date.now() - wifiIfaceCache.at < 3000) {
     return wifiIfaceCache.name
   }
@@ -291,7 +294,8 @@ type RssEpisode = { url: string; title: string; date: string | null; duration: s
 // cover: the episode's picture, else the show's, through the box's picture proxy (a local copy is /rss-covers/…).
 // offlineView: the box is offline and the feed holds only the episodes on the SD card (server.ts offlineFeedView) -
 // those are the chosen ones already, a choice of episodes is not applied to them again.
-async function rssEpisodes(feed: string): Promise<(RssEpisode[] & { offlineView?: boolean }) | null> {
+// failure: why the box could not read the feed (server.ts feedFailureOf), then without episodes.
+async function rssEpisodes(feed: string): Promise<(RssEpisode[] & { offlineView?: boolean; failure?: string }) | null> {
   const text = (v: unknown): string => {
     if (typeof v === 'string') return v
     const o = v as { _text?: unknown; _cdata?: unknown } | undefined
@@ -306,7 +310,8 @@ async function rssEpisodes(feed: string): Promise<(RssEpisode[] & { offlineView?
   try {
     const r = await fetch(`http://127.0.0.1:8200/api/rssfeed/cached?url=${encodeURIComponent(feed)}`, { signal: AbortSignal.timeout(15000) })
     if (!r.ok) return null
-    const body = (await r.json()) as { rss?: { channel?: Record<string, unknown>; _offline?: unknown } }
+    const body = (await r.json()) as { rss?: { channel?: Record<string, unknown>; _offline?: unknown; _error?: unknown } }
+    if (typeof body.rss?._error === 'string') return Object.assign([] as RssEpisode[], { failure: body.rss._error })
     const channel = body.rss?.channel
     const raw = channel?.item
     const items = (Array.isArray(raw) ? raw : raw ? [raw] : []) as Record<string, unknown>[]
@@ -352,6 +357,19 @@ function spotifyHost(req: Request): string | undefined {
   return host.replace(/:\d+$/, '')
 }
 
+/**
+ * The network routes of the display's WiFi page (its admin area): a fixed address per WiFi network and fetching the
+ * address anew - as the app's /api/app/wifi/static* and /dhcp/renew, under /api (guard: the display itself, or the
+ * app with its session).
+ */
+export function registerDisplayNetworkRoutes(app: Router, guard: RequestHandler): void {
+  registerWifiStaticRoutes(app, { wifiIface }, { prefix: '/api', read: [guard], write: [guard] })
+  app.post('/api/network/dhcp/renew', guard, async (req, res) => {
+    const r = await renewDhcp((req.body as { lan?: unknown } | undefined)?.lan)
+    res.status(r.status).json(r.body)
+  })
+}
+
 export function createElternApiRouter(deps: ElternRouterDeps): Router {
   const router = Router()
   // (a new password ends the sessions issued under the old one)
@@ -371,6 +389,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   registerCustomBootRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerFeedHostRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerPinnedCardRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  // (a fixed address per WiFi network, and the watch that takes a wrong one back to DHCP)
+  registerWifiStaticRoutes(router, { wifiIface })
+  startWifiStaticWatch({ wifiIface })
   registerHardwareRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerServicesRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerSystemRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
@@ -1218,7 +1239,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       const startupVolume = volumePercent(mb.startupVolume) ?? volumePercent(mb.startVolume) ?? null
       // (with Bluetooth audio: an own maximum, null = the same as without)
       const btMaxVolume = volumePercent(mb.btMaxVolume) ?? null
-      bluetoothAudio().then((bluetooth) => res.json({ current, maxVolume, startupVolume, btMaxVolume, bluetooth }))
+      // loudness: off | soft | strong - the player's levelling of what is not Spotify (mupibox.loudness, mpv only)
+      const loudness = mb.loudness === 'soft' || mb.loudness === 'strong' ? mb.loudness : 'off'
+      bluetoothAudio().then((bluetooth) => res.json({ current, maxVolume, startupVolume, btMaxVolume, bluetooth, loudness }))
     })
   })
 
@@ -1264,8 +1287,15 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * accidentally-muted box that looks broken.
    */
   router.post('/audio/config', requireSession, requireCsrf, async (req, res) => {
-    const body = (req.body as { maxVolume?: unknown; startupVolume?: unknown; btMaxVolume?: unknown } | undefined) ?? {}
-    const mutations: { maxVolume?: number; startupVolume?: number | null; btMaxVolume?: number | null } = {}
+    const body = (req.body as { maxVolume?: unknown; startupVolume?: unknown; btMaxVolume?: unknown; loudness?: unknown } | undefined) ?? {}
+    const mutations: { maxVolume?: number; startupVolume?: number | null; btMaxVolume?: number | null; loudness?: 'off' | 'soft' | 'strong' } = {}
+    if (body.loudness !== undefined) {
+      if (body.loudness !== 'off' && body.loudness !== 'soft' && body.loudness !== 'strong') {
+        res.status(400).json({ error: 'loudness must be off, soft or strong' })
+        return
+      }
+      mutations.loudness = body.loudness
+    }
     // the maximum while Bluetooth audio is on (headphones); null: the same as without
     if (body.btMaxVolume !== undefined) {
       const v = Number(body.btMaxVolume)
@@ -1304,6 +1334,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       if (mutations.maxVolume !== undefined) mb.maxVolume = mutations.maxVolume
       if (mutations.btMaxVolume === null) delete mb.btMaxVolume
       else if (mutations.btMaxVolume !== undefined) mb.btMaxVolume = mutations.btMaxVolume
+      if (mutations.loudness !== undefined) mb.loudness = mutations.loudness
       // The scripts that set the volume at start and shutdown (chromium-autostart.sh, mupi_shutdown.sh,
       // off_trigger.sh, shutdown_sound.sh) and the admin interface read startVolume: this app's startupVolume alone
       // had no effect. Both are written; without a fixed value both go, and the scripts leave the volume as it was.
@@ -1480,7 +1511,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     let active = false
     for (const ln of (await cli(['list_networks'])).split('\n')) {
       const parts = ln.split('\t')
-      if (ln.startsWith('network id') || parts[1] !== ssid) continue
+      // (wpa_cli prints a name with an umlaut as \xNN per byte)
+      if (ln.startsWith('network id') || decodeWpaSsid(parts[1] ?? '') !== ssid) continue
       id = parts[0]
       active = (parts[3] ?? '').includes('[CURRENT]')
       break
@@ -1549,6 +1581,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
             res.status(500).json({ error: `save_config failed: ${saveErr?.message ?? saveOut.trim()}` })
             return
           }
+          // (its fixed address, if it had one, goes with it)
+          void dropStatic(wifiIface(), ssid).catch(() => undefined)
           res.json({ ok: true })
         })
       })
@@ -1632,7 +1666,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         if ((source === 'rss' || source === 'radio') && typeof local.cover === 'string' && local.cover) coverUrl = local.cover
         if ((source === 'nas' || source === 'local') && folder) {
           const parts = folder.split('/').filter(Boolean)
-          artist = parts[parts.length - 2] ?? ''
+          // (<category>/<artist>/<album>: the artist is the folder above the album; an album with its files right in
+          // <category>/<album> has none - the category's name is not its artist)
+          artist = source === 'local' ? (parts.length >= 3 ? parts[parts.length - 2] : '') : (parts[parts.length - 2] ?? '')
           // the track's own picture (a playlist of different stories) before the album's
           const trackFile = typeof local.trackFile === 'string' ? local.trackFile : ''
           coverUrl =
@@ -1747,8 +1783,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       return
     }
     const all = await rssEpisodes(item.id)
-    if (!all) {
-      res.status(502).json({ error: 'feed_unavailable' })
+    if (!all || all.failure) {
+      // (reason: why - the app says it instead of "no episodes", see server.ts feedFailureOf)
+      res.status(502).json({ error: 'feed_unavailable', ...(all?.failure ? { reason: all.failure } : {}) })
       return
     }
     // (only the chosen ones - the box shows no others; total: how many the feed has)
@@ -1848,7 +1885,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         const title = String(item.title ?? 'Radio')
         const artist = String(item.artist ?? '')
         url = `radio/${enc(id)}/${enc(title)}:title:artist:${enc(artist)}`
-        cover = ownCover(item.cover_override) || ownCover(item.cover)
+        // (only the artist's picture set: that one - as on the tiles)
+        cover = ownCover(item.cover_override) || ownCover(item.cover) || ownCover(item.artistcover_override) || ownCover(item.artistcover)
         break
       }
       case 'rss': {
@@ -2274,6 +2312,10 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(400).json({ error: 'clientSecret must be 16-64 alphanumeric characters when provided' })
       return
     }
+    // Another Spotify app: asked again at once instead of waiting for the old app's block (spotify-block.ts). It does not
+    // always help - in a test (03.10.) Spotify blocked the new app of the same account at once, so the block seems to
+    // hold for the account; the box then has the new time from that answer. (A new login with the same app keeps it.)
+    if (clientId !== deps.getMupiboxConfig()?.spotify?.clientId) clearSpotifyBlock('another Spotify app (Client ID)')
     await deps.updateMupiboxConfig((cfg) => {
       const spotify = ((cfg.spotify as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
       spotify.clientId = clientId

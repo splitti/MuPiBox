@@ -4,7 +4,8 @@ const bodyParser = require('body-parser')
 const path = require('node:path')
 const dns = require('node:dns')
 const SpotifyWebApi = require('spotify-web-api-node')
-const createPlayer = require('./mplayer-wrapper.js')
+const createMplayer = require('./mplayer-wrapper.js')
+const createMpv = require('./mpv-wrapper.js')
 const { isPlaylistUrl, resolveStreamUrl } = require('./playlist-url.js')
 const googleTTS = require('google-tts-api')
 const fs = require('node:fs')
@@ -116,6 +117,7 @@ function setupMupiBoxConfigWatch() {
       if (fresh) {
         muPiBoxConfig = fresh
         console.log(`${new Date().toLocaleString()}: [Config] Reloaded mupiboxconfig.json (live)`)
+        if (typeof applyLoudness === 'function') applyLoudness()
       }
       // On parse failure we keep the old in-memory copy. fs.watch can still fire
       // mid-write occasionally even with debounce, so a parse error here is normal
@@ -164,7 +166,35 @@ const log = require('console-log-level')({ level: config.server.logLevel })
 /*set up express router and set headers for cross origin requests*/
 const app = express()
 const server = http.createServer(app)
-const player = createPlayer()
+// The engine for everything that is not Spotify: mpv, or mplayer as before - mupibox.playerEngine "mplayer" in
+// mupiboxconfig.json keeps the old one, MUPIBOX_PLAYER in the environment chooses for a test; read at the start (a
+// change needs a restart of the player). A box without mpv (an update that could not install it) plays with
+// mplayer. Both wrappers offer the same interface, see mpv-wrapper.js.
+const installed = (bin) =>
+  (process.env.PATH || '/usr/bin:/bin')
+    .split(':')
+    .some((dir) => dir && fs.existsSync(`${dir}/${bin}`))
+const playerEngine =
+  process.env.MUPIBOX_PLAYER ||
+  (muPiBoxConfig?.mupibox?.playerEngine === 'mplayer' || !installed('mpv') ? 'mplayer' : 'mpv')
+if (playerEngine === 'mplayer' && muPiBoxConfig?.mupibox?.playerEngine !== 'mplayer' && !process.env.MUPIBOX_PLAYER)
+  console.warn(`${new Date().toLocaleString()}: [Player] mpv is not installed - playing with mplayer`)
+const player = playerEngine === 'mpv' ? createMpv() : createMplayer()
+console.log(`${new Date().toLocaleString()}: [Player] engine: ${playerEngine}`)
+// The levelling of the loudness (mupibox.loudness: off | soft | strong, the app's "Lautstärke angleichen"): set when
+// the engine is up and whenever the config changes; only mpv has it
+let loudnessApplied = null
+function applyLoudness() {
+  const mode = ['soft', 'strong'].includes(muPiBoxConfig?.mupibox?.loudness) ? muPiBoxConfig.mupibox.loudness : 'off'
+  if (mode === loudnessApplied) return
+  loudnessApplied = mode
+  player.setLoudness?.(mode)
+  console.log(`${new Date().toLocaleString()}: [Player] loudness levelling: ${mode}`)
+}
+player.on('ready', () => {
+  loudnessApplied = null // (a new mpv process after a respawn starts without the filter)
+  applyLoudness()
+})
 
 // Refuse commands a foreign web page sends through a visitor's browser; CORS only for the box's
 // own pages (was: Access-Control-Allow-Origin * for everyone). See request-guard.js.
@@ -297,9 +327,11 @@ setInterval(() => {
 }, 1000)
 
 player.on('metadata', (val) => {
-  console.log('track metadata is', val)
+  log.debug('track metadata is', val)
   //currentMeta.currentTracknr = parseInt(val.Comment?.split(',').pop(), 10);
-  currentMeta.currentTracknr = currentMeta.currentTracknr + 1
+  // (an engine that knows its place in the playlist says it; else every file that starts counts one up)
+  const trackIndex = player.trackIndex?.() ?? -1
+  currentMeta.currentTracknr = trackIndex >= 0 ? trackIndex + 1 : currentMeta.currentTracknr + 1
   log.debug(`${now()}: [Spotify Control] Current Tracknr: ${currentMeta.currentTracknr}`)
   if (currentMeta.currentType === 'nas') {
     // Mplayer would report the stream-proxy URL as "filename"/"path" for NAS
@@ -355,8 +387,8 @@ function checkSilence() {
 }
 
 // --- Buffering of streams before playback starts ---
-// mplayer starts once cache-min percent of the cache are filled (see the wrapper).
-const cachePrefillPercent = 10
+// mplayer starts once cache-min percent of the cache are filled (see the wrapper); mpv reports 0-100 of its goal.
+const cachePrefillPercent = player.cachePrefillPercent ?? 10
 let loadingTimer = null
 
 function startLoading() {
@@ -386,7 +418,7 @@ player.on('time_pos', checkSilence)
 //player.on('track-change', () => player.getProps(['length']))
 
 player.on('filename', (val) => {
-  console.log('track name is', val)
+  log.debug('track name is', val)
   if (!currentMeta.currentTrackname) {
     currentMeta.currentTrackname = val
       .split('.mp3')[0]
@@ -399,7 +431,7 @@ player.on('filename', (val) => {
 player.on('track-change', () => player.getProps(['filename']))
 
 player.on('path', (val) => {
-  console.log('track path is', val)
+  log.debug('track path is', val)
   // A local file that plays (NAS: set from the track list, see 'metadata'): its embedded picture is shown.
   const mediaRoot = '/home/dietpi/MuPiBox/media/'
   if (currentMeta.currentType !== 'nas') {
@@ -432,23 +464,26 @@ player.on('track-change', () => {
 // finish" mode songs simply run on until the playlist is over.
 function graceSongBoundary() {
   if (playtimeState.state === 'grace' && playtimeState.graceMode === 'track') {
-    finalizePlaytimeBlock('next track would start during grace period')
+    finalizePlaytimeBlock('next track would start during grace period', true)
   }
   if (quietHoursState.state === 'grace' && quietHoursState.graceMode === 'track') {
-    finalizeQuietHoursBlock('next track would start during grace period')
+    finalizeQuietHoursBlock('next track would start during grace period', true)
   }
 }
 player.on('track-change', graceSongBoundary)
 player.on('playlist-finish', () => {
   if (playtimeState.state === 'grace') {
-    finalizePlaytimeBlock('playlist finished during grace period')
+    finalizePlaytimeBlock('playlist finished during grace period', true)
   }
   if (quietHoursState.state === 'grace') {
-    finalizeQuietHoursBlock('playlist finished during grace period')
+    finalizeQuietHoursBlock('playlist finished during grace period', true)
   }
   // A podcast episode that ended long before its end: the connection to its server broke (mplayer takes that as
   // the end of the file) - it is opened again where it stopped
   if (reconnectEpisode()) return
+  // the album or episode played to its end (not a stop: that empties currentPlayer first) - the display goes back
+  // to its list at once instead of waiting 10 s for the player to stay silent
+  if (currentMeta.currentPlayer === 'mplayer') currentMeta.finished = true
   // Library album finished naturally — drop its resume entry so the user
   // isn't offered "weiterhören" at the very end next time. Spotify and RSS
   // are skipped: Spotify gives no clean end-of-album signal via the
@@ -533,6 +568,8 @@ setInterval(() => {
 
 let activeDevice = null
 let displaySpotifyDevice = null // the display's Web Playback SDK device, as reported by the display
+let displayDeviceReportedAt = 0 // when the display last reported it (see playOnDevice)
+let displayRecoveryAt = 0 // when the display was last asked to sign in to Spotify anew
 // AR5-4: was `const nowDate = new Date()` evaluated once at module-load.
 // All 86 log templates that used `${now()}` printed
 // the boot timestamp on every line, making production debugging useless.
@@ -572,6 +609,8 @@ const currentMeta = {
   pause: false,
   album: '',
   path: '',
+  finished: false, // the local album or episode played to its end (see playlist-finish)
+  episode: '', // the address of the podcast episode that plays (rss) - the display's id of it, see the rss command
   currentTrackname: '',
   currentTracknr: 0,
   totalTracks: '',
@@ -891,8 +930,16 @@ function writePlaytimeCheckpoint() {
     dayKey: playtimeState.dayKey,
     usedSeconds: playtimeState.usedSeconds,
   }
-  fs.writeFile(PLAYTIME_CHECKPOINT_PATH, JSON.stringify(payload), (err) => {
-    if (err) log.error(`${new Date().toLocaleString()}: [Playtime] Failed to write checkpoint:`, err)
+  // (a file of its own first, then renamed: a power cut mid-write left half a file, and the day's count began at 0)
+  const tmp = `${PLAYTIME_CHECKPOINT_PATH}.tmp`
+  fs.writeFile(tmp, JSON.stringify(payload), (err) => {
+    if (err) {
+      log.error(`${new Date().toLocaleString()}: [Playtime] Failed to write checkpoint:`, err)
+      return
+    }
+    fs.rename(tmp, PLAYTIME_CHECKPOINT_PATH, (e) => {
+      if (e) log.error(`${new Date().toLocaleString()}: [Playtime] Failed to write checkpoint:`, e)
+    })
   })
   playtimeLastCheckpointAt = Date.now()
   playtimeLastCheckpointSeconds = playtimeState.usedSeconds
@@ -918,19 +965,22 @@ function isPlaybackBlocked() {
 // mplayer track-change/playlist-finish handlers, or directly when grace=0.
 // While allowUntil-override is active, transitions are suppressed — the parent has
 // explicitly green-lit playback for this window, so neither grace nor stop fire.
-function finalizePlaytimeBlock(reason) {
+// immediate: the song is over (the next one is starting) - stopped at once; else faded out, as a cut into a song
+function finalizePlaytimeBlock(reason, immediate = false) {
   if (isAllowOverrideActive()) return
   console.log(`${new Date().toLocaleString()}: [Playtime] Finalizing block (${reason})`)
   playtimeState.state = 'blocked'
   playtimeState.graceEndsAt = null
-  // (faded out, not cut: see fadeOutThen)
-  fadeOutThen(() => {
+  const stopNow = () => {
     try {
       stop()
     } catch (e) {
       console.error(`${new Date().toLocaleString()}: [Playtime] Error stopping playback:`, e)
     }
-  })
+  }
+  // (faded out when it cuts into a song: see fadeOutThen)
+  if (immediate) stopNow()
+  else fadeOutThen(stopNow)
   writePlaytimeCheckpoint()
   // Notify parents that today's listening time is up. telegram_send_message.py
   // loops over all configured chatIds, so both Family group and individual DMs
@@ -940,7 +990,7 @@ function finalizePlaytimeBlock(reason) {
   }
 }
 
-function finalizeQuietHoursBlock(reason) {
+function finalizeQuietHoursBlock(reason, immediate = false) {
   if (isAllowOverrideActive()) return
   console.log(`${new Date().toLocaleString()}: [QuietHours] Finalizing block (${reason})`)
   const label = quietHoursState.activeWindow?.label
@@ -957,13 +1007,15 @@ function finalizeQuietHoursBlock(reason) {
       (e) => e && console.error(`${new Date().toLocaleString()}: [QuietHours] Telegram message failed: ${e.message}`),
     )
   }
-  fadeOutThen(() => {
+  const stopNow = () => {
     try {
       stop()
     } catch (e) {
       console.error(`${new Date().toLocaleString()}: [QuietHours] Error stopping playback:`, e)
     }
-  })
+  }
+  if (immediate) stopNow()
+  else fadeOutThen(stopNow)
 }
 
 // Spotify: the player does not get track events from it, so while a limit is in its grace period the playback
@@ -993,8 +1045,8 @@ async function spotifyLastTrackOfAlbum(album) {
   return last
 }
 function spotifyGraceFinalize(reason) {
-  if (playtimeState.state === 'grace') finalizePlaytimeBlock(reason)
-  if (quietHoursState.state === 'grace') finalizeQuietHoursBlock(reason)
+  if (playtimeState.state === 'grace') finalizePlaytimeBlock(reason, true)
+  if (quietHoursState.state === 'grace') finalizeQuietHoursBlock(reason, true)
   spotifyGraceItemId = null
   spotifyGracePos = null
   spotifyGraceMisses = 0
@@ -1375,6 +1427,10 @@ function setAccessToken(token) {
 /*called in all error cases*/
 /*token expired and no_device error are handled explicitly*/
 function handleSpotifyError(err, from) {
+  if (err?.overtaken) {
+    log.debug(`${now()}: [Spotify Control] ${from}: ${err.message}`)
+    return
+  }
   if (err?.body?.error?.status === 401) {
     log.debug(`${now()}: access token expired, refreshing...`)
     log.debug(`${now()}: Error from: ${from}`)
@@ -1504,6 +1560,16 @@ function transferPlaybackToActiveDevice() {
   )
 }
 
+// (mplayer's playing flag comes from the poll once a second: a second /pause or /play within that second - the
+// display and the app, Telegram, an announcement - toggled mplayer twice, and the music went on)
+let mplayerToggleAt = 0
+function mplayerToggle() {
+  if (Date.now() - mplayerToggleAt < 1200) return false
+  mplayerToggleAt = Date.now()
+  player.playPause()
+  return true
+}
+
 function pause() {
   if (telegramPlaybackNotices())
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Pause"')
@@ -1519,12 +1585,13 @@ function pause() {
         writeplayerstatePause()
       },
       (err) => {
+        // (not paused after all: the music goes on, and so does the counting of the playtime)
+        currentMeta.pause = false
         handleSpotifyError(err, 'pause')
       },
     )
   } else if (currentMeta.currentPlayer === 'mplayer') {
-    if (currentMeta.playing) {
-      player.playPause()
+    if (currentMeta.playing && mplayerToggle()) {
       //currentMeta.playing = false;
       writeplayerstatePause()
     }
@@ -1549,10 +1616,12 @@ function pauseSpotifyQuietly(why) {
 function switchToMplayer() {
   if (currentMeta.currentPlayer !== 'mplayer') pauseSpotifyQuietly('switch to mplayer')
   currentMeta.currentPlayer = 'mplayer'
+  currentMeta.finished = false
 }
 
 function stop() {
   playbackGeneration++
+  currentMeta.finished = false
   clearLibraryResumeTimers()
   if (telegramPlaybackNotices())
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Stop"')
@@ -1595,6 +1664,7 @@ function stop() {
     currentMeta.durationSeconds = 0
     currentMeta.album = ''
     currentMeta.path = ''
+    currentMeta.episode = ''
     currentMeta.currentTracknr = ''
     currentMeta.totalTracks = ''
     currentMeta.currentPlayer = ''
@@ -1629,8 +1699,7 @@ function play() {
       cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Continue playing"')
     //if (hasConfiguredTelegram()) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
   } else if (currentMeta.currentPlayer === 'mplayer') {
-    if (!currentMeta.playing) {
-      player.playPause()
+    if (!currentMeta.playing && mplayerToggle()) {
       currentMeta.pause = false
       //currentMeta.playing = true;
       writeplayerstatePlay()
@@ -1744,9 +1813,50 @@ function shuffleoff() {
 
 // Spotify's play on the chosen device; when that device is gone (404: the display reported it, then its page
 // was reloaded), once more without a device, i.e. on the currently active one - as before.
+// Spotify does not know the display's player (it lost its sign-in, e.g. when the token could not be renewed at
+// start-up without network): the display is reloaded - it signs in anew and reports its device - and the start is
+// tried once more there. Only when a start failed, so a normal start takes no longer; at most once a minute.
+const DISPLAY_RECOVERY_WAIT_MS = 25_000
+async function recoverDisplayDevice() {
+  if (Date.now() - displayRecoveryAt < 60_000) return null
+  displayRecoveryAt = Date.now()
+  const askedAt = Date.now()
+  console.warn(`${now()}: [Spotify Control] Spotify does not know the display's player - the display signs in anew`)
+  currentMeta.pageReloadAt = askedAt
+  while (Date.now() - askedAt < DISPLAY_RECOVERY_WAIT_MS) {
+    await new Promise((r) => setTimeout(r, 250))
+    if (displayDeviceReportedAt > askedAt && displaySpotifyDevice) return displaySpotifyDevice
+  }
+  console.warn(`${now()}: [Spotify Control] The display did not report a Spotify player within ${DISPLAY_RECOVERY_WAIT_MS / 1000} s`)
+  return null
+}
+
+// A start overtaken while it waited for the display (a stop, another start, the play time or a quiet time): it must
+// not play after all - its callers' error handling knows it by this flag and leaves the state alone
+function overtakenStart() {
+  const e = new Error('Spotify start overtaken by a stop or another start')
+  e.overtaken = true
+  return e
+}
+
 function playOnDevice(playOptions) {
-  return spotifyApi.play(playOptions).catch((err) => {
-    if (!playOptions.device_id || err?.statusCode !== 404) throw err
+  const generation = playbackGeneration
+  const overtaken = () => generation !== playbackGeneration || isPlaybackBlocked()
+  return spotifyApi.play(playOptions).catch(async (err) => {
+    if (err?.statusCode !== 404) throw err
+    // the display's device (or, without one, no active device at all): the display signs in anew first
+    if (!playOptions.device_id || playOptions.device_id === displaySpotifyDevice) {
+      const fresh = await recoverDisplayDevice()
+      if (overtaken()) throw overtakenStart()
+      if (fresh) {
+        activeDevice = fresh
+        // (a moment for Spotify to list the new device)
+        await new Promise((r) => setTimeout(r, 1500))
+        if (overtaken()) throw overtakenStart()
+        return spotifyApi.play({ ...playOptions, device_id: fresh })
+      }
+    }
+    if (!playOptions.device_id) throw err
     log.debug(`${now()}: [Spotify Control] Device ${playOptions.device_id} not found, playing on the active device`)
     if (activeDevice === playOptions.device_id) activeDevice = null
     const { device_id: _gone, ...withoutDevice } = playOptions
@@ -1885,6 +1995,13 @@ function playListAtTrack(playedList, trackNr, progressPct) {
   log.debug(
     `${now()}: [Spotify Control] Library resume — track ${trackNr}, pct ${progressPct}, list ${playedList}`,
   )
+  if (player.startsAt) {
+    // mpv opens that track at that part of it right away (nothing to mute, no jumps); the metadata handler counts
+    // the one track that starts
+    playList(playedList, { track: trackNr, percent: progressPct })
+    currentMeta.currentTracknr = Math.max(0, trackNr - 1)
+    return
+  }
   playList(playedList)
   scheduleResumeJumps(trackNr, progressPct, 1200)
 }
@@ -1928,7 +2045,8 @@ function scheduleResumeJumps(trackNr, progressPct, firstJumpMs) {
   libraryResumeTimers.push(setTimeout(unmuteLibraryResume, lastJump + 400))
 }
 
-function playList(playedList) {
+// resume: { track, percent } - where the album goes on (only an engine that starts there takes it, see playListAtTrack)
+function playList(playedList, resume) {
   playbackGeneration++
   currentMeta.trackFile = undefined // the new album's first file sets it (see the path event)
   clearLibraryResumeTimers()
@@ -1939,7 +2057,7 @@ function playList(playedList) {
   log.debug(`${now()}: [Spotify Control] Starting currentMeta.playing:${playedTitelmod}`)
   //currentMeta.playing = true;
   writeplayerstatePlay()
-  player.playList(`/home/dietpi/MuPiBox/media/${playedTitelmod}/playlist.m3u`)
+  player.playList(`/home/dietpi/MuPiBox/media/${playedTitelmod}/playlist.m3u`, resume)
   player.setVolume(volumeStart)
   log.debug(`${now()}: /home/dietpi/MuPiBox/media/${playedTitelmod}/playlist.m3u`)
   currentMeta.currentTracknr = 0
@@ -2019,14 +2137,28 @@ async function playNasList(nasPath, resume = null) {
     fs.writeFileSync(tmpPlaylistPath, playlistLines.join('\n'))
 
     writeplayerstatePlay()
-    player.playList(tmpPlaylistPath)
+    // An engine that starts where it was left (mpv): the track and the part of it with the list; a CUE album is one
+    // file, there the position in it. The CUE's track and name follow from the playing time (see the time_pos handler).
+    const startAt = resume && player.startsAt ? nasStartOptions(Math.min(resume.trackNr, tracks.length), resume.progressPct) : null
+    player.playList(tmpPlaylistPath, startAt ?? undefined)
     player.setVolume(volumeStart)
-    currentMeta.currentTracknr = 0
+    currentMeta.currentTracknr = startAt ? Math.max(0, startAt.track - 1) : 0
     currentMeta.totalTracks = tracks.length
-    if (resume) resumeNasAt(Math.min(resume.trackNr, tracks.length), resume.progressPct)
+    if (resume && !startAt) resumeNasAt(Math.min(resume.trackNr, tracks.length), resume.progressPct)
   } catch (error) {
     log.debug(`${now()}: [Spotify Control] Error starting NAS playback: ${error}`)
   }
+}
+
+// Where a NAS album goes on, for an engine that starts there: { track, percent } - or for a CUE album (one file)
+// { track: 1, startSeconds } at the part of the track in the file
+function nasStartOptions(trackNr, progressPct) {
+  if (trackNr <= 1 && progressPct <= 1) return null
+  if (!isCuePlayback()) return { track: trackNr, percent: progressPct }
+  const index = Math.max(0, Math.min(currentCue.tracks.length, trackNr) - 1)
+  const start = currentCue.tracks[index].startSeconds
+  const end = cueTrackEnd(index)
+  return { track: 1, startSeconds: end > start ? start + ((end - start) * progressPct) / 100 : start }
 }
 
 // A NAS album where it was left: when its first track starts, on to track trackNr (another start, it is a stream too)
@@ -2329,6 +2461,17 @@ function playURL(playedURL, resumeAt = null) {
   log.debug(`${now()}: [Spotify Control] Starting currentMeta.playing:${playedURL}`)
   //currentMeta.playing = true;
   writeplayerstatePlay()
+  if (resumeAt != null && player.startsAt) {
+    // mpv begins at the position itself; the seek logic of the episode (pendingEpisodeSeek) only watches that it
+    // got there, and tries a seek when the server did not let it start there
+    player.play(playedURL, { startSeconds: resumeAt })
+    player.setVolume(volumeStart)
+    if (pendingEpisodeSeek) pendingEpisodeSeek.sent = Date.now()
+    log.debug(`${now()}: ${playedURL} from ${resumeAt}s`)
+    if (telegramPlaybackNotices())
+      cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing stream"')
+    return
+  }
   player.play(playedURL)
   if (resumeAt != null) {
     player.setVolume(0)
@@ -2650,6 +2793,7 @@ function downloadTTS(name) {
 
 async function useSpotify(command) {
   playbackGeneration++
+  currentMeta.finished = false
   if (currentMeta.currentPlayer !== 'spotify') {
     clearLibraryResumeTimers()
     player.stop() // local media, radio or a podcast may still be playing in mplayer
@@ -2769,6 +2913,7 @@ app.get('/display/spotify-device/:id', (req, res) => {
     return
   }
   displaySpotifyDevice = req.params.id
+  displayDeviceReportedAt = Date.now()
   log.debug(`${now()}: [Spotify Control] Display device: ${displaySpotifyDevice}`)
   res.json({ ok: true })
 })
@@ -2951,6 +3096,8 @@ app.use((req, res) => {
     let radioURL = dir.split('radio/').pop()
     radioURL = decodeURIComponent(radioURL)
     playRadioURL(radioURL)
+    currentMeta.path = '' // (not the last local album's folder, see the rss command)
+    currentMeta.episode = ''
   }
 
   if (hasDirSegment(command, 'rss')) {
@@ -2963,6 +3110,11 @@ app.use((req, res) => {
     const dir = command.dir
     let rssURL = dir.split('rss/').pop()
     rssURL = decodeURIComponent(rssURL)
+    // the episode's address is the id the display knows it by (rssfeed.service: id = enclosure url) - the display's
+    // player page needs it when the episode was started from the parents' app (it builds its media from /local);
+    // the path of the last local album must not stay here - it was read as the podcast's artist
+    currentMeta.episode = rssURL
+    currentMeta.path = ''
     playURL(offlineEpisodeFile(rssURL) ?? rssURL, startEpisode(rssURL))
     episodeRun = { url: rssURL, generation: playbackGeneration, retries: 0 }
   }

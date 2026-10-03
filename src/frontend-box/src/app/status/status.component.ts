@@ -198,7 +198,8 @@ export class StatusComponent {
   // Battery: only with a MuPiHAT and a battery connected
   private readonly hatActive: Signal<boolean | undefined>
   private readonly hat: Signal<Mupihat | undefined>
-  protected readonly hasBattery = computed(() => this.hatActive() === true && this.hat()?.BatteryConnected === 1)
+  // (and not the profile "USB-C mode (no battery)": the HAT reports 0 % for it, which read as an empty battery)
+  protected readonly hasBattery = computed(() => this.hatActive() === true && this.hat()?.BatteryConnected === 1 && this.hat()?.Bat_PercentSource !== 'none')
   // 0-100: the granular percentage of the backend, or the four buckets of an older one
   protected readonly percent = computed(() => {
     const hat = this.hat()

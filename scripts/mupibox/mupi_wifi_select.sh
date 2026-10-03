@@ -18,7 +18,8 @@ exec 9> /run/mupi-wifi-select.lock
 flock -w 180 9 || exit 0
 
 log() { echo "$(date '+%F %T') $*" >> "${LOG}"; }
-has_ip() { ip -4 addr show dev "$1" 2>/dev/null | grep -q "inet "; }
+# (scope global: not a link-local 169.254.x.x address, which an adapter without DHCP may give itself)
+has_ip() { ip -4 addr show dev "$1" scope global 2>/dev/null | grep -q "inet "; }
 
 # The router: from any default route, else from a DHCP lease (a second adapter in the same network does
 # not get its own default route while the first one still has it).

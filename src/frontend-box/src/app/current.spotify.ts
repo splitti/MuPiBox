@@ -1,4 +1,9 @@
 export interface CurrentSpotify {
+  // what the SDK plays in: spotify:album:<id>, spotify:playlist:<id>, spotify:show:<id>
+  context_uri?: string
+  // whether the track belongs to that album or playlist - false once Spotify's autoplay went on with other tracks
+  // after its end (the context stays the same then); undefined when not known (list of tracks not complete)
+  in_context?: boolean
   progress_ms?: number
   item?: {
     album?: {

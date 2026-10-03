@@ -69,10 +69,18 @@ fail_update() {
 	local msg=$1
 	echo "## UPDATE ABORTED: ${msg}" >&3 2>&3
 	echo "## (no destructive operation performed yet — your installation is intact)" >&3 2>&3
+	# (the box's programs are stopped before the backup of the user data: started again, so the box goes on running;
+	# the idle shutdown too, it was stopped for the update)
+	sudo -H -u dietpi bash -c "pm2 start server; pm2 start spotify-control" >&3 2>&3
+	service mupi_idle_shutdown start >&3 2>&3
+	# (the exit below ends only the part in the progress bar - the script after it reads this and ends with an error
+	# too, so a caller - the admin interface, curl | bash - sees it failed instead of "Update finished")
+	echo "Update aborted: ${msg}" > /tmp/mupibox-update-failed
 	# Surface to dialog/whiptail so the user actually sees the failure
 	echo -e "XXX\n100\nUpdate aborted: ${msg}\nXXX"
 	exit 1
 }
+rm -f /tmp/mupibox-update-failed
 service mupi_idle_shutdown stop
 # 2026-09-20: no longer installed (nothing in MuPiBox uses them any more):
 #   id3tool - only the ID3 converter used it; that converter was removed from the admin
@@ -85,10 +93,10 @@ service mupi_idle_shutdown stop
 #   automake - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
 # The changes of this list apply to DEV installs only; stable and beta keep the list they always had.
 if [ "$RELEASE" != "dev" ]; then
-  packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh"
+  packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer mpv pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh"
 else
   # libwidevinecdm0 stays: the display plays Spotify through the Web Playback SDK in Chromium, which needs Widevine
-  packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa preload python3-smbus2 pigpio libjson-c-dev libi2c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh xdotool"
+  packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer mpv pulseaudio-module-bluetooth pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa preload python3-smbus2 pigpio libjson-c-dev libi2c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh xdotool"
 fi
 packages2remove="jq"
 STEP=0
@@ -414,7 +422,11 @@ rm -f /tmp/mupibox-update-failed
 	# besides data.json it holds resume.json, albumstop.json, wlan.json, the offline lists and the
 	# RSS cache, which were all lost on every update before.
 	USERDATA_BAK="/home/dietpi/.mupibox/userdata.upd-bak"
-	rm -rf "${USERDATA_BAK}" >&3 2>&3
+	# The box's programs stop before the copy: a change the app saved or the player's progress after the copy was
+	# replaced by the older copy when the data came back (the server was stopped only after the backup before)
+	sudo -H -u dietpi bash -c "pm2 stop server; pm2 stop spotify-control" >&3 2>&3
+	# A backup left from a restore that failed (see "Restore Userdata") is kept under its own name, never thrown away
+	[ -e "${USERDATA_BAK}" ] && mv "${USERDATA_BAK}" "${USERDATA_BAK}.$(date +%Y%m%d-%H%M%S)" >&3 2>&3
 	mkdir -p "${USERDATA_BAK}/www" >&3 2>&3
 	# Every copy is checked (a full card copied part of it, and the old install was deleted all the same); what is not
 	# there (a box without covers yet) is not an error. The podcast pictures (rss-covers) come along: without them every
@@ -447,7 +459,8 @@ rm -f /tmp/mupibox-update-failed
 	# so the box keeps running on the previous version. The .upd-bak
 	# directory is removed after a successful extract.
 	BAK_DIR="/home/dietpi/.mupibox/Sonos-Kids-Controller-master.upd-bak"
-	rm -rf "${BAK_DIR}" >&3 2>&3
+	# (the old install of a restore that failed stays, under its own name)
+	[ -e "${BAK_DIR}" ] && mv "${BAK_DIR}" "${BAK_DIR}.$(date +%Y%m%d-%H%M%S)" >&3 2>&3
 	if [ -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master ]; then
 		mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master "${BAK_DIR}" >&3 2>&3 || \
 			fail_update "Could not move old install aside (filesystem full?)"
@@ -605,6 +618,8 @@ rm -f /tmp/mupibox-update-failed
 	chown dietpi:dietpi /home/dietpi/.bashrc >&3 2>&3
 	chmod 755 /usr/local/bin/mupibox/* >&3 2>&3
 	chmod 755 /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
+	# the WiFi guard in front of Debian's wpa_action (a late "disconnected" took a working WiFi down at the start)
+	/usr/local/bin/mupibox/mupi_wpa_guard.sh install >&3 2>&3 || echo "## WiFi guard not installed - Debian's wpa_action stays as it was ##" >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Copy MuPiBox-Files  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
@@ -754,13 +769,15 @@ rm -f /tmp/mupibox-update-failed
 		mkdir -p /etc/systemd/system/dietpi-wifi-monitor.service.d >&3 2>&3
 		cp -f ${MUPI_SRC}/config/services/dietpi-wifi-monitor-override.conf /etc/systemd/system/dietpi-wifi-monitor.service.d/override.conf >&3 2>&3
 	fi
-	# USB WiFi adapter preferred, onboard WiFi as fallback (see scripts/mupibox/mupi_wifi_select.sh): only versions that ship it
-	if [ "$RELEASE" = "dev" ] && [ -f ${MUPI_SRC}/config/udev/99-mupibox-wifi.rules ]; then
+	# USB WiFi adapter preferred, onboard WiFi as fallback (see scripts/mupibox/mupi_wifi_select.sh): every version
+	# that ships the script (the rules were only set up for dev versions - a release got the script, but no rule,
+	# and the cable's switch between LAN and WiFi did nothing there)
+	if [ -x /usr/local/bin/mupibox/mupi_wifi_select.sh ] && [ -f ${MUPI_SRC}/config/udev/99-mupibox-wifi.rules ]; then
 		cp -f ${MUPI_SRC}/config/udev/99-mupibox-wifi.rules /etc/udev/rules.d/99-mupibox-wifi.rules >&3 2>&3
 		udevadm control --reload >&3 2>&3
 	fi
-	# LAN takes over from WiFi again on carrier loss/return of the ethernet cable (same script): only versions that ship it
-	if [ "$RELEASE" = "dev" ] && [ -f ${MUPI_SRC}/config/udev/99-mupibox-eth.rules ]; then
+	# LAN takes over from WiFi again on carrier loss/return of the ethernet cable (same script)
+	if [ -x /usr/local/bin/mupibox/mupi_wifi_select.sh ] && [ -f ${MUPI_SRC}/config/udev/99-mupibox-eth.rules ]; then
 		cp -f ${MUPI_SRC}/config/udev/99-mupibox-eth.rules /etc/udev/rules.d/99-mupibox-eth.rules >&3 2>&3
 		udevadm control --reload >&3 2>&3
 	fi
@@ -768,7 +785,8 @@ rm -f /tmp/mupibox-update-failed
 	# remote display: a VNC that is running keeps its old settings (open to the network) until it starts again
 	systemctl try-restart mupi_vnc.service mupi_novnc.service >&3 2>&3
 	if systemctl list-unit-files dietpi-wifi-monitor.service 2>/dev/null | grep -q dietpi-wifi-monitor; then
-		systemctl restart dietpi-wifi-monitor.service >&3 2>&3
+		# (try-restart: one the parents switched off in the app stays off)
+		systemctl try-restart dietpi-wifi-monitor.service >&3 2>&3
 	fi
 	systemctl enable mupi_check_internet.service >&3 2>&3
 	systemctl start mupi_check_internet.service >&3 2>&3
@@ -958,6 +976,18 @@ rm -f /tmp/mupibox-update-failed
 		mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data >&3 2>&3
 		cp -an "${USERDATA_BAK}/www/theme-data/." /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/ >&3 2>&3 || RESTORE_OK=0
 	fi
+	# The caches of the old install (Spotify answers, covers, the NAS index) come along - moved, not copied (same card,
+	# at once). Without them the box asked Spotify for every entry again after an update: with a big library minutes of
+	# loading dots on the display, and a long way into Spotify's rate limit.
+	if [ -d "${BAK_DIR}/cache" ]; then
+		mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/cache >&3 2>&3
+		for item in "${BAK_DIR}"/cache/*; do
+			[ -e "${item}" ] || continue
+			[ -e "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/cache/$(basename "${item}")" ] && continue
+			mv "${item}" /home/dietpi/.mupibox/Sonos-Kids-Controller-master/cache/ >&3 2>&3
+		done
+		chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/cache >&3 2>&3
+	fi
 	chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config >&3 2>&3
 	# only now that everything is back
 	if [ "${RESTORE_OK}" = 1 ] && /usr/bin/jq -e . /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json > /dev/null 2>&1; then
@@ -966,6 +996,8 @@ rm -f /tmp/mupibox-update-failed
 		rm -rf "${BAK_DIR}" >&3 2>&3
 	else
 		echo "## Restore incomplete - user data kept in ${USERDATA_BAK} (old install in ${BAK_DIR})" >&3 2>&3
+		# (said at the end, outside the progress dialog - the update used to report success all the same)
+		touch /tmp/mupibox-restore-failed
 	fi
 	chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	sleep 1 >&3 2>&3
@@ -1014,6 +1046,19 @@ if [ -f /tmp/mupibox-update-failed ]; then
 	rm -rf ${PREFLIGHT_DIR}
 	echo "Update FAILED: the MuPiBox archive could not be downloaded completely (see ${LOG})."
 	echo "Nothing was replaced. Please check the network connection and run the update again."
+	exit 1
+fi
+if [ -f /tmp/mupibox-update-failed ]; then
+	cat /tmp/mupibox-update-failed
+	rm -f /tmp/mupibox-update-failed
+	echo "Nothing was replaced - your installation is as it was (see ${LOG})."
+	exit 1
+fi
+if [ -f /tmp/mupibox-restore-failed ]; then
+	rm -f /tmp/mupibox-restore-failed
+	echo "Update installed, but the USER DATA COULD NOT BE PUT BACK COMPLETELY (card full?) - see ${LOG}."
+	echo "Your data is kept in /home/dietpi/.mupibox/userdata.upd-bak (the old install in Sonos-Kids-Controller-master.upd-bak)."
+	echo "Please make room on the card and copy the missing files back from there (a new update keeps these folders under a dated name)."
 	exit 1
 fi
 

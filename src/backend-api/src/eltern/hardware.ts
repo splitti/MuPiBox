@@ -15,6 +15,63 @@ export interface HardwareDeps {
 
 // the GPIO pins the admin interface offers for the LED and the fan
 const PINS = ['4', '12', '13', '17', '18', '21', '22', '23', '24', '25', '27']
+// the I2S driver of the MAX98357A amplifier, as enable_mupihat.sh writes it
+const AMP_DRIVER = ['dtoverlay=max98357a,sdmode-pin=16', 'dtoverlay=i2s-mmap']
+
+// The Pi's boot configuration: /boot/firmware/config.txt on newer DietPi, /boot/config.txt before
+async function bootConfigPath(): Promise<string> {
+  try {
+    await fsp.access('/boot/firmware/config.txt')
+    return '/boot/firmware/config.txt'
+  } catch {
+    return '/boot/config.txt'
+  }
+}
+
+// The lines of the boot configuration that count for every Pi: before the first [section] and under [all] - one under
+// [pi5] (or [cm4], [gpio4=1], ...) does nothing on a Pi 4. And the section a line added at the end would land in.
+function bootLinesInForce(config: string): { lines: Set<string>; lastSection: string } {
+  const lines = new Set<string>()
+  let section = ''
+  for (const raw of config.split('\n')) {
+    const line = raw.trim()
+    const header = /^(\[[^\]]*\])/.exec(line)?.[1]
+    if (header) section = header
+    else if (section === '' || section === '[all]') lines.add(line)
+  }
+  return { lines, lastSection: section }
+}
+
+// What is written: DietPi's sound card and whether the amplifier's driver is in force in the boot configuration
+async function soundcardWritten(bootConfig: string): Promise<{ card: string; ampDriver: boolean }> {
+  const read = (file: string) => fsp.readFile(file, 'utf8').catch(() => '')
+  const [dietpi, config] = await Promise.all([read('/boot/dietpi.txt'), read(bootConfig)])
+  const inForce = bootLinesInForce(config).lines
+  return {
+    card: /^CONFIG_SOUNDCARD=(.*)$/m.exec(dietpi)?.[1]?.trim() ?? '',
+    ampDriver: AMP_DRIVER.every((line) => inForce.has(line)),
+  }
+}
+
+// The amplifier's driver lines added where they count for every Pi (under an [all] of their own when the file ends in
+// another section)
+async function addAmpDriver(bootConfig: string): Promise<void> {
+  const { lines, lastSection } = bootLinesInForce(await fsp.readFile(bootConfig, 'utf8').catch(() => ''))
+  const missing = AMP_DRIVER.filter((line) => !lines.has(line))
+  if (!missing.length) return
+  const add = [...(lastSection && lastSection !== '[all]' ? ['[all]'] : []), ...missing]
+  // (sh -c: the file is $0, the lines are "$@")
+  await run('sudo', ['sh', '-c', 'printf \'%s\\n\' "$@" >> "$0"', bootConfig, ...add])
+}
+
+// The sound cards the system has found (after the restart a new card needs): their names from ALSA
+async function detectedSoundcards(): Promise<string[]> {
+  const cards = await fsp.readFile('/proc/asound/cards', 'utf8').catch(() => '')
+  return cards
+    .split('\n')
+    .map((line) => /^\s*\d+\s+\[[^\]]*\]:\s*(.+)$/.exec(line)?.[1]?.trim())
+    .filter((name): name is string => !!name)
+}
 const BUTTON = ['off', 'playpause', 'next', 'ffwd']
 
 function run(cmd: string, args: string[], timeoutMs = 30000): Promise<{ ok: boolean; stdout: string }> {
@@ -67,6 +124,8 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
       soundcard: {
         current: typeof mb.physicalDevice === 'string' ? mb.physicalDevice : '',
         dietpi: dietpiSoundcard,
+        // what the system has actually found (a card chosen but not here: the driver is missing, or no restart yet)
+        detected: await detectedSoundcards(),
         options: (Array.isArray(mb.AudioDevices) ? (mb.AudioDevices as Record<string, unknown>[]) : [])
           .map((d) => ({ id: String(d.tname ?? ''), name: String(d.ufname ?? d.tname ?? '') }))
           .filter((d) => d.id),
@@ -110,6 +169,25 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
     // (only a card DietPi took is noted - and a failure is one for the app, not "saved")
     if (!r.ok) {
       res.status(500).json({ ok: false, error: 'switch_failed' })
+      return
+    }
+    // The MAX98357A (the MuPiHAT's amplifier, also sold as a board of its own) needs its I2S driver in the Pi's boot
+    // configuration; only switching the MuPiHAT on wrote it, so chosen without the HAT the box had no sound card at all
+    // (DietPi does not know the name: it turns the onboard sound off and leaves the drivers alone). Choosing another
+    // card without the HAT takes the driver out again (it would clash with another I2S card).
+    const bootConfig = await bootConfigPath()
+    const amp = id.startsWith('MAX98357A')
+    if (amp) {
+      await addAmpDriver(bootConfig)
+    } else if (section(deps, 'mupihat').hat_active !== true) {
+      await run('sudo', ['sed', '-i', '/^dtoverlay=max98357a/d;/^dtoverlay=i2s-mmap$/d', bootConfig])
+    }
+    // Is it there? DietPi's entry and - for the amplifier - the driver (asked by Andreas: "saved" said nothing)
+    const written = await soundcardWritten(bootConfig)
+    // (DietPi keeps the name in small letters: "max98357a bcm2835-i2s-hifi hifi-0")
+    if (written.card.toLowerCase() !== id.toLowerCase() || (amp && !written.ampDriver)) {
+      console.warn(`${new Date().toLocaleString()}: [MuPiBox-Server] sound card ${id} not applied: dietpi.txt "${written.card}", driver ${written.ampDriver}`)
+      res.status(500).json({ ok: false, error: 'not_applied', card: written.card, driver: written.ampDriver })
       return
     }
     await merge(deps, 'mupibox', { physicalDevice: id })

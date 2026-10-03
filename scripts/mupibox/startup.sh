@@ -80,9 +80,18 @@ fi
 
 ### Wait for internet connection and make final install-steps
 
-sleep 5
+# The network is restarted only when the box got no address at all: the WiFi takes 15-30 s to connect after power-on,
+# and this script runs ~13 s after it (the display starts that early). Restarting the WiFi then tore down the
+# connection that was just being made - every start had 30 s more without network. So: up to 60 s for an address
+# (WiFi or cable) first; the internet check (onlinestate) may lag behind an address that works.
+has_address() { ip -4 -o addr show scope global 2>/dev/null | grep -q .; }
+waited=0
+while ! has_address && [ ${waited} -lt 60 ]; do
+	sleep 3
+	waited=$((waited + 3))
+done
 ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
-if [ ${ONLINESTATE} != "online" ]; then
+if [ "${ONLINESTATE}" != "online" ] && ! has_address; then
 	restart_network
 fi
 while [ ${ONLINESTATE} != "online" ]; do
