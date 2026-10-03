@@ -110,4 +110,10 @@ body.mupi-header-hidden {
         pointer-events: none;
         transition: max-height 0.25s ease, opacity 0.2s ease;
     }
+
+    // The player in full screen: its cover (30 px from the top without the bar) sits as low as the covers of the lists
+    // (60 px, see SwiperComponent COMPACT_TOP), the controls beside it move down with it. Not the children's themes.
+    &:not(.km) app-player ion-content > ion-grid {
+        margin-top: 30px;
+    }
 }
