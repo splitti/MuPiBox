@@ -1044,10 +1044,16 @@ export class SwiperComponent<T> {
     this.speakingTimer = setTimeout(() => this.speakingName.set(undefined), 1800)
   }
 
-  // km themes: a cover that does not load shows the theme's mascot instead
+  // A cover that does not load counts as missing (km themes: their mascot, the other themes: the grey card with the name)
   protected onCoverError(name: string): void {
-    if (!this.km()) return
     this.missingCovers.update((set) => new Set(set).add(name))
+  }
+
+  // The other themes show a dark to mid grey card with the folder's name when there is no picture - the default
+  // picture ("nocover") or one that does not load. (The picture's address arrives at once; null: not known yet.)
+  protected noCover(name: string, src: string | null | undefined): boolean {
+    if (this.km()) return false
+    return this.missingCovers().has(name) || (typeof src === 'string' && (src === '' || src.includes('nocover')))
   }
 
   protected coverMissing(name: string, src: string | null | undefined): boolean {

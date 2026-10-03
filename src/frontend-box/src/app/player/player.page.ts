@@ -230,7 +230,16 @@ export class PlayerPage implements OnInit, AfterViewInit {
 
   private readonly failedCovers = new Set<string>()
   protected coverFailed(): void {
-    if (this.km() && this.cover) this.failedCovers.add(this.cover)
+    if (this.cover) this.failedCovers.add(this.cover)
+  }
+
+  /** No picture (the default one, or one that does not load): the other themes show a grey card with the name instead */
+  protected coverMissing(): boolean {
+    return !this.km() && (!this.cover || this.cover.includes('nocover') || this.failedCovers.has(this.cover))
+  }
+
+  protected coverTitle(): string {
+    return this.media?.title || this.media?.artist || ''
   }
 
   /** km themes: position and length under the progress bar (Spotify, and mplayer when it knows the length) */

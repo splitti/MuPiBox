@@ -8,7 +8,13 @@
             <ion-row class="img-row">
               <ion-col size="12">
                 <ion-card class="ep-anchor">
-                  <img draggable="false" ondragstart="return false;" [attr.data-src]="currentData.imgSrc | async">
+                  @let src = currentData.imgSrc | async;
+                  @if (noCover(currentData.name, src)) {
+                    <!-- no picture (or it does not load): dark to mid grey with the folder's name -->
+                    <div class="mupi-no-cover"><span>{{ currentData.name }}</span></div>
+                  } @else {
+                    <img draggable="false" ondragstart="return false;" [attr.data-src]="src" (error)="onCoverError(currentData.name)">
+                  }
                   @if (currentData.isNew) {
                     <span class="ep-new" aria-hidden="true"></span>
                   }
@@ -110,7 +116,12 @@
                       <span class="km-sync"><ion-icon name="link"></ion-icon></span>
                     }
                   } @else {
-                    <img draggable="false" ondragstart="return false;" loading="lazy" src="{{currentData.imgSrc | async}}">
+                    @let plainSrc = currentData.imgSrc | async;
+                    @if (noCover(currentData.name, plainSrc)) {
+                      <div class="mupi-no-cover"><span>{{ currentData.name }}</span></div>
+                    } @else {
+                      <img draggable="false" ondragstart="return false;" loading="lazy" src="{{plainSrc}}" (error)="onCoverError(currentData.name)">
+                    }
                   }
                   @if (currentData.isNew) {
                     <span class="ep-new" aria-hidden="true"></span>
