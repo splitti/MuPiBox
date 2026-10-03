@@ -62,6 +62,13 @@
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Shares & remote access (Samba, FTP, VNC) moved from Settings › Network to Settings › Services, as the last block "Access to the box". Network shows the connection only: WiFi and LAN (suggested by hyperbit).</li>
 </ul>
+<b>Sound card, NAS, player</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Sound card MAX98357A (the MuPiHAT's amplifier, also a board of its own): chosen without switching the MuPiHAT on, the box had no sound card at all - its I2S driver was only written by the MuPiHAT switch. Choosing it writes the driver now (another card without the MuPiHAT takes it out again), and every change is checked: the app says when the card or its driver did not arrive instead of "saved". The sound card page shows the cards the system has found. Newer DietPi (/boot/firmware/config.txt) is taken into account (reported by Andreas).</li>
+<li id='linews' class='linews'>NAS folders are listed alphabetically ("Folge 2" before "Folge 10") - the NAS hands them out in its own order (reported by Andreas).</li>
+<li id='linews' class='linews'>Display: a place chosen on the progress bar stays until the player reports it - the dot jumped back to the old place for a moment (reported by Andreas).</li>
+</ul>
 <b>Spotify</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
