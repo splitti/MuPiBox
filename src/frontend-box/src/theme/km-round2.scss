@@ -57,7 +57,7 @@ body.km {
     svg {
       fill: none;
       stroke: currentColor;
-      stroke-width: 2.4;
+      stroke-width: 2.6;
       stroke-linecap: round;
       stroke-linejoin: round;
     }
@@ -133,11 +133,6 @@ body.km {
     }
   }
 
-  // status group: WiFi + battery 24 high, the listening time below (see km-status-group)
-  .km-status-group mupi-status .st {
-    height: 24px;
-    padding: 0;
-  }
 }
 
 // ---------- player (§3) - positions in the page's content (it starts below the 72 px header: screen y - 72) ----------
@@ -169,36 +164,6 @@ body.km {
     div {
       overflow: hidden;
       text-overflow: ellipsis;
-    }
-  }
-
-  // volume chip: 40 high, radius 20
-  .kp-vol {
-    flex: 0 0 auto;
-    height: 40px;
-    padding: 0 12px;
-    border-radius: 20px;
-    background: var(--km-btn);
-    color: var(--km-on-btn);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 16px;
-    font-weight: 600;
-    white-space: nowrap;
-
-    svg {
-      width: 18px;
-      height: 18px;
-      fill: none;
-      stroke: currentColor;
-      stroke-width: 2.2;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-
-      path:first-child {
-        fill: currentColor;
-      }
     }
   }
 
@@ -272,13 +237,8 @@ body.km {
       height: 24px;
       fill: none;
       stroke: currentColor;
-      stroke-width: 2.4;
+      stroke-width: 2.6;
       stroke-linecap: round;
-
-      circle {
-        fill: currentColor;
-        stroke: none;
-      }
     }
 
   }
@@ -302,42 +262,61 @@ body.km {
 
   .kp-time {
     width: 100%;
+    // the bar's top edge is the column's top, the 32 px range around it starts 10 px higher
+    margin-top: -10px;
 
     ion-range {
       --bar-height: 12px;
       --bar-border-radius: 6px;
       --bar-background: var(--km-night-3);
       --bar-background-active: var(--km-apricot);
-      --knob-size: 24px;
+      --knob-size: 32px;
       --knob-background: var(--km-cream);
       padding: 0;
-      height: 24px;
-      min-height: 24px;
+      height: 32px;
+      min-height: 32px;
     }
 
+    // 24 px with a 4 px edge, full size (the md range shrinks an untouched knob to 67 %)
     ion-range::part(knob) {
       border: 4px solid var(--km-apricot);
       box-sizing: border-box;
       box-shadow: none;
+      transform: none;
     }
 
     .km-times {
       display: flex;
       justify-content: space-between;
-      // (the 12 px bar sits in the middle of the 24 px range: 6 + 4 = 10 px below it)
-      margin-top: 4px;
+      // (the 12 px bar sits in the middle of the 32 px range: 10 px below it)
+      margin-top: 0;
       font-size: 14px;
       font-weight: 500;
       color: var(--km-on-band-2);
     }
   }
 
-  &.km-light .kp-time ion-range {
-    --bar-background: rgba(0, 0, 0, 0.14);
+  // light themes: a grey bar (the theme files set night-3 with !important); of the old ones only light, whose panel
+  // stays white - the others have a darkened panel
+  &.km-light:not(.km-legacy) .kp-time ion-range,
+  &.km-theme-light .kp-time ion-range {
+    --bar-background: rgba(0, 0, 0, 0.14) !important;
   }
 
   .kp-live {
     height: 48px;
+    padding: 0 20px;
+    border-radius: 24px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 600;
+
+    i {
+      width: 12px;
+      height: 12px;
+    }
   }
 
   .kp-row {
@@ -381,8 +360,8 @@ body.km {
     }
 
     svg {
-      width: 32px;
-      height: 32px;
+      width: 30px;
+      height: 30px;
       fill: none;
       stroke: currentColor;
       stroke-width: 2.4;
@@ -391,6 +370,12 @@ body.km {
 
       .fill {
         fill: currentColor;
+      }
+
+      // filled symbols (track back / forward, wind)
+      &.kp-solid {
+        fill: currentColor;
+        stroke: none;
       }
     }
   }
@@ -411,7 +396,7 @@ body.km {
     box-shadow: 0 5px 0 var(--km-apricot-shadow);
 
     ion-icon {
-      font-size: 54px;
+      font-size: 46px;
     }
   }
 
@@ -433,6 +418,11 @@ body.km {
 
     ion-icon {
       font-size: 26px;
+    }
+
+    svg {
+      width: 26px;
+      height: 26px;
     }
 
     &.kp-on {
@@ -467,9 +457,12 @@ body.km {
     border-radius: 32px;
     background: var(--km-sheet);
     color: var(--km-on-band);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 
     h2 {
-      margin: 6px 0 18px;
+      margin: 14px 0 0;
       font-size: 28px;
       font-weight: 700;
     }
@@ -492,13 +485,15 @@ body.km {
   .out-tile {
     height: 186px;
     border-radius: 24px;
-    background: var(--km-btn);
-    color: var(--km-on-btn);
+    background: var(--km-night-3);
+    color: var(--km-cream);
     box-shadow: none;
 
     b {
       font-size: 20px;
       font-weight: 700;
+      text-wrap: balance;
+      text-align: center;
     }
 
     small {
@@ -519,6 +514,10 @@ body.km {
       small {
         color: var(--km-rose);
         opacity: 1;
+      }
+
+      .out-icon {
+        opacity: 0.6;
       }
     }
   }
@@ -543,10 +542,10 @@ body.km {
 
   // connecting: a ring around the symbol
   .out-spin {
-    width: 52px;
-    height: 52px;
+    width: 58px;
+    height: 58px;
     margin: 0;
-    border-width: 4px;
+    border-width: 5px;
     border-color: var(--km-apricot);
     border-top-color: transparent;
     opacity: 1;
@@ -559,11 +558,10 @@ body.km {
     right: 14px;
     z-index: 900;
     max-width: 380px;
-    padding: 12px 16px;
+    padding: 10px 16px;
     border-radius: 16px;
-    background: var(--km-cream);
-    color: var(--km-ink);
-    box-shadow: 0 5px 0 var(--km-shadow);
+    background: var(--km-ink);
+    color: #ffffff;
     font-size: 16px;
     font-weight: 600;
     animation: kp-toast-in 200ms ease-out;
@@ -588,19 +586,19 @@ body.km {
     border-radius: 28px;
     background: var(--km-night-2);
     display: flex;
-    gap: 16px;
-    padding: 16px;
     box-sizing: border-box;
   }
 
 
   // left 200: cover 160 (radius 20), "Zu" 160 × 64 (radius 32)
   .kt-side {
-    flex: 0 0 168px;
+    flex: 0 0 200px;
+    padding: 20px;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
   }
 
   .kt-cover {
@@ -618,13 +616,13 @@ body.km {
     border: 0;
     background: var(--km-apricot);
     color: var(--km-ink);
-    box-shadow: 0 5px 0 var(--km-apricot-shadow);
+    box-shadow: 0 4px 0 var(--km-apricot-shadow);
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
     font-family: inherit;
-    font-size: 20px;
+    font-size: 22px;
     font-weight: 700;
 
     ion-icon {
@@ -635,6 +633,7 @@ body.km {
   .kt-main {
     flex: 1;
     min-width: 0;
+    padding: 14px 0;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -655,6 +654,7 @@ body.km {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    padding-bottom: 4px;
   }
 
   // rows 58, radius 20; the current one in the accent colour with a play sign
@@ -663,7 +663,7 @@ body.km {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 0 16px 0 7px;
+    padding: 0 14px 0 8px;
     border: 0;
     border-radius: 20px;
     background: var(--km-night-3);
@@ -675,6 +675,7 @@ body.km {
     &.kt-on {
       background: var(--km-apricot);
       color: var(--km-ink);
+      box-shadow: 0 4px 0 var(--km-apricot-shadow);
 
       .kt-name {
         font-weight: 700;
@@ -692,10 +693,10 @@ body.km {
     flex: 0 0 44px;
     height: 44px;
     border-radius: 22px;
-    background: var(--km-night-4);
+    background: var(--km-night-2);
     display: grid;
     place-items: center;
-    font-size: 17px;
+    font-size: 18px;
     font-weight: 700;
 
     ion-icon {
@@ -722,7 +723,8 @@ body.km {
   .kt-dur {
     flex: 0 0 auto;
     font-size: 16px;
-    opacity: 0.85;
+    font-weight: 500;
+    opacity: 0.8;
   }
 
   .kt-loading,
@@ -734,11 +736,12 @@ body.km {
 
   // right 76: up / down, 56 round - a page each
   .kt-pager {
-    flex: 0 0 60px;
+    flex: 0 0 76px;
     display: flex;
     flex-direction: column;
+    align-items: center;
     justify-content: center;
-    gap: 20px;
+    gap: 16px;
   }
 
   .kt-page {
@@ -805,6 +808,11 @@ $km-white-panel: bastelpapier einhorn eisenbahn eiswelt feuerwehr kaetzchen ligh
     }
 
     .kt-row:not(.kt-on) {
+      background: #eaf4fa;
+      color: var(--km-ink);
+    }
+
+    .out-tile:not(.on) {
       background: #eaf4fa;
       color: var(--km-ink);
     }

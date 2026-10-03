@@ -7,7 +7,7 @@
 
 :root {
   --km-night: #EEEEEE;
-  --km-night-2: #FFFFFF;
+  --km-night-2: #EBEBEB;
   --km-night-3: #5E5E5E;
   --km-night-4: #A7A7A7;
   --km-stack-1: #B6B6B6;
@@ -29,11 +29,11 @@
   --km-ease: cubic-bezier(.2, .7, .2, 1);
   --ion-font-family: "Fredoka", sans-serif;
   /* Runde 2: Kopfzeile, Pille, Knöpfe (Werte aus THEME_WERTE.md) */
-  --km-band: rgba(115,115,115,0.82);
-  --km-on-band: #FFFFFF;
-  --km-on-band-2: #FFFFFF;
-  --km-btn: #989898;
-  --km-on-btn: #3D3D3D;
+  --km-band: rgba(255,255,255,0.82);
+  --km-on-band: #3D3D3D;
+  --km-on-band-2: #5E5E5E;
+  --km-btn: #5E5E5E;
+  --km-on-btn: #FFFFFF;
   --km-tab-idle: #3D3D3D;
   --km-on-pill: #3D3D3D;
 }
@@ -41,7 +41,10 @@
 /* Hintergrund: eigene Grundfarbe, ohne Bild */
 /* Runde 2 (Aufgabe A): eigener Hintergrund */
 .ion-page { background: var(--km-night) url("/theme-data/light/background.svg") center bottom / cover no-repeat !important; }
-.playtime-blocked-overlay { background: var(--km-overlay) !important; }
+.playtime-blocked-overlay, body.km mupi-media-unavailable { background: linear-gradient(var(--km-overlay), var(--km-overlay)), var(--km-night) !important; }
+
+/* Sperr-/Ruhebildschirm und „Nicht erreichbar“ deckend: kein Durchscheinen der Auswahl */
+body.km .playtime-blocked-overlay, body.km mupi-media-unavailable { opacity: 1 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; z-index: 1000; }
 
 /* ==== gemeinsamer km-Teil (aus den km-Theme-Dateien, unverändert) ==== */
 body .home-content, body .medialist-content, body .player-content { --ion-background-color: transparent !important; }

@@ -6,7 +6,7 @@
 
 .np-pill {
   flex: 1 1 0;
-  min-width: 200px;
+  min-width: 0;
   height: 64px;
   border-radius: 32px;
   background: var(--km-night-2);
@@ -205,8 +205,8 @@
   }
 
   svg {
-    width: 20px;
-    height: 20px;
+    width: 14px;
+    height: 14px;
     fill: currentColor;
   }
 }

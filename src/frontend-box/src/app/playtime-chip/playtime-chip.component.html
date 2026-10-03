@@ -1,6 +1,11 @@
 @if (visible()) {
-  <div class="playtime-chip" [class.playtime-chip--inline]="inline()" [attr.data-level]="level()" aria-label="Verbleibende Hörzeit">
-    <ion-icon name="time-outline" aria-hidden="true"></ion-icon>
+  <div class="playtime-chip" [attr.data-level]="level()" aria-label="Verbleibende Hörzeit">
+    @if (km()) {
+      <!-- km themes (design round 2, "Vorschlag D"): the clock as drawn - circle r 9, hands, stroke 2.6 -->
+      <svg class="km-clock" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+    } @else {
+      <ion-icon name="time-outline" aria-hidden="true"></ion-icon>
+    }
     <span>{{ remainingMinutes() }} min</span>
   </div>
 }

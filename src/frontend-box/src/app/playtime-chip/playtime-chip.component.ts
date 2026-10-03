@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, Signal } from '@angular/core'
+import { ChangeDetectionStrategy, Component, computed, inject, Signal } from '@angular/core'
 import { IonIcon } from '@ionic/angular/standalone'
 import { addIcons } from 'ionicons'
 import { timeOutline } from 'ionicons/icons'
@@ -16,16 +16,9 @@ type ChipLevel = 'normal' | 'warning' | 'critical'
 })
 export class PlaytimeChipComponent {
   private playtimeService = inject(PlaytimeService)
-  private km = inject(KmThemeService).isKm
-  /**
-   * In the header's status group of a km theme (design round 2) instead of floating below the header: the app's own
-   * chip (app.component) is then left out for km themes, the pages show this one.
-   */
-  readonly inline = input(false)
+  protected readonly km = inject(KmThemeService).isKm
 
   protected readonly visible: Signal<boolean> = computed(() => {
-    // (one chip at a time: km themes show the one in the header, the others the floating one)
-    if (this.km() !== this.inline()) return false
     const s = this.playtimeService.status()
     // Show only when playtime is enabled AND nothing is restricting playback
     // (combined state is 'normal'). Quiet-only setups have no countdown to show.

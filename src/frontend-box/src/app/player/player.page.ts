@@ -210,7 +210,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
           setTimeout(() => {
             this.outputNotFound.set(false)
             this.outputMissing.set(null)
-          }, 5000)
+          }, 4000) // (the message fades out after about 4 s, design round 2 §5)
         }
         this.loadOutput()
       },

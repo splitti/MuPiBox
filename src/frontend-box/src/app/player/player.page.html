@@ -88,19 +88,17 @@
     <div class="km-bar km-bar-player">
       <button class="km-hbtn" type="button" (click)="backFromPlayer()">
         @if (backAction() === 'minimize') {
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6" /></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 9l6.5 6.5L18.5 9" /></svg>
         } @else {
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6" /></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5.5L8.5 12l6.5 6.5" /></svg>
         }
       </button>
       <div class="km-htitle kp-titles">
         <span class="kp-t1" #themeFontSource><ng-container *ngTemplateOutlet="albumTpl"></ng-container></span>
         <span class="kp-t2"><ng-container *ngTemplateOutlet="trackTpl"></ng-container></span>
       </div>
-      @if (outputChoosable() && !showTrackList) {
-        <mupi-output-switch [output]="output()" [busy]="outputBusy()" [notFound]="outputNotFound()" (choose)="outputSwitchTap($event)"></mupi-output-switch>
-      }
-      <div class="kp-vol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9.2h3.6L11.2 5v14l-4.6-4.2H3z" /><path d="M15 9.5a3.5 3.5 0 0 1 0 5" /></svg>{{ local?.volume }} %</div>
+      <!-- the output capsule (§4): speaker | headset (only with a paired device), the volume -->
+      <mupi-output-switch [choosable]="outputChoosable()" [volume]="local?.volume" [output]="output()" [busy]="outputBusy()" [notFound]="outputNotFound()" (choose)="outputSwitchTap($event)"></mupi-output-switch>
       <mupi-km-status-group></mupi-km-status-group>
     </div>
   } @else {
@@ -231,7 +229,7 @@
       <!-- (a podcast episode has no track list) -->
       @if (!radio && media.type !== 'rss') {
         <button class="kp-tbtn" type="button" (click)="openTrackList()">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12" /><circle cx="4" cy="6" r="1.4" /><circle cx="4" cy="12" r="1.4" /><circle cx="4" cy="18" r="1.4" /></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10" /></svg>
           <span class="kp-tcount">{{ trackCounter(spotify, local) }}</span>
         </button>
       }
@@ -260,15 +258,15 @@
         </div>
         @if (!radio) {
           <div class="kp-row kp-row-skip">
-            <button class="kp-btn kp-skip" type="button" [disabled]="this.media.showid" (click)="skipPrev()"><ion-icon name="play-skip-back"></ion-icon></button>
-            <button class="kp-btn kp-skip" type="button" [disabled]="this.media.showid" (click)="skipNext()"><ion-icon name="play-skip-forward"></ion-icon></button>
+            <button class="kp-btn kp-skip" type="button" [disabled]="this.media.showid" (click)="skipPrev()"><svg class="kp-solid" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="2.8" height="14" rx="1" /><path d="M19 5v14L8.5 12z" /></svg></button>
+            <button class="kp-btn kp-skip" type="button" [disabled]="this.media.showid" (click)="skipNext()"><svg class="kp-solid" viewBox="0 0 24 24" aria-hidden="true"><rect x="16.2" y="5" width="2.8" height="14" rx="1" /><path d="M5 5v14l10.5-7z" /></svg></button>
           </div>
           <div class="kp-row kp-row-seek">
-            <button class="kp-btn kp-seek" type="button" (click)="seekBack()"><ion-icon name="play-back"></ion-icon></button>
+            <button class="kp-btn kp-seek" type="button" (click)="seekBack()"><svg class="kp-solid" viewBox="0 0 24 24" aria-hidden="true"><path d="M11.5 6v12L3 12zM21 6v12l-8.5-6z" /></svg></button>
             @if (media.type === 'spotify' && (media.category == 'music' || media.category == 'other')) {
               <button class="kp-btn kp-seek" type="button" [class.kp-on]="media.shuffle" (click)="toggleshuffle()"><ion-icon name="shuffle-outline"></ion-icon></button>
             }
-            <button class="kp-btn kp-seek" type="button" (click)="seekForward()"><ion-icon name="play-forward"></ion-icon></button>
+            <button class="kp-btn kp-seek" type="button" (click)="seekForward()"><svg class="kp-solid" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.5 6v12L21 12zM3 6v12l8.5-6z" /></svg></button>
           </div>
         }
       </div>

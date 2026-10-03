@@ -2,10 +2,11 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 import type { AudioOutputState } from '../player/player.page'
 
 /**
- * "Hören mit" in the player's header (design round 2, §4): two fields - the box's speaker | the headset - shown only
- * while a Bluetooth device is paired. With one device a tap switches at once, with several the window opens (the
- * player decides, see outputSwitchTap). States on the headset field: ready (green dot), connecting (turning ring),
- * not found (red dot; the player shows the message below the header).
+ * The output capsule in the player's header (design round 2, §4): 64 high - speaker | headset, a line, the volume.
+ * Without a paired Bluetooth device only the volume. With one device a tap on the headset switches at once, with
+ * several the window opens (the player decides, see outputSwitchTap). States of the headset field: ready (green dot),
+ * connecting (turning ring), not found (red dot; the player shows the message below the header). The volume is only
+ * shown - louder and softer are the big buttons.
  */
 @Component({
   selector: 'mupi-output-switch',
@@ -17,6 +18,9 @@ export class OutputSwitchComponent {
   readonly output = input<AudioOutputState | null>(null)
   readonly busy = input<string | null>(null)
   readonly notFound = input(false)
+  /** a Bluetooth device is paired (and the parents did not switch the choice off) */
+  readonly choosable = input(false)
+  readonly volume = input<number | undefined>(undefined)
   /** 'box', a device's MAC (one device), or 'open' (several: the window) */
   readonly choose = output<string>()
 

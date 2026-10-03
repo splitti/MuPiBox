@@ -17,7 +17,7 @@ body.km.km-theme-matrix { --ion-font-family: 'Pixolletta UI', 'Fredoka', sans-se
   --km-night-4: #0F3F0F;
   --km-stack-1: #607560;
   --km-stack-2: #0F3F0F;
-  --km-shadow: rgba(0,0,0,.45);
+  --km-shadow: rgba(0,0,0,.6);
   --km-overlay: rgba(0,0,0,.72);
   --km-cream: #E6FFE6;
   --km-ring: #05FD00;
@@ -49,11 +49,11 @@ body.km.km-theme-matrix { --ion-font-family: 'Pixolletta UI', 'Fredoka', sans-se
 /* Runde 2 (Aufgabe A): Verläufe über dem Bild */
 .ion-page {
   background: linear-gradient(180deg, rgba(0,0,0,.82) 0, rgba(0,0,0,.35) 96px, rgba(0,0,0,.35) 330px, rgba(0,0,0,.85) 480px),
-              radial-gradient(ellipse 60% 45% at 50% 48%, rgba(0,0,0,.55), transparent),
+              radial-gradient(ellipse 60% 45% at 50% 48%, rgba(0,0,0,.55), rgba(0,0,0,0) 100%),
               var(--km-night) url("/theme-data/matrix/matrix-bg.png") center / cover no-repeat !important;
 }
 /* Runde 2 (Aufgabe A): Namensleisten schwarz mit grünem Rand */
-body.km .title-row ion-card, body.km.km-stage .km-stage-name { background: #000000 !important; border: 2px solid #05FD00 !important; box-sizing: border-box; }
+body.km .title-row ion-card, body.km.km-stage .km-stage-name, body.km.km-stage .km-stage-name span, body.km.km-stage .km-stage-name * { background: #000000 !important; border: 2px solid #05FD00 !important; box-sizing: border-box; }
 body.km .title-row ion-card-title, body.km .title-row .truncate-text, body.km.km-stage .km-stage-name, body.km.km-stage .km-stage-name span { color: #9CFF9A !important; }
 .playtime-blocked-overlay, body.km mupi-media-unavailable {
   background: linear-gradient(var(--km-overlay), var(--km-overlay)), var(--km-night) url("/theme-data/matrix/matrix-bg.png") center / cover no-repeat !important;
@@ -64,6 +64,9 @@ body.km .title-row ion-card-title, body.km .title-row .truncate-text { font-fami
 body.km.km-stage .km-stage-name { font-family: var(--km-name-font) !important; font-size: calc(var(--km-name-size) + 1px) !important; font-weight: 400 !important; }
 body.km .medialist-header ion-title, body.km .player-header .toolbar-album { font-family: var(--km-name-font) !important; font-weight: 400 !important; }
 body.km .playtime-blocked-overlay h1 { font-family: var(--km-name-font) !important; font-weight: 400 !important; }
+
+/* Sperr-/Ruhebildschirm und „Nicht erreichbar“ deckend: kein Durchscheinen der Auswahl */
+body.km .playtime-blocked-overlay, body.km mupi-media-unavailable { opacity: 1 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; z-index: 1000; }
 
 /* ==== gemeinsamer km-Teil (aus den km-Theme-Dateien, unverändert) ==== */
 body .home-content, body .medialist-content, body .player-content { --ion-background-color: transparent !important; }
