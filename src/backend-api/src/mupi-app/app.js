@@ -9458,7 +9458,14 @@ const CONTROLLERS = {
     sections: (page) =>
       withoutSave(page).map((sec) => ({
         ...sec,
-        help: `${hw.data.mupihat.active ? 'Mit dem MuPiHAT gehört die Soundkarte zum HAT (MAX98357A). ' : ''}Wird nach einem Neustart übernommen.`,
+        // (and what the system has found: a card chosen but not found here has no driver, or wants the restart)
+        help: [
+          hw.data.mupihat.active ? 'Mit dem MuPiHAT gehört die Soundkarte zum HAT (MAX98357A).' : '',
+          'Wird nach einem Neustart übernommen.',
+          hw.data.soundcard.detected?.length ? `Vom System erkannt: ${hw.data.soundcard.detected.join(', ')}.` : 'Das System erkennt gerade keine Soundkarte.',
+        ]
+          .filter(Boolean)
+          .join(' '),
         items: sec.items.map((it) => (it.key === 'sound' ? { ...it, options: hw.data.soundcard.options.map((o) => o.name) } : it)),
       })),
     async change(key, v, page) {
@@ -9471,6 +9478,8 @@ const CONTROLLERS = {
       }
       toast('Wird umgestellt …')
       const r = await api(`${API}/soundcard`, { method: 'POST', body: { id: opt.id } })
+      // (the box checks what was written: DietPi's entry and, for the MAX98357A, its driver)
+      if (r.body?.error === 'not_applied') return toast('Die Soundkarte wurde nicht übernommen – bitte noch einmal versuchen', 'info')
       if (!r.ok || r.body?.ok === false) return toast('Das hat nicht geklappt', 'info')
       hw.data.soundcard.current = opt.id
       offerReboot('Die neue Soundkarte gilt nach einem Neustart.')

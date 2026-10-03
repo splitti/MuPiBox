@@ -266,6 +266,9 @@ export class PlayerPage implements OnInit, AfterViewInit {
   private contextGone = 0
   private albumEnded = false
   progress = 0
+  // The place just chosen on the progress bar (percent), until the player reports it: the next reports still had the
+  // old place for a moment, and the dot jumped back before it moved to the new one (reported by Andreas)
+  private seekHold: { value: number; until: number } | null = null
   shufflechanged = 0
   tmpProgressTime = 0
   // Tracks the playtime state across ticks so we can detect transitions
@@ -437,12 +440,24 @@ export class PlayerPage implements OnInit, AfterViewInit {
 
   seek() {
     const newValue = +this.range.value
+    this.seekHold = { value: newValue, until: Date.now() + 3000 }
     if (this.media.type === 'spotify') {
       const duration = this.currentPlayedSpotify?.item.duration_ms
       this.playerService.seekPosition(duration * (newValue / 100))
     } else if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'rss') {
       this.playerService.seekPosition(newValue)
     }
+  }
+
+  // A reported place (percent) - or the one just chosen, while the report has not reached it yet (see seekHold)
+  private heldProgress(reported: number): number {
+    const hold = this.seekHold
+    if (!hold) return reported
+    if (Math.abs(reported - hold.value) <= 2 || Date.now() > hold.until) {
+      this.seekHold = null
+      return reported
+    }
+    return hold.value
   }
 
   // Back to the list, with the reason in the box's log (why a player page closed was never to be seen)
@@ -505,7 +520,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
       const sp = this.currentPlayedSpotify
       const seek = sp?.progress_ms || 0
       if (sp?.item != null) {
-        this.progress = (seek / sp?.item.duration_ms) * 100 || 0
+        this.progress = this.heldProgress((seek / sp?.item.duration_ms) * 100 || 0)
       }
       if (sp?.is_playing) this.externallyPaused = false
       // The end of an album with Spotify's autoplay on (a setting of the account): the SDK never reports it paused,
@@ -599,7 +614,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
         return
       }
       const seek = this.currentPlayedLocal?.progressTime || 0
-      this.progress = seek || 0
+      this.progress = this.heldProgress(seek || 0)
       if (
         (this.media.type === 'library' || this.media.type === 'nas') &&
         this.playing &&
