@@ -310,7 +310,8 @@ export class SpotifyApiService {
 
   /** Until when Spotify refuses requests (0: not blocked) - also a block the Smart-Sync was told (spotify-block.ts). */
   public get spotifyBlockedUntil(): number {
-    return Math.max(this.rateLimitedUntil > Date.now() ? this.rateLimitedUntil : 0, spotifyBlock()?.until ?? 0)
+    // (only the one block of the box: a block lifted early - another Spotify app - is over here too)
+    return spotifyBlock()?.until ?? 0
   }
 
   private async rateLimitedRequest<T>(operation: () => Promise<T>, attempt = 0): Promise<T> {
