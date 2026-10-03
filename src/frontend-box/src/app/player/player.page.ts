@@ -1,4 +1,4 @@
-import { AsyncPipe } from '@angular/common'
+import { AsyncPipe, NgTemplateOutlet } from '@angular/common'
 import { HttpClient } from '@angular/common/http'
 import { AfterViewInit, Component, DestroyRef, ElementRef, inject, OnInit, signal, ViewChild } from '@angular/core'
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
@@ -28,6 +28,8 @@ import { addIcons } from 'ionicons'
 import {
   arrowBackOutline,
   arrowDownOutline,
+  chevronDown,
+  chevronUp,
   close,
   headset,
   pause,
@@ -58,6 +60,8 @@ import { isResumeEntry, type Media } from '../media'
 import { MediaService } from '../media.service'
 import type { MupiboxConfig } from '../mupibox-config.model'
 import { StatusComponent } from '../status/status.component'
+import { KmStatusGroupComponent } from '../km-header/km-status-group.component'
+import { OutputSwitchComponent } from '../output-switch/output-switch.component'
 import { PlayerCmds, PlayerService } from '../player.service'
 import type { PlaytimePlayState } from '../playtime.model'
 import { PlaytimeService } from '../playtime.service'
@@ -85,7 +89,10 @@ export interface TrackListEntry {
   imports: [
     FormsModule,
     AsyncPipe,
+    NgTemplateOutlet,
     StatusComponent,
+    KmStatusGroupComponent,
+    OutputSwitchComponent,
     IonHeader,
     IonToolbar,
     IonButtons,
@@ -127,6 +134,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
   protected readonly outputOpen = signal(false)
   protected readonly outputBusy = signal<string | null>(null)
   protected readonly outputNotFound = signal(false)
+  // (the device that did not answer - its tile gets a red edge, km themes)
+  protected readonly outputMissing = signal<string | null>(null)
   private outputTimer: ReturnType<typeof setInterval> | undefined
   protected outputChoosable(): boolean {
     const o = this.output()
@@ -148,6 +157,33 @@ export class PlayerPage implements OnInit, AfterViewInit {
     this.loadOutput()
     this.outputOpen.set(true)
   }
+  /**
+   * The km track button below the cover (design round 2, §3): "3 / 19" - the same numbers as the old header's counter
+   * (counterTpl), with spaces; '' when they are not known.
+   */
+  protected trackCounter(spotify: CurrentSpotify | null | undefined, local: CurrentMPlayer | null | undefined): string {
+    const pair = (a?: number | string, b?: number | string) => (a !== undefined && a !== '' && b !== undefined && b !== '' && Number(b) > 0 ? `${a} / ${b}` : '')
+    const m = this.media
+    if (m.type === 'library' || m.type === 'nas') return pair(local?.currentTracknr, local?.totalTracks)
+    if (m.type !== 'spotify') return ''
+    if (m.playlistid && (spotify?.playlist?.total_tracks ?? 0) > 0) return pair(spotify?.playlist?.current_track_position, spotify?.playlist?.total_tracks)
+    if (m.showid && spotify?.show_details) return pair(spotify.show_details.current_episode_position, spotify.show_details.total_episodes)
+    if (m.audiobookid && spotify?.audiobook) return pair(spotify.audiobook.current_chapter_position, spotify.audiobook.total_chapters)
+    if (this.currentPlayedSpotify?.currently_playing_type !== 'episode') return pair(spotify?.item?.track_number, spotify?.item?.album?.total_tracks)
+    return ''
+  }
+
+  /** The switch in the header (design round 2): one device switches at once, several open the window */
+  protected outputSwitchTap(target: string): void {
+    if (target === 'open') this.openOutput()
+    else this.chooseOutput(target)
+  }
+
+  /** km header's round button: minimise (the music goes on, see ionViewWillLeave) or back with stop - the same way */
+  protected backFromPlayer(): void {
+    this.navController.back({ animation: this.coverFlip.returnAnimation })
+  }
+
   protected closeOutput(): void {
     if (!this.outputBusy()) this.outputOpen.set(false)
   }
@@ -170,7 +206,11 @@ export class PlayerPage implements OnInit, AfterViewInit {
         // (the device did not answer - not on, or out of reach: said in the choice, which stays open)
         if (e?.status === 504) {
           this.outputNotFound.set(true)
-          setTimeout(() => this.outputNotFound.set(false), 5000)
+          this.outputMissing.set(target)
+          setTimeout(() => {
+            this.outputNotFound.set(false)
+            this.outputMissing.set(null)
+          }, 5000)
         }
         this.loadOutput()
       },
@@ -340,6 +380,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
     addIcons({
       arrowBackOutline,
       arrowDownOutline,
+      chevronDown,
+      chevronUp,
       volumeLowOutline,
       pause,
       play,
@@ -1042,11 +1084,37 @@ export class PlayerPage implements OnInit, AfterViewInit {
       }
     } finally {
       this.loadingTrackList = false
+      if (this.km()) this.showCurrentTrack()
     }
   }
 
   closeTrackList() {
     this.showTrackList = false
+  }
+
+  // km track list (design round 2, §5): "Titel 3 von 19" above it, the up / down buttons turn a page
+  @ViewChild('ktScroll', { static: false, read: ElementRef }) private ktScroll: ElementRef<HTMLElement> | undefined
+
+  protected trackOfText(): string {
+    const total = this.trackList.length
+    const index = this.trackList.findIndex((entry) => this.isCurrentTrack(entry))
+    if (total === 0 || index < 0) return ''
+    return this.displayTexts.text('trackOf').replace('{n}', String(index + 1)).replace('{t}', String(total))
+  }
+
+  protected pageTrackList(direction: 1 | -1): void {
+    const el = this.ktScroll?.nativeElement
+    if (!el) return
+    // (a page less one row, so the row at the edge stays in sight)
+    el.scrollBy({ top: direction * Math.max(66, el.clientHeight - 66), behavior: 'smooth' })
+  }
+
+  /** The current title in the middle of the km track list once it is there */
+  private showCurrentTrack(): void {
+    setTimeout(() => {
+      const row = this.ktScroll?.nativeElement.querySelector<HTMLElement>('.kt-on')
+      row?.scrollIntoView({ block: 'center' })
+    }, 0)
   }
 
   // Jumping several tracks at once (e.g. from track 1 to track 5) needs a corrective step on the player

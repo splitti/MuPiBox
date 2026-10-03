@@ -1,0 +1,94 @@
+// "Hören mit" (design round 2, §4): two fields 52 × 46, radius 23, in a group with 3 px padding, radius 26
+:host {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.os {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 26px;
+  background: var(--km-night-2);
+}
+
+.os-field {
+  position: relative;
+  width: 52px;
+  height: 46px;
+  border-radius: 23px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--km-on-pill);
+  display: grid;
+  place-items: center;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 150ms var(--km-spring),
+    background-color 200ms;
+
+  &:active {
+    transform: scale(0.92);
+  }
+
+  &.os-on {
+    background: var(--km-apricot);
+    color: var(--km-ink);
+  }
+
+  svg {
+    width: 26px;
+    height: 26px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+
+    .fill {
+      fill: currentColor;
+    }
+  }
+
+  // connecting: the symbol 55 % opaque, a turning ring in the accent colour
+  &[data-state='connecting'] .os-icon {
+    opacity: 0.55;
+  }
+
+  // not found: 50 %, red dot
+  &[data-state='notfound'] .os-icon {
+    opacity: 0.5;
+  }
+}
+
+// ready (green) / not found (red): an 11 px dot top right
+.os-dot {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #3ccb7f;
+  box-shadow: 0 0 0 2px var(--km-night-2);
+
+  [data-state='notfound'] > & {
+    background: var(--km-rose);
+  }
+}
+
+.os-ring {
+  position: absolute;
+  inset: 4px 9px;
+  border-radius: 50%;
+  border: 3px solid var(--km-apricot);
+  border-right-color: transparent;
+  animation: os-turn 900ms linear infinite;
+}
+
+@keyframes os-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}

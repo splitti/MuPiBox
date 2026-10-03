@@ -37,6 +37,12 @@ export const DEFAULT_DISPLAY_TEXTS = {
   // "Läuft gerade" pill in the header (km themes, design round 2)
   pausedLabel: 'Paused',
   stopLabel: 'Stop',
+  // above the track list (km themes, design round 2): {n} = the current title, {t} = how many
+  trackOf: 'Track {n} of {t}',
+  // the headset switch in the player's header: the device did not answer
+  outputHeadsetNotFound: 'Headphones not found. Are they on and close by?',
+  // the tile of the device that plays now ("Hören mit" window)
+  outputPlaying: 'playing',
 }
 export type DisplayTextKey = keyof typeof DEFAULT_DISPLAY_TEXTS
 type TextSet = Partial<Record<DisplayTextKey, string>>

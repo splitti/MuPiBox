@@ -1,0 +1,18 @@
+<div class="os" role="group">
+  <button class="os-field" type="button" [class.os-on]="onBox()" (click)="tapBox()" aria-label="Box">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path class="fill" d="M4 9h3.5L12 5v14l-4.5-4H4z" /><path d="M16 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10" /></svg>
+  </button>
+  <button class="os-field" type="button" [class.os-on]="state() === 'bt'" [attr.data-state]="state()" (click)="tapHeadset()" [attr.aria-label]="device()?.name">
+    @if (device()?.kind === 'speaker') {
+      <svg class="os-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="3" width="12" height="18" rx="3" /><circle cx="12" cy="14" r="3" /><circle class="fill" cx="12" cy="7.5" r="1" /></svg>
+    } @else {
+      <svg class="os-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15v-3a8 8 0 0 1 16 0v3" /><path class="fill" d="M4 15h3v6H5a1 1 0 0 1-1-1zM20 15h-3v6h2a1 1 0 0 0 1-1z" /></svg>
+    }
+    @if (state() === 'connecting') {
+      <span class="os-ring"></span>
+    }
+    @if (state() === 'ready' || state() === 'notfound') {
+      <span class="os-dot"></span>
+    }
+  </button>
+</div>
