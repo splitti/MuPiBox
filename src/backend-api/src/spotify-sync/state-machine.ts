@@ -73,9 +73,10 @@ export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<
   // transitions (first AUTH_FAILED, threshold-crossing for network/internal).
   const previousFailureCounters = { ...previousState.failure_counters }
   // (a block Spotify set in an earlier run, see finalise and 0b)
-  // (or one the display's lists were told - the same Spotify app, see spotify-block.ts)
+  // (the one block of the box, also the display's lists - see spotify-block.ts; the sync's own blocks are noted there
+  // too, so a block lifted early, e.g. for another Spotify app, holds for the sync as well)
   const sharedBlock = spotifyBlock()
-  const blockedUntil = Math.max(Date.parse(previousState.rate_limited_until ?? '') || 0, sharedBlock?.until ?? 0)
+  const blockedUntil = sharedBlock?.until ?? 0
   const stillBlocked = blockedUntil > startedAt.getTime()
 
   const finalise = (

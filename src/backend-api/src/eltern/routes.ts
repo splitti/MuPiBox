@@ -69,6 +69,7 @@ import { pickEpisodes } from '../episode-pick'
 import { episodeKey, mayKeep, type PodcastOffline } from '../podcast-offline'
 import { pbkdf2Sync, randomBytes } from 'node:crypto'
 import { localOnly } from '../request-guard'
+import { clearSpotifyBlock } from '../spotify-block'
 import { spotifyLoginAge } from './spotify-auth-age'
 import {
   REQUESTED_SCOPES,
@@ -2311,6 +2312,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(400).json({ error: 'clientSecret must be 16-64 alphanumeric characters when provided' })
       return
     }
+    // Another Spotify app: Spotify's block of the old one (spotify-block.ts) does not hold for it - asked again at once.
+    // (A new login with the same app keeps the block: Spotify blocks the app, not the login.)
+    if (clientId !== deps.getMupiboxConfig()?.spotify?.clientId) clearSpotifyBlock('another Spotify app (Client ID)')
     await deps.updateMupiboxConfig((cfg) => {
       const spotify = ((cfg.spotify as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
       spotify.clientId = clientId
