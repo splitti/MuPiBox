@@ -220,6 +220,22 @@ ion-content.player-content.tracklist-active {
     }
 }
 
+// The card of a missing cover in the track list's side panel: as large as the picture there, the name smaller (1em)
+// so that a long one still fits the 160 px
+.km-tl-side .km-tl-cover {
+    position: relative;
+    flex: none;
+    width: 160px;
+    height: 160px;
+    border-radius: 20px;
+    overflow: hidden;
+
+    .mupi-no-cover {
+        font-size: 1em;
+        padding: 8px;
+    }
+}
+
 .km-tl-close {
     width: 160px;
     height: 64px;

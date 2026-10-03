@@ -172,7 +172,12 @@
     <div class="km-tl-wrap">
     <!-- every theme: cover and "close" on the left (was the km themes' only; the others had a back arrow in the header) -->
     <div class="km-tl-side">
-      <img [src]="shownCover()" alt="" (error)="coverFailed()">
+      @if (coverMissing()) {
+        <!-- no picture: the card with the folder's name, as on the cover page -->
+        <div class="km-tl-cover"><div class="mupi-no-cover" [style.background]="noCoverStyle(coverTitle()).background" [style.color]="noCoverStyle(coverTitle()).color"><span>{{ coverTitle() }}</span></div></div>
+      } @else {
+        <img [src]="shownCover()" alt="" (error)="coverFailed()">
+      }
       <button class="km-tl-close" (click)="closeTrackList()"><ion-icon name="close"></ion-icon>{{ displayTexts.text('closeShort') }}</button>
     </div>
     <ion-list class="tracklist" [style.font-family]="listFontFamily" [style.--ion-font-family]="listFontFamily">
