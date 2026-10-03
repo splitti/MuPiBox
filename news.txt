@@ -32,6 +32,7 @@
 <li id='linews' class='linews'>The switch "Remote control via IP" is gone from the app: nothing read its value any more (the display always reaches the player on the box itself).</li>
 <li id='linews' class='linews'>A fixed IP address per saved WiFi network (the others keep DHCP), in the app and on the display. Before saving, a test checks it in the network the box is in, without dropping the connection: router and range, the address free, the router answering the new address (tried as a second address for a few seconds), the DNS server. The box switches at once, the WiFi connection stays. If it does not reach its router with the fixed address - right after saving or later in that network - it goes back to DHCP by itself and keeps the values paused to correct them; the app and the display say so.</li>
 <li id='linews' class='linews'>LAN for a PC plugged straight into the box: the router is optional for a fixed address (without one the internet stays with the WiFi).</li>
+<li id='linews' class='linews'>The display no longer loses its WiFi symbol for good while the box is online: the online state in the network file is checked against the real one every 10 s and corrected (a write lost to the network file's own refresh left "offline" in it until the next start) (by Andreas).</li>
 </ul>
 <b>Display</b>
 </ul>
