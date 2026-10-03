@@ -95,21 +95,26 @@
 
 	if( $_POST['activate_the_hat'] )
 		{
-			if($_POST['mupihat_active'])
+			// The scripts set the sound card and check what arrived (exit code). The card is noted in $data too: this page
+			// saves $data afterwards and would otherwise write the card of before back over the script's.
+			$hat_on = (bool)$_POST['mupihat_active'];
+			$hat_rc = 0;
+			$hat_out = array();
+			exec("sudo /usr/local/bin/mupibox/./" . ($hat_on ? "enable" : "disable") . "_mupihat.sh 2>&1", $hat_out, $hat_rc);
+			if($hat_rc == 0)
 				{
-				$data["mupihat"]["hat_active"] = true;
-				exec("sudo /usr/local/bin/mupibox/./enable_mupihat.sh");
-				$CHANGE_TXT=$CHANGE_TXT."<li>MuPiHAT is active now - sound card set to MAX98357A bcm2835-i2s-HiFi HiFi-0. The MuPiBox will now restart.</li>";
+				$data["mupihat"]["hat_active"] = $hat_on;
+				$data["mupibox"]["physicalDevice"] = $hat_on ? "MAX98357A bcm2835-i2s-HiFi HiFi-0" : "rpi-bcm2835-3.5mm";
+				$CHANGE_TXT=$CHANGE_TXT . ($hat_on
+					? "<li>MuPiHAT is active now - sound card set to MAX98357A bcm2835-i2s-HiFi HiFi-0. The MuPiBox will now restart.</li>"
+					: "<li>MuPiHAT is deactivated - sound card set to Onboard 3.5mm output. The MuPiBox will now restart.</li>");
 				$change=2;
 				$reboot = 1;
 				}
 			else
 				{
-				$data["mupihat"]["hat_active"] = false;
-				exec("sudo /usr/local/bin/mupibox/./disable_mupihat.sh");
-				$CHANGE_TXT=$CHANGE_TXT."<li>MuPiHAT is deactivated - - sound card set to Onboard 3.5mm output. The MuPiBox will now restart.</li>";
-				$change=2;
-				$reboot = 1;
+				// (nothing saved, no restart: the switch stays as it was)
+				$CHANGE_TXT=$CHANGE_TXT."<li>MuPiHAT could not be switched " . ($hat_on ? "on" : "off") . " - not everything arrived: " . htmlspecialchars(implode(" ", $hat_out)) . "</li>";
 				}
 		}
 	
