@@ -832,8 +832,11 @@ rm -f /tmp/mupibox-update-failed
 	  echo 'dtparam=gpio=on' | tee -a /boot/config.txt >&3 2>&3
 	fi
 
-	if grep -q '^dtoverlay=gpio-poweroff,gpiopin=4,active_low=1' /boot/config.txt; then
-	  echo -e "dtparam=gpio=on already set" >&3 2>&3
+	# The poweroff overlay is only added when none is active yet - in any form: a display driver's line can carry it as
+	# a parameter (dtoverlay=vc4-fkms-v3d,gpio-poweroff,gpiopin=4,active_low=1), and a second definition of the pin
+	# keeps the box from shutting down (it hangs, only pulling the plug helps). Commented-out lines do not count.
+	if grep -Eq '^[[:space:]]*dtoverlay=([^#]*,)?gpio-poweroff([,[:space:]]|$)' /boot/config.txt; then
+	  echo -e "dtoverlay=gpio-poweroff already set" >&3 2>&3
 	else
 	  echo '' | tee -a /boot/config.txt >&3 2>&3
 	  echo 'dtoverlay=gpio-poweroff,gpiopin=4,active_low=1' | tee -a /boot/config.txt >&3 2>&3
