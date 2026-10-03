@@ -260,6 +260,9 @@ body.km.km-night {
   --km-cream: #FFF3E0; --km-ring: #FFE9C9; --km-ink: #2A2140; --km-lavender: #CFC6E8;
   --km-apricot: #FFB36B; --km-apricot-shadow: #B8672C; --km-moon: #FFE3A3; --km-rose: #F2877E;
   --km-on-bg: #FFF3E0; --km-sync-bg: #241E3D; --km-sync-fg: #FFF3E0;
+  /* Runde 2 nachts: Kopfzeile, Symbole, Pille und Knöpfe hell wie bei Kuschelmond */
+  --km-on-band: #FFF3E0; --km-on-band-2: #CFC6E8; --km-btn: #3A3160; --km-on-btn: #FFF3E0;
+  --km-tab-idle: #FFFFFF; --km-on-pill: #FFFFFF;
 }
 body.km.km-night .ion-page {
   background: var(--km-night) url("/theme-data/tagundnacht/background-nacht.svg") center / cover no-repeat !important;
