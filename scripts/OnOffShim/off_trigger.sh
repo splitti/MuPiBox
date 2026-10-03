@@ -103,6 +103,9 @@ while true; do
             # Actions when button is pressed
             # the goodbye picture before anything else (the sounds and the shutdown come after it)
             /usr/local/bin/mupibox/show_goodbye.sh
+            # whatever plays is stopped first (as mupi_shutdown.sh does): the volume set below would make it jump
+            curl -s -m 2 -o /dev/null http://127.0.0.1:5005/stop
+            sleep 0.3
             /usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}%
             /usr/bin/aplay /home/dietpi/MuPiBox/sysmedia/sound/button_shutdown.wav
 
