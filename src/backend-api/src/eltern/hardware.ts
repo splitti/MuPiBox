@@ -60,7 +60,8 @@ async function addAmpDriver(bootConfig: string): Promise<void> {
   const missing = AMP_DRIVER.filter((line) => !lines.has(line))
   if (!missing.length) return
   const add = [...(lastSection && lastSection !== '[all]' ? ['[all]'] : []), ...missing]
-  await run('sudo', ['sh', '-c', 'f="$0"; shift; printf \'%s\\n\' "$@" >> "$f"', bootConfig, ...add])
+  // (sh -c: the file is $0, the lines are "$@")
+  await run('sudo', ['sh', '-c', 'printf \'%s\\n\' "$@" >> "$0"', bootConfig, ...add])
 }
 
 // The sound cards the system has found (after the restart a new card needs): their names from ALSA
