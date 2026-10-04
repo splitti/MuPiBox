@@ -14,6 +14,7 @@ import { imageSize } from './covers'
 import { requireCsrf, requireSession } from './middleware'
 import { episodeStateSettings } from '../episode-state'
 import { applyNightDim, nightDimmed, nightDimOf, parseNightDim } from './night-dim'
+import { CUSTOM_THEME_CSS, customThemeCss, customThemeOf } from './custom-theme'
 
 export interface DisplayDeps {
   getMupiboxConfig: () => MupiboxConfig | undefined
@@ -272,6 +273,63 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
     }
     const theme = String(mupibox(deps).theme ?? '')
     res.json({ ok: true, width: info.width, height: info.height, active: theme === 'custom', reloaded: theme === 'custom' ? await reloadDisplayPage() : false })
+  })
+
+  /** GET /api/app/display/custom-theme - the own theme's settings (light/dark, veil, accent, font, size). */
+  router.get('/display/custom-theme', requireSession, async (_req, res) => {
+    const hasPicture = await fsp
+      .stat(BACKGROUND)
+      .then(() => true)
+      .catch(() => false)
+    res.json({ ...customThemeOf(mupibox(deps).customTheme), hasPicture, active: mupibox(deps).theme === 'custom' })
+  })
+
+  /**
+   * POST /api/app/display/custom-theme  {mode, resolved, veil, accent, font, size}
+   * Kept in mupibox.customTheme (also while another theme is chosen) and written as the stylesheet the display adds
+   * to the theme "custom"; is it the theme on the box, the display takes it over at once (no page reload).
+   */
+  router.post('/display/custom-theme', requireSession, requireCsrf, async (req, res) => {
+    const settings = { ...customThemeOf(req.body), v: Date.now() }
+    try {
+      await fsp.writeFile(CUSTOM_THEME_CSS, customThemeCss(settings))
+    } catch {
+      res.status(500).json({ error: 'write_failed' })
+      return
+    }
+    await deps.updateMupiboxConfig((cfg) => {
+      const mb = (cfg.mupibox ?? {}) as Record<string, unknown>
+      mb.customTheme = settings
+      cfg.mupibox = mb
+    })
+    let displayUpdated = false
+    if (mupibox(deps).theme === 'custom') {
+      try {
+        displayUpdated = (await fetch('http://127.0.0.1:5005/display/reload-theme', { method: 'POST', signal: AbortSignal.timeout(3000) })).ok
+      } catch {
+        // the display takes it over on its next start
+      }
+    }
+    res.json({ ok: true, settings, displayUpdated })
+  })
+
+  /** GET /api/app/theme-font/:name - a font of the own theme for the app's preview (from the display's theme data). */
+  const THEME_FONTS: Record<string, string> = { baloo: '_fonts/Baloo2-Variable.ttf', rye: 'steampunk/Rye-Regular.ttf' }
+  router.get('/theme-font/:name', requireSession, (req, res) => {
+    const file = THEME_FONTS[String(req.params.name)]
+    if (!file) {
+      res.status(404).end()
+      return
+    }
+    res.sendFile(`/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/${file}`, { headers: { 'Content-Type': 'font/ttf', 'Cache-Control': 'public, max-age=86400' } }, (err) => {
+      if (err && !res.headersSent) res.status(404).end()
+    })
+  })
+
+  // (the stylesheet after an update or a restore: written again from the settings when it is missing)
+  void fsp.access(CUSTOM_THEME_CSS).catch(async () => {
+    const stored = mupibox(deps).customTheme
+    if (stored) await fsp.writeFile(CUSTOM_THEME_CSS, customThemeCss(customThemeOf(stored))).catch(() => undefined)
   })
 
   /** GET /api/app/display/background - the current background picture (for the preview). */

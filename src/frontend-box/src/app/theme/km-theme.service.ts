@@ -19,6 +19,8 @@ export class KmThemeService {
   private readonly stageOn = signal(false)
   private readonly autoReadOn = signal(false)
   private readonly night = signal(false)
+  // theme "custom": its own settings (app › Theme › Eigenes) - light writing or dark, and the stylesheet's version
+  private readonly custom = signal<{ light: boolean; v: number }>({ light: false, v: 0 })
 
   readonly theme = computed<KmTheme | undefined>(() => kmTheme(this.themeId()))
   readonly isKm = computed(() => this.theme() !== undefined)
@@ -44,6 +46,7 @@ export class KmThemeService {
       this.updateNight()
     })
     effect(() => this.applyBodyClasses())
+    effect(() => this.applyCustomStylesheet())
   }
 
   /** Reads the theme settings again (at start, and when the parents' app changed the theme). */
@@ -52,6 +55,8 @@ export class KmThemeService {
       next: (config) => {
         const m = config?.mupibox as { theme?: string; themeStage?: boolean; themeStageAutoRead?: boolean } | undefined
         this.themeId.set(m?.theme)
+        const own = config?.mupibox?.customTheme
+        this.custom.set({ light: own?.resolved === 'light', v: typeof own?.v === 'number' ? own.v : 0 })
         this.stageOn.set(m?.themeStage === true)
         this.autoReadOn.set(m?.themeStageAutoRead === true)
         this.updateNight()
@@ -113,6 +118,26 @@ export class KmThemeService {
     }, 320)
   }
 
+  /** The own theme's settings (written by the backend next to the picture): only while "custom" is the theme. */
+  private applyCustomStylesheet(): void {
+    const id = 'km-custom-settings'
+    const old = document.getElementById(id)
+    if (this.themeId() !== 'custom') {
+      old?.remove()
+      return
+    }
+    const href = `/theme-data/custom/custom-settings.css?v=${this.custom().v}`
+    if (old?.getAttribute('href') === href) return
+    const link = document.createElement('link')
+    link.id = id
+    link.rel = 'stylesheet'
+    link.href = href
+    // after the theme's own stylesheet (it wins on equal weight); the old one goes once the new one is there
+    link.onload = () => old?.remove()
+    if (old) old.removeAttribute('id')
+    document.head.appendChild(link)
+  }
+
   private applyBodyClasses(): void {
     const body = document.body
     for (const cls of Array.from(body.classList)) {
@@ -126,6 +151,7 @@ export class KmThemeService {
     if (theme.legacy) body.classList.add('km-legacy')
     const night = this.night()
     if (theme.light && !(night && theme.dayNight && !theme.dayNight.lightAtNight)) body.classList.add('km-light')
+    if (theme.id === 'custom' && this.custom().light) body.classList.add('km-light')
     if (this.stage()) body.classList.add('km-stage')
     if (night) body.classList.add('km-night')
   }

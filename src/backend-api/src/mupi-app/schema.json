@@ -4550,13 +4550,7 @@
        "type": "nav",
        "label": "Theme",
        "target": "theme",
-       "subtitle": "Aussehen des Box-Displays"
-      },
-      {
-       "type": "nav",
-       "label": "Eigenes Theme",
-       "target": "eigenes",
-       "subtitle": "Hintergrundbild hochladen"
+       "subtitle": "Aussehen des Box-Displays, eigenes Bild"
       },
       {
        "type": "nav",
@@ -5416,18 +5410,18 @@
   },
   {
    "l": "Eigenes Theme",
-   "where": "Aussehen › Eigenes Theme",
-   "id": "eigenes"
+   "where": "Aussehen › Theme",
+   "id": "theme"
   },
   {
    "l": "Hintergrundbild",
-   "where": "Aussehen › Eigenes Theme",
-   "id": "eigenes"
+   "where": "Aussehen › Theme",
+   "id": "theme"
   },
   {
    "l": "Bild",
-   "where": "Aussehen › Eigenes Theme",
-   "id": "eigenes"
+   "where": "Aussehen › Theme",
+   "id": "theme"
   },
   {
    "l": "Ansicht",
