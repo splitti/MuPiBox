@@ -325,6 +325,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
 
   showTrackList = false
   loadingTrackList = false
+  // (Spotify did not answer for the list - blocking the box, offline: said so instead of "no tracks")
+  trackListFailed = false
   trackList: TrackListEntry[] = []
   trackListTitle = ''
   pressingCover = false
@@ -1029,6 +1031,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
     this.showTrackList = true
     this.loadingTrackList = true
     this.trackList = []
+    this.trackListFailed = false
 
     try {
       if (this.media.type === 'library') {
@@ -1050,6 +1053,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
       } else if (this.media.playlistid) {
         const info = await firstValueFrom(this.spotifyService.getPlaylistInfo(this.media.playlistid))
         this.trackListTitle = info.playlist_name
+
+        this.trackListFailed = !!info.failed
         this.trackList = (info.tracks ?? []).map((track: any, index: number) => ({
           position: index + 1,
           id: track.id ?? track.uri,
@@ -1060,6 +1065,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
       } else if (this.media.audiobookid) {
         const info = await firstValueFrom(this.spotifyService.getAudiobookInfo(this.media.audiobookid))
         this.trackListTitle = info.audiobook_name
+
+        this.trackListFailed = !!info.failed
         this.trackList = (info.chapters ?? []).map((chapter: any, index: number) => ({
           position: index + 1,
           id: chapter.id,
@@ -1069,6 +1076,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
       } else if (this.media.showid) {
         const info = await firstValueFrom(this.spotifyService.getShowInfo(this.media.showid))
         this.trackListTitle = info.show_name
+
+        this.trackListFailed = !!info.failed
         this.trackList = (info.episodes ?? []).map((episode: any, index: number) => ({
           position: index + 1,
           id: episode.id,
@@ -1078,6 +1087,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
       } else if (this.media.id) {
         const info = await firstValueFrom(this.spotifyService.getAlbumInfo(this.media.id))
         this.trackListTitle = info.album_name
+
+        this.trackListFailed = !!info.failed
         this.trackList = (info.tracks ?? []).map((track: any) => ({
           position: track.track_number,
           id: track.id,

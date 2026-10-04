@@ -158,7 +158,7 @@
             </button>
           } @empty {
             @if (!loadingTrackList) {
-              <div class="kt-empty">No tracks available.</div>
+              <div class="kt-empty">{{ displayTexts.text(trackListFailed ? 'spotifyUnavailable' : 'noTracks') }}</div>
             }
           }
         </div>
@@ -201,7 +201,7 @@
       } @empty {
         @if (!loadingTrackList) {
           <ion-item>
-            <ion-label>No tracks available.</ion-label>
+            <ion-label>{{ displayTexts.text(trackListFailed ? 'spotifyUnavailable' : 'noTracks') }}</ion-label>
           </ion-item>
         }
       }

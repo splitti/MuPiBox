@@ -46,6 +46,7 @@ import type { Duplex } from 'node:stream'
 import { SUDO_BACKUP_SNIPPET, backupBeforeWrite } from './file-backup'
 import { readEmbeddedPicture } from './embedded-cover'
 import { acquireLock, releaseLock, staleReason } from './file-lock'
+import { type AlbumFillDeps, fillSpotifyAlbums, isBareAlbum, startSpotifyAlbumFill } from './spotify-album-fill'
 import { coverHidden } from './hidden-covers'
 import { OnlineCovers } from './online-covers'
 import { ardFeed, isArdFeed } from './ard-sounds'
@@ -3463,9 +3464,18 @@ app.post('/api/add', (req, res) => {
         return
       }
       res.status(200).send('ok')
+      // a Spotify album added by its link: its name and cover right away (see spotify-album-fill.ts)
+      if (isBareAlbum(newEntry)) setTimeout(() => void fillSpotifyAlbums(albumFillDeps, 'added'), 1000)
     })
   })
 })
+
+const albumFillDeps: AlbumFillDeps = {
+  dataFile,
+  dataLock,
+  spotify: () => spotifyApiService,
+  write: (data) => new Promise((resolve, reject) => writeJsonAtomic(dataFile, data, (error) => (error ? reject(error) : resolve()))),
+}
 
 // data.json, resume.json and wlan.json were written straight into the target file: a power cut
 // or a crash mid-write left a cut-off JSON (the library or the resume list unreadable). Written
@@ -8320,6 +8330,8 @@ if (!testServe) {
   // Boot-after-60s lead-in inside startScheduler so initial config load
   // has time to finish before the first sync attempt.
   startScheduler(spotifySyncDeps)
+  // Spotify albums kept as their id only: name and cover into data.json (spotify-album-fill.ts)
+  startSpotifyAlbumFill(albumFillDeps)
   // The Spotify login's 6 months: reminders before the end, a message when Spotify refused it (eltern/spotify-auth-age.ts)
   startSpotifyLoginWatch({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
   startTlsWatch({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })

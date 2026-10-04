@@ -27,6 +27,8 @@ export const DEFAULT_DISPLAY_TEXTS = {
   offlineLabel: 'No connection',
   // Spotify albums Spotify could not be asked for (it blocks the box's requests for a while)
   spotifyUnavailable: 'Spotify is not answering right now',
+  // the track list of an album, a playlist or a show that has none
+  noTracks: 'No tracks available',
   // title of the resume page (km themes; the other themes keep "Resume")
   resumeTitle: 'Continue listening',
   outputTitle: 'Listen with',

@@ -622,7 +622,7 @@ export class SpotifyService {
   /**
    * Get album information including total tracks and track data
    */
-  getAlbumInfo(albumId: string): Observable<{ total_tracks: number; album_name: string; tracks?: any[] }> {
+  getAlbumInfo(albumId: string): Observable<{ total_tracks: number; album_name: string; tracks?: any[]; failed?: boolean }> {
     const albumUrl = `${environment.backend.apiUrl}/spotify/album/${albumId}`
 
     return this.http.get<any>(albumUrl).pipe(
@@ -641,7 +641,7 @@ export class SpotifyService {
       })),
       catchError((error) => {
         this.logService.error('Error getting album info:', error)
-        return of({ total_tracks: 0, album_name: '', tracks: [] })
+        return of({ total_tracks: 0, album_name: '', tracks: [], failed: true })
       }),
     )
   }
@@ -649,7 +649,7 @@ export class SpotifyService {
   /**
    * Get playlist information including total tracks and track data
    */
-  getPlaylistInfo(playlistId: string): Observable<{ total_tracks: number; playlist_name: string; tracks?: any[] }> {
+  getPlaylistInfo(playlistId: string): Observable<{ total_tracks: number; playlist_name: string; tracks?: any[]; failed?: boolean }> {
     // Unified endpoint handles API + Scraper fallback automatically in backend
     const playlistUrl = `${environment.backend.apiUrl}/spotify/playlist/${playlistId}?refresh=true`
 
@@ -697,7 +697,7 @@ export class SpotifyService {
       }),
       catchError((error) => {
         this.logService.error('Failed to fetch playlist info:', error)
-        return of({ total_tracks: 0, playlist_name: '', tracks: [] })
+        return of({ total_tracks: 0, playlist_name: '', tracks: [], failed: true })
       }),
     )
   }
@@ -705,7 +705,7 @@ export class SpotifyService {
   /**
    * Get show information including total episodes and episode data
    */
-  getShowInfo(showId: string): Observable<{ total_episodes: number; show_name: string; episodes?: any[] }> {
+  getShowInfo(showId: string): Observable<{ total_episodes: number; show_name: string; episodes?: any[]; failed?: boolean }> {
     const showUrl = `${environment.backend.apiUrl}/spotify/show/${showId}`
     const showEpisodesUrl = `${environment.backend.apiUrl}/spotify/show/${showId}/episodes`
 
@@ -729,7 +729,7 @@ export class SpotifyService {
       }),
       catchError((error) => {
         this.logService.error('Error getting show info:', error)
-        return of({ total_episodes: 0, show_name: '', episodes: [] })
+        return of({ total_episodes: 0, show_name: '', episodes: [], failed: true })
       }),
     )
   }
@@ -739,7 +739,7 @@ export class SpotifyService {
    */
   getAudiobookInfo(
     audiobookId: string,
-  ): Observable<{ total_chapters: number; audiobook_name: string; chapters?: any[] }> {
+  ): Observable<{ total_chapters: number; audiobook_name: string; chapters?: any[]; failed?: boolean }> {
     const audiobookUrl = `${environment.backend.apiUrl}/spotify/audiobook/${audiobookId}`
 
     return this.http.get<any>(audiobookUrl).pipe(
@@ -757,7 +757,7 @@ export class SpotifyService {
       })),
       catchError((error) => {
         this.logService.error('Error getting audiobook info:', error)
-        return of({ total_chapters: 0, audiobook_name: '', chapters: [] })
+        return of({ total_chapters: 0, audiobook_name: '', chapters: [], failed: true })
       }),
     )
   }
