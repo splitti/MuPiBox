@@ -149,7 +149,9 @@ export async function artistAlbums(
         const first = await fetchPage(0)
         const known = new Set(kept.albums.map((a) => a.id))
         const fresh = (first.items ?? []).filter((a) => a?.id && !known.has(a.id)).map(slim)
-        if (typeof first.total === 'number' && first.total === kept.albums.length + fresh.length) {
+        // (against Spotify's own count of last time, not the kept list's length: that one is shorter where Spotify counts
+        // albums it does not list - or more than MAX_ALBUMS - and the whole list was asked again at every check)
+        if (typeof first.total === 'number' && first.total === kept.total + fresh.length) {
           const albums = [...fresh, ...kept.albums]
           keep(key, { albums, total: first.total, fullAt: kept.fullAt }, fresh.length > 0)
           if (fresh.length) console.log(`${new Date().toLocaleString()}: [artist-albums] ${artistId}: ${fresh.length} new (1 request)`)

@@ -471,6 +471,12 @@ export class MediaService {
     })
   }
 
+  // the shuffle switch of a Spotify album or playlist row, found by its id (not by an index - see the server)
+  saveShuffle(media: Media) {
+    const body = media.row?.startsWith('p:') ? { playlistid: media.playlistid, shuffle: !!media.shuffle } : { id: media.id, shuffle: !!media.shuffle }
+    this.http.post(`${this.getApiBackendUrl()}/library/shuffle`, body, { responseType: 'text' }).subscribe({ error: () => undefined })
+  }
+
   addRawMedia(media: Media) {
     const url = `${this.getApiBackendUrl()}/add`
 

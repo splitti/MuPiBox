@@ -311,10 +311,15 @@ export async function resolveSyncItems(
     try {
       // (unchanged since it was read last - same snapshot: its entries as kept, see meta-cache.ts)
       const kept = playlist.snapshotId ? keptPlaylistTracks<SpotifyTrackResponse>(playlist.id, playlist.snapshotId) : undefined
-      if (kept) tracks = kept
+      if (kept?.length) tracks = kept
       else {
         tracks = await fetchPlaylistTracks(playlist.id, accessToken)
-        if (playlist.snapshotId) keepPlaylistTracks(playlist.id, playlist.snapshotId, tracks)
+        // Spotify counts entries but none could be read (fields renamed again, every entry null): not read - as an
+        // empty playlist it removed all of its albums from the box, and that was kept for weeks
+        if (tracks.length === 0 && playlist.trackCount > 0) {
+          throw new Error(`${playlist.trackCount} entries counted, none readable`)
+        }
+        if (playlist.snapshotId && tracks.length > 0) keepPlaylistTracks(playlist.id, playlist.snapshotId, tracks)
       }
     } catch (err) {
       if (err instanceof SpotifyApiException && err.detail.kind !== 'internal') throw err

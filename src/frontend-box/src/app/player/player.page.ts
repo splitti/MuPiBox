@@ -799,8 +799,9 @@ export class PlayerPage implements OnInit, AfterViewInit {
     }
     this.resumePlay = false
     if (this.media.type === 'spotify' && (this.media.category === 'music' || this.media.category === 'other')) {
-      if (this.shufflechanged % 2 === 1) {
-        this.mediaService.editRawMediaAtIndex(this.media.index, this.media)
+      // (kept only in a row of its own - an album of an artist entry or a resume entry has none, see /api/library/shuffle)
+      if (this.shufflechanged % 2 === 1 && !isResumeEntry(this.media) && /^[ip]:/.test(this.media.row ?? '')) {
+        this.mediaService.saveShuffle(this.media)
       }
     }
     if (!keepPlaying && this.albumStop?.albumStop === 'On') {

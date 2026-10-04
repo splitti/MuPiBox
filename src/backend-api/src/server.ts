@@ -3850,6 +3850,58 @@ app.post('/api/edit', (req, res) => {
   })
 })
 
+// The display's shuffle switch for a Spotify album or playlist of its own row (music / other tabs): kept in that row,
+// found by its Spotify id - nothing else of the row changes. The display sent the whole entry to /api/edit with the
+// index it carried, and an album of an artist entry (the artist's index) or a resume entry (its place in resume.json)
+// replaced another row: an artist entry became one album.
+app.post('/api/library/shuffle', (req, res) => {
+  const { id, playlistid, shuffle } = (req.body ?? {}) as { id?: unknown; playlistid?: unknown; shuffle?: unknown }
+  const spotifyId = (v: unknown) => typeof v === 'string' && /^[A-Za-z0-9]{10,64}$/.test(v)
+  if (typeof shuffle !== 'boolean' || (spotifyId(id) === spotifyId(playlistid))) {
+    res.status(400).send('id or playlistid, and shuffle')
+    return
+  }
+  const lockResult = acquireLock(dataLock, '/api/library/shuffle')
+  if (lockResult !== 'acquired') {
+    res.status(200).send(lockResult)
+    return
+  }
+  jsonfile.readFile(dataFile, (error, data) => {
+    if (error || !Array.isArray(data)) {
+      releaseLock(dataLock, '/api/library/shuffle')
+      res.status(500).send('error')
+      return
+    }
+    const rows = data.filter((r: Record<string, unknown>) => {
+      if (!r || r.type !== 'spotify') return false
+      if (spotifyId(playlistid)) return r.playlistid === playlistid
+      return r.id === id && !r.artistid && !r.query && !r.playlistid && !r.showid && !r.audiobookid
+    }) as Record<string, unknown>[]
+    const changed = rows.filter((r) => (r.shuffle === true) !== shuffle)
+    if (changed.length === 0) {
+      releaseLock(dataLock, '/api/library/shuffle')
+      res.status(200).send(rows.length ? 'ok' : 'none')
+      return
+    }
+    for (const r of changed) r.shuffle = shuffle
+    writeJsonAtomic(dataFile, data, (writeError) => {
+      releaseLock(dataLock, '/api/library/shuffle')
+      res.status(writeError ? 500 : 200).send(writeError ? 'error' : 'ok')
+    })
+  })
+})
+
+// A Spotify id in the path of the /api/spotify/* routes: letters and digits only. They went unchecked into file names
+// (the playlist scraper's cache: an id "<playlist>#/../../../server/config/data" wrote over the library) and into
+// the paths asked at Spotify.
+const SPOTIFY_ID = /^[A-Za-z0-9]{10,64}$/
+for (const name of ['playlistId', 'artistId', 'showId', 'albumId', 'audiobookId', 'episodeId']) {
+  app.param(name, (_req, res, next, value) => {
+    if (typeof value === 'string' && SPOTIFY_ID.test(value)) return next()
+    res.status(400).json({ error: `invalid ${name}` })
+  })
+}
+
 app.get('/api/spotify/config', (_req, res) => {
   if (config?.spotify === undefined) {
     res.status(500).send('Could load spotify config.')
@@ -4275,6 +4327,10 @@ app.post('/api/spotify/validate', async (req, res) => {
 
   if (!id || !type) {
     res.status(400).json({ error: 'ID and type are required' })
+    return
+  }
+  if (typeof id !== 'string' || !SPOTIFY_ID.test(id)) {
+    res.status(400).json({ error: 'invalid id' })
     return
   }
 

@@ -1440,9 +1440,37 @@ function setAccessToken(token) {
   if (config.server.logLevel === 'debug') {
     writeCounter()
   }
-  if (currentMeta.activeSpotifyId.includes('spotify:') && !spotifyRunning) {
+  // A start that failed because the token had run out is made once more with the new one - only that start, right
+  // after it (the same start: nothing stopped or started since), and not while playback is blocked. Every hourly
+  // refresh started the last Spotify start again when it was not running: after a local album, at night, with the
+  // daily limit used up (it played next to mplayer or alone, uncounted).
+  const replay = spotifyReplayAfterRefresh
+  spotifyReplayAfterRefresh = null
+  if (
+    replay &&
+    replay.generation === playbackGeneration &&
+    Date.now() - replay.at < 60000 &&
+    currentMeta.currentPlayer === 'spotify' &&
+    currentMeta.activeSpotifyId.includes('spotify:') &&
+    !spotifyRunning &&
+    !isPlaybackBlocked()
+  ) {
     playMe()
   }
+}
+
+// a start (playMe) that failed with an expired token: made once more after the refresh, see setAccessToken
+let spotifyReplayAfterRefresh = null
+// the start (playbackGeneration) a recovery was tried for: one per start - the recoveries ran into each other (a 400
+// moved the playback and started it again, which failed the same way) until Spotify blocked the app for hours
+let spotifyRecoveredGeneration = -1
+// the errors of these commands may be recovered (another device made active, the start tried again); the others -
+// pause, stop, seek, shuffle, questions about the state - only log (a recovery started or moved the playback)
+const SPOTIFY_RECOVER_FROM = new Set(['playMe', 'play'])
+function spotifyMayRecover(from) {
+  if (!SPOTIFY_RECOVER_FROM.has(from) || spotifyRecoveredGeneration === playbackGeneration || isPlaybackBlocked()) return false
+  spotifyRecoveredGeneration = playbackGeneration
+  return true
 }
 
 /*called in all error cases*/
@@ -1459,19 +1487,18 @@ function handleSpotifyError(err, from) {
     if (config.server.logLevel === 'debug') {
       writeCounter()
     }
+    if (from === 'playMe') spotifyReplayAfterRefresh = { generation: playbackGeneration, at: Date.now() }
     if (currentMeta.activeSpotifyId !== '0') {
       refreshTokenLogged()
     }
   } else if (err?.body?.error?.status === 400) {
+    // (a content Spotify refuses - a wrong id, an offset past the end: another device does not help)
     log.debug(`${now()}: invalid id`)
     log.debug(`${now()}: Error from: ${from}`)
     log.debug(`${now()}: ${err}`)
     counter.counterrorInvalidID++
     if (config.server.logLevel === 'debug') {
       writeCounter()
-    }
-    if (currentMeta.activeSpotifyId !== '0') {
-      setActiveDevice()
     }
   } else if (err?.body?.error?.status === 429) {
     log.debug(`${now()}: To many requests on th spotify web api`)
@@ -1492,7 +1519,7 @@ function handleSpotifyError(err, from) {
     if (config.server.logLevel === 'debug') {
       writeCounter()
     }
-    if (currentMeta.activeSpotifyId !== '0') {
+    if (currentMeta.activeSpotifyId !== '0' && spotifyMayRecover(from)) {
       setActiveDevice()
     }
   } else if (err.toString().includes('Device not found')) {
@@ -1503,20 +1530,11 @@ function handleSpotifyError(err, from) {
     if (config.server.logLevel === 'debug') {
       writeCounter()
     }
-    spotifyApi.play({ device_id: currentMeta.activeSpotifyId }).then(
-      () => {
-        counter.countplay++
-        if (config.server.logLevel === 'debug') {
-          writeCounter()
-        }
-        log.debug(`${now()}: [Spotify Control] Transfering playback play deviceID`)
-        writeplayerstatePlay()
-      },
-      (err) => {
-        log.debug(`${now()}: [Spotify Control] Playback error${err}`)
-        handleSpotifyError(err, 'ack')
-      },
-    )
+    // (it played the content's URI as a device id - without one: whatever device of the account was active, e.g. a
+    // parent's phone - and its failure came back here. The box's own player made active instead, once per start)
+    if (currentMeta.activeSpotifyId !== '0' && spotifyMayRecover(from)) {
+      setActiveDevice()
+    }
   } else {
     log.debug(`${now()}: an error occured: ${err}`)
     log.debug(`${now()}: ${err}`)
@@ -1528,35 +1546,37 @@ function handleSpotifyError(err, from) {
   }
 }
 
-/*queries all devices and transfers playback to the first one discovered*/
+/* makes the box's own Spotify player the active device and starts again there */
+// (only the box's: the display's player, else the account's device with the box's name - it took the first device of
+// the account, a parent's phone or a TV, and played there)
 function setActiveDevice() {
-  // If activeDevice is not set, get available devices and use the first one
-  if (!activeDevice || activeDevice === '') {
-    spotifyApi.getMyDevices().then(
-      (data) => {
-        counter.countgetMyDevices++
-        if (config.server.logLevel === 'debug') {
-          writeCounter()
-        }
-        const availableDevices = data.body.devices
-        if (availableDevices && availableDevices.length > 0) {
-          activeDevice = availableDevices[0].id
-          log.debug(`${now()}: [Spotify Control] Auto-selected device: ${activeDevice}`)
-          // Now transfer playback to the selected device
-          transferPlaybackToActiveDevice()
-        } else {
-          log.debug(`${now()}: [Spotify Control] No available devices found`)
-        }
-      },
-      (err) => {
-        log.debug(`${now()}: [Spotify Control] Error getting devices: ${err}`)
-        handleSpotifyError(err, 'getMyDevices')
-      },
-    )
-  } else {
-    // activeDevice is already set, proceed with transfer
+  const own = displaySpotifyDevice || activeDevice
+  if (own) {
+    activeDevice = own
     transferPlaybackToActiveDevice()
+    return
   }
+  spotifyApi.getMyDevices().then(
+    (data) => {
+      counter.countgetMyDevices++
+      if (config.server.logLevel === 'debug') {
+        writeCounter()
+      }
+      const name = muPiBoxConfig?.mupibox?.host
+      const mine = (data.body.devices ?? []).find((d) => d?.id && name && d.name === name)
+      if (mine) {
+        activeDevice = mine.id
+        log.debug(`${now()}: [Spotify Control] The box's Spotify player by its name: ${activeDevice}`)
+        transferPlaybackToActiveDevice()
+      } else {
+        log.debug(`${now()}: [Spotify Control] The box's Spotify player is not among the account's devices`)
+      }
+    },
+    (err) => {
+      log.debug(`${now()}: [Spotify Control] Error getting devices: ${err}`)
+      handleSpotifyError(err, 'getMyDevices')
+    },
+  )
 }
 
 function transferPlaybackToActiveDevice() {

@@ -184,10 +184,14 @@ export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<
   try {
     // 2. Token check
     const tokenStore = loadSpotifyTokenStore(deps.getMupiboxConfig())
+    // (counted as an auth failure: the parents are told once - the counter stayed 0, and every run, every 15 minutes, sent
+    // the message again, e.g. after "disconnect" in the app with the sync still on)
     if (!tokenStore) {
+      failureCounters = bumpFailureCounter(failureCounters, 'auth')
       return finalise('AUTH_NEEDS_REAUTH', undefined, { reason: 'no Spotify tokens configured' })
     }
     if (requiresReAuth(tokenStore)) {
+      failureCounters = bumpFailureCounter(failureCounters, 'auth')
       return finalise('AUTH_NEEDS_REAUTH', undefined, {
         reason: 'token scopes lack playlist-read-private/collaborative',
       })

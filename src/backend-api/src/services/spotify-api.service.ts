@@ -91,10 +91,22 @@ export class SpotifyApiService {
   private readonly backgroundUpdateDelay = 10000 // 10 seconds between updates
 
   constructor(private config: ServerConfig) {
-    this.spotifyApi = SpotifyApi.withClientCredentials(
-      this.config.spotify?.clientId || '',
-      this.config.spotify?.clientSecret || '',
-    )
+    this.spotifyApi = SpotifyApi.withClientCredentials(this.config.spotify?.clientId || '', this.config.spotify?.clientSecret || '', [], {
+      // Spotify's answers that are no success as errors with their status and Retry-After. The SDK's own validator
+      // threw plain Errors ("The app has exceeded its rate limits.") without them: a 429 was never taken for one here,
+      // so the wait, the shared block (spotify-block.ts) and the stop of the background updates never began, and the
+      // box went on asking Spotify during a block of hours - each request making it longer.
+      responseValidator: {
+        async validateResponse(response: Response) {
+          if (response.ok) return
+          const body = await response.text().catch(() => '')
+          throw Object.assign(new Error(`Spotify ${response.status} ${response.statusText}${body ? `: ${body.slice(0, 200)}` : ''}`), {
+            statusCode: response.status,
+            headers: { 'retry-after': response.headers.get('retry-after') ?? undefined },
+          })
+        },
+      },
+    })
     console.info('Spotify API service initialized - token management handled by library')
   }
 
@@ -521,11 +533,13 @@ export class SpotifyApiService {
             // Delay to reduce load on Raspberry Pi
             await new Promise((resolve) => setTimeout(resolve, this.backgroundUpdateDelay))
           })
-          .catch((error) => {
+          .catch(async (error) => {
             console.error(
               `❌ [BG] Background update failed for ${key}:`,
               error instanceof Error ? error.message : String(error),
             )
+            // (the same pause after a failure: failed updates went on back to back)
+            await new Promise((resolve) => setTimeout(resolve, this.backgroundUpdateDelay))
           })
           .finally(() => {
             this.backgroundUpdates.delete(key)
