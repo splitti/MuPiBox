@@ -63,6 +63,42 @@ function storedSpotifyAlbum(item: Media): Media | undefined {
   if (!item.title || !item.cover) return undefined
   return { ...item, type: 'spotify', artist: item.artist || 'Unknown Artist', cover: localizeCoverUrl(item.cover) }
 }
+
+// The data.json row a Spotify entry comes from (Media.row): what is looked up for it
+function rowKey(item: Media): string | undefined {
+  if (item.query) return `q:${item.query}`
+  if (item.artistid) return `a:${item.artistid}`
+  if (item.showid) return `s:${item.showid}`
+  if (item.playlistid) return `p:${item.playlistid}`
+  if (item.audiobookid) return `b:${item.audiobookid}`
+  if (item.id) return `i:${item.id}`
+  return undefined
+}
+
+// A list made while Spotify failed (blocking the box, a timeout): a row that came back as a placeholder gets its
+// entries of the list kept before - an artist stayed a grey "not available" tile for as long as Spotify blocked
+// (hours), or was gone from the list. Lists kept before rows were noted: the kept entries of the placeholder's artist
+// the new list lacks.
+function fillFailedRows(media: Media[], kept: Media[] | undefined): Media[] {
+  const failed = new Set(media.filter((m) => m.unavailable && m.row).map((m) => m.row as string))
+  if (failed.size === 0 || !kept?.length) return media
+  const present = new Set(media.filter((m) => !m.unavailable && m.id).map((m) => m.id))
+  return media.flatMap((m) => {
+    if (!(m.unavailable && m.row && failed.has(m.row))) return [m]
+    let fromKept = kept.filter((k) => k.row === m.row && !k.unavailable)
+    if (!fromKept.length) {
+      fromKept = kept.filter(
+        (k) =>
+          !k.row && k.type === 'spotify' && !k.unavailable && k.id && !present.has(k.id) && (m.id ? k.id === m.id : k.artist === m.artist),
+      )
+    }
+    failed.delete(m.row) // (once per row)
+    if (!fromKept.length) return [m]
+    for (const k of fromKept) if (k.id) present.add(k.id)
+    // (with the row: the list made now is the kept one of the next time)
+    return fromKept.map((k) => ({ ...k, category: m.category, index: m.index, row: m.row }))
+  })
+}
 import type { WLAN } from './wlan'
 
 @Injectable({
@@ -742,6 +778,7 @@ export class MediaService {
       // entries. Shown, but not kept as the current one: it is made again at the next chance, see SpotifyService.failures)
       const failuresBefore = this.spotifyService.failures
       run = this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category).pipe(
+        map((media) => fillFailedRows(media, this.homeLists.get(category)?.media)),
         tap((media) => {
           const complete = this.spotifyService.failures === failuresBefore
           this.homeLists.set(category, { version: complete ? version : '', at: Date.now(), media })
@@ -776,7 +813,9 @@ export class MediaService {
           return of(copy(kept.media))
         }
         if (onlyArtist !== undefined) {
-          return this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category, onlyArtist)
+          return this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category, onlyArtist).pipe(
+            map((media) => fillFailedRows(media, kept?.media)),
+          )
         }
         if (kept && showKept) {
           // a failed remake keeps what is shown
@@ -893,15 +932,18 @@ export class MediaService {
     //   service call. fetchActiveResumeData's sort then sees zeros and the
     //   user's most-recently-played item ends up at a random swiper position.
     // - isResume: marks resume entries; same loss-on-service-call risk.
+    // - row: the data.json row of a Spotify entry (see fillFailedRows)
     const overwriteArtist =
       (item: Media) =>
       (source$: Observable<Media[]>): Observable<Media[]> => {
+        const row = !resume && item.type === 'spotify' ? rowKey(item) : undefined
         return source$.pipe(
           map((items) => {
             for (const currentItem of items) {
               if (item.artist?.length > 0) currentItem.artist = item.artist
               if (typeof item.lastPlayedAt === 'number') currentItem.lastPlayedAt = item.lastPlayedAt
               if (item.isResume === true) currentItem.isResume = true
+              if (row) currentItem.row = row
             }
             return items
           }),

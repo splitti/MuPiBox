@@ -72,10 +72,15 @@ export class MedialistPage extends SwiperIonicEventsHelper {
   private shownListJson = ''
   private shownArtist: Artist | undefined
   private shownCategory: CategoryType | undefined
-  // A podcast or NAS folder that came back with nothing: the load failed (a real one always has entries)
+  // A podcast or NAS folder that came back with nothing: the load failed (a real one always has entries).
+  // Spotify entries that are all placeholders: Spotify could not be asked (it blocks the box) and none were kept.
+  protected spotifyUnavailable: Signal<boolean> = computed(() => {
+    const media = this.media()
+    return !this.isLoading() && !!media?.length && media.every((m) => m.unavailable)
+  })
   protected unavailable: Signal<boolean> = computed(() => {
     const type = this.artist()?.coverMedia?.type
-    return !this.isLoading() && this.media()?.length === 0 && (type === 'rss' || type === 'nas')
+    return (!this.isLoading() && this.media()?.length === 0 && (type === 'rss' || type === 'nas')) || this.spotifyUnavailable()
   })
   protected swiperData: Signal<SwiperData<Media>[]> = computed(() => {
     return this.media()?.map((media) => {
@@ -263,6 +268,10 @@ export class MedialistPage extends SwiperIonicEventsHelper {
   }
 
   protected coverClicked(clickedMedia: Media): void {
+    // (a placeholder of an artist, a search or a show: nothing to play)
+    if (clickedMedia.unavailable && !clickedMedia.id && !clickedMedia.playlistid && !clickedMedia.showid && !clickedMedia.audiobookid) {
+      return
+    }
     if (clickedMedia.type === 'library' && clickedMedia.libraryPath && clickedMedia.libraryIsContainer) {
       // A local folder with subfolders: show its children as the next level (its own audio files, if any, are an entry there).
       this.levelsAbove.push(this.currentLevel)

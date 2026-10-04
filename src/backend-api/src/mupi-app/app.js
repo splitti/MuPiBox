@@ -1253,8 +1253,12 @@ async function loadNotices(root) {
   }
   // Spotify blocks the box's requests (too many - see spotify-block.ts): until when, without reading logs
   const block = sync.body?.spotify_block
+  clearTimeout(root.blockOver)
   if (block?.until && Date.parse(block.until) > Date.now()) {
     notes.push(['sync', 'Spotify sperrt die Box gerade', `Zu viele Anfragen – bis ${untilWhen(Date.parse(block.until))} zeigt die Box gespeicherte Spotify-Inhalte, Neues kommt danach.`, 'spotify'])
+    // (the start page stays open: the note goes when the block is over, not only at the next visit)
+    const left = Date.parse(block.until) - Date.now() + 5000
+    if (left < 2 ** 31) root.blockOver = setTimeout(() => root.isConnected && loadNotices(root), left)
   }
   const box = $('#notices', root)
   if (!box) return

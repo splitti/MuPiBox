@@ -25,6 +25,8 @@ export const DEFAULT_DISPLAY_TEXTS = {
   // list that could not be loaded: NAS folder / radio and podcasts without a connection
   nasUnavailable: 'NAS not reachable',
   offlineLabel: 'No connection',
+  // Spotify albums Spotify could not be asked for (it blocks the box's requests for a while)
+  spotifyUnavailable: 'Spotify is not answering right now',
   // title of the resume page (km themes; the other themes keep "Resume")
   resumeTitle: 'Continue listening',
   outputTitle: 'Listen with',

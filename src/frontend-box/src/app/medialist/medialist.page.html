@@ -26,7 +26,7 @@
 <ion-content class="medialist-content">
   <mupi-loading [loading]="isLoading()"></mupi-loading>
   @if (unavailable()) {
-    <mupi-media-unavailable [nas]="artist()?.coverMedia?.type === 'nas'"></mupi-media-unavailable>
+    <mupi-media-unavailable [nas]="artist()?.coverMedia?.type === 'nas'" [spotify]="spotifyUnavailable()"></mupi-media-unavailable>
   }
   <mupi-swiper [data]="swiperData()" [positionKey]="category() + '|' + (artist()?.name ?? '') + '|' + (artist()?.coverMedia?.libraryPath ?? artist()?.coverMedia?.nasPath ?? '')" (elementClicked)="this.coverClicked($event.data)"></mupi-swiper>
 </ion-content>

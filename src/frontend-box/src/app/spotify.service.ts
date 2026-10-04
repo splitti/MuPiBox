@@ -168,7 +168,8 @@ export class SpotifyService {
       catchError((error) => {
         this.failures++
         this.logService.warn('Pagination fetch failed:', error?.message || error)
-        return of([])
+        // (passed on: the caller puts a placeholder in the row's place - an empty answer looked like a row without albums)
+        throw error
       }),
     )
   }
@@ -207,10 +208,11 @@ export class SpotifyService {
       catchError((err) => {
         this.failures++
         this.logService.warn(
-          `Search query failed for "${query}" due to API error, returning empty results:`,
+          `Search query failed for "${query}" due to API error, returning unavailable placeholder:`,
           err?.message || err,
         )
-        return of([])
+        // (a placeholder, not nothing: the row stays in the list - media.service takes its entries of the kept list)
+        return of([this.placeholderMedia({ category, index, artistcover: extraDataSource?.artistcover })])
       }),
     )
   }
@@ -259,10 +261,10 @@ export class SpotifyService {
       catchError((err) => {
         this.failures++
         this.logService.warn(
-          `Artist albums query failed for artist ${id} due to API error, returning empty results:`,
+          `Artist albums query failed for artist ${id} due to API error, returning unavailable placeholder:`,
           err?.message || err,
         )
-        return of([])
+        return of([this.placeholderMedia({ category, index, artistcover: extraDataSource?.artistcover })])
       }),
     )
   }
@@ -307,10 +309,10 @@ export class SpotifyService {
       catchError((err) => {
         this.failures++
         this.logService.warn(
-          `Show episodes query failed for show ${id} due to API error, returning empty results:`,
+          `Show episodes query failed for show ${id} due to API error, returning unavailable placeholder:`,
           err?.message || err,
         )
-        return of([])
+        return of([this.placeholderMedia({ category, index, artistcover: extraDataSource?.artistcover })])
       }),
     )
   }
@@ -554,7 +556,8 @@ export class SpotifyService {
    * resume timestamps so the player can still address the entry. The
    * `unavailable: true` flag lets templates render an "item failed to load"
    * marker; an empty cover/title falls back to the default placeholder
-   * artwork.
+   * artwork. One for an artist, a search or a show has no id at all: its
+   * tile stays, a tap on it plays nothing (medialist.page).
    */
   private placeholderMedia(p: {
     id?: string
