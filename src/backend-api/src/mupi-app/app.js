@@ -162,6 +162,8 @@ async function loadBoxName() {
 const hashOf = (id) => `#/${state.pages.get(id)?.slug ?? id}`
 function currentId() {
   const name = decodeURIComponent(location.hash.replace(/^#\/?/, ''))
+  // (the page "Eigenes Theme" is gone: its settings are on the theme page)
+  if (name === 'custom-theme' || name === 'eigenes') return 'theme'
   if (state.bySlug.has(name)) return state.bySlug.get(name)
   return state.pages.has(name) ? name : 'start'
 }
@@ -9390,8 +9392,6 @@ const CONTROLLERS = {
     mount: mountWizard,
   },
   theme: { load: loadTheme, top: themeTop, sections: () => [], mount: mountTheme },
-  // (the old page "Eigenes Theme": its settings are on the theme page now - links and pins land there)
-  eigenes: { load: loadTheme, top: themeTop, sections: () => [], mount: mountTheme },
   ansicht: {
     async load() {
       await Promise.all([loadTheme(), loadDisplayOptions()])

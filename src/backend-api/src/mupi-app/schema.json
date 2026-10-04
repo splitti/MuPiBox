@@ -1828,38 +1828,6 @@
    ]
   },
   {
-   "id": "eigenes",
-   "slug": "custom-theme",
-   "area": "einstellungen",
-   "parent": "g-aussehen",
-   "title": "Eigenes Theme",
-   "description": "Hintergrundbild hochladen",
-   "icon": "image",
-   "sections": [
-    {
-     "title": "Hintergrundbild",
-     "help": "Wird beim Theme „custom“ verwendet. Am besten 800 × 480 Pixel, JPG.",
-     "items": [
-      {
-       "type": "file",
-       "label": "Bild",
-       "buttons": "Datei wählen"
-      },
-      {
-       "type": "buttons",
-       "buttons": [
-        [
-         "Bild hochladen",
-         "primary",
-         "toast:Hochgeladen"
-        ]
-       ]
-      }
-     ]
-    }
-   ]
-  },
-  {
    "id": "ansicht",
    "slug": "view",
    "area": "einstellungen",
