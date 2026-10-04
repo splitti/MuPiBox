@@ -683,7 +683,10 @@ export class SwiperComponent<T> {
     return count > 0 && count <= SwiperComponent.FLAT_ROW_COVERS
   }
 
+  // (only the Cover Flow has this layout: in any other theme a list of 4 - 9 entries remembered its position from
+  // selectedIndex, which only the Cover Flow keeps - back from the player it stood at the start)
   private isFewCovers(): boolean {
+    if (!this.coverflow()) return false
     const count = (this.shownData() ?? []).length
     return count > SwiperComponent.FLAT_ROW_COVERS && count < SwiperComponent.FEW_COVERS
   }
