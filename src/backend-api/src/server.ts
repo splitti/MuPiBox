@@ -368,7 +368,7 @@ const loginRequired = () =>
   (getMupiboxConfigSync() as { interfacelogin?: { state?: unknown } } | undefined)?.interfacelogin?.state === true
 app.use((req, res, next) => {
   const p = req.path
-  if (isLoopback(req) || p === '/app' || p.startsWith('/app/') || p.startsWith('/api/app/') || p.startsWith('/api/eltern/') || p === '/parents' || p === '/eltern' || !loginRequired()) {
+  if (isLoopback(req) || p === '/app' || p.startsWith('/app/') || p === '/manual' || p.startsWith('/manual/') || p.startsWith('/api/app/') || p.startsWith('/api/eltern/') || p === '/parents' || p === '/eltern' || !loginRequired()) {
     next()
     return
   }
@@ -8347,6 +8347,17 @@ function proxyVncUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): vo
   socket.on('error', () => upstream.destroy())
   socket.on('close', () => upstream.destroy())
 }
+
+// The manual (built from src/manual): open for everyone who reaches the box, like the app's own pages - there is
+// nothing in it that is not in the repository, and it should help before anyone has logged in.
+app.use(
+  '/manual',
+  express.static(path.join(serverDir, 'manual'), {
+    setHeaders: (res) => {
+      res.setHeader('Cache-Control', 'no-cache')
+    },
+  }),
+)
 
 app.use(
   '/app',

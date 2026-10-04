@@ -1,0 +1,106 @@
+[
+  {
+    "id": "erste-schritte",
+    "title": "Erste Schritte",
+    "children": [
+      { "id": "was-ist-die-mupibox", "title": "Was ist die MuPiBox?" },
+      { "id": "was-du-brauchst", "title": "Was du brauchst" },
+      { "id": "erster-start", "title": "Der erste Start" },
+      { "id": "app-oeffnen", "title": "Die App öffnen und anmelden" }
+    ]
+  },
+  {
+    "id": "bedienung",
+    "title": "Das Display bedienen",
+    "children": [
+      { "id": "startseite", "title": "Die Startseite" },
+      { "id": "player", "title": "Der Player" },
+      { "id": "gesten", "title": "Gesten und Vollbildmodus" },
+      { "id": "fortsetzen", "title": "Fortsetzen und „Läuft gerade“" },
+      { "id": "cover-und-themes", "title": "Cover und Themes" },
+      { "id": "eltern-zugang", "title": "Einstellungen am Display" }
+    ]
+  },
+  {
+    "id": "inhalte",
+    "title": "Inhalte hinzufügen",
+    "children": [
+      { "id": "lokale-medien", "title": "Eigene Hörspiele und Musik" },
+      { "id": "spotify", "title": "Spotify" },
+      { "id": "podcasts-und-radio", "title": "Podcasts und Radio" },
+      { "id": "nas", "title": "NAS" },
+      { "id": "cover", "title": "Cover" },
+      { "id": "verwalten", "title": "Inhalte verwalten" }
+    ]
+  },
+  {
+    "id": "spielzeit",
+    "title": "Spielzeit und Ruhezeiten",
+    "children": [
+      { "id": "tageslimits", "title": "Tageslimits" },
+      { "id": "ruhezeiten", "title": "Ruhezeiten" },
+      { "id": "schlaftimer", "title": "Sofort-Aktionen und Schlaftimer" },
+      { "id": "hoer-verlauf", "title": "Hör-Verlauf" }
+    ]
+  },
+  {
+    "id": "hardware",
+    "title": "Hardware und Zubehör",
+    "children": [
+      { "id": "display", "title": "Display" },
+      { "id": "sound", "title": "Sound und Lautstärke" },
+      { "id": "drehregler", "title": "Drehregler und Taster" },
+      { "id": "strom", "title": "Akku, MuPiHAT und Ausschalter" },
+      { "id": "luefter", "title": "Lüfter" },
+      { "id": "bluetooth", "title": "Bluetooth" },
+      { "id": "wled", "title": "WLED" }
+    ]
+  },
+  {
+    "id": "netzwerk",
+    "title": "Netzwerk und Fernzugriff",
+    "children": [
+      { "id": "wlan-und-lan", "title": "WLAN und LAN" },
+      { "id": "freigaben", "title": "Freigaben und Fernsteuerung" },
+      { "id": "sicherheit", "title": "Passwort und HTTPS" },
+      { "id": "telegram", "title": "Telegram" },
+      { "id": "mqtt", "title": "MQTT und Home Assistant" }
+    ]
+  },
+  {
+    "id": "wartung",
+    "title": "Wartung",
+    "children": [
+      { "id": "updates", "title": "Updates" },
+      { "id": "backup", "title": "Backup" },
+      { "id": "neustart", "title": "Neu starten und Ausschalten" },
+      { "id": "protokolle", "title": "Protokolle und Zustand" },
+      { "id": "problem-melden", "title": "Ein Problem melden" },
+      { "id": "system", "title": "System- und Experteneinstellungen" }
+    ]
+  },
+  {
+    "id": "fehlerbehebung",
+    "title": "Fehlerbehebung",
+    "children": [
+      { "id": "kein-ton", "title": "Kein Ton" },
+      { "id": "app-nicht-erreichbar", "title": "Die App ist nicht erreichbar" },
+      { "id": "spotify-probleme", "title": "Spotify spielt nicht" },
+      { "id": "haengt-beim-ausschalten", "title": "Die Box hängt beim Ausschalten" },
+      { "id": "weitere-faelle", "title": "Weitere Fälle" }
+    ]
+  },
+  {
+    "id": "referenz",
+    "title": "Einstellungs-Referenz"
+  },
+  {
+    "id": "anhang",
+    "title": "Anhang",
+    "children": [
+      { "id": "gpio", "title": "GPIO-Belegung" },
+      { "id": "dateien-und-dienste", "title": "Dateien, Ports und Dienste" },
+      { "id": "glossar", "title": "Glossar" }
+    ]
+  }
+]
