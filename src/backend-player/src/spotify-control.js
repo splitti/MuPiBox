@@ -1027,7 +1027,14 @@ let spotifyGraceItemId = null
 let spotifyGracePos = null
 // Polls in a row that gave no usable state (API error, token, rate limit, nothing reported).
 let spotifyGraceMisses = 0
-const SPOTIFY_GRACE_MAX_MISSES = 3 // ~4.5 s
+const SPOTIFY_GRACE_MAX_MISSES = 3 // ~9 s
+// When Spotify is asked next: it was asked every 1.5 s for the whole grace period (up to the parents' maximum, e.g.
+// 15 min - 600 requests), which Spotify answers with a block of hours. Now from what the answer tells: the time left
+// of the song, close polls only in its last seconds, at the latest every 20 s (a skip, a seek, a pause).
+let spotifyGraceNextAt = 0
+const SPOTIFY_GRACE_NEAR_END_MS = 6000
+const SPOTIFY_GRACE_MAX_WAIT_MS = 20000
+const SPOTIFY_GRACE_RETRY_MS = 3000
 // Last track of an album, per album id: track_number counts per disc and total_tracks over all
 // discs, so on a multi-disc album (audiobook boxes) the two never matched.
 const spotifyAlbumLastTrack = new Map()
@@ -1050,6 +1057,7 @@ function spotifyGraceFinalize(reason) {
   spotifyGraceItemId = null
   spotifyGracePos = null
   spotifyGraceMisses = 0
+  spotifyGraceNextAt = 0
 }
 // "stop" chosen: the player only waits to learn whether it is a podcast episode. If the Web API
 // can't tell (error, expired token, rate limit), it stops instead of letting a song run for 30 min.
@@ -1072,10 +1080,14 @@ async function spotifyGraceCheck() {
     spotifyGraceItemId = null
     spotifyGracePos = null
     spotifyGraceMisses = 0
+    spotifyGraceNextAt = 0
     return
   }
+  if (Date.now() < spotifyGraceNextAt) return
   let mode = modes.includes('track') ? 'track' : 'album' // if both are in grace the stricter one counts
   spotifyGraceBusy = true
+  // (the next poll: an answer below sets it from the song's time left; a failed one is tried again soon)
+  let nextInMs = SPOTIFY_GRACE_RETRY_MS
   try {
     const { body } = await spotifyApi.getMyCurrentPlaybackState({ additional_types: 'episode,track' })
     const item = body?.item
@@ -1118,13 +1130,22 @@ async function spotifyGraceCheck() {
     if (spotifyGraceItemId === null) spotifyGraceItemId = item.id
     if (movedOn || jumpedBack || (lastOfWhatMayFinish && remainingMs <= 2500)) {
       spotifyGraceFinalize('spotify: song / album finished during grace period')
+      return
     }
+    if (body.is_playing === false) nextInMs = 10000 // paused: nothing runs out meanwhile
+    else if (!lastOfWhatMayFinish) nextInMs = remainingMs + 1500 // (album: the next song is looked at once it began)
+    else if (remainingMs > SPOTIFY_GRACE_NEAR_END_MS) nextInMs = remainingMs - SPOTIFY_GRACE_NEAR_END_MS + 1500
+    else nextInMs = 1500 // its last seconds: as before
+    nextInMs = Math.max(1500, Math.min(SPOTIFY_GRACE_MAX_WAIT_MS, nextInMs))
   } catch (e) {
     spotifyGraceMissed(String(e))
-    // once per series of failures: the check runs every 1.5 s and the log is on the SD card
+    // once per series of failures: the log is on the SD card
     if (spotifyGraceMisses === 1) log.warn(`${now()}: [Spotify Control] Grace check failed: ${e}`)
   } finally {
     spotifyGraceBusy = false
+    // (the grace period over: the next one starts with a poll at once)
+    const stillGrace = playtimeState.state === 'grace' || quietHoursState.state === 'grace'
+    spotifyGraceNextAt = stillGrace ? Date.now() + nextInMs : 0
   }
 }
 setInterval(spotifyGraceCheck, 1500)

@@ -15,6 +15,7 @@ import { applyDiff } from './apply'
 import { computeSyncDiff } from './diff'
 import { maybeNotifyAfterRun } from './notify'
 import { discoverPlaylists, resolveSyncItems, SpotifyApiException } from './playlists'
+import { saveMetaCache } from './meta-cache'
 import { readStateFile, writeStateFile } from './state-file'
 import { acquireSyncLock, releaseSyncLock } from './sync-lock'
 import { noteSpotifyBlock, spotifyBlock } from '../spotify-block'
@@ -223,6 +224,9 @@ export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<
       resolved = await resolveSyncItems(playlistsDiscovered, accessToken, config, failures)
     } catch (err) {
       return mapSpotifyError(err, (kind) => { failureCounters = bumpFailureCounter(failureCounters, kind) }, finalise)
+    } finally {
+      // (the artists' pictures and pinned albums asked in this run, also when it ended early - meta-cache.ts)
+      saveMetaCache()
     }
 
     // 6. Read library + diff + apply — all under the data lock. Holding the

@@ -24,9 +24,12 @@ import type { CategoryType } from './category-types'
 import type { DiscoveredPlaylist, SpotifySyncConfig, SyncItem } from './types'
 import { type AlbumPage, artistAlbums } from '../artist-albums-store'
 import { noteSpotifyBlock, spotifyBlock } from '../spotify-block'
+import { type CachedAlbum, keepAlbum, keepArtistCover, keptAlbum, keptArtistCover } from './meta-cache'
 
 const API_BASE = 'https://api.spotify.com/v1'
 const HTTP_TIMEOUT_MS = 10_000
+// between requests the sync makes one by one (artists' pictures, pinned albums)
+const ONE_BY_ONE_PAUSE_MS = 300
 // (entries of a playlist per page: 50 is the most Spotify allows since its February 2026 changes - was 100, which
 // Spotify apps under the new rules refuse)
 const TRACKS_PAGE_LIMIT = 50
@@ -226,7 +229,13 @@ async function fetchPlaylistTracks(playlistId: string, accessToken: string): Pro
  */
 async function fetchArtistCovers(artistIds: string[], accessToken: string): Promise<Map<string, string>> {
   const out = new Map<string, string>()
-  const unique = [...new Set(artistIds)]
+  // (the pictures kept from an earlier run: only the new artists and the ones kept too long are asked, see meta-cache.ts)
+  const unique = [...new Set(artistIds)].filter((id) => {
+    const kept = keptArtistCover(id)
+    if (kept === undefined) return true
+    if (kept) out.set(id, kept)
+    return false
+  })
   for (let i = 0; i < unique.length; i += 50) {
     const batch = unique.slice(i, i + 50)
     try {
@@ -237,6 +246,7 @@ async function fetchArtistCovers(artistIds: string[], accessToken: string): Prom
       for (const a of resp.artists ?? []) {
         const url = pickImage(a?.images)
         if (a?.id && url) out.set(a.id, url)
+        if (a?.id) keepArtistCover(a.id, url)
       }
     } catch (err) {
       // a block (429), a login or network failure ends the run: applied without the pictures, the entries would lose
@@ -244,11 +254,14 @@ async function fetchArtistCovers(artistIds: string[], accessToken: string): Prom
       if (err instanceof SpotifyApiException && err.detail.kind !== 'internal') throw err
       // Spotify's February 2026 changes removed the request for several artists at once (GET /artists?ids=) for
       // Spotify apps under the new rules: one by one then
-      for (const id of batch) {
+      for (const [n, id] of batch.entries()) {
+        // (a short pause between them: many requests in a row are what Spotify answers with a block)
+        if (n > 0) await new Promise((resolve) => setTimeout(resolve, ONE_BY_ONE_PAUSE_MS))
         try {
           const a = await spotifyGet<{ id?: string; images?: Array<{ url?: string }> }>(`/artists/${encodeURIComponent(id)}`, accessToken)
           const url = pickImage(a?.images)
           if (a?.id && url) out.set(a.id, url)
+          if (a?.id) keepArtistCover(a.id, url)
         } catch (one) {
           if (one instanceof SpotifyApiException && one.detail.kind !== 'internal') throw one
           console.warn(`${new Date().toLocaleString()}: [spotify-sync] artist-cover fetch failed: ${(one as Error).message}`)
@@ -306,18 +319,18 @@ export async function resolveSyncItems(
   // Phase 17b: explicit single albums pinned via the WebApp search, independent
   // of any playlist. Fetch each album once and build an album-promotion item;
   // skip if a playlist already produced the same album (dedupe by groupKey).
+  // (kept from an earlier run: only new pins and ones kept too long are asked, see meta-cache.ts)
+  let askedAlbums = 0
   for (const pin of config.explicit_albums ?? []) {
     const albumId = pin?.id
     if (!albumId || items.has(`album:${albumId}`)) continue
     try {
-      const album = await spotifyGet<{
-        id?: string
-        name?: string
-        album_type?: string
-        artists?: Array<{ id?: string; name?: string }>
-        images?: Array<{ url?: string }>
-        release_date?: string
-      }>(`/albums/${encodeURIComponent(albumId)}`, accessToken)
+      let album = keptAlbum(albumId)
+      if (!album) {
+        if (askedAlbums++ > 0) await new Promise((resolve) => setTimeout(resolve, ONE_BY_ONE_PAUSE_MS))
+        album = await spotifyGet<CachedAlbum>(`/albums/${encodeURIComponent(albumId)}`, accessToken)
+        keepAlbum(album)
+      }
       const item = buildExplicitAlbumItem(album, pin.category)
       if (item) items.set(item.groupKey, item)
     } catch (err) {
