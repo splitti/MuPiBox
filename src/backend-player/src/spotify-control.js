@@ -1570,12 +1570,48 @@ function mplayerToggle() {
   return true
 }
 
+// A pause on the box's own Spotify player only: the device the box played on, else the display's (Web Playback SDK).
+// Without a device Spotify pauses whatever device of the account plays - a phone playing with the same account was
+// paused when the box stopped, started a local album or shut down (hyperbit). Not playing there (another device took
+// over): nothing to pause, and none of handleSpotifyError's recoveries - they start or move the playback.
+function pauseOwnSpotify(why) {
+  const own = activeDevice || displaySpotifyDevice
+  // (not known yet - after a restart of this process the display tells its player within 3 minutes: known by the
+  // name it signs in with: the box's host name, see set_hostname.sh)
+  const ownName = muPiBoxConfig?.mupibox?.host
+  const notOwn = (message) => Object.assign(new Error(message), { notOwn: true })
+  // (asked first which device plays: a device id in the pause alone is not a promise that Spotify leaves the others be)
+  return spotifyApi
+    .getMyCurrentPlaybackState()
+    .then(
+      ({ body }) => {
+        const device = body?.device
+        if (device?.id && (device.id === own || (!own && ownName && device.name === ownName))) return device.id
+        if (device?.id) throw notOwn(`another device plays (${device.name ?? device.id})`)
+        if (!own) throw notOwn('no own Spotify player known')
+        return own
+      },
+      (err) => {
+        // (the state not known: the pause, aimed at the box's player, all the same)
+        if (err?.body?.error?.status === 401) throw err
+        if (!own) throw notOwn('no own Spotify player known')
+        return own
+      },
+    )
+    .then((id) => spotifyApi.pause({ device_id: id }))
+    .catch((err) => {
+      if (err?.body?.error?.status === 401) handleSpotifyError(err, why)
+      else log.debug(`${now()}: [Spotify Control] ${why}: the box's Spotify player is not playing (${err?.message ?? err?.statusCode ?? err})`)
+      throw Object.assign(err ?? new Error('pause failed'), { notOwn: true })
+    })
+}
+
 function pause() {
   if (telegramPlaybackNotices())
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Pause"')
   currentMeta.pause = true
   if (currentMeta.currentPlayer === 'spotify') {
-    spotifyApi.pause().then(
+    pauseOwnSpotify('pause').then(
       () => {
         counter.countpause++
         if (config.server.logLevel === 'debug') {
@@ -1584,10 +1620,9 @@ function pause() {
         log.debug(`${now()}: [Spotify Control] Playback paused`)
         writeplayerstatePause()
       },
-      (err) => {
+      () => {
         // (not paused after all: the music goes on, and so does the counting of the playtime)
         currentMeta.pause = false
-        handleSpotifyError(err, 'pause')
       },
     )
   } else if (currentMeta.currentPlayer === 'mplayer') {
@@ -1607,10 +1642,8 @@ let playbackGeneration = 0
 // which is empty after a restart of this process - a stop then stopped nothing, and a local album started
 // while Spotify was still playing ran in parallel. So a switch always silences the other side.
 function pauseSpotifyQuietly(why) {
-  spotifyApi.pause().catch((err) => {
-    // nothing playing on Spotify, no token, offline: fine here
-    log.debug(`${now()}: [Spotify Control] Pause on ${why} not needed/possible: ${err?.statusCode ?? err}`)
-  })
+  // (nothing playing on the box's Spotify player, no token, offline: fine here)
+  pauseOwnSpotify(why).catch(() => {})
   spotifyRunning = false
 }
 function switchToMplayer() {
@@ -1626,7 +1659,7 @@ function stop() {
   if (telegramPlaybackNotices())
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Stop"')
   if (currentMeta.currentPlayer === 'spotify') {
-    spotifyApi.pause().then(
+    pauseOwnSpotify('stop').then(
       () => {
         counter.countpause++
         if (config.server.logLevel === 'debug') {
@@ -1635,9 +1668,7 @@ function stop() {
         log.debug(`${now()}: [Spotify Control] Playback stopped`)
         writeplayerstatePause()
       },
-      (err) => {
-        handleSpotifyError(err, 'stop')
-      },
+      () => {},
     )
 
     currentMeta.currentPlayer = ''
