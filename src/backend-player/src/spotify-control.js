@@ -1694,6 +1694,7 @@ function pauseOwnSpotify(why) {
   const ownName = muPiBoxConfig?.mupibox?.host
   const notOwn = (message, extra = {}) => Object.assign(new Error(message), { notOwn: true }, extra)
   if (spotifyBlockedUntil()) return Promise.reject(notOwn('Spotify blocks the requests', { blocked: true }))
+  const generation = playbackGeneration
   // (asked first which device plays: a device id in the pause alone is not a promise that Spotify leaves the others be)
   return spotifyApi
     .getMyCurrentPlaybackState()
@@ -1712,7 +1713,14 @@ function pauseOwnSpotify(why) {
         return own
       },
     )
-    .then((id) => spotifyApi.pause({ device_id: id }))
+    .then((id) => {
+      // (a Spotify start came in while Spotify was asked: the pause is for what played before - sent now it paused the
+      // new start, and the box said "Spotify plays" while it did not; tested with a stop right before a start)
+      if (generation !== playbackGeneration && currentMeta.currentPlayer === 'spotify') {
+        throw notOwn('a new start came in between', { foreign: true })
+      }
+      return spotifyApi.pause({ device_id: id })
+    })
     .catch((err) => {
       if (err?.body?.error?.status === 401) handleSpotifyError(err, why)
       else log.debug(`${now()}: [Spotify Control] ${why}: the box's Spotify player is not playing (${err?.message ?? err?.statusCode ?? err})`)
