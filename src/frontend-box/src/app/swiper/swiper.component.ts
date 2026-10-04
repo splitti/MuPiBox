@@ -461,7 +461,9 @@ export class SwiperComponent<T> {
     const position = shown && !this.pendingRestore ? this.currentPosition() : this.cachedSwiperPosition
     const oldKeys = SwiperComponent.entryKeys(before)
     const newKeys = SwiperComponent.entryKeys(data)
-    const found = position < oldKeys.length ? newKeys.indexOf(oldKeys[position]) : -1
+    // (at the very start it stays at the start: while a list comes in parts - a slow part follows after a few seconds -
+    // a part arriving in front must show at the start, not push the list to the cover that happened to come first)
+    const found = position > 0 && position < oldKeys.length ? newKeys.indexOf(oldKeys[position]) : -1
     const target = found >= 0 ? found : Math.min(position, data.length - 1)
     this.cachedSwiperPosition = target
     if (key) SwiperComponent.positions.set(key, target)
