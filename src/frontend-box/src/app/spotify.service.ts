@@ -49,6 +49,11 @@ export class SpotifyService {
     return this.playerService.isPlayerReady()
   }
 
+  /** Pause the display's own Spotify player (no request to Spotify's Web API) */
+  pausePlayer(): Promise<void> {
+    return this.playerService.pause()
+  }
+
   /** Check if we should use the web player */
   shouldUsePlayer(): boolean {
     return this.playerService.shouldUsePlayer()

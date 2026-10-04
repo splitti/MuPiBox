@@ -27,6 +27,16 @@ export interface SpotifyBlock {
 
 let current: SpotifyBlock | null = null
 let loaded = false
+// the file's time when it was read or written here: written by someone else since (the player notes a 429 of its own
+// there) - read again
+let fileMtime = -1
+function fileTime(): number {
+  try {
+    return fs.statSync(BLOCK_FILE).mtimeMs
+  } catch {
+    return -1
+  }
+}
 
 function readFile(file: string): SpotifyBlock | null {
   try {
@@ -47,14 +57,23 @@ function write(): void {
     } else {
       fs.rmSync(BLOCK_FILE, { force: true })
     }
+    fileMtime = fileTime()
   } catch {
     // only for this run of the server then
   }
 }
 
 function load(): void {
-  if (loaded) return
+  if (loaded) {
+    const t = fileTime()
+    if (t === fileMtime) return
+    fileMtime = t
+    const kept = readFile(BLOCK_FILE)
+    if (kept && (!current || kept.until > current.until)) current = kept
+    return
+  }
   loaded = true
+  fileMtime = fileTime()
   current = readFile(BLOCK_FILE)
   const old = readFile(OLD_BLOCK_FILE)
   if (old && (!current || old.until > current.until)) current = old
