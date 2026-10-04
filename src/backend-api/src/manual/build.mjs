@@ -1,8 +1,13 @@
-// Builds the MuPiBox manual (served at /manual/ on the box) into ../deploy/manual.
-//   content/**/*.md   the pages written by hand (German); content/<chapter>/index.md is the chapter's start page
-//   toc.json          the order of chapters and pages (the sidebar, the previous/next links)
-//   reference         one page per settings page of the app, built from ../mupi-app/schema.json (labels, help texts,
-//                     values and defaults come from the very same file the app shows, so the manual cannot drift)
+// Builds the MuPiBox manual (served at /manual/ on the box) into ../deploy/manual, in every language.
+//   content/<lang>/**/*.md   the pages written by hand; content/<lang>/<chapter>/index.md is the chapter's start page.
+//                            A page that is missing in a language shows the German one with a note.
+//   toc.json                 the order of chapters and pages (the sidebar, the previous/next links); titles per language
+//   strings.json             the words of the page itself (search, buttons, table headers of the reference ...)
+//   img/<lang>/              pictures per language (screenshots of the display in that language); img/ holds shared ones
+//   reference                one page per settings page of the app, built from ../mupi-app/schema.json (labels, help
+//                            texts and values come from the very same file the app shows; the English texts from the
+//                            app's own translation i18n/en.json), so the manual cannot drift from the app
+// Layout of the result: index.html (picks the language), versions.json, <lang>/..., static/, img/
 // No dependencies: a small Markdown converter lives below. Run: node src/manual/build.mjs [outDir]
 
 import fs from 'node:fs'
@@ -11,8 +16,25 @@ import { fileURLToPath } from 'node:url'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const outDir = path.resolve(process.argv[2] ?? path.join(here, '../../../deploy/manual'))
-const contentDir = path.join(here, 'content')
 const schema = JSON.parse(fs.readFileSync(path.join(here, '../mupi-app/schema.json'), 'utf8'))
+const strings = JSON.parse(fs.readFileSync(path.join(here, 'strings.json'), 'utf8'))
+const enApp = JSON.parse(fs.readFileSync(path.join(here, '../mupi-app/i18n/en.json'), 'utf8'))
+const LANGS = Object.keys(strings) // the first one is the source language
+const SOURCE = LANGS[0]
+
+// The version this manual describes: the newest heading of news.txt ("DEV 5.0.7 - changes compared to ...")
+function manualVersion() {
+  try {
+    const news = fs.readFileSync(path.join(here, '../../../../news.txt'), 'utf8')
+    const m = news.match(/<h3>\s*(?:(DEV|BETA|STABLE)\s+)?(\d+(?:\.\d+)+)/i)
+    if (m) return { id: m[2], channel: (m[1] ?? '').toLowerCase() }
+  } catch {
+    // no news.txt: the manual then has no version number
+  }
+  return { id: 'latest', channel: '' }
+}
+const VERSION = manualVersion()
+const VERSION_LABEL = VERSION.channel ? `${VERSION.id} (${VERSION.channel})` : VERSION.id
 
 // ---------------------------------------------------------------- Markdown
 
@@ -27,7 +49,7 @@ const slugify = (s) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
 
-// Inline: `code`, **bold**, *italic*, [text](link), ![alt](image), [[Taste]] (a key cap)
+// Inline: `code`, **bold**, *italic*, [text](link), ![alt](image), [[Key]] (a key cap)
 function inline(text, ctx) {
   const codes = []
   let s = text.replace(/`([^`]+)`/g, (_m, c) => {
@@ -42,7 +64,7 @@ function inline(text, ctx) {
   return s.replace(/\u0000(\d+)\u0000/g, (_m, i) => codes[Number(i)])
 }
 
-const ADMONITIONS = { NOTE: ['note', 'Hinweis'], TIP: ['tip', 'Tipp'], WARNING: ['warning', 'Achtung'], IMPORTANT: ['important', 'Wichtig'] }
+const ADMONITIONS = { NOTE: 'note', TIP: 'tip', WARNING: 'warning', IMPORTANT: 'important' }
 
 // Block level. Returns { html, headings: [{level, id, text}], text } (text = plain text for the search)
 function markdown(src, ctx) {
@@ -101,10 +123,10 @@ function markdown(src, ctx) {
     if (h) {
       const level = h[1].length
       const text = h[2]
-      const id = slugify(text.replace(/`/g, '')) || `abschnitt-${headings.length + 1}`
+      const id = slugify(text.replace(/`/g, '')) || `section-${headings.length + 1}`
       headings.push({ level, id, text: text.replace(/`/g, '') })
       plain.push(text)
-      html += level === 1 ? `<h1 id="${id}">${inline(text, ctx)}</h1>` : `<h${level} id="${id}">${inline(text, ctx)}<a class="anchor" href="#${id}" aria-label="Link zu diesem Abschnitt">#</a></h${level}>`
+      html += level === 1 ? `<h1 id="${id}">${inline(text, ctx)}</h1>` : `<h${level} id="${id}">${inline(text, ctx)}<a class="anchor" href="#${id}" aria-label="#">#</a></h${level}>`
       i++
       continue
     }
@@ -128,10 +150,10 @@ function markdown(src, ctx) {
       while (i < lines.length && lines[i].startsWith('>')) buf.push(lines[i++].replace(/^>\s?/, ''))
       const kind = buf[0].match(/^\[!(NOTE|TIP|WARNING|IMPORTANT)\]\s*$/)
       if (kind) {
-        const [cls, label] = ADMONITIONS[kind[1]]
+        const cls = ADMONITIONS[kind[1]]
         const inner = markdown(buf.slice(1).join('\n'), ctx)
         plain.push(inner.text)
-        html += `<aside class="admonition ${cls}"><p class="admonition-title">${label}</p>${inner.html}</aside>`
+        html += `<aside class="admonition ${cls}"><p class="admonition-title">${esc(ctx.t(`admonition.${cls}`))}</p>${inner.html}</aside>`
       } else {
         const inner = markdown(buf.join('\n'), ctx)
         plain.push(inner.text)
@@ -176,170 +198,95 @@ function markdown(src, ctx) {
 // ---------------------------------------------------------------- reference pages built from the schema
 
 const mdEscape = (s) => String(s ?? '').replace(/\|/g, '\\|').replace(/\n+/g, ' ')
-const clock = (v) => (typeof v === 'number' ? String(v).replace('.', ',') : String(v))
+const num = (v, lang) => (typeof v === 'number' && lang === 'de' ? String(v).replace('.', ',') : String(v))
+const groups = schema.settingsGroups
+const missingTranslations = new Set()
 
-function describeItem(it) {
+// the app's own translation (German text -> English text); what it does not know stays as it is (theme names ...)
+function tr(text, lang) {
+  if (lang === SOURCE || typeof text !== 'string' || !text.trim()) return text
+  if (text in enApp) return enApp[text]
+  missingTranslations.add(text)
+  return text
+}
+
+function describeItem(it, lang) {
+  const t = (key) => strings[lang][key]
   switch (it.type) {
     case 'toggle':
-      return { kind: 'Schalter', values: 'an / aus', def: it.default === undefined ? '' : it.default ? 'an' : 'aus' }
+      return { kind: t('ref.switch'), values: t('ref.onoff') }
     case 'slider':
-      return { kind: 'Regler', values: `${clock(it.min)} bis ${clock(it.max)}${it.unit ?? ''}${it.step ? `, in Schritten von ${clock(it.step)}` : ''}`, def: it.default === undefined ? '' : `${clock(it.default)}${it.unit ?? ''}` }
+      return { kind: t('ref.slider'), values: `${num(it.min, lang)} ${t('ref.to')} ${num(it.max, lang)}${it.unit ?? ''}${it.step ? `, ${t('ref.steps')} ${num(it.step, lang)}` : ''}` }
     case 'select':
-    case 'seg':
-      return { kind: 'Auswahl', values: (it.options ?? []).length > 40 ? `aus ${it.options.length} Möglichkeiten (die Liste zeigt die App)` : (it.options ?? []).join(' · '), def: it.default ?? '' }
+    case 'seg': {
+      const options = it.options ?? []
+      return { kind: t('ref.choice'), values: options.length > 40 ? t('ref.manyChoices').replace('{n}', String(options.length)) : options.map((o) => tr(o, lang)).join(' · ') }
+    }
     case 'text':
-      return { kind: it.kind === 'number' ? 'Zahl' : 'Eingabe', values: '', def: it.default ?? '' }
+      return { kind: it.kind === 'number' ? t('ref.number') : t('ref.input'), values: '' }
     case 'file':
-      return { kind: 'Datei', values: it.buttons ?? '', def: '' }
+      return { kind: t('ref.file'), values: tr(it.buttons ?? '', lang) }
     default:
       return null
   }
 }
 
-function referencePage(page) {
-  let md = `# ${page.title}\n\n`
-  if (page.description) md += `${page.description}.\n\n`
-  md += `> [!NOTE]\n> In der App: **Einstellungen › ${groupTitle(page.parent)} › ${page.title}**. Diese Seite wird beim Bauen des Handbuchs aus der App selbst erzeugt.\n\n`
+const groupTitle = (id, lang) => tr(groups.find((g) => g.id === id)?.title ?? '', lang)
+
+function referencePage(page, lang) {
+  const t = (key) => strings[lang][key]
+  let md = `# ${tr(page.title, lang)}\n\n`
+  if (page.description) md += `${tr(page.description, lang)}.\n\n`
+  md += `> [!NOTE]\n> ${t('ref.inTheApp')}: **${t('ref.settings')} › ${groupTitle(page.parent, lang)} › ${tr(page.title, lang)}**. ${t('ref.generated')}\n\n`
   for (const sec of page.sections) {
-    if (sec.title) md += `## ${sec.title}\n\n`
-    if (sec.help) md += `${sec.help}\n\n`
+    if (sec.title) md += `## ${tr(sec.title, lang)}\n\n`
+    if (sec.help) md += `${tr(sec.help, lang)}\n\n`
     const rows = []
     const loose = []
     for (const it of sec.items) {
-      const d = describeItem(it)
-      if (d && it.label) rows.push(`| **${mdEscape(it.label)}** | ${d.kind}${d.values ? `: ${mdEscape(d.values)}` : ''} | ${mdEscape(it.help)} |`)
-      else if (it.type === 'note' && it.text && !/\d/.test(it.text)) loose.push(`${it.text}\n`)
-      else if (it.type === 'warn' && it.text) loose.push(`> [!WARNING]\n> ${it.text}\n`)
-      else if (it.type === 'buttons') loose.push(`Schaltflächen: ${it.buttons.map((b) => `**${b[0]}**`).join(', ')}\n`)
-      else if (it.type === 'nav' && it.label) loose.push(`Weiterführend: **${it.label}**${it.subtitle ? ` (${it.subtitle})` : ''}\n`)
+      const d = describeItem(it, lang)
+      if (d && it.label) rows.push(`| **${mdEscape(tr(it.label, lang))}** | ${d.kind}${d.values ? `: ${mdEscape(d.values)}` : ''} | ${mdEscape(tr(it.help, lang))} |`)
+      else if (it.type === 'note' && it.text && !/\d/.test(it.text)) loose.push(`${tr(it.text, lang)}\n`)
+      else if (it.type === 'warn' && it.text) loose.push(`> [!WARNING]\n> ${tr(it.text, lang)}\n`)
+      else if (it.type === 'buttons') loose.push(`${t('ref.buttons')}: ${it.buttons.map((b) => `**${tr(b[0], lang)}**`).join(', ')}\n`)
+      else if (it.type === 'nav' && it.label) loose.push(`${t('ref.further')}: **${tr(it.label, lang)}**${it.subtitle ? ` (${tr(it.subtitle, lang)})` : ''}\n`)
     }
-    if (rows.length) md += `| Einstellung | Art und Werte | Bedeutung |\n| --- | --- | --- |\n${rows.join('\n')}\n\n`
+    if (rows.length) md += `| ${t('ref.colSetting')} | ${t('ref.colKind')} | ${t('ref.colMeaning')} |\n| --- | --- | --- |\n${rows.join('\n')}\n\n`
     if (loose.length) md += `${loose.join('\n')}\n`
   }
   return md
 }
 
-const groups = schema.settingsGroups
-const groupTitle = (id) => groups.find((g) => g.id === id)?.title ?? ''
+// ---------------------------------------------------------------- the table of contents (one tree per language)
 
-// ---------------------------------------------------------------- the table of contents
-
-const toc = JSON.parse(fs.readFileSync(path.join(here, 'toc.json'), 'utf8'))
-
-// Reference: groups of the app's settings, each with its pages (those that have settings of their own)
-const referenceChapter = toc.find((c) => c.id === 'referenz')
-if (referenceChapter) {
-  referenceChapter.children = []
-  for (const g of groups) {
-    const pages = schema.pages.filter((p) => p.area === 'einstellungen' && p.parent === g.id && p.sections.some((s) => s.items.some((it) => describeItem(it) || it.type === 'note' || it.type === 'warn' || it.type === 'buttons')))
-    if (!pages.length) continue
-    referenceChapter.children.push({
-      id: slugify(g.title),
-      title: g.title,
-      generated: `# ${g.title}\n\n${g.description}.\n\nDie Einstellungen dieser Gruppe:\n\n${pages.map((p) => `- [${p.title}](${p.slug}.md)${p.description ? ` – ${p.description}` : ''}`).join('\n')}\n`,
-      children: pages.map((p) => ({ id: p.slug, title: p.title, generated: referencePage(p) })),
+function buildToc(lang) {
+  const toc = JSON.parse(fs.readFileSync(path.join(here, 'toc.json'), 'utf8'))
+  const title = (n) => (typeof n.title === 'string' ? n.title : (n.title[lang] ?? n.title[SOURCE]))
+  const prepare = (nodes) =>
+    nodes.map((n) => {
+      const node = { id: n.id, title: title(n) }
+      if (n.children) node.children = prepare(n.children)
+      return node
     })
-  }
-}
+  const tree = prepare(toc)
 
-if (process.env.MANUAL_DUMP) {
-  // debugging aid: the generated reference as Markdown files
-  const dump = (nodes) => {
-    for (const n of nodes) {
-      if (n.generated !== undefined) {
-        fs.mkdirSync(process.env.MANUAL_DUMP, { recursive: true })
-        fs.writeFileSync(path.join(process.env.MANUAL_DUMP, `${n.id}.md`), n.generated)
-      }
-      if (n.children) dump(n.children)
+  // Reference: the app's settings groups, each with its pages (those that have settings of their own)
+  const reference = tree.find((c) => c.id === 'referenz')
+  if (reference) {
+    reference.children = []
+    for (const g of groups) {
+      const pages = schema.pages.filter((p) => p.area === 'einstellungen' && p.parent === g.id && p.sections.some((s) => s.items.some((it) => describeItem(it, lang) || it.type === 'note' || it.type === 'warn' || it.type === 'buttons')))
+      if (!pages.length) continue
+      const gTitle = tr(g.title, lang)
+      reference.children.push({
+        id: slugify(g.title),
+        title: gTitle,
+        generated: `# ${gTitle}\n\n${tr(g.description, lang)}.\n\n${strings[lang]['ref.groupIntro']}\n\n${pages.map((p) => `- [${tr(p.title, lang)}](${p.slug}.md)${p.description ? ` – ${tr(p.description, lang)}` : ''}`).join('\n')}\n`,
+        children: pages.map((p) => ({ id: p.slug, title: tr(p.title, lang), generated: referencePage(p, lang) })),
+      })
     }
   }
-  dump(toc)
-}
-
-// flat list of all pages in reading order, with their output paths
-const flat = []
-function walk(nodes, trail) {
-  for (const n of nodes) {
-    const dir = [...trail, n.id]
-    const hasKids = Array.isArray(n.children) && n.children.length
-    // (the toc's own objects get the paths, so the sidebar and the page list share them)
-    n.trail = trail
-    n.dir = dir
-    n.out = hasKids ? `${dir.join('/')}/index.html` : `${dir.join('/')}.html`
-    n.src = hasKids ? path.join(contentDir, ...dir, 'index.md') : path.join(contentDir, `${dir.join('/')}.md`)
-    flat.push(n)
-    if (hasKids) walk(n.children, dir)
-  }
-}
-walk(toc, [])
-const byDir = new Map(flat.map((n) => [n.dir.join('/'), n]))
-const home = { id: '', title: 'Startseite', dir: [], trail: [], out: 'index.html', src: path.join(contentDir, 'index.md') }
-
-// ---------------------------------------------------------------- page template
-
-const rel = (from, to) => {
-  const up = from.split('/').length - 1
-  return `${'../'.repeat(up)}${to}`
-}
-
-function navTree(current) {
-  const open = new Set()
-  for (let n = current; n?.dir.length; n = n.trail.length ? byDir.get(n.trail.join('/')) : null) open.add(n.dir.join('/'))
-  const render = (nodes) =>
-    `<ul>${nodes
-      .map((node) => {
-        const here = node === current
-        const link = `<a href="${rel(current.out, node.out)}"${here ? ' aria-current="page"' : ''}>${esc(node.title)}</a>`
-        if (!node.children?.length) return `<li>${link}</li>`
-        const isOpen = open.has(node.dir.join('/'))
-        return `<li class="has-children"><details${isOpen ? ' open' : ''}><summary>${link}</summary>${render(node.children)}</details></li>`
-      })
-      .join('')}</ul>`
-  return render(toc)
-}
-
-function page(node, bodyHtml, headings, index) {
-  const ctxCrumbs = []
-  for (let n = node; n && n.dir.length; n = n.trail.length ? byDir.get(n.trail.join('/')) : null) ctxCrumbs.unshift(n)
-  const crumbs = [`<a href="${rel(node.out, 'index.html')}">Handbuch</a>`, ...ctxCrumbs.slice(0, -1).map((c) => `<a href="${rel(node.out, c.out)}">${esc(c.title)}</a>`), `<span>${esc(node.title)}</span>`].join('<span class="sep">›</span>')
-  const i = flat.indexOf(node)
-  const prev = i > 0 ? flat[i - 1] : null
-  const next = i >= 0 && i < flat.length - 1 ? flat[i + 1] : null
-  const onPage = headings.filter((h) => h.level >= 2 && h.level <= 3)
-  const R = (to) => rel(node.out, to)
-  return `<!doctype html>
-<html lang="de" data-theme="auto">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(node.title)}${node.out === 'index.html' ? '' : ' – MuPiBox Handbuch'}</title>
-<meta name="description" content="${esc(index.text.slice(0, 160))}">
-<link rel="icon" href="${R('static/mupi.svg')}" type="image/svg+xml">
-<link rel="stylesheet" href="${R('static/manual.css')}">
-<script>try{var t=localStorage.getItem('manual-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
-</head>
-<body data-root="${R('')}">
-<header class="top">
-  <button class="menu" type="button" aria-label="Menü" aria-expanded="false">☰</button>
-  <a class="brand" href="${R('index.html')}"><img src="${R('static/mupi.svg')}" alt="" width="28" height="28"><span>MuPiBox <b>Handbuch</b></span></a>
-  <form class="search" role="search" onsubmit="return false"><input type="search" id="q" placeholder="Suchen  ( / )" autocomplete="off" aria-label="Im Handbuch suchen"><div id="results" hidden></div></form>
-  <a class="toapp" href="/app/" title="Zur App">App</a>
-  <button class="theme" type="button" aria-label="Hell/Dunkel umschalten">◐</button>
-</header>
-<div class="layout">
-<nav class="side" aria-label="Inhaltsverzeichnis">${navTree(node)}</nav>
-<main>
-<div class="crumbs">${crumbs}</div>
-<article>${bodyHtml}</article>
-<div class="pager">${prev ? `<a class="prev" href="${R(prev.out)}"><small>Zurück</small>${esc(prev.title)}</a>` : '<span></span>'}${next ? `<a class="next" href="${R(next.out)}"><small>Weiter</small>${esc(next.title)}</a>` : '<span></span>'}</div>
-<footer>MuPiBox Handbuch · <a href="${R('index.html')}">Startseite</a> · Fehler gefunden? Unter <em>Einstellungen › System › Über die Box › Problem melden</em> melden.</footer>
-</main>
-<aside class="toc" aria-label="Auf dieser Seite">${onPage.length ? `<p>Auf dieser Seite</p><ul>${onPage.map((h) => `<li class="l${h.level}"><a href="#${h.id}">${esc(h.text)}</a></li>`).join('')}</ul>` : ''}</aside>
-</div>
-<script src="${R('static/manual.js')}" defer></script>
-</body>
-</html>
-`
+  return tree
 }
 
 // ---------------------------------------------------------------- build
@@ -347,64 +294,205 @@ function page(node, bodyHtml, headings, index) {
 fs.rmSync(outDir, { recursive: true, force: true })
 fs.mkdirSync(outDir, { recursive: true })
 
-const searchIndex = []
-const missing = []
-const pages = [home, ...flat]
-for (const node of pages) {
-  let src = node.generated
-  if (src === undefined) {
-    if (!fs.existsSync(node.src)) {
-      missing.push(path.relative(here, node.src))
-      src = `# ${node.title}\n\n> [!NOTE]\n> Diese Seite ist noch in Arbeit.\n`
-    } else src = fs.readFileSync(node.src, 'utf8')
+const problems = []
+
+function buildLanguage(lang) {
+  const S = strings[lang]
+  const t = (key) => S[key] ?? strings[SOURCE][key] ?? key
+  const contentDir = path.join(here, 'content', lang)
+  const sourceDir = path.join(here, 'content', SOURCE)
+  const toc = buildToc(lang)
+
+  // flat list of all pages in reading order, with their output paths
+  const flat = []
+  const walk = (nodes, trail) => {
+    for (const n of nodes) {
+      const dir = [...trail, n.id]
+      const hasKids = Array.isArray(n.children) && n.children.length
+      // (the toc's own objects get the paths, so the sidebar and the page list share them)
+      n.trail = trail
+      n.dir = dir
+      n.out = hasKids ? `${dir.join('/')}/index.html` : `${dir.join('/')}.html`
+      n.rel = hasKids ? `${dir.join('/')}/index.md` : `${dir.join('/')}.md`
+      flat.push(n)
+      if (hasKids) walk(n.children, dir)
+    }
   }
-  const ctx = {
-    link: (href) => {
-      if (/^(https?:|mailto:|#|\/)/.test(href)) return href
-      const [file, hash] = href.split('#')
-      if (!file.endsWith('.md')) return href
-      // relative to the source page: resolve against the page's own directory, then point at the output file
-      const hasKids = Array.isArray(node.children) && node.children.length
-      const base = hasKids ? path.join(contentDir, ...node.dir) : path.join(contentDir, ...node.dir.slice(0, -1))
-      const target = path.resolve(base, file)
-      const key = path.relative(contentDir, target).replace(/\\/g, '/').replace(/\.md$/, '').replace(/\/index$/, '')
-      const t = key === 'index' || key === '' ? home : byDir.get(key)
-      if (!t) {
-        missing.push(`link ${href} in ${node.title}`)
-        return '#'
+  walk(toc, [])
+  const byDir = new Map(flat.map((n) => [n.dir.join('/'), n]))
+  const home = { id: '', title: t('home'), dir: [], trail: [], out: 'index.html', rel: 'index.md' }
+
+  // from one page (path inside the language folder) to another one or to a file at the root of the manual
+  const relTo = (from, to) => `${'../'.repeat(from.split('/').length - 1)}${to}`
+  const toRoot = (from, to) => `${'../'.repeat(from.split('/').length)}${to}`
+
+  function navTree(current) {
+    const open = new Set()
+    for (let n = current; n?.dir.length; n = n.trail.length ? byDir.get(n.trail.join('/')) : null) open.add(n.dir.join('/'))
+    const render = (nodes) =>
+      `<ul>${nodes
+        .map((node) => {
+          const here = node === current
+          const link = `<a href="${relTo(current.out, node.out)}"${here ? ' aria-current="page"' : ''}>${esc(node.title)}</a>`
+          if (!node.children?.length) return `<li>${link}</li>`
+          const isOpen = open.has(node.dir.join('/'))
+          return `<li class="has-children"><details${isOpen ? ' open' : ''}><summary>${link}</summary>${render(node.children)}</details></li>`
+        })
+        .join('')}</ul>`
+    return render(toc)
+  }
+
+  const i18nForScript = JSON.stringify({ none: t('searchNone'), root: t('crumbRoot') }).replace(/</g, '\\u003c')
+
+  function page(node, bodyHtml, headings, index) {
+    const crumbChain = []
+    for (let n = node; n?.dir.length; n = n.trail.length ? byDir.get(n.trail.join('/')) : null) crumbChain.unshift(n)
+    const crumbs = [`<a href="${relTo(node.out, 'index.html')}">${esc(t('crumbRoot'))}</a>`, ...crumbChain.slice(0, -1).map((c) => `<a href="${relTo(node.out, c.out)}">${esc(c.title)}</a>`), `<span>${esc(node.title)}</span>`].join('<span class="sep">›</span>')
+    const i = flat.indexOf(node)
+    const prev = i > 0 ? flat[i - 1] : null
+    const next = i >= 0 && i < flat.length - 1 ? flat[i + 1] : null
+    const onPage = headings.filter((h) => h.level >= 2 && h.level <= 3)
+    const R = (to) => relTo(node.out, to) // inside this language
+    const ROOT = (to) => toRoot(node.out, to) // at the root of the manual
+    const langOptions = LANGS.map((l) => `<option value="${ROOT(`${l}/${node.out}`)}" lang="${l}"${l === lang ? ' selected' : ''}>${esc(strings[l].languageName)}</option>`).join('')
+    const versionOptions = `<option value="${ROOT(`${lang}/${node.out}`)}" selected>${esc(VERSION_LABEL)}</option>`
+    return `<!doctype html>
+<html lang="${lang}" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(node.title)}${node.out === 'index.html' ? '' : ` – ${esc(t('manualName'))}`}</title>
+<meta name="description" content="${esc(index.text.slice(0, 160))}">
+<link rel="icon" href="${ROOT('static/mupi.svg')}" type="image/svg+xml">
+<link rel="stylesheet" href="${ROOT('static/manual.css')}">
+<script>try{var t=localStorage.getItem('manual-theme');if(t)document.documentElement.dataset.theme=t;localStorage.setItem('manual-lang','${lang}')}catch(e){}</script>
+</head>
+<body data-root="${ROOT('')}" data-lang="${lang}" data-page="${esc(node.out)}">
+<header class="top">
+  <button class="menu" type="button" aria-label="${esc(t('menu'))}" aria-expanded="false">☰</button>
+  <a class="brand" href="${R('index.html')}"><img src="${ROOT('static/mupi.svg')}" alt="" width="28" height="28"><span>MuPiBox <b>${esc(t('manualName'))}</b></span></a>
+  <form class="search" role="search" onsubmit="return false"><input type="search" id="q" placeholder="${esc(t('search'))}  ( / )" autocomplete="off" aria-label="${esc(t('searchLabel'))}"><div id="results" hidden></div></form>
+  <label class="pick pick-version"><span class="sr">${esc(t('version'))}</span><select id="version" aria-label="${esc(t('version'))}">${versionOptions}</select></label>
+  <label class="pick"><span class="sr">${esc(t('language'))}</span><select id="lang" aria-label="${esc(t('language'))}">${langOptions}</select></label>
+  <a class="toapp" href="/app/" title="${esc(t('toApp'))}">App</a>
+  <button class="theme" type="button" aria-label="${esc(t('theme'))}">◐</button>
+</header>
+<div class="layout">
+<nav class="side" aria-label="${esc(t('toc'))}">${navTree(node)}</nav>
+<main>
+<div class="crumbs">${crumbs}</div>
+<article>${bodyHtml}</article>
+<div class="pager">${prev ? `<a class="prev" href="${R(prev.out)}"><small>${esc(t('prev'))}</small>${esc(prev.title)}</a>` : '<span></span>'}${next ? `<a class="next" href="${R(next.out)}"><small>${esc(t('next'))}</small>${esc(next.title)}</a>` : '<span></span>'}</div>
+<footer>${t('footer').replace('{home}', R('index.html'))}</footer>
+</main>
+<aside class="toc" aria-label="${esc(t('onThisPage'))}">${onPage.length ? `<p>${esc(t('onThisPage'))}</p><ul>${onPage.map((h) => `<li class="l${h.level}"><a href="#${h.id}">${esc(h.text)}</a></li>`).join('')}</ul>` : ''}</aside>
+</div>
+<script id="i18n" type="application/json">${i18nForScript}</script>
+<script src="${ROOT('static/manual.js')}" defer></script>
+</body>
+</html>
+`
+  }
+
+  const searchIndex = []
+  const pages = [home, ...flat]
+  for (const node of pages) {
+    let src = node.generated
+    let fromSource = false
+    if (src === undefined) {
+      const own = path.join(contentDir, node.rel)
+      if (fs.existsSync(own)) src = fs.readFileSync(own, 'utf8')
+      else if (lang !== SOURCE && fs.existsSync(path.join(sourceDir, node.rel))) {
+        // not translated yet: the source language's page, with a note
+        src = fs.readFileSync(path.join(sourceDir, node.rel), 'utf8')
+        fromSource = true
+        problems.push(`${lang}: not translated: ${node.rel}`)
+      } else {
+        problems.push(`${lang}: missing: ${node.rel}`)
+        src = `# ${node.title}\n`
       }
-      return rel(node.out, t.out) + (hash ? `#${hash}` : '')
-    },
-    asset: (src) => (/^(https?:|\/)/.test(src) ? src : rel(node.out, `img/${path.basename(src)}`)),
+    }
+    const ctx = {
+      t,
+      link: (href) => {
+        if (/^(https?:|mailto:|#|\/)/.test(href)) return href
+        const [file, hash] = href.split('#')
+        if (!file.endsWith('.md')) return href
+        // relative to the source page: resolve against the page's own directory, then point at the output file
+        const hasKids = Array.isArray(node.children) && node.children.length
+        const base = hasKids ? path.join(contentDir, ...node.dir) : path.join(contentDir, ...node.dir.slice(0, -1))
+        const key = path.relative(contentDir, path.resolve(base, file)).replace(/\\/g, '/').replace(/\.md$/, '').replace(/\/index$/, '')
+        const target = key === 'index' || key === '' ? home : byDir.get(key)
+        if (!target) {
+          problems.push(`${lang}: link ${href} in ${node.rel}`)
+          return '#'
+        }
+        return relTo(node.out, target.out) + (hash ? `#${hash}` : '')
+      },
+      asset: (file) => {
+        if (/^(https?:|\/)/.test(file)) return file
+        const name = path.basename(file)
+        // a picture of this language first, then the shared ones
+        if (fs.existsSync(path.join(here, 'img', lang, name))) return toRoot(node.out, `img/${lang}/${name}`)
+        if (fs.existsSync(path.join(here, 'img', name))) return toRoot(node.out, `img/${name}`)
+        // a picture only another language has (a screenshot of its display): better than none
+        for (const other of LANGS) if (fs.existsSync(path.join(here, 'img', other, name))) return toRoot(node.out, `img/${other}/${name}`)
+        problems.push(`${lang}: picture ${name} in ${node.rel}`)
+        return toRoot(node.out, `img/${name}`)
+      },
+    }
+    if (fromSource) src = src.replace(/^(# .*\n)/, `$1\n> [!NOTE]\n> ${t('notTranslated')}\n`)
+    const { html, headings, text } = markdown(src, ctx)
+    const title = headings[0]?.level === 1 ? headings[0].text : node.title
+    const target = path.join(outDir, lang, node.out)
+    fs.mkdirSync(path.dirname(target), { recursive: true })
+    fs.writeFileSync(target, page(node, html, headings.slice(1), { text }))
+    searchIndex.push({
+      u: node.out,
+      t: title,
+      c: node.trail.map((_id, k) => byDir.get(node.trail.slice(0, k + 1).join('/'))?.title).filter(Boolean).join(' › '),
+      h: headings.slice(1).filter((h) => h.level <= 3).map((h) => ({ id: h.id, t: h.text })),
+      x: text.slice(0, 6000),
+    })
   }
-  const { html, headings, text } = markdown(src, ctx)
-  const title = headings[0]?.level === 1 ? headings[0].text : node.title
-  const target = path.join(outDir, node.out)
-  fs.mkdirSync(path.dirname(target), { recursive: true })
-  fs.writeFileSync(target, page(node, html, headings.slice(1), { text }))
-  searchIndex.push({
-    u: node.out,
-    t: title,
-    c: node.trail.map((_id, k) => byDir.get(node.trail.slice(0, k + 1).join('/'))?.title).filter(Boolean).join(' › '),
-    h: headings.slice(1).filter((h) => h.level <= 3).map((h) => ({ id: h.id, t: h.text })),
-    x: text.slice(0, 6000),
-  })
+  fs.writeFileSync(path.join(outDir, lang, 'search-index.json'), JSON.stringify(searchIndex))
+  return pages.length
 }
 
-fs.writeFileSync(path.join(outDir, 'search-index.json'), JSON.stringify(searchIndex))
+let total = 0
+for (const lang of LANGS) total += buildLanguage(lang)
+
+// the front door: the language of the last visit, else the browser's, else the first one
+fs.writeFileSync(
+  path.join(outDir, 'index.html'),
+  `<!doctype html>
+<html lang="${SOURCE}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MuPiBox</title>
+<script>
+(function () {
+  var langs = ${JSON.stringify(LANGS)}, lang = langs[0];
+  try { var saved = localStorage.getItem('manual-lang'); if (langs.indexOf(saved) >= 0) lang = saved; else { var b = (navigator.language || '').slice(0, 2).toLowerCase(); if (langs.indexOf(b) >= 0) lang = b; else if (b) lang = langs.indexOf('en') >= 0 ? 'en' : lang; } } catch (e) {}
+  location.replace(lang + '/index.html' + location.hash);
+})();
+</script></head>
+<body>${LANGS.map((l) => `<p><a href="${l}/index.html">${esc(strings[l].languageName)}</a></p>`).join('')}</body></html>
+`,
+)
+
+// the versions of the manual that this box offers; each entry is a folder next to the language folders
+fs.writeFileSync(path.join(outDir, 'versions.json'), JSON.stringify({ current: VERSION.id, versions: [{ id: VERSION.id, label: VERSION_LABEL, path: '.' }], languages: LANGS.map((l) => ({ id: l, name: strings[l].languageName })) }))
 
 // static files: styles, script, logo, fonts, pictures
-const staticDir = path.join(here, 'static')
-fs.cpSync(staticDir, path.join(outDir, 'static'), { recursive: true })
+fs.cpSync(path.join(here, 'static'), path.join(outDir, 'static'), { recursive: true })
 const app = path.join(here, '../mupi-app')
 fs.copyFileSync(path.join(app, 'mupi.svg'), path.join(outDir, 'static/mupi.svg'))
 fs.mkdirSync(path.join(outDir, 'static/fonts'), { recursive: true })
 for (const f of ['nunito-sans-latin-wght-normal.woff2', 'nunito-sans-latin-ext-wght-normal.woff2', 'fredoka-latin-wght-normal.woff2', 'fredoka-latin-ext-wght-normal.woff2']) fs.copyFileSync(path.join(app, 'fonts', f), path.join(outDir, 'static/fonts', f))
-const imgSrc = path.join(here, 'img')
-if (fs.existsSync(imgSrc)) fs.cpSync(imgSrc, path.join(outDir, 'img'), { recursive: true })
+if (fs.existsSync(path.join(here, 'img'))) fs.cpSync(path.join(here, 'img'), path.join(outDir, 'img'), { recursive: true })
 
-console.log(`manual: ${pages.length} pages -> ${outDir}`)
-if (missing.length) {
-  console.warn(`manual: ${missing.length} problem(s):\n  ${[...new Set(missing)].join('\n  ')}`)
+console.log(`manual ${VERSION_LABEL}: ${total} pages in ${LANGS.length} languages -> ${outDir}`)
+if (process.env.MANUAL_VERBOSE && missingTranslations.size) console.log(`manual: ${missingTranslations.size} app texts without English translation:\n  ${[...missingTranslations].slice(0, 40).join('\n  ')}`)
+if (problems.length) {
+  console.warn(`manual: ${problems.length} problem(s):\n  ${[...new Set(problems)].slice(0, 60).join('\n  ')}`)
   if (process.env.MANUAL_STRICT) process.exit(1)
 }

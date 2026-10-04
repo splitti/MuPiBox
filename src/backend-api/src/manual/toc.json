@@ -1,106 +1,412 @@
 [
   {
     "id": "erste-schritte",
-    "title": "Erste Schritte",
+    "title": {
+      "de": "Erste Schritte",
+      "en": "Getting started"
+    },
     "children": [
-      { "id": "was-ist-die-mupibox", "title": "Was ist die MuPiBox?" },
-      { "id": "was-du-brauchst", "title": "Was du brauchst" },
-      { "id": "erster-start", "title": "Der erste Start" },
-      { "id": "app-oeffnen", "title": "Die App öffnen und anmelden" }
+      {
+        "id": "was-ist-die-mupibox",
+        "title": {
+          "de": "Was ist die MuPiBox?",
+          "en": "What is the MuPiBox?"
+        }
+      },
+      {
+        "id": "was-du-brauchst",
+        "title": {
+          "de": "Was du brauchst",
+          "en": "What you need"
+        }
+      },
+      {
+        "id": "erster-start",
+        "title": {
+          "de": "Der erste Start",
+          "en": "The first start"
+        }
+      },
+      {
+        "id": "app-oeffnen",
+        "title": {
+          "de": "Die App öffnen und anmelden",
+          "en": "Opening the app and signing in"
+        }
+      }
     ]
   },
   {
     "id": "bedienung",
-    "title": "Das Display bedienen",
+    "title": {
+      "de": "Das Display bedienen",
+      "en": "Using the display"
+    },
     "children": [
-      { "id": "startseite", "title": "Die Startseite" },
-      { "id": "player", "title": "Der Player" },
-      { "id": "gesten", "title": "Gesten und Vollbildmodus" },
-      { "id": "fortsetzen", "title": "Fortsetzen und „Läuft gerade“" },
-      { "id": "cover-und-themes", "title": "Cover und Themes" },
-      { "id": "eltern-zugang", "title": "Einstellungen am Display" }
+      {
+        "id": "startseite",
+        "title": {
+          "de": "Die Startseite",
+          "en": "The start page"
+        }
+      },
+      {
+        "id": "player",
+        "title": {
+          "de": "Der Player",
+          "en": "The player"
+        }
+      },
+      {
+        "id": "gesten",
+        "title": {
+          "de": "Gesten und Vollbildmodus",
+          "en": "Gestures and full screen"
+        }
+      },
+      {
+        "id": "fortsetzen",
+        "title": {
+          "de": "Fortsetzen und „Läuft gerade“",
+          "en": "Continue and “Now playing”"
+        }
+      },
+      {
+        "id": "cover-und-themes",
+        "title": {
+          "de": "Cover und Themes",
+          "en": "Covers and themes"
+        }
+      },
+      {
+        "id": "eltern-zugang",
+        "title": {
+          "de": "Einstellungen am Display",
+          "en": "Settings on the display"
+        }
+      }
     ]
   },
   {
     "id": "inhalte",
-    "title": "Inhalte hinzufügen",
+    "title": {
+      "de": "Inhalte hinzufügen",
+      "en": "Adding content"
+    },
     "children": [
-      { "id": "lokale-medien", "title": "Eigene Hörspiele und Musik" },
-      { "id": "spotify", "title": "Spotify" },
-      { "id": "podcasts-und-radio", "title": "Podcasts und Radio" },
-      { "id": "nas", "title": "NAS" },
-      { "id": "cover", "title": "Cover" },
-      { "id": "verwalten", "title": "Inhalte verwalten" }
+      {
+        "id": "lokale-medien",
+        "title": {
+          "de": "Eigene Hörspiele und Musik",
+          "en": "Your own audiobooks and music"
+        }
+      },
+      {
+        "id": "spotify",
+        "title": {
+          "de": "Spotify",
+          "en": "Spotify"
+        }
+      },
+      {
+        "id": "podcasts-und-radio",
+        "title": {
+          "de": "Podcasts und Radio",
+          "en": "Podcasts and radio"
+        }
+      },
+      {
+        "id": "nas",
+        "title": {
+          "de": "NAS",
+          "en": "NAS"
+        }
+      },
+      {
+        "id": "cover",
+        "title": {
+          "de": "Cover",
+          "en": "Covers"
+        }
+      },
+      {
+        "id": "verwalten",
+        "title": {
+          "de": "Inhalte verwalten",
+          "en": "Managing content"
+        }
+      }
     ]
   },
   {
     "id": "spielzeit",
-    "title": "Spielzeit und Ruhezeiten",
+    "title": {
+      "de": "Spielzeit und Ruhezeiten",
+      "en": "Playtime and quiet times"
+    },
     "children": [
-      { "id": "tageslimits", "title": "Tageslimits" },
-      { "id": "ruhezeiten", "title": "Ruhezeiten" },
-      { "id": "schlaftimer", "title": "Sofort-Aktionen und Schlaftimer" },
-      { "id": "hoer-verlauf", "title": "Hör-Verlauf" }
+      {
+        "id": "tageslimits",
+        "title": {
+          "de": "Tageslimits",
+          "en": "Daily limits"
+        }
+      },
+      {
+        "id": "ruhezeiten",
+        "title": {
+          "de": "Ruhezeiten",
+          "en": "Quiet times"
+        }
+      },
+      {
+        "id": "schlaftimer",
+        "title": {
+          "de": "Sofort-Aktionen und Schlaftimer",
+          "en": "Instant actions and sleep timer"
+        }
+      },
+      {
+        "id": "hoer-verlauf",
+        "title": {
+          "de": "Hör-Verlauf",
+          "en": "Listening history"
+        }
+      }
     ]
   },
   {
     "id": "hardware",
-    "title": "Hardware und Zubehör",
+    "title": {
+      "de": "Hardware und Zubehör",
+      "en": "Hardware and accessories"
+    },
     "children": [
-      { "id": "display", "title": "Display" },
-      { "id": "sound", "title": "Sound und Lautstärke" },
-      { "id": "drehregler", "title": "Drehregler und Taster" },
-      { "id": "strom", "title": "Akku, MuPiHAT und Ausschalter" },
-      { "id": "luefter", "title": "Lüfter" },
-      { "id": "bluetooth", "title": "Bluetooth" },
-      { "id": "wled", "title": "WLED" }
+      {
+        "id": "display",
+        "title": {
+          "de": "Display",
+          "en": "Display"
+        }
+      },
+      {
+        "id": "sound",
+        "title": {
+          "de": "Sound und Lautstärke",
+          "en": "Sound and volume"
+        }
+      },
+      {
+        "id": "drehregler",
+        "title": {
+          "de": "Drehregler und Taster",
+          "en": "Rotary knob and button"
+        }
+      },
+      {
+        "id": "strom",
+        "title": {
+          "de": "Akku, MuPiHAT und Ausschalter",
+          "en": "Battery, MuPiHAT and power button"
+        }
+      },
+      {
+        "id": "luefter",
+        "title": {
+          "de": "Lüfter",
+          "en": "Fan"
+        }
+      },
+      {
+        "id": "bluetooth",
+        "title": {
+          "de": "Bluetooth",
+          "en": "Bluetooth"
+        }
+      },
+      {
+        "id": "wled",
+        "title": {
+          "de": "WLED",
+          "en": "WLED"
+        }
+      }
     ]
   },
   {
     "id": "netzwerk",
-    "title": "Netzwerk und Fernzugriff",
+    "title": {
+      "de": "Netzwerk und Fernzugriff",
+      "en": "Network and remote access"
+    },
     "children": [
-      { "id": "wlan-und-lan", "title": "WLAN und LAN" },
-      { "id": "freigaben", "title": "Freigaben und Fernsteuerung" },
-      { "id": "sicherheit", "title": "Passwort und HTTPS" },
-      { "id": "telegram", "title": "Telegram" },
-      { "id": "mqtt", "title": "MQTT und Home Assistant" }
+      {
+        "id": "wlan-und-lan",
+        "title": {
+          "de": "WLAN und LAN",
+          "en": "Wi-Fi and LAN"
+        }
+      },
+      {
+        "id": "freigaben",
+        "title": {
+          "de": "Freigaben und Fernsteuerung",
+          "en": "Shares and remote control"
+        }
+      },
+      {
+        "id": "sicherheit",
+        "title": {
+          "de": "Passwort und HTTPS",
+          "en": "Password and HTTPS"
+        }
+      },
+      {
+        "id": "telegram",
+        "title": {
+          "de": "Telegram",
+          "en": "Telegram"
+        }
+      },
+      {
+        "id": "mqtt",
+        "title": {
+          "de": "MQTT und Home Assistant",
+          "en": "MQTT and Home Assistant"
+        }
+      }
     ]
   },
   {
     "id": "wartung",
-    "title": "Wartung",
+    "title": {
+      "de": "Wartung",
+      "en": "Maintenance"
+    },
     "children": [
-      { "id": "updates", "title": "Updates" },
-      { "id": "backup", "title": "Backup" },
-      { "id": "neustart", "title": "Neu starten und Ausschalten" },
-      { "id": "protokolle", "title": "Protokolle und Zustand" },
-      { "id": "problem-melden", "title": "Ein Problem melden" },
-      { "id": "system", "title": "System- und Experteneinstellungen" }
+      {
+        "id": "updates",
+        "title": {
+          "de": "Updates",
+          "en": "Updates"
+        }
+      },
+      {
+        "id": "backup",
+        "title": {
+          "de": "Backup",
+          "en": "Backup"
+        }
+      },
+      {
+        "id": "neustart",
+        "title": {
+          "de": "Neu starten und Ausschalten",
+          "en": "Restart and shut down"
+        }
+      },
+      {
+        "id": "protokolle",
+        "title": {
+          "de": "Protokolle und Zustand",
+          "en": "Logs and status"
+        }
+      },
+      {
+        "id": "problem-melden",
+        "title": {
+          "de": "Ein Problem melden",
+          "en": "Reporting a problem"
+        }
+      },
+      {
+        "id": "system",
+        "title": {
+          "de": "System- und Experteneinstellungen",
+          "en": "System and expert settings"
+        }
+      }
     ]
   },
   {
     "id": "fehlerbehebung",
-    "title": "Fehlerbehebung",
+    "title": {
+      "de": "Fehlerbehebung",
+      "en": "Troubleshooting"
+    },
     "children": [
-      { "id": "kein-ton", "title": "Kein Ton" },
-      { "id": "app-nicht-erreichbar", "title": "Die App ist nicht erreichbar" },
-      { "id": "spotify-probleme", "title": "Spotify spielt nicht" },
-      { "id": "haengt-beim-ausschalten", "title": "Die Box hängt beim Ausschalten" },
-      { "id": "weitere-faelle", "title": "Weitere Fälle" }
+      {
+        "id": "kein-ton",
+        "title": {
+          "de": "Kein Ton",
+          "en": "No sound"
+        }
+      },
+      {
+        "id": "app-nicht-erreichbar",
+        "title": {
+          "de": "Die App ist nicht erreichbar",
+          "en": "The app is not reachable"
+        }
+      },
+      {
+        "id": "spotify-probleme",
+        "title": {
+          "de": "Spotify spielt nicht",
+          "en": "Spotify does not play"
+        }
+      },
+      {
+        "id": "haengt-beim-ausschalten",
+        "title": {
+          "de": "Die Box hängt beim Ausschalten",
+          "en": "The box hangs when shutting down"
+        }
+      },
+      {
+        "id": "weitere-faelle",
+        "title": {
+          "de": "Weitere Fälle",
+          "en": "More cases"
+        }
+      }
     ]
   },
   {
     "id": "referenz",
-    "title": "Einstellungs-Referenz"
+    "title": {
+      "de": "Einstellungs-Referenz",
+      "en": "Settings reference"
+    }
   },
   {
     "id": "anhang",
-    "title": "Anhang",
+    "title": {
+      "de": "Anhang",
+      "en": "Appendix"
+    },
     "children": [
-      { "id": "gpio", "title": "GPIO-Belegung" },
-      { "id": "dateien-und-dienste", "title": "Dateien, Ports und Dienste" },
-      { "id": "glossar", "title": "Glossar" }
+      {
+        "id": "gpio",
+        "title": {
+          "de": "GPIO-Belegung",
+          "en": "GPIO assignment"
+        }
+      },
+      {
+        "id": "dateien-und-dienste",
+        "title": {
+          "de": "Dateien, Ports und Dienste",
+          "en": "Files, ports and services"
+        }
+      },
+      {
+        "id": "glossar",
+        "title": {
+          "de": "Glossar",
+          "en": "Glossary"
+        }
+      }
     ]
   }
 ]

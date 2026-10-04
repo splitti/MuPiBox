@@ -2,6 +2,14 @@
 // The search reads search-index.json once (title, chapter, headings, text of every page) and ranks in the browser.
 ;(() => {
   const root = document.body.dataset.root || ''
+  const lang = document.body.dataset.lang || ''
+  const page = document.body.dataset.page || 'index.html'
+  let texts = { none: 'Nothing found.' }
+  try {
+    texts = JSON.parse(document.getElementById('i18n').textContent)
+  } catch (_e) {
+    // the English default stays
+  }
   const html = document.documentElement
   const $ = (s) => document.querySelector(s)
 
@@ -12,6 +20,22 @@
     menu.setAttribute('aria-expanded', String(open))
   })
   document.querySelector('main')?.addEventListener('click', () => document.body.classList.remove('nav-open'))
+
+  // language and version: the same page in another language / version (a version folder holds the languages)
+  const go = (select) => select?.addEventListener('change', () => {
+    if (select.value) location.href = select.value
+  })
+  go($('#lang'))
+  go($('#version'))
+  // other versions of the manual a box offers (versions.json lists them; the page itself only knows its own)
+  fetch(`${root}versions.json`)
+    .then((r) => r.json())
+    .then((v) => {
+      const select = $('#version')
+      if (!select || !Array.isArray(v.versions) || v.versions.length < 2) return
+      select.innerHTML = v.versions.map((x) => `<option value="${root}${x.path === '.' ? '' : `${x.path}/`}${lang}/${page}"${x.id === v.current ? ' selected' : ''}>${x.label}</option>`).join('')
+    })
+    .catch(() => {})
 
   // light / dark / auto
   $('.theme')?.addEventListener('click', () => {
@@ -57,7 +81,7 @@
   let index = null
   let loading = null
   let sel = -1
-  const load = () => (loading ??= fetch(`${root}search-index.json`).then((r) => r.json()).then((j) => (index = j)).catch(() => (index = [])))
+  const load = () => (loading ??= fetch(`${root}${lang}/search-index.json`).then((r) => r.json()).then((j) => (index = j)).catch(() => (index = [])))
 
   const fold = (s) => s.toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
   const escHtml = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
@@ -114,7 +138,7 @@
             return `<a href="${root}${p.u}${heading ? `#${heading.id}` : ''}"><b>${escHtml(p.t)}</b><small>${escHtml(p.c)}${heading ? ` › ${escHtml(heading.t)}` : ''}</small><small>${snippet}</small></a>`
           })
           .join('')
-      : '<p class="none">Nichts gefunden.</p>'
+      : `<p class="none">${escHtml(texts.none)}</p>`
     box.hidden = false
   }
 
