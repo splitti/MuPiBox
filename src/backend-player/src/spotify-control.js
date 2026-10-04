@@ -1628,6 +1628,7 @@ function pauseOwnSpotify(why) {
 }
 
 function pause() {
+  forgetSpotifyState()
   if (telegramPlaybackNotices())
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Pause"')
   currentMeta.pause = true
@@ -1674,6 +1675,7 @@ function switchToMplayer() {
 }
 
 function stop() {
+  forgetSpotifyState()
   playbackGeneration++
   currentMeta.finished = false
   clearLibraryResumeTimers()
@@ -1732,6 +1734,7 @@ function stop() {
 }
 
 function play() {
+  forgetSpotifyState()
   if (currentMeta.currentPlayer === 'spotify') {
     spotifyApi.play().then(
       () => {
@@ -1764,6 +1767,7 @@ function play() {
 }
 
 function next() {
+  forgetSpotifyState()
   if (currentMeta.currentPlayer === 'spotify') {
     spotifyApi.skipToNext().then(
       () => {
@@ -1789,6 +1793,7 @@ function next() {
 }
 
 function previous() {
+  forgetSpotifyState()
   if (currentMeta.currentPlayer === 'spotify') {
     spotifyApi.skipToPrevious().then(
       () => {
@@ -1834,6 +1839,7 @@ function jumpToTrack(targetPosition) {
 }
 
 function shuffleon() {
+  forgetSpotifyState()
   spotifyApi.setShuffle(true).then(
     () => {
       counter.countsetShuffle++
@@ -1849,6 +1855,7 @@ function shuffleon() {
 }
 
 function shuffleoff() {
+  forgetSpotifyState()
   spotifyApi.setShuffle(false).then(
     () => {
       counter.countsetShuffle++
@@ -1892,6 +1899,7 @@ function overtakenStart() {
 }
 
 function playOnDevice(playOptions) {
+  forgetSpotifyState()
   const generation = playbackGeneration
   const overtaken = () => generation !== playbackGeneration || isPlaybackBlocked()
   return spotifyApi.play(playOptions).catch(async (err) => {
@@ -2540,6 +2548,7 @@ function playURL(playedURL, resumeAt = null) {
 
 /*seek 30 secends back or forward*/
 function seek(progress) {
+  forgetSpotifyState()
   let currentProgress = 0
   let targetProgress = 0
   log.debug(`${now()}: [Spotify Control] Setting progress to ${progress}`)
@@ -2812,6 +2821,7 @@ function fadeOutThen(done) {
 }
 
 async function transferPlayback(id) {
+  forgetSpotifyState()
   await spotifyApi.transferMyPlayback([id]).then(
     () => {
       counter.counttransferMyPlayback++
@@ -2900,8 +2910,35 @@ app.get('/setDevice', (req, _res) => {
 
 /*endpoint to return all state information*/
 /*only used if sonos-kids-player is modified*/
+// The Spotify state for the parents' app (its start page asks every 5 s while it is open): kept for 15 s, the progress
+// moved on by the time since - every ask went to Spotify (720 requests an hour). A command of the box (play, pause,
+// skip, ...) asks anew.
+let spotifyStateKept = null
+const SPOTIFY_STATE_KEEP_MS = 15000
+function forgetSpotifyState() {
+  spotifyStateKept = null
+}
+const EMPTY_STATE = () => ({
+  item: {
+    album: {
+      name: '',
+      total_tracks: '',
+    },
+    name: '',
+    track_number: '',
+  },
+  currently_playing_type: '',
+})
 app.get('/state', (_req, res) => {
   if (currentMeta.currentPlayer === 'spotify') {
+    const kept = spotifyStateKept
+    const age = kept ? Date.now() - kept.at : Number.POSITIVE_INFINITY
+    // (its song over meanwhile: asked anew for the next one)
+    const progress = kept?.state.is_playing && typeof kept.state.progress_ms === 'number' ? kept.state.progress_ms + age : kept?.state.progress_ms
+    if (kept && age < SPOTIFY_STATE_KEEP_MS && !(progress >= (kept.state.item?.duration_ms ?? Number.POSITIVE_INFINITY))) {
+      res.send({ ...kept.state, progress_ms: progress })
+      return
+    }
     spotifyApi
       .getMyCurrentPlaybackState({
         additional_types: 'episode,track',
@@ -2913,23 +2950,18 @@ app.get('/state', (_req, res) => {
             writeCounter()
           }
           let state = data.body
-          if (Object.keys(state).length === 0) {
-            state = {
-              item: {
-                album: {
-                  name: '',
-                  total_tracks: '',
-                },
-                name: '',
-                track_number: '',
-              },
-              currently_playing_type: '',
-            }
+          if (!state || Object.keys(state).length === 0) {
+            state = EMPTY_STATE()
+          } else {
+            spotifyStateKept = { at: Date.now(), state }
           }
           res.send(state)
         },
         (err) => {
-          handleSpotifyError(err, 'stateHTTP')
+          // (only a question: none of handleSpotifyError's recoveries - they start or move the playback - and an
+          // answer all the same, the app waited for its timeout; an expired token is renewed)
+          if (err?.body?.error?.status === 401) handleSpotifyError(err, 'stateHTTP')
+          res.send(EMPTY_STATE())
         },
       )
   } else {

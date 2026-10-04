@@ -1,5 +1,6 @@
-// What the Smart-Sync asks Spotify for that hardly ever changes - an artist's picture, a pinned album's name and cover -
-// kept on the SD card (cache/sync-meta.json). Every run (every 15 minutes) asked for all of them again: for Spotify apps
+// What the Smart-Sync asks Spotify for that hardly ever changes - an artist's picture, a pinned album's name and cover,
+// the entries of a playlist that did not change (Spotify's snapshot of it is the same) - kept on the SD card
+// (cache/sync-meta.json). Every run (every 15 minutes) asked for all of them again: for Spotify apps
 // under its 2026 rules (no more several artists in one request) 40 artist subscriptions were 40 requests in a row every
 // 15 minutes, and Spotify answers such runs with a block of hours (seen with a big library, Maik).
 // Kept for about 30 days - a new picture of an artist comes within a month - each entry with a day of its own, so they
@@ -21,6 +22,8 @@ interface MetaFile {
   /** artist id → its picture (null: Spotify has none) and until when it counts (ms) */
   artists: Record<string, { url: string | null; until: number }>
   albums: Record<string, { album: CachedAlbum; until: number }>
+  /** a playlist's entries as read at Spotify's snapshot (its version) */
+  playlists: Record<string, { snapshot: string; tracks: unknown[]; until: number }>
 }
 
 const FILE = path.join(process.cwd(), 'cache', 'sync-meta.json')
@@ -33,9 +36,9 @@ function load(): MetaFile {
   if (meta) return meta
   try {
     const kept = JSON.parse(fs.readFileSync(FILE, 'utf8')) as Partial<MetaFile>
-    meta = { artists: kept.artists ?? {}, albums: kept.albums ?? {} }
+    meta = { artists: kept.artists ?? {}, albums: kept.albums ?? {}, playlists: kept.playlists ?? {} }
   } catch {
-    meta = { artists: {}, albums: {} }
+    meta = { artists: {}, albums: {}, playlists: {} }
   }
   return meta
 }
@@ -73,6 +76,17 @@ export function keepAlbum(album: CachedAlbum): void {
   dirty = true
 }
 
+/** A playlist's entries as kept when Spotify still names the same snapshot (else undefined: to be read). */
+export function keptPlaylistTracks<T>(id: string, snapshot: string): T[] | undefined {
+  const e = load().playlists[id]
+  return e && e.snapshot === snapshot && e.until > Date.now() ? (e.tracks as T[]) : undefined
+}
+
+export function keepPlaylistTracks(id: string, snapshot: string, tracks: unknown[]): void {
+  load().playlists[id] = { snapshot, tracks, until: until() }
+  dirty = true
+}
+
 /** Written when something new came (once per run). Entries run out long ago are dropped then. */
 export function saveMetaCache(): void {
   if (!dirty || !meta) return
@@ -80,6 +94,7 @@ export function saveMetaCache(): void {
   const old = Date.now() - KEEP_MS
   for (const [id, e] of Object.entries(meta.artists)) if (e.until < old) delete meta.artists[id]
   for (const [id, e] of Object.entries(meta.albums)) if (e.until < old) delete meta.albums[id]
+  for (const [id, e] of Object.entries(meta.playlists)) if (e.until < old) delete meta.playlists[id]
   try {
     fs.mkdirSync(path.dirname(FILE), { recursive: true })
     const tmp = `${FILE}.tmp`

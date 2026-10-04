@@ -216,6 +216,8 @@ export interface DiscoveredPlaylist {
   categoryOverride?: CategoryType // from [mupibox:category=X] tag in description
   episodeOnly: boolean // true if [mupibox:episode-only] in description
   trackCount: number
+  /** Spotify's version of the playlist: changes with every change of it (an unchanged one is not read again) */
+  snapshotId?: string
 }
 
 /** What gets written to /tmp/.spotify_sync_state.json (§6.6). */
