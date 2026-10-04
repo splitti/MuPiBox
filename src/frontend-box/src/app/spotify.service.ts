@@ -150,7 +150,9 @@ export class SpotifyService {
               catchError((error) => {
                 this.failures++
                 this.logService.warn(`Failed to fetch page at offset ${offset}:`, error?.message || error)
-                return of([] as T[])
+                // (passed on: a list without this page lost its episodes or albums for the whole block - a failed row
+                // takes them from the kept list, see media.service fillFailedRows)
+                throw error
               }),
             ),
           )
@@ -717,13 +719,13 @@ export class SpotifyService {
     return this.http.get<any>(showUrl).pipe(
       timeout(15000), // B10
       switchMap((show) => {
-        // Get all episodes for position calculation
-        return this.http.get<any[]>(showEpisodesUrl).pipe(
-          timeout(15000), // B10
+        // The episodes for the position (pages of 10 as the backend asks Spotify, at most 100 - it answers pages, not
+        // a list)
+        return this.fetchAllPaginatedResults<any>(showEpisodesUrl, {}, 10, 10).pipe(
           map((episodesData) => ({
             total_episodes: show.total_episodes,
             show_name: show.name,
-            episodes: episodesData.map((episode: any) => ({
+            episodes: episodesData.filter((episode: any) => episode != null).map((episode: any) => ({
               id: episode.id,
               uri: episode.uri || `spotify:episode:${episode.id}`,
               name: episode.name,

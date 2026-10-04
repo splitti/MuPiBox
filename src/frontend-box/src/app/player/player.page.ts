@@ -57,6 +57,7 @@ import { DisplayTextsService } from '../display-texts.service'
 import { KmThemeService } from '../theme/km-theme.service'
 import { LogService } from '../log.service'
 import { isResumeEntry, type Media } from '../media'
+import { cleanResumePlaceholder } from '../resume-builder'
 import { MediaService } from '../media.service'
 import type { MupiboxConfig } from '../mupibox-config.model'
 import { StatusComponent } from '../status/status.component'
@@ -896,7 +897,13 @@ export class PlayerPage implements OnInit, AfterViewInit {
     // the zeros of the empty local player)
     if ((this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'rss') && this.currentPlayedLocal?.currentPlayer !== 'mplayer') return
 
+    // Spotify: the track's place in its album or playlist not known (a list of more than 50 tracks, one that could not
+    // be loaded): the last save stands - it was saved as track 1 at the position of track N
+    if (this.media.type === 'spotify' && !this.media.showid && !this.currentPlayedSpotify?.item?.track_number) return
     this.resumemedia = Object.assign({}, this.media)
+    // (a placeholder - Spotify did not answer when the list was made - with the name and cover of what plays; without
+    // them it is not kept: "Nicht verfügbar" stayed in resume for good)
+    if (!cleanResumePlaceholder(this.resumemedia, this.currentPlayedSpotify)) return
     if (this.resumemedia.type === 'spotify' && this.resumemedia?.showid) {
       this.resumemedia.resumespotifytrack_number = this.currentPlayedSpotify?.item?.track_number || 1
       this.resumemedia.resumespotifyprogress_ms = this.currentPlayedSpotify?.progress_ms || 0
@@ -1090,8 +1097,9 @@ export class PlayerPage implements OnInit, AfterViewInit {
         this.trackListTitle = info.album_name
 
         this.trackListFailed = !!info.failed
-        this.trackList = (info.tracks ?? []).map((track: any) => ({
-          position: track.track_number,
+        this.trackList = (info.tracks ?? []).map((track: any, index: number) => ({
+          // (its place in the album: track_number counts per disc - on a second disc a tap played the first's)
+          position: index + 1,
           id: track.id,
           name: track.name,
           artist: track.artist,

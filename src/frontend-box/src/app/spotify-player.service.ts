@@ -70,6 +70,8 @@ export class SpotifyPlayerService {
 
   // When Spotify last listed this player among the account's devices (see deviceKnownToSpotify)
   private deviceCheckedAt = 0
+  // until when Spotify blocks the requests (its Retry-After of a 429 to the device check)
+  private deviceCheckBlockedUntil = 0
   private readonly DEVICE_CHECK_FRESH_MS = 60000 // a start within a minute of a check needs no second one
   private readonly DEVICE_CHECK_EVERY_MS = 180000 // also every 3 minutes: starts from the web app or Telegram find it connected
 
@@ -675,6 +677,8 @@ export class SpotifyPlayerService {
   private async deviceKnownToSpotify(): Promise<boolean | null> {
     const id = this.deviceId
     if (!id || !this.isOnline) return null
+    // (Spotify blocks the box's requests: not asked again before its time - each request only kept the block going)
+    if (Date.now() < this.deviceCheckBlockedUntil) return null
     try {
       // (fetch, not HttpClient: the header the player asks of the box's own pages is set here by hand - without it
       // the player refused the request every few minutes, the check never ran, and a player Spotify had dropped
@@ -689,6 +693,10 @@ export class SpotifyPlayerService {
         headers: { Authorization: `Bearer ${token}` },
         signal: AbortSignal.timeout(4000),
       })
+      if (res.status === 429) {
+        const seconds = Number.parseInt(res.headers.get('retry-after') ?? '', 10)
+        this.deviceCheckBlockedUntil = Date.now() + (Number.isFinite(seconds) && seconds > 0 ? seconds : 600) * 1000
+      }
       if (!res.ok) return null
       const body = (await res.json()) as { devices?: { id?: string }[] }
       const known = (body.devices ?? []).some((d) => d.id === id)
@@ -747,10 +755,13 @@ export class SpotifyPlayerService {
     // (the album as the display's own entries name it: its id, so a resume entry has a key - one without was
     // refused; the page shows the track and the artist from the SDK's state anyway)
     const albumId = /^spotify:album:([A-Za-z0-9]+)$/.exec(track.album?.uri ?? '')?.[1]
+    // (a playlist started from the parents' app or Telegram: kept as that playlist - as the album of its current
+    // track, resume played another album with the playlist's track number)
+    const playlistId = /^spotify:playlist:([A-Za-z0-9]+)$/.exec((this.playerState$.value as any)?.context?.uri ?? '')?.[1]
     return {
       type: 'spotify',
       category: 'other',
-      ...(albumId ? { id: albumId } : {}),
+      ...(playlistId ? { playlistid: playlistId } : albumId ? { id: albumId } : {}),
       title: track.album?.name || track.name,
       artist: track.artists?.[0]?.name || 'Unknown Artist',
       cover: track.album?.images?.[0]?.url || '../assets/images/nocover_mupi.png',
