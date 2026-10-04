@@ -1,3 +1,21 @@
+<h3>DEV 5.0.8 - changes compared to 5.0.7</h3>
+<b>Themes</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>A new header on every theme: one row, 64 px high - history, categories, "Now playing", WiFi and battery. A long press on WiFi and battery still opens the settings. The listening time is a small chip below the header on every page.</li>
+<li id='linews' class='linews'>"Now playing": the player can be left while the music goes on - a pill in the header shows the cover, the title and a stop button, a tap opens the player again. In the app: Settings › Audio › "Back in the player" - minimise (the default) or stop.</li>
+<li id='linews' class='linews'>The player rearranged: the track button ("3 / 19") sits below the cover like a handle and opens the track list (a long press on the cover still does), bigger buttons. Volume and output share one capsule in the header: box | headphones (only with a paired Bluetooth device) - one tap switches, with several devices the window "Listen with" opens, and a headset that is not found is said so.</li>
+<li id='linews' class='linews'>The track list new: the cover and "Close" on the left, the tracks as rows, paging on the right.</li>
+<li id='linews' class='linews'>The 37 older themes (blue, steampunk ...): a band behind the header and a panel behind the player's controls in their colours; new backgrounds for blue, wood and light, matrix adjusted; pikachu, steampunk and matrix use their own font for the whole screen. Daily limit, quiet time and "not reachable" cover the screen fully - the choice behind no longer shows through. Eight themes with well-known characters have mascots of their own; steampunk shows its gear in the stage view too, and the 16 themes with a font of their own use it for the name in the stage view.</li>
+<li id='linews' class='linews'>coverflow (by Andreas): the same header with categories, "Now playing" and minimising, and player, "Listen with" and track list in coverflow's own look (black, square covers with a mirror image). The cover band stays as it is.</li>
+<li id='linews' class='linews'>Tag &amp; Nacht: at night the header, the symbols and the buttons are light again (they stayed dark and were hard to read).</li>
+<li id='linews' class='linews'>The listening-time chip hides while the "Listen with" window is open; the tick on the chosen tile is visible again on light circles.</li>
+</ul>
+<b>Display</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Covers no longer jump on their own when the library changes (Smart-Sync, NAS folders, an upload): a list loaded again in the background stays on the cover it was on, found by its name, not by its place - an entry added or removed in front of it moved the list to another cover. Only the finished list is shown, without loading dots; nothing happens at all when the list looks the same as before, and on an error it stays as it is. A poll that got no answer (the box busy, e.g. with a sync) no longer counts as a change: it made the lists load twice. Covers that stay are no longer built anew (they flickered), in the start page, the album lists, the stage view and coverflow. The "new" dot, the progress bar and the tick of podcast episodes are really shown now (the list lost them on the way to the screen).</li>
+</ul>
 <h3>DEV 5.0.7 - changes compared to 5.0.6</h3>
 <b>New player: mpv</b>
 </ul>
@@ -22,7 +40,6 @@
 <li id='linews' class='linews'>A category with a big library shows what is there after a few seconds, the rest follows - before, it showed only loading dots until every Spotify entry was looked up (minutes after an update), and after a minute the page was even loaded again, which started it over.</li>
 <li id='linews' class='linews'>The lists of the categories the box keeps survive an update (now in server/config, which the update keeps) - the first tap after an update no longer makes them from scratch.</li>
 <li id='linews' class='linews'>Spotify: the box's cache of Spotify's answers (and of the covers) survives an update as well - every entry was asked for again after an update, with a big library minutes of loading and a long way into Spotify's rate limit. The cache holds 4000 answers now (1000 before: a big library threw out its own entries while being made). A list made while Spotify blocked requests or a lookup failed is shown but not kept as complete - it is made again later instead of showing placeholders for hours. A Spotify search entry fetches its first 100 hits (before: every page of a thousand, a hundred requests for one entry).</li>
-<li id='linews' class='linews'>Covers no longer jump on their own when the library changes (Smart-Sync, NAS folders, an upload): a list loaded again in the background stays on the cover it was on, found by its name, not by its place - an entry added or removed in front of it moved the list to another cover. Only the finished list is shown, without loading dots; nothing happens at all when the list looks the same as before, and on an error it stays as it is. A poll that got no answer (the box busy, e.g. with a sync) no longer counts as a change: it made the lists load twice. Covers that stay are no longer built anew (they flickered), in the start page, the album lists, the stage view and coverflow. The "new" dot, the progress bar and the tick of podcast episodes are really shown now (the list lost them on the way to the screen).</li>
 </ul>
 <b>Network</b>
 </ul>
