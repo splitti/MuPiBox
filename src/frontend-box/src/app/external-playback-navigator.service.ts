@@ -6,6 +6,7 @@ import { Subject, catchError, firstValueFrom, interval, merge, of, switchMap, ti
 import { filter, map } from 'rxjs/operators'
 import { environment } from 'src/environments/environment'
 import type { CurrentMPlayer } from './current.mplayer'
+import { BackgroundPlaybackService } from './background-playback.service'
 import type { Media } from './media'
 import { SpotifyService } from './spotify.service'
 import { KmThemeService } from './theme/km-theme.service'
@@ -35,6 +36,8 @@ export class ExternalPlaybackNavigatorService {
   /** True while the player page is being left only to be opened again for a new start from the phone. */
   public replacingPlayerPage = false
   private readonly navController = inject(NavController)
+  // what plays on after the player page was left ("Läuft gerade"): its next track must not pull the display back
+  private readonly background = inject(BackgroundPlaybackService)
   /** Ask /local right now (outside the timer), e.g. when a Spotify track starts while on the player page. */
   private readonly pollNow$ = new Subject<void>()
   /** Same idea for "show the new theme now" from the parents' web app (see checkThemeReload). */
@@ -77,6 +80,7 @@ export class ExternalPlaybackNavigatorService {
         filter((track) => track !== null),
         filter(() => !this.isCurrentlyOnPlayerPage()),
         filter(() => !this.isNavigatingToPlayer),
+        filter(() => this.background.media() === null),
         map((track) => this.spotifyService.createMediaFromSpotifyTrack(track)),
       )
       .subscribe({

@@ -1241,7 +1241,10 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       const btMaxVolume = volumePercent(mb.btMaxVolume) ?? null
       // loudness: off | soft | strong - the player's levelling of what is not Spotify (mupibox.loudness, mpv only)
       const loudness = mb.loudness === 'soft' || mb.loudness === 'strong' ? mb.loudness : 'off'
-      bluetoothAudio().then((bluetooth) => res.json({ current, maxVolume, startupVolume, btMaxVolume, bluetooth, loudness }))
+      // playerBack: minimize | stop - the display's back button in the player (mupibox.playerBack, km themes): the
+      // music goes on with "Läuft gerade" in the header, or it stops as before
+      const playerBack = mb.playerBack === 'stop' ? 'stop' : 'minimize'
+      bluetoothAudio().then((bluetooth) => res.json({ current, maxVolume, startupVolume, btMaxVolume, bluetooth, loudness, playerBack }))
     })
   })
 
@@ -1287,8 +1290,15 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * accidentally-muted box that looks broken.
    */
   router.post('/audio/config', requireSession, requireCsrf, async (req, res) => {
-    const body = (req.body as { maxVolume?: unknown; startupVolume?: unknown; btMaxVolume?: unknown; loudness?: unknown } | undefined) ?? {}
-    const mutations: { maxVolume?: number; startupVolume?: number | null; btMaxVolume?: number | null; loudness?: 'off' | 'soft' | 'strong' } = {}
+    const body = (req.body as { maxVolume?: unknown; startupVolume?: unknown; btMaxVolume?: unknown; loudness?: unknown; playerBack?: unknown } | undefined) ?? {}
+    const mutations: { maxVolume?: number; startupVolume?: number | null; btMaxVolume?: number | null; loudness?: 'off' | 'soft' | 'strong'; playerBack?: 'minimize' | 'stop' } = {}
+    if (body.playerBack !== undefined) {
+      if (body.playerBack !== 'minimize' && body.playerBack !== 'stop') {
+        res.status(400).json({ error: 'playerBack must be minimize or stop' })
+        return
+      }
+      mutations.playerBack = body.playerBack
+    }
     if (body.loudness !== undefined) {
       if (body.loudness !== 'off' && body.loudness !== 'soft' && body.loudness !== 'strong') {
         res.status(400).json({ error: 'loudness must be off, soft or strong' })
@@ -1335,6 +1345,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       if (mutations.btMaxVolume === null) delete mb.btMaxVolume
       else if (mutations.btMaxVolume !== undefined) mb.btMaxVolume = mutations.btMaxVolume
       if (mutations.loudness !== undefined) mb.loudness = mutations.loudness
+      if (mutations.playerBack !== undefined) mb.playerBack = mutations.playerBack
       // The scripts that set the volume at start and shutdown (chromium-autostart.sh, mupi_shutdown.sh,
       // off_trigger.sh, shutdown_sound.sh) and the admin interface read startVolume: this app's startupVolume alone
       // had no effect. Both are written; without a fixed value both go, and the scripts leave the volume as it was.

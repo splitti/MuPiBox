@@ -1,0 +1,826 @@
+// km themes, design round 2 (design handoff "design_handoff_mupibox_runde2"): the parts all 67 km themes share -
+// one piece for all of them, coloured only by the theme's --km-* variables (THEME_WERTE.md wrote the new ones into
+// every theme file: --km-band, --km-on-band, --km-on-band-2, --km-btn, --km-on-btn, --km-tab-idle, --km-on-pill).
+// coverflow (no km theme): header, player, "Hören mit" and track list apply to body.cf too, in its colours
+// (cf-round2.scss).
+
+body.km,
+body.cf {
+  // WiFi and battery on the header's colour (the old themes have their band behind it, see below)
+  --st-on: var(--km-on-band, var(--km-on-bg));
+
+  // ---------- header (§1): left 14, right 14, top 4, 64 high, gap 12 - everything 64 px, one line ----------
+  .km-r2 {
+    box-shadow: none !important;
+
+    &::after {
+      display: none;
+    }
+  }
+
+  .km-bar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 72px;
+    padding: 4px 14px;
+    box-sizing: border-box;
+    color: var(--km-on-band);
+  }
+
+  // the round button on the left (history, back, minimise): 64, the button colours of the theme
+  .km-hbtn {
+    flex: 0 0 64px;
+    width: 64px;
+    height: 64px;
+    border-radius: 32px;
+    border: 0;
+    padding: 0;
+    background: var(--km-btn);
+    color: var(--km-on-btn);
+    display: grid;
+    place-items: center;
+    box-shadow: 0 4px 0 var(--km-shadow);
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 150ms var(--km-spring);
+
+    &:active {
+      transform: scale(0.9);
+    }
+
+    svg,
+    ion-icon {
+      width: 28px;
+      height: 28px;
+      font-size: 28px;
+    }
+
+    svg {
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+  }
+
+  // categories: group 4 px padding, radius 34; tabs 96 × 56 (80 with the pill), radius 28; idle tabs --km-tab-idle
+  .km-tabs-wrap {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    justify-content: center;
+
+    &.km-mini {
+      flex: 0 0 auto;
+    }
+  }
+
+  .km-tabs {
+    display: flex;
+    padding: 4px;
+    border-radius: 34px;
+    background: var(--km-night-2);
+  }
+
+  .km-tab {
+    width: 96px;
+    height: 56px;
+    border-radius: 28px;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--km-tab-idle);
+    display: grid;
+    place-items: center;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      transform 150ms var(--km-spring),
+      background-color 200ms;
+
+    &.km-on {
+      background: var(--km-apricot);
+      color: var(--km-ink);
+    }
+
+    &:active {
+      transform: scale(0.92);
+    }
+
+    ion-icon {
+      font-size: 28px;
+    }
+  }
+
+  .km-mini .km-tab {
+    width: 80px;
+  }
+
+  // page title in the header (album list, player): next to the round button
+  .km-htitle {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    .km-ht1 {
+      font-size: 26px;
+      font-weight: 600;
+      color: var(--km-on-band);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+}
+
+// ---------- player (§3) - positions in the page's content (it starts below the 72 px header: screen y - 72) ----------
+body.km,
+body.cf {
+  .km-bar-player {
+    gap: 10px;
+  }
+
+  .kp-titles {
+    .kp-t1 {
+      font-size: 21px;
+      font-weight: 600;
+      color: var(--km-on-band);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .kp-t2 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--km-on-band-2);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    // (the template's blocks wrap their text in a div)
+    div {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .player-content .kp {
+    position: relative;
+    height: 408px;
+  }
+
+  // cover 316 at x 36 / y 90, radius 28; radio: 300 at x 42 / y 112
+  .kp-cover {
+    position: absolute;
+    left: 36px;
+    top: 18px;
+    width: 316px;
+    height: 316px;
+    border-radius: 28px;
+    overflow: hidden;
+    background: var(--km-night-4);
+    box-shadow: 0 8px 0 var(--km-shadow);
+    transition: transform 150ms var(--km-spring);
+
+    > img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    &.km-pressing {
+      transform: scale(0.97);
+    }
+  }
+
+  .kp-radio .kp-cover {
+    left: 42px;
+    top: 40px;
+    width: 300px;
+    height: 300px;
+  }
+
+  // the track button like a handle below the cover: 196 × 60 at x 96 / y 390, radius 30
+  .kp-tbtn {
+    position: absolute;
+    left: 96px;
+    top: 318px;
+    width: 196px;
+    height: 60px;
+    border-radius: 30px;
+    border: 0;
+    padding: 0;
+    background: var(--km-cream);
+    color: var(--km-ink);
+    box-shadow: 0 5px 0 var(--km-shadow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 22px;
+    font-weight: 700;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 150ms var(--km-spring);
+
+    &:active {
+      transform: scale(0.95);
+    }
+
+    svg {
+      width: 24px;
+      height: 24px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.6;
+      stroke-linecap: round;
+    }
+
+  }
+
+  // the old themes' panel behind the controls (§7); the km themes have none
+  .kp-panel {
+    display: none;
+  }
+
+  // the controls: left 384, right 30, top 112 (with the panel 132), centred, gap 14 (10)
+  .kp-ctrl {
+    position: absolute;
+    left: 384px;
+    right: 30px;
+    top: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .kp-time {
+    width: 100%;
+    // the bar's top edge is the column's top, the 32 px range around it starts 10 px higher
+    margin-top: -10px;
+
+    ion-range {
+      --bar-height: 12px;
+      --bar-border-radius: 6px;
+      --bar-background: var(--km-night-3);
+      --bar-background-active: var(--km-apricot);
+      --knob-size: 32px;
+      --knob-background: var(--km-cream);
+      padding: 0;
+      height: 32px;
+      min-height: 32px;
+    }
+
+    // 24 px with a 4 px edge, full size (the md range shrinks an untouched knob to 67 %)
+    ion-range::part(knob) {
+      border: 4px solid var(--km-apricot);
+      box-sizing: border-box;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .km-times {
+      display: flex;
+      justify-content: space-between;
+      // (the 12 px bar sits in the middle of the 32 px range: 10 px below it)
+      margin-top: 0;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--km-on-band-2);
+    }
+  }
+
+  // light themes: a grey bar (the theme files set night-3 with !important); of the old ones only light, whose panel
+  // stays white - the others have a darkened panel
+  &.km-light:not(.km-legacy) .kp-time ion-range,
+  &.km-theme-light .kp-time ion-range {
+    --bar-background: rgba(0, 0, 0, 0.14) !important;
+  }
+
+  .kp-live {
+    height: 48px;
+    padding: 0 20px;
+    border-radius: 24px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 600;
+
+    i {
+      width: 12px;
+      height: 12px;
+    }
+  }
+
+  .kp-row {
+    display: flex;
+    align-items: center;
+  }
+
+  .kp-row-main {
+    gap: 28px;
+  }
+
+  .kp-row-skip {
+    gap: 56px;
+  }
+
+  .kp-row-seek {
+    gap: 24px;
+  }
+
+  .kp-btn {
+    border: 0;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    background: var(--km-btn);
+    color: var(--km-on-btn);
+    box-shadow: 0 5px 0 var(--km-shadow);
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 150ms var(--km-spring);
+
+    &:active {
+      transform: scale(0.92);
+    }
+
+    &:disabled {
+      opacity: 0.4;
+    }
+
+    ion-icon {
+      font-size: 30px;
+    }
+
+    svg {
+      width: 30px;
+      height: 30px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+
+      .fill {
+        fill: currentColor;
+      }
+
+      // filled symbols (track back / forward, wind)
+      &.kp-solid {
+        fill: currentColor;
+        stroke: none;
+      }
+    }
+  }
+
+  // leiser / lauter 76, play 116
+  .kp-vol-btn {
+    width: 76px;
+    height: 76px;
+    border-radius: 38px;
+  }
+
+  .kp-play {
+    width: 116px;
+    height: 116px;
+    border-radius: 58px;
+    background: var(--km-apricot);
+    color: var(--km-ink);
+    box-shadow: 0 5px 0 var(--km-apricot-shadow);
+
+    ion-icon {
+      font-size: 46px;
+    }
+  }
+
+  // track back / forward 96 × 72
+  .kp-skip {
+    width: 96px;
+    height: 72px;
+    border-radius: 36px;
+  }
+
+  // seeking 72 × 60, no shadow
+  .kp-seek {
+    width: 72px;
+    height: 60px;
+    border-radius: 30px;
+    background: var(--km-night-2);
+    color: var(--km-on-pill);
+    box-shadow: none;
+
+    ion-icon {
+      font-size: 26px;
+    }
+
+    svg {
+      width: 26px;
+      height: 26px;
+    }
+
+    &.kp-on {
+      background: var(--km-apricot);
+      color: var(--km-ink);
+    }
+  }
+}
+
+// ---------- "Hören mit" window (§4) and the headset message ----------
+body.km,
+body.cf {
+  // (the window's background: the theme's panel colour; the old themes' half-transparent one would let the player show
+  // through - their opaque page colour instead)
+  --km-sheet: var(--km-night-2);
+
+  &.km-legacy {
+    --km-sheet: var(--km-night);
+  }
+
+  .out-dim {
+    background: rgba(10, 8, 20, 0.6);
+    align-items: flex-start;
+  }
+
+  .out-panel {
+    position: absolute;
+    left: 60px;
+    right: 60px;
+    top: 70px;
+    width: auto;
+    padding: 22px 24px 24px;
+    border-radius: 32px;
+    background: var(--km-sheet);
+    color: var(--km-on-band);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    h2 {
+      margin: 14px 0 0;
+      font-size: 28px;
+      font-weight: 700;
+    }
+  }
+
+  .out-close {
+    right: 20px;
+    top: 16px;
+    width: 56px;
+    height: 56px;
+    border-radius: 28px;
+    background: var(--km-btn);
+    color: var(--km-on-btn);
+  }
+
+  .out-tiles {
+    --out-gap: 14px;
+  }
+
+  .out-tile {
+    height: 186px;
+    border-radius: 24px;
+    background: var(--km-night-3);
+    color: var(--km-cream);
+    box-shadow: none;
+
+    b {
+      font-size: 20px;
+      font-weight: 700;
+      text-wrap: balance;
+      text-align: center;
+    }
+
+    small {
+      font-size: 15px;
+      font-weight: 600;
+      opacity: 0.85;
+    }
+
+    &.on {
+      background: var(--km-apricot);
+      color: var(--km-ink);
+      box-shadow: none;
+    }
+
+    &.out-missing {
+      box-shadow: inset 0 0 0 3px var(--km-rose);
+
+      small {
+        color: var(--km-rose);
+        opacity: 1;
+      }
+
+      .out-icon {
+        opacity: 0.6;
+      }
+    }
+  }
+
+  .out-icon {
+    width: 52px;
+    height: 52px;
+  }
+
+  .out-check {
+    width: 30px;
+    height: 30px;
+    border-radius: 15px;
+    background: var(--km-cream);
+
+    // (!important: the player's own rule draws it white, which vanished on the light circle)
+    svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--km-ink) !important;
+    }
+  }
+
+  // connecting: a ring around the symbol
+  .out-spin {
+    width: 58px;
+    height: 58px;
+    margin: 0;
+    border-width: 5px;
+    border-color: var(--km-apricot);
+    border-top-color: transparent;
+    opacity: 1;
+  }
+
+  // the switch's "not found" (one headset, no window): below the header on the right, fades out by itself
+  .kp-toast {
+    position: fixed;
+    top: 78px;
+    right: 14px;
+    z-index: 900;
+    max-width: 380px;
+    padding: 10px 16px;
+    border-radius: 16px;
+    background: var(--km-ink);
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 600;
+    animation: kp-toast-in 200ms ease-out;
+  }
+}
+
+@keyframes kp-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+// ---------- track list (§5): panel left 16, right 16, top 114, bottom 14 - content y = screen y - 72 ----------
+body.km,
+body.cf {
+  .player-content .kt {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    top: 42px;
+    bottom: 14px;
+    border-radius: 28px;
+    background: var(--km-night-2);
+    display: flex;
+    box-sizing: border-box;
+  }
+
+
+  // left 200: cover 160 (radius 20), "Zu" 160 × 64 (radius 32)
+  .kt-side {
+    flex: 0 0 200px;
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .kt-cover {
+    width: 160px;
+    height: 160px;
+    border-radius: 20px;
+    object-fit: cover;
+    background: var(--km-night-4);
+  }
+
+  .kt-close {
+    width: 160px;
+    height: 64px;
+    border-radius: 32px;
+    border: 0;
+    background: var(--km-apricot);
+    color: var(--km-ink);
+    box-shadow: 0 4px 0 var(--km-apricot-shadow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: inherit;
+    font-size: 22px;
+    font-weight: 700;
+
+    ion-icon {
+      font-size: 24px;
+    }
+  }
+
+  .kt-main {
+    flex: 1;
+    min-width: 0;
+    padding: 14px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .kt-head {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--km-lavender);
+    min-height: 20px;
+  }
+
+  .kt-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 4px;
+  }
+
+  // rows 58, radius 20; the current one in the accent colour with a play sign
+  .kt-row {
+    flex: 0 0 58px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 14px 0 8px;
+    border: 0;
+    border-radius: 20px;
+    background: var(--km-night-3);
+    color: var(--km-cream);
+    font-family: inherit;
+    text-align: left;
+    -webkit-tap-highlight-color: transparent;
+
+    &.kt-on {
+      background: var(--km-apricot);
+      color: var(--km-ink);
+      box-shadow: 0 4px 0 var(--km-apricot-shadow);
+
+      .kt-name {
+        font-weight: 700;
+      }
+
+      .kt-num {
+        background: var(--km-cream);
+        color: var(--km-ink);
+      }
+    }
+  }
+
+
+  .kt-num {
+    flex: 0 0 44px;
+    height: 44px;
+    border-radius: 22px;
+    background: var(--km-night-2);
+    display: grid;
+    place-items: center;
+    font-size: 18px;
+    font-weight: 700;
+
+    ion-icon {
+      font-size: 20px;
+    }
+  }
+
+  .kt-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 20px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    small {
+      margin-left: 8px;
+      font-size: 15px;
+      opacity: 0.75;
+    }
+  }
+
+  .kt-dur {
+    flex: 0 0 auto;
+    font-size: 16px;
+    font-weight: 500;
+    opacity: 0.8;
+  }
+
+  .kt-loading,
+  .kt-empty {
+    padding: 20px;
+    color: var(--km-lavender);
+    font-size: 18px;
+  }
+
+  // right 76: up / down, 56 round - a page each
+  .kt-pager {
+    flex: 0 0 76px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .kt-page {
+    width: 56px;
+    height: 56px;
+    border-radius: 28px;
+    border: 0;
+    background: var(--km-night-3);
+    color: var(--km-cream);
+    box-shadow: 0 4px 0 var(--km-shadow);
+    display: grid;
+    place-items: center;
+
+    &:active {
+      transform: scale(0.92);
+    }
+
+    ion-icon {
+      font-size: 28px;
+    }
+  }
+}
+
+// ---------- the old themes (§7): a band under the header on every page, a panel behind the player's controls ----------
+// (the picture themes' dark gradient at the top is gone from their files; the band takes its place - no blur, the
+// picture shows through)
+body.km.km-legacy {
+  .km-r2 .km-bar {
+    background: var(--km-band);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  }
+
+  .kp-panel {
+    display: block;
+    position: absolute;
+    left: 368px;
+    right: 14px;
+    top: 40px;
+    bottom: 12px;
+    border-radius: 28px;
+    background: var(--km-band);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+  }
+
+  // the controls move down a bit on the panel: top 132, gap 10
+  .kp-ctrl {
+    top: 60px;
+    gap: 10px;
+  }
+
+  .kp-radio .kp-ctrl {
+    top: 80px;
+  }
+}
+
+// themes with a white panel (--km-night-2 white): the track list panel gets a shadow, its rows a light blue (§5);
+// Tag & Nacht only by day (at night its panel is dark)
+$km-white-panel: bastelpapier einhorn eisenbahn eiswelt feuerwehr kaetzchen light meerjungfrau pferdehof piratenbucht
+  prinzessin ritterburg safari schmetterlinge sonnenhof tagundnacht zuckerland;
+@each $id in $km-white-panel {
+  body.km.km-theme-#{$id}:not(.km-night) {
+    .player-content .kt {
+      box-shadow: 0 6px 0 var(--km-shadow);
+    }
+
+    .kt-row:not(.kt-on) {
+      background: #eaf4fa;
+      color: var(--km-ink);
+    }
+
+    .out-tile:not(.on) {
+      background: #eaf4fa;
+      color: var(--km-ink);
+    }
+  }
+}

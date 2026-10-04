@@ -25,7 +25,12 @@
         "outputConnected": "connected",
         "outputOff": "off",
         "outputConnecting": "switching on …",
-        "outputNotFound": "Not found – is it switched on?"
+        "outputNotFound": "Not found – is it switched on?",
+        "pausedLabel": "Paused",
+        "stopLabel": "Stop",
+        "trackOf": "Track {n} of {t}",
+        "outputHeadsetNotFound": "Headphones not found. Are they on and close by?",
+        "outputPlaying": "playing"
       }
     },
     "de": {
@@ -52,7 +57,12 @@
         "outputConnected": "verbunden",
         "outputOff": "aus",
         "outputConnecting": "einschalten …",
-        "outputNotFound": "Nicht gefunden – ist es an?"
+        "outputNotFound": "Nicht gefunden – ist es an?",
+        "pausedLabel": "Pause",
+        "stopLabel": "Stopp",
+        "trackOf": "Titel {n} von {t}",
+        "outputHeadsetNotFound": "Kopfhörer nicht gefunden. Ist er an und in der Nähe?",
+        "outputPlaying": "spielt"
       }
     },
     "fr": {
@@ -79,7 +89,12 @@
         "outputConnected": "connecté",
         "outputOff": "éteint",
         "outputConnecting": "allumage …",
-        "outputNotFound": "Introuvable – est-il allumé ?"
+        "outputNotFound": "Introuvable – est-il allumé ?",
+        "pausedLabel": "Pause",
+        "stopLabel": "Arrêter",
+        "trackOf": "Titre {n} sur {t}",
+        "outputHeadsetNotFound": "Casque introuvable. Est-il allumé et à proximité ?",
+        "outputPlaying": "joue"
       }
     },
     "es": {
@@ -106,7 +121,12 @@
         "outputConnected": "conectado",
         "outputOff": "apagado",
         "outputConnecting": "encendiendo …",
-        "outputNotFound": "No encontrado – ¿está encendido?"
+        "outputNotFound": "No encontrado – ¿está encendido?",
+        "pausedLabel": "En pausa",
+        "stopLabel": "Detener",
+        "trackOf": "Pista {n} de {t}",
+        "outputHeadsetNotFound": "No se encuentran los auriculares. ¿Están encendidos y cerca?",
+        "outputPlaying": "suena"
       }
     },
     "it": {
@@ -133,7 +153,12 @@
         "outputConnected": "connesso",
         "outputOff": "spento",
         "outputConnecting": "accensione …",
-        "outputNotFound": "Non trovato – è acceso?"
+        "outputNotFound": "Non trovato – è acceso?",
+        "pausedLabel": "In pausa",
+        "stopLabel": "Stop",
+        "trackOf": "Brano {n} di {t}",
+        "outputHeadsetNotFound": "Cuffie non trovate. Sono accese e vicine?",
+        "outputPlaying": "in riproduzione"
       }
     },
     "nl": {
@@ -160,7 +185,12 @@
         "outputConnected": "verbonden",
         "outputOff": "uit",
         "outputConnecting": "inschakelen …",
-        "outputNotFound": "Niet gevonden – staat het aan?"
+        "outputNotFound": "Niet gevonden – staat het aan?",
+        "pausedLabel": "Gepauzeerd",
+        "stopLabel": "Stop",
+        "trackOf": "Nummer {n} van {t}",
+        "outputHeadsetNotFound": "Koptelefoon niet gevonden. Staat hij aan en is hij dichtbij?",
+        "outputPlaying": "speelt"
       }
     },
     "sv": {
@@ -187,7 +217,12 @@
         "outputConnected": "ansluten",
         "outputOff": "av",
         "outputConnecting": "slås på …",
-        "outputNotFound": "Hittades inte – är den på?"
+        "outputNotFound": "Hittades inte – är den på?",
+        "pausedLabel": "Pausad",
+        "stopLabel": "Stoppa",
+        "trackOf": "Spår {n} av {t}",
+        "outputHeadsetNotFound": "Hörlurarna hittades inte. Är de på och i närheten?",
+        "outputPlaying": "spelar"
       }
     },
     "da": {
@@ -214,7 +249,12 @@
         "outputConnected": "forbundet",
         "outputOff": "slukket",
         "outputConnecting": "tænder …",
-        "outputNotFound": "Ikke fundet – er den tændt?"
+        "outputNotFound": "Ikke fundet – er den tændt?",
+        "pausedLabel": "Pause",
+        "stopLabel": "Stop",
+        "trackOf": "Nummer {n} af {t}",
+        "outputHeadsetNotFound": "Høretelefoner ikke fundet. Er de tændt og i nærheden?",
+        "outputPlaying": "spiller"
       }
     },
     "nb": {
@@ -241,7 +281,12 @@
         "outputConnected": "tilkoblet",
         "outputOff": "av",
         "outputConnecting": "slås på …",
-        "outputNotFound": "Ikke funnet – er den på?"
+        "outputNotFound": "Ikke funnet – er den på?",
+        "pausedLabel": "Pause",
+        "stopLabel": "Stopp",
+        "trackOf": "Spor {n} av {t}",
+        "outputHeadsetNotFound": "Hodetelefonene ble ikke funnet. Er de på og i nærheten?",
+        "outputPlaying": "spiller"
       }
     },
     "fi": {
@@ -268,7 +313,12 @@
         "outputConnected": "yhdistetty",
         "outputOff": "pois",
         "outputConnecting": "käynnistyy …",
-        "outputNotFound": "Ei löytynyt – onko se päällä?"
+        "outputNotFound": "Ei löytynyt – onko se päällä?",
+        "pausedLabel": "Tauko",
+        "stopLabel": "Pysäytä",
+        "trackOf": "Kappale {n}/{t}",
+        "outputHeadsetNotFound": "Kuulokkeita ei löytynyt. Ovatko ne päällä ja lähellä?",
+        "outputPlaying": "soi"
       }
     },
     "pl": {
@@ -295,7 +345,12 @@
         "outputConnected": "połączono",
         "outputOff": "wyłączone",
         "outputConnecting": "włączanie …",
-        "outputNotFound": "Nie znaleziono – czy jest włączone?"
+        "outputNotFound": "Nie znaleziono – czy jest włączone?",
+        "pausedLabel": "Pauza",
+        "stopLabel": "Stop",
+        "trackOf": "Utwór {n} z {t}",
+        "outputHeadsetNotFound": "Nie znaleziono słuchawek. Czy są włączone i w pobliżu?",
+        "outputPlaying": "gra"
       }
     },
     "pt": {
@@ -322,7 +377,12 @@
         "outputConnected": "ligado",
         "outputOff": "desligado",
         "outputConnecting": "a ligar …",
-        "outputNotFound": "Não encontrado – está ligado?"
+        "outputNotFound": "Não encontrado – está ligado?",
+        "pausedLabel": "Em pausa",
+        "stopLabel": "Parar",
+        "trackOf": "Faixa {n} de {t}",
+        "outputHeadsetNotFound": "Auscultadores não encontrados. Estão ligados e por perto?",
+        "outputPlaying": "a tocar"
       }
     },
     "tr": {
@@ -349,7 +409,12 @@
         "outputConnected": "bağlı",
         "outputOff": "kapalı",
         "outputConnecting": "açılıyor …",
-        "outputNotFound": "Bulunamadı – açık mı?"
+        "outputNotFound": "Bulunamadı – açık mı?",
+        "pausedLabel": "Duraklatıldı",
+        "stopLabel": "Durdur",
+        "trackOf": "Parça {n} / {t}",
+        "outputHeadsetNotFound": "Kulaklık bulunamadı. Açık ve yakında mı?",
+        "outputPlaying": "çalıyor"
       }
     },
     "uk": {
@@ -376,7 +441,12 @@
         "outputConnected": "підключено",
         "outputOff": "вимкнено",
         "outputConnecting": "вмикається …",
-        "outputNotFound": "Не знайдено – чи ввімкнено?"
+        "outputNotFound": "Не знайдено – чи ввімкнено?",
+        "pausedLabel": "Пауза",
+        "stopLabel": "Стоп",
+        "trackOf": "Трек {n} з {t}",
+        "outputHeadsetNotFound": "Навушники не знайдено. Вони увімкнені й поруч?",
+        "outputPlaying": "грає"
       }
     },
     "ru": {
@@ -403,7 +473,12 @@
         "outputConnected": "подключено",
         "outputOff": "выключено",
         "outputConnecting": "включается …",
-        "outputNotFound": "Не найдено – включено ли?"
+        "outputNotFound": "Не найдено – включено ли?",
+        "pausedLabel": "Пауза",
+        "stopLabel": "Стоп",
+        "trackOf": "Трек {n} из {t}",
+        "outputHeadsetNotFound": "Наушники не найдены. Они включены и рядом?",
+        "outputPlaying": "играет"
       }
     },
     "cs": {
@@ -430,7 +505,12 @@
         "outputConnected": "připojeno",
         "outputOff": "vypnuto",
         "outputConnecting": "zapíná se …",
-        "outputNotFound": "Nenalezeno – je zapnuté?"
+        "outputNotFound": "Nenalezeno – je zapnuté?",
+        "pausedLabel": "Pozastaveno",
+        "stopLabel": "Zastavit",
+        "trackOf": "Skladba {n} z {t}",
+        "outputHeadsetNotFound": "Sluchátka nenalezena. Jsou zapnutá a poblíž?",
+        "outputPlaying": "hraje"
       }
     },
     "el": {
@@ -457,7 +537,12 @@
         "outputConnected": "συνδεδεμένο",
         "outputOff": "κλειστό",
         "outputConnecting": "ενεργοποίηση …",
-        "outputNotFound": "Δεν βρέθηκε – είναι ανοιχτό;"
+        "outputNotFound": "Δεν βρέθηκε – είναι ανοιχτό;",
+        "pausedLabel": "Παύση",
+        "stopLabel": "Διακοπή",
+        "trackOf": "Κομμάτι {n} από {t}",
+        "outputHeadsetNotFound": "Δεν βρέθηκαν ακουστικά. Είναι ανοιχτά και κοντά;",
+        "outputPlaying": "παίζει"
       }
     }
   }

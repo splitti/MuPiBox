@@ -25,6 +25,9 @@ import { CategoryType, isSyncManaged, Media, MediaSorting } from '../media'
 import { MediaService } from '../media.service'
 import { MediaUnavailableComponent } from '../media-unavailable/media-unavailable.component'
 import { StatusComponent } from '../status/status.component'
+import { KmStatusGroupComponent } from '../km-header/km-status-group.component'
+import { NowPlayingPillComponent } from '../now-playing-pill/now-playing-pill.component'
+import { KmThemeService } from '../theme/km-theme.service'
 import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
 
@@ -34,6 +37,8 @@ import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
   styleUrls: ['./medialist.page.scss'],
   imports: [
     StatusComponent,
+    KmStatusGroupComponent,
+    NowPlayingPillComponent,
     IonHeader,
     IonToolbar,
     IonButtons,
@@ -49,6 +54,9 @@ import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
 })
 export class MedialistPage extends SwiperIonicEventsHelper {
   protected isLoading: WritableSignal<boolean> = signal(false)
+  // km themes, design round 2: header with the back button, the title, "Läuft gerade" and the status group
+  protected readonly km = inject(KmThemeService).isKm
+  protected readonly r2 = inject(KmThemeService).roundTwo
   protected category: WritableSignal<CategoryType> = signal('audiobook')
   protected artist: WritableSignal<Artist | undefined> = signal(undefined)
 

@@ -1,0 +1,404 @@
+// coverflow (Andreas' theme, no km theme): the header, "Läuft gerade", the player, "Hören mit" and the track list of
+// design round 2 (km-round2.scss, body.cf) in coverflow's look - black, cards #1C1C1E, lines #3A3A3C, grey #8E8E93,
+// white text, square covers with a mirror image, the system font. The cover band itself stays as it is (swiper).
+// Values from the design's coverflow draft (800 × 480).
+
+body.cf {
+  // the round-2 parts take their colours from these
+  --km-night: #000000;
+  --km-night-2: #1c1c1e;
+  --km-night-3: #2c2c2e;
+  --km-night-4: #3a3a3c;
+  --km-cream: #ffffff;
+  --km-ink: #000000;
+  --km-lavender: #8e8e93;
+  --km-apricot: #ffffff;
+  --km-apricot-shadow: transparent;
+  --km-shadow: transparent;
+  --km-rose: #ff453a;
+  --km-moon: #ffffff;
+  --km-on-bg: #ffffff;
+  --km-on-band: #ffffff;
+  --km-on-band-2: #8e8e93;
+  --km-btn: #1c1c1e;
+  --km-on-btn: #ffffff;
+  --km-tab-idle: #8e8e93;
+  --km-on-pill: #ffffff;
+  --km-spring: cubic-bezier(0.3, 1.4, 0.6, 1);
+  --km-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  // ---------- header: 72 high, gap 12, 16 at the sides; round button 48, everything else square-ish ----------
+  .km-bar {
+    gap: 12px;
+    padding: 4px 16px;
+  }
+
+  .km-hbtn {
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
+    border-radius: 24px;
+    box-shadow: none;
+
+    svg,
+    ion-icon {
+      width: 24px;
+      height: 24px;
+      font-size: 24px;
+    }
+  }
+
+  // categories: a segmented control, the chosen one white
+  .km-tabs {
+    padding: 3px;
+    border-radius: 12px;
+    gap: 2px;
+  }
+
+  .km-tab {
+    width: 80px;
+    height: 46px;
+    border-radius: 9px;
+
+    ion-icon {
+      font-size: 26px;
+    }
+  }
+
+  .km-mini .km-tab {
+    width: 64px;
+  }
+
+  .km-htitle .km-ht1 {
+    font-size: 22px;
+  }
+
+  // "Läuft gerade": a plain line, 52 high, radius 10, square cover 40
+  .np-pill {
+    flex: 0 1 300px;
+    max-width: 300px;
+    margin-left: auto;
+    height: 52px;
+    border-radius: 10px;
+    padding: 6px 6px 6px 6px;
+    gap: 10px;
+  }
+
+  .np-cover {
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+
+    svg {
+      width: 22px;
+      height: 22px;
+    }
+  }
+
+  .np-text {
+    gap: 2px;
+  }
+
+  .np-title {
+    font-size: 15px;
+  }
+
+  .np-sub {
+    font-size: 13px;
+    font-weight: 400;
+  }
+
+  .np-bars {
+    height: 14px;
+
+    i {
+      width: 3px;
+    }
+  }
+
+  .np-stop {
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: var(--km-night-3);
+
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+  }
+
+  // ---------- player ----------
+  .kp-titles {
+    .kp-t1 {
+      font-size: 20px;
+    }
+
+    .kp-t2 {
+      font-weight: 400;
+    }
+  }
+
+  // output: the capsule square-ish - speaker | headset 48 × 40, the volume 16 / 600
+  .oc {
+    height: 46px;
+    padding: 3px;
+    border-radius: 10px;
+  }
+
+  .oc-solo {
+    padding-left: 12px;
+  }
+
+  .oc-field {
+    width: 48px;
+    height: 40px;
+    border-radius: 8px;
+    color: var(--km-lavender);
+
+    &.oc-on {
+      background: var(--km-night-4);
+      color: #ffffff;
+    }
+
+    svg {
+      width: 22px;
+      height: 22px;
+    }
+  }
+
+  .oc-dot {
+    top: 5px;
+    right: 8px;
+    width: 10px;
+    height: 10px;
+  }
+
+  .oc-ring {
+    inset: 4px 8px;
+    border-width: 2px;
+  }
+
+  .oc-sep {
+    height: 24px;
+    margin: 0 4px;
+    background: var(--km-night-4);
+  }
+
+  .oc-vol {
+    height: 40px;
+    padding: 0 10px 0 6px;
+    font-size: 16px;
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  // the listening time: right 16, top 76, 36 high, radius 10
+  .playtime-chip {
+    top: 76px !important;
+    right: 16px !important;
+    height: 36px !important;
+    padding: 0 12px !important;
+    gap: 8px !important;
+    border-radius: 10px !important;
+    font-size: 16px !important;
+    box-shadow: none !important;
+  }
+
+  // cover 316 square, no frame, a mirror image below
+  .kp-cover {
+    border-radius: 0;
+    box-shadow: none;
+    background: var(--km-night-2);
+    overflow: visible;
+    -webkit-box-reflect: below 2px linear-gradient(transparent 68%, rgba(255, 255, 255, 0.3));
+  }
+
+  // "3 / 19" at the cover: 196 × 56 at y 384, radius 12, a black edge against the mirror image
+  .kp-tbtn {
+    top: 312px;
+    height: 56px;
+    border-radius: 12px;
+    background: var(--km-night-2);
+    color: #ffffff;
+    box-shadow: 0 0 0 3px #000000;
+    font-size: 19px;
+    font-weight: 600;
+
+    svg {
+      width: 22px;
+      height: 22px;
+    }
+  }
+
+  // the controls: left 400, right 40, the bar at y 138, rows 20 apart
+  .kp-ctrl {
+    left: 400px;
+    right: 40px;
+    top: 60px;
+    gap: 20px;
+  }
+
+  .kp-time {
+    ion-range {
+      --bar-height: 4px;
+      --bar-border-radius: 2px;
+      --bar-background: var(--km-night-4) !important;
+      --bar-background-active: var(--km-lavender);
+      --knob-size: 20px;
+      --knob-background: #ffffff;
+    }
+
+    ion-range::part(knob) {
+      border: 0;
+    }
+
+    .km-times {
+      color: var(--km-lavender);
+    }
+  }
+
+  .kp-btn {
+    box-shadow: none;
+  }
+
+  // leiser · play · lauter over the whole width: 76 / 112 / 76
+  .kp-row-main {
+    width: 100%;
+    justify-content: space-between;
+    gap: 0;
+  }
+
+  .kp-vol-btn svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  .kp-play {
+    width: 112px;
+    height: 112px;
+    border-radius: 56px;
+    box-shadow: none;
+  }
+
+  // track back / forward 100 × 60, 320 wide
+  .kp-row-skip {
+    gap: 120px;
+  }
+
+  .kp-skip {
+    width: 100px;
+    height: 60px;
+    border-radius: 30px;
+  }
+
+  // wind 64 round, grey symbols, 220 wide
+  .kp-row-seek {
+    gap: 92px;
+  }
+
+  .kp-seek {
+    width: 64px;
+    height: 64px;
+    border-radius: 32px;
+    color: var(--km-lavender);
+
+    &.kp-on {
+      background: #ffffff;
+      color: #000000;
+    }
+  }
+
+  .kp-live {
+    background: var(--km-night-2);
+    color: #ffffff;
+  }
+
+  .kp-toast {
+    border-radius: 10px;
+    background: var(--km-night-3);
+  }
+
+  // ---------- "Hören mit": dimmed 70 % black, the window radius 16, tiles radius 14 ----------
+  .out-dim {
+    background: rgba(0, 0, 0, 0.7);
+  }
+
+  .out-panel {
+    border-radius: 16px;
+
+    h2 {
+      font-size: 26px;
+    }
+  }
+
+  .out-close {
+    background: var(--km-night-3);
+  }
+
+  .out-tile {
+    border-radius: 14px;
+
+    small {
+      color: var(--km-lavender);
+      opacity: 1;
+    }
+
+    &.on small {
+      color: #000000;
+    }
+  }
+
+  .out-check {
+    background: #000000;
+
+    svg {
+      stroke: #ffffff !important;
+    }
+  }
+
+  // ---------- track list: panel radius 16, rows radius 12, the current one white ----------
+  .player-content .kt {
+    border-radius: 16px;
+  }
+
+  .kt-cover {
+    border-radius: 0;
+  }
+
+  .kt-close {
+    border-radius: 12px;
+    box-shadow: none;
+  }
+
+  .kt-row {
+    border-radius: 12px;
+
+    &.kt-on {
+      box-shadow: none;
+
+      .kt-num {
+        background: #000000;
+        color: #ffffff;
+      }
+
+      .kt-dur {
+        color: var(--km-night-4);
+      }
+    }
+  }
+
+  .kt-dur {
+    color: var(--km-lavender);
+    opacity: 1;
+  }
+
+  .kt-page {
+    box-shadow: none;
+  }
+}

@@ -28,12 +28,19 @@
   --km-spring: cubic-bezier(.3, 1.4, .6, 1);
   --km-ease: cubic-bezier(.2, .7, .2, 1);
   --ion-font-family: "Fredoka", sans-serif;
+  /* Runde 2: Kopfzeile, Pille, Knöpfe (Werte aus THEME_WERTE.md) */
+  --km-band: rgba(0,0,0,.5);
+  --km-on-band: #FFFFFF;
+  --km-on-band-2: #DDDDDD;
+  --km-btn: #333333;
+  --km-on-btn: #FFFFFF;
+  --km-tab-idle: #FFFFFF;
+  --km-on-pill: #FFFFFF;
 }
 
 /* Hintergrund: eigenes Bild, oben ein weicher Verlauf für Statusleiste und Reiter */
 .ion-page {
-  background: linear-gradient(to bottom, rgba(0,0,0,.5) 0, rgba(0,0,0,0) 120px),
-              var(--km-night) url("/theme-data/custom/custom-bg.jpg") center / cover no-repeat !important;
+  background: var(--km-night) url("/theme-data/custom/custom-bg.jpg") center / cover no-repeat !important;
 }
 .playtime-blocked-overlay, body.km mupi-media-unavailable {
   background: linear-gradient(var(--km-overlay), var(--km-overlay)), var(--km-night) url("/theme-data/custom/custom-bg.jpg") center / cover no-repeat !important;
@@ -41,6 +48,9 @@
 
 /* custom: Das Bild lädt der Nutzer hoch (theme-data/custom/custom-bg.jpg). Die alten Vorlagen light.css / dark.css
    werden durch die km-Varianten in theme-data/custom/ ersetzt (siehe README → custom). */
+
+/* Sperr-/Ruhebildschirm und „Nicht erreichbar“ deckend: kein Durchscheinen der Auswahl */
+body.km .playtime-blocked-overlay, body.km mupi-media-unavailable { opacity: 1 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; z-index: 1000; }
 
 /* ==== gemeinsamer km-Teil (aus den km-Theme-Dateien, unverändert) ==== */
 body .home-content, body .medialist-content, body .player-content { --ion-background-color: transparent !important; }

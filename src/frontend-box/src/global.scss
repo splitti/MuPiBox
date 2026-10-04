@@ -92,3 +92,7 @@ html {
 }
 /* km themes (children's themes): headers and status icons - see theme/km.scss */
 @import "./theme/km";
+/* km themes, design round 2: header, "Läuft gerade", player, ... - see theme/km-round2.scss */
+@import "./theme/km-round2";
+/* coverflow: the round-2 header, player and track list in its own look - see theme/cf-round2.scss */
+@import "./theme/cf-round2";

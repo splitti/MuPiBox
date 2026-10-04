@@ -50,9 +50,18 @@
 }
 
 // km themes: mascot 220 on the left with the icon as a badge, heading and line of text on the right
-:host-context(body.km) .playtime-blocked-overlay {
+:host-context(body.km:not(.km-legacy)) .playtime-blocked-overlay {
   // plain overlay colour, as in the design (the theme file puts its landscape picture here)
   background: var(--km-overlay) !important;
+}
+
+// the old themes: their file sets the background (colour or picture under the overlay colour) - always opaque, the
+// choice behind must not shine through
+:host-context(body.km.km-legacy) .playtime-blocked-overlay {
+  background: linear-gradient(var(--km-overlay), var(--km-overlay)), var(--km-night);
+}
+
+:host-context(body.km) .playtime-blocked-overlay {
 
   .content {
     display: flex;

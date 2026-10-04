@@ -1,6 +1,6 @@
-import { AsyncPipe } from '@angular/common'
+import { AsyncPipe, NgTemplateOutlet } from '@angular/common'
 import { HttpClient } from '@angular/common/http'
-import { AfterViewInit, Component, DestroyRef, ElementRef, inject, OnInit, signal, ViewChild } from '@angular/core'
+import { AfterViewInit, Component, DestroyRef, ElementRef, effect, inject, OnInit, signal, ViewChild } from '@angular/core'
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { FormsModule } from '@angular/forms'
 import { ActivatedRoute, Router } from '@angular/router'
@@ -27,6 +27,9 @@ import {
 import { addIcons } from 'ionicons'
 import {
   arrowBackOutline,
+  arrowDownOutline,
+  chevronDown,
+  chevronUp,
   close,
   headset,
   pause,
@@ -43,6 +46,7 @@ import {
 import { firstValueFrom, type Observable } from 'rxjs'
 import { environment } from '../../environments/environment'
 import type { AlbumStop } from '../albumstop'
+import { BackgroundPlaybackService } from '../background-playback.service'
 import { CurrentMediaService } from '../current-media.service'
 import { ExternalPlaybackNavigatorService } from '../external-playback-navigator.service'
 import type { CurrentMPlayer } from '../current.mplayer'
@@ -56,6 +60,8 @@ import { isResumeEntry, type Media } from '../media'
 import { MediaService } from '../media.service'
 import type { MupiboxConfig } from '../mupibox-config.model'
 import { StatusComponent } from '../status/status.component'
+import { KmStatusGroupComponent } from '../km-header/km-status-group.component'
+import { OutputSwitchComponent } from '../output-switch/output-switch.component'
 import { PlayerCmds, PlayerService } from '../player.service'
 import type { PlaytimePlayState } from '../playtime.model'
 import { PlaytimeService } from '../playtime.service'
@@ -83,7 +89,10 @@ export interface TrackListEntry {
   imports: [
     FormsModule,
     AsyncPipe,
+    NgTemplateOutlet,
     StatusComponent,
+    KmStatusGroupComponent,
+    OutputSwitchComponent,
     IonHeader,
     IonToolbar,
     IonButtons,
@@ -117,6 +126,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
   // km themes (children's themes): their own markup in the template (see theme/km-theme.service.ts)
   private readonly kmTheme = inject(KmThemeService)
   protected readonly km = this.kmTheme.isKm
+  /** header, controls, track list and "Hören mit" of design round 2: the km themes and coverflow */
+  protected readonly r2 = this.kmTheme.roundTwo
   protected readonly displayTexts = inject(DisplayTextsService)
 
   // "Hören mit": the box's speaker or a paired Bluetooth device (backend-api audio-output.ts). A tap on the volume opens
@@ -125,6 +136,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
   protected readonly outputOpen = signal(false)
   protected readonly outputBusy = signal<string | null>(null)
   protected readonly outputNotFound = signal(false)
+  // (the device that did not answer - its tile gets a red edge, km themes)
+  protected readonly outputMissing = signal<string | null>(null)
   private outputTimer: ReturnType<typeof setInterval> | undefined
   protected outputChoosable(): boolean {
     const o = this.output()
@@ -146,6 +159,33 @@ export class PlayerPage implements OnInit, AfterViewInit {
     this.loadOutput()
     this.outputOpen.set(true)
   }
+  /**
+   * The km track button below the cover (design round 2, §3): "3 / 19" - the same numbers as the old header's counter
+   * (counterTpl), with spaces; '' when they are not known.
+   */
+  protected trackCounter(spotify: CurrentSpotify | null | undefined, local: CurrentMPlayer | null | undefined): string {
+    const pair = (a?: number | string, b?: number | string) => (a !== undefined && a !== '' && b !== undefined && b !== '' && Number(b) > 0 ? `${a} / ${b}` : '')
+    const m = this.media
+    if (m.type === 'library' || m.type === 'nas') return pair(local?.currentTracknr, local?.totalTracks)
+    if (m.type !== 'spotify') return ''
+    if (m.playlistid && (spotify?.playlist?.total_tracks ?? 0) > 0) return pair(spotify?.playlist?.current_track_position, spotify?.playlist?.total_tracks)
+    if (m.showid && spotify?.show_details) return pair(spotify.show_details.current_episode_position, spotify.show_details.total_episodes)
+    if (m.audiobookid && spotify?.audiobook) return pair(spotify.audiobook.current_chapter_position, spotify.audiobook.total_chapters)
+    if (this.currentPlayedSpotify?.currently_playing_type !== 'episode') return pair(spotify?.item?.track_number, spotify?.item?.album?.total_tracks)
+    return ''
+  }
+
+  /** The switch in the header (design round 2): one device switches at once, several open the window */
+  protected outputSwitchTap(target: string): void {
+    if (target === 'open') this.openOutput()
+    else this.chooseOutput(target)
+  }
+
+  /** km header's round button: minimise (the music goes on, see ionViewWillLeave) or back with stop - the same way */
+  protected backFromPlayer(): void {
+    this.navController.back({ animation: this.coverFlip.returnAnimation })
+  }
+
   protected closeOutput(): void {
     if (!this.outputBusy()) this.outputOpen.set(false)
   }
@@ -168,7 +208,11 @@ export class PlayerPage implements OnInit, AfterViewInit {
         // (the device did not answer - not on, or out of reach: said in the choice, which stays open)
         if (e?.status === 504) {
           this.outputNotFound.set(true)
-          setTimeout(() => this.outputNotFound.set(false), 5000)
+          this.outputMissing.set(target)
+          setTimeout(() => {
+            this.outputNotFound.set(false)
+            this.outputMissing.set(null)
+          }, 4000) // (the message fades out after about 4 s, design round 2 §5)
         }
         this.loadOutput()
       },
@@ -285,6 +329,11 @@ export class PlayerPage implements OnInit, AfterViewInit {
   trackListTitle = ''
   pressingCover = false
   listViewTimerMs = 2500
+  // Settings "Zurück im Player" (design round 2, §6): the back button minimises (the music goes on, the header shows
+  // "Läuft gerade") or stops as before. Its symbol shows which: arrow down / arrow left.
+  protected readonly backAction = signal<'minimize' | 'stop'>('minimize')
+  // the page left by itself (end of the album, stopped from outside, nothing playing): never handed to the pill
+  private leftByPage = false
   listFontFamily = ''
   private longPressTimer: ReturnType<typeof setTimeout> | undefined
   private shuffleTimer: ReturnType<typeof setTimeout> | undefined
@@ -302,9 +351,12 @@ export class PlayerPage implements OnInit, AfterViewInit {
     protected coverFlip: CoverFlipService,
     private playtimeService: PlaytimeService,
     private currentMediaService: CurrentMediaService,
+    private backgroundPlayback: BackgroundPlaybackService,
   ) {
     this.spotify$ = this.mediaService.current$
     this.local$ = this.mediaService.local$
+    // the listening-time chip lies above every page: hidden while the "Hören mit" window dims the player
+    effect(() => document.body.classList.toggle('kp-out-open', this.outputOpen()))
 
     // navState is read once into a local because the external-playback flag
     // (Phase 19 Stufe B) is read from the same state object further down.
@@ -317,7 +369,9 @@ export class PlayerPage implements OnInit, AfterViewInit {
       }
       // isResumeEntry() instead of a bare category check: it also recognises
       // legacy entries written before the isResume flag existed.
-      if (isResumeEntry(this.media)) {
+      // (not when it is opened again for what plays on in the background or was started from elsewhere: that runs
+      // already - a resume entry opened from the pill must not start a second time)
+      if (isResumeEntry(this.media) && navState.externalPlayback !== true) {
         this.resumePlay = true
       }
       // Phase 19 Stufe B: extern getriggerter Track (Eltern-WebApp etc.)
@@ -329,6 +383,9 @@ export class PlayerPage implements OnInit, AfterViewInit {
     }
     addIcons({
       arrowBackOutline,
+      arrowDownOutline,
+      chevronDown,
+      chevronUp,
       volumeLowOutline,
       pause,
       play,
@@ -356,6 +413,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
         if (typeof configuredSeconds === 'number' && configuredSeconds > 0) {
           this.listViewTimerMs = configuredSeconds * 1000
         }
+        this.backAction.set(config?.mupibox?.playerBack === 'stop' ? 'stop' : 'minimize')
       },
       error: () => {
         // Keep default listViewTimerMs if config could not be loaded.
@@ -470,6 +528,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
 
   // Back to the list, with the reason in the box's log (why a player page closed was never to be seen)
   private leavePage(reason: string): void {
+    this.leftByPage = true
     this.logService.log(`[PlayerPage] back to the list: ${reason}`)
     this.navController.back()
   }
@@ -655,6 +714,9 @@ export class PlayerPage implements OnInit, AfterViewInit {
 
   async ionViewWillEnter() {
     this.updateProgression = true
+    this.leftByPage = false
+    // (whatever ran on in the background is on this page again - or is replaced by what starts now)
+    this.backgroundPlayback.clear()
     // (the output as it is now - also changed from the web app or by headphones switched off)
     this.loadOutput()
     clearInterval(this.outputTimer)
@@ -721,17 +783,25 @@ export class PlayerPage implements OnInit, AfterViewInit {
       this.saveResumeFiles()
     }
     this.updateProgression = false
-    if (this.media.shuffle || this.shufflechanged) {
-      this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF)
+    // Left with the back button while it plays and set to minimise: the playback goes on and is handed to the
+    // "Läuft gerade" pill (it stops it later, with the same clean-up as below). Left by the page itself - the end of
+    // the album (Spotify's autoplay would go on with another one), nothing playing - it stops as always.
+    const keepPlaying = this.r2() && this.backAction() === 'minimize' && this.playing && !this.leftByPage && !this.albumEnded
+    if (keepPlaying) {
+      this.backgroundPlayback.begin(this.media, { shuffled: !!(this.media.shuffle || this.shufflechanged), albumStop: this.albumStop?.albumStop === 'On' })
+    } else {
+      if (this.media.shuffle || this.shufflechanged) {
+        this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF)
+      }
+      this.playerService.sendCmd(PlayerCmds.STOP)
     }
-    this.playerService.sendCmd(PlayerCmds.STOP)
     this.resumePlay = false
     if (this.media.type === 'spotify' && (this.media.category === 'music' || this.media.category === 'other')) {
       if (this.shufflechanged % 2 === 1) {
         this.mediaService.editRawMediaAtIndex(this.media.index, this.media)
       }
     }
-    if (this.albumStop?.albumStop === 'On') {
+    if (!keepPlaying && this.albumStop?.albumStop === 'On') {
       this.playerService.sendCmd(PlayerCmds.ALBUMSTOP)
     }
   }
@@ -1018,11 +1088,37 @@ export class PlayerPage implements OnInit, AfterViewInit {
       }
     } finally {
       this.loadingTrackList = false
+      if (this.r2()) this.showCurrentTrack()
     }
   }
 
   closeTrackList() {
     this.showTrackList = false
+  }
+
+  // km track list (design round 2, §5): "Titel 3 von 19" above it, the up / down buttons turn a page
+  @ViewChild('ktScroll', { static: false, read: ElementRef }) private ktScroll: ElementRef<HTMLElement> | undefined
+
+  protected trackOfText(): string {
+    const total = this.trackList.length
+    const index = this.trackList.findIndex((entry) => this.isCurrentTrack(entry))
+    if (total === 0 || index < 0) return ''
+    return this.displayTexts.text('trackOf').replace('{n}', String(index + 1)).replace('{t}', String(total))
+  }
+
+  protected pageTrackList(direction: 1 | -1): void {
+    const el = this.ktScroll?.nativeElement
+    if (!el) return
+    // (a page less one row, so the row at the edge stays in sight)
+    el.scrollBy({ top: direction * Math.max(66, el.clientHeight - 66), behavior: 'smooth' })
+  }
+
+  /** The current title in the middle of the km track list once it is there */
+  private showCurrentTrack(): void {
+    setTimeout(() => {
+      const row = this.ktScroll?.nativeElement.querySelector<HTMLElement>('.kt-on')
+      row?.scrollIntoView({ block: 'center' })
+    }, 0)
   }
 
   // Jumping several tracks at once (e.g. from track 1 to track 5) needs a corrective step on the player
