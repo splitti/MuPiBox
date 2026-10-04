@@ -10,11 +10,17 @@
 <li id='linews' class='linews'>coverflow (by Andreas): the same header with categories, "Now playing" and minimising, and player, "Listen with" and track list in coverflow's own look (black, square covers with a mirror image). The cover band stays as it is.</li>
 <li id='linews' class='linews'>Tag &amp; Nacht: at night the header, the symbols and the buttons are light again (they stayed dark and were hard to read).</li>
 <li id='linews' class='linews'>The listening-time chip hides while the "Listen with" window is open; the tick on the chosen tile is visible again on light circles.</li>
+<li id='linews' class='linews'>New theme previews in the app and in MuPi-Conf: every theme as it really looks on the display, all with the same made-up covers (no real audio plays any more). WALL·E has a picture now. They are made by tools/theme-preview/render.mjs, which takes every theme by itself - a new theme gets its picture without any other change.</li>
 </ul>
 <b>Display</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Covers no longer jump on their own when the library changes (Smart-Sync, NAS folders, an upload): a list loaded again in the background stays on the cover it was on, found by its name, not by its place - an entry added or removed in front of it moved the list to another cover. Only the finished list is shown, without loading dots; nothing happens at all when the list looks the same as before, and on an error it stays as it is. A poll that got no answer (the box busy, e.g. with a sync) no longer counts as a change: it made the lists load twice. Covers that stay are no longer built anew (they flickered), in the start page, the album lists, the stage view and coverflow. The "new" dot, the progress bar and the tick of podcast episodes are really shown now (the list lost them on the way to the screen).</li>
+</ul>
+<b>System</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Update and installation no longer add a second gpio-poweroff line to /boot/config.txt when one is there already, also inside a line that loads further overlays (e.g. a display driver) - such boxes hung at shutdown and could not be started with the button. A new line uses the pin set for the OnOff SHIM (it was always 4). A line added by an earlier update stays: remove it by hand once.</li>
 </ul>
 <h3>DEV 5.0.7 - changes compared to 5.0.6</h3>
 <b>New player: mpv</b>
