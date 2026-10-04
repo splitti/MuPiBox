@@ -210,8 +210,13 @@ body.cf {
     box-shadow: none !important;
   }
 
-  // cover 316 square, no frame, a mirror image below
+  // cover 316 square at x 36 / y 90 (radio: 300 at x 42 / y 112), no frame, a mirror image below - coverflow keeps its
+  // own layout, not the other themes' "D"
   .kp-cover {
+    left: 36px;
+    top: 18px;
+    width: 316px;
+    height: 316px;
     border-radius: 0;
     box-shadow: none;
     background: var(--km-night-2);
@@ -219,9 +224,19 @@ body.cf {
     -webkit-box-reflect: below 2px linear-gradient(transparent 68%, rgba(255, 255, 255, 0.3));
   }
 
-  // "3 / 19" at the cover: 196 × 56 at y 384, radius 12, a black edge against the mirror image
+  .kp-radio .kp-cover {
+    left: 42px;
+    top: 40px;
+    width: 300px;
+    height: 300px;
+  }
+
+  // "3 / 19" at the cover: 196 × 56 at x 96 / y 384, radius 12, a black edge against the mirror image
   .kp-tbtn {
+    left: 96px;
     top: 312px;
+    width: 196px;
+    gap: 10px;
     height: 56px;
     border-radius: 12px;
     background: var(--km-night-2);

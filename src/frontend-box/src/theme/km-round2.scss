@@ -175,13 +175,14 @@ body.cf {
     height: 408px;
   }
 
-  // cover 316 at x 36 / y 90, radius 28; radio: 300 at x 42 / y 112
+  // player layout "D" (all themes but coverflow, radio too): cover 324 at x 30 / y 112, radius 28 - its top edge is the
+  // old themes' panel's
   .kp-cover {
     position: absolute;
-    left: 36px;
-    top: 18px;
-    width: 316px;
-    height: 316px;
+    left: 30px;
+    top: 40px;
+    width: 324px;
+    height: 324px;
     border-radius: 28px;
     overflow: hidden;
     background: var(--km-night-4);
@@ -202,31 +203,25 @@ body.cf {
     }
   }
 
-  .kp-radio .kp-cover {
-    left: 42px;
-    top: 40px;
-    width: 300px;
-    height: 300px;
-  }
-
-  // the track button like a handle below the cover: 196 × 60 at x 96 / y 390, radius 30
+  // the track button like a handle below the cover: 160 × 48 at x 112 / y 420 (centred under the cover, 16 px over
+  // it), radius 24 - its bottom edge is the panel's
   .kp-tbtn {
     position: absolute;
-    left: 96px;
-    top: 318px;
-    width: 196px;
-    height: 60px;
-    border-radius: 30px;
+    left: 112px;
+    top: 348px;
+    width: 160px;
+    height: 48px;
+    border-radius: 24px;
     border: 0;
     padding: 0;
     background: var(--km-cream);
     color: var(--km-ink);
-    box-shadow: 0 5px 0 var(--km-shadow);
+    box-shadow: 0 4px 0 var(--km-shadow);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    font-size: 22px;
+    gap: 8px;
+    font-size: 20px;
     font-weight: 700;
     -webkit-tap-highlight-color: transparent;
     transition: transform 150ms var(--km-spring);
@@ -246,21 +241,22 @@ body.cf {
 
   }
 
-  // the old themes' panel behind the controls (§7); the km themes have none
+  // the old themes' panel behind the controls (§7, 112 to 468); the km themes have none
   .kp-panel {
     display: none;
   }
 
-  // the controls: left 384, right 30, top 112 (with the panel 132), centred, gap 14 (10)
+  // the controls: left 384, right 30, top 136.5, centred, gap 10 - with and without the panel, the same space above
+  // and below them on it
   .kp-ctrl {
     position: absolute;
     left: 384px;
     right: 30px;
-    top: 40px;
+    top: 64.5px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 14px;
+    gap: 10px;
   }
 
   .kp-time {
@@ -791,16 +787,11 @@ body.km.km-legacy {
     background: var(--km-band);
     border: 1px solid rgba(255, 255, 255, 0.16);
   }
+}
 
-  // the controls move down a bit on the panel: top 132, gap 10
-  .kp-ctrl {
-    top: 60px;
-    gap: 10px;
-  }
-
-  .kp-radio .kp-ctrl {
-    top: 80px;
-  }
+// the times under the bar one line high in every font (Baloo's taller lines moved the controls 5 px down)
+body.km .kp-time .km-times {
+  line-height: 17px;
 }
 
 // themes with a white panel (--km-night-2 white): the track list panel gets a shadow, its rows a light blue (§5);
