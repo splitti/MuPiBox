@@ -1,0 +1,32 @@
+[
+  {
+    "datei": "cover-1.svg",
+    "name": "Lumi",
+    "motiv": "Mond mit Sternen"
+  },
+  {
+    "datei": "cover-2.svg",
+    "name": "Tilo",
+    "motiv": "Fuchs im Wald"
+  },
+  {
+    "datei": "cover-3.svg",
+    "name": "Professorin Pimpelbart",
+    "motiv": "Rakete"
+  },
+  {
+    "datei": "cover-4.svg",
+    "name": "Nuri",
+    "motiv": "Wal im Meer"
+  },
+  {
+    "datei": "cover-5.svg",
+    "name": "Ivo",
+    "motiv": "kleiner Drache"
+  },
+  {
+    "datei": "cover-6.svg",
+    "name": "Sami",
+    "motiv": "Leuchtturm"
+  }
+]

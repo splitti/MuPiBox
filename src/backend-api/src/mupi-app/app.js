@@ -5417,7 +5417,7 @@ function themeTop() {
       <div class="search">${icon('search')}<input class="input" id="t-q" type="search" placeholder="Theme suchen" autocomplete="off"></div>
       <div class="theme-grid" id="t-grid">${list
         .map(
-          (n) => `<button class="theme-card" data-theme="${esc(n)}" aria-pressed="${n === t.current}"><span class="theme-img"><img src="${API}/theme-preview/${encodeURIComponent(n)}?v=2" alt="" loading="lazy"></span>
+          (n) => `<button class="theme-card" data-theme="${esc(n)}" aria-pressed="${n === t.current}"><span class="theme-img"><img src="${API}/theme-preview/${encodeURIComponent(n)}?v=3" alt="" loading="lazy"></span>
             <b translate="no">${esc(themeLabel(n))}</b>${n === t.current ? '<small>aktiv</small>' : ''}</button>`,
         )
         .join('')}</div></section>`,
@@ -5435,7 +5435,7 @@ function mountTheme(root, page) {
     if (name === disp.theme.current) continue
     c.onclick = () =>
       openSheet(
-        `<h2 translate="no">${esc(themeLabel(name))}</h2><div class="theme-big"><img src="${API}/theme-preview/${encodeURIComponent(name)}?v=2" alt=""></div>
+        `<h2 translate="no">${esc(themeLabel(name))}</h2><div class="theme-big"><img src="${API}/theme-preview/${encodeURIComponent(name)}?v=3" alt=""></div>
          <p class="help" style="margin:0">Dieses Theme auf der Box verwenden?</p>
          <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn" data-later>Beim nächsten Neuladen</button><button class="btn primary" data-now>Jetzt anzeigen</button></div>`,
         (sheet, close) => {

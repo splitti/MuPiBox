@@ -2187,12 +2187,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     }
     // cached only when there is a picture: a cached "not found" kept a theme without preview for an hour
     const cached = { headers: { 'Cache-Control': 'public, max-age=3600' } }
+    // (every theme has its picture, made by tools/theme-preview/render.mjs)
     res.sendFile(`/var/www/images/${name}.png`, cached, (err) => {
-      if (!err || res.headersSent) return
-      // the children's themes (km) have an SVG picture of their background instead
-      res.sendFile(`/var/www/images/km/${name}.svg`, cached, (err2) => {
-        if (err2 && !res.headersSent) res.status(404).setHeader('Cache-Control', 'no-store').end()
-      })
+      if (err && !res.headersSent) res.status(404).setHeader('Cache-Control', 'no-store').end()
     })
   })
 

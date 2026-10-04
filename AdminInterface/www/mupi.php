@@ -768,7 +768,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				?>
 				</select>
 				</div>
-				<div class="themePrev"><img src="images/<?php print isset($kmNames[$data["mupibox"]["theme"]]) ? 'km/' . htmlspecialchars($data["mupibox"]["theme"]) . '.svg' : htmlspecialchars($data["mupibox"]["theme"]) . '.png'; ?>" width="250" height="150" name="selectedTheme" style="object-fit:cover;" /></div>
+				<div class="themePrev"><img src="images/<?php print htmlspecialchars($data["mupibox"]["theme"]); ?>.png?v=3" width="250" height="150" name="selectedTheme" style="object-fit:cover;" /></div>
 				<style>
 					.mupi-toggle { display:inline-flex; align-items:center; gap:10px; margin-top:12px; cursor:pointer; }
 					/* the label text as big as the normal text of the page (the label defaults were 9px bold) */
@@ -811,7 +811,6 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 					</div>
 				</div>
 				<script>
-					var kmThemeIds = <?= json_encode(array_keys($kmNames)) ?>; // the kids' themes (their preview picture, see view.js)
 					var kmStageIds = <?= json_encode(array_merge(array_keys($kmNames), array_keys($kmLegacy))) ?>; // all themes in the km layout
 					function toggleKmStageOption() {
 						var sel = document.getElementById('theme');
