@@ -1421,7 +1421,7 @@ function errorText(r, fallback = 'Das hat nicht geklappt') {
 
 /* Spielzeit: ring, instant actions, sleep timer, daily limits, quiet rules */
 
-const caps = { config: null, status: null, sleep: null }
+const caps = { config: null, status: null, sleep: null, listened: null }
 
 async function saveCaps(body, done = 'Gespeichert') {
   const r = await api(`${API}/caps-config`, { method: 'POST', body })
@@ -1430,12 +1430,24 @@ async function saveCaps(body, done = 'Gespeichert') {
   return r.ok
 }
 
+// Minutes listened today when the player keeps no count (limit and quiet times off): from the listening history, as
+// the start page's tile - the ring said 0 then
+async function listenedToday() {
+  if (Number.isFinite(caps.status?.playtime?.usedSeconds)) {
+    caps.listened = null
+    return
+  }
+  const log = await api(`${API}/playlog?range=today`)
+  caps.listened = Number.isFinite(log.body?.totalMinutes) ? log.body.totalMinutes : null
+}
+
 async function loadCaps() {
   const [cfg, st, sleep] = await Promise.all([api(`${API}/caps-config`), api('/api/playtime'), api(`${API}/sleeptimer`)])
   if (!cfg.ok) throw new Error(`caps-config ${cfg.status}`)
   caps.config = cfg.body
   caps.status = st.ok ? st.body : null
   caps.sleep = sleep.body?.active ? sleep.body : null
+  await listenedToday()
   const pl = cfg.body.playtimeLimit ?? {}
   const qh = cfg.body.quietHours ?? {}
   state.values.set('limitOn', !!pl.enabled)
@@ -1454,6 +1466,7 @@ async function refreshPlaytime() {
   const [st, sleep] = await Promise.all([api('/api/playtime'), api(`${API}/sleeptimer`)])
   if (st.ok) caps.status = st.body
   caps.sleep = sleep.body?.active ? sleep.body : null
+  await listenedToday()
   drawRing()
   drawSleep()
 }
@@ -1467,7 +1480,7 @@ function drawRing() {
   const q = st.quiet ?? {}
   const ov = st.override ?? {}
   const now = Date.now()
-  const used = Math.floor((p.usedSeconds ?? 0) / 60)
+  const used = Number.isFinite(p.usedSeconds) ? Math.floor(p.usedSeconds / 60) : (caps.listened ?? 0)
   const limited = !!p.enabled && Number.isFinite(p.limitMinutes)
   const left = limited ? Math.max(0, Math.ceil((p.remainingSeconds ?? (p.limitMinutes - used) * 60) / 60)) : null
   const pct = limited ? (p.limitMinutes > 0 ? Math.min(1, used / p.limitMinutes) : 1) : 0
