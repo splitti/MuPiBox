@@ -26,7 +26,7 @@ Radiosender kommen als **Stream-Adresse** auf die Box:
 - **Radiosender suchen** (**Bibliothek › Radiosender suchen**): Suchbegriff eingeben, den Sender wählen.
 - **Link einfügen** mit dem Typ **Radio-Stream**: Du gibst die Adresse des Streams ein. Es darf auch eine `.m3u`- oder `.pls`-Datei sein: Die Box liest die Stream-Adresse daraus. Als **Titel** gibst du den Namen des Senders ein, der auf dem Display erscheint.
 
-Beim Radio zeigt der Player statt eines Fortschrittsbalkens die Anzeige **Live**. Ein Radiosender stoppt am Spielzeitlimit sofort, auch wenn für Titel „zu Ende spielen“ eingestellt ist ([Tageslimits](../spielzeit/tageslimits.md)).
+Beim Radio zeigt der Player statt eines Fortschrittsbalkens die Anzeige **Live**. Ein Radiosender stoppt am Spielzeitlimit sofort, auch wenn „Titel zu Ende spielen“ eingestellt ist ([Tageslimits](../spielzeit/tageslimits.md)).
 
 > [!TIP]
 > Das Logo eines Senders kannst du als **Cover** angeben: Trage die Adresse des Bildes beim Hinzufügen ein oder lade es hoch ([Cover](cover.md)).

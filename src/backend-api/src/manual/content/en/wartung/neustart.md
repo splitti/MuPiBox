@@ -6,7 +6,7 @@
 
 | Action | Effect |
 | --- | --- |
-| **Restart** | restarts the box. This takes about a minute |
+| **Restart** | restarts the box. This takes about a minute, playback ends |
 | **Switch off** | shuts the box down |
 
 > [!NOTE]
@@ -14,7 +14,14 @@
 
 ## Display and services
 
-Under **Display & services** you restart only the display or single services, without restarting the whole box. That is the quicker way if the display shows an old page or has hung.
+Under **Display & services** you restart only parts, without restarting the whole box. That is the quicker way if the display shows an old page or has hung.
+
+| Action | Effect |
+| --- | --- |
+| **Restart display** | Chromium restarts (a few seconds black). Playback continues |
+| **Restart player** | Spotify and local playback restart. Whatever is playing stops |
+| **Restart services** | the box's player and server. The app is briefly unreachable |
+| **Apply settings** | writes all settings to the services again and restarts the display |
 
 ## How the box switches off
 

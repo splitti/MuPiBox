@@ -7,8 +7,7 @@ Die Box pflegt sich weitgehend selbst. Dieses Kapitel zeigt, was du hin und wied
 | [Updates](updates.md) | neue MuPiBox-Versionen und das Betriebssystem |
 | [Backup](backup.md) | sichern und wiederherstellen |
 | [Neu starten und Ausschalten](neustart.md) | Box, Display und Dienste |
-| [Protokolle und Zustand](protokolle.md) | Logs lesen, Speicher und Temperatur prüfen |
-| [Ein Problem melden](problem-melden.md) | einen Bericht für die Entwickler zusammenstellen |
+| [Protokolle und Zustand](protokolle.md) | Logs lesen, Speicher und Temperatur prüfen, Support-Infos für die Hilfe |
 | [System- und Experteneinstellungen](system.md) | Übertakten, Browser, Hostname und mehr |
 
 > [!IMPORTANT]

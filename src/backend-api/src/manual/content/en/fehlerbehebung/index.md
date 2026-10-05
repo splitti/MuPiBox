@@ -12,9 +12,9 @@ When something does not work, look here for the sign you see.
 
 ## If nothing of this helps
 
-1. Look into the logs ([Logs and status](../wartung/protokolle.md)).
-2. Create a [problem report](../wartung/problem-melden.md): it collects everything needed for help, without passwords.
-3. Ask the community: [Discord](https://discord.gg/4EjCgpCbbe) or [mupibox.de](https://mupibox.de).
+1. Look into **Box health** and the logs ([Logs and status](../wartung/protokolle.md)).
+2. Under **Settings › System › About the box** download the **support info**: version, settings without passwords, library and network and system state in one file. Logs are not included; download them under **Logs** as well.
+3. Ask the community: [Discord](https://discord.gg/4EjCgpCbbe) or [mupibox.de](https://mupibox.de). You can also report a bug on GitHub: [splitti/MuPiBox](https://github.com/splitti/MuPiBox/issues).
 
 > [!TIP]
 > A restart of the box ([Restart and shut down](../wartung/neustart.md)) solves surprisingly many problems. But make a [backup](../wartung/backup.md) first if you have changed something in the configuration.

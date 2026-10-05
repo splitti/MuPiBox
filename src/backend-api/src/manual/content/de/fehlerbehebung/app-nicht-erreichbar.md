@@ -14,14 +14,14 @@ Handy oder PC müssen **im selben Netzwerk** sein wie die Box (dasselbe WLAN ode
 
 - Hat die Box nach einem WLAN-Wechsel eine **neue IP-Adresse** bekommen? Die aktuelle zeigt die Netzwerkseite am Display ([Einstellungen am Display](../bedienung/eltern-zugang.md)) oder die Geräteliste deines Routers.
 - Funktioniert `mupibox.local` nicht, nimm die IP-Adresse. Manche Netzwerke und Geräte lösen `.local`-Namen nicht auf.
-- Beginne die Adresse mit `http://`. Mit `https://` geht es nur, wenn du HTTPS eingerichtet hast ([Passwort und HTTPS](../netzwerk/sicherheit.md)).
+- Die App geht mit `http://` und mit `https://`. Die Box sorgt bei jedem Start selbst für ihr Zertifikat ([Passwort und HTTPS](../netzwerk/sicherheit.md)).
 
 ## 4. Browser-Warnung bei HTTPS
 
-Warnt der Browser vor einem **unsicheren Zertifikat**, ist das bei der Box normal: Das Zertifikat stammt von der Box selbst. Installiere es einmal auf dem Gerät ([Passwort und HTTPS](../netzwerk/sicherheit.md)) oder öffne die App über `http://`.
+Warnt der Browser vor einem **unsicheren Zertifikat**, ist das bei der Box normal: Das Zertifikat stammt von der Box selbst. Du kannst die Warnung bestätigen und trotzdem weitergehen. Damit sie verschwindet, installierst du das Zertifikat einmal auf dem Gerät ([Passwort und HTTPS](../netzwerk/sicherheit.md)). Oder du öffnest die App über `http://`.
 
 > [!WARNING]
-> Hast du **http auf https umleiten** eingeschaltet und das Zertifikat auf deinem Gerät ist nicht installiert, kommst du über dieses Gerät nicht mehr hinein. Wechsle auf ein Gerät, das der Box vertraut, oder schalte die Umleitung dort wieder aus.
+> Hast du **http auf https umleiten** eingeschaltet und das Zertifikat auf deinem Gerät ist nicht installiert, warnt der Browser bei jedem Besuch. Wechsle auf ein Gerät, das der Box vertraut, oder öffne die App über Port 8200 (`http://<IP-Adresse>:8200/app/`). Dort ist sie immer per http erreichbar. Dann kannst du die Umleitung wieder ausschalten.
 
 ## 5. Mit dem Display hineinkommen
 

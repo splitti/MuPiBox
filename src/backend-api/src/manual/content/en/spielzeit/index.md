@@ -6,7 +6,7 @@ In the app under **Playtime** you decide when and how long the box plays.
 | --- | --- |
 | [Daily limits](tageslimits.md) | how many minutes may be listened to per weekday |
 | [Quiet times](ruhezeiten.md) | time windows in which the box stays silent, for example homework and bedtime |
-| [Instant actions and sleep timer](schlaftimer.md) | bonus time, lift blocks, quiet now, switch off after a time |
+| [Instant actions and sleep timer](schlaftimer.md) | bonus time, lift lock, quiet now, switch off after a time |
 | [Listening history](hoer-verlauf.md) | what was listened to in the last days |
 
 ## What the child sees

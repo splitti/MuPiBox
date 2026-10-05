@@ -2,13 +2,15 @@
 
 ## Themes
 
-Das **Theme** bestimmt Farben, Hintergründe und Schriften des Displays. Es stehen 67 Themes zur Verfügung, von schlichten Farben (hell, dunkel, blau, rot …) über Kinderwelten (Weltraum, Unterwasser, Feuerwehr, Pferdehof …) bis zu Figuren-Themes. Du wählst es unter **Einstellungen › Aussehen › Theme**; nach dem Wechsel lädt das Display neu.
+Das **Theme** bestimmt Farben, Hintergründe und Schriften des Displays. Es stehen 67 Themes zur Verfügung, von schlichten Farben (hell, dunkel, blau, rot …) über Kinderwelten (Weltraum, Unterwasser, Feuerwehr, Pferdehof …) bis zu Figuren-Themes, dazu das Theme **Eigenes** mit einem eigenen Bild. Du wählst es unter **Einstellungen › Aussehen › Theme**: Tippe auf ein Theme und dann auf **Jetzt anzeigen** oder **Beim nächsten Neuladen**.
 
 ![Eine Auswahl der Themes](Themes.png)
 
 ### Eigenes Theme
 
-Das Theme **custom** zeigt ein eigenes Hintergrundbild. Lade es unter **Einstellungen › Aussehen › Eigenes Theme** hoch. Am besten passt ein JPG mit 800 × 480 Pixeln, der Standardauflösung des Displays.
+Das Theme **Eigenes** zeigt ein eigenes Hintergrundbild. Tippe auf der Theme-Seite auf **Eigenes** und wähle ein Foto oder Bild vom Gerät. Die App schneidet es auf das Format des Displays zu.
+
+Solange **Eigenes** aktiv ist, steht oben auf der Theme-Seite **Dein eigenes Theme**. Dort tauschst du das Bild (**Anderes Bild**) und stellst ein, wie stark das Bild abgedunkelt oder aufgehellt wird, ob Schrift und Symbole hell oder dunkel sind, die Akzentfarbe, die Schriftart und die Schriftgröße der Namen. Die Box zeigt jede Änderung gleich.
 
 ### Start- und Wartungsbilder
 
@@ -29,10 +31,4 @@ Jedes Album, jeder Podcast und jeder Radiosender zeigt ein **Cover**. Wo das her
 3. bei Spotify das Cover von Spotify,
 4. bei Alben ohne eigenes Bild auf Wunsch ein **Online-Cover** von iTunes oder Deezer ([Cover](../inhalte/cover.md)).
 
-### Fehlendes Cover
-
-Findet die Box für einen Eintrag kein Bild, zeigt sie stattdessen eine **farbige Karte mit dem Ordnernamen** in der Mitte. Der Name steht groß und bricht bei langen Namen auf mehrere Zeilen um. Die Farbe ist ein Verlauf von dunkel nach hell und wird aus einer Farbauswahl pro Ordnername bestimmt: derselbe Ordner hat immer dieselbe Farbe, verschiedene Ordner sehen verschieden aus. Dieselbe Karte erscheint im Player und in der Titelliste.
-
-![Ein Eintrag ohne Cover: Karte mit dem Ordnernamen](display-placeholder.png)
-
-Willst du statt der Karte ein Bild, lade ein Cover hoch ([Cover](../inhalte/cover.md)).
+Findet die Box gar kein Bild, zeigt sie das Ersatzbild des Themes. Willst du ein richtiges Cover, lade eines hoch ([Cover](../inhalte/cover.md)).

@@ -4,39 +4,40 @@ A **NAS** is a network drive in your home network, for example a router with sto
 
 You set it up under **Library › NAS**.
 
-## Profiles
+## Sign-in
 
-A **profile** saves server, share and login details. You can create several, such as “Home NAS” and “Grandma & Grandpa”, and switch between them with **Load**. **Create profile** makes a new one, **Delete** removes it.
-
-## Login details
+The box signs in to the NAS via **WebDAV**. A WebDAV server has to run on the NAS for this (on Synology for example port 5005, for HTTPS 5006).
 
 | Field | Meaning |
 | --- | --- |
-| **Server** | name or IP address of the NAS |
-| **Share** | name of the network share |
-| **User** and **Password** | the login details for this share |
+| **Server (address:port)** | address of the NAS with the WebDAV port, for example `192.168.1.10:5005` |
+| **HTTPS** | connect encrypted |
+| **User** and **Password** | the login details for the NAS |
+| **Remember sign-in** | without this switch the box forgets the password at the next restart, and the NAS tab is empty then; it is stored encrypted |
 
-**Sign in** connects the box to the share, **Sign out** disconnects it.
+**Sign in** connects the box to the NAS. After that the page shows server, user and status. **Different sign-in** switches to another NAS or account, **Sign out** disconnects.
 
 ## Choosing folders
 
-After signing in, the box reads in the share's folders. For every folder you decide:
+After signing in, the box shows the NAS's folders as a tree. For every folder you decide:
 
-- **Show**: appears on the box,
-- **Hide**: stays hidden,
+- **Show**: appears on the box. You choose where: in the NAS tab or in Audiobooks, Music or Radio & podcasts, next to the content from the memory card and Spotify.
+- **Hide**: stays hidden, including everything below it.
 - **Download**: is copied to the memory card so that it also plays without the NAS.
 
 Useful for this:
 
-- **Filter folders**: searches the list.
-- **Show selection only**, **All**, **None**: quick marking.
-- **Update index**: reads the folders in again if something has changed on the NAS.
-- **Download selected**: copies the folders you marked for download. **All downloads** and **No downloads** mark all or none.
-- **Reload covers**: looks for the covers again.
+- The search field **Search folders across the whole NAS** also finds folders deep in the tree. For this the box needs a search index; **Update index** reads the folders in again if something has changed on the NAS.
+- **Show only the selection** lists only the folders you have shown, hidden or marked for download.
+- **Show all**, **Show none**, **Download all** and **Download none** mark quickly.
 
-With **Save selection** you apply the choice.
+With **Save selection** you apply the choice. **Download selected** copies the folders marked for download to the memory card; a bar shows the progress, **Cancel download** stops it. **Reload cover** fetches the covers again.
 
 > [!NOTE]
-> If the connection to the NAS breaks during a download, the box carries on as soon as the NAS is reachable again.
+> Before downloading, the box checks that everything fits on the memory card. If a download breaks off, run **Download selected** again: files that are already complete on the box are skipped. A folder only plays without the NAS once it has been downloaded completely.
 
-On the display the content appears under the category **NAS**, which you can hide if you like ([The start page](../bedienung/startseite.md)).
+## Profiles
+
+A **profile** remembers the folder selection (show, hide, download) for one NAS and account, not the password. **Save selection as profile** creates a new one, for example one per child. With the button next to a profile you switch to its selection, **Delete** removes it. The default profile always stays.
+
+On the display the shown folders appear in the **NAS** tab or in the category you chose. You can hide the NAS tab if you like ([The start page](../bedienung/startseite.md)).

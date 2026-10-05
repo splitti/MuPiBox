@@ -41,4 +41,4 @@ Starte die Box danach neu. Der Pin steht auch in der Konfiguration der Box (`shi
 
 - Läuft beim Ausschalten noch Musik, wird sie angehalten, bevor der Abschiedston kommt. Bleibt die Box trotzdem hängen, schau in die Protokolle ([Protokolle und Zustand](../wartung/protokolle.md)): Das Log `shutdown_control.log` gehört zum Ausschalten per Taster.
 - Prüfe das Netzteil: Spannungseinbrüche beim Herunterfahren können sie hängen lassen.
-- Erstelle einen [Problembericht](../wartung/problem-melden.md).
+- Hilft das nicht, frag in der Community nach oder melde den Fehler auf GitHub ([splitti/MuPiBox](https://github.com/splitti/MuPiBox/issues)). Lade dafür die **Support-Infos** und das Log `shutdown_control.log` herunter ([Protokolle und Zustand](../wartung/protokolle.md)).

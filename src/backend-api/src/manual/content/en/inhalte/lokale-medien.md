@@ -6,23 +6,23 @@ Files that are stored on the box's memory card also play without internet. There
 
 **Library › Upload from device**:
 
-1. Choose the **category**: Audiobook, Radio play, Music or Radio & podcasts.
+1. Choose the **category**: Audiobooks, Music or Radio & podcasts.
 2. Enter **Artist** and **Album**. The box builds the folders from these.
-3. Choose **tracks**, a whole **folder** or a **cover**, or drag files and folders onto the window.
+3. Choose the files with **Choose track**, **Choose folder** or **Choose cover**, or drag files and folders onto the window.
 4. Tap **Upload**. A bar shows the progress, below it you see how much space is free on the memory card.
 
 The tracks are copied to the memory card and then appear on the display by themselves.
 
 ## Copy over the network
 
-Switch **Samba** on (**Settings › Network › Shares & remote access**), then the memory card can be opened in your home network as a drive. You then copy folders as onto a USB stick. Alternatively there is an FTP server, which you switch on if you need it ([Shares and remote control](../netzwerk/freigaben.md)).
+Switch **Samba** on (**Settings › Services › Shares & remote access**), then the memory card can be opened in your home network as a drive. You then copy folders as onto a USB stick. Alternatively there is an FTP server, which you switch on if you need it ([Shares and remote control](../netzwerk/freigaben.md)).
 
 > [!NOTE]
 > This way you create the folders yourself. If you stick to “Artist/Album/Track”, the box sorts them in neatly. The app's upload page takes care of creating the folders for you.
 
 ## Covers for your own files
 
-If a picture lies in the album folder or is embedded in the files, the box uses it as the cover. Otherwise it can look for an online cover or shows the coloured card with the folder name ([Covers](cover.md)).
+If a picture lies in the album folder or is embedded in the files, the box uses it as the cover. Otherwise it can look for an online cover or shows the theme's placeholder picture ([Covers](cover.md)).
 
 ## Space on the card
 

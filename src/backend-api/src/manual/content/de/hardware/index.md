@@ -4,8 +4,8 @@ Dieses Kapitel beschreibt, wie du Display, Sound und Zubehör an die Box anschli
 
 | Seite | Inhalt |
 | --- | --- |
-| [Display](display.md) | Helligkeit, Display-Aus, Drehung, Auflösung |
-| [Sound und Lautstärke](sound.md) | Soundkarte, Maximum, Startlautstärke |
+| [Display](display.md) | Helligkeit, abends dunkler, Display-Aus, Drehung, Auflösung |
+| [Sound und Lautstärke](sound.md) | Soundkarte, Maximum, Startlautstärke, Lautstärke angleichen |
 | [Drehregler und Taster](drehregler.md) | Lautstärke und Titelwahl per Drehknopf |
 | [Akku, MuPiHAT und Ausschalter](strom.md) | Akkuprofil, automatisches Ausschalten, Ein-/Aus-Taster, LED |
 | [Lüfter](luefter.md) | temperaturgeregelter Lüfter |

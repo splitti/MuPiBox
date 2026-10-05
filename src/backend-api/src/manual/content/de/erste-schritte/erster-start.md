@@ -14,8 +14,8 @@ Das Startbild ist eine von 15 Szenen, die Karte oder jeden Start zufällig. Du w
 Die Box braucht ein WLAN, damit du sie von Handy oder PC aus einrichten kannst und damit Spotify, Podcasts und Radio funktionieren. Wenn sie noch kein Netz kennt, richtest du es am Display ein:
 
 1. Öffne die Einstellungen am Display ([Einstellungen am Display](../bedienung/eltern-zugang.md)).
-2. Wähle die **Netzwerkeinstellungen** und dort das WLAN.
-3. Tippe dein Netz in der Liste an und gib das Passwort ein.
+2. Tippe auf die Kachel **Network settings**. Hängt die Box gerade am Kabel, wähle oben **WiFi**.
+3. Tippe in der Liste neben deinem Netz auf **Connect** und gib das Passwort ein. Ein verstecktes Netz trägst du mit **Add network** selbst ein.
 
 Die Box bleibt im aktuellen Netz und wechselt erst, wenn das neue erreichbar ist. Mehr dazu, auch zu einer festen IP-Adresse und zum Kabelanschluss: [WLAN und LAN](../netzwerk/wlan-und-lan.md).
 

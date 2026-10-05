@@ -4,8 +4,8 @@ This chapter describes how you connect the display, sound and accessories to the
 
 | Page | Content |
 | --- | --- |
-| [Display](display.md) | brightness, display off, rotation, resolution |
-| [Sound and volume](sound.md) | sound card, maximum, start volume |
+| [Display](display.md) | brightness, evening dimming, display off, rotation, resolution |
+| [Sound and volume](sound.md) | sound card, maximum, start volume, levelling the loudness |
 | [Rotary knob and button](drehregler.md) | volume and track selection with a rotary knob |
 | [Battery, MuPiHAT and power button](strom.md) | battery profile, automatic shutdown, on/off button, LED |
 | [Fan](luefter.md) | temperature-controlled fan |

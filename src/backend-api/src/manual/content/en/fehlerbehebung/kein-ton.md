@@ -9,7 +9,7 @@ The box shows that something is playing, but nothing comes out of the speaker? G
 
 ## 2. Output device
 
-- Have you chosen a **Bluetooth device** in the player (headphone icon) that is not connected at the moment? Choose the box itself as the output ([The player](../bedienung/player.md), [Bluetooth](../hardware/bluetooth.md)).
+- Is the box playing on a **Bluetooth device** that is not connected at the moment? Choose the box itself as the output: in the app on the start page under **Output** (**Speaker**), or on the display with a tap on the volume at the top of the player ([The player](../bedienung/player.md), [Bluetooth](../hardware/bluetooth.md)).
 - Is **Bluetooth** on and a device nearby that the box takes over automatically? Switch the device off or turn **Connect automatically** off.
 
 ## 3. Sound card
@@ -23,7 +23,7 @@ The box shows that something is playing, but nothing comes out of the speaker? G
 
 - Is the speaker connected and switched on, are plugs and cables firm?
 - For onboard outputs: the sound card setting chooses between **3.5 mm jack** and **HDMI**.
-- If you hear crackling or dropouts, check whether the display shows an **under-voltage warning**: a power supply that is too weak also makes the sound drop out ([System and expert settings](../wartung/system.md)).
+- If you hear crackling or dropouts, check whether the display shows an **undervoltage warning**: a power supply that is too weak also makes the sound drop out ([System and expert settings](../wartung/system.md)).
 
 ## 5. Spotify
 

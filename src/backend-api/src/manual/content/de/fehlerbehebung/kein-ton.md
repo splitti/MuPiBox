@@ -9,7 +9,7 @@ Die Box zeigt, dass etwas spielt, aber es kommt nichts aus dem Lautsprecher? Geh
 
 ## 2. Ausgabegerät
 
-- Hast du im Player ein **Bluetooth-Gerät** gewählt (Kopfhörer-Symbol), das gerade nicht verbunden ist? Wähle die Box selbst als Ausgabe ([Der Player](../bedienung/player.md), [Bluetooth](../hardware/bluetooth.md)).
+- Spielt die Box auf einem **Bluetooth-Gerät**, das gerade nicht verbunden ist? Wähle die Box selbst als Ausgabe: in der App auf der Startseite unter **Ausgabe** (**Lautsprecher**) oder am Display mit einem Tipp auf die Lautstärke oben im Player ([Der Player](../bedienung/player.md), [Bluetooth](../hardware/bluetooth.md)).
 - Ist **Bluetooth** an und ein Gerät in der Nähe, das die Box automatisch übernimmt? Schalte das Gerät aus oder **Automatisch verbinden** ab.
 
 ## 3. Soundkarte

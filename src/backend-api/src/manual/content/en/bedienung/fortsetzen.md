@@ -1,18 +1,18 @@
 # Continue and “Now playing”
 
-## Continue
+## Resume
 
-The box remembers what was played last and offers it in the **Continue** list. One tap and it carries on exactly where it stopped.
+The box remembers what was played last. The clock symbol at the top left of the start page opens the **Resume** list. One tap on an entry and it carries on exactly where it stopped.
 
-You set the number of entries under **Settings › Display & controls › Controls on the display › Hold times & Continue**: 1 to 99.
+You set the number of entries under **Settings › Display & controls › Controls on the display › Continue listening › Entries under “Resume”**: 1 to 99.
 
 ### Podcasts
 
-Podcasts have extra rules that apply episode by episode:
+Podcasts have extra rules that apply episode by episode. They are on the same page under **Continue listening** and **Podcasts**:
 
 | Setting | Effect |
 | --- | --- |
-| **Continue at the last position** | the episode starts where it stopped |
+| **Continue podcast episodes where you left off** | the episode starts where it stopped |
 | **Remember position for** | how long the position is remembered, from one month to unlimited |
 | **Mark new episodes** | a dot on the podcast and the new episode |
 | **Mark as new for** | how long the dot stays: 3, 7 or 14 days |
@@ -22,14 +22,14 @@ Only what was published after the podcast was added counts as new. The dot disap
 
 ## “Now playing”
 
-The **Currently playing** bar appears on the start page when playback carries on although the child has left the player. It shows the track and has a **Stop** button. A tap on the bar opens the player again.
+The music can go on when the child leaves the player. Then **Now playing** appears at the top of the header on the start page and in the album lists: cover, title and a stop button. A tap on it opens the player again, the stop button ends playback.
 
-![The Currently playing bar at the bottom of the start page](display-now-playing.png)
+This behaviour is a setting: **Settings › Audio › Volume › Back in the player**.
 
-This behaviour is a setting: **Settings › Audio › Volume › Keep playing when leaving the player**.
+- **Minimise** (default): the music goes on. The back button in the player shows an arrow pointing down.
+- **Stop**: the music stops and the display goes back one level. The back button shows an arrow pointing left.
 
-- **Off**: Playback stops when the child leaves the player with the back arrow.
-- **On**: It carries on. This applies to all kinds of content: your own files, Spotify, podcasts, radio and NAS.
+This applies to all kinds of content: your own files, Spotify, podcasts, radio and NAS.
 
 > [!NOTE]
-> The setting takes effect immediately, the box does not need to be restarted. A display that has a page open picks it up as soon as the page has been reloaded.
+> The box does not need to be restarted. The setting applies the next time the player opens.

@@ -1,6 +1,6 @@
 # Einstellungs-Referenz
 
-Hier steht jede Einstellung der App, geordnet wie in der App unter **Einstellungen**. Die Seiten dieses Kapitels werden beim Bauen des Handbuchs **automatisch aus der App erzeugt**: Bezeichnungen, Auswahlmöglichkeiten, Wertebereiche und Hilfetexte sind dieselben, die du in der App siehst.
+Hier steht jede Einstellung der App, geordnet wie in der App unter **Einstellungen**. Die Seiten dieses Kapitels werden beim Bauen des Handbuchs **automatisch erzeugt**, aus derselben Beschreibung der Einstellungen, aus der die App ihre Seiten aufbaut. Manche Seiten zeigt die App etwas anders, etwa mit zusätzlichen Karten oder Hinweisen. Im Zweifel gilt, was die App zeigt und was die Kapitel davor beschreiben.
 
 Wie eine Einstellung im Zusammenhang benutzt wird, erklären die Kapitel davor, zum Beispiel [Hardware und Zubehör](../hardware/index.md) oder [Netzwerk und Fernzugriff](../netzwerk/index.md).
 
@@ -20,10 +20,10 @@ Wie eine Einstellung im Zusammenhang benutzt wird, erklären die Kapitel davor, 
 Die Einstellungen sind in diese Gruppen geordnet:
 
 - **Aussehen**: Theme, Ansicht, Start- und Wartungsbilder, Display-Texte
-- **Display & Bedienung**: Helligkeit, Drehung, Haltezeiten, Display live
+- **Display & Bedienung**: Display, Bedienung am Display, Display live
 - **Audio**: Lautstärke, Soundkarte, Drehregler, Bluetooth, Sprachausgabe
 - **Akku & Strom**: Akku, MuPiHAT, Ausschalten, Taster, Lüfter
-- **Netzwerk**: WLAN, LAN, Freigaben
-- **Dienste**: Telegram, MQTT, WLED
+- **Netzwerk**: WLAN, LAN
+- **Dienste**: Spotify, NAS, Podcast- und Radiosuche, Telegram, MQTT, WLED, Freigaben & Fernzugriff (Samba, FTP, VNC)
 - **Sicherheit**: Passwort, Anmeldung, HTTPS
-- **System**: Über die Box, Zustand, Updates, Backup, Neustart, Protokolle, Optionen, Browser, Experten, Sprache
+- **System**: Über die Box, Zustand, Updates, Backup, Neustart, Protokolle, Systemoptionen, Browser, Experten, Sprache, Rechtliches

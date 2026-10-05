@@ -16,18 +16,19 @@
 | **HTTPS** | encrypted connection to the app |
 | **IP address** | the box's address on the network |
 | **Kiosk mode** | full screen without the browser's controls, which is how the display runs |
-| **Librespot** | the free Spotify Connect component the box uses |
 | **MQTT** | a lightweight messaging method for the smart home and devices |
+| **mpv** | the program that plays audiobooks, music, podcasts and radio. If it is missing, the box uses mplayer |
 | **MuPiHAT** | board with battery management for the box |
 | **NAS** | network storage in the home network |
 | **OnOff SHIM** | on/off button with status LED for the Raspberry Pi |
 | **Overlay** | a hardware description the Raspberry Pi loads at start from `/boot/config.txt` |
 | **PM2** | program that watches the server and the player and restarts them |
-| **Playlist prefix** | the beginning of a name by which Smart-Sync recognises the box's Spotify playlists |
+| **Playlist prefix** | the beginning of a name by which Smart Sync recognises the box's Spotify playlists |
 | **RSS** | the format in which podcasts publish their episodes |
 | **Quiet time** | time window in which the box does not play |
-| **Samba** | method by which the memory card appears as a drive in the Windows network |
-| **Smart-Sync** | fetches Spotify playlists onto the box automatically |
+| **Samba** | method by which the box's media folder (`/home/dietpi/MuPiBox/media`) appears as a drive in the Windows network |
+| **Smart Sync** | fetches Spotify playlists onto the box automatically |
+| **Spotify player** | Spotify plays in the display's browser (Spotify Web Playback SDK with Widevine). For Spotify, the display is the device the box plays on |
 | **SSID** | the name of a Wi-Fi network |
 | **Theme** | the display's look: colours, backgrounds, fonts |
 | **Token** | a secret key by which a service (for example a Telegram bot) identifies itself |

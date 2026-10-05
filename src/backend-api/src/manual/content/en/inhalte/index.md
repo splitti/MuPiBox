@@ -9,7 +9,7 @@ Everything the box plays is managed in the app in the **Library** area. There ar
 | **Podcasts and radio** | RSS podcasts and internet radio | [Podcasts and radio](podcasts-und-radio.md) |
 | **NAS** | media on a network drive in your home network | [NAS](nas.md) |
 
-Every item goes into a **category**: Audiobook, Radio play, Music or Radio & podcasts. The category decides under which tab it appears on the display ([The start page](../bedienung/startseite.md)).
+Every item goes into one of three **categories**: Audiobook, Music or Radio & podcasts. The category decides under which tab it appears on the display: Audiobooks, Music or Radio & podcasts. Folders from the NAS are in their own NAS tab or in one of these categories ([The start page](../bedienung/startseite.md)).
 
 After that:
 

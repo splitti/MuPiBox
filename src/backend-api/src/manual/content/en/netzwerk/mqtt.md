@@ -18,7 +18,7 @@ Over **MQTT** the box reports its state to a broker in your home network and can
 
 | Setting | Effect |
 | --- | --- |
-| **Update (playing)** | how often the box reports during playback, 1 to 90 seconds |
+| **Update (playback)** | how often the box reports during playback, 1 to 90 seconds |
 | **Update (idle)** | how often it reports when nothing is playing, 1 to 90 seconds |
 | **Timeout** | waiting time for the broker, 10 to 180 seconds |
 

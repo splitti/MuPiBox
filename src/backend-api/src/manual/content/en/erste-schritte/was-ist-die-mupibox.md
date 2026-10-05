@@ -23,4 +23,4 @@ On the display the content is sorted into categories: Audiobooks, Music, NAS, an
 The box can switch itself off after a set time without playback, and the display goes off after 10 minutes without use. Both times can be changed ([Display](../hardware/display.md), [Battery, MuPiHAT and power button](../hardware/strom.md)).
 
 > [!NOTE]
-> The MuPiBox is a community project. The software is built on DietPi, Librespot, mplayer and other open-source components. The list is under **Settings › System › Legal**.
+> The MuPiBox is a community project. The software is built on DietPi, Chromium, mpv and other open-source components. The player plays your own files, NAS, podcasts and radio with mpv (mplayer only as a fallback when mpv is missing). Spotify plays in the display's browser through Spotify's Web Playback SDK. The list of components is under **Settings › System › Legal**.

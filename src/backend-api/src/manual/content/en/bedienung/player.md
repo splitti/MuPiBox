@@ -11,28 +11,37 @@ A tap on an album or a track opens the player and starts playback.
 | Play / Pause | start or pause playback |
 | Previous / next track | jump to the track before or after |
 | Rewind / fast-forward | jump back or forward within the track |
-| Shuffle | play tracks in random order |
+| Shuffle | play tracks in random order; only for Spotify in the categories Music and Radio & podcasts |
 | Louder / quieter | change the volume, limited by the maximum the parents have set |
-| Headphone icon | choose the output device: the box itself or a paired Bluetooth device ([Bluetooth](../hardware/bluetooth.md)) |
-| Back arrow | leave the player |
+| Volume at the top | shows the volume in percent; with a paired Bluetooth device you choose next to it where the music plays (see below) |
+| Back button at the top left | leave the player (see below) |
 
-Depending on the kind of content, not all elements are there. For a radio station, for example, the player shows **Live** instead of a progress bar.
+Depending on the kind of content, not all elements are there. For a radio station the player shows **Live** instead of the progress bar, and the buttons for skipping and seeking are missing.
 
 ## The track list
 
-Press and hold the cover in the player until the **track list** opens (can be set from 0.5 to 5 seconds under **Settings › Display & controls › Controls on the display**). Tap a track to play it, or close the list again.
+The **track list** shows all tracks of the album or playlist. It opens in two ways:
+
+- Tap the button below the cover. It shows the track number, for example “3 / 19”.
+- Or press and hold the cover until the list opens. How long is set under **Settings › Display & controls › Controls on the display › Hold times › Hold time for the track list** (0.5 to 5 seconds).
+
+Tap a track to play it. The button below the cover on the left closes the list again. Radio stations and podcasts via RSS have no track list.
 
 ![The track list with the current track](display-tracklist.png)
 
-If an album has no cover, the list shows the same coloured card with the folder name as the overview ([Covers and themes](cover-und-themes.md)).
+## Box or headphones
+
+If a Bluetooth device is paired, the header shows two fields next to the volume: box and headphones. A tap switches where the music plays. If several devices are paired, the **Listen with** window opens, where the child chooses the device.
+
+Without a paired device the header shows only the volume. You can switch the choice on the display off under **Settings › Display & controls › Controls on the display › Headphones › Choose box or headphones on the display**. In the app switching always works ([Bluetooth](../hardware/bluetooth.md)).
 
 ## What happens when the player is left?
 
-Without this setting, playback stops when the child leaves the player with the back arrow. This can be changed: if you switch on **Settings › Audio › Volume › Keep playing when leaving the player**, playback continues, and on the start page a bar **Currently playing** shows the track with a stop button. A tap on the bar opens the player again ([Continue and “Now playing”](fortsetzen.md)).
+By default the music goes on when the child leaves the player with the back button. At the top of the header **Now playing** then shows what is playing, with a stop button. You set this under **Settings › Audio › Volume › Back in the player**: **Minimise** (the music goes on) or **Stop** (the music stops). More: [Continue and “Now playing”](fortsetzen.md).
 
 ## Podcasts
 
-For podcasts the box remembers where an episode stopped and marks new episodes with a dot. A bar shows episodes that have been started, a tick those that were listened to the end. You set this under **Controls on the display › Podcasts** ([Podcasts and radio](../inhalte/podcasts-und-radio.md)).
+For podcasts the box remembers where an episode stopped and marks new episodes with a dot. A bar shows episodes that have been started, a tick those that were listened to the end. You set this under **Controls on the display › Continue listening** and **› Podcasts** ([Podcasts and radio](../inhalte/podcasts-und-radio.md)).
 
 ## When the playtime is used up
 

@@ -6,7 +6,7 @@ Under **Listen › Listening history** you see what the box has played, so that 
 | --- | --- |
 | **Today** | today's listening time, how many tracks played and what was listened to most |
 | **Last 7 days** | the listening time per day as a chart, plus the total in minutes and tracks |
-| **Most listened (7 days)** | the albums or artists with the most minutes and how often they played |
+| **Most played (7 days)** | the albums or artists with the most minutes and how often they played |
 | **Top tracks (7 days)** | the single tracks that were listened to most often |
 
 > [!TIP]

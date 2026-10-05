@@ -14,14 +14,14 @@ Phone or PC must be **in the same network** as the box (the same Wi-Fi or the sa
 
 - Has the box got a **new IP address** after a Wi-Fi change? The current one is shown on the network page on the display ([Settings on the display](../bedienung/eltern-zugang.md)) or in your router's device list.
 - If `mupibox.local` does not work, use the IP address. Some networks and devices do not resolve `.local` names.
-- Begin the address with `http://`. With `https://` it only works if you have set up HTTPS ([Password and HTTPS](../netzwerk/sicherheit.md)).
+- The app works with `http://` and with `https://`. The box takes care of its certificate by itself at every start ([Password and HTTPS](../netzwerk/sicherheit.md)).
 
 ## 4. Browser warning with HTTPS
 
-If the browser warns about an **insecure certificate**, that is normal with the box: the certificate comes from the box itself. Install it once on the device ([Password and HTTPS](../netzwerk/sicherheit.md)) or open the app via `http://`.
+If the browser warns about an **insecure certificate**, that is normal with the box: the certificate comes from the box itself. You can confirm the warning and go on anyway. To make it go away, install the certificate once on the device ([Password and HTTPS](../netzwerk/sicherheit.md)). Or open the app via `http://`.
 
 > [!WARNING]
-> If you have switched on **Redirect http to https** and the certificate is not installed on your device, you can no longer get in from this device. Switch to a device that trusts the box, or switch the redirect off there again.
+> If you have switched on **Redirect http to https** and the certificate is not installed on your device, the browser warns on every visit. Switch to a device that trusts the box, or open the app via port 8200 (`http://<IP address>:8200/app/`). There it can always be reached via http. Then you can switch the redirect off again.
 
 ## 5. Getting in with the display
 

@@ -12,12 +12,12 @@ The status indicator on the display reads the box's online state from a file kep
 
 - The display switches itself off after the set time. A tap wakes it ([Display](../hardware/display.md)).
 - If it stays dark, check **Display off after** and the brightness.
-- Does the display show an **old page** after an update? Restart only the display: **Settings › System › Restart & shut down › Display & services**.
+- Does the display show an **old page** after an update? Restart only the display: **Settings › System › Restart & shut down › Display & services › Restart display**.
 
 ## Covers are missing
 
-- If you see a **coloured card with the folder name**, the box has found no picture. That is intended. Upload a cover or switch on the online search ([Covers](../inhalte/cover.md)).
-- You discard a **wrong** cover under **Library › Cover › Recently found**.
+- If you see a **coloured card with the folder name**, the box has found no picture. That is intended. Upload a cover or switch on **Search for cover online** ([Covers](../inhalte/cover.md)).
+- You discard a **wrong** cover under **Library › Cover** in the **Found covers** card with **Discard**. The album then falls back to the picture of the folder above it.
 
 ## A new album does not appear
 
@@ -25,13 +25,15 @@ Your own files appear by themselves once they are completely copied. With a **NA
 
 ## The box is slow or the display stutters
 
-- **Under-voltage**: a power supply or cable that is too weak is the most common cause ([System and expert settings](../wartung/system.md)).
+- **Undervoltage**: a power supply or cable that is too weak is the most common cause ([System and expert settings](../wartung/system.md)).
 - **Temperature**: if **Box health** shows high values, a [fan](../hardware/luefter.md) or a better case helps.
 - **Memory card full**: the free space is shown under **About the box**. Clear up or move media to the [NAS](../inhalte/nas.md).
 
 ## An update failed
 
-If an update fails, the box restores the previous state. If it then does not run normally, restore the [backup](../wartung/backup.md) you made beforehand, and report the problem ([Reporting a problem](../wartung/problem-melden.md)).
+If already the download or the unpacking of the new version fails, the previous installation stays. Apart from that there is no complete way back to the old state. The **Updates** page shows under **Output** what happened.
+
+The box saved settings, library and covers before the update: in `/home/dietpi/mupibox-backups/before-update-….zip`. If the box then does not run normally, restore the [backup](../wartung/backup.md) you made beforehand. If that does not help, ask the community or report the bug on GitHub ([splitti/MuPiBox](https://github.com/splitti/MuPiBox/issues)), ideally with the **support info** ([Logs and status](../wartung/protokolle.md)).
 
 ## The box does not report to Telegram
 

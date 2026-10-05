@@ -15,9 +15,8 @@ Die MuPiBox ist ein Musik- und Hörspielplayer für Kinder, den sie selbst über
 | Hörzeiten begrenzen oder eine Schlafenszeit einstellen | [Spielzeit und Ruhezeiten](spielzeit/index.md) |
 | Zubehör anschließen: Drehregler, Akku, Lüfter, Bluetooth | [Hardware und Zubehör](hardware/index.md) |
 | WLAN, Passwort, Telegram oder Home Assistant einrichten | [Netzwerk und Fernzugriff](netzwerk/index.md) |
-| die Box aktualisieren, sichern oder ein Problem melden | [Wartung](wartung/index.md) |
+| die Box aktualisieren, sichern oder neu starten | [Wartung](wartung/index.md) |
 | wissen, was nicht funktioniert, wenn etwas nicht funktioniert | [Fehlerbehebung](fehlerbehebung/index.md) |
-| jede einzelne Einstellung nachschlagen | [Einstellungs-Referenz](referenz/index.md) |
 
 ## Zwei Oberflächen
 
@@ -32,6 +31,5 @@ Die Box hat zwei Oberflächen, die zusammen arbeiten:
 
 - Menüwege schreibe ich so: **Einstellungen › Audio › Lautstärke**. Das ist der Weg durch die App.
 - Gelb hinterlegte Kästen mit **Achtung** warnen vor Dingen, die etwas kaputt machen oder Daten löschen können.
-- Die [Einstellungs-Referenz](referenz/index.md) wird beim Bauen des Handbuchs aus der App selbst erzeugt. Bezeichnungen, Auswahlmöglichkeiten und Wertebereiche stimmen dort also immer mit der App überein.
 
 Für Hilfe außerhalb dieses Handbuchs gibt es die Website [mupibox.de](https://mupibox.de) und den [Discord-Kanal](https://discord.gg/4EjCgpCbbe) der Community.

@@ -58,13 +58,6 @@
         }
       },
       {
-        "id": "gesten",
-        "title": {
-          "de": "Gesten und Vollbildmodus",
-          "en": "Gestures and full screen"
-        }
-      },
-      {
         "id": "fortsetzen",
         "title": {
           "de": "Fortsetzen und „Läuft gerade“",
@@ -313,13 +306,6 @@
         }
       },
       {
-        "id": "problem-melden",
-        "title": {
-          "de": "Ein Problem melden",
-          "en": "Reporting a problem"
-        }
-      },
-      {
         "id": "system",
         "title": {
           "de": "System- und Experteneinstellungen",
@@ -371,13 +357,6 @@
         }
       }
     ]
-  },
-  {
-    "id": "referenz",
-    "title": {
-      "de": "Einstellungs-Referenz",
-      "en": "Settings reference"
-    }
   },
   {
     "id": "anhang",

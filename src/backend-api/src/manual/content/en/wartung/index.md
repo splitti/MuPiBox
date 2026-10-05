@@ -7,8 +7,7 @@ The box largely looks after itself. This chapter shows what you should do now an
 | [Updates](updates.md) | new MuPiBox versions and the operating system |
 | [Backup](backup.md) | back up and restore |
 | [Restart and shut down](neustart.md) | box, display and services |
-| [Logs and status](protokolle.md) | read logs, check memory and temperature |
-| [Reporting a problem](problem-melden.md) | compile a report for the developers |
+| [Logs and status](protokolle.md) | read logs, check memory and temperature, support info for getting help |
 | [System and expert settings](system.md) | overclocking, browser, hostname and more |
 
 > [!IMPORTANT]

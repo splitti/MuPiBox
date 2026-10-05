@@ -17,10 +17,10 @@ The setting **When the limit is reached** decides:
 | Choice | Effect |
 | --- | --- |
 | **Stop immediately** | playback ends on the spot |
-| **Finish the track** | the current track is played to the end |
-| **Finish the album** | the current album is played to the end |
+| **Play track to the end** | the current track is played to the end |
+| **Play album to the end** | the current album is played to the end |
 
-So that an audiobook does not run on endlessly, **Keep playing at most** limits the extra time (5 minutes to 3 hours). After that the box also stops in the middle of a track or album.
+So that an audiobook does not run on endlessly, **Keep playing for at most** limits the extra time (5 minutes to 3 hours). After that the box also stops in the middle of a track or album.
 
 > [!NOTE]
 > **Podcasts** may finish the episode. **Radio** stops at once, because a radio station has no end.

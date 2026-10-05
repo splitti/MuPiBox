@@ -8,8 +8,8 @@ First enter the **minutes** (1 to 1440). Then:
 
 | Action | Effect |
 | --- | --- |
-| **+ Bonus time** | adds these minutes to today's daily limit |
-| **Lift blocks** | lifts limit and quiet time for these minutes, the box plays freely |
+| **+ bonus time** | adds these minutes to today's daily limit |
+| **Lift lock** | lifts limit and quiet time for these minutes, the box plays freely |
 | **Quiet now** | stops playback for these minutes |
 
 The actions change neither the daily limits nor the quiet times themselves. After the minutes have passed, what is set applies again.
@@ -21,7 +21,7 @@ The **sleep timer** switches the box **completely off** after a time has passed,
 1. Choose the **minutes** (15 to 360, in steps of 15).
 2. Tap **Start**. **Stop** cancels it.
 
-In the last stretch before the end the box fades the volume out slowly, so playback ends quietly instead of abruptly.
+In the last 20 seconds before the end the box fades the volume out slowly, so playback ends quietly instead of abruptly.
 
 > [!NOTE]
 > After the timer has switched the box off, it must be switched on again at the device ([Restart and shut down](../wartung/neustart.md)).

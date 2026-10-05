@@ -15,9 +15,8 @@ The MuPiBox is a music and audiobook player for children, which they operate the
 | limit listening time or set a bedtime | [Playtime and quiet times](spielzeit/index.md) |
 | connect accessories: rotary knob, battery, fan, Bluetooth | [Hardware and accessories](hardware/index.md) |
 | set up Wi-Fi, password, Telegram or Home Assistant | [Network and remote access](netzwerk/index.md) |
-| update the box, back it up or report a problem | [Maintenance](wartung/index.md) |
+| update the box, back it up or restart it | [Maintenance](wartung/index.md) |
 | find out what to do when something does not work | [Troubleshooting](fehlerbehebung/index.md) |
-| look up every single setting | [Settings reference](referenz/index.md) |
 
 ## Two interfaces
 
@@ -32,6 +31,5 @@ The box has two interfaces that work together:
 
 - I write menu paths like this: **Settings › Audio › Volume**. That is the way through the app.
 - Boxes marked **Warning** warn about things that can break something or delete data.
-- The [Settings reference](referenz/index.md) is generated from the app itself when the manual is built. Names, choices and value ranges there always match the app.
 
 For help beyond this manual there is the website [mupibox.de](https://mupibox.de) and the community's [Discord channel](https://discord.gg/4EjCgpCbbe).

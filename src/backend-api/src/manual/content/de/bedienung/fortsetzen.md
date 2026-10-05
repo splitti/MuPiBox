@@ -2,17 +2,17 @@
 
 ## Fortsetzen
 
-Die Box merkt sich, was zuletzt gehört wurde, und bietet es in der **Fortsetzen**-Liste an. Ein Tipp, und es geht genau dort weiter, wo es aufgehört hat.
+Die Box merkt sich, was zuletzt gehört wurde. Das Uhr-Symbol oben links auf der Startseite öffnet die **Fortsetzen**-Liste. Ein Tipp auf einen Eintrag, und es geht genau dort weiter, wo es aufgehört hat.
 
-Die Anzahl der Einträge stellst du unter **Einstellungen › Display & Bedienung › Bedienung am Display › Haltezeiten & Fortsetzen** ein: 1 bis 99.
+Die Anzahl der Einträge stellst du unter **Einstellungen › Display & Bedienung › Bedienung am Display › Weiterhören › Einträge unter „Fortsetzen“** ein: 1 bis 99.
 
 ### Podcasts
 
-Podcasts haben zusätzliche Regeln, die Folge für Folge gelten:
+Podcasts haben zusätzliche Regeln, die Folge für Folge gelten. Sie stehen auf derselben Seite unter **Weiterhören** und **Podcasts**:
 
 | Einstellung | Wirkung |
 | --- | --- |
-| **An der letzten Stelle weiterhören** | die Folge beginnt dort, wo sie aufgehört wurde |
+| **Podcast-Folgen an der letzten Stelle weiterhören** | die Folge beginnt dort, wo sie aufgehört wurde |
 | **Stelle merken für** | wie lange die Stelle gemerkt wird, von einem Monat bis unbegrenzt |
 | **Neue Folgen markieren** | ein Punkt auf dem Podcast und der neuen Folge |
 | **Als neu markieren für** | wie lange der Punkt bleibt: 3, 7 oder 14 Tage |
@@ -22,14 +22,14 @@ Als neu gilt nur, was nach dem Hinzufügen des Podcasts erschienen ist. Der Punk
 
 ## „Läuft gerade“
 
-![Die Leiste „Läuft gerade“ am unteren Rand der Startseite](display-now-playing.png)
+Die Musik kann weiterlaufen, wenn das Kind den Player verlässt. Dann erscheint oben in der Kopfleiste der Startseite und der Albumlisten die Anzeige **Läuft gerade**: Cover, Titel und ein Stopp-Knopf. Ein Tipp auf die Anzeige öffnet den Player wieder, der Stopp-Knopf beendet die Wiedergabe.
 
-Die Leiste **Läuft gerade** erscheint auf der Startseite, wenn die Wiedergabe weiterläuft, obwohl das Kind den Player verlassen hat. Sie zeigt den Titel und hat einen **Stopp**-Knopf. Ein Tipp auf die Leiste öffnet den Player wieder.
+Das Verhalten ist eine Einstellung: **Einstellungen › Audio › Lautstärke › Zurück im Player**.
 
-Das Verhalten ist eine Einstellung: **Einstellungen › Audio › Lautstärke › Weiterspielen beim Verlassen des Players**.
+- **Minimieren** (Standard): Die Musik läuft weiter. Der Zurück-Knopf im Player zeigt einen Pfeil nach unten.
+- **Beenden**: Die Musik stoppt, das Display geht eine Ebene zurück. Der Zurück-Knopf zeigt einen Pfeil nach links.
 
-- **Aus**: Die Wiedergabe stoppt, wenn das Kind den Player mit dem Zurück-Pfeil verlässt.
-- **An**: Sie läuft weiter. Das gilt für alle Arten von Inhalt: eigene Dateien, Spotify, Podcasts, Radio und NAS.
+Das gilt für alle Arten von Inhalt: eigene Dateien, Spotify, Podcasts, Radio und NAS.
 
 > [!NOTE]
-> Die Einstellung wirkt sofort, die Box muss nicht neu gestartet werden. Ein Display, das gerade eine Seite offen hat, übernimmt sie, sobald die Seite neu geladen wurde.
+> Die Box muss nicht neu gestartet werden. Die Einstellung gilt, sobald der Player das nächste Mal geöffnet wird.

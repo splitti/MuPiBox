@@ -23,4 +23,4 @@ Auf dem Display sind die Inhalte in Kategorien sortiert: Hörspiele, Musik, NAS 
 Die Box kann sich nach einer einstellbaren Zeit ohne Wiedergabe von selbst ausschalten, und das Display geht nach 10 Minuten ohne Bedienung aus. Beide Zeiten sind einstellbar ([Display](../hardware/display.md), [Akku, MuPiHAT und Ausschalter](../hardware/strom.md)).
 
 > [!NOTE]
-> Die MuPiBox ist ein Gemeinschaftsprojekt. Die Software baut auf DietPi, Librespot, mplayer und weiteren Open-Source-Bausteinen auf. Die Liste steht unter **Einstellungen › System › Rechtliches**.
+> Die MuPiBox ist ein Gemeinschaftsprojekt. Die Software baut auf DietPi, Chromium, mpv und weiteren Open-Source-Bausteinen auf. Eigene Dateien, NAS, Podcasts und Radio spielt der Player mit mpv (mplayer nur als Rückfall, wenn mpv fehlt). Spotify spielt im Browser des Displays über das Web Playback SDK von Spotify. Die Liste der Bausteine steht unter **Einstellungen › System › Rechtliches**.

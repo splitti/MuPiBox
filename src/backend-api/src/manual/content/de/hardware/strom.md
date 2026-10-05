@@ -12,26 +12,26 @@ Der **MuPiHAT** ist eine Platine mit Akku-Verwaltung, die auf den Raspberry Pi g
 
 | Einstellung | Bedeutung |
 | --- | --- |
-| **MuPiHAT aktiv** | schaltet die Unterstützung ein |
-| **Akku** | das Profil deines Akkus: ENERpower 2S3P 15.000 mAh, Ansmann 2S1P, ENERpower 2S2P 10.000 mAh, **USB-C-Betrieb (ohne Akku)** oder **Eigenes Profil** |
+| **MuPiHAT aktiv** | schaltet die Unterstützung ein. Umschalten stellt auch die Soundkarte um und startet die Box neu |
+| **Akku** | das Profil deines Akkus: Ansmann 2S1P, ENERpower 2S2P 10.000mAh, ENERpower 2S3P 15.000mAh, **USB-C-Betrieb (ohne Akku)** oder **Eigenes Profil** |
 
-Wählst du **Eigenes Profil**, trägst du die Spannungen deines Akkus in Millivolt ein:
+Darunter stehen die Spannungen des gewählten Profils in Millivolt. Du kannst sie ändern und mit **Profil speichern** übernehmen, der MuPiHAT-Dienst startet dafür neu. Passt keines der Profile zu deinem Akku, wähle **Eigenes Profil**. Beim **USB-C-Betrieb (ohne Akku)** gibt es keine Spannungen und keine Ladekurve.
 
-| Wert | Bedeutung | Bereich |
+| Karte | Wert | Bereich |
 | --- | --- | --- |
-| **v_100**, **v_75**, **v_50**, **v_25**, **v_0** | Spannung bei 100 %, 75 %, 50 %, 25 % und 0 % | 5000–9000 für v_100 |
-| **Warnung** | ab dieser Spannung warnt die Box | 5500–8000 |
-| **Abschalten** | ab dieser Spannung schaltet sich die Box aus, sie muss unter der Warnung liegen | 5000–7500 |
-| **Ladeschluss VREG** (optional) | die Spannung, bei der das Laden endet | 6000–8500 |
+| **Ladekurve** | **Leer**, **25 %**, **50 %**, **75 %**, **Voll** (v_0 bis v_100): die Spannung bei diesem Ladestand. Die Werte steigen von „Leer“ nach „Voll“ | je 5000–9000 |
+| **Schwellen** | **Warnung ab**: ab dieser Spannung warnt die Box | 5500–8000 |
+| **Schwellen** | **Abschalten bei**: ab dieser Spannung schaltet sich die Box aus. Muss unter der Warnung liegen | 5000–7500 |
+| **Laden** | **Ladeschluss** (VREG, optional): die Spannung, bei der das Laden endet. Leer = Standard des Lade-Chips | 6000–8400 |
 
 > [!WARNING]
-> **Ladeschluss (VREG) ist sicherheitskritisch.** Ist er zu hoch eingestellt, schadet das den Zellen. Ändere ihn nur, wenn du weißt, was du tust.
+> **Der Ladeschluss (VREG) ist sicherheitskritisch.** Bei zwei Zellen in Reihe sind höchstens 8400 mV erlaubt (4,2 V je Zelle). Höher schadet dem Akku, die App nimmt keinen höheren Wert an. Ändere ihn nur, wenn du weißt, was du tust.
 
 Bei leerem Akku schaltet die Box sich selbst aus, und das Display zeigt vorher das Bild für „Akku leer“ ([Cover und Themes](../bedienung/cover-und-themes.md)). Mit Telegram bekommst du außerdem eine Nachricht, wenn der Akku fast leer ist ([Telegram](../netzwerk/telegram.md)).
 
 ## Automatisch ausschalten
 
-**Einstellungen › Akku & Strom › Automatisch ausschalten**: Die Box schaltet sich aus, wenn niemand hört. Einstellbar von 0 bis 300 Minuten in Fünferschritten. **0 bedeutet nie**, so ist es nach der Installation eingestellt.
+**Einstellungen › Akku & Strom › Automatisch ausschalten**: Die Box schaltet sich aus, wenn niemand hört. Einstellbar von 0 bis 300 Minuten in Fünferschritten. **0 bedeutet nie**, so ist es nach der Installation eingestellt. Die Box prüft alle 10 Sekunden, ob etwas läuft.
 
 ## Ein-/Ausschalter und LED
 
@@ -39,8 +39,8 @@ Mit einem **OnOff SHIM** (Ein-/Aus-Taster mit Betriebs-LED) schaltest du die Box
 
 | Einstellung | Wirkung |
 | --- | --- |
-| **Verzögerung des Ausschalt-Tasters** | so lange hältst du den Taster, bis die Box ausgeht, 0 bis 5 Sekunden (nach der Installation 2) |
-| **LED-Pin (OnOffShim)** | der GPIO-Pin der LED (nach der Installation 13) |
+| **Verzögerung des Ausschalt-Tasters** | so lange hältst du den Taster, bis die Box ausgeht, 0 bis 5 Sekunden (nach der Installation 2). Gilt nach einem Neustart |
+| **LED-Pin (OnOffShim)** | der GPIO-Pin der LED (nach der Installation 13). Gilt nach einem Neustart |
 | **LED-Helligkeit normal** | Helligkeit im Betrieb, 0 bis 100 % |
 | **LED-Helligkeit gedimmt** | Helligkeit, wenn gedimmt wird, 0 bis 100 % |
 

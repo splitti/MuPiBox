@@ -11,9 +11,9 @@ Time windows may go **past midnight** (for example 20:00 to 7:00). **Several win
 
 ## When a quiet time begins
 
-Just like with the daily limit, you choose what happens when a quiet time starts: **Stop immediately**, **Finish the track** or **Finish the album**. **Keep playing at most** also limits the extra time here.
+Just like with the daily limit, you choose what happens when a quiet time starts: **Stop immediately**, **Play track to the end** or **Play album to the end**. **Keep playing for at most** also limits the extra time here.
 
 During the quiet time the child sees a message on the display. You change its text under **Settings › Appearance › Text on the display** ([Playtime and quiet times](index.md)).
 
 > [!TIP]
-> If you need quiet or an exception from the quiet for once, use **Quiet now** or **Lift blocks** ([Instant actions and sleep timer](schlaftimer.md)).
+> If you need quiet or an exception from the quiet for once, use **Quiet now** or **Lift lock** ([Instant actions and sleep timer](schlaftimer.md)).

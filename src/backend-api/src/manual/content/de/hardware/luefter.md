@@ -13,7 +13,7 @@ Ein Lüfter hält den Raspberry Pi kühl, etwa in einem geschlossenen Gehäuse o
 | **50 % ab** | Temperatur für 50 % | 55 °C |
 | **25 % ab** | Temperatur für 25 % | 45 °C |
 
-Die Temperaturen lassen sich zwischen 20 und 90 °C einstellen.
+Die Temperaturen lassen sich zwischen 20 und 90 °C einstellen. Sie müssen von 100 % nach 25 % kleiner werden. Mit **Speichern** übernimmst du alle Werte.
 
 > [!NOTE]
 > Der Lüfter braucht einen eigenen GPIO-Pin und darf ihn sich nicht mit anderem Zubehör teilen ([GPIO-Belegung](../anhang/gpio.md)). Wie warm die Box gerade ist, zeigt **Einstellungen › System › Zustand der Box** ([Protokolle und Zustand](../wartung/protokolle.md)).

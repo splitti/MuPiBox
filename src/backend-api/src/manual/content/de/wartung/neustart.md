@@ -6,7 +6,7 @@
 
 | Aktion | Wirkung |
 | --- | --- |
-| **Neu starten** | startet die Box neu. Das dauert etwa eine Minute |
+| **Neu starten** | startet die Box neu. Das dauert etwa eine Minute, die Wiedergabe endet |
 | **Ausschalten** | fährt die Box herunter |
 
 > [!NOTE]
@@ -14,7 +14,14 @@
 
 ## Display und Dienste
 
-Unter **Display & Dienste** startest du nur die Anzeige oder einzelne Dienste neu, ohne die ganze Box neu zu starten. Das ist der schnellere Weg, wenn das Display eine alte Seite zeigt oder sich aufgehängt hat.
+Unter **Display & Dienste** startest du nur Teile neu, ohne die ganze Box neu zu starten. Das ist der schnellere Weg, wenn das Display eine alte Seite zeigt oder sich aufgehängt hat.
+
+| Aktion | Wirkung |
+| --- | --- |
+| **Display neu starten** | Chromium startet neu (ein paar Sekunden schwarz). Die Wiedergabe läuft weiter |
+| **Player neu starten** | Spotify und die lokale Wiedergabe starten neu. Was läuft, stoppt |
+| **Dienste neu starten** | Player und Server der Box. Die App ist dabei kurz nicht erreichbar |
+| **Einstellungen übernehmen** | schreibt alle Einstellungen neu in die Dienste und startet das Display neu |
 
 ## So schaltet sich die Box aus
 

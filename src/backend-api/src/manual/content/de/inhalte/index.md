@@ -9,7 +9,7 @@ Alles, was die Box abspielt, verwaltest du in der App im Bereich **Bibliothek**.
 | **Podcasts und Radio** | RSS-Podcasts und Internetradio | [Podcasts und Radio](podcasts-und-radio.md) |
 | **NAS** | Medien auf einem Netzwerkspeicher im Heimnetz | [NAS](nas.md) |
 
-Jeder Inhalt kommt in eine **Kategorie**: Hörbuch, Hörspiel, Musik oder Radio & Podcasts. Die Kategorie bestimmt, unter welchem Reiter er auf dem Display erscheint ([Die Startseite](../bedienung/startseite.md)).
+Jeder Inhalt kommt in eine von drei **Kategorien**: Hörbuch/Hörspiel, Musik oder Radio & Podcasts. Die Kategorie bestimmt, unter welchem Reiter er auf dem Display erscheint: Hörspiele, Musik oder Radio & Podcasts. Ordner vom NAS stehen im eigenen Reiter NAS oder in einer dieser Kategorien ([Die Startseite](../bedienung/startseite.md)).
 
 Danach:
 

@@ -4,23 +4,31 @@ With **WLED** a light strip shows light effects that go with the box: in operati
 
 **Settings › Services › WLED**
 
+## Connection
+
 | Setting | Meaning |
 | --- | --- |
 | **WLED active** | switches the connection on (off after installation) |
-| **Serial interface** | the controller's USB connection, usually `/dev/ttyUSB0` |
-| **Baud rate** | transmission speed, 300 to 921600 bps, usually 115200 |
+| **Interface** | the controller's USB connection, usually `/dev/ttyUSB0` |
+| **Baud rate** | transmission speed, 300 to 921600, usually 115200 |
+
+At the top the card shows whether a WLED device has answered. If none answers, tap **Search again**. Saving works anyway.
 
 ## Presets
 
-A **preset** is a saved light effect in the WLED controller. You only enter the **numbers**:
+A **preset** is a saved light effect in the WLED controller:
 
-- **Main preset**: the effect in normal operation,
-- **Preset at start** with its number,
-- **Preset at shutdown** with its number.
+- **In normal operation**: the everyday effect,
+- **At startup**: a preset of its own when switching on (switch on, then choose the preset),
+- **On shutdown**: a preset of its own when switching off (switch on, then choose the preset).
+
+If the WLED device has answered, you choose the presets from its list. Otherwise you enter their **numbers**.
 
 ## Brightness
 
-**Brightness normal** and **Brightness dimmed**, each from 0 to 255.
+**Normal** and **Dimmed**, each from 0 to 100 %.
+
+**Save** applies the connection, presets and brightness. If the WLED device is reachable, the values also go to the device.
 
 > [!NOTE]
-> You create the presets in WLED itself, with WLED's app or web interface. The MuPiBox only calls them by their number.
+> You create the presets in WLED itself, with WLED's app or web interface. The MuPiBox only calls them up.

@@ -21,7 +21,7 @@ Der **Schlaftimer** schaltet die Box nach Ablauf einer Zeit **komplett aus**, eg
 1. Wähle die **Minuten** (15 bis 360, in Schritten von 15).
 2. Tippe auf **Starten**. **Stoppen** bricht ihn ab.
 
-In der letzten Zeit vor dem Ende blendet die Box die Lautstärke langsam aus, die Wiedergabe endet dann leise statt abrupt.
+In den letzten 20 Sekunden vor dem Ende blendet die Box die Lautstärke langsam aus, die Wiedergabe endet dann leise statt abrupt.
 
 > [!NOTE]
 > Auch nach dem Ausschalten durch den Timer muss die Box am Gerät wieder eingeschaltet werden ([Neu starten und Ausschalten](../wartung/neustart.md)).

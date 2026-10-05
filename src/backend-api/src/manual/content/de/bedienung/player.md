@@ -11,28 +11,37 @@ Ein Tipp auf ein Album oder einen Titel öffnet den Player und startet die Wiede
 | Play / Pause | Wiedergabe starten oder anhalten |
 | Vorheriger / nächster Titel | zum Titel davor oder danach springen |
 | Zurück- / Vorspulen | im Titel zurück oder vor springen |
-| Zufall | Titel in zufälliger Reihenfolge abspielen |
+| Zufall | Titel in zufälliger Reihenfolge abspielen; nur bei Spotify in den Kategorien Musik und Radio & Podcasts |
 | Lauter / leiser | Lautstärke ändern, begrenzt durch das Maximum, das Eltern festgelegt haben |
-| Kopfhörer-Symbol | Ausgabegerät wählen: die Box selbst oder ein gekoppeltes Bluetooth-Gerät ([Bluetooth](../hardware/bluetooth.md)) |
-| Pfeil zurück | Player verlassen |
+| Lautstärke oben | zeigt die Lautstärke in Prozent; mit einem gekoppelten Bluetooth-Gerät wählst du daneben, wo die Musik spielt (siehe unten) |
+| Zurück-Knopf oben links | Player verlassen (siehe unten) |
 
-Je nach Art des Inhalts sind nicht alle Elemente da. Bei einem Radiosender zum Beispiel zeigt der Player statt eines Fortschrittsbalkens die Anzeige **Live**.
+Je nach Art des Inhalts sind nicht alle Elemente da. Bei einem Radiosender steht statt des Fortschrittsbalkens **Live**, und die Knöpfe zum Springen und Spulen fehlen.
 
 ## Die Titelliste
 
-Halte das Cover im Player gedrückt, bis die **Titelliste** aufgeht (einstellbar von 0,5 bis 5 Sekunden unter **Einstellungen › Display & Bedienung › Bedienung am Display**). Tippe einen Titel an, um ihn abzuspielen, oder schließe die Liste wieder.
+Die **Titelliste** zeigt alle Titel des Albums oder der Playlist. Sie geht auf zwei Wegen auf:
+
+- Tippe auf den Knopf unter dem Cover. Er zeigt die Titelnummer, zum Beispiel „3 / 19“.
+- Oder halte das Cover gedrückt, bis die Liste aufgeht. Wie lange, stellst du ein unter **Einstellungen › Display & Bedienung › Bedienung am Display › Haltezeiten › Haltezeit für die Titelliste** (0,5 bis 5 Sekunden).
+
+Tippe einen Titel an, um ihn abzuspielen. Der Knopf unter dem Cover links schließt die Liste wieder. Radiosender und Podcasts über RSS haben keine Titelliste.
 
 ![Die Titelliste mit dem laufenden Titel](display-tracklist.png)
 
-Hat ein Album kein Cover, zeigt die Liste dieselbe farbige Karte mit dem Ordnernamen wie die Übersicht ([Cover und Themes](cover-und-themes.md)).
+## Box oder Kopfhörer
+
+Ist ein Bluetooth-Gerät gekoppelt, zeigt die Kopfleiste neben der Lautstärke zwei Felder: Box und Kopfhörer. Ein Tipp wechselt, wo die Musik spielt. Sind mehrere Geräte gekoppelt, öffnet sich das Fenster **Hören mit**, in dem das Kind das Gerät wählt.
+
+Ohne gekoppeltes Gerät zeigt die Kopfleiste nur die Lautstärke. Ausschalten lässt sich die Wahl am Display unter **Einstellungen › Display & Bedienung › Bedienung am Display › Kopfhörer › Box oder Kopfhörer am Display wählen**. In der App geht das Umschalten immer ([Bluetooth](../hardware/bluetooth.md)).
 
 ## Was passiert beim Verlassen des Players?
 
-Ohne diese Einstellung hört die Wiedergabe auf, wenn das Kind den Player mit dem Zurück-Pfeil verlässt. Das ist einstellbar: Schaltest du **Einstellungen › Audio › Lautstärke › Weiterspielen beim Verlassen des Players** ein, läuft die Wiedergabe weiter, und auf der Startseite zeigt eine Leiste **Läuft gerade** den Titel mit einem Stopp-Knopf. Ein Tipp auf die Leiste öffnet den Player wieder ([Fortsetzen und „Läuft gerade“](fortsetzen.md)).
+Von Haus aus läuft die Musik weiter, wenn das Kind den Player mit dem Zurück-Knopf verlässt. Oben in der Kopfleiste zeigt dann **Läuft gerade**, was spielt, mit einem Stopp-Knopf. Das stellst du ein unter **Einstellungen › Audio › Lautstärke › Zurück im Player**: **Minimieren** (die Musik läuft weiter) oder **Beenden** (die Musik stoppt). Mehr dazu: [Fortsetzen und „Läuft gerade“](fortsetzen.md).
 
 ## Podcasts
 
-Bei Podcasts merkt sich die Box die Stelle, an der eine Folge aufgehört wurde, und markiert neue Folgen mit einem Punkt. Ein Balken zeigt angefangene Folgen, ein Haken zu Ende gehörte. Das stellst du unter **Bedienung am Display › Podcasts** ein ([Podcasts und Radio](../inhalte/podcasts-und-radio.md)).
+Bei Podcasts merkt sich die Box die Stelle, an der eine Folge aufgehört wurde, und markiert neue Folgen mit einem Punkt. Ein Balken zeigt angefangene Folgen, ein Haken zu Ende gehörte. Das stellst du unter **Bedienung am Display › Weiterhören** und **› Podcasts** ein ([Podcasts und Radio](../inhalte/podcasts-und-radio.md)).
 
 ## Wenn die Spielzeit aufgebraucht ist
 

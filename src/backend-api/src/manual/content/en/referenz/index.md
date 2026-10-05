@@ -1,6 +1,6 @@
 # Settings reference
 
-Here is every setting of the app, sorted as in the app under **Settings**. The pages of this chapter are **generated automatically from the app** when the manual is built: names, choices, value ranges and help texts are the same ones you see in the app.
+Here is every setting of the app, sorted as in the app under **Settings**. The pages of this chapter are **generated automatically** when the manual is built, from the same description of the settings that the app builds its pages from. The app shows some pages a little differently, for example with additional cards or notes. If in doubt, what the app shows and what the chapters before describe applies.
 
 How a setting is used in context is explained by the chapters before, for example [Hardware and accessories](../hardware/index.md) or [Network and remote access](../netzwerk/index.md).
 
@@ -20,10 +20,10 @@ How a setting is used in context is explained by the chapters before, for exampl
 The settings are arranged in these groups:
 
 - **Appearance**: theme, view, boot and maintenance screens, display texts
-- **Display & controls**: brightness, rotation, hold times, live display
+- **Display & controls**: display, controls on the display, live display
 - **Audio**: volume, sound card, rotary knob, Bluetooth, speech output
 - **Battery & Power**: battery, MuPiHAT, shutdown, button, fan
-- **Network**: Wi-Fi, LAN, shares
-- **Services**: Telegram, MQTT, WLED
+- **Network**: Wi-Fi, LAN
+- **Services**: Spotify, NAS, podcast and radio search, Telegram, MQTT, WLED, shares & remote access (Samba, FTP, VNC)
 - **Security**: password, sign-in, HTTPS
-- **System**: about the box, health, updates, backup, restart, logs, options, browser, experts, language
+- **System**: about the box, health, updates, backup, restart, logs, system options, browser, experts, language, legal

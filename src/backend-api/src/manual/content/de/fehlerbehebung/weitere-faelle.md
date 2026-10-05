@@ -12,12 +12,12 @@ Die Statusanzeige am Display liest den Online-Zustand der Box aus einer Datei, d
 
 - Das Display schaltet sich nach der eingestellten Zeit von selbst aus. Ein Tipp weckt es ([Display](../hardware/display.md)).
 - Bleibt es dunkel, prüfe **Display aus nach** und die Helligkeit.
-- Das Display zeigt eine **alte Seite** nach einem Update? Starte nur die Anzeige neu: **Einstellungen › System › Neu starten & Ausschalten › Display & Dienste**.
+- Das Display zeigt eine **alte Seite** nach einem Update? Starte nur die Anzeige neu: **Einstellungen › System › Neu starten & Ausschalten › Display & Dienste › Display neu starten**.
 
 ## Cover fehlen
 
-- Siehst du eine **farbige Karte mit dem Ordnernamen**, hat die Box kein Bild gefunden. Das ist gewollt. Lade ein Cover hoch oder aktiviere die Online-Suche ([Cover](../inhalte/cover.md)).
-- Ein **falsches** Cover verwirfst du unter **Bibliothek › Cover › Zuletzt gefunden**.
+- Siehst du eine **farbige Karte mit dem Ordnernamen**, hat die Box kein Bild gefunden. Das ist gewollt. Lade ein Cover hoch oder schalte **Cover online suchen** ein ([Cover](../inhalte/cover.md)).
+- Ein **falsches** Cover verwirfst du unter **Bibliothek › Cover** in der Karte **Gefundene Cover** mit **Verwerfen**. Das Album fällt dann auf das Bild des Ordners darüber zurück.
 
 ## Ein neues Album erscheint nicht
 
@@ -31,7 +31,9 @@ Eigene Dateien erscheinen von selbst, wenn sie vollständig kopiert sind. Bei ei
 
 ## Ein Update ist fehlgeschlagen
 
-Die Box stellt bei einem fehlgeschlagenen Update den vorherigen Stand wieder her. Läuft sie danach nicht normal, spiele das [Backup](../wartung/backup.md) ein, das du vorher gemacht hast, und melde das Problem ([Ein Problem melden](../wartung/problem-melden.md)).
+Scheitert schon das Herunterladen oder das Auspacken der neuen Version, bleibt die bisherige Installation erhalten. Einen vollständigen Rückweg auf den alten Stand gibt es sonst nicht. Was passiert ist, zeigt die Seite **Updates** unter **Ausgabe**.
+
+Einstellungen, Bibliothek und Cover hat die Box vor dem Update gesichert: in `/home/dietpi/mupibox-backups/before-update-….zip`. Läuft die Box danach nicht normal, spiele das [Backup](../wartung/backup.md) ein, das du vorher gemacht hast. Hilft das nicht, frag in der Community nach oder melde den Fehler auf GitHub ([splitti/MuPiBox](https://github.com/splitti/MuPiBox/issues)), am besten mit den **Support-Infos** ([Protokolle und Zustand](../wartung/protokolle.md)).
 
 ## Die Box meldet sich nicht bei Telegram
 

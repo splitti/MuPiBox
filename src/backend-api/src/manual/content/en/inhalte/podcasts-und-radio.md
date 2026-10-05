@@ -26,7 +26,7 @@ Radio stations come onto the box as a **stream address**:
 - **Search radio stations** (**Library › Search radio stations**): enter a search term, pick the station.
 - **Paste link** with the type **Radio stream**: you enter the address of the stream. It can also be a `.m3u` or `.pls` file: the box reads the stream address from it. As the **title** you enter the name of the station that appears on the display.
 
-For radio the player shows **Live** instead of a progress bar. A radio station stops at once at the playtime limit, even if “finish the track” is set for tracks ([Daily limits](../spielzeit/tageslimits.md)).
+For radio the player shows **Live** instead of a progress bar. A radio station stops at once at the playtime limit, even if “Play track to the end” is set ([Daily limits](../spielzeit/tageslimits.md)).
 
 > [!TIP]
 > You can give a station's logo as the **cover**: enter the address of the picture when adding, or upload it ([Covers](cover.md)).
