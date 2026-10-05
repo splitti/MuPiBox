@@ -88,6 +88,26 @@ export class SpotifyPlayerService {
 
     this.setupNetworkMonitoring()
     this.setupDeviceCheck()
+    this.playerState$.subscribe((state) => this.reportSilence(state))
+  }
+
+  // What the box's player was told last: whether this player is silent (see reportSilence)
+  private silenceReported: boolean | null = null
+
+  /**
+   * Whether this player is silent - paused, or the playback not on it - told to the box's player: it counts the play
+   * time only while something plays, and a pause from a phone over Spotify Connect left its own pause flag unset (a
+   * silent box counted as playing). Only changes, and again with the device check (the box's player restarted).
+   */
+  private reportSilence(state: SpotifyWebPlaybackState | null, again = false): void {
+    const silent = !state || state.paused
+    if (silent === this.silenceReported && !again) return
+    this.silenceReported = silent
+    this.http.get(`${environment.backend.playerUrl}/display/spotify-silent/${silent ? 1 : 0}`).subscribe({
+      error: () => {
+        this.silenceReported = null
+      },
+    })
   }
 
   /**
@@ -360,7 +380,10 @@ export class SpotifyPlayerService {
       this.logService.log('[Spotify SDK] ensurePlayerReady() result:', ready, 'state:', this.sdkState)
       // Setting up the player (and its DRM module) blanked the screen for a moment: the boot screen of index.html
       // stays until it is done
-      window.setTimeout(() => (window as unknown as { mupiBootDone?: (what: string) => void }).mupiBootDone?.('sdk'), 300)
+      window.setTimeout(
+        () => (window as unknown as { mupiBootDone?: (what: string) => void }).mupiBootDone?.('sdk'),
+        300,
+      )
       return ready
     } catch (error) {
       this.logService.error('[Spotify SDK] ensurePlayerReady() exception:', error)
@@ -703,7 +726,10 @@ export class SpotifyPlayerService {
       if (known) {
         this.deviceCheckedAt = Date.now()
         // (the box's player forgets the display's device when it restarts: told again)
-        this.http.get(`${environment.backend.playerUrl}/display/spotify-device/${encodeURIComponent(id)}`).subscribe({ error: () => {} })
+        this.http
+          .get(`${environment.backend.playerUrl}/display/spotify-device/${encodeURIComponent(id)}`)
+          .subscribe({ error: () => {} })
+        this.reportSilence(this.playerState$.value, true)
       } else this.logService.warn('[Spotify SDK] Spotify does not list this player any more:', id)
       return known
     } catch {
@@ -757,7 +783,9 @@ export class SpotifyPlayerService {
     const albumId = /^spotify:album:([A-Za-z0-9]+)$/.exec(track.album?.uri ?? '')?.[1]
     // (a playlist started from the parents' app or Telegram: kept as that playlist - as the album of its current
     // track, resume played another album with the playlist's track number)
-    const playlistId = /^spotify:playlist:([A-Za-z0-9]+)$/.exec((this.playerState$.value as any)?.context?.uri ?? '')?.[1]
+    const playlistId = /^spotify:playlist:([A-Za-z0-9]+)$/.exec(
+      (this.playerState$.value as any)?.context?.uri ?? '',
+    )?.[1]
     return {
       type: 'spotify',
       category: 'other',

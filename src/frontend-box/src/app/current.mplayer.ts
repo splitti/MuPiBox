@@ -45,4 +45,8 @@ export interface CurrentMPlayer {
   episode?: string
   // The file that plays (nas:<NAS path> / local:<library path>): its embedded picture is shown (/api/track-cover).
   trackFile?: string
+  /** Which start this is (the player counts them): a command with ?gen= is made only for this playback. */
+  generation?: number
+  /** The display's Spotify player is silent (paused, or the playback not on it), as the display told the player. */
+  spotifySilent?: boolean
 }

@@ -639,6 +639,10 @@ const currentMeta = {
   // ... and to load its page again, e.g. after a setting it only reads when a page loads (names under the covers,
   // hidden categories, hold times): gentler than the admin interface's kiosk restart, playback goes on.
   pageReloadAt: 0,
+  // The display's Spotify player is silent: paused, or the playback is not on it (reported by the display, see
+  // /display/spotify-silent). A pause from a phone over Spotify Connect left the pause flag unset - the play time and
+  // the background bar counted a silent box as playing.
+  spotifySilent: false,
 }
 // Live tracklist (with real names) of the currently playing NAS folder, fetched
 // once in playNasList() - used to name each track as it plays, since mplayer
@@ -801,7 +805,7 @@ function getLogicalDay(now, resetHour) {
 
 function isActuallyPlaying() {
   if (!currentMeta.currentPlayer) return false
-  if (currentMeta.currentPlayer === 'spotify') return currentMeta.pause === false
+  if (currentMeta.currentPlayer === 'spotify') return currentMeta.pause === false && !currentMeta.spotifySilent
   if (currentMeta.currentPlayer === 'mplayer') return currentMeta.playing === true
   return false
 }
@@ -1860,20 +1864,27 @@ function play() {
     // (only a play that is really sent takes back a pause the display still has to make: one refused in a block let
     // the music go on)
     currentMeta.spotifySilenceAt = 0
-    spotifyApi.play(ownSpotifyDeviceOptions()).then(
-      () => {
-        counter.countplay++
-        if (config.server.logLevel === 'debug') {
-          writeCounter()
-        }
-        log.debug(`${now()}: [Spotify Control] Playback started`)
-        currentMeta.pause = false
-        writeplayerstatePlay()
-      },
-      (err) => {
-        handleSpotifyError(err, 'play')
-      },
-    )
+    // (only on the box's own player - without a device Spotify went on on the account's active one, a phone)
+    ownDeviceForStart()
+      .then((own) => {
+        if (!own) throw new Error("The box's Spotify player is not known - not played")
+        activeDevice = activeDevice || own
+        return spotifyApi.play({ device_id: activeDevice })
+      })
+      .then(
+        () => {
+          counter.countplay++
+          if (config.server.logLevel === 'debug') {
+            writeCounter()
+          }
+          log.debug(`${now()}: [Spotify Control] Playback started`)
+          currentMeta.pause = false
+          writeplayerstatePlay()
+        },
+        (err) => {
+          handleSpotifyError(err, 'play')
+        },
+      )
     if (telegramPlaybackNotices())
       cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Continue playing"')
     //if (hasConfiguredTelegram()) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
@@ -1998,8 +2009,7 @@ function shuffleoff() {
   )
 }
 
-// Spotify's play on the chosen device; when that device is gone (404: the display reported it, then its page
-// was reloaded), once more without a device, i.e. on the currently active one - as before.
+// Spotify's play on the box's own device - never without one (see ownDeviceForStart).
 // Spotify does not know the display's player (it lost its sign-in, e.g. when the token could not be renewed at
 // start-up without network): the display is reloaded - it signs in anew and reports its device - and the start is
 // tried once more there. Only when a start failed, so a normal start takes no longer; at most once a minute.
@@ -2026,15 +2036,47 @@ function overtakenStart() {
   return e
 }
 
-function playOnDevice(playOptions) {
+// The box's own Spotify player for a start that names none (after a restart of this player the display has not told its
+// device yet): by its name among the account's devices, else the display signs in anew. A start without a device plays
+// on the account's active one - a parent's phone that plays right now.
+async function ownDeviceForStart() {
+  if (displaySpotifyDevice) return displaySpotifyDevice
+  const name = config?.['node-sonos-http-api']?.server || muPiBoxConfig?.mupibox?.host
+  if (name) {
+    try {
+      const data = await spotifyApi.getMyDevices()
+      counter.countgetMyDevices++
+      const mine = (data.body.devices ?? []).find((d) => d?.id && d.name === name)
+      if (mine) return mine.id
+    } catch (err) {
+      if (isSpotify429(err, 'ownDeviceForStart')) throw err
+      log.debug(`${now()}: [Spotify Control] Devices not read: ${err}`)
+    }
+  }
+  return recoverDisplayDevice()
+}
+
+async function playOnDevice(playOptions) {
   forgetSpotifyState()
   const generation = playbackGeneration
   // (overtaken also by a block of Spotify's requests set while waiting for the display - asked again it only grew)
   const overtaken = () => generation !== playbackGeneration || isPlaybackBlocked() || !!spotifyBlockedUntil()
+  if (!playOptions.device_id) {
+    const own = await ownDeviceForStart()
+    if (overtaken()) throw overtakenStart()
+    if (!own) {
+      // (nothing plays: the state says so, else the play time counted a silent box)
+      currentMeta.currentPlayer = ''
+      currentMeta.activeSpotifyId = ''
+      throw new Error("The box's Spotify player is not known - not started")
+    }
+    activeDevice = own
+    playOptions = { ...playOptions, device_id: own }
+  }
   return spotifyApi.play(playOptions).catch(async (err) => {
     if (err?.statusCode !== 404) throw err
     // the display's device (or, without one, no active device at all): the display signs in anew first
-    if (!playOptions.device_id || playOptions.device_id === displaySpotifyDevice) {
+    if (playOptions.device_id === displaySpotifyDevice) {
       const fresh = await recoverDisplayDevice()
       if (overtaken()) throw overtakenStart()
       if (fresh) {
@@ -3030,7 +3072,7 @@ async function useSpotify(command) {
   } else {
     // Not from the display: play on the display's device when it reported one. Spotify's "currently active
     // device" often is none (after a restart, or after the NAS or local media played) - then nothing played.
-    // If that device is gone, playMe() tries once more without a device (see playOnDevice()).
+    // None reported (after a restart of this player): playOnDevice() looks for the box's own one first.
     activeDevice = displaySpotifyDevice
     log.debug(`${now()}: [Spotify Control] No device in the request, using the display's: ${activeDevice}`)
   }
@@ -3170,6 +3212,11 @@ app.get('/display/spotify-device/:id', (req, res) => {
   res.json({ ok: true })
 })
 
+app.get('/display/spotify-silent/:on', (req, res) => {
+  currentMeta.spotifySilent = req.params.on === '1'
+  res.json({ ok: true })
+})
+
 // Called by the backend on the box (the parents' web app's "reload the display now").
 app.post('/display/reload-theme', (_req, res) => {
   currentMeta.themeReloadAt = Date.now()
@@ -3188,7 +3235,8 @@ app.get('/local', (_req, res) => {
   // und neue Felder (triggerSource/triggerAt aus Phase 19 Stufe B)
   // landen nicht in der Response, obwohl die Mutationen am Objekt
   // ankommen.
-  res.json({ ...currentMeta })
+  // (generation: which start this is - a stop of the display's background playback names it, see ?gen=)
+  res.json({ ...currentMeta, generation: playbackGeneration })
 })
 
 app.get('/spotify/token', (_req, res) => {
@@ -3280,6 +3328,28 @@ app.use((req, res) => {
       `${new Date().toLocaleString()}: [${tag}] Rejected command (${reason}): name=${command.name} dir=${command.dir}`,
     )
     res.status(423).send({ status: 'blocked', error: reason })
+    return
+  }
+
+  // A Spotify start while Spotify blocks the requests: refused before anything changes (the pause flag of what was
+  // paused was cleared first - it counted as playing) and said so
+  if (command.name.includes('spotify:') && spotifyBlockedUntil()) {
+    log.debug(`${now()}: [Spotify Control] Spotify start refused: Spotify blocks the requests`)
+    res.status(503).send({ status: 'blocked', error: 'spotify_blocked' })
+    return
+  }
+  // A command for one playback only (?gen=, see /local): another one started meanwhile - the display's background stop
+  // stopped it, and kept its place under the album before
+  const onlyFor = (() => {
+    try {
+      return new URL(req.url, 'http://localhost').searchParams.get('gen')
+    } catch {
+      return null
+    }
+  })()
+  if (onlyFor !== null && Number(onlyFor) !== playbackGeneration) {
+    log.debug(`${now()}: [Spotify Control] ${command.name} not made: for playback ${onlyFor}, now ${playbackGeneration}`)
+    res.status(409).send({ status: 'overtaken', error: 'another playback' })
     return
   }
 

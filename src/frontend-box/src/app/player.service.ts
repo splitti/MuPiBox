@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
 import type { ServerHttpApiConfig } from '@backend-api/server.model'
-import type { Observable } from 'rxjs'
+import { firstValueFrom, type Observable, timeout } from 'rxjs'
 import { shareReplay } from 'rxjs/operators'
 import { environment } from '../environments/environment'
 import { CurrentMediaService } from './current-media.service'
@@ -59,9 +59,9 @@ export class PlayerService {
     // only changes via setting_update.sh (which restarts pm2 anyway), so
     // the lifetime cache is fine.
     if (!this.config) {
-      this.config = this.http.get<ServerHttpApiConfig>(`${environment.backend.apiUrl}/sonos`).pipe(
-        shareReplay({ bufferSize: 1, refCount: false }),
-      )
+      this.config = this.http
+        .get<ServerHttpApiConfig>(`${environment.backend.apiUrl}/sonos`)
+        .pipe(shareReplay({ bufferSize: 1, refCount: false }))
     }
 
     return this.config
@@ -81,6 +81,22 @@ export class PlayerService {
 
   sendCmd(cmd: PlayerCmds) {
     this.sendRequest(cmd)
+  }
+
+  /**
+   * A command only for the playback the player named with this generation (/local): the player refuses it when another
+   * one plays by now. Whether it was made (false also when the player did not answer).
+   */
+  async sendCmdFor(cmd: PlayerCmds, generation: number): Promise<boolean> {
+    const room = this.spotifyService.isPlayerReady() ? this.spotifyService.getDeviceId() : 'current'
+    try {
+      await firstValueFrom(
+        this.http.get(`${environment.backend.playerUrl}/${room}/${cmd}?gen=${generation}`).pipe(timeout(3000)),
+      )
+      return true
+    } catch {
+      return false
+    }
   }
 
   seekPosition(pos: number) {

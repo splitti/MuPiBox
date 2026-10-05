@@ -1410,6 +1410,7 @@ function errorText(r, fallback = 'Das hat nicht geklappt') {
     {
       playtime_limit_reached: 'Die Hörzeit für heute ist aufgebraucht.',
       quiet_hours_active: 'Gerade ist Ruhezeit.',
+      spotify_blocked: 'Spotify lässt gerade keine Anfragen zu. Bitte später noch einmal versuchen.',
       spotify_id_missing: 'Dieser Eintrag hat keine Spotify-ID.',
       item_not_found: 'Den Eintrag gibt es nicht mehr.',
       library_unavailable: 'Die Bibliothek ließ sich nicht lesen.',

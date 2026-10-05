@@ -791,7 +791,12 @@ export class PlayerPage implements OnInit, AfterViewInit {
     // the album (Spotify's autoplay would go on with another one), nothing playing - it stops as always.
     const keepPlaying = this.r2() && this.backAction() === 'minimize' && this.playing && !this.leftByPage && !this.albumEnded
     if (keepPlaying) {
-      this.backgroundPlayback.begin(this.media, { shuffled: !!(this.media.shuffle || this.shufflechanged), albumStop: this.albumStop?.albumStop === 'On' })
+      // (with the player's last answer: which start plays - its generation - is known from the first moment)
+      this.backgroundPlayback.begin(
+        this.media,
+        { shuffled: !!(this.media.shuffle || this.shufflechanged), albumStop: this.albumStop?.albumStop === 'On' },
+        this.currentPlayedLocal ?? null,
+      )
     } else {
       if (this.media.shuffle || this.shufflechanged) {
         this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF)
