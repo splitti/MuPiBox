@@ -1783,8 +1783,10 @@ function pause() {
 // after its awaits was overtaken and must not play.
 let playbackGeneration = 0
 // Bumped by every stop and every new playback asked for (a command that starts media) - not by the loads inside one
-// (a podcast's reconnect, a radio's stream address): which playback /local names, and a command with ?gen= is for
-let playbackRequest = 0
+// (a podcast's reconnect, a radio's stream address): which playback /local names, and a command with ?gen= is for.
+// Begins at the start time of this process: after a restart of the player the numbers are new - a stop the display
+// still had for a playback before the restart stopped the first new one, which had the same number.
+let playbackRequest = Date.now()
 // Bumped by every play and pause: a play that waited for the box's device is not made after a pause meanwhile
 let playPauseRequest = 0
 
@@ -1894,6 +1896,12 @@ function play() {
           counter.countplay++
           if (config.server.logLevel === 'debug') {
             writeCounter()
+          }
+          // (a pause, a stop or another start while Spotify answered: its state stays - the late answer set "playing"
+          // over a pause already made)
+          if (asked !== playPauseRequest || generation !== playbackGeneration) {
+            log.debug(`${now()}: [Spotify Control] Play answered after a pause, stop or start - state left as it is`)
+            return
           }
           log.debug(`${now()}: [Spotify Control] Playback started`)
           currentMeta.pause = false

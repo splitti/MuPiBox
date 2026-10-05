@@ -177,7 +177,7 @@ export class BackgroundPlaybackService {
             // (the music went on while the player was asked - played on, or a new state: no end)
             if (!stillEnded()) return
             console.log(`[BackgroundPlayback] end: ${why} - stopped`)
-            await this.finish()
+            await this.finish(0, stillEnded)
           }
           this.endCheck = setTimeout(() => void check(0), jumpedBack || !state?.paused ? 1500 : 3000)
         }),
@@ -318,13 +318,17 @@ export class BackgroundPlaybackService {
 
   /** The end of what played in the background: stopped - no place kept (the player's state is already the next
    * music's: its track and position were saved under this album), the last saved place stays. */
-  private async finish(attempt = 0): Promise<void> {
+  private async finish(attempt = 0, stillEnded: () => boolean = () => true): Promise<void> {
     const finishing = this.media()
     const stopped = await this.stopPlayer()
     if (this.media() !== finishing) return
     if (stopped === 'failed') {
-      // (the stop did not reach the player: tried again a little later, the bar stays meanwhile)
-      if (attempt < 2) setTimeout(() => this.media() === finishing && void this.finish(attempt + 1), 2000)
+      // (the stop did not reach the player: tried again a little later, the bar stays meanwhile - only while it is still
+      // the end: the same album went on meanwhile, from a phone, and was stopped all the same)
+      if (attempt < 2)
+        setTimeout(() => {
+          if (this.media() === finishing && stillEnded()) void this.finish(attempt + 1, stillEnded)
+        }, 2000)
       return
     }
     this.clear()

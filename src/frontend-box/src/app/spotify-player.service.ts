@@ -100,7 +100,7 @@ export class SpotifyPlayerService {
    * time only while something plays, and a pause from a phone over Spotify Connect left its own pause flag unset (a
    * silent box counted as playing). Only changes, and again with the device check (the box's player restarted).
    */
-  private reportSilence(state: SpotifyWebPlaybackState | null, again = false): void {
+  private reportSilence(state: SpotifyWebPlaybackState | null, again = false, deviceToldAgain = false): void {
     // (only the kiosk's own player, once it has its device - the display's page opened in a browser elsewhere has no
     // player, and its "silent" counted the playing box as silent; the box's player checks the device too)
     // (a player that disconnected has no device any more: told under the one it had - the box's player still knows it)
@@ -113,8 +113,14 @@ export class SpotifyPlayerService {
     this.http
       .get(`${environment.backend.playerUrl}/display/spotify-silent/${silent ? 1 : 0}?device=${device}`)
       .subscribe({
-        error: () => {
+        error: (err: { status?: number }) => {
           this.silenceReported = null
+          // (the box's player restarted and does not know this device yet - until the next device check, up to 3
+          // minutes, nothing silent was counted: the device told again at once, then the silence)
+          if (err?.status !== 409 || deviceToldAgain || !this.deviceId) return
+          this.http
+            .get(`${environment.backend.playerUrl}/display/spotify-device/${encodeURIComponent(this.deviceId)}`)
+            .subscribe({ next: () => this.reportSilence(this.playerState$.value, true, true), error: () => {} })
         },
       })
   }
