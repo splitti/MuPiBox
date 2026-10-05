@@ -330,7 +330,8 @@ done
 # the Cover Flow view (stage) of the children's themes is on by default since 5.0.8: switched on once on every box (it
 # was off by default before, so an "off" there was mostly not chosen), the marker keeps the choice made after that
 update_config 'if .mupibox.themeStageDefaultOn != true then .mupibox.themeStage = true | .mupibox.themeStageDefaultOn = true else . end'
-update_config '.mupibox.themeStage = (.mupibox.themeStage // true)'
+# (only where nothing is set: "// true" replaced a chosen false as well - every update switched it on again)
+update_config 'if .mupibox.themeStage == null then .mupibox.themeStage = true else . end'
 update_config '.mupibox.themeStageAutoRead = (.mupibox.themeStageAutoRead // false)'
 # boot and maintenance screens (MuPi-Conf): scene of the boot screen (or "random"), maintenance scene ("same" = the
 # boot screen's), box name in the boot screen (empty = MuPiBox), language of the maintenance texts

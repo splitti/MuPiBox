@@ -103,10 +103,24 @@ while true; do
             # Actions when button is pressed
             # the goodbye picture before anything else (the sounds and the shutdown come after it)
             /usr/local/bin/mupibox/show_goodbye.sh
-            # whatever plays is stopped first (as mupi_shutdown.sh does): the volume set below would make it jump
+            # whatever plays is stopped first (as mupi_shutdown.sh does): the volume set below would make it jump. The
+            # player answers the stop at once, Spotify's own pause follows over the network - the volume is set for the
+            # sound only once the display's Spotify player reports it is silent (up to 3 s); else the sound plays at the
+            # volume as it is (no music made louder)
             curl -s -m 2 -o /dev/null http://127.0.0.1:5005/stop
-            sleep 0.3
-            /usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}%
+            silent=false
+            for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
+                sleep 0.25
+                if [ "$(curl -s -m 1 http://127.0.0.1:5005/local | /usr/bin/jq -r '.spotifySilent' 2>/dev/null)" = "true" ]; then
+                    silent=true
+                    break
+                fi
+            done
+            if [ "$silent" = true ]; then
+                /usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}%
+            else
+                echo "$(date) - INFO:  Spotify not reported silent - shutdown sound at the current volume" >> ${LOGFILE}
+            fi
             /usr/bin/aplay /home/dietpi/MuPiBox/sysmedia/sound/button_shutdown.wav
 
             echo "$(date) - INFO:  Stopping services" >> ${LOGFILE}
