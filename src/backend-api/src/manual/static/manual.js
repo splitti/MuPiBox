@@ -13,13 +13,17 @@
   const html = document.documentElement
   const $ = (s) => document.querySelector(s)
 
-  // menu (small screens)
+  // menu (phone and tablet): the side bar as a drawer, closed by a tap beside it or Escape
   const menu = $('.menu')
-  menu?.addEventListener('click', () => {
-    const open = document.body.classList.toggle('nav-open')
-    menu.setAttribute('aria-expanded', String(open))
+  const setNav = (open) => {
+    document.body.classList.toggle('nav-open', open)
+    menu?.setAttribute('aria-expanded', String(open))
+  }
+  menu?.addEventListener('click', () => setNav(!document.body.classList.contains('nav-open')))
+  $('.scrim')?.addEventListener('click', () => setNav(false))
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') setNav(false)
   })
-  document.querySelector('main')?.addEventListener('click', () => document.body.classList.remove('nav-open'))
 
   // language and version: the same page in another language / version (a version folder holds the languages)
   const go = (select) => select?.addEventListener('change', () => {
@@ -33,17 +37,20 @@
     .then((v) => {
       const select = $('#version')
       if (!select || !Array.isArray(v.versions) || v.versions.length < 2) return
+      select.closest('.pick-version')?.removeAttribute('hidden')
       select.innerHTML = v.versions.map((x) => `<option value="${root}${x.path === '.' ? '' : `${x.path}/`}${lang}/${page}"${x.id === v.current ? ' selected' : ''}>${x.label}</option>`).join('')
     })
     .catch(() => {})
 
-  // light / dark / auto
+  // light / dark: the app's own choice (the same key) - switched here, the app has it too, and the other way round
   $('.theme')?.addEventListener('click', () => {
     const dark = getComputedStyle(html).colorScheme.startsWith('dark')
     const next = dark ? 'light' : 'dark'
-    html.dataset.theme = next
+    html.setAttribute('data-theme', next)
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta) meta.content = next === 'light' ? '#F3F6F9' : '#0F1522'
     try {
-      localStorage.setItem('manual-theme', next)
+      localStorage.setItem('mupi-theme', next)
     } catch (_e) {
       // storage may be blocked: the choice then lasts for this page only
     }
@@ -78,6 +85,12 @@
   const input = $('#q')
   const box = $('#results')
   if (!input || !box) return
+  // (the phone: the field below the top bar, behind its button)
+  $('.search-btn')?.addEventListener('click', () => {
+    const open = document.body.classList.toggle('search-open')
+    if (open) input.focus()
+    else box.hidden = true
+  })
   let index = null
   let loading = null
   let sel = -1
@@ -163,11 +176,14 @@
     }
   })
   document.addEventListener('click', (e) => {
-    if (!e.target.closest('.search')) box.hidden = true
+    if (e.target.closest('.search') || e.target.closest('.search-btn')) return
+    box.hidden = true
+    document.body.classList.remove('search-open')
   })
   document.addEventListener('keydown', (e) => {
     if (e.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName ?? '')) {
       e.preventDefault()
+      document.body.classList.add('search-open')
       input.focus()
       input.select()
     }

@@ -301,11 +301,13 @@ function renderChrome(page) {
   $('#topbar').innerHTML = `
     ${isArea ? `<div class="brand-dot">${mupiImg()}</div>` : `<button class="icon-btn" id="back" aria-label="Zurück">${icon('back')}</button>`}
     <div class="title">${esc(title)}</div>
+    ${manualButton()}
     ${langButton()}
     ${themeButton()}
     <button class="icon-btn soft" id="power-btn" aria-label="Neu starten oder ausschalten">${icon('power')}</button>
     ${state.open ? '' : `<button class="icon-btn" id="logout-btn" aria-label="Abmelden">${icon('logout')}</button>`}`
   $('#back')?.addEventListener('click', () => go(backTarget(page)))
+  $('#manual-btn').addEventListener('click', openManual)
   $('#lang-btn').addEventListener('click', openLangSheet)
   $('#theme-btn').addEventListener('click', toggleTheme)
   $('#power-btn').addEventListener('click', openPowerSheet)
@@ -328,6 +330,16 @@ function renderChrome(page) {
       ${a.id === 'einstellungen' ? groups.map((g) => `<button class="side-link sub" data-go="${g.id}" ${g.id === groupOf ? 'aria-current="page"' : ''}>${icon(g.icon, 18)}${esc(g.title)}</button>`).join('') : ''}`,
     ).join('')}`
   for (const el of document.querySelectorAll('[data-go]')) el.onclick = () => go(el.dataset.go)
+}
+
+// The manual on the box (/manual/, open without a login): in the app's language when it has it, else its own choice
+// (the language used there last, or the browser's)
+function manualButton() {
+  return `<button class="icon-btn soft" id="manual-btn" aria-label="Handbuch">${icon('book')}</button>`
+}
+function openManual() {
+  const lang = getLang()
+  window.open(['de', 'en'].includes(lang) ? `/manual/${lang}/index.html` : '/manual/', '_blank', 'noopener')
 }
 
 function themeButton() {
@@ -10603,7 +10615,8 @@ function toast(text, kind = 'ok') {
 /* ---------- login ---------- */
 
 function renderLoginBar() {
-  $('#topbar').innerHTML = `<div class="login-bar">${langButton()}${themeButton()}</div>`
+  $('#topbar').innerHTML = `<div class="login-bar">${manualButton()}${langButton()}${themeButton()}</div>`
+  $('#manual-btn').addEventListener('click', openManual)
   $('#lang-btn').addEventListener('click', openLangSheet)
   $('#theme-btn').addEventListener('click', toggleTheme)
 }

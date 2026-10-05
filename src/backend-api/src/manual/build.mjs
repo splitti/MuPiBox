@@ -13,6 +13,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { icon } from '../mupi-app/icons.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const outDir = path.resolve(process.argv[2] ?? path.join(here, '../../../deploy/manual'))
@@ -259,12 +260,26 @@ function referencePage(page, lang) {
 
 // ---------------------------------------------------------------- the table of contents (one tree per language)
 
+// the symbols of the chapters in the side bar - the app's own (icons.js)
+const CHAPTER_ICONS = {
+  'erste-schritte': 'home',
+  bedienung: 'touch',
+  inhalte: 'music',
+  spielzeit: 'time',
+  hardware: 'chip',
+  netzwerk: 'wifi',
+  wartung: 'gear',
+  fehlerbehebung: 'bulb',
+  referenz: 'sliders',
+  anhang: 'doc',
+}
+
 function buildToc(lang) {
   const toc = JSON.parse(fs.readFileSync(path.join(here, 'toc.json'), 'utf8'))
   const title = (n) => (typeof n.title === 'string' ? n.title : (n.title[lang] ?? n.title[SOURCE]))
   const prepare = (nodes) =>
     nodes.map((n) => {
-      const node = { id: n.id, title: title(n) }
+      const node = { id: n.id, title: title(n), icon: n.icon ?? CHAPTER_ICONS[n.id] }
       if (n.children) node.children = prepare(n.children)
       return node
     })
@@ -281,6 +296,7 @@ function buildToc(lang) {
       reference.children.push({
         id: slugify(g.title),
         title: gTitle,
+        icon: g.icon,
         generated: `# ${gTitle}\n\n${tr(g.description, lang)}.\n\n${strings[lang]['ref.groupIntro']}\n\n${pages.map((p) => `- [${tr(p.title, lang)}](${p.slug}.md)${p.description ? ` – ${tr(p.description, lang)}` : ''}`).join('\n')}\n`,
         children: pages.map((p) => ({ id: p.slug, title: tr(p.title, lang), generated: referencePage(p, lang) })),
       })
@@ -329,17 +345,18 @@ function buildLanguage(lang) {
   function navTree(current) {
     const open = new Set()
     for (let n = current; n?.dir.length; n = n.trail.length ? byDir.get(n.trail.join('/')) : null) open.add(n.dir.join('/'))
-    const render = (nodes) =>
-      `<ul>${nodes
+    const render = (nodes, depth) =>
+      `<ul class="d${depth}">${nodes
         .map((node) => {
           const here = node === current
-          const link = `<a href="${relTo(current.out, node.out)}"${here ? ' aria-current="page"' : ''}>${esc(node.title)}</a>`
+          const sym = depth === 0 ? `<span class="tile">${icon(node.icon ?? 'doc', 18)}</span>` : ''
+          const link = `<a class="side-link${depth ? ' sub' : ''}" href="${relTo(current.out, node.out)}"${here ? ' aria-current="page"' : ''}>${sym}<span>${esc(node.title)}</span></a>`
           if (!node.children?.length) return `<li>${link}</li>`
           const isOpen = open.has(node.dir.join('/'))
-          return `<li class="has-children"><details${isOpen ? ' open' : ''}><summary>${link}</summary>${render(node.children)}</details></li>`
+          return `<li class="has-children"><details${isOpen ? ' open' : ''}><summary>${link}<span class="chev">${icon('chevron', 16)}</span></summary>${render(node.children, depth + 1)}</details></li>`
         })
         .join('')}</ul>`
-    return render(toc)
+    return render(toc, 0)
   }
 
   const i18nForScript = JSON.stringify({ none: t('searchNone'), root: t('crumbRoot') }).replace(/</g, '\\u003c')
@@ -356,37 +373,55 @@ function buildLanguage(lang) {
     const ROOT = (to) => toRoot(node.out, to) // at the root of the manual
     const langOptions = LANGS.map((l) => `<option value="${ROOT(`${l}/${node.out}`)}" lang="${l}"${l === lang ? ' selected' : ''}>${esc(strings[l].languageName)}</option>`).join('')
     const versionOptions = `<option value="${ROOT(`${lang}/${node.out}`)}" selected>${esc(VERSION_LABEL)}</option>`
+    const chapter = crumbChain[0]
+    const barTitle = chapter && chapter !== node ? chapter.title : t('manualName')
+    const mupi = (w) => `<img class="mupi-d" src="${ROOT('static/mupi.svg')}" alt="" width="${w}" height="${w}"><img class="mupi-l" src="${ROOT('static/mupi-hell.svg')}" alt="" width="${w}" height="${w}">`
+    const navRow = (n, cls, label) =>
+      `<a class="card navrow ${cls}" href="${R(n.out)}">${cls === 'prev' ? `<span class="chev back">${icon('back', 18)}</span>` : ''}<span class="lbl"><small>${esc(label)}</small><b>${esc(n.title)}</b></span>${cls === 'next' ? `<span class="chev">${icon('chevron', 18)}</span>` : ''}</a>`
     return `<!doctype html>
-<html lang="${lang}" data-theme="auto">
+<html lang="${lang}">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1522">
 <title>${esc(node.title)}${node.out === 'index.html' ? '' : ` – ${esc(t('manualName'))}`}</title>
 <meta name="description" content="${esc(index.text.slice(0, 160))}">
 <link rel="icon" href="${ROOT('static/mupi.svg')}" type="image/svg+xml">
+<link rel="stylesheet" href="${ROOT('static/fonts.css')}">
+<link rel="stylesheet" href="${ROOT('static/tokens.css')}">
 <link rel="stylesheet" href="${ROOT('static/manual.css')}">
-<script>try{var t=localStorage.getItem('manual-theme');if(t)document.documentElement.dataset.theme=t;localStorage.setItem('manual-lang','${lang}')}catch(e){}</script>
+<script>try{var t=localStorage.getItem('mupi-theme');if(t==='light'||t==='dark'||t==='auto')document.documentElement.setAttribute('data-theme',t);if(t==='light'||(t==='auto'&&matchMedia('(prefers-color-scheme: light)').matches))document.querySelector('meta[name="theme-color"]').content='#F3F6F9';localStorage.setItem('manual-lang','${lang}')}catch(e){}</script>
 </head>
 <body data-root="${ROOT('')}" data-lang="${lang}" data-page="${esc(node.out)}">
-<header class="top">
-  <button class="menu" type="button" aria-label="${esc(t('menu'))}" aria-expanded="false">☰</button>
-  <a class="brand" href="${R('index.html')}"><img src="${ROOT('static/mupi.svg')}" alt="" width="28" height="28"><span>MuPiBox <b>${esc(t('manualName'))}</b></span></a>
-  <form class="search" role="search" onsubmit="return false"><input type="search" id="q" placeholder="${esc(t('search'))}  ( / )" autocomplete="off" aria-label="${esc(t('searchLabel'))}"><div id="results" hidden></div></form>
-  <label class="pick pick-version"><span class="sr">${esc(t('version'))}</span><select id="version" aria-label="${esc(t('version'))}">${versionOptions}</select></label>
-  <label class="pick"><span class="sr">${esc(t('language'))}</span><select id="lang" aria-label="${esc(t('language'))}">${langOptions}</select></label>
-  <a class="toapp" href="/app/" title="${esc(t('toApp'))}">App</a>
-  <button class="theme" type="button" aria-label="${esc(t('theme'))}">◐</button>
+<div class="shell">
+<nav class="sidebar" aria-label="${esc(t('toc'))}">
+  <a class="brand" href="${R('index.html')}"><span class="brand-dot">${mupi(34)}</span><span>${esc(t('manualName'))}</span></a>
+  ${navTree(node)}
+</nav>
+<div class="main">
+<header class="topbar">
+  <button class="icon-btn menu" type="button" aria-label="${esc(t('menu'))}" aria-expanded="false">${icon('text')}</button>
+  <a class="brand-dot" href="${R('index.html')}" aria-label="${esc(t('home'))}">${mupi(32)}</a>
+  <div class="title">${esc(barTitle)}</div>
+  <form class="search" role="search" onsubmit="return false">${icon('search')}<input class="input" type="search" id="q" placeholder="${esc(t('search'))}" autocomplete="off" aria-label="${esc(t('searchLabel'))}"><div id="results" class="card" hidden></div></form>
+  <button class="icon-btn soft search-btn" type="button" aria-label="${esc(t('searchLabel'))}">${icon('search')}</button>
+  <label class="lang-btn pick pick-version" hidden>${icon('hist', 20)}<span>${esc(VERSION.id)}</span><select id="version" aria-label="${esc(t('version'))}">${versionOptions}</select></label>
+  <label class="lang-btn pick">${icon('globe', 20)}<span translate="no">${esc(lang.toUpperCase())}</span><select id="lang" aria-label="${esc(t('language'))}">${langOptions}</select></label>
+  <button class="icon-btn soft theme" type="button" aria-label="${esc(t('theme'))}"><span class="i-sun">${icon('sun')}</span><span class="i-moon">${icon('moon')}</span></button>
+  <a class="icon-btn soft toapp" href="/app/" aria-label="${esc(t('toApp'))}" title="${esc(t('toApp'))}">${icon('ext')}</a>
 </header>
-<div class="layout">
-<nav class="side" aria-label="${esc(t('toc'))}">${navTree(node)}</nav>
-<main>
+<div class="page">
+<main class="doc">
 <div class="crumbs">${crumbs}</div>
-<article>${bodyHtml}</article>
-<div class="pager">${prev ? `<a class="prev" href="${R(prev.out)}"><small>${esc(t('prev'))}</small>${esc(prev.title)}</a>` : '<span></span>'}${next ? `<a class="next" href="${R(next.out)}"><small>${esc(t('next'))}</small>${esc(next.title)}</a>` : '<span></span>'}</div>
+<article class="card">${bodyHtml}</article>
+<div class="pager">${prev ? navRow(prev, 'prev', t('prev')) : '<span></span>'}${next ? navRow(next, 'next', t('next')) : '<span></span>'}</div>
 <footer>${t('footer').replace('{home}', R('index.html'))}</footer>
 </main>
 <aside class="toc" aria-label="${esc(t('onThisPage'))}">${onPage.length ? `<p>${esc(t('onThisPage'))}</p><ul>${onPage.map((h) => `<li class="l${h.level}"><a href="#${h.id}">${esc(h.text)}</a></li>`).join('')}</ul>` : ''}</aside>
 </div>
+</div>
+</div>
+<div class="scrim"></div>
 <script id="i18n" type="application/json">${i18nForScript}</script>
 <script src="${ROOT('static/manual.js')}" defer></script>
 </body>
@@ -485,9 +520,9 @@ fs.writeFileSync(path.join(outDir, 'versions.json'), JSON.stringify({ current: V
 // static files: styles, script, logo, fonts, pictures
 fs.cpSync(path.join(here, 'static'), path.join(outDir, 'static'), { recursive: true })
 const app = path.join(here, '../mupi-app')
-fs.copyFileSync(path.join(app, 'mupi.svg'), path.join(outDir, 'static/mupi.svg'))
-fs.mkdirSync(path.join(outDir, 'static/fonts'), { recursive: true })
-for (const f of ['nunito-sans-latin-wght-normal.woff2', 'nunito-sans-latin-ext-wght-normal.woff2', 'fredoka-latin-wght-normal.woff2', 'fredoka-latin-ext-wght-normal.woff2']) fs.copyFileSync(path.join(app, 'fonts', f), path.join(outDir, 'static/fonts', f))
+// (the app's very files - colours, light and dark, fonts and the MuPi: the manual looks like the app and follows it)
+for (const f of ['mupi.svg', 'mupi-hell.svg', 'tokens.css', 'fonts.css']) fs.copyFileSync(path.join(app, f), path.join(outDir, 'static', f))
+fs.cpSync(path.join(app, 'fonts'), path.join(outDir, 'static/fonts'), { recursive: true })
 if (fs.existsSync(path.join(here, 'img'))) fs.cpSync(path.join(here, 'img'), path.join(outDir, 'img'), { recursive: true })
 
 console.log(`manual ${VERSION_LABEL}: ${total} pages in ${LANGS.length} languages -> ${outDir}`)
