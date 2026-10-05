@@ -320,6 +320,8 @@ ensure_theme supermario
 ensure_theme dinosaur
 ensure_theme unicorn
 ensure_theme axolotl
+# (wall-e came with a stylesheet and its pictures but was never registered: it could not be chosen)
+ensure_theme wall-e
 
 # km themes (children's themes of one design, see themes/km-themes.json)
 for km_theme in kuschelmond moosnest sonnenhof pferdehof fussball fahrzeuge buecherregal kassettenrekorder unterwasser bastelpapier prinzessin einhorn feenschloss weltraum dinoland piratenbucht tagundnacht feuerwehr ritterburg eisenbahn roboter heldenstadt safari eiswelt zirkus meerjungfrau ballett kaetzchen zuckerland schmetterlinge; do

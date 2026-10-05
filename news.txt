@@ -11,7 +11,7 @@
 <li id='linews' class='linews'>coverflow (by Andreas): the same header with categories, "Now playing" and minimising, and player, "Listen with" and track list in coverflow's own look (black, square covers with a mirror image). The cover band stays as it is.</li>
 <li id='linews' class='linews'>Tag &amp; Nacht: at night the header, the symbols and the buttons are light again (they stayed dark and were hard to read).</li>
 <li id='linews' class='linews'>The listening-time chip hides while the "Listen with" window is open; the tick on the chosen tile is visible again on light circles.</li>
-<li id='linews' class='linews'>New theme previews in the app and in MuPi-Conf: every theme as it really looks on the display, all with the same made-up covers (no real audio plays any more). WALL·E has a picture now. They are made by tools/theme-preview/render.mjs, which takes every theme by itself - a new theme gets its picture without any other change.</li>
+<li id='linews' class='linews'>New theme previews in the app and in MuPi-Conf: every theme as it really looks on the display, all with the same made-up covers (no real audio plays any more). WALL·E has a picture now, and it can be chosen at all: the theme was never registered on the box, so it was missing from the list. They are made by tools/theme-preview/render.mjs, which takes every theme by itself - a new theme gets its picture without any other change.</li>
 <li id='linews' class='linews'>The own theme ("Custom") is set up on the theme page now, right where it is chosen (the page "Custom theme" is gone): the picture - any photo from the phone, the app cuts it to the display - light or dark writing (automatic from the picture's brightness), a veil that darkens or lightens the picture for readable names, an accent colour (suggestions from the picture), the font of the names (Fredoka, Baloo, Nunito, Rye) and its size. A live preview with the demo covers shows it, the box takes over every change at once. The tile "Custom" shows your own picture. Choosing "Custom" without a picture asks for one first.</li>
 </ul>
 <b>Display</b>
@@ -33,6 +33,7 @@
 <b>App</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Words: the battery's card says "Charging" and a NAS profile is "applied" - in English both said "Download"; "Hide horizontal scroll bar" works in every view, not only with the theme coverflow, as its help text said.</li>
 <li id='linews' class='linews'>Listening time without a daily limit: the page "Listening time" showed 0 min listened today while the start page had the right minutes - it now takes them from the listening history too.</li>
 </ul>
 <b>System</b>
