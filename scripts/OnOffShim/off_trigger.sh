@@ -106,12 +106,9 @@ while true; do
             # whatever plays is stopped first (as mupi_shutdown.sh does). The stop is not done at once everywhere (Spotify
             # pauses over the network, a local album that is just opening is stopped again after up to 2 s), so the volume
             # for the sound is never raised, only lowered to the start volume: music that still plays for a moment is not
-            # made louder. Not readable: left as it is.
+            # made louder (lower_volume_to.sh, also used by shutdown_sound.sh)
             curl -s -m 2 -o /dev/null http://127.0.0.1:5005/stop
-            current=$(/usr/bin/pactl get-sink-volume @DEFAULT_SINK@ 2>/dev/null | grep -o '[0-9]*%' | head -n 1 | tr -d '%')
-            if [ -n "$current" ] && [ -n "${START_VOLUME}" ] && [ "$current" -gt "${START_VOLUME}" ] 2>/dev/null; then
-                /usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}%
-            fi
+            /usr/local/bin/mupibox/lower_volume_to.sh "${START_VOLUME}"
             /usr/bin/aplay /home/dietpi/MuPiBox/sysmedia/sound/button_shutdown.wav
 
             echo "$(date) - INFO:  Stopping services" >> ${LOGFILE}

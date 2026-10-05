@@ -6,5 +6,6 @@ SHUT_SOUND=$(/usr/bin/jq -r .mupibox.shutSound ${CONFIG})
 AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
 START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
 
-/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}% 
+# (never louder than now: music that has not stopped yet is not raised under the goodbye sound)
+/usr/local/bin/mupibox/lower_volume_to.sh "${START_VOLUME}"
 /usr/bin/aplay ${SHUT_SOUND}
