@@ -28,11 +28,22 @@
   --km-spring: cubic-bezier(.3, 1.4, .6, 1);
   --km-ease: cubic-bezier(.2, .7, .2, 1);
   --ion-font-family: "Fredoka", sans-serif;
+  /* Runde 2: Kopfzeile, Pille, Knöpfe (Werte aus THEME_WERTE.md) */
+  --km-band: rgba(122,0,0,0.82);
+  --km-on-band: #FFFFFF;
+  --km-on-band-2: #F0B3B3;
+  --km-btn: #D32424;
+  --km-on-btn: #FFFFFF;
+  --km-tab-idle: #FFFFFF;
+  --km-on-pill: #FFFFFF;
 }
 
 /* Hintergrund: eigene Grundfarbe, ohne Bild */
 .ion-page { background: var(--km-night) !important; }
-.playtime-blocked-overlay { background: var(--km-overlay) !important; }
+.playtime-blocked-overlay, body.km mupi-media-unavailable { background: linear-gradient(var(--km-overlay), var(--km-overlay)), var(--km-night) !important; }
+
+/* Sperr-/Ruhebildschirm und „Nicht erreichbar“ deckend: kein Durchscheinen der Auswahl */
+body.km .playtime-blocked-overlay, body.km mupi-media-unavailable { opacity: 1 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; z-index: 1000; }
 
 /* ==== gemeinsamer km-Teil (aus den km-Theme-Dateien, unverändert) ==== */
 body .home-content, body .medialist-content, body .player-content { --ion-background-color: transparent !important; }

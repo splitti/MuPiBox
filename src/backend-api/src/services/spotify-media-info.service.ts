@@ -138,6 +138,8 @@ export class SpotifyMediaInfo {
   }
 
   private getCacheFilePath(id: string, type: 'playlist'): string {
+    // (an id with a path in it wrote anywhere: only a Spotify id - letters and digits - becomes a file name)
+    if (!/^[A-Za-z0-9]{10,64}$/.test(id)) throw new Error(`invalid Spotify id: ${id.slice(0, 80)}`)
     return path.join(this.cacheDir, `${type}_${id}.json`)
   }
 

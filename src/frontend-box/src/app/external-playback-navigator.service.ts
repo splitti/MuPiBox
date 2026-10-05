@@ -6,6 +6,7 @@ import { Subject, catchError, firstValueFrom, interval, merge, of, switchMap, ti
 import { filter, map } from 'rxjs/operators'
 import { environment } from 'src/environments/environment'
 import type { CurrentMPlayer } from './current.mplayer'
+import { BackgroundPlaybackService } from './background-playback.service'
 import type { Media } from './media'
 import { SpotifyService } from './spotify.service'
 import { KmThemeService } from './theme/km-theme.service'
@@ -35,6 +36,8 @@ export class ExternalPlaybackNavigatorService {
   /** True while the player page is being left only to be opened again for a new start from the phone. */
   public replacingPlayerPage = false
   private readonly navController = inject(NavController)
+  // what plays on after the player page was left ("Läuft gerade"): its next track must not pull the display back
+  private readonly background = inject(BackgroundPlaybackService)
   /** Ask /local right now (outside the timer), e.g. when a Spotify track starts while on the player page. */
   private readonly pollNow$ = new Subject<void>()
   /** Same idea for "show the new theme now" from the parents' web app (see checkThemeReload). */
@@ -77,6 +80,7 @@ export class ExternalPlaybackNavigatorService {
         filter((track) => track !== null),
         filter(() => !this.isCurrentlyOnPlayerPage()),
         filter(() => !this.isNavigatingToPlayer),
+        filter(() => this.background.media() === null),
         map((track) => this.spotifyService.createMediaFromSpotifyTrack(track)),
       )
       .subscribe({
@@ -123,6 +127,7 @@ export class ExternalPlaybackNavigatorService {
       .subscribe((data) => {
         this.checkThemeReload(data.themeReloadAt)
         this.checkPageReload(data.pageReloadAt)
+        this.checkSpotifySilence(data.spotifySilenceAt)
         // the admin interface's text preview (a frame on another device): no jump to the player page there
         if (window.location.pathname.startsWith('/text-preview')) return
         const at = data.triggerAt ?? 0
@@ -193,6 +198,18 @@ export class ExternalPlaybackNavigatorService {
 
   /** The app changed a setting the display only reads when its page loads (see the player's /display/reload-page):
    *  the page is loaded again, like checkThemeReload with a baseline first. Playback runs on in the player. */
+  // The player wants the box's Spotify silent and could not pause it through Spotify (a block, no answer - the daily
+  // limit or a quiet time "stopped" and it played on): the display pauses its own Spotify player, without Spotify's
+  // Web API. 0 after a start; the first answer after loading the page is only taken as the baseline.
+  private lastSeenSilenceAt: number | null = null
+  private checkSpotifySilence(at: number | undefined): void {
+    if (typeof at !== 'number') return
+    const before = this.lastSeenSilenceAt
+    this.lastSeenSilenceAt = at
+    if (before === null || at === 0 || at <= before) return
+    void this.spotifyService.pausePlayer()
+  }
+
   private checkPageReload(reloadAt: number | undefined): void {
     if (typeof reloadAt !== 'number') return
     if (this.lastSeenPageReloadAt === null || reloadAt < this.lastSeenPageReloadAt) {
@@ -367,9 +384,12 @@ export class ExternalPlaybackNavigatorService {
     // Prevent multiple simultaneous navigations
     this.isNavigatingToPlayer = true
 
+    // (it plays already: without externalPlayback the page started it once more - the album from its first track, a
+    // second after a start at track 24 from the web app or Telegram; seen in a live test)
     const navigationExtras: NavigationExtras = {
       state: {
         media: media,
+        externalPlayback: true,
       },
     }
 

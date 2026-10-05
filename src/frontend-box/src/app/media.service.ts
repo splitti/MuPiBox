@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http'
 import { Injectable, signal } from '@angular/core'
 import {
+  asapScheduler,
   combineLatest,
   concat,
   defer,
@@ -30,9 +31,11 @@ import {
   mergeAll,
   mergeMap,
   retry,
+  scan,
   share,
   shareReplay,
   startWith,
+  subscribeOn,
   switchMap,
   takeUntil,
   take,
@@ -59,8 +62,45 @@ import { type ExtraDataMedia, localizeCoverUrl } from './utils'
 // hours. The album's tracks are still asked for when it is opened or played. Entries without title or cover go on
 // asking Spotify (getMediaByID).
 function storedSpotifyAlbum(item: Media): Media | undefined {
-  if (!item.title || !item.cover) return undefined
+  // (a placeholder that got into resume.json - "not available", the no-cover picture - is asked for again)
+  if (!item.title || !item.cover || item.unavailable || item.cover.includes('nocover')) return undefined
   return { ...item, type: 'spotify', artist: item.artist || 'Unknown Artist', cover: localizeCoverUrl(item.cover) }
+}
+
+// The data.json row a Spotify entry comes from (Media.row): what is looked up for it
+function rowKey(item: Media): string | undefined {
+  if (item.query) return `q:${item.query}`
+  if (item.artistid && !item.id) return `a:${item.artistid}`
+  if (item.showid) return `s:${item.showid}`
+  if (item.playlistid) return `p:${item.playlistid}`
+  if (item.audiobookid) return `b:${item.audiobookid}`
+  if (item.id) return `i:${item.id}`
+  return undefined
+}
+
+// A list made while Spotify failed (blocking the box, a timeout): a row that came back as a placeholder gets its
+// entries of the list kept before - an artist stayed a grey "not available" tile for as long as Spotify blocked
+// (hours), or was gone from the list. Lists kept before rows were noted: the kept entries of the placeholder's artist
+// the new list lacks.
+function fillFailedRows(media: Media[], kept: Media[] | undefined): Media[] {
+  const failed = new Set(media.filter((m) => m.unavailable && m.row).map((m) => m.row as string))
+  if (failed.size === 0 || !kept?.length) return media
+  const present = new Set(media.filter((m) => !m.unavailable && m.id).map((m) => m.id))
+  return media.flatMap((m) => {
+    if (!(m.unavailable && m.row && failed.has(m.row))) return [m]
+    let fromKept = kept.filter((k) => k.row === m.row && !k.unavailable)
+    if (!fromKept.length) {
+      fromKept = kept.filter(
+        (k) =>
+          !k.row && k.type === 'spotify' && !k.unavailable && k.id && !present.has(k.id) && (m.id ? k.id === m.id : k.artist === m.artist),
+      )
+    }
+    failed.delete(m.row) // (once per row)
+    if (!fromKept.length) return [m]
+    for (const k of fromKept) if (k.id) present.add(k.id)
+    // (with the row: the list made now is the kept one of the next time)
+    return fromKept.map((k) => ({ ...k, category: m.category, index: m.index, row: m.row }))
+  })
 }
 import type { WLAN } from './wlan'
 
@@ -106,7 +146,9 @@ export class MediaService {
 
                   // Get enhanced media information if context is available
                   let mediaInfo = null
-                  let trackPosition = 1
+                  // (undefined when the track is not in the list - more than 50 tracks, a list that could not be
+                  // loaded: it was "1", and resume started that album at track 1 at the position of track N)
+                  let trackPosition: number | undefined
                   // whether the track belongs to the album or playlist that plays (Spotify's autoplay goes on with
                   // others in the same context); only told when the list of tracks is complete
                   let inContext: boolean | undefined
@@ -130,7 +172,8 @@ export class MediaService {
                       if (currentTrackIndex !== -1) {
                         trackPosition = currentTrackIndex + 1
                       }
-                      if (mediaInfo.tracks.length >= (mediaInfo.total_tracks ?? 0)) inContext = currentTrackIndex !== -1
+                      // (no "in context" for playlists: the list from Spotify's embed is cut at about 100 tracks and
+                      // may be older than the playlist - a track past it or newly added ended the playlist with a stop)
                     } else if (contextUri.includes('spotify:show:')) {
                       // Both shows and audiobooks use spotify:show: URIs
                       if (mediaInfo?.episodes) {
@@ -166,7 +209,7 @@ export class MediaService {
                       duration_ms: currentTrack.duration_ms,
                       track_number: ['album', 'playlist', 'show'].includes(contextType)
                         ? trackPosition
-                        : currentTrack.track_number || 1,
+                        : currentTrack.track_number || undefined,
                       album: currentTrack.album,
                       ...(mediaInfo && {
                         album: {
@@ -355,6 +398,7 @@ export class MediaService {
     if (!this.libraryVersion$) {
       this.libraryVersion$ = this.versions().pipe(
         map((v) => (v.version === '' ? '' : `${v.version}|${v.local}`)),
+        MediaService.keepLastVersion(),
         distinctUntilChanged(),
       )
     }
@@ -365,10 +409,18 @@ export class MediaService {
     if (!this.dataVersion$) {
       this.dataVersion$ = this.versions().pipe(
         map((v) => v.version),
+        MediaService.keepLastVersion(),
         distinctUntilChanged(),
       )
     }
     return this.dataVersion$
+  }
+
+  // A poll without an answer ('': the box was busy, e.g. with a Smart-Sync) is no change of the library: the last
+  // version stays. It used to count as one - and the next answer as another, so the pages loaded their lists twice
+  // for nothing, and the covers on the start page jumped. Only as long as no answer came at all, '' goes through.
+  private static keepLastVersion() {
+    return scan<string, string>((last, version) => (version === '' ? last : version), '')
   }
 
   /** Whether the NAS tab is wanted: shown NAS folders are left that have no category (older backends: always). */
@@ -425,6 +477,12 @@ export class MediaService {
     })
   }
 
+  // the shuffle switch of a Spotify album or playlist row, found by its id (not by an index - see the server)
+  saveShuffle(media: Media) {
+    const body = media.row?.startsWith('p:') ? { playlistid: media.playlistid, shuffle: !!media.shuffle } : { id: media.id, shuffle: !!media.shuffle }
+    this.http.post(`${this.getApiBackendUrl()}/library/shuffle`, body, { responseType: 'text' }).subscribe({ error: () => undefined })
+  }
+
   addRawMedia(media: Media) {
     const url = `${this.getApiBackendUrl()}/add`
 
@@ -434,6 +492,8 @@ export class MediaService {
   }
 
   addRawResume(media: Media) {
+    // (a placeholder of a Spotify entry Spotify did not answer for: not kept - see resume-builder cleanResumePlaceholder)
+    if (media.unavailable) return
     const url = `${this.getApiBackendUrl()}/addresume`
 
     this.http.post(url, media, { responseType: 'text' }).subscribe((response) => {
@@ -570,8 +630,10 @@ export class MediaService {
   }
 
   // The home page: the kept list at once and, when it is out of date, the new one after it (see homeListMedia).
-  public fetchArtistData(category: CategoryType): Observable<Artist[]> {
-    return this.fetchMedia(category, undefined, true).pipe(
+  // background: the list is already on the screen and is loaded again because the library changed - only the
+  // finished list then, no steps on the way (they made the covers jump or the list shrink for a moment).
+  public fetchArtistData(category: CategoryType, background = false): Observable<Artist[]> {
+    return this.fetchMedia(category, undefined, !background, background).pipe(
       map((media: Media[]) => {
         // Separate playlists without artists from regular media
         const regularMedia: Media[] = []
@@ -687,6 +749,8 @@ export class MediaService {
   private homeListsLoaded$?: Observable<void>
   // (keyed by category and data.json version: a run for an older version does not stand in for the new one)
   private homeListRuns = new Map<string, Observable<Media[]>>()
+  // the data.json version of the newest run per category (see remakeHomeList)
+  private newestHomeListRun = new Map<CategoryType, string>()
   private homeListsWarming?: Subscription
 
   // the lists the box kept (once per start of the display)
@@ -729,8 +793,13 @@ export class MediaService {
       // (a lookup that failed meanwhile - Spotify blocking requests, a timeout: the list has placeholders or lacks
       // entries. Shown, but not kept as the current one: it is made again at the next chance, see SpotifyService.failures)
       const failuresBefore = this.spotifyService.failures
+      this.newestHomeListRun.set(category, version)
       run = this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category).pipe(
+        map((media) => fillFailedRows(media, this.homeLists.get(category)?.media)),
         tap((media) => {
+          // (a run for an older data.json that ends after the newer one: not kept - it put the old list back, also
+          // on the box)
+          if (this.newestHomeListRun.get(category) !== version) return
           const complete = this.spotifyService.failures === failuresBefore
           this.homeLists.set(category, { version: complete ? version : '', at: Date.now(), media })
           if (version !== '' && complete) {
@@ -764,11 +833,23 @@ export class MediaService {
           return of(copy(kept.media))
         }
         if (onlyArtist !== undefined) {
-          return this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category, onlyArtist)
+          return this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category, onlyArtist).pipe(
+            map((media) => fillFailedRows(media, kept?.media)),
+          )
         }
         if (kept && showKept) {
           // a failed remake keeps what is shown
-          return concat(of(copy(kept.media)), this.remakeHomeList(category, version).pipe(map(copy), catchError(() => EMPTY)))
+          return concat(
+            of(copy(kept.media)),
+            this.remakeHomeList(category, version).pipe(
+              map(copy),
+              // (said in the log: a list that could not be made again stayed the old one, unnoticed)
+              catchError((error) => {
+                console.warn(`[MediaService] list of ${category} not made again:`, error)
+                return EMPTY
+              }),
+            ),
+          )
         }
         return this.remakeHomeList(category, version).pipe(map(copy))
       }),
@@ -787,7 +868,14 @@ export class MediaService {
           this.loadHomeLists().pipe(
             switchMap(() => from(categories().filter((c) => MediaService.HOME_LIST_CATEGORIES.includes(c)))),
             concatMap((category) =>
-              this.homeListIsCurrent(category, version) ? EMPTY : this.remakeHomeList(category, version).pipe(catchError(() => EMPTY)),
+              this.homeListIsCurrent(category, version)
+                ? EMPTY
+                : this.remakeHomeList(category, version).pipe(
+                    catchError((error) => {
+                      console.warn(`[MediaService] list of ${category} not made again:`, error)
+                      return EMPTY
+                    }),
+                  ),
             ),
           ),
         ),
@@ -805,7 +893,7 @@ export class MediaService {
     })
   }
 
-  private fetchMedia(category: CategoryType, onlyArtist?: string, showKept = false): Observable<Media[]> {
+  private fetchMedia(category: CategoryType, onlyArtist?: string, showKept = false, background = false): Observable<Media[]> {
     if (category === 'nas') {
       // NAS media is fetched live from the NAS on every call (never cached
       // into data.json), so it bypasses the Spotify-oriented updateMedia pipeline
@@ -840,14 +928,19 @@ export class MediaService {
         .pipe(catchError(() => of([] as Media[])))
       // NAS folders the parents put into this category (app: NAS › "Anzeigen"). The NAS may answer slowly or not at
       // all: the list shows at once with the NAS folders of last time, the new ones follow.
-      const nasFolders = this.http.get<Media[]>(`${this.getApiBackendUrl()}/nas/artists?category=${category}`).pipe(
+      // (loaded again in the background: only the NAS's answer, not last time's list first)
+      const nasAnswer = this.http.get<Media[]>(`${this.getApiBackendUrl()}/nas/artists?category=${category}`).pipe(
         timeout(20000),
         retry({ count: 2, delay: () => timer(5000) }),
         tap((list) => this.nasInCategory.set(category, list)),
         catchError(() => of(this.nasInCategory.get(category) ?? [])),
-        startWith(this.nasInCategory.get(category) ?? []),
-        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
       )
+      const nasFolders = background
+        ? nasAnswer
+        : nasAnswer.pipe(
+            startWith(this.nasInCategory.get(category) ?? []),
+            distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+          )
       // combineLatest: the data.json part may come twice (kept list, then the new one), each time with the folders.
       // Home page (showKept): a part not there after a few seconds is shown empty first, the rest follows - a big
       // library made from scratch (after an update: many Spotify entries) showed only loading dots for minutes, and
@@ -876,15 +969,18 @@ export class MediaService {
     //   service call. fetchActiveResumeData's sort then sees zeros and the
     //   user's most-recently-played item ends up at a random swiper position.
     // - isResume: marks resume entries; same loss-on-service-call risk.
+    // - row: the data.json row of a Spotify entry (see fillFailedRows)
     const overwriteArtist =
       (item: Media) =>
       (source$: Observable<Media[]>): Observable<Media[]> => {
+        const row = !resume && item.type === 'spotify' ? rowKey(item) : undefined
         return source$.pipe(
           map((items) => {
             for (const currentItem of items) {
               if (item.artist?.length > 0) currentItem.artist = item.artist
               if (typeof item.lastPlayedAt === 'number') currentItem.lastPlayedAt = item.lastPlayedAt
               if (item.isResume === true) currentItem.isResume = true
+              if (row) currentItem.row = row
             }
             return items
           }),
@@ -921,8 +1017,9 @@ export class MediaService {
               .getMediaByQuery(item.query, item.category, item.index, item)
               .pipe(overwriteArtist(item)),
             iif(
-              // Get media by artist
-              () => !!(item.artistid && item.artistid.length > 0),
+              // Get media by artist (not an album row that also names its artist: a compilation of the Smart-Sync was
+              // shown as the artist's whole discography)
+              () => !!(item.artistid && item.artistid.length > 0 && !item.id),
               this.spotifyService
                 .getMediaByArtistID(item.artistid, item.category, item.index, item)
                 .pipe(overwriteArtist(item)),
@@ -1041,7 +1138,10 @@ export class MediaService {
       // Spotify rate-limiter (100 ms minRequestInterval) comfortable -- ~50 req/s
       // peak, well under quota, and the staggering smooths the cache-write storm
       // on SD.
-      mergeMap((items) => from(items), 5),
+      // (each one started in a step of its own: most of them answer at once - a stored album, a local folder - and each
+      // started the next one inside its own end, deeper and deeper; a few hundred of them in a row ran out of call
+      // stack, the error got lost and the list never came - seen after a dozen albums more had name and cover)
+      mergeMap((items) => from(items).pipe(subscribeOn(asapScheduler)), 5),
       mergeAll(), // merge everything together
       toArray(), // convert to array
       map((media) => {
@@ -1115,7 +1215,6 @@ export class MediaService {
     audiobook_name?: string
   } | null> {
     try {
-      let mediaInfo: any = null
       let mediaId: string | null = null
 
       // Parse the URI to determine the type and extract the ID
@@ -1134,25 +1233,48 @@ export class MediaService {
       if (this.mediaInfoCache.currentId === mediaId) {
         return this.mediaInfoCache
       }
+      // (asked once per second while it plays: a lookup on its way is waited for, a failed one is tried again after
+      // 30 s - it was kept as the context's info for good, and its empty track list gave every track position 1)
+      const failedAt = this.mediaInfoFailedAt.get(mediaId)
+      if (failedAt && Date.now() - failedAt < 30_000) return null
+      const running = this.mediaInfoRunning.get(mediaId)
+      if (running) return running
+      const lookup = this.lookUpMediaInfo(contextUri, mediaId)
+      this.mediaInfoRunning.set(mediaId, lookup)
+      try {
+        return await lookup
+      } finally {
+        this.mediaInfoRunning.delete(mediaId)
+      }
+    } catch (error) {
+      console.warn('Failed to get media info for URI:', contextUri, error)
+    }
+    return null
+  }
+
+  private readonly mediaInfoFailedAt = new Map<string, number>()
+  private readonly mediaInfoRunning = new Map<string, Promise<any>>()
+
+  private async lookUpMediaInfo(contextUri: string, mediaId: string): Promise<any> {
+    try {
+      let mediaInfo: any = null
 
       if (contextUri.includes('spotify:album:')) {
         mediaInfo = await firstValueFrom(this.spotifyService.getAlbumInfo(mediaId))
       } else if (contextUri.includes('spotify:playlist:')) {
         mediaInfo = await firstValueFrom(this.spotifyService.getPlaylistInfo(mediaId))
       } else if (contextUri.includes('spotify:show:')) {
-        // Both shows and audiobooks use spotify:show: URIs
-        // Try audiobook endpoint first (more specific, will fail for podcast shows)
-        try {
-          mediaInfo = await firstValueFrom(this.spotifyService.getAudiobookInfo(mediaId))
-        } catch {
-          // Fallback to show API (more general, works for both shows and audiobooks)
-          try {
-            mediaInfo = await firstValueFrom(this.spotifyService.getShowInfo(mediaId))
-          } catch {
-            console.warn('Failed to get info for show/audiobook:', mediaId)
-          }
-        }
+        // Both shows and audiobooks use spotify:show: URIs: the audiobook first, a podcast show if it is none
+        // (getAudiobookInfo never throws - it answers "failed": the show was never asked)
+        mediaInfo = await firstValueFrom(this.spotifyService.getAudiobookInfo(mediaId))
+        if (mediaInfo?.failed) mediaInfo = await firstValueFrom(this.spotifyService.getShowInfo(mediaId))
       }
+
+      if (mediaInfo?.failed) {
+        this.mediaInfoFailedAt.set(mediaId, Date.now())
+        return null
+      }
+      this.mediaInfoFailedAt.delete(mediaId)
 
       if (mediaInfo && mediaId) {
         // Determine media type and set appropriate name

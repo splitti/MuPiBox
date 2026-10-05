@@ -30,6 +30,8 @@ const MOVED: Record<string, [string, string] | null> = {
   'wlanopt:wlan-hardware': ['wlan', 'wlan-hardware'],
   'wlanopt:verbindung': ['wlan', 'wlan-wachter'],
   'wlanopt:fernsteuerung-per-ip': null,
+  // 5.0.8: the page "Eigenes Theme" is gone, its picture and settings are on the theme page
+  'eigenes:hintergrundbild': null,
 }
 function movedPin(page: string, card: string): [string, string] | null {
   const key = `${page}:${card}`

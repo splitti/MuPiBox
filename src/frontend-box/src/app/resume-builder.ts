@@ -7,14 +7,34 @@ import type { Media } from './media'
 // player.page.ts:saveResumeFiles so both the in-page saver and the global
 // resume-on-cap effect produce identical entries (which lets the backend's
 // composite-key dedup overwrite cleanly instead of duplicating).
+/**
+ * A resume entry made from a placeholder (Spotify did not answer when the list was made: "Nicht verfügbar", the no-cover
+ * picture) takes the name and cover of what plays; without them false - not to be kept. The list's own marks go.
+ */
+export function cleanResumePlaceholder(resume: Media, spotify: CurrentSpotify | null | undefined): boolean {
+  delete resume.row
+  if (!resume.unavailable) return true
+  const album = spotify?.item?.album as { name?: string; images?: { url?: string }[] } | undefined
+  if (!album?.name) return false
+  delete resume.unavailable
+  resume.title = album.name
+  const cover = album.images?.[0]?.url
+  if (cover) resume.cover = cover
+  return true
+}
+
 export function buildResumeMedia(
   source: Media,
   spotify: CurrentSpotify | null | undefined,
   local: CurrentMPlayer | null | undefined,
 ): Media {
   const resume: Media = { ...source }
+  cleanResumePlaceholder(resume, spotify)
 
-  if (resume.type === 'spotify' && resume.showid) {
+  // (the track's place not known - see player.page saveResumeFiles: the values the entry has stay)
+  if (resume.type === 'spotify' && !resume.showid && !spotify?.item?.track_number) {
+    // nothing of the position
+  } else if (resume.type === 'spotify' && resume.showid) {
     resume.resumespotifytrack_number = spotify?.item?.track_number || 1
     resume.resumespotifyprogress_ms = spotify?.progress_ms || 0
     resume.resumespotifyduration_ms = spotify?.item?.duration_ms || 0
@@ -25,6 +45,12 @@ export function buildResumeMedia(
   } else if (resume.type === 'library') {
     // resumelocalalbum kept for downgrade-safety; new readers prefer category.
     resume.resumelocalalbum = resume.category
+    resume.resumelocalcurrentTracknr = local?.currentTracknr || 0
+    resume.resumelocalprogressTime = local?.progressTime || 0
+  } else if (resume.type === 'nas') {
+    // (as the player page saves it: the path is its id in resume.json - the stop of a minimised NAS album kept no
+    // place, and under another key)
+    resume.id = `nas:${resume.nasPath}`
     resume.resumelocalcurrentTracknr = local?.currentTracknr || 0
     resume.resumelocalprogressTime = local?.progressTime || 0
   } else if (resume.type === 'rss') {

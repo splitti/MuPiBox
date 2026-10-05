@@ -5,7 +5,9 @@
 // Spotify lists an artist's albums newest first (checked with artists of 25, 177 and 294 albums). So once the whole
 // list is kept, a check asks for the first page only: the albums not known yet are the new ones, and Spotify's total
 // says whether that is all (else - an album removed, or one added with an older date - the whole list is asked again).
-// A check at most every 6 hours, the whole list at least once a week. Written only when the list changed.
+// A check at most every 6 hours, the whole list every 3 to 5 weeks (each artist on a day of its own: the lists the
+// display asked for together all ran out in the same week and were asked whole one after the other - hundreds of
+// requests for a big library; the check finds the new albums anyway). Written only when the list changed.
 
 import * as fs from 'node:fs'
 import * as path from 'node:path'
@@ -30,7 +32,14 @@ export type FetchAlbumPage = (offset: number) => Promise<AlbumPage>
 
 const DIR = path.join(process.cwd(), 'cache', 'artist-albums')
 const CHECK_EVERY_MS = 6 * 60 * 60 * 1000
-const FULL_EVERY_MS = 7 * 24 * 60 * 60 * 1000
+const FULL_EVERY_MS = 28 * 24 * 60 * 60 * 1000
+
+// 0.75 to 1.25 times FULL_EVERY_MS, always the same for an artist (from its key)
+function fullEvery(key: string): number {
+  let h = 0
+  for (const c of key) h = (h * 31 + c.charCodeAt(0)) >>> 0
+  return FULL_EVERY_MS * (0.75 + (h % 1000) / 2000)
+}
 const MAX_ALBUMS = 500
 const PAGE_PAUSE_MS = 400
 
@@ -42,6 +51,11 @@ interface Kept {
 }
 
 const memory = new Map<string, Kept & { checkedAt: number }>()
+
+/** Forgets the lists kept in memory (after "clear cache" removed their files). */
+export function clearArtistAlbumsMemory(): void {
+  memory.clear()
+}
 const running = new Map<string, Promise<StoredAlbum[]>>()
 
 const keyOf = (artistId: string, groups: string) => `${artistId}_${groups}`.replace(/[^A-Za-z0-9_-]/g, '-')
@@ -53,8 +67,9 @@ function read(key: string): (Kept & { checkedAt: number }) | undefined {
   try {
     const kept = JSON.parse(fs.readFileSync(fileOf(key), 'utf8')) as Kept
     if (!Array.isArray(kept?.albums)) return undefined
-    // (checked when the server started: a first check after a restart asks one page)
-    const entry = { ...kept, checkedAt: 0 }
+    // (as if checked at some time in the last 6 hours: each artist's first check after a restart comes at a time of its
+    // own - they were all asked in the first minute after every restart, and right after a block ended)
+    const entry = { ...kept, checkedAt: Date.now() - Math.random() * CHECK_EVERY_MS }
     memory.set(key, entry)
     return entry
   } catch {
@@ -136,11 +151,13 @@ export async function artistAlbums(
     const now = Date.now()
     if (kept && now - kept.checkedAt < CHECK_EVERY_MS) return kept.albums
     try {
-      if (kept && now - kept.fullAt < FULL_EVERY_MS) {
+      if (kept && now - kept.fullAt < fullEvery(key)) {
         const first = await fetchPage(0)
         const known = new Set(kept.albums.map((a) => a.id))
         const fresh = (first.items ?? []).filter((a) => a?.id && !known.has(a.id)).map(slim)
-        if (typeof first.total === 'number' && first.total === kept.albums.length + fresh.length) {
+        // (against Spotify's own count of last time, not the kept list's length: that one is shorter where Spotify counts
+        // albums it does not list - or more than MAX_ALBUMS - and the whole list was asked again at every check)
+        if (typeof first.total === 'number' && first.total === kept.total + fresh.length) {
           const albums = [...fresh, ...kept.albums]
           keep(key, { albums, total: first.total, fullAt: kept.fullAt }, fresh.length > 0)
           if (fresh.length) console.log(`${new Date().toLocaleString()}: [artist-albums] ${artistId}: ${fresh.length} new (1 request)`)

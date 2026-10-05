@@ -72,7 +72,7 @@ async function detectedSoundcards(): Promise<string[]> {
     .map((line) => /^\s*\d+\s+\[[^\]]*\]:\s*(.+)$/.exec(line)?.[1]?.trim())
     .filter((name): name is string => !!name)
 }
-const BUTTON = ['off', 'playpause', 'next', 'ffwd']
+const BUTTON = ['off', 'playpause', 'next', 'tracks', 'ffwd']
 
 function run(cmd: string, args: string[], timeoutMs = 30000): Promise<{ ok: boolean; stdout: string }> {
   return new Promise((resolve) => {

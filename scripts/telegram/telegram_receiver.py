@@ -2,6 +2,7 @@
 
 import sys
 import time
+import datetime
 import telepot
 import html
 import json
@@ -334,7 +335,17 @@ def on_chat_message(msg):
     # ── Phase 14d — Spotify Smart-Sync controls ────────────────────────
     elif command == '/resync':
         status_code, body = call_api_post('/spotify-sync/trigger?source=telegram', {})
-        if status_code == 202:
+        if status_code == 202 and isinstance(body, dict) and body.get('spotify_block_until'):
+            # (Spotify blocks the box: the run asks nothing before that time - it was told as "started")
+            try:
+                until = datetime.datetime.fromtimestamp(int(body['spotify_block_until']) / 1000).strftime('%H:%M')
+            except (TypeError, ValueError):
+                until = '?'
+            bot.sendMessage(chat_id, tr('sync_blocked', until=until))
+        elif status_code == 202 and isinstance(body, dict) and body.get('status') == 'scheduled':
+            # (the cooldown after the last run: one run follows by itself - it was told as "started")
+            bot.sendMessage(chat_id, tr('sync_scheduled', wait=body.get('scheduledInSeconds', 60)))
+        elif status_code == 202:
             bot.sendMessage(chat_id, tr('sync_started'))
         elif status_code == 429:
             wait = (body or {}).get('retry_after_seconds', 60) if isinstance(body, dict) else 60

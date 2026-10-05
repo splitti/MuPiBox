@@ -49,6 +49,11 @@ export class SpotifyService {
     return this.playerService.isPlayerReady()
   }
 
+  /** Pause the display's own Spotify player (no request to Spotify's Web API) */
+  pausePlayer(): Promise<void> {
+    return this.playerService.pause()
+  }
+
   /** Check if we should use the web player */
   shouldUsePlayer(): boolean {
     return this.playerService.shouldUsePlayer()
@@ -105,7 +110,8 @@ export class SpotifyService {
   private fetchAllPaginatedResults<T>(url: string, baseParams: any, pageSize = 10, maxPages = Number.POSITIVE_INFINITY): Observable<T[]> {
     const fetchPage = (offset: number): Observable<{ items: T[]; total: number; limit: number; offset: number }> => {
       const params = { ...baseParams, limit: pageSize.toString(), offset: offset.toString() }
-      return this.http.get<{ items: T[]; total: number; limit: number; offset: number }>(url, { params })
+      // (each page with a time limit: one that never answered kept the whole lookup - and the track list - open)
+      return this.http.get<{ items: T[]; total: number; limit: number; offset: number }>(url, { params }).pipe(timeout(20000))
     }
 
     // First, get the total count and then fetch all pages
@@ -145,7 +151,9 @@ export class SpotifyService {
               catchError((error) => {
                 this.failures++
                 this.logService.warn(`Failed to fetch page at offset ${offset}:`, error?.message || error)
-                return of([] as T[])
+                // (passed on: a list without this page lost its episodes or albums for the whole block - a failed row
+                // takes them from the kept list, see media.service fillFailedRows)
+                throw error
               }),
             ),
           )
@@ -168,7 +176,8 @@ export class SpotifyService {
       catchError((error) => {
         this.failures++
         this.logService.warn('Pagination fetch failed:', error?.message || error)
-        return of([])
+        // (passed on: the caller puts a placeholder in the row's place - an empty answer looked like a row without albums)
+        throw error
       }),
     )
   }
@@ -207,10 +216,11 @@ export class SpotifyService {
       catchError((err) => {
         this.failures++
         this.logService.warn(
-          `Search query failed for "${query}" due to API error, returning empty results:`,
+          `Search query failed for "${query}" due to API error, returning unavailable placeholder:`,
           err?.message || err,
         )
-        return of([])
+        // (a placeholder, not nothing: the row stays in the list - media.service takes its entries of the kept list)
+        return of([this.placeholderMedia({ category, index, artistcover: extraDataSource?.artistcover })])
       }),
     )
   }
@@ -259,10 +269,10 @@ export class SpotifyService {
       catchError((err) => {
         this.failures++
         this.logService.warn(
-          `Artist albums query failed for artist ${id} due to API error, returning empty results:`,
+          `Artist albums query failed for artist ${id} due to API error, returning unavailable placeholder:`,
           err?.message || err,
         )
-        return of([])
+        return of([this.placeholderMedia({ category, index, artistcover: extraDataSource?.artistcover })])
       }),
     )
   }
@@ -307,10 +317,10 @@ export class SpotifyService {
       catchError((err) => {
         this.failures++
         this.logService.warn(
-          `Show episodes query failed for show ${id} due to API error, returning empty results:`,
+          `Show episodes query failed for show ${id} due to API error, returning unavailable placeholder:`,
           err?.message || err,
         )
-        return of([])
+        return of([this.placeholderMedia({ category, index, artistcover: extraDataSource?.artistcover })])
       }),
     )
   }
@@ -554,7 +564,8 @@ export class SpotifyService {
    * resume timestamps so the player can still address the entry. The
    * `unavailable: true` flag lets templates render an "item failed to load"
    * marker; an empty cover/title falls back to the default placeholder
-   * artwork.
+   * artwork. One for an artist, a search or a show has no id at all: its
+   * tile stays, a tap on it plays nothing (medialist.page).
    */
   private placeholderMedia(p: {
     id?: string
@@ -619,7 +630,7 @@ export class SpotifyService {
   /**
    * Get album information including total tracks and track data
    */
-  getAlbumInfo(albumId: string): Observable<{ total_tracks: number; album_name: string; tracks?: any[] }> {
+  getAlbumInfo(albumId: string): Observable<{ total_tracks: number; album_name: string; tracks?: any[]; failed?: boolean }> {
     const albumUrl = `${environment.backend.apiUrl}/spotify/album/${albumId}`
 
     return this.http.get<any>(albumUrl).pipe(
@@ -638,7 +649,7 @@ export class SpotifyService {
       })),
       catchError((error) => {
         this.logService.error('Error getting album info:', error)
-        return of({ total_tracks: 0, album_name: '', tracks: [] })
+        return of({ total_tracks: 0, album_name: '', tracks: [], failed: true })
       }),
     )
   }
@@ -646,7 +657,7 @@ export class SpotifyService {
   /**
    * Get playlist information including total tracks and track data
    */
-  getPlaylistInfo(playlistId: string): Observable<{ total_tracks: number; playlist_name: string; tracks?: any[] }> {
+  getPlaylistInfo(playlistId: string): Observable<{ total_tracks: number; playlist_name: string; tracks?: any[]; failed?: boolean }> {
     // Unified endpoint handles API + Scraper fallback automatically in backend
     const playlistUrl = `${environment.backend.apiUrl}/spotify/playlist/${playlistId}?refresh=true`
 
@@ -694,7 +705,7 @@ export class SpotifyService {
       }),
       catchError((error) => {
         this.logService.error('Failed to fetch playlist info:', error)
-        return of({ total_tracks: 0, playlist_name: '', tracks: [] })
+        return of({ total_tracks: 0, playlist_name: '', tracks: [], failed: true })
       }),
     )
   }
@@ -702,20 +713,20 @@ export class SpotifyService {
   /**
    * Get show information including total episodes and episode data
    */
-  getShowInfo(showId: string): Observable<{ total_episodes: number; show_name: string; episodes?: any[] }> {
+  getShowInfo(showId: string): Observable<{ total_episodes: number; show_name: string; episodes?: any[]; failed?: boolean }> {
     const showUrl = `${environment.backend.apiUrl}/spotify/show/${showId}`
     const showEpisodesUrl = `${environment.backend.apiUrl}/spotify/show/${showId}/episodes`
 
     return this.http.get<any>(showUrl).pipe(
       timeout(15000), // B10
       switchMap((show) => {
-        // Get all episodes for position calculation
-        return this.http.get<any[]>(showEpisodesUrl).pipe(
-          timeout(15000), // B10
+        // The episodes for the position (pages of 10 as the backend asks Spotify, at most 100 - it answers pages, not
+        // a list)
+        return this.fetchAllPaginatedResults<any>(showEpisodesUrl, {}, 10, 10).pipe(
           map((episodesData) => ({
             total_episodes: show.total_episodes,
             show_name: show.name,
-            episodes: episodesData.map((episode: any) => ({
+            episodes: episodesData.filter((episode: any) => episode != null).map((episode: any) => ({
               id: episode.id,
               uri: episode.uri || `spotify:episode:${episode.id}`,
               name: episode.name,
@@ -726,7 +737,7 @@ export class SpotifyService {
       }),
       catchError((error) => {
         this.logService.error('Error getting show info:', error)
-        return of({ total_episodes: 0, show_name: '', episodes: [] })
+        return of({ total_episodes: 0, show_name: '', episodes: [], failed: true })
       }),
     )
   }
@@ -736,7 +747,7 @@ export class SpotifyService {
    */
   getAudiobookInfo(
     audiobookId: string,
-  ): Observable<{ total_chapters: number; audiobook_name: string; chapters?: any[] }> {
+  ): Observable<{ total_chapters: number; audiobook_name: string; chapters?: any[]; failed?: boolean }> {
     const audiobookUrl = `${environment.backend.apiUrl}/spotify/audiobook/${audiobookId}`
 
     return this.http.get<any>(audiobookUrl).pipe(
@@ -754,7 +765,7 @@ export class SpotifyService {
       })),
       catchError((error) => {
         this.logService.error('Error getting audiobook info:', error)
-        return of({ total_chapters: 0, audiobook_name: '', chapters: [] })
+        return of({ total_chapters: 0, audiobook_name: '', chapters: [], failed: true })
       }),
     )
   }

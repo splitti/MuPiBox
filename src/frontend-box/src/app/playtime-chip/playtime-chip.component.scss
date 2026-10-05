@@ -37,32 +37,46 @@
   }
 }
 
-// km themes: 32 high below the 72 px header, no blur; > 10 min night, 5-10 accent, < 5 red
-:host-context(body.km) .playtime-chip {
-  top: 76px;
+// km themes, design round 2 ("Vorschlag D"): 30 high at top 74 / right 14 below the header on every page - it ends
+// at y 104, before the right cover ring of the start page (from y 106); > 10 min the button colours, 5-10 accent, < 5 red
+:host-context(body.km) .playtime-chip,
+:host-context(body.cf) .playtime-chip {
+  top: 74px;
   right: 14px;
-  height: 32px;
-  padding: 0 12px;
-  border-radius: 16px;
-  font-size: 16px;
+  height: 30px;
+  padding: 0 11px 0 9px;
+  gap: 6px;
+  border-radius: 15px;
+  font-size: 15px;
   font-weight: 600;
-  background: var(--km-night-3);
-  color: var(--km-cream);
+  background: var(--km-btn);
+  color: var(--km-on-btn);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  box-shadow: none;
+  box-shadow: 0 3px 0 var(--km-shadow);
 
-  ion-icon {
-    font-size: 18px;
+  .km-clock {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
-  &[data-level='warning'] {
+  &[data-level="warning"] {
     background: var(--km-apricot);
     color: var(--km-ink);
   }
 
-  &[data-level='critical'] {
+  &[data-level="critical"] {
     background: var(--km-rose);
     color: #2a1520;
   }
+}
+
+// hidden while the player's "Hören mit" window is open (the chip lies above every page, the window only above the player)
+:host-context(body.kp-out-open) .playtime-chip {
+  visibility: hidden;
 }

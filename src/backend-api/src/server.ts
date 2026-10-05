@@ -33,7 +33,7 @@ import { SpotifyMediaInfo } from './services/spotify-media-info.service'
 import { createSpotifySyncRouter } from './spotify-sync/routes'
 import { startScheduler } from './spotify-sync/scheduler'
 import type { RunSyncDeps } from './spotify-sync/state-machine'
-import { buildElternLandingHandler, createElternApiRouter, registerDisplayNetworkRoutes } from './eltern/routes'
+import { buildElternLandingHandler, createElternApiRouter, registerDisplayNetworkRoutes, setOnSpotifyCacheCleared } from './eltern/routes'
 import { startSpotifyLoginWatch } from './eltern/spotify-auth-age'
 import { startTlsWatch } from './eltern/tls'
 import { startWeeklySummary } from './eltern/weekly-summary'
@@ -46,6 +46,7 @@ import type { Duplex } from 'node:stream'
 import { SUDO_BACKUP_SNIPPET, backupBeforeWrite } from './file-backup'
 import { readEmbeddedPicture } from './embedded-cover'
 import { acquireLock, releaseLock, staleReason } from './file-lock'
+import { type AlbumFillDeps, fillSpotifyAlbums, isBareAlbum, startSpotifyAlbumFill } from './spotify-album-fill'
 import { coverHidden } from './hidden-covers'
 import { OnlineCovers } from './online-covers'
 import { ardFeed, isArdFeed } from './ard-sounds'
@@ -74,6 +75,26 @@ if (!productionServe) {
   configBasePath = './config' // This uses the package.json path as pwd.
 }
 
+// "Clear cache" in the app: the lookups' memory too
+setOnSpotifyCacheCleared(() => spotifyApiService?.clearMemory())
+
+// Another Spotify app entered in the app (setting_update.sh writes config.json): the display's Spotify lookups use it
+// at once - they went on with the old one (still blocked) until a restart of the server
+function watchSpotifyCredentials(): void {
+  fs.watchFile(`${configBasePath}/config.json`, { interval: 10_000 }, () => {
+    readJsonFile(`${configBasePath}/config.json`)
+      .then((fresh: ServerConfig) => {
+        const before = config?.spotify
+        const now = fresh?.spotify
+        if (!now || (now.clientId === before?.clientId && now.clientSecret === before?.clientSecret)) return
+        config = fresh
+        spotifyApiService = new SpotifyApiService(fresh)
+        console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Spotify app changed - the lookups use the new one`)
+      })
+      .catch(() => undefined)
+  }).unref?.()
+}
+
 async function readJsonFile(path: string) {
   const file = await readFile(path, 'utf8')
   return JSON.parse(file)
@@ -82,6 +103,7 @@ async function readJsonFile(path: string) {
 let config: ServerConfig | undefined
 readJsonFile(`${configBasePath}/config.json`).then((configFile) => {
   config = configFile
+  watchSpotifyCredentials()
 
   // Initialize Spotify API service once config is loaded
   if (config?.spotify) {
@@ -3463,9 +3485,18 @@ app.post('/api/add', (req, res) => {
         return
       }
       res.status(200).send('ok')
+      // a Spotify album added by its link: its name and cover right away (see spotify-album-fill.ts)
+      if (isBareAlbum(newEntry)) setTimeout(() => void fillSpotifyAlbums(albumFillDeps, 'added'), 1000)
     })
   })
 })
+
+const albumFillDeps: AlbumFillDeps = {
+  dataFile,
+  dataLock,
+  spotify: () => spotifyApiService,
+  write: (data) => new Promise((resolve, reject) => writeJsonAtomic(dataFile, data, (error) => (error ? reject(error) : resolve()))),
+}
 
 // data.json, resume.json and wlan.json were written straight into the target file: a power cut
 // or a crash mid-write left a cut-off JSON (the library or the resume list unreadable). Written
@@ -3840,6 +3871,58 @@ app.post('/api/edit', (req, res) => {
   })
 })
 
+// The display's shuffle switch for a Spotify album or playlist of its own row (music / other tabs): kept in that row,
+// found by its Spotify id - nothing else of the row changes. The display sent the whole entry to /api/edit with the
+// index it carried, and an album of an artist entry (the artist's index) or a resume entry (its place in resume.json)
+// replaced another row: an artist entry became one album.
+app.post('/api/library/shuffle', (req, res) => {
+  const { id, playlistid, shuffle } = (req.body ?? {}) as { id?: unknown; playlistid?: unknown; shuffle?: unknown }
+  const spotifyId = (v: unknown) => typeof v === 'string' && /^[A-Za-z0-9]{10,64}$/.test(v)
+  if (typeof shuffle !== 'boolean' || (spotifyId(id) === spotifyId(playlistid))) {
+    res.status(400).send('id or playlistid, and shuffle')
+    return
+  }
+  const lockResult = acquireLock(dataLock, '/api/library/shuffle')
+  if (lockResult !== 'acquired') {
+    res.status(200).send(lockResult)
+    return
+  }
+  jsonfile.readFile(dataFile, (error, data) => {
+    if (error || !Array.isArray(data)) {
+      releaseLock(dataLock, '/api/library/shuffle')
+      res.status(500).send('error')
+      return
+    }
+    const rows = data.filter((r: Record<string, unknown>) => {
+      if (!r || r.type !== 'spotify') return false
+      if (spotifyId(playlistid)) return r.playlistid === playlistid
+      return r.id === id && !r.artistid && !r.query && !r.playlistid && !r.showid && !r.audiobookid
+    }) as Record<string, unknown>[]
+    const changed = rows.filter((r) => (r.shuffle === true) !== shuffle)
+    if (changed.length === 0) {
+      releaseLock(dataLock, '/api/library/shuffle')
+      res.status(200).send(rows.length ? 'ok' : 'none')
+      return
+    }
+    for (const r of changed) r.shuffle = shuffle
+    writeJsonAtomic(dataFile, data, (writeError) => {
+      releaseLock(dataLock, '/api/library/shuffle')
+      res.status(writeError ? 500 : 200).send(writeError ? 'error' : 'ok')
+    })
+  })
+})
+
+// A Spotify id in the path of the /api/spotify/* routes: letters and digits only. They went unchecked into file names
+// (the playlist scraper's cache: an id "<playlist>#/../../../server/config/data" wrote over the library) and into
+// the paths asked at Spotify.
+const SPOTIFY_ID = /^[A-Za-z0-9]{10,64}$/
+for (const name of ['playlistId', 'artistId', 'showId', 'albumId', 'audiobookId', 'episodeId']) {
+  app.param(name, (_req, res, next, value) => {
+    if (typeof value === 'string' && SPOTIFY_ID.test(value)) return next()
+    res.status(400).json({ error: `invalid ${name}` })
+  })
+}
+
 app.get('/api/spotify/config', (_req, res) => {
   if (config?.spotify === undefined) {
     res.status(500).send('Could load spotify config.')
@@ -3923,9 +4006,12 @@ app.get('/api/spotify/playlist/:playlistId', async (req, res) => {
       `${new Date().toLocaleString()}: [MuPiBox-Server] Successfully fetched playlist via API: ${apiData.name}`,
     )
 
-    // Always try to fetch playlist via scraper
-    await spotifyMediaInfo.fetchPlaylistData(playlistId)
+    // Always try to fetch playlist via scraper (in the background: the answer is sent - its failure went into the catch
+    // below, which scraped a second time and answered once more after the headers were sent)
+    spotifyMediaInfo.fetchPlaylistData(playlistId).catch(() => undefined)
+    return
   } catch (_apiError) {
+    if (res.headersSent) return
     console.log(
       `${new Date().toLocaleString()}: [MuPiBox-Server] API failed for playlist ${playlistId}, trying scraper fallback...`,
     )
@@ -4016,7 +4102,10 @@ app.get('/api/spotify/artist/:artistId/albums', async (req, res) => {
   }
 
   const artistId = req.params.artistId
-  const albumTypes = (req.query.album_type as string) || 'album,single,compilation'
+  // (only Spotify's own groups, in one order: any other text made a list of its own on the SD card, asked whole)
+  const allowedTypes = ['album', 'single', 'compilation', 'appears_on']
+  const requestedTypes = String(req.query.album_type ?? '').split(',').filter((t) => allowedTypes.includes(t))
+  const albumTypes = requestedTypes.length ? allowedTypes.filter((t) => requestedTypes.includes(t)).join(',') : 'album,single,compilation'
   const limit = Number.parseInt(req.query.limit as string, 10) || 5
   const offset = Number.parseInt(req.query.offset as string, 10) || 0
 
@@ -4265,6 +4354,10 @@ app.post('/api/spotify/validate', async (req, res) => {
 
   if (!id || !type) {
     res.status(400).json({ error: 'ID and type are required' })
+    return
+  }
+  if (typeof id !== 'string' || !SPOTIFY_ID.test(id)) {
+    res.status(400).json({ error: 'invalid id' })
     return
   }
 
@@ -8320,6 +8413,8 @@ if (!testServe) {
   // Boot-after-60s lead-in inside startScheduler so initial config load
   // has time to finish before the first sync attempt.
   startScheduler(spotifySyncDeps)
+  // Spotify albums kept as their id only: name and cover into data.json (spotify-album-fill.ts)
+  startSpotifyAlbumFill(albumFillDeps)
   // The Spotify login's 6 months: reminders before the end, a message when Spotify refused it (eltern/spotify-auth-age.ts)
   startSpotifyLoginWatch({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
   startTlsWatch({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })

@@ -13,13 +13,22 @@ const SYNC_LOCK_PATH = '/tmp/.spotify_sync.lock'
 
 export type AcquireResult = 'acquired' | 'locked' | 'error'
 
+function processAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch (err) {
+    return (err as NodeJS.ErrnoException).code === 'EPERM'
+  }
+}
+
 /** Try to claim the sync lock. Returns 'acquired' on success, 'locked' if
  *  another run holds a fresh lock, 'error' on filesystem trouble. Steals
  *  stale locks older than `staleMs`. */
 export function acquireSyncLock(staleMs: number, lockPath: string = SYNC_LOCK_PATH): AcquireResult {
   const tryOpen = (): AcquireResult => {
     try {
-      fs.closeSync(fs.openSync(lockPath, 'wx'))
+      fs.writeFileSync(lockPath, String(process.pid), { flag: 'wx' })
       return 'acquired'
     } catch (err) {
       const code = (err as NodeJS.ErrnoException).code
@@ -39,7 +48,11 @@ export function acquireSyncLock(staleMs: number, lockPath: string = SYNC_LOCK_PA
   try {
     const stat = fs.statSync(lockPath)
     const ageMs = Date.now() - stat.mtimeMs
-    if (ageMs > staleMs) {
+    // (left by a process that is gone - the server restarted during a run: the first run after the start waited a
+    // whole interval for it)
+    const pid = Number.parseInt(fs.readFileSync(lockPath, 'utf8'), 10)
+    const ownerGone = Number.isInteger(pid) && pid > 0 && pid !== process.pid && !processAlive(pid)
+    if (ageMs > staleMs || ownerGone) {
       try {
         fs.unlinkSync(lockPath)
       } catch {

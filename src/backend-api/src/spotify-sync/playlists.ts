@@ -21,12 +21,25 @@ import {
   resolvePlaylistCategory,
 } from './categorizer'
 import type { CategoryType } from './category-types'
-import type { DiscoveredPlaylist, SpotifySyncConfig, SyncItem } from './types'
+import type { DiscoveredPlaylist, FailedSource, SpotifySyncConfig, SyncItem } from './types'
 import { type AlbumPage, artistAlbums } from '../artist-albums-store'
 import { noteSpotifyBlock, spotifyBlock } from '../spotify-block'
+import {
+  type CachedAlbum,
+  keepAlbum,
+  keepArtistCover,
+  keepPlaylistTracks,
+  keptAlbum,
+  keptArtistCover,
+  keptPlaylistTracks,
+} from './meta-cache'
 
 const API_BASE = 'https://api.spotify.com/v1'
 const HTTP_TIMEOUT_MS = 10_000
+// between two requests of the sync: its pages, playlists, pictures and albums came back to back, and many requests in
+// a short time are what Spotify answers with a block (the server's own requests keep a pause too, spotify-api.service)
+const MIN_GAP_MS = 300
+let lastRequestAt = 0
 // (entries of a playlist per page: 50 is the most Spotify allows since its February 2026 changes - was 100, which
 // Spotify apps under the new rules refuse)
 const TRACKS_PAGE_LIMIT = 50
@@ -56,6 +69,9 @@ async function spotifyGet<T>(path: string, accessToken: string): Promise<T> {
     const left = Math.max(1, Math.ceil((block.until - Date.now()) / 1000))
     throw new SpotifyApiException({ kind: 'rate-limit', reason: `${path} not asked: Spotify blocks for ${left} s more (${block.reason})`, retryAfterSeconds: left })
   }
+  const wait = lastRequestAt + MIN_GAP_MS - Date.now()
+  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait))
+  lastRequestAt = Date.now()
   let response: Response
   try {
     response = await fetch(`${API_BASE}${path}`, {
@@ -98,14 +114,19 @@ async function spotifyGet<T>(path: string, accessToken: string): Promise<T> {
 /** Discover all sync-managed playlists for the active user. */
 // failures: what could not be read in this run (an explicit playlist, a pinned album, an artist) - the diff removes
 // nothing then, see computeSyncDiff
-export async function discoverPlaylists(accessToken: string, config: SpotifySyncConfig, failures: string[] = []): Promise<DiscoveredPlaylist[]> {
+export async function discoverPlaylists(
+  accessToken: string,
+  config: SpotifySyncConfig,
+  failures: string[] = [],
+  failedSources: FailedSource[] = [],
+): Promise<DiscoveredPlaylist[]> {
   if (config.playlist_explicit_ids.length > 0) {
     // Mode A: explicit IDs. Skip /me/playlists scan.
     const out: DiscoveredPlaylist[] = []
     for (const id of config.playlist_explicit_ids) {
       try {
-        const p = await spotifyGet<{ id: string; name: string; description?: string; items?: { total?: number }; tracks?: { total?: number } }>(
-          `/playlists/${id}?fields=id,name,description,items(total)`,
+        const p = await spotifyGet<{ id: string; name: string; description?: string; snapshot_id?: string; items?: { total?: number }; tracks?: { total?: number } }>(
+          `/playlists/${id}?fields=id,name,description,snapshot_id,items(total)`,
           accessToken,
         )
         out.push(buildDiscoveredPlaylist(p))
@@ -114,6 +135,7 @@ export async function discoverPlaylists(accessToken: string, config: SpotifySync
         if (err instanceof SpotifyApiException && err.detail.kind !== 'internal') throw err
         // Skip individually-failing playlists; sync over what we got (adding and updating - not removing).
         failures.push(`playlist ${id}`)
+        failedSources.push({ kind: 'playlist', id })
         console.warn(`${new Date().toLocaleString()}: [spotify-sync] discover: explicit playlist ${id} failed: ${(err as Error).message}`)
       }
     }
@@ -130,16 +152,20 @@ export async function discoverPlaylists(accessToken: string, config: SpotifySync
   }
   while (next) {
     const page = await spotifyGet<{
-      items: Array<{ id: string; name: string; description?: string; items?: { total?: number }; tracks?: { total?: number } }>
+      items: Array<{ id: string; name: string; description?: string; snapshot_id?: string; items?: { total?: number }; tracks?: { total?: number } }>
       next: string | null
     }>(`/me/playlists?limit=${PLAYLISTS_PAGE_LIMIT}&offset=${offset}`, accessToken)
     for (const item of page.items ?? []) {
-      if (playlistMatchesPrefix(item.name, prefix)) {
+      // (an entry Spotify sends as null - a playlist not available: skipped, it ended the whole run with a TypeError)
+      if (item?.name && playlistMatchesPrefix(item.name, prefix)) {
         matched.push(buildDiscoveredPlaylist(item))
       }
     }
-    next = page.next !== null && (page.items?.length ?? 0) === PLAYLISTS_PAGE_LIMIT
-    offset += PLAYLISTS_PAGE_LIMIT
+    // (Spotify's own paging decides: a page it shortened still has a next one - the MuPiBox playlists after it were
+    // not seen, and their entries removed)
+    const got = page.items?.length ?? 0
+    next = !!page.next && got > 0
+    offset += got
     // Safety net against runaway pagination — Spotify caps at ~50 user
     // playlists per offset and ~~thousand total; 50 pages = 2500 items.
     if (offset > 50 * PLAYLISTS_PAGE_LIMIT) break
@@ -151,6 +177,7 @@ function buildDiscoveredPlaylist(p: {
   id: string
   name: string
   description?: string
+  snapshot_id?: string
   items?: { total?: number }
   tracks?: { total?: number }
 }): DiscoveredPlaylist {
@@ -163,6 +190,7 @@ function buildDiscoveredPlaylist(p: {
     episodeOnly: overrides.episodeOnly,
     // (`tracks` is named `items` since Spotify's February 2026 changes)
     trackCount: p.items?.total ?? p.tracks?.total ?? 0,
+    snapshotId: typeof p.snapshot_id === 'string' && p.snapshot_id ? p.snapshot_id : undefined,
   }
 }
 
@@ -226,7 +254,13 @@ async function fetchPlaylistTracks(playlistId: string, accessToken: string): Pro
  */
 async function fetchArtistCovers(artistIds: string[], accessToken: string): Promise<Map<string, string>> {
   const out = new Map<string, string>()
-  const unique = [...new Set(artistIds)]
+  // (the pictures kept from an earlier run: only the new artists and the ones kept too long are asked, see meta-cache.ts)
+  const unique = [...new Set(artistIds)].filter((id) => {
+    const kept = keptArtistCover(id)
+    if (kept === undefined) return true
+    if (kept) out.set(id, kept)
+    return false
+  })
   for (let i = 0; i < unique.length; i += 50) {
     const batch = unique.slice(i, i + 50)
     try {
@@ -237,6 +271,7 @@ async function fetchArtistCovers(artistIds: string[], accessToken: string): Prom
       for (const a of resp.artists ?? []) {
         const url = pickImage(a?.images)
         if (a?.id && url) out.set(a.id, url)
+        if (a?.id) keepArtistCover(a.id, url)
       }
     } catch (err) {
       // a block (429), a login or network failure ends the run: applied without the pictures, the entries would lose
@@ -249,6 +284,7 @@ async function fetchArtistCovers(artistIds: string[], accessToken: string): Prom
           const a = await spotifyGet<{ id?: string; images?: Array<{ url?: string }> }>(`/artists/${encodeURIComponent(id)}`, accessToken)
           const url = pickImage(a?.images)
           if (a?.id && url) out.set(a.id, url)
+          if (a?.id) keepArtistCover(a.id, url)
         } catch (one) {
           if (one instanceof SpotifyApiException && one.detail.kind !== 'internal') throw one
           console.warn(`${new Date().toLocaleString()}: [spotify-sync] artist-cover fetch failed: ${(one as Error).message}`)
@@ -273,6 +309,7 @@ export async function resolveSyncItems(
   accessToken: string,
   config: SpotifySyncConfig,
   failures: string[] = [],
+  failedSources: FailedSource[] = [],
 ): Promise<{ items: Map<string, SyncItem>; perPlaylistCounts: Map<string, number> }> {
   const items = new Map<string, SyncItem>()
   const perPlaylistCounts = new Map<string, number>()
@@ -283,10 +320,22 @@ export async function resolveSyncItems(
     // the artists and albums below. A login, rate-limit or network failure still ends the run.
     let tracks: SpotifyTrackResponse[]
     try {
-      tracks = await fetchPlaylistTracks(playlist.id, accessToken)
+      // (unchanged since it was read last - same snapshot: its entries as kept, see meta-cache.ts)
+      const kept = playlist.snapshotId ? keptPlaylistTracks<SpotifyTrackResponse>(playlist.id, playlist.snapshotId) : undefined
+      if (kept?.length) tracks = kept
+      else {
+        tracks = await fetchPlaylistTracks(playlist.id, accessToken)
+        // Spotify counts entries but none could be read (fields renamed again, every entry null): not read - as an
+        // empty playlist it removed all of its albums from the box, and that was kept for weeks
+        if (tracks.length === 0 && playlist.trackCount > 0) {
+          throw new Error(`${playlist.trackCount} entries counted, none readable`)
+        }
+        if (playlist.snapshotId && tracks.length > 0) keepPlaylistTracks(playlist.id, playlist.snapshotId, tracks)
+      }
     } catch (err) {
       if (err instanceof SpotifyApiException && err.detail.kind !== 'internal') throw err
       failures.push(`playlist ${playlist.name || playlist.id}`)
+      failedSources.push({ kind: 'playlist', id: playlist.id })
       console.warn(`${new Date().toLocaleString()}: [spotify-sync] playlist ${playlist.id} (${playlist.name}) not read: ${(err as Error).message}`)
       continue
     }
@@ -306,18 +355,16 @@ export async function resolveSyncItems(
   // Phase 17b: explicit single albums pinned via the WebApp search, independent
   // of any playlist. Fetch each album once and build an album-promotion item;
   // skip if a playlist already produced the same album (dedupe by groupKey).
+  // (kept from an earlier run: only new pins and ones kept too long are asked, see meta-cache.ts)
   for (const pin of config.explicit_albums ?? []) {
     const albumId = pin?.id
     if (!albumId || items.has(`album:${albumId}`)) continue
     try {
-      const album = await spotifyGet<{
-        id?: string
-        name?: string
-        album_type?: string
-        artists?: Array<{ id?: string; name?: string }>
-        images?: Array<{ url?: string }>
-        release_date?: string
-      }>(`/albums/${encodeURIComponent(albumId)}`, accessToken)
+      let album = keptAlbum(albumId)
+      if (!album) {
+        album = await spotifyGet<CachedAlbum>(`/albums/${encodeURIComponent(albumId)}`, accessToken)
+        keepAlbum(album)
+      }
       const item = buildExplicitAlbumItem(album, pin.category)
       if (item) items.set(item.groupKey, item)
     } catch (err) {
@@ -325,6 +372,7 @@ export async function resolveSyncItems(
       // and artists only kept the block going (state-machine: RATE_LIMITED waits for Spotify's time)
       if (err instanceof SpotifyApiException && err.detail.kind !== 'internal') throw err
       failures.push(`album ${albumId}`)
+      failedSources.push({ kind: 'album', id: albumId })
       console.warn(
         `${new Date().toLocaleString()}: [spotify-sync] explicit album ${albumId} fetch failed: ${(err as Error).message}`,
       )
@@ -357,6 +405,7 @@ export async function resolveSyncItems(
       // (as for the albums above: a block, a login or network failure ends the run)
       if (err instanceof SpotifyApiException && err.detail.kind !== 'internal') throw err
       failures.push(`artist ${sub.name || sub.id}`)
+      failedSources.push({ kind: 'artist', id: sub.id, name: sub.name })
       console.warn(
         `${new Date().toLocaleString()}: [spotify-sync] artist subscription ${sub.id} failed: ${(err as Error).message}`,
       )

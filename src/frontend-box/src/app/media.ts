@@ -65,6 +65,9 @@ export interface Media {
   // instead of silently vanishing — callers / templates can render it
   // greyed-out or with an "unavailable" badge later.
   unavailable?: boolean
+  // The data.json row a Spotify entry was looked up from (e.g. 'a:<artistid>', see media.service rowKey): a list made
+  // while Spotify failed takes that row's entries from the list kept before instead of a placeholder.
+  row?: string
   // Set by /api/addresume to Date.now() on every save. Frontend sorts the
   // resume page by this DESC so "most recently played" lands at position 1
   // even when the entry was already in the file (addresume's update-in-

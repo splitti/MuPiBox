@@ -459,7 +459,7 @@ if( isset($_POST['rotary_toggle']) || $rotary_save )
 	if( $rotary_save )
 		{
 		// Only the offered functions (the service reads this value on every button press)
-		$rotary_button = in_array($_POST['rotary_button'] ?? '', array('off','playpause','next','ffwd'), true) ? $_POST['rotary_button'] : 'off';
+		$rotary_button = in_array($_POST['rotary_button'] ?? '', array('off','playpause','next','tracks','ffwd'), true) ? $_POST['rotary_button'] : 'off';
 		$rotary_step = min(10, max(1, intval($_POST['rotary_step'] ?? 5)));
 		if( ($data["rotary"]["button"] ?? null) !== $rotary_button || ($data["rotary"]["step"] ?? null) !== $rotary_step )
 			{
@@ -768,7 +768,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				?>
 				</select>
 				</div>
-				<div class="themePrev"><img src="images/<?php print isset($kmNames[$data["mupibox"]["theme"]]) ? 'km/' . htmlspecialchars($data["mupibox"]["theme"]) . '.svg' : htmlspecialchars($data["mupibox"]["theme"]) . '.png'; ?>" width="250" height="150" name="selectedTheme" style="object-fit:cover;" /></div>
+				<div class="themePrev"><img src="images/<?php print htmlspecialchars($data["mupibox"]["theme"]); ?>.png?v=3" width="250" height="150" name="selectedTheme" style="object-fit:cover;" /></div>
 				<style>
 					.mupi-toggle { display:inline-flex; align-items:center; gap:10px; margin-top:12px; cursor:pointer; }
 					/* the label text as big as the normal text of the page (the label defaults were 9px bold) */
@@ -811,7 +811,6 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 					</div>
 				</div>
 				<script>
-					var kmThemeIds = <?= json_encode(array_keys($kmNames)) ?>; // the kids' themes (their preview picture, see view.js)
 					var kmStageIds = <?= json_encode(array_merge(array_keys($kmNames), array_keys($kmLegacy))) ?>; // all themes in the km layout
 					function toggleKmStageOption() {
 						var sel = document.getElementById('theme');
@@ -1509,7 +1508,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<h2>Push button function (GPIO 10)</h2>
 				<div><select id="rotary_button" name="rotary_button" class="element text medium">
 				<?php
-				$rotary_functions = array( "off" => "Inactive", "playpause" => "Toggle pause / play", "next" => "Next song", "ffwd" => "Fast forward (30 sec)" );
+				$rotary_functions = array( "off" => "Inactive", "playpause" => "Toggle pause / play", "next" => "Next song", "tracks" => "Track selection (press switches the knob)", "ffwd" => "Fast forward (30 sec)" );
 				foreach($rotary_functions as $value => $label) {
 					$selected = ( $value == $rotary_button ) ? " selected=\"selected\"" : "";
 					print "<option value=\"" . $value . "\"" . $selected . ">" . $label . "</option>";

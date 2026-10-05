@@ -14,7 +14,7 @@ import { KmThemeService } from '../theme/km-theme.service'
     @if (km()) {
       <div class="km-unavail">
         <div class="km-mascot-small"><img [src]="mascot()" alt="" /><ion-icon name="cloud-offline-outline"></ion-icon></div>
-        <div class="km-unavail-text">{{ displayTexts.text(nas() ? 'nasUnavailable' : 'offlineLabel') }}</div>
+        <div class="km-unavail-text">{{ displayTexts.text(nas() ? 'nasUnavailable' : spotify() ? 'spotifyUnavailable' : 'offlineLabel') }}</div>
       </div>
     } @else {
       <img src="assets/images/media-unavailable.webp" alt="The media could not be loaded" />
@@ -57,6 +57,8 @@ import { KmThemeService } from '../theme/km-theme.service'
 export class MediaUnavailableComponent {
   /** a NAS list (else: radio / podcasts without a connection) - only the km themes say which */
   public readonly nas = input(false)
+  /** Spotify entries Spotify could not be asked for (it blocks the box's requests) */
+  public readonly spotify = input(false)
   private readonly kmTheme = inject(KmThemeService)
   protected readonly km = this.kmTheme.isKm
   protected readonly mascot = computed(() => this.kmTheme.kmMascot('awake'))

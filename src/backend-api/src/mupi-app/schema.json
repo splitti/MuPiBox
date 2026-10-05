@@ -1828,38 +1828,6 @@
    ]
   },
   {
-   "id": "eigenes",
-   "slug": "custom-theme",
-   "area": "einstellungen",
-   "parent": "g-aussehen",
-   "title": "Eigenes Theme",
-   "description": "Hintergrundbild hochladen",
-   "icon": "image",
-   "sections": [
-    {
-     "title": "Hintergrundbild",
-     "help": "Wird beim Theme „custom“ verwendet. Am besten 800 × 480 Pixel, JPG.",
-     "items": [
-      {
-       "type": "file",
-       "label": "Bild",
-       "buttons": "Datei wählen"
-      },
-      {
-       "type": "buttons",
-       "buttons": [
-        [
-         "Bild hochladen",
-         "primary",
-         "toast:Hochgeladen"
-        ]
-       ]
-      }
-     ]
-    }
-   ]
-  },
-  {
    "id": "ansicht",
    "slug": "view",
    "area": "einstellungen",
@@ -2498,6 +2466,7 @@
         "Aus",
         "Play/Pause",
         "Nächster Titel",
+        "Titelwahl (Drücken schaltet um)",
         "Vorspulen"
        ]
       },
@@ -4550,13 +4519,7 @@
        "type": "nav",
        "label": "Theme",
        "target": "theme",
-       "subtitle": "Aussehen des Box-Displays"
-      },
-      {
-       "type": "nav",
-       "label": "Eigenes Theme",
-       "target": "eigenes",
-       "subtitle": "Hintergrundbild hochladen"
+       "subtitle": "Aussehen des Box-Displays, eigenes Bild"
       },
       {
        "type": "nav",
@@ -5416,18 +5379,18 @@
   },
   {
    "l": "Eigenes Theme",
-   "where": "Aussehen › Eigenes Theme",
-   "id": "eigenes"
+   "where": "Aussehen › Theme",
+   "id": "theme"
   },
   {
    "l": "Hintergrundbild",
-   "where": "Aussehen › Eigenes Theme",
-   "id": "eigenes"
+   "where": "Aussehen › Theme",
+   "id": "theme"
   },
   {
    "l": "Bild",
-   "where": "Aussehen › Eigenes Theme",
-   "id": "eigenes"
+   "where": "Aussehen › Theme",
+   "id": "theme"
   },
   {
    "l": "Ansicht",

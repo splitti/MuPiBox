@@ -25,6 +25,10 @@ export const DEFAULT_DISPLAY_TEXTS = {
   // list that could not be loaded: NAS folder / radio and podcasts without a connection
   nasUnavailable: 'NAS not reachable',
   offlineLabel: 'No connection',
+  // Spotify albums Spotify could not be asked for (it blocks the box's requests for a while)
+  spotifyUnavailable: 'Spotify is not answering right now',
+  // the track list of an album, a playlist or a show that has none
+  noTracks: 'No tracks available',
   // title of the resume page (km themes; the other themes keep "Resume")
   resumeTitle: 'Continue listening',
   outputTitle: 'Listen with',
@@ -34,6 +38,15 @@ export const DEFAULT_DISPLAY_TEXTS = {
   outputOff: 'off',
   outputConnecting: 'switching on …',
   outputNotFound: 'Not found – is it switched on?',
+  // "Läuft gerade" pill in the header (km themes, design round 2)
+  pausedLabel: 'Paused',
+  stopLabel: 'Stop',
+  // above the track list (km themes, design round 2): {n} = the current title, {t} = how many
+  trackOf: 'Track {n} of {t}',
+  // the headset switch in the player's header: the device did not answer
+  outputHeadsetNotFound: 'Headphones not found. Are they on and close by?',
+  // the tile of the device that plays now ("Hören mit" window)
+  outputPlaying: 'playing',
 }
 export type DisplayTextKey = keyof typeof DEFAULT_DISPLAY_TEXTS
 type TextSet = Partial<Record<DisplayTextKey, string>>

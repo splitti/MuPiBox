@@ -70,6 +70,8 @@ import { episodeKey, mayKeep, type PodcastOffline } from '../podcast-offline'
 import { pbkdf2Sync, randomBytes } from 'node:crypto'
 import { localOnly } from '../request-guard'
 import { clearSpotifyBlock } from '../spotify-block'
+import { clearArtistAlbumsMemory } from '../artist-albums-store'
+import { clearMetaCache } from '../spotify-sync/meta-cache'
 import { spotifyLoginAge } from './spotify-auth-age'
 import {
   REQUESTED_SCOPES,
@@ -218,11 +220,22 @@ function applySpotifyAccessToPlayer(restartPlayer: boolean): void {
   runSettingUpdate(restartPlayer)
 }
 
+// what else keeps Spotify's answers in memory (the server's SpotifyApiService - server.ts sets it)
+let onSpotifyCacheCleared: () => void = () => {}
+export function setOnSpotifyCacheCleared(listener: () => void): void {
+  onSpotifyCacheCleared = listener
+}
+
 // The backend's Spotify caches (see /spotify-access/clear-cache); true when all of them are gone
+// (the artists' album lists and the Smart-Sync's kept pictures, albums and playlists too, and what is kept in memory -
+// those stayed until a restart)
 async function clearSpotifyCache(): Promise<boolean> {
   const dir = `${process.cwd()}/cache`
   let ok = true
-  for (const name of ['spotify', 'spotify-api', 'covers', 'home-lists.json']) {
+  clearArtistAlbumsMemory()
+  clearMetaCache()
+  onSpotifyCacheCleared()
+  for (const name of ['spotify', 'spotify-api', 'covers', 'home-lists.json', 'artist-albums', 'sync-meta.json']) {
     const target = `${dir}/${name}`
     try {
       await fsp.rm(target, { recursive: true, force: true })
@@ -1241,7 +1254,10 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       const btMaxVolume = volumePercent(mb.btMaxVolume) ?? null
       // loudness: off | soft | strong - the player's levelling of what is not Spotify (mupibox.loudness, mpv only)
       const loudness = mb.loudness === 'soft' || mb.loudness === 'strong' ? mb.loudness : 'off'
-      bluetoothAudio().then((bluetooth) => res.json({ current, maxVolume, startupVolume, btMaxVolume, bluetooth, loudness }))
+      // playerBack: minimize | stop - the display's back button in the player (mupibox.playerBack, km themes): the
+      // music goes on with "Läuft gerade" in the header, or it stops as before
+      const playerBack = mb.playerBack === 'stop' ? 'stop' : 'minimize'
+      bluetoothAudio().then((bluetooth) => res.json({ current, maxVolume, startupVolume, btMaxVolume, bluetooth, loudness, playerBack }))
     })
   })
 
@@ -1287,8 +1303,15 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * accidentally-muted box that looks broken.
    */
   router.post('/audio/config', requireSession, requireCsrf, async (req, res) => {
-    const body = (req.body as { maxVolume?: unknown; startupVolume?: unknown; btMaxVolume?: unknown; loudness?: unknown } | undefined) ?? {}
-    const mutations: { maxVolume?: number; startupVolume?: number | null; btMaxVolume?: number | null; loudness?: 'off' | 'soft' | 'strong' } = {}
+    const body = (req.body as { maxVolume?: unknown; startupVolume?: unknown; btMaxVolume?: unknown; loudness?: unknown; playerBack?: unknown } | undefined) ?? {}
+    const mutations: { maxVolume?: number; startupVolume?: number | null; btMaxVolume?: number | null; loudness?: 'off' | 'soft' | 'strong'; playerBack?: 'minimize' | 'stop' } = {}
+    if (body.playerBack !== undefined) {
+      if (body.playerBack !== 'minimize' && body.playerBack !== 'stop') {
+        res.status(400).json({ error: 'playerBack must be minimize or stop' })
+        return
+      }
+      mutations.playerBack = body.playerBack
+    }
     if (body.loudness !== undefined) {
       if (body.loudness !== 'off' && body.loudness !== 'soft' && body.loudness !== 'strong') {
         res.status(400).json({ error: 'loudness must be off, soft or strong' })
@@ -1335,6 +1358,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       if (mutations.btMaxVolume === null) delete mb.btMaxVolume
       else if (mutations.btMaxVolume !== undefined) mb.btMaxVolume = mutations.btMaxVolume
       if (mutations.loudness !== undefined) mb.loudness = mutations.loudness
+      if (mutations.playerBack !== undefined) mb.playerBack = mutations.playerBack
       // The scripts that set the volume at start and shutdown (chromium-autostart.sh, mupi_shutdown.sh,
       // off_trigger.sh, shutdown_sound.sh) and the admin interface read startVolume: this app's startupVolume alone
       // had no effect. Both are written; without a fixed value both go, and the scripts leave the volume as it was.
@@ -2051,7 +2075,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       available,
       labels,
       labelsDe,
-      stage: mb.themeStage === true,
+      stage: mb.themeStage !== false, // (on unless switched off: the default since 5.0.8)
       stageAutoRead: mb.themeStageAutoRead === true,
     })
   })
@@ -2115,7 +2139,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       const m = ((c.mupibox as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
       if (typeof body.stage === 'boolean') m.themeStage = body.stage
       if (typeof body.autoRead === 'boolean') m.themeStageAutoRead = body.autoRead
-      stage = m.themeStage === true
+      stage = m.themeStage !== false
       autoRead = m.themeStageAutoRead === true
       c.mupibox = m
     })
@@ -2176,12 +2200,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     }
     // cached only when there is a picture: a cached "not found" kept a theme without preview for an hour
     const cached = { headers: { 'Cache-Control': 'public, max-age=3600' } }
+    // (every theme has its picture, made by tools/theme-preview/render.mjs)
     res.sendFile(`/var/www/images/${name}.png`, cached, (err) => {
-      if (!err || res.headersSent) return
-      // the children's themes (km) have an SVG picture of their background instead
-      res.sendFile(`/var/www/images/km/${name}.svg`, cached, (err2) => {
-        if (err2 && !res.headersSent) res.status(404).setHeader('Cache-Control', 'no-store').end()
-      })
+      if (err && !res.headersSent) res.status(404).setHeader('Cache-Control', 'no-store').end()
     })
   })
 

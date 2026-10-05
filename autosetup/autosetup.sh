@@ -510,11 +510,15 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	  echo 'dtparam=gpio=on' | tee -a "${BOOT_CONFIG}" >&3 2>&3
 	fi
 
-	if grep -q '^dtoverlay=gpio-poweroff,gpiopin=4,active_low=1' "${BOOT_CONFIG}"; then
+	# gpio-poweroff only when it is in no dtoverlay line yet (also not in one that loads further overlays, e.g. a
+	# display driver: a second line made such boxes hang at shutdown), on the pin set for the OnOff SHIM
+	if grep -qE '^[[:space:]]*dtoverlay=.*gpio-poweroff' "${BOOT_CONFIG}"; then
 	  echo -e "dtoverlay=gpio-poweroff already set" >&3 2>&3
 	else
+	  POWEROFF_PIN=$(/usr/bin/jq -r '.shim.poweroffPin // "4"' ${CONFIG} 2>/dev/null)
+	  [[ "${POWEROFF_PIN}" =~ ^[0-9]+$ ]] || POWEROFF_PIN=4
 	  echo '' | tee -a "${BOOT_CONFIG}" >&3 2>&3
-	  echo 'dtoverlay=gpio-poweroff,gpiopin=4,active_low=1' | tee -a "${BOOT_CONFIG}" >&3 2>&3
+	  echo "dtoverlay=gpio-poweroff,gpiopin=${POWEROFF_PIN},active_low=1" | tee -a "${BOOT_CONFIG}" >&3 2>&3
 	fi
 
 	# Power LED on the Pi's PWM hardware (see led_control.py; the software PWM took about 9 % of a CPU core all the

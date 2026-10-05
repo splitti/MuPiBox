@@ -92,6 +92,8 @@ TEXTS = {
     # ── Smart-Sync ──────────────────────────────────────────────────────────
     'sync_started': {'de': '🔄 Sync gestartet – das Ergebnis zeigt /syncstatus.', 'en': '🔄 Sync started – /syncstatus shows the result.'},
     'sync_started_short': {'de': '🔄 Sync gestartet.', 'en': '🔄 Sync started.'},
+    'sync_scheduled': {'de': '⏱ Der Sync folgt in {wait} s (kurz nach dem letzten).', 'en': '⏱ The sync follows in {wait} s (right after the last one).'},
+    'sync_blocked': {'de': '⛔ Spotify sperrt die Box gerade - der Sync wartet bis {until}.', 'en': '⛔ Spotify is blocking the box - the sync waits until {until}.'},
     'sync_cooldown': {'de': '⏱ Bitte in {wait} s noch einmal versuchen.', 'en': '⏱ Please try again in {wait} s.'},
     'sync_running': {'de': '⏳ Es läuft bereits ein Sync.', 'en': '⏳ A sync is already running.'},
     'sync_disabled': {'de': '⚠️ Smart-Sync ist nicht aktiviert. Du schaltest ihn in der MuPiBox-App ein (/login).', 'en': '⚠️ Smart-Sync is not enabled. Turn it on in the MuPiBox app (/login).'},

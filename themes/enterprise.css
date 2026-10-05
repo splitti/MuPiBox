@@ -31,12 +31,19 @@
   --ion-font-family: "Fredoka", sans-serif;
   --km-name-font: "Nasa21", "Fredoka", sans-serif;
   --km-name-size: 22px;
+  /* Runde 2: Kopfzeile, Pille, Knöpfe (Werte aus THEME_WERTE.md) */
+  --km-band: rgba(20,10,42,.62);
+  --km-on-band: #FFFFFF;
+  --km-on-band-2: #D6CCF0;
+  --km-btn: #443265;
+  --km-on-btn: #FFFFFF;
+  --km-tab-idle: #FFFFFF;
+  --km-on-pill: #FFFFFF;
 }
 
 /* Hintergrund: eigenes Bild, oben ein weicher Verlauf für Statusleiste und Reiter */
 .ion-page {
-  background: linear-gradient(to bottom, rgba(0,0,0,.5) 0, rgba(0,0,0,0) 120px),
-              var(--km-night) url("/theme-data/enterprise/enterprise-bg.jpg") center / cover no-repeat !important;
+  background: var(--km-night) url("/theme-data/enterprise/enterprise-bg.jpg") center / cover no-repeat !important;
 }
 .playtime-blocked-overlay, body.km mupi-media-unavailable {
   background: linear-gradient(var(--km-overlay), var(--km-overlay)), var(--km-night) url("/theme-data/enterprise/enterprise-bg.jpg") center / cover no-repeat !important;
@@ -44,9 +51,12 @@
 
 /* Eigene Schrift: Namensleisten, Bühnen-Name, Titel (Größe an die Schrift angepasst; Leiste bleibt 232 × 60) */
 body.km .title-row ion-card-title, body.km .title-row .truncate-text { font-family: var(--km-name-font) !important; font-size: var(--km-name-size) !important; font-weight: 400 !important; line-height: 1.1; }
-body.km.km-stage .km-stage-name { font-family: var(--km-name-font) !important; font-size: calc(var(--km-name-size) + 1px) !important; font-weight: 400 !important; }
+body.km.km-stage .km-stage-name, body.km.km-stage .km-stage-name span, body.km.km-stage .km-stage-name * { font-family: var(--km-name-font) !important; font-size: calc(var(--km-name-size) + 1px) !important; font-weight: 400 !important; }
 body.km .medialist-header ion-title, body.km .player-header .toolbar-album { font-family: var(--km-name-font) !important; font-weight: 400 !important; }
 body.km .playtime-blocked-overlay h1 { font-family: var(--km-name-font) !important; font-weight: 400 !important; }
+
+/* Sperr-/Ruhebildschirm und „Nicht erreichbar“ deckend: kein Durchscheinen der Auswahl */
+body.km .playtime-blocked-overlay, body.km mupi-media-unavailable { opacity: 1 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; z-index: 1000; }
 
 /* ==== gemeinsamer km-Teil (aus den km-Theme-Dateien, unverändert) ==== */
 body .home-content, body .medialist-content, body .player-content { --ion-background-color: transparent !important; }

@@ -6,7 +6,7 @@
 //
 // No I/O, no side effects — keeps the matching rules testable.
 
-import type { BoxLibraryEntry, ConflictReport, SyncDiff, SyncItem } from './types'
+import type { BoxLibraryEntry, ConflictReport, FailedSource, SyncDiff, SyncItem } from './types'
 
 /**
  * Match a SyncItem against the library by its identifierField. Items live
@@ -64,7 +64,9 @@ function syncEntryDiffersFromItem(entry: BoxLibraryEntry, item: SyncItem): boole
   if (entry.title !== item.title) return true
   if (entry.category !== item.category) return true
   if (entry.cover !== item.cover) return true
-  if (entry.artistcover !== item.artistCover) return true
+  // (a picture not known in this run - its request failed - is no change: it stripped the entry's picture, and the
+  // next run put it back, both times writing the library)
+  if (item.artistCover !== undefined && entry.artistcover !== item.artistCover) return true
   // (the release date came later: entries without it get it once)
   if (item.releaseDate && entry.release_date !== item.releaseDate) return true
   if (entry.spotify_sync_mode !== item.mode) return true
@@ -91,11 +93,28 @@ function syncEntryDiffersFromItem(entry: BoxLibraryEntry, item: SyncItem): boole
  * limit): nothing is removed then. Its entries were not in the items only because of that, and a removal would have
  * thrown away their overrides; the next complete run tidies up.
  */
-export function computeSyncDiff(syncItems: Map<string, SyncItem>, library: BoxLibraryEntry[], opts: { noRemovals?: boolean } = {}): SyncDiff {
+/** Whether an entry belongs to a source that could not be read in this run (kept, not removed). */
+function fromFailedSource(entry: BoxLibraryEntry, failed: FailedSource[]): boolean {
+  const playlists = entry.spotify_sync_playlists ?? []
+  return failed.some((f) => {
+    if (f.kind === 'playlist') return playlists.includes(f.id)
+    // (also an entry in a playlist: an album both pinned and in a playlist, taken out of the playlist while the pin
+    // could not be read, was removed)
+    if (f.kind === 'album') return entry.id === f.id
+    return entry.artistid === f.id || (!!f.name && entry.artist === f.name)
+  })
+}
+
+export function computeSyncDiff(
+  syncItems: Map<string, SyncItem>,
+  library: BoxLibraryEntry[],
+  opts: { noRemovals?: boolean; failedSources?: FailedSource[] } = {},
+): SyncDiff {
   const additions: SyncItem[] = []
   const updates: SyncDiff['updates'] = []
   const conflicts: ConflictReport[] = []
 
+  const failedPlaylists = new Set((opts.failedSources ?? []).filter((f) => f.kind === 'playlist').map((f) => f.id))
   // Mark which library entries got matched (for the orphan-removal step).
   const matchedLibrary = new Set<BoxLibraryEntry>()
 
@@ -105,6 +124,9 @@ export function computeSyncDiff(syncItems: Map<string, SyncItem>, library: BoxLi
       additions.push(item)
       continue
     }
+    // (an entry two items match - a pinned album that is also in a playlist as part of a compilation: the first one
+    // counts; both updated it, each its own way, and the library was written at every run)
+    if (matchedLibrary.has(match)) continue
     matchedLibrary.add(match)
     const source = match.source ?? 'manual'
     if (source === 'manual') {
@@ -119,6 +141,12 @@ export function computeSyncDiff(syncItems: Map<string, SyncItem>, library: BoxLi
       continue
     }
     // source === 'spotify-sync' (or anything else that drifted in)
+    // (a playlist that could not be read in this run stays in the entry's list: replaced by only the playlists read,
+    // the next run - that playlist failing again - did not know the entry belonged to it any more and removed it)
+    if (failedPlaylists.size) {
+      const kept = (match.spotify_sync_playlists ?? []).filter((id) => failedPlaylists.has(id) && !item.playlistIds.includes(id))
+      if (kept.length) item.playlistIds = [...item.playlistIds, ...kept]
+    }
     if (syncEntryDiffersFromItem(match, item)) {
       updates.push({ existing: match, item })
     }
@@ -129,10 +157,13 @@ export function computeSyncDiff(syncItems: Map<string, SyncItem>, library: BoxLi
   // Orphan-removal: sync-managed library entries that no longer appear
   // in any MuPiBox-playlist.
   const removals: BoxLibraryEntry[] = []
+  // (only the entries of a source that could not be read are kept: one that could never be read - a pinned album
+  // Spotify took down, a playlist the Spotify app may not read - held back every removal of the whole sync for good)
   if (!opts.noRemovals) {
     for (const entry of library) {
       if ((entry.source ?? 'manual') !== 'spotify-sync') continue
       if (matchedLibrary.has(entry)) continue
+      if (opts.failedSources?.length && fromFailedSource(entry, opts.failedSources)) continue
       removals.push(entry)
     }
   }

@@ -67,8 +67,10 @@ export function createSpotifySyncRouter(deps: RunSyncDeps): Router {
       res.status(code).json(result)
       return
     }
-    // ok: 'queued' (running now) or 'scheduled' (trailing-edge after cooldown).
-    res.status(202).json(result)
+    // ok: 'queued' (running now) or 'scheduled' (trailing-edge after cooldown). During a Spotify block the run asks
+    // nothing before its end - said, so the bot and the app do not report a start
+    const block = spotifyBlock()
+    res.status(202).json(block ? { ...result, spotify_block_until: block.until } : result)
   })
 
   /** GET /api/spotify-sync/config

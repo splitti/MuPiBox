@@ -27,6 +27,16 @@ export interface SpotifyBlock {
 
 let current: SpotifyBlock | null = null
 let loaded = false
+// the file's time when it was read or written here: written by someone else since (the player notes a 429 of its own
+// there) - read again
+let fileMtime = -1
+function fileTime(): number {
+  try {
+    return fs.statSync(BLOCK_FILE).mtimeMs
+  } catch {
+    return -1
+  }
+}
 
 function readFile(file: string): SpotifyBlock | null {
   try {
@@ -47,14 +57,23 @@ function write(): void {
     } else {
       fs.rmSync(BLOCK_FILE, { force: true })
     }
+    fileMtime = fileTime()
   } catch {
     // only for this run of the server then
   }
 }
 
 function load(): void {
-  if (loaded) return
+  if (loaded) {
+    const t = fileTime()
+    if (t === fileMtime) return
+    fileMtime = t
+    const kept = readFile(BLOCK_FILE)
+    if (kept && (!current || kept.until > current.until)) current = kept
+    return
+  }
   loaded = true
+  fileMtime = fileTime()
   current = readFile(BLOCK_FILE)
   const old = readFile(OLD_BLOCK_FILE)
   if (old && (!current || old.until > current.until)) current = old
@@ -86,6 +105,12 @@ export function spotifyBlock(): SpotifyBlock | null {
   return current
 }
 
+const clearedListeners: Array<() => void> = []
+/** Told when a block is lifted before its time (the Smart-Sync's scheduler waits for it otherwise). */
+export function onSpotifyBlockCleared(listener: () => void): void {
+  clearedListeners.push(listener)
+}
+
 /** The block is over before its time: Spotify answered again, or another Spotify app was entered. */
 export function clearSpotifyBlock(why: string): void {
   load()
@@ -93,4 +118,11 @@ export function clearSpotifyBlock(why: string): void {
   console.log(`${new Date().toLocaleString()}: [Spotify] block until ${new Date(current.until).toLocaleString()} lifted: ${why}`)
   current = null
   write()
+  for (const listener of clearedListeners) {
+    try {
+      listener()
+    } catch {
+      // a listener's trouble is its own
+    }
+  }
 }

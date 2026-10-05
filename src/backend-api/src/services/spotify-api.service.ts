@@ -48,6 +48,12 @@ export class SpotifyApiService {
   // available RAM (capped at 500 entries) so the same code stays safe on a
   // Pi 3 (~100 MB free -> ~50 entries) and a Pi 4 (~3 GB free -> 500).
   private memCache = new Map<string, CachedSpotifyData>()
+
+  /** Forgets what is kept in memory (after "clear cache" removed the files). */
+  public clearMemory(): void {
+    this.memCache.clear()
+    this.backgroundFailedAt.clear()
+  }
   private memCacheCap: number = Math.max(
     50,
     Math.min(
@@ -91,10 +97,22 @@ export class SpotifyApiService {
   private readonly backgroundUpdateDelay = 10000 // 10 seconds between updates
 
   constructor(private config: ServerConfig) {
-    this.spotifyApi = SpotifyApi.withClientCredentials(
-      this.config.spotify?.clientId || '',
-      this.config.spotify?.clientSecret || '',
-    )
+    this.spotifyApi = SpotifyApi.withClientCredentials(this.config.spotify?.clientId || '', this.config.spotify?.clientSecret || '', [], {
+      // Spotify's answers that are no success as errors with their status and Retry-After. The SDK's own validator
+      // threw plain Errors ("The app has exceeded its rate limits.") without them: a 429 was never taken for one here,
+      // so the wait, the shared block (spotify-block.ts) and the stop of the background updates never began, and the
+      // box went on asking Spotify during a block of hours - each request making it longer.
+      responseValidator: {
+        async validateResponse(response: Response) {
+          if (response.ok) return
+          const body = await response.text().catch(() => '')
+          throw Object.assign(new Error(`Spotify ${response.status} ${response.statusText}${body ? `: ${body.slice(0, 200)}` : ''}`), {
+            statusCode: response.status,
+            headers: { 'retry-after': response.headers.get('retry-after') ?? undefined },
+          })
+        },
+      },
+    })
     console.info('Spotify API service initialized - token management handled by library')
   }
 
@@ -121,7 +139,12 @@ export class SpotifyApiService {
   // H7: Lightweight LRU eviction. Called from saveToCache; runs only when
   // the directory exceeds CACHE_MAX_FILES. We sort by mtime (oldest first)
   // and unlink CACHE_PRUNE_BATCH files. Cheap enough to do inline.
+  private pruneCheckedAt = 0
   private pruneCacheIfNeeded(): void {
+    // (at most every 10 minutes: the folder - up to 4000 files - was read at every save, while a list was made from
+    // scratch hundreds of times in a row)
+    if (Date.now() - this.pruneCheckedAt < 10 * 60 * 1000) return
+    this.pruneCheckedAt = Date.now()
     try {
       const files = fs.readdirSync(this.cacheDir)
       if (files.length <= SpotifyApiService.CACHE_MAX_FILES) return
@@ -165,6 +188,11 @@ export class SpotifyApiService {
   }
 
   private getCacheExpiryForKey(cacheKey: string): number {
+    // (the longer prefixes first: show_episodes_ and artist_albums_ were taken for show_ and artist_ - a show's new
+    // episodes came after 7 days instead of one)
+    if (cacheKey.startsWith('artist_albums_') || cacheKey.startsWith('show_episodes_')) {
+      return this.cacheExpiry.semiStatic
+    }
     if (
       cacheKey.startsWith('album_') ||
       cacheKey.startsWith('show_') ||
@@ -173,9 +201,6 @@ export class SpotifyApiService {
       cacheKey.startsWith('episode_')
     ) {
       return this.cacheExpiry.static
-    }
-    if (cacheKey.startsWith('artist_albums_') || cacheKey.startsWith('show_episodes_')) {
-      return this.cacheExpiry.semiStatic
     }
     if (cacheKey.startsWith('playlist_')) {
       return this.cacheExpiry.dynamic
@@ -460,7 +485,13 @@ export class SpotifyApiService {
     console.debug('🏁 Finished processing request queue')
   }
 
+  // when the background update of a key failed last (not queued again for 30 minutes)
+  private backgroundFailedAt = new Map<string, number>()
+
   private triggerBackgroundUpdate(cacheKey: string, operation: () => Promise<any>, prioritize = false): void {
+    // (an update that failed - an album taken down, a block - was queued again at every read, i.e. every list made)
+    const failedAt = this.backgroundFailedAt.get(cacheKey)
+    if (failedAt && Date.now() - failedAt < 30 * 60 * 1000) return
     if (this.backgroundUpdates.has(cacheKey)) {
       console.debug(`🔄 Background update already in progress for ${cacheKey}`)
       return
@@ -516,16 +547,21 @@ export class SpotifyApiService {
 
         const updatePromise = this.rateLimitedRequest(operation)
           .then(async (result) => {
+            this.backgroundFailedAt.delete(key)
             await this.saveToCache(key, result)
             console.debug(`✅ [BG] Background update completed for ${key}`)
             // Delay to reduce load on Raspberry Pi
             await new Promise((resolve) => setTimeout(resolve, this.backgroundUpdateDelay))
           })
-          .catch((error) => {
+          .catch(async (error) => {
+            if (this.backgroundFailedAt.size > 2000) this.backgroundFailedAt.clear()
+            this.backgroundFailedAt.set(key, Date.now())
             console.error(
               `❌ [BG] Background update failed for ${key}:`,
               error instanceof Error ? error.message : String(error),
             )
+            // (the same pause after a failure: failed updates went on back to back)
+            await new Promise((resolve) => setTimeout(resolve, this.backgroundUpdateDelay))
           })
           .finally(() => {
             this.backgroundUpdates.delete(key)

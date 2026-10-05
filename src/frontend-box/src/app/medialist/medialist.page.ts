@@ -14,7 +14,7 @@ import {
 } from '@ionic/angular/standalone'
 import { addIcons } from 'ionicons'
 import { arrowBackOutline } from 'ionicons/icons'
-import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs'
+import { catchError, combineLatest, EMPTY, filter, map, of, switchMap, tap } from 'rxjs'
 
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
@@ -25,6 +25,9 @@ import { CategoryType, isSyncManaged, Media, MediaSorting } from '../media'
 import { MediaService } from '../media.service'
 import { MediaUnavailableComponent } from '../media-unavailable/media-unavailable.component'
 import { StatusComponent } from '../status/status.component'
+import { KmStatusGroupComponent } from '../km-header/km-status-group.component'
+import { NowPlayingPillComponent } from '../now-playing-pill/now-playing-pill.component'
+import { KmThemeService } from '../theme/km-theme.service'
 import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
 
@@ -34,6 +37,8 @@ import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
   styleUrls: ['./medialist.page.scss'],
   imports: [
     StatusComponent,
+    KmStatusGroupComponent,
+    NowPlayingPillComponent,
     IonHeader,
     IonToolbar,
     IonButtons,
@@ -49,6 +54,9 @@ import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
 })
 export class MedialistPage extends SwiperIonicEventsHelper {
   protected isLoading: WritableSignal<boolean> = signal(false)
+  // km themes, design round 2: header with the back button, the title, "Läuft gerade" and the status group
+  protected readonly km = inject(KmThemeService).isKm
+  protected readonly r2 = inject(KmThemeService).roundTwo
   protected category: WritableSignal<CategoryType> = signal('audiobook')
   protected artist: WritableSignal<Artist | undefined> = signal(undefined)
 
@@ -60,10 +68,19 @@ export class MedialistPage extends SwiperIonicEventsHelper {
   private levelsAbove: Record<string, string>[] = []
   private currentLevel: Record<string, string> = {}
   protected media: Signal<Media[]>
-  // A podcast or NAS folder that came back with nothing: the load failed (a real one always has entries)
+  // the list on the screen (as JSON) and what it is of: a quiet reload that brings the same list changes nothing
+  private shownListJson = ''
+  private shownArtist: Artist | undefined
+  private shownCategory: CategoryType | undefined
+  // A podcast or NAS folder that came back with nothing: the load failed (a real one always has entries).
+  // Spotify entries that are all placeholders: Spotify could not be asked (it blocks the box) and none were kept.
+  protected spotifyUnavailable: Signal<boolean> = computed(() => {
+    const media = this.media()
+    return !this.isLoading() && !!media?.length && media.every((m) => m.unavailable)
+  })
   protected unavailable: Signal<boolean> = computed(() => {
     const type = this.artist()?.coverMedia?.type
-    return !this.isLoading() && this.media()?.length === 0 && (type === 'rss' || type === 'nas')
+    return (!this.isLoading() && this.media()?.length === 0 && (type === 'rss' || type === 'nas')) || this.spotifyUnavailable()
   })
   protected swiperData: Signal<SwiperData<Media>[]> = computed(() => {
     return this.media()?.map((media) => {
@@ -165,8 +182,18 @@ export class MedialistPage extends SwiperIonicEventsHelper {
         // updates without leaving and re-entering the artist.
         this.mediaService.getLibraryVersion(),
       ]).pipe(
-        tap(() => this.isLoading.set(true)),
-        switchMap(([category, artist, version]) => {
+        // The same list again because the library changed (Smart-Sync, upload): loaded quietly - no loading dots,
+        // nothing when it looks the same, the list stays on an error (as on the start page)
+        map(([category, artist, version]) => ({
+          category,
+          artist,
+          version,
+          background: artist !== undefined && artist === this.shownArtist && category === this.shownCategory,
+        })),
+        tap(({ background }) => {
+          if (!background) this.isLoading.set(true)
+        }),
+        switchMap(({ category, artist, version, background }) => {
           if (artist === undefined) {
             return of([])
           }
@@ -202,7 +229,7 @@ export class MedialistPage extends SwiperIonicEventsHelper {
           return this.mediaService.fetchMediaFromArtist(artist, category, version).pipe(
             catchError((error) => {
               console.error(error)
-              return of([])
+              return background ? EMPTY : of([])
             }),
             map((media) => {
               return this.sortMedia(
@@ -211,6 +238,14 @@ export class MedialistPage extends SwiperIonicEventsHelper {
                 isShow ? MediaSorting.ReleaseDateDescending : MediaSorting.AlphabeticalAscending,
               )
             }),
+            map((media) => ({ media, json: JSON.stringify(media) })),
+            filter(({ json }) => !background || json !== this.shownListJson),
+            tap(({ json }) => {
+              this.shownListJson = json
+              this.shownArtist = artist
+              this.shownCategory = category
+            }),
+            map(({ media }) => media),
           )
         }),
         tap(() => this.isLoading.set(false)),
@@ -233,6 +268,10 @@ export class MedialistPage extends SwiperIonicEventsHelper {
   }
 
   protected coverClicked(clickedMedia: Media): void {
+    // (a placeholder of an artist, a search or a show: nothing to play)
+    if (clickedMedia.unavailable && !clickedMedia.id && !clickedMedia.playlistid && !clickedMedia.showid && !clickedMedia.audiobookid) {
+      return
+    }
     if (clickedMedia.type === 'library' && clickedMedia.libraryPath && clickedMedia.libraryIsContainer) {
       // A local folder with subfolders: show its children as the next level (its own audio files, if any, are an entry there).
       this.levelsAbove.push(this.currentLevel)

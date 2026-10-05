@@ -162,6 +162,8 @@ async function loadBoxName() {
 const hashOf = (id) => `#/${state.pages.get(id)?.slug ?? id}`
 function currentId() {
   const name = decodeURIComponent(location.hash.replace(/^#\/?/, ''))
+  // (the page "Eigenes Theme" is gone: its settings are on the theme page)
+  if (name === 'custom-theme' || name === 'eigenes') return 'theme'
   if (state.bySlug.has(name)) return state.bySlug.get(name)
   return state.pages.has(name) ? name : 'start'
 }
@@ -1251,8 +1253,12 @@ async function loadNotices(root) {
   }
   // Spotify blocks the box's requests (too many - see spotify-block.ts): until when, without reading logs
   const block = sync.body?.spotify_block
+  clearTimeout(root.blockOver)
   if (block?.until && Date.parse(block.until) > Date.now()) {
     notes.push(['sync', 'Spotify sperrt die Box gerade', `Zu viele Anfragen – bis ${untilWhen(Date.parse(block.until))} zeigt die Box gespeicherte Spotify-Inhalte, Neues kommt danach.`, 'spotify'])
+    // (the start page stays open: the note goes when the block is over, not only at the next visit)
+    const left = Date.parse(block.until) - Date.now() + 5000
+    if (left < 2 ** 31) root.blockOver = setTimeout(() => root.isConnected && loadNotices(root), left)
   }
   const box = $('#notices', root)
   if (!box) return
@@ -1404,6 +1410,7 @@ function errorText(r, fallback = 'Das hat nicht geklappt') {
     {
       playtime_limit_reached: 'Die Hörzeit für heute ist aufgebraucht.',
       quiet_hours_active: 'Gerade ist Ruhezeit.',
+      spotify_blocked: 'Spotify lässt gerade keine Anfragen zu. Bitte später noch einmal versuchen.',
       spotify_id_missing: 'Dieser Eintrag hat keine Spotify-ID.',
       item_not_found: 'Den Eintrag gibt es nicht mehr.',
       library_unavailable: 'Die Bibliothek ließ sich nicht lesen.',
@@ -1415,7 +1422,7 @@ function errorText(r, fallback = 'Das hat nicht geklappt') {
 
 /* Spielzeit: ring, instant actions, sleep timer, daily limits, quiet rules */
 
-const caps = { config: null, status: null, sleep: null }
+const caps = { config: null, status: null, sleep: null, listened: null }
 
 async function saveCaps(body, done = 'Gespeichert') {
   const r = await api(`${API}/caps-config`, { method: 'POST', body })
@@ -1424,12 +1431,24 @@ async function saveCaps(body, done = 'Gespeichert') {
   return r.ok
 }
 
+// Minutes listened today when the player keeps no count (limit and quiet times off): from the listening history, as
+// the start page's tile - the ring said 0 then
+async function listenedToday() {
+  if (Number.isFinite(caps.status?.playtime?.usedSeconds)) {
+    caps.listened = null
+    return
+  }
+  const log = await api(`${API}/playlog?range=today`)
+  caps.listened = Number.isFinite(log.body?.totalMinutes) ? log.body.totalMinutes : null
+}
+
 async function loadCaps() {
   const [cfg, st, sleep] = await Promise.all([api(`${API}/caps-config`), api('/api/playtime'), api(`${API}/sleeptimer`)])
   if (!cfg.ok) throw new Error(`caps-config ${cfg.status}`)
   caps.config = cfg.body
   caps.status = st.ok ? st.body : null
   caps.sleep = sleep.body?.active ? sleep.body : null
+  await listenedToday()
   const pl = cfg.body.playtimeLimit ?? {}
   const qh = cfg.body.quietHours ?? {}
   state.values.set('limitOn', !!pl.enabled)
@@ -1448,6 +1467,7 @@ async function refreshPlaytime() {
   const [st, sleep] = await Promise.all([api('/api/playtime'), api(`${API}/sleeptimer`)])
   if (st.ok) caps.status = st.body
   caps.sleep = sleep.body?.active ? sleep.body : null
+  await listenedToday()
   drawRing()
   drawSleep()
 }
@@ -1461,7 +1481,7 @@ function drawRing() {
   const q = st.quiet ?? {}
   const ov = st.override ?? {}
   const now = Date.now()
-  const used = Math.floor((p.usedSeconds ?? 0) / 60)
+  const used = Number.isFinite(p.usedSeconds) ? Math.floor(p.usedSeconds / 60) : (caps.listened ?? 0)
   const limited = !!p.enabled && Number.isFinite(p.limitMinutes)
   const left = limited ? Math.max(0, Math.ceil((p.remainingSeconds ?? (p.limitMinutes - used) * 60) / 60)) : null
   const pct = limited ? (p.limitMinutes > 0 ? Math.min(1, used / p.limitMinutes) : 1) : 0
@@ -4831,7 +4851,7 @@ function nasTop() {
         <div class="rows">${nas.profiles
           .map(
             (p, i) => `<div class="entry"><span class="lbl"><b>${esc(p.name === 'standard' ? 'Standard' : p.name)}</b><small>${p.shown} angezeigt · ${p.hidden} ausgeblendet · ${p.download} laden${p.matchesLogin ? '' : ` · anderes NAS (${esc(p.account ?? '')}@${esc(p.address ?? '')})`}</small></span>
-              ${p.active ? '<span class="chip ok">aktiv</span>' : `<button class="btn sm" data-pload="${i}" ${p.matchesLogin ? '' : 'disabled'}>Laden</button>`}${p.name === 'standard' ? '' : `<button class="btn danger sm" data-pdel="${i}">Löschen</button>`}</div>`,
+              ${p.active ? '<span class="chip ok">aktiv</span>' : `<button class="btn sm" data-pload="${i}" ${p.matchesLogin ? '' : 'disabled'}>Übernehmen</button>`}${p.name === 'standard' ? '' : `<button class="btn danger sm" data-pdel="${i}">Löschen</button>`}</div>`,
           )
           .join('')}</div>
         <div class="btns"><button class="btn" id="n-pnew">${icon('plus', 18)}Auswahl als Profil speichern</button></div></section>`
@@ -5214,7 +5234,7 @@ function mountNas(root, page) {
   for (const b of root.querySelectorAll('[data-pload]')) {
     const p = nas.profiles[Number(b.dataset.pload)]
     b.onclick = () =>
-      confirmSheet('Laden', `Profil „${p.name === 'standard' ? 'Standard' : p.name}“ laden? Die aktuelle Ordner-Auswahl wird ersetzt${nas.edits.size ? ' (auch deine ungespeicherten Änderungen)' : ''}.`, async () => {
+      confirmSheet('Übernehmen', `Profil „${p.name === 'standard' ? 'Standard' : p.name}“ übernehmen? Die aktuelle Ordner-Auswahl wird ersetzt${nas.edits.size ? ' (auch deine ungespeicherten Änderungen)' : ''}.`, async () => {
         const r = await api('/api/nas/profiles/load', { method: 'POST', body: { name: p.name } })
         if (r.body?.error === 'different_login') return toast('Das Profil gehört zu einem anderen NAS oder Konto', 'info')
         if (!r.body?.success) return toast('Das hat nicht geklappt', 'info')
@@ -5370,6 +5390,8 @@ async function loadTheme() {
   const r = await api(`${API}/theme`)
   if (!r.ok) throw new Error(`theme ${r.status}`)
   disp.theme = r.body
+  const c = await api(`${API}/display/custom-theme`)
+  disp.custom = c.ok ? c.body : null
 }
 async function loadDisplayOptions() {
   const r = await api(`${API}/display-options`)
@@ -5413,11 +5435,13 @@ function themeTop() {
   const t = disp.theme ?? {}
   const list = [...(t.available ?? [])].sort((a, b) => themeLabel(a).localeCompare(themeLabel(b), LOCALE, { sensitivity: 'base' }))
   return [
+    // (the own theme's settings first while it is the theme: below 68 tiles they were far down)
+    ...(t.current === 'custom' && disp.custom ? [customCard()] : []),
     `<section class="card wide"><h2>Theme</h2><p class="help">Tippe auf ein Theme, um es auf der Box zu verwenden.</p>
       <div class="search">${icon('search')}<input class="input" id="t-q" type="search" placeholder="Theme suchen" autocomplete="off"></div>
       <div class="theme-grid" id="t-grid">${list
         .map(
-          (n) => `<button class="theme-card" data-theme="${esc(n)}" aria-pressed="${n === t.current}"><span class="theme-img"><img src="${API}/theme-preview/${encodeURIComponent(n)}?v=2" alt="" loading="lazy"></span>
+          (n) => `<button class="theme-card" data-theme="${esc(n)}" aria-pressed="${n === t.current}"><span class="theme-img">${n === 'custom' && disp.custom?.hasPicture ? ctPreview(disp.custom, true) : `<img src="${API}/theme-preview/${encodeURIComponent(n)}?v=3" alt="" loading="lazy">`}</span>
             <b translate="no">${esc(themeLabel(n))}</b>${n === t.current ? '<small>aktiv</small>' : ''}</button>`,
         )
         .join('')}</div></section>`,
@@ -5433,9 +5457,13 @@ function mountTheme(root, page) {
   for (const c of root.querySelectorAll('.theme-card')) {
     const name = c.dataset.theme
     if (name === disp.theme.current) continue
+    if (name === 'custom' && disp.custom && !disp.custom.hasPicture) {
+      c.onclick = () => ctAskPicture(page)
+      continue
+    }
     c.onclick = () =>
       openSheet(
-        `<h2 translate="no">${esc(themeLabel(name))}</h2><div class="theme-big"><img src="${API}/theme-preview/${encodeURIComponent(name)}?v=2" alt=""></div>
+        `<h2 translate="no">${esc(themeLabel(name))}</h2><div class="theme-big"><img src="${API}/theme-preview/${encodeURIComponent(name)}?v=3" alt=""></div>
          <p class="help" style="margin:0">Dieses Theme auf der Box verwenden?</p>
          <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn" data-later>Beim nächsten Neuladen</button><button class="btn primary" data-now>Jetzt anzeigen</button></div>`,
         (sheet, close) => {
@@ -5461,50 +5489,254 @@ function mountTheme(root, page) {
         },
       )
   }
+  mountCustomCard(root)
 }
 
-/* Eigenes Theme: the background picture of the theme "custom" */
+/* Eigenes Theme ("custom"): the parents' picture and its settings - on the theme page, only while "custom" is the
+   theme. A live preview draws the display with the demo covers (tools/theme-preview); every change is saved at once
+   and the box shows it (eltern/custom-theme.ts writes the stylesheet the display adds). */
 
-function bgTop() {
-  const active = disp.theme?.current === 'custom'
-  return [
-    `<section class="card"><h2>Hintergrundbild</h2><p class="help">Das Bild des Themes „Eigenes“ (custom): ein JPG, am besten 800 × 480 Pixel oder größer. Es füllt das ganze Display.</p>
-      <div class="bg-preview"><img id="b-img" src="${API}/display/background?t=${Date.now()}" alt=""></div>
-      <input type="file" id="b-file" accept=".jpg,.jpeg,image/jpeg" hidden>
-      <div class="btns"><button class="btn" id="b-pick">${icon('image', 18)}Bild wählen</button><button class="btn primary" id="b-up" disabled>${icon('up', 18)}Bild hochladen</button></div>
-      <p class="help" id="b-picked" style="margin:0"></p>
-      ${active ? '<p class="help" style="margin:0">Das Theme „Eigenes“ ist aktiv.</p>' : `<div class="btns"><button class="btn" id="b-activate">Theme „Eigenes“ verwenden</button></div>`}</section>`,
-  ]
-}
-
-function mountCustom(root, page) {
-  let file = null
-  const img = $('#b-img', root)
-  img.addEventListener('error', () => img.remove(), { once: true })
-  $('#b-pick', root).onclick = () => $('#b-file', root).click()
-  $('#b-file', root).onchange = (e) => {
-    file = e.target.files?.[0] ?? null
-    const ok = file && /\.jpe?g$/i.test(file.name)
-    $('#b-picked', root).textContent = file ? (ok ? file.name : 'Bitte ein JPG wählen.') : ''
-    $('#b-up', root).disabled = !ok
+const CT_FONTS = [
+  ['fredoka', 'Fredoka', '"Fredoka", sans-serif', 600],
+  ['baloo', 'Baloo', '"Baloo 2", "Fredoka", sans-serif', 700],
+  ['nunito', 'Nunito', '"Nunito Sans", sans-serif', 800],
+  ['rye', 'Rye', '"Rye", serif', 400],
+]
+const CT_SIZES = [
+  ['s', 'Klein', 18],
+  ['m', 'Normal', 21],
+  ['l', 'Groß', 24],
+]
+// (the same rule as eltern/custom-theme.ts: the dark symbols on the accent must stay readable)
+function ctReadable(hex) {
+  const lum = (h) => {
+    const [r, g, b] = [1, 3, 5].map((i) => Number.parseInt(h.slice(i, i + 2), 16) / 255).map((s) => (s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
   }
-  $('#b-up', root).onclick = async () => {
-    const r = await fetch(`${API}/display/background`, { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'image/jpeg', 'x-mupibox-csrf': state.csrf }, body: file }).catch(() => null)
-    const b = r ? await r.json().catch(() => ({})) : {}
-    if (!r?.ok) {
-      return toast({ not_jpeg: 'Das ist kein JPG.', too_small: `Das Bild ist zu klein (${b.width} × ${b.height}).`, too_large: 'Das Bild ist größer als 15 MB.' }[b.error] ?? 'Hochladen ging nicht', 'info')
+  const ink = lum('#1A1A1A')
+  let c = hex
+  for (let i = 0; i < 20 && (lum(c) + 0.05) / (ink + 0.05) < 4.5; i++) {
+    c = `#${[1, 3, 5].map((k) => Math.round(Number.parseInt(c.slice(k, k + 2), 16) + (255 - Number.parseInt(c.slice(k, k + 2), 16)) * 0.12).toString(16).padStart(2, '0')).join('')}`.toUpperCase()
+  }
+  return c
+}
+const ctAccent = (c) => (c.accent ? ctReadable(c.accent) : c.resolved === 'light' ? '#FFCF6E' : '#E8E8E8')
+const ctBg = () => `${API}/display/background?t=${disp.customBgT ?? 0}`
+
+// the display at 800 × 480, scaled: the picture, the veil, the header, three demo covers with their names
+function ctPreview(c, mini = false) {
+  const font = CT_FONTS.find(([id]) => id === c.font) ?? CT_FONTS[0]
+  const size = (CT_SIZES.find(([id]) => id === c.size) ?? CT_SIZES[1])[2]
+  const covers = ['Lumi', 'Tilo', 'Professorin Pimpelbart']
+    .map((n, i) => `<div class="ct-cell"><span class="ct-cover" style="background-image:url('demo/cover-${i + 1}.svg')"></span><span class="ct-name" translate="no">${n}</span></div>`)
+    .join('')
+  return `<div class="ct-disp ct-${c.resolved}${mini ? ' ct-mini' : ''}" aria-hidden="true" style="${esc(`--ct-veil:${c.veil / 100};--ct-accent:${ctAccent(c)};--ct-font:${font[2]};--ct-weight:${font[3]};--ct-size:${size / 8}cqw;--ct-bg:url('${ctBg()}')`)}">
+    <span class="ct-pic"></span><span class="ct-veil"></span>
+    <span class="ct-hb"><i></i></span><span class="ct-tabs"><b></b><b></b><b></b><b></b></span><span class="ct-st"><i></i><u></u></span>
+    <div class="ct-row">${covers}</div></div>`
+}
+
+// the picture's brightness (writing: light on a dark picture, dark on a light one) and colours for the accent
+async function ctMeasure() {
+  try {
+    const img = new Image()
+    img.src = ctBg()
+    await img.decode()
+    const w = 80
+    const h = 48
+    const cv = document.createElement('canvas')
+    cv.width = w
+    cv.height = h
+    const ctx = cv.getContext('2d', { willReadFrequently: true })
+    ctx.drawImage(img, 0, 0, w, h)
+    const d = ctx.getImageData(0, 0, w, h).data
+    // brightness where the writing is: the header (top 15 %) and the name bars (60 - 90 %)
+    let sum = 0
+    let n = 0
+    const counts = new Map()
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4
+        const [r, g, b] = [d[i], d[i + 1], d[i + 2]]
+        if (y < h * 0.15 || (y > h * 0.6 && y < h * 0.9)) {
+          sum += 0.2126 * r + 0.7152 * g + 0.0722 * b
+          n++
+        }
+        const max = Math.max(r, g, b)
+        const min = Math.min(r, g, b)
+        if (max - min < 60 || max < 70) continue // greys and dark shades are no accent
+        const key = ((r >> 5) << 6) | ((g >> 5) << 3) | (b >> 5)
+        const e = counts.get(key) ?? { n: 0, r: 0, g: 0, b: 0 }
+        e.n++
+        e.r += r
+        e.g += g
+        e.b += b
+        counts.set(key, e)
+      }
     }
-    toast(`Bild gespeichert.${b.active ? ` ${b.reloaded ? 'Das Display lädt neu.' : ''}` : ' Es erscheint, wenn das Theme „Eigenes“ aktiv ist.'}`)
-    renderPage(page, false)
+    const hex = (e) => `#${[e.r, e.g, e.b].map((v) => Math.round(v / e.n).toString(16).padStart(2, '0')).join('')}`.toUpperCase()
+    const palette = []
+    for (const e of [...counts.values()].sort((a, b) => b.n - a.n)) {
+      const c = ctReadable(hex(e))
+      if (!palette.some((p) => Math.abs(Number.parseInt(p.slice(1), 16) - Number.parseInt(c.slice(1), 16)) < 0x202020)) palette.push(c)
+      if (palette.length === 5) break
+    }
+    return { light: n > 0 && sum / n > 150, palette }
+  } catch {
+    return null
   }
-  $('#b-activate', root)?.addEventListener('click', async () => {
-    const r = await api(`${API}/theme`, { method: 'POST', body: { theme: 'custom' } })
-    if (!r.ok) return toast('Das hat nicht geklappt', 'info')
-    const rl = await api(`${API}/display/reload-page`, { method: 'POST', body: {} })
-    toast(rl.ok && rl.body?.ok !== false ? 'Theme „Eigenes“ ist aktiv. Das Display lädt neu.' : 'Theme „Eigenes“ ist aktiv. Das Display zeigt es nach dem nächsten Neuladen.')
-    await loadTheme()
-    renderPage(page, false)
-  })
+}
+
+function customCard() {
+  const c = disp.custom
+  const seg = (id, opts, cur) => `<div class="seg" id="${id}">${opts.map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${v === cur}">${esc(l)}</button>`).join('')}</div>`
+  const veilLabel = c.resolved === 'light' ? 'Bild aufhellen' : 'Bild abdunkeln'
+  return `<section class="card wide" id="ct-card"><h2>Dein eigenes Theme</h2><p class="help">Bild, Lesbarkeit und Schrift für „Eigenes“. Die Box zeigt jede Änderung gleich.</p>
+    <style>@font-face{font-family:"Baloo 2";src:url("${API}/theme-font/baloo");font-weight:400 800;font-display:swap}@font-face{font-family:"Rye";src:url("${API}/theme-font/rye");font-display:swap}</style>
+    <div id="ct-prev">${ctPreview(c)}</div>
+    <div class="field"><label>Hintergrundbild</label>
+      <div class="ct-picrow"><span class="ct-thumb" style="background-image:url('${ctBg()}')"></span><div class="btns"><button class="btn sm" type="button" id="ct-pick">${icon('image', 18)}Anderes Bild</button></div></div>
+      <input type="file" id="ct-file" accept="image/*" hidden><small>Ein Foto oder Bild vom Gerät. Die App schneidet es auf das Format des Displays zu.</small></div>
+    <div class="field"><div class="slider-head"><label for="ct-veil" id="ct-veil-l">${veilLabel}</label><span class="value-pill" id="ct-veil-out">${c.veil} %</span></div>
+      <input type="range" id="ct-veil" min="0" max="70" step="5" value="${c.veil}" style="--fill:${(c.veil / 70) * 100}%"><small>Ein Schleier über dem Bild macht Namen und Symbole auf unruhigen Bildern lesbar.</small></div>
+    <div class="field"><label>Schrift und Symbole</label>${seg('ct-mode', [['auto', 'Automatisch'], ['dark', 'Hell'], ['light', 'Dunkel']], c.mode)}
+      <small>Automatisch: helle Schrift auf dunklen Bildern, dunkle auf hellen.</small></div>
+    <div class="field"><label>Akzentfarbe</label><div class="ct-swatches" id="ct-accent"></div><small>Für den gewählten Reiter, den Play-Knopf und den Fortschritt.</small></div>
+    <div class="field"><label>Schriftart der Namen</label><div class="ct-fonts" id="ct-font">${CT_FONTS.map(([id, label, family, weight]) => `<button type="button" data-v="${id}" aria-pressed="${id === c.font}"><span style="font-family:${esc(family)};font-weight:${weight}" translate="no">Lumi</span><small translate="no">${label}</small></button>`).join('')}</div></div>
+    <div class="field"><label>Schriftgröße</label>${seg('ct-size', CT_SIZES.map(([v, l]) => [v, l]), c.size)}<small>Lange Namen enden auf der Box mit „…“.</small></div>
+    <p class="help" id="ct-saved" style="margin:0" aria-live="polite"></p></section>`
+}
+
+// a picture from the device, cut to the display's 5 : 3 and sent as JPEG (HEIC etc.: whatever the browser can open)
+async function ctUploadPicture(file) {
+  let bmp
+  try {
+    bmp = await createImageBitmap(file)
+  } catch {
+    toast('Dieses Bild kann der Browser nicht öffnen. Bitte ein JPG oder PNG nehmen.', 'info')
+    return false
+  }
+  if (bmp.width < 400 || bmp.height < 240) {
+    toast(`Das Bild ist zu klein (${bmp.width} × ${bmp.height}).`, 'info')
+    return false
+  }
+  const ratio = 800 / 480
+  const sw = Math.min(bmp.width, bmp.height * ratio)
+  const sh = sw / ratio
+  const w = Math.min(1600, Math.round(sw))
+  const cv = document.createElement('canvas')
+  cv.width = w
+  cv.height = Math.round(w / ratio)
+  cv.getContext('2d').drawImage(bmp, (bmp.width - sw) / 2, (bmp.height - sh) / 2, sw, sh, 0, 0, cv.width, cv.height)
+  const blob = await new Promise((r) => cv.toBlob(r, 'image/jpeg', 0.88))
+  const r = await fetch(`${API}/display/background`, { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'image/jpeg', 'x-mupibox-csrf': state.csrf }, body: blob }).catch(() => null)
+  if (!r?.ok) {
+    toast('Hochladen ging nicht', 'info')
+    return false
+  }
+  disp.customBgT = Date.now()
+  if (disp.custom) disp.custom.hasPicture = true
+  return true
+}
+
+async function ctSave(c) {
+  const r = await api(`${API}/display/custom-theme`, { method: 'POST', body: { mode: c.mode, resolved: c.resolved, veil: c.veil, accent: c.accent, font: c.font, size: c.size } })
+  return r.ok ? r.body : null
+}
+
+function mountCustomCard(root) {
+  const card = $('#ct-card', root)
+  if (!card) return
+  const c = disp.custom
+  let palette = []
+  let timer = 0
+  const saved = $('#ct-saved', card)
+  const redraw = () => {
+    $('#ct-prev', card).innerHTML = ctPreview(c)
+    const tile = root.querySelector('.theme-card[data-theme="custom"] .theme-img')
+    if (tile) tile.innerHTML = ctPreview(c, true)
+    $('#ct-veil-l', card).textContent = c.resolved === 'light' ? 'Bild aufhellen' : 'Bild abdunkeln'
+    const own = c.accent && !palette.includes(c.accent) ? [c.accent] : []
+    $('#ct-accent', card).innerHTML = `<button type="button" class="ct-sw" data-v="" aria-pressed="${!c.accent}" style="--sw:${c.resolved === 'light' ? '#FFCF6E' : '#E8E8E8'}" aria-label="Standard"></button>${[...palette, ...own]
+      .map((p) => `<button type="button" class="ct-sw" data-v="${p}" aria-pressed="${p === c.accent}" style="--sw:${p}" aria-label="${p}"></button>`)
+      .join('')}<label class="ct-sw ct-any" aria-label="Eigene Farbe"><input type="color" value="${c.accent ?? '#5DA9E9'}"></label>`
+    for (const b of card.querySelectorAll('#ct-accent .ct-sw[data-v]')) b.onclick = () => change({ accent: b.dataset.v || null })
+    $('#ct-accent input', card).onchange = (e) => change({ accent: ctReadable(e.target.value.toUpperCase()) })
+  }
+  const change = (part) => {
+    Object.assign(c, part)
+    for (const [id, key] of [['#ct-mode', 'mode'], ['#ct-size', 'size'], ['#ct-font', 'font']]) {
+      for (const b of card.querySelectorAll(`${id} button`)) b.setAttribute('aria-pressed', String(b.dataset.v === c[key]))
+    }
+    redraw()
+    saved.textContent = ''
+    clearTimeout(timer)
+    timer = setTimeout(async () => {
+      const r = await ctSave(c)
+      saved.textContent = r ? (r.displayUpdated ? 'Gespeichert - die Box zeigt es.' : 'Gespeichert.') : 'Nicht gespeichert.'
+    }, 500)
+  }
+  const measure = async () => {
+    const m = await ctMeasure()
+    if (!m) return
+    palette = m.palette
+    if (c.mode === 'auto') c.resolved = m.light ? 'light' : 'dark'
+    redraw()
+  }
+  for (const b of card.querySelectorAll('#ct-mode button')) {
+    b.onclick = async () => {
+      const mode = b.dataset.v
+      if (mode === 'auto') {
+        const m = await ctMeasure()
+        change({ mode, resolved: m?.light ? 'light' : 'dark' })
+      } else change({ mode, resolved: mode })
+    }
+  }
+  for (const b of card.querySelectorAll('#ct-size button')) b.onclick = () => change({ size: b.dataset.v })
+  for (const b of card.querySelectorAll('#ct-font button')) b.onclick = () => change({ font: b.dataset.v })
+  const veil = $('#ct-veil', card)
+  veil.oninput = () => {
+    veil.style.setProperty('--fill', `${(veil.value / 70) * 100}%`)
+    $('#ct-veil-out', card).textContent = `${veil.value} %`
+    change({ veil: Number(veil.value) })
+  }
+  $('#ct-pick', card).onclick = () => $('#ct-file', card).click()
+  $('#ct-file', card).onchange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file || !(await ctUploadPicture(file))) return
+    $('.ct-thumb', card).style.backgroundImage = `url('${ctBg()}')`
+    await measure()
+    change({})
+  }
+  redraw()
+  measure()
+}
+
+// "Eigenes" chosen without a picture yet: the picture first
+function ctAskPicture(page) {
+  openSheet(
+    `<h2>Eigenes Theme</h2><p class="help" style="margin:0">Für „Eigenes“ brauchst du ein Bild, z. B. ein Foto. Die App schneidet es auf das Format des Displays zu; Schrift und Farben stellst du danach ein.</p>
+     <input type="file" id="ct-first" accept="image/*" hidden>
+     <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-pick>${icon('image', 18)}Bild wählen</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      sheet.querySelector('[data-pick]').onclick = () => sheet.querySelector('#ct-first').click()
+      sheet.querySelector('#ct-first').onchange = async (e) => {
+        const file = e.target.files?.[0]
+        if (!file || !(await ctUploadPicture(file))) return
+        close()
+        const m = await ctMeasure()
+        const c = { ...disp.custom, mode: 'auto', resolved: m?.light ? 'light' : 'dark' }
+        await ctSave(c)
+        const r = await api(`${API}/theme`, { method: 'POST', body: { theme: 'custom' } })
+        if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+        const rl = await api(`${API}/display/reload-page`, { method: 'POST', body: {} })
+        toast(rl.ok && rl.body?.ok !== false ? '„Eigenes“ ist aktiv. Das Display lädt neu.' : '„Eigenes“ ist aktiv. Das Display zeigt es nach dem nächsten Neuladen.')
+        await loadTheme()
+        renderPage(page, false)
+      }
+    },
+  )
 }
 
 /* Start- und Wartungsbilder: the scenes with the box name / texts laid over them as the box puts them in */
@@ -6067,6 +6299,8 @@ async function loadVolume() {
   // the levelling of the loudness (off | soft | strong): a switch and, with it on, the strength
   state.values.set('loudOn', r.body.loudness === 'soft' || r.body.loudness === 'strong')
   state.values.set('loudMode', r.body.loudness === 'strong' ? 'Kräftig' : 'Sanft')
+  // the display's back button in the player: minimise (the music goes on, "Läuft gerade" in the header) or stop
+  state.values.set('playerBack', r.body.playerBack === 'stop' ? 'Beenden' : 'Minimieren')
 }
 
 /* Soundkarte, Drehregler */
@@ -6075,6 +6309,8 @@ const BTN_FN = [
   ['Aus', 'off'],
   ['Play/Pause', 'playpause'],
   ['Nächster Titel', 'next'],
+  // (a press switches the knob for 10 s from the volume to the tracks: one track per detent)
+  ['Titelwahl (Drücken schaltet um)', 'tracks'],
   ['Vorspulen', 'ffwd'],
 ]
 
@@ -9176,7 +9412,6 @@ const CONTROLLERS = {
     mount: mountWizard,
   },
   theme: { load: loadTheme, top: themeTop, sections: () => [], mount: mountTheme },
-  eigenes: { load: loadTheme, top: bgTop, sections: () => [], mount: mountCustom },
   ansicht: {
     async load() {
       await Promise.all([loadTheme(), loadDisplayOptions()])
@@ -9193,7 +9428,9 @@ const CONTROLLERS = {
           if (it.key === 'stage') return { ...it, help: `Große Cover in der Mitte, für die Kinder-Themes${isKidsTheme(disp.theme?.current) ? '' : ` – das aktive Theme (${cur}) nutzt sie nicht`}.` }
           // (reading names out works only with the cover flow: shown under it while it is on)
           if (it.key === 'tts') return { ...it, dep: 'stage' }
-          if (it.key === 'names' || it.key === 'hideScroll') return { ...it, help: disp.theme?.current === 'coverflow' ? 'Nur beim Theme „coverflow“.' : `Nur beim Theme „coverflow“ – aktiv ist gerade „${cur}“.` }
+          // (the scroll bar is below the covers in every view - the cover flow's and the three side by side too)
+          if (it.key === 'hideScroll') return { ...it, help: 'Der Balken unter den Covern, in jeder Ansicht.' }
+          if (it.key === 'names') return { ...it, help: disp.theme?.current === 'coverflow' ? 'Nur beim Theme „coverflow“.' : `Nur beim Theme „coverflow“ – aktiv ist gerade „${cur}“.` }
           return it
         }),
       })),
@@ -9441,8 +9678,32 @@ const CONTROLLERS = {
           ...(state.values.get('loudOn') ? [{ type: 'seg', key: 'loudMode', label: 'Stärke', options: ['Sanft', 'Kräftig'], help: 'Sanft lässt der Dynamik eines Hörspiels mehr Raum, kräftig gleicht stärker an.' }] : []),
         ],
       },
+      // (the display's back button in the player - the kids' themes; its symbol shows which of the two it does)
+      {
+        title: 'Zurück im Player',
+        help: 'Was der Zurück-Knopf oben links im Player auf dem Display macht.',
+        items: [
+          {
+            type: 'seg',
+            key: 'playerBack',
+            label: 'Zurück im Player',
+            options: ['Minimieren', 'Beenden'],
+            help:
+              state.values.get('playerBack') === 'Beenden'
+                ? 'Beenden: Die Musik stoppt, das Display geht eine Ebene zurück (Pfeil nach links).'
+                : 'Minimieren: Die Musik läuft weiter, oben zeigt „Läuft gerade“, was spielt – mit einem Stopp-Knopf (Pfeil nach unten).',
+          },
+        ],
+      },
     ],
     async change(key, v, page) {
+      if (key === 'playerBack') {
+        const r = await api(`${API}/audio/config`, { method: 'POST', body: { playerBack: v === 'Beenden' ? 'stop' : 'minimize' } })
+        if (!r.ok) return toast('Nicht gespeichert', 'info')
+        toast('Gespeichert')
+        renderPage(page, false)
+        return
+      }
       if (key === 'loudOn' || key === 'loudMode') {
         const on = key === 'loudOn' ? !!v : !!state.values.get('loudOn')
         const strong = (key === 'loudMode' ? v : state.values.get('loudMode')) === 'Kräftig'
@@ -9592,7 +9853,8 @@ const CONTROLLERS = {
           ],
         },
         {
-          title: 'Laden',
+          // ("Aufladen": "Laden" is the NAS's and the voices' download in the English app)
+          title: 'Aufladen',
           col: 1,
           items: [it('vreg', { label: 'Ladeschluss', sub: 'VREG', unit: 'mV', help: 'Leer = Standard des Lade-Chips. Bei zwei Zellen in Reihe höchstens 8400 mV (4,2 V je Zelle) – höher schadet dem Akku.' })],
         },

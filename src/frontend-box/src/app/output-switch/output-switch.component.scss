@@ -1,0 +1,136 @@
+// output capsule (design round 2, §4): 64 high, padding 4, radius 32, gap 2 - fields 56 × 56, a line 1 × 32, the volume
+:host {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.oc {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 64px;
+  padding: 4px;
+  box-sizing: border-box;
+  border-radius: 32px;
+  background: var(--km-night-2);
+  color: var(--km-on-pill);
+
+  // without a paired headset: only the volume, 14 from the left
+  &.oc-solo {
+    padding-left: 14px;
+  }
+}
+
+svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  .fill {
+    fill: currentColor;
+  }
+}
+
+.oc-field {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 28px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--km-on-pill);
+  display: grid;
+  place-items: center;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 150ms var(--km-spring),
+    background-color 200ms;
+
+  &:active {
+    transform: scale(0.92);
+  }
+
+  &.oc-on {
+    background: var(--km-apricot);
+    color: var(--km-ink);
+  }
+
+  svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  // connecting: the symbol 55 % opaque, a turning ring in the accent colour
+  &[data-state='connecting'] .oc-icon {
+    opacity: 0.55;
+  }
+
+  &[data-state='notfound'] .oc-icon {
+    opacity: 0.5;
+  }
+}
+
+// ready (green) / not found (red): 11 px, right 10, top 10, a 2 px edge in the capsule's colour
+.oc-dot {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 11px;
+  height: 11px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid var(--km-night-2);
+  background: #3ccb7f;
+
+  [data-state='notfound'] > & {
+    background: var(--km-rose);
+  }
+}
+
+.oc-ring {
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  border: 3px solid var(--km-apricot);
+  border-right-color: transparent;
+  animation: oc-turn 900ms linear infinite;
+}
+
+@keyframes oc-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.oc-sep {
+  flex: 0 0 1px;
+  width: 1px;
+  height: 32px;
+  margin: 0 6px;
+  background: color-mix(in srgb, var(--km-on-pill) 25%, transparent);
+}
+
+// the volume: 56 high, padding 0 14 0 8, speaker 22, "30 %" 18 / 600
+.oc-vol {
+  height: 56px;
+  padding: 0 14px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--km-on-pill);
+
+  svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+.oc-solo .oc-vol {
+  padding-left: 0;
+}
