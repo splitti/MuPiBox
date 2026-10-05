@@ -6522,6 +6522,11 @@ function batteryTop() {
         ? 'entlädt'
         : 'Ruhezustand'
   const health = { OK: 'OK', LOW: 'Niedrig', SHUTDOWN: 'Leer' }[h.Bat_Stat] ?? h.Bat_Stat
+  // while it charges: the time until full (the HAT service works it out from the current that goes in) and where the
+  // percent comes from
+  const etaMin = Number.isFinite(h.Charge_Eta_Min) ? h.Charge_Eta_Min : null
+  const etaText = etaMin === null ? '' : etaMin < 5 ? 'gleich fertig' : `${etaMin >= 60 ? `${Math.floor(etaMin / 60)} h ` : ''}${etaMin % 60 ? `${etaMin % 60} min` : ''}`.trim()
+  const chargeNote = charging && h.Bat_PercentSource === 'charging' ? 'Beim Laden aus der geladenen Menge geschätzt – nicht aus der Spannung.' : ''
   // the last 24 hours in twelve steps of two hours: the charge at the end of each (the last reading in it), so every
   // bar says how full the box was then
   const now = Date.now()
@@ -6547,10 +6552,10 @@ function batteryTop() {
         ? `<div class="note warn">${icon('bat', 18)}<span>${esc(BATTERY_STALE)} ${esc(`Letzte Werte von ${hhmm(Date.parse(h.BatteryStaleSince))} Uhr.`)}</span></div>
            <div class="btns"><button class="btn" id="hat-reboot">Box neu starten</button></div>`
         : ''
-    }<div class="bat-now"><div class="bat-pct">${Number.isFinite(pct) ? `${pct} %` : '–'}</div><small>${esc([health, state].filter(Boolean).join(' · '))}</small></div>
+    }<div class="bat-now"><div class="bat-pct">${Number.isFinite(pct) ? `${pct} %` : '–'}</div><small>${esc([health, state, charging && etaText ? (etaMin < 5 ? etaText : `voll in etwa ${etaText}`) : ''].filter(Boolean).join(' · '))}</small>${chargeNote ? `<small class="help">${esc(chargeNote)}</small>` : ''}</div>
       <dl class="kv"><div><dt>Akku-Spannung</dt><dd>${v(h.Vbat)}</dd></div><div><dt>USB-Spannung</dt><dd>${v(h.Vbus)}</dd></div>
         <div><dt>Akku-Strom</dt><dd>${Number.isFinite(h.Ibat) ? `${h.Ibat.toLocaleString(LOCALE)} mA` : '–'}</dd></div><div><dt>Temperatur Lade-Chip</dt><dd>${Number.isFinite(h.Temp) ? `${h.Temp.toLocaleString(LOCALE)} °C` : '–'}</dd></div>
-        <div><dt>Ladegerät</dt><dd>${esc(status)}</dd></div></dl></section>`,
+        <div><dt>Ladegerät</dt><dd>${esc(status)}</dd></div>${charging ? `<div><dt>Voll in etwa</dt><dd>${esc(etaText || (Number.isFinite(h.Bat_Capacity_mAh) ? 'lässt sich gerade nicht schätzen' : 'Kapazität des Akkus unbekannt'))}</dd></div>` : ''}</dl></section>`,
     `<section class="card"><h2>Verlauf (24 h)</h2>${
       last
         ? `${chart}<p class="help" style="margin:0">${esc(`Zuletzt ${last.percent} % um ${hhmm(Date.parse(last.ts))}.`)}</p>`
@@ -6582,6 +6587,7 @@ const PROFILE_KEYS = [
   ['thWarn', 'th_warning'],
   ['thShut', 'th_shutdown'],
   ['vreg', 'vreg'],
+  ['capacity', 'capacity'],
 ]
 
 async function loadHat() {
@@ -6604,7 +6610,8 @@ function hatNowLine() {
   if (!h || !Number.isFinite(h.Vbat)) return ''
   const pct = Number.isFinite(h.Bat_Percent) ? h.Bat_Percent : Number.parseInt(String(h.Bat_SOC ?? ''), 10)
   const what = batteryCharging(h) ? 'lädt' : Number.isFinite(h.Ibat) && h.Ibat < -50 ? 'entlädt' : 'Ruhezustand'
-  const parts = [`${(h.Vbat / 1000).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} V`, Number.isFinite(pct) ? `${pct} %` : '', what].filter(Boolean)
+  const eta = batteryCharging(h) && Number.isFinite(h.Charge_Eta_Min) && h.Charge_Eta_Min >= 5 ? `voll in etwa ${h.Charge_Eta_Min >= 60 ? `${Math.floor(h.Charge_Eta_Min / 60)} h ` : ''}${h.Charge_Eta_Min % 60 ? `${h.Charge_Eta_Min % 60} min` : ''}`.trim() : ''
+  const parts = [`${(h.Vbat / 1000).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} V`, Number.isFinite(pct) ? `${pct} %` : '', what, eta].filter(Boolean)
   return `<div class="status-line"><span class="dot ok"></span><span><span>Jetzt</span> <b>${esc(parts.join(' · '))}</b></span></div>`
 }
 
@@ -6625,6 +6632,8 @@ function hatProfileErrors() {
   else if (!e.thWarn && v.thShut >= v.thWarn) e.thShut = 'Muss unter der Warnung liegen'
   const vreg = String(state.values.get('vreg') ?? '').trim()
   if (vreg && !(v.vreg >= 6000 && v.vreg <= 8400)) e.vreg = v.vreg > 8400 ? 'Höher als 8400 mV schadet einem 2S-Akku' : '6000–8400'
+  const capacity = String(state.values.get('capacity') ?? '').trim()
+  if (capacity && !(v.capacity >= 500 && v.capacity <= 200000)) e.capacity = '500–200000'
   return e
 }
 
@@ -9895,7 +9904,10 @@ const CONTROLLERS = {
           // ("Aufladen": "Laden" is the NAS's and the voices' download in the English app)
           title: 'Aufladen',
           col: 1,
-          items: [it('vreg', { label: 'Ladeschluss', sub: 'VREG', unit: 'mV', help: 'Leer = Standard des Lade-Chips. Bei zwei Zellen in Reihe höchstens 8400 mV (4,2 V je Zelle) – höher schadet dem Akku.' })],
+          items: [
+            it('vreg', { label: 'Ladeschluss', sub: 'VREG', unit: 'mV', help: 'Leer = Standard des Lade-Chips. Bei zwei Zellen in Reihe höchstens 8400 mV (4,2 V je Zelle) – höher schadet dem Akku.' }),
+            it('capacity', { label: 'Kapazität', sub: 'für die Zeit bis voll', unit: 'mAh', help: 'Die Größe des Akkus. Leer = die Größe aus dem Namen des Profils, sonst gibt es keine Zeit bis voll.' }),
+          ],
         },
         { bar: true, items: [{ type: 'buttons', buttons: [['Profil speichern', 'primary', 'toast:Gespeichert']] }] },
       ]
@@ -9956,7 +9968,16 @@ const CONTROLLERS = {
             profile.vreg = null
             continue
           }
+          if (raw === '' && field === 'capacity') {
+            profile.capacity = null
+            continue
+          }
           if (raw === '') continue
+          if (field === 'capacity') {
+            if (!/^\d{3,6}$/.test(raw) || Number(raw) < 500) return toast('Kapazität: bitte in mAh, mindestens 500', 'info')
+            profile.capacity = Number(raw)
+            continue
+          }
           if (!/^\d{4}$/.test(raw)) return toast(`${field}: bitte eine Spannung in mV (4 Ziffern)`, 'info')
           profile[field] = Number(raw)
         }

@@ -1062,6 +1062,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     // Validation pro-Feld + Cross-Field (th_shutdown < th_warning).
     let profileMutations: Record<string, string> | null = null
     let removeVreg = false
+    let removeCapacity = false
     if (body.batteryProfile && typeof body.batteryProfile === 'object') {
       const ranges: Record<string, [number, number]> = {
         v_100: [5000, 9000],
@@ -1072,6 +1073,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         th_warning: [5500, 8000],
         th_shutdown: [5000, 7500],
         vreg: [6000, 8500],
+        // the pack's capacity in mAh: the time until full is calculated with it
+        capacity: [500, 200000],
       }
       const candidates: Record<string, string> = {}
       for (const [field, [lo, hi]] of Object.entries(ranges)) {
@@ -1081,10 +1084,15 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
           removeVreg = true
           continue
         }
+        // capacity null: no own value again (the size in the profile's name counts, else no time until full)
+        if (field === 'capacity' && raw === null) {
+          removeCapacity = true
+          continue
+        }
         if (raw === undefined || raw === null || raw === '') continue
         const n = Math.floor(Number(raw))
         if (!Number.isFinite(n) || n < lo || n > hi) {
-          res.status(400).json({ error: `${field} must be ${lo}-${hi} mV` })
+          res.status(400).json({ error: `${field} must be ${lo}-${hi} ${field === 'capacity' ? 'mAh' : 'mV'}` })
           return
         }
         candidates[field] = String(n)
@@ -1106,7 +1114,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         res.status(400).json({ error: `th_shutdown (${finalShutdown}) must be < th_warning (${finalWarning})` })
         return
       }
-      if (Object.keys(candidates).length > 0 || removeVreg) profileMutations = candidates
+      if (Object.keys(candidates).length > 0 || removeVreg || removeCapacity) profileMutations = candidates
     }
 
     if (Object.keys(timeoutMutations).length === 0 && !profileMutations) {
@@ -1131,6 +1139,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
           const pConfig = ((profile.config as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
           Object.assign(pConfig, profileMutations)
           if (removeVreg) delete pConfig.vreg
+          if (removeCapacity) delete pConfig.capacity
           profile.config = pConfig
           mupihat.battery_types = types
           cfg.mupihat = mupihat

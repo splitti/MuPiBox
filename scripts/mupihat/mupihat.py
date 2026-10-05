@@ -127,6 +127,7 @@ def periodic_json_dump():
                 # last ~32s instead of a single sample. Cheap, done inside
                 # the lock so we use the value the bulk-read just refreshed.
                 hat.record_vbat_sample(hat.read_Vbat())
+                hat.update_charge_estimate()
             time.sleep(1)  # Allow time for the registers to be updated
             with i2c_lock:
                 if json_flag:
