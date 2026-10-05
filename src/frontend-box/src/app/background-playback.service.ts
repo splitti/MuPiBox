@@ -291,34 +291,43 @@ export class BackgroundPlaybackService {
       if (this.media() !== stopping) return
       if (!this.stillThis(stopping, local)) return this.clear()
     }
-    await this.stopPlayer()
-    this.clear()
+    // (the stop did not reach the player: the music goes on - the bar stays, its stop can be tapped again)
+    if ((await this.stopPlayer()) === 'failed') return
+    // (something else went into the background while the stop was on its way: its bar stays)
+    if (this.media() === stopping) this.clear()
   }
 
   /**
    * The stop itself. Only for the start this is about (its generation): the player refuses it when something else was
    * started in the moment between the look above and the stop - that one stopped, and its place was kept under this.
    */
-  private async stopPlayer(): Promise<void> {
+  private async stopPlayer(): Promise<'done' | 'overtaken' | 'failed'> {
     const generation = this.generation
     if (!generation) {
       if (this.shuffled) this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF)
       this.playerService.sendCmd(PlayerCmds.STOP)
       if (this.albumStop) this.playerService.sendCmd(PlayerCmds.ALBUMSTOP)
-      return
+      return 'done'
     }
     // (one after the other: the stop counts a new start, a shuffle-off behind it was refused)
     if (this.shuffled) await this.playerService.sendCmdFor(PlayerCmds.SHUFFLEOFF, generation)
     const stopped = await this.playerService.sendCmdFor(PlayerCmds.STOP, generation)
-    if (stopped && this.albumStop) this.playerService.sendCmd(PlayerCmds.ALBUMSTOP)
+    if (stopped === 'done' && this.albumStop) this.playerService.sendCmd(PlayerCmds.ALBUMSTOP)
+    return stopped
   }
 
   /** The end of what played in the background: stopped - no place kept (the player's state is already the next
    * music's: its track and position were saved under this album), the last saved place stays. */
-  private async finish(): Promise<void> {
+  private async finish(attempt = 0): Promise<void> {
     const finishing = this.media()
-    await this.stopPlayer()
-    if (this.media() === finishing) this.clear()
+    const stopped = await this.stopPlayer()
+    if (this.media() !== finishing) return
+    if (stopped === 'failed') {
+      // (the stop did not reach the player: tried again a little later, the bar stays meanwhile)
+      if (attempt < 2) setTimeout(() => this.media() === finishing && void this.finish(attempt + 1), 2000)
+      return
+    }
+    this.clear()
   }
 
   private async poll(): Promise<void> {

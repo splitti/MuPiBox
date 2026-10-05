@@ -1749,6 +1749,7 @@ function pauseOwnSpotify(why) {
 
 function pause() {
   forgetSpotifyState()
+  playPauseRequest++
   // (a start waiting for the token's renewal is not made after a pause - it started the music again)
   spotifyReplayAfterRefresh = null
   if (telegramPlaybackNotices())
@@ -1781,6 +1782,11 @@ function pause() {
 // Bumped by every stop and every new playback start; an async start (NAS) that finds it changed
 // after its awaits was overtaken and must not play.
 let playbackGeneration = 0
+// Bumped by every stop and every new playback asked for (a command that starts media) - not by the loads inside one
+// (a podcast's reconnect, a radio's stream address): which playback /local names, and a command with ?gen= is for
+let playbackRequest = 0
+// Bumped by every play and pause: a play that waited for the box's device is not made after a pause meanwhile
+let playPauseRequest = 0
 
 // The two players don't know of each other: Spotify plays in the kiosk browser (Web Playback SDK), local
 // media, radio, podcasts and the NAS in mplayer. The player only knew what was playing from its own state,
@@ -1801,6 +1807,7 @@ function switchToMplayer() {
 function stop() {
   forgetSpotifyState()
   playbackGeneration++
+  playbackRequest++
   currentMeta.finished = false
   clearLibraryResumeTimers()
   if (telegramPlaybackNotices())
@@ -1865,8 +1872,19 @@ function play() {
     // the music go on)
     currentMeta.spotifySilenceAt = 0
     // (only on the box's own player - without a device Spotify went on on the account's active one, a phone)
+    const asked = ++playPauseRequest
+    const generation = playbackGeneration
     ownDeviceForStart()
       .then((own) => {
+        // (while the device was looked for: a pause, a stop, another start, a limit or a block - the play is not made,
+        // it started the music again, uncounted after a stop)
+        const overtaken =
+          asked !== playPauseRequest ||
+          generation !== playbackGeneration ||
+          currentMeta.currentPlayer !== 'spotify' ||
+          isPlaybackBlocked() ||
+          !!spotifyBlockedUntil()
+        if (overtaken) throw overtakenStart()
         if (!own) throw new Error("The box's Spotify player is not known - not played")
         activeDevice = activeDevice || own
         return spotifyApi.play({ device_id: activeDevice })
@@ -3213,6 +3231,12 @@ app.get('/display/spotify-device/:id', (req, res) => {
 })
 
 app.get('/display/spotify-silent/:on', (req, res) => {
+  // (only from the device the display reported - the display's page opened in a parent's browser through the app has
+  // no player of its own, and its "silent" counted the playing box as silent)
+  if (!displaySpotifyDevice || req.query.device !== displaySpotifyDevice) {
+    res.status(409).json({ error: 'not the display device' })
+    return
+  }
   currentMeta.spotifySilent = req.params.on === '1'
   res.json({ ok: true })
 })
@@ -3236,7 +3260,7 @@ app.get('/local', (_req, res) => {
   // landen nicht in der Response, obwohl die Mutationen am Objekt
   // ankommen.
   // (generation: which start this is - a stop of the display's background playback names it, see ?gen=)
-  res.json({ ...currentMeta, generation: playbackGeneration })
+  res.json({ ...currentMeta, generation: playbackRequest })
 })
 
 app.get('/spotify/token', (_req, res) => {
@@ -3347,8 +3371,8 @@ app.use((req, res) => {
       return null
     }
   })()
-  if (onlyFor !== null && Number(onlyFor) !== playbackGeneration) {
-    log.debug(`${now()}: [Spotify Control] ${command.name} not made: for playback ${onlyFor}, now ${playbackGeneration}`)
+  if (onlyFor !== null && Number(onlyFor) !== playbackRequest) {
+    log.debug(`${now()}: [Spotify Control] ${command.name} not made: for playback ${onlyFor}, now ${playbackRequest}`)
     res.status(409).send({ status: 'overtaken', error: 'another playback' })
     return
   }
@@ -3358,6 +3382,7 @@ app.use((req, res) => {
   // picture of a podcast played before it (radio and podcasts set their own below, Spotify brings its own).
   const newMedia = command.name.includes('spotify:') || ['library', 'nas', 'radio', 'rss'].some((segment) => hasDirSegment(command, segment))
   if (newMedia) {
+    playbackRequest++
     currentMeta.pause = false
     if (hasDirSegment(command, 'library') || hasDirSegment(command, 'nas')) currentMeta.cover = triggerCover
   }

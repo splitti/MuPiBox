@@ -93,6 +93,7 @@ export class SpotifyPlayerService {
 
   // What the box's player was told last: whether this player is silent (see reportSilence)
   private silenceReported: boolean | null = null
+  private silenceDevice: string | null = null
 
   /**
    * Whether this player is silent - paused, or the playback not on it - told to the box's player: it counts the play
@@ -100,14 +101,22 @@ export class SpotifyPlayerService {
    * silent box counted as playing). Only changes, and again with the device check (the box's player restarted).
    */
   private reportSilence(state: SpotifyWebPlaybackState | null, again = false): void {
+    // (only the kiosk's own player, once it has its device - the display's page opened in a browser elsewhere has no
+    // player, and its "silent" counted the playing box as silent; the box's player checks the device too)
+    // (a player that disconnected has no device any more: told under the one it had - the box's player still knows it)
+    this.silenceDevice = this.deviceId ?? this.silenceDevice
+    if (!this.shouldUsePlayer() || !this.silenceDevice) return
     const silent = !state || state.paused
     if (silent === this.silenceReported && !again) return
     this.silenceReported = silent
-    this.http.get(`${environment.backend.playerUrl}/display/spotify-silent/${silent ? 1 : 0}`).subscribe({
-      error: () => {
-        this.silenceReported = null
-      },
-    })
+    const device = encodeURIComponent(this.silenceDevice)
+    this.http
+      .get(`${environment.backend.playerUrl}/display/spotify-silent/${silent ? 1 : 0}?device=${device}`)
+      .subscribe({
+        error: () => {
+          this.silenceReported = null
+        },
+      })
   }
 
   /**
@@ -598,10 +607,11 @@ export class SpotifyPlayerService {
       this.isConnected$.next(true)
       // Tell the player which Spotify device the display is: a start that does not come from the display (the
       // parents' web app, Telegram) plays here too, instead of on "the active device" - there is none after a
-      // restart or while the NAS/local media played, and then nothing played at all.
+      // restart or while the NAS/local media played, and then nothing played at all. Then whether it is silent: the
+      // box's player takes that only from the device it knows.
       this.http
         .get(`${environment.backend.playerUrl}/display/spotify-device/${encodeURIComponent(device_id)}`)
-        .subscribe({ error: () => {} })
+        .subscribe({ next: () => this.reportSilence(this.playerState$.value, true), error: () => {} })
     })
 
     // Not ready event - device disconnected
@@ -728,8 +738,7 @@ export class SpotifyPlayerService {
         // (the box's player forgets the display's device when it restarts: told again)
         this.http
           .get(`${environment.backend.playerUrl}/display/spotify-device/${encodeURIComponent(id)}`)
-          .subscribe({ error: () => {} })
-        this.reportSilence(this.playerState$.value, true)
+          .subscribe({ next: () => this.reportSilence(this.playerState$.value, true), error: () => {} })
       } else this.logService.warn('[Spotify SDK] Spotify does not list this player any more:', id)
       return known
     } catch {
