@@ -3023,7 +3023,9 @@ app.get('/getDevices', (_req, res) => {
       res.send(availableDevices)
     },
     (err) => {
-      handleSpotifyError(err, 'getMyDevicesHTTP')
+      // (an answer also on a failure - the request waited for its timeout; only a token renewal, no recovery)
+      if (err?.body?.error?.status === 401) handleSpotifyError(err, 'getMyDevicesHTTP')
+      res.status(502).json({ error: 'devices not available' })
     },
   )
 })

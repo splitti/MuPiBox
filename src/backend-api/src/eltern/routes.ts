@@ -70,6 +70,7 @@ import { episodeKey, mayKeep, type PodcastOffline } from '../podcast-offline'
 import { pbkdf2Sync, randomBytes } from 'node:crypto'
 import { localOnly } from '../request-guard'
 import { clearSpotifyBlock } from '../spotify-block'
+import { clearArtistAlbumsMemory } from '../artist-albums-store'
 import { spotifyLoginAge } from './spotify-auth-age'
 import {
   REQUESTED_SCOPES,
@@ -218,11 +219,21 @@ function applySpotifyAccessToPlayer(restartPlayer: boolean): void {
   runSettingUpdate(restartPlayer)
 }
 
+// what else keeps Spotify's answers in memory (the server's SpotifyApiService - server.ts sets it)
+let onSpotifyCacheCleared: () => void = () => {}
+export function setOnSpotifyCacheCleared(listener: () => void): void {
+  onSpotifyCacheCleared = listener
+}
+
 // The backend's Spotify caches (see /spotify-access/clear-cache); true when all of them are gone
+// (the artists' album lists and the Smart-Sync's kept pictures, albums and playlists too, and what is kept in memory -
+// those stayed until a restart)
 async function clearSpotifyCache(): Promise<boolean> {
   const dir = `${process.cwd()}/cache`
   let ok = true
-  for (const name of ['spotify', 'spotify-api', 'covers', 'home-lists.json']) {
+  clearArtistAlbumsMemory()
+  onSpotifyCacheCleared()
+  for (const name of ['spotify', 'spotify-api', 'covers', 'home-lists.json', 'artist-albums', 'sync-meta.json']) {
     const target = `${dir}/${name}`
     try {
       await fsp.rm(target, { recursive: true, force: true })

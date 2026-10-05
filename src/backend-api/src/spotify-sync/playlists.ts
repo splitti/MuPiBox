@@ -21,7 +21,7 @@ import {
   resolvePlaylistCategory,
 } from './categorizer'
 import type { CategoryType } from './category-types'
-import type { DiscoveredPlaylist, SpotifySyncConfig, SyncItem } from './types'
+import type { DiscoveredPlaylist, FailedSource, SpotifySyncConfig, SyncItem } from './types'
 import { type AlbumPage, artistAlbums } from '../artist-albums-store'
 import { noteSpotifyBlock, spotifyBlock } from '../spotify-block'
 import {
@@ -114,7 +114,12 @@ async function spotifyGet<T>(path: string, accessToken: string): Promise<T> {
 /** Discover all sync-managed playlists for the active user. */
 // failures: what could not be read in this run (an explicit playlist, a pinned album, an artist) - the diff removes
 // nothing then, see computeSyncDiff
-export async function discoverPlaylists(accessToken: string, config: SpotifySyncConfig, failures: string[] = []): Promise<DiscoveredPlaylist[]> {
+export async function discoverPlaylists(
+  accessToken: string,
+  config: SpotifySyncConfig,
+  failures: string[] = [],
+  failedSources: FailedSource[] = [],
+): Promise<DiscoveredPlaylist[]> {
   if (config.playlist_explicit_ids.length > 0) {
     // Mode A: explicit IDs. Skip /me/playlists scan.
     const out: DiscoveredPlaylist[] = []
@@ -130,6 +135,7 @@ export async function discoverPlaylists(accessToken: string, config: SpotifySync
         if (err instanceof SpotifyApiException && err.detail.kind !== 'internal') throw err
         // Skip individually-failing playlists; sync over what we got (adding and updating - not removing).
         failures.push(`playlist ${id}`)
+        failedSources.push({ kind: 'playlist', id })
         console.warn(`${new Date().toLocaleString()}: [spotify-sync] discover: explicit playlist ${id} failed: ${(err as Error).message}`)
       }
     }
@@ -150,12 +156,16 @@ export async function discoverPlaylists(accessToken: string, config: SpotifySync
       next: string | null
     }>(`/me/playlists?limit=${PLAYLISTS_PAGE_LIMIT}&offset=${offset}`, accessToken)
     for (const item of page.items ?? []) {
-      if (playlistMatchesPrefix(item.name, prefix)) {
+      // (an entry Spotify sends as null - a playlist not available: skipped, it ended the whole run with a TypeError)
+      if (item?.name && playlistMatchesPrefix(item.name, prefix)) {
         matched.push(buildDiscoveredPlaylist(item))
       }
     }
-    next = page.next !== null && (page.items?.length ?? 0) === PLAYLISTS_PAGE_LIMIT
-    offset += PLAYLISTS_PAGE_LIMIT
+    // (Spotify's own paging decides: a page it shortened still has a next one - the MuPiBox playlists after it were
+    // not seen, and their entries removed)
+    const got = page.items?.length ?? 0
+    next = !!page.next && got > 0
+    offset += got
     // Safety net against runaway pagination — Spotify caps at ~50 user
     // playlists per offset and ~~thousand total; 50 pages = 2500 items.
     if (offset > 50 * PLAYLISTS_PAGE_LIMIT) break
@@ -299,6 +309,7 @@ export async function resolveSyncItems(
   accessToken: string,
   config: SpotifySyncConfig,
   failures: string[] = [],
+  failedSources: FailedSource[] = [],
 ): Promise<{ items: Map<string, SyncItem>; perPlaylistCounts: Map<string, number> }> {
   const items = new Map<string, SyncItem>()
   const perPlaylistCounts = new Map<string, number>()
@@ -324,6 +335,7 @@ export async function resolveSyncItems(
     } catch (err) {
       if (err instanceof SpotifyApiException && err.detail.kind !== 'internal') throw err
       failures.push(`playlist ${playlist.name || playlist.id}`)
+      failedSources.push({ kind: 'playlist', id: playlist.id })
       console.warn(`${new Date().toLocaleString()}: [spotify-sync] playlist ${playlist.id} (${playlist.name}) not read: ${(err as Error).message}`)
       continue
     }
@@ -360,6 +372,7 @@ export async function resolveSyncItems(
       // and artists only kept the block going (state-machine: RATE_LIMITED waits for Spotify's time)
       if (err instanceof SpotifyApiException && err.detail.kind !== 'internal') throw err
       failures.push(`album ${albumId}`)
+      failedSources.push({ kind: 'album', id: albumId })
       console.warn(
         `${new Date().toLocaleString()}: [spotify-sync] explicit album ${albumId} fetch failed: ${(err as Error).message}`,
       )
@@ -392,6 +405,7 @@ export async function resolveSyncItems(
       // (as for the albums above: a block, a login or network failure ends the run)
       if (err instanceof SpotifyApiException && err.detail.kind !== 'internal') throw err
       failures.push(`artist ${sub.name || sub.id}`)
+      failedSources.push({ kind: 'artist', id: sub.id, name: sub.name })
       console.warn(
         `${new Date().toLocaleString()}: [spotify-sync] artist subscription ${sub.id} failed: ${(err as Error).message}`,
       )

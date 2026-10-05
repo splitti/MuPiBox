@@ -51,6 +51,11 @@ interface Kept {
 }
 
 const memory = new Map<string, Kept & { checkedAt: number }>()
+
+/** Forgets the lists kept in memory (after "clear cache" removed their files). */
+export function clearArtistAlbumsMemory(): void {
+  memory.clear()
+}
 const running = new Map<string, Promise<StoredAlbum[]>>()
 
 const keyOf = (artistId: string, groups: string) => `${artistId}_${groups}`.replace(/[^A-Za-z0-9_-]/g, '-')
@@ -62,8 +67,9 @@ function read(key: string): (Kept & { checkedAt: number }) | undefined {
   try {
     const kept = JSON.parse(fs.readFileSync(fileOf(key), 'utf8')) as Kept
     if (!Array.isArray(kept?.albums)) return undefined
-    // (checked when the server started: a first check after a restart asks one page)
-    const entry = { ...kept, checkedAt: 0 }
+    // (as if checked at some time in the last 6 hours: each artist's first check after a restart comes at a time of its
+    // own - they were all asked in the first minute after every restart, and right after a block ended)
+    const entry = { ...kept, checkedAt: Date.now() - Math.random() * CHECK_EVERY_MS }
     memory.set(key, entry)
     return entry
   } catch {

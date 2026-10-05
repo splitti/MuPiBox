@@ -33,7 +33,7 @@ import { SpotifyMediaInfo } from './services/spotify-media-info.service'
 import { createSpotifySyncRouter } from './spotify-sync/routes'
 import { startScheduler } from './spotify-sync/scheduler'
 import type { RunSyncDeps } from './spotify-sync/state-machine'
-import { buildElternLandingHandler, createElternApiRouter, registerDisplayNetworkRoutes } from './eltern/routes'
+import { buildElternLandingHandler, createElternApiRouter, registerDisplayNetworkRoutes, setOnSpotifyCacheCleared } from './eltern/routes'
 import { startSpotifyLoginWatch } from './eltern/spotify-auth-age'
 import { startTlsWatch } from './eltern/tls'
 import { startWeeklySummary } from './eltern/weekly-summary'
@@ -75,6 +75,26 @@ if (!productionServe) {
   configBasePath = './config' // This uses the package.json path as pwd.
 }
 
+// "Clear cache" in the app: the lookups' memory too
+setOnSpotifyCacheCleared(() => spotifyApiService?.clearMemory())
+
+// Another Spotify app entered in the app (setting_update.sh writes config.json): the display's Spotify lookups use it
+// at once - they went on with the old one (still blocked) until a restart of the server
+function watchSpotifyCredentials(): void {
+  fs.watchFile(`${configBasePath}/config.json`, { interval: 10_000 }, () => {
+    readJsonFile(`${configBasePath}/config.json`)
+      .then((fresh: ServerConfig) => {
+        const before = config?.spotify
+        const now = fresh?.spotify
+        if (!now || (now.clientId === before?.clientId && now.clientSecret === before?.clientSecret)) return
+        config = fresh
+        spotifyApiService = new SpotifyApiService(fresh)
+        console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Spotify app changed - the lookups use the new one`)
+      })
+      .catch(() => undefined)
+  }).unref?.()
+}
+
 async function readJsonFile(path: string) {
   const file = await readFile(path, 'utf8')
   return JSON.parse(file)
@@ -83,6 +103,7 @@ async function readJsonFile(path: string) {
 let config: ServerConfig | undefined
 readJsonFile(`${configBasePath}/config.json`).then((configFile) => {
   config = configFile
+  watchSpotifyCredentials()
 
   // Initialize Spotify API service once config is loaded
   if (config?.spotify) {
@@ -3985,9 +4006,12 @@ app.get('/api/spotify/playlist/:playlistId', async (req, res) => {
       `${new Date().toLocaleString()}: [MuPiBox-Server] Successfully fetched playlist via API: ${apiData.name}`,
     )
 
-    // Always try to fetch playlist via scraper
-    await spotifyMediaInfo.fetchPlaylistData(playlistId)
+    // Always try to fetch playlist via scraper (in the background: the answer is sent - its failure went into the catch
+    // below, which scraped a second time and answered once more after the headers were sent)
+    spotifyMediaInfo.fetchPlaylistData(playlistId).catch(() => undefined)
+    return
   } catch (_apiError) {
+    if (res.headersSent) return
     console.log(
       `${new Date().toLocaleString()}: [MuPiBox-Server] API failed for playlist ${playlistId}, trying scraper fallback...`,
     )
@@ -4078,7 +4102,10 @@ app.get('/api/spotify/artist/:artistId/albums', async (req, res) => {
   }
 
   const artistId = req.params.artistId
-  const albumTypes = (req.query.album_type as string) || 'album,single,compilation'
+  // (only Spotify's own groups, in one order: any other text made a list of its own on the SD card, asked whole)
+  const allowedTypes = ['album', 'single', 'compilation', 'appears_on']
+  const requestedTypes = String(req.query.album_type ?? '').split(',').filter((t) => allowedTypes.includes(t))
+  const albumTypes = requestedTypes.length ? allowedTypes.filter((t) => requestedTypes.includes(t)).join(',') : 'album,single,compilation'
   const limit = Number.parseInt(req.query.limit as string, 10) || 5
   const offset = Number.parseInt(req.query.offset as string, 10) || 0
 

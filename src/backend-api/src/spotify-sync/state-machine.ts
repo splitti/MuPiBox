@@ -21,6 +21,7 @@ import { acquireSyncLock, releaseSyncLock } from './sync-lock'
 import { noteSpotifyBlock, spotifyBlock } from '../spotify-block'
 import {
   type BoxLibraryEntry,
+  type FailedSource,
   type SyncDiff,
   type SyncFailureKind,
   type SyncState,
@@ -215,9 +216,10 @@ export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<
 
     // 4. Discovery (failures: a source skipped in this run - nothing is removed then, see computeSyncDiff)
     const failures: string[] = []
+    const failedSources: FailedSource[] = []
     let playlistsDiscovered
     try {
-      playlistsDiscovered = await discoverPlaylists(accessToken, config, failures)
+      playlistsDiscovered = await discoverPlaylists(accessToken, config, failures, failedSources)
     } catch (err) {
       return mapSpotifyError(err, (kind) => { failureCounters = bumpFailureCounter(failureCounters, kind) }, finalise)
     }
@@ -225,7 +227,7 @@ export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<
     // 5. Resolve tracks
     let resolved
     try {
-      resolved = await resolveSyncItems(playlistsDiscovered, accessToken, config, failures)
+      resolved = await resolveSyncItems(playlistsDiscovered, accessToken, config, failures, failedSources)
     } catch (err) {
       return mapSpotifyError(err, (kind) => { failureCounters = bumpFailureCounter(failureCounters, kind) }, finalise)
     } finally {
@@ -254,8 +256,9 @@ export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<
         return finalise('INTERNAL_ERROR', undefined, { reason: 'data.json root is not an array' })
       }
       const library = parsed as BoxLibraryEntry[]
-      if (failures.length) console.warn(`${new Date().toLocaleString()}: [spotify-sync] not read in this run (${failures.join(', ')}) - nothing is removed`)
-      diff = computeSyncDiff(resolved.items, library, { noRemovals: failures.length > 0 })
+      if (failures.length) console.warn(`${new Date().toLocaleString()}: [spotify-sync] not read in this run (${failures.join(', ')}) - their entries are kept`)
+      // (removals held back only for the entries of what could not be read; a failure of unknown source holds back all)
+      diff = computeSyncDiff(resolved.items, library, { noRemovals: failures.length > failedSources.length, failedSources })
       applyResult = await applyDiff(diff, library, deps.dataFile, new Date())
     } catch (err) {
       deps.releaseDataLock()

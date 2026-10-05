@@ -94,7 +94,7 @@ function applyUpdate(target: BoxLibraryEntry, item: SyncItem, isoNow: string): v
   target.title = item.title
   target.category = item.category
   target.cover = item.cover
-  target.artistcover = item.artistCover
+  if (item.artistCover !== undefined) target.artistcover = item.artistCover
   if (item.releaseDate) target.release_date = item.releaseDate
   target.spotify_sync_last_seen = isoNow
   target.spotify_sync_playlists = [...item.playlistIds]

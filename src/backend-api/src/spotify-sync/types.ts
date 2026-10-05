@@ -209,6 +209,9 @@ export interface BoxLibraryEntry {
 }
 
 /** Discovered playlist, normalised from spotify-web-api-node responses. */
+/** A source of the sync that could not be read in a run: only its own entries are kept from removal (see diff.ts). */
+export type FailedSource = { kind: 'playlist'; id: string } | { kind: 'album'; id: string } | { kind: 'artist'; id: string; name?: string }
+
 export interface DiscoveredPlaylist {
   id: string
   name: string

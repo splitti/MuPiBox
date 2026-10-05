@@ -105,6 +105,12 @@ export function spotifyBlock(): SpotifyBlock | null {
   return current
 }
 
+const clearedListeners: Array<() => void> = []
+/** Told when a block is lifted before its time (the Smart-Sync's scheduler waits for it otherwise). */
+export function onSpotifyBlockCleared(listener: () => void): void {
+  clearedListeners.push(listener)
+}
+
 /** The block is over before its time: Spotify answered again, or another Spotify app was entered. */
 export function clearSpotifyBlock(why: string): void {
   load()
@@ -112,4 +118,11 @@ export function clearSpotifyBlock(why: string): void {
   console.log(`${new Date().toLocaleString()}: [Spotify] block until ${new Date(current.until).toLocaleString()} lifted: ${why}`)
   current = null
   write()
+  for (const listener of clearedListeners) {
+    try {
+      listener()
+    } catch {
+      // a listener's trouble is its own
+    }
+  }
 }

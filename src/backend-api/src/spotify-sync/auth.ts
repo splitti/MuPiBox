@@ -14,6 +14,7 @@
 // arranges persistence via a callback so we don't import server.ts
 // internals into this module.
 
+import { createHash } from 'node:crypto'
 import { hasRequiredSyncScopes } from './config-loader'
 import type { SpotifyTokenStore } from './types'
 
@@ -146,6 +147,13 @@ export async function persistRefreshedToken(
     spotify.tokenExpiresAt = newStore.tokenExpiresAt
     spotify.tokenUpdatedAt = newStore.tokenUpdatedAt
     spotify.tokenScopes = newStore.tokenScopes
+    // (Spotify renewed the refresh token: still the same login - the 6 months count from its start. The mark of the
+    // login moves with it; a new mark made the box take it for a new login of unknown date - wrong end date, no
+    // reminders, and a message to log in again)
+    const mark = (t: string) => createHash('sha256').update(t).digest('hex').slice(0, 12)
+    if (newStore.refreshToken && store.refreshToken && newStore.refreshToken !== store.refreshToken && spotify.authorizedTokenId === mark(store.refreshToken)) {
+      spotify.authorizedTokenId = mark(newStore.refreshToken)
+    }
     cfg.spotify = spotify
   })
   return newStore
@@ -164,14 +172,23 @@ export function tokenStillValid(store: SpotifyTokenStore, slackSeconds = 300): b
  * expired or close to expiry. Wraps refresh + persist. Throws nothing;
  * returns a discriminated result.
  */
+let refreshRunning: ReturnType<typeof refreshAccessToken> | null = null
+
 export async function getValidAccessToken(
   store: SpotifyTokenStore,
   updateCfg: (mutate: (cfg: Record<string, unknown>) => void) => Promise<void>,
 ): Promise<{ ok: true; token: string; store: SpotifyTokenStore } | { ok: false; failure: RefreshFailure }> {
-  if (tokenStillValid(store)) {
+  if (tokenStillValid(store, 900)) {
     return { ok: true, token: store.accessToken, store }
   }
-  const outcome = await refreshAccessToken(store)
+  // (one refresh at a time: the sync and the app's album lists refreshed at the same moment - with a refresh token
+  // Spotify renews at each use, the second one was refused, and the parents were told the login failed)
+  if (!refreshRunning) {
+    refreshRunning = refreshAccessToken(store).finally(() => {
+      refreshRunning = null
+    })
+  }
+  const outcome = await refreshRunning
   if (!outcome.ok) {
     // outcome is the failure variant here; strip the `ok: false` flag
     // before passing back so the caller doesn't have to re-narrow.

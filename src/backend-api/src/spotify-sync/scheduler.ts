@@ -8,6 +8,7 @@
 // Lifetimes follow the box's pm2/systemd-managed backend-api process —
 // stop() exists for tests but isn't called in production.
 
+import { onSpotifyBlockCleared } from '../spotify-block'
 import { runSync, type RunSyncDeps, type RunSyncResult } from './state-machine'
 import type { SyncTrigger } from './types'
 import { loadSpotifySyncConfig } from './config-loader'
@@ -39,6 +40,7 @@ export function startScheduler(deps: RunSyncDeps): void {
   // when backend-api comes up; don't ambush the I2C bus / network in
   // the first minute.
   scheduleNext(60, deps)
+  onSpotifyBlockCleared(() => scheduleNext(60, deps))
   console.log(
     `${new Date().toLocaleString()}: [spotify-sync] scheduler started (enabled=${config.enabled}, interval=${config.polling_interval_seconds}s)`,
   )
@@ -71,7 +73,8 @@ function scheduleNext(delaySeconds: number, deps: RunSyncDeps): void {
       console.error(`${new Date().toLocaleString()}: [spotify-sync] scheduled run threw: ${(err as Error).message}`)
     }
     // Muss in JEDEM Pfad passieren, sonst endet die Kette hier.
-    scheduleNext(next, deps)
+    // (at most a day: a Retry-After of weeks overflowed setTimeout, which then fired at once - again and again)
+    scheduleNext(Math.max(1, Math.min(next, 86400)), deps)
   }, delaySeconds * 1000)
   // Keep the event loop responsive — sync polling isn't a reason to
   // pin the process awake. (No-op on Node22 if there's other activity.)
