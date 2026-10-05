@@ -41,7 +41,7 @@
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Spotify on another device with the same account (a phone, a speaker) is no longer paused when the box shuts down, starts a local album or is stopped: the box pauses only its own Spotify player now, and only when Spotify says it is the one playing.</li>
 <li id='linews' class='linews'>Update and installation no longer add a second gpio-poweroff line to /boot/config.txt when one is there already, also inside a line that loads further overlays (e.g. a display driver) - such boxes hung at shutdown and could not be started with the button. A new line uses the pin set for the OnOff SHIM (it was always 4). A line added by an earlier update stays: remove it by hand once.</li>
-<li id='linews' class='linews'>The power button (OnOffShim) stops what plays before its shutdown sound - the music jumped to the start volume for a moment (by Andreas).</li>
+<li id='linews' class='linews'>The power button (OnOffShim) stops what plays before its shutdown sound, and the volume for the sound is only ever lowered to the start volume, never raised - the music jumped to the start volume for a moment (by Andreas).</li>
 <li id='linews' class='linews'>Rotary knob: a new function of its button, &quot;Track selection&quot; - a press turns the knob into a track selector for 10 s (one track per detent, clockwise next, counter clockwise previous; every turn starts the time anew), a second press brings the volume back. &quot;Next track&quot; stays as it was (by Andreas).</li>
 </ul>
 <h3>DEV 5.0.7 - changes compared to 5.0.6</h3>

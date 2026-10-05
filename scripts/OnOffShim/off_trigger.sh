@@ -103,23 +103,14 @@ while true; do
             # Actions when button is pressed
             # the goodbye picture before anything else (the sounds and the shutdown come after it)
             /usr/local/bin/mupibox/show_goodbye.sh
-            # whatever plays is stopped first (as mupi_shutdown.sh does): the volume set below would make it jump. The
-            # player answers the stop at once, Spotify's own pause follows over the network - the volume is set for the
-            # sound only once the display's Spotify player reports it is silent (up to 3 s); else the sound plays at the
-            # volume as it is (no music made louder)
+            # whatever plays is stopped first (as mupi_shutdown.sh does). The stop is not done at once everywhere (Spotify
+            # pauses over the network, a local album that is just opening is stopped again after up to 2 s), so the volume
+            # for the sound is never raised, only lowered to the start volume: music that still plays for a moment is not
+            # made louder. Not readable: left as it is.
             curl -s -m 2 -o /dev/null http://127.0.0.1:5005/stop
-            silent=false
-            for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
-                sleep 0.25
-                if [ "$(curl -s -m 1 http://127.0.0.1:5005/local | /usr/bin/jq -r '.spotifySilent' 2>/dev/null)" = "true" ]; then
-                    silent=true
-                    break
-                fi
-            done
-            if [ "$silent" = true ]; then
+            current=$(/usr/bin/pactl get-sink-volume @DEFAULT_SINK@ 2>/dev/null | grep -o '[0-9]*%' | head -n 1 | tr -d '%')
+            if [ -n "$current" ] && [ -n "${START_VOLUME}" ] && [ "$current" -gt "${START_VOLUME}" ] 2>/dev/null; then
                 /usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}%
-            else
-                echo "$(date) - INFO:  Spotify not reported silent - shutdown sound at the current volume" >> ${LOGFILE}
             fi
             /usr/bin/aplay /home/dietpi/MuPiBox/sysmedia/sound/button_shutdown.wav
 
