@@ -17,15 +17,16 @@ Beim Hinzufügen eines Inhalts legst du fest, in welche Kategorie er kommt ([Inh
 
 ## Wie die Cover angeordnet sind
 
-- Nach der Installation stehen drei Cover nebeneinander, der Name darunter. Wische seitlich, um weiterzublättern. Ein Tipp auf ein Cover öffnet es.
-- Schaltest du die **Cover-Flow-Ansicht** ein, liegt ein großes Cover in der Mitte, die Nachbarn sind kleiner. Wische seitlich, um die Liste zu bewegen. Tippst du ein Cover am Rand an, rückt es in die Mitte; das mittlere öffnet sich mit einem Tipp.
+- Nach der Installation ist die **Cover-Flow-Ansicht** an: Ein großes Cover liegt in der Mitte, die Nachbarn sind kleiner. Wische seitlich, um die Liste zu bewegen. Tippst du ein Cover am Rand an, rückt es in die Mitte; das mittlere öffnet sich mit einem Tipp.
+- Schaltest du sie aus, stehen drei Cover nebeneinander, der Name darunter. Wische seitlich, um weiterzublättern. Ein Tipp auf ein Cover öffnet es.
 - Das Theme **coverflow** hat eine eigene Anordnung: Die Cover stehen schräg, nur das mittlere zeigt nach vorn. Auch hier rückt ein Cover am Rand erst in die Mitte.
 
 Unter **Einstellungen › Aussehen › Ansicht** stellst du ein:
 
-- **Cover-Flow-Ansicht (Bühne)**: an oder aus, für alle Themes außer coverflow,
+- **Cover-Flow-Ansicht (Bühne)**: an (Standard) oder aus, für alle Themes außer coverflow,
 - **Namen vorlesen, wenn das Cover stehen bleibt**: nur mit der Cover-Flow-Ansicht (Stimme und Sprache: **Audio › Sprachausgabe**),
-- **Ordner- und Albumnamen anzeigen** und **Horizontale Scrollleiste ausblenden**: nur beim Theme coverflow.
+- **Ordner- und Albumnamen anzeigen**: nur beim Theme coverflow,
+- **Horizontale Scrollleiste ausblenden**: der Balken unter den Covern, in jeder Ansicht.
 
 ## Ordner und Alben
 

@@ -39,6 +39,6 @@ Restart the box afterwards. The pin is also in the box's configuration (`shim.po
 
 ## If it is not that
 
-- If music is still playing when switching off, it is paused before the goodbye sound. If the box still hangs, look in the logs ([Logs and status](../wartung/protokolle.md)): the log `shutdown_control.log` belongs to switching off with the button.
+- If music is still playing when switching off, it is paused before the goodbye sound. If the box still hangs, look in the logs ([Logs and status](../wartung/protokolle.md)): the log `shutdown_control.log` belongs to switching off with the button. It is kept in memory and is gone once the power is off - so look at it while the box is still running.
 - Check the power supply: voltage dips during shutdown can make it hang.
 - If that does not help, ask the community or report the bug on GitHub ([splitti/MuPiBox](https://github.com/splitti/MuPiBox/issues)). Download the **support info** and the log `shutdown_control.log` for it ([Logs and status](../wartung/protokolle.md)).

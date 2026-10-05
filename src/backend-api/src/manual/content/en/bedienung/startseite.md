@@ -17,15 +17,16 @@ When you add content you decide which category it goes into ([Adding content](..
 
 ## How the covers are arranged
 
-- After installation three covers stand side by side, the name below. Swipe sideways to page on. A tap on a cover opens it.
-- If you switch on the **cover flow view**, one large cover lies in the middle, its neighbours are smaller. Swipe sideways to move the list. If you tap a cover at the edge, it moves to the middle; the middle one opens with a tap.
+- After installation the **cover flow view** is on: one large cover lies in the middle, its neighbours are smaller. Swipe sideways to move the list. If you tap a cover at the edge, it moves to the middle; the middle one opens with a tap.
+- If you switch it off, three covers stand side by side, the name below. Swipe sideways to page on. A tap on a cover opens it.
 - The theme **coverflow** has an arrangement of its own: the covers are tilted, only the middle one faces front. Here too a cover at the edge first moves to the middle.
 
 Under **Settings › Appearance › View** you set:
 
-- **Cover flow view (stage)**: on or off, for all themes except coverflow,
+- **Cover flow view (stage)**: on (default) or off, for all themes except coverflow,
 - **Read the name aloud when the cover stops**: only with the cover flow view (voice and language: **Audio › Speech output**),
-- **Show folder and album names** and **Hide horizontal scroll bar**: only with the theme coverflow.
+- **Show folder and album names**: only with the theme coverflow,
+- **Hide horizontal scroll bar**: the bar below the covers, in every view.
 
 ## Folders and albums
 
