@@ -838,6 +838,7 @@
  "Der Server ist nur über IPv6 erreichbar, die Box hat aber kein IPv6. Trag eine IPv4-Adresse des Servers ein – im Heimnetz z. B. 192.168.…": "Ο διακομιστής είναι προσβάσιμος μόνο μέσω IPv6, αλλά το κουτί δεν έχει IPv6. Γράψε μια διεύθυνση IPv4 του διακομιστή – στο οικιακό δίκτυο π.χ. 192.168.…",
  "Der Server liegt im Heimnetz. Die Box ruft ihn erst ab, wenn du ihn erlaubst.": "Ο διακομιστής βρίσκεται στο οικιακό δίκτυο. Το κουτί τον διαβάζει μόνο αφού το επιτρέψεις.",
  "Der Stand der Online-Cover ließ sich nicht laden.": "Δεν ήταν δυνατή η φόρτωση της κατάστασης των online εξωφύλλων.",
+ "Der Startwert ist nur aus der Spannung geschätzt, weil die Ladung schon lief, als die Box sie zum ersten Mal sah. Er wird korrigiert, sobald der Akku in die Spannungsphase kommt.": "Η αρχική τιμή εκτιμάται μόνο από την τάση, επειδή η φόρτιση ήταν ήδη σε εξέλιξη όταν η συσκευή την είδε για πρώτη φορά. Διορθώνεται μόλις η μπαταρία περάσει στη φάση σταθερής τάσης.",
  "Der Status ist gerade nicht erreichbar.": "Η κατάσταση δεν είναι προσβάσιμη αυτή τη στιγμή.",
  "Der Suchindex wird im Hintergrund erstellt": "Το ευρετήριο αναζήτησης δημιουργείται στο παρασκήνιο",
  "Der Sync läuft in {} s.": "Ο συγχρονισμός ξεκινά σε {} δευτ.",

@@ -838,6 +838,7 @@
  "Der Server ist nur über IPv6 erreichbar, die Box hat aber kein IPv6. Trag eine IPv4-Adresse des Servers ein – im Heimnetz z. B. 192.168.…": "Il server è raggiungibile solo via IPv6, ma la box non ha IPv6. Inserisci un indirizzo IPv4 del server – nella rete domestica ad es. 192.168.…",
  "Der Server liegt im Heimnetz. Die Box ruft ihn erst ab, wenn du ihn erlaubst.": "Il server si trova nella rete domestica. La box lo interroga solo dopo che l’hai consentito.",
  "Der Stand der Online-Cover ließ sich nicht laden.": "Non è stato possibile caricare lo stato delle copertine online.",
+ "Der Startwert ist nur aus der Spannung geschätzt, weil die Ladung schon lief, als die Box sie zum ersten Mal sah. Er wird korrigiert, sobald der Akku in die Spannungsphase kommt.": "Il valore iniziale è solo stimato dalla tensione, perché la ricarica era già in corso quando il box l’ha vista per la prima volta. Viene corretto non appena la batteria entra nella fase a tensione costante.",
  "Der Status ist gerade nicht erreichbar.": "Lo stato non è al momento raggiungibile.",
  "Der Suchindex wird im Hintergrund erstellt": "L'indice di ricerca viene creato in background",
  "Der Sync läuft in {} s.": "La sincronizzazione parte tra {} s.",

@@ -838,6 +838,7 @@
  "Der Server ist nur über IPv6 erreichbar, die Box hat aber kein IPv6. Trag eine IPv4-Adresse des Servers ein – im Heimnetz z. B. 192.168.…": "Сервер доступен только по IPv6, но у устройства нет IPv6. Укажите IPv4-адрес сервера – в домашней сети, например, 192.168.…",
  "Der Server liegt im Heimnetz. Die Box ruft ihn erst ab, wenn du ihn erlaubst.": "Сервер находится в домашней сети. Устройство обращается к нему только после разрешения.",
  "Der Stand der Online-Cover ließ sich nicht laden.": "Не удалось загрузить статус онлайн-обложек.",
+ "Der Startwert ist nur aus der Spannung geschätzt, weil die Ladung schon lief, als die Box sie zum ersten Mal sah. Er wird korrigiert, sobald der Akku in die Spannungsphase kommt.": "Начальное значение оценено только по напряжению, потому что зарядка уже шла, когда устройство увидело её впервые. Оно исправится, как только аккумулятор перейдёт в фазу постоянного напряжения.",
  "Der Status ist gerade nicht erreichbar.": "Статус сейчас недоступен.",
  "Der Suchindex wird im Hintergrund erstellt": "Поисковый индекс создаётся в фоне",
  "Der Sync läuft in {} s.": "Синхронизация начнётся через {} с.",

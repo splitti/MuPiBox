@@ -6527,6 +6527,9 @@ function batteryTop() {
   const etaMin = Number.isFinite(h.Charge_Eta_Min) ? h.Charge_Eta_Min : null
   const etaText = etaMin === null ? '' : etaMin < 5 ? 'gleich fertig' : `${etaMin >= 60 ? `${Math.floor(etaMin / 60)} h ` : ''}${etaMin % 60 ? `${etaMin % 60} min` : ''}`.trim()
   const chargeNote = charging && h.Bat_PercentSource === 'charging' ? 'Beim Laden aus der geladenen Menge geschätzt – nicht aus der Spannung.' : ''
+  // the starting point of this charge is only a guess from the voltage (the charge was already running when the HAT service
+  // started): said so until the step over to constant voltage corrects it
+  const startNote = charging && h.Charge_Start_Uncertain === true ? 'Der Startwert ist nur aus der Spannung geschätzt, weil die Ladung schon lief, als die Box sie zum ersten Mal sah. Er wird korrigiert, sobald der Akku in die Spannungsphase kommt.' : ''
   // the last 24 hours in twelve steps of two hours: the charge at the end of each (the last reading in it), so every
   // bar says how full the box was then
   const now = Date.now()
@@ -6552,7 +6555,7 @@ function batteryTop() {
         ? `<div class="note warn">${icon('bat', 18)}<span>${esc(BATTERY_STALE)} ${esc(`Letzte Werte von ${hhmm(Date.parse(h.BatteryStaleSince))} Uhr.`)}</span></div>
            <div class="btns"><button class="btn" id="hat-reboot">Box neu starten</button></div>`
         : ''
-    }<div class="bat-now"><div class="bat-pct">${Number.isFinite(pct) ? `${pct} %` : '–'}</div><small>${esc([health, state, charging && etaText ? (etaMin < 5 ? etaText : `voll in etwa ${etaText}`) : ''].filter(Boolean).join(' · '))}</small>${chargeNote ? `<small class="help">${esc(chargeNote)}</small>` : ''}</div>
+    }<div class="bat-now"><div class="bat-pct">${Number.isFinite(pct) ? `${pct} %` : '–'}</div><small>${esc([health, state, charging && etaText ? (etaMin < 5 ? etaText : `voll in etwa ${etaText}`) : ''].filter(Boolean).join(' · '))}</small>${chargeNote ? `<small class="help">${esc(chargeNote)}</small>` : ''}${startNote ? `<div class="note warn">${icon('info', 18)}<span>${esc(startNote)}</span></div>` : ''}</div>
       <dl class="kv"><div><dt>Akku-Spannung</dt><dd>${v(h.Vbat)}</dd></div><div><dt>USB-Spannung</dt><dd>${v(h.Vbus)}</dd></div>
         <div><dt>Akku-Strom</dt><dd>${Number.isFinite(h.Ibat) ? `${h.Ibat.toLocaleString(LOCALE)} mA` : '–'}</dd></div><div><dt>Temperatur Lade-Chip</dt><dd>${Number.isFinite(h.Temp) ? `${h.Temp.toLocaleString(LOCALE)} °C` : '–'}</dd></div>
         <div><dt>Ladegerät</dt><dd>${esc(status)}</dd></div>${charging ? `<div><dt>Voll in etwa</dt><dd>${esc(etaText || (Number.isFinite(h.Bat_Capacity_mAh) ? 'lässt sich gerade nicht schätzen' : 'Kapazität des Akkus unbekannt'))}</dd></div>` : ''}</dl></section>`,

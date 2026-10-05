@@ -6247,6 +6247,8 @@ class bq25792:
             'Charge_Phase' : self._charge.phase if self._charge is not None else 'idle',
             'Charge_Eta_Min' : self._charge.eta_min if self._charge is not None else None,
             'Bat_Capacity_mAh' : self.battery_conf.get('capacity_mah'),
+            # True while the percent of a charge rests on a starting point that is only guessed from the voltage
+            'Charge_Start_Uncertain' : bool(self._charge is not None and self._charge.percent is not None and self._charge.start_uncertain),
         }
     
     def to_json_registers(self):

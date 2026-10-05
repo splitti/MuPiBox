@@ -838,6 +838,7 @@
  "Der Server ist nur über IPv6 erreichbar, die Box hat aber kein IPv6. Trag eine IPv4-Adresse des Servers ein – im Heimnetz z. B. 192.168.…": "Sunucuya yalnızca IPv6 ile ulaşılabiliyor, ancak kutunun IPv6’sı yok. Sunucunun bir IPv4 adresini gir – ev ağında örn. 192.168.…",
  "Der Server liegt im Heimnetz. Die Box ruft ihn erst ab, wenn du ihn erlaubst.": "Sunucu ev ağında. Kutu, sen izin verene kadar ondan veri almaz.",
  "Der Stand der Online-Cover ließ sich nicht laden.": "Çevrimiçi kapakların durumu yüklenemedi.",
+ "Der Startwert ist nur aus der Spannung geschätzt, weil die Ladung schon lief, als die Box sie zum ersten Mal sah. Er wird korrigiert, sobald der Akku in die Spannungsphase kommt.": "Başlangıç değeri yalnızca gerilimden tahmin edildi, çünkü kutu şarjı ilk gördüğünde şarj zaten sürüyordu. Pil sabit gerilim aşamasına geçtiğinde düzeltilir.",
  "Der Status ist gerade nicht erreichbar.": "Durum şu anda erişilemiyor.",
  "Der Suchindex wird im Hintergrund erstellt": "Arama dizini arka planda oluşturuluyor",
  "Der Sync läuft in {} s.": "Senkronizasyon {} sn içinde çalışacak.",

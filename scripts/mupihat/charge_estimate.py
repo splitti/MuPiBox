@@ -79,6 +79,7 @@ class ChargeEstimator:
 
     def reset_session(self):
         self.active = False
+        self.start_uncertain = False  # True: the starting point is only the voltage (nothing known from before the charge)
         self.start_pct = 0.0
         self.charged_mah = 0.0
         self.ema = None
@@ -136,12 +137,14 @@ class ChargeEstimator:
             self.percent = 100.0
             self.eta_min = 0
             self.active = True
+            self.start_uncertain = False
             self._save()
             return
 
         if not self.active:
             self.active = True
-            self.start_pct = self._starting_point(now, voltage_pct)
+            self.start_pct, known = self._starting_point(now, voltage_pct)
+            self.start_uncertain = not known
             self.charged_mah = 0.0
             self.ema = None
             self.cc_peak = 0.0
@@ -161,6 +164,7 @@ class ChargeEstimator:
             if self.cv_i0 is None:
                 # the step over to CV is a known point: take the count to it
                 self.cv_i0 = max(i, self.iterm * 1.5)
+                self.start_uncertain = False
                 self.cc_peak = max(self.cc_peak, self.cv_i0)
                 pct = self.CC_END_PCT
             span = math.log(max(self.cv_i0, self.iterm * 1.01) / self.iterm)
@@ -182,10 +186,11 @@ class ChargeEstimator:
         """The percent before the charge: the middle of what the voltage said while the pack was at rest."""
         old = sorted(p for (t, p) in self._rest if now - t >= 20)
         if old:
-            return old[len(old) // 2]
+            return old[len(old) // 2], True
         if self._rest:
-            return sorted(p for (_, p) in self._rest)[len(self._rest) // 2]
-        return float(voltage_pct) if voltage_pct is not None else 0.0
+            return sorted(p for (_, p) in self._rest)[len(self._rest) // 2], True
+        # nothing from before the charge (the service started while it charged): only the voltage is left - a guess
+        return (float(voltage_pct) if voltage_pct is not None else 0.0), False
 
     def _tau_s(self):
         """Time constant of the fall of the current in the CV phase, in seconds."""
@@ -230,7 +235,7 @@ class ChargeEstimator:
         if not self._state_file:
             return
         try:
-            data = {"wall": self._wall(), "active": self.active, "start_pct": self.start_pct, "charged_mah": self.charged_mah, "cc_peak": self.cc_peak, "cv_i0": self.cv_i0, "percent": self.percent}
+            data = {"wall": self._wall(), "active": self.active, "start_pct": self.start_pct, "charged_mah": self.charged_mah, "cc_peak": self.cc_peak, "cv_i0": self.cv_i0, "percent": self.percent, "start_uncertain": self.start_uncertain}
             tmp = self._state_file + ".tmp"
             with open(tmp, "w") as f:
                 json.dump(data, f)
@@ -251,5 +256,6 @@ class ChargeEstimator:
                 self.cc_peak = float(data.get("cc_peak") or 0.0)
                 self.cv_i0 = data.get("cv_i0")
                 self.percent = data.get("percent")
+                self.start_uncertain = bool(data.get("start_uncertain", False))
         except (OSError, ValueError, KeyError, TypeError):
             pass

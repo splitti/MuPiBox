@@ -838,6 +838,7 @@
  "Der Server ist nur über IPv6 erreichbar, die Box hat aber kein IPv6. Trag eine IPv4-Adresse des Servers ein – im Heimnetz z. B. 192.168.…": "Palvelimeen pääsee vain IPv6:lla, mutta laatikolla ei ole IPv6:ta. Anna palvelimen IPv4-osoite – kotiverkossa esim. 192.168.…",
  "Der Server liegt im Heimnetz. Die Box ruft ihn erst ab, wenn du ihn erlaubst.": "Palvelin on kotiverkossa. Laatikko hakee siltä vasta, kun sallit sen.",
  "Der Stand der Online-Cover ließ sich nicht laden.": "Verkkokansikuvien tilaa ei voitu ladata.",
+ "Der Startwert ist nur aus der Spannung geschätzt, weil die Ladung schon lief, als die Box sie zum ersten Mal sah. Er wird korrigiert, sobald der Akku in die Spannungsphase kommt.": "Aloitusarvo on arvioitu vain jännitteestä, koska lataus oli jo käynnissä, kun laite näki sen ensimmäisen kerran. Se korjataan, kun akku siirtyy vakiojännitevaiheeseen.",
  "Der Status ist gerade nicht erreichbar.": "Tila ei ole juuri nyt tavoitettavissa.",
  "Der Suchindex wird im Hintergrund erstellt": "Hakuindeksiä luodaan taustalla",
  "Der Sync läuft in {} s.": "Synkronointi käynnistyy {} s kuluttua.",

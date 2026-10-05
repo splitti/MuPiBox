@@ -838,6 +838,7 @@
  "Der Server ist nur über IPv6 erreichbar, die Box hat aber kein IPv6. Trag eine IPv4-Adresse des Servers ein – im Heimnetz z. B. 192.168.…": "O servidor só é acessível por IPv6, mas a caixa não tem IPv6. Introduz um endereço IPv4 do servidor – na rede doméstica, p. ex., 192.168.…",
  "Der Server liegt im Heimnetz. Die Box ruft ihn erst ab, wenn du ihn erlaubst.": "O servidor está na rede doméstica. A caixa só o consulta depois de o autorizares.",
  "Der Stand der Online-Cover ließ sich nicht laden.": "Não foi possível carregar o estado das capas online.",
+ "Der Startwert ist nur aus der Spannung geschätzt, weil die Ladung schon lief, als die Box sie zum ersten Mal sah. Er wird korrigiert, sobald der Akku in die Spannungsphase kommt.": "O valor inicial é apenas estimado a partir da tensão, porque o carregamento já estava em curso quando a caixa o viu pela primeira vez. É corrigido assim que a bateria entra na fase de tensão constante.",
  "Der Status ist gerade nicht erreichbar.": "O estado não está acessível de momento.",
  "Der Suchindex wird im Hintergrund erstellt": "O índice de pesquisa está a ser criado em segundo plano",
  "Der Sync läuft in {} s.": "A sincronização começa em {} s.",

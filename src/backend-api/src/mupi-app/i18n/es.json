@@ -838,6 +838,7 @@
  "Der Server ist nur über IPv6 erreichbar, die Box hat aber kein IPv6. Trag eine IPv4-Adresse des Servers ein – im Heimnetz z. B. 192.168.…": "El servidor solo es accesible por IPv6, pero la caja no tiene IPv6. Introduce una dirección IPv4 del servidor; en la red doméstica, p. ej., 192.168.…",
  "Der Server liegt im Heimnetz. Die Box ruft ihn erst ab, wenn du ihn erlaubst.": "El servidor está en la red doméstica. La caja solo lo consulta cuando lo permitas.",
  "Der Stand der Online-Cover ließ sich nicht laden.": "No se pudo cargar el estado de las carátulas en línea.",
+ "Der Startwert ist nur aus der Spannung geschätzt, weil die Ladung schon lief, als die Box sie zum ersten Mal sah. Er wird korrigiert, sobald der Akku in die Spannungsphase kommt.": "El valor inicial solo se estima a partir de la tensión, porque la carga ya estaba en marcha cuando la caja la vio por primera vez. Se corrige en cuanto la batería llega a la fase de tensión constante.",
  "Der Status ist gerade nicht erreichbar.": "El estado no está disponible en este momento.",
  "Der Suchindex wird im Hintergrund erstellt": "El índice de búsqueda se está creando en segundo plano",
  "Der Sync läuft in {} s.": "La sincronización empieza en {} s.",

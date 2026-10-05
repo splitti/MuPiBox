@@ -838,6 +838,7 @@
  "Der Server ist nur über IPv6 erreichbar, die Box hat aber kein IPv6. Trag eine IPv4-Adresse des Servers ein – im Heimnetz z. B. 192.168.…": "Serwer jest dostępny tylko przez IPv6, a Box nie ma IPv6. Wpisz adres IPv4 serwera – w sieci domowej np. 192.168.…",
  "Der Server liegt im Heimnetz. Die Box ruft ihn erst ab, wenn du ihn erlaubst.": "Serwer jest w sieci domowej. Box pobiera z niego dane dopiero, gdy na to zezwolisz.",
  "Der Stand der Online-Cover ließ sich nicht laden.": "Nie udało się wczytać stanu okładek online.",
+ "Der Startwert ist nur aus der Spannung geschätzt, weil die Ladung schon lief, als die Box sie zum ersten Mal sah. Er wird korrigiert, sobald der Akku in die Spannungsphase kommt.": "Wartość początkowa jest szacowana wyłącznie na podstawie napięcia, ponieważ ładowanie już trwało, gdy urządzenie zobaczyło je po raz pierwszy. Zostanie skorygowana, gdy akumulator wejdzie w fazę stałego napięcia.",
  "Der Status ist gerade nicht erreichbar.": "Status jest teraz niedostępny.",
  "Der Suchindex wird im Hintergrund erstellt": "Indeks wyszukiwania jest tworzony w tle",
  "Der Sync läuft in {} s.": "Synchronizacja uruchomi się za {} s.",

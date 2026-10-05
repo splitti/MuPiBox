@@ -838,6 +838,7 @@
  "Der Server ist nur über IPv6 erreichbar, die Box hat aber kein IPv6. Trag eine IPv4-Adresse des Servers ein – im Heimnetz z. B. 192.168.…": "Le serveur n’est joignable qu’en IPv6, mais la Box n’a pas d’IPv6. Saisis une adresse IPv4 du serveur – dans le réseau domestique p. ex. 192.168.…",
  "Der Server liegt im Heimnetz. Die Box ruft ihn erst ab, wenn du ihn erlaubst.": "Le serveur se trouve dans le réseau domestique. La Box ne l’interroge qu’une fois que tu l’as autorisé.",
  "Der Stand der Online-Cover ließ sich nicht laden.": "Impossible de charger l'état des pochettes en ligne.",
+ "Der Startwert ist nur aus der Spannung geschätzt, weil die Ladung schon lief, als die Box sie zum ersten Mal sah. Er wird korrigiert, sobald der Akku in die Spannungsphase kommt.": "La valeur de départ est seulement estimée d’après la tension, car la charge était déjà en cours quand la box l’a vue pour la première fois. Elle est corrigée dès que la batterie passe en phase de tension constante.",
  "Der Status ist gerade nicht erreichbar.": "Le statut est actuellement inaccessible.",
  "Der Suchindex wird im Hintergrund erstellt": "L'index de recherche est créé en arrière-plan",
  "Der Sync läuft in {} s.": "La synchro démarre dans {} s.",

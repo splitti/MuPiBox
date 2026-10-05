@@ -838,6 +838,7 @@
  "Der Server ist nur über IPv6 erreichbar, die Box hat aber kein IPv6. Trag eine IPv4-Adresse des Servers ein – im Heimnetz z. B. 192.168.…": "De server is alleen via IPv6 bereikbaar, maar de box heeft geen IPv6. Vul een IPv4-adres van de server in – in het thuisnetwerk bijv. 192.168.…",
  "Der Server liegt im Heimnetz. Die Box ruft ihn erst ab, wenn du ihn erlaubst.": "De server staat in het thuisnetwerk. De box haalt er pas iets op als je hem toestaat.",
  "Der Stand der Online-Cover ließ sich nicht laden.": "De status van de online covers kon niet worden geladen.",
+ "Der Startwert ist nur aus der Spannung geschätzt, weil die Ladung schon lief, als die Box sie zum ersten Mal sah. Er wird korrigiert, sobald der Akku in die Spannungsphase kommt.": "De beginwaarde is alleen geschat op basis van de spanning, omdat het laden al bezig was toen de box het voor het eerst zag. Hij wordt gecorrigeerd zodra de accu in de fase met constante spanning komt.",
  "Der Status ist gerade nicht erreichbar.": "De status is nu niet bereikbaar.",
  "Der Suchindex wird im Hintergrund erstellt": "De zoekindex wordt op de achtergrond aangemaakt",
  "Der Sync läuft in {} s.": "De sync start over {} s.",

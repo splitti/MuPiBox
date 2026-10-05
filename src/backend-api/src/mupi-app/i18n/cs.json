@@ -838,6 +838,7 @@
  "Der Server ist nur über IPv6 erreichbar, die Box hat aber kein IPv6. Trag eine IPv4-Adresse des Servers ein – im Heimnetz z. B. 192.168.…": "Server je dostupný jen přes IPv6, box ale IPv6 nemá. Zadejte IPv4 adresu serveru – v domácí síti např. 192.168.…",
  "Der Server liegt im Heimnetz. Die Box ruft ihn erst ab, wenn du ihn erlaubst.": "Server je v domácí síti. Box z něj stahuje až poté, co ho povolíte.",
  "Der Stand der Online-Cover ließ sich nicht laden.": "Stav online obalů se nepodařilo načíst.",
+ "Der Startwert ist nur aus der Spannung geschätzt, weil die Ladung schon lief, als die Box sie zum ersten Mal sah. Er wird korrigiert, sobald der Akku in die Spannungsphase kommt.": "Počáteční hodnota je jen odhadnuta z napětí, protože nabíjení už probíhalo, když ho zařízení poprvé zaregistrovalo. Opraví se, jakmile baterie přejde do fáze konstantního napětí.",
  "Der Status ist gerade nicht erreichbar.": "Stav teď není dostupný.",
  "Der Suchindex wird im Hintergrund erstellt": "Vyhledávací index se vytváří na pozadí",
  "Der Sync läuft in {} s.": "Synchronizace poběží za {} s.",

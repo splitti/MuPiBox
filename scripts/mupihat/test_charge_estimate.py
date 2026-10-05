@@ -111,6 +111,23 @@ for _ in range(10):  # a real one: near the limit, and it stays
     flick.update(900, "Taper Charge (CV mode)", 35, 8280, 8300)
 assert flick.phase == "cv" and flick.percent >= 85, f"the real CV phase was not taken: {flick.phase} {flick.percent}"
 
+# a charge that is already running when the estimate starts: the starting point is a guess, and the note goes at CV
+late = ChargeEstimator(capacity_mah=CAP, iterm_ma=ITERM, clock=lambda: clock[0], wall=lambda: clock[0])
+clock[0] += STEP
+late.update(2000, "Fast charge (CC mode)", 60, 7900, 8300)
+assert late.start_uncertain is True, "no rest readings: the start should be marked as a guess"
+for _ in range(6):
+    clock[0] += STEP
+    late.update(1800, "Taper Charge (CV mode)", 60, 8290, 8300)
+assert late.start_uncertain is False, "the step to CV should correct the guess"
+known = ChargeEstimator(capacity_mah=CAP, iterm_ma=ITERM, clock=lambda: clock[0], wall=lambda: clock[0])
+for _ in range(10):
+    clock[0] += STEP
+    known.update(-500, "Not Charging", 40, 7000, 8300)
+clock[0] += STEP
+known.update(2000, "Fast charge (CC mode)", 90, 7900, 8300)
+assert known.start_uncertain is False, "a charge after rest readings is not a guess"
+
 # hardly any current (the box takes what the input gives): no time to name
 slow = ChargeEstimator(capacity_mah=CAP, iterm_ma=ITERM, clock=lambda: clock[0], wall=lambda: clock[0])
 for _ in range(10):

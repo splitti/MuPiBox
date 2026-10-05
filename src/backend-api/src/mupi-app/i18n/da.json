@@ -838,6 +838,7 @@
  "Der Server ist nur über IPv6 erreichbar, die Box hat aber kein IPv6. Trag eine IPv4-Adresse des Servers ein – im Heimnetz z. B. 192.168.…": "Serveren kan kun nås via IPv6, men boksen har ingen IPv6. Indtast en IPv4-adresse til serveren – i hjemmenetværket f.eks. 192.168.…",
  "Der Server liegt im Heimnetz. Die Box ruft ihn erst ab, wenn du ihn erlaubst.": "Serveren ligger i hjemmenetværket. Boksen henter først fra den, når du tillader den.",
  "Der Stand der Online-Cover ließ sich nicht laden.": "Status for online-covere kunne ikke indlæses.",
+ "Der Startwert ist nur aus der Spannung geschätzt, weil die Ladung schon lief, als die Box sie zum ersten Mal sah. Er wird korrigiert, sobald der Akku in die Spannungsphase kommt.": "Startværdien er kun anslået ud fra spændingen, fordi opladningen allerede var i gang, da boksen første gang så den. Den rettes, så snart batteriet når fasen med konstant spænding.",
  "Der Status ist gerade nicht erreichbar.": "Status kan ikke nås lige nu.",
  "Der Suchindex wird im Hintergrund erstellt": "Søgeindekset oprettes i baggrunden",
  "Der Sync läuft in {} s.": "Syncen kører om {} s.",
