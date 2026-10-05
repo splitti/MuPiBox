@@ -1154,6 +1154,7 @@ async function spotifyGraceCheck() {
     else nextInMs = 1500 // its last seconds: as before
     nextInMs = Math.max(1500, Math.min(SPOTIFY_GRACE_MAX_WAIT_MS, nextInMs))
   } catch (e) {
+    isSpotify429(e, 'grace check')
     spotifyGraceMissed(String(e))
     // once per series of failures: the log is on the SD card
     if (spotifyGraceMisses === 1) log.warn(`${now()}: [Spotify Control] Grace check failed: ${e}`)
@@ -1469,6 +1470,7 @@ function setAccessToken(token) {
     currentMeta.currentPlayer === 'spotify' &&
     currentMeta.activeSpotifyId.includes('spotify:') &&
     !spotifyRunning &&
+    !currentMeta.pause &&
     !isPlaybackBlocked()
   ) {
     playMe()
@@ -1647,6 +1649,13 @@ function spotifyBlockedUntil() {
   }
   return spotifyBlockKept.until > Date.now() ? spotifyBlockKept.until : 0
 }
+// a 429 of any request of the player: into the shared block - also where nothing is recovered (the state, a pause)
+function isSpotify429(err, from) {
+  const status = err?.statusCode ?? err?.body?.error?.status
+  if (status !== 429) return false
+  noteSpotifyBlockFromPlayer(err, from)
+  return true
+}
 function noteSpotifyBlockFromPlayer(err, from) {
   const seconds = Number.parseInt(err?.headers?.['retry-after'] ?? '', 10)
   if (!(seconds > 10)) return
@@ -1707,8 +1716,10 @@ function pauseOwnSpotify(why) {
         return own
       },
       (err) => {
-        // (the state not known: the pause, aimed at the box's player, all the same)
+        // (the state not known: the pause, aimed at the box's player, all the same - not after a 429: the display
+        // pauses its player then, see the callers)
         if (err?.body?.error?.status === 401) throw err
+        if (isSpotify429(err, why)) throw notOwn('Spotify blocks the requests', { blocked: true })
         if (!own) throw notOwn('no own Spotify player known')
         return own
       },
@@ -1723,13 +1734,18 @@ function pauseOwnSpotify(why) {
     })
     .catch((err) => {
       if (err?.body?.error?.status === 401) handleSpotifyError(err, why)
-      else log.debug(`${now()}: [Spotify Control] ${why}: the box's Spotify player is not playing (${err?.message ?? err?.statusCode ?? err})`)
-      throw Object.assign(err ?? new Error('pause failed'), { notOwn: true })
+      else if (!isSpotify429(err, why)) log.debug(`${now()}: [Spotify Control] ${why}: the box's Spotify player is not playing (${err?.message ?? err?.statusCode ?? err})`)
+      // (a Spotify start came in while this pause was on its way: its failure is about what played before - it must
+      // not have the display pause the new start)
+      const overtaken = generation !== playbackGeneration && currentMeta.currentPlayer === 'spotify'
+      throw Object.assign(err ?? new Error('pause failed'), { notOwn: true }, overtaken ? { foreign: true } : {})
     })
 }
 
 function pause() {
   forgetSpotifyState()
+  // (a start waiting for the token's renewal is not made after a pause - it started the music again)
+  spotifyReplayAfterRefresh = null
   if (telegramPlaybackNotices())
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Pause"')
   currentMeta.pause = true
@@ -1838,9 +1854,11 @@ function stop() {
 
 function play() {
   forgetSpotifyState()
-  currentMeta.spotifySilenceAt = 0
   if (currentMeta.currentPlayer === 'spotify') {
     if (spotifyBlockedUntil()) return log.debug(`${now()}: [Spotify Control] play: Spotify blocks the requests`)
+    // (only a play that is really sent takes back a pause the display still has to make: one refused in a block let
+    // the music go on)
+    currentMeta.spotifySilenceAt = 0
     spotifyApi.play(ownSpotifyDeviceOptions()).then(
       () => {
         counter.countplay++
@@ -2035,6 +2053,15 @@ function playOnDevice(playOptions) {
 
 function playMe() {
   log.debug(`${now()}: [Spotify Control] Spotify play ${currentMeta.activeSpotifyId}`)
+  if (spotifyBlockedUntil()) {
+    // (Spotify blocks the requests: the start would only make the block longer. Nothing plays - the state says so,
+    // else the playtime counted for a silent box)
+    log.debug(`${now()}: [Spotify Control] Spotify start not sent: Spotify blocks the requests`)
+    currentMeta.currentPlayer = ''
+    currentMeta.activeSpotifyId = ''
+    spotifyRunning = false
+    return
+  }
   spotifyStartedHere = true
   currentMeta.spotifySilenceAt = 0
   // (a stop, a local album or a limit that came while Spotify was asked: the start that arrives after it is paused
@@ -3012,6 +3039,7 @@ async function useSpotify(command) {
 /*endpoint to return all spotify connect devices on the network*/
 /*only used if sonos-kids-player is modified*/
 app.get('/getDevices', (_req, res) => {
+  if (spotifyBlockedUntil()) return res.status(503).json({ error: 'Spotify blocks the requests' })
   spotifyApi.getMyDevices().then(
     (data) => {
       counter.countgetMyDevices++
@@ -3094,8 +3122,9 @@ app.get('/state', (_req, res) => {
         },
         (err) => {
           // (only a question: none of handleSpotifyError's recoveries - they start or move the playback - and an
-          // answer all the same, the app waited for its timeout; an expired token is renewed)
+          // answer all the same, the app waited for its timeout; an expired token is renewed, a block noted)
           if (err?.body?.error?.status === 401) handleSpotifyError(err, 'stateHTTP')
+          else isSpotify429(err, 'stateHTTP')
           res.send(EMPTY_STATE())
         },
       )

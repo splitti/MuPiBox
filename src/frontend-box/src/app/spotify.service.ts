@@ -110,7 +110,8 @@ export class SpotifyService {
   private fetchAllPaginatedResults<T>(url: string, baseParams: any, pageSize = 10, maxPages = Number.POSITIVE_INFINITY): Observable<T[]> {
     const fetchPage = (offset: number): Observable<{ items: T[]; total: number; limit: number; offset: number }> => {
       const params = { ...baseParams, limit: pageSize.toString(), offset: offset.toString() }
-      return this.http.get<{ items: T[]; total: number; limit: number; offset: number }>(url, { params })
+      // (each page with a time limit: one that never answered kept the whole lookup - and the track list - open)
+      return this.http.get<{ items: T[]; total: number; limit: number; offset: number }>(url, { params }).pipe(timeout(20000))
     }
 
     // First, get the total count and then fetch all pages

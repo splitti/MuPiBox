@@ -47,6 +47,12 @@ export function buildResumeMedia(
     resume.resumelocalalbum = resume.category
     resume.resumelocalcurrentTracknr = local?.currentTracknr || 0
     resume.resumelocalprogressTime = local?.progressTime || 0
+  } else if (resume.type === 'nas') {
+    // (as the player page saves it: the path is its id in resume.json - the stop of a minimised NAS album kept no
+    // place, and under another key)
+    resume.id = `nas:${resume.nasPath}`
+    resume.resumelocalcurrentTracknr = local?.currentTracknr || 0
+    resume.resumelocalprogressTime = local?.progressTime || 0
   } else if (resume.type === 'rss') {
     resume.resumerssprogressTime = local?.progressTime || 0
   }

@@ -71,6 +71,7 @@ import { pbkdf2Sync, randomBytes } from 'node:crypto'
 import { localOnly } from '../request-guard'
 import { clearSpotifyBlock } from '../spotify-block'
 import { clearArtistAlbumsMemory } from '../artist-albums-store'
+import { clearMetaCache } from '../spotify-sync/meta-cache'
 import { spotifyLoginAge } from './spotify-auth-age'
 import {
   REQUESTED_SCOPES,
@@ -232,6 +233,7 @@ async function clearSpotifyCache(): Promise<boolean> {
   const dir = `${process.cwd()}/cache`
   let ok = true
   clearArtistAlbumsMemory()
+  clearMetaCache()
   onSpotifyCacheCleared()
   for (const name of ['spotify', 'spotify-api', 'covers', 'home-lists.json', 'artist-albums', 'sync-meta.json']) {
     const target = `${dir}/${name}`

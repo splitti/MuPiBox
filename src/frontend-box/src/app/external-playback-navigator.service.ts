@@ -384,9 +384,12 @@ export class ExternalPlaybackNavigatorService {
     // Prevent multiple simultaneous navigations
     this.isNavigatingToPlayer = true
 
+    // (it plays already: without externalPlayback the page started it once more - the album from its first track, a
+    // second after a start at track 24 from the web app or Telegram; seen in a live test)
     const navigationExtras: NavigationExtras = {
       state: {
         media: media,
+        externalPlayback: true,
       },
     }
 

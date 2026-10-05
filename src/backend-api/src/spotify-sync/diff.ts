@@ -98,8 +98,8 @@ function fromFailedSource(entry: BoxLibraryEntry, failed: FailedSource[]): boole
   const playlists = entry.spotify_sync_playlists ?? []
   return failed.some((f) => {
     if (f.kind === 'playlist') return playlists.includes(f.id)
-    // (pinned albums and an artist's albums belong to no playlist)
-    if (playlists.length > 0) return false
+    // (also an entry in a playlist: an album both pinned and in a playlist, taken out of the playlist while the pin
+    // could not be read, was removed)
     if (f.kind === 'album') return entry.id === f.id
     return entry.artistid === f.id || (!!f.name && entry.artist === f.name)
   })
@@ -114,6 +114,7 @@ export function computeSyncDiff(
   const updates: SyncDiff['updates'] = []
   const conflicts: ConflictReport[] = []
 
+  const failedPlaylists = new Set((opts.failedSources ?? []).filter((f) => f.kind === 'playlist').map((f) => f.id))
   // Mark which library entries got matched (for the orphan-removal step).
   const matchedLibrary = new Set<BoxLibraryEntry>()
 
@@ -140,6 +141,12 @@ export function computeSyncDiff(
       continue
     }
     // source === 'spotify-sync' (or anything else that drifted in)
+    // (a playlist that could not be read in this run stays in the entry's list: replaced by only the playlists read,
+    // the next run - that playlist failing again - did not know the entry belonged to it any more and removed it)
+    if (failedPlaylists.size) {
+      const kept = (match.spotify_sync_playlists ?? []).filter((id) => failedPlaylists.has(id) && !item.playlistIds.includes(id))
+      if (kept.length) item.playlistIds = [...item.playlistIds, ...kept]
+    }
     if (syncEntryDiffersFromItem(match, item)) {
       updates.push({ existing: match, item })
     }

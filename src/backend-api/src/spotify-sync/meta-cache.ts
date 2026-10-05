@@ -46,6 +46,12 @@ function load(): MetaFile {
 // 24 to 36 days: not all of one run's entries run out together
 const until = () => Date.now() + KEEP_MS * (0.8 + Math.random() * 0.4)
 
+/** Forgets everything kept (after "clear cache" removed the file: it was used on, and written back). */
+export function clearMetaCache(): void {
+  meta = { artists: {}, albums: {}, playlists: {} }
+  dirty = false
+}
+
 /** The kept picture of an artist: a URL, null (Spotify has none), or undefined (not kept / too old). */
 export function keptArtistCover(id: string): string | null | undefined {
   const e = load().artists[id]
