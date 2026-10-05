@@ -2797,6 +2797,14 @@
        "kind": "number"
       },
       {
+       "type": "text",
+       "label": "Kapazität",
+       "key": "capacity",
+       "default": "",
+       "help": "Die Größe des Akkus. Leer = die Größe aus dem Namen des Profils, sonst gibt es keine Zeit bis voll.",
+       "kind": "number"
+      },
+      {
        "type": "buttons",
        "buttons": [
         [
