@@ -57,7 +57,8 @@ export class KmThemeService {
         this.themeId.set(m?.theme)
         const own = config?.mupibox?.customTheme
         this.custom.set({ light: own?.resolved === 'light', v: typeof own?.v === 'number' ? own.v : 0 })
-        this.stageOn.set(m?.themeStage === true)
+        // (on unless switched off: the default since 5.0.8)
+        this.stageOn.set(m?.themeStage !== false)
         this.autoReadOn.set(m?.themeStageAutoRead === true)
         this.updateNight()
       },

@@ -2,6 +2,7 @@
 <b>Themes</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>The Cover Flow view (big cover in the middle) is now on by default for all children's themes, the older ones too. An update switches it on once on every box; switched off afterwards, it stays off.</li>
 <li id='linews' class='linews'>A new header on every theme: one row, 64 px high - history, categories, "Now playing", WiFi and battery. A long press on WiFi and battery still opens the settings. The listening time is a small chip below the header on every page.</li>
 <li id='linews' class='linews'>"Now playing": the player can be left while the music goes on - a pill in the header shows the cover, the title and a stop button, a tap opens the player again. In the app: Settings › Audio › "Back in the player" - minimise (the default) or stop.</li>
 <li id='linews' class='linews'>The player rearranged: the track button ("3 / 19") sits below the cover like a handle and opens the track list (a long press on the cover still does), bigger buttons. Volume and output share one capsule in the header: box | headphones (only with a paired Bluetooth device) - one tap switches, with several devices the window "Listen with" opens, and a headset that is not found is said so. The same layout in every theme (but coverflow): a bigger cover (324 px) at the height of the controls, the track button below it, and the controls with the same space above and below - on the old themes' panel and without one.</li>
