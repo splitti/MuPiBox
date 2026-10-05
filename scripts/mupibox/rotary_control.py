@@ -3,7 +3,7 @@
 #   GPIO 26 = encoder A (CLK), GPIO 24 = encoder B (DT), GPIO 10 = push button (to GND)
 # Turning changes the volume by rotary.step percent per detent (the player keeps the max volume and the display in sync), the push button
 # does what is chosen in the admin interface (rotary.button in mupiboxconfig.json, read again when it changed).
-# With "next track" chosen the button works as a switch: the first press turns the knob into a track selector (every
+# With "track selection" chosen the button works as a switch (with "next track" a press skips one track, as before): the first press turns the knob into a track selector (every
 # detent clockwise = next track, counter clockwise = previous track) for TRACK_MODE_S seconds - each turn starts the
 # time anew, so it lasts as long as the knob is being turned - and the second press (or the time running out) brings
 # the volume back.
@@ -97,9 +97,9 @@ def playing():
 
 
 def track_mode():
-    # the knob selects tracks: only while the button is still set to "next track" and the time has not run out
+    # the knob selects tracks: only while the button is still set to "track selection" and the time has not run out
     global track_mode_until
-    if rotary_config().get("button", "off") != "next":
+    if rotary_config().get("button", "off") != "tracks":
         track_mode_until = 0.0  # another function chosen meanwhile: the mode ends, also if it is chosen again later
     return time.monotonic() < track_mode_until
 
@@ -107,7 +107,7 @@ def track_mode():
 def button_pressed():
     global track_mode_until
     action = rotary_config().get("button", "off")
-    if action == "next":
+    if action == "tracks":
         # a switch: on the first press the knob selects tracks, on the second one it sets the volume again
         track_mode_until = 0.0 if track_mode() else time.monotonic() + TRACK_MODE_S
         print("rotary: %s" % ("track selection" if track_mode_until else "volume"), flush=True)
@@ -115,6 +115,8 @@ def button_pressed():
     track_mode_until = 0.0
     if action == "playpause":
         player("pause" if playing() else "play")
+    elif action == "next":
+        player("next")
     elif action == "ffwd":
         player("seek+30")
 

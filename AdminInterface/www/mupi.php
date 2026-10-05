@@ -459,7 +459,7 @@ if( isset($_POST['rotary_toggle']) || $rotary_save )
 	if( $rotary_save )
 		{
 		// Only the offered functions (the service reads this value on every button press)
-		$rotary_button = in_array($_POST['rotary_button'] ?? '', array('off','playpause','next','ffwd'), true) ? $_POST['rotary_button'] : 'off';
+		$rotary_button = in_array($_POST['rotary_button'] ?? '', array('off','playpause','next','tracks','ffwd'), true) ? $_POST['rotary_button'] : 'off';
 		$rotary_step = min(10, max(1, intval($_POST['rotary_step'] ?? 5)));
 		if( ($data["rotary"]["button"] ?? null) !== $rotary_button || ($data["rotary"]["step"] ?? null) !== $rotary_step )
 			{
@@ -1508,7 +1508,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<h2>Push button function (GPIO 10)</h2>
 				<div><select id="rotary_button" name="rotary_button" class="element text medium">
 				<?php
-				$rotary_functions = array( "off" => "Inactive", "playpause" => "Toggle pause / play", "next" => "Next song", "ffwd" => "Fast forward (30 sec)" );
+				$rotary_functions = array( "off" => "Inactive", "playpause" => "Toggle pause / play", "next" => "Next song", "tracks" => "Track selection (press switches the knob)", "ffwd" => "Fast forward (30 sec)" );
 				foreach($rotary_functions as $value => $label) {
 					$selected = ( $value == $rotary_button ) ? " selected=\"selected\"" : "";
 					print "<option value=\"" . $value . "\"" . $selected . ">" . $label . "</option>";

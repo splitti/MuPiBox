@@ -6309,6 +6309,8 @@ const BTN_FN = [
   ['Aus', 'off'],
   ['Play/Pause', 'playpause'],
   ['Nächster Titel', 'next'],
+  // (a press switches the knob for 10 s from the volume to the tracks: one track per detent)
+  ['Titelwahl (Drücken schaltet um)', 'tracks'],
   ['Vorspulen', 'ffwd'],
 ]
 
