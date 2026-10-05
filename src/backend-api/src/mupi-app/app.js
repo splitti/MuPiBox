@@ -4851,7 +4851,7 @@ function nasTop() {
         <div class="rows">${nas.profiles
           .map(
             (p, i) => `<div class="entry"><span class="lbl"><b>${esc(p.name === 'standard' ? 'Standard' : p.name)}</b><small>${p.shown} angezeigt · ${p.hidden} ausgeblendet · ${p.download} laden${p.matchesLogin ? '' : ` · anderes NAS (${esc(p.account ?? '')}@${esc(p.address ?? '')})`}</small></span>
-              ${p.active ? '<span class="chip ok">aktiv</span>' : `<button class="btn sm" data-pload="${i}" ${p.matchesLogin ? '' : 'disabled'}>Laden</button>`}${p.name === 'standard' ? '' : `<button class="btn danger sm" data-pdel="${i}">Löschen</button>`}</div>`,
+              ${p.active ? '<span class="chip ok">aktiv</span>' : `<button class="btn sm" data-pload="${i}" ${p.matchesLogin ? '' : 'disabled'}>Übernehmen</button>`}${p.name === 'standard' ? '' : `<button class="btn danger sm" data-pdel="${i}">Löschen</button>`}</div>`,
           )
           .join('')}</div>
         <div class="btns"><button class="btn" id="n-pnew">${icon('plus', 18)}Auswahl als Profil speichern</button></div></section>`
@@ -5234,7 +5234,7 @@ function mountNas(root, page) {
   for (const b of root.querySelectorAll('[data-pload]')) {
     const p = nas.profiles[Number(b.dataset.pload)]
     b.onclick = () =>
-      confirmSheet('Laden', `Profil „${p.name === 'standard' ? 'Standard' : p.name}“ laden? Die aktuelle Ordner-Auswahl wird ersetzt${nas.edits.size ? ' (auch deine ungespeicherten Änderungen)' : ''}.`, async () => {
+      confirmSheet('Übernehmen', `Profil „${p.name === 'standard' ? 'Standard' : p.name}“ übernehmen? Die aktuelle Ordner-Auswahl wird ersetzt${nas.edits.size ? ' (auch deine ungespeicherten Änderungen)' : ''}.`, async () => {
         const r = await api('/api/nas/profiles/load', { method: 'POST', body: { name: p.name } })
         if (r.body?.error === 'different_login') return toast('Das Profil gehört zu einem anderen NAS oder Konto', 'info')
         if (!r.body?.success) return toast('Das hat nicht geklappt', 'info')
@@ -9428,7 +9428,9 @@ const CONTROLLERS = {
           if (it.key === 'stage') return { ...it, help: `Große Cover in der Mitte, für die Kinder-Themes${isKidsTheme(disp.theme?.current) ? '' : ` – das aktive Theme (${cur}) nutzt sie nicht`}.` }
           // (reading names out works only with the cover flow: shown under it while it is on)
           if (it.key === 'tts') return { ...it, dep: 'stage' }
-          if (it.key === 'names' || it.key === 'hideScroll') return { ...it, help: disp.theme?.current === 'coverflow' ? 'Nur beim Theme „coverflow“.' : `Nur beim Theme „coverflow“ – aktiv ist gerade „${cur}“.` }
+          // (the scroll bar is below the covers in every view - the cover flow's and the three side by side too)
+          if (it.key === 'hideScroll') return { ...it, help: 'Der Balken unter den Covern, in jeder Ansicht.' }
+          if (it.key === 'names') return { ...it, help: disp.theme?.current === 'coverflow' ? 'Nur beim Theme „coverflow“.' : `Nur beim Theme „coverflow“ – aktiv ist gerade „${cur}“.` }
           return it
         }),
       })),
@@ -9851,7 +9853,8 @@ const CONTROLLERS = {
           ],
         },
         {
-          title: 'Laden',
+          // ("Aufladen": "Laden" is the NAS's and the voices' download in the English app)
+          title: 'Aufladen',
           col: 1,
           items: [it('vreg', { label: 'Ladeschluss', sub: 'VREG', unit: 'mV', help: 'Leer = Standard des Lade-Chips. Bei zwei Zellen in Reihe höchstens 8400 mV (4,2 V je Zelle) – höher schadet dem Akku.' })],
         },
