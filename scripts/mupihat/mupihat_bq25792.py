@@ -358,6 +358,9 @@ class bq25792:
             return self.read_Vbat()
         return sum(self._vbat_history) // len(self._vbat_history)
 
+    # the resistance of the pack and its wiring in ohms (2S: two cells and the cables): a current of 0.5 A is 60 mV
+    PACK_RESISTANCE_OHM = 0.12
+
     def _voltage_percent(self):
         '''
         The percent the (smoothed) battery voltage says, as a float 0-100 - the rest curve of the profile. None without
@@ -373,7 +376,20 @@ class bq25792:
             return None
         if v_100 <= 10:
             return None
-        v = self.smoothed_vbat()
+        return self._percent_at(self.smoothed_vbat())
+
+    def _percent_at(self, v):
+        '''The percent a rest voltage (mV) stands for on the profile's curve (float, 0-100); None without a curve.'''
+        try:
+            v_100 = int(self.battery_conf['v_100'])
+            v_75  = int(self.battery_conf['v_75'])
+            v_50  = int(self.battery_conf['v_50'])
+            v_25  = int(self.battery_conf['v_25'])
+            v_0   = int(self.battery_conf['v_0'])
+        except (KeyError, ValueError, TypeError):
+            return None
+        if v_100 <= 10:
+            return None
         if v >= v_100:
             return 100.0
         if v >= v_75:
@@ -405,10 +421,18 @@ class bq25792:
             if cap != self._charge_capacity:
                 self._charge.set_capacity(cap)
                 self._charge_capacity = cap
-            pct = self._voltage_percent()
-            if pct is None:
+            if self._voltage_percent() is None:
                 return
-            self._charge.update(self.read_Ibat(), self.read_ChargerStatus(), pct)
+            # What the pack would read at rest: the voltage less the drop the current causes in the pack (charging) or
+            # plus it (discharging). Only the estimate takes this value; the percent shown at rest is the plain voltage.
+            ibat = self.read_Ibat()
+            v_rest = self.smoothed_vbat() - ibat * self.PACK_RESISTANCE_OHM
+            vreg = None
+            try:
+                vreg = int(self.REG01_Charge_Voltage_Limit.VREG)
+            except Exception:
+                pass
+            self._charge.update(ibat, self.read_ChargerStatus(), self._percent_at(v_rest), self.read_Vbat(), vreg)
             # The charge ended (cable out): the smoothing still holds the voltages of the charge - half a minute of
             # "80 %" - so it starts anew from the voltage the pack has now.
             charging = self._charge.percent is not None and self._charge.phase in ("precharge", "cc", "cv", "topoff")

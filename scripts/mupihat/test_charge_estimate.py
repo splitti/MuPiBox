@@ -92,6 +92,25 @@ clock[0] += STEP
 swap.update(3000, "Fast charge (CC mode)", 100)  # the other charger
 assert abs(swap.percent - reached) < 1.5, f"the swap lost the progress: {reached:.1f} -> {swap.percent:.1f}"
 
+# a false "Taper / CV" report for a moment while the voltage is far from the limit: no jump to the end
+flick = ChargeEstimator(capacity_mah=CAP, iterm_ma=ITERM, clock=lambda: clock[0], wall=lambda: clock[0])
+for _ in range(60):
+    clock[0] += STEP
+    flick.update(-600, "Not Charging", 35, 7000, 8300)
+for _ in range(30):
+    clock[0] += STEP
+    flick.update(500, "Fast charge (CC mode)", 35, 7900, 8300)
+for _ in range(2):  # fewer than the readings that make it real
+    clock[0] += STEP
+    flick.update(20, "Taper Charge (CV mode)", 35, 7900, 8300)
+clock[0] += STEP
+flick.update(500, "Fast charge (CC mode)", 35, 7900, 8300)
+assert flick.percent < 40, f"a false CV report moved the percent to {flick.percent:.1f}"
+for _ in range(10):  # a real one: near the limit, and it stays
+    clock[0] += STEP
+    flick.update(900, "Taper Charge (CV mode)", 35, 8280, 8300)
+assert flick.phase == "cv" and flick.percent >= 85, f"the real CV phase was not taken: {flick.phase} {flick.percent}"
+
 # hardly any current (the box takes what the input gives): no time to name
 slow = ChargeEstimator(capacity_mah=CAP, iterm_ma=ITERM, clock=lambda: clock[0], wall=lambda: clock[0])
 for _ in range(10):

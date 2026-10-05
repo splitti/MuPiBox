@@ -56,6 +56,9 @@ class ChargeEstimator:
     REST_WINDOW_S = 600
     # more than this many hours is no estimate
     MAX_ETA_H = 24
+    # the constant-voltage phase counts when the voltage is within this of the charge limit, for this many readings in a row
+    CV_NEAR_LIMIT_MV = 250
+    CV_CONFIRM_READINGS = 3
 
     def __init__(self, capacity_mah=None, iterm_ma=200, clock=time.monotonic, wall=time.time, state_file=None):
         self.capacity = capacity_mah if capacity_mah and capacity_mah > 0 else None
@@ -65,6 +68,7 @@ class ChargeEstimator:
         self._state_file = state_file
         self._rest = deque()  # (t, percent by voltage) while not charging
         self._last_t = None
+        self._cv_streak = 0
         self.reset_session()
         self._restore()
 
@@ -88,13 +92,24 @@ class ChargeEstimator:
         self.capacity = capacity_mah if capacity_mah and capacity_mah > 0 else None
 
     # --- feeding
-    def update(self, ibat_ma, status, voltage_pct):
+    def update(self, ibat_ma, status, voltage_pct, vbat_mv=None, vreg_mv=None):
         """One reading (every few seconds): battery current in mA (+ = charging), the chip's charge state, and the percent
-        the voltage alone says (a float)."""
+        the voltage alone says (a float, with the voltage drop of the charge current taken off). With the battery voltage
+        and the charge limit (VREG) the constant-voltage phase is told from a false report of it."""
         now = self._clock()
         dt = 0.0 if self._last_t is None else min(30.0, max(0.0, now - self._last_t))
         self._last_t = now
         ph = phase_of(status)
+        # The chip reports "Taper (CV mode)" for a moment now and then while it is still far from its charge limit (when
+        # the input gives way, at a change of the cable ...). The CV phase is only taken for real when the voltage is near
+        # the limit and the report stays for a few readings - a single wrong one set the percent to 99 for good.
+        if ph == "cv":
+            near_limit = vbat_mv is None or vreg_mv is None or vbat_mv >= vreg_mv - self.CV_NEAR_LIMIT_MV
+            self._cv_streak = self._cv_streak + 1 if near_limit else 0
+            if self._cv_streak < self.CV_CONFIRM_READINGS:
+                ph = "cc"
+        else:
+            self._cv_streak = 0
         self.phase = ph
         charging = ph in CHARGING_PHASES and ibat_ma is not None and ibat_ma > self.MIN_CHARGE_MA
 
