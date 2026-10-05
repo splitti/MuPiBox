@@ -1657,8 +1657,9 @@ function isSpotify429(err, from) {
   return true
 }
 function noteSpotifyBlockFromPlayer(err, from) {
-  const seconds = Number.parseInt(err?.headers?.['retry-after'] ?? '', 10)
-  if (!(seconds > 10)) return
+  const given = Number.parseInt(err?.headers?.['retry-after'] ?? '', 10)
+  // (every wait Spotify asks for - a short one let the next request out at once; none given: a minute)
+  const seconds = given > 0 ? given : 60
   const until = Date.now() + seconds * 1000
   if (until <= spotifyBlockedUntil()) return
   try {
@@ -2028,7 +2029,8 @@ function overtakenStart() {
 function playOnDevice(playOptions) {
   forgetSpotifyState()
   const generation = playbackGeneration
-  const overtaken = () => generation !== playbackGeneration || isPlaybackBlocked()
+  // (overtaken also by a block of Spotify's requests set while waiting for the display - asked again it only grew)
+  const overtaken = () => generation !== playbackGeneration || isPlaybackBlocked() || !!spotifyBlockedUntil()
   return spotifyApi.play(playOptions).catch(async (err) => {
     if (err?.statusCode !== 404) throw err
     // the display's device (or, without one, no active device at all): the display signs in anew first
@@ -2043,23 +2045,18 @@ function playOnDevice(playOptions) {
         return spotifyApi.play({ ...playOptions, device_id: fresh })
       }
     }
-    if (!playOptions.device_id) throw err
-    log.debug(`${now()}: [Spotify Control] Device ${playOptions.device_id} not found, playing on the active device`)
+    // (no start on "the active device" of the account instead - a parent's phone, a TV)
     if (activeDevice === playOptions.device_id) activeDevice = null
-    const { device_id: _gone, ...withoutDevice } = playOptions
-    return spotifyApi.play(withoutDevice)
+    throw err
   })
 }
 
 function playMe() {
   log.debug(`${now()}: [Spotify Control] Spotify play ${currentMeta.activeSpotifyId}`)
   if (spotifyBlockedUntil()) {
-    // (Spotify blocks the requests: the start would only make the block longer. Nothing plays - the state says so,
-    // else the playtime counted for a silent box)
+    // (Spotify blocks the requests: a start would only make the block longer - a new one is refused before anything
+    // changes, see useSpotify; a recovery or a repeat is not made)
     log.debug(`${now()}: [Spotify Control] Spotify start not sent: Spotify blocks the requests`)
-    currentMeta.currentPlayer = ''
-    currentMeta.activeSpotifyId = ''
-    spotifyRunning = false
     return
   }
   spotifyStartedHere = true
@@ -3007,6 +3004,12 @@ function downloadTTS(name) {
 }
 
 async function useSpotify(command) {
+  // (Spotify blocks the requests: the start is not made, and what plays now goes on as it was - counted. The state
+  // was set for the new start first, and then the music that went on counted as nothing)
+  if (spotifyBlockedUntil()) {
+    log.debug(`${now()}: [Spotify Control] Spotify start refused: Spotify blocks the requests`)
+    return
+  }
   playbackGeneration++
   currentMeta.finished = false
   if (currentMeta.currentPlayer !== 'spotify') {
@@ -3053,6 +3056,7 @@ app.get('/getDevices', (_req, res) => {
     (err) => {
       // (an answer also on a failure - the request waited for its timeout; only a token renewal, no recovery)
       if (err?.body?.error?.status === 401) handleSpotifyError(err, 'getMyDevicesHTTP')
+      else isSpotify429(err, 'getMyDevicesHTTP')
       res.status(502).json({ error: 'devices not available' })
     },
   )

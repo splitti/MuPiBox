@@ -9,6 +9,7 @@ import type { Media } from './media'
 import { MediaService } from './media.service'
 import { PlayerCmds, PlayerService } from './player.service'
 import { buildResumeMedia } from './resume-builder'
+import type { SpotifyWebPlaybackState } from './spotify'
 import { SpotifyService } from './spotify.service'
 
 /** Whatever the player reports as playing: mplayer says "playing", Spotify (the display's Web Playback SDK) "pause". */
@@ -79,52 +80,82 @@ export class BackgroundPlaybackService {
       // (the time listened keeps counting, so the place is kept for "continue listening" when it is stopped later)
       interval(1000).subscribe(() => this.currentMediaService.markPlaying(this.playing)),
     ]
-    // A Spotify album: its end, when Spotify's autoplay (an account setting) goes on with tracks of other albums. The
-    // player page watched for it and stopped there; minimised, nothing did, and other music played on. Told by the
-    // display's own player (its state changes - no request to Spotify): a track of another album that still plays a
-    // moment later.
-    const album = media.type === 'spotify' && media.id && !media.playlistid && !media.showid && !media.audiobookid ? `spotify:album:${media.id}` : ''
-    if (album) {
-      // (the album's tracks in their order: a jump back to an earlier one is its end too - Spotify went on once with a
-      // track of the same album after the last; one lookup, from the server's cache)
+    // The end of Spotify playback that goes on in the background - the player page watched for it and stopped there;
+    // minimised, nothing did and other music played on, or the box counted the time of a silent one. Told by the
+    // display's own player (its state changes, no request to Spotify):
+    //  - an album: a track of another album plays (Spotify's autoplay), or after its last track an earlier one of it
+    //    (not with shuffle: there any order is the album's)
+    //  - a playlist: it plays in another context than the playlist (autoplay goes on outside it)
+    //  - both: the player stands at a track's start or end (the album or playlist is over, autoplay off) - a pause in
+    //    the middle of a track (from a phone) stays a pause
+    // Looked at again a moment later and against the start the player was given: a new start (also of the same album
+    // from the app) is no end of it.
+    if (media.type === 'spotify') {
+      const album = media.id && !media.playlistid && !media.showid && !media.audiobookid ? `spotify:album:${media.id}` : ''
+      const playlist = media.playlistid ? `spotify:playlist:${media.playlistid}` : ''
       let tracks: string[] = []
       let lastIndex = -1
-      firstValueFrom(this.spotifyService.getAlbumInfo(media.id as string))
-        .then((info) => {
-          tracks = (info.tracks ?? []).map((t: { id?: string }) => t.id ?? '')
-        })
-        .catch((): void => undefined)
+      if (album) {
+        // (the album's tracks in their order: one lookup, from the server's cache)
+        firstValueFrom(this.spotifyService.getAlbumInfo(media.id as string))
+          .then((info) => {
+            tracks = (info.tracks ?? []).map((t: { id?: string }) => t.id ?? '')
+          })
+          .catch((): void => undefined)
+      }
+      type State = SpotifyWebPlaybackState | null
+      const ended = (state: State): string => {
+        if (!state) return ''
+        const track = state.track_window?.current_track
+        if (state.paused) {
+          const position = state.position ?? 0
+          const duration = track?.duration_ms ?? 0
+          return position > 1500 && duration > 0 && position < duration - 1500 ? '' : 'it stands at the start or end of a track'
+        }
+        if (album && track?.album?.uri && track.album.uri !== album) return 'another album plays (autoplay)'
+        if (playlist && state.context?.uri && state.context.uri !== playlist) return 'it plays outside the playlist (autoplay)'
+        return ''
+      }
       this.subscriptions.push(
         this.spotifyService.playerState$.subscribe((state) => {
           const track = state?.track_window?.current_track
-          const index = track?.id && tracks.length ? tracks.indexOf(track.id) : -1
-          const jumpedBack = !!state && !state.paused && index >= 0 && lastIndex >= 0 && index < lastIndex
+          const index = album && track?.id && tracks.length ? tracks.indexOf(track.id) : -1
+          const jumpedBack =
+            !!state && !state.paused && !this.shuffled && !state.shuffle && index >= 0 && lastIndex === tracks.length - 1 && index < lastIndex
           if (index >= 0 && !state?.paused) lastIndex = index
-          const other = (s: typeof state) =>
-            jumpedBack ||
-            (!!s && !s.paused && !!s.track_window?.current_track?.album?.uri && s.track_window.current_track.album.uri !== album)
-          if (!other(state) || this.albumEndCheck) return
-          this.albumEndCheck = setTimeout(async () => {
-            this.albumEndCheck = undefined
-            if (this.media() !== media || !other(this.spotifyService.playerState$.value)) return
-            // (only Spotify's autoplay, not a new start from the web app or Telegram: the player names the album it
-            // started - autoplay leaves that as it is)
-            const now = await firstValueFrom(
-              this.http.get<CurrentMPlayer>(`${environment.backend.playerUrl}/local`).pipe(timeout(1500), catchError(() => of(null))),
-            )
-            if (this.media() !== media) return
-            // (the very start the player was given when this went into the background: a new one - also of this album
-            // from the app - is no end of it)
-            if (!now?.activeSpotifyId?.startsWith(`${album}:`) || (this.startedAs && now.activeSpotifyId !== this.startedAs)) return this.clear()
-            console.log('[BackgroundPlayback] album end (Spotify autoplay went on with another album) - stopped')
-            void this.stop()
-          }, 1500)
+          const why = jumpedBack ? 'after the last track an earlier one plays (autoplay)' : ended(state)
+          if (!why || this.endCheck) return
+          this.endCheck = setTimeout(
+            async () => {
+              this.endCheck = undefined
+              if (this.media() !== media) return
+              if (!jumpedBack && !ended(this.spotifyService.playerState$.value)) return
+              const now = await firstValueFrom(
+                this.http.get<CurrentMPlayer>(`${environment.backend.playerUrl}/local`).pipe(timeout(1500), catchError(() => of(null))),
+              )
+              if (this.media() !== media || !now) return
+              // (something else was started meanwhile - from the app or Telegram: not this one's end)
+              if (now.currentPlayer !== 'spotify' || (this.startedAs && now.activeSpotifyId !== this.startedAs)) return this.clear()
+              // (paused by the box - the app's pause: a pause, no end)
+              if (now.pause === true) return
+              console.log(`[BackgroundPlayback] end: ${why} - stopped`)
+              this.finish()
+            },
+            jumpedBack || !this.spotifyService.playerState$.value?.paused ? 1500 : 3000,
+          )
         }),
       )
     }
   }
 
-  private albumEndCheck: ReturnType<typeof setTimeout> | undefined
+  private endCheck: ReturnType<typeof setTimeout> | undefined
+
+  /** Whether the player still plays what this note is about (the answer of /local), as far as it tells. */
+  private stillThis(media: Media | null, local: CurrentMPlayer | null): boolean {
+    if (!media || !local) return true
+    if (media.type === 'spotify') return local.currentPlayer !== 'mplayer' && (!this.startedAs || !local.activeSpotifyId || local.activeSpotifyId === this.startedAs)
+    return local.currentPlayer !== 'spotify'
+  }
   // what the player was told to play when this went into the background (its activeSpotifyId)
   private startedAs = ''
 
@@ -164,8 +195,8 @@ export class BackgroundPlaybackService {
 
   /** Nothing in the background any more: it ended, the player page took it over again, or something new started. */
   clear(): void {
-    clearTimeout(this.albumEndCheck)
-    this.albumEndCheck = undefined
+    clearTimeout(this.endCheck)
+    this.endCheck = undefined
     for (const s of this.subscriptions) s.unsubscribe()
     this.subscriptions = []
     this.media.set(null)
@@ -185,12 +216,29 @@ export class BackgroundPlaybackService {
         firstValueFrom(source$.pipe(take(1), timeout(1500))).catch((): null => null)
       const spotify = source.type === 'spotify' ? await look(this.mediaService.current$) : null
       const local = await look(this.http.get<CurrentMPlayer>(`${environment.backend.playerUrl}/local`))
-      // (something else started while the place was read - up to 3 s: it is neither saved as this one nor stopped)
-      if (this.media() !== stopping) return
+      // (something else started while the place was read - up to 3 s: it is neither saved as this one nor stopped;
+      // also when the player names another start already and the display has not yet taken it over)
+      if (this.media() !== stopping || !this.stillThis(source, local)) return
       if (source.type === 'spotify' ? spotify : local)
         this.mediaService.addRawResume(buildResumeMedia(source, spotify, local))
     }
     if (this.media() !== stopping) return
+    if (!(source && resumable && this.currentMediaService.shouldPersistResume())) {
+      // (not read above: asked now whether the player still plays this one)
+      const local = await firstValueFrom(
+        this.http.get<CurrentMPlayer>(`${environment.backend.playerUrl}/local`).pipe(timeout(1500), catchError(() => of(null))),
+      )
+      if (this.media() !== stopping || !this.stillThis(stopping, local)) return
+    }
+    if (this.shuffled) this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF)
+    this.playerService.sendCmd(PlayerCmds.STOP)
+    if (this.albumStop) this.playerService.sendCmd(PlayerCmds.ALBUMSTOP)
+    this.clear()
+  }
+
+  /** The end of what played in the background: stopped - no place kept (the player's state is already the next
+   * music's: its track and position were saved under this album), the last saved place stays. */
+  private finish(): void {
     if (this.shuffled) this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF)
     this.playerService.sendCmd(PlayerCmds.STOP)
     if (this.albumStop) this.playerService.sendCmd(PlayerCmds.ALBUMSTOP)
