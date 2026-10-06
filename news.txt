@@ -1,3 +1,12 @@
+<h3>DEV 5.0.9 - changes compared to 5.0.8</h3>
+<b>Manual</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>A manual on the box (by Andreas): at http://&lt;box&gt;/manual/, in German and English, without internet and without a login - getting started, using the display, adding content, listening time and quiet times, hardware, network, maintenance, troubleshooting and an appendix with GPIO pins, files and services. A search over all pages, the language and version on top, "on this page" beside the text.</li>
+<li id='linews' class='linews'>It looks like the app: the same colours, fonts and symbols, light and dark shared with the app, the side bar of the app on the PC and a drawer on the phone.</li>
+<li id='linews' class='linews'>The app has a "Manual" button at the top right, also on the login page; it opens the manual in the app's language.</li>
+<li id='linews' class='linews'>Every page was checked against the box itself (menu paths, names of buttons, values); the pictures are made from the real display with a made-up demo library (tools/manual-shots/shots.mjs), in the Sonnenhof theme.</li>
+</ul>
 <h3>DEV 5.0.8 - changes compared to 5.0.7</h3>
 <b>Themes</b>
 </ul>
