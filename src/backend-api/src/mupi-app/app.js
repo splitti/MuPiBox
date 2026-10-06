@@ -330,15 +330,15 @@ function renderChrome(page) {
   for (const el of document.querySelectorAll('[data-go]')) el.onclick = () => go(el.dataset.go)
 }
 
-// The manual on the box (/manual/, open without a login): in the app's language when it has it, else its own choice
-// (the language used there last, or the browser's). A row on the start page; the login page has it as a button (no
+// The manual on the box (/manual/, open without a login): in the app's language when it has it, else the browser's,
+// else English (see the manual's front door). A row on the start page; the login page has it as a button (no
 // start page there - and whoever cannot sign in needs it most)
 function manualButton() {
   return `<button class="icon-btn soft" id="manual-btn" aria-label="Handbuch">${icon('book')}</button>`
 }
 function openManual() {
-  const lang = getLang()
-  window.open(['de', 'en'].includes(lang) ? `/manual/${lang}/index.html` : '/manual/', '_blank', 'noopener')
+  // (the manual's front door finds the language itself: the app's, else the browser's, else English)
+  window.open('/manual/', '_blank', 'noopener')
 }
 
 function themeButton() {

@@ -2,7 +2,7 @@
 <b>Manual</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
-<li id='linews' class='linews'>A manual on the box (by Andreas): at http://&lt;box&gt;/manual/, in German and English, without internet and without a login - getting started, using the display, adding content, listening time and quiet times, hardware, network, maintenance, troubleshooting and an appendix with GPIO pins, files and services. A search over all pages, the language and version on top, "on this page" beside the text.</li>
+<li id='linews' class='linews'>A manual on the box (by Andreas): at http://&lt;box&gt;/manual/, in German and English (the language of the app, else of the browser, else English), without internet and without a login - getting started, using the display, adding content, listening time and quiet times, hardware, network, maintenance, troubleshooting and an appendix with GPIO pins, files and services. A search over all pages, the language and version on top, "on this page" beside the text.</li>
 <li id='linews' class='linews'>It looks like the app: the same colours, fonts and symbols, light and dark shared with the app, the side bar of the app on the PC and a drawer on the phone.</li>
 <li id='linews' class='linews'>The app's start page has a row "Manual" below "System", the login page a button for it; both open the manual in the app's language.</li>
 <li id='linews' class='linews'>Every page was checked against the box itself (menu paths, names of buttons, values); the pictures are made from the real display with a made-up demo library (tools/manual-shots/shots.mjs), in the Sonnenhof theme.</li>

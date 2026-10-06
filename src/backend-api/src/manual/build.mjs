@@ -390,7 +390,7 @@ function buildLanguage(lang) {
 <link rel="stylesheet" href="${ROOT('static/fonts.css')}">
 <link rel="stylesheet" href="${ROOT('static/tokens.css')}">
 <link rel="stylesheet" href="${ROOT('static/manual.css')}">
-<script>try{var t=localStorage.getItem('mupi-theme');if(t==='light'||t==='dark'||t==='auto')document.documentElement.setAttribute('data-theme',t);if(t==='light'||(t==='auto'&&matchMedia('(prefers-color-scheme: light)').matches))document.querySelector('meta[name="theme-color"]').content='#F3F6F9';localStorage.setItem('manual-lang','${lang}')}catch(e){}</script>
+<script>try{var t=localStorage.getItem('mupi-theme');if(t==='light'||t==='dark'||t==='auto')document.documentElement.setAttribute('data-theme',t);if(t==='light'||(t==='auto'&&matchMedia('(prefers-color-scheme: light)').matches))document.querySelector('meta[name="theme-color"]').content='#F3F6F9'}catch(e){}</script>
 </head>
 <body data-root="${ROOT('')}" data-lang="${lang}" data-page="${esc(node.out)}">
 <div class="shell">
@@ -497,7 +497,9 @@ function buildLanguage(lang) {
 let total = 0
 for (const lang of LANGS) total += buildLanguage(lang)
 
-// the front door: the language of the last visit, else the browser's, else the first one
+// the front door: the language of the app (its own choice, "mupi-lang" - the same box, the same browser), else the first
+// of the browser's languages the manual has, else English. Nothing is remembered here: the language picker on a page
+// only changes that page, the next visit finds the language anew.
 fs.writeFileSync(
   path.join(outDir, 'index.html'),
   `<!doctype html>
@@ -505,9 +507,14 @@ fs.writeFileSync(
 <title>MuPiBox</title>
 <script>
 (function () {
-  var langs = ${JSON.stringify(LANGS)}, lang = langs[0];
-  try { var saved = localStorage.getItem('manual-lang'); if (langs.indexOf(saved) >= 0) lang = saved; else { var b = (navigator.language || '').slice(0, 2).toLowerCase(); if (langs.indexOf(b) >= 0) lang = b; else if (b) lang = langs.indexOf('en') >= 0 ? 'en' : lang; } } catch (e) {}
-  location.replace(lang + '/index.html' + location.hash);
+  var langs = ${JSON.stringify(LANGS)}, lang = null;
+  var pick = function (code) { code = String(code || '').toLowerCase().slice(0, 2); return langs.indexOf(code) >= 0 ? code : null; };
+  try { lang = pick(localStorage.getItem('mupi-lang')); } catch (e) {}
+  if (!lang) {
+    var wanted = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language];
+    for (var i = 0; i < wanted.length && !lang; i++) lang = pick(wanted[i]);
+  }
+  location.replace((lang || (langs.indexOf('en') >= 0 ? 'en' : langs[0])) + '/index.html' + location.hash);
 })();
 </script></head>
 <body>${LANGS.map((l) => `<p><a href="${l}/index.html">${esc(strings[l].languageName)}</a></p>`).join('')}</body></html>
