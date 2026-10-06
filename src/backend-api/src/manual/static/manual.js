@@ -148,7 +148,7 @@
       ? hits
           .map(({ p, heading, at }) => {
             const snippet = at >= 0 ? `${at > 40 ? '… ' : ''}${escHtml(p.x.slice(Math.max(0, at - 40), at + 110))} …` : ''
-            return `<a href="${root}${p.u}${heading ? `#${heading.id}` : ''}"><b>${escHtml(p.t)}</b><small>${escHtml(p.c)}${heading ? ` › ${escHtml(heading.t)}` : ''}</small><small>${snippet}</small></a>`
+            return `<a href="${root}${lang}/${p.u}${heading ? `#${heading.id}` : ''}"><b>${escHtml(p.t)}</b><small>${escHtml(p.c)}${heading ? ` › ${escHtml(heading.t)}` : ''}</small><small>${snippet}</small></a>`
           })
           .join('')
       : `<p class="none">${escHtml(texts.none)}</p>`
