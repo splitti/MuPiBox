@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // Screenshots of the display for the manual (src/backend-api/src/manual/img/<lang>/display-*.png): the real display
-// build, the theme of a fresh box ("blue", Cover Flow on) and the made-up demo library of tools/theme-preview (no real
+// build, a children's theme ("sonnenhof" unless --theme says otherwise, Cover Flow on as on a fresh box) and the made-up demo library of tools/theme-preview (no real
 // titles, covers or brands). Like the theme previews, the demo lives only in this script: it serves the display build and
 // answers every request of the display itself (Chrome DevTools protocol), the box never has a demo mode.
 //
-//   node tools/manual-shots/shots.mjs [--www <display build>] [--lang de,en] [--chrome <path>]
+//   node tools/manual-shots/shots.mjs [--www <display build>] [--lang de,en] [--theme <id>] [--chrome <path>]
 //
 // Needs Node 22+ and Chrome or Chromium; first build the display (cd src/frontend-box && npx ng build).
 
@@ -26,7 +26,8 @@ const langs = arg('lang', 'de,en').split(',').filter(Boolean)
 const themesDir = path.join(repo, 'themes')
 const demoDir = path.join(repo, 'tools', 'theme-preview', 'demo-bibliothek')
 const outBase = path.join(repo, 'src', 'backend-api', 'src', 'manual', 'img')
-const THEME = 'blue'
+// the theme of the pictures (--theme <id>): Sonnenhof, a children's theme with the Cover Flow
+const THEME = arg('theme', 'sonnenhof')
 const chromePath =
   arg('chrome', process.env.CHROME) ??
   [
