@@ -22,6 +22,8 @@ Als neu gilt nur, was nach dem Hinzufügen des Podcasts erschienen ist. Der Punk
 
 ## „Läuft gerade“
 
+![„Läuft gerade“ oben in der Kopfleiste der Startseite](display-now-playing.png)
+
 Die Musik kann weiterlaufen, wenn das Kind den Player verlässt. Dann erscheint oben in der Kopfleiste der Startseite und der Albumlisten die Anzeige **Läuft gerade**: Cover, Titel und ein Stopp-Knopf. Ein Tipp auf die Anzeige öffnet den Player wieder, der Stopp-Knopf beendet die Wiedergabe.
 
 Das Verhalten ist eine Einstellung: **Einstellungen › Audio › Lautstärke › Zurück im Player**.

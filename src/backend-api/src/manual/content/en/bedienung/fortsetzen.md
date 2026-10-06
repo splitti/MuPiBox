@@ -22,6 +22,8 @@ Only what was published after the podcast was added counts as new. The dot disap
 
 ## “Now playing”
 
+![“Now playing” at the top of the start page's header](display-now-playing.png)
+
 The music can go on when the child leaves the player. Then **Now playing** appears at the top of the header on the start page and in the album lists: cover, title and a stop button. A tap on it opens the player again, the stop button ends playback.
 
 This behaviour is a setting: **Settings › Audio › Volume › Back in the player**.
