@@ -1,4 +1,9 @@
 <h3>DEV 5.0.9 - changes compared to 5.0.8</h3>
+<b>Spotify</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Switching the box off (or a stop) with nothing playing on it no longer pauses Spotify on another device of the same account, a PC or a phone: the display paused its own Spotify player, and Spotify took that pause for the account's playback. It now pauses it only when the box itself plays (reported by hyperbit).</li>
+</ul>
 <b>Manual</b>
 </ul>
 <ul id='ulnews' class='ulnews'>

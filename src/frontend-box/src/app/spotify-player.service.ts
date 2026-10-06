@@ -198,6 +198,11 @@ export class SpotifyPlayerService {
     }
 
     try {
+      // Only when this player plays itself: the SDK's pause on a player that is not the active device paused whatever
+      // device of the account was playing - a PC or phone with the same account, when the box was shut down with
+      // nothing playing on it (reported by hyperbit). getCurrentState() is null unless the playback is on this device.
+      const state = await this.player.getCurrentState()
+      if (!state || state.paused) return
       await this.player.pause()
     } catch (error) {
       this.logService.error('[Spotify SDK] Error pausing:', error)
