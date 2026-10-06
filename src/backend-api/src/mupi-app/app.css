@@ -706,11 +706,6 @@ a.btn { text-decoration: none; color: inherit; }
   .topbar { gap: 6px; padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
   .topbar .icon-btn, .topbar .lang-btn { width: 38px; height: 38px; }
 }
-/* a very narrow phone: with the manual there are six buttons at the top */
-@media (max-width: 370px) {
-  .topbar { gap: 4px; }
-  .topbar .icon-btn, .topbar .lang-btn { width: 34px; height: 34px; }
-}
 /* a slider that does nothing now (e.g. the start volume without a fixed start value) */
 input[type="range"]:disabled { opacity: .4; cursor: default; }
 /* the phone: a segment's words may wrap (two lines instead of cut off), two fields side by side go below each other */

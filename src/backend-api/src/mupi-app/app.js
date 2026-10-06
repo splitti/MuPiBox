@@ -301,13 +301,11 @@ function renderChrome(page) {
   $('#topbar').innerHTML = `
     ${isArea ? `<div class="brand-dot">${mupiImg()}</div>` : `<button class="icon-btn" id="back" aria-label="Zurück">${icon('back')}</button>`}
     <div class="title">${esc(title)}</div>
-    ${manualButton()}
     ${langButton()}
     ${themeButton()}
     <button class="icon-btn soft" id="power-btn" aria-label="Neu starten oder ausschalten">${icon('power')}</button>
     ${state.open ? '' : `<button class="icon-btn" id="logout-btn" aria-label="Abmelden">${icon('logout')}</button>`}`
   $('#back')?.addEventListener('click', () => go(backTarget(page)))
-  $('#manual-btn').addEventListener('click', openManual)
   $('#lang-btn').addEventListener('click', openLangSheet)
   $('#theme-btn').addEventListener('click', toggleTheme)
   $('#power-btn').addEventListener('click', openPowerSheet)
@@ -333,7 +331,8 @@ function renderChrome(page) {
 }
 
 // The manual on the box (/manual/, open without a login): in the app's language when it has it, else its own choice
-// (the language used there last, or the browser's)
+// (the language used there last, or the browser's). A row on the start page; the login page has it as a button (no
+// start page there - and whoever cannot sign in needs it most)
 function manualButton() {
   return `<button class="icon-btn soft" id="manual-btn" aria-label="Handbuch">${icon('book')}</button>`
 }
@@ -798,6 +797,7 @@ function wire(root, page) {
 
 // Pages outside the app: the previous admin interface (port 80) and the DietPi dashboard (port 5252)
 async function openExternal(which) {
+  if (which === 'manual') return openManual()
   const host = location.hostname
   if (which === 'dietpi') {
     window.open(`http://${host}:5252/`, '_blank', 'noopener')
@@ -925,6 +925,7 @@ function startSkeleton() {
       ${navRow('bluetooth', 'Bluetooth', 'Kopfhörer und Lautsprecher', 'bt')}
       ${navRow('telegram', 'Telegram', 'Eltern-Bot', 'tg')}
       ${navRow('g-system', 'System', 'Über die Box, Neustart, Updates', 'gear')}
+      ${navRow('ext:manual', 'Handbuch', 'Anleitung zu Box, Display und App', 'book')}
       ${navRow('ext:admin', 'Erweiterte Einstellungen', 'Das bisherige Admin-Interface', 'ext')}
     </div></section>`,
   ]
