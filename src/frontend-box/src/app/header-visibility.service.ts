@@ -1,6 +1,7 @@
-import { effect, Injectable, inject, signal } from '@angular/core'
+import { computed, effect, Injectable, inject, signal, untracked } from '@angular/core'
 import { Router } from '@angular/router'
 import { Subject } from 'rxjs'
+import { KmThemeService } from './theme/km-theme.service'
 
 interface Point {
   x: number
@@ -12,6 +13,8 @@ interface Point {
  * same on all of them: two fingers swiping up hide it, two fingers swiping down show it again. With it gone, one finger
  * swiping up from the bottom edge goes one level back - what the bar's back button does (it is not there to tap).
  * The state is kept in this browser, so it stays after a page change or a reload.
+ * Only in the Cover Flow theme, and only while switched on in the app (Appearance › View): in any other theme, or switched
+ * off, the gestures do nothing and the bar is always there (a bar folded away before comes back).
  * On the start page two fingers swiping in from the right edge to the left go to the next category, from the left
  * edge to the right to the one before - round and round, the last one leads to the first and the other way (the tabs of
  * the bar are not there to tap with it folded away).
@@ -29,10 +32,15 @@ export class HeaderVisibilityService {
   private static readonly CATEGORY_EDGE_PX = 120
   private static readonly CATEGORY_SWIPE_PX = 100
 
-  /** Whether the top bar is folded away (the style sheet does it, by the class on the body; the covers use it too). */
-  readonly hidden = signal(HeaderVisibilityService.read())
-
   private readonly router = inject(Router)
+  private readonly kmTheme = inject(KmThemeService)
+  private readonly active = this.kmTheme.fullscreenGestures
+  // what the last swipe asked for (kept in the browser); it counts only while the gestures are active
+  private readonly folded = signal(HeaderVisibilityService.read())
+
+  /** Whether the top bar is folded away (the style sheet does it, by the class on the body; the covers use it too). */
+  readonly hidden = computed(() => this.active() && this.folded())
+
   /** A category swipe on the start page: 1 = the next category, -1 = the one before. */
   readonly categorySwipe = new Subject<1 | -1>()
   private twoFingerStart: Point | null = null
@@ -40,6 +48,11 @@ export class HeaderVisibilityService {
 
   constructor() {
     effect(() => document.body.classList.toggle('mupi-header-hidden', this.hidden()))
+    // switched off in the app (Cover Flow is on, the gestures not): the bar folded away is forgotten, so switching them on
+    // again does not hide it at once
+    effect(() => {
+      if (this.kmTheme.isCoverflow() && !this.active()) untracked(() => this.set(false))
+    })
     const passive = { passive: true }
     document.addEventListener('touchstart', (e) => this.onStart(e), passive)
     document.addEventListener('touchmove', (e) => this.onMove(e), passive)
@@ -61,8 +74,8 @@ export class HeaderVisibilityService {
   }
 
   private set(hidden: boolean): void {
-    if (this.hidden() === hidden) return
-    this.hidden.set(hidden)
+    if (this.folded() === hidden) return
+    this.folded.set(hidden)
     try {
       localStorage.setItem(HeaderVisibilityService.KEY, hidden ? '1' : '0')
     } catch {
@@ -81,6 +94,7 @@ export class HeaderVisibilityService {
 
   private onStart(e: TouchEvent): void {
     this.reset()
+    if (!this.active()) return
     const path = this.path()
     if (!HeaderVisibilityService.PAGES.has(path)) return
     if (e.touches.length === 2) {

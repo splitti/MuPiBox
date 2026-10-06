@@ -21,6 +21,8 @@ export class KmThemeService {
   // the old plain themes: band behind the header / panel behind the player's controls (app › Appearance, on by default)
   private readonly headerBand = signal(true)
   private readonly playerPanel = signal(true)
+  // Cover Flow: the top bar may be folded away by a two-finger swipe (app › Appearance, on by default)
+  private readonly fullscreenGesturesOn = signal(true)
   private readonly night = signal(false)
   // theme "custom": its own settings (app › Theme › Eigenes) - light writing or dark, and the stylesheet's version
   private readonly custom = signal<{ light: boolean; v: number }>({ light: false, v: 0 })
@@ -32,6 +34,8 @@ export class KmThemeService {
   readonly isCoverflow = computed(() => this.themeId() === 'coverflow')
   /** the round-2 layout of header, player and track list: every km theme and coverflow */
   readonly roundTwo = computed(() => this.isKm() || this.isCoverflow())
+  /** the full screen gestures of HeaderVisibilityService: only the Cover Flow theme, and only while switched on */
+  readonly fullscreenGestures = computed(() => this.isCoverflow() && this.fullscreenGesturesOn())
   /** the stage view (big cover in the middle) of a km theme */
   readonly stage = computed(() => this.isKm() && this.stageOn())
   /** read the name aloud when the stage stops on a cover */
@@ -57,7 +61,7 @@ export class KmThemeService {
     this.http.get<MupiboxConfig>(`${environment.backend.apiUrl}/config`).subscribe({
       next: (config) => {
         const m = config?.mupibox as
-          | { theme?: string; themeStage?: boolean; themeStageAutoRead?: boolean; headerBand?: boolean; playerPanel?: boolean }
+          | { theme?: string; themeStage?: boolean; themeStageAutoRead?: boolean; headerBand?: boolean; playerPanel?: boolean; fullscreenGestures?: boolean }
           | undefined
         this.themeId.set(m?.theme)
         const own = config?.mupibox?.customTheme
@@ -67,6 +71,7 @@ export class KmThemeService {
         this.autoReadOn.set(m?.themeStageAutoRead === true)
         this.headerBand.set(m?.headerBand !== false)
         this.playerPanel.set(m?.playerPanel !== false)
+        this.fullscreenGesturesOn.set(m?.fullscreenGestures !== false)
         this.updateNight()
       },
       error: () => undefined,

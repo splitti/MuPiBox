@@ -9434,6 +9434,7 @@ const CONTROLLERS = {
       state.values.set('hideScroll', disp.opts.hideScrollbar)
       state.values.set('headerBand', disp.theme.headerBand !== false)
       state.values.set('playerPanel', disp.theme.playerPanel !== false)
+      state.values.set('fullscreenGestures', disp.theme.fullscreenGestures !== false)
     },
     sections: (page) =>
       page.sections.map((sec) => ({
@@ -9443,6 +9444,8 @@ const CONTROLLERS = {
         items: sec.items
           .filter((it) => it.key !== 'headerBand' || (disp.theme?.bandOptional ?? []).includes(disp.theme?.current))
           .filter((it) => it.key !== 'playerPanel' || (disp.theme?.panelOptional ?? []).includes(disp.theme?.current))
+          // (the full screen gestures exist only in the Cover Flow theme)
+          .filter((it) => it.key !== 'fullscreenGestures' || disp.theme?.current === 'coverflow')
           .map((it) => {
           const cur = themeLabel(disp.theme?.current ?? '')
           if (it.key === 'stage') return { ...it, help: `Große Cover in der Mitte, für die Kinder-Themes${isKidsTheme(disp.theme?.current) ? '' : ` – das aktive Theme (${cur}) nutzt sie nicht`}.` }
@@ -9453,6 +9456,7 @@ const CONTROLLERS = {
           if (it.key === 'names') return { ...it, help: disp.theme?.current === 'coverflow' ? 'Nur beim Theme „coverflow“.' : `Nur beim Theme „coverflow“ – aktiv ist gerade „${cur}“.` }
           if (it.key === 'headerBand') return { ...it, help: 'Aus: Die Kopfzeile liegt ohne farbiges Band auf dem Hintergrund des Themes.' }
           if (it.key === 'playerPanel') return { ...it, help: 'Aus: Die Knöpfe des Players stehen ohne Fläche auf dem Hintergrund, in den Farben der Kopfzeile.' }
+          if (it.key === 'fullscreenGestures') return { ...it, help: 'Zwei Finger nach oben wischen blendet die Kopfzeile aus und macht die Cover größer, nach unten holt sie zurück. Ohne Kopfzeile: ein Finger vom unteren Rand nach oben geht zurück, zwei Finger vom Rand zur Seite wechseln die Kategorie.' }
           return it
         }),
       })),
@@ -9465,7 +9469,7 @@ const CONTROLLERS = {
         const r = await api(`${API}/theme-stage`, { method: 'POST', body: { autoRead: v } })
         return toast(r.ok ? (v ? 'Vorlesen an' : 'Vorlesen aus') : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
       }
-      if (key === 'headerBand' || key === 'playerPanel') {
+      if (key === 'headerBand' || key === 'playerPanel' || key === 'fullscreenGestures') {
         const r = await api(`${API}/theme-stage`, { method: 'POST', body: { [key]: v } })
         if (r.ok) disp.theme[key] = v
         return toast(r.ok ? 'Gespeichert' : 'Nicht gespeichert', r.ok ? 'ok' : 'info')

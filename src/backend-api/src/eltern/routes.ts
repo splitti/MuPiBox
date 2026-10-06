@@ -2084,6 +2084,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       stageAutoRead: mb.themeStageAutoRead === true,
       headerBand: mb.headerBand !== false,
       playerPanel: mb.playerPanel !== false,
+      // (Cover Flow: the top bar folded away by a two-finger swipe - on unless switched off)
+      fullscreenGestures: mb.fullscreenGestures !== false,
       bandOptional,
       panelOptional,
     })
@@ -2132,15 +2134,16 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/app/theme-stage  {stage?, autoRead?}
+   * POST /api/app/theme-stage  {stage?, autoRead?, headerBand?, playerPanel?, fullscreenGestures?}
    * The children's themes' Cover Flow view (mupibox.themeStage) and reading the name aloud when it stops
    * (mupibox.themeStageAutoRead). The display takes them over right away (same signal as after a theme change).
    */
   router.post('/theme-stage', requireSession, requireCsrf, async (req, res) => {
-    const body = (req.body as { stage?: unknown; autoRead?: unknown; headerBand?: unknown; playerPanel?: unknown } | undefined) ?? {}
-    const flags = [body.stage, body.autoRead, body.headerBand, body.playerPanel]
+    const body =
+      (req.body as { stage?: unknown; autoRead?: unknown; headerBand?: unknown; playerPanel?: unknown; fullscreenGestures?: unknown } | undefined) ?? {}
+    const flags = [body.stage, body.autoRead, body.headerBand, body.playerPanel, body.fullscreenGestures]
     if (flags.some((v) => v !== undefined && typeof v !== 'boolean')) {
-      res.status(400).json({ error: 'stage, autoRead, headerBand and playerPanel must be true or false' })
+      res.status(400).json({ error: 'stage, autoRead, headerBand, playerPanel and fullscreenGestures must be true or false' })
       return
     }
     let stage = false
@@ -2151,6 +2154,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       if (typeof body.autoRead === 'boolean') m.themeStageAutoRead = body.autoRead
       if (typeof body.headerBand === 'boolean') m.headerBand = body.headerBand
       if (typeof body.playerPanel === 'boolean') m.playerPanel = body.playerPanel
+      if (typeof body.fullscreenGestures === 'boolean') m.fullscreenGestures = body.fullscreenGestures
       stage = m.themeStage !== false
       autoRead = m.themeStageAutoRead === true
       c.mupibox = m

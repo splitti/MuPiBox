@@ -1877,6 +1877,12 @@
        "label": "Player mit Hintergrundfläche",
        "key": "playerPanel",
        "default": true
+      },
+      {
+       "type": "toggle",
+       "label": "Vollbild per Wischgeste",
+       "key": "fullscreenGestures",
+       "default": true
       }
      ]
     }
