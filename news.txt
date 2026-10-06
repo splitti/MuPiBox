@@ -16,6 +16,7 @@
 <li id='linews' class='linews'>It looks like the app: the same colours, fonts and symbols, light and dark shared with the app, the side bar of the app on the PC and a drawer on the phone.</li>
 <li id='linews' class='linews'>The app's start page has a row "Manual" below "System", the login page a button for it; both open the manual in the app's language.</li>
 <li id='linews' class='linews'>Every page was checked against the box itself (menu paths, names of buttons, values); the pictures are made from the real display with a made-up demo library (tools/manual-shots/shots.mjs), in the Sonnenhof theme.</li>
+<li id='linews' class='linews'>The GPIO page (by Andreas): a button per accessory (rotary knob, OnOff SHIM, fan, status LED, MuPiHAT, sound cards, I2C module) marks its pins on the 40-pin header; pins two accessories would both need show up as an overlap. The table of the pins in use shows, on the box, only what this box uses right now (a switched-off fan or rotary knob is left out, changed pins show their number).</li>
 </ul>
 <h3>DEV 5.0.8 - changes compared to 5.0.7</h3>
 <b>Themes</b>
