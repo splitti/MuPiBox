@@ -229,6 +229,43 @@ footer a { color: var(--mp-muted); }
   th, td { padding: 8px 10px; }
 }
 
+/* GPIO map (page anhang/gpio) */
+.gpio-pick { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.gpio-btn { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 8px 14px; border: 1px solid var(--mp-border); border-radius: 999px; background: var(--mp-chip); color: var(--mp-text); font: inherit; font-size: 14px; line-height: 1.3; text-align: left; cursor: pointer; }
+.gpio-btn:hover { border-color: var(--c); }
+.gpio-btn:focus-visible { outline: 2px solid var(--mp-primary); outline-offset: 2px; }
+.gpio-btn[aria-pressed="true"] { border-color: var(--c); background: var(--mp-primary-soft); background: color-mix(in srgb, var(--c) 24%, var(--mp-surface)); font-weight: 700; }
+.gpio-dot { flex: none; display: inline-block; width: 12px; height: 12px; margin-right: 6px; border-radius: 50%; background: var(--c); vertical-align: -1px; }
+.gpio-btn .gpio-dot { margin: 0; opacity: .45; }
+.gpio-btn[aria-pressed="true"] .gpio-dot { opacity: 1; }
+.gpio-status { min-height: 1.5em; margin: 4px 0 12px; color: var(--mp-muted); }
+.gpio-map.has-clash .gpio-status { color: var(--mp-danger); font-weight: 700; }
+.gpio-board { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; max-width: 560px; margin: 8px 0 12px; padding: 12px; border: 1px solid var(--mp-border); border-radius: var(--mp-r); background: var(--mp-field); }
+.gpio-board .pin { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 38px; padding: 3px 8px; border: 1px solid transparent; border-radius: 10px; }
+.gpio-board .pin.l { justify-content: space-between; text-align: right; }
+.gpio-board .pin.r { text-align: left; }
+.gpio-board .t { display: flex; flex-direction: column; min-width: 0; flex: 1; font-size: 13px; line-height: 1.25; }
+.gpio-board .t b { font-weight: 500; }
+.gpio-board .pin.used .t b { font-weight: 700; }
+.gpio-board .t small { overflow: hidden; color: var(--mp-muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.gpio-board .n { flex: none; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--mp-chip); color: var(--mp-muted); font-size: 11px; }
+.gpio-board .fixed-pin { color: var(--mp-muted); }
+.gpio-board { margin-bottom: 20px; }
+.gpio-board .pin.used { border-color: var(--c); background: var(--mp-primary-soft); background: color-mix(in srgb, var(--c) 22%, var(--mp-surface)); }
+.gpio-board .pin.used .n { background: var(--c); color: #0B1220; }
+.gpio-board .pin.used .t small { color: var(--mp-text); }
+.gpio-board .pin.reserved { border: 1px dashed var(--c); }
+.gpio-board .pin.reserved .n { background: var(--mp-chip); box-shadow: inset 0 0 0 2px var(--c); color: var(--mp-text); }
+.gpio-board .pin.clash { border: 2px solid var(--mp-danger); background: var(--mp-danger-soft); }
+.gpio-board .pin.clash .n { background: var(--mp-danger); color: #fff; }
+.gpio-table .gpio-dot { margin-right: 8px; }
+.gpio-table tr.on td { background: var(--mp-primary-soft); }
+@media (max-width: 420px) {
+  .gpio-board { gap: 4px 8px; padding: 8px; }
+  .gpio-board .pin { gap: 5px; padding: 3px 4px; }
+  .gpio-board .t { font-size: 12px; }
+}
+
 @media print {
   .topbar, .sidebar, .toc, .pager, footer, .scrim { display: none !important; }
   .shell, .page { display: block; }

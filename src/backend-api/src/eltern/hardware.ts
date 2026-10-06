@@ -157,6 +157,25 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
     })
   })
 
+  /**
+   * GET /api/app/pins-in-use - which accessories use GPIO pins on this box right now (no login: the manual's GPIO page,
+   * open like the app's own pages, shows only these). Pins only, no other settings.
+   */
+  router.get('/pins-in-use', (_req, res) => {
+    const shim = section(deps, 'shim')
+    const fan = section(deps, 'fan')
+    res.set('Cache-Control', 'no-store').json({
+      rotary: section(deps, 'rotary').active === true,
+      fan: { active: fan.fan_active === true, gpio: String(fan.fan_gpio ?? '13') },
+      shim: {
+        poweroffPin: String(shim.poweroffPin ?? '4'),
+        triggerPin: String(shim.triggerPin ?? '17'),
+        cutPin: String(shim.cutPin ?? '27'),
+        ledPin: String(shim.ledPin ?? '13'),
+      },
+    })
+  })
+
   /** POST /api/app/soundcard {id} - one of mupibox.AudioDevices; DietPi switches the card, needs a restart. */
   router.post('/soundcard', requireSession, requireCsrf, async (req, res) => {
     const id = String((req.body as { id?: unknown } | undefined)?.id ?? '')

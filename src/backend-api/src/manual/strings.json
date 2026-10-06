@@ -40,7 +40,18 @@
     "ref.colSetting": "Einstellung",
     "ref.colKind": "Art und Werte",
     "ref.colMeaning": "Bedeutung",
-    "ref.groupIntro": "Die Einstellungen dieser Gruppe:"
+    "ref.groupIntro": "Die Einstellungen dieser Gruppe:",
+    "gpio.pick": "Zubehör auswählen",
+    "gpio.hint": "Tippe auf ein Zubehör, das du angeschlossen hast. Die Pinleiste zeigt dann, welche Pins es belegt. Gestrichelt umrandete Pins sind zum Zubehör herausgeführt, aber frei nutzbar.",
+    "gpio.board": "Pinleiste des Raspberry Pi",
+    "gpio.none": "Noch kein Zubehör gewählt.",
+    "gpio.ok": "Keine Überschneidung: Die gewählten Pins sind frei.",
+    "gpio.conflict": "Überschneidung: Diese Pins würden doppelt belegt:",
+    "gpio.optional": "Pins des Zubehörs",
+    "gpio.colAccessory": "Zubehör",
+    "gpio.colPins": "Pins (BCM)",
+    "gpio.free": "frei",
+    "gpio.power": "Strom / Masse"
   },
   "en": {
     "languageName": "English",
@@ -83,6 +94,17 @@
     "ref.colSetting": "Setting",
     "ref.colKind": "Type and values",
     "ref.colMeaning": "Meaning",
-    "ref.groupIntro": "The settings of this group:"
+    "ref.groupIntro": "The settings of this group:",
+    "gpio.pick": "Choose accessories",
+    "gpio.hint": "Tap an accessory you have connected. The pin header then shows which pins it uses. Pins with a dashed outline are routed to the accessory but free to use.",
+    "gpio.board": "The Raspberry Pi's pin header",
+    "gpio.none": "No accessory chosen yet.",
+    "gpio.ok": "No overlap: the chosen pins are free.",
+    "gpio.conflict": "Overlap: these pins would be used twice:",
+    "gpio.optional": "Pins of the accessories",
+    "gpio.colAccessory": "Accessory",
+    "gpio.colPins": "Pins (BCM)",
+    "gpio.free": "free",
+    "gpio.power": "Power / ground"
   }
 }

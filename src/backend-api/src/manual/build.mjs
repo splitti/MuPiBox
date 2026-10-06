@@ -19,6 +19,7 @@ const here = path.dirname(fileURLToPath(import.meta.url))
 const outDir = path.resolve(process.argv[2] ?? path.join(here, '../../../deploy/manual'))
 const schema = JSON.parse(fs.readFileSync(path.join(here, '../mupi-app/schema.json'), 'utf8'))
 const strings = JSON.parse(fs.readFileSync(path.join(here, 'strings.json'), 'utf8'))
+const gpioData = JSON.parse(fs.readFileSync(path.join(here, 'gpio-map.json'), 'utf8'))
 const enApp = JSON.parse(fs.readFileSync(path.join(here, '../mupi-app/i18n/en.json'), 'utf8'))
 const LANGS = Object.keys(strings) // the first one is the source language
 const SOURCE = LANGS[0]
@@ -138,8 +139,12 @@ function markdown(src, ctx) {
       i += 2
       let rows = ''
       while (i < lines.length && lines[i].includes('|') && lines[i].trim()) {
-        rows += `<tr>${cells(lines[i]).map((c) => `<td>${inline(c, ctx)}</td>`).join('')}</tr>`
-        plain.push(cells(lines[i]).join(' '))
+        // a row may carry an id in front of its first cell ("{fan} Fan"): the page's script can then show/hide/update it
+        const row = cells(lines[i])
+        const rowId = /^\{([a-z0-9-]+)\}\s*/.exec(row[0])
+        if (rowId) row[0] = row[0].slice(rowId[0].length)
+        rows += `<tr${rowId ? ` data-pin="${rowId[1]}"` : ''}>${row.map((c) => `<td>${inline(c, ctx)}</td>`).join('')}</tr>`
+        plain.push(row.join(' '))
         i++
       }
       html += `<div class="table-wrap"><table><thead><tr>${head.map((c) => `<th>${inline(c, ctx)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`
@@ -171,6 +176,15 @@ function markdown(src, ctx) {
     const fig = line.match(/^!\[([^\]]*)\]\(([^)\s]+)\)\s*$/)
     if (fig) {
       html += `<figure><img src="${ctx.asset(fig[2])}" alt="${esc(fig[1])}" loading="lazy">${fig[1] ? `<figcaption>${inline(fig[1], ctx)}</figcaption>` : ''}</figure>`
+      i++
+      continue
+    }
+    // the GPIO map (gpio-map.json): buttons per accessory and the pin header
+    if (/^:::gpio-map\s*$/.test(line)) {
+      const map = ctx.gpioMap()
+      html += map.html
+      headings.push(...map.headings)
+      plain.push(map.text)
       i++
       continue
     }
@@ -256,6 +270,57 @@ function referencePage(page, lang) {
     if (loose.length) md += `${loose.join('\n')}\n`
   }
   return md
+}
+
+// ---------------------------------------------------------------- the GPIO map (page anhang/gpio)
+
+// the 40-pin header: the BCM number of every physical pin (number) or what else the pin carries
+const HEADER_PINS = [
+  '3V3', '5V', 2, '5V', 3, 'GND', 4, 14, 'GND', 15, 17, 18, 27, 'GND', 22, 23, '3V3', 24, 10, 'GND',
+  9, 25, 11, 8, 'GND', 7, 0, 1, 5, 'GND', 6, 12, 13, 'GND', 19, 16, 26, 20, 'GND', 21,
+]
+
+// Buttons for the accessories you can choose, the pin header and the table of their pins. manual.js makes the buttons
+// work (it reads the data from the script tag); without it the table still tells everything.
+function gpioMap(lang, t) {
+  const loc = (v) => (typeof v === 'string' ? v : (v[lang] ?? v[SOURCE]))
+  const prepare = (list) =>
+    list.map((a) => ({
+      id: a.id,
+      color: a.color,
+      name: loc(a.name),
+      short: a.short ? loc(a.short) : loc(a.name),
+      pins: a.pins.map((p) => ({ g: p.gpio, fn: loc(p.fn), bus: p.bus, free: p.free })),
+    }))
+  const optional = prepare(gpioData.accessories)
+  const data = { accessories: optional, text: { none: t('gpio.none'), ok: t('gpio.ok'), conflict: t('gpio.conflict'), free: t('gpio.free') } }
+  const pinList = (a) => a.pins.map((p) => `${p.g} (${esc(p.fn)})`).join(', ')
+  const dot = (a) => `<i class="gpio-dot" style="--c:${a.color}"></i>`
+  const buttons = optional.map((a) => `<button type="button" class="gpio-btn" aria-pressed="false" data-acc="${a.id}" style="--c:${a.color}">${dot(a)}<span>${esc(a.name)}</span></button>`).join('')
+  const cells = HEADER_PINS.map((p, k) => {
+    const phys = k + 1
+    const side = phys % 2 ? 'l' : 'r'
+    const label = typeof p === 'number' ? `GPIO${p}` : p
+    const text = `<span class="t"><b>${label}</b><small></small></span>`
+    const num = `<span class="n">${phys}</span>`
+    return `<div class="pin ${side}${typeof p === 'number' ? '' : ' fixed-pin'}"${typeof p === 'number' ? ` data-g="${p}"` : ''}>${side === 'l' ? text + num : num + text}</div>`
+  }).join('')
+  const html = `<div class="gpio-map">
+<h2 id="${slugify(t('gpio.pick'))}">${esc(t('gpio.pick'))}<a class="anchor" href="#${slugify(t('gpio.pick'))}" aria-label="#">#</a></h2>
+<p>${esc(t('gpio.hint'))}</p>
+<div class="gpio-pick" role="group" aria-label="${esc(t('gpio.pick'))}">${buttons}</div>
+<p class="gpio-status" role="status" aria-live="polite"></p>
+<div class="gpio-board" role="group" aria-label="${esc(t('gpio.board'))}">${cells}</div>
+<h3 id="${slugify(t('gpio.optional'))}">${esc(t('gpio.optional'))}<a class="anchor" href="#${slugify(t('gpio.optional'))}" aria-label="#">#</a></h3>
+<div class="table-wrap"><table class="gpio-table"><thead><tr><th>${esc(t('gpio.colAccessory'))}</th><th>${esc(t('gpio.colPins'))}</th></tr></thead><tbody>${optional.map((a) => `<tr data-acc="${a.id}"><td>${dot(a)}<strong>${esc(a.name)}</strong></td><td>${pinList(a)}</td></tr>`).join('')}</tbody></table></div>
+<script type="application/json" class="gpio-data">${JSON.stringify(data).replace(/</g, '\u003c')}</script>
+</div>`
+  const text = [t('gpio.pick'), t('gpio.hint'), ...optional.map((a) => `${a.name} ${a.pins.map((p) => `GPIO${p.g}`).join(' ')}`)].join(' ')
+  const headings = [
+    { level: 2, id: slugify(t('gpio.pick')), text: t('gpio.pick') },
+    { level: 3, id: slugify(t('gpio.optional')), text: t('gpio.optional') },
+  ]
+  return { html, text, headings }
 }
 
 // ---------------------------------------------------------------- the table of contents (one tree per language)
@@ -449,6 +514,7 @@ function buildLanguage(lang) {
     }
     const ctx = {
       t,
+      gpioMap: () => gpioMap(lang, t),
       link: (href) => {
         if (/^(https?:|mailto:|#|\/)/.test(href)) return href
         const [file, hash] = href.split('#')

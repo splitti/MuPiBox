@@ -1,0 +1,407 @@
+{
+  "accessories": [
+    {
+      "id": "rotary",
+      "color": "#3FA7D6",
+      "name": {
+        "de": "Drehregler",
+        "en": "Rotary knob"
+      },
+      "pins": [
+        {
+          "gpio": 26,
+          "fn": {
+            "de": "A (CLK)",
+            "en": "A (CLK)"
+          }
+        },
+        {
+          "gpio": 24,
+          "fn": {
+            "de": "B (DT)",
+            "en": "B (DT)"
+          }
+        },
+        {
+          "gpio": 10,
+          "fn": {
+            "de": "Taster",
+            "en": "Button"
+          }
+        }
+      ],
+      "short": {
+        "de": "Drehregler",
+        "en": "Rotary knob"
+      }
+    },
+    {
+      "id": "shim",
+      "color": "#E0962E",
+      "name": {
+        "de": "OnOff SHIM",
+        "en": "OnOff SHIM"
+      },
+      "pins": [
+        {
+          "gpio": 4,
+          "fn": {
+            "de": "Signal zum Ausschalten",
+            "en": "Shutdown signal"
+          }
+        },
+        {
+          "gpio": 17,
+          "fn": {
+            "de": "Taster",
+            "en": "Button"
+          }
+        }
+      ],
+      "short": {
+        "de": "OnOff SHIM",
+        "en": "OnOff SHIM"
+      }
+    },
+    {
+      "id": "fan",
+      "color": "#4CAF7D",
+      "name": {
+        "de": "Lüfter",
+        "en": "Fan"
+      },
+      "pins": [
+        {
+          "gpio": 12,
+          "fn": {
+            "de": "PWM-Signal",
+            "en": "PWM signal"
+          }
+        }
+      ],
+      "short": {
+        "de": "Lüfter",
+        "en": "Fan"
+      }
+    },
+    {
+      "id": "led",
+      "color": "#B5C94A",
+      "name": {
+        "de": "Status-LED",
+        "en": "Status LED"
+      },
+      "short": {
+        "de": "Status-LED",
+        "en": "Status LED"
+      },
+      "pins": [
+        {
+          "gpio": 13,
+          "bus": "led",
+          "fn": {
+            "de": "Betriebs-LED (Pin einstellbar, 13 nach der Installation)",
+            "en": "Status LED (pin adjustable, 13 after installation)"
+          }
+        }
+      ]
+    },
+    {
+      "id": "mupihat",
+      "color": "#8E9AF0",
+      "name": {
+        "de": "MuPiHAT",
+        "en": "MuPiHAT"
+      },
+      "short": {
+        "de": "MuPiHAT",
+        "en": "MuPiHAT"
+      },
+      "pins": [
+        {
+          "gpio": 2,
+          "bus": "i2c",
+          "fn": {
+            "de": "I²C Daten (SDA, Ladechip)",
+            "en": "I²C data (SDA, charger chip)"
+          }
+        },
+        {
+          "gpio": 3,
+          "bus": "i2c",
+          "fn": {
+            "de": "I²C Takt (SCL, Ladechip)",
+            "en": "I²C clock (SCL, charger chip)"
+          }
+        },
+        {
+          "gpio": 4,
+          "fn": {
+            "de": "Signal zum Ausschalten (KILL_N)",
+            "en": "Shutdown signal (KILL_N)"
+          }
+        },
+        {
+          "gpio": 13,
+          "bus": "led",
+          "fn": {
+            "de": "Status-LED (LED_POWER)",
+            "en": "Status LED (LED_POWER)"
+          }
+        },
+        {
+          "gpio": 16,
+          "fn": {
+            "de": "Verstärker ein/aus (AUDIO_EN)",
+            "en": "Amplifier on/off (AUDIO_EN)"
+          }
+        },
+        {
+          "gpio": 17,
+          "fn": {
+            "de": "Ein/Aus-Taster (INT_N)",
+            "en": "On/off button (INT_N)"
+          }
+        },
+        {
+          "gpio": 18,
+          "fn": {
+            "de": "BCLK (Bit-Takt)",
+            "en": "BCLK (bit clock)"
+          }
+        },
+        {
+          "gpio": 19,
+          "fn": {
+            "de": "LRCLK (Wort-Takt)",
+            "en": "LRCLK (word clock)"
+          }
+        },
+        {
+          "gpio": 21,
+          "fn": {
+            "de": "Daten Ausgang (DOUT)",
+            "en": "Data out (DOUT)"
+          }
+        },
+        {
+          "gpio": 27,
+          "fn": {
+            "de": "Interrupt des Ladechips (INT_BQ_N)",
+            "en": "Charger chip interrupt (INT_BQ_N)"
+          }
+        },
+        {
+          "gpio": 5,
+          "free": true,
+          "fn": {
+            "de": "Erweiterungsleiste J5 (frei nutzbar)",
+            "en": "Extension header J5 (free to use)"
+          }
+        },
+        {
+          "gpio": 6,
+          "free": true,
+          "fn": {
+            "de": "Erweiterungsleiste J5 (frei nutzbar)",
+            "en": "Extension header J5 (free to use)"
+          }
+        },
+        {
+          "gpio": 8,
+          "free": true,
+          "fn": {
+            "de": "Erweiterungsleiste J5 (frei nutzbar)",
+            "en": "Extension header J5 (free to use)"
+          }
+        },
+        {
+          "gpio": 9,
+          "free": true,
+          "fn": {
+            "de": "Erweiterungsleiste J5 (frei nutzbar)",
+            "en": "Extension header J5 (free to use)"
+          }
+        },
+        {
+          "gpio": 10,
+          "free": true,
+          "fn": {
+            "de": "Erweiterungsleiste J5 (frei nutzbar)",
+            "en": "Extension header J5 (free to use)"
+          }
+        },
+        {
+          "gpio": 11,
+          "free": true,
+          "fn": {
+            "de": "Erweiterungsleiste J5 (frei nutzbar)",
+            "en": "Extension header J5 (free to use)"
+          }
+        },
+        {
+          "gpio": 12,
+          "free": true,
+          "fn": {
+            "de": "Erweiterungsleiste J5 (frei nutzbar)",
+            "en": "Extension header J5 (free to use)"
+          }
+        },
+        {
+          "gpio": 25,
+          "free": true,
+          "fn": {
+            "de": "Erweiterungsleiste J5 (frei nutzbar)",
+            "en": "Extension header J5 (free to use)"
+          }
+        }
+      ]
+    },
+    {
+      "id": "i2s-dac",
+      "color": "#B07CE8",
+      "name": {
+        "de": "I²S-Soundkarte (HiFiBerry DAC / MiniAmp, Digi …)",
+        "en": "I²S sound card (HiFiBerry DAC / MiniAmp, Digi …)"
+      },
+      "short": {
+        "de": "I²S-Soundkarte",
+        "en": "I²S sound card"
+      },
+      "pins": [
+        {
+          "gpio": 18,
+          "fn": {
+            "de": "BCLK (Bit-Takt)",
+            "en": "BCLK (bit clock)"
+          }
+        },
+        {
+          "gpio": 19,
+          "fn": {
+            "de": "LRCLK (Wort-Takt)",
+            "en": "LRCLK (word clock)"
+          }
+        },
+        {
+          "gpio": 20,
+          "fn": {
+            "de": "Daten Eingang",
+            "en": "Data in"
+          }
+        },
+        {
+          "gpio": 21,
+          "fn": {
+            "de": "Daten Ausgang",
+            "en": "Data out"
+          }
+        }
+      ]
+    },
+    {
+      "id": "i2s-dacplus",
+      "color": "#E06C9F",
+      "name": {
+        "de": "I²S-Soundkarte mit I²C-Steuerung (HiFiBerry DAC+, IQaudIO, Allo Boss / Piano …)",
+        "en": "I²S sound card with I²C control (HiFiBerry DAC+, IQaudIO, Allo Boss / Piano …)"
+      },
+      "short": {
+        "de": "Soundkarte mit I²C",
+        "en": "Sound card with I²C"
+      },
+      "pins": [
+        {
+          "gpio": 18,
+          "fn": {
+            "de": "BCLK (Bit-Takt)",
+            "en": "BCLK (bit clock)"
+          }
+        },
+        {
+          "gpio": 19,
+          "fn": {
+            "de": "LRCLK (Wort-Takt)",
+            "en": "LRCLK (word clock)"
+          }
+        },
+        {
+          "gpio": 20,
+          "fn": {
+            "de": "Daten Eingang",
+            "en": "Data in"
+          }
+        },
+        {
+          "gpio": 21,
+          "fn": {
+            "de": "Daten Ausgang",
+            "en": "Data out"
+          }
+        },
+        {
+          "gpio": 2,
+          "bus": "i2c",
+          "fn": {
+            "de": "I²C Daten (SDA)",
+            "en": "I²C data (SDA)"
+          }
+        },
+        {
+          "gpio": 3,
+          "bus": "i2c",
+          "fn": {
+            "de": "I²C Takt (SCL)",
+            "en": "I²C clock (SCL)"
+          }
+        },
+        {
+          "gpio": 0,
+          "bus": "hat-id",
+          "fn": {
+            "de": "HAT-ID (EEPROM, Daten)",
+            "en": "HAT ID (EEPROM, data)"
+          }
+        },
+        {
+          "gpio": 1,
+          "bus": "hat-id",
+          "fn": {
+            "de": "HAT-ID (EEPROM, Takt)",
+            "en": "HAT ID (EEPROM, clock)"
+          }
+        }
+      ]
+    },
+    {
+      "id": "i2c-module",
+      "color": "#D6B83A",
+      "name": {
+        "de": "I²C-Modul (z. B. Echtzeituhr DS3231, Sensor)",
+        "en": "I²C module (e.g. DS3231 real-time clock, sensor)"
+      },
+      "short": {
+        "de": "I²C-Modul",
+        "en": "I²C module"
+      },
+      "pins": [
+        {
+          "gpio": 2,
+          "bus": "i2c",
+          "fn": {
+            "de": "I²C Daten (SDA)",
+            "en": "I²C data (SDA)"
+          }
+        },
+        {
+          "gpio": 3,
+          "bus": "i2c",
+          "fn": {
+            "de": "I²C Takt (SCL)",
+            "en": "I²C clock (SCL)"
+          }
+        }
+      ]
+    }
+  ]
+}
