@@ -9432,11 +9432,18 @@ const CONTROLLERS = {
       state.values.set('tts', disp.theme.stageAutoRead === true)
       state.values.set('names', disp.opts.coverflowShowNames)
       state.values.set('hideScroll', disp.opts.hideScrollbar)
+      state.values.set('headerBand', disp.theme.headerBand !== false)
+      state.values.set('playerPanel', disp.theme.playerPanel !== false)
     },
     sections: (page) =>
       page.sections.map((sec) => ({
         ...sec,
-        items: sec.items.map((it) => {
+        // (the band behind the header and the panel behind the player: only the old plain themes may do without them -
+        // on a picture the writing would not be readable; not shown at all for the other themes)
+        items: sec.items
+          .filter((it) => it.key !== 'headerBand' || (disp.theme?.bandOptional ?? []).includes(disp.theme?.current))
+          .filter((it) => it.key !== 'playerPanel' || (disp.theme?.panelOptional ?? []).includes(disp.theme?.current))
+          .map((it) => {
           const cur = themeLabel(disp.theme?.current ?? '')
           if (it.key === 'stage') return { ...it, help: `Große Cover in der Mitte, für die Kinder-Themes${isKidsTheme(disp.theme?.current) ? '' : ` – das aktive Theme (${cur}) nutzt sie nicht`}.` }
           // (reading names out works only with the cover flow: shown under it while it is on)
@@ -9444,6 +9451,8 @@ const CONTROLLERS = {
           // (the scroll bar is below the covers in every view - the cover flow's and the three side by side too)
           if (it.key === 'hideScroll') return { ...it, help: 'Der Balken unter den Covern, in jeder Ansicht.' }
           if (it.key === 'names') return { ...it, help: disp.theme?.current === 'coverflow' ? 'Nur beim Theme „coverflow“.' : `Nur beim Theme „coverflow“ – aktiv ist gerade „${cur}“.` }
+          if (it.key === 'headerBand') return { ...it, help: 'Aus: Die Kopfzeile liegt ohne farbiges Band auf dem Hintergrund des Themes.' }
+          if (it.key === 'playerPanel') return { ...it, help: 'Aus: Die Knöpfe des Players stehen ohne Fläche auf dem Hintergrund, in den Farben der Kopfzeile.' }
           return it
         }),
       })),
@@ -9455,6 +9464,11 @@ const CONTROLLERS = {
       if (key === 'tts') {
         const r = await api(`${API}/theme-stage`, { method: 'POST', body: { autoRead: v } })
         return toast(r.ok ? (v ? 'Vorlesen an' : 'Vorlesen aus') : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+      }
+      if (key === 'headerBand' || key === 'playerPanel') {
+        const r = await api(`${API}/theme-stage`, { method: 'POST', body: { [key]: v } })
+        if (r.ok) disp.theme[key] = v
+        return toast(r.ok ? 'Gespeichert' : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
       }
       if (key === 'names') return saveDisplayOptions({ coverflowShowNames: v })
       if (key === 'hideScroll') return saveDisplayOptions({ hideScrollbar: v })

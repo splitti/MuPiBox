@@ -1,4 +1,9 @@
 <h3>DEV 5.0.9 - changes compared to 5.0.8</h3>
+<b>Themes</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>The older plain themes (blue, green, red, pink, dark ...): under Appearance &gt; View the band behind the header and the panel behind the player's controls can be switched off, for the look of 5.0.7. Without the panel the controls of a light theme take the band's colour, so buttons and progress stay clearly visible; a dark theme keeps its own. Offered only for the themes that stay readable without them - not for the picture themes (suggested by toby_fischer).</li>
+</ul>
 <b>Spotify</b>
 </ul>
 <ul id='ulnews' class='ulnews'>

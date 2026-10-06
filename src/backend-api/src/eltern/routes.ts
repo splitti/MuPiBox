@@ -2057,15 +2057,20 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     // ("Tag & Nacht") - the web app shows the ones of its own language
     const labels: Record<string, string> = {}
     const labelsDe: Record<string, string> = {}
+    // (the old plain themes: band behind the header / panel behind the player's controls may be switched off)
+    const bandOptional: string[] = []
+    const panelOptional: string[] = []
     try {
       const km = JSON.parse(readFileSync('/home/dietpi/MuPiBox/themes/km-themes.json', 'utf8')) as {
-        themes?: { id?: unknown; label?: unknown; labelEn?: unknown }[]
+        themes?: { id?: unknown; label?: unknown; labelEn?: unknown; headerBandOptional?: unknown; playerPanelOptional?: unknown }[]
       }
       for (const theme of km.themes ?? []) {
         if (typeof theme.id !== 'string') continue
         if (typeof theme.label === 'string') labelsDe[theme.id] = theme.label
         const en = theme.labelEn ?? theme.label
         if (typeof en === 'string') labels[theme.id] = en
+        if (theme.headerBandOptional === true) bandOptional.push(theme.id)
+        if (theme.playerPanelOptional === true) panelOptional.push(theme.id)
       }
     } catch {
       // no registry (older installation): the names as they are
@@ -2077,6 +2082,10 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       labelsDe,
       stage: mb.themeStage !== false, // (on unless switched off: the default since 5.0.8)
       stageAutoRead: mb.themeStageAutoRead === true,
+      headerBand: mb.headerBand !== false,
+      playerPanel: mb.playerPanel !== false,
+      bandOptional,
+      panelOptional,
     })
   })
 
@@ -2128,9 +2137,10 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * (mupibox.themeStageAutoRead). The display takes them over right away (same signal as after a theme change).
    */
   router.post('/theme-stage', requireSession, requireCsrf, async (req, res) => {
-    const body = (req.body as { stage?: unknown; autoRead?: unknown } | undefined) ?? {}
-    if ((body.stage !== undefined && typeof body.stage !== 'boolean') || (body.autoRead !== undefined && typeof body.autoRead !== 'boolean')) {
-      res.status(400).json({ error: 'stage and autoRead must be true or false' })
+    const body = (req.body as { stage?: unknown; autoRead?: unknown; headerBand?: unknown; playerPanel?: unknown } | undefined) ?? {}
+    const flags = [body.stage, body.autoRead, body.headerBand, body.playerPanel]
+    if (flags.some((v) => v !== undefined && typeof v !== 'boolean')) {
+      res.status(400).json({ error: 'stage, autoRead, headerBand and playerPanel must be true or false' })
       return
     }
     let stage = false
@@ -2139,6 +2149,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       const m = ((c.mupibox as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
       if (typeof body.stage === 'boolean') m.themeStage = body.stage
       if (typeof body.autoRead === 'boolean') m.themeStageAutoRead = body.autoRead
+      if (typeof body.headerBand === 'boolean') m.headerBand = body.headerBand
+      if (typeof body.playerPanel === 'boolean') m.playerPanel = body.playerPanel
       stage = m.themeStage !== false
       autoRead = m.themeStageAutoRead === true
       c.mupibox = m

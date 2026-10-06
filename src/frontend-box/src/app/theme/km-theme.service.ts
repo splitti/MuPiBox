@@ -18,6 +18,9 @@ export class KmThemeService {
   private readonly themeId = signal<string | undefined>(undefined)
   private readonly stageOn = signal(false)
   private readonly autoReadOn = signal(false)
+  // the old plain themes: band behind the header / panel behind the player's controls (app › Appearance, on by default)
+  private readonly headerBand = signal(true)
+  private readonly playerPanel = signal(true)
   private readonly night = signal(false)
   // theme "custom": its own settings (app › Theme › Eigenes) - light writing or dark, and the stylesheet's version
   private readonly custom = signal<{ light: boolean; v: number }>({ light: false, v: 0 })
@@ -53,13 +56,17 @@ export class KmThemeService {
   refresh(): void {
     this.http.get<MupiboxConfig>(`${environment.backend.apiUrl}/config`).subscribe({
       next: (config) => {
-        const m = config?.mupibox as { theme?: string; themeStage?: boolean; themeStageAutoRead?: boolean } | undefined
+        const m = config?.mupibox as
+          | { theme?: string; themeStage?: boolean; themeStageAutoRead?: boolean; headerBand?: boolean; playerPanel?: boolean }
+          | undefined
         this.themeId.set(m?.theme)
         const own = config?.mupibox?.customTheme
         this.custom.set({ light: own?.resolved === 'light', v: typeof own?.v === 'number' ? own.v : 0 })
         // (on unless switched off: the default since 5.0.8)
         this.stageOn.set(m?.themeStage !== false)
         this.autoReadOn.set(m?.themeStageAutoRead === true)
+        this.headerBand.set(m?.headerBand !== false)
+        this.playerPanel.set(m?.playerPanel !== false)
         this.updateNight()
       },
       error: () => undefined,
@@ -150,6 +157,9 @@ export class KmThemeService {
     body.classList.add('km', `km-theme-${theme.id}`)
     // an old theme of the box in the km layout: header band and player panel (design round 2, §7)
     if (theme.legacy) body.classList.add('km-legacy')
+    // (switched off in the app - only where the theme allows it: its background stays calm behind the words)
+    if (theme.legacy && theme.headerBandOptional && !this.headerBand()) body.classList.add('km-noband')
+    if (theme.legacy && theme.playerPanelOptional && !this.playerPanel()) body.classList.add('km-nopanel')
     const night = this.night()
     if (theme.light && !(night && theme.dayNight && !theme.dayNight.lightAtNight)) body.classList.add('km-light')
     if (theme.id === 'custom' && this.custom().light) body.classList.add('km-light')
