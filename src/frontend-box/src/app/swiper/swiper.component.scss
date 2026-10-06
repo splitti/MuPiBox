@@ -126,9 +126,10 @@ swiper-container.coverflow {
     // Mirror image below every cover (with its title), fading out - as in Cover Flow.
     ion-grid {
         // Room for the reflection: Swiper cuts off what lies outside the row, so the row has to reach the bottom of the display
-        // for the mirror image to run down to its edge - 100vh - 70 px bar - 20 px padding - 300 px cover = 90 px at 480 px
+        // for the mirror image to run down to its edge - 100vh - 72 px bar - 20 px padding - 300 px cover = 88 px at 480 px,
+        // 2 px less to be safe: the row must not be taller than the page, or a scrollbar shows up at the side
         // (with the bar folded away the row is scaled up and moved so that it ends at the bottom just the same)
-        margin-bottom: max(76px, calc(100vh - 390px));
+        margin-bottom: max(76px, calc(100vh - 394px));
         -webkit-box-reflect: below 2px linear-gradient(transparent 68%, rgba(255, 255, 255, 0.3));
     }
 
