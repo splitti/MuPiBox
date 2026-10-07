@@ -296,5 +296,8 @@ class ChargeEstimator:
                 self.cv_i0 = data.get("cv_i0")
                 self.percent = data.get("percent")
                 self.start_uncertain = bool(data.get("start_uncertain", False))
+                # (the phase of the charge as well: a reading left out right after the restart - a false "Done" - would
+                # else show the voltage, which reads high while it charges)
+                self.phase = "cv" if self.cv_i0 else "cc"
         except (OSError, ValueError, KeyError, TypeError):
             pass
