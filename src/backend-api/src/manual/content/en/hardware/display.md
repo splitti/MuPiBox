@@ -28,7 +28,9 @@ If the display stands upside down or sideways, you rotate the picture. For a **D
 
 ## Resolution
 
-The default is **800 × 480** pixels (the size of the usual 7-inch touch displays). Under **Size** you choose one of the usual sizes or **Custom …** and then enter **Width** and **Height**. With **Apply resolution** the display restarts at once. Background pictures for the theme “custom” fit best at exactly this size ([Covers and themes](../bedienung/cover-und-themes.md)).
+The default is **800 × 480** pixels (the size of the usual 7-inch touch displays). Under **Size** you choose one of the usual sizes or **Custom …** and then enter **Width** and **Height**. With **Apply resolution** the display restarts at once.
+
+If the resolution is larger than 800 × 480, the box enlarges the interface to match: the layout and the themes stay the same, text, symbols and covers are drawn at full sharpness. With the Raspberry Pi Touch Display 2 (1280 × 720) that is 1.5 times. So set the real resolution of your display here. Background pictures for the theme “custom” fit best at exactly this size ([Covers and themes](../bedienung/cover-und-themes.md)).
 
 ## Live display
 

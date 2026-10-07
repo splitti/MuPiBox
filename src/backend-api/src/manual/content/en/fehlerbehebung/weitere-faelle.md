@@ -27,6 +27,7 @@ Your own files appear by themselves once they are completely copied. With a **NA
 
 - **Undervoltage**: a power supply or cable that is too weak is the most common cause ([System and expert settings](../wartung/system.md)).
 - **Temperature**: if **Box health** shows high values, a [fan](../hardware/luefter.md) or a better case helps.
+- **USB stick in the wrong port**: if the box runs from a USB stick or SSD, it belongs in a blue USB 3.0 port. In a black USB 2.0 port it is many times slower, above all when memory runs short. **About the box** then shows a hint.
 - **Memory card full**: the free space is shown under **About the box**. Clear up or move media to the [NAS](../inhalte/nas.md).
 
 ## An update failed

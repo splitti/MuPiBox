@@ -27,6 +27,7 @@ Eigene Dateien erscheinen von selbst, wenn sie vollständig kopiert sind. Bei ei
 
 - **Unterspannung**: ein zu schwaches Netzteil oder Kabel ist die häufigste Ursache ([System- und Experteneinstellungen](../wartung/system.md)).
 - **Temperatur**: zeigt **Zustand der Box** hohe Werte, hilft ein [Lüfter](../hardware/luefter.md) oder ein besseres Gehäuse.
+- **USB-Stick am falschen Anschluss**: Läuft die Box von einem USB-Stick oder einer SSD, gehört er in einen blauen USB-3.0-Port. Am schwarzen USB-2.0-Port ist er um ein Vielfaches langsamer, vor allem wenn der Arbeitsspeicher knapp wird. **Über die Box** zeigt dann einen Hinweis.
 - **Speicherkarte voll**: Der freie Platz steht unter **Über die Box**. Räume auf oder lagere Medien aufs [NAS](../inhalte/nas.md) aus.
 
 ## Ein Update ist fehlgeschlagen

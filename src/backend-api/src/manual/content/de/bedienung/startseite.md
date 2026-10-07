@@ -26,7 +26,18 @@ Unter **Einstellungen › Aussehen › Ansicht** stellst du ein:
 - **Cover-Flow-Ansicht (Bühne)**: an (Standard) oder aus, für alle Themes außer coverflow,
 - **Namen vorlesen, wenn das Cover stehen bleibt**: nur mit der Cover-Flow-Ansicht (Stimme und Sprache: **Audio › Sprachausgabe**),
 - **Ordner- und Albumnamen anzeigen**: nur beim Theme coverflow,
-- **Horizontale Scrollleiste ausblenden**: der Balken unter den Covern, in jeder Ansicht.
+- **Scrollleiste unter den Covern**: **Standard** (wie im Theme vorgesehen), **Durchgehend** (über die ganze Breite und dicker, mit großen Fingern leicht zu treffen) oder **Ausblenden**. An der Leiste kannst du ziehen, auch bei der Cover-Flow-Ansicht: Die Cover laufen mit, beim Loslassen rastet das nächste ein,
+- **Kopfzeile mit Hintergrund** und **Player mit Hintergrundfläche**: nur bei den älteren schlichten Themes (etwa blue, green, red, dark). Ausgeschaltet liegt die Kopfzeile ohne farbiges Band auf dem Hintergrund, und die Knöpfe des Players stehen ohne Fläche da, in den Farben der Kopfzeile,
+- **Vollbild per Wischgeste**: nur beim Theme coverflow, siehe unten.
+
+## Vollbild beim Theme coverflow
+
+Mit **zwei Fingern nach oben wischen** blendet die Kopfzeile aus, die Cover werden größer. **Zwei Finger nach unten** holen sie zurück. Ohne Kopfzeile gilt:
+
+- **ein Finger vom unteren Rand nach oben**: eine Ebene zurück (wie der Zurück-Knopf),
+- **zwei Finger vom rechten oder linken Rand zur Seite**: die nächste oder vorige Kategorie.
+
+Die Box merkt sich, ob die Kopfzeile ausgeblendet ist. Schaltest du **Vollbild per Wischgeste** aus, ist die Kopfzeile sofort wieder da. Zoomen mit zwei Fingern ist auf der Box immer aus.
 
 ## Ordner und Alben
 

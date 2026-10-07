@@ -6,6 +6,8 @@ Under **Settings › Battery & Power** you find everything about the power suppl
 
 **Settings › Battery & Power › Battery** shows the charge level, the voltage and the history of the last 24 hours. The display shows the level in the status indicator.
 
+While charging, the voltage reads too high, because the charger lifts the battery above its rest voltage. So while charging the box counts the charge that goes in, starting from the level before the cable was plugged in, and shows **full in about …**. Shortly after charging, while the voltage is still raised, it keeps counting, and only then goes by the voltage again. The time is an estimate: if the box plays at the same time, the battery gets less current, and a weak 5 V power supply charges it much more slowly.
+
 ## MuPiHAT and battery profile
 
 The **MuPiHAT** is a board with battery management that is plugged onto the Raspberry Pi. Under **MuPiHAT & battery profile** you set:
@@ -23,6 +25,7 @@ Below it are the voltages of the chosen profile in millivolts. You can change th
 | **Thresholds** | **Warning from**: from this voltage the box warns | 5500–8000 |
 | **Thresholds** | **Shut down at**: from this voltage the box switches itself off. Must be below the warning | 5000–7500 |
 | Charging | **Charge cutoff** (VREG, optional): the voltage at which charging ends. Empty = the charger chip's default | 6000–8400 |
+| Charging | **Capacity** (mAh, optional): the size of the battery, for the time until full. Empty = the size from the profile's name | 500–200000 |
 
 > [!WARNING]
 > **The charge cutoff (VREG) is safety-critical.** With two cells in series at most 8400 mV are allowed (4.2 V per cell). Higher damages the battery; the app does not accept a higher value. Change it only if you know what you are doing.

@@ -6,6 +6,8 @@ Unter **Einstellungen › Akku & Strom** findest du alles zur Stromversorgung.
 
 **Einstellungen › Akku & Strom › Akku** zeigt den Ladestand, die Spannung und den Verlauf der letzten 24 Stunden. Das Display zeigt den Stand in der Statusanzeige.
 
+Beim Laden zeigt die Spannung zu viel an, weil das Ladegerät den Akku über seine Ruhespannung hebt. Die Box rechnet deshalb beim Laden mit der Menge, die hineingeht, ausgehend vom Stand vor dem Einstecken, und zeigt dazu **voll in etwa …**. Auch kurz nach dem Laden, wenn die Spannung noch erhöht ist, zählt sie weiter, erst danach wieder nach der Spannung. Die Zeit ist eine Schätzung: Spielt die Box gleichzeitig, bekommt der Akku weniger Strom ab, und mit einem schwachen 5-V-Netzteil lädt er deutlich langsamer.
+
 ## MuPiHAT und Akku-Profil
 
 Der **MuPiHAT** ist eine Platine mit Akku-Verwaltung, die auf den Raspberry Pi gesteckt wird. Unter **MuPiHAT & Akku-Profil** stellst du ein:
@@ -23,6 +25,7 @@ Darunter stehen die Spannungen des gewählten Profils in Millivolt. Du kannst si
 | **Schwellen** | **Warnung ab**: ab dieser Spannung warnt die Box | 5500–8000 |
 | **Schwellen** | **Abschalten bei**: ab dieser Spannung schaltet sich die Box aus. Muss unter der Warnung liegen | 5000–7500 |
 | **Laden** | **Ladeschluss** (VREG, optional): die Spannung, bei der das Laden endet. Leer = Standard des Lade-Chips | 6000–8400 |
+| **Laden** | **Kapazität** (mAh, optional): die Größe des Akkus, für die Zeit bis voll. Leer = die Größe aus dem Namen des Profils | 500–200000 |
 
 > [!WARNING]
 > **Der Ladeschluss (VREG) ist sicherheitskritisch.** Bei zwei Zellen in Reihe sind höchstens 8400 mV erlaubt (4,2 V je Zelle). Höher schadet dem Akku, die App nimmt keinen höheren Wert an. Ändere ihn nur, wenn du weißt, was du tust.

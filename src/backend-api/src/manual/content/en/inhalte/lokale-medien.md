@@ -20,6 +20,15 @@ Switch **Samba** on (**Settings › Services › Shares & remote access**), then
 > [!NOTE]
 > This way you create the folders yourself. If you stick to “Artist/Album/Track”, the box sorts them in neatly. The app's upload page takes care of creating the folders for you.
 
+## Download from the box
+
+Under **Library › SD card** you get content back from the box, for example onto your phone or for a backup:
+
+- In an **album** every track is listed with its size and a download button. **Download album as ZIP** gets the whole album.
+- In a **folder** the number of tracks and the size of each album are shown. **Download folder as ZIP** gets everything in it, with subfolders and covers.
+
+The box packs the ZIP while it is downloaded, without compressing it. So the Raspberry Pi has hardly anything to do, and the box keeps playing meanwhile. From about 1 GB on the app asks first, as that takes a while over WiFi and needs that much room on the device. Content from Spotify or the NAS cannot be downloaded here.
+
 ## Covers for your own files
 
 If a picture lies in the album folder or is embedded in the files, the box uses it as the cover. Otherwise it can look for an online cover or shows the theme's placeholder picture ([Covers](cover.md)).

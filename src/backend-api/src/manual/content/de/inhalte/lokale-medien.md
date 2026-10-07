@@ -20,6 +20,15 @@ Schalte **Samba** ein (**Einstellungen › Dienste › Freigaben & Fernzugriff**
 > [!NOTE]
 > Auf diesem Weg legst du die Ordner selbst an. Hältst du dich an „Interpret/Album/Titel“, sortiert die Box sie sauber ein. Die Upload-Seite der App nimmt dir das Anlegen der Ordner ab.
 
+## Von der Box herunterladen
+
+Unter **Bibliothek › SD-Karte** holst du Inhalte wieder von der Box, etwa aufs Handy oder für eine Sicherung:
+
+- In einem **Album** steht jeder Titel mit Größe und einem Download-Knopf. **Album als ZIP herunterladen** holt das ganze Album.
+- In einem **Ordner** stehen Titelzahl und Größe jedes Albums. **Ordner als ZIP herunterladen** holt alles darin, mit Unterordnern und Covern.
+
+Die Box packt das ZIP während des Herunterladens, ohne es zu komprimieren. So hat der Raspberry Pi kaum zu tun, und die Box spielt währenddessen weiter. Ab etwa 1 GB fragt die App vorher nach, weil das über WLAN eine Weile dauert und auf dem Gerät entsprechend Platz braucht. Inhalte von Spotify oder vom NAS lassen sich hier nicht herunterladen.
+
 ## Cover für eigene Dateien
 
 Liegt im Albumordner ein Bild oder ist es in den Dateien eingebettet, nimmt die Box es als Cover. Sonst kann sie ein Online-Cover suchen oder zeigt das Ersatzbild des Themes ([Cover](cover.md)).

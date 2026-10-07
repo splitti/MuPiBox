@@ -28,7 +28,9 @@ Steht das Display auf dem Kopf oder quer, drehst du das Bild. Für ein **Display
 
 ## Auflösung
 
-Der Standard ist **800 × 480** Pixel (die Größe der üblichen 7-Zoll-Touch-Displays). Unter **Größe** wählst du eine der üblichen Größen oder **Eigene …** und trägst dann **Breite** und **Höhe** ein. Mit **Auflösung übernehmen** startet das Display gleich neu. Hintergrundbilder für das Theme „custom“ passen am besten in genau dieser Größe ([Cover und Themes](../bedienung/cover-und-themes.md)).
+Der Standard ist **800 × 480** Pixel (die Größe der üblichen 7-Zoll-Touch-Displays). Unter **Größe** wählst du eine der üblichen Größen oder **Eigene …** und trägst dann **Breite** und **Höhe** ein. Mit **Auflösung übernehmen** startet das Display gleich neu.
+
+Ist die Auflösung größer als 800 × 480, vergrößert die Box die Oberfläche passend: Aufbau und Themes bleiben gleich, Schrift, Symbole und Cover werden in voller Schärfe gezeichnet. Beim Raspberry Pi Touch Display 2 (1280 × 720) ist das das 1,5-Fache. Stell hier deshalb die echte Auflösung deines Displays ein. Hintergrundbilder für das Theme „custom“ passen am besten in genau dieser Größe ([Cover und Themes](../bedienung/cover-und-themes.md)).
 
 ## Display live
 
