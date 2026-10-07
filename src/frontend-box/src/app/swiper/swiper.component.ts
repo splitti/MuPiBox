@@ -193,7 +193,8 @@ export class SwiperComponent<T> {
     const c = this.stageClamp(this.stageIndex(), total)
     return { w, x: (c / (total - 1)) * (1 - w) }
   })
-  // the long bar of the stage can be dragged: the stage follows, the name is read (when switched on) where it stops
+  // the stage's bar can be dragged (the short one of "Standard" and the long one): the stage follows, the name is read
+  // (when switched on) where it stops
   private stageBarFrom: number | undefined
 
   // Since we reset the swiper container when the page is entered / left, we need to
@@ -701,7 +702,6 @@ export class SwiperComponent<T> {
   }
 
   protected stageBarDown(event: PointerEvent): void {
-    if (!this.fullScrollbar()) return
     this.stageBarFrom = this.stageIndex()
     ;(event.currentTarget as HTMLElement | null)?.setPointerCapture?.(event.pointerId)
     this.stageBarAt(event)

@@ -494,8 +494,18 @@ swiper-container.coverflow {
         height: 8px;
         border-radius: 4px;
         background: var(--km-night-3);
-        overflow: hidden;
-        pointer-events: none;
+        // (it can be dragged - see stageBarDown - and is hit a bit above and below what is drawn)
+        pointer-events: auto;
+        touch-action: none;
+
+        &::before {
+            content: "";
+            position: absolute;
+            left: -8px;
+            right: -8px;
+            top: -4px;
+            bottom: -14px;
+        }
 
         i {
             display: block;
