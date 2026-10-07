@@ -233,10 +233,11 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 
 	echo -e "XXX\n${STEP}\nConfigure pm2 startup... \nXXX"
 	before=$(date +%s)
-	pm2 startup >&3 2>&3
-	PM2_ENV=$(grep "sudo env" ${LOG} | tail -n 1)
-	echo ${PM2_ENV} >&3 2>&3
-	${PM2_ENV} >&3 2>&3
+	# For the user dietpi, whoever runs this script: server and player run under dietpi (pm2 start/save below). Run as
+	# root (curl ... | sudo bash) a plain "pm2 startup" registered pm2-root, which started nothing after the reboot - the
+	# app answered 503. As dietpi it printed a "sudo env ..." line to run, which is what this does directly.
+	env PATH="$PATH:/usr/bin" pm2 startup systemd -u dietpi --hp /home/dietpi >&3 2>&3
+	systemctl disable --now pm2-root >/dev/null 2>&1 || true
 	after=$(date +%s)
 	echo -e "## Configure pm2 ## finished after $((after - before)) seconds" >&3 2>&3
 	STEP=$((STEP + 1))
