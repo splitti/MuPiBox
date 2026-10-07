@@ -1,9 +1,18 @@
 #!/bin/bash
 #
 # Script for MuPiBox Autosetup
-# Start with: cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup-stable.sh | bash
+# Start with: cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup.sh | sudo bash
+# The channel as the first argument (stable when none is given), e.g. the development version on a fresh DietPi:
+#   cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup.sh | sudo bash -s -- dev
 
-RELEASE="stable"
+case "$1" in
+	stable | beta | dev) RELEASE="$1" ;;
+	"") RELEASE="stable" ;;
+	*)
+		echo "Unknown channel '$1' - use stable, beta or dev" >&2
+		exit 1
+		;;
+esac
 LOG="/tmp/autosetup.log"
 BOOT_DIR="/boot"
 BOOT_CONFIG="/boot/config.txt"
