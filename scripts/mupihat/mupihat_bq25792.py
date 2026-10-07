@@ -501,7 +501,8 @@ class bq25792:
         # estimate of the charge that went in (charge_estimate.py) is shown instead, up to "full" when the charger
         # says it ended the charge.
         est = self._charge
-        if est is not None and est.percent is not None and est.phase in ("precharge", "cc", "cv", "topoff", "done"):
+        # (shortly after a charge too - est.settling: the voltage reads the charge for a while after the cable is out)
+        if est is not None and est.percent is not None and (est.phase in ("precharge", "cc", "cv", "topoff", "done") or est.settling):
             pct = est.percent
 
         # Round to 5 % steps -- see docstring above for why not 1 %.

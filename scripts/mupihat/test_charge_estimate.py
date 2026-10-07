@@ -159,6 +159,25 @@ for _ in range(3):
         weak.update(0, "Charge Termination Done", 100, 8050, 8300)
 assert weak.percent < 85, f"a Done far below the limit moved the percent to {weak.percent:.1f}"
 
+# the cable out after a charge: the voltage still reads high (90 %), the box shows what the charge reached, less what
+# it used - and the voltage again only after the pack has settled
+out = ChargeEstimator(capacity_mah=15000, iterm_ma=ITERM, clock=lambda: clock[0], wall=lambda: clock[0])
+for _ in range(60):
+    clock[0] += STEP
+    out.update(-650, "Not Charging", 70, 7600, 8300)
+for _ in range(720):  # an hour at 0.6 A
+    clock[0] += STEP
+    out.update(600, "Fast charge (CC mode)", 100, 8100, 8300)
+reached = out.percent
+for _ in range(24):  # two minutes without the cable
+    clock[0] += STEP
+    out.update(-650, "Not Charging", 90, 7950, 8300)
+assert out.settling and reached - 1 < out.percent <= reached, f"after the cable went out it should show about {reached:.1f}, got {out.percent}"
+for _ in range(400):  # more than half an hour later: the voltage again
+    clock[0] += STEP
+    out.update(-650, "Not Charging", 74, 7700, 8300)
+assert out.percent is None and not out.settling, "after the settling time the voltage should count again"
+
 # a false "Done" or "Top-off" in the middle of the CC phase (after an I2C error of the chip): the percent stays where it was
 glitch = ChargeEstimator(capacity_mah=15000, iterm_ma=ITERM, clock=lambda: clock[0], wall=lambda: clock[0])
 for _ in range(60):

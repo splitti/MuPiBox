@@ -86,6 +86,7 @@ class ChargeEstimator:
 
     # --- what the user of this class reads
     percent = None  # the estimate while charging (float), else None
+    settling = False  # True: no charge, but shortly after one - percent is then what it reached less what was used
     eta_min = None  # minutes until full, else None
     phase = "idle"
 
@@ -159,10 +160,19 @@ class ChargeEstimator:
                 self._rest.append((now, float(voltage_pct)))
             while self._rest and now - self._rest[0][0] > self.REST_WINDOW_S:
                 self._rest.popleft()
-            self.percent = None
             self.eta_min = None
+            # shortly after a charge (cable out) the voltage still reads the charge - it showed 90 % at 80: what the
+            # charge reached, less what the box used since, until the pack has settled
+            if self._after is not None:
+                used = self._after[2] / self.capacity * 100.0 if self.capacity else 0.0
+                self.percent = max(0.0, self._after[1] - used)
+                self.settling = True
+            else:
+                self.percent = None
+                self.settling = False
             return
 
+        self.settling = False
         if ph == "done":
             self.percent = 100.0
             self.eta_min = 0
