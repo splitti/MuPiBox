@@ -147,7 +147,9 @@ export class HeaderVisibilityService {
     const page = pages.find(
       (p) => !p.classList.contains('ion-page-hidden') && !p.classList.contains('ion-page-invisible'),
     )
+    // (the round-2 headers - Cover Flow and the children's themes - have plain buttons, marked data-mupi-back)
     const button =
+      page?.querySelector<HTMLElement>('ion-header [data-mupi-back]') ??
       page?.querySelector<HTMLElement>('ion-header ion-back-button') ??
       page?.querySelector<HTMLElement>('ion-header ion-buttons[slot="start"] ion-button')
     button?.click()

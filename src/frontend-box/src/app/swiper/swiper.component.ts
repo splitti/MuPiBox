@@ -139,6 +139,8 @@ export class SwiperComponent<T> {
   protected readonly displayTexts = inject(DisplayTextsService)
   protected readonly speakingName = signal<string | undefined>(undefined)
   private speakingTimer: ReturnType<typeof setTimeout> | undefined
+  // the picture addresses that did not load (by address, not by name: two entries of the same name can have different
+  // pictures, and a new address of an entry gets its try)
   private readonly missingCovers = signal(new Set<string>())
 
   // km "Bühne" (stage, MuPi-Conf > "Cover-Flow-Ansicht"): the covers around the one in the middle, drawn by hand
@@ -710,23 +712,23 @@ export class SwiperComponent<T> {
     this.speakingTimer = setTimeout(() => this.speakingName.set(undefined), 1800)
   }
 
-  // A cover that does not load counts as missing (km themes: their mascot, the other themes: the grey card with the name)
-  protected onCoverError(name: string): void {
-    this.missingCovers.update((set) => new Set(set).add(name))
+  // A cover that does not load counts as missing (km themes: their mascot, the other themes: the card with the name)
+  protected onCoverError(src: string | null | undefined): void {
+    if (src) this.missingCovers.update((set) => new Set(set).add(src))
   }
 
-  // The other themes show a dark to mid grey card with the folder's name when there is no picture - the default
+  // The other themes show a card with the folder's name in its colour when there is no picture - the default
   // picture ("nocover") or one that does not load. (The picture's address arrives at once; null: not known yet.)
   // (the colours of the card: one per folder name, see no-cover.ts)
   protected readonly noCoverStyle = noCoverStyle
 
-  protected noCover(name: string, src: string | null | undefined): boolean {
+  protected noCover(src: string | null | undefined): boolean {
     if (this.km()) return false
-    return this.missingCovers().has(name) || (typeof src === 'string' && (src === '' || src.includes('nocover')))
+    return typeof src === 'string' && (src === '' || src.includes('nocover') || this.missingCovers().has(src))
   }
 
-  protected coverMissing(name: string, src: string | null | undefined): boolean {
-    return !src || src.includes('nocover') || this.missingCovers().has(name)
+  protected coverMissing(src: string | null | undefined): boolean {
+    return !src || src.includes('nocover') || this.missingCovers().has(src)
   }
 
   // Tapping a tilted side cover brings it to the center; only the centered one opens.
