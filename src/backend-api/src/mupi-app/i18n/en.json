@@ -1626,6 +1626,7 @@
  "lädt … {} %": "downloading … {}%",
  "lädt (Erhaltung)": "charging (trickle)",
  "lädt (fast voll)": "charging (almost full)",
+ "lädt (Pause)": "charging (pause)",
  "lädt (schnell)": "charging (fast)",
  "lädt nicht": "not charging",
  "Lagerfeuer": "Campfire",

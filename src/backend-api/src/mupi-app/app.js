@@ -6554,6 +6554,11 @@ function mountBluetooth(root, page) {
 // the battery takes current (not: the power supply gives some - that also runs the Pi; with the charger stuck it gave
 // 45 mA and the app showed the flash while the battery ran down)
 const batteryCharging = (h) => Number.isFinite(h?.Ibat) && h.Ibat > 50
+// The charge goes on but no current flows just now: the chip reports "Done" now and then on a weak input, far below its
+// limit, and the estimate does not take it (Charge_Phase stays the one of the charge) - "vollständig geladen" was wrong
+const batteryChargePaused = (h) => !batteryCharging(h) && ['precharge', 'cc', 'cv', 'topoff'].includes(h?.Charge_Phase) && Number.isFinite(h?.Vbus) && h.Vbus > 4000
+// full: as the estimate says, when the HAT service has one (Charge_Phase), else as the chip says
+const batteryFull = (h) => (h?.Charge_Phase ? h.Charge_Phase === 'done' : /termination|done/i.test(h?.Charger_Status ?? ''))
 // (the box saw it for 10 minutes: /api/mupihat ChargeProblemSince, see checkCharging in server.ts)
 const NOT_CHARGING = 'Das Netzteil steckt, aber der Akku lädt nicht. Bitte das Netzteil an der Box kurz abziehen und wieder anstecken.'
 // (the MuPiHAT service did not update the values for 10 minutes, a restart of it did not help: BatteryStaleSince, see
@@ -6586,11 +6591,14 @@ function batteryTop() {
   const PHASE = { precharge: 'Vorladen', cc: 'lädt (schnell)', cv: 'lädt (fast voll)', topoff: 'lädt (fast voll)', done: 'vollständig geladen' }
   const status =
     (charging && PHASE[h.Charge_Phase]) ||
+    (batteryChargePaused(h) && 'lädt (Pause)') ||
     ({ 'Not Charging': 'lädt nicht', 'Pre-charge': 'Vorladen', 'Fast charge (CC mode)': 'lädt (schnell)', 'Fast Charging': 'lädt (schnell)', 'Fast charging': 'lädt (schnell)', 'Trickle Charge': 'lädt (Erhaltung)', 'Taper Charge (CV mode)': 'lädt (fast voll)', 'Taper Charging': 'lädt (fast voll)', 'Top-off Timer Active Charging': 'lädt (fast voll)', 'Charge Termination Done': 'vollständig geladen' }[h.Charger_Status] ?? h.Charger_Status ?? '–')
   // what the battery does now, under the big number (as the design: "OK · entlädt")
   const state = charging
     ? 'lädt'
-    : /termination|done/i.test(h.Charger_Status ?? '')
+    : batteryChargePaused(h)
+      ? 'lädt (Pause)'
+      : batteryFull(h)
       ? 'vollständig geladen'
       : Number.isFinite(h.Ibat) && h.Ibat < -50
         ? 'entlädt'
@@ -6686,7 +6694,7 @@ function hatNowLine() {
   }
   if (!h || !Number.isFinite(h.Vbat)) return ''
   const pct = Number.isFinite(h.Bat_Percent) ? h.Bat_Percent : Number.parseInt(String(h.Bat_SOC ?? ''), 10)
-  const what = batteryCharging(h) ? 'lädt' : Number.isFinite(h.Ibat) && h.Ibat < -50 ? 'entlädt' : 'Ruhezustand'
+  const what = batteryCharging(h) ? 'lädt' : batteryChargePaused(h) ? 'lädt (Pause)' : Number.isFinite(h.Ibat) && h.Ibat < -50 ? 'entlädt' : 'Ruhezustand'
   const eta = batteryCharging(h) && Number.isFinite(h.Charge_Eta_Min) && h.Charge_Eta_Min >= 5 ? `voll in etwa ${h.Charge_Eta_Min >= 60 ? `${Math.floor(h.Charge_Eta_Min / 60)} h ` : ''}${h.Charge_Eta_Min % 60 ? `${h.Charge_Eta_Min % 60} min` : ''}`.trim() : ''
   const parts = [`${(h.Vbat / 1000).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} V`, Number.isFinite(pct) ? `${pct} %` : '', what, eta].filter(Boolean)
   return `<div class="status-line"><span class="dot ok"></span><span><span>Jetzt</span> <b>${esc(parts.join(' · '))}</b></span></div>`
