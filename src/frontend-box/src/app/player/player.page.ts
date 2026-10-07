@@ -31,6 +31,7 @@ import {
   chevronDown,
   chevronUp,
   close,
+  bluetooth,
   headset,
   pause,
   play,
@@ -159,6 +160,11 @@ export class PlayerPage implements OnInit, AfterViewInit {
     const o = this.output()
     if (!o) return false
     return this.outputOnBluetooth() || o.cards?.find((c) => `card:${c.id}` === o.current)?.kind === 'jack'
+  }
+  /** the symbol next to the volume: where the box plays (Bluetooth, headphones, or the speaker) */
+  protected outputIconName(): 'bluetooth' | 'headset' | 'volume-medium' {
+    if (this.outputOnBluetooth()) return 'bluetooth'
+    return this.outputOnPhones() ? 'headset' : 'volume-medium'
   }
   /** a sound card's name in the window: the amplifier is "Speaker" in the display's language, the others say what they are */
   protected cardLabel(c: { name: string; kind: string }): string {
@@ -436,6 +442,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
       volumeMedium,
       close,
       headset,
+      bluetooth,
     })
   }
 

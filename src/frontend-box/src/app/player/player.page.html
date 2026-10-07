@@ -114,7 +114,7 @@
     </ion-title>
     <ion-title class="toolbar-tracknumber" slot="end">
       <!-- the volume, with where the box plays: a tap chooses speaker or Bluetooth ("Hören mit", see openOutput) -->
-      <div class="km-vol" [class.out-tap]="outputChoosable()" (click)="openOutput()">@if (km()) {<ion-icon [name]="outputOnPhones() ? 'headset' : 'volume-medium'"></ion-icon>{{local?.volume}} %} @else { @if (outputOnPhones()) {<ion-icon name="headset"></ion-icon>}{{local?.volume}}% }</div>
+      <div class="km-vol" [class.out-tap]="outputChoosable()" (click)="openOutput()">@if (km()) {<ion-icon [name]="outputIconName()"></ion-icon>{{local?.volume}} %} @else { @if (outputIconName() !== 'volume-medium') {<ion-icon [name]="outputIconName()"></ion-icon>}{{local?.volume}}% }</div>
       <ng-container *ngTemplateOutlet="counterTpl"></ng-container>
     </ion-title>
     <span slot="end" class="mupihat-icon-container"><mupi-status></mupi-status></span>

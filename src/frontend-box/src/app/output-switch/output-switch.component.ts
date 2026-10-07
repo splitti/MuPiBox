@@ -2,11 +2,12 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 import type { AudioOutputState } from '../player/player.page'
 
 /**
- * The output capsule in the player's header (design round 2, §4): 64 high - speaker | headset, a line, the volume.
- * Without a paired Bluetooth device only the volume. With one device a tap on the headset switches at once, with
- * several the window opens (the player decides, see outputSwitchTap). States of the headset field: ready (green dot),
- * connecting (turning ring), not found (red dot; the player shows the message below the header). The volume is only
- * shown - louder and softer are the big buttons.
+ * The output capsule in the player's header (design round 2, §4): 64 high - one field, a line, the volume.
+ * The field shows where the box plays: the Bluetooth symbol (a Bluetooth device), headphones (the 3.5 mm output) or
+ * the speaker (the box's own sound card). Without a choice (one output) only the volume. With two outputs a tap goes
+ * to the other one at once, with more the window opens (the player decides, see outputSwitchTap). States of the field:
+ * ready (green dot: a Bluetooth device is connected, not playing), connecting (turning ring), not found (red dot; the
+ * player shows the message below the header). The volume is only shown - louder and softer are the big buttons.
  */
 @Component({
   selector: 'mupi-output-switch',
@@ -25,40 +26,34 @@ export class OutputSwitchComponent {
   readonly choose = output<string>()
 
   protected readonly devices = computed(() => this.output()?.devices ?? [])
-  /** the box's own output (its speaker, or one of its sound cards) - not a Bluetooth device */
-  protected readonly onBox = computed(() => {
-    const current = this.output()?.current ?? 'box'
-    return current === 'box' || current.startsWith('card:')
-  })
-  private readonly cardCount = computed(() => this.output()?.cards?.length ?? 0)
-  /** the 3.5 mm output plays: the box's field shows headphones */
-  protected readonly onJack = computed(() => {
-    const o = this.output()
-    return o?.cards?.find((c) => `card:${c.id}` === o.current)?.kind === 'jack'
-  })
-  /** the headset the right field stands for: the one playing, else the first paired one */
-  protected readonly device = computed(() => {
-    const o = this.output()
-    return this.devices().find((d) => d.mac === o?.current) ?? this.devices()[0]
-  })
+  private readonly cards = computed(() => this.output()?.cards ?? [])
+  private readonly current = computed(() => this.output()?.current ?? 'box')
+  /** a Bluetooth device plays */
+  protected readonly onBluetooth = computed(() => this.devices().some((d) => d.mac === this.current()))
+  /** the 3.5 mm output plays: headphones */
+  protected readonly onJack = computed(() => this.cards().find((c) => `card:${c.id}` === this.current())?.kind === 'jack')
+  /** the symbol of the output that plays */
+  protected readonly symbol = computed<'bluetooth' | 'phones' | 'speaker'>(() => (this.onBluetooth() ? 'bluetooth' : this.onJack() ? 'phones' : 'speaker'))
+  /** the Bluetooth device the field stands for: the one playing, else the first paired one */
+  protected readonly device = computed(() => this.devices().find((d) => d.mac === this.current()) ?? this.devices()[0])
+  protected readonly label = computed(() => (this.onBluetooth() ? this.device()?.name : this.cards().find((c) => `card:${c.id}` === this.current())?.name) ?? 'Box')
   protected readonly state = computed<'bt' | 'connecting' | 'notfound' | 'ready' | 'off'>(() => {
     const d = this.device()
     if (!d) return 'off'
     if (this.busy() && this.devices().some((x) => x.mac === this.busy())) return 'connecting'
     if (this.notFound()) return 'notfound'
-    if (this.output()?.current === d.mac) return 'bt'
+    if (this.current() === d.mac) return 'bt'
     return d.connected ? 'ready' : 'off'
   })
+  /** the outputs there are: the box's sound cards (one counts as "the box") and the paired devices */
+  private readonly optionCount = computed(() => Math.max(this.cards().length, 1) + this.devices().length)
 
-  protected tapBox(): void {
-    // (several devices or several sound cards: the window decides)
-    if (this.devices().length > 1 || this.cardCount() > 1) return this.choose.emit('open')
-    if (!this.onBox()) this.choose.emit('box')
-  }
-
-  protected tapHeadset(): void {
-    if (this.devices().length > 1) return this.choose.emit('open')
-    const d = this.device()
-    if (d && this.output()?.current !== d.mac) this.choose.emit(d.mac)
+  protected tap(): void {
+    // (three or more: the window decides)
+    if (this.optionCount() > 2) return this.choose.emit('open')
+    // two: a tap goes to the other one
+    if (this.devices().length === 1 && this.cards().length < 2) return this.choose.emit(this.onBluetooth() ? 'box' : this.devices()[0].mac)
+    const other = this.cards().find((c) => `card:${c.id}` !== this.current())
+    if (other) this.choose.emit(`card:${other.id}`)
   }
 }

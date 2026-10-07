@@ -134,3 +134,8 @@ svg {
 .oc-solo .oc-vol {
   padding-left: 0;
 }
+
+// with the choice (one field beside it) the volume stands without its own speaker symbol
+.oc-vol-plain {
+  padding-left: 4px;
+}
