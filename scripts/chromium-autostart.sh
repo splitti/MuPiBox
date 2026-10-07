@@ -35,9 +35,9 @@ CHROMIUM_OPTS=""
 
 # Fast feedback and process control
 CHROMIUM_OPTS="--fast --fast-start --skip-gpu-data-loading"
-# FORCE GPU Settings
+# FORCE GPU Settings (without WebGPU: no page of the box uses it)
 if ${FORCE_GPU} ; then
-	CHROMIUM_OPTS="${CHROMIUM_OPTS} --ignore-gpu-blocklist --enable-gpu --use-gl=egl --enable-unsafe-webgpu --enable-gpu-rasterization"
+	CHROMIUM_OPTS="${CHROMIUM_OPTS} --ignore-gpu-blocklist --enable-gpu --use-gl=egl --enable-gpu-rasterization"
 fi
 # Enable smooth scrolling animation
 if ${SCROLL_ANIMATION} ; then
@@ -69,6 +69,12 @@ CACHE_IN_RAM=$(/usr/bin/jq -r '.chromium.cacheInRam // true' ${CONFIG})
 if [ "${CACHE_IN_RAM}" != "false" ]; then
 	CACHE_PATH="/tmp/chromium_cache"
 	mkdir -p "${CACHE_PATH}"
+	# The cache in RAM is memory the box lacks on a Pi with 1 GB: there at most 32 MB (it swapped at every start of
+	# Spotify, with a cache allowed to grow to 128 MB).
+	MEM_KB=$(awk '/^MemTotal:/ {print $2}' /proc/meminfo)
+	if [ "${MEM_KB:-0}" -gt 0 ] && [ "${MEM_KB}" -lt 1572864 ] && [ "${CACHE_SIZE}" -gt 33554432 ]; then
+		CACHE_SIZE=33554432
+	fi
 fi
 CHROMIUM_OPTS="${CHROMIUM_OPTS} --disk-cache-dir=${CACHE_PATH:-/home/dietpi/.mupibox/chromium_cache} --disk-cache-size=${CACHE_SIZE:-33554432}"
 # DEBUG MODE
