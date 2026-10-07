@@ -14,6 +14,7 @@
 <b>App</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Library: tracks, albums and folders of the SD card or USB stick can be downloaded again (wish of hyperbit) - a track as it lies on the card, an album or a folder as a ZIP the box makes while it goes (not compressed: hardly any work for the Pi, no file in between); the folder shows the tracks and size of each album, a download over 1 GB asks first. Only with the app's login and only inside the media folders.</li>
 <li id='linews' class='linews'>About the box: the bar of the free space names the drive the box runs from (SD card, USB drive, SSD), and a USB stick or SSD running at USB 2.0 speed gets a hint - in a black USB 2.0 port it is many times slower than in a blue USB 3.0 port, the box starts slowly and stutters when memory runs short (found by hyperbit: a Pi with 1 GB stuttered at every start of Spotify until the stick moved to the blue port). On a Pi with less than 1.5 GB the display's cache in RAM is now at most 32 MB instead of 128 MB, memory such a box lacks.</li>
 </ul>
 <b>MuPiHAT</b>
