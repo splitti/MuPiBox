@@ -2932,7 +2932,7 @@ async function fillFolderDownloads(sheet, folder, albums) {
     const s = info.children?.[String(albums[Number(b.dataset.a)]?.libraryPath ?? '').split('/').pop()]
     if (s) b.querySelector('.lbl')?.insertAdjacentHTML('beforeend', `<small>${esc(`${s.audio} Titel · ${formatBytes(s.bytes)}`)}</small>`)
   }
-  card.innerHTML = `<button class="btn primary block" id="dl-zip">${icon('save', 18)}Ordner als ZIP herunterladen</button>
+  card.innerHTML = `<button class="btn primary block" id="dl-zip">${icon('download', 18)}Ordner als ZIP herunterladen</button>
     <div class="dl-meta"><span>${esc(`${info.files} Dateien · ${formatBytes(info.bytes)}`)}</span><span>${esc(dlTime(info.bytes))}</span></div>`
   card.hidden = false
   $('#dl-zip', sheet).onclick = () => downloadFolder(folder.libraryPath, folder.title, info)
@@ -2950,12 +2950,12 @@ async function fillAlbumDownloads(sheet, album) {
     list.innerHTML = info.tracks
       .map(
         (t, i) => `<div class="lib-row dl-row"><span class="trk-no">${i + 1}</span><span class="lbl"><b translate="no">${esc(t.name)}</b><small>${esc(formatBytes(t.size))}</small></span>
-          <a class="icon-btn soft" href="${API}/local/download?path=${encodeURIComponent(t.path)}" download aria-label="${esc(t.name)} herunterladen" data-dl="${esc(t.name)}">${icon('save', 18)}</a></div>`,
+          <a class="icon-btn soft" href="${API}/local/download?path=${encodeURIComponent(t.path)}" download aria-label="${esc(t.name)} herunterladen" data-dl="${esc(t.name)}">${icon('download', 18)}</a></div>`,
       )
       .join('')
     for (const a of list.querySelectorAll('[data-dl]')) a.addEventListener('click', () => toast(`Download startet: ${a.dataset.dl}`))
   }
-  $('#dl-album', sheet).innerHTML = `<button class="btn block" id="dl-zip">${icon('save', 18)}Album als ZIP herunterladen</button>`
+  $('#dl-album', sheet).innerHTML = `<button class="btn block" id="dl-zip">${icon('download', 18)}Album als ZIP herunterladen</button>`
   $('#dl-zip', sheet).onclick = () => downloadFolder(album.libraryPath, album.title, info)
 }
 
@@ -2966,7 +2966,7 @@ function openLocalAlbumSheet(album, parent) {
      <span class="album-cover">${album.cover ? `<img src="${esc(stampedCover(album.cover))}" alt="">` : icon('image', 40)}</span>
      <div class="album-title"><h2 translate="no">${esc(album.title)}</h2><p class="help" style="margin:0">${esc(['Album auf der SD-Karte', catLabel(album.category), parent?.title].filter(Boolean).join(' · '))}</p></div>
      <button class="btn primary block" data-cover>${icon('image', 18)}${album.cover ? 'Cover ändern' : 'Cover wählen'}</button>
-     <div class="section-label dl-head" id="dl-head" hidden><span>Titel</span><span></span></div><div class="rows" id="dl-tracks"></div><div id="dl-album"></div>
+     <div id="dl-album"></div><div class="section-label dl-head" id="dl-head" hidden><span>Titel</span><span></span></div><div class="rows" id="dl-tracks"></div>
      <div class="btns"><button class="btn danger" data-del>Album löschen</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
     (sheet, close) => {
       for (const img of sheet.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
