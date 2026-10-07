@@ -31,6 +31,11 @@ export class OutputSwitchComponent {
     return current === 'box' || current.startsWith('card:')
   })
   private readonly cardCount = computed(() => this.output()?.cards?.length ?? 0)
+  /** the 3.5 mm output plays: the box's field shows headphones */
+  protected readonly onJack = computed(() => {
+    const o = this.output()
+    return o?.cards?.find((c) => `card:${c.id}` === o.current)?.kind === 'jack'
+  })
   /** the headset the right field stands for: the one playing, else the first paired one */
   protected readonly device = computed(() => {
     const o = this.output()

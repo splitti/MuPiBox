@@ -98,7 +98,8 @@ function cardOf(sink: string, desc: string): CardOutput {
         : /soc_sound|i2s|max98357|hifiberry|iqaudio|allo|dac/.test(n)
           ? 'amp'
           : 'card'
-  const name = kind === 'hdmi' ? 'HDMI' : kind === 'jack' ? '3.5 mm' : kind === 'amp' ? 'I²S' : kind === 'usb' ? 'USB' : desc || sink
+  // ('Speaker' is the fallback: the display and the web app say it in their language for an amplifier card)
+  const name = kind === 'hdmi' ? 'HDMI' : kind === 'jack' ? '3.5 mm' : kind === 'amp' ? 'Speaker' : kind === 'usb' ? 'USB' : desc || sink
   return { id: sink, name, desc, kind }
 }
 

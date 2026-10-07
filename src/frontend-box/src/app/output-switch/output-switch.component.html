@@ -1,7 +1,11 @@
 <div class="oc" [class.oc-solo]="!choosable()" role="group">
   @if (choosable()) {
     <button class="oc-field" type="button" [class.oc-on]="onBox()" (click)="tapBox()" aria-label="Box">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5" /><circle cx="12" cy="14.5" r="3.5" /><circle cx="12" cy="7" r="1.2" /></svg>
+      @if (onJack()) {
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15v-3a8 8 0 0 1 16 0v3" /><rect x="3" y="14" width="5" height="7" rx="1.5" /><rect x="16" y="14" width="5" height="7" rx="1.5" /></svg>
+      } @else {
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5" /><circle cx="12" cy="14.5" r="3.5" /><circle cx="12" cy="7" r="1.2" /></svg>
+      }
     </button>
     @if (devices().length > 0) {
     <button class="oc-field" type="button" [class.oc-on]="state() === 'bt'" [attr.data-state]="state()" (click)="tapHeadset()" [attr.aria-label]="device()?.name">

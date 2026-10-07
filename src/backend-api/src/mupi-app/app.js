@@ -1167,13 +1167,16 @@ async function playbackAction(root, action) {
 // every few seconds (see loadNow); read again every 15 s and after a change
 const outState = { data: null, busy: null }
 
+// a sound card's name: the amplifier is the speaker (in the app's language), the others say what they are (3.5 mm, HDMI, USB)
+const cardName = (c) => (c.kind === 'amp' ? tr('Lautsprecher') : c.name)
+
 function outputRow() {
   const o = outState.data
   const cards = o?.cards ?? []
   if (!o?.devices?.length && cards.length < 2) return ''
   const btn = (target, ic, label) =>
     `<button data-out="${esc(target)}" aria-pressed="${o.current === target}" ${outState.busy ? 'disabled' : ''}>${outState.busy === target ? '<span class="spin sm"></span>' : icon(ic, 16)}<span translate="${target === 'box' ? 'yes' : 'no'}">${esc(label)}</span></button>`
-  return `<div class="out-row"><span class="out-label">Ausgabe</span><div class="seg out-seg">${cards.length > 1 ? cards.map((c) => btn(`card:${c.id}`, 'vol', c.name)).join('') : btn('box', 'vol', 'Lautsprecher')}${o.devices.map((d) => btn(d.mac, 'phones', d.name)).join('')}</div></div>`
+  return `<div class="out-row"><span class="out-label">Ausgabe</span><div class="seg out-seg">${cards.length > 1 ? cards.map((c) => btn(`card:${c.id}`, c.kind === 'jack' ? 'phones' : 'vol', cardName(c))).join('') : btn('box', 'vol', 'Lautsprecher')}${o.devices.map((d) => btn(d.mac, 'phones', d.name)).join('')}</div></div>`
 }
 
 async function loadOutput(root) {
@@ -1192,7 +1195,7 @@ async function chooseOutput(root, target) {
   if (slot) slot.innerHTML = outputRow()
   const r = await api('/api/audio-output', { method: 'POST', body: { target } })
   outState.busy = null
-  const name = target === 'box' ? tr('Lautsprecher') : target.startsWith('card:') ? (outState.data?.cards ?? []).find((c) => `card:${c.id}` === target)?.name ?? '' : (outState.data?.devices ?? []).find((d) => d.mac === target)?.name ?? ''
+  const name = target === 'box' ? tr('Lautsprecher') : target.startsWith('card:') ? cardName((outState.data?.cards ?? []).find((c) => `card:${c.id}` === target) ?? { name: '' }) : (outState.data?.devices ?? []).find((d) => d.mac === target)?.name ?? ''
   toast(r.ok ? `${tr('Ausgabe')}: ${name}` : r.status === 504 ? `${name}: ${tr('nicht gefunden – ist es an?')}` : 'Das ging nicht', r.ok ? 'ok' : 'info')
   await loadOutput(root)
 }

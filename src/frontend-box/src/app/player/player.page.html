@@ -114,7 +114,7 @@
     </ion-title>
     <ion-title class="toolbar-tracknumber" slot="end">
       <!-- the volume, with where the box plays: a tap chooses speaker or Bluetooth ("Hören mit", see openOutput) -->
-      <div class="km-vol" [class.out-tap]="outputChoosable()" (click)="openOutput()">@if (km()) {<ion-icon [name]="outputOnBluetooth() ? 'headset' : 'volume-medium'"></ion-icon>{{local?.volume}} %} @else { @if (outputOnBluetooth()) {<ion-icon name="headset"></ion-icon>}{{local?.volume}}% }</div>
+      <div class="km-vol" [class.out-tap]="outputChoosable()" (click)="openOutput()">@if (km()) {<ion-icon [name]="outputOnPhones() ? 'headset' : 'volume-medium'"></ion-icon>{{local?.volume}} %} @else { @if (outputOnPhones()) {<ion-icon name="headset"></ion-icon>}{{local?.volume}}% }</div>
       <ng-container *ngTemplateOutlet="counterTpl"></ng-container>
     </ion-title>
     <span slot="end" class="mupihat-icon-container"><mupi-status></mupi-status></span>
@@ -425,10 +425,12 @@
         @for (c of output()?.cards ?? []; track c.id) {
           <button class="out-tile" [class.on]="output()?.current === 'card:' + c.id" (click)="chooseOutput('card:' + c.id)">
             @if (output()?.current === 'card:' + c.id) {<span class="out-check"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>}
-            @if (outputBusy() === 'card:' + c.id) {<span class="out-spin"></span>} @else {
+            @if (outputBusy() === 'card:' + c.id) {<span class="out-spin"></span>} @else if (c.kind === 'jack') {
+              <svg class="out-icon" viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0 1 16 0v3" /><path class="fill" d="M4 15h3v6H5a1 1 0 0 1-1-1zM20 15h-3v6h2a1 1 0 0 0 1-1z" /></svg>
+            } @else {
               <svg class="out-icon" viewBox="0 0 24 24"><path class="fill" d="M4 9h3.5L12 5v14l-4.5-4H4z" /><path d="M16 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10" /></svg>
             }
-            <b translate="no">{{ c.name }}</b><small translate="no">{{ c.desc }}</small>
+            <b translate="no">{{ cardLabel(c) }}</b><small translate="no">{{ c.desc }}</small>
           </button>
         }
         @if ((output()?.cards?.length ?? 0) < 2) {

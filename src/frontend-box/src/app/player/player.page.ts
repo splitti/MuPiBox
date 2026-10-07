@@ -154,6 +154,16 @@ export class PlayerPage implements OnInit, AfterViewInit {
     const o = this.output()
     return !!o && o.current !== 'box' && !o.current.startsWith('card:')
   }
+  /** headphones in the header: a Bluetooth device or the 3.5 mm output plays */
+  protected outputOnPhones(): boolean {
+    const o = this.output()
+    if (!o) return false
+    return this.outputOnBluetooth() || o.cards?.find((c) => `card:${c.id}` === o.current)?.kind === 'jack'
+  }
+  /** a sound card's name in the window: the amplifier is "Speaker" in the display's language, the others say what they are */
+  protected cardLabel(c: { name: string; kind: string }): string {
+    return c.kind === 'amp' ? this.displayTexts.text('outputBoxSub') : c.name
+  }
   /** the window's tiles: one per sound card (or "the box" with one card) and one per paired device */
   protected outputTileCount(): number {
     const o = this.output()
