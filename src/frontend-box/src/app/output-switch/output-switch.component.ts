@@ -24,7 +24,7 @@ export class OutputSwitchComponent {
   /** 'box', a device's MAC (one device), or 'open' (several devices or sound cards: the window) */
   readonly choose = output<string>()
 
-  private readonly devices = computed(() => this.output()?.devices ?? [])
+  protected readonly devices = computed(() => this.output()?.devices ?? [])
   /** the box's own output (its speaker, or one of its sound cards) - not a Bluetooth device */
   protected readonly onBox = computed(() => {
     const current = this.output()?.current ?? 'box'
