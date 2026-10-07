@@ -16,6 +16,11 @@
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>About the box: the bar of the free space names the drive the box runs from (SD card, USB drive, SSD), and a USB stick or SSD running at USB 2.0 speed gets a hint - in a black USB 2.0 port it is many times slower than in a blue USB 3.0 port, the box starts slowly and stutters when memory runs short (found by hyperbit: a Pi with 1 GB stuttered at every start of Spotify until the stick moved to the blue port). On a Pi with less than 1.5 GB the display's cache in RAM is now at most 32 MB instead of 128 MB, memory such a box lacks.</li>
 </ul>
+<b>Radio</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>A picture uploaded in the app and set as the cover of a radio station is shown on the display again (it showed the default picture, the browser had it - reported by boing86): an address of the box itself is taken from its cover folder instead of being fetched; other addresses of the home network stay refused.</li>
+</ul>
 <b>Installation</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
