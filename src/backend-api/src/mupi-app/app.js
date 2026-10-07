@@ -363,6 +363,16 @@ function renderPageNav(page) {
   updatePageNavSections(page)
 }
 
+// Back / next under a page of a settings group (phone, tablet, small PC window: where "Auf dieser Seite" is not shown)
+function pager(page) {
+  const sibs = page.parent?.startsWith('g-') ? state.schema.pages.filter((p) => p.parent === page.parent) : []
+  const at = sibs.findIndex((p) => p.id === page.id)
+  if (sibs.length < 2 || at < 0) return ''
+  const btn = (p, kind, label) =>
+    `<button class="pager-btn ${kind}" data-go="${esc(p.id)}">${kind === 'prev' ? icon('back', 18) : ''}<span class="lbl"><small>${label}</small><b>${esc(p.title)}</b></span>${kind === 'next' ? icon('chevron', 18) : ''}</button>`
+  return `<div class="group-pager wide">${sibs[at - 1] ? btn(sibs[at - 1], 'prev', 'Zurück') : '<span></span>'}${sibs[at + 1] ? btn(sibs[at + 1], 'next', 'Weiter') : '<span></span>'}</div>`
+}
+
 // The cards of the page drawn (headings of its cards) as jumps under the shown page; marks the one being read.
 // Called again whenever the page is drawn.
 function updatePageNavSections(page) {
@@ -487,6 +497,7 @@ async function renderPage(page, reload = true) {
     return pageNotLoaded(main, page)
   }
   parts.push(...childNav(page))
+  parts.push(pager(page))
   // a redraw with the values already loaded (after a change) stays where the user is
   const keepScroll = !reload && main.dataset.page === page.id ? window.scrollY : null
   main.innerHTML = parts.join('')

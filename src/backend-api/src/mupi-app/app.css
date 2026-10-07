@@ -72,6 +72,20 @@ a { color: var(--mp-primary-text); }
 
 .sidebar { display: none; }
 .pagenav { display: none; }
+/* back / next under a page of a settings group, where the list "Auf dieser Seite" is not shown */
+.group-pager { display: grid; grid-template-columns: 1fr 1fr; gap: var(--mp-gap); }
+.pager-btn {
+  display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 16px; min-width: 0;
+  background: var(--mp-surface); border: 1px solid var(--mp-border); border-radius: var(--mp-r-card);
+  color: var(--mp-text); text-align: left;
+}
+.pager-btn:hover { border-color: var(--mp-primary); }
+.pager-btn .lbl { flex: 1; min-width: 0; }
+.pager-btn .lbl small { display: block; font-size: 13px; color: var(--mp-muted); font-weight: 600; }
+.pager-btn .lbl b { display: block; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pager-btn svg { color: var(--mp-muted); flex: none; }
+.pager-btn.next { text-align: right; }
+@media (max-width: 560px) { .group-pager { grid-template-columns: minmax(0, 1fr); } }
 /* (a card jumped to from "Auf dieser Seite" ends below the top bar) */
 .content section.card { scroll-margin-top: calc(var(--mp-head-h) + env(safe-area-inset-top) + 12px); }
 
@@ -102,10 +116,13 @@ a { color: var(--mp-primary-text); }
 }
 /* Large screens: "Auf dieser Seite" at the right of a settings page (the pages of its group), as the manual has it */
 @media (min-width: 1440px) {
-  .main.has-pagenav { display: grid; grid-template-columns: minmax(0, 1fr) 224px; grid-template-rows: auto 1fr; }
+  /* (content and list side by side, as a group in the middle: the list right beside the content) */
+  .main.has-pagenav { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, var(--mp-maxw-wide)) 224px minmax(0, 1fr); grid-template-rows: auto 1fr; }
   .main.has-pagenav > .topbar { grid-column: 1 / -1; }
+  .main.has-pagenav > .content { grid-column: 2; }
+  .group-pager { display: none; }
   .main.has-pagenav > .pagenav {
-    display: block; position: sticky; top: calc(var(--mp-head-h) + env(safe-area-inset-top)); align-self: start;
+    grid-column: 3; display: block; position: sticky; top: calc(var(--mp-head-h) + env(safe-area-inset-top)); align-self: start;
     padding: 8px 24px 24px 8px;
   }
   .pagenav p { margin: 0 0 8px; font-weight: 800; font-size: 13px; color: var(--mp-muted); }
