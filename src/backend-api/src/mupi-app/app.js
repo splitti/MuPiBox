@@ -2761,6 +2761,7 @@ async function openLocalSheet(folder, parent = null) {
        <div class="lbl"><h2 translate="no">${esc(folder.title)}</h2><p class="help" style="margin:0">${esc(['Ordner auf der SD-Karte', catLabel(folder.category), `${albums.length} ${albums.length === 1 ? 'Album' : 'Alben'}`].join(' · '))}</p>
        <button class="btn sm" data-cover>${icon('image', 16)}${folder.cover ? 'Cover ändern' : 'Cover wählen'}</button></div></div>
      ${albums.length ? `<div class="section-label" style="margin:0">Alben</div><div class="rows">${albums.map((a, i) => `<button class="entry lib-row" data-a="${i}">${thumb(a.cover)}<span class="lbl"><b translate="no">${esc(a.title)}</b>${a.libraryIsContainer ? '<small>Ordner</small>' : ''}</span><span class="chev">${icon('chevron', 18)}</span></button>`).join('')}</div>` : ''}
+     <div class="dl-card" id="dl-card" hidden></div>
      <div class="btns"><button class="btn danger" data-all>Ganzen Ordner löschen</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
     (sheet, close) => {
       for (const img of sheet.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
@@ -2769,6 +2770,7 @@ async function openLocalSheet(folder, parent = null) {
       sheet.querySelector('[data-back]')?.addEventListener('click', back)
       sheet.querySelector('[data-cover]').onclick = () => pickLocalCover(folder, parent, (f) => openLocalSheet(f, parent))
       for (const b of sheet.querySelectorAll('[data-a]')) b.onclick = () => openLocalSheet(albums[Number(b.dataset.a)], folder)
+      fillFolderDownloads(sheet, folder, albums)
       sheet.querySelector('[data-all]').onclick = () => {
         close()
         deleteLocal(folder.libraryPath, folder.title, 'Der Ordner')
@@ -2892,6 +2894,71 @@ function openNasAlbumSheet(album, parent) {
   )
 }
 
+/* Herunterladen von der SD-Karte / dem USB-Stick (hyperbit): a track as it lies on the card, an album or a folder as a
+   ZIP the box makes while it goes (local-download.ts) */
+
+// from this size on a question before (the phone needs the room, WiFi needs the time)
+const DL_ASK_BYTES = 1e9
+// a rough time over WiFi, at 2 to 6 MB/s; nothing for a small download
+function dlTime(bytes) {
+  if (bytes < 60e6) return ''
+  const lo = Math.max(1, Math.round(bytes / 6e6 / 60))
+  const hi = Math.max(lo, Math.round(bytes / 2e6 / 60))
+  return lo === hi ? `über WLAN ca. ${lo} min` : `über WLAN ca. ${lo}–${hi} min`
+}
+function startDownload(url) {
+  const a = document.createElement('a')
+  a.href = url
+  a.download = ''
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+}
+async function downloadFolder(libraryPath, title, info) {
+  if (info.bytes >= DL_ASK_BYTES) {
+    const ok = await ask('Ganzen Ordner herunterladen?', `„${title}“ – ${info.files} Dateien, ${formatBytes(info.bytes)}. Die Box spielt dabei weiter. Auf dem Handy braucht die Datei ${formatBytes(info.bytes)} freien Platz.`, 'Herunterladen')
+    if (!ok) return
+  }
+  startDownload(`${API}/local/zip?path=${encodeURIComponent(libraryPath)}`)
+  toast(`Download startet: ${title}.zip`)
+}
+// a folder's sheet: per album its tracks and size, and the ZIP of the whole folder
+async function fillFolderDownloads(sheet, folder, albums) {
+  const r = await api(`${API}/local/info?path=${encodeURIComponent(folder.libraryPath)}`)
+  const card = $('#dl-card', sheet)
+  if (!r.ok || !card?.isConnected) return
+  const info = r.body
+  for (const b of sheet.querySelectorAll('[data-a]')) {
+    const s = info.children?.[String(albums[Number(b.dataset.a)]?.libraryPath ?? '').split('/').pop()]
+    if (s) b.querySelector('.lbl')?.insertAdjacentHTML('beforeend', `<small>${esc(`${s.audio} Titel · ${formatBytes(s.bytes)}`)}</small>`)
+  }
+  card.innerHTML = `<button class="btn primary block" id="dl-zip">${icon('save', 18)}Ordner als ZIP herunterladen</button>
+    <div class="dl-meta"><span>${esc(`${info.files} Dateien · ${formatBytes(info.bytes)}`)}</span><span>${esc(dlTime(info.bytes))}</span></div>`
+  card.hidden = false
+  $('#dl-zip', sheet).onclick = () => downloadFolder(folder.libraryPath, folder.title, info)
+}
+// an album's sheet: its tracks, each to download, and the album as a ZIP
+async function fillAlbumDownloads(sheet, album) {
+  const r = await api(`${API}/local/info?path=${encodeURIComponent(album.libraryPath)}`)
+  const list = $('#dl-tracks', sheet)
+  if (!r.ok || !list?.isConnected) return
+  const info = r.body
+  const head = $('#dl-head', sheet)
+  if (info.tracks?.length) {
+    head.lastElementChild.textContent = `${info.tracks.length} · ${formatBytes(info.bytes)}`
+    head.hidden = false
+    list.innerHTML = info.tracks
+      .map(
+        (t, i) => `<div class="lib-row dl-row"><span class="trk-no">${i + 1}</span><span class="lbl"><b translate="no">${esc(t.name)}</b><small>${esc(formatBytes(t.size))}</small></span>
+          <a class="icon-btn soft" href="${API}/local/download?path=${encodeURIComponent(t.path)}" download aria-label="${esc(t.name)} herunterladen" data-dl="${esc(t.name)}">${icon('save', 18)}</a></div>`,
+      )
+      .join('')
+    for (const a of list.querySelectorAll('[data-dl]')) a.addEventListener('click', () => toast(`Download startet: ${a.dataset.dl}`))
+  }
+  $('#dl-album', sheet).innerHTML = `<button class="btn block" id="dl-zip">${icon('save', 18)}Album als ZIP herunterladen</button>`
+  $('#dl-zip', sheet).onclick = () => downloadFolder(album.libraryPath, album.title, info)
+}
+
 // An album of the SD card: its cover large, change it or delete the album; back to its artist
 function openLocalAlbumSheet(album, parent) {
   openSheet(
@@ -2899,6 +2966,7 @@ function openLocalAlbumSheet(album, parent) {
      <span class="album-cover">${album.cover ? `<img src="${esc(stampedCover(album.cover))}" alt="">` : icon('image', 40)}</span>
      <div class="album-title"><h2 translate="no">${esc(album.title)}</h2><p class="help" style="margin:0">${esc(['Album auf der SD-Karte', catLabel(album.category), parent?.title].filter(Boolean).join(' · '))}</p></div>
      <button class="btn primary block" data-cover>${icon('image', 18)}${album.cover ? 'Cover ändern' : 'Cover wählen'}</button>
+     <div class="section-label dl-head" id="dl-head" hidden><span>Titel</span><span></span></div><div class="rows" id="dl-tracks"></div><div id="dl-album"></div>
      <div class="btns"><button class="btn danger" data-del>Album löschen</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
     (sheet, close) => {
       for (const img of sheet.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
@@ -2906,6 +2974,7 @@ function openLocalAlbumSheet(album, parent) {
       sheet.querySelector('[data-close]').onclick = back
       sheet.querySelector('[data-back]')?.addEventListener('click', back)
       sheet.querySelector('[data-cover]').onclick = () => pickLocalCover(album, parent, (f) => openLocalAlbumSheet(f, parent))
+      fillAlbumDownloads(sheet, album)
       sheet.querySelector('[data-del]').onclick = () => {
         close()
         deleteLocal(album.libraryPath, album.title, 'Das Album')

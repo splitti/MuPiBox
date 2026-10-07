@@ -61,6 +61,7 @@ import { registerNetworkRoutes, renewDhcp } from './network'
 import { registerUpdateRoutes } from './updates'
 import { registerTlsRoutes, tlsOf } from './tls'
 import { type LocalLibraryDeps, registerLocalUploadRoutes } from './upload'
+import { registerLocalDownloadRoutes } from './local-download'
 import { registerPodcastRoutes } from './podcasts'
 import { registerHealthRoutes } from './health'
 import { playlogSummary } from './playlog'
@@ -398,6 +399,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   router.use(localNetworkOnly)
 
   if (deps.localLibrary) registerLocalUploadRoutes(router, deps.localLibrary)
+  // (and back: a track, an album or a folder of the card as a download - local-download.ts)
+  if (deps.localLibrary) registerLocalDownloadRoutes(router, deps.localLibrary)
   registerDisplayRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerSpeechRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerCustomBootRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
