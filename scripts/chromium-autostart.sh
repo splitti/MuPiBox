@@ -47,6 +47,9 @@ else
 fi
 # Disable touch swipe back and forward gestures.
 CHROMIUM_OPTS="${CHROMIUM_OPTS} --disable-features=OverscrollHistoryNavigation"
+# No zooming with two fingers (it stood in the debug block only: children zoomed the display by accident, and the
+# Cover Flow theme's two-finger swipes must not zoom it either)
+CHROMIUM_OPTS="${CHROMIUM_OPTS} --disable-pinch"
 # Suppresses Error dialogs
 CHROMIUM_OPTS="${CHROMIUM_OPTS} --noerrdialogs"
 # Window Settings
@@ -79,7 +82,7 @@ fi
 CHROMIUM_OPTS="${CHROMIUM_OPTS} --disk-cache-dir=${CACHE_PATH:-/home/dietpi/.mupibox/chromium_cache} --disk-cache-size=${CACHE_SIZE:-33554432}"
 # DEBUG MODE
 if [ "${DEBUG}" = "1" ]; then
-	CHROMIUM_OPTS="${CHROMIUM_OPTS} --enable-logging --v=1 --disable-pinch"
+	CHROMIUM_OPTS="${CHROMIUM_OPTS} --enable-logging --v=1"
 fi
 # Spotify Web Playback SDK Support
 CHROMIUM_OPTS="${CHROMIUM_OPTS} --autoplay-policy=no-user-gesture-required"
