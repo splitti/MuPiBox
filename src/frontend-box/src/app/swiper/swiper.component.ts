@@ -727,8 +727,13 @@ export class SwiperComponent<T> {
     if (!el || !bar || total < 2) return
     const r = el.getBoundingClientRect()
     const f = ((event.clientX - r.left) / Math.max(1, r.width) - bar.w / 2) / Math.max(0.01, 1 - bar.w)
-    const c = this.stageClamp(Math.round(Math.max(0, Math.min(1, f)) * (total - 1)), this.shownData().length)
+    const target = Math.round(Math.max(0, Math.min(1, f)) * (total - 1))
+    // (a long list is rendered bit by bit: a place beyond the rendered part has it rendered up to there first - else
+    // the end of a list of 300 stood at the 45th entry)
+    if (target >= this.shownData().length) this.renderableLimit.set(Math.min(total, Math.max(this.renderableLimit(), target + 12)))
+    const c = this.stageClamp(target, this.shownData().length)
     this.stageIndex.set(c)
+    this.cachedSwiperPosition = c
     this.preloadCoversNear(c)
     this.maybeGrow()
   }

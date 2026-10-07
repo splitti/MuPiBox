@@ -206,6 +206,10 @@ class ChargeEstimator:
             if self.cv_i0 is None:
                 # the step over to CV is a known point: take the count to it
                 self.cv_i0 = max(i, self.iterm * 1.5)
+                # a start that was only a guess from the voltage (too high while it charges) is corrected here, downwards
+                # too - once; the note on it goes only with the correction
+                if self.start_uncertain:
+                    self.percent = None
                 self.start_uncertain = False
                 self.cc_peak = max(self.cc_peak, self.cv_i0)
                 pct = self.CC_END_PCT

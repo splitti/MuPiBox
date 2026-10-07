@@ -209,6 +209,15 @@ for _ in range(6):
     clock[0] += STEP
     late.update(1800, "Taper Charge (CV mode)", 60, 8290, 8300)
 assert late.start_uncertain is False, "the step to CV should correct the guess"
+# the guess was too high (the voltage read 100 % while it charged): the step to CV corrects it downwards, once
+high = ChargeEstimator(capacity_mah=CAP, iterm_ma=ITERM, clock=lambda: clock[0], wall=lambda: clock[0])
+clock[0] += STEP
+high.update(2000, "Fast charge (CC mode)", 100, 7900, 8300)
+assert high.start_uncertain and high.percent >= 85
+for _ in range(6):
+    clock[0] += STEP
+    high.update(1800, "Taper Charge (CV mode)", 100, 8290, 8300)
+assert not high.start_uncertain and high.percent < 90, f"the too high guess was not corrected: {high.percent:.1f}"
 known = ChargeEstimator(capacity_mah=CAP, iterm_ma=ITERM, clock=lambda: clock[0], wall=lambda: clock[0])
 for _ in range(10):
     clock[0] += STEP
