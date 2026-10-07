@@ -331,8 +331,9 @@ function renderChrome(page) {
   for (const el of document.querySelectorAll('[data-go]')) el.onclick = () => go(el.dataset.go)
 }
 
-// "Auf dieser Seite" (large screens, like the manual): a page of a settings group (Aussehen › Theme) lists the pages of
-// its group at the right, the shown one marked; the CSS shows it from 1440 px on
+// "Auf dieser Seite" (large screens, like the manual): at the right of a page the pages of its settings group (Aussehen ›
+// Theme), the shown one marked, and under it the cards of the page to jump to; the CSS shows it from 1440 px on
+let pageNavSpy = null
 function renderPageNav(page) {
   const main = $('.main')
   let nav = $('#pagenav')
@@ -341,14 +342,71 @@ function renderPageNav(page) {
     nav.id = 'pagenav'
     nav.className = 'pagenav'
     nav.setAttribute('aria-label', 'Auf dieser Seite')
+    // (a card of this page: scrolled to, the address stays - it is the app's route)
+    nav.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-sec]')
+      if (!b) return
+      const calm = matchMedia('(prefers-reduced-motion: reduce)').matches
+      document.getElementById(b.dataset.sec)?.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' })
+    })
     main.append(nav)
   }
   const siblings = page.parent?.startsWith('g-') ? state.schema.pages.filter((p) => p.parent === page.parent) : []
-  main.classList.toggle('has-pagenav', siblings.length > 1)
-  nav.innerHTML =
-    siblings.length > 1
-      ? `<p>Auf dieser Seite</p><ul>${siblings.map((p) => `<li><button data-go="${esc(p.id)}" ${p.id === page.id ? 'aria-current="page"' : ''}>${esc(p.title)}</button></li>`).join('')}</ul>`
-      : ''
+  nav.dataset.sibs = String(siblings.length > 1 ? siblings.length : 0)
+  nav.innerHTML = !page.parent
+    ? ''
+    : `<p>Auf dieser Seite</p>${
+        siblings.length > 1
+          ? `<ul>${siblings.map((p) => `<li><button data-go="${esc(p.id)}" ${p.id === page.id ? 'aria-current="page"' : ''}>${esc(p.title)}</button>${p.id === page.id ? '<ul class="sub"></ul>' : ''}</li>`).join('')}</ul>`
+          : '<ul class="sub"></ul>'
+      }`
+  updatePageNavSections(page)
+}
+
+// The cards of the page drawn (headings of its cards) as jumps under the shown page; marks the one being read.
+// Called again whenever the page is drawn.
+function updatePageNavSections(page) {
+  pageNavSpy?.disconnect()
+  pageNavSpy = null
+  const nav = $('#pagenav')
+  const content = $('#content')
+  if (!nav) return
+  // (the page itself is drawn later: until then only its group's pages count)
+  $('.main').classList.toggle('has-pagenav', Number(nav.dataset.sibs) > 1)
+  if (!page.parent || content.dataset.page !== page.id) return
+  const cards = [...content.querySelectorAll('section.card')].filter((c) => !c.hidden && c.querySelector(':scope > h2, :scope > .card-head > h2'))
+  const heads = cards.map((c, i) => {
+    c.id ||= `sec-${i}`
+    return { id: c.id, text: c.querySelector('h2').textContent.trim(), card: c }
+  })
+  const sub = nav.querySelector('.sub')
+  const useful = heads.length >= 2 && sub
+  if (sub) sub.innerHTML = useful ? heads.map((h) => `<li><button data-sec="${esc(h.id)}">${esc(h.text)}</button></li>`).join('') : ''
+  $('.main').classList.toggle('has-pagenav', Number(nav.dataset.sibs) > 1 || !!useful)
+  if (!useful || !('IntersectionObserver' in window)) return
+  const buttons = new Map(heads.map((h) => [h.id, sub.querySelector(`[data-sec="${h.id}"]`)]))
+  const seen = new Set()
+  const mark = () => {
+    // (at the end of the page the last card cannot reach the top: it counts then)
+    const atEnd = innerHeight + scrollY >= document.documentElement.scrollHeight - 4
+    const first = atEnd ? heads.at(-1) : heads.find((h) => seen.has(h.id))
+    for (const [id, b] of buttons) b?.classList.toggle('on', id === first?.id)
+  }
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) (e.isIntersecting ? seen.add(e.target.id) : seen.delete(e.target.id))
+      mark()
+    },
+    { rootMargin: '-80px 0px -55% 0px' },
+  )
+  for (const h of heads) io.observe(h.card)
+  addEventListener('scroll', mark, { passive: true })
+  pageNavSpy = {
+    disconnect() {
+      io.disconnect()
+      removeEventListener('scroll', mark)
+    },
+  }
 }
 
 // The manual on the box (/manual/, open without a login): in the app's language when it has it, else the browser's,
@@ -433,6 +491,7 @@ async function renderPage(page, reload = true) {
   const keepScroll = !reload && main.dataset.page === page.id ? window.scrollY : null
   main.innerHTML = parts.join('')
   main.dataset.page = page.id
+  updatePageNavSections(page)
   // two columns on a wide PC screen when the page has several cards (the start page has its own layout)
   main.classList.toggle('start', page.id === 'start')
   main.classList.toggle('cols', page.id !== 'start' && main.querySelectorAll(':scope > .card, :scope > .col-stack').length >= 2)

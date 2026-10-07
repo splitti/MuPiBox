@@ -72,6 +72,8 @@ a { color: var(--mp-primary-text); }
 
 .sidebar { display: none; }
 .pagenav { display: none; }
+/* (a card jumped to from "Auf dieser Seite" ends below the top bar) */
+.content section.card { scroll-margin-top: calc(var(--mp-head-h) + env(safe-area-inset-top) + 12px); }
 
 @media (min-width: 960px) {
   .shell { display: grid; grid-template-columns: 248px 1fr; }
@@ -115,6 +117,11 @@ a { color: var(--mp-primary-text); }
   }
   .pagenav button:hover { color: var(--mp-text); }
   .pagenav button[aria-current="page"] { color: var(--mp-primary-text); border-left-color: var(--mp-primary); font-weight: 700; }
+  /* the cards of the shown page under it */
+  .pagenav .sub { border-left: 0; margin: 0 0 6px 14px; }
+  .pagenav .sub button { padding: 4px 12px; font-size: 13px; }
+  .pagenav .sub button.on { color: var(--mp-primary-text); border-left-color: var(--mp-primary); font-weight: 700; }
+  .main.has-pagenav > .pagenav { max-height: calc(100vh - var(--mp-head-h) - env(safe-area-inset-top)); overflow-y: auto; }
 }
 /* PC from 1200 px: pages with several cards in two columns; wide blocks across both */
 @media (min-width: 1200px) {
