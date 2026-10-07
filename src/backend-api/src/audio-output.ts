@@ -2,8 +2,11 @@
  * Where the box plays: its own speaker or a paired Bluetooth device ("Hören mit" on the display's player, the output
  * row of the web app's "Jetzt läuft").
  *
+ * With more than one sound card (the 3.5 mm output next to an I2S amplifier, HDMI, a USB DAC) each is an output of its
+ * own ("card:<sink>"); with one card it is simply "the box".
+ *
  * One output at a time: choosing a Bluetooth device connects it (if it is not yet) and lets the other Bluetooth audio
- * devices go; choosing the box lets them all go. PulseAudio keeps a volume per output, so the speaker comes back at
+ * devices go; choosing the box (or one of its cards) lets them all go. PulseAudio keeps a volume per output, so the speaker comes back at
  * its own volume after the headphones - a device connected for the first time is not left louder than the box was.
  *
  * The box's sound card can drop out of PulseAudio (seen after headphones were let go: only the null sink was left and
@@ -29,17 +32,30 @@ export interface OutputDevice {
   connected: boolean
 }
 
+/** A sound card of the box: PulseAudio's ALSA sink, named for what it is (language-neutral: 3.5 mm, HDMI, I2S, USB) */
+export interface CardOutput {
+  /** the PulseAudio sink's name (alsa_output....) */
+  id: string
+  name: string
+  /** what PulseAudio calls it (a hint under the name) */
+  desc: string
+  kind: 'jack' | 'hdmi' | 'amp' | 'usb' | 'card'
+}
+
 const MAC_RE = /^([0-9A-F]{2}:){5}[0-9A-F]{2}$/i
+const CARD_PREFIX = 'card:'
+const SINK_RE = /^alsa_output\.[\w.:+-]+$/
 // (a device that takes audio: "Audio Sink" in its UUIDs)
 const AUDIO_SINK_UUID = /0000110b-0000-1000-8000-00805f9b34fb/i
 
-function run(cmd: string, args: string[], timeout = 10000): Promise<{ ok: boolean; stdout: string }> {
+function run(cmd: string, args: string[], timeout = 10000, env?: NodeJS.ProcessEnv): Promise<{ ok: boolean; stdout: string }> {
   return new Promise((resolve) => {
-    execFile(cmd, args, { timeout, maxBuffer: 1024 * 1024 }, (err, stdout) => resolve({ ok: !err, stdout: String(stdout ?? '') }))
+    execFile(cmd, args, { timeout, maxBuffer: 1024 * 1024, env }, (err, stdout) => resolve({ ok: !err, stdout: String(stdout ?? '') }))
   })
 }
 const ctl = (...args: string[]) => run('bluetoothctl', args, 20000)
-const pactl = (...args: string[]) => run('pactl', args)
+// (PulseAudio's tools speak the system language - "Senke #", "Beschreibung:" - and the lists are read by their words)
+const pactl = (...args: string[]) => run('pactl', args, 10000, { ...process.env, LC_ALL: 'C' })
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 /** The paired Bluetooth devices that take audio */
@@ -71,10 +87,39 @@ async function sinks(): Promise<string[]> {
     .filter(Boolean)
 }
 
-/** Where it plays now: 'box' or the Bluetooth device's address */
+function cardOf(sink: string, desc: string): CardOutput {
+  const n = sink.toLowerCase()
+  const kind: CardOutput['kind'] = /hdmi/.test(n)
+    ? 'hdmi'
+    : /usb/.test(n)
+      ? 'usb'
+      : /bcm2835[_-]audio|headphones|3\.5mm/.test(n)
+        ? 'jack'
+        : /soc_sound|i2s|max98357|hifiberry|iqaudio|allo|dac/.test(n)
+          ? 'amp'
+          : 'card'
+  const name = kind === 'hdmi' ? 'HDMI' : kind === 'jack' ? '3.5 mm' : kind === 'amp' ? 'I²S' : kind === 'usb' ? 'USB' : desc || sink
+  return { id: sink, name, desc, kind }
+}
+
+/** The sound cards of the box (the ALSA sinks of PulseAudio) */
+export async function cardOutputs(): Promise<CardOutput[]> {
+  const text = (await pactl('list', 'sinks')).stdout
+  const out: CardOutput[] = []
+  for (const block of text.split(/\n(?=Sink #)/)) {
+    const name = /^\s*Name:\s*(\S+)/m.exec(block)?.[1]
+    if (!name || !name.startsWith('alsa_output') || !SINK_RE.test(name)) continue
+    out.push(cardOf(name, /^\s*Description:\s*(.+)$/m.exec(block)?.[1]?.trim() ?? ''))
+  }
+  return out
+}
+
+/** Where it plays now: 'box' (or, with several cards, 'card:<sink>') or the Bluetooth device's address */
 export async function currentOutput(): Promise<string> {
   const def = (await pactl('get-default-sink')).stdout.trim()
-  return sinkMac(def) ?? 'box'
+  const mac = sinkMac(def)
+  if (mac) return mac
+  return def.startsWith('alsa_output') && (await sinks()).filter((s) => s.startsWith('alsa_output')).length > 1 ? CARD_PREFIX + def : 'box'
 }
 
 const boxSink = async () => (await sinks()).find((s) => s.startsWith('alsa_output')) ?? null
@@ -125,6 +170,14 @@ async function toBox(devices: OutputDevice[]): Promise<boolean> {
   return true
 }
 
+/** Plays on one of the box's cards: the Bluetooth audio devices let go, that card's sink the default */
+async function toCard(sink: string, devices: OutputDevice[]): Promise<boolean> {
+  if (!(await sinks()).includes(sink)) return false
+  for (const d of devices.filter((x) => x.connected)) await ctl('disconnect', d.mac)
+  await moveTo(sink)
+  return true
+}
+
 /** Plays on a Bluetooth device: connected (up to ~15 s), the others let go, its sink the default */
 async function toDevice(mac: string, devices: OutputDevice[]): Promise<'ok' | 'not_found' | 'no_sink'> {
   const before = await boxSink()
@@ -150,16 +203,21 @@ async function toDevice(mac: string, devices: OutputDevice[]): Promise<'ok' | 'n
 let switching = false
 
 export function registerAudioOutputRoutes(app: Express, deps: AudioOutputDeps): void {
-  /** GET /api/audio-output - {current: 'box'|mac, devices, display: the choice on the display allowed} */
+  /**
+   * GET /api/audio-output - {current: 'box'|'card:<sink>'|mac, devices: the paired Bluetooth devices, cards: the box's
+   * sound cards when there is more than one (else []), display: the choice on the display allowed}
+   */
   app.get('/api/audio-output', deps.guard, async (_req, res) => {
     const mb = (deps.getMupiboxConfig() as { mupibox?: { outputPicker?: unknown } } | undefined)?.mupibox
-    res.json({ current: await currentOutput(), devices: await outputDevices(), display: mb?.outputPicker !== false })
+    const cards = await cardOutputs()
+    res.json({ current: await currentOutput(), devices: await outputDevices(), cards: cards.length > 1 ? cards : [], display: mb?.outputPicker !== false })
   })
 
-  /** POST /api/audio-output {target: 'box'|mac} - play there (409 while another switch runs) */
+  /** POST /api/audio-output {target: 'box'|'card:<sink>'|mac} - play there (409 while another switch runs) */
   app.post('/api/audio-output', deps.guard, async (req, res) => {
     const target = String((req.body as { target?: unknown } | undefined)?.target ?? '')
-    if (target !== 'box' && !MAC_RE.test(target)) {
+    const isCard = target.startsWith(CARD_PREFIX) && SINK_RE.test(target.slice(CARD_PREFIX.length))
+    if (target !== 'box' && !isCard && !MAC_RE.test(target)) {
       res.status(400).json({ error: 'invalid_target' })
       return
     }
@@ -170,6 +228,11 @@ export function registerAudioOutputRoutes(app: Express, deps: AudioOutputDeps): 
     switching = true
     try {
       const devices = await outputDevices()
+      if (isCard) {
+        const ok = await toCard(target.slice(CARD_PREFIX.length), devices)
+        res.status(ok ? 200 : 404).json({ ok, error: ok ? undefined : 'unknown_card', current: await currentOutput() })
+        return
+      }
       if (target !== 'box' && !devices.some((d) => d.mac === target.toUpperCase())) {
         res.status(404).json({ error: 'not_paired' })
         return

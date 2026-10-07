@@ -3,6 +3,7 @@
     <button class="oc-field" type="button" [class.oc-on]="onBox()" (click)="tapBox()" aria-label="Box">
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5" /><circle cx="12" cy="14.5" r="3.5" /><circle cx="12" cy="7" r="1.2" /></svg>
     </button>
+    @if (devices().length > 0) {
     <button class="oc-field" type="button" [class.oc-on]="state() === 'bt'" [attr.data-state]="state()" (click)="tapHeadset()" [attr.aria-label]="device()?.name">
       @if (device()?.kind === 'speaker') {
         <svg class="oc-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="3" width="12" height="18" rx="3" /><circle cx="12" cy="14" r="3" /><circle class="fill" cx="12" cy="7.5" r="1" /></svg>
@@ -16,6 +17,7 @@
         <span class="oc-dot"></span>
       }
     </button>
+    }
     <span class="oc-sep" aria-hidden="true"></span>
   }
   <span class="oc-vol">

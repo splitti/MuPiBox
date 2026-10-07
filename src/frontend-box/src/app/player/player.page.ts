@@ -69,10 +69,15 @@ import type { PlaytimePlayState } from '../playtime.model'
 import { PlaytimeService } from '../playtime.service'
 import { SpotifyService } from '../spotify.service'
 
-/** Where the box plays (backend-api audio-output.ts): current is 'box' or a device's address */
+/**
+ * Where the box plays (backend-api audio-output.ts): current is 'box', 'card:<sink>' (one of the box's sound cards, when it
+ * has several) or a device's address
+ */
 export interface AudioOutputState {
   current: string
   devices: { mac: string; name: string; kind: 'headphones' | 'speaker'; connected: boolean }[]
+  /** the box's sound cards (3.5 mm, HDMI, I2S amplifier, USB) - only when there is more than one, else empty */
+  cards?: { id: string; name: string; desc: string; kind: 'jack' | 'hdmi' | 'amp' | 'usb' | 'card' }[]
   display: boolean
 }
 
@@ -143,11 +148,16 @@ export class PlayerPage implements OnInit, AfterViewInit {
   private outputTimer: ReturnType<typeof setInterval> | undefined
   protected outputChoosable(): boolean {
     const o = this.output()
-    return !!o?.display && o.devices.length > 0
+    return !!o?.display && (o.devices.length > 0 || (o.cards?.length ?? 0) > 1)
   }
   protected outputOnBluetooth(): boolean {
     const o = this.output()
-    return !!o && o.current !== 'box'
+    return !!o && o.current !== 'box' && !o.current.startsWith('card:')
+  }
+  /** the window's tiles: one per sound card (or "the box" with one card) and one per paired device */
+  protected outputTileCount(): number {
+    const o = this.output()
+    return Math.max(o?.cards?.length ?? 0, 1) + (o?.devices?.length ?? 0)
   }
   private loadOutput(): void {
     this.http.get<AudioOutputState>(`${environment.backend.apiUrl}/audio-output`).subscribe({

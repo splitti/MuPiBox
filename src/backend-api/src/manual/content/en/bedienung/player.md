@@ -33,6 +33,8 @@ Tap a track to play it. The button below the cover on the left closes the list a
 
 If a Bluetooth device is paired, the header shows two fields next to the volume: box and headphones. A tap switches where the music plays. If several devices are paired, the **Listen with** window opens, where the child chooses the device.
 
+If the box has **several sound outputs** (for example the 3.5 mm output next to an I²S amplifier, HDMI or a USB audio adapter), each one is a tile of its own in the **Listen with** window: **3.5 mm**, **HDMI**, **I²S** or **USB**, with the name the system gives it below. The window then opens without a paired Bluetooth device too. The choice holds until the next restart, after that the box plays through the sound card chosen under **Settings › Audio › Sound card** again. An output only shows up when it is active in the system: the 3.5 mm output needs `dtparam=audio=on` in `/boot/config.txt` and a restart. With only one sound output everything stays as before.
+
 Without a paired device the header shows only the volume. You can switch the choice on the display off under **Settings › Display & controls › Controls on the display › Headphones › Choose box or headphones on the display**. In the app switching always works ([Bluetooth](../hardware/bluetooth.md)).
 
 ## What happens when the player is left?

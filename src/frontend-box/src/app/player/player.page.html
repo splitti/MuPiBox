@@ -421,7 +421,17 @@
     <div class="out-panel" (click)="$event.stopPropagation()">
       <h2>{{ displayTexts.text('outputTitle') }}</h2>
       <button class="out-close" (click)="closeOutput()" aria-label="close"><ion-icon name="close"></ion-icon></button>
-      <div class="out-tiles" [style.--out-cols]="(output()?.devices?.length ?? 0) > 1 ? 3 : 2">
+      <div class="out-tiles" [style.--out-cols]="outputTileCount() > 2 ? 3 : 2">
+        @for (c of output()?.cards ?? []; track c.id) {
+          <button class="out-tile" [class.on]="output()?.current === 'card:' + c.id" (click)="chooseOutput('card:' + c.id)">
+            @if (output()?.current === 'card:' + c.id) {<span class="out-check"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>}
+            @if (outputBusy() === 'card:' + c.id) {<span class="out-spin"></span>} @else {
+              <svg class="out-icon" viewBox="0 0 24 24"><path class="fill" d="M4 9h3.5L12 5v14l-4.5-4H4z" /><path d="M16 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10" /></svg>
+            }
+            <b translate="no">{{ c.name }}</b><small translate="no">{{ c.desc }}</small>
+          </button>
+        }
+        @if ((output()?.cards?.length ?? 0) < 2) {
         <button class="out-tile" [class.on]="output()?.current === 'box'" (click)="chooseOutput('box')">
           @if (output()?.current === 'box') {<span class="out-check"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>}
           @if (outputBusy() === 'box') {<span class="out-spin"></span>} @else {
@@ -429,6 +439,7 @@
           }
           <b>{{ displayTexts.text('outputBox') }}</b><small>{{ displayTexts.text('outputBoxSub') }}</small>
         </button>
+        }
         @for (d of output()?.devices ?? []; track d.mac) {
           <button class="out-tile" [class.on]="output()?.current === d.mac" [class.out-missing]="outputMissing() === d.mac" (click)="chooseOutput(d.mac)">
             @if (output()?.current === d.mac) {<span class="out-check"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>}

@@ -21,11 +21,16 @@ export class OutputSwitchComponent {
   /** a Bluetooth device is paired (and the parents did not switch the choice off) */
   readonly choosable = input(false)
   readonly volume = input<number | undefined>(undefined)
-  /** 'box', a device's MAC (one device), or 'open' (several: the window) */
+  /** 'box', a device's MAC (one device), or 'open' (several devices or sound cards: the window) */
   readonly choose = output<string>()
 
   private readonly devices = computed(() => this.output()?.devices ?? [])
-  protected readonly onBox = computed(() => (this.output()?.current ?? 'box') === 'box')
+  /** the box's own output (its speaker, or one of its sound cards) - not a Bluetooth device */
+  protected readonly onBox = computed(() => {
+    const current = this.output()?.current ?? 'box'
+    return current === 'box' || current.startsWith('card:')
+  })
+  private readonly cardCount = computed(() => this.output()?.cards?.length ?? 0)
   /** the headset the right field stands for: the one playing, else the first paired one */
   protected readonly device = computed(() => {
     const o = this.output()
@@ -34,14 +39,15 @@ export class OutputSwitchComponent {
   protected readonly state = computed<'bt' | 'connecting' | 'notfound' | 'ready' | 'off'>(() => {
     const d = this.device()
     if (!d) return 'off'
-    if (this.busy() && this.busy() !== 'box') return 'connecting'
+    if (this.busy() && this.devices().some((x) => x.mac === this.busy())) return 'connecting'
     if (this.notFound()) return 'notfound'
     if (this.output()?.current === d.mac) return 'bt'
     return d.connected ? 'ready' : 'off'
   })
 
   protected tapBox(): void {
-    if (this.devices().length > 1) return this.choose.emit('open')
+    // (several devices or several sound cards: the window decides)
+    if (this.devices().length > 1 || this.cardCount() > 1) return this.choose.emit('open')
     if (!this.onBox()) this.choose.emit('box')
   }
 
