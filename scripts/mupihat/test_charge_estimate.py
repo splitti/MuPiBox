@@ -56,9 +56,10 @@ while t <= total:
             print(f"  at {frac * 100:3.0f} % of the way: percent {est.percent:5.1f}  eta {est.eta_min} min  (truth {truth_min:4.0f} min)  {est.phase}")
     t += STEP
 
-# the end: the charger says done
-clock[0] += STEP
-est.update(0, "Charge Termination Done", 100)
+# the end: the charger says done (and stays at it)
+for _ in range(3):
+    clock[0] += STEP
+    est.update(0, "Charge Termination Done", 100)
 print(f"done: percent {est.percent}  eta {est.eta_min}")
 assert est.percent == 100.0 and est.eta_min == 0
 
@@ -110,6 +111,28 @@ for _ in range(10):  # a real one: near the limit, and it stays
     clock[0] += STEP
     flick.update(900, "Taper Charge (CV mode)", 35, 8280, 8300)
 assert flick.phase == "cv" and flick.percent >= 85, f"the real CV phase was not taken: {flick.phase} {flick.percent}"
+
+# a false "Done" or "Top-off" in the middle of the CC phase (after an I2C error of the chip): the percent stays where it was
+glitch = ChargeEstimator(capacity_mah=15000, iterm_ma=ITERM, clock=lambda: clock[0], wall=lambda: clock[0])
+for _ in range(60):
+    clock[0] += STEP
+    glitch.update(-650, "Not Charging", 44, 7220, 8400)
+for _ in range(240):
+    clock[0] += STEP
+    glitch.update(640, "Fast charge (CC mode)", 100, 7570, 8400)
+before = glitch.percent
+for status in ("Charge Termination Done", "Top-off Timer Active Charging", "Charge Termination Done"):
+    clock[0] += STEP
+    glitch.update(0, status, 100, 7570, 8400)
+    clock[0] += STEP
+    glitch.update(640, "Fast charge (CC mode)", 100, 7570, 8400)
+assert glitch.phase == "cc" and glitch.percent < 60, f"a false end report moved the percent to {glitch.percent:.1f} ({glitch.phase})"
+assert glitch.percent >= before, "the percent went backwards"
+assert glitch.eta_min is not None and glitch.eta_min > 300, f"the time left should still be hours, got {glitch.eta_min}"
+for _ in range(3):  # a real end: near the limit, and it stays
+    clock[0] += STEP
+    glitch.update(0, "Charge Termination Done", 100, 8380, 8400)
+assert glitch.percent == 100.0 and glitch.eta_min == 0, f"the real end was not taken: {glitch.percent}"
 
 # a charge that is already running when the estimate starts: the starting point is a guess, and the note goes at CV
 late = ChargeEstimator(capacity_mah=CAP, iterm_ma=ITERM, clock=lambda: clock[0], wall=lambda: clock[0])

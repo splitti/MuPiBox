@@ -69,6 +69,7 @@ class ChargeEstimator:
         self._rest = deque()  # (t, percent by voltage) while not charging
         self._last_t = None
         self._cv_streak = 0
+        self._end_streak = 0
         self.reset_session()
         self._restore()
 
@@ -111,6 +112,17 @@ class ChargeEstimator:
                 ph = "cc"
         else:
             self._cv_streak = 0
+        # The same for the end of a charge ("Top-off", "Charge Termination Done"): after a failed read of the chip
+        # (I2C error) one of them came now and then in the middle of the constant-current phase, and as the percent never
+        # goes back within a charge, it stayed at 99 % from 50 % on. Taken only near the charge limit and when it stays;
+        # until then the reading is left out (the percent and the time stay as they were).
+        if ph in ("topoff", "done"):
+            near_limit = vbat_mv is None or vreg_mv is None or vbat_mv >= vreg_mv - self.CV_NEAR_LIMIT_MV
+            self._end_streak = self._end_streak + 1 if near_limit else 0
+            if self._end_streak < self.CV_CONFIRM_READINGS:
+                return
+        else:
+            self._end_streak = 0
         self.phase = ph
         charging = ph in CHARGING_PHASES and ibat_ma is not None and ibat_ma > self.MIN_CHARGE_MA
 
