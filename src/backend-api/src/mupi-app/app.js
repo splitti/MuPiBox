@@ -327,7 +327,28 @@ function renderChrome(page) {
       (a) => `<button class="side-link" data-go="${a.id}" ${a.id === area && !(area === 'einstellungen' && page.id !== 'einstellungen') ? 'aria-current="page"' : ''}>${icon(a.icon)}${a.title}</button>
       ${a.id === 'einstellungen' ? groups.map((g) => `<button class="side-link sub" data-go="${g.id}" ${g.id === groupOf ? 'aria-current="page"' : ''}>${icon(g.icon, 18)}${esc(g.title)}</button>`).join('') : ''}`,
     ).join('')}`
+  renderPageNav(page)
   for (const el of document.querySelectorAll('[data-go]')) el.onclick = () => go(el.dataset.go)
+}
+
+// "Auf dieser Seite" (large screens, like the manual): a page of a settings group (Aussehen › Theme) lists the pages of
+// its group at the right, the shown one marked; the CSS shows it from 1440 px on
+function renderPageNav(page) {
+  const main = $('.main')
+  let nav = $('#pagenav')
+  if (!nav) {
+    nav = document.createElement('nav')
+    nav.id = 'pagenav'
+    nav.className = 'pagenav'
+    nav.setAttribute('aria-label', 'Auf dieser Seite')
+    main.append(nav)
+  }
+  const siblings = page.parent?.startsWith('g-') ? state.schema.pages.filter((p) => p.parent === page.parent) : []
+  main.classList.toggle('has-pagenav', siblings.length > 1)
+  nav.innerHTML =
+    siblings.length > 1
+      ? `<p>Auf dieser Seite</p><ul>${siblings.map((p) => `<li><button data-go="${esc(p.id)}" ${p.id === page.id ? 'aria-current="page"' : ''}>${esc(p.title)}</button></li>`).join('')}</ul>`
+      : ''
 }
 
 // The manual on the box (/manual/, open without a login): in the app's language when it has it, else the browser's,

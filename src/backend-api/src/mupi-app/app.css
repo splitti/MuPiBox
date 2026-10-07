@@ -71,6 +71,7 @@ a { color: var(--mp-primary-text); }
 .tab span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .sidebar { display: none; }
+.pagenav { display: none; }
 
 @media (min-width: 960px) {
   .shell { display: grid; grid-template-columns: 248px 1fr; }
@@ -96,6 +97,24 @@ a { color: var(--mp-primary-text); }
   .sidebar .side-foot { margin-top: auto; }
   .content { max-width: var(--mp-maxw-wide); padding-bottom: 32px; }
   .topbar { padding: env(safe-area-inset-top) max(24px, env(safe-area-inset-right)) 0 24px; }
+}
+/* Large screens: "Auf dieser Seite" at the right of a settings page (the pages of its group), as the manual has it */
+@media (min-width: 1440px) {
+  .main.has-pagenav { display: grid; grid-template-columns: minmax(0, 1fr) 224px; grid-template-rows: auto 1fr; }
+  .main.has-pagenav > .topbar { grid-column: 1 / -1; }
+  .main.has-pagenav > .pagenav {
+    display: block; position: sticky; top: calc(var(--mp-head-h) + env(safe-area-inset-top)); align-self: start;
+    padding: 8px 24px 24px 8px;
+  }
+  .pagenav p { margin: 0 0 8px; font-weight: 800; font-size: 13px; color: var(--mp-muted); }
+  .pagenav ul { list-style: none; margin: 0; padding: 0; border-left: 2px solid var(--mp-border); }
+  .pagenav button {
+    display: block; width: 100%; text-align: left; padding: 6px 12px; margin-left: -2px;
+    border: 0; border-left: 2px solid transparent; background: none; color: var(--mp-muted);
+    font-size: 14px; line-height: 1.35;
+  }
+  .pagenav button:hover { color: var(--mp-text); }
+  .pagenav button[aria-current="page"] { color: var(--mp-primary-text); border-left-color: var(--mp-primary); font-weight: 700; }
 }
 /* PC from 1200 px: pages with several cards in two columns; wide blocks across both */
 @media (min-width: 1200px) {
