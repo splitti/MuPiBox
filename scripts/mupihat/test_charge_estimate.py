@@ -68,8 +68,8 @@ mean = sum(abs(e) for e in errors) / len(errors)
 print(f"eta error (relative, floor 30 min): mean {mean * 100:.0f} %, worst {worst * 100:.0f} %")
 assert worst < 0.5, "the time estimate is off by more than half"
 
-# unplugged in the middle: back to the voltage, and a new charge starts from the new rest value
-for _ in range(60):
+# unplugged for long (more than the settling time): back to the voltage, and a new charge starts from the new rest value
+for _ in range(400):
     clock[0] += STEP
     est.update(-600, "Not Charging", 70)
 assert est.percent is None and est.eta_min is None
@@ -111,6 +111,23 @@ for _ in range(10):  # a real one: near the limit, and it stays
     clock[0] += STEP
     flick.update(900, "Taper Charge (CV mode)", 35, 8280, 8300)
 assert flick.phase == "cv" and flick.percent >= 85, f"the real CV phase was not taken: {flick.phase} {flick.percent}"
+
+# the cable out for five minutes in the middle of a charge: the voltage at rest still reads the charge (80 %), the new
+# charge goes on from what was reached less what the box used meanwhile, not from the voltage
+pause = ChargeEstimator(capacity_mah=15000, iterm_ma=ITERM, clock=lambda: clock[0], wall=lambda: clock[0])
+for _ in range(60):
+    clock[0] += STEP
+    pause.update(-650, "Not Charging", 44, 7220, 8300)
+for _ in range(1200):  # 100 minutes at 0.65 A: about 1.05 Ah, 7 % of 15 Ah
+    clock[0] += STEP
+    pause.update(650, "Fast charge (CC mode)", 100, 7900, 8300)
+reached = pause.percent
+for _ in range(60):  # five minutes without the cable, 0.65 A taken
+    clock[0] += STEP
+    pause.update(-650, "Not Charging", 80, 7730, 8300)
+clock[0] += STEP
+pause.update(620, "Fast charge (CC mode)", 100, 8100, 8300)
+assert reached - 1.0 < pause.percent < reached, f"after a short pause the charge should go on from about {reached:.1f} %, got {pause.percent:.1f}"
 
 # a false "Done" or "Top-off" in the middle of the CC phase (after an I2C error of the chip): the percent stays where it was
 glitch = ChargeEstimator(capacity_mah=15000, iterm_ma=ITERM, clock=lambda: clock[0], wall=lambda: clock[0])

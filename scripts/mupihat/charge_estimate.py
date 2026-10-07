@@ -54,6 +54,9 @@ class ChargeEstimator:
     CURRENT_SMOOTHING_S = 60
     # how long a quiet stretch of the pack is remembered as the starting point, in seconds
     REST_WINDOW_S = 600
+    # after a charge the voltage reads too high for a while (the pack settles): this long the starting point of a new charge
+    # is what the last one reached, less what the box took from the pack since
+    RELAX_S = 1800
     # more than this many hours is no estimate
     MAX_ETA_H = 24
     # the constant-voltage phase counts when the voltage is within this of the charge limit, for this many readings in a row
@@ -70,6 +73,7 @@ class ChargeEstimator:
         self._last_t = None
         self._cv_streak = 0
         self._end_streak = 0
+        self._after = None  # [time the last charge ended, percent it reached, mAh taken from the pack since]
         self.reset_session()
         self._restore()
 
@@ -136,7 +140,13 @@ class ChargeEstimator:
                 self._rest.clear()
                 if last is not None:
                     self._rest.append((now - 25, last))
+                    self._after = [now, float(last), 0.0]
                 self._save()
+            if self._after is not None:
+                if now - self._after[0] <= self.RELAX_S:
+                    self._after[2] += max(-(ibat_ma or 0.0), 0.0) * dt / 3600.0
+                else:
+                    self._after = None
             if voltage_pct is not None:
                 self._rest.append((now, float(voltage_pct)))
             while self._rest and now - self._rest[0][0] > self.REST_WINDOW_S:
@@ -195,7 +205,12 @@ class ChargeEstimator:
 
     # --- parts
     def _starting_point(self, now, voltage_pct):
-        """The percent before the charge: the middle of what the voltage said while the pack was at rest."""
+        """The percent before the charge: the middle of what the voltage said while the pack was at rest - or, shortly after
+        a charge (cable out for a moment), what that one reached less what was used since: the voltage then still reads
+        the charge (it jumped from 70 to 80 % after five minutes without the cable)."""
+        if self._after is not None and now - self._after[0] <= self.RELAX_S:
+            used = self._after[2] / self.capacity * 100.0 if self.capacity else 0.0
+            return max(0.0, self._after[1] - used), True
         old = sorted(p for (t, p) in self._rest if now - t >= 20)
         if old:
             return old[len(old) // 2], True
