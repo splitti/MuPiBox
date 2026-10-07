@@ -145,6 +145,20 @@ for k in range(480):  # 40 minutes more of the same
 spread = (max(etas) - min(etas)) / (sum(etas) / len(etas))
 assert spread < 0.35, f"the time until full jumps with the current: {min(etas)}..{max(etas)} min"
 
+# a weak input: "Done" for a minute at 8.05 V (limit 8.30), then the charge goes on - several times; it stays a charge
+weak = ChargeEstimator(capacity_mah=15000, iterm_ma=ITERM, clock=lambda: clock[0], wall=lambda: clock[0])
+for _ in range(60):
+    clock[0] += STEP
+    weak.update(-650, "Not Charging", 69, 7700, 8300)
+for _ in range(3):
+    for _ in range(120):
+        clock[0] += STEP
+        weak.update(600, "Fast charge (CC mode)", 100, 8150, 8300)
+    for _ in range(12):
+        clock[0] += STEP
+        weak.update(0, "Charge Termination Done", 100, 8050, 8300)
+assert weak.percent < 85, f"a Done far below the limit moved the percent to {weak.percent:.1f}"
+
 # a false "Done" or "Top-off" in the middle of the CC phase (after an I2C error of the chip): the percent stays where it was
 glitch = ChargeEstimator(capacity_mah=15000, iterm_ma=ITERM, clock=lambda: clock[0], wall=lambda: clock[0])
 for _ in range(60):

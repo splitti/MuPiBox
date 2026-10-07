@@ -65,6 +65,9 @@ class ChargeEstimator:
     MAX_ETA_H = 24
     # the constant-voltage phase counts when the voltage is within this of the charge limit, for this many readings in a row
     CV_NEAR_LIMIT_MV = 250
+    # the end of a charge (Done, Top-off) only this close to the limit: on a weak 5 V input the chip reported "Done" again and
+    # again at 8.0-8.17 V of 8.30, whenever the box took more and the charge current broke down for a moment - at 80 %
+    END_NEAR_LIMIT_MV = 100
     CV_CONFIRM_READINGS = 3
 
     def __init__(self, capacity_mah=None, iterm_ma=200, clock=time.monotonic, wall=time.time, state_file=None):
@@ -126,7 +129,7 @@ class ChargeEstimator:
         # goes back within a charge, it stayed at 99 % from 50 % on. Taken only near the charge limit and when it stays;
         # until then the reading is left out (the percent and the time stay as they were).
         if ph in ("topoff", "done"):
-            near_limit = vbat_mv is None or vreg_mv is None or vbat_mv >= vreg_mv - self.CV_NEAR_LIMIT_MV
+            near_limit = vbat_mv is None or vreg_mv is None or vbat_mv >= vreg_mv - self.END_NEAR_LIMIT_MV
             self._end_streak = self._end_streak + 1 if near_limit else 0
             if self._end_streak < self.CV_CONFIRM_READINGS:
                 return
