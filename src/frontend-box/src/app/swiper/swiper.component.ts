@@ -184,14 +184,17 @@ export class SwiperComponent<T> {
     const data = this.shownData()
     return data.length > 0 ? data[this.stageClamp(this.stageIndex(), data.length)] : undefined
   })
-  // position of the scrollbar's thumb (track 200 px): the whole list, not only what is rendered yet
+  // position of the scrollbar's thumb as parts of the track (w: its width, x: where it starts): the whole list, not only
+  // what is rendered yet; at least 24 px of the 200 px track, or 60 px of the long one
   protected readonly stageBar = computed(() => {
     const total = this.data()?.length ?? 0
     if (total < 2 || this.shownData().length === 0) return undefined
-    const width = Math.max(24, 200 / total)
+    const w = Math.max(this.fullScrollbar() ? 0.08 : 0.12, 1 / total)
     const c = this.stageClamp(this.stageIndex(), total)
-    return { width, x: (c / (total - 1)) * (200 - width) }
+    return { w, x: (c / (total - 1)) * (1 - w) }
   })
+  // the long bar of the stage can be dragged: the stage follows, the name is read (when switched on) where it stops
+  private stageBarFrom: number | undefined
 
   // Since we reset the swiper container when the page is entered / left, we need to
   // manually cache / restore the swiper position.
@@ -209,6 +212,8 @@ export class SwiperComponent<T> {
   /** Width of one cover in the Cover Flow, measured on first use (0 = not yet). */
   private coverflowCoverWidth = 0
   protected hideScrollbar: WritableSignal<boolean> = signal(false)
+  // the scrollbar across the width and thicker (app > Aussehen > Ansicht: "Durchgehend"), in every theme
+  protected readonly fullScrollbar = signal(false)
   // Coverflow theme only: shows currentData.name (album name, falling back to the folder name -
   // the same value the non-Coverflow list already shows under each cover) below the cover.
   protected coverflowShowNames: WritableSignal<boolean> = signal(false)
@@ -234,6 +239,7 @@ export class SwiperComponent<T> {
       next: (config) => {
         this.coverflow.set(config?.mupibox?.theme === 'coverflow')
         this.hideScrollbar.set(config?.mupibox?.hideScrollbar === true)
+        this.fullScrollbar.set(config?.mupibox?.scrollbarStyle === 'full')
         this.coverflowShowNames.set(config?.mupibox?.coverflowShowNames === true)
         this.configLoaded.set(true)
       },
@@ -692,6 +698,39 @@ export class SwiperComponent<T> {
       // the click that follows the release is not a tap
       setTimeout(() => (this.stageDragged = false), 0)
     }
+  }
+
+  protected stageBarDown(event: PointerEvent): void {
+    if (!this.fullScrollbar()) return
+    this.stageBarFrom = this.stageIndex()
+    ;(event.currentTarget as HTMLElement | null)?.setPointerCapture?.(event.pointerId)
+    this.stageBarAt(event)
+  }
+
+  protected stageBarMove(event: PointerEvent): void {
+    if (this.stageBarFrom !== undefined) this.stageBarAt(event)
+  }
+
+  protected stageBarUp(): void {
+    if (this.stageBarFrom === undefined) return
+    const to = this.stageIndex()
+    // (back to where it started for a moment: stageGo then reads the name of the new one, as after a swipe)
+    this.stageIndex.set(this.stageBarFrom)
+    this.stageBarFrom = undefined
+    this.stageGo(to)
+  }
+
+  private stageBarAt(event: PointerEvent): void {
+    const el = event.currentTarget as HTMLElement | null
+    const bar = this.stageBar()
+    const total = this.data()?.length ?? 0
+    if (!el || !bar || total < 2) return
+    const r = el.getBoundingClientRect()
+    const f = ((event.clientX - r.left) / Math.max(1, r.width) - bar.w / 2) / Math.max(0.01, 1 - bar.w)
+    const c = this.stageClamp(Math.round(Math.max(0, Math.min(1, f)) * (total - 1)), this.shownData().length)
+    this.stageIndex.set(c)
+    this.preloadCoversNear(c)
+    this.maybeGrow()
   }
 
   // The cover in the middle opens, a side cover comes to the middle.

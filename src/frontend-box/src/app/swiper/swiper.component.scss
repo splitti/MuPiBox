@@ -7,6 +7,30 @@
     transform: translateY(var(--swiper-shift, 0px)) scale(var(--swiper-k, 1));
 }
 
+// "Durchgehend" (app > Aussehen > Ansicht): the scrollbar across the width less 24 px on each side and 14 px thick; its
+// transparent border above and below is part of it, so a finger next to it still hits it. $bottom: where the drawn bar
+// ends above the bottom of the list.
+@mixin full-scrollbar($bottom) {
+    --swiper-scrollbar-size: 14px;
+
+    &::part(scrollbar) {
+        left: 24px;
+        width: calc(100% - 48px);
+        bottom: $bottom - 6px;
+        box-sizing: content-box;
+        border-top: 12px solid transparent;
+        border-bottom: 6px solid transparent;
+        background-clip: padding-box;
+        border-radius: 13px;
+    }
+}
+
+// (also for the coverflow theme, whose own scrollbar values come later in this file)
+swiper-container.sb-full,
+swiper-container.coverflow.sb-full {
+    @include full-scrollbar(10px);
+}
+
 swiper-container {
     --swiper-scrollbar-bg-color: rgba(255, 255, 255, 0.2);
     --swiper-scrollbar-drag-bg-color: rgba(255, 255, 255, 0.8);
@@ -478,7 +502,32 @@ swiper-container.coverflow {
             height: 100%;
             border-radius: 4px;
             background: var(--km-lavender);
-            transition: transform 320ms cubic-bezier(0.2, 0.7, 0.2, 1);
+            transition: margin-left 320ms cubic-bezier(0.2, 0.7, 0.2, 1);
+        }
+
+        // "Durchgehend": across the width below the name, 12 px thick, and it can be dragged (the touch area reaches a
+        // bit above it and down to the bottom of the screen)
+        &.sb-full {
+            left: 24px;
+            width: calc(100% - 48px);
+            height: 12px;
+            border-radius: 6px;
+            overflow: visible;
+            pointer-events: auto;
+            touch-action: none;
+
+            &::before {
+                content: "";
+                position: absolute;
+                left: 0;
+                right: 0;
+                top: -6px;
+                bottom: -18px;
+            }
+
+            i {
+                border-radius: 6px;
+            }
         }
     }
 
@@ -499,6 +548,11 @@ swiper-container.coverflow {
     swiper-container::part(scrollbar) {
         width: 200px;
         left: calc(50% - 100px);
+    }
+
+    // (the children's themes: the long one where the short one is, 22 px above the bottom)
+    swiper-container.sb-full {
+        @include full-scrollbar(22px);
     }
 }
 

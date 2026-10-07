@@ -1861,10 +1861,15 @@
        "default": true
       },
       {
-       "type": "toggle",
-       "label": "Horizontale Scrollleiste ausblenden",
-       "key": "hideScroll",
-       "default": true
+       "type": "seg",
+       "label": "Scrollleiste unter den Covern",
+       "key": "scrollbar",
+       "default": "Standard",
+       "options": [
+        "Standard",
+        "Durchgehend",
+        "Ausblenden"
+       ]
       },
       {
        "type": "toggle",
@@ -5434,7 +5439,7 @@
    "id": "ansicht"
   },
   {
-   "l": "Horizontale Scrollleiste ausblenden",
+   "l": "Scrollleiste unter den Covern",
    "where": "Aussehen › Ansicht",
    "id": "ansicht"
   },

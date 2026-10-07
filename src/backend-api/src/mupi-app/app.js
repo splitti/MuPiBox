@@ -610,7 +610,7 @@ function renderItemOnly(it) {
     case 'seg':
       return `<div class="field"><label>${esc(it.label)}</label><div class="seg" data-seg="${esc(it.key)}">${it.options
         .map((o) => `<button aria-pressed="${o === value(it)}" data-v="${esc(o)}">${esc(o)}</button>`)
-        .join('')}</div></div>`
+        .join('')}</div>${help}</div>`
     case 'text': {
       const kind = it.kind || 'text'
       const type = kind === 'password' ? 'password' : kind === 'number' ? 'number' : kind === 'url' ? 'url' : kind === 'time' ? 'time' : 'text'
@@ -8001,6 +8001,13 @@ const fmtUptime = (s) => {
   return d ? `${d} T ${h} h` : h ? `${h} h ${m} min` : `${m} min`
 }
 
+// what the three choices of the scrollbar do (Aussehen > Ansicht)
+const SCROLLBAR_HELP = {
+  Standard: 'Wie im Theme vorgesehen.',
+  Durchgehend: 'Über die ganze Breite und dicker – leichter zu treffen, auch mit großen Fingern.',
+  Ausblenden: 'Keine Leiste, gewischt wird auf den Covern.',
+}
+
 /* Über die Box */
 
 // news.txt is an HTML snippet from GitHub: turned into plain text (headings, bullet points) - nothing of it is run
@@ -9525,7 +9532,7 @@ const CONTROLLERS = {
       state.values.set('stage', disp.theme.stage === true)
       state.values.set('tts', disp.theme.stageAutoRead === true)
       state.values.set('names', disp.opts.coverflowShowNames)
-      state.values.set('hideScroll', disp.opts.hideScrollbar)
+      state.values.set('scrollbar', disp.opts.hideScrollbar ? 'Ausblenden' : disp.opts.scrollbarStyle === 'full' ? 'Durchgehend' : 'Standard')
       state.values.set('headerBand', disp.theme.headerBand !== false)
       state.values.set('playerPanel', disp.theme.playerPanel !== false)
       state.values.set('fullscreenGestures', disp.theme.fullscreenGestures !== false)
@@ -9545,8 +9552,8 @@ const CONTROLLERS = {
           if (it.key === 'stage') return { ...it, help: `Große Cover in der Mitte, für die Kinder-Themes${isKidsTheme(disp.theme?.current) ? '' : ` – das aktive Theme (${cur}) nutzt sie nicht`}.` }
           // (reading names out works only with the cover flow: shown under it while it is on)
           if (it.key === 'tts') return { ...it, dep: 'stage' }
-          // (the scroll bar is below the covers in every view - the cover flow's and the three side by side too)
-          if (it.key === 'hideScroll') return { ...it, help: 'Der Balken unter den Covern, in jeder Ansicht.' }
+          // (the scroll bar is below the covers in every view - the stage's, the cover flow's and the three side by side)
+          if (it.key === 'scrollbar') return { ...it, helpId: 'sb-help', help: SCROLLBAR_HELP[state.values.get('scrollbar')] ?? SCROLLBAR_HELP.Standard }
           if (it.key === 'names') return { ...it, help: disp.theme?.current === 'coverflow' ? 'Nur beim Theme „coverflow“.' : `Nur beim Theme „coverflow“ – aktiv ist gerade „${cur}“.` }
           if (it.key === 'headerBand') return { ...it, help: 'Aus: Die Kopfzeile liegt ohne farbiges Band auf dem Hintergrund des Themes.' }
           if (it.key === 'playerPanel') return { ...it, help: 'Aus: Die Knöpfe des Players stehen ohne Fläche auf dem Hintergrund, in den Farben der Kopfzeile.' }
@@ -9569,7 +9576,11 @@ const CONTROLLERS = {
         return toast(r.ok ? 'Gespeichert' : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
       }
       if (key === 'names') return saveDisplayOptions({ coverflowShowNames: v })
-      if (key === 'hideScroll') return saveDisplayOptions({ hideScrollbar: v })
+      if (key === 'scrollbar') {
+        const help = $('#sb-help')
+        if (help) help.textContent = SCROLLBAR_HELP[v] ?? ''
+        return saveDisplayOptions(v === 'Ausblenden' ? { hideScrollbar: true } : { hideScrollbar: false, scrollbarStyle: v === 'Durchgehend' ? 'full' : 'standard' })
+      }
     },
   },
   startbilder: { load: loadBootscreens, top: bootTop, sections: () => [], ownNav: true, mount: mountBoot },
