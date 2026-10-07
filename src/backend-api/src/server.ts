@@ -1448,11 +1448,47 @@ async function sendRssImage(res: express.Response, file: string, thumbSize: numb
 
 // `url`: a remote picture (fetched and cached on first use); `local`: a picture that already
 // is in the cover cache (channel covers). `w`: ask for a thumbnail of at most that size.
+// A picture uploaded in the app (Bibliothek > Cover: http://<box>/cover/<name>) given as the cover of a radio station:
+// its address is the box itself, which the box never fetches (checkRemoteUrl) - the display showed the default picture
+// (reported by boing86). It is taken from the cover folder instead; only that folder, only a plain file name.
+const customCoverDir = '/home/dietpi/MuPiBox/media/cover'
+function ownCoverFile(raw: string): string | undefined {
+  let url: URL
+  try {
+    url = new URL(raw)
+  } catch {
+    return undefined
+  }
+  const m = url.pathname.match(/^\/cover\/([^/]+)$/)
+  if (!m) return undefined
+  const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, '')
+  const configured = String((getMupiboxConfigSync()?.mupibox as { host?: string } | undefined)?.host ?? '').toLowerCase()
+  const names = new Set(['localhost', '127.0.0.1', '::1', os.hostname().toLowerCase(), `${os.hostname().toLowerCase()}.local`])
+  if (configured) {
+    names.add(configured)
+    names.add(configured.endsWith('.local') ? configured.slice(0, -6) : `${configured}.local`)
+  }
+  for (const list of Object.values(os.networkInterfaces())) for (const a of list ?? []) names.add(a.address.toLowerCase())
+  if (!names.has(host)) return undefined
+  let name: string
+  try {
+    name = decodeURIComponent(m[1])
+  } catch {
+    return undefined
+  }
+  if (name !== path.basename(name) || name.startsWith('.')) return undefined
+  const file = path.join(customCoverDir, name)
+  return fs.existsSync(file) ? file : undefined
+}
+
 app.get('/api/rssfeed/image', async (req, res) => {
   const thumbSize = parseThumbSize(req.query.w)
   let file: string | undefined
+  const own = typeof req.query.url === 'string' ? ownCoverFile(req.query.url) : undefined
 
-  if (typeof req.query.local === 'string') {
+  if (own) {
+    file = own
+  } else if (typeof req.query.local === 'string') {
     const name = path.basename(req.query.local)
     file = path.join(rssCoverDir, name)
     if (!fs.existsSync(file)) {
