@@ -54,6 +54,14 @@ CHROMIUM_OPTS="${CHROMIUM_OPTS} --disable-pinch"
 CHROMIUM_OPTS="${CHROMIUM_OPTS} --noerrdialogs"
 # Window Settings
 CHROMIUM_OPTS="${CHROMIUM_OPTS} --window-size=${RES_X:-1280},${RES_Y:-720} --window-position=0,0"
+# A display larger than the design size 800 x 480 (e.g. the Raspberry Pi Touch Display 2, 1280 x 720): the page is drawn
+# larger by the smaller of the two factors (1280 x 720: 1.5, the page is then 853 x 480) - sharp, and the themes keep
+# their layout. The same as uiScale() in the backend, which makes the covers that much larger. (LC_ALL=C: a German
+# locale would print 1,50.)
+UI_SCALE=$(LC_ALL=C awk -v x="${RES_X}" -v y="${RES_Y}" 'BEGIN { if (x + 0 <= 0 || y + 0 <= 0) { print 1; exit } s = x / 800; if (y / 480 < s) s = y / 480; if (s > 3) s = 3; if (s > 1) printf "%.2f", s; else print 1 }')
+if [ "${UI_SCALE}" != "1" ]; then
+	CHROMIUM_OPTS="${CHROMIUM_OPTS} --force-device-scale-factor=${UI_SCALE}"
+fi
 # COLOR Parameters
 # start background in the base colour of the boot screen (see bootscreen_color.sh), MuPi blue without one
 BOOT_BG=$(cat /home/dietpi/MuPiBox/sysmedia/images/bootscreen/color 2>/dev/null | tr -cd '0-9a-f' | cut -c1-6)

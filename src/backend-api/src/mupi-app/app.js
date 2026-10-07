@@ -9627,7 +9627,7 @@ const CONTROLLERS = {
         },
         {
           title: 'Auflösung',
-          help: 'Das Display startet damit gleich neu.',
+          help: 'Die Auflösung deines Displays. Ist sie größer als 800 × 480, wird die Oberfläche passend vergrößert – scharf und im gleichen Aufbau. Das Display startet damit gleich neu.',
           items: [
             { type: 'select', label: 'Größe', key: 'resPreset', options: [...RES_PRESETS.map(([l]) => l), 'Eigene …'] },
             { type: 'pair', dep: 'resCustom', keep: true, items: [it('resX', { label: 'Breite', unit: 'px' }), it('resY', { label: 'Höhe', unit: 'px' })] },

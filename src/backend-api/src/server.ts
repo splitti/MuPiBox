@@ -57,6 +57,7 @@ import { registerAudioOutputRoutes, startAudioWatch } from './audio-output'
 import { episodeKey, MAX_KEEP, type OfflineEpisode, PodcastOffline } from './podcast-offline'
 import { setFeedHeadReader } from './podcast-search'
 import { EpisodeState, episodeStateSettings } from './episode-state'
+import { uiScale } from './ui-scale'
 import { browserGuard, corsOptionsFor, isAllowedHost, isLoopback, localOnly, localOrElternSession, PROXY_PORT, setConfiguredHosts, viaProxy } from './request-guard'
 
 // Force IPv4 for DNS lookups to avoid EAI_AGAIN errors on Raspberry Pi
@@ -1882,9 +1883,10 @@ app.get('/api/spotify/cover-for/:kind/:id', async (req, res) => {
             : kind === 'show'
               ? await api.getShow(id)
               : await api.getAudiobook(id)
-    // the smallest image that is still sharp in a list (>= 300 px), else the biggest there is
+    // the smallest image that is still sharp in a list (>= 300 px, on a larger display that much more), else the biggest
     const images = [...(item?.images ?? [])].sort((a, b) => (a.width ?? 0) - (b.width ?? 0))
-    const image = images.find((i) => (i.width ?? 0) >= 300) ?? images[images.length - 1]
+    const need = 300 * uiScale(getMupiboxConfigSync())
+    const image = images.find((i) => (i.width ?? 0) >= need) ?? images[images.length - 1]
     const imageId = image?.url?.match(/^https:\/\/i\.scdn\.co\/image\/([A-Za-z0-9]+)$/)?.[1]
     if (!imageId) {
       res.status(404).type('text/plain').send('no cover')
@@ -7841,8 +7843,9 @@ async function warmLibraryThumbnails(dir: string, depth: number): Promise<void> 
 }
 setTimeout(() => void warmLibraryThumbnails(libraryRoot, 0), 90 * 1000).unref()
 
+// (a display larger than 800 x 480 draws its page larger: the covers too, so they stay sharp - see ui-scale.ts)
 function parseThumbSize(value: unknown): number | undefined {
-  const size = Number(value)
+  const size = Number(value) * uiScale(getMupiboxConfigSync())
   return Number.isFinite(size) && size > 0 ? Math.min(Math.max(Math.round(size), 64), 800) : undefined
 }
 
