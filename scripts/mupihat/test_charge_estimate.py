@@ -129,6 +129,22 @@ clock[0] += STEP
 pause.update(620, "Fast charge (CC mode)", 100, 8100, 8300)
 assert reached - 1.0 < pause.percent < reached, f"after a short pause the charge should go on from about {reached:.1f} %, got {pause.percent:.1f}"
 
+# the charge current goes up and down (the box takes part of the input: a playing amplifier): the time until full stays calm
+calm = ChargeEstimator(capacity_mah=15000, iterm_ma=ITERM, clock=lambda: clock[0], wall=lambda: clock[0])
+for _ in range(60):
+    clock[0] += STEP
+    calm.update(-600, "Not Charging", 50, 7300, 8300)
+for k in range(360):  # 30 minutes of 650 mA and 250 mA, five minutes each
+    clock[0] += STEP
+    calm.update(650 if (k // 60) % 2 == 0 else 250, "Fast charge (CC mode)", 100, 7900, 8300)
+etas = []
+for k in range(480):  # 40 minutes more of the same
+    clock[0] += STEP
+    calm.update(650 if (k // 60) % 2 == 0 else 250, "Fast charge (CC mode)", 100, 7900, 8300)
+    etas.append(calm.eta_min)
+spread = (max(etas) - min(etas)) / (sum(etas) / len(etas))
+assert spread < 0.35, f"the time until full jumps with the current: {min(etas)}..{max(etas)} min"
+
 # a false "Done" or "Top-off" in the middle of the CC phase (after an I2C error of the chip): the percent stays where it was
 glitch = ChargeEstimator(capacity_mah=15000, iterm_ma=ITERM, clock=lambda: clock[0], wall=lambda: clock[0])
 for _ in range(60):

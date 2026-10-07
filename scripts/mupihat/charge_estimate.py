@@ -52,6 +52,10 @@ class ChargeEstimator:
     MIN_CHARGE_MA = 15
     # the time constant of the smoothing of the charge current, in seconds
     CURRENT_SMOOTHING_S = 60
+    # the time constant of the current the time until full is worked out with in the CC phase, in seconds: the box takes
+    # part of what the input gives (a playing amplifier, the display), so the charge current goes up and down by the
+    # minute - with the current of the last minute the time jumped between 6 and 15 hours
+    ETA_SMOOTHING_S = 900
     # how long a quiet stretch of the pack is remembered as the starting point, in seconds
     REST_WINDOW_S = 600
     # after a charge the voltage reads too high for a while (the pack settles): this long the starting point of a new charge
@@ -88,6 +92,7 @@ class ChargeEstimator:
         self.start_pct = 0.0
         self.charged_mah = 0.0
         self.ema = None
+        self.slow = None
         self.cc_peak = 0.0
         self.cv_i0 = None
         self._cv = deque()  # (t, ln(I)) in the CV phase
@@ -169,6 +174,7 @@ class ChargeEstimator:
             self.start_uncertain = not known
             self.charged_mah = 0.0
             self.ema = None
+            self.slow = None
             self.cc_peak = 0.0
             self.cv_i0 = None
             self._cv.clear()
@@ -176,6 +182,7 @@ class ChargeEstimator:
 
         i = float(ibat_ma)
         self.ema = i if self.ema is None else self.ema + (i - self.ema) * min(1.0, dt / self.CURRENT_SMOOTHING_S if dt else 1.0)
+        self.slow = i if self.slow is None else self.slow + (i - self.slow) * min(1.0, dt / self.ETA_SMOOTHING_S if dt else 1.0)
         self.charged_mah += max(i, 0.0) * dt / 3600.0 * self.EFFICIENCY
 
         pct = self.start_pct + (self.charged_mah / self.capacity * 100.0 if self.capacity else 0.0)
@@ -239,7 +246,8 @@ class ChargeEstimator:
             return None
         if ph == "topoff":
             return 10
-        i_now = self.ema if self.ema else 0.0
+        # (CC: the current of the last quarter of an hour; CV: the current now - it falls, and the fall is the measure)
+        i_now = (self.slow or self.ema or 0.0) if ph == "cc" else (self.ema or 0.0)
         if i_now < self.MIN_CHARGE_MA * 2:
             return None  # hardly anything goes in (the box takes what the input gives): no time to name
         tau = self._tau_s()
@@ -262,7 +270,7 @@ class ChargeEstimator:
         if not self._state_file:
             return
         try:
-            data = {"wall": self._wall(), "active": self.active, "start_pct": self.start_pct, "charged_mah": self.charged_mah, "cc_peak": self.cc_peak, "cv_i0": self.cv_i0, "percent": self.percent, "start_uncertain": self.start_uncertain}
+            data = {"wall": self._wall(), "active": self.active, "start_pct": self.start_pct, "charged_mah": self.charged_mah, "cc_peak": self.cc_peak, "slow": self.slow, "cv_i0": self.cv_i0, "percent": self.percent, "start_uncertain": self.start_uncertain}
             tmp = self._state_file + ".tmp"
             with open(tmp, "w") as f:
                 json.dump(data, f)
@@ -281,6 +289,7 @@ class ChargeEstimator:
                 self.start_pct = float(data["start_pct"])
                 self.charged_mah = float(data["charged_mah"])
                 self.cc_peak = float(data.get("cc_peak") or 0.0)
+                self.slow = float(data["slow"]) if data.get("slow") else None
                 self.cv_i0 = data.get("cv_i0")
                 self.percent = data.get("percent")
                 self.start_uncertain = bool(data.get("start_uncertain", False))

@@ -6512,7 +6512,12 @@ function batteryTop() {
   if (!Number.isFinite(pct)) pct = Number.parseInt(String(h.Bat_SOC ?? ''), 10)
   const charging = batteryCharging(h)
   const v = (mv) => (Number.isFinite(mv) && mv > 0 ? `${(mv / 1000).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} V` : '–')
-  const status = { 'Not Charging': 'lädt nicht', 'Pre-charge': 'Vorladen', 'Fast charge (CC mode)': 'lädt (schnell)', 'Fast Charging': 'lädt (schnell)', 'Fast charging': 'lädt (schnell)', 'Trickle Charge': 'lädt (Erhaltung)', 'Taper Charge (CV mode)': 'lädt (fast voll)', 'Taper Charging': 'lädt (fast voll)', 'Top-off Timer Active Charging': 'lädt (fast voll)', 'Charge Termination Done': 'vollständig geladen' }[h.Charger_Status] ?? h.Charger_Status ?? '–'
+  // (while it charges: the phase the estimate goes by - the chip reports "Taper (CV)" also far below its limit when the
+  // input gives too little, then "fast voll" said the wrong thing at 70 %)
+  const PHASE = { precharge: 'Vorladen', cc: 'lädt (schnell)', cv: 'lädt (fast voll)', topoff: 'lädt (fast voll)', done: 'vollständig geladen' }
+  const status =
+    (charging && PHASE[h.Charge_Phase]) ||
+    ({ 'Not Charging': 'lädt nicht', 'Pre-charge': 'Vorladen', 'Fast charge (CC mode)': 'lädt (schnell)', 'Fast Charging': 'lädt (schnell)', 'Fast charging': 'lädt (schnell)', 'Trickle Charge': 'lädt (Erhaltung)', 'Taper Charge (CV mode)': 'lädt (fast voll)', 'Taper Charging': 'lädt (fast voll)', 'Top-off Timer Active Charging': 'lädt (fast voll)', 'Charge Termination Done': 'vollständig geladen' }[h.Charger_Status] ?? h.Charger_Status ?? '–')
   // what the battery does now, under the big number (as the design: "OK · entlädt")
   const state = charging
     ? 'lädt'
