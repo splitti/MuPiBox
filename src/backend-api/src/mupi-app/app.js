@@ -7966,11 +7966,19 @@ function aboutTop() {
   const disk = i.disk ?? {}
   const used = disk.total ? Math.round(((disk.total - disk.free) / disk.total) * 100) : null
   const row = (k, v) => (v ? `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>` : '')
+  // (the drive the box runs from - an SD card, or a USB stick / SSD; a stick at USB 2.0 speed is many times slower)
+  const drive = i.drive ?? {}
+  const driveName = { sd: 'SD-Karte', usb: 'USB-Laufwerk', nvme: 'SSD' }[drive.kind] ?? (drive.kind ? 'Systemlaufwerk' : 'SD-Karte')
+  const driveNote = {
+    'usb2-port': 'Dein Systemlaufwerk steckt in einem USB-2.0-Port (schwarz). Steck es in einen blauen USB-3.0-Port, dann startet und reagiert die Box deutlich schneller.',
+    'usb2-drive': 'Dein Systemlaufwerk ist ein USB-2.0-Stick. Mit einem USB-3.0-Stick oder einer SSD im blauen Port startet und reagiert die Box deutlich schneller.',
+  }[drive.hint]
   return [
     // (on a wide screen: MuPiBox on the left over two rows, the name and the support beside it, then the history and
     // the news across the whole width)
     `<section class="card about-main"><h2>MuPiBox</h2><dl class="kv">${row('Version', sys.version)}${row('Hostname', i.hostname)}${row('Läuft seit', i.uptime_seconds != null ? fmtUptime(i.uptime_seconds) : '')}${row('CPU-Last', i.load_1 != null ? `${i.load_1.toLocaleString(LOCALE)} (${i.cpu_count} Kerne)` : '')}${row('Temperatur', i.cpu_temp_c != null ? `${Math.round(i.cpu_temp_c)} °C` : '')}${row('Arbeitsspeicher', i.mem_total ? `${formatBytes(i.mem_total - i.mem_free)} von ${formatBytes(i.mem_total)}` : '')}</dl>
-      ${used != null ? `<div class="bar"><div class="slider-head"><b>SD-Karte</b><span class="value-pill">${used} %</span></div><div class="track"><i style="--w:${used}%"></i></div><small>${formatBytes(disk.free)} frei von ${formatBytes(disk.total)}</small></div>` : ''}</section>`,
+      ${used != null ? `<div class="bar"><div class="slider-head"><b>${esc(driveName)}</b><span class="value-pill">${used} %</span></div><div class="track"><i style="--w:${used}%"></i></div><small>${formatBytes(disk.free)} frei von ${formatBytes(disk.total)}</small></div>` : ''}
+      ${driveNote ? `<div class="note warn">${icon('info', 18)}<span>${esc(driveNote)}</span></div>` : ''}</section>`,
     `<section class="card"><h2>Name der Box</h2><p class="help">Steht auf dem Startbild und oben in der App.</p>
       <div class="field"><label for="ab-name">Name der Box (höchstens ${max} Zeichen)</label><input class="input" id="ab-name" maxlength="${max}" value="${esc(sys.bs?.current?.boxName ?? '')}" placeholder="${esc(sys.bs?.screens?.defaultName ?? 'MuPiBox')}"></div>
       <div class="btns"><button class="btn primary" id="ab-save">Speichern</button></div></section>`,

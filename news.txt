@@ -11,6 +11,11 @@
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Switching the box off (or a stop) with nothing playing on it no longer pauses Spotify on another device of the same account, a PC or a phone: the display paused its own Spotify player, and Spotify took that pause for the account's playback. It now pauses it only when the box itself plays (reported by hyperbit).</li>
 </ul>
+<b>App</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>About the box: the bar of the free space names the drive the box runs from (SD card, USB drive, SSD), and a USB stick or SSD running at USB 2.0 speed gets a hint - in a black USB 2.0 port it is many times slower than in a blue USB 3.0 port, the box starts slowly and stutters when memory runs short (found by hyperbit: a Pi with 1 GB stuttered at every start of Spotify until the stick moved to the blue port).</li>
+</ul>
 <b>Manual</b>
 </ul>
 <ul id='ulnews' class='ulnews'>

@@ -56,6 +56,7 @@ import { registerHardwareRoutes } from './hardware'
 import { registerServicesRoutes } from './services'
 import { registerSystemRoutes } from './system'
 import { registerAdminRoutes } from './admin'
+import { bootDrive } from './boot-drive'
 import { registerNetworkRoutes, renewDhcp } from './network'
 import { registerUpdateRoutes } from './updates'
 import { registerTlsRoutes, tlsOf } from './tls'
@@ -2738,7 +2739,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   /**
    * GET /api/app/system
    * Read-only box system overview (Phase 15g): hostname, uptime, CPU load +
-   * count + temperature, RAM, root-disk usage. Uses Node built-ins only
+   * count + temperature, RAM, root-disk usage and the drive it runs from. Uses Node built-ins only
    * (os + fs.statfs + the thermal sysfs node) — no shell-out. Reboot/Shutdown
    * actions reuse the existing /api/reboot|/api/shutdown endpoints.
    */
@@ -2766,6 +2767,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       mem_free: os.freemem(),
       cpu_temp_c: cpuTempC,
       disk,
+      // (SD card or USB drive, and a USB 3 stick in a USB 2.0 port - see boot-drive.ts)
+      drive: bootDrive(),
     })
   })
 
