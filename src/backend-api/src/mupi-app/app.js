@@ -5587,6 +5587,9 @@ async function loadDisplayOptions() {
 
 // What the display did after a save, in words
 function displayNote(b) {
+  // (the choice of the output on the display switched on: the 3.5 mm output made ready - at once, or after a restart)
+  if (b?.audio?.restartNeeded) return 'Der 3,5-mm-Ausgang wurde eingeschaltet – das gilt erst nach einem Neustart der Box.'
+  if (b?.audio && (b.audio.blacklistRemoved || b.audio.configChanged || b.audio.cmdlineChanged)) return 'Der 3,5-mm-Ausgang ist bereit.'
   if (b?.restartKiosk) return 'Das Display startet neu.'
   if (b?.reboot) return 'Wird nach einem Neustart der Box übernommen.'
   if (b?.restartPlayer) return 'Der Player startet neu.'
@@ -9841,7 +9844,7 @@ const CONTROLLERS = {
               type: 'toggle',
               key: 'outPick',
               label: 'Box oder Kopfhörer am Display wählen',
-              help: 'Ein Tipp auf die Lautstärke oben im Player öffnet „Hören mit“ – nur wenn ein Bluetooth-Gerät gekoppelt ist. In der App geht es immer.',
+              help: 'Ein Tipp auf die Lautstärke oben im Player öffnet „Hören mit“ – wenn ein Bluetooth-Gerät gekoppelt ist oder die Box mehrere Soundausgänge hat. Beim Einschalten bereitet die Box den 3,5-mm-Ausgang vor (gilt nach einem Neustart). In der App geht es immer.',
             },
           ],
         },

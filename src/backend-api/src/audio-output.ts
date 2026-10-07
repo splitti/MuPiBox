@@ -201,6 +201,97 @@ async function toDevice(mac: string, devices: OutputDevice[]): Promise<'ok' | 'n
   return 'ok'
 }
 
+// --- the 3.5 mm output of the board: DietPi switches it off when another sound card is chosen --------------------------
+
+/** DietPi's block of the board's own audio driver: it writes it when a sound card other than the onboard one is chosen */
+const DIETPI_BLACKLIST = '/etc/modprobe.d/dietpi-disable_rpi_audio.conf'
+
+export interface OnboardAudioResult {
+  /** dtparam=audio=on was not in force in the boot configuration: it is now */
+  configChanged: boolean
+  /** DietPi's blacklist of snd_bcm2835 was there: taken away (the file kept as ....removed) */
+  blacklistRemoved: boolean
+  /** snd_bcm2835.enable_headphones=0 was on the kernel command line: taken off */
+  cmdlineChanged: boolean
+  /** the 3.5 mm card is there now */
+  ready: boolean
+  /** the change applies after a restart of the box */
+  restartNeeded: boolean
+}
+
+const sudo = (...args: string[]) => run('sudo', args, 15000)
+
+/**
+ * Makes the board's 3.5 mm output usable (the choice "Box oder Kopfhörer am Display wählen" has something to choose from
+ * then): 1. DietPi's blacklist of the driver goes, 2. dtparam=audio=on stands in the boot configuration (where it counts
+ * for every Pi: before the first [section] or under [all]), 3. no snd_bcm2835.enable_headphones=0 on the kernel command
+ * line. The driver is loaded at once when the boot configuration had it on already; else (or when it does not appear)
+ * the change needs a restart. Nothing is changed that is already right.
+ */
+export async function enableOnboardAudio(): Promise<OnboardAudioResult> {
+  const result: OnboardAudioResult = { configChanged: false, blacklistRemoved: false, cmdlineChanged: false, ready: false, restartNeeded: false }
+  const cardThere = async () => /bcm2835/i.test(await fsp.readFile('/proc/asound/cards', 'utf8').catch(() => ''))
+  const bootDir = await fsp.access('/boot/firmware/config.txt').then(() => '/boot/firmware', () => '/boot')
+  const bootConfig = `${bootDir}/config.txt`
+  const text = await fsp.readFile(bootConfig, 'utf8').catch(() => null)
+
+  // 1. DietPi's blacklist
+  if (await fsp.access(DIETPI_BLACKLIST).then(() => true, () => false)) {
+    // (modprobe reads only *.conf: the renamed file stays as a copy and blocks nothing)
+    result.blacklistRemoved = (await sudo('mv', DIETPI_BLACKLIST, `${DIETPI_BLACKLIST}.removed`)).ok
+  }
+
+  // 2. dtparam=audio=on in the boot configuration
+  if (text !== null) {
+    let section = ''
+    let state = ''
+    const lines: number[] = []
+    text.split('\n').forEach((raw, i) => {
+      const line = raw.trim()
+      const header = /^(\[[^\]]*\])/.exec(line)?.[1]
+      if (header) {
+        section = header
+        return
+      }
+      if (section !== '' && section !== '[all]') return
+      const m = /^dtparam=audio=(\S+)/.exec(line)
+      if (m) {
+        lines.push(i + 1)
+        state = m[1]
+      }
+    })
+    if (state !== 'on') {
+      await sudo('cp', '-p', bootConfig, `${bootConfig}.bak-audio`)
+      if (lines.length) {
+        // (the lines that switch it off or set it otherwise: this one value, in place)
+        const ok = (await sudo('sed', '-i', ...lines.flatMap((n) => ['-e', `${n}s/.*/dtparam=audio=on/`]), bootConfig)).ok
+        result.configChanged = ok
+      } else {
+        const add = [...(section && section !== '[all]' ? ['[all]'] : []), 'dtparam=audio=on']
+        // (sh -c: the file is $0, the lines are "$@")
+        result.configChanged = (await sudo('sh', '-c', 'printf "%s\n" "$@" >> "$0"', bootConfig, ...add)).ok
+      }
+    }
+  }
+
+  // 3. the kernel command line
+  const cmdline = await fsp.readFile(`${bootDir}/cmdline.txt`, 'utf8').catch(() => '')
+  if (/snd_bcm2835\.enable_headphones=0/.test(cmdline)) {
+    result.cmdlineChanged = (await sudo('sed', '-i', '-E', 's/[[:space:]]*snd_bcm2835\.enable_headphones=0//', `${bootDir}/cmdline.txt`)).ok
+  }
+
+  // the card: there already, or loaded now when the board's audio device is in the system (the boot configuration had it on)
+  result.ready = await cardThere()
+  const deviceThere = await fsp.access('/sys/bus/platform/devices/bcm2835_audio').then(() => true, () => false)
+  if (!result.ready && deviceThere && !result.configChanged && !result.cmdlineChanged) {
+    await sudo('modprobe', 'snd_bcm2835')
+    await sleep(2500)
+    result.ready = await cardThere()
+  }
+  result.restartNeeded = !result.ready
+  return result
+}
+
 let switching = false
 
 export function registerAudioOutputRoutes(app: Express, deps: AudioOutputDeps): void {
