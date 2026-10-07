@@ -458,6 +458,12 @@ export class PlayerPage implements OnInit, AfterViewInit {
     this.mediaService.local$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((local) => {
       this.currentPlayedLocal = local
       this.followTrackCover(local?.trackFile)
+      // The bar also with every report of the player, not only in updateProgress's ticks: once (a NAS album paused at
+      // 59 %) the dot stood at the start while the time below it showed the right place - both come from this report
+      // now, so they cannot part.
+      if (this.media?.type === 'library' || this.media?.type === 'nas' || this.media?.type === 'rss') {
+        this.progress = this.heldProgress(Number(local?.progressTime) || 0)
+      }
     })
     this.mediaService.albumStop$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((albumStop) => {
       this.albumStop = albumStop
