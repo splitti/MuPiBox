@@ -284,4 +284,14 @@ for _ in range(5):
     slow.update(20, "Fast charge (CC mode)", 100)
 assert slow.eta_min is None
 
+# as good as full (after a restart of the box the chip charges again, on a weak input in CC at the limit): no time
+nearly = ChargeEstimator(capacity_mah=15000, iterm_ma=ITERM, clock=lambda: clock[0], wall=lambda: clock[0])
+for _ in range(10):
+    clock[0] += STEP
+    nearly.update(-400, "Not Charging", 99.5, 8250, 8300)
+for _ in range(60):
+    clock[0] += STEP
+    nearly.update(565, "Fast charge (CC mode)", 100, 8296, 8300)
+assert nearly.percent >= 99 and nearly.eta_min is None, f"at {nearly.percent:.1f} % a time of {nearly.eta_min} min"
+
 print("ok")

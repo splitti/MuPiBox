@@ -252,7 +252,10 @@ class ChargeEstimator:
         # never backwards within a charge, never "full" before the charger says so
         pct = max(pct, self.percent or 0.0)
         self.percent = min(pct, 99.0)
-        self.eta_min = self._eta(ph)
+        # (from 99 % on no time any more: the pack is as good as full - on a weak input the chip stays in CC at the
+        # charge limit with the current the input leaves, and the fall of that current, which the time goes by, does
+        # not come; it said "full in about 6 h 20 min" at 8.30 V and 100 %)
+        self.eta_min = None if self.percent >= 99.0 else self._eta(ph)
         self._save()
 
     # --- parts
