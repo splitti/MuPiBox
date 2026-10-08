@@ -674,7 +674,7 @@ rm -f /tmp/mupibox-update-failed
 	# initramfs-splash is not used (config.txt does not load it; the start pictures come from fbv, splash_screen.sh):
 	# its image and settings file go, unless the box's config.txt loads it after all
 	if ! grep -q '^initramfs' "${BOOT_CONFIG}" 2>/dev/null; then
-		rm -f /boot/initramfs.img /boot/splash.txt >&3 2>&3
+		rm -f "$(dirname "${BOOT_CONFIG}")/initramfs.img" "$(dirname "${BOOT_CONFIG}")/splash.txt" >&3 2>&3
 	fi
 	cp ${MUPI_SRC}/media/images/goodbye.png /home/dietpi/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
 	#mv ${MUPI_SRC}/media/images/splash.png /boot/splash.png >&3 2>&3
@@ -840,7 +840,11 @@ rm -f /tmp/mupibox-update-failed
 
 	# gpio-poweroff only when it is in no dtoverlay line yet (also not in one that loads further overlays, e.g. a
 	# display driver: a second line made such boxes hang at shutdown), on the pin set for the OnOff SHIM
-	if grep -qE '^[[:space:]]*dtoverlay=.*gpio-poweroff' "${BOOT_CONFIG}"; then
+	# Not next to a button of its own on gpio-shutdown (issue #175): with gpio-poweroff the Pi no longer woke from it,
+	# and every update put the line back after it was taken out
+	if grep -qE '^[[:space:]]*dtoverlay=.*gpio-shutdown' "${BOOT_CONFIG}"; then
+	  echo -e "dtoverlay=gpio-shutdown set: no gpio-poweroff" >&3 2>&3
+	elif grep -qE '^[[:space:]]*dtoverlay=.*gpio-poweroff' "${BOOT_CONFIG}"; then
 	  echo -e "dtoverlay=gpio-poweroff already set" >&3 2>&3
 	else
 	  POWEROFF_PIN=$(/usr/bin/jq -r '.shim.poweroffPin // "4"' ${CONFIG} 2>/dev/null)

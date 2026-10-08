@@ -522,7 +522,11 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 
 	# gpio-poweroff only when it is in no dtoverlay line yet (also not in one that loads further overlays, e.g. a
 	# display driver: a second line made such boxes hang at shutdown), on the pin set for the OnOff SHIM
-	if grep -qE '^[[:space:]]*dtoverlay=.*gpio-poweroff' "${BOOT_CONFIG}"; then
+	# Not next to a button of its own on gpio-shutdown (issue #175): with gpio-poweroff the Pi no longer woke from it,
+	# and every update put the line back after it was taken out
+	if grep -qE '^[[:space:]]*dtoverlay=.*gpio-shutdown' "${BOOT_CONFIG}"; then
+	  echo -e "dtoverlay=gpio-shutdown set: no gpio-poweroff" >&3 2>&3
+	elif grep -qE '^[[:space:]]*dtoverlay=.*gpio-poweroff' "${BOOT_CONFIG}"; then
 	  echo -e "dtoverlay=gpio-poweroff already set" >&3 2>&3
 	else
 	  POWEROFF_PIN=$(/usr/bin/jq -r '.shim.poweroffPin // "4"' ${CONFIG} 2>/dev/null)

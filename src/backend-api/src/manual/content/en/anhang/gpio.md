@@ -33,3 +33,6 @@ The pin for switching off is in **two** places, and both must match:
 2. in `/boot/config.txt`: as the parameter `gpiopin=…` of the overlay `gpio-poweroff`.
 
 More on this and what happens with a duplicate line: [The box hangs when shutting down](../fehlerbehebung/haengt-beim-ausschalten.md).
+
+> [!NOTE]
+> If instead of an OnOff SHIM or MuPiHAT you have entered a button of your own with the overlay `gpio-shutdown`, installation and update leave `gpio-poweroff` out. With both together the Pi no longer starts from the button. A line an earlier update has already entered you remove once yourself.

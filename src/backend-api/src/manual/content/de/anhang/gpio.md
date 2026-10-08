@@ -33,3 +33,6 @@ Der Pin für das Ausschalten steht an **zwei** Stellen, und beide müssen übere
 2. in `/boot/config.txt`: als Parameter `gpiopin=…` des Overlays `gpio-poweroff`.
 
 Mehr dazu und was bei einer doppelten Zeile passiert: [Die Box hängt beim Ausschalten](../fehlerbehebung/haengt-beim-ausschalten.md).
+
+> [!NOTE]
+> Hast du statt OnOff SHIM oder MuPiHAT einen eigenen Taster mit dem Overlay `gpio-shutdown` eingetragen, lassen Installation und Update `gpio-poweroff` weg. Mit beiden zusammen startet der Pi über den Taster nicht mehr. Eine Zeile, die ein früheres Update schon eingetragen hat, entfernst du einmal selbst.
