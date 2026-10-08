@@ -452,6 +452,10 @@
             }
             <b translate="no">{{ d.name }}</b>
             <small>{{ outputBusy() === d.mac ? displayTexts.text('outputConnecting') : outputMissing() === d.mac && r2() ? displayTexts.text('outputNotFound') : output()?.current === d.mac && km() ? '● ' + displayTexts.text('outputPlaying') : d.connected ? displayTexts.text('outputConnected') : displayTexts.text('outputOff') }}</small>
+            <!-- the headphones' battery, when they report it (backend-api btBattery) -->
+            @if (d.connected && d.battery != null) {
+              <span class="out-batt" [class.low]="d.battery <= 20"><svg viewBox="0 0 26 14" aria-hidden="true"><rect x="1" y="1" width="21" height="12" rx="2.5" /><path d="M24.5 5v4" /><rect class="fill" x="3.5" y="3.5" [attr.width]="16 * d.battery / 100" height="7" rx="1" /></svg>{{ d.battery }} %</span>
+            }
           </button>
         }
       </div>

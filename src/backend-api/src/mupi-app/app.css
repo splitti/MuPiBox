@@ -1127,3 +1127,9 @@ textarea[hidden] { display: none; }
 .ct-fonts button[aria-pressed="true"] { border-color: var(--mp-primary); box-shadow: inset 0 0 0 2px var(--mp-primary); }
 .ct-fonts button span { font-size: 20px; line-height: 1.15; }
 .ct-fonts button small { font-size: 11px; color: var(--mp-muted); }
+
+/* the battery of connected Bluetooth headphones (" · 80 %"), red at 20 % and below */
+.bt-batt.low {
+  color: var(--mp-danger);
+  font-weight: 600;
+}

@@ -29,6 +29,10 @@ Once a device is paired, you choose the output: the box itself (**Speaker**) or 
 
 If the device is not reachable, the box says so instead of simply staying silent.
 
+## Battery of the headphones
+
+If connected headphones report their battery, the box shows it: on the display in **Listen with** on their tile (red at 20 % and below), in the app next to their name at the output and under **Paired devices**. Many headphones report it in steps of 10, some not at all (AirPods, for example). Then nothing is shown there.
+
 ## Volume with Bluetooth
 
 For Bluetooth devices there is a **maximum of its own**. That way headphones may stay quieter than a speaker. You set it in the app under **Settings › Audio › Volume** with **Separate limit with Bluetooth** ([Sound and volume](sound.md)).

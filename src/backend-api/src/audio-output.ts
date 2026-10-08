@@ -35,6 +35,8 @@ export interface OutputDevice {
   name: string
   kind: 'headphones' | 'speaker'
   connected: boolean
+  /** the battery in percent, when the device reports it (see btBattery) */
+  battery?: number
 }
 
 /** A sound card of the box: PulseAudio's ALSA sink, named for what it is (language-neutral: 3.5 mm, HDMI, I2S, USB) */
@@ -78,12 +80,24 @@ export async function outputDevices(): Promise<OutputDevice[]> {
       name: /Alias:\s*(.+)/.exec(info)?.[1]?.trim() || m[2].trim() || m[1],
       kind: /headphone|headset/.test(icon) ? 'headphones' : /audio-card|speaker/.test(icon) ? 'speaker' : 'headphones',
       connected: /Connected:\s*yes/i.test(info),
+      battery: /Connected:\s*yes/i.test(info) ? btBattery(info) : undefined,
     })
   }
   return out
 }
 
-const sinkMac = (sink: string) => /^bluez_(?:sink|output)\.([0-9A-F_]{17})/i.exec(sink)?.[1]?.replace(/_/g, ':').toUpperCase() ?? null
+/**
+ * The battery of a connected Bluetooth device from `bluetoothctl info` ("Battery Percentage: 0x50 (80)"): headsets send
+ * it over their hands-free link (PulseAudio passes it on to BlueZ, which needs Experimental = true in main.conf - set
+ * by the update), BLE devices over GATT. Many report it in steps of 10, some (AirPods on this stack) not at all.
+ */
+export function btBattery(info: string): number | undefined {
+  const m = /Battery Percentage:\s*0x[0-9a-f]+\s*\((\d+)\)/i.exec(info)
+  const v = m ? Number(m[1]) : Number.NaN
+  return Number.isInteger(v) && v >= 0 && v <= 100 ? v : undefined
+}
+
+const sinkMac =(sink: string) => /^bluez_(?:sink|output)\.([0-9A-F_]{17})/i.exec(sink)?.[1]?.replace(/_/g, ':').toUpperCase() ?? null
 
 async function sinks(): Promise<string[]> {
   return (await pactl('list', 'short', 'sinks')).stdout

@@ -1169,6 +1169,8 @@ const outState = { data: null, busy: null }
 
 // a sound card's name: the amplifier is the speaker (in the app's language), the others say what they are (3.5 mm, HDMI, USB)
 const cardName = (c) => (c.kind === 'amp' ? tr('Lautsprecher') : c.name)
+// the battery of connected headphones, when they report it (backend-api btBattery): " · 80 %"
+const btBatteryText = (d) => (d?.connected && Number.isInteger(d.battery) ? ` · ${d.battery} %` : '')
 
 function outputRow() {
   const o = outState.data
@@ -1176,7 +1178,7 @@ function outputRow() {
   if (!o?.devices?.length && cards.length < 2) return ''
   const btn = (target, ic, label) =>
     `<button data-out="${esc(target)}" aria-pressed="${o.current === target}" ${outState.busy ? 'disabled' : ''}>${outState.busy === target ? '<span class="spin sm"></span>' : icon(ic, 16)}<span translate="${target === 'box' ? 'yes' : 'no'}">${esc(label)}</span></button>`
-  return `<div class="out-row"><span class="out-label">Ausgabe</span><div class="seg out-seg">${cards.length > 1 ? cards.map((c) => btn(`card:${c.id}`, c.kind === 'jack' ? 'phones' : 'vol', cardName(c))).join('') : btn('box', 'vol', 'Lautsprecher')}${o.devices.map((d) => btn(d.mac, 'phones', d.name)).join('')}</div></div>`
+  return `<div class="out-row"><span class="out-label">Ausgabe</span><div class="seg out-seg">${cards.length > 1 ? cards.map((c) => btn(`card:${c.id}`, c.kind === 'jack' ? 'phones' : 'vol', cardName(c))).join('') : btn('box', 'vol', 'Lautsprecher')}${o.devices.map((d) => btn(d.mac, 'phones', d.name + btBatteryText(d))).join('')}</div></div>`
 }
 
 async function loadOutput(root) {
@@ -6533,7 +6535,7 @@ function btTop() {
           ? `<div class="rows">${devices
               .map(
                 (d, i) =>
-                  `<div class="entry"><span class="avatar">${icon('bt', 16)}</span><span class="lbl"><b translate="no">${esc(d.name)}</b><small>${d.connected ? 'verbunden' : 'nicht verbunden'}</small></span>
+                  `<div class="entry"><span class="avatar">${icon('bt', 16)}</span><span class="lbl"><b translate="no">${esc(d.name)}</b><small>${d.connected ? 'verbunden' : 'nicht verbunden'}${btBatteryText(d) ? `<span class="bt-batt${d.battery <= 20 ? ' low' : ''}" translate="no">${btBatteryText(d)}</span>` : ''}</small></span>
                   ${d.connected ? `<button class="btn sm" data-bt-disc="${i}">Trennen</button>` : `<button class="btn sm" data-bt-conn="${i}">Verbinden</button>`}<button class="btn danger sm" data-bt-rm="${i}">Entfernen</button></div>`,
               )
               .join('')}</div>`
@@ -11166,7 +11168,7 @@ const LIVE_CARDS = {
         ? `<div class="rows">${pins.btDevices
             .map(
               (d, i) =>
-                `<div class="entry"><span class="avatar">${icon('phones', 16)}</span><span class="lbl"><b translate="no">${esc(d.name)}</b><small>${d.connected ? 'verbunden' : 'nicht verbunden'}</small></span>${d.connected ? `<button class="btn sm" data-pin-bt="disconnect" data-i="${i}">Trennen</button>` : `<button class="btn sm primary" data-pin-bt="connect" data-i="${i}">Verbinden</button>`}</div>`,
+                `<div class="entry"><span class="avatar">${icon('phones', 16)}</span><span class="lbl"><b translate="no">${esc(d.name)}</b><small>${d.connected ? 'verbunden' : 'nicht verbunden'}${btBatteryText(d) ? `<span class="bt-batt${d.battery <= 20 ? ' low' : ''}" translate="no">${btBatteryText(d)}</span>` : ''}</small></span>${d.connected ? `<button class="btn sm" data-pin-bt="disconnect" data-i="${i}">Trennen</button>` : `<button class="btn sm primary" data-pin-bt="connect" data-i="${i}">Verbinden</button>`}</div>`,
             )
             .join('')}</div>`
         : `<p class="help" style="margin:0">${esc('Noch kein Gerät gekoppelt.')}</p>`

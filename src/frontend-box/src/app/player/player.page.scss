@@ -853,6 +853,32 @@ ion-content.player-content.tracklist-active {
     opacity: 0.75;
   }
 
+  // the headphones' battery: a symbol with its level and the percent, red at 20 % and below
+  .out-batt {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 16px;
+    font-weight: 600;
+
+    svg {
+      width: 26px;
+      height: 14px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.6;
+
+      .fill {
+        fill: currentColor;
+        stroke: none;
+      }
+    }
+
+    &.low {
+      color: var(--km-rose, #d9534f);
+    }
+  }
+
   &.on {
     background: var(--km-night-3, #2f7fc0);
     color: var(--km-cream, #fff);

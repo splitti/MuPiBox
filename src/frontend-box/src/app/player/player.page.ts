@@ -76,7 +76,7 @@ import { SpotifyService } from '../spotify.service'
  */
 export interface AudioOutputState {
   current: string
-  devices: { mac: string; name: string; kind: 'headphones' | 'speaker'; connected: boolean }[]
+  devices: { mac: string; name: string; kind: 'headphones' | 'speaker'; connected: boolean; battery?: number }[]
   /** the box's sound cards (3.5 mm, HDMI, I2S amplifier, USB) - only when there is more than one, else empty */
   cards?: { id: string; name: string; desc: string; kind: 'jack' | 'hdmi' | 'amp' | 'usb' | 'card' }[]
   display: boolean

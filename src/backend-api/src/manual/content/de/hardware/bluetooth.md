@@ -29,6 +29,10 @@ Ist ein Gerät gekoppelt, wählst du die Ausgabe: die Box selbst (**Lautsprecher
 
 Ist das Gerät nicht erreichbar, meldet die Box das, statt einfach still zu bleiben.
 
+## Akkustand der Kopfhörer
+
+Meldet ein verbundener Kopfhörer seinen Akkustand, zeigt die Box ihn an: am Display in **Hören mit** auf seiner Kachel (rot bei 20 % und darunter), in der App neben seinem Namen bei der Ausgabe und unter **Gekoppelte Geräte**. Viele Kopfhörer melden ihn in 10er-Schritten, manche gar nicht (AirPods zum Beispiel). Dann steht dort einfach nichts.
+
 ## Lautstärke mit Bluetooth
 
 Für Bluetooth-Geräte gibt es ein **eigenes Maximum**. So dürfen Kopfhörer leiser bleiben als ein Lautsprecher. Du stellst es in der App unter **Einstellungen › Audio › Lautstärke** mit **Eigene Grenze mit Bluetooth** ein ([Sound und Lautstärke](sound.md)).

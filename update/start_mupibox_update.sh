@@ -608,6 +608,12 @@ rm -f /tmp/mupibox-update-failed
 	mv ${MUPI_SRC}/scripts/chromium-autostart.sh /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	mv ${MUPI_SRC}/scripts/mupibox/* /usr/local/bin/mupibox/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/bluetooth/* /usr/local/bin/mupibox/ >&3 2>&3
+	# The battery of Bluetooth headphones (display and app, issue #176): BlueZ 5.66 takes it from PulseAudio only with
+	# its experimental interfaces (BatteryProviderManager1). Applies after the restart.
+	if [ -f /etc/bluetooth/main.conf ] && ! grep -qE '^[[:space:]]*Experimental[[:space:]]*=[[:space:]]*true' /etc/bluetooth/main.conf; then
+	  sed -i -E 's/^#?[[:space:]]*Experimental[[:space:]]*=.*/Experimental = true/' /etc/bluetooth/main.conf >&3 2>&3
+	  grep -qE '^Experimental = true' /etc/bluetooth/main.conf || sed -i '/^\[General\]/a Experimental = true' /etc/bluetooth/main.conf >&3 2>&3
+	fi
 	mv ${MUPI_SRC}/scripts/wled/* /usr/local/bin/mupibox/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/telegram/* /usr/local/bin/mupibox/ >&3 2>&3
 	#mv ${MUPI_SRC}/config/templates/www.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3

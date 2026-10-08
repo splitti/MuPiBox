@@ -75,6 +75,7 @@ import { clearSpotifyBlock } from '../spotify-block'
 import { clearArtistAlbumsMemory } from '../artist-albums-store'
 import { clearMetaCache } from '../spotify-sync/meta-cache'
 import { spotifyLoginAge } from './spotify-auth-age'
+import { btBattery } from '../audio-output'
 import {
   REQUESTED_SCOPES,
   buildAuthorizeUrl,
@@ -2522,7 +2523,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     const controller = ctl ? { mac: ctl[1], name: ctl[2].trim() } : null
     const show = await execCapture('sudo', ['-u', 'dietpi', 'bluetoothctl', 'show'])
     const powered = /Powered:\s*yes/i.test(show.stdout)
-    const devices: Array<{ mac: string; name: string; connected: boolean }> = []
+    const devices: Array<{ mac: string; name: string; connected: boolean; battery?: number }> = []
     if (powered) {
       const dev = await execCapture('sudo', ['-u', 'dietpi', 'bluetoothctl', 'devices'])
       const parsed: Array<{ mac: string; name: string }> = []
@@ -2535,7 +2536,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         // (only paired ones: "devices" also names what a search found nearby - phones, watches, trackers with
         // changing addresses - for some minutes after it, and they showed up here as "paired" without a name)
         if (!/Paired:\s*yes/i.test(info.stdout)) continue
-        devices.push({ ...d, connected: /Connected:\s*yes/i.test(info.stdout) })
+        const connected = /Connected:\s*yes/i.test(info.stdout)
+        devices.push({ ...d, connected, battery: connected ? btBattery(info.stdout) : undefined })
       }
     }
     const ac = await execCapture('systemctl', ['is-active', 'mupi_autoconnect_bt'])
