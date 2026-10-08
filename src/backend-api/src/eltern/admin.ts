@@ -52,6 +52,8 @@ const JSON_FILES: Record<string, string> = {
 // What a backup holds (the admin interface's backup.php / fullbackup.php) and what a restore may write - with the own
 // theme's background picture (it was missing after a restore, reported by hyperbit)
 const BACKGROUND = '/home/dietpi/MuPiBox/themes/custom-bg.jpg'
+// ... and the own start, goodbye and battery pictures (web app › Startbilder › Eigene Bilder, bootscreen-custom.ts)
+const BOOT_CUSTOM = ['splash.png', 'goodbye.png', 'battery.png', 'color'].map((f) => `/home/dietpi/MuPiBox/sysmedia/images/bootscreen-custom/${f}`)
 const BACKUP_FILES = ['/etc/mupibox/mupiboxconfig.json', `${SERVER_CONFIG}/data.json`]
 // Kept free on the SD card by a restore (the box itself needs room to run)
 const RESERVE_BYTES = 512 * 1024 * 1024
@@ -60,7 +62,7 @@ const freeBytes = async (dir: string) => {
   return st ? Math.max(0, st.bavail * st.bsize - RESERVE_BYTES) : 0
 }
 
-const RESTORE_FILES = ['etc/mupibox/mupiboxconfig.json', 'home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json', BACKGROUND.slice(1)]
+const RESTORE_FILES = ['etc/mupibox/mupiboxconfig.json', 'home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json', BACKGROUND.slice(1), ...BOOT_CUSTOM.map((f) => f.slice(1))]
 const RESTORE_DIRS = [
   'etc/',
   'etc/mupibox/',
@@ -68,6 +70,9 @@ const RESTORE_DIRS = [
   'home/dietpi/',
   'home/dietpi/MuPiBox/',
   'home/dietpi/MuPiBox/themes/',
+  'home/dietpi/MuPiBox/sysmedia/',
+  'home/dietpi/MuPiBox/sysmedia/images/',
+  'home/dietpi/MuPiBox/sysmedia/images/bootscreen-custom/',
   'home/dietpi/.mupibox/',
   'home/dietpi/.mupibox/Sonos-Kids-Controller-master/',
   'home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/',
@@ -395,8 +400,9 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
   router.get('/backup', requireSession, async (req, res) => {
     const full = req.query.kind === 'full'
     const zip = `/var/tmp/mupibox-backup-${process.pid}-${Date.now()}.zip`
-    const background = (await fsp.access(BACKGROUND).then(() => true, () => false)) ? [BACKGROUND] : []
-    const sources = [full ? '/home/dietpi/MuPiBox/media' : '/home/dietpi/MuPiBox/media/cover', ...BACKUP_FILES, ...background]
+    const present = (f: string) => fsp.access(f).then(() => true, () => false)
+    const extras = (await Promise.all([BACKGROUND, ...BOOT_CUSTOM].map(async (f) => ((await present(f)) ? f : '')))).filter(Boolean)
+    const sources = [full ? '/home/dietpi/MuPiBox/media' : '/home/dietpi/MuPiBox/media/cover', ...BACKUP_FILES, ...extras]
     const r = await run('sudo', ['sh', '-c', `zip -q -r '${zip}' ${sources.map((s) => `'${s}'`).join(' ')}; chmod 644 '${zip}'`], full ? 3600000 : 120000)
     const exists = await fsp.stat(zip).then(() => true, () => false)
     if (!exists) {
@@ -523,7 +529,7 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
       cfg.mupibox = { ...((cfg.mupibox as Record<string, unknown>) ?? {}), version }
     })
     // what the restored config switches on but lives outside it (MuPiHAT, fan, rotary encoder, 3.5 mm output, the own
-    // theme's stylesheet): set up as the config says - a fresh box showed the MuPiHAT as active, but it was never set up
+    // theme's stylesheet, the start pictures with the own ones): set up as the config says - a fresh box showed the MuPiHAT as active, but it was never set up
     await run('sudo', ['/usr/local/bin/mupibox/apply_restored_settings.sh'], 300000)
     const host = String((deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined)?.host ?? '')
     if (HOSTNAME.test(host)) await run('sudo', ['/boot/dietpi/func/change_hostname', host], 60000)

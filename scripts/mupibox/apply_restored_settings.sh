@@ -42,6 +42,12 @@ if [ "$(j '.mupibox.onboardAudio // false')" = "true" ] && [ -x "${B}/onboard_au
 	"${B}/onboard_audio.sh" on >/dev/null
 fi
 
+# the start, goodbye and battery pictures put together again, with the restored own pictures (unpacked as root: the
+# folder back to dietpi, the server writes there)
+BOOT_CUSTOM=/home/dietpi/MuPiBox/sysmedia/images/bootscreen-custom
+[ -d "${BOOT_CUSTOM}" ] && chown -R dietpi:dietpi "${BOOT_CUSTOM}"
+[ -x "${B}/bootscreen_update.sh" ] && "${B}/bootscreen_update.sh" >/dev/null 2>&1
+
 # the own theme's stylesheet: written anew from the restored settings when the server starts (display.ts)
 [ -n "$(j '.mupibox.customTheme // empty')" ] && rm -f "${CUSTOM_CSS}"
 

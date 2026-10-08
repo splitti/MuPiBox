@@ -87,8 +87,14 @@
 					'etc/mupibox/mupiboxconfig.json',
 					'home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json',
 					'home/dietpi/MuPiBox/themes/custom-bg.jpg',
+					'home/dietpi/MuPiBox/sysmedia/images/bootscreen-custom/splash.png',
+					'home/dietpi/MuPiBox/sysmedia/images/bootscreen-custom/goodbye.png',
+					'home/dietpi/MuPiBox/sysmedia/images/bootscreen-custom/battery.png',
+					'home/dietpi/MuPiBox/sysmedia/images/bootscreen-custom/color',
 				];
 				$allowedExactDirs = ['etc/', 'etc/mupibox/', 'home/', 'home/dietpi/', 'home/dietpi/MuPiBox/', 'home/dietpi/MuPiBox/themes/',
+					'home/dietpi/MuPiBox/sysmedia/', 'home/dietpi/MuPiBox/sysmedia/images/',
+					'home/dietpi/MuPiBox/sysmedia/images/bootscreen-custom/',
 					'home/dietpi/.mupibox/', 'home/dietpi/.mupibox/Sonos-Kids-Controller-master/',
 					'home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/',
 					'home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/'];
