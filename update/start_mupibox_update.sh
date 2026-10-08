@@ -677,10 +677,18 @@ rm -f /tmp/mupibox-update-failed
 	echo -e "XXX\n${STEP}\nCopy some media files... \nXXX"
 	# Splash and Media
 	before=$(date +%s)
-	# initramfs-splash is not used (config.txt does not load it; the start pictures come from fbv, splash_screen.sh):
-	# its image and settings file go, unless the box's config.txt loads it after all
-	if ! grep -q '^initramfs' "${BOOT_CONFIG}" 2>/dev/null; then
-		rm -f "$(dirname "${BOOT_CONFIG}")/initramfs.img" "$(dirname "${BOOT_CONFIG}")/splash.txt" >&3 2>&3
+	# The initramfs splash of older installers and updates ("initramfs initramfs.img" with splash.txt beside it) showed
+	# the old blue start picture at the kernel's start, before the chosen one (issue #177). The box starts without an
+	# initramfs (DietPi, root drivers in the kernel); the start pictures come from fbv (splash_screen.sh). Switched off
+	# - only exactly this line with splash.txt beside it; a system initramfs (auto_initramfs, initramfs8, an initrd with
+	# followkernel) stays - and its image and settings file go once nothing loads them.
+	BOOT_DIR="$(dirname "${BOOT_CONFIG}")"
+	if [ -f "${BOOT_DIR}/splash.txt" ] && grep -qE '^[[:space:]]*initramfs[[:space:]]+initramfs\.img[[:space:]]*$' "${BOOT_CONFIG}"; then
+		cp -p "${BOOT_CONFIG}" "${BOOT_CONFIG}.bak-splash" >&3 2>&3
+		sed -i -E 's/^[[:space:]]*initramfs[[:space:]]+initramfs\.img[[:space:]]*$/#initramfs initramfs.img  # old start picture (initramfs-splash), switched off by the MuPiBox update/' "${BOOT_CONFIG}" >&3 2>&3
+	fi
+	if ! grep -qE '^[[:space:]]*initramfs[[:space:]]+initramfs\.img' "${BOOT_CONFIG}" 2>/dev/null; then
+		rm -f "${BOOT_DIR}/initramfs.img" "${BOOT_DIR}/splash.txt" >&3 2>&3
 	fi
 	cp ${MUPI_SRC}/media/images/goodbye.png /home/dietpi/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
 	#mv ${MUPI_SRC}/media/images/splash.png /boot/splash.png >&3 2>&3
