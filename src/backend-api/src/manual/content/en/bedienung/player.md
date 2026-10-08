@@ -31,7 +31,7 @@ Tap a track to play it. The button below the cover on the left closes the list a
 
 ## Box or headphones
 
-If a Bluetooth device is paired, the header shows two fields next to the volume: box and headphones. The field the music is playing through is highlighted. A tap opens the **Listen with** window, where the child chooses. If the headphones are off or out of range, the window says so there.
+If a Bluetooth device is paired, the header shows a field next to the volume with the symbol of the output the music is playing through: box or headphones. A tap opens the **Listen with** window, where the child chooses. If the headphones are off or out of range, the window says so there.
 
 If the box has **several sound outputs** (for example the 3.5 mm output next to an I²S amplifier, HDMI or a USB audio adapter), each one is a tile of its own in the **Listen with** window: **Speaker** (the box's sound card, for example the amplifier), **3.5 mm** (with a headphones symbol), **HDMI** or **USB**, with the name the system gives it below. The window then opens without a paired Bluetooth device too. The box remembers the choice across a restart too. You switch on the 3.5 mm output next to a sound card of its own under **Settings › Audio › Sound card › Headphone jack** ([Sound and volume](../hardware/sound.md)). With only one sound output everything stays as before.
 

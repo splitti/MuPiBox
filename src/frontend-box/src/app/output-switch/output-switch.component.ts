@@ -2,12 +2,11 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 import type { AudioOutputState } from '../player/player.page'
 
 /**
- * The output capsule in the player's header (design round 2, §4): 64 high - box | headphones, a line, the volume.
- * The left field is the box's speaker, the right one the headphones (a paired Bluetooth device or the 3.5 mm output);
- * the one that plays is marked. Without a choice only the volume. A tap on either opens "Hören mit" (the player's
- * window) - switching at once tried a Bluetooth device that was off and only said "not found". States of the right
- * field: ready (green dot: a Bluetooth device is connected, not playing), connecting (turning ring), not found (red dot;
- * the player shows the message below the header). The volume is only shown - louder and softer are the big buttons.
+ * The output capsule in the player's header (design round 2, §4): 64 high - one field, a line, the volume.
+ * The field shows where the box plays: the box, or headphones (a paired Bluetooth device or the 3.5 mm output; a
+ * Bluetooth speaker with its own symbol). Without a choice only the volume. A tap opens "Hören mit" (the player's
+ * window), where the output is switched - switching at once tried a Bluetooth device that was off and only said "not
+ * found". While it connects, a turning ring. The volume is only shown - louder and softer are the big buttons.
  */
 @Component({
   selector: 'mupi-output-switch',
