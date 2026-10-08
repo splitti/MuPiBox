@@ -112,6 +112,7 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
     } catch {
       // not DietPi (development)
     }
+    const model = (await fsp.readFile('/proc/device-tree/model', 'utf8').catch(() => '')).replace(/\0/g, '')
     const [fanActive, rotaryActive] = await Promise.all(['mupi_fan', 'mupi_rotary'].map(async (s) => (await run('systemctl', ['is-active', s], 5000)).stdout.trim() === 'active'))
     res.json({
       soundcard: {
@@ -124,8 +125,11 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
           .filter((d) => d.id),
         // the board's 3.5 mm output next to the box's card (not with the onboard output as the card: it is on then):
         // switched on in the app, what is written (applies after a restart) and whether the system has it now
+        // (none on a Pi 5 or Zero; on a Pi up to the 3 the jack shares its PWM unit with the status LED's hardware PWM,
+        // which then runs in software - the same model lists as onboard_audio.sh)
         onboard: {
-          applicable: !(typeof mb.physicalDevice === 'string' && mb.physicalDevice.startsWith('rpi-bcm2835')),
+          applicable: !(typeof mb.physicalDevice === 'string' && mb.physicalDevice.startsWith('rpi-bcm2835')) && !/Raspberry Pi (5|500)|Compute Module 5|Raspberry Pi Zero/.test(model),
+          ledSoftware: /Raspberry Pi (3|2|Zero|Model)|Compute Module (3|Rev)/.test(model) && ['12', '13'].includes(String(shim.ledPin ?? '')),
           on: mb.onboardAudio === true,
           written: (await onboardAudioWritten()) === 'on',
           active: /bcm2835 Headphones|Headphones/i.test(await fsp.readFile('/proc/asound/cards', 'utf8').catch(() => '')),

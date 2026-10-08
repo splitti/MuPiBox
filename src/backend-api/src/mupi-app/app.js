@@ -6528,7 +6528,7 @@ function btTop() {
     ${noHw ? `<div class="note warn">${icon('info', 18)}<span>Der Bluetooth-Chip ist ausgeschaltet (gilt nach einem Neustart). Einschalten unten unter „Hardware“.</span></div>` : ''}
     ${b.powered ? `<div class="status-line"><span class="dot ${linked ? 'ok' : ''}"></span><span>${linked ? `Verbunden mit <b translate="no">${esc(linked.name)}</b>` : 'Kein Gerät verbunden'}</span></div>` : ''}
     ${sw('bt-on', 'Bluetooth', 'Für Kopfhörer oder Lautsprecher.', b.powered, noHw)}${sw('bt-auto', 'Automatisch verbinden', 'Verbindet ein bekanntes Gerät von selbst, sobald es an ist.', b.autoconnect, noHw)}
-    <div class="navlist">${navRow('lautstaerke', 'Lautstärkegrenze für Kopfhörer', 'Eigenes Maximum, solange Bluetooth-Audio läuft', 'vol')}</div></section>`
+    <div class="navlist">${navRow('lautstaerke', 'Lautstärkegrenze für Kopfhörer', 'Eigenes Maximum, solange Kopfhörer spielen', 'vol')}</div></section>`
   const paired = b.powered
     ? `<section class="card" data-col="1" data-card="gekoppelte-gerate"><h2>Gekoppelte Geräte</h2>${
         devices.length
@@ -9904,14 +9904,14 @@ const CONTROLLERS = {
                 ...it,
                 help:
                   hw.audio?.bluetooth && state.values.get('volBtOn')
-                    ? `Höchstens ${state.values.get('volBtMax')} % – gerade mit Bluetooth-Kopfhörer oder -Lautsprecher.`
+                    ? `Höchstens ${state.values.get('volBtMax')} % – gerade mit Kopfhörer oder Bluetooth-Lautsprecher.`
                     : `Höchstens ${state.values.get('volMax')} % (Hörschutz).`,
               }
             : it.key === 'volMax'
               ? [
                   { ...it, help: 'Lauter geht es auch am Display und per Telegram nicht.' },
-                  { type: 'toggle', key: 'volBtOn', label: 'Eigene Grenze mit Bluetooth', help: 'Für Kopfhörer: gilt, solange Kopfhörer oder ein Lautsprecher per Bluetooth verbunden sind.' },
-                  { type: 'slider', key: 'volBtMax', label: 'Maximum mit Bluetooth', min: 10, max: 100, step: 5, unit: ' %', dep: 'volBtOn', help: 'Ist die Box beim Verbinden lauter, geht sie gleich auf diesen Wert herunter.' },
+                  { type: 'toggle', key: 'volBtOn', label: 'Eigene Grenze für Kopfhörer', help: 'Gilt, solange über Bluetooth (Kopfhörer oder Lautsprecher) oder die Kopfhörerbuchse gespielt wird.' },
+                  { type: 'slider', key: 'volBtMax', label: 'Maximum für Kopfhörer', min: 10, max: 100, step: 5, unit: ' %', dep: 'volBtOn', help: 'Ist die Box beim Verbinden oder beim Wechsel auf die Buchse lauter, geht sie gleich auf diesen Wert herunter.' },
                 ]
               : it.key === 'volStart'
                 ? // (never above the maximum; only with a fixed start value)
@@ -10025,6 +10025,8 @@ const CONTROLLERS = {
                   help: [
                     'Für Kopfhörer an der Buchse des Raspberry Pi, neben der Soundkarte der Box. Gewählt wird im Player über „Hören mit“ oder in der App bei der Ausgabe.',
                     hw.data.soundcard.onboard.on && !hw.data.soundcard.onboard.active ? 'Gilt nach einem Neustart der Box.' : '',
+                    // (Pi up to the 3: the jack and the LED's hardware PWM share one PWM unit, see onboard_audio.sh)
+                    hw.data.soundcard.onboard.ledSoftware ? 'Auf diesem Raspberry Pi teilen sich Buchse und Status-LED die PWM-Einheit: Die LED läuft dann per Software weiter (etwas mehr Rechenlast).' : '',
                   ]
                     .filter(Boolean)
                     .join(' '),

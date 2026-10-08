@@ -35,4 +35,4 @@ If connected headphones report their battery, the box shows it: on the display i
 
 ## Volume with Bluetooth
 
-For Bluetooth devices there is a **maximum of its own**. That way headphones may stay quieter than a speaker. You set it in the app under **Settings › Audio › Volume** with **Separate limit with Bluetooth** ([Sound and volume](sound.md)).
+For headphones there is a **maximum of its own**. It applies to Bluetooth devices and to the headphone jack. That way headphones may stay quieter than a speaker. You set it in the app under **Settings › Audio › Volume** with **Own limit for headphones** ([Sound and volume](sound.md)).

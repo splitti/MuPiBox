@@ -35,4 +35,4 @@ Meldet ein verbundener Kopfhörer seinen Akkustand, zeigt die Box ihn an: am Dis
 
 ## Lautstärke mit Bluetooth
 
-Für Bluetooth-Geräte gibt es ein **eigenes Maximum**. So dürfen Kopfhörer leiser bleiben als ein Lautsprecher. Du stellst es in der App unter **Einstellungen › Audio › Lautstärke** mit **Eigene Grenze mit Bluetooth** ein ([Sound und Lautstärke](sound.md)).
+Für Kopfhörer gibt es ein **eigenes Maximum**. Es gilt für Bluetooth-Geräte und für die Kopfhörerbuchse. So dürfen Kopfhörer leiser bleiben als ein Lautsprecher. Du stellst es in der App unter **Einstellungen › Audio › Lautstärke** mit **Eigene Grenze für Kopfhörer** ein ([Sound und Lautstärke](sound.md)).

@@ -2941,8 +2941,17 @@ const _execAsync = (cmd) =>
 let btAudio = { at: 0, on: false }
 async function bluetoothAudio() {
   if (Date.now() - btAudio.at < 3000) return btAudio.on
+  // (headphones: a Bluetooth device, or the board's 3.5 mm output - its card is "bcm2835 Headphones", see backend-api
+  // audio-output.ts; the own limit for headphones counts there too, not only the box's maximum)
   const on = await _execAsync('/usr/bin/pactl get-default-sink')
-    .then(({ stdout }) => String(stdout).trim().startsWith('bluez_'))
+    .then(async ({ stdout }) => {
+      const sink = String(stdout).trim()
+      if (sink.startsWith('bluez_')) return true
+      if (!sink.startsWith('alsa_output.') || !sink.includes('bcm2835')) return false
+      const { stdout: list } = await _execAsync('LC_ALL=C /usr/bin/pactl list sinks')
+      const block = String(list).split(/\n(?=Sink #)/).find((b) => b.includes(`Name: ${sink}\n`)) ?? ''
+      return /alsa\.card_name = "[^"]*Headphones/i.test(block)
+    })
     .catch(() => false)
   btAudio = { at: Date.now(), on }
   return on

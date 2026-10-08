@@ -870,7 +870,12 @@ rm -f /tmp/mupibox-update-failed
 	# Power LED on the Pi's PWM hardware (see led_control.py; the software PWM took about 9 % of a CPU core all the
 	# time): only for GPIO 12/13 and with the analog audio off (it uses the same PWM unit). Active from the next start.
 	LED_PIN=$(/usr/bin/jq -r '.shim.ledPin // empty' ${CONFIG} 2>/dev/null)
-	if { [ "${LED_PIN}" = "12" ] || [ "${LED_PIN}" = "13" ]; } && grep -q '^dtparam=audio=off' "${BOOT_CONFIG}" && ! grep -q '^dtoverlay=pwm' "${BOOT_CONFIG}"; then
+	# (the analog audio shares the PWM unit only on a Pi 1, 2, 3 and Zero - on a Pi 4 or newer the LED gets it also with
+	# the 3.5 mm output switched on, see onboard_audio.sh)
+	PWM_FREE=0
+	grep -q '^dtparam=audio=off' "${BOOT_CONFIG}" && PWM_FREE=1
+	case "${RASPPI}" in *"Raspberry Pi 3"* | *"Raspberry Pi 2"* | *"Raspberry Pi Zero"* | *"Raspberry Pi Model"* | *"Compute Module 3"* | *"Compute Module Rev"*) ;; *) PWM_FREE=1 ;; esac
+	if { [ "${LED_PIN}" = "12" ] || [ "${LED_PIN}" = "13" ]; } && [ "${PWM_FREE}" = "1" ] && ! grep -q '^dtoverlay=pwm' "${BOOT_CONFIG}"; then
 	  echo "dtoverlay=pwm,pin=${LED_PIN},func=4" | tee -a "${BOOT_CONFIG}" >&3 2>&3
 	fi
 

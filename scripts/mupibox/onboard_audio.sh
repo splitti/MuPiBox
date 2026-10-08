@@ -31,6 +31,20 @@ ORDER=/etc/modprobe.d/mupibox-card-order.conf
 CHANGED=0
 
 physical=$(/usr/bin/jq -r '.mupibox.physicalDevice // ""' "${CONFIG}" 2>/dev/null)
+MODEL=$(tr -d '\0' < /proc/device-tree/model 2>/dev/null)
+
+# The Pi 5 and the Zero have no 3.5 mm output: nothing to switch there
+no_jack() { case "${MODEL}" in *"Raspberry Pi 5"* | *"Raspberry Pi 500"* | *"Compute Module 5"* | *"Raspberry Pi Zero"*) return 0 ;; esac; return 1; }
+# On a Pi 1, 2, 3 and Zero the 3.5 mm output and the status LED's hardware PWM (dtoverlay=pwm on GPIO 12/13, see
+# led_control.py) use the same PWM unit (PWM0) - on a Pi 4 the jack has PWM1 of its own. Only these models listed:
+# any other (Pi 4, 400, CM4, unknown) keeps the LED on the hardware PWM.
+pwm_shared() {
+	case "${MODEL}" in
+		*"Raspberry Pi 3"* | *"Raspberry Pi 2"* | *"Raspberry Pi Zero"* | *"Raspberry Pi Model"* | *"Compute Module 3"* | *"Compute Module Rev"*) return 0 ;;
+	esac
+	return 1
+}
+LED_PIN=$(/usr/bin/jq -r '.shim.ledPin // empty' "${CONFIG}" 2>/dev/null)
 
 # dtparam=audio=<on|off> in the lines that count for every Pi (before the first [section] and under [all]); added at
 # the end (under an [all] of its own after another section) when there is none
@@ -63,6 +77,11 @@ audio_on() {
 	if grep -q 'snd_bcm2835\.enable_headphones=0' "${BOOT_CMDLINE}" 2>/dev/null; then
 		sed -i -E 's/[[:space:]]*snd_bcm2835\.enable_headphones=0//' "${BOOT_CMDLINE}" && CHANGED=1
 	fi
+	# the LED's hardware PWM off on the models where it shares the jack's PWM unit: led_control.py falls back to the
+	# software PWM by itself (a little CPU)
+	if pwm_shared && grep -q '^dtoverlay=pwm,' "${BOOT_CONFIG}"; then
+		sed -i '/^dtoverlay=pwm,/d' "${BOOT_CONFIG}" && CHANGED=1
+	fi
 	# ("!": slot 0 is not for this module - the box's own card takes it, the onboard cards the next free ones)
 	if [ "$(cat "${ORDER}" 2>/dev/null)" != "options snd slots=!snd_bcm2835" ]; then
 		echo "options snd slots=!snd_bcm2835" > "${ORDER}" && CHANGED=1
@@ -82,7 +101,16 @@ audio_off() {
 	if [ -f "${ORDER}" ]; then
 		rm -f "${ORDER}" && CHANGED=1
 	fi
+	# the LED back on the hardware PWM (as the update sets it: GPIO 12/13 and the analog audio off)
+	if pwm_shared && { [ "${LED_PIN}" = "12" ] || [ "${LED_PIN}" = "13" ]; } && ! grep -q '^dtoverlay=pwm' "${BOOT_CONFIG}"; then
+		echo "dtoverlay=pwm,pin=${LED_PIN},func=4" >> "${BOOT_CONFIG}" && CHANGED=1
+	fi
 }
+
+if no_jack; then
+	[ "${1:-}" = "status" ] && echo "off"
+	exit 0
+fi
 
 case "${physical}" in
 	rpi-bcm2835-*)

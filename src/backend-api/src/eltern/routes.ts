@@ -75,7 +75,7 @@ import { clearSpotifyBlock } from '../spotify-block'
 import { clearArtistAlbumsMemory } from '../artist-albums-store'
 import { clearMetaCache } from '../spotify-sync/meta-cache'
 import { spotifyLoginAge } from './spotify-auth-age'
-import { btBattery } from '../audio-output'
+import { btBattery, headphonesPlaying } from '../audio-output'
 import {
   REQUESTED_SCOPES,
   buildAuthorizeUrl,
@@ -175,11 +175,8 @@ function readDisplayLanguages(): Record<string, { name?: string }> {
  */
 // Bluetooth audio now: PulseAudio's default output is a Bluetooth device (headphones, a speaker) - then its own
 // maximum volume counts (mupibox.btMaxVolume), see the player's volumeCap()
-function bluetoothAudio(): Promise<boolean> {
-  return new Promise((resolve) =>
-    execFile('/usr/bin/pactl', ['get-default-sink'], { timeout: 3000 }, (err, stdout) => resolve(!err && String(stdout).trim().startsWith('bluez_'))),
-  )
-}
+// (headphones play - Bluetooth or the 3.5 mm output: their own limit counts, see audio-output.ts)
+const bluetoothAudio = (): Promise<boolean> => headphonesPlaying().catch(() => false)
 
 function volumePercent(value: unknown): number | undefined {
   const n = typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : Number.NaN

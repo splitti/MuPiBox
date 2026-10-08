@@ -169,6 +169,17 @@ const boxSink = async () => {
 }
 const boxSinkStrict = async () => boxCardOf(await cardOutputs())?.id ?? null
 
+/**
+ * Headphones play: a Bluetooth device, or the board's 3.5 mm output (its card is "bcm2835 Headphones") - the own limit
+ * for headphones (mupibox.btMaxVolume) counts then, not only the box's maximum (the player does the same).
+ */
+export async function headphonesPlaying(): Promise<boolean> {
+  const def = (await pactl('get-default-sink')).stdout.trim()
+  if (def.startsWith('bluez_')) return true
+  if (!def.startsWith('alsa_output.') || !def.includes('bcm2835')) return false
+  return (await cardOutputs()).find((c) => c.id === def)?.kind === 'jack'
+}
+
 /** Where it plays now: 'box' (or, with several cards, 'card:<sink>') or the Bluetooth device's address */
 export async function currentOutput(): Promise<string> {
   const def = (await pactl('get-default-sink')).stdout.trim()

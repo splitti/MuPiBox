@@ -20,10 +20,11 @@ Hat die Box eine eigene Soundkarte (zum Beispiel den MuPiHAT oder einen HiFiBerr
 
 Danach gibt es mehrere Ausgänge: Im Player öffnet ein Tipp auf die Lautstärke **Hören mit** mit einer Kachel je Ausgang, in der App wählst du bei **Jetzt läuft** unter **Ausgabe**. Die Box merkt sich den gewählten Ausgang auch über einen Neustart. Ohne Wahl spielt sie über die Soundkarte, die oben gewählt ist.
 
-- Wechselst du auf die Buchse, wird sie nicht lauter, als die Box gerade war. Das **Maximum mit Bluetooth** gilt für die Buchse nicht, das **Maximum (Hörschutz)** schon.
+- Wechselst du auf die Buchse, wird sie nicht lauter, als die Box gerade war. Das **Maximum für Kopfhörer** gilt auch für die Buchse, ebenso das **Maximum (Hörschutz)**.
 - Die Box sorgt dafür, dass ihre Soundkarte die erste Karte im System bleibt. Wechselst du die Soundkarte oder schaltest du den MuPiHAT ein oder aus, schaltet sie die Buchse danach wieder ein.
 - Ausschalten stellt alles zurück, wie DietPi es für die Soundkarte eingerichtet hat (ebenfalls nach einem Neustart).
 - Ist der Onboard-Ausgang selbst die Soundkarte, gibt es den Schalter nicht: Die Buchse ist dann ohnehin an.
+- Raspberry Pi 5 und Zero haben keine 3,5-mm-Buchse, dort fehlt der Schalter. Auf einem Raspberry Pi 1 bis 3 teilen sich Buchse und Status-LED (GPIO 12/13) die PWM-Einheit: Mit eingeschalteter Buchse läuft die LED per Software weiter. Ab dem Pi 4 bleibt sie auf der Hardware-PWM.
 
 ## Lautstärke
 
@@ -33,7 +34,7 @@ Danach gibt es mehrere Ausgänge: Im Player öffnet ein Tipp auf die Lautstärke
 | --- | --- |
 | **Lautstärke jetzt** | die aktuelle Lautstärke, 0 bis 100 % |
 | **Maximum (Hörschutz)** | die höchste Lautstärke, die sich überhaupt einstellen lässt, 10 bis 100 %. Gilt für Display, App, Drehregler und Telegram |
-| **Eigene Grenze mit Bluetooth** und **Maximum mit Bluetooth** | ein eigenes Maximum, solange Kopfhörer oder ein Lautsprecher per Bluetooth verbunden sind (siehe unten) |
+| **Eigene Grenze für Kopfhörer** und **Maximum für Kopfhörer** | ein eigenes Maximum, solange über Bluetooth (Kopfhörer oder Lautsprecher) oder die Kopfhörerbuchse gespielt wird (siehe unten) |
 | **Beim Start auf festen Wert setzen** | an: Die Box startet immer mit dem **Wert beim Start**. Aus: Sie behält die Lautstärke von vor dem Ausschalten |
 | **Wert beim Start** | die Startlautstärke, nie höher als das Maximum |
 
@@ -42,7 +43,7 @@ Danach gibt es mehrere Ausgänge: Im Player öffnet ein Tipp auf die Lautstärke
 
 ## Mit Bluetooth
 
-Für Kopfhörer und Lautsprecher per Bluetooth gibt es ein eigenes Maximum, damit Kopfhörer nicht so laut werden dürfen wie ein Lautsprecher. Schalte dafür **Eigene Grenze mit Bluetooth** ein und stelle **Maximum mit Bluetooth** ein. Ist die Box beim Verbinden lauter, geht sie gleich auf diesen Wert herunter ([Bluetooth](bluetooth.md)).
+Für Kopfhörer und Lautsprecher per Bluetooth und für die Kopfhörerbuchse gibt es ein eigenes Maximum, damit Kopfhörer nicht so laut werden dürfen wie der Lautsprecher der Box. Schalte dafür **Eigene Grenze für Kopfhörer** ein und stelle **Maximum für Kopfhörer** ein. Ist die Box beim Verbinden lauter, geht sie gleich auf diesen Wert herunter ([Bluetooth](bluetooth.md)).
 
 ## Lautstärke angleichen
 
