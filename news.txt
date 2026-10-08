@@ -24,7 +24,7 @@
 <b>Audio</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
-<li id='linews' class='linews'>Several sound outputs (by Andreas): next to the box's sound card the Raspberry Pi's 3.5 mm output, HDMI or a USB DAC are outputs of their own - in 'Listen with' on the display (one tile each, also without Bluetooth) and in the app's output row; the capsule in the player shows where it plays (speaker, headphones, Bluetooth).</li>
+<li id='linews' class='linews'>Several sound outputs (by Andreas): next to the box's sound card the Raspberry Pi's 3.5 mm output, HDMI or a USB DAC are outputs of their own - in 'Listen with' on the display (one tile each, also without Bluetooth) and in the app's output row; the capsule in the player keeps its two fields (box | headphones, the one that plays highlighted), and a tap on it opens Listen with instead of switching at once (that tried headphones that were off and only said not found).</li>
 <li id='linews' class='linews'>Headphone jack next to the sound card: Settings &gt; Audio &gt; Sound card &gt; '3.5 mm output as well' keeps the board's 3.5 mm output on (DietPi switches it off with another card) - after a restart. The box's own card stays card 0, 'the box' is always the chosen card (PulseAudio took the jack as the default after the start, the speaker stayed silent), the chosen output is kept across a restart, a switch to the jack is never louder than the box was, and after a change of the sound card or the MuPiHAT the jack is switched on again. Switching it off puts DietPi's settings back.</li>
 </ul>
 <b>MuPiHAT</b>
