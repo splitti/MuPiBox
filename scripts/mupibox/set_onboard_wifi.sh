@@ -9,7 +9,10 @@
 # last line of config.txt had no line break, the overlay was glued to it ("dtoverlay=i2s-mmapdtoverlay=disable-wifi"),
 # which broke both overlays, and switching on again removed the LAST line of the file, whatever it was.
 
-CONFIG="${CONFIG:-/boot/config.txt}"
+# (/boot/firmware/config.txt on newer DietPi, v10 / Debian 13)
+DEFAULT_CONFIG=/boot/config.txt
+[ -f /boot/firmware/config.txt ] && DEFAULT_CONFIG=/boot/firmware/config.txt
+CONFIG="${CONFIG:-${DEFAULT_CONFIG}}"
 LINE="dtoverlay=disable-wifi"
 
 [ -f "${CONFIG}" ] || exit 1

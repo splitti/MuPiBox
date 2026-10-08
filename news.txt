@@ -35,6 +35,7 @@
 <b>Installation</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Newer DietPi (v10, Debian 13 'Trixie') keeps the boot files in /boot/firmware/: the update, the app (system options, display rotation, onboard WiFi), the player and the admin interface now find config.txt and cmdline.txt there as well (they wrote to /boot/config.txt, which the Pi does not read there; pointed out by Markus). A fresh install no longer shows the DietPi website on the display (installing Chromium replaced the kiosk script; reported by Markus), and switching the onboard WiFi on again no longer removes the last line of config.txt.</li>
 <li id='linews' class='linews'>The setup script takes the channel as its argument: on a fresh DietPi the development version installs directly with <code>cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup.sh | sudo bash -s -- dev</code> (without an argument it stays the stable version; asked for by Markus).</li>
 </ul>
 <b>Manual</b>

@@ -1,4 +1,5 @@
 <?php
+	require_once __DIR__ . '/includes/boot.php';
 	// MED-16: same as service.php — csrf_check() before any output.
 	require_once __DIR__ . '/includes/csrf.php';
 	csrf_check();
@@ -25,14 +26,14 @@
 	if( $_POST['change_warnings'] == "disable" )
 		{
 		// only the line of this setting goes (it used to cut off the last line of config.txt, whatever it was)
-		$command = "sudo sed -i '/^avoid_warnings=1$/d' /boot/config.txt";
+		$command = "sudo sed -i '/^avoid_warnings=1$/d' {$bootConfig}";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Warning Icons disabled [restart necessary]</li>";
 		}
 	else if( $_POST['change_warnings'] == "enable" )
 		{
-		$command = "echo 'avoid_warnings=1' | sudo tee -a /boot/config.txt";
+		$command = "echo 'avoid_warnings=1' | sudo tee -a {$bootConfig}";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Warning Icons enabled [restart necessary]</li>";
@@ -40,14 +41,14 @@
 
 	if( $_POST['change_turbo'] == "disable" )
 		{
-		$command = "sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'initial_turbo' 'initial_turbo=0' /boot/config.txt\"";
+		$command = "sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'initial_turbo' 'initial_turbo=0' {$bootConfig}\"";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Inital Turbo disabled</li>";
 		}
 	else if( $_POST['change_turbo'] == "enable" )
 		{
-		$command = "sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'initial_turbo' 'initial_turbo=30' /boot/config.txt\"";
+		$command = "sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'initial_turbo' 'initial_turbo=30' {$bootConfig}\"";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Inital Turbo enabled</li>";
@@ -89,7 +90,7 @@
 
 	if( $_POST['change_sd'] == "activate for next boot" )
 		{
-		$command = "echo 'dtoverlay=sdtweak,overclock_50=100' | sudo tee -a /boot/config.txt";
+		$command = "echo 'dtoverlay=sdtweak,overclock_50=100' | sudo tee -a {$bootConfig}";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>SD Overclocking activated [restart necessary]</li>";
@@ -97,7 +98,7 @@
 	else if( $_POST['change_sd'] == "disable" )
 		{
 		// only the line of this setting goes (it used to cut off the last line of config.txt, whatever it was)
-		$command = "sudo sed -i '/^dtoverlay=sdtweak,overclock_50=100$/d' /boot/config.txt";
+		$command = "sudo sed -i '/^dtoverlay=sdtweak,overclock_50=100$/d' {$bootConfig}";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>SD Overclocking disabled [restart necessary]</li>";
@@ -117,7 +118,7 @@
 		$change_netboot = "activate for next boot";
 		}
 
-	$command = "sudo /usr/bin/cat /boot/config.txt | /usr/bin/grep 'dtoverlay=sdtweak,overclock_50=100'";
+	$command = "sudo /usr/bin/cat {$bootConfig} | /usr/bin/grep 'dtoverlay=sdtweak,overclock_50=100'";
 	exec($command, $sdoutput, $sdresult );
 
 	if( $sdoutput[0] )
@@ -172,7 +173,7 @@
 			</p>
 			<p>
 			<?php
-			$command = "cat /boot/config.txt | grep initial_turbo | cut -d '=' -f 2";
+			$command = "cat {$bootConfig} | grep initial_turbo | cut -d '=' -f 2";
 			$turbo = exec($command, $output);
 			echo "Turbo seconds: <b>".$turbo."</b>";
 			if($turbo == 0)
@@ -227,7 +228,7 @@
 			</p>
 			<p>
 			<?php
-			$command = "cat /boot/config.txt | grep 'avoid_warnings=1'";
+			$command = "cat {$bootConfig} | grep 'avoid_warnings=1'";
 			$warnings = exec($command, $output);
 			if($warnings == "")
 				{

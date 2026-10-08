@@ -12,6 +12,7 @@ import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { withLock } from '../file-lock'
 import { requireCsrf, requireSession } from './middleware'
+import { bootConfigPath } from './boot-paths'
 
 export interface AdminDeps {
   getMupiboxConfig: () => MupiboxConfig | undefined
@@ -138,7 +139,7 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
   /* ---- system options ---- */
 
   router.get('/system-options', requireSession, async (_req, res) => {
-    const configTxt = await readText('/boot/config.txt')
+    const configTxt = await readText(await bootConfigPath())
     const dietpiTxt = await readText('/boot/dietpi.txt')
     const governors = (await readText('/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors')).trim().split(/\s+/).filter(Boolean)
     const waitNet = (await run('sudo', ['test', '-f', '/etc/systemd/system/dietpi-postboot.service.d/dietpi.conf'], 5000)).ok
@@ -160,19 +161,22 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
     const { key, value } = (req.body ?? {}) as { key?: unknown; value?: unknown }
     const on = value === true
     let r: { ok: boolean } = { ok: false }
+    const bootConfig = await bootConfigPath()
+    // (a line added once: the file is $0, the line $1)
+    const addLine = (line: string) => run('sudo', ['sh', '-c', 'grep -qx "$1" "$0" || echo "$1" >> "$0"', bootConfig, line])
     switch (key) {
       case 'ocSd':
         r = on
-          ? await run('sudo', ['sh', '-c', "grep -qx 'dtoverlay=sdtweak,overclock_50=100' /boot/config.txt || echo 'dtoverlay=sdtweak,overclock_50=100' >> /boot/config.txt"])
-          : await run('sudo', ['sed', '-i', '/^dtoverlay=sdtweak,overclock_50=100$/d', '/boot/config.txt'])
+          ? await addLine('dtoverlay=sdtweak,overclock_50=100')
+          : await run('sudo', ['sed', '-i', '/^dtoverlay=sdtweak,overclock_50=100$/d', bootConfig])
         break
       case 'noWarn':
         r = on
-          ? await run('sudo', ['sh', '-c', "grep -qx 'avoid_warnings=1' /boot/config.txt || echo 'avoid_warnings=1' >> /boot/config.txt"])
-          : await run('sudo', ['sed', '-i', '/^avoid_warnings=1$/d', '/boot/config.txt'])
+          ? await addLine('avoid_warnings=1')
+          : await run('sudo', ['sed', '-i', '/^avoid_warnings=1$/d', bootConfig])
         break
       case 'turbo':
-        r = await dietpiInject('initial_turbo', `initial_turbo=${on ? 30 : 0}`, '/boot/config.txt')
+        r = await dietpiInject('initial_turbo', `initial_turbo=${on ? 30 : 0}`, bootConfig)
         break
       case 'waitNet':
         r = await run('sudo', ['/boot/dietpi/func/dietpi-set_software', 'boot_wait_for_network', on ? '1' : '0'], 60000)

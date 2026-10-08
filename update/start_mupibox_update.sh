@@ -26,6 +26,12 @@ else
 	RELEASE="stable"
 fi
 
+# The Pi's boot files: /boot/firmware/ on newer DietPi (v10, Debian 13 "Trixie"), /boot/ before (as autosetup.sh)
+BOOT_CONFIG="/boot/config.txt"
+BOOT_CMDLINE="/boot/cmdline.txt"
+[ -f /boot/firmware/config.txt ] && BOOT_CONFIG="/boot/firmware/config.txt"
+[ -f /boot/firmware/cmdline.txt ] && BOOT_CMDLINE="/boot/firmware/cmdline.txt"
+
 # Preflight: this update replaces jq with a freshly downloaded binary and rewrites the
 # configuration with jq. Download it FIRST, so a network problem (e.g. a
 # DNS failure) stops the update before anything on the box has been changed. Before,
@@ -667,7 +673,7 @@ rm -f /tmp/mupibox-update-failed
 	before=$(date +%s)
 	# initramfs-splash is not used (config.txt does not load it; the start pictures come from fbv, splash_screen.sh):
 	# its image and settings file go, unless the box's config.txt loads it after all
-	if ! grep -q '^initramfs' /boot/config.txt 2>/dev/null; then
+	if ! grep -q '^initramfs' "${BOOT_CONFIG}" 2>/dev/null; then
 		rm -f /boot/initramfs.img /boot/splash.txt >&3 2>&3
 	fi
 	cp ${MUPI_SRC}/media/images/goodbye.png /home/dietpi/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
@@ -825,29 +831,29 @@ rm -f /tmp/mupibox-update-failed
 	/usr/bin/chown dietpi:dietpi ${MUPI_SRC}/config/templates/crontab.template >&3 2>&3
 	sudo -H -u dietpi bash -c "/usr/bin/crontab ${MUPI_SRC}/config/templates/crontab.template"  >&3 2>&3
 
-	if grep -q '^dtparam=gpio=on' /boot/config.txt; then
+	if grep -q '^dtparam=gpio=on' "${BOOT_CONFIG}"; then
 	  echo -e "dtparam=gpio=on already set" >&3 2>&3
 	else
-	  echo '' | tee -a /boot/config.txt >&3 2>&3
-	  echo 'dtparam=gpio=on' | tee -a /boot/config.txt >&3 2>&3
+	  echo '' | tee -a "${BOOT_CONFIG}" >&3 2>&3
+	  echo 'dtparam=gpio=on' | tee -a "${BOOT_CONFIG}" >&3 2>&3
 	fi
 
 	# gpio-poweroff only when it is in no dtoverlay line yet (also not in one that loads further overlays, e.g. a
 	# display driver: a second line made such boxes hang at shutdown), on the pin set for the OnOff SHIM
-	if grep -qE '^[[:space:]]*dtoverlay=.*gpio-poweroff' /boot/config.txt; then
+	if grep -qE '^[[:space:]]*dtoverlay=.*gpio-poweroff' "${BOOT_CONFIG}"; then
 	  echo -e "dtoverlay=gpio-poweroff already set" >&3 2>&3
 	else
 	  POWEROFF_PIN=$(/usr/bin/jq -r '.shim.poweroffPin // "4"' ${CONFIG} 2>/dev/null)
 	  [[ "${POWEROFF_PIN}" =~ ^[0-9]+$ ]] || POWEROFF_PIN=4
-	  echo '' | tee -a /boot/config.txt >&3 2>&3
-	  echo "dtoverlay=gpio-poweroff,gpiopin=${POWEROFF_PIN},active_low=1" | tee -a /boot/config.txt >&3 2>&3
+	  echo '' | tee -a "${BOOT_CONFIG}" >&3 2>&3
+	  echo "dtoverlay=gpio-poweroff,gpiopin=${POWEROFF_PIN},active_low=1" | tee -a "${BOOT_CONFIG}" >&3 2>&3
 	fi
 
 	# Power LED on the Pi's PWM hardware (see led_control.py; the software PWM took about 9 % of a CPU core all the
 	# time): only for GPIO 12/13 and with the analog audio off (it uses the same PWM unit). Active from the next start.
 	LED_PIN=$(/usr/bin/jq -r '.shim.ledPin // empty' ${CONFIG} 2>/dev/null)
-	if { [ "${LED_PIN}" = "12" ] || [ "${LED_PIN}" = "13" ]; } && grep -q '^dtparam=audio=off' /boot/config.txt && ! grep -q '^dtoverlay=pwm' /boot/config.txt; then
-	  echo "dtoverlay=pwm,pin=${LED_PIN},func=4" | tee -a /boot/config.txt >&3 2>&3
+	if { [ "${LED_PIN}" = "12" ] || [ "${LED_PIN}" = "13" ]; } && grep -q '^dtparam=audio=off' "${BOOT_CONFIG}" && ! grep -q '^dtoverlay=pwm' "${BOOT_CONFIG}"; then
+	  echo "dtoverlay=pwm,pin=${LED_PIN},func=4" | tee -a "${BOOT_CONFIG}" >&3 2>&3
 	fi
 
 	usermod -aG dialout dietpi >&3 2>&3

@@ -3513,7 +3513,9 @@ app.use((req, res) => {
   } else if (command.name === 'albumstop') cmdCall('bash /usr/local/bin/mupibox/albumstop.sh')
   else if (command.name === 'enablewifi')
     cmdCall(
-      "sudo sed -i -e 's/dtoverlay=disable-wifi//g' /boot/config.txt && sudo head -n -1 /boot/config.txt > /tmp/config.txt && sudo mv /tmp/config.txt /boot/config.txt && sudo su - -c '/usr/local/bin/mupibox/restart.sh &'",
+      // (set_onboard_wifi.sh finds the boot configuration on every DietPi and takes only its own line out - this removed
+      // the LAST line of /boot/config.txt, whatever it was)
+      "sudo /usr/local/bin/mupibox/set_onboard_wifi.sh on && sudo su - -c '/usr/local/bin/mupibox/restart.sh &'",
     )
 
   else if (command.name.includes('localtrack:')) {

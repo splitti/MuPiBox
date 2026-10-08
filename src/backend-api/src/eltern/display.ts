@@ -15,6 +15,7 @@ import { requireCsrf, requireSession } from './middleware'
 import { episodeStateSettings } from '../episode-state'
 import { applyNightDim, nightDimmed, nightDimOf, parseNightDim } from './night-dim'
 import { CUSTOM_THEME_CSS, customThemeCss, customThemeOf } from './custom-theme'
+import { bootConfigPath } from './boot-paths'
 
 export interface DisplayDeps {
   getMupiboxConfig: () => MupiboxConfig | undefined
@@ -68,7 +69,7 @@ async function readBrightness(): Promise<number | null> {
 async function readRotations(): Promise<Record<string, string>> {
   let text = ''
   try {
-    text = await fsp.readFile('/boot/config.txt', 'utf8')
+    text = await fsp.readFile(await bootConfigPath(), 'utf8')
   } catch {
     // not a Raspberry Pi (development)
   }
@@ -215,9 +216,10 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
       await applyNightDim(deps.getMupiboxConfig(), true)
       result.dimmed = nightDimmed()
     }
-    // rotation: into /boot/config.txt as the admin interface does (DietPi's G_CONFIG_INJECT); needs a restart
+    // rotation: into config.txt as the admin interface does (DietPi's G_CONFIG_INJECT); needs a restart
+    const bootConfig = await bootConfigPath()
     for (const [key, value] of Object.entries(rotation)) {
-      await run('sudo', ['su', '-', 'dietpi', '-c', `. /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT '${key}=' '${key}=${value}' /boot/config.txt`], 30000)
+      await run('sudo', ['su', '-', 'dietpi', '-c', `. /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT '${key}=' '${key}=${value}' ${bootConfig}`], 30000)
       result.reboot = true
     }
     if (tts !== undefined) {

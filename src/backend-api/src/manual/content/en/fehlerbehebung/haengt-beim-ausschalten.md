@@ -29,6 +29,8 @@ Sign in to the box via SSH (or open a terminal in the DietPi dashboard) and look
 grep -n gpio-poweroff /boot/config.txt
 ```
 
+On newer systems (DietPi with Debian 13 “Trixie”) the file is at `/boot/firmware/config.txt`. Use that path in all commands on this page then.
+
 - **One** line (whether standalone or as a parameter of another overlay): fine, the cause lies elsewhere.
 - **Two or more** lines with `gpio-poweroff`: keep the line that belongs to your display and remove the additional standalone line `dtoverlay=gpio-poweroff,gpiopin=4,active_low=1`. You can edit the file with `sudo nano /boot/config.txt`.
 

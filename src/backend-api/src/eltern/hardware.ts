@@ -7,6 +7,7 @@ import { promises as fsp } from 'node:fs'
 import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { requireCsrf, requireSession } from './middleware'
+import { bootConfigPath } from './boot-paths'
 
 export interface HardwareDeps {
   getMupiboxConfig: () => MupiboxConfig | undefined
@@ -18,15 +19,6 @@ const PINS = ['4', '12', '13', '17', '18', '21', '22', '23', '24', '25', '27']
 // the I2S driver of the MAX98357A amplifier, as enable_mupihat.sh writes it
 const AMP_DRIVER = ['dtoverlay=max98357a,sdmode-pin=16', 'dtoverlay=i2s-mmap']
 
-// The Pi's boot configuration: /boot/firmware/config.txt on newer DietPi, /boot/config.txt before
-async function bootConfigPath(): Promise<string> {
-  try {
-    await fsp.access('/boot/firmware/config.txt')
-    return '/boot/firmware/config.txt'
-  } catch {
-    return '/boot/config.txt'
-  }
-}
 
 // The lines of the boot configuration that count for every Pi: before the first [section] and under [all] - one under
 // [pi5] (or [cm4], [gpio4=1], ...) does nothing on a Pi 4. And the section a line added at the end would land in.
