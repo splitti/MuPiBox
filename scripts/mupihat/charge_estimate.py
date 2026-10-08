@@ -69,6 +69,15 @@ class ChargeEstimator:
     # again at 8.0-8.17 V of 8.30, whenever the box took more and the charge current broke down for a moment - at 80 %
     END_NEAR_LIMIT_MV = 100
     CV_CONFIRM_READINGS = 3
+    # A real end comes on a weak input straight out of the CC phase (no CV), and the pack then drops at once to 8.14-8.17 V
+    # of 8.30: the voltage of the Done is no measure then, so it also counts when the charge was near the limit this short
+    # a time before - or when the chip holds the Done this long and the pack stays above its recharge level. Near the end
+    # the chip goes back and forth between CC and Done for a minute or two at a time: the Done after the near limit counts
+    # only when it stays END_CONFIRM_S
+    END_RECENT_S = 600
+    END_CONFIRM_S = 300
+    END_HOLD_S = 1800
+    END_HOLD_NEAR_MV = 200
 
     def __init__(self, capacity_mah=None, iterm_ma=200, clock=time.monotonic, wall=time.time, state_file=None):
         self.capacity = capacity_mah if capacity_mah and capacity_mah > 0 else None
@@ -80,6 +89,8 @@ class ChargeEstimator:
         self._last_t = None
         self._cv_streak = 0
         self._end_streak = 0
+        self._near_end_t = None  # when the pack was last near the limit while it charged
+        self._done_since = None  # since when the chip reports the end without a break
         self._after = None  # [time the last charge ended, percent it reached, mAh taken from the pack since]
         self.reset_session()
         self._restore()
@@ -92,6 +103,7 @@ class ChargeEstimator:
 
     def reset_session(self):
         self.active = False
+        self.full = False  # True: the chip ended this charge once (a top-up after it stays at 100 %)
         self.start_uncertain = False  # True: the starting point is only the voltage (nothing known from before the charge)
         self.start_pct = 0.0
         self.charged_mah = 0.0
@@ -130,12 +142,21 @@ class ChargeEstimator:
         # goes back within a charge, it stayed at 99 % from 50 % on. Taken only near the charge limit and when it stays;
         # until then the reading is left out (the percent and the time stay as they were).
         if ph in ("topoff", "done"):
+            if self._done_since is None:
+                self._done_since = now
             near_limit = vbat_mv is None or vreg_mv is None or vbat_mv >= vreg_mv - self.END_NEAR_LIMIT_MV
-            self._end_streak = self._end_streak + 1 if near_limit else 0
+            recent = (self._near_end_t is not None and self._done_since - self._near_end_t <= self.END_RECENT_S
+                      and now - self._done_since >= self.END_CONFIRM_S)
+            held = now - self._done_since >= self.END_HOLD_S and vbat_mv is not None and vreg_mv is not None and vbat_mv >= vreg_mv - self.END_HOLD_NEAR_MV
+            self._end_streak = self._end_streak + 1 if (near_limit or recent or held) else 0
             if self._end_streak < self.CV_CONFIRM_READINGS:
                 return
         else:
             self._end_streak = 0
+            self._done_since = None
+            if (ph in CHARGING_PHASES and ibat_ma is not None and ibat_ma > self.MIN_CHARGE_MA and vbat_mv is not None
+                    and vreg_mv is not None and vbat_mv >= vreg_mv - self.END_NEAR_LIMIT_MV):
+                self._near_end_t = now
         self.phase = ph
         charging = ph in CHARGING_PHASES and ibat_ma is not None and ibat_ma > self.MIN_CHARGE_MA
 
@@ -173,10 +194,17 @@ class ChargeEstimator:
             return
 
         self.settling = False
+        if self.full and ph != "done":
+            # the chip charges again after the end (the pack sank a little, or the box took more for a moment): still full
+            self.phase = "done"
+            self.percent = 100.0
+            self.eta_min = None
+            return
         if ph == "done":
             self.percent = 100.0
             self.eta_min = 0
             self.active = True
+            self.full = True
             self.start_uncertain = False
             self._save()
             return
@@ -287,7 +315,7 @@ class ChargeEstimator:
         if not self._state_file:
             return
         try:
-            data = {"wall": self._wall(), "active": self.active, "start_pct": self.start_pct, "charged_mah": self.charged_mah, "cc_peak": self.cc_peak, "slow": self.slow, "cv_i0": self.cv_i0, "percent": self.percent, "start_uncertain": self.start_uncertain}
+            data = {"wall": self._wall(), "active": self.active, "start_pct": self.start_pct, "charged_mah": self.charged_mah, "cc_peak": self.cc_peak, "slow": self.slow, "cv_i0": self.cv_i0, "percent": self.percent, "start_uncertain": self.start_uncertain, "full": self.full}
             tmp = self._state_file + ".tmp"
             with open(tmp, "w") as f:
                 json.dump(data, f)
@@ -310,8 +338,9 @@ class ChargeEstimator:
                 self.cv_i0 = data.get("cv_i0")
                 self.percent = data.get("percent")
                 self.start_uncertain = bool(data.get("start_uncertain", False))
+                self.full = bool(data.get("full", False))
                 # (the phase of the charge as well: a reading left out right after the restart - a false "Done" - would
                 # else show the voltage, which reads high while it charges)
-                self.phase = "cv" if self.cv_i0 else "cc"
+                self.phase = "done" if self.full else "cv" if self.cv_i0 else "cc"
         except (OSError, ValueError, KeyError, TypeError):
             pass

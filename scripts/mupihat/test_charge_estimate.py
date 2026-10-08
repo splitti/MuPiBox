@@ -158,6 +158,54 @@ for _ in range(3):
         clock[0] += STEP
         weak.update(0, "Charge Termination Done", 100, 8050, 8300)
 assert weak.percent < 85, f"a Done far below the limit moved the percent to {weak.percent:.1f}"
+# ... and a Done that stays far below the limit (under the recharge level) stays no end, however long
+for _ in range(720):
+    clock[0] += STEP
+    weak.update(0, "Charge Termination Done", 100, 8050, 8300)
+assert weak.phase != "done", "a long Done at 8.05 V of 8.30 should not count as full"
+
+# the real end on a weak input: straight out of CC at 8.26 V, then Done - and the pack drops to 8.15 V at once
+real = ChargeEstimator(capacity_mah=15000, iterm_ma=ITERM, clock=lambda: clock[0], wall=lambda: clock[0])
+for _ in range(60):
+    clock[0] += STEP
+    real.update(-650, "Not Charging", 70, 7700, 8300)
+for _ in range(240):
+    clock[0] += STEP
+    real.update(580, "Fast charge (CC mode)", 100, 8250, 8300)
+for _ in range(3):  # near the end it goes back and forth: a minute of Done, then CC again - no end yet
+    for _ in range(12):
+        clock[0] += STEP
+        real.update(0, "Charge Termination Done", 100, 8120, 8300)
+    assert real.phase != "done", "a Done of a minute between CC readings should not count yet"
+    for _ in range(24):
+        clock[0] += STEP
+        real.update(560, "Fast charge (CC mode)", 100, 8225, 8300)
+for _ in range(70):
+    clock[0] += STEP
+    real.update(0, "Charge Termination Done", 100, 8146, 8300)
+assert real.phase == "done" and real.percent == 100.0, f"the end after 8.25 V was not taken: {real.phase} {real.percent}"
+# the chip charges again a little later: it stays full
+for _ in range(60):
+    clock[0] += STEP
+    real.update(600, "Fast charge (CC mode)", 100, 8250, 8300)
+assert real.phase == "done" and real.percent == 100.0 and real.eta_min is None, "a top-up after the end should stay full"
+# the cable out: what was reached (100 %) less what was used
+for _ in range(12):
+    clock[0] += STEP
+    real.update(-650, "Not Charging", 95, 8000, 8300)
+assert real.settling and 99 < real.percent <= 100, f"after the end and the cable out: {real.percent}"
+
+# the same end with nothing known from before (the service restarted after the Done): the Done held for half an hour
+# above the recharge level counts
+late_end = ChargeEstimator(capacity_mah=15000, iterm_ma=ITERM, clock=lambda: clock[0], wall=lambda: clock[0])
+for _ in range(300):
+    clock[0] += STEP
+    late_end.update(0, "Charge Termination Done", 100, 8162, 8300)
+assert late_end.phase != "done", "a Done far from the limit should not count at once"
+for _ in range(100):
+    clock[0] += STEP
+    late_end.update(0, "Charge Termination Done", 100, 8162, 8300)
+assert late_end.phase == "done" and late_end.percent == 100.0, "a Done held for half an hour at 8.16 V should count"
 
 # the cable out after a charge: the voltage still reads high (90 %), the box shows what the charge reached, less what
 # it used - and the voltage again only after the pack has settled
