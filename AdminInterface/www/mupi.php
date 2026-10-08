@@ -331,7 +331,8 @@
 	$data["mupibox"]["physicalDevice"]=$_POST['audio'];
 	$command = "sudo /boot/dietpi/func/dietpi-set_hardware soundcard " . escapeshellarg($_POST['audio']);
 	$change_soundcard = exec($command, $output, $change_soundcard );
-	$CHANGE_TXT=$CHANGE_TXT."<li>Soundcard changed to  ".$data["mupibox"]["physicalDevice"]."x</li>";
+	$soundcard_changed = true;
+	$CHANGE_TXT=$CHANGE_TXT."<li>Soundcard changed to ".$data["mupibox"]["physicalDevice"]."</li>";
 	$change=2;
 	}
  // A valid hostname only (RFC 1123 label) - the value went unchecked into a root shell.
@@ -720,6 +721,12 @@ if( $_POST['fan_control'] )
   {
    save_mupiboxconfig($data);
    exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
+   // DietPi blocks the board's 3.5 mm output again with another card: on again when it was switched on in the app
+   // (after the config is saved - the script goes by the new card; as the app's eltern/hardware.ts)
+   if( !empty($soundcard_changed) )
+    {
+    exec("sudo /usr/local/bin/mupibox/onboard_audio.sh reapply");
+    }
   }
 
 $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
