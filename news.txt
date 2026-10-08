@@ -42,6 +42,7 @@
 <b>Installation</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Restoring a backup (found by hyperbit on a fresh install): what the configuration switches on but lives outside it is now set up as well - the MuPiHAT (it showed as active in the app, while the battery page found no HAT until it was switched off and on), fan, rotary encoder and the 3.5 mm output; and the backup holds the own theme's background picture.</li>
 <li id='linews' class='linews'>A button of your own on gpio-shutdown (issue #175, Markus): installation and update no longer add gpio-poweroff next to it - with both the Pi did not start from the button any more, and every update put the line back.</li>
 <li id='linews' class='linews'>MQTT: an error in the service's loop no longer ends it with a NameError that hid the real error (issue #154) - it is logged with its cause and the next round follows.</li>
 <li id='linews' class='linews'>Newer DietPi (v10, Debian 13 'Trixie') keeps the boot files in /boot/firmware/: the update, the app (system options, display rotation, onboard WiFi), the player and the admin interface now find config.txt and cmdline.txt there as well (they wrote to /boot/config.txt, which the Pi does not read there; pointed out by Markus). A fresh install no longer shows the DietPi website on the display (installing Chromium replaced the kiosk script; reported by Markus), and switching the onboard WiFi on again no longer removes the last line of config.txt.</li>

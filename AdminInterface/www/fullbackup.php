@@ -9,5 +9,5 @@ require __DIR__ . '/includes/zip_download.php';
 mupibox_send_zip(
 	'full_backup.zip',
 	'-r',
-	'/home/dietpi/MuPiBox/media/* /etc/mupibox/mupiboxconfig.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json'
+	'/home/dietpi/MuPiBox/media/* /etc/mupibox/mupiboxconfig.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json /home/dietpi/MuPiBox/themes/custom-bg.jpg'
 );

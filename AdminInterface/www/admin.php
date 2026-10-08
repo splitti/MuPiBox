@@ -86,8 +86,9 @@
 				$allowedExactFiles = [
 					'etc/mupibox/mupiboxconfig.json',
 					'home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json',
+					'home/dietpi/MuPiBox/themes/custom-bg.jpg',
 				];
-				$allowedExactDirs = ['etc/', 'etc/mupibox/', 'home/', 'home/dietpi/', 'home/dietpi/MuPiBox/',
+				$allowedExactDirs = ['etc/', 'etc/mupibox/', 'home/', 'home/dietpi/', 'home/dietpi/MuPiBox/', 'home/dietpi/MuPiBox/themes/',
 					'home/dietpi/.mupibox/', 'home/dietpi/.mupibox/Sonos-Kids-Controller-master/',
 					'home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/',
 					'home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/'];
@@ -157,6 +158,9 @@
 				$change_hostname = exec($command, $output, $change_hostname );
 				$command = "sudo su dietpi -c '/usr/local/bin/mupibox/./set_hostname.sh'";
 				exec($command);
+
+				// What the restored config switches on but lives outside it (MuPiHAT, fan, rotary encoder ...)
+				exec("sudo /usr/local/bin/mupibox/apply_restored_settings.sh >> /tmp/restore.log 2>&1");
 
 				$command = "sudo rm " . escapeshellarg($target_file);
 				exec($command, $output, $result );
