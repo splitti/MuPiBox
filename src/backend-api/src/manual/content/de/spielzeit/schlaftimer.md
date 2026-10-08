@@ -26,6 +26,9 @@ In den letzten 20 Sekunden vor dem Ende blendet die Box die Lautstärke langsam 
 > [!NOTE]
 > Auch nach dem Ausschalten durch den Timer muss die Box am Gerät wieder eingeschaltet werden ([Neu starten und Ausschalten](../wartung/neustart.md)).
 
-## Automatisch ausschalten
+## Automatisch ausschalten und Display
 
-Unabhängig vom Schlaftimer schaltet sich die Box aus, wenn lange nichts gehört wird: **Einstellungen › Akku & Strom › Automatisch ausschalten**, einstellbar bis 300 Minuten, 0 = nie (so ist es nach der Installation eingestellt) ([Akku, MuPiHAT und Ausschalter](../hardware/strom.md)).
+Unabhängig vom Schlaftimer schaltet sich die Box aus, wenn lange nichts gehört wird. Das und **Display aus nach** stellst du gleich hier auf der Seite **Spielzeit** in der Karte **Ausschalten** ein, damit alle Zeiten an einem Ort sind. Dieselben Einstellungen stehen auch unter **Einstellungen › Akku & Strom › Automatisch ausschalten** und **Display & Bedienung › Display**.
+
+- **Box aus nach … ohne Wiedergabe**: bis 300 Minuten, 0 = nie (so ist es nach der Installation eingestellt) ([Akku, MuPiHAT und Ausschalter](../hardware/strom.md)).
+- **Display aus nach**: so lange ohne Bedienung am Display, dann wird es dunkel. 0 = nie.

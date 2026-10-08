@@ -181,6 +181,36 @@
      ]
     },
     {
+     "title": "Ausschalten",
+     "help": "Dieselben Einstellungen wie unter Akku & Strom › Automatisch ausschalten und Display & Bedienung › Display.",
+     "items": [
+      {
+       "type": "slider",
+       "label": "Box aus nach … ohne Wiedergabe",
+       "key": "idleOff",
+       "default": 240,
+       "help": "0 = nie. Die Box prüft alle 10 Sekunden, ob etwas läuft.",
+       "min": 0,
+       "max": 300,
+       "step": 5,
+       "unit": " min",
+       "zero": "Nie"
+      },
+      {
+       "type": "slider",
+       "label": "Display aus nach",
+       "key": "dispOff",
+       "default": 10,
+       "help": "Ohne Bedienung am Display. 0 = nie.",
+       "min": 0,
+       "max": 120,
+       "step": 1,
+       "unit": " min",
+       "zero": "Nie"
+      }
+     ]
+    },
+    {
      "title": "Tageslimits",
      "help": "Minuten pro Wochentag. 0 = an diesem Tag gesperrt.",
      "items": [

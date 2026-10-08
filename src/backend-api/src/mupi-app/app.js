@@ -1562,7 +1562,13 @@ async function listenedToday() {
 }
 
 async function loadCaps() {
-  const [cfg, st, sleep] = await Promise.all([api(`${API}/caps-config`), api('/api/playtime'), api(`${API}/sleeptimer`)])
+  const [cfg, st, sleep, power] = await Promise.all([api(`${API}/caps-config`), api('/api/playtime'), api(`${API}/sleeptimer`), api(`${API}/power-config`)])
+  // (the card "Ausschalten": the same values as the pages Automatisch ausschalten and Display - wish of hyperbit, all
+  // the times in one place)
+  if (power.ok) {
+    state.values.set('idleOff', Number(power.body.timeout?.idlePiShutdown ?? power.body.idlePiShutdown ?? 0))
+    state.values.set('dispOff', Number(power.body.idleDisplayOff ?? power.body.timeout?.idleDisplayOff ?? 10))
+  }
   if (!cfg.ok) throw new Error(`caps-config ${cfg.status}`)
   caps.config = cfg.body
   caps.status = st.ok ? st.body : null
@@ -9234,14 +9240,24 @@ const isSharesSection = (s) => (s.items ?? []).some((it) => it.target === 'freig
 const CONTROLLERS = {
   spielzeit: {
     load: loadCaps,
+    // ("Display aus nach" in the steps of its own page)
+    sections: (page) => page.sections.map((sec) => (sec.title === 'Ausschalten' ? { ...sec, items: sec.items.map((it) => (it.key === 'dispOff' ? { ...it, stops: DISPLAY_OFF_STOPS } : it)) } : sec)),
     mount(root) {
       drawRing()
       drawSleep()
       bonusButton(root)
       every(20000, refreshPlaytime)
     },
-    change(key, v) {
+    async change(key, v) {
       switch (key) {
+        case 'idleOff': {
+          const r = await api(`${API}/power-config`, { method: 'POST', body: { idlePiShutdown: Number(v) } })
+          return toast(r.ok ? (Number(v) === 0 ? 'Schaltet sich nicht mehr selbst aus' : `Aus nach ${v} min ohne Wiedergabe`) : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+        }
+        case 'dispOff': {
+          const r = await api(`${API}/power-config`, { method: 'POST', body: { idleDisplayOff: Number(v) } })
+          return toast(r.ok ? (Number(v) === 0 ? 'Display bleibt an' : `Display aus nach ${v} min`) : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+        }
         case 'limitOn':
           bonusButton($('#content'), v)
           return saveCaps({ playtimeLimit: { enabled: v } }, v ? 'Tageslimits an' : 'Tageslimits aus')

@@ -26,6 +26,9 @@ In the last 20 seconds before the end the box fades the volume out slowly, so pl
 > [!NOTE]
 > After the timer has switched the box off, it must be switched on again at the device ([Restart and shut down](../wartung/neustart.md)).
 
-## Automatic shutdown
+## Automatic shutdown and display
 
-Independent of the sleep timer, the box switches itself off when nothing has been listened to for a long time: **Settings › Battery & Power › Automatic shutdown**, adjustable up to 300 minutes, 0 = never (that is how it is set after installation) ([Battery, MuPiHAT and power button](../hardware/strom.md)).
+Independent of the sleep timer, the box switches itself off when nothing has been listened to for a long time. You set that and **Display off after** right here on the page **Playtime** in the card **Switch off**, so all the times are in one place. The same settings are also under **Settings › Battery & Power › Automatic shutdown** and **Display & controls › Display**.
+
+- **Box off after … without playback**: up to 300 minutes, 0 = never (that is how it is set after installation) ([Battery, MuPiHAT and power button](../hardware/strom.md)).
+- **Display off after**: this long without use of the display, then it goes dark. 0 = never.
