@@ -11,6 +11,7 @@
 <b>Spotify</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Spotify starts on the display again after a podcast (issue #171, found by fetredlwl): until the display's Spotify player has a track, the player page read a missing track and failed on every redraw, before the start was sent.</li>
 <li id='linews' class='linews'>Switching the box off (or a stop) with nothing playing on it no longer pauses Spotify on another device of the same account, a PC or a phone: the display paused its own Spotify player, and Spotify took that pause for the account's playback. It now pauses it only when the box itself plays (reported by hyperbit).</li>
 </ul>
 <b>App</b>

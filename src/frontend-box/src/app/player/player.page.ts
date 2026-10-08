@@ -560,8 +560,9 @@ export class PlayerPage implements OnInit, AfterViewInit {
     const newValue = +this.range.value
     this.seekHold = { value: newValue, until: Date.now() + 3000 }
     if (this.media.type === 'spotify') {
-      const duration = this.currentPlayedSpotify?.item.duration_ms
-      this.playerService.seekPosition(duration * (newValue / 100))
+      // (no track loaded yet in the display's Spotify player - after a podcast, at the start: nothing to seek in)
+      const duration = this.currentPlayedSpotify?.item?.duration_ms
+      if (duration) this.playerService.seekPosition(duration * (newValue / 100))
     } else if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'rss') {
       this.playerService.seekPosition(newValue)
     }
@@ -963,9 +964,9 @@ export class PlayerPage implements OnInit, AfterViewInit {
       this.resumemedia.resumespotifyprogress_ms = this.currentPlayedSpotify?.progress_ms || 0
       this.resumemedia.resumespotifyduration_ms = this.currentPlayedSpotify?.item?.duration_ms || 0
     } else if (this.resumemedia.type === 'spotify') {
-      this.resumemedia.resumespotifytrack_number = this.currentPlayedSpotify?.item.track_number || 0
+      this.resumemedia.resumespotifytrack_number = this.currentPlayedSpotify?.item?.track_number || 0
       this.resumemedia.resumespotifyprogress_ms = this.currentPlayedSpotify?.progress_ms || 0
-      this.resumemedia.resumespotifyduration_ms = this.currentPlayedSpotify?.item.duration_ms || 0
+      this.resumemedia.resumespotifyduration_ms = this.currentPlayedSpotify?.item?.duration_ms || 0
     } else if (this.resumemedia.type === 'library') {
       // resumelocalalbum stays for downgrade-safety: an older client still
       // depends on it to recover the original category from a legacy-style

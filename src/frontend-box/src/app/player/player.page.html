@@ -13,7 +13,7 @@
 
 <ng-template #albumTpl>
       @if (media.type ==='spotify' && currentPlayedSpotify?.currently_playing_type !== 'episode') {
-        <div>{{spotify?.item.album.name}}</div>
+        <div>{{spotify?.item?.album?.name}}</div>
       } @else {
         @if (media.showid && spotify?.show_details) {
           <div>{{spotify?.show_details?.name}}</div>
@@ -34,7 +34,7 @@
 </ng-template>
 <ng-template #trackTpl>
       @if (media.type ==='spotify' && currentPlayedSpotify?.currently_playing_type !== 'episode') {
-        <div>{{spotify?.item.name}}</div>
+        <div>{{spotify?.item?.name}}</div>
       } @else {
         @if (media.showid && spotify?.show_details) {
           <div>{{spotify?.item?.name}}</div>
@@ -67,9 +67,9 @@
           } @else if (media.audiobookid && spotify?.audiobook) {
             <!-- Audiobook -->
             <div>{{spotify?.audiobook?.current_chapter_position}}/{{spotify?.audiobook?.total_chapters}}</div>
-          } @else if (currentPlayedSpotify?.currently_playing_type !== 'episode' && spotify?.item.album.total_tracks > 0) {
+          } @else if (currentPlayedSpotify?.currently_playing_type !== 'episode' && spotify?.item?.album?.total_tracks > 0) {
             <!-- Regular album -->
-            <div>{{spotify?.item.track_number}}/{{spotify?.item.album.total_tracks}}</div>
+            <div>{{spotify?.item?.track_number}}/{{spotify?.item?.album?.total_tracks}}</div>
           } @else {
             <!-- Fallback - no track info available -->
             <div></div>
