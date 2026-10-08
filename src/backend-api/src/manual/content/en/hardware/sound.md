@@ -14,6 +14,17 @@ The choices include:
 > [!NOTE]
 > The choice in the app lists the cards. If you do not find your card there, try the entry that matches the chip on the card (many cards share drivers). If the sound stays off, [No sound](../fehlerbehebung/kein-ton.md) helps.
 
+### Headphone jack as well
+
+If the box has a sound card of its own (for example the MuPiHAT or a HiFiBerry), DietPi switches off the Raspberry Pi's 3.5 mm output. With **Settings › Audio › Sound card › Headphone jack › 3.5 mm output as well** it stays on next to the sound card, for headphones on the jack. This applies after a restart, which the app offers right away.
+
+Then there are several outputs: in the player a tap on the volume opens **Listen with** with one tile per output, in the app you choose under **Output** in **Now playing**. The box remembers the chosen output across a restart too. Without a choice it plays through the sound card chosen above.
+
+- When you switch to the jack, it is not louder than the box just was. The **maximum with Bluetooth** does not apply to the jack, the **maximum (hearing protection)** does.
+- The box makes sure its sound card stays the first card in the system. If you change the sound card or switch the MuPiHAT on or off, it switches the jack back on afterwards.
+- Switching it off puts everything back the way DietPi set it up for the sound card (also after a restart).
+- If the onboard output is the sound card itself, there is no switch: the jack is on anyway.
+
 ## Volume
 
 **Settings › Audio › Volume**:

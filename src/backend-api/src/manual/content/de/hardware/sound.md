@@ -14,6 +14,17 @@ Zur Wahl stehen unter anderem:
 > [!NOTE]
 > Welche Karten es gibt, zeigt die Auswahl in der App. Findest du deine Karte dort nicht, probiere den Eintrag, der zum Chip auf der Karte passt (viele Karten teilen sich Treiber). Bleibt der Ton aus, hilft [Kein Ton](../fehlerbehebung/kein-ton.md).
 
+### Kopfhörerbuchse zusätzlich
+
+Hat die Box eine eigene Soundkarte (zum Beispiel den MuPiHAT oder einen HiFiBerry), schaltet DietPi den 3,5-mm-Ausgang des Raspberry Pi ab. Mit **Einstellungen › Audio › Soundkarte › Kopfhörerbuchse › 3,5-mm-Ausgang zusätzlich** bleibt er neben der Soundkarte an, für Kopfhörer an der Buchse. Das gilt nach einem Neustart, den die App gleich anbietet.
+
+Danach gibt es mehrere Ausgänge: Im Player öffnet ein Tipp auf die Lautstärke **Hören mit** mit einer Kachel je Ausgang, in der App wählst du bei **Jetzt läuft** unter **Ausgabe**. Die Box merkt sich den gewählten Ausgang auch über einen Neustart. Ohne Wahl spielt sie über die Soundkarte, die oben gewählt ist.
+
+- Wechselst du auf die Buchse, wird sie nicht lauter, als die Box gerade war. Das **Maximum mit Bluetooth** gilt für die Buchse nicht, das **Maximum (Hörschutz)** schon.
+- Die Box sorgt dafür, dass ihre Soundkarte die erste Karte im System bleibt. Wechselst du die Soundkarte oder schaltest du den MuPiHAT ein oder aus, schaltet sie die Buchse danach wieder ein.
+- Ausschalten stellt alles zurück, wie DietPi es für die Soundkarte eingerichtet hat (ebenfalls nach einem Neustart).
+- Ist der Onboard-Ausgang selbst die Soundkarte, gibt es den Schalter nicht: Die Buchse ist dann ohnehin an.
+
 ## Lautstärke
 
 **Einstellungen › Audio › Lautstärke**:

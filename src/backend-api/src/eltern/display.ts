@@ -10,7 +10,6 @@ import { execFile, spawn } from 'node:child_process'
 import { promises as fsp } from 'node:fs'
 import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
-import { enableOnboardAudio } from '../audio-output'
 import { imageSize } from './covers'
 import { requireCsrf, requireSession } from './middleware'
 import { episodeStateSettings } from '../episode-state'
@@ -235,10 +234,6 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
       result.restartKiosk = true
     } else if (['coverflowShowNames', 'hideScrollbar', 'scrollbarStyle', 'hiddenCategories', 'listviewTimer', 'settingsAccessTimer'].some((k) => k in mb)) {
       result.reloaded = await reloadDisplayPage()
-    }
-    // the choice "Box oder Kopfhörer am Display wählen" switched on: the board's 3.5 mm output made ready (see audio-output.ts)
-    if (body.outputPicker === true) {
-      result.audio = await enableOnboardAudio().catch(() => undefined)
     }
     res.json(result)
   })

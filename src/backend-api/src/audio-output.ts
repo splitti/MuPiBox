@@ -3,11 +3,14 @@
  * row of the web app's "Jetzt läuft").
  *
  * With more than one sound card (the 3.5 mm output next to an I2S amplifier, HDMI, a USB DAC) each is an output of its
- * own ("card:<sink>"); with one card it is simply "the box".
+ * own ("card:<sink>"); with one card it is simply "the box". "The box" is always the card chosen under Audio > Soundkarte
+ * (not the first one PulseAudio lists), a card chosen on the display or in the app is kept for the next start, and the
+ * board's own outputs are switched on next to the box's card with setOnboardAudio (Audio > Soundkarte, needs a restart).
  *
  * One output at a time: choosing a Bluetooth device connects it (if it is not yet) and lets the other Bluetooth audio
- * devices go; choosing the box (or one of its cards) lets them all go. PulseAudio keeps a volume per output, so the speaker comes back at
- * its own volume after the headphones - a device connected for the first time is not left louder than the box was.
+ * devices go; choosing the box (or one of its cards) lets them all go. PulseAudio keeps a volume per output, so the
+ * speaker comes back at its own volume after the headphones - an output used for the first time is not left louder than
+ * the box was.
  *
  * The box's sound card can drop out of PulseAudio (seen after headphones were let go: only the null sink was left and
  * even ALSA refused to open the card until its driver was bound again). ensureBoxSink() binds the driver anew when the
@@ -23,6 +26,8 @@ export interface AudioOutputDeps {
   /** the display (loopback) or the web app with its session */
   guard: RequestHandler
   getMupiboxConfig: () => unknown
+  /** to keep the chosen output for the next start and the switch of the 3.5 mm output (under the config lock) */
+  updateMupiboxConfig?: (mutate: (cfg: Record<string, unknown>) => void | false) => Promise<void>
 }
 
 export interface OutputDevice {
@@ -87,16 +92,19 @@ async function sinks(): Promise<string[]> {
     .filter(Boolean)
 }
 
-function cardOf(sink: string, desc: string): CardOutput {
-  const n = sink.toLowerCase()
+// What a sink is, read from its name and what PulseAudio says of its card (alsa.card_name, alsa.id): the amplifier
+// first - the MAX98357A's id is "bcm2835-i2s-HiFi HiFi-0", the board's own cards are "bcm2835 Headphones" and "bcm2835
+// HDMI 1" (the same platform device, so the sink's name alone does not tell them apart)
+function cardOf(sink: string, desc: string, hints = ''): CardOutput {
+  const n = `${sink} ${hints}`.toLowerCase()
   const kind: CardOutput['kind'] = /hdmi/.test(n)
     ? 'hdmi'
     : /usb/.test(n)
       ? 'usb'
-      : /bcm2835[_-]audio|headphones|3\.5mm/.test(n)
-        ? 'jack'
-        : /soc_sound|i2s|max98357|hifiberry|iqaudio|allo|dac/.test(n)
-          ? 'amp'
+      : /soc_sound|i2s|max98357|hifiberry|iqaudio|allo|dac|simple-card/.test(n)
+        ? 'amp'
+        : /bcm2835|headphones|3\.5mm/.test(n)
+          ? 'jack'
           : 'card'
   // ('Speaker' is the fallback: the display and the web app say it in their language for an amplifier card)
   const name = kind === 'hdmi' ? 'HDMI' : kind === 'jack' ? '3.5 mm' : kind === 'amp' ? 'Speaker' : kind === 'usb' ? 'USB' : desc || sink
@@ -110,10 +118,42 @@ export async function cardOutputs(): Promise<CardOutput[]> {
   for (const block of text.split(/\n(?=Sink #)/)) {
     const name = /^\s*Name:\s*(\S+)/m.exec(block)?.[1]
     if (!name || !name.startsWith('alsa_output') || !SINK_RE.test(name)) continue
-    out.push(cardOf(name, /^\s*Description:\s*(.+)$/m.exec(block)?.[1]?.trim() ?? ''))
+    const prop = (key: string) => new RegExp(`^\\s*${key.replace(/\./g, '\\.')} = "([^"]*)"`, 'm').exec(block)?.[1] ?? ''
+    out.push(cardOf(name, /^\s*Description:\s*(.+)$/m.exec(block)?.[1]?.trim() ?? '', `${prop('alsa.card_name')} ${prop('alsa.id')}`))
   }
   return out
 }
+
+// --- the box's own card: the one chosen under Audio > Soundkarte (mupibox.physicalDevice) -----------------------------
+
+let config: () => unknown = () => undefined
+let saveConfig: ((mutate: (cfg: Record<string, unknown>) => void | false) => Promise<void>) | undefined
+const mupibox = () => ((config() as { mupibox?: Record<string, unknown> } | undefined)?.mupibox ?? {}) as Record<string, unknown>
+
+/** what kind of card the box's own one is: the onboard outputs and a USB DAC by name, every other one is an I2S card */
+function boxKind(): CardOutput['kind'] | 'i2s' {
+  const device = String(mupibox().physicalDevice ?? '')
+  return device === 'rpi-bcm2835-3.5mm' ? 'jack' : device === 'rpi-bcm2835-hdmi' ? 'hdmi' : device === 'usb-dac' ? 'usb' : 'i2s'
+}
+
+/**
+ * The box's own card among the cards PulseAudio has (null when it is not there): with one card that one; else the one
+ * of the chosen kind - with the board's 3.5 mm output switched on next to an amplifier, the amplifier (whatever the order
+ * of the cards: "the first card" was the 3.5 mm one when it came first)
+ */
+function boxCardOf(cards: CardOutput[]): CardOutput | null {
+  if (cards.length <= 1) return cards[0] ?? null
+  const want = boxKind()
+  if (want === 'i2s') return cards.find((c) => c.kind !== 'jack' && c.kind !== 'hdmi') ?? null
+  return cards.find((c) => c.kind === want || (want === 'usb' && c.kind === 'card')) ?? null
+}
+
+/** The box's own sink, or - when it is missing - any of its cards (null without any) */
+const boxSink = async () => {
+  const cards = await cardOutputs()
+  return (boxCardOf(cards) ?? cards[0])?.id ?? null
+}
+const boxSinkStrict = async () => boxCardOf(await cardOutputs())?.id ?? null
 
 /** Where it plays now: 'box' (or, with several cards, 'card:<sink>') or the Bluetooth device's address */
 export async function currentOutput(): Promise<string> {
@@ -123,32 +163,49 @@ export async function currentOutput(): Promise<string> {
   return def.startsWith('alsa_output') && (await sinks()).filter((s) => s.startsWith('alsa_output')).length > 1 ? CARD_PREFIX + def : 'box'
 }
 
-const boxSink = async () => (await sinks()).find((s) => s.startsWith('alsa_output')) ?? null
+// the ALSA ids of the board's own cards (the legacy driver: Headphones, b1, b2; with KMS: vc4hdmi0, vc4hdmi1)
+const ONBOARD_ID = /^(Headphones|b\d+|vc4hdmi\d*|HDMI\d*|bcm2835.*)$/i
+
+/** The box's own card in /sys/class/sound (to bind its driver anew), null when it is not in the system */
+async function boxCardDir(): Promise<string | null> {
+  const cards = (await fsp.readdir('/sys/class/sound').catch(() => [] as string[]))
+    .filter((n) => /^card\d+$/.test(n))
+    .sort((a, b) => Number(a.slice(4)) - Number(b.slice(4)))
+  // (the onboard outputs or a USB DAC as the box's card: card 0 as before)
+  if (boxKind() !== 'i2s') return cards.includes('card0') ? '/sys/class/sound/card0' : null
+  for (const c of cards) {
+    const id = (await fsp.readFile(`/sys/class/sound/${c}/id`, 'utf8').catch(() => '')).trim()
+    if (id && !ONBOARD_ID.test(id)) return `/sys/class/sound/${c}`
+  }
+  return null
+}
 
 /** The sound card's sink, its driver bound anew when PulseAudio lost it (null when there is no card at all) */
 export async function ensureBoxSink(): Promise<string | null> {
-  const have = await boxSink()
+  const have = await boxSinkStrict()
   if (have) return have
+  const dir = await boxCardDir()
+  if (!dir) return await boxSink()
   let device: string
   let driver: string
   try {
-    device = path.basename(await fsp.realpath('/sys/class/sound/card0/device'))
-    driver = path.basename(await fsp.realpath('/sys/class/sound/card0/device/driver'))
+    device = path.basename(await fsp.realpath(`${dir}/device`))
+    driver = path.basename(await fsp.realpath(`${dir}/device/driver`))
   } catch {
-    return null
+    return await boxSink()
   }
-  if (!/^[\w:.-]+$/.test(device) || !/^[\w:.-]+$/.test(driver)) return null
+  if (!/^[\w:.-]+$/.test(device) || !/^[\w:.-]+$/.test(driver)) return await boxSink()
   console.warn(`${new Date().toLocaleString()}: [audio-output] the sound card's sink is missing - binding ${device} (${driver}) again`)
-  const dir = `/sys/bus/platform/drivers/${driver}`
-  await run('sudo', ['sh', '-c', `echo '${device}' > ${dir}/unbind`])
+  const drivers = `/sys/bus/platform/drivers/${driver}`
+  await run('sudo', ['sh', '-c', `echo '${device}' > ${drivers}/unbind`])
   await sleep(1000)
-  await run('sudo', ['sh', '-c', `echo '${device}' > ${dir}/bind`])
+  await run('sudo', ['sh', '-c', `echo '${device}' > ${drivers}/bind`])
   for (let i = 0; i < 10; i++) {
     await sleep(500)
-    const sink = await boxSink()
+    const sink = await boxSinkStrict()
     if (sink) return sink
   }
-  return null
+  return await boxSink()
 }
 
 async function moveTo(sink: string) {
@@ -162,20 +219,45 @@ async function moveTo(sink: string) {
 
 const volumeOf = async (sink: string) => Number(/(\d+)%/.exec((await pactl('get-sink-volume', sink)).stdout)?.[1] ?? Number.NaN)
 
+/** not louder than the box was: an output used for the first time (headphones!) starts wherever PulseAudio puts it */
+async function notLouderThan(sink: string, boxVolume: number) {
+  const vol = await volumeOf(sink)
+  if (Number.isFinite(boxVolume) && Number.isFinite(vol) && vol > boxVolume) await pactl('set-sink-volume', sink, `${boxVolume}%`)
+}
+
+/** The output chosen on the display or in the app is kept for the next start: one of the box's other cards, else none */
+async function remember(sink: string | null) {
+  if (!saveConfig) return
+  const want = sink ?? undefined
+  await saveConfig((cfg) => {
+    const mb = (cfg.mupibox ?? {}) as Record<string, unknown>
+    if (mb.audioOutput === want) return false
+    if (want) mb.audioOutput = want
+    else delete mb.audioOutput
+    cfg.mupibox = mb
+  }).catch((e: unknown) => console.warn(`${new Date().toLocaleString()}: [audio-output] output not kept: ${e instanceof Error ? e.message : e}`))
+}
+
 /** Plays on the box: the Bluetooth audio devices let go, the speaker's sink the default */
 async function toBox(devices: OutputDevice[]): Promise<boolean> {
   for (const d of devices.filter((x) => x.connected)) await ctl('disconnect', d.mac)
   const sink = await ensureBoxSink()
   if (!sink) return false
   await moveTo(sink)
+  await remember(null)
   return true
 }
 
 /** Plays on one of the box's cards: the Bluetooth audio devices let go, that card's sink the default */
 async function toCard(sink: string, devices: OutputDevice[]): Promise<boolean> {
   if (!(await sinks()).includes(sink)) return false
+  const box = await boxSinkStrict()
+  const before = (await pactl('get-default-sink')).stdout.trim()
+  const beforeVolume = before ? await volumeOf(before) : Number.NaN
   for (const d of devices.filter((x) => x.connected)) await ctl('disconnect', d.mac)
+  if (sink !== box) await notLouderThan(sink, beforeVolume)
   await moveTo(sink)
+  await remember(sink === box ? null : sink)
   return true
 }
 
@@ -194,107 +276,49 @@ async function toDevice(mac: string, devices: OutputDevice[]): Promise<'ok' | 'n
     if (!sink) await sleep(500)
   }
   if (!sink) return 'no_sink'
-  // (not louder than the box was - a device's first time starts wherever PulseAudio puts it)
-  const vol = await volumeOf(sink)
-  if (Number.isFinite(boxVolume) && Number.isFinite(vol) && vol > boxVolume) await pactl('set-sink-volume', sink, `${boxVolume}%`)
+  await notLouderThan(sink, boxVolume)
   await moveTo(sink)
   return 'ok'
 }
 
-// --- the 3.5 mm output of the board: DietPi switches it off when another sound card is chosen --------------------------
+// --- the board's 3.5 mm output next to the box's card (Audio > Soundkarte; scripts/mupibox/onboard_audio.sh) ---------
 
-/** DietPi's block of the board's own audio driver: it writes it when a sound card other than the onboard one is chosen */
-const DIETPI_BLACKLIST = '/etc/modprobe.d/dietpi-disable_rpi_audio.conf'
-
-export interface OnboardAudioResult {
-  /** dtparam=audio=on was not in force in the boot configuration: it is now */
-  configChanged: boolean
-  /** DietPi's blacklist of snd_bcm2835 was there: taken away (the file kept as ....removed) */
-  blacklistRemoved: boolean
-  /** snd_bcm2835.enable_headphones=0 was on the kernel command line: taken off */
-  cmdlineChanged: boolean
-  /** the 3.5 mm card is there now */
-  ready: boolean
-  /** the change applies after a restart of the box */
-  restartNeeded: boolean
-}
-
-const sudo = (...args: string[]) => run('sudo', args, 15000)
+const ONBOARD_SCRIPT = '/usr/local/bin/mupibox/onboard_audio.sh'
 
 /**
- * Makes the board's 3.5 mm output usable (the choice "Box oder Kopfhörer am Display wählen" has something to choose from
- * then): 1. DietPi's blacklist of the driver goes, 2. dtparam=audio=on stands in the boot configuration (where it counts
- * for every Pi: before the first [section] or under [all]), 3. no snd_bcm2835.enable_headphones=0 on the kernel command
- * line. The driver is loaded at once when the boot configuration had it on already; else (or when it does not appear)
- * the change needs a restart. Nothing is changed that is already right.
+ * The board's own outputs on or off (DietPi's block, dtparam=audio, the order of the cards - see the script). Returns
+ * whether something was written: it applies after a restart of the box.
  */
-export async function enableOnboardAudio(): Promise<OnboardAudioResult> {
-  const result: OnboardAudioResult = { configChanged: false, blacklistRemoved: false, cmdlineChanged: false, ready: false, restartNeeded: false }
-  const cardThere = async () => /bcm2835/i.test(await fsp.readFile('/proc/asound/cards', 'utf8').catch(() => ''))
-  const bootDir = await fsp.access('/boot/firmware/config.txt').then(() => '/boot/firmware', () => '/boot')
-  const bootConfig = `${bootDir}/config.txt`
-  const text = await fsp.readFile(bootConfig, 'utf8').catch(() => null)
-
-  // 1. DietPi's blacklist
-  if (await fsp.access(DIETPI_BLACKLIST).then(() => true, () => false)) {
-    // (modprobe reads only *.conf: the renamed file stays as a copy and blocks nothing)
-    result.blacklistRemoved = (await sudo('mv', DIETPI_BLACKLIST, `${DIETPI_BLACKLIST}.removed`)).ok
-  }
-
-  // 2. dtparam=audio=on in the boot configuration
-  if (text !== null) {
-    let section = ''
-    let state = ''
-    const lines: number[] = []
-    text.split('\n').forEach((raw, i) => {
-      const line = raw.trim()
-      const header = /^(\[[^\]]*\])/.exec(line)?.[1]
-      if (header) {
-        section = header
-        return
-      }
-      if (section !== '' && section !== '[all]') return
-      const m = /^dtparam=audio=(\S+)/.exec(line)
-      if (m) {
-        lines.push(i + 1)
-        state = m[1]
-      }
+export async function setOnboardAudio(on: boolean): Promise<{ ok: boolean; changed: boolean }> {
+  if (saveConfig) {
+    await saveConfig((cfg) => {
+      const mb = (cfg.mupibox ?? {}) as Record<string, unknown>
+      mb.onboardAudio = on
+      // (an output of the board kept for the start: gone with it)
+      if (!on && typeof mb.audioOutput === 'string' && /bcm2835/.test(mb.audioOutput)) delete mb.audioOutput
+      cfg.mupibox = mb
     })
-    if (state !== 'on') {
-      await sudo('cp', '-p', bootConfig, `${bootConfig}.bak-audio`)
-      if (lines.length) {
-        // (the lines that switch it off or set it otherwise: this one value, in place)
-        const ok = (await sudo('sed', '-i', ...lines.flatMap((n) => ['-e', `${n}s/.*/dtparam=audio=on/`]), bootConfig)).ok
-        result.configChanged = ok
-      } else {
-        const add = [...(section && section !== '[all]' ? ['[all]'] : []), 'dtparam=audio=on']
-        // (sh -c: the file is $0, the lines are "$@")
-        result.configChanged = (await sudo('sh', '-c', 'printf "%s\n" "$@" >> "$0"', bootConfig, ...add)).ok
-      }
-    }
   }
+  const r = await run('sudo', [ONBOARD_SCRIPT, on ? 'on' : 'off'], 20000)
+  return { ok: r.ok, changed: /changed/.test(r.stdout) }
+}
 
-  // 3. the kernel command line
-  const cmdline = await fsp.readFile(`${bootDir}/cmdline.txt`, 'utf8').catch(() => '')
-  if (/snd_bcm2835\.enable_headphones=0/.test(cmdline)) {
-    result.cmdlineChanged = (await sudo('sed', '-i', '-E', 's/[[:space:]]*snd_bcm2835\.enable_headphones=0//', `${bootDir}/cmdline.txt`)).ok
-  }
+/** After DietPi switched the sound card (it writes its block anew): the board's outputs on again when they were */
+export async function reapplyOnboardAudio(): Promise<boolean> {
+  const r = await run('sudo', [ONBOARD_SCRIPT, 'reapply'], 20000)
+  return /changed/.test(r.stdout)
+}
 
-  // the card: there already, or loaded now when the board's audio device is in the system (the boot configuration had it on)
-  result.ready = await cardThere()
-  const deviceThere = await fsp.access('/sys/bus/platform/devices/bcm2835_audio').then(() => true, () => false)
-  if (!result.ready && deviceThere && !result.configChanged && !result.cmdlineChanged) {
-    await sudo('modprobe', 'snd_bcm2835')
-    await sleep(2500)
-    result.ready = await cardThere()
-  }
-  result.restartNeeded = !result.ready
-  return result
+/** What is written for the board's outputs ('on' / 'off'; '' when the script is not there) */
+export async function onboardAudioWritten(): Promise<string> {
+  return (await run('sudo', [ONBOARD_SCRIPT, 'status'], 10000)).stdout.trim()
 }
 
 let switching = false
 
 export function registerAudioOutputRoutes(app: Express, deps: AudioOutputDeps): void {
+  config = deps.getMupiboxConfig
+  saveConfig = deps.updateMupiboxConfig
   /**
    * GET /api/audio-output - {current: 'box'|'card:<sink>'|mac, devices: the paired Bluetooth devices, cards: the box's
    * sound cards when there is more than one (else []), display: the choice on the display allowed}
@@ -337,15 +361,47 @@ export function registerAudioOutputRoutes(app: Express, deps: AudioOutputDeps): 
   })
 }
 
-/** Every 20 s: no Bluetooth output and no sound card sink - the card's driver bound anew (see ensureBoxSink) */
+/**
+ * After the start: the output kept (one of the box's other cards) or else the box's own card is the default - PulseAudio
+ * takes the card it likes best, and with the 3.5 mm output switched on that was the jack, the speaker stayed silent.
+ * Not while a Bluetooth device plays. Tried until PulseAudio has the cards (true: done).
+ */
+async function startOutput(): Promise<boolean> {
+  const def = (await pactl('get-default-sink')).stdout.trim()
+  if (def.startsWith('bluez_')) return true
+  const cards = await cardOutputs()
+  if (!cards.length) return false
+  if (cards.length === 1) return true
+  const kept = String(mupibox().audioOutput ?? '')
+  const target = cards.find((c) => c.id === kept)?.id ?? boxCardOf(cards)?.id
+  if (!target) return false
+  if (target !== def) {
+    console.log(`${new Date().toLocaleString()}: [audio-output] at the start: plays on ${target} (was ${def || 'none'})`)
+    await moveTo(target)
+  }
+  return true
+}
+
+/** Every 20 s: no Bluetooth output and the box's card without its sink - the card's driver bound anew (see ensureBoxSink) */
 export function startAudioWatch(): void {
+  let started = false
+  let tries = 0
+  // the board's outputs switched on but blocked again (the sound card switched with the admin interface, a DietPi
+  // update): written anew, they apply after the next restart
+  setTimeout(() => {
+    reapplyOnboardAudio()
+      .then((changed) => changed && console.warn(`${new Date().toLocaleString()}: [audio-output] the board's 3.5 mm output was blocked again - switched on anew, applies after a restart`))
+      .catch(() => undefined)
+  }, 30000).unref()
   setInterval(async () => {
     if (switching) return
     // (PulseAudio not there - starting, restarting: no sinks to see, but the card is fine; binding its driver anew
     // every 20 s meanwhile cut the sound for a second each time)
     if (!(await pactl('info')).ok) return
+    if (!started && tries++ < 9) started = await startOutput().catch(() => false)
     const list = await sinks()
-    if (list.some((s) => s.startsWith('alsa_output') || s.startsWith('bluez_'))) return
+    if (list.some((s) => s.startsWith('bluez_'))) return
+    if (list.some((s) => s.startsWith('alsa_output')) && (await boxSinkStrict())) return
     await ensureBoxSink().catch(() => null)
   }, 20000).unref()
 }

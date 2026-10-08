@@ -1132,7 +1132,7 @@ const podcastOffline = new PodcastOffline({
 podcastOffline.start()
 
 // Where the box plays: speaker or Bluetooth ("Hören mit" on the display, the web app's output row; audio-output.ts)
-registerAudioOutputRoutes(app, { guard: localOrElternSession, getMupiboxConfig: () => getMupiboxConfigSync() })
+registerAudioOutputRoutes(app, { guard: localOrElternSession, getMupiboxConfig: () => getMupiboxConfigSync(), updateMupiboxConfig })
 startAudioWatch()
 
 // Whether the box has no internet right now (network.json, written every minute by get_network.sh)

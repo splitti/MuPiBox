@@ -5587,9 +5587,6 @@ async function loadDisplayOptions() {
 
 // What the display did after a save, in words
 function displayNote(b) {
-  // (the choice of the output on the display switched on: the 3.5 mm output made ready - at once, or after a restart)
-  if (b?.audio?.restartNeeded) return 'Der 3,5-mm-Ausgang wurde eingeschaltet – das gilt erst nach einem Neustart der Box.'
-  if (b?.audio && (b.audio.blacklistRemoved || b.audio.configChanged || b.audio.cmdlineChanged)) return 'Der 3,5-mm-Ausgang ist bereit.'
   if (b?.restartKiosk) return 'Das Display startet neu.'
   if (b?.reboot) return 'Wird nach einem Neustart der Box übernommen.'
   if (b?.restartPlayer) return 'Der Player startet neu.'
@@ -9844,7 +9841,7 @@ const CONTROLLERS = {
               type: 'toggle',
               key: 'outPick',
               label: 'Box oder Kopfhörer am Display wählen',
-              help: 'Ein Tipp auf die Lautstärke oben im Player öffnet „Hören mit“ – wenn ein Bluetooth-Gerät gekoppelt ist oder die Box mehrere Soundausgänge hat. Beim Einschalten bereitet die Box den 3,5-mm-Ausgang vor (gilt nach einem Neustart). In der App geht es immer.',
+              help: 'Ein Tipp auf die Lautstärke oben im Player öffnet „Hören mit“ – wenn ein Bluetooth-Gerät gekoppelt ist oder die Box mehrere Soundausgänge hat. In der App geht es immer.',
             },
           ],
         },
@@ -9998,9 +9995,10 @@ const CONTROLLERS = {
       await loadHardware()
       const sc = hw.data.soundcard
       state.values.set('sound', sc.options.find((o) => o.id === sc.current)?.name ?? sc.current)
+      state.values.set('jack', !!sc.onboard?.on)
     },
-    sections: (page) =>
-      withoutSave(page).map((sec) => ({
+    sections: (page) => [
+      ...withoutSave(page).map((sec) => ({
         ...sec,
         // (and what the system has found: a card chosen but not found here has no driver, or wants the restart)
         help: [
@@ -10012,7 +10010,41 @@ const CONTROLLERS = {
           .join(' '),
         items: sec.items.map((it) => (it.key === 'sound' ? { ...it, options: hw.data.soundcard.options.map((o) => o.name) } : it)),
       })),
+      // the board's 3.5 mm output next to the box's card: headphones on the jack (not with the onboard output as the card)
+      ...(hw.data.soundcard.onboard?.applicable
+        ? [
+            {
+              title: 'Kopfhörerbuchse',
+              items: [
+                {
+                  type: 'toggle',
+                  key: 'jack',
+                  label: '3,5-mm-Ausgang zusätzlich',
+                  help: [
+                    'Für Kopfhörer an der Buchse des Raspberry Pi, neben der Soundkarte der Box. Gewählt wird im Player über „Hören mit“ oder in der App bei der Ausgabe.',
+                    hw.data.soundcard.onboard.on && !hw.data.soundcard.onboard.active ? 'Gilt nach einem Neustart der Box.' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' '),
+                },
+              ],
+            },
+          ]
+        : []),
+    ],
     async change(key, v, page) {
+      if (key === 'jack') {
+        const r = await api(`${API}/onboard-audio`, { method: 'POST', body: { on: !!v } })
+        if (!r.ok || r.body?.ok === false) {
+          state.values.set('jack', !v)
+          renderPage(page, false)
+          return toast('Das hat nicht geklappt', 'info')
+        }
+        hw.data.soundcard.onboard.on = !!v
+        renderPage(page, false)
+        if (r.body?.reboot) return offerReboot(v ? 'Der 3,5-mm-Ausgang gilt nach einem Neustart.' : 'Der 3,5-mm-Ausgang ist nach einem Neustart aus.')
+        return toast('Gespeichert')
+      }
       if (key !== 'sound') return
       const opt = hw.data.soundcard.options.find((o) => o.name === v)
       if (!opt || opt.id === hw.data.soundcard.current) return
