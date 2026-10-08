@@ -331,6 +331,9 @@
 	$data["mupibox"]["physicalDevice"]=$_POST['audio'];
 	$command = "sudo /boot/dietpi/func/dietpi-set_hardware soundcard " . escapeshellarg($_POST['audio']);
 	$change_soundcard = exec($command, $output, $change_soundcard );
+	// The MAX98357A's I2S driver: DietPi does not know the card and leaves the drivers alone - in for it, out for
+	// another card unless the MuPiHAT is on (amp_driver.sh, as the app's eltern/hardware.ts)
+	exec("sudo /usr/local/bin/mupibox/amp_driver.sh " . (strpos($_POST['audio'], 'MAX98357A') === 0 ? "on" : "off"));
 	$soundcard_changed = true;
 	$CHANGE_TXT=$CHANGE_TXT."<li>Soundcard changed to ".$data["mupibox"]["physicalDevice"]."</li>";
 	$change=2;
