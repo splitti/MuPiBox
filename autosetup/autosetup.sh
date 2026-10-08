@@ -238,6 +238,10 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	# app answered 503. As dietpi it printed a "sudo env ..." line to run, which is what this does directly.
 	env PATH="$PATH:/usr/bin" pm2 startup systemd -u dietpi --hp /home/dietpi >&3 2>&3
 	systemctl disable --now pm2-root >/dev/null 2>&1 || true
+	# the start of server and player made robust: oneshot, tried again when it hangs (config/services/pm2-dietpi.override.conf)
+	mkdir -p /etc/systemd/system/pm2-dietpi.service.d >&3 2>&3
+	cp -f ${MUPI_SRC}/config/services/pm2-dietpi.override.conf /etc/systemd/system/pm2-dietpi.service.d/override.conf >&3 2>&3
+	systemctl daemon-reload >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Configure pm2 ## finished after $((after - before)) seconds" >&3 2>&3
 	STEP=$((STEP + 1))

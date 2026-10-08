@@ -45,6 +45,7 @@
 <b>Installation</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>The start of server and player made robust: if pm2 hangs while starting them (seen once - the display showed 503 until they were started by hand), the start is tried again after 90 s instead of leaving the box without its server. Install and update set this up for the service pm2-dietpi.</li>
 <li id='linews' class='linews'>Restoring a backup (found by hyperbit on a fresh install): what the configuration switches on but lives outside it is now set up as well - the MuPiHAT (it showed as active in the app, while the battery page found no HAT until it was switched off and on), fan, rotary encoder and the 3.5 mm output; and the backup holds the own theme's background picture and the own start, goodbye and battery pictures (wish of hyperbit), which are put together again after the restore.</li>
 <li id='linews' class='linews'>A button of your own on gpio-shutdown (issue #175, Markus): installation and update no longer add gpio-poweroff next to it - with both the Pi did not start from the button any more, and every update put the line back.</li>
 <li id='linews' class='linews'>MQTT: an error in the service's loop no longer ends it with a NameError that hid the real error (issue #154) - it is logged with its cause and the next round follows.</li>

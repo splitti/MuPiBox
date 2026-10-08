@@ -1064,6 +1064,14 @@ rm -f /tmp/mupibox-update-failed
 	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && if pm2 describe server >/dev/null 2>&1; then pm2 restart server; else pm2 start server.js --name server; fi" >&3 2>&3
 	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/spotifycontroller-main && if pm2 describe spotify-control >/dev/null 2>&1; then pm2 restart spotify-control; else pm2 start spotify-control.js --name spotify-control; fi" >&3 2>&3
 	sudo -H -u dietpi bash -c "pm2 save" >&3 2>&3
+	# the start of server and player made robust: oneshot, tried again when "pm2 resurrect" hangs (seen once: the
+	# display showed "503" until it was started by hand; config/services/pm2-dietpi.override.conf). Takes effect at the
+	# next start, the running pm2 is not touched.
+	if [ -f /etc/systemd/system/pm2-dietpi.service ]; then
+		mkdir -p /etc/systemd/system/pm2-dietpi.service.d >&3 2>&3
+		cp -f ${MUPI_SRC}/config/services/pm2-dietpi.override.conf /etc/systemd/system/pm2-dietpi.service.d/override.conf >&3 2>&3
+		systemctl daemon-reload >&3 2>&3
+	fi
 
 	###############################################################################################
 	echo -e "XXX\n100\nInstallation complete, please reboot the system... \nXXX"	
