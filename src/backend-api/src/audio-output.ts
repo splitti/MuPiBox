@@ -267,7 +267,14 @@ async function toDevice(mac: string, devices: OutputDevice[]): Promise<'ok' | 'n
   const boxVolume = before ? await volumeOf(before) : Number.NaN
   if (!devices.find((d) => d.mac === mac)?.connected) {
     await ctl('connect', mac)
-    if (!/Connected:\s*yes/i.test((await ctl('info', mac)).stdout)) return 'not_found'
+    // (headphones often report "connected" a second or two after the command returns: the display said "not found"
+    // and then showed them connected - asked again for up to 8 s before giving up)
+    let connected = false
+    for (let i = 0; i < 9 && !connected; i++) {
+      if (i) await sleep(1000)
+      connected = /Connected:\s*yes/i.test((await ctl('info', mac)).stdout)
+    }
+    if (!connected) return 'not_found'
   }
   for (const d of devices.filter((x) => x.connected && x.mac !== mac)) await ctl('disconnect', d.mac)
   let sink: string | undefined
@@ -386,6 +393,7 @@ async function startOutput(): Promise<boolean> {
 export function startAudioWatch(): void {
   let started = false
   let tries = 0
+  let missing = 0
   // the board's outputs switched on but blocked again (the sound card switched with the admin interface, a DietPi
   // update): written anew, they apply after the next restart
   setTimeout(() => {
@@ -400,8 +408,14 @@ export function startAudioWatch(): void {
     if (!(await pactl('info')).ok) return
     if (!started && tries++ < 9) started = await startOutput().catch(() => false)
     const list = await sinks()
-    if (list.some((s) => s.startsWith('bluez_'))) return
-    if (list.some((s) => s.startsWith('alsa_output')) && (await boxSinkStrict())) return
+    if (list.some((s) => s.startsWith('bluez_')) || (list.some((s) => s.startsWith('alsa_output')) && (await boxSinkStrict()))) {
+      missing = 0
+      return
+    }
+    // (only when it stays missing for a minute: right after a restart of PulseAudio it has no sinks for a moment and
+    // still holds the card - unbinding it then hung in the kernel, the card was gone until the box was restarted)
+    if (++missing < 3) return
+    missing = 0
     await ensureBoxSink().catch(() => null)
   }, 20000).unref()
 }
