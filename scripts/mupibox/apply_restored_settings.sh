@@ -13,15 +13,35 @@ CUSTOM_CSS=/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/cus
 j() { /usr/bin/jq -r "$1" "${CONFIG}" 2>/dev/null; }
 enabled() { systemctl is-enabled "$1" >/dev/null 2>&1; }
 
-# MuPiHAT: I2C, the amplifier's driver, its services and sound card (enable/disable_mupihat.sh)
+# the restored sound card, read before the MuPiHAT's scripts write theirs (a name DietPi could take, else none)
+CARD=$(j '.mupibox.physicalDevice // empty')
+case "${CARD}" in *[!A-Za-z0-9\ ._:-]*) CARD='' ;; esac
+CARD_ARG=()
+[ -n "${CARD}" ] && CARD_ARG=("${CARD}")
+
+# MuPiHAT: I2C, the amplifier's driver, its services and sound card (enable/disable_mupihat.sh) - with the restored
+# card: switched off, the script set the 3.5 mm output and a backup's USB DAC was lost
 if [ "$(j '.mupihat.hat_active // false')" = "true" ]; then
 	if ! enabled mupi_hat.service; then
 		echo "MuPiHAT on (restored configuration)"
-		"${B}/enable_mupihat.sh"
+		"${B}/enable_mupihat.sh" "${CARD_ARG[@]}"
 	fi
 elif enabled mupi_hat.service; then
 	echo "MuPiHAT off (restored configuration)"
-	"${B}/disable_mupihat.sh"
+	"${B}/disable_mupihat.sh" "${CARD_ARG[@]}"
+fi
+
+# the restored sound card in DietPi's configuration (dietpi.txt), as the app chooses it (eltern/hardware.ts), and the
+# MAX98357A's driver for it - or out again for another card while the MuPiHAT is off (amp_driver.sh)
+if [ -n "${CARD}" ]; then
+	current=$(sed -n '/^[[:blank:]]*CONFIG_SOUNDCARD=/{s/^[^=]*=//p;q}' /boot/dietpi.txt 2>/dev/null)
+	if [ "${CARD,,}" != "${current,,}" ]; then
+		echo "sound card ${CARD} (restored configuration)"
+		/boot/dietpi/func/dietpi-set_hardware soundcard "${CARD}"
+	fi
+	if [ -x "${B}/amp_driver.sh" ]; then
+		case "${CARD}" in MAX98357A*) "${B}/amp_driver.sh" on ;; *) "${B}/amp_driver.sh" off ;; esac
+	fi
 fi
 
 # fan and rotary encoder: their services

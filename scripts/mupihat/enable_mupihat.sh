@@ -14,7 +14,9 @@ if [ -z "${BOOT_CONFIG}" ]; then
 fi
 DIETPI_TXT="${DIETPI_TXT:-/boot/dietpi.txt}"
 MUPIBOX_CONFIG="${MUPIBOX_CONFIG:-/etc/mupibox/mupiboxconfig.json}"
-CARD='MAX98357A bcm2835-i2s-HiFi HiFi-0'
+# the sound card afterwards: the HAT's amplifier, or the one given (a restored backup keeps its own card,
+# apply_restored_settings.sh)
+CARD="${1:-MAX98357A bcm2835-i2s-HiFi HiFi-0}"
 ERR=0
 
 add_line() { grep -qxF "$1" "$2" || echo "$1" >> "$2"; }

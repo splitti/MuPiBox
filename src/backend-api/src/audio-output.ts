@@ -158,7 +158,9 @@ function boxKind(): CardOutput['kind'] | 'i2s' {
 function boxCardOf(cards: CardOutput[]): CardOutput | null {
   if (cards.length <= 1) return cards[0] ?? null
   const want = boxKind()
-  if (want === 'i2s') return cards.find((c) => c.kind !== 'jack' && c.kind !== 'hdmi') ?? null
+  // (an amplifier first, then a card of no known kind - never a USB device plugged in next to it: listed before the
+  // amplifier, it was taken for the box's card)
+  if (want === 'i2s') return cards.find((c) => c.kind === 'amp') ?? cards.find((c) => c.kind === 'card') ?? null
   return cards.find((c) => c.kind === want || (want === 'usb' && c.kind === 'card')) ?? null
 }
 

@@ -16,7 +16,9 @@ if [ -z "${BOOT_CONFIG}" ]; then
 fi
 DIETPI_TXT="${DIETPI_TXT:-/boot/dietpi.txt}"
 MUPIBOX_CONFIG="${MUPIBOX_CONFIG:-/etc/mupibox/mupiboxconfig.json}"
-CARD='rpi-bcm2835-3.5mm'
+# the sound card afterwards: the board's 3.5 mm output, or the one given (a restored backup keeps its own card,
+# apply_restored_settings.sh)
+CARD="${1:-rpi-bcm2835-3.5mm}"
 ERR=0
 
 if [ "${DRY_RUN}" != "1" ]; then
