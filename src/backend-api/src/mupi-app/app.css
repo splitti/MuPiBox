@@ -73,7 +73,7 @@ a { color: var(--mp-primary-text); }
 .sidebar { display: none; }
 .pagenav { display: none; }
 /* back / next under a page of a settings group, where the list "Auf dieser Seite" is not shown */
-.group-pager { display: grid; grid-template-columns: 1fr 1fr; gap: var(--mp-gap); }
+.group-pager { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--mp-gap); }
 .pager-btn {
   display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 16px; min-width: 0;
   background: var(--mp-surface); border: 1px solid var(--mp-border); border-radius: var(--mp-r-card);
@@ -82,10 +82,11 @@ a { color: var(--mp-primary-text); }
 .pager-btn:hover { border-color: var(--mp-primary); }
 .pager-btn .lbl { flex: 1; min-width: 0; }
 .pager-btn .lbl small { display: block; font-size: 13px; color: var(--mp-muted); font-weight: 600; }
-.pager-btn .lbl b { display: block; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* (side by side also on a phone: a long title takes two lines instead of being cut off) */
+.pager-btn .lbl b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; font-size: 15px; line-height: 1.25; }
 .pager-btn svg { color: var(--mp-muted); flex: none; }
 .pager-btn.next { text-align: right; }
-@media (max-width: 560px) { .group-pager { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 560px) { .pager-btn { padding: 10px 12px; gap: 8px; } }
 /* (a card jumped to from "Auf dieser Seite" ends below the top bar) */
 .content section.card { scroll-margin-top: calc(var(--mp-head-h) + env(safe-area-inset-top) + 12px); }
 

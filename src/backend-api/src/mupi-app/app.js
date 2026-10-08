@@ -170,9 +170,16 @@ function currentId() {
 function currentPage() {
   return state.pages.get(currentId())
 }
+// Two pages of the same settings group (Aussehen › Theme, Ansicht …): moving between them is like changing tabs, it
+// takes no step of its own - back (the arrow at the top, the browser's back) leads up to the group, not page by page
+const groupSiblings = (a, b) => !!a && !!b && a.id !== b.id && !!a.parent && a.parent === b.parent && a.parent.startsWith('g-')
 function go(id) {
   // (an address outside the app, e.g. "Erweiterte Einstellungen": whoever wired the click)
   if (String(id).startsWith('ext:')) return openExternal(id.slice(4))
+  if (groupSiblings(currentPage(), state.pages.get(id))) {
+    if (location.hash !== hashOf(id)) history.replaceState(null, '', hashOf(id))
+    return route()
+  }
   // (the address by pushState, then drawn: setting location.hash made the app on the iPhone's home screen load itself
   // again after every change of page - "Verbinde mit der Box …" - while Safari and Chrome only fired hashchange)
   if (location.hash !== hashOf(id)) history.pushState(null, '', hashOf(id))
@@ -213,6 +220,8 @@ function noteTrail(page) {
   }
   const at = trail.indexOf(page.id)
   if (at >= 0) trail.length = at + 1
+  // (another page of the same settings group: it takes the place of the one before, see groupSiblings)
+  else if (groupSiblings(state.pages.get(trail.at(-1)), page)) trail[trail.length - 1] = page.id
   else trail.push(page.id)
 }
 // where the back button leads: the page before, else (opened by a link, reloaded) the one above
@@ -370,7 +379,7 @@ function pager(page) {
   if (sibs.length < 2 || at < 0) return ''
   const btn = (p, kind, label) =>
     `<button class="pager-btn ${kind}" data-go="${esc(p.id)}">${kind === 'prev' ? icon('back', 18) : ''}<span class="lbl"><small>${label}</small><b>${esc(p.title)}</b></span>${kind === 'next' ? icon('chevron', 18) : ''}</button>`
-  return `<div class="group-pager wide">${sibs[at - 1] ? btn(sibs[at - 1], 'prev', 'Zurück') : '<span></span>'}${sibs[at + 1] ? btn(sibs[at + 1], 'next', 'Weiter') : '<span></span>'}</div>`
+  return `<div class="group-pager wide">${sibs[at - 1] ? btn(sibs[at - 1], 'prev', 'Vorherige Seite') : '<span></span>'}${sibs[at + 1] ? btn(sibs[at + 1], 'next', 'Nächste Seite') : '<span></span>'}</div>`
 }
 
 // The cards of the page drawn (headings of its cards) as jumps under the shown page; marks the one being read.
