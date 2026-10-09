@@ -41,7 +41,7 @@ For every saved network a **fixed IP address** can be set via **Address** (**Obt
 
 ### Wi-Fi hardware
 
-The built-in Wi-Fi can be switched off (**Onboard Wi-Fi on**). For a **USB Wi-Fi stick** you choose the **USB Wi-Fi driver** (RTL88X2BU or RTL8821AU) and tap **Install driver**. The driver is built on the box, which takes a few minutes. Then restart the box. Once the driver is installed, you set **Power saving for the USB adapter** (**Off**, **Minimum** or **Maximum**). **Off** makes the connection more stable with some adapters.
+The built-in Wi-Fi can be switched off (**Onboard Wi-Fi on**). It can also be switched on again on the display: tap the Wi-Fi symbol at the top of the Wi-Fi page. If it was already off at the start, it is back after a restart – the display offers one. For a **USB Wi-Fi stick** you choose the **USB Wi-Fi driver** (RTL88X2BU or RTL8821AU) and tap **Install driver**. The driver is built on the box, which takes a few minutes. Then restart the box. Once the driver is installed, you set **Power saving for the USB adapter** (**Off**, **Minimum** or **Maximum**). **Off** makes the connection more stable with some adapters.
 
 ## LAN (cable)
 

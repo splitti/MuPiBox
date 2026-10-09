@@ -18,6 +18,7 @@
 <b>App</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Onboard WiFi switched off in the app can be switched on again on the display (found by Andreas): the app also switches the chip off at the start, and after a restart the display's WiFi page had no button for it any more - without LAN or a USB adapter nothing could bring it back. The button now stays; tapped, the chip is on again after a restart, which the display offers.</li>
 <li id='linews' class='linews'>All the times in one place (wish of hyperbit): the page Playtime has a card Switch off under the sleep timer - switch off after ... without playback and display off after - the same settings as on their own pages under Battery &amp; Power and Display.</li>
 <li id='linews' class='linews'>Settings pages of a group (Appearance: Theme, View, Start and maintenance images, Texts on the display ...) by Andreas: on a large screen a list 'On this page' beside the content with the pages of the group and the cards of the shown page; on a phone or tablet 'Previous page' and 'Next page' side by side at the end. Moving between the pages of a group is like changing tabs: the back arrow at the top (and the browser's back) leads up to the group, not page by page.</li>
 <li id='linews' class='linews'>Player: the progress bar follows every report of the player (NAS, SD card, podcasts) - once the dot of a paused NAS album stood at the start while the time below it was right.</li>

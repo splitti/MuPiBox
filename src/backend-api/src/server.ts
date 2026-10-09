@@ -38,6 +38,7 @@ import { startSpotifyLoginWatch } from './eltern/spotify-auth-age'
 import { startTlsWatch } from './eltern/tls'
 import { startWeeklySummary } from './eltern/weekly-summary'
 import { startNightDim } from './eltern/night-dim'
+import { bootConfigPath } from './eltern/boot-paths'
 import { startSpeech } from './speech'
 import { startBucketCleanup, parseCookie } from './eltern/middleware'
 import { SESSION_COOKIE, validateSession } from './eltern/auth'
@@ -2794,20 +2795,32 @@ app.get('/api/network/link', async (_req, res) => {
 // adapter that may also be plugged in. Immediate, no reboot needed.
 const ONBOARD_WIFI_SCRIPT = '/usr/local/bin/mupibox/mupi_onboard_wifi.sh'
 
+// The app's switch (eltern/network.ts) also switches the chip off at the start (dtoverlay=disable-wifi): after a restart
+// the box had no onboard adapter, the display hid its button - and without LAN or a USB adapter nothing could switch it
+// on again. Such a chip counts as there and off; on takes the line out, and the radio comes after a restart.
+const onboardWifiBootDisabled = async () => /^dtoverlay=disable-wifi\s*$/m.test(await readFile(await bootConfigPath(), 'utf8').catch(() => ''))
+
 app.get('/api/network/onboard-wifi', async (_req, res) => {
   try {
     const { stdout } = await execFileAsync(ONBOARD_WIFI_SCRIPT, ['status'])
     const status = stdout.trim()
-    res.json({ available: status !== 'unavailable', enabled: status === 'on' })
+    const bootDisabled = await onboardWifiBootDisabled()
+    res.json({ available: status !== 'unavailable' || bootDisabled, enabled: status === 'on' && !bootDisabled, bootDisabled })
   } catch (error) {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error reading onboard WiFi state: ${error}`)
     res.status(500).send('error')
   }
 })
 
+/** POST {enabled}: 'ok', or 'reboot' when the chip was off at the start (on after a restart) */
 app.post('/api/network/onboard-wifi', localOrElternSession, async (req, res) => {
   try {
     const enabled = Boolean(req.body?.enabled)
+    if (enabled && (await onboardWifiBootDisabled())) {
+      await execFileAsync('sudo', ['/usr/local/bin/mupibox/set_onboard_wifi.sh', 'on'])
+      const { stdout } = await execFileAsync(ONBOARD_WIFI_SCRIPT, ['status'])
+      if (stdout.trim() === 'unavailable') return void res.send('reboot')
+    }
     await execFileAsync('sudo', [ONBOARD_WIFI_SCRIPT, enabled ? 'on' : 'off'])
     res.send('ok')
   } catch (error) {
