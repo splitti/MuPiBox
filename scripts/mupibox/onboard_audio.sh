@@ -1,40 +1,57 @@
 #!/bin/bash
 #
-# The board's own audio (3.5 mm jack, HDMI sound) next to the box's sound card - the switch "3.5 mm output" in the
-# app (Einstellungen > Audio > Soundkarte). DietPi switches it off whenever a sound card other than the onboard one is
-# chosen (a block of the driver in modprobe.d, dtparam=audio=off).
+# The board's own audio (3.5 mm jack, HDMI sound) next to the box's sound card - the switches "Kopfhörerbuchse" and
+# "HDMI-Ton" in the app (Einstellungen > Audio > Soundkarte). DietPi switches the onboard audio off whenever a sound
+# card other than the onboard one is chosen (a block of the driver in modprobe.d, dtparam=audio=off).
 #
-#   on       DietPi's block away, dtparam=audio=on where it counts, no snd_bcm2835.enable_headphones=0 on the kernel
-#            command line - and the box's own card stays card 0 (/etc/asound.conf, the card's repair in the server and
-#            DietPi's tools all mean card 0): the onboard driver may not take that slot
+#   on       the jack: DietPi's block away, dtparam=audio=on where it counts, no snd_bcm2835.enable_headphones=0 on the
+#            kernel command line - and the box's own card stays card 0 (/etc/asound.conf, the card's repair in the
+#            server and DietPi's tools all mean card 0): the onboard driver may not take that slot
 #   off      back as DietPi has it for a card other than the onboard one
-#   reapply  "on" again when mupibox.onboardAudio is set (after DietPi switched the sound card, which writes its block
-#            anew - from the app, the MuPiHAT scripts and at the server's start)
-#   status   on / off: what is written (it applies after a restart)
+#   hdmi-on  HDMI sound as a sound card of its own. Pi 1-3 and Zero: the onboard driver does it (like the jack, plus
+#            snd_bcm2835.enable_hdmi=1 and hdmi_drive=2, so a monitor in DVI mode does not leave the sound out). Pi 4
+#            and 400: the onboard driver has no HDMI sound there, the vc4 display driver does - so the overlay
+#            vc4-fkms-v3d is added when no vc4 overlay is there (the firmware's display stays, only the sound card
+#            comes with it); an overlay with "noaudio" loses that word. Pi 5: nothing to write (KMS is always there).
+#   hdmi-off the lines written for it away again (each one has the comment "# mupibox-hdmi-audio" above it)
+#   reapply  "on" again for what is set in mupibox.onboardAudio / mupibox.hdmiAudio (after DietPi switched the sound
+#            card, which writes its block anew - from the app, the MuPiHAT scripts and at the server's start)
+#   status / hdmi-status   on / off: what is written for the jack / HDMI (it applies after a restart)
 #
-# (mupibox.onboardAudio itself is the server's to write: it holds the lock on the configuration.)
-# Prints "changed" when something was written: it applies after a restart of the box. Nothing is written that is
-# already right, and nothing at all while the onboard card is the box's sound card.
+# (mupibox.onboardAudio and mupibox.hdmiAudio themselves are the server's to write: it holds the lock on the
+# configuration.) Prints "changed" when something was written: it applies after a restart of the box. Nothing is
+# written that is already right, and nothing at all while the onboard card is the box's sound card.
+# CONFIG / BOOT_DIR / MODEL / MODPROBE_DIR for a test on copies.
 
 set -u
 
-CONFIG=/etc/mupibox/mupiboxconfig.json
-if [ -f /boot/firmware/config.txt ]; then
-	BOOT_DIR=/boot/firmware
-else
-	BOOT_DIR=/boot
+CONFIG="${CONFIG:-/etc/mupibox/mupiboxconfig.json}"
+if [ -z "${BOOT_DIR:-}" ]; then
+	if [ -f /boot/firmware/config.txt ]; then
+		BOOT_DIR=/boot/firmware
+	else
+		BOOT_DIR=/boot
+	fi
 fi
+MODPROBE_DIR="${MODPROBE_DIR:-/etc/modprobe.d}"
 BOOT_CONFIG="${BOOT_DIR}/config.txt"
 BOOT_CMDLINE="${BOOT_DIR}/cmdline.txt"
-BLACKLIST=/etc/modprobe.d/dietpi-disable_rpi_audio.conf
-ORDER=/etc/modprobe.d/mupibox-card-order.conf
+BLACKLIST="${MODPROBE_DIR}/dietpi-disable_rpi_audio.conf"
+ORDER="${MODPROBE_DIR}/mupibox-card-order.conf"
+MARK="# mupibox-hdmi-audio"
 CHANGED=0
 
 physical=$(/usr/bin/jq -r '.mupibox.physicalDevice // ""' "${CONFIG}" 2>/dev/null)
-MODEL=$(tr -d '\0' < /proc/device-tree/model 2>/dev/null)
+# what is switched on in the app (the server writes these before it calls this script)
+WANT_JACK=$(/usr/bin/jq -r '.mupibox.onboardAudio // false' "${CONFIG}" 2>/dev/null)
+WANT_HDMI=$(/usr/bin/jq -r '.mupibox.hdmiAudio // false' "${CONFIG}" 2>/dev/null)
+MODEL="${MODEL:-$(tr -d '\0' < /proc/device-tree/model 2>/dev/null)}"
 
 # The Pi 5 and the Zero have no 3.5 mm output: nothing to switch there
 no_jack() { case "${MODEL}" in *"Raspberry Pi 5"* | *"Raspberry Pi 500"* | *"Compute Module 5"* | *"Raspberry Pi Zero"*) return 0 ;; esac; return 1; }
+# HDMI sound by the vc4 display driver (Pi 4, 400, CM4) or always there with KMS (Pi 5): the onboard driver has none
+vc4_model() { case "${MODEL}" in *"Raspberry Pi 4"* | *"Raspberry Pi 400"* | *"Compute Module 4"* | *"Raspberry Pi 5"* | *"Raspberry Pi 500"* | *"Compute Module 5"*) return 0 ;; esac; return 1; }
+pi5_model() { case "${MODEL}" in *"Raspberry Pi 5"* | *"Raspberry Pi 500"* | *"Compute Module 5"*) return 0 ;; esac; return 1; }
 # On a Pi 1, 2, 3 and Zero the 3.5 mm output and the status LED's hardware PWM (dtoverlay=pwm on GPIO 12/13, see
 # led_control.py) use the same PWM unit (PWM0) - on a Pi 4 the jack has PWM1 of its own. Only these models listed:
 # any other (Pi 4, 400, CM4, unknown) keeps the LED on the hardware PWM.
@@ -68,14 +85,33 @@ set_dtparam() {
 	rm -f "${tmp}"
 }
 
+# snd_bcm2835.<name>=<value> on the kernel command line (one line): exactly this value once, or written anew at the end
+set_cmdline() {
+	local name="$1" value="$2" cur
+	[ -f "${BOOT_CMDLINE}" ] || return 0
+	cur=$(grep -oE "snd_bcm2835\.${name}=[^[:space:]]*" "${BOOT_CMDLINE}" | sort -u | tr '\n' ' ')
+	[ "${cur}" = "snd_bcm2835.${name}=${value} " ] && return 0
+	sed -i -E "s/[[:space:]]*snd_bcm2835\.${name}=[^[:space:]]*//g; 1 s/[[:space:]]*\$/ snd_bcm2835.${name}=${value}/" "${BOOT_CMDLINE}" && CHANGED=1
+}
+
+# a line for the boot configuration, with the comment above that lets hdmi-off find it again; where it counts for every
+# Pi (an [all] of its own after another section)
+add_marked() {
+	local last
+	cp -p "${BOOT_CONFIG}" "${BOOT_CONFIG}.bak-audio"
+	last=$(sed -n 's/^[[:space:]]*\(\[[^]]*\]\).*/\1/p' "${BOOT_CONFIG}" | tail -n 1)
+	[ -z "${last}" ] || [ "${last}" = "[all]" ] || echo '[all]' >> "${BOOT_CONFIG}"
+	{ echo "${MARK}"; echo "$1"; } >> "${BOOT_CONFIG}" && CHANGED=1
+}
+
 audio_on() {
 	if [ -f "${BLACKLIST}" ]; then
 		# (modprobe reads only *.conf: the renamed file is kept and blocks nothing)
 		mv -f "${BLACKLIST}" "${BLACKLIST}.removed" && CHANGED=1
 	fi
 	set_dtparam on
-	if grep -q 'snd_bcm2835\.enable_headphones=0' "${BOOT_CMDLINE}" 2>/dev/null; then
-		sed -i -E 's/[[:space:]]*snd_bcm2835\.enable_headphones=0//' "${BOOT_CMDLINE}" && CHANGED=1
+	if [ "${WANT_JACK}" = "true" ] && grep -q 'snd_bcm2835\.enable_headphones=0' "${BOOT_CMDLINE}" 2>/dev/null; then
+		sed -i -E 's/[[:space:]]*snd_bcm2835\.enable_headphones=0//g' "${BOOT_CMDLINE}" && CHANGED=1
 	fi
 	# the LED's hardware PWM off on the models where it shares the jack's PWM unit: led_control.py falls back to the
 	# software PWM by itself (a little CPU)
@@ -107,15 +143,73 @@ audio_off() {
 	fi
 }
 
-if no_jack; then
-	[ "${1:-}" = "status" ] && echo "off"
-	exit 0
-fi
+# --- HDMI sound ----------------------------------------------------------------------------------------------------
+
+VC4_OVERLAY='^[[:space:]]*dtoverlay=vc4-f?kms-v3d'
+
+hdmi_on() {
+	if pi5_model; then
+		:
+	elif vc4_model; then
+		if grep -Eq "${VC4_OVERLAY}" "${BOOT_CONFIG}"; then
+			# (the overlay is there; "noaudio" would hide the HDMI sound card)
+			if grep -Eq "${VC4_OVERLAY}.*[,[:space:]]noaudio" "${BOOT_CONFIG}"; then
+				sed -i -E "/${VC4_OVERLAY}/ s/,noaudio//g" "${BOOT_CONFIG}" && CHANGED=1
+			fi
+		else
+			add_marked "dtoverlay=vc4-fkms-v3d"
+		fi
+	else
+		# the onboard driver: HDMI sound on its command line, HDMI mode (not DVI) for a monitor that has none by itself
+		set_cmdline enable_hdmi 1
+		if ! grep -Eq '^[[:space:]]*hdmi_drive=' "${BOOT_CONFIG}"; then
+			add_marked "hdmi_drive=2"
+		fi
+	fi
+}
+
+hdmi_off() {
+	# the lines written for it (the comment above each one finds them)
+	if grep -q "^${MARK}\$" "${BOOT_CONFIG}"; then
+		cp -p "${BOOT_CONFIG}" "${BOOT_CONFIG}.bak-audio"
+		sed -i "/^${MARK}\$/{N;d}" "${BOOT_CONFIG}" && CHANGED=1
+	fi
+	if ! vc4_model && grep -q 'snd_bcm2835\.enable_hdmi=1' "${BOOT_CMDLINE}" 2>/dev/null; then
+		set_cmdline enable_hdmi 0
+	fi
+}
+
+# does the system have the HDMI sound written: on / off
+hdmi_state() {
+	if pi5_model; then
+		echo "on"
+	elif vc4_model; then
+		if grep -Eq "${VC4_OVERLAY}" "${BOOT_CONFIG}" && ! grep -Eq "${VC4_OVERLAY}.*[,[:space:]]noaudio" "${BOOT_CONFIG}"; then echo "on"; else echo "off"; fi
+	elif [ ! -f "${BLACKLIST}" ] && ! grep -q 'snd_bcm2835\.enable_hdmi=0' "${BOOT_CMDLINE}" 2>/dev/null && grep -q 'snd_bcm2835\.enable_hdmi=1' "${BOOT_CMDLINE}" 2>/dev/null; then
+		echo "on"
+	else
+		echo "off"
+	fi
+}
+
+# the onboard driver is needed for the jack, and for HDMI sound on the models where it does that itself
+needs_driver() {
+	{ [ "${WANT_JACK}" = "true" ] && ! no_jack; } && return 0
+	[ "${WANT_HDMI}" = "true" ] && ! vc4_model && return 0
+	return 1
+}
+
+# everything as the two switches say: the driver (DietPi's block, dtparam, the order of the cards) while it is needed,
+# and the HDMI lines
+apply() {
+	if needs_driver; then audio_on; else audio_off; fi
+	if [ "${WANT_HDMI}" = "true" ]; then hdmi_on; else hdmi_off; fi
+}
 
 case "${physical}" in
 	rpi-bcm2835-*)
 		# the onboard output is the box's sound card: DietPi has it on, nothing to do here - but it must be card 0 then
-		[ "${1:-}" = "status" ] && echo "on" && exit 0
+		case "${1:-}" in status | hdmi-status) echo "on"; exit 0 ;; esac
 		if [ -f "${ORDER}" ]; then
 			rm -f "${ORDER}" && echo "changed"
 		fi
@@ -125,21 +219,39 @@ esac
 
 case "${1:-}" in
 	on)
-		audio_on
+		no_jack && exit 0
+		WANT_JACK=true
+		apply
 		;;
 	off)
-		audio_off
+		no_jack && exit 0
+		WANT_JACK=false
+		apply
+		;;
+	hdmi-on)
+		WANT_HDMI=true
+		apply
+		;;
+	hdmi-off)
+		WANT_HDMI=false
+		apply
 		;;
 	reapply)
-		[ "$(/usr/bin/jq -r '.mupibox.onboardAudio // false' "${CONFIG}" 2>/dev/null)" = "true" ] || exit 0
-		audio_on
+		no_jack && WANT_JACK=false
+		{ [ "${WANT_JACK}" = "true" ] || [ "${WANT_HDMI}" = "true" ]; } || exit 0
+		apply
 		;;
 	status)
-		if [ ! -f "${BLACKLIST}" ] && [ -f "${ORDER}" ]; then echo "on"; else echo "off"; fi
+		no_jack && { echo "off"; exit 0; }
+		if [ ! -f "${BLACKLIST}" ] && [ -f "${ORDER}" ] && ! grep -q 'snd_bcm2835\.enable_headphones=0' "${BOOT_CMDLINE}" 2>/dev/null; then echo "on"; else echo "off"; fi
+		exit 0
+		;;
+	hdmi-status)
+		hdmi_state
 		exit 0
 		;;
 	*)
-		echo "usage: $0 on|off|reapply|status" >&2
+		echo "usage: $0 on|off|hdmi-on|hdmi-off|reapply|status|hdmi-status" >&2
 		exit 2
 		;;
 esac

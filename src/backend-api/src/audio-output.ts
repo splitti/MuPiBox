@@ -337,6 +337,29 @@ export async function setOnboardAudio(on: boolean): Promise<{ ok: boolean; chang
   return { ok: r.ok, changed: /changed/.test(r.stdout) }
 }
 
+/**
+ * The HDMI sound on or off as a sound card of its own (the onboard driver on a Pi up to the 3, the vc4 display driver on
+ * a Pi 4 - see the script). Returns whether something was written: it applies after a restart of the box.
+ */
+export async function setHdmiAudio(on: boolean): Promise<{ ok: boolean; changed: boolean }> {
+  if (saveConfig) {
+    await saveConfig((cfg) => {
+      const mb = (cfg.mupibox ?? {}) as Record<string, unknown>
+      mb.hdmiAudio = on
+      // (an HDMI output kept for the start: gone with it)
+      if (!on && typeof mb.audioOutput === 'string' && /hdmi/i.test(mb.audioOutput)) delete mb.audioOutput
+      cfg.mupibox = mb
+    })
+  }
+  const r = await run('sudo', [ONBOARD_SCRIPT, on ? 'hdmi-on' : 'hdmi-off'], 20000)
+  return { ok: r.ok, changed: /changed/.test(r.stdout) }
+}
+
+/** What is written for the HDMI sound ('on' / 'off'; '' when the script is not there) */
+export async function hdmiAudioWritten(): Promise<string> {
+  return (await run('sudo', [ONBOARD_SCRIPT, 'hdmi-status'], 10000)).stdout.trim()
+}
+
 /** After DietPi switched the sound card (it writes its block anew): the board's outputs on again when they were */
 export async function reapplyOnboardAudio(): Promise<boolean> {
   const r = await run('sudo', [ONBOARD_SCRIPT, 'reapply'], 20000)

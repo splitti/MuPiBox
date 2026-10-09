@@ -8,7 +8,7 @@ import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { requireCsrf, requireSession } from './middleware'
 import { bootConfigPath } from './boot-paths'
-import { onboardAudioWritten, reapplyOnboardAudio, setOnboardAudio } from '../audio-output'
+import { hdmiAudioWritten, onboardAudioWritten, reapplyOnboardAudio, setHdmiAudio, setOnboardAudio } from '../audio-output'
 
 export interface HardwareDeps {
   getMupiboxConfig: () => MupiboxConfig | undefined
@@ -134,6 +134,15 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
           written: (await onboardAudioWritten()) === 'on',
           active: /bcm2835 Headphones|Headphones/i.test(await fsp.readFile('/proc/asound/cards', 'utf8').catch(() => '')),
         },
+        // the HDMI sound as a sound card of its own (any Pi with HDMI; a Pi 4 gets the vc4 display driver for it, which
+        // applies after a restart - see onboard_audio.sh)
+        hdmi: {
+          applicable: !(typeof mb.physicalDevice === 'string' && mb.physicalDevice.startsWith('rpi-bcm2835')),
+          viaDisplayDriver: /Raspberry Pi (4|400|5|500)|Compute Module (4|5)/.test(model),
+          on: mb.hdmiAudio === true,
+          written: (await hdmiAudioWritten()) === 'on',
+          active: /HDMI/i.test(await fsp.readFile('/proc/asound/cards', 'utf8').catch(() => '')),
+        },
       },
       rotary: { active: rotary.active === true, running: rotaryActive, step: int(rotary.step, 1, 10) ?? 5, button: BUTTON.includes(String(rotary.button)) ? rotary.button : 'off' },
       mupihat: {
@@ -232,6 +241,20 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
     const mb = section(deps, 'mupibox')
     if (typeof mb.physicalDevice === 'string' && mb.physicalDevice.startsWith('rpi-bcm2835')) return void res.status(409).json({ error: 'onboard_is_the_card' })
     const r = await setOnboardAudio(on)
+    if (!r.ok) return void res.status(500).json({ ok: false, error: 'switch_failed' })
+    res.json({ ok: true, reboot: r.changed })
+  })
+
+  /**
+   * POST /api/app/hdmi-audio {on} - the HDMI sound as a sound card of its own, next to the box's sound card ("Hören mit"
+   * on the display, the output row in the app). Applies after a restart.
+   */
+  router.post('/hdmi-audio', requireSession, requireCsrf, async (req, res) => {
+    const on = (req.body as { on?: unknown } | undefined)?.on
+    if (typeof on !== 'boolean') return void res.status(400).json({ error: 'invalid on' })
+    const mb = section(deps, 'mupibox')
+    if (typeof mb.physicalDevice === 'string' && mb.physicalDevice.startsWith('rpi-bcm2835')) return void res.status(409).json({ error: 'onboard_is_the_card' })
+    const r = await setHdmiAudio(on)
     if (!r.ok) return void res.status(500).json({ ok: false, error: 'switch_failed' })
     res.json({ ok: true, reboot: r.changed })
   })
