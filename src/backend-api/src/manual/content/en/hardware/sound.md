@@ -18,13 +18,22 @@ The choices include:
 
 If the box has a sound card of its own (for example the MuPiHAT or a HiFiBerry), DietPi switches off the Raspberry Pi's 3.5 mm output. With **Settings › Audio › Sound card › Headphone jack › 3.5 mm output as well** it stays on next to the sound card, for headphones on the jack. This applies after a restart, which the app offers right away.
 
-Then there are several outputs: in the player a tap on the volume opens **Listen with** with one tile per output, in the app you choose under **Output** in **Now playing**. The box remembers the chosen output across a restart too. Without a choice it plays through the sound card chosen above.
+Then there are several outputs: in the player a tap on the symbol next to the volume switches to the other one at once with two outputs, with more it opens **Listen with** with one tile per output ([The player](../bedienung/player.md)). In the app you choose under **Output** in **Now playing**. The box remembers the chosen output across a restart too. Without a choice it plays through the sound card chosen above.
 
 - When you switch to the jack, it is not louder than the box just was. The **maximum for headphones** applies to the jack too, as does the **maximum (hearing protection)**.
 - The box makes sure its sound card stays the first card in the system. If you change the sound card or switch the MuPiHAT on or off, it switches the jack back on afterwards.
 - Switching it off puts everything back the way DietPi set it up for the sound card (also after a restart).
 - If the onboard output is the sound card itself, there is no switch: the jack is on anyway.
 - The Raspberry Pi 5 and Zero have no 3.5 mm jack, the switch is missing there. On a Raspberry Pi 1 to 3 the jack and the status LED (GPIO 12/13) share the PWM unit: with the jack switched on the LED keeps running in software. From the Pi 4 on it stays on the hardware PWM.
+
+### HDMI sound as well
+
+For a monitor or TV on the HDMI port switch on **Settings › Audio › Sound card › HDMI sound › HDMI output as well**. The HDMI output is then an output of its own next to the box's sound card and is chosen like the jack in the player or in the app. This too applies after a restart.
+
+- The jack stays off as long as its own switch is off. Both can be switched on together.
+- The box sets the HDMI output to HDMI instead of DVI (`hdmi_drive=2`), so a monitor without a setting of its own gets the sound too – only if the boot configuration has nothing about it yet.
+- Switching it off takes out again everything that was written for it.
+- If the onboard output is the sound card itself, there is no switch.
 
 ## Volume
 

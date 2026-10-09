@@ -2762,5 +2762,10 @@
  "Das Display startet damit gleich neu.": "Il display si riavvierà subito.",
  "Der Balken unter den Covern, in jeder Ansicht.": "La barra sotto le copertine, in ogni vista.",
  "Horizontale Scrollleiste ausblenden": "Nascondi la barra di scorrimento orizzontale",
- "SSD": "SSD"
+ "SSD": "SSD",
+ "HDMI-Ton": "Audio HDMI",
+ "HDMI-Ausgang zusätzlich": "Uscita HDMI in più",
+ "Für einen Monitor oder Fernseher am HDMI-Anschluss, neben der Soundkarte der Box. Gewählt wird im Player über „Hören mit“ oder in der App bei der Ausgabe.": "Per un monitor o un televisore sulla porta HDMI, accanto alla scheda audio del box. Si sceglie nel player con «Ascolta con» o nell'app, nella riga dell'uscita.",
+ "Der HDMI-Ausgang gilt nach einem Neustart.": "L'uscita HDMI vale dopo un riavvio.",
+ "Der HDMI-Ausgang ist nach einem Neustart aus.": "L'uscita HDMI è spenta dopo un riavvio."
 }

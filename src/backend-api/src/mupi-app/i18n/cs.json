@@ -2762,5 +2762,10 @@
  "Das Display startet damit gleich neu.": "Displej se tím hned restartuje.",
  "Der Balken unter den Covern, in jeder Ansicht.": "Pruh pod obaly, v každém zobrazení.",
  "Horizontale Scrollleiste ausblenden": "Skrýt vodorovný posuvník",
- "SSD": "SSD"
+ "SSD": "SSD",
+ "HDMI-Ton": "Zvuk HDMI",
+ "HDMI-Ausgang zusätzlich": "Navíc výstup HDMI",
+ "Für einen Monitor oder Fernseher am HDMI-Anschluss, neben der Soundkarte der Box. Gewählt wird im Player über „Hören mit“ oder in der App bei der Ausgabe.": "Pro monitor nebo televizi na portu HDMI, vedle zvukové karty boxu. Volí se v přehrávači přes „Poslouchat přes“ nebo v aplikaci v řádku výstupu.",
+ "Der HDMI-Ausgang gilt nach einem Neustart.": "Výstup HDMI platí po restartu.",
+ "Der HDMI-Ausgang ist nach einem Neustart aus.": "Výstup HDMI je po restartu vypnutý."
 }

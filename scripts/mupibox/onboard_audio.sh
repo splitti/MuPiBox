@@ -39,6 +39,7 @@ BOOT_CMDLINE="${BOOT_DIR}/cmdline.txt"
 BLACKLIST="${MODPROBE_DIR}/dietpi-disable_rpi_audio.conf"
 ORDER="${MODPROBE_DIR}/mupibox-card-order.conf"
 MARK="# mupibox-hdmi-audio"
+MARK_KMS="# mupibox-hdmi-audio: noaudio taken from vc4-kms-v3d"
 CHANGED=0
 
 physical=$(/usr/bin/jq -r '.mupibox.physicalDevice // ""' "${CONFIG}" 2>/dev/null)
@@ -102,19 +103,33 @@ add_marked() {
 	{ echo "${MARK}"; echo "$1"; } >> "${BOOT_CONFIG}" && CHANGED=1
 }
 
+# the LED back on the hardware PWM (as the update sets it: GPIO 12/13 and the analog audio off)
+led_pwm_back() {
+	if pwm_shared && { [ "${LED_PIN}" = "12" ] || [ "${LED_PIN}" = "13" ]; } && ! grep -q '^dtoverlay=pwm' "${BOOT_CONFIG}"; then
+		echo "dtoverlay=pwm,pin=${LED_PIN},func=4" >> "${BOOT_CONFIG}" && CHANGED=1
+	fi
+}
+
 audio_on() {
 	if [ -f "${BLACKLIST}" ]; then
 		# (modprobe reads only *.conf: the renamed file is kept and blocks nothing)
 		mv -f "${BLACKLIST}" "${BLACKLIST}.removed" && CHANGED=1
 	fi
 	set_dtparam on
-	if [ "${WANT_JACK}" = "true" ] && grep -q 'snd_bcm2835\.enable_headphones=0' "${BOOT_CMDLINE}" 2>/dev/null; then
-		sed -i -E 's/[[:space:]]*snd_bcm2835\.enable_headphones=0//g' "${BOOT_CMDLINE}" && CHANGED=1
-	fi
-	# the LED's hardware PWM off on the models where it shares the jack's PWM unit: led_control.py falls back to the
-	# software PWM by itself (a little CPU)
-	if pwm_shared && grep -q '^dtoverlay=pwm,' "${BOOT_CONFIG}"; then
-		sed -i '/^dtoverlay=pwm,/d' "${BOOT_CONFIG}" && CHANGED=1
+	if [ "${WANT_JACK}" = "true" ]; then
+		if grep -q 'snd_bcm2835\.enable_headphones=0' "${BOOT_CMDLINE}" 2>/dev/null; then
+			sed -i -E 's/[[:space:]]*snd_bcm2835\.enable_headphones=0//g' "${BOOT_CMDLINE}" && CHANGED=1
+		fi
+		# the LED's hardware PWM off on the models where it shares the jack's PWM unit: led_control.py falls back to
+		# the software PWM by itself (a little CPU)
+		if pwm_shared && grep -q '^dtoverlay=pwm,' "${BOOT_CONFIG}"; then
+			sed -i '/^dtoverlay=pwm,/d' "${BOOT_CONFIG}" && CHANGED=1
+		fi
+	elif ! no_jack; then
+		# the driver for HDMI only: the jack stays out (it came along as a card of its own, and on a Pi 1-3 it took
+		# the LED's PWM unit - free again then)
+		set_cmdline enable_headphones 0
+		led_pwm_back
 	fi
 	# ("!": slot 0 is not for this module - the box's own card takes it, the onboard cards the next free ones)
 	if [ "$(cat "${ORDER}" 2>/dev/null)" != "options snd slots=!snd_bcm2835" ]; then
@@ -135,10 +150,7 @@ audio_off() {
 	if [ -f "${ORDER}" ]; then
 		rm -f "${ORDER}" && CHANGED=1
 	fi
-	# the LED back on the hardware PWM (as the update sets it: GPIO 12/13 and the analog audio off)
-	if pwm_shared && { [ "${LED_PIN}" = "12" ] || [ "${LED_PIN}" = "13" ]; } && ! grep -q '^dtoverlay=pwm' "${BOOT_CONFIG}"; then
-		echo "dtoverlay=pwm,pin=${LED_PIN},func=4" >> "${BOOT_CONFIG}" && CHANGED=1
-	fi
+	led_pwm_back
 }
 
 # --- HDMI sound ----------------------------------------------------------------------------------------------------
@@ -159,9 +171,12 @@ hdmi_on() {
 	if pi5_model; then
 		:
 	elif grep -Eq "${KMS_OVERLAY}" "${BOOT_CONFIG}"; then
-		# (full KMS: "noaudio" would hide the HDMI sound card)
+		# (full KMS: "noaudio" would hide the HDMI sound card - noted with a comment of its own, so hdmi-off puts it back;
+		# never MARK, whose next line hdmi-off removes)
 		if grep -Eq "${KMS_OVERLAY}.*[,[:space:]]noaudio" "${BOOT_CONFIG}"; then
+			cp -p "${BOOT_CONFIG}" "${BOOT_CONFIG}.bak-audio"
 			sed -i -E "/${KMS_OVERLAY}/ s/,noaudio//g" "${BOOT_CONFIG}" && CHANGED=1
+			grep -q "^${MARK_KMS}\$" "${BOOT_CONFIG}" || echo "${MARK_KMS}" >> "${BOOT_CONFIG}"
 		fi
 	else
 		# the onboard driver: HDMI sound on its command line, HDMI mode (not DVI) for a monitor that has none by itself
@@ -181,6 +196,12 @@ hdmi_off() {
 	fi
 	if grep -q 'snd_bcm2835\.enable_hdmi=1' "${BOOT_CMDLINE}" 2>/dev/null; then
 		set_cmdline enable_hdmi 0
+	fi
+	# full KMS: "noaudio" back where hdmi-on took it away
+	if grep -q "^${MARK_KMS}\$" "${BOOT_CONFIG}"; then
+		cp -p "${BOOT_CONFIG}" "${BOOT_CONFIG}.bak-audio"
+		sed -i -E "/${KMS_OVERLAY}/ { /[,[:space:]]noaudio/! s/[[:space:]]*\$/,noaudio/ }" "${BOOT_CONFIG}"
+		sed -i "/^${MARK_KMS}\$/d" "${BOOT_CONFIG}" && CHANGED=1
 	fi
 }
 

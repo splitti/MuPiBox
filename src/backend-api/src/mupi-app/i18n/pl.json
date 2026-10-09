@@ -2762,5 +2762,10 @@
  "Das Display startet damit gleich neu.": "Wyświetlacz zaraz się przez to zrestartuje.",
  "Der Balken unter den Covern, in jeder Ansicht.": "Pasek pod okładkami, w każdym widoku.",
  "Horizontale Scrollleiste ausblenden": "Ukryj poziomy pasek przewijania",
- "SSD": "SSD"
+ "SSD": "SSD",
+ "HDMI-Ton": "Dźwięk HDMI",
+ "HDMI-Ausgang zusätzlich": "Dodatkowo wyjście HDMI",
+ "Für einen Monitor oder Fernseher am HDMI-Anschluss, neben der Soundkarte der Box. Gewählt wird im Player über „Hören mit“ oder in der App bei der Ausgabe.": "Dla monitora lub telewizora na złączu HDMI, obok karty dźwiękowej pudełka. Wybierasz je w odtwarzaczu w „Słuchaj przez” albo w aplikacji w wierszu wyjścia.",
+ "Der HDMI-Ausgang gilt nach einem Neustart.": "Wyjście HDMI zadziała po ponownym uruchomieniu.",
+ "Der HDMI-Ausgang ist nach einem Neustart aus.": "Wyjście HDMI będzie wyłączone po ponownym uruchomieniu."
 }

@@ -18,13 +18,22 @@ Zur Wahl stehen unter anderem:
 
 Hat die Box eine eigene Soundkarte (zum Beispiel den MuPiHAT oder einen HiFiBerry), schaltet DietPi den 3,5-mm-Ausgang des Raspberry Pi ab. Mit **Einstellungen › Audio › Soundkarte › Kopfhörerbuchse › 3,5-mm-Ausgang zusätzlich** bleibt er neben der Soundkarte an, für Kopfhörer an der Buchse. Das gilt nach einem Neustart, den die App gleich anbietet.
 
-Danach gibt es mehrere Ausgänge: Im Player öffnet ein Tipp auf die Lautstärke **Hören mit** mit einer Kachel je Ausgang, in der App wählst du bei **Jetzt läuft** unter **Ausgabe**. Die Box merkt sich den gewählten Ausgang auch über einen Neustart. Ohne Wahl spielt sie über die Soundkarte, die oben gewählt ist.
+Danach gibt es mehrere Ausgänge: Im Player wechselt ein Tipp auf das Symbol neben der Lautstärke bei zwei Ausgängen gleich zum anderen, bei mehr öffnet er **Hören mit** mit einer Kachel je Ausgang ([Der Player](../bedienung/player.md)). In der App wählst du bei **Jetzt läuft** unter **Ausgabe**. Die Box merkt sich den gewählten Ausgang auch über einen Neustart. Ohne Wahl spielt sie über die Soundkarte, die oben gewählt ist.
 
 - Wechselst du auf die Buchse, wird sie nicht lauter, als die Box gerade war. Das **Maximum für Kopfhörer** gilt auch für die Buchse, ebenso das **Maximum (Hörschutz)**.
 - Die Box sorgt dafür, dass ihre Soundkarte die erste Karte im System bleibt. Wechselst du die Soundkarte oder schaltest du den MuPiHAT ein oder aus, schaltet sie die Buchse danach wieder ein.
 - Ausschalten stellt alles zurück, wie DietPi es für die Soundkarte eingerichtet hat (ebenfalls nach einem Neustart).
 - Ist der Onboard-Ausgang selbst die Soundkarte, gibt es den Schalter nicht: Die Buchse ist dann ohnehin an.
 - Raspberry Pi 5 und Zero haben keine 3,5-mm-Buchse, dort fehlt der Schalter. Auf einem Raspberry Pi 1 bis 3 teilen sich Buchse und Status-LED (GPIO 12/13) die PWM-Einheit: Mit eingeschalteter Buchse läuft die LED per Software weiter. Ab dem Pi 4 bleibt sie auf der Hardware-PWM.
+
+### HDMI-Ton zusätzlich
+
+Für einen Monitor oder Fernseher am HDMI-Anschluss schaltest du **Einstellungen › Audio › Soundkarte › HDMI-Ton › HDMI-Ausgang zusätzlich** ein. Der HDMI-Ausgang ist dann ein eigener Ausgang neben der Soundkarte der Box und wird wie die Buchse im Player oder in der App gewählt. Auch das gilt nach einem Neustart.
+
+- Die Buchse bleibt dabei aus, solange ihr eigener Schalter aus ist. Beide lassen sich zusammen einschalten.
+- Die Box stellt den HDMI-Ausgang auf HDMI statt DVI (`hdmi_drive=2`), damit auch ein Monitor ohne eigene Einstellung den Ton bekommt – nur, wenn in der Boot-Konfiguration noch nichts dazu steht.
+- Ausschalten nimmt alles wieder heraus, was dafür eingetragen wurde.
+- Ist der Onboard-Ausgang selbst die Soundkarte, gibt es den Schalter nicht.
 
 ## Lautstärke
 

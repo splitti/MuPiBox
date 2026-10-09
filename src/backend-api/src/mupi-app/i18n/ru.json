@@ -2762,5 +2762,10 @@
  "Das Display startet damit gleich neu.": "Дисплей сразу перезапустится.",
  "Der Balken unter den Covern, in jeder Ansicht.": "Полоса под обложками, в любом виде.",
  "Horizontale Scrollleiste ausblenden": "Скрыть горизонтальную полосу прокрутки",
- "SSD": "SSD"
+ "SSD": "SSD",
+ "HDMI-Ton": "Звук HDMI",
+ "HDMI-Ausgang zusätzlich": "Дополнительно выход HDMI",
+ "Für einen Monitor oder Fernseher am HDMI-Anschluss, neben der Soundkarte der Box. Gewählt wird im Player über „Hören mit“ oder in der App bei der Ausgabe.": "Для монитора или телевизора на разъёме HDMI, рядом со звуковой картой коробки. Выбирается в плеере через «Слушать через» или в приложении в строке вывода.",
+ "Der HDMI-Ausgang gilt nach einem Neustart.": "Выход HDMI заработает после перезапуска.",
+ "Der HDMI-Ausgang ist nach einem Neustart aus.": "Выход HDMI будет выключен после перезапуска."
 }

@@ -2762,5 +2762,10 @@
  "Das Display startet damit gleich neu.": "Ekran bu nedenle birazdan yeniden başlar.",
  "Der Balken unter den Covern, in jeder Ansicht.": "Kapakların altındaki çubuk, her görünümde.",
  "Horizontale Scrollleiste ausblenden": "Yatay kaydırma çubuğunu gizle",
- "SSD": "SSD"
+ "SSD": "SSD",
+ "HDMI-Ton": "HDMI sesi",
+ "HDMI-Ausgang zusätzlich": "Ayrıca HDMI çıkışı",
+ "Für einen Monitor oder Fernseher am HDMI-Anschluss, neben der Soundkarte der Box. Gewählt wird im Player über „Hören mit“ oder in der App bei der Ausgabe.": "HDMI bağlantısındaki bir monitör veya televizyon için, kutunun ses kartının yanında. Oynatıcıda «Şununla dinle» üzerinden veya uygulamada çıkış satırında seçilir.",
+ "Der HDMI-Ausgang gilt nach einem Neustart.": "HDMI çıkışı yeniden başlatmadan sonra geçerli olur.",
+ "Der HDMI-Ausgang ist nach einem Neustart aus.": "HDMI çıkışı yeniden başlatmadan sonra kapalıdır."
 }

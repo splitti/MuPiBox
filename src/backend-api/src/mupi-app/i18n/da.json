@@ -2762,5 +2762,10 @@
  "Das Display startet damit gleich neu.": "Skærmen genstarter derfor med det samme.",
  "Der Balken unter den Covern, in jeder Ansicht.": "Bjælken under coverne, i alle visninger.",
  "Horizontale Scrollleiste ausblenden": "Skjul vandret rullebjælke",
- "SSD": "SSD"
+ "SSD": "SSD",
+ "HDMI-Ton": "HDMI-lyd",
+ "HDMI-Ausgang zusätzlich": "HDMI-udgang også",
+ "Für einen Monitor oder Fernseher am HDMI-Anschluss, neben der Soundkarte der Box. Gewählt wird im Player über „Hören mit“ oder in der App bei der Ausgabe.": "Til en skærm eller et tv på HDMI-porten, ved siden af boksens lydkort. Du vælger den i afspilleren under “Lyt med” eller i appen ved udgangen.",
+ "Der HDMI-Ausgang gilt nach einem Neustart.": "HDMI-udgangen gælder efter en genstart.",
+ "Der HDMI-Ausgang ist nach einem Neustart aus.": "HDMI-udgangen er slukket efter en genstart."
 }

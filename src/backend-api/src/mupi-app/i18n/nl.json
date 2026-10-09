@@ -2762,5 +2762,10 @@
  "Das Display startet damit gleich neu.": "Het display start daarmee meteen opnieuw op.",
  "Der Balken unter den Covern, in jeder Ansicht.": "De balk onder de covers, in elke weergave.",
  "Horizontale Scrollleiste ausblenden": "Horizontale schuifbalk verbergen",
- "SSD": "SSD"
+ "SSD": "SSD",
+ "HDMI-Ton": "HDMI-geluid",
+ "HDMI-Ausgang zusätzlich": "Ook HDMI-uitgang",
+ "Für einen Monitor oder Fernseher am HDMI-Anschluss, neben der Soundkarte der Box. Gewählt wird im Player über „Hören mit“ oder in der App bei der Ausgabe.": "Voor een monitor of tv op de HDMI-aansluiting, naast de geluidskaart van de box. Je kiest hem in de speler via «Luisteren met» of in de app bij de uitvoer.",
+ "Der HDMI-Ausgang gilt nach einem Neustart.": "De HDMI-uitgang geldt na een herstart.",
+ "Der HDMI-Ausgang ist nach einem Neustart aus.": "De HDMI-uitgang is uit na een herstart."
 }

@@ -2762,5 +2762,10 @@
  "Das Display startet damit gleich neu.": "Η οθόνη θα επανεκκινηθεί αμέσως.",
  "Der Balken unter den Covern, in jeder Ansicht.": "Η μπάρα κάτω από τα εξώφυλλα, σε κάθε προβολή.",
  "Horizontale Scrollleiste ausblenden": "Απόκρυψη οριζόντιας γραμμής κύλισης",
- "SSD": "SSD"
+ "SSD": "SSD",
+ "HDMI-Ton": "Ήχος HDMI",
+ "HDMI-Ausgang zusätzlich": "Και έξοδος HDMI",
+ "Für einen Monitor oder Fernseher am HDMI-Anschluss, neben der Soundkarte der Box. Gewählt wird im Player über „Hören mit“ oder in der App bei der Ausgabe.": "Για οθόνη ή τηλεόραση στη θύρα HDMI, δίπλα στην κάρτα ήχου του κουτιού. Επιλέγεται στο πρόγραμμα αναπαραγωγής μέσω «Ακούστε με» ή στην εφαρμογή, στη γραμμή εξόδου.",
+ "Der HDMI-Ausgang gilt nach einem Neustart.": "Η έξοδος HDMI ισχύει μετά από επανεκκίνηση.",
+ "Der HDMI-Ausgang ist nach einem Neustart aus.": "Η έξοδος HDMI είναι κλειστή μετά από επανεκκίνηση."
 }
