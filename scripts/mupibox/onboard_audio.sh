@@ -182,23 +182,28 @@ model_filters() {
 	esac
 }
 
-# The KMS lines in force on this Pi: before the first [section], under [all], or under a model filter of this model
-# (other conditions such as [hdmi:0] are kept as they are, [none] ends everything until [all]).
+# The KMS lines in force on this Pi: before the first [section], under [all], or under a model filter of this model.
+# Every other condition ([EDID=...], [gpio4=1], [hdmi:0], [0x...] ...) cannot be told from here: from it on until [all]
+# a KMS line is no proof of full KMS and is not changed (an [EDID=other monitor] line was taken for KMS, the onboard
+# driver was switched off and the HDMI sound had none). Conditions of different kinds add up in config.txt, so a model
+# filter after such a condition does not lift it; [none] ends everything until [all].
 #   kms_lines has      a KMS line is in force
 #   kms_lines noaudio  ... and it has "noaudio"
 #   kms_lines strip    prints the file with "noaudio" taken from those lines
 #   kms_lines add      prints the file with "noaudio" added to those lines
 kms_lines() {
 	awk -v mode="$1" -v filters=" $(model_filters) " '
-		function on_this_pi() { return model_ok && !none }
-		BEGIN { model_ok = 1; none = 0; found = 0 }
+		function on_this_pi() { return model_ok && !none && !unknown }
+		BEGIN { model_ok = 1; none = 0; unknown = 0; found = 0 }
 		{
 			t = $0; sub(/^[[:space:]]+/, "", t)
 			if (t ~ /^\[/) {
 				sec = t; sub(/\].*$/, "]", sec)
-				if (sec == "[all]") { model_ok = 1; none = 0 }
-				else if (sec == "[none]") none = 1
-				else if (sec ~ /^\[(pi[0-9]+[a-z+]*|cm[0-9]+[a-z]*)\]$/) model_ok = index(filters, " " sec " ") > 0
+				lsec = tolower(sec)
+				if (lsec == "[all]") { model_ok = 1; none = 0; unknown = 0 }
+				else if (lsec == "[none]") none = 1
+				else if (lsec ~ /^\[(pi[0-9]+[a-z+]*|cm[0-9]+[a-z]*)\]$/) model_ok = index(filters, " " lsec " ") > 0
+				else unknown = 1
 				if (mode == "strip" || mode == "add") print
 				next
 			}
