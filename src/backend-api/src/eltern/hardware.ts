@@ -7,6 +7,8 @@ import { promises as fsp } from 'node:fs'
 import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { requireCsrf, requireSession } from './middleware'
+import { bootConfigPath } from './boot-paths'
+import { hdmiAudioWritten, onboardAudioWritten, reapplyOnboardAudio, setHdmiAudio, setOnboardAudio } from '../audio-output'
 
 export interface HardwareDeps {
   getMupiboxConfig: () => MupiboxConfig | undefined
@@ -18,15 +20,6 @@ const PINS = ['4', '12', '13', '17', '18', '21', '22', '23', '24', '25', '27']
 // the I2S driver of the MAX98357A amplifier, as enable_mupihat.sh writes it
 const AMP_DRIVER = ['dtoverlay=max98357a,sdmode-pin=16', 'dtoverlay=i2s-mmap']
 
-// The Pi's boot configuration: /boot/firmware/config.txt on newer DietPi, /boot/config.txt before
-async function bootConfigPath(): Promise<string> {
-  try {
-    await fsp.access('/boot/firmware/config.txt')
-    return '/boot/firmware/config.txt'
-  } catch {
-    return '/boot/config.txt'
-  }
-}
 
 // The lines of the boot configuration that count for every Pi: before the first [section] and under [all] - one under
 // [pi5] (or [cm4], [gpio4=1], ...) does nothing on a Pi 4. And the section a line added at the end would land in.
@@ -119,6 +112,7 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
     } catch {
       // not DietPi (development)
     }
+    const model = (await fsp.readFile('/proc/device-tree/model', 'utf8').catch(() => '')).replace(/\0/g, '')
     const [fanActive, rotaryActive] = await Promise.all(['mupi_fan', 'mupi_rotary'].map(async (s) => (await run('systemctl', ['is-active', s], 5000)).stdout.trim() === 'active'))
     res.json({
       soundcard: {
@@ -129,6 +123,24 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
         options: (Array.isArray(mb.AudioDevices) ? (mb.AudioDevices as Record<string, unknown>[]) : [])
           .map((d) => ({ id: String(d.tname ?? ''), name: String(d.ufname ?? d.tname ?? '') }))
           .filter((d) => d.id),
+        // the board's 3.5 mm output next to the box's card (not with the onboard output as the card: it is on then):
+        // switched on in the app, what is written (applies after a restart) and whether the system has it now
+        // (none on a Pi 5 or Zero; on a Pi up to the 3 the jack shares its PWM unit with the status LED's hardware PWM,
+        // which then runs in software - the same model lists as onboard_audio.sh)
+        onboard: {
+          applicable: !(typeof mb.physicalDevice === 'string' && mb.physicalDevice.startsWith('rpi-bcm2835')) && !/Raspberry Pi (5|500)|Compute Module 5|Raspberry Pi Zero/.test(model),
+          ledSoftware: /Raspberry Pi (3|2|Zero|Model)|Compute Module (3|Rev)/.test(model) && ['12', '13'].includes(String(shim.ledPin ?? '')),
+          on: mb.onboardAudio === true,
+          written: (await onboardAudioWritten()) === 'on',
+          active: /bcm2835 Headphones|Headphones/i.test(await fsp.readFile('/proc/asound/cards', 'utf8').catch(() => '')),
+        },
+        // the HDMI sound as a sound card of its own (any Pi with HDMI; applies after a restart - see onboard_audio.sh)
+        hdmi: {
+          applicable: !(typeof mb.physicalDevice === 'string' && mb.physicalDevice.startsWith('rpi-bcm2835')),
+          on: mb.hdmiAudio === true,
+          written: (await hdmiAudioWritten()) === 'on',
+          active: /HDMI/i.test(await fsp.readFile('/proc/asound/cards', 'utf8').catch(() => '')),
+        },
       },
       rotary: { active: rotary.active === true, running: rotaryActive, step: int(rotary.step, 1, 10) ?? 5, button: BUTTON.includes(String(rotary.button)) ? rotary.button : 'off' },
       mupihat: {
@@ -154,6 +166,25 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
         t25: Number(fan.fan_temp_25 ?? 45),
       },
       pins: PINS,
+    })
+  })
+
+  /**
+   * GET /api/app/pins-in-use - which accessories use GPIO pins on this box right now (no login: the manual's GPIO page,
+   * open like the app's own pages, shows only these). Pins only, no other settings.
+   */
+  router.get('/pins-in-use', (_req, res) => {
+    const shim = section(deps, 'shim')
+    const fan = section(deps, 'fan')
+    res.set('Cache-Control', 'no-store').json({
+      rotary: section(deps, 'rotary').active === true,
+      fan: { active: fan.fan_active === true, gpio: String(fan.fan_gpio ?? '13') },
+      shim: {
+        poweroffPin: String(shim.poweroffPin ?? '4'),
+        triggerPin: String(shim.triggerPin ?? '17'),
+        cutPin: String(shim.cutPin ?? '27'),
+        ledPin: String(shim.ledPin ?? '13'),
+      },
     })
   })
 
@@ -191,8 +222,39 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
       return
     }
     await merge(deps, 'mupibox', { physicalDevice: id })
+    // (DietPi blocks the board's outputs anew with another card: on again when they were switched on - after the card
+    // is written, the script goes by it)
+    await reapplyOnboardAudio().catch(() => false)
     detached('sudo /usr/local/bin/mupibox/setting_update.sh >/dev/null 2>&1')
     res.json({ ok: true, reboot: true })
+  })
+
+  /**
+   * POST /api/app/onboard-audio {on} - the board's 3.5 mm output (and HDMI sound) next to the box's sound card, for
+   * headphones on the jack ("Hören mit" on the display, the output row in the app). Applies after a restart.
+   */
+  router.post('/onboard-audio', requireSession, requireCsrf, async (req, res) => {
+    const on = (req.body as { on?: unknown } | undefined)?.on
+    if (typeof on !== 'boolean') return void res.status(400).json({ error: 'invalid on' })
+    const mb = section(deps, 'mupibox')
+    if (typeof mb.physicalDevice === 'string' && mb.physicalDevice.startsWith('rpi-bcm2835')) return void res.status(409).json({ error: 'onboard_is_the_card' })
+    const r = await setOnboardAudio(on)
+    if (!r.ok) return void res.status(500).json({ ok: false, error: 'switch_failed' })
+    res.json({ ok: true, reboot: r.changed })
+  })
+
+  /**
+   * POST /api/app/hdmi-audio {on} - the HDMI sound as a sound card of its own, next to the box's sound card ("Hören mit"
+   * on the display, the output row in the app). Applies after a restart.
+   */
+  router.post('/hdmi-audio', requireSession, requireCsrf, async (req, res) => {
+    const on = (req.body as { on?: unknown } | undefined)?.on
+    if (typeof on !== 'boolean') return void res.status(400).json({ error: 'invalid on' })
+    const mb = section(deps, 'mupibox')
+    if (typeof mb.physicalDevice === 'string' && mb.physicalDevice.startsWith('rpi-bcm2835')) return void res.status(409).json({ error: 'onboard_is_the_card' })
+    const r = await setHdmiAudio(on)
+    if (!r.ok) return void res.status(500).json({ ok: false, error: 'switch_failed' })
+    res.json({ ok: true, reboot: r.changed })
   })
 
   /** POST /api/app/rotary {active?, step?, button?} - the rotary encoder (volume) and its push button. */

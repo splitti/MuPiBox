@@ -14,7 +14,9 @@ if [ -z "${BOOT_CONFIG}" ]; then
 fi
 DIETPI_TXT="${DIETPI_TXT:-/boot/dietpi.txt}"
 MUPIBOX_CONFIG="${MUPIBOX_CONFIG:-/etc/mupibox/mupiboxconfig.json}"
-CARD='MAX98357A bcm2835-i2s-HiFi HiFi-0'
+# the sound card afterwards: the HAT's amplifier, or the one given (a restored backup keeps its own card,
+# apply_restored_settings.sh)
+CARD="${1:-MAX98357A bcm2835-i2s-HiFi HiFi-0}"
 ERR=0
 
 add_line() { grep -qxF "$1" "$2" || echo "$1" >> "$2"; }
@@ -66,6 +68,12 @@ LOCK=/tmp/.mupiboxconfig.lock
 	rm -f "${TMP}"
 	exit 1
 ) 9<"${LOCK}" || ERR=1
+
+# the 3.5 mm output switched on in the app: DietPi's switch of the card has blocked it again (see onboard_audio.sh;
+# after the card is written above, the script goes by it)
+if [ "${DRY_RUN}" != "1" ] && [ -x /usr/local/bin/mupibox/onboard_audio.sh ]; then
+	/usr/local/bin/mupibox/onboard_audio.sh reapply >/dev/null || true
+fi
 
 # arrived? the driver lines (in force for this Pi), and DietPi's card (which DietPi keeps in small letters)
 effective 'dtoverlay=max98357a,sdmode-pin=16' "${BOOT_CONFIG}" && effective 'dtoverlay=i2s-mmap' "${BOOT_CONFIG}" || ERR=1

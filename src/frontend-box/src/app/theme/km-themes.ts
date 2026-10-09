@@ -9,6 +9,10 @@ export interface KmTheme {
   light: boolean
   /** an old theme of the box in the km layout (keeps its name and its place in the theme list) */
   legacy?: boolean
+  /** the band behind the header may be switched off in the app (a plain background: the header stays readable) */
+  headerBandOptional?: boolean
+  /** the panel behind the player's controls may be switched off in the app */
+  playerPanelOptional?: boolean
   mascot: { sleeping: string; awake: string }
   /** shown instead of the default cover (bear with headphones) when a title has no cover of its own */
   coverPlaceholder: string
@@ -353,6 +357,8 @@ export const KM_THEMES: readonly KmTheme[] = [
     label: 'blue',
     light: true,
     legacy: true,
+    headerBandOptional: true,
+    playerPanelOptional: true,
     mascot: {
       sleeping: '/theme-data/blue/maskottchen.svg',
       awake: '/theme-data/blue/maskottchen-wach.svg',
@@ -364,6 +370,8 @@ export const KM_THEMES: readonly KmTheme[] = [
     label: 'captainamerica',
     light: false,
     legacy: true,
+    headerBandOptional: true,
+    playerPanelOptional: true,
     mascot: {
       sleeping: '/theme-data/captainamerica/maskottchen.svg',
       awake: '/theme-data/captainamerica/maskottchen-wach.svg',
@@ -375,6 +383,8 @@ export const KM_THEMES: readonly KmTheme[] = [
     label: 'chocolate',
     light: true,
     legacy: true,
+    headerBandOptional: true,
+    playerPanelOptional: true,
     mascot: {
       sleeping: '/theme-data/chocolate/maskottchen.svg',
       awake: '/theme-data/chocolate/maskottchen-wach.svg',
@@ -386,6 +396,8 @@ export const KM_THEMES: readonly KmTheme[] = [
     label: 'cinema',
     light: false,
     legacy: true,
+    headerBandOptional: true,
+    playerPanelOptional: true,
     mascot: {
       sleeping: '/theme-data/cinema/maskottchen.svg',
       awake: '/theme-data/cinema/maskottchen-wach.svg',
@@ -430,6 +442,8 @@ export const KM_THEMES: readonly KmTheme[] = [
     label: 'danger',
     light: true,
     legacy: true,
+    headerBandOptional: true,
+    playerPanelOptional: true,
     mascot: {
       sleeping: '/theme-data/danger/maskottchen.svg',
       awake: '/theme-data/danger/maskottchen-wach.svg',
@@ -441,6 +455,8 @@ export const KM_THEMES: readonly KmTheme[] = [
     label: 'dark',
     light: false,
     legacy: true,
+    headerBandOptional: true,
+    playerPanelOptional: true,
     mascot: {
       sleeping: '/theme-data/dark/maskottchen.svg',
       awake: '/theme-data/dark/maskottchen-wach.svg',
@@ -452,6 +468,8 @@ export const KM_THEMES: readonly KmTheme[] = [
     label: 'darkred',
     light: true,
     legacy: true,
+    headerBandOptional: true,
+    playerPanelOptional: true,
     mascot: {
       sleeping: '/theme-data/darkred/maskottchen.svg',
       awake: '/theme-data/darkred/maskottchen-wach.svg',
@@ -463,6 +481,8 @@ export const KM_THEMES: readonly KmTheme[] = [
     label: 'deepblue',
     light: false,
     legacy: true,
+    headerBandOptional: true,
+    playerPanelOptional: true,
     mascot: {
       sleeping: '/theme-data/deepblue/maskottchen.svg',
       awake: '/theme-data/deepblue/maskottchen-wach.svg',
@@ -529,6 +549,8 @@ export const KM_THEMES: readonly KmTheme[] = [
     label: 'green',
     light: true,
     legacy: true,
+    headerBandOptional: true,
+    playerPanelOptional: true,
     mascot: {
       sleeping: '/theme-data/green/maskottchen.svg',
       awake: '/theme-data/green/maskottchen-wach.svg',
@@ -540,6 +562,8 @@ export const KM_THEMES: readonly KmTheme[] = [
     label: 'ironman',
     light: true,
     legacy: true,
+    headerBandOptional: true,
+    playerPanelOptional: true,
     mascot: {
       sleeping: '/theme-data/ironman/maskottchen.svg',
       awake: '/theme-data/ironman/maskottchen-wach.svg',
@@ -551,6 +575,7 @@ export const KM_THEMES: readonly KmTheme[] = [
     label: 'light',
     light: true,
     legacy: true,
+    headerBandOptional: true,
     mascot: {
       sleeping: '/theme-data/light/maskottchen.svg',
       awake: '/theme-data/light/maskottchen-wach.svg',
@@ -584,6 +609,8 @@ export const KM_THEMES: readonly KmTheme[] = [
     label: 'mint',
     light: true,
     legacy: true,
+    headerBandOptional: true,
+    playerPanelOptional: true,
     mascot: {
       sleeping: '/theme-data/mint/maskottchen.svg',
       awake: '/theme-data/mint/maskottchen-wach.svg',
@@ -606,6 +633,8 @@ export const KM_THEMES: readonly KmTheme[] = [
     label: 'orange',
     light: true,
     legacy: true,
+    headerBandOptional: true,
+    playerPanelOptional: true,
     mascot: {
       sleeping: '/theme-data/orange/maskottchen.svg',
       awake: '/theme-data/orange/maskottchen-wach.svg',
@@ -628,6 +657,8 @@ export const KM_THEMES: readonly KmTheme[] = [
     label: 'pink',
     light: true,
     legacy: true,
+    headerBandOptional: true,
+    playerPanelOptional: true,
     mascot: {
       sleeping: '/theme-data/pink/maskottchen.svg',
       awake: '/theme-data/pink/maskottchen-wach.svg',
@@ -639,6 +670,8 @@ export const KM_THEMES: readonly KmTheme[] = [
     label: 'purple',
     light: true,
     legacy: true,
+    headerBandOptional: true,
+    playerPanelOptional: true,
     mascot: {
       sleeping: '/theme-data/purple/maskottchen.svg',
       awake: '/theme-data/purple/maskottchen-wach.svg',
@@ -650,6 +683,8 @@ export const KM_THEMES: readonly KmTheme[] = [
     label: 'red',
     light: true,
     legacy: true,
+    headerBandOptional: true,
+    playerPanelOptional: true,
     mascot: {
       sleeping: '/theme-data/red/maskottchen.svg',
       awake: '/theme-data/red/maskottchen-wach.svg',
@@ -705,6 +740,8 @@ export const KM_THEMES: readonly KmTheme[] = [
     label: 'vintage',
     light: false,
     legacy: true,
+    headerBandOptional: true,
+    playerPanelOptional: true,
     mascot: {
       sleeping: '/theme-data/vintage/maskottchen.svg',
       awake: '/theme-data/vintage/maskottchen-wach.svg',
@@ -716,6 +753,8 @@ export const KM_THEMES: readonly KmTheme[] = [
     label: 'wall-e',
     light: false,
     legacy: true,
+    headerBandOptional: true,
+    playerPanelOptional: true,
     mascot: {
       sleeping: '/theme-data/wall-e/maskottchen.svg',
       awake: '/theme-data/wall-e/maskottchen-wach.svg',
@@ -727,6 +766,8 @@ export const KM_THEMES: readonly KmTheme[] = [
     label: 'wood',
     light: false,
     legacy: true,
+    headerBandOptional: true,
+    playerPanelOptional: true,
     mascot: {
       sleeping: '/theme-data/wood/maskottchen.svg',
       awake: '/theme-data/wood/maskottchen-wach.svg',
@@ -738,6 +779,8 @@ export const KM_THEMES: readonly KmTheme[] = [
     label: 'xmas',
     light: false,
     legacy: true,
+    headerBandOptional: true,
+    playerPanelOptional: true,
     mascot: {
       sleeping: '/theme-data/xmas/maskottchen.svg',
       awake: '/theme-data/xmas/maskottchen-wach.svg',

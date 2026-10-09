@@ -1,4 +1,5 @@
 <?php
+	require_once __DIR__ . '/includes/boot.php';
 	include ('includes/header.php');
 
 	$hdmi_rotate_option[0][0]="0";
@@ -22,9 +23,9 @@
 	$dlcd_rotate_option[1][0]="2";
 	$dlcd_rotate_option[1][1]="180 degrees";
 
-	$lcd_rotation_state=`sed -n '/^[[:blank:]]*lcd_rotate=/{s/^[^=]*=//p;q}' /boot/config.txt`;
-	$dlcd_rotation_state=`sed -n '/^[[:blank:]]*display_lcd_rotate=/{s/^[^=]*=//p;q}' /boot/config.txt`;
-	$hdmi_rotation_state=`sed -n '/^[[:blank:]]*display_hdmi_rotate=/{s/^[^=]*=//p;q}' /boot/config.txt`;
+	$lcd_rotation_state=`sed -n '/^[[:blank:]]*lcd_rotate=/{s/^[^=]*=//p;q}' {$bootConfig}`;
+	$dlcd_rotation_state=`sed -n '/^[[:blank:]]*display_lcd_rotate=/{s/^[^=]*=//p;q}' {$bootConfig}`;
+	$hdmi_rotation_state=`sed -n '/^[[:blank:]]*display_hdmi_rotate=/{s/^[^=]*=//p;q}' {$bootConfig}`;
 
 	// Display rotations: dietpi accepts integer rotation values (0/90/180/270
 	// for HDMI, 0/1/2/3 for LCD-flips). The values were spliced into a
@@ -37,7 +38,7 @@
 		$hdmiRot = intval($_POST['hdmi_rotation']);
 		if (in_array($hdmiRot, $rotationWhitelist, true) && $hdmiRot != substr($hdmi_rotation_state,0,-1))
 			{
-			exec("sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'display_hdmi_rotate=' 'display_hdmi_rotate=" . $hdmiRot . "' /boot/config.txt\"");
+			exec("sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'display_hdmi_rotate=' 'display_hdmi_rotate=" . $hdmiRot . "' {$bootConfig}\"");
 			$change=1;
 			$CHANGE_TXT=$CHANGE_TXT."<li>Set HDMI-Rotation [reboot is necessary]</li>";
 			}
@@ -47,7 +48,7 @@
 		$lcdRot = intval($_POST['lcd_rotation']);
 		if (in_array($lcdRot, $rotationWhitelist, true) && $lcdRot != substr($lcd_rotation_state,0,-1))
 			{
-			exec("sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'lcd_rotate=' 'lcd_rotate=" . $lcdRot . "' /boot/config.txt\"");
+			exec("sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'lcd_rotate=' 'lcd_rotate=" . $lcdRot . "' {$bootConfig}\"");
 			$change=1;
 			$CHANGE_TXT=$CHANGE_TXT."<li>Set LCD-Rotation [reboot is necessary]</li>";
 			}
@@ -57,7 +58,7 @@
 		$dlcdRot = intval($_POST['dlcd_rotation']);
 		if (in_array($dlcdRot, $rotationWhitelist, true) && $dlcdRot != substr($dlcd_rotation_state,0,-1))
 			{
-			exec("sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'display_lcd_rotate=' 'display_lcd_rotate=" . $dlcdRot . "' /boot/config.txt\"");
+			exec("sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'display_lcd_rotate=' 'display_lcd_rotate=" . $dlcdRot . "' {$bootConfig}\"");
 			$change=1;
 			$CHANGE_TXT=$CHANGE_TXT."<li>Set Display-LCD-Rotation [reboot is necessary]</li>";
 			}
@@ -163,14 +164,14 @@
 	if( $_POST['change_warnings'] == "disable" )
 		{
 		// only the line of this setting goes (it used to cut off the last line of config.txt, whatever it was)
-		$command = "sudo sed -i '/^avoid_warnings=1$/d' /boot/config.txt";
+		$command = "sudo sed -i '/^avoid_warnings=1$/d' {$bootConfig}";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Warning Icons disabled [restart necessary]</li>";
 		}
 	else if( $_POST['change_warnings'] == "enable" )
 		{
-		$command = "echo 'avoid_warnings=1' | sudo tee -a /boot/config.txt";
+		$command = "echo 'avoid_warnings=1' | sudo tee -a {$bootConfig}";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Warning Icons enabled [restart necessary]</li>";
@@ -178,14 +179,14 @@
 
 	if( $_POST['change_turbo'] == "disable" )
 		{
-		$command = "sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'initial_turbo' 'initial_turbo=0' /boot/config.txt\"";
+		$command = "sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'initial_turbo' 'initial_turbo=0' {$bootConfig}\"";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Inital Turbo disabled</li>";
 		}
 	else if( $_POST['change_turbo'] == "enable" )
 		{
-		$command = "sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'initial_turbo' 'initial_turbo=30' /boot/config.txt\"";
+		$command = "sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'initial_turbo' 'initial_turbo=30' {$bootConfig}\"";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Inital Turbo enabled</li>";
@@ -231,7 +232,7 @@
 
 	if( $_POST['change_sd'] == "activate for next boot" )
 		{
-		$command = "echo 'dtoverlay=sdtweak,overclock_50=100' | sudo tee -a /boot/config.txt";
+		$command = "echo 'dtoverlay=sdtweak,overclock_50=100' | sudo tee -a {$bootConfig}";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>SD Overclocking activated [restart necessary]</li>";
@@ -239,7 +240,7 @@
 	else if( $_POST['change_sd'] == "disable" )
 		{
 		// only the line of this setting goes (it used to cut off the last line of config.txt, whatever it was)
-		$command = "sudo sed -i '/^dtoverlay=sdtweak,overclock_50=100$/d' /boot/config.txt";
+		$command = "sudo sed -i '/^dtoverlay=sdtweak,overclock_50=100$/d' {$bootConfig}";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>SD Overclocking disabled [restart necessary]</li>";
@@ -259,7 +260,7 @@
 		$change_netboot = "activate for next boot";
 		}
 
-	$command = "sudo /usr/bin/cat /boot/config.txt | /usr/bin/grep 'dtoverlay=sdtweak,overclock_50=100'";
+	$command = "sudo /usr/bin/cat {$bootConfig} | /usr/bin/grep 'dtoverlay=sdtweak,overclock_50=100'";
 	exec($command, $sdoutput, $sdresult );
 
 	if( $sdoutput[0] )
@@ -330,7 +331,11 @@
 	$data["mupibox"]["physicalDevice"]=$_POST['audio'];
 	$command = "sudo /boot/dietpi/func/dietpi-set_hardware soundcard " . escapeshellarg($_POST['audio']);
 	$change_soundcard = exec($command, $output, $change_soundcard );
-	$CHANGE_TXT=$CHANGE_TXT."<li>Soundcard changed to  ".$data["mupibox"]["physicalDevice"]."x</li>";
+	// The MAX98357A's I2S driver: DietPi does not know the card and leaves the drivers alone - in for it, out for
+	// another card unless the MuPiHAT is on (amp_driver.sh, as the app's eltern/hardware.ts)
+	exec("sudo /usr/local/bin/mupibox/amp_driver.sh " . (strpos($_POST['audio'], 'MAX98357A') === 0 ? "on" : "off"));
+	$soundcard_changed = true;
+	$CHANGE_TXT=$CHANGE_TXT."<li>Soundcard changed to ".$data["mupibox"]["physicalDevice"]."</li>";
 	$change=2;
 	}
  // A valid hostname only (RFC 1123 label) - the value went unchecked into a root shell.
@@ -719,6 +724,12 @@ if( $_POST['fan_control'] )
   {
    save_mupiboxconfig($data);
    exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
+   // DietPi blocks the board's 3.5 mm output again with another card: on again when it was switched on in the app
+   // (after the config is saved - the script goes by the new card; as the app's eltern/hardware.ts)
+   if( !empty($soundcard_changed) )
+    {
+    exec("sudo /usr/local/bin/mupibox/onboard_audio.sh reapply");
+    }
   }
 
 $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
@@ -1255,9 +1266,9 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 
 			<?php
-				$lcd_rotation_state=`sed -n '/^[[:blank:]]*lcd_rotate=/{s/^[^=]*=//p;q}' /boot/config.txt`;
-				$dlcd_rotation_state=`sed -n '/^[[:blank:]]*display_lcd_rotate=/{s/^[^=]*=//p;q}' /boot/config.txt`;
-				$hdmi_rotation_state=`sed -n '/^[[:blank:]]*display_hdmi_rotate=/{s/^[^=]*=//p;q}' /boot/config.txt`;
+				$lcd_rotation_state=`sed -n '/^[[:blank:]]*lcd_rotate=/{s/^[^=]*=//p;q}' {$bootConfig}`;
+				$dlcd_rotation_state=`sed -n '/^[[:blank:]]*display_lcd_rotate=/{s/^[^=]*=//p;q}' {$bootConfig}`;
+				$hdmi_rotation_state=`sed -n '/^[[:blank:]]*display_hdmi_rotate=/{s/^[^=]*=//p;q}' {$bootConfig}`;
 			?>
 			<li id="li_1" >
 				<h2>Display Rotation Settings</h2>
@@ -1751,7 +1762,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				</p>
 				<p>
 				<?php
-				$command = "cat /boot/config.txt | grep initial_turbo | cut -d '=' -f 2";
+				$command = "cat {$bootConfig} | grep initial_turbo | cut -d '=' -f 2";
 				$turbo = exec($command, $output);
 				echo "Turbo seconds: <b>".$turbo."</b>";
 				if($turbo == 0)
@@ -1806,7 +1817,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				</p>
 				<p>
 				<?php
-				$command = "cat /boot/config.txt | grep 'avoid_warnings=1'";
+				$command = "cat {$bootConfig} | grep 'avoid_warnings=1'";
 				$warnings = exec($command, $output);
 				if($warnings == "")
 					{

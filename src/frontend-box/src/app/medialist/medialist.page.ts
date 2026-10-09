@@ -22,6 +22,7 @@ import { CoverFlipService } from '../cover-flip.service'
 import { newestFirst, pickEpisodes } from '../episode-pick'
 import { LoadingComponent } from '../loading/loading.component'
 import { CategoryType, isSyncManaged, Media, MediaSorting } from '../media'
+import { HeaderVisibilityService } from '../header-visibility.service'
 import { MediaService } from '../media.service'
 import { MediaUnavailableComponent } from '../media-unavailable/media-unavailable.component'
 import { StatusComponent } from '../status/status.component'
@@ -111,6 +112,8 @@ export class MedialistPage extends SwiperIonicEventsHelper {
 
   // (whether there is a page to go back to: none after the page was loaded afresh here)
   private readonly outlet = inject(IonRouterOutlet, { optional: true })
+  // the top bar is folded away (HeaderVisibilityService): the covers are drawn larger
+  protected readonly headerHidden = inject(HeaderVisibilityService).hidden
 
   constructor(
     private router: Router,

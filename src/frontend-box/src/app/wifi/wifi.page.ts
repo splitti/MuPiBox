@@ -647,6 +647,9 @@ export class WifiPage {
     if (!status || !status.available) {
       return 'Onboard WiFi'
     }
+    if (status.bootDisabled) {
+      return 'Onboard WiFi is switched off at the start - tap to turn it on (after a restart)'
+    }
     return status.enabled ? 'Onboard WiFi is on - tap to turn it off' : 'Onboard WiFi is off - tap to turn it on'
   })
 
@@ -678,9 +681,29 @@ export class WifiPage {
   }
 
   private setOnboardWifi(enabled: boolean) {
-    this.wifiService.setOnboardWifi(enabled).subscribe(() => {
+    this.wifiService.setOnboardWifi(enabled).subscribe((answer) => {
       this.wifiService.getOnboardWifi().subscribe((status) => this.onboardWifi.set(status))
+      // (switched off at the start: the chip comes back with a restart)
+      if (answer === 'reboot') this.offerRestartForOnboardWifi()
     })
+  }
+
+  private async offerRestartForOnboardWifi() {
+    const alert = await this.alertController.create({
+      cssClass: 'alert',
+      header: 'Onboard WiFi',
+      message: 'The onboard WiFi was switched off at the start. It is on again after a restart.',
+      buttons: [
+        {
+          text: 'Restart now',
+          handler: () => {
+            this.wifiService.restartBox().subscribe({ error: (err) => console.error('[wifi] /api/reboot failed:', err) })
+          },
+        },
+        { text: 'Later', role: 'cancel' },
+      ],
+    })
+    await alert.present()
   }
 
   // Ethernet port on/off (administrative link state, immediate) - independent of its DHCP/STATIC config.

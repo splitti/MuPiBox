@@ -13,7 +13,7 @@
 
 <ng-template #albumTpl>
       @if (media.type ==='spotify' && currentPlayedSpotify?.currently_playing_type !== 'episode') {
-        <div>{{spotify?.item.album.name}}</div>
+        <div>{{spotify?.item?.album?.name}}</div>
       } @else {
         @if (media.showid && spotify?.show_details) {
           <div>{{spotify?.show_details?.name}}</div>
@@ -34,7 +34,7 @@
 </ng-template>
 <ng-template #trackTpl>
       @if (media.type ==='spotify' && currentPlayedSpotify?.currently_playing_type !== 'episode') {
-        <div>{{spotify?.item.name}}</div>
+        <div>{{spotify?.item?.name}}</div>
       } @else {
         @if (media.showid && spotify?.show_details) {
           <div>{{spotify?.item?.name}}</div>
@@ -67,9 +67,9 @@
           } @else if (media.audiobookid && spotify?.audiobook) {
             <!-- Audiobook -->
             <div>{{spotify?.audiobook?.current_chapter_position}}/{{spotify?.audiobook?.total_chapters}}</div>
-          } @else if (currentPlayedSpotify?.currently_playing_type !== 'episode' && spotify?.item.album.total_tracks > 0) {
+          } @else if (currentPlayedSpotify?.currently_playing_type !== 'episode' && spotify?.item?.album?.total_tracks > 0) {
             <!-- Regular album -->
-            <div>{{spotify?.item.track_number}}/{{spotify?.item.album.total_tracks}}</div>
+            <div>{{spotify?.item?.track_number}}/{{spotify?.item?.album?.total_tracks}}</div>
           } @else {
             <!-- Fallback - no track info available -->
             <div></div>
@@ -86,7 +86,7 @@
     <!-- km themes, design round 2 (§3): minimise/back, album and track, "Hören mit" (only with a paired headset),
          the volume, WiFi/battery with the listening time -->
     <div class="km-bar km-bar-player">
-      <button class="km-hbtn" type="button" (click)="backFromPlayer()">
+      <button class="km-hbtn" type="button" data-mupi-back (click)="backFromPlayer()">
         @if (backAction() === 'minimize') {
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 9l6.5 6.5L18.5 9" /></svg>
         } @else {
@@ -114,7 +114,7 @@
     </ion-title>
     <ion-title class="toolbar-tracknumber" slot="end">
       <!-- the volume, with where the box plays: a tap chooses speaker or Bluetooth ("Hören mit", see openOutput) -->
-      <div class="km-vol" [class.out-tap]="outputChoosable()" (click)="openOutput()">@if (km()) {<ion-icon [name]="outputOnBluetooth() ? 'headset' : 'volume-medium'"></ion-icon>{{local?.volume}} %} @else { @if (outputOnBluetooth()) {<ion-icon name="headset"></ion-icon>}{{local?.volume}}% }</div>
+      <div class="km-vol" [class.out-tap]="outputChoosable()" (click)="openOutput()">@if (km()) {<ion-icon [name]="outputIconName()"></ion-icon>{{local?.volume}} %} @else { @if (outputIconName() !== 'volume-medium') {<ion-icon [name]="outputIconName()"></ion-icon>}{{local?.volume}}% }</div>
       <ng-container *ngTemplateOutlet="counterTpl"></ng-container>
     </ion-title>
     <span slot="end" class="mupihat-icon-container"><mupi-status></mupi-status></span>
@@ -172,7 +172,12 @@
     <div class="km-tl-wrap">
     <!-- every theme: cover and "close" on the left (was the km themes' only; the others had a back arrow in the header) -->
     <div class="km-tl-side">
-      <img [src]="shownCover()" alt="" (error)="coverFailed()">
+      @if (coverMissing()) {
+        <!-- no picture: the card with the folder's name, as on the cover page -->
+        <div class="km-tl-cover"><div class="mupi-no-cover" [style.background]="noCoverStyle(coverTitle()).background" [style.color]="noCoverStyle(coverTitle()).color"><span>{{ coverTitle() }}</span></div></div>
+      } @else {
+        <img [src]="shownCover()" alt="" (error)="coverFailed()">
+      }
       <button class="km-tl-close" (click)="closeTrackList()"><ion-icon name="close"></ion-icon>{{ displayTexts.text('closeShort') }}</button>
     </div>
     <ion-list class="tracklist" [style.font-family]="listFontFamily" [style.--ion-font-family]="listFontFamily">
@@ -275,8 +280,12 @@
   <ion-grid>
     <ion-row>
       <ion-col size="6">
-        <ion-card class="cover-card" [class.km-pressing]="km() && pressingCover" (pointerdown)="coverPointerDown()" (pointerup)="coverPointerUp()" (pointerleave)="coverPointerUp()" (pointercancel)="coverPointerUp()">
-          <img [src]="shownCover()" (error)="coverFailed()" draggable="false" style="-moz-user-select: none;" ondragstart="return false;">
+        <ion-card class="cover-card" [class.reflect]="coverflowTheme" [class.km-pressing]="km() && pressingCover" (pointerdown)="coverPointerDown()" (pointerup)="coverPointerUp()" (pointerleave)="coverPointerUp()" (pointercancel)="coverPointerUp()">
+          @if (coverMissing()) {
+            <div class="mupi-no-cover" [style.background]="noCoverStyle(coverTitle()).background" [style.color]="noCoverStyle(coverTitle()).color"><span>{{ coverTitle() }}</span></div>
+          } @else {
+            <img [src]="shownCover()" (error)="coverFailed()" draggable="false" style="-moz-user-select: none;" ondragstart="return false;">
+          }
           @if ((media.type === 'radio' || media.type === 'rss') && currentPlayedLocal?.loading && km()) {
             <!-- km themes: three bouncing dots on the cover while the stream connects -->
             <div class="km-cover-dots"><i></i><i></i><i></i></div>
@@ -412,7 +421,19 @@
     <div class="out-panel" (click)="$event.stopPropagation()">
       <h2>{{ displayTexts.text('outputTitle') }}</h2>
       <button class="out-close" (click)="closeOutput()" aria-label="close"><ion-icon name="close"></ion-icon></button>
-      <div class="out-tiles" [style.--out-cols]="(output()?.devices?.length ?? 0) > 1 ? 3 : 2">
+      <div class="out-tiles" [style.--out-cols]="outputTileCount() > 2 ? 3 : 2">
+        @for (c of output()?.cards ?? []; track c.id) {
+          <button class="out-tile" [class.on]="output()?.current === 'card:' + c.id" (click)="chooseOutput('card:' + c.id)">
+            @if (output()?.current === 'card:' + c.id) {<span class="out-check"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>}
+            @if (outputBusy() === 'card:' + c.id) {<span class="out-spin"></span>} @else if (c.kind === 'jack') {
+              <svg class="out-icon" viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0 1 16 0v3" /><path class="fill" d="M4 15h3v6H5a1 1 0 0 1-1-1zM20 15h-3v6h2a1 1 0 0 0 1-1z" /></svg>
+            } @else {
+              <svg class="out-icon" viewBox="0 0 24 24"><path class="fill" d="M4 9h3.5L12 5v14l-4.5-4H4z" /><path d="M16 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10" /></svg>
+            }
+            <b translate="no">{{ cardLabel(c) }}</b><small translate="no">{{ c.desc }}</small>
+          </button>
+        }
+        @if ((output()?.cards?.length ?? 0) < 2) {
         <button class="out-tile" [class.on]="output()?.current === 'box'" (click)="chooseOutput('box')">
           @if (output()?.current === 'box') {<span class="out-check"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>}
           @if (outputBusy() === 'box') {<span class="out-spin"></span>} @else {
@@ -420,6 +441,7 @@
           }
           <b>{{ displayTexts.text('outputBox') }}</b><small>{{ displayTexts.text('outputBoxSub') }}</small>
         </button>
+        }
         @for (d of output()?.devices ?? []; track d.mac) {
           <button class="out-tile" [class.on]="output()?.current === d.mac" [class.out-missing]="outputMissing() === d.mac" (click)="chooseOutput(d.mac)">
             @if (output()?.current === d.mac) {<span class="out-check"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>}
@@ -430,6 +452,10 @@
             }
             <b translate="no">{{ d.name }}</b>
             <small>{{ outputBusy() === d.mac ? displayTexts.text('outputConnecting') : outputMissing() === d.mac && r2() ? displayTexts.text('outputNotFound') : output()?.current === d.mac && km() ? '● ' + displayTexts.text('outputPlaying') : d.connected ? displayTexts.text('outputConnected') : displayTexts.text('outputOff') }}</small>
+            <!-- the headphones' battery, when they report it (backend-api btBattery) -->
+            @if (d.connected && d.battery != null) {
+              <span class="out-batt" [class.low]="d.battery <= 20"><svg viewBox="0 0 26 14" aria-hidden="true"><rect x="1" y="1" width="21" height="12" rx="2.5" /><path d="M24.5 5v4" /><rect class="fill" x="3.5" y="3.5" [attr.width]="16 * d.battery / 100" height="7" rx="1" /></svg>{{ d.battery }} %</span>
+            }
           </button>
         }
       </div>

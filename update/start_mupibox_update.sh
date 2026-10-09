@@ -26,6 +26,12 @@ else
 	RELEASE="stable"
 fi
 
+# The Pi's boot files: /boot/firmware/ on newer DietPi (v10, Debian 13 "Trixie"), /boot/ before (as autosetup.sh)
+BOOT_CONFIG="/boot/config.txt"
+BOOT_CMDLINE="/boot/cmdline.txt"
+[ -f /boot/firmware/config.txt ] && BOOT_CONFIG="/boot/firmware/config.txt"
+[ -f /boot/firmware/cmdline.txt ] && BOOT_CMDLINE="/boot/firmware/cmdline.txt"
+
 # Preflight: this update replaces jq with a freshly downloaded binary and rewrites the
 # configuration with jq. Download it FIRST, so a network problem (e.g. a
 # DNS failure) stops the update before anything on the box has been changed. Before,
@@ -219,10 +225,12 @@ rm -f /tmp/mupibox-update-failed
 		echo -e "## apt-get install ${package}  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	done
 
-	# pinctrl for the OnOff SHIM on Debian 13 "Trixie" (libgpiod 2, see scripts/OnOffShim): in raspberrypi-utils there.
-	# Debian 12 "Bookworm" has no such package and keeps using the tools of gpiod.
-	if apt-cache show raspberrypi-utils >/dev/null 2>&1 && ! dpkg -l raspberrypi-utils 2>/dev/null | grep -q '^ii'; then
-		apt-get --yes install raspberrypi-utils >&3 2>&3
+	# pinctrl for the OnOff SHIM with libgpiod 2 (Debian 13 "Trixie", see scripts/OnOffShim): in raspi-utils-core of the
+	# Raspberry Pi archive (the name raspberrypi-utils written here before is only the source package - nothing was
+	# installed, poweroff.sh fell back to a gpioset in the background). Not with libgpiod 1 (Bookworm): it keeps the
+	# tools of gpiod, and raspi-utils-core would replace its libraspberrypi-bin there.
+	if gpioset --version 2>/dev/null | grep -q ' v2\.' && ! command -v pinctrl >/dev/null && apt-cache show raspi-utils-core >/dev/null 2>&1; then
+		apt-get --yes install raspi-utils-core >&3 2>&3
 	fi
 
 	for package in ${packages2remove}
@@ -602,6 +610,12 @@ rm -f /tmp/mupibox-update-failed
 	mv ${MUPI_SRC}/scripts/chromium-autostart.sh /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	mv ${MUPI_SRC}/scripts/mupibox/* /usr/local/bin/mupibox/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/bluetooth/* /usr/local/bin/mupibox/ >&3 2>&3
+	# The battery of Bluetooth headphones (display and app, issue #176): BlueZ 5.66 takes it from PulseAudio only with
+	# its experimental interfaces (BatteryProviderManager1). Applies after the restart.
+	if [ -f /etc/bluetooth/main.conf ] && ! grep -qE '^[[:space:]]*Experimental[[:space:]]*=[[:space:]]*true' /etc/bluetooth/main.conf; then
+	  sed -i -E 's/^#?[[:space:]]*Experimental[[:space:]]*=.*/Experimental = true/' /etc/bluetooth/main.conf >&3 2>&3
+	  grep -qE '^Experimental = true' /etc/bluetooth/main.conf || sed -i '/^\[General\]/a Experimental = true' /etc/bluetooth/main.conf >&3 2>&3
+	fi
 	mv ${MUPI_SRC}/scripts/wled/* /usr/local/bin/mupibox/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/telegram/* /usr/local/bin/mupibox/ >&3 2>&3
 	#mv ${MUPI_SRC}/config/templates/www.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
@@ -665,10 +679,18 @@ rm -f /tmp/mupibox-update-failed
 	echo -e "XXX\n${STEP}\nCopy some media files... \nXXX"
 	# Splash and Media
 	before=$(date +%s)
-	# initramfs-splash is not used (config.txt does not load it; the start pictures come from fbv, splash_screen.sh):
-	# its image and settings file go, unless the box's config.txt loads it after all
-	if ! grep -q '^initramfs' /boot/config.txt 2>/dev/null; then
-		rm -f /boot/initramfs.img /boot/splash.txt >&3 2>&3
+	# The initramfs splash of older installers and updates ("initramfs initramfs.img" with splash.txt beside it) showed
+	# the old blue start picture at the kernel's start, before the chosen one (issue #177). The box starts without an
+	# initramfs (DietPi, root drivers in the kernel); the start pictures come from fbv (splash_screen.sh). Switched off
+	# - only exactly this line with splash.txt beside it; a system initramfs (auto_initramfs, initramfs8, an initrd with
+	# followkernel) stays - and its image and settings file go once nothing loads them.
+	BOOT_DIR="$(dirname "${BOOT_CONFIG}")"
+	if [ -f "${BOOT_DIR}/splash.txt" ] && grep -qE '^[[:space:]]*initramfs[[:space:]]+initramfs\.img[[:space:]]*$' "${BOOT_CONFIG}"; then
+		cp -p "${BOOT_CONFIG}" "${BOOT_CONFIG}.bak-splash" >&3 2>&3
+		sed -i -E 's/^[[:space:]]*initramfs[[:space:]]+initramfs\.img[[:space:]]*$/#initramfs initramfs.img  # old start picture (initramfs-splash), switched off by the MuPiBox update/' "${BOOT_CONFIG}" >&3 2>&3
+	fi
+	if ! grep -qE '^[[:space:]]*initramfs[[:space:]]+initramfs\.img' "${BOOT_CONFIG}" 2>/dev/null; then
+		rm -f "${BOOT_DIR}/initramfs.img" "${BOOT_DIR}/splash.txt" >&3 2>&3
 	fi
 	cp ${MUPI_SRC}/media/images/goodbye.png /home/dietpi/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
 	#mv ${MUPI_SRC}/media/images/splash.png /boot/splash.png >&3 2>&3
@@ -825,29 +847,38 @@ rm -f /tmp/mupibox-update-failed
 	/usr/bin/chown dietpi:dietpi ${MUPI_SRC}/config/templates/crontab.template >&3 2>&3
 	sudo -H -u dietpi bash -c "/usr/bin/crontab ${MUPI_SRC}/config/templates/crontab.template"  >&3 2>&3
 
-	if grep -q '^dtparam=gpio=on' /boot/config.txt; then
+	if grep -q '^dtparam=gpio=on' "${BOOT_CONFIG}"; then
 	  echo -e "dtparam=gpio=on already set" >&3 2>&3
 	else
-	  echo '' | tee -a /boot/config.txt >&3 2>&3
-	  echo 'dtparam=gpio=on' | tee -a /boot/config.txt >&3 2>&3
+	  echo '' | tee -a "${BOOT_CONFIG}" >&3 2>&3
+	  echo 'dtparam=gpio=on' | tee -a "${BOOT_CONFIG}" >&3 2>&3
 	fi
 
 	# gpio-poweroff only when it is in no dtoverlay line yet (also not in one that loads further overlays, e.g. a
 	# display driver: a second line made such boxes hang at shutdown), on the pin set for the OnOff SHIM
-	if grep -qE '^[[:space:]]*dtoverlay=.*gpio-poweroff' /boot/config.txt; then
+	# Not next to a button of its own on gpio-shutdown (issue #175): with gpio-poweroff the Pi no longer woke from it,
+	# and every update put the line back after it was taken out
+	if grep -qE '^[[:space:]]*dtoverlay=.*gpio-shutdown' "${BOOT_CONFIG}"; then
+	  echo -e "dtoverlay=gpio-shutdown set: no gpio-poweroff" >&3 2>&3
+	elif grep -qE '^[[:space:]]*dtoverlay=.*gpio-poweroff' "${BOOT_CONFIG}"; then
 	  echo -e "dtoverlay=gpio-poweroff already set" >&3 2>&3
 	else
 	  POWEROFF_PIN=$(/usr/bin/jq -r '.shim.poweroffPin // "4"' ${CONFIG} 2>/dev/null)
 	  [[ "${POWEROFF_PIN}" =~ ^[0-9]+$ ]] || POWEROFF_PIN=4
-	  echo '' | tee -a /boot/config.txt >&3 2>&3
-	  echo "dtoverlay=gpio-poweroff,gpiopin=${POWEROFF_PIN},active_low=1" | tee -a /boot/config.txt >&3 2>&3
+	  echo '' | tee -a "${BOOT_CONFIG}" >&3 2>&3
+	  echo "dtoverlay=gpio-poweroff,gpiopin=${POWEROFF_PIN},active_low=1" | tee -a "${BOOT_CONFIG}" >&3 2>&3
 	fi
 
 	# Power LED on the Pi's PWM hardware (see led_control.py; the software PWM took about 9 % of a CPU core all the
 	# time): only for GPIO 12/13 and with the analog audio off (it uses the same PWM unit). Active from the next start.
 	LED_PIN=$(/usr/bin/jq -r '.shim.ledPin // empty' ${CONFIG} 2>/dev/null)
-	if { [ "${LED_PIN}" = "12" ] || [ "${LED_PIN}" = "13" ]; } && grep -q '^dtparam=audio=off' /boot/config.txt && ! grep -q '^dtoverlay=pwm' /boot/config.txt; then
-	  echo "dtoverlay=pwm,pin=${LED_PIN},func=4" | tee -a /boot/config.txt >&3 2>&3
+	# (the analog audio shares the PWM unit only on a Pi 1, 2, 3 and Zero - on a Pi 4 or newer the LED gets it also with
+	# the 3.5 mm output switched on, see onboard_audio.sh)
+	PWM_FREE=0
+	grep -q '^dtparam=audio=off' "${BOOT_CONFIG}" && PWM_FREE=1
+	case "${RASPPI}" in *"Raspberry Pi 3"* | *"Raspberry Pi 2"* | *"Raspberry Pi Zero"* | *"Raspberry Pi Model"* | *"Compute Module 3"* | *"Compute Module Rev"*) ;; *) PWM_FREE=1 ;; esac
+	if { [ "${LED_PIN}" = "12" ] || [ "${LED_PIN}" = "13" ]; } && [ "${PWM_FREE}" = "1" ] && ! grep -q '^dtoverlay=pwm' "${BOOT_CONFIG}"; then
+	  echo "dtoverlay=pwm,pin=${LED_PIN},func=4" | tee -a "${BOOT_CONFIG}" >&3 2>&3
 	fi
 
 	usermod -aG dialout dietpi >&3 2>&3
@@ -1035,6 +1066,14 @@ rm -f /tmp/mupibox-update-failed
 	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && if pm2 describe server >/dev/null 2>&1; then pm2 restart server; else pm2 start server.js --name server; fi" >&3 2>&3
 	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/spotifycontroller-main && if pm2 describe spotify-control >/dev/null 2>&1; then pm2 restart spotify-control; else pm2 start spotify-control.js --name spotify-control; fi" >&3 2>&3
 	sudo -H -u dietpi bash -c "pm2 save" >&3 2>&3
+	# the start of server and player made robust: oneshot, tried again when "pm2 resurrect" hangs (seen once: the
+	# display showed "503" until it was started by hand; config/services/pm2-dietpi.override.conf). Takes effect at the
+	# next start, the running pm2 is not touched.
+	if [ -f /etc/systemd/system/pm2-dietpi.service ]; then
+		mkdir -p /etc/systemd/system/pm2-dietpi.service.d >&3 2>&3
+		cp -f ${MUPI_SRC}/config/services/pm2-dietpi.override.conf /etc/systemd/system/pm2-dietpi.service.d/override.conf >&3 2>&3
+		systemctl daemon-reload >&3 2>&3
+	fi
 
 	###############################################################################################
 	echo -e "XXX\n100\nInstallation complete, please reboot the system... \nXXX"	

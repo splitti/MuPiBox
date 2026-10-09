@@ -31,5 +31,13 @@ if [ "${WHAT}" != "browser" ]; then
 		# write only when it changes (the boot partition is on the SD card)
 		[ "${NEW_LINE}" != "$(cat "${CMDLINE}")" ] && printf '%s\n' "${NEW_LINE}" > "${CMDLINE}"
 	fi
+	# The initramfs splash of older installations ("initramfs initramfs.img" in config.txt and splash.txt, installers up
+	# to 3.x) shows splash.png of the boot partition at the kernel's start, before splash_screen.sh: that was the old
+	# blue start picture, then the chosen one came (issue #177). It gets the chosen one too, written only when it changes.
+	BOOT_DIR=$(dirname "${CMDLINE}")
+	PIC="${OUT}/splash-$1.png"
+	if [ -f "${BOOT_DIR}/splash.txt" ] && [ -f "${PIC}" ] && grep -qE '^[[:space:]]*initramfs[[:space:]]+initramfs\.img' "${BOOT_DIR}/config.txt" 2>/dev/null; then
+		cmp -s "${PIC}" "${BOOT_DIR}/splash.png" || cp "${PIC}" "${BOOT_DIR}/splash.png"
+	fi
 fi
 exit 0

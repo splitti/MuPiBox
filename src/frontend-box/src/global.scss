@@ -96,3 +96,49 @@ html {
 @import "./theme/km-round2";
 /* coverflow: the round-2 header, player and track list in its own look - see theme/cf-round2.scss */
 @import "./theme/cf-round2";
+
+// The top bar folded away (HeaderVisibilityService puts the class on the body): on the start page, the lists, the player
+// and "continue listening" it folds up to nothing and the content gets the room.
+body.mupi-header-hidden {
+    app-home ion-header,
+    app-medialist ion-header,
+    app-player ion-header,
+    app-resume ion-header {
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+        pointer-events: none;
+        transition: max-height 0.25s ease, opacity 0.2s ease;
+    }
+
+    // The player in full screen: its cover (30 px from the top without the bar) sits as low as the covers of the lists
+    // (60 px, see SwiperComponent COMPACT_TOP), the controls beside it move down with it. Not the children's themes.
+    &:not(.km) app-player ion-content > ion-grid {
+        margin-top: 30px;
+    }
+}
+
+// A cover that is missing (no picture found, or it does not load): dark to mid grey with the folder's name in the
+// middle, always 2em, long names break over several lines. Fills the cover's card, in the lists and in the player.
+.mupi-no-cover {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 12px;
+    overflow: hidden;
+    background: linear-gradient(145deg, #2b2b2b 0%, #8c8c8c 100%);
+    color: #ffffff;
+    font-size: 2em;
+    line-height: 1.2;
+    text-align: center;
+    user-select: none;
+
+    span {
+        max-width: 100%;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+}

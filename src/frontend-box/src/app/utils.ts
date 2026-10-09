@@ -22,7 +22,9 @@ const SPOTIFY_CDN_RE = /^https:\/\/i\.scdn\.co\/image\/([A-Za-z0-9]+)$/
 // without a width (some playlists) or lists without a 300 px entry fall back to the first one.
 export function pickCoverUrl(images: { url?: string; width?: number | null }[] | undefined | null): string | undefined {
   if (!images?.length) return undefined
-  const sized = images.filter((img) => img?.url && typeof img.width === 'number' && img.width >= 300)
+  // (a display larger than 800 x 480 draws the page larger - chromium-autostart.sh: a larger picture stays sharp)
+  const need = 300 * Math.max(1, typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1)
+  const sized = images.filter((img) => img?.url && typeof img.width === 'number' && img.width >= need)
   sized.sort((a, b) => (a.width as number) - (b.width as number))
   return sized[0]?.url ?? images[0]?.url
 }

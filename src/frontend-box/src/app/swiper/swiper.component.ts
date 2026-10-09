@@ -25,6 +25,7 @@ import { environment } from '../../environments/environment'
 import type { MupiboxConfig } from '../mupibox-config.model'
 import { CoverFlipService } from '../cover-flip.service'
 import { DisplayTextsService } from '../display-texts.service'
+import { noCoverStyle } from '../no-cover'
 import { PlayerService } from '../player.service'
 import { KmThemeService } from '../theme/km-theme.service'
 
@@ -57,9 +58,38 @@ export interface SwiperData<T> {
   imports: [AsyncPipe, IonCard, IonCardHeader, IonCardTitle, IonCol, IonGrid, IonIcon, IonRow],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '[class.compact]': 'compactActive()',
+    '[style.--swiper-k]': 'compactScale()',
+    '[style.--swiper-shift]': 'compactShift()',
+  },
 })
 export class SwiperComponent<T> {
   public data = input.required<SwiperData<T>[]>()
+  // The start page's top bar is folded away: the row of covers is drawn larger and moves up to 60 px below the top of
+  // the display (the covers sit lower than the bar was high: 60 px, so the picture does not crowd the edge). All of it is one scaling of the whole row (the Cover Flow is worked out for the row's own width, so it
+  // follows the narrower width it is laid out in - see swiper.component.scss).
+  public compact = input<boolean>(false)
+  private static readonly COMPACT_TOP = 60
+  private static readonly HEADER_HEIGHT = 70
+  // Cover Flow without the bar: the covers are as large as the player's cover (px), whatever the display's height
+  private static readonly COMPACT_COVER = 350
+  private static readonly COVERFLOW_COVER = 300
+  // (not the children's themes: their covers sit in a layout of their own)
+  protected readonly compactActive = computed(() => this.compact() && !this.km())
+  // the row's own padding above the covers: 20 px in Cover Flow, 35 px in the other themes
+  private compactRowTop(): number {
+    return this.coverflow() ? 20 : 35
+  }
+  // the covers' area ran from row top to the bottom of the display (height - header) and now runs from 10 px to the
+  // bottom: that is the factor, capped so a tall screen does not blow the covers up
+  protected readonly compactScale = computed(() => {
+    if (this.coverflow()) return (SwiperComponent.COMPACT_COVER / SwiperComponent.COVERFLOW_COVER).toFixed(4)
+    const h = window.innerHeight
+    const k = (h - SwiperComponent.COMPACT_TOP) / (h - SwiperComponent.HEADER_HEIGHT - this.compactRowTop())
+    return Number.isFinite(k) ? Math.min(1.3, Math.max(1, k)).toFixed(4) : '1'
+  })
+  protected readonly compactShift = computed(() => `${(SwiperComponent.COMPACT_TOP - this.compactRowTop() * Number(this.compactScale())).toFixed(1)}px`)
   // Identifies the list (e.g. category + artist). A page can be rebuilt when the player opens (the album
   // list is), which lost the remembered position with the component; kept per key it survives that.
   public positionKey = input<string | undefined>(undefined)
@@ -109,6 +139,8 @@ export class SwiperComponent<T> {
   protected readonly displayTexts = inject(DisplayTextsService)
   protected readonly speakingName = signal<string | undefined>(undefined)
   private speakingTimer: ReturnType<typeof setTimeout> | undefined
+  // the picture addresses that did not load (by address, not by name: two entries of the same name can have different
+  // pictures, and a new address of an entry gets its try)
   private readonly missingCovers = signal(new Set<string>())
 
   // km "Bühne" (stage, MuPi-Conf > "Cover-Flow-Ansicht"): the covers around the one in the middle, drawn by hand
@@ -152,14 +184,18 @@ export class SwiperComponent<T> {
     const data = this.shownData()
     return data.length > 0 ? data[this.stageClamp(this.stageIndex(), data.length)] : undefined
   })
-  // position of the scrollbar's thumb (track 200 px): the whole list, not only what is rendered yet
+  // position of the scrollbar's thumb as parts of the track (w: its width, x: where it starts): the whole list, not only
+  // what is rendered yet; at least 24 px of the 200 px track, or 60 px of the long one
   protected readonly stageBar = computed(() => {
     const total = this.data()?.length ?? 0
     if (total < 2 || this.shownData().length === 0) return undefined
-    const width = Math.max(24, 200 / total)
+    const w = Math.max(this.fullScrollbar() ? 0.08 : 0.12, 1 / total)
     const c = this.stageClamp(this.stageIndex(), total)
-    return { width, x: (c / (total - 1)) * (200 - width) }
+    return { w, x: (c / (total - 1)) * (1 - w) }
   })
+  // the stage's bar can be dragged (the short one of "Standard" and the long one): the stage follows, the name is read
+  // (when switched on) where it stops
+  private stageBarFrom: number | undefined
 
   // Since we reset the swiper container when the page is entered / left, we need to
   // manually cache / restore the swiper position.
@@ -169,12 +205,6 @@ export class SwiperComponent<T> {
   // positionKey of the list currently shown (to notice a folder level change within the page)
   private shownKey: string | undefined
 
-  // Lists with fewer covers than this are spread over the whole screen instead of scrolled.
-  private static readonly FEW_COVERS = 10
-  private selectedIndex = 0
-  private snapUntil = 0
-  private introDone = false
-
   // The Cover Flow look belongs to the "coverflow" theme (Mupi-conf > MuPiBox settings > Theme);
   // with any other theme the lists look like they always did. The scrollbar can be hidden
   // for every theme. Both come from the MuPiBox config, which is loaded once.
@@ -183,6 +213,8 @@ export class SwiperComponent<T> {
   /** Width of one cover in the Cover Flow, measured on first use (0 = not yet). */
   private coverflowCoverWidth = 0
   protected hideScrollbar: WritableSignal<boolean> = signal(false)
+  // the scrollbar across the width and thicker (app > Aussehen > Ansicht: "Durchgehend"), in every theme
+  protected readonly fullScrollbar = signal(false)
   // Coverflow theme only: shows currentData.name (album name, falling back to the folder name -
   // the same value the non-Coverflow list already shows under each cover) below the cover.
   protected coverflowShowNames: WritableSignal<boolean> = signal(false)
@@ -193,10 +225,22 @@ export class SwiperComponent<T> {
     http: HttpClient,
   ) {
     addIcons({ checkmark, folder, link, play })
+    // the row is laid out in another width now (or again in the old one): Swiper measures it anew
+    effect(() => {
+      this.compactActive()
+      untracked(() => {
+        setTimeout(() => {
+          ;(this.swiperContainer()?.nativeElement?.swiper as Swiper | undefined)?.update()
+          this.coverflowCoverWidth = 0
+          this.applyCoverflow()
+        }, 60)
+      })
+    })
     http.get<MupiboxConfig>(`${environment.backend.apiUrl}/config`).subscribe({
       next: (config) => {
         this.coverflow.set(config?.mupibox?.theme === 'coverflow')
         this.hideScrollbar.set(config?.mupibox?.hideScrollbar === true)
+        this.fullScrollbar.set(config?.mupibox?.scrollbarStyle === 'full')
         this.coverflowShowNames.set(config?.mupibox?.coverflowShowNames === true)
         this.configLoaded.set(true)
       },
@@ -236,7 +280,6 @@ export class SwiperComponent<T> {
     // render-chunk and snap to the cached index mid-swipe).
     effect(() => {
       if (!this.pageIsShown()) return
-      this.selectedIndex = this.cachedSwiperPosition
       this.stageIndex.set(this.cachedSwiperPosition)
       this.pendingRestore = this.cachedSwiperPosition > 0
     })
@@ -277,7 +320,6 @@ export class SwiperComponent<T> {
         this.shownKey = key
         const target = (key ? SwiperComponent.positions.get(key) : undefined) ?? 0
         this.cachedSwiperPosition = target
-        this.selectedIndex = target
         this.stageIndex.set(target)
         this.renderableLimit.set(Math.max(SwiperComponent.RENDER_INITIAL, target + 12))
         this.swiper()?.slideTo(0, 0)
@@ -288,11 +330,6 @@ export class SwiperComponent<T> {
     // New slides need their tilt as soon as they are rendered.
     effect(() => {
       this.shownData()
-      // New slides (or slides that were reused for other content) take their place at once;
-      // gliding there from whatever layout they had before looked like shaking while a page
-      // change was animating.
-      this.snapUntil = Date.now() + 900
-      this.introDone = false
       setTimeout(() => this.applyCoverflow(), 0)
       // The swiper's scrollbar only exists a moment later.
       setTimeout(() => this.applyCoverflow(), 400)
@@ -467,7 +504,6 @@ export class SwiperComponent<T> {
     const target = found >= 0 ? found : Math.min(position, data.length - 1)
     this.cachedSwiperPosition = target
     if (key) SwiperComponent.positions.set(key, target)
-    this.selectedIndex = target
     this.stageIndex.set(target)
     if (!shown || this.pendingRestore) return
     this.renderableLimit.set(Math.max(this.renderableLimit(), target + 12))
@@ -476,7 +512,7 @@ export class SwiperComponent<T> {
       const sw = this.swiper()
       if (!sw || !this.pageIsShown()) return
       ;(sw as unknown as { update?: () => void }).update?.()
-      if (!this.kmStage() && !this.isFewCovers() && sw.activeIndex !== target) sw.slideTo(target, 0)
+      if (!this.kmStage() && sw.activeIndex !== target) sw.slideTo(target, 0)
       this.applyCoverflow()
     }, 0)
   }
@@ -491,7 +527,6 @@ export class SwiperComponent<T> {
     if (key) {
       SwiperComponent.positions.delete(key)
     }
-    this.selectedIndex = 0
     this.stageIndex.set(0)
     this.applyCoverflow()
   }
@@ -508,22 +543,11 @@ export class SwiperComponent<T> {
       return
     }
     this.watchCoverSources(this.swiperContainer()?.nativeElement as HTMLElement)
-    this.loadNearCovers(swiper, this.isFlatRow() || this.isFewCovers() ? undefined : 9)
-    if (this.isFlatRow()) {
-      this.applyFlatRowLayout(swiper)
-      return
-    }
-    for (const slide of Array.from(swiper.slides) as HTMLElement[]) {
-      slide.style.transformOrigin = ''
-    }
-    if (this.isFewCovers()) {
-      this.applyFewCoversLayout(swiper)
-      return
-    }
-    this.resetFewCoversMode(swiper)
+    this.loadNearCovers(swiper, 9)
     // Three covers on each side of the centered one. The space between the edge of the centered cover and the
     // edge of the screen is divided into three equal steps (each side cover shows a strip of one step), and
-    // all side covers have the same tilt.
+    // all side covers have the same tilt. With three covers or fewer there are less than three on a side: the space
+    // is divided among those that are there, so the outermost one reaches the edge of the screen all the same.
     const visibleSides = 3
     const maxAngle = 65
     const depth = 100
@@ -539,7 +563,14 @@ export class SwiperComponent<T> {
     const coverWidth = this.coverflowCoverWidth || 300
     const unit = coverWidth + (Number(swiper.params.spaceBetween) || 0) // distance of two neighbouring covers in the row
     const screenHalf = swiper.width / 2
-    const step = (screenHalf - coverWidth / 2) / visibleSides
+    const room = screenHalf - coverWidth / 2 // from the edge of the centered cover to the edge of the screen
+    const total = (this.shownData() ?? []).length
+    // Where the list stands (the index of the cover in the middle, fractional while it moves): slide 0 has it as its progress.
+    const position = slides[0].progress ?? 0
+    // How many covers there are on the side of the screen `side` points to (-1 left, +1 right), at least 1 and at most
+    // 3 - kept steady while the list moves, so the covers glide instead of jumping when another one reaches the middle.
+    const coversOnSide = (side: number): number =>
+      total > 3 ? visibleSides : Math.min(visibleSides, Math.max(1, side > 0 ? total - 1 - position : position))
     for (const slide of slides) {
       const progress = slide.progress ?? 0
       const t = Math.abs(progress)
@@ -566,72 +597,13 @@ export class SwiperComponent<T> {
       const outerZ = z + (coverWidth / 2) * Math.sin(radians)
       const scale = perspective / (perspective - outerZ)
       // Move the outer edge of the cover to its place: one step further out for every cover.
+      const step = room / coversOnSide(side)
       const shift = side * (((coverWidth / 2) + t * (step - unit)) / scale - (coverWidth / 2) * Math.cos(radians))
       slide.style.transform = `perspective(${perspective}px) translateX(${shift}px) translateZ(${z}px) rotateY(${-side * angle}deg)`
       // Covers nearer to the center are drawn on top of the further ones.
       slide.style.zIndex = String(1000 - Math.round(t * 10))
     }
   }
-
-  // --- Short lists (fewer than FEW_COVERS covers) -------------------------------------
-  // They are not scrolled by swiper: the covers are spread over the whole width, the
-  // first at the left edge and the last at the right edge. The selected cover faces
-  // front, all others are tilted towards it. Dragging moves the selection continuously
-  // (the covers follow the finger, then glide into place); tapping a cover selects it.
-  private static readonly DRAG_PIXELS_PER_COVER = 130
-
-  private fewLayouts: { shift: number; rotate: number; z: number }[][] | undefined
-  private fewLayoutKey = ''
-  private fewTranslate = 0 // the swiper's own scroll position while the layouts were measured
-  private dragging = false
-  private dragStartX = 0
-  private dragStartPosition = 0
-  private dragPosition = 0
-  private suppressClick = false
-
-  protected fewPointerDown(event: PointerEvent): void {
-    if (!this.isFewCovers()) {
-      return
-    }
-    this.dragging = true
-    this.dragStartX = event.clientX
-    this.dragStartPosition = this.selectedIndex
-    this.dragPosition = this.selectedIndex
-    this.suppressClick = false
-    ;(event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId)
-  }
-
-  protected fewPointerMove(event: PointerEvent): void {
-    if (!this.dragging) {
-      return
-    }
-    const distance = event.clientX - this.dragStartX
-    if (Math.abs(distance) > 8) {
-      this.suppressClick = true // what follows is a drag, not a tap
-    }
-    const last = (this.shownData() ?? []).length - 1
-    this.dragPosition = Math.min(Math.max(this.dragStartPosition - distance / SwiperComponent.DRAG_PIXELS_PER_COVER, 0), last)
-    const swiper = this.swiperContainer()?.nativeElement?.swiper as Swiper | undefined
-    if (swiper) {
-      this.renderFewCovers(swiper, this.dragPosition, false)
-    }
-  }
-
-  protected fewPointerUp(event: PointerEvent): void {
-    if (!this.dragging) {
-      return
-    }
-    this.dragging = false
-    ;(event.currentTarget as HTMLElement).releasePointerCapture?.(event.pointerId)
-    if (this.suppressClick) {
-      this.selectedIndex = Math.round(this.dragPosition)
-      this.applyCoverflow() // glides to the selected cover
-    }
-  }
-
-  // Up to this many covers are simply shown in a row: same size, all facing front,
-  // no tilt, no animation and nothing to scroll.
-  private static readonly FLAT_ROW_COVERS = 3
 
   // The pictures are only fetched for covers that are (nearly) in view. A podcast has hundreds
   // of episodes, and requesting all of their pictures at once would take minutes.
@@ -678,260 +650,10 @@ export class SwiperComponent<T> {
     }
   }
 
-  private isFlatRow(): boolean {
-    const count = (this.shownData() ?? []).length
-    return count > 0 && count <= SwiperComponent.FLAT_ROW_COVERS
-  }
-
-  // (only the Cover Flow has this layout: in any other theme a list of 4 - 9 entries remembered its position from
-  // selectedIndex, which only the Cover Flow keeps - back from the player it stood at the start)
-  private isFewCovers(): boolean {
-    if (!this.coverflow()) return false
-    const count = (this.shownData() ?? []).length
-    return count > SwiperComponent.FLAT_ROW_COVERS && count < SwiperComponent.FEW_COVERS
-  }
-
-  private applyFlatRowLayout(swiper: Swiper): void {
-    const slides = Array.from(swiper.slides) as HTMLElement[]
-    const count = slides.length
-    if (count === 0) {
-      return
-    }
-    swiper.allowTouchMove = false
-    if (swiper.scrollbar?.el) {
-      swiper.scrollbar.el.style.display = 'none'
-    }
-    // As large as possible (up to 300px) with the same gap between and around the covers.
-    const minGap = 20
-    const coverSize = Math.min(300, (swiper.width - (count + 1) * minGap) / count)
-    const gap = (swiper.width - count * coverSize) / (count + 1)
-    slides.forEach((slide) => {
-      slide.style.transition = 'none'
-      slide.style.transform = 'none'
-    })
-    const naturalCenters = slides.map((slide) => {
-      const rect = slide.getBoundingClientRect()
-      return rect.left + rect.width / 2
-    })
-    slides.forEach((slide, index) => {
-      const center = gap * (index + 1) + coverSize * index + coverSize / 2
-      // A smaller cover shrinks around the middle of its top edge (20px into the slide), so that
-      // edge stays 20px below the menu bar.
-      slide.style.transformOrigin = 'center 20px'
-      slide.style.transform = `translateX(${center - naturalCenters[index]}px) scale(${coverSize / 300})`
-      slide.style.zIndex = '1'
-    })
-  }
-
-  private applyFewCoversLayout(swiper: Swiper): void {
-    const slides = Array.from(swiper.slides) as HTMLElement[]
-    if (slides.length === 0) {
-      return
-    }
-    swiper.allowTouchMove = false
-    if (swiper.scrollbar?.el) {
-      swiper.scrollbar.el.style.display = ''
-      swiper.scrollbar.el.style.pointerEvents = 'none' // only shows where the selection is
-    }
-    const key = `${slides.length}:${swiper.width}`
-    if (!this.fewLayouts || this.fewLayoutKey !== key) {
-      this.measureFewLayouts(swiper, slides)
-      this.fewLayoutKey = key
-    }
-    if (!this.dragging) {
-      this.selectedIndex = Math.min(this.selectedIndex, slides.length - 1)
-      if (Date.now() <= this.snapUntil) {
-        // Fresh slides: they fade in at their final place, starting from a clean
-        // state. Later calls in this window must not disturb that.
-        if (!this.introDone && this.fewLayouts) {
-          this.introDone = true
-          this.playFewCoversIntro(swiper, slides)
-        }
-        return
-      }
-      this.renderFewCovers(swiper, this.selectedIndex, slides[0].style.transform !== '')
-    }
-  }
-
-  // The layout for every possible selection is measured once. How wide a tilted cover
-  // looks depends on perspective and position, so it is measured and corrected a few
-  // times instead of calculated.
-  private measureFewLayouts(swiper: Swiper, slides: HTMLElement[]): void {
-    const count = slides.length
-    const margin = 0
-    const flatWidth = 300
-    const angle = 65
-    const depth = 100
-    const perspective = 1000
-    const scale = perspective / (perspective + depth) // tilted covers are further away
-    const width = swiper.width
-
-    this.fewTranslate = swiper.translate
-    slides.forEach((slide) => {
-      slide.style.transition = 'none'
-      slide.style.transform = 'none'
-    })
-    const naturalCenters = slides.map((slide) => {
-      const rect = slide.getBoundingClientRect()
-      return rect.left + rect.width / 2
-    })
-    const cardRects = (): DOMRect[] =>
-      slides.map((slide) => (slide.querySelector('ion-card') ?? slide).getBoundingClientRect())
-
-    const layouts: { shift: number; rotate: number; z: number }[][] = []
-    for (let selected = 0; selected < count; selected++) {
-      const shifts = new Array<number>(count).fill(0)
-      const apply = (): void => {
-        slides.forEach((slide, index) => {
-          const tilted = index !== selected
-          const rotate = index < selected ? angle : index > selected ? -angle : 0
-          slide.style.transform = `perspective(${perspective}px) translateX(${shifts[index]}px) translateZ(${tilted ? -depth : 0}px) rotateY(${rotate}deg)`
-        })
-      }
-
-      // Wanted position of every cover: the left edge (flat cover and left group) or the
-      // right edge (right group), given the current widths of the tilted covers.
-      const targets = (tiltedWidths: number[]): { edge: 'left' | 'right'; pos: number }[] => {
-        const left = selected
-        const right = count - 1 - selected
-        const leftWidth = left > 0 ? tiltedWidths[left - 1] : 0
-        const rightWidth = right > 0 ? tiltedWidths[selected + 1] : 0
-        const gaps = (left > 0 ? 1 : 0) + (right > 0 ? 1 : 0)
-        const steps = Math.max(left - 1, 0) + Math.max(right - 1, 0)
-        const space = width - 2 * margin - flatWidth - leftWidth - rightWidth
-        const wantedGap = 14
-        const pitch = steps > 0 ? Math.min(Math.max((space - gaps * wantedGap) / steps, 12), 170) : 0
-        const gap = gaps > 0 ? Math.max((space - steps * pitch) / gaps, 8) : 0
-        let flatLeft = margin + (left > 0 ? (left - 1) * pitch + leftWidth + gap : 0)
-        if (count === 1) {
-          flatLeft = (width - flatWidth) / 2
-        }
-        return slides.map((_, index) => {
-          if (index < selected) {
-            return { edge: 'left', pos: margin + index * pitch }
-          }
-          if (index > selected) {
-            return { edge: 'right', pos: width - margin - (count - 1 - index) * pitch }
-          }
-          return { edge: 'left', pos: flatLeft }
-        })
-      }
-
-      // First guess from the natural positions, then measure and correct.
-      let widths = slides.map(() => 115)
-      let wanted = targets(widths)
-      slides.forEach((_, index) => {
-        const tilted = index !== selected
-        let center = wanted[index].pos + flatWidth / 2
-        if (tilted) {
-          center = wanted[index].edge === 'left' ? wanted[index].pos + widths[index] / 2 : wanted[index].pos - widths[index] / 2
-        }
-        shifts[index] = (center - naturalCenters[index]) / (tilted ? scale : 1)
-      })
-      apply()
-      for (let round = 0; round < 3; round++) {
-        const rects = cardRects()
-        widths = rects.map((rect) => rect.width)
-        wanted = targets(widths)
-        slides.forEach((_, index) => {
-          const measured = wanted[index].edge === 'left' ? rects[index].left : rects[index].right
-          shifts[index] += (wanted[index].pos - measured) / (index === selected ? 1 : scale)
-        })
-        apply()
-      }
-      layouts.push(
-        slides.map((_, index) => ({
-          shift: shifts[index],
-          rotate: index < selected ? angle : index > selected ? -angle : 0,
-          z: index === selected ? 0 : -depth,
-        })),
-      )
-    }
-    this.fewLayouts = layouts
-    slides.forEach((slide) => {
-      slide.style.transform = ''
-    })
-  }
-
-  // Shows the layout for a (fractional) selection: between two selections every cover
-  // is halfway between its two positions - that is what makes dragging follow the finger.
-  private renderFewCovers(swiper: Swiper, position: number, animate: boolean): void {
-    const layouts = this.fewLayouts
-    if (!layouts) {
-      return
-    }
-    const slides = Array.from(swiper.slides) as HTMLElement[]
-    const from = Math.min(Math.floor(position), slides.length - 1)
-    const to = Math.min(from + 1, slides.length - 1)
-    const fraction = position - from
-    const mix = (a: number, b: number): number => a + (b - a) * fraction
-    // The swiper moves its slides on its own (e.g. when it centers the first slide after
-    // it has been set up). The layouts were measured at another scroll position, so the
-    // difference has to be taken out again (outside the perspective, so tilted covers keep
-    // their measured shape) or every cover would sit off to one side.
-    const moved = swiper.translate - this.fewTranslate
-    slides.forEach((slide, index) => {
-      const a = layouts[from][index]
-      const b = layouts[to][index]
-      const z = mix(a.z, b.z)
-      const shift = mix(a.shift, b.shift)
-      slide.style.transition = animate ? 'transform 0.4s ease' : 'none'
-      // The outer translation moves the finished picture, so the cover keeps its shape.
-      slide.style.transform = `translateX(${-moved}px) perspective(1000px) translateX(${shift}px) translateZ(${z}px) rotateY(${mix(a.rotate, b.rotate)}deg)`
-      slide.style.zIndex = String(1000 - Math.round(Math.abs(index - position) * 10))
-    })
-    this.showFewCoversScrollbar(swiper, position, slides.length, animate)
-  }
-
-  // The swiper does not scroll in this mode, so its scrollbar is driven by hand: the thumb
-  // moves along the track with the (fractional) selection.
-  private showFewCoversScrollbar(swiper: Swiper, position: number, count: number, animate: boolean): void {
-    const track = swiper.scrollbar?.el as HTMLElement | undefined
-    const thumb = swiper.scrollbar?.dragEl as HTMLElement | undefined
-    if (!track || !thumb || count < 2) {
-      return
-    }
-    const trackWidth = track.clientWidth
-    const thumbWidth = Math.max(trackWidth / count, 40)
-    thumb.style.transition = animate ? 'transform 0.4s ease' : 'none'
-    thumb.style.width = `${thumbWidth}px`
-    thumb.style.transform = `translate3d(${(position / (count - 1)) * (trackWidth - thumbWidth)}px, 0, 0)`
-  }
-
-  private playFewCoversIntro(swiper: Swiper, slides: HTMLElement[]): void {
-    // Start state: final layout, invisible, without any transition.
-    this.renderFewCovers(swiper, this.selectedIndex, false)
-    slides.forEach((slide) => (slide.style.opacity = '0'))
-    // Two frames later the start state has been painted; now everything glides to its place.
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
-        this.renderFewCovers(swiper, this.selectedIndex, true)
-        slides.forEach((slide) => {
-          slide.style.transition = 'transform 0.45s ease-out, opacity 0.45s ease-out'
-          slide.style.opacity = '1'
-        })
-      }),
-    )
-  }
-
-  // Back to the scrolling Cover Flow (e.g. when the list grows past the threshold).
-  private resetFewCoversMode(swiper: Swiper): void {
-    swiper.allowTouchMove = true
-    if (swiper.scrollbar?.el) {
-      swiper.scrollbar.el.style.display = ''
-    }
-    if (swiper.scrollbar?.el) {
-      swiper.scrollbar.el.style.pointerEvents = ''
-    }
-    for (const slide of Array.from(swiper.slides) as HTMLElement[]) {
-      slide.style.transition = ''
-    }
-  }
-
   // Index of the entry the list stands on (remembered when the page is left or the folder level changes).
   private currentPosition(): number {
     if (this.kmStage()) return this.stageIndex()
-    return this.isFewCovers() ? this.selectedIndex : (this.swiper()?.activeIndex ?? 0)
+    return this.swiper()?.activeIndex ?? 0
   }
 
   // --- km "Bühne" ---------------------------------------------------------------------------------------------
@@ -979,6 +701,43 @@ export class SwiperComponent<T> {
     }
   }
 
+  protected stageBarDown(event: PointerEvent): void {
+    this.stageBarFrom = this.stageIndex()
+    ;(event.currentTarget as HTMLElement | null)?.setPointerCapture?.(event.pointerId)
+    this.stageBarAt(event)
+  }
+
+  protected stageBarMove(event: PointerEvent): void {
+    if (this.stageBarFrom !== undefined) this.stageBarAt(event)
+  }
+
+  protected stageBarUp(): void {
+    if (this.stageBarFrom === undefined) return
+    const to = this.stageIndex()
+    // (back to where it started for a moment: stageGo then reads the name of the new one, as after a swipe)
+    this.stageIndex.set(this.stageBarFrom)
+    this.stageBarFrom = undefined
+    this.stageGo(to)
+  }
+
+  private stageBarAt(event: PointerEvent): void {
+    const el = event.currentTarget as HTMLElement | null
+    const bar = this.stageBar()
+    const total = this.data()?.length ?? 0
+    if (!el || !bar || total < 2) return
+    const r = el.getBoundingClientRect()
+    const f = ((event.clientX - r.left) / Math.max(1, r.width) - bar.w / 2) / Math.max(0.01, 1 - bar.w)
+    const target = Math.round(Math.max(0, Math.min(1, f)) * (total - 1))
+    // (a long list is rendered bit by bit: a place beyond the rendered part has it rendered up to there first - else
+    // the end of a list of 300 stood at the 45th entry)
+    if (target >= this.shownData().length) this.renderableLimit.set(Math.min(total, Math.max(this.renderableLimit(), target + 12)))
+    const c = this.stageClamp(target, this.shownData().length)
+    this.stageIndex.set(c)
+    this.cachedSwiperPosition = c
+    this.preloadCoversNear(c)
+    this.maybeGrow()
+  }
+
   // The cover in the middle opens, a side cover comes to the middle.
   protected kmStageTap(index: number, item: SwiperData<T>): void {
     if (this.stageDragged) return
@@ -997,14 +756,23 @@ export class SwiperComponent<T> {
     this.speakingTimer = setTimeout(() => this.speakingName.set(undefined), 1800)
   }
 
-  // km themes: a cover that does not load shows the theme's mascot instead
-  protected onCoverError(name: string): void {
-    if (!this.km()) return
-    this.missingCovers.update((set) => new Set(set).add(name))
+  // A cover that does not load counts as missing (km themes: their mascot, the other themes: the card with the name)
+  protected onCoverError(src: string | null | undefined): void {
+    if (src) this.missingCovers.update((set) => new Set(set).add(src))
   }
 
-  protected coverMissing(name: string, src: string | null | undefined): boolean {
-    return !src || src.includes('nocover') || this.missingCovers().has(name)
+  // The other themes show a card with the folder's name in its colour when there is no picture - the default
+  // picture ("nocover") or one that does not load. (The picture's address arrives at once; null: not known yet.)
+  // (the colours of the card: one per folder name, see no-cover.ts)
+  protected readonly noCoverStyle = noCoverStyle
+
+  protected noCover(src: string | null | undefined): boolean {
+    if (this.km()) return false
+    return typeof src === 'string' && (src === '' || src.includes('nocover') || this.missingCovers().has(src))
+  }
+
+  protected coverMissing(src: string | null | undefined): boolean {
+    return !src || src.includes('nocover') || this.missingCovers().has(src)
   }
 
   // Tapping a tilted side cover brings it to the center; only the centered one opens.
@@ -1012,30 +780,11 @@ export class SwiperComponent<T> {
   // element, so the tapped slide is found by position instead: covers nearer to the
   // center are on top of the further ones, so they are checked first.
   protected slideClicked(event: MouseEvent): void {
-    if (this.suppressClick) {
-      this.suppressClick = false
-      return
-    }
     const swiper = this.swiperContainer()?.nativeElement?.swiper as Swiper | undefined
     if (!swiper) {
       return
     }
-    if (this.isFlatRow()) {
-      // Every cover faces front: a tap opens it directly.
-      const slides = Array.from(swiper.slides) as HTMLElement[]
-      const index = slides.findIndex((slide) => {
-        const rect = slide.getBoundingClientRect()
-        return event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom
-      })
-      const item = (this.shownData() ?? [])[index]
-      if (item) {
-        this.coverFlip.capture(slides[index])
-        this.elementClicked.emit(item)
-      }
-      return
-    }
-    const few = this.isFewCovers()
-    const current = few ? this.selectedIndex : swiper.activeIndex
+    const current = swiper.activeIndex
     const byDistance = (Array.from(swiper.slides) as HTMLElement[])
       .map((slide, index) => ({ slide, index }))
       .sort((a, b) => Math.abs(a.index - current) - Math.abs(b.index - current))
@@ -1045,12 +794,7 @@ export class SwiperComponent<T> {
         continue
       }
       if (index !== current) {
-        if (few) {
-          this.selectedIndex = index
-          this.applyCoverflow()
-        } else {
-          swiper.slideTo(index, 300)
-        }
+        swiper.slideTo(index, 300)
         return
       }
       const item = (this.shownData() ?? [])[index]

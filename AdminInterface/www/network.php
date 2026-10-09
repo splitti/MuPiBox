@@ -1,4 +1,5 @@
 <?php
+	require_once __DIR__ . '/includes/boot.php';
 	// USB WiFi drivers offered on the Network page: which chipset, where it lands once
 	// installed (used to show install state), and where the install/remove scripts live.
 	$usb_wifi_drivers = array(
@@ -62,7 +63,7 @@
 		$change=1;
 		if (file_exists("/tmp/driver-install.txt"))
 			{
-			$CHANGE_TXT=$CHANGE_TXT."<li>Kernel-headers not installed. Please check correct arm_64bit-setting in /boot/config.txt (in V7, the setting must be 0).</li>";
+			$CHANGE_TXT=$CHANGE_TXT."<li>Kernel-headers not installed. Please check correct arm_64bit-setting in {$bootConfig} (in V7, the setting must be 0).</li>";
 			}
 		else
 			{
@@ -409,7 +410,7 @@
  echo "net.ipv6.conf.default.disable_ipv6 = 1" >> /etc/sysctl.conf
  echo "net.ipv6.conf.lo.disable_ipv6 = 1" >> /etc/sysctl.conf
 			*/
-			$command = "grep '^dtoverlay=disable-wifi' /boot/config.txt";
+			$command = "grep '^dtoverlay=disable-wifi' {$bootConfig}";
 			$wifionoff = exec($command, $output);
 			if($wifionoff == "")
 				{

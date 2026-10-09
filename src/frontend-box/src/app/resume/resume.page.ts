@@ -11,6 +11,7 @@ import { ArtworkService } from '../artwork.service'
 import { DisplayTextsService } from '../display-texts.service'
 import { LoadingComponent } from '../loading/loading.component'
 import { Media } from '../media'
+import { HeaderVisibilityService } from '../header-visibility.service'
 import { MediaService } from '../media.service'
 import { StatusComponent } from '../status/status.component'
 import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
@@ -38,6 +39,8 @@ export class ResumePage extends SwiperIonicEventsHelper {
   // km themes: the title in the display's language ("Weiterhören")
   protected readonly km = inject(KmThemeService).isKm
   protected readonly displayTexts = inject(DisplayTextsService)
+  // the top bar is folded away (HeaderVisibilityService): the covers are drawn larger
+  protected readonly headerHidden = inject(HeaderVisibilityService).hidden
   protected isOnline: Signal<boolean>
   protected isLoading: WritableSignal<boolean> = signal(false)
   protected media: Signal<Media[]>

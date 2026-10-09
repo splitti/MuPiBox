@@ -35,6 +35,12 @@ import time
 import json
 
 import logging
+import re
+
+try:
+    from charge_estimate import ChargeEstimator
+except ImportError:  # an old install without the file: the percent then comes from the voltage alone
+    ChargeEstimator = None
 
 # Configure logging
 logging.basicConfig(
@@ -165,6 +171,10 @@ class bq25792:
             # 4s cycle = ~32s window, well below the timescale of real SoC
             # change but long enough to absorb the load-sag transients.
             self._vbat_history: list[int] = []
+            # percent while charging and time until full (charge_estimate.py), made when the profile is known
+            self._charge = None
+            self._charge_capacity = None
+            self._was_charging = False
             self._vbat_history_max = 8
             # ADC plausibility filter: last accepted reading per signal and
             # how many implausible samples in a row we have suppressed.
@@ -271,6 +281,12 @@ class bq25792:
                     # vreg above. battery_conf is an explicit whitelist, not a
                     # copy of the profile dict -- a key that is not listed here
                     # never reaches write_defaults(), no matter what the JSON says.
+                    cap_raw = bt["config"].get("capacity")
+                    cap = int(cap_raw) if str(cap_raw or "").strip().isdigit() else None
+                    if cap is None:
+                        m = re.search(r"(\d+)[.,]?(\d{3})\s*mAh", selected_battery_name)
+                        cap = int(m.group(1) + m.group(2)) if m else None
+                    self.battery_conf["capacity_mah"] = cap
                     vsysmin_raw = bt["config"].get("vsysmin")
                     self.battery_conf["vsysmin"] = int(vsysmin_raw) if vsysmin_raw not in (None, "", "0") else None
                     logging.info("Battery configuration loaded from JSON: %s", self.battery_conf_file)
@@ -342,6 +358,90 @@ class bq25792:
             return self.read_Vbat()
         return sum(self._vbat_history) // len(self._vbat_history)
 
+    # the resistance of the pack and its wiring in ohms (2S: two cells and the cables): a current of 0.5 A is 60 mV
+    PACK_RESISTANCE_OHM = 0.12
+
+    def _voltage_percent(self):
+        '''
+        The percent the (smoothed) battery voltage says, as a float 0-100 - the rest curve of the profile. None without
+        a profile that has voltages (USB-C mode).
+        '''
+        try:
+            v_100 = int(self.battery_conf['v_100'])
+            v_75  = int(self.battery_conf['v_75'])
+            v_50  = int(self.battery_conf['v_50'])
+            v_25  = int(self.battery_conf['v_25'])
+            v_0   = int(self.battery_conf['v_0'])
+        except (KeyError, ValueError, TypeError):
+            return None
+        if v_100 <= 10:
+            return None
+        return self._percent_at(self.smoothed_vbat())
+
+    def _percent_at(self, v):
+        '''The percent a rest voltage (mV) stands for on the profile's curve (float, 0-100); None without a curve.'''
+        try:
+            v_100 = int(self.battery_conf['v_100'])
+            v_75  = int(self.battery_conf['v_75'])
+            v_50  = int(self.battery_conf['v_50'])
+            v_25  = int(self.battery_conf['v_25'])
+            v_0   = int(self.battery_conf['v_0'])
+        except (KeyError, ValueError, TypeError):
+            return None
+        if v_100 <= 10:
+            return None
+        if v >= v_100:
+            return 100.0
+        if v >= v_75:
+            return 75.0 + 25.0 * (v - v_75) / max(1, v_100 - v_75)
+        if v >= v_50:
+            return 50.0 + 25.0 * (v - v_50) / max(1, v_75 - v_50)
+        if v >= v_25:
+            return 25.0 + 25.0 * (v - v_25) / max(1, v_50 - v_25)
+        if v >= v_0:
+            return 25.0 * (v - v_0) / max(1, v_25 - v_0)
+        return 0.0
+
+    def update_charge_estimate(self):
+        '''
+        Feeds the charge estimate (percent while charging, time until full) with the current readings. Called every
+        cycle of the service, after the registers were read; never raises.
+        '''
+        if ChargeEstimator is None:
+            return
+        try:
+            cap = self.battery_conf.get('capacity_mah')
+            if self._charge is None:
+                iterm = None
+                try:
+                    iterm = int(self.REG09_Termination_Control.get_ITERM())
+                except Exception:
+                    pass
+                self._charge = ChargeEstimator(capacity_mah=cap, iterm_ma=iterm or 200, state_file="/tmp/mupihat_charge.json")
+            if cap != self._charge_capacity:
+                self._charge.set_capacity(cap)
+                self._charge_capacity = cap
+            if self._voltage_percent() is None:
+                return
+            # What the pack would read at rest: the voltage less the drop the current causes in the pack (charging) or
+            # plus it (discharging). Only the estimate takes this value; the percent shown at rest is the plain voltage.
+            ibat = self.read_Ibat()
+            v_rest = self.smoothed_vbat() - ibat * self.PACK_RESISTANCE_OHM
+            vreg = None
+            try:
+                vreg = int(self.REG01_Charge_Voltage_Limit.VREG)
+            except Exception:
+                pass
+            self._charge.update(ibat, self.read_ChargerStatus(), self._percent_at(v_rest), self.read_Vbat(), vreg)
+            # The charge ended (cable out): the smoothing still holds the voltages of the charge - half a minute of
+            # "80 %" - so it starts anew from the voltage the pack has now.
+            charging = self._charge.percent is not None and self._charge.phase in ("precharge", "cc", "cv", "topoff")
+            if self._was_charging and not charging:
+                self._vbat_history.clear()
+            self._was_charging = charging
+        except Exception as _error:
+            logging.error("charge estimate failed: %s", str(_error))
+
     def battery_percent_granular(self):
         '''
         Phase-12: piecewise-linear interpolation between the 5 thresholds for
@@ -397,6 +497,14 @@ class bq25792:
         else:
             pct = 0.0
 
+        # While it charges, the voltage reads far too high (the charger holds the pack above its rest curve): the
+        # estimate of the charge that went in (charge_estimate.py) is shown instead, up to "full" when the charger
+        # says it ended the charge.
+        est = self._charge
+        # (shortly after a charge too - est.settling: the voltage reads the charge for a while after the cable is out)
+        if est is not None and est.percent is not None and (est.phase in ("precharge", "cc", "cv", "topoff", "done") or est.settling):
+            pct = est.percent
+
         # Round to 5 % steps -- see docstring above for why not 1 %.
         rounded = int(round(pct / 5.0) * 5)
         rounded = max(0, min(100, rounded))
@@ -405,11 +513,9 @@ class bq25792:
         # (pack held above rest curve by CC current). Flag the source so the
         # frontend can render a charging indicator (⚡) instead of treating
         # the number as a settled SoC reading.
-        try:
-            _, chg_str = self.read_ChargerStatus()
-            source = "charging" if 'Charge' in chg_str and 'Done' not in chg_str else "voltage"
-        except Exception:
-            source = "voltage"
+        # (the phase is the estimate's: the chip's text is "Fast charge (CC mode)" and "Taper Charge (CV mode)", spelled
+        # differently, so a search for one word missed one of them)
+        source = "charging" if est is not None and est.percent is not None and est.phase in ("precharge", "cc", "cv", "topoff") else "voltage"
 
         return (rounded, source)
 
@@ -6137,6 +6243,13 @@ class bq25792:
             # messages, legacy Admin-UI bits).
             'Bat_Percent' : bat_Percent,
             'Bat_PercentSource' : bat_PercentSource,
+            # charge estimate: the phase of the charge (idle, precharge, cc, cv, topoff, done), the minutes until full
+            # (None when it cannot be told) and the capacity of the profile that the time is calculated with
+            'Charge_Phase' : self._charge.phase if self._charge is not None else 'idle',
+            'Charge_Eta_Min' : self._charge.eta_min if self._charge is not None else None,
+            'Bat_Capacity_mAh' : self.battery_conf.get('capacity_mah'),
+            # True while the percent of a charge rests on a starting point that is only guessed from the voltage
+            'Charge_Start_Uncertain' : bool(self._charge is not None and self._charge.percent is not None and self._charge.start_uncertain),
         }
     
     def to_json_registers(self):

@@ -9,7 +9,10 @@
 # last line of config.txt had no line break, the overlay was glued to it ("dtoverlay=i2s-mmapdtoverlay=disable-wifi"),
 # which broke both overlays, and switching on again removed the LAST line of the file, whatever it was.
 
-CONFIG="${CONFIG:-/boot/config.txt}"
+# (/boot/firmware/config.txt on newer DietPi, v10 / Debian 13)
+DEFAULT_CONFIG=/boot/config.txt
+[ -f /boot/firmware/config.txt ] && DEFAULT_CONFIG=/boot/firmware/config.txt
+CONFIG="${CONFIG:-${DEFAULT_CONFIG}}"
 LINE="dtoverlay=disable-wifi"
 
 [ -f "${CONFIG}" ] || exit 1
@@ -58,3 +61,14 @@ else
 	echo "set_onboard_wifi.sh: could not write ${CONFIG}" >&2
 fi
 rm -f "${TMP}" "${TMP}.clean"
+
+# on: the onboard radio's soft block, kept by systemd-rfkill for the next start, taken back as well. Switched off in the
+# app, the radio was blocked before the chip was switched off at the start - back after a restart, the chip came up
+# blocked, and the WiFi stayed off although it was switched on. The onboard chip is the one on the SD bus ("mmc" in its
+# path, e.g. platform-fe300000.mmcnr:wlan); a USB adapter's state ("usb" in its path) stays as it is.
+if [ "$1" = "on" ] && [ -d "${RFKILL_STATE_DIR:=/var/lib/systemd/rfkill}" ]; then
+	for state in "${RFKILL_STATE_DIR}"/*mmc*:wlan; do
+		# (if, not &&: no state file must not become the script's exit status)
+		if [ -f "${state}" ]; then printf '0\n' > "${state}"; fi
+	done
+fi

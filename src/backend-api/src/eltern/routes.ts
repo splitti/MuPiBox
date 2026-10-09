@@ -56,10 +56,12 @@ import { registerHardwareRoutes } from './hardware'
 import { registerServicesRoutes } from './services'
 import { registerSystemRoutes } from './system'
 import { registerAdminRoutes } from './admin'
+import { bootDrive } from './boot-drive'
 import { registerNetworkRoutes, renewDhcp } from './network'
 import { registerUpdateRoutes } from './updates'
 import { registerTlsRoutes, tlsOf } from './tls'
 import { type LocalLibraryDeps, registerLocalUploadRoutes } from './upload'
+import { registerLocalDownloadRoutes } from './local-download'
 import { registerPodcastRoutes } from './podcasts'
 import { registerHealthRoutes } from './health'
 import { playlogSummary } from './playlog'
@@ -73,6 +75,7 @@ import { clearSpotifyBlock } from '../spotify-block'
 import { clearArtistAlbumsMemory } from '../artist-albums-store'
 import { clearMetaCache } from '../spotify-sync/meta-cache'
 import { spotifyLoginAge } from './spotify-auth-age'
+import { btBattery, headphonesPlaying } from '../audio-output'
 import {
   REQUESTED_SCOPES,
   buildAuthorizeUrl,
@@ -172,11 +175,8 @@ function readDisplayLanguages(): Record<string, { name?: string }> {
  */
 // Bluetooth audio now: PulseAudio's default output is a Bluetooth device (headphones, a speaker) - then its own
 // maximum volume counts (mupibox.btMaxVolume), see the player's volumeCap()
-function bluetoothAudio(): Promise<boolean> {
-  return new Promise((resolve) =>
-    execFile('/usr/bin/pactl', ['get-default-sink'], { timeout: 3000 }, (err, stdout) => resolve(!err && String(stdout).trim().startsWith('bluez_'))),
-  )
-}
+// (headphones play - Bluetooth or the 3.5 mm output: their own limit counts, see audio-output.ts)
+const bluetoothAudio = (): Promise<boolean> => headphonesPlaying().catch(() => false)
 
 function volumePercent(value: unknown): number | undefined {
   const n = typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : Number.NaN
@@ -397,6 +397,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   router.use(localNetworkOnly)
 
   if (deps.localLibrary) registerLocalUploadRoutes(router, deps.localLibrary)
+  // (and back: a track, an album or a folder of the card as a download - local-download.ts)
+  if (deps.localLibrary) registerLocalDownloadRoutes(router, deps.localLibrary)
   registerDisplayRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerSpeechRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerCustomBootRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
@@ -1061,6 +1063,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     // Validation pro-Feld + Cross-Field (th_shutdown < th_warning).
     let profileMutations: Record<string, string> | null = null
     let removeVreg = false
+    let removeCapacity = false
     if (body.batteryProfile && typeof body.batteryProfile === 'object') {
       const ranges: Record<string, [number, number]> = {
         v_100: [5000, 9000],
@@ -1071,6 +1074,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         th_warning: [5500, 8000],
         th_shutdown: [5000, 7500],
         vreg: [6000, 8500],
+        // the pack's capacity in mAh: the time until full is calculated with it
+        capacity: [500, 200000],
       }
       const candidates: Record<string, string> = {}
       for (const [field, [lo, hi]] of Object.entries(ranges)) {
@@ -1080,10 +1085,15 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
           removeVreg = true
           continue
         }
+        // capacity null: no own value again (the size in the profile's name counts, else no time until full)
+        if (field === 'capacity' && raw === null) {
+          removeCapacity = true
+          continue
+        }
         if (raw === undefined || raw === null || raw === '') continue
         const n = Math.floor(Number(raw))
         if (!Number.isFinite(n) || n < lo || n > hi) {
-          res.status(400).json({ error: `${field} must be ${lo}-${hi} mV` })
+          res.status(400).json({ error: `${field} must be ${lo}-${hi} ${field === 'capacity' ? 'mAh' : 'mV'}` })
           return
         }
         candidates[field] = String(n)
@@ -1105,7 +1115,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         res.status(400).json({ error: `th_shutdown (${finalShutdown}) must be < th_warning (${finalWarning})` })
         return
       }
-      if (Object.keys(candidates).length > 0 || removeVreg) profileMutations = candidates
+      if (Object.keys(candidates).length > 0 || removeVreg || removeCapacity) profileMutations = candidates
     }
 
     if (Object.keys(timeoutMutations).length === 0 && !profileMutations) {
@@ -1130,6 +1140,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
           const pConfig = ((profile.config as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
           Object.assign(pConfig, profileMutations)
           if (removeVreg) delete pConfig.vreg
+          if (removeCapacity) delete pConfig.capacity
           profile.config = pConfig
           mupihat.battery_types = types
           cfg.mupihat = mupihat
@@ -2057,15 +2068,20 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     // ("Tag & Nacht") - the web app shows the ones of its own language
     const labels: Record<string, string> = {}
     const labelsDe: Record<string, string> = {}
+    // (the old plain themes: band behind the header / panel behind the player's controls may be switched off)
+    const bandOptional: string[] = []
+    const panelOptional: string[] = []
     try {
       const km = JSON.parse(readFileSync('/home/dietpi/MuPiBox/themes/km-themes.json', 'utf8')) as {
-        themes?: { id?: unknown; label?: unknown; labelEn?: unknown }[]
+        themes?: { id?: unknown; label?: unknown; labelEn?: unknown; headerBandOptional?: unknown; playerPanelOptional?: unknown }[]
       }
       for (const theme of km.themes ?? []) {
         if (typeof theme.id !== 'string') continue
         if (typeof theme.label === 'string') labelsDe[theme.id] = theme.label
         const en = theme.labelEn ?? theme.label
         if (typeof en === 'string') labels[theme.id] = en
+        if (theme.headerBandOptional === true) bandOptional.push(theme.id)
+        if (theme.playerPanelOptional === true) panelOptional.push(theme.id)
       }
     } catch {
       // no registry (older installation): the names as they are
@@ -2077,6 +2093,12 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       labelsDe,
       stage: mb.themeStage !== false, // (on unless switched off: the default since 5.0.8)
       stageAutoRead: mb.themeStageAutoRead === true,
+      headerBand: mb.headerBand !== false,
+      playerPanel: mb.playerPanel !== false,
+      // (Cover Flow: the top bar folded away by a two-finger swipe - on unless switched off)
+      fullscreenGestures: mb.fullscreenGestures !== false,
+      bandOptional,
+      panelOptional,
     })
   })
 
@@ -2123,14 +2145,16 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/app/theme-stage  {stage?, autoRead?}
+   * POST /api/app/theme-stage  {stage?, autoRead?, headerBand?, playerPanel?, fullscreenGestures?}
    * The children's themes' Cover Flow view (mupibox.themeStage) and reading the name aloud when it stops
    * (mupibox.themeStageAutoRead). The display takes them over right away (same signal as after a theme change).
    */
   router.post('/theme-stage', requireSession, requireCsrf, async (req, res) => {
-    const body = (req.body as { stage?: unknown; autoRead?: unknown } | undefined) ?? {}
-    if ((body.stage !== undefined && typeof body.stage !== 'boolean') || (body.autoRead !== undefined && typeof body.autoRead !== 'boolean')) {
-      res.status(400).json({ error: 'stage and autoRead must be true or false' })
+    const body =
+      (req.body as { stage?: unknown; autoRead?: unknown; headerBand?: unknown; playerPanel?: unknown; fullscreenGestures?: unknown } | undefined) ?? {}
+    const flags = [body.stage, body.autoRead, body.headerBand, body.playerPanel, body.fullscreenGestures]
+    if (flags.some((v) => v !== undefined && typeof v !== 'boolean')) {
+      res.status(400).json({ error: 'stage, autoRead, headerBand, playerPanel and fullscreenGestures must be true or false' })
       return
     }
     let stage = false
@@ -2139,6 +2163,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       const m = ((c.mupibox as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
       if (typeof body.stage === 'boolean') m.themeStage = body.stage
       if (typeof body.autoRead === 'boolean') m.themeStageAutoRead = body.autoRead
+      if (typeof body.headerBand === 'boolean') m.headerBand = body.headerBand
+      if (typeof body.playerPanel === 'boolean') m.playerPanel = body.playerPanel
+      if (typeof body.fullscreenGestures === 'boolean') m.fullscreenGestures = body.fullscreenGestures
       stage = m.themeStage !== false
       autoRead = m.themeStageAutoRead === true
       c.mupibox = m
@@ -2493,7 +2520,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     const controller = ctl ? { mac: ctl[1], name: ctl[2].trim() } : null
     const show = await execCapture('sudo', ['-u', 'dietpi', 'bluetoothctl', 'show'])
     const powered = /Powered:\s*yes/i.test(show.stdout)
-    const devices: Array<{ mac: string; name: string; connected: boolean }> = []
+    const devices: Array<{ mac: string; name: string; connected: boolean; battery?: number }> = []
     if (powered) {
       const dev = await execCapture('sudo', ['-u', 'dietpi', 'bluetoothctl', 'devices'])
       const parsed: Array<{ mac: string; name: string }> = []
@@ -2506,7 +2533,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         // (only paired ones: "devices" also names what a search found nearby - phones, watches, trackers with
         // changing addresses - for some minutes after it, and they showed up here as "paired" without a name)
         if (!/Paired:\s*yes/i.test(info.stdout)) continue
-        devices.push({ ...d, connected: /Connected:\s*yes/i.test(info.stdout) })
+        const connected = /Connected:\s*yes/i.test(info.stdout)
+        devices.push({ ...d, connected, battery: connected ? btBattery(info.stdout) : undefined })
       }
     }
     const ac = await execCapture('systemctl', ['is-active', 'mupi_autoconnect_bt'])
@@ -2722,7 +2750,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   /**
    * GET /api/app/system
    * Read-only box system overview (Phase 15g): hostname, uptime, CPU load +
-   * count + temperature, RAM, root-disk usage. Uses Node built-ins only
+   * count + temperature, RAM, root-disk usage and the drive it runs from. Uses Node built-ins only
    * (os + fs.statfs + the thermal sysfs node) — no shell-out. Reboot/Shutdown
    * actions reuse the existing /api/reboot|/api/shutdown endpoints.
    */
@@ -2750,6 +2778,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       mem_free: os.freemem(),
       cpu_temp_c: cpuTempC,
       disk,
+      // (SD card or USB drive, and a USB 3 stick in a USB 2.0 port - see boot-drive.ts)
+      drive: bootDrive(),
     })
   })
 

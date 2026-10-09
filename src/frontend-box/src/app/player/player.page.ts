@@ -31,6 +31,7 @@ import {
   chevronDown,
   chevronUp,
   close,
+  bluetooth,
   headset,
   pause,
   play,
@@ -59,6 +60,7 @@ import { LogService } from '../log.service'
 import { isResumeEntry, type Media } from '../media'
 import { cleanResumePlaceholder } from '../resume-builder'
 import { MediaService } from '../media.service'
+import { noCoverStyle } from '../no-cover'
 import type { MupiboxConfig } from '../mupibox-config.model'
 import { StatusComponent } from '../status/status.component'
 import { KmStatusGroupComponent } from '../km-header/km-status-group.component'
@@ -68,10 +70,15 @@ import type { PlaytimePlayState } from '../playtime.model'
 import { PlaytimeService } from '../playtime.service'
 import { SpotifyService } from '../spotify.service'
 
-/** Where the box plays (backend-api audio-output.ts): current is 'box' or a device's address */
+/**
+ * Where the box plays (backend-api audio-output.ts): current is 'box', 'card:<sink>' (one of the box's sound cards, when it
+ * has several) or a device's address
+ */
 export interface AudioOutputState {
   current: string
-  devices: { mac: string; name: string; kind: 'headphones' | 'speaker'; connected: boolean }[]
+  devices: { mac: string; name: string; kind: 'headphones' | 'speaker'; connected: boolean; battery?: number }[]
+  /** the box's sound cards (3.5 mm, HDMI, I2S amplifier, USB) - only when there is more than one, else empty */
+  cards?: { id: string; name: string; desc: string; kind: 'jack' | 'hdmi' | 'amp' | 'usb' | 'card' }[]
   display: boolean
 }
 
@@ -142,11 +149,31 @@ export class PlayerPage implements OnInit, AfterViewInit {
   private outputTimer: ReturnType<typeof setInterval> | undefined
   protected outputChoosable(): boolean {
     const o = this.output()
-    return !!o?.display && o.devices.length > 0
+    return !!o?.display && (o.devices.length > 0 || (o.cards?.length ?? 0) > 1)
   }
   protected outputOnBluetooth(): boolean {
     const o = this.output()
-    return !!o && o.current !== 'box'
+    return !!o && o.current !== 'box' && !o.current.startsWith('card:')
+  }
+  /** headphones in the header: a Bluetooth device or the 3.5 mm output plays */
+  protected outputOnPhones(): boolean {
+    const o = this.output()
+    if (!o) return false
+    return this.outputOnBluetooth() || o.cards?.find((c) => `card:${c.id}` === o.current)?.kind === 'jack'
+  }
+  /** the symbol next to the volume: where the box plays (Bluetooth, headphones, or the speaker) */
+  protected outputIconName(): 'bluetooth' | 'headset' | 'volume-medium' {
+    if (this.outputOnBluetooth()) return 'bluetooth'
+    return this.outputOnPhones() ? 'headset' : 'volume-medium'
+  }
+  /** a sound card's name in the window: the amplifier is "Speaker" in the display's language, the others say what they are */
+  protected cardLabel(c: { name: string; kind: string }): string {
+    return c.kind === 'amp' ? this.displayTexts.text('outputBoxSub') : c.name
+  }
+  /** the window's tiles: one per sound card (or "the box" with one card) and one per paired device */
+  protected outputTileCount(): number {
+    const o = this.output()
+    return Math.max(o?.cards?.length ?? 0, 1) + (o?.devices?.length ?? 0)
   }
   private loadOutput(): void {
     this.http.get<AudioOutputState>(`${environment.backend.apiUrl}/audio-output`).subscribe({
@@ -230,7 +257,19 @@ export class PlayerPage implements OnInit, AfterViewInit {
 
   private readonly failedCovers = new Set<string>()
   protected coverFailed(): void {
-    if (this.km() && this.cover) this.failedCovers.add(this.cover)
+    if (this.cover) this.failedCovers.add(this.cover)
+  }
+
+  /** No picture (the default one, or one that does not load): the other themes show a grey card with the name instead */
+  protected coverMissing(): boolean {
+    return !this.km() && (!this.cover || this.cover.includes('nocover') || this.failedCovers.has(this.cover))
+  }
+
+  // (the colours of the card: one per folder name, the same as in the lists - see no-cover.ts)
+  protected readonly noCoverStyle = noCoverStyle
+
+  protected coverTitle(): string {
+    return this.media?.title || this.media?.artist || ''
   }
 
   /** km themes: position and length under the progress bar (Spotify, and mplayer when it knows the length) */
@@ -337,6 +376,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
   protected readonly backAction = signal<'minimize' | 'stop'>('minimize')
   // the page left by itself (end of the album, stopped from outside, nothing playing): never handed to the pill
   private leftByPage = false
+  // The Cover Flow theme (Mupi-conf > Theme) mirrors the cover below it, as its lists do
+  protected coverflowTheme = false
   listFontFamily = ''
   private longPressTimer: ReturnType<typeof setTimeout> | undefined
   private shuffleTimer: ReturnType<typeof setTimeout> | undefined
@@ -401,6 +442,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
       volumeMedium,
       close,
       headset,
+      bluetooth,
     })
   }
 
@@ -417,6 +459,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
           this.listViewTimerMs = configuredSeconds * 1000
         }
         this.backAction.set(config?.mupibox?.playerBack === 'stop' ? 'stop' : 'minimize')
+        this.coverflowTheme = config?.mupibox?.theme === 'coverflow'
       },
       error: () => {
         // Keep default listViewTimerMs if config could not be loaded.
@@ -442,6 +485,12 @@ export class PlayerPage implements OnInit, AfterViewInit {
     this.mediaService.local$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((local) => {
       this.currentPlayedLocal = local
       this.followTrackCover(local?.trackFile)
+      // The bar also with every report of the player, not only in updateProgress's ticks: once (a NAS album paused at
+      // 59 %) the dot stood at the start while the time below it showed the right place - both come from this report
+      // now, so they cannot part.
+      if (this.media?.type === 'library' || this.media?.type === 'nas' || this.media?.type === 'rss') {
+        this.progress = this.heldProgress(Number(local?.progressTime) || 0)
+      }
     })
     this.mediaService.albumStop$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((albumStop) => {
       this.albumStop = albumStop
@@ -511,8 +560,9 @@ export class PlayerPage implements OnInit, AfterViewInit {
     const newValue = +this.range.value
     this.seekHold = { value: newValue, until: Date.now() + 3000 }
     if (this.media.type === 'spotify') {
-      const duration = this.currentPlayedSpotify?.item.duration_ms
-      this.playerService.seekPosition(duration * (newValue / 100))
+      // (no track loaded yet in the display's Spotify player - after a podcast, at the start: nothing to seek in)
+      const duration = this.currentPlayedSpotify?.item?.duration_ms
+      if (duration) this.playerService.seekPosition(duration * (newValue / 100))
     } else if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'rss') {
       this.playerService.seekPosition(newValue)
     }
@@ -914,9 +964,9 @@ export class PlayerPage implements OnInit, AfterViewInit {
       this.resumemedia.resumespotifyprogress_ms = this.currentPlayedSpotify?.progress_ms || 0
       this.resumemedia.resumespotifyduration_ms = this.currentPlayedSpotify?.item?.duration_ms || 0
     } else if (this.resumemedia.type === 'spotify') {
-      this.resumemedia.resumespotifytrack_number = this.currentPlayedSpotify?.item.track_number || 0
+      this.resumemedia.resumespotifytrack_number = this.currentPlayedSpotify?.item?.track_number || 0
       this.resumemedia.resumespotifyprogress_ms = this.currentPlayedSpotify?.progress_ms || 0
-      this.resumemedia.resumespotifyduration_ms = this.currentPlayedSpotify?.item.duration_ms || 0
+      this.resumemedia.resumespotifyduration_ms = this.currentPlayedSpotify?.item?.duration_ms || 0
     } else if (this.resumemedia.type === 'library') {
       // resumelocalalbum stays for downgrade-safety: an older client still
       // depends on it to recover the original category from a legacy-style

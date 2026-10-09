@@ -13,6 +13,11 @@ ion-back-button {
     margin-right: auto !important;
 }
 
+// Cover Flow theme: the cover is mirrored below it, fading out - the same reflection as in its lists (swiper.component.scss)
+.cover-card.reflect {
+    -webkit-box-reflect: below 2px linear-gradient(transparent 68%, rgba(255, 255, 255, 0.3));
+}
+
 .cover-card img {
     display: block;
     width: 350px;
@@ -217,6 +222,22 @@ ion-content.player-content.tracklist-active {
         border-radius: 20px;
         object-fit: contain;
         background: #262626;
+    }
+}
+
+// The card of a missing cover in the track list's side panel: as large as the picture there, the name smaller (1em)
+// so that a long one still fits the 160 px
+.km-tl-side .km-tl-cover {
+    position: relative;
+    flex: none;
+    width: 160px;
+    height: 160px;
+    border-radius: 20px;
+    overflow: hidden;
+
+    .mupi-no-cover {
+        font-size: 1em;
+        padding: 8px;
     }
 }
 
@@ -830,6 +851,32 @@ ion-content.player-content.tracklist-active {
   small {
     font-size: 16px;
     opacity: 0.75;
+  }
+
+  // the headphones' battery: a symbol with its level and the percent, red at 20 % and below
+  .out-batt {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 16px;
+    font-weight: 600;
+
+    svg {
+      width: 26px;
+      height: 14px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.6;
+
+      .fill {
+        fill: currentColor;
+        stroke: none;
+      }
+    }
+
+    &.low {
+      color: var(--km-rose, #d9534f);
+    }
   }
 
   &.on {

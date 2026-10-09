@@ -23,7 +23,7 @@ export interface LocalLibraryDeps {
 }
 
 // What the box plays (as nasAudioExtensions / the player's localAudioPattern) and the pictures it takes as covers
-const AUDIO_EXTENSIONS = ['.mp3', '.flac', '.wav', '.wma', '.ogg', '.m4a']
+export const AUDIO_EXTENSIONS = ['.mp3', '.flac', '.wav', '.wma', '.ogg', '.m4a']
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.jfif', '.png', '.webp']
 // Kept free on the SD card (as for the NAS downloads): the box needs room for its logs, caches and updates
 const RESERVE_BYTES = 512 * 1024 * 1024
@@ -33,7 +33,7 @@ const RESERVE_BYTES = 512 * 1024 * 1024
 // resolved; what does not exist yet is made below it. The category folder itself is held to the media folder (the
 // one fixed border): a category that is a link elsewhere (media/music -> /home/dietpi) is no place to write or delete.
 const within = (real: string, base: string) => real === base || real.startsWith(base + path.sep)
-async function reallyInside(target: string, folder: string, root: string): Promise<boolean> {
+export async function reallyInside(target: string, folder: string, root: string): Promise<boolean> {
   const top = await fsp.realpath(root).catch(() => null)
   const base = await fsp.realpath(folder).catch(() => null)
   if (!top || !base || base === top || !within(base, top)) return false

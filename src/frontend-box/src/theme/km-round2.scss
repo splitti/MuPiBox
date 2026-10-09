@@ -789,6 +789,54 @@ body.km.km-legacy {
   }
 }
 
+// The old themes as chosen in the app (Appearance): no band behind the header, no panel behind the player's controls -
+// the words and symbols there take the theme's own foreground colour then, as in 5.0.7. Only for the themes whose
+// background stays calm behind them (km-themes.json: headerBandOptional / playerPanelOptional, see km-theme.service).
+body.km.km-legacy.km-noband .km-r2 .km-bar {
+  background: transparent;
+  border-bottom-color: transparent;
+  --km-on-band: var(--km-on-bg);
+  --km-on-band-2: var(--km-on-bg);
+  --st-on: var(--km-on-bg);
+}
+
+body.km.km-legacy.km-nopanel {
+  .kp-panel {
+    display: none;
+  }
+
+  .kp-time .km-times {
+    color: var(--km-on-bg);
+  }
+
+  // A light theme: without the panel the controls take its colour themselves: the buttons in the band's colour with
+  // its writing (the
+  // theme's own button colour was close to the background - pink on pink), the bar's rail too; the big button takes
+  // the theme's strong button colour inside a ring of the band's colour (its light accent was the background's colour)
+  // (a dark theme keeps its controls as they are: on its dark background the band's dark colour vanished instead)
+  &.km-light .kp-btn {
+    background: var(--km-band);
+    color: var(--km-on-band);
+  }
+
+  &.km-light .kp-play {
+    background: var(--km-btn);
+    color: var(--km-on-btn);
+    box-shadow:
+      inset 0 0 0 5px var(--km-band),
+      0 5px 0 var(--km-shadow); // (the shadow of the other buttons: the accent's own, yellow under blue, did not fit)
+  }
+
+  // the bar: the part played in the band's colour, the rest of the rail the same colour pale, the knob in the button
+  // colour inside a ring of the band's colour (the light accent and the light knob vanished on a light background)
+  &.km-light .kp-time ion-range {
+    --bar-background: color-mix(in srgb, var(--km-band) 30%, transparent) !important;
+    --bar-background-active: var(--km-band) !important;
+    --knob-background: var(--km-btn) !important;
+    --knob-box-shadow: 0 0 0 4px var(--km-band) !important;
+  }
+}
+
 // the times under the bar one line high in every font (Baloo's taller lines moved the controls 5 px down)
 body.km .kp-time .km-times {
   line-height: 17px;

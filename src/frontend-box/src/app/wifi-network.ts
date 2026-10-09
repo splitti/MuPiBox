@@ -65,9 +65,11 @@ export interface EthernetConfig {
 
 /** Whether the onboard WiFi radio is on or off (rfkill), independent of a USB WiFi adapter. */
 export interface OnboardWifiStatus {
-  /** False when the box has no onboard WiFi adapter at all. */
+  /** False when the box has no onboard WiFi adapter at all (one switched off at the start counts as there). */
   available: boolean
   enabled: boolean
+  /** Switched off at the start (the app's switch): on comes after a restart. */
+  bootDisabled?: boolean
 }
 
 /** A fixed address for one saved WiFi network (see backend eltern/wifi-static.ts); paused: taken back to DHCP. */

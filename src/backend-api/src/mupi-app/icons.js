@@ -43,6 +43,7 @@ export const ICONS = {
   bulb: "M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V16h8v-1.3A7 7 0 0 0 12 2z",
   info: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 11v6M12 7.5h.01",
   save: "M5 3h11l3 3v15H5zM8 3v5h8V3M8 21v-7h8v7",
+  download: "M12 4v11M7 10l5 5 5-5M5 20h14",
   doc: "M6 2h9l5 5v15H6zM14 2v6h6M9 13h6M9 17h6",
   globe: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18",
   pulse: "M3 12h4l3-7 4 14 3-7h4",
@@ -55,6 +56,7 @@ export const ICONS = {
   logout: "M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3",
   close: "M6 6l12 12M18 6L6 18",
   check: "M5 12l5 5 9-10",
+  book: "M4 19V5a2 2 0 0 1 2-2h14v14H6a2 2 0 0 0-2 2zM4 19a2 2 0 0 0 2 2h14v-4",
 }
 
 export function icon(name, size = 20) {

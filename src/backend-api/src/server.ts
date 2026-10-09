@@ -38,6 +38,7 @@ import { startSpotifyLoginWatch } from './eltern/spotify-auth-age'
 import { startTlsWatch } from './eltern/tls'
 import { startWeeklySummary } from './eltern/weekly-summary'
 import { startNightDim } from './eltern/night-dim'
+import { bootConfigPath } from './eltern/boot-paths'
 import { startSpeech } from './speech'
 import { startBucketCleanup, parseCookie } from './eltern/middleware'
 import { SESSION_COOKIE, validateSession } from './eltern/auth'
@@ -57,6 +58,7 @@ import { registerAudioOutputRoutes, startAudioWatch } from './audio-output'
 import { episodeKey, MAX_KEEP, type OfflineEpisode, PodcastOffline } from './podcast-offline'
 import { setFeedHeadReader } from './podcast-search'
 import { EpisodeState, episodeStateSettings } from './episode-state'
+import { uiScale } from './ui-scale'
 import { browserGuard, corsOptionsFor, isAllowedHost, isLoopback, localOnly, localOrElternSession, PROXY_PORT, setConfiguredHosts, viaProxy } from './request-guard'
 
 // Force IPv4 for DNS lookups to avoid EAI_AGAIN errors on Raspberry Pi
@@ -368,7 +370,7 @@ const loginRequired = () =>
   (getMupiboxConfigSync() as { interfacelogin?: { state?: unknown } } | undefined)?.interfacelogin?.state === true
 app.use((req, res, next) => {
   const p = req.path
-  if (isLoopback(req) || p === '/app' || p.startsWith('/app/') || p.startsWith('/api/app/') || p.startsWith('/api/eltern/') || p === '/parents' || p === '/eltern' || !loginRequired()) {
+  if (isLoopback(req) || p === '/app' || p.startsWith('/app/') || p === '/manual' || p.startsWith('/manual/') || p.startsWith('/api/app/') || p.startsWith('/api/eltern/') || p === '/parents' || p === '/eltern' || !loginRequired()) {
     next()
     return
   }
@@ -1131,7 +1133,7 @@ const podcastOffline = new PodcastOffline({
 podcastOffline.start()
 
 // Where the box plays: speaker or Bluetooth ("Hören mit" on the display, the web app's output row; audio-output.ts)
-registerAudioOutputRoutes(app, { guard: localOrElternSession, getMupiboxConfig: () => getMupiboxConfigSync() })
+registerAudioOutputRoutes(app, { guard: localOrElternSession, getMupiboxConfig: () => getMupiboxConfigSync(), updateMupiboxConfig })
 startAudioWatch()
 
 // Whether the box has no internet right now (network.json, written every minute by get_network.sh)
@@ -1448,11 +1450,47 @@ async function sendRssImage(res: express.Response, file: string, thumbSize: numb
 
 // `url`: a remote picture (fetched and cached on first use); `local`: a picture that already
 // is in the cover cache (channel covers). `w`: ask for a thumbnail of at most that size.
+// A picture uploaded in the app (Bibliothek > Cover: http://<box>/cover/<name>) given as the cover of a radio station:
+// its address is the box itself, which the box never fetches (checkRemoteUrl) - the display showed the default picture
+// (reported by boing86). It is taken from the cover folder instead; only that folder, only a plain file name.
+const customCoverDir = '/home/dietpi/MuPiBox/media/cover'
+function ownCoverFile(raw: string): string | undefined {
+  let url: URL
+  try {
+    url = new URL(raw)
+  } catch {
+    return undefined
+  }
+  const m = url.pathname.match(/^\/cover\/([^/]+)$/)
+  if (!m) return undefined
+  const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, '')
+  const configured = String((getMupiboxConfigSync()?.mupibox as { host?: string } | undefined)?.host ?? '').toLowerCase()
+  const names = new Set(['localhost', '127.0.0.1', '::1', os.hostname().toLowerCase(), `${os.hostname().toLowerCase()}.local`])
+  if (configured) {
+    names.add(configured)
+    names.add(configured.endsWith('.local') ? configured.slice(0, -6) : `${configured}.local`)
+  }
+  for (const list of Object.values(os.networkInterfaces())) for (const a of list ?? []) names.add(a.address.toLowerCase())
+  if (!names.has(host)) return undefined
+  let name: string
+  try {
+    name = decodeURIComponent(m[1])
+  } catch {
+    return undefined
+  }
+  if (name !== path.basename(name) || name.startsWith('.')) return undefined
+  const file = path.join(customCoverDir, name)
+  return fs.existsSync(file) ? file : undefined
+}
+
 app.get('/api/rssfeed/image', async (req, res) => {
   const thumbSize = parseThumbSize(req.query.w)
   let file: string | undefined
+  const own = typeof req.query.url === 'string' ? ownCoverFile(req.query.url) : undefined
 
-  if (typeof req.query.local === 'string') {
+  if (own) {
+    file = own
+  } else if (typeof req.query.local === 'string') {
     const name = path.basename(req.query.local)
     file = path.join(rssCoverDir, name)
     if (!fs.existsSync(file)) {
@@ -1846,9 +1884,10 @@ app.get('/api/spotify/cover-for/:kind/:id', async (req, res) => {
             : kind === 'show'
               ? await api.getShow(id)
               : await api.getAudiobook(id)
-    // the smallest image that is still sharp in a list (>= 300 px), else the biggest there is
+    // the smallest image that is still sharp in a list (>= 300 px, on a larger display that much more), else the biggest
     const images = [...(item?.images ?? [])].sort((a, b) => (a.width ?? 0) - (b.width ?? 0))
-    const image = images.find((i) => (i.width ?? 0) >= 300) ?? images[images.length - 1]
+    const need = 300 * uiScale(getMupiboxConfigSync())
+    const image = images.find((i) => (i.width ?? 0) >= need) ?? images[images.length - 1]
     const imageId = image?.url?.match(/^https:\/\/i\.scdn\.co\/image\/([A-Za-z0-9]+)$/)?.[1]
     if (!imageId) {
       res.status(404).type('text/plain').send('no cover')
@@ -2756,20 +2795,32 @@ app.get('/api/network/link', async (_req, res) => {
 // adapter that may also be plugged in. Immediate, no reboot needed.
 const ONBOARD_WIFI_SCRIPT = '/usr/local/bin/mupibox/mupi_onboard_wifi.sh'
 
+// The app's switch (eltern/network.ts) also switches the chip off at the start (dtoverlay=disable-wifi): after a restart
+// the box had no onboard adapter, the display hid its button - and without LAN or a USB adapter nothing could switch it
+// on again. Such a chip counts as there and off; on takes the line out, and the radio comes after a restart.
+const onboardWifiBootDisabled = async () => /^dtoverlay=disable-wifi\s*$/m.test(await readFile(await bootConfigPath(), 'utf8').catch(() => ''))
+
 app.get('/api/network/onboard-wifi', async (_req, res) => {
   try {
     const { stdout } = await execFileAsync(ONBOARD_WIFI_SCRIPT, ['status'])
     const status = stdout.trim()
-    res.json({ available: status !== 'unavailable', enabled: status === 'on' })
+    const bootDisabled = await onboardWifiBootDisabled()
+    res.json({ available: status !== 'unavailable' || bootDisabled, enabled: status === 'on' && !bootDisabled, bootDisabled })
   } catch (error) {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error reading onboard WiFi state: ${error}`)
     res.status(500).send('error')
   }
 })
 
+/** POST {enabled}: 'ok', or 'reboot' when the chip was off at the start (on after a restart) */
 app.post('/api/network/onboard-wifi', localOrElternSession, async (req, res) => {
   try {
     const enabled = Boolean(req.body?.enabled)
+    if (enabled && (await onboardWifiBootDisabled())) {
+      await execFileAsync('sudo', ['/usr/local/bin/mupibox/set_onboard_wifi.sh', 'on'])
+      const { stdout } = await execFileAsync(ONBOARD_WIFI_SCRIPT, ['status'])
+      if (stdout.trim() === 'unavailable') return void res.send('reboot')
+    }
     await execFileAsync('sudo', [ONBOARD_WIFI_SCRIPT, enabled ? 'on' : 'off'])
     res.send('ok')
   } catch (error) {
@@ -7805,8 +7856,9 @@ async function warmLibraryThumbnails(dir: string, depth: number): Promise<void> 
 }
 setTimeout(() => void warmLibraryThumbnails(libraryRoot, 0), 90 * 1000).unref()
 
+// (a display larger than 800 x 480 draws its page larger: the covers too, so they stay sharp - see ui-scale.ts)
 function parseThumbSize(value: unknown): number | undefined {
-  const size = Number(value)
+  const size = Number(value) * uiScale(getMupiboxConfigSync())
   return Number.isFinite(size) && size > 0 ? Math.min(Math.max(Math.round(size), 64), 800) : undefined
 }
 
@@ -8347,6 +8399,17 @@ function proxyVncUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): vo
   socket.on('error', () => upstream.destroy())
   socket.on('close', () => upstream.destroy())
 }
+
+// The manual (built from src/manual): open for everyone who reaches the box, like the app's own pages - there is
+// nothing in it that is not in the repository, and it should help before anyone has logged in.
+app.use(
+  '/manual',
+  express.static(path.join(serverDir, 'manual'), {
+    setHeaders: (res) => {
+      res.setHeader('Cache-Control', 'no-cache')
+    },
+  }),
+)
 
 app.use(
   '/app',

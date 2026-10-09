@@ -2941,8 +2941,17 @@ const _execAsync = (cmd) =>
 let btAudio = { at: 0, on: false }
 async function bluetoothAudio() {
   if (Date.now() - btAudio.at < 3000) return btAudio.on
+  // (headphones: a Bluetooth device, or the board's 3.5 mm output - its card is "bcm2835 Headphones", see backend-api
+  // audio-output.ts; the own limit for headphones counts there too, not only the box's maximum)
   const on = await _execAsync('/usr/bin/pactl get-default-sink')
-    .then(({ stdout }) => String(stdout).trim().startsWith('bluez_'))
+    .then(async ({ stdout }) => {
+      const sink = String(stdout).trim()
+      if (sink.startsWith('bluez_')) return true
+      if (!sink.startsWith('alsa_output.') || !sink.includes('bcm2835')) return false
+      const { stdout: list } = await _execAsync('LC_ALL=C /usr/bin/pactl list sinks')
+      const block = String(list).split(/\n(?=Sink #)/).find((b) => b.includes(`Name: ${sink}\n`)) ?? ''
+      return /alsa\.card_name = "[^"]*Headphones/i.test(block)
+    })
     .catch(() => false)
   btAudio = { at: Date.now(), on }
   return on
@@ -3513,7 +3522,9 @@ app.use((req, res) => {
   } else if (command.name === 'albumstop') cmdCall('bash /usr/local/bin/mupibox/albumstop.sh')
   else if (command.name === 'enablewifi')
     cmdCall(
-      "sudo sed -i -e 's/dtoverlay=disable-wifi//g' /boot/config.txt && sudo head -n -1 /boot/config.txt > /tmp/config.txt && sudo mv /tmp/config.txt /boot/config.txt && sudo su - -c '/usr/local/bin/mupibox/restart.sh &'",
+      // (set_onboard_wifi.sh finds the boot configuration on every DietPi and takes only its own line out - this removed
+      // the LAST line of /boot/config.txt, whatever it was)
+      "sudo /usr/local/bin/mupibox/set_onboard_wifi.sh on && sudo su - -c '/usr/local/bin/mupibox/restart.sh &'",
     )
 
   else if (command.name.includes('localtrack:')) {

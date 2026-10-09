@@ -12,6 +12,7 @@ import * as path from 'node:path'
 import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { requireCsrf, requireSession } from './middleware'
+import { bootConfigPath } from './boot-paths'
 
 export interface NetworkDeps {
   getMupiboxConfig: () => MupiboxConfig | undefined
@@ -51,7 +52,7 @@ async function powerLevel(module: string): Promise<string | null> {
 
 export function registerNetworkRoutes(router: Router, deps: NetworkDeps): void {
   router.get('/network-options', requireSession, async (_req, res) => {
-    const configTxt = await fsp.readFile('/boot/config.txt', 'utf8').catch(() => '')
+    const configTxt = await fsp.readFile(await bootConfigPath(), 'utf8').catch(() => '')
     const dhclient = await fsp.readFile('/etc/dhcp/dhclient.conf', 'utf8').catch(() => '')
     const radio = (await run(ONBOARD_SCRIPT, ['status'], 5000)).stdout.trim() // on | off | unavailable
     const bootDisabled = /^dtoverlay=disable-wifi\s*$/m.test(configTxt)

@@ -27,6 +27,7 @@ import base64
 import datetime
 import fcntl
 import json
+import traceback
 import netifaces as ni
 import os
 import paho.mqtt.client as mqtt
@@ -986,8 +987,11 @@ def main():
         client.publish(mqtt_topic + '/' + mqtt_clientId + '/power', "on", qos=0)
         client.publish(mqtt_topic + '/' + mqtt_clientId + '/reboot', "off", qos=0)
 
-        try:
-            while True:
+        # One failed round (a file being rewritten, the broker gone for a moment, a value that does not parse) is logged
+        # with its cause and the next round follows - before, the handler printed an undefined signum: every error ended
+        # the service with a NameError that hid it (issue #154). Paho's own thread reconnects to the broker.
+        while True:
+            try:
                 ssid, signal_strength, signal_quality = get_wifi()
                 charger_status, vbat, vbus, ibat, ibus, temp, bat_soc, bat_stat, bat_type, battery_connected = get_mupihat()
 
@@ -1019,12 +1023,10 @@ def main():
                 else:
                     sleeptime = mqtt_refreshIdle
                 time.sleep(sleeptime)
-        except Exception as e:
-            print(f"Signal {signum} received. Service will be stopped...")
-            client.loop_stop()
-            client.publish(mqtt_topic + '/' + mqtt_clientId + '/state', "offline", qos=0)
-            client.disconnect()
-            exit(0)
+            except Exception as e:
+                print(f"Exception in main loop: {e!r}", flush=True)
+                traceback.print_exc()
+                time.sleep(10)
 
 
 if __name__ == "__main__":

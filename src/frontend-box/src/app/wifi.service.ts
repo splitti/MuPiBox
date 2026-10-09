@@ -78,8 +78,13 @@ export class WifiService {
     return this.http.get<OnboardWifiStatus>(`${environment.backend.apiUrl}/network/onboard-wifi`)
   }
 
+  /** 'ok', or 'reboot' when the onboard WiFi was switched off at the start (on after a restart) */
   public setOnboardWifi(enabled: boolean): Observable<string> {
     return this.http.post(`${environment.backend.apiUrl}/network/onboard-wifi`, { enabled }, { responseType: 'text' })
+  }
+
+  public restartBox(): Observable<string> {
+    return this.http.post(`${environment.backend.apiUrl}/reboot`, {}, { responseType: 'text' })
   }
 
   /** The saved WiFi networks with a fixed address (and the one last taken back to DHCP). */

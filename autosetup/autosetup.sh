@@ -1,9 +1,18 @@
 #!/bin/bash
 #
 # Script for MuPiBox Autosetup
-# Start with: cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup-stable.sh | bash
+# Start with: cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup.sh | sudo bash
+# The channel as the first argument (stable when none is given), e.g. the development version on a fresh DietPi:
+#   cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup.sh | sudo bash -s -- dev
 
-RELEASE="stable"
+case "$1" in
+	stable | beta | dev) RELEASE="$1" ;;
+	"") RELEASE="stable" ;;
+	*)
+		echo "Unknown channel '$1' - use stable, beta or dev" >&2
+		exit 1
+		;;
+esac
 LOG="/tmp/autosetup.log"
 BOOT_DIR="/boot"
 BOOT_CONFIG="/boot/config.txt"
@@ -87,10 +96,12 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 		STEP=$((STEP + 1))
 	done
 
-	# pinctrl for the OnOff SHIM on Debian 13 "Trixie" (libgpiod 2, see scripts/OnOffShim): in raspberrypi-utils there.
-	# Debian 12 "Bookworm" has no such package and keeps using the tools of gpiod.
-	if apt-cache show raspberrypi-utils >/dev/null 2>&1 && ! dpkg -l raspberrypi-utils 2>/dev/null | grep -q '^ii'; then
-		apt-get --yes install raspberrypi-utils >&3 2>&3
+	# pinctrl for the OnOff SHIM with libgpiod 2 (Debian 13 "Trixie", see scripts/OnOffShim): in raspi-utils-core of the
+	# Raspberry Pi archive (the name raspberrypi-utils written here before is only the source package - nothing was
+	# installed, poweroff.sh fell back to a gpioset in the background). Not with libgpiod 1 (Bookworm): it keeps the
+	# tools of gpiod, and raspi-utils-core would replace its libraspberrypi-bin there.
+	if gpioset --version 2>/dev/null | grep -q ' v2\.' && ! command -v pinctrl >/dev/null && apt-cache show raspi-utils-core >/dev/null 2>&1; then
+		apt-get --yes install raspi-utils-core >&3 2>&3
 	fi
 
 	###############################################################################################
@@ -224,10 +235,15 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 
 	echo -e "XXX\n${STEP}\nConfigure pm2 startup... \nXXX"
 	before=$(date +%s)
-	pm2 startup >&3 2>&3
-	PM2_ENV=$(grep "sudo env" ${LOG} | tail -n 1)
-	echo ${PM2_ENV} >&3 2>&3
-	${PM2_ENV} >&3 2>&3
+	# For the user dietpi, whoever runs this script: server and player run under dietpi (pm2 start/save below). Run as
+	# root (curl ... | sudo bash) a plain "pm2 startup" registered pm2-root, which started nothing after the reboot - the
+	# app answered 503. As dietpi it printed a "sudo env ..." line to run, which is what this does directly.
+	env PATH="$PATH:/usr/bin" pm2 startup systemd -u dietpi --hp /home/dietpi >&3 2>&3
+	systemctl disable --now pm2-root >/dev/null 2>&1 || true
+	# the start of server and player made robust: oneshot, tried again when it hangs (config/services/pm2-dietpi.override.conf)
+	mkdir -p /etc/systemd/system/pm2-dietpi.service.d >&3 2>&3
+	cp -f ${MUPI_SRC}/config/services/pm2-dietpi.override.conf /etc/systemd/system/pm2-dietpi.service.d/override.conf >&3 2>&3
+	systemctl daemon-reload >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Configure pm2 ## finished after $((after - before)) seconds" >&3 2>&3
 	STEP=$((STEP + 1))
@@ -420,9 +436,15 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	done
 	cp -f ${MUPI_SRC}/themes/km-themes.json /home/dietpi/MuPiBox/themes/km-themes.json >&3 2>&3
 	mv ${MUPI_SRC}/themes/*.css /home/dietpi/MuPiBox/themes/ >&3 2>&3
-	mv ${MUPI_SRC}/scripts/chromium-autostart.sh /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
+	cp -f ${MUPI_SRC}/scripts/chromium-autostart.sh /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	mv ${MUPI_SRC}/scripts/mupibox/* /usr/local/bin/mupibox/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/bluetooth/* /usr/local/bin/mupibox/ >&3 2>&3
+	# The battery of Bluetooth headphones (display and app, issue #176): BlueZ 5.66 takes it from PulseAudio only with
+	# its experimental interfaces (BatteryProviderManager1). Applies after the restart.
+	if [ -f /etc/bluetooth/main.conf ] && ! grep -qE '^[[:space:]]*Experimental[[:space:]]*=[[:space:]]*true' /etc/bluetooth/main.conf; then
+	  sed -i -E 's/^#?[[:space:]]*Experimental[[:space:]]*=.*/Experimental = true/' /etc/bluetooth/main.conf >&3 2>&3
+	  grep -qE '^Experimental = true' /etc/bluetooth/main.conf || sed -i '/^\[General\]/a Experimental = true' /etc/bluetooth/main.conf >&3 2>&3
+	fi
 	mv ${MUPI_SRC}/scripts/wled/* /usr/local/bin/mupibox/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/telegram/* /usr/local/bin/mupibox/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/mupihat/* /usr/local/bin/mupibox/ >&3 2>&3
@@ -512,7 +534,11 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 
 	# gpio-poweroff only when it is in no dtoverlay line yet (also not in one that loads further overlays, e.g. a
 	# display driver: a second line made such boxes hang at shutdown), on the pin set for the OnOff SHIM
-	if grep -qE '^[[:space:]]*dtoverlay=.*gpio-poweroff' "${BOOT_CONFIG}"; then
+	# Not next to a button of its own on gpio-shutdown (issue #175): with gpio-poweroff the Pi no longer woke from it,
+	# and every update put the line back after it was taken out
+	if grep -qE '^[[:space:]]*dtoverlay=.*gpio-shutdown' "${BOOT_CONFIG}"; then
+	  echo -e "dtoverlay=gpio-shutdown set: no gpio-poweroff" >&3 2>&3
+	elif grep -qE '^[[:space:]]*dtoverlay=.*gpio-poweroff' "${BOOT_CONFIG}"; then
 	  echo -e "dtoverlay=gpio-poweroff already set" >&3 2>&3
 	else
 	  POWEROFF_PIN=$(/usr/bin/jq -r '.shim.poweroffPin // "4"' ${CONFIG} 2>/dev/null)
@@ -528,7 +554,7 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	  echo "dtoverlay=pwm,pin=${LED_PIN},func=4" | tee -a "${BOOT_CONFIG}" >&3 2>&3
 	fi
 
-	curl https://raw.githubusercontent.com/scopatz/nanorc/master/install.sh | sh >&3 2>&3
+	curl -fsSL https://raw.githubusercontent.com/scopatz/nanorc/master/install.sh | sh >&3 2>&3
 	touch /home/dietpi/.mupi.install >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Set environment ## finished after $((after - before)) seconds" >&3 2>&3
@@ -550,20 +576,23 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	echo -e "XXX\n${STEP}\nInstall Chromium-Kiosk... \nXXX"
 	before=$(date +%s)
 	echo -ne '\n' | /boot/dietpi/dietpi-software install 113 >&3 2>&3
+	# Installing Chromium writes DietPi's own kiosk script, which opens SOFTWARE_CHROMIUM_AUTOSTART_URL (dietpi.com):
+	# the MuPiBox script goes in again after it (a fresh install showed the DietPi website until the first update)
+	cp -f ${MUPI_SRC}/scripts/chromium-autostart.sh /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	/boot/dietpi/dietpi-autostart 11 >&3 2>&3
 	chmod +x /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	apt-get install xserver-xorg-legacy -y >&3 2>&3
 	sed -i 's/allowed_users\=console/allowed_users\=anybody/g' /etc/X11/Xwrapper.config >&3 2>&3
 	mv -f ${MUPI_SRC}/config/templates/98-dietpi-disable_dpms.conf /etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf >&3 2>&3
-	sed -i 's/tty1/tty3 vt.global_cursor_default\=0 fastboot noatime nodiratime noram splash silent loglevel\=0 vt.default_red\=68,68,68,68,68,68,68,68 vt.default_grn\=175,175,175,175,175,175,175,175 vt.default_blu\=226,226,226,226,226,226,226,226/g' /boot/cmdline.txt >&3 2>&3
+	sed -i 's/tty1/tty3 vt.global_cursor_default\=0 fastboot noatime nodiratime noram splash silent loglevel\=0 vt.default_red\=68,68,68,68,68,68,68,68 vt.default_grn\=175,175,175,175,175,175,175,175 vt.default_blu\=226,226,226,226,226,226,226,226/g' ${BOOT_CMDLINE} >&3 2>&3
 	sed -i 's/session    optional   pam_motd.so motd\=\/run\/motd.dynamic/#session    optional   pam_motd.so motd\=\/run\/motd.dynamic/g' /etc/pam.d/login >&3 2>&3
 	sed -i 's/session    optional   pam_motd.so noupdate/#session    optional   pam_motd.so noupdate/g' /etc/pam.d/login >&3 2>&3
 	sed -i 's/ExecStart\=-\/sbin\/agetty -a dietpi -J \%I \$TERM/ExecStart\=-\/sbin\/agetty --skip-login --noclear --noissue --login-options "-f dietpi" \%I \$TERM/g' /etc/systemd/system/getty@tty1.service.d/dietpi-autologin.conf >&3 2>&3
 	/boot/dietpi/func/dietpi-set_hardware gpumemsplit 128 >&3 2>&3
 	/boot/dietpi/func/dietpi-set_hardware headless 0 >&3 2>&3
 	/boot/dietpi/func/dietpi-set_hardware rpi-opengl disable >&3 2>&3
-	su - -c ". /boot/dietpi/func/dietpi-globals && G_CHECK_ROOT_USER && G_CHECK_ROOTFS_RW && G_INIT && G_CONFIG_INJECT 'framebuffer_width=' \"framebuffer_width=800\" /boot/config.txt" >&3 2>&3
-	su - -c ". /boot/dietpi/func/dietpi-globals && G_CHECK_ROOT_USER && G_CHECK_ROOTFS_RW && G_INIT && G_CONFIG_INJECT 'framebuffer_height=' \"framebuffer_height=480\" /boot/config.txt" >&3 2>&3
+	su - -c ". /boot/dietpi/func/dietpi-globals && G_CHECK_ROOT_USER && G_CHECK_ROOTFS_RW && G_INIT && G_CONFIG_INJECT 'framebuffer_width=' \"framebuffer_width=800\" ${BOOT_CONFIG}" >&3 2>&3
+	su - -c ". /boot/dietpi/func/dietpi-globals && G_CHECK_ROOT_USER && G_CHECK_ROOTFS_RW && G_INIT && G_CONFIG_INJECT 'framebuffer_height=' \"framebuffer_height=480\" ${BOOT_CONFIG}" >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Install Chromium ## finished after $((after - before)) seconds" >&3 2>&3
 	STEP=$((STEP + 1))
