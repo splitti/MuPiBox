@@ -8,11 +8,11 @@
 #            kernel command line - and the box's own card stays card 0 (/etc/asound.conf, the card's repair in the
 #            server and DietPi's tools all mean card 0): the onboard driver may not take that slot
 #   off      back as DietPi has it for a card other than the onboard one
-#   hdmi-on  HDMI sound as a sound card of its own. Pi 1-3 and Zero: the onboard driver does it (like the jack, plus
-#            snd_bcm2835.enable_hdmi=1 and hdmi_drive=2, so a monitor in DVI mode does not leave the sound out). Pi 4
-#            and 400: the onboard driver has no HDMI sound there, the vc4 display driver does - so the overlay
-#            vc4-fkms-v3d is added when no vc4 overlay is there (the firmware's display stays, only the sound card
-#            comes with it); an overlay with "noaudio" loses that word. Pi 5: nothing to write (KMS is always there).
+#   hdmi-on  HDMI sound as a sound card of its own. With the firmware's display (the default of the box, also with
+#            vc4-fkms-v3d) the onboard driver does it, on every model: like the jack, plus snd_bcm2835.enable_hdmi=1
+#            and hdmi_drive=2, so a monitor in DVI mode does not leave the sound out. With full KMS (vc4-kms-v3d) the
+#            display driver brings the sound card by itself: an overlay with "noaudio" only loses that word. Pi 5: KMS
+#            is always there, nothing to write.
 #   hdmi-off the lines written for it away again (each one has the comment "# mupibox-hdmi-audio" above it)
 #   reapply  "on" again for what is set in mupibox.onboardAudio / mupibox.hdmiAudio (after DietPi switched the sound
 #            card, which writes its block anew - from the app, the MuPiHAT scripts and at the server's start)
@@ -49,8 +49,6 @@ MODEL="${MODEL:-$(tr -d '\0' < /proc/device-tree/model 2>/dev/null)}"
 
 # The Pi 5 and the Zero have no 3.5 mm output: nothing to switch there
 no_jack() { case "${MODEL}" in *"Raspberry Pi 5"* | *"Raspberry Pi 500"* | *"Compute Module 5"* | *"Raspberry Pi Zero"*) return 0 ;; esac; return 1; }
-# HDMI sound by the vc4 display driver (Pi 4, 400, CM4) or always there with KMS (Pi 5): the onboard driver has none
-vc4_model() { case "${MODEL}" in *"Raspberry Pi 4"* | *"Raspberry Pi 400"* | *"Compute Module 4"* | *"Raspberry Pi 5"* | *"Raspberry Pi 500"* | *"Compute Module 5"*) return 0 ;; esac; return 1; }
 pi5_model() { case "${MODEL}" in *"Raspberry Pi 5"* | *"Raspberry Pi 500"* | *"Compute Module 5"*) return 0 ;; esac; return 1; }
 # On a Pi 1, 2, 3 and Zero the 3.5 mm output and the status LED's hardware PWM (dtoverlay=pwm on GPIO 12/13, see
 # led_control.py) use the same PWM unit (PWM0) - on a Pi 4 the jack has PWM1 of its own. Only these models listed:
@@ -145,19 +143,25 @@ audio_off() {
 
 # --- HDMI sound ----------------------------------------------------------------------------------------------------
 
-VC4_OVERLAY='^[[:space:]]*dtoverlay=vc4-f?kms-v3d'
+# full KMS: the display driver brings the HDMI sound card (with the firmware's display, also vc4-fkms-v3d, it does not)
+KMS_OVERLAY='^[[:space:]]*dtoverlay=vc4-kms-v3d'
+
+# an earlier version of this script wrote vc4-fkms-v3d for the Pi 4: gone again (the line with its comment)
+drop_fkms() {
+	if grep -A1 "^${MARK}\$" "${BOOT_CONFIG}" | grep -q '^dtoverlay=vc4-fkms-v3d'; then
+		cp -p "${BOOT_CONFIG}" "${BOOT_CONFIG}.bak-audio"
+		sed -i "/^${MARK}\$/{N;/dtoverlay=vc4-fkms-v3d/d}" "${BOOT_CONFIG}" && CHANGED=1
+	fi
+}
 
 hdmi_on() {
+	drop_fkms
 	if pi5_model; then
 		:
-	elif vc4_model; then
-		if grep -Eq "${VC4_OVERLAY}" "${BOOT_CONFIG}"; then
-			# (the overlay is there; "noaudio" would hide the HDMI sound card)
-			if grep -Eq "${VC4_OVERLAY}.*[,[:space:]]noaudio" "${BOOT_CONFIG}"; then
-				sed -i -E "/${VC4_OVERLAY}/ s/,noaudio//g" "${BOOT_CONFIG}" && CHANGED=1
-			fi
-		else
-			add_marked "dtoverlay=vc4-fkms-v3d"
+	elif grep -Eq "${KMS_OVERLAY}" "${BOOT_CONFIG}"; then
+		# (full KMS: "noaudio" would hide the HDMI sound card)
+		if grep -Eq "${KMS_OVERLAY}.*[,[:space:]]noaudio" "${BOOT_CONFIG}"; then
+			sed -i -E "/${KMS_OVERLAY}/ s/,noaudio//g" "${BOOT_CONFIG}" && CHANGED=1
 		fi
 	else
 		# the onboard driver: HDMI sound on its command line, HDMI mode (not DVI) for a monitor that has none by itself
@@ -169,12 +173,13 @@ hdmi_on() {
 }
 
 hdmi_off() {
+	drop_fkms
 	# the lines written for it (the comment above each one finds them)
 	if grep -q "^${MARK}\$" "${BOOT_CONFIG}"; then
 		cp -p "${BOOT_CONFIG}" "${BOOT_CONFIG}.bak-audio"
 		sed -i "/^${MARK}\$/{N;d}" "${BOOT_CONFIG}" && CHANGED=1
 	fi
-	if ! vc4_model && grep -q 'snd_bcm2835\.enable_hdmi=1' "${BOOT_CMDLINE}" 2>/dev/null; then
+	if grep -q 'snd_bcm2835\.enable_hdmi=1' "${BOOT_CMDLINE}" 2>/dev/null; then
 		set_cmdline enable_hdmi 0
 	fi
 }
@@ -183,8 +188,8 @@ hdmi_off() {
 hdmi_state() {
 	if pi5_model; then
 		echo "on"
-	elif vc4_model; then
-		if grep -Eq "${VC4_OVERLAY}" "${BOOT_CONFIG}" && ! grep -Eq "${VC4_OVERLAY}.*[,[:space:]]noaudio" "${BOOT_CONFIG}"; then echo "on"; else echo "off"; fi
+	elif grep -Eq "${KMS_OVERLAY}" "${BOOT_CONFIG}"; then
+		if grep -Eq "${KMS_OVERLAY}.*[,[:space:]]noaudio" "${BOOT_CONFIG}"; then echo "off"; else echo "on"; fi
 	elif [ ! -f "${BLACKLIST}" ] && ! grep -q 'snd_bcm2835\.enable_hdmi=0' "${BOOT_CMDLINE}" 2>/dev/null && grep -q 'snd_bcm2835\.enable_hdmi=1' "${BOOT_CMDLINE}" 2>/dev/null; then
 		echo "on"
 	else
@@ -192,10 +197,10 @@ hdmi_state() {
 	fi
 }
 
-# the onboard driver is needed for the jack, and for HDMI sound on the models where it does that itself
+# the onboard driver is needed for the jack, and for HDMI sound unless full KMS does it
 needs_driver() {
 	{ [ "${WANT_JACK}" = "true" ] && ! no_jack; } && return 0
-	[ "${WANT_HDMI}" = "true" ] && ! vc4_model && return 0
+	[ "${WANT_HDMI}" = "true" ] && ! pi5_model && ! grep -Eq "${KMS_OVERLAY}" "${BOOT_CONFIG}" && return 0
 	return 1
 }
 

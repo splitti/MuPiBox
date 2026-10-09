@@ -134,11 +134,9 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
           written: (await onboardAudioWritten()) === 'on',
           active: /bcm2835 Headphones|Headphones/i.test(await fsp.readFile('/proc/asound/cards', 'utf8').catch(() => '')),
         },
-        // the HDMI sound as a sound card of its own (any Pi with HDMI; a Pi 4 gets the vc4 display driver for it, which
-        // applies after a restart - see onboard_audio.sh)
+        // the HDMI sound as a sound card of its own (any Pi with HDMI; applies after a restart - see onboard_audio.sh)
         hdmi: {
           applicable: !(typeof mb.physicalDevice === 'string' && mb.physicalDevice.startsWith('rpi-bcm2835')),
-          viaDisplayDriver: /Raspberry Pi (4|400|5|500)|Compute Module (4|5)/.test(model),
           on: mb.hdmiAudio === true,
           written: (await hdmiAudioWritten()) === 'on',
           active: /HDMI/i.test(await fsp.readFile('/proc/asound/cards', 'utf8').catch(() => '')),

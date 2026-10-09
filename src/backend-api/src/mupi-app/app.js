@@ -10064,8 +10064,6 @@ const CONTROLLERS = {
                   label: 'HDMI-Ausgang zusätzlich',
                   help: [
                     'Für einen Monitor oder Fernseher am HDMI-Anschluss, neben der Soundkarte der Box. Gewählt wird im Player über „Hören mit“ oder in der App bei der Ausgabe.',
-                    // (Pi 4: the sound comes with the vc4 display driver, the box adds its overlay)
-                    hw.data.soundcard.hdmi.viaDisplayDriver ? 'Auf diesem Raspberry Pi kommt der HDMI-Ton mit dem Anzeigetreiber vc4: Die Box trägt dafür dtoverlay=vc4-fkms-v3d ein, falls noch kein vc4-Treiber geladen ist.' : '',
                     hw.data.soundcard.hdmi.on && !hw.data.soundcard.hdmi.active ? 'Gilt nach einem Neustart der Box.' : '',
                   ]
                     .filter(Boolean)
