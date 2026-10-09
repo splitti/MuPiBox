@@ -41,6 +41,9 @@ BOOT_CMDLINE="${BOOT_DIR}/cmdline.txt"
 BLACKLIST="${MODPROBE_DIR}/dietpi-disable_rpi_audio.conf"
 ORDER="${MODPROBE_DIR}/mupibox-card-order.conf"
 MARK="# mupibox-hdmi-audio"
+# above every KMS line hdmi-on took "noaudio" from: hdmi-off puts it back on exactly that line, in whatever section
+MARK_KMS_LINE="# mupibox-hdmi-audio: noaudio taken from the next line"
+# (an earlier version, never released: one such comment at the end, for all KMS lines)
 MARK_KMS="# mupibox-hdmi-audio: noaudio taken from vc4-kms-v3d"
 CHANGED=0
 
@@ -189,12 +192,23 @@ model_filters() {
 # filter after such a condition does not lift it; [none] ends everything until [all].
 #   kms_lines has      a KMS line is in force
 #   kms_lines noaudio  ... and it has "noaudio"
-#   kms_lines strip    prints the file with "noaudio" taken from those lines
-#   kms_lines add      prints the file with "noaudio" added to those lines
+#   kms_lines strip    prints the file with "noaudio" taken from those lines, MARK_KMS_LINE above each one
+#   kms_lines restore  prints the file with "noaudio" back on the line below each MARK_KMS_LINE - whatever its section:
+#                      what was taken away is put back, also where the detection would now leave the line alone - and
+#                      the marks gone
+#   kms_lines restore_all  the same, and "noaudio" back on every KMS line (the earlier version's single MARK_KMS)
 kms_lines() {
-	awk -v mode="$1" -v filters=" $(model_filters) " '
+	awk -v mode="$1" -v filters=" $(model_filters) " -v mark="${MARK_KMS_LINE}" -v legacy="${MARK_KMS}" '
 		function on_this_pi() { return model_ok && !none && !unknown }
-		BEGIN { model_ok = 1; none = 0; unknown = 0; found = 0 }
+		function add_noaudio() { if ($0 !~ /[,[:space:]]noaudio([,[:space:]]|$)/) sub(/[[:space:]]*$/, ",noaudio") }
+		BEGIN { model_ok = 1; none = 0; unknown = 0; found = 0; pending = 0 }
+		mode == "restore" || mode == "restore_all" {
+			if ($0 == mark || $0 == legacy) { pending = 1; next }
+			if ($0 ~ /^[[:space:]]*dtoverlay=vc4-kms-v3d([,[:space:]]|$)/ && (pending || mode == "restore_all")) add_noaudio()
+			pending = 0
+			print
+			next
+		}
 		{
 			t = $0; sub(/^[[:space:]]+/, "", t)
 			if (t ~ /^\[/) {
@@ -204,17 +218,16 @@ kms_lines() {
 				else if (lsec == "[none]") none = 1
 				else if (lsec ~ /^\[(pi[0-9]+[a-z+]*|cm[0-9]+[a-z]*)\]$/) model_ok = index(filters, " " lsec " ") > 0
 				else unknown = 1
-				if (mode == "strip" || mode == "add") print
+				if (mode == "strip") print
 				next
 			}
 			kms = on_this_pi() && t ~ /^dtoverlay=vc4-kms-v3d([,[:space:]]|$)/
 			if (kms) {
 				found = 1
 				if (t ~ /[,[:space:]]noaudio([,[:space:]]|$)/) has_noaudio = 1
-				if (mode == "strip") gsub(/,noaudio/, "")
-				if (mode == "add" && $0 !~ /[,[:space:]]noaudio([,[:space:]]|$)/) sub(/[[:space:]]*$/, ",noaudio")
+				if (mode == "strip" && t ~ /,noaudio/) { print mark; gsub(/,noaudio/, "") }
 			}
-			if (mode == "strip" || mode == "add") print
+			if (mode == "strip") print
 		}
 		END {
 			if (mode == "has") exit !found
@@ -222,7 +235,8 @@ kms_lines() {
 		}' "${BOOT_CONFIG}"
 }
 
-# config.txt rewritten with the KMS lines changed (strip / add); only when something changes
+# config.txt rewritten with the KMS lines changed (strip / restore / restore_all) - the marks go with the same write, so
+# they are gone only when what they stand for is back; only when something changes
 kms_rewrite() {
 	local tmp
 	tmp=$(mktemp) || return 1
@@ -248,11 +262,10 @@ hdmi_on() {
 	if pi5_model; then
 		:
 	elif kms_lines has; then
-		# (full KMS: "noaudio" would hide the HDMI sound card - noted with a comment of its own, so hdmi-off puts it back;
-		# never MARK, whose next line hdmi-off removes)
+		# (full KMS: "noaudio" would hide the HDMI sound card - each changed line gets MARK_KMS_LINE above it, so hdmi-off
+		# puts it back there; never MARK, whose next line hdmi-off removes)
 		if kms_lines noaudio; then
 			kms_rewrite strip
-			grep -q "^${MARK_KMS}\$" "${BOOT_CONFIG}" || echo "${MARK_KMS}" >> "${BOOT_CONFIG}"
 		fi
 	else
 		# the onboard driver: HDMI sound on its command line, HDMI mode (not DVI) for a monitor that has none by itself
@@ -275,8 +288,9 @@ hdmi_off() {
 	fi
 	# full KMS: "noaudio" back where hdmi-on took it away
 	if grep -q "^${MARK_KMS}\$" "${BOOT_CONFIG}"; then
-		kms_rewrite add
-		sed -i "/^${MARK_KMS}\$/d" "${BOOT_CONFIG}" && CHANGED=1
+		kms_rewrite restore_all
+	elif grep -q "^${MARK_KMS_LINE}\$" "${BOOT_CONFIG}"; then
+		kms_rewrite restore
 	fi
 }
 
@@ -346,7 +360,7 @@ case "${1:-}" in
 		no_jack && WANT_JACK=false
 		# (both off and nothing of ours written: DietPi's state stays untouched - no block written anew)
 		if [ "${WANT_JACK}" != "true" ] && [ "${WANT_HDMI}" != "true" ] && [ ! -f "${ORDER}" ] && [ ! -f "${BLACKLIST}.removed" ] &&
-			! grep -Eq "^(${MARK}|${MARK_KMS})\$" "${BOOT_CONFIG}" && ! grep -q 'snd_bcm2835\.enable_hdmi=1' "${BOOT_CMDLINE}" 2>/dev/null; then
+			! grep -Eq "^(${MARK}|${MARK_KMS}|${MARK_KMS_LINE})\$" "${BOOT_CONFIG}" && ! grep -q 'snd_bcm2835\.enable_hdmi=1' "${BOOT_CMDLINE}" 2>/dev/null; then
 			exit 0
 		fi
 		apply
