@@ -1,20 +1,29 @@
 <div class="oc" [class.oc-solo]="!choosable()" role="group">
   @if (choosable()) {
-    <button class="oc-field" type="button" [attr.data-state]="state()" (click)="tap()" [attr.aria-label]="label()">
-      @if (onBox()) {
-        <svg class="oc-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5" /><circle cx="12" cy="14.5" r="3.5" /><circle cx="12" cy="7" r="1.2" /></svg>
-      } @else if (!onJack() && device()?.kind === 'speaker') {
-        <svg class="oc-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="3" width="12" height="18" rx="3" /><circle cx="12" cy="14" r="3" /><circle class="fill" cx="12" cy="7.5" r="1" /></svg>
-      } @else {
-        <svg class="oc-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15v-3a8 8 0 0 1 16 0v3" /><rect x="3" y="14" width="5" height="7" rx="1.5" /><rect x="16" y="14" width="5" height="7" rx="1.5" /></svg>
+    <button class="oc-field" type="button" [class.oc-on]="symbol() !== 'speaker'" [attr.data-state]="state()" (click)="tap()" [attr.aria-label]="label()">
+      @switch (symbol()) {
+        @case ('bluetooth') {
+          <svg class="oc-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 7.5l11 9L12 21V3l5.5 4.5-11 9" /></svg>
+        }
+        @case ('phones') {
+          <svg class="oc-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15v-3a8 8 0 0 1 16 0v3" /><rect x="3" y="14" width="5" height="7" rx="1.5" /><rect x="16" y="14" width="5" height="7" rx="1.5" /></svg>
+        }
+        @default {
+          <svg class="oc-icon" viewBox="0 0 24 24" aria-hidden="true"><path class="fill" d="M4 9h3.5L12 5v14l-4.5-4H4z" /><path d="M16 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10" /></svg>
+        }
       }
       @if (state() === 'connecting') {
         <span class="oc-ring"></span>
       }
+      @if (state() === 'ready' || state() === 'notfound') {
+        <span class="oc-dot"></span>
+      }
     </button>
     <span class="oc-sep" aria-hidden="true"></span>
   }
-  <span class="oc-vol">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path class="fill" d="M3 9.2h3.6L11.2 5v14l-4.6-4.2H3z" /><path d="M15 9.5a3.5 3.5 0 0 1 0 5" /></svg>{{ volume() }} %
+  <span class="oc-vol" [class.oc-vol-plain]="choosable()">
+    @if (!choosable()) {
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="fill" d="M3 9.2h3.6L11.2 5v14l-4.6-4.2H3z" /><path d="M15 9.5a3.5 3.5 0 0 1 0 5" /></svg>
+    }{{ volume() }} %
   </span>
 </div>
