@@ -57,10 +57,11 @@ for pair in 'fan.fan_active:mupi_fan' 'rotary.active:mupi_rotary'; do
 	fi
 done
 
-# the board's 3.5 mm output and the HDMI sound next to the sound card, as the restored switches say (onboard_audio.sh
-# reapply; it does nothing with the onboard card)
-if { [ "$(j '.mupibox.onboardAudio // false')" = "true" ] || [ "$(j '.mupibox.hdmiAudio // false')" = "true" ]; } && [ -x "${B}/onboard_audio.sh" ]; then
-	"${B}/onboard_audio.sh" reapply >/dev/null
+# the board's 3.5 mm output and the HDMI sound next to the sound card, exactly as the restored switches say - off too:
+# a jack or HDMI sound the box had before stays on otherwise, while the app shows it off (onboard_audio.sh sync; it does
+# nothing with the onboard card)
+if [ -x "${B}/onboard_audio.sh" ]; then
+	"${B}/onboard_audio.sh" sync >/dev/null
 fi
 
 # the start, goodbye and battery pictures put together again, with the restored own pictures (unpacked as root: the

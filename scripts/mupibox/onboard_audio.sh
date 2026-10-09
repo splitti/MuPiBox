@@ -16,6 +16,8 @@
 #   hdmi-off the lines written for it away again (each one has the comment "# mupibox-hdmi-audio" above it)
 #   reapply  "on" again for what is set in mupibox.onboardAudio / mupibox.hdmiAudio (after DietPi switched the sound
 #            card, which writes its block anew - from the app, the MuPiHAT scripts and at the server's start)
+#   sync     both switches exactly as mupibox.onboardAudio / mupibox.hdmiAudio say, off included (a restored backup:
+#            reapply left a jack or HDMI sound of the box before it on when the backup has them off)
 #   status / hdmi-status   on / off: what is written for the jack / HDMI (it applies after a restart)
 #
 # (mupibox.onboardAudio and mupibox.hdmiAudio themselves are the server's to write: it holds the lock on the
@@ -155,8 +157,78 @@ audio_off() {
 
 # --- HDMI sound ----------------------------------------------------------------------------------------------------
 
-# full KMS: the display driver brings the HDMI sound card (with the firmware's display, also vc4-fkms-v3d, it does not)
-KMS_OVERLAY='^[[:space:]]*dtoverlay=vc4-kms-v3d'
+# full KMS (dtoverlay=vc4-kms-v3d): the display driver brings the HDMI sound card (with the firmware's display, also
+# vc4-fkms-v3d, it does not)
+
+# The model filters of config.txt this Pi answers to ([pi4] on a Pi 4, [pi400] and [pi4] on a Pi 400 ...): a KMS line
+# under [pi4] does nothing on a Pi 3 - it was taken for full KMS there, and the HDMI sound got no driver.
+model_filters() {
+	case "${MODEL}" in
+		*"Raspberry Pi 500"*) echo "[pi500] [pi5]" ;;
+		*"Compute Module 5"*) echo "[cm5] [pi5]" ;;
+		*"Raspberry Pi 5"*) echo "[pi5]" ;;
+		*"Raspberry Pi 400"*) echo "[pi400] [pi4]" ;;
+		*"Compute Module 4S"*) echo "[cm4s] [pi4]" ;;
+		*"Compute Module 4"*) echo "[cm4] [pi4]" ;;
+		*"Raspberry Pi 4"*) echo "[pi4]" ;;
+		*"Raspberry Pi Zero 2"*) echo "[pi02] [pi0]" ;;
+		*"Raspberry Pi Zero W"*) echo "[pi0w] [pi0]" ;;
+		*"Raspberry Pi Zero"*) echo "[pi0]" ;;
+		*"Raspberry Pi 3 Model"*"Plus"*) echo "[pi3+] [pi3]" ;;
+		*"Compute Module 3"*) echo "[cm3] [pi3]" ;;
+		*"Raspberry Pi 3"*) echo "[pi3]" ;;
+		*"Raspberry Pi 2"*) echo "[pi2]" ;;
+		*"Raspberry Pi Model"* | *"Compute Module Rev"*) echo "[pi1]" ;;
+	esac
+}
+
+# The KMS lines in force on this Pi: before the first [section], under [all], or under a model filter of this model
+# (other conditions such as [hdmi:0] are kept as they are, [none] ends everything until [all]).
+#   kms_lines has      a KMS line is in force
+#   kms_lines noaudio  ... and it has "noaudio"
+#   kms_lines strip    prints the file with "noaudio" taken from those lines
+#   kms_lines add      prints the file with "noaudio" added to those lines
+kms_lines() {
+	awk -v mode="$1" -v filters=" $(model_filters) " '
+		function on_this_pi() { return model_ok && !none }
+		BEGIN { model_ok = 1; none = 0; found = 0 }
+		{
+			t = $0; sub(/^[[:space:]]+/, "", t)
+			if (t ~ /^\[/) {
+				sec = t; sub(/\].*$/, "]", sec)
+				if (sec == "[all]") { model_ok = 1; none = 0 }
+				else if (sec == "[none]") none = 1
+				else if (sec ~ /^\[(pi[0-9]+[a-z+]*|cm[0-9]+[a-z]*)\]$/) model_ok = index(filters, " " sec " ") > 0
+				if (mode == "strip" || mode == "add") print
+				next
+			}
+			kms = on_this_pi() && t ~ /^dtoverlay=vc4-kms-v3d([,[:space:]]|$)/
+			if (kms) {
+				found = 1
+				if (t ~ /[,[:space:]]noaudio([,[:space:]]|$)/) has_noaudio = 1
+				if (mode == "strip") gsub(/,noaudio/, "")
+				if (mode == "add" && $0 !~ /[,[:space:]]noaudio([,[:space:]]|$)/) sub(/[[:space:]]*$/, ",noaudio")
+			}
+			if (mode == "strip" || mode == "add") print
+		}
+		END {
+			if (mode == "has") exit !found
+			if (mode == "noaudio") exit !has_noaudio
+		}' "${BOOT_CONFIG}"
+}
+
+# config.txt rewritten with the KMS lines changed (strip / add); only when something changes
+kms_rewrite() {
+	local tmp
+	tmp=$(mktemp) || return 1
+	kms_lines "$1" > "${tmp}" || { rm -f "${tmp}"; return 1; }
+	if [ -s "${tmp}" ] && ! cmp -s "${tmp}" "${BOOT_CONFIG}"; then
+		cp -p "${BOOT_CONFIG}" "${BOOT_CONFIG}.bak-audio"
+		# (written in place: the file keeps its owner and mode, on the FAT boot partition too)
+		cat "${tmp}" > "${BOOT_CONFIG}" && CHANGED=1
+	fi
+	rm -f "${tmp}"
+}
 
 # an earlier version of this script wrote vc4-fkms-v3d for the Pi 4: gone again (the line with its comment)
 drop_fkms() {
@@ -170,12 +242,11 @@ hdmi_on() {
 	drop_fkms
 	if pi5_model; then
 		:
-	elif grep -Eq "${KMS_OVERLAY}" "${BOOT_CONFIG}"; then
+	elif kms_lines has; then
 		# (full KMS: "noaudio" would hide the HDMI sound card - noted with a comment of its own, so hdmi-off puts it back;
 		# never MARK, whose next line hdmi-off removes)
-		if grep -Eq "${KMS_OVERLAY}.*[,[:space:]]noaudio" "${BOOT_CONFIG}"; then
-			cp -p "${BOOT_CONFIG}" "${BOOT_CONFIG}.bak-audio"
-			sed -i -E "/${KMS_OVERLAY}/ s/,noaudio//g" "${BOOT_CONFIG}" && CHANGED=1
+		if kms_lines noaudio; then
+			kms_rewrite strip
 			grep -q "^${MARK_KMS}\$" "${BOOT_CONFIG}" || echo "${MARK_KMS}" >> "${BOOT_CONFIG}"
 		fi
 	else
@@ -199,8 +270,7 @@ hdmi_off() {
 	fi
 	# full KMS: "noaudio" back where hdmi-on took it away
 	if grep -q "^${MARK_KMS}\$" "${BOOT_CONFIG}"; then
-		cp -p "${BOOT_CONFIG}" "${BOOT_CONFIG}.bak-audio"
-		sed -i -E "/${KMS_OVERLAY}/ { /[,[:space:]]noaudio/! s/[[:space:]]*\$/,noaudio/ }" "${BOOT_CONFIG}"
+		kms_rewrite add
 		sed -i "/^${MARK_KMS}\$/d" "${BOOT_CONFIG}" && CHANGED=1
 	fi
 }
@@ -209,8 +279,8 @@ hdmi_off() {
 hdmi_state() {
 	if pi5_model; then
 		echo "on"
-	elif grep -Eq "${KMS_OVERLAY}" "${BOOT_CONFIG}"; then
-		if grep -Eq "${KMS_OVERLAY}.*[,[:space:]]noaudio" "${BOOT_CONFIG}"; then echo "off"; else echo "on"; fi
+	elif kms_lines has; then
+		if kms_lines noaudio; then echo "off"; else echo "on"; fi
 	elif [ ! -f "${BLACKLIST}" ] && ! grep -q 'snd_bcm2835\.enable_hdmi=0' "${BOOT_CMDLINE}" 2>/dev/null && grep -q 'snd_bcm2835\.enable_hdmi=1' "${BOOT_CMDLINE}" 2>/dev/null; then
 		echo "on"
 	else
@@ -221,7 +291,7 @@ hdmi_state() {
 # the onboard driver is needed for the jack, and for HDMI sound unless full KMS does it
 needs_driver() {
 	{ [ "${WANT_JACK}" = "true" ] && ! no_jack; } && return 0
-	[ "${WANT_HDMI}" = "true" ] && ! pi5_model && ! grep -Eq "${KMS_OVERLAY}" "${BOOT_CONFIG}" && return 0
+	[ "${WANT_HDMI}" = "true" ] && ! pi5_model && ! kms_lines has && return 0
 	return 1
 }
 
@@ -267,6 +337,15 @@ case "${1:-}" in
 		{ [ "${WANT_JACK}" = "true" ] || [ "${WANT_HDMI}" = "true" ]; } || exit 0
 		apply
 		;;
+	sync)
+		no_jack && WANT_JACK=false
+		# (both off and nothing of ours written: DietPi's state stays untouched - no block written anew)
+		if [ "${WANT_JACK}" != "true" ] && [ "${WANT_HDMI}" != "true" ] && [ ! -f "${ORDER}" ] && [ ! -f "${BLACKLIST}.removed" ] &&
+			! grep -Eq "^(${MARK}|${MARK_KMS})\$" "${BOOT_CONFIG}" && ! grep -q 'snd_bcm2835\.enable_hdmi=1' "${BOOT_CMDLINE}" 2>/dev/null; then
+			exit 0
+		fi
+		apply
+		;;
 	status)
 		no_jack && { echo "off"; exit 0; }
 		if [ ! -f "${BLACKLIST}" ] && [ -f "${ORDER}" ] && ! grep -q 'snd_bcm2835\.enable_headphones=0' "${BOOT_CMDLINE}" 2>/dev/null; then echo "on"; else echo "off"; fi
@@ -277,7 +356,7 @@ case "${1:-}" in
 		exit 0
 		;;
 	*)
-		echo "usage: $0 on|off|hdmi-on|hdmi-off|reapply|status|hdmi-status" >&2
+		echo "usage: $0 on|off|hdmi-on|hdmi-off|reapply|sync|status|hdmi-status" >&2
 		exit 2
 		;;
 esac
