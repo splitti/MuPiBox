@@ -5,7 +5,7 @@ POWEROFF_PIN=$(/usr/bin/jq -r .shim.poweroffPin ${CONFIG})
 CUT_PIN=$(/usr/bin/jq -r .shim.cutPin ${CONFIG})
 
 # Sets a pin as output to 0 or 1. libgpiod 1 (Debian 12 "Bookworm"): gpioset as always - the pin keeps its level after
-# it. libgpiod 2 (Debian 13 "Trixie"): its gpioset holds the level only while it runs, so pinctrl (raspberrypi-utils)
+# it. libgpiod 2 (Debian 13 "Trixie"): its gpioset holds the level only while it runs, so pinctrl (raspi-utils-core)
 # sets it, or else a gpioset that stays in the background.
 set_pin() {
     if ! gpioset --version 2>/dev/null | grep -q ' v2\.'; then

@@ -96,10 +96,12 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 		STEP=$((STEP + 1))
 	done
 
-	# pinctrl for the OnOff SHIM on Debian 13 "Trixie" (libgpiod 2, see scripts/OnOffShim): in raspberrypi-utils there.
-	# Debian 12 "Bookworm" has no such package and keeps using the tools of gpiod.
-	if apt-cache show raspberrypi-utils >/dev/null 2>&1 && ! dpkg -l raspberrypi-utils 2>/dev/null | grep -q '^ii'; then
-		apt-get --yes install raspberrypi-utils >&3 2>&3
+	# pinctrl for the OnOff SHIM with libgpiod 2 (Debian 13 "Trixie", see scripts/OnOffShim): in raspi-utils-core of the
+	# Raspberry Pi archive (the name raspberrypi-utils written here before is only the source package - nothing was
+	# installed, poweroff.sh fell back to a gpioset in the background). Not with libgpiod 1 (Bookworm): it keeps the
+	# tools of gpiod, and raspi-utils-core would replace its libraspberrypi-bin there.
+	if gpioset --version 2>/dev/null | grep -q ' v2\.' && ! command -v pinctrl >/dev/null && apt-cache show raspi-utils-core >/dev/null 2>&1; then
+		apt-get --yes install raspi-utils-core >&3 2>&3
 	fi
 
 	###############################################################################################
