@@ -31,7 +31,7 @@ Tippe einen Titel an, um ihn abzuspielen. Der Knopf unter dem Cover links schlie
 
 ## Box oder Kopfhörer
 
-Ist ein Bluetooth-Gerät gekoppelt, zeigt die Kopfleiste neben der Lautstärke ein Feld mit dem Symbol des Ausgangs, über den die Musik gerade spielt: Box oder Kopfhörer. Ein Tipp öffnet das Fenster **Hören mit**, in dem das Kind wählt. Ist der Kopfhörer aus oder nicht in Reichweite, sagt das Fenster es dort.
+Ist ein Bluetooth-Gerät gekoppelt, zeigt die Kopfleiste neben der Lautstärke ein Feld mit dem Symbol des Ausgangs, über den die Musik gerade spielt: Lautsprecher (die Box), Bluetooth oder Kopfhörer (der 3,5-mm-Ausgang). Spielt sie nicht über den Lautsprecher, ist das Feld farbig. Ein grüner Punkt heißt: Das Bluetooth-Gerät ist verbunden, spielt aber nicht. Ein roter Punkt heißt: Es wurde nicht gefunden (aus oder nicht in Reichweite), die Box sagt es unter der Kopfleiste. Gibt es genau zwei Ausgänge, wechselt ein Tipp gleich zum anderen. Bei mehr Ausgängen öffnet ein Tipp das Fenster **Hören mit**, in dem das Kind wählt.
 
 Hat die Box **mehrere Soundausgänge** (zum Beispiel den 3,5-mm-Ausgang neben einem I²S-Verstärker, HDMI oder einen USB-Audio-Adapter), steht jeder davon als eigene Kachel im Fenster **Hören mit**: **Lautsprecher** (die Soundkarte der Box, zum Beispiel der Verstärker), **3.5 mm** (mit einem Kopfhörer-Symbol), **HDMI** oder **USB**, darunter der Name, den das System ihm gibt. Das Fenster öffnet sich dann auch ohne gekoppeltes Bluetooth-Gerät. Die Box merkt sich die Wahl auch über einen Neustart. Den 3,5-mm-Ausgang neben einer eigenen Soundkarte schaltest du unter **Einstellungen › Audio › Soundkarte › Kopfhörerbuchse** ein ([Sound und Lautstärke](../hardware/sound.md)). Mit nur einem Soundausgang bleibt alles wie vorher.
 
