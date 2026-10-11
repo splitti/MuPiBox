@@ -2427,7 +2427,6 @@
  "system-options {}": "system-options {}",
  "Systemlaufwerk": "Systemenhet",
  "Systemoptionen": "Systemalternativ",
- "Systemverwaltung von DietPi (Port 5252)": "Systemhantering för DietPi (port 5252)",
  "Tab": "Tab",
  "Tage": "Dagar",
  "Tageslimits": "Dagliga gränser",
@@ -2791,5 +2790,11 @@
  "1. In Home Assistant die Integration „MuPiBox“ hinzufügen – die Box wird gefunden, sonst die Adresse oben eingeben. 2. Den Schlüssel unten kopieren und in Home Assistant einfügen. 3. Hier „Koppeln erlauben“ tippen und in Home Assistant auf „Weiter“. 4. Den Code eingeben, den das Display der Box zeigt.": "1. Lägg till integrationen «MuPiBox» i Home Assistant – boxen hittas, annars anger du adressen ovan. 2. Kopiera nyckeln nedan och klistra in den i Home Assistant. 3. Tryck här på «Tillåt parkoppling» och i Home Assistant på «Skicka». 4. Ange koden som boxens skärm visar.",
  "Home Assistant fragt beim Koppeln nach diesem Schlüssel. Er beweist, dass Home Assistant mit dieser Box spricht – nie einen Schlüssel aus einer anderen Quelle einfügen.": "Home Assistant frågar efter den här nyckeln vid parkoppling. Den bevisar att Home Assistant pratar med den här boxen – klistra aldrig in en nyckel från någon annan källa.",
  "Schlüssel kopieren": "Kopiera nyckel",
- "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Markerat – kopiera det själv (Ctrl+C eller «Kopiera»)"
+ "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Markerat – kopiera det själv (Ctrl+C eller «Kopiera»)",
+ "DietPi-Dashboard erlauben": "Tillåt DietPi-instrumentpanelen",
+ "Systemverwaltung von DietPi mit einem Terminal mit Root-Rechten. Erreichbar nur über diese App, nicht direkt im Netz.": "Systemadministration för DietPi med en terminal med root-rättigheter. Nås bara via den här appen, inte direkt i nätverket.",
+ "DietPi-Dashboard erlaubt": "DietPi-instrumentpanelen tillåten",
+ "DietPi-Dashboard aus": "DietPi-instrumentpanelen av",
+ "startet gerade …": "startar …",
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "DietPi-instrumentpanelen är av – tillåt den under System › Experter"
 }

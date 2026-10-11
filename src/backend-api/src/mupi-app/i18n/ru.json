@@ -2427,7 +2427,6 @@
  "system-options {}": "system-options {}",
  "Systemlaufwerk": "Системный накопитель",
  "Systemoptionen": "Системные параметры",
- "Systemverwaltung von DietPi (Port 5252)": "Управление системой DietPi (порт 5252)",
  "Tab": "Tab",
  "Tage": "Дни",
  "Tageslimits": "Дневные лимиты",
@@ -2791,5 +2790,11 @@
  "1. In Home Assistant die Integration „MuPiBox“ hinzufügen – die Box wird gefunden, sonst die Adresse oben eingeben. 2. Den Schlüssel unten kopieren und in Home Assistant einfügen. 3. Hier „Koppeln erlauben“ tippen und in Home Assistant auf „Weiter“. 4. Den Code eingeben, den das Display der Box zeigt.": "1. Добавьте в Home Assistant интеграцию «MuPiBox» – коробка будет найдена, иначе введите адрес выше. 2. Скопируйте ключ ниже и вставьте его в Home Assistant. 3. Нажмите здесь «Разрешить сопряжение», а в Home Assistant – «Подтвердить». 4. Введите код, который показывает экран коробки.",
  "Home Assistant fragt beim Koppeln nach diesem Schlüssel. Er beweist, dass Home Assistant mit dieser Box spricht – nie einen Schlüssel aus einer anderen Quelle einfügen.": "Home Assistant запрашивает этот ключ при сопряжении. Он подтверждает, что Home Assistant говорит именно с этой коробкой – никогда не вставляйте ключ из другого источника.",
  "Schlüssel kopieren": "Копировать ключ",
- "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Выделено – скопируйте сами (Ctrl+C или «Копировать»)"
+ "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Выделено – скопируйте сами (Ctrl+C или «Копировать»)",
+ "DietPi-Dashboard erlauben": "Разрешить панель DietPi",
+ "Systemverwaltung von DietPi mit einem Terminal mit Root-Rechten. Erreichbar nur über diese App, nicht direkt im Netz.": "Управление системой DietPi с терминалом с правами root. Доступна только через это приложение, не напрямую в сети.",
+ "DietPi-Dashboard erlaubt": "Панель DietPi разрешена",
+ "DietPi-Dashboard aus": "Панель DietPi выключена",
+ "startet gerade …": "запускается …",
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Панель DietPi выключена – разрешите её в Система › Для экспертов"
 }

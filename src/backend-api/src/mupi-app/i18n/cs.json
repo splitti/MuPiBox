@@ -2427,7 +2427,6 @@
  "system-options {}": "system-options {}",
  "Systemlaufwerk": "Systémová jednotka",
  "Systemoptionen": "Možnosti systému",
- "Systemverwaltung von DietPi (Port 5252)": "Správa systému DietPi (port 5252)",
  "Tab": "Tab",
  "Tage": "Dny",
  "Tageslimits": "Denní limity",
@@ -2791,5 +2790,11 @@
  "1. In Home Assistant die Integration „MuPiBox“ hinzufügen – die Box wird gefunden, sonst die Adresse oben eingeben. 2. Den Schlüssel unten kopieren und in Home Assistant einfügen. 3. Hier „Koppeln erlauben“ tippen und in Home Assistant auf „Weiter“. 4. Den Code eingeben, den das Display der Box zeigt.": "1. Přidejte v Home Assistantu integraci „MuPiBox“ – box se najde, jinak zadejte adresu výše. 2. Zkopírujte klíč níže a vložte ho do Home Assistantu. 3. Klepněte zde na „Povolit párování“ a v Home Assistantu na „Odeslat“. 4. Zadejte kód, který ukazuje displej boxu.",
  "Home Assistant fragt beim Koppeln nach diesem Schlüssel. Er beweist, dass Home Assistant mit dieser Box spricht – nie einen Schlüssel aus einer anderen Quelle einfügen.": "Home Assistant se při párování ptá na tento klíč. Dokazuje, že Home Assistant mluví s tímto boxem – nikdy nevkládejte klíč odjinud.",
  "Schlüssel kopieren": "Kopírovat klíč",
- "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Označeno – zkopírujte to sami (Ctrl+C nebo „Kopírovat“)"
+ "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Označeno – zkopírujte to sami (Ctrl+C nebo „Kopírovat“)",
+ "DietPi-Dashboard erlauben": "Povolit panel DietPi",
+ "Systemverwaltung von DietPi mit einem Terminal mit Root-Rechten. Erreichbar nur über diese App, nicht direkt im Netz.": "Správa systému DietPi s terminálem s právy roota. Dostupný jen přes tuto aplikaci, ne přímo v síti.",
+ "DietPi-Dashboard erlaubt": "Panel DietPi povolen",
+ "DietPi-Dashboard aus": "Panel DietPi vypnut",
+ "startet gerade …": "spouští se …",
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Panel DietPi je vypnutý – povolte ho v Systém › Experti"
 }

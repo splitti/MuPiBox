@@ -2427,7 +2427,6 @@
  "system-options {}": "system-options {}",
  "Systemlaufwerk": "System drive",
  "Systemoptionen": "System options",
- "Systemverwaltung von DietPi (Port 5252)": "DietPi system management (port 5252)",
  "Tab": "Tab",
  "Tage": "Days",
  "Tageslimits": "Daily limits",
@@ -2791,5 +2790,11 @@
  "1. In Home Assistant die Integration „MuPiBox“ hinzufügen – die Box wird gefunden, sonst die Adresse oben eingeben. 2. Den Schlüssel unten kopieren und in Home Assistant einfügen. 3. Hier „Koppeln erlauben“ tippen und in Home Assistant auf „Weiter“. 4. Den Code eingeben, den das Display der Box zeigt.": "1. Add the “MuPiBox” integration in Home Assistant – the box is found, otherwise enter the address above. 2. Copy the key below and paste it into Home Assistant. 3. Tap “Allow pairing” here and “Submit” in Home Assistant. 4. Enter the code the box’s display shows.",
  "Home Assistant fragt beim Koppeln nach diesem Schlüssel. Er beweist, dass Home Assistant mit dieser Box spricht – nie einen Schlüssel aus einer anderen Quelle einfügen.": "Home Assistant asks for this key when pairing. It proves that Home Assistant is talking to this box – never paste a key from anywhere else.",
  "Schlüssel kopieren": "Copy key",
- "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Selected – please copy it yourself (Ctrl+C or “Copy”)"
+ "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Selected – please copy it yourself (Ctrl+C or “Copy”)",
+ "DietPi-Dashboard erlauben": "Allow DietPi Dashboard",
+ "Systemverwaltung von DietPi mit einem Terminal mit Root-Rechten. Erreichbar nur über diese App, nicht direkt im Netz.": "DietPi system management with a terminal with root rights. Reachable through this app only, not directly in the network.",
+ "DietPi-Dashboard erlaubt": "DietPi Dashboard allowed",
+ "DietPi-Dashboard aus": "DietPi Dashboard off",
+ "startet gerade …": "starting …",
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "The DietPi Dashboard is off – allow it under System › Experts"
 }

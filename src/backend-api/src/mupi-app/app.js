@@ -900,7 +900,19 @@ async function openExternal(which) {
   if (which === 'manual') return openManual()
   const host = location.hostname
   if (which === 'dietpi') {
-    window.open(`http://${host}:5252/`, '_blank', 'noopener')
+    // signed in with a one-time ticket of this app's session (the dashboard itself has a password nobody knows). The
+    // window opens at once: one opened after waiting for the ticket is blocked as a popup.
+    const win = window.open('', '_blank')
+    const r = await api(`${API}/dietpi-dashboard/ticket`, { method: 'POST' })
+    if (!r.ok || !r.body?.ticket) {
+      win?.close()
+      return toast(r.body?.error === 'dashboard_off' ? 'Das DietPi-Dashboard ist aus – unter System › Experten erlauben' : 'Das hat nicht geklappt', 'info')
+    }
+    const url = `http://${host}:${r.body.port ?? 5252}/mupibox-open?ticket=${encodeURIComponent(r.body.ticket)}`
+    if (win) {
+      win.opener = null
+      win.location.href = url
+    } else location.href = url
     return
   }
   // the admin interface, signed in with a one-time ticket of this app's session (no second login there). The window
@@ -8931,10 +8943,11 @@ const lanCtrl = { load: loadNetOptions, sections: lanSections, change: changeNet
 /* Experten */
 
 async function loadExperts() {
-  const [json, info] = await Promise.all([api(`${API}/json-file?key=${adm.json.key}`), api(`${API}/system`)])
+  const [json, info, dash] = await Promise.all([api(`${API}/json-file?key=${adm.json.key}`), api(`${API}/system`), api(`${API}/dietpi-dashboard`)])
   adm.json.keys = json.body?.keys ?? []
   adm.json.text = json.body?.text ?? ''
   adm.host = info.body?.hostname ?? ''
+  adm.dash = dash.ok ? dash.body : { enabled: false, active: false }
 }
 
 const JSON_LABEL = {
@@ -8958,7 +8971,11 @@ function expertsTop() {
       <div class="field"><label for="ex-host">Hostname</label><input class="input mono" id="ex-host" maxlength="63" value="${esc(adm.host)}" autocomplete="off"></div>
       <div class="btns"><button class="btn primary" id="ex-hostsave">Speichern</button></div></section>`,
     // (beside the host name: both short)
-    `<section class="card"><h2>Weitere Werkzeuge</h2><div class="navlist">${navRow('ext:dietpi', 'DietPi-Dashboard', 'Systemverwaltung von DietPi (Port 5252)', 'ext')}${navRow('ext:admin', 'Bisheriges Admin-Interface', 'Port 80', 'ext')}</div></section>`,
+    // (the DietPi-Dashboard has a terminal with root rights: off by default, and switched on reached from here only -
+    // a one-time ticket signs in, see backend-api eltern/dietpi-dashboard.ts)
+    `<section class="card"><h2>Weitere Werkzeuge</h2>
+      <div class="row"><span class="lbl"><b>DietPi-Dashboard erlauben</b><small>Systemverwaltung von DietPi mit einem Terminal mit Root-Rechten. Erreichbar nur über diese App, nicht direkt im Netz.</small></span><label class="switch"><input type="checkbox" id="ex-dash" ${adm.dash?.enabled ? 'checked' : ''} aria-label="DietPi-Dashboard erlauben"><span></span></label></div>
+      <div class="navlist">${adm.dash?.enabled ? navRow('ext:dietpi', 'DietPi-Dashboard', adm.dash.active ? 'öffnet sich in einem neuen Fenster' : 'startet gerade …', 'ext') : ''}${navRow('ext:admin', 'Bisheriges Admin-Interface', 'Port 80', 'ext')}</div></section>`,
     `<section class="card wide"><h2>Konfiguration direkt bearbeiten</h2>
       <div class="note warn">${icon('info', 18)}<span>Fehler hier können die Box lahmlegen. Nur ändern, was du kennst – vorher ein Backup ziehen.</span></div>
       <div class="field"><label for="ex-file">Datei</label><select class="input" id="ex-file">${adm.json.keys.map((k) => `<option value="${k}"${k === adm.json.key ? ' selected' : ''}>${esc(JSON_LABEL[k] ?? k)}</option>`).join('')}</select></div>
@@ -8973,6 +8990,14 @@ function expertsTop() {
 }
 
 function mountExperts(root, page) {
+  $('#ex-dash', root).onchange = async (e) => {
+    const on = e.target.checked
+    e.target.disabled = true
+    const r = await api(`${API}/dietpi-dashboard`, { method: 'POST', body: { on } })
+    toast(r.ok && r.body?.ok ? (on ? 'DietPi-Dashboard erlaubt' : 'DietPi-Dashboard aus') : 'Das hat nicht geklappt', r.ok && r.body?.ok ? 'ok' : 'info')
+    await loadExperts().catch(() => undefined)
+    if (currentPage()?.id === page.id) renderPage(page, false)
+  }
   const area = $('#ex-json', root)
   const msg = $('#ex-jsonmsg', root)
   const check = () => {

@@ -2427,7 +2427,6 @@
  "system-options {}": "system-options {}",
  "Systemlaufwerk": "Unidad del sistema",
  "Systemoptionen": "Opciones del sistema",
- "Systemverwaltung von DietPi (Port 5252)": "Administración del sistema de DietPi (puerto 5252)",
  "Tab": "Tab",
  "Tage": "Días",
  "Tageslimits": "Límites diarios",
@@ -2791,5 +2790,11 @@
  "1. In Home Assistant die Integration „MuPiBox“ hinzufügen – die Box wird gefunden, sonst die Adresse oben eingeben. 2. Den Schlüssel unten kopieren und in Home Assistant einfügen. 3. Hier „Koppeln erlauben“ tippen und in Home Assistant auf „Weiter“. 4. Den Code eingeben, den das Display der Box zeigt.": "1. Añade la integración «MuPiBox» en Home Assistant: la caja se encuentra sola; si no, introduce la dirección de arriba. 2. Copia la clave de abajo y pégala en Home Assistant. 3. Toca aquí «Permitir emparejar» y «Enviar» en Home Assistant. 4. Introduce el código que muestra la pantalla de la caja.",
  "Home Assistant fragt beim Koppeln nach diesem Schlüssel. Er beweist, dass Home Assistant mit dieser Box spricht – nie einen Schlüssel aus einer anderen Quelle einfügen.": "Home Assistant pide esta clave al emparejar. Demuestra que Home Assistant habla con esta caja: nunca pegues una clave de otra fuente.",
  "Schlüssel kopieren": "Copiar clave",
- "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Seleccionado: cópialo tú (Ctrl+C o «Copiar»)"
+ "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Seleccionado: cópialo tú (Ctrl+C o «Copiar»)",
+ "DietPi-Dashboard erlauben": "Permitir el panel de DietPi",
+ "Systemverwaltung von DietPi mit einem Terminal mit Root-Rechten. Erreichbar nur über diese App, nicht direkt im Netz.": "Administración del sistema de DietPi con un terminal con derechos de root. Accesible solo desde esta app, no directamente en la red.",
+ "DietPi-Dashboard erlaubt": "Panel de DietPi permitido",
+ "DietPi-Dashboard aus": "Panel de DietPi desactivado",
+ "startet gerade …": "iniciando …",
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "El panel de DietPi está desactivado: permítelo en Sistema › Expertos"
 }

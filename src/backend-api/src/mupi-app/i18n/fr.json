@@ -2427,7 +2427,6 @@
  "system-options {}": "system-options {}",
  "Systemlaufwerk": "Disque système",
  "Systemoptionen": "Options système",
- "Systemverwaltung von DietPi (Port 5252)": "Administration système de DietPi (port 5252)",
  "Tab": "Tab",
  "Tage": "Jours",
  "Tageslimits": "Limites quotidiennes",
@@ -2791,5 +2790,11 @@
  "1. In Home Assistant die Integration „MuPiBox“ hinzufügen – die Box wird gefunden, sonst die Adresse oben eingeben. 2. Den Schlüssel unten kopieren und in Home Assistant einfügen. 3. Hier „Koppeln erlauben“ tippen und in Home Assistant auf „Weiter“. 4. Den Code eingeben, den das Display der Box zeigt.": "1. Ajoutez l’intégration « MuPiBox » dans Home Assistant – la box est trouvée, sinon saisissez l’adresse ci-dessus. 2. Copiez la clé ci-dessous et collez-la dans Home Assistant. 3. Touchez ici « Autoriser l’appairage » puis « Valider » dans Home Assistant. 4. Saisissez le code affiché sur l’écran de la box.",
  "Home Assistant fragt beim Koppeln nach diesem Schlüssel. Er beweist, dass Home Assistant mit dieser Box spricht – nie einen Schlüssel aus einer anderen Quelle einfügen.": "Home Assistant demande cette clé lors de l’appairage. Elle prouve que Home Assistant parle bien à cette box – ne collez jamais une clé venant d’ailleurs.",
  "Schlüssel kopieren": "Copier la clé",
- "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Sélectionné – copiez-le vous-même (Ctrl+C ou « Copier »)"
+ "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Sélectionné – copiez-le vous-même (Ctrl+C ou « Copier »)",
+ "DietPi-Dashboard erlauben": "Autoriser le tableau de bord DietPi",
+ "Systemverwaltung von DietPi mit einem Terminal mit Root-Rechten. Erreichbar nur über diese App, nicht direkt im Netz.": "Administration système de DietPi avec un terminal aux droits root. Accessible uniquement via cette app, pas directement sur le réseau.",
+ "DietPi-Dashboard erlaubt": "Tableau de bord DietPi autorisé",
+ "DietPi-Dashboard aus": "Tableau de bord DietPi désactivé",
+ "startet gerade …": "démarrage …",
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Le tableau de bord DietPi est désactivé – l’autoriser sous Système › Experts"
 }

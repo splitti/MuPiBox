@@ -1,3 +1,9 @@
+<h3>DEV 5.0.10 - changes compared to 5.0.9</h3>
+<b>Security</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>DietPi-Dashboard: without a password it gave everyone in the Wi-Fi a web terminal as dietpi (sudo without a password), i.e. root on the box. It now has a random password nobody knows and listens on an inner port; port 5252 is answered by the box's server, which signs a parent of the app in with a one-time ticket - so it opens from the app only (Settings &gt; System &gt; Experts), without a login of its own. Opened directly, port 5252 shows a password prompt nobody gets past. Off by default: the update switches it off on every box once, the switch 'Allow DietPi-Dashboard' turns it on again. The old admin interface's menu item leads to that page of the app.</li>
+</ul>
 <h3>DEV 5.0.9 - changes compared to 5.0.8</h3>
 <b>Themes</b>
 </ul>

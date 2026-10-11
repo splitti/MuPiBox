@@ -2427,7 +2427,6 @@
  "system-options {}": "system-options {}",
  "Systemlaufwerk": "Unità di sistema",
  "Systemoptionen": "Opzioni di sistema",
- "Systemverwaltung von DietPi (Port 5252)": "Gestione del sistema di DietPi (porta 5252)",
  "Tab": "Tab",
  "Tage": "Giorni",
  "Tageslimits": "Limiti giornalieri",
@@ -2791,5 +2790,11 @@
  "1. In Home Assistant die Integration „MuPiBox“ hinzufügen – die Box wird gefunden, sonst die Adresse oben eingeben. 2. Den Schlüssel unten kopieren und in Home Assistant einfügen. 3. Hier „Koppeln erlauben“ tippen und in Home Assistant auf „Weiter“. 4. Den Code eingeben, den das Display der Box zeigt.": "1. Aggiungi l’integrazione «MuPiBox» in Home Assistant – il box viene trovato, altrimenti inserisci l’indirizzo sopra. 2. Copia la chiave qui sotto e incollala in Home Assistant. 3. Tocca qui «Consenti l’abbinamento» e «Invia» in Home Assistant. 4. Inserisci il codice mostrato sul display del box.",
  "Home Assistant fragt beim Koppeln nach diesem Schlüssel. Er beweist, dass Home Assistant mit dieser Box spricht – nie einen Schlüssel aus einer anderen Quelle einfügen.": "Home Assistant chiede questa chiave durante l’abbinamento. Dimostra che Home Assistant parla con questo box – non incollare mai una chiave da un’altra fonte.",
  "Schlüssel kopieren": "Copia chiave",
- "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Selezionato – copialo tu (Ctrl+C o «Copia»)"
+ "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Selezionato – copialo tu (Ctrl+C o «Copia»)",
+ "DietPi-Dashboard erlauben": "Consenti la dashboard di DietPi",
+ "Systemverwaltung von DietPi mit einem Terminal mit Root-Rechten. Erreichbar nur über diese App, nicht direkt im Netz.": "Gestione di sistema di DietPi con un terminale con diritti di root. Raggiungibile solo da questa app, non direttamente in rete.",
+ "DietPi-Dashboard erlaubt": "Dashboard di DietPi consentita",
+ "DietPi-Dashboard aus": "Dashboard di DietPi disattivata",
+ "startet gerade …": "avvio in corso …",
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "La dashboard di DietPi è disattivata – consentila in Sistema › Esperti"
 }

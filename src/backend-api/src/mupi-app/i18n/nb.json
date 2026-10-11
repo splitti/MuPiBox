@@ -2427,7 +2427,6 @@
  "system-options {}": "system-options {}",
  "Systemlaufwerk": "Systemstasjon",
  "Systemoptionen": "Systemalternativer",
- "Systemverwaltung von DietPi (Port 5252)": "Systemadministrasjon fra DietPi (port 5252)",
  "Tab": "Tab",
  "Tage": "Dager",
  "Tageslimits": "Daglige grenser",
@@ -2791,5 +2790,11 @@
  "1. In Home Assistant die Integration „MuPiBox“ hinzufügen – die Box wird gefunden, sonst die Adresse oben eingeben. 2. Den Schlüssel unten kopieren und in Home Assistant einfügen. 3. Hier „Koppeln erlauben“ tippen und in Home Assistant auf „Weiter“. 4. Den Code eingeben, den das Display der Box zeigt.": "1. Legg til integrasjonen «MuPiBox» i Home Assistant – boksen blir funnet, ellers skriver du inn adressen over. 2. Kopier nøkkelen nedenfor og lim den inn i Home Assistant. 3. Trykk her på «Tillat paring» og i Home Assistant på «Send». 4. Skriv inn koden som boksens skjerm viser.",
  "Home Assistant fragt beim Koppeln nach diesem Schlüssel. Er beweist, dass Home Assistant mit dieser Box spricht – nie einen Schlüssel aus einer anderen Quelle einfügen.": "Home Assistant ber om denne nøkkelen ved paring. Den beviser at Home Assistant snakker med denne boksen – lim aldri inn en nøkkel fra et annet sted.",
  "Schlüssel kopieren": "Kopier nøkkel",
- "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Merket – kopier det selv (Ctrl+C eller «Kopier»)"
+ "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Merket – kopier det selv (Ctrl+C eller «Kopier»)",
+ "DietPi-Dashboard erlauben": "Tillat DietPi-dashbordet",
+ "Systemverwaltung von DietPi mit einem Terminal mit Root-Rechten. Erreichbar nur über diese App, nicht direkt im Netz.": "Systemadministrasjon av DietPi med en terminal med root-rettigheter. Kan bare nås via denne appen, ikke direkte i nettverket.",
+ "DietPi-Dashboard erlaubt": "DietPi-dashbordet tillatt",
+ "DietPi-Dashboard aus": "DietPi-dashbordet av",
+ "startet gerade …": "starter …",
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "DietPi-dashbordet er av – tillat det under System › Eksperter"
 }

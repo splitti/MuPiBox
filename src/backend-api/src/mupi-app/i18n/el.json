@@ -2427,7 +2427,6 @@
  "system-options {}": "system-options {}",
  "Systemlaufwerk": "Μονάδα συστήματος",
  "Systemoptionen": "Επιλογές συστήματος",
- "Systemverwaltung von DietPi (Port 5252)": "Διαχείριση συστήματος DietPi (θύρα 5252)",
  "Tab": "Tab",
  "Tage": "Ημέρες",
  "Tageslimits": "Ημερήσια όρια",
@@ -2791,5 +2790,11 @@
  "1. In Home Assistant die Integration „MuPiBox“ hinzufügen – die Box wird gefunden, sonst die Adresse oben eingeben. 2. Den Schlüssel unten kopieren und in Home Assistant einfügen. 3. Hier „Koppeln erlauben“ tippen und in Home Assistant auf „Weiter“. 4. Den Code eingeben, den das Display der Box zeigt.": "1. Προσθέστε στο Home Assistant την ενσωμάτωση «MuPiBox» – το κουτί βρίσκεται μόνο του, αλλιώς πληκτρολογήστε τη διεύθυνση παραπάνω. 2. Αντιγράψτε το κλειδί παρακάτω και επικολλήστε το στο Home Assistant. 3. Πατήστε εδώ «Να επιτρέπεται η σύζευξη» και στο Home Assistant «Υποβολή». 4. Πληκτρολογήστε τον κωδικό που δείχνει η οθόνη του κουτιού.",
  "Home Assistant fragt beim Koppeln nach diesem Schlüssel. Er beweist, dass Home Assistant mit dieser Box spricht – nie einen Schlüssel aus einer anderen Quelle einfügen.": "Το Home Assistant ζητά αυτό το κλειδί κατά τη σύζευξη. Αποδεικνύει ότι το Home Assistant μιλά με αυτό το κουτί – μην επικολλάτε ποτέ κλειδί από άλλη πηγή.",
  "Schlüssel kopieren": "Αντιγραφή κλειδιού",
- "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Επιλέχθηκε – αντιγράψτε το μόνοι σας (Ctrl+C ή «Αντιγραφή»)"
+ "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Επιλέχθηκε – αντιγράψτε το μόνοι σας (Ctrl+C ή «Αντιγραφή»)",
+ "DietPi-Dashboard erlauben": "Να επιτρέπεται ο πίνακας του DietPi",
+ "Systemverwaltung von DietPi mit einem Terminal mit Root-Rechten. Erreichbar nur über diese App, nicht direkt im Netz.": "Διαχείριση συστήματος του DietPi με τερματικό με δικαιώματα root. Προσβάσιμος μόνο μέσω αυτής της εφαρμογής, όχι απευθείας στο δίκτυο.",
+ "DietPi-Dashboard erlaubt": "Ο πίνακας του DietPi επιτρέπεται",
+ "DietPi-Dashboard aus": "Ο πίνακας του DietPi είναι κλειστός",
+ "startet gerade …": "εκκινεί …",
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Ο πίνακας του DietPi είναι κλειστός – επιτρέψτε τον στο Σύστημα › Για προχωρημένους"
 }

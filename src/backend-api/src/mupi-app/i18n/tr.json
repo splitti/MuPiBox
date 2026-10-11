@@ -2427,7 +2427,6 @@
  "system-options {}": "system-options {}",
  "Systemlaufwerk": "Sistem sürücüsü",
  "Systemoptionen": "Sistem seçenekleri",
- "Systemverwaltung von DietPi (Port 5252)": "DietPi sistem yönetimi (Port 5252)",
  "Tab": "Sekme",
  "Tage": "Gün",
  "Tageslimits": "Günlük limitler",
@@ -2791,5 +2790,11 @@
  "1. In Home Assistant die Integration „MuPiBox“ hinzufügen – die Box wird gefunden, sonst die Adresse oben eingeben. 2. Den Schlüssel unten kopieren und in Home Assistant einfügen. 3. Hier „Koppeln erlauben“ tippen und in Home Assistant auf „Weiter“. 4. Den Code eingeben, den das Display der Box zeigt.": "1. Home Assistant’ta «MuPiBox» entegrasyonunu ekleyin – kutu bulunur, bulunmazsa yukarıdaki adresi girin. 2. Aşağıdaki anahtarı kopyalayıp Home Assistant’a yapıştırın. 3. Burada «Eşleştirmeye izin ver»e, Home Assistant’ta «Gönder»e dokunun. 4. Kutunun ekranında görünen kodu girin.",
  "Home Assistant fragt beim Koppeln nach diesem Schlüssel. Er beweist, dass Home Assistant mit dieser Box spricht – nie einen Schlüssel aus einer anderen Quelle einfügen.": "Home Assistant eşleştirme sırasında bu anahtarı sorar. Home Assistant’ın bu kutuyla konuştuğunu kanıtlar – başka bir kaynaktan gelen anahtarı asla yapıştırmayın.",
  "Schlüssel kopieren": "Anahtarı kopyala",
- "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Seçildi – lütfen kendiniz kopyalayın (Ctrl+C veya «Kopyala»)"
+ "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Seçildi – lütfen kendiniz kopyalayın (Ctrl+C veya «Kopyala»)",
+ "DietPi-Dashboard erlauben": "DietPi panosuna izin ver",
+ "Systemverwaltung von DietPi mit einem Terminal mit Root-Rechten. Erreichbar nur über diese App, nicht direkt im Netz.": "Root yetkili bir terminalle DietPi sistem yönetimi. Yalnızca bu uygulama üzerinden erişilebilir, doğrudan ağdan değil.",
+ "DietPi-Dashboard erlaubt": "DietPi panosuna izin verildi",
+ "DietPi-Dashboard aus": "DietPi panosu kapalı",
+ "startet gerade …": "başlatılıyor …",
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "DietPi panosu kapalı – Sistem › Uzman altında izin verin"
 }

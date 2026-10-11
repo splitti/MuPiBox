@@ -2427,7 +2427,6 @@
  "system-options {}": "system-options {}",
  "Systemlaufwerk": "Systemdrev",
  "Systemoptionen": "Systemindstillinger",
- "Systemverwaltung von DietPi (Port 5252)": "DietPi-systemstyring (port 5252)",
  "Tab": "Tab",
  "Tage": "Dage",
  "Tageslimits": "Dagsgrænser",
@@ -2791,5 +2790,11 @@
  "1. In Home Assistant die Integration „MuPiBox“ hinzufügen – die Box wird gefunden, sonst die Adresse oben eingeben. 2. Den Schlüssel unten kopieren und in Home Assistant einfügen. 3. Hier „Koppeln erlauben“ tippen und in Home Assistant auf „Weiter“. 4. Den Code eingeben, den das Display der Box zeigt.": "1. Tilføj integrationen “MuPiBox” i Home Assistant – boksen bliver fundet, ellers indtaster du adressen ovenfor. 2. Kopiér nøglen nedenfor og indsæt den i Home Assistant. 3. Tryk her på “Tillad parring” og i Home Assistant på “Send”. 4. Indtast koden, som boksens skærm viser.",
  "Home Assistant fragt beim Koppeln nach diesem Schlüssel. Er beweist, dass Home Assistant mit dieser Box spricht – nie einen Schlüssel aus einer anderen Quelle einfügen.": "Home Assistant beder om denne nøgle ved parring. Den beviser, at Home Assistant taler med denne boks – indsæt aldrig en nøgle fra et andet sted.",
  "Schlüssel kopieren": "Kopiér nøgle",
- "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Markeret – kopiér det selv (Ctrl+C eller “Kopiér”)"
+ "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Markeret – kopiér det selv (Ctrl+C eller “Kopiér”)",
+ "DietPi-Dashboard erlauben": "Tillad DietPi-dashboardet",
+ "Systemverwaltung von DietPi mit einem Terminal mit Root-Rechten. Erreichbar nur über diese App, nicht direkt im Netz.": "Systemadministration af DietPi med en terminal med root-rettigheder. Kan kun nås via denne app, ikke direkte på netværket.",
+ "DietPi-Dashboard erlaubt": "DietPi-dashboardet tilladt",
+ "DietPi-Dashboard aus": "DietPi-dashboardet slukket",
+ "startet gerade …": "starter …",
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "DietPi-dashboardet er slukket – tillad det under System › Eksperter"
 }

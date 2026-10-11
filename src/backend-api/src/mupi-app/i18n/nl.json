@@ -2427,7 +2427,6 @@
  "system-options {}": "system-options {}",
  "Systemlaufwerk": "Systeemschijf",
  "Systemoptionen": "Systeemopties",
- "Systemverwaltung von DietPi (Port 5252)": "Systeembeheer van DietPi (poort 5252)",
  "Tab": "Tab",
  "Tage": "Dagen",
  "Tageslimits": "Daglimieten",
@@ -2791,5 +2790,11 @@
  "1. In Home Assistant die Integration „MuPiBox“ hinzufügen – die Box wird gefunden, sonst die Adresse oben eingeben. 2. Den Schlüssel unten kopieren und in Home Assistant einfügen. 3. Hier „Koppeln erlauben“ tippen und in Home Assistant auf „Weiter“. 4. Den Code eingeben, den das Display der Box zeigt.": "1. Voeg in Home Assistant de integratie «MuPiBox» toe – de box wordt gevonden, anders het adres hierboven invullen. 2. Kopieer de sleutel hieronder en plak hem in Home Assistant. 3. Tik hier op «Koppelen toestaan» en in Home Assistant op «Verzenden». 4. Voer de code in die het scherm van de box toont.",
  "Home Assistant fragt beim Koppeln nach diesem Schlüssel. Er beweist, dass Home Assistant mit dieser Box spricht – nie einen Schlüssel aus einer anderen Quelle einfügen.": "Home Assistant vraagt bij het koppelen om deze sleutel. Hij bewijst dat Home Assistant met deze box praat – plak nooit een sleutel uit een andere bron.",
  "Schlüssel kopieren": "Sleutel kopiëren",
- "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Geselecteerd – kopieer het zelf (Ctrl+C of «Kopiëren»)"
+ "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Geselecteerd – kopieer het zelf (Ctrl+C of «Kopiëren»)",
+ "DietPi-Dashboard erlauben": "DietPi-dashboard toestaan",
+ "Systemverwaltung von DietPi mit einem Terminal mit Root-Rechten. Erreichbar nur über diese App, nicht direkt im Netz.": "Systeembeheer van DietPi met een terminal met rootrechten. Alleen bereikbaar via deze app, niet direct in het netwerk.",
+ "DietPi-Dashboard erlaubt": "DietPi-dashboard toegestaan",
+ "DietPi-Dashboard aus": "DietPi-dashboard uit",
+ "startet gerade …": "wordt gestart …",
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Het DietPi-dashboard staat uit – toestaan onder Systeem › Experts"
 }

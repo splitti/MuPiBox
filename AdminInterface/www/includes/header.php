@@ -333,7 +333,9 @@
 				<?php if (!navTabHidden('smart')) { ?><a<?= navActive('smart.php') ?> href="<?= $link ?>smart.php"><i class="fa-solid fa-share-nodes"></i> Smart</a><?php } ?>
 				<?php /*<a href="service.php"><i class="fa-solid fa-gear"></i> Services</a>
 				<a href="tweaks.php"><i class="fa-solid fa-rocket"></i> Performance</a>*/ ?>
-				<?php if (!navTabHidden('dietpidash')) { ?><a href="<?= $link ?>" onmouseover="javascript:event.target.port=5252" target="_blank"><i class="fa-brands fa-raspberry-pi"></i> DietPi-Dash</a><?php } ?>
+				<?php /* the DietPi-Dashboard is reached through the app only (a one-time ticket; its port asks for a password nobody
+				knows): the app's page with the switch and the button */ ?>
+				<?php if (!navTabHidden('dietpidash')) { ?><a href="/app/#/experten" target="_blank"><i class="fa-brands fa-raspberry-pi"></i> DietPi-Dash</a><?php } ?>
 				<?php /*<a href="/" onmouseover="javascript:event.target.port=8081" target="_blank"><i class="fa-brands fa-youtube"></i> Youtube</a>*/ ?>
 				<?php if (!navTabHidden('logs')) { ?><a<?= navActive('logviewer.php') ?> href="<?= $link ?>logviewer.php"><i class="fa-solid fa-file-lines"></i> Logs</a><?php } ?>
 				<?php if (!navTabHidden('json')) { ?><a<?= navActive('jsoneditor.php') ?> href="<?= $link ?>jsoneditor.php"><i class="fa-solid fa-code"></i> JSON</a><?php } ?>

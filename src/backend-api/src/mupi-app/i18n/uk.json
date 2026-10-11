@@ -2427,7 +2427,6 @@
  "system-options {}": "system-options {}",
  "Systemlaufwerk": "Системний накопичувач",
  "Systemoptionen": "Параметри системи",
- "Systemverwaltung von DietPi (Port 5252)": "Керування системою DietPi (порт 5252)",
  "Tab": "Tab",
  "Tage": "Дні",
  "Tageslimits": "Денні ліміти",
@@ -2791,5 +2790,11 @@
  "1. In Home Assistant die Integration „MuPiBox“ hinzufügen – die Box wird gefunden, sonst die Adresse oben eingeben. 2. Den Schlüssel unten kopieren und in Home Assistant einfügen. 3. Hier „Koppeln erlauben“ tippen und in Home Assistant auf „Weiter“. 4. Den Code eingeben, den das Display der Box zeigt.": "1. Додайте в Home Assistant інтеграцію «MuPiBox» – скриньку буде знайдено, інакше введіть адресу вище. 2. Скопіюйте ключ нижче й вставте його в Home Assistant. 3. Торкніться тут «Дозволити з’єднання» і в Home Assistant «Надіслати». 4. Введіть код, який показує екран скриньки.",
  "Home Assistant fragt beim Koppeln nach diesem Schlüssel. Er beweist, dass Home Assistant mit dieser Box spricht – nie einen Schlüssel aus einer anderen Quelle einfügen.": "Home Assistant запитує цей ключ під час з’єднання. Він підтверджує, що Home Assistant говорить саме з цією скринькою – ніколи не вставляйте ключ з іншого джерела.",
  "Schlüssel kopieren": "Копіювати ключ",
- "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Виділено – скопіюйте самостійно (Ctrl+C або «Копіювати»)"
+ "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Виділено – скопіюйте самостійно (Ctrl+C або «Копіювати»)",
+ "DietPi-Dashboard erlauben": "Дозволити панель DietPi",
+ "Systemverwaltung von DietPi mit einem Terminal mit Root-Rechten. Erreichbar nur über diese App, nicht direkt im Netz.": "Керування системою DietPi з терміналом із правами root. Доступна лише через цей застосунок, не напряму в мережі.",
+ "DietPi-Dashboard erlaubt": "Панель DietPi дозволено",
+ "DietPi-Dashboard aus": "Панель DietPi вимкнено",
+ "startet gerade …": "запускається …",
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Панель DietPi вимкнена – дозвольте її в Система › Для досвідчених"
 }

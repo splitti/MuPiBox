@@ -2427,7 +2427,6 @@
  "system-options {}": "system-options {}",
  "Systemlaufwerk": "Järjestelmäasema",
  "Systemoptionen": "Järjestelmäasetukset",
- "Systemverwaltung von DietPi (Port 5252)": "DietPin järjestelmänhallinta (portti 5252)",
  "Tab": "Tab",
  "Tage": "Päivää",
  "Tageslimits": "Päivärajat",
@@ -2791,5 +2790,11 @@
  "1. In Home Assistant die Integration „MuPiBox“ hinzufügen – die Box wird gefunden, sonst die Adresse oben eingeben. 2. Den Schlüssel unten kopieren und in Home Assistant einfügen. 3. Hier „Koppeln erlauben“ tippen und in Home Assistant auf „Weiter“. 4. Den Code eingeben, den das Display der Box zeigt.": "1. Lisää Home Assistantiin integraatio «MuPiBox» – laatikko löytyy, muuten syötä yllä oleva osoite. 2. Kopioi alla oleva avain ja liitä se Home Assistantiin. 3. Napauta tässä «Salli parinmuodostus» ja Home Assistantissa «Lähetä». 4. Syötä koodi, jonka laatikon näyttö näyttää.",
  "Home Assistant fragt beim Koppeln nach diesem Schlüssel. Er beweist, dass Home Assistant mit dieser Box spricht – nie einen Schlüssel aus einer anderen Quelle einfügen.": "Home Assistant kysyy tätä avainta parinmuodostuksessa. Se todistaa, että Home Assistant puhuu juuri tämän laatikon kanssa – älä koskaan liitä avainta muualta.",
  "Schlüssel kopieren": "Kopioi avain",
- "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Valittu – kopioi itse (Ctrl+C tai «Kopioi»)"
+ "Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)": "Valittu – kopioi itse (Ctrl+C tai «Kopioi»)",
+ "DietPi-Dashboard erlauben": "Salli DietPi-hallintapaneeli",
+ "Systemverwaltung von DietPi mit einem Terminal mit Root-Rechten. Erreichbar nur über diese App, nicht direkt im Netz.": "DietPin järjestelmänhallinta pääteikkunalla, jossa on root-oikeudet. Käytettävissä vain tämän sovelluksen kautta, ei suoraan verkossa.",
+ "DietPi-Dashboard erlaubt": "DietPi-hallintapaneeli sallittu",
+ "DietPi-Dashboard aus": "DietPi-hallintapaneeli pois",
+ "startet gerade …": "käynnistyy …",
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "DietPi-hallintapaneeli on pois – salli se kohdassa Järjestelmä › Asiantuntijat"
 }
