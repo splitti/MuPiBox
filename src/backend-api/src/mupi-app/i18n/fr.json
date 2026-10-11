@@ -2772,5 +2772,8 @@
  "DietPi-Dashboard erlaubt": "Tableau de bord DietPi autorisé",
  "DietPi-Dashboard aus": "Tableau de bord DietPi désactivé",
  "startet gerade …": "démarrage …",
- "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Le tableau de bord DietPi est désactivé – l’autoriser sous Système › Experts"
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Le tableau de bord DietPi est désactivé – l’autoriser sous Système › Experts",
+ "Kein Passwort gesetzt": "Aucun mot de passe défini",
+ "Anmeldung ist aus": "La connexion est désactivée",
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Tout le monde sur le réseau domestique peut régler la box. Touchez pour définir un mot de passe et activer la connexion."
 }

@@ -26,7 +26,8 @@ if (session_status() === PHP_SESSION_NONE) {
 
 $__cfgRaw = file_get_contents('/etc/mupibox/mupiboxconfig.json');
 $__cfg    = json_decode($__cfgRaw, true);
-$__loginRequired = !empty($__cfg['interfacelogin']['state']);
+// (a config that cannot be read or is no JSON: the login counts as on - fail-closed, as header.php)
+$__loginRequired = !is_array($__cfg) || !empty($__cfg['interfacelogin']['state']);
 $__loggedIn      = isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;
 
 // Same idle timeout as header.php (60 min), checked BEFORE last_activity is bumped below: this

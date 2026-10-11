@@ -2772,5 +2772,8 @@
  "DietPi-Dashboard erlaubt": "Panel DietPi dozwolony",
  "DietPi-Dashboard aus": "Panel DietPi wyłączony",
  "startet gerade …": "uruchamianie …",
- "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Panel DietPi jest wyłączony – zezwól na niego w System › Eksperci"
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Panel DietPi jest wyłączony – zezwól na niego w System › Eksperci",
+ "Kein Passwort gesetzt": "Nie ustawiono hasła",
+ "Anmeldung ist aus": "Logowanie jest wyłączone",
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Każdy w sieci domowej może zmieniać ustawienia pudełka. Dotknij, aby ustawić hasło i włączyć logowanie."
 }

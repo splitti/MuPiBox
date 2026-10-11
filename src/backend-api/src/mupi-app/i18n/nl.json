@@ -2772,5 +2772,8 @@
  "DietPi-Dashboard erlaubt": "DietPi-dashboard toegestaan",
  "DietPi-Dashboard aus": "DietPi-dashboard uit",
  "startet gerade …": "wordt gestart …",
- "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Het DietPi-dashboard staat uit – toestaan onder Systeem › Experts"
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Het DietPi-dashboard staat uit – toestaan onder Systeem › Experts",
+ "Kein Passwort gesetzt": "Geen wachtwoord ingesteld",
+ "Anmeldung ist aus": "Inloggen staat uit",
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Iedereen in het thuisnetwerk kan de box instellen. Tik om een wachtwoord in te stellen en inloggen aan te zetten."
 }

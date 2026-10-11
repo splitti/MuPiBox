@@ -2772,5 +2772,8 @@
  "DietPi-Dashboard erlaubt": "DietPi-hallintapaneeli sallittu",
  "DietPi-Dashboard aus": "DietPi-hallintapaneeli pois",
  "startet gerade …": "käynnistyy …",
- "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "DietPi-hallintapaneeli on pois – salli se kohdassa Järjestelmä › Asiantuntijat"
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "DietPi-hallintapaneeli on pois – salli se kohdassa Järjestelmä › Asiantuntijat",
+ "Kein Passwort gesetzt": "Salasanaa ei ole asetettu",
+ "Anmeldung ist aus": "Kirjautuminen on pois",
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Kuka tahansa kotiverkossa voi muuttaa laatikon asetuksia. Napauta asettaaksesi salasanan ja ottaaksesi kirjautumisen käyttöön."
 }

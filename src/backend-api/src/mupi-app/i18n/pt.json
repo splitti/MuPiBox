@@ -2772,5 +2772,8 @@
  "DietPi-Dashboard erlaubt": "Painel do DietPi permitido",
  "DietPi-Dashboard aus": "Painel do DietPi desligado",
  "startet gerade …": "a iniciar …",
- "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "O painel do DietPi está desligado – permita-o em Sistema › Avançado"
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "O painel do DietPi está desligado – permita-o em Sistema › Avançado",
+ "Kein Passwort gesetzt": "Nenhuma palavra-passe definida",
+ "Anmeldung ist aus": "O início de sessão está desligado",
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Qualquer pessoa na rede doméstica pode configurar a caixa. Toque para definir uma palavra-passe e ligar o início de sessão."
 }

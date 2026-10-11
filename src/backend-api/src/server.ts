@@ -41,7 +41,7 @@ import { startNightDim } from './eltern/night-dim'
 import { bootConfigPath } from './eltern/boot-paths'
 import { startSpeech } from './speech'
 import { startBucketCleanup, parseCookie } from './eltern/middleware'
-import { SESSION_COOKIE, validateSession } from './eltern/auth'
+import { isLoginRequired, SESSION_COOKIE, validateSession } from './eltern/auth'
 import { type IncomingMessage, request as httpRequest } from 'node:http'
 import type { Duplex } from 'node:stream'
 import { SUDO_BACKUP_SNIPPET, backupBeforeWrite } from './file-backup'
@@ -366,8 +366,8 @@ app.use(cors(corsOptionsFor))
 // itself (its display, the scripts, the Telegram bot, the admin interface's PHP - all on 127.0.0.1) or a parent signed
 // in to the app (its session cookie, the one of the admin interface's login too). The app itself (/app) and its own
 // API (/api/app, before /api/eltern: login, magic links, …) check for themselves. Without the login switch the box stays open, as chosen.
-const loginRequired = () =>
-  (getMupiboxConfigSync() as { interfacelogin?: { state?: unknown } } | undefined)?.interfacelogin?.state === true
+// (fail-closed: a config that cannot be read counts as the last readable one, without any as login required)
+const loginRequired = () => isLoginRequired()
 app.use((req, res, next) => {
   const p = req.path
   if (isLoopback(req) || p === '/app' || p.startsWith('/app/') || p === '/manual' || p.startsWith('/manual/') || p.startsWith('/api/app/') || p.startsWith('/api/eltern/') || p === '/parents' || p === '/eltern' || !loginRequired()) {

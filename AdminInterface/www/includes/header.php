@@ -96,7 +96,8 @@
 		return in_array($key, $navTabsHidden, true);
 	}
 	// Null-safe: a freshly seeded config may not carry the block yet.
-	$loginEnabled = $data['interfacelogin']['state'] ?? false;
+	// (an unreadable config: the login counts as on - fail-closed, see mupibox_config_unreadable)
+	$loginEnabled = ($data['interfacelogin']['state'] ?? false) || mupibox_config_unreadable();
 	$hashedPassword = $data['interfacelogin']['password'] ?? '';
 
 	$change=0;

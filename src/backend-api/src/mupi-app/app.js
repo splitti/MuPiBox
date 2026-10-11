@@ -1360,8 +1360,13 @@ function nextQuiet(schedule) {
 }
 
 async function loadNotices(root) {
-  const [hat, sync, access] = await Promise.all([api('/api/mupihat'), api('/api/spotify-sync/status'), api(`${API}/spotify-access`)])
+  const [hat, sync, access, auth] = await Promise.all([api('/api/mupihat'), api('/api/spotify-sync/status'), api(`${API}/spotify-access`), api(`${API}/auth-info`)])
   const notes = []
+  // no password, or the login off: everyone in the home network can set up the box - said every time, it is not closed
+  // for good (the parents decide on the page Passwort)
+  if (auth.ok && (auth.body?.passwordConfigured === false || auth.body?.loginRequired === false)) {
+    notes.push(['lock', auth.body.passwordConfigured === false ? 'Kein Passwort gesetzt' : 'Anmeldung ist aus', 'Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.', 'passwort'])
+  }
   const pct = hat.body?.Bat_Percent
   const battery = hat.ok && !noBattery(hat.body)
   if (battery && hat.body?.ChargeProblemSince) notes.push(['plug', 'Akku lädt nicht', NOT_CHARGING, 'akku'])
