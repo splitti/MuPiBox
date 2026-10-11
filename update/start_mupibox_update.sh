@@ -776,6 +776,14 @@ rm -f /tmp/mupibox-update-failed
 	# The Samba share is a standalone server (smbd); the Active Directory domain controller came with the package and
 	# is not needed
 	systemctl disable --now samba-ad-dc.service >&3 2>&3
+	# The share's announcement for the Windows network (WS-Discovery, so the box shows up there): wsdd2 (Debian 12 and 13;
+	# Debian 13 has no wsdd), a box with wsdd keeps it. Installed when neither is, running together with the share (only when Samba is on).
+	WSD=$(apt-cache show wsdd2 >/dev/null 2>&1 && echo wsdd2 || echo wsdd)
+	dpkg -s wsdd >/dev/null 2>&1 || dpkg -s wsdd2 >/dev/null 2>&1 || apt-get --yes install ${WSD} >&3 2>&3
+	for u in wsdd wsdd2; do
+		systemctl cat ${u}.service >/dev/null 2>&1 || continue
+		if systemctl is-enabled --quiet smbd.service; then systemctl enable --now ${u}.service >&3 2>&3; else systemctl disable --now ${u}.service >&3 2>&3; fi
+	done
 
 	# Tolerant replacement for DietPi's WiFi monitor (see scripts/mupibox/wifi_monitor.sh): the original re-connected at
 	# the first lost ping - also while the box roams between access points, 5-15 s without network each time. For

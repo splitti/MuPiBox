@@ -42,8 +42,17 @@ const SHARES: Record<string, { unit: string; on: string; off: string }> = {
   samba: {
     unit: 'smbd',
     // (the admin interface's setup: its smb.conf and the user dietpi with the password "mupibox")
-    on: `if ! command -v smbd >/dev/null; then ${APT} apt-get install samba wsdd -y && wget -q ${TEMPLATES}/smb.conf -O /etc/samba/smb.conf && (echo mupibox; echo mupibox) | smbpasswd -s -a dietpi; fi && systemctl enable smbd && systemctl start smbd`,
-    off: 'systemctl stop smbd; systemctl disable smbd',
+    // With the share its announcement for the Windows network (WS-Discovery): wsdd2 (Debian 12 and 13; Debian 13 has no
+    // wsdd, "apt-get install samba wsdd" failed whole there), a box that has wsdd keeps it - installed when neither is,
+    // switched on and off with smbd. It was never started before: the box was missing in the Windows network.
+    on:
+      `WSD=$(apt-cache show wsdd2 >/dev/null 2>&1 && echo wsdd2 || echo wsdd); ` +
+      `if ! command -v smbd >/dev/null; then ${APT} apt-get install samba $WSD -y && wget -q ${TEMPLATES}/smb.conf -O /etc/samba/smb.conf && (echo mupibox; echo mupibox) | smbpasswd -s -a dietpi || exit 1; fi; ` +
+      // (the announcement is a help, not the share: without it the switch still counts as done)
+      `dpkg -s wsdd >/dev/null 2>&1 || dpkg -s wsdd2 >/dev/null 2>&1 || ${APT} apt-get install $WSD -y; ` +
+      `systemctl enable smbd && systemctl start smbd || exit 1; ` +
+      `for u in wsdd wsdd2; do systemctl cat $u.service >/dev/null 2>&1 && systemctl enable $u && systemctl restart $u; done; exit 0`,
+    off: 'systemctl stop smbd; systemctl disable smbd; for u in wsdd wsdd2; do systemctl disable --now $u >/dev/null 2>&1; done; true',
   },
   ftp: {
     unit: 'proftpd',
