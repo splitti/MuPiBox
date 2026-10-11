@@ -533,6 +533,20 @@ export async function verifyAppPassword(plain: string, cfg: unknown): Promise<bo
   }
 }
 
+// The admin interface's password every box comes with (config/templates/mupiboxconfig.json) - written in its
+// instructions, so known to everyone. It stays a password (the login can be on with it), the app only says so.
+const DEFAULT_PASSWORD = 'MuP1B0x'
+let defaultCheck: { key: string; result: boolean } | undefined
+
+/** Is the password still the well-known default one? (bcrypt takes a moment on the Pi: checked once per password) */
+export async function usesDefaultPassword(cfg: unknown): Promise<boolean> {
+  if (!hasAppPassword(cfg)) return false
+  const e = (cfg as { eltern?: { password?: unknown } } | undefined)?.eltern?.password
+  const key = `${adminHash(cfg) ?? ''}|${typeof e === 'string' ? e : JSON.stringify(e ?? null)}`
+  if (defaultCheck?.key !== key) defaultCheck = { key, result: await verifyAppPassword(DEFAULT_PASSWORD, cfg) }
+  return defaultCheck.result
+}
+
 /** Sets the one password (bcrypt, readable by the admin interface too); the old parents' password goes. */
 export async function setAppPassword(
   plain: string,

@@ -382,7 +382,6 @@
  "Anmelden geht auch ohne Passwort: per QR-Code am Display (Statusanzeige lange drücken) oder mit einem Link über Telegram.": "Přihlásit se lze i bez hesla: pomocí QR kódu na displeji (dlouhým stiskem stavového řádku) nebo odkazem přes Telegram.",
  "Anmeldung": "Přihlášení",
  "Anmeldung ausgeschaltet": "Přihlášení vypnuto",
- "Anmeldung ausschalten": "Vypnout přihlášení",
  "Anmeldung bei Spotify fehlgeschlagen": "Přihlášení ke Spotify se nezdařilo",
  "Anmeldung eingeschaltet": "Přihlášení zapnuto",
  "Anmeldung einschalten": "Zapnout přihlášení",
@@ -716,7 +715,6 @@
  "Damit die Box Spotify abspielen kann, braucht sie eine eigene Spotify-App (kostenlos, auf developer.spotify.com) und deine Anmeldung. Der Assistent führt Schritt für Schritt hin.": "Aby Box mohl přehrávat Spotify, potřebuje vlastní aplikaci Spotify (zdarma, na developer.spotify.com) a vaše přihlášení. Průvodce vás provede krok za krokem.",
  "Danach liest die Box den Akku wieder aus.": "Potom Box znovu načte baterii.",
  "Danach stoppt die Box auch mitten im Titel oder Album.": "Potom se Box zastaví, i uprostřed skladby nebo alba.",
- "Dann kommt jeder im Heimnetz ohne Passwort in die App und das Admin-Interface.": "Pak se do aplikace a admin rozhraní dostane v domácí síti kdokoli bez hesla.",
  "Dark Red": "Dark Red",
  "Darstellung": "Zobrazení",
  "Das Admin-Interface lädt Bibliotheken von öffentlichen Servern (jQuery, jsDelivr, cdnjs); dabei sehen diese die Adresse des Browsers.": "Administrační rozhraní načítá knihovny z veřejných serverů (jQuery, jsDelivr, cdnjs); ty přitom vidí adresu prohlížeče.",
@@ -2799,5 +2797,11 @@
  "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Panel DietPi je vypnutý – povolte ho v Systém › Experti",
  "Kein Passwort gesetzt": "Heslo není nastaveno",
  "Anmeldung ist aus": "Přihlášení je vypnuté",
- "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Kdokoli v domácí síti může box nastavovat. Klepněte pro nastavení hesla a zapnutí přihlášení."
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Kdokoli v domácí síti může box nastavovat. Klepněte pro nastavení hesla a zapnutí přihlášení.",
+ "Anmeldung ausschalten?": "Vypnout přihlášení?",
+ "Die Box nutzt noch das Standardpasswort, das in jeder Anleitung steht. Antippen, um ein eigenes festzulegen.": "Box stále používá výchozí heslo, které je v každém návodu. Klepnutím nastavíte vlastní.",
+ "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Přesto chci box provozovat bez hesla.",
+ "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Bez přihlášení může box nastavit kdokoli v domácí síti – i hosté na Wi-Fi a zařízení, která neznáš: mazat obsah, připojit Spotify, vypnout box a používat administrační rozhraní se všemi právy.",
+ "Standardpasswort aktiv": "Aktivní výchozí heslo",
+ "Verstanden": "Rozumím"
 }

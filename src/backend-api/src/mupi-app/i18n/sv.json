@@ -382,7 +382,6 @@
  "Anmelden geht auch ohne Passwort: per QR-Code am Display (Statusanzeige lange drücken) oder mit einem Link über Telegram.": "Det går att logga in utan lösenord också: via QR-kod på displayen (håll in statusindikatorn) eller med en länk via Telegram.",
  "Anmeldung": "Inloggning",
  "Anmeldung ausgeschaltet": "Inloggning avstängd",
- "Anmeldung ausschalten": "Stäng av inloggning",
  "Anmeldung bei Spotify fehlgeschlagen": "Inloggningen på Spotify misslyckades",
  "Anmeldung eingeschaltet": "Inloggning påslagen",
  "Anmeldung einschalten": "Slå på inloggning",
@@ -716,7 +715,6 @@
  "Damit die Box Spotify abspielen kann, braucht sie eine eigene Spotify-App (kostenlos, auf developer.spotify.com) und deine Anmeldung. Der Assistent führt Schritt für Schritt hin.": "För att boxen ska kunna spela Spotify behöver den en egen Spotify-app (gratis, på developer.spotify.com) och din inloggning. Guiden tar dig dit steg för steg.",
  "Danach liest die Box den Akku wieder aus.": "Därefter läser boxen av batteriet igen.",
  "Danach stoppt die Box auch mitten im Titel oder Album.": "Därefter stannar boxen, även mitt i ett spår eller album.",
- "Dann kommt jeder im Heimnetz ohne Passwort in die App und das Admin-Interface.": "Då kommer alla i hemnätverket in i appen och adminsystemet utan lösenord.",
  "Dark Red": "Dark Red",
  "Darstellung": "Visning",
  "Das Admin-Interface lädt Bibliotheken von öffentlichen Servern (jQuery, jsDelivr, cdnjs); dabei sehen diese die Adresse des Browsers.": "Adminmiljön laddar bibliotek från offentliga servrar (jQuery, jsDelivr, cdnjs); dessa ser då webbläsarens adress.",
@@ -2799,5 +2797,11 @@
  "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "DietPi-instrumentpanelen är av – tillåt den under System › Experter",
  "Kein Passwort gesetzt": "Inget lösenord angivet",
  "Anmeldung ist aus": "Inloggningen är av",
- "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Alla i hemnätverket kan ställa in boxen. Tryck för att ange ett lösenord och slå på inloggningen."
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Alla i hemnätverket kan ställa in boxen. Tryck för att ange ett lösenord och slå på inloggningen.",
+ "Anmeldung ausschalten?": "Stänga av inloggning?",
+ "Die Box nutzt noch das Standardpasswort, das in jeder Anleitung steht. Antippen, um ein eigenes festzulegen.": "Boxen använder fortfarande standardlösenordet som står i varje bruksanvisning. Tryck för att välja ett eget.",
+ "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Jag vill ändå använda boxen utan lösenord.",
+ "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Utan inloggning kan alla i hemnätverket ställa in boxen – även gäster på wifi och enheter du inte känner: radera innehåll, ansluta Spotify, stänga av boxen och använda admin-gränssnittet med alla rättigheter.",
+ "Standardpasswort aktiv": "Standardlösenord aktivt",
+ "Verstanden": "Uppfattat"
 }

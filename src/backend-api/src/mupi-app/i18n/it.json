@@ -382,7 +382,6 @@
  "Anmelden geht auch ohne Passwort: per QR-Code am Display (Statusanzeige lange drücken) oder mit einem Link über Telegram.": "Puoi accedere anche senza password: con il codice QR sul display (tieni premuta la barra di stato) o con un link via Telegram.",
  "Anmeldung": "Accesso",
  "Anmeldung ausgeschaltet": "Accesso disattivato",
- "Anmeldung ausschalten": "Disattiva l'accesso",
  "Anmeldung bei Spotify fehlgeschlagen": "Accesso a Spotify non riuscito",
  "Anmeldung eingeschaltet": "Accesso attivato",
  "Anmeldung einschalten": "Attiva l'accesso",
@@ -716,7 +715,6 @@
  "Damit die Box Spotify abspielen kann, braucht sie eine eigene Spotify-App (kostenlos, auf developer.spotify.com) und deine Anmeldung. Der Assistent führt Schritt für Schritt hin.": "Per riprodurre Spotify, la box ha bisogno di una propria app Spotify (gratuita, su developer.spotify.com) e del tuo accesso. La procedura guidata ti accompagna passo per passo.",
  "Danach liest die Box den Akku wieder aus.": "Dopo, la box legge di nuovo la batteria.",
  "Danach stoppt die Box auch mitten im Titel oder Album.": "Poi il box si ferma, anche a metà di un brano o di un album.",
- "Dann kommt jeder im Heimnetz ohne Passwort in die App und das Admin-Interface.": "Chiunque nella rete di casa accede allora all'app e all'interfaccia di amministrazione senza password.",
  "Dark Red": "Dark Red",
  "Darstellung": "Visualizzazione",
  "Das Admin-Interface lädt Bibliotheken von öffentlichen Servern (jQuery, jsDelivr, cdnjs); dabei sehen diese die Adresse des Browsers.": "L'interfaccia di amministrazione carica librerie da server pubblici (jQuery, jsDelivr, cdnjs); questi vedono così l'indirizzo del browser.",
@@ -2799,5 +2797,11 @@
  "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "La dashboard di DietPi è disattivata – consentila in Sistema › Esperti",
  "Kein Passwort gesetzt": "Nessuna password impostata",
  "Anmeldung ist aus": "L’accesso è disattivato",
- "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Chiunque nella rete domestica può configurare il box. Tocca per impostare una password e attivare l’accesso."
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Chiunque nella rete domestica può configurare il box. Tocca per impostare una password e attivare l’accesso.",
+ "Anmeldung ausschalten?": "Disattivare l’accesso?",
+ "Die Box nutzt noch das Standardpasswort, das in jeder Anleitung steht. Antippen, um ein eigenes festzulegen.": "Il box usa ancora la password predefinita che si trova in ogni manuale. Tocca per impostarne una tua.",
+ "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Voglio comunque usare il box senza password.",
+ "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Senza accesso chiunque nella rete di casa può configurare il box – anche ospiti sul Wi-Fi e dispositivi che non conosci: eliminare contenuti, collegare Spotify, spegnere il box e usare l’interfaccia di amministrazione con tutti i diritti.",
+ "Standardpasswort aktiv": "Password predefinita attiva",
+ "Verstanden": "Ho capito"
 }

@@ -1360,12 +1360,14 @@ function nextQuiet(schedule) {
 }
 
 async function loadNotices(root) {
-  const [hat, sync, access, auth] = await Promise.all([api('/api/mupihat'), api('/api/spotify-sync/status'), api(`${API}/spotify-access`), api(`${API}/auth-info`)])
+  const [hat, sync, access, auth] = await Promise.all([api('/api/mupihat'), api('/api/spotify-sync/status'), api(`${API}/spotify-access`), api(`${API}/auth-state`)])
   const notes = []
   // no password, or the login off: everyone in the home network can set up the box - said every time, it is not closed
-  // for good (the parents decide on the page Passwort)
-  if (auth.ok && (auth.body?.passwordConfigured === false || auth.body?.loginRequired === false)) {
-    notes.push(['lock', auth.body.passwordConfigured === false ? 'Kein Passwort gesetzt' : 'Anmeldung ist aus', 'Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.', 'passwort'])
+  // for good (the parents decide on the page Passwort); with the login on but the well-known default password, that
+  if (auth.ok && (auth.body?.passwordSet === false || auth.body?.loginRequired === false)) {
+    notes.push(['lock', auth.body.passwordSet === false ? 'Kein Passwort gesetzt' : 'Anmeldung ist aus', 'Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.', 'passwort'])
+  } else if (auth.ok && auth.body?.defaultPassword) {
+    notes.push(['lock', 'Standardpasswort aktiv', 'Die Box nutzt noch das Standardpasswort, das in jeder Anleitung steht. Antippen, um ein eigenes festzulegen.', 'passwort'])
   }
   const pct = hat.body?.Bat_Percent
   const battery = hat.ok && !noBattery(hat.body)
@@ -7497,6 +7499,33 @@ function securityTop() {
   ]
 }
 
+// Switching the login off: possible as before, but warned about and confirmed once more - the button only works once
+// "Verstanden" is switched on (the server asks for that confirmation too)
+function askLoginOff() {
+  return new Promise((resolve) => {
+    let answer = false
+    openSheet(
+      `<h2>${esc('Anmeldung ausschalten?')}</h2>
+       <div class="note warn">${icon('info', 18)}<span>${esc('Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.')}</span></div>
+       <div class="row"><span class="lbl"><b>${esc('Verstanden')}</b><small>${esc('Ich möchte die Box trotzdem ohne Passwort betreiben.')}</small></span>
+         <label class="switch"><input type="checkbox" data-agree aria-label="${esc('Verstanden')}"><span></span></label></div>
+       <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn danger" data-ok disabled>${esc('Ausschalten')}</button></div>`,
+      (sheet, close) => {
+        const ok = sheet.querySelector('[data-ok]')
+        sheet.querySelector('[data-agree]').onchange = (e) => {
+          ok.disabled = !e.target.checked
+        }
+        sheet.querySelector('[data-close]').onclick = close
+        ok.onclick = () => {
+          answer = true
+          close()
+        }
+      },
+      () => setTimeout(() => resolve(answer)),
+    )
+  })
+}
+
 function mountSecurity(root, page) {
   for (const b of root.querySelectorAll('[data-eye]')) {
     b.onclick = () => {
@@ -7551,11 +7580,12 @@ function mountSecurity(root, page) {
     })
   $('#sec-login', root).onchange = async (e) => {
     const required = e.target.checked
-    if (!(await ask(required ? 'Anmeldung einschalten' : 'Anmeldung ausschalten', required ? 'Die App und das Admin-Interface fragen dann nach dem Passwort.' : 'Dann kommt jeder im Heimnetz ohne Passwort in die App und das Admin-Interface.', required ? 'Einschalten' : 'Ausschalten'))) {
+    const agreed = required ? await ask('Anmeldung einschalten', 'Die App und das Admin-Interface fragen dann nach dem Passwort.', 'Einschalten') : await askLoginOff()
+    if (!agreed) {
       e.target.checked = !required
       return
     }
-    const r = await api(`${API}/auth/login-required`, { method: 'POST', body: { required } })
+    const r = await api(`${API}/auth/login-required`, { method: 'POST', body: required ? { required } : { required, confirmed: true } })
     if (!r.ok) {
       e.target.checked = !required
       return toast(r.body?.error === 'wrong_password' ? 'Das Passwort stimmt nicht' : r.status === 429 ? 'Zu viele Versuche – bitte kurz warten' : 'Nicht gespeichert', 'info')

@@ -382,7 +382,6 @@
  "Anmelden geht auch ohne Passwort: per QR-Code am Display (Statusanzeige lange drücken) oder mit einem Link über Telegram.": "Logowanie działa też bez hasła: przez kod QR na wyświetlaczu (przytrzymaj wskaźnik stanu) albo linkiem przez Telegram.",
  "Anmeldung": "Logowanie",
  "Anmeldung ausgeschaltet": "Logowanie wyłączone",
- "Anmeldung ausschalten": "Wyłącz logowanie",
  "Anmeldung bei Spotify fehlgeschlagen": "Logowanie do Spotify nie powiodło się",
  "Anmeldung eingeschaltet": "Logowanie włączone",
  "Anmeldung einschalten": "Włącz logowanie",
@@ -716,7 +715,6 @@
  "Damit die Box Spotify abspielen kann, braucht sie eine eigene Spotify-App (kostenlos, auf developer.spotify.com) und deine Anmeldung. Der Assistent führt Schritt für Schritt hin.": "Aby Box mógł odtwarzać Spotify, potrzebuje własnej aplikacji Spotify (bezpłatnej, na developer.spotify.com) i twojego logowania. Asystent poprowadzi cię krok po kroku.",
  "Danach liest die Box den Akku wieder aus.": "Potem Box znów odczyta akumulator.",
  "Danach stoppt die Box auch mitten im Titel oder Album.": "Potem Box się zatrzymuje, także w środku utworu lub albumu.",
- "Dann kommt jeder im Heimnetz ohne Passwort in die App und das Admin-Interface.": "Wtedy każdy w sieci domowej dostanie się do aplikacji i interfejsu administratora bez hasła.",
  "Dark Red": "Dark Red",
  "Darstellung": "Wyświetlanie",
  "Das Admin-Interface lädt Bibliotheken von öffentlichen Servern (jQuery, jsDelivr, cdnjs); dabei sehen diese die Adresse des Browsers.": "Interfejs administracyjny wczytuje biblioteki z publicznych serwerów (jQuery, jsDelivr, cdnjs); serwery te widzą wówczas adres przeglądarki.",
@@ -2799,5 +2797,11 @@
  "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Panel DietPi jest wyłączony – zezwól na niego w System › Eksperci",
  "Kein Passwort gesetzt": "Nie ustawiono hasła",
  "Anmeldung ist aus": "Logowanie jest wyłączone",
- "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Każdy w sieci domowej może zmieniać ustawienia pudełka. Dotknij, aby ustawić hasło i włączyć logowanie."
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Każdy w sieci domowej może zmieniać ustawienia pudełka. Dotknij, aby ustawić hasło i włączyć logowanie.",
+ "Anmeldung ausschalten?": "Wyłączyć logowanie?",
+ "Die Box nutzt noch das Standardpasswort, das in jeder Anleitung steht. Antippen, um ein eigenes festzulegen.": "Box nadal używa domyślnego hasła, które jest w każdej instrukcji. Stuknij, aby ustawić własne.",
+ "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Mimo to chcę używać boxa bez hasła.",
+ "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Bez logowania każdy w sieci domowej może ustawiać box – także goście w Wi-Fi i urządzenia, których nie znasz: usuwać treści, łączyć Spotify, wyłączać box i używać panelu administracyjnego ze wszystkimi uprawnieniami.",
+ "Standardpasswort aktiv": "Aktywne hasło domyślne",
+ "Verstanden": "Rozumiem"
 }

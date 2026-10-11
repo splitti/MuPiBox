@@ -382,7 +382,6 @@
  "Anmelden geht auch ohne Passwort: per QR-Code am Display (Statusanzeige lange drücken) oder mit einem Link über Telegram.": "Η σύνδεση γίνεται και χωρίς κωδικό πρόσβασης: με κωδικό QR στην οθόνη (παρατεταμένο πάτημα στην ένδειξη κατάστασης) ή με σύνδεσμο μέσω Telegram.",
  "Anmeldung": "Σύνδεση",
  "Anmeldung ausgeschaltet": "Η σύνδεση απενεργοποιήθηκε",
- "Anmeldung ausschalten": "Απενεργοποίηση σύνδεσης",
  "Anmeldung bei Spotify fehlgeschlagen": "Η σύνδεση στο Spotify απέτυχε",
  "Anmeldung eingeschaltet": "Η σύνδεση ενεργοποιήθηκε",
  "Anmeldung einschalten": "Ενεργοποίηση σύνδεσης",
@@ -716,7 +715,6 @@
  "Damit die Box Spotify abspielen kann, braucht sie eine eigene Spotify-App (kostenlos, auf developer.spotify.com) und deine Anmeldung. Der Assistent führt Schritt für Schritt hin.": "Για να παίζει το κουτί Spotify, χρειάζεται δική του εφαρμογή Spotify (δωρεάν, στο developer.spotify.com) και τη σύνδεσή σου. Ο οδηγός σε καθοδηγεί βήμα βήμα.",
  "Danach liest die Box den Akku wieder aus.": "Μετά το κουτί θα διαβάζει ξανά την μπαταρία.",
  "Danach stoppt die Box auch mitten im Titel oder Album.": "Μετά το κουτί σταματά, ακόμη και στη μέση ενός κομματιού ή άλμπουμ.",
- "Dann kommt jeder im Heimnetz ohne Passwort in die App und das Admin-Interface.": "Τότε όλοι στο οικιακό δίκτυο μπαίνουν χωρίς κωδικό πρόσβασης στην εφαρμογή και τη διεπαφή διαχείρισης.",
  "Dark Red": "Dark Red",
  "Darstellung": "Εμφάνιση",
  "Das Admin-Interface lädt Bibliotheken von öffentlichen Servern (jQuery, jsDelivr, cdnjs); dabei sehen diese die Adresse des Browsers.": "Η διεπαφή διαχείρισης φορτώνει βιβλιοθήκες από δημόσιους διακομιστές (jQuery, jsDelivr, cdnjs)· έτσι αυτοί βλέπουν τη διεύθυνση του προγράμματος περιήγησης.",
@@ -2799,5 +2797,11 @@
  "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Ο πίνακας του DietPi είναι κλειστός – επιτρέψτε τον στο Σύστημα › Για προχωρημένους",
  "Kein Passwort gesetzt": "Δεν έχει οριστεί κωδικός",
  "Anmeldung ist aus": "Η σύνδεση είναι απενεργοποιημένη",
- "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Οποιοσδήποτε στο οικιακό δίκτυο μπορεί να ρυθμίσει το κουτί. Πατήστε για να ορίσετε κωδικό και να ενεργοποιήσετε τη σύνδεση."
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Οποιοσδήποτε στο οικιακό δίκτυο μπορεί να ρυθμίσει το κουτί. Πατήστε για να ορίσετε κωδικό και να ενεργοποιήσετε τη σύνδεση.",
+ "Anmeldung ausschalten?": "Απενεργοποίηση σύνδεσης;",
+ "Die Box nutzt noch das Standardpasswort, das in jeder Anleitung steht. Antippen, um ein eigenes festzulegen.": "Το κουτί χρησιμοποιεί ακόμα τον προεπιλεγμένο κωδικό που υπάρχει σε κάθε εγχειρίδιο. Πάτησε για να ορίσεις δικό σου.",
+ "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Θέλω παρ’ όλα αυτά να λειτουργεί το κουτί χωρίς κωδικό.",
+ "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Χωρίς σύνδεση, οποιοσδήποτε στο οικιακό δίκτυο μπορεί να ρυθμίσει το κουτί – και επισκέπτες στο Wi-Fi και συσκευές που δεν γνωρίζεις: να διαγράψει περιεχόμενο, να συνδέσει το Spotify, να απενεργοποιήσει το κουτί και να χρησιμοποιήσει το περιβάλλον διαχείρισης με όλα τα δικαιώματα.",
+ "Standardpasswort aktiv": "Ενεργός προεπιλεγμένος κωδικός",
+ "Verstanden": "Κατάλαβα"
 }

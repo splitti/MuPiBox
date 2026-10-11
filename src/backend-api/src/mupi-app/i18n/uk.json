@@ -382,7 +382,6 @@
  "Anmelden geht auch ohne Passwort: per QR-Code am Display (Statusanzeige lange drücken) oder mit einem Link über Telegram.": "Увійти можна й без пароля: за QR-кодом на дисплеї (довге натискання на індикатор стану) або за посиланням через Telegram.",
  "Anmeldung": "Вхід",
  "Anmeldung ausgeschaltet": "Вхід вимкнено",
- "Anmeldung ausschalten": "Вимкнути вхід",
  "Anmeldung bei Spotify fehlgeschlagen": "Не вдалося увійти в Spotify",
  "Anmeldung eingeschaltet": "Вхід увімкнено",
  "Anmeldung einschalten": "Увімкнути вхід",
@@ -716,7 +715,6 @@
  "Damit die Box Spotify abspielen kann, braucht sie eine eigene Spotify-App (kostenlos, auf developer.spotify.com) und deine Anmeldung. Der Assistent führt Schritt für Schritt hin.": "Щоб бокс міг відтворювати Spotify, йому потрібен власний застосунок Spotify (безкоштовний, на developer.spotify.com) і твій вхід. Майстер проведе тебе крок за кроком.",
  "Danach liest die Box den Akku wieder aus.": "Після цього бокс знову зчитуватиме акумулятор.",
  "Danach stoppt die Box auch mitten im Titel oder Album.": "Після цього бокс зупиняється, навіть посеред треку чи альбому.",
- "Dann kommt jeder im Heimnetz ohne Passwort in die App und das Admin-Interface.": "Тоді будь-хто в домашній мережі зможе увійти в застосунок і адміністративний інтерфейс без пароля.",
  "Dark Red": "Dark Red",
  "Darstellung": "Відображення",
  "Das Admin-Interface lädt Bibliotheken von öffentlichen Servern (jQuery, jsDelivr, cdnjs); dabei sehen diese die Adresse des Browsers.": "Адміністративний інтерфейс завантажує бібліотеки з публічних серверів (jQuery, jsDelivr, cdnjs); при цьому вони бачать адресу браузера.",
@@ -2799,5 +2797,11 @@
  "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Панель DietPi вимкнена – дозвольте її в Система › Для досвідчених",
  "Kein Passwort gesetzt": "Пароль не встановлено",
  "Anmeldung ist aus": "Вхід вимкнено",
- "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Будь-хто в домашній мережі може налаштовувати скриньку. Торкніться, щоб встановити пароль і ввімкнути вхід."
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Будь-хто в домашній мережі може налаштовувати скриньку. Торкніться, щоб встановити пароль і ввімкнути вхід.",
+ "Anmeldung ausschalten?": "Вимкнути вхід?",
+ "Die Box nutzt noch das Standardpasswort, das in jeder Anleitung steht. Antippen, um ein eigenes festzulegen.": "Бокс досі використовує стандартний пароль, який є в кожній інструкції. Торкнися, щоб задати власний.",
+ "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Я все одно хочу користуватися боксом без пароля.",
+ "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Без входу будь-хто в домашній мережі може налаштовувати бокс – і гості у Wi-Fi, і незнайомі пристрої: видаляти вміст, підключати Spotify, вимикати бокс і користуватися інтерфейсом адміністратора з усіма правами.",
+ "Standardpasswort aktiv": "Активний стандартний пароль",
+ "Verstanden": "Зрозуміло"
 }
