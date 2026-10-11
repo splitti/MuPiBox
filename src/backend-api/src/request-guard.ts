@@ -70,9 +70,15 @@ const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 /** Paths a foreign site may send the browser to as a top-level navigation. */
 const NAVIGATION_ALLOWED_API = ['/api/app/spotify-oauth/callback', '/api/eltern/spotify-oauth/callback']
 
+/**
+ * A value from a request for the log: quoted, escaped and short. Logs are shown in the admin interface, and a Host header
+ * written there as it came could carry markup.
+ */
+export const logValue = (v: unknown): string => JSON.stringify(String(v ?? '').slice(0, 200))
+
 function reject(req: Request, res: Parameters<RequestHandler>[1], reason: string) {
   console.warn(
-    `${new Date().toLocaleString()}: [MuPiBox-Server] Refused ${req.method} ${req.path} (${reason}; host=${req.headers.host ?? ''} origin=${req.headers.origin ?? ''})`,
+    `${new Date().toLocaleString()}: [MuPiBox-Server] Refused ${req.method} ${logValue(req.path)} (${reason}; host=${logValue(req.headers.host)} origin=${logValue(req.headers.origin)})`,
   )
   res.status(403).send('forbidden')
 }

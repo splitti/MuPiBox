@@ -45,9 +45,13 @@ function isSameHostOrigin(req) {
 
 const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
+// a value from a request for the log: quoted, escaped and short - a log is shown in the admin interface, and a Host
+// header written there as it came could carry markup
+const logValue = (v) => JSON.stringify(String(v ?? '').slice(0, 200))
+
 function reject(req, res, reason) {
   console.warn(
-    `${new Date().toLocaleString()}: [Spotify Control] Refused ${req.method} ${req.path} (${reason}; host=${req.headers.host || ''} origin=${req.headers.origin || ''})`,
+    `${new Date().toLocaleString()}: [Spotify Control] Refused ${req.method} ${logValue(req.path)} (${reason}; host=${logValue(req.headers.host)} origin=${logValue(req.headers.origin)})`,
   )
   res.status(403).send('forbidden')
 }

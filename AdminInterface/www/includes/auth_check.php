@@ -16,6 +16,9 @@
 //
 // Auth logic mirrors header.php's gate at line ~100 verbatim.
 
+// (what these endpoints send is never taken for something else - a text or a download read as HTML by the browser)
+header('X-Content-Type-Options: nosniff');
+
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params(['httponly' => true, 'samesite' => 'Lax']);
     session_start();
