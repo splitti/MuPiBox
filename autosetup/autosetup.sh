@@ -662,6 +662,14 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 		systemctl enable ${service}.service >&3 2>&3
 		systemctl start ${service}.service >&3 2>&3
 	done
+	# The share's announcement for the Windows network (WS-Discovery, so the box shows up there): wsdd2 (Debian 12 and 13;
+	# Debian 13 has no wsdd), a box with wsdd keeps it. Installed when neither is, running together with the share.
+	WSD=$(apt-cache show wsdd2 >/dev/null 2>&1 && echo wsdd2 || echo wsdd)
+	dpkg -s wsdd >/dev/null 2>&1 || dpkg -s wsdd2 >/dev/null 2>&1 || apt-get --yes install ${WSD} >&3 2>&3
+	for u in wsdd wsdd2; do
+		systemctl cat ${u}.service >/dev/null 2>&1 || continue
+		systemctl enable --now ${u}.service >&3 2>&3
+	done
 	# The DietPi-Dashboard: a password nobody knows, an inner port, off - the app switches it on and opens it with a
 	# one-time ticket (dietpi_dashboard.sh, backend-api eltern/dietpi-dashboard.ts)
 	if [ -x /opt/dietpi-dashboard/dietpi-dashboard ]; then
