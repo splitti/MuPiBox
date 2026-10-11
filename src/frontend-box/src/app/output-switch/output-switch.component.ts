@@ -6,8 +6,8 @@ import type { AudioOutputState } from '../player/player.page'
  * The field shows where the box plays: the Bluetooth symbol (a Bluetooth device), headphones (the 3.5 mm output) or
  * the speaker (the box's own sound card). Without a choice (one output) only the volume. With two outputs a tap goes
  * to the other one at once, with more the window opens (the player decides, see outputSwitchTap); held for a moment it
- * always opens the window. States of the field: ready (a Bluetooth device is connected, not playing - green dot, or its
- * battery when it reports one; the battery also while it plays), connecting (turning ring), not found (red dot; the
+ * always opens the window. States of the field: ready (a Bluetooth device is connected, not playing - green dot), bt
+ * (it plays - its battery when it reports one), connecting (turning ring), not found (red dot; the
  * player shows the message below the header). The volume is only shown - louder and softer are the big buttons.
  */
 @Component({
@@ -50,14 +50,14 @@ export class OutputSwitchComponent {
   private readonly optionCount = computed(() => Math.max(this.cards().length, 1) + this.devices().length)
 
   /**
-   * The Bluetooth device's battery when it reports it (backend-api btBattery), shown where the green dot was - while it
-   * plays and while it is connected next to the box: a small battery, green, yellow at 20 % and less, red at 10 % and
-   * less. Without a report the field stays as it was.
+   * The Bluetooth device's battery when it reports it (backend-api btBattery), while it plays (headphones or a speaker):
+   * a small battery at the top right, green, yellow at 20 % and less, red at 10 % and less. Not while the box itself
+   * plays - the green dot stays there; without a report the field stays as it was.
    */
   protected readonly battery = computed(() => {
     const d = this.device()
     const state = this.state()
-    return d?.connected && typeof d.battery === 'number' && (state === 'bt' || state === 'ready') ? Math.max(0, Math.min(100, d.battery)) : null
+    return d?.connected && typeof d.battery === 'number' && state === 'bt' ? Math.max(0, Math.min(100, d.battery)) : null
   })
   protected readonly batteryLevel = computed(() => {
     const b = this.battery() ?? 100
