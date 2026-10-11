@@ -32,8 +32,8 @@
         <span class="oc-hold" aria-hidden="true"></span>
       }
       @if (battery() !== null) {
-        <!-- the headphones' battery where the green dot was (the dot stays when they report none); the fill at least a
-             sliver, so a low battery is still seen -->
+        <!-- the battery of the Bluetooth device that plays (none: nothing); the fill at least a sliver, so a low battery
+             is still seen -->
         <span class="oc-bat" [attr.data-level]="batteryLevel()" aria-hidden="true"><span class="oc-bat-fill" [style.width.%]="(battery() ?? 0) < 22 ? 22 : battery()"></span></span>
       } @else if (state() === 'ready' || state() === 'notfound') {
         <span class="oc-dot"></span>
