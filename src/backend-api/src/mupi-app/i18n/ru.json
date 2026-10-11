@@ -2407,7 +2407,6 @@
  "system-options {}": "system-options {}",
  "Systemlaufwerk": "Системный накопитель",
  "Systemoptionen": "Системные параметры",
- "Systemverwaltung von DietPi (Port 5252)": "Управление системой DietPi (порт 5252)",
  "Tab": "Tab",
  "Tage": "Дни",
  "Tageslimits": "Дневные лимиты",
@@ -2767,5 +2766,11 @@
  "HDMI-Ausgang zusätzlich": "Дополнительно выход HDMI",
  "Für einen Monitor oder Fernseher am HDMI-Anschluss, neben der Soundkarte der Box. Gewählt wird im Player über „Hören mit“ oder in der App bei der Ausgabe.": "Для монитора или телевизора на разъёме HDMI, рядом со звуковой картой коробки. Выбирается в плеере через «Слушать через» или в приложении в строке вывода.",
  "Der HDMI-Ausgang gilt nach einem Neustart.": "Выход HDMI заработает после перезапуска.",
- "Der HDMI-Ausgang ist nach einem Neustart aus.": "Выход HDMI будет выключен после перезапуска."
+ "Der HDMI-Ausgang ist nach einem Neustart aus.": "Выход HDMI будет выключен после перезапуска.",
+ "DietPi-Dashboard erlauben": "Разрешить панель DietPi",
+ "Systemverwaltung von DietPi mit einem Terminal mit Root-Rechten. Erreichbar nur über diese App, nicht direkt im Netz.": "Управление системой DietPi с терминалом с правами root. Доступна только через это приложение, не напрямую в сети.",
+ "DietPi-Dashboard erlaubt": "Панель DietPi разрешена",
+ "DietPi-Dashboard aus": "Панель DietPi выключена",
+ "startet gerade …": "запускается …",
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Панель DietPi выключена – разрешите её в Система › Для экспертов"
 }

@@ -23,7 +23,7 @@ dtoverlay=gpio-poweroff,gpiopin=4,active_low=1
 
 ## How to check and fix it
 
-Sign in to the box via SSH (or open a terminal in the DietPi dashboard) and look for the overlay:
+Sign in to the box via SSH (or open a terminal in the DietPi dashboard, if it is allowed under Settings › System › Experts) and look for the overlay:
 
 ```
 grep -n gpio-poweroff /boot/config.txt

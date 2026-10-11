@@ -329,14 +329,7 @@ rm -f /tmp/mupibox-update-failed
 		echo "DietPi-Dashboard download failed - keeping the installed version" >&3 2>&3
 	fi
 	rm -f "${DD_TMP}"
-	DD_CONF_TMP=$(mktemp /tmp/dietpi-dashboard-conf.XXXXXX)
-	if curl -sSfL --retry 3 --retry-delay 3 -m 60 "https://raw.githubusercontent.com/nonnorm/DietPi-Dashboard/${DD_VERSION}/config.toml" -o "${DD_CONF_TMP}" >&3 2>&3 && [ -s "${DD_CONF_TMP}" ]; then
-		cp -f "${DD_CONF_TMP}" /opt/dietpi-dashboard/config.toml >&3 2>&3
-	fi
-	rm -f "${DD_CONF_TMP}"
-	#bash -c 'su dietpi -c "yes \"\" | sudo /boot/dietpi/dietpi-software install 200"' >&3 2>&3
-	/usr/bin/sed -i 's/#terminal_user = "root"/terminal_user = "dietpi"/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
-	#sudo /usr/bin/sed -i 's/pass = true/pass = false/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
+	# (its config.toml is written by dietpi_dashboard.sh further down - the release's default had no password, see there)
 	after=$(date +%s)
 	echo -e "## Setup DietPi-Dashboard  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
@@ -816,8 +809,17 @@ rm -f /tmp/mupibox-update-failed
 	systemctl start mupi_check_monitor.service >&3 2>&3
 	systemctl enable mupi_powerled.service >&3 2>&3
 	systemctl start mupi_powerled.service >&3 2>&3
-	systemctl enable dietpi-dashboard.service >&3 2>&3
-	systemctl start dietpi-dashboard.service >&3 2>&3
+	# The DietPi-Dashboard behind the app (dietpi_dashboard.sh): a password nobody knows, an inner port, reached through a
+	# one-time ticket of the app only - without a password it was a terminal as dietpi (sudo) for everyone in the Wi-Fi.
+	# On only when switched on in the app (mupibox.dietpiDashboard): every box that had it open is switched off once.
+	if [ -x /opt/dietpi-dashboard/dietpi-dashboard ]; then
+		/usr/local/bin/mupibox/dietpi_dashboard.sh setup >&3 2>&3
+		if [ "$(/usr/bin/jq -r '.mupibox.dietpiDashboard // false' /etc/mupibox/mupiboxconfig.json 2>/dev/null)" = "true" ]; then
+			/usr/local/bin/mupibox/dietpi_dashboard.sh on >&3 2>&3
+		else
+			/usr/local/bin/mupibox/dietpi_dashboard.sh off >&3 2>&3
+		fi
+	fi
 	if [ "${MUPI_ETHERNET}" = "1" ]; then
 		systemctl enable mupi_ethernet.service >&3 2>&3
 		systemctl start mupi_ethernet.service >&3 2>&3

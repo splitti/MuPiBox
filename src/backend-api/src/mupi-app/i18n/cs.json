@@ -2407,7 +2407,6 @@
  "system-options {}": "system-options {}",
  "Systemlaufwerk": "Systémová jednotka",
  "Systemoptionen": "Možnosti systému",
- "Systemverwaltung von DietPi (Port 5252)": "Správa systému DietPi (port 5252)",
  "Tab": "Tab",
  "Tage": "Dny",
  "Tageslimits": "Denní limity",
@@ -2767,5 +2766,11 @@
  "HDMI-Ausgang zusätzlich": "Navíc výstup HDMI",
  "Für einen Monitor oder Fernseher am HDMI-Anschluss, neben der Soundkarte der Box. Gewählt wird im Player über „Hören mit“ oder in der App bei der Ausgabe.": "Pro monitor nebo televizi na portu HDMI, vedle zvukové karty boxu. Volí se v přehrávači přes „Poslouchat přes“ nebo v aplikaci v řádku výstupu.",
  "Der HDMI-Ausgang gilt nach einem Neustart.": "Výstup HDMI platí po restartu.",
- "Der HDMI-Ausgang ist nach einem Neustart aus.": "Výstup HDMI je po restartu vypnutý."
+ "Der HDMI-Ausgang ist nach einem Neustart aus.": "Výstup HDMI je po restartu vypnutý.",
+ "DietPi-Dashboard erlauben": "Povolit panel DietPi",
+ "Systemverwaltung von DietPi mit einem Terminal mit Root-Rechten. Erreichbar nur über diese App, nicht direkt im Netz.": "Správa systému DietPi s terminálem s právy roota. Dostupný jen přes tuto aplikaci, ne přímo v síti.",
+ "DietPi-Dashboard erlaubt": "Panel DietPi povolen",
+ "DietPi-Dashboard aus": "Panel DietPi vypnut",
+ "startet gerade …": "spouští se …",
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Panel DietPi je vypnutý – povolte ho v Systém › Experti"
 }

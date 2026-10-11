@@ -2407,7 +2407,6 @@
  "system-options {}": "system-options {}",
  "Systemlaufwerk": "Järjestelmäasema",
  "Systemoptionen": "Järjestelmäasetukset",
- "Systemverwaltung von DietPi (Port 5252)": "DietPin järjestelmänhallinta (portti 5252)",
  "Tab": "Tab",
  "Tage": "Päivää",
  "Tageslimits": "Päivärajat",
@@ -2767,5 +2766,11 @@
  "HDMI-Ausgang zusätzlich": "Myös HDMI-lähtö",
  "Für einen Monitor oder Fernseher am HDMI-Anschluss, neben der Soundkarte der Box. Gewählt wird im Player über „Hören mit“ oder in der App bei der Ausgabe.": "Näytölle tai televisiolle HDMI-liitännässä, laatikon äänikortin rinnalle. Valitse se soittimessa kohdasta «Kuuntele» tai sovelluksessa ulostulon rivillä.",
  "Der HDMI-Ausgang gilt nach einem Neustart.": "HDMI-lähtö tulee voimaan uudelleenkäynnistyksen jälkeen.",
- "Der HDMI-Ausgang ist nach einem Neustart aus.": "HDMI-lähtö on pois uudelleenkäynnistyksen jälkeen."
+ "Der HDMI-Ausgang ist nach einem Neustart aus.": "HDMI-lähtö on pois uudelleenkäynnistyksen jälkeen.",
+ "DietPi-Dashboard erlauben": "Salli DietPi-hallintapaneeli",
+ "Systemverwaltung von DietPi mit einem Terminal mit Root-Rechten. Erreichbar nur über diese App, nicht direkt im Netz.": "DietPin järjestelmänhallinta pääteikkunalla, jossa on root-oikeudet. Käytettävissä vain tämän sovelluksen kautta, ei suoraan verkossa.",
+ "DietPi-Dashboard erlaubt": "DietPi-hallintapaneeli sallittu",
+ "DietPi-Dashboard aus": "DietPi-hallintapaneeli pois",
+ "startet gerade …": "käynnistyy …",
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "DietPi-hallintapaneeli on pois – salli se kohdassa Järjestelmä › Asiantuntijat"
 }

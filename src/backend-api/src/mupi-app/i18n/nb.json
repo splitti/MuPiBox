@@ -2407,7 +2407,6 @@
  "system-options {}": "system-options {}",
  "Systemlaufwerk": "Systemstasjon",
  "Systemoptionen": "Systemalternativer",
- "Systemverwaltung von DietPi (Port 5252)": "Systemadministrasjon fra DietPi (port 5252)",
  "Tab": "Tab",
  "Tage": "Dager",
  "Tageslimits": "Daglige grenser",
@@ -2767,5 +2766,11 @@
  "HDMI-Ausgang zusätzlich": "HDMI-utgang i tillegg",
  "Für einen Monitor oder Fernseher am HDMI-Anschluss, neben der Soundkarte der Box. Gewählt wird im Player über „Hören mit“ oder in der App bei der Ausgabe.": "For en skjerm eller TV på HDMI-porten, ved siden av boksens lydkort. Du velger den i spilleren under «Lytt med» eller i appen ved utgangen.",
  "Der HDMI-Ausgang gilt nach einem Neustart.": "HDMI-utgangen gjelder etter en omstart.",
- "Der HDMI-Ausgang ist nach einem Neustart aus.": "HDMI-utgangen er av etter en omstart."
+ "Der HDMI-Ausgang ist nach einem Neustart aus.": "HDMI-utgangen er av etter en omstart.",
+ "DietPi-Dashboard erlauben": "Tillat DietPi-dashbordet",
+ "Systemverwaltung von DietPi mit einem Terminal mit Root-Rechten. Erreichbar nur über diese App, nicht direkt im Netz.": "Systemadministrasjon av DietPi med en terminal med root-rettigheter. Kan bare nås via denne appen, ikke direkte i nettverket.",
+ "DietPi-Dashboard erlaubt": "DietPi-dashbordet tillatt",
+ "DietPi-Dashboard aus": "DietPi-dashbordet av",
+ "startet gerade …": "starter …",
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "DietPi-dashbordet er av – tillat det under System › Eksperter"
 }

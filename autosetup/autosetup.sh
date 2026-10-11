@@ -337,8 +337,8 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 		echo "DietPi-Dashboard ${DD_VERSION} download failed - the box runs without it" >&3 2>&3
 	fi
 	rm -f "${DD_TMP}"
-	curl -sSfL --retry 3 --retry-delay 3 -m 60 "https://raw.githubusercontent.com/nonnorm/DietPi-Dashboard/${DD_VERSION}/config.toml" -o /opt/dietpi-dashboard/config.toml >&3 2>&3
-	sed -i 's/#terminal_user = "root"/terminal_user = "dietpi"/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
+	# (its config.toml is written by dietpi_dashboard.sh when the services are set up - the release's default had no
+	# password; off until it is switched on in the app)
 	after=$(date +%s)
 	echo -e "## Setup DietPi-Dashboard ## finished after $((after - before)) seconds" >&3 2>&3
 	STEP=$((STEP + 1))
@@ -650,12 +650,16 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	# The Samba share is a standalone server (smbd); the Active Directory domain controller is not needed
 	systemctl disable --now samba-ad-dc.service >&3 2>&3
 	systemctl daemon-reload >&3 2>&3
-	for service in mupi_wifi mupi_check_internet mupi_check_monitor mupi_idle_shutdown smbd mupi_startstop pulseaudio mupi_splash mupi_powerled dietpi-dashboard mupi_ethernet mupi_goodbye; do
-		# (the dashboard only when its program came - see "Setup DietPi-Dashboard")
-		[ "${service}" = "dietpi-dashboard" ] && [ ! -x /opt/dietpi-dashboard/dietpi-dashboard ] && continue
+	for service in mupi_wifi mupi_check_internet mupi_check_monitor mupi_idle_shutdown smbd mupi_startstop pulseaudio mupi_splash mupi_powerled mupi_ethernet mupi_goodbye; do
 		systemctl enable ${service}.service >&3 2>&3
 		systemctl start ${service}.service >&3 2>&3
 	done
+	# The DietPi-Dashboard: a password nobody knows, an inner port, off - the app switches it on and opens it with a
+	# one-time ticket (dietpi_dashboard.sh, backend-api eltern/dietpi-dashboard.ts)
+	if [ -x /opt/dietpi-dashboard/dietpi-dashboard ]; then
+		/usr/local/bin/mupibox/dietpi_dashboard.sh setup >&3 2>&3
+		/usr/local/bin/mupibox/dietpi_dashboard.sh off >&3 2>&3
+	fi
 	after=$(date +%s)
 	echo -e "## Enable and start services ## finished after $((after - before)) seconds" >&3 2>&3
 	STEP=$((STEP + 1))

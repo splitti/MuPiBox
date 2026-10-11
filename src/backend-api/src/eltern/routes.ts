@@ -53,6 +53,7 @@ import { registerPinnedCardRoutes } from './pinned-cards'
 import { dropStatic, registerWifiStaticRoutes, startWifiStaticWatch } from './wifi-static'
 import { decodeWpaSsid } from '../wpa-ssid'
 import { registerHardwareRoutes } from './hardware'
+import { registerDietpiDashboardRoutes, startDietpiDashboard } from './dietpi-dashboard'
 import { registerServicesRoutes } from './services'
 import { registerSystemRoutes } from './system'
 import { registerAdminRoutes } from './admin'
@@ -408,6 +409,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   registerWifiStaticRoutes(router, { wifiIface })
   startWifiStaticWatch({ wifiIface })
   registerHardwareRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  // (the DietPi-Dashboard behind the app: port 5252 answered by this server, see dietpi-dashboard.ts)
+  registerDietpiDashboardRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  startDietpiDashboard({ getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerServicesRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerSystemRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   // (pm2 runs server.js from its folder: templates/ lies next to it)

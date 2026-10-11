@@ -2407,7 +2407,6 @@
  "system-options {}": "system-options {}",
  "Systemlaufwerk": "Μονάδα συστήματος",
  "Systemoptionen": "Επιλογές συστήματος",
- "Systemverwaltung von DietPi (Port 5252)": "Διαχείριση συστήματος DietPi (θύρα 5252)",
  "Tab": "Tab",
  "Tage": "Ημέρες",
  "Tageslimits": "Ημερήσια όρια",
@@ -2767,5 +2766,11 @@
  "HDMI-Ausgang zusätzlich": "Και έξοδος HDMI",
  "Für einen Monitor oder Fernseher am HDMI-Anschluss, neben der Soundkarte der Box. Gewählt wird im Player über „Hören mit“ oder in der App bei der Ausgabe.": "Για οθόνη ή τηλεόραση στη θύρα HDMI, δίπλα στην κάρτα ήχου του κουτιού. Επιλέγεται στο πρόγραμμα αναπαραγωγής μέσω «Ακούστε με» ή στην εφαρμογή, στη γραμμή εξόδου.",
  "Der HDMI-Ausgang gilt nach einem Neustart.": "Η έξοδος HDMI ισχύει μετά από επανεκκίνηση.",
- "Der HDMI-Ausgang ist nach einem Neustart aus.": "Η έξοδος HDMI είναι κλειστή μετά από επανεκκίνηση."
+ "Der HDMI-Ausgang ist nach einem Neustart aus.": "Η έξοδος HDMI είναι κλειστή μετά από επανεκκίνηση.",
+ "DietPi-Dashboard erlauben": "Να επιτρέπεται ο πίνακας του DietPi",
+ "Systemverwaltung von DietPi mit einem Terminal mit Root-Rechten. Erreichbar nur über diese App, nicht direkt im Netz.": "Διαχείριση συστήματος του DietPi με τερματικό με δικαιώματα root. Προσβάσιμος μόνο μέσω αυτής της εφαρμογής, όχι απευθείας στο δίκτυο.",
+ "DietPi-Dashboard erlaubt": "Ο πίνακας του DietPi επιτρέπεται",
+ "DietPi-Dashboard aus": "Ο πίνακας του DietPi είναι κλειστός",
+ "startet gerade …": "εκκινεί …",
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Ο πίνακας του DietPi είναι κλειστός – επιτρέψτε τον στο Σύστημα › Για προχωρημένους"
 }
