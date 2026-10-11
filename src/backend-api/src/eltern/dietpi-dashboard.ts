@@ -52,13 +52,20 @@ async function open(req: IncomingMessage, res: ServerResponse): Promise<void> {
     return page(res, 403, '<h1>DietPi-Dashboard</h1><p>Dieser Link ist abgelaufen. Bitte das Dashboard in der MuPiBox-App öffnen (Einstellungen › System › Experten).</p>')
   }
   const r = await run(['token'], 10000)
-  const token = r.stdout.trim()
-  if (!r.ok || !/^[A-Za-z0-9._-]+$/.test(token)) {
+  const [token = '', fingerprint = ''] = r.stdout.trim().split(' ')
+  if (!r.ok || !/^[A-Za-z0-9._-]+$/.test(token) || !/^[0-9a-f]{64}$/.test(fingerprint)) {
     log('no token (is the dashboard running?)')
     return page(res, 503, '<h1>DietPi-Dashboard</h1><p>Das Dashboard antwortet nicht. In der App aus- und wieder einschalten, sonst die Box neu starten.</p>')
   }
-  // (the key the dashboard uses: "<hostname>:<port>" of the page; the token only ever in this answer)
-  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' })
+  // The token is bound to the cookie FINGERPRINT (its SHA-256 is in the token): set here as the dashboard's login sets
+  // it. The key the dashboard keeps the token under: "<hostname>:<port>" of the page. Both only ever in this answer.
+  res.writeHead(200, {
+    'Content-Type': 'text/html; charset=utf-8',
+    'Cache-Control': 'no-store',
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'no-referrer',
+    'Set-Cookie': `FINGERPRINT=${fingerprint}; Path=/; HttpOnly; SameSite=Strict`,
+  })
   res.end(
     `<!doctype html><html><head><meta charset="utf-8"><title>DietPi-Dashboard</title></head><body><script>` +
       `try{var k=location.hostname+":"+location.port,t=JSON.parse(localStorage.getItem("tokens")||"{}");t[k]=${JSON.stringify(token)};localStorage.setItem("tokens",JSON.stringify(t))}catch(e){}` +
