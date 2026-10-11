@@ -1,6 +1,10 @@
 <?php
 require __DIR__ . '/includes/auth_check.php';
 
+// Plain text for every mode: PHP's default text/html let a log line that someone put into a log from outside (a
+// Host header, a file name) run as script on this page's origin - where the admin interface has root rights.
+header('Content-Type: text/plain; charset=utf-8');
+
 // backend.php streams pm2 log contents and service status as plain text
 // for XHR consumers in the admin UI. Use the header-only gate so the
 // fetch() body stays free of HTML chrome.

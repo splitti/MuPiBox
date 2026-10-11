@@ -59,7 +59,7 @@ import { episodeKey, MAX_KEEP, type OfflineEpisode, PodcastOffline } from './pod
 import { setFeedHeadReader } from './podcast-search'
 import { EpisodeState, episodeStateSettings } from './episode-state'
 import { uiScale } from './ui-scale'
-import { browserGuard, corsOptionsFor, isAllowedHost, isLoopback, localOnly, localOrElternSession, PROXY_PORT, setConfiguredHosts, viaProxy } from './request-guard'
+import { browserGuard, corsOptionsFor, isAllowedHost, isLoopback, localOnly, localOrElternSession, logValue, PROXY_PORT, setConfiguredHosts, viaProxy } from './request-guard'
 
 // Force IPv4 for DNS lookups to avoid EAI_AGAIN errors on Raspberry Pi
 // This fixes issues where IPv6 is misconfigured or not supported
@@ -8373,7 +8373,7 @@ app.use('/app/vnc', express.static(noVncDir, { index: false, setHeaders: (res) =
 // password), from a page of the box itself (a foreign page's websocket carries its own Origin), passed on to websockify
 function proxyVncUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): void {
   const refuse = (status: string) => {
-    console.warn(`${new Date().toLocaleString()}: [MuPiBox-Server] VNC connection refused (${status}): ${req.url} host=${req.headers.host ?? ''} origin=${req.headers.origin ?? ''}`)
+    console.warn(`${new Date().toLocaleString()}: [MuPiBox-Server] VNC connection refused (${status}): ${logValue(req.url)} host=${logValue(req.headers.host)} origin=${logValue(req.headers.origin)}`)
     socket.end(`HTTP/1.1 ${status}\r\nConnection: close\r\n\r\n`)
   }
   if (!(req.url ?? '').startsWith('/app/vnc/websockify')) return refuse('404 Not Found')
