@@ -380,7 +380,6 @@
  "Anmelden geht auch ohne Passwort: per QR-Code am Display (Statusanzeige lange drücken) oder mit einem Link über Telegram.": "Login går også uden adgangskode: via QR-kode på skærmen (langt tryk på statusvisningen) eller med et link via Telegram.",
  "Anmeldung": "Login",
  "Anmeldung ausgeschaltet": "Login slået fra",
- "Anmeldung ausschalten": "Slå login fra",
  "Anmeldung bei Spotify fehlgeschlagen": "Login hos Spotify mislykkedes",
  "Anmeldung eingeschaltet": "Login slået til",
  "Anmeldung einschalten": "Slå login til",
@@ -712,7 +711,6 @@
  "Damit die Box Spotify abspielen kann, braucht sie eine eigene Spotify-App (kostenlos, auf developer.spotify.com) und deine Anmeldung. Der Assistent führt Schritt für Schritt hin.": "For at boksen kan afspille Spotify, skal den have sin egen Spotify-app (gratis, på developer.spotify.com) og dit login. Assistenten fører dig derhen trin for trin.",
  "Danach liest die Box den Akku wieder aus.": "Derefter aflæser boksen batteriet igen.",
  "Danach stoppt die Box auch mitten im Titel oder Album.": "Derefter stopper boksen, også midt i et nummer eller album.",
- "Dann kommt jeder im Heimnetz ohne Passwort in die App und das Admin-Interface.": "Så kommer alle i hjemmenetværket ind i appen og admin-grænsefladen uden adgangskode.",
  "Dark Red": "Dark Red",
  "Darstellung": "Visning",
  "Das Admin-Interface lädt Bibliotheken von öffentlichen Servern (jQuery, jsDelivr, cdnjs); dabei sehen diese die Adresse des Browsers.": "Admin-grænsefladen indlæser biblioteker fra offentlige servere (jQuery, jsDelivr, cdnjs); disse ser derved browserens adresse.",
@@ -2775,5 +2773,11 @@
  "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "DietPi-dashboardet er slukket – tillad det under System › Eksperter",
  "Kein Passwort gesetzt": "Ingen adgangskode angivet",
  "Anmeldung ist aus": "Login er slået fra",
- "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Alle på hjemmenetværket kan indstille boksen. Tryk for at angive en adgangskode og slå login til."
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Alle på hjemmenetværket kan indstille boksen. Tryk for at angive en adgangskode og slå login til.",
+ "Anmeldung ausschalten?": "Slå login fra?",
+ "Die Box nutzt noch das Standardpasswort, das in jeder Anleitung steht. Antippen, um ein eigenes festzulegen.": "Boksen bruger stadig standardadgangskoden, som står i enhver vejledning. Tryk for at vælge din egen.",
+ "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Jeg vil alligevel bruge boksen uden adgangskode.",
+ "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Uden login kan alle i hjemmenetværket indstille boksen – også gæster på wi-fi og enheder, du ikke kender: slette indhold, forbinde Spotify, slukke boksen og bruge admin-interfacet med alle rettigheder.",
+ "Standardpasswort aktiv": "Standardadgangskode aktiv",
+ "Verstanden": "Forstået"
 }

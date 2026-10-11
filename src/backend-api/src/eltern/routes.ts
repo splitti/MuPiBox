@@ -30,6 +30,7 @@ import {
   APP_PASSWORD_MIN_LENGTH,
   appLoginRequired,
   hasAppPassword,
+  usesDefaultPassword,
   setAppPassword,
   verifyAppPassword,
   PERSISTENT_TTL_MS,
@@ -618,7 +619,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       passwordSet: hasAppPassword(cfg),
       loginRequired: appLoginRequired(cfg),
       loginSwitch: (cfg as { interfacelogin?: { state?: unknown } } | undefined)?.interfacelogin?.state === true,
-      defaultPassword: await verifyAppPassword('MuP1B0x', cfg),
+      defaultPassword: await usesDefaultPassword(cfg),
       keptDevices: keptSessionCount(),
     })
   })
@@ -669,7 +670,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /** POST /api/app/auth/login-required {required} - "Anmeldung verlangen" (interfacelogin.state). Whoever is signed
-   *  in may switch it (no second password, decided on 29.09.2026); switching on needs a password to ask for. */
+   *  in may switch it (no second password, decided on 29.09.2026); switching on needs a password to ask for. Switching
+   *  off needs {confirmed: true}: the app warns first and has it confirmed once more (everyone in the home network can
+   *  then set up the box). */
   router.post('/auth/login-required', requireSession, requireCsrf, ipRateLimit(5), async (req, res) => {
     const body = (req.body ?? {}) as { required?: unknown; current?: unknown }
     if (typeof body.required !== 'boolean') {
@@ -682,6 +685,10 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       return
     }
     const wasOn = (cfg as { interfacelogin?: { state?: unknown } } | undefined)?.interfacelogin?.state === true
+    if (!body.required && wasOn && (body as { confirmed?: unknown }).confirmed !== true) {
+      res.status(400).json({ error: 'confirm_needed' })
+      return
+    }
     const callerAnon = validateSession(req.elternSessionId)?.anon === true
     await deps.updateMupiboxConfig((c) => {
       const login = ((c.interfacelogin as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>

@@ -31,6 +31,8 @@
 	// Replaces the ~15 inline `file_put_contents+sudo mv` patterns across
 	// admin.php, mupi.php, mupihat.php, spotify.php and smart.php.
 	require_once __DIR__ . '/save_config.php';
+	// the limit on wrong passwords at the login below
+	require_once __DIR__ . '/login_limit.php';
 
 	if (isset($_POST['spotifyget']) && $_POST['spotifyget'] === 'saving') {
 		if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
@@ -248,7 +250,13 @@
 				exit;
 			}
 			if (isset($_POST['password'])) {
-				if (password_verify($_POST['password'], $hashedPassword)) {
+				$loginIp = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+				if (mupibox_login_blocked($loginIp)) {
+					// (not even checked: the password is not tried while the limit holds)
+					http_response_code(429);
+					$loginError = "Too many attempts - please wait a minute.";
+				} elseif (password_verify($_POST['password'], $hashedPassword)) {
+					mupibox_login_record($loginIp, true);
 					// new session id at login: a session id planted before the login must not
 					// become a logged-in one (session fixation)
 					session_regenerate_id(true);
@@ -257,6 +265,7 @@
 					header("Location: " . $_SERVER['PHP_SELF']);
 					exit;
 				} else {
+					mupibox_login_record($loginIp, false);
 					sleep(1); // slows down password guessing
 					$loginError = "Wrong password!"; // was $error, which the form never printed
 				}

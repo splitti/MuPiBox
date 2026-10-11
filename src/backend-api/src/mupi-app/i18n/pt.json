@@ -380,7 +380,6 @@
  "Anmelden geht auch ohne Passwort: per QR-Code am Display (Statusanzeige lange drücken) oder mit einem Link über Telegram.": "Também é possível iniciar sessão sem palavra-passe: através do código QR no ecrã (pressiona demoradamente o indicador de estado) ou com uma ligação pelo Telegram.",
  "Anmeldung": "Sessão",
  "Anmeldung ausgeschaltet": "Sessão desativada",
- "Anmeldung ausschalten": "Desativar sessão",
  "Anmeldung bei Spotify fehlgeschlagen": "O início de sessão no Spotify falhou",
  "Anmeldung eingeschaltet": "Sessão ativada",
  "Anmeldung einschalten": "Ativar sessão",
@@ -712,7 +711,6 @@
  "Damit die Box Spotify abspielen kann, braucht sie eine eigene Spotify-App (kostenlos, auf developer.spotify.com) und deine Anmeldung. Der Assistent führt Schritt für Schritt hin.": "Para a caixa poder reproduzir o Spotify, precisa da sua própria app do Spotify (gratuita, em developer.spotify.com) e da tua sessão. O assistente guia-te passo a passo.",
  "Danach liest die Box den Akku wieder aus.": "Depois, a caixa volta a ler a bateria.",
  "Danach stoppt die Box auch mitten im Titel oder Album.": "Depois a caixa para, mesmo a meio de uma faixa ou de um álbum.",
- "Dann kommt jeder im Heimnetz ohne Passwort in die App und das Admin-Interface.": "Assim, qualquer pessoa na rede de casa entra na app e na interface de administração sem palavra-passe.",
  "Dark Red": "Dark Red",
  "Darstellung": "Apresentação",
  "Das Admin-Interface lädt Bibliotheken von öffentlichen Servern (jQuery, jsDelivr, cdnjs); dabei sehen diese die Adresse des Browsers.": "A interface de administração carrega bibliotecas a partir de servidores públicos (jQuery, jsDelivr, cdnjs); estes veem, assim, o endereço do navegador.",
@@ -2775,5 +2773,11 @@
  "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "O painel do DietPi está desligado – permita-o em Sistema › Avançado",
  "Kein Passwort gesetzt": "Nenhuma palavra-passe definida",
  "Anmeldung ist aus": "O início de sessão está desligado",
- "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Qualquer pessoa na rede doméstica pode configurar a caixa. Toque para definir uma palavra-passe e ligar o início de sessão."
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Qualquer pessoa na rede doméstica pode configurar a caixa. Toque para definir uma palavra-passe e ligar o início de sessão.",
+ "Anmeldung ausschalten?": "Desativar o início de sessão?",
+ "Die Box nutzt noch das Standardpasswort, das in jeder Anleitung steht. Antippen, um ein eigenes festzulegen.": "A caixa ainda usa a palavra-passe padrão que está em todos os manuais. Toca para definir a tua.",
+ "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Mesmo assim quero usar a caixa sem palavra-passe.",
+ "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Sem início de sessão, qualquer pessoa na rede doméstica pode configurar a caixa – também convidados no Wi-Fi e dispositivos que não conheces: apagar conteúdos, ligar o Spotify, desligar a caixa e usar a interface de administração com todos os direitos.",
+ "Standardpasswort aktiv": "Palavra-passe padrão ativa",
+ "Verstanden": "Entendido"
 }

@@ -380,7 +380,6 @@
  "Anmelden geht auch ohne Passwort: per QR-Code am Display (Statusanzeige lange drücken) oder mit einem Link über Telegram.": "Kirjautuminen onnistuu myös ilman salasanaa: QR-koodilla näytöltä (paina tilanäyttöä pitkään) tai Telegram-linkillä.",
  "Anmeldung": "Kirjautuminen",
  "Anmeldung ausgeschaltet": "Kirjautuminen pois päältä",
- "Anmeldung ausschalten": "Poista kirjautuminen käytöstä",
  "Anmeldung bei Spotify fehlgeschlagen": "Kirjautuminen Spotifyhin epäonnistui",
  "Anmeldung eingeschaltet": "Kirjautuminen päällä",
  "Anmeldung einschalten": "Ota kirjautuminen käyttöön",
@@ -712,7 +711,6 @@
  "Damit die Box Spotify abspielen kann, braucht sie eine eigene Spotify-App (kostenlos, auf developer.spotify.com) und deine Anmeldung. Der Assistent führt Schritt für Schritt hin.": "Jotta laatikko voi toistaa Spotifya, se tarvitsee oman Spotify-sovelluksen (ilmainen, osoitteessa developer.spotify.com) ja kirjautumisesi. Ohjattu asennus opastaa vaihe vaiheelta.",
  "Danach liest die Box den Akku wieder aus.": "Sen jälkeen laatikko lukee akun taas.",
  "Danach stoppt die Box auch mitten im Titel oder Album.": "Sen jälkeen laatikko pysähtyy, myös kesken kappaleen tai albumin.",
- "Dann kommt jeder im Heimnetz ohne Passwort in die App und das Admin-Interface.": "Silloin kuka tahansa kotiverkossa pääsee sovellukseen ja hallintaliittymään ilman salasanaa.",
  "Dark Red": "Dark Red",
  "Darstellung": "Näyttö",
  "Das Admin-Interface lädt Bibliotheken von öffentlichen Servern (jQuery, jsDelivr, cdnjs); dabei sehen diese die Adresse des Browsers.": "Hallintaliittymä lataa kirjastoja julkisilta palvelimilta (jQuery, jsDelivr, cdnjs); nämä näkevät tällöin selaimen osoitteen.",
@@ -2775,5 +2773,11 @@
  "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "DietPi-hallintapaneeli on pois – salli se kohdassa Järjestelmä › Asiantuntijat",
  "Kein Passwort gesetzt": "Salasanaa ei ole asetettu",
  "Anmeldung ist aus": "Kirjautuminen on pois",
- "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Kuka tahansa kotiverkossa voi muuttaa laatikon asetuksia. Napauta asettaaksesi salasanan ja ottaaksesi kirjautumisen käyttöön."
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Kuka tahansa kotiverkossa voi muuttaa laatikon asetuksia. Napauta asettaaksesi salasanan ja ottaaksesi kirjautumisen käyttöön.",
+ "Anmeldung ausschalten?": "Poistetaanko kirjautuminen käytöstä?",
+ "Die Box nutzt noch das Standardpasswort, das in jeder Anleitung steht. Antippen, um ein eigenes festzulegen.": "Laatikko käyttää yhä oletussalasanaa, joka on jokaisessa ohjeessa. Napauta ja aseta oma.",
+ "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Haluan silti käyttää laatikkoa ilman salasanaa.",
+ "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Ilman kirjautumista kuka tahansa kotiverkossa voi säätää laatikkoa – myös vieraat Wi-Fissä ja laitteet, joita et tunne: poistaa sisältöä, yhdistää Spotifyn, sammuttaa laatikon ja käyttää hallintaliittymää kaikin oikeuksin.",
+ "Standardpasswort aktiv": "Oletussalasana käytössä",
+ "Verstanden": "Selvä"
 }

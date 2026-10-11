@@ -380,7 +380,6 @@
  "Anmelden geht auch ohne Passwort: per QR-Code am Display (Statusanzeige lange drücken) oder mit einem Link über Telegram.": "You can also sign in without a password: via QR code on the display (long-press the status icons) or with a link via Telegram.",
  "Anmeldung": "Sign-in",
  "Anmeldung ausgeschaltet": "Sign-in turned off",
- "Anmeldung ausschalten": "Turn off sign-in",
  "Anmeldung bei Spotify fehlgeschlagen": "Spotify sign-in failed",
  "Anmeldung eingeschaltet": "Sign-in turned on",
  "Anmeldung einschalten": "Turn on sign-in",
@@ -712,7 +711,6 @@
  "Damit die Box Spotify abspielen kann, braucht sie eine eigene Spotify-App (kostenlos, auf developer.spotify.com) und deine Anmeldung. Der Assistent führt Schritt für Schritt hin.": "For the box to play Spotify, it needs its own Spotify app (free, at developer.spotify.com) and your sign-in. The wizard guides you there step by step.",
  "Danach liest die Box den Akku wieder aus.": "Afterwards the box reads the battery again.",
  "Danach stoppt die Box auch mitten im Titel oder Album.": "After that the box stops, even in the middle of a track or album.",
- "Dann kommt jeder im Heimnetz ohne Passwort in die App und das Admin-Interface.": "Then anyone on the home network gets into the app and the admin interface without a password.",
  "Dark Red": "Dark Red",
  "Darstellung": "Display",
  "Das Admin-Interface lädt Bibliotheken von öffentlichen Servern (jQuery, jsDelivr, cdnjs); dabei sehen diese die Adresse des Browsers.": "The admin interface loads libraries from public servers (jQuery, jsDelivr, cdnjs); in doing so, they see the browser's address.",
@@ -2775,5 +2773,11 @@
  "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "The DietPi Dashboard is off – allow it under System › Experts",
  "Kein Passwort gesetzt": "No password set",
  "Anmeldung ist aus": "Login is off",
- "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Anyone in the home network can change the box’s settings. Tap to set a password and switch the login on."
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Anyone in the home network can change the box’s settings. Tap to set a password and switch the login on.",
+ "Anmeldung ausschalten?": "Switch the login off?",
+ "Die Box nutzt noch das Standardpasswort, das in jeder Anleitung steht. Antippen, um ein eigenes festzulegen.": "The box still uses the default password that is in every manual. Tap to set your own.",
+ "Ich möchte die Box trotzdem ohne Passwort betreiben.": "I want to run the box without a password anyway.",
+ "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Without a login, anyone in the home network can set up the box – guests on the Wi-Fi and devices you do not know as well: delete content, connect Spotify, switch the box off and use the admin interface with full rights.",
+ "Standardpasswort aktiv": "Default password active",
+ "Verstanden": "Understood"
 }

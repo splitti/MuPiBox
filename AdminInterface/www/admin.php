@@ -431,10 +431,18 @@
 
 	if($_POST['change_login'])
 		{
-		if($data["interfacelogin"]["state"])
+		// switching off: only with the warning confirmed (the box is then open to everyone in the home network - the
+		// app asks the same, see mupi-app/app.js askLoginOff)
+		if($data["interfacelogin"]["state"] && empty($_POST['confirm_login_off']))
 			{
-			$data["interfacelogin"]["state"]=false;	
+			$CHANGE_TXT=$CHANGE_TXT."<li>Login not disabled: please confirm the warning first</li>";
+			if (empty($change)) { $change=4; } // message only
+			}
+		else if($data["interfacelogin"]["state"])
+			{
+			$data["interfacelogin"]["state"]=false;
 			$CHANGE_TXT=$CHANGE_TXT."<li>Login disabled</li>";
+			$change=2;
 			}
 		else
 			{
@@ -444,8 +452,8 @@
 			$data["interfacelogin"]["epoch"] = bin2hex(random_bytes(8));
 			if (!empty($_SESSION['logged_in'])) { $_SESSION['login_epoch'] = $data["interfacelogin"]["epoch"]; }
 			$CHANGE_TXT=$CHANGE_TXT."<li>Login enabled</li>";
+			$change=2;
 			}
-		$change=2;
 		}
 
 	if( $change == 1 )
@@ -512,9 +520,18 @@
 		<ul>
 			<li id="li_1" >
 				<h2>Password </h2>
-				<p>
-				The default password is "MuP1B0x"!
+				<?php
+				// the well-known default password (in every manual) is still a password, only said so
+				$__defaultPw = password_verify('MuP1B0x', (string)($data['interfacelogin']['password'] ?? ''));
+				if ($__defaultPw) { ?>
+				<p class="error">
+				The box still uses the default password "MuP1B0x" that is written in every manual - please set your own.
 				</p>
+				<?php } else { ?>
+				<p>
+				Your own password is set (the default password "MuP1B0x" no longer works).
+				</p>
+				<?php } ?>
 				<div>
 				<label for="curpwd">Current password</label>
 				<input id="curpwd" name="curpwd" class="element text medium" type="password" maxlength="255" value="" autocomplete="current-password"/>
@@ -542,6 +559,16 @@
 				echo "Login state: <b>".$login_state."</b>";
 				?>
 				</p>
+				<?php if ($data['interfacelogin']['state']) { ?>
+				<p class="error">
+				Without the login everyone in the home network can set up the box - guests on the Wi-Fi and devices you do not
+				know as well: delete content, connect Spotify, switch the box off and use this interface with all rights.
+				</p>
+				<p>
+				<input type="checkbox" id="confirm_login_off" name="confirm_login_off" value="1" />
+				<label for="confirm_login_off" style="display:inline">I understand and want to run the box without a password</label>
+				</p>
+				<?php } ?>
 				<input id="saveForm" class="button_text" type="submit" name="change_login" value="<?php print $login_button; ?>" />
 			</li>
 

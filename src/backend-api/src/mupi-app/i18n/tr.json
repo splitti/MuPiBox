@@ -380,7 +380,6 @@
  "Anmelden geht auch ohne Passwort: per QR-Code am Display (Statusanzeige lange drücken) oder mit einem Link über Telegram.": "Şifresiz de oturum açabilirsin: ekrandaki QR kod ile (durum göstergesine uzun basarak) veya Telegram üzerinden bir bağlantıyla.",
  "Anmeldung": "Oturum açma",
  "Anmeldung ausgeschaltet": "Oturum açma kapalı",
- "Anmeldung ausschalten": "Oturum açmayı kapat",
  "Anmeldung bei Spotify fehlgeschlagen": "Spotify'da oturum açma başarısız oldu",
  "Anmeldung eingeschaltet": "Oturum açma açık",
  "Anmeldung einschalten": "Oturum açmayı aç",
@@ -712,7 +711,6 @@
  "Damit die Box Spotify abspielen kann, braucht sie eine eigene Spotify-App (kostenlos, auf developer.spotify.com) und deine Anmeldung. Der Assistent führt Schritt für Schritt hin.": "Kutunun Spotify çalabilmesi için kendi Spotify uygulaması (ücretsiz, developer.spotify.com üzerinde) ve senin oturumun gerekir. Sihirbaz seni adım adım yönlendirir.",
  "Danach liest die Box den Akku wieder aus.": "Ardından kutu pili yeniden okur.",
  "Danach stoppt die Box auch mitten im Titel oder Album.": "Ardından kutu, parça veya albümün ortasında da durur.",
- "Dann kommt jeder im Heimnetz ohne Passwort in die App und das Admin-Interface.": "O zaman ev ağındaki herkes şifresiz olarak uygulamaya ve yönetici arayüzüne girebilir.",
  "Dark Red": "Dark Red",
  "Darstellung": "Görünüm",
  "Das Admin-Interface lädt Bibliotheken von öffentlichen Servern (jQuery, jsDelivr, cdnjs); dabei sehen diese die Adresse des Browsers.": "Yönetim arayüzü, kitaplıkları genel sunuculardan yükler (jQuery, jsDelivr, cdnjs); bu sunucular bu sırada tarayıcının adresini görür.",
@@ -2775,5 +2773,11 @@
  "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "DietPi panosu kapalı – Sistem › Uzman altında izin verin",
  "Kein Passwort gesetzt": "Parola belirlenmedi",
  "Anmeldung ist aus": "Oturum açma kapalı",
- "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Ev ağındaki herkes kutunun ayarlarını değiştirebilir. Bir parola belirlemek ve oturum açmayı açmak için dokunun."
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Ev ağındaki herkes kutunun ayarlarını değiştirebilir. Bir parola belirlemek ve oturum açmayı açmak için dokunun.",
+ "Anmeldung ausschalten?": "Oturum açma kapatılsın mı?",
+ "Die Box nutzt noch das Standardpasswort, das in jeder Anleitung steht. Antippen, um ein eigenes festzulegen.": "Kutu hâlâ her kılavuzda yazan varsayılan parolayı kullanıyor. Kendi parolanı belirlemek için dokun.",
+ "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Kutuyu yine de parolasız kullanmak istiyorum.",
+ "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Oturum açma olmadan ev ağındaki herkes kutuyu ayarlayabilir – Wi-Fi’deki misafirler ve tanımadığın cihazlar da: içerik silebilir, Spotify bağlayabilir, kutuyu kapatabilir ve yönetici arayüzünü tüm haklarla kullanabilir.",
+ "Standardpasswort aktiv": "Varsayılan parola etkin",
+ "Verstanden": "Anladım"
 }

@@ -380,7 +380,6 @@
  "Anmelden geht auch ohne Passwort: per QR-Code am Display (Statusanzeige lange drücken) oder mit einem Link über Telegram.": "Aanmelden kan ook zonder wachtwoord: via de QR-code op het display (lang op de statusweergave drukken) of met een link via Telegram.",
  "Anmeldung": "Aanmelding",
  "Anmeldung ausgeschaltet": "Aanmelding uitgeschakeld",
- "Anmeldung ausschalten": "Aanmelding uitschakelen",
  "Anmeldung bei Spotify fehlgeschlagen": "Aanmelden bij Spotify mislukt",
  "Anmeldung eingeschaltet": "Aanmelding ingeschakeld",
  "Anmeldung einschalten": "Aanmelding inschakelen",
@@ -712,7 +711,6 @@
  "Damit die Box Spotify abspielen kann, braucht sie eine eigene Spotify-App (kostenlos, auf developer.spotify.com) und deine Anmeldung. Der Assistent führt Schritt für Schritt hin.": "Om Spotify te kunnen afspelen heeft de box een eigen Spotify-app nodig (gratis, op developer.spotify.com) en jouw aanmelding. De assistent leidt je er stap voor stap naartoe.",
  "Danach liest die Box den Akku wieder aus.": "Daarna leest de box de accu weer uit.",
  "Danach stoppt die Box auch mitten im Titel oder Album.": "Daarna stopt de box, ook midden in een nummer of album.",
- "Dann kommt jeder im Heimnetz ohne Passwort in die App und das Admin-Interface.": "Dan kan iedereen in het thuisnetwerk zonder wachtwoord bij de app en de admin-interface.",
  "Dark Red": "Dark Red",
  "Darstellung": "Weergave",
  "Das Admin-Interface lädt Bibliotheken von öffentlichen Servern (jQuery, jsDelivr, cdnjs); dabei sehen diese die Adresse des Browsers.": "De beheerinterface laadt bibliotheken van openbare servers (jQuery, jsDelivr, cdnjs); deze zien daarbij het adres van de browser.",
@@ -2775,5 +2773,11 @@
  "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Het DietPi-dashboard staat uit – toestaan onder Systeem › Experts",
  "Kein Passwort gesetzt": "Geen wachtwoord ingesteld",
  "Anmeldung ist aus": "Inloggen staat uit",
- "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Iedereen in het thuisnetwerk kan de box instellen. Tik om een wachtwoord in te stellen en inloggen aan te zetten."
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Iedereen in het thuisnetwerk kan de box instellen. Tik om een wachtwoord in te stellen en inloggen aan te zetten.",
+ "Anmeldung ausschalten?": "Inloggen uitschakelen?",
+ "Die Box nutzt noch das Standardpasswort, das in jeder Anleitung steht. Antippen, um ein eigenes festzulegen.": "De box gebruikt nog het standaardwachtwoord dat in elke handleiding staat. Tik om een eigen wachtwoord in te stellen.",
+ "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Ik wil de box toch zonder wachtwoord gebruiken.",
+ "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Zonder inloggen kan iedereen in het thuisnetwerk de box instellen – ook gasten op de wifi en apparaten die je niet kent: inhoud verwijderen, Spotify koppelen, de box uitschakelen en de beheerinterface met alle rechten gebruiken.",
+ "Standardpasswort aktiv": "Standaardwachtwoord actief",
+ "Verstanden": "Begrepen"
 }

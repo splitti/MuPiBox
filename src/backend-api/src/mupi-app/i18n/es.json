@@ -380,7 +380,6 @@
  "Anmelden geht auch ohne Passwort: per QR-Code am Display (Statusanzeige lange drücken) oder mit einem Link über Telegram.": "También puedes iniciar sesión sin contraseña: con el código QR de la pantalla (mantén pulsado el indicador de estado) o con un enlace por Telegram.",
  "Anmeldung": "Inicio de sesión",
  "Anmeldung ausgeschaltet": "Inicio de sesión desactivado",
- "Anmeldung ausschalten": "Desactivar inicio de sesión",
  "Anmeldung bei Spotify fehlgeschlagen": "Error al iniciar sesión en Spotify",
  "Anmeldung eingeschaltet": "Inicio de sesión activado",
  "Anmeldung einschalten": "Activar inicio de sesión",
@@ -712,7 +711,6 @@
  "Damit die Box Spotify abspielen kann, braucht sie eine eigene Spotify-App (kostenlos, auf developer.spotify.com) und deine Anmeldung. Der Assistent führt Schritt für Schritt hin.": "Para que la caja pueda reproducir Spotify, necesita su propia app de Spotify (gratis, en developer.spotify.com) y tu inicio de sesión. El asistente te guía paso a paso.",
  "Danach liest die Box den Akku wieder aus.": "Después, la caja vuelve a leer la batería.",
  "Danach stoppt die Box auch mitten im Titel oder Album.": "Después la caja se detiene, incluso a mitad de una pista o un álbum.",
- "Dann kommt jeder im Heimnetz ohne Passwort in die App und das Admin-Interface.": "Entonces cualquiera en la red doméstica entra sin contraseña en la app y en la interfaz de administración.",
  "Dark Red": "Dark Red",
  "Darstellung": "Visualización",
  "Das Admin-Interface lädt Bibliotheken von öffentlichen Servern (jQuery, jsDelivr, cdnjs); dabei sehen diese die Adresse des Browsers.": "La interfaz de administración carga bibliotecas desde servidores públicos (jQuery, jsDelivr, cdnjs); estos ven así la dirección del navegador.",
@@ -2775,5 +2773,11 @@
  "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "El panel de DietPi está desactivado: permítelo en Sistema › Expertos",
  "Kein Passwort gesetzt": "No hay contraseña",
  "Anmeldung ist aus": "El inicio de sesión está desactivado",
- "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Cualquiera en la red doméstica puede configurar la caja. Toca para establecer una contraseña y activar el inicio de sesión."
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Cualquiera en la red doméstica puede configurar la caja. Toca para establecer una contraseña y activar el inicio de sesión.",
+ "Anmeldung ausschalten?": "¿Desactivar el inicio de sesión?",
+ "Die Box nutzt noch das Standardpasswort, das in jeder Anleitung steht. Antippen, um ein eigenes festzulegen.": "La caja sigue usando la contraseña predeterminada que aparece en todos los manuales. Toca para poner una propia.",
+ "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Aun así quiero usar la caja sin contraseña.",
+ "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Sin inicio de sesión, cualquiera en la red doméstica puede configurar la caja, también invitados en la wifi y dispositivos que no conoces: borrar contenido, conectar Spotify, apagar la caja y usar la interfaz de administración con todos los permisos.",
+ "Standardpasswort aktiv": "Contraseña predeterminada activa",
+ "Verstanden": "Entendido"
 }

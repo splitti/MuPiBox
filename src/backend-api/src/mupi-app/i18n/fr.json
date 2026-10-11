@@ -380,7 +380,6 @@
  "Anmelden geht auch ohne Passwort: per QR-Code am Display (Statusanzeige lange drücken) oder mit einem Link über Telegram.": "La connexion est aussi possible sans mot de passe : par QR code sur l'écran (appui long sur l'indicateur d'état) ou avec un lien via Telegram.",
  "Anmeldung": "Connexion",
  "Anmeldung ausgeschaltet": "Connexion désactivée",
- "Anmeldung ausschalten": "Désactiver la connexion",
  "Anmeldung bei Spotify fehlgeschlagen": "Échec de la connexion à Spotify",
  "Anmeldung eingeschaltet": "Connexion activée",
  "Anmeldung einschalten": "Activer la connexion",
@@ -712,7 +711,6 @@
  "Damit die Box Spotify abspielen kann, braucht sie eine eigene Spotify-App (kostenlos, auf developer.spotify.com) und deine Anmeldung. Der Assistent führt Schritt für Schritt hin.": "Pour que la Box puisse jouer Spotify, il lui faut sa propre app Spotify (gratuite, sur developer.spotify.com) et ta connexion. L'assistant te guide étape par étape.",
  "Danach liest die Box den Akku wieder aus.": "Ensuite, la Box relit la batterie.",
  "Danach stoppt die Box auch mitten im Titel oder Album.": "Ensuite la Box s’arrête, même au milieu d’un titre ou d’un album.",
- "Dann kommt jeder im Heimnetz ohne Passwort in die App und das Admin-Interface.": "Tout le monde sur le réseau domestique accède alors à l'app et à l'interface d'administration sans mot de passe.",
  "Dark Red": "Dark Red",
  "Darstellung": "Affichage",
  "Das Admin-Interface lädt Bibliotheken von öffentlichen Servern (jQuery, jsDelivr, cdnjs); dabei sehen diese die Adresse des Browsers.": "L'interface d'administration charge des bibliothèques depuis des serveurs publics (jQuery, jsDelivr, cdnjs) ; ceux-ci voient alors l'adresse du navigateur.",
@@ -2775,5 +2773,11 @@
  "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Le tableau de bord DietPi est désactivé – l’autoriser sous Système › Experts",
  "Kein Passwort gesetzt": "Aucun mot de passe défini",
  "Anmeldung ist aus": "La connexion est désactivée",
- "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Tout le monde sur le réseau domestique peut régler la box. Touchez pour définir un mot de passe et activer la connexion."
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Tout le monde sur le réseau domestique peut régler la box. Touchez pour définir un mot de passe et activer la connexion.",
+ "Anmeldung ausschalten?": "Désactiver la connexion ?",
+ "Die Box nutzt noch das Standardpasswort, das in jeder Anleitung steht. Antippen, um ein eigenes festzulegen.": "La box utilise encore le mot de passe par défaut, qui figure dans chaque notice. Touchez pour en définir un vôtre.",
+ "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Je veux quand même utiliser la box sans mot de passe.",
+ "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Sans connexion, n’importe qui sur le réseau domestique peut régler la box – y compris les invités sur le Wi-Fi et des appareils que vous ne connaissez pas : supprimer du contenu, connecter Spotify, éteindre la box et utiliser l’interface d’administration avec tous les droits.",
+ "Standardpasswort aktiv": "Mot de passe par défaut actif",
+ "Verstanden": "Compris"
 }
