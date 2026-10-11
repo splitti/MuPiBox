@@ -90,6 +90,82 @@ svg {
   }
 }
 
+// the headphones' battery where the dot sits (top right): 20 × 11, an edge in the capsule's colour as the dot has;
+// the fill green, yellow at 20 % and less, red at 10 % and less (then the outline red too)
+.oc-bat {
+  position: absolute;
+  top: 6px;
+  right: 3px;
+  width: 20px;
+  height: 11px;
+  box-sizing: border-box;
+  border: 1.6px solid currentColor;
+  border-radius: 3px;
+  background: var(--km-night-2);
+  box-shadow: 0 0 0 2px var(--km-night-2);
+
+  // the battery's knob
+  &::after {
+    content: '';
+    position: absolute;
+    right: -4px;
+    top: 50%;
+    width: 2px;
+    height: 4px;
+    margin-top: -2px;
+    border-radius: 0 1px 1px 0;
+    background: currentColor;
+  }
+
+  &[data-level='mid'] {
+    color: #c98a00;
+  }
+
+  &[data-level='low'] {
+    color: var(--km-rose);
+  }
+}
+
+.oc-bat-fill {
+  position: absolute;
+  left: 1.5px;
+  top: 1.5px;
+  bottom: 1.5px;
+  max-width: calc(100% - 3px);
+  border-radius: 1px;
+  background: #3ccb7f;
+
+  [data-level='mid'] > & {
+    background: #f5b82e;
+  }
+
+  [data-level='low'] > & {
+    background: var(--km-rose);
+  }
+}
+
+// held: a ring fills in while the finger stays (then "Hören mit" opens)
+.oc-hold {
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  border: 3px solid currentColor;
+  opacity: 0;
+  pointer-events: none;
+  animation: oc-hold 600ms linear forwards;
+}
+
+@keyframes oc-hold {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+}
+
 .oc-ring {
   position: absolute;
   inset: 6px;
