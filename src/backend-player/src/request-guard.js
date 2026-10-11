@@ -13,7 +13,15 @@
  */
 const os = require('node:os')
 
-const LOCAL_SUFFIXES = ['local', 'lan', 'home', 'fritz.box', 'localdomain', 'home.arpa', 'box', 'speedport.ip', 'internal']
+// (not 'box': a public top-level domain, see backend-api request-guard.ts)
+const LOCAL_SUFFIXES = ['local', 'lan', 'home', 'fritz.box', 'localdomain', 'home.arpa', 'speedport.ip', 'internal']
+
+// The box's own media players (mpv as it identifies itself - mpv-wrapper.js sets it -, the ffmpeg inside it, the old
+// mplayer). They run on the box, so what they open counts as "from the box itself" below. An episode of a foreign
+// podcast feed, a radio address or a server's redirect pointing at http://127.0.0.1:5005/<device>/shutoff would
+// otherwise be a command. None of them ever has anything to ask here.
+const MEDIA_PLAYER_AGENT = /\b(?:lib)?mpv\b|\bLavf\/|\bMPlayer\b|\bffmpeg\b/i
+const isMediaPlayerRequest = (req) => MEDIA_PLAYER_AGENT.test(String(req.headers['user-agent'] ?? ''))
 
 function hostnameOf(hostHeader) {
   if (!hostHeader) return ''
@@ -63,6 +71,7 @@ function isLoopback(req) {
 }
 
 function browserGuard(req, res, next) {
+  if (isMediaPlayerRequest(req)) return reject(req, res, 'media player request')
   if (!isAllowedHost(req.headers.host)) return reject(req, res, 'host not allowed')
   if (req.headers['sec-fetch-site'] === 'cross-site') return reject(req, res, 'cross-site request')
   if (UNSAFE_METHODS.has(req.method) && req.headers.origin !== undefined && !isSameHostOrigin(req)) {
@@ -94,4 +103,4 @@ function browserGuard(req, res, next) {
   next()
 }
 
-module.exports = { browserGuard }
+module.exports = { browserGuard, MEDIA_PLAYER_AGENT }

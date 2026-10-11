@@ -6,7 +6,7 @@ const dns = require('node:dns')
 const SpotifyWebApi = require('spotify-web-api-node')
 const createMplayer = require('./mplayer-wrapper.js')
 const createMpv = require('./mpv-wrapper.js')
-const { isPlaylistUrl, resolveStreamUrl } = require('./playlist-url.js')
+const { isPlaylistUrl, pointsAtBox, resolveStreamUrl } = require('./playlist-url.js')
 const googleTTS = require('google-tts-api')
 const fs = require('node:fs')
 const childProcess = require('node:child_process')
@@ -2731,6 +2731,12 @@ function offlineEpisodeFile(url) {
 // with its first round, and the volume stays at 0 until it got there (endEpisodeSeek): the beginning played for a
 // second or so before the jump.
 function playURL(playedURL, resumeAt = null) {
+  // an episode or radio address on the box itself is no media: its servers would take it as a command (playlist-url.js)
+  if (pointsAtBox(playedURL)) {
+    log.warn(`${now()}: [Spotify Control] Refused to play ${JSON.stringify(String(playedURL).slice(0, 200))}: an address on the box itself`)
+    stopLoading()
+    return
+  }
   playbackGeneration++
   startLoading()
   log.debug(`${now()}: [Spotify Control] Starting currentMeta.playing:${playedURL}`)
@@ -2875,6 +2881,13 @@ function deleteLocal(deleteFile) {
   // reject anything that doesn't end up inside the root.
   if (!fullPath.startsWith(MEDIA_ROOT)) {
     log.warn(`${now()}: [deleteLocal] path-traversal attempt rejected: ${relPath} → ${fullPath}`)
+    return
+  }
+  // Only an album: the display sends category:artist:title. A category alone ("audiobook"), or a call with an empty
+  // part ("audiobook::"), resolved to the whole category's folder and removed all of it.
+  const parts = decoded.split(':')
+  if (parts.length < 2 || parts.some((part) => part.trim() === '') || path.relative(MEDIA_ROOT, fullPath).split(path.sep).length < 2) {
+    log.warn(`${now()}: [deleteLocal] refusing to delete more than an album: ${JSON.stringify(relPath)}`)
     return
   }
   // Don't shell out to a non-existent target — that's the symptom of

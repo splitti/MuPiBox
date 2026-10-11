@@ -10,6 +10,7 @@
 # .localdomain, .fritz.box, .speedport.ip) - plus the address the parents set up for their own certificate
 # (mupiboxconfig.json tls.linkHost, see backend-api eltern/tls.ts). Written again when that changes; lighttpd is
 # restarted only when the file changed (restart, not reload). Runs as root. CONFIG / CONF / NO_RESTART=1 for a test.
+# The same file refuses the box's own media players (mpv, ffmpeg, mplayer), as the app's server and the player do.
 
 CONFIG="${CONFIG:-/etc/mupibox/mupiboxconfig.json}"
 CONF="${CONF:-/etc/lighttpd/conf-enabled/80-mupibox-hosts.conf}"
@@ -31,6 +32,11 @@ cat > "${tmp}" <<EOF || exit 1
 	\$HTTP["host"] != "" {
 		url.access-deny = ( "" )
 	}
+}
+# The box's own media players (mpv, its ffmpeg, mplayer) have nothing to ask here: an episode or a redirect pointing at
+# http://127.0.0.1/... must not reach the admin interface (the same in backend-api / backend-player request-guard).
+\$HTTP["useragent"] =~ "(^|[^A-Za-z0-9_])((lib)?mpv|Lavf/|MPlayer|ffmpeg)" {
+	url.access-deny = ( "" )
 }
 EOF
 
