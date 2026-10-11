@@ -2796,5 +2796,8 @@
  "DietPi-Dashboard erlaubt": "DietPi Dashboard allowed",
  "DietPi-Dashboard aus": "DietPi Dashboard off",
  "startet gerade …": "starting …",
- "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "The DietPi Dashboard is off – allow it under System › Experts"
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "The DietPi Dashboard is off – allow it under System › Experts",
+ "Kein Passwort gesetzt": "No password set",
+ "Anmeldung ist aus": "Login is off",
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Anyone in the home network can change the box’s settings. Tap to set a password and switch the login on."
 }

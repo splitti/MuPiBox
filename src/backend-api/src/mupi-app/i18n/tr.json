@@ -2796,5 +2796,8 @@
  "DietPi-Dashboard erlaubt": "DietPi panosuna izin verildi",
  "DietPi-Dashboard aus": "DietPi panosu kapalı",
  "startet gerade …": "başlatılıyor …",
- "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "DietPi panosu kapalı – Sistem › Uzman altında izin verin"
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "DietPi panosu kapalı – Sistem › Uzman altında izin verin",
+ "Kein Passwort gesetzt": "Parola belirlenmedi",
+ "Anmeldung ist aus": "Oturum açma kapalı",
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Ev ağındaki herkes kutunun ayarlarını değiştirebilir. Bir parola belirlemek ve oturum açmayı açmak için dokunun."
 }

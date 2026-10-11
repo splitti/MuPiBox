@@ -2796,5 +2796,8 @@
  "DietPi-Dashboard erlaubt": "DietPi-dashboardet tilladt",
  "DietPi-Dashboard aus": "DietPi-dashboardet slukket",
  "startet gerade …": "starter …",
- "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "DietPi-dashboardet er slukket – tillad det under System › Eksperter"
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "DietPi-dashboardet er slukket – tillad det under System › Eksperter",
+ "Kein Passwort gesetzt": "Ingen adgangskode angivet",
+ "Anmeldung ist aus": "Login er slået fra",
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Alle på hjemmenetværket kan indstille boksen. Tryk for at angive en adgangskode og slå login til."
 }

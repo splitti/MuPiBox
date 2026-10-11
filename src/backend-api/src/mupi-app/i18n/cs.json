@@ -2796,5 +2796,8 @@
  "DietPi-Dashboard erlaubt": "Panel DietPi povolen",
  "DietPi-Dashboard aus": "Panel DietPi vypnut",
  "startet gerade …": "spouští se …",
- "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Panel DietPi je vypnutý – povolte ho v Systém › Experti"
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Panel DietPi je vypnutý – povolte ho v Systém › Experti",
+ "Kein Passwort gesetzt": "Heslo není nastaveno",
+ "Anmeldung ist aus": "Přihlášení je vypnuté",
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Kdokoli v domácí síti může box nastavovat. Klepněte pro nastavení hesla a zapnutí přihlášení."
 }

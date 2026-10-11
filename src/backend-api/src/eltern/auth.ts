@@ -137,18 +137,37 @@ function saveSessions(): void {
 // The password a session was issued under (a short hash of its hash; '' without a password), and the sign-out
 // generation (interfacelogin.epoch: changed by "sign out other devices" and a new password, here or in the admin
 // interface, which checks it for its own sessions). Set up by the router, which reads the config.
-let passwordStamp: () => string = () => ''
-let loginRequired: () => boolean = () => false
+// Fail-closed: a config that cannot be read for a moment (written half by another program, a broken file) counts as
+// the last one that could - and with none at all the login is required. It opened the box to everyone in the network
+// and threw away every session (no password stamp to compare).
+let passwordStamp: () => string | null = () => ''
+let loginRequired: () => boolean = () => true
+let lastGoodConfig: unknown
 export function usePasswordStamp(readConfig: () => unknown): void {
-  passwordStamp = () => {
+  const current = () => {
     const cfg = readConfig()
+    if (cfg !== undefined) lastGoodConfig = cfg
+    return cfg ?? lastGoodConfig
+  }
+  passwordStamp = () => {
+    const cfg = current()
+    // (not known: no session is ended for it)
+    if (cfg === undefined) return null
     const admin = adminHash(cfg) ?? ''
     const parents = readPasswordEntry(cfg)?.hash ?? ''
     const epoch = (cfg as { interfacelogin?: { epoch?: unknown } } | undefined)?.interfacelogin?.epoch
     const gen = typeof epoch === 'string' ? epoch : ''
     return admin || parents || gen ? createHash('sha256').update(`${admin}|${parents}${gen ? `|${gen}` : ''}`).digest('hex').slice(0, 16) : ''
   }
-  loginRequired = () => (readConfig() as { interfacelogin?: { state?: unknown } } | undefined)?.interfacelogin?.state === true
+  loginRequired = () => {
+    const cfg = current()
+    return cfg === undefined || (cfg as { interfacelogin?: { state?: unknown } }).interfacelogin?.state === true
+  }
+}
+
+/** The login switch as the gate of the server sees it (fail-closed, see usePasswordStamp) */
+export function isLoginRequired(): boolean {
+  return loginRequired()
 }
 
 /** A new sign-out generation: every session but the ones restamped afterwards ends, in the admin interface too. */
@@ -240,7 +259,7 @@ export function issueSession(ip: string, persistent = false, anon = false, extra
     lastSeen: nowIso,
     ip,
     csrf,
-    pw: passwordStamp(),
+    pw: passwordStamp() ?? '',
     ...(persistent ? { persistent: true } : {}),
     ...(anon ? { anon: true } : {}),
     ...(extra.device ? { device: extra.device } : {}),
@@ -256,7 +275,7 @@ export function issueSession(ip: string, persistent = false, anon = false, extra
 export function restampSession(sessionId: string | undefined): void {
   const entry = ownEntry(loadSessions(), sessionId)
   if (!entry) return
-  entry.pw = passwordStamp()
+  entry.pw = passwordStamp() ?? ''
   saveSessions()
 }
 
@@ -285,7 +304,8 @@ export function validateSession(sessionId: string | undefined): Session | null {
   if (!entry) return null
   // issued under another password (changed since, here or in the admin interface) or before "sign out other
   // devices"; or given without a password while the login was off - and it is on now: over
-  if ((entry.pw !== undefined && entry.pw !== passwordStamp()) || (entry.anon && loginRequired())) {
+  const stamp = passwordStamp()
+  if ((entry.pw !== undefined && stamp !== null && entry.pw !== stamp) || (entry.anon && loginRequired())) {
     delete sessions[sessionId as string]
     saveSessions()
     return null
@@ -494,6 +514,9 @@ export function hasAppPassword(cfg: unknown): boolean {
 
 /** Does the app ask for a login? (interfacelogin.state; without any password there is nothing to ask for) */
 export function appLoginRequired(cfg: unknown): boolean {
+  // (a config not readable for a moment: the last readable one; none at all: required - fail-closed)
+  if (cfg === undefined) cfg = lastGoodConfig
+  if (cfg === undefined) return true
   return (cfg as { interfacelogin?: { state?: unknown } } | undefined)?.interfacelogin?.state === true && hasAppPassword(cfg)
 }
 

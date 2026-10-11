@@ -2796,5 +2796,8 @@
  "DietPi-Dashboard erlaubt": "DietPi-instrumentpanelen tillåten",
  "DietPi-Dashboard aus": "DietPi-instrumentpanelen av",
  "startet gerade …": "startar …",
- "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "DietPi-instrumentpanelen är av – tillåt den under System › Experter"
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "DietPi-instrumentpanelen är av – tillåt den under System › Experter",
+ "Kein Passwort gesetzt": "Inget lösenord angivet",
+ "Anmeldung ist aus": "Inloggningen är av",
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Alla i hemnätverket kan ställa in boxen. Tryck för att ange ett lösenord och slå på inloggningen."
 }

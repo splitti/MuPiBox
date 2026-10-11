@@ -20,7 +20,10 @@ import os from 'node:os'
 import type { Request, RequestHandler } from 'express'
 import { requireCsrf, requireSession } from './eltern/middleware'
 
-const LOCAL_SUFFIXES = ['local', 'lan', 'home', 'fritz.box', 'localdomain', 'home.arpa', 'box', 'speedport.ip', 'internal']
+// Endings of the home network nobody can register on the internet - not 'box': .box is a public top-level domain, a
+// foreign page could have taken <boxname>.box and pointed it at the box (DNS rebinding); fritz.box is AVM's own.
+// The web server (lighttpd) has the same list: scripts/mupibox/lighttpd_hosts.sh
+const LOCAL_SUFFIXES = ['local', 'lan', 'home', 'fritz.box', 'localdomain', 'home.arpa', 'speedport.ip', 'internal']
 
 function hostnameOf(hostHeader: string | undefined): string {
   if (!hostHeader) return ''

@@ -2796,5 +2796,8 @@
  "DietPi-Dashboard erlaubt": "Ο πίνακας του DietPi επιτρέπεται",
  "DietPi-Dashboard aus": "Ο πίνακας του DietPi είναι κλειστός",
  "startet gerade …": "εκκινεί …",
- "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Ο πίνακας του DietPi είναι κλειστός – επιτρέψτε τον στο Σύστημα › Για προχωρημένους"
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Ο πίνακας του DietPi είναι κλειστός – επιτρέψτε τον στο Σύστημα › Για προχωρημένους",
+ "Kein Passwort gesetzt": "Δεν έχει οριστεί κωδικός",
+ "Anmeldung ist aus": "Η σύνδεση είναι απενεργοποιημένη",
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Οποιοσδήποτε στο οικιακό δίκτυο μπορεί να ρυθμίσει το κουτί. Πατήστε για να ορίσετε κωδικό και να ενεργοποιήσετε τη σύνδεση."
 }

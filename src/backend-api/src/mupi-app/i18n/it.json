@@ -2796,5 +2796,8 @@
  "DietPi-Dashboard erlaubt": "Dashboard di DietPi consentita",
  "DietPi-Dashboard aus": "Dashboard di DietPi disattivata",
  "startet gerade …": "avvio in corso …",
- "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "La dashboard di DietPi è disattivata – consentila in Sistema › Esperti"
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "La dashboard di DietPi è disattivata – consentila in Sistema › Esperti",
+ "Kein Passwort gesetzt": "Nessuna password impostata",
+ "Anmeldung ist aus": "L’accesso è disattivato",
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Chiunque nella rete domestica può configurare il box. Tocca per impostare una password e attivare l’accesso."
 }

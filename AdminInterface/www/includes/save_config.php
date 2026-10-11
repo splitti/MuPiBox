@@ -13,9 +13,20 @@ function mupibox_config(bool $forceReread = false): array {
     // what a page actually changed, and refreshes it after a save.
     if (!isset($GLOBALS['__mupibox_config_cache']) || $forceReread) {
         $raw = @file_get_contents('/etc/mupibox/mupiboxconfig.json');
-        $GLOBALS['__mupibox_config_cache'] = $raw === false ? [] : (json_decode($raw, true) ?? []);
+        $parsed = $raw === false ? null : json_decode($raw, true);
+        // (not readable or not JSON - mupibox_config_unreadable(): the login then counts as required)
+        $GLOBALS['__mupibox_config_bad'] = !is_array($parsed);
+        $GLOBALS['__mupibox_config_cache'] = is_array($parsed) ? $parsed : [];
     }
     return $GLOBALS['__mupibox_config_cache'];
+}
+
+// Fail-closed: a config that could not be read (written half by another program, a broken file) left the login off -
+// the whole admin interface open, with root rights. Then the login counts as required (and nobody gets in until the
+// file is readable again).
+function mupibox_config_unreadable(): bool {
+    mupibox_config();
+    return $GLOBALS['__mupibox_config_bad'] ?? true;
 }
 
 // Applies what a page changed ($baseline -> $changed) onto the config as it is on disk now

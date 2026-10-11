@@ -2796,5 +2796,8 @@
  "DietPi-Dashboard erlaubt": "Панель DietPi разрешена",
  "DietPi-Dashboard aus": "Панель DietPi выключена",
  "startet gerade …": "запускается …",
- "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Панель DietPi выключена – разрешите её в Система › Для экспертов"
+ "Das DietPi-Dashboard ist aus – unter System › Experten erlauben": "Панель DietPi выключена – разрешите её в Система › Для экспертов",
+ "Kein Passwort gesetzt": "Пароль не задан",
+ "Anmeldung ist aus": "Вход выключен",
+ "Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.": "Любой в домашней сети может настраивать коробку. Нажмите, чтобы задать пароль и включить вход."
 }
