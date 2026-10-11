@@ -324,6 +324,9 @@ const createPlayer = (options = {}) => {
         '--demuxer-readahead-secs=20',
         '--cache-pause-initial=yes',
         '--network-timeout=20',
+        // how mpv names itself to every server, its default written out: the box's own servers refuse it (a foreign
+        // feed or redirect pointing at http://127.0.0.1:5005/... must not become a command - request-guard.js)
+        '--user-agent=libmpv',
         `--input-ipc-server=${socketPath}`,
       ],
       { env: process.env, stdio: ['ignore', 'ignore', 'ignore'] },

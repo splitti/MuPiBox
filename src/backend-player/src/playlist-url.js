@@ -2,6 +2,7 @@
 
 const dns = require('node:dns').promises
 const net = require('node:net')
+const os = require('node:os')
 
 // A radio link can point at a playlist (m3u / m3u8 / pls) instead of at the stream itself. mplayer opens such a
 // link as one file and does not play what is listed in it, so the playlist is opened here and the FIRST stream of
@@ -171,4 +172,44 @@ async function resolveStreamUrl(url, fetchImpl = fetch, lookupImpl = dns.lookup)
   return current
 }
 
-module.exports = { isPlaylistUrl, firstEntry, isInternalAddress, resolveStreamUrl }
+// ── Addresses on the box itself ──────────────────────────────────────────────────────────────────────────────────
+// What is played (an episode of a podcast feed, a radio address) never points at the box itself: its servers take a
+// plain GET as a command. The home network stays open - a NAS, a family's podcast or radio server live there. Only
+// what is written in the address (no name lookup): a name of the internet resolving to the box, and every redirect,
+// is caught by the servers themselves, which refuse the media player (request-guard.js).
+
+const BOX_NAME_SUFFIXES = ['local', 'lan', 'home', 'fritz.box', 'localdomain', 'home.arpa', 'speedport.ip', 'internal']
+
+function unmappedIp(host) {
+  const ip = host.toLowerCase().replace(/^\[|\]$/g, '')
+  const mapped = /^(?:::ffff:|64:ff9b::|::)(\d+\.\d+\.\d+\.\d+)$/.exec(ip)
+  if (mapped) return mapped[1]
+  const hex = /^(?:::ffff:|64:ff9b::|::)([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(ip)
+  if (hex) {
+    const hi = Number.parseInt(hex[1], 16)
+    const lo = Number.parseInt(hex[2], 16)
+    return `${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`
+  }
+  return ip
+}
+
+function pointsAtBox(url, hostname = os.hostname(), interfaces = os.networkInterfaces()) {
+  let host
+  try {
+    host = new URL(url).hostname.toLowerCase().replace(/^\[|\]$/g, '').replace(/\.$/, '')
+  } catch {
+    return false // no address (a file)
+  }
+  if (!host) return false
+  if (host === 'localhost' || host.endsWith('.localhost')) return true
+  const box = String(hostname).toLowerCase()
+  if (host === box || BOX_NAME_SUFFIXES.some((suffix) => host === `${box}.${suffix}`)) return true
+  if (!net.isIP(host)) return false
+  const ip = unmappedIp(host)
+  if (/^(127|0)\./.test(ip) || ip === '::1' || ip === '::') return true
+  return Object.values(interfaces)
+    .flat()
+    .some((nic) => nic && unmappedIp(String(nic.address).split('%')[0]) === ip)
+}
+
+module.exports = { isPlaylistUrl, firstEntry, isInternalAddress, resolveStreamUrl, pointsAtBox }

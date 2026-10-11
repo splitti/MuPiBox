@@ -86,7 +86,23 @@ function reject(req: Request, res: Parameters<RequestHandler>[1], reason: string
   res.status(403).send('forbidden')
 }
 
+/**
+ * The box's own media players (mpv - backend-player mpv-wrapper.js -, the ffmpeg inside it, the old mplayer). What they
+ * open comes from the box itself; an episode of a foreign podcast feed, a radio address or a server's redirect pointing
+ * at http://127.0.0.1:8200/api/... must not reach the API that way. They only ever fetch a NAS track from here
+ * (backend-player: http://localhost:8200/api/nas/stream). The same list: backend-player request-guard.js, lighttpd_hosts.sh
+ */
+const MEDIA_PLAYER_AGENT = /\b(?:lib)?mpv\b|\bLavf\/|\bMPlayer\b|\bffmpeg\b/i
+const MEDIA_PLAYER_PATHS = ['/api/nas/stream']
+
 export const browserGuard: RequestHandler = (req, res, next) => {
+  if (
+    MEDIA_PLAYER_AGENT.test(String(req.headers['user-agent'] ?? '')) &&
+    !((req.method === 'GET' || req.method === 'HEAD') && MEDIA_PLAYER_PATHS.includes(req.path))
+  ) {
+    reject(req, res, 'media player request')
+    return
+  }
   if (!isAllowedHost(req.headers.host)) {
     reject(req, res, 'host not allowed')
     return
