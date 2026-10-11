@@ -2883,10 +2883,16 @@ function deleteLocal(deleteFile) {
     log.warn(`${now()}: [deleteLocal] path-traversal attempt rejected: ${relPath} → ${fullPath}`)
     return
   }
-  // Only an album: the display sends category:artist:title. A category alone ("audiobook"), or a call with an empty
-  // part ("audiobook::"), resolved to the whole category's folder and removed all of it.
+  // Only an album: the display sends category:artist:title. A category alone ("audiobook"), a call with an empty part
+  // ("audiobook::") or one going back up ("audiobook:x:.." - the command's parser also leaves "." of it) resolved to a
+  // whole category's or artist's folder and removed all of it. Every part is one folder level, exactly.
   const parts = decoded.split(':')
-  if (parts.length < 2 || parts.some((part) => part.trim() === '') || path.relative(MEDIA_ROOT, fullPath).split(path.sep).length < 2) {
+  const levels = path.relative(MEDIA_ROOT, fullPath).split(path.sep)
+  if (
+    parts.length < 2 ||
+    parts.some((part) => part.trim() === '' || part === '.' || part === '..') ||
+    levels.length !== parts.length
+  ) {
     log.warn(`${now()}: [deleteLocal] refusing to delete more than an album: ${JSON.stringify(relPath)}`)
     return
   }
