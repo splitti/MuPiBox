@@ -9,7 +9,8 @@
 #   dietpi_dashboard.sh on      setup, then the service on (also after a restart)
 #   dietpi_dashboard.sh off     the service off
 #   dietpi_dashboard.sh status  active / inactive
-#   dietpi_dashboard.sh token   signs in with the password and prints the dashboard's token (for the server)
+#   dietpi_dashboard.sh token   signs in with the password and prints the dashboard's token and the fingerprint it is
+#                               bound to (for the server)
 #
 # Runs as root (the server calls it with sudo). The password stays in a file only root reads; the server never sees it.
 
@@ -76,10 +77,13 @@ case "${1:-}" in
 		;;
 	token)
 		[ -s "${PW_FILE}" ] || exit 1
-		# (the password as the body of POST /login/ - the dashboard answers with its token, 401 for a wrong one)
-		token=$(curl -s -f -m 5 -X POST --data-binary @"${PW_FILE}" "http://127.0.0.1:${PORT}/login/") || exit 1
+		# The password as the body of POST /login/ - the dashboard answers with its token (401 for a wrong one). The token
+		# is bound to the cookie FINGERPRINT (32 random bytes, hex; the token holds their SHA-256): made here and sent
+		# along, printed after the token - the server puts it into the browser together with the token.
+		fingerprint=$(hex32)
+		token=$(curl -s -f -m 5 -X POST -H "Cookie: FINGERPRINT=${fingerprint}" --data-binary @"${PW_FILE}" "http://127.0.0.1:${PORT}/login/") || exit 1
 		[[ "${token}" =~ ^[A-Za-z0-9._-]+$ ]] || exit 1
-		printf '%s\n' "${token}"
+		printf '%s %s\n' "${token}" "${fingerprint}"
 		;;
 	*)
 		echo "usage: $0 setup|on|off|status|token" >&2
