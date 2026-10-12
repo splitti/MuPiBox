@@ -712,6 +712,12 @@ rm -f /tmp/mupibox-update-failed
 	
 	service spotifyd stop >&3 2>&3
 	systemctl disable spotifyd >&3 2>&3
+	# preload (a desktop daemon that preloads programs it saw started; no longer installed since 5.0.10): off where a
+	# box has it - the box starts the same few programs, which stay in memory anyway, and it only took memory and wrote
+	# its state to the SD card. The package stays, only switched off.
+	if [ -e /etc/init.d/preload ] || systemctl cat preload.service >/dev/null 2>&1; then
+		systemctl disable --now preload >&3 2>&3
+	fi
 	if systemctl cat librespot.service > /dev/null 2>&1; then
 		systemctl disable --now librespot.service >&3 2>&3
 	fi
