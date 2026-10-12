@@ -588,7 +588,6 @@ STEP=0
 	cp -f ${MUPI_SRC}/scripts/chromium-autostart.sh /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	/boot/dietpi/dietpi-autostart 11 >&3 2>&3
 	chmod 755 /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
-	chmod +x /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	# full colours in the display on a Pi with 2 GB or more: takes DietPi's "low-end device mode" out again (see the file)
 	mkdir -p /etc/chromium.d && tr -d '\r' < ${MUPI_SRC}/config/chromium/zz-mupibox > /etc/chromium.d/zz-mupibox && chmod 644 /etc/chromium.d/zz-mupibox
 	apt-get install xserver-xorg-legacy -y >&3 2>&3
