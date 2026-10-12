@@ -27,6 +27,13 @@
 <li id='linews' class='linews'>config.txt and cmdline.txt on the boot partition are no longer overwritten in place (sound outputs; the colour of the boot screen - with a random boot screen at every start): a power cut in that moment left them half or empty and the box no longer started. Now written next to them, forced onto the card, then exchanged.</li>
 <li id='linews' class='linews'>The WiFi settings (with their passwords) were readable by every user on the box after an update: they are readable by root only again, and written next to the file instead of through /tmp.</li>
 </ul>
+<b>Installation</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Samba on a new box (suggested by Markus): the installation now installs the share and its announcement (wsdd2) and sets them up, but leaves them off - the app switches them on at once and without internet. It used to "switch on" a share that was never installed (the app installed it at its first switch-on).</li>
+<li id='linews' class='linews'>All themes on a new box (found by Markus): the installation copied every theme, but the settings listed only the older ones - the newer ones came with the first update. The installation now applies the update's settings step (conf_update.sh) too.</li>
+<li id='linews' class='linews'>DietPi's survey (found by Markus): never answered, it was decided on its own by the installation's first DietPi software install, its question hidden in the log. The installation now answers it with no (SURVEY_OPTED_IN=0); a box whose owner chose to take part keeps that.</li>
+</ul>
 <b>Player</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
