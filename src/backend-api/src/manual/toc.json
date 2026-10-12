@@ -315,6 +315,13 @@
     ]
   },
   {
+    "id": "referenz",
+    "title": {
+      "de": "Einstellungs-Referenz",
+      "en": "Settings reference"
+    }
+  },
+  {
     "id": "fehlerbehebung",
     "title": {
       "de": "Fehlerbehebung",
