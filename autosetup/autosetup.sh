@@ -5,33 +5,35 @@
 # The channel as the first argument (stable when none is given), e.g. the development version on a fresh DietPi:
 #   cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup.sh | sudo bash -s -- dev
 
+exec 3>${LOG}
+
 case "$1" in
-	stable | beta | dev) RELEASE="$1" ;;
-	"") RELEASE="stable" ;;
+	stable|beta|dev)
+		RELEASE="$1"
+		;;
+	"")
+		RELEASE="stable"
+		;;
 	*)
 		echo "Unknown channel '$1' - use stable, beta or dev" >&2
 		exit 1
 		;;
 esac
+
+if [ -f "/boot/firmware/config.txt" ];
+then
+	BOOT_DIR="/boot/firmware"
+	BOOT_CONFIG="/boot/firmware/config.txt"
+	BOOT_CMDLINE="/boot/firmware/cmdline.txt"
+else
+	BOOT_DIR="/boot"
+	BOOT_CONFIG="/boot/config.txt"
+	BOOT_CMDLINE="/boot/cmdline.txt"
+fi
+
 LOG="/tmp/autosetup.log"
-BOOT_DIR="/boot"
-BOOT_CONFIG="/boot/config.txt"
-BOOT_CMDLINE="/boot/cmdline.txt"
-
-if [ -f "/boot/firmware/config.txt" ]; then
-  BOOT_DIR="/boot/firmware"
-  BOOT_CONFIG="/boot/firmware/config.txt"
-fi
-
-if [ -f "/boot/firmware/cmdline.txt" ]; then
-  BOOT_CMDLINE="/boot/firmware/cmdline.txt"
-fi
 VER_JSON="/tmp/version.json"
 CONFIG="/etc/mupibox/mupiboxconfig.json"
-STEP=0
-
-exec 3>${LOG}
-
 OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)
 OS=${OS:17}
 ARCH=$(uname -m)
@@ -45,6 +47,7 @@ fi
 
 rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 
+STEP=0
 {
 	# 2026-09-20: no longer installed (nothing in MuPiBox uses them any more):
 	#   id3tool - only the ID3 converter used it; that converter was removed from the admin
