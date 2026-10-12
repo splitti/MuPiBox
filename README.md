@@ -27,6 +27,14 @@ See [DEPENDENCIES.md](DEPENDENCIES.md) for what MuPiBox needs (npm packages, sys
 ## Cover Flow prompt
 [docs/COVERFLOW_PROMPT.md](docs/COVERFLOW_PROMPT.md) is a prompt for an AI coding assistant that rebuilds the Cover Flow theme of this fork in your own MuPiBox project.
 
+## Project history / Projektgeschichte
+
+**Deutsch:** MuPiBox entstand aus den praktischen Erfahrungen mit frühen DIY-Musikboxen wie [TonUINO](https://github.com/xfjx/TonUINO) und [Phoniebox / RPi-Jukebox-RFID](https://github.com/MiczFlor/RPi-Jukebox-RFID). Nach der rückblickenden Darstellung der Projektbeteiligten wurde bei diesen frühen Experimenten insbesondere eine **Phoniebox um ein Display erweitert**. Die Erfahrungen mit RFID, Raspberry Pi und der visuellen Bedienung prägten die Idee einer kindgerechten Touch-Musikbox. **Die konkrete MuPiBox Classic wurde 2022 auf Basis des [Sonos-Kids-Controllers von Thyraz](https://github.com/Thyraz/Sonos-Kids-Controller) aufgebaut** und anschließend eigenständig erweitert. Die öffentliche Repository-Historie beginnt mit dem [Initial Commit vom 9. Februar 2022](https://github.com/splitti/MuPiBox/commit/e63c1fdff8bda99800e946dc754464a5d14f2aa2).
+
+**English:** MuPiBox grew out of practical experience with earlier DIY music-box projects such as TonUINO and Phoniebox. According to the contributors' retrospective account, **a display was added to a Phoniebox** during early experiments, helping shape the idea of a child-friendly touchscreen music box. **MuPiBox Classic was concretely built from 2022 on the basis of Thyraz's Sonos-Kids-Controller** and subsequently extended. The public repository history starts with the initial commit on 9 February 2022.
+
+*Historical note (recorded on 12 October 2026):* The Phoniebox-display experiments are documented here from contributors' recollections; their exact dates are not independently established by this note. TonUINO and Phoniebox are acknowledged as earlier inspirations, not necessarily as copied source-code bases. A history written today does not prove public disclosure of a particular technical feature before a patent filing date.
+
 ## Based on
 - DietPi (https://dietpi.com/)
 - fbv by godspeed (https://github.com/godspeed1989/fbv)
