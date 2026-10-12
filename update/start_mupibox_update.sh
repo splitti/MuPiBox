@@ -93,13 +93,32 @@ fail_update() {
 	exit 1
 }
 
-# Where the update is, for an update that stops halfway (power cut): unpacking -> unpacked -> (gone at the end).
-# restore_interrupted_update.sh reads it at the next start (and the next update) and undoes or finishes the update.
-# Written next to it and on the card before the update goes on.
+# An update in progress, for one that stops halfway (power cut): set before the old installation is moved aside, gone
+# only after the very last step. restore_interrupted_update.sh finds it at the next start (and the next update) and
+# brings the old installation back, whole. Written next to it, checked, on the card - and only then the update goes
+# on (1 when any of it failed: the caller stops the update before it touches anything).
 UPDATE_STATE=/home/dietpi/.mupibox/update-state
 mark_update() {
-	printf '%s\n' "$1" > "${UPDATE_STATE}.new" && sync "${UPDATE_STATE}.new" 2>/dev/null
-	mv -f "${UPDATE_STATE}.new" "${UPDATE_STATE}" && sync
+	local next="${UPDATE_STATE}.new"
+	rm -f "${next}"
+	if printf '%s\n' "$1" > "${next}" && [ "$(head -n 1 "${next}" 2>/dev/null)" = "$1" ] \
+		&& { sync "${next}" 2>/dev/null || sync; } && mv -f "${next}" "${UPDATE_STATE}" && sync; then
+		return 0
+	fi
+	rm -f "${next}"
+	return 1
+}
+# $1 in place of $2 through a copy next to it: a file exchanged in one step (never missing in between - the network
+# check writes an empty library where it finds none), a folder replaced once its copy is complete
+put_back_item() {
+	local next="${2}.upd-restore"
+	rm -rf "${next}"
+	cp -a "$1" "${next}" >&3 2>&3 || { rm -rf "${next}"; return 1; }
+	if [ -d "${next}" ] && [ ! -L "${next}" ]; then
+		rm -rf "$2" && mv "${next}" "$2"
+	else
+		mv -f "${next}" "$2"
+	fi
 }
 clear_update_mark() {
 	rm -f "${UPDATE_STATE}" "${UPDATE_STATE}.new"
@@ -471,7 +490,9 @@ rm -f /tmp/mupibox-update-failed
 	sudo -H -u dietpi bash -c "pm2 stop server; pm2 stop spotify-control" >&3 2>&3
 	# An update that stopped before (a power cut while it ran): its data back from its backup first - else this run saved
 	# the empty library and brought that back (restore_interrupted_update.sh; it runs at every start of the box too)
-	[ -f "${MUPI_SRC}/scripts/mupibox/restore_interrupted_update.sh" ] && bash "${MUPI_SRC}/scripts/mupibox/restore_interrupted_update.sh" --no-restart >&3 2>&3
+	if [ -f "${MUPI_SRC}/scripts/mupibox/restore_interrupted_update.sh" ]; then
+		bash "${MUPI_SRC}/scripts/mupibox/restore_interrupted_update.sh" --no-restart >&3 2>&3 			|| fail_update "An update that stopped before could not be undone (see the log) - nothing was changed, the backups are kept"
+	fi
 	# ... and in place before the installation is touched: should this update stop halfway, the next start undoes or
 	# finishes it (mupi_update_recover.service runs it before pm2) - also on the first update that brings it
 	if [ -f "${MUPI_SRC}/scripts/mupibox/restore_interrupted_update.sh" ] && [ -f "${MUPI_SRC}/config/services/mupi_update_recover.service" ]; then
@@ -517,8 +538,8 @@ rm -f /tmp/mupibox-update-failed
 	BAK_DIR="/home/dietpi/.mupibox/Sonos-Kids-Controller-master.upd-bak"
 	# (the old install of a restore that failed stays, under its own name)
 	[ -e "${BAK_DIR}" ] && mv "${BAK_DIR}" "${BAK_DIR}.$(date +%Y%m%d-%H%M%S)" >&3 2>&3
-	# (from here on a power cut leaves an installation that may be incomplete: undone at the next start)
-	mark_update unpacking
+	# (from here on until the very last step a power cut brings the old installation back at the next start)
+	mark_update unpacking || fail_update "The update's state could not be written (card full?) - nothing was changed"
 	if [ -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master ]; then
 		mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master "${BAK_DIR}" >&3 2>&3 || \
 			{ clear_update_mark; fail_update "Could not move old install aside (filesystem full?)"; }
@@ -536,9 +557,7 @@ rm -f /tmp/mupibox-update-failed
 		clear_update_mark
 		fail_update "deploy.zip extraction failed — rolled back to previous install"
 	fi
-	# complete and on the card: a power cut from here on keeps the new installation and brings the user data back
 	sync
-	mark_update unpacked
 	# (the old install is removed once the user data is back, see "Restore Userdata")
 	mv ${MUPI_SRC}/config/templates/monitor.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json >&3 2>&3
 	mv ${MUPI_SRC}/config/templates/www.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
@@ -1075,41 +1094,24 @@ rm -f /tmp/mupibox-update-failed
 			config.json|monitor.json|active_data.json|active_resume.json|network.json) continue ;;
 		esac
 		[ -L "${item}" ] && continue
-		rm -rf "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/${name}" >&3 2>&3
-		cp -a "${item}" "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/${name}" >&3 2>&3 || RESTORE_OK=0
+		put_back_item "${item}" "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/${name}" || RESTORE_OK=0
 	done
 	for item in cover active_theme.css rss-covers; do
 		[ -e "${USERDATA_BAK}/www/${item}" ] || continue
-		rm -rf "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/${item}" >&3 2>&3
-		cp -a "${USERDATA_BAK}/www/${item}" "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/${item}" >&3 2>&3 || RESTORE_OK=0
+		put_back_item "${USERDATA_BAK}/www/${item}" "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/${item}" || RESTORE_OK=0
 	done
 	# theme-data: the new version's files stay, what the user added comes back (-n: nothing of the update replaced)
 	if [ -d "${USERDATA_BAK}/www/theme-data" ]; then
 		mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data >&3 2>&3
 		cp -an "${USERDATA_BAK}/www/theme-data/." /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/ >&3 2>&3 || RESTORE_OK=0
 	fi
-	# The caches of the old install (Spotify answers, covers, the NAS index) come along - moved, not copied (same card,
-	# at once). Without them the box asked Spotify for every entry again after an update: with a big library minutes of
-	# loading dots on the display, and a long way into Spotify's rate limit.
-	if [ -d "${BAK_DIR}/cache" ]; then
-		mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/cache >&3 2>&3
-		for item in "${BAK_DIR}"/cache/*; do
-			[ -e "${item}" ] || continue
-			[ -e "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/cache/$(basename "${item}")" ] && continue
-			mv "${item}" /home/dietpi/.mupibox/Sonos-Kids-Controller-master/cache/ >&3 2>&3
-		done
-		chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/cache >&3 2>&3
-	fi
 	chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config >&3 2>&3
-	# only now that everything is back
+	# Everything back: the old installation and the backup go at the very end of the update (see "Finish the update"),
+	# not here - until then a power cut brings the old installation back whole at the next start
 	if [ "${RESTORE_OK}" = 1 ] && /usr/bin/jq -e . /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json > /dev/null 2>&1; then
-		rm -rf "${USERDATA_BAK}" >&3 2>&3
-		# the old install is not needed any more either
-		rm -rf "${BAK_DIR}" >&3 2>&3
-		# the update is through as far as the installation and the user data go
-		clear_update_mark
+		RESTORE_DONE=1
 	else
-		# (the mark stays "unpacked": the next start tries to bring the user data back once more)
+		# (the mark stays: the next start brings the old installation back, with its data as it was)
 		echo "## Restore incomplete - user data kept in ${USERDATA_BAK} (old install in ${BAK_DIR})" >&3 2>&3
 		# (said at the end, outside the progress dialog - the update used to report success all the same)
 		touch /tmp/mupibox-restore-failed
@@ -1146,6 +1148,39 @@ rm -f /tmp/mupibox-update-failed
 	/usr/local/bin/mupibox/./setting_update.sh >&3 2>&3
 	# boot and maintenance screens for the settings (box name, scene, language)
 	/usr/local/bin/mupibox/bootscreen_update.sh >&3 2>&3
+
+	# Finish the update - only now that everything is installed and set up (the configuration above too): the old
+	# installation's caches (Spotify answers, covers, the NAS index) come along - moved, not copied (same card, at once;
+	# without them the box asked Spotify for every entry again, a long way into its rate limit), of two Spotify blocks
+	# the longer one. Then the old installation, the backup and the mark go. Should anything of it fail, all three stay
+	# and the next start brings the old installation back whole.
+	if [ "${RESTORE_DONE:-0}" = 1 ]; then
+		FINISH_OK=1
+		NEW_CACHE=/home/dietpi/.mupibox/Sonos-Kids-Controller-master/cache
+		if [ -d "${BAK_DIR}/cache" ]; then
+			mkdir -p "${NEW_CACHE}" >&3 2>&3 || FINISH_OK=0
+			block_until() { [ -s "$1" ] && /usr/bin/jq -r '.until // 0 | floor' "$1" 2>/dev/null | grep -E '^[0-9]+$' || echo 0; }
+			for item in "${BAK_DIR}"/cache/*; do
+				[ -e "${item}" ] || continue
+				name=$(basename "${item}")
+				if [ "${name}" = "spotify-block.json" ]; then
+					if [ "$(block_until "${item}")" -gt "$(block_until "${NEW_CACHE}/${name}")" ]; then
+						cp -a "${item}" "${NEW_CACHE}/${name}.upd" && mv -f "${NEW_CACHE}/${name}.upd" "${NEW_CACHE}/${name}" >&3 2>&3 || FINISH_OK=0
+					fi
+				elif [ ! -e "${NEW_CACHE}/${name}" ]; then
+					mv "${item}" "${NEW_CACHE}/" >&3 2>&3 || FINISH_OK=0
+				fi
+			done
+			chown -R dietpi:dietpi "${NEW_CACHE}" >&3 2>&3
+		fi
+		sync
+		if [ "${FINISH_OK}" = 1 ]; then
+			rm -rf "${USERDATA_BAK}" "${BAK_DIR}" >&3 2>&3
+			clear_update_mark
+		else
+			echo "## The old installation's cache could not be taken over - old installation (${BAK_DIR}) and backup kept" >&3 2>&3
+		fi
+	fi
 	
 	mv ${LOG} /boot/$(date +%F)_update_${VERSION}.log >&3 2>&3
 	chown dietpi:dietpi ${CONFIG} >&3 2>&3
@@ -1189,8 +1224,9 @@ fi
 if [ -f /tmp/mupibox-restore-failed ]; then
 	rm -f /tmp/mupibox-restore-failed
 	echo "Update installed, but the USER DATA COULD NOT BE PUT BACK COMPLETELY (card full?) - see ${LOG}."
-	echo "Your data is kept in /home/dietpi/.mupibox/userdata.upd-bak (the old install in Sonos-Kids-Controller-master.upd-bak)."
-	echo "Please make room on the card and copy the missing files back from there (a new update keeps these folders under a dated name)."
+	echo "At its next start the box goes back to the previous version, with your data as it was (nothing is lost:"
+	echo "the old install waits in Sonos-Kids-Controller-master.upd-bak). Please make room on the card, restart the box"
+	echo "and run the update again."
 	exit 1
 fi
 

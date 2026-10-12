@@ -1,10 +1,11 @@
 [Unit]
-# An update that did not get to its end (the power cut while it ran): its installation undone or its user data put
-# back (scripts/mupibox/restore_interrupted_update.sh) - before pm2 starts the app's server and the player, so nothing
-# they write meets the files being put back. Does nothing when no update stopped halfway.
-Description=MuPiBox: finish or undo an update that stopped halfway
+# An update that did not get to its end (the power cut while it ran): the old installation back, whole
+# (scripts/mupibox/restore_interrupted_update.sh) - before pm2 starts the app's server and the player and before the
+# network check, which writes an empty library where it finds none, so nothing meets the files while they are moved.
+# Does nothing when no update stopped halfway.
+Description=MuPiBox: undo an update that stopped halfway
 After=local-fs.target
-Before=pm2-dietpi.service mupi_startstop.service
+Before=pm2-dietpi.service mupi_startstop.service mupi_check_internet.service mupi_telegram.service
 
 [Service]
 Type=oneshot

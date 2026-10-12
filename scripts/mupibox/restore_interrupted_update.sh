@@ -2,25 +2,25 @@
 #
 # After an update that did not get to its end - the power cut or the box switched off while it ran. The update copies
 # the user data (library, resume points, covers ...) to userdata.upd-bak, moves the old installation aside to
-# Sonos-Kids-Controller-master.upd-bak, unpacks the new one and only then brings the data back
-# (update/start_mupibox_update.sh, "Backup Userdata" / "Restore Userdata"). Stopped in between, the box started with an
-# empty library - or, cut off while unpacking, with a broken installation - and the data waited in the backup.
+# Sonos-Kids-Controller-master.upd-bak (moved, not copied: its data stays in it as it was), unpacks the new one, sets
+# it up and brings the data back (update/start_mupibox_update.sh). Stopped in between, the box started with an empty
+# library - or, cut off while unpacking, with a broken installation.
 #
-# The update says where it is in update-state (written next to it, then exchanged, on the card before it goes on):
-#   unpacking   the old installation is aside, the new one is being unpacked - not known to be complete
-#   unpacked    the new one is complete (unpacked, checked, on the card); the user data is not back yet
-#   (no file)   the update got to its end, or never began
-# Here (mupi_update_recover.service at every start, before pm2 starts the app's server and the player; and at the
-# beginning of every update, before its own backup):
-#   unpacking   the old installation comes back, with its data (the new one is kept as .broken-<time>)
-#   unpacked    the user data comes back from the backup - all of it, as often as it takes: the mark goes only when
-#               all of it is back and the library is readable - and the old installation's cache with it (the Spotify
-#               block too: of two the longer one)
-# Updates before this mark existed: the old installation comes back when the new one lacks server.js or index.html,
-# the user data when the library is empty and the backup has one.
-# Whatever the app's server or the player would write meanwhile: they are stopped first when they run (and started
-# again after), so nothing they write is replaced by the backup or the other way round. Every file comes back through a
-# copy next to it, then exchanged. Runs as root.
+# The update marks it (update-state, written next to it, then exchanged, on the card before it goes on) from before
+# it moves the old installation aside until its very last step - only then the old installation and the backup go.
+# Whatever the mark finds here, there is one way back that is always whole: the old installation comes back, with its
+# own data as it was before the update (the new one is kept as .broken-<time>, the backup as userdata.upd-bak.kept-
+# <time>). The update can then simply be run again. Nothing is put together from halves: an installation half set up,
+# user data half brought back.
+#
+# Updates before this mark existed (no mark, an old installation left aside): it comes back when the new one lacks
+# server.js or index.html; the user data comes back from the backup when the library is empty and the backup has one.
+#
+# Run by mupi_update_recover.service at every start - before pm2 starts the app's server and the player and before
+# the network check (check_network.sh writes an empty library where it finds none) - and at the beginning of every
+# update, before its own backup: an update that stopped before is undone first. Exit 1 when it could not be undone or
+# finished: the update then stops before it touches anything. The app's server and the player are stopped first when
+# they run (and started again after). Runs as root.
 #   --no-restart   kept for the callers of before; the apps are only started again when this script stopped them
 # SKC / USERDATA_BAK / UPDATE_STATE / PLAYER_DIR for a test on copies, NO_PM2=1 leaves the running apps alone.
 
@@ -33,6 +33,7 @@ JQ=/usr/bin/jq
 [ -x "${JQ}" ] || JQ=jq
 STAMP=$(date +%Y%m%d-%H%M%S)
 STOPPED=0
+RESULT=0
 
 log() { echo "restore_interrupted_update: $*"; }
 
@@ -59,42 +60,44 @@ start_apps() {
 	sudo -H -u dietpi bash -c 'pm2 start server spotify-control >/dev/null 2>&1'
 }
 
-# $1 (a file or folder) in place of $2: copied next to it, then exchanged
+# $1 in place of $2, through a copy next to it: a file is exchanged in one step (never missing in between), a folder
+# replaced once its copy is complete
 put_back() {
 	local next="${2}.mupibox-restore"
 	rm -rf "${next}"
 	cp -a "$1" "${next}" || { rm -rf "${next}"; return 1; }
-	rm -rf "$2"
-	mv "${next}" "$2"
+	if [ -d "${next}" ] && [ ! -L "${next}" ]; then
+		rm -rf "$2" && mv "${next}" "$2"
+	else
+		mv -f "${next}" "$2"
+	fi
 }
 
-# the update's marks gone (written as the update writes them)
-clear_state() {
-	rm -f "${UPDATE_STATE}" "${UPDATE_STATE}.new"
-	sync
-}
-
-# the old installation back in place of an incomplete one
+# the old installation back in place of the new one
 roll_back() {
 	stop_apps
-	[ -e "${SKC}" ] && mv "${SKC}" "${SKC}.broken-${STAMP}"
+	if [ -e "${SKC}" ] && ! mv "${SKC}" "${SKC}.broken-${STAMP}"; then
+		log "could not move the incomplete installation aside"
+		return 1
+	fi
 	if ! mv "${OLD}" "${SKC}"; then
 		log "could not move the previous installation back"
 		return 1
 	fi
-	# (the update copied the new player there already; the old installation brings its own)
+	# (the update copies its player there; the old installation brings its own)
 	if [ -s "${SKC}/spotify-control.js" ] && [ -d "${PLAYER_DIR}" ]; then
 		cp "${SKC}/spotify-control.js" "${PLAYER_DIR}/spotify-control.js.mupibox-restore" &&
 			mv -f "${PLAYER_DIR}/spotify-control.js.mupibox-restore" "${PLAYER_DIR}/spotify-control.js"
 	fi
-	# the update's backup belongs to it: kept, under a name an update does not take for its own
+	# the update's backup: kept, under a name an update does not take for its own
 	[ -d "${USERDATA_BAK}" ] && mv "${USERDATA_BAK}" "${USERDATA_BAK}.kept-${STAMP}"
 	chown -R dietpi:dietpi "${SKC}" 2>/dev/null
-	log "the previous installation is back"
+	sync
+	log "the previous installation is back, with its data - the update can be run again"
 	return 0
 }
 
-# the user data from the update's backup, all of it (as "Restore Userdata" in the update); 0 when everything is back
+# (updates from before the mark) the user data from the update's backup; 0 when all of it is back
 restore_userdata() {
 	local ok=0 item name
 	mkdir -p "${SKC}/server/config" "${SKC}/www" || return 1
@@ -112,13 +115,17 @@ restore_userdata() {
 		[ -e "${USERDATA_BAK}/www/${item}" ] || continue
 		put_back "${USERDATA_BAK}/www/${item}" "${SKC}/www/${item}" || ok=1
 	done
-	# theme-data: the installation's files stay, what the user added comes back
 	if [ -d "${USERDATA_BAK}/www/theme-data" ]; then
 		mkdir -p "${SKC}/www/theme-data" && cp -an "${USERDATA_BAK}/www/theme-data/." "${SKC}/www/theme-data/" || ok=1
 	fi
 	chown -R dietpi:dietpi "${SKC}/server/config" 2>/dev/null
-	# the library has to be readable again (an empty one is fine only when the backup's was empty too)
-	"${JQ}" -e . "${SKC}/server/config/data.json" >/dev/null 2>&1 || [ ! -e "${USERDATA_BAK}/config/data.json" ] || ok=1
+	# a Spotify block the old installation still holds (copied - the old installation stays as it is): of two the
+	# longer one, so the box does not ask Spotify again while it has to wait
+	local old_block="${OLD}/cache/spotify-block.json" new_block="${SKC}/cache/spotify-block.json"
+	if [ -s "${old_block}" ] && [ "$(block_until "${old_block}")" -gt "$(block_until "${new_block}")" ]; then
+		mkdir -p "${SKC}/cache" && put_back "${old_block}" "${new_block}" && chown -R dietpi:dietpi "${SKC}/cache" || ok=1
+	fi
+	[ "$(entries "${SKC}/server/config/data.json")" -gt 0 ] || ok=1
 	return ${ok}
 }
 
@@ -128,77 +135,40 @@ block_until() {
 	"${JQ}" -r '.until // 0 | floor' "$1" 2>/dev/null | grep -E '^[0-9]+$' || echo 0
 }
 
-# the old installation's caches (Spotify answers, covers, the NAS index), as the update moves them; of two Spotify
-# blocks the one that holds longer
-merge_cache() {
-	[ -d "${OLD}/cache" ] || return 0
-	local item name target
-	mkdir -p "${SKC}/cache"
-	for item in "${OLD}"/cache/* "${OLD}"/cache/.[!.]*; do
-		[ -e "${item}" ] || continue
-		name=$(basename "${item}")
-		target="${SKC}/cache/${name}"
-		if [ "${name}" = "spotify-block.json" ]; then
-			[ "$(block_until "${item}")" -gt "$(block_until "${target}")" ] && put_back "${item}" "${target}"
-		elif [ ! -e "${target}" ]; then
-			mv "${item}" "${target}"
-		fi
-	done
-	chown -R dietpi:dietpi "${SKC}/cache" 2>/dev/null
-	return 0
-}
-
-STATE=$(head -n 1 "${UPDATE_STATE}" 2>/dev/null | tr -d '[:space:]')
-DATA="${SKC}/server/config/data.json"
-
-if [ "${STATE}" = "unpacking" ]; then
-	# 1. cut off while unpacking: whatever is there may be incomplete - the old installation back
+if [ -e "${UPDATE_STATE}" ]; then
+	# An update stopped between moving the old installation aside and its last step (whatever the mark says - an empty
+	# one too: it was written before anything was touched)
 	if [ -d "${OLD}" ]; then
-		log "an update stopped while unpacking - the previous installation comes back"
-		roll_back && clear_state
+		log "an update stopped halfway - the previous installation comes back"
+		if roll_back; then
+			rm -f "${UPDATE_STATE}" "${UPDATE_STATE}.new"
+			sync
+		else
+			RESULT=1
+		fi
 	else
 		# (moving it aside is one rename: without it the update stopped before - the old installation is untouched)
 		log "an update stopped before it moved the installation aside - nothing to undo"
-		clear_state
+		rm -f "${UPDATE_STATE}" "${UPDATE_STATE}.new"
+		sync
 	fi
-elif [ "${STATE}" = "unpacked" ]; then
-	# 2. the new installation complete, the user data not (all) back: all of it again
-	if [ -d "${USERDATA_BAK}/config" ]; then
-		log "an update stopped before the user data was back - it comes back now"
-		stop_apps
-		if restore_userdata; then
-			merge_cache
-			sync
-			rm -rf "${USERDATA_BAK}" "${OLD}"
-			clear_state
-			log "user data restored"
-		else
-			log "the user data could not be restored completely - tried again at the next start (backup in ${USERDATA_BAK})"
-		fi
+elif [ -d "${OLD}" ] && [ -s "${OLD}/server.js" ] && { [ ! -s "${SKC}/server.js" ] || [ ! -s "${SKC}/www/index.html" ]; }; then
+	log "the installation is incomplete (an update stopped while unpacking) - the previous one comes back"
+	roll_back || RESULT=1
+elif [ -d "${USERDATA_BAK}/config" ] && [ "$(entries "${USERDATA_BAK}/config/data.json")" -gt 0 ] && [ "$(entries "${SKC}/server/config/data.json")" -eq 0 ]; then
+	log "the library is empty, the backup of an update has $(entries "${USERDATA_BAK}/config/data.json") entries - the user data comes back"
+	stop_apps
+	if restore_userdata; then
+		sync
+		# kept, under a name the update does not use (it would take an old backup for the one of its own run)
+		mv "${USERDATA_BAK}" "${USERDATA_BAK}.restored-${STAMP}"
+		log "user data restored"
 	else
-		log "an update stopped after unpacking, without a backup of the user data - nothing to bring back"
-		clear_state
-	fi
-elif [ -z "${STATE}" ]; then
-	# updates from before the marks
-	if [ -d "${OLD}" ] && [ -s "${OLD}/server.js" ] && { [ ! -s "${SKC}/server.js" ] || [ ! -s "${SKC}/www/index.html" ]; }; then
-		log "the installation is incomplete (an update stopped while unpacking) - the previous one comes back"
-		roll_back
-	elif [ -d "${USERDATA_BAK}/config" ] && [ "$(entries "${USERDATA_BAK}/config/data.json")" -gt 0 ] && [ "$(entries "${DATA}")" -eq 0 ]; then
-		log "the library is empty, the backup of an update has $(entries "${USERDATA_BAK}/config/data.json") entries - the user data comes back"
-		stop_apps
-		if restore_userdata; then
-			merge_cache
-			sync
-			# kept, under a name the update does not use (it would take an old backup for the one of its own run)
-			mv "${USERDATA_BAK}" "${USERDATA_BAK}.restored-${STAMP}"
-			log "user data restored"
-		else
-			log "the user data could not be restored completely - the backup stays in ${USERDATA_BAK}"
-		fi
+		log "the user data could not be restored completely - the backup stays in ${USERDATA_BAK}"
+		RESULT=1
 	fi
 fi
 
 sync
 start_apps
-exit 0
+exit ${RESULT}
