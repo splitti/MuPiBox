@@ -18,6 +18,15 @@
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Samba share in the Windows network (found by Markus): the app's switch started the share only, never its announcement (WS-Discovery), so the box did not show up in the Windows network; and it asked for the package wsdd, which Debian 13 'Trixie' does not have - the whole installation failed there. Now wsdd2 (Debian 12 and 13; a box with wsdd keeps it) is installed when missing and switched on and off with the share - also by the installation and the update.</li>
 </ul>
+<b>Reliability</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>An update that stopped halfway (the power cut, the box switched off while it ran) no longer leaves an empty library: at the next start - and at the beginning of the next update - the box brings the library, resume points and covers back from the update's backup; if it stopped while unpacking, the previous version comes back. The copy data.json.pre-update is never replaced by an empty list any more.</li>
+<li id='linews' class='linews'>The version the update writes into the settings could empty them: a jq that failed for a moment (a broken file, a full SD card) left mupiboxconfig.json empty - every setting gone. Now written next to it and exchanged only when it worked (installation too).</li>
+<li id='linews' class='linews'>Node.js is no longer removed before the new one is downloaded: without internet for a moment the box was left without Node.js - the app, the display and the player no longer ran. The old one stays until the new one is in; without any, the update stops before it changes anything.</li>
+<li id='linews' class='linews'>config.txt and cmdline.txt on the boot partition are no longer overwritten in place (sound outputs; the colour of the boot screen - with a random boot screen at every start): a power cut in that moment left them half or empty and the box no longer started. Now written next to them, forced onto the card, then exchanged.</li>
+<li id='linews' class='linews'>The WiFi settings (with their passwords) were readable by every user on the box after an update: they are readable by root only again, and written next to the file instead of through /tmp.</li>
+</ul>
 <b>Player</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
