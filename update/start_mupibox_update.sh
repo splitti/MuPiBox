@@ -1103,10 +1103,8 @@ rm -f /tmp/mupibox-update-failed
 	if [ "${RESTORE_OK}" = 1 ] && /usr/bin/jq -e . /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json > /dev/null 2>&1; then
 		RESTORE_DONE=1
 	else
-		# (the mark stays: the next start brings the old installation back, with its data as it was)
+		# (the end of the update goes back to the old installation, with its data as it was)
 		echo "## Restore incomplete - user data kept in ${USERDATA_BAK} (old install in ${BAK_DIR})" >&3 2>&3
-		# (said at the end, outside the progress dialog - the update used to report success all the same)
-		touch /tmp/mupibox-restore-failed
 	fi
 	chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	sleep 1 >&3 2>&3
@@ -1166,11 +1164,22 @@ rm -f /tmp/mupibox-update-failed
 			chown -R dietpi:dietpi "${NEW_CACHE}" >&3 2>&3
 		fi
 		sync
+		# The update counts as done once "done" is on the card: what is left over then is only cleared up - a power cut
+		# while the old installation is being deleted must not bring a half deleted one back
+		[ "${FINISH_OK}" = 1 ] && mark_update done || FINISH_OK=0
 		if [ "${FINISH_OK}" = 1 ]; then
 			rm -rf "${USERDATA_BAK}" "${BAK_DIR}" >&3 2>&3
 			clear_update_mark
+		fi
+	fi
+	# Not done (the user data not all back, the old caches not taken over, the mark not written): back to the previous
+	# version at once, before the new one runs and anything is written into it - not only at the next start
+	if [ "${RESTORE_DONE:-0}" != 1 ] || [ "${FINISH_OK:-0}" != 1 ]; then
+		echo "## The update could not be finished - going back to the previous version" >&3 2>&3
+		if bash /usr/local/bin/mupibox/restore_interrupted_update.sh --no-restart >&3 2>&3; then
+			fail_update "The update could not be finished (card full?) - the previous version is back, with your data as it was"
 		else
-			echo "## The old installation's cache could not be taken over - old installation (${BAK_DIR}) and backup kept" >&3 2>&3
+			fail_update "The update could not be finished, and going back did not complete either - restart the box: it goes on with it at the start"
 		fi
 	fi
 	
@@ -1201,24 +1210,11 @@ rm -f /tmp/mupibox-update-failed
 } | whiptail --title "MuPiBox Update ${VERSION_LONG}" --gauge "Please wait while installing" 6 60 0
 
 if [ -f /tmp/mupibox-update-failed ]; then
+	# (the reason, as fail_update wrote it - this said "the archive could not be downloaded" for every abort before)
+	echo "Update FAILED: $(sed 's/^Update aborted: //' /tmp/mupibox-update-failed)"
+	echo "See ${LOG} (or the dated update log on the boot partition)."
 	rm -f /tmp/mupibox-update-failed
 	rm -rf ${PREFLIGHT_DIR}
-	echo "Update FAILED: the MuPiBox archive could not be downloaded completely (see ${LOG})."
-	echo "Nothing was replaced. Please check the network connection and run the update again."
-	exit 1
-fi
-if [ -f /tmp/mupibox-update-failed ]; then
-	cat /tmp/mupibox-update-failed
-	rm -f /tmp/mupibox-update-failed
-	echo "Nothing was replaced - your installation is as it was (see ${LOG})."
-	exit 1
-fi
-if [ -f /tmp/mupibox-restore-failed ]; then
-	rm -f /tmp/mupibox-restore-failed
-	echo "Update installed, but the USER DATA COULD NOT BE PUT BACK COMPLETELY (card full?) - see ${LOG}."
-	echo "At its next start the box goes back to the previous version, with your data as it was (nothing is lost:"
-	echo "the old install waits in Sonos-Kids-Controller-master.upd-bak). Please make room on the card, restart the box"
-	echo "and run the update again."
 	exit 1
 fi
 
