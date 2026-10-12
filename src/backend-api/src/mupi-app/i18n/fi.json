@@ -2779,5 +2779,8 @@
  "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Haluan silti käyttää laatikkoa ilman salasanaa.",
  "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Ilman kirjautumista kuka tahansa kotiverkossa voi säätää laatikkoa – myös vieraat Wi-Fissä ja laitteet, joita et tunne: poistaa sisältöä, yhdistää Spotifyn, sammuttaa laatikon ja käyttää hallintaliittymää kaikin oikeuksin.",
  "Standardpasswort aktiv": "Oletussalasana käytössä",
- "Verstanden": "Selvä"
+ "Verstanden": "Selvä",
+ "Startet mit": "Aloittaa välilehdellä",
+ "Dieser Reiter ist offen, wenn das Display startet.": "Tämä välilehti on auki, kun näyttö käynnistyy.",
+ "Das Display startet mit {}": "Näyttö aloittaa välilehdellä {}"
 }

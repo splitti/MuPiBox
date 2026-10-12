@@ -99,6 +99,8 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
       // (the scrollbar of the cover lists in every theme: the theme's own, or across the width and thicker)
       scrollbarStyle: mb.scrollbarStyle === 'full' ? 'full' : 'standard',
       hiddenCategories: Array.isArray(mb.hiddenCategories) ? (mb.hiddenCategories as unknown[]).filter((c) => CATEGORIES.includes(String(c))) : [],
+      // (the tab the display opens with; a hidden one: the display takes the first shown tab)
+      startCategory: CATEGORIES.includes(String(mb.startCategory)) ? String(mb.startCategory) : 'audiobook',
       resume: num(mb.resume, 1, 99) ?? 9,
       listviewTimer: num(mb.listviewTimer, 0.5, 5, 0.5) ?? 2.5,
       settingsAccessTimer: num(mb.settingsAccessTimer, 1, 10, 0.5) ?? 3,
@@ -147,6 +149,10 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
       // at least one tab stays on the display
       if (unique.length >= CATEGORIES.length) return res.status(400).json({ error: 'at least one category must stay visible' })
       mb.hiddenCategories = unique
+    }
+    if (body.startCategory !== undefined) {
+      if (!CATEGORIES.includes(String(body.startCategory))) return bad('startCategory')
+      mb.startCategory = String(body.startCategory)
     }
     const numbers: [string, number, number, number, Record<string, unknown>][] = [
       ['resume', 1, 99, 1, mb],
@@ -232,7 +238,7 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
       // (as the admin interface: with dietpi's login environment, so chromium finds its display)
       detached('sudo /usr/local/bin/mupibox/setting_update.sh >/dev/null 2>&1; sudo -i -u dietpi bash -c "setsid nohup /usr/local/bin/mupibox/restart_kiosk.sh >/dev/null 2>&1 < /dev/null &"')
       result.restartKiosk = true
-    } else if (['coverflowShowNames', 'hideScrollbar', 'scrollbarStyle', 'hiddenCategories', 'listviewTimer', 'settingsAccessTimer'].some((k) => k in mb)) {
+    } else if (['coverflowShowNames', 'hideScrollbar', 'scrollbarStyle', 'hiddenCategories', 'startCategory', 'listviewTimer', 'settingsAccessTimer'].some((k) => k in mb)) {
       result.reloaded = await reloadDisplayPage()
     }
     res.json(result)

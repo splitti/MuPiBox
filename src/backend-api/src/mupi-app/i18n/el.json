@@ -2779,5 +2779,8 @@
  "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Θέλω παρ’ όλα αυτά να λειτουργεί το κουτί χωρίς κωδικό.",
  "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Χωρίς σύνδεση, οποιοσδήποτε στο οικιακό δίκτυο μπορεί να ρυθμίσει το κουτί – και επισκέπτες στο Wi-Fi και συσκευές που δεν γνωρίζεις: να διαγράψει περιεχόμενο, να συνδέσει το Spotify, να απενεργοποιήσει το κουτί και να χρησιμοποιήσει το περιβάλλον διαχείρισης με όλα τα δικαιώματα.",
  "Standardpasswort aktiv": "Ενεργός προεπιλεγμένος κωδικός",
- "Verstanden": "Κατάλαβα"
+ "Verstanden": "Κατάλαβα",
+ "Startet mit": "Ξεκινά με",
+ "Dieser Reiter ist offen, wenn das Display startet.": "Αυτή η καρτέλα είναι ανοιχτή όταν ξεκινά η οθόνη.",
+ "Das Display startet mit {}": "Η οθόνη ξεκινά με {}"
 }

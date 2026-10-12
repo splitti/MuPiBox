@@ -2779,5 +2779,8 @@
  "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Aun así quiero usar la caja sin contraseña.",
  "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Sin inicio de sesión, cualquiera en la red doméstica puede configurar la caja, también invitados en la wifi y dispositivos que no conoces: borrar contenido, conectar Spotify, apagar la caja y usar la interfaz de administración con todos los permisos.",
  "Standardpasswort aktiv": "Contraseña predeterminada activa",
- "Verstanden": "Entendido"
+ "Verstanden": "Entendido",
+ "Startet mit": "Empieza con",
+ "Dieser Reiter ist offen, wenn das Display startet.": "Esta pestaña está abierta cuando se inicia la pantalla.",
+ "Das Display startet mit {}": "La pantalla empieza con {}"
 }

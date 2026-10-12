@@ -10,6 +10,8 @@ export interface MupiboxConfig {
     settingsAccessTimer?: number
     // Display categories hidden in the kiosk (Admin > Control system > Hide display categorys)
     hiddenCategories?: string[]
+    // The tab the display opens with (app > Bedienung > Startet mit): audiobook (default), music, nas or other
+    startCategory?: string
     // Hides the horizontal scrollbar of the cover lists (Admin > Mupi-conf > Theme)
     hideScrollbar?: boolean
     // The scrollbar of the cover lists in every theme: 'standard' (the theme's own) or 'full' (across the width and

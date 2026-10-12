@@ -47,6 +47,8 @@ Manche Einträge sind Ordner, etwa ein Interpret oder eine Hörspielreihe. Ein T
 
 Wer zum Beispiel keine NAS-Inhalte hat, blendet den Reiter aus: **Einstellungen › Display & Bedienung › Bedienung am Display › Reiter auf dem Display**. Jeder Reiter hat einen Schalter, an heißt sichtbar. Die sichtbaren Reiter teilen sich die Breite. Mindestens einer bleibt sichtbar.
 
+Unter **Startet mit** wählst du, welcher Reiter offen ist, wenn das Display startet. Ohne Auswahl sind es die Hörspiele. Ist der gewählte Reiter ausgeblendet, startet das Display mit dem ersten sichtbaren.
+
 ## Fortsetzen
 
 Das Uhr-Symbol links neben den Reitern öffnet die **Fortsetzen**-Liste mit den zuletzt gehörten Titeln, so dass das Kind genau dort weiterhört, wo es aufgehört hat. Wie viele Einträge sie hat, stellst du unter **Bedienung am Display › Weiterhören › Einträge unter „Fortsetzen“** ein. Mehr dazu: [Fortsetzen und „Läuft gerade“](fortsetzen.md).
