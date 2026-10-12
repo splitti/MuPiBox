@@ -5,8 +5,6 @@
 # The channel as the first argument (stable when none is given), e.g. the development version on a fresh DietPi:
 #   cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup.sh | sudo bash -s -- dev
 
-exec 3>${LOG}
-
 case "$1" in
 	stable|beta|dev)
 		RELEASE="$1"
@@ -32,6 +30,8 @@ else
 fi
 
 LOG="/tmp/autosetup.log"
+# (only once LOG is set: opened before, the redirect failed - and every step with ">&3 2>&3" was skipped, not run)
+exec 3>${LOG}
 VER_JSON="/tmp/version.json"
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)
@@ -373,7 +373,7 @@ STEP=0
 	mv -f ${MUPI_SRC}/config/templates/smb.conf /etc/samba/smb.conf >&3 2>&3
 	(echo "mupibox"; echo "mupibox") | smbpasswd -s -a dietpi >&3 2>&3
 	# (the package starts them: off until the app switches the share on; the domain controller is never needed)
-	for u in smbd nmbd samba-ad-dc ${WSD}; do
+	for u in smbd nmbd samba-ad-dc wsdd wsdd2; do
 		systemctl cat ${u}.service >/dev/null 2>&1 || continue
 		systemctl disable --now ${u}.service >&3 2>&3
 	done
@@ -611,13 +611,13 @@ STEP=0
 	echo -e "XXX\n${STEP}\nEnable and start services... \nXXX"
 	before=$(date +%s)
 	
-	# LAN without waiting at boot, and an address at once when a cable is plugged in (see scripts/mupibox/mupi_ethernet.sh).
-	# Also re-evaluates LAN vs WiFi priority (mupi_wifi_select.sh) on every carrier change - the udev rule above
-	# does not fire on every board (some onboard ethernet drivers never emit a uevent for it), and this script
-	# already reacts to the exact same "ip monitor link" event, so it is the more reliable place to trigger it.
-	# the goodbye picture until the power is off (see config/services/mupi_goodbye.service)
-	# an update that stops halfway: undone or finished at the next start, before pm2 (restore_interrupted_update.sh)
-	mv -f ${MUPI_SRC}/config/services/*.service /etc/systemd/system/ >&3 2>&3
+	# Every unit of config/services (each file says what it is for), the timer of the certificate check with them -
+	# switched on below only those the box needs from the start; the others (VNC, MuPiHAT, fan, rotary, MQTT, Telegram,
+	# DietPi-Dashboard ...) the app or the admin interface switches on. Among them: mupi_ethernet (LAN without waiting at
+	# boot, and the choice between LAN and WiFi at every change of the cable - the udev rule below does not fire on every
+	# board), mupi_goodbye (the goodbye picture until the power is off), mupi_update_recover (an update that stopped
+	# halfway undone at the next start, before pm2).
+	mv -f ${MUPI_SRC}/config/services/*.service ${MUPI_SRC}/config/services/*.timer /etc/systemd/system/ >&3 2>&3
 	
 	# Tolerant replacement for DietPi's WiFi monitor (see scripts/mupibox/wifi_monitor.sh)
 	mkdir -p /etc/systemd/system/dietpi-wifi-monitor.service.d >&3 2>&3
@@ -634,7 +634,8 @@ STEP=0
 	mkdir -p "/etc/systemd/system/getty@tty1.service.d" >&3 2>&3
 	cp -f "${MUPI_SRC}/config/services/getty@tty1.service.d/mupibox.conf" "/etc/systemd/system/getty@tty1.service.d/mupibox.conf" >&3 2>&3
 	
-	# Admin interface and DietPi dashboard 45 s after the start (see config/services/mupibox-delayed-start.conf)
+	# Admin interface, DietPi dashboard and the Samba share (once the app switches it on) 45 s after the start
+	# (see config/services/mupibox-delayed-start.conf)
 	for delayed in lighttpd smbd dietpi-dashboard $(systemctl list-unit-files "php*-fpm.service" --no-legend 2>/dev/null | awk '{print $1}' | sed 's/\.service$//'); do
 		mkdir -p "/etc/systemd/system/${delayed}.service.d" >&3 2>&3
 		cp -f "${MUPI_SRC}/config/services/mupibox-delayed-start.conf" "/etc/systemd/system/${delayed}.service.d/mupibox-delayed-start.conf" >&3 2>&3
