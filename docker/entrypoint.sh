@@ -1,5 +1,15 @@
 #!/bin/bash
 
+# docker:start mounts the host's src/backend-api over server/: its config folder then lacks the server's own config
+# files the image put there (config.json, monitor.json) - without config.json the server answered /api/sonos with
+# "Could not load server config." and Spotify never started. Taken from the templates when missing, never over a file
+# that is there (the Spotify client id and secret go into config.json by hand, see README).
+TEMPLATES=/home/dietpi/MuPiBoxSource/config/templates
+SERVER_CONFIG=/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config
+mkdir -p "${SERVER_CONFIG}"
+[ -f "${SERVER_CONFIG}/config.json" ] || cp "${TEMPLATES}/www.json" "${SERVER_CONFIG}/config.json"
+[ -f "${SERVER_CONFIG}/monitor.json" ] || cp "${TEMPLATES}/monitor.json" "${SERVER_CONFIG}/monitor.json"
+
 # The API serves the library from active_data.json (and the resume list from active_resume.json), symlinks that the
 # box's network check (scripts/mupibox/check_network.sh) points at data.json or offline_data.json. No such service
 # runs here, so they are set once, to the online files - without them the library stays empty.

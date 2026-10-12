@@ -240,6 +240,22 @@ const dataFile = `${configBasePath}/data.json`
 const resumeFile = `${configBasePath}/resume.json`
 const activedataFile = `${configBasePath}/active_data.json`
 const activeresumeFile = `${configBasePath}/active_resume.json`
+// The display reads the library and the resume list through the active files, links a box's network check
+// (check_network.sh) points at the online or the offline lists. In development no such check runs: the links to the
+// online lists are made here once, when they are missing - else a library put into config/ (README, Contributing)
+// stayed empty on the display. Only in development; on the box nothing changes.
+if (devServe) {
+  for (const [active, target] of [
+    [activedataFile, dataFile],
+    [activeresumeFile, resumeFile],
+  ]) {
+    try {
+      if (!fs.existsSync(active) && fs.existsSync(target)) fs.symlinkSync(path.basename(target), active)
+    } catch (err) {
+      console.warn(`${new Date().toLocaleString()}: [MuPiBox-Server] ${path.basename(active)} could not be linked to ${path.basename(target)}: ${(err as Error).message}`)
+    }
+  }
+}
 const networkFile = `${configBasePath}/network.json`
 const wlanFile = `${configBasePath}/wlan.json`
 const monitorFile = `${configBasePath}/monitor.json`
