@@ -1,5 +1,6 @@
 // mpv as the box's player for everything that is not Spotify (local media, the NAS, radio, podcasts, announcements).
-// Same interface as mplayer-wrapper.js - the player (spotify-control.js) does not know which of the two runs:
+// The interface the former mplayer-wrapper.js had (mplayer was the engine up to 5.0.6), as the player
+// (spotify-control.js) uses it:
 //   play, playList, queue, next, previous, playPause, seek, seekPercent, setVolume, stop, getProps, exec, close
 //   events: track-change, playlist-finish, cache-fill, prop + <prop> (percent_pos, time_pos, length, pause, metadata,
 //   filename, path), close, mplayer-error

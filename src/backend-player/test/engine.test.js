@@ -1,8 +1,8 @@
-// The player's engine wrapper (mplayer-wrapper.js or mpv-wrapper.js) driven as spotify-control.js drives it: the same
+// The player's engine wrapper (mpv-wrapper.js) driven as spotify-control.js drives it: the same
 // calls, the same events expected, against files made here (sine tones) and a stream from a local HTTP server.
-// Run on the box (the engines are there):
-//   npm run build:test && scp ../deploy/engine-test.js mupibox:/tmp/ && ssh mupibox 'ENGINE=mpv node /tmp/engine-test.js'
-// ENGINE=mplayer|mpv (default mpv). Sound comes out of the box's speaker at a low volume while it runs.
+// Run on the box (mpv is there):
+//   npm run build:test && scp ../deploy/engine-test.js mupibox:/tmp/ && ssh mupibox 'node /tmp/engine-test.js'
+// Sound comes out of the box's speaker at a low volume while it runs.
 const { test, before, after } = require('node:test')
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
@@ -10,9 +10,9 @@ const http = require('node:http')
 const os = require('node:os')
 const path = require('node:path')
 
-const ENGINE = process.env.ENGINE || 'mpv'
-const createPlayer = ENGINE === 'mplayer' ? require('../src/mplayer-wrapper.js') : require('../src/mpv-wrapper.js')
-const STARTS_AT = ENGINE !== 'mplayer' // (mplayer-wrapper.js seeks after the start; see out.startsAt)
+const ENGINE = 'mpv'
+const createPlayer = require('../src/mpv-wrapper.js')
+const STARTS_AT = true // (mpv starts at a position itself; see out.startsAt)
 
 const TRACK_SECONDS = 4
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mupibox-engine-test-'))
@@ -106,7 +106,7 @@ before(async () => {
   // spotify-control.js asks for the position once a second; mplayer's wrapper tells the end of a playlist only by
   // the answer to such a poll
   pollTimer = setInterval(() => player.getProps(['percent_pos']), 500)
-  await sleep(ENGINE === 'mpv' ? 1500 : 1000)
+  await sleep(1500)
   player.setVolume(5)
 })
 
@@ -219,9 +219,7 @@ test(`${ENGINE}: volume is set and read back`, async () => {
   player.setVolume(30)
   await sleep(300)
   const v = await prop('volume')
-  // (mplayer answers with the volume of its mixer, not with the value set - only mpv reads it back exactly)
-  if (ENGINE === 'mpv') assert.ok(Math.abs(v - 30) < 1, `volume ${v}`)
-  else assert.ok(Number.isFinite(v), `volume ${v}`)
+  assert.ok(Math.abs(v - 30) < 1, `volume ${v}`)
   player.setVolume(5)
 })
 

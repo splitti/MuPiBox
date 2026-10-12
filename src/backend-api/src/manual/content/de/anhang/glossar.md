@@ -17,7 +17,7 @@
 | **IP-Adresse** | die Adresse der Box im Netzwerk |
 | **Kiosk-Modus** | Vollbild ohne Bedienelemente des Browsers, so läuft das Display |
 | **MQTT** | ein leichtes Nachrichtenverfahren für Smarthome und Geräte |
-| **mpv** | das Programm, das Hörspiele, Musik, Podcasts und Radio abspielt. Fehlt es, nimmt die Box mplayer |
+| **mpv** | das Programm, das Hörspiele, Musik, Podcasts und Radio abspielt |
 | **MuPiHAT** | Platine mit Akku-Verwaltung für die Box |
 | **NAS** | Netzwerkspeicher im Heimnetz |
 | **OnOff SHIM** | Ein-/Aus-Taster mit Betriebs-LED für den Raspberry Pi |

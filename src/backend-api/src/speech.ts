@@ -681,7 +681,7 @@ async function gong(): Promise<string> {
   return GONG_FILE
 }
 
-// Plays a file over PulseAudio (a WAV with paplay, an MP3 with mpv - with mplayer where mpv is missing), `level` of
+// Plays a file over PulseAudio (a WAV with paplay, an MP3 with mpv), `level` of
 // the box's volume
 function playFile(file: string, level: number): Promise<void> {
   const percent = String(Math.round(level * 100))
@@ -689,7 +689,6 @@ function playFile(file: string, level: number): Promise<void> {
     ? [['paplay', [`--volume=${Math.round(level * 65536)}`, file]]]
     : [
         ['mpv', ['--no-video', '--really-quiet', '--no-config', '--ao=pulse', `--volume=${percent}`, file]],
-        ['mplayer', ['-really-quiet', '-nolirc', '-ao', 'pulse', '-softvol', '-volume', percent, file]],
       ]
   const attempt = (i: number): Promise<void> =>
     new Promise((resolve) => {

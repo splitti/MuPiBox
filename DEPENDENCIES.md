@@ -14,7 +14,7 @@ places are listed in [Unused and deprecated](#unused-and-deprecated).
 |---|---|---|
 | `frontend-box` | Display UI (Angular 20 + Ionic 8), served by the server on port 8200 | `src/frontend-box` |
 | `backend-api` | REST API (Express 5, esbuild bundle `server.js`, pm2 process `server`, port 8200) | `src/backend-api` |
-| `backend-player` | Player control (Express 4 + `mplayer` in slave mode, bundle `spotify-control.js`, pm2 process `spotify-control`, port 5005) | `src/backend-player` |
+| `backend-player` | Player control (Express 4 + `mpv` over its JSON IPC socket, bundle `spotify-control.js`, pm2 process `spotify-control`, port 5005) | `src/backend-player` |
 | Admin interface | PHP pages behind lighttpd | `AdminInterface/www` |
 | Scripts and services | Shell/Python helpers and systemd units | `scripts`, `config/services` |
 
@@ -44,7 +44,6 @@ Dev: `esbuild` (bundle), `tsx` (run TypeScript), `typescript`, `@types/*`, `supe
 | `spotify-web-api-node` | remote control of the Spotify Connect device (librespot) |
 | `google-tts-api` | spoken text ("read the title aloud") |
 | `console-log-level`, `debug` | log output |
-| `js-string-escape` | quoting file names for mplayer's slave commands |
 
 Dev: `esbuild`.
 
@@ -68,7 +67,8 @@ still build.
 
 | Package | Workspace | Why unused |
 |---|---|---|
-| `byline` | backend-player | mplayer output is split into lines by hand now (Latin-1 titles need raw bytes) |
+| `byline` | backend-player | mplayer output was split into lines by hand (Latin-1 titles need raw bytes); mplayer is gone since 5.0.10 |
+| `js-string-escape` | backend-player | quoted file names for mplayer's slave commands; mplayer is gone since 5.0.10 (mpv takes JSON) |
 | `protobufjs`, `protobufjs-cli` | backend-player | only the `build-proto` script used them; the `proto/` folder and the generated file do not exist |
 | `nodemon` | backend-player | the `serve` script starts `node` directly |
 | `http`, `path` | backend-player | Node.js built-in modules, no npm package needed |
@@ -84,7 +84,7 @@ Kept, with what uses them:
 
 | Package | Used by |
 |---|---|
-| `mplayer` | playback engine (`mplayer-wrapper.js`) |
+| `mpv` | playback engine for everything but Spotify (`mpv-wrapper.js`); mplayer, the fallback until 5.0.9, is no longer installed |
 | `libasound2`, `python3-alsaaudio` | audio output, volume in `mqtt.py` |
 | `pulseaudio-module-bluetooth`, `bluez` | Bluetooth speakers (`scripts/bluetooth`, Bluetooth pages) |
 | `lighttpd-mod-openssl` | HTTPS for the admin interface (lighttpd) |
@@ -132,7 +132,7 @@ Python libraries used only by manual analysis tools (`scripts/mupihat/plot_*.py`
 
 | Binary | Used for | Where it comes from |
 |---|---|---|
-| `mplayer` | playback | apt |
+| `mpv` | playback | apt |
 | `jq` | reads the JSON config in nearly every shell script | downloaded from the jq GitHub release by update/autosetup (1.8.1) |
 | `librespot` | Spotify Connect player, see below | downloaded from `splitti/MuPiBox` (`bin/librespot/dev_0.6_20250806`) |
 | `fbv` | shows pictures on the framebuffer (splash) | `bin/fbv` (`fbv`, `fbv_64`) |

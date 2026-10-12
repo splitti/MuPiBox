@@ -34,7 +34,6 @@ See [DEPENDENCIES.md](DEPENDENCIES.md) for what MuPiBox needs (npm packages, sys
 - Sonos Kids Controller by Thyraz (https://github.com/Thyraz/Sonos-Kids-Controller)
 - SpotifyController (https://github.com/amueller-tech/spotifycontroller)
 - Librespot (https://github.com/librespot-org/librespot)
-- mplayer-wrapper by derhuerst (https://github.com/derhuerst/mplayer-wrapper)
 - pi-blaster by sarfata (https://github.com/sarfata/pi-blaster)
 - google-tts by zlargon (https://github.com/zlargon/google-tts)
 - Font Pan Pizza by Mark Lohner (https://www.marc-lohner.com/)

@@ -13,7 +13,6 @@ RUN apt-get update && \
     wget \
     cron \
     jq \
-    mplayer \
     mpv \
     nodejs \
     npm \
@@ -67,13 +66,6 @@ RUN mkdir /var/log/mupibox/
 RUN mv -f $mupisrc/config/templates/mupiboxconfig.json "/etc/mupibox/mupiboxconfig.json"
 RUN chown root:www-data /etc/mupibox/mupiboxconfig.json
 RUN chmod 775 /etc/mupibox/mupiboxconfig.json
-
-# Install mplayer wrapper
-WORKDIR /home/dietpi/.mupibox
-RUN git clone https://github.com/derhuerst/mplayer-wrapper
-RUN cp $mupisrc/dev/customize/mplayer-wrapper/index.js /home/dietpi/.mupibox/mplayer-wrapper/index.js
-WORKDIR /home/dietpi/.mupibox/mplayer-wrapper
-RUN npm install
 
 # Install google tts.
 WORKDIR /home/dietpi/.mupibox

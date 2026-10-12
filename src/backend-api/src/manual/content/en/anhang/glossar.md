@@ -17,7 +17,7 @@
 | **IP address** | the box's address on the network |
 | **Kiosk mode** | full screen without the browser's controls, which is how the display runs |
 | **MQTT** | a lightweight messaging method for the smart home and devices |
-| **mpv** | the program that plays audiobooks, music, podcasts and radio. If it is missing, the box uses mplayer |
+| **mpv** | the program that plays audiobooks, music, podcasts and radio |
 | **MuPiHAT** | board with battery management for the box |
 | **NAS** | network storage in the home network |
 | **OnOff SHIM** | on/off button with status LED for the Raspberry Pi |
