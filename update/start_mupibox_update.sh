@@ -92,6 +92,19 @@ fail_update() {
 	echo -e "XXX\n100\nUpdate aborted: ${msg}\nXXX"
 	exit 1
 }
+
+# Where the update is, for an update that stops halfway (power cut): unpacking -> unpacked -> (gone at the end).
+# restore_interrupted_update.sh reads it at the next start (and the next update) and undoes or finishes the update.
+# Written next to it and on the card before the update goes on.
+UPDATE_STATE=/home/dietpi/.mupibox/update-state
+mark_update() {
+	printf '%s\n' "$1" > "${UPDATE_STATE}.new" && sync "${UPDATE_STATE}.new" 2>/dev/null
+	mv -f "${UPDATE_STATE}.new" "${UPDATE_STATE}" && sync
+}
+clear_update_mark() {
+	rm -f "${UPDATE_STATE}" "${UPDATE_STATE}.new"
+	sync
+}
 rm -f /tmp/mupibox-update-failed
 service mupi_idle_shutdown stop
 # 2026-09-20: no longer installed (nothing in MuPiBox uses them any more):
@@ -459,6 +472,15 @@ rm -f /tmp/mupibox-update-failed
 	# An update that stopped before (a power cut while it ran): its data back from its backup first - else this run saved
 	# the empty library and brought that back (restore_interrupted_update.sh; it runs at every start of the box too)
 	[ -f "${MUPI_SRC}/scripts/mupibox/restore_interrupted_update.sh" ] && bash "${MUPI_SRC}/scripts/mupibox/restore_interrupted_update.sh" --no-restart >&3 2>&3
+	# ... and in place before the installation is touched: should this update stop halfway, the next start undoes or
+	# finishes it (mupi_update_recover.service runs it before pm2) - also on the first update that brings it
+	if [ -f "${MUPI_SRC}/scripts/mupibox/restore_interrupted_update.sh" ] && [ -f "${MUPI_SRC}/config/services/mupi_update_recover.service" ]; then
+		mkdir -p /usr/local/bin/mupibox >&3 2>&3
+		tr -d '\r' < "${MUPI_SRC}/scripts/mupibox/restore_interrupted_update.sh" > /usr/local/bin/mupibox/restore_interrupted_update.sh && chmod 755 /usr/local/bin/mupibox/restore_interrupted_update.sh
+		cp -f "${MUPI_SRC}/config/services/mupi_update_recover.service" /etc/systemd/system/mupi_update_recover.service >&3 2>&3
+		systemctl daemon-reload >&3 2>&3
+		systemctl enable mupi_update_recover.service >&3 2>&3
+	fi
 	# A backup left from a restore that failed (see "Restore Userdata") is kept under its own name, never thrown away
 	[ -e "${USERDATA_BAK}" ] && mv "${USERDATA_BAK}" "${USERDATA_BAK}.$(date +%Y%m%d-%H%M%S)" >&3 2>&3
 	mkdir -p "${USERDATA_BAK}/www" >&3 2>&3
@@ -495,20 +517,28 @@ rm -f /tmp/mupibox-update-failed
 	BAK_DIR="/home/dietpi/.mupibox/Sonos-Kids-Controller-master.upd-bak"
 	# (the old install of a restore that failed stays, under its own name)
 	[ -e "${BAK_DIR}" ] && mv "${BAK_DIR}" "${BAK_DIR}.$(date +%Y%m%d-%H%M%S)" >&3 2>&3
+	# (from here on a power cut leaves an installation that may be incomplete: undone at the next start)
+	mark_update unpacking
 	if [ -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master ]; then
 		mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master "${BAK_DIR}" >&3 2>&3 || \
-			fail_update "Could not move old install aside (filesystem full?)"
+			{ clear_update_mark; fail_update "Could not move old install aside (filesystem full?)"; }
 	fi
 	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/ >&3 2>&3
-	if ! unzip ${MUPI_SRC}/bin/nodejs/deploy.zip -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3; then
+	if ! unzip ${MUPI_SRC}/bin/nodejs/deploy.zip -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3 \
+		|| [ ! -s /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server.js ] \
+		|| [ ! -s /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/index.html ]; then
 		# Rollback: remove the partially-extracted dir and restore the backup.
 		rm -rf /home/dietpi/.mupibox/Sonos-Kids-Controller-master >&3 2>&3
 		if [ -d "${BAK_DIR}" ]; then
 			mv "${BAK_DIR}" /home/dietpi/.mupibox/Sonos-Kids-Controller-master >&3 2>&3
 			sudo -H -u dietpi bash -c "pm2 start server" >&3 2>&3
 		fi
+		clear_update_mark
 		fail_update "deploy.zip extraction failed — rolled back to previous install"
 	fi
+	# complete and on the card: a power cut from here on keeps the new installation and brings the user data back
+	sync
+	mark_update unpacked
 	# (the old install is removed once the user data is back, see "Restore Userdata")
 	mv ${MUPI_SRC}/config/templates/monitor.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json >&3 2>&3
 	mv ${MUPI_SRC}/config/templates/www.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
@@ -1076,7 +1106,10 @@ rm -f /tmp/mupibox-update-failed
 		rm -rf "${USERDATA_BAK}" >&3 2>&3
 		# the old install is not needed any more either
 		rm -rf "${BAK_DIR}" >&3 2>&3
+		# the update is through as far as the installation and the user data go
+		clear_update_mark
 	else
+		# (the mark stays "unpacked": the next start tries to bring the user data back once more)
 		echo "## Restore incomplete - user data kept in ${USERDATA_BAK} (old install in ${BAK_DIR})" >&3 2>&3
 		# (said at the end, outside the progress dialog - the update used to report success all the same)
 		touch /tmp/mupibox-restore-failed
