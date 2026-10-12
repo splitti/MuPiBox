@@ -360,9 +360,30 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	echo -e "XXX\n${STEP}\nCopy DietPi config... \nXXX"
 	before=$(date +%s)
 	mv -f ${MUPI_SRC}/config/templates/asound.conf /etc/asound.conf >&3 2>&3
-	mv -f ${MUPI_SRC}/config/templates/smb.conf /etc/samba/smb.conf >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Copy DietPi config ## finished after $((after - before)) seconds" >&3 2>&3
+	STEP=$((STEP + 1))
+
+	###############################################################################################
+
+	echo -e "XXX\n${STEP}\nPreconfigure Samba... \nXXX"
+	before=$(date +%s)
+	# The Samba share (the box in the Windows network) installed and set up, but off: the app switches it on
+	# (Einstellungen › Dienste, eltern/services.ts) - then at once and without internet. Nothing was installed for it
+	# before (smb.conf and the password went nowhere, smbd was "switched on" without being there), the app installed it
+	# at its first switch-on. With it its announcement (WS-Discovery): wsdd2 (Debian 12 and 13), else wsdd.
+	WSD=$(apt-cache show wsdd2 >/dev/null 2>&1 && echo wsdd2 || echo wsdd)
+	apt-get --yes install samba ${WSD} >&3 2>&3
+	mkdir -p /etc/samba >&3 2>&3
+	mv -f ${MUPI_SRC}/config/templates/smb.conf /etc/samba/smb.conf >&3 2>&3
+	(echo "mupibox"; echo "mupibox") | smbpasswd -s -a dietpi >&3 2>&3
+	# (the package starts them: off until the app switches the share on; the domain controller is never needed)
+	for u in smbd nmbd samba-ad-dc wsdd wsdd2; do
+		systemctl cat ${u}.service >/dev/null 2>&1 || continue
+		systemctl disable --now ${u}.service >&3 2>&3
+	done
+	after=$(date +%s)
+	echo -e "## Preconfigure Samba ## finished after $((after - before)) seconds" >&3 2>&3
 	STEP=$((STEP + 1))
 
 	###############################################################################################
@@ -479,6 +500,18 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 
 	echo -e "XXX\n${STEP}\nInstall Hifiberry-MiniAmp and Bluetooth support... \nXXX"
 	before=$(date +%s)
+	# DietPi's survey (dietpi.txt SURVEY_OPTED_IN): never answered (-1, or not there), the first dietpi-software install
+	# below decided it on its own - its question went into this script's log, nobody saw it. Off then; a box whose owner
+	# chose to take part (1) keeps that.
+	DIETPI_TXT=/boot/dietpi.txt
+	[ -f /boot/firmware/dietpi.txt ] && DIETPI_TXT=/boot/firmware/dietpi.txt
+	if [ -f "${DIETPI_TXT}" ] && ! grep -qE '^[[:space:]]*SURVEY_OPTED_IN=1[[:space:]]*$' "${DIETPI_TXT}"; then
+		if grep -qE '^[[:space:]]*SURVEY_OPTED_IN=' "${DIETPI_TXT}"; then
+			sed -i -E 's/^[[:space:]]*SURVEY_OPTED_IN=.*/SURVEY_OPTED_IN=0/' "${DIETPI_TXT}" >&3 2>&3
+		else
+			echo 'SURVEY_OPTED_IN=0' >> "${DIETPI_TXT}"
+		fi
+	fi
 	/boot/dietpi/dietpi-software install 5 >&3 2>&3
 	/boot/dietpi/func/dietpi-set_hardware bluetooth enable >&3 2>&3
 	/boot/dietpi/func/dietpi-set_hardware soundcard "hifiberry-dac" >&3 2>&3
@@ -524,7 +557,6 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 
 	echo -e "XXX\n${STEP}\nSet environment... \nXXX"
 	before=$(date +%s)
-	(echo "mupibox"; echo "mupibox") | smbpasswd -s -a dietpi >&3 2>&3
 	THEME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme.css"
 	ln -sf /home/dietpi/MuPiBox/themes/blue.css ${THEME_FILE} >&3 2>&3
 	echo "www-data ALL=(ALL:ALL) NOPASSWD: ALL" | tee /etc/sudoers.d/www-data >&3 2>&3
@@ -533,6 +565,9 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	chown dietpi:dietpi /tmp/crontab.template >&3 2>&3
 	su dietpi -c "/usr/bin/crontab /tmp/crontab.template" >&3 2>&3
 	ln -sf /tmp/network.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json >&3 2>&3
+	# What the update does with the settings (conf_update.sh) also on a new box: the template lacks entries only the
+	# update added - the newer themes among them, so the admin interface showed only the old ones until the first update
+	bash /usr/local/bin/mupibox/conf_update.sh >&3 2>&3
 	# the version: into a file next to the config, then exchanged - written in place, a jq that failed left it empty
 	VTMP="${CONFIG}.version.$$"
 	if jq --arg v "${VERSION_LONG}" '.mupibox.version = $v' ${CONFIG} > "${VTMP}" 2>&3 && [ -s "${VTMP}" ]; then
@@ -671,17 +706,10 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	# The Samba share is a standalone server (smbd); the Active Directory domain controller is not needed
 	systemctl disable --now samba-ad-dc.service >&3 2>&3
 	systemctl daemon-reload >&3 2>&3
-	for service in mupi_wifi mupi_check_internet mupi_check_monitor mupi_idle_shutdown smbd mupi_startstop pulseaudio mupi_splash mupi_powerled mupi_ethernet mupi_goodbye; do
+	# (not the Samba share: off until the app switches it on, see "Preconfigure Samba")
+	for service in mupi_wifi mupi_check_internet mupi_check_monitor mupi_idle_shutdown mupi_startstop pulseaudio mupi_splash mupi_powerled mupi_ethernet mupi_goodbye; do
 		systemctl enable ${service}.service >&3 2>&3
 		systemctl start ${service}.service >&3 2>&3
-	done
-	# The share's announcement for the Windows network (WS-Discovery, so the box shows up there): wsdd2 (Debian 12 and 13;
-	# Debian 13 has no wsdd), a box with wsdd keeps it. Installed when neither is, running together with the share.
-	WSD=$(apt-cache show wsdd2 >/dev/null 2>&1 && echo wsdd2 || echo wsdd)
-	dpkg -s wsdd >/dev/null 2>&1 || dpkg -s wsdd2 >/dev/null 2>&1 || apt-get --yes install ${WSD} >&3 2>&3
-	for u in wsdd wsdd2; do
-		systemctl cat ${u}.service >/dev/null 2>&1 || continue
-		systemctl enable --now ${u}.service >&3 2>&3
 	done
 	# The DietPi-Dashboard: a password nobody knows, an inner port, off - the app switches it on and opens it with a
 	# one-time ticket (dietpi_dashboard.sh, backend-api eltern/dietpi-dashboard.ts)
