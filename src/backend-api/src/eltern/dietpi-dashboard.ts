@@ -112,7 +112,7 @@ function pass(req: IncomingMessage, res: ServerResponse): void {
 
 /** Its websockets (/ws, terminal, files): the raw connection to the inner port - the dashboard checks its token */
 function upgrade(req: IncomingMessage, socket: Duplex, head: Buffer): void {
-  if (!isAllowedHost(req.headers.host) || (httpsOnly() && secure && !encrypted(req))) {
+  if (!isAllowedHost(req.headers.host) || (httpsOnly() && !encrypted(req))) {
     socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n')
     return
   }
@@ -134,8 +134,11 @@ function handle(req: IncomingMessage, res: ServerResponse): void {
     res.writeHead(403).end()
     return
   }
-  if (httpsOnly() && secure && !encrypted(req)) {
-    res.writeHead(308, { Location: `https://${req.headers.host}${req.url ?? '/'}` }).end()
+  // "Nur sichere Verbindung": nothing of the dashboard over http - also not while https is not ready yet (the
+  // certificate is still being read after the start, or could not be read): then a note instead of the sign-in
+  if (httpsOnly() && !encrypted(req)) {
+    if (secure) res.writeHead(308, { Location: `https://${req.headers.host}${req.url ?? '/'}` }).end()
+    else page(res, 503, '<h1>DietPi-Dashboard</h1><p>Die sichere Verbindung (https) ist noch nicht bereit. Bitte gleich noch einmal aus der App öffnen.</p>')
     return
   }
   if ((req.url ?? '').split('?')[0] === '/mupibox-open') {
@@ -149,9 +152,9 @@ function handle(req: IncomingMessage, res: ServerResponse): void {
 
 // The certificate for https: read (again) when it is new - at the start, and at most every 30 s when a connection
 // comes (tls_cert.sh renews it for a new address of the box). Without one, the port speaks http only.
-function refreshPem(): void {
+function refreshPem(): Promise<void> {
   const now = Date.now()
-  if (pemLoading || now - pemChecked < PEM_CHECK_MS) return
+  if (pemLoading || now - pemChecked < PEM_CHECK_MS) return Promise.resolve()
   pemChecked = now
   let stamp = ''
   try {
@@ -160,9 +163,9 @@ function refreshPem(): void {
   } catch {
     // none (yet)
   }
-  if (stamp === pemStamp) return
+  if (stamp === pemStamp) return Promise.resolve()
   pemLoading = true
-  run(['pem'], 10000)
+  return run(['pem'], 10000)
     .then((r) => {
       if (!r.ok || !/PRIVATE KEY-----/.test(r.stdout) || !/BEGIN CERTIFICATE/.test(r.stdout)) {
         if (stamp) log('no certificate for https')
@@ -190,7 +193,7 @@ function startProxy(): void {
   if (proxy) return
   plain ??= createServer(handle).on('upgrade', upgrade)
   pemChecked = 0
-  refreshPem()
+  const initialPem = refreshPem()
   // One port for both: a TLS connection begins with the byte 22 (a handshake record), http with a letter.
   const s = net.createServer((socket) => {
     sockets.add(socket)
@@ -210,8 +213,12 @@ function startProxy(): void {
     log(`port ${OUTER_PORT}: ${err.message}`)
     if (proxy === s) proxy = null
   })
-  s.listen(OUTER_PORT)
   proxy = s
+  // (the port opens once the certificate was read - or could not be: then http only, and nothing with "Nur sichere
+  // Verbindung", see handle)
+  initialPem.finally(() => {
+    if (proxy === s) s.listen(OUTER_PORT)
+  })
 }
 
 function stopProxy(): void {
