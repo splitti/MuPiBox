@@ -16,7 +16,7 @@
 <b>Network</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
-<li id='linews' class='linews'>Samba share in the Windows network (found by Markus): the app's switch started the share only, never its announcement (WS-Discovery), so the box did not show up in the Windows network; and it asked for the package wsdd, which Debian 13 'Trixie' does not have - the whole installation failed there. Now wsdd2 (Debian 12 and 13; a box with wsdd keeps it) is installed when missing and switched on and off with the share - also by the installation and the update.</li>
+<li id='linews' class='linews'>Samba share in the Windows network: the app's switch started the share only, never its announcement (WS-Discovery), so the box did not show up in the Windows network; and it asked for the package wsdd, which Debian 13 'Trixie' does not have - the whole installation failed there. Now wsdd2 (Debian 12 and 13; a box with wsdd keeps it) is installed when missing and switched on and off with the share - also by the installation and the update.</li>
 </ul>
 <b>Reliability</b>
 </ul>
@@ -30,9 +30,9 @@
 <b>Installation</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
-<li id='linews' class='linews'>Samba on a new box (suggested by Markus): the installation now installs the share and its announcement (wsdd2) and sets them up, but leaves them off - the app switches them on at once and without internet. It used to "switch on" a share that was never installed (the app installed it at its first switch-on).</li>
-<li id='linews' class='linews'>All themes on a new box (found by Markus): the installation copied every theme, but the settings listed only the older ones - the newer ones came with the first update. The installation now applies the update's settings step (conf_update.sh) too.</li>
-<li id='linews' class='linews'>DietPi's survey (found by Markus): never answered, it was decided on its own by the installation's first DietPi software install, its question hidden in the log. The installation now answers it with no (SURVEY_OPTED_IN=0); a box whose owner chose to take part keeps that.</li>
+<li id='linews' class='linews'>Samba on a new box: the installation now installs the share and its announcement (wsdd2) and sets them up, but leaves them off - the app switches them on at once and without internet. It used to "switch on" a share that was never installed (the app installed it at its first switch-on).</li>
+<li id='linews' class='linews'>All themes on a new box: the installation copied every theme, but the settings listed only the older ones - the newer ones came with the first update. The installation now applies the update's settings step (conf_update.sh) too.</li>
+<li id='linews' class='linews'>DietPi's survey: never answered, it was decided on its own by the installation's first DietPi software install, its question hidden in the log. The installation now answers it with no (SURVEY_OPTED_IN=0); a box whose owner chose to take part keeps that.</li>
 </ul>
 <b>Player</b>
 </ul>
@@ -42,8 +42,8 @@
 <b>Display</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
-<li id='linews' class='linews'>Full colours on the display (found by toby_fischer): DietPi starts Chromium in its "low-end device mode", which draws pictures with 16 bits per pixel - covers and photos showed bands of colour. On a Pi with 2 GB or more the update takes the mode out again (/etc/chromium.d/zz-mupibox, after DietPi's own file, which stays as it is); a Pi with 1 GB or less keeps it to save memory. Applies from the next start of the box.</li>
-<li id='linews' class='linews'>Start tab (wish of Andreas): the display no longer always starts with the audiobooks - in the app under Display &amp; controls &gt; Controls on the display &gt; Tabs on the display, "Starts with" chooses the tab that is open when the display starts (one of the visible ones; a hidden one: the first visible tab, as before).</li>
+<li id='linews' class='linews'>Full colours on the display: DietPi starts Chromium in its "low-end device mode", which draws pictures with 16 bits per pixel - covers and photos showed bands of colour. On a Pi with 2 GB or more the update takes the mode out again (/etc/chromium.d/zz-mupibox, after DietPi's own file, which stays as it is); a Pi with 1 GB or less keeps it to save memory. Applies from the next start of the box.</li>
+<li id='linews' class='linews'>Start tab: the display no longer always starts with the audiobooks - in the app under Display &amp; controls &gt; Controls on the display &gt; Tabs on the display, "Starts with" chooses the tab that is open when the display starts (one of the visible ones; a hidden one: the first visible tab, as before).</li>
 <li id='linews' class='linews'>Output capsule in the player: while it plays through Bluetooth headphones or a Bluetooth speaker, the device's battery is shown at the top right of the field (when it reports it) - a small battery, green, yellow at 20 % and less, red at 10 % and less; while the box itself plays the green dot stays. Held for a moment, the capsule always opens Listen with, also with two outputs where a tap switches at once; a ring fills while it is held.</li>
 </ul>
 <h3>DEV 5.0.9 - changes compared to 5.0.8</h3>
