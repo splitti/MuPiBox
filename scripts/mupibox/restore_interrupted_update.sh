@@ -21,11 +21,15 @@
 #
 # Run by mupi_update_recover.service at every start - before pm2 starts the app's server and the player and before
 # the network check (check_network.sh writes an empty library where it finds none) - and at the beginning of every
-# update, before its own backup: an update that stopped before is undone first. Exit 1 when it could not be undone or
+# update, before its own backup: an update that stopped before is undone first. While the installation is exchanged
+# or files are put back nothing else writes the library or the resume list: the app's server and the player stopped,
+# cron held (get_network.sh), the scripts that write them waited for, the shared locks (/tmp/.data.lock,
+# /tmp/.resume.lock) taken as the backend takes them. Exit 1 when it could not be undone or
 # finished: the update then stops before it touches anything. The app's server and the player are stopped first when
 # they run (and started again after). Runs as root.
 #   --no-restart   kept for the callers of before; the apps are only started again when this script stopped them
-# SKC / USERDATA_BAK / UPDATE_STATE / PLAYER_DIR for a test on copies, NO_PM2=1 leaves the running apps alone.
+# SKC / USERDATA_BAK / UPDATE_STATE / PLAYER_DIR / LOCK_DIR for a test on copies, NO_PM2=1 leaves the running apps
+# and cron alone (NO_CRON=0 holds cron all the same), TEST_PAUSE=<s> waits there between the two moves.
 
 SKC="${SKC:-/home/dietpi/.mupibox/Sonos-Kids-Controller-master}"
 OLD="${SKC}.upd-bak"
@@ -39,6 +43,15 @@ BROKEN="${SKC}.broken"
 STATE=""
 STOPPED=0
 RESULT=0
+# the locks the library and the resume list share with the backend and the shell scripts (see backend-api
+# file-lock.ts): created without overwriting, "<pid> <token>" inside, touched while held, only our own removed
+LOCK_DIR="${LOCK_DIR:-/tmp}"
+DATA_LOCK="${LOCK_DIR}/.data.lock"
+RESUME_LOCK="${LOCK_DIR}/.resume.lock"
+LOCK_TOKEN="restore-${STAMP}"
+LOCKED=0
+TOUCHER=""
+CRON_STOPPED=0
 
 log() { echo "restore_interrupted_update: $*"; }
 
@@ -64,6 +77,73 @@ start_apps() {
 	[ "${STOPPED}" = 1 ] || return
 	sudo -H -u dietpi bash -c 'pm2 start server spotify-control >/dev/null 2>&1'
 }
+
+# A lock that may be taken over, as the backend decides it (file-lock.ts staleReason): gone, its holder's process no
+# longer runs (or did not touch it for 10 min), or an empty one of a script not touched for 30 s
+lock_stale() {
+	local content age pid
+	[ -e "$1" ] || return 0
+	content=$(cat "$1" 2>/dev/null)
+	age=$(( $(date +%s) - $(stat -c %Y "$1" 2>/dev/null || date +%s) ))
+	pid=$(printf '%s' "${content}" | sed -nE 's/^([0-9]+) [^ ]+$/\1/p')
+	if [ -n "${pid}" ]; then
+		kill -0 "${pid}" 2>/dev/null || return 0
+		[ "${age}" -gt 600 ]
+		return
+	fi
+	[ "${age}" -gt 30 ]
+}
+take_lock() {
+	local i
+	for i in $(seq 1 120); do
+		if ( set -C; printf '%s %s\n' "$$" "${LOCK_TOKEN}" > "$1" ) 2>/dev/null; then
+			# (the backend runs as dietpi: it has to be able to read it and, should this script die, take it over)
+			chown dietpi:dietpi "$1" 2>/dev/null
+			return 0
+		fi
+		lock_stale "$1" && rm -f "$1"
+		sleep 0.5
+	done
+	return 1
+}
+own_lock() { [ "$(cat "$1" 2>/dev/null)" = "$$ ${LOCK_TOKEN}" ]; }
+
+# Nothing else writes the library or the resume list while the installation is exchanged or files are put back: cron
+# (get_network.sh writes an empty library where it finds none) held, the scripts that write them waited for, and the
+# shared locks taken - held, and taken again should a script that began before remove them, until all of it is done
+quiet_writers() {
+	[ "${LOCKED}" = 1 ] && return 0
+	if [ "${NO_CRON:-${NO_PM2:-0}}" != 1 ] && systemctl is-active --quiet cron 2>/dev/null; then
+		systemctl stop cron && CRON_STOPPED=1
+	fi
+	local i
+	for i in $(seq 1 60); do
+		pgrep -f 'mupibox/(\./)?(get_network|m3u_generator|add_index)\.sh' >/dev/null 2>&1 || break
+		sleep 0.5
+	done
+	take_lock "${DATA_LOCK}" && take_lock "${RESUME_LOCK}" || { log "the library is locked by another program - try again later"; release_writers; return 1; }
+	LOCKED=1
+	(
+		while sleep 1; do
+			for l in "${DATA_LOCK}" "${RESUME_LOCK}"; do
+				if own_lock "${l}"; then touch "${l}"; else ( set -C; printf '%s %s\n' "$$" "${LOCK_TOKEN}" > "${l}" ) 2>/dev/null; fi
+			done
+		done
+	) &
+	TOUCHER=$!
+	return 0
+}
+release_writers() {
+	[ -n "${TOUCHER}" ] && kill "${TOUCHER}" 2>/dev/null && wait "${TOUCHER}" 2>/dev/null
+	TOUCHER=""
+	for l in "${DATA_LOCK}" "${RESUME_LOCK}"; do
+		own_lock "${l}" && rm -f "${l}"
+	done
+	LOCKED=0
+	[ "${CRON_STOPPED}" = 1 ] && systemctl start cron
+	CRON_STOPPED=0
+}
+trap release_writers EXIT
 
 # $1 in place of $2, through a copy next to it: a file is exchanged in one step (never missing in between), a folder
 # replaced once its copy is complete
@@ -103,12 +183,14 @@ roll_back() {
 		write_state rollback || { log "could not write the mark for the way back (card full?)"; return 1; }
 	fi
 	stop_apps
+	quiet_writers || return 1
 	if [ -d "${OLD}" ]; then
 		if [ -e "${SKC}" ]; then
 			# (one of an earlier way back keeps its place under a dated name)
 			[ -e "${BROKEN}" ] && { mv "${BROKEN}" "${BROKEN}-${STAMP}" || return 1; }
 			mv "${SKC}" "${BROKEN}" || { log "could not move the new installation aside"; return 1; }
 		fi
+		[ -n "${TEST_PAUSE:-}" ] && sleep "${TEST_PAUSE}"
 		mv "${OLD}" "${SKC}" || { log "could not move the previous installation back"; return 1; }
 		sync
 	elif [ ! -s "${SKC}/server.js" ]; then
@@ -205,7 +287,7 @@ elif [ -d "${OLD}" ] && [ -s "${OLD}/server.js" ] && { [ ! -s "${SKC}/server.js"
 elif [ -d "${USERDATA_BAK}/config" ] && [ "$(entries "${USERDATA_BAK}/config/data.json")" -gt 0 ] && [ "$(entries "${SKC}/server/config/data.json")" -eq 0 ]; then
 	log "the library is empty, the backup of an update has $(entries "${USERDATA_BAK}/config/data.json") entries - the user data comes back"
 	stop_apps
-	if restore_userdata; then
+	if quiet_writers && restore_userdata; then
 		sync
 		# kept, under a name the update does not use (it would take an old backup for the one of its own run)
 		mv "${USERDATA_BAK}" "${USERDATA_BAK}.restored-${STAMP}"
@@ -217,5 +299,6 @@ elif [ -d "${USERDATA_BAK}/config" ] && [ "$(entries "${USERDATA_BAK}/config/dat
 fi
 
 sync
+release_writers
 start_apps
 exit ${RESULT}
