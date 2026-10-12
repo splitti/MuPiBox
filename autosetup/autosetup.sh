@@ -521,7 +521,14 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	chown dietpi:dietpi /tmp/crontab.template >&3 2>&3
 	su dietpi -c "/usr/bin/crontab /tmp/crontab.template" >&3 2>&3
 	ln -sf /tmp/network.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json >&3 2>&3
-	cat <<< $(jq --arg v "${VERSION_LONG}" '.mupibox.version = $v' ${CONFIG}) > ${CONFIG}
+	# the version: into a file next to the config, then exchanged - written in place, a jq that failed left it empty
+	VTMP="${CONFIG}.version.$$"
+	if jq --arg v "${VERSION_LONG}" '.mupibox.version = $v' ${CONFIG} > "${VTMP}" 2>&3 && [ -s "${VTMP}" ]; then
+		mv -f "${VTMP}" ${CONFIG}
+	else
+		rm -f "${VTMP}"
+		echo "## WARNING: version not written, the config was left as it is ##" >&3 2>&3
+	fi
 	chown root:www-data ${CONFIG} >&3 2>&3
 	chmod 775 ${CONFIG} >&3 2>&3
 

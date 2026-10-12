@@ -1065,7 +1065,16 @@ rm -f /tmp/mupibox-update-failed
 	
 	echo -e "XXX\n${STEP}\nFinalizing setup... \nXXX"
 	#cp ${CONFIG} ${CONFIG}_backup  >&3 2>&3
-	/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION_LONG}" '.mupibox.version = $v' ${CONFIG}) >  ${CONFIG}
+	# The version, written as every other change of the config (conf_update.sh): into a file next to it, then exchanged.
+	# Written in place, a jq that failed (the config broken for a moment, a full SD card) left it empty - every setting
+	# gone, the Spotify login and the password with them.
+	VTMP="${CONFIG}.version.$$"
+	if /usr/bin/jq --arg v "${VERSION_LONG}" '.mupibox.version = $v' ${CONFIG} > "${VTMP}" 2>&3 && [ -s "${VTMP}" ]; then
+		mv -f "${VTMP}" ${CONFIG}
+	else
+		rm -f "${VTMP}"
+		echo "## WARNING: version not written, the config was left as it is ##" >&3 2>&3
+	fi
 	chown root:www-data ${CONFIG}
 	chmod 775 ${CONFIG}
 	#systemctl start mupi_idle_shutdown.service >&3 2>&3
