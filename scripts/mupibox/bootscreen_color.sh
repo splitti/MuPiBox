@@ -28,8 +28,19 @@ if [ "${WHAT}" != "browser" ]; then
 		NEW_LINE=$(sed -e "s/vt\.default_red=[0-9,]*/vt.default_red=$(rep ${R})/" \
 			-e "s/vt\.default_grn=[0-9,]*/vt.default_grn=$(rep ${G})/" \
 			-e "s/vt\.default_blu=[0-9,]*/vt.default_blu=$(rep ${B})/" "${CMDLINE}")
-		# write only when it changes (the boot partition is on the SD card)
-		[ "${NEW_LINE}" != "$(cat "${CMDLINE}")" ] && printf '%s\n' "${NEW_LINE}" > "${CMDLINE}"
+		# Written only when it changes (the boot partition is on the SD card) - next to it, forced onto the card, then
+		# exchanged: written in place, a power cut in that moment left cmdline.txt half or empty and the box no longer
+		# started (with a random boot screen this runs at every start)
+		# (never a line without the root file system: a sed that failed must not leave the box without its start line)
+		if [[ "${NEW_LINE}" == *root=* ]] && [ "${NEW_LINE}" != "$(cat "${CMDLINE}")" ]; then
+			NEXT="${CMDLINE}.mupibox-new"
+			if printf '%s\n' "${NEW_LINE}" > "${NEXT}" && [ -s "${NEXT}" ]; then
+				sync "${NEXT}" 2>/dev/null || sync
+				mv -f "${NEXT}" "${CMDLINE}" && sync
+			else
+				rm -f "${NEXT}"
+			fi
+		fi
 	fi
 	# The initramfs splash of older installations ("initramfs initramfs.img" in config.txt and splash.txt, installers up
 	# to 3.x) shows splash.png of the boot partition at the kernel's start, before splash_screen.sh: that was the old
