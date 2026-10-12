@@ -116,7 +116,7 @@ with the date and reason):
 | `python3-gpiozero` | no script imports it |
 | `libgles2-mesa` | Chromium brings its graphics libraries itself; the package does not exist in Debian 13 "Trixie" (5.0.10) |
 | `libasound2` | comes with mpv and PulseAudio; in Trixie it is called `libasound2t64` and the old name fails on 32 bit (5.0.10) |
-| `preload` | a desktop daemon that preloads programs it saw started; the box starts the same few, which stay in memory anyway - it only took RAM and wrote its state to the SD card (5.0.10; boxes that have it keep it, it is off there) |
+| `preload` | a desktop daemon that preloads programs it saw started; the box starts the same few, which stay in memory anyway - it only took RAM and wrote its state to the SD card (5.0.10; on a box that has it the update switches it off, the package stays) |
 | `libi2c-dev` | nothing is compiled against it, the MuPiHAT uses `python3-smbus2` (5.0.10) |
 | `@ionic/cli` (npm, autosetup) | a tool to build the display's app, the box gets it built (5.0.10) |
 | nano syntax colours (`scopatz/nanorc`, autosetup) | comfort only, a script of a foreign repository run as root (5.0.10) |
