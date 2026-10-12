@@ -58,8 +58,14 @@ CONFIG="/etc/mupibox/mupiboxconfig.json"
 if ${PREFLIGHT_DIR}/jq . ${CONFIG} > /dev/null 2>&1; then
   cp ${CONFIG} /home/dietpi/mupiboxconfig.json.pre-update
 fi
-if ${PREFLIGHT_DIR}/jq . /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json > /dev/null 2>&1; then
-  cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json /home/dietpi/data.json.pre-update
+# (an empty library never replaces a copy that has one: an update started again after one that stopped halfway - the
+# library empty then - kept only the empty list here)
+PRE_DATA=/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json
+pre_entries() { ${PREFLIGHT_DIR}/jq 'if type == "array" then length else 0 end' "$1" 2>/dev/null | head -n 1 | grep -E '^[0-9]+$' || echo 0; }
+if ${PREFLIGHT_DIR}/jq . "${PRE_DATA}" > /dev/null 2>&1; then
+  if [ "$(pre_entries "${PRE_DATA}")" -gt 0 ] || [ "$(pre_entries /home/dietpi/data.json.pre-update)" -eq 0 ]; then
+    cp "${PRE_DATA}" /home/dietpi/data.json.pre-update
+  fi
 fi
 LOG="/boot/mupibox_update.log"
 exec 3>${LOG}
@@ -200,9 +206,18 @@ rm -f /tmp/mupibox-update-failed
 	if [[ "$NODEJS" == "v22."* ]]; then
 		echo "Node.js already at v22.*" >&3 2>&3
 	else
-		apt-get --yes remove nodejs >&3 2>&3
-		curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash - >&3 2>&3
-		apt-get install -y nodejs >&3 2>&3
+		# Node.js 22 from NodeSource, installed over the one there is. It is no longer removed first: when the download or
+		# the installation failed (no internet for a moment, NodeSource not answering), the box was left without Node.js -
+		# the app, the display and the player no longer ran. The old one stays until the new one is in.
+		if curl -fsSL https://deb.nodesource.com/setup_22.x -o /tmp/nodesource_setup.sh >&3 2>&3 && bash /tmp/nodesource_setup.sh >&3 2>&3; then
+			apt-get install -y nodejs >&3 2>&3
+		fi
+		rm -f /tmp/nodesource_setup.sh
+		NODEJS=$(nodejs --version 2>/dev/null)
+		if [[ "$NODEJS" != "v22."* ]]; then
+			echo "## WARNING: Node.js 22 could not be installed (still ${NODEJS:-none}) ##" >&3 2>&3
+			command -v node >/dev/null 2>&1 || fail_update "Node.js could not be installed (internet?) - please start the update again"
+		fi
 	fi
 	after=$(date +%s)
 
@@ -441,6 +456,9 @@ rm -f /tmp/mupibox-update-failed
 	# The box's programs stop before the copy: a change the app saved or the player's progress after the copy was
 	# replaced by the older copy when the data came back (the server was stopped only after the backup before)
 	sudo -H -u dietpi bash -c "pm2 stop server; pm2 stop spotify-control" >&3 2>&3
+	# An update that stopped before (a power cut while it ran): its data back from its backup first - else this run saved
+	# the empty library and brought that back (restore_interrupted_update.sh; it runs at every start of the box too)
+	[ -f "${MUPI_SRC}/scripts/mupibox/restore_interrupted_update.sh" ] && bash "${MUPI_SRC}/scripts/mupibox/restore_interrupted_update.sh" --no-restart >&3 2>&3
 	# A backup left from a restore that failed (see "Restore Userdata") is kept under its own name, never thrown away
 	[ -e "${USERDATA_BAK}" ] && mv "${USERDATA_BAK}" "${USERDATA_BAK}.$(date +%Y%m%d-%H%M%S)" >&3 2>&3
 	mkdir -p "${USERDATA_BAK}/www" >&3 2>&3
@@ -1073,7 +1091,16 @@ rm -f /tmp/mupibox-update-failed
 	
 	echo -e "XXX\n${STEP}\nFinalizing setup... \nXXX"
 	#cp ${CONFIG} ${CONFIG}_backup  >&3 2>&3
-	/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION_LONG}" '.mupibox.version = $v' ${CONFIG}) >  ${CONFIG}
+	# The version, written as every other change of the config (conf_update.sh): into a file next to it, then exchanged.
+	# Written in place, a jq that failed (the config broken for a moment, a full SD card) left it empty - every setting
+	# gone, the Spotify login and the password with them.
+	VTMP="${CONFIG}.version.$$"
+	if /usr/bin/jq --arg v "${VERSION_LONG}" '.mupibox.version = $v' ${CONFIG} > "${VTMP}" 2>&3 && [ -s "${VTMP}" ]; then
+		mv -f "${VTMP}" ${CONFIG}
+	else
+		rm -f "${VTMP}"
+		echo "## WARNING: version not written, the config was left as it is ##" >&3 2>&3
+	fi
 	chown root:www-data ${CONFIG}
 	chmod 775 ${CONFIG}
 	#systemctl start mupi_idle_shutdown.service >&3 2>&3

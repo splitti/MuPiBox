@@ -47,6 +47,18 @@ MARK_KMS_LINE="# mupibox-hdmi-audio: noaudio taken from the next line"
 MARK_KMS="# mupibox-hdmi-audio: noaudio taken from vc4-kms-v3d"
 CHANGED=0
 
+# Puts the file $1 in place of the boot file $2: written next to it, forced onto the card, then exchanged. Written in
+# place, a power cut in that moment (a box on battery) left config.txt half or empty - and the box no longer started.
+replace_boot_file() {
+	local next="${2}.mupibox-new"
+	cat "$1" > "${next}" || { rm -f "${next}"; return 1; }
+	chmod --reference="$2" "${next}" 2>/dev/null
+	chown --reference="$2" "${next}" 2>/dev/null
+	sync "${next}" 2>/dev/null || sync
+	mv -f "${next}" "$2" || { rm -f "${next}"; return 1; }
+	sync
+}
+
 physical=$(/usr/bin/jq -r '.mupibox.physicalDevice // ""' "${CONFIG}" 2>/dev/null)
 # what is switched on in the app (the server writes these before it calls this script)
 WANT_JACK=$(/usr/bin/jq -r '.mupibox.onboardAudio // false' "${CONFIG}" 2>/dev/null)
@@ -84,8 +96,7 @@ set_dtparam() {
 		return 0
 	fi
 	cp -p "${BOOT_CONFIG}" "${BOOT_CONFIG}.bak-audio"
-	# (written in place: the file keeps its owner and mode, on the FAT boot partition too)
-	cat "${tmp}" > "${BOOT_CONFIG}" && CHANGED=1
+	replace_boot_file "${tmp}" "${BOOT_CONFIG}" && CHANGED=1
 	rm -f "${tmp}"
 }
 
@@ -243,8 +254,7 @@ kms_rewrite() {
 	kms_lines "$1" > "${tmp}" || { rm -f "${tmp}"; return 1; }
 	if [ -s "${tmp}" ] && ! cmp -s "${tmp}" "${BOOT_CONFIG}"; then
 		cp -p "${BOOT_CONFIG}" "${BOOT_CONFIG}.bak-audio"
-		# (written in place: the file keeps its owner and mode, on the FAT boot partition too)
-		cat "${tmp}" > "${BOOT_CONFIG}" && CHANGED=1
+		replace_boot_file "${tmp}" "${BOOT_CONFIG}" && CHANGED=1
 	fi
 	rm -f "${tmp}"
 }

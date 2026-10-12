@@ -3,7 +3,11 @@
 
 WPACONF="/etc/wpa_supplicant/wpa_supplicant.conf"
 NETWORKINTERFACES="/etc/network/interfaces"
-TMP_FILE="/tmp/wpa_supplicant.conf.tmp"
+# The new version is written next to the file (the same file system: the exchange is one step, nothing half written
+# when the power goes) and readable by root only - it holds the WiFi passwords. Built in /tmp (another file system,
+# so mv copied) it came out readable by everyone (0644).
+TMP_FILE="${WPACONF}.mupibox-new"
+umask 077
 
 add_config() {
 	local SEARCH_ENTRY=$1
@@ -86,3 +90,6 @@ in_network_block=0
 } > "$TMP_FILE"
 
 mv "$TMP_FILE" "$WPACONF"
+# (also a file left readable by everyone by an earlier version, and its copy)
+chown root:root "$WPACONF" "$WPACONF.bak" 2>/dev/null
+chmod 600 "$WPACONF" "$WPACONF.bak" 2>/dev/null
