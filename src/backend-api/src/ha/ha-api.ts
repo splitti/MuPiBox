@@ -24,6 +24,7 @@ import { createServer as createHttpsServer, type Server as HttpsServer } from 'n
 import os from 'node:os'
 import express, { type Express, type NextFunction, type Request, type RequestHandler, type Response, type Router } from 'express'
 import { headphonesPlaying } from '../audio-output'
+import { displayLoginLinkShown } from '../eltern/auth'
 import { compareVersions, officialVersions, parseInstalled } from '../eltern/updates'
 import { announce, speechOf } from '../speech'
 import { isLoopback } from '../request-guard'
@@ -449,10 +450,13 @@ function buildApp(deps: HaDeps): Express {
   v1.get('/media/cover/current', requireScope('read'), async (_req, res) => {
     const snap = await playbackSnapshot(deps.covers).catch(() => null)
     const url = snap?.coverUrl ?? ''
-    // only the box's own pictures and Spotify's (no address of anywhere else is fetched for the caller)
+    // the box's own pictures and Spotify's directly; any other address (a radio station's logo, a podcast's picture)
+    // through the box's picture proxy, as the display gets it: it fetches only addresses on the internet - never the
+    // box itself or the home network (checkRemoteUrl / openRemote in server.ts) - and keeps a copy
     let target = ''
     if (url.startsWith('/') && !url.startsWith('//')) target = `${SELF}${url}`
     else if (/^https:\/\/([a-z0-9-]+\.)*(scdn\.co|spotifycdn\.com)\//i.test(url)) target = url
+    else if (/^https?:\/\/[^/?#\s]+/i.test(url) && url.length <= 2048) target = `${SELF}/api/rssfeed/image?url=${encodeURIComponent(url)}`
     if (!target) return fail(res, 404, 'not_found', 'No cover for what plays now')
     try {
       const r = await fetch(target, { signal: AbortSignal.timeout(8000), redirect: 'error' })
@@ -504,21 +508,31 @@ function buildApp(deps: HaDeps): Express {
 
   /** GET /screenshot (read) - what the display shows (PNG; one picture at most every 2 s) */
   // Never while a pairing is open: the display shows the code then, and a client with read only would read it here
-  // and pair itself with control - the code is meant for whoever stands at the box. A picture taken while a pairing
-  // opened is thrown away, not kept for the next 2 s.
+  // and pair itself with control - the code is meant for whoever stands at the box. Nor while the display may show a
+  // parents' login link that still works (its QR code and the address as text): a client with read only would sign
+  // in as a parent with it - the app, and the admin interface with it. A picture taken while either began is thrown
+  // away, not kept for the next 2 s.
+  const displaySecret = () => pairingForDisplay().active === true || displayLoginLinkShown()
   v1.get('/screenshot', requireScope('read'), async (_req, res) => {
-    const busy = () => fail(res, 409, 'provider_unavailable', 'A pairing is open on the display')
-    if (pairingForDisplay().active) return busy()
+    const busy = () => fail(res, 409, 'provider_unavailable', 'The display shows a code or a login link')
+    if (displaySecret()) {
+      lastShot = 0
+      return busy()
+    }
     if (Date.now() - lastShot > 2000) {
       shooting ??= run('sh', ['-c', `DISPLAY=:0 XAUTHORITY=/home/dietpi/.Xauthority scrot -o ${SCREENSHOT_FILE}`], 8000).then((r) => {
         shooting = undefined
-        lastShot = r.ok && !pairingForDisplay().active ? Date.now() : 0
+        lastShot = r.ok && !displaySecret() ? Date.now() : 0
         if (!lastShot) fsp.rm(SCREENSHOT_FILE, { force: true }).catch(() => undefined)
         return r.ok
       })
       await shooting
     }
-    if (pairingForDisplay().active) return busy()
+    if (displaySecret()) {
+      lastShot = 0
+      fsp.rm(SCREENSHOT_FILE, { force: true }).catch(() => undefined)
+      return busy()
+    }
     if (!lastShot) return fail(res, 503, 'temporarily_unavailable', 'No picture of the display')
     res.type('image/png').sendFile(SCREENSHOT_FILE, (err) => {
       if (err && !res.headersSent) fail(res, 503, 'temporarily_unavailable', 'No picture of the display')

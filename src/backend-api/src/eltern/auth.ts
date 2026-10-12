@@ -245,6 +245,21 @@ export function generateMagicLink(source: string): { token: string; expiresIn: n
   return { token, expiresIn: Math.floor(MAGIC_LINK_TTL_MS / 1000) }
 }
 
+// The display shows its login link (QR code and plain text, frontend-box eltern-magic-link.service.ts) for 60 s at most:
+// with some time to spare, a link made for it is taken as on the screen that long - unless it was used already.
+const DISPLAY_LINK_SOURCES = new Set(['settings-qr'])
+const DISPLAY_LINK_SHOWN_MS = 90_000
+
+/**
+ * May the display show a login link that still works now? Whoever sees the screen then (a picture of it for Home
+ * Assistant, ha/ha-api.ts) could sign in as a parent with it.
+ */
+export function displayLoginLinkShown(now: number = Date.now()): boolean {
+  return Object.values(loadMagicLinks()).some(
+    (entry) => entry && !entry.used && DISPLAY_LINK_SOURCES.has(entry.source) && now - Date.parse(entry.issued) < DISPLAY_LINK_SHOWN_MS,
+  )
+}
+
 /**
  * Issue a fresh session + csrf token. Used by every authentication path
  * (magic-link, password login, …) — keeps session creation in one place.
