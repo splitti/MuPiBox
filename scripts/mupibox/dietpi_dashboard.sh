@@ -11,6 +11,9 @@
 #   dietpi_dashboard.sh status  active / inactive
 #   dietpi_dashboard.sh token   signs in with the password and prints the dashboard's token and the fingerprint it is
 #                               bound to (for the server)
+#   dietpi_dashboard.sh pem     prints the box's certificate with its key, as the web server uses it for https
+#                               (tls_cert.sh) - the server answers https on 5252 with it, so the dashboard and its
+#                               sign-in are not sent in the clear from an app opened with https
 #
 # Runs as root (the server calls it with sudo). The password stays in a file only root reads; the server never sees it.
 
@@ -85,8 +88,12 @@ case "${1:-}" in
 		[[ "${token}" =~ ^[A-Za-z0-9._-]+$ ]] || exit 1
 		printf '%s %s\n' "${token}" "${fingerprint}"
 		;;
+	pem)
+		[ -s /etc/lighttpd/server.pem ] || exit 1
+		cat /etc/lighttpd/server.pem
+		;;
 	*)
-		echo "usage: $0 setup|on|off|status|token" >&2
+		echo "usage: $0 setup|on|off|status|token|pem" >&2
 		exit 2
 		;;
 esac

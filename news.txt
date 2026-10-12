@@ -11,6 +11,7 @@
 <li id='linews' class='linews'>Default password: a box still using the password every box comes with (MuP1B0x, written in every manual) says so - on the app's start page and in the admin interface - with the way to set an own one. It stays a password: the login keeps working with it.</li>
 <li id='linews' class='linews'>Switching the login off still works, but the app and the admin interface warn first (everyone in the home network can then set up the box) and it has to be confirmed once more.</li>
 <li id='linews' class='linews'>Admin interface login: at most 5 wrong passwords a minute from one device and 20 from all together, then it waits for the minute to pass - it only waited one second per wrong password, and many requests at once could try passwords as fast as the box answered. The app's login had this limit already.</li>
+<li id='linews' class='linews'>DietPi-Dashboard with https: opened from the app with https, it opens with https as well (port 5252 speaks both, with the box's certificate) - before, it always went over http, and its sign-in and the terminal went through the network in the clear. With "Only secure connection" http is sent on to https.</li>
 </ul>
 <b>Network</b>
 </ul>
