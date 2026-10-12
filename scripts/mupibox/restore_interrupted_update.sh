@@ -6,12 +6,15 @@
 # it up and brings the data back (update/start_mupibox_update.sh). Stopped in between, the box started with an empty
 # library - or, cut off while unpacking, with a broken installation.
 #
-# The update marks it (update-state, written next to it, then exchanged, on the card before it goes on) from before
-# it moves the old installation aside until its very last step - only then the old installation and the backup go.
-# Whatever the mark finds here, there is one way back that is always whole: the old installation comes back, with its
-# own data as it was before the update (the new one is kept as .broken-<time>, the backup as userdata.upd-bak.kept-
-# <time>). The update can then simply be run again. Nothing is put together from halves: an installation half set up,
-# user data half brought back.
+# The update marks it (update-state, written next to it, checked, on the card before it goes on):
+#   unpacking   from before it moves the old installation aside until everything is installed, set up and back
+#   done        the update got to its end - written before it clears up (the old installation, the backup)
+#   rollback    written here, before going back (below)
+# Found here: "done" - only what is left over goes, nothing goes back. "rollback" - the way back goes on where it
+# stopped. Anything else (an empty mark too) - the one way back that is always whole: the old installation comes back,
+# with its own data as it was before the update, and its player (the new one is kept as .broken, the backup as
+# userdata.upd-bak.kept-<time>). The update can then simply be run again. Nothing is put together from halves: an
+# installation half set up, user data half brought back. The mark goes only when the way back is complete.
 #
 # Updates before this mark existed (no mark, an old installation left aside): it comes back when the new one lacks
 # server.js or index.html; the user data comes back from the backup when the library is empty and the backup has one.
@@ -32,6 +35,8 @@ PLAYER_DIR="${PLAYER_DIR:-/home/dietpi/.mupibox/spotifycontroller-main}"
 JQ=/usr/bin/jq
 [ -x "${JQ}" ] || JQ=jq
 STAMP=$(date +%Y%m%d-%H%M%S)
+BROKEN="${SKC}.broken"
+STATE=""
 STOPPED=0
 RESULT=0
 
@@ -73,26 +78,59 @@ put_back() {
 	fi
 }
 
-# the old installation back in place of the new one
+# the mark written as the update writes it: next to it, checked, on the card (1 when any of it failed)
+write_state() {
+	local next="${UPDATE_STATE}.new"
+	rm -f "${next}"
+	if printf '%s\n' "$1" > "${next}" && [ "$(head -n 1 "${next}" 2>/dev/null)" = "$1" ] \
+		&& { sync "${next}" 2>/dev/null || sync; } && mv -f "${next}" "${UPDATE_STATE}" && sync; then
+		return 0
+	fi
+	rm -f "${next}"
+	return 1
+}
+clear_state() {
+	rm -f "${UPDATE_STATE}" "${UPDATE_STATE}.new"
+	sync
+}
+
+# The old installation back in place of the new one. Marked "rollback" first: stopped anywhere in between (a power
+# cut again), the next run takes it up where it stopped - the new installation aside (as .broken), the old one back
+# (once that is done there is no .upd-bak any more: with "rollback" that means it is in place), its player. The mark
+# goes only when all of it is done. 0 when it is.
 roll_back() {
+	if [ "${STATE}" != "rollback" ]; then
+		write_state rollback || { log "could not write the mark for the way back (card full?)"; return 1; }
+	fi
 	stop_apps
-	if [ -e "${SKC}" ] && ! mv "${SKC}" "${SKC}.broken-${STAMP}"; then
-		log "could not move the incomplete installation aside"
+	if [ -d "${OLD}" ]; then
+		if [ -e "${SKC}" ]; then
+			# (one of an earlier way back keeps its place under a dated name)
+			[ -e "${BROKEN}" ] && { mv "${BROKEN}" "${BROKEN}-${STAMP}" || return 1; }
+			mv "${SKC}" "${BROKEN}" || { log "could not move the new installation aside"; return 1; }
+		fi
+		mv "${OLD}" "${SKC}" || { log "could not move the previous installation back"; return 1; }
+		sync
+	elif [ ! -s "${SKC}/server.js" ]; then
+		log "neither the previous installation nor one in place - nothing to go back to"
 		return 1
 	fi
-	if ! mv "${OLD}" "${SKC}"; then
-		log "could not move the previous installation back"
-		return 1
-	fi
-	# (the update copies its player there; the old installation brings its own)
+	# its player (the update copies the new one there): has to be in place too, or the way back is not done
 	if [ -s "${SKC}/spotify-control.js" ] && [ -d "${PLAYER_DIR}" ]; then
-		cp "${SKC}/spotify-control.js" "${PLAYER_DIR}/spotify-control.js.mupibox-restore" &&
-			mv -f "${PLAYER_DIR}/spotify-control.js.mupibox-restore" "${PLAYER_DIR}/spotify-control.js"
+		if ! cmp -s "${SKC}/spotify-control.js" "${PLAYER_DIR}/spotify-control.js"; then
+			cp "${SKC}/spotify-control.js" "${PLAYER_DIR}/spotify-control.js.mupibox-restore" \
+				&& { sync "${PLAYER_DIR}/spotify-control.js.mupibox-restore" 2>/dev/null || sync; } \
+				&& mv -f "${PLAYER_DIR}/spotify-control.js.mupibox-restore" "${PLAYER_DIR}/spotify-control.js" \
+				|| { rm -f "${PLAYER_DIR}/spotify-control.js.mupibox-restore"; log "could not put the previous player back (card full?)"; return 1; }
+		fi
 	fi
 	# the update's backup: kept, under a name an update does not take for its own
-	[ -d "${USERDATA_BAK}" ] && mv "${USERDATA_BAK}" "${USERDATA_BAK}.kept-${STAMP}"
+	if [ -d "${USERDATA_BAK}" ]; then
+		mv "${USERDATA_BAK}" "${USERDATA_BAK}.kept-${STAMP}" || return 1
+	fi
 	chown -R dietpi:dietpi "${SKC}" 2>/dev/null
 	sync
+	clear_state
 	log "the previous installation is back, with its data - the update can be run again"
 	return 0
 }
@@ -136,24 +174,33 @@ block_until() {
 }
 
 if [ -e "${UPDATE_STATE}" ]; then
-	# An update stopped between moving the old installation aside and its last step (whatever the mark says - an empty
-	# one too: it was written before anything was touched)
-	if [ -d "${OLD}" ]; then
-		log "an update stopped halfway - the previous installation comes back"
-		if roll_back; then
-			rm -f "${UPDATE_STATE}" "${UPDATE_STATE}.new"
-			sync
-		else
-			RESULT=1
-		fi
-	else
-		# (moving it aside is one rename: without it the update stopped before - the old installation is untouched)
-		log "an update stopped before it moved the installation aside - nothing to undo"
-		rm -f "${UPDATE_STATE}" "${UPDATE_STATE}.new"
-		sync
-	fi
+	STATE=$(head -n 1 "${UPDATE_STATE}" 2>/dev/null | tr -d '[:space:]')
+	case "${STATE}" in
+		done)
+			# the update got to its end; stopped while it cleared up: only what is left over goes, nothing goes back
+			log "an update finished, clearing up what it left"
+			rm -rf "${USERDATA_BAK}" "${OLD}" && clear_state || RESULT=1
+			;;
+		rollback)
+			log "a way back to the previous installation stopped halfway - it goes on"
+			roll_back || RESULT=1
+			;;
+		*)
+			# stopped between moving the old installation aside and its end (an empty mark too: it was written before
+			# anything was touched)
+			if [ -d "${OLD}" ]; then
+				log "an update stopped halfway - the previous installation comes back"
+				roll_back || RESULT=1
+			else
+				# (moving it aside is one rename: without it the update stopped before - the old one is untouched)
+				log "an update stopped before it moved the installation aside - nothing to undo"
+				clear_state
+			fi
+			;;
+	esac
 elif [ -d "${OLD}" ] && [ -s "${OLD}/server.js" ] && { [ ! -s "${SKC}/server.js" ] || [ ! -s "${SKC}/www/index.html" ]; }; then
 	log "the installation is incomplete (an update stopped while unpacking) - the previous one comes back"
+	STATE=""
 	roll_back || RESULT=1
 elif [ -d "${USERDATA_BAK}/config" ] && [ "$(entries "${USERDATA_BAK}/config/data.json")" -gt 0 ] && [ "$(entries "${SKC}/server/config/data.json")" -eq 0 ]; then
 	log "the library is empty, the backup of an update has $(entries "${USERDATA_BAK}/config/data.json") entries - the user data comes back"
