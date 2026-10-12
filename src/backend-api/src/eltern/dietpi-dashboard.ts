@@ -5,12 +5,20 @@
 // app asks for one (POST /api/app/dietpi-dashboard/ticket) and opens http://<box>:5252/mupibox-open?ticket=…, where
 // the dashboard's own token is put into the browser (the dashboard keeps it in localStorage "tokens", per host:port)
 // before it is shown. Whoever opens the port without a ticket gets the dashboard's password prompt. Off by default.
+//
+// The port speaks https as well (the first byte of a connection tells which): an app opened with https opens the
+// dashboard with https - with http the token, the cookie it is bound to and the terminal went through the network in
+// the clear. The certificate is the box's own one of the web server (tls_cert.sh), read again when it is renewed. With
+// "Nur sichere Verbindung" (tls.httpsOnly) http is sent on to https.
 
 import { execFile } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
+import fs from 'node:fs'
 import { createServer, request, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
+import { createServer as createHttpsServer, type Server as HttpsServer } from 'node:https'
 import net from 'node:net'
 import type { Duplex } from 'node:stream'
+import type { TLSSocket } from 'node:tls'
 import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { isAllowedHost } from '../request-guard'
@@ -26,8 +34,21 @@ const OUTER_PORT = 5252
 const INNER_PORT = 5253
 const TICKET_MS = 60_000
 
+// the box's certificate with its key, as the web server has it (dietpi_dashboard.sh pem reads it as root)
+const PEM_FILE = '/etc/lighttpd/server.pem'
+const PEM_CHECK_MS = 30_000
+
 const tickets = new Map<string, number>()
-let proxy: Server | null = null
+// the port (it hands each connection to the http or the https server below)
+let proxy: net.Server | null = null
+let plain: Server | null = null
+let secure: HttpsServer | null = null
+let pemStamp = ''
+let pemChecked = 0
+let pemLoading = false
+let depsRef: DashboardDeps | undefined
+// every connection of the port (also a terminal's websocket): ended when the dashboard is switched off
+const sockets = new Set<net.Socket>()
 
 function run(args: string[], timeoutMs = 30000): Promise<{ ok: boolean; stdout: string }> {
   return new Promise((resolve) => {
@@ -37,6 +58,8 @@ function run(args: string[], timeoutMs = 30000): Promise<{ ok: boolean; stdout: 
 
 const log = (text: string) => console.warn(`${new Date().toLocaleString()}: [MuPiBox-Server] dietpi-dashboard: ${text}`)
 const enabledIn = (deps: DashboardDeps) => ((deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined)?.dietpiDashboard ?? false) === true
+const httpsOnly = () => ((depsRef?.getMupiboxConfig() as { tls?: { httpsOnly?: unknown } } | undefined)?.tls?.httpsOnly ?? false) === true
+const encrypted = (req: IncomingMessage) => (req.socket as TLSSocket).encrypted === true
 
 function page(res: ServerResponse, status: number, body: string): void {
   res.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' })
@@ -64,7 +87,8 @@ async function open(req: IncomingMessage, res: ServerResponse): Promise<void> {
     'Cache-Control': 'no-store',
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'no-referrer',
-    'Set-Cookie': `FINGERPRINT=${fingerprint}; Path=/; HttpOnly; SameSite=Strict`,
+    // (Secure over https: never sent along to the same port in the clear)
+    'Set-Cookie': `FINGERPRINT=${fingerprint}; Path=/; HttpOnly; SameSite=Strict${encrypted(req) ? '; Secure' : ''}`,
   })
   res.end(
     `<!doctype html><html><head><meta charset="utf-8"><title>DietPi-Dashboard</title></head><body><script>` +
@@ -88,7 +112,7 @@ function pass(req: IncomingMessage, res: ServerResponse): void {
 
 /** Its websockets (/ws, terminal, files): the raw connection to the inner port - the dashboard checks its token */
 function upgrade(req: IncomingMessage, socket: Duplex, head: Buffer): void {
-  if (!isAllowedHost(req.headers.host)) {
+  if (!isAllowedHost(req.headers.host) || (httpsOnly() && secure && !encrypted(req))) {
     socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n')
     return
   }
@@ -104,23 +128,84 @@ function upgrade(req: IncomingMessage, socket: Duplex, head: Buffer): void {
   socket.on('close', () => upstream.destroy())
 }
 
+function handle(req: IncomingMessage, res: ServerResponse): void {
+  // (the same names as the app's: a foreign page that took over a name of its own in DNS gets nothing here)
+  if (!isAllowedHost(req.headers.host)) {
+    res.writeHead(403).end()
+    return
+  }
+  if (httpsOnly() && secure && !encrypted(req)) {
+    res.writeHead(308, { Location: `https://${req.headers.host}${req.url ?? '/'}` }).end()
+    return
+  }
+  if ((req.url ?? '').split('?')[0] === '/mupibox-open') {
+    open(req, res).catch(() => {
+      if (!res.headersSent) page(res, 500, '<h1>DietPi-Dashboard</h1><p>Fehler beim Öffnen.</p>')
+    })
+    return
+  }
+  pass(req, res)
+}
+
+// The certificate for https: read (again) when it is new - at the start, and at most every 30 s when a connection
+// comes (tls_cert.sh renews it for a new address of the box). Without one, the port speaks http only.
+function refreshPem(): void {
+  const now = Date.now()
+  if (pemLoading || now - pemChecked < PEM_CHECK_MS) return
+  pemChecked = now
+  let stamp = ''
+  try {
+    const st = fs.statSync(PEM_FILE)
+    stamp = `${st.mtimeMs}|${st.size}`
+  } catch {
+    // none (yet)
+  }
+  if (stamp === pemStamp) return
+  pemLoading = true
+  run(['pem'], 10000)
+    .then((r) => {
+      if (!r.ok || !/PRIVATE KEY-----/.test(r.stdout) || !/BEGIN CERTIFICATE/.test(r.stdout)) {
+        if (stamp) log('no certificate for https')
+        return
+      }
+      try {
+        if (secure) secure.setSecureContext({ key: r.stdout, cert: r.stdout })
+        else {
+          const s = createHttpsServer({ key: r.stdout, cert: r.stdout }, handle)
+          s.on('upgrade', upgrade)
+          s.on('tlsClientError', () => undefined)
+          secure = s
+        }
+        pemStamp = stamp
+      } catch (err) {
+        log(`certificate not usable: ${(err as Error).message}`)
+      }
+    })
+    .finally(() => {
+      pemLoading = false
+    })
+}
+
 function startProxy(): void {
   if (proxy) return
-  const s = createServer((req, res) => {
-    // (the same names as the app's: a foreign page that took over a name of its own in DNS gets nothing here)
-    if (!isAllowedHost(req.headers.host)) {
-      res.writeHead(403).end()
-      return
-    }
-    if ((req.url ?? '').split('?')[0] === '/mupibox-open') {
-      open(req, res).catch(() => {
-        if (!res.headersSent) page(res, 500, '<h1>DietPi-Dashboard</h1><p>Fehler beim Öffnen.</p>')
-      })
-      return
-    }
-    pass(req, res)
+  plain ??= createServer(handle).on('upgrade', upgrade)
+  pemChecked = 0
+  refreshPem()
+  // One port for both: a TLS connection begins with the byte 22 (a handshake record), http with a letter.
+  const s = net.createServer((socket) => {
+    sockets.add(socket)
+    socket.on('close', () => sockets.delete(socket))
+    socket.on('error', () => socket.destroy())
+    socket.once('data', (first: Buffer) => {
+      socket.pause()
+      socket.unshift(first)
+      refreshPem()
+      const target = first[0] === 22 ? secure : plain
+      if (!target) return void socket.destroy()
+      target.emit('connection', socket)
+      process.nextTick(() => socket.resume())
+    })
   })
-  s.on('upgrade', upgrade)
   s.on('error', (err) => {
     log(`port ${OUTER_PORT}: ${err.message}`)
     if (proxy === s) proxy = null
@@ -134,11 +219,13 @@ function stopProxy(): void {
   proxy = null
   if (!s) return
   s.close()
-  s.closeAllConnections?.()
+  for (const socket of sockets) socket.destroy()
+  sockets.clear()
 }
 
 /** At the server's start: the port answered when the dashboard is switched on in the app */
 export function startDietpiDashboard(deps: DashboardDeps): void {
+  depsRef = deps
   // (the config may not be read yet this early: asked again every 2 s, for a minute at most)
   let tries = 0
   const check = () => {
@@ -149,6 +236,7 @@ export function startDietpiDashboard(deps: DashboardDeps): void {
 }
 
 export function registerDietpiDashboardRoutes(router: Router, deps: DashboardDeps): void {
+  depsRef = deps
   /** GET /api/app/dietpi-dashboard - switched on, running */
   router.get('/dietpi-dashboard', requireSession, async (_req, res) => {
     const status = (await run(['status'], 10000)).stdout.trim()
@@ -173,7 +261,7 @@ export function registerDietpiDashboardRoutes(router: Router, deps: DashboardDep
     res.json({ ok: true })
   })
 
-  /** POST /api/app/dietpi-dashboard/ticket - a one-time ticket for http://<box>:5252/mupibox-open (60 s) */
+  /** POST /api/app/dietpi-dashboard/ticket - a one-time ticket for http(s)://<box>:5252/mupibox-open (60 s) */
   router.post('/dietpi-dashboard/ticket', requireSession, requireCsrf, (_req, res) => {
     if (!enabledIn(deps)) return void res.status(409).json({ error: 'dashboard_off' })
     const now = Date.now()

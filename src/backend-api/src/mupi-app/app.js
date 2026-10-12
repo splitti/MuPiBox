@@ -908,7 +908,8 @@ async function openExternal(which) {
       win?.close()
       return toast(r.body?.error === 'dashboard_off' ? 'Das DietPi-Dashboard ist aus – unter System › Experten erlauben' : 'Das hat nicht geklappt', 'info')
     }
-    const url = `http://${host}:${r.body.port ?? 5252}/mupibox-open?ticket=${encodeURIComponent(r.body.ticket)}`
+    // (with https like this app: the dashboard's sign-in and terminal never go through the network in the clear)
+    const url = `${location.protocol === 'https:' ? 'https' : 'http'}://${host}:${r.body.port ?? 5252}/mupibox-open?ticket=${encodeURIComponent(r.body.ticket)}`
     if (win) {
       win.opener = null
       win.location.href = url
