@@ -258,39 +258,11 @@
 		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Chromium Kiosk restarted</li>";
 		}
-	if( $_POST['mupibox_update'] )
-		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash -s -- stable";
-		exec($command, $output, $result );
-		// M5: external command above just mutated the config -- force fresh re-read.
-		$data = mupibox_config(true);
-		$change=3;
-		$reboot=1;
-		$CHANGE_TXT=$CHANGE_TXT."<li>Update complete to Version ".$data["mupibox"]["version"]."</li>";
-		}
-	if( $_POST['mupibox_update_beta'] )
-		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash -s -- beta";
-		exec($command, $output, $result );
-		// M5: external command above just mutated the config -- force fresh re-read.
-		$data = mupibox_config(true);
-		$change=1;
-		$reboot=1;
-		$data["mupibox"]["version"]=$data["mupibox"]["version"]." BETA";
-		$CHANGE_TXT=$CHANGE_TXT."<li>Update complete to Beta-Version ".$data["mupibox"]["version"]."</li>";
-		}
-	if( $_POST['mupibox_update_dev'] )
-		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash -s -- dev";
-
-		exec($command, $output, $result );
-		// M5: external command above just mutated the config -- force fresh re-read.
-		$data = mupibox_config(true);
-		$change=1;
-		$reboot=1;
-		$data["mupibox"]["version"]=$data["mupibox"]["version"]." DEVELOPMENT";
-		$CHANGE_TXT=$CHANGE_TXT."<li>Update complete to Development-Version ".$data["mupibox"]["version"]."</li>";
-		}
+	// The MuPiBox update and the OS update are started in the app only (Settings > System > Updates, backend-api
+	// eltern/updates.ts): run here inside the PHP request, the update script's progress went into whiptail, which quits
+	// at once without a terminal - the update ended after its first step; it also replaces this interface and restarts
+	// the web server under the running request, and it reported "Update complete" either way. The app runs both as a
+	// systemd unit of their own and shows the progress. The buttons below lead there.
 /*	if( $_POST['config_update'] )
 		{
 		// The installed copy first: piping a script fetched live from the upstream repo into a root
@@ -301,13 +273,6 @@
 		$CHANGE_TXT=$CHANGE_TXT."<li>Config is up to date.</li>";
 		}
 */
-	if( $_POST['os_update'] )
-		{
-		$command = "sudo apt-get -y --install-recommends -o Dpkg::Options::=\"--force-confdef\" -o Dpkg::Options::=\"--force-confold\" update && sudo apt-get -y --install-recommends -o Dpkg::Options::=\"--force-confdef\" -o Dpkg::Options::=\"--force-confold\" upgrade";
-		exec($command, $output, $result );
-		$change=3;
-		$CHANGE_TXT=$CHANGE_TXT."<li>OS is up to date.</li>";
-		}
 	if( $_POST['shutdown'] )
 		{
 		#$command = 'bash -c "sleep 2; exec nohup setsid /usr/local/bin/mupibox/./shutdown.sh > /dev/null 2>&1" &';
@@ -640,6 +605,8 @@
 		<ul>
 			<li class="li_norm"><h2>MuPiBox updates</h2>
 				<p>You can update MuPiBox at any time to stable, beta or development version. Please be careful, the development version could destroy your installation!</p>
+				<p>The update runs in the app (Settings &gt; System &gt; Updates): there it shows its progress and goes on when this page is replaced by the update.</p>
+				<p><a class="button_text_green" href="/app/#/updates" target="_blank" rel="noopener">Open the updates in the app</a></p>
 				<p>
 					<table>
 						<tr>
@@ -653,29 +620,16 @@
 								<th>Environment</th>
 								<th>Latest Version</th>
 								<th>Release-Infos</th>
-								<th>Update-Button</th>
 						</tr>
 						<tr>
 								<td>Stable</td>
 								<td><?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["version"]; ?></td>
 								<td><?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["releaseinfo"]; ?></td>
-								<td>
-								<input type="hidden" name="update_url" value="<?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["url"]; ?>" />
-								<input type="hidden" name="update_env" value="stable" />
-								<input type="hidden" name="update_version" value="<?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
-								<input id="saveForm" class="button_text_green" type="submit" name="mupibox_update" value="Update to version <?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
-								</td>
 						</tr>
 						<tr>
 								<td>Beta</td>
 								<td><?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["version"]; ?></td>
 								<td><?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["releaseinfo"]; ?></td>
-								<td>
-								<input type="hidden" name="update_url" value="<?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["url"]; ?>" />
-								<input type="hidden" name="update_env" value="beta" />
-								<input type="hidden" name="update_version" value="<?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
-								<input id="saveForm" class="button_text_orange" type="submit" name="mupibox_update_beta" value="Update to version <?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
-								</td>
 						</tr>
 						<tr>
 								<td>Development</td>
@@ -685,12 +639,6 @@
 									?>
 								 </td>
 								<td><?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["releaseinfo"]; ?></td>
-								<td>
-								<input type="hidden" name="update_url" value="<?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["url"]; ?>" />
-								<input type="hidden" name="update_env" value="dev" />
-								<input type="hidden" name="update_version" value="<?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
-								<input id="saveForm" class="button_text_red" type="submit" name="mupibox_update_dev" value="Update to version <?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
-								</td>
 						</tr>
 					</table>
 				</p>
@@ -699,7 +647,7 @@
 				</p>
 			</li>
 				Updating OS packages (apt-get update and apt-get upgrade):<br/>
-				<input id="saveForm" class="button_text" type="submit" name="os_update" value="Update OS"  onclick="return confirm('Do really want to update the Operating System?');" />
+				<a class="button_text" href="/app/#/updates" target="_blank" rel="noopener">Update the OS in the app</a>
 			</li>
 		</ul>
 	</details>
