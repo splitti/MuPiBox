@@ -77,13 +77,19 @@ exec 3>${LOG}
 # Add fail_update() to bail BEFORE any destructive op when a pre-flight
 # check fails, plus an atomic-swap pattern around the rm so a failure
 # at extract time can restore the previous install.
+# fail_update <message> [nostart]
 fail_update() {
 	local msg=$1
 	echo "## UPDATE ABORTED: ${msg}" >&3 2>&3
-	echo "## (no destructive operation performed yet — your installation is intact)" >&3 2>&3
 	# (the box's programs are stopped before the backup of the user data: started again, so the box goes on running;
-	# the idle shutdown too, it was stopped for the update)
-	sudo -H -u dietpi bash -c "pm2 start server; pm2 start spotify-control" >&3 2>&3
+	# the idle shutdown too, it was stopped for the update) - not with "nostart": the installation is not in a state to
+	# run (a way back that did not complete - the next start of the box takes it up, before pm2 starts them)
+	if [ "${2:-}" = "nostart" ]; then
+		echo "## (the box's server and player stay stopped - restart the box: the way back goes on at the start)" >&3 2>&3
+	else
+		echo "## (your installation is as it was before the update)" >&3 2>&3
+		sudo -H -u dietpi bash -c "pm2 start server; pm2 start spotify-control" >&3 2>&3
+	fi
 	service mupi_idle_shutdown start >&3 2>&3
 	# (the exit below ends only the part in the progress bar - the script after it reads this and ends with an error
 	# too, so a caller - the admin interface, curl | bash - sees it failed instead of "Update finished")
@@ -491,7 +497,7 @@ rm -f /tmp/mupibox-update-failed
 	# An update that stopped before (a power cut while it ran): its data back from its backup first - else this run saved
 	# the empty library and brought that back (restore_interrupted_update.sh; it runs at every start of the box too)
 	if [ -f "${MUPI_SRC}/scripts/mupibox/restore_interrupted_update.sh" ]; then
-		bash "${MUPI_SRC}/scripts/mupibox/restore_interrupted_update.sh" --no-restart >&3 2>&3 			|| fail_update "An update that stopped before could not be undone (see the log) - nothing was changed, the backups are kept"
+		bash "${MUPI_SRC}/scripts/mupibox/restore_interrupted_update.sh" --no-restart >&3 2>&3 			|| fail_update "An update that stopped before could not be undone (see the log) - nothing was changed, the backups are kept; restart the box: it goes on with it at the start" nostart
 	fi
 	# ... and in place before the installation is touched: should this update stop halfway, the next start undoes or
 	# finishes it (mupi_update_recover.service runs it before pm2) - also on the first update that brings it
@@ -1187,7 +1193,7 @@ rm -f /tmp/mupibox-update-failed
 		if bash /usr/local/bin/mupibox/restore_interrupted_update.sh --no-restart >&3 2>&3; then
 			fail_update "The update could not be finished (card full?) - the previous version is back, with your data as it was"
 		else
-			fail_update "The update could not be finished, and going back did not complete either - restart the box: it goes on with it at the start"
+			fail_update "The update could not be finished, and going back did not complete either - restart the box: it goes on with it at the start" nostart
 		fi
 	fi
 	
