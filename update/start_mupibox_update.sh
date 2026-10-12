@@ -200,9 +200,18 @@ rm -f /tmp/mupibox-update-failed
 	if [[ "$NODEJS" == "v22."* ]]; then
 		echo "Node.js already at v22.*" >&3 2>&3
 	else
-		apt-get --yes remove nodejs >&3 2>&3
-		curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash - >&3 2>&3
-		apt-get install -y nodejs >&3 2>&3
+		# Node.js 22 from NodeSource, installed over the one there is. It is no longer removed first: when the download or
+		# the installation failed (no internet for a moment, NodeSource not answering), the box was left without Node.js -
+		# the app, the display and the player no longer ran. The old one stays until the new one is in.
+		if curl -fsSL https://deb.nodesource.com/setup_22.x -o /tmp/nodesource_setup.sh >&3 2>&3 && bash /tmp/nodesource_setup.sh >&3 2>&3; then
+			apt-get install -y nodejs >&3 2>&3
+		fi
+		rm -f /tmp/nodesource_setup.sh
+		NODEJS=$(nodejs --version 2>/dev/null)
+		if [[ "$NODEJS" != "v22."* ]]; then
+			echo "## WARNING: Node.js 22 could not be installed (still ${NODEJS:-none}) ##" >&3 2>&3
+			command -v node >/dev/null 2>&1 || fail_update "Node.js could not be installed (internet?) - please start the update again"
+		fi
 	fi
 	after=$(date +%s)
 

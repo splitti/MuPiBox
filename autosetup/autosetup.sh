@@ -209,9 +209,13 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	if [[ "$NODEJS" == "v22."* ]]; then
 		echo "Node.js already at v22.*" >&3 2>&3
 	else
-		apt-get --yes remove nodejs >&3 2>&3
-		curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >&3 2>&3
-		apt-get install -y nodejs >&3 2>&3
+		# Node.js 22 from NodeSource, installed over one there may be - not removed first: a failed download left none
+		if curl -fsSL https://deb.nodesource.com/setup_22.x -o /tmp/nodesource_setup.sh >&3 2>&3 && bash /tmp/nodesource_setup.sh >&3 2>&3; then
+			apt-get install -y nodejs >&3 2>&3
+		fi
+		rm -f /tmp/nodesource_setup.sh
+		NODEJS=$(nodejs --version 2>/dev/null)
+		[[ "$NODEJS" == "v22."* ]] || echo "## WARNING: Node.js 22 could not be installed (${NODEJS:-none}) - the box needs it, please run the installation again ##" >&3 2>&3
 	fi
 	after=$(date +%s)
 	echo -e "## Install/Update Node.js 22 ## finished after $((after - before)) seconds" >&3 2>&3
