@@ -123,12 +123,23 @@ quiet_writers() {
 	done
 	take_lock "${DATA_LOCK}" && take_lock "${RESUME_LOCK}" || { log "the library is locked by another program - try again later"; release_writers; return 1; }
 	LOCKED=1
+	# The helper keeps the locks while this script lives - and only then: should the script be killed outright (its
+	# EXIT trap does not run then), the helper notices within a second, removes the locks that are ours, starts cron
+	# again when it was held here, and ends. Otherwise the library scans (m3u_generator.sh, add_index.sh) would stop at
+	# "Data-file locked." until the next start of the box.
+	local main=$$ cron_held=${CRON_STOPPED}
 	(
-		while sleep 1; do
+		while kill -0 "${main}" 2>/dev/null; do
+			sleep 1
+			kill -0 "${main}" 2>/dev/null || break
 			for l in "${DATA_LOCK}" "${RESUME_LOCK}"; do
-				if own_lock "${l}"; then touch "${l}"; else ( set -C; printf '%s %s\n' "$$" "${LOCK_TOKEN}" > "${l}" ) 2>/dev/null; fi
+				if own_lock "${l}"; then touch "${l}"; else ( set -C; printf '%s %s\n' "${main}" "${LOCK_TOKEN}" > "${l}" ) 2>/dev/null; fi
 			done
 		done
+		for l in "${DATA_LOCK}" "${RESUME_LOCK}"; do
+			own_lock "${l}" && rm -f "${l}"
+		done
+		[ "${cron_held}" = 1 ] && systemctl start cron
 	) &
 	TOUCHER=$!
 	return 0
