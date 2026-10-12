@@ -141,14 +141,13 @@ service mupi_idle_shutdown stop
 #   i2c-tools - no script calls i2cdetect/i2cget/i2cset (I2C is used through python3-smbus2)
 #   autoconf - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
 #   automake - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
-# The changes of this list apply to DEV installs only; stable and beta keep the list they always had.
-if [ "$RELEASE" != "dev" ]; then
-  packages2install="lighttpd-mod-openssl gpiod git mpv pulseaudio-module-bluetooth python3-pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt mesa-utils libsdl2-dev python3-smbus2 pigpio libjson-c-dev i2c-tools python3-smbus python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh rfkill"
-else
-  # libwidevinecdm0 stays: the display plays Spotify through the Web Playback SDK in Chromium, which needs Widevine
-  packages2install="lighttpd-mod-openssl gpiod git mpv pulseaudio-module-bluetooth python3-pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt python3-smbus2 pigpio libjson-c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh xdotool rfkill"
-fi
-packages2remove="jq"
+# One list for every channel (stable and beta kept the list of before until 5.0.10 - without xdotool, which the display's
+# window and the goodbye picture need, and with the packages above that nothing uses).
+# libwidevinecdm0 stays: the display plays Spotify through the Web Playback SDK in Chromium, which needs Widevine
+packages2install="lighttpd-mod-openssl gpiod git mpv pulseaudio-module-bluetooth python3-pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt python3-smbus2 pigpio libjson-c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh xdotool rfkill"
+# packages the update removes (apt-get remove, only when installed) - none at the moment; Debian's jq goes where the
+# update puts its own jq (see "Copy binaries")
+packages2remove=""
 STEP=0
 VER_JSON="/tmp/version.json"
 OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)  >&3 2>&3
@@ -299,7 +298,8 @@ rm -f /tmp/mupibox-update-failed
 		STEP=$(($STEP + 1))
 		echo -e "XXX\n${STEP}\Remove ${package}\nXXX"
 		PKG_OK=$(dpkg -l ${package} 2>/dev/null | egrep '^ii' | wc -l) >&3 2>&3
-		if [ ${PKG_OK} -eq 0 ]; then
+		# (only an installed one: this was "-eq 0" - it tried to remove what was not there, and removed nothing)
+		if [ ${PKG_OK} -gt 0 ]; then
 		  apt-get --yes remove ${package} >&3 2>&3
 		fi
 		after=$(date +%s)
@@ -700,7 +700,13 @@ rm -f /tmp/mupibox-update-failed
 
 	echo -e "XXX\n${STEP}\nCopy binaries... \nXXX"	
 	before=$(date +%s)
-	rm /usr/bin/jq >&3 2>&3
+	# Debian's own jq off the box (the update puts jq 1.8.1 into /usr/bin a few lines below; with Debian's package
+	# left, an "apt upgrade" put its older one back over it) - with dpkg, which refuses when another package depends on
+	# it (apt-get --yes would remove that one too); the file goes in any case
+	if dpkg -s jq >/dev/null 2>&1; then
+		dpkg -r jq >&3 2>&3 || echo "## Debian's jq stays installed (another package needs it) ##" >&3 2>&3
+	fi
+	rm -f /usr/bin/jq >&3 2>&3
 	
 	service spotifyd stop >&3 2>&3
 	systemctl disable spotifyd >&3 2>&3
