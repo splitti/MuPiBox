@@ -610,29 +610,15 @@ STEP=0
 
 	echo -e "XXX\n${STEP}\nEnable and start services... \nXXX"
 	before=$(date +%s)
-	mv -f ${MUPI_SRC}/config/services/mupi_idle_shutdown.service /etc/systemd/system/mupi_idle_shutdown.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_splash.service /etc/systemd/system/mupi_splash.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/pulseaudio.service /etc/systemd/system/pulseaudio.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_startstop.service /etc/systemd/system/mupi_startstop.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_wifi.service /etc/systemd/system/mupi_wifi.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_check_internet.service /etc/systemd/system/mupi_check_internet.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_check_monitor.service /etc/systemd/system/mupi_check_monitor.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_autoconnect_bt.service /etc/systemd/system/mupi_autoconnect_bt.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_vnc.service /etc/systemd/system/mupi_vnc.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_novnc.service /etc/systemd/system/mupi_novnc.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_powerled.service /etc/systemd/system/mupi_powerled.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_telegram.service /etc/systemd/system/mupi_telegram.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/dietpi-dashboard.service /etc/systemd/system/dietpi-dashboard.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_hat.service /etc/systemd/system/mupi_hat.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_fan.service /etc/systemd/system/mupi_fan.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_tls.service /etc/systemd/system/mupi_tls.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_tls.timer /etc/systemd/system/mupi_tls.timer >&3 2>&3
+	
+	# LAN without waiting at boot, and an address at once when a cable is plugged in (see scripts/mupibox/mupi_ethernet.sh).
+	# Also re-evaluates LAN vs WiFi priority (mupi_wifi_select.sh) on every carrier change - the udev rule above
+	# does not fire on every board (some onboard ethernet drivers never emit a uevent for it), and this script
+	# already reacts to the exact same "ip monitor link" event, so it is the more reliable place to trigger it.
+	# the goodbye picture until the power is off (see config/services/mupi_goodbye.service)
 	# an update that stops halfway: undone or finished at the next start, before pm2 (restore_interrupted_update.sh)
-	mv -f ${MUPI_SRC}/config/services/mupi_update_recover.service /etc/systemd/system/mupi_update_recover.service >&3 2>&3
-	systemctl daemon-reload >&3 2>&3
-	systemctl enable mupi_update_recover.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_hat_control.service /etc/systemd/system/mupi_hat_control.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_autoconnect-wifi.service /etc/systemd/system/mupi_autoconnect-wifi.service >&3 2>&3
+	mv -f ${MUPI_SRC}/config/services/*.service /etc/systemd/system/ >&3 2>&3
+	
 	# Tolerant replacement for DietPi's WiFi monitor (see scripts/mupibox/wifi_monitor.sh)
 	mkdir -p /etc/systemd/system/dietpi-wifi-monitor.service.d >&3 2>&3
 	cp -f ${MUPI_SRC}/config/services/dietpi-wifi-monitor-override.conf /etc/systemd/system/dietpi-wifi-monitor.service.d/override.conf >&3 2>&3
@@ -641,31 +627,26 @@ STEP=0
 	# LAN takes over from WiFi again on carrier loss/return of the ethernet cable (same script)
 	cp -f ${MUPI_SRC}/config/udev/99-mupibox-eth.rules /etc/udev/rules.d/99-mupibox-eth.rules >&3 2>&3
 	udevadm control --reload >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_mqtt.service /etc/systemd/system/mupi_mqtt.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_rotary.service /etc/systemd/system/mupi_rotary.service >&3 2>&3
-	# LAN without waiting at boot, and an address at once when a cable is plugged in (see scripts/mupibox/mupi_ethernet.sh).
-	# Also re-evaluates LAN vs WiFi priority (mupi_wifi_select.sh) on every carrier change - the udev rule above
-	# does not fire on every board (some onboard ethernet drivers never emit a uevent for it), and this script
-	# already reacts to the exact same "ip monitor link" event, so it is the more reliable place to trigger it.
-	mv -f ${MUPI_SRC}/config/services/mupi_ethernet.service /etc/systemd/system/mupi_ethernet.service >&3 2>&3
-	# the goodbye picture until the power is off (see config/services/mupi_goodbye.service)
-	mv -f ${MUPI_SRC}/config/services/mupi_goodbye.service /etc/systemd/system/mupi_goodbye.service >&3 2>&3
+
 	mkdir -p "/etc/systemd/system/ifup@eth0.service.d" >&3 2>&3
 	cp -f "${MUPI_SRC}/config/services/ifup@eth0.service.d/mupibox.conf" "/etc/systemd/system/ifup@eth0.service.d/mupibox.conf" >&3 2>&3
 	# The display's autologin without the 5 s Type=idle wait (see config/services/getty@tty1.service.d/mupibox.conf)
 	mkdir -p "/etc/systemd/system/getty@tty1.service.d" >&3 2>&3
 	cp -f "${MUPI_SRC}/config/services/getty@tty1.service.d/mupibox.conf" "/etc/systemd/system/getty@tty1.service.d/mupibox.conf" >&3 2>&3
+	
 	# Admin interface and DietPi dashboard 45 s after the start (see config/services/mupibox-delayed-start.conf)
 	for delayed in lighttpd smbd dietpi-dashboard $(systemctl list-unit-files "php*-fpm.service" --no-legend 2>/dev/null | awk '{print $1}' | sed 's/\.service$//'); do
 		mkdir -p "/etc/systemd/system/${delayed}.service.d" >&3 2>&3
 		cp -f "${MUPI_SRC}/config/services/mupibox-delayed-start.conf" "/etc/systemd/system/${delayed}.service.d/mupibox-delayed-start.conf" >&3 2>&3
 	done
 	systemctl daemon-reload >&3 2>&3
+	
 	# (not the Samba share: off until the app switches it on, see "Preconfigure Samba")
-	for service in mupi_wifi mupi_check_internet mupi_check_monitor mupi_idle_shutdown mupi_startstop pulseaudio mupi_splash mupi_powerled mupi_ethernet mupi_goodbye; do
+	for service in mupi_wifi mupi_check_internet mupi_check_monitor mupi_idle_shutdown mupi_startstop pulseaudio mupi_splash mupi_powerled mupi_ethernet mupi_goodbye mupi_update_recover; do
 		systemctl enable ${service}.service >&3 2>&3
 		systemctl start ${service}.service >&3 2>&3
 	done
+	
 	# The DietPi-Dashboard: a password nobody knows, an inner port, off - the app switches it on and opens it with a
 	# one-time ticket (dietpi_dashboard.sh, backend-api eltern/dietpi-dashboard.ts)
 	if [ -x /opt/dietpi-dashboard/dietpi-dashboard ]; then
