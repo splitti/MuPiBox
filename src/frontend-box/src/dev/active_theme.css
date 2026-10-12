@@ -1,0 +1,5 @@
+/* For ng serve only (angular.json, configuration "development"). On a box, active_theme.css is a symlink in www/
+   to the chosen theme in ~/MuPiBox/themes, set by setting_update.sh; the dev server has no box, so this file stands
+   in for it. Change the theme here for local development. The theme files come from ../../themes, which the dev
+   server serves at /themes/ (the stylesheets) and /theme-data/ (their pictures and fonts, as on a box). */
+@import url("/themes/blue.css");

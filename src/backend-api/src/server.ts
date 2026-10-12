@@ -228,7 +228,11 @@ async function removeSavedOnlineCover(key: string): Promise<void> {
   if ((await stat(localFile).catch(() => undefined))?.size === size) await rm(localFile, { force: true })
 }
 
-const mupiboxConfigPath = '/etc/mupibox/mupiboxconfig.json'
+// In development (and the tests) the box config lies next to the other config files (configBasePath, a copy of
+// config/templates/mupiboxconfig.json): /etc/mupibox exists on a box only, and without the config the display does
+// not know its theme (no km layout: the player's icons shrank, the scroll bar sat on the name cards) and most pages
+// of the app answer 503.
+const mupiboxConfigPath = productionServe ? '/etc/mupibox/mupiboxconfig.json' : path.resolve(configBasePath, 'mupiboxconfig.json')
 const mupiboxConfigDir = path.dirname(mupiboxConfigPath)
 const mupiboxConfigFile = path.basename(mupiboxConfigPath)
 const dataFile = `${configBasePath}/data.json`
@@ -1970,6 +1974,8 @@ const MUPIBOX_CONFIG_LOCK = '/tmp/.mupiboxconfig.lock'
 // has no flock of its own, so a small `flock ... sh` child holds it: it prints once it has the
 // lock and exits (dropping it) when its stdin is closed.
 function acquireMupiboxConfigLock(): Promise<() => void> {
+  // (in development nothing else writes the file, and macOS has no flock)
+  if (!productionServe) return Promise.resolve(() => undefined)
   return new Promise((resolve, reject) => {
     // The PHP side opens the lock file for writing: if this process creates it, make it writable
     // for everyone. If PHP created it (not writable for us), flock still works on a read-only fd.
@@ -2010,6 +2016,12 @@ function acquireMupiboxConfigLock(): Promise<() => void> {
 
 async function replaceMupiboxConfigFile(content: Record<string, unknown>): Promise<void> {
   const tmpPath = `/tmp/.mupiboxconfig.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.json`
+  if (!productionServe) {
+    // (the file is our own: written next to it, then renamed into place)
+    await writeFile(`${mupiboxConfigPath}.new`, `${JSON.stringify(content, null, 2)}\n`, { mode: 0o644 })
+    await rename(`${mupiboxConfigPath}.new`, mupiboxConfigPath)
+    return
+  }
   await writeFile(tmpPath, `${JSON.stringify(content, null, 2)}\n`, { mode: 0o644 })
   try {
     // /tmp is a RAM disk and /etc is on the SD card, so a plain mv would copy into the target in
@@ -7709,7 +7721,9 @@ async function libraryFindCoverBelow(files: NasFileEntry[], depth: number): Prom
 // that are made once with Python's PIL (package python3-pil) and kept in a cache folder.
 // If PIL is missing or a picture cannot be converted, the original file is sent instead.
 
-const thumbDir = '/home/dietpi/.mupibox/thumbs'
+// (in development next to the cover cache below cwd, see configBasePath: /home/dietpi does not exist there, and the
+// mkdir below failed every picture request of the display - radio logos showed the name card)
+const thumbDir = productionServe ? '/home/dietpi/.mupibox/thumbs' : path.join(process.cwd(), 'cache', 'thumbs')
 const thumbMaxParallel = 2
 let thumbsUnavailableUntil = 0
 let thumbRunning = 0

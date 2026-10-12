@@ -421,6 +421,13 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
    * no symbolic links, no ".."); then it is unpacked as root, the config brought up to date, and the box restarts.
    */
   router.put('/backup/restore', requireSession, requireCsrf, async (req, res) => {
+    // A backup is unpacked to / as root (the box's paths): on a development machine that is nothing to do, and the
+    // sudo below waited for a password nobody could type - the app showed "Wird geprüft und eingespielt …" for good.
+    // There the two files of a backup go into the dev config by hand (README, Contributing).
+    if (process.env.NODE_ENV === 'development') {
+      res.status(501).json({ error: 'restore_on_box_only' })
+      return
+    }
     const file = `/var/tmp/mupibox-restore-${process.pid}-${Date.now()}.zip`
     // the upload may not fill the SD card: at most what is free there, less a reserve for the box itself
     const room = await freeBytes('/var/tmp')
