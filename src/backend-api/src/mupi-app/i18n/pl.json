@@ -2803,5 +2803,8 @@
  "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Mimo to chcę używać boxa bez hasła.",
  "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Bez logowania każdy w sieci domowej może ustawiać box – także goście w Wi-Fi i urządzenia, których nie znasz: usuwać treści, łączyć Spotify, wyłączać box i używać panelu administracyjnego ze wszystkimi uprawnieniami.",
  "Standardpasswort aktiv": "Aktywne hasło domyślne",
- "Verstanden": "Rozumiem"
+ "Verstanden": "Rozumiem",
+ "Startet mit": "Zaczyna od",
+ "Dieser Reiter ist offen, wenn das Display startet.": "Ta karta jest otwarta po uruchomieniu wyświetlacza.",
+ "Das Display startet mit {}": "Wyświetlacz zaczyna od {}"
 }

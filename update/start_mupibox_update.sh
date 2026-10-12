@@ -99,10 +99,10 @@ service mupi_idle_shutdown stop
 #   automake - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
 # The changes of this list apply to DEV installs only; stable and beta keep the list they always had.
 if [ "$RELEASE" != "dev" ]; then
-  packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer mpv pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh"
+  packages2install="lighttpd-mod-openssl gpiod git libasound2 mpv pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh"
 else
   # libwidevinecdm0 stays: the display plays Spotify through the Web Playback SDK in Chromium, which needs Widevine
-  packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer mpv pulseaudio-module-bluetooth pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa preload python3-smbus2 pigpio libjson-c-dev libi2c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh xdotool"
+  packages2install="lighttpd-mod-openssl gpiod git libasound2 mpv pulseaudio-module-bluetooth pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa preload python3-smbus2 pigpio libjson-c-dev libi2c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh xdotool"
 fi
 packages2remove="jq"
 STEP=0
@@ -224,6 +224,13 @@ rm -f /tmp/mupibox-update-failed
 		after=$(date +%s)
 		echo -e "## apt-get install ${package}  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	done
+
+	# mpv plays everything but Spotify (mplayer, the fallback until 5.0.9, is gone): asked once more with fresh package
+	# lists when the loop above could not install it - without it the box plays nothing but Spotify
+	if ! command -v mpv >/dev/null 2>&1; then
+		apt-get update >&3 2>&3
+		apt-get --yes install mpv >&3 2>&3 || echo "## WARNING: mpv could not be installed - only Spotify will play ##" >&3 2>&3
+	fi
 
 	# pinctrl for the OnOff SHIM with libgpiod 2 (Debian 13 "Trixie", see scripts/OnOffShim): in raspi-utils-core of the
 	# Raspberry Pi archive (the name raspberrypi-utils written here before is only the source package - nothing was
@@ -609,6 +616,8 @@ rm -f /tmp/mupibox-update-failed
 	cp -f ${MUPI_SRC}/themes/km-themes.json /home/dietpi/MuPiBox/themes/km-themes.json >&3 2>&3
 	mv ${MUPI_SRC}/themes/*.css /home/dietpi/MuPiBox/themes/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/chromium-autostart.sh /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
+	# full colours in the display on a Pi with 2 GB or more: takes DietPi's "low-end device mode" out again (see the file)
+	mkdir -p /etc/chromium.d && tr -d '\r' < ${MUPI_SRC}/config/chromium/zz-mupibox > /etc/chromium.d/zz-mupibox && chmod 644 /etc/chromium.d/zz-mupibox
 	mv ${MUPI_SRC}/scripts/mupibox/* /usr/local/bin/mupibox/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/bluetooth/* /usr/local/bin/mupibox/ >&3 2>&3
 	# The battery of Bluetooth headphones (display and app, issue #176): BlueZ 5.66 takes it from PulseAudio only with

@@ -2803,5 +2803,8 @@
  "Ich möchte die Box trotzdem ohne Passwort betreiben.": "I want to run the box without a password anyway.",
  "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Without a login, anyone in the home network can set up the box – guests on the Wi-Fi and devices you do not know as well: delete content, connect Spotify, switch the box off and use the admin interface with full rights.",
  "Standardpasswort aktiv": "Default password active",
- "Verstanden": "Understood"
+ "Verstanden": "Understood",
+ "Startet mit": "Starts with",
+ "Dieser Reiter ist offen, wenn das Display startet.": "This tab is open when the display starts.",
+ "Das Display startet mit {}": "The display starts with {}"
 }

@@ -4,7 +4,6 @@ const bodyParser = require('body-parser')
 const path = require('node:path')
 const dns = require('node:dns')
 const SpotifyWebApi = require('spotify-web-api-node')
-const createMplayer = require('./mplayer-wrapper.js')
 const createMpv = require('./mpv-wrapper.js')
 const { isPlaylistUrl, pointsAtBox, resolveStreamUrl } = require('./playlist-url.js')
 const googleTTS = require('google-tts-api')
@@ -166,21 +165,17 @@ const log = require('console-log-level')({ level: config.server.logLevel })
 /*set up express router and set headers for cross origin requests*/
 const app = express()
 const server = http.createServer(app)
-// The engine for everything that is not Spotify: mpv, or mplayer as before - mupibox.playerEngine "mplayer" in
-// mupiboxconfig.json keeps the old one, MUPIBOX_PLAYER in the environment chooses for a test; read at the start (a
-// change needs a restart of the player). A box without mpv (an update that could not install it) plays with
-// mplayer. Both wrappers offer the same interface, see mpv-wrapper.js.
+// The engine for everything that is not Spotify: mpv (mpv-wrapper.js). mplayer, the engine up to 5.0.6 and the
+// fallback until 5.0.9, is gone - "mupibox.playerEngine" in mupiboxconfig.json and MUPIBOX_PLAYER are not read any
+// more. The installation and the update install mpv; a box without it plays nothing but Spotify, said in the log.
 const installed = (bin) =>
   (process.env.PATH || '/usr/bin:/bin')
     .split(':')
     .some((dir) => dir && fs.existsSync(`${dir}/${bin}`))
-const playerEngine =
-  process.env.MUPIBOX_PLAYER ||
-  (muPiBoxConfig?.mupibox?.playerEngine === 'mplayer' || !installed('mpv') ? 'mplayer' : 'mpv')
-if (playerEngine === 'mplayer' && muPiBoxConfig?.mupibox?.playerEngine !== 'mplayer' && !process.env.MUPIBOX_PLAYER)
-  console.warn(`${new Date().toLocaleString()}: [Player] mpv is not installed - playing with mplayer`)
-const player = playerEngine === 'mpv' ? createMpv() : createMplayer()
-console.log(`${new Date().toLocaleString()}: [Player] engine: ${playerEngine}`)
+if (!installed('mpv'))
+  console.error(`${new Date().toLocaleString()}: [Player] mpv is not installed - nothing but Spotify plays (sudo apt-get install mpv)`)
+const player = createMpv()
+console.log(`${new Date().toLocaleString()}: [Player] engine: mpv`)
 // The levelling of the loudness (mupibox.loudness: off | soft | strong, the app's "Lautstärke angleichen"): set when
 // the engine is up and whenever the config changes; only mpv has it
 let loudnessApplied = null

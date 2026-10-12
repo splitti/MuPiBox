@@ -2803,5 +2803,8 @@
  "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Ik wil de box toch zonder wachtwoord gebruiken.",
  "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Zonder inloggen kan iedereen in het thuisnetwerk de box instellen – ook gasten op de wifi en apparaten die je niet kent: inhoud verwijderen, Spotify koppelen, de box uitschakelen en de beheerinterface met alle rechten gebruiken.",
  "Standardpasswort aktiv": "Standaardwachtwoord actief",
- "Verstanden": "Begrepen"
+ "Verstanden": "Begrepen",
+ "Startet mit": "Begint met",
+ "Dieser Reiter ist offen, wenn das Display startet.": "Dit tabblad is open wanneer het scherm start.",
+ "Das Display startet mit {}": "Het scherm begint met {}"
 }

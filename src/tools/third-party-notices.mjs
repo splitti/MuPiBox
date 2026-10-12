@@ -422,7 +422,7 @@ const STATIC = {
     ['CodeMirror 5.65.15', 'cdnjs.cloudflare.com', 'MIT'],
   ],
   debian: [
-    ['mplayer', 'playback of files, NAS, radio, podcasts', 'GPL-2.0-or-later'],
+    ['mpv', 'playback of files, NAS, radio, podcasts, announcements', 'GPL-2.0-or-later (as Debian builds it; parts LGPL-2.1-or-later)'],
     ['Chromium (DietPi software 113)', 'the display', 'BSD-3-Clause and others'],
     [
       'libwidevinecdm0 (Widevine CDM)',

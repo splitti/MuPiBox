@@ -1,0 +1,13 @@
+# MuPiBox: read by the Chromium start (/usr/bin/chromium sources every file in /etc/chromium.d, in order - this one
+# after DietPi's file "dietpi"). Installed by the installation and the update (config/chromium/zz-mupibox).
+#
+# DietPi starts Chromium in its "low-end device mode" (--enable-low-end-device-mode in /etc/chromium.d/dietpi): it
+# draws pictures with 16 bits per pixel, and photos and covers show bands of colour instead of smooth tones. A Pi with
+# 2 GB or more has the memory for full colours, so the flag is taken out again here; a Pi with 1 GB or less keeps the
+# mode, it saves memory there. DietPi's own file is not changed (an update of DietPi may write it anew).
+mupibox_mem_kb=$(awk '/^MemTotal:/ {print $2}' /proc/meminfo 2>/dev/null)
+if [ "${mupibox_mem_kb:-0}" -ge 1500000 ] 2>/dev/null; then
+	CHROMIUM_FLAGS=$(printf '%s' "$CHROMIUM_FLAGS" | sed 's/[[:space:]]*--enable-low-end-device-mode//g')
+	export CHROMIUM_FLAGS
+fi
+unset mupibox_mem_kb

@@ -18,7 +18,6 @@
     "debug": "^4.3.4",
     "express": "^4.17.1",
     "google-tts-api": "2.0.2",
-    "js-string-escape": "^1.0.1",
     "spotify-web-api-node": "^5.0.0"
   },
   "devDependencies": {
@@ -27,7 +26,8 @@
   "description": "Playback backend for the MupiBox.",
   "private": true,
   "_unusedDependencies": {
-    "byline": "2026-09-20: line splitting of the mplayer output is done by hand now (raw bytes, see mplayer-wrapper.js)",
+    "byline": "2026-09-20: line splitting of the mplayer output was done by hand (raw bytes); mplayer is gone since 5.0.10",
+    "js-string-escape": "2026-10-12: quoted file names for mplayer's slave commands; mplayer is gone (mpv takes JSON)",
     "protobufjs": "2026-09-20: only the never-finished Spotify login protocol (build-proto script) used it; no proto/ folder or generated file exists",
     "protobufjs-cli": "2026-09-20: only the build-proto script used it (see protobufjs)",
     "nodemon": "2026-09-20: the serve script starts node directly",

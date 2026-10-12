@@ -2803,5 +2803,8 @@
  "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Je veux quand même utiliser la box sans mot de passe.",
  "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Sans connexion, n’importe qui sur le réseau domestique peut régler la box – y compris les invités sur le Wi-Fi et des appareils que vous ne connaissez pas : supprimer du contenu, connecter Spotify, éteindre la box et utiliser l’interface d’administration avec tous les droits.",
  "Standardpasswort aktiv": "Mot de passe par défaut actif",
- "Verstanden": "Compris"
+ "Verstanden": "Compris",
+ "Startet mit": "Démarre avec",
+ "Dieser Reiter ist offen, wenn das Display startet.": "Cet onglet est ouvert au démarrage de l’écran.",
+ "Das Display startet mit {}": "L’écran démarre avec {}"
 }

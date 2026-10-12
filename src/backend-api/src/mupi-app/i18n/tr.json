@@ -2803,5 +2803,8 @@
  "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Kutuyu yine de parolasız kullanmak istiyorum.",
  "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Oturum açma olmadan ev ağındaki herkes kutuyu ayarlayabilir – Wi-Fi’deki misafirler ve tanımadığın cihazlar da: içerik silebilir, Spotify bağlayabilir, kutuyu kapatabilir ve yönetici arayüzünü tüm haklarla kullanabilir.",
  "Standardpasswort aktiv": "Varsayılan parola etkin",
- "Verstanden": "Anladım"
+ "Verstanden": "Anladım",
+ "Startet mit": "Şununla başlar",
+ "Dieser Reiter ist offen, wenn das Display startet.": "Ekran başladığında bu sekme açık olur.",
+ "Das Display startet mit {}": "Ekran şununla başlar: {}"
 }

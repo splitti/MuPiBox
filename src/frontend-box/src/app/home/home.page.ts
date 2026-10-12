@@ -105,6 +105,8 @@ export class HomePage extends SwiperIonicEventsHelper {
   protected isOnline: Signal<boolean>
   protected isLoading: WritableSignal<boolean> = signal(false)
   protected category: WritableSignal<CategoryType> = signal('audiobook')
+  // a tab chosen on the display (tap or swipe): the start tab of the settings, read a moment later, does not replace it
+  private categoryChosen = false
   // The picture that stands for a whole list that could not be loaded (once, not per station / podcast):
   // the NAS tab when the NAS did not answer, radio stations and podcasts when the box is offline.
   protected unavailable: Signal<boolean>
@@ -132,6 +134,11 @@ export class HomePage extends SwiperIonicEventsHelper {
         const hidden = config?.mupibox?.hiddenCategories
         if (Array.isArray(hidden)) {
           this.hiddenCategories.set(hidden)
+        }
+        // The tab the parents chose to start with (app › Bedienung) - unless a tab was chosen here already
+        const start = this.categories.find((c) => c.key === config?.mupibox?.startCategory)
+        if (start && !this.categoryChosen) {
+          this.category.set(start.key)
         }
         // Do not start on a category that is hidden.
         const visible = this.visibleCategories()
@@ -246,10 +253,12 @@ export class HomePage extends SwiperIonicEventsHelper {
       0,
       visible.findIndex((c) => c.key === this.category()),
     )
+    this.categoryChosen = true
     this.category.set(visible[(index + step + visible.length) % visible.length].key)
   }
 
   protected categoryChanged(event: any): void {
+    this.categoryChosen = true
     this.category.set(event.detail.value)
   }
 

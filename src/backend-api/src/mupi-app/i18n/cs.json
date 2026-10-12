@@ -2803,5 +2803,8 @@
  "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Přesto chci box provozovat bez hesla.",
  "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Bez přihlášení může box nastavit kdokoli v domácí síti – i hosté na Wi-Fi a zařízení, která neznáš: mazat obsah, připojit Spotify, vypnout box a používat administrační rozhraní se všemi právy.",
  "Standardpasswort aktiv": "Aktivní výchozí heslo",
- "Verstanden": "Rozumím"
+ "Verstanden": "Rozumím",
+ "Startet mit": "Začíná s",
+ "Dieser Reiter ist offen, wenn das Display startet.": "Tato karta je otevřená, když se displej spustí.",
+ "Das Display startet mit {}": "Displej začíná s {}"
 }

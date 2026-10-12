@@ -2803,5 +2803,8 @@
  "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Я все одно хочу користуватися боксом без пароля.",
  "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Без входу будь-хто в домашній мережі може налаштовувати бокс – і гості у Wi-Fi, і незнайомі пристрої: видаляти вміст, підключати Spotify, вимикати бокс і користуватися інтерфейсом адміністратора з усіма правами.",
  "Standardpasswort aktiv": "Активний стандартний пароль",
- "Verstanden": "Зрозуміло"
+ "Verstanden": "Зрозуміло",
+ "Startet mit": "Починати з",
+ "Dieser Reiter ist offen, wenn das Display startet.": "Ця вкладка відкрита під час запуску дисплея.",
+ "Das Display startet mit {}": "Дисплей починає з {}"
 }

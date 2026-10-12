@@ -2803,5 +2803,8 @@
  "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Jeg vil alligevel bruge boksen uden adgangskode.",
  "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Uden login kan alle i hjemmenetværket indstille boksen – også gæster på wi-fi og enheder, du ikke kender: slette indhold, forbinde Spotify, slukke boksen og bruge admin-interfacet med alle rettigheder.",
  "Standardpasswort aktiv": "Standardadgangskode aktiv",
- "Verstanden": "Forstået"
+ "Verstanden": "Forstået",
+ "Startet mit": "Starter med",
+ "Dieser Reiter ist offen, wenn das Display startet.": "Denne fane er åben, når displayet starter.",
+ "Das Display startet mit {}": "Displayet starter med {}"
 }

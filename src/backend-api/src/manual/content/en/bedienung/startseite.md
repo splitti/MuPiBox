@@ -47,6 +47,8 @@ Some entries are folders, for example an artist or a series of radio plays. A ta
 
 If you have no NAS content, for example, hide the tab: **Settings › Display & controls › Controls on the display › Tabs on the display**. Every tab has a switch, on means visible. The visible tabs share the width. At least one stays visible.
 
+Under **Starts with** you choose which tab is open when the display starts. Without a choice it is the audiobooks. If the chosen tab is hidden, the display starts with the first visible one.
+
 ## Resume
 
 The clock symbol to the left of the tabs opens the **Resume** list with the most recently played items, so the child carries on listening exactly where they stopped. How many entries it has is set under **Controls on the display › Continue listening › Entries under “Resume”**. More: [Continue and “Now playing”](fortsetzen.md).

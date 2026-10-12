@@ -2803,5 +2803,8 @@
  "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Mesmo assim quero usar a caixa sem palavra-passe.",
  "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Sem início de sessão, qualquer pessoa na rede doméstica pode configurar a caixa – também convidados no Wi-Fi e dispositivos que não conheces: apagar conteúdos, ligar o Spotify, desligar a caixa e usar a interface de administração com todos os direitos.",
  "Standardpasswort aktiv": "Palavra-passe padrão ativa",
- "Verstanden": "Entendido"
+ "Verstanden": "Entendido",
+ "Startet mit": "Começa com",
+ "Dieser Reiter ist offen, wenn das Display startet.": "Este separador está aberto quando o ecrã arranca.",
+ "Das Display startet mit {}": "O ecrã começa com {}"
 }

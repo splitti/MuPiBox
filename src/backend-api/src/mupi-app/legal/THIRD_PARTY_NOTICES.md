@@ -245,7 +245,7 @@ information; the package itself names the exact terms (`/usr/share/doc/<package>
 
 | Component | Use | License (informational) |
 | --- | --- | --- |
-| mplayer | playback of files, NAS, radio, podcasts | GPL-2.0-or-later |
+| mpv | playback of files, NAS, radio, podcasts, announcements | GPL-2.0-or-later (as Debian builds it; parts LGPL-2.1-or-later) |
 | Chromium (DietPi software 113) | the display | BSD-3-Clause and others |
 | libwidevinecdm0 (Widevine CDM) | Spotify in the display (Web Playback SDK) | proprietary (Google), redistributed by Raspberry Pi |
 | lighttpd, lighttpd-mod-openssl (DietPi software 84) | web server, https | BSD-3-Clause |

@@ -6381,6 +6381,7 @@ async function loadControls() {
   state.values.set('hideM', hidden.has('music'))
   state.values.set('hideN', hidden.has('nas'))
   state.values.set('hideO', hidden.has('other'))
+  state.values.set('startCat', o.startCategory ?? 'audiobook')
   state.values.set('resume', o.resume)
   state.values.set('listTimer', o.listviewTimer)
   state.values.set('setTimer', o.settingsAccessTimer)
@@ -6392,6 +6393,8 @@ async function loadControls() {
   state.values.set('epProgress', o.episodeProgress !== false)
 }
 
+// The category of each tab (by its hidden key)
+const TAB_CATEGORY = { hideA: 'audiobook', hideM: 'music', hideN: 'nas', hideO: 'other' }
 // The display's tabs: hidden key, the page's switch (on = shown), its name
 const TAB_KEYS = [
   ['hideA', 'showA', 'Hörspiele'],
@@ -9982,6 +9985,14 @@ const CONTROLLERS = {
           items: [
             { type: 'html', html: `<div class="tab-prev" aria-hidden="true">${shown.map(([, , l]) => `<span>${esc(l)}</span>`).join('')}</div>` },
             ...TAB_KEYS.map(([k, show, label]) => ({ type: 'toggle', key: show, label, disabled: shown.length === 1 && !state.values.get(k) })),
+            // the tab the display opens with - one of the shown ones (a hidden start tab: the display takes the first shown)
+            ...(shown.length > 1
+              ? (() => {
+                  const start = shown.find(([k]) => TAB_CATEGORY[k] === state.values.get('startCat')) ?? shown[0]
+                  state.values.set('startTab', start[2])
+                  return [{ type: 'select', key: 'startTab', label: 'Startet mit', options: shown.map(([, , l]) => l), help: 'Dieser Reiter ist offen, wenn das Display startet.' }]
+                })()
+              : []),
           ],
         },
         {
@@ -10019,7 +10030,14 @@ const CONTROLLERS = {
       ]
     },
     async change(key, v, page) {
-      const cats = { hideA: 'audiobook', hideM: 'music', hideN: 'nas', hideO: 'other' }
+      const cats = TAB_CATEGORY
+      if (key === 'startTab') {
+        const tab = TAB_KEYS.find(([, , l]) => l === v)
+        if (!tab) return
+        const ok = await saveDisplayOptions({ startCategory: cats[tab[0]] }, `Das Display startet mit ${v}`)
+        if (ok) state.values.set('startCat', cats[tab[0]])
+        return ok
+      }
       // (a tab switched on: not hidden)
       const tab = TAB_KEYS.find(([, show]) => show === key)
       if (tab) {

@@ -2803,5 +2803,8 @@
  "Ich möchte die Box trotzdem ohne Passwort betreiben.": "Voglio comunque usare il box senza password.",
  "Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.": "Senza accesso chiunque nella rete di casa può configurare il box – anche ospiti sul Wi-Fi e dispositivi che non conosci: eliminare contenuti, collegare Spotify, spegnere il box e usare l’interfaccia di amministrazione con tutti i diritti.",
  "Standardpasswort aktiv": "Password predefinita attiva",
- "Verstanden": "Ho capito"
+ "Verstanden": "Ho capito",
+ "Startet mit": "Inizia con",
+ "Dieser Reiter ist offen, wenn das Display startet.": "Questa scheda è aperta quando il display si avvia.",
+ "Das Display startet mit {}": "Il display inizia con {}"
 }
