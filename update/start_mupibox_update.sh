@@ -143,10 +143,10 @@ service mupi_idle_shutdown stop
 #   automake - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
 # The changes of this list apply to DEV installs only; stable and beta keep the list they always had.
 if [ "$RELEASE" != "dev" ]; then
-  packages2install="lighttpd-mod-openssl gpiod git libasound2 mpv pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh"
+  packages2install="lighttpd-mod-openssl gpiod git mpv pulseaudio-module-bluetooth python3-pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools python3-smbus python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh rfkill"
 else
   # libwidevinecdm0 stays: the display plays Spotify through the Web Playback SDK in Chromium, which needs Widevine
-  packages2install="lighttpd-mod-openssl gpiod git libasound2 mpv pulseaudio-module-bluetooth pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa preload python3-smbus2 pigpio libjson-c-dev libi2c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh xdotool"
+  packages2install="lighttpd-mod-openssl gpiod git mpv pulseaudio-module-bluetooth python3-pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt preload python3-smbus2 pigpio libjson-c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh xdotool rfkill"
 fi
 packages2remove="jq"
 STEP=0
@@ -316,31 +316,12 @@ rm -f /tmp/mupibox-update-failed
 
 	STEP=$(($STEP + 1))
 	if [ $OS == "bullseye" ]; then
-		echo -e "XXX\n${STEP}\nInstall package mutagen\nXXX"
-		before=$(date +%s)
-		pip install mutagen >&3 2>&3
-		STEP=$(($STEP + 4))
-		after=$(date +%s)
-		echo -e "## pip install mutagen  ##  finished after $((after - $before)) seconds" >&3 2>&3
-		echo -e "XXX\n${STEP}\nInstall package pip requests\nXXX"
-		before=$(date +%s)
-		installed=$(pip list | grep requests)
-		if [ ${#installed} = 0 ]; then
-			pip install requests --break-system-packages >&3 2>&3
-		fi
-		after=$(date +%s)
-		echo -e "## pip install requests  ##  finished after $((after - $before)) seconds" >&3 2>&3
-		before=$(date +%s)
-		installed=$(pip list | grep pyserial)
-		if [ ${#installed} = 0 ]; then
-			pip install pyserial --break-system-packages >&3 2>&3
-		fi
-		after=$(date +%s)
-		echo -e "## pip install pyserial  ##  finished after $((after - $before)) seconds" >&3 2>&3
+		# (requests and pyserial come from the package list: python3-requests, python3-serial; mutagen is not used)
 		STEP=$(($STEP + 1))
 	else
-		echo -e "XXX\n${STEP}\nInstall package python3-mutagen\nXXX"
-		packages2install="python3-mutagen  python3-dev"
+		echo -e "XXX\n${STEP}\nInstall package python3-dev\nXXX"
+		# (python3-dev: pip may have to build a part of telepot; python3-mutagen is not used by anything)
+		packages2install="python3-dev"
 		for package in ${packages2install}
 		do		
 			before=$(date +%s)
@@ -1200,7 +1181,6 @@ rm -f /tmp/mupibox-update-failed
 	mv ${LOG} /boot/$(date +%F)_update_${VERSION}.log >&3 2>&3
 	chown dietpi:dietpi ${CONFIG} >&3 2>&3
 	
-	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
 	# by path: on a fresh box pm2 knows neither process yet ("pm2 start server" looked for a file "server")
 	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && if pm2 describe server >/dev/null 2>&1; then pm2 restart server; else pm2 start server.js --name server; fi" >&3 2>&3
 	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/spotifycontroller-main && if pm2 describe spotify-control >/dev/null 2>&1; then pm2 restart spotify-control; else pm2 start spotify-control.js --name spotify-control; fi" >&3 2>&3
