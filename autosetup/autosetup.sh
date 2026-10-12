@@ -59,7 +59,7 @@ STEP=0
 	#   autoconf - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
 	#   automake - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
 	# libwidevinecdm0 stays: the display plays Spotify through the Web Playback SDK in Chromium, which needs Widevine
-	packages2install="lighttpd-mod-openssl gpiod git libasound2 mpv pulseaudio-module-bluetooth pip bluez zip unzip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa preload python3-smbus2 pigpio libjson-c-dev libi2c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh rfkill xdotool"
+	packages2install="lighttpd-mod-openssl gpiod git mpv pulseaudio-module-bluetooth python3-pip bluez zip unzip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt preload python3-smbus2 pigpio libjson-c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh rfkill xdotool"
 
 	###############################################################################################
 
@@ -117,26 +117,8 @@ STEP=0
 		# after=$(date +%s)
 		# echo -e "## pip install mutagen ## finished after $((after - before)) seconds" >&3 2>&3
 		# STEP=$((STEP + 1))
-
-		echo -e "XXX\n${STEP}\nInstall package pip requests\nXXX"
-		before=$(date +%s)
-		installed=$(pip list | grep requests)
-		if [ ${#installed} = 0 ]; then
-			pip install requests --break-system-packages >&3 2>&3
-		fi
-		after=$(date +%s)
-		echo -e "## pip install requests ## finished after $((after - before)) seconds" >&3 2>&3
-		STEP=$((STEP + 1))
-
-		echo -e "XXX\n${STEP}\nInstall package pip pyserial\nXXX"
-		before=$(date +%s)
-		installed=$(pip list | grep pyserial)
-		if [ ${#installed} = 0 ]; then
-			pip install pyserial --break-system-packages >&3 2>&3
-		fi
-		after=$(date +%s)
-		echo -e "## pip install pyserial ## finished after $((after - before)) seconds" >&3 2>&3
-		STEP=$((STEP + 1))
+		# (requests and pyserial come from the package list: python3-requests, python3-serial)
+		:
 	else
 		echo -e "XXX\n${STEP}\nInstall package python3-dev\nXXX"
 		# 2026-09-20: python3-mutagen is no longer installed (only the removed ID3 converter used it).
@@ -226,12 +208,6 @@ STEP=0
 
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nInstall ionic... \nXXX"
-	before=$(date +%s)
-	npm install -g @ionic/cli >&3 2>&3
-	after=$(date +%s)
-	echo -e "## Install ionic ## finished after $((after - before)) seconds" >&3 2>&3
-	STEP=$((STEP + 1))
 
 	echo -e "XXX\n${STEP}\nInstall pm2... \nXXX"
 	before=$(date +%s)
@@ -561,7 +537,6 @@ STEP=0
 	  echo "dtoverlay=pwm,pin=${LED_PIN},func=4" | tee -a "${BOOT_CONFIG}" >&3 2>&3
 	fi
 
-	curl -fsSL https://raw.githubusercontent.com/scopatz/nanorc/master/install.sh | sh >&3 2>&3
 	touch /home/dietpi/.mupi.install >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Set environment ## finished after $((after - before)) seconds" >&3 2>&3
@@ -707,7 +682,6 @@ STEP=0
 	/usr/local/bin/mupibox/./setting_update.sh >&3 2>&3
 	# boot and maintenance screens for the settings (box name, scene, language)
 	/usr/local/bin/mupibox/bootscreen_update.sh >&3 2>&3
-	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
 	# by path: on a fresh box pm2 knows neither process yet ("pm2 start server" looked for a file "server")
 	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && if pm2 describe server >/dev/null 2>&1; then pm2 restart server; else pm2 start server.js --name server; fi" >&3 2>&3
 	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/spotifycontroller-main && if pm2 describe spotify-control >/dev/null 2>&1; then pm2 restart spotify-control; else pm2 start spotify-control.js --name spotify-control; fi" >&3 2>&3

@@ -85,7 +85,7 @@ Kept, with what uses them:
 | Package | Used by |
 |---|---|
 | `mpv` | playback engine for everything but Spotify (`mpv-wrapper.js`); mplayer, the fallback until 5.0.9, is no longer installed |
-| `libasound2`, `python3-alsaaudio` | audio output, volume in `mqtt.py` |
+| `python3-alsaaudio` | volume in `mqtt.py` (the ALSA library itself comes with mpv and PulseAudio) |
 | `pulseaudio-module-bluetooth`, `bluez` | Bluetooth speakers (`scripts/bluetooth`, Bluetooth pages) |
 | `lighttpd-mod-openssl` | HTTPS for the admin interface (lighttpd) |
 | `git`, `zip` | admin pages (service, network, backup), update |
@@ -96,15 +96,16 @@ Kept, with what uses them:
 | `bc` | `mupi_start_led.sh` |
 | `build-essential`, `pigpio`, `libjson-c-dev` | autosetup compiles `scripts/led/led_control.c` (`-lpigpio -ljson-c`) |
 | `gpiod` | power button/shim scripts (`scripts/OnOffShim`) |
-| `libi2c-dev`, `python3-smbus2` | MuPiHAT (`scripts/mupihat`) |
+| `python3-smbus2` | MuPiHAT (`scripts/mupihat`) |
 | `python3-rpi.gpio`, `python3-lgpio` | LED and fan control (`RPi.GPIO`); `lgpio` is not imported by any script, it is kept as the GPIO backend for the Raspberry Pi 5 |
 | `python3-serial` | WLED scripts |
 | `python3-requests` | many scripts (Telegram, network check, MQTT) |
 | `python3-paho-mqtt`, `python3-netifaces` | `scripts/mqtt/mqtt.py` (Home Assistant) |
 | `python3-flask` | MuPiHAT status page (`mupihat.py`) |
 | `python3-pil` | cover thumbnails of the API server (falls back to the original pictures without it) |
-| `pip`, `python3-dev` | autosetup installs `telepot`, `requests`, `pyserial` with pip; `telepot` is used by the Telegram scripts |
-| `libgles2-mesa`, `preload` | GPU/graphics stack for the kiosk browser and application preloading; no explicit call, kept as system tuning |
+| `python3-pip`, `python3-dev` | `telepot` (Telegram scripts) is installed with pip; `python3-dev` in case pip has to build a part of it. `requests` and `pyserial` come from the package list (`python3-requests`, `python3-serial`), no longer also from pip |
+| `preload` | application preloading; no explicit call, kept as system tuning (an open question: it writes its state to the SD card) |
+| `rfkill` | switching the onboard WiFi (`set_onboard_wifi.sh`, the app) - in the update's list too since 5.0.10 |
 
 No longer installed (commented out in `update/start_mupibox_update.sh` and `autosetup/autosetup.sh`
 with the date and reason):
@@ -114,6 +115,12 @@ with the date and reason):
 | `id3tool` | only the ID3 converter used it, which was removed from the admin |
 | `python3-mutagen` and the pip `mutagen` step (autosetup) | same |
 | `python3-gpiozero` | no script imports it |
+| `libgles2-mesa` | Chromium brings its graphics libraries itself; the package does not exist in Debian 13 "Trixie" (5.0.10) |
+| `libasound2` | comes with mpv and PulseAudio; in Trixie it is called `libasound2t64` and the old name fails on 32 bit (5.0.10) |
+| `libi2c-dev` | nothing is compiled against it, the MuPiHAT uses `python3-smbus2` (5.0.10) |
+| `@ionic/cli` (npm, autosetup) | a tool to build the display's app, the box gets it built (5.0.10) |
+| nano syntax colours (`scopatz/nanorc`, autosetup) | comfort only, a script of a foreign repository run as root (5.0.10) |
+| `npm install` in the app's folder (autosetup and update) | the folder has no `package.json`, the server is one bundled file (5.0.10) |
 | `python3-smbus` | unused, the scripts use `python3-smbus2` |
 | `i2c-tools` | no script calls `i2cdetect`/`i2cget`/`i2cset` |
 | `mesa-utils` | diagnostics only (`glxinfo`), never called |
@@ -166,7 +173,8 @@ Python libraries used only by manual analysis tools (`scripts/mupihat/plot_*.py`
 
 | Service | Purpose |
 |---|---|
-| `mupi_startstop`, `mupi_splash`, `mupi_idle_shutdown`, `mupi_change_checker` | start/stop, splash screen, idle shutdown, watches the media directory for changes |
+| `mupi_startstop`, `mupi_splash`, `mupi_idle_shutdown` | start/stop, splash screen, idle shutdown |
+| `mupi_update_recover` | an update that stopped halfway undone at the next start (`restore_interrupted_update.sh`) |
 | `mupi_wifi`, `mupi_autoconnect-wifi`, `mupi_check_internet`, `mupi_check_monitor` | network and display monitoring |
 | `dietpi-wifi-monitor` (override) | this fork's tolerant replacement for DietPi's WiFi monitor (`scripts/mupibox/wifi_monitor.sh`) |
 | `pulseaudio`, `mupi_autoconnect_bt` | audio server, Bluetooth speaker reconnect |
@@ -175,7 +183,6 @@ Python libraries used only by manual analysis tools (`scripts/mupihat/plot_*.py`
 | `mupi_vnc`, `mupi_novnc` | remote view (optional, off by default) |
 | `dietpi-dashboard` | DietPi dashboard |
 | `librespot` | Spotify Connect (optional, see above) |
-| `spotifyd` | not used any more, replaced by librespot |
 
 ## Unused and deprecated
 
@@ -184,7 +191,8 @@ can be deleted.
 
 - `scripts/librespot/librespot-start.sh` - replaced by `librespot.service` and `env-librespot`
 - `scripts/mupibox/get_deviceid.sh` - nothing runs it
-- `config/services/spotifyd.service`, `config/templates/spotifyd.conf` - spotifyd was replaced by librespot
+- `config/templates/spotifyd.conf` - spotifyd was replaced by librespot (its unit `spotifyd.service` and the old
+  `mupi_change_checker.service` were removed in 5.0.10; on a box the update switches spotifyd off and removes the change checker)
 - `scripts/telegram/telegram_end_publish.py`, `telegram_playing.py`, `telegram_shutdown.py`,
   `telegram_stop.py` - nothing starts them
 - Binaries in `bin/librespot` other than `dev_0.6_20250806` (see above)
