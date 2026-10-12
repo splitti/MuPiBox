@@ -1,0 +1,15 @@
+[Unit]
+# An update that did not get to its end (the power cut while it ran): its installation undone or its user data put
+# back (scripts/mupibox/restore_interrupted_update.sh) - before pm2 starts the app's server and the player, so nothing
+# they write meets the files being put back. Does nothing when no update stopped halfway.
+Description=MuPiBox: finish or undo an update that stopped halfway
+After=local-fs.target
+Before=pm2-dietpi.service mupi_startstop.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/mupibox/restore_interrupted_update.sh --no-restart
+TimeoutStartSec=600
+
+[Install]
+WantedBy=multi-user.target
