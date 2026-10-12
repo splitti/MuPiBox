@@ -669,6 +669,10 @@ STEP=0
 	mv -f ${MUPI_SRC}/config/services/mupi_fan.service /etc/systemd/system/mupi_fan.service >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_tls.service /etc/systemd/system/mupi_tls.service >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_tls.timer /etc/systemd/system/mupi_tls.timer >&3 2>&3
+	# an update that stops halfway: undone or finished at the next start, before pm2 (restore_interrupted_update.sh)
+	mv -f ${MUPI_SRC}/config/services/mupi_update_recover.service /etc/systemd/system/mupi_update_recover.service >&3 2>&3
+	systemctl daemon-reload >&3 2>&3
+	systemctl enable mupi_update_recover.service >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_hat_control.service /etc/systemd/system/mupi_hat_control.service >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_autoconnect-wifi.service /etc/systemd/system/mupi_autoconnect-wifi.service >&3 2>&3
 	# Tolerant replacement for DietPi's WiFi monitor (see scripts/mupibox/wifi_monitor.sh)
