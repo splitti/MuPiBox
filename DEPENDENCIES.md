@@ -104,7 +104,6 @@ Kept, with what uses them:
 | `python3-flask` | MuPiHAT status page (`mupihat.py`) |
 | `python3-pil` | cover thumbnails of the API server (falls back to the original pictures without it) |
 | `python3-pip`, `python3-dev` | `telepot` (Telegram scripts) is installed with pip; `python3-dev` in case pip has to build a part of it. `requests` and `pyserial` come from the package list (`python3-requests`, `python3-serial`), no longer also from pip |
-| `preload` | application preloading; no explicit call, kept as system tuning (an open question: it writes its state to the SD card) |
 | `rfkill` | switching the onboard WiFi (`set_onboard_wifi.sh`, the app) - in the update's list too since 5.0.10 |
 
 No longer installed (commented out in `update/start_mupibox_update.sh` and `autosetup/autosetup.sh`
@@ -117,6 +116,7 @@ with the date and reason):
 | `python3-gpiozero` | no script imports it |
 | `libgles2-mesa` | Chromium brings its graphics libraries itself; the package does not exist in Debian 13 "Trixie" (5.0.10) |
 | `libasound2` | comes with mpv and PulseAudio; in Trixie it is called `libasound2t64` and the old name fails on 32 bit (5.0.10) |
+| `preload` | a desktop daemon that preloads programs it saw started; the box starts the same few, which stay in memory anyway - it only took RAM and wrote its state to the SD card (5.0.10; boxes that have it keep it, it is off there) |
 | `libi2c-dev` | nothing is compiled against it, the MuPiHAT uses `python3-smbus2` (5.0.10) |
 | `@ionic/cli` (npm, autosetup) | a tool to build the display's app, the box gets it built (5.0.10) |
 | nano syntax colours (`scopatz/nanorc`, autosetup) | comfort only, a script of a foreign repository run as root (5.0.10) |
