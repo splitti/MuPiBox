@@ -23,6 +23,9 @@
 
 #sudo /usr/local/bin/mupibox/./get_network.sh
 
+# An update that did not get to its end (the power cut while it ran): the library and the installation as before it
+sudo /usr/local/bin/mupibox/restore_interrupted_update.sh
+
 # The display brightness chosen in the app (mupibox.displayBrightness, percent; missing = as the display starts).
 # At least 10 %, so a mistake never leaves a black display after a restart.
 BRIGHTNESS=$(/usr/bin/jq -r '.mupibox.displayBrightness // empty' /etc/mupibox/mupiboxconfig.json 2>/dev/null)

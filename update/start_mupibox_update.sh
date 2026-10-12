@@ -58,8 +58,14 @@ CONFIG="/etc/mupibox/mupiboxconfig.json"
 if ${PREFLIGHT_DIR}/jq . ${CONFIG} > /dev/null 2>&1; then
   cp ${CONFIG} /home/dietpi/mupiboxconfig.json.pre-update
 fi
-if ${PREFLIGHT_DIR}/jq . /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json > /dev/null 2>&1; then
-  cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json /home/dietpi/data.json.pre-update
+# (an empty library never replaces a copy that has one: an update started again after one that stopped halfway - the
+# library empty then - kept only the empty list here)
+PRE_DATA=/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json
+pre_entries() { ${PREFLIGHT_DIR}/jq 'if type == "array" then length else 0 end' "$1" 2>/dev/null | head -n 1 | grep -E '^[0-9]+$' || echo 0; }
+if ${PREFLIGHT_DIR}/jq . "${PRE_DATA}" > /dev/null 2>&1; then
+  if [ "$(pre_entries "${PRE_DATA}")" -gt 0 ] || [ "$(pre_entries /home/dietpi/data.json.pre-update)" -eq 0 ]; then
+    cp "${PRE_DATA}" /home/dietpi/data.json.pre-update
+  fi
 fi
 LOG="/boot/mupibox_update.log"
 exec 3>${LOG}
@@ -442,6 +448,9 @@ rm -f /tmp/mupibox-update-failed
 	# The box's programs stop before the copy: a change the app saved or the player's progress after the copy was
 	# replaced by the older copy when the data came back (the server was stopped only after the backup before)
 	sudo -H -u dietpi bash -c "pm2 stop server; pm2 stop spotify-control" >&3 2>&3
+	# An update that stopped before (a power cut while it ran): its data back from its backup first - else this run saved
+	# the empty library and brought that back (restore_interrupted_update.sh; it runs at every start of the box too)
+	[ -f "${MUPI_SRC}/scripts/mupibox/restore_interrupted_update.sh" ] && bash "${MUPI_SRC}/scripts/mupibox/restore_interrupted_update.sh" --no-restart >&3 2>&3
 	# A backup left from a restore that failed (see "Restore Userdata") is kept under its own name, never thrown away
 	[ -e "${USERDATA_BAK}" ] && mv "${USERDATA_BAK}" "${USERDATA_BAK}.$(date +%Y%m%d-%H%M%S)" >&3 2>&3
 	mkdir -p "${USERDATA_BAK}/www" >&3 2>&3
