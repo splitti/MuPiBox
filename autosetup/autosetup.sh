@@ -5,33 +5,35 @@
 # The channel as the first argument (stable when none is given), e.g. the development version on a fresh DietPi:
 #   cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup.sh | sudo bash -s -- dev
 
+exec 3>${LOG}
+
 case "$1" in
-	stable | beta | dev) RELEASE="$1" ;;
-	"") RELEASE="stable" ;;
+	stable|beta|dev)
+		RELEASE="$1"
+		;;
+	"")
+		RELEASE="stable"
+		;;
 	*)
 		echo "Unknown channel '$1' - use stable, beta or dev" >&2
 		exit 1
 		;;
 esac
+
+if [ -f "/boot/firmware/config.txt" ];
+then
+	BOOT_DIR="/boot/firmware"
+	BOOT_CONFIG="/boot/firmware/config.txt"
+	BOOT_CMDLINE="/boot/firmware/cmdline.txt"
+else
+	BOOT_DIR="/boot"
+	BOOT_CONFIG="/boot/config.txt"
+	BOOT_CMDLINE="/boot/cmdline.txt"
+fi
+
 LOG="/tmp/autosetup.log"
-BOOT_DIR="/boot"
-BOOT_CONFIG="/boot/config.txt"
-BOOT_CMDLINE="/boot/cmdline.txt"
-
-if [ -f "/boot/firmware/config.txt" ]; then
-  BOOT_DIR="/boot/firmware"
-  BOOT_CONFIG="/boot/firmware/config.txt"
-fi
-
-if [ -f "/boot/firmware/cmdline.txt" ]; then
-  BOOT_CMDLINE="/boot/firmware/cmdline.txt"
-fi
 VER_JSON="/tmp/version.json"
 CONFIG="/etc/mupibox/mupiboxconfig.json"
-STEP=0
-
-exec 3>${LOG}
-
 OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)
 OS=${OS:17}
 ARCH=$(uname -m)
@@ -45,6 +47,7 @@ fi
 
 rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 
+STEP=0
 {
 	# 2026-09-20: no longer installed (nothing in MuPiBox uses them any more):
 	#   id3tool - only the ID3 converter used it; that converter was removed from the admin
@@ -370,7 +373,7 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	mv -f ${MUPI_SRC}/config/templates/smb.conf /etc/samba/smb.conf >&3 2>&3
 	(echo "mupibox"; echo "mupibox") | smbpasswd -s -a dietpi >&3 2>&3
 	# (the package starts them: off until the app switches the share on; the domain controller is never needed)
-	for u in smbd nmbd samba-ad-dc wsdd wsdd2; do
+	for u in smbd nmbd samba-ad-dc ${WSD}; do
 		systemctl cat ${u}.service >/dev/null 2>&1 || continue
 		systemctl disable --now ${u}.service >&3 2>&3
 	done
@@ -405,63 +408,21 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 
 	echo -e "XXX\n${STEP}\nCopy MuPiBox files and themes... \nXXX"
 	before=$(date +%s)
-	for theme in earth steampunk fantasybutterflies matrix lines forms comic mystic clone-wars enterprise spiderman supermario pikachu dinosaur unicorn axolotl custom; do
-		mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/${theme} >&3 2>&3
-	done
-
-	mv ${MUPI_SRC}/themes/fantasybutterflies/odstemplikBold.otf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/odstemplikBold.otf >&3 2>&3
-	mv ${MUPI_SRC}/themes/fantasybutterflies/fantasy-butterflies-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/fantasy-butterflies-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/fantasybutterflies/fantasy-circle-bg.png /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/fantasy-circle-bg.png >&3 2>&3
-	mv ${MUPI_SRC}/themes/lines/lines-bg.png /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/lines/lines-bg.png >&3 2>&3
-	mv ${MUPI_SRC}/themes/lines/KOMIKND_.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/lines/KOMIKND_.ttf >&3 2>&3
-	mv ${MUPI_SRC}/themes/forms/forms-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/forms/forms-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/forms/LT_Crafted.otf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/forms/LT_Crafted.otf >&3 2>&3
-	mv ${MUPI_SRC}/themes/comic/comic-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/comic/comic-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/comic/snaphand-v1-free.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/comic/snaphand-v1-free.ttf >&3 2>&3
-	mv ${MUPI_SRC}/themes/mystic/mystic-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/mystic/mystic-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/mystic/ylee_Mortal_Heart.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/mystic/ylee_Mortal_Heart.ttf >&3 2>&3
-	mv ${MUPI_SRC}/themes/matrix/matrix-bg.png /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/matrix/matrix-bg.png >&3 2>&3
-	mv ${MUPI_SRC}/themes/matrix/Pixolletta8px.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/matrix/Pixolletta8px.ttf >&3 2>&3
-	mv ${MUPI_SRC}/themes/clone-wars/Starjedi.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/clone-wars/Starjedi.ttf >&3 2>&3
-	mv ${MUPI_SRC}/themes/clone-wars/clone-wars-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/clone-wars/clone-wars-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/enterprise/Nasa21.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/enterprise/Nasa21.ttf >&3 2>&3
-	mv ${MUPI_SRC}/themes/enterprise/enterprise-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/enterprise/enterprise-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/spiderman/IntensaFuente.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/spiderman/IntensaFuente.ttf >&3 2>&3
-	mv ${MUPI_SRC}/themes/spiderman/spiderman-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/spiderman/spiderman-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/pikachu/PokemonXandY.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/pikachu/PokemonXandY.ttf >&3 2>&3
-	mv ${MUPI_SRC}/themes/pikachu/pikachu-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/pikachu/pikachu-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/supermario/TitanOne-Regular.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/supermario/TitanOne-Regular.ttf >&3 2>&3
-
-	mv ${MUPI_SRC}/themes/supermario/OFL-TitanOne.txt /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/supermario/OFL-TitanOne.txt >&3 2>&3
-	mv ${MUPI_SRC}/themes/supermario/supermario-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/supermario/supermario-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/dinosaur/BerlinSmallCaps.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/dinosaur/BerlinSmallCaps.ttf >&3 2>&3
-	mv ${MUPI_SRC}/themes/dinosaur/dinosaur-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/dinosaur/dinosaur-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/unicorn/MagnoliaScript.otf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/unicorn/MagnoliaScript.otf >&3 2>&3
-	mv ${MUPI_SRC}/themes/unicorn/unicorn-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/unicorn/unicorn-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/axolotl/MagnoliaScript.otf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/axolotl/MagnoliaScript.otf >&3 2>&3
-	mv ${MUPI_SRC}/themes/axolotl/axolotl-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/axolotl/axolotl-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/earth/earth-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/earth-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/earth/Nasa21.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/Nasa21.ttf >&3 2>&3
-	mv ${MUPI_SRC}/themes/steampunk/steampunk-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/steampunk/Rye-Regular.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/Rye-Regular.ttf >&3 2>&3
-
-	mv ${MUPI_SRC}/themes/steampunk/OFL-Rye.txt /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/OFL-Rye.txt >&3 2>&3
-	mv ${MUPI_SRC}/themes/steampunk/steampunk-gear.png /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-gear.png >&3 2>&3
-	mv ${MUPI_SRC}/themes/steampunk/steampunk-header.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-header.jpg >&3 2>&3
-	ln -sf /home/dietpi/MuPiBox/themes/custom-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/custom/custom-bg.jpg >&3 2>&3
 
 	# km themes (children's themes of one design): pictures per theme, shared fonts, and the list with their names
 	# (the admin interface shows those). New ones: add the id here, in conf_update.sh and in autosetup.sh.
 	KM_THEMES="kuschelmond moosnest sonnenhof pferdehof fussball fahrzeuge buecherregal kassettenrekorder unterwasser bastelpapier prinzessin einhorn feenschloss weltraum dinoland piratenbucht tagundnacht feuerwehr ritterburg eisenbahn roboter heldenstadt safari eiswelt zirkus meerjungfrau ballett kaetzchen zuckerland schmetterlinge"
+	
 	# the old themes in the km layout (legacy in km-themes.json): their mascots and cover placeholders; coverflow stays
 	KM_LEGACY_THEMES="axolotl blue captainamerica chocolate cinema clone-wars comic custom danger dark darkred deepblue dinosaur earth enterprise fantasybutterflies forms green ironman light lines matrix mint mystic orange pikachu pink purple red spiderman steampunk supermario unicorn vintage wall-e wood xmas"
 	for theme in ${KM_THEMES} ${KM_LEGACY_THEMES} _fonts; do
 		mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/${theme} >&3 2>&3
 		cp -f ${MUPI_SRC}/themes/${theme}/* /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/${theme}/ >&3 2>&3
 	done
+	ln -sf /home/dietpi/MuPiBox/themes/custom-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/custom/custom-bg.jpg >&3 2>&3
+	
 	cp -f ${MUPI_SRC}/themes/km-themes.json /home/dietpi/MuPiBox/themes/km-themes.json >&3 2>&3
 	mv ${MUPI_SRC}/themes/*.css /home/dietpi/MuPiBox/themes/ >&3 2>&3
-	cp -f ${MUPI_SRC}/scripts/chromium-autostart.sh /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	mv ${MUPI_SRC}/scripts/mupibox/* /usr/local/bin/mupibox/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/bluetooth/* /usr/local/bin/mupibox/ >&3 2>&3
 	# The battery of Bluetooth headphones (display and app, issue #176): BlueZ 5.66 takes it from PulseAudio only with
@@ -481,7 +442,7 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	mv ${MUPI_SRC}/config/templates/add_wifi.json /boot/add_wifi.json >&3 2>&3
 	mv ${MUPI_SRC}/config/templates/.bashrc /home/dietpi/.bashrc >&3 2>&3
 	chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ /home/dietpi/MuPiBox /home/dietpi/.bashrc >&3 2>&3
-	chmod 755 /usr/local/bin/mupibox/* /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
+	chmod 755 /usr/local/bin/mupibox/* >&3 2>&3
 	# the WiFi guard in front of Debian's wpa_action (a late "disconnected" took a working WiFi down at the start)
 	/usr/local/bin/mupibox/mupi_wpa_guard.sh install >&3 2>&3 || echo "## WiFi guard not installed - Debian's wpa_action stays as it was ##" >&3 2>&3
 	after=$(date +%s)
@@ -626,7 +587,7 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	# the MuPiBox script goes in again after it (a fresh install showed the DietPi website until the first update)
 	cp -f ${MUPI_SRC}/scripts/chromium-autostart.sh /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	/boot/dietpi/dietpi-autostart 11 >&3 2>&3
-	chmod +x /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
+	chmod 755 /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	# full colours in the display on a Pi with 2 GB or more: takes DietPi's "low-end device mode" out again (see the file)
 	mkdir -p /etc/chromium.d && tr -d '\r' < ${MUPI_SRC}/config/chromium/zz-mupibox > /etc/chromium.d/zz-mupibox && chmod 644 /etc/chromium.d/zz-mupibox
 	apt-get install xserver-xorg-legacy -y >&3 2>&3
@@ -649,29 +610,15 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 
 	echo -e "XXX\n${STEP}\nEnable and start services... \nXXX"
 	before=$(date +%s)
-	mv -f ${MUPI_SRC}/config/services/mupi_idle_shutdown.service /etc/systemd/system/mupi_idle_shutdown.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_splash.service /etc/systemd/system/mupi_splash.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/pulseaudio.service /etc/systemd/system/pulseaudio.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_startstop.service /etc/systemd/system/mupi_startstop.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_wifi.service /etc/systemd/system/mupi_wifi.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_check_internet.service /etc/systemd/system/mupi_check_internet.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_check_monitor.service /etc/systemd/system/mupi_check_monitor.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_autoconnect_bt.service /etc/systemd/system/mupi_autoconnect_bt.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_vnc.service /etc/systemd/system/mupi_vnc.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_novnc.service /etc/systemd/system/mupi_novnc.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_powerled.service /etc/systemd/system/mupi_powerled.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_telegram.service /etc/systemd/system/mupi_telegram.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/dietpi-dashboard.service /etc/systemd/system/dietpi-dashboard.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_hat.service /etc/systemd/system/mupi_hat.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_fan.service /etc/systemd/system/mupi_fan.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_tls.service /etc/systemd/system/mupi_tls.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_tls.timer /etc/systemd/system/mupi_tls.timer >&3 2>&3
+	
+	# LAN without waiting at boot, and an address at once when a cable is plugged in (see scripts/mupibox/mupi_ethernet.sh).
+	# Also re-evaluates LAN vs WiFi priority (mupi_wifi_select.sh) on every carrier change - the udev rule above
+	# does not fire on every board (some onboard ethernet drivers never emit a uevent for it), and this script
+	# already reacts to the exact same "ip monitor link" event, so it is the more reliable place to trigger it.
+	# the goodbye picture until the power is off (see config/services/mupi_goodbye.service)
 	# an update that stops halfway: undone or finished at the next start, before pm2 (restore_interrupted_update.sh)
-	mv -f ${MUPI_SRC}/config/services/mupi_update_recover.service /etc/systemd/system/mupi_update_recover.service >&3 2>&3
-	systemctl daemon-reload >&3 2>&3
-	systemctl enable mupi_update_recover.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_hat_control.service /etc/systemd/system/mupi_hat_control.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_autoconnect-wifi.service /etc/systemd/system/mupi_autoconnect-wifi.service >&3 2>&3
+	mv -f ${MUPI_SRC}/config/services/*.service /etc/systemd/system/ >&3 2>&3
+	
 	# Tolerant replacement for DietPi's WiFi monitor (see scripts/mupibox/wifi_monitor.sh)
 	mkdir -p /etc/systemd/system/dietpi-wifi-monitor.service.d >&3 2>&3
 	cp -f ${MUPI_SRC}/config/services/dietpi-wifi-monitor-override.conf /etc/systemd/system/dietpi-wifi-monitor.service.d/override.conf >&3 2>&3
@@ -680,33 +627,26 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	# LAN takes over from WiFi again on carrier loss/return of the ethernet cable (same script)
 	cp -f ${MUPI_SRC}/config/udev/99-mupibox-eth.rules /etc/udev/rules.d/99-mupibox-eth.rules >&3 2>&3
 	udevadm control --reload >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_mqtt.service /etc/systemd/system/mupi_mqtt.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_rotary.service /etc/systemd/system/mupi_rotary.service >&3 2>&3
-	# LAN without waiting at boot, and an address at once when a cable is plugged in (see scripts/mupibox/mupi_ethernet.sh).
-	# Also re-evaluates LAN vs WiFi priority (mupi_wifi_select.sh) on every carrier change - the udev rule above
-	# does not fire on every board (some onboard ethernet drivers never emit a uevent for it), and this script
-	# already reacts to the exact same "ip monitor link" event, so it is the more reliable place to trigger it.
-	mv -f ${MUPI_SRC}/config/services/mupi_ethernet.service /etc/systemd/system/mupi_ethernet.service >&3 2>&3
-	# the goodbye picture until the power is off (see config/services/mupi_goodbye.service)
-	mv -f ${MUPI_SRC}/config/services/mupi_goodbye.service /etc/systemd/system/mupi_goodbye.service >&3 2>&3
+
 	mkdir -p "/etc/systemd/system/ifup@eth0.service.d" >&3 2>&3
 	cp -f "${MUPI_SRC}/config/services/ifup@eth0.service.d/mupibox.conf" "/etc/systemd/system/ifup@eth0.service.d/mupibox.conf" >&3 2>&3
 	# The display's autologin without the 5 s Type=idle wait (see config/services/getty@tty1.service.d/mupibox.conf)
 	mkdir -p "/etc/systemd/system/getty@tty1.service.d" >&3 2>&3
 	cp -f "${MUPI_SRC}/config/services/getty@tty1.service.d/mupibox.conf" "/etc/systemd/system/getty@tty1.service.d/mupibox.conf" >&3 2>&3
-	# Admin interface, Samba share and DietPi dashboard 45 s after the start (see config/services/mupibox-delayed-start.conf)
+	
+	# Admin interface and DietPi dashboard 45 s after the start (see config/services/mupibox-delayed-start.conf)
 	for delayed in lighttpd smbd dietpi-dashboard $(systemctl list-unit-files "php*-fpm.service" --no-legend 2>/dev/null | awk '{print $1}' | sed 's/\.service$//'); do
 		mkdir -p "/etc/systemd/system/${delayed}.service.d" >&3 2>&3
 		cp -f "${MUPI_SRC}/config/services/mupibox-delayed-start.conf" "/etc/systemd/system/${delayed}.service.d/mupibox-delayed-start.conf" >&3 2>&3
 	done
-	# The Samba share is a standalone server (smbd); the Active Directory domain controller is not needed
-	systemctl disable --now samba-ad-dc.service >&3 2>&3
 	systemctl daemon-reload >&3 2>&3
+	
 	# (not the Samba share: off until the app switches it on, see "Preconfigure Samba")
-	for service in mupi_wifi mupi_check_internet mupi_check_monitor mupi_idle_shutdown mupi_startstop pulseaudio mupi_splash mupi_powerled mupi_ethernet mupi_goodbye; do
+	for service in mupi_wifi mupi_check_internet mupi_check_monitor mupi_idle_shutdown mupi_startstop pulseaudio mupi_splash mupi_powerled mupi_ethernet mupi_goodbye mupi_update_recover; do
 		systemctl enable ${service}.service >&3 2>&3
 		systemctl start ${service}.service >&3 2>&3
 	done
+	
 	# The DietPi-Dashboard: a password nobody knows, an inner port, off - the app switches it on and opens it with a
 	# one-time ticket (dietpi_dashboard.sh, backend-api eltern/dietpi-dashboard.ts)
 	if [ -x /opt/dietpi-dashboard/dietpi-dashboard ]; then
