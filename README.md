@@ -82,6 +82,8 @@ Develop in a GitHub codespace (`.devcontainer`) or locally with Node.js 22 (PHP 
    Your own box's library and settings: take the two files out of a backup of the box (Settings › Backup) into
    that folder, `unzip -o -j <backup>.zip etc/mupibox/mupiboxconfig.json home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json -d src/backend-api/config/`
    (the app's own restore page works on a box only). The Spotify client id and secret go into `config.json` by hand.
+   The display reads the library through `active_data.json` (and the resume list through `active_resume.json`): in
+   development the backend links them to `data.json` and `resume.json` at its start when they are missing.
 4. `npm run lint` (Biome) before you commit. Tests: `npm run test:frontend-box` and
    `npm run test --workspace=mupibox-backend-api`.
 5. Create a branch, commit, push and open a pull request.
@@ -141,7 +143,7 @@ users will notice.
 
 Without a box, the Dockerfile in the root directory gives a production-like test of freshly built zips: it
 installs `bin/nodejs/deploy.zip` and `AdminInterface/release/www.zip` the way autosetup does (Node 22, pm2,
-lighttpd with PHP and the proxy to the app). `npm run docker:build`, then `npm run docker:start`; the app is at
+lighttpd with PHP and the proxy to the app). `npm run docker:build`, then `npm run docker:start` (the container is called `mupibox` and goes when it ends); the app is at
 http://localhost/app/, the old admin interface at http://localhost/index.php, the display UI at http://localhost:8200/
 (with the player beside it on port 5005, as the kiosk on a box has it; from another device in the network the
 display goes through the API instead, as a phone does). There is no sound device and no hardware in the container:
