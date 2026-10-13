@@ -337,7 +337,7 @@ STEP=0
 
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nPreconfigure Samba... \nXXX"
+	echo -e "XXX\n${STEP}\nPreconfigure Samba, FTP and VNC... \nXXX"
 	before=$(date +%s)
 	# The Samba share (the box in the Windows network) installed and set up, but off: the app switches it on
 	# (Einstellungen › Dienste, eltern/services.ts) - then at once and without internet. Nothing was installed for it
@@ -353,8 +353,19 @@ STEP=0
 		systemctl cat ${u}.service >/dev/null 2>&1 || continue
 		systemctl disable --now ${u}.service >&3 2>&3
 	done
+	# FTP (proftpd) and VNC (x11vnc, websockify and noVNC for the browser) the same way, issue #178: installed and set up,
+	# off - the app's switches (eltern/services.ts) then only start and stop them, at once and without internet
+	DEBIAN_FRONTEND=noninteractive apt-get --yes install proftpd-core x11vnc websockify >&3 2>&3
+	if [ -d /etc/proftpd ]; then
+		cp -f ${MUPI_SRC}/config/templates/proftpd.conf /etc/proftpd/proftpd.conf >&3 2>&3
+	fi
+	systemctl disable --now proftpd.service >&3 2>&3
+	if [ ! -d /usr/share/novnc ]; then
+		git clone --depth 1 https://github.com/novnc/noVNC.git /usr/share/novnc >&3 2>&3 && chown -R dietpi:dietpi /usr/share/novnc >&3 2>&3
+	fi
+	# (mupi_vnc and mupi_novnc are installed with the other units and stay off until the app switches VNC on)
 	after=$(date +%s)
-	echo -e "## Preconfigure Samba ## finished after $((after - before)) seconds" >&3 2>&3
+	echo -e "## Preconfigure Samba, FTP and VNC ## finished after $((after - before)) seconds" >&3 2>&3
 	STEP=$((STEP + 1))
 
 	###############################################################################################
