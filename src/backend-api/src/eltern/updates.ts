@@ -102,6 +102,13 @@ if [ "$RC" = "0" ] && [ ! -e /boot/mupibox_update.log ] && [ "$(cut -f1 "$D/prog
 	finish rebooting
 	sleep 10
 	systemctl reboot
+elif [ -e /tmp/mupibox-update-nostart ]; then
+	# the update could not go back to the previous installation completely (fail_update ... nostart): nothing is
+	# started on an installation in that state - the next start of the box finishes the way back before pm2 starts
+	# the server and the player (mupi_update_recover.service)
+	echo "The update stopped, and the way back to the previous version is not complete - restart the box."
+	finish failed
+	[ "$IDLE_WAS_ACTIVE" = "active" ] && systemctl start mupi_idle_shutdown
 else
 	finish failed
 	# the display was ended by the update script: back to the box's normal state
