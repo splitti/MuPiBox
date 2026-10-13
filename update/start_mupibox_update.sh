@@ -864,7 +864,7 @@ rm -f /tmp/mupibox-update-failed
 	# Samba, FTP and VNC on a box that does not have them yet (issue #178): installed and set up, but off - the app's
 	# switches (eltern/services.ts) then only start and stop them, at once and without internet; a fresh installation
 	# does the same. Only what is missing: a service that is there is left as it is (one that is on stays on), and an
-	# own smb.conf or proftpd.conf is never replaced. Debian's packages start their service when they are installed -
+	# own smb.conf, proftpd.conf or Samba password is never replaced. Debian's packages start their service when they are installed -
 	# policy-rc.d keeps them from it meanwhile (else proftpd ran for a moment with Debian's own config, which lets the
 	# box's user log in). Nothing of it stops the update: what fails is installed by the app's switch as before.
 	POLICY_RC=/usr/sbin/policy-rc.d
@@ -875,26 +875,71 @@ rm -f /tmp/mupibox-update-failed
 	# (installed means installed: dpkg -s also answers for a package removed with only its config left - the state the
 	# old admin interface's switches left behind with apt-get remove)
 	pkg_installed() { dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q 'install ok installed'; }
+	# The services the packages bring are masked before they are installed and switched off only after: a power cut in
+	# between leaves them unable to start instead of switched on at the next start (the packages enable them). The list
+	# on the card tells restore_interrupted_update.sh which ones to unmask and switch off then. Only units that are not
+	# there yet - one that is there is left as it is.
+	UPDATE_MASKED=/home/dietpi/.mupibox/update-masked
+	mask_new() {
+		local u
+		for u in "$@"; do
+			[ -e /usr/lib/systemd/system/${u}.service ] || [ -e /lib/systemd/system/${u}.service ] || [ -e /etc/systemd/system/${u}.service ] && continue
+			echo "${u}" >> "${UPDATE_MASKED}" && sync "${UPDATE_MASKED}" && systemctl mask ${u}.service >&3 2>&3
+		done
+	}
+	# (unmasked first: systemctl ignores switching off a masked unit - the package's links would stay and start it later)
+	off_new() {
+		local u
+		for u in "$@"; do
+			grep -qsx "${u}" "${UPDATE_MASKED}" || continue
+			systemctl unmask ${u}.service >&3 2>&3
+			systemctl cat ${u}.service >/dev/null 2>&1 && systemctl disable --now ${u}.service >&3 2>&3
+		done
+	}
+	# A config comes from the template only while it is none of the user's own: there was none before the install, or
+	# it is still the package's (its original, or what ucf wrote and keeps the checksum of). An own smb.conf or
+	# proftpd.conf - kept by the apt-get remove of the old switches - stays as it is.
+	conf_untouched() {
+		cmp -s "$1" "$2" && return 0
+		local sum
+		sum=$(md5sum < "$1" 2>/dev/null | cut -d' ' -f1)
+		[ -n "${sum}" ] && grep -qs "^${sum}  $1\$" /var/lib/ucf/hashfile
+	}
 	WSD=$(apt-cache show wsdd2 >/dev/null 2>&1 && echo wsdd2 || echo wsdd)
 	if ! pkg_installed samba; then
-		if DEBIAN_FRONTEND=noninteractive apt-get --yes install samba ${WSD} >&3 2>&3; then
-			for u in smbd nmbd samba-ad-dc wsdd wsdd2; do
-				systemctl cat ${u}.service >/dev/null 2>&1 && systemctl disable --now ${u}.service >&3 2>&3
-			done
-			[ -f ${MUPI_SRC}/config/templates/smb.conf ] && cp -f ${MUPI_SRC}/config/templates/smb.conf /etc/samba/smb.conf >&3 2>&3
-			(echo "mupibox"; echo "mupibox") | smbpasswd -s -a dietpi >&3 2>&3
+		SMB_CONF_HAD=0
+		[ -e /etc/samba/smb.conf ] && SMB_CONF_HAD=1
+		mask_new smbd nmbd samba-ad-dc wsdd wsdd2
+		DEBIAN_FRONTEND=noninteractive apt-get --yes install samba ${WSD} >&3 2>&3
+		SMB_OK=$?
+		off_new smbd nmbd samba-ad-dc wsdd wsdd2
+		if [ "${SMB_OK}" = 0 ]; then
+			if [ -f ${MUPI_SRC}/config/templates/smb.conf ] && { [ "${SMB_CONF_HAD}" = 0 ] || conf_untouched /etc/samba/smb.conf /usr/share/samba/smb.conf; }; then
+				cp -f ${MUPI_SRC}/config/templates/smb.conf /etc/samba/smb.conf >&3 2>&3
+			fi
+			# (the first password only for a Samba user that is not there yet: one kept from before keeps its own)
+			pdbedit -u dietpi >/dev/null 2>&1 || (echo "mupibox"; echo "mupibox") | smbpasswd -s -a dietpi >&3 2>&3
 		else
 			echo "## Samba not installed now - the app's switch installs it ##" >&3 2>&3
 		fi
 	fi
 	if ! pkg_installed proftpd-core && ! command -v proftpd >/dev/null 2>&1; then
-		if DEBIAN_FRONTEND=noninteractive apt-get --yes install proftpd-core >&3 2>&3; then
-			systemctl disable --now proftpd.service >&3 2>&3
-			[ -d /etc/proftpd ] && [ -f ${MUPI_SRC}/config/templates/proftpd.conf ] && cp -f ${MUPI_SRC}/config/templates/proftpd.conf /etc/proftpd/proftpd.conf >&3 2>&3
+		FTP_CONF_HAD=0
+		[ -e /etc/proftpd/proftpd.conf ] && FTP_CONF_HAD=1
+		mask_new proftpd
+		DEBIAN_FRONTEND=noninteractive apt-get --yes install proftpd-core >&3 2>&3
+		FTP_OK=$?
+		off_new proftpd
+		if [ "${FTP_OK}" = 0 ]; then
+			if [ -d /etc/proftpd ] && [ -f ${MUPI_SRC}/config/templates/proftpd.conf ] \
+				&& { [ "${FTP_CONF_HAD}" = 0 ] || conf_untouched /etc/proftpd/proftpd.conf /usr/share/proftpd/templates/proftpd.conf; }; then
+				cp -f ${MUPI_SRC}/config/templates/proftpd.conf /etc/proftpd/proftpd.conf >&3 2>&3
+			fi
 		else
 			echo "## FTP not installed now - the app's switch installs it ##" >&3 2>&3
 		fi
 	fi
+	rm -f "${UPDATE_MASKED}"
 	if ! command -v x11vnc >/dev/null 2>&1 || ! command -v websockify >/dev/null 2>&1; then
 		DEBIAN_FRONTEND=noninteractive apt-get --yes install x11vnc websockify >&3 2>&3 || echo "## VNC not installed now - the app's switch installs it ##" >&3 2>&3
 	fi

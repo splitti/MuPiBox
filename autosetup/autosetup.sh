@@ -358,11 +358,26 @@ STEP=0
 	if [ ! -e "${POLICY_RC}" ]; then
 		printf '#!/bin/sh\n# written by the MuPiBox update while it installs packages: no service starts meanwhile\nexit 101\n' > "${POLICY_RC}" && chmod 755 "${POLICY_RC}" && POLICY_RC_OURS=1
 	fi
+	# A config comes from the template only while it is none of the user's own (a setup run again on a box that has
+	# them): there was none before, or it is still the package's - its original, or what ucf wrote and keeps the
+	# checksum of. The first Samba password the same: only for a Samba user that is not there yet.
+	conf_untouched() {
+		cmp -s "$1" "$2" && return 0
+		local sum
+		sum=$(md5sum < "$1" 2>/dev/null | cut -d' ' -f1)
+		[ -n "${sum}" ] && grep -qs "^${sum}  $1$" /var/lib/ucf/hashfile
+	}
+	SMB_CONF_HAD=0
+	[ -e /etc/samba/smb.conf ] && SMB_CONF_HAD=1
+	FTP_CONF_HAD=0
+	[ -e /etc/proftpd/proftpd.conf ] && FTP_CONF_HAD=1
 	WSD=$(apt-cache show wsdd2 >/dev/null 2>&1 && echo wsdd2 || echo wsdd)
 	DEBIAN_FRONTEND=noninteractive apt-get --yes install samba ${WSD} >&3 2>&3
 	mkdir -p /etc/samba >&3 2>&3
-	mv -f ${MUPI_SRC}/config/templates/smb.conf /etc/samba/smb.conf >&3 2>&3
-	(echo "mupibox"; echo "mupibox") | smbpasswd -s -a dietpi >&3 2>&3
+	if [ "${SMB_CONF_HAD}" = 0 ] || conf_untouched /etc/samba/smb.conf /usr/share/samba/smb.conf; then
+		cp -f ${MUPI_SRC}/config/templates/smb.conf /etc/samba/smb.conf >&3 2>&3
+	fi
+	pdbedit -u dietpi >/dev/null 2>&1 || (echo "mupibox"; echo "mupibox") | smbpasswd -s -a dietpi >&3 2>&3
 	# (the package starts them: off until the app switches the share on; the domain controller is never needed)
 	for u in smbd nmbd samba-ad-dc wsdd wsdd2; do
 		systemctl cat ${u}.service >/dev/null 2>&1 || continue
@@ -371,7 +386,7 @@ STEP=0
 	# FTP (proftpd) and VNC (x11vnc, websockify and noVNC for the browser) the same way, issue #178: installed and set up,
 	# off - the app's switches (eltern/services.ts) then only start and stop them, at once and without internet
 	DEBIAN_FRONTEND=noninteractive apt-get --yes install proftpd-core x11vnc websockify >&3 2>&3
-	if [ -d /etc/proftpd ]; then
+	if [ -d /etc/proftpd ] && { [ "${FTP_CONF_HAD}" = 0 ] || conf_untouched /etc/proftpd/proftpd.conf /usr/share/proftpd/templates/proftpd.conf; }; then
 		cp -f ${MUPI_SRC}/config/templates/proftpd.conf /etc/proftpd/proftpd.conf >&3 2>&3
 	fi
 	systemctl disable --now proftpd.service >&3 2>&3

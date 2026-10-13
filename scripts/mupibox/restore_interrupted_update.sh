@@ -29,7 +29,8 @@
 # they run (and started again after). Runs as root.
 #   --no-restart   kept for the callers of before; the apps are only started again when this script stopped them
 # SKC / USERDATA_BAK / UPDATE_STATE / PLAYER_DIR / LOCK_DIR for a test on copies, NO_PM2=1 leaves the running apps
-# and cron alone (NO_CRON=0 holds cron all the same), TEST_PAUSE=<s> waits there between the two moves.
+# and cron alone (NO_CRON=0 holds cron all the same), TEST_PAUSE=<s> waits there between the two moves,
+# SKIP_POLICY_RC=1 leaves a policy-rc.d and the services the update masked alone.
 
 SKC="${SKC:-/home/dietpi/.mupibox/Sonos-Kids-Controller-master}"
 OLD="${SKC}.upd-bak"
@@ -270,6 +271,25 @@ block_until() {
 # by an update that stopped there, it kept every service of every package installed later from starting
 if [ -z "${SKIP_POLICY_RC:-}" ] && grep -qs "written by the MuPiBox update" /usr/sbin/policy-rc.d; then
 	rm -f /usr/sbin/policy-rc.d && log "removed the policy-rc.d an update left behind"
+fi
+# ... and masks the services of those packages until they are switched off: an update that stopped there leaves them
+# masked (or, unmasked a moment before the power cut, switched on by their package) - unmasked and off, as the app's
+# switches expect them. Unmasked first: systemctl ignores switching off a masked unit.
+UPDATE_MASKED="${UPDATE_MASKED:-/home/dietpi/.mupibox/update-masked}"
+if [ -z "${SKIP_POLICY_RC:-}" ] && [ -e "${UPDATE_MASKED}" ]; then
+	masked_ok=0
+	masked_units=""
+	while read -r unit; do
+		case "${unit}" in '' | *[!a-z0-9_-]*) continue ;; esac
+		masked_units="${masked_units} ${unit}"
+		systemctl unmask "${unit}.service" >/dev/null 2>&1 || masked_ok=1
+		if systemctl cat "${unit}.service" >/dev/null 2>&1; then
+			systemctl disable --now "${unit}.service" >/dev/null 2>&1 || masked_ok=1
+		fi
+	done < "${UPDATE_MASKED}"
+	# (kept when any of it failed: tried again at the next start)
+	[ "${masked_ok}" = 0 ] && rm -f "${UPDATE_MASKED}"
+	[ -n "${masked_units}" ] && log "unmasked and switched off the services an update was installing:${masked_units}"
 fi
 
 if [ -e "${UPDATE_STATE}" ]; then
