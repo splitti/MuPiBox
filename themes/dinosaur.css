@@ -8,7 +8,7 @@
 
 :root {
   --km-night: #1F2B1C;
-  --km-night-2: rgba(0,0,0,.55);
+  --km-night-2: rgba(20,30,18,.82);
   --km-night-3: #2F3F2A;
   --km-night-4: #3E5236;
   --km-stack-1: #788275;
@@ -32,7 +32,7 @@
   --km-name-font: "BerlinSmallCaps", "Fredoka", sans-serif;
   --km-name-size: 23px;
   /* Runde 2: Kopfzeile, Pille, Knöpfe (Werte aus THEME_WERTE.md) */
-  --km-band: rgba(0,0,0,.55);
+  --km-band: rgba(20,30,18,.8);
   --km-on-band: #FFFFFF;
   --km-on-band-2: #D8E3CF;
   --km-btn: #2F3F2A;
@@ -43,7 +43,7 @@
 
 /* Hintergrund: eigenes Bild, oben ein weicher Verlauf für Statusleiste und Reiter */
 .ion-page {
-  background: var(--km-night) url("/theme-data/dinosaur/dinosaur-bg.jpg") center / cover no-repeat !important;
+  background: linear-gradient(rgba(0,0,0,.25), rgba(0,0,0,.25)), var(--km-night) url("/theme-data/dinosaur/dinosaur-bg.jpg") center / cover no-repeat !important;
 }
 .playtime-blocked-overlay, body.km mupi-media-unavailable {
   background: linear-gradient(var(--km-overlay), var(--km-overlay)), var(--km-night) url("/theme-data/dinosaur/dinosaur-bg.jpg") center / cover no-repeat !important;
