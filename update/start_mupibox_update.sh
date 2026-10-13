@@ -86,6 +86,8 @@ fail_update() {
 	# run (a way back that did not complete - the next start of the box takes it up, before pm2 starts them)
 	if [ "${2:-}" = "nostart" ]; then
 		echo "## (the box's server and player stay stopped - restart the box: the way back goes on at the start)" >&3 2>&3
+		# (for whoever started the update - the app's update unit: it starts nothing afterwards either)
+		touch /tmp/mupibox-update-nostart
 	else
 		echo "## (your installation is as it was before the update)" >&3 2>&3
 		sudo -H -u dietpi bash -c "pm2 start server; pm2 start spotify-control" >&3 2>&3
@@ -130,7 +132,7 @@ clear_update_mark() {
 	rm -f "${UPDATE_STATE}" "${UPDATE_STATE}.new"
 	sync
 }
-rm -f /tmp/mupibox-update-failed
+rm -f /tmp/mupibox-update-failed /tmp/mupibox-update-nostart
 service mupi_idle_shutdown stop
 # 2026-09-20: no longer installed (nothing in MuPiBox uses them any more):
 #   id3tool - only the ID3 converter used it; that converter was removed from the admin

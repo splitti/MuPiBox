@@ -83,7 +83,8 @@ Develop in a GitHub codespace (`.devcontainer`) or locally with Node.js 22 (PHP 
    that folder, `unzip -o -j <backup>.zip etc/mupibox/mupiboxconfig.json home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json -d src/backend-api/config/`
    (the app's own restore page works on a box only). The Spotify client id and secret go into `config.json` by hand.
    The display reads the library through `active_data.json` (and the resume list through `active_resume.json`): in
-   development the backend links them to `data.json` and `resume.json` at its start when they are missing.
+   development the backend links them to `data.json` and `resume.json` at its start when they are missing (and writes
+   those two as empty lists first when they are not there yet, so a library copied in later shows at once).
 4. `npm run lint` (Biome) before you commit. Tests: `npm run test:frontend-box` and
    `npm run test --workspace=mupibox-backend-api`.
 5. Create a branch, commit, push and open a pull request.

@@ -242,14 +242,17 @@ const activeresumeFile = `${configBasePath}/active_resume.json`
 // The display reads the library and the resume list through the active files, links a box's network check
 // (check_network.sh) points at the online or the offline lists. In development no such check runs: the links to the
 // online lists are made here once, when they are missing - else a library put into config/ (README, Contributing)
-// stayed empty on the display. Only in development; on the box nothing changes.
+// stayed empty on the display. A list not there yet is written empty first (never over one that is): the link then
+// stands from the start, and a library copied in later or a resume point saved later shows at once. Only in
+// development; on the box nothing changes.
 if (devServe) {
   for (const [active, target] of [
     [activedataFile, dataFile],
     [activeresumeFile, resumeFile],
   ]) {
     try {
-      if (!fs.existsSync(active) && fs.existsSync(target)) fs.symlinkSync(path.basename(target), active)
+      if (!fs.existsSync(target)) fs.writeFileSync(target, '[]', { flag: 'wx' })
+      if (!fs.existsSync(active)) fs.symlinkSync(path.basename(target), active)
     } catch (err) {
       console.warn(`${new Date().toLocaleString()}: [MuPiBox-Server] ${path.basename(active)} could not be linked to ${path.basename(target)}: ${(err as Error).message}`)
     }
