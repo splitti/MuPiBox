@@ -282,14 +282,21 @@ if [ -z "${SKIP_POLICY_RC:-}" ] && [ -e "${UPDATE_MASKED}" ]; then
 	while read -r unit; do
 		case "${unit}" in '' | *[!a-z0-9_-]*) continue ;; esac
 		masked_units="${masked_units} ${unit}"
-		systemctl unmask "${unit}.service" >/dev/null 2>&1 || masked_ok=1
-		if systemctl cat "${unit}.service" >/dev/null 2>&1; then
-			systemctl disable --now "${unit}.service" >/dev/null 2>&1 || masked_ok=1
+		if systemctl unmask "${unit}.service" >/dev/null 2>&1 \
+			&& { ! systemctl cat "${unit}.service" >/dev/null 2>&1 || systemctl disable --now "${unit}.service" >/dev/null 2>&1; }; then
+			continue
 		fi
+		# not switched off: masked again, it cannot start meanwhile
+		systemctl mask "${unit}.service" >/dev/null 2>&1
+		masked_ok=1
 	done < "${UPDATE_MASKED}"
 	# (kept when any of it failed: tried again at the next start)
-	[ "${masked_ok}" = 0 ] && rm -f "${UPDATE_MASKED}"
-	[ -n "${masked_units}" ] && log "unmasked and switched off the services an update was installing:${masked_units}"
+	if [ "${masked_ok}" = 0 ]; then
+		rm -f "${UPDATE_MASKED}"
+		[ -n "${masked_units}" ] && log "unmasked and switched off the services an update was installing:${masked_units}"
+	else
+		log "could not switch off all services an update was installing (${masked_units# }) - masked until the next start"
+	fi
 fi
 
 if [ -e "${UPDATE_STATE}" ]; then

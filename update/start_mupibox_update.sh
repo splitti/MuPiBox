@@ -872,22 +872,32 @@ rm -f /tmp/mupibox-update-failed
 	# on the card tells restore_interrupted_update.sh which ones to unmask and switch off then. Only units that are not
 	# there yet - one that is there is left as it is.
 	UPDATE_MASKED=/home/dietpi/.mupibox/update-masked
+	# (1 when one could not be masked: its package is not installed now)
 	mask_new() {
-		local u
+		local u rc=0
 		for u in "$@"; do
 			[ -e /usr/lib/systemd/system/${u}.service ] || [ -e /lib/systemd/system/${u}.service ] || [ -e /etc/systemd/system/${u}.service ] && continue
-			echo "${u}" >> "${UPDATE_MASKED}" && sync "${UPDATE_MASKED}" && systemctl mask ${u}.service >&3 2>&3
+			{ echo "${u}" >> "${UPDATE_MASKED}" && sync "${UPDATE_MASKED}" && systemctl mask ${u}.service >&3 2>&3; } || rc=1
 		done
+		return ${rc}
 	}
-	# (unmasked first: systemctl ignores switching off a masked unit - the package's links would stay and start it later)
+	# (unmasked first: systemctl ignores switching off a masked unit - the package's links would stay and start it later.
+	# One that cannot be switched off is masked again and stays on the list: it cannot start, and the next start tries
+	# again - 1 then)
 	off_new() {
-		local u
+		local u rc=0
 		for u in "$@"; do
 			grep -qsx "${u}" "${UPDATE_MASKED}" || continue
-			systemctl unmask ${u}.service >&3 2>&3
-			systemctl cat ${u}.service >/dev/null 2>&1 && systemctl disable --now ${u}.service >&3 2>&3
+			if systemctl unmask ${u}.service >&3 2>&3 \
+				&& { ! systemctl cat ${u}.service >/dev/null 2>&1 || systemctl disable --now ${u}.service >&3 2>&3; }; then
+				continue
+			fi
+			systemctl mask ${u}.service >&3 2>&3
+			rc=1
 		done
+		return ${rc}
 	}
+	SHARES_OFF_OK=1
 	# A config comes from the template only while it is none of the user's own: there was none before the install, or
 	# it is still the package's (its original, or what ucf wrote and keeps the checksum of). An own smb.conf or
 	# proftpd.conf - kept by the apt-get remove of the old switches - stays as it is.
@@ -901,10 +911,12 @@ rm -f /tmp/mupibox-update-failed
 	if ! pkg_installed samba; then
 		SMB_CONF_HAD=0
 		[ -e /etc/samba/smb.conf ] && SMB_CONF_HAD=1
-		mask_new smbd nmbd samba-ad-dc wsdd wsdd2
-		DEBIAN_FRONTEND=noninteractive apt-get --yes install samba ${WSD} >&3 2>&3
-		SMB_OK=$?
-		off_new smbd nmbd samba-ad-dc wsdd wsdd2
+		SMB_OK=1
+		if mask_new smbd nmbd samba-ad-dc wsdd wsdd2; then
+			DEBIAN_FRONTEND=noninteractive apt-get --yes install samba ${WSD} >&3 2>&3
+			SMB_OK=$?
+		fi
+		off_new smbd nmbd samba-ad-dc wsdd wsdd2 || SHARES_OFF_OK=0
 		if [ "${SMB_OK}" = 0 ]; then
 			if [ -f ${MUPI_SRC}/config/templates/smb.conf ] && { [ "${SMB_CONF_HAD}" = 0 ] || conf_untouched /etc/samba/smb.conf /usr/share/samba/smb.conf; }; then
 				cp -f ${MUPI_SRC}/config/templates/smb.conf /etc/samba/smb.conf >&3 2>&3
@@ -918,10 +930,12 @@ rm -f /tmp/mupibox-update-failed
 	if ! pkg_installed proftpd-core && ! command -v proftpd >/dev/null 2>&1; then
 		FTP_CONF_HAD=0
 		[ -e /etc/proftpd/proftpd.conf ] && FTP_CONF_HAD=1
-		mask_new proftpd
-		DEBIAN_FRONTEND=noninteractive apt-get --yes install proftpd-core >&3 2>&3
-		FTP_OK=$?
-		off_new proftpd
+		FTP_OK=1
+		if mask_new proftpd; then
+			DEBIAN_FRONTEND=noninteractive apt-get --yes install proftpd-core >&3 2>&3
+			FTP_OK=$?
+		fi
+		off_new proftpd || SHARES_OFF_OK=0
 		if [ "${FTP_OK}" = 0 ]; then
 			if [ -d /etc/proftpd ] && [ -f ${MUPI_SRC}/config/templates/proftpd.conf ] \
 				&& { [ "${FTP_CONF_HAD}" = 0 ] || conf_untouched /etc/proftpd/proftpd.conf /usr/share/proftpd/templates/proftpd.conf; }; then
@@ -931,7 +945,11 @@ rm -f /tmp/mupibox-update-failed
 			echo "## FTP not installed now - the app's switch installs it ##" >&3 2>&3
 		fi
 	fi
-	rm -f "${UPDATE_MASKED}"
+	if [ "${SHARES_OFF_OK}" = 1 ]; then
+		rm -f "${UPDATE_MASKED}"
+	else
+		echo "## a Samba/FTP service could not be switched off - masked until the next start switches it off ##" >&3 2>&3
+	fi
 	if ! command -v x11vnc >/dev/null 2>&1 || ! command -v websockify >/dev/null 2>&1; then
 		DEBIAN_FRONTEND=noninteractive apt-get --yes install x11vnc websockify >&3 2>&3 || echo "## VNC not installed now - the app's switch installs it ##" >&3 2>&3
 	fi
