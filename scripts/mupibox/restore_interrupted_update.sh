@@ -266,6 +266,12 @@ block_until() {
 	"${JQ}" -r '.until // 0 | floor' "$1" 2>/dev/null | grep -E '^[0-9]+$' || echo 0
 }
 
+# The update keeps services from starting while it installs Samba, FTP and VNC (a policy-rc.d of its own): left behind
+# by an update that stopped there, it kept every service of every package installed later from starting
+if [ -z "${SKIP_POLICY_RC:-}" ] && grep -qs "written by the MuPiBox update" /usr/sbin/policy-rc.d; then
+	rm -f /usr/sbin/policy-rc.d && log "removed the policy-rc.d an update left behind"
+fi
+
 if [ -e "${UPDATE_STATE}" ]; then
 	STATE=$(head -n 1 "${UPDATE_STATE}" 2>/dev/null | tr -d '[:space:]')
 	case "${STATE}" in

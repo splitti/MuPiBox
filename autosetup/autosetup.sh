@@ -351,8 +351,15 @@ STEP=0
 	# (Einstellungen › Dienste, eltern/services.ts) - then at once and without internet. Nothing was installed for it
 	# before (smb.conf and the password went nowhere, smbd was "switched on" without being there), the app installed it
 	# at its first switch-on. With it its announcement (WS-Discovery): wsdd2 (Debian 12 and 13), else wsdd.
+	# Debian's packages start their service when they are installed: policy-rc.d keeps them from it meanwhile (else
+	# proftpd ran for a moment with Debian's own config, which lets the box's user log in) - the same as the update
+	POLICY_RC=/usr/sbin/policy-rc.d
+	POLICY_RC_OURS=0
+	if [ ! -e "${POLICY_RC}" ]; then
+		printf '#!/bin/sh\n# written by the MuPiBox update while it installs packages: no service starts meanwhile\nexit 101\n' > "${POLICY_RC}" && chmod 755 "${POLICY_RC}" && POLICY_RC_OURS=1
+	fi
 	WSD=$(apt-cache show wsdd2 >/dev/null 2>&1 && echo wsdd2 || echo wsdd)
-	apt-get --yes install samba ${WSD} >&3 2>&3
+	DEBIAN_FRONTEND=noninteractive apt-get --yes install samba ${WSD} >&3 2>&3
 	mkdir -p /etc/samba >&3 2>&3
 	mv -f ${MUPI_SRC}/config/templates/smb.conf /etc/samba/smb.conf >&3 2>&3
 	(echo "mupibox"; echo "mupibox") | smbpasswd -s -a dietpi >&3 2>&3
@@ -372,6 +379,7 @@ STEP=0
 		git clone --depth 1 https://github.com/novnc/noVNC.git /usr/share/novnc >&3 2>&3 && chown -R dietpi:dietpi /usr/share/novnc >&3 2>&3
 	fi
 	# (mupi_vnc and mupi_novnc are installed with the other units and stay off until the app switches VNC on)
+	[ "${POLICY_RC_OURS}" = 1 ] && rm -f "${POLICY_RC}"
 	after=$(date +%s)
 	echo -e "## Preconfigure Samba, FTP and VNC ## finished after $((after - before)) seconds" >&3 2>&3
 	STEP=$((STEP + 1))

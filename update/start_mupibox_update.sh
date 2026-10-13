@@ -133,6 +133,9 @@ clear_update_mark() {
 	sync
 }
 rm -f /tmp/mupibox-update-failed /tmp/mupibox-update-nostart
+# (a policy-rc.d an update that stopped halfway left behind - see "Samba, FTP and VNC" below: it kept every service from
+# starting when a package is installed)
+grep -qs "written by the MuPiBox update" /usr/sbin/policy-rc.d && rm -f /usr/sbin/policy-rc.d
 service mupi_idle_shutdown stop
 # 2026-09-20: no longer installed (nothing in MuPiBox uses them any more):
 #   id3tool - only the ID3 converter used it; that converter was removed from the admin
@@ -858,6 +861,47 @@ rm -f /tmp/mupibox-update-failed
 			cp -f "${MUPI_SRC}/config/services/mupibox-delayed-start.conf" "/etc/systemd/system/${delayed}.service.d/mupibox-delayed-start.conf" >&3 2>&3
 		done
 	fi
+	# Samba, FTP and VNC on a box that does not have them yet (issue #178): installed and set up, but off - the app's
+	# switches (eltern/services.ts) then only start and stop them, at once and without internet; a fresh installation
+	# does the same. Only what is missing: a service that is there is left as it is (one that is on stays on), and an
+	# own smb.conf or proftpd.conf is never replaced. Debian's packages start their service when they are installed -
+	# policy-rc.d keeps them from it meanwhile (else proftpd ran for a moment with Debian's own config, which lets the
+	# box's user log in). Nothing of it stops the update: what fails is installed by the app's switch as before.
+	POLICY_RC=/usr/sbin/policy-rc.d
+	POLICY_RC_OURS=0
+	if [ ! -e "${POLICY_RC}" ]; then
+		printf '#!/bin/sh\n# written by the MuPiBox update while it installs packages: no service starts meanwhile\nexit 101\n' > "${POLICY_RC}" && chmod 755 "${POLICY_RC}" && POLICY_RC_OURS=1
+	fi
+	# (installed means installed: dpkg -s also answers for a package removed with only its config left - the state the
+	# old admin interface's switches left behind with apt-get remove)
+	pkg_installed() { dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q 'install ok installed'; }
+	WSD=$(apt-cache show wsdd2 >/dev/null 2>&1 && echo wsdd2 || echo wsdd)
+	if ! pkg_installed samba; then
+		if DEBIAN_FRONTEND=noninteractive apt-get --yes install samba ${WSD} >&3 2>&3; then
+			for u in smbd nmbd samba-ad-dc wsdd wsdd2; do
+				systemctl cat ${u}.service >/dev/null 2>&1 && systemctl disable --now ${u}.service >&3 2>&3
+			done
+			[ -f ${MUPI_SRC}/config/templates/smb.conf ] && cp -f ${MUPI_SRC}/config/templates/smb.conf /etc/samba/smb.conf >&3 2>&3
+			(echo "mupibox"; echo "mupibox") | smbpasswd -s -a dietpi >&3 2>&3
+		else
+			echo "## Samba not installed now - the app's switch installs it ##" >&3 2>&3
+		fi
+	fi
+	if ! pkg_installed proftpd-core && ! command -v proftpd >/dev/null 2>&1; then
+		if DEBIAN_FRONTEND=noninteractive apt-get --yes install proftpd-core >&3 2>&3; then
+			systemctl disable --now proftpd.service >&3 2>&3
+			[ -d /etc/proftpd ] && [ -f ${MUPI_SRC}/config/templates/proftpd.conf ] && cp -f ${MUPI_SRC}/config/templates/proftpd.conf /etc/proftpd/proftpd.conf >&3 2>&3
+		else
+			echo "## FTP not installed now - the app's switch installs it ##" >&3 2>&3
+		fi
+	fi
+	if ! command -v x11vnc >/dev/null 2>&1 || ! command -v websockify >/dev/null 2>&1; then
+		DEBIAN_FRONTEND=noninteractive apt-get --yes install x11vnc websockify >&3 2>&3 || echo "## VNC not installed now - the app's switch installs it ##" >&3 2>&3
+	fi
+	if [ ! -d /usr/share/novnc ]; then
+		git clone --depth 1 https://github.com/novnc/noVNC.git /usr/share/novnc >&3 2>&3 && chown -R dietpi:dietpi /usr/share/novnc >&3 2>&3
+	fi
+	[ "${POLICY_RC_OURS}" = 1 ] && rm -f "${POLICY_RC}"
 	# The Samba share is a standalone server (smbd); the Active Directory domain controller came with the package and
 	# is not needed
 	systemctl disable --now samba-ad-dc.service >&3 2>&3
