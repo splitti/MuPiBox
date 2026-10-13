@@ -717,25 +717,32 @@ def mqtt_systeminfo():
     client.publish(mqtt_topic + '/' + mqtt_clientId + '/version', mupi_version, qos=0)
     client.publish(mqtt_topic + '/' + mqtt_clientId + '/admininterface', 'http://' + ip, qos=0)
 
-# Callback function for when the client receives a CONNACK response from the server.
+# Callback function for when the client receives a CONNACK response from the server - at the first connection and at
+# every one after the broker was gone (restarted, the network lost): the subscriptions, the Home Assistant discovery
+# and "online" again each time. They were set once at the start: after a reconnect the box sent its values on, but no
+# command (power, volume, play, pause, screenshot) reached it any more.
 def on_connect(client, userdata, flags, rc):
-    print("Connected to MQTT broker with result code: " + str(rc))
-
-# Callback function for when the client is disconnected from the broker
-def on_disconnect(client, userdata, rc):
-    print("Disconnected from MQTT broker with result code: " + str(rc))
-    client.publish(mqtt_topic + '/' + mqtt_clientId + '/state', "offline", qos=0)
-    client.publish(mqtt_topic + '/' + mqtt_clientId + '/power', "off", qos=0)
-    client.publish(mqtt_topic + '/' + mqtt_clientId + '/reboot', "off", qos=0)
+    print("Connected to MQTT broker with result code: " + str(rc), flush=True)
     if rc != 0:
-        print("Unexpected disconnect, trying to reconnect...")
-        import time
-        time.sleep(5)
-        try:
-            client.reconnect()
-            print("Reconnect successful!")
-        except Exception as e:
-            print("Reconnect failed: ", e)
+        return
+    for command in ('power', 'volume', 'reboot', 'pause', 'play', 'take_screenshot'):
+        client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/' + command + '/set')
+    try:
+        if mqtt_ha_active:
+            mqtt_publish_ha()
+        mqtt_systeminfo()
+    except Exception as e:
+        print(f"Publishing after the connection failed: {e!r}", flush=True)
+    client.publish(mqtt_topic + '/' + mqtt_clientId + '/state', "online", qos=0)
+    client.publish(mqtt_topic + '/' + mqtt_clientId + '/power', "on", qos=0)
+    client.publish(mqtt_topic + '/' + mqtt_clientId + '/reboot', "off", qos=0)
+
+# Callback function for when the client is disconnected from the broker. Paho's network thread (loop_start) connects
+# again by itself (reconnect_delay_set below); "offline" comes from the broker as the last will - published here it
+# never got out, the connection was gone. The reconnect done here by hand, in paho's own thread with a sleep, held
+# that thread and ran into paho's own one.
+def on_disconnect(client, userdata, rc):
+    print("Disconnected from MQTT broker with result code: " + str(rc), flush=True)
 
 
 def playback_info():
@@ -969,23 +976,14 @@ def main():
         client.on_message = on_message
         #mqtt_topics = (mqtt_topic + '/' + mqtt_clientId + '/'), (mqtt_ha_topic + "/switch/" + mqtt_clientId + "_state/")
 
-        # Connect to the MQTT broker
-        client.connect(mqtt_broker, mqtt_port, mqtt_timeout)
-        client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/power/set')
-        client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/volume/set')
-        client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/reboot/set')
-        client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/pause/set')
-        client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/play/set')
-        client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/take_screenshot/set')
+        # "offline" from the broker itself when the box is gone without a goodbye (power cut, network lost)
+        client.will_set(mqtt_topic + '/' + mqtt_clientId + '/state', "offline", qos=0)
+        # (paho connects again by itself after a lost connection: at first after a second, then up to a minute)
+        client.reconnect_delay_set(min_delay=1, max_delay=60)
 
+        # Connect to the MQTT broker - the subscriptions, the discovery and "online" follow in on_connect
+        client.connect(mqtt_broker, mqtt_port, mqtt_timeout)
         client.loop_start()
-        if mqtt_ha_active:
-            mqtt_publish_ha()
-            time.sleep(2)
-        mqtt_systeminfo()
-        client.publish(mqtt_topic + '/' + mqtt_clientId + '/state', "online", qos=0)
-        client.publish(mqtt_topic + '/' + mqtt_clientId + '/power', "on", qos=0)
-        client.publish(mqtt_topic + '/' + mqtt_clientId + '/reboot', "off", qos=0)
 
         # One failed round (a file being rewritten, the broker gone for a moment, a value that does not parse) is logged
         # with its cause and the next round follows - before, the handler printed an undefined signum: every error ended

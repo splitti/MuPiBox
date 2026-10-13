@@ -4943,15 +4943,23 @@ async function nasFetch(
           else if (value !== undefined) headers.set(name, String(value))
         }
         const status = res.statusCode ?? 502
-        const noBody = status === 204 || status === 304 || init.method === 'HEAD'
-        if (noBody) res.resume()
-        resolve(
-          new Response(noBody ? null : (Readable.toWeb(res) as unknown as ReadableStream), {
-            status,
-            statusText: res.statusMessage,
-            headers,
-          }),
-        )
+        // (no body allowed with 204, 205 and 304, and a status outside 200-599 is refused: the Response constructor
+        // threw here, in a callback nothing caught - the whole server ended. As fetchPinned: a failed fetch instead.)
+        const noBody = status === 204 || status === 205 || status === 304 || init.method === 'HEAD'
+        try {
+          if (status < 200 || status > 599) throw new Error(`unexpected status ${status}`)
+          if (noBody) res.resume()
+          resolve(
+            new Response(noBody ? null : (Readable.toWeb(res) as unknown as ReadableStream), {
+              status,
+              statusText: res.statusMessage,
+              headers,
+            }),
+          )
+        } catch (err) {
+          res.destroy()
+          reject(err)
+        }
       },
     )
     req.once('error', (error) => {

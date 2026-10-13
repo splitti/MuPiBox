@@ -1223,6 +1223,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         detached: true,
         stdio: 'ignore',
       })
+      // (a start that fails - sudo or the script missing - comes as an 'error' event: unhandled it ended the server)
+      child.on('error', (err) => console.warn(`${new Date().toLocaleString()}: [eltern] sleep timer: ${err.message}`))
       child.unref()
     } catch (err) {
       res.status(500).json({ error: `spawn failed: ${(err as Error).message}` })
@@ -1408,6 +1410,20 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       }
       cfg.mupibox = mb
     })
+    // The hearing protection lowered: what plays louder than the new maximum comes down at once (it stayed as loud
+    // until someone touched the volume) - the Bluetooth maximum while Bluetooth audio is on, as /audio/volume does
+    if (mutations.maxVolume !== undefined || mutations.btMaxVolume !== undefined) {
+      const mb = (deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined) ?? {}
+      const btMax = volumePercent(mb.btMaxVolume)
+      const cap = btMax !== undefined && (await bluetoothAudio()) ? btMax : (volumePercent(mb.maxVolume) ?? 100)
+      await new Promise<void>((resolve) =>
+        execFile('/usr/bin/amixer', ['sget', 'Master'], { timeout: 3000 }, (err, stdout) => {
+          const now = !err && stdout ? Number.parseInt(stdout.match(/\[(\d+)%\]/)?.[1] ?? '', 10) : Number.NaN
+          if (!Number.isFinite(now) || now <= cap) return resolve()
+          execFile('/usr/bin/amixer', ['sset', 'Master', `${cap}%`], { timeout: 3000 }, () => resolve())
+        }),
+      )
+    }
     res.json({ ok: true, applied: mutations })
   })
 

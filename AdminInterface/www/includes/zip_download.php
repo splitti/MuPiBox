@@ -15,6 +15,16 @@
 // contain request data.
 
 function mupibox_send_zip(string $downloadName, string $zipOptions, string $sources): void {
+	// Only from the admin interface itself, or typed in / from a bookmark: a link on another site, clicked while signed
+	// in here, made the box pack an archive too - the full backup with the whole media folder, in /var/tmp (the session
+	// cookie is SameSite=Lax: such a click carries it). Browsers send Sec-Fetch-Site; without it nothing is decided here.
+	$site = $_SERVER['HTTP_SEC_FETCH_SITE'] ?? '';
+	if ($site !== '' && $site !== 'same-origin' && $site !== 'same-site' && $site !== 'none') {
+		http_response_code(403);
+		header('Content-Type: text/plain; charset=utf-8');
+		echo "Downloads start from the admin interface itself.\n";
+		exit;
+	}
 	$path = '/var/tmp/mupibox-download-' . bin2hex(random_bytes(12)) . '.zip';
 	ignore_user_abort(true);
 	register_shutdown_function(function () use ($path) {
