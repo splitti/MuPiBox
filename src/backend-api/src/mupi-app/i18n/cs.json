@@ -2808,5 +2808,9 @@
  "Dieser Reiter ist offen, wenn das Display startet.": "Tato karta je otevřená, když se displej spustí.",
  "Das Display startet mit {}": "Displej začíná s {}",
  "Empfohlen": "Doporučeno",
- "Legacy · die bisherige Oberfläche": "Legacy · dosavadní rozhraní"
+ "Legacy · die bisherige Oberfläche": "Legacy · dosavadní rozhraní",
+ "Home Assistant (MQTT-Discovery)": "Home Assistant (MQTT Discovery)",
+ "Die Box erscheint in Home Assistant von selbst als Gerät. Einfacher und mit mehr Funktionen (Ansagen, Nachrichten aufs Display): Dienste › Home Assistant.": "Box se v Home Assistantu objeví sama jako zařízení. Jednodušší a s více funkcemi (hlášení, zprávy na displej): Služby › Home Assistant.",
+ "Die MQTT-Discovery für Home Assistant ist auch an (Dienste › MQTT). Die Box erscheint dann zweimal in Home Assistant – eins von beiden ausschalten.": "MQTT Discovery pro Home Assistant je také zapnuté (Služby › MQTT). Box se pak v Home Assistantu objeví dvakrát – jedno z nich vypněte.",
+ "Dienste › MQTT": "Služby › MQTT"
 }

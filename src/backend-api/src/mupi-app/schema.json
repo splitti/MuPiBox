@@ -3526,7 +3526,7 @@
    "slug": "mqtt",
    "area": "einstellungen",
    "parent": "g-dienste",
-   "title": "MQTT / Home Assistant",
+   "title": "MQTT",
    "description": "Broker, Topic, Intervalle, Discovery",
    "icon": "home2",
    "sections": [
@@ -4819,13 +4819,19 @@
      "items": [
       {
        "type": "nav",
+       "label": "Home Assistant",
+       "target": "homeassistant",
+       "subtitle": "Anzeigen und steuern in Home Assistant"
+      },
+      {
+       "type": "nav",
        "label": "Telegram",
        "target": "telegram",
        "subtitle": "Eltern-Bot, erlaubte Chats"
       },
       {
        "type": "nav",
-       "label": "MQTT / Home Assistant",
+       "label": "MQTT",
        "target": "mqtt",
        "subtitle": "Broker, Topic, Intervalle, Discovery"
       },
@@ -6114,83 +6120,83 @@
    "id": "telegram"
   },
   {
-   "l": "MQTT / Home Assistant",
-   "where": "Dienste › MQTT / Home Assistant",
+   "l": "MQTT",
+   "where": "Dienste › MQTT",
    "id": "mqtt"
   },
   {
    "l": "MQTT aktiv",
-   "where": "Dienste › MQTT / Home Assistant",
+   "where": "Dienste › MQTT",
    "id": "mqtt"
   },
   {
    "l": "Gerätename",
-   "where": "Dienste › MQTT / Home Assistant",
+   "where": "Dienste › MQTT",
    "id": "mqtt"
   },
   {
    "l": "Broker",
-   "where": "Dienste › MQTT / Home Assistant",
+   "where": "Dienste › MQTT",
    "id": "mqtt"
   },
   {
    "l": "Port",
-   "where": "Dienste › MQTT / Home Assistant",
+   "where": "Dienste › MQTT",
    "id": "mqtt"
   },
   {
    "l": "Topic",
-   "where": "Dienste › MQTT / Home Assistant",
+   "where": "Dienste › MQTT",
    "id": "mqtt"
   },
   {
    "l": "Client-ID",
-   "where": "Dienste › MQTT / Home Assistant",
+   "where": "Dienste › MQTT",
    "id": "mqtt"
   },
   {
    "l": "Benutzer",
-   "where": "Dienste › MQTT / Home Assistant",
+   "where": "Dienste › MQTT",
    "id": "mqtt"
   },
   {
    "l": "Passwort",
-   "where": "Dienste › MQTT / Home Assistant",
+   "where": "Dienste › MQTT",
    "id": "mqtt"
   },
   {
    "l": "Intervalle",
-   "where": "Dienste › MQTT / Home Assistant",
+   "where": "Dienste › MQTT",
    "id": "mqtt"
   },
   {
    "l": "Aktualisierung (Wiedergabe)",
-   "where": "Dienste › MQTT / Home Assistant",
+   "where": "Dienste › MQTT",
    "id": "mqtt"
   },
   {
    "l": "Aktualisierung (Leerlauf)",
-   "where": "Dienste › MQTT / Home Assistant",
+   "where": "Dienste › MQTT",
    "id": "mqtt"
   },
   {
    "l": "Timeout",
-   "where": "Dienste › MQTT / Home Assistant",
+   "where": "Dienste › MQTT",
    "id": "mqtt"
   },
   {
    "l": "Home Assistant",
-   "where": "Dienste › MQTT / Home Assistant",
+   "where": "Dienste › MQTT",
    "id": "mqtt"
   },
   {
    "l": "An Home Assistant melden",
-   "where": "Dienste › MQTT / Home Assistant",
+   "where": "Dienste › MQTT",
    "id": "mqtt"
   },
   {
    "l": "Discovery-Präfix",
-   "where": "Dienste › MQTT / Home Assistant",
+   "where": "Dienste › MQTT",
    "id": "mqtt"
   },
   {

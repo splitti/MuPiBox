@@ -2808,5 +2808,9 @@
  "Dieser Reiter ist offen, wenn das Display startet.": "Ekran başladığında bu sekme açık olur.",
  "Das Display startet mit {}": "Ekran şununla başlar: {}",
  "Empfohlen": "Önerilen",
- "Legacy · die bisherige Oberfläche": "Legacy · önceki arayüz"
+ "Legacy · die bisherige Oberfläche": "Legacy · önceki arayüz",
+ "Home Assistant (MQTT-Discovery)": "Home Assistant (MQTT Discovery)",
+ "Die Box erscheint in Home Assistant von selbst als Gerät. Einfacher und mit mehr Funktionen (Ansagen, Nachrichten aufs Display): Dienste › Home Assistant.": "Kutu, Home Assistant’ta kendiliğinden cihaz olarak görünür. Daha basit ve daha fazla işlevle (anonslar, ekrana mesajlar): Hizmetler › Home Assistant.",
+ "Die MQTT-Discovery für Home Assistant ist auch an (Dienste › MQTT). Die Box erscheint dann zweimal in Home Assistant – eins von beiden ausschalten.": "Home Assistant için MQTT Discovery de açık (Hizmetler › MQTT). Kutu o zaman Home Assistant’ta iki kez görünür – ikisinden birini kapat.",
+ "Dienste › MQTT": "Hizmetler › MQTT"
 }

@@ -9320,7 +9320,12 @@ function haTop() {
       ? `<div class="status-line"><span class="dot ok"></span><span>Bereit unter <b translate="no">https://${esc(location.hostname)}:${esc(d.port)}</b></span></div>`
       : `<div class="note warn">${icon('info', 18)}<span>Die Schnittstelle startet nicht. Ein Neustart des Servers oder der Box hilft meist.</span></div>`
     : ''
-  const main = `<section class="card" data-col="1"><div class="card-head"><h2>Home Assistant</h2><span class="chip ${on && d.listening ? 'ok' : ''}">${on ? 'an' : 'aus'}</span></div>${state}${sw}</section>`
+  // (both ways at once: the box would be in Home Assistant twice, with each value twice)
+  const twice =
+    on && d.mqtt_discovery
+      ? `<div class="note warn">${icon('info', 18)}<span>Die MQTT-Discovery für Home Assistant ist auch an (Dienste › MQTT). Die Box erscheint dann zweimal in Home Assistant – eins von beiden ausschalten.</span></div>`
+      : ''
+  const main = `<section class="card" data-col="1"><div class="card-head"><h2>Home Assistant</h2><span class="chip ${on && d.listening ? 'ok' : ''}">${on ? 'an' : 'aus'}</span></div>${state}${twice}${sw}</section>`
   if (!on || !d.listening) return [main]
   const left = Math.max(0, Math.round((haState.pairUntil - Date.now()) / 1000))
   const pair = `<section class="card" data-col="2"><h2>Koppeln</h2>
@@ -10613,7 +10618,7 @@ const CONTROLLERS = {
           ],
         },
         { ...page.sections[1], col: 2 },
-        { title: 'Home Assistant', col: 2, items: [it('haOn', { help: 'Die Box erscheint in Home Assistant von selbst als Gerät.' }), it('haTopic', { dep: 'haOn' })] },
+        { title: 'Home Assistant (MQTT-Discovery)', col: 2, items: [it('haOn', { help: 'Die Box erscheint in Home Assistant von selbst als Gerät. Einfacher und mit mehr Funktionen (Ansagen, Nachrichten aufs Display): Dienste › Home Assistant.' }), it('haTopic', { dep: 'haOn' })] },
         { bar: true, items: [{ type: 'buttons', buttons: [['Speichern', 'primary', 'toast:Gespeichert']] }] },
       ]
     },

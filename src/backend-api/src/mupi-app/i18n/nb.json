@@ -2808,5 +2808,9 @@
  "Dieser Reiter ist offen, wenn das Display startet.": "Denne fanen er åpen når skjermen starter.",
  "Das Display startet mit {}": "Skjermen starter med {}",
  "Empfohlen": "Anbefalt",
- "Legacy · die bisherige Oberfläche": "Legacy · det tidligere grensesnittet"
+ "Legacy · die bisherige Oberfläche": "Legacy · det tidligere grensesnittet",
+ "Home Assistant (MQTT-Discovery)": "Home Assistant (MQTT-discovery)",
+ "Die Box erscheint in Home Assistant von selbst als Gerät. Einfacher und mit mehr Funktionen (Ansagen, Nachrichten aufs Display): Dienste › Home Assistant.": "Boksen dukker selv opp i Home Assistant som enhet. Enklere og med flere funksjoner (kunngjøringer, meldinger på skjermen): Tjenester › Home Assistant.",
+ "Die MQTT-Discovery für Home Assistant ist auch an (Dienste › MQTT). Die Box erscheint dann zweimal in Home Assistant – eins von beiden ausschalten.": "MQTT-discovery for Home Assistant er også på (Tjenester › MQTT). Boksen vises da to ganger i Home Assistant – slå av en av dem.",
+ "Dienste › MQTT": "Tjenester › MQTT"
 }

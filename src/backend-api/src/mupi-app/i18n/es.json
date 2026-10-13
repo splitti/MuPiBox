@@ -2808,5 +2808,9 @@
  "Dieser Reiter ist offen, wenn das Display startet.": "Esta pestaña está abierta cuando se inicia la pantalla.",
  "Das Display startet mit {}": "La pantalla empieza con {}",
  "Empfohlen": "Recomendada",
- "Legacy · die bisherige Oberfläche": "Legacy · la interfaz anterior"
+ "Legacy · die bisherige Oberfläche": "Legacy · la interfaz anterior",
+ "Home Assistant (MQTT-Discovery)": "Home Assistant (MQTT Discovery)",
+ "Die Box erscheint in Home Assistant von selbst als Gerät. Einfacher und mit mehr Funktionen (Ansagen, Nachrichten aufs Display): Dienste › Home Assistant.": "La caja aparece sola en Home Assistant como dispositivo. Más sencillo y con más funciones (avisos, mensajes en la pantalla): Servicios › Home Assistant.",
+ "Die MQTT-Discovery für Home Assistant ist auch an (Dienste › MQTT). Die Box erscheint dann zweimal in Home Assistant – eins von beiden ausschalten.": "El MQTT Discovery para Home Assistant también está activado (Servicios › MQTT). La caja aparece entonces dos veces en Home Assistant: desactiva uno de los dos.",
+ "Dienste › MQTT": "Servicios › MQTT"
 }

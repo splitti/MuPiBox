@@ -2808,5 +2808,9 @@
  "Dieser Reiter ist offen, wenn das Display startet.": "Tämä välilehti on auki, kun näyttö käynnistyy.",
  "Das Display startet mit {}": "Näyttö aloittaa välilehdellä {}",
  "Empfohlen": "Suositeltu",
- "Legacy · die bisherige Oberfläche": "Legacy · aiempi käyttöliittymä"
+ "Legacy · die bisherige Oberfläche": "Legacy · aiempi käyttöliittymä",
+ "Home Assistant (MQTT-Discovery)": "Home Assistant (MQTT-discovery)",
+ "Die Box erscheint in Home Assistant von selbst als Gerät. Einfacher und mit mehr Funktionen (Ansagen, Nachrichten aufs Display): Dienste › Home Assistant.": "Laatikko näkyy Home Assistantissa itsestään laitteena. Helpompi ja enemmän toimintoja (kuulutukset, viestit näytölle): Palvelut › Home Assistant.",
+ "Die MQTT-Discovery für Home Assistant ist auch an (Dienste › MQTT). Die Box erscheint dann zweimal in Home Assistant – eins von beiden ausschalten.": "Home Assistantin MQTT-discovery on myös päällä (Palvelut › MQTT). Laatikko näkyy silloin Home Assistantissa kahdesti – kytke toinen pois.",
+ "Dienste › MQTT": "Palvelut › MQTT"
 }

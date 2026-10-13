@@ -2808,5 +2808,9 @@
  "Dieser Reiter ist offen, wenn das Display startet.": "Эта вкладка открыта при запуске дисплея.",
  "Das Display startet mit {}": "Дисплей начинает с {}",
  "Empfohlen": "Рекомендуется",
- "Legacy · die bisherige Oberfläche": "Legacy · прежний интерфейс"
+ "Legacy · die bisherige Oberfläche": "Legacy · прежний интерфейс",
+ "Home Assistant (MQTT-Discovery)": "Home Assistant (MQTT Discovery)",
+ "Die Box erscheint in Home Assistant von selbst als Gerät. Einfacher und mit mehr Funktionen (Ansagen, Nachrichten aufs Display): Dienste › Home Assistant.": "Бокс сам появляется в Home Assistant как устройство. Проще и с большим числом функций (объявления, сообщения на дисплей): Службы › Home Assistant.",
+ "Die MQTT-Discovery für Home Assistant ist auch an (Dienste › MQTT). Die Box erscheint dann zweimal in Home Assistant – eins von beiden ausschalten.": "MQTT Discovery для Home Assistant тоже включён (Службы › MQTT). Тогда бокс появится в Home Assistant дважды – отключите одно из двух.",
+ "Dienste › MQTT": "Службы › MQTT"
 }

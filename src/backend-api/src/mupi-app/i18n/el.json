@@ -2808,5 +2808,9 @@
  "Dieser Reiter ist offen, wenn das Display startet.": "Αυτή η καρτέλα είναι ανοιχτή όταν ξεκινά η οθόνη.",
  "Das Display startet mit {}": "Η οθόνη ξεκινά με {}",
  "Empfohlen": "Προτείνεται",
- "Legacy · die bisherige Oberfläche": "Legacy · το προηγούμενο περιβάλλον"
+ "Legacy · die bisherige Oberfläche": "Legacy · το προηγούμενο περιβάλλον",
+ "Home Assistant (MQTT-Discovery)": "Home Assistant (MQTT Discovery)",
+ "Die Box erscheint in Home Assistant von selbst als Gerät. Einfacher und mit mehr Funktionen (Ansagen, Nachrichten aufs Display): Dienste › Home Assistant.": "Το κουτί εμφανίζεται μόνο του στο Home Assistant ως συσκευή. Πιο απλά και με περισσότερες λειτουργίες (ανακοινώσεις, μηνύματα στην οθόνη): Υπηρεσίες › Home Assistant.",
+ "Die MQTT-Discovery für Home Assistant ist auch an (Dienste › MQTT). Die Box erscheint dann zweimal in Home Assistant – eins von beiden ausschalten.": "Το MQTT Discovery για το Home Assistant είναι επίσης ενεργό (Υπηρεσίες › MQTT). Το κουτί εμφανίζεται τότε δύο φορές στο Home Assistant – απενεργοποίησε το ένα από τα δύο.",
+ "Dienste › MQTT": "Υπηρεσίες › MQTT"
 }

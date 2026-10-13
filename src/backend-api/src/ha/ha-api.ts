@@ -226,11 +226,19 @@ async function battery(deps: HaDeps): Promise<{ percent: number | null; charging
   const hat = deps.getMupiboxConfig()?.mupihat as { hat_active?: unknown } | undefined
   if (hat?.hat_active !== true) return { percent: null, charging: null }
   try {
-    const j = JSON.parse(await fsp.readFile('/tmp/mupihat.json', 'utf8')) as { Bat_Percent?: unknown; Charger_Status?: unknown; Charge_Phase?: unknown }
+    const j = JSON.parse(await fsp.readFile('/tmp/mupihat.json', 'utf8')) as { Bat_Percent?: unknown; Charger_Status?: unknown; Charge_Phase?: unknown; IBus?: unknown }
     const pct = Number(j.Bat_Percent)
+    // charging = on the charger, as the display shows it (its bolt: current flows in at the USB input) - the charger's
+    // status said "not charging" once the battery was full ("Charge Termination Done") while the box hung on the
+    // power supply. Only without the input current reported the status text decides.
+    const ibus = Number(j.IBus)
     const status = String(j.Charger_Status ?? '').toLowerCase()
-    const charging = /charge|cc|cv|taper|top-off/.test(status) && !/not charging|done|termination/.test(status)
-    return { percent: Number.isFinite(pct) && pct >= 0 && pct <= 100 ? Math.round(pct) : null, charging: status ? charging : null }
+    const charging = Number.isFinite(ibus)
+      ? ibus > 0
+      : status
+        ? /charge|cc|cv|taper|top-off/.test(status) && !/not charging|done|termination/.test(status)
+        : null
+    return { percent: Number.isFinite(pct) && pct >= 0 && pct <= 100 ? Math.round(pct) : null, charging }
   } catch {
     return { percent: null, charging: null }
   }
@@ -563,6 +571,7 @@ function buildApp(deps: HaDeps): Express {
     if (await quietNow()) return fail(res, 409, 'provider_unavailable', 'Quiet time on the box - nothing is shown')
     const ms = typeof body.duration_ms === 'number' && Number.isFinite(body.duration_ms) ? body.duration_ms : 8000
     message = { title: typeof body.title === 'string' ? body.title.trim().slice(0, 60) : '', text, until: Date.now() + Math.max(2000, Math.min(60000, ms)) }
+    log(`message for the display from "${(req as Request & { haClient?: HaClient }).haClient?.client_name ?? '?'}" (${text.length} characters)`)
     wakeDisplay()
     res.json({ success: true })
   })
@@ -575,6 +584,7 @@ function buildApp(deps: HaDeps): Express {
     if (speechOf(deps.getMupiboxConfig()).engine === 'off') return fail(res, 409, 'provider_unavailable', 'The speech output of the box is switched off')
     if (await quietNow()) return fail(res, 409, 'provider_unavailable', 'Quiet time on the box - nothing is said')
     // (said in the background: the announcement waits for what plays, and takes seconds)
+    log(`announcement from "${(req as Request & { haClient?: HaClient }).haClient?.client_name ?? '?'}" (${text.length} characters)`)
     announce(deps.getMupiboxConfig, text).catch(() => false)
     res.status(202).json({ success: true, accepted: true })
   })
@@ -603,6 +613,7 @@ function buildApp(deps: HaDeps): Express {
         const r = await playerCommand(command)
         if (r.status === 423) return fail(res, 409, 'provider_unavailable', 'Playing is blocked right now (listening time or quiet hours)')
         if (!r.ok) return fail(res, 503, 'temporarily_unavailable', `The player answered ${r.status}`)
+        log(`${command} from "${client.client_name}"`)
         return void res.json({ success: true })
       }
       if (command === 'set_volume') {
@@ -724,6 +735,14 @@ function buildApp(deps: HaDeps): Express {
   })
 
   app.use('/api/ha/v1', v1)
+  // The address itself in a browser - Home Assistant's "Visit" link on the device page leads here (the integration
+  // takes its API address as the configuration URL): on to the box's app instead of an error
+  app.get('/', (req, res, next) => {
+    if (!req.accepts('html')) return next()
+    const host = /^[A-Za-z0-9.-]+$/.test(req.hostname) ? req.hostname : ''
+    if (!host) return next()
+    res.redirect(302, `https://${host}/app/`)
+  })
   app.use((_req, res) => fail(res, 404, 'not_found', 'Unknown path'))
   // (anything that throws: the contract's error, never a stack trace)
   app.use((_err: unknown, _req: Request, res: Response, _next: NextFunction) => fail(res, 500, 'internal_error', 'Unexpected failure'))
@@ -812,7 +831,10 @@ export function registerHaAppRoutes(router: Router, deps: HaDeps, guards: { sess
   /** GET /api/app/ha - switched on, listening, the fingerprint, the paired clients (without their tokens) */
   router.get('/ha', guards.session, async (_req, res) => {
     const clients = await readClients()
+    // (the MQTT discovery for Home Assistant on as well: the box would be in Home Assistant twice)
+    const mqtt = (deps.getMupiboxConfig()?.mqtt ?? {}) as { active?: unknown; ha_active?: unknown }
     res.json({
+      mqtt_discovery: mqtt.active === true && mqtt.ha_active === true,
       enabled: enabledIn(deps),
       listening: !!server,
       port: HA_PORT,
