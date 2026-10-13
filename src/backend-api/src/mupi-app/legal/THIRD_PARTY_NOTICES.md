@@ -181,6 +181,12 @@ the packages in the bundles.
 | "Glitch019 / Computer Startup" by Zeraora (`media/sound/startup.wav`) | start sound | CC0 1.0 | https://freesound.org/people/Zeraora/sounds/572773/ |
 | "game over" by Leszek_Szary (`media/sound/shutdown.wav`) | shutdown sound | CC0 1.0 | https://freesound.org/people/Leszek_Szary/sounds/133283/ |
 | Sounds `media/sound/button_shutdown.wav`, `media/sound/low.wav` | shutdown by button, battery low | TODO: origin and license to be cleared (added in 2024, "Better sounds") |  |
+| jQuery 3.7.1, jQuery UI 1.13.2 | admin interface, `AdminInterface/www/vendor/jquery`, `vendor/jquery-ui` | MIT | `LICENSE.txt` next to each |
+| Popper.js 1.16.0 | admin interface, `AdminInterface/www/vendor/popper` | MIT | `LICENSE` next to it |
+| Bootstrap 3.4.1 (CSS), 4.5.2 (JavaScript), 5.3.3 (CSS) | admin interface, `AdminInterface/www/vendor/bootstrap` | MIT | `LICENSE` next to them |
+| Font Awesome Free 6.5.1 | admin interface, `AdminInterface/www/vendor/fontawesome` (CSS and WOFF2 fonts) | icons CC BY 4.0, fonts SIL OFL 1.1, code MIT | `LICENSE.txt` next to it |
+| CodeMirror 5.65.15 | admin interface, `AdminInterface/www/vendor/codemirror` (editor of the settings file) | MIT | `LICENSE` next to it |
+| Icons: Material Design Icons, Material Symbols, Google Material Icons; Tabler Icons | admin interface (battery, WiFi, fan, power), 19 icons in `AdminInterface/www/vendor/icons/icons.js` | Apache-2.0; Tabler: MIT | `LICENSES.md` and the licence texts next to it |
 
 ### A.3 Pictures of the themes
 
@@ -226,17 +232,6 @@ The installer (or the box, when a function needs them) fetches these from their 
 | noVNC | git clone to /usr/share/novnc (autosetup, update where missing; used only when remote control is switched on) | MPL-2.0 (parts under other licenses) | https://github.com/novnc/noVNC |
 | Piper | 2023.11.14-2 (piper_linux_aarch64.tar.gz from github.com/rhasspy/piper), only when the first voice is loaded under Speech output | MIT; the archive also holds espeak-ng and its data (GPL-3.0-or-later), ONNX Runtime 1.14.1 (MIT), piper-phonemize (MIT) and the libtashkeel model (MIT) | https://github.com/rhasspy/piper - speaks announcements and names offline |
 | Piper voices | each one when it is loaded under Speech output (huggingface.co/rhasspy/piper-voices) | per voice (e.g. CC0, CC BY 4.0, MIT) - the app shows each voice's licence and source | https://huggingface.co/rhasspy/piper-voices |
-
-### Loaded at runtime from CDNs (admin interface)
-
-The browser showing the admin interface loads these from the CDN named (the CDN sees the browser's address).
-
-| Library | CDN | License |
-| --- | --- | --- |
-| jQuery 3.7.1, jQuery UI 1.13.2 | code.jquery.com | MIT |
-| Bootstrap 5.3.3 | cdn.jsdelivr.net | MIT |
-| Popper.js 1.16.0 | cdnjs.cloudflare.com | MIT |
-| CodeMirror 5.65.15 | cdnjs.cloudflare.com | MIT |
 
 ## C. Installed from Debian / Raspberry Pi OS / DietPi packages
 

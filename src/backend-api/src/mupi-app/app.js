@@ -8574,7 +8574,6 @@ function legalTop() {
         <li>Telegram (nur mit eingerichtetem Bot): die Nachrichten des Bots, bei „Wiedergabe melden“ auch Titel und ein Bildschirmfoto.</li>
         <li>GitHub: die Prüfung auf Updates, die Neuigkeiten und die Updates selbst; beim ersten Laden einer Stimme das Programm Piper.</li>
         <li>Hugging Face (nur mit Piper): die Liste der Stimmen, eine gewählte Stimme und ihre Hörprobe. Was die Box sagt, bleibt auf der Box.</li>
-        <li>Das Admin-Interface lädt Bibliotheken von öffentlichen Servern (jQuery, jsDelivr, cdnjs); dabei sehen diese die Adresse des Browsers.</li>
       </ul>
       <p class="help">Für diese Dienste gelten deren eigene Bedingungen und Datenschutzhinweise.</p></section>`,
     `<section class="card"><h2>Externe Dienste</h2><div class="rows">${LEGAL_SERVICES.map(

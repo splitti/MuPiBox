@@ -200,24 +200,25 @@
 		} catch (e) {}
 		</script>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
-		<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-		<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
-		<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.5.1/css/all.css">
+		<!-- the libraries from the box itself (vendor/), no longer from CDNs: no third party sees a visit, and the page works
+		     without internet. The same files and versions as before - see THIRD_PARTY_NOTICES.md for their licences. -->
+		<link rel="stylesheet" href="vendor/bootstrap/bootstrap-3.4.1.min.css">
+		<script src="vendor/jquery/jquery-3.7.1.min.js"></script>
+		<script src="vendor/jquery-ui/jquery-ui-1.13.2.min.js"></script>
+		<script src="vendor/popper/popper-1.16.0.min.js"></script>
+		<script src="vendor/bootstrap/bootstrap-4.5.2.min.js"></script>
+		<link href="vendor/bootstrap/bootstrap-5.3.3.min.css" rel="stylesheet">
+		<link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 		<title>MuPiBox Admin-Interface</title>
 		<link rel="stylesheet" type="text/css" href="view.css?v=<?= (int)@filemtime(__DIR__ . '/../view.css') ?>" media="all">
-		<script src="https://code.iconify.design/iconify-icon/2.0.0/iconify-icon.min.js"></script>
+		<script src="vendor/icons/icons.js"></script>
 		<script type="text/javascript" src="view.js?v=<?= (int)@filemtime(__DIR__ . '/../view.js') ?>"></script>
-		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 		<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
-		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
-		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/eclipse.min.css">
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script>
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/javascript/javascript.min.js"></script>
+		<link rel="stylesheet" href="vendor/codemirror/codemirror.css">
+		<link rel="stylesheet" href="vendor/codemirror/theme/eclipse.css">
+		<script src="vendor/codemirror/codemirror.js"></script>
+		<script src="vendor/codemirror/mode/javascript/javascript.js"></script>
 	</head>
 <?php
 	if ($loginEnabled) {

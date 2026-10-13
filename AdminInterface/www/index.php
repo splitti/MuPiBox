@@ -235,52 +235,26 @@
 			$boot_total = $boot_total_mb . "MB";
 	?>
 
-	<script type="text/javascript">
-			// Load google charts
-			google.charts.load('current', {'packages':['corechart']});
-			google.charts.setOnLoadCallback(drawChartroot);
-			google.charts.setOnLoadCallback(drawChartboot);
-
-
-			// Draw the chart and set the chart values
-			function drawChartroot() {
-			  var data = google.visualization.arrayToDataTable([
-			  ['Spacetype', 'Size'],
-			  [<?php print "'/ free [". $root_free ."]'" ?>, <?php print $root_free_gb; ?>],
-			  [<?php print "'/ used [". $root_total ."]'" ?>, <?php print $root_total_gb; ?>]
-			]);
-
-			  // Optional; add a title and set the width and height of the chart
-			  var options = {'title':'Disc Space - / in Gigabytes','width':'auto','height':'auto','is3D':'true'};
-
-			  // Display the chart inside the <div> element with id="piechart"
-			  var chart = new google.visualization.PieChart(document.getElementById('rootchart'));
-			  chart.draw(data, options);
-			}
-
-			// Draw the chart and set the chart values
-			function drawChartboot() {
-			  var data = google.visualization.arrayToDataTable([
-			  ['Spacetype', 'Size'],
-			  [<?php print "'/boot free [". $boot_free ."]'" ?>, <?php print $boot_free_mb; ?>],
-			  [<?php print "'/boot used [". $boot_total ."]'" ?>, <?php print $boot_total_mb; ?>]
-			]);
-
-			  // Optional; add a title and set the width and height of the chart
-			  var options = {'title':'Disc Space - /boot in Megabytes','width':'auto','height':'auto','is3D':'true'};
-			  
-			  // Display the chart inside the <div> element with id="piechart"
-			  var chart = new google.visualization.PieChart(document.getElementById('bootchart'));
-			  chart.draw(data, options);
-			}
-	</script>
+	<?php
+		// The two disk charts drawn by the page itself (a CSS conic gradient) - Google Charts, loaded from gstatic.com at
+		// every visit of the start page, told Google each visit and drew nothing without internet
+		function mupi_disk_pie(string $id, string $title, float $used, float $free, string $usedLabel, string $freeLabel): void {
+			$total = $used + $free;
+			$pct = $total > 0 ? round($used * 100 / $total, 1) : 0;
+			echo '<div id="' . $id . '" class="chart"><div class="disk-pie">';
+			echo '<div class="disk-pie-title">' . htmlspecialchars($title) . '</div>';
+			echo '<div class="disk-pie-body"><div class="disk-pie-circle" style="--used:' . $pct . '%" role="img" aria-label="' . htmlspecialchars($usedLabel . ', ' . $freeLabel) . '"><span>' . $pct . ' %</span></div>';
+			echo '<ul class="disk-pie-legend"><li><i class="free"></i>' . htmlspecialchars($freeLabel) . '</li><li><i class="used"></i>' . htmlspecialchars($usedLabel) . '</li></ul></div>';
+			echo '</div></div>';
+		}
+	?>
 	</li><li class="li_norm">
 	<div class="col-md-6">
-			<div id="rootchart" class="chart"></div>
+			<?php mupi_disk_pie('rootchart', 'Disc Space - / in Gigabytes', $root_total_gb, $root_free_gb, '/ used [' . $root_total . ']', '/ free [' . $root_free . ']'); ?>
 	</div>
 	</li><li class="li_norm">
 	<div class="col-md-6">
-			<div id="bootchart" class="chart"></div>
+			<?php mupi_disk_pie('bootchart', 'Disc Space - /boot in Megabytes', $boot_total_mb, $boot_free_mb, '/boot used [' . $boot_total . ']', '/boot free [' . $boot_free . ']'); ?>
 	</div>
 	</li>
 	</ul></details>
