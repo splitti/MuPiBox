@@ -898,6 +898,12 @@ rm -f /tmp/mupibox-update-failed
 		return ${rc}
 	}
 	SHARES_OFF_OK=1
+	# a list left by an update before (a service it could not switch off, and restore_interrupted_update.sh neither):
+	# tried again here whatever the packages say - their install below is skipped then, and the list goes at the end
+	# only when every service on it is off
+	if [ -s "${UPDATE_MASKED}" ]; then
+		off_new $(grep -E '^[a-z0-9_-]+$' "${UPDATE_MASKED}" | sort -u) || SHARES_OFF_OK=0
+	fi
 	# A config comes from the template only while it is none of the user's own: there was none before the install, or
 	# it is still the package's (its original, or what ucf wrote and keeps the checksum of). An own smb.conf or
 	# proftpd.conf - kept by the apt-get remove of the old switches - stays as it is.
