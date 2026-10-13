@@ -236,23 +236,15 @@ STEP=0
 	echo -e "XXX\n${STEP}\nClean and create directories... \nXXX"
 	before=$(date +%s)
 	rm -Rf /home/dietpi/.mupibox /home/dietpi/MuPiBox >&3 2>&3
-	mkdir -p /home/dietpi/.mupibox/chromium_cache >&3 2>&3
-	mkdir -p /home/dietpi/MuPiBox/tts_files >&3 2>&3
-	mkdir -p /home/dietpi/MuPiBox/sysmedia/sound >&3 2>&3
-	mkdir -p /home/dietpi/MuPiBox/sysmedia/images >&3 2>&3
+
+	mkdir -p /home/dietpi/.mupibox/{chromium_cache,Sonos-Kids-Controller-master,spotifycontroller-main/config} >&3 2>&3
 	mkdir -p /home/dietpi/.cache/spotify >&3 2>&3
-	mkdir -p /home/dietpi/MuPiBox/media/audiobook >&3 2>&3
-	mkdir -p /home/dietpi/MuPiBox/media/music >&3 2>&3
-	mkdir -p /home/dietpi/MuPiBox/media/other >&3 2>&3
-	mkdir -p /home/dietpi/MuPiBox/media/NAS >&3 2>&3
-	mkdir -p /home/dietpi/MuPiBox/media/cover >&3 2>&3
-	mkdir -p /home/dietpi/MuPiBox/media/youtube-dl >&3 2>&3
-	mkdir -p /home/dietpi/MuPiBox/themes >&3 2>&3
-	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
-	mkdir -p /home/dietpi/.mupibox/spotifycontroller-main/config >&3 2>&3
-	mkdir -p /usr/local/bin/mupibox >&3 2>&3
+	mkdir -p /home/dietpi/MuPiBox/{tts_files,themes,sysmedia/{sound,images},media/{audiobook,music,other,NAS,cover,youtube-dl}} >&3 2>&3
+
 	mkdir -p /etc/mupibox >&3 2>&3
+	mkdir -p /usr/local/bin/mupibox >&3 2>&3
 	mkdir -p /var/log/mupibox/ >&3 2>&3
+
 	chown -R dietpi:dietpi /home/dietpi/.mupibox /home/dietpi/MuPiBox >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Clean and create directories ## finished after $((after - before)) seconds" >&3 2>&3
@@ -365,7 +357,6 @@ STEP=0
 	[ -e /etc/proftpd/proftpd.conf ] && FTP_CONF_HAD=1
 	WSD=$(apt-cache show wsdd2 >/dev/null 2>&1 && echo wsdd2 || echo wsdd)
 	DEBIAN_FRONTEND=noninteractive apt-get --yes install samba ${WSD} >&3 2>&3
-	mkdir -p /etc/samba >&3 2>&3
 	if [ "${SMB_CONF_HAD}" = 0 ] || conf_untouched /etc/samba/smb.conf /usr/share/samba/smb.conf; then
 		cp -f ${MUPI_SRC}/config/templates/smb.conf /etc/samba/smb.conf >&3 2>&3
 	fi
