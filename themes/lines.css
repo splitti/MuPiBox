@@ -9,7 +9,7 @@
 :root {
   --km-night: #270A47;
   --km-night-2: #3A1466;
-  --km-night-3: #3A1466;
+  --km-night-3: #5A2A99;
   --km-night-4: #4E1E86;
   --km-stack-1: #7F669C;
   --km-stack-2: #4E1E86;
@@ -43,7 +43,7 @@
 
 /* Hintergrund: eigenes Bild, oben ein weicher Verlauf für Statusleiste und Reiter */
 .ion-page {
-  background: var(--km-night) url("/theme-data/lines/lines-bg.png") center / cover no-repeat !important;
+  background: linear-gradient(rgba(39,10,71,.45), rgba(39,10,71,.45)), var(--km-night) url("/theme-data/lines/lines-bg.png") center / cover no-repeat !important;
 }
 .playtime-blocked-overlay, body.km mupi-media-unavailable {
   background: linear-gradient(var(--km-overlay), var(--km-overlay)), var(--km-night) url("/theme-data/lines/lines-bg.png") center / cover no-repeat !important;

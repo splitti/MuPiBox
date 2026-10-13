@@ -776,6 +776,19 @@ body.km.km-legacy {
     border-bottom: 1px solid rgba(255, 255, 255, 0.14);
   }
 
+  // the round button on the band flat, like the tabs, the pill and the chips next to it: with the cards' shadow below
+  // it, it looked as if it sat lower than they do
+  .km-hbtn {
+    box-shadow: none;
+  }
+
+  // seeking: on the panel in the button colour, a little lighter (night-2, the panel's own colour in most of the old
+  // themes, made them invisible - only the arrows were to be seen)
+  .kp-seek:not(.kp-on) {
+    background: color-mix(in srgb, var(--km-btn) 75%, transparent);
+    color: var(--km-on-btn);
+  }
+
   .kp-panel {
     display: block;
     position: absolute;

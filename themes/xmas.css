@@ -6,13 +6,13 @@
 @font-face { font-family: "Fredoka"; src: url("/theme-data/_fonts/Fredoka-Variable.ttf") format("truetype"); font-weight: 300 700; font-display: block; }
 
 :root {
-  --km-night: #008E21;
-  --km-night-2: #DE0000;
-  --km-night-3: #E32424;
-  --km-night-4: #E74242;
+  --km-night: #1E6B3A;
+  --km-night-2: #B3261E;
+  --km-night-3: #C62828;
+  --km-night-4: #D04848;
   --km-stack-1: #7A400F;
   --km-stack-2: #A70000;
-  --km-shadow: #005C15;
+  --km-shadow: #0F3D20;
   --km-overlay: #006317;
   --km-cream: #FCE6E6;
   --km-ring: #9B0000;
@@ -29,10 +29,10 @@
   --km-ease: cubic-bezier(.2, .7, .2, 1);
   --ion-font-family: "Fredoka", sans-serif;
   /* Runde 2: Kopfzeile, Pille, Knöpfe (Werte aus THEME_WERTE.md) */
-  --km-band: rgba(133,0,0,0.82);
+  --km-band: rgba(110,20,16,0.88);
   --km-on-band: #FFFFFF;
   --km-on-band-2: #F5B3B3;
-  --km-btn: #E32424;
+  --km-btn: #C62828;
   --km-on-btn: #FFFFFF;
   --km-tab-idle: #FFFFFF;
   --km-on-pill: #FFFFFF;

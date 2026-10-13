@@ -12,7 +12,7 @@ body.km.km-theme-pikachu { --ion-font-family: 'Pokemon UI', 'Fredoka', sans-seri
 
 :root {
   --km-night: #1E2A14;
-  --km-night-2: rgba(40,34,8,.62);
+  --km-night-2: rgba(40,34,8,.88);
   --km-night-3: #3B3310;
   --km-night-4: #544A18;
   --km-stack-1: #807A64;
@@ -36,7 +36,7 @@ body.km.km-theme-pikachu { --ion-font-family: 'Pokemon UI', 'Fredoka', sans-seri
   --km-name-font: "Pokemon X and Y", "Fredoka", sans-serif;
   --km-name-size: 25px;
   /* Runde 2: Kopfzeile, Pille, Knöpfe (Werte aus THEME_WERTE.md) */
-  --km-band: rgba(40,34,8,.62);
+  --km-band: rgba(40,34,8,.86);
   --km-on-band: #FFFFFF;
   --km-on-band-2: #F2E8B8;
   --km-btn: #473F1E;

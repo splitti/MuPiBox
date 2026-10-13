@@ -8,7 +8,7 @@
 
 :root {
   --km-night: #31403D;
-  --km-night-2: rgba(49,64,61,.85);
+  --km-night-2: rgba(49,64,61,.92);
   --km-night-3: #C02F12;
   --km-night-4: #9A250E;
   --km-stack-1: #D67865;
@@ -32,7 +32,7 @@
   --km-name-font: "SnapHand", "Fredoka", sans-serif;
   --km-name-size: 26px;
   /* Runde 2: Kopfzeile, Pille, Knöpfe (Werte aus THEME_WERTE.md) */
-  --km-band: rgba(49,64,61,.85);
+  --km-band: rgba(49,64,61,.92);
   --km-on-band: #FFFFFF;
   --km-on-band-2: #E6EFEC;
   --km-btn: #C02F12;
@@ -43,7 +43,7 @@
 
 /* Hintergrund: eigenes Bild, oben ein weicher Verlauf für Statusleiste und Reiter */
 .ion-page {
-  background: var(--km-night) url("/theme-data/comic/comic-bg.jpg") center / cover no-repeat !important;
+  background: linear-gradient(rgba(31,42,40,.45), rgba(31,42,40,.45)), var(--km-night) url("/theme-data/comic/comic-bg.jpg") center / cover no-repeat !important;
 }
 .playtime-blocked-overlay, body.km mupi-media-unavailable {
   background: linear-gradient(var(--km-overlay), var(--km-overlay)), var(--km-night) url("/theme-data/comic/comic-bg.jpg") center / cover no-repeat !important;

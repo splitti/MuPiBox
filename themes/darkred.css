@@ -6,13 +6,13 @@
 @font-face { font-family: "Fredoka"; src: url("/theme-data/_fonts/Fredoka-Variable.ttf") format("truetype"); font-weight: 300 700; font-display: block; }
 
 :root {
-  --km-night: #FF0000;
+  --km-night: #C62828;
   --km-night-2: #8B0000;
   --km-night-3: #9B2424;
   --km-night-4: #A94242;
   --km-stack-1: #BF0000;
   --km-stack-2: #680000;
-  --km-shadow: #A60000;
+  --km-shadow: #7F0000;
   --km-overlay: #FF0000;
   --km-cream: #F3E6E6;
   --km-ring: #8B0000;
