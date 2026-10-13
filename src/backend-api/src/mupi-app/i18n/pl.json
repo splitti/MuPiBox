@@ -2782,5 +2782,7 @@
  "Verstanden": "Rozumiem",
  "Startet mit": "Zaczyna od",
  "Dieser Reiter ist offen, wenn das Display startet.": "Ta karta jest otwarta po uruchomieniu wyświetlacza.",
- "Das Display startet mit {}": "Wyświetlacz zaczyna od {}"
+ "Das Display startet mit {}": "Wyświetlacz zaczyna od {}",
+ "Empfohlen": "Zalecana",
+ "Legacy · die bisherige Oberfläche": "Legacy · dotychczasowy interfejs"
 }

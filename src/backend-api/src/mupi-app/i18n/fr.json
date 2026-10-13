@@ -2782,5 +2782,7 @@
  "Verstanden": "Compris",
  "Startet mit": "Démarre avec",
  "Dieser Reiter ist offen, wenn das Display startet.": "Cet onglet est ouvert au démarrage de l’écran.",
- "Das Display startet mit {}": "L’écran démarre avec {}"
+ "Das Display startet mit {}": "L’écran démarre avec {}",
+ "Empfohlen": "Recommandée",
+ "Legacy · die bisherige Oberfläche": "Legacy · l'interface précédente"
 }

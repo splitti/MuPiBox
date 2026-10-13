@@ -11037,11 +11037,12 @@ function renderLoginBar() {
   $('#theme-btn').addEventListener('click', toggleTheme)
 }
 
-// Where the login leads: this app (beta) or the previous admin interface (PHP on port 80/443, same password). The choice
+// Where the login leads: this app (the recommended one) or the previous admin interface (legacy: PHP on port 80/443,
+// same password). The choice
 // is remembered in this browser. The start page of port 80 (/) opens the login with ?portal, also when signed in.
 const PORTALS = [
-  ['app', 'Web-App', 'Beta', 'grid'],
-  ['admin', 'Admin-Interface', 'Die bisherige Oberfläche', 'gear'],
+  ['app', 'Web-App', 'Empfohlen', 'grid'],
+  ['admin', 'Admin-Interface', 'Legacy · die bisherige Oberfläche', 'gear'],
 ]
 const adminUrl = () => `${location.protocol}//${location.hostname}/index.php`
 

@@ -2782,5 +2782,7 @@
  "Verstanden": "Entendido",
  "Startet mit": "Empieza con",
  "Dieser Reiter ist offen, wenn das Display startet.": "Esta pestaña está abierta cuando se inicia la pantalla.",
- "Das Display startet mit {}": "La pantalla empieza con {}"
+ "Das Display startet mit {}": "La pantalla empieza con {}",
+ "Empfohlen": "Recomendada",
+ "Legacy · die bisherige Oberfläche": "Legacy · la interfaz anterior"
 }

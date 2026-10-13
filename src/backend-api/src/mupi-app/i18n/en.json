@@ -2782,5 +2782,7 @@
  "Verstanden": "Understood",
  "Startet mit": "Starts with",
  "Dieser Reiter ist offen, wenn das Display startet.": "This tab is open when the display starts.",
- "Das Display startet mit {}": "The display starts with {}"
+ "Das Display startet mit {}": "The display starts with {}",
+ "Empfohlen": "Recommended",
+ "Legacy · die bisherige Oberfläche": "Legacy · the previous interface"
 }

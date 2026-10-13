@@ -2782,5 +2782,7 @@
  "Verstanden": "Понятно",
  "Startet mit": "Начинать с",
  "Dieser Reiter ist offen, wenn das Display startet.": "Эта вкладка открыта при запуске дисплея.",
- "Das Display startet mit {}": "Дисплей начинает с {}"
+ "Das Display startet mit {}": "Дисплей начинает с {}",
+ "Empfohlen": "Рекомендуется",
+ "Legacy · die bisherige Oberfläche": "Legacy · прежний интерфейс"
 }
