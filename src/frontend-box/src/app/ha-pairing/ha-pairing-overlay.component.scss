@@ -135,3 +135,25 @@
   line-height: 1.4;
   white-space: pre-wrap;
 }
+
+// In a kids' theme the message looks like the box itself - it is for the child in front of it: the theme's font, its
+// light card with the shadow of the name bars, the screen behind only dimmed (the pairing above stays as it is: for the
+// parents, with the code)
+:host-context(body.km) {
+  .ha-msg-overlay {
+    background: rgba(0, 0, 0, 0.55);
+  }
+
+  .ha-msg {
+    background: var(--km-cream);
+    color: var(--km-ink);
+    font-family: var(--ion-font-family, inherit);
+    border-radius: 28px;
+    padding: 22px 34px;
+    box-shadow: 0 6px 0 var(--km-shadow);
+  }
+
+  .ha-msg-text {
+    font-weight: 600;
+  }
+}
