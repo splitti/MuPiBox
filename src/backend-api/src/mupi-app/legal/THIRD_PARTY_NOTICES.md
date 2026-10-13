@@ -90,7 +90,6 @@ the packages in the bundles.
 | ionicons | 8.0.13 | MIT | display | https://github.com/ionic-team/ionicons |
 | ipaddr.js | 1.9.1 | MIT | backend, player | https://github.com/whitequark/ipaddr.js |
 | is-promise | 4.0.0 | MIT | backend | https://github.com/then/is-promise |
-| js-string-escape | 1.0.1 | MIT | player | https://github.com/joliss/js-string-escape |
 | jsonfile | 6.2.0 | MIT | backend | git@github.com:jprichardson/node-jsonfile |
 | math-intrinsics | 1.1.0 | MIT | backend, player | https://github.com/es-shims/math-intrinsics |
 | media-typer | 0.3.0 | MIT | player | jshttp/media-typer |
@@ -163,7 +162,7 @@ the packages in the bundles.
 | Fredoka font | web app and kids' themes (`mupi-app/fonts`, `themes/_fonts`) | SIL Open Font License 1.1 | `OFL-Fredoka.txt` next to the font |
 | Nunito Sans font | web app (`mupi-app/fonts`) | SIL Open Font License 1.1 | `OFL-NunitoSans.txt` next to the font |
 | Baloo 2 font | kids' themes (`themes/_fonts`) | SIL Open Font License 1.1 | `OFL-Baloo2.txt` next to the font |
-| fbv (framebuffer image viewer) | boot and shutdown pictures, prebuilt in `bin/fbv` | GPL-2.0 | TODO: add the source offer / link to the source of the exact version |
+| fbv (framebuffer image viewer) | boot and shutdown pictures, prebuilt in `bin/fbv` | GPL-2.0 | the source of the version built (1.1, commit 57f26fb1 - github.com/godspeed1989/fbv, also github.com/splitti/fbv) next to it: `bin/fbv/fbv-1.1-57f26fb1-source.tar.gz`; built with `dev/compile_scripts/fbv.sh` |
 | led_control | power LED, compiled on the box from `scripts/led/led_control.c` | MuPiBox project code |  |
 | Berlin Small Caps by Manfred Klein (`BerlinSmallCaps.ttf`) | theme `dinosaur` | dafont "100% Free"; the file names only the copyright | https://www.dafont.com/berlin-small-caps.font |
 | Intensa Fuente by Edumorcel (`IntensaFuente.ttf`) | theme `spiderman` | dafont "100% Free"; the file has no license of its own | https://www.dafont.com/intensa-fuente.font |
@@ -179,7 +178,9 @@ the packages in the bundles.
 | Star Jedi by Davide Canavero (Boba Fonts) (`Starjedi.ttf`) | theme `clone-wars` | dafont "100% Free"; the file names only the copyright | https://www.dafont.com/star-jedi.font |
 | Titan One by Rodrigo Fuenzalida (`TitanOne-Regular.ttf`) | theme `supermario` | SIL Open Font License 1.1 (OFL-TitanOne.txt next to it) | https://fonts.google.com/specimen/Titan+One |
 | ylee Mortal Heart, Immortal Memory by Yosep Lee (`ylee_Mortal_Heart.ttf`) | theme `mystic` | dafont "100% Free"; the author: free for commercial and non-commercial use | https://www.dafont.com/ylee-mhim.font |
-| Sounds (`media/sound/*.wav`) | start, shutdown and battery sounds | TODO: origin and license to be cleared |  |
+| "Glitch019 / Computer Startup" by Zeraora (`media/sound/startup.wav`) | start sound | CC0 1.0 | https://freesound.org/people/Zeraora/sounds/572773/ |
+| "game over" by Leszek_Szary (`media/sound/shutdown.wav`) | shutdown sound | CC0 1.0 | https://freesound.org/people/Leszek_Szary/sounds/133283/ |
+| Sounds `media/sound/button_shutdown.wav`, `media/sound/low.wav` | shutdown by button, battery low | TODO: origin and license to be cleared (added in 2024, "Better sounds") |  |
 
 ### A.3 Pictures of the themes
 
@@ -221,9 +222,8 @@ The installer (or the box, when a function needs them) fetches these from their 
 | jq | 1.8.1, from github.com/jqlang/jq (autosetup, update) | MIT | https://github.com/jqlang/jq |
 | Node.js | 22.x, from deb.nodesource.com (autosetup) | MIT (plus the licenses of its bundled parts) | https://nodejs.org |
 | pm2 | npm, global (autosetup) | AGPL-3.0 | https://github.com/Unitech/pm2 - runs the backend and the player as separate processes |
-| @ionic/cli | npm, global (autosetup) | MIT | https://github.com/ionic-team/ionic-cli |
-| requests, pyserial, telepot | Python packages from PyPI (autosetup) | Apache-2.0, BSD-3-Clause, MIT | Telegram bot and serial access |
-| noVNC | only when remote control is switched on (git clone to /usr/share/novnc) | MPL-2.0 (parts under other licenses) | https://github.com/novnc/noVNC |
+| telepot | Python package from PyPI (autosetup) | MIT | https://github.com/nickoala/telepot - Telegram bot |
+| noVNC | git clone to /usr/share/novnc (autosetup, update where missing; used only when remote control is switched on) | MPL-2.0 (parts under other licenses) | https://github.com/novnc/noVNC |
 | Piper | 2023.11.14-2 (piper_linux_aarch64.tar.gz from github.com/rhasspy/piper), only when the first voice is loaded under Speech output | MIT; the archive also holds espeak-ng and its data (GPL-3.0-or-later), ONNX Runtime 1.14.1 (MIT), piper-phonemize (MIT) and the libtashkeel model (MIT) | https://github.com/rhasspy/piper - speaks announcements and names offline |
 | Piper voices | each one when it is loaded under Speech output (huggingface.co/rhasspy/piper-voices) | per voice (e.g. CC0, CC BY 4.0, MIT) - the app shows each voice's licence and source | https://huggingface.co/rhasspy/piper-voices |
 
@@ -254,10 +254,10 @@ information; the package itself names the exact terms (`/usr/share/doc/<package>
 | BlueZ | Bluetooth | GPL-2.0 |
 | DietPi-Dashboard (DietPi software 200) | system dashboard | GPL-3.0 |
 | x11vnc, websockify | remote control of the display, only when switched on | GPL-2.0, LGPL-3.0 |
-| Samba, wsdd, ProFTPD | network shares, only when switched on | GPL-3.0, MIT, GPL-2.0 |
-| rrdtool, scrot, feh, librsvg2-bin, zip, git, bc, net-tools, wireless-tools, rfkill | tools of the scripts | GPL / LGPL / MIT (per package) |
+| Samba, wsdd2 (or wsdd), ProFTPD | network shares, only when switched on | GPL-3.0, GPL-3.0 (wsdd: MIT), GPL-2.0 |
+| rrdtool, scrot, feh, librsvg2-bin, xdotool, zip, unzip, git, bc, net-tools, wireless-tools, rfkill | tools of the scripts | GPL / LGPL / MIT (per package) |
 | pigpio, gpiod, python3-rpi.gpio, python3-lgpio, python3-smbus2, python3-alsaaudio, python3-netifaces, python3-flask, python3-pil, python3-paho-mqtt, python3-serial, python3-requests | hardware, MuPiHAT, MQTT, scripts | Unlicense / LGPL / MIT / BSD / EPL (per package) |
-| libjson-c, libi2c, libasound2, libgles2-mesa, preload, build-essential | libraries and build tools | MIT / LGPL / GPL (per package) |
+| libjson-c, build-essential, python3-pip | libraries and build tools | MIT / LGPL / GPL (per package) |
 
 ## License texts of the bundled npm packages
 
@@ -2195,32 +2195,6 @@ THE SOFTWARE.
 
 ```
 Copyright (c) 2014 Forbes Lindesay
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-```
-
-### js-string-escape 1.0.1 (MIT)
-
-```
-The MIT License (MIT)
-
-Copyright (c) 2013 Jo Liss
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
