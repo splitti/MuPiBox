@@ -1159,11 +1159,14 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         }
       }
     })
-    // "Display aus nach" while nothing plays is the X server's blanking (BlankTime, written by setting_update.sh, read
-    // at the start): set live now as well, 0 = never; setting_update.sh keeps it for the next start
+    // "Display aus nach" while nothing plays is the X server's blanking and power saving (BlankTime and the DPMS times,
+    // written by setting_update.sh, read at the start): set live now as well, 0 = never; setting_update.sh keeps it for
+    // the next start. Both the same: the blanking only empties the picture, DPMS "off" is what get_monitor.sh switches
+    // the backlight off with - with its own default (5 min) it went dark before the time set, or never at "never".
     if (timeoutMutations.idleDisplayOff !== undefined) {
       const min = Number(timeoutMutations.idleDisplayOff)
-      const xset = min > 0 ? ['s', String(min * 60), String(min * 60)] : ['s', 'off']
+      const sec = String(min * 60)
+      const xset = min > 0 ? ['s', sec, sec, 'dpms', sec, sec, sec] : ['s', 'off', 'dpms', '0', '0', '0']
       execFile('xset', xset, { env: { ...process.env, DISPLAY: ':0' }, timeout: 5000 }, (err) => {
         if (err) console.warn(`${new Date().toLocaleString()}: [eltern] xset ${xset.join(' ')}: ${err.message}`)
       })

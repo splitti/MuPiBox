@@ -2,8 +2,8 @@
 #
 # Get monitor blank information to block inputs if the screen is blank - and switch the backlight off with it.
 #
-# The screen goes dark through the X server's power saving (DPMS, BlankTime from timeout.idleDisplayOff, or
-# /api/screen/off while something plays). On a display the firmware drives (the official 7" touch display without
+# The screen goes dark through the X server's power saving (DPMS: its times are timeout.idleDisplayOff, the same as
+# BlankTime - setting_update.sh and the app set both; or /api/screen/off while something plays). On a display the firmware drives (the official 7" touch display without
 # KMS) that only blanks the picture: its backlight stayed on, all night - and vcgencmd display_power kept saying "on",
 # so the first tap was not swallowed either. So this asks the X server every second: is the monitor off, the
 # backlight goes off (bl_power 4), does a tap wake it, the backlight comes back - and only when it was this script
