@@ -2806,5 +2806,7 @@
  "Verstanden": "Anladım",
  "Startet mit": "Şununla başlar",
  "Dieser Reiter ist offen, wenn das Display startet.": "Ekran başladığında bu sekme açık olur.",
- "Das Display startet mit {}": "Ekran şununla başlar: {}"
+ "Das Display startet mit {}": "Ekran şununla başlar: {}",
+ "Empfohlen": "Önerilen",
+ "Legacy · die bisherige Oberfläche": "Legacy · önceki arayüz"
 }

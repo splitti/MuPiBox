@@ -2806,5 +2806,7 @@
  "Verstanden": "Selvä",
  "Startet mit": "Aloittaa välilehdellä",
  "Dieser Reiter ist offen, wenn das Display startet.": "Tämä välilehti on auki, kun näyttö käynnistyy.",
- "Das Display startet mit {}": "Näyttö aloittaa välilehdellä {}"
+ "Das Display startet mit {}": "Näyttö aloittaa välilehdellä {}",
+ "Empfohlen": "Suositeltu",
+ "Legacy · die bisherige Oberfläche": "Legacy · aiempi käyttöliittymä"
 }

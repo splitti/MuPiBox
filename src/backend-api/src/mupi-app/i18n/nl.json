@@ -2806,5 +2806,7 @@
  "Verstanden": "Begrepen",
  "Startet mit": "Begint met",
  "Dieser Reiter ist offen, wenn das Display startet.": "Dit tabblad is open wanneer het scherm start.",
- "Das Display startet mit {}": "Het scherm begint met {}"
+ "Das Display startet mit {}": "Het scherm begint met {}",
+ "Empfohlen": "Aanbevolen",
+ "Legacy · die bisherige Oberfläche": "Legacy · de vorige interface"
 }
