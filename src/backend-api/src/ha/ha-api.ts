@@ -52,6 +52,8 @@ export interface HaDeps {
   getMupiboxConfig: () => Record<string, unknown> | undefined
   updateMupiboxConfig: (mutate: (cfg: Record<string, unknown>) => void | false) => Promise<void>
   covers: PlaybackCovers
+  /** the resume list the display shows ("Zuletzt gehört": active_resume.json) - what a "play" with nothing loaded goes on with */
+  resumeFile?: string
 }
 
 const log = (msg: string) => console.log(`${new Date().toLocaleString()}: [ha-api] ${msg}`)
@@ -352,6 +354,45 @@ async function playerCommand(path: string): Promise<{ ok: boolean; status: numbe
   return { ok: r.ok, status: r.status, body }
 }
 
+/**
+ * The most recent entry of the resume list ("Zuletzt gehört") as the player's start address at its place - what a
+ * "play" from Home Assistant goes on with when nothing is loaded (as the display's resume does it, player.service.ts
+ * resumeMedia / resumeLibraryMedia / resumeNasMedia). Only what the player resumes by itself: an album on the box or
+ * the NAS, Spotify; null for the rest (radio, podcasts) and for an empty list.
+ */
+async function lastResumeStart(deps: HaDeps): Promise<{ url: string; type: string } | null> {
+  if (!deps.resumeFile) return null
+  let list: unknown
+  try {
+    list = JSON.parse(await fsp.readFile(deps.resumeFile, 'utf8'))
+  } catch {
+    return null
+  }
+  if (!Array.isArray(list)) return null
+  const entries = list.filter((e): e is Record<string, unknown> => !!e && typeof e === 'object')
+  if (!entries.length) return null
+  const m = entries.reduce((a, b) => (Number(b.lastPlayedAt ?? 0) > Number(a.lastPlayedAt ?? 0) ? b : a))
+  const enc = encodeURIComponent
+  const int = (v: unknown, d: number) => (Number.isFinite(Number(v)) ? Math.trunc(Number(v)) : d)
+  const track = Math.max(1, int(m.resumelocalcurrentTracknr, 1))
+  const pct = Math.max(0, Math.min(100, Math.round(Number(m.resumelocalprogressTime) || 0)))
+  const type = String(m.type ?? '')
+  if (type === 'library') {
+    const folder =
+      typeof m.libraryPath === 'string' && m.libraryPath
+        ? m.libraryPath.split('/').filter(Boolean).map(enc).join(':')
+        : `${enc(String(m.category ?? ''))}:${enc(String(m.artist ?? ''))}:${enc(String(m.title ?? ''))}`
+    return { url: `musicsearch/library/resume/${folder}:${track}:${pct}`, type }
+  }
+  if (type === 'nas' && typeof m.nasPath === 'string' && m.nasPath) return { url: `musicsearch/nas/resume/${enc(m.nasPath)}:${track}:${pct}`, type }
+  if (type === 'spotify') {
+    const ref = m.playlistid ? `playlist:${enc(String(m.playlistid))}` : m.id ? `album:${enc(String(m.id))}` : m.showid ? `episode:${enc(String(m.showid))}` : m.audiobookid ? `show:${enc(String(m.audiobookid))}` : ''
+    if (!ref) return null
+    return { url: `spotify/now/spotify:${ref}:${Math.max(1, int(m.resumespotifytrack_number, 1))}:${Math.max(0, int(m.resumespotifyprogress_ms, 0))}`, type }
+  }
+  return null
+}
+
 // ---- phase 2: screenshot, message, quiet time, power -----------------------------------------------------------------
 
 let lastShot = 0
@@ -608,8 +649,17 @@ function buildApp(deps: HaDeps): Express {
     if (!client.scopes.includes('control')) return fail(res, 403, 'insufficient_scope', 'This needs the right "control"')
     try {
       if (['play', 'pause', 'stop', 'next', 'previous'].includes(command)) {
-        // (nothing loaded: no false success - the player answered "ok" to a play with nothing to play)
-        if (command !== 'stop' && !(await playbackSnapshot(deps.covers).catch(() => null))?.player) return fail(res, 409, 'provider_unavailable', 'Nothing is loaded to play - start something on the box first')
+        // (nothing loaded: no false success - the player answered "ok" to a play with nothing to play. A "play" goes
+        // on with what was listened to last, as the display's "Zuletzt gehört": a morning automation just says play)
+        if (command !== 'stop' && !(await playbackSnapshot(deps.covers).catch(() => null))?.player) {
+          const last = command === 'play' ? await lastResumeStart(deps) : null
+          if (!last) return fail(res, 409, 'provider_unavailable', 'Nothing is loaded to play - start something on the box first')
+          const r = await playerCommand(`current/${last.url}`)
+          if (r.status === 423) return fail(res, 409, 'provider_unavailable', 'Playing is blocked right now (listening time or quiet hours)')
+          if (!r.ok) return fail(res, 503, 'temporarily_unavailable', `The player answered ${r.status}`)
+          log(`play from "${client.client_name}": goes on with the last listened (${last.type})`)
+          return void res.json({ success: true })
+        }
         const r = await playerCommand(command)
         if (r.status === 423) return fail(res, 409, 'provider_unavailable', 'Playing is blocked right now (listening time or quiet hours)')
         if (!r.ok) return fail(res, 503, 'temporarily_unavailable', `The player answered ${r.status}`)
