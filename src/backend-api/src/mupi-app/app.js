@@ -363,7 +363,7 @@ function renderPageNav(page) {
     })
     main.append(nav)
   }
-  const siblings = page.parent?.startsWith('g-') ? state.schema.pages.filter((p) => p.parent === page.parent) : []
+  const siblings = groupPages(page)
   nav.dataset.sibs = String(siblings.length > 1 ? siblings.length : 0)
   nav.innerHTML = !page.parent
     ? ''
@@ -375,9 +375,18 @@ function renderPageNav(page) {
   updatePageNavSections(page)
 }
 
+// The pages of a page's settings group in the order the group's page lists them (its cards one after the other - not
+// the order of schema.json: TIDAL went from Home Assistant to WLED); those it does not list come after them
+function groupPages(page) {
+  if (!page.parent?.startsWith('g-')) return []
+  const order = (state.pages.get(page.parent)?.sections || []).flatMap((s) => (s.items || []).filter((i) => i.type === 'nav').map((i) => i.target))
+  const at = (p) => (order.includes(p.id) ? order.indexOf(p.id) : order.length)
+  return state.schema.pages.filter((p) => p.parent === page.parent).sort((a, b) => at(a) - at(b))
+}
+
 // Back / next under a page of a settings group (phone, tablet, small PC window: where "Auf dieser Seite" is not shown)
 function pager(page) {
-  const sibs = page.parent?.startsWith('g-') ? state.schema.pages.filter((p) => p.parent === page.parent) : []
+  const sibs = groupPages(page)
   const at = sibs.findIndex((p) => p.id === page.id)
   if (sibs.length < 2 || at < 0) return ''
   const btn = (p, kind, label) =>
