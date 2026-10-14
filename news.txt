@@ -2,7 +2,7 @@
 <b>App</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
-<li id='linews' class='linews'>Texts on the display: the preview of the screens (limit reached, quiet time, QR code for parents) stayed black or showed the login page - it was taken from the display's port 8200 by http, which a page opened with https may not show in a frame, and which lets in only the box itself or a session whose cookie it gets. It now comes through the app's own address (the web server passes the display's files on). The page says that a quiet time with a name of its own (Playtime > Quiet times) shows that name as the heading instead of the heading set here.</li>
+<li id='linews' class='linews'>Texts on the display: the preview of the screens (limit reached, quiet time, QR code for parents) stayed black or showed the login page - it was taken from the display's port 8200 by http, which a page opened with https may not show in a frame, and which lets in only the box itself or a session whose cookie it gets. It now comes through the app's own address (the web server passes the display's files and the theme on), and it shows the screens in the look of the theme the box uses; the fields under it are spaced properly again. The page says that a quiet time with a name of its own (Playtime > Quiet times) shows that name as the heading instead of the heading set here.</li>
 </ul>
 <h3>DEV 5.0.10 - changes compared to 5.0.9</h3>
 <b>Security</b>

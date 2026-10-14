@@ -559,6 +559,8 @@ select.input { appearance: auto; }
 .bs-maint .t { display: block; line-height: 1.05; }
 .bs-maint .s { display: inline; line-height: 1.9; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 
+/* the texts' fields under the preview: spaced as in a card (their dividing lines and the hint's -8px count on it) */
+#dt-fields { display: flex; flex-direction: column; gap: 14px; }
 .dt-frame { position: relative; aspect-ratio: 800 / 480; border-radius: var(--mp-r-sm); overflow: hidden; background: #000; --s: .5; }
 .dt-frame iframe { position: absolute; left: 0; top: 0; width: 800px; height: 480px; border: 0; transform: scale(var(--s)); transform-origin: 0 0; pointer-events: none; }
 .live-shot { aspect-ratio: 800 / 480; border-radius: var(--mp-r-sm); overflow: hidden; background: #000; }
