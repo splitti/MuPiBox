@@ -10,6 +10,11 @@
 <li id='linews' class='linews'>When the display could not read the box's settings once at its start (e.g. right after an update), it stayed without its theme - the layout of before the themes, whatever theme was set - until the next restart, and it went dark after one minute instead of the time set. It now asks again until it gets them.</li>
 <li id='linews' class='linews'>No square frame around the big cover in the middle any more: with a keyboard at the box (or a remote that types, VNC), Chromium drew its focus frame around the cover's tile.</li>
 </ul>
+<b>Spotify</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Podcasts of Spotify: an episode Spotify no longer offers comes in its list as an empty entry, and the whole list of the show failed on it - the show showed as not available once the list kept on the box was gone (e.g. after an update). Such entries are left out now (the album search too), and the next pages of a list go by the size of a page, so no episode comes twice when one was left out.</li>
+</ul>
 <h3>DEV 5.0.10 - changes compared to 5.0.9</h3>
 <b>Security</b>
 </ul>
