@@ -174,7 +174,7 @@ function currentPage() {
 // takes no step of its own - back (the arrow at the top, the browser's back) leads up to the group, not page by page
 const groupSiblings = (a, b) => !!a && !!b && a.id !== b.id && !!a.parent && a.parent === b.parent && a.parent.startsWith('g-')
 function go(id) {
-  // (an address outside the app, e.g. "Erweiterte Einstellungen": whoever wired the click)
+  // (an address outside the app, e.g. the admin interface: whoever wired the click)
   if (String(id).startsWith('ext:')) return openExternal(id.slice(4))
   if (groupSiblings(currentPage(), state.pages.get(id))) {
     if (location.hash !== hashOf(id)) history.replaceState(null, '', hashOf(id))
@@ -1039,7 +1039,7 @@ function startSkeleton() {
       ${navRow('telegram', 'Telegram', 'Eltern-Bot', 'tg')}
       ${navRow('g-system', 'System', 'Über die Box, Neustart, Updates', 'gear')}
       ${navRow('ext:manual', 'Handbuch', 'Anleitung zu Box, Display und App', 'book')}
-      ${navRow('ext:admin', 'Erweiterte Einstellungen', 'Legacy · die bisherige Oberfläche', 'ext')}
+      ${navRow('ext:admin', 'Admin-Interface', 'Legacy · die bisherige Oberfläche', 'ext')}
     </div></section>`,
   ]
 }
@@ -9006,7 +9006,7 @@ function expertsTop() {
     // a one-time ticket signs in, see backend-api eltern/dietpi-dashboard.ts)
     `<section class="card"><h2>Weitere Werkzeuge</h2>
       <div class="row"><span class="lbl"><b>DietPi-Dashboard erlauben</b><small>Systemverwaltung von DietPi mit einem Terminal mit Root-Rechten. Erreichbar nur über diese App, nicht direkt im Netz.</small></span><label class="switch"><input type="checkbox" id="ex-dash" ${adm.dash?.enabled ? 'checked' : ''} aria-label="DietPi-Dashboard erlauben"><span></span></label></div>
-      <div class="navlist">${adm.dash?.enabled ? navRow('ext:dietpi', 'DietPi-Dashboard', adm.dash.active ? 'öffnet sich in einem neuen Fenster' : 'startet gerade …', 'ext') : ''}${navRow('ext:admin', 'Bisheriges Admin-Interface', 'Port 80', 'ext')}</div></section>`,
+      <div class="navlist">${adm.dash?.enabled ? navRow('ext:dietpi', 'DietPi-Dashboard', adm.dash.active ? 'öffnet sich in einem neuen Fenster' : 'startet gerade …', 'ext') : ''}${navRow('ext:admin', 'Admin-Interface', 'Legacy · die bisherige Oberfläche', 'ext')}</div></section>`,
     `<section class="card wide"><h2>Konfiguration direkt bearbeiten</h2>
       <div class="note warn">${icon('info', 18)}<span>Fehler hier können die Box lahmlegen. Nur ändern, was du kennst – vorher ein Backup ziehen.</span></div>
       <div class="field"><label for="ex-file">Datei</label><select class="input" id="ex-file">${adm.json.keys.map((k) => `<option value="${k}"${k === adm.json.key ? ' selected' : ''}>${esc(JSON_LABEL[k] ?? k)}</option>`).join('')}</select></div>

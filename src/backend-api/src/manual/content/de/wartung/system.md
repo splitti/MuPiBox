@@ -38,7 +38,7 @@ Die Änderungen gelten nach einem Neustart des Displays. Den startest du gleich 
 **Einstellungen › System › Experten**:
 
 - **Hostname**: der Name der Box im Netzwerk, zum Beispiel `mupibox` (erreichbar als `mupibox.local`). Nur Buchstaben, Ziffern und Bindestrich. Wird nach einem Neustart übernommen.
-- **Weitere Werkzeuge**: das **DietPi-Dashboard** (Systemverwaltung von DietPi) und das **Bisherige Admin-Interface**. Beide öffnen sich in einem neuen Fenster. Das DietPi-Dashboard hat ein Terminal mit Root-Rechten und ist deshalb ab Werk aus: Mit **DietPi-Dashboard erlauben** schaltest du es ein. Es öffnet sich dann nur über die App, ohne eigene Anmeldung. Wer Port 5252 direkt im Browser aufruft, landet bei einer Passwortabfrage, an der niemand vorbeikommt.
+- **Weitere Werkzeuge**: das **DietPi-Dashboard** (Systemverwaltung von DietPi) und das **Admin-Interface** (Legacy, die bisherige Oberfläche). Beide öffnen sich in einem neuen Fenster. Das DietPi-Dashboard hat ein Terminal mit Root-Rechten und ist deshalb ab Werk aus: Mit **DietPi-Dashboard erlauben** schaltest du es ein. Es öffnet sich dann nur über die App, ohne eigene Anmeldung. Wer Port 5252 direkt im Browser aufruft, landet bei einer Passwortabfrage, an der niemand vorbeikommt.
 - **Konfiguration direkt bearbeiten**: ein Editor für die JSON-Dateien der Box. Unter **Datei** wählst du, welche, zum Beispiel `mupiboxconfig.json` (Box), `data.json` (Bibliothek) oder `config.json` (Server).
 - **Zurücksetzen**: **Box-Konfiguration zurücksetzen** (alle Einstellungen auf den Stand der installierten Version, das Passwort bleibt), **Bibliothek leeren** (alle Einträge der Bibliothek weg, die Dateien bleiben) und **Server-Konfiguration zurücksetzen**.
 

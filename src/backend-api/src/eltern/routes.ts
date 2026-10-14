@@ -498,7 +498,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
 
   /**
    * POST /api/app/admin-ticket - a one-time ticket that signs the app's user in to the admin interface (the app's
-   * "Erweiterte Einstellungen"), without the password: the admin interface (header.php) redeems it through the box
+   * "Admin-Interface", Legacy), without the password: the admin interface (header.php) redeems it through the box
    * itself, POST /admin-ticket/redeem {ticket}. 60 seconds, single use.
    */
   router.post('/admin-ticket', requireSession, requireCsrf, (_req, res) => {
