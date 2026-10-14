@@ -277,9 +277,11 @@ async function battery(deps: HaDeps): Promise<{ percent: number | null; charging
 }
 
 // The operating state (contract 1.1, optional): playing, in_use (something loaded, paused), display_off, idle. The
-// Classic has no standby of its own - and nothing is sent when the display's state cannot be read.
+// Classic has no standby of its own - and nothing is sent when the display's state cannot be read, or the player did
+// not answer (snap null: not "nothing loaded" - it may well be playing, with the display off or on)
 async function powerState(deps: HaDeps, snap: { player?: unknown; playing?: unknown } | null): Promise<string | undefined> {
-  if (snap?.playing) return 'playing'
+  if (!snap) return undefined
+  if (snap.playing) return 'playing'
   let monitor = ''
   try {
     if (deps.monitorFile) monitor = String((JSON.parse(await fsp.readFile(deps.monitorFile, 'utf8')) as { monitor?: unknown }).monitor ?? '')
@@ -287,7 +289,7 @@ async function powerState(deps: HaDeps, snap: { player?: unknown; playing?: unkn
     // unreadable: unknown
   }
   if (monitor.toLowerCase() === 'off') return 'display_off'
-  if (snap?.player) return 'in_use'
+  if (snap.player) return 'in_use'
   return monitor.toLowerCase() === 'on' ? 'idle' : undefined
 }
 
