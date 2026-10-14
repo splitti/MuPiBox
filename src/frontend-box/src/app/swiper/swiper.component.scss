@@ -346,6 +346,9 @@ swiper-container.coverflow {
         border: 0;
         background: transparent;
         -webkit-tap-highlight-color: transparent;
+        // no square focus ring around the round cover: a keyboard on the box (or a remote that types, VNC) focused the
+        // button, and Chromium drew its outline at the button's 280 x 280 - the display is not worked by keyboard
+        outline: none;
         transition:
             transform 320ms cubic-bezier(0.2, 0.7, 0.2, 1),
             opacity 320ms;
