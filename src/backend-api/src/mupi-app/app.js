@@ -11,7 +11,10 @@ import { icon } from './icons.js'
 const API = '/api/app'
 // The app's own port (8200): the display's pages are there, also when the app is used through port 80 (whose root is
 // the admin interface's)
-const BOX_ORIGIN = `http://${location.hostname}:8200`
+// The display's pages in a frame of the app (the preview of the texts on the display): through the app's own address -
+// http://<box>:8200 is no frame for a page opened with https, and port 8200 lets in only the box itself or a session
+// whose cookie it gets (the web server passes /text-preview and the display's files on, 90-mupibox-app.conf)
+const BOX_ORIGIN = location.origin
 // Where Spotify sends the browser back after the login: https through the box's web server (port 443) - Spotify takes
 // no http addresses except 127.0.0.1. It has to be entered in the Spotify app. Which one the box uses comes from the box
 // (eltern/oauth.ts redirectModeOf: /app/spotify-callback, or /spotify.php for a box set up before the app).
@@ -6280,7 +6283,10 @@ function textsTop() {
       <div class="dt-frame" id="dt-frame"><iframe src="${BOX_ORIGIN}/text-preview?screen=${disp.dtScreen}" title="Vorschau" tabindex="-1"></iframe></div>
       <div id="dt-fields">${DT_FIELDS.filter(([sc]) => sc === disp.dtScreen)
         .map(([, key, label]) => `<div class="field"><label for="dt-${key}">${label}</label><input class="input" id="dt-${key}" data-dt="${key}" maxlength="120" value="${esc(disp.dt.texts[key] ?? '')}" placeholder="${esc(defaults[key] ?? '')}"></div>`)
-        .join('')}</div>
+        .join('')}${
+        // (the display shows a quiet window's own name as the heading - "my heading is not taken" without it)
+        disp.dtScreen === 'quiet' ? '<p class="help">Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.</p>' : ''
+      }</div>
       <div class="btns"><button class="btn primary" id="dt-save">Texte speichern</button></div></section>`,
   ]
 }

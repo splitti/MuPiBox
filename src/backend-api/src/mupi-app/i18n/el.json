@@ -2812,5 +2812,6 @@
  "MQTT-Discovery": "MQTT Discovery",
  "Als Gerät anmelden": "Δήλωση ως συσκευή",
  "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Τα συστήματα έξυπνου σπιτιού με MQTT Discovery προσθέτουν μόνα τους το κουτί ως συσκευή, με τις τιμές και τα κουμπιά του.",
- "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Το κουτί στέλνει στο Topic/Client-ID/Client-ID/…, π.χ. MuPiBox/Boxname/MuPiBox/MuPiBox/state"
+ "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Το κουτί στέλνει στο Topic/Client-ID/Client-ID/…, π.χ. MuPiBox/Boxname/MuPiBox/MuPiBox/state",
+ "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Αν μια ώρα ησυχίας έχει όνομα (Χρόνος παιχνιδιού › Ώρες ησυχίας), εμφανίζεται αυτό το όνομα ως επικεφαλίδα."
 }

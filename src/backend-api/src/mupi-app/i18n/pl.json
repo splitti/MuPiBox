@@ -2812,5 +2812,6 @@
  "MQTT-Discovery": "MQTT Discovery",
  "Als Gerät anmelden": "Zgłaszaj jako urządzenie",
  "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Systemy smart home z MQTT Discovery same dodają pudełko jako urządzenie, z jego wartościami i przyciskami.",
- "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Pudełko wysyła pod Topic/Client-ID/Client-ID/…, np. MuPiBox/Boxname/MuPiBox/MuPiBox/state"
+ "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Pudełko wysyła pod Topic/Client-ID/Client-ID/…, np. MuPiBox/Boxname/MuPiBox/MuPiBox/state",
+ "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Jeśli czas odpoczynku ma nazwę (Czas słuchania › Czasy odpoczynku), jako nagłówek pojawia się ta nazwa."
 }

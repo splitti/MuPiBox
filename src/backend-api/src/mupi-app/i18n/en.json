@@ -2812,5 +2812,6 @@
  "MQTT-Discovery": "MQTT discovery",
  "Als Gerät anmelden": "Announce as a device",
  "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Smart-home systems with MQTT discovery add the box as a device by themselves, with its values and buttons.",
- "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "The box sends under Topic/Client-ID/Client-ID/…, e.g. MuPiBox/Boxname/MuPiBox/MuPiBox/state"
+ "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "The box sends under Topic/Client-ID/Client-ID/…, e.g. MuPiBox/Boxname/MuPiBox/MuPiBox/state",
+ "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "If a quiet time has a name (Playtime › Quiet times), that name is shown as the heading."
 }

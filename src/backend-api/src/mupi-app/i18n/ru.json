@@ -2812,5 +2812,6 @@
  "MQTT-Discovery": "MQTT Discovery",
  "Als Gerät anmelden": "Регистрировать как устройство",
  "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Системы умного дома с MQTT Discovery сами добавят бокс как устройство — с его значениями и кнопками.",
- "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Бокс отправляет в Topic/Client-ID/Client-ID/…, например, MuPiBox/Boxname/MuPiBox/MuPiBox/state"
+ "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Бокс отправляет в Topic/Client-ID/Client-ID/…, например, MuPiBox/Boxname/MuPiBox/MuPiBox/state",
+ "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Если у периода тишины есть название (Время прослушивания › Периоды отдыха), в заголовке показывается это название."
 }

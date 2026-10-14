@@ -2812,5 +2812,6 @@
  "MQTT-Discovery": "MQTT Discovery",
  "Als Gerät anmelden": "Cihaz olarak bildir",
  "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "MQTT Discovery destekleyen akıllı ev sistemleri kutuyu değerleri ve düğmeleriyle kendiliğinden cihaz olarak ekler.",
- "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Kutu Topic/Client-ID/Client-ID/… altında gönderir, ör. MuPiBox/Boxname/MuPiBox/MuPiBox/state"
+ "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Kutu Topic/Client-ID/Client-ID/… altında gönderir, ör. MuPiBox/Boxname/MuPiBox/MuPiBox/state",
+ "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Bir sessiz saatin adı varsa (Oyun süresi › Sessiz saatler), başlık olarak bu ad görünür."
 }

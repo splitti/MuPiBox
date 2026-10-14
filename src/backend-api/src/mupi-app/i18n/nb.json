@@ -2812,5 +2812,6 @@
  "MQTT-Discovery": "MQTT-discovery",
  "Als Gerät anmelden": "Meld som enhet",
  "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Smarthussystemer med MQTT-discovery legger selv til boksen som enhet, med verdier og knapper.",
- "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Boksen sender under Topic/Client-ID/Client-ID/…, f.eks. MuPiBox/Boxname/MuPiBox/MuPiBox/state"
+ "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Boksen sender under Topic/Client-ID/Client-ID/…, f.eks. MuPiBox/Boxname/MuPiBox/MuPiBox/state",
+ "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Har en hviletid et navn (Spilletid › Hviletider), vises navnet som overskrift."
 }

@@ -2812,5 +2812,6 @@
  "MQTT-Discovery": "MQTT-discovery",
  "Als Gerät anmelden": "Ilmoita laitteena",
  "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Älykodin järjestelmät, joissa on MQTT-discovery, lisäävät laatikon itse laitteeksi arvoineen ja painikkeineen.",
- "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Laatikko lähettää aiheisiin Topic/Client-ID/Client-ID/…, esim. MuPiBox/Boxname/MuPiBox/MuPiBox/state"
+ "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Laatikko lähettää aiheisiin Topic/Client-ID/Client-ID/…, esim. MuPiBox/Boxname/MuPiBox/MuPiBox/state",
+ "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Jos hiljaisella ajalla on nimi (Soittoaika › Hiljaiset hetket), otsikkona näkyy tämä nimi."
 }
