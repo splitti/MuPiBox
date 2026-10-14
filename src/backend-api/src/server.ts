@@ -1170,6 +1170,7 @@ const haDeps = {
     playingTrackCover: async (file: string) => ((await trackCover(file).catch(() => undefined)) ? `/api/track-cover?file=${encodeURIComponent(file)}` : null),
   },
   resumeFile: activeresumeFile,
+  monitorFile,
 }
 registerHaDisplayRoute(app)
 const haRouter = express.Router()

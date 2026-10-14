@@ -55,6 +55,8 @@ export interface HaDeps {
   covers: PlaybackCovers
   /** the resume list the display shows ("Zuletzt gehört": active_resume.json) - what a "play" with nothing loaded goes on with */
   resumeFile?: string
+  /** monitor.json: whether the display is on ({"monitor": "On" | "Off"}) - for the operating state in /state */
+  monitorFile?: string
 }
 
 const log = (msg: string) => console.log(`${new Date().toLocaleString()}: [ha-api] ${msg}`)
@@ -225,11 +227,25 @@ function ipAddress(): string | null {
   return null
 }
 
-async function battery(deps: HaDeps): Promise<{ percent: number | null; charging: boolean | null }> {
+// The MuPiHAT's own values for the contract's optional device fields (1.1: integration 0.5.0 shows them): only
+// with a MuPiHAT, and only what it measured - absent, never 0
+type HatValues = { external_power: boolean; battery_voltage_mv?: number; battery_current_ma?: number; mupihat_temperature_c?: number }
+
+async function battery(deps: HaDeps): Promise<{ percent: number | null; charging: boolean | null; hat: HatValues | null }> {
   const hat = deps.getMupiboxConfig()?.mupihat as { hat_active?: unknown } | undefined
-  if (hat?.hat_active !== true) return { percent: null, charging: null }
+  if (hat?.hat_active !== true) return { percent: null, charging: null, hat: null }
   try {
-    const j = JSON.parse(await fsp.readFile('/tmp/mupihat.json', 'utf8')) as { Bat_Percent?: unknown; Charger_Status?: unknown; Charge_Phase?: unknown; IBus?: unknown }
+    const j = JSON.parse(await fsp.readFile('/tmp/mupihat.json', 'utf8')) as {
+      Bat_Percent?: unknown
+      Charger_Status?: unknown
+      Charge_Phase?: unknown
+      IBus?: unknown
+      Vbus?: unknown
+      Vbat?: unknown
+      Ibat?: unknown
+      Temp?: unknown
+      BatteryConnected?: unknown
+    }
     const pct = Number(j.Bat_Percent)
     // charging = on the charger, as the display shows it (its bolt: current flows in at the USB input) - the charger's
     // status said "not charging" once the battery was full ("Charge Termination Done") while the box hung on the
@@ -241,10 +257,43 @@ async function battery(deps: HaDeps): Promise<{ percent: number | null; charging
       : status
         ? /charge|cc|cv|taper|top-off/.test(status) && !/not charging|done|termination/.test(status)
         : null
-    return { percent: Number.isFinite(pct) && pct >= 0 && pct <= 100 ? Math.round(pct) : null, charging }
+    // external power: voltage at the USB input (the charger reports some 5 V there while a power supply is in; IBus
+    // alone is 0 when the box takes nothing over it). Battery current from the charger: + charging, - discharging.
+    const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined)
+    const vbus = num(j.Vbus)
+    const values: HatValues = { external_power: vbus !== undefined ? vbus >= 4000 : Number.isFinite(ibus) && ibus > 0 }
+    if (Number(j.BatteryConnected) !== 0) {
+      const vbat = num(j.Vbat)
+      const ibat = num(j.Ibat)
+      if (vbat !== undefined && vbat > 0) values.battery_voltage_mv = Math.round(vbat)
+      if (ibat !== undefined) values.battery_current_ma = Math.round(ibat)
+    }
+    const temp = num(j.Temp)
+    if (temp !== undefined && temp > -40 && temp < 150) values.mupihat_temperature_c = Math.round(temp * 10) / 10
+    return { percent: Number.isFinite(pct) && pct >= 0 && pct <= 100 ? Math.round(pct) : null, charging, hat: values }
   } catch {
-    return { percent: null, charging: null }
+    return { percent: null, charging: null, hat: null }
   }
+}
+
+// The operating state (contract 1.1, optional): playing, in_use (something loaded, paused), display_off, idle. The
+// Classic has no standby of its own - and nothing is sent when the display's state cannot be read.
+async function powerState(deps: HaDeps, snap: { player?: unknown; playing?: unknown } | null): Promise<string | undefined> {
+  if (snap?.playing) return 'playing'
+  let monitor = ''
+  try {
+    if (deps.monitorFile) monitor = String((JSON.parse(await fsp.readFile(deps.monitorFile, 'utf8')) as { monitor?: unknown }).monitor ?? '')
+  } catch {
+    // unreadable: unknown
+  }
+  if (monitor.toLowerCase() === 'off') return 'display_off'
+  if (snap?.player) return 'in_use'
+  return monitor.toLowerCase() === 'on' ? 'idle' : undefined
+}
+
+// Where the box's app is for the host Home Assistant reached it under ("Visit" on the device page: web_url, 1.1)
+function webUrl(req: Request): string | null {
+  return /^[A-Za-z0-9.-]+$/.test(req.hostname) ? `https://${req.hostname}/app/` : null
 }
 
 async function muted(): Promise<boolean | null> {
@@ -452,13 +501,17 @@ function buildApp(deps: HaDeps): Express {
     }
   })
 
-  v1.get('/info', requireScope('read'), async (_req, res) => {
-    const mb = (deps.getMupiboxConfig()?.mupibox ?? {}) as { host?: unknown; version?: unknown }
+  v1.get('/info', requireScope('read'), async (req, res) => {
+    const mb = (deps.getMupiboxConfig()?.mupibox ?? {}) as { host?: unknown; version?: unknown; boxName?: unknown }
+    const boxName = typeof mb.boxName === 'string' ? mb.boxName.trim().slice(0, 64) : ''
     res.json({
       api_version: 1,
       device_id: await deviceId(),
-      // (the box's name; "MuPiBox" in front only when it is not in it already - a box called MuPiBox was "MuPiBox MuPiBox")
-      name: ((h) => (/mupibox/i.test(h) ? h : `MuPiBox ${h}`))(String(mb.host || os.hostname())),
+      // The box's name as the app shows it (its own name, e.g. a child's box); without one the host name, with
+      // "MuPiBox" in front only when it is not in it already - a box called MuPiBox was "MuPiBox MuPiBox". The
+      // integration (0.5.1) takes it for the device instead of "MuPiBox (<IP>)" - but not a bare "MuPiBox".
+      name: boxName || ((h) => (/mupibox/i.test(h) ? h : `MuPiBox ${h}`))(String(mb.host || os.hostname())),
+      web_url: webUrl(req),
       product: 'mupibox',
       generation: 'classic',
       software_version: String(mb.version ?? '') || null,
@@ -492,7 +545,15 @@ function buildApp(deps: HaDeps): Express {
       : { state: 'unavailable', provider: null, title: null, artist: null, album: null, media_id: null, duration: null, position: null, cover_url: null, volume: null, muted: mute }
     res.json({
       playback,
-      device: { battery_percent: bat.percent, charging: bat.charging, wifi_signal_dbm: dbm, ip_address: ipAddress(), uptime_seconds: Math.round(os.uptime()) },
+      device: {
+        battery_percent: bat.percent,
+        charging: bat.charging,
+        wifi_signal_dbm: dbm,
+        ip_address: ipAddress(),
+        uptime_seconds: Math.round(os.uptime()),
+        ...(bat.hat ?? {}),
+        ...((s) => (s ? { power_state: s } : {}))(await powerState(deps, snap)),
+      },
       metrics: sys,
     })
   })
