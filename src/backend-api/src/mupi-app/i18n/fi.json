@@ -2813,5 +2813,13 @@
  "Als Gerät anmelden": "Ilmoita laitteena",
  "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Älykodin järjestelmät, joissa on MQTT-discovery, lisäävät laatikon itse laitteeksi arvoineen ja painikkeineen.",
  "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Laatikko lähettää aiheisiin Topic/Client-ID/Client-ID/…, esim. MuPiBox/Boxname/MuPiBox/MuPiBox/state",
- "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Jos hiljaisella ajalla on nimi (Soittoaika › Hiljaiset hetket), otsikkona näkyy tämä nimi."
+ "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Jos hiljaisella ajalla on nimi (Soittoaika › Hiljaiset hetket), otsikkona näkyy tämä nimi.",
+ "mpv wird installiert": "mpv:tä asennetaan",
+ "Das dauert ein paar Minuten, danach startet der Player neu.": "Tämä kestää muutaman minuutin, sen jälkeen soitin käynnistyy uudelleen.",
+ "mpv fehlt – nur Spotify spielt": "mpv puuttuu – vain Spotify soi",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Antippen, um ihn zu installieren.": "Ilman mpv-soitinta kirjasto, NAS, radio, podcastit ja kuulutukset eivät soi. Asenna napauttamalla.",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Ilman mpv-soitinta kirjasto, NAS, radio, podcastit ja kuulutukset eivät soi. Viimeisin yritys epäonnistui (internet?) – yritä uudelleen napauttamalla.",
+ "mpv installieren?": "Asennetaanko mpv?",
+ "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "Laatikko lataa soittimen internetistä ja asentaa sen. Tämä kestää muutaman minuutin, sen jälkeen soitin käynnistyy uudelleen.",
+ "mpv ist installiert, der Player startet neu": "mpv on asennettu, soitin käynnistyy uudelleen"
 }

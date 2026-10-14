@@ -1364,7 +1364,7 @@ function nextQuiet(schedule) {
 }
 
 async function loadNotices(root) {
-  const [hat, sync, access, auth] = await Promise.all([api('/api/mupihat'), api('/api/spotify-sync/status'), api(`${API}/spotify-access`), api(`${API}/auth-state`)])
+  const [hat, sync, access, auth, tools] = await Promise.all([api('/api/mupihat'), api('/api/spotify-sync/status'), api(`${API}/spotify-access`), api(`${API}/auth-state`), api(`${API}/player-tools`)])
   const notes = []
   // no password, or the login off: everyone in the home network can set up the box - said every time, it is not closed
   // for good (the parents decide on the page Passwort); with the login on but the well-known default password, that
@@ -1372,6 +1372,24 @@ async function loadNotices(root) {
     notes.push(['lock', auth.body.passwordSet === false ? 'Kein Passwort gesetzt' : 'Anmeldung ist aus', 'Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.', 'passwort'])
   } else if (auth.ok && auth.body?.defaultPassword) {
     notes.push(['lock', 'Standardpasswort aktiv', 'Die Box nutzt noch das Standardpasswort, das in jeder Anleitung steht. Antippen, um ein eigenes festzulegen.', 'passwort'])
+  }
+  // mpv, the player for everything but Spotify, missing (an update whose installation failed - there is no other
+  // player since 5.0.10): installed from here, the start page says when it is done
+  clearTimeout(root.mpvCheck)
+  if (tools.ok && (tools.body?.mpv === false || tools.body?.job?.running)) {
+    if (tools.body.job?.running) {
+      notes.push(['sync', 'mpv wird installiert', 'Das dauert ein paar Minuten, danach startet der Player neu.', () => {}])
+      root.mpvCheck = setTimeout(() => root.isConnected && loadNotices(root), 10000)
+    } else {
+      const text =
+        tools.body.job?.ok === false
+          ? 'Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.'
+          : 'Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Antippen, um ihn zu installieren.'
+      notes.push(['music', 'mpv fehlt – nur Spotify spielt', text, () => installMpv(root)])
+    }
+  } else if (tools.ok && tools.body?.job?.ok === true && root.mpvInstalling) {
+    root.mpvInstalling = false
+    toast('mpv ist installiert, der Player startet neu')
   }
   const pct = hat.body?.Bat_Percent
   const battery = hat.ok && !noBattery(hat.body)
@@ -1427,6 +1445,14 @@ async function loadNotices(root) {
     }
   }
   if (band?.isConnected) drawNotices(band, items)
+}
+
+async function installMpv(root) {
+  if (!(await ask('mpv installieren?', 'Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.', 'Installieren'))) return
+  const r = await api(`${API}/player-tools/install-mpv`, { method: 'POST', body: {} })
+  if (!r.ok && r.status !== 409) return toast('Das hat nicht geklappt', 'info')
+  root.mpvInstalling = true
+  loadNotices(root)
 }
 
 // the whole news over the start page (not the page "Über die Box": the parents stay where they are)

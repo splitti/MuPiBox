@@ -2813,5 +2813,13 @@
  "Als Gerät anmelden": "Регистрировать как устройство",
  "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Системы умного дома с MQTT Discovery сами добавят бокс как устройство — с его значениями и кнопками.",
  "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Бокс отправляет в Topic/Client-ID/Client-ID/…, например, MuPiBox/Boxname/MuPiBox/MuPiBox/state",
- "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Если у периода тишины есть название (Время прослушивания › Периоды отдыха), в заголовке показывается это название."
+ "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Если у периода тишины есть название (Время прослушивания › Периоды отдыха), в заголовке показывается это название.",
+ "mpv wird installiert": "mpv устанавливается",
+ "Das dauert ein paar Minuten, danach startet der Player neu.": "Это займёт несколько минут, затем плеер перезапустится.",
+ "mpv fehlt – nur Spotify spielt": "Нет mpv – играет только Spotify",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Antippen, um ihn zu installieren.": "Без плеера mpv не воспроизводятся библиотека, NAS, радио, подкасты и объявления. Нажмите, чтобы установить его.",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Без плеера mpv не воспроизводятся библиотека, NAS, радио, подкасты и объявления. Последняя попытка не удалась (интернет?) – нажмите, чтобы попробовать снова.",
+ "mpv installieren?": "Установить mpv?",
+ "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "Бокс загрузит плеер из интернета и установит его. Это займёт несколько минут, затем плеер перезапустится.",
+ "mpv ist installiert, der Player startet neu": "mpv установлен, плеер перезапускается"
 }

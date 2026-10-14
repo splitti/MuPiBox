@@ -2813,5 +2813,13 @@
  "Als Gerät anmelden": "Announce as a device",
  "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Smart-home systems with MQTT discovery add the box as a device by themselves, with its values and buttons.",
  "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "The box sends under Topic/Client-ID/Client-ID/…, e.g. MuPiBox/Boxname/MuPiBox/MuPiBox/state",
- "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "If a quiet time has a name (Playtime › Quiet times), that name is shown as the heading."
+ "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "If a quiet time has a name (Playtime › Quiet times), that name is shown as the heading.",
+ "mpv wird installiert": "Installing mpv",
+ "Das dauert ein paar Minuten, danach startet der Player neu.": "This takes a few minutes, then the player restarts.",
+ "mpv fehlt – nur Spotify spielt": "mpv missing – only Spotify plays",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Antippen, um ihn zu installieren.": "Without the mpv player, the library, NAS, radio, podcasts and announcements don’t play. Tap to install it.",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Without the mpv player, the library, NAS, radio, podcasts and announcements don’t play. The last attempt failed (internet?) – tap to try again.",
+ "mpv installieren?": "Install mpv?",
+ "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "The box downloads the player from the internet and installs it. This takes a few minutes, then the player restarts.",
+ "mpv ist installiert, der Player startet neu": "mpv is installed, the player restarts"
 }

@@ -2813,5 +2813,13 @@
  "Als Gerät anmelden": "Реєструвати як пристрій",
  "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Системи розумного дому з MQTT Discovery самі додадуть бокс як пристрій — з його значеннями й кнопками.",
  "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Бокс надсилає в Topic/Client-ID/Client-ID/…, напр., MuPiBox/Boxname/MuPiBox/MuPiBox/state",
- "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Якщо період тиші має назву (Час гри › Періоди відпочинку), у заголовку показується ця назва."
+ "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Якщо період тиші має назву (Час гри › Періоди відпочинку), у заголовку показується ця назва.",
+ "mpv wird installiert": "mpv встановлюється",
+ "Das dauert ein paar Minuten, danach startet der Player neu.": "Це займе кілька хвилин, потім плеєр перезапуститься.",
+ "mpv fehlt – nur Spotify spielt": "Немає mpv – грає лише Spotify",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Antippen, um ihn zu installieren.": "Без плеєра mpv не відтворюються бібліотека, NAS, радіо, подкасти й оголошення. Торкніться, щоб установити його.",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Без плеєра mpv не відтворюються бібліотека, NAS, радіо, подкасти й оголошення. Остання спроба не вдалася (інтернет?) – торкніться, щоб спробувати ще раз.",
+ "mpv installieren?": "Установити mpv?",
+ "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "Бокс завантажить плеєр з інтернету й установить його. Це займе кілька хвилин, потім плеєр перезапуститься.",
+ "mpv ist installiert, der Player startet neu": "mpv установлено, плеєр перезапускається"
 }

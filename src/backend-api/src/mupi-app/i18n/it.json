@@ -2813,5 +2813,13 @@
  "Als Gerät anmelden": "Annuncia come dispositivo",
  "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "I sistemi smart home con MQTT Discovery aggiungono da soli il box come dispositivo, con i suoi valori e pulsanti.",
  "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Il box invia sotto Topic/Client-ID/Client-ID/…, ad es. MuPiBox/Boxname/MuPiBox/MuPiBox/state",
- "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Se un periodo di quiete ha un nome (Tempo di ascolto › Tempi di silenzio), come titolo appare quel nome."
+ "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Se un periodo di quiete ha un nome (Tempo di ascolto › Tempi di silenzio), come titolo appare quel nome.",
+ "mpv wird installiert": "Installazione di mpv",
+ "Das dauert ein paar Minuten, danach startet der Player neu.": "Ci vogliono alcuni minuti, poi il lettore si riavvia.",
+ "mpv fehlt – nur Spotify spielt": "Manca mpv – suona solo Spotify",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Antippen, um ihn zu installieren.": "Senza il lettore mpv non suonano libreria, NAS, radio, podcast e annunci. Tocca per installarlo.",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Senza il lettore mpv non suonano libreria, NAS, radio, podcast e annunci. L’ultimo tentativo non è riuscito (internet?) – tocca per riprovare.",
+ "mpv installieren?": "Installare mpv?",
+ "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "Il box scarica il lettore da internet e lo installa. Ci vogliono alcuni minuti, poi il lettore si riavvia.",
+ "mpv ist installiert, der Player startet neu": "mpv è installato, il lettore si riavvia"
 }

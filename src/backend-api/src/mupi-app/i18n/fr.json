@@ -2813,5 +2813,13 @@
  "Als Gerät anmelden": "Annoncer comme appareil",
  "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Les systèmes domotiques compatibles avec la découverte MQTT ajoutent la box d’eux-mêmes comme appareil, avec ses valeurs et ses boutons.",
  "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "La box envoie sous Topic/Client-ID/Client-ID/…, p. ex. MuPiBox/Boxname/MuPiBox/MuPiBox/state",
- "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Si une heure calme a un nom (Temps d'écoute › Heures calmes), ce nom s’affiche comme titre."
+ "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Si une heure calme a un nom (Temps d'écoute › Heures calmes), ce nom s’affiche comme titre.",
+ "mpv wird installiert": "Installation de mpv",
+ "Das dauert ein paar Minuten, danach startet der Player neu.": "Cela prend quelques minutes, puis le lecteur redémarre.",
+ "mpv fehlt – nur Spotify spielt": "mpv manquant – seul Spotify fonctionne",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Antippen, um ihn zu installieren.": "Sans le lecteur mpv, la bibliothèque, le NAS, la radio, les podcasts et les annonces ne sont pas lus. Touchez pour l’installer.",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Sans le lecteur mpv, la bibliothèque, le NAS, la radio, les podcasts et les annonces ne sont pas lus. La dernière tentative a échoué (internet ?) – touchez pour réessayer.",
+ "mpv installieren?": "Installer mpv ?",
+ "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "La box télécharge le lecteur depuis internet et l’installe. Cela prend quelques minutes, puis le lecteur redémarre.",
+ "mpv ist installiert, der Player startet neu": "mpv est installé, le lecteur redémarre"
 }

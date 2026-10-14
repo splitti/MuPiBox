@@ -2813,5 +2813,13 @@
  "Als Gerät anmelden": "Zgłaszaj jako urządzenie",
  "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Systemy smart home z MQTT Discovery same dodają pudełko jako urządzenie, z jego wartościami i przyciskami.",
  "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Pudełko wysyła pod Topic/Client-ID/Client-ID/…, np. MuPiBox/Boxname/MuPiBox/MuPiBox/state",
- "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Jeśli czas odpoczynku ma nazwę (Czas słuchania › Czasy odpoczynku), jako nagłówek pojawia się ta nazwa."
+ "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Jeśli czas odpoczynku ma nazwę (Czas słuchania › Czasy odpoczynku), jako nagłówek pojawia się ta nazwa.",
+ "mpv wird installiert": "Instalowanie mpv",
+ "Das dauert ein paar Minuten, danach startet der Player neu.": "Potrwa to kilka minut, potem odtwarzacz uruchomi się ponownie.",
+ "mpv fehlt – nur Spotify spielt": "Brak mpv – gra tylko Spotify",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Antippen, um ihn zu installieren.": "Bez odtwarzacza mpv nie grają biblioteka, NAS, radio, podcasty ani komunikaty. Dotknij, aby go zainstalować.",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Bez odtwarzacza mpv nie grają biblioteka, NAS, radio, podcasty ani komunikaty. Ostatnia próba się nie powiodła (internet?) – dotknij, aby spróbować ponownie.",
+ "mpv installieren?": "Zainstalować mpv?",
+ "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "Pudełko pobiera odtwarzacz z internetu i go instaluje. Potrwa to kilka minut, potem odtwarzacz uruchomi się ponownie.",
+ "mpv ist installiert, der Player startet neu": "mpv jest zainstalowany, odtwarzacz uruchamia się ponownie"
 }

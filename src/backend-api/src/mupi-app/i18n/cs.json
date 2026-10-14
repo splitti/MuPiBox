@@ -2813,5 +2813,13 @@
  "Als Gerät anmelden": "Přihlásit jako zařízení",
  "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Systémy chytré domácnosti s MQTT Discovery samy přidají box jako zařízení, včetně jeho hodnot a tlačítek.",
  "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Box odesílá pod Topic/Client-ID/Client-ID/…, např. MuPiBox/Boxname/MuPiBox/MuPiBox/state",
- "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Má-li doba klidu vlastní název (Herní doba › Doby odpočinku), zobrazí se jako nadpis tento název."
+ "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Má-li doba klidu vlastní název (Herní doba › Doby odpočinku), zobrazí se jako nadpis tento název.",
+ "mpv wird installiert": "mpv se instaluje",
+ "Das dauert ein paar Minuten, danach startet der Player neu.": "Trvá to několik minut, poté se přehrávač restartuje.",
+ "mpv fehlt – nur Spotify spielt": "Chybí mpv – hraje jen Spotify",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Antippen, um ihn zu installieren.": "Bez přehrávače mpv nehraje knihovna, NAS, rádio, podcasty ani hlášení. Klepnutím ho nainstalujete.",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Bez přehrávače mpv nehraje knihovna, NAS, rádio, podcasty ani hlášení. Poslední pokus se nezdařil (internet?) – klepnutím to zkusíte znovu.",
+ "mpv installieren?": "Nainstalovat mpv?",
+ "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "Box stáhne přehrávač z internetu a nainstaluje ho. Trvá to několik minut, poté se přehrávač restartuje.",
+ "mpv ist installiert, der Player startet neu": "mpv je nainstalován, přehrávač se restartuje"
 }

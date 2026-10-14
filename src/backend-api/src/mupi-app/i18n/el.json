@@ -2813,5 +2813,13 @@
  "Als Gerät anmelden": "Δήλωση ως συσκευή",
  "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Τα συστήματα έξυπνου σπιτιού με MQTT Discovery προσθέτουν μόνα τους το κουτί ως συσκευή, με τις τιμές και τα κουμπιά του.",
  "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Το κουτί στέλνει στο Topic/Client-ID/Client-ID/…, π.χ. MuPiBox/Boxname/MuPiBox/MuPiBox/state",
- "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Αν μια ώρα ησυχίας έχει όνομα (Χρόνος παιχνιδιού › Ώρες ησυχίας), εμφανίζεται αυτό το όνομα ως επικεφαλίδα."
+ "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Αν μια ώρα ησυχίας έχει όνομα (Χρόνος παιχνιδιού › Ώρες ησυχίας), εμφανίζεται αυτό το όνομα ως επικεφαλίδα.",
+ "mpv wird installiert": "Το mpv εγκαθίσταται",
+ "Das dauert ein paar Minuten, danach startet der Player neu.": "Διαρκεί λίγα λεπτά, μετά η αναπαραγωγή επανεκκινείται.",
+ "mpv fehlt – nur Spotify spielt": "Λείπει το mpv – παίζει μόνο Spotify",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Antippen, um ihn zu installieren.": "Χωρίς το πρόγραμμα αναπαραγωγής mpv δεν παίζουν βιβλιοθήκη, NAS, ραδιόφωνο, podcasts και ανακοινώσεις. Πάτησε για εγκατάσταση.",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Χωρίς το πρόγραμμα αναπαραγωγής mpv δεν παίζουν βιβλιοθήκη, NAS, ραδιόφωνο, podcasts και ανακοινώσεις. Η τελευταία προσπάθεια απέτυχε (internet;) – πάτησε για να ξαναδοκιμάσεις.",
+ "mpv installieren?": "Εγκατάσταση mpv;",
+ "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "Το κουτί κατεβάζει το πρόγραμμα αναπαραγωγής από το internet και το εγκαθιστά. Διαρκεί λίγα λεπτά, μετά η αναπαραγωγή επανεκκινείται.",
+ "mpv ist installiert, der Player startet neu": "Το mpv εγκαταστάθηκε, η αναπαραγωγή επανεκκινείται"
 }

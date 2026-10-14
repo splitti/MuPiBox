@@ -2813,5 +2813,13 @@
  "Als Gerät anmelden": "Aanmelden als apparaat",
  "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Smarthomesystemen met MQTT-discovery voegen de box vanzelf toe als apparaat, met zijn waarden en knoppen.",
  "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "De box verstuurt onder Topic/Client-ID/Client-ID/…, bijv. MuPiBox/Boxname/MuPiBox/MuPiBox/state",
- "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Heeft een rusttijd een naam (Speeltijd › Rusttijden), dan staat die naam als kop."
+ "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Heeft een rusttijd een naam (Speeltijd › Rusttijden), dan staat die naam als kop.",
+ "mpv wird installiert": "mpv wordt geïnstalleerd",
+ "Das dauert ein paar Minuten, danach startet der Player neu.": "Dit duurt een paar minuten, daarna start de speler opnieuw.",
+ "mpv fehlt – nur Spotify spielt": "mpv ontbreekt – alleen Spotify speelt",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Antippen, um ihn zu installieren.": "Zonder de speler mpv spelen bibliotheek, NAS, radio, podcasts en meldingen niet. Tik om hem te installeren.",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Zonder de speler mpv spelen bibliotheek, NAS, radio, podcasts en meldingen niet. De laatste poging is mislukt (internet?) – tik om het opnieuw te proberen.",
+ "mpv installieren?": "mpv installeren?",
+ "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "De box downloadt de speler van internet en installeert hem. Dit duurt een paar minuten, daarna start de speler opnieuw.",
+ "mpv ist installiert, der Player startet neu": "mpv is geïnstalleerd, de speler start opnieuw"
 }

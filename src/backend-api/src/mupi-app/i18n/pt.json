@@ -2813,5 +2813,13 @@
  "Als Gerät anmelden": "Anunciar como dispositivo",
  "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Os sistemas de casa inteligente com MQTT Discovery adicionam a caixa sozinhos como dispositivo, com os seus valores e botões.",
  "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "A caixa envia em Topic/Client-ID/Client-ID/…, p. ex. MuPiBox/Boxname/MuPiBox/MuPiBox/state",
- "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Se um período de silêncio tiver nome (Tempo de reprodução › Períodos de descanso), esse nome aparece como título."
+ "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Se um período de silêncio tiver nome (Tempo de reprodução › Períodos de descanso), esse nome aparece como título.",
+ "mpv wird installiert": "A instalar o mpv",
+ "Das dauert ein paar Minuten, danach startet der Player neu.": "Demora alguns minutos; depois o leitor reinicia.",
+ "mpv fehlt – nur Spotify spielt": "Falta o mpv – só toca o Spotify",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Antippen, um ihn zu installieren.": "Sem o leitor mpv, a biblioteca, o NAS, a rádio, os podcasts e os anúncios não tocam. Toque para o instalar.",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Sem o leitor mpv, a biblioteca, o NAS, a rádio, os podcasts e os anúncios não tocam. A última tentativa falhou (internet?) – toque para tentar de novo.",
+ "mpv installieren?": "Instalar o mpv?",
+ "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "A caixa descarrega o leitor da internet e instala-o. Demora alguns minutos; depois o leitor reinicia.",
+ "mpv ist installiert, der Player startet neu": "O mpv está instalado, o leitor reinicia"
 }

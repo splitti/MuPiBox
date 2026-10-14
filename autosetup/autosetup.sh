@@ -47,6 +47,12 @@ fi
 
 rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 
+# apt without questions and with patience: a question about a changed config file waited for an answer nobody gives,
+# and the package lock held by DietPi's or Debian's own updates (often right after the first start) made every
+# apt-get here give up at once - mpv among them, so the box played nothing but Spotify
+export DEBIAN_FRONTEND=noninteractive
+apt-get() { command apt-get -o DPkg::Lock::Timeout=600 -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold "$@"; }
+
 STEP=0
 {
 	# 2026-09-20: no longer installed (nothing in MuPiBox uses them any more):
@@ -65,7 +71,9 @@ STEP=0
 
 	echo -e "XXX\n${STEP}\nUpdate package-list\nXXX"
 	before=$(date +%s)
+	dpkg --configure -a >&3 2>&3
 	apt-get update >&3 2>&3
+	apt-get --yes -f install >&3 2>&3
 	after=$(date +%s)
 	echo -e "## apt-get update ## finished after $((after - before)) seconds" >&3 2>&3
 	STEP=$((STEP + 1))
@@ -98,6 +106,13 @@ STEP=0
 		echo -e "## apt-get install ${package} ## finished after $((after - before)) seconds" >&3 2>&3
 		STEP=$((STEP + 1))
 	done
+	# mpv plays everything but Spotify: asked once more with fresh package lists when the loop could not install it
+	if ! command -v mpv >/dev/null 2>&1; then
+		dpkg --configure -a >&3 2>&3
+		apt-get update >&3 2>&3
+		apt-get --yes -f install >&3 2>&3
+		apt-get --yes install mpv >&3 2>&3 || echo "## WARNING: mpv could not be installed - only Spotify will play (the app offers to install it) ##" >&3 2>&3
+	fi
 
 	# pinctrl for the OnOff SHIM with libgpiod 2 (Debian 13 "Trixie", see scripts/OnOffShim): in raspi-utils-core of the
 	# Raspberry Pi archive (the name raspberrypi-utils written here before is only the source package - nothing was

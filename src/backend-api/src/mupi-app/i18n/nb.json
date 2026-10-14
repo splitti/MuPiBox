@@ -2813,5 +2813,13 @@
  "Als Gerät anmelden": "Meld som enhet",
  "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Smarthussystemer med MQTT-discovery legger selv til boksen som enhet, med verdier og knapper.",
  "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Boksen sender under Topic/Client-ID/Client-ID/…, f.eks. MuPiBox/Boxname/MuPiBox/MuPiBox/state",
- "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Har en hviletid et navn (Spilletid › Hviletider), vises navnet som overskrift."
+ "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Har en hviletid et navn (Spilletid › Hviletider), vises navnet som overskrift.",
+ "mpv wird installiert": "mpv installeres",
+ "Das dauert ein paar Minuten, danach startet der Player neu.": "Det tar noen minutter, deretter starter spilleren på nytt.",
+ "mpv fehlt – nur Spotify spielt": "mpv mangler – bare Spotify spiller",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Antippen, um ihn zu installieren.": "Uten spilleren mpv spiller ikke bibliotek, NAS, radio, podkaster og kunngjøringer. Trykk for å installere den.",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Uten spilleren mpv spiller ikke bibliotek, NAS, radio, podkaster og kunngjøringer. Siste forsøk mislyktes (internett?) – trykk for å prøve igjen.",
+ "mpv installieren?": "Installere mpv?",
+ "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "Boksen laster ned spilleren fra internett og installerer den. Det tar noen minutter, deretter starter spilleren på nytt.",
+ "mpv ist installiert, der Player startet neu": "mpv er installert, spilleren starter på nytt"
 }

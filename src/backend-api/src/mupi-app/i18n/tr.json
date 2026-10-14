@@ -2813,5 +2813,13 @@
  "Als Gerät anmelden": "Cihaz olarak bildir",
  "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "MQTT Discovery destekleyen akıllı ev sistemleri kutuyu değerleri ve düğmeleriyle kendiliğinden cihaz olarak ekler.",
  "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Kutu Topic/Client-ID/Client-ID/… altında gönderir, ör. MuPiBox/Boxname/MuPiBox/MuPiBox/state",
- "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Bir sessiz saatin adı varsa (Oyun süresi › Sessiz saatler), başlık olarak bu ad görünür."
+ "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Bir sessiz saatin adı varsa (Oyun süresi › Sessiz saatler), başlık olarak bu ad görünür.",
+ "mpv wird installiert": "mpv kuruluyor",
+ "Das dauert ein paar Minuten, danach startet der Player neu.": "Bu birkaç dakika sürer, ardından oynatıcı yeniden başlar.",
+ "mpv fehlt – nur Spotify spielt": "mpv eksik – yalnızca Spotify çalıyor",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Antippen, um ihn zu installieren.": "mpv oynatıcısı olmadan kitaplık, NAS, radyo, podcast’ler ve duyurular çalmaz. Kurmak için dokunun.",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "mpv oynatıcısı olmadan kitaplık, NAS, radyo, podcast’ler ve duyurular çalmaz. Son deneme başarısız oldu (internet?) – yeniden denemek için dokunun.",
+ "mpv installieren?": "mpv kurulsun mu?",
+ "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "Kutu oynatıcıyı internetten indirip kurar. Bu birkaç dakika sürer, ardından oynatıcı yeniden başlar.",
+ "mpv ist installiert, der Player startet neu": "mpv kuruldu, oynatıcı yeniden başlıyor"
 }

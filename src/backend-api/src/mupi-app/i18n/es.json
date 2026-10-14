@@ -2813,5 +2813,13 @@
  "Als Gerät anmelden": "Anunciar como dispositivo",
  "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Los sistemas domóticos con MQTT Discovery añaden la caja solos como dispositivo, con sus valores y botones.",
  "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "La caja envía bajo Topic/Client-ID/Client-ID/…, p. ej. MuPiBox/Boxname/MuPiBox/MuPiBox/state",
- "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Si un tiempo de silencio tiene nombre (Tiempo de juego › Horas de descanso), ese nombre aparece como título."
+ "Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.": "Si un tiempo de silencio tiene nombre (Tiempo de juego › Horas de descanso), ese nombre aparece como título.",
+ "mpv wird installiert": "Instalando mpv",
+ "Das dauert ein paar Minuten, danach startet der Player neu.": "Tarda unos minutos; después el reproductor se reinicia.",
+ "mpv fehlt – nur Spotify spielt": "Falta mpv: solo suena Spotify",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Antippen, um ihn zu installieren.": "Sin el reproductor mpv no suenan la biblioteca, el NAS, la radio, los podcasts ni los avisos. Toca para instalarlo.",
+ "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Sin el reproductor mpv no suenan la biblioteca, el NAS, la radio, los podcasts ni los avisos. El último intento falló (¿internet?): toca para volver a intentarlo.",
+ "mpv installieren?": "¿Instalar mpv?",
+ "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "La caja descarga el reproductor de internet y lo instala. Tarda unos minutos; después el reproductor se reinicia.",
+ "mpv ist installiert, der Player startet neu": "mpv está instalado, el reproductor se reinicia"
 }
