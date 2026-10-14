@@ -14,6 +14,14 @@
 # for its own purposes above - is the one place that reliably catches it here.
 
 IF="${1:-eth0}"
+# The port may come a moment after this service at the start (its driver loaded later - seen with newer kernels):
+# this script gave up at once then, and as ifup@eth0 does nothing any more, the LAN stayed without an address until
+# the next start - a box set up over a cable was unreachable. It waits for the port now; a board without one (or a
+# port that comes still later) is started again by the udev rule 99-mupibox-eth.rules when the port appears.
+for _ in $(seq 1 30); do
+	[ -d "/sys/class/net/${IF}" ] && break
+	sleep 1
+done
 [ -d "/sys/class/net/${IF}" ] || exit 0
 
 # LAN switched off (WiFi settings / the app, /api/network/ethernet/power): the port stays down while this file

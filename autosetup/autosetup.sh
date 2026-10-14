@@ -742,11 +742,41 @@ STEP=0
 
 	###############################################################################################
 
+	# What the box cannot do without (every step above only writes to the log, also when it fails): checked before the
+	# restart - a box restarted without them showed the display's "no connection" page and nothing else, and why was
+	# only in a log on the system partition. The result goes to the log; the restart only when all is there.
+	MISSING=""
+	command -v node >/dev/null 2>&1 || MISSING="${MISSING} Node.js"
+	command -v mpv >/dev/null 2>&1 || MISSING="${MISSING} mpv"
+	command -v chromium >/dev/null 2>&1 || command -v chromium-browser >/dev/null 2>&1 || MISSING="${MISSING} Chromium"
+	[ -f /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server.js ] || MISSING="${MISSING} server.js"
+	[ -f /home/dietpi/.mupibox/spotifycontroller-main/spotify-control.js ] || MISSING="${MISSING} spotify-control.js"
+	ANSWER=""
+	for _ in $(seq 1 20); do
+		ANSWER=$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 http://127.0.0.1:8200/ 2>/dev/null)
+		[ -n "${ANSWER}" ] && [ "${ANSWER}" != "000" ] && break
+		sleep 2
+	done
+	[ -n "${ANSWER}" ] && [ "${ANSWER}" != "000" ] || MISSING="${MISSING} server(8200)"
+	echo "${MISSING}" > /tmp/autosetup.missing
+	echo "## Check before the restart: ${MISSING:-everything there} ##" >&3 2>&3
+
 	echo -e "XXX\n100\nInstallation complete, please reboot the system... \nXXX"
 	rm -Rf ${MUPI_SRC} >&3 2>&3
-	mv ${LOG} /boot/autosetup.log > /dev/null 2>&3
 	sleep 5
 
 } | whiptail --title "MuPiBox Autosetup ${VERSION_LONG}" --gauge "Please wait while installing" 6 60 0
 
+# The log on the boot partition (/boot/firmware on newer systems): readable from the memory card on a PC too, when
+# the box cannot be reached
+exec 3>&-
+cp -f ${LOG} "${BOOT_DIR}/autosetup.log" > /dev/null 2>&1
+MISSING=$(cat /tmp/autosetup.missing 2>/dev/null)
+if [ -n "${MISSING}" ]; then
+	echo ""
+	echo "The installation is not complete, missing:${MISSING}"
+	echo "The box is NOT restarted. The log: ${BOOT_DIR}/autosetup.log (also on the boot partition of the memory card)."
+	echo "Check the internet connection and start the installation again."
+	exit 1
+fi
 reboot

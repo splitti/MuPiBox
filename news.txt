@@ -17,6 +17,12 @@
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Podcasts of Spotify: an episode Spotify no longer offers comes in its list as an empty entry, and the whole list of the show failed on it - the show showed as not available once the list kept on the box was gone (e.g. after an update). Such entries are left out now (the album search too), and the next pages of a list go by the size of a page, so no episode comes twice when one was left out.</li>
 </ul>
+<b>Installation and network</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>LAN: when the port came a moment after the box's LAN service at the start (its driver loaded later, seen with newer kernels), the service gave up and the LAN stayed without an address until the next start - a box connected by cable could not be reached. It now waits for the port, and starts again when the port appears later.</li>
+<li id='linews' class='linews'>Fresh installation: before its restart it checks that Node.js, mpv, Chromium, the server and the player are there and the server answers - otherwise it does not restart and says what is missing (a box restarted without them showed only the display's 'no connection' page). Its log is written to the boot partition (/boot/firmware on newer systems), readable from the memory card on a PC.</li>
+</ul>
 <h3>DEV 5.0.10 - changes compared to 5.0.9</h3>
 <b>Security</b>
 </ul>
