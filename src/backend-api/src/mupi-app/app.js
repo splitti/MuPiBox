@@ -7360,11 +7360,13 @@ async function loadMqtt() {
   state.values.set('mqPw', '')
 }
 
-// One of the topics the box sends to, from what is typed (scripts/mqtt/mqtt.py: topic/client-id/state …)
+// One of the topics the box sends to, from what is typed. scripts/mqtt/mqtt.py puts the client id in twice
+// (topic/client-id/client-id/state …) - as it always has, existing Symcon/HA setups listen there
 function mqttTopicPreview() {
   const t = String(state.values.get('mqTopic') ?? '').trim() || '…'
   const c = String(state.values.get('mqClient') ?? '').trim() || '…'
-  return `z. B. ${t}/${c}/state`
+  const base = `${t}/${c}`
+  return `z. B. ${base}/${c}/state`
 }
 
 /* WLED */
