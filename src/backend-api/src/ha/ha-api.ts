@@ -29,6 +29,7 @@ import { compareVersions, officialVersions, parseInstalled } from '../eltern/upd
 import { announce, speechOf } from '../speech'
 import { isLoopback } from '../request-guard'
 import { type PlaybackCovers, playbackSnapshot } from '../playback-snapshot'
+import { withVolumeLock } from '../volume-lock'
 import { clientByToken, deviceId, type HaClient, HA_DIR, readClients, type Scope, SCOPES, tokenHash, updateClients } from './ha-store'
 
 export const HA_PORT = 8443
@@ -669,9 +670,9 @@ function buildApp(deps: HaDeps): Express {
       if (command === 'set_volume') {
         const v = body.value
         if (typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v > 100) return fail(res, 400, 'invalid_value', 'Volume must be an integer between 0 and 100')
-        // (never above the box's maximum - the one for headphones while they play)
-        const applied = Math.min(v, await volumeCap(deps))
-        const r = await run('/usr/bin/amixer', ['sset', 'Master', `${applied}%`], 3000)
+        // (never above the box's maximum - the one for headphones while they play; read in the volume queue, so a
+        // hearing protection saved meanwhile is not set over: volume-lock.ts)
+        const r = await withVolumeLock(async () => run('/usr/bin/amixer', ['sset', 'Master', `${Math.min(v, await volumeCap(deps))}%`], 3000))
         if (!r.ok) return fail(res, 500, 'internal_error', 'The volume could not be set')
         return void res.json({ success: true })
       }

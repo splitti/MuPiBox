@@ -546,10 +546,10 @@
 			<li class="li_norm"><h2>Backup MuPiBox-settings</h2>
 				<p>Backup MuPiBox-Data (cover, mupiboxconfig.json and data.json):</p>
 
-				<input id="saveForm" class="button_text" type="submit" name="backupdownload" value="Download Configuration-Backup" onclick="window.open('./backup.php', '_blank');" />
+				<input id="saveForm" class="button_text" type="submit" name="backupdownload" value="Download Configuration-Backup" formaction="./backup.php" formtarget="_blank" />
 				<p>Backup all MuPiBox-Data (media-files, cover, mupiboxconfig.json and data.json):</p>
 
-				<input id="saveForm" class="button_text" type="submit" name="fullbackupdownload" value="Download Full-Backup" onclick="window.open('./fullbackup.php', '_blank');" />
+				<input id="saveForm" class="button_text" type="submit" name="fullbackupdownload" value="Download Full-Backup" formaction="./fullbackup.php" formtarget="_blank" />
 			</li>
 			<li class="li_norm"><h2>Restore MuPiBox-settings</h2>
 				<p>Restore Backup-File:</p>
@@ -687,7 +687,7 @@
 							print '<input id="saveForm" class="button_text_red" type="submit" name="spotifydebug" value="Controller Debugging Active - turn off';
 							}
 					?>" />
-				<input id="saveForm" class="button_text" type="submit" name="pm2download" value="Download PM2-Log" onclick="window.open('./pm2logs.php', '_blank');" />
+				<input id="saveForm" class="button_text" type="submit" name="pm2download" value="Download PM2-Log" formaction="./pm2logs.php" formtarget="_blank" />
 
 			</li>
 		</ul>

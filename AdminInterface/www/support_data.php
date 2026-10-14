@@ -4,6 +4,9 @@ require __DIR__ . '/includes/auth_check.php';
 // support_data bundles config + logs + state for support. Same exposure
 // concerns as pm2logs.php / fullbackup.php — require auth via the
 // header-only gate (header.php would print HTML and corrupt the zip).
+require __DIR__ . '/includes/zip_download.php';
+// nothing collected before the form of the admin interface asked for it (see zip_download.php)
+mupibox_download_guard('support_data.zip');
 $command = "sudo rm -f /var/www/support_data.zip"; // left over by older versions
 exec( $command );
 $command = "sudo rm -R /tmp/support";
@@ -39,5 +42,4 @@ exec( $command );
 register_shutdown_function(function () {
 	exec("sudo rm -rf /tmp/support");
 });
-require __DIR__ . '/includes/zip_download.php';
 mupibox_send_zip('support_data.zip', '-r', '/tmp/support/*');

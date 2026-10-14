@@ -174,7 +174,7 @@
 			<ul>
 				<li class="li_norm"><h2>System Information</h2></li>
 					<p>Download system information for support on discord:</p>
-					<input id="saveForm" class="button_text" type="submit" name="supportdownload" value="Download Support-Infos" onclick="window.open('./support_data.php', '_blank');" />
+					<input id="saveForm" class="button_text" type="submit" name="supportdownload" value="Download Support-Infos" formaction="./support_data.php" formtarget="_blank" />
 				</li>
 				<li class="li_norm">
 

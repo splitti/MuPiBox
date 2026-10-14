@@ -76,6 +76,7 @@ import { localOnly } from '../request-guard'
 import { clearSpotifyBlock } from '../spotify-block'
 import { clearArtistAlbumsMemory } from '../artist-albums-store'
 import { clearMetaCache } from '../spotify-sync/meta-cache'
+import { withVolumeLock } from '../volume-lock'
 import { spotifyLoginAge } from './spotify-auth-age'
 import { btBattery, headphonesPlaying } from '../audio-output'
 import { playbackSnapshot } from '../playback-snapshot'
@@ -1302,25 +1303,29 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(400).json({ error: 'volume must be a number between 0 and 100' })
       return
     }
-    const cfg = deps.getMupiboxConfig()
-    if (!cfg) {
+    const requested = Math.floor(raw)
+    // the maximum read in its turn: a hearing protection saved meanwhile is never set over (volume-lock.ts)
+    const r = await withVolumeLock(async () => {
+      const cfg = deps.getMupiboxConfig()
       // Same defence as GET /audio: without a loaded config we don't know the
       // cap, so refuse rather than silently let any volume through.
+      if (!cfg) return { noConfig: true as const }
+      const mb = (cfg.mupibox as Record<string, unknown> | undefined) ?? {}
+      const btMax = volumePercent(mb.btMaxVolume)
+      const cap = btMax !== undefined && (await bluetoothAudio()) ? btMax : (volumePercent(mb.maxVolume) ?? 100)
+      const applied = Math.min(requested, cap)
+      const err = await new Promise<Error | null>((resolve) => execFile('/usr/bin/amixer', ['sset', 'Master', `${applied}%`], { timeout: 3000 }, (e) => resolve(e)))
+      return { applied, err }
+    })
+    if ('noConfig' in r) {
       res.status(503).json({ error: 'config not yet loaded, please retry' })
       return
     }
-    const mb = (cfg.mupibox as Record<string, unknown> | undefined) ?? {}
-    const btMax = volumePercent(mb.btMaxVolume)
-    const cap = btMax !== undefined && (await bluetoothAudio()) ? btMax : (volumePercent(mb.maxVolume) ?? 100)
-    const requested = Math.floor(raw)
-    const applied = Math.min(requested, cap)
-    execFile('/usr/bin/amixer', ['sset', 'Master', `${applied}%`], { timeout: 3000 }, (err) => {
-      if (err) {
-        res.status(500).json({ error: `amixer failed: ${err.message}` })
-        return
-      }
-      res.json({ ok: true, applied, capped: applied < requested })
-    })
+    if (r.err) {
+      res.status(500).json({ error: `amixer failed: ${r.err.message}` })
+      return
+    }
+    res.json({ ok: true, applied: r.applied, capped: r.applied < requested })
   })
 
   /**
@@ -1411,18 +1416,22 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       cfg.mupibox = mb
     })
     // The hearing protection lowered: what plays louder than the new maximum comes down at once (it stayed as loud
-    // until someone touched the volume) - the Bluetooth maximum while Bluetooth audio is on, as /audio/volume does
+    // until someone touched the volume) - the Bluetooth maximum while Bluetooth audio is on, as /audio/volume does.
+    // In the volume queue, with the maximum as saved by then: an older save finishing late lowers to the newest
+    // maximum, never back up to its own (volume-lock.ts)
     if (mutations.maxVolume !== undefined || mutations.btMaxVolume !== undefined) {
-      const mb = (deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined) ?? {}
-      const btMax = volumePercent(mb.btMaxVolume)
-      const cap = btMax !== undefined && (await bluetoothAudio()) ? btMax : (volumePercent(mb.maxVolume) ?? 100)
-      await new Promise<void>((resolve) =>
-        execFile('/usr/bin/amixer', ['sget', 'Master'], { timeout: 3000 }, (err, stdout) => {
-          const now = !err && stdout ? Number.parseInt(stdout.match(/\[(\d+)%\]/)?.[1] ?? '', 10) : Number.NaN
-          if (!Number.isFinite(now) || now <= cap) return resolve()
-          execFile('/usr/bin/amixer', ['sset', 'Master', `${cap}%`], { timeout: 3000 }, () => resolve())
-        }),
-      )
+      await withVolumeLock(async () => {
+        const mb = (deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined) ?? {}
+        const btMax = volumePercent(mb.btMaxVolume)
+        const cap = btMax !== undefined && (await bluetoothAudio()) ? btMax : (volumePercent(mb.maxVolume) ?? 100)
+        await new Promise<void>((resolve) =>
+          execFile('/usr/bin/amixer', ['sget', 'Master'], { timeout: 3000 }, (err, stdout) => {
+            const now = !err && stdout ? Number.parseInt(stdout.match(/\[(\d+)%\]/)?.[1] ?? '', 10) : Number.NaN
+            if (!Number.isFinite(now) || now <= cap) return resolve()
+            execFile('/usr/bin/amixer', ['sset', 'Master', `${cap}%`], { timeout: 3000 }, () => resolve())
+          }),
+        )
+      })
     }
     res.json({ ok: true, applied: mutations })
   })
