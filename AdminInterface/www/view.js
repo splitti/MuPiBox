@@ -69,7 +69,12 @@ $(document).ready(function() {
     });
 
     // Event-Handler für Formulare
-    $('#remform, #form').on("submit", function() {
+    $('#remform, #form').on("submit", function(e) {
+        // A download sent to its own tab (the backup/log buttons: formtarget="_blank"): this page is not loaded
+        // again, so the overlay would have stayed over it until a manual reload
+        const by = e.originalEvent && e.originalEvent.submitter;
+        const target = (by && by.getAttribute('formtarget')) || this.getAttribute('target') || '';
+        if (target && target !== '_self') return;
         showModal();
     });
 
