@@ -362,7 +362,6 @@
  "An der letzten Stelle weiterhören": "Fortsätt där du slutade",
  "An die Startseite": "Till startsidan",
  "An die Startseite heften": "Fäst på startsidan",
- "An Home Assistant melden": "Rapportera till Home Assistant",
  "Andere Anmeldung": "Annan inloggning",
  "Anderes Bild": "Annan bild",
  "Ändern": "Ändra",
@@ -2701,7 +2700,6 @@
  "Wohin?": "Vart?",
  "Xmas": "Xmas",
  "z. B. „Papa kommt gleich hoch.“": "t.ex. „Pappa kommer strax upp.“",
- "z. B. {}/{}/state": "t.ex. {}/{}/state",
  "z. B. 123456789": "t.ex. 123456789",
  "z. B. 192.168.1.1": "t.ex. 192.168.1.1",
  "z. B. 192.168.1.10": "t.ex. 192.168.1.10",
@@ -2809,8 +2807,10 @@
  "Das Display startet mit {}": "Skärmen startar med {}",
  "Empfohlen": "Rekommenderas",
  "Legacy · die bisherige Oberfläche": "Legacy · det tidigare gränssnittet",
- "Home Assistant (MQTT-Discovery)": "Home Assistant (MQTT-discovery)",
- "Die Box erscheint in Home Assistant von selbst als Gerät. Einfacher und mit mehr Funktionen (Ansagen, Nachrichten aufs Display): Dienste › Home Assistant.": "Lådan dyker själv upp i Home Assistant som enhet. Enklare och med fler funktioner (utrop, meddelanden på displayen): Tjänster › Home Assistant.",
  "Die MQTT-Discovery für Home Assistant ist auch an (Dienste › MQTT). Die Box erscheint dann zweimal in Home Assistant – eins von beiden ausschalten.": "MQTT-discovery för Home Assistant är också på (Tjänster › MQTT). Lådan visas då två gånger i Home Assistant – stäng av en av dem.",
- "Dienste › MQTT": "Tjänster › MQTT"
+ "Dienste › MQTT": "Tjänster › MQTT",
+ "MQTT-Discovery": "MQTT-discovery",
+ "Als Gerät anmelden": "Anmäl som enhet",
+ "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Smarta hem-system med MQTT-discovery lägger själva till lådan som enhet, med dess värden och knappar.",
+ "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Lådan skickar under Topic/Client-ID/Client-ID/…, t.ex. MuPiBox/Boxname/MuPiBox/MuPiBox/state"
 }

@@ -362,7 +362,6 @@
  "An der letzten Stelle weiterhören": "Continue where you left off",
  "An die Startseite": "To the start page",
  "An die Startseite heften": "Pin to the start page",
- "An Home Assistant melden": "Report to Home Assistant",
  "Andere Anmeldung": "Different sign-in",
  "Anderes Bild": "Another image",
  "Ändern": "Change",
@@ -2701,7 +2700,6 @@
  "Wohin?": "Where to?",
  "Xmas": "Xmas",
  "z. B. „Papa kommt gleich hoch.“": "e.g. “Dad is coming up in a minute.”",
- "z. B. {}/{}/state": "e.g. {}/{}/state",
  "z. B. 123456789": "e.g. 123456789",
  "z. B. 192.168.1.1": "e.g. 192.168.1.1",
  "z. B. 192.168.1.10": "e.g. 192.168.1.10",
@@ -2809,8 +2807,10 @@
  "Das Display startet mit {}": "The display starts with {}",
  "Empfohlen": "Recommended",
  "Legacy · die bisherige Oberfläche": "Legacy · the previous interface",
- "Home Assistant (MQTT-Discovery)": "Home Assistant (MQTT discovery)",
- "Die Box erscheint in Home Assistant von selbst als Gerät. Einfacher und mit mehr Funktionen (Ansagen, Nachrichten aufs Display): Dienste › Home Assistant.": "The box shows up in Home Assistant by itself as a device. Simpler and with more functions (announcements, messages on the display): Services › Home Assistant.",
  "Die MQTT-Discovery für Home Assistant ist auch an (Dienste › MQTT). Die Box erscheint dann zweimal in Home Assistant – eins von beiden ausschalten.": "The MQTT discovery for Home Assistant is on as well (Services › MQTT). The box then shows up twice in Home Assistant – switch one of them off.",
- "Dienste › MQTT": "Services › MQTT"
+ "Dienste › MQTT": "Services › MQTT",
+ "MQTT-Discovery": "MQTT discovery",
+ "Als Gerät anmelden": "Announce as a device",
+ "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Smart-home systems with MQTT discovery add the box as a device by themselves, with its values and buttons.",
+ "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "The box sends under Topic/Client-ID/Client-ID/…, e.g. MuPiBox/Boxname/MuPiBox/MuPiBox/state"
 }

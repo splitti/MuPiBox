@@ -362,7 +362,6 @@
  "An der letzten Stelle weiterhören": "Seguir donde lo dejaste",
  "An die Startseite": "A la página de inicio",
  "An die Startseite heften": "Fijar en la página de inicio",
- "An Home Assistant melden": "Notificar a Home Assistant",
  "Andere Anmeldung": "Otro inicio de sesión",
  "Anderes Bild": "Otra imagen",
  "Ändern": "Cambiar",
@@ -2701,7 +2700,6 @@
  "Wohin?": "¿Adónde?",
  "Xmas": "Xmas",
  "z. B. „Papa kommt gleich hoch.“": "p. ej. «Papá sube enseguida.»",
- "z. B. {}/{}/state": "p. ej. {}/{}/state",
  "z. B. 123456789": "p. ej. 123456789",
  "z. B. 192.168.1.1": "p. ej. 192.168.1.1",
  "z. B. 192.168.1.10": "p. ej. 192.168.1.10",
@@ -2809,8 +2807,10 @@
  "Das Display startet mit {}": "La pantalla empieza con {}",
  "Empfohlen": "Recomendada",
  "Legacy · die bisherige Oberfläche": "Legacy · la interfaz anterior",
- "Home Assistant (MQTT-Discovery)": "Home Assistant (MQTT Discovery)",
- "Die Box erscheint in Home Assistant von selbst als Gerät. Einfacher und mit mehr Funktionen (Ansagen, Nachrichten aufs Display): Dienste › Home Assistant.": "La caja aparece sola en Home Assistant como dispositivo. Más sencillo y con más funciones (avisos, mensajes en la pantalla): Servicios › Home Assistant.",
  "Die MQTT-Discovery für Home Assistant ist auch an (Dienste › MQTT). Die Box erscheint dann zweimal in Home Assistant – eins von beiden ausschalten.": "El MQTT Discovery para Home Assistant también está activado (Servicios › MQTT). La caja aparece entonces dos veces en Home Assistant: desactiva uno de los dos.",
- "Dienste › MQTT": "Servicios › MQTT"
+ "Dienste › MQTT": "Servicios › MQTT",
+ "MQTT-Discovery": "MQTT Discovery",
+ "Als Gerät anmelden": "Anunciar como dispositivo",
+ "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Los sistemas domóticos con MQTT Discovery añaden la caja solos como dispositivo, con sus valores y botones.",
+ "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "La caja envía bajo Topic/Client-ID/Client-ID/…, p. ej. MuPiBox/Boxname/MuPiBox/MuPiBox/state"
 }

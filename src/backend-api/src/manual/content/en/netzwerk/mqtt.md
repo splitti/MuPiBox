@@ -27,7 +27,7 @@ Over **MQTT** the box reports its state to a broker in your home network and can
 
 ## Topics
 
-All topics begin with the topic and the client ID, and the client ID appears twice. With topic `MuPiBox/Kidsroom` and client ID `MuPiBox`, for example, the box reports under `MuPiBox/Kidsroom/MuPiBox/MuPiBox/state`.
+All topics begin with the topic and the client ID, and the client ID appears twice. With topic `MuPiBox/Boxname` and client ID `MuPiBox`, for example, the box reports under `MuPiBox/Boxname/MuPiBox/MuPiBox/state`.
 
 | Topic (after the beginning) | Content |
 | --- | --- |
@@ -48,9 +48,9 @@ The box can be controlled over the same topics with `/set` at the end:
 | `reboot/set` | `reboot` | restart |
 | `power/set` | `shutdown` | shut down |
 
-## Home Assistant
+## MQTT discovery
 
-With **Report to Home Assistant** the box creates its devices in Home Assistant by itself (MQTT discovery). The **discovery prefix** must match what is set in Home Assistant (there it is normally called `homeassistant`).
+With **Announce as a device** the box announces its values and buttons so that smart-home systems with MQTT discovery add it as a device by themselves, for example Home Assistant, openHAB or Domoticz. The **discovery prefix** must match what is set there; `homeassistant` is usual.
 
 > [!TIP]
-> If you do not need Home Assistant, you can still use MQTT: for example to integrate state and control into a smart-home system of your own.
+> If your system does not understand MQTT discovery, leave the switch off and set up the values and commands from [Topics](#topics) yourself.

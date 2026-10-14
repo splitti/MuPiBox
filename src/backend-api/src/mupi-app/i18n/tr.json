@@ -362,7 +362,6 @@
  "An der letzten Stelle weiterhören": "Kaldığın yerden devam et",
  "An die Startseite": "Başlangıç sayfasına",
  "An die Startseite heften": "Başlangıç sayfasına sabitle",
- "An Home Assistant melden": "Home Assistant'a bildir",
  "Andere Anmeldung": "Başka oturum açma",
  "Anderes Bild": "Başka resim",
  "Ändern": "Değiştir",
@@ -2701,7 +2700,6 @@
  "Wohin?": "Nereye?",
  "Xmas": "Xmas",
  "z. B. „Papa kommt gleich hoch.“": "örn. „Baba birazdan yukarı çıkıyor.“",
- "z. B. {}/{}/state": "ör. {}/{}/state",
  "z. B. 123456789": "örn. 123456789",
  "z. B. 192.168.1.1": "örn. 192.168.1.1",
  "z. B. 192.168.1.10": "ör. 192.168.1.10",
@@ -2809,8 +2807,10 @@
  "Das Display startet mit {}": "Ekran şununla başlar: {}",
  "Empfohlen": "Önerilen",
  "Legacy · die bisherige Oberfläche": "Legacy · önceki arayüz",
- "Home Assistant (MQTT-Discovery)": "Home Assistant (MQTT Discovery)",
- "Die Box erscheint in Home Assistant von selbst als Gerät. Einfacher und mit mehr Funktionen (Ansagen, Nachrichten aufs Display): Dienste › Home Assistant.": "Kutu, Home Assistant’ta kendiliğinden cihaz olarak görünür. Daha basit ve daha fazla işlevle (anonslar, ekrana mesajlar): Hizmetler › Home Assistant.",
  "Die MQTT-Discovery für Home Assistant ist auch an (Dienste › MQTT). Die Box erscheint dann zweimal in Home Assistant – eins von beiden ausschalten.": "Home Assistant için MQTT Discovery de açık (Hizmetler › MQTT). Kutu o zaman Home Assistant’ta iki kez görünür – ikisinden birini kapat.",
- "Dienste › MQTT": "Hizmetler › MQTT"
+ "Dienste › MQTT": "Hizmetler › MQTT",
+ "MQTT-Discovery": "MQTT Discovery",
+ "Als Gerät anmelden": "Cihaz olarak bildir",
+ "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "MQTT Discovery destekleyen akıllı ev sistemleri kutuyu değerleri ve düğmeleriyle kendiliğinden cihaz olarak ekler.",
+ "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Kutu Topic/Client-ID/Client-ID/… altında gönderir, ör. MuPiBox/Boxname/MuPiBox/MuPiBox/state"
 }

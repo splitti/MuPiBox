@@ -362,7 +362,6 @@
  "An der letzten Stelle weiterhören": "Verder luisteren waar je was",
  "An die Startseite": "Naar de startpagina",
  "An die Startseite heften": "Op de startpagina vastzetten",
- "An Home Assistant melden": "Melden aan Home Assistant",
  "Andere Anmeldung": "Andere aanmelding",
  "Anderes Bild": "Andere afbeelding",
  "Ändern": "Wijzigen",
@@ -2701,7 +2700,6 @@
  "Wohin?": "Waarheen?",
  "Xmas": "Xmas",
  "z. B. „Papa kommt gleich hoch.“": "bijv. „Papa komt zo naar boven.”",
- "z. B. {}/{}/state": "bijv. {}/{}/state",
  "z. B. 123456789": "bijv. 123456789",
  "z. B. 192.168.1.1": "bijv. 192.168.1.1",
  "z. B. 192.168.1.10": "bijv. 192.168.1.10",
@@ -2809,8 +2807,10 @@
  "Das Display startet mit {}": "Het scherm begint met {}",
  "Empfohlen": "Aanbevolen",
  "Legacy · die bisherige Oberfläche": "Legacy · de vorige interface",
- "Home Assistant (MQTT-Discovery)": "Home Assistant (MQTT-discovery)",
- "Die Box erscheint in Home Assistant von selbst als Gerät. Einfacher und mit mehr Funktionen (Ansagen, Nachrichten aufs Display): Dienste › Home Assistant.": "De box verschijnt vanzelf als apparaat in Home Assistant. Eenvoudiger en met meer functies (omroepen, berichten op het display): Diensten › Home Assistant.",
  "Die MQTT-Discovery für Home Assistant ist auch an (Dienste › MQTT). Die Box erscheint dann zweimal in Home Assistant – eins von beiden ausschalten.": "De MQTT-discovery voor Home Assistant staat ook aan (Diensten › MQTT). De box verschijnt dan twee keer in Home Assistant – zet een van beide uit.",
- "Dienste › MQTT": "Diensten › MQTT"
+ "Dienste › MQTT": "Diensten › MQTT",
+ "MQTT-Discovery": "MQTT-discovery",
+ "Als Gerät anmelden": "Aanmelden als apparaat",
+ "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Smarthomesystemen met MQTT-discovery voegen de box vanzelf toe als apparaat, met zijn waarden en knoppen.",
+ "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "De box verstuurt onder Topic/Client-ID/Client-ID/…, bijv. MuPiBox/Boxname/MuPiBox/MuPiBox/state"
 }

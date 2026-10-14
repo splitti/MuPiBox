@@ -362,7 +362,6 @@
  "An der letzten Stelle weiterhören": "Continuar onde ficou",
  "An die Startseite": "Para a página inicial",
  "An die Startseite heften": "Afixar na página inicial",
- "An Home Assistant melden": "Reportar ao Home Assistant",
  "Andere Anmeldung": "Outro início de sessão",
  "Anderes Bild": "Outra imagem",
  "Ändern": "Alterar",
@@ -2701,7 +2700,6 @@
  "Wohin?": "Para onde?",
  "Xmas": "Xmas",
  "z. B. „Papa kommt gleich hoch.“": "p. ex. «O pai já vai subir.»",
- "z. B. {}/{}/state": "p. ex. {}/{}/state",
  "z. B. 123456789": "p. ex. 123456789",
  "z. B. 192.168.1.1": "p. ex. 192.168.1.1",
  "z. B. 192.168.1.10": "p. ex. 192.168.1.10",
@@ -2809,8 +2807,10 @@
  "Das Display startet mit {}": "O ecrã começa com {}",
  "Empfohlen": "Recomendada",
  "Legacy · die bisherige Oberfläche": "Legacy · a interface anterior",
- "Home Assistant (MQTT-Discovery)": "Home Assistant (MQTT Discovery)",
- "Die Box erscheint in Home Assistant von selbst als Gerät. Einfacher und mit mehr Funktionen (Ansagen, Nachrichten aufs Display): Dienste › Home Assistant.": "A caixa aparece sozinha no Home Assistant como dispositivo. Mais simples e com mais funções (avisos, mensagens no ecrã): Serviços › Home Assistant.",
  "Die MQTT-Discovery für Home Assistant ist auch an (Dienste › MQTT). Die Box erscheint dann zweimal in Home Assistant – eins von beiden ausschalten.": "O MQTT Discovery para o Home Assistant também está ligado (Serviços › MQTT). A caixa aparece então duas vezes no Home Assistant – desliga um dos dois.",
- "Dienste › MQTT": "Serviços › MQTT"
+ "Dienste › MQTT": "Serviços › MQTT",
+ "MQTT-Discovery": "MQTT Discovery",
+ "Als Gerät anmelden": "Anunciar como dispositivo",
+ "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Os sistemas de casa inteligente com MQTT Discovery adicionam a caixa sozinhos como dispositivo, com os seus valores e botões.",
+ "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "A caixa envia em Topic/Client-ID/Client-ID/…, p. ex. MuPiBox/Boxname/MuPiBox/MuPiBox/state"
 }

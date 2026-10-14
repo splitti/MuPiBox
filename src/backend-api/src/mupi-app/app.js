@@ -7360,15 +7360,6 @@ async function loadMqtt() {
   state.values.set('mqPw', '')
 }
 
-// One of the topics the box sends to, from what is typed. scripts/mqtt/mqtt.py puts the client id in twice
-// (topic/client-id/client-id/state …) - as it always has, existing Symcon/HA setups listen there
-function mqttTopicPreview() {
-  const t = String(state.values.get('mqTopic') ?? '').trim() || '…'
-  const c = String(state.values.get('mqClient') ?? '').trim() || '…'
-  const base = `${t}/${c}`
-  return `z. B. ${base}/${c}/state`
-}
-
 /* WLED */
 
 const WLED_BAUD = ['300', '1200', '2400', '4800', '9600', '19200', '38400', '57600', '115200', '230400', '460800', '921600']
@@ -10614,18 +10605,16 @@ const CONTROLLERS = {
           col: 1,
           items: [
             it('mqName', { dim: 'mqttOn' }),
-            it('mqTopic', { dim: 'mqttOn', help: mqttTopicPreview(), helpId: 'mq-preview' }),
+            // scripts/mqtt/mqtt.py puts the client id in twice - as it always has, existing setups listen there
+            it('mqTopic', { dim: 'mqttOn', help: 'Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state' }),
             it('mqClient', { dim: 'mqttOn' }),
           ],
         },
         { ...page.sections[1], col: 2 },
-        { title: 'Home Assistant (MQTT-Discovery)', col: 2, items: [it('haOn', { help: 'Die Box erscheint in Home Assistant von selbst als Gerät. Einfacher und mit mehr Funktionen (Ansagen, Nachrichten aufs Display): Dienste › Home Assistant.' }), it('haTopic', { dep: 'haOn' })] },
+        // the discovery format comes from Home Assistant, but openHAB, Domoticz and others read it too
+        { title: 'MQTT-Discovery', col: 2, items: [it('haOn', { help: 'Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.' }), it('haTopic', { dep: 'haOn' })] },
         { bar: true, items: [{ type: 'buttons', buttons: [['Speichern', 'primary', 'toast:Gespeichert']] }] },
       ]
-    },
-    mount(root) {
-      // the topics as they come out, while typing
-      for (const k of ['mqTopic', 'mqClient']) $(`#k-${k}`, root)?.addEventListener('input', () => ($('#mq-preview', root).textContent = mqttTopicPreview()))
     },
     byLabel: {
       async Speichern(_a, _l, page) {

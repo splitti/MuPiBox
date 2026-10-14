@@ -27,7 +27,7 @@
 
 ## Themen
 
-Alle Themen beginnen mit Topic und Client-ID, die Client-ID steht dabei zweimal. Mit Topic `MuPiBox/Kinderzimmer` und Client-ID `MuPiBox` meldet die Box zum Beispiel unter `MuPiBox/Kinderzimmer/MuPiBox/MuPiBox/state`.
+Alle Themen beginnen mit Topic und Client-ID, die Client-ID steht dabei zweimal. Mit Topic `MuPiBox/Boxname` und Client-ID `MuPiBox` meldet die Box zum Beispiel unter `MuPiBox/Boxname/MuPiBox/MuPiBox/state`.
 
 | Thema (nach dem Anfang) | Inhalt |
 | --- | --- |
@@ -48,9 +48,9 @@ Steuern lässt sich die Box über dieselben Themen mit `/set` am Ende:
 | `reboot/set` | `reboot` | Neustart |
 | `power/set` | `shutdown` | Herunterfahren |
 
-## Home Assistant
+## MQTT-Discovery
 
-Mit **An Home Assistant melden** legt die Box ihre Geräte in Home Assistant von selbst an (MQTT Discovery). Das **Discovery-Präfix** muss zu dem passen, was in Home Assistant eingestellt ist (dort heißt es normalerweise `homeassistant`).
+Mit **Als Gerät anmelden** meldet die Box ihre Werte und Knöpfe so an, dass Smart-Home-Systeme mit MQTT-Discovery sie von selbst als Gerät anlegen, zum Beispiel Home Assistant, openHAB oder Domoticz. Das **Discovery-Präfix** muss zu dem passen, was dort eingestellt ist; üblich ist `homeassistant`.
 
 > [!TIP]
-> Brauchst du kein Home Assistant, kannst du MQTT trotzdem nutzen: etwa um Zustand und Steuerung in ein eigenes Smarthome-System einzubinden.
+> Versteht dein System kein MQTT-Discovery, bleibt der Schalter aus. Die Werte und Befehle aus [Themen](#themen) legst du dann selbst an.

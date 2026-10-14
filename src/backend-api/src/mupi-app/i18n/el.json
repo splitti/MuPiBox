@@ -362,7 +362,6 @@
  "An der letzten Stelle weiterhören": "Συνέχεια από εκεί που σταμάτησες",
  "An die Startseite": "Στην αρχική σελίδα",
  "An die Startseite heften": "Καρφίτσωμα στην αρχική σελίδα",
- "An Home Assistant melden": "Αναφορά στο Home Assistant",
  "Andere Anmeldung": "Άλλη σύνδεση",
  "Anderes Bild": "Άλλη εικόνα",
  "Ändern": "Αλλαγή",
@@ -2701,7 +2700,6 @@
  "Wohin?": "Πού;",
  "Xmas": "Xmas",
  "z. B. „Papa kommt gleich hoch.“": "π.χ. «Ο μπαμπάς ανεβαίνει σε λίγο.»",
- "z. B. {}/{}/state": "π.χ. {}/{}/state",
  "z. B. 123456789": "π.χ. 123456789",
  "z. B. 192.168.1.1": "π.χ. 192.168.1.1",
  "z. B. 192.168.1.10": "π.χ. 192.168.1.10",
@@ -2809,8 +2807,10 @@
  "Das Display startet mit {}": "Η οθόνη ξεκινά με {}",
  "Empfohlen": "Προτείνεται",
  "Legacy · die bisherige Oberfläche": "Legacy · το προηγούμενο περιβάλλον",
- "Home Assistant (MQTT-Discovery)": "Home Assistant (MQTT Discovery)",
- "Die Box erscheint in Home Assistant von selbst als Gerät. Einfacher und mit mehr Funktionen (Ansagen, Nachrichten aufs Display): Dienste › Home Assistant.": "Το κουτί εμφανίζεται μόνο του στο Home Assistant ως συσκευή. Πιο απλά και με περισσότερες λειτουργίες (ανακοινώσεις, μηνύματα στην οθόνη): Υπηρεσίες › Home Assistant.",
  "Die MQTT-Discovery für Home Assistant ist auch an (Dienste › MQTT). Die Box erscheint dann zweimal in Home Assistant – eins von beiden ausschalten.": "Το MQTT Discovery για το Home Assistant είναι επίσης ενεργό (Υπηρεσίες › MQTT). Το κουτί εμφανίζεται τότε δύο φορές στο Home Assistant – απενεργοποίησε το ένα από τα δύο.",
- "Dienste › MQTT": "Υπηρεσίες › MQTT"
+ "Dienste › MQTT": "Υπηρεσίες › MQTT",
+ "MQTT-Discovery": "MQTT Discovery",
+ "Als Gerät anmelden": "Δήλωση ως συσκευή",
+ "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Τα συστήματα έξυπνου σπιτιού με MQTT Discovery προσθέτουν μόνα τους το κουτί ως συσκευή, με τις τιμές και τα κουμπιά του.",
+ "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Το κουτί στέλνει στο Topic/Client-ID/Client-ID/…, π.χ. MuPiBox/Boxname/MuPiBox/MuPiBox/state"
 }

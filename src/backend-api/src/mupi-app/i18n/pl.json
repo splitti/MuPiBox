@@ -362,7 +362,6 @@
  "An der letzten Stelle weiterhören": "Słuchaj dalej od miejsca przerwania",
  "An die Startseite": "Na stronę startową",
  "An die Startseite heften": "Przypnij do strony startowej",
- "An Home Assistant melden": "Zgłaszaj do Home Assistant",
  "Andere Anmeldung": "Inne logowanie",
  "Anderes Bild": "Inny obraz",
  "Ändern": "Zmień",
@@ -2701,7 +2700,6 @@
  "Wohin?": "Dokąd?",
  "Xmas": "Xmas",
  "z. B. „Papa kommt gleich hoch.“": "np. „Tata zaraz przyjdzie na górę.”",
- "z. B. {}/{}/state": "np. {}/{}/state",
  "z. B. 123456789": "np. 123456789",
  "z. B. 192.168.1.1": "np. 192.168.1.1",
  "z. B. 192.168.1.10": "np. 192.168.1.10",
@@ -2809,8 +2807,10 @@
  "Das Display startet mit {}": "Wyświetlacz zaczyna od {}",
  "Empfohlen": "Zalecana",
  "Legacy · die bisherige Oberfläche": "Legacy · dotychczasowy interfejs",
- "Home Assistant (MQTT-Discovery)": "Home Assistant (MQTT Discovery)",
- "Die Box erscheint in Home Assistant von selbst als Gerät. Einfacher und mit mehr Funktionen (Ansagen, Nachrichten aufs Display): Dienste › Home Assistant.": "Pudełko samo pojawia się w Home Assistant jako urządzenie. Prościej i z większą liczbą funkcji (komunikaty, wiadomości na wyświetlaczu): Usługi › Home Assistant.",
  "Die MQTT-Discovery für Home Assistant ist auch an (Dienste › MQTT). Die Box erscheint dann zweimal in Home Assistant – eins von beiden ausschalten.": "MQTT Discovery dla Home Assistant jest również włączone (Usługi › MQTT). Pudełko pojawi się wtedy w Home Assistant dwa razy – wyłącz jedno z nich.",
- "Dienste › MQTT": "Usługi › MQTT"
+ "Dienste › MQTT": "Usługi › MQTT",
+ "MQTT-Discovery": "MQTT Discovery",
+ "Als Gerät anmelden": "Zgłaszaj jako urządzenie",
+ "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Systemy smart home z MQTT Discovery same dodają pudełko jako urządzenie, z jego wartościami i przyciskami.",
+ "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Pudełko wysyła pod Topic/Client-ID/Client-ID/…, np. MuPiBox/Boxname/MuPiBox/MuPiBox/state"
 }

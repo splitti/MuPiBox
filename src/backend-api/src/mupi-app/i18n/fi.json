@@ -362,7 +362,6 @@
  "An der letzten Stelle weiterhören": "Jatka siitä, mihin jäit",
  "An die Startseite": "Aloitussivulle",
  "An die Startseite heften": "Kiinnitä aloitussivulle",
- "An Home Assistant melden": "Ilmoita Home Assistantille",
  "Andere Anmeldung": "Toinen kirjautuminen",
  "Anderes Bild": "Toinen kuva",
  "Ändern": "Muuta",
@@ -2701,7 +2700,6 @@
  "Wohin?": "Minne?",
  "Xmas": "Xmas",
  "z. B. „Papa kommt gleich hoch.“": "esim. ”Isi tulee kohta ylös.”",
- "z. B. {}/{}/state": "esim. {}/{}/state",
  "z. B. 123456789": "esim. 123456789",
  "z. B. 192.168.1.1": "esim. 192.168.1.1",
  "z. B. 192.168.1.10": "esim. 192.168.1.10",
@@ -2809,8 +2807,10 @@
  "Das Display startet mit {}": "Näyttö aloittaa välilehdellä {}",
  "Empfohlen": "Suositeltu",
  "Legacy · die bisherige Oberfläche": "Legacy · aiempi käyttöliittymä",
- "Home Assistant (MQTT-Discovery)": "Home Assistant (MQTT-discovery)",
- "Die Box erscheint in Home Assistant von selbst als Gerät. Einfacher und mit mehr Funktionen (Ansagen, Nachrichten aufs Display): Dienste › Home Assistant.": "Laatikko näkyy Home Assistantissa itsestään laitteena. Helpompi ja enemmän toimintoja (kuulutukset, viestit näytölle): Palvelut › Home Assistant.",
  "Die MQTT-Discovery für Home Assistant ist auch an (Dienste › MQTT). Die Box erscheint dann zweimal in Home Assistant – eins von beiden ausschalten.": "Home Assistantin MQTT-discovery on myös päällä (Palvelut › MQTT). Laatikko näkyy silloin Home Assistantissa kahdesti – kytke toinen pois.",
- "Dienste › MQTT": "Palvelut › MQTT"
+ "Dienste › MQTT": "Palvelut › MQTT",
+ "MQTT-Discovery": "MQTT-discovery",
+ "Als Gerät anmelden": "Ilmoita laitteena",
+ "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Älykodin järjestelmät, joissa on MQTT-discovery, lisäävät laatikon itse laitteeksi arvoineen ja painikkeineen.",
+ "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Laatikko lähettää aiheisiin Topic/Client-ID/Client-ID/…, esim. MuPiBox/Boxname/MuPiBox/MuPiBox/state"
 }

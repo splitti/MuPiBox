@@ -362,7 +362,6 @@
  "An der letzten Stelle weiterhören": "Продовжувати з місця зупинки",
  "An die Startseite": "На головну",
  "An die Startseite heften": "Закріпити на головній",
- "An Home Assistant melden": "Повідомляти Home Assistant",
  "Andere Anmeldung": "Інший вхід",
  "Anderes Bild": "Інше зображення",
  "Ändern": "Змінити",
@@ -2701,7 +2700,6 @@
  "Wohin?": "Куди?",
  "Xmas": "Xmas",
  "z. B. „Papa kommt gleich hoch.“": "напр. «Тато зараз підніметься.»",
- "z. B. {}/{}/state": "напр., {}/{}/state",
  "z. B. 123456789": "напр. 123456789",
  "z. B. 192.168.1.1": "напр. 192.168.1.1",
  "z. B. 192.168.1.10": "напр., 192.168.1.10",
@@ -2809,8 +2807,10 @@
  "Das Display startet mit {}": "Дисплей починає з {}",
  "Empfohlen": "Рекомендовано",
  "Legacy · die bisherige Oberfläche": "Legacy · попередній інтерфейс",
- "Home Assistant (MQTT-Discovery)": "Home Assistant (MQTT Discovery)",
- "Die Box erscheint in Home Assistant von selbst als Gerät. Einfacher und mit mehr Funktionen (Ansagen, Nachrichten aufs Display): Dienste › Home Assistant.": "Бокс сам з’являється в Home Assistant як пристрій. Простіше й з більшою кількістю функцій (оголошення, повідомлення на дисплей): Служби › Home Assistant.",
  "Die MQTT-Discovery für Home Assistant ist auch an (Dienste › MQTT). Die Box erscheint dann zweimal in Home Assistant – eins von beiden ausschalten.": "MQTT Discovery для Home Assistant також увімкнено (Служби › MQTT). Тоді бокс з’явиться в Home Assistant двічі – вимкніть одне з двох.",
- "Dienste › MQTT": "Служби › MQTT"
+ "Dienste › MQTT": "Служби › MQTT",
+ "MQTT-Discovery": "MQTT Discovery",
+ "Als Gerät anmelden": "Реєструвати як пристрій",
+ "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Системи розумного дому з MQTT Discovery самі додадуть бокс як пристрій — з його значеннями й кнопками.",
+ "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Бокс надсилає в Topic/Client-ID/Client-ID/…, напр., MuPiBox/Boxname/MuPiBox/MuPiBox/state"
 }

@@ -362,7 +362,6 @@
  "An der letzten Stelle weiterhören": "Riprendi da dove eri rimasto",
  "An die Startseite": "Nella pagina iniziale",
  "An die Startseite heften": "Fissa nella pagina iniziale",
- "An Home Assistant melden": "Segnala a Home Assistant",
  "Andere Anmeldung": "Altro accesso",
  "Anderes Bild": "Altra immagine",
  "Ändern": "Modifica",
@@ -2701,7 +2700,6 @@
  "Wohin?": "Dove?",
  "Xmas": "Xmas",
  "z. B. „Papa kommt gleich hoch.“": "per es. «Papà sale tra un attimo.»",
- "z. B. {}/{}/state": "ad es. {}/{}/state",
  "z. B. 123456789": "per es. 123456789",
  "z. B. 192.168.1.1": "per es. 192.168.1.1",
  "z. B. 192.168.1.10": "ad es. 192.168.1.10",
@@ -2809,8 +2807,10 @@
  "Das Display startet mit {}": "Il display inizia con {}",
  "Empfohlen": "Consigliata",
  "Legacy · die bisherige Oberfläche": "Legacy · l'interfaccia precedente",
- "Home Assistant (MQTT-Discovery)": "Home Assistant (MQTT Discovery)",
- "Die Box erscheint in Home Assistant von selbst als Gerät. Einfacher und mit mehr Funktionen (Ansagen, Nachrichten aufs Display): Dienste › Home Assistant.": "Il box compare da solo in Home Assistant come dispositivo. Più semplice e con più funzioni (annunci, messaggi sul display): Servizi › Home Assistant.",
  "Die MQTT-Discovery für Home Assistant ist auch an (Dienste › MQTT). Die Box erscheint dann zweimal in Home Assistant – eins von beiden ausschalten.": "Anche l’MQTT Discovery per Home Assistant è attivo (Servizi › MQTT). Il box compare quindi due volte in Home Assistant: disattiva uno dei due.",
- "Dienste › MQTT": "Servizi › MQTT"
+ "Dienste › MQTT": "Servizi › MQTT",
+ "MQTT-Discovery": "MQTT Discovery",
+ "Als Gerät anmelden": "Annuncia come dispositivo",
+ "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "I sistemi smart home con MQTT Discovery aggiungono da soli il box come dispositivo, con i suoi valori e pulsanti.",
+ "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Il box invia sotto Topic/Client-ID/Client-ID/…, ad es. MuPiBox/Boxname/MuPiBox/MuPiBox/state"
 }

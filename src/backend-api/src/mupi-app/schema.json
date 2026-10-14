@@ -3626,12 +3626,12 @@
      ]
     },
     {
-     "title": "Home Assistant",
+     "title": "MQTT-Discovery",
      "help": "",
      "items": [
       {
        "type": "toggle",
-       "label": "An Home Assistant melden",
+       "label": "Als Gerät anmelden",
        "key": "haOn",
        "default": false
       },
@@ -6185,12 +6185,12 @@
    "id": "mqtt"
   },
   {
-   "l": "Home Assistant",
+   "l": "MQTT-Discovery",
    "where": "Dienste › MQTT",
    "id": "mqtt"
   },
   {
-   "l": "An Home Assistant melden",
+   "l": "Als Gerät anmelden",
    "where": "Dienste › MQTT",
    "id": "mqtt"
   },

@@ -362,7 +362,6 @@
  "An der letzten Stelle weiterhören": "Продолжать с места остановки",
  "An die Startseite": "На главную",
  "An die Startseite heften": "Закрепить на главной",
- "An Home Assistant melden": "Сообщать в Home Assistant",
  "Andere Anmeldung": "Другой вход",
  "Anderes Bild": "Другое изображение",
  "Ändern": "Изменить",
@@ -2701,7 +2700,6 @@
  "Wohin?": "Куда?",
  "Xmas": "Xmas",
  "z. B. „Papa kommt gleich hoch.“": "например, «Папа сейчас поднимется.»",
- "z. B. {}/{}/state": "например, {}/{}/state",
  "z. B. 123456789": "например, 123456789",
  "z. B. 192.168.1.1": "например, 192.168.1.1",
  "z. B. 192.168.1.10": "например, 192.168.1.10",
@@ -2809,8 +2807,10 @@
  "Das Display startet mit {}": "Дисплей начинает с {}",
  "Empfohlen": "Рекомендуется",
  "Legacy · die bisherige Oberfläche": "Legacy · прежний интерфейс",
- "Home Assistant (MQTT-Discovery)": "Home Assistant (MQTT Discovery)",
- "Die Box erscheint in Home Assistant von selbst als Gerät. Einfacher und mit mehr Funktionen (Ansagen, Nachrichten aufs Display): Dienste › Home Assistant.": "Бокс сам появляется в Home Assistant как устройство. Проще и с большим числом функций (объявления, сообщения на дисплей): Службы › Home Assistant.",
  "Die MQTT-Discovery für Home Assistant ist auch an (Dienste › MQTT). Die Box erscheint dann zweimal in Home Assistant – eins von beiden ausschalten.": "MQTT Discovery для Home Assistant тоже включён (Службы › MQTT). Тогда бокс появится в Home Assistant дважды – отключите одно из двух.",
- "Dienste › MQTT": "Службы › MQTT"
+ "Dienste › MQTT": "Службы › MQTT",
+ "MQTT-Discovery": "MQTT Discovery",
+ "Als Gerät anmelden": "Регистрировать как устройство",
+ "Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.": "Системы умного дома с MQTT Discovery сами добавят бокс как устройство — с его значениями и кнопками.",
+ "Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state": "Бокс отправляет в Topic/Client-ID/Client-ID/…, например, MuPiBox/Boxname/MuPiBox/MuPiBox/state"
 }
