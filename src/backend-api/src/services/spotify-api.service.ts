@@ -594,13 +594,15 @@ export class SpotifyApiService {
       const result = await this.spotifyApi.search(query, ['album'], 'DE', Math.min(l, 10) as any, o)
       return {
         items:
-          result.albums.items.map((item) => ({
-            id: item.id,
-            name: item.name,
-            artists: item.artists,
-            images: item.images,
-            release_date: item.release_date,
-          })) || [],
+          result.albums.items
+            .filter((item) => item)
+            .map((item) => ({
+              id: item.id,
+              name: item.name,
+              artists: item.artists,
+              images: item.images,
+              release_date: item.release_date,
+            })) || [],
         total: result.albums.total || 0,
         limit: result.albums.limit || l,
         offset: result.albums.offset || o,
@@ -725,12 +727,15 @@ export class SpotifyApiService {
     return this.executeWithCache(cacheKey, async () => {
       const result = await this.spotifyApi.shows.episodes(showId, 'DE', Math.min(l, 10) as any, o)
       return {
-        items: result.items.map((item) => ({
-          id: item.id,
-          name: item.name,
-          images: item.images,
-          release_date: item.release_date,
-        })),
+        // (Spotify lists an episode that is not available (any more) as null: left out, it failed the whole update)
+        items: result.items
+          .filter((item) => item)
+          .map((item) => ({
+            id: item.id,
+            name: item.name,
+            images: item.images,
+            release_date: item.release_date,
+          })),
         total: result.total || 0,
         limit: result.limit || l,
         offset: result.offset || o,
