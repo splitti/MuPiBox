@@ -8,7 +8,7 @@ The box works in your home network. This chapter shows how to connect it and how
 | [Shares and remote control](freigaben.md) | Samba, FTP and VNC |
 | [Password and HTTPS](sicherheit.md) | protect the app, encrypted connection |
 | [Telegram](telegram.md) | parent bot with notifications and remote control |
-| [MQTT and Home Assistant](mqtt.md) | integrate the box into the smart home |
+| [MQTT](mqtt.md) | state and commands through an MQTT broker, with MQTT discovery |
 | [Home Assistant](home-assistant.md) | show and control through the box's Home Assistant interface |
 
 > [!NOTE]

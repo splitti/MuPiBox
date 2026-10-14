@@ -1,6 +1,6 @@
-# MQTT und Home Assistant
+# MQTT
 
-Über **MQTT** meldet die Box ihren Zustand an einen Broker im Heimnetz und lässt sich darüber steuern. Mit **Home Assistant** richtet sich die Box dort selbst ein (MQTT-Discovery). Die Einstellungen stehen unter **Einstellungen › Dienste › MQTT**.
+Über **MQTT** meldet die Box ihren Zustand an einen Broker im Heimnetz und lässt sich darüber steuern. Mit **MQTT-Discovery** legen Smart-Home-Systeme die Box von selbst als Gerät an. Die Einstellungen stehen unter **Einstellungen › Dienste › MQTT**.
 
 > [!TIP]
 > Für Home Assistant geht es auch ohne Broker und mit mehr Funktionen (Ansagen, Nachrichten aufs Display): die direkte Kopplung unter [Home Assistant](home-assistant.md). Nimm nur eine von beiden, sonst erscheint die Box zweimal.

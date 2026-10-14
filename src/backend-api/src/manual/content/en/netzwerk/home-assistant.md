@@ -3,7 +3,7 @@
 With **Home Assistant** you can show and control the box: what is playing (with cover), volume, pause, next and previous, seeking in the track and where the box plays (speaker, headphone jack, Bluetooth headphones). Home Assistant also shows battery level, Wi-Fi signal, CPU load, temperature, memory and storage. The connection is encrypted (HTTPS) and only within the home network. In Home Assistant you need the **MuPiBox** integration from HACS.
 
 > [!NOTE]
-> This is the new connection through the box's Home Assistant interface. The older connection through an MQTT broker still exists ([MQTT and Home Assistant](mqtt.md)). You only need one of the two.
+> This is the new connection through the box's Home Assistant interface. The older connection through an MQTT broker with MQTT discovery still exists ([MQTT](mqtt.md#mqtt-discovery)). You only need one of the two.
 
 ## Switching on
 

@@ -24,6 +24,6 @@ The settings are arranged in these groups:
 - **Audio**: volume, sound card, rotary knob, Bluetooth, speech output
 - **Battery & Power**: battery, MuPiHAT, shutdown, button, fan
 - **Network**: Wi-Fi, LAN
-- **Services**: Spotify, NAS, podcast and radio search, Telegram, MQTT, WLED, shares & remote access (Samba, FTP, VNC)
+- **Services**: Spotify, NAS, podcast and radio search, Telegram, MQTT, Home Assistant, WLED, shares & remote access (Samba, FTP, VNC)
 - **Security**: password, sign-in, HTTPS
 - **System**: about the box, health, updates, backup, restart, logs, system options, browser, experts, language, legal

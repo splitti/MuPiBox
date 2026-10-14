@@ -16,7 +16,7 @@ On the display the content is sorted into categories: Audiobooks, Music, NAS, an
 - how long and when the child may listen: [Playtime and quiet times](../spielzeit/index.md),
 - how loud the box may get at most (hearing protection): [Sound and volume](../hardware/sound.md),
 - how the box looks: themes, boot screens and texts ([Covers and themes](../bedienung/cover-und-themes.md)),
-- how it reports: Telegram messages and Home Assistant ([Telegram](../netzwerk/telegram.md), [MQTT and Home Assistant](../netzwerk/mqtt.md)).
+- how it reports: Telegram messages, Home Assistant and MQTT ([Telegram](../netzwerk/telegram.md), [Home Assistant](../netzwerk/home-assistant.md), [MQTT](../netzwerk/mqtt.md)).
 
 ## What the box takes care of by itself
 

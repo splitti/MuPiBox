@@ -71,7 +71,7 @@
    "id": "g-dienste",
    "title": "Dienste",
    "icon": "plug",
-   "description": "Spotify, NAS, Podcast- und Radiosuche · Telegram, MQTT, WLED · Samba, FTP, VNC"
+   "description": "Spotify, NAS, Podcast- und Radiosuche · Telegram, MQTT, Home Assistant, WLED · Samba, FTP, VNC"
   },
   {
    "id": "g-sicherheit",
@@ -4778,7 +4778,7 @@
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "Dienste",
-   "description": "Spotify, NAS, Podcast- und Radiosuche · Telegram, MQTT, WLED · Samba, FTP, VNC",
+   "description": "Spotify, NAS, Podcast- und Radiosuche · Telegram, MQTT, Home Assistant, WLED · Samba, FTP, VNC",
    "icon": "plug",
    "sections": [
     {

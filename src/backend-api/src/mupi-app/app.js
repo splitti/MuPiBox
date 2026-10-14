@@ -1039,7 +1039,7 @@ function startSkeleton() {
       ${navRow('telegram', 'Telegram', 'Eltern-Bot', 'tg')}
       ${navRow('g-system', 'System', 'Über die Box, Neustart, Updates', 'gear')}
       ${navRow('ext:manual', 'Handbuch', 'Anleitung zu Box, Display und App', 'book')}
-      ${navRow('ext:admin', 'Erweiterte Einstellungen', 'Das bisherige Admin-Interface', 'ext')}
+      ${navRow('ext:admin', 'Erweiterte Einstellungen', 'Legacy · die bisherige Oberfläche', 'ext')}
     </div></section>`,
   ]
 }

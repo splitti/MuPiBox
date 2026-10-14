@@ -3,7 +3,7 @@
 Mit **Home Assistant** kannst du die Box anzeigen und steuern: was gerade läuft (mit Cover), Lautstärke, Pause, Weiter und Zurück, Springen im Titel und wo die Box spielt (Lautsprecher, Kopfhörerbuchse, Bluetooth-Kopfhörer). Dazu zeigt Home Assistant Akkustand, WLAN-Signal, Prozessorlast, Temperatur, Arbeitsspeicher und Speicherplatz. Die Verbindung läuft verschlüsselt (HTTPS) und nur im Heimnetz. In Home Assistant brauchst du dafür die Integration **MuPiBox** aus HACS.
 
 > [!NOTE]
-> Das ist die neue Anbindung über die Home-Assistant-Schnittstelle der Box. Die ältere Anbindung über einen MQTT-Broker gibt es weiter ([MQTT und Home Assistant](mqtt.md)). Du brauchst nur eine von beiden.
+> Das ist die neue Anbindung über die Home-Assistant-Schnittstelle der Box. Die ältere Anbindung über einen MQTT-Broker mit MQTT-Discovery gibt es weiter ([MQTT](mqtt.md#mqtt-discovery)). Du brauchst nur eine von beiden.
 
 ## Einschalten
 
