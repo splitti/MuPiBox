@@ -6,32 +6,34 @@
 #   cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup.sh | sudo bash -s -- dev
 
 case "$1" in
-	stable | beta | dev) RELEASE="$1" ;;
-	"") RELEASE="stable" ;;
+	stable|beta|dev)
+		RELEASE="$1"
+		;;
+	"")
+		RELEASE="stable"
+		;;
 	*)
 		echo "Unknown channel '$1' - use stable, beta or dev" >&2
 		exit 1
 		;;
 esac
+
+if [ -f "/boot/firmware/config.txt" ];
+then
+	BOOT_DIR="/boot/firmware"
+	BOOT_CONFIG="/boot/firmware/config.txt"
+	BOOT_CMDLINE="/boot/firmware/cmdline.txt"
+else
+	BOOT_DIR="/boot"
+	BOOT_CONFIG="/boot/config.txt"
+	BOOT_CMDLINE="/boot/cmdline.txt"
+fi
+
 LOG="/tmp/autosetup.log"
-BOOT_DIR="/boot"
-BOOT_CONFIG="/boot/config.txt"
-BOOT_CMDLINE="/boot/cmdline.txt"
-
-if [ -f "/boot/firmware/config.txt" ]; then
-  BOOT_DIR="/boot/firmware"
-  BOOT_CONFIG="/boot/firmware/config.txt"
-fi
-
-if [ -f "/boot/firmware/cmdline.txt" ]; then
-  BOOT_CMDLINE="/boot/firmware/cmdline.txt"
-fi
+# (only once LOG is set: opened before, the redirect failed - and every step with ">&3 2>&3" was skipped, not run)
+exec 3>${LOG}
 VER_JSON="/tmp/version.json"
 CONFIG="/etc/mupibox/mupiboxconfig.json"
-STEP=0
-
-exec 3>${LOG}
-
 OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)
 OS=${OS:17}
 ARCH=$(uname -m)
@@ -45,6 +47,7 @@ fi
 
 rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 
+STEP=0
 {
 	# 2026-09-20: no longer installed (nothing in MuPiBox uses them any more):
 	#   id3tool - only the ID3 converter used it; that converter was removed from the admin
@@ -56,7 +59,7 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	#   autoconf - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
 	#   automake - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
 	# libwidevinecdm0 stays: the display plays Spotify through the Web Playback SDK in Chromium, which needs Widevine
-	packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer mpv pulseaudio-module-bluetooth pip bluez zip unzip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa preload python3-smbus2 pigpio libjson-c-dev libi2c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh rfkill xdotool"
+	packages2install="lighttpd-mod-openssl gpiod git mpv pulseaudio-module-bluetooth python3-pip bluez zip unzip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt python3-smbus2 pigpio libjson-c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh rfkill xdotool"
 
 	###############################################################################################
 
@@ -103,6 +106,14 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	if gpioset --version 2>/dev/null | grep -q ' v2\.' && ! command -v pinctrl >/dev/null && apt-cache show raspi-utils-core >/dev/null 2>&1; then
 		apt-get --yes install raspi-utils-core >&3 2>&3
 	fi
+	# avahi for the Home Assistant API (scripts/mupibox/ha_mdns.sh): installed, but running only while the API is switched
+	# on in the app - its install starts it, so it is switched off again here unless the API is on
+	if ! dpkg -l avahi-daemon 2>/dev/null | grep -q '^ii'; then
+		apt-get --yes install --no-install-recommends avahi-daemon >&3 2>&3
+	fi
+	if [ "$(/usr/bin/jq -r '.homeAssistant.enabled // false' ${CONFIG} 2>/dev/null)" != "true" ]; then
+		systemctl disable --now avahi-daemon.socket avahi-daemon >&3 2>&3
+	fi
 
 	###############################################################################################
 
@@ -114,26 +125,8 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 		# after=$(date +%s)
 		# echo -e "## pip install mutagen ## finished after $((after - before)) seconds" >&3 2>&3
 		# STEP=$((STEP + 1))
-
-		echo -e "XXX\n${STEP}\nInstall package pip requests\nXXX"
-		before=$(date +%s)
-		installed=$(pip list | grep requests)
-		if [ ${#installed} = 0 ]; then
-			pip install requests --break-system-packages >&3 2>&3
-		fi
-		after=$(date +%s)
-		echo -e "## pip install requests ## finished after $((after - before)) seconds" >&3 2>&3
-		STEP=$((STEP + 1))
-
-		echo -e "XXX\n${STEP}\nInstall package pip pyserial\nXXX"
-		before=$(date +%s)
-		installed=$(pip list | grep pyserial)
-		if [ ${#installed} = 0 ]; then
-			pip install pyserial --break-system-packages >&3 2>&3
-		fi
-		after=$(date +%s)
-		echo -e "## pip install pyserial ## finished after $((after - before)) seconds" >&3 2>&3
-		STEP=$((STEP + 1))
+		# (requests and pyserial come from the package list: python3-requests, python3-serial)
+		:
 	else
 		echo -e "XXX\n${STEP}\nInstall package python3-dev\nXXX"
 		# 2026-09-20: python3-mutagen is no longer installed (only the removed ID3 converter used it).
@@ -209,9 +202,13 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	if [[ "$NODEJS" == "v22."* ]]; then
 		echo "Node.js already at v22.*" >&3 2>&3
 	else
-		apt-get --yes remove nodejs >&3 2>&3
-		curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >&3 2>&3
-		apt-get install -y nodejs >&3 2>&3
+		# Node.js 22 from NodeSource, installed over one there may be - not removed first: a failed download left none
+		if curl -fsSL https://deb.nodesource.com/setup_22.x -o /tmp/nodesource_setup.sh >&3 2>&3 && bash /tmp/nodesource_setup.sh >&3 2>&3; then
+			apt-get install -y nodejs >&3 2>&3
+		fi
+		rm -f /tmp/nodesource_setup.sh
+		NODEJS=$(nodejs --version 2>/dev/null)
+		[[ "$NODEJS" == "v22."* ]] || echo "## WARNING: Node.js 22 could not be installed (${NODEJS:-none}) - the box needs it, please run the installation again ##" >&3 2>&3
 	fi
 	after=$(date +%s)
 	echo -e "## Install/Update Node.js 22 ## finished after $((after - before)) seconds" >&3 2>&3
@@ -219,12 +216,6 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nInstall ionic... \nXXX"
-	before=$(date +%s)
-	npm install -g @ionic/cli >&3 2>&3
-	after=$(date +%s)
-	echo -e "## Install ionic ## finished after $((after - before)) seconds" >&3 2>&3
-	STEP=$((STEP + 1))
 
 	echo -e "XXX\n${STEP}\nInstall pm2... \nXXX"
 	before=$(date +%s)
@@ -253,23 +244,15 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	echo -e "XXX\n${STEP}\nClean and create directories... \nXXX"
 	before=$(date +%s)
 	rm -Rf /home/dietpi/.mupibox /home/dietpi/MuPiBox >&3 2>&3
-	mkdir -p /home/dietpi/.mupibox/chromium_cache >&3 2>&3
-	mkdir -p /home/dietpi/MuPiBox/tts_files >&3 2>&3
-	mkdir -p /home/dietpi/MuPiBox/sysmedia/sound >&3 2>&3
-	mkdir -p /home/dietpi/MuPiBox/sysmedia/images >&3 2>&3
+
+	mkdir -p /home/dietpi/.mupibox/{chromium_cache,Sonos-Kids-Controller-master,spotifycontroller-main/config} >&3 2>&3
 	mkdir -p /home/dietpi/.cache/spotify >&3 2>&3
-	mkdir -p /home/dietpi/MuPiBox/media/audiobook >&3 2>&3
-	mkdir -p /home/dietpi/MuPiBox/media/music >&3 2>&3
-	mkdir -p /home/dietpi/MuPiBox/media/other >&3 2>&3
-	mkdir -p /home/dietpi/MuPiBox/media/NAS >&3 2>&3
-	mkdir -p /home/dietpi/MuPiBox/media/cover >&3 2>&3
-	mkdir -p /home/dietpi/MuPiBox/media/youtube-dl >&3 2>&3
-	mkdir -p /home/dietpi/MuPiBox/themes >&3 2>&3
-	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
-	mkdir -p /home/dietpi/.mupibox/spotifycontroller-main/config >&3 2>&3
-	mkdir -p /usr/local/bin/mupibox >&3 2>&3
+	mkdir -p /home/dietpi/MuPiBox/{tts_files,themes,sysmedia/{sound,images},media/{audiobook,music,other,NAS,cover,youtube-dl}} >&3 2>&3
+
 	mkdir -p /etc/mupibox >&3 2>&3
+	mkdir -p /usr/local/bin/mupibox >&3 2>&3
 	mkdir -p /var/log/mupibox/ >&3 2>&3
+
 	chown -R dietpi:dietpi /home/dietpi/.mupibox /home/dietpi/MuPiBox >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Clean and create directories ## finished after $((after - before)) seconds" >&3 2>&3
@@ -337,8 +320,8 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 		echo "DietPi-Dashboard ${DD_VERSION} download failed - the box runs without it" >&3 2>&3
 	fi
 	rm -f "${DD_TMP}"
-	curl -sSfL --retry 3 --retry-delay 3 -m 60 "https://raw.githubusercontent.com/nonnorm/DietPi-Dashboard/${DD_VERSION}/config.toml" -o /opt/dietpi-dashboard/config.toml >&3 2>&3
-	sed -i 's/#terminal_user = "root"/terminal_user = "dietpi"/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
+	# (its config.toml is written by dietpi_dashboard.sh when the services are set up - the release's default had no
+	# password; off until it is switched on in the app)
 	after=$(date +%s)
 	echo -e "## Setup DietPi-Dashboard ## finished after $((after - before)) seconds" >&3 2>&3
 	STEP=$((STEP + 1))
@@ -348,9 +331,63 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	echo -e "XXX\n${STEP}\nCopy DietPi config... \nXXX"
 	before=$(date +%s)
 	mv -f ${MUPI_SRC}/config/templates/asound.conf /etc/asound.conf >&3 2>&3
-	mv -f ${MUPI_SRC}/config/templates/smb.conf /etc/samba/smb.conf >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Copy DietPi config ## finished after $((after - before)) seconds" >&3 2>&3
+	STEP=$((STEP + 1))
+
+	###############################################################################################
+
+	echo -e "XXX\n${STEP}\nPreconfigure Samba, FTP and VNC... \nXXX"
+	before=$(date +%s)
+	# The Samba share (the box in the Windows network) installed and set up, but off: the app switches it on
+	# (Einstellungen › Dienste, eltern/services.ts) - then at once and without internet. Nothing was installed for it
+	# before (smb.conf and the password went nowhere, smbd was "switched on" without being there), the app installed it
+	# at its first switch-on. With it its announcement (WS-Discovery): wsdd2 (Debian 12 and 13), else wsdd.
+	# Debian's packages start their service when they are installed: policy-rc.d keeps them from it meanwhile (else
+	# proftpd ran for a moment with Debian's own config, which lets the box's user log in) - the same as the update
+	POLICY_RC=/usr/sbin/policy-rc.d
+	POLICY_RC_OURS=0
+	if [ ! -e "${POLICY_RC}" ]; then
+		printf '#!/bin/sh\n# written by the MuPiBox update while it installs packages: no service starts meanwhile\nexit 101\n' > "${POLICY_RC}" && chmod 755 "${POLICY_RC}" && POLICY_RC_OURS=1
+	fi
+	# A config comes from the template only while it is none of the user's own (a setup run again on a box that has
+	# them): there was none before, or it is still the package's - its original, or what ucf wrote and keeps the
+	# checksum of. The first Samba password the same: only for a Samba user that is not there yet.
+	conf_untouched() {
+		cmp -s "$1" "$2" && return 0
+		local sum
+		sum=$(md5sum < "$1" 2>/dev/null | cut -d' ' -f1)
+		[ -n "${sum}" ] && grep -qs "^${sum}  $1$" /var/lib/ucf/hashfile
+	}
+	SMB_CONF_HAD=0
+	[ -e /etc/samba/smb.conf ] && SMB_CONF_HAD=1
+	FTP_CONF_HAD=0
+	[ -e /etc/proftpd/proftpd.conf ] && FTP_CONF_HAD=1
+	WSD=$(apt-cache show wsdd2 >/dev/null 2>&1 && echo wsdd2 || echo wsdd)
+	DEBIAN_FRONTEND=noninteractive apt-get --yes install samba ${WSD} >&3 2>&3
+	if [ "${SMB_CONF_HAD}" = 0 ] || conf_untouched /etc/samba/smb.conf /usr/share/samba/smb.conf; then
+		cp -f ${MUPI_SRC}/config/templates/smb.conf /etc/samba/smb.conf >&3 2>&3
+	fi
+	pdbedit -u dietpi >/dev/null 2>&1 || (echo "mupibox"; echo "mupibox") | smbpasswd -s -a dietpi >&3 2>&3
+	# (the package starts them: off until the app switches the share on; the domain controller is never needed)
+	for u in smbd nmbd samba-ad-dc wsdd wsdd2; do
+		systemctl cat ${u}.service >/dev/null 2>&1 || continue
+		systemctl disable --now ${u}.service >&3 2>&3
+	done
+	# FTP (proftpd) and VNC (x11vnc, websockify and noVNC for the browser) the same way, issue #178: installed and set up,
+	# off - the app's switches (eltern/services.ts) then only start and stop them, at once and without internet
+	DEBIAN_FRONTEND=noninteractive apt-get --yes install proftpd-core x11vnc websockify >&3 2>&3
+	if [ -d /etc/proftpd ] && { [ "${FTP_CONF_HAD}" = 0 ] || conf_untouched /etc/proftpd/proftpd.conf /usr/share/proftpd/templates/proftpd.conf; }; then
+		cp -f ${MUPI_SRC}/config/templates/proftpd.conf /etc/proftpd/proftpd.conf >&3 2>&3
+	fi
+	systemctl disable --now proftpd.service >&3 2>&3
+	if [ ! -d /usr/share/novnc ]; then
+		git clone --depth 1 https://github.com/novnc/noVNC.git /usr/share/novnc >&3 2>&3 && chown -R dietpi:dietpi /usr/share/novnc >&3 2>&3
+	fi
+	# (mupi_vnc and mupi_novnc are installed with the other units and stay off until the app switches VNC on)
+	[ "${POLICY_RC_OURS}" = 1 ] && rm -f "${POLICY_RC}"
+	after=$(date +%s)
+	echo -e "## Preconfigure Samba, FTP and VNC ## finished after $((after - before)) seconds" >&3 2>&3
 	STEP=$((STEP + 1))
 
 	###############################################################################################
@@ -380,63 +417,21 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 
 	echo -e "XXX\n${STEP}\nCopy MuPiBox files and themes... \nXXX"
 	before=$(date +%s)
-	for theme in earth steampunk fantasybutterflies matrix lines forms comic mystic clone-wars enterprise spiderman supermario pikachu dinosaur unicorn axolotl custom; do
-		mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/${theme} >&3 2>&3
-	done
-
-	mv ${MUPI_SRC}/themes/fantasybutterflies/odstemplikBold.otf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/odstemplikBold.otf >&3 2>&3
-	mv ${MUPI_SRC}/themes/fantasybutterflies/fantasy-butterflies-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/fantasy-butterflies-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/fantasybutterflies/fantasy-circle-bg.png /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/fantasy-circle-bg.png >&3 2>&3
-	mv ${MUPI_SRC}/themes/lines/lines-bg.png /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/lines/lines-bg.png >&3 2>&3
-	mv ${MUPI_SRC}/themes/lines/KOMIKND_.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/lines/KOMIKND_.ttf >&3 2>&3
-	mv ${MUPI_SRC}/themes/forms/forms-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/forms/forms-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/forms/LT_Crafted.otf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/forms/LT_Crafted.otf >&3 2>&3
-	mv ${MUPI_SRC}/themes/comic/comic-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/comic/comic-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/comic/snaphand-v1-free.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/comic/snaphand-v1-free.ttf >&3 2>&3
-	mv ${MUPI_SRC}/themes/mystic/mystic-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/mystic/mystic-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/mystic/ylee_Mortal_Heart.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/mystic/ylee_Mortal_Heart.ttf >&3 2>&3
-	mv ${MUPI_SRC}/themes/matrix/matrix-bg.png /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/matrix/matrix-bg.png >&3 2>&3
-	mv ${MUPI_SRC}/themes/matrix/Pixolletta8px.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/matrix/Pixolletta8px.ttf >&3 2>&3
-	mv ${MUPI_SRC}/themes/clone-wars/Starjedi.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/clone-wars/Starjedi.ttf >&3 2>&3
-	mv ${MUPI_SRC}/themes/clone-wars/clone-wars-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/clone-wars/clone-wars-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/enterprise/Nasa21.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/enterprise/Nasa21.ttf >&3 2>&3
-	mv ${MUPI_SRC}/themes/enterprise/enterprise-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/enterprise/enterprise-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/spiderman/IntensaFuente.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/spiderman/IntensaFuente.ttf >&3 2>&3
-	mv ${MUPI_SRC}/themes/spiderman/spiderman-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/spiderman/spiderman-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/pikachu/PokemonXandY.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/pikachu/PokemonXandY.ttf >&3 2>&3
-	mv ${MUPI_SRC}/themes/pikachu/pikachu-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/pikachu/pikachu-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/supermario/TitanOne-Regular.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/supermario/TitanOne-Regular.ttf >&3 2>&3
-
-	mv ${MUPI_SRC}/themes/supermario/OFL-TitanOne.txt /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/supermario/OFL-TitanOne.txt >&3 2>&3
-	mv ${MUPI_SRC}/themes/supermario/supermario-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/supermario/supermario-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/dinosaur/BerlinSmallCaps.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/dinosaur/BerlinSmallCaps.ttf >&3 2>&3
-	mv ${MUPI_SRC}/themes/dinosaur/dinosaur-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/dinosaur/dinosaur-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/unicorn/MagnoliaScript.otf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/unicorn/MagnoliaScript.otf >&3 2>&3
-	mv ${MUPI_SRC}/themes/unicorn/unicorn-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/unicorn/unicorn-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/axolotl/MagnoliaScript.otf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/axolotl/MagnoliaScript.otf >&3 2>&3
-	mv ${MUPI_SRC}/themes/axolotl/axolotl-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/axolotl/axolotl-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/earth/earth-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/earth-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/earth/Nasa21.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/Nasa21.ttf >&3 2>&3
-	mv ${MUPI_SRC}/themes/steampunk/steampunk-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/steampunk/Rye-Regular.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/Rye-Regular.ttf >&3 2>&3
-
-	mv ${MUPI_SRC}/themes/steampunk/OFL-Rye.txt /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/OFL-Rye.txt >&3 2>&3
-	mv ${MUPI_SRC}/themes/steampunk/steampunk-gear.png /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-gear.png >&3 2>&3
-	mv ${MUPI_SRC}/themes/steampunk/steampunk-header.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-header.jpg >&3 2>&3
-	ln -sf /home/dietpi/MuPiBox/themes/custom-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/custom/custom-bg.jpg >&3 2>&3
 
 	# km themes (children's themes of one design): pictures per theme, shared fonts, and the list with their names
 	# (the admin interface shows those). New ones: add the id here, in conf_update.sh and in autosetup.sh.
 	KM_THEMES="kuschelmond moosnest sonnenhof pferdehof fussball fahrzeuge buecherregal kassettenrekorder unterwasser bastelpapier prinzessin einhorn feenschloss weltraum dinoland piratenbucht tagundnacht feuerwehr ritterburg eisenbahn roboter heldenstadt safari eiswelt zirkus meerjungfrau ballett kaetzchen zuckerland schmetterlinge"
+	
 	# the old themes in the km layout (legacy in km-themes.json): their mascots and cover placeholders; coverflow stays
 	KM_LEGACY_THEMES="axolotl blue captainamerica chocolate cinema clone-wars comic custom danger dark darkred deepblue dinosaur earth enterprise fantasybutterflies forms green ironman light lines matrix mint mystic orange pikachu pink purple red spiderman steampunk supermario unicorn vintage wall-e wood xmas"
 	for theme in ${KM_THEMES} ${KM_LEGACY_THEMES} _fonts; do
 		mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/${theme} >&3 2>&3
 		cp -f ${MUPI_SRC}/themes/${theme}/* /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/${theme}/ >&3 2>&3
 	done
+	ln -sf /home/dietpi/MuPiBox/themes/custom-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/custom/custom-bg.jpg >&3 2>&3
+	
 	cp -f ${MUPI_SRC}/themes/km-themes.json /home/dietpi/MuPiBox/themes/km-themes.json >&3 2>&3
 	mv ${MUPI_SRC}/themes/*.css /home/dietpi/MuPiBox/themes/ >&3 2>&3
-	cp -f ${MUPI_SRC}/scripts/chromium-autostart.sh /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	mv ${MUPI_SRC}/scripts/mupibox/* /usr/local/bin/mupibox/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/bluetooth/* /usr/local/bin/mupibox/ >&3 2>&3
 	# The battery of Bluetooth headphones (display and app, issue #176): BlueZ 5.66 takes it from PulseAudio only with
@@ -456,7 +451,7 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	mv ${MUPI_SRC}/config/templates/add_wifi.json /boot/add_wifi.json >&3 2>&3
 	mv ${MUPI_SRC}/config/templates/.bashrc /home/dietpi/.bashrc >&3 2>&3
 	chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ /home/dietpi/MuPiBox /home/dietpi/.bashrc >&3 2>&3
-	chmod 755 /usr/local/bin/mupibox/* /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
+	chmod 755 /usr/local/bin/mupibox/* >&3 2>&3
 	# the WiFi guard in front of Debian's wpa_action (a late "disconnected" took a working WiFi down at the start)
 	/usr/local/bin/mupibox/mupi_wpa_guard.sh install >&3 2>&3 || echo "## WiFi guard not installed - Debian's wpa_action stays as it was ##" >&3 2>&3
 	after=$(date +%s)
@@ -467,6 +462,18 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 
 	echo -e "XXX\n${STEP}\nInstall Hifiberry-MiniAmp and Bluetooth support... \nXXX"
 	before=$(date +%s)
+	# DietPi's survey (dietpi.txt SURVEY_OPTED_IN): never answered (-1, or not there), the first dietpi-software install
+	# below decided it on its own - its question went into this script's log, nobody saw it. Off then; a box whose owner
+	# chose to take part (1) keeps that.
+	DIETPI_TXT=/boot/dietpi.txt
+	[ -f /boot/firmware/dietpi.txt ] && DIETPI_TXT=/boot/firmware/dietpi.txt
+	if [ -f "${DIETPI_TXT}" ] && ! grep -qE '^[[:space:]]*SURVEY_OPTED_IN=1[[:space:]]*$' "${DIETPI_TXT}"; then
+		if grep -qE '^[[:space:]]*SURVEY_OPTED_IN=' "${DIETPI_TXT}"; then
+			sed -i -E 's/^[[:space:]]*SURVEY_OPTED_IN=.*/SURVEY_OPTED_IN=0/' "${DIETPI_TXT}" >&3 2>&3
+		else
+			echo 'SURVEY_OPTED_IN=0' >> "${DIETPI_TXT}"
+		fi
+	fi
 	/boot/dietpi/dietpi-software install 5 >&3 2>&3
 	/boot/dietpi/func/dietpi-set_hardware bluetooth enable >&3 2>&3
 	/boot/dietpi/func/dietpi-set_hardware soundcard "hifiberry-dac" >&3 2>&3
@@ -512,7 +519,6 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 
 	echo -e "XXX\n${STEP}\nSet environment... \nXXX"
 	before=$(date +%s)
-	(echo "mupibox"; echo "mupibox") | smbpasswd -s -a dietpi >&3 2>&3
 	THEME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme.css"
 	ln -sf /home/dietpi/MuPiBox/themes/blue.css ${THEME_FILE} >&3 2>&3
 	echo "www-data ALL=(ALL:ALL) NOPASSWD: ALL" | tee /etc/sudoers.d/www-data >&3 2>&3
@@ -521,7 +527,17 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	chown dietpi:dietpi /tmp/crontab.template >&3 2>&3
 	su dietpi -c "/usr/bin/crontab /tmp/crontab.template" >&3 2>&3
 	ln -sf /tmp/network.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json >&3 2>&3
-	cat <<< $(jq --arg v "${VERSION_LONG}" '.mupibox.version = $v' ${CONFIG}) > ${CONFIG}
+	# What the update does with the settings (conf_update.sh) also on a new box: the template lacks entries only the
+	# update added - the newer themes among them, so the admin interface showed only the old ones until the first update
+	bash /usr/local/bin/mupibox/conf_update.sh >&3 2>&3
+	# the version: into a file next to the config, then exchanged - written in place, a jq that failed left it empty
+	VTMP="${CONFIG}.version.$$"
+	if jq --arg v "${VERSION_LONG}" '.mupibox.version = $v' ${CONFIG} > "${VTMP}" 2>&3 && [ -s "${VTMP}" ]; then
+		mv -f "${VTMP}" ${CONFIG}
+	else
+		rm -f "${VTMP}"
+		echo "## WARNING: version not written, the config was left as it is ##" >&3 2>&3
+	fi
 	chown root:www-data ${CONFIG} >&3 2>&3
 	chmod 775 ${CONFIG} >&3 2>&3
 
@@ -554,7 +570,6 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	  echo "dtoverlay=pwm,pin=${LED_PIN},func=4" | tee -a "${BOOT_CONFIG}" >&3 2>&3
 	fi
 
-	curl -fsSL https://raw.githubusercontent.com/scopatz/nanorc/master/install.sh | sh >&3 2>&3
 	touch /home/dietpi/.mupi.install >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Set environment ## finished after $((after - before)) seconds" >&3 2>&3
@@ -580,7 +595,9 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	# the MuPiBox script goes in again after it (a fresh install showed the DietPi website until the first update)
 	cp -f ${MUPI_SRC}/scripts/chromium-autostart.sh /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	/boot/dietpi/dietpi-autostart 11 >&3 2>&3
-	chmod +x /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
+	chmod 755 /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
+	# full colours in the display on a Pi with 2 GB or more: takes DietPi's "low-end device mode" out again (see the file)
+	mkdir -p /etc/chromium.d && tr -d '\r' < ${MUPI_SRC}/config/chromium/zz-mupibox > /etc/chromium.d/zz-mupibox && chmod 644 /etc/chromium.d/zz-mupibox
 	apt-get install xserver-xorg-legacy -y >&3 2>&3
 	sed -i 's/allowed_users\=console/allowed_users\=anybody/g' /etc/X11/Xwrapper.config >&3 2>&3
 	mv -f ${MUPI_SRC}/config/templates/98-dietpi-disable_dpms.conf /etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf >&3 2>&3
@@ -601,25 +618,15 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 
 	echo -e "XXX\n${STEP}\nEnable and start services... \nXXX"
 	before=$(date +%s)
-	mv -f ${MUPI_SRC}/config/services/mupi_idle_shutdown.service /etc/systemd/system/mupi_idle_shutdown.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_splash.service /etc/systemd/system/mupi_splash.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/pulseaudio.service /etc/systemd/system/pulseaudio.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_startstop.service /etc/systemd/system/mupi_startstop.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_wifi.service /etc/systemd/system/mupi_wifi.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_check_internet.service /etc/systemd/system/mupi_check_internet.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_check_monitor.service /etc/systemd/system/mupi_check_monitor.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_autoconnect_bt.service /etc/systemd/system/mupi_autoconnect_bt.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_vnc.service /etc/systemd/system/mupi_vnc.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_novnc.service /etc/systemd/system/mupi_novnc.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_powerled.service /etc/systemd/system/mupi_powerled.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_telegram.service /etc/systemd/system/mupi_telegram.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/dietpi-dashboard.service /etc/systemd/system/dietpi-dashboard.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_hat.service /etc/systemd/system/mupi_hat.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_fan.service /etc/systemd/system/mupi_fan.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_tls.service /etc/systemd/system/mupi_tls.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_tls.timer /etc/systemd/system/mupi_tls.timer >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_hat_control.service /etc/systemd/system/mupi_hat_control.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_autoconnect-wifi.service /etc/systemd/system/mupi_autoconnect-wifi.service >&3 2>&3
+	
+	# Every unit of config/services (each file says what it is for), the timer of the certificate check with them -
+	# switched on below only those the box needs from the start; the others (VNC, MuPiHAT, fan, rotary, MQTT, Telegram,
+	# DietPi-Dashboard ...) the app or the admin interface switches on. Among them: mupi_ethernet (LAN without waiting at
+	# boot, and the choice between LAN and WiFi at every change of the cable - the udev rule below does not fire on every
+	# board), mupi_goodbye (the goodbye picture until the power is off), mupi_update_recover (an update that stopped
+	# halfway undone at the next start, before pm2).
+	mv -f ${MUPI_SRC}/config/services/*.service ${MUPI_SRC}/config/services/*.timer /etc/systemd/system/ >&3 2>&3
+	
 	# Tolerant replacement for DietPi's WiFi monitor (see scripts/mupibox/wifi_monitor.sh)
 	mkdir -p /etc/systemd/system/dietpi-wifi-monitor.service.d >&3 2>&3
 	cp -f ${MUPI_SRC}/config/services/dietpi-wifi-monitor-override.conf /etc/systemd/system/dietpi-wifi-monitor.service.d/override.conf >&3 2>&3
@@ -628,34 +635,33 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	# LAN takes over from WiFi again on carrier loss/return of the ethernet cable (same script)
 	cp -f ${MUPI_SRC}/config/udev/99-mupibox-eth.rules /etc/udev/rules.d/99-mupibox-eth.rules >&3 2>&3
 	udevadm control --reload >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_mqtt.service /etc/systemd/system/mupi_mqtt.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/mupi_rotary.service /etc/systemd/system/mupi_rotary.service >&3 2>&3
-	# LAN without waiting at boot, and an address at once when a cable is plugged in (see scripts/mupibox/mupi_ethernet.sh).
-	# Also re-evaluates LAN vs WiFi priority (mupi_wifi_select.sh) on every carrier change - the udev rule above
-	# does not fire on every board (some onboard ethernet drivers never emit a uevent for it), and this script
-	# already reacts to the exact same "ip monitor link" event, so it is the more reliable place to trigger it.
-	mv -f ${MUPI_SRC}/config/services/mupi_ethernet.service /etc/systemd/system/mupi_ethernet.service >&3 2>&3
-	# the goodbye picture until the power is off (see config/services/mupi_goodbye.service)
-	mv -f ${MUPI_SRC}/config/services/mupi_goodbye.service /etc/systemd/system/mupi_goodbye.service >&3 2>&3
+
 	mkdir -p "/etc/systemd/system/ifup@eth0.service.d" >&3 2>&3
 	cp -f "${MUPI_SRC}/config/services/ifup@eth0.service.d/mupibox.conf" "/etc/systemd/system/ifup@eth0.service.d/mupibox.conf" >&3 2>&3
 	# The display's autologin without the 5 s Type=idle wait (see config/services/getty@tty1.service.d/mupibox.conf)
 	mkdir -p "/etc/systemd/system/getty@tty1.service.d" >&3 2>&3
 	cp -f "${MUPI_SRC}/config/services/getty@tty1.service.d/mupibox.conf" "/etc/systemd/system/getty@tty1.service.d/mupibox.conf" >&3 2>&3
-	# Admin interface, Samba share and DietPi dashboard 45 s after the start (see config/services/mupibox-delayed-start.conf)
+	
+	# Admin interface, DietPi dashboard and the Samba share (once the app switches it on) 45 s after the start
+	# (see config/services/mupibox-delayed-start.conf)
 	for delayed in lighttpd smbd dietpi-dashboard $(systemctl list-unit-files "php*-fpm.service" --no-legend 2>/dev/null | awk '{print $1}' | sed 's/\.service$//'); do
 		mkdir -p "/etc/systemd/system/${delayed}.service.d" >&3 2>&3
 		cp -f "${MUPI_SRC}/config/services/mupibox-delayed-start.conf" "/etc/systemd/system/${delayed}.service.d/mupibox-delayed-start.conf" >&3 2>&3
 	done
-	# The Samba share is a standalone server (smbd); the Active Directory domain controller is not needed
-	systemctl disable --now samba-ad-dc.service >&3 2>&3
 	systemctl daemon-reload >&3 2>&3
-	for service in mupi_wifi mupi_check_internet mupi_check_monitor mupi_idle_shutdown smbd mupi_startstop pulseaudio mupi_splash mupi_powerled dietpi-dashboard mupi_ethernet mupi_goodbye; do
-		# (the dashboard only when its program came - see "Setup DietPi-Dashboard")
-		[ "${service}" = "dietpi-dashboard" ] && [ ! -x /opt/dietpi-dashboard/dietpi-dashboard ] && continue
+	
+	# (not the Samba share: off until the app switches it on, see "Preconfigure Samba")
+	for service in mupi_wifi mupi_check_internet mupi_check_monitor mupi_idle_shutdown mupi_startstop pulseaudio mupi_splash mupi_powerled mupi_ethernet mupi_goodbye mupi_update_recover; do
 		systemctl enable ${service}.service >&3 2>&3
 		systemctl start ${service}.service >&3 2>&3
 	done
+	
+	# The DietPi-Dashboard: a password nobody knows, an inner port, off - the app switches it on and opens it with a
+	# one-time ticket (dietpi_dashboard.sh, backend-api eltern/dietpi-dashboard.ts)
+	if [ -x /opt/dietpi-dashboard/dietpi-dashboard ]; then
+		/usr/local/bin/mupibox/dietpi_dashboard.sh setup >&3 2>&3
+		/usr/local/bin/mupibox/dietpi_dashboard.sh off >&3 2>&3
+	fi
 	after=$(date +%s)
 	echo -e "## Enable and start services ## finished after $((after - before)) seconds" >&3 2>&3
 	STEP=$((STEP + 1))
@@ -691,6 +697,8 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	cp -f ${MUPI_SRC}/config/lighttpd/99-mupibox-media-noexec.conf /etc/lighttpd/conf-enabled/99-mupibox-media-noexec.conf >&3 2>&3
 	# the app on port 80/443 too: its login at /, the app at /app (see the file)
 	cp -f ${MUPI_SRC}/config/lighttpd/90-mupibox-app.conf /etc/lighttpd/conf-enabled/90-mupibox-app.conf >&3 2>&3
+	# only names of the home network: a foreign name pointed at the box gets 403 (DNS rebinding, lighttpd_hosts.sh)
+	NO_RESTART=1 /usr/local/bin/mupibox/lighttpd_hosts.sh >&3 2>&3
 	lighty-enable-mod proxy >&3 2>&3
 	lighty-enable-mod ssl >&3 2>&3
 	# restart, not reload: new modules and the new certificate (root only) are only taken over by a new start
@@ -707,7 +715,6 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	/usr/local/bin/mupibox/./setting_update.sh >&3 2>&3
 	# boot and maintenance screens for the settings (box name, scene, language)
 	/usr/local/bin/mupibox/bootscreen_update.sh >&3 2>&3
-	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
 	# by path: on a fresh box pm2 knows neither process yet ("pm2 start server" looked for a file "server")
 	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && if pm2 describe server >/dev/null 2>&1; then pm2 restart server; else pm2 start server.js --name server; fi" >&3 2>&3
 	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/spotifycontroller-main && if pm2 describe spotify-control >/dev/null 2>&1; then pm2 restart spotify-control; else pm2 start spotify-control.js --name spotify-control; fi" >&3 2>&3

@@ -51,7 +51,7 @@ Other tasks are done by services whose names begin with `mupi_`. The most import
 | `mupi_hat`, `mupi_hat_control` | MuPiHAT and battery |
 | `mupi_powerled` | status LED |
 | `mupi_telegram` | Telegram bot |
-| `mupi_mqtt` | MQTT and Home Assistant |
+| `mupi_mqtt` | MQTT (with MQTT discovery) |
 | `mupi_tls` | certificate for HTTPS (checked at every start and daily via `mupi_tls.timer`) |
 | `mupi_vnc`, `mupi_novnc` | remote control of the display |
 | `mupi_wifi`, `mupi_autoconnect-wifi`, `mupi_ethernet` | Wi-Fi and LAN |

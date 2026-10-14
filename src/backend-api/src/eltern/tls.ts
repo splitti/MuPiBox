@@ -201,6 +201,8 @@ export function registerTlsRoutes(router: Router, deps: Deps): void {
       cfg.tls = tls
     })
     res.json({ ok: true })
+    // (the web server answers this name from now on - every other foreign name keeps its 403, lighttpd_hosts.sh)
+    execFile('sudo', ['/usr/local/bin/mupibox/lighttpd_hosts.sh'], { timeout: 60000 }, () => undefined)
   })
 }
 

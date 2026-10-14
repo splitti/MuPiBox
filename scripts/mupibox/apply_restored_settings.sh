@@ -57,6 +57,14 @@ for pair in 'fan.fan_active:mupi_fan' 'rotary.active:mupi_rotary'; do
 	fi
 done
 
+# the names the web server answers to, with the restored own address (tls.linkHost; the box restarts afterwards)
+[ -x "${B}/lighttpd_hosts.sh" ] && NO_RESTART=1 "${B}/lighttpd_hosts.sh" >/dev/null 2>&1
+
+# the DietPi-Dashboard as the restored switch says (behind the app, see dietpi_dashboard.sh)
+if [ -x "${B}/dietpi_dashboard.sh" ] && [ -x /opt/dietpi-dashboard/dietpi-dashboard ]; then
+	if [ "$(j '.mupibox.dietpiDashboard // false')" = "true" ]; then "${B}/dietpi_dashboard.sh" on >/dev/null 2>&1; else "${B}/dietpi_dashboard.sh" off >/dev/null 2>&1; fi
+fi
+
 # the board's 3.5 mm output and the HDMI sound next to the sound card, exactly as the restored switches say - off too:
 # a jack or HDMI sound the box had before stays on otherwise, while the app shows it off (onboard_audio.sh sync; it does
 # nothing with the onboard card)

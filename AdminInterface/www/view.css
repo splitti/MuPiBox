@@ -61,6 +61,32 @@ body
   width: 100%;
 }
 
+/* the disk charts on the start page, drawn by the page itself (index.php mupi_disk_pie) - Google Charts' colours */
+.disk-pie { padding: 8px 0; }
+.disk-pie-title { font-weight: bold; margin-bottom: 8px; }
+.disk-pie-body { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.disk-pie-circle {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: conic-gradient(#dc3912 0 var(--used), #3366cc var(--used) 100%);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+.disk-pie-circle span {
+  background: rgba(255, 255, 255, 0.85);
+  color: #222;
+  border-radius: 10px;
+  padding: 2px 8px;
+  font-size: 13px;
+}
+.disk-pie-legend { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+.disk-pie-legend li { margin: 4px 0; }
+.disk-pie-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.disk-pie-legend i.free { background: #3366cc; }
+.disk-pie-legend i.used { background: #dc3912; }
+
 
 #mupi
 {

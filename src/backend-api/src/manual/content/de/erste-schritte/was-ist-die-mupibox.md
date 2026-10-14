@@ -16,7 +16,7 @@ Auf dem Display sind die Inhalte in Kategorien sortiert: Hörspiele, Musik, NAS 
 - wie lange und wann das Kind hören darf: [Spielzeit und Ruhezeiten](../spielzeit/index.md),
 - wie laut die Box höchstens wird (Hörschutz): [Sound und Lautstärke](../hardware/sound.md),
 - wie die Box aussieht: Themes, Startbilder und Texte ([Cover und Themes](../bedienung/cover-und-themes.md)),
-- wie sie sich meldet: Telegram-Nachrichten und Home Assistant ([Telegram](../netzwerk/telegram.md), [MQTT und Home Assistant](../netzwerk/mqtt.md)).
+- wie sie sich meldet: Telegram-Nachrichten, Home Assistant und MQTT ([Telegram](../netzwerk/telegram.md), [Home Assistant](../netzwerk/home-assistant.md), [MQTT](../netzwerk/mqtt.md)).
 
 ## Was sich selbst um die Box kümmert
 

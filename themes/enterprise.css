@@ -8,7 +8,7 @@
 
 :root {
   --km-night: #140A2A;
-  --km-night-2: rgba(20,10,42,.62);
+  --km-night-2: rgba(20,10,42,.82);
   --km-night-3: #2A1650;
   --km-night-4: #3A2070;
   --km-stack-1: #75688D;
@@ -16,7 +16,7 @@
   --km-shadow: rgba(0,0,0,.45);
   --km-overlay: rgba(0,0,0,.72);
   --km-cream: #F2F0FF;
-  --km-ring: #FF4D78;
+  --km-ring: #D6CCF0;
   --km-ink: #140A2A;
   --km-lavender: #D6CCF0;
   --km-apricot: #3FC8FF;
@@ -32,7 +32,7 @@
   --km-name-font: "Nasa21", "Fredoka", sans-serif;
   --km-name-size: 22px;
   /* Runde 2: Kopfzeile, Pille, Knöpfe (Werte aus THEME_WERTE.md) */
-  --km-band: rgba(20,10,42,.62);
+  --km-band: rgba(20,10,42,.82);
   --km-on-band: #FFFFFF;
   --km-on-band-2: #D6CCF0;
   --km-btn: #443265;
@@ -43,7 +43,7 @@
 
 /* Hintergrund: eigenes Bild, oben ein weicher Verlauf für Statusleiste und Reiter */
 .ion-page {
-  background: var(--km-night) url("/theme-data/enterprise/enterprise-bg.jpg") center / cover no-repeat !important;
+  background: linear-gradient(rgba(20,10,42,.45), rgba(20,10,42,.45)), var(--km-night) url("/theme-data/enterprise/enterprise-bg.jpg") center / cover no-repeat !important;
 }
 .playtime-blocked-overlay, body.km mupi-media-unavailable {
   background: linear-gradient(var(--km-overlay), var(--km-overlay)), var(--km-night) url("/theme-data/enterprise/enterprise-bg.jpg") center / cover no-repeat !important;

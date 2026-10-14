@@ -32,7 +32,20 @@
         "stopLabel": "Stop",
         "trackOf": "Track {n} of {t}",
         "outputHeadsetNotFound": "Headphones not found. Are they on and close by?",
-        "outputPlaying": "playing"
+        "outputPlaying": "playing",
+        "haTitle": "Pair Home Assistant",
+        "haWaiting": "Now start the pairing in Home Assistant.",
+        "haKey": "Key of the box – it must match the one Home Assistant shows:",
+        "haWants": "{c} would like to pair",
+        "haCode": "Enter this code in Home Assistant:",
+        "haScopeRead": "see what is playing",
+        "haScopeControl": "control playback",
+        "haCancel": "Cancel",
+        "haAlso": "It also asks for:",
+        "haScopeNotify": "messages and announcements",
+        "haScopePower": "restart and switch off",
+        "haAllowAll": "Allow all",
+        "haOnlyBasic": "Only show and control"
       }
     },
     "de": {
@@ -66,7 +79,20 @@
         "stopLabel": "Stopp",
         "trackOf": "Titel {n} von {t}",
         "outputHeadsetNotFound": "Kopfhörer nicht gefunden. Ist er an und in der Nähe?",
-        "outputPlaying": "spielt"
+        "outputPlaying": "spielt",
+        "haTitle": "Home Assistant koppeln",
+        "haWaiting": "Starte jetzt die Kopplung in Home Assistant.",
+        "haKey": "Schlüssel der Box – er muss mit dem in Home Assistant übereinstimmen:",
+        "haWants": "{c} möchte koppeln",
+        "haCode": "Gib diesen Code in Home Assistant ein:",
+        "haScopeRead": "sehen, was läuft",
+        "haScopeControl": "Wiedergabe steuern",
+        "haCancel": "Abbrechen",
+        "haAlso": "Außerdem möchte es:",
+        "haScopeNotify": "Nachrichten und Ansagen",
+        "haScopePower": "Neustart und Ausschalten",
+        "haAllowAll": "Alles erlauben",
+        "haOnlyBasic": "Nur anzeigen und steuern"
       }
     },
     "fr": {
@@ -100,7 +126,20 @@
         "stopLabel": "Arrêter",
         "trackOf": "Titre {n} sur {t}",
         "outputHeadsetNotFound": "Casque introuvable. Est-il allumé et à proximité ?",
-        "outputPlaying": "joue"
+        "outputPlaying": "joue",
+        "haTitle": "Associer Home Assistant",
+        "haWaiting": "Lance maintenant l’association dans Home Assistant.",
+        "haKey": "Clé de la boîte – elle doit correspondre à celle affichée par Home Assistant :",
+        "haWants": "{c} souhaite s’associer",
+        "haCode": "Saisis ce code dans Home Assistant :",
+        "haScopeRead": "voir ce qui joue",
+        "haScopeControl": "piloter la lecture",
+        "haCancel": "Annuler",
+        "haAlso": "Il demande aussi :",
+        "haScopeNotify": "messages et annonces",
+        "haScopePower": "redémarrer et éteindre",
+        "haAllowAll": "Tout autoriser",
+        "haOnlyBasic": "Seulement afficher et piloter"
       }
     },
     "es": {
@@ -134,7 +173,20 @@
         "stopLabel": "Detener",
         "trackOf": "Pista {n} de {t}",
         "outputHeadsetNotFound": "No se encuentran los auriculares. ¿Están encendidos y cerca?",
-        "outputPlaying": "suena"
+        "outputPlaying": "suena",
+        "haTitle": "Vincular Home Assistant",
+        "haWaiting": "Inicia ahora la vinculación en Home Assistant.",
+        "haKey": "Clave de la caja: debe coincidir con la que muestra Home Assistant:",
+        "haWants": "{c} quiere vincularse",
+        "haCode": "Introduce este código en Home Assistant:",
+        "haScopeRead": "ver qué suena",
+        "haScopeControl": "controlar la reproducción",
+        "haCancel": "Cancelar",
+        "haAlso": "También pide:",
+        "haScopeNotify": "mensajes y anuncios",
+        "haScopePower": "reiniciar y apagar",
+        "haAllowAll": "Permitir todo",
+        "haOnlyBasic": "Solo mostrar y controlar"
       }
     },
     "it": {
@@ -168,7 +220,20 @@
         "stopLabel": "Stop",
         "trackOf": "Brano {n} di {t}",
         "outputHeadsetNotFound": "Cuffie non trovate. Sono accese e vicine?",
-        "outputPlaying": "in riproduzione"
+        "outputPlaying": "in riproduzione",
+        "haTitle": "Associa Home Assistant",
+        "haWaiting": "Avvia ora l’associazione in Home Assistant.",
+        "haKey": "Chiave del box – deve coincidere con quella mostrata da Home Assistant:",
+        "haWants": "{c} vuole associarsi",
+        "haCode": "Inserisci questo codice in Home Assistant:",
+        "haScopeRead": "vedere cosa suona",
+        "haScopeControl": "controllare la riproduzione",
+        "haCancel": "Annulla",
+        "haAlso": "Chiede anche:",
+        "haScopeNotify": "messaggi e annunci",
+        "haScopePower": "riavviare e spegnere",
+        "haAllowAll": "Consenti tutto",
+        "haOnlyBasic": "Solo mostrare e controllare"
       }
     },
     "nl": {
@@ -202,7 +267,20 @@
         "stopLabel": "Stop",
         "trackOf": "Nummer {n} van {t}",
         "outputHeadsetNotFound": "Koptelefoon niet gevonden. Staat hij aan en is hij dichtbij?",
-        "outputPlaying": "speelt"
+        "outputPlaying": "speelt",
+        "haTitle": "Home Assistant koppelen",
+        "haWaiting": "Start nu het koppelen in Home Assistant.",
+        "haKey": "Sleutel van de box – die moet gelijk zijn aan die in Home Assistant:",
+        "haWants": "{c} wil koppelen",
+        "haCode": "Voer deze code in Home Assistant in:",
+        "haScopeRead": "zien wat er speelt",
+        "haScopeControl": "afspelen bedienen",
+        "haCancel": "Annuleren",
+        "haAlso": "Het vraagt ook:",
+        "haScopeNotify": "berichten en aankondigingen",
+        "haScopePower": "herstarten en uitschakelen",
+        "haAllowAll": "Alles toestaan",
+        "haOnlyBasic": "Alleen tonen en bedienen"
       }
     },
     "sv": {
@@ -236,7 +314,20 @@
         "stopLabel": "Stoppa",
         "trackOf": "Spår {n} av {t}",
         "outputHeadsetNotFound": "Hörlurarna hittades inte. Är de på och i närheten?",
-        "outputPlaying": "spelar"
+        "outputPlaying": "spelar",
+        "haTitle": "Para Home Assistant",
+        "haWaiting": "Starta nu parkopplingen i Home Assistant.",
+        "haKey": "Boxens nyckel – den måste stämma med den som Home Assistant visar:",
+        "haWants": "{c} vill parkoppla",
+        "haCode": "Ange den här koden i Home Assistant:",
+        "haScopeRead": "se vad som spelas",
+        "haScopeControl": "styra uppspelningen",
+        "haCancel": "Avbryt",
+        "haAlso": "Den ber också om:",
+        "haScopeNotify": "meddelanden och utrop",
+        "haScopePower": "starta om och stänga av",
+        "haAllowAll": "Tillåt allt",
+        "haOnlyBasic": "Bara visa och styra"
       }
     },
     "da": {
@@ -270,7 +361,20 @@
         "stopLabel": "Stop",
         "trackOf": "Nummer {n} af {t}",
         "outputHeadsetNotFound": "Høretelefoner ikke fundet. Er de tændt og i nærheden?",
-        "outputPlaying": "spiller"
+        "outputPlaying": "spiller",
+        "haTitle": "Par Home Assistant",
+        "haWaiting": "Start nu parringen i Home Assistant.",
+        "haKey": "Boksens nøgle – den skal svare til den, Home Assistant viser:",
+        "haWants": "{c} vil gerne parre",
+        "haCode": "Indtast denne kode i Home Assistant:",
+        "haScopeRead": "se hvad der spiller",
+        "haScopeControl": "styre afspilningen",
+        "haCancel": "Annuller",
+        "haAlso": "Den beder også om:",
+        "haScopeNotify": "beskeder og meddelelser",
+        "haScopePower": "genstart og sluk",
+        "haAllowAll": "Tillad alt",
+        "haOnlyBasic": "Kun vise og styre"
       }
     },
     "nb": {
@@ -304,7 +408,20 @@
         "stopLabel": "Stopp",
         "trackOf": "Spor {n} av {t}",
         "outputHeadsetNotFound": "Hodetelefonene ble ikke funnet. Er de på og i nærheten?",
-        "outputPlaying": "spiller"
+        "outputPlaying": "spiller",
+        "haTitle": "Koble til Home Assistant",
+        "haWaiting": "Start sammenkoblingen i Home Assistant nå.",
+        "haKey": "Boksens nøkkel – den må stemme med den Home Assistant viser:",
+        "haWants": "{c} vil koble seg til",
+        "haCode": "Skriv inn denne koden i Home Assistant:",
+        "haScopeRead": "se hva som spilles",
+        "haScopeControl": "styre avspillingen",
+        "haCancel": "Avbryt",
+        "haAlso": "Den ber også om:",
+        "haScopeNotify": "meldinger og kunngjøringer",
+        "haScopePower": "omstart og slå av",
+        "haAllowAll": "Tillat alt",
+        "haOnlyBasic": "Bare vise og styre"
       }
     },
     "fi": {
@@ -338,7 +455,20 @@
         "stopLabel": "Pysäytä",
         "trackOf": "Kappale {n}/{t}",
         "outputHeadsetNotFound": "Kuulokkeita ei löytynyt. Ovatko ne päällä ja lähellä?",
-        "outputPlaying": "soi"
+        "outputPlaying": "soi",
+        "haTitle": "Yhdistä Home Assistant",
+        "haWaiting": "Aloita yhdistäminen nyt Home Assistantissa.",
+        "haKey": "Laatikon avain – sen on vastattava Home Assistantin näyttämää:",
+        "haWants": "{c} haluaa yhdistää",
+        "haCode": "Syötä tämä koodi Home Assistantiin:",
+        "haScopeRead": "nähdä, mikä soi",
+        "haScopeControl": "ohjata toistoa",
+        "haCancel": "Peruuta",
+        "haAlso": "Se pyytää myös:",
+        "haScopeNotify": "viestit ja kuulutukset",
+        "haScopePower": "uudelleenkäynnistys ja sammutus",
+        "haAllowAll": "Salli kaikki",
+        "haOnlyBasic": "Vain näyttää ja ohjata"
       }
     },
     "pl": {
@@ -372,7 +502,20 @@
         "stopLabel": "Stop",
         "trackOf": "Utwór {n} z {t}",
         "outputHeadsetNotFound": "Nie znaleziono słuchawek. Czy są włączone i w pobliżu?",
-        "outputPlaying": "gra"
+        "outputPlaying": "gra",
+        "haTitle": "Połącz Home Assistant",
+        "haWaiting": "Rozpocznij teraz parowanie w Home Assistant.",
+        "haKey": "Klucz boxa – musi się zgadzać z tym, który pokazuje Home Assistant:",
+        "haWants": "{c} chce się połączyć",
+        "haCode": "Wpisz ten kod w Home Assistant:",
+        "haScopeRead": "widzieć, co gra",
+        "haScopeControl": "sterować odtwarzaniem",
+        "haCancel": "Anuluj",
+        "haAlso": "Prosi też o:",
+        "haScopeNotify": "wiadomości i komunikaty",
+        "haScopePower": "ponowne uruchomienie i wyłączanie",
+        "haAllowAll": "Zezwól na wszystko",
+        "haOnlyBasic": "Tylko pokazywać i sterować"
       }
     },
     "pt": {
@@ -406,7 +549,20 @@
         "stopLabel": "Parar",
         "trackOf": "Faixa {n} de {t}",
         "outputHeadsetNotFound": "Auscultadores não encontrados. Estão ligados e por perto?",
-        "outputPlaying": "a tocar"
+        "outputPlaying": "a tocar",
+        "haTitle": "Emparelhar o Home Assistant",
+        "haWaiting": "Inicia agora o emparelhamento no Home Assistant.",
+        "haKey": "Chave da caixa – tem de coincidir com a que o Home Assistant mostra:",
+        "haWants": "{c} quer emparelhar",
+        "haCode": "Introduz este código no Home Assistant:",
+        "haScopeRead": "ver o que está a tocar",
+        "haScopeControl": "controlar a reprodução",
+        "haCancel": "Cancelar",
+        "haAlso": "Também pede:",
+        "haScopeNotify": "mensagens e anúncios",
+        "haScopePower": "reiniciar e desligar",
+        "haAllowAll": "Permitir tudo",
+        "haOnlyBasic": "Só mostrar e controlar"
       }
     },
     "tr": {
@@ -440,7 +596,20 @@
         "stopLabel": "Durdur",
         "trackOf": "Parça {n} / {t}",
         "outputHeadsetNotFound": "Kulaklık bulunamadı. Açık ve yakında mı?",
-        "outputPlaying": "çalıyor"
+        "outputPlaying": "çalıyor",
+        "haTitle": "Home Assistant’ı eşleştir",
+        "haWaiting": "Şimdi Home Assistant’ta eşleştirmeyi başlat.",
+        "haKey": "Kutunun anahtarı – Home Assistant’ın gösterdiğiyle aynı olmalı:",
+        "haWants": "{c} eşleşmek istiyor",
+        "haCode": "Bu kodu Home Assistant’a gir:",
+        "haScopeRead": "çalanı görmek",
+        "haScopeControl": "oynatmayı kontrol etmek",
+        "haCancel": "İptal",
+        "haAlso": "Ayrıca şunları istiyor:",
+        "haScopeNotify": "mesajlar ve anonslar",
+        "haScopePower": "yeniden başlatma ve kapatma",
+        "haAllowAll": "Hepsine izin ver",
+        "haOnlyBasic": "Yalnızca göster ve kontrol et"
       }
     },
     "uk": {
@@ -474,7 +643,20 @@
         "stopLabel": "Стоп",
         "trackOf": "Трек {n} з {t}",
         "outputHeadsetNotFound": "Навушники не знайдено. Вони увімкнені й поруч?",
-        "outputPlaying": "грає"
+        "outputPlaying": "грає",
+        "haTitle": "Під’єднати Home Assistant",
+        "haWaiting": "Тепер почни під’єднання в Home Assistant.",
+        "haKey": "Ключ бокса – він має збігатися з тим, що показує Home Assistant:",
+        "haWants": "{c} хоче під’єднатися",
+        "haCode": "Введи цей код у Home Assistant:",
+        "haScopeRead": "бачити, що грає",
+        "haScopeControl": "керувати відтворенням",
+        "haCancel": "Скасувати",
+        "haAlso": "Також просить:",
+        "haScopeNotify": "повідомлення й оголошення",
+        "haScopePower": "перезапуск і вимкнення",
+        "haAllowAll": "Дозволити все",
+        "haOnlyBasic": "Лише показувати й керувати"
       }
     },
     "ru": {
@@ -508,7 +690,20 @@
         "stopLabel": "Стоп",
         "trackOf": "Трек {n} из {t}",
         "outputHeadsetNotFound": "Наушники не найдены. Они включены и рядом?",
-        "outputPlaying": "играет"
+        "outputPlaying": "играет",
+        "haTitle": "Подключить Home Assistant",
+        "haWaiting": "Теперь начни подключение в Home Assistant.",
+        "haKey": "Ключ бокса – он должен совпадать с тем, что показывает Home Assistant:",
+        "haWants": "{c} хочет подключиться",
+        "haCode": "Введи этот код в Home Assistant:",
+        "haScopeRead": "видеть, что играет",
+        "haScopeControl": "управлять воспроизведением",
+        "haCancel": "Отмена",
+        "haAlso": "Также просит:",
+        "haScopeNotify": "сообщения и объявления",
+        "haScopePower": "перезапуск и выключение",
+        "haAllowAll": "Разрешить всё",
+        "haOnlyBasic": "Только показывать и управлять"
       }
     },
     "cs": {
@@ -542,7 +737,20 @@
         "stopLabel": "Zastavit",
         "trackOf": "Skladba {n} z {t}",
         "outputHeadsetNotFound": "Sluchátka nenalezena. Jsou zapnutá a poblíž?",
-        "outputPlaying": "hraje"
+        "outputPlaying": "hraje",
+        "haTitle": "Spárovat Home Assistant",
+        "haWaiting": "Teď spusť párování v Home Assistant.",
+        "haKey": "Klíč boxu – musí souhlasit s tím, který ukazuje Home Assistant:",
+        "haWants": "{c} se chce spárovat",
+        "haCode": "Zadej tento kód do Home Assistant:",
+        "haScopeRead": "vidět, co hraje",
+        "haScopeControl": "ovládat přehrávání",
+        "haCancel": "Zrušit",
+        "haAlso": "Žádá také o:",
+        "haScopeNotify": "zprávy a hlášení",
+        "haScopePower": "restart a vypnutí",
+        "haAllowAll": "Povolit vše",
+        "haOnlyBasic": "Jen zobrazovat a ovládat"
       }
     },
     "el": {
@@ -576,7 +784,20 @@
         "stopLabel": "Διακοπή",
         "trackOf": "Κομμάτι {n} από {t}",
         "outputHeadsetNotFound": "Δεν βρέθηκαν ακουστικά. Είναι ανοιχτά και κοντά;",
-        "outputPlaying": "παίζει"
+        "outputPlaying": "παίζει",
+        "haTitle": "Σύζευξη Home Assistant",
+        "haWaiting": "Ξεκίνα τώρα τη σύζευξη στο Home Assistant.",
+        "haKey": "Κλειδί του box – πρέπει να ταιριάζει με αυτό που δείχνει το Home Assistant:",
+        "haWants": "Το {c} θέλει σύζευξη",
+        "haCode": "Πληκτρολόγησε αυτόν τον κωδικό στο Home Assistant:",
+        "haScopeRead": "να βλέπει τι παίζει",
+        "haScopeControl": "να ελέγχει την αναπαραγωγή",
+        "haCancel": "Ακύρωση",
+        "haAlso": "Ζητά επίσης:",
+        "haScopeNotify": "μηνύματα και ανακοινώσεις",
+        "haScopePower": "επανεκκίνηση και απενεργοποίηση",
+        "haAllowAll": "Να επιτρέπονται όλα",
+        "haOnlyBasic": "Μόνο εμφάνιση και έλεγχος"
       }
     }
   }

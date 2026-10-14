@@ -30,6 +30,7 @@ import {
   APP_PASSWORD_MIN_LENGTH,
   appLoginRequired,
   hasAppPassword,
+  usesDefaultPassword,
   setAppPassword,
   verifyAppPassword,
   PERSISTENT_TTL_MS,
@@ -53,6 +54,7 @@ import { registerPinnedCardRoutes } from './pinned-cards'
 import { dropStatic, registerWifiStaticRoutes, startWifiStaticWatch } from './wifi-static'
 import { decodeWpaSsid } from '../wpa-ssid'
 import { registerHardwareRoutes } from './hardware'
+import { registerDietpiDashboardRoutes, startDietpiDashboard } from './dietpi-dashboard'
 import { registerServicesRoutes } from './services'
 import { registerSystemRoutes } from './system'
 import { registerAdminRoutes } from './admin'
@@ -74,8 +76,10 @@ import { localOnly } from '../request-guard'
 import { clearSpotifyBlock } from '../spotify-block'
 import { clearArtistAlbumsMemory } from '../artist-albums-store'
 import { clearMetaCache } from '../spotify-sync/meta-cache'
+import { withVolumeLock } from '../volume-lock'
 import { spotifyLoginAge } from './spotify-auth-age'
 import { btBattery, headphonesPlaying } from '../audio-output'
+import { playbackSnapshot } from '../playback-snapshot'
 import {
   REQUESTED_SCOPES,
   buildAuthorizeUrl,
@@ -408,6 +412,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   registerWifiStaticRoutes(router, { wifiIface })
   startWifiStaticWatch({ wifiIface })
   registerHardwareRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  // (the DietPi-Dashboard behind the app: port 5252 answered by this server, see dietpi-dashboard.ts)
+  registerDietpiDashboardRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  startDietpiDashboard({ getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerServicesRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerSystemRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   // (pm2 runs server.js from its folder: templates/ lies next to it)
@@ -491,7 +498,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
 
   /**
    * POST /api/app/admin-ticket - a one-time ticket that signs the app's user in to the admin interface (the app's
-   * "Erweiterte Einstellungen"), without the password: the admin interface (header.php) redeems it through the box
+   * "Admin-Interface", Legacy), without the password: the admin interface (header.php) redeems it through the box
    * itself, POST /admin-ticket/redeem {ticket}. 60 seconds, single use.
    */
   router.post('/admin-ticket', requireSession, requireCsrf, (_req, res) => {
@@ -614,7 +621,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       passwordSet: hasAppPassword(cfg),
       loginRequired: appLoginRequired(cfg),
       loginSwitch: (cfg as { interfacelogin?: { state?: unknown } } | undefined)?.interfacelogin?.state === true,
-      defaultPassword: await verifyAppPassword('MuP1B0x', cfg),
+      defaultPassword: await usesDefaultPassword(cfg),
       keptDevices: keptSessionCount(),
     })
   })
@@ -665,7 +672,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /** POST /api/app/auth/login-required {required} - "Anmeldung verlangen" (interfacelogin.state). Whoever is signed
-   *  in may switch it (no second password, decided on 29.09.2026); switching on needs a password to ask for. */
+   *  in may switch it (no second password, decided on 29.09.2026); switching on needs a password to ask for. Switching
+   *  off needs {confirmed: true}: the app warns first and has it confirmed once more (everyone in the home network can
+   *  then set up the box). */
   router.post('/auth/login-required', requireSession, requireCsrf, ipRateLimit(5), async (req, res) => {
     const body = (req.body ?? {}) as { required?: unknown; current?: unknown }
     if (typeof body.required !== 'boolean') {
@@ -678,6 +687,10 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       return
     }
     const wasOn = (cfg as { interfacelogin?: { state?: unknown } } | undefined)?.interfacelogin?.state === true
+    if (!body.required && wasOn && (body as { confirmed?: unknown }).confirmed !== true) {
+      res.status(400).json({ error: 'confirm_needed' })
+      return
+    }
     const callerAnon = validateSession(req.elternSessionId)?.anon === true
     await deps.updateMupiboxConfig((c) => {
       const login = ((c.interfacelogin as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
@@ -1147,11 +1160,14 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         }
       }
     })
-    // "Display aus nach" while nothing plays is the X server's blanking (BlankTime, written by setting_update.sh, read
-    // at the start): set live now as well, 0 = never; setting_update.sh keeps it for the next start
+    // "Display aus nach" while nothing plays is the X server's blanking and power saving (BlankTime and the DPMS times,
+    // written by setting_update.sh, read at the start): set live now as well, 0 = never; setting_update.sh keeps it for
+    // the next start. Both the same: the blanking only empties the picture, DPMS "off" is what get_monitor.sh switches
+    // the backlight off with - with its own default (5 min) it went dark before the time set, or never at "never".
     if (timeoutMutations.idleDisplayOff !== undefined) {
       const min = Number(timeoutMutations.idleDisplayOff)
-      const xset = min > 0 ? ['s', String(min * 60), String(min * 60)] : ['s', 'off']
+      const sec = String(min * 60)
+      const xset = min > 0 ? ['s', sec, sec, 'dpms', sec, sec, sec] : ['s', 'off', 'dpms', '0', '0', '0']
       execFile('xset', xset, { env: { ...process.env, DISPLAY: ':0' }, timeout: 5000 }, (err) => {
         if (err) console.warn(`${new Date().toLocaleString()}: [eltern] xset ${xset.join(' ')}: ${err.message}`)
       })
@@ -1208,6 +1224,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         detached: true,
         stdio: 'ignore',
       })
+      // (a start that fails - sudo or the script missing - comes as an 'error' event: unhandled it ended the server)
+      child.on('error', (err) => console.warn(`${new Date().toLocaleString()}: [eltern] sleep timer: ${err.message}`))
       child.unref()
     } catch (err) {
       res.status(500).json({ error: `spawn failed: ${(err as Error).message}` })
@@ -1285,25 +1303,29 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(400).json({ error: 'volume must be a number between 0 and 100' })
       return
     }
-    const cfg = deps.getMupiboxConfig()
-    if (!cfg) {
+    const requested = Math.floor(raw)
+    // the maximum read in its turn: a hearing protection saved meanwhile is never set over (volume-lock.ts)
+    const r = await withVolumeLock(async () => {
+      const cfg = deps.getMupiboxConfig()
       // Same defence as GET /audio: without a loaded config we don't know the
       // cap, so refuse rather than silently let any volume through.
+      if (!cfg) return { noConfig: true as const }
+      const mb = (cfg.mupibox as Record<string, unknown> | undefined) ?? {}
+      const btMax = volumePercent(mb.btMaxVolume)
+      const cap = btMax !== undefined && (await bluetoothAudio()) ? btMax : (volumePercent(mb.maxVolume) ?? 100)
+      const applied = Math.min(requested, cap)
+      const err = await new Promise<Error | null>((resolve) => execFile('/usr/bin/amixer', ['sset', 'Master', `${applied}%`], { timeout: 3000 }, (e) => resolve(e)))
+      return { applied, err }
+    })
+    if ('noConfig' in r) {
       res.status(503).json({ error: 'config not yet loaded, please retry' })
       return
     }
-    const mb = (cfg.mupibox as Record<string, unknown> | undefined) ?? {}
-    const btMax = volumePercent(mb.btMaxVolume)
-    const cap = btMax !== undefined && (await bluetoothAudio()) ? btMax : (volumePercent(mb.maxVolume) ?? 100)
-    const requested = Math.floor(raw)
-    const applied = Math.min(requested, cap)
-    execFile('/usr/bin/amixer', ['sset', 'Master', `${applied}%`], { timeout: 3000 }, (err) => {
-      if (err) {
-        res.status(500).json({ error: `amixer failed: ${err.message}` })
-        return
-      }
-      res.json({ ok: true, applied, capped: applied < requested })
-    })
+    if (r.err) {
+      res.status(500).json({ error: `amixer failed: ${r.err.message}` })
+      return
+    }
+    res.json({ ok: true, applied: r.applied, capped: r.applied < requested })
   })
 
   /**
@@ -1393,6 +1415,24 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       }
       cfg.mupibox = mb
     })
+    // The hearing protection lowered: what plays louder than the new maximum comes down at once (it stayed as loud
+    // until someone touched the volume) - the Bluetooth maximum while Bluetooth audio is on, as /audio/volume does.
+    // In the volume queue, with the maximum as saved by then: an older save finishing late lowers to the newest
+    // maximum, never back up to its own (volume-lock.ts)
+    if (mutations.maxVolume !== undefined || mutations.btMaxVolume !== undefined) {
+      await withVolumeLock(async () => {
+        const mb = (deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined) ?? {}
+        const btMax = volumePercent(mb.btMaxVolume)
+        const cap = btMax !== undefined && (await bluetoothAudio()) ? btMax : (volumePercent(mb.maxVolume) ?? 100)
+        await new Promise<void>((resolve) =>
+          execFile('/usr/bin/amixer', ['sget', 'Master'], { timeout: 3000 }, (err, stdout) => {
+            const now = !err && stdout ? Number.parseInt(stdout.match(/\[(\d+)%\]/)?.[1] ?? '', 10) : Number.NaN
+            if (!Number.isFinite(now) || now <= cap) return resolve()
+            execFile('/usr/bin/amixer', ['sset', 'Master', `${cap}%`], { timeout: 3000 }, () => resolve())
+          }),
+        )
+      })
+    }
     res.json({ ok: true, applied: mutations })
   })
 
@@ -1665,104 +1705,12 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   /**
    * GET /api/app/playback  (Phase 18 Item 5)
    * Snapshot of what's playing on the box (current track + paused/playing
-   * state). Just proxies the player's own /local — same data the box's
-   * frontend already gets from it.
+   * state), from the player's own /local and /state - see playback-snapshot.ts
+   * (the Home Assistant API reads the same).
    */
   router.get('/playback', requireSession, async (_req, res) => {
     try {
-      const localRes = await fetch('http://127.0.0.1:5005/local', { signal: AbortSignal.timeout(3000) })
-      if (!localRes.ok) {
-        res.status(502).json({ error: 'player unreachable' })
-        return
-      }
-      const local = (await localRes.json()) as Record<string, unknown>
-      const player = String(local.currentPlayer ?? '')
-
-      // The /local fields (playing, currentTrackname, album) are mplayer-side
-      // and stay empty during Spotify playback. For Spotify the canonical
-      // truth is /state.is_playing + /state.item.* — that's the
-      // getMyCurrentPlaybackState response from the Spotify API.
-      let playing = false
-      let title = ''
-      let artist = ''
-      let album = ''
-      let coverUrl: string | null = null
-      let progressMs: number | null = null
-      let durationMs: number | null = null
-      if (player === 'mplayer') {
-        playing = local.playing === true
-        title = String(local.currentTrackname ?? '')
-        album = String(local.album ?? '')
-        // A NAS or local album: path is its folder (NAS path, or <category>/<artist>/<album> in the library);
-        // the artist is the folder above, the cover the one the box shows for it.
-        const source = String(local.currentType ?? '')
-        const folder = String(local.path ?? '')
-        // a radio station or podcast: the picture it was started with (the app passes it on, spotify-control.js ?cover=)
-        if ((source === 'rss' || source === 'radio') && typeof local.cover === 'string' && local.cover) coverUrl = local.cover
-        if ((source === 'nas' || source === 'local') && folder) {
-          const parts = folder.split('/').filter(Boolean)
-          // (<category>/<artist>/<album>: the artist is the folder above the album; an album with its files right in
-          // <category>/<album> has none - the category's name is not its artist)
-          artist = source === 'local' ? (parts.length >= 3 ? parts[parts.length - 2] : '') : (parts[parts.length - 2] ?? '')
-          // the track's own picture (a playlist of different stories) before the album's
-          const trackFile = typeof local.trackFile === 'string' ? local.trackFile : ''
-          coverUrl =
-            (trackFile ? await deps.playingTrackCover?.(trackFile) : null) ??
-            (await deps.playingAlbumCover?.(source, folder)) ??
-            null
-        }
-      } else if (player === 'spotify') {
-        try {
-          const stateRes = await fetch('http://127.0.0.1:5005/state', { signal: AbortSignal.timeout(3000) })
-          if (stateRes.ok) {
-            const state = (await stateRes.json()) as {
-              is_playing?: boolean
-              progress_ms?: number
-              item?: {
-                name?: string
-                duration_ms?: number
-                artists?: Array<{ name?: string }>
-                album?: { name?: string; images?: Array<{ url?: string }> }
-                show?: { name?: string; publisher?: string; images?: Array<{ url?: string }> }
-                images?: Array<{ url?: string }>
-              }
-            }
-            playing = state.is_playing === true
-            if (typeof state.progress_ms === 'number') progressMs = state.progress_ms
-            if (typeof state.item?.duration_ms === 'number') durationMs = state.item.duration_ms
-            if (state.item?.name) title = String(state.item.name)
-            if (state.item?.album?.name) album = String(state.item.album.name)
-            if (state.item?.show?.name) {
-              artist = String(state.item.show.name)
-              if (!album && state.item.show.publisher) album = String(state.item.show.publisher)
-            } else if (Array.isArray(state.item?.artists) && state.item.artists[0]?.name) {
-              artist = String(state.item.artists[0].name)
-            }
-            // Cover art priority: episode-own > show > album. Spotify orders
-            // images largest-first, so [0] is the highest-res available.
-            const candidates = [
-              state.item?.images?.[0]?.url,
-              state.item?.show?.images?.[0]?.url,
-              state.item?.album?.images?.[0]?.url,
-            ].filter((u): u is string => typeof u === 'string' && u.length > 0)
-            if (candidates.length > 0) coverUrl = candidates[0]
-          }
-        } catch {
-          /* state fetch failed → stays not-playing */
-        }
-      }
-      res.json({
-        playing,
-        player,
-        source: String(local.currentType ?? ''),
-        title,
-        artist,
-        album,
-        coverUrl,
-        progressMs,
-        durationMs,
-        volume: typeof local.volume === 'number' ? local.volume : null,
-      })
+      res.json(await playbackSnapshot({ playingAlbumCover: deps.playingAlbumCover, playingTrackCover: deps.playingTrackCover }))
     } catch (err) {
       res.status(502).json({ error: `player unreachable: ${(err as Error).message}` })
     }

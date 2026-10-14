@@ -1,0 +1,40 @@
+@if (pairing().active) {
+  <div class="ha-overlay">
+    <div class="ha-card">
+      <h2>{{ texts.text('haTitle') }}</h2>
+      @if (pairing().stage === 'approve') {
+        <p class="ha-wants" translate="no">{{ texts.text('haWants', { c: pairing().client_name ?? '' }) }}</p>
+        <p class="ha-scopes">{{ scopes() }}</p>
+        <p>{{ texts.text('haAlso') }}</p>
+        <p class="ha-extra">{{ extra() }}</p>
+        <div class="ha-choice">
+          <button class="ha-btn" (click)="decide(false)">{{ texts.text('haOnlyBasic') }}</button>
+          <button class="ha-btn ha-primary" (click)="decide(true)">{{ texts.text('haAllowAll') }}</button>
+        </div>
+      } @else if (pairing().stage === 'code') {
+        <p class="ha-wants" translate="no">{{ texts.text('haWants', { c: pairing().client_name ?? '' }) }}</p>
+        <p>{{ texts.text('haCode') }}</p>
+        <div class="ha-code" translate="no">{{ code() }}</div>
+        <p class="ha-scopes">{{ scopes() }}</p>
+      } @else {
+        <p>{{ texts.text('haWaiting') }}</p>
+      }
+      <p class="ha-keyhint">{{ texts.text('haKey') }}</p>
+      <code class="ha-key" translate="no">{{ pairing().fingerprint }}</code>
+      <div class="ha-foot">
+        <span class="ha-countdown">{{ texts.text('parentsCountdown', { s: pairing().expires_in ?? 0 }) }}</span>
+        <button class="ha-cancel" (click)="cancel()">{{ texts.text('haCancel') }}</button>
+      </div>
+    </div>
+  </div>
+} @else if (message(); as m) {
+  <!-- a message Home Assistant sent (POST /api/ha/v1/message): until its time is up or it is tapped away -->
+  <div class="ha-overlay ha-msg-overlay" (click)="closeMessage()">
+    <div class="ha-card ha-msg">
+      @if (m.title) {
+        <h2 translate="no">{{ m.title }}</h2>
+      }
+      <p class="ha-msg-text" translate="no">{{ m.text }}</p>
+    </div>
+  </div>
+}

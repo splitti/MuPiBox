@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# The admin interface's libraries exactly as published (minified files, fonts): no line-ending conversion
+AdminInterface/www/vendor/** -text

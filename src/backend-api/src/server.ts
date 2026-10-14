@@ -40,8 +40,9 @@ import { startWeeklySummary } from './eltern/weekly-summary'
 import { startNightDim } from './eltern/night-dim'
 import { bootConfigPath } from './eltern/boot-paths'
 import { startSpeech } from './speech'
-import { startBucketCleanup, parseCookie } from './eltern/middleware'
-import { SESSION_COOKIE, validateSession } from './eltern/auth'
+import { startBucketCleanup, parseCookie, requireCsrf, requireSession } from './eltern/middleware'
+import { registerHaAppRoutes, registerHaDisplayRoute, startHaApi } from './ha/ha-api'
+import { isLoginRequired, SESSION_COOKIE, validateSession } from './eltern/auth'
 import { type IncomingMessage, request as httpRequest } from 'node:http'
 import type { Duplex } from 'node:stream'
 import { SUDO_BACKUP_SNIPPET, backupBeforeWrite } from './file-backup'
@@ -59,7 +60,7 @@ import { episodeKey, MAX_KEEP, type OfflineEpisode, PodcastOffline } from './pod
 import { setFeedHeadReader } from './podcast-search'
 import { EpisodeState, episodeStateSettings } from './episode-state'
 import { uiScale } from './ui-scale'
-import { browserGuard, corsOptionsFor, isAllowedHost, isLoopback, localOnly, localOrElternSession, PROXY_PORT, setConfiguredHosts, viaProxy } from './request-guard'
+import { browserGuard, corsOptionsFor, isAllowedHost, isLoopback, localOnly, localOrElternSession, logValue, PROXY_PORT, setConfiguredHosts, viaProxy } from './request-guard'
 
 // Force IPv4 for DNS lookups to avoid EAI_AGAIN errors on Raspberry Pi
 // This fixes issues where IPv6 is misconfigured or not supported
@@ -228,13 +229,36 @@ async function removeSavedOnlineCover(key: string): Promise<void> {
   if ((await stat(localFile).catch(() => undefined))?.size === size) await rm(localFile, { force: true })
 }
 
-const mupiboxConfigPath = '/etc/mupibox/mupiboxconfig.json'
+// In development (and the tests) the box config lies next to the other config files (configBasePath, a copy of
+// config/templates/mupiboxconfig.json): /etc/mupibox exists on a box only, and without the config the display does
+// not know its theme (no km layout: the player's icons shrank, the scroll bar sat on the name cards) and most pages
+// of the app answer 503.
+const mupiboxConfigPath = productionServe ? '/etc/mupibox/mupiboxconfig.json' : path.resolve(configBasePath, 'mupiboxconfig.json')
 const mupiboxConfigDir = path.dirname(mupiboxConfigPath)
 const mupiboxConfigFile = path.basename(mupiboxConfigPath)
 const dataFile = `${configBasePath}/data.json`
 const resumeFile = `${configBasePath}/resume.json`
 const activedataFile = `${configBasePath}/active_data.json`
 const activeresumeFile = `${configBasePath}/active_resume.json`
+// The display reads the library and the resume list through the active files, links a box's network check
+// (check_network.sh) points at the online or the offline lists. In development no such check runs: the links to the
+// online lists are made here once, when they are missing - else a library put into config/ (README, Contributing)
+// stayed empty on the display. A list not there yet is written empty first (never over one that is): the link then
+// stands from the start, and a library copied in later or a resume point saved later shows at once. Only in
+// development; on the box nothing changes.
+if (devServe) {
+  for (const [active, target] of [
+    [activedataFile, dataFile],
+    [activeresumeFile, resumeFile],
+  ]) {
+    try {
+      if (!fs.existsSync(target)) fs.writeFileSync(target, '[]', { flag: 'wx' })
+      if (!fs.existsSync(active)) fs.symlinkSync(path.basename(target), active)
+    } catch (err) {
+      console.warn(`${new Date().toLocaleString()}: [MuPiBox-Server] ${path.basename(active)} could not be linked to ${path.basename(target)}: ${(err as Error).message}`)
+    }
+  }
+}
 const networkFile = `${configBasePath}/network.json`
 const wlanFile = `${configBasePath}/wlan.json`
 const monitorFile = `${configBasePath}/monitor.json`
@@ -366,8 +390,8 @@ app.use(cors(corsOptionsFor))
 // itself (its display, the scripts, the Telegram bot, the admin interface's PHP - all on 127.0.0.1) or a parent signed
 // in to the app (its session cookie, the one of the admin interface's login too). The app itself (/app) and its own
 // API (/api/app, before /api/eltern: login, magic links, …) check for themselves. Without the login switch the box stays open, as chosen.
-const loginRequired = () =>
-  (getMupiboxConfigSync() as { interfacelogin?: { state?: unknown } } | undefined)?.interfacelogin?.state === true
+// (fail-closed: a config that cannot be read counts as the last readable one, without any as login required)
+const loginRequired = () => isLoginRequired()
 app.use((req, res, next) => {
   const p = req.path
   if (isLoopback(req) || p === '/app' || p.startsWith('/app/') || p === '/manual' || p.startsWith('/manual/') || p.startsWith('/api/app/') || p.startsWith('/api/eltern/') || p === '/parents' || p === '/eltern' || !loginRequired()) {
@@ -1135,6 +1159,23 @@ podcastOffline.start()
 // Where the box plays: speaker or Bluetooth ("Hören mit" on the display, the web app's output row; audio-output.ts)
 registerAudioOutputRoutes(app, { guard: localOrElternSession, getMupiboxConfig: () => getMupiboxConfigSync(), updateMupiboxConfig })
 startAudioWatch()
+
+// The Home Assistant API v1 (ha/ha-api.ts): its own HTTPS port 8443, switched on in the app (Einstellungen › Home
+// Assistant); here the app's routes, the display's view of a pairing and the refusal on the plain port
+const haDeps = {
+  getMupiboxConfig: () => getMupiboxConfigSync() as unknown as Record<string, unknown> | undefined,
+  updateMupiboxConfig,
+  covers: {
+    playingAlbumCover,
+    playingTrackCover: async (file: string) => ((await trackCover(file).catch(() => undefined)) ? `/api/track-cover?file=${encodeURIComponent(file)}` : null),
+  },
+  resumeFile: activeresumeFile,
+  monitorFile,
+}
+registerHaDisplayRoute(app)
+const haRouter = express.Router()
+registerHaAppRoutes(haRouter, haDeps, { session: requireSession, csrf: requireCsrf })
+app.use('/api/app', haRouter)
 
 // Whether the box has no internet right now (network.json, written every minute by get_network.sh)
 let offlineCheck = { at: 0, offline: false }
@@ -1970,6 +2011,8 @@ const MUPIBOX_CONFIG_LOCK = '/tmp/.mupiboxconfig.lock'
 // has no flock of its own, so a small `flock ... sh` child holds it: it prints once it has the
 // lock and exits (dropping it) when its stdin is closed.
 function acquireMupiboxConfigLock(): Promise<() => void> {
+  // (in development nothing else writes the file, and macOS has no flock)
+  if (!productionServe) return Promise.resolve(() => undefined)
   return new Promise((resolve, reject) => {
     // The PHP side opens the lock file for writing: if this process creates it, make it writable
     // for everyone. If PHP created it (not writable for us), flock still works on a read-only fd.
@@ -2010,6 +2053,12 @@ function acquireMupiboxConfigLock(): Promise<() => void> {
 
 async function replaceMupiboxConfigFile(content: Record<string, unknown>): Promise<void> {
   const tmpPath = `/tmp/.mupiboxconfig.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.json`
+  if (!productionServe) {
+    // (the file is our own: written next to it, then renamed into place)
+    await writeFile(`${mupiboxConfigPath}.new`, `${JSON.stringify(content, null, 2)}\n`, { mode: 0o644 })
+    await rename(`${mupiboxConfigPath}.new`, mupiboxConfigPath)
+    return
+  }
   await writeFile(tmpPath, `${JSON.stringify(content, null, 2)}\n`, { mode: 0o644 })
   try {
     // /tmp is a RAM disk and /etc is on the SD card, so a plain mv would copy into the target in
@@ -4895,15 +4944,23 @@ async function nasFetch(
           else if (value !== undefined) headers.set(name, String(value))
         }
         const status = res.statusCode ?? 502
-        const noBody = status === 204 || status === 304 || init.method === 'HEAD'
-        if (noBody) res.resume()
-        resolve(
-          new Response(noBody ? null : (Readable.toWeb(res) as unknown as ReadableStream), {
-            status,
-            statusText: res.statusMessage,
-            headers,
-          }),
-        )
+        // (no body allowed with 204, 205 and 304, and a status outside 200-599 is refused: the Response constructor
+        // threw here, in a callback nothing caught - the whole server ended. As fetchPinned: a failed fetch instead.)
+        const noBody = status === 204 || status === 205 || status === 304 || init.method === 'HEAD'
+        try {
+          if (status < 200 || status > 599) throw new Error(`unexpected status ${status}`)
+          if (noBody) res.resume()
+          resolve(
+            new Response(noBody ? null : (Readable.toWeb(res) as unknown as ReadableStream), {
+              status,
+              statusText: res.statusMessage,
+              headers,
+            }),
+          )
+        } catch (err) {
+          res.destroy()
+          reject(err)
+        }
       },
     )
     req.once('error', (error) => {
@@ -7709,7 +7766,9 @@ async function libraryFindCoverBelow(files: NasFileEntry[], depth: number): Prom
 // that are made once with Python's PIL (package python3-pil) and kept in a cache folder.
 // If PIL is missing or a picture cannot be converted, the original file is sent instead.
 
-const thumbDir = '/home/dietpi/.mupibox/thumbs'
+// (in development next to the cover cache below cwd, see configBasePath: /home/dietpi does not exist there, and the
+// mkdir below failed every picture request of the display - radio logos showed the name card)
+const thumbDir = productionServe ? '/home/dietpi/.mupibox/thumbs' : path.join(process.cwd(), 'cache', 'thumbs')
 const thumbMaxParallel = 2
 let thumbsUnavailableUntil = 0
 let thumbRunning = 0
@@ -8373,7 +8432,7 @@ app.use('/app/vnc', express.static(noVncDir, { index: false, setHeaders: (res) =
 // password), from a page of the box itself (a foreign page's websocket carries its own Origin), passed on to websockify
 function proxyVncUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): void {
   const refuse = (status: string) => {
-    console.warn(`${new Date().toLocaleString()}: [MuPiBox-Server] VNC connection refused (${status}): ${req.url} host=${req.headers.host ?? ''} origin=${req.headers.origin ?? ''}`)
+    console.warn(`${new Date().toLocaleString()}: [MuPiBox-Server] VNC connection refused (${status}): ${logValue(req.url)} host=${logValue(req.headers.host)} origin=${logValue(req.headers.origin)}`)
     socket.end(`HTTP/1.1 ${status}\r\nConnection: close\r\n\r\n`)
   }
   if (!(req.url ?? '').startsWith('/app/vnc/websockify')) return refuse('404 Not Found')
@@ -8481,6 +8540,8 @@ if (!testServe) {
   // The Spotify login's 6 months: reminders before the end, a message when Spotify refused it (eltern/spotify-auth-age.ts)
   startSpotifyLoginWatch({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
   startTlsWatch({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
+  // the Home Assistant API, when it is switched on (ha/ha-api.ts)
+  startHaApi(haDeps)
   startWeeklySummary({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig, currentPlayLogStart })
   // "Abends dunkler": the display's brightness in the evening (eltern/night-dim.ts)
   startNightDim(getMupiboxConfigSync)

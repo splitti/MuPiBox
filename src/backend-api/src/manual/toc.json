@@ -264,8 +264,15 @@
       {
         "id": "mqtt",
         "title": {
-          "de": "MQTT und Home Assistant",
-          "en": "MQTT and Home Assistant"
+          "de": "MQTT",
+          "en": "MQTT"
+        }
+      },
+      {
+        "id": "home-assistant",
+        "title": {
+          "de": "Home Assistant",
+          "en": "Home Assistant"
         }
       }
     ]

@@ -51,7 +51,7 @@ Weitere Aufgaben erledigen Dienste, deren Namen mit `mupi_` beginnen. Die wichti
 | `mupi_hat`, `mupi_hat_control` | MuPiHAT und Akku |
 | `mupi_powerled` | Betriebs-LED |
 | `mupi_telegram` | Telegram-Bot |
-| `mupi_mqtt` | MQTT und Home Assistant |
+| `mupi_mqtt` | MQTT (mit MQTT-Discovery) |
 | `mupi_tls` | Zertifikat für HTTPS (bei jedem Start und täglich über `mupi_tls.timer` geprüft) |
 | `mupi_vnc`, `mupi_novnc` | Fernsteuerung des Displays |
 | `mupi_wifi`, `mupi_autoconnect-wifi`, `mupi_ethernet` | WLAN und LAN |

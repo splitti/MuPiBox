@@ -38,7 +38,7 @@ The changes apply after a restart of the display. You restart it right away with
 **Settings › System › Experts**:
 
 - **Hostname**: the box's name on the network, for example `mupibox` (reachable as `mupibox.local`). Only letters, digits and hyphen. Applied after a restart.
-- **More tools**: the **DietPi Dashboard** (DietPi system management, port 5252) and the **Previous admin interface**. Both open in a new window.
+- **More tools**: the **DietPi Dashboard** (DietPi system management) and the **Admin interface** (legacy, the previous interface). Both open in a new window. The DietPi Dashboard has a terminal with root rights and is therefore off by default: switch it on with **Allow DietPi Dashboard**. It then opens through the app only, without a login of its own. Whoever opens port 5252 directly in the browser gets a password prompt nobody gets past.
 - **Edit configuration directly**: an editor for the box's JSON files. Under **File** you choose which one, for example `mupiboxconfig.json` (box), `data.json` (library) or `config.json` (server).
 - **Reset**: **Reset box configuration** (all settings back to the state of the installed version; the password stays), **Clear library** (all entries of the library gone; the files stay) and **Reset server configuration**.
 

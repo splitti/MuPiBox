@@ -16,6 +16,9 @@
 //
 // Auth logic mirrors header.php's gate at line ~100 verbatim.
 
+// (what these endpoints send is never taken for something else - a text or a download read as HTML by the browser)
+header('X-Content-Type-Options: nosniff');
+
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params(['httponly' => true, 'samesite' => 'Lax']);
     session_start();
@@ -23,7 +26,8 @@ if (session_status() === PHP_SESSION_NONE) {
 
 $__cfgRaw = file_get_contents('/etc/mupibox/mupiboxconfig.json');
 $__cfg    = json_decode($__cfgRaw, true);
-$__loginRequired = !empty($__cfg['interfacelogin']['state']);
+// (a config that cannot be read or is no JSON: the login counts as on - fail-closed, as header.php)
+$__loginRequired = !is_array($__cfg) || !empty($__cfg['interfacelogin']['state']);
 $__loggedIn      = isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;
 
 // Same idle timeout as header.php (60 min), checked BEFORE last_activity is bumped below: this

@@ -58,8 +58,14 @@ CONFIG="/etc/mupibox/mupiboxconfig.json"
 if ${PREFLIGHT_DIR}/jq . ${CONFIG} > /dev/null 2>&1; then
   cp ${CONFIG} /home/dietpi/mupiboxconfig.json.pre-update
 fi
-if ${PREFLIGHT_DIR}/jq . /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json > /dev/null 2>&1; then
-  cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json /home/dietpi/data.json.pre-update
+# (an empty library never replaces a copy that has one: an update started again after one that stopped halfway - the
+# library empty then - kept only the empty list here)
+PRE_DATA=/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json
+pre_entries() { ${PREFLIGHT_DIR}/jq 'if type == "array" then length else 0 end' "$1" 2>/dev/null | head -n 1 | grep -E '^[0-9]+$' || echo 0; }
+if ${PREFLIGHT_DIR}/jq . "${PRE_DATA}" > /dev/null 2>&1; then
+  if [ "$(pre_entries "${PRE_DATA}")" -gt 0 ] || [ "$(pre_entries /home/dietpi/data.json.pre-update)" -eq 0 ]; then
+    cp "${PRE_DATA}" /home/dietpi/data.json.pre-update
+  fi
 fi
 LOG="/boot/mupibox_update.log"
 exec 3>${LOG}
@@ -71,13 +77,21 @@ exec 3>${LOG}
 # Add fail_update() to bail BEFORE any destructive op when a pre-flight
 # check fails, plus an atomic-swap pattern around the rm so a failure
 # at extract time can restore the previous install.
+# fail_update <message> [nostart]
 fail_update() {
 	local msg=$1
 	echo "## UPDATE ABORTED: ${msg}" >&3 2>&3
-	echo "## (no destructive operation performed yet — your installation is intact)" >&3 2>&3
 	# (the box's programs are stopped before the backup of the user data: started again, so the box goes on running;
-	# the idle shutdown too, it was stopped for the update)
-	sudo -H -u dietpi bash -c "pm2 start server; pm2 start spotify-control" >&3 2>&3
+	# the idle shutdown too, it was stopped for the update) - not with "nostart": the installation is not in a state to
+	# run (a way back that did not complete - the next start of the box takes it up, before pm2 starts them)
+	if [ "${2:-}" = "nostart" ]; then
+		echo "## (the box's server and player stay stopped - restart the box: the way back goes on at the start)" >&3 2>&3
+		# (for whoever started the update - the app's update unit: it starts nothing afterwards either)
+		touch /tmp/mupibox-update-nostart
+	else
+		echo "## (your installation is as it was before the update)" >&3 2>&3
+		sudo -H -u dietpi bash -c "pm2 start server; pm2 start spotify-control" >&3 2>&3
+	fi
 	service mupi_idle_shutdown start >&3 2>&3
 	# (the exit below ends only the part in the progress bar - the script after it reads this and ends with an error
 	# too, so a caller - the admin interface, curl | bash - sees it failed instead of "Update finished")
@@ -86,7 +100,42 @@ fail_update() {
 	echo -e "XXX\n100\nUpdate aborted: ${msg}\nXXX"
 	exit 1
 }
-rm -f /tmp/mupibox-update-failed
+
+# An update in progress, for one that stops halfway (power cut): set before the old installation is moved aside, gone
+# only after the very last step. restore_interrupted_update.sh finds it at the next start (and the next update) and
+# brings the old installation back, whole. Written next to it, checked, on the card - and only then the update goes
+# on (1 when any of it failed: the caller stops the update before it touches anything).
+UPDATE_STATE=/home/dietpi/.mupibox/update-state
+mark_update() {
+	local next="${UPDATE_STATE}.new"
+	rm -f "${next}"
+	if printf '%s\n' "$1" > "${next}" && [ "$(head -n 1 "${next}" 2>/dev/null)" = "$1" ] \
+		&& { sync "${next}" 2>/dev/null || sync; } && mv -f "${next}" "${UPDATE_STATE}" && sync; then
+		return 0
+	fi
+	rm -f "${next}"
+	return 1
+}
+# $1 in place of $2 through a copy next to it: a file exchanged in one step (never missing in between - the network
+# check writes an empty library where it finds none), a folder replaced once its copy is complete
+put_back_item() {
+	local next="${2}.upd-restore"
+	rm -rf "${next}"
+	cp -a "$1" "${next}" >&3 2>&3 || { rm -rf "${next}"; return 1; }
+	if [ -d "${next}" ] && [ ! -L "${next}" ]; then
+		rm -rf "$2" && mv "${next}" "$2"
+	else
+		mv -f "${next}" "$2"
+	fi
+}
+clear_update_mark() {
+	rm -f "${UPDATE_STATE}" "${UPDATE_STATE}.new"
+	sync
+}
+rm -f /tmp/mupibox-update-failed /tmp/mupibox-update-nostart
+# (a policy-rc.d an update that stopped halfway left behind - see "Samba, FTP and VNC" below: it kept every service from
+# starting when a package is installed)
+grep -qs "written by the MuPiBox update" /usr/sbin/policy-rc.d && rm -f /usr/sbin/policy-rc.d
 service mupi_idle_shutdown stop
 # 2026-09-20: no longer installed (nothing in MuPiBox uses them any more):
 #   id3tool - only the ID3 converter used it; that converter was removed from the admin
@@ -97,14 +146,13 @@ service mupi_idle_shutdown stop
 #   i2c-tools - no script calls i2cdetect/i2cget/i2cset (I2C is used through python3-smbus2)
 #   autoconf - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
 #   automake - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
-# The changes of this list apply to DEV installs only; stable and beta keep the list they always had.
-if [ "$RELEASE" != "dev" ]; then
-  packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer mpv pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh"
-else
-  # libwidevinecdm0 stays: the display plays Spotify through the Web Playback SDK in Chromium, which needs Widevine
-  packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer mpv pulseaudio-module-bluetooth pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa preload python3-smbus2 pigpio libjson-c-dev libi2c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh xdotool"
-fi
-packages2remove="jq"
+# One list for every channel (stable and beta kept the list of before until 5.0.10 - without xdotool, which the display's
+# window and the goodbye picture need, and with the packages above that nothing uses).
+# libwidevinecdm0 stays: the display plays Spotify through the Web Playback SDK in Chromium, which needs Widevine
+packages2install="lighttpd-mod-openssl gpiod git mpv pulseaudio-module-bluetooth python3-pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt python3-smbus2 pigpio libjson-c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh xdotool rfkill"
+# packages the update removes (apt-get remove, only when installed) - none at the moment; Debian's jq goes where the
+# update puts its own jq (see "Copy binaries")
+packages2remove=""
 STEP=0
 VER_JSON="/tmp/version.json"
 OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)  >&3 2>&3
@@ -200,9 +248,18 @@ rm -f /tmp/mupibox-update-failed
 	if [[ "$NODEJS" == "v22."* ]]; then
 		echo "Node.js already at v22.*" >&3 2>&3
 	else
-		apt-get --yes remove nodejs >&3 2>&3
-		curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash - >&3 2>&3
-		apt-get install -y nodejs >&3 2>&3
+		# Node.js 22 from NodeSource, installed over the one there is. It is no longer removed first: when the download or
+		# the installation failed (no internet for a moment, NodeSource not answering), the box was left without Node.js -
+		# the app, the display and the player no longer ran. The old one stays until the new one is in.
+		if curl -fsSL https://deb.nodesource.com/setup_22.x -o /tmp/nodesource_setup.sh >&3 2>&3 && bash /tmp/nodesource_setup.sh >&3 2>&3; then
+			apt-get install -y nodejs >&3 2>&3
+		fi
+		rm -f /tmp/nodesource_setup.sh
+		NODEJS=$(nodejs --version 2>/dev/null)
+		if [[ "$NODEJS" != "v22."* ]]; then
+			echo "## WARNING: Node.js 22 could not be installed (still ${NODEJS:-none}) ##" >&3 2>&3
+			command -v node >/dev/null 2>&1 || fail_update "Node.js could not be installed (internet?) - please start the update again"
+		fi
 	fi
 	after=$(date +%s)
 
@@ -225,12 +282,27 @@ rm -f /tmp/mupibox-update-failed
 		echo -e "## apt-get install ${package}  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	done
 
+	# mpv plays everything but Spotify (mplayer, the fallback until 5.0.9, is gone): asked once more with fresh package
+	# lists when the loop above could not install it - without it the box plays nothing but Spotify
+	if ! command -v mpv >/dev/null 2>&1; then
+		apt-get update >&3 2>&3
+		apt-get --yes install mpv >&3 2>&3 || echo "## WARNING: mpv could not be installed - only Spotify will play ##" >&3 2>&3
+	fi
+
 	# pinctrl for the OnOff SHIM with libgpiod 2 (Debian 13 "Trixie", see scripts/OnOffShim): in raspi-utils-core of the
 	# Raspberry Pi archive (the name raspberrypi-utils written here before is only the source package - nothing was
 	# installed, poweroff.sh fell back to a gpioset in the background). Not with libgpiod 1 (Bookworm): it keeps the
 	# tools of gpiod, and raspi-utils-core would replace its libraspberrypi-bin there.
 	if gpioset --version 2>/dev/null | grep -q ' v2\.' && ! command -v pinctrl >/dev/null && apt-cache show raspi-utils-core >/dev/null 2>&1; then
 		apt-get --yes install raspi-utils-core >&3 2>&3
+	fi
+	# avahi for the Home Assistant API (scripts/mupibox/ha_mdns.sh): installed, but running only while the API is switched
+	# on in the app - its install starts it, so it is switched off again here unless the API is on
+	if ! dpkg -l avahi-daemon 2>/dev/null | grep -q '^ii'; then
+		apt-get --yes install --no-install-recommends avahi-daemon >&3 2>&3
+	fi
+	if [ "$(/usr/bin/jq -r '.homeAssistant.enabled // false' ${CONFIG} 2>/dev/null)" != "true" ]; then
+		systemctl disable --now avahi-daemon.socket avahi-daemon >&3 2>&3
 	fi
 
 	for package in ${packages2remove}
@@ -239,7 +311,8 @@ rm -f /tmp/mupibox-update-failed
 		STEP=$(($STEP + 1))
 		echo -e "XXX\n${STEP}\Remove ${package}\nXXX"
 		PKG_OK=$(dpkg -l ${package} 2>/dev/null | egrep '^ii' | wc -l) >&3 2>&3
-		if [ ${PKG_OK} -eq 0 ]; then
+		# (only an installed one: this was "-eq 0" - it tried to remove what was not there, and removed nothing)
+		if [ ${PKG_OK} -gt 0 ]; then
 		  apt-get --yes remove ${package} >&3 2>&3
 		fi
 		after=$(date +%s)
@@ -248,31 +321,12 @@ rm -f /tmp/mupibox-update-failed
 
 	STEP=$(($STEP + 1))
 	if [ $OS == "bullseye" ]; then
-		echo -e "XXX\n${STEP}\nInstall package mutagen\nXXX"
-		before=$(date +%s)
-		pip install mutagen >&3 2>&3
-		STEP=$(($STEP + 4))
-		after=$(date +%s)
-		echo -e "## pip install mutagen  ##  finished after $((after - $before)) seconds" >&3 2>&3
-		echo -e "XXX\n${STEP}\nInstall package pip requests\nXXX"
-		before=$(date +%s)
-		installed=$(pip list | grep requests)
-		if [ ${#installed} = 0 ]; then
-			pip install requests --break-system-packages >&3 2>&3
-		fi
-		after=$(date +%s)
-		echo -e "## pip install requests  ##  finished after $((after - $before)) seconds" >&3 2>&3
-		before=$(date +%s)
-		installed=$(pip list | grep pyserial)
-		if [ ${#installed} = 0 ]; then
-			pip install pyserial --break-system-packages >&3 2>&3
-		fi
-		after=$(date +%s)
-		echo -e "## pip install pyserial  ##  finished after $((after - $before)) seconds" >&3 2>&3
+		# (requests and pyserial come from the package list: python3-requests, python3-serial; mutagen is not used)
 		STEP=$(($STEP + 1))
 	else
-		echo -e "XXX\n${STEP}\nInstall package python3-mutagen\nXXX"
-		packages2install="python3-mutagen  python3-dev"
+		echo -e "XXX\n${STEP}\nInstall package python3-dev\nXXX"
+		# (python3-dev: pip may have to build a part of telepot; python3-mutagen is not used by anything)
+		packages2install="python3-dev"
 		for package in ${packages2install}
 		do		
 			before=$(date +%s)
@@ -329,14 +383,7 @@ rm -f /tmp/mupibox-update-failed
 		echo "DietPi-Dashboard download failed - keeping the installed version" >&3 2>&3
 	fi
 	rm -f "${DD_TMP}"
-	DD_CONF_TMP=$(mktemp /tmp/dietpi-dashboard-conf.XXXXXX)
-	if curl -sSfL --retry 3 --retry-delay 3 -m 60 "https://raw.githubusercontent.com/nonnorm/DietPi-Dashboard/${DD_VERSION}/config.toml" -o "${DD_CONF_TMP}" >&3 2>&3 && [ -s "${DD_CONF_TMP}" ]; then
-		cp -f "${DD_CONF_TMP}" /opt/dietpi-dashboard/config.toml >&3 2>&3
-	fi
-	rm -f "${DD_CONF_TMP}"
-	#bash -c 'su dietpi -c "yes \"\" | sudo /boot/dietpi/dietpi-software install 200"' >&3 2>&3
-	/usr/bin/sed -i 's/#terminal_user = "root"/terminal_user = "dietpi"/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
-	#sudo /usr/bin/sed -i 's/pass = true/pass = false/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
+	# (its config.toml is written by dietpi_dashboard.sh further down - the release's default had no password, see there)
 	after=$(date +%s)
 	echo -e "## Setup DietPi-Dashboard  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
@@ -433,6 +480,20 @@ rm -f /tmp/mupibox-update-failed
 	# The box's programs stop before the copy: a change the app saved or the player's progress after the copy was
 	# replaced by the older copy when the data came back (the server was stopped only after the backup before)
 	sudo -H -u dietpi bash -c "pm2 stop server; pm2 stop spotify-control" >&3 2>&3
+	# An update that stopped before (a power cut while it ran): its data back from its backup first - else this run saved
+	# the empty library and brought that back (restore_interrupted_update.sh; it runs at every start of the box too)
+	if [ -f "${MUPI_SRC}/scripts/mupibox/restore_interrupted_update.sh" ]; then
+		bash "${MUPI_SRC}/scripts/mupibox/restore_interrupted_update.sh" --no-restart >&3 2>&3 			|| fail_update "An update that stopped before could not be undone (see the log) - nothing was changed, the backups are kept; restart the box: it goes on with it at the start" nostart
+	fi
+	# ... and in place before the installation is touched: should this update stop halfway, the next start undoes or
+	# finishes it (mupi_update_recover.service runs it before pm2) - also on the first update that brings it
+	if [ -f "${MUPI_SRC}/scripts/mupibox/restore_interrupted_update.sh" ] && [ -f "${MUPI_SRC}/config/services/mupi_update_recover.service" ]; then
+		mkdir -p /usr/local/bin/mupibox >&3 2>&3
+		tr -d '\r' < "${MUPI_SRC}/scripts/mupibox/restore_interrupted_update.sh" > /usr/local/bin/mupibox/restore_interrupted_update.sh && chmod 755 /usr/local/bin/mupibox/restore_interrupted_update.sh
+		cp -f "${MUPI_SRC}/config/services/mupi_update_recover.service" /etc/systemd/system/mupi_update_recover.service >&3 2>&3
+		systemctl daemon-reload >&3 2>&3
+		systemctl enable mupi_update_recover.service >&3 2>&3
+	fi
 	# A backup left from a restore that failed (see "Restore Userdata") is kept under its own name, never thrown away
 	[ -e "${USERDATA_BAK}" ] && mv "${USERDATA_BAK}" "${USERDATA_BAK}.$(date +%Y%m%d-%H%M%S)" >&3 2>&3
 	mkdir -p "${USERDATA_BAK}/www" >&3 2>&3
@@ -469,20 +530,26 @@ rm -f /tmp/mupibox-update-failed
 	BAK_DIR="/home/dietpi/.mupibox/Sonos-Kids-Controller-master.upd-bak"
 	# (the old install of a restore that failed stays, under its own name)
 	[ -e "${BAK_DIR}" ] && mv "${BAK_DIR}" "${BAK_DIR}.$(date +%Y%m%d-%H%M%S)" >&3 2>&3
+	# (from here on until the very last step a power cut brings the old installation back at the next start)
+	mark_update unpacking || fail_update "The update's state could not be written (card full?) - nothing was changed"
 	if [ -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master ]; then
 		mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master "${BAK_DIR}" >&3 2>&3 || \
-			fail_update "Could not move old install aside (filesystem full?)"
+			{ clear_update_mark; fail_update "Could not move old install aside (filesystem full?)"; }
 	fi
 	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/ >&3 2>&3
-	if ! unzip ${MUPI_SRC}/bin/nodejs/deploy.zip -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3; then
+	if ! unzip ${MUPI_SRC}/bin/nodejs/deploy.zip -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3 \
+		|| [ ! -s /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server.js ] \
+		|| [ ! -s /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/index.html ]; then
 		# Rollback: remove the partially-extracted dir and restore the backup.
 		rm -rf /home/dietpi/.mupibox/Sonos-Kids-Controller-master >&3 2>&3
 		if [ -d "${BAK_DIR}" ]; then
 			mv "${BAK_DIR}" /home/dietpi/.mupibox/Sonos-Kids-Controller-master >&3 2>&3
 			sudo -H -u dietpi bash -c "pm2 start server" >&3 2>&3
 		fi
+		clear_update_mark
 		fail_update "deploy.zip extraction failed — rolled back to previous install"
 	fi
+	sync
 	# (the old install is removed once the user data is back, see "Restore Userdata")
 	mv ${MUPI_SRC}/config/templates/monitor.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json >&3 2>&3
 	mv ${MUPI_SRC}/config/templates/www.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
@@ -608,6 +675,8 @@ rm -f /tmp/mupibox-update-failed
 	cp -f ${MUPI_SRC}/themes/km-themes.json /home/dietpi/MuPiBox/themes/km-themes.json >&3 2>&3
 	mv ${MUPI_SRC}/themes/*.css /home/dietpi/MuPiBox/themes/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/chromium-autostart.sh /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
+	# full colours in the display on a Pi with 2 GB or more: takes DietPi's "low-end device mode" out again (see the file)
+	mkdir -p /etc/chromium.d && tr -d '\r' < ${MUPI_SRC}/config/chromium/zz-mupibox > /etc/chromium.d/zz-mupibox && chmod 644 /etc/chromium.d/zz-mupibox
 	mv ${MUPI_SRC}/scripts/mupibox/* /usr/local/bin/mupibox/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/bluetooth/* /usr/local/bin/mupibox/ >&3 2>&3
 	# The battery of Bluetooth headphones (display and app, issue #176): BlueZ 5.66 takes it from PulseAudio only with
@@ -644,10 +713,22 @@ rm -f /tmp/mupibox-update-failed
 
 	echo -e "XXX\n${STEP}\nCopy binaries... \nXXX"	
 	before=$(date +%s)
-	rm /usr/bin/jq >&3 2>&3
+	# Debian's own jq off the box (the update puts jq 1.8.1 into /usr/bin a few lines below; with Debian's package
+	# left, an "apt upgrade" put its older one back over it) - with dpkg, which refuses when another package depends on
+	# it (apt-get --yes would remove that one too); the file goes in any case
+	if dpkg -s jq >/dev/null 2>&1; then
+		dpkg -r jq >&3 2>&3 || echo "## Debian's jq stays installed (another package needs it) ##" >&3 2>&3
+	fi
+	rm -f /usr/bin/jq >&3 2>&3
 	
 	service spotifyd stop >&3 2>&3
 	systemctl disable spotifyd >&3 2>&3
+	# preload (a desktop daemon that preloads programs it saw started; no longer installed since 5.0.10): off where a
+	# box has it - the box starts the same few programs, which stay in memory anyway, and it only took memory and wrote
+	# its state to the SD card. The package stays, only switched off.
+	if [ -e /etc/init.d/preload ] || systemctl cat preload.service >/dev/null 2>&1; then
+		systemctl disable --now preload >&3 2>&3
+	fi
 	if systemctl cat librespot.service > /dev/null 2>&1; then
 		systemctl disable --now librespot.service >&3 2>&3
 	fi
@@ -780,9 +861,127 @@ rm -f /tmp/mupibox-update-failed
 			cp -f "${MUPI_SRC}/config/services/mupibox-delayed-start.conf" "/etc/systemd/system/${delayed}.service.d/mupibox-delayed-start.conf" >&3 2>&3
 		done
 	fi
+	# Samba, FTP and VNC on a box that does not have them yet (issue #178): installed and set up, but off - the app's
+	# switches (eltern/services.ts) then only start and stop them, at once and without internet; a fresh installation
+	# does the same. Only what is missing: a service that is there is left as it is (one that is on stays on), and an
+	# own smb.conf, proftpd.conf or Samba password is never replaced. Debian's packages start their service when they are installed -
+	# policy-rc.d keeps them from it meanwhile (else proftpd ran for a moment with Debian's own config, which lets the
+	# box's user log in). Nothing of it stops the update: what fails is installed by the app's switch as before.
+	POLICY_RC=/usr/sbin/policy-rc.d
+	POLICY_RC_OURS=0
+	if [ ! -e "${POLICY_RC}" ]; then
+		printf '#!/bin/sh\n# written by the MuPiBox update while it installs packages: no service starts meanwhile\nexit 101\n' > "${POLICY_RC}" && chmod 755 "${POLICY_RC}" && POLICY_RC_OURS=1
+	fi
+	# (installed means installed: dpkg -s also answers for a package removed with only its config left - the state the
+	# old admin interface's switches left behind with apt-get remove)
+	pkg_installed() { dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q 'install ok installed'; }
+	# The services the packages bring are masked before they are installed and switched off only after: a power cut in
+	# between leaves them unable to start instead of switched on at the next start (the packages enable them). The list
+	# on the card tells restore_interrupted_update.sh which ones to unmask and switch off then. Only units that are not
+	# there yet - one that is there is left as it is.
+	UPDATE_MASKED=/home/dietpi/.mupibox/update-masked
+	# (1 when one could not be masked: its package is not installed now)
+	mask_new() {
+		local u rc=0
+		for u in "$@"; do
+			[ -e /usr/lib/systemd/system/${u}.service ] || [ -e /lib/systemd/system/${u}.service ] || [ -e /etc/systemd/system/${u}.service ] && continue
+			{ echo "${u}" >> "${UPDATE_MASKED}" && sync "${UPDATE_MASKED}" && systemctl mask ${u}.service >&3 2>&3; } || rc=1
+		done
+		return ${rc}
+	}
+	# (unmasked first: systemctl ignores switching off a masked unit - the package's links would stay and start it later.
+	# One that cannot be switched off is masked again and stays on the list: it cannot start, and the next start tries
+	# again - 1 then)
+	off_new() {
+		local u rc=0
+		for u in "$@"; do
+			grep -qsx "${u}" "${UPDATE_MASKED}" || continue
+			if systemctl unmask ${u}.service >&3 2>&3 \
+				&& { ! systemctl cat ${u}.service >/dev/null 2>&1 || systemctl disable --now ${u}.service >&3 2>&3; }; then
+				continue
+			fi
+			systemctl mask ${u}.service >&3 2>&3
+			rc=1
+		done
+		return ${rc}
+	}
+	SHARES_OFF_OK=1
+	# a list left by an update before (a service it could not switch off, and restore_interrupted_update.sh neither):
+	# tried again here whatever the packages say - their install below is skipped then, and the list goes at the end
+	# only when every service on it is off
+	if [ -s "${UPDATE_MASKED}" ]; then
+		off_new $(grep -E '^[a-z0-9_-]+$' "${UPDATE_MASKED}" | sort -u) || SHARES_OFF_OK=0
+	fi
+	# A config comes from the template only while it is none of the user's own: there was none before the install, or
+	# it is still the package's (its original, or what ucf wrote and keeps the checksum of). An own smb.conf or
+	# proftpd.conf - kept by the apt-get remove of the old switches - stays as it is.
+	conf_untouched() {
+		cmp -s "$1" "$2" && return 0
+		local sum
+		sum=$(md5sum < "$1" 2>/dev/null | cut -d' ' -f1)
+		[ -n "${sum}" ] && grep -qs "^${sum}  $1\$" /var/lib/ucf/hashfile
+	}
+	WSD=$(apt-cache show wsdd2 >/dev/null 2>&1 && echo wsdd2 || echo wsdd)
+	if ! pkg_installed samba; then
+		SMB_CONF_HAD=0
+		[ -e /etc/samba/smb.conf ] && SMB_CONF_HAD=1
+		SMB_OK=1
+		if mask_new smbd nmbd samba-ad-dc wsdd wsdd2; then
+			DEBIAN_FRONTEND=noninteractive apt-get --yes install samba ${WSD} >&3 2>&3
+			SMB_OK=$?
+		fi
+		off_new smbd nmbd samba-ad-dc wsdd wsdd2 || SHARES_OFF_OK=0
+		if [ "${SMB_OK}" = 0 ]; then
+			if [ -f ${MUPI_SRC}/config/templates/smb.conf ] && { [ "${SMB_CONF_HAD}" = 0 ] || conf_untouched /etc/samba/smb.conf /usr/share/samba/smb.conf; }; then
+				cp -f ${MUPI_SRC}/config/templates/smb.conf /etc/samba/smb.conf >&3 2>&3
+			fi
+			# (the first password only for a Samba user that is not there yet: one kept from before keeps its own)
+			pdbedit -u dietpi >/dev/null 2>&1 || (echo "mupibox"; echo "mupibox") | smbpasswd -s -a dietpi >&3 2>&3
+		else
+			echo "## Samba not installed now - the app's switch installs it ##" >&3 2>&3
+		fi
+	fi
+	if ! pkg_installed proftpd-core && ! command -v proftpd >/dev/null 2>&1; then
+		FTP_CONF_HAD=0
+		[ -e /etc/proftpd/proftpd.conf ] && FTP_CONF_HAD=1
+		FTP_OK=1
+		if mask_new proftpd; then
+			DEBIAN_FRONTEND=noninteractive apt-get --yes install proftpd-core >&3 2>&3
+			FTP_OK=$?
+		fi
+		off_new proftpd || SHARES_OFF_OK=0
+		if [ "${FTP_OK}" = 0 ]; then
+			if [ -d /etc/proftpd ] && [ -f ${MUPI_SRC}/config/templates/proftpd.conf ] \
+				&& { [ "${FTP_CONF_HAD}" = 0 ] || conf_untouched /etc/proftpd/proftpd.conf /usr/share/proftpd/templates/proftpd.conf; }; then
+				cp -f ${MUPI_SRC}/config/templates/proftpd.conf /etc/proftpd/proftpd.conf >&3 2>&3
+			fi
+		else
+			echo "## FTP not installed now - the app's switch installs it ##" >&3 2>&3
+		fi
+	fi
+	if [ "${SHARES_OFF_OK}" = 1 ]; then
+		rm -f "${UPDATE_MASKED}"
+	else
+		echo "## a Samba/FTP service could not be switched off - masked until the next start switches it off ##" >&3 2>&3
+	fi
+	if ! command -v x11vnc >/dev/null 2>&1 || ! command -v websockify >/dev/null 2>&1; then
+		DEBIAN_FRONTEND=noninteractive apt-get --yes install x11vnc websockify >&3 2>&3 || echo "## VNC not installed now - the app's switch installs it ##" >&3 2>&3
+	fi
+	if [ ! -d /usr/share/novnc ]; then
+		git clone --depth 1 https://github.com/novnc/noVNC.git /usr/share/novnc >&3 2>&3 && chown -R dietpi:dietpi /usr/share/novnc >&3 2>&3
+	fi
+	[ "${POLICY_RC_OURS}" = 1 ] && rm -f "${POLICY_RC}"
 	# The Samba share is a standalone server (smbd); the Active Directory domain controller came with the package and
 	# is not needed
 	systemctl disable --now samba-ad-dc.service >&3 2>&3
+	# The share's announcement for the Windows network (WS-Discovery, so the box shows up there): wsdd2 (Debian 12 and 13;
+	# Debian 13 has no wsdd), a box with wsdd keeps it. Installed when neither is, running together with the share (only when Samba is on).
+	WSD=$(apt-cache show wsdd2 >/dev/null 2>&1 && echo wsdd2 || echo wsdd)
+	dpkg -s wsdd >/dev/null 2>&1 || dpkg -s wsdd2 >/dev/null 2>&1 || apt-get --yes install ${WSD} >&3 2>&3
+	for u in wsdd wsdd2; do
+		systemctl cat ${u}.service >/dev/null 2>&1 || continue
+		if systemctl is-enabled --quiet smbd.service; then systemctl enable --now ${u}.service >&3 2>&3; else systemctl disable --now ${u}.service >&3 2>&3; fi
+	done
 
 	# Tolerant replacement for DietPi's WiFi monitor (see scripts/mupibox/wifi_monitor.sh): the original re-connected at
 	# the first lost ping - also while the box roams between access points, 5-15 s without network each time. For
@@ -816,8 +1015,17 @@ rm -f /tmp/mupibox-update-failed
 	systemctl start mupi_check_monitor.service >&3 2>&3
 	systemctl enable mupi_powerled.service >&3 2>&3
 	systemctl start mupi_powerled.service >&3 2>&3
-	systemctl enable dietpi-dashboard.service >&3 2>&3
-	systemctl start dietpi-dashboard.service >&3 2>&3
+	# The DietPi-Dashboard behind the app (dietpi_dashboard.sh): a password nobody knows, an inner port, reached through a
+	# one-time ticket of the app only - without a password it was a terminal as dietpi (sudo) for everyone in the Wi-Fi.
+	# On only when switched on in the app (mupibox.dietpiDashboard): every box that had it open is switched off once.
+	if [ -x /opt/dietpi-dashboard/dietpi-dashboard ]; then
+		/usr/local/bin/mupibox/dietpi_dashboard.sh setup >&3 2>&3
+		if [ "$(/usr/bin/jq -r '.mupibox.dietpiDashboard // false' /etc/mupibox/mupiboxconfig.json 2>/dev/null)" = "true" ]; then
+			/usr/local/bin/mupibox/dietpi_dashboard.sh on >&3 2>&3
+		else
+			/usr/local/bin/mupibox/dietpi_dashboard.sh off >&3 2>&3
+		fi
+	fi
 	if [ "${MUPI_ETHERNET}" = "1" ]; then
 		systemctl enable mupi_ethernet.service >&3 2>&3
 		systemctl start mupi_ethernet.service >&3 2>&3
@@ -973,6 +1181,8 @@ rm -f /tmp/mupibox-update-failed
 	cp -f ${MUPI_SRC}/config/lighttpd/99-mupibox-media-noexec.conf /etc/lighttpd/conf-enabled/99-mupibox-media-noexec.conf >&3 2>&3
 	# the app on port 80/443 too: its login at /, the app at /app (see the file)
 	cp -f ${MUPI_SRC}/config/lighttpd/90-mupibox-app.conf /etc/lighttpd/conf-enabled/90-mupibox-app.conf >&3 2>&3
+	# only names of the home network: a foreign name pointed at the box gets 403 (DNS rebinding, lighttpd_hosts.sh)
+	NO_RESTART=1 /usr/local/bin/mupibox/lighttpd_hosts.sh >&3 2>&3
 	lighty-enable-mod proxy  >&3 2>&3
 	lighty-enable-mod ssl  >&3 2>&3
 	# restart, not reload: new modules and the new certificate (root only) are only taken over by a new start
@@ -998,41 +1208,25 @@ rm -f /tmp/mupibox-update-failed
 			config.json|monitor.json|active_data.json|active_resume.json|network.json) continue ;;
 		esac
 		[ -L "${item}" ] && continue
-		rm -rf "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/${name}" >&3 2>&3
-		cp -a "${item}" "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/${name}" >&3 2>&3 || RESTORE_OK=0
+		put_back_item "${item}" "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/${name}" || RESTORE_OK=0
 	done
 	for item in cover active_theme.css rss-covers; do
 		[ -e "${USERDATA_BAK}/www/${item}" ] || continue
-		rm -rf "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/${item}" >&3 2>&3
-		cp -a "${USERDATA_BAK}/www/${item}" "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/${item}" >&3 2>&3 || RESTORE_OK=0
+		put_back_item "${USERDATA_BAK}/www/${item}" "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/${item}" || RESTORE_OK=0
 	done
 	# theme-data: the new version's files stay, what the user added comes back (-n: nothing of the update replaced)
 	if [ -d "${USERDATA_BAK}/www/theme-data" ]; then
 		mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data >&3 2>&3
 		cp -an "${USERDATA_BAK}/www/theme-data/." /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/ >&3 2>&3 || RESTORE_OK=0
 	fi
-	# The caches of the old install (Spotify answers, covers, the NAS index) come along - moved, not copied (same card,
-	# at once). Without them the box asked Spotify for every entry again after an update: with a big library minutes of
-	# loading dots on the display, and a long way into Spotify's rate limit.
-	if [ -d "${BAK_DIR}/cache" ]; then
-		mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/cache >&3 2>&3
-		for item in "${BAK_DIR}"/cache/*; do
-			[ -e "${item}" ] || continue
-			[ -e "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/cache/$(basename "${item}")" ] && continue
-			mv "${item}" /home/dietpi/.mupibox/Sonos-Kids-Controller-master/cache/ >&3 2>&3
-		done
-		chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/cache >&3 2>&3
-	fi
 	chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config >&3 2>&3
-	# only now that everything is back
+	# Everything back: the old installation and the backup go at the very end of the update (see "Finish the update"),
+	# not here - until then a power cut brings the old installation back whole at the next start
 	if [ "${RESTORE_OK}" = 1 ] && /usr/bin/jq -e . /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json > /dev/null 2>&1; then
-		rm -rf "${USERDATA_BAK}" >&3 2>&3
-		# the old install is not needed any more either
-		rm -rf "${BAK_DIR}" >&3 2>&3
+		RESTORE_DONE=1
 	else
+		# (the end of the update goes back to the old installation, with its data as it was)
 		echo "## Restore incomplete - user data kept in ${USERDATA_BAK} (old install in ${BAK_DIR})" >&3 2>&3
-		# (said at the end, outside the progress dialog - the update used to report success all the same)
-		touch /tmp/mupibox-restore-failed
 	fi
 	chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	sleep 1 >&3 2>&3
@@ -1044,7 +1238,16 @@ rm -f /tmp/mupibox-update-failed
 	
 	echo -e "XXX\n${STEP}\nFinalizing setup... \nXXX"
 	#cp ${CONFIG} ${CONFIG}_backup  >&3 2>&3
-	/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION_LONG}" '.mupibox.version = $v' ${CONFIG}) >  ${CONFIG}
+	# The version, written as every other change of the config (conf_update.sh): into a file next to it, then exchanged.
+	# Written in place, a jq that failed (the config broken for a moment, a full SD card) left it empty - every setting
+	# gone, the Spotify login and the password with them.
+	VTMP="${CONFIG}.version.$$"
+	if /usr/bin/jq --arg v "${VERSION_LONG}" '.mupibox.version = $v' ${CONFIG} > "${VTMP}" 2>&3 && [ -s "${VTMP}" ]; then
+		mv -f "${VTMP}" ${CONFIG}
+	else
+		rm -f "${VTMP}"
+		echo "## WARNING: version not written, the config was left as it is ##" >&3 2>&3
+	fi
 	chown root:www-data ${CONFIG}
 	chmod 775 ${CONFIG}
 	#systemctl start mupi_idle_shutdown.service >&3 2>&3
@@ -1057,11 +1260,54 @@ rm -f /tmp/mupibox-update-failed
 	/usr/local/bin/mupibox/./setting_update.sh >&3 2>&3
 	# boot and maintenance screens for the settings (box name, scene, language)
 	/usr/local/bin/mupibox/bootscreen_update.sh >&3 2>&3
+
+	# Finish the update - only now that everything is installed and set up (the configuration above too): the old
+	# installation's caches (Spotify answers, covers, the NAS index) come along - moved, not copied (same card, at once;
+	# without them the box asked Spotify for every entry again, a long way into its rate limit), of two Spotify blocks
+	# the longer one. Then the old installation, the backup and the mark go. Should anything of it fail, all three stay
+	# and the next start brings the old installation back whole.
+	if [ "${RESTORE_DONE:-0}" = 1 ]; then
+		FINISH_OK=1
+		NEW_CACHE=/home/dietpi/.mupibox/Sonos-Kids-Controller-master/cache
+		if [ -d "${BAK_DIR}/cache" ]; then
+			mkdir -p "${NEW_CACHE}" >&3 2>&3 || FINISH_OK=0
+			block_until() { [ -s "$1" ] && /usr/bin/jq -r '.until // 0 | floor' "$1" 2>/dev/null | grep -E '^[0-9]+$' || echo 0; }
+			for item in "${BAK_DIR}"/cache/*; do
+				[ -e "${item}" ] || continue
+				name=$(basename "${item}")
+				if [ "${name}" = "spotify-block.json" ]; then
+					if [ "$(block_until "${item}")" -gt "$(block_until "${NEW_CACHE}/${name}")" ]; then
+						cp -a "${item}" "${NEW_CACHE}/${name}.upd" && mv -f "${NEW_CACHE}/${name}.upd" "${NEW_CACHE}/${name}" >&3 2>&3 || FINISH_OK=0
+					fi
+				elif [ ! -e "${NEW_CACHE}/${name}" ]; then
+					mv "${item}" "${NEW_CACHE}/" >&3 2>&3 || FINISH_OK=0
+				fi
+			done
+			chown -R dietpi:dietpi "${NEW_CACHE}" >&3 2>&3
+		fi
+		sync
+		# The update counts as done once "done" is on the card: what is left over then is only cleared up - a power cut
+		# while the old installation is being deleted must not bring a half deleted one back
+		[ "${FINISH_OK}" = 1 ] && mark_update done || FINISH_OK=0
+		if [ "${FINISH_OK}" = 1 ]; then
+			rm -rf "${USERDATA_BAK}" "${BAK_DIR}" >&3 2>&3
+			clear_update_mark
+		fi
+	fi
+	# Not done (the user data not all back, the old caches not taken over, the mark not written): back to the previous
+	# version at once, before the new one runs and anything is written into it - not only at the next start
+	if [ "${RESTORE_DONE:-0}" != 1 ] || [ "${FINISH_OK:-0}" != 1 ]; then
+		echo "## The update could not be finished - going back to the previous version" >&3 2>&3
+		if bash /usr/local/bin/mupibox/restore_interrupted_update.sh --no-restart >&3 2>&3; then
+			fail_update "The update could not be finished (card full?) - the previous version is back, with your data as it was"
+		else
+			fail_update "The update could not be finished, and going back did not complete either - restart the box: it goes on with it at the start" nostart
+		fi
+	fi
 	
 	mv ${LOG} /boot/$(date +%F)_update_${VERSION}.log >&3 2>&3
 	chown dietpi:dietpi ${CONFIG} >&3 2>&3
 	
-	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
 	# by path: on a fresh box pm2 knows neither process yet ("pm2 start server" looked for a file "server")
 	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && if pm2 describe server >/dev/null 2>&1; then pm2 restart server; else pm2 start server.js --name server; fi" >&3 2>&3
 	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/spotifycontroller-main && if pm2 describe spotify-control >/dev/null 2>&1; then pm2 restart spotify-control; else pm2 start spotify-control.js --name spotify-control; fi" >&3 2>&3
@@ -1085,23 +1331,11 @@ rm -f /tmp/mupibox-update-failed
 } | whiptail --title "MuPiBox Update ${VERSION_LONG}" --gauge "Please wait while installing" 6 60 0
 
 if [ -f /tmp/mupibox-update-failed ]; then
+	# (the reason, as fail_update wrote it - this said "the archive could not be downloaded" for every abort before)
+	echo "Update FAILED: $(sed 's/^Update aborted: //' /tmp/mupibox-update-failed)"
+	echo "See ${LOG} (or the dated update log on the boot partition)."
 	rm -f /tmp/mupibox-update-failed
 	rm -rf ${PREFLIGHT_DIR}
-	echo "Update FAILED: the MuPiBox archive could not be downloaded completely (see ${LOG})."
-	echo "Nothing was replaced. Please check the network connection and run the update again."
-	exit 1
-fi
-if [ -f /tmp/mupibox-update-failed ]; then
-	cat /tmp/mupibox-update-failed
-	rm -f /tmp/mupibox-update-failed
-	echo "Nothing was replaced - your installation is as it was (see ${LOG})."
-	exit 1
-fi
-if [ -f /tmp/mupibox-restore-failed ]; then
-	rm -f /tmp/mupibox-restore-failed
-	echo "Update installed, but the USER DATA COULD NOT BE PUT BACK COMPLETELY (card full?) - see ${LOG}."
-	echo "Your data is kept in /home/dietpi/.mupibox/userdata.upd-bak (the old install in Sonos-Kids-Controller-master.upd-bak)."
-	echo "Please make room on the card and copy the missing files back from there (a new update keeps these folders under a dated name)."
 	exit 1
 fi
 

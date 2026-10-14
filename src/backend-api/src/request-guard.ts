@@ -20,7 +20,10 @@ import os from 'node:os'
 import type { Request, RequestHandler } from 'express'
 import { requireCsrf, requireSession } from './eltern/middleware'
 
-const LOCAL_SUFFIXES = ['local', 'lan', 'home', 'fritz.box', 'localdomain', 'home.arpa', 'box', 'speedport.ip', 'internal']
+// Endings of the home network nobody can register on the internet - not 'box': .box is a public top-level domain, a
+// foreign page could have taken <boxname>.box and pointed it at the box (DNS rebinding); fritz.box is AVM's own.
+// The web server (lighttpd) has the same list: scripts/mupibox/lighttpd_hosts.sh
+const LOCAL_SUFFIXES = ['local', 'lan', 'home', 'fritz.box', 'localdomain', 'home.arpa', 'speedport.ip', 'internal']
 
 function hostnameOf(hostHeader: string | undefined): string {
   if (!hostHeader) return ''
@@ -70,14 +73,36 @@ const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 /** Paths a foreign site may send the browser to as a top-level navigation. */
 const NAVIGATION_ALLOWED_API = ['/api/app/spotify-oauth/callback', '/api/eltern/spotify-oauth/callback']
 
+/**
+ * A value from a request for the log: quoted, escaped and short. Logs are shown in the admin interface, and a Host header
+ * written there as it came could carry markup.
+ */
+export const logValue = (v: unknown): string => JSON.stringify(String(v ?? '').slice(0, 200))
+
 function reject(req: Request, res: Parameters<RequestHandler>[1], reason: string) {
   console.warn(
-    `${new Date().toLocaleString()}: [MuPiBox-Server] Refused ${req.method} ${req.path} (${reason}; host=${req.headers.host ?? ''} origin=${req.headers.origin ?? ''})`,
+    `${new Date().toLocaleString()}: [MuPiBox-Server] Refused ${req.method} ${logValue(req.path)} (${reason}; host=${logValue(req.headers.host)} origin=${logValue(req.headers.origin)})`,
   )
   res.status(403).send('forbidden')
 }
 
+/**
+ * The box's own media players (mpv - backend-player mpv-wrapper.js -, the ffmpeg inside it, the old mplayer). What they
+ * open comes from the box itself; an episode of a foreign podcast feed, a radio address or a server's redirect pointing
+ * at http://127.0.0.1:8200/api/... must not reach the API that way. They only ever fetch a NAS track from here
+ * (backend-player: http://localhost:8200/api/nas/stream). The same list: backend-player request-guard.js, lighttpd_hosts.sh
+ */
+const MEDIA_PLAYER_AGENT = /\b(?:lib)?mpv\b|\bLavf\/|\bMPlayer\b|\bffmpeg\b/i
+const MEDIA_PLAYER_PATHS = ['/api/nas/stream']
+
 export const browserGuard: RequestHandler = (req, res, next) => {
+  if (
+    MEDIA_PLAYER_AGENT.test(String(req.headers['user-agent'] ?? '')) &&
+    !((req.method === 'GET' || req.method === 'HEAD') && MEDIA_PLAYER_PATHS.includes(req.path))
+  ) {
+    reject(req, res, 'media player request')
+    return
+  }
   if (!isAllowedHost(req.headers.host)) {
     reject(req, res, 'host not allowed')
     return

@@ -258,39 +258,11 @@
 		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Chromium Kiosk restarted</li>";
 		}
-	if( $_POST['mupibox_update'] )
-		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash -s -- stable";
-		exec($command, $output, $result );
-		// M5: external command above just mutated the config -- force fresh re-read.
-		$data = mupibox_config(true);
-		$change=3;
-		$reboot=1;
-		$CHANGE_TXT=$CHANGE_TXT."<li>Update complete to Version ".$data["mupibox"]["version"]."</li>";
-		}
-	if( $_POST['mupibox_update_beta'] )
-		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash -s -- beta";
-		exec($command, $output, $result );
-		// M5: external command above just mutated the config -- force fresh re-read.
-		$data = mupibox_config(true);
-		$change=1;
-		$reboot=1;
-		$data["mupibox"]["version"]=$data["mupibox"]["version"]." BETA";
-		$CHANGE_TXT=$CHANGE_TXT."<li>Update complete to Beta-Version ".$data["mupibox"]["version"]."</li>";
-		}
-	if( $_POST['mupibox_update_dev'] )
-		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash -s -- dev";
-
-		exec($command, $output, $result );
-		// M5: external command above just mutated the config -- force fresh re-read.
-		$data = mupibox_config(true);
-		$change=1;
-		$reboot=1;
-		$data["mupibox"]["version"]=$data["mupibox"]["version"]." DEVELOPMENT";
-		$CHANGE_TXT=$CHANGE_TXT."<li>Update complete to Development-Version ".$data["mupibox"]["version"]."</li>";
-		}
+	// The MuPiBox update and the OS update are started in the app only (Settings > System > Updates, backend-api
+	// eltern/updates.ts): run here inside the PHP request, the update script's progress went into whiptail, which quits
+	// at once without a terminal - the update ended after its first step; it also replaces this interface and restarts
+	// the web server under the running request, and it reported "Update complete" either way. The app runs both as a
+	// systemd unit of their own and shows the progress. The buttons below lead there.
 /*	if( $_POST['config_update'] )
 		{
 		// The installed copy first: piping a script fetched live from the upstream repo into a root
@@ -301,13 +273,6 @@
 		$CHANGE_TXT=$CHANGE_TXT."<li>Config is up to date.</li>";
 		}
 */
-	if( $_POST['os_update'] )
-		{
-		$command = "sudo apt-get -y --install-recommends -o Dpkg::Options::=\"--force-confdef\" -o Dpkg::Options::=\"--force-confold\" update && sudo apt-get -y --install-recommends -o Dpkg::Options::=\"--force-confdef\" -o Dpkg::Options::=\"--force-confold\" upgrade";
-		exec($command, $output, $result );
-		$change=3;
-		$CHANGE_TXT=$CHANGE_TXT."<li>OS is up to date.</li>";
-		}
 	if( $_POST['shutdown'] )
 		{
 		#$command = 'bash -c "sleep 2; exec nohup setsid /usr/local/bin/mupibox/./shutdown.sh > /dev/null 2>&1" &';
@@ -431,10 +396,18 @@
 
 	if($_POST['change_login'])
 		{
-		if($data["interfacelogin"]["state"])
+		// switching off: only with the warning confirmed (the box is then open to everyone in the home network - the
+		// app asks the same, see mupi-app/app.js askLoginOff)
+		if($data["interfacelogin"]["state"] && empty($_POST['confirm_login_off']))
 			{
-			$data["interfacelogin"]["state"]=false;	
+			$CHANGE_TXT=$CHANGE_TXT."<li>Login not disabled: please confirm the warning first</li>";
+			if (empty($change)) { $change=4; } // message only
+			}
+		else if($data["interfacelogin"]["state"])
+			{
+			$data["interfacelogin"]["state"]=false;
 			$CHANGE_TXT=$CHANGE_TXT."<li>Login disabled</li>";
+			$change=2;
 			}
 		else
 			{
@@ -444,8 +417,8 @@
 			$data["interfacelogin"]["epoch"] = bin2hex(random_bytes(8));
 			if (!empty($_SESSION['logged_in'])) { $_SESSION['login_epoch'] = $data["interfacelogin"]["epoch"]; }
 			$CHANGE_TXT=$CHANGE_TXT."<li>Login enabled</li>";
+			$change=2;
 			}
-		$change=2;
 		}
 
 	if( $change == 1 )
@@ -512,9 +485,18 @@
 		<ul>
 			<li id="li_1" >
 				<h2>Password </h2>
-				<p>
-				The default password is "MuP1B0x"!
+				<?php
+				// the well-known default password (in every manual) is still a password, only said so
+				$__defaultPw = password_verify('MuP1B0x', (string)($data['interfacelogin']['password'] ?? ''));
+				if ($__defaultPw) { ?>
+				<p class="error">
+				The box still uses the default password "MuP1B0x" that is written in every manual - please set your own.
 				</p>
+				<?php } else { ?>
+				<p>
+				Your own password is set (the default password "MuP1B0x" no longer works).
+				</p>
+				<?php } ?>
 				<div>
 				<label for="curpwd">Current password</label>
 				<input id="curpwd" name="curpwd" class="element text medium" type="password" maxlength="255" value="" autocomplete="current-password"/>
@@ -542,6 +524,16 @@
 				echo "Login state: <b>".$login_state."</b>";
 				?>
 				</p>
+				<?php if ($data['interfacelogin']['state']) { ?>
+				<p class="error">
+				Without the login everyone in the home network can set up the box - guests on the Wi-Fi and devices you do not
+				know as well: delete content, connect Spotify, switch the box off and use this interface with all rights.
+				</p>
+				<p>
+				<input type="checkbox" id="confirm_login_off" name="confirm_login_off" value="1" />
+				<label for="confirm_login_off" style="display:inline">I understand and want to run the box without a password</label>
+				</p>
+				<?php } ?>
 				<input id="saveForm" class="button_text" type="submit" name="change_login" value="<?php print $login_button; ?>" />
 			</li>
 
@@ -554,10 +546,10 @@
 			<li class="li_norm"><h2>Backup MuPiBox-settings</h2>
 				<p>Backup MuPiBox-Data (cover, mupiboxconfig.json and data.json):</p>
 
-				<input id="saveForm" class="button_text" type="submit" name="backupdownload" value="Download Configuration-Backup" onclick="window.open('./backup.php', '_blank');" />
+				<input id="saveForm" class="button_text" type="submit" name="backupdownload" value="Download Configuration-Backup" formaction="./backup.php" formtarget="_blank" />
 				<p>Backup all MuPiBox-Data (media-files, cover, mupiboxconfig.json and data.json):</p>
 
-				<input id="saveForm" class="button_text" type="submit" name="fullbackupdownload" value="Download Full-Backup" onclick="window.open('./fullbackup.php', '_blank');" />
+				<input id="saveForm" class="button_text" type="submit" name="fullbackupdownload" value="Download Full-Backup" formaction="./fullbackup.php" formtarget="_blank" />
 			</li>
 			<li class="li_norm"><h2>Restore MuPiBox-settings</h2>
 				<p>Restore Backup-File:</p>
@@ -613,6 +605,8 @@
 		<ul>
 			<li class="li_norm"><h2>MuPiBox updates</h2>
 				<p>You can update MuPiBox at any time to stable, beta or development version. Please be careful, the development version could destroy your installation!</p>
+				<p>The update runs in the app (Settings &gt; System &gt; Updates): there it shows its progress and goes on when this page is replaced by the update.</p>
+				<p><a class="button_text_green" href="/app/#/updates" target="_blank" rel="noopener">Open the updates in the app</a></p>
 				<p>
 					<table>
 						<tr>
@@ -626,29 +620,16 @@
 								<th>Environment</th>
 								<th>Latest Version</th>
 								<th>Release-Infos</th>
-								<th>Update-Button</th>
 						</tr>
 						<tr>
 								<td>Stable</td>
 								<td><?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["version"]; ?></td>
 								<td><?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["releaseinfo"]; ?></td>
-								<td>
-								<input type="hidden" name="update_url" value="<?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["url"]; ?>" />
-								<input type="hidden" name="update_env" value="stable" />
-								<input type="hidden" name="update_version" value="<?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
-								<input id="saveForm" class="button_text_green" type="submit" name="mupibox_update" value="Update to version <?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
-								</td>
 						</tr>
 						<tr>
 								<td>Beta</td>
 								<td><?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["version"]; ?></td>
 								<td><?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["releaseinfo"]; ?></td>
-								<td>
-								<input type="hidden" name="update_url" value="<?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["url"]; ?>" />
-								<input type="hidden" name="update_env" value="beta" />
-								<input type="hidden" name="update_version" value="<?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
-								<input id="saveForm" class="button_text_orange" type="submit" name="mupibox_update_beta" value="Update to version <?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
-								</td>
 						</tr>
 						<tr>
 								<td>Development</td>
@@ -658,12 +639,6 @@
 									?>
 								 </td>
 								<td><?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["releaseinfo"]; ?></td>
-								<td>
-								<input type="hidden" name="update_url" value="<?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["url"]; ?>" />
-								<input type="hidden" name="update_env" value="dev" />
-								<input type="hidden" name="update_version" value="<?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
-								<input id="saveForm" class="button_text_red" type="submit" name="mupibox_update_dev" value="Update to version <?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
-								</td>
 						</tr>
 					</table>
 				</p>
@@ -672,7 +647,7 @@
 				</p>
 			</li>
 				Updating OS packages (apt-get update and apt-get upgrade):<br/>
-				<input id="saveForm" class="button_text" type="submit" name="os_update" value="Update OS"  onclick="return confirm('Do really want to update the Operating System?');" />
+				<a class="button_text" href="/app/#/updates" target="_blank" rel="noopener">Update the OS in the app</a>
 			</li>
 		</ul>
 	</details>
@@ -712,7 +687,7 @@
 							print '<input id="saveForm" class="button_text_red" type="submit" name="spotifydebug" value="Controller Debugging Active - turn off';
 							}
 					?>" />
-				<input id="saveForm" class="button_text" type="submit" name="pm2download" value="Download PM2-Log" onclick="window.open('./pm2logs.php', '_blank');" />
+				<input id="saveForm" class="button_text" type="submit" name="pm2download" value="Download PM2-Log" formaction="./pm2logs.php" formtarget="_blank" />
 
 			</li>
 		</ul>

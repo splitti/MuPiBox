@@ -135,12 +135,12 @@ AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
 # Without this pkill both invocations spawn their own player & overlay
 # the welcome wav. Match by the wav path so the regex never collides
 # with the player instance held by the backend-player.
-# Played with mpv (mplayer where mpv is missing).
-pkill -f "(mpv|mplayer).*${START_SOUND}" 2>/dev/null
+# Played with mpv (paplay where mpv is missing - the sound is a WAV).
+pkill -f "(mpv|paplay).*${START_SOUND}" 2>/dev/null
 if command -v mpv >/dev/null 2>&1; then
 	/usr/bin/mpv --no-video --really-quiet --no-config --ao=pulse,alsa --volume=100 "${START_SOUND}" >/dev/null 2>&1 &
 else
-	/usr/bin/mplayer -volume 100 ${START_SOUND} &
+	paplay "${START_SOUND}" >/dev/null 2>&1 &
 fi
 pgrep -f "chromium-browser" | while read -r pid; do
     # Setze die Priorität für jeden Prozess neu

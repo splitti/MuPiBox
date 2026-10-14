@@ -14,6 +14,7 @@ import { Monitor } from './monitor'
 import type { PlaytimePlayState } from './playtime.model'
 import { PlaytimeService } from './playtime.service'
 import { ElternMagicLinkOverlayComponent } from './eltern-magic-link/eltern-magic-link-overlay.component'
+import { HaPairingOverlayComponent } from './ha-pairing/ha-pairing-overlay.component'
 import { PlaytimeBlockedOverlayComponent } from './playtime-blocked-overlay/playtime-blocked-overlay.component'
 import { PlaytimeChipComponent } from './playtime-chip/playtime-chip.component'
 import { buildResumeMedia } from './resume-builder'
@@ -24,7 +25,7 @@ import { KmThemeService } from './theme/km-theme.service'
   selector: 'app-root',
   templateUrl: 'app.component.html',
   styleUrls: ['app.component.scss'],
-  imports: [IonApp, IonRouterOutlet, PlaytimeBlockedOverlayComponent, PlaytimeChipComponent, ElternMagicLinkOverlayComponent],
+  imports: [IonApp, IonRouterOutlet, PlaytimeBlockedOverlayComponent, PlaytimeChipComponent, ElternMagicLinkOverlayComponent, HaPairingOverlayComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent {

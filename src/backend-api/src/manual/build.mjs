@@ -225,6 +225,15 @@ function tr(text, lang) {
   return text
 }
 
+// The prototype's example data in schema.json is not for the manual: a sound card's raw ALSA name (one box's own card)
+// among the choices, a Bluetooth controller's address in a help text. Such a choice or sentence is left out.
+const isExampleData = (s) => /\b[0-9A-F]{2}(?::[0-9A-F]{2}){5}\b|bcm2835-i2s/.test(String(s))
+const withoutExampleData = (text) =>
+  String(text ?? '')
+    .split(/(?<=\.)\s+/)
+    .filter((sentence) => !isExampleData(sentence))
+    .join(' ')
+
 function describeItem(it, lang) {
   const t = (key) => strings[lang][key]
   switch (it.type) {
@@ -234,7 +243,7 @@ function describeItem(it, lang) {
       return { kind: t('ref.slider'), values: `${num(it.min, lang)} ${t('ref.to')} ${num(it.max, lang)}${it.unit ?? ''}${it.step ? `, ${t('ref.steps')} ${num(it.step, lang)}` : ''}` }
     case 'select':
     case 'seg': {
-      const options = it.options ?? []
+      const options = (it.options ?? []).filter((o) => !isExampleData(o))
       return { kind: t('ref.choice'), values: options.length > 40 ? t('ref.manyChoices').replace('{n}', String(options.length)) : options.map((o) => tr(o, lang)).join(' · ') }
     }
     case 'text':
@@ -260,7 +269,7 @@ function referencePage(page, lang) {
     const loose = []
     for (const it of sec.items) {
       const d = describeItem(it, lang)
-      if (d && it.label) rows.push(`| **${mdEscape(tr(it.label, lang))}** | ${d.kind}${d.values ? `: ${mdEscape(d.values)}` : ''} | ${mdEscape(tr(it.help, lang))} |`)
+      if (d && it.label) rows.push(`| **${mdEscape(tr(it.label, lang))}** | ${d.kind}${d.values ? `: ${mdEscape(d.values)}` : ''} | ${mdEscape(withoutExampleData(tr(it.help, lang)))} |`)
       else if (it.type === 'note' && it.text && !/\d/.test(it.text)) loose.push(`${tr(it.text, lang)}\n`)
       else if (it.type === 'warn' && it.text) loose.push(`> [!WARNING]\n> ${tr(it.text, lang)}\n`)
       else if (it.type === 'buttons') loose.push(`${t('ref.buttons')}: ${it.buttons.map((b) => `**${tr(b[0], lang)}**`).join(', ')}\n`)

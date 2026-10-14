@@ -122,6 +122,11 @@ timeout=$(/usr/bin/jq -r .timeout.idleDisplayOff ${MUPIBOX_CONFIG})
 timeout_int=$(printf '%s' "${timeout}" | tr -dc '0-9')
 : "${timeout_int:=0}"
 /usr/bin/sed -i 's|.*Option "BlankTime".*|    Option "BlankTime" "'"${timeout_int}"'"|g' ${DISPLAY_STANDBY}
+# The DPMS times the same (0 = never): the blanking only empties the picture, DPMS "off" is what get_monitor.sh
+# switches the backlight off with - with the X server's own default (5 min) it went dark before the time set. Added
+# next to BlankTime where they are missing (a box set up before).
+/usr/bin/sed -i '/Option "\(StandbyTime\|SuspendTime\|OffTime\)"/d' ${DISPLAY_STANDBY}
+/usr/bin/sed -i 's|.*Option "BlankTime".*|&\n    Option "StandbyTime" "'"${timeout_int}"'"\n    Option "SuspendTime" "'"${timeout_int}"'"\n    Option "OffTime" "'"${timeout_int}"'"|' ${DISPLAY_STANDBY}
 
 #currentIP=$(hostname -I)
 #/usr/bin/cat <<< $(/usr/bin/jq --arg v "${currentIP}" '.ip = $v' ${SONOS_NETWORK}) >  ${SONOS_NETWORK}

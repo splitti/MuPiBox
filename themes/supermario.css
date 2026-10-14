@@ -8,7 +8,7 @@
 
 :root {
   --km-night: #2A1450;
-  --km-night-2: rgba(0,1,160,.55);
+  --km-night-2: rgba(16,16,120,.88);
   --km-night-3: #1A1ACC;
   --km-night-4: #10109A;
   --km-stack-1: #6A6ADE;
@@ -32,7 +32,7 @@
   --km-name-font: "Titan One", "Fredoka", sans-serif;
   --km-name-size: 23px;
   /* Runde 2: Kopfzeile, Pille, Knöpfe (Werte aus THEME_WERTE.md) */
-  --km-band: rgba(0,1,160,.55);
+  --km-band: rgba(16,16,120,.86);
   --km-on-band: #FFFFFF;
   --km-on-band-2: #D6D6FF;
   --km-btn: #2828CF;

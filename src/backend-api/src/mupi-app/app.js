@@ -174,7 +174,7 @@ function currentPage() {
 // takes no step of its own - back (the arrow at the top, the browser's back) leads up to the group, not page by page
 const groupSiblings = (a, b) => !!a && !!b && a.id !== b.id && !!a.parent && a.parent === b.parent && a.parent.startsWith('g-')
 function go(id) {
-  // (an address outside the app, e.g. "Erweiterte Einstellungen": whoever wired the click)
+  // (an address outside the app, e.g. the admin interface: whoever wired the click)
   if (String(id).startsWith('ext:')) return openExternal(id.slice(4))
   if (groupSiblings(currentPage(), state.pages.get(id))) {
     if (location.hash !== hashOf(id)) history.replaceState(null, '', hashOf(id))
@@ -900,7 +900,20 @@ async function openExternal(which) {
   if (which === 'manual') return openManual()
   const host = location.hostname
   if (which === 'dietpi') {
-    window.open(`http://${host}:5252/`, '_blank', 'noopener')
+    // signed in with a one-time ticket of this app's session (the dashboard itself has a password nobody knows). The
+    // window opens at once: one opened after waiting for the ticket is blocked as a popup.
+    const win = window.open('', '_blank')
+    const r = await api(`${API}/dietpi-dashboard/ticket`, { method: 'POST' })
+    if (!r.ok || !r.body?.ticket) {
+      win?.close()
+      return toast(r.body?.error === 'dashboard_off' ? 'Das DietPi-Dashboard ist aus – unter System › Experten erlauben' : 'Das hat nicht geklappt', 'info')
+    }
+    // (with https like this app: the dashboard's sign-in and terminal never go through the network in the clear)
+    const url = `${location.protocol === 'https:' ? 'https' : 'http'}://${host}:${r.body.port ?? 5252}/mupibox-open?ticket=${encodeURIComponent(r.body.ticket)}`
+    if (win) {
+      win.opener = null
+      win.location.href = url
+    } else location.href = url
     return
   }
   // the admin interface, signed in with a one-time ticket of this app's session (no second login there). The window
@@ -1026,7 +1039,7 @@ function startSkeleton() {
       ${navRow('telegram', 'Telegram', 'Eltern-Bot', 'tg')}
       ${navRow('g-system', 'System', 'Über die Box, Neustart, Updates', 'gear')}
       ${navRow('ext:manual', 'Handbuch', 'Anleitung zu Box, Display und App', 'book')}
-      ${navRow('ext:admin', 'Erweiterte Einstellungen', 'Das bisherige Admin-Interface', 'ext')}
+      ${navRow('ext:admin', 'Admin-Interface', 'Legacy · die bisherige Oberfläche', 'ext')}
     </div></section>`,
   ]
 }
@@ -1348,8 +1361,15 @@ function nextQuiet(schedule) {
 }
 
 async function loadNotices(root) {
-  const [hat, sync, access] = await Promise.all([api('/api/mupihat'), api('/api/spotify-sync/status'), api(`${API}/spotify-access`)])
+  const [hat, sync, access, auth] = await Promise.all([api('/api/mupihat'), api('/api/spotify-sync/status'), api(`${API}/spotify-access`), api(`${API}/auth-state`)])
   const notes = []
+  // no password, or the login off: everyone in the home network can set up the box - said every time, it is not closed
+  // for good (the parents decide on the page Passwort); with the login on but the well-known default password, that
+  if (auth.ok && (auth.body?.passwordSet === false || auth.body?.loginRequired === false)) {
+    notes.push(['lock', auth.body.passwordSet === false ? 'Kein Passwort gesetzt' : 'Anmeldung ist aus', 'Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.', 'passwort'])
+  } else if (auth.ok && auth.body?.defaultPassword) {
+    notes.push(['lock', 'Standardpasswort aktiv', 'Die Box nutzt noch das Standardpasswort, das in jeder Anleitung steht. Antippen, um ein eigenes festzulegen.', 'passwort'])
+  }
   const pct = hat.body?.Bat_Percent
   const battery = hat.ok && !noBattery(hat.body)
   if (battery && hat.body?.ChargeProblemSince) notes.push(['plug', 'Akku lädt nicht', NOT_CHARGING, 'akku'])
@@ -6361,6 +6381,7 @@ async function loadControls() {
   state.values.set('hideM', hidden.has('music'))
   state.values.set('hideN', hidden.has('nas'))
   state.values.set('hideO', hidden.has('other'))
+  state.values.set('startCat', o.startCategory ?? 'audiobook')
   state.values.set('resume', o.resume)
   state.values.set('listTimer', o.listviewTimer)
   state.values.set('setTimer', o.settingsAccessTimer)
@@ -6372,6 +6393,8 @@ async function loadControls() {
   state.values.set('epProgress', o.episodeProgress !== false)
 }
 
+// The category of each tab (by its hidden key)
+const TAB_CATEGORY = { hideA: 'audiobook', hideM: 'music', hideN: 'nas', hideO: 'other' }
 // The display's tabs: hidden key, the page's switch (on = shown), its name
 const TAB_KEYS = [
   ['hideA', 'showA', 'Hörspiele'],
@@ -7337,13 +7360,6 @@ async function loadMqtt() {
   state.values.set('mqPw', '')
 }
 
-// One of the topics the box sends to, from what is typed (scripts/mqtt/mqtt.py: topic/client-id/state …)
-function mqttTopicPreview() {
-  const t = String(state.values.get('mqTopic') ?? '').trim() || '…'
-  const c = String(state.values.get('mqClient') ?? '').trim() || '…'
-  return `z. B. ${t}/${c}/state`
-}
-
 /* WLED */
 
 const WLED_BAUD = ['300', '1200', '2400', '4800', '9600', '19200', '38400', '57600', '115200', '230400', '460800', '921600']
@@ -7480,6 +7496,33 @@ function securityTop() {
   ]
 }
 
+// Switching the login off: possible as before, but warned about and confirmed once more - the button only works once
+// "Verstanden" is switched on (the server asks for that confirmation too)
+function askLoginOff() {
+  return new Promise((resolve) => {
+    let answer = false
+    openSheet(
+      `<h2>${esc('Anmeldung ausschalten?')}</h2>
+       <div class="note warn">${icon('info', 18)}<span>${esc('Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.')}</span></div>
+       <div class="row"><span class="lbl"><b>${esc('Verstanden')}</b><small>${esc('Ich möchte die Box trotzdem ohne Passwort betreiben.')}</small></span>
+         <label class="switch"><input type="checkbox" data-agree aria-label="${esc('Verstanden')}"><span></span></label></div>
+       <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn danger" data-ok disabled>${esc('Ausschalten')}</button></div>`,
+      (sheet, close) => {
+        const ok = sheet.querySelector('[data-ok]')
+        sheet.querySelector('[data-agree]').onchange = (e) => {
+          ok.disabled = !e.target.checked
+        }
+        sheet.querySelector('[data-close]').onclick = close
+        ok.onclick = () => {
+          answer = true
+          close()
+        }
+      },
+      () => setTimeout(() => resolve(answer)),
+    )
+  })
+}
+
 function mountSecurity(root, page) {
   for (const b of root.querySelectorAll('[data-eye]')) {
     b.onclick = () => {
@@ -7534,11 +7577,12 @@ function mountSecurity(root, page) {
     })
   $('#sec-login', root).onchange = async (e) => {
     const required = e.target.checked
-    if (!(await ask(required ? 'Anmeldung einschalten' : 'Anmeldung ausschalten', required ? 'Die App und das Admin-Interface fragen dann nach dem Passwort.' : 'Dann kommt jeder im Heimnetz ohne Passwort in die App und das Admin-Interface.', required ? 'Einschalten' : 'Ausschalten'))) {
+    const agreed = required ? await ask('Anmeldung einschalten', 'Die App und das Admin-Interface fragen dann nach dem Passwort.', 'Einschalten') : await askLoginOff()
+    if (!agreed) {
       e.target.checked = !required
       return
     }
-    const r = await api(`${API}/auth/login-required`, { method: 'POST', body: { required } })
+    const r = await api(`${API}/auth/login-required`, { method: 'POST', body: required ? { required } : { required, confirmed: true } })
     if (!r.ok) {
       e.target.checked = !required
       return toast(r.body?.error === 'wrong_password' ? 'Das Passwort stimmt nicht' : r.status === 429 ? 'Zu viele Versuche – bitte kurz warten' : 'Nicht gespeichert', 'info')
@@ -8523,7 +8567,6 @@ function legalTop() {
         <li>Telegram (nur mit eingerichtetem Bot): die Nachrichten des Bots, bei „Wiedergabe melden“ auch Titel und ein Bildschirmfoto.</li>
         <li>GitHub: die Prüfung auf Updates, die Neuigkeiten und die Updates selbst; beim ersten Laden einer Stimme das Programm Piper.</li>
         <li>Hugging Face (nur mit Piper): die Liste der Stimmen, eine gewählte Stimme und ihre Hörprobe. Was die Box sagt, bleibt auf der Box.</li>
-        <li>Das Admin-Interface lädt Bibliotheken von öffentlichen Servern (jQuery, jsDelivr, cdnjs); dabei sehen diese die Adresse des Browsers.</li>
       </ul>
       <p class="help">Für diese Dienste gelten deren eigene Bedingungen und Datenschutzhinweise.</p></section>`,
     `<section class="card"><h2>Externe Dienste</h2><div class="rows">${LEGAL_SERVICES.map(
@@ -8931,10 +8974,11 @@ const lanCtrl = { load: loadNetOptions, sections: lanSections, change: changeNet
 /* Experten */
 
 async function loadExperts() {
-  const [json, info] = await Promise.all([api(`${API}/json-file?key=${adm.json.key}`), api(`${API}/system`)])
+  const [json, info, dash] = await Promise.all([api(`${API}/json-file?key=${adm.json.key}`), api(`${API}/system`), api(`${API}/dietpi-dashboard`)])
   adm.json.keys = json.body?.keys ?? []
   adm.json.text = json.body?.text ?? ''
   adm.host = info.body?.hostname ?? ''
+  adm.dash = dash.ok ? dash.body : { enabled: false, active: false }
 }
 
 const JSON_LABEL = {
@@ -8958,7 +9002,11 @@ function expertsTop() {
       <div class="field"><label for="ex-host">Hostname</label><input class="input mono" id="ex-host" maxlength="63" value="${esc(adm.host)}" autocomplete="off"></div>
       <div class="btns"><button class="btn primary" id="ex-hostsave">Speichern</button></div></section>`,
     // (beside the host name: both short)
-    `<section class="card"><h2>Weitere Werkzeuge</h2><div class="navlist">${navRow('ext:dietpi', 'DietPi-Dashboard', 'Systemverwaltung von DietPi (Port 5252)', 'ext')}${navRow('ext:admin', 'Bisheriges Admin-Interface', 'Port 80', 'ext')}</div></section>`,
+    // (the DietPi-Dashboard has a terminal with root rights: off by default, and switched on reached from here only -
+    // a one-time ticket signs in, see backend-api eltern/dietpi-dashboard.ts)
+    `<section class="card"><h2>Weitere Werkzeuge</h2>
+      <div class="row"><span class="lbl"><b>DietPi-Dashboard erlauben</b><small>Systemverwaltung von DietPi mit einem Terminal mit Root-Rechten. Erreichbar nur über diese App, nicht direkt im Netz.</small></span><label class="switch"><input type="checkbox" id="ex-dash" ${adm.dash?.enabled ? 'checked' : ''} aria-label="DietPi-Dashboard erlauben"><span></span></label></div>
+      <div class="navlist">${adm.dash?.enabled ? navRow('ext:dietpi', 'DietPi-Dashboard', adm.dash.active ? 'öffnet sich in einem neuen Fenster' : 'startet gerade …', 'ext') : ''}${navRow('ext:admin', 'Admin-Interface', 'Legacy · die bisherige Oberfläche', 'ext')}</div></section>`,
     `<section class="card wide"><h2>Konfiguration direkt bearbeiten</h2>
       <div class="note warn">${icon('info', 18)}<span>Fehler hier können die Box lahmlegen. Nur ändern, was du kennst – vorher ein Backup ziehen.</span></div>
       <div class="field"><label for="ex-file">Datei</label><select class="input" id="ex-file">${adm.json.keys.map((k) => `<option value="${k}"${k === adm.json.key ? ' selected' : ''}>${esc(JSON_LABEL[k] ?? k)}</option>`).join('')}</select></div>
@@ -8973,6 +9021,14 @@ function expertsTop() {
 }
 
 function mountExperts(root, page) {
+  $('#ex-dash', root).onchange = async (e) => {
+    const on = e.target.checked
+    e.target.disabled = true
+    const r = await api(`${API}/dietpi-dashboard`, { method: 'POST', body: { on } })
+    toast(r.ok && r.body?.ok ? (on ? 'DietPi-Dashboard erlaubt' : 'DietPi-Dashboard aus') : 'Das hat nicht geklappt', r.ok && r.body?.ok ? 'ok' : 'info')
+    await loadExperts().catch(() => undefined)
+    if (currentPage()?.id === page.id) renderPage(page, false)
+  }
   const area = $('#ex-json', root)
   const msg = $('#ex-jsonmsg', root)
   const check = () => {
@@ -9237,6 +9293,103 @@ const isSharesSection = (s) => (s.items ?? []).some((it) => it.target === 'freig
 /* the controllers: load(page) reads the box before drawing, mount(root, page) runs after it, change(key, value)
    saves a setting, act / byLabel run the buttons, sections(page) gives the building blocks with the box's values,
    top(page) draws the page's own top part (instead of customTop's), ownNav: the page shows its sub pages itself */
+/* Home Assistant (backend-api ha/ha-api.ts): the API v1 on, pairing opened for 60 s, the paired Home Assistants */
+
+const haState = { data: null, pairUntil: 0 }
+
+async function loadHa() {
+  const r = await api(`${API}/ha`)
+  if (!r.ok) throw new Error(`ha ${r.status}`)
+  haState.data = r.body
+}
+
+function haTop() {
+  const d = haState.data ?? {}
+  const on = d.enabled === true
+  const sw = `<div class="row"><span class="lbl"><b>Home Assistant erlauben</b><small>Home Assistant kann die Box dann anzeigen und steuern (Integration „MuPiBox“ über HACS). Nur im Heimnetz und verschlüsselt.</small></span><label class="switch"><input type="checkbox" id="ha-on" ${on ? 'checked' : ''} aria-label="Home Assistant erlauben"><span></span></label></div>`
+  const state = on
+    ? d.listening
+      ? `<div class="status-line"><span class="dot ok"></span><span>Bereit unter <b translate="no">https://${esc(location.hostname)}:${esc(d.port)}</b></span></div>`
+      : `<div class="note warn">${icon('info', 18)}<span>Die Schnittstelle startet nicht. Ein Neustart des Servers oder der Box hilft meist.</span></div>`
+    : ''
+  // (both ways at once: the box would be in Home Assistant twice, with each value twice)
+  const twice =
+    on && d.mqtt_discovery
+      ? `<div class="note warn">${icon('info', 18)}<span>Die MQTT-Discovery für Home Assistant ist auch an (Dienste › MQTT). Die Box erscheint dann zweimal in Home Assistant – eins von beiden ausschalten.</span></div>`
+      : ''
+  const main = `<section class="card" data-col="1"><div class="card-head"><h2>Home Assistant</h2><span class="chip ${on && d.listening ? 'ok' : ''}">${on ? 'an' : 'aus'}</span></div>${state}${twice}${sw}</section>`
+  if (!on || !d.listening) return [main]
+  const left = Math.max(0, Math.round((haState.pairUntil - Date.now()) / 1000))
+  const pair = `<section class="card" data-col="2"><h2>Koppeln</h2>
+    <p class="help">1. In Home Assistant die Integration „MuPiBox“ hinzufügen – die Box wird gefunden, sonst die Adresse oben eingeben. 2. Den Schlüssel unten kopieren und in Home Assistant einfügen. 3. Hier „Koppeln erlauben“ tippen und in Home Assistant auf „Weiter“. 4. Den Code eingeben, den das Display der Box zeigt.</p>
+    <div class="field"><label>Schlüssel der Box</label><p class="mono-block ha-key" id="ha-key" translate="no">${esc(d.fingerprint ?? '')}</p><div class="btns"><button class="btn" id="ha-copy">Schlüssel kopieren</button></div><small>Home Assistant fragt beim Koppeln nach diesem Schlüssel. Er beweist, dass Home Assistant mit dieser Box spricht – nie einen Schlüssel aus einer anderen Quelle einfügen.</small></div>
+    <div class="btns"><button class="btn primary" id="ha-pair" ${left ? 'disabled' : ''}>${left ? `<span id="ha-left">Offen … noch ${left} s</span>` : 'Koppeln erlauben (60 s)'}</button>${left ? '<button class="btn" id="ha-pair-stop">Beenden</button>' : ''}</div></section>`
+  const clients = d.clients ?? []
+  const scopeText = (list) => (list ?? []).map((x) => (x === 'read' ? 'Anzeigen' : x === 'control' ? 'Steuern' : x === 'notify' ? 'Nachrichten und Ansagen' : x === 'power' ? 'Neu starten & Ausschalten' : x)).join(' · ')
+  const paired = `<section class="card" data-col="1"><h2>Gekoppelt</h2>${
+    clients.length
+      ? `<div class="rows">${clients
+          .map(
+            (c, i) =>
+              `<div class="entry"><span class="avatar">${icon('home2', 16)}</span><span class="lbl"><b translate="no">${esc(c.client_name)}</b><small>${esc(scopeText(c.scopes))} · seit ${esc(new Date(c.paired_at).toLocaleDateString())}</small></span><button class="btn danger sm" data-ha-rm="${i}">Entfernen</button></div>`,
+          )
+          .join('')}</div>`
+      : '<p class="help" style="margin:0">Noch kein Home Assistant gekoppelt.</p>'
+  }</section>`
+  return [main, pair, paired]
+}
+
+function mountHa(root, page) {
+  const again = async (text, kind) => {
+    if (text) toast(text, kind)
+    await loadHa().catch(() => undefined)
+    if (currentPage()?.id === page.id) renderPage(page, false)
+  }
+  $('#ha-on', root).onchange = async (e) => {
+    const on = e.target.checked
+    const r = await api(`${API}/ha/enabled`, { method: 'POST', body: { on } })
+    again(r.ok && r.body?.ok ? (on ? 'Home Assistant erlaubt' : 'Home Assistant aus') : 'Das hat nicht geklappt', r.ok && r.body?.ok ? 'ok' : 'info')
+  }
+  // (the 64 hex characters without the spaces of the grouping - what Home Assistant takes)
+  $('#ha-copy', root)?.addEventListener('click', () => copyText(String(haState.data?.fingerprint ?? '').replace(/\s+/g, '').toLowerCase(), $('#ha-key', root)))
+  $('#ha-pair', root)?.addEventListener('click', async () => {
+    const r = await api(`${API}/ha/pairing`, { method: 'POST', body: {} })
+    if (!r.ok) return toast(r.body?.error === 'pairing_in_progress' ? 'Eine Kopplung läuft schon – am Display abbrechen oder warten' : 'Das hat nicht geklappt', 'info')
+    haState.pairUntil = Date.now() + (r.body?.expires_in ?? 60) * 1000
+    again('Koppeln ist 60 s erlaubt – jetzt in Home Assistant starten', 'ok')
+  })
+  $('#ha-pair-stop', root)?.addEventListener('click', async () => {
+    await api(`${API}/ha/pairing`, { method: 'DELETE' })
+    haState.pairUntil = 0
+    again('Koppeln beendet')
+  })
+  for (const b of root.querySelectorAll('[data-ha-rm]')) {
+    b.addEventListener('click', async () => {
+      const c = (haState.data?.clients ?? [])[Number(b.dataset.haRm)]
+      if (!c || !(await ask('Kopplung entfernen?', `„${c.client_name}“ kann die Box danach nicht mehr anzeigen und steuern, bis es neu gekoppelt wird.`, 'Entfernen'))) return
+      const r = await api(`${API}/ha/clients/${encodeURIComponent(c.client_id)}`, { method: 'DELETE' })
+      again(r.ok ? 'Kopplung entfernt' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+    })
+  }
+  // while pairing is open: the time it still has, every second, and the list again when it ends (a new Home Assistant)
+  if (haState.pairUntil > Date.now()) {
+    every(1000, () => {
+      const left = Math.round((haState.pairUntil - Date.now()) / 1000)
+      const el = $('#ha-left', root)
+      if (left > 0 && el) el.textContent = `Offen … noch ${left} s`
+      else if (left <= 0) {
+        haState.pairUntil = 0
+        again()
+      }
+    })
+  } else {
+    // (a pairing that is just being finished at the box: the new one shows up)
+    every(5000, () => loadHa().then(() => {
+      if (currentPage()?.id === page.id && (haState.data?.clients ?? []).length !== root.querySelectorAll('[data-ha-rm]').length) renderPage(page, false)
+    }).catch(() => undefined))
+  }
+}
+
 const CONTROLLERS = {
   spielzeit: {
     load: loadCaps,
@@ -9829,6 +9982,14 @@ const CONTROLLERS = {
           items: [
             { type: 'html', html: `<div class="tab-prev" aria-hidden="true">${shown.map(([, , l]) => `<span>${esc(l)}</span>`).join('')}</div>` },
             ...TAB_KEYS.map(([k, show, label]) => ({ type: 'toggle', key: show, label, disabled: shown.length === 1 && !state.values.get(k) })),
+            // the tab the display opens with - one of the shown ones (a hidden start tab: the display takes the first shown)
+            ...(shown.length > 1
+              ? (() => {
+                  const start = shown.find(([k]) => TAB_CATEGORY[k] === state.values.get('startCat')) ?? shown[0]
+                  state.values.set('startTab', start[2])
+                  return [{ type: 'select', key: 'startTab', label: 'Startet mit', options: shown.map(([, , l]) => l), help: 'Dieser Reiter ist offen, wenn das Display startet.' }]
+                })()
+              : []),
           ],
         },
         {
@@ -9866,7 +10027,14 @@ const CONTROLLERS = {
       ]
     },
     async change(key, v, page) {
-      const cats = { hideA: 'audiobook', hideM: 'music', hideN: 'nas', hideO: 'other' }
+      const cats = TAB_CATEGORY
+      if (key === 'startTab') {
+        const tab = TAB_KEYS.find(([, , l]) => l === v)
+        if (!tab) return
+        const ok = await saveDisplayOptions({ startCategory: cats[tab[0]] }, `Das Display startet mit ${v}`)
+        if (ok) state.values.set('startCat', cats[tab[0]])
+        return ok
+      }
       // (a tab switched on: not hidden)
       const tab = TAB_KEYS.find(([, show]) => show === key)
       if (tab) {
@@ -10413,6 +10581,7 @@ const CONTROLLERS = {
     },
   },
   telegram: { load: loadTelegram, top: tgTop, sections: () => [], mount: mountTelegram },
+  homeassistant: { load: loadHa, top: haTop, sections: () => [], mount: mountHa },
   mqtt: {
     load: loadMqtt,
     // the connection (broker and login), the box's names in MQTT, how often, Home Assistant - saved together
@@ -10436,18 +10605,16 @@ const CONTROLLERS = {
           col: 1,
           items: [
             it('mqName', { dim: 'mqttOn' }),
-            it('mqTopic', { dim: 'mqttOn', help: mqttTopicPreview(), helpId: 'mq-preview' }),
+            // scripts/mqtt/mqtt.py puts the client id in twice - as it always has, existing setups listen there
+            it('mqTopic', { dim: 'mqttOn', help: 'Die Box sendet unter Topic/Client-ID/Client-ID/…, z. B. MuPiBox/Boxname/MuPiBox/MuPiBox/state' }),
             it('mqClient', { dim: 'mqttOn' }),
           ],
         },
         { ...page.sections[1], col: 2 },
-        { title: 'Home Assistant', col: 2, items: [it('haOn', { help: 'Die Box erscheint in Home Assistant von selbst als Gerät.' }), it('haTopic', { dep: 'haOn' })] },
+        // the discovery format comes from Home Assistant, but openHAB, Domoticz and others read it too
+        { title: 'MQTT-Discovery', col: 2, items: [it('haOn', { help: 'Smart-Home-Systeme mit MQTT-Discovery legen die Box von selbst als Gerät an, mit ihren Werten und Knöpfen.' }), it('haTopic', { dep: 'haOn' })] },
         { bar: true, items: [{ type: 'buttons', buttons: [['Speichern', 'primary', 'toast:Gespeichert']] }] },
       ]
-    },
-    mount(root) {
-      // the topics as they come out, while typing
-      for (const k of ['mqTopic', 'mqClient']) $(`#k-${k}`, root)?.addEventListener('input', () => ($('#mq-preview', root).textContent = mqttTopicPreview()))
     },
     byLabel: {
       async Speichern(_a, _l, page) {
@@ -10926,16 +11093,37 @@ function confirmSheet(title, text, onOk) {
   )
 }
 
-function copyText(text) {
+// Copies from a click: the clipboard API where the browser has it (https), else - also when it refuses - the old way
+// with a hidden text field (the app on http). When both fail, never "Kopiert": the shown element (if given) is
+// selected for copying by hand.
+async function copyText(text, shown) {
   const done = () => toast('Kopiert')
-  if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text).then(done, () => toast('Kopieren ging nicht', 'info'))
-  const ta = Object.assign(document.createElement('textarea'), { value: text })
-  ta.style.cssText = 'position:fixed;opacity:0'
+  if (navigator.clipboard?.writeText && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text)
+      return done()
+    } catch {}
+  }
+  const ta = Object.assign(document.createElement('textarea'), { value: text, readOnly: true })
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0'
   document.body.append(ta)
+  ta.focus()
   ta.select()
-  const ok = document.execCommand('copy')
+  let ok = false
+  try {
+    ok = document.execCommand('copy')
+  } catch {}
   ta.remove()
-  ok ? done() : toast(`Bitte von Hand kopieren: ${text}`, 'info')
+  if (ok) return done()
+  if (shown) {
+    const range = document.createRange()
+    range.selectNodeContents(shown)
+    const sel = window.getSelection()
+    sel?.removeAllRanges()
+    sel?.addRange(range)
+    return toast('Markiert – bitte selbst kopieren (Strg+C oder „Kopieren“)', 'info')
+  }
+  toast(`Bitte von Hand kopieren: ${text}`, 'info')
 }
 
 // A message at the bottom. Answers whether it was a success ('ok'): a page's change() that ends with
@@ -10958,11 +11146,12 @@ function renderLoginBar() {
   $('#theme-btn').addEventListener('click', toggleTheme)
 }
 
-// Where the login leads: this app (beta) or the previous admin interface (PHP on port 80/443, same password). The choice
+// Where the login leads: this app (the recommended one) or the previous admin interface (legacy: PHP on port 80/443,
+// same password). The choice
 // is remembered in this browser. The start page of port 80 (/) opens the login with ?portal, also when signed in.
 const PORTALS = [
-  ['app', 'Web-App', 'Beta', 'grid'],
-  ['admin', 'Admin-Interface', 'Die bisherige Oberfläche', 'gear'],
+  ['app', 'Web-App', 'Empfohlen', 'grid'],
+  ['admin', 'Admin-Interface', 'Legacy · die bisherige Oberfläche', 'gear'],
 ]
 const adminUrl = () => `${location.protocol}//${location.hostname}/index.php`
 

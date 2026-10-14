@@ -24,6 +24,6 @@ Die Einstellungen sind in diese Gruppen geordnet:
 - **Audio**: Lautstärke, Soundkarte, Drehregler, Bluetooth, Sprachausgabe
 - **Akku & Strom**: Akku, MuPiHAT, Ausschalten, Taster, Lüfter
 - **Netzwerk**: WLAN, LAN
-- **Dienste**: Spotify, NAS, Podcast- und Radiosuche, Telegram, MQTT, WLED, Freigaben & Fernzugriff (Samba, FTP, VNC)
+- **Dienste**: Spotify, NAS, Podcast- und Radiosuche, Telegram, MQTT, Home Assistant, WLED, Freigaben & Fernzugriff (Samba, FTP, VNC)
 - **Sicherheit**: Passwort, Anmeldung, HTTPS
 - **System**: Über die Box, Zustand, Updates, Backup, Neustart, Protokolle, Systemoptionen, Browser, Experten, Sprache, Rechtliches

@@ -2,12 +2,15 @@
   @if (!textPreview) {
     @if (monitorOff()) {
       <div class="mupi-monitor-blocker" (click)="$event.stopPropagation()"></div>
+    } @else {
+      <!-- (not over the dark layer of a switched-off display: it stood out bright there, on the display's pictures too) -->
+      <mupi-playtime-chip></mupi-playtime-chip>
     }
-    <mupi-playtime-chip></mupi-playtime-chip>
     @if (playtimeBlocked()) {
       <mupi-playtime-blocked></mupi-playtime-blocked>
     }
   }
   <mupi-eltern-magic-link-overlay></mupi-eltern-magic-link-overlay>
+  <mupi-ha-pairing-overlay></mupi-ha-pairing-overlay>
   <ion-router-outlet></ion-router-outlet>
 </ion-app>

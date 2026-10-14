@@ -31,6 +31,8 @@
 	// Replaces the ~15 inline `file_put_contents+sudo mv` patterns across
 	// admin.php, mupi.php, mupihat.php, spotify.php and smart.php.
 	require_once __DIR__ . '/save_config.php';
+	// the limit on wrong passwords at the login below
+	require_once __DIR__ . '/login_limit.php';
 
 	if (isset($_POST['spotifyget']) && $_POST['spotifyget'] === 'saving') {
 		if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
@@ -96,7 +98,8 @@
 		return in_array($key, $navTabsHidden, true);
 	}
 	// Null-safe: a freshly seeded config may not carry the block yet.
-	$loginEnabled = $data['interfacelogin']['state'] ?? false;
+	// (an unreadable config: the login counts as on - fail-closed, see mupibox_config_unreadable)
+	$loginEnabled = ($data['interfacelogin']['state'] ?? false) || mupibox_config_unreadable();
 	$hashedPassword = $data['interfacelogin']['password'] ?? '';
 
 	$change=0;
@@ -197,24 +200,25 @@
 		} catch (e) {}
 		</script>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
-		<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-		<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
-		<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.5.1/css/all.css">
+		<!-- the libraries from the box itself (vendor/), no longer from CDNs: no third party sees a visit, and the page works
+		     without internet. The same files and versions as before - see THIRD_PARTY_NOTICES.md for their licences. -->
+		<link rel="stylesheet" href="vendor/bootstrap/bootstrap-3.4.1.min.css">
+		<script src="vendor/jquery/jquery-3.7.1.min.js"></script>
+		<script src="vendor/jquery-ui/jquery-ui-1.13.2.min.js"></script>
+		<script src="vendor/popper/popper-1.16.0.min.js"></script>
+		<script src="vendor/bootstrap/bootstrap-4.5.2.min.js"></script>
+		<link href="vendor/bootstrap/bootstrap-5.3.3.min.css" rel="stylesheet">
+		<link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 		<title>MuPiBox Admin-Interface</title>
 		<link rel="stylesheet" type="text/css" href="view.css?v=<?= (int)@filemtime(__DIR__ . '/../view.css') ?>" media="all">
-		<script src="https://code.iconify.design/iconify-icon/2.0.0/iconify-icon.min.js"></script>
+		<script src="vendor/icons/icons.js"></script>
 		<script type="text/javascript" src="view.js?v=<?= (int)@filemtime(__DIR__ . '/../view.js') ?>"></script>
-		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 		<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
-		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
-		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/eclipse.min.css">
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script>
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/javascript/javascript.min.js"></script>
+		<link rel="stylesheet" href="vendor/codemirror/codemirror.css">
+		<link rel="stylesheet" href="vendor/codemirror/theme/eclipse.css">
+		<script src="vendor/codemirror/codemirror.js"></script>
+		<script src="vendor/codemirror/mode/javascript/javascript.js"></script>
 	</head>
 <?php
 	if ($loginEnabled) {
@@ -247,7 +251,13 @@
 				exit;
 			}
 			if (isset($_POST['password'])) {
-				if (password_verify($_POST['password'], $hashedPassword)) {
+				$loginIp = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+				if (mupibox_login_blocked($loginIp)) {
+					// (not even checked: the password is not tried while the limit holds)
+					http_response_code(429);
+					$loginError = "Too many attempts - please wait a minute.";
+				} elseif (password_verify($_POST['password'], $hashedPassword)) {
+					mupibox_login_record($loginIp, true);
 					// new session id at login: a session id planted before the login must not
 					// become a logged-in one (session fixation)
 					session_regenerate_id(true);
@@ -256,6 +266,7 @@
 					header("Location: " . $_SERVER['PHP_SELF']);
 					exit;
 				} else {
+					mupibox_login_record($loginIp, false);
 					sleep(1); // slows down password guessing
 					$loginError = "Wrong password!"; // was $error, which the form never printed
 				}
@@ -333,7 +344,9 @@
 				<?php if (!navTabHidden('smart')) { ?><a<?= navActive('smart.php') ?> href="<?= $link ?>smart.php"><i class="fa-solid fa-share-nodes"></i> Smart</a><?php } ?>
 				<?php /*<a href="service.php"><i class="fa-solid fa-gear"></i> Services</a>
 				<a href="tweaks.php"><i class="fa-solid fa-rocket"></i> Performance</a>*/ ?>
-				<?php if (!navTabHidden('dietpidash')) { ?><a href="<?= $link ?>" onmouseover="javascript:event.target.port=5252" target="_blank"><i class="fa-brands fa-raspberry-pi"></i> DietPi-Dash</a><?php } ?>
+				<?php /* the DietPi-Dashboard is reached through the app only (a one-time ticket; its port asks for a password nobody
+				knows): the app's page with the switch and the button */ ?>
+				<?php if (!navTabHidden('dietpidash')) { ?><a href="/app/#/experten" target="_blank"><i class="fa-brands fa-raspberry-pi"></i> DietPi-Dash</a><?php } ?>
 				<?php /*<a href="/" onmouseover="javascript:event.target.port=8081" target="_blank"><i class="fa-brands fa-youtube"></i> Youtube</a>*/ ?>
 				<?php if (!navTabHidden('logs')) { ?><a<?= navActive('logviewer.php') ?> href="<?= $link ?>logviewer.php"><i class="fa-solid fa-file-lines"></i> Logs</a><?php } ?>
 				<?php if (!navTabHidden('json')) { ?><a<?= navActive('jsoneditor.php') ?> href="<?= $link ?>jsoneditor.php"><i class="fa-solid fa-code"></i> JSON</a><?php } ?>

@@ -22,3 +22,9 @@ src/backend-api/build/
 
 __pycache__/
 *.pyc
+.idea
+
+# Cover cache the backend-api writes next to its cwd when run locally (on the box it lies in the install folder).
+src/backend-api/cache/
+# rss covers the backend-api writes next to its sources when run locally (serverDir/www; on the box that is the install folder)
+src/backend-api/src/www/

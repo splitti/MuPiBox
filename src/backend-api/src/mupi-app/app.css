@@ -521,6 +521,8 @@ select.input { appearance: auto; }
 .tog[aria-pressed="true"] { background: var(--mp-primary-soft); border-color: var(--mp-primary); color: var(--mp-primary-text); }
 .tog[data-k="hide"][aria-pressed="true"] { background: var(--mp-danger-soft); border-color: var(--mp-danger); color: var(--mp-danger); }
 .mono-block { margin: 0; padding: 10px 12px; border-radius: var(--mp-r-sm); background: var(--mp-field); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; overflow-wrap: anywhere; }
+/* the Home Assistant key: one tap selects all of it (copied by hand when the browser lets nothing copy), large enough to compare */
+.mono-block.ha-key { -webkit-user-select: all; user-select: all; font-size: 14px; line-height: 1.6; word-spacing: 2px; }
 
 /* ---------- Aussehen & Display ---------- */
 .theme-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 12px; }
