@@ -4177,7 +4177,7 @@ app.get('/api/spotify/search', async (req, res) => {
     res.status(400).json({ error: 'query (q) of at least 2 characters required' })
     return
   }
-  const allowed = ['artist', 'album', 'track']
+  const allowed = ['artist', 'album', 'track', 'playlist']
   const rawTypes = typeof req.query.types === 'string' ? req.query.types : 'artist,album,track'
   const types = rawTypes
     .split(',')

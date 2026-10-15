@@ -22,6 +22,8 @@ export interface SpotifyApiArtistAlbumsResult {
   artists: Array<{ name: string }>
   images: Array<{ url: string; width?: number; height?: number }>
   release_date: string
+  // album, single or compilation (the app's artist view filters by it)
+  album_type?: string
 }
 
 export interface SpotifyApiShowEpisodesResult {

@@ -1137,3 +1137,13 @@ textarea[hidden] { display: none; }
   color: var(--mp-danger);
   font-weight: 600;
 }
+
+/* the search: what is in the library already (a tick and its words in the line) */
+.in-lib {
+  color: var(--mp-success);
+}
+.lib-row > .in-lib {
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: 6px;
+}

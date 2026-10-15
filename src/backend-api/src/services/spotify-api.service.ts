@@ -617,7 +617,7 @@ export class SpotifyApiService {
    */
   async searchAll(
     query: string,
-    types: Array<'artist' | 'album' | 'track'> = ['artist', 'album', 'track'],
+    types: Array<'artist' | 'album' | 'track' | 'playlist'> = ['artist', 'album', 'track'],
     limit = 8,
   ): Promise<{
     artists: Array<{ id: string; name: string; images: unknown[] }>
@@ -631,6 +631,7 @@ export class SpotifyApiService {
       total_tracks?: number
     }>
     tracks: Array<{ id: string; name: string; artists: unknown[]; album: unknown }>
+    playlists: Array<{ id: string; name: string; owner: string; images: unknown[]; tracks?: number }>
   }> {
     const l = Math.min(Math.max(limit, 1), 10)
     const cacheKey = `search_all_${query}_${types.join(',')}_${l}`
@@ -654,6 +655,16 @@ export class SpotifyApiService {
           artists: t.artists ?? [],
           album: t.album ?? null,
         })),
+        // (Spotify gives empty places in a search's playlists - a playlist no longer there)
+        playlists: (result.playlists?.items ?? [])
+          .filter((p: any) => p?.id)
+          .map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            owner: p.owner?.display_name ?? '',
+            images: p.images ?? [],
+            tracks: p.tracks?.total ?? p.items?.total,
+          })),
       }
     })
   }
@@ -713,6 +724,7 @@ export class SpotifyApiService {
       artists: (item.artists ?? []) as any,
       images: (item.images ?? []) as any,
       release_date: item.release_date ?? '',
+      album_type: item.album_type ?? undefined,
     }))
   }
 
