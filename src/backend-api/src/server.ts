@@ -1664,11 +1664,16 @@ app.get('/api/data-version', (_req, res) => {
   // by check_network.sh; statSync follows it. mtime+size flips whenever the
   // Smart-Sync rewrites the library, so the frontend can re-fetch /api/data
   // only when something actually changed — no full-list polling.
+  // (tidal: TIDAL switched on in the app - off, the box leaves its entries out; part of the version, so the lists are
+  // made again when it is switched)
+  const cfg = getMupiboxConfigSync() as (Record<string, unknown> & { tidal?: { enabled?: unknown } }) | undefined
+  const tidal = cfg?.tidal?.enabled === true
+  const nasTab = nasTabWanted(nasSettings(getMupiboxConfigSync()))
   try {
     const st = fs.statSync(activedataFile)
-    res.json({ version: `${Math.floor(st.mtimeMs)}-${st.size}`, local: String(localLibraryVersion), nasTab: nasTabWanted(nasSettings(getMupiboxConfigSync())) })
+    res.json({ version: `${Math.floor(st.mtimeMs)}-${st.size}-${tidal ? 't' : 'n'}`, local: String(localLibraryVersion), nasTab, tidal })
   } catch {
-    res.json({ version: '0', local: String(localLibraryVersion), nasTab: nasTabWanted(nasSettings(getMupiboxConfigSync())) })
+    res.json({ version: `0-${tidal ? 't' : 'n'}`, local: String(localLibraryVersion), nasTab, tidal })
   }
 })
 

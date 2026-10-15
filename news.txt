@@ -21,6 +21,11 @@
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Podcasts of Spotify: an episode Spotify no longer offers comes in its list as an empty entry, and the whole list of the show failed on it - the show showed as not available once the list kept on the box was gone (e.g. after an update). Such entries are left out now (the album search too), and the next pages of a list go by the size of a page, so no episode comes twice when one was left out.</li>
 </ul>
+<b>TIDAL</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New, and unofficial: with a TIDAL subscription the box plays audiobooks, albums and playlists of TIDAL itself (Settings &gt; Services &gt; TIDAL). It signs in the way TIDAL's own apps do (the free library python-tidal) - TIDAL does not expressly allow this and may block it, so it is off until it is switched on, with a notice to confirm. The sign-in goes with a code on link.tidal.com, the TIDAL password never comes to the box. Library &gt; Add &gt; Search on TIDAL finds albums, artists and playlists; on the display they play like an album of the memory card - track list, next/previous, seeking, continue listening, playtime and quiet times. Only tracks TIDAL delivers unencrypted are played, no copy protection is got around. Without internet the TIDAL entries are hidden, and so they are on the display and on Listen while TIDAL is switched off (the library keeps them). A whole artist can be added too ('Add the whole artist'): the box and the app show it as a folder of all its albums, also those released later; an album TIDAL lists in several qualities is shown once. The search filters by All, Artist, Albums and Playlists, and the category is chosen when adding, as in the Spotify search; what is in the library has a tick, an artist's albums can be searched, filtered (albums, EPs and singles) and sorted. A whole artist can be narrowed in the library, as a Spotify subscription: a range of episodes by release (from-to) and single albums switched off.</li>
+</ul>
 <b>Installation and network</b>
 </ul>
 <ul id='ulnews' class='ulnews'>

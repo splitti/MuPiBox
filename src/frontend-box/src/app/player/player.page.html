@@ -20,7 +20,7 @@
         } @else if (media.audiobookid && spotify?.audiobook) {
           <div>{{spotify?.audiobook?.name}}</div>
         } @else {
-          @if (media.type ==='library' || media.type ==='nas') {
+          @if (media.type ==='library' || media.type ==='nas' || media.type ==='tidal') {
             <div>{{local?.album}}</div>
           } @else {
             @if (media.type ==='rss') {
@@ -41,7 +41,7 @@
         } @else if (media.audiobookid && spotify?.audiobook) {
           <div>{{spotify?.item?.name}}</div>
         } @else {
-          @if (media.type ==='library' || media.type ==='nas') {
+          @if (media.type ==='library' || media.type ==='nas' || media.type ==='tidal') {
             <div>{{local?.currentTrackname}}</div>
           } @else {
             @if (media.type ==='rss') {
@@ -54,7 +54,7 @@
       }
 </ng-template>
 <ng-template #counterTpl>
-      @if (media.type ==='library' || media.type ==='nas') {
+      @if (media.type ==='library' || media.type ==='nas' || media.type ==='tidal') {
         <div>{{local?.currentTracknr}}/{{local?.totalTracks}}</div>
       } @else {
         @if (media.type ==='spotify') {
@@ -222,7 +222,7 @@
         @if ((media.type === 'radio' || media.type === 'rss') && currentPlayedLocal?.loading) {
           <div class="km-cover-dots"><i></i><i></i><i></i></div>
         }
-        @if (media.type === 'spotify' || media.type === 'library' || media.type === 'nas') {
+        @if (media.type === 'spotify' || media.type === 'library' || media.type === 'nas' || media.type === 'tidal') {
           <div class="press-indicator" [class.active]="pressingCover" [style.--press-duration.ms]="listViewTimerMs">
             <svg viewBox="0 0 48 48">
               <circle class="press-indicator-track" cx="24" cy="24" r="20"></circle>
@@ -298,7 +298,7 @@
               </svg>
             </div>
           }
-          @if (media.type === 'spotify' || media.type === 'library' || media.type === 'nas') {
+          @if (media.type === 'spotify' || media.type === 'library' || media.type === 'nas' || media.type === 'tidal') {
             <div class="press-indicator" [class.active]="pressingCover" [style.--press-duration.ms]="listViewTimerMs">
               <svg viewBox="0 0 48 48">
                 <circle class="press-indicator-track" cx="24" cy="24" r="20"></circle>

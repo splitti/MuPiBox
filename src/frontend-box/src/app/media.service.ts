@@ -382,7 +382,7 @@ export class MediaService {
 
   private libraryVersion$?: Observable<string>
   private dataVersion$?: Observable<string>
-  private versions$?: Observable<{ version: string; local: string; nasTab: boolean }>
+  private versions$?: Observable<{ version: string; local: string; nasTab: boolean; tidal: boolean }>
 
   /**
    * Phase 17g: cheap library-change signal. Polls /api/data-version (a stat,
@@ -431,14 +431,15 @@ export class MediaService {
     )
   }
 
-  private versions(): Observable<{ version: string; local: string; nasTab: boolean }> {
+  private versions(): Observable<{ version: string; local: string; nasTab: boolean; tidal: boolean }> {
     if (!this.versions$) {
       this.versions$ = interval(20000).pipe(
         startWith(0),
         switchMap(() =>
-          this.http.get<{ version: string; local?: string; nasTab?: boolean }>(`${this.getApiBackendUrl()}/data-version`).pipe(
-            map((r) => ({ version: r?.version ?? '', local: r?.local ?? '', nasTab: r?.nasTab !== false })),
-            catchError(() => of({ version: '', local: '', nasTab: true })),
+          this.http.get<{ version: string; local?: string; nasTab?: boolean; tidal?: boolean }>(`${this.getApiBackendUrl()}/data-version`).pipe(
+            // (tidal: an older server without it - its entries are shown, as before)
+            map((r) => ({ version: r?.version ?? '', local: r?.local ?? '', nasTab: r?.nasTab !== false, tidal: r?.tidal !== false })),
+            catchError(() => of({ version: '', local: '', nasTab: true, tidal: true })),
           ),
         ),
         shareReplay({ bufferSize: 1, refCount: true }),
@@ -987,7 +988,9 @@ export class MediaService {
         )
       }
 
-    return this.http.get<Media[]>(url).pipe(
+    // (TIDAL switched off in the app: its entries are left out - they stay in the library, to be managed there)
+    return forkJoin([this.http.get<Media[]>(url), this.versions().pipe(take(1))]).pipe(
+      map(([items, v]) => (v.tidal ? items : items.filter((it) => it?.type !== 'tidal'))),
       // Filter to get only items for the chosen category.
       map((items) => {
         if (resume) {
@@ -1121,7 +1124,12 @@ export class MediaService {
                               map((currentItem) => [currentItem]),
                               overwriteArtist(item),
                             ),
-                          of([item]), // Single album. Also return as array, so we always have the same data type
+                          iif(
+                            // a whole TIDAL artist: its albums, from the box's TIDAL service (through the player)
+                            () => item.type === 'tidal' && item.tidalKind === 'artist' && !!item.id && !isResumeEntry(item),
+                            this.tidalArtistAlbums(item),
+                            of([item]), // Single album. Also return as array, so we always have the same data type
+                          ),
                         ),
                       ),
                     ),
@@ -1170,6 +1178,37 @@ export class MediaService {
 
   private getPlayerBackendUrl(): string {
     return environment.backend.playerUrl
+  }
+
+  // The albums of a TIDAL artist entry (tidalKind 'artist'), each a TIDAL album of the entry's artist and category - the
+  // service asks TIDAL every time, so albums that came out later are there too. Not reachable (offline, TIDAL off or not
+  // signed in): none, the rest of the list stays.
+  private tidalArtistAlbums(item: Media): Observable<Media[]> {
+    return this.http
+      .get<{ albums?: { id: string; name: string; cover?: string | null; year?: number | null }[] }>(
+        `${this.getPlayerBackendUrl()}/tidal/artist/${encodeURIComponent(item.id)}/albums${tidalRangeQuery(item)}`,
+      )
+      .pipe(
+        timeout(60000),
+        map((r) =>
+          (r.albums ?? []).map(
+            (a) =>
+              ({
+                type: 'tidal',
+                tidalKind: 'album',
+                id: String(a.id),
+                title: a.name,
+                artist: item.artist,
+                category: item.category,
+                cover: a.cover ?? undefined,
+                artistcover: item.artistcover_override ?? item.artistcover ?? item.cover,
+                release_date: a.year ? String(a.year) : undefined,
+                index: item.index,
+              }) as Media,
+          ),
+        ),
+        catchError(() => of([] as Media[])),
+      )
   }
 
   /**
@@ -1312,4 +1351,16 @@ export class MediaService {
 
     return null
   }
+}
+
+// The range (positions by release, 1 = the oldest) and the left-out albums of an entry of a whole TIDAL artist, as the
+// box's TIDAL service takes them (tidal_service.py narrowed; the parents' app sets them) - '' without any
+function tidalRangeQuery(item: Media): string {
+  const q = new URLSearchParams()
+  if (Number(item.range_from) >= 1) q.set('from', String(Math.floor(Number(item.range_from))))
+  if (Number(item.range_to) >= 1) q.set('to', String(Math.floor(Number(item.range_to))))
+  const ex = (Array.isArray(item.exclude_album_ids) ? item.exclude_album_ids : []).map(String).filter((x) => /^\d{1,15}$/.test(x))
+  if (ex.length) q.set('exclude', ex.join(','))
+  const text = q.toString()
+  return text ? `?${text}` : ''
 }

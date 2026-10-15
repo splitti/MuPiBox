@@ -1,6 +1,6 @@
 # Inhalte hinzufügen
 
-Alles, was die Box abspielt, verwaltest du in der App im Bereich **Bibliothek**. Es gibt vier Wege, Inhalte auf die Box zu bringen:
+Alles, was die Box abspielt, verwaltest du in der App im Bereich **Bibliothek**. Es gibt fünf Wege, Inhalte auf die Box zu bringen:
 
 | Quelle | Wann sinnvoll | Seite |
 | --- | --- | --- |
@@ -8,6 +8,7 @@ Alles, was die Box abspielt, verwaltest du in der App im Bereich **Bibliothek**.
 | **Spotify** | Alben, Playlists, Künstler, Hörbücher und Podcasts von Spotify | [Spotify](spotify.md) |
 | **Podcasts und Radio** | RSS-Podcasts und Internetradio | [Podcasts und Radio](podcasts-und-radio.md) |
 | **NAS** | Medien auf einem Netzwerkspeicher im Heimnetz | [NAS](nas.md) |
+| **TIDAL** | Hörspiele, Alben und Playlists mit einem TIDAL-Abo (inoffizielle Anbindung) | [TIDAL](tidal.md) |
 
 Jeder Inhalt kommt in eine von drei **Kategorien**: Hörbuch/Hörspiel, Musik oder Radio & Podcasts. Die Kategorie bestimmt, unter welchem Reiter er auf dem Display erscheint: Hörspiele, Musik oder Radio & Podcasts. Ordner vom NAS stehen im eigenen Reiter NAS oder in einer dieser Kategorien ([Die Startseite](../bedienung/startseite.md)).
 

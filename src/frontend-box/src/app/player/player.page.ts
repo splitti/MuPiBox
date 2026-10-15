@@ -194,7 +194,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   protected trackCounter(spotify: CurrentSpotify | null | undefined, local: CurrentMPlayer | null | undefined): string {
     const pair = (a?: number | string, b?: number | string) => (a !== undefined && a !== '' && b !== undefined && b !== '' && Number(b) > 0 ? `${a} / ${b}` : '')
     const m = this.media
-    if (m.type === 'library' || m.type === 'nas') return pair(local?.currentTracknr, local?.totalTracks)
+    if (m.type === 'library' || m.type === 'nas' || m.type === 'tidal') return pair(local?.currentTracknr, local?.totalTracks)
     if (m.type !== 'spotify') return ''
     if (m.playlistid && (spotify?.playlist?.total_tracks ?? 0) > 0) return pair(spotify?.playlist?.current_track_position, spotify?.playlist?.total_tracks)
     if (m.showid && spotify?.show_details) return pair(spotify.show_details.current_episode_position, spotify.show_details.total_episodes)
@@ -488,7 +488,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
       // The bar also with every report of the player, not only in updateProgress's ticks: once (a NAS album paused at
       // 59 %) the dot stood at the start while the time below it showed the right place - both come from this report
       // now, so they cannot part.
-      if (this.media?.type === 'library' || this.media?.type === 'nas' || this.media?.type === 'rss') {
+      if (this.media?.type === 'library' || this.media?.type === 'nas' || this.media?.type === 'tidal' || this.media?.type === 'rss') {
         this.progress = this.heldProgress(Number(local?.progressTime) || 0)
       }
     })
@@ -563,7 +563,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
       // (no track loaded yet in the display's Spotify player - after a podcast, at the start: nothing to seek in)
       const duration = this.currentPlayedSpotify?.item?.duration_ms
       if (duration) this.playerService.seekPosition(duration * (newValue / 100))
-    } else if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'rss') {
+    } else if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal' || this.media.type === 'rss') {
       this.playerService.seekPosition(newValue)
     }
   }
@@ -729,7 +729,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
           this.updateProgress()
         }
       }, 1000)
-    } else if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'rss') {
+    } else if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal' || this.media.type === 'rss') {
       // The player says the album or episode played to its end: back to the list at once (it waited 10 s for the
       // player to stay silent - the page looked stuck meanwhile). No resume save on the way out: the album is done.
       if (this.currentPlayedLocal?.finished && !this.isLeaving) {
@@ -741,7 +741,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
       const seek = this.currentPlayedLocal?.progressTime || 0
       this.progress = this.heldProgress(seek || 0)
       if (
-        (this.media.type === 'library' || this.media.type === 'nas') &&
+        (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal') &&
         this.playing &&
         !this.currentPlayedLocal?.playing &&
         this.currentPlayedLocal?.currentTracknr === this.currentPlayedLocal?.totalTracks
@@ -824,7 +824,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
       return
     }
     if (
-      (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'rss') &&
+      (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal' || this.media.type === 'rss') &&
       !this.media.shuffle &&
       this.playing &&
       !this.albumEnded // (the SDK's position belongs to what autoplay went on with, not to this album)
@@ -907,6 +907,13 @@ export class PlayerPage implements OnInit, AfterViewInit {
         this.logService.error('[PlayerPage] Failed to start NAS playback')
         return
       }
+    } else if (this.media.type === 'tidal') {
+      // (the player starts the album or playlist at the saved track and part of it, as for the NAS)
+      const success = await this.playerService.resumeTidalMedia(this.media)
+      if (!success) {
+        this.logService.error('[PlayerPage] Failed to start TIDAL playback')
+        return
+      }
     } else if (this.media.type === 'rss') {
       const success = await this.playerService.playMedia(this.media)
       if (!success) {
@@ -950,7 +957,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
     // position) - the entry of the last periodic save stands, it is not overwritten with zeros
     // (and for local media only while mplayer/mpv plays: Spotify started meanwhile wrote this page's NAS entry with
     // the zeros of the empty local player)
-    if ((this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'rss') && this.currentPlayedLocal?.currentPlayer !== 'mplayer') return
+    if ((this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal' || this.media.type === 'rss') && this.currentPlayedLocal?.currentPlayer !== 'mplayer') return
 
     // Spotify: the track's place in its album or playlist not known (a list of more than 50 tracks, one that could not
     // be loaded): the last save stands - it was saved as track 1 at the position of track N
@@ -977,6 +984,9 @@ export class PlayerPage implements OnInit, AfterViewInit {
     } else if (this.resumemedia.type === 'nas') {
       // NAS entries have no id of their own; the path identifies them in resume.json.
       this.resumemedia.id = `nas:${this.resumemedia.nasPath}`
+      this.resumemedia.resumelocalcurrentTracknr = this.currentPlayedLocal?.currentTracknr || 0
+      this.resumemedia.resumelocalprogressTime = this.currentPlayedLocal?.progressTime || 0
+    } else if (this.resumemedia.type === 'tidal') {
       this.resumemedia.resumelocalcurrentTracknr = this.currentPlayedLocal?.currentTracknr || 0
       this.resumemedia.resumelocalprogressTime = this.currentPlayedLocal?.progressTime || 0
     } else if (this.resumemedia.type === 'rss') {
@@ -1050,7 +1060,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
     if (this.playing) {
       //this.playing = false;
       this.playerService.sendCmd(PlayerCmds.PAUSE)
-      if (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'rss') {
+      if (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal' || this.media.type === 'rss') {
         this.saveResumeFiles()
       }
     } else {
@@ -1073,7 +1083,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   // --------------------------------------------
 
   coverPointerDown() {
-    if (this.media.type !== 'spotify' && this.media.type !== 'library' && this.media.type !== 'nas') {
+    if (this.media.type !== 'spotify' && this.media.type !== 'library' && this.media.type !== 'nas' && this.media.type !== 'tidal') {
       return
     }
     clearTimeout(this.longPressTimer)
@@ -1107,6 +1117,14 @@ export class PlayerPage implements OnInit, AfterViewInit {
         }))
       } else if (this.media.type === 'nas') {
         const tracks = await firstValueFrom(this.playerService.getNasTracklist(this.media))
+        this.trackListTitle = this.media.title
+        this.trackList = (tracks ?? []).map((track) => ({
+          position: track.position,
+          id: `${track.position}`,
+          name: track.name,
+        }))
+      } else if (this.media.type === 'tidal') {
+        const tracks = await firstValueFrom(this.playerService.getTidalTracklist(this.media))
         this.trackListTitle = this.media.title
         this.trackList = (tracks ?? []).map((track) => ({
           position: track.position,
@@ -1207,7 +1225,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   private pendingTrackTimer: ReturnType<typeof setTimeout> | undefined
 
   playTrackFromList(entry: TrackListEntry) {
-    if (this.media.type === 'library' || this.media.type === 'nas') {
+    if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal') {
       clearTimeout(this.pendingTrackTimer)
       this.pendingTrackPosition = entry.position
       this.pendingTrackTimer = setTimeout(() => {
@@ -1218,7 +1236,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   }
 
   isCurrentTrack(entry: TrackListEntry): boolean {
-    if (this.media.type === 'library' || this.media.type === 'nas') {
+    if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal') {
       const actualPosition = this.currentPlayedLocal?.currentTracknr
       if (this.pendingTrackPosition !== undefined) {
         if (actualPosition === this.pendingTrackPosition) {

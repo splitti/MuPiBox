@@ -290,6 +290,22 @@ export class ExternalPlaybackNavigatorService {
         }
       }
     }
+    if (media?.type === 'tidal') {
+      const entries = await firstValueFrom(
+        this.http.get<Media[]>(`${environment.backend.apiUrl}/data`).pipe(
+          timeout(3000),
+          catchError(() => of([] as Media[])),
+        ),
+      )
+      const own = entries.find((e) => e.type === 'tidal' && String(e.id) === String(media.id))
+      if (own) {
+        media.category = own.category
+        media.artist = own.artist
+        media.title = own.title || media.title
+        if (!media.cover) media.cover = own.cover
+        media.artistcover = own.artistcover || media.artistcover || own.cover
+      }
+    }
     const extras: NavigationExtras = { state: { externalPlayback: true } }
     if (media) (extras.state as Record<string, unknown>).media = media
 
@@ -341,6 +357,21 @@ export class ExternalPlaybackNavigatorService {
         artist: folders[folders.length - 2] ?? '',
         title: String(data.album ?? folders[folders.length - 1] ?? ''),
         nasPath: path,
+      } as Media
+    }
+    // A TIDAL album or playlist: path is <album|playlist>:<id>; its library entry (artist, category) is looked up
+    // in navigateToPlayerExternal, the cover is the one the app passed on
+    const tidal = /^(album|playlist):([A-Za-z0-9-]+)$/.exec(path)
+    if ((data as { currentType?: string }).currentType === 'tidal' && tidal) {
+      return {
+        type: 'tidal',
+        tidalKind: tidal[1] as 'album' | 'playlist',
+        id: tidal[2],
+        category: 'music',
+        artist: '',
+        title: String(data.album ?? ''),
+        cover: data.cover || undefined,
+        artistcover: data.cover || undefined,
       } as Media
     }
     const pathParts = path.split('/').filter(Boolean)

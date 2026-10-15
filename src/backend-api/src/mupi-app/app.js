@@ -1980,9 +1980,24 @@ const spotifyArtistTile = (it) => ({
   path: it.artistid,
   index: it._index,
 })
-const playable = (it) => it && typeof it === 'object' && !it.isResume && it.category !== 'resume' && it.type !== 'library' && !(it.type === 'spotify' && !it.id && !it.playlistid && !it.showid && !it.audiobookid)
+// A whole TIDAL artist (tidalKind 'artist'): a folder of its albums as well, from the box's TIDAL service
+const isTidalArtist = (it) => it && it.type === 'tidal' && it.tidalKind === 'artist' && !it.isResume
+const tidalArtistTile = (it) => ({
+  kind: 'tdartist',
+  title: itemArtist(it) || itemTitle(it),
+  sub: catOf(it) === 'music' ? 'Alle Alben' : 'Alle Folgen',
+  cover: it.artistcover_override ?? it.artistcover ?? it.cover_override ?? it.cover ?? '',
+  badge: 'TIDAL',
+  folder: true,
+  path: it.id,
+  index: it._index,
+})
+const playable = (it) =>
+  it && typeof it === 'object' && (it.type !== 'tidal' || svc.tidal) && !it.isResume && it.category !== 'resume' && it.type !== 'library' && !(it.type === 'spotify' && !it.id && !it.playlistid && !it.showid && !it.audiobookid) && !isTidalArtist(it)
 
 async function loadHear() {
+  // (whether TIDAL is on: its entries only then - see playable)
+  await loadServices().catch(() => undefined)
   const [data, nas, ...local] = await Promise.all([
     api('/api/data'),
     api('/api/nas/artists?expand=1'),
@@ -2004,6 +2019,7 @@ function topTiles() {
     const items = hear.items.filter((it) => playable(it) && (cat === 'all' || catOf(it) === cat))
     for (const it of hear.items) {
       if (isSpotifyArtist(it) && (cat === 'all' || catOf(it) === cat) && match(`${itemArtist(it)} ${itemTitle(it)}`)) tiles.push(spotifyArtistTile(it))
+      if (isTidalArtist(it) && svc.tidal && (cat === 'all' || catOf(it) === cat) && match(`${itemArtist(it)} ${itemTitle(it)}`)) tiles.push(tidalArtistTile(it))
     }
     if (q) {
       for (const it of items) if (match(`${itemTitle(it)} ${itemArtist(it)}`)) tiles.push(entryTile(it))
@@ -2032,6 +2048,7 @@ function badgeOf(it) {
   if (it.type === 'spotify') return 'Spotify'
   if (it.type === 'radio' || it.category === 'radio') return 'Radio'
   if (it.type === 'rss') return 'Podcast'
+  if (it.type === 'tidal') return 'TIDAL'
   return ''
 }
 const ENTRY_IDENT = ['type', 'id', 'playlistid', 'showid', 'audiobookid', 'artistid', 'title', 'artist']
@@ -2058,6 +2075,11 @@ function levelTiles() {
       .map((a) => ({ kind: 'spalbum', title: String(a.name ?? '—'), sub: '', cover: a.images?.[1]?.url ?? a.images?.[0]?.url ?? '', badge: 'Spotify', index: top.index, albumId: a.id }))
       .sort((x, y) => x.title.localeCompare(y.title, 'de', { numeric: true }))
   }
+  if (top.kind === 'tdartist') {
+    return (hear.level ?? [])
+      .filter((a) => a?.id && match(a.name ?? ''))
+      .map((a) => ({ kind: 'tdalbum', title: String(a.name ?? '—'), sub: a.year ? String(a.year) : '', cover: a.thumb || a.cover || '', badge: 'TIDAL', index: top.index, albumId: a.id }))
+  }
   return (hear.level ?? []).filter((f) => match(`${f.title} ${f.artist}`)).map(top.kind === 'nas' ? nasTile : localTile)
 }
 
@@ -2067,6 +2089,17 @@ async function openLevel() {
   hear.levelError = ''
   drawHear()
   if (!top || top.kind === 'artist') return
+  if (top.kind === 'tdartist') {
+    // a whole TIDAL artist: its albums as the box's TIDAL service lists them (albums first, then EPs and singles)
+    const entry = hear.items.find((it) => it?._index === top.index)
+    const range = tidalRangeQuery(entry)
+    const r = await api(`${API}/tidal/artist/${encodeURIComponent(top.path)}/albums${range ? `?${range}` : ''}`)
+    if (hear.stack.at(-1) !== top) return
+    if (!r.ok) hear.levelError = r.status === 409 ? 'TIDAL ist ausgeschaltet.' : 'TIDAL antwortet gerade nicht.'
+    hear.level = r.body?.albums ?? []
+    drawHear()
+    return
+  }
   if (top.kind === 'spartist') {
     // the artist's albums from Spotify, all at once: the backend keeps them on the SD card and checks them with one page
     // at most every 6 hours (artist-albums-store.ts) - a subscribed artist's list is kept already. (Asked page by page,
@@ -2142,6 +2175,7 @@ function onTile(t) {
   if (t.kind === 'entry' && t.ident?.type === 'rss') return openEpisodes(t)
   if (t.kind === 'entry') return startPlay(t.title, `${API}/library/play`, { index: t.index, expect: t.ident })
   if (t.kind === 'spalbum') return startPlay(t.title, `${API}/library/play`, { index: t.index, albumId: t.albumId })
+  if (t.kind === 'tdalbum') return startPlay(t.title, `${API}/library/play`, { index: t.index, albumId: t.albumId, cover: t.cover })
   if (t.kind === 'nas') return startPlay(t.title, `${API}/library/play-nas`, { path: t.path })
   return startPlay(t.title, `${API}/library/play-local`, { path: t.path })
 }
@@ -2340,6 +2374,7 @@ const LIB_SOURCES = [
   ['spotify-sync', 'Smart-Sync'],
   ['podcast', 'Podcasts'],
   ['radio', 'Radio'],
+  ['tidal', 'TIDAL'],
   ['local', 'SD-Karte'],
   ['nas', 'NAS'],
 ]
@@ -2350,7 +2385,8 @@ const entryInSource = (it, src) =>
   (src === 'spotify' && it.type === 'spotify') ||
   (src === 'spotify-sync' && (it.source ?? 'manual') === 'spotify-sync') ||
   (src === 'podcast' && it.type === 'rss') ||
-  (src === 'radio' && it.type === 'radio')
+  (src === 'radio' && it.type === 'radio') ||
+  (src === 'tidal' && it.type === 'tidal')
 // A show of ARD Sounds: a podcast whose "feed" is ard:<show id> (the box builds its episode list from the ARD)
 const isArdEntry = (it) => it?.type === 'rss' && String(it.id ?? '').startsWith('ard:')
 const CAT_SHORT = { audiobook: 'Hörspiel', music: 'Musik', other: 'Radio & Podcasts' }
@@ -2459,12 +2495,14 @@ function libSub(g) {
         : 'Podcast'
       : first?.type === 'radio'
         ? 'Radio'
-        : (SOURCE_LABEL[g.src] ?? '')
+        : first?.type === 'tidal'
+          ? 'TIDAL'
+          : (SOURCE_LABEL[g.src] ?? '')
   if (g.kind === 'local') return `${g.folder.libraryIsContainer ? 'Ordner' : 'Album'} · ${src}`
   if (g.kind === 'nas') return `${g.folder.nasIsContainer ? 'Ordner' : 'Album'} · ${src}`
   if (g.entries.length === 1) {
     const e = g.entries[0]
-    const whole = e.item.type === 'spotify' && !e.item.id && !e.item.playlistid && !e.item.showid && !e.item.audiobookid
+    const whole = (e.item.type === 'spotify' && !e.item.id && !e.item.playlistid && !e.item.showid && !e.item.audiobookid) || isTidalArtist(e.item)
     // (the source already says Spotify: what kind of Spotify entry it is instead)
     // (a podcast or a station under its own name: the source says what it is - not "Podcast · Podcast")
     if ((e.item.type === 'rss' || e.item.type === 'radio') && e.title === g.artist) return src
@@ -2720,6 +2758,8 @@ function openEntrySheet(item, back = null) {
   const isSync = (item.source ?? 'manual') === 'spotify-sync'
   // a whole Spotify artist ("Alle Folgen"): its albums are listed, as the folders of the SD card and the NAS
   const wholeArtist = item.type === 'spotify' && item.artistid && !item.id && !item.playlistid && !item.showid && !item.audiobookid
+  // a whole TIDAL artist: its range and the albums left out
+  const tidalArtist = item.type === 'tidal' && item.tidalKind === 'artist'
   // (order, shuffle, a part of the episodes: of the entries one adds by hand - Spotify and podcasts)
   const playOptions = !isSync && (item.type === 'spotify' || item.type === 'rss')
   // a radio station or a podcast: its address (stream / feed) can be changed too
@@ -2751,11 +2791,13 @@ function openEntrySheet(item, back = null) {
      ${item.type === 'rss' ? offlineField(item) : ''}
      ${isSync ? `<p class="help" style="margin:0">Entfernen geht über Bibliothek › Verwaltete Inhalte oder die Spotify-Playlist.</p>` : ''}
      ${wholeArtist ? `<div class="section-label" style="margin:0">Alben</div><div id="e-albums"><p class="help">Lade die Alben von Spotify …</p></div>` : ''}
+     ${tidalArtist ? tidalRangeFields(item) : ''}
      <div class="btns">${isSync ? '' : `<button class="btn danger" data-del>Löschen</button>`}<button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Speichern</button></div>`,
     (sheet, close) => {
       sheet.querySelector('[data-close]').onclick = back ? back.open : close
       sheet.querySelector('[data-back]')?.addEventListener('click', back?.open)
       if (wholeArtist) loadArtistAlbums(item, sheet.querySelector('#e-albums'))
+      if (tidalArtist) wireTidalRange(item, sheet)
       if (item.type === 'rss') loadOfflineStatus(item.id, sheet.querySelector('#e-offline-status'))
       if (playOptions && item.type === 'rss') {
         wireEpisodePick(sheet, 'e', () =>
@@ -2837,6 +2879,7 @@ function openEntrySheet(item, back = null) {
         const keep = item.type === 'rss' ? Number(sheet.querySelector('#e-offline').value) || 0 : 0
         if (keep) updated.offline = keep
         else delete updated.offline
+        if (tidalArtist && !readTidalRange(sheet, updated)) return toast('Der Bereich passt nicht (von 1 an, „bis“ nicht vor „von“)', 'info')
         const r = await api('/api/edit', { method: 'POST', body: { index: libPlace(item), data: updated, original: item } })
         if (!libWriteOk(r)) return
         close()
@@ -3471,6 +3514,8 @@ async function libraryHave(source) {
       if (it.playlistid) have.add(`playlist:${it.playlistid}`)
       if (it.artistid && !it.id) have.add(`artist:${it.artistid}`)
     }
+    // (TIDAL: its entries - albums, playlists, whole artists)
+    if (source === 'tidal' && it.type === 'tidal' && it.id) have.add(`${it.tidalKind ?? 'album'}:${it.id}`)
   }
   for (const a of subs?.body?.artists ?? []) have.add(`artist:${a.id ?? a.artistId}`)
   for (const a of subs?.body?.explicit_albums ?? []) have.add(`album:${a.id}`)
@@ -3515,7 +3560,7 @@ const spAlbum = (a) => ({
 function resultRow(r, i, list, have) {
   const there = have?.has(`${r.kind}:${r.id}`) || !!r.via
   return `<button class="entry lib-row ard-show" data-list="${list}" data-i="${i}"><span class="lib-thumb">${r.img ? `<img src="${esc(r.img)}" alt="" loading="lazy">` : ''}${icon(r.kind === 'artist' ? 'folder' : 'music', 18)}</span>
-    <span class="lbl"><b translate="no">${esc(r.t)}</b><small translate="no">${esc(r.s)}${there ? ` · <span class="in-lib">${esc(have?.has(`${r.kind}:${r.id}`) ? 'In der Bibliothek' : 'Künstler abonniert')}</span>` : ''}</small></span>${there ? `<span class="in-lib" aria-hidden="true">${icon('check', 18)}</span>` : ''}<span class="chev">${icon('chevron', 18)}</span></button>`
+    <span class="lbl"><b translate="no">${esc(r.t)}</b><small translate="no">${esc(r.s)}${there ? ` · <span class="in-lib">${esc(have?.has(`${r.kind}:${r.id}`) ? 'In der Bibliothek' : (r.viaText ?? 'Künstler abonniert'))}</span>` : ''}</small></span>${there ? `<span class="in-lib" aria-hidden="true">${icon('check', 18)}</span>` : ''}<span class="chev">${icon('chevron', 18)}</span></button>`
 }
 
 // The albums of an artist in a search, filtered: by a text, by kind (albums or EPs and singles) and in an order -
@@ -4053,6 +4098,245 @@ async function openRadioStation(s) {
       })
     },
   )
+}
+
+/* Auf TIDAL suchen (the box's TIDAL service through eltern/tidal.ts; switched on and signed in on Dienste › TIDAL) */
+
+// the last search (type: what of it is shown), and an artist opened from it (its albums, with the way back); the
+// category is chosen when adding (addSheet) - the one chosen last starts the next sheet, as on Spotify (search.cat)
+const tds = { q: '', type: 'Alle', result: null, artist: null, busy: false, have: new Set() }
+
+function tidalSearchTop() {
+  if (!svc.tidal) {
+    return [
+      `<section class="card wide"><p class="help" style="margin:0">${esc('TIDAL ist ausgeschaltet. Einschalten und anmelden unter Einstellungen › Dienste › TIDAL.')}</p>
+        <div class="btns"><button class="btn primary" id="tds-services">TIDAL öffnen</button></div></section>`,
+    ]
+  }
+  return [
+    `<section class="card wide">
+      <p class="help" style="margin:0">${esc('Findet Hörspiele, Alben, Künstler und Playlists auf TIDAL. Ein Album oder eine Playlist kommt in die gewählte Kategorie auf die Box und spielt dort mit deinem TIDAL-Konto.')}</p>
+      <div class="search">${icon('search')}<input class="input" id="tds-q" type="search" placeholder="${esc('Suchen – z. B. ein Hörspiel oder eine Band')}" autocomplete="off" value="${esc(tds.q)}" enterkeyhint="search"></div>
+      <div class="seg" id="tds-type">${['Alle', 'Künstler', 'Alben', 'Playlists'].map((t) => `<button aria-pressed="${tds.type === t}" data-v="${t}">${t}</button>`).join('')}</div>
+      <div class="btns"><button class="btn primary" id="tds-go">Suchen</button></div>
+    </section>`,
+    `<div id="tds-results" class="wide-stack"></div>`,
+  ]
+}
+
+// Why the box's TIDAL service could not answer
+function tidalFailText(r) {
+  if (r.status === 401) return 'Die Box ist nicht bei TIDAL angemeldet – unter Einstellungen › Dienste › TIDAL anmelden.'
+  if (r.status === 409) return 'TIDAL ist ausgeschaltet.'
+  if (r.status === 503) return 'Der TIDAL-Dienst der Box läuft nicht.'
+  return 'TIDAL ist gerade nicht erreichbar.'
+}
+
+async function doTidalSearch() {
+  const q = tds.q.trim()
+  if (q.length < 2) return toast('Bitte mindestens 2 Zeichen eingeben', 'info')
+  if (tds.busy) return
+  const box = $('#tds-results')
+  box.innerHTML = `<div class="loading"><p>Suche …</p></div>`
+  tds.busy = true
+  const [r, have] = await Promise.all([api(`${API}/tidal/search?${new URLSearchParams({ q })}`), libraryHave('tidal')])
+  tds.have = have
+  tds.busy = false
+  if (!box.isConnected) return
+  if (!r.ok) {
+    box.innerHTML = `<p class="help">${esc(tidalFailText(r))}</p>`
+    return
+  }
+  tds.result = r.body
+  tds.artist = null
+  drawTidal()
+}
+
+async function openTidalArtist(a) {
+  artistView.q = ''
+  tds.artist = { ...a, albums: null }
+  drawTidal()
+  $('#tds-results')?.scrollIntoView({ block: 'start' })
+  const r = await api(`${API}/tidal/artist/${encodeURIComponent(a.id)}/albums`)
+  if (tds.artist?.id !== a.id) return
+  if (!r.ok) {
+    tds.artist.error = tidalFailText(r)
+    tds.artist.albums = []
+  } else tds.artist.albums = r.body?.albums ?? []
+  drawTidal()
+}
+
+const tidalSub = (x) => (x.kind === 'artist' ? 'Künstler' : [x.kind === 'playlist' ? 'Playlist' : x.artist, x.year, x.tracks ? `${x.tracks} Titel` : ''].filter(Boolean).join(' · '))
+// (as resultRow wants it: the small picture in the list)
+// (via: an album of an artist added as a whole - on the box through that entry)
+const tidalRow = (x) => ({
+  ...x,
+  t: x.name,
+  s: tidalSub(x),
+  img: x.thumb || x.cover,
+  ...(x.kind !== 'artist' && x.artist_id && tds.have.has(`artist:${x.artist_id}`) ? { via: x.artist_id, viaText: 'Künstler in der Bibliothek' } : {}),
+})
+
+function drawTidal() {
+  const box = $('#tds-results')
+  if (!box) return
+  const lists = {}
+  const rowsOf = (key, items) => {
+    lists[key] = items
+    return items.map((x, i) => resultRow(x, i, key, tds.have)).join('')
+  }
+  const card = (key, title, items) => (items.length ? `<section class="card"><h2 translate="no">${esc(title)}</h2><div class="rows">${rowsOf(key, items.map(tidalRow))}</div></section>` : '')
+  const wire = () => {
+    for (const img of box.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+    for (const b of box.querySelectorAll('[data-list]')) {
+      const x = lists[b.dataset.list][Number(b.dataset.i)]
+      b.onclick = () => (x.kind === 'artist' ? openTidalArtist(x) : openTidalItem(x))
+    }
+  }
+  if (tds.artist) {
+    const a = tds.artist
+    const whole = tds.have.has(`artist:${a.id}`)
+    box.innerHTML = `<div class="btns"><button class="btn" id="tds-back">${icon('back', 18)}Zurück zur Suche</button></div>
+      <section class="card"><div class="ard-head">${a.cover ? `<img src="${esc(a.cover)}" alt="">` : ''}<span class="lbl"><h2 translate="no" style="margin:0">${esc(a.name)}</h2><small>${esc(whole ? 'Künstler auf TIDAL · ganz in der Bibliothek' : 'Künstler auf TIDAL')}</small></span></div>
+        <p class="help" style="margin:0">${esc('Ganz hinzugefügt zeigt die Box alle Alben des Künstlers, auch neue. Einzelne Alben fügst du unten hinzu.')}</p>
+        <div class="btns"><button class="btn primary" id="tds-whole">${icon(whole ? 'check' : 'plus', 18)}${esc(whole ? 'In der Bibliothek' : 'Ganzen Künstler hinzufügen')}</button></div></section>
+      <section class="card"><h2>${esc('Alben')}</h2>${artistControls('tds')}<div class="rows" id="tds-alist"></div></section>`
+    const list = () => {
+      const el = $('#tds-alist', box)
+      if (!a.albums) el.innerHTML = '<div class="loading"><p>Lade …</p></div>'
+      else {
+        const rows = filterAlbums(a.albums.map(tidalRow))
+        el.innerHTML = rows.length ? rowsOf('albums', rows) : `<p class="help" style="margin:0">${esc(a.error ?? (a.albums.length ? 'Nichts gefunden.' : 'Keine Alben gefunden.'))}</p>`
+      }
+      wire()
+    }
+    list()
+    wireArtistControls(box, 'tds', list)
+    $('#tds-back', box).onclick = () => {
+      tds.artist = null
+      drawTidal()
+    }
+    $('#tds-whole', box).onclick = () => openTidalItem({ ...a, kind: 'artist' })
+    return
+  } else {
+    const res = tds.result ?? {}
+    const show = (t) => tds.type === 'Alle' || tds.type === t
+    const html =
+      (show('Künstler') ? card('artists', 'Künstler', (res.artists ?? []).slice(0, tds.type === 'Alle' ? 6 : 20)) : '') +
+      (show('Alben') ? card('albums', 'Alben', res.albums ?? []) : '') +
+      (show('Playlists') ? card('playlists', 'Playlists', res.playlists ?? []) : '')
+    box.innerHTML = html || (tds.result ? `<p class="help">${esc('Nichts gefunden.')}</p>` : '')
+  }
+  wire()
+}
+
+// An album, a playlist or a whole artist (all its albums, the box lists them when it is opened): onto the box in the
+// category chosen in the sheet
+async function openTidalItem(x) {
+  const kind = x.kind === 'artist' ? 'artist' : x.kind === 'playlist' ? 'playlist' : 'album'
+  const have = tds.have.has(`${kind}:${x.id}`)
+  addSheet(
+    {
+      title: x.name,
+      sub: kind === 'artist' ? 'Künstler auf TIDAL' : tidalSub(x),
+      img: x.cover,
+      have,
+      cat: x.kind === 'playlist' ? 'music' : search.cat,
+      text: kind === 'artist' ? 'Die Box zeigt alle Alben des Künstlers als einen Eintrag, auch Alben, die später dazukommen. Einen Bereich (Folge von–bis) und einzelne Alben stellst du danach in der Bibliothek ein.' : '',
+    },
+    async (category) => {
+      // (a playlist under its own name: it has no artist of its own)
+      const artist = kind === 'playlist' ? x.name : x.artist || x.name
+      const body = { type: 'tidal', tidalKind: kind, id: x.id, artist, title: x.name, category, source: 'manual', ...(x.cover ? { cover: x.cover } : {}) }
+      const r = await api('/api/add', { method: 'POST', body })
+      if (!libWriteOk(r)) return false
+      search.cat = category
+      tds.have.add(`${kind}:${x.id}`)
+      drawTidal()
+      toast(`Hinzugefügt: ${x.name}`)
+      libChanged()
+      lib.items = null
+      return true
+    },
+  )
+}
+
+// The range (positions by release, 1 = the oldest) and the left-out albums of an entry of a whole TIDAL artist, as the
+// box's TIDAL service takes them (tidal_service.py narrowed) - '' without any
+function tidalRangeQuery(it) {
+  const q = new URLSearchParams()
+  if (Number(it?.range_from) >= 1) q.set('from', String(Math.floor(it.range_from)))
+  if (Number(it?.range_to) >= 1) q.set('to', String(Math.floor(it.range_to)))
+  const ex = (Array.isArray(it?.exclude_album_ids) ? it.exclude_album_ids : []).filter((x) => /^\d{1,15}$/.test(String(x)))
+  if (ex.length) q.set('exclude', ex.join(','))
+  return q.toString()
+}
+
+// The library's sheet of a whole TIDAL artist: the range and the albums left out (as a Spotify subscription has them
+// on "Verwaltete Inhalte") - saved with the sheet. The albums with their positions come from the service.
+function tidalRangeFields(item) {
+  return `<div class="section-label" style="margin:0">${esc('Folgen und Alben')}</div>
+    <p class="help" style="margin:0">${esc('„Folge“ ist die Position nach Erscheinungsdatum (1 = die älteste). Leer = alle.')}</p>
+    <div class="rule-times"><div class="field"><label for="e-tfrom">Folge von</label><input class="input" id="e-tfrom" type="number" min="1" value="${esc(item.range_from ?? '')}"></div>
+      <div class="field"><label for="e-tto">Folge bis</label><input class="input" id="e-tto" type="number" min="1" value="${esc(item.range_to ?? '')}"></div></div>
+    <div id="e-talbums"><p class="help">${esc('Lade die Alben von TIDAL …')}</p></div>`
+}
+async function wireTidalRange(item, sheet) {
+  const box = sheet.querySelector('#e-talbums')
+  sheet.tidalExcluded = new Set((item.exclude_album_ids ?? []).map(String))
+  const r = await api(`${API}/tidal/artist/${encodeURIComponent(item.id)}/albums?all=1`)
+  if (!box.isConnected) return
+  if (!r.ok) {
+    box.innerHTML = `<p class="help">${esc(tidalFailText(r))}</p>`
+    return
+  }
+  const albums = [...(r.body?.albums ?? [])].sort((a, b) => a.position - b.position)
+  const num = (id) => {
+    const v = Number(sheet.querySelector(id).value)
+    return v >= 1 ? Math.floor(v) : null
+  }
+  const draw = () => {
+    const lo = num('#e-tfrom')
+    const hi = num('#e-tto')
+    box.innerHTML = albums.length
+      ? `<div class="rows">${albums
+          .map((al, i) => {
+            const inRange = (lo === null || al.position >= lo) && (hi === null || al.position <= hi)
+            return `<div class="entry${inRange ? '' : ' out'}"><span class="pos">${al.position}</span><span class="lib-thumb">${al.thumb || al.cover ? `<img src="${esc(al.thumb || al.cover)}" alt="" loading="lazy">` : ''}</span>
+              <span class="lbl"><b translate="no">${esc(al.name)}</b><small>${esc([al.date?.slice(0, 4), inRange ? '' : 'außerhalb des Bereichs'].filter(Boolean).join(' · '))}</small></span>
+              <label class="switch"><input type="checkbox" data-tal="${i}" ${inRange && !sheet.tidalExcluded.has(al.id) ? 'checked' : ''} ${inRange ? '' : 'disabled'} aria-label="${esc(al.name)} auf der Box"><span></span></label></div>`
+          })
+          .join('')}</div>`
+      : `<p class="help">${esc('Keine Alben gefunden.')}</p>`
+    for (const img of box.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+    for (const cb of box.querySelectorAll('[data-tal]')) {
+      cb.onchange = () => {
+        const id = albums[Number(cb.dataset.tal)].id
+        if (cb.checked) sheet.tidalExcluded.delete(id)
+        else sheet.tidalExcluded.add(id)
+      }
+    }
+  }
+  draw()
+  for (const id of ['#e-tfrom', '#e-tto']) sheet.querySelector(id).addEventListener('input', draw)
+}
+// (null: a range that does not fit)
+function readTidalRange(sheet, updated) {
+  const num = (id) => {
+    const v = sheet.querySelector(id).value.trim()
+    return v === '' ? undefined : Math.floor(Number(v))
+  }
+  const from = num('#e-tfrom')
+  const to = num('#e-tto')
+  if ([from, to].some((v) => v !== undefined && !(v >= 1)) || (from && to && from > to)) return null
+  if (from) updated.range_from = from
+  else delete updated.range_from
+  if (to) updated.range_to = to
+  else delete updated.range_to
+  const ex = [...(sheet.tidalExcluded ?? [])]
+  if (ex.length) updated.exclude_album_ids = ex
+  else delete updated.exclude_album_ids
+  return updated
 }
 
 /* Link einfügen (Spotify-Link, Radiosender, Podcast) */
@@ -9647,6 +9931,107 @@ function mountHa(root, page) {
   }
 }
 
+/* TIDAL (backend-api eltern/tidal.ts, unofficial: python-tidal): switched on with a hint, the sign-in with a code */
+
+const tidalState = { data: null }
+
+async function loadTidal() {
+  const r = await api(`${API}/tidal`)
+  if (!r.ok) throw new Error(`tidal ${r.status}`)
+  tidalState.data = r.body
+}
+
+function tidalTop() {
+  const d = tidalState.data ?? {}
+  const on = d.enabled === true
+  const busy = d.job?.running === true
+  const ready = on && d.active === true && !busy
+  const acc = d.account ?? null
+  const hint = `<div class="note warn">${icon('info', 18)}<span>Inoffizielle Anbindung: Die Box meldet sich bei TIDAL so an wie TIDALs eigene Apps (Bibliothek python-tidal). TIDAL erlaubt das nicht ausdrücklich und kann es jederzeit sperren – Nutzung auf eigene Verantwortung, nur mit einem TIDAL-Abo.</span></div>`
+  const sw = `<div class="row"><span class="lbl"><b>TIDAL verwenden</b><small>Beim ersten Einschalten richtet die Box die Anbindung ein (etwa eine Minute, braucht Internet).</small></span><label class="switch"><input type="checkbox" id="td-on" ${on ? 'checked' : ''} ${busy ? 'disabled' : ''} aria-label="TIDAL verwenden"><span></span></label></div>`
+  const state = busy
+    ? `<div class="status-line"><span class="dot"></span><span>${d.job?.on ? 'Wird eingerichtet …' : 'Wird ausgeschaltet …'}</span></div>`
+    : on && d.job?.ok === false
+      ? `<div class="note warn">${icon('info', 18)}<span>Das Einrichten hat nicht geklappt. Internet prüfen und TIDAL noch einmal aus- und einschalten.</span></div>`
+      : on && !d.active
+        ? `<div class="note warn">${icon('info', 18)}<span>Der TIDAL-Dienst läuft nicht. TIDAL einmal aus- und wieder einschalten.</span></div>`
+        : ''
+  const main = `<section class="card" data-col="1"><div class="card-head"><h2>TIDAL</h2><span class="chip ${ready && acc?.logged_in ? 'ok' : ''}">${on ? (acc?.logged_in ? 'verbunden' : 'an') : 'aus'}</span></div>${hint}${state}${sw}</section>`
+  if (!ready) return [main]
+  let body
+  if (acc?.logged_in) {
+    // (the account's country, named in the app's language: TIDAL's catalogue differs from country to country - the box
+    // searches and plays the one of this account; "DE" alone was taken for a language)
+    let country = ''
+    try {
+      country = acc.country ? (new Intl.DisplayNames([getLang()], { type: 'region' }).of(acc.country) ?? acc.country) : ''
+    } catch {
+      country = acc.country ?? ''
+    }
+    body = `<div class="status-line"><span class="dot ok"></span><span>${country ? `Mit TIDAL verbunden · Konto aus ${esc(country)}` : 'Mit TIDAL verbunden'}</span></div>
+      <p class="help">Die Anmeldung liegt nur auf der Box. Trennen löscht sie dort.</p>${country ? `<p class="help" style="margin:0">${esc('TIDALs Angebot unterscheidet sich je Land: Die Box sucht und spielt das des Landes, aus dem dein Konto ist.')}</p>` : ''}
+      <div class="btns"><button class="btn danger" id="td-logout">Trennen</button></div>`
+  } else if (acc?.pending) {
+    const p = acc.pending
+    body = `<p class="help">Auf einem Handy oder PC öffnen und mit deinem TIDAL-Konto bestätigen. Dein TIDAL-Passwort kommt dabei nie auf die Box.</p>
+      <div class="field"><label>Code</label><p class="mono-block" translate="no" style="font-size:28px;letter-spacing:4px;text-align:center">${esc(p.code)}</p></div>
+      <div class="btns"><a class="btn primary" href="${esc(p.url)}" target="_blank" rel="noopener">link.tidal.com öffnen</a><button class="btn" id="td-cancel">Abbrechen</button></div>
+      <p class="help" id="td-left" style="margin:0">Gültig noch ${Math.max(0, Math.round((p.expires_in ?? 0) / 60))} min</p>`
+  } else {
+    const err = acc?.error === 'expired' ? 'Der Code ist abgelaufen – bitte neu verbinden.' : acc?.error ? 'Die Anmeldung hat nicht geklappt – bitte noch einmal.' : ''
+    body = `${err ? `<div class="note warn">${icon('info', 18)}<span>${err}</span></div>` : ''}<p class="help">Die Box zeigt einen Code, den du auf link.tidal.com mit deinem TIDAL-Konto bestätigst.</p>
+      <div class="btns"><button class="btn primary" id="td-login">Mit TIDAL verbinden</button></div>`
+  }
+  return [main, `<section class="card" data-col="2"><h2>Konto</h2>${body}</section>`]
+}
+
+function mountTidal(root, page) {
+  const again = async (text, kind) => {
+    if (text) toast(text, kind)
+    await loadTidal().catch(() => undefined)
+    if (currentPage()?.id === page.id) renderPage(page, false)
+  }
+  $('#td-on', root)?.addEventListener('change', async (e) => {
+    const on = e.target.checked
+    if (on && !(await ask('TIDAL einschalten?', 'Das ist eine inoffizielle Anbindung: Die Box meldet sich wie eine TIDAL-App an. TIDAL erlaubt das nicht ausdrücklich und kann die Anbindung oder im schlimmsten Fall das Konto sperren. Nutzung auf eigene Verantwortung.', 'Verstanden, einschalten'))) {
+      e.target.checked = false
+      return
+    }
+    const r = await api(`${API}/tidal/enabled`, { method: 'POST', body: { on, confirmed: on } })
+    // (the search and the entries on Hören follow at once, not after the services' 30 s - see loadServices)
+    svc.at = 0
+    again(r.ok ? (on ? 'TIDAL wird eingerichtet' : 'TIDAL wird ausgeschaltet') : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+  })
+  $('#td-login', root)?.addEventListener('click', async () => {
+    const r = await api(`${API}/tidal/login`, { method: 'POST', body: {} })
+    // (given up meanwhile - the cancel came first: nothing to say)
+    again(r.ok || r.body?.error === 'given_up' ? '' : 'TIDAL ist gerade nicht erreichbar', r.ok ? 'ok' : 'info')
+  })
+  $('#td-cancel', root)?.addEventListener('click', async () => {
+    await api(`${API}/tidal/login`, { method: 'DELETE' })
+    again('Anmeldung abgebrochen')
+  })
+  $('#td-logout', root)?.addEventListener('click', async () => {
+    if (!(await ask('Von TIDAL trennen?', 'Die Anmeldung auf der Box wird gelöscht. Danach lässt sich TIDAL mit einem neuen Code wieder verbinden.', 'Trennen'))) return
+    const r = await api(`${API}/tidal/logout`, { method: 'POST', body: {} })
+    again(r.ok ? 'Von TIDAL getrennt' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+  })
+  // while it sets up or a code waits for confirmation: the page follows (the code confirmed on the phone)
+  const d = tidalState.data ?? {}
+  if (d.job?.running || d.account?.pending) {
+    every(3000, async () => {
+      const before = JSON.stringify([tidalState.data?.job?.running, tidalState.data?.active, tidalState.data?.account?.logged_in, !!tidalState.data?.account?.pending])
+      await loadTidal().catch(() => undefined)
+      const now = JSON.stringify([tidalState.data?.job?.running, tidalState.data?.active, tidalState.data?.account?.logged_in, !!tidalState.data?.account?.pending])
+      if (before !== now && currentPage()?.id === page.id) return renderPage(page, false)
+      // (the code's time left, counting down without drawing the page again)
+      const left = tidalState.data?.account?.pending?.expires_in
+      const el = $('#td-left', root)
+      if (el && left != null) el.textContent = left >= 60 ? `Gültig noch ${Math.round(left / 60)} min` : `Gültig noch ${left} s`
+    })
+  }
+}
+
 const CONTROLLERS = {
   spielzeit: {
     load: loadCaps,
@@ -9875,6 +10260,26 @@ const CONTROLLERS = {
       $('#pod-go', root).onclick = doPodSearch
       if (pod.result) drawPod()
       else loadPodSuggestions()
+    },
+  },
+  tidalsuche: {
+    load: loadServices,
+    top: tidalSearchTop,
+    sections: () => [],
+    mount(root) {
+      const q = $('#tds-q', root)
+      if (!q) return $('#tds-services', root)?.addEventListener('click', () => go('tidal'))
+      q.addEventListener('input', () => (tds.q = q.value))
+      q.addEventListener('keydown', (e) => e.key === 'Enter' && doTidalSearch())
+      $('#tds-go', root).onclick = doTidalSearch
+      $('#tds-type', root).onclick = (e) => {
+        const b = e.target.closest('button')
+        if (!b) return
+        tds.type = b.dataset.v
+        for (const x of b.parentElement.children) x.setAttribute('aria-pressed', String(x === b))
+        drawTidal()
+      }
+      if (tds.artist || tds.result) drawTidal()
     },
   },
   radiosuche: {
@@ -10852,6 +11257,7 @@ const CONTROLLERS = {
   },
   telegram: { load: loadTelegram, top: tgTop, sections: () => [], mount: mountTelegram },
   homeassistant: { load: loadHa, top: haTop, sections: () => [], mount: mountHa },
+  tidal: { load: loadTidal, top: tidalTop, sections: () => [], mount: mountTidal },
   mqtt: {
     load: loadMqtt,
     // the connection (broker and login), the box's names in MQTT, how often, Home Assistant - saved together
@@ -11295,7 +11701,7 @@ function openDay(el, page) {
 // only those - a Spotify search without a Spotify login only ends in an error.
 // podcasts: the podcast search (Apple's directory, for German with the ARD Audiothek); available: the languages it
 // offers ({code, name})
-const svc = { spotify: true, podcasts: true, radio: true, available: [], at: 0 }
+const svc = { spotify: true, podcasts: true, radio: true, tidal: false, available: [], at: 0 }
 async function loadServices() {
   if (Date.now() - svc.at < 30_000) return svc
   const [access, sources] = await Promise.all([api(`${API}/spotify-access`), api(`${API}/sources`)])
@@ -11308,6 +11714,7 @@ async function loadServices() {
 function setSources(b) {
   svc.podcasts = b.podcastSearch !== false
   svc.radio = b.radioSearch !== false
+  svc.tidal = b.tidal === true
   if (Array.isArray(b.available)) svc.available = b.available
 }
 
@@ -11317,6 +11724,7 @@ async function openAdd() {
     ...(svc.spotify ? [['suche', 'search', 'Auf Spotify suchen', 'Hörspiele, Alben und Künstler finden']] : []),
     ...(svc.podcasts ? [['podsuche', 'globe', 'Podcasts suchen', 'Kinderpodcasts und Hörspiele in vielen Sprachen']] : []),
     ...(svc.radio ? [['radiosuche', 'vol', 'Radiosender suchen', 'Kinderradio und Sender aus vielen Ländern']] : []),
+    ...(svc.tidal ? [['tidalsuche', 'search', 'Auf TIDAL suchen', 'Hörspiele, Alben, Künstler und Playlists finden']] : []),
     ['link', 'link', 'Link einfügen', svc.spotify ? 'Spotify-Link, Radiosender oder Podcast' : 'Radiosender oder Podcast'],
     ['upload', 'up', 'Vom Gerät hochladen', 'Titel oder ganze Ordner auf die SD-Karte'],
   ]

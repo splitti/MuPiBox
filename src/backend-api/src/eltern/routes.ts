@@ -56,6 +56,7 @@ import { decodeWpaSsid } from '../wpa-ssid'
 import { fanSpeedNow, registerHardwareRoutes } from './hardware'
 import { registerDietpiDashboardRoutes, startDietpiDashboard } from './dietpi-dashboard'
 import { registerServicesRoutes } from './services'
+import { registerTidalRoutes } from './tidal'
 import { registerSystemRoutes } from './system'
 import { registerAdminRoutes } from './admin'
 import { bootDrive } from './boot-drive'
@@ -416,6 +417,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   registerDietpiDashboardRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   startDietpiDashboard({ getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerServicesRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  registerTidalRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerSystemRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   // (pm2 runs server.js from its folder: templates/ lies next to it)
   registerAdminRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig, serverDir: process.cwd() })
@@ -1838,7 +1840,17 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     // One album of an entry that subscribes a whole Spotify artist (only artistid): the app lists the artist's albums
     // and plays the one tapped - only for an artist that is in the library.
     const albumId = body.albumId
-    if (albumId !== undefined) {
+    if (albumId !== undefined && type === 'tidal') {
+      // one album of an entry of a whole TIDAL artist (tidalKind 'artist'), as the app lists them
+      if (typeof albumId !== 'string' || !/^\d{1,15}$/.test(albumId) || item.tidalKind !== 'artist') {
+        res.status(400).json({ error: 'invalid_album' })
+        return
+      }
+      url = `musicsearch/tidal/album:${albumId}`
+      // (the album's own picture, as the app shows it - only one of TIDAL's; else the artist's)
+      const albumCover = (body as { cover?: unknown }).cover
+      cover = typeof albumCover === 'string' && albumCover.startsWith('https://resources.tidal.com/') && albumCover.length < 300 ? albumCover : ownCover(item.cover)
+    } else if (albumId !== undefined) {
       if (typeof albumId !== 'string' || !/^[A-Za-z0-9]{10,40}$/.test(albumId) || type !== 'spotify' || !item.artistid) {
         res.status(400).json({ error: 'invalid_album' })
         return
@@ -1888,6 +1900,22 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         const artist = episode.show || String(item.artist ?? '')
         url = `rss/${enc(episode.url)}/${enc(episode.title)}:title:artist:${enc(artist)}`
         cover = ownCover(item.cover_override) || episode.cover
+        break
+      }
+      case 'tidal': {
+        // an album or a playlist of TIDAL, played by the box's TIDAL service (see eltern/tidal.ts)
+        const id = String(item.id ?? '')
+        if (!/^[A-Za-z0-9-]{1,64}$/.test(id)) {
+          res.status(400).json({ error: 'tidal_id_missing' })
+          return
+        }
+        // (a whole artist plays one of its albums - the app asks with albumId)
+        if (item.tidalKind === 'artist') {
+          res.status(400).json({ error: 'tidal_artist_needs_album' })
+          return
+        }
+        url = `musicsearch/tidal/${item.tidalKind === 'playlist' ? 'playlist' : 'album'}:${enc(id)}`
+        cover = ownCover(item.cover_override) || ownCover(item.cover) || ownCover(item.artistcover)
         break
       }
       default:

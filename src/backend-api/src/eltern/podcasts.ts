@@ -58,6 +58,8 @@ export function registerPodcastRoutes(router: Router, deps: PodcastRouteDeps): v
     return {
       podcastSearch: podcastSearchOn(cfg),
       radioSearch: radioSearchOn(cfg),
+      // (TIDAL switched on, see tidal.ts: the app offers its search when adding)
+      tidal: ((cfg as Record<string, unknown> | undefined)?.tidal as { enabled?: unknown } | undefined)?.enabled === true,
       available: Object.entries(CONTENT_LANGUAGES).map(([code, l]) => ({ code, name: l.name })),
     }
   }

@@ -339,6 +339,9 @@ player.on('metadata', (val) => {
     }
     // the file that plays: the display and the web app show its embedded picture (/api/track-cover)
     currentMeta.trackFile = track ? `nas:${track.path}` : undefined
+  } else if (currentMeta.currentType === 'tidal') {
+    const track = currentTidalTracks[currentMeta.currentTracknr - 1]
+    if (track) currentMeta.currentTrackname = track.name
   } else if (currentMeta.currentType !== 'rss' && currentMeta.currentType !== 'radio') {
     currentMeta.currentTrackname = val.Title
   }
@@ -434,7 +437,7 @@ player.on('path', (val) => {
     currentMeta.trackFile =
       typeof val === 'string' && val.startsWith(mediaRoot) ? `local:${val.slice(mediaRoot.length)}` : undefined
   }
-  if (currentMeta.currentType !== 'rss' && currentMeta.currentType !== 'radio' && currentMeta.currentType !== 'nas') {
+  if (!['rss', 'radio', 'nas', 'tidal'].includes(currentMeta.currentType)) {
     // The folder holding the file, whatever the folder depth (was: fixed 7th segment).
     const pathParts = val.split('/')
     if (pathParts.length > 2) {
@@ -493,16 +496,24 @@ player.on('playlist-finish', () => {
 // failure here just leaves a stale resume entry, no playback impact.
 function deleteResumeForFinishedLibraryAlbum() {
   if (currentMeta.currentPlayer !== 'mplayer') return
-  if (currentMeta.currentType !== 'local') return
   const rawPath = currentMeta.path
   if (!rawPath) return
-  const parts = String(rawPath).split('/')
-  if (parts.length < 3) return
-  const body = JSON.stringify({
-    type: 'library',
-    artist: decodeURIComponent(parts[1]),
-    title: decodeURIComponent(parts[2]),
-  })
+  let body
+  if (currentMeta.currentType === 'tidal') {
+    // a TIDAL album or playlist: its resume entry is keyed by TIDAL's id (path is <album|playlist>:<id>)
+    const id = String(rawPath).split(':')[1]
+    if (!id) return
+    body = JSON.stringify({ type: 'tidal', id })
+  } else {
+    if (currentMeta.currentType !== 'local') return
+    const parts = String(rawPath).split('/')
+    if (parts.length < 3) return
+    body = JSON.stringify({
+      type: 'library',
+      artist: decodeURIComponent(parts[1]),
+      title: decodeURIComponent(parts[2]),
+    })
+  }
   const req = http.request(
     {
       host: '127.0.0.1',
@@ -643,6 +654,10 @@ const currentMeta = {
 // once in playNasList() - used to name each track as it plays, since mplayer
 // only ever sees the stream-proxy URL, not the real filename.
 let currentNasTracks = []
+// the same for a TIDAL album or playlist (playTidalList): mpv sees the service's /stream/<id> only
+let currentTidalTracks = []
+// the box's TIDAL service (scripts/mupibox/tidal_service.py)
+const TIDAL_SERVICE = 'http://127.0.0.1:5011'
 
 // === Playtime Limit (daily listening cap) ===
 // Per-weekday limit on active playback time. Configured in mupiboxconfig.json
@@ -1179,7 +1194,7 @@ function hasDirSegment(command, segment) {
 function isPlayInitiatingCommand(command) {
   if (command.name?.includes('spotify:')) return true
   // 'nas' was missing: NAS playback ignored the playtime limit and quiet hours
-  if (['library', 'nas', 'radio', 'rss', 'say'].some((segment) => hasDirSegment(command, segment))) {
+  if (['library', 'nas', 'tidal', 'radio', 'rss', 'say'].some((segment) => hasDirSegment(command, segment))) {
     return true
   }
   if (['play', 'next', 'previous', 'seek+30', 'seek-30'].includes(command.name)) return true
@@ -2459,6 +2474,61 @@ async function playNasList(nasPath, resume = null) {
   }
 }
 
+// Plays a TIDAL album or playlist ("album:<id>" / "playlist:<id>"): the box's TIDAL service lists its tracks, and mpv
+// plays an m3u of the service's /stream/<track> - each sends mpv on to the track's address at TIDAL, asked for when
+// the track starts (they run out after a while, a list made at the start would not last an album). Like the NAS:
+// the list is fetched on every start, a start overtaken meanwhile is dropped.
+// resume: {trackNr, progressPct} to go on where it was left
+async function playTidalList(ref, resume = null) {
+  const [kind, id] = String(ref).split(':')
+  if (!['album', 'playlist'].includes(kind) || !/^[A-Za-z0-9-]{1,64}$/.test(id ?? '')) {
+    console.warn(`${now()}: [Spotify Control] TIDAL: not a list to play: ${ref}`)
+    return
+  }
+  const generation = ++playbackGeneration
+  // (a pause while the list loads: the start is held until "play" - see heldStart)
+  const asked = playPauseRequest
+  clearLibraryResumeTimers()
+  try {
+    const response = await fetch(`${TIDAL_SERVICE}/tracks?kind=${kind}&id=${encodeURIComponent(id)}`, { signal: AbortSignal.timeout(45000) })
+    const body = response.ok ? await response.json() : null
+    const tracks = Array.isArray(body?.list) ? body.list : []
+    if (tracks.length === 0) {
+      console.warn(`${now()}: [Spotify Control] TIDAL ${kind} ${id} not started: ${response.ok ? 'no playable tracks' : `the service answered ${response.status} (signed in to TIDAL?)`}`)
+      return
+    }
+    if (generation !== playbackGeneration || isPlaybackBlocked()) {
+      log.debug(`${now()}: [Spotify Control] TIDAL ${kind} ${id} dropped (stopped, replaced or blocked meanwhile)`)
+      return
+    }
+    currentTidalTracks = tracks
+    currentMeta.currentType = 'tidal'
+    currentMeta.album = body.name || ''
+    currentMeta.path = `${kind}:${id}`
+    currentMeta.trackFile = undefined
+    const first = resume ? Math.min(Math.max(1, resume.trackNr), tracks.length) : 1
+    currentMeta.currentTrackname = tracks[first - 1].name
+    const tmpPlaylistPath = '/tmp/tidal_playlist.m3u'
+    fs.writeFileSync(tmpPlaylistPath, tracks.map((track) => `${TIDAL_SERVICE}/stream/${track.id}`).join('\n'))
+    currentMeta.currentTracknr = first - 1
+    currentMeta.totalTracks = tracks.length
+    const begin = () => {
+      writeplayerstatePlay()
+      const startAt = resume && (first > 1 || resume.progressPct > 1) ? { track: first, percent: resume.progressPct } : null
+      player.playList(tmpPlaylistPath, startAt ?? undefined)
+      player.setVolume(volumeStart)
+    }
+    if (pausedSince(asked)) {
+      heldStart = { generation, begin }
+      log.debug(`${now()}: [Spotify Control] TIDAL ${kind} ${id} paused while loading - starts with "play"`)
+      return
+    }
+    begin()
+  } catch (error) {
+    console.warn(`${now()}: [Spotify Control] TIDAL ${kind} ${id} not started: ${error}`)
+  }
+}
+
 // Where a NAS album goes on, for an engine that starts there: { track, percent } - or for a CUE album (one file)
 // { track: 1, startSeconds } at the part of the track in the file
 function nasStartOptions(trackNr, progressPct) {
@@ -3386,6 +3456,52 @@ app.get('/nas/tracklist/:encoded', async (req, res) => {
   }
 })
 
+/*returns the track list of a TIDAL album or playlist (<album|playlist>:<id>), from the box's TIDAL service*/
+app.get('/tidal/tracklist/:ref', async (req, res) => {
+  const [kind, id] = String(req.params.ref).split(':')
+  if (!['album', 'playlist'].includes(kind) || !/^[A-Za-z0-9-]{1,64}$/.test(id ?? '')) {
+    res.status(400).json({ error: 'invalid list' })
+    return
+  }
+  try {
+    const response = await fetch(`${TIDAL_SERVICE}/tracks?kind=${kind}&id=${encodeURIComponent(id)}`, { signal: AbortSignal.timeout(45000) })
+    const body = response.ok ? await response.json() : null
+    if (!Array.isArray(body?.list)) {
+      res.status(response.status === 401 ? 401 : 502).json({ error: 'tracklist not available' })
+      return
+    }
+    res.json(body.list.map((track) => ({ position: track.number, name: track.name })))
+  } catch (error) {
+    log.debug(`${now()}: [Spotify Control] Error fetching TIDAL tracklist for ${kind}:${id}: ${error}`)
+    res.status(502).json({ error: 'tracklist not available' })
+  }
+})
+
+/*returns the albums of a TIDAL artist (a whole artist in the library: the display lists them), from the box's TIDAL service*/
+app.get('/tidal/artist/:id/albums', async (req, res) => {
+  const id = String(req.params.id)
+  if (!/^\d{1,15}$/.test(id)) {
+    res.status(400).json({ error: 'invalid artist' })
+    return
+  }
+  try {
+    // (the entry's range and left-out albums - see tidal_service.py narrowed)
+    const q = new URLSearchParams()
+    for (const k of ['from', 'to']) if (typeof req.query[k] === 'string' && /^\d{1,5}$/.test(req.query[k])) q.set(k, req.query[k])
+    if (typeof req.query.exclude === 'string' && /^\d{1,15}(,\d{1,15}){0,499}$/.test(req.query.exclude)) q.set('exclude', req.query.exclude)
+    const response = await fetch(`${TIDAL_SERVICE}/artist/${id}/albums${q.size ? `?${q}` : ''}`, { signal: AbortSignal.timeout(45000) })
+    const body = response.ok ? await response.json() : null
+    if (!Array.isArray(body?.albums)) {
+      res.status(response.status === 401 ? 401 : 502).json({ error: 'albums not available' })
+      return
+    }
+    res.json({ albums: body.albums.map((a) => ({ id: a.id, name: a.name, cover: a.cover ?? null, year: a.year ?? null })) })
+  } catch (error) {
+    log.debug(`${now()}: [Spotify Control] Error fetching TIDAL albums of artist ${id}: ${error}`)
+    res.status(502).json({ error: 'albums not available' })
+  }
+})
+
 /*sonos-kids-controller sends commands via http get and uses path names for encoding*/
 /*commands are as defined in sonos-kids-controller and mapped spotify calls*/
 app.use((req, res) => {
@@ -3451,11 +3567,11 @@ app.use((req, res) => {
   // A new playback starts unpaused and without the picture of the one before: a "pause" of the playback before stayed
   // set (the display showed the play button while the new one played), and a local or NAS album kept the episode
   // picture of a podcast played before it (radio and podcasts set their own below, Spotify brings its own).
-  const newMedia = command.name.includes('spotify:') || ['library', 'nas', 'radio', 'rss'].some((segment) => hasDirSegment(command, segment))
+  const newMedia = command.name.includes('spotify:') || ['library', 'nas', 'tidal', 'radio', 'rss'].some((segment) => hasDirSegment(command, segment))
   if (newMedia) {
     playbackRequest++
     currentMeta.pause = false
-    if (hasDirSegment(command, 'library') || hasDirSegment(command, 'nas')) currentMeta.cover = triggerCover
+    if (['library', 'nas', 'tidal'].some((segment) => hasDirSegment(command, segment))) currentMeta.cover = triggerCover
   }
 
   /*this is the first command to be received. It always includes the device id encoded in between two /*/
@@ -3501,6 +3617,18 @@ app.use((req, res) => {
     const progressPct = Number.parseFloat(parts[2])
     if (parts.length === 3 && trackNr >= 1 && Number.isFinite(progressPct)) playNasList(parts[0], { trackNr, progressPct })
     else playNasList(command.base)
+  }
+
+  if (hasDirSegment(command, 'tidal')) {
+    switchToMplayer()
+    currentMeta.currentType = 'tidal'
+    // /musicsearch/tidal/<album|playlist>:<id>, to go on: /musicsearch/tidal/resume/<album|playlist>:<id>:<trackNr>:<progressPct>
+    const parts = command.base.split(':')
+    const trackNr = Number.parseInt(parts[2], 10)
+    const progressPct = Number.parseFloat(parts[3])
+    if (hasDirSegment(command, 'resume') && parts.length === 4 && trackNr >= 1 && Number.isFinite(progressPct)) {
+      playTidalList(`${parts[0]}:${parts[1]}`, { trackNr, progressPct })
+    } else playTidalList(`${parts[0]}:${parts[1]}`)
   }
 
   if (hasDirSegment(command, 'radio')) {
@@ -3584,7 +3712,7 @@ app.use((req, res) => {
   else if (command.name.includes('localtrack:')) {
     const targetPosition = Number.parseInt(command.name.split(':')[1], 10)
     jumpToTrack(targetPosition)
-  } else if (command.name.includes('nastrack:')) {
+  } else if (command.name.includes('nastrack:') || command.name.includes('tidaltrack:')) {
     const targetPosition = Number.parseInt(command.name.split(':')[1], 10)
     jumpToTrack(targetPosition)
   }

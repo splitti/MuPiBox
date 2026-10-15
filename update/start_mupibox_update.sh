@@ -852,6 +852,10 @@ rm -f /tmp/mupibox-update-failed
 	mv -f ${MUPI_SRC}/config/services/mupi_autoconnect-wifi.service /etc/systemd/system/mupi_autoconnect-wifi.service  >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_mqtt.service /etc/systemd/system/mupi_mqtt.service  >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_rotary.service /etc/systemd/system/mupi_rotary.service  >&3 2>&3
+	# TIDAL (unofficial, see scripts/mupibox/tidal_service.py): on only when switched on in the app (below)
+	if [ -f ${MUPI_SRC}/config/services/mupi_tidal.service ]; then
+		mv -f ${MUPI_SRC}/config/services/mupi_tidal.service /etc/systemd/system/mupi_tidal.service >&3 2>&3
+	fi
 	# LAN without waiting at boot, and an address at once when a cable is plugged in (see scripts/mupibox/mupi_ethernet.sh)
 	if [ -f ${MUPI_SRC}/config/services/mupi_ethernet.service ]; then
 		mv -f ${MUPI_SRC}/config/services/mupi_ethernet.service /etc/systemd/system/mupi_ethernet.service >&3 2>&3
@@ -1048,6 +1052,11 @@ rm -f /tmp/mupibox-update-failed
 	fi
 	if [ "${MUPI_GOODBYE}" = "1" ]; then
 		systemctl enable --now mupi_goodbye.service >&3 2>&3
+	fi
+	# TIDAL switched on in the app: its Python brought to the version the box is tested with, and the service started
+	# again with the new tidal_service.py (the sign-in stays). Without internet now: it keeps running as it was.
+	if [ -x /usr/local/bin/mupibox/tidal_setup.sh ] && [ "$(/usr/bin/jq -r '.tidal.enabled // false' /etc/mupibox/mupiboxconfig.json 2>/dev/null)" = "true" ]; then
+		/usr/local/bin/mupibox/tidal_setup.sh on >&3 2>&3 || echo "## WARNING: TIDAL could not be set up - the app's switch tries again ##" >&3 2>&3
 	fi
 	after=$(date +%s)
 	echo -e "## Restarting services  ##  finished after $((after - $before)) seconds" >&3 2>&3

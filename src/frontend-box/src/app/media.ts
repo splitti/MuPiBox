@@ -45,6 +45,13 @@ export interface Media {
   resumelocalcurrentTracknr?: number
   resumelocalprogressTime?: number
   resumerssprogressTime?: number
+  // TIDAL (type: 'tidal'): id is TIDAL's id of the album, playlist or artist (a whole artist: the list shows its albums,
+  // see MediaService.tidalArtistAlbums), played by the box's TIDAL service and mpv
+  tidalKind?: 'album' | 'playlist' | 'artist'
+  // a whole TIDAL artist: only the albums at these positions by release (1 = the oldest), and without these ids
+  range_from?: number
+  range_to?: number
+  exclude_album_ids?: string[]
   // Full NAS path of this entry's folder, used for NAS media (type: 'nas')
   // to browse/stream it live instead of resolving a local file path.
   nasPath?: string
