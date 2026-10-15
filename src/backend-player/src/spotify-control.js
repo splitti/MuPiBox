@@ -2356,6 +2356,8 @@ async function playNasList(nasPath, resume = null) {
   const decodedPath = decodeURIComponent(nasPath)
   log.debug(`${now()}: [Spotify Control] Starting NAS playback: ${decodedPath}`)
   const generation = ++playbackGeneration
+  // (a pause while the list loads: the start is not made - the start of the list takes a pause back, the music came)
+  const asked = playPauseRequest
   clearLibraryResumeTimers()
 
   try {
@@ -2378,8 +2380,8 @@ async function playNasList(nasPath, resume = null) {
     // The track list can take seconds (NAS over WebDAV). A stop, another album, or a playtime /
     // quiet-hours block in the meantime used to be overtaken: the late answer started playback
     // anyway. Such a start is dropped now.
-    if (generation !== playbackGeneration || isPlaybackBlocked()) {
-      log.debug(`${now()}: [Spotify Control] NAS playback of ${decodedPath} dropped (stopped, replaced or blocked meanwhile)`)
+    if (generation !== playbackGeneration || asked !== playPauseRequest || isPlaybackBlocked()) {
+      log.debug(`${now()}: [Spotify Control] NAS playback of ${decodedPath} dropped (paused, stopped, replaced or blocked meanwhile)`)
       return
     }
     currentNasTracks = tracks
