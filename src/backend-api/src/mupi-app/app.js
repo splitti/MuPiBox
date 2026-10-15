@@ -2056,26 +2056,14 @@ async function openLevel() {
   drawHear()
   if (!top || top.kind === 'artist') return
   if (top.kind === 'spartist') {
-    // the artist's albums from Spotify: the box's backend gives at most 10 at a time (Benjamin Blümchen has more than
-    // 280), so the pages after the first are asked for six at a time, and the grid fills as they come
-    const page = (offset) => api(`/api/spotify/artist/${encodeURIComponent(top.path)}/albums?limit=50&offset=${offset}`)
-    const first = await page(0)
+    // the artist's albums from Spotify, all at once: the backend keeps them on the SD card and checks them with one page
+    // at most every 6 hours (artist-albums-store.ts) - a subscribed artist's list is kept already. (Asked page by page,
+    // six at a time, it was about 30 requests for a big artist at every opening.)
+    const r = await api(`/api/spotify/artist/${encodeURIComponent(top.path)}/albums?all=1`)
     if (hear.stack.at(-1) !== top) return
-    if (!first.ok) hear.levelError = 'Spotify antwortet gerade nicht.'
-    const all = [...(first.body?.items ?? [])]
-    hear.level = [...all]
+    if (!r.ok) hear.levelError = 'Spotify antwortet gerade nicht.'
+    hear.level = r.body?.items ?? []
     drawHear()
-    const step = first.body?.items?.length || 10
-    const total = Math.min(1000, Number(first.body?.total) || 0)
-    const offsets = []
-    for (let o = step; o < total; o += step) offsets.push(o)
-    for (let i = 0; i < offsets.length; i += 6) {
-      const pages = await Promise.all(offsets.slice(i, i + 6).map(page))
-      if (hear.stack.at(-1) !== top) return
-      for (const p of pages) all.push(...(p.body?.items ?? []))
-      hear.level = [...all]
-      drawHear()
-    }
     return
   }
   const r = await api(top.kind === 'nas' ? `/api/nas/children?path=${encodeURIComponent(top.path)}` : `/api/library/children?path=${encodeURIComponent(top.path)}`)
