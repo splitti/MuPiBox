@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, Signal } from '@angular/core'
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, input, Signal } from '@angular/core'
 import { IonIcon } from '@ionic/angular/standalone'
 import { addIcons } from 'ionicons'
 import { hourglass, hourglassOutline, moonOutline, musicalNotesOutline } from 'ionicons/icons'
@@ -72,7 +72,10 @@ export class PlaytimeBlockedOverlayComponent {
 
   constructor() {
     addIcons({ moonOutline, musicalNotesOutline, hourglassOutline, hourglass })
-    // created each time playback gets blocked: pick up texts changed in the meantime
+    // created each time playback gets blocked: pick up texts changed in the meantime - and again while it is shown
+    // (a quiet time lasts the night: a text changed in the app showed only at the next one, or after a restart)
     this.texts.refresh()
+    const again = setInterval(() => this.texts.refresh(), 30000)
+    inject(DestroyRef).onDestroy(() => clearInterval(again))
   }
 }

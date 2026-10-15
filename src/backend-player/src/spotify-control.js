@@ -1312,6 +1312,9 @@ function quietHoursTickStep() {
         finalizeQuietHoursBlock(`entered window ${window.from}-${window.to} (${!isActuallyPlaying() ? 'nothing playing' : currentMeta.currentType === 'radio' ? 'radio stream' : 'no grace configured'})`)
       }
     } else if (quietHoursState.state === 'grace') {
+      // (the window as the settings have it now: its name changed in the app while it runs is the display's heading
+      // at once - it stayed the one of its start until the next window or a restart)
+      quietHoursState.activeWindow = window
       quietGraceIdle = isActuallyPlaying() ? 0 : quietGraceIdle + 1
       if (quietHoursState.graceEndsAt !== null && Date.now() >= quietHoursState.graceEndsAt) {
         finalizeQuietHoursBlock(`grace safety limit reached (${quietHoursState.graceMode})`)
@@ -1320,7 +1323,8 @@ function quietHoursTickStep() {
         finalizeQuietHoursBlock('nothing playing any more during the grace period')
       }
     }
-    // 'blocked': stay blocked
+    // 'blocked': stay blocked (with the window as the settings have it now, see above)
+    else quietHoursState.activeWindow = window
   } else if (quietHoursState.state !== 'normal') {
     // Just exited a window — release without auto-starting playback
     console.log(`${now.toLocaleString()}: [QuietHours] Window ended. Playback can resume on user action.`)
