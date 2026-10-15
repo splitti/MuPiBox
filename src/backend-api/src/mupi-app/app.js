@@ -3612,7 +3612,7 @@ function drawSearch() {
       ? card(
           'tracks',
           'Titel',
-          (d.tracks ?? []).filter((t) => t.album?.id).map((t) => ({ kind: 'album', id: t.album.id, name: t.album.name ?? t.name, t: t.name, s: `${spNames(t.artists)} · ${t.album?.name ?? ''}`, img: spImg(t.album?.images) })),
+          (d.tracks ?? []).filter((t) => t.album?.id).map((t) => viaSubscription({ kind: 'album', id: t.album.id, name: t.album.name ?? t.name, t: t.name, s: `${spNames(t.artists)} · ${t.album?.name ?? ''}`, img: spImg(t.album?.images), artistIds: (t.album?.artists ?? t.artists ?? []).map((x) => x?.id).filter(Boolean) })),
           `<p class="help" style="margin:0">${esc('Ein Titel kommt mit seinem ganzen Album auf die Box.')}</p>`,
         )
       : '') +
