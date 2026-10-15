@@ -4,16 +4,31 @@
 # Start with: cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup.sh | sudo bash
 # The channel as the first argument (stable when none is given), e.g. the development version on a fresh DietPi:
 #   cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup.sh | sudo bash -s -- dev
+# Or a branch of a repository (to test a state before its release), as the update takes it:
+#   ... | sudo bash -s -- branch <branch> [owner/repository, splitti/MuPiBox when none is given]
 
 case "$1" in
 	stable|beta|dev)
 		RELEASE="$1"
 		;;
+	branch)
+		RELEASE="dev"
+		BRANCH="$2"
+		REPO="${3:-splitti/MuPiBox}"
+		if ! [[ "${BRANCH}" =~ ^[A-Za-z0-9._/-]+$ ]] || ! [[ "${REPO}" =~ ^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$ ]]; then
+			echo "Usage: autosetup.sh branch <branch> [owner/repository]" >&2
+			exit 1
+		fi
+		if [ "$(curl -s -o /dev/null -w "%{http_code}" "https://api.github.com/repos/${REPO}/branches/${BRANCH}")" != "200" ]; then
+			echo "Branch '${BRANCH}' not found in ${REPO}" >&2
+			exit 1
+		fi
+		;;
 	"")
 		RELEASE="stable"
 		;;
 	*)
-		echo "Unknown channel '$1' - use stable, beta or dev" >&2
+		echo "Unknown channel '$1' - use stable, beta, dev or branch <branch> [owner/repository]" >&2
 		exit 1
 		;;
 esac
@@ -177,10 +192,17 @@ STEP=0
 
 	echo -e "XXX\n${STEP}\nPrepare MuPiBox Download ... \nXXX"
 	before=$(date +%s)
-	wget -q -O ${VER_JSON} https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json >&3 2>&3
-	VERSION=$(/usr/bin/jq -r .release.${RELEASE}[-1].version ${VER_JSON})
-	MUPIBOX_URL=$(/usr/bin/jq -r .release.${RELEASE}[-1].url ${VER_JSON})
-	VERSION_LONG="${VERSION} ${RELEASE}"
+	if [ -n "${BRANCH}" ]; then
+		# a branch: its state now, named as the update names it (DEV <branch> <date of its last commit>)
+		VERSION="${BRANCH}"
+		MUPIBOX_URL="https://github.com/${REPO}/archive/refs/heads/${BRANCH}.zip"
+		VERSION_LONG="DEV ${BRANCH} $(curl -s "https://api.github.com/repos/${REPO}/branches/${BRANCH}" | /usr/bin/jq -r '.commit.commit.committer.date' | cut -d'T' -f1)"
+	else
+		wget -q -O ${VER_JSON} https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json >&3 2>&3
+		VERSION=$(/usr/bin/jq -r .release.${RELEASE}[-1].version ${VER_JSON})
+		MUPIBOX_URL=$(/usr/bin/jq -r .release.${RELEASE}[-1].url ${VER_JSON})
+		VERSION_LONG="${VERSION} ${RELEASE}"
+	fi
 	MUPI_SRC="/home/dietpi/MuPiBox-${VERSION}"
 	after=$(date +%s)
 	echo -e "## Prepare MuPiBox Download ## finished after $((after - before)) seconds" >&3 2>&3
@@ -208,6 +230,9 @@ STEP=0
 
 	echo -e "XXX\n${STEP}\nUnzip MuPiBox Version ${VERSION_LONG}... \nXXX"
 	before=$(date +%s)
+	# (the folder the zip unpacks to: <repository>-<branch or version>, a branch's "/" made "-" by GitHub)
+	UNPACKED=$(unzip -Z1 /home/dietpi/mupibox.zip 2>/dev/null | head -n 1 | cut -d/ -f1)
+	[ -n "${UNPACKED}" ] && MUPI_SRC="/home/dietpi/${UNPACKED}"
 	unzip -q -d /home/dietpi/ /home/dietpi/mupibox.zip >&3 2>&3
 	rm /home/dietpi/mupibox.zip >&3 2>&3
 	after=$(date +%s)
