@@ -2851,5 +2851,7 @@
  "Playlists": "Плейлисти",
  "Reihenfolge": "Порядок",
  "Künstler abonniert": "Підписка на виконавця",
- "Anmeldung und Smart-Sync · Bibliothek › Spotify": "Вхід і Smart-Sync · Бібліотека › Spotify"
+ "Anmeldung und Smart-Sync · Bibliothek › Spotify": "Вхід і Smart-Sync · Бібліотека › Spotify",
+ "Die Überschrift ist der Name der Ruhezeit (Spielzeit › Ruhezeiten), z. B. „Hausaufgaben“ oder „Gute Nacht“. Ohne Namen und bei „Ruhe sofort“ steht dort „{}“.": "Заголовок — це назва періоду тиші (Час гри › Періоди відпочинку), наприклад «Уроки» або «На добраніч». Без назви та при «Тиша негайно» там стоїть «{}».",
+ "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Показується на екрані як заголовок, поки триває цей період тиші – наприклад «Уроки» або «На добраніч»."
 }

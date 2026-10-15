@@ -20,7 +20,7 @@ Unter **Eigene Bilder** kannst du statt der vorgefertigten Szenen ein eigenes Fo
 
 ### Texte auf dem Display
 
-Was das Kind liest, wenn das Limit erreicht ist, eine Ruhezeit läuft oder der QR-Code für Eltern erscheint, änderst du unter **Einstellungen › Aussehen › Texte auf dem Display**. Bleibt ein Feld leer, gilt der Text der eingestellten Sprache.
+Was das Kind liest, wenn das Limit erreicht ist, eine Ruhezeit läuft oder der QR-Code für Eltern erscheint, änderst du unter **Einstellungen › Aussehen › Texte auf dem Display**. Bleibt ein Feld leer, gilt der Text der eingestellten Sprache. Bei der Ruhezeit ist die Überschrift der Name des Zeitfensters ([Ruhezeiten](../spielzeit/ruhezeiten.md)); dort änderst du nur den Text darunter.
 
 ## Cover
 

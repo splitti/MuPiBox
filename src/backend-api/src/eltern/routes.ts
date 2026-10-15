@@ -119,7 +119,7 @@ export interface ElternRouterDeps {
 const DISPLAY_TEXT_KEYS = [
   'blockedHeading',
   'blockedSubheading',
-  'quietHeading',
+  // (no quietHeading: a quiet time's heading is the name of its window - see the box's display-texts.service)
   'quietSubheading',
   'parentsTitle',
   'parentsHint',

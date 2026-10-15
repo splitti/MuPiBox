@@ -2851,5 +2851,7 @@
  "Playlists": "Spellistor",
  "Reihenfolge": "Ordning",
  "Künstler abonniert": "Artist prenumererad",
- "Anmeldung und Smart-Sync · Bibliothek › Spotify": "Inloggning och Smart-Sync · Bibliotek › Spotify"
+ "Anmeldung und Smart-Sync · Bibliothek › Spotify": "Inloggning och Smart-Sync · Bibliotek › Spotify",
+ "Die Überschrift ist der Name der Ruhezeit (Spielzeit › Ruhezeiten), z. B. „Hausaufgaben“ oder „Gute Nacht“. Ohne Namen und bei „Ruhe sofort“ steht dort „{}“.": "Rubriken är vilotidens namn (Speltid › Vilotider), t.ex. ”Läxor” eller ”God natt”. Utan namn och vid ”Vila nu” står det ”{}”.",
+ "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Visas på skärmen som rubrik medan den här vilotiden pågår – t.ex. ”Läxor” eller ”God natt”."
 }

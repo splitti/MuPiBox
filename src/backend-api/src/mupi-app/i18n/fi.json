@@ -2851,5 +2851,7 @@
  "Playlists": "Soittolistat",
  "Reihenfolge": "Järjestys",
  "Künstler abonniert": "Artisti tilattu",
- "Anmeldung und Smart-Sync · Bibliothek › Spotify": "Kirjautuminen ja Smart-Sync · Kirjasto › Spotify"
+ "Anmeldung und Smart-Sync · Bibliothek › Spotify": "Kirjautuminen ja Smart-Sync · Kirjasto › Spotify",
+ "Die Überschrift ist der Name der Ruhezeit (Spielzeit › Ruhezeiten), z. B. „Hausaufgaben“ oder „Gute Nacht“. Ohne Namen und bei „Ruhe sofort“ steht dort „{}“.": "Otsikko on hiljaisen ajan nimi (Soittoaika › Hiljaiset hetket), esim. ”Läksyt” tai ”Hyvää yötä”. Ilman nimeä ja kohdassa ”Hiljaisuus heti” siinä lukee ”{}”.",
+ "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Näkyy näytöllä otsikkona, kun tämä hiljainen aika on käynnissä – esim. ”Läksyt” tai ”Hyvää yötä”."
 }

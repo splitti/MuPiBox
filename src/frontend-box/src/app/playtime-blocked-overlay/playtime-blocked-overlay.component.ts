@@ -60,7 +60,8 @@ export class PlaytimeBlockedOverlayComponent {
         subheading: this.texts.text('blockedSubheading'),
       }
     }
-    // A quiet window with a label ("Bedtime", "Homework") shows that label as the heading.
+    // A quiet window with a name ("Bedtime", "Homework") shows that name as the heading - the heading of the quiet
+    // time is that name (Spielzeit › Ruhezeiten); without one, and for a parent's pause, the language's text.
     const label = s.blockSource === 'quiet' ? s.quiet.label?.trim() : undefined
     return {
       iconName: label ? 'hourglass-outline' : 'moon-outline',

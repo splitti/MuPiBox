@@ -2851,5 +2851,7 @@
  "Playlists": "Playlists",
  "Reihenfolge": "Order",
  "Künstler abonniert": "Artist subscribed",
- "Anmeldung und Smart-Sync · Bibliothek › Spotify": "Sign-in and Smart Sync · Library › Spotify"
+ "Anmeldung und Smart-Sync · Bibliothek › Spotify": "Sign-in and Smart Sync · Library › Spotify",
+ "Die Überschrift ist der Name der Ruhezeit (Spielzeit › Ruhezeiten), z. B. „Hausaufgaben“ oder „Gute Nacht“. Ohne Namen und bei „Ruhe sofort“ steht dort „{}“.": "The heading is the name of the quiet time (Playtime › Quiet times), e.g. “Homework” or “Good night”. Without a name, and for “Quiet now”, it says “{}”.",
+ "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Shown on the display as the heading while this quiet time lasts – e.g. “Homework” or “Good night”."
 }

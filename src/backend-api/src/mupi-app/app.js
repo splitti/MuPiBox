@@ -1823,7 +1823,8 @@ function openRule(rule, page) {
   const days = new Set(r.days)
   openSheet(
     `<h2>${rule ? 'Zeitfenster bearbeiten' : 'Neues Zeitfenster'}</h2>
-     <div class="field"><label for="rule-label">Bezeichnung</label><input class="input" id="rule-label" maxlength="80" placeholder="z. B. Schlafenszeit" value="${esc(r.label)}"></div>
+     <div class="field"><label for="rule-label">Bezeichnung</label><input class="input" id="rule-label" maxlength="80" placeholder="z. B. Schlafenszeit" value="${esc(r.label)}">
+       <p class="help" style="margin:0">${esc('Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.')}</p></div>
      <div class="rule-times"><div class="field"><label for="rule-from">Von</label>${timeSelect('rule-from', r.from)}</div>
        <div class="field"><label for="rule-to">Bis</label>${timeSelect('rule-to', r.to)}</div></div>
      <div class="field"><label>Tage</label><div class="daypick" id="rule-days">${DAY_SHORT.map((d, i) => `<button aria-pressed="${days.has(i)}" data-d="${i}" aria-label="${DAY_LONG[i]}">${d}</button>`).join('')}</div></div>
@@ -6499,7 +6500,6 @@ function mountBoot(root, page) {
 const DT_FIELDS = [
   ['blocked', 'blockedHeading', 'Überschrift'],
   ['blocked', 'blockedSubheading', 'Text darunter'],
-  ['quiet', 'quietHeading', 'Überschrift'],
   ['quiet', 'quietSubheading', 'Text darunter'],
   ['parents', 'parentsTitle', 'Titel'],
   ['parents', 'parentsHint', 'Hinweis'],
@@ -6533,8 +6533,11 @@ function textsTop() {
       <div id="dt-fields">${DT_FIELDS.filter(([sc]) => sc === disp.dtScreen)
         .map(([, key, label]) => `<div class="field"><label for="dt-${key}">${label}</label><input class="input" id="dt-${key}" data-dt="${key}" maxlength="120" value="${esc(disp.dt.texts[key] ?? '')}" placeholder="${esc(defaults[key] ?? '')}"></div>`)
         .join('')}${
-        // (the display shows a quiet window's own name as the heading - "my heading is not taken" without it)
-        disp.dtScreen === 'quiet' ? '<p class="help">Hat eine Ruhezeit einen Namen (Spielzeit › Ruhezeiten), steht dort dieser Name als Überschrift.</p>' : ''
+        // (a quiet time's heading is the name of its window - one heading for all of them did not fit: "Gute Nacht"
+        // for the homework; the field for it is gone)
+        disp.dtScreen === 'quiet'
+          ? `<p class="help">${esc(`Die Überschrift ist der Name der Ruhezeit (Spielzeit › Ruhezeiten), z. B. „Hausaufgaben“ oder „Gute Nacht“. Ohne Namen und bei „Ruhe sofort“ steht dort „${defaults.quietHeading ?? 'Ruhezeit'}“.`)}</p>`
+          : ''
       }</div>
       <div class="btns"><button class="btn primary" id="dt-save">Texte speichern</button></div></section>`,
   ]

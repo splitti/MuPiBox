@@ -2851,5 +2851,7 @@
  "Playlists": "Playlists",
  "Reihenfolge": "Orden",
  "Künstler abonniert": "Artista suscrito",
- "Anmeldung und Smart-Sync · Bibliothek › Spotify": "Inicio de sesión y Smart-Sync · Biblioteca › Spotify"
+ "Anmeldung und Smart-Sync · Bibliothek › Spotify": "Inicio de sesión y Smart-Sync · Biblioteca › Spotify",
+ "Die Überschrift ist der Name der Ruhezeit (Spielzeit › Ruhezeiten), z. B. „Hausaufgaben“ oder „Gute Nacht“. Ohne Namen und bei „Ruhe sofort“ steht dort „{}“.": "El título es el nombre del tiempo de silencio (Tiempo de juego › Horas de descanso), p. ej. «Deberes» o «Buenas noches». Sin nombre y con «Descanso inmediato» aparece «{}».",
+ "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Aparece en la pantalla como título mientras dura este tiempo de silencio – p. ej. «Deberes» o «Buenas noches»."
 }

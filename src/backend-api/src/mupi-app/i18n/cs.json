@@ -2851,5 +2851,7 @@
  "Playlists": "Playlisty",
  "Reihenfolge": "Pořadí",
  "Künstler abonniert": "Interpret odebírán",
- "Anmeldung und Smart-Sync · Bibliothek › Spotify": "Přihlášení a Smart-Sync · Knihovna › Spotify"
+ "Anmeldung und Smart-Sync · Bibliothek › Spotify": "Přihlášení a Smart-Sync · Knihovna › Spotify",
+ "Die Überschrift ist der Name der Ruhezeit (Spielzeit › Ruhezeiten), z. B. „Hausaufgaben“ oder „Gute Nacht“. Ohne Namen und bei „Ruhe sofort“ steht dort „{}“.": "Nadpis je název doby klidu (Herní doba › Doby odpočinku), např. „Úkoly“ nebo „Dobrou noc“. Bez názvu a u „Klid ihned“ tam stojí „{}“.",
+ "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Zobrazí se na displeji jako nadpis, dokud tato doba klidu trvá – např. „Úkoly“ nebo „Dobrou noc“."
 }

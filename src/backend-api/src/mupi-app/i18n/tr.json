@@ -2851,5 +2851,7 @@
  "Playlists": "Çalma listeleri",
  "Reihenfolge": "Sıra",
  "Künstler abonniert": "Sanatçıya abone olundu",
- "Anmeldung und Smart-Sync · Bibliothek › Spotify": "Oturum açma ve Smart-Sync · Kütüphane › Spotify"
+ "Anmeldung und Smart-Sync · Bibliothek › Spotify": "Oturum açma ve Smart-Sync · Kütüphane › Spotify",
+ "Die Überschrift ist der Name der Ruhezeit (Spielzeit › Ruhezeiten), z. B. „Hausaufgaben“ oder „Gute Nacht“. Ohne Namen und bei „Ruhe sofort“ steht dort „{}“.": "Başlık, sessiz saatin adıdır (Oyun süresi › Sessiz saatler), ör. „Ödev“ ya da „İyi geceler“. Ad yoksa ve „Hemen sessizlik“ için orada „{}“ yazar.",
+ "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Bu sessiz saat sürdükçe ekranda başlık olarak görünür – ör. „Ödev“ ya da „İyi geceler“."
 }
