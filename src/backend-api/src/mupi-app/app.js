@@ -3507,14 +3507,16 @@ const spAlbum = (a) => ({
   img: spImg(a.images),
   date: String(a.release_date ?? ''),
   single: a.album_type === 'single',
+  artistIds: (a.artists ?? []).map((x) => x?.id).filter(Boolean),
 })
 
 // A row of a search result (Spotify, TIDAL): opens what it is - an artist its albums, an album the sheet to add it;
 // a tick for what is in the library already (have: "kind:id", see libraryHave)
+// (via: an album of a subscribed artist - on the box through the subscription, not as an entry of its own)
 function resultRow(r, i, list, have) {
-  const there = have?.has(`${r.kind}:${r.id}`)
+  const there = have?.has(`${r.kind}:${r.id}`) || !!r.via
   return `<button class="entry lib-row ard-show" data-list="${list}" data-i="${i}"><span class="lib-thumb">${r.img ? `<img src="${esc(r.img)}" alt="" loading="lazy">` : ''}${icon(r.kind === 'artist' ? 'folder' : 'music', 18)}</span>
-    <span class="lbl"><b translate="no">${esc(r.t)}</b><small translate="no">${esc(r.s)}${there ? ` · <span class="in-lib">${esc('In der Bibliothek')}</span>` : ''}</small></span>${there ? `<span class="in-lib" aria-hidden="true">${icon('check', 18)}</span>` : ''}<span class="chev">${icon('chevron', 18)}</span></button>`
+    <span class="lbl"><b translate="no">${esc(r.t)}</b><small translate="no">${esc(r.s)}${there ? ` · <span class="in-lib">${esc(have?.has(`${r.kind}:${r.id}`) ? 'In der Bibliothek' : 'Künstler abonniert')}</span>` : ''}</small></span>${there ? `<span class="in-lib" aria-hidden="true">${icon('check', 18)}</span>` : ''}<span class="chev">${icon('chevron', 18)}</span></button>`
 }
 
 // The albums of an artist (Spotify, TIDAL), filtered: by a text, by kind (albums or EPs and singles) and in an order -
@@ -3605,7 +3607,7 @@ function drawSearch() {
   const show = (t) => search.type === 'Alle' || search.type === t
   const html =
     (show('Künstler') ? card('artists', 'Künstler', (d.artists ?? []).filter((a) => a.id).map((a) => ({ kind: 'artist', id: a.id, name: a.name, t: a.name, s: 'Künstler', img: spImg(a.images) }))) : '') +
-    (show('Alben') ? card('albums', 'Alben', (d.albums ?? []).filter((a) => a.id).map(spAlbum)) : '') +
+    (show('Alben') ? card('albums', 'Alben', (d.albums ?? []).filter((a) => a.id).map(spAlbum).map(viaSubscription)) : '') +
     (show('Titel')
       ? card(
           'tracks',
@@ -3623,6 +3625,12 @@ function drawSearch() {
       : '')
   box.innerHTML = html || `<p class="help">${esc('Nichts gefunden.')}</p>`
   wire()
+}
+
+// An album of an artist subscribed to (via: that artist's id) - marked in the results as on the box already
+function viaSubscription(r) {
+  const via = (r.artistIds ?? []).find((id) => search.have.has(`artist:${id}`))
+  return via ? { ...r, via } : r
 }
 
 // An artist from the search: its albums (all at once - the backend keeps them, see getAllArtistAlbums), and
