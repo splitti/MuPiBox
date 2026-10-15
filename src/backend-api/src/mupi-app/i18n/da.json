@@ -2821,5 +2821,17 @@
  "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Uden afspilleren mpv spiller bibliotek, NAS, radio, podcasts og meddelelser ikke. Sidste forsøg mislykkedes (internet?) – tryk for at prøve igen.",
  "mpv installieren?": "Installer mpv?",
  "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "Boksen henter afspilleren fra internettet og installerer den. Det tager et par minutter, derefter genstarter afspilleren.",
- "mpv ist installiert, der Player startet neu": "mpv er installeret, afspilleren genstarter"
+ "mpv ist installiert, der Player startet neu": "mpv er installeret, afspilleren genstarter",
+ "Der Lüfter läuft gerade mit {} %.": "Blæseren kører lige nu med {} %.",
+ "Der Lüfter steht gerade – die Box ist kühl genug.": "Blæseren står stille lige nu – boksen er kølig nok.",
+ "Der Lüfter läuft, seine Stufe ist noch nicht bekannt.": "Blæseren kører, dens trin er endnu ikke kendt.",
+ "Der Lüfter ist eingeschaltet, sein Dienst läuft aber nicht.": "Blæseren er slået til, men dens tjeneste kører ikke.",
+ "Fehlende Programme werden installiert": "Manglende programmer installeres",
+ "Das dauert ein paar Minuten.": "Det tager et par minutter.",
+ "Nicht installiert: {}. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Ikke installeret: {}. Sidste forsøg mislykkedes (internet?) – tryk for at prøve igen.",
+ "Nicht installiert: {}. Ohne sie fehlen zum Beispiel der Boxname auf den Startbildern oder das Abschiedsbild. Antippen, um sie zu installieren.": "Ikke installeret: {}. Uden dem mangler for eksempel boksens navn på startbillederne eller farvelbilledet. Tryk for at installere dem.",
+ "Programme der Box fehlen": "Boksens programmer mangler",
+ "Die fehlenden Programme sind installiert": "De manglende programmer er installeret",
+ "Fehlende Programme installieren?": "Installer manglende programmer?",
+ "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Boksen henter {} fra internettet og installerer dem. Det tager et par minutter."
 }

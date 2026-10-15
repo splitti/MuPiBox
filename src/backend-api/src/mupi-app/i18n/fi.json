@@ -2821,5 +2821,17 @@
  "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Ilman mpv-soitinta kirjasto, NAS, radio, podcastit ja kuulutukset eivät soi. Viimeisin yritys epäonnistui (internet?) – yritä uudelleen napauttamalla.",
  "mpv installieren?": "Asennetaanko mpv?",
  "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "Laatikko lataa soittimen internetistä ja asentaa sen. Tämä kestää muutaman minuutin, sen jälkeen soitin käynnistyy uudelleen.",
- "mpv ist installiert, der Player startet neu": "mpv on asennettu, soitin käynnistyy uudelleen"
+ "mpv ist installiert, der Player startet neu": "mpv on asennettu, soitin käynnistyy uudelleen",
+ "Der Lüfter läuft gerade mit {} %.": "Tuuletin pyörii nyt {} %:n teholla.",
+ "Der Lüfter steht gerade – die Box ist kühl genug.": "Tuuletin on nyt pysähdyksissä – laatikko on tarpeeksi viileä.",
+ "Der Lüfter läuft, seine Stufe ist noch nicht bekannt.": "Tuuletin pyörii, sen tasoa ei vielä tiedetä.",
+ "Der Lüfter ist eingeschaltet, sein Dienst läuft aber nicht.": "Tuuletin on päällä, mutta sen palvelu ei ole käynnissä.",
+ "Fehlende Programme werden installiert": "Puuttuvia ohjelmia asennetaan",
+ "Das dauert ein paar Minuten.": "Tämä kestää muutaman minuutin.",
+ "Nicht installiert: {}. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Ei asennettu: {}. Viimeisin yritys epäonnistui (internet?) – yritä uudelleen napauttamalla.",
+ "Nicht installiert: {}. Ohne sie fehlen zum Beispiel der Boxname auf den Startbildern oder das Abschiedsbild. Antippen, um sie zu installieren.": "Ei asennettu: {}. Ilman niitä puuttuu esimerkiksi laatikon nimi aloituskuvista tai hyvästelykuva. Asenna ne napauttamalla.",
+ "Programme der Box fehlen": "Laatikon ohjelmia puuttuu",
+ "Die fehlenden Programme sind installiert": "Puuttuvat ohjelmat on asennettu",
+ "Fehlende Programme installieren?": "Asennetaanko puuttuvat ohjelmat?",
+ "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Laatikko lataa {} internetistä ja asentaa ne. Tämä kestää muutaman minuutin."
 }

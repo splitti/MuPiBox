@@ -1373,7 +1373,7 @@ function nextQuiet(schedule) {
 }
 
 async function loadNotices(root) {
-  const [hat, sync, access, auth, tools] = await Promise.all([api('/api/mupihat'), api('/api/spotify-sync/status'), api(`${API}/spotify-access`), api(`${API}/auth-state`), api(`${API}/player-tools`)])
+  const [hat, sync, access, auth, tools] = await Promise.all([api('/api/mupihat'), api('/api/spotify-sync/status'), api(`${API}/spotify-access`), api(`${API}/auth-state`), api(`${API}/missing-programs`)])
   const notes = []
   // no password, or the login off: everyone in the home network can set up the box - said every time, it is not closed
   // for good (the parents decide on the page Passwort); with the login on but the well-known default password, that
@@ -1382,23 +1382,32 @@ async function loadNotices(root) {
   } else if (auth.ok && auth.body?.defaultPassword) {
     notes.push(['lock', 'Standardpasswort aktiv', 'Die Box nutzt noch das Standardpasswort, das in jeder Anleitung steht. Antippen, um ein eigenes festzulegen.', 'passwort'])
   }
-  // mpv, the player for everything but Spotify, missing (an update whose installation failed - there is no other
-  // player since 5.0.10): installed from here, the start page says when it is done
+  // Programs a part of the box needs, not installed (an update whose installation failed): mpv - the player for
+  // everything but Spotify, there is no other since 5.0.10 - and those of the start pictures and the goodbye picture
+  // (see install_missing.sh). Installed from here, the start page says when it is done.
   clearTimeout(root.mpvCheck)
-  if (tools.ok && (tools.body?.mpv === false || tools.body?.job?.running)) {
-    if (tools.body.job?.running) {
-      notes.push(['sync', 'mpv wird installiert', 'Das dauert ein paar Minuten, danach startet der Player neu.', () => {}])
-      root.mpvCheck = setTimeout(() => root.isConnected && loadNotices(root), 10000)
-    } else {
-      const text =
-        tools.body.job?.ok === false
-          ? 'Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.'
-          : 'Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Antippen, um ihn zu installieren.'
-      notes.push(['music', 'mpv fehlt – nur Spotify spielt', text, () => installMpv(root)])
-    }
-  } else if (tools.ok && tools.body?.job?.ok === true && root.mpvInstalling) {
-    root.mpvInstalling = false
-    toast('mpv ist installiert, der Player startet neu')
+  const installJob = tools.ok ? tools.body?.job : null
+  const missing = tools.ok && Array.isArray(tools.body?.missing) ? tools.body.missing : []
+  if (installJob?.running) {
+    if ((installJob.programs ?? []).includes('mpv')) notes.push(['sync', 'mpv wird installiert', 'Das dauert ein paar Minuten, danach startet der Player neu.', () => {}])
+    else notes.push(['sync', 'Fehlende Programme werden installiert', 'Das dauert ein paar Minuten.', () => {}])
+    root.mpvCheck = setTimeout(() => root.isConnected && loadNotices(root), 10000)
+  } else if (missing.includes('mpv')) {
+    const text =
+      installJob?.ok === false
+        ? 'Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.'
+        : 'Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Antippen, um ihn zu installieren.'
+    notes.push(['music', 'mpv fehlt – nur Spotify spielt', text, () => installMissing(root, missing)])
+  } else if (missing.length) {
+    const list = missing.join(', ')
+    const text =
+      installJob?.ok === false
+        ? `Nicht installiert: ${list}. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.`
+        : `Nicht installiert: ${list}. Ohne sie fehlen zum Beispiel der Boxname auf den Startbildern oder das Abschiedsbild. Antippen, um sie zu installieren.`
+    notes.push(['image', 'Programme der Box fehlen', text, () => installMissing(root, missing)])
+  } else if (installJob?.ok === true && root.installing) {
+    toast(root.installing === 'mpv' ? 'mpv ist installiert, der Player startet neu' : 'Die fehlenden Programme sind installiert')
+    root.installing = null
   }
   const pct = hat.body?.Bat_Percent
   const battery = hat.ok && !noBattery(hat.body)
@@ -1456,11 +1465,16 @@ async function loadNotices(root) {
   if (band?.isConnected) drawNotices(band, items)
 }
 
-async function installMpv(root) {
-  if (!(await ask('mpv installieren?', 'Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.', 'Installieren'))) return
-  const r = await api(`${API}/player-tools/install-mpv`, { method: 'POST', body: {} })
+// (missing: what the start page found - all of it is installed, mpv among it or not)
+async function installMissing(root, missing) {
+  const mpv = missing.includes('mpv')
+  const yes = mpv
+    ? await ask('mpv installieren?', 'Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.', 'Installieren')
+    : await ask('Fehlende Programme installieren?', `Die Box lädt ${missing.join(', ')} aus dem Internet und installiert sie. Das dauert ein paar Minuten.`, 'Installieren')
+  if (!yes) return
+  const r = await api(`${API}/missing-programs/install`, { method: 'POST', body: {} })
   if (!r.ok && r.status !== 409) return toast('Das hat nicht geklappt', 'info')
-  root.mpvInstalling = true
+  root.installing = mpv ? 'mpv' : 'other'
   loadNotices(root)
 }
 
@@ -8274,7 +8288,7 @@ function aboutTop() {
   return [
     // (on a wide screen: MuPiBox on the left over two rows, the name and the support beside it, then the history and
     // the news across the whole width)
-    `<section class="card about-main"><h2>MuPiBox</h2><dl class="kv">${row('Version', sys.version)}${row('Hostname', i.hostname)}${row('Läuft seit', i.uptime_seconds != null ? fmtUptime(i.uptime_seconds) : '')}${row('CPU-Last', i.load_1 != null ? `${i.load_1.toLocaleString(LOCALE)} (${i.cpu_count} Kerne)` : '')}${row('Temperatur', i.cpu_temp_c != null ? `${Math.round(i.cpu_temp_c)} °C` : '')}${row('Arbeitsspeicher', i.mem_total ? `${formatBytes(i.mem_total - i.mem_free)} von ${formatBytes(i.mem_total)}` : '')}</dl>
+    `<section class="card about-main"><h2>MuPiBox</h2><dl class="kv">${row('Version', sys.version)}${row('Hostname', i.hostname)}${row('Läuft seit', i.uptime_seconds != null ? fmtUptime(i.uptime_seconds) : '')}${row('CPU-Last', i.load_1 != null ? `${i.load_1.toLocaleString(LOCALE)} (${i.cpu_count} Kerne)` : '')}${row('Temperatur', i.cpu_temp_c != null ? `${Math.round(i.cpu_temp_c)} °C` : '')}${row('Lüfter', i.fan_speed != null ? `${i.fan_speed} %` : '')}${row('Arbeitsspeicher', i.mem_total ? `${formatBytes(i.mem_total - i.mem_free)} von ${formatBytes(i.mem_total)}` : '')}</dl>
       ${used != null ? `<div class="bar"><div class="slider-head"><b>${esc(driveName)}</b><span class="value-pill">${used} %</span></div><div class="track"><i style="--w:${used}%"></i></div><small>${formatBytes(disk.free)} frei von ${formatBytes(disk.total)}</small></div>` : ''}
       ${driveNote ? `<div class="note warn">${icon('info', 18)}<span>${esc(driveNote)}</span></div>` : ''}</section>`,
     `<section class="card"><h2>Name der Box</h2><p class="help">Steht auf dem Startbild und oben in der App.</p>
@@ -10541,6 +10555,20 @@ const CONTROLLERS = {
       state.values.set('fanOn', f.active)
       state.values.set('fanPin', f.gpio)
       for (const k of ['100', '75', '50', '25']) state.values.set(`fan${k}`, f[`t${k}`])
+    },
+    // how fast it runs now (the old admin interface showed it in its header; fan_control.py says it every 15 s)
+    top() {
+      const f = hw.data?.fan
+      if (!f?.active) return []
+      const now =
+        f.speed != null
+          ? f.speed > 0
+            ? `Der Lüfter läuft gerade mit ${f.speed} %.`
+            : 'Der Lüfter steht gerade – die Box ist kühl genug.'
+          : f.running
+            ? 'Der Lüfter läuft, seine Stufe ist noch nicht bekannt.'
+            : 'Der Lüfter ist eingeschaltet, sein Dienst läuft aber nicht.'
+      return [`<section class="card wide"><p class="help" style="margin:0">${esc(now)}</p></section>`]
     },
     sections: (page) =>
       page.sections.map((sec) => ({

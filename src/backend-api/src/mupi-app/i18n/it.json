@@ -2821,5 +2821,17 @@
  "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Senza il lettore mpv non suonano libreria, NAS, radio, podcast e annunci. L’ultimo tentativo non è riuscito (internet?) – tocca per riprovare.",
  "mpv installieren?": "Installare mpv?",
  "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "Il box scarica il lettore da internet e lo installa. Ci vogliono alcuni minuti, poi il lettore si riavvia.",
- "mpv ist installiert, der Player startet neu": "mpv è installato, il lettore si riavvia"
+ "mpv ist installiert, der Player startet neu": "mpv è installato, il lettore si riavvia",
+ "Der Lüfter läuft gerade mit {} %.": "La ventola gira ora al {} %.",
+ "Der Lüfter steht gerade – die Box ist kühl genug.": "La ventola è ferma ora – il box è abbastanza fresco.",
+ "Der Lüfter läuft, seine Stufe ist noch nicht bekannt.": "La ventola gira, il suo livello non è ancora noto.",
+ "Der Lüfter ist eingeschaltet, sein Dienst läuft aber nicht.": "La ventola è attivata, ma il suo servizio non è in esecuzione.",
+ "Fehlende Programme werden installiert": "Installazione dei programmi mancanti",
+ "Das dauert ein paar Minuten.": "Ci vogliono alcuni minuti.",
+ "Nicht installiert: {}. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Non installato: {}. L’ultimo tentativo non è riuscito (internet?) – tocca per riprovare.",
+ "Nicht installiert: {}. Ohne sie fehlen zum Beispiel der Boxname auf den Startbildern oder das Abschiedsbild. Antippen, um sie zu installieren.": "Non installato: {}. Senza di loro mancano per esempio il nome del box nelle immagini di avvio o l’immagine di saluto. Tocca per installarli.",
+ "Programme der Box fehlen": "Mancano programmi del box",
+ "Die fehlenden Programme sind installiert": "I programmi mancanti sono installati",
+ "Fehlende Programme installieren?": "Installare i programmi mancanti?",
+ "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Il box scarica {} da internet e li installa. Ci vogliono alcuni minuti."
 }

@@ -2821,5 +2821,17 @@
  "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Bez přehrávače mpv nehraje knihovna, NAS, rádio, podcasty ani hlášení. Poslední pokus se nezdařil (internet?) – klepnutím to zkusíte znovu.",
  "mpv installieren?": "Nainstalovat mpv?",
  "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "Box stáhne přehrávač z internetu a nainstaluje ho. Trvá to několik minut, poté se přehrávač restartuje.",
- "mpv ist installiert, der Player startet neu": "mpv je nainstalován, přehrávač se restartuje"
+ "mpv ist installiert, der Player startet neu": "mpv je nainstalován, přehrávač se restartuje",
+ "Der Lüfter läuft gerade mit {} %.": "Ventilátor právě běží na {} %.",
+ "Der Lüfter steht gerade – die Box ist kühl genug.": "Ventilátor právě stojí – Box je dostatečně chladný.",
+ "Der Lüfter läuft, seine Stufe ist noch nicht bekannt.": "Ventilátor běží, jeho stupeň zatím není známý.",
+ "Der Lüfter ist eingeschaltet, sein Dienst läuft aber nicht.": "Ventilátor je zapnutý, jeho služba ale neběží.",
+ "Fehlende Programme werden installiert": "Chybějící programy se instalují",
+ "Das dauert ein paar Minuten.": "Trvá to několik minut.",
+ "Nicht installiert: {}. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Nenainstalováno: {}. Poslední pokus se nezdařil (internet?) – klepnutím to zkusíte znovu.",
+ "Nicht installiert: {}. Ohne sie fehlen zum Beispiel der Boxname auf den Startbildern oder das Abschiedsbild. Antippen, um sie zu installieren.": "Nenainstalováno: {}. Bez nich chybí například název Boxu na úvodních obrázcích nebo obrázek na rozloučenou. Klepnutím je nainstalujete.",
+ "Programme der Box fehlen": "Chybí programy Boxu",
+ "Die fehlenden Programme sind installiert": "Chybějící programy jsou nainstalovány",
+ "Fehlende Programme installieren?": "Nainstalovat chybějící programy?",
+ "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Box stáhne {} z internetu a nainstaluje je. Trvá to několik minut."
 }

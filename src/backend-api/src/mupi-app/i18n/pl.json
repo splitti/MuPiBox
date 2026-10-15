@@ -2821,5 +2821,17 @@
  "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Bez odtwarzacza mpv nie grają biblioteka, NAS, radio, podcasty ani komunikaty. Ostatnia próba się nie powiodła (internet?) – dotknij, aby spróbować ponownie.",
  "mpv installieren?": "Zainstalować mpv?",
  "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "Pudełko pobiera odtwarzacz z internetu i go instaluje. Potrwa to kilka minut, potem odtwarzacz uruchomi się ponownie.",
- "mpv ist installiert, der Player startet neu": "mpv jest zainstalowany, odtwarzacz uruchamia się ponownie"
+ "mpv ist installiert, der Player startet neu": "mpv jest zainstalowany, odtwarzacz uruchamia się ponownie",
+ "Der Lüfter läuft gerade mit {} %.": "Wentylator pracuje teraz na {} %.",
+ "Der Lüfter steht gerade – die Box ist kühl genug.": "Wentylator teraz stoi – Box jest wystarczająco chłodny.",
+ "Der Lüfter läuft, seine Stufe ist noch nicht bekannt.": "Wentylator pracuje, jego poziom nie jest jeszcze znany.",
+ "Der Lüfter ist eingeschaltet, sein Dienst läuft aber nicht.": "Wentylator jest włączony, ale jego usługa nie działa.",
+ "Fehlende Programme werden installiert": "Instalowanie brakujących programów",
+ "Das dauert ein paar Minuten.": "Potrwa to kilka minut.",
+ "Nicht installiert: {}. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Nie zainstalowano: {}. Ostatnia próba się nie powiodła (internet?) – dotknij, aby spróbować ponownie.",
+ "Nicht installiert: {}. Ohne sie fehlen zum Beispiel der Boxname auf den Startbildern oder das Abschiedsbild. Antippen, um sie zu installieren.": "Nie zainstalowano: {}. Bez nich brakuje na przykład nazwy Boxa na obrazach startowych lub obrazu pożegnalnego. Dotknij, aby je zainstalować.",
+ "Programme der Box fehlen": "Brakuje programów Boxa",
+ "Die fehlenden Programme sind installiert": "Brakujące programy są zainstalowane",
+ "Fehlende Programme installieren?": "Zainstalować brakujące programy?",
+ "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Box pobiera {} z internetu i je instaluje. Potrwa to kilka minut."
 }

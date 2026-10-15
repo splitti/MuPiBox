@@ -97,6 +97,21 @@ async function merge(deps: HardwareDeps, key: string, values: Record<string, unk
   })
 }
 
+/**
+ * The fan's speed now, in percent (scripts/fan/fan_control.py writes it to /tmp/fan.json every 15 s, as the old admin
+ * interface showed it in its header) - null without a running fan (no file, or one not written for a minute).
+ */
+export async function fanSpeedNow(): Promise<number | null> {
+  try {
+    const st = await fsp.stat('/tmp/fan.json')
+    if (Date.now() - st.mtimeMs > 60_000) return null
+    const speed = Number.parseInt(String((JSON.parse(await fsp.readFile('/tmp/fan.json', 'utf8')) as { speed?: unknown })?.speed ?? ''), 10)
+    return Number.isFinite(speed) ? speed : null
+  } catch {
+    return null
+  }
+}
+
 export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void {
   /** GET /api/app/hardware - everything the pages Soundkarte, Drehregler, MuPiHAT, Taster and Lüfter show. */
   router.get('/hardware', requireSession, async (_req, res) => {
@@ -159,6 +174,7 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
       fan: {
         active: fan.fan_active === true,
         running: fanActive,
+        speed: fanActive ? await fanSpeedNow() : null,
         gpio: String(fan.fan_gpio ?? '13'),
         t100: Number(fan.fan_temp_100 ?? 75),
         t75: Number(fan.fan_temp_75 ?? 65),

@@ -15,5 +15,7 @@ A fan keeps the Raspberry Pi cool, for example in a closed case or with a Pi 4 o
 
 The temperatures can be set between 20 and 90 °C. They must get lower from 100 % to 25 %. **Save** applies all values.
 
+How fast the fan is running right now (0, 25, 50, 75 or 100 %) is shown at the top of this page while the fan is switched on, and under **Settings › System › About the box** next to the temperature.
+
 > [!NOTE]
 > The fan needs a GPIO pin of its own and must not share it with other accessories ([GPIO assignment](../anhang/gpio.md)). How warm the box currently is is shown under **Settings › System › Box health** ([Logs and status](../wartung/protokolle.md)).

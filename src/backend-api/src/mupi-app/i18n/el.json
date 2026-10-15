@@ -2821,5 +2821,17 @@
  "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Χωρίς το πρόγραμμα αναπαραγωγής mpv δεν παίζουν βιβλιοθήκη, NAS, ραδιόφωνο, podcasts και ανακοινώσεις. Η τελευταία προσπάθεια απέτυχε (internet;) – πάτησε για να ξαναδοκιμάσεις.",
  "mpv installieren?": "Εγκατάσταση mpv;",
  "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "Το κουτί κατεβάζει το πρόγραμμα αναπαραγωγής από το internet και το εγκαθιστά. Διαρκεί λίγα λεπτά, μετά η αναπαραγωγή επανεκκινείται.",
- "mpv ist installiert, der Player startet neu": "Το mpv εγκαταστάθηκε, η αναπαραγωγή επανεκκινείται"
+ "mpv ist installiert, der Player startet neu": "Το mpv εγκαταστάθηκε, η αναπαραγωγή επανεκκινείται",
+ "Der Lüfter läuft gerade mit {} %.": "Ο ανεμιστήρας λειτουργεί τώρα στο {} %.",
+ "Der Lüfter steht gerade – die Box ist kühl genug.": "Ο ανεμιστήρας είναι σταματημένος – το κουτί είναι αρκετά δροσερό.",
+ "Der Lüfter läuft, seine Stufe ist noch nicht bekannt.": "Ο ανεμιστήρας λειτουργεί, η βαθμίδα του δεν είναι ακόμη γνωστή.",
+ "Der Lüfter ist eingeschaltet, sein Dienst läuft aber nicht.": "Ο ανεμιστήρας είναι ενεργός, αλλά η υπηρεσία του δεν τρέχει.",
+ "Fehlende Programme werden installiert": "Εγκαθίστανται τα προγράμματα που λείπουν",
+ "Das dauert ein paar Minuten.": "Διαρκεί λίγα λεπτά.",
+ "Nicht installiert: {}. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Δεν έχουν εγκατασταθεί: {}. Η τελευταία προσπάθεια απέτυχε (internet;) – πάτησε για να ξαναδοκιμάσεις.",
+ "Nicht installiert: {}. Ohne sie fehlen zum Beispiel der Boxname auf den Startbildern oder das Abschiedsbild. Antippen, um sie zu installieren.": "Δεν έχουν εγκατασταθεί: {}. Χωρίς αυτά λείπει για παράδειγμα το όνομα του κουτιού από τις εικόνες εκκίνησης ή η εικόνα αποχαιρετισμού. Πάτησε για να τα εγκαταστήσεις.",
+ "Programme der Box fehlen": "Λείπουν προγράμματα του κουτιού",
+ "Die fehlenden Programme sind installiert": "Τα προγράμματα που έλειπαν εγκαταστάθηκαν",
+ "Fehlende Programme installieren?": "Εγκατάσταση των προγραμμάτων που λείπουν;",
+ "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Το κουτί κατεβάζει τα {} από το internet και τα εγκαθιστά. Διαρκεί λίγα λεπτά."
 }

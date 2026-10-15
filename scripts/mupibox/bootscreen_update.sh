@@ -20,11 +20,15 @@ mkdir -p /var/www/images /var/www/fonts
 ln -sfn "${BS_DIR}" /var/www/images/bootscreens
 ln -sfn /usr/local/share/fonts/mupibox/Fredoka-Variable.ttf /var/www/fonts/Fredoka-Variable.ttf
 
-if command -v rsvg-convert >/dev/null && python3 "${BS_DIR}/tools/compose_bootscreen.py" apply "${OUT}"; then
+# what putting them together needs (install_missing.sh installs it; the app's start page offers that): said in the log
+WHY=""
+command -v rsvg-convert >/dev/null || WHY="rsvg-convert is missing (package librsvg2-bin)"
+[ -n "${WHY}" ] || python3 -c "import PIL" 2>/dev/null || WHY="Pillow is missing (package python3-pil)"
+if [ -z "${WHY}" ] && python3 "${BS_DIR}/tools/compose_bootscreen.py" apply "${OUT}"; then
 	BOOT=$(/usr/bin/jq -r '.mupibox.bootscreen // ""' "${CONFIG}")
 else
-	# nothing could be put together (e.g. rsvg-convert missing): the default's pictures shipped ready-made
-	echo "putting the pictures together failed - the ready-made pictures of ${DEFAULT} are used"
+	# nothing could be put together: the default's pictures shipped ready-made (without the box's name, one scene)
+	echo "putting the pictures together failed (${WHY:-see above}) - the ready-made pictures of ${DEFAULT} are used"
 	LANG_DIR=$(/usr/bin/jq -r '.mupibox.bootscreenLanguage // "en"' "${CONFIG}")
 	[ -d "${BS_DIR}/prerendered/${LANG_DIR}" ] || LANG_DIR="en"
 	[ -d "${BS_DIR}/prerendered/${LANG_DIR}" ] || exit 1

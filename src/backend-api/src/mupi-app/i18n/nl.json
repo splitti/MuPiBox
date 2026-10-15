@@ -2821,5 +2821,17 @@
  "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Zonder de speler mpv spelen bibliotheek, NAS, radio, podcasts en meldingen niet. De laatste poging is mislukt (internet?) – tik om het opnieuw te proberen.",
  "mpv installieren?": "mpv installeren?",
  "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "De box downloadt de speler van internet en installeert hem. Dit duurt een paar minuten, daarna start de speler opnieuw.",
- "mpv ist installiert, der Player startet neu": "mpv is geïnstalleerd, de speler start opnieuw"
+ "mpv ist installiert, der Player startet neu": "mpv is geïnstalleerd, de speler start opnieuw",
+ "Der Lüfter läuft gerade mit {} %.": "De ventilator draait nu op {} %.",
+ "Der Lüfter steht gerade – die Box ist kühl genug.": "De ventilator staat nu stil – de box is koel genoeg.",
+ "Der Lüfter läuft, seine Stufe ist noch nicht bekannt.": "De ventilator draait, zijn stand is nog niet bekend.",
+ "Der Lüfter ist eingeschaltet, sein Dienst läuft aber nicht.": "De ventilator staat aan, maar zijn dienst draait niet.",
+ "Fehlende Programme werden installiert": "Ontbrekende programma’s worden geïnstalleerd",
+ "Das dauert ein paar Minuten.": "Dit duurt een paar minuten.",
+ "Nicht installiert: {}. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Niet geïnstalleerd: {}. De laatste poging is mislukt (internet?) – tik om het opnieuw te proberen.",
+ "Nicht installiert: {}. Ohne sie fehlen zum Beispiel der Boxname auf den Startbildern oder das Abschiedsbild. Antippen, um sie zu installieren.": "Niet geïnstalleerd: {}. Zonder ontbreekt bijvoorbeeld de naam van de box op de startafbeeldingen of de afscheidsafbeelding. Tik om ze te installeren.",
+ "Programme der Box fehlen": "Programma’s van de box ontbreken",
+ "Die fehlenden Programme sind installiert": "De ontbrekende programma’s zijn geïnstalleerd",
+ "Fehlende Programme installieren?": "Ontbrekende programma’s installeren?",
+ "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "De box downloadt {} van internet en installeert ze. Dit duurt een paar minuten."
 }

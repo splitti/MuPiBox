@@ -2821,5 +2821,17 @@
  "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Without the mpv player, the library, NAS, radio, podcasts and announcements don’t play. The last attempt failed (internet?) – tap to try again.",
  "mpv installieren?": "Install mpv?",
  "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "The box downloads the player from the internet and installs it. This takes a few minutes, then the player restarts.",
- "mpv ist installiert, der Player startet neu": "mpv is installed, the player restarts"
+ "mpv ist installiert, der Player startet neu": "mpv is installed, the player restarts",
+ "Der Lüfter läuft gerade mit {} %.": "The fan is running at {} % right now.",
+ "Der Lüfter steht gerade – die Box ist kühl genug.": "The fan is standing still right now – the box is cool enough.",
+ "Der Lüfter läuft, seine Stufe ist noch nicht bekannt.": "The fan is running, its speed is not known yet.",
+ "Der Lüfter ist eingeschaltet, sein Dienst läuft aber nicht.": "The fan is switched on, but its service is not running.",
+ "Fehlende Programme werden installiert": "Installing missing programs",
+ "Das dauert ein paar Minuten.": "This takes a few minutes.",
+ "Nicht installiert: {}. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Not installed: {}. The last attempt failed (internet?) – tap to try again.",
+ "Nicht installiert: {}. Ohne sie fehlen zum Beispiel der Boxname auf den Startbildern oder das Abschiedsbild. Antippen, um sie zu installieren.": "Not installed: {}. Without them, for example the box name on the start pictures or the goodbye picture is missing. Tap to install them.",
+ "Programme der Box fehlen": "Programs of the box are missing",
+ "Die fehlenden Programme sind installiert": "The missing programs are installed",
+ "Fehlende Programme installieren?": "Install missing programs?",
+ "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "The box downloads {} from the internet and installs them. This takes a few minutes."
 }

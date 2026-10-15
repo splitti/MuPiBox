@@ -2821,5 +2821,17 @@
  "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Utan spelaren mpv spelas inte bibliotek, NAS, radio, poddar och meddelanden. Senaste försöket misslyckades (internet?) – tryck för att försöka igen.",
  "mpv installieren?": "Installera mpv?",
  "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "Lådan hämtar spelaren från internet och installerar den. Det tar några minuter, sedan startar spelaren om.",
- "mpv ist installiert, der Player startet neu": "mpv är installerad, spelaren startar om"
+ "mpv ist installiert, der Player startet neu": "mpv är installerad, spelaren startar om",
+ "Der Lüfter läuft gerade mit {} %.": "Fläkten går just nu på {} %.",
+ "Der Lüfter steht gerade – die Box ist kühl genug.": "Fläkten står still just nu – lådan är sval nog.",
+ "Der Lüfter läuft, seine Stufe ist noch nicht bekannt.": "Fläkten går, dess nivå är inte känd ännu.",
+ "Der Lüfter ist eingeschaltet, sein Dienst läuft aber nicht.": "Fläkten är påslagen, men dess tjänst körs inte.",
+ "Fehlende Programme werden installiert": "Saknade program installeras",
+ "Das dauert ein paar Minuten.": "Det tar några minuter.",
+ "Nicht installiert: {}. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Inte installerat: {}. Senaste försöket misslyckades (internet?) – tryck för att försöka igen.",
+ "Nicht installiert: {}. Ohne sie fehlen zum Beispiel der Boxname auf den Startbildern oder das Abschiedsbild. Antippen, um sie zu installieren.": "Inte installerat: {}. Utan dem saknas till exempel lådans namn på startbilderna eller avskedsbilden. Tryck för att installera dem.",
+ "Programme der Box fehlen": "Lådans program saknas",
+ "Die fehlenden Programme sind installiert": "De saknade programmen är installerade",
+ "Fehlende Programme installieren?": "Installera saknade program?",
+ "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Lådan hämtar {} från internet och installerar dem. Det tar några minuter."
 }

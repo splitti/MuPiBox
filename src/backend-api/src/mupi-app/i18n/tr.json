@@ -2821,5 +2821,17 @@
  "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "mpv oynatıcısı olmadan kitaplık, NAS, radyo, podcast’ler ve duyurular çalmaz. Son deneme başarısız oldu (internet?) – yeniden denemek için dokunun.",
  "mpv installieren?": "mpv kurulsun mu?",
  "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "Kutu oynatıcıyı internetten indirip kurar. Bu birkaç dakika sürer, ardından oynatıcı yeniden başlar.",
- "mpv ist installiert, der Player startet neu": "mpv kuruldu, oynatıcı yeniden başlıyor"
+ "mpv ist installiert, der Player startet neu": "mpv kuruldu, oynatıcı yeniden başlıyor",
+ "Der Lüfter läuft gerade mit {} %.": "Fan şu anda %{} ile çalışıyor.",
+ "Der Lüfter steht gerade – die Box ist kühl genug.": "Fan şu anda duruyor – kutu yeterince serin.",
+ "Der Lüfter läuft, seine Stufe ist noch nicht bekannt.": "Fan çalışıyor, kademesi henüz bilinmiyor.",
+ "Der Lüfter ist eingeschaltet, sein Dienst läuft aber nicht.": "Fan açık, ancak hizmeti çalışmıyor.",
+ "Fehlende Programme werden installiert": "Eksik programlar kuruluyor",
+ "Das dauert ein paar Minuten.": "Bu birkaç dakika sürer.",
+ "Nicht installiert: {}. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Kurulu değil: {}. Son deneme başarısız oldu (internet?) – yeniden denemek için dokunun.",
+ "Nicht installiert: {}. Ohne sie fehlen zum Beispiel der Boxname auf den Startbildern oder das Abschiedsbild. Antippen, um sie zu installieren.": "Kurulu değil: {}. Bunlar olmadan örneğin açılış resimlerinde kutunun adı ya da veda resmi eksik olur. Kurmak için dokunun.",
+ "Programme der Box fehlen": "Kutunun programları eksik",
+ "Die fehlenden Programme sind installiert": "Eksik programlar kuruldu",
+ "Fehlende Programme installieren?": "Eksik programlar kurulsun mu?",
+ "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Kutu {} paketlerini internetten indirip kurar. Bu birkaç dakika sürer."
 }

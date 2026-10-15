@@ -2821,5 +2821,17 @@
  "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Sin el reproductor mpv no suenan la biblioteca, el NAS, la radio, los podcasts ni los avisos. El último intento falló (¿internet?): toca para volver a intentarlo.",
  "mpv installieren?": "¿Instalar mpv?",
  "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "La caja descarga el reproductor de internet y lo instala. Tarda unos minutos; después el reproductor se reinicia.",
- "mpv ist installiert, der Player startet neu": "mpv está instalado, el reproductor se reinicia"
+ "mpv ist installiert, der Player startet neu": "mpv está instalado, el reproductor se reinicia",
+ "Der Lüfter läuft gerade mit {} %.": "El ventilador funciona ahora al {} %.",
+ "Der Lüfter steht gerade – die Box ist kühl genug.": "El ventilador está parado ahora: la caja está lo bastante fría.",
+ "Der Lüfter läuft, seine Stufe ist noch nicht bekannt.": "El ventilador funciona, su nivel aún no se conoce.",
+ "Der Lüfter ist eingeschaltet, sein Dienst läuft aber nicht.": "El ventilador está activado, pero su servicio no funciona.",
+ "Fehlende Programme werden installiert": "Instalando los programas que faltan",
+ "Das dauert ein paar Minuten.": "Tarda unos minutos.",
+ "Nicht installiert: {}. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Sin instalar: {}. El último intento falló (¿internet?): toca para volver a intentarlo.",
+ "Nicht installiert: {}. Ohne sie fehlen zum Beispiel der Boxname auf den Startbildern oder das Abschiedsbild. Antippen, um sie zu installieren.": "Sin instalar: {}. Sin ellos falta, por ejemplo, el nombre de la caja en las imágenes de inicio o la imagen de despedida. Toca para instalarlos.",
+ "Programme der Box fehlen": "Faltan programas de la caja",
+ "Die fehlenden Programme sind installiert": "Los programas que faltaban están instalados",
+ "Fehlende Programme installieren?": "¿Instalar los programas que faltan?",
+ "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "La caja descarga {} de internet y los instala. Tarda unos minutos."
 }

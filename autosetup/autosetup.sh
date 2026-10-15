@@ -106,12 +106,17 @@ STEP=0
 		echo -e "## apt-get install ${package} ## finished after $((after - before)) seconds" >&3 2>&3
 		STEP=$((STEP + 1))
 	done
-	# mpv plays everything but Spotify: asked once more with fresh package lists when the loop could not install it
-	if ! command -v mpv >/dev/null 2>&1; then
+	# What a part of the box needs (the list of scripts/mupibox/install_missing.sh: mpv, the start pictures, the goodbye
+	# picture): asked once more with fresh package lists when the loop could not install it
+	MISSING_NOW=""
+	for p in mpv librsvg2-bin python3-pil xdotool feh; do
+		dpkg-query -W -f='${Status}' "${p}" 2>/dev/null | grep -q "install ok installed" || MISSING_NOW="${MISSING_NOW} ${p}"
+	done
+	if [ -n "${MISSING_NOW}" ]; then
 		dpkg --configure -a >&3 2>&3
 		apt-get update >&3 2>&3
 		apt-get --yes -f install >&3 2>&3
-		apt-get --yes install mpv >&3 2>&3 || echo "## WARNING: mpv could not be installed - only Spotify will play (the app offers to install it) ##" >&3 2>&3
+		apt-get --yes install ${MISSING_NOW} >&3 2>&3 || echo "## WARNING: not installed:${MISSING_NOW} (the app offers to install it) ##" >&3 2>&3
 	fi
 
 	# pinctrl for the OnOff SHIM with libgpiod 2 (Debian 13 "Trixie", see scripts/OnOffShim): in raspi-utils-core of the

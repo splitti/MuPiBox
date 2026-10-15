@@ -30,8 +30,18 @@ function detached(script: string): void {
 }
 
 const PM2 = 'PM2=$(command -v pm2 || echo /usr/local/bin/pm2); "$PM2"'
-// installing mpv from the app's notice (see /player-tools)
-const mpvJob: { running: boolean; ok?: boolean; at?: number } = { running: false }
+// installing what is missing from the app's notice (see /missing-programs)
+// (programs: what it installs)
+const installJob: { running: boolean; ok?: boolean; at?: number; programs?: string[] } = { running: false }
+const INSTALL_MISSING = '/usr/local/bin/mupibox/install_missing.sh'
+// the programs without which a part of the box does not work and that apt can install (install_missing.sh --list)
+async function missingPrograms(): Promise<string[]> {
+  const r = await run('bash', [INSTALL_MISSING, '--list'], 20000)
+  return r.stdout
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => /^[a-z0-9.+-]+$/.test(l))
+}
 const PLAYER_CONFIG = '/home/dietpi/.mupibox/spotifycontroller-main/config/config.json'
 
 // The logs and services the admin interface's log viewer offers (backend.php)
@@ -301,24 +311,28 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
   })
 
   /**
-   * GET /api/app/player-tools - whether mpv is there (the player for everything but Spotify: without it, and without
-   * mplayer since 5.0.10, the box plays Spotify only - the app's start page says so), and an installation at work
+   * GET /api/app/missing-programs - the programs a part of the box needs and that are not installed (mpv: without it,
+   * and without mplayer since 5.0.10, the box plays Spotify only; rsvg-convert and Pillow: the start pictures), and an
+   * installation at work - the app's start page says so and installs them
    */
-  router.get('/player-tools', requireSession, async (_req, res) => {
-    const mpv = (await run('sh', ['-c', 'command -v mpv'], 5000)).ok
-    res.json({ mpv, job: mpvJob })
+  router.get('/missing-programs', requireSession, async (_req, res) => {
+    res.json({ missing: installJob.running ? [] : await missingPrograms(), job: installJob })
   })
 
-  /** POST /api/app/player-tools/install-mpv - installs mpv in the background (a few minutes), then restarts the player */
-  router.post('/player-tools/install-mpv', requireSession, requireCsrf, (_req, res) => {
-    if (mpvJob.running) {
+  /** POST /api/app/missing-programs/install - installs them in the background (a few minutes); mpv: the player restarts */
+  router.post('/missing-programs/install', requireSession, requireCsrf, async (_req, res) => {
+    if (installJob.running) {
       res.status(409).json({ error: 'already installing' })
       return
     }
-    Object.assign(mpvJob, { running: true, ok: undefined, at: Date.now() })
-    const child = spawn('sh', ['-c', `sudo bash /usr/local/bin/mupibox/install_mpv.sh && { ${PM2} restart spotify-control >/dev/null 2>&1; true; }`], { stdio: 'ignore' })
-    child.on('error', () => Object.assign(mpvJob, { running: false, ok: false }))
-    child.on('exit', (code) => Object.assign(mpvJob, { running: false, ok: code === 0 }))
+    Object.assign(installJob, { running: true, ok: undefined, at: Date.now(), programs: [] })
+    const programs = await missingPrograms()
+    installJob.programs = programs
+    // (the player only when mpv was missing: a restart ends what plays)
+    const restart = programs.includes('mpv') ? ` && { ${PM2} restart spotify-control >/dev/null 2>&1; true; }` : ''
+    const child = spawn('sh', ['-c', `sudo bash ${INSTALL_MISSING}${restart}`], { stdio: 'ignore' })
+    child.on('error', () => Object.assign(installJob, { running: false, ok: false }))
+    child.on('exit', (code) => Object.assign(installJob, { running: false, ok: code === 0 }))
     res.json({ ok: true, started: true })
   })
 

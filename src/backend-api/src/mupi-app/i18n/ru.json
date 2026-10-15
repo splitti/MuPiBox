@@ -2821,5 +2821,17 @@
  "Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Без плеера mpv не воспроизводятся библиотека, NAS, радио, подкасты и объявления. Последняя попытка не удалась (интернет?) – нажмите, чтобы попробовать снова.",
  "mpv installieren?": "Установить mpv?",
  "Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.": "Бокс загрузит плеер из интернета и установит его. Это займёт несколько минут, затем плеер перезапустится.",
- "mpv ist installiert, der Player startet neu": "mpv установлен, плеер перезапускается"
+ "mpv ist installiert, der Player startet neu": "mpv установлен, плеер перезапускается",
+ "Der Lüfter läuft gerade mit {} %.": "Вентилятор сейчас работает на {} %.",
+ "Der Lüfter steht gerade – die Box ist kühl genug.": "Вентилятор сейчас стоит – устройство достаточно холодное.",
+ "Der Lüfter läuft, seine Stufe ist noch nicht bekannt.": "Вентилятор работает, его уровень пока неизвестен.",
+ "Der Lüfter ist eingeschaltet, sein Dienst läuft aber nicht.": "Вентилятор включён, но его служба не запущена.",
+ "Fehlende Programme werden installiert": "Устанавливаются недостающие программы",
+ "Das dauert ein paar Minuten.": "Это займёт несколько минут.",
+ "Nicht installiert: {}. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.": "Не установлено: {}. Последняя попытка не удалась (интернет?) – нажмите, чтобы попробовать снова.",
+ "Nicht installiert: {}. Ohne sie fehlen zum Beispiel der Boxname auf den Startbildern oder das Abschiedsbild. Antippen, um sie zu installieren.": "Не установлено: {}. Без них, например, нет названия устройства на заставках или прощального изображения. Нажмите, чтобы установить их.",
+ "Programme der Box fehlen": "Не хватает программ устройства",
+ "Die fehlenden Programme sind installiert": "Недостающие программы установлены",
+ "Fehlende Programme installieren?": "Установить недостающие программы?",
+ "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Устройство загрузит {} из интернета и установит их. Это займёт несколько минут."
 }
