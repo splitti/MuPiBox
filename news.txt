@@ -11,7 +11,7 @@
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>When the display could not read the box's settings once at its start (e.g. right after an update), it stayed without its theme - the layout of before the themes, whatever theme was set - until the next restart, and it went dark after one minute instead of the time set. It now asks again until it gets them.</li>
 <li id='linews' class='linews'>No square frame around the big cover in the middle any more: with a keyboard at the box (or a remote that types, VNC), Chromium drew its focus frame around the cover's tile.</li>
-<li id='linews' class='linews'>A NAS album paused while its track list was still loading began to play anyway once the list came. The pause now counts.</li>
+<li id='linews' class='linews'>A NAS album paused while its track list was still loading began to play anyway once the list came. It now waits, paused, and starts with Play (a stop or another album lets it go).</li>
 </ul>
 <b>Spotify</b>
 </ul>

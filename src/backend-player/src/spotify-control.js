@@ -1784,6 +1784,19 @@ let playbackGeneration = 0
 let playbackRequest = Date.now()
 // Bumped by every play and pause: a play that waited for the box's device is not made after a pause meanwhile
 let playPauseRequest = 0
+// An album paused while its track list was loading (NAS, TIDAL): not started then - the start of the list takes a
+// pause back - but kept, paused, and started by the next "play". A stop or another start (playbackGeneration) let it
+// go. (Dropping it left "play" without anything to play: the album had to be chosen again.)
+let heldStart = null
+function startHeld() {
+  const held = heldStart
+  heldStart = null
+  if (!held || held.generation !== playbackGeneration) return false
+  held.begin()
+  return true
+}
+// Paused while a list loaded (asked: playPauseRequest when it began)? Then its start is held instead of made.
+const pausedSince = (asked) => asked !== playPauseRequest && currentMeta.pause === true
 
 // The two players don't know of each other: Spotify plays in the kiosk browser (Web Playback SDK), local
 // media, radio, podcasts and the NAS in mplayer. The player only knew what was playing from its own state,
@@ -1910,7 +1923,18 @@ function play() {
       cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Continue playing"')
     //if (hasConfiguredTelegram()) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
   } else if (currentMeta.currentPlayer === 'mplayer') {
-    if (!currentMeta.playing && mplayerToggle()) {
+    // an album paused while its list loaded: started now (see heldStart)
+    if (startHeld()) {
+      currentMeta.pause = false
+      return
+    }
+    // (a list still loading, nothing to unpause yet: the pause made meanwhile no longer counts - it starts when it is
+    // there)
+    if (!currentMeta.playing && !mplayerToggle()) {
+      currentMeta.pause = false
+      return
+    }
+    if (!currentMeta.playing) {
       currentMeta.pause = false
       //currentMeta.playing = true;
       writeplayerstatePlay()
@@ -2356,7 +2380,7 @@ async function playNasList(nasPath, resume = null) {
   const decodedPath = decodeURIComponent(nasPath)
   log.debug(`${now()}: [Spotify Control] Starting NAS playback: ${decodedPath}`)
   const generation = ++playbackGeneration
-  // (a pause while the list loads: the start is not made - the start of the list takes a pause back, the music came)
+  // (a pause while the list loads: the start is held until "play" - see heldStart)
   const asked = playPauseRequest
   clearLibraryResumeTimers()
 
@@ -2380,8 +2404,8 @@ async function playNasList(nasPath, resume = null) {
     // The track list can take seconds (NAS over WebDAV). A stop, another album, or a playtime /
     // quiet-hours block in the meantime used to be overtaken: the late answer started playback
     // anyway. Such a start is dropped now.
-    if (generation !== playbackGeneration || asked !== playPauseRequest || isPlaybackBlocked()) {
-      log.debug(`${now()}: [Spotify Control] NAS playback of ${decodedPath} dropped (paused, stopped, replaced or blocked meanwhile)`)
+    if (generation !== playbackGeneration || isPlaybackBlocked()) {
+      log.debug(`${now()}: [Spotify Control] NAS playback of ${decodedPath} dropped (stopped, replaced or blocked meanwhile)`)
       return
     }
     currentNasTracks = tracks
@@ -2407,16 +2431,25 @@ async function playNasList(nasPath, resume = null) {
     })
     const tmpPlaylistPath = '/tmp/nas_playlist.m3u'
     fs.writeFileSync(tmpPlaylistPath, playlistLines.join('\n'))
-
-    writeplayerstatePlay()
-    // An engine that starts where it was left (mpv): the track and the part of it with the list; a CUE album is one
-    // file, there the position in it. The CUE's track and name follow from the playing time (see the time_pos handler).
-    const startAt = resume && player.startsAt ? nasStartOptions(Math.min(resume.trackNr, tracks.length), resume.progressPct) : null
-    player.playList(tmpPlaylistPath, startAt ?? undefined)
-    player.setVolume(volumeStart)
-    currentMeta.currentTracknr = startAt ? Math.max(0, startAt.track - 1) : 0
+    currentMeta.currentTracknr = 0
     currentMeta.totalTracks = tracks.length
-    if (resume && !startAt) resumeNasAt(Math.min(resume.trackNr, tracks.length), resume.progressPct)
+
+    const begin = () => {
+      writeplayerstatePlay()
+      // An engine that starts where it was left (mpv): the track and the part of it with the list; a CUE album is one
+      // file, there the position in it. The CUE's track and name follow from the playing time (see the time_pos handler).
+      const startAt = resume && player.startsAt ? nasStartOptions(Math.min(resume.trackNr, tracks.length), resume.progressPct) : null
+      player.playList(tmpPlaylistPath, startAt ?? undefined)
+      player.setVolume(volumeStart)
+      currentMeta.currentTracknr = startAt ? Math.max(0, startAt.track - 1) : 0
+      if (resume && !startAt) resumeNasAt(Math.min(resume.trackNr, tracks.length), resume.progressPct)
+    }
+    if (pausedSince(asked)) {
+      heldStart = { generation, begin }
+      log.debug(`${now()}: [Spotify Control] NAS playback of ${decodedPath} paused while loading - starts with "play"`)
+      return
+    }
+    begin()
   } catch (error) {
     log.debug(`${now()}: [Spotify Control] Error starting NAS playback: ${error}`)
   }
