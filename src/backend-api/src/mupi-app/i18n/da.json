@@ -2833,5 +2833,14 @@
  "Programme der Box fehlen": "Boksens programmer mangler",
  "Die fehlenden Programme sind installiert": "De manglende programmer er installeret",
  "Fehlende Programme installieren?": "Installer manglende programmer?",
- "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Boksen henter {} fra internettet og installerer dem. Det tager et par minutter."
+ "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Boksen henter {} fra internettet og installerer dem. Det tager et par minutter.",
+ "Abonnieren holt alle Folgen auf die Box und später auch neue. Einzelne Alben fügst du unten hinzu.": "Et abonnement henter alle afsnit til boksen og senere også nye. Enkelte albums tilføjer du nedenfor.",
+ "Abonniert: {}. {}": "Abonneret: {}. {}",
+ "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.": "Alle afsnit kommer på boksen, nye senere af sig selv. Omfanget kan du derefter begrænse under „Administreret indhold“.",
+ "Ein Titel kommt mit seinem ganzen Album auf die Box.": "Et nummer kommer på boksen med hele sit album.",
+ "Findet Hörspiele, Alben und Künstler auf Spotify. Antippen zeigt ein Album zum Hinzufügen oder die Alben eines Künstlers – die Kategorie wählst du beim Hinzufügen.": "Finder lydbøger, albums og kunstnere på Spotify. Tryk viser et album til tilføjelse eller en kunstners albums – kategorien vælger du, når du tilføjer.",
+ "Ganzen Künstler abonnieren": "Abonner på hele kunstneren",
+ "Hinzugefügt: {}. {}": "Tilføjet: {}. {}",
+ "Künstler auf Spotify": "Kunstner på Spotify",
+ "Zurück zur Suche": "Tilbage til søgningen"
 }

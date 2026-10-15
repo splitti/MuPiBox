@@ -2833,5 +2833,14 @@
  "Programme der Box fehlen": "Lådans program saknas",
  "Die fehlenden Programme sind installiert": "De saknade programmen är installerade",
  "Fehlende Programme installieren?": "Installera saknade program?",
- "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Lådan hämtar {} från internet och installerar dem. Det tar några minuter."
+ "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Lådan hämtar {} från internet och installerar dem. Det tar några minuter.",
+ "Abonnieren holt alle Folgen auf die Box und später auch neue. Einzelne Alben fügst du unten hinzu.": "En prenumeration hämtar alla avsnitt till lådan och senare även nya. Enstaka album lägger du till nedan.",
+ "Abonniert: {}. {}": "Prenumererar: {}. {}",
+ "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.": "Alla avsnitt kommer på lådan, nya senare av sig själva. Omfånget kan du sedan begränsa under ”Hanterat innehåll”.",
+ "Ein Titel kommt mit seinem ganzen Album auf die Box.": "Ett spår kommer på lådan med hela sitt album.",
+ "Findet Hörspiele, Alben und Künstler auf Spotify. Antippen zeigt ein Album zum Hinzufügen oder die Alben eines Künstlers – die Kategorie wählst du beim Hinzufügen.": "Hittar ljudböcker, album och artister på Spotify. Tryck visar ett album att lägga till eller en artists album – kategorin väljer du när du lägger till.",
+ "Ganzen Künstler abonnieren": "Prenumerera på hela artisten",
+ "Hinzugefügt: {}. {}": "Tillagt: {}. {}",
+ "Künstler auf Spotify": "Artist på Spotify",
+ "Zurück zur Suche": "Tillbaka till sökningen"
 }

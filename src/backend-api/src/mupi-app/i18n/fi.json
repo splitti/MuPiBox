@@ -2833,5 +2833,14 @@
  "Programme der Box fehlen": "Laatikon ohjelmia puuttuu",
  "Die fehlenden Programme sind installiert": "Puuttuvat ohjelmat on asennettu",
  "Fehlende Programme installieren?": "Asennetaanko puuttuvat ohjelmat?",
- "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Laatikko lataa {} internetistä ja asentaa ne. Tämä kestää muutaman minuutin."
+ "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Laatikko lataa {} internetistä ja asentaa ne. Tämä kestää muutaman minuutin.",
+ "Abonnieren holt alle Folgen auf die Box und später auch neue. Einzelne Alben fügst du unten hinzu.": "Tilaus tuo laatikkoon kaikki jaksot ja myöhemmin myös uudet. Yksittäiset albumit lisäät alla.",
+ "Abonniert: {}. {}": "Tilattu: {}. {}",
+ "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.": "Kaikki jaksot tulevat laatikkoon, uudet myöhemmin itsestään. Laajuutta voit rajata sen jälkeen kohdassa ”Hallitut sisällöt”.",
+ "Ein Titel kommt mit seinem ganzen Album auf die Box.": "Kappale tulee laatikkoon koko albuminsa kanssa.",
+ "Findet Hörspiele, Alben und Künstler auf Spotify. Antippen zeigt ein Album zum Hinzufügen oder die Alben eines Künstlers – die Kategorie wählst du beim Hinzufügen.": "Löytää äänikirjoja, albumeja ja artisteja Spotifysta. Napauttamalla näet lisättävän albumin tai artistin albumit – kategorian valitset lisätessä.",
+ "Ganzen Künstler abonnieren": "Tilaa koko artisti",
+ "Hinzugefügt: {}. {}": "Lisätty: {}. {}",
+ "Künstler auf Spotify": "Artisti Spotifyssa",
+ "Zurück zur Suche": "Takaisin hakuun"
 }

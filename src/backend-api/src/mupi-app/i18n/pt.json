@@ -2833,5 +2833,14 @@
  "Programme der Box fehlen": "Faltam programas da caixa",
  "Die fehlenden Programme sind installiert": "Os programas em falta estão instalados",
  "Fehlende Programme installieren?": "Instalar os programas em falta?",
- "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "A caixa descarrega {} da internet e instala-os. Demora alguns minutos."
+ "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "A caixa descarrega {} da internet e instala-os. Demora alguns minutos.",
+ "Abonnieren holt alle Folgen auf die Box und später auch neue. Einzelne Alben fügst du unten hinzu.": "A subscrição traz todos os episódios para a caixa e, mais tarde, também os novos. Os álbuns individuais adicionas abaixo.",
+ "Abonniert: {}. {}": "Subscrito: {}. {}",
+ "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.": "Todos os episódios chegam à caixa, os novos mais tarde sozinhos. Depois podes limitar o intervalo em «Itens geridos».",
+ "Ein Titel kommt mit seinem ganzen Album auf die Box.": "Uma faixa chega à caixa com o álbum inteiro.",
+ "Findet Hörspiele, Alben und Künstler auf Spotify. Antippen zeigt ein Album zum Hinzufügen oder die Alben eines Künstlers – die Kategorie wählst du beim Hinzufügen.": "Encontra audiolivros, álbuns e artistas no Spotify. Tocar mostra um álbum para adicionar ou os álbuns de um artista – a categoria escolhes ao adicionar.",
+ "Ganzen Künstler abonnieren": "Subscrever o artista inteiro",
+ "Hinzugefügt: {}. {}": "Adicionado: {}. {}",
+ "Künstler auf Spotify": "Artista no Spotify",
+ "Zurück zur Suche": "Voltar à pesquisa"
 }

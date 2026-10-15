@@ -3442,14 +3442,16 @@ async function loadSubAlbums(a, box) {
 
 /* Auf Spotify suchen */
 
-const search = { q: '', type: 'Alle', cat: 'audiobook', result: null, busy: false }
+// (cat: the category chosen last - the next sheet starts with it; artist: one opened from the search, its albums with
+// the way back to the search)
+const search = { q: '', type: 'Alle', cat: 'audiobook', result: null, busy: false, artist: null }
 
 function searchTop() {
   return [
     `<section class="card wide">
+      <p class="help" style="margin:0">${esc('Findet Hörspiele, Alben und Künstler auf Spotify. Antippen zeigt ein Album zum Hinzufügen oder die Alben eines Künstlers – die Kategorie wählst du beim Hinzufügen.')}</p>
       <div class="search">${icon('search')}<input class="input" id="s-q" type="search" placeholder="Künstler, Album oder Titel …" autocomplete="off" value="${esc(search.q)}" enterkeyhint="search"></div>
       <div class="seg" id="s-type">${['Alle', 'Künstler', 'Alben', 'Titel'].map((t) => `<button aria-pressed="${search.type === t}" data-v="${t}">${t}</button>`).join('')}</div>
-      <div class="field"><label for="s-cat">Hinzufügen als</label>${catSelect('s-cat', search.cat, false)}</div>
       <div class="btns"><button class="btn primary" id="s-go">Suchen</button></div>
     </section>`,
     `<div id="s-results" class="wide-stack"></div>`,
@@ -3469,71 +3471,154 @@ async function doSpotifySearch() {
     return
   }
   search.result = r.body ?? {}
+  search.artist = null
   drawSearch()
+}
+
+const spImg = (images) => (Array.isArray(images) && images.length ? images[1]?.url || images[0]?.url : '')
+const spNames = (arr) => (arr ?? []).map((x) => x?.name).filter(Boolean).join(', ')
+const spYear = (a) => String(a?.release_date ?? '').slice(0, 4)
+const spAlbum = (a) => ({ kind: 'album', id: a.id, name: a.name, t: a.name, s: [spNames(a.artists), spYear(a), a.total_tracks ? `${a.total_tracks} Titel` : ''].filter(Boolean).join(' · '), img: spImg(a.images) })
+
+// A row of a search result (Spotify, TIDAL): opens what it is - an artist its albums, an album the sheet to add it
+function resultRow(r, i, list) {
+  return `<button class="entry lib-row ard-show" data-list="${list}" data-i="${i}"><span class="lib-thumb">${r.img ? `<img src="${esc(r.img)}" alt="" loading="lazy">` : ''}${icon(r.kind === 'artist' ? 'folder' : 'music', 18)}</span>
+    <span class="lbl"><b translate="no">${esc(r.t)}</b><small translate="no">${esc(r.s)}</small></span><span class="chev">${icon('chevron', 18)}</span></button>`
 }
 
 function drawSearch() {
   const box = $('#s-results')
   const d = search.result
   if (!box || !d) return
-  const img = (images) => (Array.isArray(images) && images.length ? images[1]?.url || images[0]?.url : '')
-  const names = (arr) => (arr ?? []).map((x) => x?.name).filter(Boolean).join(', ')
-  const groups = [
-    ['Künstler', (d.artists ?? []).filter((a) => a.id).map((a) => ({ kind: 'artist', id: a.id, name: a.name, t: a.name, s: 'Künstler – alle Folgen abonnieren', img: img(a.images) }))],
-    ['Alben', (d.albums ?? []).filter((a) => a.id).map((a) => ({ kind: 'album', id: a.id, name: a.name, t: a.name, s: names(a.artists), img: img(a.images) }))],
-    ['Titel', (d.tracks ?? []).filter((t) => t.album?.id).map((t) => ({ kind: 'album', id: t.album.id, name: t.album.name ?? t.name, t: t.name, s: `${names(t.artists)} · ${t.album?.name ?? ''}`, img: img(t.album?.images) }))],
-  ].filter(([, rows]) => rows.length)
-  search.rows = groups.flatMap(([, rows]) => rows)
-  let n = 0
-  box.innerHTML = groups.length
-    ? groups
-        .map(
-          ([title, rows]) => `<section class="card"><h2>${title}</h2><div class="rows">${rows
-            .map((r) => `<div class="entry"><span class="lib-thumb">${r.img ? `<img src="${esc(r.img)}" alt="" loading="lazy">` : ''}${icon('music', 18)}</span><span class="lbl"><b translate="no">${esc(r.t)}</b><small>${esc(r.s)}</small></span>
-              <button class="icon-btn soft" data-r="${n++}" aria-label="${esc(`${r.kind === 'artist' ? 'Abonnieren' : 'Hinzufügen'}: ${r.t}`)}">${icon('plus', 18)}</button></div>`)
-            .join('')}</div>${title === 'Titel' ? '<p class="help" style="margin:0">＋ fügt das ganze Album des Titels hinzu.</p>' : ''}</section>`,
-        )
-        .join('')
-    : `<p class="help">Nichts gefunden.</p>`
-  for (const b of box.querySelectorAll('[data-r]')) b.onclick = () => addFromSearch(search.rows[Number(b.dataset.r)], b)
+  const lists = {}
+  const card = (key, title, rows, foot = '') => {
+    lists[key] = rows
+    return rows.length ? `<section class="card"><h2 translate="no">${esc(title)}</h2><div class="rows">${rows.map((r, i) => resultRow(r, i, key)).join('')}</div>${foot}</section>` : ''
+  }
+  if (search.artist) {
+    const a = search.artist
+    box.innerHTML = `<div class="btns"><button class="btn" id="s-back">${icon('back', 18)}Zurück zur Suche</button></div>
+      <section class="card"><div class="ard-head">${a.img ? `<img src="${esc(a.img)}" alt="">` : ''}<span class="lbl"><h2 translate="no" style="margin:0">${esc(a.name)}</h2><small>${esc('Künstler auf Spotify')}</small></span></div>
+        <p class="help" style="margin:0">${esc('Abonnieren holt alle Folgen auf die Box und später auch neue. Einzelne Alben fügst du unten hinzu.')}</p>
+        <div class="btns"><button class="btn primary" id="s-sub">${icon('plus', 18)}Ganzen Künstler abonnieren</button></div></section>
+      ${a.albums ? card('albums', 'Alben', a.albums) || `<p class="help">${esc('Keine Alben gefunden.')}</p>` : '<div class="loading"><p>Lade …</p></div>'}`
+    $('#s-back', box).onclick = () => {
+      search.artist = null
+      drawSearch()
+    }
+    $('#s-sub', box).onclick = () => subscribeSpotifyArtist(a)
+  } else {
+    const html =
+      card('artists', 'Künstler', (d.artists ?? []).filter((a) => a.id).map((a) => ({ kind: 'artist', id: a.id, name: a.name, t: a.name, s: 'Künstler', img: spImg(a.images) }))) +
+      card('albums', 'Alben', (d.albums ?? []).filter((a) => a.id).map(spAlbum)) +
+      card(
+        'tracks',
+        'Titel',
+        (d.tracks ?? []).filter((t) => t.album?.id).map((t) => ({ kind: 'album', id: t.album.id, name: t.album.name ?? t.name, t: t.name, s: `${spNames(t.artists)} · ${t.album?.name ?? ''}`, img: spImg(t.album?.images) })),
+        `<p class="help" style="margin:0">${esc('Ein Titel kommt mit seinem ganzen Album auf die Box.')}</p>`,
+      )
+    box.innerHTML = html || `<p class="help">${esc('Nichts gefunden.')}</p>`
+  }
+  for (const img of box.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+  for (const b of box.querySelectorAll('[data-list]')) {
+    const r = lists[b.dataset.list][Number(b.dataset.i)]
+    b.onclick = () => (r.kind === 'artist' ? openSpotifyArtist(r) : openSpotifyAlbum(r))
+  }
 }
 
-async function addFromSearch(r, btn) {
-  const run = async () => {
-    btn.disabled = true
-    const res =
-      r.kind === 'artist'
-        ? await api(`${API}/library/subscribe-artist`, { method: 'POST', body: { artistId: r.id, name: r.name, category: search.cat } })
-        : await api(`${API}/library/add-album`, { method: 'POST', body: { albumId: r.id, category: search.cat, name: r.name } })
+// An artist from the search: its albums (the backend gives them in pages; up to 200 here, newest first as Spotify
+// sends them), and subscribing to all of it
+async function openSpotifyArtist(r) {
+  search.artist = { ...r, albums: null }
+  drawSearch()
+  $('#s-results')?.scrollIntoView({ block: 'start' })
+  const page = (offset) => api(`/api/spotify/artist/${encodeURIComponent(r.id)}/albums?limit=50&offset=${offset}`)
+  const first = await page(0)
+  if (search.artist?.id !== r.id) return
+  const all = [...(first.body?.items ?? [])]
+  const step = first.body?.items?.length || 10
+  const total = Math.min(200, Number(first.body?.total) || 0)
+  const offsets = []
+  for (let o = step; o < total; o += step) offsets.push(o)
+  for (let i = 0; i < offsets.length; i += 6) {
+    const pages = await Promise.all(offsets.slice(i, i + 6).map(page))
+    if (search.artist?.id !== r.id) return
+    for (const p of pages) all.push(...(p.body?.items ?? []))
+  }
+  search.artist.albums = all.filter((a) => a?.id).map(spAlbum)
+  drawSearch()
+}
+
+// The sheet to add something to the box (Spotify, TIDAL): picture, what it is, the category - chosen here, not before the
+// search - and the button. have: already in the library (only closing then). onAdd(category) returns true when done.
+function addSheet({ title, sub, img, have, haveText, cat, text, okLabel }, onAdd) {
+  openSheet(
+    `<div class="ard-head">${img ? `<img src="${esc(img)}" alt="">` : ''}<span class="lbl"><h2 translate="no" style="margin:0">${esc(title)}</h2><small translate="no">${esc(sub ?? '')}</small></span></div>
+     ${text ? `<p class="help" style="margin:0">${esc(text)}</p>` : ''}
+     ${
+       have
+         ? `<p class="help" style="margin:0">${esc(haveText ?? 'Schon in der Bibliothek.')}</p><div class="btns"><button class="btn" data-close>Schließen</button></div>`
+         : `<div class="field"><label for="add-cat">Hinzufügen als</label>${catSelect('add-cat', cat, false)}</div>
+            <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-add>${icon('plus', 18)}${esc(okLabel ?? 'Hinzufügen')}</button></div>`
+     }`,
+    (sheet, close) => {
+      for (const b of sheet.querySelectorAll('[data-close]')) b.onclick = close
+      sheet.querySelector('[data-add]')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget
+        btn.disabled = true
+        const done = await onAdd(sheet.querySelector('#add-cat').value)
+        btn.disabled = false
+        if (done) close()
+      })
+    },
+  )
+}
+
+async function openSpotifyAlbum(r) {
+  const data = await api('/api/data')
+  const have = Array.isArray(data.body) && data.body.some((it) => it?.type === 'spotify' && it.id === r.id)
+  addSheet({ title: r.name, sub: r.s, img: r.img, have, cat: search.cat }, async (category) => {
+    const res = await api(`${API}/library/add-album`, { method: 'POST', body: { albumId: r.id, category, name: r.name } })
     if (!res.ok) {
-      btn.disabled = false
-      return toast('Das hat nicht geklappt', 'info')
+      toast('Das hat nicht geklappt', 'info')
+      return false
     }
-    btn.innerHTML = icon('check', 18)
+    search.cat = category
     const sync = await fireSync()
-    toast(`${r.kind === 'artist' ? 'Abonniert' : 'Hinzugefügt'}: ${r.name}. ${sync}`)
+    toast(`Hinzugefügt: ${r.name}. ${sync}`)
     libChanged()
-  }
-  if (r.kind === 'artist') {
-    // (subscribed already: a second subscribe would replace its range and category - it is changed where it is managed)
-    const subs = await api(`${API}/library/subscriptions`)
-    if ((subs.body?.artists ?? []).some((a) => a.id === r.id || a.artistId === r.id)) {
-      btn.innerHTML = icon('check', 18)
-      return toast('Schon abonniert – Bereich und Kategorie änderst du unter „Verwaltete Inhalte“.', 'info')
-    }
-    return openSheet(
-      `<h2>${esc(r.name)} abonnieren?</h2><p class="help" style="margin:0">Alle Folgen kommen als ${esc(catLabel(search.cat))} auf die Box, neue später von selbst. Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.</p>
-       <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Abonnieren</button></div>`,
-      (sheet, close) => {
-        sheet.querySelector('[data-close]').onclick = close
-        sheet.querySelector('[data-ok]').onclick = () => {
-          close()
-          run()
-        }
-      },
-    )
-  }
-  return run()
+    return true
+  })
+}
+
+async function subscribeSpotifyArtist(a) {
+  // (subscribed already: a second subscribe would replace its range and category - it is changed where it is managed)
+  const subs = await api(`${API}/library/subscriptions`)
+  const have = (subs.body?.artists ?? []).some((x) => x.id === a.id || x.artistId === a.id)
+  addSheet(
+    {
+      title: a.name,
+      sub: 'Künstler auf Spotify',
+      img: a.img,
+      have,
+      haveText: 'Schon abonniert – Bereich und Kategorie änderst du unter „Verwaltete Inhalte“.',
+      cat: search.cat,
+      text: 'Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.',
+      okLabel: 'Abonnieren',
+    },
+    async (category) => {
+      const res = await api(`${API}/library/subscribe-artist`, { method: 'POST', body: { artistId: a.id, name: a.name, category } })
+      if (!res.ok) {
+        toast('Das hat nicht geklappt', 'info')
+        return false
+      }
+      search.cat = category
+      const sync = await fireSync()
+      toast(`Abonniert: ${a.name}. ${sync}`)
+      libChanged()
+      return true
+    },
+  )
 }
 
 /* Podcasts suchen (Apple's podcast directory, in the stores of a language; see podcast-search.ts) */
@@ -9632,7 +9717,6 @@ const CONTROLLERS = {
         for (const x of b.parentElement.children) x.setAttribute('aria-pressed', String(x === b))
         if (search.q.trim().length >= 2) doSpotifySearch()
       }
-      $('#s-cat', root).onchange = (e) => (search.cat = e.target.value)
       $('#s-go', root).onclick = doSpotifySearch
       drawSearch()
     },

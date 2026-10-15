@@ -25,11 +25,13 @@ Die Zugangsdaten siehst und änderst du später unter **Bibliothek › Spotify �
 
 ### Auf Spotify suchen
 
-**Bibliothek › Auf Spotify suchen**: Gib einen Suchbegriff ein, wähle, ob in **Alle**, **Künstler**, **Alben** oder **Titel** gesucht wird, und wähle unter **Hinzufügen als** die Kategorie. Aus den Treffern fügst du mit ＋ hinzu:
+**Bibliothek › Hinzufügen › Auf Spotify suchen**: Gib einen Suchbegriff ein und wähle, ob in **Alle**, **Künstler**, **Alben** oder **Titel** gesucht wird. Einen Treffer tippst du an:
 
-- ein **Album**,
-- einen **Künstler**: Das legt ein Künstler-Abo an, alle Folgen kommen auf die Box, neue später von selbst ([Inhalte verwalten](verwalten.md)),
-- bei einem **Titel** das ganze Album, auf dem er ist.
+- ein **Album** zeigt Cover und Angaben; dort wählst du unter **Hinzufügen als** die Kategorie und tippst auf **Hinzufügen**,
+- ein **Titel** kommt genauso mit seinem ganzen Album auf die Box,
+- ein **Künstler** zeigt seine Alben zum einzelnen Hinzufügen. **Ganzen Künstler abonnieren** legt ein Künstler-Abo an: Alle Folgen kommen auf die Box, neue später von selbst ([Inhalte verwalten](verwalten.md)). **Zurück zur Suche** führt zur Trefferliste.
+
+Die zuletzt gewählte Kategorie ist beim nächsten Hinzufügen vorausgewählt.
 
 ### Link einfügen
 

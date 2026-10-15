@@ -2833,5 +2833,14 @@
  "Programme der Box fehlen": "Faltan programas de la caja",
  "Die fehlenden Programme sind installiert": "Los programas que faltaban están instalados",
  "Fehlende Programme installieren?": "¿Instalar los programas que faltan?",
- "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "La caja descarga {} de internet y los instala. Tarda unos minutos."
+ "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "La caja descarga {} de internet y los instala. Tarda unos minutos.",
+ "Abonnieren holt alle Folgen auf die Box und später auch neue. Einzelne Alben fügst du unten hinzu.": "La suscripción trae a la caja todos los episodios y, más tarde, también los nuevos. Los álbumes sueltos los añades abajo.",
+ "Abonniert: {}. {}": "Suscrito: {}. {}",
+ "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.": "Todos los episodios llegan a la caja, los nuevos más tarde solos. Después puedes acotar el rango en «Contenidos gestionados».",
+ "Ein Titel kommt mit seinem ganzen Album auf die Box.": "Una canción llega a la caja con todo su álbum.",
+ "Findet Hörspiele, Alben und Künstler auf Spotify. Antippen zeigt ein Album zum Hinzufügen oder die Alben eines Künstlers – die Kategorie wählst du beim Hinzufügen.": "Encuentra audiolibros, álbumes y artistas en Spotify. Al tocar ves un álbum para añadir o los álbumes de un artista; la categoría la eliges al añadir.",
+ "Ganzen Künstler abonnieren": "Suscribirse a todo el artista",
+ "Hinzugefügt: {}. {}": "Añadido: {}. {}",
+ "Künstler auf Spotify": "Artista en Spotify",
+ "Zurück zur Suche": "Volver a la búsqueda"
 }

@@ -25,11 +25,13 @@ You can look at and change the credentials later under **Library › Spotify ›
 
 ### Search on Spotify
 
-**Library › Search on Spotify**: enter a search term, choose whether to search in **All**, **Artist**, **Albums** or **Track**, and choose the category under **Add as**. From the hits you add with ＋:
+**Library › Add › Search on Spotify**: enter a search term and choose whether to search in **All**, **Artist**, **Albums** or **Track**. Tap a hit:
 
-- an **album**,
-- an **artist**: this creates an artist subscription, all episodes come onto the box, new ones later by themselves ([Managing content](verwalten.md)),
-- for a **track** the whole album it is on.
+- an **album** shows its cover and details; there you choose the category under **Add as** and tap **Add**,
+- a **track** comes onto the box the same way, with its whole album,
+- an **artist** shows their albums to add one by one. **Subscribe to the whole artist** creates an artist subscription: all episodes come onto the box, new ones later by themselves ([Managing content](verwalten.md)). **Back to search** returns to the results.
+
+The category chosen last is preselected the next time you add something.
 
 ### Paste link
 

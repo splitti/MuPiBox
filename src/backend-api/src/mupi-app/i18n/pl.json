@@ -2833,5 +2833,14 @@
  "Programme der Box fehlen": "Brakuje programów Boxa",
  "Die fehlenden Programme sind installiert": "Brakujące programy są zainstalowane",
  "Fehlende Programme installieren?": "Zainstalować brakujące programy?",
- "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Box pobiera {} z internetu i je instaluje. Potrwa to kilka minut."
+ "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Box pobiera {} z internetu i je instaluje. Potrwa to kilka minut.",
+ "Abonnieren holt alle Folgen auf die Box und später auch neue. Einzelne Alben fügst du unten hinzu.": "Subskrypcja przenosi na Boxa wszystkie odcinki, a później także nowe. Pojedyncze albumy dodasz poniżej.",
+ "Abonniert: {}. {}": "Zasubskrybowano: {}. {}",
+ "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.": "Wszystkie odcinki trafią na Boxa, nowe później same. Zakres możesz potem zawęzić w „Zarządzane treści”.",
+ "Ein Titel kommt mit seinem ganzen Album auf die Box.": "Utwór trafia na Boxa z całym albumem.",
+ "Findet Hörspiele, Alben und Künstler auf Spotify. Antippen zeigt ein Album zum Hinzufügen oder die Alben eines Künstlers – die Kategorie wählst du beim Hinzufügen.": "Znajduje audiobooki, albumy i wykonawców na Spotify. Dotknięcie pokazuje album do dodania lub albumy wykonawcy – kategorię wybierasz przy dodawaniu.",
+ "Ganzen Künstler abonnieren": "Subskrybuj całego wykonawcę",
+ "Hinzugefügt: {}. {}": "Dodano: {}. {}",
+ "Künstler auf Spotify": "Wykonawca na Spotify",
+ "Zurück zur Suche": "Wróć do wyszukiwania"
 }

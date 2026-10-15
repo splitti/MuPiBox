@@ -2833,5 +2833,14 @@
  "Programme der Box fehlen": "Programma’s van de box ontbreken",
  "Die fehlenden Programme sind installiert": "De ontbrekende programma’s zijn geïnstalleerd",
  "Fehlende Programme installieren?": "Ontbrekende programma’s installeren?",
- "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "De box downloadt {} van internet en installeert ze. Dit duurt een paar minuten."
+ "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "De box downloadt {} van internet en installeert ze. Dit duurt een paar minuten.",
+ "Abonnieren holt alle Folgen auf die Box und später auch neue. Einzelne Alben fügst du unten hinzu.": "Abonneren zet alle afleveringen op de box en later ook nieuwe. Losse albums voeg je hieronder toe.",
+ "Abonniert: {}. {}": "Geabonneerd: {}. {}",
+ "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.": "Alle afleveringen komen op de box, nieuwe later vanzelf. Het bereik kun je daarna beperken onder „Beheerde inhoud”.",
+ "Ein Titel kommt mit seinem ganzen Album auf die Box.": "Een nummer komt met zijn hele album op de box.",
+ "Findet Hörspiele, Alben und Künstler auf Spotify. Antippen zeigt ein Album zum Hinzufügen oder die Alben eines Künstlers – die Kategorie wählst du beim Hinzufügen.": "Vindt luisterboeken, albums en artiesten op Spotify. Tik voor een album om toe te voegen of de albums van een artiest – de categorie kies je bij het toevoegen.",
+ "Ganzen Künstler abonnieren": "Op de hele artiest abonneren",
+ "Hinzugefügt: {}. {}": "Toegevoegd: {}. {}",
+ "Künstler auf Spotify": "Artiest op Spotify",
+ "Zurück zur Suche": "Terug naar zoeken"
 }

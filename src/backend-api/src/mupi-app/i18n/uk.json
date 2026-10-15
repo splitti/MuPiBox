@@ -2833,5 +2833,14 @@
  "Programme der Box fehlen": "Бракує програм пристрою",
  "Die fehlenden Programme sind installiert": "Відсутні програми встановлено",
  "Fehlende Programme installieren?": "Установити відсутні програми?",
- "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Пристрій завантажить {} з інтернету й установить їх. Це займе кілька хвилин."
+ "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Пристрій завантажить {} з інтернету й установить їх. Це займе кілька хвилин.",
+ "Abonnieren holt alle Folgen auf die Box und später auch neue. Einzelne Alben fügst du unten hinzu.": "Підписка додає на пристрій усі епізоди, а пізніше й нові. Окремі альбоми додавай нижче.",
+ "Abonniert: {}. {}": "Підписано: {}. {}",
+ "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.": "Усі епізоди потраплять на пристрій, нові пізніше самі. Діапазон потім можна звузити в розділі «Керований вміст».",
+ "Ein Titel kommt mit seinem ganzen Album auf die Box.": "Трек потрапляє на пристрій разом з усім альбомом.",
+ "Findet Hörspiele, Alben und Künstler auf Spotify. Antippen zeigt ein Album zum Hinzufügen oder die Alben eines Künstlers – die Kategorie wählst du beim Hinzufügen.": "Знаходить аудіокниги, альбоми й виконавців у Spotify. Торкнись, щоб побачити альбом для додавання або альбоми виконавця – категорію обираєш під час додавання.",
+ "Ganzen Künstler abonnieren": "Підписатися на всього виконавця",
+ "Hinzugefügt: {}. {}": "Додано: {}. {}",
+ "Künstler auf Spotify": "Виконавець у Spotify",
+ "Zurück zur Suche": "Назад до пошуку"
 }

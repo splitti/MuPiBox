@@ -2833,5 +2833,14 @@
  "Programme der Box fehlen": "Kutunun programları eksik",
  "Die fehlenden Programme sind installiert": "Eksik programlar kuruldu",
  "Fehlende Programme installieren?": "Eksik programlar kurulsun mu?",
- "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Kutu {} paketlerini internetten indirip kurar. Bu birkaç dakika sürer."
+ "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Kutu {} paketlerini internetten indirip kurar. Bu birkaç dakika sürer.",
+ "Abonnieren holt alle Folgen auf die Box und später auch neue. Einzelne Alben fügst du unten hinzu.": "Abonelik tüm bölümleri kutuya, sonra yenilerini de getirir. Tek tek albümleri aşağıdan eklersin.",
+ "Abonniert: {}. {}": "Abone olundu: {}. {}",
+ "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.": "Tüm bölümler kutuya gelir, yeniler daha sonra kendiliğinden. Aralığı sonra „Yönetilen içerikler“ altında daraltabilirsin.",
+ "Ein Titel kommt mit seinem ganzen Album auf die Box.": "Bir parça tüm albümüyle kutuya gelir.",
+ "Findet Hörspiele, Alben und Künstler auf Spotify. Antippen zeigt ein Album zum Hinzufügen oder die Alben eines Künstlers – die Kategorie wählst du beim Hinzufügen.": "Spotify’da sesli kitap, albüm ve sanatçı bulur. Dokununca eklenecek bir albüm ya da bir sanatçının albümleri görünür – kategoriyi eklerken seçersin.",
+ "Ganzen Künstler abonnieren": "Sanatçının tamamına abone ol",
+ "Hinzugefügt: {}. {}": "Eklendi: {}. {}",
+ "Künstler auf Spotify": "Spotify’daki sanatçı",
+ "Zurück zur Suche": "Aramaya dön"
 }

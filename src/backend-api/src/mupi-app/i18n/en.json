@@ -2833,5 +2833,14 @@
  "Programme der Box fehlen": "Programs of the box are missing",
  "Die fehlenden Programme sind installiert": "The missing programs are installed",
  "Fehlende Programme installieren?": "Install missing programs?",
- "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "The box downloads {} from the internet and installs them. This takes a few minutes."
+ "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "The box downloads {} from the internet and installs them. This takes a few minutes.",
+ "Abonnieren holt alle Folgen auf die Box und später auch neue. Einzelne Alben fügst du unten hinzu.": "Subscribing brings all episodes onto the box, and new ones later. Add single albums below.",
+ "Abonniert: {}. {}": "Subscribed: {}. {}",
+ "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.": "All episodes come onto the box, new ones later by themselves. You can narrow the range afterwards under “Managed items”.",
+ "Ein Titel kommt mit seinem ganzen Album auf die Box.": "A track comes onto the box with its whole album.",
+ "Findet Hörspiele, Alben und Künstler auf Spotify. Antippen zeigt ein Album zum Hinzufügen oder die Alben eines Künstlers – die Kategorie wählst du beim Hinzufügen.": "Finds audiobooks, albums and artists on Spotify. Tap to see an album to add or an artist’s albums – you choose the category when adding.",
+ "Ganzen Künstler abonnieren": "Subscribe to the whole artist",
+ "Hinzugefügt: {}. {}": "Added: {}. {}",
+ "Künstler auf Spotify": "Artist on Spotify",
+ "Zurück zur Suche": "Back to search"
 }

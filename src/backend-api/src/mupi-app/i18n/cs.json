@@ -2833,5 +2833,14 @@
  "Programme der Box fehlen": "Chybí programy Boxu",
  "Die fehlenden Programme sind installiert": "Chybějící programy jsou nainstalovány",
  "Fehlende Programme installieren?": "Nainstalovat chybějící programy?",
- "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Box stáhne {} z internetu a nainstaluje je. Trvá to několik minut."
+ "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Box stáhne {} z internetu a nainstaluje je. Trvá to několik minut.",
+ "Abonnieren holt alle Folgen auf die Box und später auch neue. Einzelne Alben fügst du unten hinzu.": "Odběr přinese do Boxu všechny díly a později i nové. Jednotlivá alba přidáte níže.",
+ "Abonniert: {}. {}": "Odebíráno: {}. {}",
+ "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.": "Všechny díly se dostanou do Boxu, nové později samy. Rozsah můžete poté omezit v části „Spravovaný obsah“.",
+ "Ein Titel kommt mit seinem ganzen Album auf die Box.": "Skladba se do Boxu dostane s celým albem.",
+ "Findet Hörspiele, Alben und Künstler auf Spotify. Antippen zeigt ein Album zum Hinzufügen oder die Alben eines Künstlers – die Kategorie wählst du beim Hinzufügen.": "Najde audioknihy, alba a interprety na Spotify. Klepnutím zobrazíte album k přidání nebo alba interpreta – kategorii zvolíte při přidávání.",
+ "Ganzen Künstler abonnieren": "Odebírat celého interpreta",
+ "Hinzugefügt: {}. {}": "Přidáno: {}. {}",
+ "Künstler auf Spotify": "Interpret na Spotify",
+ "Zurück zur Suche": "Zpět na hledání"
 }

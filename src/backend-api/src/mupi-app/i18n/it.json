@@ -2833,5 +2833,14 @@
  "Programme der Box fehlen": "Mancano programmi del box",
  "Die fehlenden Programme sind installiert": "I programmi mancanti sono installati",
  "Fehlende Programme installieren?": "Installare i programmi mancanti?",
- "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Il box scarica {} da internet e li installa. Ci vogliono alcuni minuti."
+ "Die Box lädt {} aus dem Internet und installiert sie. Das dauert ein paar Minuten.": "Il box scarica {} da internet e li installa. Ci vogliono alcuni minuti.",
+ "Abonnieren holt alle Folgen auf die Box und später auch neue. Einzelne Alben fügst du unten hinzu.": "L’abbonamento porta sul box tutti gli episodi e più tardi anche quelli nuovi. I singoli album li aggiungi qui sotto.",
+ "Abonniert: {}. {}": "Abbonato: {}. {}",
+ "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.": "Tutti gli episodi arrivano sul box, i nuovi più tardi da soli. L’intervallo lo puoi poi limitare in «Contenuti gestiti».",
+ "Ein Titel kommt mit seinem ganzen Album auf die Box.": "Un brano arriva sul box con tutto il suo album.",
+ "Findet Hörspiele, Alben und Künstler auf Spotify. Antippen zeigt ein Album zum Hinzufügen oder die Alben eines Künstlers – die Kategorie wählst du beim Hinzufügen.": "Trova audiodrammi, album e artisti su Spotify. Toccando vedi un album da aggiungere o gli album di un artista – la categoria la scegli quando aggiungi.",
+ "Ganzen Künstler abonnieren": "Abbonati a tutto l’artista",
+ "Hinzugefügt: {}. {}": "Aggiunto: {}. {}",
+ "Künstler auf Spotify": "Artista su Spotify",
+ "Zurück zur Suche": "Torna alla ricerca"
 }
