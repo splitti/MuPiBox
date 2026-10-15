@@ -175,7 +175,7 @@ function currentPage() {
 }
 // Two pages of the same settings group (Aussehen › Theme, Ansicht …): moving between them is like changing tabs, it
 // takes no step of its own - back (the arrow at the top, the browser's back) leads up to the group, not page by page
-const groupSiblings = (a, b) => !!a && !!b && a.id !== b.id && !!a.parent && a.parent === b.parent && a.parent.startsWith('g-')
+const groupSiblings = (a, b) => !!a && !!b && a.id !== b.id && !!groupOf(a) && groupOf(a) === groupOf(b)
 function go(id) {
   // (an address outside the app, e.g. the admin interface: whoever wired the click)
   if (String(id).startsWith('ext:')) return openExternal(id.slice(4))
@@ -375,13 +375,24 @@ function renderPageNav(page) {
   updatePageNavSections(page)
 }
 
+// The pages a settings group's page leads to (its nav rows, card after card)
+const groupNav = (g) => (g?.sections || []).flatMap((s) => (s.items || []).filter((i) => i.type === 'nav').map((i) => i.target))
+// The settings group of a page: the one it belongs to, or - a page of another area - the one listing it (Spotify and
+// the NAS are pages of the library that Dienste lists too)
+function groupOf(page) {
+  if (!page) return null
+  if (page.parent?.startsWith('g-')) return state.pages.get(page.parent) ?? null
+  return state.schema.pages.find((g) => g.id.startsWith('g-') && groupNav(g).includes(page.id)) ?? null
+}
 // The pages of a page's settings group in the order the group's page lists them (its cards one after the other - not
-// the order of schema.json: TIDAL went from Home Assistant to WLED); those it does not list come after them
+// the order of schema.json: TIDAL went from Home Assistant to WLED), the pages of other areas it lists among them
+// (Spotify, NAS); its own pages it does not list come after them
 function groupPages(page) {
-  if (!page.parent?.startsWith('g-')) return []
-  const order = (state.pages.get(page.parent)?.sections || []).flatMap((s) => (s.items || []).filter((i) => i.type === 'nav').map((i) => i.target))
-  const at = (p) => (order.includes(p.id) ? order.indexOf(p.id) : order.length)
-  return state.schema.pages.filter((p) => p.parent === page.parent).sort((a, b) => at(a) - at(b))
+  const g = groupOf(page)
+  if (!g) return []
+  const order = groupNav(g)
+  const listed = order.map((id) => state.pages.get(id)).filter((p) => p && (p.parent === g.id || !p.parent?.startsWith('g-')))
+  return [...listed, ...state.schema.pages.filter((p) => p.parent === g.id && !order.includes(p.id))]
 }
 
 // Back / next under a page of a settings group (phone, tablet, small PC window: where "Auf dieser Seite" is not shown)
