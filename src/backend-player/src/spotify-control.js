@@ -1788,7 +1788,7 @@ let playbackGeneration = 0
 let playbackRequest = Date.now()
 // Bumped by every play and pause: a play that waited for the box's device is not made after a pause meanwhile
 let playPauseRequest = 0
-// An album paused while its track list was loading (NAS, TIDAL): not started then - the start of the list takes a
+// An album paused while its track list was loading (NAS): not started then - the start of the list takes a
 // pause back - but kept, paused, and started by the next "play". A stop or another start (playbackGeneration) let it
 // go. (Dropping it left "play" without anything to play: the album had to be chosen again.)
 let heldStart = null

@@ -385,7 +385,7 @@ function groupOf(page) {
   return state.schema.pages.find((g) => g.id.startsWith('g-') && groupNav(g).includes(page.id)) ?? null
 }
 // The pages of a page's settings group in the order the group's page lists them (its cards one after the other - not
-// the order of schema.json: TIDAL went from Home Assistant to WLED), the pages of other areas it lists among them
+// the order of schema.json: a page went from Home Assistant to WLED), the pages of other areas it lists among them
 // (Spotify, NAS); its own pages it does not list come after them
 function groupPages(page) {
   const g = groupOf(page)
@@ -3460,7 +3460,7 @@ function searchTop() {
 
 // What of a source is in the library already, as "kind:id" (album, playlist, artist): the search marks it. Spotify:
 // the library's entries, the subscribed artists and the albums added from the search (also those the sync has not
-// fetched yet); TIDAL: its entries.
+// fetched yet).
 async function libraryHave(source) {
   const have = new Set()
   const [data, subs] = await Promise.all([api('/api/data'), source === 'spotify' ? api(`${API}/library/subscriptions`) : Promise.resolve(null)])
@@ -3471,7 +3471,6 @@ async function libraryHave(source) {
       if (it.playlistid) have.add(`playlist:${it.playlistid}`)
       if (it.artistid && !it.id) have.add(`artist:${it.artistid}`)
     }
-    if (source === 'tidal' && it.type === 'tidal' && it.id) have.add(`${it.tidalKind ?? 'album'}:${it.id}`)
   }
   for (const a of subs?.body?.artists ?? []) have.add(`artist:${a.id ?? a.artistId}`)
   for (const a of subs?.body?.explicit_albums ?? []) have.add(`album:${a.id}`)
@@ -3510,7 +3509,7 @@ const spAlbum = (a) => ({
   artistIds: (a.artists ?? []).map((x) => x?.id).filter(Boolean),
 })
 
-// A row of a search result (Spotify, TIDAL): opens what it is - an artist its albums, an album the sheet to add it;
+// A row of a search result: opens what it is - an artist its albums, an album the sheet to add it;
 // a tick for what is in the library already (have: "kind:id", see libraryHave)
 // (via: an album of a subscribed artist - on the box through the subscription, not as an entry of its own)
 function resultRow(r, i, list, have) {
@@ -3519,7 +3518,7 @@ function resultRow(r, i, list, have) {
     <span class="lbl"><b translate="no">${esc(r.t)}</b><small translate="no">${esc(r.s)}${there ? ` · <span class="in-lib">${esc(have?.has(`${r.kind}:${r.id}`) ? 'In der Bibliothek' : 'Künstler abonniert')}</span>` : ''}</small></span>${there ? `<span class="in-lib" aria-hidden="true">${icon('check', 18)}</span>` : ''}<span class="chev">${icon('chevron', 18)}</span></button>`
 }
 
-// The albums of an artist (Spotify, TIDAL), filtered: by a text, by kind (albums or EPs and singles) and in an order -
+// The albums of an artist in a search, filtered: by a text, by kind (albums or EPs and singles) and in an order -
 // a big artist has hundreds (Benjamin Blümchen: about 290). Rows: { name, date: "YYYY[-MM-DD]", single }.
 const artistView = { q: '', kind: 'Alle', sort: 'new' }
 function artistControls(prefix) {
@@ -3646,7 +3645,7 @@ async function openSpotifyArtist(r) {
   drawSearch()
 }
 
-// The sheet to add something to the box (Spotify, TIDAL): picture, what it is, the category - chosen here, not before the
+// The sheet to add something from a search to the box: picture, what it is, the category - chosen here, not before the
 // search - and the button. have: already in the library (only closing then). onAdd(category) returns true when done.
 function addSheet({ title, sub, img, have, haveText, cat, text, okLabel }, onAdd) {
   openSheet(
