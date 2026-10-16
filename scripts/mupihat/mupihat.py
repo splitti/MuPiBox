@@ -128,16 +128,41 @@ def apply_defaults():
     return cell_ok
 
 
-# A reset of the charger while the service runs: its settings written again, at most every 5 minutes. Not again once
-# the cell count could not be corrected (charging stays off - writing the defaults switches it on first).
+# A reset of the charger while the service runs: its settings written again at once. Only when the chip is found reset
+# again right after that (the writes do not stick) it waits: then at most every 5 minutes.
 REINIT_EVERY_S = 300
 reinit_at = 0.0
-reinit_gave_up = False
+reset_before = False
+# The cell count could not be corrected: charging is kept off on every round (a reset of the chip switches it on
+# again), whatever the wait above - and the cell count it reports is no new reset then.
+charging_blocked = False
+
+
+def check_charger():
+    """A reset of the chip found and handled. Returns whether its values can be taken (False: its ADC is still off or
+    it still has to be set up - they are the values of before the reset)."""
+    global reinit_at, reset_before, charging_blocked
+    reason = hat.charger_reset_reason()
+    if charging_blocked and reason == "cell count":
+        reason = ""
+    if reason and (not reset_before or time.monotonic() - reinit_at >= REINIT_EVERY_S):
+        reinit_at = time.monotonic()
+        logging.warning("Charger was reset (%s): writing its settings again", reason)
+        charging_blocked = not apply_defaults()
+        reason = hat.charger_reset_reason()
+        if charging_blocked and reason == "cell count":
+            reason = ""
+        if reason:
+            logging.error("Charger still not set up (%s): its values are not taken, tried again later", reason)
+    if charging_blocked and not hat.keep_charging_disabled():
+        logging.error("Charging could not be switched off again")
+    reset_before = bool(reason)
+    return not reason
 
 
 def periodic_json_dump():
     """Periodically writes the register values to a JSON file."""
-    global json_flag, json_file, reinit_at, reinit_gave_up
+    global json_flag, json_file
     while True:
         # AR5-5: serialise I2C work via i2c_lock so Flask request workers
         # don't interleave bus transactions with this thread. Sleeps stay
@@ -150,23 +175,22 @@ def periodic_json_dump():
             with i2c_lock:
                 # (the chip was reset - its ADC off, the PROG pin's cell count back: the values it gave stayed those of
                 # before, for hours, and it did not charge. Seen on 15.10.2026 at 23:10, noticed the next morning.)
-                reason = hat.charger_reset_reason()
-                if reason and not reinit_gave_up and time.monotonic() - reinit_at >= REINIT_EVERY_S:
-                    reinit_at = time.monotonic()
-                    logging.warning("Charger was reset (%s): writing its settings again", reason)
-                    if not apply_defaults():
-                        reinit_gave_up = True
+                valid = check_charger()
                 hat.read_all_register()
                 # Phase-12: append the current VBAT to the smoothing ring so
                 # battery_percent_granular() sees a moving-average of the
                 # last ~32s instead of a single sample. Cheap, done inside
                 # the lock so we use the value the bulk-read just refreshed.
-                hat.record_vbat_sample(hat.read_Vbat())
-                hat.update_charge_estimate()
+                # (not the values of a chip still reset: they are those of before)
+                if valid:
+                    hat.record_vbat_sample(hat.read_Vbat())
+                    hat.update_charge_estimate()
             time.sleep(1)  # Allow time for the registers to be updated
             with i2c_lock:
                 if json_flag:
                     snapshot = hat.to_json()
+                    # (read by the display: no "charging" from values of before a reset)
+                    snapshot["Measurement_Valid"] = valid
                 if log_flag:
                     log_register_values()
         except Exception as e:
@@ -210,7 +234,7 @@ def parse_arguments():
 
 
 def main():
-    global hat, log_flag, json_flag, json_file, reinit_at, reinit_gave_up
+    global hat, log_flag, json_flag, json_file, charging_blocked
 
     # Parse command-line arguments
     args = parse_arguments()
@@ -227,8 +251,8 @@ def main():
     # Initialize BQ25792
     try:
         hat = bq25792(battery_conf_file=config_file)
-        reinit_at = time.monotonic()
-        reinit_gave_up = not apply_defaults()
+        # (a reset found later is handled at once: the start is no attempt the next one waits for)
+        charging_blocked = not apply_defaults()
 
     except Exception as e:
         logging.error("MuPiHAT initialization failed: %s", str(e))
