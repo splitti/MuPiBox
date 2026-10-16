@@ -2573,8 +2573,8 @@ function entryPlayFields(item) {
     }`
 }
 
-// Which episodes of a podcast come on the box (entry field "episodePick", see ../episode-pick.ts): counted by date,
-// episode 1 is the oldest the feed has. The display, the lists here and the SD card follow it.
+// Which episodes of a podcast come on the box (entry field "episodePick", see ../episode-pick.ts): counted by date.
+// 'Eigener Bereich' counts from the newest, 0 is the newest episode. The display, the lists here and the SD card follow it.
 const EPISODE_PICKS = [
   ['', 'Alle Folgen'],
   ['newest:10', 'Die 10 neuesten'],
@@ -2591,10 +2591,12 @@ function pickEpisodes(newestFirst, pick) {
   const n = newestFirst.length
   let m = /^(newest|oldest):(\d{1,4})$/.exec(pick ?? '')
   if (m) return m[1] === 'newest' ? newestFirst.slice(0, Number(m[2])) : newestFirst.slice(Math.max(0, n - Number(m[2])))
-  m = /^range:(\d{1,5})-(\d{1,5})$/.exec(pick ?? '')
+  m = /^(range|span):(\d{1,5})-(\d{1,5})$/.exec(pick ?? '')
   if (!m) return newestFirst
-  const from = Math.min(Number(m[1]), Number(m[2]))
-  const to = Math.max(Number(m[1]), Number(m[2]))
+  const from = Math.min(Number(m[2]), Number(m[3]))
+  const to = Math.max(Number(m[2]), Number(m[3]))
+  // span: counted from the newest (0 is the newest episode); range (as chosen before): from the oldest (1 is the oldest)
+  if (m[1] === 'span') return newestFirst.slice(from, to + 1)
   return newestFirst.slice(Math.max(0, n - to), Math.max(0, n - from + 1))
 }
 
@@ -2602,11 +2604,15 @@ function pickEpisodes(newestFirst, pick) {
 // feed's order) keeps it until another choice is made.
 function episodePickFields(p, item) {
   const pick = typeof item.episodePick === 'string' ? item.episodePick : ''
-  const range = /^range:(\d+)-(\d+)$/.exec(pick)
+  // (the span: counted from the newest, 0 is the newest episode; a range from before, counted from the oldest, stays
+  // as it is - an option of its own - until another choice is made)
+  const range = /^span:(\d+)-(\d+)$/.exec(pick)
+  const oldRange = /^range:(\d+)-(\d+)$/.exec(pick)
   const other = /^(newest|oldest):(\d+)$/.exec(pick)
   const legacy = !pick && item.aPartOfAll === true
   const opts = [
     ...(legacy ? [['legacy', `Wie bisher (Nr. ${item.aPartOfAllMin ?? 1} – ${item.aPartOfAllMax ?? '…'} im Feed)`]] : []),
+    ...(oldRange ? [[pick, `Bereich wie bisher (Folge ${oldRange[1]} – ${oldRange[2]}, ab der ältesten)`]] : []),
     ...EPISODE_PICKS,
     ...(other && !EPISODE_PICKS.some(([v]) => v === pick) ? [[pick, other[1] === 'newest' ? `Die ${other[2]} neuesten` : `Die ersten ${other[2]}`]] : []),
   ]
@@ -2614,17 +2620,20 @@ function episodePickFields(p, item) {
   return `<div class="field"><label for="${p}-pick">Welche Folgen auf die Box</label><select class="input" id="${p}-pick">${opts
     .map(([v, l]) => `<option value="${v}"${v === chosen ? ' selected' : ''}>${esc(l)}</option>`)
     .join('')}</select></div>
-    <div class="field" id="${p}-range"${range ? '' : ' hidden'}><label>Folge von – bis</label><div class="rule-times"><input class="input" id="${p}-from" type="number" min="1" inputmode="numeric" value="${range ? range[1] : ''}" placeholder="von" aria-label="von"><input class="input" id="${p}-to" type="number" min="1" inputmode="numeric" value="${range ? range[2] : ''}" placeholder="bis" aria-label="bis"></div>
-      <small>Gezählt nach Datum: Folge 1 ist die älteste.</small></div>`
+    <div class="field" id="${p}-range"${range ? '' : ' hidden'}><label>Folge von – bis</label><div class="rule-times"><input class="input" id="${p}-from" type="number" min="0" inputmode="numeric" value="${range ? range[1] : ''}" placeholder="von" aria-label="von"><input class="input" id="${p}-to" type="number" min="0" inputmode="numeric" value="${range ? range[2] : ''}" placeholder="bis" aria-label="bis"></div>
+      <small>Gezählt nach Datum: 0 ist die neueste Folge.</small></div>`
 }
 
 // The choice as its fields say it: '' (all), 'legacy', 'newest:N' …, or null (a range that does not fit)
 function episodePickOf(sheet, p) {
   const v = sheet.querySelector(`#${p}-pick`).value
   if (v !== 'range') return v
-  const from = Number(sheet.querySelector(`#${p}-from`).value) || 0
-  const to = Number(sheet.querySelector(`#${p}-to`).value) || 0
-  return Number.isInteger(from) && Number.isInteger(to) && from >= 1 && to >= from && to <= 99999 ? `range:${from}-${to}` : null
+  // (an empty field is not a 0: the newest episode must be typed)
+  const fromText = sheet.querySelector(`#${p}-from`).value.trim()
+  const toText = sheet.querySelector(`#${p}-to`).value.trim()
+  const from = fromText === '' ? NaN : Number(fromText)
+  const to = toText === '' ? NaN : Number(toText)
+  return Number.isInteger(from) && Number.isInteger(to) && from >= 0 && to >= from && to <= 99999 ? `span:${from}-${to}` : null
 }
 
 // A change of the choice: the range's fields shown or not, then `changed`
@@ -2637,7 +2646,7 @@ function wireEpisodePick(sheet, p, changed) {
   for (const k of ['from', 'to']) sheet.querySelector(`#${p}-${k}`).addEventListener('input', changed)
 }
 
-const BAD_RANGE = 'Bitte beide Nummern eintragen (ab 1, die zweite nicht kleiner als die erste)'
+const BAD_RANGE = 'Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)'
 
 // How many of a podcast's newest episodes stay on the SD card (entry field "offline"; see podcast-offline.ts); with a
 // choice of episodes the newest of the chosen ones - or all of them (at most 50, as the box keeps)
