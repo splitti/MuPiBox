@@ -388,10 +388,17 @@ function checkSilence() {
 // mplayer starts once cache-min percent of the cache are filled (see the wrapper); mpv reports 0-100 of its goal.
 const cachePrefillPercent = player.cachePrefillPercent ?? 10
 let loadingTimer = null
+// The ring on the cover is shown for at least this long (ms): on a fast line the stream plays after a second or so, and
+// the display (it asks once a second) hardly saw the ring.
+const MIN_LOADING_MS = 2000
+let loadingSince = 0
+let loadingEndTimer = null
 
 function startLoading() {
   currentMeta.loading = true
   currentMeta.loadProgress = 0
+  loadingSince = Date.now()
+  clearTimeout(loadingEndTimer)
   clearTimeout(loadingTimer)
   // Never leave the display waiting for ever (unreachable stream, stream ended, ...).
   loadingTimer = setTimeout(stopLoading, 90 * 1000)
@@ -399,8 +406,21 @@ function startLoading() {
 
 function stopLoading() {
   clearTimeout(loadingTimer)
+  clearTimeout(loadingEndTimer)
   currentMeta.loading = false
   currentMeta.loadProgress = 0
+}
+
+// The stream plays: the ring ends - after MIN_LOADING_MS at the earliest (a stop or a failure ends it at once)
+function finishLoading() {
+  if (!currentMeta.loading) return
+  const rest = MIN_LOADING_MS - (Date.now() - loadingSince)
+  if (rest <= 0) {
+    stopLoading()
+    return
+  }
+  clearTimeout(loadingEndTimer)
+  loadingEndTimer = setTimeout(stopLoading, rest)
 }
 
 // mplayer says "Starting playback" (track-change) once its cache is filled: the ring ends with it. mpv says file-loaded as
@@ -411,14 +431,14 @@ const loadingEndsWithCache = cachePrefillPercent >= 100
 player.on('cache-fill', (percent) => {
   if (currentMeta.loading) {
     currentMeta.loadProgress = Math.min(100, Math.round((percent / cachePrefillPercent) * 100))
-    if (loadingEndsWithCache && currentMeta.loadProgress >= 100) stopLoading()
+    if (loadingEndsWithCache && currentMeta.loadProgress >= 100) finishLoading()
   }
 })
 player.on('track-change', () => {
-  if (!loadingEndsWithCache) stopLoading()
+  if (!loadingEndsWithCache) finishLoading()
 })
 player.on('time_pos', (seconds) => {
-  if (loadingEndsWithCache && currentMeta.loading && Number(seconds) > 0.5) stopLoading()
+  if (loadingEndsWithCache && currentMeta.loading && Number(seconds) > 0.5) finishLoading()
 })
 player.on('percent_pos', checkSilence)
 player.on('time_pos', checkSilence)
