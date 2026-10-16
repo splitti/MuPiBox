@@ -6064,6 +6064,40 @@ class bq25792:
         self.read_all_register()
         return self.write_defaults()
 
+    def charger_reset_reason(self):
+        '''
+        Whether the chip lost the settings written at the start (a reset while running, e.g. a dip of its supply):
+        its POR defaults are back - the ADC off (VBAT, VBUS, IBUS, IBAT then keep the values of before the reset, and
+        the box showed them for hours: "charging", a battery that did not go down) and the cell count from the PROG pin
+        (seen latched as 4S on a 2S pack: a charge target of 16800 mV, and the battery was not charged).
+        Returns the reason, '' when the settings are in place, None when the bus did not answer (not known - neither
+        a reset nor none).
+        '''
+        try:
+            if not (self.read_register(0x2E, 1)[0] & 0x80):
+                return "ADC off"
+            cells = self._battery_cell_count()
+            if cells and (self.read_register(0x0A, 1)[0] >> 6) + 1 != cells:
+                return "cell count"
+        except I2CError:
+            return None
+        return ""
+
+    def keep_charging_disabled(self):
+        '''
+        With a cell count that could not be corrected charging must stay off - but a reset of the chip sets EN_CHG back
+        to 1 (its POR value). Checked on every round: switched off again, and read back. Returns whether it is off.
+        '''
+        try:
+            reg0f = self.read_register(0x0F, 1)[0]
+            if not (reg0f & 0b00100000):
+                return True
+            logging.error("Charging was on again (a reset of the chip?) with a wrong cell count: switching it off.")
+            self.safe_execute(self.bq.write_byte_data, self.i2c_addr, 0x0F, reg0f & ~0b00100000 & 0xFF)
+            return not (self.read_register(0x0F, 1)[0] & 0b00100000)
+        except I2CError:
+            return False
+
     def disable_charging(self):
         '''
         Safe state when the cell count cannot be corrected: the system keeps running from the input,

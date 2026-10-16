@@ -108,6 +108,78 @@ def api_registers():
         return jsonify({"error": str(e)}), 500
 
 
+def apply_defaults():
+    """The settings of the box written to the charger (at the start, and again after a reset of the chip).
+    A write that did not stick used to be only a log line. Retried a few times (a transient I2C error is the usual
+    cause); a cell count that stays wrong is the dangerous case (a 2S pack with a 4S latch has a 16800 mV charge
+    target), so charging is switched off then. A VREG that stays at its POR default (4.2 V/cell) is within cell spec:
+    logged only. Returns whether the cell count is right."""
+    cell_ok, vreg_ok = hat.MuPiHAT_Default()
+    for attempt in range(2):
+        if cell_ok and vreg_ok:
+            break
+        logging.warning("Charger settings not verified (cell ok: %s, VREG ok: %s), retrying...", cell_ok, vreg_ok)
+        time.sleep(2)
+        cell_ok, vreg_ok = hat.MuPiHAT_Default()
+    if not cell_ok:
+        hat.disable_charging()
+    elif not vreg_ok:
+        logging.error("VREG from the battery profile could not be set; the chip keeps its default.")
+    return cell_ok
+
+
+# A reset of the charger while the service runs: its settings written again at once. Only when the chip is found reset
+# again right after that (the writes do not stick) it waits: then at most every 5 minutes.
+REINIT_EVERY_S = 300
+reinit_at = 0.0
+reset_before = False
+# The cell count could not be corrected: charging is kept off on every round (a reset of the chip switches it on
+# again), whatever the wait above - and the cell count it reports is no new reset then.
+cells_uncorrectable = False
+# Setting the chip up failed halfway (the bus gave up): not known what it holds - charging is kept off until it is
+# set up, tried again after the wait above.
+setup_failed = False
+
+
+def known_reason():
+    """charger_reset_reason() without the cell count that is known to be wrong (cells_uncorrectable)."""
+    reason = hat.charger_reset_reason()
+    return "" if cells_uncorrectable and reason == "cell count" else reason
+
+
+def check_charger():
+    """A reset of the chip found and handled. Returns whether its values can be taken - False: its ADC is still off,
+    it still has to be set up (they are the values of before the reset), or it could not be asked (not known)."""
+    global reinit_at, reset_before, cells_uncorrectable, setup_failed
+    reason = known_reason()
+    if reason is None:
+        # (the bus did not answer: nothing is known - no valid values, and a reset seen before is not forgotten)
+        if cells_uncorrectable or setup_failed:
+            hat.keep_charging_disabled()
+        return False
+    unresolved = bool(reason) or setup_failed
+    try:
+        if unresolved and (not reset_before or time.monotonic() - reinit_at >= REINIT_EVERY_S):
+            reinit_at = time.monotonic()
+            # (a failed setup counts until one gets through, also when this one ends in an exception)
+            setup_failed = True
+            logging.warning("Charger was reset (%s): writing its settings again", reason or "setup failed before")
+            cells_uncorrectable = not apply_defaults()
+            setup_failed = False
+            reason = known_reason()
+            if reason is None or reason:
+                logging.error("Charger still not set up (%s): its values are not taken, tried again later", reason)
+            unresolved = reason is None or bool(reason)
+    except Exception as e:
+        logging.error("Setting up the charger failed (%s): charging kept off, tried again later", e)
+        unresolved = True
+    finally:
+        reset_before = unresolved
+        if (cells_uncorrectable or setup_failed) and not hat.keep_charging_disabled():
+            logging.error("Charging could not be switched off again")
+    return not unresolved
+
+
 def periodic_json_dump():
     """Periodically writes the register values to a JSON file."""
     global json_flag, json_file
@@ -121,17 +193,30 @@ def periodic_json_dump():
                 hat.watchdog_reset()
             time.sleep(0.1)  # Allow time for the watchdog reset
             with i2c_lock:
-                hat.read_all_register()
+                # (the chip was reset - its ADC off, the PROG pin's cell count back: the values it gave stayed those of
+                # before, for hours, and it did not charge. Seen on 15.10.2026 at 23:10, noticed the next morning.)
+                valid = check_charger()
+                # (a bulk read that failed leaves the values of the round before: not taken either)
+                if hat.read_all_register() != 0:
+                    valid = False
                 # Phase-12: append the current VBAT to the smoothing ring so
                 # battery_percent_granular() sees a moving-average of the
                 # last ~32s instead of a single sample. Cheap, done inside
                 # the lock so we use the value the bulk-read just refreshed.
-                hat.record_vbat_sample(hat.read_Vbat())
-                hat.update_charge_estimate()
+                # (not the values of a chip still reset: they are those of before)
+                if valid:
+                    hat.record_vbat_sample(hat.read_Vbat())
+                    hat.update_charge_estimate()
             time.sleep(1)  # Allow time for the registers to be updated
             with i2c_lock:
                 if json_flag:
                     snapshot = hat.to_json()
+                    # (read by the display: no "charging" from values of before a reset)
+                    snapshot["Measurement_Valid"] = valid
+                    # (and no battery state from them: LOW or SHUTDOWN would warn or switch the box off -
+                    # mupihat_automation.sh, Telegram)
+                    if not valid:
+                        snapshot["Bat_Stat"] = "UNKNOWN"
                 if log_flag:
                     log_register_values()
         except Exception as e:
@@ -175,7 +260,7 @@ def parse_arguments():
 
 
 def main():
-    global hat, log_flag, json_flag, json_file
+    global hat, log_flag, json_flag, json_file, cells_uncorrectable
 
     # Parse command-line arguments
     args = parse_arguments()
@@ -192,21 +277,8 @@ def main():
     # Initialize BQ25792
     try:
         hat = bq25792(battery_conf_file=config_file)
-        # A write that did not stick used to be only a log line. Retry a few times (a transient
-        # I2C error is the usual cause); a cell count that stays wrong is the dangerous case (a 2S
-        # pack with a 4S latch has a 16800 mV charge target), so charging is switched off then.
-        # A VREG that stays at its POR default (4.2 V/cell) is within cell spec: logged only.
-        cell_ok, vreg_ok = hat.MuPiHAT_Default()
-        for attempt in range(2):
-            if cell_ok and vreg_ok:
-                break
-            logging.warning("Charger settings not verified (cell ok: %s, VREG ok: %s), retrying...", cell_ok, vreg_ok)
-            time.sleep(2)
-            cell_ok, vreg_ok = hat.MuPiHAT_Default()
-        if not cell_ok:
-            hat.disable_charging()
-        elif not vreg_ok:
-            logging.error("VREG from the battery profile could not be set; the chip keeps its default.")
+        # (a reset found later is handled at once: the start is no attempt the next one waits for)
+        cells_uncorrectable = not apply_defaults()
 
     except Exception as e:
         logging.error("MuPiHAT initialization failed: %s", str(e))

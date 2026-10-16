@@ -6,3 +6,6 @@
 # KillMode=process: same reason as the WiFi rule (99-mupibox-wifi.rules) - the script starts long-running
 # WiFi programs in the background that must not be stopped together with it when it ends.
 SUBSYSTEM=="net", KERNEL=="eth0", ACTION=="change", ATTR{carrier}=="0|1", RUN+="/usr/bin/systemd-run --no-block --property=KillMode=process /usr/local/bin/mupibox/mupi_wifi_select.sh"
+# The port itself appearing (its driver loaded after mupi_ethernet.service had started and found no port): the
+# service is started again, so the LAN gets its address without a restart. (start: one that runs is left as it is)
+SUBSYSTEM=="net", KERNEL=="eth0", ACTION=="add", RUN+="/usr/bin/systemctl --no-block start mupi_ethernet.service"

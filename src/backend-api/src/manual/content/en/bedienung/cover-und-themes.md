@@ -20,7 +20,7 @@ Under **Custom images** you can use your own photo or logo instead of the ready-
 
 ### Text on the display
 
-What the child reads when the limit is reached, a quiet time is running or the QR code for parents appears, you change under **Settings › Appearance › Text on the display**. If a field stays empty, the text of the set language applies.
+What the child reads when the limit is reached, a quiet time is running or the QR code for parents appears, you change under **Settings › Appearance › Text on the display**. If a field stays empty, the text of the set language applies. For the quiet time the heading is the name of the time window ([Quiet times](../spielzeit/ruhezeiten.md)); there you only change the text below it.
 
 ## Covers
 

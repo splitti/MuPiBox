@@ -22,7 +22,20 @@ BAT_CONNECTED=$(jq -r '.BatteryConnected' ${JSON_FILE})
 if [ "${BAT_CONNECTED}" -eq 1 ]; then
 	# the parents hear of a low battery once (Telegram), again only after the box was charging in between
 	LOW_SENT=0
+	INVALID_ROUNDS=0
 	while true; do
+		# Values of a charger that was reset and is not set up again (mupihat.py: Measurement_Valid false) are those of
+		# before the reset - no warning and no shutdown from them. Said in the log at once and every 30 minutes while it
+		# lasts; the service sets the chip up again by itself.
+		if [ -f ${JSON_FILE} ] && [ "$(jq -r '.Measurement_Valid' ${JSON_FILE})" = "false" ]; then
+			if [ $((INVALID_ROUNDS % 30)) -eq 0 ]; then
+				echo "Battery values not valid (charger being set up again) for ${INVALID_ROUNDS} min - no battery decisions"
+			fi
+			INVALID_ROUNDS=$((INVALID_ROUNDS + 1))
+			sleep 60
+			continue
+		fi
+		INVALID_ROUNDS=0
 		if [ -f ${JSON_FILE} ]; then
 			VBUS=$(jq -r '.Vbus' ${JSON_FILE})
             if [ "$VBUS" -gt 1000 ]; then

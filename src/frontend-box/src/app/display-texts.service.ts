@@ -128,8 +128,11 @@ export class DisplayTextsService {
   /** The text for `key`; {name} placeholders are filled from `values`. Reading it inside a computed/template tracks changes. */
   public text(key: DisplayTextKey, values: Record<string, string | number> = {}): string {
     const sets = this.languages()
-    const template =
-      this.custom()[key] ?? sets[this.language()]?.[key] ?? sets.en?.[key] ?? DEFAULT_DISPLAY_TEXTS[key]
+    // (a quiet time's heading is the name of its window, see PlaytimeBlockedOverlayComponent - without one the
+    // language's text; an own heading saved before, when the parents' app had a field for it, is left out: one heading
+    // for every window did not fit them all - "Gute Nacht" for the homework)
+    const own = key === 'quietHeading' ? undefined : this.custom()[key]
+    const template = own ?? sets[this.language()]?.[key] ?? sets.en?.[key] ?? DEFAULT_DISPLAY_TEXTS[key]
     return template.replace(/\{(\w+)\}/g, (whole, name: string) => (name in values ? String(values[name]) : whole))
   }
 }

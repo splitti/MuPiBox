@@ -594,13 +594,15 @@ export class SpotifyApiService {
       const result = await this.spotifyApi.search(query, ['album'], 'DE', Math.min(l, 10) as any, o)
       return {
         items:
-          result.albums.items.map((item) => ({
-            id: item.id,
-            name: item.name,
-            artists: item.artists,
-            images: item.images,
-            release_date: item.release_date,
-          })) || [],
+          result.albums.items
+            .filter((item) => item)
+            .map((item) => ({
+              id: item.id,
+              name: item.name,
+              artists: item.artists,
+              images: item.images,
+              release_date: item.release_date,
+            })) || [],
         total: result.albums.total || 0,
         limit: result.albums.limit || l,
         offset: result.albums.offset || o,
@@ -615,7 +617,7 @@ export class SpotifyApiService {
    */
   async searchAll(
     query: string,
-    types: Array<'artist' | 'album' | 'track'> = ['artist', 'album', 'track'],
+    types: Array<'artist' | 'album' | 'track' | 'playlist'> = ['artist', 'album', 'track'],
     limit = 8,
   ): Promise<{
     artists: Array<{ id: string; name: string; images: unknown[] }>
@@ -629,6 +631,7 @@ export class SpotifyApiService {
       total_tracks?: number
     }>
     tracks: Array<{ id: string; name: string; artists: unknown[]; album: unknown }>
+    playlists: Array<{ id: string; name: string; owner: string; images: unknown[]; tracks?: number }>
   }> {
     const l = Math.min(Math.max(limit, 1), 10)
     const cacheKey = `search_all_${query}_${types.join(',')}_${l}`
@@ -652,6 +655,16 @@ export class SpotifyApiService {
           artists: t.artists ?? [],
           album: t.album ?? null,
         })),
+        // (Spotify gives empty places in a search's playlists - a playlist no longer there)
+        playlists: (result.playlists?.items ?? [])
+          .filter((p: any) => p?.id)
+          .map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            owner: p.owner?.display_name ?? '',
+            images: p.images ?? [],
+            tracks: p.tracks?.total ?? p.items?.total,
+          })),
       }
     })
   }
@@ -711,6 +724,7 @@ export class SpotifyApiService {
       artists: (item.artists ?? []) as any,
       images: (item.images ?? []) as any,
       release_date: item.release_date ?? '',
+      album_type: item.album_type ?? undefined,
     }))
   }
 
@@ -725,12 +739,15 @@ export class SpotifyApiService {
     return this.executeWithCache(cacheKey, async () => {
       const result = await this.spotifyApi.shows.episodes(showId, 'DE', Math.min(l, 10) as any, o)
       return {
-        items: result.items.map((item) => ({
-          id: item.id,
-          name: item.name,
-          images: item.images,
-          release_date: item.release_date,
-        })),
+        // (Spotify lists an episode that is not available (any more) as null: left out, it failed the whole update)
+        items: result.items
+          .filter((item) => item)
+          .map((item) => ({
+            id: item.id,
+            name: item.name,
+            images: item.images,
+            release_date: item.release_date,
+          })),
         total: result.total || 0,
         limit: result.limit || l,
         offset: result.offset || o,

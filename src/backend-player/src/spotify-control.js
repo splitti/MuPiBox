@@ -324,6 +324,8 @@ setInterval(() => {
 
 player.on('metadata', (val) => {
   log.debug('track metadata is', val)
+  // (an answer of mplayer/mpv that comes in after Spotify took over is not Spotify's track)
+  if (currentMeta.currentPlayer === 'spotify') return
   //currentMeta.currentTracknr = parseInt(val.Comment?.split(',').pop(), 10);
   // (an engine that knows its place in the playlist says it; else every file that starts counts one up)
   const trackIndex = player.trackIndex?.() ?? -1
@@ -415,7 +417,7 @@ player.on('time_pos', checkSilence)
 
 player.on('filename', (val) => {
   log.debug('track name is', val)
-  if (!currentMeta.currentTrackname) {
+  if (!currentMeta.currentTrackname && currentMeta.currentPlayer !== 'spotify') {
     currentMeta.currentTrackname = val
       .split('.mp3')[0]
       .split('.flac')[0]
@@ -1312,6 +1314,9 @@ function quietHoursTickStep() {
         finalizeQuietHoursBlock(`entered window ${window.from}-${window.to} (${!isActuallyPlaying() ? 'nothing playing' : currentMeta.currentType === 'radio' ? 'radio stream' : 'no grace configured'})`)
       }
     } else if (quietHoursState.state === 'grace') {
+      // (the window as the settings have it now: its name changed in the app while it runs is the display's heading
+      // at once - it stayed the one of its start until the next window or a restart)
+      quietHoursState.activeWindow = window
       quietGraceIdle = isActuallyPlaying() ? 0 : quietGraceIdle + 1
       if (quietHoursState.graceEndsAt !== null && Date.now() >= quietHoursState.graceEndsAt) {
         finalizeQuietHoursBlock(`grace safety limit reached (${quietHoursState.graceMode})`)
@@ -1320,7 +1325,8 @@ function quietHoursTickStep() {
         finalizeQuietHoursBlock('nothing playing any more during the grace period')
       }
     }
-    // 'blocked': stay blocked
+    // 'blocked': stay blocked (with the window as the settings have it now, see above)
+    else quietHoursState.activeWindow = window
   } else if (quietHoursState.state !== 'normal') {
     // Just exited a window — release without auto-starting playback
     console.log(`${now.toLocaleString()}: [QuietHours] Window ended. Playback can resume on user action.`)
@@ -1784,6 +1790,19 @@ let playbackGeneration = 0
 let playbackRequest = Date.now()
 // Bumped by every play and pause: a play that waited for the box's device is not made after a pause meanwhile
 let playPauseRequest = 0
+// An album paused while its track list was loading (NAS): not started then - the start of the list takes a
+// pause back - but kept, paused, and started by the next "play". A stop or another start (playbackGeneration) let it
+// go. (Dropping it left "play" without anything to play: the album had to be chosen again.)
+let heldStart = null
+function startHeld() {
+  const held = heldStart
+  heldStart = null
+  if (!held || held.generation !== playbackGeneration) return false
+  held.begin()
+  return true
+}
+// Paused while a list loaded (asked: playPauseRequest when it began)? Then its start is held instead of made.
+const pausedSince = (asked) => asked !== playPauseRequest && currentMeta.pause === true
 
 // The two players don't know of each other: Spotify plays in the kiosk browser (Web Playback SDK), local
 // media, radio, podcasts and the NAS in mplayer. The player only knew what was playing from its own state,
@@ -1799,6 +1818,18 @@ function switchToMplayer() {
   if (currentMeta.currentPlayer !== 'mplayer') pauseSpotifyQuietly('switch to mplayer')
   currentMeta.currentPlayer = 'mplayer'
   currentMeta.finished = false
+}
+// What mplayer/mpv said of its track (name, album, place) - gone once it no longer plays
+function forgetLocalTrack() {
+  currentMeta.currentTrackname = ''
+  currentMeta.progressTime = ''
+  currentMeta.positionSeconds = 0
+  currentMeta.durationSeconds = 0
+  currentMeta.album = ''
+  currentMeta.path = ''
+  currentMeta.episode = ''
+  currentMeta.currentTracknr = ''
+  currentMeta.totalTracks = ''
 }
 
 function stop() {
@@ -1840,15 +1871,7 @@ function stop() {
     }
     //currentMeta.playing = false;
     writeplayerstatePause()
-    currentMeta.currentTrackname = ''
-    currentMeta.progressTime = ''
-    currentMeta.positionSeconds = 0
-    currentMeta.durationSeconds = 0
-    currentMeta.album = ''
-    currentMeta.path = ''
-    currentMeta.episode = ''
-    currentMeta.currentTracknr = ''
-    currentMeta.totalTracks = ''
+    forgetLocalTrack()
     currentMeta.currentPlayer = ''
     currentMeta.pause = false
     spotifyRunning = false
@@ -1910,7 +1933,18 @@ function play() {
       cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Continue playing"')
     //if (hasConfiguredTelegram()) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
   } else if (currentMeta.currentPlayer === 'mplayer') {
-    if (!currentMeta.playing && mplayerToggle()) {
+    // an album paused while its list loaded: started now (see heldStart)
+    if (startHeld()) {
+      currentMeta.pause = false
+      return
+    }
+    // (a list still loading, nothing to unpause yet: the pause made meanwhile no longer counts - it starts when it is
+    // there)
+    if (!currentMeta.playing && !mplayerToggle()) {
+      currentMeta.pause = false
+      return
+    }
+    if (!currentMeta.playing) {
       currentMeta.pause = false
       //currentMeta.playing = true;
       writeplayerstatePlay()
@@ -2356,6 +2390,8 @@ async function playNasList(nasPath, resume = null) {
   const decodedPath = decodeURIComponent(nasPath)
   log.debug(`${now()}: [Spotify Control] Starting NAS playback: ${decodedPath}`)
   const generation = ++playbackGeneration
+  // (a pause while the list loads: the start is held until "play" - see heldStart)
+  const asked = playPauseRequest
   clearLibraryResumeTimers()
 
   try {
@@ -2405,16 +2441,25 @@ async function playNasList(nasPath, resume = null) {
     })
     const tmpPlaylistPath = '/tmp/nas_playlist.m3u'
     fs.writeFileSync(tmpPlaylistPath, playlistLines.join('\n'))
-
-    writeplayerstatePlay()
-    // An engine that starts where it was left (mpv): the track and the part of it with the list; a CUE album is one
-    // file, there the position in it. The CUE's track and name follow from the playing time (see the time_pos handler).
-    const startAt = resume && player.startsAt ? nasStartOptions(Math.min(resume.trackNr, tracks.length), resume.progressPct) : null
-    player.playList(tmpPlaylistPath, startAt ?? undefined)
-    player.setVolume(volumeStart)
-    currentMeta.currentTracknr = startAt ? Math.max(0, startAt.track - 1) : 0
+    currentMeta.currentTracknr = 0
     currentMeta.totalTracks = tracks.length
-    if (resume && !startAt) resumeNasAt(Math.min(resume.trackNr, tracks.length), resume.progressPct)
+
+    const begin = () => {
+      writeplayerstatePlay()
+      // An engine that starts where it was left (mpv): the track and the part of it with the list; a CUE album is one
+      // file, there the position in it. The CUE's track and name follow from the playing time (see the time_pos handler).
+      const startAt = resume && player.startsAt ? nasStartOptions(Math.min(resume.trackNr, tracks.length), resume.progressPct) : null
+      player.playList(tmpPlaylistPath, startAt ?? undefined)
+      player.setVolume(volumeStart)
+      currentMeta.currentTracknr = startAt ? Math.max(0, startAt.track - 1) : 0
+      if (resume && !startAt) resumeNasAt(Math.min(resume.trackNr, tracks.length), resume.progressPct)
+    }
+    if (pausedSince(asked)) {
+      heldStart = { generation, begin }
+      log.debug(`${now()}: [Spotify Control] NAS playback of ${decodedPath} paused while loading - starts with "play"`)
+      return
+    }
+    begin()
   } catch (error) {
     log.debug(`${now()}: [Spotify Control] Error starting NAS playback: ${error}`)
   }
@@ -3107,6 +3152,9 @@ async function useSpotify(command) {
   if (currentMeta.currentPlayer !== 'spotify') {
     clearLibraryResumeTimers()
     player.stop() // local media, radio or a podcast may still be playing in mplayer
+    // (Spotify names no track here: the name of the MP3 played before stayed in the bar of the display until a
+    // restart of this player)
+    forgetLocalTrack()
   }
   currentMeta.currentPlayer = 'spotify'
   currentMeta.currentType = 'spotify'

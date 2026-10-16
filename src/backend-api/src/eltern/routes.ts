@@ -53,7 +53,7 @@ import { registerFeedHostRoutes } from './feed-hosts'
 import { registerPinnedCardRoutes } from './pinned-cards'
 import { dropStatic, registerWifiStaticRoutes, startWifiStaticWatch } from './wifi-static'
 import { decodeWpaSsid } from '../wpa-ssid'
-import { registerHardwareRoutes } from './hardware'
+import { fanSpeedNow, registerHardwareRoutes } from './hardware'
 import { registerDietpiDashboardRoutes, startDietpiDashboard } from './dietpi-dashboard'
 import { registerServicesRoutes } from './services'
 import { registerSystemRoutes } from './system'
@@ -119,7 +119,7 @@ export interface ElternRouterDeps {
 const DISPLAY_TEXT_KEYS = [
   'blockedHeading',
   'blockedSubheading',
-  'quietHeading',
+  // (no quietHeading: a quiet time's heading is the name of its window - see the box's display-texts.service)
   'quietSubheading',
   'parentsTitle',
   'parentsHint',
@@ -2725,6 +2725,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       mem_total: os.totalmem(),
       mem_free: os.freemem(),
       cpu_temp_c: cpuTempC,
+      // (the fan's speed in percent, null without a running fan - see hardware.ts)
+      fan_speed: await fanSpeedNow(),
       disk,
       // (SD card or USB drive, and a USB 3 stick in a USB 2.0 port - see boot-drive.ts)
       drive: bootDrive(),

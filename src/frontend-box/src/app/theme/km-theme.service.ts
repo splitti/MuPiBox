@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http'
 import { computed, effect, Injectable, signal } from '@angular/core'
+import { retry, type Subscription, timer } from 'rxjs'
 import { environment } from '../../environments/environment'
 import type { MupiboxConfig } from '../mupibox-config.model'
 import { PlaytimeService } from '../playtime.service'
@@ -56,9 +57,18 @@ export class KmThemeService {
     effect(() => this.applyCustomStylesheet())
   }
 
+  private loading?: Subscription
+
   /** Reads the theme settings again (at start, and when the parents' app changed the theme). */
   refresh(): void {
-    this.http.get<MupiboxConfig>(`${environment.backend.apiUrl}/config`).subscribe({
+    // Asked again until it answers (after 2, 4, ... at most 30 s): asked only at the start, a single failure there
+    // left the display without its theme for good - the old layout of before the themes, whichever theme was set,
+    // until the next restart. A newer call replaces one still trying.
+    this.loading?.unsubscribe()
+    this.loading = this.http
+      .get<MupiboxConfig>(`${environment.backend.apiUrl}/config`)
+      .pipe(retry({ delay: (_err, n) => timer(Math.min(30000, 2000 * n)) }))
+      .subscribe({
       next: (config) => {
         const m = config?.mupibox as
           | { theme?: string; themeStage?: boolean; themeStageAutoRead?: boolean; headerBand?: boolean; playerPanel?: boolean; fullscreenGestures?: boolean }

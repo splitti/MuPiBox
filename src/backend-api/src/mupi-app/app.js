@@ -11,7 +11,10 @@ import { icon } from './icons.js'
 const API = '/api/app'
 // The app's own port (8200): the display's pages are there, also when the app is used through port 80 (whose root is
 // the admin interface's)
-const BOX_ORIGIN = `http://${location.hostname}:8200`
+// The display's pages in a frame of the app (the preview of the texts on the display): through the app's own address -
+// http://<box>:8200 is no frame for a page opened with https, and port 8200 lets in only the box itself or a session
+// whose cookie it gets (the web server passes /text-preview and the display's files on, 90-mupibox-app.conf)
+const BOX_ORIGIN = location.origin
 // Where Spotify sends the browser back after the login: https through the box's web server (port 443) - Spotify takes
 // no http addresses except 127.0.0.1. It has to be entered in the Spotify app. Which one the box uses comes from the box
 // (eltern/oauth.ts redirectModeOf: /app/spotify-callback, or /spotify.php for a box set up before the app).
@@ -172,7 +175,7 @@ function currentPage() {
 }
 // Two pages of the same settings group (Aussehen › Theme, Ansicht …): moving between them is like changing tabs, it
 // takes no step of its own - back (the arrow at the top, the browser's back) leads up to the group, not page by page
-const groupSiblings = (a, b) => !!a && !!b && a.id !== b.id && !!a.parent && a.parent === b.parent && a.parent.startsWith('g-')
+const groupSiblings = (a, b) => !!a && !!b && a.id !== b.id && !!groupOf(a) && groupOf(a) === groupOf(b)
 function go(id) {
   // (an address outside the app, e.g. the admin interface: whoever wired the click)
   if (String(id).startsWith('ext:')) return openExternal(id.slice(4))
@@ -360,7 +363,7 @@ function renderPageNav(page) {
     })
     main.append(nav)
   }
-  const siblings = page.parent?.startsWith('g-') ? state.schema.pages.filter((p) => p.parent === page.parent) : []
+  const siblings = groupPages(page)
   nav.dataset.sibs = String(siblings.length > 1 ? siblings.length : 0)
   nav.innerHTML = !page.parent
     ? ''
@@ -372,9 +375,29 @@ function renderPageNav(page) {
   updatePageNavSections(page)
 }
 
+// The pages a settings group's page leads to (its nav rows, card after card)
+const groupNav = (g) => (g?.sections || []).flatMap((s) => (s.items || []).filter((i) => i.type === 'nav').map((i) => i.target))
+// The settings group of a page: the one it belongs to, or - a page of another area - the one listing it (Spotify and
+// the NAS are pages of the library that Dienste lists too)
+function groupOf(page) {
+  if (!page) return null
+  if (page.parent?.startsWith('g-')) return state.pages.get(page.parent) ?? null
+  return state.schema.pages.find((g) => g.id.startsWith('g-') && groupNav(g).includes(page.id)) ?? null
+}
+// The pages of a page's settings group in the order the group's page lists them (its cards one after the other - not
+// the order of schema.json: a page went from Home Assistant to WLED), the pages of other areas it lists among them
+// (Spotify, NAS); its own pages it does not list come after them
+function groupPages(page) {
+  const g = groupOf(page)
+  if (!g) return []
+  const order = groupNav(g)
+  const listed = order.map((id) => state.pages.get(id)).filter((p) => p && (p.parent === g.id || !p.parent?.startsWith('g-')))
+  return [...listed, ...state.schema.pages.filter((p) => p.parent === g.id && !order.includes(p.id))]
+}
+
 // Back / next under a page of a settings group (phone, tablet, small PC window: where "Auf dieser Seite" is not shown)
 function pager(page) {
-  const sibs = page.parent?.startsWith('g-') ? state.schema.pages.filter((p) => p.parent === page.parent) : []
+  const sibs = groupPages(page)
   const at = sibs.findIndex((p) => p.id === page.id)
   if (sibs.length < 2 || at < 0) return ''
   const btn = (p, kind, label) =>
@@ -1361,7 +1384,7 @@ function nextQuiet(schedule) {
 }
 
 async function loadNotices(root) {
-  const [hat, sync, access, auth] = await Promise.all([api('/api/mupihat'), api('/api/spotify-sync/status'), api(`${API}/spotify-access`), api(`${API}/auth-state`)])
+  const [hat, sync, access, auth, tools] = await Promise.all([api('/api/mupihat'), api('/api/spotify-sync/status'), api(`${API}/spotify-access`), api(`${API}/auth-state`), api(`${API}/missing-programs`)])
   const notes = []
   // no password, or the login off: everyone in the home network can set up the box - said every time, it is not closed
   // for good (the parents decide on the page Passwort); with the login on but the well-known default password, that
@@ -1369,6 +1392,33 @@ async function loadNotices(root) {
     notes.push(['lock', auth.body.passwordSet === false ? 'Kein Passwort gesetzt' : 'Anmeldung ist aus', 'Jeder im Heimnetz kann die Box einstellen. Antippen, um ein Passwort festzulegen und die Anmeldung einzuschalten.', 'passwort'])
   } else if (auth.ok && auth.body?.defaultPassword) {
     notes.push(['lock', 'Standardpasswort aktiv', 'Die Box nutzt noch das Standardpasswort, das in jeder Anleitung steht. Antippen, um ein eigenes festzulegen.', 'passwort'])
+  }
+  // Programs a part of the box needs, not installed (an update whose installation failed): mpv - the player for
+  // everything but Spotify, there is no other since 5.0.10 - and those of the start pictures and the goodbye picture
+  // (see install_missing.sh). Installed from here, the start page says when it is done.
+  clearTimeout(root.mpvCheck)
+  const installJob = tools.ok ? tools.body?.job : null
+  const missing = tools.ok && Array.isArray(tools.body?.missing) ? tools.body.missing : []
+  if (installJob?.running) {
+    if ((installJob.programs ?? []).includes('mpv')) notes.push(['sync', 'mpv wird installiert', 'Das dauert ein paar Minuten, danach startet der Player neu.', () => {}])
+    else notes.push(['sync', 'Fehlende Programme werden installiert', 'Das dauert ein paar Minuten.', () => {}])
+    root.mpvCheck = setTimeout(() => root.isConnected && loadNotices(root), 10000)
+  } else if (missing.includes('mpv')) {
+    const text =
+      installJob?.ok === false
+        ? 'Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.'
+        : 'Ohne den Player mpv spielen Bibliothek, NAS, Radio, Podcasts und Ansagen nicht. Antippen, um ihn zu installieren.'
+    notes.push(['music', 'mpv fehlt – nur Spotify spielt', text, () => installMissing(root, missing)])
+  } else if (missing.length) {
+    const list = missing.join(', ')
+    const text =
+      installJob?.ok === false
+        ? `Nicht installiert: ${list}. Der letzte Versuch hat nicht geklappt (Internet?) – antippen, um es noch einmal zu versuchen.`
+        : `Nicht installiert: ${list}. Ohne sie fehlen zum Beispiel der Boxname auf den Startbildern oder das Abschiedsbild. Antippen, um sie zu installieren.`
+    notes.push(['image', 'Programme der Box fehlen', text, () => installMissing(root, missing)])
+  } else if (installJob?.ok === true && root.installing) {
+    toast(root.installing === 'mpv' ? 'mpv ist installiert, der Player startet neu' : 'Die fehlenden Programme sind installiert')
+    root.installing = null
   }
   const pct = hat.body?.Bat_Percent
   const battery = hat.ok && !noBattery(hat.body)
@@ -1424,6 +1474,19 @@ async function loadNotices(root) {
     }
   }
   if (band?.isConnected) drawNotices(band, items)
+}
+
+// (missing: what the start page found - all of it is installed, mpv among it or not)
+async function installMissing(root, missing) {
+  const mpv = missing.includes('mpv')
+  const yes = mpv
+    ? await ask('mpv installieren?', 'Die Box lädt den Player aus dem Internet und installiert ihn. Das dauert ein paar Minuten, danach startet der Player neu.', 'Installieren')
+    : await ask('Fehlende Programme installieren?', `Die Box lädt ${missing.join(', ')} aus dem Internet und installiert sie. Das dauert ein paar Minuten.`, 'Installieren')
+  if (!yes) return
+  const r = await api(`${API}/missing-programs/install`, { method: 'POST', body: {} })
+  if (!r.ok && r.status !== 409) return toast('Das hat nicht geklappt', 'info')
+  root.installing = mpv ? 'mpv' : 'other'
+  loadNotices(root)
 }
 
 // the whole news over the start page (not the page "Über die Box": the parents stay where they are)
@@ -1760,7 +1823,8 @@ function openRule(rule, page) {
   const days = new Set(r.days)
   openSheet(
     `<h2>${rule ? 'Zeitfenster bearbeiten' : 'Neues Zeitfenster'}</h2>
-     <div class="field"><label for="rule-label">Bezeichnung</label><input class="input" id="rule-label" maxlength="80" placeholder="z. B. Schlafenszeit" value="${esc(r.label)}"></div>
+     <div class="field"><label for="rule-label">Bezeichnung</label><input class="input" id="rule-label" maxlength="80" placeholder="z. B. Schlafenszeit" value="${esc(r.label)}">
+       <p class="help" style="margin:0">${esc('Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.')}</p></div>
      <div class="rule-times"><div class="field"><label for="rule-from">Von</label>${timeSelect('rule-from', r.from)}</div>
        <div class="field"><label for="rule-to">Bis</label>${timeSelect('rule-to', r.to)}</div></div>
      <div class="field"><label>Tage</label><div class="daypick" id="rule-days">${DAY_SHORT.map((d, i) => `<button aria-pressed="${days.has(i)}" data-d="${i}" aria-label="${DAY_LONG[i]}">${d}</button>`).join('')}</div></div>
@@ -2004,26 +2068,14 @@ async function openLevel() {
   drawHear()
   if (!top || top.kind === 'artist') return
   if (top.kind === 'spartist') {
-    // the artist's albums from Spotify: the box's backend gives at most 10 at a time (Benjamin Blümchen has more than
-    // 280), so the pages after the first are asked for six at a time, and the grid fills as they come
-    const page = (offset) => api(`/api/spotify/artist/${encodeURIComponent(top.path)}/albums?limit=50&offset=${offset}`)
-    const first = await page(0)
+    // the artist's albums from Spotify, all at once: the backend keeps them on the SD card and checks them with one page
+    // at most every 6 hours (artist-albums-store.ts) - a subscribed artist's list is kept already. (Asked page by page,
+    // six at a time, it was about 30 requests for a big artist at every opening.)
+    const r = await api(`/api/spotify/artist/${encodeURIComponent(top.path)}/albums?all=1`)
     if (hear.stack.at(-1) !== top) return
-    if (!first.ok) hear.levelError = 'Spotify antwortet gerade nicht.'
-    const all = [...(first.body?.items ?? [])]
-    hear.level = [...all]
+    if (!r.ok) hear.levelError = 'Spotify antwortet gerade nicht.'
+    hear.level = r.body?.items ?? []
     drawHear()
-    const step = first.body?.items?.length || 10
-    const total = Math.min(1000, Number(first.body?.total) || 0)
-    const offsets = []
-    for (let o = step; o < total; o += step) offsets.push(o)
-    for (let i = 0; i < offsets.length; i += 6) {
-      const pages = await Promise.all(offsets.slice(i, i + 6).map(page))
-      if (hear.stack.at(-1) !== top) return
-      for (const p of pages) all.push(...(p.body?.items ?? []))
-      hear.level = [...all]
-      drawHear()
-    }
     return
   }
   const r = await api(top.kind === 'nas' ? `/api/nas/children?path=${encodeURIComponent(top.path)}` : `/api/library/children?path=${encodeURIComponent(top.path)}`)
@@ -3390,98 +3442,298 @@ async function loadSubAlbums(a, box) {
 
 /* Auf Spotify suchen */
 
-const search = { q: '', type: 'Alle', cat: 'audiobook', result: null, busy: false }
+// (cat: the category chosen last - the next sheet starts with it; artist: one opened from the search, its albums with
+// the way back to the search; have: what is in the library already, see libraryHave)
+const search = { q: '', type: 'Alle', cat: 'audiobook', result: null, busy: false, artist: null, have: new Set() }
 
 function searchTop() {
   return [
     `<section class="card wide">
+      <p class="help" style="margin:0">${esc('Findet Hörspiele, Alben, Künstler und Playlists auf Spotify. Antippen zeigt ein Album zum Hinzufügen oder die Alben eines Künstlers – die Kategorie wählst du beim Hinzufügen.')}</p>
       <div class="search">${icon('search')}<input class="input" id="s-q" type="search" placeholder="Künstler, Album oder Titel …" autocomplete="off" value="${esc(search.q)}" enterkeyhint="search"></div>
-      <div class="seg" id="s-type">${['Alle', 'Künstler', 'Alben', 'Titel'].map((t) => `<button aria-pressed="${search.type === t}" data-v="${t}">${t}</button>`).join('')}</div>
-      <div class="field"><label for="s-cat">Hinzufügen als</label>${catSelect('s-cat', search.cat, false)}</div>
+      <div class="seg" id="s-type">${['Alle', 'Künstler', 'Alben', 'Titel', 'Playlists'].map((t) => `<button aria-pressed="${search.type === t}" data-v="${t}">${t}</button>`).join('')}</div>
       <div class="btns"><button class="btn primary" id="s-go">Suchen</button></div>
     </section>`,
     `<div id="s-results" class="wide-stack"></div>`,
   ]
 }
 
+// What of a source is in the library already, as "kind:id" (album, playlist, artist): the search marks it. Spotify:
+// the library's entries, the subscribed artists and the albums added from the search (also those the sync has not
+// fetched yet).
+async function libraryHave(source) {
+  const have = new Set()
+  const [data, subs] = await Promise.all([api('/api/data'), source === 'spotify' ? api(`${API}/library/subscriptions`) : Promise.resolve(null)])
+  for (const it of Array.isArray(data.body) ? data.body : []) {
+    if (!it || it.isResume) continue
+    if (source === 'spotify' && it.type === 'spotify') {
+      if (it.id) have.add(`album:${it.id}`)
+      if (it.playlistid) have.add(`playlist:${it.playlistid}`)
+      if (it.artistid && !it.id) have.add(`artist:${it.artistid}`)
+    }
+  }
+  for (const a of subs?.body?.artists ?? []) have.add(`artist:${a.id ?? a.artistId}`)
+  for (const a of subs?.body?.explicit_albums ?? []) have.add(`album:${a.id}`)
+  return have
+}
+
 async function doSpotifySearch() {
   const q = search.q.trim()
   if (q.length < 2) return toast('Bitte mindestens 2 Zeichen eingeben', 'info')
-  const types = { Alle: 'artist,album,track', Künstler: 'artist', Alben: 'album', Titel: 'track' }[search.type]
+  const types = { Alle: 'artist,album,track,playlist', Künstler: 'artist', Alben: 'album', Titel: 'track', Playlists: 'playlist' }[search.type]
   const box = $('#s-results')
   box.innerHTML = `<div class="loading"><p>Suche …</p></div>`
-  const r = await api(`/api/spotify/search?q=${encodeURIComponent(q)}&types=${types}&limit=8`)
+  const [r, have] = await Promise.all([api(`/api/spotify/search?q=${encodeURIComponent(q)}&types=${types}&limit=8`), libraryHave('spotify')])
   if (!r.ok) {
     // (the backend's reason is English, e.g. "Failed to search"; 503: Spotify is not set up)
     box.innerHTML = `<p class="help">${r.status === 503 ? 'Die Suche braucht eine eingerichtete Spotify-Verbindung (Bibliothek › Spotify).' : 'Die Suche hat nicht geklappt.'}</p>`
     return
   }
   search.result = r.body ?? {}
+  search.have = have
+  search.artist = null
   drawSearch()
+}
+
+const spImg = (images) => (Array.isArray(images) && images.length ? images[1]?.url || images[0]?.url : '')
+const spNames = (arr) => (arr ?? []).map((x) => x?.name).filter(Boolean).join(', ')
+const spAlbum = (a) => ({
+  kind: 'album',
+  id: a.id,
+  name: a.name,
+  t: a.name,
+  s: [spNames(a.artists), String(a.release_date ?? '').slice(0, 4), a.total_tracks ? `${a.total_tracks} Titel` : ''].filter(Boolean).join(' · '),
+  img: spImg(a.images),
+  date: String(a.release_date ?? ''),
+  single: a.album_type === 'single',
+  artistIds: (a.artists ?? []).map((x) => x?.id).filter(Boolean),
+})
+
+// A row of a search result: opens what it is - an artist its albums, an album the sheet to add it;
+// a tick for what is in the library already (have: "kind:id", see libraryHave)
+// (via: an album of a subscribed artist - on the box through the subscription, not as an entry of its own)
+function resultRow(r, i, list, have) {
+  const there = have?.has(`${r.kind}:${r.id}`) || !!r.via
+  return `<button class="entry lib-row ard-show" data-list="${list}" data-i="${i}"><span class="lib-thumb">${r.img ? `<img src="${esc(r.img)}" alt="" loading="lazy">` : ''}${icon(r.kind === 'artist' ? 'folder' : 'music', 18)}</span>
+    <span class="lbl"><b translate="no">${esc(r.t)}</b><small translate="no">${esc(r.s)}${there ? ` · <span class="in-lib">${esc(have?.has(`${r.kind}:${r.id}`) ? 'In der Bibliothek' : 'Künstler abonniert')}</span>` : ''}</small></span>${there ? `<span class="in-lib" aria-hidden="true">${icon('check', 18)}</span>` : ''}<span class="chev">${icon('chevron', 18)}</span></button>`
+}
+
+// The albums of an artist in a search, filtered: by a text, by kind (albums or EPs and singles) and in an order -
+// a big artist has hundreds (Benjamin Blümchen: about 290). Rows: { name, date: "YYYY[-MM-DD]", single }.
+const artistView = { q: '', kind: 'Alle', sort: 'new' }
+function artistControls(prefix) {
+  return `<div class="search">${icon('search')}<input class="input" id="${prefix}-aq" type="search" placeholder="${esc('In den Alben suchen')}" autocomplete="off" value="${esc(artistView.q)}"></div>
+    <div class="seg" id="${prefix}-ak">${['Alle', 'Alben', 'EPs & Singles'].map((t) => `<button aria-pressed="${artistView.kind === t}" data-v="${t}">${t}</button>`).join('')}</div>
+    <div class="field"><label for="${prefix}-as">${esc('Reihenfolge')}</label><select class="input" id="${prefix}-as">${[
+      ['new', 'Neueste zuerst'],
+      ['old', 'Älteste zuerst'],
+      ['az', 'Alphabetisch A–Z'],
+    ]
+      .map(([v, l]) => `<option value="${v}"${artistView.sort === v ? ' selected' : ''}>${esc(l)}</option>`)
+      .join('')}</select></div>`
+}
+function filterAlbums(rows) {
+  const q = norm(artistView.q.trim())
+  const out = rows.filter((r) => (!q || norm(r.name).includes(q)) && (artistView.kind === 'Alle' || (artistView.kind === 'Alben') !== !!r.single))
+  if (artistView.sort === 'az') return out.sort((a, b) => a.name.localeCompare(b.name, 'de', { numeric: true }))
+  const by = artistView.sort === 'old' ? 1 : -1
+  return out.sort((a, b) => by * String(a.date ?? '').localeCompare(String(b.date ?? '')))
+}
+// (redraw: only the list - the field keeps its focus while typing)
+function wireArtistControls(box, prefix, redraw) {
+  const q = $(`#${prefix}-aq`, box)
+  if (!q) return
+  q.oninput = () => {
+    artistView.q = q.value
+    redraw()
+  }
+  $(`#${prefix}-ak`, box).onclick = (e) => {
+    const b = e.target.closest('button')
+    if (!b) return
+    artistView.kind = b.dataset.v
+    for (const x of b.parentElement.children) x.setAttribute('aria-pressed', String(x === b))
+    redraw()
+  }
+  $(`#${prefix}-as`, box).onchange = (e) => {
+    artistView.sort = e.target.value
+    redraw()
+  }
 }
 
 function drawSearch() {
   const box = $('#s-results')
   const d = search.result
   if (!box || !d) return
-  const img = (images) => (Array.isArray(images) && images.length ? images[1]?.url || images[0]?.url : '')
-  const names = (arr) => (arr ?? []).map((x) => x?.name).filter(Boolean).join(', ')
-  const groups = [
-    ['Künstler', (d.artists ?? []).filter((a) => a.id).map((a) => ({ kind: 'artist', id: a.id, name: a.name, t: a.name, s: 'Künstler – alle Folgen abonnieren', img: img(a.images) }))],
-    ['Alben', (d.albums ?? []).filter((a) => a.id).map((a) => ({ kind: 'album', id: a.id, name: a.name, t: a.name, s: names(a.artists), img: img(a.images) }))],
-    ['Titel', (d.tracks ?? []).filter((t) => t.album?.id).map((t) => ({ kind: 'album', id: t.album.id, name: t.album.name ?? t.name, t: t.name, s: `${names(t.artists)} · ${t.album?.name ?? ''}`, img: img(t.album?.images) }))],
-  ].filter(([, rows]) => rows.length)
-  search.rows = groups.flatMap(([, rows]) => rows)
-  let n = 0
-  box.innerHTML = groups.length
-    ? groups
-        .map(
-          ([title, rows]) => `<section class="card"><h2>${title}</h2><div class="rows">${rows
-            .map((r) => `<div class="entry"><span class="lib-thumb">${r.img ? `<img src="${esc(r.img)}" alt="" loading="lazy">` : ''}${icon('music', 18)}</span><span class="lbl"><b translate="no">${esc(r.t)}</b><small>${esc(r.s)}</small></span>
-              <button class="icon-btn soft" data-r="${n++}" aria-label="${esc(`${r.kind === 'artist' ? 'Abonnieren' : 'Hinzufügen'}: ${r.t}`)}">${icon('plus', 18)}</button></div>`)
-            .join('')}</div>${title === 'Titel' ? '<p class="help" style="margin:0">＋ fügt das ganze Album des Titels hinzu.</p>' : ''}</section>`,
+  const lists = {}
+  const rowsOf = (key, rows) => {
+    lists[key] = rows
+    return rows.map((r, i) => resultRow(r, i, key, search.have)).join('')
+  }
+  const card = (key, title, rows, foot = '') => (rows.length ? `<section class="card"><h2 translate="no">${esc(title)}</h2><div class="rows">${rowsOf(key, rows)}</div>${foot}</section>` : '')
+  const wire = () => {
+    for (const img of box.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+    for (const b of box.querySelectorAll('[data-list]')) {
+      const r = lists[b.dataset.list][Number(b.dataset.i)]
+      b.onclick = () => (r.kind === 'artist' ? openSpotifyArtist(r) : r.kind === 'playlist' ? openSpotifyPlaylist(r) : openSpotifyAlbum(r))
+    }
+  }
+  if (search.artist) {
+    const a = search.artist
+    const subscribed = search.have.has(`artist:${a.id}`)
+    box.innerHTML = `<div class="btns"><button class="btn" id="s-back">${icon('back', 18)}Zurück zur Suche</button></div>
+      <section class="card"><div class="ard-head">${a.img ? `<img src="${esc(a.img)}" alt="">` : ''}<span class="lbl"><h2 translate="no" style="margin:0">${esc(a.name)}</h2><small>${esc(subscribed ? 'Künstler auf Spotify · abonniert' : 'Künstler auf Spotify')}</small></span></div>
+        <p class="help" style="margin:0">${esc('Abonnieren holt alle Folgen auf die Box und später auch neue. Einzelne Alben fügst du unten hinzu.')}</p>
+        <div class="btns"><button class="btn primary" id="s-sub">${icon(subscribed ? 'check' : 'plus', 18)}${esc(subscribed ? 'Abonniert' : 'Ganzen Künstler abonnieren')}</button></div></section>
+      <section class="card"><h2>${esc('Alben')}</h2>${artistControls('s')}<div class="rows" id="s-alist"></div></section>`
+    const list = () => {
+      const el = $('#s-alist', box)
+      if (!a.albums) el.innerHTML = '<div class="loading"><p>Lade …</p></div>'
+      else {
+        const rows = filterAlbums(a.albums)
+        el.innerHTML = rows.length ? rowsOf('albums', rows) : `<p class="help" style="margin:0">${esc(a.albums.length ? 'Nichts gefunden.' : 'Keine Alben gefunden.')}</p>`
+      }
+      wire()
+    }
+    list()
+    wireArtistControls(box, 's', list)
+    $('#s-back', box).onclick = () => {
+      search.artist = null
+      drawSearch()
+    }
+    $('#s-sub', box).onclick = () => subscribeSpotifyArtist(a)
+    return
+  }
+  const show = (t) => search.type === 'Alle' || search.type === t
+  const html =
+    (show('Künstler') ? card('artists', 'Künstler', (d.artists ?? []).filter((a) => a.id).map((a) => ({ kind: 'artist', id: a.id, name: a.name, t: a.name, s: 'Künstler', img: spImg(a.images) }))) : '') +
+    (show('Alben') ? card('albums', 'Alben', (d.albums ?? []).filter((a) => a.id).map(spAlbum).map(viaSubscription)) : '') +
+    (show('Titel')
+      ? card(
+          'tracks',
+          'Titel',
+          (d.tracks ?? []).filter((t) => t.album?.id).map((t) => viaSubscription({ kind: 'album', id: t.album.id, name: t.album.name ?? t.name, t: t.name, s: `${spNames(t.artists)} · ${t.album?.name ?? ''}`, img: spImg(t.album?.images), artistIds: (t.album?.artists ?? t.artists ?? []).map((x) => x?.id).filter(Boolean) })),
+          `<p class="help" style="margin:0">${esc('Ein Titel kommt mit seinem ganzen Album auf die Box.')}</p>`,
         )
-        .join('')
-    : `<p class="help">Nichts gefunden.</p>`
-  for (const b of box.querySelectorAll('[data-r]')) b.onclick = () => addFromSearch(search.rows[Number(b.dataset.r)], b)
+      : '') +
+    (show('Playlists')
+      ? card(
+          'playlists',
+          'Playlists',
+          (d.playlists ?? []).filter((p) => p.id).map((p) => ({ kind: 'playlist', id: p.id, name: p.name, t: p.name, s: ['Playlist', p.owner, p.tracks ? `${p.tracks} Titel` : ''].filter(Boolean).join(' · '), img: spImg(p.images) })),
+        )
+      : '')
+  box.innerHTML = html || `<p class="help">${esc('Nichts gefunden.')}</p>`
+  wire()
 }
 
-async function addFromSearch(r, btn) {
-  const run = async () => {
-    btn.disabled = true
-    const res =
-      r.kind === 'artist'
-        ? await api(`${API}/library/subscribe-artist`, { method: 'POST', body: { artistId: r.id, name: r.name, category: search.cat } })
-        : await api(`${API}/library/add-album`, { method: 'POST', body: { albumId: r.id, category: search.cat, name: r.name } })
+// An album of an artist subscribed to (via: that artist's id) - marked in the results as on the box already
+function viaSubscription(r) {
+  const via = (r.artistIds ?? []).find((id) => search.have.has(`artist:${id}`))
+  return via ? { ...r, via } : r
+}
+
+// An artist from the search: its albums (all at once - the backend keeps them, see getAllArtistAlbums), and
+// subscribing to all of it
+async function openSpotifyArtist(r) {
+  artistView.q = ''
+  search.artist = { ...r, albums: null }
+  drawSearch()
+  $('#s-results')?.scrollIntoView({ block: 'start' })
+  const res = await api(`/api/spotify/artist/${encodeURIComponent(r.id)}/albums?all=1`)
+  if (search.artist?.id !== r.id) return
+  search.artist.albums = (res.body?.items ?? []).filter((a) => a?.id).map(spAlbum)
+  drawSearch()
+}
+
+// The sheet to add something from a search to the box: picture, what it is, the category - chosen here, not before the
+// search - and the button. have: already in the library (only closing then). onAdd(category) returns true when done.
+function addSheet({ title, sub, img, have, haveText, cat, text, okLabel }, onAdd) {
+  openSheet(
+    `<div class="ard-head">${img ? `<img src="${esc(img)}" alt="">` : ''}<span class="lbl"><h2 translate="no" style="margin:0">${esc(title)}</h2><small translate="no">${esc(sub ?? '')}</small></span></div>
+     ${text ? `<p class="help" style="margin:0">${esc(text)}</p>` : ''}
+     ${
+       have
+         ? `<p class="help" style="margin:0">${esc(haveText ?? 'Schon in der Bibliothek.')}</p><div class="btns"><button class="btn" data-close>Schließen</button></div>`
+         : `<div class="field"><label for="add-cat">Hinzufügen als</label>${catSelect('add-cat', cat, false)}</div>
+            <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-add>${icon('plus', 18)}${esc(okLabel ?? 'Hinzufügen')}</button></div>`
+     }`,
+    (sheet, close) => {
+      for (const b of sheet.querySelectorAll('[data-close]')) b.onclick = close
+      sheet.querySelector('[data-add]')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget
+        btn.disabled = true
+        const done = await onAdd(sheet.querySelector('#add-cat').value)
+        btn.disabled = false
+        if (done) close()
+      })
+    },
+  )
+}
+
+// (after adding: the tick in the list at once)
+function markHave(key) {
+  search.have.add(key)
+  drawSearch()
+}
+
+async function openSpotifyAlbum(r) {
+  addSheet({ title: r.name, sub: r.s, img: r.img, have: search.have.has(`album:${r.id}`), cat: search.cat }, async (category) => {
+    const res = await api(`${API}/library/add-album`, { method: 'POST', body: { albumId: r.id, category, name: r.name } })
     if (!res.ok) {
-      btn.disabled = false
-      return toast('Das hat nicht geklappt', 'info')
+      toast('Das hat nicht geklappt', 'info')
+      return false
     }
-    btn.innerHTML = icon('check', 18)
+    search.cat = category
+    markHave(`album:${r.id}`)
     const sync = await fireSync()
-    toast(`${r.kind === 'artist' ? 'Abonniert' : 'Hinzugefügt'}: ${r.name}. ${sync}`)
+    toast(`Hinzugefügt: ${r.name}. ${sync}`)
     libChanged()
-  }
-  if (r.kind === 'artist') {
-    // (subscribed already: a second subscribe would replace its range and category - it is changed where it is managed)
-    const subs = await api(`${API}/library/subscriptions`)
-    if ((subs.body?.artists ?? []).some((a) => a.id === r.id || a.artistId === r.id)) {
-      btn.innerHTML = icon('check', 18)
-      return toast('Schon abonniert – Bereich und Kategorie änderst du unter „Verwaltete Inhalte“.', 'info')
-    }
-    return openSheet(
-      `<h2>${esc(r.name)} abonnieren?</h2><p class="help" style="margin:0">Alle Folgen kommen als ${esc(catLabel(search.cat))} auf die Box, neue später von selbst. Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.</p>
-       <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Abonnieren</button></div>`,
-      (sheet, close) => {
-        sheet.querySelector('[data-close]').onclick = close
-        sheet.querySelector('[data-ok]').onclick = () => {
-          close()
-          run()
-        }
-      },
-    )
-  }
-  return run()
+    return true
+  })
+}
+
+// A playlist: an entry of the library as a pasted link makes it (the box fetches its tracks when it plays)
+async function openSpotifyPlaylist(r) {
+  addSheet({ title: r.name, sub: r.s, img: r.img, have: search.have.has(`playlist:${r.id}`), cat: search.cat === 'audiobook' ? 'music' : search.cat }, async (category) => {
+    const body = { type: 'spotify', playlistid: r.id, spotify_url: `https://open.spotify.com/playlist/${r.id}`, artist: r.name, category, source: 'manual' }
+    const res = await api('/api/add', { method: 'POST', body })
+    if (!libWriteOk(res)) return false
+    search.cat = category
+    markHave(`playlist:${r.id}`)
+    toast(`Hinzugefügt: ${r.name}`)
+    libChanged()
+    lib.items = null
+    return true
+  })
+}
+
+async function subscribeSpotifyArtist(a) {
+  // (subscribed already: a second subscribe would replace its range and category - it is changed where it is managed)
+  addSheet(
+    {
+      title: a.name,
+      sub: 'Künstler auf Spotify',
+      img: a.img,
+      have: search.have.has(`artist:${a.id}`),
+      haveText: 'Schon abonniert – Bereich und Kategorie änderst du unter „Verwaltete Inhalte“.',
+      cat: search.cat,
+      text: 'Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.',
+      okLabel: 'Abonnieren',
+    },
+    async (category) => {
+      const res = await api(`${API}/library/subscribe-artist`, { method: 'POST', body: { artistId: a.id, name: a.name, category } })
+      if (!res.ok) {
+        toast('Das hat nicht geklappt', 'info')
+        return false
+      }
+      search.cat = category
+      markHave(`artist:${a.id}`)
+      const sync = await fireSync()
+      toast(`Abonniert: ${a.name}. ${sync}`)
+      libChanged()
+      return true
+    },
+  )
 }
 
 /* Podcasts suchen (Apple's podcast directory, in the stores of a language; see podcast-search.ts) */
@@ -3883,6 +4135,17 @@ async function addLink(page) {
     if (type === 'Spotify-Suche') {
       // (the box looks the search up itself: its first hit plays - a name is needed for the tile)
       if (!label) return toast('Bitte auch einen Namen eintragen (so heißt die Kachel)', 'info')
+      // (the box shows the albums the search finds - a search without any, as one with "AND" that Spotify does not
+      // know, was added and nothing came on the box: said before it is added; no answer from Spotify does not stop it)
+      const found = await api(`/api/spotify/search/albums?query=${encodeURIComponent(url)}&limit=1&offset=0`)
+      const total = found.ok ? (found.body?.total ?? found.body?.albums?.total) : undefined
+      if (total === 0)
+        return toast(
+          /\b(AND|OR|NOT)\b/.test(url)
+            ? 'Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:"Name" album:"Folge")'
+            : 'Spotify findet zu diesem Suchbegriff keine Alben',
+          'info',
+        )
       Object.assign(body, { type: 'spotify', query: url, artist: label })
     } else if (type === 'Spotify-Link') {
       if (!url.startsWith('https://open.spotify.com/')) return toast('Spotify-Links beginnen mit https://open.spotify.com/', 'info')
@@ -6247,7 +6510,6 @@ function mountBoot(root, page) {
 const DT_FIELDS = [
   ['blocked', 'blockedHeading', 'Überschrift'],
   ['blocked', 'blockedSubheading', 'Text darunter'],
-  ['quiet', 'quietHeading', 'Überschrift'],
   ['quiet', 'quietSubheading', 'Text darunter'],
   ['parents', 'parentsTitle', 'Titel'],
   ['parents', 'parentsHint', 'Hinweis'],
@@ -6280,7 +6542,13 @@ function textsTop() {
       <div class="dt-frame" id="dt-frame"><iframe src="${BOX_ORIGIN}/text-preview?screen=${disp.dtScreen}" title="Vorschau" tabindex="-1"></iframe></div>
       <div id="dt-fields">${DT_FIELDS.filter(([sc]) => sc === disp.dtScreen)
         .map(([, key, label]) => `<div class="field"><label for="dt-${key}">${label}</label><input class="input" id="dt-${key}" data-dt="${key}" maxlength="120" value="${esc(disp.dt.texts[key] ?? '')}" placeholder="${esc(defaults[key] ?? '')}"></div>`)
-        .join('')}</div>
+        .join('')}${
+        // (a quiet time's heading is the name of its window - one heading for all of them did not fit: "Gute Nacht"
+        // for the homework; the field for it is gone)
+        disp.dtScreen === 'quiet'
+          ? `<p class="help">${esc(`Die Überschrift ist der Name der Ruhezeit (Spielzeit › Ruhezeiten), z. B. „Hausaufgaben“ oder „Gute Nacht“. Ohne Namen und bei „Ruhe sofort“ steht dort „${defaults.quietHeading ?? 'Ruhezeit'}“.`)}</p>`
+          : ''
+      }</div>
       <div class="btns"><button class="btn primary" id="dt-save">Texte speichern</button></div></section>`,
   ]
 }
@@ -8233,7 +8501,7 @@ function aboutTop() {
   return [
     // (on a wide screen: MuPiBox on the left over two rows, the name and the support beside it, then the history and
     // the news across the whole width)
-    `<section class="card about-main"><h2>MuPiBox</h2><dl class="kv">${row('Version', sys.version)}${row('Hostname', i.hostname)}${row('Läuft seit', i.uptime_seconds != null ? fmtUptime(i.uptime_seconds) : '')}${row('CPU-Last', i.load_1 != null ? `${i.load_1.toLocaleString(LOCALE)} (${i.cpu_count} Kerne)` : '')}${row('Temperatur', i.cpu_temp_c != null ? `${Math.round(i.cpu_temp_c)} °C` : '')}${row('Arbeitsspeicher', i.mem_total ? `${formatBytes(i.mem_total - i.mem_free)} von ${formatBytes(i.mem_total)}` : '')}</dl>
+    `<section class="card about-main"><h2>MuPiBox</h2><dl class="kv">${row('Version', sys.version)}${row('Hostname', i.hostname)}${row('Läuft seit', i.uptime_seconds != null ? fmtUptime(i.uptime_seconds) : '')}${row('CPU-Last', i.load_1 != null ? `${i.load_1.toLocaleString(LOCALE)} (${i.cpu_count} Kerne)` : '')}${row('Temperatur', i.cpu_temp_c != null ? `${Math.round(i.cpu_temp_c)} °C` : '')}${row('Lüfter', i.fan_speed != null ? `${i.fan_speed} %` : '')}${row('Arbeitsspeicher', i.mem_total ? `${formatBytes(i.mem_total - i.mem_free)} von ${formatBytes(i.mem_total)}` : '')}</dl>
       ${used != null ? `<div class="bar"><div class="slider-head"><b>${esc(driveName)}</b><span class="value-pill">${used} %</span></div><div class="track"><i style="--w:${used}%"></i></div><small>${formatBytes(disk.free)} frei von ${formatBytes(disk.total)}</small></div>` : ''}
       ${driveNote ? `<div class="note warn">${icon('info', 18)}<span>${esc(driveNote)}</span></div>` : ''}</section>`,
     `<section class="card"><h2>Name der Box</h2><p class="help">Steht auf dem Startbild und oben in der App.</p>
@@ -9577,7 +9845,6 @@ const CONTROLLERS = {
         for (const x of b.parentElement.children) x.setAttribute('aria-pressed', String(x === b))
         if (search.q.trim().length >= 2) doSpotifySearch()
       }
-      $('#s-cat', root).onchange = (e) => (search.cat = e.target.value)
       $('#s-go', root).onclick = doSpotifySearch
       drawSearch()
     },
@@ -9750,7 +10017,11 @@ const CONTROLLERS = {
                   ...it,
                   label: type === 'Spotify-Suche' ? 'Suchbegriff' : 'Link',
                   placeholder: type === 'Spotify-Suche' ? 'z. B. Benjamin Blümchen Folge 1' : 'https://…',
-                  ...(svc.spotify ? {} : { help: 'Radio: auch eine .m3u- oder .pls-Datei – die Box liest die Stream-Adresse daraus. Podcast: die Adresse des Feeds.' }),
+                  ...(type === 'Spotify-Suche'
+                    ? { help: 'Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:"Name" album:"Folge" – ohne AND.' }
+                    : svc.spotify
+                      ? {}
+                      : { help: 'Radio: auch eine .m3u- oder .pls-Datei – die Box liest die Stream-Adresse daraus. Podcast: die Adresse des Feeds.' }),
                 }
               : it.key === 'lLabel' && type === 'Spotify-Suche'
                 ? { ...it, label: 'Name der Kachel' }
@@ -10500,6 +10771,20 @@ const CONTROLLERS = {
       state.values.set('fanOn', f.active)
       state.values.set('fanPin', f.gpio)
       for (const k of ['100', '75', '50', '25']) state.values.set(`fan${k}`, f[`t${k}`])
+    },
+    // how fast it runs now (the old admin interface showed it in its header; fan_control.py says it every 15 s)
+    top() {
+      const f = hw.data?.fan
+      if (!f?.active) return []
+      const now =
+        f.speed != null
+          ? f.speed > 0
+            ? `Der Lüfter läuft gerade mit ${f.speed} %.`
+            : 'Der Lüfter steht gerade – die Box ist kühl genug.'
+          : f.running
+            ? 'Der Lüfter läuft, seine Stufe ist noch nicht bekannt.'
+            : 'Der Lüfter ist eingeschaltet, sein Dienst läuft aber nicht.'
+      return [`<section class="card wide"><p class="help" style="margin:0">${esc(now)}</p></section>`]
     },
     sections: (page) =>
       page.sections.map((sec) => ({

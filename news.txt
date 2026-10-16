@@ -1,3 +1,40 @@
+<h3>DEV 5.0.11 - changes compared to 5.0.10</h3>
+<b>App</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Texts on the display: the preview of the screens (limit reached, quiet time, QR code for parents) stayed black or showed the login page - it was taken from the display's port 8200 by http, which a page opened with https may not show in a frame, and which lets in only the box itself or a session whose cookie it gets. It now comes through the app's own address (the web server passes the display's files and the theme on), and it shows the screens in the look of the theme the box uses; the fields under it are spaced properly again. A quiet time's heading is the name of its time window (Playtime > Quiet times) - e.g. 'Homework' or 'Good night'; the field for one heading of all quiet times is gone (it did not fit them all, and a window's name replaced it anyway, unnoticed). Without a name, and for 'Quiet now', the language's text. The window's sheet says so under its name. A name changed while the quiet time runs, and a text changed while the display shows the screen, show at once (within half a minute) - they waited for the next quiet time or a restart.</li>
+<li id='linews' class='linews'>Without the media player mpv the box plays nothing but Spotify (no library, NAS, radio, podcasts, Google's announcements) - mplayer, which played in its place until 5.0.9, is gone. When the update could not install mpv, that went by quietly - and the same with rsvg-convert and Pillow, without which the start pictures have no box name and no random scene (the log said only 'putting the pictures together failed'). The app's start page now names what is missing, and a tap installs it (a few minutes; mpv: then the player restarts; the start pictures are put together again). The update and the installation make sure apt can do its work: they wait when the package system is busy (DietPi's or Debian's own updates, often right after a start - apt gave up at once before), finish an installation stopped halfway before, repair broken dependencies and never stop at a question. A box whose installation stopped before it ever fetched the package lists names the missing programs too (apt knew none of them, so nothing was offered); the installation fetches the lists first.</li>
+<li id='linews' class='linews'>Fan: how fast it runs now (as the old admin interface showed it in its header) - on the page Fan and under About the box, next to the temperature.</li>
+<li id='linews' class='linews'>Search on Spotify: a hit is tapped instead of added with + at once - an album shows its cover and details and is added there, with the category chosen in that moment (no longer before the search); an artist shows their albums to add one by one, and 'Subscribe to the whole artist' at the top - with a field to search them, a filter (albums, EPs and singles) and an order (newest, oldest first, A-Z). Playlists can be found and added too, and what is in the library already has a tick.</li>
+<li id='linews' class='linews'>Link: a 'Spotify search' entry shows the albums its search finds - a search Spotify finds nothing for (e.g. with AND between the filters, as the manual showed it; Spotify no longer knows AND) was added and nothing came on the box. The app now asks Spotify first and says so instead of adding it, the field says how to narrow a search (artist:"Name" album:"Episode"), and the manual's example is without AND.</li>
+<li id='linews' class='linews'>Listen: a subscribed Spotify artist's albums come in one request from the list the box keeps (checked with one page at most every 6 hours) - they were asked page by page, six at a time, about 30 requests for a big artist at every opening.</li>
+<li id='linews' class='linews'>Settings: 'Previous page' and 'Next page' under a page go in the order its group lists the pages (Services, System) - they jumped back and forth before.</li>
+</ul>
+<b>Display</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>When the display could not read the box's settings once at its start (e.g. right after an update), it stayed without its theme - the layout of before the themes, whatever theme was set - until the next restart, and it went dark after one minute instead of the time set. It now asks again until it gets them.</li>
+<li id='linews' class='linews'>No square frame around the big cover in the middle any more: with a keyboard at the box (or a remote that types, VNC), Chromium drew its focus frame around the cover's tile.</li>
+<li id='linews' class='linews'>'Now playing' at the top: after an MP3 (library, NAS, podcast) and then Spotify it kept the name of the MP3 track until a restart of the player - Spotify names no track there, and the name of the one before was not cleared when Spotify took over.</li>
+<li id='linews' class='linews'>A NAS album paused while its track list was still loading began to play anyway once the list came. It now waits, paused, and starts with Play (a stop or another album lets it go).</li>
+</ul>
+<b>Spotify</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Podcasts of Spotify: an episode Spotify no longer offers comes in its list as an empty entry, and the whole list of the show failed on it - the show showed as not available once the list kept on the box was gone (e.g. after an update). Such entries are left out now (the album search too), and the next pages of a list go by the size of a page, so no episode comes twice when one was left out.</li>
+</ul>
+<b>MuPiHAT</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>When the charger chip was reset while the box ran (e.g. a dip of its supply), it was back on its factory settings - its measuring off, and the cell count read from its pin, once 4 instead of 2 cells (a charge voltage of 16.8 V for a 2S pack). The service set the chip up only at its start and did not notice: the box kept showing the values of before the reset for hours (charging at 75 % while it ran on battery, nearly empty), the battery was not charged, and the shutdown at an empty battery could not see the voltage go down. The service now checks this every few seconds and sets the chip up again at once (only when the chip is found reset again right after, it waits 5 minutes for the next try; until it is set up, and when the chip cannot be asked, its values are not taken - the display shows no charging from them, Home Assistant gets none, and the shutdown at an empty battery does not act on them: it says so in its log, every 30 minutes while it lasts). A setup that fails halfway (the bus gives up) keeps charging off until one gets through. A cell count it cannot correct switches charging off, as at the start, and the service keeps it off on every round - a further reset of the chip switched it on again.</li>
+</ul>
+<b>Installation and network</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>LAN: when the port came a moment after the box's LAN service at the start (its driver loaded later, seen with newer kernels), the service gave up and the LAN stayed without an address until the next start - a box connected by cable could not be reached. It now waits for the port, and starts again when the port appears later.</li>
+<li id='linews' class='linews'>Fresh installation: before its restart it checks that Node.js, mpv, Chromium, the server and the player are there and the server answers - otherwise it does not restart and says what is missing (a box restarted without them showed only the display's 'no connection' page). Its log is written to the boot partition (/boot/firmware on newer systems), readable from the memory card on a PC.</li>
+<li id='linews' class='linews'>The fresh installation can install a branch too, as the update does (autosetup.sh branch &lt;branch&gt; [owner/repository]): a state can be tried on a new memory card before its release.</li>
+</ul>
 <h3>DEV 5.0.10 - changes compared to 5.0.9</h3>
 <b>Security</b>
 </ul>

@@ -218,7 +218,8 @@ export class StatusComponent {
         return 0
     }
   })
-  protected readonly charging = computed(() => (this.hat()?.IBus ?? 0) > 0)
+  // (not from the values of a charger that was reset: they are those of before, see Mupihat.Measurement_Valid)
+  protected readonly charging = computed(() => this.hat()?.Measurement_Valid !== false && (this.hat()?.IBus ?? 0) > 0)
 
   public constructor(playerService: PlayerService, mediaService: MediaService) {
     this.network = toSignal(mediaService.network$, { initialValue: undefined })

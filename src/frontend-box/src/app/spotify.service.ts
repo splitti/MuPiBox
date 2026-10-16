@@ -118,33 +118,32 @@ export class SpotifyService {
     return fetchPage(0).pipe(
       switchMap((firstPageResponse) => {
         const { items: firstPageItems, total } = firstPageResponse
+        // The pages go by the size the server used (its limit: at most Spotify's 10), not by the number of entries -
+        // the server leaves out what Spotify lists as null (an episode no longer available), and a first page of 9
+        // started the next one a place too early (an episode twice; with 10 in all a second page that is not there).
+        // Without a limit in the answer: its entries, as before (MED-14: a page the server made shorter than asked).
+        const served = Number(firstPageResponse.limit)
+        const step = served > 0 ? Math.min(served, pageSize) : firstPageItems.length || pageSize
+        const firstEnd = (Number(firstPageResponse.offset) || 0) + step
 
         // If we have all results in the first page, return them
-        if (firstPageItems.length >= total) {
+        if (firstEnd >= total) {
           return of(firstPageItems)
         }
 
         // Calculate how many more pages we need
-        const remainingItems = total - firstPageItems.length
-        const additionalPagesNeeded = Math.min(Math.ceil(remainingItems / pageSize), maxPages - 1)
+        const remainingItems = total - firstEnd
+        const additionalPagesNeeded = Math.min(Math.ceil(remainingItems / step), maxPages - 1)
 
         if (additionalPagesNeeded <= 0) {
           return of(firstPageItems)
         }
 
-        // Create observables for additional pages.
-        // MED-14: previously offset = page * pageSize, which assumed every
-        // page returned exactly pageSize items. When the first page came
-        // back short (Spotify can server-side-filter for market/availability,
-        // or the user has fewer-than-pageSize items in some categories),
-        // the second page started at pageSize instead of firstPageItems.length
-        // — every item between firstPageItems.length and pageSize was
-        // silently skipped. Anchor subsequent offsets to the actual length
-        // of the first page; if first page was full this still produces
-        // pageSize, 2*pageSize, … as before.
+        // Create observables for additional pages, each `step` after the first (see above: the size the server used,
+        // which also covers MED-14 - a server that served fewer than pageSize per page skipped the rest before).
         const additionalPageObservables: Observable<T[]>[] = []
         for (let page = 1; page <= additionalPagesNeeded; page++) {
-          const offset = firstPageItems.length + (page - 1) * pageSize
+          const offset = firstEnd + (page - 1) * step
           additionalPageObservables.push(
             fetchPage(offset).pipe(
               map((response) => response.items),

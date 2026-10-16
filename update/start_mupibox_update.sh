@@ -153,6 +153,11 @@ packages2install="lighttpd-mod-openssl gpiod git mpv pulseaudio-module-bluetooth
 # packages the update removes (apt-get remove, only when installed) - none at the moment; Debian's jq goes where the
 # update puts its own jq (see "Copy binaries")
 packages2remove=""
+# apt without questions and with patience: an installation asking about a changed config file waited for an answer
+# nobody gives (no terminal), and the package lock held by DietPi's or Debian's own updates (often right after the
+# start) made every apt-get here give up at once - mpv among them, so the box played nothing but Spotify afterwards
+export DEBIAN_FRONTEND=noninteractive
+apt-get() { command apt-get -o DPkg::Lock::Timeout=600 -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold "$@"; }
 STEP=0
 VER_JSON="/tmp/version.json"
 OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)  >&3 2>&3
@@ -236,7 +241,11 @@ rm -f /tmp/mupibox-update-failed
 
 	echo -e "XXX\n${STEP}\nUpdate package-list\nXXX"
 	before=$(date +%s)
+	# a dpkg stopped halfway before (power gone during an installation) makes apt refuse every package until it is
+	# finished, and dependencies left broken by that as well
+	dpkg --configure -a >&3 2>&3
 	apt-get update >&3 2>&3
+	apt-get --yes -f install >&3 2>&3
 	after=$(date +%s)
 
 	echo -e "## apt-get update ##  finished after $((after - $before)) seconds" >&3 2>&3
@@ -282,11 +291,18 @@ rm -f /tmp/mupibox-update-failed
 		echo -e "## apt-get install ${package}  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	done
 
-	# mpv plays everything but Spotify (mplayer, the fallback until 5.0.9, is gone): asked once more with fresh package
-	# lists when the loop above could not install it - without it the box plays nothing but Spotify
-	if ! command -v mpv >/dev/null 2>&1; then
+	# What a part of the box needs (the list of scripts/mupibox/install_missing.sh - mpv plays everything but Spotify,
+	# mplayer is gone; rsvg-convert and Pillow put the start pictures together; xdotool and feh the goodbye picture):
+	# asked once more with fresh package lists when the loop above could not install it
+	MISSING_NOW=""
+	for p in mpv librsvg2-bin python3-pil xdotool feh; do
+		dpkg-query -W -f='${Status}' "${p}" 2>/dev/null | grep -q "install ok installed" || MISSING_NOW="${MISSING_NOW} ${p}"
+	done
+	if [ -n "${MISSING_NOW}" ]; then
+		dpkg --configure -a >&3 2>&3
 		apt-get update >&3 2>&3
-		apt-get --yes install mpv >&3 2>&3 || echo "## WARNING: mpv could not be installed - only Spotify will play ##" >&3 2>&3
+		apt-get --yes -f install >&3 2>&3
+		apt-get --yes install ${MISSING_NOW} >&3 2>&3 || echo "## WARNING: not installed:${MISSING_NOW} (the app offers to install it) ##" >&3 2>&3
 	fi
 
 	# pinctrl for the OnOff SHIM with libgpiod 2 (Debian 13 "Trixie", see scripts/OnOffShim): in raspi-utils-core of the

@@ -4,16 +4,31 @@
 # Start with: cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup.sh | sudo bash
 # The channel as the first argument (stable when none is given), e.g. the development version on a fresh DietPi:
 #   cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup.sh | sudo bash -s -- dev
+# Or a branch of a repository (to test a state before its release), as the update takes it:
+#   ... | sudo bash -s -- branch <branch> [owner/repository, splitti/MuPiBox when none is given]
 
 case "$1" in
 	stable|beta|dev)
 		RELEASE="$1"
 		;;
+	branch)
+		RELEASE="dev"
+		BRANCH="$2"
+		REPO="${3:-splitti/MuPiBox}"
+		if ! [[ "${BRANCH}" =~ ^[A-Za-z0-9._/-]+$ ]] || ! [[ "${REPO}" =~ ^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$ ]]; then
+			echo "Usage: autosetup.sh branch <branch> [owner/repository]" >&2
+			exit 1
+		fi
+		if [ "$(curl -s -o /dev/null -w "%{http_code}" "https://api.github.com/repos/${REPO}/branches/${BRANCH}")" != "200" ]; then
+			echo "Branch '${BRANCH}' not found in ${REPO}" >&2
+			exit 1
+		fi
+		;;
 	"")
 		RELEASE="stable"
 		;;
 	*)
-		echo "Unknown channel '$1' - use stable, beta or dev" >&2
+		echo "Unknown channel '$1' - use stable, beta, dev or branch <branch> [owner/repository]" >&2
 		exit 1
 		;;
 esac
@@ -47,6 +62,12 @@ fi
 
 rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 
+# apt without questions and with patience: a question about a changed config file waited for an answer nobody gives,
+# and the package lock held by DietPi's or Debian's own updates (often right after the first start) made every
+# apt-get here give up at once - mpv among them, so the box played nothing but Spotify
+export DEBIAN_FRONTEND=noninteractive
+apt-get() { command apt-get -o DPkg::Lock::Timeout=600 -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold "$@"; }
+
 STEP=0
 {
 	# 2026-09-20: no longer installed (nothing in MuPiBox uses them any more):
@@ -65,7 +86,9 @@ STEP=0
 
 	echo -e "XXX\n${STEP}\nUpdate package-list\nXXX"
 	before=$(date +%s)
+	dpkg --configure -a >&3 2>&3
 	apt-get update >&3 2>&3
+	apt-get --yes -f install >&3 2>&3
 	after=$(date +%s)
 	echo -e "## apt-get update ## finished after $((after - before)) seconds" >&3 2>&3
 	STEP=$((STEP + 1))
@@ -98,6 +121,18 @@ STEP=0
 		echo -e "## apt-get install ${package} ## finished after $((after - before)) seconds" >&3 2>&3
 		STEP=$((STEP + 1))
 	done
+	# What a part of the box needs (the list of scripts/mupibox/install_missing.sh: mpv, the start pictures, the goodbye
+	# picture): asked once more with fresh package lists when the loop could not install it
+	MISSING_NOW=""
+	for p in mpv librsvg2-bin python3-pil xdotool feh; do
+		dpkg-query -W -f='${Status}' "${p}" 2>/dev/null | grep -q "install ok installed" || MISSING_NOW="${MISSING_NOW} ${p}"
+	done
+	if [ -n "${MISSING_NOW}" ]; then
+		dpkg --configure -a >&3 2>&3
+		apt-get update >&3 2>&3
+		apt-get --yes -f install >&3 2>&3
+		apt-get --yes install ${MISSING_NOW} >&3 2>&3 || echo "## WARNING: not installed:${MISSING_NOW} (the app offers to install it) ##" >&3 2>&3
+	fi
 
 	# pinctrl for the OnOff SHIM with libgpiod 2 (Debian 13 "Trixie", see scripts/OnOffShim): in raspi-utils-core of the
 	# Raspberry Pi archive (the name raspberrypi-utils written here before is only the source package - nothing was
@@ -157,10 +192,17 @@ STEP=0
 
 	echo -e "XXX\n${STEP}\nPrepare MuPiBox Download ... \nXXX"
 	before=$(date +%s)
-	wget -q -O ${VER_JSON} https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json >&3 2>&3
-	VERSION=$(/usr/bin/jq -r .release.${RELEASE}[-1].version ${VER_JSON})
-	MUPIBOX_URL=$(/usr/bin/jq -r .release.${RELEASE}[-1].url ${VER_JSON})
-	VERSION_LONG="${VERSION} ${RELEASE}"
+	if [ -n "${BRANCH}" ]; then
+		# a branch: its state now, named as the update names it (DEV <branch> <date of its last commit>)
+		VERSION="${BRANCH}"
+		MUPIBOX_URL="https://github.com/${REPO}/archive/refs/heads/${BRANCH}.zip"
+		VERSION_LONG="DEV ${BRANCH} $(curl -s "https://api.github.com/repos/${REPO}/branches/${BRANCH}" | /usr/bin/jq -r '.commit.commit.committer.date' | cut -d'T' -f1)"
+	else
+		wget -q -O ${VER_JSON} https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json >&3 2>&3
+		VERSION=$(/usr/bin/jq -r .release.${RELEASE}[-1].version ${VER_JSON})
+		MUPIBOX_URL=$(/usr/bin/jq -r .release.${RELEASE}[-1].url ${VER_JSON})
+		VERSION_LONG="${VERSION} ${RELEASE}"
+	fi
 	MUPI_SRC="/home/dietpi/MuPiBox-${VERSION}"
 	after=$(date +%s)
 	echo -e "## Prepare MuPiBox Download ## finished after $((after - before)) seconds" >&3 2>&3
@@ -188,6 +230,9 @@ STEP=0
 
 	echo -e "XXX\n${STEP}\nUnzip MuPiBox Version ${VERSION_LONG}... \nXXX"
 	before=$(date +%s)
+	# (the folder the zip unpacks to: <repository>-<branch or version>, a branch's "/" made "-" by GitHub)
+	UNPACKED=$(unzip -Z1 /home/dietpi/mupibox.zip 2>/dev/null | head -n 1 | cut -d/ -f1)
+	[ -n "${UNPACKED}" ] && MUPI_SRC="/home/dietpi/${UNPACKED}"
 	unzip -q -d /home/dietpi/ /home/dietpi/mupibox.zip >&3 2>&3
 	rm /home/dietpi/mupibox.zip >&3 2>&3
 	after=$(date +%s)
@@ -727,11 +772,41 @@ STEP=0
 
 	###############################################################################################
 
+	# What the box cannot do without (every step above only writes to the log, also when it fails): checked before the
+	# restart - a box restarted without them showed the display's "no connection" page and nothing else, and why was
+	# only in a log on the system partition. The result goes to the log; the restart only when all is there.
+	MISSING=""
+	command -v node >/dev/null 2>&1 || MISSING="${MISSING} Node.js"
+	command -v mpv >/dev/null 2>&1 || MISSING="${MISSING} mpv"
+	command -v chromium >/dev/null 2>&1 || command -v chromium-browser >/dev/null 2>&1 || MISSING="${MISSING} Chromium"
+	[ -f /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server.js ] || MISSING="${MISSING} server.js"
+	[ -f /home/dietpi/.mupibox/spotifycontroller-main/spotify-control.js ] || MISSING="${MISSING} spotify-control.js"
+	ANSWER=""
+	for _ in $(seq 1 20); do
+		ANSWER=$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 http://127.0.0.1:8200/ 2>/dev/null)
+		[ -n "${ANSWER}" ] && [ "${ANSWER}" != "000" ] && break
+		sleep 2
+	done
+	[ -n "${ANSWER}" ] && [ "${ANSWER}" != "000" ] || MISSING="${MISSING} server(8200)"
+	echo "${MISSING}" > /tmp/autosetup.missing
+	echo "## Check before the restart: ${MISSING:-everything there} ##" >&3 2>&3
+
 	echo -e "XXX\n100\nInstallation complete, please reboot the system... \nXXX"
 	rm -Rf ${MUPI_SRC} >&3 2>&3
-	mv ${LOG} /boot/autosetup.log > /dev/null 2>&3
 	sleep 5
 
 } | whiptail --title "MuPiBox Autosetup ${VERSION_LONG}" --gauge "Please wait while installing" 6 60 0
 
+# The log on the boot partition (/boot/firmware on newer systems): readable from the memory card on a PC too, when
+# the box cannot be reached
+exec 3>&-
+cp -f ${LOG} "${BOOT_DIR}/autosetup.log" > /dev/null 2>&1
+MISSING=$(cat /tmp/autosetup.missing 2>/dev/null)
+if [ -n "${MISSING}" ]; then
+	echo ""
+	echo "The installation is not complete, missing:${MISSING}"
+	echo "The box is NOT restarted. The log: ${BOOT_DIR}/autosetup.log (also on the boot partition of the memory card)."
+	echo "Check the internet connection and start the installation again."
+	exit 1
+fi
 reboot

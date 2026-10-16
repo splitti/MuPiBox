@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
-import { interval, Subject, Subscription } from 'rxjs'
+import { interval, retry, Subject, Subscription, timer } from 'rxjs'
 import { throttleTime } from 'rxjs/operators'
 import { environment } from 'src/environments/environment'
 import { MupiboxConfig } from './mupibox-config.model'
@@ -26,7 +26,12 @@ export class DisplayManagerService {
 
   private loadIdleTimeout(): void {
     console.log('[DisplayManager] Loading idle timeout from config...')
-    this.http.get<MupiboxConfig>(`${environment.backend.apiUrl}/config`).subscribe({
+    // (a failure at the start is asked again a few times before the 1-minute fallback: the display went off after a
+    // minute instead of the time set in the app)
+    this.http
+      .get<MupiboxConfig>(`${environment.backend.apiUrl}/config`)
+      .pipe(retry({ count: 6, delay: (_err, n) => timer(Math.min(15000, 2000 * n)) }))
+      .subscribe({
       next: (config) => {
         // 0 = never (as the app and the admin interface say); only a missing or broken value falls back to 1 minute
         const timeout = Number.parseInt(String(config?.timeout?.idleDisplayOff ?? '1'), 10)

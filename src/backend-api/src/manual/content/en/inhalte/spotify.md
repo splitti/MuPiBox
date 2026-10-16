@@ -25,11 +25,14 @@ You can look at and change the credentials later under **Library › Spotify ›
 
 ### Search on Spotify
 
-**Library › Search on Spotify**: enter a search term, choose whether to search in **All**, **Artist**, **Albums** or **Track**, and choose the category under **Add as**. From the hits you add with ＋:
+**Library › Add › Search on Spotify**: enter a search term and choose whether to search in **All**, **Artist**, **Albums**, **Track** or **Playlists**. What is in the library already has a tick and “In the library”. Tap a hit:
 
-- an **album**,
-- an **artist**: this creates an artist subscription, all episodes come onto the box, new ones later by themselves ([Managing content](verwalten.md)),
-- for a **track** the whole album it is on.
+- an **album** shows its cover and details; there you choose the category under **Add as** and tap **Add**,
+- a **track** comes onto the box the same way, with its whole album,
+- a **playlist** comes onto the box as one entry (the box fetches its tracks when it plays),
+- an **artist** shows their albums to add one by one; a search field, **All**, **Albums** and **EPs & singles** and the **Order** (newest, oldest first or alphabetical) help with artists who have many albums. **Subscribe to the whole artist** creates an artist subscription: all episodes come onto the box, new ones later by themselves ([Managing content](verwalten.md)). **Back to search** returns to the results.
+
+The category chosen last is preselected the next time you add something.
 
 ### Paste link
 
@@ -47,10 +50,12 @@ You can look at and change the credentials later under **Library › Spotify ›
 As a type there is also **Spotify search**: instead of a single album you save a search as an entry. The field is then called **Search term**. The box shows all albums found (at most 100) collected under one tile. You phrase the search with Spotify's search filters, for example:
 
 ```
-artist:"Name of the series" AND album:"Episode"
+artist:"Name of the series" album:"Episode"
 ```
 
-The field **Tile name** is required: that is what the tile is called on the display. With a second entry, such as `artist:"Name of the series" AND album:"Volume"`, one artist gives two separate tiles.
+Several filters apply together, no `AND` is needed between them: with it Spotify no longer finds anything. If the search finds no albums, the app tells you right when you add it.
+
+The field **Tile name** is required: that is what the tile is called on the display. With a second entry, such as `artist:"Name of the series" album:"Volume"`, one artist gives two separate tiles.
 
 ## Smart Sync: playlists onto the box automatically
 
