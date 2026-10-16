@@ -245,7 +245,10 @@ async function battery(deps: HaDeps): Promise<{ percent: number | null; charging
       Ibat?: unknown
       Temp?: unknown
       BatteryConnected?: unknown
+      Measurement_Valid?: unknown
     }
+    // (a charger that was reset and is not set up again: its values are those of before the reset - none sent)
+    if (j.Measurement_Valid === false) return { percent: null, charging: null, hat: null }
     const pct = Number(j.Bat_Percent)
     // charging = on the charger, as the display shows it (its bolt: current flows in at the USB input) - the charger's
     // status said "not charging" once the battery was full ("Charge Termination Done") while the box hung on the

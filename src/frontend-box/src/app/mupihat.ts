@@ -15,4 +15,6 @@ export interface Mupihat {
   Bat_Percent?: number
   // 'none': the profile "USB-C mode (no battery)" - nothing to show, whatever the charger reads
   Bat_PercentSource?: 'voltage' | 'charging' | 'none'
+  // false: the charger was reset and is not set up again yet - its values are those of before the reset
+  Measurement_Valid?: boolean
 }

@@ -6082,6 +6082,21 @@ class bq25792:
             return ""
         return ""
 
+    def keep_charging_disabled(self):
+        '''
+        With a cell count that could not be corrected charging must stay off - but a reset of the chip sets EN_CHG back
+        to 1 (its POR value). Checked on every round: switched off again, and read back. Returns whether it is off.
+        '''
+        try:
+            reg0f = self.read_register(0x0F, 1)[0]
+            if not (reg0f & 0b00100000):
+                return True
+            logging.error("Charging was on again (a reset of the chip?) with a wrong cell count: switching it off.")
+            self.safe_execute(self.bq.write_byte_data, self.i2c_addr, 0x0F, reg0f & ~0b00100000 & 0xFF)
+            return not (self.read_register(0x0F, 1)[0] & 0b00100000)
+        except I2CError:
+            return False
+
     def disable_charging(self):
         '''
         Safe state when the cell count cannot be corrected: the system keeps running from the input,
