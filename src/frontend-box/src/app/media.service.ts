@@ -1191,7 +1191,9 @@ export class MediaService {
   // none - and the list counts as not complete (tidalFailures): it is not kept as the current one, and made again
   // later. (An empty answer kept as complete left the artist's albums gone for six hours, also once TIDAL was back.)
   private tidalArtistAlbums(item: Media): Observable<Media[]> {
-    const row = `t:${item.id}`
+    // (with its range and the albums left out: the albums kept for another choice - before one was left out in the
+    // app - do not stand in for this one)
+    const row = `t:${item.id}${tidalRangeQuery(item)}`
     return this.http
       .get<{ albums?: { id: string; name: string; cover?: string | null; year?: number | null }[] }>(
         `${this.getPlayerBackendUrl()}/tidal/artist/${encodeURIComponent(item.id)}/albums${tidalRangeQuery(item)}`,
@@ -1373,7 +1375,11 @@ function tidalRangeQuery(item: Media): string {
   const q = new URLSearchParams()
   if (Number(item.range_from) >= 1) q.set('from', String(Math.floor(Number(item.range_from))))
   if (Number(item.range_to) >= 1) q.set('to', String(Math.floor(Number(item.range_to))))
-  const ex = (Array.isArray(item.exclude_album_ids) ? item.exclude_album_ids : []).map(String).filter((x) => /^\d{1,15}$/.test(x))
+  // (sorted: the same choice gives the same text - it is also the row of the entry, see tidalArtistAlbums)
+  const ex = (Array.isArray(item.exclude_album_ids) ? item.exclude_album_ids : [])
+    .map(String)
+    .filter((x) => /^\d{1,15}$/.test(x))
+    .sort()
   if (ex.length) q.set('exclude', ex.join(','))
   const text = q.toString()
   return text ? `?${text}` : ''
