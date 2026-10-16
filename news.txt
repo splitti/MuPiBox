@@ -23,6 +23,10 @@
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Podcasts of Spotify: an episode Spotify no longer offers comes in its list as an empty entry, and the whole list of the show failed on it - the show showed as not available once the list kept on the box was gone (e.g. after an update). Such entries are left out now (the album search too), and the next pages of a list go by the size of a page, so no episode comes twice when one was left out.</li>
 </ul>
+<b>MuPiHAT</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>When the charger chip was reset while the box ran (e.g. a dip of its supply), it was back on its factory settings - its measuring off, and the cell count read from its pin, once 4 instead of 2 cells (a charge voltage of 16.8 V for a 2S pack). The service set the chip up only at its start and did not notice: the box kept showing the values of before the reset for hours (charging at 75 % while it ran on battery, nearly empty), the battery was not charged, and the shutdown at an empty battery could not see the voltage go down. The service now checks this every few seconds and sets the chip up again (at most every 5 minutes; a cell count it cannot correct switches charging off, as at the start).</li>
 <b>Installation and network</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
