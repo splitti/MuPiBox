@@ -4419,6 +4419,17 @@ async function addLink(page) {
     if (type === 'Spotify-Suche') {
       // (the box looks the search up itself: its first hit plays - a name is needed for the tile)
       if (!label) return toast('Bitte auch einen Namen eintragen (so heißt die Kachel)', 'info')
+      // (the box shows the albums the search finds - a search without any, as one with "AND" that Spotify does not
+      // know, was added and nothing came on the box: said before it is added; no answer from Spotify does not stop it)
+      const found = await api(`/api/spotify/search/albums?query=${encodeURIComponent(url)}&limit=1&offset=0`)
+      const total = found.ok ? (found.body?.total ?? found.body?.albums?.total) : undefined
+      if (total === 0)
+        return toast(
+          /\b(AND|OR|NOT)\b/.test(url)
+            ? 'Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:"Name" album:"Folge")'
+            : 'Spotify findet zu diesem Suchbegriff keine Alben',
+          'info',
+        )
       Object.assign(body, { type: 'spotify', query: url, artist: label })
     } else if (type === 'Spotify-Link') {
       if (!url.startsWith('https://open.spotify.com/')) return toast('Spotify-Links beginnen mit https://open.spotify.com/', 'info')
@@ -10411,7 +10422,11 @@ const CONTROLLERS = {
                   ...it,
                   label: type === 'Spotify-Suche' ? 'Suchbegriff' : 'Link',
                   placeholder: type === 'Spotify-Suche' ? 'z. B. Benjamin Blümchen Folge 1' : 'https://…',
-                  ...(svc.spotify ? {} : { help: 'Radio: auch eine .m3u- oder .pls-Datei – die Box liest die Stream-Adresse daraus. Podcast: die Adresse des Feeds.' }),
+                  ...(type === 'Spotify-Suche'
+                    ? { help: 'Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:"Name" album:"Folge" – ohne AND.' }
+                    : svc.spotify
+                      ? {}
+                      : { help: 'Radio: auch eine .m3u- oder .pls-Datei – die Box liest die Stream-Adresse daraus. Podcast: die Adresse des Feeds.' }),
                 }
               : it.key === 'lLabel' && type === 'Spotify-Suche'
                 ? { ...it, label: 'Name der Kachel' }

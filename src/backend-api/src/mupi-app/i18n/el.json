@@ -2909,5 +2909,8 @@
  "Mit TIDAL verbunden · Konto aus {}": "Συνδεδεμένο με TIDAL · λογαριασμός από: {}",
  "TIDALs Angebot unterscheidet sich je Land: Die Box sucht und spielt das des Landes, aus dem dein Konto ist.": "Η προσφορά του TIDAL διαφέρει ανά χώρα: Το κουτί αναζητά και παίζει αυτήν της χώρας του λογαριασμού σου.",
  "Die Überschrift ist der Name der Ruhezeit (Spielzeit › Ruhezeiten), z. B. „Hausaufgaben“ oder „Gute Nacht“. Ohne Namen und bei „Ruhe sofort“ steht dort „{}“.": "Η επικεφαλίδα είναι το όνομα της ώρας ησυχίας (Χρόνος παιχνιδιού › Ώρες ησυχίας), π.χ. «Μαθήματα» ή «Καληνύχτα». Χωρίς όνομα και στο «Άμεση ησυχία» εμφανίζεται «{}».",
- "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Εμφανίζεται στην οθόνη ως επικεφαλίδα όσο διαρκεί αυτή η ώρα ησυχίας – π.χ. «Μαθήματα» ή «Καληνύχτα»."
+ "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Εμφανίζεται στην οθόνη ως επικεφαλίδα όσο διαρκεί αυτή η ώρα ησυχίας – π.χ. «Μαθήματα» ή «Καληνύχτα».",
+ "Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:\"Name\" album:\"Folge\")": "Το Spotify δεν βρίσκει άλμπουμ – αναζητήστε χωρίς AND, OR ή NOT (π.χ. artist:\"Όνομα\" album:\"Επεισόδιο\")",
+ "Spotify findet zu diesem Suchbegriff keine Alben": "Το Spotify δεν βρίσκει άλμπουμ για αυτόν τον όρο αναζήτησης",
+ "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "Το πλακίδιο δείχνει τα άλμπουμ που βρίσκει το Spotify (έως 100). Περιορισμός με artist:\"Όνομα\" album:\"Επεισόδιο\" – χωρίς AND."
 }

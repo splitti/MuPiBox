@@ -2909,5 +2909,8 @@
  "Mit TIDAL verbunden · Konto aus {}": "Koblet til TIDAL · konto fra {}",
  "TIDALs Angebot unterscheidet sich je Land: Die Box sucht und spielt das des Landes, aus dem dein Konto ist.": "TIDALs utvalg varierer fra land til land: Boksen søker i og spiller utvalget i landet kontoen din er fra.",
  "Die Überschrift ist der Name der Ruhezeit (Spielzeit › Ruhezeiten), z. B. „Hausaufgaben“ oder „Gute Nacht“. Ohne Namen und bei „Ruhe sofort“ steht dort „{}“.": "Overskriften er navnet på hviletiden (Spilletid › Hviletider), f.eks. «Lekser» eller «God natt». Uten navn og ved «Ro nå» står det «{}».",
- "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Vises på skjermen som overskrift mens denne hviletiden varer – f.eks. «Lekser» eller «God natt»."
+ "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Vises på skjermen som overskrift mens denne hviletiden varer – f.eks. «Lekser» eller «God natt».",
+ "Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:\"Name\" album:\"Folge\")": "Spotify finner ingen album – søk uten AND, OR eller NOT (f.eks. artist:\"Navn\" album:\"Episode\")",
+ "Spotify findet zu diesem Suchbegriff keine Alben": "Spotify finner ingen album for dette søkeordet",
+ "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "Flisen viser albumene Spotify finner (opptil 100). Avgrens med artist:\"Navn\" album:\"Episode\" – uten AND."
 }

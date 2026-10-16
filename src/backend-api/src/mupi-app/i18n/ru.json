@@ -2909,5 +2909,8 @@
  "Mit TIDAL verbunden · Konto aus {}": "Подключено к TIDAL · аккаунт: {}",
  "TIDALs Angebot unterscheidet sich je Land: Die Box sucht und spielt das des Landes, aus dem dein Konto ist.": "Каталог TIDAL зависит от страны: устройство ищет и воспроизводит каталог страны вашего аккаунта.",
  "Die Überschrift ist der Name der Ruhezeit (Spielzeit › Ruhezeiten), z. B. „Hausaufgaben“ oder „Gute Nacht“. Ohne Namen und bei „Ruhe sofort“ steht dort „{}“.": "Заголовок — это название периода тишины (Время прослушивания › Периоды отдыха), например «Уроки» или «Спокойной ночи». Без названия и при «Тишина сейчас» там стоит «{}».",
- "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Показывается на экране как заголовок, пока длится этот период тишины – например «Уроки» или «Спокойной ночи»."
+ "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Показывается на экране как заголовок, пока длится этот период тишины – например «Уроки» или «Спокойной ночи».",
+ "Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:\"Name\" album:\"Folge\")": "Spotify не находит альбомов – ищите без AND, OR или NOT (например, artist:\"Имя\" album:\"Серия\")",
+ "Spotify findet zu diesem Suchbegriff keine Alben": "Spotify не находит альбомов по этому запросу",
+ "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "Плитка показывает альбомы, которые находит Spotify (до 100). Сузить можно так: artist:\"Имя\" album:\"Серия\" – без AND."
 }

@@ -2909,5 +2909,8 @@
  "Mit TIDAL verbunden · Konto aus {}": "Ligado ao TIDAL · conta de {}",
  "TIDALs Angebot unterscheidet sich je Land: Die Box sucht und spielt das des Landes, aus dem dein Konto ist.": "A oferta do TIDAL varia de país para país: a caixa pesquisa e toca a do país da tua conta.",
  "Die Überschrift ist der Name der Ruhezeit (Spielzeit › Ruhezeiten), z. B. „Hausaufgaben“ oder „Gute Nacht“. Ohne Namen und bei „Ruhe sofort“ steht dort „{}“.": "O título é o nome do período de silêncio (Tempo de reprodução › Períodos de descanso), p. ex. «Trabalhos de casa» ou «Boa noite». Sem nome e com «Descanso já» aparece «{}».",
- "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Aparece no ecrã como título enquanto dura este período de silêncio – p. ex. «Trabalhos de casa» ou «Boa noite»."
+ "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Aparece no ecrã como título enquanto dura este período de silêncio – p. ex. «Trabalhos de casa» ou «Boa noite».",
+ "Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:\"Name\" album:\"Folge\")": "O Spotify não encontra álbuns – pesquise sem AND, OR ou NOT (p. ex. artist:\"Nome\" album:\"Episódio\")",
+ "Spotify findet zu diesem Suchbegriff keine Alben": "O Spotify não encontra álbuns para este termo de pesquisa",
+ "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "O mosaico mostra os álbuns que o Spotify encontra (até 100). Restrinja com artist:\"Nome\" album:\"Episódio\" – sem AND."
 }

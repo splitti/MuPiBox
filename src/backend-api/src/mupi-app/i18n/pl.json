@@ -2909,5 +2909,8 @@
  "Mit TIDAL verbunden · Konto aus {}": "Połączono z TIDAL · konto: {}",
  "TIDALs Angebot unterscheidet sich je Land: Die Box sucht und spielt das des Landes, aus dem dein Konto ist.": "Oferta TIDAL różni się w zależności od kraju: Box wyszukuje i odtwarza ofertę kraju Twojego konta.",
  "Die Überschrift ist der Name der Ruhezeit (Spielzeit › Ruhezeiten), z. B. „Hausaufgaben“ oder „Gute Nacht“. Ohne Namen und bei „Ruhe sofort“ steht dort „{}“.": "Nagłówek to nazwa czasu odpoczynku (Czas słuchania › Czasy odpoczynku), np. „Lekcje” albo „Dobranoc”. Bez nazwy i przy „Cisza natychmiast” widnieje „{}”.",
- "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Wyświetla się na ekranie jako nagłówek, dopóki trwa ten czas odpoczynku – np. „Lekcje” albo „Dobranoc”."
+ "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Wyświetla się na ekranie jako nagłówek, dopóki trwa ten czas odpoczynku – np. „Lekcje” albo „Dobranoc”.",
+ "Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:\"Name\" album:\"Folge\")": "Spotify nie znajduje albumów – szukaj bez AND, OR lub NOT (np. artist:\"Nazwa\" album:\"Odcinek\")",
+ "Spotify findet zu diesem Suchbegriff keine Alben": "Spotify nie znajduje albumów dla tego wyszukiwania",
+ "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "Kafelek pokazuje albumy, które znajdzie Spotify (do 100). Zawęź przez artist:\"Nazwa\" album:\"Odcinek\" – bez AND."
 }

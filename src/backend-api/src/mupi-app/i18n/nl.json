@@ -2909,5 +2909,8 @@
  "Mit TIDAL verbunden · Konto aus {}": "Verbonden met TIDAL · account uit {}",
  "TIDALs Angebot unterscheidet sich je Land: Die Box sucht und spielt das des Landes, aus dem dein Konto ist.": "Het aanbod van TIDAL verschilt per land: de box zoekt en speelt dat van het land waar je account vandaan komt.",
  "Die Überschrift ist der Name der Ruhezeit (Spielzeit › Ruhezeiten), z. B. „Hausaufgaben“ oder „Gute Nacht“. Ohne Namen und bei „Ruhe sofort“ steht dort „{}“.": "De kop is de naam van de rusttijd (Speeltijd › Rusttijden), bijv. „Huiswerk” of „Welterusten”. Zonder naam en bij „Nu stil” staat er „{}”.",
- "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Staat op het scherm als kop zolang deze rusttijd duurt – bijv. „Huiswerk” of „Welterusten”."
+ "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Staat op het scherm als kop zolang deze rusttijd duurt – bijv. „Huiswerk” of „Welterusten”.",
+ "Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:\"Name\" album:\"Folge\")": "Spotify vindt geen albums – zoek zonder AND, OR of NOT (bijv. artist:\"Naam\" album:\"Aflevering\")",
+ "Spotify findet zu diesem Suchbegriff keine Alben": "Spotify vindt geen albums voor deze zoekterm",
+ "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "De tegel toont de albums die Spotify vindt (tot 100). Beperk met artist:\"Naam\" album:\"Aflevering\" – zonder AND."
 }

@@ -2909,5 +2909,8 @@
  "Mit TIDAL verbunden · Konto aus {}": "TIDAL’a bağlı · hesap ülkesi: {}",
  "TIDALs Angebot unterscheidet sich je Land: Die Box sucht und spielt das des Landes, aus dem dein Konto ist.": "TIDAL’ın kataloğu ülkeden ülkeye değişir: Kutu, hesabının ülkesindeki kataloğu arar ve çalar.",
  "Die Überschrift ist der Name der Ruhezeit (Spielzeit › Ruhezeiten), z. B. „Hausaufgaben“ oder „Gute Nacht“. Ohne Namen und bei „Ruhe sofort“ steht dort „{}“.": "Başlık, sessiz saatin adıdır (Oyun süresi › Sessiz saatler), ör. „Ödev“ ya da „İyi geceler“. Ad yoksa ve „Hemen sessizlik“ için orada „{}“ yazar.",
- "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Bu sessiz saat sürdükçe ekranda başlık olarak görünür – ör. „Ödev“ ya da „İyi geceler“."
+ "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Bu sessiz saat sürdükçe ekranda başlık olarak görünür – ör. „Ödev“ ya da „İyi geceler“.",
+ "Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:\"Name\" album:\"Folge\")": "Spotify albüm bulamıyor – lütfen AND, OR veya NOT olmadan arayın (ör. artist:\"Ad\" album:\"Bölüm\")",
+ "Spotify findet zu diesem Suchbegriff keine Alben": "Spotify bu arama terimi için albüm bulamıyor",
+ "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "Kutucuk, Spotify’ın bulduğu albümleri gösterir (en fazla 100). artist:\"Ad\" album:\"Bölüm\" ile daraltın – AND olmadan."
 }
