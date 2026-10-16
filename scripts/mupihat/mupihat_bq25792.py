@@ -6070,7 +6070,8 @@ class bq25792:
         its POR defaults are back - the ADC off (VBAT, VBUS, IBUS, IBAT then keep the values of before the reset, and
         the box showed them for hours: "charging", a battery that did not go down) and the cell count from the PROG pin
         (seen latched as 4S on a 2S pack: a charge target of 16800 mV, and the battery was not charged).
-        Returns the reason, '' when the settings are in place (or the bus did not answer: asked again next time).
+        Returns the reason, '' when the settings are in place, None when the bus did not answer (not known - neither
+        a reset nor none).
         '''
         try:
             if not (self.read_register(0x2E, 1)[0] & 0x80):
@@ -6079,7 +6080,7 @@ class bq25792:
             if cells and (self.read_register(0x0A, 1)[0] >> 6) + 1 != cells:
                 return "cell count"
         except I2CError:
-            return ""
+            return None
         return ""
 
     def keep_charging_disabled(self):
