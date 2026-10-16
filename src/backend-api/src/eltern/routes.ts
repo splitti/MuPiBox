@@ -1473,27 +1473,65 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * dedup by SSID (keep the strongest signal) and drop hidden networks
    * (empty SSID). Slow — iwlist takes ~3-5 s.
    */
+  // The scan of the supplicant, for when iwlist has nothing: wpa_cli lists what the adapter found ("bssid / frequency /
+  // signal level / flags / ssid"). iwlist's old interface hands back an empty list on some drivers (a USB adapter's:
+  // too many networks for its buffer, or the adapter not up yet).
+  type ScanNet = { ssid: string; signal_dbm: number; encrypted: boolean }
+  const wpaScan = (): Promise<ScanNet[]> =>
+    new Promise((resolve) => {
+      const iface = wifiIface()
+      execFile('sudo', ['/usr/sbin/wpa_cli', '-i', iface, 'scan'], { timeout: 5000 }, () => {
+        setTimeout(() => {
+          execFile('sudo', ['/usr/sbin/wpa_cli', '-i', iface, 'scan_results'], { timeout: 5000 }, (err, stdout) => {
+            const nets: ScanNet[] = []
+            if (!err) {
+              for (const ln of stdout.split('\n').slice(1)) {
+                const f = ln.split('\t')
+                const ssid = f[4] ?? ''
+                if (f.length < 5 || !ssid || ssid.includes('\x00')) continue
+                nets.push({ ssid, signal_dbm: Number.parseInt(f[2], 10) || -100, encrypted: /WPA|WEP|RSN/.test(f[3] ?? '') })
+              }
+            }
+            resolve(nets)
+          })
+        }, 4000)
+      })
+    })
+
+  const bestPerSsid = (list: ScanNet[]): ScanNet[] => {
+    const byBest = new Map<string, ScanNet>()
+    for (const n of list) {
+      const prev = byBest.get(n.ssid)
+      if (!prev || n.signal_dbm > prev.signal_dbm) byBest.set(n.ssid, n)
+    }
+    return [...byBest.values()].sort((a, b) => b.signal_dbm - a.signal_dbm)
+  }
+
   router.get(['/wifi/scan', '/wlan/scan'], requireSession, (_req, res) => {
-    iwlistScan().then((stdout) => {
-      const blocks = stdout.split(/Cell \d+ -/)
-      const byBest = new Map<string, { ssid: string; signal_dbm: number; encrypted: boolean }>()
-      for (const blk of blocks) {
-        const ssidMatch = blk.match(/ESSID:"([^"]*)"/)
-        if (!ssidMatch) continue
-        const ssid = ssidMatch[1]
-        if (!ssid) continue // hidden network
-        const sigMatch = blk.match(/Signal level=(-?\d+)\s*dBm/)
-        const signal_dbm = sigMatch ? Number.parseInt(sigMatch[1], 10) : -100
-        const encrypted = /Encryption key:on/.test(blk)
-        const prev = byBest.get(ssid)
-        if (!prev || signal_dbm > prev.signal_dbm) {
-          byBest.set(ssid, { ssid, signal_dbm, encrypted })
-        }
-      }
-      const networks = [...byBest.values()].sort((a, b) => b.signal_dbm - a.signal_dbm)
-      res.json({ networks })
-    }, (err: Error) => {
-      res.status(500).json({ error: `iwlist failed: ${err.message}` })
+    // (an adapter that is down finds nothing: switched on first - harmless when it is already up)
+    execFile('sudo', ['/usr/sbin/ip', 'link', 'set', wifiIface(), 'up'], { timeout: 3000 }, () => {
+      iwlistScan().then(
+        async (stdout) => {
+          const found: ScanNet[] = []
+          for (const blk of stdout.split(/Cell \d+ -/)) {
+            const ssidMatch = blk.match(/ESSID:"([^"]*)"/)
+            if (!ssidMatch || !ssidMatch[1]) continue // not a network block, or a hidden network
+            const sigMatch = blk.match(/Signal level=(-?\d+)\s*dBm/)
+            found.push({
+              ssid: ssidMatch[1],
+              signal_dbm: sigMatch ? Number.parseInt(sigMatch[1], 10) : -100,
+              encrypted: /Encryption key:on/.test(blk),
+            })
+          }
+          res.json({ networks: bestPerSsid(found.length ? found : await wpaScan()) })
+        },
+        async (err: Error) => {
+          // iwlist failed: the supplicant's list before giving up
+          const nets = await wpaScan()
+          if (nets.length) res.json({ networks: bestPerSsid(nets) })
+          else res.status(500).json({ error: `iwlist failed: ${err.message}` })
+        },
+      )
     })
   })
 

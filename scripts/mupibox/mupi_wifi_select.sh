@@ -9,7 +9,8 @@
 
 IFACE_TOOL="/usr/local/bin/mupibox/mupi_wifi_iface.sh"
 LOG="/home/dietpi/mupi_wifi_select.log" # not in /tmp or /var/log: both are RAM disks that are emptied at every boot
-WAIT_SECONDS=60
+WAIT_SECONDS=15 # for the USB link to reach the router once it has an address
+USB_BRING_UP_SECONDS=15 # for the USB adapter to connect at all: after that the onboard WiFi takes over
 
 # Events for both adapters arrive within a moment: run one after the other, the last one sees the final state.
 # The lock file is closed again (9>&-) for everything started below: the WiFi programs that ifup starts in the
@@ -79,22 +80,31 @@ wait_for_ip() {
 #   start an interface it thinks is up even if the link is dead - the state after an adapter was taken
 #   down or unplugged. Only then the state is cleared first (ifdown --force) and the interface started.
 bring_up() {
-	local i="$1"
+	local i="$1" seconds="${2:-30}"
 	if has_ip "$i"; then
 		return 0
 	fi
 	if pgrep -f "wpa_supplicant.* -i ${i} " > /dev/null; then
 		log "$i is being brought up - waiting"
-		wait_for_ip "$i" 30 && return 0
+		wait_for_ip "$i" "${seconds}" && return 0
 		if wpa_cli -i "$i" status 2>/dev/null | grep -q "wpa_state=COMPLETED"; then
 			log "$i is connected but has no address - requesting one"
 			ifup "$i=default" >> "${LOG}" 2>&1 9>&-
 			wait_for_ip "$i" 20 && return 0
 		fi
+		# Still nothing: the adapter is started over - its programs from scratch and ifupdown's idea of
+		# "already configured" cleared (an ifup on top of that only answered "already configured", the box stayed offline)
+		log "$i is stuck - starting it over"
+		ifdown --force "$i" >> "${LOG}" 2>&1 9>&-
+		pkill -f "wpa_supplicant.* -i ${i} " 2> /dev/null
+		pkill -f "dhclient.*/run/dhclient\.${i}\.pid" 2> /dev/null
+		rm -f "/run/wpa_supplicant/${i}"
+		ifup "$i" >> "${LOG}" 2>&1 9>&-
+		wait_for_ip "$i" $((seconds + 10)) && return 0
 	else
 		ifdown --force "$i" >> "${LOG}" 2>&1 9>&-
 		ifup "$i" >> "${LOG}" 2>&1 9>&-
-		wait_for_ip "$i" 40 && return 0
+		wait_for_ip "$i" $((seconds + 10)) && return 0
 	fi
 	log "$i got no address"
 	return 1
@@ -130,7 +140,7 @@ fi
 # USB adapter present: connect it first.
 if ! has_ip "${usb}"; then
 	log "bringing up ${usb}"
-	bring_up "${usb}"
+	bring_up "${usb}" "${USB_BRING_UP_SECONDS}"
 fi
 for ((i = 0; i < WAIT_SECONDS; i += 2)); do
 	if has_ip "${usb}" && reaches_router "${usb}"; then
