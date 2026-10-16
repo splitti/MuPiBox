@@ -403,12 +403,23 @@ function stopLoading() {
   currentMeta.loadProgress = 0
 }
 
+// mplayer says "Starting playback" (track-change) once its cache is filled: the ring ends with it. mpv says file-loaded as
+// soon as the stream is OPEN and fills its cache after that - the ring ended in that moment, and the display showed
+// nothing for the seconds until the sound came. With mpv the loading ends with the cache filled (or, for a stream that
+// reports no buffering, with the sound running: time_pos).
+const loadingEndsWithCache = cachePrefillPercent >= 100
 player.on('cache-fill', (percent) => {
   if (currentMeta.loading) {
     currentMeta.loadProgress = Math.min(100, Math.round((percent / cachePrefillPercent) * 100))
+    if (loadingEndsWithCache && currentMeta.loadProgress >= 100) stopLoading()
   }
 })
-player.on('track-change', stopLoading)
+player.on('track-change', () => {
+  if (!loadingEndsWithCache) stopLoading()
+})
+player.on('time_pos', (seconds) => {
+  if (loadingEndsWithCache && currentMeta.loading && Number(seconds) > 0.5) stopLoading()
+})
 player.on('percent_pos', checkSilence)
 player.on('time_pos', checkSilence)
 
