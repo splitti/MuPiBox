@@ -336,12 +336,18 @@ def artist_albums(artist_id):
     # albums first, then EPs and singles (an audio drama's episodes come as albums, songs often as singles). TIDAL
     # lists one album several times (its versions in other qualities, Dolby Atmos, explicit and clean): one of them is
     # kept - the same name with the same number of tracks is the same album for the box.
+    # One of the two lists failing fails it all (tried once more first): a list without the albums numbered the singles
+    # from 1, and a range saved for the albums ("1-1": the oldest album) took a single instead.
     for fetch in (artist.get_albums, artist.get_ep_singles):
-        try:
-            items = paged(lambda limit, offset: fetch(limit=limit, offset=offset), most=500, step=50)
-        except Exception as e:
-            log(f"albums of artist {artist_id}: {e}")
-            items = []
+        for attempt in (1, 2):
+            try:
+                items = paged(lambda limit, offset: fetch(limit=limit, offset=offset), most=500, step=50)
+                break
+            except Exception as e:
+                log(f"albums of artist {artist_id} (attempt {attempt}): {e}")
+                if attempt == 2:
+                    raise
+                time.sleep(1)
         for a in items:
             key = ((a.name or "").strip().casefold(), a.num_tracks)
             if a.id in seen or key in seen:

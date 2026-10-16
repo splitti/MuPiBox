@@ -84,7 +84,8 @@ function rowKey(item: Media): string | undefined {
 // the new list lacks.
 function fillFailedRows(media: Media[], kept: Media[] | undefined): Media[] {
   const failed = new Set(media.filter((m) => m.unavailable && m.row).map((m) => m.row as string))
-  if (failed.size === 0 || !kept?.length) return media
+  // (a TIDAL artist that could not be asked for and has nothing kept: left out, see below)
+  if (failed.size === 0 || !kept?.length) return media.filter((m) => !(m.unavailable && m.type === 'tidal'))
   const present = new Set(media.filter((m) => !m.unavailable && m.id).map((m) => m.id))
   return media.flatMap((m) => {
     if (!(m.unavailable && m.row && failed.has(m.row))) return [m]
@@ -96,7 +97,8 @@ function fillFailedRows(media: Media[], kept: Media[] | undefined): Media[] {
       )
     }
     failed.delete(m.row) // (once per row)
-    if (!fromKept.length) return [m]
+    // (a TIDAL artist without kept albums: none - its placeholder is no album to show or play)
+    if (!fromKept.length) return m.type === 'tidal' ? [] : [m]
     for (const k of fromKept) if (k.id) present.add(k.id)
     // (with the row: the list made now is the kept one of the next time)
     return fromKept.map((k) => ({ ...k, category: m.category, index: m.index, row: m.row }))
@@ -747,6 +749,8 @@ export class MediaService {
   private static readonly HOME_LIST_MAX_AGE_MS = 6 * 60 * 60 * 1000
   private static readonly HOME_LIST_CATEGORIES: CategoryType[] = ['audiobook', 'music', 'other']
   private homeLists = new Map<CategoryType, { version: string; at: number; media: Media[] }>()
+  // how often the albums of a TIDAL artist could not be asked for (see tidalArtistAlbums; as SpotifyService.failures)
+  private tidalFailures = 0
   private homeListsLoaded$?: Observable<void>
   // (keyed by category and data.json version: a run for an older version does not stand in for the new one)
   private homeListRuns = new Map<string, Observable<Media[]>>()
@@ -794,6 +798,7 @@ export class MediaService {
       // (a lookup that failed meanwhile - Spotify blocking requests, a timeout: the list has placeholders or lacks
       // entries. Shown, but not kept as the current one: it is made again at the next chance, see SpotifyService.failures)
       const failuresBefore = this.spotifyService.failures
+      const tidalFailuresBefore = this.tidalFailures
       this.newestHomeListRun.set(category, version)
       run = this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category).pipe(
         map((media) => fillFailedRows(media, this.homeLists.get(category)?.media)),
@@ -801,7 +806,7 @@ export class MediaService {
           // (a run for an older data.json that ends after the newer one: not kept - it put the old list back, also
           // on the box)
           if (this.newestHomeListRun.get(category) !== version) return
-          const complete = this.spotifyService.failures === failuresBefore
+          const complete = this.spotifyService.failures === failuresBefore && this.tidalFailures === tidalFailuresBefore
           this.homeLists.set(category, { version: complete ? version : '', at: Date.now(), media })
           if (version !== '' && complete) {
             this.http.put(`${this.getApiBackendUrl()}/home-lists/${category}`, { version, media }).subscribe({ error: () => undefined })
@@ -917,7 +922,7 @@ export class MediaService {
     }
     const dataMedia = MediaService.HOME_LIST_CATEGORIES.includes(category)
       ? this.homeListMedia(category, showKept, onlyArtist)
-      : this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category, onlyArtist)
+      : this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category, onlyArtist).pipe(map((media) => fillFailedRows(media, undefined)))
 
     if (category === 'audiobook' || category === 'music' || category === 'other') {
       // Local files are read live from the media folders (any folder depth), so
@@ -1182,8 +1187,11 @@ export class MediaService {
 
   // The albums of a TIDAL artist entry (tidalKind 'artist'), each a TIDAL album of the entry's artist and category - the
   // service asks TIDAL every time, so albums that came out later are there too. Not reachable (offline, TIDAL off or not
-  // signed in): none, the rest of the list stays.
+  // signed in): a placeholder of the row - the albums of the list kept before stand in for it (fillFailedRows), else
+  // none - and the list counts as not complete (tidalFailures): it is not kept as the current one, and made again
+  // later. (An empty answer kept as complete left the artist's albums gone for six hours, also once TIDAL was back.)
   private tidalArtistAlbums(item: Media): Observable<Media[]> {
+    const row = `t:${item.id}`
     return this.http
       .get<{ albums?: { id: string; name: string; cover?: string | null; year?: number | null }[] }>(
         `${this.getPlayerBackendUrl()}/tidal/artist/${encodeURIComponent(item.id)}/albums${tidalRangeQuery(item)}`,
@@ -1204,10 +1212,16 @@ export class MediaService {
                 artistcover: item.artistcover_override ?? item.artistcover ?? item.cover,
                 release_date: a.year ? String(a.year) : undefined,
                 index: item.index,
+                row,
               }) as Media,
           ),
         ),
-        catchError(() => of([] as Media[])),
+        catchError(() => {
+          this.tidalFailures++
+          return of([
+            { type: 'tidal', tidalKind: 'artist', id: item.id, artist: item.artist, category: item.category, index: item.index, unavailable: true, row } as Media,
+          ])
+        }),
       )
   }
 
