@@ -108,9 +108,36 @@ def api_registers():
         return jsonify({"error": str(e)}), 500
 
 
+def apply_defaults():
+    """The settings of the box written to the charger (at the start, and again after a reset of the chip).
+    A write that did not stick used to be only a log line. Retried a few times (a transient I2C error is the usual
+    cause); a cell count that stays wrong is the dangerous case (a 2S pack with a 4S latch has a 16800 mV charge
+    target), so charging is switched off then. A VREG that stays at its POR default (4.2 V/cell) is within cell spec:
+    logged only. Returns whether the cell count is right."""
+    cell_ok, vreg_ok = hat.MuPiHAT_Default()
+    for attempt in range(2):
+        if cell_ok and vreg_ok:
+            break
+        logging.warning("Charger settings not verified (cell ok: %s, VREG ok: %s), retrying...", cell_ok, vreg_ok)
+        time.sleep(2)
+        cell_ok, vreg_ok = hat.MuPiHAT_Default()
+    if not cell_ok:
+        hat.disable_charging()
+    elif not vreg_ok:
+        logging.error("VREG from the battery profile could not be set; the chip keeps its default.")
+    return cell_ok
+
+
+# A reset of the charger while the service runs: its settings written again, at most every 5 minutes. Not again once
+# the cell count could not be corrected (charging stays off - writing the defaults switches it on first).
+REINIT_EVERY_S = 300
+reinit_at = 0.0
+reinit_gave_up = False
+
+
 def periodic_json_dump():
     """Periodically writes the register values to a JSON file."""
-    global json_flag, json_file
+    global json_flag, json_file, reinit_at, reinit_gave_up
     while True:
         # AR5-5: serialise I2C work via i2c_lock so Flask request workers
         # don't interleave bus transactions with this thread. Sleeps stay
@@ -121,6 +148,14 @@ def periodic_json_dump():
                 hat.watchdog_reset()
             time.sleep(0.1)  # Allow time for the watchdog reset
             with i2c_lock:
+                # (the chip was reset - its ADC off, the PROG pin's cell count back: the values it gave stayed those of
+                # before, for hours, and it did not charge. Seen on 15.10.2026 at 23:10, noticed the next morning.)
+                reason = hat.charger_reset_reason()
+                if reason and not reinit_gave_up and time.monotonic() - reinit_at >= REINIT_EVERY_S:
+                    reinit_at = time.monotonic()
+                    logging.warning("Charger was reset (%s): writing its settings again", reason)
+                    if not apply_defaults():
+                        reinit_gave_up = True
                 hat.read_all_register()
                 # Phase-12: append the current VBAT to the smoothing ring so
                 # battery_percent_granular() sees a moving-average of the
@@ -175,7 +210,7 @@ def parse_arguments():
 
 
 def main():
-    global hat, log_flag, json_flag, json_file
+    global hat, log_flag, json_flag, json_file, reinit_at, reinit_gave_up
 
     # Parse command-line arguments
     args = parse_arguments()
@@ -192,21 +227,8 @@ def main():
     # Initialize BQ25792
     try:
         hat = bq25792(battery_conf_file=config_file)
-        # A write that did not stick used to be only a log line. Retry a few times (a transient
-        # I2C error is the usual cause); a cell count that stays wrong is the dangerous case (a 2S
-        # pack with a 4S latch has a 16800 mV charge target), so charging is switched off then.
-        # A VREG that stays at its POR default (4.2 V/cell) is within cell spec: logged only.
-        cell_ok, vreg_ok = hat.MuPiHAT_Default()
-        for attempt in range(2):
-            if cell_ok and vreg_ok:
-                break
-            logging.warning("Charger settings not verified (cell ok: %s, VREG ok: %s), retrying...", cell_ok, vreg_ok)
-            time.sleep(2)
-            cell_ok, vreg_ok = hat.MuPiHAT_Default()
-        if not cell_ok:
-            hat.disable_charging()
-        elif not vreg_ok:
-            logging.error("VREG from the battery profile could not be set; the chip keeps its default.")
+        reinit_at = time.monotonic()
+        reinit_gave_up = not apply_defaults()
 
     except Exception as e:
         logging.error("MuPiHAT initialization failed: %s", str(e))

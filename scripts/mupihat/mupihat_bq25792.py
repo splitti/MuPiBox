@@ -6064,6 +6064,24 @@ class bq25792:
         self.read_all_register()
         return self.write_defaults()
 
+    def charger_reset_reason(self):
+        '''
+        Whether the chip lost the settings written at the start (a reset while running, e.g. a dip of its supply):
+        its POR defaults are back - the ADC off (VBAT, VBUS, IBUS, IBAT then keep the values of before the reset, and
+        the box showed them for hours: "charging", a battery that did not go down) and the cell count from the PROG pin
+        (seen latched as 4S on a 2S pack: a charge target of 16800 mV, and the battery was not charged).
+        Returns the reason, '' when the settings are in place (or the bus did not answer: asked again next time).
+        '''
+        try:
+            if not (self.read_register(0x2E, 1)[0] & 0x80):
+                return "ADC off"
+            cells = self._battery_cell_count()
+            if cells and (self.read_register(0x0A, 1)[0] >> 6) + 1 != cells:
+                return "cell count"
+        except I2CError:
+            return ""
+        return ""
+
     def disable_charging(self):
         '''
         Safe state when the cell count cannot be corrected: the system keeps running from the input,
