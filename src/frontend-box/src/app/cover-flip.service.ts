@@ -130,7 +130,7 @@ export class CoverFlipService {
       root.addAnimation(createAnimation().addElement(opts.enteringEl).beforeRemoveClass('ion-page-invisible').fromTo('opacity', '1', '1'))
     }
     if (opts?.leavingEl) {
-      root.addAnimation(createAnimation().addElement(opts.leavingEl).fromTo('opacity', '0', '0'))
+      root.addAnimation(createAnimation().addElement(opts.leavingEl).beforeStyles({ opacity: '0' }))
     }
     return root
   }
@@ -140,7 +140,7 @@ export class CoverFlipService {
     const root = createAnimation().duration(duration).easing('ease-in-out')
     // The player is gone at once (its cover goes on turning back to the list, below); the list (which fills in a moment
     // after it is shown) fades in later. The player fading out beside the list looked like it appeared once more.
-    root.addAnimation(createAnimation().addElement(leaving).fromTo('opacity', '0', '0'))
+    root.addAnimation(createAnimation().addElement(leaving).beforeStyles({ opacity: '0' }))
     root.addAnimation(
       createAnimation()
         .addElement(entering)
