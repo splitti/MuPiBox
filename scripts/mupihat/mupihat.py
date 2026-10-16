@@ -196,7 +196,9 @@ def periodic_json_dump():
                 # (the chip was reset - its ADC off, the PROG pin's cell count back: the values it gave stayed those of
                 # before, for hours, and it did not charge. Seen on 15.10.2026 at 23:10, noticed the next morning.)
                 valid = check_charger()
-                hat.read_all_register()
+                # (a bulk read that failed leaves the values of the round before: not taken either)
+                if hat.read_all_register() != 0:
+                    valid = False
                 # Phase-12: append the current VBAT to the smoothing ring so
                 # battery_percent_granular() sees a moving-average of the
                 # last ~32s instead of a single sample. Cheap, done inside
