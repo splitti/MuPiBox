@@ -50,10 +50,12 @@ The category chosen last is preselected the next time you add something.
 As a type there is also **Spotify search**: instead of a single album you save a search as an entry. The field is then called **Search term**. The box shows all albums found (at most 100) collected under one tile. You phrase the search with Spotify's search filters, for example:
 
 ```
-artist:"Name of the series" AND album:"Episode"
+artist:"Name of the series" album:"Episode"
 ```
 
-The field **Tile name** is required: that is what the tile is called on the display. With a second entry, such as `artist:"Name of the series" AND album:"Volume"`, one artist gives two separate tiles.
+Several filters apply together, no `AND` is needed between them: with it Spotify no longer finds anything. If the search finds no albums, the app tells you right when you add it.
+
+The field **Tile name** is required: that is what the tile is called on the display. With a second entry, such as `artist:"Name of the series" album:"Volume"`, one artist gives two separate tiles.
 
 ## Smart Sync: playlists onto the box automatically
 

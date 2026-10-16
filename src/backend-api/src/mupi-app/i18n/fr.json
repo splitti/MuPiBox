@@ -2853,5 +2853,8 @@
  "Künstler abonniert": "Artiste abonné",
  "Anmeldung und Smart-Sync · Bibliothek › Spotify": "Connexion et Smart-Sync · Bibliothèque › Spotify",
  "Die Überschrift ist der Name der Ruhezeit (Spielzeit › Ruhezeiten), z. B. „Hausaufgaben“ oder „Gute Nacht“. Ohne Namen und bei „Ruhe sofort“ steht dort „{}“.": "Le titre est le nom de l’heure calme (Temps d'écoute › Heures calmes), p. ex. « Devoirs » ou « Bonne nuit ». Sans nom, et pour « Calme immédiat », il indique « {} ».",
- "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "S’affiche comme titre sur l’écran pendant cette heure calme – p. ex. « Devoirs » ou « Bonne nuit »."
+ "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "S’affiche comme titre sur l’écran pendant cette heure calme – p. ex. « Devoirs » ou « Bonne nuit ».",
+ "Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:\"Name\" album:\"Folge\")": "Spotify ne trouve aucun album – veuillez chercher sans AND, OR ni NOT (p. ex. artist:\"Nom\" album:\"Épisode\")",
+ "Spotify findet zu diesem Suchbegriff keine Alben": "Spotify ne trouve aucun album pour ce terme de recherche",
+ "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "La tuile affiche les albums que Spotify trouve (jusqu’à 100). Affinez avec artist:\"Nom\" album:\"Épisode\" – sans AND."
 }

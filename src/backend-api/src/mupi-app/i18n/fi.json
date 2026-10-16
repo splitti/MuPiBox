@@ -2853,5 +2853,8 @@
  "Künstler abonniert": "Artisti tilattu",
  "Anmeldung und Smart-Sync · Bibliothek › Spotify": "Kirjautuminen ja Smart-Sync · Kirjasto › Spotify",
  "Die Überschrift ist der Name der Ruhezeit (Spielzeit › Ruhezeiten), z. B. „Hausaufgaben“ oder „Gute Nacht“. Ohne Namen und bei „Ruhe sofort“ steht dort „{}“.": "Otsikko on hiljaisen ajan nimi (Soittoaika › Hiljaiset hetket), esim. ”Läksyt” tai ”Hyvää yötä”. Ilman nimeä ja kohdassa ”Hiljaisuus heti” siinä lukee ”{}”.",
- "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Näkyy näytöllä otsikkona, kun tämä hiljainen aika on käynnissä – esim. ”Läksyt” tai ”Hyvää yötä”."
+ "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Näkyy näytöllä otsikkona, kun tämä hiljainen aika on käynnissä – esim. ”Läksyt” tai ”Hyvää yötä”.",
+ "Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:\"Name\" album:\"Folge\")": "Spotify ei löydä albumeja – hae ilman AND-, OR- tai NOT-sanoja (esim. artist:\"Nimi\" album:\"Jakso\")",
+ "Spotify findet zu diesem Suchbegriff keine Alben": "Spotify ei löydä albumeja tällä hakusanalla",
+ "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "Ruutu näyttää albumit, jotka Spotify löytää (enintään 100). Rajaa haulla artist:\"Nimi\" album:\"Jakso\" – ilman AND-sanaa."
 }

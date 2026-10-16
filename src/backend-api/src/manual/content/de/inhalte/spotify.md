@@ -50,10 +50,12 @@ Die zuletzt gewählte Kategorie ist beim nächsten Hinzufügen vorausgewählt.
 Als Typ gibt es außerdem **Spotify-Suche**: Statt eines einzelnen Albums speicherst du eine Suche als Eintrag. Das Feld heißt dann **Suchbegriff**. Die Box zeigt alle gefundenen Alben (höchstens 100) gesammelt unter einer Kachel. Du formulierst die Suche mit den Suchfiltern von Spotify, zum Beispiel:
 
 ```
-artist:"Name der Reihe" AND album:"Folge"
+artist:"Name der Reihe" album:"Folge"
 ```
 
-Das Feld **Name der Kachel** ist Pflicht: So heißt die Kachel auf dem Display. Mit einem zweiten Eintrag, etwa `artist:"Name der Reihe" AND album:"Band"`, entstehen aus einem Künstler zwei getrennte Kacheln.
+Mehrere Filter gelten zusammen, ein `AND` dazwischen braucht es nicht: Damit findet Spotify heute nichts mehr. Findet die Suche keine Alben, sagt dir die App das schon beim Hinzufügen.
+
+Das Feld **Name der Kachel** ist Pflicht: So heißt die Kachel auf dem Display. Mit einem zweiten Eintrag, etwa `artist:"Name der Reihe" album:"Band"`, entstehen aus einem Künstler zwei getrennte Kacheln.
 
 ## Smart-Sync: Playlists automatisch auf die Box
 

@@ -2853,5 +2853,8 @@
  "Künstler abonniert": "Artist subscribed",
  "Anmeldung und Smart-Sync · Bibliothek › Spotify": "Sign-in and Smart Sync · Library › Spotify",
  "Die Überschrift ist der Name der Ruhezeit (Spielzeit › Ruhezeiten), z. B. „Hausaufgaben“ oder „Gute Nacht“. Ohne Namen und bei „Ruhe sofort“ steht dort „{}“.": "The heading is the name of the quiet time (Playtime › Quiet times), e.g. “Homework” or “Good night”. Without a name, and for “Quiet now”, it says “{}”.",
- "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Shown on the display as the heading while this quiet time lasts – e.g. “Homework” or “Good night”."
+ "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Shown on the display as the heading while this quiet time lasts – e.g. “Homework” or “Good night”.",
+ "Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:\"Name\" album:\"Folge\")": "Spotify finds no albums for this – please search without AND, OR or NOT (e.g. artist:\"Name\" album:\"Episode\")",
+ "Spotify findet zu diesem Suchbegriff keine Alben": "Spotify finds no albums for this search term",
+ "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "The tile shows the albums Spotify finds for it (up to 100). Narrow it down with artist:\"Name\" album:\"Episode\" – without AND."
 }

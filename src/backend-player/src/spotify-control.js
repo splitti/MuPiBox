@@ -324,6 +324,8 @@ setInterval(() => {
 
 player.on('metadata', (val) => {
   log.debug('track metadata is', val)
+  // (an answer of mplayer/mpv that comes in after Spotify took over is not Spotify's track)
+  if (currentMeta.currentPlayer === 'spotify') return
   //currentMeta.currentTracknr = parseInt(val.Comment?.split(',').pop(), 10);
   // (an engine that knows its place in the playlist says it; else every file that starts counts one up)
   const trackIndex = player.trackIndex?.() ?? -1
@@ -415,7 +417,7 @@ player.on('time_pos', checkSilence)
 
 player.on('filename', (val) => {
   log.debug('track name is', val)
-  if (!currentMeta.currentTrackname) {
+  if (!currentMeta.currentTrackname && currentMeta.currentPlayer !== 'spotify') {
     currentMeta.currentTrackname = val
       .split('.mp3')[0]
       .split('.flac')[0]
@@ -1817,6 +1819,18 @@ function switchToMplayer() {
   currentMeta.currentPlayer = 'mplayer'
   currentMeta.finished = false
 }
+// What mplayer/mpv said of its track (name, album, place) - gone once it no longer plays
+function forgetLocalTrack() {
+  currentMeta.currentTrackname = ''
+  currentMeta.progressTime = ''
+  currentMeta.positionSeconds = 0
+  currentMeta.durationSeconds = 0
+  currentMeta.album = ''
+  currentMeta.path = ''
+  currentMeta.episode = ''
+  currentMeta.currentTracknr = ''
+  currentMeta.totalTracks = ''
+}
 
 function stop() {
   forgetSpotifyState()
@@ -1857,15 +1871,7 @@ function stop() {
     }
     //currentMeta.playing = false;
     writeplayerstatePause()
-    currentMeta.currentTrackname = ''
-    currentMeta.progressTime = ''
-    currentMeta.positionSeconds = 0
-    currentMeta.durationSeconds = 0
-    currentMeta.album = ''
-    currentMeta.path = ''
-    currentMeta.episode = ''
-    currentMeta.currentTracknr = ''
-    currentMeta.totalTracks = ''
+    forgetLocalTrack()
     currentMeta.currentPlayer = ''
     currentMeta.pause = false
     spotifyRunning = false
@@ -3146,6 +3152,9 @@ async function useSpotify(command) {
   if (currentMeta.currentPlayer !== 'spotify') {
     clearLibraryResumeTimers()
     player.stop() // local media, radio or a podcast may still be playing in mplayer
+    // (Spotify names no track here: the name of the MP3 played before stayed in the bar of the display until a
+    // restart of this player)
+    forgetLocalTrack()
   }
   currentMeta.currentPlayer = 'spotify'
   currentMeta.currentType = 'spotify'

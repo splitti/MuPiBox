@@ -2853,5 +2853,8 @@
  "Künstler abonniert": "Interpret odebírán",
  "Anmeldung und Smart-Sync · Bibliothek › Spotify": "Přihlášení a Smart-Sync · Knihovna › Spotify",
  "Die Überschrift ist der Name der Ruhezeit (Spielzeit › Ruhezeiten), z. B. „Hausaufgaben“ oder „Gute Nacht“. Ohne Namen und bei „Ruhe sofort“ steht dort „{}“.": "Nadpis je název doby klidu (Herní doba › Doby odpočinku), např. „Úkoly“ nebo „Dobrou noc“. Bez názvu a u „Klid ihned“ tam stojí „{}“.",
- "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Zobrazí se na displeji jako nadpis, dokud tato doba klidu trvá – např. „Úkoly“ nebo „Dobrou noc“."
+ "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Zobrazí se na displeji jako nadpis, dokud tato doba klidu trvá – např. „Úkoly“ nebo „Dobrou noc“.",
+ "Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:\"Name\" album:\"Folge\")": "Spotify k tomu nenašel žádná alba – hledejte prosím bez AND, OR nebo NOT (např. artist:\"Jméno\" album:\"Díl\")",
+ "Spotify findet zu diesem Suchbegriff keine Alben": "Spotify k tomuto hledanému výrazu nenašel žádná alba",
+ "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "Dlaždice ukazuje alba, která k tomu Spotify najde (až 100). Zúžit pomocí artist:\"Jméno\" album:\"Díl\" – bez AND."
 }
