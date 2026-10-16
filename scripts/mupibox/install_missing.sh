@@ -18,16 +18,31 @@
 NEEDED="mpv librsvg2-bin python3-pil xdotool feh"
 LOG="/tmp/mupibox-install-missing.log"
 
-missing() {
+not_installed() {
 	for p in ${NEEDED}; do
-		dpkg-query -W -f='${Status}' "${p}" 2>/dev/null | grep -q "install ok installed" && continue
-		# (only what this system's package lists offer: one apt cannot install would be asked for forever)
-		LC_ALL=C apt-cache policy "${p}" 2>/dev/null | grep -q 'Candidate: [^(]' && echo "${p}"
+		dpkg-query -W -f='${Status}' "${p}" 2>/dev/null | grep -q "install ok installed" || echo "${p}"
+	done
+}
+
+# Of the given ones, what apt can install: what this system's package lists offer (one apt cannot install would be asked
+# for forever). Without any package lists (an installation stopped before its first apt-get update) apt knows none of
+# them - they count then, the installation fetches the lists first (they were left out, and nothing was repaired).
+offered() {
+	local lists=0 p pol
+	ls /var/lib/apt/lists/*_Packages* >/dev/null 2>&1 && lists=1
+	for p in "$@"; do
+		pol=$(LC_ALL=C apt-cache policy "${p}" 2>/dev/null)
+		if echo "${pol}" | grep -q 'Candidate: [^(]'; then
+			echo "${p}"
+		elif [ "${lists}" = 0 ]; then
+			echo "${p}"
+		fi
 	done
 }
 
 if [ "${1:-}" = "--list" ]; then
-	missing
+	# shellcheck disable=SC2046
+	offered $(not_installed)
 	exit 0
 fi
 
@@ -36,18 +51,27 @@ APT_OPTS="-o DPkg::Lock::Timeout=600 -o Dpkg::Options::=--force-confdef -o Dpkg:
 
 exec >"${LOG}" 2>&1
 date
-BEFORE=$(missing)
+BEFORE=$(not_installed)
 if [ -z "${BEFORE}" ]; then
 	echo "nothing missing"
 	exit 0
 fi
 echo "missing: ${BEFORE}"
 dpkg --configure -a
-apt-get ${APT_OPTS} update
+apt-get ${APT_OPTS} update || echo "fetching the package lists failed"
 apt-get ${APT_OPTS} --yes -f install
+# (what the package lists offer now that they are fetched)
 # shellcheck disable=SC2086
-apt-get ${APT_OPTS} --yes install ${BEFORE}
-AFTER=$(missing)
+INSTALL=$(offered ${BEFORE})
+if [ -n "${INSTALL}" ]; then
+	# shellcheck disable=SC2086
+	apt-get ${APT_OPTS} --yes install ${INSTALL}
+else
+	echo "apt offers none of them"
+fi
+# (still missing: what apt offers but did not install - with the lists not fetched, all)
+# shellcheck disable=SC2046
+AFTER=$(offered $(not_installed))
 # the start pictures put together again when what they need came now
 if echo "${BEFORE}" | grep -qE 'librsvg2-bin|python3-pil' && [ -x /usr/local/bin/mupibox/bootscreen_update.sh ]; then
 	/usr/local/bin/mupibox/bootscreen_update.sh
