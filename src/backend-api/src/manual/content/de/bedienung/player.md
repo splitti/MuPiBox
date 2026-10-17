@@ -35,7 +35,7 @@ Ist ein Bluetooth-Gerät gekoppelt, zeigt die Kopfleiste neben der Lautstärke e
 
 Hat die Box **mehrere Soundausgänge** (zum Beispiel den 3,5-mm-Ausgang neben einem I²S-Verstärker, HDMI oder einen USB-Audio-Adapter), steht jeder davon als eigene Kachel im Fenster **Hören mit**: **Lautsprecher** (die Soundkarte der Box, zum Beispiel der Verstärker), **3.5 mm** (mit einem Kopfhörer-Symbol), **HDMI** oder **USB**, darunter der Name, den das System ihm gibt. Das Fenster öffnet sich dann auch ohne gekoppeltes Bluetooth-Gerät. Die Box merkt sich die Wahl auch über einen Neustart. Den 3,5-mm-Ausgang neben einer eigenen Soundkarte schaltest du unter **Einstellungen › Audio › Soundkarte › Kopfhörerbuchse** ein ([Sound und Lautstärke](../hardware/sound.md)). Mit nur einem Soundausgang bleibt alles wie vorher.
 
-Ohne gekoppeltes Gerät zeigt die Kopfleiste nur die Lautstärke. Ausschalten lässt sich die Wahl am Display unter **Einstellungen › Display & Bedienung › Bedienung am Display › Kopfhörer › Box oder Kopfhörer am Display wählen**. In der App geht das Umschalten immer ([Bluetooth](../hardware/bluetooth.md)).
+Ohne gekoppeltes Gerät zeigt die Kopfleiste nur die Lautstärke. Ausschalten lässt sich die Wahl am Display unter **Einstellungen › Display & Bedienung › Bedienung am Display › Kopfhörer › Box oder Kopfhörer am Display wählen**. Spielt die Musik dann über Bluetooth oder Kopfhörer, zeigt die Kopfleiste das Symbol und den Akkustand trotzdem an, nur umschalten lässt sich am Display nichts. In der App geht das Umschalten immer ([Bluetooth](../hardware/bluetooth.md)).
 
 ## Was passiert beim Verlassen des Players?
 
