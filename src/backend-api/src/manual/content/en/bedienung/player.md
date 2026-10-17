@@ -35,7 +35,7 @@ If a Bluetooth device is paired, the header shows a field next to the volume wit
 
 If the box has **several sound outputs** (for example the 3.5 mm output next to an I²S amplifier, HDMI or a USB audio adapter), each one is a tile of its own in the **Listen with** window: **Speaker** (the box's sound card, for example the amplifier), **3.5 mm** (with a headphones symbol), **HDMI** or **USB**, with the name the system gives it below. The window then opens without a paired Bluetooth device too. The box remembers the choice across a restart too. You switch on the 3.5 mm output next to a sound card of its own under **Settings › Audio › Sound card › Headphone jack** ([Sound and volume](../hardware/sound.md)). With only one sound output everything stays as before.
 
-Without a paired device the header shows only the volume. You can switch the choice on the display off under **Settings › Display & controls › Controls on the display › Headphones › Choose box or headphones on the display**. In the app switching always works ([Bluetooth](../hardware/bluetooth.md)).
+Without a paired device the header shows only the volume. You can switch the choice on the display off under **Settings › Display & controls › Controls on the display › Headphones › Choose box or headphones on the display**. If the music then plays through Bluetooth or headphones, the header still shows the symbol and the battery – it just cannot be switched on the display. In the app switching always works ([Bluetooth](../hardware/bluetooth.md)).
 
 ## What happens when the player is left?
 
