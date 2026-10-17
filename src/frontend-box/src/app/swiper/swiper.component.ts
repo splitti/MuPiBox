@@ -403,6 +403,13 @@ export class SwiperComponent<T> {
     }
   }
 
+  // The page starts to come in: the list is rendered now (it is emptied while the page is away, see shownData), so the
+  // covers are loaded by the time the page is visible - at the end of the page change (ionViewDidEnter) they came a
+  // moment too late.
+  public ionViewWillEnter(): void {
+    this.ionViewDidEnter()
+  }
+
   public ionViewDidEnter(): void {
     const key = this.positionKey()
     if (key && this.cachedSwiperPosition === 0) {
