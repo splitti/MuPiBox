@@ -46,6 +46,12 @@ export class OutputSwitchComponent {
     if (this.current() === d.mac) return 'bt'
     return d.connected ? 'ready' : 'off'
   })
+  /**
+   * The field is there with a choice - and also without one while the sound goes elsewhere (Bluetooth headphones, the
+   * 3.5 mm output): then it only shows where, with the headphones' battery, and a tap does nothing. With the choice on
+   * the display switched off it was not there at all, and nothing showed that headphones played.
+   */
+  protected readonly field = computed(() => this.choosable() || this.symbol() !== 'speaker')
   /** the outputs there are: the box's sound cards (one counts as "the box") and the paired devices */
   private readonly optionCount = computed(() => Math.max(this.cards().length, 1) + this.devices().length)
 
@@ -79,6 +85,7 @@ export class OutputSwitchComponent {
 
   protected holdBegin(e: PointerEvent): void {
     this.holdEnd()
+    if (!this.choosable()) return
     this.held = false
     this.holdStart = { x: e.clientX, y: e.clientY }
     this.holding.set(true)
@@ -102,6 +109,7 @@ export class OutputSwitchComponent {
   }
 
   protected click(): void {
+    if (!this.choosable()) return
     // (the click the finger's lifting makes after a hold: the window is open already)
     if (this.held) {
       this.held = false
