@@ -8,6 +8,7 @@
 </ul>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Player (kids' themes and cover flow): Bluetooth headphones or the headphone jack that play show at the top - their symbol and the headphones' battery - also when 'Choose box or headphones on the display' is switched off. Before, only the volume was there then, and nothing showed that the sound went to the headphones. Without the choice the symbol only shows; a tap does nothing.</li>
+<li id='linews' class='linews'>Less memory for the player: mpv kept up to 150 MiB read ahead and 50 MiB of what was played for every file, local and NAS ones too - 100 to 250 MB even when idle, too much for a Pi with 1 GB (it could run out of memory). It now keeps at most 16 MiB ahead (still more than the 20 seconds it reads ahead) and 4 MiB back: about 80 MB less with an audiobook of 48 MB.</li>
 <h3>DEV 5.0.11 - changes compared to 5.0.10</h3>
 <b>App</b>
 </ul>
