@@ -2856,5 +2856,6 @@
  "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Staat op het scherm als kop zolang deze rusttijd duurt – bijv. „Huiswerk” of „Welterusten”.",
  "Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:\"Name\" album:\"Folge\")": "Spotify vindt geen albums – zoek zonder AND, OR of NOT (bijv. artist:\"Naam\" album:\"Aflevering\")",
  "Spotify findet zu diesem Suchbegriff keine Alben": "Spotify vindt geen albums voor deze zoekterm",
- "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "De tegel toont de albums die Spotify vindt (tot 100). Beperk met artist:\"Naam\" album:\"Aflevering\" – zonder AND."
+ "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "De tegel toont de albums die Spotify vindt (tot 100). Beperk met artist:\"Naam\" album:\"Aflevering\" – zonder AND.",
+ "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "De slaaptimer is afgelopen – de box schakelt nu uit."
 }

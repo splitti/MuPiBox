@@ -2856,5 +2856,6 @@
  "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Visas på skärmen som rubrik medan den här vilotiden pågår – t.ex. ”Läxor” eller ”God natt”.",
  "Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:\"Name\" album:\"Folge\")": "Spotify hittar inga album – sök utan AND, OR eller NOT (t.ex. artist:\"Namn\" album:\"Avsnitt\")",
  "Spotify findet zu diesem Suchbegriff keine Alben": "Spotify hittar inga album för den här söktermen",
- "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "Rutan visar albumen som Spotify hittar (upp till 100). Avgränsa med artist:\"Namn\" album:\"Avsnitt\" – utan AND."
+ "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "Rutan visar albumen som Spotify hittar (upp till 100). Avgränsa med artist:\"Namn\" album:\"Avsnitt\" – utan AND.",
+ "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "Insomningstimern har gått ut – lådan stängs av nu."
 }

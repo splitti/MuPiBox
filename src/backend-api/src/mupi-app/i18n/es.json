@@ -2856,5 +2856,6 @@
  "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Aparece en la pantalla como título mientras dura este tiempo de silencio – p. ej. «Deberes» o «Buenas noches».",
  "Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:\"Name\" album:\"Folge\")": "Spotify no encuentra álbumes – busque sin AND, OR ni NOT (p. ej. artist:\"Nombre\" album:\"Episodio\")",
  "Spotify findet zu diesem Suchbegriff keine Alben": "Spotify no encuentra álbumes para este término de búsqueda",
- "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "El mosaico muestra los álbumes que Spotify encuentra (hasta 100). Acote con artist:\"Nombre\" album:\"Episodio\" – sin AND."
+ "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "El mosaico muestra los álbumes que Spotify encuentra (hasta 100). Acote con artist:\"Nombre\" album:\"Episodio\" – sin AND.",
+ "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "El temporizador de apagado ha terminado: la caja se está apagando."
 }

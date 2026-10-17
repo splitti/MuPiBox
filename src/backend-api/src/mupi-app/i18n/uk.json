@@ -2856,5 +2856,6 @@
  "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Показується на екрані як заголовок, поки триває цей період тиші – наприклад «Уроки» або «На добраніч».",
  "Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:\"Name\" album:\"Folge\")": "Spotify не знаходить альбомів – шукайте без AND, OR чи NOT (наприклад, artist:\"Ім’я\" album:\"Серія\")",
  "Spotify findet zu diesem Suchbegriff keine Alben": "Spotify не знаходить альбомів за цим запитом",
- "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "Плитка показує альбоми, які знаходить Spotify (до 100). Звузити можна так: artist:\"Ім’я\" album:\"Серія\" – без AND."
+ "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "Плитка показує альбоми, які знаходить Spotify (до 100). Звузити можна так: artist:\"Ім’я\" album:\"Серія\" – без AND.",
+ "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "Таймер сну завершився – коробка вимикається."
 }

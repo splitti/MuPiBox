@@ -2856,5 +2856,6 @@
  "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Εμφανίζεται στην οθόνη ως επικεφαλίδα όσο διαρκεί αυτή η ώρα ησυχίας – π.χ. «Μαθήματα» ή «Καληνύχτα».",
  "Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:\"Name\" album:\"Folge\")": "Το Spotify δεν βρίσκει άλμπουμ – αναζητήστε χωρίς AND, OR ή NOT (π.χ. artist:\"Όνομα\" album:\"Επεισόδιο\")",
  "Spotify findet zu diesem Suchbegriff keine Alben": "Το Spotify δεν βρίσκει άλμπουμ για αυτόν τον όρο αναζήτησης",
- "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "Το πλακίδιο δείχνει τα άλμπουμ που βρίσκει το Spotify (έως 100). Περιορισμός με artist:\"Όνομα\" album:\"Επεισόδιο\" – χωρίς AND."
+ "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "Το πλακίδιο δείχνει τα άλμπουμ που βρίσκει το Spotify (έως 100). Περιορισμός με artist:\"Όνομα\" album:\"Επεισόδιο\" – χωρίς AND.",
+ "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "Ο χρονοδιακόπτης ύπνου έληξε – το κουτί απενεργοποιείται τώρα."
 }

@@ -2856,5 +2856,6 @@
  "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Appare sul display come titolo finché dura questo periodo di quiete – p. es. «Compiti» o «Buonanotte».",
  "Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:\"Name\" album:\"Folge\")": "Spotify non trova album – cerca senza AND, OR o NOT (p. es. artist:\"Nome\" album:\"Episodio\")",
  "Spotify findet zu diesem Suchbegriff keine Alben": "Spotify non trova album per questo termine di ricerca",
- "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "Il riquadro mostra gli album che Spotify trova (fino a 100). Restringi con artist:\"Nome\" album:\"Episodio\" – senza AND."
+ "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "Il riquadro mostra gli album che Spotify trova (fino a 100). Restringi con artist:\"Nome\" album:\"Episodio\" – senza AND.",
+ "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "Il timer di spegnimento è scaduto – il box si sta spegnendo."
 }

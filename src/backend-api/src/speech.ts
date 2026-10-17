@@ -16,6 +16,7 @@ import { promises as fsp, existsSync, createWriteStream } from 'node:fs'
 import * as path from 'node:path'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
+import { sleepTimerState } from './sleep-timer'
 
 const PIPER_DIR = '/home/dietpi/.mupibox/piper'
 const PIPER_BIN = `${PIPER_DIR}/piper/piper`
@@ -819,7 +820,9 @@ async function tick(getConfig: () => unknown): Promise<void> {
   said.bedtimeWindow = inWindow
   // the sleep timer ends in about a minute
   if (sp.sleepEnd.on) {
-    const remaining = Number.parseInt(await fsp.readFile('/tmp/.time2sleep', 'utf8').catch(() => ''), 10)
+    // (the box's timer, whoever set it - a /tmp/.time2sleep left behind no longer counts)
+    const timer = await sleepTimerState().catch(() => null)
+    const remaining = timer?.active && !timer.shutting_down ? timer.remaining_s : Number.NaN
     if (Number.isFinite(remaining) && remaining > 40 && remaining <= 70) {
       const run = Math.round((Date.now() + remaining * 1000) / 60000)
       if (said.sleepRun !== run) {

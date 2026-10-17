@@ -1,3 +1,9 @@
+<h3>DEV 5.0.12 - changes compared to 5.0.11</h3>
+<b>Sleep timer and Home Assistant</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Sleep timer: the box has exactly one, whoever sets it - the app, Telegram, the old admin interface and now Home Assistant all set and see the same countdown. A new timer replaces the running one; before, Telegram started a second countdown beside it, and each of them could switch the box off at its own time. A stop or a replacement answers only once the old countdown has ended (also during its fade-out: the volume goes back to where it was), so it can never switch the box off later. The countdown runs as a system service of its own: a restart of the app's server does not touch it, a countdown that failed starts again with the same end, and after the box was switched on no old timer is left. A file left behind by an ended timer no longer counts as a running one. Once the time is up and the box shuts down, the timer can no longer be stopped - the app, Telegram and the admin interface say so instead of reporting success.</li>
+<li id='linews' class='linews'>Home Assistant: the box's sleep timer can be set, replaced and stopped from Home Assistant (right "restart and switch off", up to 720 minutes, 0 stops), and Home Assistant shows its time left and its end (right "show" is enough) - with the integration from the version that knows it (shared API contract: POST /api/ha/v1/sleep_timer, sleep_timer in /state, capability sleep_timer). Pairings without the right to switch off do not get it afterwards: pair again to use the timer.</li>
 <h3>DEV 5.0.11 - changes compared to 5.0.10</h3>
 <b>App</b>
 </ul>

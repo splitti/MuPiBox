@@ -70,6 +70,8 @@ TEXTS = {
     'usage_sleep': {'de': 'Nutzung: /sleep <1-1440>', 'en': 'Usage: /sleep <1-1440>'},
     'sleep_set': {'de': 'Schlaftimer: Die MuPiBox schaltet sich in {mins} Minuten aus', 'en': 'Sleep timer set to {mins} minutes'},
     'sleep_invalid': {'de': 'Ungültige Minutenzahl', 'en': 'Invalid sleep value'},
+    'sleep_failed': {'de': 'Der Schlaftimer konnte nicht gestellt werden', 'en': 'The sleep timer could not be set'},
+    'sleep_shutting_down': {'de': 'Der Schlaftimer ist schon abgelaufen – die MuPiBox schaltet sich gerade aus', 'en': 'The sleep timer has run out – the MuPiBox is shutting down'},
     'usage_minutes': {'de': 'Nutzung: {cmd} <Minuten>  (1..1440)', 'en': 'Usage: {cmd} <minutes>  (1..1440)'},
     'extend_done': {'de': '✅ Heute +{mins} min Bonus hinzugefügt.', 'en': '✅ Added {mins} bonus minutes for today.'},
     'extend_short': {'de': '+{mins} min hinzugefügt', 'en': '+{mins} min added'},
