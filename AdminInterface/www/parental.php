@@ -4,14 +4,17 @@
 	// Parental settings (moved here from mupi.php): sleep timer and idle shutdown, daily playtime limit and quiet
 	// hours. $change: 2 = save the configuration, 3 = only show the message.
 
+	// The box's one power-off timer (sleep_timer.sh: the same the app, Telegram and Home Assistant set). Start replaces
+	// a running one, stop waits until it has ended; exit code 3: it ran out already, the box is shutting down.
+	$SLEEP_TIMER = "/usr/local/bin/mupibox/sleep_timer.sh";
+
 	if($_POST['stop_sleeptimer'] == "Stop running timer")
 		{
-		$command = "sudo pkill -f \"sleep_timer.sh\"";
-		exec($command);
-		$command = "sudo rm /tmp/.time2sleep";
-		exec($command);
+		exec("sudo " . $SLEEP_TIMER . " stop", $out, $rc);
 		$change=3;
-		$CHANGE_TXT=$CHANGE_TXT."<li>Sleeptimer stopped</li>";
+		if ($rc == 0) $CHANGE_TXT=$CHANGE_TXT."<li>Sleeptimer stopped</li>";
+		elseif ($rc == 3) $CHANGE_TXT=$CHANGE_TXT."<li>ERROR: the sleeptimer has run out, the box is shutting down</li>";
+		else $CHANGE_TXT=$CHANGE_TXT."<li>ERROR: the sleeptimer could not be stopped</li>";
 		}
 
 	if($_POST['potimer'])
@@ -25,11 +28,11 @@
 		if ($minutes > 0 && $minutes <= 24 * 60)
 			{
 			$timerSleepingTime = $minutes * 60;
-			$command = "sudo nohup /usr/local/bin/mupibox/./sleep_timer.sh " . $timerSleepingTime . "  > /dev/null 2>&1 &";
-			exec($command);
+			exec("sudo " . $SLEEP_TIMER . " start " . escapeshellarg((string)$timerSleepingTime), $out, $rc);
 			$change=3;
-			$CHANGE_TXT=$CHANGE_TXT."<li>" . $minutes . " minutes sleeptimer started</li>";
-			//sudo pkill -f "sleep_timer.sh"
+			if ($rc == 0) $CHANGE_TXT=$CHANGE_TXT."<li>" . $minutes . " minutes sleeptimer started</li>";
+			elseif ($rc == 3) $CHANGE_TXT=$CHANGE_TXT."<li>ERROR: the sleeptimer has run out, the box is shutting down</li>";
+			else $CHANGE_TXT=$CHANGE_TXT."<li>ERROR: the sleeptimer could not be started</li>";
 			}
 		else
 			{
@@ -157,7 +160,9 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			<li id="li_1" >
 				<h2>Sleeptimer</h2>
 				<?php
-				if (file_exists("/tmp/.time2sleep")) {
+				$sleepTimer = json_decode((string)shell_exec("sudo " . $SLEEP_TIMER . " status"), true);
+				$time2sleep = (is_array($sleepTimer) && !empty($sleepTimer['active'])) ? (int)$sleepTimer['remaining_s'] : 0;
+				if ($time2sleep > 0) {
 						?>
 					MuPiBox will shut down  after (hh:mm:ss):</br>
 					<div id="app"></div>
@@ -566,16 +571,8 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 ?>
 
 <?php
-        // M11: /tmp/.time2sleep only exists while a sleep timer is active.
-        // Without an active timer fopen() returned false and fgets(false)
-        // raised an uncaught TypeError on PHP 8+. Guard the resource open
-        // and default to empty string so the page renders cleanly either
-        // way (the JS side already handles an empty value).
-        $time2sleep = '';
-        if ($fh = @fopen("/tmp/.time2sleep", 'r')) {
-            $time2sleep = fgets($fh);
-            fclose($fh);
-        }
+        // ($time2sleep: the seconds left of the box's timer, asked above where the timer is shown - 0 without one)
+        $time2sleep = isset($time2sleep) ? (int)$time2sleep : 0;
 ?>
 
 <script>

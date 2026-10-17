@@ -67,6 +67,7 @@ import { type LocalLibraryDeps, registerLocalUploadRoutes } from './upload'
 import { registerLocalDownloadRoutes } from './local-download'
 import { registerPodcastRoutes } from './podcasts'
 import { registerHealthRoutes } from './health'
+import { SLEEP_TIMER_MAX_MINUTES, SleepTimerError, sleepTimerState, startSleepTimer, stopSleepTimer } from '../sleep-timer'
 import { playlogSummary } from './playlog'
 import { weeklySummaryOn } from './weekly-summary'
 import { isArdFeed } from '../ard-sounds'
@@ -1180,57 +1181,36 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
 
   /**
    * GET /api/app/sleeptimer  (Phase 17i)
-   * Read the runtime state of the poweroff-countdown timer. The countdown
-   * itself is the existing `sleep_timer.sh` background process (started by
-   * AdminInterface/mupi.php today) which writes the remaining seconds to
-   * `/tmp/.time2sleep` once per second and runs `poweroff` when it hits zero.
-   * The file only exists while a timer is active.
+   * The power-off timer of the box - the one Home Assistant, Telegram and the old admin interface set as well
+   * (sleep-timer.ts: its deadline, and whether its countdown runs; a /tmp/.time2sleep left behind no longer counts).
    */
-  router.get('/sleeptimer', requireSession, (_req, res) => {
-    try {
-      const raw = readFileSync('/tmp/.time2sleep', 'utf8').trim()
-      const remaining = Number.parseInt(raw, 10)
-      if (Number.isFinite(remaining) && remaining > 0) {
-        const until = new Date(Date.now() + remaining * 1000)
-        res.json({ active: true, remaining_seconds: remaining, until_iso: until.toISOString() })
-        return
-      }
-    } catch {
-      // file missing — no timer running, fall through
+  router.get('/sleeptimer', requireSession, async (_req, res) => {
+    const t = await sleepTimerState()
+    if (t.active && t.ends_at) {
+      res.json({ active: true, remaining_seconds: t.remaining_s, until_iso: new Date(t.ends_at).toISOString(), ends_at: t.ends_at, shutting_down: t.shutting_down })
+      return
     }
     res.json({ active: false })
   })
 
   /**
    * POST /api/app/sleeptimer/start  {minutes}  (Phase 17i)
-   * Mirrors the mupi.php behaviour: spawn `sleep_timer.sh <seconds>` detached
-   * via sudo. Accepts 1..1440 minutes (same cap the admin UI uses). The shell
-   * script writes the remaining time to /tmp/.time2sleep and runs `poweroff`
-   * when it hits zero; everything else is just observation.
+   * Starts the box's power-off timer (1..1440 minutes, the cap the admin UI uses); a running one is replaced - the
+   * answer comes once the old countdown has ended, so it can no longer switch the box off.
    */
   router.post('/sleeptimer/start', requireSession, requireCsrf, async (req, res) => {
     const body = (req.body as { minutes?: unknown } | undefined) ?? {}
     const minutes = Math.floor(Number(body.minutes))
-    if (!Number.isFinite(minutes) || minutes < 1 || minutes > 1440) {
-      res.status(400).json({ error: 'minutes must be an integer between 1 and 1440' })
+    if (!Number.isFinite(minutes) || minutes < 1 || minutes > SLEEP_TIMER_MAX_MINUTES) {
+      res.status(400).json({ error: `minutes must be an integer between 1 and ${SLEEP_TIMER_MAX_MINUTES}` })
       return
     }
     const seconds = minutes * 60
     try {
-      // A timer that is already running is replaced, not joined by a second one: correcting
-      // 30 to 90 minutes used to leave the 30-minute timer running, and it shut the box down.
-      await new Promise<void>((resolve) => {
-        execFile('sudo', ['pkill', '-f', 'sleep_timer.sh'], { timeout: 5000 }, () => resolve())
-      })
-      const child = spawn('sudo', ['/usr/local/bin/mupibox/sleep_timer.sh', String(seconds)], {
-        detached: true,
-        stdio: 'ignore',
-      })
-      // (a start that fails - sudo or the script missing - comes as an 'error' event: unhandled it ended the server)
-      child.on('error', (err) => console.warn(`${new Date().toLocaleString()}: [eltern] sleep timer: ${err.message}`))
-      child.unref()
+      await startSleepTimer(seconds)
     } catch (err) {
-      res.status(500).json({ error: `spawn failed: ${(err as Error).message}` })
+      const shutting = err instanceof SleepTimerError && err.code === 'shutting_down'
+      res.status(shutting ? 409 : 503).json({ error: shutting ? 'shutting_down' : (err as Error).message })
       return
     }
     res.json({ ok: true, minutes, seconds })
@@ -1238,16 +1218,18 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
 
   /**
    * POST /api/app/sleeptimer/stop  (Phase 17i)
-   * Mirrors mupi.php's "Stop running timer" button: `pkill -f sleep_timer.sh`
-   * then remove `/tmp/.time2sleep`. Both are idempotent — calling stop when
-   * no timer runs returns ok without erroring.
+   * Stops the box's power-off timer - also when none runs (ok then as well). Once it ran out and the box shuts down
+   * it cannot be stopped any more: 409.
    */
-  router.post('/sleeptimer/stop', requireSession, requireCsrf, (_req, res) => {
-    execFile('sudo', ['pkill', '-f', 'sleep_timer.sh'], { timeout: 5000 }, () => {
-      execFile('sudo', ['rm', '-f', '/tmp/.time2sleep'], { timeout: 5000 }, () => {
-        res.json({ ok: true })
-      })
-    })
+  router.post('/sleeptimer/stop', requireSession, requireCsrf, async (_req, res) => {
+    try {
+      await stopSleepTimer()
+    } catch (err) {
+      const shutting = err instanceof SleepTimerError && err.code === 'shutting_down'
+      res.status(shutting ? 409 : 503).json({ error: shutting ? 'shutting_down' : (err as Error).message })
+      return
+    }
+    res.json({ ok: true })
   })
 
   /**

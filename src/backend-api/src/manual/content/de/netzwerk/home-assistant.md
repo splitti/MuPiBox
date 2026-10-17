@@ -28,6 +28,7 @@ Der Code steht nur auf dem Display der Box. Wer ihn eingibt, hat die Box also vo
 - **Nachrichten** (Recht „Nachrichten und Ansagen“): Ein kurzer Text erscheint auf dem Display, bis seine Zeit um ist oder jemand darauf tippt.
 - **Ansagen** (Recht „Nachrichten und Ansagen“): Die Box spricht einen Text mit der Sprachausgabe. Dafür muss unter **Einstellungen › Audio › Sprachausgabe** eine Stimme eingestellt sein.
 - **Neustart und Ausschalten** (Recht „Neustart und Ausschalten“): Die Box startet neu oder fährt herunter, wie mit dem Knopf in der App.
+- **Ausschalt-Timer** (Recht „Neustart und Ausschalten“): Home Assistant stellt den [Schlaftimer](../spielzeit/schlaftimer.md) der Box, ersetzt ihn oder stoppt ihn (0 Minuten), bis 720 Minuten. Es ist derselbe Timer wie in der App und bei Telegram: Wer ihn wo stellt, alle sehen dieselbe Restzeit. Die Restzeit und das Ende sieht Home Assistant auch nur mit dem Recht zum Anzeigen. Ab Version 5.0.12 der Box, mit der Integration ab der Version, die den Timer kennt.
 
 Während einer Ruhezeit zeigt die Box keine Nachrichten und spricht keine Ansagen.
 
@@ -40,3 +41,5 @@ Die App listet unter **Gekoppelt** jedes Home Assistant mit seinen Rechten. **En
 - Die Lautstärke aus Home Assistant hält sich an das Maximum der Box, bei Kopfhörern an die Grenze für Kopfhörer.
 - Die Spielzeit und die Ruhezeiten gelten auch für Home Assistant. Ist die Wiedergabe gesperrt, startet auch Home Assistant nichts.
 - Ändern sich die IP-Adresse oder der Name der Box, bleibt die Kopplung bestehen: Der Schlüssel der Box ändert sich dabei nicht.
+- Eine Kopplung von früher ohne das Recht „Neustart und Ausschalten“ bekommt es nicht nachträglich. Soll Home Assistant den Timer stellen, entferne die Kopplung und koppele neu mit diesem Recht.
+- Für Entwickler: Die Schnittstelle ist im [gemeinsamen API-Vertrag](https://github.com/splitti/MuPiBox-homeassistant/blob/main/docs/classic-api-contract.md) beschrieben.

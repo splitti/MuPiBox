@@ -21,7 +21,32 @@ Der **Schlaftimer** schaltet die Box nach Ablauf einer Zeit **komplett aus**, eg
 1. Wähle die **Minuten** (15 bis 360, in Schritten von 15).
 2. Tippe auf **Starten**. **Stoppen** bricht ihn ab.
 
-In den letzten 20 Sekunden vor dem Ende blendet die Box die Lautstärke langsam aus, die Wiedergabe endet dann leise statt abrupt.
+In den letzten 20 Sekunden vor dem Ende blendet die Box die Lautstärke langsam aus, die Wiedergabe endet dann leise statt abrupt. Danach stellt sie die Lautstärke für den nächsten Start wieder her und fährt ganz normal herunter, mit Abschiedsbild und Ton.
+
+### Ein Timer für alle Wege
+
+Die Box hat immer **genau einen** Schlaftimer. Die App, Telegram (`/sleep` und die Knöpfe), das alte Admin-Interface und [Home Assistant](../netzwerk/home-assistant.md) stellen alle denselben Timer und sehen dieselbe Restzeit:
+
+- **Ein neuer Timer ersetzt den laufenden.** Stellst du 30 Minuten und danach 60, gilt nur noch die 60. Der alte Timer kann die Box nicht mehr ausschalten.
+- **Stoppen** bricht ihn ab, egal wo er gestellt wurde. Auch zweimal hintereinander ist kein Fehler. Kurz vor dem Ende, während der Ausblendung, kommt die Lautstärke wieder auf den Wert davor.
+- **Ist die Zeit abgelaufen**, beginnt das Ausschalten. Ab dann lässt sich der Timer nicht mehr stoppen, die App meldet das.
+- Der Timer läuft **unabhängig** von der App, von Telegram und von Home Assistant. Ein Neustart der App oder eine getrennte Verbindung zu Home Assistant ändert nichts an ihm. Nach dem Einschalten der Box ist kein alter Timer mehr da.
+
+### Unterschied zu den anderen Zeiten
+
+| Was | Wirkung |
+| --- | --- |
+| **Schlaftimer** | schaltet die **ganze Box aus**, wenn die Zeit um ist |
+| **Ruhe sofort**, Ruhezeiten, Tageslimit | stoppen nur die **Wiedergabe**, die Box bleibt an |
+| **Box aus nach … ohne Wiedergabe** | schaltet aus, wenn **länger nichts** gehört wurde |
+
+### Wenn es nicht klappt
+
+Für Fortgeschrittene, per SSH auf der Box:
+
+- `sudo /usr/local/bin/mupibox/sleep_timer.sh status` zeigt, ob ein Timer läuft und bis wann.
+- `journalctl -u mupi-sleep-timer` zeigt, was der Timer getan hat (gestartet, ersetzt, gestoppt, abgelaufen).
+- `sudo /usr/local/bin/mupibox/sleep_timer.sh stop` stoppt ihn von Hand.
 
 > [!NOTE]
 > Auch nach dem Ausschalten durch den Timer muss die Box am Gerät wieder eingeschaltet werden ([Neu starten und Ausschalten](../wartung/neustart.md)).

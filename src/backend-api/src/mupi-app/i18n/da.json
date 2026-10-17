@@ -2912,5 +2912,6 @@
  "Steht auf dem Display als Überschrift, solange diese Ruhezeit läuft – z. B. „Hausaufgaben“ oder „Gute Nacht“.": "Vises på displayet som overskrift, mens denne hviletid varer – f.eks. „Lektier“ eller „Godnat“.",
  "Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:\"Name\" album:\"Folge\")": "Spotify finder ingen album – søg venligst uden AND, OR eller NOT (f.eks. artist:\"Navn\" album:\"Afsnit\")",
  "Spotify findet zu diesem Suchbegriff keine Alben": "Spotify finder ingen album til dette søgeord",
- "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "Feltet viser de album, Spotify finder (op til 100). Afgræns med artist:\"Navn\" album:\"Afsnit\" – uden AND."
+ "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "Feltet viser de album, Spotify finder (op til 100). Afgræns med artist:\"Navn\" album:\"Afsnit\" – uden AND.",
+ "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "Sleep-timeren er udløbet – boksen slukker lige nu."
 }

@@ -8,7 +8,8 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { promises as fsp } from 'node:fs'
 
-export const HA_DIR = '/etc/mupibox/ha'
+// (MUPIBOX_HA_DIR: only for the tests - a folder of their own instead of the box's pairings)
+export const HA_DIR = process.env.MUPIBOX_HA_DIR || '/etc/mupibox/ha'
 const DEVICE_FILE = `${HA_DIR}/device.json`
 const CLIENTS_FILE = `${HA_DIR}/clients.json`
 

@@ -1570,7 +1570,7 @@ function sleepSheet(root) {
         sheet.querySelector('[data-ok]').onclick = async () => {
           close()
           const r = await api(`${API}/sleeptimer/stop`, { method: 'POST' })
-          toast(r.ok ? 'Schlaftimer gestoppt' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+          toast(r.ok ? 'Schlaftimer gestoppt' : errorText(r), r.ok ? 'ok' : 'info')
           setTimeout(() => loadStatus(root), 1200)
         }
       },
@@ -1618,6 +1618,7 @@ function errorText(r, fallback = 'Das hat nicht geklappt') {
       library_unavailable: 'Die Bibliothek ließ sich nicht lesen.',
       nas_path_not_selected: 'Dieser NAS-Ordner ist nicht freigegeben.',
       invalid_path: 'Dieser Ordner lässt sich nicht abspielen.',
+      shutting_down: 'Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.',
     }[code] ?? fallback
   )
 }
