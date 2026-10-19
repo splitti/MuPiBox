@@ -142,7 +142,7 @@ if command -v mpv >/dev/null 2>&1; then
 else
 	paplay "${START_SOUND}" >/dev/null 2>&1 &
 fi
-pgrep -f "chromium-browser" | while read -r pid; do
+pgrep -f "chromium" | while read -r pid; do
     # Setze die Priorität für jeden Prozess neu
     sudo renice -n -10 -p "$pid"
 done
@@ -151,7 +151,7 @@ pgrep -f "node	" | while read -r pid; do
     sudo renice -n -10 -p "$pid"
 done
 sleep 5
-pgrep -f "chromium-browser" | while read -r pid; do
+pgrep -f "chromium" | while read -r pid; do
     # Setze die Priorität für jeden Prozess neu
     sudo renice -n -10 -p "$pid"
 done

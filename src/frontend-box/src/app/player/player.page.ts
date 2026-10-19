@@ -538,16 +538,6 @@ export class PlayerPage implements OnInit, AfterViewInit {
     }
   }
 
-  // Buffering of a stream before it starts: 0 (nothing yet) to 100 (enough to start).
-  get loadProgress(): number {
-    return Math.min(100, Math.max(0, this.currentPlayedLocal?.loadProgress ?? 0))
-  }
-
-  // The ring shrinks from the full circle (r=20) to a small dot (r=3) as the buffer fills.
-  get loadRingRadius(): number {
-    return 20 - 17 * (this.loadProgress / 100)
-  }
-
   // The timer for the end of the album's last track (see updateProgress) taken off: a seek, a pause or a step to
   // another track - the next tick sets it anew if the end is still near
   private cancelAlbumEnd() {

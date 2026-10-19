@@ -2913,5 +2913,9 @@
  "Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:\"Name\" album:\"Folge\")": "Spotify nie znajduje albumów – szukaj bez AND, OR lub NOT (np. artist:\"Nazwa\" album:\"Odcinek\")",
  "Spotify findet zu diesem Suchbegriff keine Alben": "Spotify nie znajduje albumów dla tego wyszukiwania",
  "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "Kafelek pokazuje albumy, które znajdzie Spotify (do 100). Zawęź przez artist:\"Nazwa\" album:\"Odcinek\" – bez AND.",
- "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "Wyłącznik czasowy dobiegł końca – pudełko właśnie się wyłącza."
+ "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "Wyłącznik czasowy dobiegł końca – pudełko właśnie się wyłącza.",
+ "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Zakres jak dotąd (odcinki {} – {}, liczone od najstarszego)",
+ "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Wpisz oba numery (od 0, drugi nie mniejszy niż pierwszy)",
+ "Gezählt nach Datum: 0 ist die neueste Folge.": "Liczone według daty: odcinek 0 jest najnowszy.",
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Gdy pojawi się nowy odcinek, zakres przesuwa się razem z nim."
 }

@@ -30,6 +30,9 @@ import type { SpotifyValidationRequest, SpotifyValidationResponse } from './mode
 import { CoverCacheService } from './services/cover-cache.service'
 import { SpotifyApiService } from './services/spotify-api.service'
 import { SpotifyMediaInfo } from './services/spotify-media-info.service'
+import { fetchFullPlaylistTracks } from './services/spotify-playlist-full'
+import { getValidAccessToken } from './spotify-sync/auth'
+import { loadSpotifyTokenStore } from './spotify-sync/config-loader'
 import { createSpotifySyncRouter } from './spotify-sync/routes'
 import { startScheduler } from './spotify-sync/scheduler'
 import type { RunSyncDeps } from './spotify-sync/state-machine'
@@ -363,6 +366,14 @@ setupMupiboxConfigWatch()
 
 // Initialize Spotify services
 const spotifyMediaInfo = new SpotifyMediaInfo()
+// The embed page a playlist is read from lists 100 tracks at most: the rest comes from the Web API with the Spotify login
+spotifyMediaInfo.fullPlaylistTracks = async (playlistId, kept) => {
+  const store = loadSpotifyTokenStore(await getMupiboxConfig())
+  if (!store) return undefined
+  const token = await getValidAccessToken(store, updateMupiboxConfig)
+  if (!token.ok) return undefined
+  return fetchFullPlaylistTracks(playlistId, token.token, kept)
+}
 let spotifyApiService: SpotifyApiService | undefined
 
 // We export the app so we can use it in testing.
@@ -1615,6 +1626,76 @@ async function warmRssEpisodeCovers(feed: any, count: number): Promise<void> {
       }
     }
   }
+}
+
+// The pictures of a podcast on the box: its channel cover (a file named by the feed's key, see downloadRssCover) and the
+// pictures of its episodes (named by their address, see rssImageLocalFile) - the episodes found in the feed as the box
+// has cached it.
+async function rssPictureFiles(feedUrl: string): Promise<string[]> {
+  const cacheKey = rssCacheKeyFor(feedUrl)
+  const files = new Set<string>()
+  try {
+    for (const name of await readdir(rssCoverDir)) {
+      if (name.startsWith(`${cacheKey}.`)) files.add(path.join(rssCoverDir, name))
+    }
+  } catch {
+    // no cover folder yet
+  }
+  try {
+    const feed = JSON.parse(await readFile(rssCacheFilePath(cacheKey), 'utf8'))
+    const items = feed?.rss?.channel?.item
+    for (const item of Array.isArray(items) ? items : items ? [items] : []) {
+      const href = item?.['itunes:image']?._attributes?.href
+      const local = typeof href === 'string' ? rssImageLocalFile(href) : undefined
+      if (local) files.add(local.file)
+    }
+  } catch {
+    // the feed was never cached: only the channel cover (found above) is there
+  }
+  return [...files]
+}
+
+// A podcast was taken out of the library: its pictures go with it - the cover folder kept one file for every picture
+// ever shown, for ever, and so did the small copies of them (thumbs). The same podcast twice in the library keeps them.
+// (The feed itself stays in the cache; episodes kept on the SD card are not touched.)
+async function removeRssPictures(removed: unknown, remaining: unknown[]): Promise<void> {
+  const entry = removed as { type?: unknown; id?: unknown } | undefined
+  if (entry?.type !== 'rss' || typeof entry.id !== 'string' || !entry.id) return
+  const otherFeeds = remaining
+    .filter((e) => (e as { type?: unknown } | undefined)?.type === 'rss')
+    .map((e) => (e as { id?: unknown }).id)
+    .filter((id): id is string => typeof id === 'string' && id !== '')
+  if (otherFeeds.includes(entry.id)) return
+  // (the episodes' pictures are named by their address, not by their podcast: one another podcast still shows - the
+  // same feed under http and https, two podcasts of one maker - stays)
+  const stillUsed = new Set<string>()
+  for (const other of otherFeeds) for (const file of await rssPictureFiles(other)) stillUsed.add(file)
+  // (added again right away, its feed is fetched anew at the next request: the cover comes back at once, not after the
+  // refresh interval - the kept feed still points at the pictures deleted here)
+  const cacheKey = rssCacheKeyFor(entry.id)
+  rssLastRefresh.delete(cacheKey)
+  let gone = 0
+  let thumbNames: Set<string> | undefined
+  for (const file of await rssPictureFiles(entry.id)) {
+    if (stillUsed.has(file)) continue
+    let size: number
+    try {
+      size = (await stat(file)).size
+    } catch {
+      continue // not there (any more)
+    }
+    await rm(file, { force: true })
+    gone++
+    // The small copies are named by a hash with the size asked for in it (see getThumbnail / sendRssImage): all sizes
+    // the box hands out (64 to 800 px) are tried.
+    thumbNames ??= new Set(await readdir(thumbDir).catch(() => [] as string[]))
+    for (let px = 64; px <= 800; px++) {
+      const name = `${crypto.createHash('sha1').update(`rss|${file}|${size}|${px}`).digest('hex')}.jpg`
+      if (thumbNames.has(name)) await rm(path.join(thumbDir, name), { force: true })
+    }
+  }
+  // (not the feed's address: a private feed has its key in it)
+  if (gone) console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Podcast removed: ${gone} cover file(s) deleted (feed ${cacheKey})`)
 }
 
 app.get('/api/data', (_req, res) => {
@@ -3909,7 +3990,7 @@ app.post('/api/delete', (req, res) => {
       res.status(problem === 'library changed' ? 409 : 400).send(problem)
       return
     }
-    data.splice(req.body.index, 1)
+    const [removed] = data.splice(req.body.index, 1)
     renumberLibrary(data)
     writeJsonAtomic(dataFile, data, (writeError) => {
       releaseLock(dataLock, '/api/delete')
@@ -3918,6 +3999,10 @@ app.post('/api/delete', (req, res) => {
         res.status(500).send('error')
         return
       }
+      // a podcast: its pictures go as well (in the background - the answer does not wait for them)
+      removeRssPictures(removed, data).catch((error) => {
+        console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Could not remove the pictures of a podcast: ${error}`)
+      })
       res.status(200).send('ok')
     })
   })
