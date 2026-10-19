@@ -32,6 +32,7 @@ import { SpotifyApiService } from './services/spotify-api.service'
 import { SpotifyMediaInfo } from './services/spotify-media-info.service'
 import { fetchFullPlaylistTracks } from './services/spotify-playlist-full'
 import { getValidAccessToken } from './spotify-sync/auth'
+import { SpotifyApiException } from './spotify-sync/playlists'
 import { loadSpotifyTokenStore } from './spotify-sync/config-loader'
 import { createSpotifySyncRouter } from './spotify-sync/routes'
 import { startScheduler } from './spotify-sync/scheduler'
@@ -371,7 +372,17 @@ spotifyMediaInfo.fullPlaylistTracks = async (playlistId, kept) => {
   const store = loadSpotifyTokenStore(await getMupiboxConfig())
   if (!store) return undefined
   const token = await getValidAccessToken(store, updateMupiboxConfig)
-  if (!token.ok) return undefined
+  if (!token.ok) {
+    // (a login Spotify refused counts as none; a block or the network as a failure that may pass - asked again in an
+    // hour, the refresh itself waits for Spotify's Retry-After, see getValidAccessToken)
+    const f = token.failure
+    if (f.kind === 'auth') return undefined
+    throw new SpotifyApiException(
+      f.kind === 'rate-limit'
+        ? { kind: 'rate-limit', reason: `token refresh: ${f.reason}`, retryAfterSeconds: f.retryAfterSeconds ?? 60 }
+        : { kind: f.kind, reason: `token refresh: ${f.reason}` },
+    )
+  }
   return fetchFullPlaylistTracks(playlistId, token.token, kept)
 }
 let spotifyApiService: SpotifyApiService | undefined
