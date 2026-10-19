@@ -1650,10 +1650,23 @@ async function rssPictureFiles(feedUrl: string): Promise<string[]> {
 async function removeRssPictures(removed: unknown, remaining: unknown[]): Promise<void> {
   const entry = removed as { type?: unknown; id?: unknown } | undefined
   if (entry?.type !== 'rss' || typeof entry.id !== 'string' || !entry.id) return
-  if (remaining.some((e) => (e as { type?: unknown; id?: unknown } | undefined)?.type === 'rss' && (e as { id?: unknown }).id === entry.id)) return
+  const otherFeeds = remaining
+    .filter((e) => (e as { type?: unknown } | undefined)?.type === 'rss')
+    .map((e) => (e as { id?: unknown }).id)
+    .filter((id): id is string => typeof id === 'string' && id !== '')
+  if (otherFeeds.includes(entry.id)) return
+  // (the episodes' pictures are named by their address, not by their podcast: one another podcast still shows - the
+  // same feed under http and https, two podcasts of one maker - stays)
+  const stillUsed = new Set<string>()
+  for (const other of otherFeeds) for (const file of await rssPictureFiles(other)) stillUsed.add(file)
+  // (added again right away, its feed is fetched anew at the next request: the cover comes back at once, not after the
+  // refresh interval - the kept feed still points at the pictures deleted here)
+  const cacheKey = rssCacheKeyFor(entry.id)
+  rssLastRefresh.delete(cacheKey)
   let gone = 0
   let thumbNames: Set<string> | undefined
   for (const file of await rssPictureFiles(entry.id)) {
+    if (stillUsed.has(file)) continue
     let size: number
     try {
       size = (await stat(file)).size
@@ -1670,7 +1683,8 @@ async function removeRssPictures(removed: unknown, remaining: unknown[]): Promis
       if (thumbNames.has(name)) await rm(path.join(thumbDir, name), { force: true })
     }
   }
-  if (gone) console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Podcast removed: ${gone} cover file(s) deleted (${entry.id})`)
+  // (not the feed's address: a private feed has its key in it)
+  if (gone) console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Podcast removed: ${gone} cover file(s) deleted (feed ${cacheKey})`)
 }
 
 app.get('/api/data', (_req, res) => {
