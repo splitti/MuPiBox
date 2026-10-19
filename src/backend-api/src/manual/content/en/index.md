@@ -5,6 +5,16 @@ The MuPiBox is a music and audiobook player for children, which they operate the
 > [!TIP]
 > Press [[/]] to jump to the search at the top. It searches the whole manual, including the settings reference.
 
+## Classic and NG: which MuPiBox is this?
+
+**Classic** deliberately keeps things simple so young children can choose stories and music independently. Its clear controls may also suit older users and people with impaired vision. Classic is not restricted to toddlers.
+
+**NG (Next Generation)** is designed to grow with its users. It supports diverse media sources, customisable layouts and apps controlled through parental settings. There are more features to explore, but the interface remains child-friendly.
+
+**Identification:** Classic has a **white MuPiBox wordmark and a small white mascot on a dark background**. NG uses a **colourful wordmark** and is clearly labelled **NG** or **MuPiBox NG** in the admin interface. RFID is currently available in NG but could be supported by Classic in the future.
+
+Both editions have their own strengths. [Compare their features and audiences](https://mupibox.de/classic-vs-ng/).
+
 ## Where do I start?
 
 | You want to … | Then read … |

@@ -5,6 +5,16 @@ Die MuPiBox ist ein Musik- und Hörspielplayer für Kinder, den sie selbst über
 > [!TIP]
 > Mit der Taste [[/]] springst du in die Suche oben. Sie durchsucht das ganze Handbuch, auch die Einstellungs-Referenz.
 
+## Classic und NG: Welche MuPiBox ist das?
+
+**Classic** ist bewusst besonders einfach gestaltet: Kleine Kinder sollen ihre Hörspiele und Musik selbstständig bedienen können. Die klare Oberfläche ist ebenso für ältere Menschen oder Personen mit Sehschwäche angenehm. Classic richtet sich nicht ausschließlich an Kleinkinder.
+
+**NG (Next Generation)** ist die mitwachsende Variante. Sie bietet viele Medienquellen, anpassbare Ansichten und Apps, die per Elternkontrolle freigegeben oder gesperrt werden können. Die Bedienung bietet mehr Möglichkeiten, bleibt aber kindgerecht.
+
+**Erkennung:** Classic zeigt einen **weißen MuPiBox-Schriftzug und ein kleines weißes Maskottchen auf dunklem Hintergrund**. NG hat einen **bunten MuPiBox-Schriftzug** und im Admin-Interface steht deutlich **NG** beziehungsweise **MuPiBox NG**. RFID ist derzeit in NG enthalten, für Classic zukünftig aber nicht grundsätzlich ausgeschlossen.
+
+Beide Boxen haben ihre eigenen Stärken. [Vergleich und Zielgruppen auf mupibox.de](https://mupibox.de/classic-vs-ng/).
+
 ## Wo fange ich an?
 
 | Du willst … | Dann lies … |
