@@ -32,10 +32,11 @@ if [ ${wled_active} = true ]; then
 	wled_main_id=$(/usr/bin/jq -r .wled.main_id ${MUPIBOX_CONFIG})
 	wled_baud_rate=$(/usr/bin/jq -r .wled.baud_rate ${MUPIBOX_CONFIG})
 	wled_brightness_def=$(/usr/bin/jq -r .wled.brightness_default ${MUPIBOX_CONFIG})
-	pid=`pidof /usr/lib/chromium-browser/chromium-browser`
+	# (the browser's program is called chromium-browser on Debian 12 and chromium on Debian 13)
+	pid=$(pgrep -f "chromium" | head -n 1)
 	while [ -z "${pid}" ] ;
 	do
-		pid=`pidof /usr/lib/chromium-browser/chromium-browser`
+		pid=$(pgrep -f "chromium" | head -n 1)
 		sleep 3
 	done
 	wled_data='{"ps":'${wled_main_id}'}'

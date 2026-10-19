@@ -156,7 +156,7 @@ int main(void) {
 
     int browser_running = 1;
     while (browser_running) {
-        if (system("ps -ef | grep chromium-browser | grep http | grep -v grep") == 0) {
+        if (system("ps -ef | grep chromium | grep http | grep -v grep") == 0) {
             printf("Chromium started\n");
             // Browser läuft, beende die Schleife
             browser_running = 0;
