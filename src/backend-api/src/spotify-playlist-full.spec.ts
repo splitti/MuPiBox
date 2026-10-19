@@ -6,7 +6,8 @@ import { afterEach, describe, it } from 'node:test'
 import type { SpotifyPlaylistData } from './models/spotify-media-info.model'
 import { SpotifyMediaInfo } from './services/spotify-media-info.service'
 import { fetchFullPlaylistTracks } from './services/spotify-playlist-full'
-import { SpotifyApiException } from './spotify-sync/playlists'
+import { getValidAccessToken } from './spotify-sync/auth'
+import { SpotifyApiException, spotifyGet } from './spotify-sync/playlists'
 
 const realFetch = globalThis.fetch
 
@@ -235,5 +236,53 @@ describe('SpotifyMediaInfo: a playlist longer than the embed page', () => {
     }
     await fetchSync(svc)
     assert.equal(asked, false)
+  })
+})
+
+describe('spotifyGet: the pause between two requests', () => {
+  it('holds after the server was busy for a moment (no requests all at once)', async () => {
+    const sent: number[] = []
+    globalThis.fetch = (async () => {
+      sent.push(Date.now())
+      return Response.json({})
+    }) as typeof fetch
+    const all = Promise.all([1, 2, 3, 4].map((n) => spotifyGet(`/test/${n}`, 'token')))
+    // (the server busy for a second while they wait)
+    const until = Date.now() + 1000
+    while (Date.now() < until) {
+      // busy
+    }
+    await all
+    assert.equal(sent.length, 4)
+    for (let i = 1; i < sent.length; i++) assert.ok(sent[i] - sent[i - 1] >= 295, `gap ${sent[i] - sent[i - 1]} ms`)
+  })
+})
+
+describe('getValidAccessToken: a refresh Spotify refused', () => {
+  const expired = { clientId: 'client', accessToken: 'old', refreshToken: 'refresh-429', tokenExpiresAt: new Date(0).toISOString() }
+  const noSave = async () => {}
+
+  it("is not tried again before Spotify's Retry-After", async () => {
+    let asked = 0
+    globalThis.fetch = (async () => {
+      asked++
+      return new Response('', { status: 429, headers: { 'retry-after': '3600' } })
+    }) as typeof fetch
+    const first = await getValidAccessToken(expired, noSave)
+    const second = await getValidAccessToken(expired, noSave)
+    assert.equal(asked, 1)
+    assert.equal(first.ok, false)
+    assert.equal(second.ok || second.failure.kind, 'rate-limit')
+    assert.ok(!second.ok && (second.failure.retryAfterSeconds ?? 0) > 3500)
+  })
+
+  it('a new login is tried at once', async () => {
+    let asked = 0
+    globalThis.fetch = (async () => {
+      asked++
+      return new Response('', { status: 429, headers: { 'retry-after': '3600' } })
+    }) as typeof fetch
+    await getValidAccessToken({ ...expired, refreshToken: 'refresh-new-login' }, noSave)
+    assert.equal(asked, 1)
   })
 })
