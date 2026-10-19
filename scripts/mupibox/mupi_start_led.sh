@@ -32,11 +32,12 @@ if [ ${wled_active} = true ]; then
 	wled_main_id=$(/usr/bin/jq -r .wled.main_id ${MUPIBOX_CONFIG})
 	wled_baud_rate=$(/usr/bin/jq -r .wled.baud_rate ${MUPIBOX_CONFIG})
 	wled_brightness_def=$(/usr/bin/jq -r .wled.brightness_default ${MUPIBOX_CONFIG})
-	# (the browser's program is called chromium-browser on Debian 12 and chromium on Debian 13)
-	pid=$(pgrep -f "chromium" | head -n 1)
+	# (the browser's program is called chromium-browser on Debian 12 and chromium on Debian 13 - pidof by the program's
+	# name waits for the browser itself, as before; "pgrep -f chromium" also found the kiosk script starting it)
+	pid=$(pidof chromium-browser chromium)
 	while [ -z "${pid}" ] ;
 	do
-		pid=$(pgrep -f "chromium" | head -n 1)
+		pid=$(pidof chromium-browser chromium)
 		sleep 3
 	done
 	wled_data='{"ps":'${wled_main_id}'}'
