@@ -367,12 +367,12 @@ setupMupiboxConfigWatch()
 // Initialize Spotify services
 const spotifyMediaInfo = new SpotifyMediaInfo()
 // The embed page a playlist is read from lists 100 tracks at most: the rest comes from the Web API with the Spotify login
-spotifyMediaInfo.fullPlaylistTracks = async (playlistId) => {
+spotifyMediaInfo.fullPlaylistTracks = async (playlistId, kept) => {
   const store = loadSpotifyTokenStore(await getMupiboxConfig())
   if (!store) return undefined
   const token = await getValidAccessToken(store, updateMupiboxConfig)
   if (!token.ok) return undefined
-  return fetchFullPlaylistTracks(playlistId, token.token)
+  return fetchFullPlaylistTracks(playlistId, token.token, kept)
 }
 let spotifyApiService: SpotifyApiService | undefined
 

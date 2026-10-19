@@ -62,16 +62,21 @@ export class SpotifyApiException extends Error {
  * GET helper with 401/429/timeout handling. Throws SpotifyApiException. Keeps to the box's one Spotify block
  * (spotify-block.ts) - every request of the sync and of the app's album lists comes through here: during a block
  * Spotify is not asked (each request only keeps it going), and a 429 sets it for the display's lists too.
+ * `source`: who a 429 is told to (the block's "told to the sync / the display's lists").
  */
-export async function spotifyGet<T>(path: string, accessToken: string): Promise<T> {
+export async function spotifyGet<T>(path: string, accessToken: string, source: 'sync' | 'display' = 'sync'): Promise<T> {
+  // (the slot is taken before waiting: two callers at once - the sync and a playlist of the display - each waited for
+  // the same last request and then asked together)
+  const at = Math.max(Date.now(), lastRequestAt + MIN_GAP_MS)
+  lastRequestAt = at
+  const wait = at - Date.now()
+  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait))
+  // (after the wait: a 429 that came meanwhile holds this request back too)
   const block = spotifyBlock()
   if (block) {
     const left = Math.max(1, Math.ceil((block.until - Date.now()) / 1000))
     throw new SpotifyApiException({ kind: 'rate-limit', reason: `${path} not asked: Spotify blocks for ${left} s more (${block.reason})`, retryAfterSeconds: left })
   }
-  const wait = lastRequestAt + MIN_GAP_MS - Date.now()
-  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait))
-  lastRequestAt = Date.now()
   let response: Response
   try {
     response = await fetch(`${API_BASE}${path}`, {
@@ -92,7 +97,7 @@ export async function spotifyGet<T>(path: string, accessToken: string): Promise<
     const parsed = Number.parseInt(header ?? '', 10)
     const retryAfter = Number.isFinite(parsed) && parsed > 0 ? parsed : 60
     const reason = `429 from ${path} (Spotify: wait ${retryAfter} s${header ? '' : ', no Retry-After given'})`
-    noteSpotifyBlock(Date.now() + retryAfter * 1000, 'sync', reason)
+    noteSpotifyBlock(Date.now() + retryAfter * 1000, source, reason)
     throw new SpotifyApiException({ kind: 'rate-limit', reason, retryAfterSeconds: retryAfter })
   }
   if (!response.ok) {
