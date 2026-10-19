@@ -2860,5 +2860,6 @@
  "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "Ο χρονοδιακόπτης ύπνου έληξε – το κουτί απενεργοποιείται τώρα.",
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Εύρος όπως πριν (επεισόδιο {} – {}, μετρημένο από το παλαιότερο)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Συμπληρώστε και τους δύο αριθμούς (από 0, ο δεύτερος όχι μικρότερος από τον πρώτο)",
- "Gezählt nach Datum: 0 ist die neueste Folge.": "Μετρώνται κατά ημερομηνία: το επεισόδιο 0 είναι το νεότερο."
+ "Gezählt nach Datum: 0 ist die neueste Folge.": "Μετρώνται κατά ημερομηνία: το επεισόδιο 0 είναι το νεότερο.",
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Όταν προστίθεται νέο επεισόδιο, το εύρος μετακινείται μαζί του."
 }

@@ -2860,5 +2860,6 @@
  "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "O temporizador de desligar terminou – a caixa está a desligar-se.",
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Intervalo como antes (episódio {} – {}, contado a partir do mais antigo)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Introduza os dois números (a partir de 0, o segundo não menor que o primeiro)",
- "Gezählt nach Datum: 0 ist die neueste Folge.": "Contado por data: o episódio 0 é o mais recente."
+ "Gezählt nach Datum: 0 ist die neueste Folge.": "Contado por data: o episódio 0 é o mais recente.",
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Quando sai um novo episódio, o intervalo desloca-se com ele."
 }

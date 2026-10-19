@@ -2860,5 +2860,6 @@
  "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "Insomningstimern har gått ut – lådan stängs av nu.",
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Intervall som tidigare (avsnitt {} – {}, räknat från det äldsta)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Ange båda numren (från 0, det andra inte mindre än det första)",
- "Gezählt nach Datum: 0 ist die neueste Folge.": "Räknat efter datum: avsnitt 0 är det nyaste."
+ "Gezählt nach Datum: 0 ist die neueste Folge.": "Räknat efter datum: avsnitt 0 är det nyaste.",
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "När ett nytt avsnitt kommer flyttas intervallet med."
 }

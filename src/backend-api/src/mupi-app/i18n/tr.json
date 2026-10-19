@@ -2860,5 +2860,6 @@
  "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "Uyku zamanlayıcısı doldu – kutu şu anda kapanıyor.",
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Önceki gibi aralık (bölüm {} – {}, en eskiden sayılır)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Lütfen iki numarayı da girin (0'dan başlayarak, ikincisi birinciden küçük olmasın)",
- "Gezählt nach Datum: 0 ist die neueste Folge.": "Tarihe göre sayılır: 0. bölüm en yenisidir."
+ "Gezählt nach Datum: 0 ist die neueste Folge.": "Tarihe göre sayılır: 0. bölüm en yenisidir.",
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Yeni bir bölüm eklendiğinde aralık da onunla birlikte kayar."
 }

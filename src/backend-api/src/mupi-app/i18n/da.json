@@ -2860,5 +2860,6 @@
  "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "Sleep-timeren er udløbet – boksen slukker lige nu.",
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Område som før (episode {} – {}, talt fra den ældste)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Indtast begge numre (fra 0, det andet ikke mindre end det første)",
- "Gezählt nach Datum: 0 ist die neueste Folge.": "Talt efter dato: episode 0 er den nyeste."
+ "Gezählt nach Datum: 0 ist die neueste Folge.": "Talt efter dato: episode 0 er den nyeste.",
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Kommer der et nyt afsnit til, flytter området med."
 }

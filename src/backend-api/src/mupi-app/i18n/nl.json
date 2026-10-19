@@ -2860,5 +2860,6 @@
  "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "De slaaptimer is afgelopen – de box schakelt nu uit.",
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Bereik zoals eerder (aflevering {} – {}, geteld vanaf de oudste)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Vul beide nummers in (vanaf 0, het tweede niet kleiner dan het eerste)",
- "Gezählt nach Datum: 0 ist die neueste Folge.": "Geteld op datum: aflevering 0 is de nieuwste."
+ "Gezählt nach Datum: 0 ist die neueste Folge.": "Geteld op datum: aflevering 0 is de nieuwste.",
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Komt er een nieuwe aflevering bij, dan schuift het bereik mee."
 }

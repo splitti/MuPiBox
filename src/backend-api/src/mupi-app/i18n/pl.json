@@ -2860,5 +2860,6 @@
  "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "Wyłącznik czasowy dobiegł końca – pudełko właśnie się wyłącza.",
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Zakres jak dotąd (odcinki {} – {}, liczone od najstarszego)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Wpisz oba numery (od 0, drugi nie mniejszy niż pierwszy)",
- "Gezählt nach Datum: 0 ist die neueste Folge.": "Liczone według daty: odcinek 0 jest najnowszy."
+ "Gezählt nach Datum: 0 ist die neueste Folge.": "Liczone według daty: odcinek 0 jest najnowszy.",
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Gdy pojawi się nowy odcinek, zakres przesuwa się razem z nim."
 }

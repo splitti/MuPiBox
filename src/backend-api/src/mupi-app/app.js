@@ -2622,7 +2622,7 @@ function episodePickFields(p, item) {
     .map(([v, l]) => `<option value="${v}"${v === chosen ? ' selected' : ''}>${esc(l)}</option>`)
     .join('')}</select></div>
     <div class="field" id="${p}-range"${range ? '' : ' hidden'}><label>Folge von – bis</label><div class="rule-times"><input class="input" id="${p}-from" type="number" min="0" inputmode="numeric" value="${range ? range[1] : ''}" placeholder="von" aria-label="von"><input class="input" id="${p}-to" type="number" min="0" inputmode="numeric" value="${range ? range[2] : ''}" placeholder="bis" aria-label="bis"></div>
-      <small>Gezählt nach Datum: 0 ist die neueste Folge.</small></div>`
+      <small>Gezählt nach Datum: 0 ist die neueste Folge.</small> <small>${esc('Kommt eine neue Folge dazu, rückt der Bereich mit.')}</small></div>`
 }
 
 // The choice as its fields say it: '' (all), 'legacy', 'newest:N' …, or null (a range that does not fit)
@@ -3863,7 +3863,8 @@ async function openPodShow(s) {
      }`,
     async (sheet, close) => {
       for (const b of sheet.querySelectorAll('[data-close]')) b.onclick = close
-      // the feed's episodes, newest first (by date; without one in the feed's order), numbered by date: 1 = the oldest
+      // the feed's episodes, newest first (by date; without one in the feed's order), numbered as the range counts:
+      // 0 = the newest
       let episodes = null
       const preview = () => {
         const box = sheet.querySelector('#pod-eps')
@@ -3901,7 +3902,8 @@ async function openPodShow(s) {
             .join('')}</div>${outside.length ? `<p class="help" style="margin:0">${esc(`Grau: nicht auf der Box (${outside.length} Folgen)`)}</p>` : ''}`
       }
       if (!have) {
-        // "the first N" and a range read from the oldest on, the newest N from the newest - until the order is chosen
+        // "the first N" from the oldest on; the newest N and a range (counted from the newest) from the newest - until the
+        // order is chosen
         let sortTouched = false
         sheet.querySelector('#pod-sort').addEventListener('change', () => {
           sortTouched = true
@@ -3909,7 +3911,7 @@ async function openPodShow(s) {
         })
         wireEpisodePick(sheet, 'pod', () => {
           const v = sheet.querySelector('#pod-pick').value
-          if (!sortTouched) sheet.querySelector('#pod-sort').value = /^(oldest|range)/.test(v) ? SORT_VALUES[3] : SORT_VALUES[4]
+          if (!sortTouched) sheet.querySelector('#pod-sort').value = /^oldest/.test(v) ? SORT_VALUES[3] : SORT_VALUES[4]
           refreshOfflineOptions(sheet.querySelector('#pod-off'), v !== '')
           preview()
         })
@@ -3954,7 +3956,7 @@ async function openPodShow(s) {
         })
         // (as the box counts: one without a date after all dated ones, in the feed's order)
         .sort((a, b) => (b.when ?? -b.i) - (a.when ?? -a.i))
-      episodes = list.map((e, i) => ({ ...e, no: list.length - i }))
+      episodes = list.map((e, i) => ({ ...e, no: i }))
       preview()
     },
   )

@@ -12,6 +12,10 @@ Es gibt drei Wege, einen Podcast hinzuzufügen:
 
 Beim Öffnen zeigt die Box die **Episodenliste**, neueste Folge zuerst.
 
+### Welche Folgen auf die Box
+
+Beim Hinzufügen und Bearbeiten wählst du unter **Welche Folgen auf die Box**: alle, die neuesten oder die ersten (ältesten) N Folgen, oder einen **eigenen Bereich**. Der eigene Bereich zählt nach Datum ab der neuesten Folge: **0 ist die neueste**, 0 bis 9 sind also die zehn neuesten. Kommt eine neue Folge dazu, rückt der Bereich mit. Die Vorschau darunter zeigt, welche Folgen auf die Box kommen. Ein Bereich, der vor Version 5.0.12 gespeichert wurde, zählt weiter ab der ältesten und steht als **Bereich wie bisher** in der Auswahl, bis du etwas anderes wählst.
+
 ### Hörstand und neue Folgen
 
 Die Box merkt sich pro Folge, wo aufgehört wurde, und kann neue Folgen markieren. Ein Punkt auf dem Podcast und auf der Folge zeigt Neues. Bei angefangenen Folgen zeigt ein Balken, wie weit gehört wurde, bei zu Ende gehörten ein Haken. Alle Regeln stehen unter [Fortsetzen und „Läuft gerade“](../bedienung/fortsetzen.md).

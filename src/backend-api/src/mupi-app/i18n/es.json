@@ -2860,5 +2860,6 @@
  "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "El temporizador de apagado ha terminado: la caja se está apagando.",
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Rango como antes (episodio {} – {}, contado desde el más antiguo)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Introduce ambos números (desde 0, el segundo no menor que el primero)",
- "Gezählt nach Datum: 0 ist die neueste Folge.": "Contado por fecha: el episodio 0 es el más reciente."
+ "Gezählt nach Datum: 0 ist die neueste Folge.": "Contado por fecha: el episodio 0 es el más reciente.",
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Cuando sale un episodio nuevo, el rango se desplaza con él."
 }

@@ -2860,5 +2860,6 @@
  "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "The sleep timer has run out – the box is shutting down.",
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Range as before (episode {} – {}, counted from the oldest)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Please enter both numbers (from 0, the second not smaller than the first)",
- "Gezählt nach Datum: 0 ist die neueste Folge.": "Counted by date: episode 0 is the newest."
+ "Gezählt nach Datum: 0 ist die neueste Folge.": "Counted by date: episode 0 is the newest.",
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "When a new episode comes out, the range moves along with it."
 }

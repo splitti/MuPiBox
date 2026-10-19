@@ -2860,5 +2860,6 @@
  "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "Таймер сна истёк – коробка выключается.",
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Диапазон как раньше (выпуск {} – {}, счёт от самого старого)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Введите оба номера (от 0, второй не меньше первого)",
- "Gezählt nach Datum: 0 ist die neueste Folge.": "Счёт по дате: выпуск 0 — самый новый."
+ "Gezählt nach Datum: 0 ist die neueste Folge.": "Счёт по дате: выпуск 0 — самый новый.",
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Когда выходит новый выпуск, диапазон сдвигается вместе с ним."
 }

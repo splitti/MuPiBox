@@ -2860,5 +2860,6 @@
  "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "La minuterie de mise en veille est écoulée – la box s’éteint.",
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Plage comme avant (épisode {} – {}, compté depuis le plus ancien)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Saisissez les deux numéros (à partir de 0, le second pas plus petit que le premier)",
- "Gezählt nach Datum: 0 ist die neueste Folge.": "Compté par date : l’épisode 0 est le plus récent."
+ "Gezählt nach Datum: 0 ist die neueste Folge.": "Compté par date : l’épisode 0 est le plus récent.",
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Quand un nouvel épisode paraît, la plage se décale avec lui."
 }

@@ -2860,5 +2860,6 @@
  "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "Časovač vypnutí vypršel – box se právě vypíná.",
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Rozsah jako dosud (díl {} – {}, počítáno od nejstaršího)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Zadejte obě čísla (od 0, druhé ne menší než první)",
- "Gezählt nach Datum: 0 ist die neueste Folge.": "Počítáno podle data: díl 0 je nejnovější."
+ "Gezählt nach Datum: 0 ist die neueste Folge.": "Počítáno podle data: díl 0 je nejnovější.",
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Když přibude nový díl, rozsah se posune s ním."
 }
