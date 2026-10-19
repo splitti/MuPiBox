@@ -388,8 +388,8 @@ function checkSilence() {
 // mpv reports 0-100 of its goal (cachePrefillPercent, 100)
 const cachePrefillPercent = player.cachePrefillPercent ?? 100
 let loadingTimer = null
-// The ring on the cover is shown for at least this long (ms): on a fast line the stream plays after a second or so, and
-// the display (it asks once a second) hardly saw the ring.
+// The dots on the cover are shown for at least this long (ms): on a fast line the stream plays after a second or so, and
+// the display (it asks once a second) hardly saw them.
 const MIN_LOADING_MS = 2000
 let loadingSince = 0
 let loadingEndTimer = null
@@ -418,7 +418,7 @@ function stopLoading() {
   currentMeta.loadProgress = 0
 }
 
-// The stream plays: the ring ends - after MIN_LOADING_MS at the earliest (a stop or a failure ends it at once)
+// The stream plays: the dots end - after MIN_LOADING_MS at the earliest (a stop or a failure ends it at once)
 function finishLoading() {
   if (!currentMeta.loading) return
   const rest = MIN_LOADING_MS - (Date.now() - loadingSince)
@@ -430,7 +430,7 @@ function finishLoading() {
   loadingEndTimer = setTimeout(stopLoading, rest)
 }
 
-// mpv says file-loaded (track-change) as soon as the stream is OPEN and fills its cache after that - the ring ended in
+// mpv says file-loaded (track-change) as soon as the stream is OPEN and fills its cache after that - the dots ended in
 // that moment, and the display showed nothing for the seconds until the sound came. The loading ends with the cache
 // filled, or, for a stream that reports no buffering, with the sound running (time_pos past where it started).
 player.on('cache-fill', (percent) => {
@@ -2588,7 +2588,7 @@ function playFile(playedFile) {
 
 // A radio link may be a playlist (m3u / pls) instead of the stream itself: its FIRST stream is played (see
 // playlist-url.js). The playlist is fetched first, so the start waits for it (a few seconds at most, the display shows
-// the loading ring meanwhile); a stop or another start in that time wins. Everything else starts at once, as before.
+// the loading dots meanwhile); a stop or another start in that time wins. Everything else starts at once, as before.
 function playRadioURL(radioURL) {
   if (!isPlaylistUrl(radioURL)) {
     playURL(radioURL)

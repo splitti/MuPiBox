@@ -9,6 +9,25 @@
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Player (kids' themes and cover flow): Bluetooth headphones or the headphone jack that play show at the top - their symbol and the headphones' battery - also when 'Choose box or headphones on the display' is switched off. Before, only the volume was there then, and nothing showed that the sound went to the headphones. Without the choice the symbol only shows; a tap does nothing.</li>
 <li id='linews' class='linews'>Less memory for the player: mpv kept up to 150 MiB read ahead and 50 MiB of what was played for every file, local and NAS ones too - 100 to 250 MB even when idle, too much for a Pi with 1 GB (it could run out of memory). It now keeps at most 16 MiB ahead (still more than the 20 seconds it reads ahead) and 4 MiB back: about 80 MB less with an audiobook of 48 MB.</li>
+<li id='linews' class='linews'>Radio and podcasts: while a stream connects, three bouncing dots show on the cover in every theme (as in the overview) - Cover Flow showed nothing, its dots had no look. They show until the stream really plays: mpv reported the stream as started as soon as it was open and filled its buffer only after that, so the display showed nothing for those seconds. They show for at least 2 seconds (on a fast line the display hardly saw them), end when a stream breaks off before it played, and an episode that goes on where it stopped counts from there.</li>
+<li id='linews' class='linews'>Back from the player to a list: the covers are there while the page comes in (they were drawn only once the page change was over), and the player no longer fades out over the list for a moment - it seemed to come back. The cover still turns back into the list; without a cover to turn, the list comes with a short fade.</li>
+</ul>
+<b>Podcasts</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Own range of episodes: counted from the newest, 0 is the newest episode (as in 4.2.4) - it was counted from the oldest (1 = oldest). When a new episode comes out, the range moves along with it; the preview numbers the episodes the same way. A range chosen before keeps working as it was, shown as 'Range as before (… counted from the oldest)' until another choice is made.</li>
+<li id='linews' class='linews'>Removing a podcast from the library deletes its pictures (its cover, its episodes' pictures and their small copies) - they stayed on the SD card for ever. Pictures another podcast in the library still shows stay. Added again, its cover comes back at once (the feed is fetched anew).</li>
+</ul>
+<b>Spotify</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Playlists of more than 100 tracks: all of them play - the box read the list from Spotify's embed page, which lists 100 at most (a playlist of 340 showed 100, 'Track 5/100'). Such a list is now completed with the box's Spotify login (up to 1000 tracks), one playlist after the other and only when the playlist changed (Spotify's version of it - otherwise one request instead of all pages); a full list read before stays when Spotify cannot be asked (a block, no network, no login). Without a login the 100 stay. The pause between two requests of the box to Spotify now holds also when several ask at the same time.</li>
+</ul>
+<b>System</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Debian 13: the status LED blinked for ever after the start, and the Bluetooth auto-connect, the WLED start and the browser's priority waited for the browser in vain - they looked for its old name (chromium-browser; on Debian 13 it is called chromium). They now find it under both names.</li>
+</ul>
 <h3>DEV 5.0.11 - changes compared to 5.0.10</h3>
 <b>App</b>
 </ul>
