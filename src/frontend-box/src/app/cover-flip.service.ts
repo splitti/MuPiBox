@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core'
-import { Animation, AnimationBuilder, createAnimation, mdTransitionAnimation } from '@ionic/angular/standalone'
+import { Animation, AnimationBuilder, createAnimation } from '@ionic/angular/standalone'
 
 interface FlipSource {
   card: HTMLElement
@@ -112,28 +112,35 @@ export class CoverFlipService {
 
   // The way back: the same movement in reverse order. Used by the player's back button; without
   // a remembered cover (e.g. the player was opened from somewhere else) the normal animation runs.
-  public readonly returnAnimation: AnimationBuilder = (baseEl: HTMLElement, opts?: { enteringEl?: HTMLElement; leavingEl?: HTMLElement }) => {
+  public readonly returnAnimation: AnimationBuilder = (_baseEl: HTMLElement, opts?: { enteringEl?: HTMLElement; leavingEl?: HTMLElement }) => {
     const opened = this.opened
     if (!opened || !opts?.enteringEl || !opts.leavingEl) {
-      return mdTransitionAnimation(baseEl, opts as never)
+      // (not the material one: its leaving page - the player - fades out over the list for a fifth of a second, which
+      // looked like the player appearing again once the list was there)
+      return this.cut(opts)
     }
     this.opened = undefined
     return this.buildReturn(opened, opts.enteringEl, opts.leavingEl)
   }
 
+  // The way back without a cover to turn: the list shown, the page that is left gone at once (no fade over the list).
+  private cut(opts?: { enteringEl?: HTMLElement; leavingEl?: HTMLElement }): Animation {
+    const root = createAnimation().duration(1)
+    if (opts?.enteringEl) {
+      root.addAnimation(createAnimation().addElement(opts.enteringEl).beforeRemoveClass('ion-page-invisible').fromTo('opacity', '1', '1'))
+    }
+    if (opts?.leavingEl) {
+      root.addAnimation(createAnimation().addElement(opts.leavingEl).beforeStyles({ opacity: '0' }))
+    }
+    return root
+  }
+
   private buildReturn(source: FlipSource, entering: HTMLElement, leaving: HTMLElement): Animation {
     const duration = CoverFlipService.DURATION_MS
     const root = createAnimation().duration(duration).easing('ease-in-out')
-    // The player fades out first; the list (which fills in a moment after it is shown) fades in later.
-    root.addAnimation(
-      createAnimation()
-        .addElement(leaving)
-        .keyframes([
-          { offset: 0, opacity: '1' },
-          { offset: 0.3, opacity: '0' },
-          { offset: 1, opacity: '0' },
-        ]),
-    )
+    // The player is gone at once (its cover goes on turning back to the list, below); the list (which fills in a moment
+    // after it is shown) fades in later. The player fading out beside the list looked like it appeared once more.
+    root.addAnimation(createAnimation().addElement(leaving).beforeStyles({ opacity: '0' }))
     root.addAnimation(
       createAnimation()
         .addElement(entering)
