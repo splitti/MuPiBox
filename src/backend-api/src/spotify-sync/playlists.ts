@@ -61,15 +61,18 @@ export class SpotifyApiException extends Error {
 // The requests' turns, one after the other: each waits for the one before to be sent and then MIN_GAP_MS from that
 // moment. Two callers at once (the sync and a playlist of the display) each waited for the same last request and asked
 // together; and times planned ahead came all at once after the server was busy for a moment.
+// `send` runs in the turn and has to start its request right away (synchronously): the time counts from there - taken
+// before the block check, a slow look at the SD card for it shortened the pause to the next request.
 let pacing: Promise<void> = Promise.resolve()
-function nextSlot(): Promise<void> {
+function inTurn<T>(send: () => Promise<T>): Promise<T> {
+  let sent: Promise<T> | undefined
   const turn = pacing.then(async () => {
     const wait = lastRequestAt + MIN_GAP_MS - Date.now()
     if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait))
-    lastRequestAt = Date.now()
+    sent = send()
   })
-  pacing = turn
-  return turn
+  pacing = turn.catch(() => undefined)
+  return turn.then(() => sent as Promise<T>)
 }
 
 /**
@@ -79,20 +82,23 @@ function nextSlot(): Promise<void> {
  * `source`: who a 429 is told to (the block's "told to the sync / the display's lists").
  */
 export async function spotifyGet<T>(path: string, accessToken: string, source: 'sync' | 'display' = 'sync'): Promise<T> {
-  await nextSlot()
-  // (after the wait: a 429 that came meanwhile holds this request back too)
-  const block = spotifyBlock()
-  if (block) {
-    const left = Math.max(1, Math.ceil((block.until - Date.now()) / 1000))
-    throw new SpotifyApiException({ kind: 'rate-limit', reason: `${path} not asked: Spotify blocks for ${left} s more (${block.reason})`, retryAfterSeconds: left })
-  }
   let response: Response
   try {
-    response = await fetch(`${API_BASE}${path}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      signal: AbortSignal.timeout(HTTP_TIMEOUT_MS),
+    response = await inTurn(() => {
+      // (in the turn, after the wait: a 429 that came meanwhile holds this request back too)
+      const block = spotifyBlock()
+      if (block) {
+        const left = Math.max(1, Math.ceil((block.until - Date.now()) / 1000))
+        throw new SpotifyApiException({ kind: 'rate-limit', reason: `${path} not asked: Spotify blocks for ${left} s more (${block.reason})`, retryAfterSeconds: left })
+      }
+      lastRequestAt = Date.now()
+      return fetch(`${API_BASE}${path}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        signal: AbortSignal.timeout(HTTP_TIMEOUT_MS),
+      })
     })
   } catch (err) {
+    if (err instanceof SpotifyApiException) throw err
     const e = err as Error
     throw new SpotifyApiException({ kind: 'network', reason: `${path}: ${e?.message ?? String(err)}` })
   }

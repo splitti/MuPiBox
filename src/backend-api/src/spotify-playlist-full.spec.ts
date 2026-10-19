@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
+import { syncBuiltinESMExports } from 'node:module'
 import os from 'node:os'
 import path from 'node:path'
-import { afterEach, describe, it } from 'node:test'
+import { afterEach, describe, it, mock } from 'node:test'
 import type { SpotifyPlaylistData } from './models/spotify-media-info.model'
 import { SpotifyMediaInfo } from './services/spotify-media-info.service'
 import { fetchFullPlaylistTracks } from './services/spotify-playlist-full'
@@ -254,6 +255,36 @@ describe('spotifyGet: the pause between two requests', () => {
     }
     await all
     assert.equal(sent.length, 4)
+    for (let i = 1; i < sent.length; i++) assert.ok(sent[i] - sent[i - 1] >= 295, `gap ${sent[i] - sent[i - 1]} ms`)
+  })
+
+  it('holds when the block check is slow (the SD card): the time counts from the request itself', async () => {
+    const sent: number[] = []
+    globalThis.fetch = (async () => {
+      sent.push(Date.now())
+      return Response.json({})
+    }) as typeof fetch
+    let first = true
+    const original = fs.statSync
+    const stat = mock.method(fs, 'statSync', (...args: Parameters<typeof fs.statSync>) => {
+      if (first) {
+        first = false
+        const until = Date.now() + 700
+        while (Date.now() < until) {
+          // slow
+        }
+      }
+      return original(...args)
+    })
+    // (spotify-block.ts reads it by "import * as fs": the mock reaches it only like this)
+    syncBuiltinESMExports()
+    try {
+      await Promise.all([1, 2, 3].map((n) => spotifyGet(`/slow/${n}`, 'token')))
+    } finally {
+      stat.mock.restore()
+      syncBuiltinESMExports()
+    }
+    assert.equal(sent.length, 3)
     for (let i = 1; i < sent.length; i++) assert.ok(sent[i] - sent[i - 1] >= 295, `gap ${sent[i] - sent[i - 1]} ms`)
   })
 })
