@@ -2857,5 +2857,8 @@
  "Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:\"Name\" album:\"Folge\")": "Spotify ne trouve aucun album – veuillez chercher sans AND, OR ni NOT (p. ex. artist:\"Nom\" album:\"Épisode\")",
  "Spotify findet zu diesem Suchbegriff keine Alben": "Spotify ne trouve aucun album pour ce terme de recherche",
  "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "La tuile affiche les albums que Spotify trouve (jusqu’à 100). Affinez avec artist:\"Nom\" album:\"Épisode\" – sans AND.",
- "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "La minuterie de mise en veille est écoulée – la box s’éteint."
+ "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "La minuterie de mise en veille est écoulée – la box s’éteint.",
+ "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Plage comme avant (épisode {} – {}, compté depuis le plus ancien)",
+ "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Saisissez les deux numéros (à partir de 0, le second pas plus petit que le premier)",
+ "Gezählt nach Datum: 0 ist die neueste Folge.": "Compté par date : l’épisode 0 est le plus récent."
 }

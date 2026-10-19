@@ -2857,5 +2857,8 @@
  "Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:\"Name\" album:\"Folge\")": "Το Spotify δεν βρίσκει άλμπουμ – αναζητήστε χωρίς AND, OR ή NOT (π.χ. artist:\"Όνομα\" album:\"Επεισόδιο\")",
  "Spotify findet zu diesem Suchbegriff keine Alben": "Το Spotify δεν βρίσκει άλμπουμ για αυτόν τον όρο αναζήτησης",
  "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "Το πλακίδιο δείχνει τα άλμπουμ που βρίσκει το Spotify (έως 100). Περιορισμός με artist:\"Όνομα\" album:\"Επεισόδιο\" – χωρίς AND.",
- "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "Ο χρονοδιακόπτης ύπνου έληξε – το κουτί απενεργοποιείται τώρα."
+ "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "Ο χρονοδιακόπτης ύπνου έληξε – το κουτί απενεργοποιείται τώρα.",
+ "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Εύρος όπως πριν (επεισόδιο {} – {}, μετρημένο από το παλαιότερο)",
+ "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Συμπληρώστε και τους δύο αριθμούς (από 0, ο δεύτερος όχι μικρότερος από τον πρώτο)",
+ "Gezählt nach Datum: 0 ist die neueste Folge.": "Μετρώνται κατά ημερομηνία: το επεισόδιο 0 είναι το νεότερο."
 }

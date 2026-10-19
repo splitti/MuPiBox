@@ -2857,5 +2857,8 @@
  "Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:\"Name\" album:\"Folge\")": "Spotify no encuentra álbumes – busque sin AND, OR ni NOT (p. ej. artist:\"Nombre\" album:\"Episodio\")",
  "Spotify findet zu diesem Suchbegriff keine Alben": "Spotify no encuentra álbumes para este término de búsqueda",
  "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "El mosaico muestra los álbumes que Spotify encuentra (hasta 100). Acote con artist:\"Nombre\" album:\"Episodio\" – sin AND.",
- "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "El temporizador de apagado ha terminado: la caja se está apagando."
+ "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "El temporizador de apagado ha terminado: la caja se está apagando.",
+ "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Rango como antes (episodio {} – {}, contado desde el más antiguo)",
+ "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Introduce ambos números (desde 0, el segundo no menor que el primero)",
+ "Gezählt nach Datum: 0 ist die neueste Folge.": "Contado por fecha: el episodio 0 es el más reciente."
 }

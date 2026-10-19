@@ -2857,5 +2857,8 @@
  "Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:\"Name\" album:\"Folge\")": "Spotify ei löydä albumeja – hae ilman AND-, OR- tai NOT-sanoja (esim. artist:\"Nimi\" album:\"Jakso\")",
  "Spotify findet zu diesem Suchbegriff keine Alben": "Spotify ei löydä albumeja tällä hakusanalla",
  "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "Ruutu näyttää albumit, jotka Spotify löytää (enintään 100). Rajaa haulla artist:\"Nimi\" album:\"Jakso\" – ilman AND-sanaa.",
- "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "Uniajastin on päättynyt – laatikko sammuu parhaillaan."
+ "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "Uniajastin on päättynyt – laatikko sammuu parhaillaan.",
+ "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Väli kuten ennen (jakso {} – {}, laskettuna vanhimmasta)",
+ "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Anna molemmat numerot (alkaen 0, toinen ei pienempi kuin ensimmäinen)",
+ "Gezählt nach Datum: 0 ist die neueste Folge.": "Laskettu päivämäärän mukaan: jakso 0 on uusin."
 }

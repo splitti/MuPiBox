@@ -2857,5 +2857,8 @@
  "Spotify findet dazu keine Alben – bitte ohne AND, OR oder NOT suchen (z. B. artist:\"Name\" album:\"Folge\")": "Spotify k tomu nenašel žádná alba – hledejte prosím bez AND, OR nebo NOT (např. artist:\"Jméno\" album:\"Díl\")",
  "Spotify findet zu diesem Suchbegriff keine Alben": "Spotify k tomuto hledanému výrazu nenašel žádná alba",
  "Die Kachel zeigt die Alben, die Spotify dazu findet (bis zu 100). Eingrenzen mit artist:\"Name\" album:\"Folge\" – ohne AND.": "Dlaždice ukazuje alba, která k tomu Spotify najde (až 100). Zúžit pomocí artist:\"Jméno\" album:\"Díl\" – bez AND.",
- "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "Časovač vypnutí vypršel – box se právě vypíná."
+ "Der Schlaftimer ist abgelaufen – die Box schaltet sich gerade aus.": "Časovač vypnutí vypršel – box se právě vypíná.",
+ "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Rozsah jako dosud (díl {} – {}, počítáno od nejstaršího)",
+ "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Zadejte obě čísla (od 0, druhé ne menší než první)",
+ "Gezählt nach Datum: 0 ist die neueste Folge.": "Počítáno podle data: díl 0 je nejnovější."
 }
