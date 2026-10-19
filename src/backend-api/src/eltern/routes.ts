@@ -52,7 +52,7 @@ import { registerCustomBootRoutes } from './bootscreen-custom'
 import { registerFeedHostRoutes } from './feed-hosts'
 import { registerPinnedCardRoutes } from './pinned-cards'
 import { dropStatic, registerWifiStaticRoutes, startWifiStaticWatch } from './wifi-static'
-import { decodeWpaSsid } from '../wpa-ssid'
+import { decodeWpaSsid, parseWpaCliScanResults } from '../wpa-ssid'
 import { fanSpeedNow, registerHardwareRoutes } from './hardware'
 import { registerDietpiDashboardRoutes, startDietpiDashboard } from './dietpi-dashboard'
 import { registerServicesRoutes } from './services'
@@ -1462,18 +1462,14 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   const wpaScan = (): Promise<ScanNet[]> =>
     new Promise((resolve) => {
       const iface = wifiIface()
-      execFile('sudo', ['/usr/sbin/wpa_cli', '-i', iface, 'scan'], { timeout: 5000 }, () => {
+      execFile('sudo', ['wpa_cli', '-i', iface, 'scan'], { timeout: 5000 }, () => {
         setTimeout(() => {
-          execFile('sudo', ['/usr/sbin/wpa_cli', '-i', iface, 'scan_results'], { timeout: 5000 }, (err, stdout) => {
-            const nets: ScanNet[] = []
-            if (!err) {
-              for (const ln of stdout.split('\n').slice(1)) {
-                const f = ln.split('\t')
-                const ssid = f[4] ?? ''
-                if (f.length < 5 || !ssid || ssid.includes('\x00')) continue
-                nets.push({ ssid, signal_dbm: Number.parseInt(f[2], 10) || -100, encrypted: /WPA|WEP|RSN/.test(f[3] ?? '') })
-              }
-            }
+          execFile('sudo', ['wpa_cli', '-i', iface, 'scan_results'], { timeout: 5000 }, (err, stdout) => {
+            // (read as the box's WiFi page reads it: a name with umlauts comes as \xNN from wpa_cli, a hidden network
+            // with an empty or all-zero name)
+            const nets: ScanNet[] = err
+              ? []
+              : [...parseWpaCliScanResults(stdout)].map(([ssid, n]) => ({ ssid, signal_dbm: n.signalDbm, encrypted: n.secured }))
             resolve(nets)
           })
         }, 4000)

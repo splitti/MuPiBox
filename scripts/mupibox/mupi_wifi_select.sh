@@ -87,14 +87,22 @@ bring_up() {
 	if pgrep -f "wpa_supplicant.* -i ${i} " > /dev/null; then
 		log "$i is being brought up - waiting"
 		wait_for_ip "$i" "${seconds}" && return 0
-		if wpa_cli -i "$i" status 2>/dev/null | grep -q "wpa_state=COMPLETED"; then
+		local state
+		state=$(wpa_cli -i "$i" status 2>/dev/null | sed -n 's/^wpa_state=//p')
+		if [ "${state}" = "COMPLETED" ]; then
 			log "$i is connected but has no address - requesting one"
 			ifup "$i=default" >> "${LOG}" 2>&1 9>&-
 			wait_for_ip "$i" 20 && return 0
+		elif [ -n "${state}" ] && [ "${state}" != "INTERFACE_DISABLED" ]; then
+			# (still looking for a known network - out of reach, or the router not up yet: its wpa_supplicant is
+			# fine, starting it over only broke a link about to come up; the onboard WiFi takes over below)
+			log "$i is not connected (${state})"
+			return 1
 		fi
-		# Still nothing: the adapter is started over - its programs from scratch and ifupdown's idea of
+		# Stuck: its wpa_supplicant does not answer, the adapter is disabled, or it is connected and an address was
+		# asked for in vain. The adapter is started over - its programs from scratch and ifupdown's idea of
 		# "already configured" cleared (an ifup on top of that only answered "already configured", the box stayed offline)
-		log "$i is stuck - starting it over"
+		log "$i is stuck (${state:-no answer}) - starting it over"
 		ifdown --force "$i" >> "${LOG}" 2>&1 9>&-
 		pkill -f "wpa_supplicant.* -i ${i} " 2> /dev/null
 		pkill -f "dhclient.*/run/dhclient\.${i}\.pid" 2> /dev/null

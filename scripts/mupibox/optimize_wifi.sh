@@ -42,19 +42,21 @@ if ! grep -q "wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf" "$NETWORKINTERFA
 	cp "$NETWORKINTERFACES" "$NETWORKINTERFACES.bak"
 	sed -i 's|wpa-conf /etc/wpa_supplicant/wpa_supplicant.conf|wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf|' $NETWORKINTERFACES
 	sed -i 's|iface wlan0 inet dhcp|iface wlan0 inet manual|' $NETWORKINTERFACES
-	echo "iface default inet dhcp" | tee -a $NETWORKINTERFACES > /dev/null
 fi
 
-# The adapters defined in interfaces.d (see above) get the same roaming setup. Their backup goes next to
-# /etc/network/interfaces, not into interfaces.d: everything in there is read as a definition.
+# The adapters defined in interfaces.d (see above) get the same roaming setup - one that gets its address by DHCP: a
+# fixed address set in DietPi (iface wlanX inet static) stays as it is, with wpa-roam that stanza would be "manual"
+# and the address lost. Their backup goes next to /etc/network/interfaces, not into interfaces.d: everything in there
+# is read as a definition.
 for conf in "$NETWORKINTERFACESD"/wlan[0-9].conf; do
 	[ -f "$conf" ] || continue
-	if grep -q "^wpa-conf /etc/wpa_supplicant/wpa_supplicant.conf" "$conf"; then
+	if grep -q "^wpa-conf /etc/wpa_supplicant/wpa_supplicant.conf" "$conf" && grep -q "^iface wlan[0-9] inet dhcp" "$conf"; then
 		cp "$conf" "/etc/network/$(basename "$conf").bak"
 		sed -i -e 's|^wpa-conf /etc/wpa_supplicant/wpa_supplicant.conf|wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf|' -e 's|^iface \(wlan[0-9]\) inet dhcp|iface \1 inet manual|' "$conf"
 	fi
 done
-# the roaming setup brings the address by the logical interface "default": it has to be defined once
+# the roaming setup brings the address by the logical interface "default": it has to be defined once - one line for
+# every run before (with the adapters in interfaces.d, /etc/network/interfaces never had wpa-roam: each run added one)
 if ! grep -qs "^iface default inet dhcp" "$NETWORKINTERFACES" "$NETWORKINTERFACESD"/*; then
 	echo "iface default inet dhcp" >> "$NETWORKINTERFACES"
 fi
@@ -63,9 +65,17 @@ fi
 # is used is decided by mupi_wifi_select.sh (USB preferred, onboard as fallback).
 # One definition per adapter: an adapter that is defined twice (here and in interfaces.d/wlan1.conf, as an earlier
 # version of this script left it) starts two wpa_supplicant that stop each other - the link comes up and goes down
-# again a few seconds later, with no address.
+# again a few seconds later, with no address. The one here goes: its lines up to the next stanza or empty line (a
+# range up to a line that is not there - another order, wpa-conf instead of wpa-roam - deleted to the end of the file).
 if grep -qs "^iface wlan1 " "$NETWORKINTERFACESD"/*.conf && grep -q "^iface wlan1 " "$NETWORKINTERFACES"; then
-	sed -i '/^allow-hotplug wlan1$/,/^wpa-roam .*wpa_supplicant\.conf$/d' "$NETWORKINTERFACES"
+	cp "$NETWORKINTERFACES" "$NETWORKINTERFACES.bak-wlan1"
+	awk '
+		/^(allow-hotplug|auto)[ \t]+wlan1[ \t]*$/ || /^iface[ \t]+wlan1[ \t]/ { skip = 1; next }
+		skip && (/^[ \t]*$/ || /^(auto|allow-|iface|mapping|source)/) { skip = 0 }
+		!skip { print }
+	' "$NETWORKINTERFACES.bak-wlan1" > "$NETWORKINTERFACES.mupibox-new" &&
+		chmod 644 "$NETWORKINTERFACES.mupibox-new" &&
+		mv "$NETWORKINTERFACES.mupibox-new" "$NETWORKINTERFACES"
 fi
 if ! grep -qs "^iface wlan1 " "$NETWORKINTERFACES" "$NETWORKINTERFACESD"/*; then
 	{

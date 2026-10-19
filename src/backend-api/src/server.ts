@@ -57,7 +57,7 @@ import { OnlineCovers } from './online-covers'
 import { ardFeed, isArdFeed } from './ard-sounds'
 import { isEpisodePick } from './episode-pick'
 import { feedHostKey, feedHostsOf, isPrivateHost, neverFetched } from './lan-feeds'
-import { decodeWpaSsid } from './wpa-ssid'
+import { decodeWpaSsid, parseWpaCliScanResults, type WifiScanEntry, wifiBandOf } from './wpa-ssid'
 import { registerAudioOutputRoutes, startAudioWatch } from './audio-output'
 import { episodeKey, MAX_KEEP, type OfflineEpisode, PodcastOffline } from './podcast-offline'
 import { setFeedHeadReader } from './podcast-search'
@@ -3012,57 +3012,6 @@ app.get('/api/wifi/status', async (_req, res) => {
     res.status(500).send('error')
   }
 })
-
-// wpa_cli prints SSIDs with non-ASCII / special bytes as \xNN escapes.
-
-interface WifiScanEntry {
-  signalDbm: number
-  secured: boolean
-  bands: string[] // "2.4", "5" (and "6"): every band the network is broadcast on
-}
-
-function wifiBandOf(frequencyMhz: number): string | undefined {
-  if (frequencyMhz >= 2400 && frequencyMhz < 2500) {
-    return '2.4'
-  }
-  if (frequencyMhz >= 4900 && frequencyMhz < 5900) {
-    return '5'
-  }
-  if (frequencyMhz >= 5925) {
-    return '6'
-  }
-  return undefined
-}
-
-// "bssid / frequency / signal level / flags / ssid" per line; the strongest access
-// point wins when a network is broadcast by several.
-function parseWpaCliScanResults(stdout: string): Map<string, WifiScanEntry> {
-  const networks = new Map<string, WifiScanEntry>()
-  for (const line of stdout.split('\n').slice(1)) {
-    const parts = line.trim().split('\t')
-    if (parts.length < 5) {
-      continue
-    }
-    const signalDbm = Number.parseInt(parts[2], 10)
-    const ssid = decodeWpaSsid(parts.slice(4).join('\t'))
-    // Hidden networks show up with an empty or all-zero SSID.
-    if (Number.isNaN(signalDbm) || ssid.replaceAll('\0', '').trim() === '') {
-      continue
-    }
-    const band = wifiBandOf(Number.parseInt(parts[1], 10))
-    const previous = networks.get(ssid)
-    const bands = new Set(previous?.bands ?? [])
-    if (band) {
-      bands.add(band)
-    }
-    if (!previous || signalDbm > previous.signalDbm) {
-      networks.set(ssid, { signalDbm, secured: /WPA|WEP|RSN/.test(parts[3]), bands: [...bands] })
-    } else {
-      previous.bands = [...bands]
-    }
-  }
-  return networks
-}
 
 // Rough dBm -> percent (-100 dBm = 0 %, -50 dBm and better = 100 %).
 function wifiSignalPercent(signalDbm: number): number {
