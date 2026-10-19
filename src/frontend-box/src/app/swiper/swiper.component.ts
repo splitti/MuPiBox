@@ -407,10 +407,17 @@ export class SwiperComponent<T> {
   // covers are loaded by the time the page is visible - at the end of the page change (ionViewDidEnter) they came a
   // moment too late.
   public ionViewWillEnter(): void {
-    this.ionViewDidEnter()
+    this.enter()
   }
 
+  // (done at ionViewWillEnter already: a second time here set renderableLimit back while the list was growing, and it
+  // stayed cut until the next swipe - in Cover Flow with many albums the covers far on the right were missing)
   public ionViewDidEnter(): void {
+    if (this.pageIsShown()) return
+    this.enter()
+  }
+
+  private enter(): void {
     const key = this.positionKey()
     if (key && this.cachedSwiperPosition === 0) {
       this.cachedSwiperPosition = SwiperComponent.positions.get(key) ?? 0

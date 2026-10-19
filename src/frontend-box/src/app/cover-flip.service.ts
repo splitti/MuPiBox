@@ -110,8 +110,8 @@ export class CoverFlipService {
     return root
   }
 
-  // The way back: the same movement in reverse order. Used by the player's back button; without
-  // a remembered cover (e.g. the player was opened from somewhere else) the normal animation runs.
+  // The way back: the same movement in reverse order. Used by the player's back button; without a remembered cover
+  // (the player was opened from "Läuft gerade", "Weiterhören" or the app) the list fades in briefly (see cut).
   public readonly returnAnimation: AnimationBuilder = (_baseEl: HTMLElement, opts?: { enteringEl?: HTMLElement; leavingEl?: HTMLElement }) => {
     const opened = this.opened
     if (!opened || !opts?.enteringEl || !opts.leavingEl) {
@@ -123,11 +123,12 @@ export class CoverFlipService {
     return this.buildReturn(opened, opts.enteringEl, opts.leavingEl)
   }
 
-  // The way back without a cover to turn: the list shown, the page that is left gone at once (no fade over the list).
+  // The way back without a cover to turn: the page that is left gone at once (no fade over the list), the list fading
+  // in for a moment - a hard cut looked like a jump on the small display.
   private cut(opts?: { enteringEl?: HTMLElement; leavingEl?: HTMLElement }): Animation {
-    const root = createAnimation().duration(1)
+    const root = createAnimation().duration(150).easing('ease-out')
     if (opts?.enteringEl) {
-      root.addAnimation(createAnimation().addElement(opts.enteringEl).beforeRemoveClass('ion-page-invisible').fromTo('opacity', '1', '1'))
+      root.addAnimation(createAnimation().addElement(opts.enteringEl).beforeRemoveClass('ion-page-invisible').fromTo('opacity', '0', '1'))
     }
     if (opts?.leavingEl) {
       root.addAnimation(createAnimation().addElement(opts.leavingEl).beforeStyles({ opacity: '0' }))
