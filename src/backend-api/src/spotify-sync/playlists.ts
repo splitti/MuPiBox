@@ -63,7 +63,7 @@ export class SpotifyApiException extends Error {
  * (spotify-block.ts) - every request of the sync and of the app's album lists comes through here: during a block
  * Spotify is not asked (each request only keeps it going), and a 429 sets it for the display's lists too.
  */
-async function spotifyGet<T>(path: string, accessToken: string): Promise<T> {
+export async function spotifyGet<T>(path: string, accessToken: string): Promise<T> {
   const block = spotifyBlock()
   if (block) {
     const left = Math.max(1, Math.ceil((block.until - Date.now()) / 1000))

@@ -30,6 +30,9 @@ import type { SpotifyValidationRequest, SpotifyValidationResponse } from './mode
 import { CoverCacheService } from './services/cover-cache.service'
 import { SpotifyApiService } from './services/spotify-api.service'
 import { SpotifyMediaInfo } from './services/spotify-media-info.service'
+import { fetchFullPlaylistTracks } from './services/spotify-playlist-full'
+import { getValidAccessToken } from './spotify-sync/auth'
+import { loadSpotifyTokenStore } from './spotify-sync/config-loader'
 import { createSpotifySyncRouter } from './spotify-sync/routes'
 import { startScheduler } from './spotify-sync/scheduler'
 import type { RunSyncDeps } from './spotify-sync/state-machine'
@@ -363,6 +366,14 @@ setupMupiboxConfigWatch()
 
 // Initialize Spotify services
 const spotifyMediaInfo = new SpotifyMediaInfo()
+// The embed page a playlist is read from lists 100 tracks at most: the rest comes from the Web API with the Spotify login
+spotifyMediaInfo.fullPlaylistTracks = async (playlistId) => {
+  const store = loadSpotifyTokenStore(await getMupiboxConfig())
+  if (!store) return undefined
+  const token = await getValidAccessToken(store, updateMupiboxConfig)
+  if (!token.ok) return undefined
+  return fetchFullPlaylistTracks(playlistId, token.token)
+}
 let spotifyApiService: SpotifyApiService | undefined
 
 // We export the app so we can use it in testing.
