@@ -220,7 +220,18 @@
       <div class="kp-cover" [class.km-pressing]="pressingCover" (pointerdown)="coverPointerDown()" (pointerup)="coverPointerUp()" (pointerleave)="coverPointerUp()" (pointercancel)="coverPointerUp()">
         <img [src]="shownCover()" (error)="coverFailed()" draggable="false" ondragstart="return false;" alt="">
         @if ((media.type === 'radio' || media.type === 'rss') && currentPlayedLocal?.loading) {
-          <div class="km-cover-dots"><i></i><i></i><i></i></div>
+          @if (km()) {
+            <div class="km-cover-dots"><i></i><i></i><i></i></div>
+          } @else {
+            <!-- Cover Flow (design round 2 without the km themes): the dots have no styles there - the ring as on the
+                 other themes -->
+            <div class="load-indicator">
+              <svg viewBox="0 0 48 48">
+                <circle class="load-indicator-track" cx="24" cy="24" r="20"></circle>
+                <circle class="load-indicator-ring" [class.waiting]="loadProgress === 0" cx="24" cy="24" [attr.r]="loadRingRadius"></circle>
+              </svg>
+            </div>
+          }
         }
         @if (media.type === 'spotify' || media.type === 'library' || media.type === 'nas') {
           <div class="press-indicator" [class.active]="pressingCover" [style.--press-duration.ms]="listViewTimerMs">
