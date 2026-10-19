@@ -385,19 +385,26 @@ function checkSilence() {
 }
 
 // --- Buffering of streams before playback starts ---
-// mplayer starts once cache-min percent of the cache are filled (see the wrapper); mpv reports 0-100 of its goal.
-const cachePrefillPercent = player.cachePrefillPercent ?? 10
+// mpv reports 0-100 of its goal (cachePrefillPercent, 100)
+const cachePrefillPercent = player.cachePrefillPercent ?? 100
 let loadingTimer = null
 // The ring on the cover is shown for at least this long (ms): on a fast line the stream plays after a second or so, and
 // the display (it asks once a second) hardly saw the ring.
 const MIN_LOADING_MS = 2000
 let loadingSince = 0
 let loadingEndTimer = null
+// Where the stream starts (s): an episode that goes on reports that position at once - the sound runs once time_pos
+// is past it. And time_pos counts only once the new file is loaded (track-change): an answer to a time-pos query sent
+// before the loadfile came in afterwards with the position of the file before, and ended the loading.
+let loadingFromPos = 0
+let loadingFileLoaded = false
 
-function startLoading() {
+function startLoading(fromSeconds = 0) {
   currentMeta.loading = true
   currentMeta.loadProgress = 0
   loadingSince = Date.now()
+  loadingFromPos = Number(fromSeconds) || 0
+  loadingFileLoaded = false
   clearTimeout(loadingEndTimer)
   clearTimeout(loadingTimer)
   // Never leave the display waiting for ever (unreachable stream, stream ended, ...).
@@ -423,22 +430,20 @@ function finishLoading() {
   loadingEndTimer = setTimeout(stopLoading, rest)
 }
 
-// mplayer says "Starting playback" (track-change) once its cache is filled: the ring ends with it. mpv says file-loaded as
-// soon as the stream is OPEN and fills its cache after that - the ring ended in that moment, and the display showed
-// nothing for the seconds until the sound came. With mpv the loading ends with the cache filled (or, for a stream that
-// reports no buffering, with the sound running: time_pos).
-const loadingEndsWithCache = cachePrefillPercent >= 100
+// mpv says file-loaded (track-change) as soon as the stream is OPEN and fills its cache after that - the ring ended in
+// that moment, and the display showed nothing for the seconds until the sound came. The loading ends with the cache
+// filled, or, for a stream that reports no buffering, with the sound running (time_pos past where it started).
 player.on('cache-fill', (percent) => {
   if (currentMeta.loading) {
     currentMeta.loadProgress = Math.min(100, Math.round((percent / cachePrefillPercent) * 100))
-    if (loadingEndsWithCache && currentMeta.loadProgress >= 100) finishLoading()
+    if (currentMeta.loadProgress >= 100) finishLoading()
   }
 })
 player.on('track-change', () => {
-  if (!loadingEndsWithCache) finishLoading()
+  loadingFileLoaded = true
 })
 player.on('time_pos', (seconds) => {
-  if (loadingEndsWithCache && currentMeta.loading && Number(seconds) > 0.5) finishLoading()
+  if (currentMeta.loading && loadingFileLoaded && Number(seconds) > loadingFromPos + 0.5) finishLoading()
 })
 player.on('percent_pos', checkSilence)
 player.on('time_pos', checkSilence)
@@ -507,6 +512,9 @@ player.on('playlist-finish', () => {
   if (quietHoursState.state === 'grace') {
     finalizeQuietHoursBlock('playlist finished during grace period', true)
   }
+  // (a stream that ended or broke off before it played: no loading any more - it stayed on until the 90-s guard, and
+  // the display took the box for playing meanwhile. A reconnect below starts a loading of its own.)
+  stopLoading()
   // A podcast episode that ended long before its end: the connection to its server broke (mplayer takes that as
   // the end of the file) - it is opened again where it stopped
   if (reconnectEpisode()) return
@@ -2809,7 +2817,8 @@ function playURL(playedURL, resumeAt = null) {
     return
   }
   playbackGeneration++
-  startLoading()
+  // (an episode that goes on: the sound runs once mpv is past that position)
+  startLoading(resumeAt != null && player.startsAt ? resumeAt : 0)
   log.debug(`${now()}: [Spotify Control] Starting currentMeta.playing:${playedURL}`)
   //currentMeta.playing = true;
   writeplayerstatePlay()
