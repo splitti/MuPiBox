@@ -88,14 +88,33 @@ export class PlaytimeBlockedOverlayComponent {
   })
   protected readonly clockHint = computed(() => this.texts.text('clockNotSynced'))
 
-  // held on WiFi/battery: the settings for the parents, after the time set for the start page
+  // held on WiFi/battery: the settings for the parents, after the time set for the start page. With a finger the
+  // hold ended at once on the box (with the mouse it worked): the pointer is kept on the area now (a finger that rolls
+  // a little left it), a long press opens no context menu, and only a real move (> 24 px) or lifting it ends the hold.
   private holdTimer: number | undefined
-  protected holdStart(): void {
+  private holdFrom: { x: number; y: number } | null = null
+  protected holdStart(e: PointerEvent): void {
     if (this.preview()) return
+    console.log(`[lock-hold] down (${e.pointerType})`)
+    try {
+      ;(e.currentTarget as Element | null)?.setPointerCapture(e.pointerId)
+    } catch {
+      // (no capture: the hold still works while the finger stays on the area)
+    }
+    this.holdFrom = { x: e.clientX, y: e.clientY }
     window.clearTimeout(this.holdTimer)
-    this.holdTimer = window.setTimeout(() => this.parentAccess.open(), this.parentAccess.holdMs)
+    this.holdTimer = window.setTimeout(() => {
+      console.log('[lock-hold] held: settings')
+      this.holdFrom = null
+      this.parentAccess.open()
+    }, this.parentAccess.holdMs)
   }
-  protected holdEnd(): void {
+  protected holdMove(e: PointerEvent): void {
+    if (this.holdFrom && Math.hypot(e.clientX - this.holdFrom.x, e.clientY - this.holdFrom.y) > 24) this.holdEnd('moved')
+  }
+  protected holdEnd(why: string): void {
+    if (this.holdFrom) console.log(`[lock-hold] ${why} before the time`)
+    this.holdFrom = null
     window.clearTimeout(this.holdTimer)
   }
 

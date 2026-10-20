@@ -1,4 +1,13 @@
 .mupihat-icon-container {
+    // WiFi and battery in the toolbar's own colour (its text colour): the kids' themes set the status colours for
+    // their own background (dark icons on a light theme) - on this dark toolbar they were hardly to be seen
+    --st-on: initial;
+    --st-track: initial;
+    --st-full: initial;
+    --st-num: initial;
+    --st-low: initial;
+    --st-charge: initial;
+    --st-bolt-edge: initial;
     padding-right: 20px;
     display: inline-flex;
     align-items: center;

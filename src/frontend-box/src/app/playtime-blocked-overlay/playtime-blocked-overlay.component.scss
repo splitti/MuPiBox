@@ -187,5 +187,9 @@
     display: flex;
     align-items: center;
     -webkit-tap-highlight-color: transparent;
+    // (a finger held there: no browser gesture, no callout or text selection - they ended the hold)
+    touch-action: none;
+    -webkit-touch-callout: none;
+    user-select: none;
   }
 }
