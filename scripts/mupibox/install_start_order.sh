@@ -3,9 +3,10 @@
 # The start order of the services that are not needed for the display (run as root by the install and the update, they
 # call daemon-reload afterwards):
 #
-#   pm2 (server, player) -> the kiosk's Chromium shows the start page -> php-fpm -> lighttpd -> smbd -> DietPi dashboard
+#   pm2 (server, player) -> the kiosk's Chromium shows the start page -> LAN (mupi_ethernet) -> Bluetooth (bluetoothd)
+#   -> php-fpm -> lighttpd -> smbd -> DietPi dashboard
 #
-# These four were started 45 s after the power was switched on (mupibox-delayed-start.conf): a fixed time that is too
+# The last four were started 45 s after the power was switched on (mupibox-delayed-start.conf): a fixed time that is too
 # long on a fast box and too short on a slow one (a system on a stick: the display was still loading when they started,
 # Chromium's child processes waited 15 s for the browser, and the start page failed). Now each one starts when the one
 # before has started, the first when the display is up (mupibox-display-ready.service, wait_display_ready.sh: at most
@@ -32,7 +33,7 @@ TimeoutStartSec=150
 EOF
 
 before="${READY}"
-for unit in $(systemctl list-unit-files "php*-fpm.service" --no-legend 2>/dev/null | awk '{print $1}' | sed 's/\.service$//') lighttpd smbd dietpi-dashboard; do
+for unit in mupi_ethernet bluetooth $(systemctl list-unit-files "php*-fpm.service" --no-legend 2>/dev/null | awk '{print $1}' | sed 's/\.service$//') lighttpd smbd dietpi-dashboard; do
 	mkdir -p "${UNIT_DIR}/${unit}.service.d"
 	# (the fixed 45 s wait of the earlier versions goes)
 	rm -f "${UNIT_DIR}/${unit}.service.d/mupibox-delayed-start.conf"
