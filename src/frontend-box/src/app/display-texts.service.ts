@@ -61,6 +61,20 @@ export const DEFAULT_DISPLAY_TEXTS = {
   haScopePower: 'restart and switch off',
   haAllowAll: 'Allow all',
   haOnlyBasic: 'Only show and control',
+  // the parents' menu on the box (settings page, held on WiFi/battery) and its restart / shut down question
+  settingsTitle: 'Settings',
+  settingsNetwork: 'Network',
+  settingsBluetooth: 'Bluetooth',
+  settingsPower: 'Restart / Shut down',
+  settingsParentApp: 'Parent web app',
+  powerQuestion: 'Restart or shut down the MuPiBox?',
+  powerShutdown: 'Shut down',
+  powerReboot: 'Restart',
+  powerCancel: 'Cancel',
+  // lock screen: the box has not had the time from the network since it was switched on
+  clockNotSynced: 'Time not synchronised',
+  // the bar while the lock screen stands back for the parents' menu (see parent-access.service.ts)
+  parentAccessHint: 'Parent access – the lock still applies. Back to the start page, or 2 minutes without a touch: the lock screen comes back.',
 }
 export type DisplayTextKey = keyof typeof DEFAULT_DISPLAY_TEXTS
 type TextSet = Partial<Record<DisplayTextKey, string>>

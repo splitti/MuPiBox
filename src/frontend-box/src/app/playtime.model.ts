@@ -40,4 +40,6 @@ export interface PlaytimeStatusActive {
     allowUntil: number
     forceBlockUntil: number
   }
+  /** the box has had the time from the network since it was switched on (undefined: not known) */
+  clockSynced?: boolean
 }

@@ -142,3 +142,8 @@ body.mupi-header-hidden {
         word-break: break-word;
     }
 }
+
+// The lock screen stands back for the parents' settings (app/parent-access): room at the bottom for its bar
+body.mupi-parent-access ion-content {
+    --padding-bottom: 76px;
+}
