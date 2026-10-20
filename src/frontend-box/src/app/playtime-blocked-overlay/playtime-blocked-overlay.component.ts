@@ -3,7 +3,6 @@ import { IonIcon } from '@ionic/angular/standalone'
 import { addIcons } from 'ionicons'
 import { hourglass, hourglassOutline, moonOutline, musicalNotesOutline } from 'ionicons/icons'
 import { DisplayTextsService } from '../display-texts.service'
-import { LogService } from '../log.service'
 import { ParentAccessService } from '../parent-access/parent-access.service'
 import { PlaytimeService } from '../playtime.service'
 import { StatusComponent } from '../status/status.component'
@@ -27,7 +26,6 @@ export class PlaytimeBlockedOverlayComponent {
   private texts = inject(DisplayTextsService)
   private kmTheme = inject(KmThemeService)
   private parentAccess = inject(ParentAccessService)
-  private log = inject(LogService)
   // Preview of the admin interface (text-preview page): shows this screen whatever the real state is.
   public readonly preview = input<'blocked' | 'quiet' | undefined>(undefined)
   protected readonly km = this.kmTheme.isKm
@@ -95,28 +93,30 @@ export class PlaytimeBlockedOverlayComponent {
   // a little left it), a long press opens no context menu, and only a real move (> 24 px) or lifting it ends the hold.
   private holdTimer: number | undefined
   private holdFrom: { x: number; y: number } | null = null
+  // held: a light surface shows it
+  protected readonly holding = signal(false)
   protected holdStart(e: PointerEvent): void {
     if (this.preview()) return
-    this.log.log(`[lock-hold] down (${e.pointerType})`)
     try {
       ;(e.currentTarget as Element | null)?.setPointerCapture(e.pointerId)
     } catch {
       // (no capture: the hold still works while the finger stays on the area)
     }
     this.holdFrom = { x: e.clientX, y: e.clientY }
+    this.holding.set(true)
     window.clearTimeout(this.holdTimer)
     this.holdTimer = window.setTimeout(() => {
-      this.log.log('[lock-hold] held: settings')
       this.holdFrom = null
+      this.holding.set(false)
       this.parentAccess.open()
     }, this.parentAccess.holdMs)
   }
   protected holdMove(e: PointerEvent): void {
     if (this.holdFrom && Math.hypot(e.clientX - this.holdFrom.x, e.clientY - this.holdFrom.y) > 24) this.holdEnd('moved')
   }
-  protected holdEnd(why: string): void {
-    if (this.holdFrom) this.log.log(`[lock-hold] ${why} before the time`)
+  protected holdEnd(_why: string): void {
     this.holdFrom = null
+    this.holding.set(false)
     window.clearTimeout(this.holdTimer)
   }
 
