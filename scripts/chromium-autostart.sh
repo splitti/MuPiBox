@@ -4,17 +4,51 @@
 # Chromium-parameters: https://peter.sh/experiments/chromium-command-line-switches/
 #                      https://kapeli.com/cheat_sheets/Chromium_Command_Line_Switches.docset/Contents/Resources/Documents/index
 # /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh
-# Watchdog: now and then Chromium starts but never opens the start page (white screen, window title
-# stays "Untitled"; seen at boot and after a kiosk restart). If that is still the case after 60 s,
-# restart the kiosk once (the marker keeps a persistent failure from turning into a restart loop).
+# Watchdog: now and then Chromium starts but never opens the start page: the window stays on a blank page (title
+# "Untitled - Chromium", or no title at all), for ever. Seen at boot and after a kiosk restart; at a start of the box
+# Chromium's child processes wait 15 s for the browser while the card is busy ("Terminating current process after 15
+# seconds with no connection" in its log), the network service dies with them, and the first navigation to the start
+# page fails - Chromium does not try again. The title is read every 10 s (a single look 60 s after the start missed
+# a window that had no title yet at that moment and stayed white for ever): a large Chromium window without
+# "MuPiBox" in its title for two looks in a row after 60 s, or no Chromium window at all after 150 s (the display did
+# not come up), restarts the kiosk. At most 3 restarts per start of the box (the count is kept in /tmp, the restarted
+# kiosk runs this watchdog again); the start page being open ends it, and the count with it.
 (
-	sleep 60
-	export DISPLAY=:0 XAUTHORITY="$(ls -t /tmp/serverauth.* 2>/dev/null | head -1)"
-	if xwininfo -root -tree 2>/dev/null | grep -q '"Untitled - Chromium"' && ! find /tmp/kiosk-watchdog -mmin -5 2>/dev/null | grep -q .; then
-		touch /tmp/kiosk-watchdog
-		logger -t mupibox-kiosk "Chromium did not load the start page, restarting the kiosk"
-		/usr/local/bin/mupibox/restart_kiosk.sh
-	fi
+	COUNT=/tmp/kiosk-watchdog-tries
+	waited=0
+	bad=0
+	while [ "$waited" -lt 420 ]; do
+		sleep 10
+		waited=$((waited + 10))
+		export DISPLAY=:0 XAUTHORITY="$(ls -t /tmp/serverauth.* 2>/dev/null | head -1)"
+		# the kiosk's window: the large one of Chromium (the other is a 10 x 10 helper window)
+		win=$(xwininfo -root -tree 2>/dev/null | awk '/\("chromium" "Chromium"\)/ { split($(NF - 1), g, "x"); if (g[1] + 0 >= 400) { print; exit } }')
+		case "$win" in
+			*'"MuPiBox'*)
+				rm -f "$COUNT"
+				exit 0
+				;;
+		esac
+		if { [ -n "$win" ] && [ "$waited" -ge 60 ]; } || { [ -z "$win" ] && [ "$waited" -ge 150 ]; }; then
+			bad=$((bad + 1))
+		else
+			bad=0
+		fi
+		if [ "$bad" -ge 2 ]; then
+			tries=$(cat "$COUNT" 2>/dev/null)
+			tries=${tries:-0}
+			if [ "$tries" -ge 3 ]; then
+				logger -t mupibox-kiosk "Chromium still has not loaded the start page after $tries restarts, giving up"
+				exit 0
+			fi
+			echo $((tries + 1)) > "$COUNT"
+			logger -t mupibox-kiosk "Chromium did not load the start page (window: ${win:-none}), restarting the kiosk (try $((tries + 1)) of 3)"
+			# (setsid: the restart kills every process whose name has "chromium" in it - this watchdog too, it is named after
+			# this script - and must go on without it)
+			setsid /usr/local/bin/mupibox/restart_kiosk.sh >/dev/null 2>&1 &
+			exit 0
+		fi
+	done
 ) >/dev/null 2>&1 &
 clear
 /usr/local/bin/mupibox/./startup.sh &
