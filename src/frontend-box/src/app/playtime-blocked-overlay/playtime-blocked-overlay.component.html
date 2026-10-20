@@ -18,6 +18,7 @@
   </div>
   <div
     class="lock-status"
+    [class.holding]="holding()"
     (pointerdown)="holdStart($event)"
     (pointermove)="holdMove($event)"
     (pointerup)="holdEnd('up')"

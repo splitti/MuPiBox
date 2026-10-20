@@ -187,6 +187,13 @@
     display: flex;
     align-items: center;
     -webkit-tap-highlight-color: transparent;
+    border-radius: 26px;
+    transition: background-color 150ms ease-out;
+
+    // held (for the settings): a light surface around WiFi and battery, as on the start page
+    &.holding {
+      background-color: color-mix(in srgb, var(--st-on, #ffffff) 16%, transparent);
+    }
     // (a finger held there: no browser gesture, no callout or text selection - they ended the hold)
     touch-action: none;
     -webkit-touch-callout: none;
