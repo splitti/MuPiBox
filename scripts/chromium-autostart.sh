@@ -8,18 +8,19 @@
 # "Untitled - Chromium", or no title at all), for ever. Seen at boot and after a kiosk restart; at a start of the box
 # Chromium's child processes wait 15 s for the browser while the card is busy ("Terminating current process after 15
 # seconds with no connection" in its log), the network service dies with them, and the first navigation to the start
-# page fails - Chromium does not try again. The title is read every 10 s (a single look 60 s after the start missed
-# a window that had no title yet at that moment and stayed white for ever): a large Chromium window without
-# "MuPiBox" in its title for two looks in a row after 60 s, or no Chromium window at all after 150 s (the display did
-# not come up), restarts the kiosk. At most 3 restarts per start of the box (the count is kept in /tmp, the restarted
-# kiosk runs this watchdog again); the start page being open ends it, and the count with it.
+# page fails - Chromium does not try again. The window's title is looked at for the first time after 50 s and then every
+# 10 s (a single look 60 s after the start missed a window that had no title yet at that moment and stayed white for
+# ever): a large Chromium window without "MuPiBox" in its title for two looks in a row, or no Chromium window at all after
+# 150 s (the display did not come up), restarts the kiosk. At most 3 restarts per start of the box (the count is kept in
+# /tmp, the restarted kiosk runs this watchdog again); the start page being open ends it, and the count with it.
 (
 	COUNT=/tmp/kiosk-watchdog-tries
-	waited=0
+	FIRST=50      # seconds until the first look, then one every 10 s
+	NO_WINDOW=150 # seconds after which a missing Chromium window counts as a failure
+	sleep "$FIRST"
+	waited=$FIRST
 	bad=0
-	while [ "$waited" -lt 420 ]; do
-		sleep 10
-		waited=$((waited + 10))
+	while [ "$waited" -le 420 ]; do
 		export DISPLAY=:0 XAUTHORITY="$(ls -t /tmp/serverauth.* 2>/dev/null | head -1)"
 		# the kiosk's window: the large one of Chromium (the other is a 10 x 10 helper window)
 		win=$(xwininfo -root -tree 2>/dev/null | awk '/\("chromium" "Chromium"\)/ { split($(NF - 1), g, "x"); if (g[1] + 0 >= 400) { print; exit } }')
@@ -29,7 +30,7 @@
 				exit 0
 				;;
 		esac
-		if { [ -n "$win" ] && [ "$waited" -ge 60 ]; } || { [ -z "$win" ] && [ "$waited" -ge 150 ]; }; then
+		if [ -n "$win" ] || [ "$waited" -ge "$NO_WINDOW" ]; then
 			bad=$((bad + 1))
 		else
 			bad=0
@@ -48,6 +49,8 @@
 			setsid /usr/local/bin/mupibox/restart_kiosk.sh >/dev/null 2>&1 &
 			exit 0
 		fi
+		sleep 10
+		waited=$((waited + 10))
 	done
 ) >/dev/null 2>&1 &
 clear
