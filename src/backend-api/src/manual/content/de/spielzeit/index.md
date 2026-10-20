@@ -13,6 +13,8 @@ In der App unter **Spielzeit** bestimmst du, wann und wie lange die Box spielt.
 
 Ist das Limit aufgebraucht oder läuft eine Ruhezeit, erscheint auf dem Display ein Hinweis statt des Players. Den Text änderst du unter **Einstellungen › Aussehen › Texte auf dem Display** (Bildschirme „Limit erreicht“, „Ruhezeit“ und „QR-Code für Eltern“). Leer heißt: Der Text der eingestellten Box-Sprache gilt.
 
+Oben auf dem Sperrbild stehen die Uhrzeit sowie WLAN und Akku. Hältst du WLAN und Akku gedrückt, kommst du als Eltern auch jetzt an die Einstellungen am Display, etwa um ein WLAN einzurichten oder den QR-Code für die App zu zeigen. Die Sperre gilt dabei weiter ([Während einer Ruhezeit oder nach dem Tageslimit](../bedienung/eltern-zugang.md)).
+
 Ein kleines Symbol auf dem Display zeigt die verbleibende Spielzeit an.
 
 ## Hörschutz

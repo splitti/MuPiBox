@@ -26,7 +26,7 @@ Die Startseite der Box ist das Anmeldefenster der App. Von dort gelangst du in d
 Die App kennt mehrere Wege hinein:
 
 - **Mit Passwort**, das du unter **Einstellungen › Sicherheit › Passwort & Anmeldung** vergibst. Es gilt für die ganze App, am Handy wie am PC.
-- **Per QR-Code am Display**: Halte die Statusanzeige oben rechts am Display einige Sekunden gedrückt (die Haltezeit ist einstellbar unter **Einstellungen › Display & Bedienung › Bedienung am Display**). Es öffnen sich die Einstellungen am Display. Tippe dort auf **Parent web app**: Es erscheint ein QR-Code, den du mit dem Handy scannst. Das geht auch ohne Passwort ([Einstellungen am Display](../bedienung/eltern-zugang.md)).
+- **Per QR-Code am Display**: Halte die Statusanzeige oben rechts am Display einige Sekunden gedrückt (die Haltezeit ist einstellbar unter **Einstellungen › Display & Bedienung › Bedienung am Display**). Es öffnen sich die Einstellungen am Display. Tippe dort auf **Eltern-WebApp** (auf einer Box ohne gewählte Sprache **Parent web app**): Es erscheint ein QR-Code, den du mit dem Handy scannst. Das geht auch ohne Passwort ([Einstellungen am Display](../bedienung/eltern-zugang.md)).
 - **Mit einem Link über Telegram**, wenn du den Bot eingerichtet hast ([Telegram](../netzwerk/telegram.md)).
 
 Ist **Anmeldung verlangen** eingeschaltet, schützt die Box auch ihre Display-Seite und ihre Schnittstelle vor Zugriffen aus dem Netzwerk. Die Box selbst, ihr Display und ihre eigenen Dienste sind davon nicht betroffen.
