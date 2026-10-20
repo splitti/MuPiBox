@@ -16,7 +16,14 @@
       </span>
     }
   </div>
-  <div class="lock-status" (pointerdown)="holdStart()" (pointerup)="holdEnd()" (pointerleave)="holdEnd()" (pointercancel)="holdEnd()">
+  <div
+    class="lock-status"
+    (pointerdown)="holdStart($event)"
+    (pointermove)="holdMove($event)"
+    (pointerup)="holdEnd('up')"
+    (pointercancel)="holdEnd('cancel')"
+    (contextmenu)="$event.preventDefault()"
+  >
     <mupi-status></mupi-status>
   </div>
   <div class="content">
