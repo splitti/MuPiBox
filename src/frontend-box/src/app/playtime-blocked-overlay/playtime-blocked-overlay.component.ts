@@ -3,6 +3,7 @@ import { IonIcon } from '@ionic/angular/standalone'
 import { addIcons } from 'ionicons'
 import { hourglass, hourglassOutline, moonOutline, musicalNotesOutline } from 'ionicons/icons'
 import { DisplayTextsService } from '../display-texts.service'
+import { LogService } from '../log.service'
 import { ParentAccessService } from '../parent-access/parent-access.service'
 import { PlaytimeService } from '../playtime.service'
 import { StatusComponent } from '../status/status.component'
@@ -26,6 +27,7 @@ export class PlaytimeBlockedOverlayComponent {
   private texts = inject(DisplayTextsService)
   private kmTheme = inject(KmThemeService)
   private parentAccess = inject(ParentAccessService)
+  private log = inject(LogService)
   // Preview of the admin interface (text-preview page): shows this screen whatever the real state is.
   public readonly preview = input<'blocked' | 'quiet' | undefined>(undefined)
   protected readonly km = this.kmTheme.isKm
@@ -95,7 +97,7 @@ export class PlaytimeBlockedOverlayComponent {
   private holdFrom: { x: number; y: number } | null = null
   protected holdStart(e: PointerEvent): void {
     if (this.preview()) return
-    console.log(`[lock-hold] down (${e.pointerType})`)
+    this.log.log(`[lock-hold] down (${e.pointerType})`)
     try {
       ;(e.currentTarget as Element | null)?.setPointerCapture(e.pointerId)
     } catch {
@@ -104,7 +106,7 @@ export class PlaytimeBlockedOverlayComponent {
     this.holdFrom = { x: e.clientX, y: e.clientY }
     window.clearTimeout(this.holdTimer)
     this.holdTimer = window.setTimeout(() => {
-      console.log('[lock-hold] held: settings')
+      this.log.log('[lock-hold] held: settings')
       this.holdFrom = null
       this.parentAccess.open()
     }, this.parentAccess.holdMs)
@@ -113,7 +115,7 @@ export class PlaytimeBlockedOverlayComponent {
     if (this.holdFrom && Math.hypot(e.clientX - this.holdFrom.x, e.clientY - this.holdFrom.y) > 24) this.holdEnd('moved')
   }
   protected holdEnd(why: string): void {
-    if (this.holdFrom) console.log(`[lock-hold] ${why} before the time`)
+    if (this.holdFrom) this.log.log(`[lock-hold] ${why} before the time`)
     this.holdFrom = null
     window.clearTimeout(this.holdTimer)
   }
