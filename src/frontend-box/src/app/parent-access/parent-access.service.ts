@@ -3,6 +3,7 @@ import { Injectable, inject, signal } from '@angular/core'
 import { NavigationEnd, Router } from '@angular/router'
 import { filter } from 'rxjs'
 import { environment } from '../../environments/environment'
+import { LogService } from '../log.service'
 import type { MupiboxConfig } from '../mupibox-config.model'
 
 // The parents' way into the settings while playback is locked (quiet time, the day's limit): held on WiFi/battery of
@@ -13,6 +14,7 @@ import type { MupiboxConfig } from '../mupibox-config.model'
 export class ParentAccessService {
   private router = inject(Router)
   private http = inject(HttpClient)
+  private log = inject(LogService)
 
   // the pages it opens (a path and what is below it: /wifi/add)
   private static readonly PAGES = ['/settings', '/wifi', '/bluetooth']
@@ -36,6 +38,24 @@ export class ParentAccessService {
     this.router.events.pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd)).subscribe((e) => {
       if (this.active() && !ParentAccessService.allowed(e.urlAfterRedirects)) this.end()
     })
+    // TEMPORARY (finger hold on the box): what a finger does - target, start, end or cancel, context menu
+    const where = (e: Event) => {
+      const t = e.target as Element | null
+      return `${t?.tagName?.toLowerCase() ?? '?'}.${String(t?.getAttribute?.('class') ?? '').slice(0, 40)}`
+    }
+    let downAt = 0
+    for (const type of ['pointerdown', 'pointerup', 'pointercancel', 'contextmenu', 'touchstart', 'touchend', 'touchcancel']) {
+      document.addEventListener(
+        type,
+        (e) => {
+          const p = e as PointerEvent
+          if (type.startsWith('pointer') && p.pointerType !== 'touch') return
+          if (type === 'pointerdown' || type === 'touchstart') downAt = Date.now()
+          this.log.log(`[touch-debug] ${type} ${where(e)} +${Date.now() - downAt} ms`)
+        },
+        { capture: true, passive: true },
+      )
+    }
     // (every touch on these pages starts the 2 minutes again)
     document.addEventListener('pointerdown', () => this.active() && this.restartIdle(), {
       capture: true,
