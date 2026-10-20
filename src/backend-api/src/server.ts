@@ -2075,6 +2075,16 @@ function withLiveOverride(data: Record<string, unknown>): Record<string, unknown
   return { ...data, override: { ...current, forceBlockUntil: Number(ov.forceBlockUntil) || 0, allowUntil: Number(ov.allowUntil) || 0 } }
 }
 
+// Has the box had the time from the network since it was switched on? The Pi has no clock of its own: switched on
+// without a network it goes on from the time it was switched off (fake-hwclock) - a quiet time or the day's limit of
+// then may still hold. systemd-timesyncd leaves this file once it has set the time (/run is emptied at every start);
+// without timesyncd (no such folder) it is not known - the lock screen then says nothing about it.
+const TIMESYNC_DIR = '/run/systemd/timesync'
+function clockSynced(): boolean | undefined {
+  if (fs.existsSync(`${TIMESYNC_DIR}/synchronized`)) return true
+  return fs.existsSync(TIMESYNC_DIR) ? false : undefined
+}
+
 app.get('/api/playtime', (_req, res) => {
   const disabled: PlaytimeStatus = { enabled: false }
   if (!fs.existsSync(playtimeFile)) {
@@ -2087,7 +2097,7 @@ app.get('/api/playtime', (_req, res) => {
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
       res.json(disabled)
     } else {
-      res.json(data && typeof data === 'object' ? withLiveOverride(data as Record<string, unknown>) : data)
+      res.json(data && typeof data === 'object' ? { ...withLiveOverride(data as Record<string, unknown>), clockSynced: clockSynced() } : data)
     }
   })
 })

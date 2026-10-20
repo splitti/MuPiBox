@@ -144,3 +144,48 @@
     opacity: 1;
   }
 }
+
+// Top left the time, top right WiFi and battery (as on the start page; held, they open the settings for the parents).
+// Their colour is the status' one of the theme (--st-on: km.scss, coverflow.css) - white on the plain overlay.
+.playtime-blocked-overlay {
+  .lock-clock {
+    position: absolute;
+    left: 26px;
+    top: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    color: var(--st-on, #ffffff);
+    text-align: left;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  .lock-time {
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  .lock-clock-hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 15px;
+    font-weight: 600;
+    opacity: 0.8;
+  }
+
+  // the same place as the status group of the start page: 64 px line under a 4 px edge
+  .lock-status {
+    position: absolute;
+    top: 4px;
+    right: 8px;
+    height: 64px;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+}

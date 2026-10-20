@@ -1,4 +1,24 @@
 <div class="playtime-blocked-overlay" (click)="$event.stopPropagation()">
+  <!-- top left the time (with a hint while the box has not had it from the network), top right WiFi and battery as
+       on the start page - held, they open the settings for the parents (parent-access.service.ts) -->
+  <div class="lock-clock">
+    <span class="lock-time">{{ time() }}</span>
+    @if (clockNotSynced()) {
+      <span class="lock-clock-hint">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+          <path d="M2 8.5a15 15 0 0 1 20 0" />
+          <path d="M5.5 12a10 10 0 0 1 13 0" />
+          <path d="M9 15.5a5 5 0 0 1 6 0" />
+          <circle cx="12" cy="19" r="1.2" fill="currentColor" stroke="none" />
+          <path d="M3 3l18 18" />
+        </svg>
+        {{ clockHint() }}
+      </span>
+    }
+  </div>
+  <div class="lock-status" (pointerdown)="holdStart()" (pointerup)="holdEnd()" (pointerleave)="holdEnd()" (pointercancel)="holdEnd()">
+    <mupi-status></mupi-status>
+  </div>
   <div class="content">
     @if (km()) {
       <!-- km themes: the theme's mascot asleep, the icon as a badge on it; the texts next to it -->

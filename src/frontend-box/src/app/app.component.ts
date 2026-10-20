@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http'
-import { ChangeDetectionStrategy, Component, computed, effect, Signal, signal } from '@angular/core'
+import { ChangeDetectionStrategy, Component, computed, effect, inject, Signal, signal } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { IonApp, IonRouterOutlet } from '@ionic/angular/standalone'
 import { catchError, distinctUntilChanged, firstValueFrom, interval, map, Observable, of, switchMap, timeout } from 'rxjs'
@@ -15,6 +15,8 @@ import type { PlaytimePlayState } from './playtime.model'
 import { PlaytimeService } from './playtime.service'
 import { ElternMagicLinkOverlayComponent } from './eltern-magic-link/eltern-magic-link-overlay.component'
 import { HaPairingOverlayComponent } from './ha-pairing/ha-pairing-overlay.component'
+import { ParentAccessBarComponent } from './parent-access/parent-access-bar.component'
+import { ParentAccessService } from './parent-access/parent-access.service'
 import { PlaytimeBlockedOverlayComponent } from './playtime-blocked-overlay/playtime-blocked-overlay.component'
 import { PlaytimeChipComponent } from './playtime-chip/playtime-chip.component'
 import { buildResumeMedia } from './resume-builder'
@@ -25,7 +27,15 @@ import { KmThemeService } from './theme/km-theme.service'
   selector: 'app-root',
   templateUrl: 'app.component.html',
   styleUrls: ['app.component.scss'],
-  imports: [IonApp, IonRouterOutlet, PlaytimeBlockedOverlayComponent, PlaytimeChipComponent, ElternMagicLinkOverlayComponent, HaPairingOverlayComponent],
+  imports: [
+    IonApp,
+    IonRouterOutlet,
+    PlaytimeBlockedOverlayComponent,
+    PlaytimeChipComponent,
+    ElternMagicLinkOverlayComponent,
+    HaPairingOverlayComponent,
+    ParentAccessBarComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent {
@@ -37,6 +47,7 @@ export class AppComponent {
   // box's own state (display off, a real playtime lock, the playtime chip).
   protected readonly textPreview = window.location.pathname.startsWith('/text-preview')
   protected playtimeBlocked: Signal<boolean>
+  protected readonly parentAccess = inject(ParentAccessService)
 
   // Track previous playtime state to detect normal -> grace/blocked transitions.
   // 'unknown' on first tick avoids spurious save before we know the baseline.
@@ -81,6 +92,10 @@ export class AppComponent {
     this.playtimeBlocked = computed(() => {
       const s = playtimeService.status()
       return s.enabled === true && s.state === 'blocked'
+    })
+    // the lock ended while the parents were in the settings: the next lock shows its screen again
+    effect(() => {
+      if (!this.playtimeBlocked() && this.parentAccess.active()) this.parentAccess.end()
     })
 
     // Global resume-on-cap: when playtime/quiet hours transitions
