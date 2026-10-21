@@ -4,6 +4,7 @@
 // scripts/mupibox/legacy_admin.sh (as root): php-fpm, lighttpd's PHP module, and the .php addresses sent to the app.
 // mupibox.legacyAdmin: false = off (a new installation), true or not there = on (a box set up before keeps it).
 import { execFile } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { requireCsrf, requireSession } from './middleware'
@@ -14,10 +15,17 @@ export interface LegacyAdminDeps {
 }
 
 const SCRIPT = '/usr/local/bin/mupibox/legacy_admin.sh'
+// written by the script when it switches off (lighttpd sends the .php addresses to the app): the state as the web
+// server has it - the config's key can be gone (a reset of the box configuration) while the admin interface stays off
+const OFF_CONF = '/etc/lighttpd/conf-enabled/92-mupibox-admin-off.conf'
 
-/** The admin interface is on (a box that never chose keeps it on). */
+/** The admin interface is on: as the web server has it (the config's key only where that cannot be seen). */
 export function legacyAdminOn(cfg: MupiboxConfig | undefined): boolean {
-  return (cfg?.mupibox as Record<string, unknown> | undefined)?.legacyAdmin !== false
+  try {
+    return !existsSync(OFF_CONF)
+  } catch {
+    return (cfg?.mupibox as Record<string, unknown> | undefined)?.legacyAdmin !== false
+  }
 }
 
 function run(args: string[], timeoutMs: number): Promise<{ ok: boolean; stdout: string }> {
@@ -40,17 +48,23 @@ export function registerLegacyAdminRoutes(router: Router, deps: LegacyAdminDeps)
   router.post('/legacy-admin', requireSession, requireCsrf, async (req, res) => {
     const on = (req.body as { on?: unknown } | undefined)?.on
     if (typeof on !== 'boolean') return void res.status(400).json({ error: 'invalid on' })
-    // (lighttpd is read again only after the answer: the app's request goes through it, and its reload cut it off)
-    const job = switching.then(() => run([on ? 'on' : 'off', 'noreload'], 90000))
-    switching = job.catch(() => undefined)
-    const r = await job
-    if (!r.ok) return void res.status(500).json({ ok: false, error: 'switch_failed' })
-    await deps.updateMupiboxConfig((cfg) => {
-      cfg.mupibox = { ...((cfg.mupibox as Record<string, unknown>) ?? {}), legacyAdmin: on }
+    // One job in the queue: the switch, its config, and lighttpd read again - only after the answer (the app's request
+    // goes through lighttpd, and its reload cut it off). The next switch waits for all of it: two at once ran over each
+    // other, and one's reload fell into the other's request.
+    const job = switching.then(async () => {
+      const r = await run([on ? 'on' : 'off', 'noreload'], 90000)
+      if (!r.ok) return false
+      await deps.updateMupiboxConfig((cfg) => {
+        cfg.mupibox = { ...((cfg.mupibox as Record<string, unknown>) ?? {}), legacyAdmin: on }
+      })
+      return true
     })
+    switching = job
+      .then((ok) => new Promise((resolve) => setTimeout(resolve, ok ? 1500 : 0)).then(() => run(['reload'], 30000)))
+      .catch(() => undefined)
+    const ok = await job.catch(() => false)
+    if (!ok) return void res.status(500).json({ ok: false, error: 'switch_failed' })
     console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Admin interface switched ${on ? 'on' : 'off'}`)
     res.json({ ok: true })
-    const reload = new Promise((resolve) => setTimeout(resolve, 1500)).then(() => run(['reload'], 30000))
-    switching = reload.catch(() => undefined)
   })
 }

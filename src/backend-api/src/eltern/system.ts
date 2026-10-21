@@ -15,7 +15,22 @@ export interface SystemDeps {
   updateMupiboxConfig: (mutate: (cfg: Record<string, unknown>) => void) => Promise<void>
 }
 
-// The end of a log (at most maxBytes): a log of days can be large, the support zip goes to Discord
+// Access data a log may carry, blacked out before it goes into the support zip (it is shared on Discord): a user and
+// password in an address (http://user:pass@…), token-like parameters of an address (a radio stream's ?token=…, a
+// feed's key, Spotify's code), Bearer tokens, Telegram bot tokens
+export function withoutLogSecrets(text: string): string {
+  return text
+    .replace(/\b([a-z][a-z0-9+.-]*:\/\/)[^\s/@:]+:[^\s/@]+@/gi, '$1***:***@')
+    .replace(
+      /([?&;](?:token|access_token|refresh_token|id_token|auth|authorization|key|apikey|api_key|apiKey|secret|client_secret|password|passwd|pass|pw|pwd|sig|signature|session|sessionid|sid|code|ticket)=)[^&\s"'<>]+/gi,
+      '$1***',
+    )
+    .replace(/\b(Bearer\s+)[A-Za-z0-9._~+/=-]{8,}/g, '$1***')
+    .replace(/\bbot\d{6,}:[A-Za-z0-9_-]{20,}/g, 'bot***')
+}
+
+// The end of a log (at most maxBytes): a log of days can be large, the support zip goes to Discord - without the
+// access data in it (withoutLogSecrets)
 async function copyTail(from: string, to: string, maxBytes: number): Promise<void> {
   const fh = await fsp.open(from, 'r')
   try {
@@ -23,7 +38,7 @@ async function copyTail(from: string, to: string, maxBytes: number): Promise<voi
     const length = Math.min(size, maxBytes)
     const buf = Buffer.alloc(length)
     await fh.read(buf, 0, length, size - length)
-    await fsp.writeFile(to, buf)
+    await fsp.writeFile(to, withoutLogSecrets(buf.toString('utf8')))
   } finally {
     await fh.close()
   }
