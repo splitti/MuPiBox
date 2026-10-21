@@ -1091,7 +1091,9 @@ function mountStart(root) {
   drawPins(root)
   api(`${API}/legacy-admin`).then((r) => {
     startState.legacyAdmin = !(r.ok && r.body?.on === false)
-    if (!startState.legacyAdmin) $('[data-go="ext:admin"]', root)?.remove()
+    const row = $('[data-go="ext:admin"]', root)
+    if (!startState.legacyAdmin) row?.remove()
+    else if (!row) $('.start-more .navlist', root)?.insertAdjacentHTML('beforeend', navRow('ext:admin', 'Admin-Interface', 'Legacy · die bisherige Oberfläche', 'ext'))
   })
   loadOutput(root)
   every(15000, () => loadOutput(root))
@@ -9323,7 +9325,10 @@ function mountExperts(root, page) {
     const r = await api(`${API}/legacy-admin`, { method: 'POST', body: { on } })
     toast(r.ok && r.body?.ok ? (on ? 'Admin-Interface eingeschaltet' : 'Admin-Interface aus') : 'Das hat nicht geklappt', r.ok && r.body?.ok ? 'ok' : 'info')
     // (not asked again at once: the web server reads its config again right after the answer - see legacy-admin.ts)
-    if (r.ok && r.body?.ok) adm.legacy = on
+    if (r.ok && r.body?.ok) {
+      adm.legacy = on
+      startState.legacyAdmin = on
+    }
     if (currentPage()?.id === page.id) renderPage(page, false)
   }
   $('#ex-dash', root).onchange = async (e) => {
