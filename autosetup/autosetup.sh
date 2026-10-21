@@ -307,7 +307,9 @@ STEP=0
 
 	echo -e "XXX\n${STEP}\nCreate hushlogin and MuPiBox config... \nXXX"
 	before=$(date +%s)
-	touch /home/dietpi/.hushlogin >&3 2>&3
+	# No DietPi banner (logo, system data, "Running warm...") on the display's console while the box starts: for dietpi,
+	# and for root, who logs in there on DietPi 10 / Debian 13 (the agetty line below is not the same there)
+	touch /home/dietpi/.hushlogin /root/.hushlogin >&3 2>&3
 	mv -f ${MUPI_SRC}/config/templates/mupiboxconfig.json ${CONFIG} >&3 2>&3
 	chown root:www-data ${CONFIG} >&3 2>&3
 	chmod 775 ${CONFIG} >&3 2>&3
