@@ -868,6 +868,9 @@ rm -f /tmp/mupibox-update-failed
 		mv -f ${MUPI_SRC}/config/services/mupi_goodbye.service /etc/systemd/system/mupi_goodbye.service >&3 2>&3
 		MUPI_GOODBYE=1
 	fi
+	# No DietPi banner (logo, system data, "Running warm...") on the display's console while the box starts: DietPi shows
+	# it at the autologin unless ~/.hushlogin exists - for dietpi, and for root, who logs in there on DietPi 10 / Debian 13
+	touch /home/dietpi/.hushlogin /root/.hushlogin >&3 2>&3
 	# The display's autologin without the 5 s Type=idle wait (see config/services/getty@tty1.service.d/mupibox.conf)
 	if [ -f "${MUPI_SRC}/config/services/getty@tty1.service.d/mupibox.conf" ]; then
 		mkdir -p "/etc/systemd/system/getty@tty1.service.d" >&3 2>&3
