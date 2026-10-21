@@ -2917,5 +2917,12 @@
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Bereik zoals eerder (aflevering {} – {}, geteld vanaf de oudste)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Vul beide nummers in (vanaf 0, het tweede niet kleiner dan het eerste)",
  "Gezählt nach Datum: 0 ist die neueste Folge.": "Geteld op datum: aflevering 0 is de nieuwste.",
- "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Komt er een nieuwe aflevering bij, dan schuift het bereik mee."
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Komt er een nieuwe aflevering bij, dan schuift het bereik mee.",
+ "Admin-Interface aus": "Beheerinterface uit",
+ "Admin-Interface eingeschaltet": "Beheerinterface ingeschakeld",
+ "Das Admin-Interface ist aus – unter System › Experten einschalten": "De beheerinterface staat uit – zet hem aan onder Systeem › Experts",
+ "Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.": "De vorige interface met PHP. Deze app kan alles wat die kon. Uit antwoordt er op de box niets meer met PHP – een beveiligingslek in PHP kan hem dan niet raken.",
+ "Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.": "Voor hulp op Discord: een zip met de bibliotheek, de instellingen (zonder wachtwoorden, tokens en accounts), de netwerk- en systeemstatus en de logboeken van de box.",
+ "Gerät": "Apparaat",
+ "Start dauerte": "Opstarten duurde"
 }

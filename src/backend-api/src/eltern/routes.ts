@@ -55,6 +55,7 @@ import { dropStatic, registerWifiStaticRoutes, startWifiStaticWatch } from './wi
 import { decodeWpaSsid } from '../wpa-ssid'
 import { fanSpeedNow, registerHardwareRoutes } from './hardware'
 import { registerDietpiDashboardRoutes, startDietpiDashboard } from './dietpi-dashboard'
+import { legacyAdminOn, registerLegacyAdminRoutes } from './legacy-admin'
 import { registerServicesRoutes } from './services'
 import { registerTidalRoutes } from './tidal'
 import { registerSystemRoutes } from './system'
@@ -416,6 +417,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   registerHardwareRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   // (the DietPi-Dashboard behind the app: port 5252 answered by this server, see dietpi-dashboard.ts)
   registerDietpiDashboardRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  registerLegacyAdminRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   startDietpiDashboard({ getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerServicesRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerTidalRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
@@ -505,6 +507,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * itself, POST /admin-ticket/redeem {ticket}. 60 seconds, single use.
    */
   router.post('/admin-ticket', requireSession, requireCsrf, (_req, res) => {
+    if (!legacyAdminOn(deps.getMupiboxConfig())) return void res.status(409).json({ error: 'admin_off' })
     const now = Date.now()
     for (const [t, until] of adminTickets) if (until < now) adminTickets.delete(t)
     const ticket = randomBytes(32).toString('hex')
@@ -583,7 +586,12 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    *  screen can decide whether to offer a password-login form. Returns only
    *  a boolean; never the hash. */
   router.get('/auth-info', (_req, res) => {
-    res.json({ passwordConfigured: hasAppPassword(deps.getMupiboxConfig()), loginRequired: appLoginRequired(deps.getMupiboxConfig()) })
+    // (legacyAdmin: whether the login offers the previous admin interface at all)
+    res.json({
+      passwordConfigured: hasAppPassword(deps.getMupiboxConfig()),
+      loginRequired: appLoginRequired(deps.getMupiboxConfig()),
+      legacyAdmin: legacyAdminOn(deps.getMupiboxConfig()),
+    })
   })
 
   /** POST /api/app/login  {password}  (Phase 17h)
@@ -2712,7 +2720,29 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * (os + fs.statfs + the thermal sysfs node) — no shell-out. Reboot/Shutdown
    * actions reuse the existing /api/reboot|/api/shutdown endpoints.
    */
+  // (the device and the system do not change while the box runs; the time of its start is known once it has finished)
+  let deviceModel: string | undefined
+  let osName: string | undefined
+  let bootSeconds: number | null = null
+  const bootTime = (): Promise<number | null> =>
+    bootSeconds !== null
+      ? Promise.resolve(bootSeconds)
+      : new Promise((resolve) => {
+          execFile('systemd-analyze', ['time'], { timeout: 5000 }, (err, stdout) => {
+            // "Startup finished in 1.333s (kernel) + 27.029s (userspace) = 28.363s" ("1min 4.2s" on a slow one)
+            const total = /= (?:(\d+)min )?([\d.]+)s/.exec(String(stdout ?? ''))
+            if (!err && total) bootSeconds = Math.round((Number(total[1] ?? 0) * 60 + Number(total[2])) * 10) / 10
+            resolve(bootSeconds)
+          })
+        })
+
   router.get('/system', requireSession, async (_req, res) => {
+    if (deviceModel === undefined) {
+      deviceModel = (await fsp.readFile('/sys/firmware/devicetree/base/model', 'utf8').catch(() => '')).replace(/\0/g, '').trim()
+    }
+    if (osName === undefined) {
+      osName = /^PRETTY_NAME="?([^"\n]*)"?$/m.exec(await fsp.readFile('/etc/os-release', 'utf8').catch(() => ''))?.[1] ?? ''
+    }
     let cpuTempC: number | null = null
     try {
       const milli = Number.parseInt(readFileSync('/sys/class/thermal/thermal_zone0/temp', 'utf8').trim(), 10)
@@ -2740,6 +2770,11 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       disk,
       // (SD card or USB drive, and a USB 3 stick in a USB 2.0 port - see boot-drive.ts)
       drive: bootDrive(),
+      // (shown before by the admin interface only)
+      model: deviceModel || null,
+      os_name: osName || null,
+      arch: os.machine(),
+      boot_seconds: await bootTime(),
     })
   })
 

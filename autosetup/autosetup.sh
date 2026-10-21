@@ -749,6 +749,11 @@ STEP=0
 	lighty-enable-mod ssl >&3 2>&3
 	# restart, not reload: new modules and the new certificate (root only) are only taken over by a new start
 	systemctl restart lighttpd >&3 2>&3
+	# The previous admin interface (PHP) is off on a new box: the app does everything it did, and no PHP answers in the
+	# home network (switch: app › System › Experten; see scripts/mupibox/legacy_admin.sh)
+	tmp_cfg=$(mktemp /etc/mupibox/.cfg.XXXXXX) && jq '.mupibox.legacyAdmin = false' /etc/mupibox/mupiboxconfig.json > "$tmp_cfg" && chown --reference=/etc/mupibox/mupiboxconfig.json "$tmp_cfg" && chmod --reference=/etc/mupibox/mupiboxconfig.json "$tmp_cfg" && mv -f "$tmp_cfg" /etc/mupibox/mupiboxconfig.json
+	rm -f "$tmp_cfg"
+	/usr/local/bin/mupibox/legacy_admin.sh off >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Activate SSL ## finished after $((after - before)) seconds" >&3 2>&3
 	STEP=$((STEP + 1))

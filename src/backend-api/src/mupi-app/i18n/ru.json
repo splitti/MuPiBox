@@ -2917,5 +2917,12 @@
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Диапазон как раньше (выпуск {} – {}, счёт от самого старого)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Введите оба номера (от 0, второй не меньше первого)",
  "Gezählt nach Datum: 0 ist die neueste Folge.": "Счёт по дате: выпуск 0 — самый новый.",
- "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Когда выходит новый выпуск, диапазон сдвигается вместе с ним."
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Когда выходит новый выпуск, диапазон сдвигается вместе с ним.",
+ "Admin-Interface aus": "Админ-интерфейс выключен",
+ "Admin-Interface eingeschaltet": "Админ-интерфейс включён",
+ "Das Admin-Interface ist aus – unter System › Experten einschalten": "Админ-интерфейс выключен – включите его в Система › Для экспертов",
+ "Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.": "Прежний интерфейс на PHP. Это приложение умеет всё, что умел он. В выключенном состоянии на коробке больше ничто не отвечает через PHP – уязвимость в PHP её тогда не затронет.",
+ "Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.": "Для помощи в Discord: zip-архив с библиотекой, настройками (без паролей, токенов и учётных записей), состоянием сети и системы и журналами коробки.",
+ "Gerät": "Устройство",
+ "Start dauerte": "Запуск занял"
 }

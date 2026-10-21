@@ -2917,5 +2917,12 @@
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Väli kuten ennen (jakso {} – {}, laskettuna vanhimmasta)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Anna molemmat numerot (alkaen 0, toinen ei pienempi kuin ensimmäinen)",
  "Gezählt nach Datum: 0 ist die neueste Folge.": "Laskettu päivämäärän mukaan: jakso 0 on uusin.",
- "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Kun uusi jakso tulee, alue siirtyy sen mukana."
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Kun uusi jakso tulee, alue siirtyy sen mukana.",
+ "Admin-Interface aus": "Ylläpitoliittymä pois",
+ "Admin-Interface eingeschaltet": "Ylläpitoliittymä päällä",
+ "Das Admin-Interface ist aus – unter System › Experten einschalten": "Ylläpitoliittymä on pois – kytke se päälle kohdassa Järjestelmä › Asiantuntijat",
+ "Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.": "Aiempi PHP-käyttöliittymä. Tämä sovellus osaa kaiken, mitä se osasi. Pois päältä laatikossa ei enää vastaa mikään PHP:llä – PHP:n tietoturva-aukko ei silloin voi osua siihen.",
+ "Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.": "Apua varten Discordissa: zip, jossa on kirjasto, asetukset (ilman salasanoja, tunnuksia ja tilejä), verkon ja järjestelmän tila sekä laatikon lokit.",
+ "Gerät": "Laite",
+ "Start dauerte": "Käynnistys kesti"
 }

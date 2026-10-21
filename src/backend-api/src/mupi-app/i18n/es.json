@@ -2917,5 +2917,12 @@
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Rango como antes (episodio {} – {}, contado desde el más antiguo)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Introduce ambos números (desde 0, el segundo no menor que el primero)",
  "Gezählt nach Datum: 0 ist die neueste Folge.": "Contado por fecha: el episodio 0 es el más reciente.",
- "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Cuando sale un episodio nuevo, el rango se desplaza con él."
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Cuando sale un episodio nuevo, el rango se desplaza con él.",
+ "Admin-Interface aus": "Interfaz de administración desactivada",
+ "Admin-Interface eingeschaltet": "Interfaz de administración activada",
+ "Das Admin-Interface ist aus – unter System › Experten einschalten": "La interfaz de administración está desactivada: actívala en Sistema › Expertos",
+ "Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.": "La interfaz anterior con PHP. Esta app puede hacer todo lo que hacía. Desactivada, nada en la caja responde ya con PHP: un fallo de seguridad de PHP no puede afectarla.",
+ "Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.": "Para pedir ayuda en Discord: un zip con la biblioteca, los ajustes (sin contraseñas, tokens ni cuentas), el estado de la red y del sistema y los registros de la caja.",
+ "Gerät": "Dispositivo",
+ "Start dauerte": "El arranque tardó"
 }

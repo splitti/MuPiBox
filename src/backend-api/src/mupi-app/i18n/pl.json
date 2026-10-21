@@ -2917,5 +2917,12 @@
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Zakres jak dotąd (odcinki {} – {}, liczone od najstarszego)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Wpisz oba numery (od 0, drugi nie mniejszy niż pierwszy)",
  "Gezählt nach Datum: 0 ist die neueste Folge.": "Liczone według daty: odcinek 0 jest najnowszy.",
- "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Gdy pojawi się nowy odcinek, zakres przesuwa się razem z nim."
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Gdy pojawi się nowy odcinek, zakres przesuwa się razem z nim.",
+ "Admin-Interface aus": "Interfejs administracyjny wyłączony",
+ "Admin-Interface eingeschaltet": "Interfejs administracyjny włączony",
+ "Das Admin-Interface ist aus – unter System › Experten einschalten": "Interfejs administracyjny jest wyłączony – włącz go w System › Eksperci",
+ "Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.": "Dotychczasowy interfejs w PHP. Ta aplikacja potrafi wszystko, co on. Po wyłączeniu nic na pudełku nie odpowiada już przez PHP – luka bezpieczeństwa w PHP nie może go wtedy dotknąć.",
+ "Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.": "Do pomocy na Discordzie: plik zip z biblioteką, ustawieniami (bez haseł, tokenów i kont), stanem sieci i systemu oraz dziennikami pudełka.",
+ "Gerät": "Urządzenie",
+ "Start dauerte": "Uruchamianie trwało"
 }

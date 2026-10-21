@@ -2917,5 +2917,12 @@
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Range as before (episode {} – {}, counted from the oldest)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Please enter both numbers (from 0, the second not smaller than the first)",
  "Gezählt nach Datum: 0 ist die neueste Folge.": "Counted by date: episode 0 is the newest.",
- "Kommt eine neue Folge dazu, rückt der Bereich mit.": "When a new episode comes out, the range moves along with it."
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "When a new episode comes out, the range moves along with it.",
+ "Admin-Interface aus": "Admin interface off",
+ "Admin-Interface eingeschaltet": "Admin interface switched on",
+ "Das Admin-Interface ist aus – unter System › Experten einschalten": "The admin interface is off – switch it on under System › Experts",
+ "Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.": "The previous interface with PHP. This app can do everything it could. Off, nothing on the box answers with PHP any more – a security flaw in PHP cannot hit it then.",
+ "Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.": "For help on Discord: a zip with the library, the settings (without passwords, tokens and accounts), the network and system state and the box’s logs.",
+ "Gerät": "Device",
+ "Start dauerte": "Start took"
 }

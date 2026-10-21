@@ -2917,5 +2917,12 @@
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Intervall som tidigare (avsnitt {} – {}, räknat från det äldsta)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Ange båda numren (från 0, det andra inte mindre än det första)",
  "Gezählt nach Datum: 0 ist die neueste Folge.": "Räknat efter datum: avsnitt 0 är det nyaste.",
- "Kommt eine neue Folge dazu, rückt der Bereich mit.": "När ett nytt avsnitt kommer flyttas intervallet med."
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "När ett nytt avsnitt kommer flyttas intervallet med.",
+ "Admin-Interface aus": "Administrationsgränssnittet av",
+ "Admin-Interface eingeschaltet": "Administrationsgränssnittet på",
+ "Das Admin-Interface ist aus – unter System › Experten einschalten": "Administrationsgränssnittet är av – slå på det under System › Experter",
+ "Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.": "Det tidigare gränssnittet med PHP. Den här appen kan allt det kunde. Av svarar inget på boxen längre med PHP – en säkerhetsbrist i PHP kan då inte träffa den.",
+ "Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.": "För hjälp på Discord: en zip med biblioteket, inställningarna (utan lösenord, token och konton), nätverks- och systemstatus och boxens loggar.",
+ "Gerät": "Enhet",
+ "Start dauerte": "Starten tog"
 }
