@@ -57,7 +57,7 @@ lan_connected() {
 eth0_gateway() {
 	local gw
 	gw=$(ip -4 route show default dev eth0 2>/dev/null | awk '{print $3}' | head -n 1)
-	[ -z "${gw}" ] && gw=$(awk '/^iface[ \t]+eth0[ \t]+inet[ \t]+static/ { s = 1; next } /^(iface|auto|allow-)/ { s = 0 } s && $1 == "gateway" { print $2; exit }' /etc/network/interfaces 2>/dev/null)
+	[ -z "${gw}" ] && gw=$(awk '/^iface[ \t]+eth0[ \t]+inet[ \t]+static/ { s = 1; next } /^(iface|auto|allow-)/ { s = 0 } s && $1 == "gateway" { print $2; exit }' /etc/network/interfaces /etc/network/interfaces.d/* 2>/dev/null)
 	[ -z "${gw}" ] && gw=$(grep -h "option routers" /var/lib/dhcp/dhclient.eth0.leases* 2>/dev/null | tail -n 1 | awk '{gsub(";", "", $3); print $3}')
 	echo "${gw}"
 }

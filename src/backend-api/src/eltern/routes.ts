@@ -1494,9 +1494,13 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
           for (const blk of stdout.split(/Cell \d+ -/)) {
             const ssidMatch = blk.match(/ESSID:"([^"]*)"/)
             if (!ssidMatch || !ssidMatch[1]) continue // not a network block, or a hidden network
+            // (iwlist prints a character outside ASCII as \xNN per byte, as wpa_cli does: 'Åsna-Müller' came as
+            // '\xC3\x85sna-M\xC3\xBCller'; a hidden network may come as zero bytes)
+            const ssid = decodeWpaSsid(ssidMatch[1])
+            if (ssid.replaceAll('\0', '').trim() === '') continue
             const sigMatch = blk.match(/Signal level=(-?\d+)\s*dBm/)
             found.push({
-              ssid: ssidMatch[1],
+              ssid,
               signal_dbm: sigMatch ? Number.parseInt(sigMatch[1], 10) : -100,
               encrypted: /Encryption key:on/.test(blk),
             })

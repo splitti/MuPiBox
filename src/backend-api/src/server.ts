@@ -3167,9 +3167,33 @@ interface EthernetConfig {
   dns: string
 }
 
-async function readInterfacesFile(): Promise<string> {
-  const { stdout } = await execFileAsync('sudo', ['cat', INTERFACES_FILE])
+// DietPi 10 (Debian 13) keeps each adapter in a file of its own (interfaces.d/eth0.conf, read by "source
+// interfaces.d/*"): the LAN view answered "no ethernet interface configured" there, and its switch did nothing
+const INTERFACES_D = '/etc/network/interfaces.d'
+
+async function catFile(file: string): Promise<string> {
+  const { stdout } = await execFileAsync('sudo', ['cat', file])
   return stdout
+}
+
+// The file with the ethernet stanza: /etc/network/interfaces, else interfaces.d/eth*.conf
+async function ethernetInterfacesPath(): Promise<string> {
+  if (parseEthernetStanza(await catFile(INTERFACES_FILE))) return INTERFACES_FILE
+  let names: string[] = []
+  try {
+    names = (await fs.promises.readdir(INTERFACES_D)).filter((n) => /^eth\w*\.conf$/.test(n)).sort()
+  } catch {
+    // no interfaces.d
+  }
+  for (const name of names) {
+    const file = path.join(INTERFACES_D, name)
+    if (parseEthernetStanza(await catFile(file).catch(() => ''))) return file
+  }
+  return INTERFACES_FILE
+}
+
+async function readInterfacesFile(): Promise<string> {
+  return catFile(await ethernetInterfacesPath())
 }
 
 // Finds the "iface ethN inet dhcp|static" line and the address/netmask/gateway/dns-nameservers lines that
@@ -3213,7 +3237,8 @@ function renderEthernetStanza(cfg: EthernetConfig): string {
 }
 
 async function writeEthernetConfig(next: EthernetConfig): Promise<void> {
-  const text = await readInterfacesFile()
+  const file = await ethernetInterfacesPath()
+  const text = await catFile(file)
   const parsed = parseEthernetStanza(text)
   if (!parsed) {
     throw new Error('no ethernet interface configured in /etc/network/interfaces')
@@ -3223,15 +3248,17 @@ async function writeEthernetConfig(next: EthernetConfig): Promise<void> {
     return
   }
   const tmpPath = `/tmp/.interfaces.${process.pid}.${Date.now()}`
-  const nextPath = `${INTERFACES_FILE}.mupibox-new`
+  // (in /etc/network, not next to a file in interfaces.d: everything in there is read as a definition - a new version
+  // left there by a power cut would have been one)
+  const nextPath = path.join(path.dirname(INTERFACES_FILE), `.${path.basename(file)}.mupibox-new`)
   await writeFile(tmpPath, updated, { mode: 0o644 })
   try {
     // Same atomic replace as the WPA config (new file next to it, same owner and mode, then rename) so a
     // power cut mid-write cannot leave the box without a valid interfaces file.
     await execFileAsync('sudo', ['cp', tmpPath, nextPath])
-    await execFileAsync('sudo', ['chown', '--reference', INTERFACES_FILE, nextPath])
-    await execFileAsync('sudo', ['chmod', '--reference', INTERFACES_FILE, nextPath])
-    await execFileAsync('sudo', ['mv', '-f', nextPath, INTERFACES_FILE])
+    await execFileAsync('sudo', ['chown', '--reference', file, nextPath])
+    await execFileAsync('sudo', ['chmod', '--reference', file, nextPath])
+    await execFileAsync('sudo', ['mv', '-f', nextPath, file])
   } finally {
     await fs.promises.rm(tmpPath, { force: true })
   }
@@ -3394,7 +3421,9 @@ app.post('/api/network/ethernet/restart', localOrElternSession, async (_req, res
     if (!fs.existsSync(LAN_OFF_FILE)) {
       await execFileAsync('sudo', ['ifdown', '--force', parsed.iface]).catch(() => undefined)
       await execFileAsync('sudo', ['ip', 'link', 'set', parsed.iface, 'up'])
-      await execFileAsync('sudo', ['ifup', '--allow=hotplug', parsed.iface], { timeout: 30000 }).catch(() => undefined)
+      // (not --allow=hotplug: DietPi 10 writes eth0 without allow-hotplug when it was set up over WiFi - ifup then did
+      // nothing; LAN on/off is the box's own switch, lan.off)
+      await execFileAsync('sudo', ['ifup', parsed.iface], { timeout: 30000 }).catch(() => undefined)
       execFile('sudo', ['/usr/local/bin/mupibox/mupi_wifi_select.sh'], { timeout: 300000 }, () => undefined)
     }
     res.send('ok')
