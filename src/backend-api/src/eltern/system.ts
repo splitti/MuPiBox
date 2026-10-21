@@ -23,10 +23,13 @@ export interface SystemDeps {
 // such lines held the whole server up).
 const SECRET_PARAMS = 'token|access_token|refresh_token|id_token|auth|authorization|key|apikey|api_key|secret|client_secret|password|passwd|pass|pw|pwd|sig|signature|session|sessionid|sid|code|ticket'
 // (the whole part before the host - user, password, a token as password -, of any length; it ends at the next / so the
-// search stays short; plain and URL-encoded: %3A%2F%2F … %40)
+// search stays short, and at the end of the string it stands in: quotes and the delimiters of JSON and HTML are never
+// part of an address unencoded - else a JSON line ran on to an @ fields later ("contact":"help@…") and lost everything
+// in between; plain and URL-encoded: %3A%2F%2F … %40)
 const SCHEMES = 'https?|rtsp|rtmp|mms|icy|ftps?|sftp|smb|nfs|wss?|davs?'
-const URL_CREDENTIALS = new RegExp(`\\b(${SCHEMES}):\\/\\/[^\\s/@?#]+@`, 'gi')
-const URL_CREDENTIALS_ENCODED = new RegExp(`\\b(${SCHEMES})%3A%2F%2F(?:(?!%2F|%40|%3F|%23)[^\\s/@?#&])+%40`, 'gi')
+const NOT_IN_URL = '\\s/@?#"\'`<>{}\\[\\]\\\\'
+const URL_CREDENTIALS = new RegExp(`\\b(${SCHEMES}):\\/\\/[^${NOT_IN_URL}]+@`, 'gi')
+const URL_CREDENTIALS_ENCODED = new RegExp(`\\b(${SCHEMES})%3A%2F%2F(?:(?!%2F|%40|%3F|%23|%22)[^${NOT_IN_URL}&])+%40`, 'gi')
 const PARAM_PLAIN = new RegExp(`([?&;](?:${SECRET_PARAMS})=)[^&;\\s"'<>]+`, 'gi')
 // (encoded: ? & ; = as %3F %26 %3B %3D - the value ends at the next encoded separator)
 const PARAM_ENCODED = new RegExp(`((?:%3F|%26|%3B)(?:${SECRET_PARAMS})%3D)(?:(?!%26|%3B)[^&;\\s"'<>])+`, 'gi')
