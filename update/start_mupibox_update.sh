@@ -872,13 +872,11 @@ rm -f /tmp/mupibox-update-failed
 		mkdir -p "/etc/systemd/system/getty@tty1.service.d" >&3 2>&3
 		cp -f "${MUPI_SRC}/config/services/getty@tty1.service.d/mupibox.conf" "/etc/systemd/system/getty@tty1.service.d/mupibox.conf" >&3 2>&3
 	fi
-	# Admin interface, Samba share and DietPi dashboard 45 s after the start: not needed for the display, which they
-	# were competing with (see config/services/mupibox-delayed-start.conf)
-	if [ -f "${MUPI_SRC}/config/services/mupibox-delayed-start.conf" ]; then
-		for delayed in lighttpd smbd dietpi-dashboard $(systemctl list-unit-files "php*-fpm.service" --no-legend 2>/dev/null | awk '{print $1}' | sed 's/\.service$//'); do
-			mkdir -p "/etc/systemd/system/${delayed}.service.d" >&3 2>&3
-			cp -f "${MUPI_SRC}/config/services/mupibox-delayed-start.conf" "/etc/systemd/system/${delayed}.service.d/mupibox-delayed-start.conf" >&3 2>&3
-		done
+	# Admin interface, Samba share and DietPi dashboard after the display shows the start page, one after the other: not
+	# needed for the display, which they were competing with (was: 45 s after the start, see
+	# scripts/mupibox/install_start_order.sh)
+	if [ -f /usr/local/bin/mupibox/install_start_order.sh ]; then
+		bash /usr/local/bin/mupibox/install_start_order.sh >&3 2>&3
 	fi
 	# Samba, FTP and VNC on a box that does not have them yet (issue #178): installed and set up, but off - the app's
 	# switches (eltern/services.ts) then only start and stop them, at once and without internet; a fresh installation
