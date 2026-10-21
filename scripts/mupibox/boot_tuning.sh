@@ -26,23 +26,40 @@ fi
 
 # --- zram swap with 1 GB of RAM or less (a 1 GB Pi reports about 900 MB)
 mem_kb=$(awk '/^MemTotal:/ { print $2 }' /proc/meminfo)
+rc=0
 if [ -n "${mem_kb}" ] && [ "${mem_kb}" -le 1100000 ] && [ -x "${SET_SWAP}" ] && [ -f "${DIETPI_TXT}" ]; then
 	size=$(sed -n 's/^[[:blank:]]*AUTO_SETUP_SWAPFILE_SIZE=//p' "${DIETPI_TXT}" | head -n 1)
 	location=$(sed -n 's/^[[:blank:]]*AUTO_SETUP_SWAPFILE_LOCATION=//p' "${DIETPI_TXT}" | head -n 1)
+	# The swap as it is now, to put it back if zram fails: the active swap file (path and size, MiB) as /proc/swaps names
+	# it - dietpi.txt may be empty or say "1" (auto), and DietPi's tool then takes what it finds active too. Only without
+	# an active file the values of dietpi.txt.
+	read -r prev_path prev_size < <(awk '$2 == "file" { printf "%s %d\n", $1, $3 / 1024; exit }' /proc/swaps)
+	if [ -z "${prev_path}" ] && [[ ${location} == /* ]] && [[ ${size} =~ ^[0-9]+$ ]]; then
+		prev_path=${location}
+		prev_size=${size}
+	fi
 	if [ "${size}" = "0" ]; then
 		echo "swap is switched off on purpose - no zram"
-	elif [ "${location}" = "zram" ] || [ "${location}" = "zram0" ] || [ "${location}" = "/dev/zram0" ]; then
+	elif [ "${location}" = "zram" ] || [ "${location}" = "zram0" ] || [ "${location}" = "/dev/zram0" ] || grep -q '^/dev/zram0[[:blank:]]' /proc/swaps; then
 		: # zram already
 	elif ! modprobe zram 2>/dev/null; then
 		# (DietPi's tool switches the old swap off and deletes its file before it loads the module: without the module
 		# the box was left without any swap)
 		echo "no zram module for this kernel - the swap stays as it is"
 	else
-		echo "1 GB of RAM: swap as zram instead of ${location:-a file}"
+		echo "1 GB of RAM: swap as zram instead of ${prev_path:-no swap file}"
 		if ! "${SET_SWAP}" 1 zram || ! grep -q '^/dev/zram0[[:blank:]]' /proc/swaps; then
-			echo "zram could not be set up - the swap as before (${size:-1} MiB, ${location:-/var/swap})"
-			"${SET_SWAP}" "${size:-1}" "${location:-/var/swap}"
+			if [ -n "${prev_path}" ] && [ "${prev_size:-0}" -gt 0 ]; then
+				echo "zram could not be set up - the swap as before (${prev_size} MiB, ${prev_path})"
+				if ! "${SET_SWAP}" "${prev_size}" "${prev_path}" || ! grep -q "^${prev_path}[[:blank:]]" /proc/swaps; then
+					echo "ERROR: the swap could not be put back (${prev_size} MiB, ${prev_path}) - the box runs without swap" >&2
+					rc=1
+				fi
+			else
+				echo "ERROR: zram could not be set up, and there was no swap file before" >&2
+				rc=1
+			fi
 		fi
 	fi
 fi
-exit 0
+exit "${rc}"
