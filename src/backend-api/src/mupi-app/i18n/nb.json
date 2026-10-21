@@ -2861,5 +2861,12 @@
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Område som før (episode {} – {}, telt fra den eldste)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Skriv inn begge numrene (fra 0, det andre ikke mindre enn det første)",
  "Gezählt nach Datum: 0 ist die neueste Folge.": "Telt etter dato: episode 0 er den nyeste.",
- "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Når en ny episode kommer, flytter området seg med."
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Når en ny episode kommer, flytter området seg med.",
+ "Admin-Interface aus": "Administrasjonsgrensesnitt av",
+ "Admin-Interface eingeschaltet": "Administrasjonsgrensesnitt slått på",
+ "Das Admin-Interface ist aus – unter System › Experten einschalten": "Administrasjonsgrensesnittet er av – slå det på under System › Eksperter",
+ "Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.": "Det tidligere grensesnittet med PHP. Denne appen kan alt det kunne. Av svarer ingenting på boksen lenger med PHP – et sikkerhetshull i PHP kan da ikke ramme den.",
+ "Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.": "For hjelp på Discord: en zip med biblioteket, innstillingene (uten passord, tokens og kontoer), nettverks- og systemstatus og boksens logger.",
+ "Gerät": "Enhet",
+ "Start dauerte": "Oppstarten tok"
 }

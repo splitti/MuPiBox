@@ -2861,5 +2861,12 @@
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Intervallo come prima (episodio {} – {}, contato dal più vecchio)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Inserisci entrambi i numeri (da 0, il secondo non minore del primo)",
  "Gezählt nach Datum: 0 ist die neueste Folge.": "Contati per data: l’episodio 0 è il più recente.",
- "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Quando esce un nuovo episodio, l’intervallo si sposta con esso."
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Quando esce un nuovo episodio, l’intervallo si sposta con esso.",
+ "Admin-Interface aus": "Interfaccia di amministrazione disattivata",
+ "Admin-Interface eingeschaltet": "Interfaccia di amministrazione attivata",
+ "Das Admin-Interface ist aus – unter System › Experten einschalten": "L’interfaccia di amministrazione è disattivata – attivala in Sistema › Esperti",
+ "Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.": "La vecchia interfaccia in PHP. Questa app sa fare tutto ciò che faceva. Disattivata, sul box nulla risponde più in PHP – una falla di sicurezza di PHP non può colpirlo.",
+ "Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.": "Per l’aiuto su Discord: uno zip con la libreria, le impostazioni (senza password, token e account), lo stato di rete e sistema e i log del box.",
+ "Gerät": "Dispositivo",
+ "Start dauerte": "L’avvio è durato"
 }

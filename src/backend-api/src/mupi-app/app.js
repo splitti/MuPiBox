@@ -944,6 +944,10 @@ async function openExternal(which) {
   const win = window.open('', '_blank')
   let url = `${location.protocol === 'https:' ? 'https' : 'http'}://${host}/index.php`
   const r = await api(`${API}/admin-ticket`, { method: 'POST' })
+  if (r.status === 409 && r.body?.error === 'admin_off') {
+    win?.close()
+    return toast('Das Admin-Interface ist aus – unter System › Experten einschalten', 'info')
+  }
   if (r.ok && r.body?.ticket) url += `?app_ticket=${r.body.ticket}`
   if (!win) {
     location.href = url
@@ -1062,7 +1066,7 @@ function startSkeleton() {
       ${navRow('telegram', 'Telegram', 'Eltern-Bot', 'tg')}
       ${navRow('g-system', 'System', 'Über die Box, Neustart, Updates', 'gear')}
       ${navRow('ext:manual', 'Handbuch', 'Anleitung zu Box, Display und App', 'book')}
-      ${navRow('ext:admin', 'Admin-Interface', 'Legacy · die bisherige Oberfläche', 'ext')}
+      ${startState.legacyAdmin === false ? '' : navRow('ext:admin', 'Admin-Interface', 'Legacy · die bisherige Oberfläche', 'ext')}
     </div></section>`,
   ]
 }
@@ -1074,7 +1078,8 @@ function tile(target, ic, label, val, id) {
 
 // (playtimeEnabled: the daily limit as last seen - the start page is drawn with or without "+15 min" before its status
 // has come, so the button does not show up and go again on every visit)
-const startState = { maxVolume: 100, volTimer: null, sleep: null, quietUntil: 0, playtimeEnabled: null }
+// (legacyAdmin: the previous admin interface switched on - System › Experten; off, the start page does not offer it)
+const startState = { maxVolume: 100, volTimer: null, sleep: null, quietUntil: 0, playtimeEnabled: null, legacyAdmin: null }
 
 // After a quick action: the start page's state now and twice more (the player takes a change over within seconds)
 function statusSoon(root) {
@@ -1084,6 +1089,10 @@ function statusSoon(root) {
 
 function mountStart(root) {
   drawPins(root)
+  api(`${API}/legacy-admin`).then((r) => {
+    startState.legacyAdmin = !(r.ok && r.body?.on === false)
+    if (!startState.legacyAdmin) $('[data-go="ext:admin"]', root)?.remove()
+  })
   loadOutput(root)
   every(15000, () => loadOutput(root))
   root.addEventListener('click', (e) => {
@@ -8513,13 +8522,13 @@ function aboutTop() {
   return [
     // (on a wide screen: MuPiBox on the left over two rows, the name and the support beside it, then the history and
     // the news across the whole width)
-    `<section class="card about-main"><h2>MuPiBox</h2><dl class="kv">${row('Version', sys.version)}${row('Hostname', i.hostname)}${row('Läuft seit', i.uptime_seconds != null ? fmtUptime(i.uptime_seconds) : '')}${row('CPU-Last', i.load_1 != null ? `${i.load_1.toLocaleString(LOCALE)} (${i.cpu_count} Kerne)` : '')}${row('Temperatur', i.cpu_temp_c != null ? `${Math.round(i.cpu_temp_c)} °C` : '')}${row('Lüfter', i.fan_speed != null ? `${i.fan_speed} %` : '')}${row('Arbeitsspeicher', i.mem_total ? `${formatBytes(i.mem_total - i.mem_free)} von ${formatBytes(i.mem_total)}` : '')}</dl>
+    `<section class="card about-main"><h2>MuPiBox</h2><dl class="kv">${row('Version', sys.version)}${row('Hostname', i.hostname)}${row('Gerät', i.model ?? '')}${row('System', i.os_name ? `${i.os_name}${i.arch ? ` (${i.arch})` : ''}` : '')}${row('Läuft seit', i.uptime_seconds != null ? fmtUptime(i.uptime_seconds) : '')}${row('Start dauerte', i.boot_seconds != null ? `${Math.round(i.boot_seconds).toLocaleString(LOCALE)} s` : '')}${row('CPU-Last', i.load_1 != null ? `${i.load_1.toLocaleString(LOCALE)} (${i.cpu_count} Kerne)` : '')}${row('Temperatur', i.cpu_temp_c != null ? `${Math.round(i.cpu_temp_c)} °C` : '')}${row('Lüfter', i.fan_speed != null ? `${i.fan_speed} %` : '')}${row('Arbeitsspeicher', i.mem_total ? `${formatBytes(i.mem_total - i.mem_free)} von ${formatBytes(i.mem_total)}` : '')}</dl>
       ${used != null ? `<div class="bar"><div class="slider-head"><b>${esc(driveName)}</b><span class="value-pill">${used} %</span></div><div class="track"><i style="--w:${used}%"></i></div><small>${formatBytes(disk.free)} frei von ${formatBytes(disk.total)}</small></div>` : ''}
       ${driveNote ? `<div class="note warn">${icon('info', 18)}<span>${esc(driveNote)}</span></div>` : ''}</section>`,
     `<section class="card"><h2>Name der Box</h2><p class="help">Steht auf dem Startbild und oben in der App.</p>
       <div class="field"><label for="ab-name">Name der Box (höchstens ${max} Zeichen)</label><input class="input" id="ab-name" maxlength="${max}" value="${esc(sys.bs?.current?.boxName ?? '')}" placeholder="${esc(sys.bs?.screens?.defaultName ?? 'MuPiBox')}"></div>
       <div class="btns"><button class="btn primary" id="ab-save">Speichern</button></div></section>`,
-    `<section class="card"><h2>Support</h2><p class="help">Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand.</p>
+    `<section class="card"><h2>Support</h2><p class="help">Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.</p>
       <div class="btns"><a class="btn" href="${API}/support-info" download>${icon('save', 18)}Support-Infos herunterladen</a></div></section>`,
     `<section class="card wide"><div class="hist-head"><h2>Verlauf</h2><div class="pills small" id="ab-range">${[1, 6, 24].map((h) => `<button aria-selected="${sys.range === h}" data-h="${h}">${h} h</button>`).join('')}</div></div>
       <div class="hist-grid" id="ab-charts"><div class="loading"><p>Lade …</p></div></div>
@@ -9254,7 +9263,13 @@ const lanCtrl = { load: loadNetOptions, sections: lanSections, change: changeNet
 /* Experten */
 
 async function loadExperts() {
-  const [json, info, dash] = await Promise.all([api(`${API}/json-file?key=${adm.json.key}`), api(`${API}/system`), api(`${API}/dietpi-dashboard`)])
+  const [json, info, dash, legacy] = await Promise.all([
+    api(`${API}/json-file?key=${adm.json.key}`),
+    api(`${API}/system`),
+    api(`${API}/dietpi-dashboard`),
+    api(`${API}/legacy-admin`),
+  ])
+  adm.legacy = legacy.ok ? legacy.body?.on !== false : true
   adm.json.keys = json.body?.keys ?? []
   adm.json.text = json.body?.text ?? ''
   adm.host = info.body?.hostname ?? ''
@@ -9286,7 +9301,8 @@ function expertsTop() {
     // a one-time ticket signs in, see backend-api eltern/dietpi-dashboard.ts)
     `<section class="card"><h2>Weitere Werkzeuge</h2>
       <div class="row"><span class="lbl"><b>DietPi-Dashboard erlauben</b><small>Systemverwaltung von DietPi mit einem Terminal mit Root-Rechten. Erreichbar nur über diese App, nicht direkt im Netz.</small></span><label class="switch"><input type="checkbox" id="ex-dash" ${adm.dash?.enabled ? 'checked' : ''} aria-label="DietPi-Dashboard erlauben"><span></span></label></div>
-      <div class="navlist">${adm.dash?.enabled ? navRow('ext:dietpi', 'DietPi-Dashboard', adm.dash.active ? 'öffnet sich in einem neuen Fenster' : 'startet gerade …', 'ext') : ''}${navRow('ext:admin', 'Admin-Interface', 'Legacy · die bisherige Oberfläche', 'ext')}</div></section>`,
+      <div class="row"><span class="lbl"><b>Admin-Interface</b><small>${esc('Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.')}</small></span><label class="switch"><input type="checkbox" id="ex-admin" ${adm.legacy ? 'checked' : ''} aria-label="Admin-Interface"><span></span></label></div>
+      <div class="navlist">${adm.dash?.enabled ? navRow('ext:dietpi', 'DietPi-Dashboard', adm.dash.active ? 'öffnet sich in einem neuen Fenster' : 'startet gerade …', 'ext') : ''}${adm.legacy ? navRow('ext:admin', 'Admin-Interface', 'Legacy · die bisherige Oberfläche', 'ext') : ''}</div></section>`,
     `<section class="card wide"><h2>Konfiguration direkt bearbeiten</h2>
       <div class="note warn">${icon('info', 18)}<span>Fehler hier können die Box lahmlegen. Nur ändern, was du kennst – vorher ein Backup ziehen.</span></div>
       <div class="field"><label for="ex-file">Datei</label><select class="input" id="ex-file">${adm.json.keys.map((k) => `<option value="${k}"${k === adm.json.key ? ' selected' : ''}>${esc(JSON_LABEL[k] ?? k)}</option>`).join('')}</select></div>
@@ -9301,6 +9317,14 @@ function expertsTop() {
 }
 
 function mountExperts(root, page) {
+  $('#ex-admin', root).onchange = async (e) => {
+    const on = e.target.checked
+    e.target.disabled = true
+    const r = await api(`${API}/legacy-admin`, { method: 'POST', body: { on } })
+    toast(r.ok && r.body?.ok ? (on ? 'Admin-Interface eingeschaltet' : 'Admin-Interface aus') : 'Das hat nicht geklappt', r.ok && r.body?.ok ? 'ok' : 'info')
+    await loadExperts().catch(() => undefined)
+    if (currentPage()?.id === page.id) renderPage(page, false)
+  }
   $('#ex-dash', root).onchange = async (e) => {
     const on = e.target.checked
     e.target.disabled = true
@@ -11524,7 +11548,9 @@ async function renderLogin(hasSession = state.loginHasSession ?? false) {
   const info = (await fetch(`${API}/auth-info`, { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null), () => null)) ?? {}
   // (?portal=admin: sent here from port 8200 with the admin interface chosen)
   if (new URLSearchParams(location.search).get('portal') === 'admin') setPortalChoice('admin')
-  let choice = portalChoice()
+  // (the admin interface switched off - System › Experten: only the app; the choice is not offered)
+  const portals = info.legacyAdmin === false ? PORTALS.filter(([id]) => id !== 'admin') : PORTALS
+  let choice = info.legacyAdmin === false ? 'app' : portalChoice()
   const draw = () => {
     // Without a password there is nothing to type in: for the app the page says how to get in instead (a password field
     // that can only fail made people think there was a default password)
@@ -11533,12 +11559,18 @@ async function renderLogin(hasSession = state.loginHasSession ?? false) {
     $('#content').innerHTML = `
     <div class="login">
       <div class="logo">${mupiImg('width="64" height="67"')}</div>
-      <div class="login-head"><h1>Willkommen zurück</h1><p class="help">Wohin möchtest du?</p></div>
+      <div class="login-head"><h1>Willkommen zurück</h1>${portals.length > 1 ? '<p class="help">Wohin möchtest du?</p>' : ''}</div>
       <form class="card" id="login-form">
-        <div class="portal-pick" role="radiogroup" aria-label="Wohin möchtest du?">${PORTALS.map(
-          ([id, name, sub, ic]) =>
-            `<button type="button" class="portal-opt" role="radio" data-portal="${id}" aria-checked="${id === choice}">${icon(ic, 22)}<span class="lbl"><b>${esc(name)}</b><small>${esc(sub)}</small></span></button>`,
-        ).join('')}</div>
+        ${
+          portals.length > 1
+            ? `<div class="portal-pick" role="radiogroup" aria-label="Wohin möchtest du?">${portals
+                .map(
+                  ([id, name, sub, ic]) =>
+                    `<button type="button" class="portal-opt" role="radio" data-portal="${id}" aria-checked="${id === choice}">${icon(ic, 22)}<span class="lbl"><b>${esc(name)}</b><small>${esc(sub)}</small></span></button>`,
+                )
+                .join('')}</div>`
+            : ''
+        }
         ${
           noPassword
             ? `<p class="help" style="margin:0">Auf dieser Box ist noch kein Passwort gesetzt. Hinein geht es mit dem QR-Code am Display oder dem Telegram-Bot (unten), danach diese Seite neu laden.</p>
@@ -11547,7 +11579,7 @@ async function renderLogin(hasSession = state.loginHasSession ?? false) {
                 needPassword
                   ? `<div class="field"><label for="pw">Passwort</label>
                       <div class="input-wrap"><input class="input has-eye" id="pw" type="password" autocomplete="current-password" required><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div>
-                      <small>Dasselbe Passwort für die Web-App und das Admin-Interface.</small></div>`
+                      ${portals.length > 1 ? '<small>Dasselbe Passwort für die Web-App und das Admin-Interface.</small>' : ''}</div>`
                   : ''
               }${
                 needPassword && choice === 'app'

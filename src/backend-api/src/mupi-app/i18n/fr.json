@@ -2861,5 +2861,12 @@
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Plage comme avant (épisode {} – {}, compté depuis le plus ancien)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Saisissez les deux numéros (à partir de 0, le second pas plus petit que le premier)",
  "Gezählt nach Datum: 0 ist die neueste Folge.": "Compté par date : l’épisode 0 est le plus récent.",
- "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Quand un nouvel épisode paraît, la plage se décale avec lui."
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Quand un nouvel épisode paraît, la plage se décale avec lui.",
+ "Admin-Interface aus": "Interface d’administration désactivée",
+ "Admin-Interface eingeschaltet": "Interface d’administration activée",
+ "Das Admin-Interface ist aus – unter System › Experten einschalten": "L’interface d’administration est désactivée – l’activer sous Système › Experts",
+ "Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.": "L’ancienne interface en PHP. Cette appli sait faire tout ce qu’elle faisait. Désactivée, plus rien ne répond en PHP sur la box – une faille de sécurité de PHP ne peut alors plus l’atteindre.",
+ "Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.": "Pour l’aide sur Discord : un zip avec la bibliothèque, les réglages (sans mots de passe, jetons ni comptes), l’état du réseau et du système et les journaux de la box.",
+ "Gerät": "Appareil",
+ "Start dauerte": "Durée du démarrage"
 }

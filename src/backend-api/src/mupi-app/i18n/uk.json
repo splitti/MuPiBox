@@ -2861,5 +2861,12 @@
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Діапазон як раніше (випуск {} – {}, відлік від найстарішого)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Введіть обидва номери (від 0, другий не менший за перший)",
  "Gezählt nach Datum: 0 ist die neueste Folge.": "Рахуються за датою: випуск 0 — найновіший.",
- "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Коли виходить новий випуск, діапазон зсувається разом з ним."
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Коли виходить новий випуск, діапазон зсувається разом з ним.",
+ "Admin-Interface aus": "Адмін-інтерфейс вимкнено",
+ "Admin-Interface eingeschaltet": "Адмін-інтерфейс увімкнено",
+ "Das Admin-Interface ist aus – unter System › Experten einschalten": "Адмін-інтерфейс вимкнено – увімкніть його в Система › Для досвідчених",
+ "Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.": "Попередній інтерфейс на PHP. Цей застосунок уміє все, що вмів він. Коли вимкнено, на коробці ніщо більше не відповідає через PHP – вразливість у PHP її тоді не зачепить.",
+ "Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.": "Для допомоги в Discord: zip-архів із бібліотекою, налаштуваннями (без паролів, токенів і облікових записів), станом мережі й системи та журналами коробки.",
+ "Gerät": "Пристрій",
+ "Start dauerte": "Запуск тривав"
 }

@@ -1209,6 +1209,11 @@ rm -f /tmp/mupibox-update-failed
 	lighty-enable-mod ssl  >&3 2>&3
 	# restart, not reload: new modules and the new certificate (root only) are only taken over by a new start
 	systemctl restart lighttpd >&3 2>&3
+	# the previous admin interface as chosen in the app (System › Experten): an update may bring PHP and lighttpd's PHP
+	# module back - switched off, they go again (not chosen: as it is)
+	if [ -x /usr/local/bin/mupibox/legacy_admin.sh ]; then
+		/usr/local/bin/mupibox/legacy_admin.sh apply >&3 2>&3
+	fi
 	after=$(date +%s)
 	echo -e "## Network optimization ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))

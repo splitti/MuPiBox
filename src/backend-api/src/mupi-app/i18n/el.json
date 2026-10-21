@@ -2861,5 +2861,12 @@
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Εύρος όπως πριν (επεισόδιο {} – {}, μετρημένο από το παλαιότερο)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Συμπληρώστε και τους δύο αριθμούς (από 0, ο δεύτερος όχι μικρότερος από τον πρώτο)",
  "Gezählt nach Datum: 0 ist die neueste Folge.": "Μετρώνται κατά ημερομηνία: το επεισόδιο 0 είναι το νεότερο.",
- "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Όταν προστίθεται νέο επεισόδιο, το εύρος μετακινείται μαζί του."
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Όταν προστίθεται νέο επεισόδιο, το εύρος μετακινείται μαζί του.",
+ "Admin-Interface aus": "Διεπαφή διαχείρισης απενεργοποιημένη",
+ "Admin-Interface eingeschaltet": "Διεπαφή διαχείρισης ενεργοποιημένη",
+ "Das Admin-Interface ist aus – unter System › Experten einschalten": "Η διεπαφή διαχείρισης είναι απενεργοποιημένη – ενεργοποιήστε τη στο Σύστημα › Για προχωρημένους",
+ "Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.": "Η προηγούμενη διεπαφή με PHP. Αυτή η εφαρμογή μπορεί να κάνει ό,τι μπορούσε εκείνη. Όταν είναι απενεργοποιημένη, τίποτα στο κουτί δεν απαντά πια με PHP – ένα κενό ασφαλείας της PHP δεν μπορεί να το πλήξει.",
+ "Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.": "Για βοήθεια στο Discord: ένα zip με τη βιβλιοθήκη, τις ρυθμίσεις (χωρίς κωδικούς, tokens και λογαριασμούς), την κατάσταση δικτύου και συστήματος και τα αρχεία καταγραφής του κουτιού.",
+ "Gerät": "Συσκευή",
+ "Start dauerte": "Η εκκίνηση διήρκεσε"
 }

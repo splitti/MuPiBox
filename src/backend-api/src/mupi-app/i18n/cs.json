@@ -2861,5 +2861,12 @@
  "Bereich wie bisher (Folge {} – {}, ab der ältesten)": "Rozsah jako dosud (díl {} – {}, počítáno od nejstaršího)",
  "Bitte beide Nummern eintragen (ab 0, die zweite nicht kleiner als die erste)": "Zadejte obě čísla (od 0, druhé ne menší než první)",
  "Gezählt nach Datum: 0 ist die neueste Folge.": "Počítáno podle data: díl 0 je nejnovější.",
- "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Když přibude nový díl, rozsah se posune s ním."
+ "Kommt eine neue Folge dazu, rückt der Bereich mit.": "Když přibude nový díl, rozsah se posune s ním.",
+ "Admin-Interface aus": "Administrační rozhraní vypnuto",
+ "Admin-Interface eingeschaltet": "Administrační rozhraní zapnuto",
+ "Das Admin-Interface ist aus – unter System › Experten einschalten": "Administrační rozhraní je vypnuté – zapněte ho v Systém › Experti",
+ "Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.": "Dosavadní rozhraní v PHP. Tato aplikace umí vše, co umělo ono. Když je vypnuté, na krabičce už nic neodpovídá přes PHP – bezpečnostní chyba v PHP ji pak nezasáhne.",
+ "Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.": "Pro pomoc na Discordu: zip s knihovnou, nastavením (bez hesel, tokenů a účtů), stavem sítě a systému a protokoly krabičky.",
+ "Gerät": "Zařízení",
+ "Start dauerte": "Spuštění trvalo"
 }

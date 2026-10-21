@@ -15,6 +15,20 @@ export interface SystemDeps {
   updateMupiboxConfig: (mutate: (cfg: Record<string, unknown>) => void) => Promise<void>
 }
 
+// The end of a log (at most maxBytes): a log of days can be large, the support zip goes to Discord
+async function copyTail(from: string, to: string, maxBytes: number): Promise<void> {
+  const fh = await fsp.open(from, 'r')
+  try {
+    const { size } = await fh.stat()
+    const length = Math.min(size, maxBytes)
+    const buf = Buffer.alloc(length)
+    await fh.read(buf, 0, length, size - length)
+    await fsp.writeFile(to, buf)
+  } finally {
+    await fh.close()
+  }
+}
+
 function run(cmd: string, args: string[], timeoutMs = 30000): Promise<{ ok: boolean; stdout: string }> {
   return new Promise((resolve) => {
     execFile(cmd, args, { timeout: timeoutMs, maxBuffer: 8 * 1024 * 1024 }, (err, stdout) => resolve({ ok: !err, stdout: stdout ?? '' }))
@@ -273,7 +287,7 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
 
   /**
    * GET /api/app/support-info - a zip for the support (Discord): the library, the config without secrets, the
-   * monitor and network state, versions. As the admin interface's support_data.php, but the secrets are removed by
+   * monitor and network state, versions, the logs (pm2, Chromium's debug log). As the admin interface's support_data.php, but the secrets are removed by
    * key (its line filter let multi-line values through).
    */
   router.get('/support-info', requireSession, async (_req, res) => {
@@ -295,7 +309,19 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
       const model = (await fsp.readFile('/sys/firmware/devicetree/base/model', 'utf8').catch(() => '')).replace(/\0/g, '')
       const jq = await run('jq', ['--version'], 5000)
       const version = String((deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined)?.version ?? '')
-      await fsp.writeFile(`${dir}/mupi.info`, [osRelease, model, os.hostname(), os.arch(), `MuPiBox ${version}`, jq.stdout.trim()].join('\n'))
+      const boot = await run('systemd-analyze', ['time'], 5000)
+      await fsp.writeFile(`${dir}/mupi.info`, [osRelease, model, os.hostname(), os.arch(), os.machine(), `MuPiBox ${version}`, jq.stdout.trim(), boot.stdout.trim()].join('\n'))
+      // The logs of the server and the player, also the rotated ones (the app's log page shows their last lines only),
+      // and Chromium's debug log when its switch is on (System › Experten) - each its last 5 MB (as the admin
+      // interface's pm2logs.php and debug.php, which sent them whole)
+      const logs = '/home/dietpi/.pm2/logs'
+      const names = await fsp.readdir(logs).catch(() => [] as string[])
+      if (names.length) await fsp.mkdir(`${dir}/pm2-logs`)
+      for (const name of names) {
+        if (!/^[\w.-]+$/.test(name)) continue
+        await copyTail(path.join(logs, name), path.join(dir, 'pm2-logs', name), 5 * 1024 * 1024).catch(() => undefined)
+      }
+      await copyTail('/home/dietpi/.config/chromium/chrome_debug.log', `${dir}/chrome_debug.log`, 5 * 1024 * 1024).catch(() => undefined)
       const zip = `${dir}.zip`
       const z = await run('sh', ['-c', `cd '${dir}' && zip -q -r '${zip}' .`], 30000)
       if (!z.ok) {
