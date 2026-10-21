@@ -9322,7 +9322,8 @@ function mountExperts(root, page) {
     e.target.disabled = true
     const r = await api(`${API}/legacy-admin`, { method: 'POST', body: { on } })
     toast(r.ok && r.body?.ok ? (on ? 'Admin-Interface eingeschaltet' : 'Admin-Interface aus') : 'Das hat nicht geklappt', r.ok && r.body?.ok ? 'ok' : 'info')
-    await loadExperts().catch(() => undefined)
+    // (not asked again at once: the web server reads its config again right after the answer - see legacy-admin.ts)
+    if (r.ok && r.body?.ok) adm.legacy = on
     if (currentPage()?.id === page.id) renderPage(page, false)
   }
   $('#ex-dash', root).onchange = async (e) => {
