@@ -15,6 +15,10 @@ const OVERLAY_TIMEOUT_S = 60
 @Injectable({ providedIn: 'root' })
 export class ElternMagicLinkService {
   private countdownTimer: ReturnType<typeof setTimeout> | null = null
+  // Every request for a link and every close counts one up: an answer that comes after a close (the parent access on
+  // the lock screen ended meanwhile, see ParentAccessService.end) or after a newer request is not shown - it showed the
+  // login QR code above the lock screen again.
+  private generation = 0
 
   /** Whether the overlay is currently shown. Read by the overlay component. */
   readonly visible = signal(false)
@@ -38,6 +42,7 @@ export class ElternMagicLinkService {
       console.warn('[eltern-magic-link] no LAN IP available — cannot build a phone-reachable link')
       return
     }
+    const mine = ++this.generation
     try {
       const res = await fetch('/api/app/magic-link/generate', {
         method: 'POST',
@@ -56,6 +61,7 @@ export class ElternMagicLinkService {
         console.warn('[eltern-magic-link] no login link (status', res.status, ') - showing the plain address')
       }
       const qrDataUrl = await QRCode.toDataURL(url, { margin: 2, width: 320 })
+      if (mine !== this.generation) return
       this.magicLinkUrl.set(url)
       this.qrUrl.set(qrDataUrl)
       this.visible.set(true)
@@ -67,6 +73,7 @@ export class ElternMagicLinkService {
 
   /** Manually close the overlay (X button or backdrop click). Idempotent. */
   close(): void {
+    this.generation++
     this.visible.set(false)
     this.magicLinkUrl.set(null)
     this.qrUrl.set(null)
@@ -77,6 +84,8 @@ export class ElternMagicLinkService {
   }
 
   private startCountdown(): void {
+    // (a link shown again while one was shown: one countdown, not two counting down together)
+    if (this.countdownTimer) clearTimeout(this.countdownTimer)
     this.countdownSeconds.set(OVERLAY_TIMEOUT_S)
     const tick = (): void => {
       const left = this.countdownSeconds() - 1
