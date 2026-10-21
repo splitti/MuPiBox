@@ -689,12 +689,11 @@ STEP=0
 	mkdir -p "/etc/systemd/system/getty@tty1.service.d" >&3 2>&3
 	cp -f "${MUPI_SRC}/config/services/getty@tty1.service.d/mupibox.conf" "/etc/systemd/system/getty@tty1.service.d/mupibox.conf" >&3 2>&3
 	
-	# Admin interface, DietPi dashboard and the Samba share (once the app switches it on) 45 s after the start
-	# (see config/services/mupibox-delayed-start.conf)
-	for delayed in lighttpd smbd dietpi-dashboard $(systemctl list-unit-files "php*-fpm.service" --no-legend 2>/dev/null | awk '{print $1}' | sed 's/\.service$//'); do
-		mkdir -p "/etc/systemd/system/${delayed}.service.d" >&3 2>&3
-		cp -f "${MUPI_SRC}/config/services/mupibox-delayed-start.conf" "/etc/systemd/system/${delayed}.service.d/mupibox-delayed-start.conf" >&3 2>&3
-	done
+	# Admin interface, DietPi dashboard and the Samba share (once the app switches it on) after the display shows the
+	# start page, one after the other (was: 45 s after the start, see scripts/mupibox/install_start_order.sh)
+	bash /usr/local/bin/mupibox/install_start_order.sh >&3 2>&3
+	# initial_turbo for a faster start, and zram swap on a Pi with 1 GB (see scripts/mupibox/boot_tuning.sh)
+	bash /usr/local/bin/mupibox/boot_tuning.sh >&3 2>&3
 	systemctl daemon-reload >&3 2>&3
 	
 	# (not the Samba share: off until the app switches it on, see "Preconfigure Samba")
