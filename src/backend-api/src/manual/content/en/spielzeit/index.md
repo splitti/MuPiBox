@@ -13,6 +13,8 @@ In the app under **Playtime** you decide when and how long the box plays.
 
 If the limit is used up or a quiet time is running, the display shows a message instead of the player. You change the text under **Settings › Appearance › Text on the display** (the screens “Limit reached”, “Quiet time” and “QR code for parents”). Empty means: the text of the set box language applies.
 
+At the top of the lock screen you see the time as well as Wi-Fi and battery. If you press and hold Wi-Fi and battery, you as a parent reach the settings on the display even now, for example to set up a Wi-Fi or to show the QR code for the app. The lock still applies ([During a quiet time or after the daily limit](../bedienung/eltern-zugang.md)).
+
 A small symbol on the display shows the remaining playtime.
 
 ## Hearing protection

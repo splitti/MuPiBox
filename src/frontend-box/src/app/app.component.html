@@ -7,7 +7,12 @@
       <mupi-playtime-chip></mupi-playtime-chip>
     }
     @if (playtimeBlocked()) {
-      <mupi-playtime-blocked></mupi-playtime-blocked>
+      <!-- held on WiFi/battery of the lock screen: it stands back for the settings (parent-access.service.ts) -->
+      @if (parentAccess.active()) {
+        <mupi-parent-access-bar></mupi-parent-access-bar>
+      } @else {
+        <mupi-playtime-blocked></mupi-playtime-blocked>
+      }
     }
   }
   <mupi-eltern-magic-link-overlay></mupi-eltern-magic-link-overlay>

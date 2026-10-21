@@ -34,3 +34,18 @@
         }
     }
 }
+
+// WiFi and battery white like the title: the kids' themes set the status colours for their own background (dark icons
+// on a light theme, km.scss) - on this dark toolbar they were hardly to be seen
+:host-context(body.km) .mupihat-icon-container {
+    --st-on: #ffffff;
+    --st-track: rgba(255, 255, 255, 0.42);
+    --st-full: #ffffff;
+    --st-num: #1c1c1e;
+    --st-bolt-edge: #1c1c1e;
+}
+
+// (the four tiles fit the display: no scrollbar at the right edge)
+ion-content::part(scroll) {
+    scrollbar-width: none;
+}

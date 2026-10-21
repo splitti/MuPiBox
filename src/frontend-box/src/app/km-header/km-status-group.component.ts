@@ -15,11 +15,26 @@ import { StatusComponent } from '../status/status.component'
       flex: 0 0 auto;
     }
     .km-status-group {
+      position: relative;
       display: flex;
       align-items: center;
       justify-content: flex-end;
       height: 64px;
       -webkit-tap-highlight-color: transparent;
+    }
+    /* held (for the settings): a light surface around WiFi and battery in their colour */
+    .km-status-group::before {
+      content: '';
+      position: absolute;
+      inset: 6px -12px;
+      border-radius: 26px;
+      background: color-mix(in srgb, var(--st-on, currentColor) 16%, transparent);
+      opacity: 0;
+      transition: opacity 150ms ease-out;
+      pointer-events: none;
+    }
+    :host(.km-holding) .km-status-group::before {
+      opacity: 1;
     }
   `,
   imports: [StatusComponent],

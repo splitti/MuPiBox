@@ -14,7 +14,7 @@ The boot screen is one of 15 scenes or the card, or a random one at every start.
 The box needs a Wi-Fi so that you can set it up from a phone or PC and so that Spotify, podcasts and radio work. If it does not know a network yet, set one up on the display:
 
 1. Open the settings on the display ([Settings on the display](../bedienung/eltern-zugang.md)).
-2. Tap the **Network settings** tile. If the box is connected by cable right now, choose **WiFi** at the top.
+2. Tap the **Network** tile. If the box is connected by cable right now, choose **WiFi** at the top.
 3. In the list, tap **Connect** next to your network and enter the password. A hidden network you enter yourself with **Add network**.
 
 The box stays in the current network and only switches when the new one is reachable. More about this, also about a fixed IP address and the cable connection: [Wi-Fi and LAN](../netzwerk/wlan-und-lan.md).
