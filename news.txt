@@ -28,6 +28,8 @@
 </ul>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Debian 13: the status LED blinked for ever after the start, and the Bluetooth auto-connect, the WLED start and the browser's priority waited for the browser in vain - they looked for its old name (chromium-browser; on Debian 13 it is called chromium). They now find it under both names.</li>
+<li id='linews' class='linews'>Display stays white at the start: when the box is very busy while it starts (e.g. its system on a USB stick), Chromium sometimes gives up loading the start page and shows a blank page for ever. The watchdog looked once, after 60 s, and missed a window that had no title yet; its restart of the display also ended itself (the restart stops every process with 'chromium' in its name - the watchdog too), and the display stayed off. It now looks from 50 s on every 10 s (up to 7 minutes), also notices a display that did not come up at all, and restarts it at most 3 times per start of the box.</li>
+<li id='linews' class='linews'>Debian 13: DietPi's banner (logo, system data, 'Running warm, but safe') no longer shows on the display's console while the box starts - root logs in there on DietPi 10, and only the dietpi user had the file that hides it. The update adds it on existing boxes too.</li>
 </ul>
 <h3>DEV 5.0.11 - changes compared to 5.0.10</h3>
 <b>App</b>
