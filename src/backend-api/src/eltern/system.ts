@@ -22,13 +22,18 @@ export interface SystemDeps {
 // linear in the text (an open scheme name like [a-z][a-z0-9+.-]*:// tried the rest of every long word again - a log of
 // such lines held the whole server up).
 const SECRET_PARAMS = 'token|access_token|refresh_token|id_token|auth|authorization|key|apikey|api_key|secret|client_secret|password|passwd|pass|pw|pwd|sig|signature|session|sessionid|sid|code|ticket'
-const URL_CREDENTIALS = /\b(https?|rtsp|rtmp|mms|icy|ftps?|sftp|smb|nfs|wss?|davs?):\/\/[^\s/@:]{1,256}:[^\s/@]{1,256}@/gi
+// (the whole part before the host - user, password, a token as password -, of any length; it ends at the next / so the
+// search stays short; plain and URL-encoded: %3A%2F%2F … %40)
+const SCHEMES = 'https?|rtsp|rtmp|mms|icy|ftps?|sftp|smb|nfs|wss?|davs?'
+const URL_CREDENTIALS = new RegExp(`\\b(${SCHEMES}):\\/\\/[^\\s/@?#]+@`, 'gi')
+const URL_CREDENTIALS_ENCODED = new RegExp(`\\b(${SCHEMES})%3A%2F%2F(?:(?!%2F|%40|%3F|%23)[^\\s/@?#&])+%40`, 'gi')
 const PARAM_PLAIN = new RegExp(`([?&;](?:${SECRET_PARAMS})=)[^&;\\s"'<>]+`, 'gi')
 // (encoded: ? & ; = as %3F %26 %3B %3D - the value ends at the next encoded separator)
 const PARAM_ENCODED = new RegExp(`((?:%3F|%26|%3B)(?:${SECRET_PARAMS})%3D)(?:(?!%26|%3B)[^&;\\s"'<>])+`, 'gi')
 export function withoutLogSecrets(text: string): string {
   return text
-    .replace(URL_CREDENTIALS, '$1://***:***@')
+    .replace(URL_CREDENTIALS, '$1://***@')
+    .replace(URL_CREDENTIALS_ENCODED, '$1%3A%2F%2F***%40')
     .replace(PARAM_PLAIN, '$1***')
     .replace(PARAM_ENCODED, '$1***')
     .replace(/\b(Bearer\s+)[A-Za-z0-9._~+/=-]{8,}/g, '$1***')
@@ -46,8 +51,14 @@ async function copyTail(from: string, to: string, maxBytes: number): Promise<voi
     await fh.read(buf, 0, length, size - length)
     // (cut off at its start: the first, partial line goes - a token whose ?token= lay before the cut stayed unnoticed,
     // and a character cut in two came out broken)
-    const nl = size > length ? buf.indexOf(0x0a) : -1
-    const text = (nl >= 0 ? buf.subarray(nl + 1) : buf).toString('utf8')
+    // (no line break at all in a cut window: all of it is that one partial line - it goes as well)
+    const cut = size > length
+    const nl = cut ? buf.indexOf(0x0a) : -1
+    const text = !cut
+      ? buf.toString('utf8')
+      : nl >= 0
+        ? buf.subarray(nl + 1).toString('utf8')
+        : '[the last line of this log is longer than the part kept and is left out]\n'
     await fsp.writeFile(to, withoutLogSecrets(text))
   } finally {
     await fh.close()
