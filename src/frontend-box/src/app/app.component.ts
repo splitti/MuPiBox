@@ -95,7 +95,7 @@ export class AppComponent {
     })
     // the lock ended while the parents were in the settings: the next lock shows its screen again
     effect(() => {
-      if (!this.playtimeBlocked() && this.parentAccess.active()) this.parentAccess.end()
+      if (!this.playtimeBlocked() && this.parentAccess.active()) this.parentAccess.end(false)
     })
 
     // Global resume-on-cap: when playtime/quiet hours transitions
