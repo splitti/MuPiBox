@@ -692,6 +692,8 @@ STEP=0
 	# Admin interface, DietPi dashboard and the Samba share (once the app switches it on) after the display shows the
 	# start page, one after the other (was: 45 s after the start, see scripts/mupibox/install_start_order.sh)
 	bash /usr/local/bin/mupibox/install_start_order.sh >&3 2>&3
+	# initial_turbo for a faster start, and zram swap on a Pi with 1 GB (see scripts/mupibox/boot_tuning.sh)
+	bash /usr/local/bin/mupibox/boot_tuning.sh >&3 2>&3
 	systemctl daemon-reload >&3 2>&3
 	
 	# (not the Samba share: off until the app switches it on, see "Preconfigure Samba")

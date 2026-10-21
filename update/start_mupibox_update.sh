@@ -878,6 +878,11 @@ rm -f /tmp/mupibox-update-failed
 	if [ -f /usr/local/bin/mupibox/install_start_order.sh ]; then
 		bash /usr/local/bin/mupibox/install_start_order.sh >&3 2>&3
 	fi
+	# initial_turbo for a faster start, and zram swap on a Pi with 1 GB - each only when nothing was chosen for it (see
+	# scripts/mupibox/boot_tuning.sh)
+	if [ -f /usr/local/bin/mupibox/boot_tuning.sh ]; then
+		bash /usr/local/bin/mupibox/boot_tuning.sh >&3 2>&3
+	fi
 	# Samba, FTP and VNC on a box that does not have them yet (issue #178): installed and set up, but off - the app's
 	# switches (eltern/services.ts) then only start and stop them, at once and without internet; a fresh installation
 	# does the same. Only what is missing: a service that is there is left as it is (one that is on stays on), and an
