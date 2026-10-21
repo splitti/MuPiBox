@@ -33,9 +33,16 @@ if [ -n "${mem_kb}" ] && [ "${mem_kb}" -le 1100000 ] && [ -x "${SET_SWAP}" ] && 
 		echo "swap is switched off on purpose - no zram"
 	elif [ "${location}" = "zram" ] || [ "${location}" = "zram0" ] || [ "${location}" = "/dev/zram0" ]; then
 		: # zram already
+	elif ! modprobe zram 2>/dev/null; then
+		# (DietPi's tool switches the old swap off and deletes its file before it loads the module: without the module
+		# the box was left without any swap)
+		echo "no zram module for this kernel - the swap stays as it is"
 	else
 		echo "1 GB of RAM: swap as zram instead of ${location:-a file}"
-		"${SET_SWAP}" 1 zram
+		if ! "${SET_SWAP}" 1 zram || ! grep -q '^/dev/zram0[[:blank:]]' /proc/swaps; then
+			echo "zram could not be set up - the swap as before (${size:-1} MiB, ${location:-/var/swap})"
+			"${SET_SWAP}" "${size:-1}" "${location:-/var/swap}"
+		fi
 	fi
 fi
 exit 0

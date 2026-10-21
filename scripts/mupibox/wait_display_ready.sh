@@ -17,6 +17,12 @@ window_title() {
 		| awk '/\("chromium" "Chromium"\)/ { split($(NF - 1), g, "x"); if (g[1] + 0 >= 400) { print; exit } }'
 }
 
+# (during the install or the update, see install_start_order.sh: the kiosk is stopped, nothing to wait for)
+if [ -e /run/mupibox-display-ready.skip ]; then
+	logger -t mupibox-display-ready "install or update running - not waiting for the display"
+	exit 0
+fi
+
 start=$(cut -d. -f1 /proc/uptime)
 while :; do
 	case "$(window_title)" in
