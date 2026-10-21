@@ -40,7 +40,8 @@ export function registerLegacyAdminRoutes(router: Router, deps: LegacyAdminDeps)
   router.post('/legacy-admin', requireSession, requireCsrf, async (req, res) => {
     const on = (req.body as { on?: unknown } | undefined)?.on
     if (typeof on !== 'boolean') return void res.status(400).json({ error: 'invalid on' })
-    const job = switching.then(() => run([on ? 'on' : 'off'], 90000))
+    // (lighttpd is read again only after the answer: the app's request goes through it, and its reload cut it off)
+    const job = switching.then(() => run([on ? 'on' : 'off', 'noreload'], 90000))
     switching = job.catch(() => undefined)
     const r = await job
     if (!r.ok) return void res.status(500).json({ ok: false, error: 'switch_failed' })
@@ -49,5 +50,7 @@ export function registerLegacyAdminRoutes(router: Router, deps: LegacyAdminDeps)
     })
     console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Admin interface switched ${on ? 'on' : 'off'}`)
     res.json({ ok: true })
+    const reload = new Promise((resolve) => setTimeout(resolve, 1500)).then(() => run(['reload'], 30000))
+    switching = reload.catch(() => undefined)
   })
 }

@@ -3,7 +3,10 @@
 # The previous admin interface (PHP pages behind lighttpd) on or off - the app's switch (Einstellungen › System ›
 # Experten, eltern/legacy-admin.ts), the install (off) and the update (as the config says). Run as root.
 #
-#   legacy_admin.sh on | off | status | apply
+#   legacy_admin.sh on | off [noreload] | status | apply | reload
+#
+# noreload: lighttpd is not read again yet - the app switches through lighttpd itself, and even a graceful reload cut
+# its request off (the answer never came): the server answers first and then runs "reload".
 #
 # off: php-fpm stopped and disabled, lighttpd's PHP module out, and every .php address sent to the app - nothing on the
 #      box answers with PHP any more (a PHP flaw reached from the home network cannot hit it). lighttpd itself stays:
@@ -37,7 +40,7 @@ status() {
 }
 
 switch_off() {
-	local unit f name mods=""
+	local reload="$1" unit f name mods=""
 	for unit in $(fpm_units); do
 		systemctl disable --now "${unit}" >/dev/null 2>&1
 	done
@@ -63,11 +66,11 @@ $HTTP["url"] =~ "\.(php[0-9]?|phtml|phar)$" {
 	url.redirect-code = 302
 }
 EOF
-	lighttpd_again
+	[ "${reload}" = "noreload" ] || lighttpd_again
 }
 
 switch_on() {
-	local unit name
+	local reload="$1" unit name
 	rm -f "${OFF_CONF}"
 	if [ -s "${MODS_FILE}" ]; then
 		for name in $(cat "${MODS_FILE}"); do
@@ -78,13 +81,14 @@ switch_on() {
 	for unit in $(fpm_units); do
 		systemctl enable --now "${unit}" >/dev/null 2>&1
 	done
-	lighttpd_again
+	[ "${reload}" = "noreload" ] || lighttpd_again
 }
 
 case "$1" in
-	on) switch_on ;;
-	off) switch_off ;;
+	on) switch_on "$2" ;;
+	off) switch_off "$2" ;;
 	status) status ;;
+	reload) lighttpd_again ;;
 	apply)
 		want=$(jq -r 'if .mupibox.legacyAdmin == false then "off" elif .mupibox.legacyAdmin == true then "on" else "" end' "${CONFIG}" 2>/dev/null)
 		if [ "${want}" = "off" ]; then
@@ -94,7 +98,7 @@ case "$1" in
 		fi
 		;;
 	*)
-		echo "Usage: $0 on|off|status|apply" >&2
+		echo "Usage: $0 on|off [noreload]|status|apply|reload" >&2
 		exit 2
 		;;
 esac
