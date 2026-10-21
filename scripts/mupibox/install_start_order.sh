@@ -22,6 +22,10 @@
 UNIT_DIR="/etc/systemd/system"
 READY="mupibox-display-ready.service"
 
+# (this script runs in the install and the update: the kiosk is stopped then, and a restart of lighttpd there pulls the
+# new display check in - it waited its full 120 s. Not during this start of the box: /run is empty at the next one.)
+touch /run/mupibox-display-ready.skip
+
 cat > "${UNIT_DIR}/${READY}" <<'EOF'
 # MuPiBox: ends when the display shows the start page (at the latest after 120 s). The services that are not needed for
 # the display are ordered after it (see scripts/mupibox/install_start_order.sh).
