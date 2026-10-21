@@ -3,8 +3,12 @@
 # The start order of the services that are not needed for the display (run as root by the install and the update, they
 # call daemon-reload afterwards):
 #
-#   pm2 (server, player) -> the kiosk's Chromium shows the start page -> LAN (mupi_ethernet) -> Bluetooth (bluetoothd)
-#   -> php-fpm -> lighttpd -> smbd -> DietPi dashboard
+#   pm2 (server, player) -> the kiosk's Chromium shows the start page -> Bluetooth (bluetoothd) -> php-fpm -> lighttpd
+#   -> smbd -> DietPi dashboard
+#
+# Not the LAN (mupi_ethernet): on DietPi 10 it is the only one that brings the cable up (eth0 has no allow-hotplug there)
+# - behind the display a box on a cable came into the network 30 to 120 s later, without the time (quiet times, the
+# day's limit) and without Spotify meanwhile. It asks for its address in the background and holds nothing up.
 #
 # The last four were started 45 s after the power was switched on (mupibox-delayed-start.conf): a fixed time that is too
 # long on a fast box and too short on a slow one (a system on a stick: the display was still loading when they started,
@@ -33,7 +37,11 @@ TimeoutStartSec=150
 EOF
 
 before="${READY}"
-for unit in mupi_ethernet bluetooth $(systemctl list-unit-files "php*-fpm.service" --no-legend 2>/dev/null | awk '{print $1}' | sed 's/\.service$//') lighttpd smbd dietpi-dashboard; do
+# (an earlier version of this script ordered the LAN behind the display too)
+rm -f "${UNIT_DIR}/mupi_ethernet.service.d/mupibox-start-order.conf"
+rmdir "${UNIT_DIR}/mupi_ethernet.service.d" 2>/dev/null
+
+for unit in bluetooth $(systemctl list-unit-files "php*-fpm.service" --no-legend 2>/dev/null | awk '{print $1}' | sed 's/\.service$//') lighttpd smbd dietpi-dashboard; do
 	mkdir -p "${UNIT_DIR}/${unit}.service.d"
 	# (the fixed 45 s wait of the earlier versions goes)
 	rm -f "${UNIT_DIR}/${unit}.service.d/mupibox-delayed-start.conf"
