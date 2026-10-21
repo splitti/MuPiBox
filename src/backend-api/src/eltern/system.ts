@@ -17,14 +17,20 @@ export interface SystemDeps {
 
 // Access data a log may carry, blacked out before it goes into the support zip (it is shared on Discord): a user and
 // password in an address (http://user:pass@…), token-like parameters of an address (a radio stream's ?token=…, a
-// feed's key, Spotify's code), Bearer tokens, Telegram bot tokens
+// feed's key, Spotify's code) - also URL-encoded, as the player logs an address it got from the display
+// (%3Ftoken%3D…) -, Bearer tokens, Telegram bot tokens. Every pattern starts at a fixed word and stops at a separator:
+// linear in the text (an open scheme name like [a-z][a-z0-9+.-]*:// tried the rest of every long word again - a log of
+// such lines held the whole server up).
+const SECRET_PARAMS = 'token|access_token|refresh_token|id_token|auth|authorization|key|apikey|api_key|secret|client_secret|password|passwd|pass|pw|pwd|sig|signature|session|sessionid|sid|code|ticket'
+const URL_CREDENTIALS = /\b(https?|rtsp|rtmp|mms|icy|ftps?|sftp|smb|nfs|wss?|davs?):\/\/[^\s/@:]{1,256}:[^\s/@]{1,256}@/gi
+const PARAM_PLAIN = new RegExp(`([?&;](?:${SECRET_PARAMS})=)[^&;\\s"'<>]+`, 'gi')
+// (encoded: ? & ; = as %3F %26 %3B %3D - the value ends at the next encoded separator)
+const PARAM_ENCODED = new RegExp(`((?:%3F|%26|%3B)(?:${SECRET_PARAMS})%3D)(?:(?!%26|%3B)[^&;\\s"'<>])+`, 'gi')
 export function withoutLogSecrets(text: string): string {
   return text
-    .replace(/\b([a-z][a-z0-9+.-]*:\/\/)[^\s/@:]+:[^\s/@]+@/gi, '$1***:***@')
-    .replace(
-      /([?&;](?:token|access_token|refresh_token|id_token|auth|authorization|key|apikey|api_key|apiKey|secret|client_secret|password|passwd|pass|pw|pwd|sig|signature|session|sessionid|sid|code|ticket)=)[^&\s"'<>]+/gi,
-      '$1***',
-    )
+    .replace(URL_CREDENTIALS, '$1://***:***@')
+    .replace(PARAM_PLAIN, '$1***')
+    .replace(PARAM_ENCODED, '$1***')
     .replace(/\b(Bearer\s+)[A-Za-z0-9._~+/=-]{8,}/g, '$1***')
     .replace(/\bbot\d{6,}:[A-Za-z0-9_-]{20,}/g, 'bot***')
 }
@@ -38,7 +44,11 @@ async function copyTail(from: string, to: string, maxBytes: number): Promise<voi
     const length = Math.min(size, maxBytes)
     const buf = Buffer.alloc(length)
     await fh.read(buf, 0, length, size - length)
-    await fsp.writeFile(to, withoutLogSecrets(buf.toString('utf8')))
+    // (cut off at its start: the first, partial line goes - a token whose ?token= lay before the cut stayed unnoticed,
+    // and a character cut in two came out broken)
+    const nl = size > length ? buf.indexOf(0x0a) : -1
+    const text = (nl >= 0 ? buf.subarray(nl + 1) : buf).toString('utf8')
+    await fsp.writeFile(to, withoutLogSecrets(text))
   } finally {
     await fh.close()
   }

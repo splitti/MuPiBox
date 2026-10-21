@@ -51,18 +51,33 @@ export function registerLegacyAdminRoutes(router: Router, deps: LegacyAdminDeps)
     // One job in the queue: the switch, its config, and lighttpd read again - only after the answer (the app's request
     // goes through lighttpd, and its reload cut it off). The next switch waits for all of it: two at once ran over each
     // other, and one's reload fell into the other's request.
+    // A switch that fails half way - the script, or the config it is saved in (its lock has a timeout) - goes back to
+    // what was before, in the same job: the web server and the answers of this server stay of one mind. lighttpd is
+    // read again in any case.
     const job = switching.then(async () => {
+      const before = legacyAdminOn(deps.getMupiboxConfig())
+      const back = () => run([before ? 'on' : 'off', 'noreload'], 90000)
       const r = await run([on ? 'on' : 'off', 'noreload'], 90000)
-      if (!r.ok) return false
-      await deps.updateMupiboxConfig((cfg) => {
-        cfg.mupibox = { ...((cfg.mupibox as Record<string, unknown>) ?? {}), legacyAdmin: on }
-      })
+      if (!r.ok) {
+        await back()
+        return false
+      }
+      try {
+        await deps.updateMupiboxConfig((cfg) => {
+          cfg.mupibox = { ...((cfg.mupibox as Record<string, unknown>) ?? {}), legacyAdmin: on }
+        })
+      } catch {
+        await back()
+        return false
+      }
       return true
     })
-    switching = job
-      .then((ok) => new Promise((resolve) => setTimeout(resolve, ok ? 1500 : 0)).then(() => run(['reload'], 30000)))
+    const done = job.catch(() => false)
+    switching = done
+      .then((ok) => new Promise((resolve) => setTimeout(resolve, ok ? 1500 : 0)))
+      .then(() => run(['reload'], 30000))
       .catch(() => undefined)
-    const ok = await job.catch(() => false)
+    const ok = await done
     if (!ok) return void res.status(500).json({ ok: false, error: 'switch_failed' })
     console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Admin interface switched ${on ? 'on' : 'off'}`)
     res.json({ ok: true })
