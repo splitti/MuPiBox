@@ -116,6 +116,13 @@
         }
       },
       {
+        "id": "tidal",
+        "title": {
+          "de": "TIDAL",
+          "en": "TIDAL"
+        }
+      },
+      {
         "id": "cover",
         "title": {
           "de": "Cover",

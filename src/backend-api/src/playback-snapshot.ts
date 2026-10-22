@@ -56,8 +56,8 @@ export async function playbackSnapshot(covers: PlaybackCovers = {}): Promise<Pla
     // the artist is the folder above, the cover the one the box shows for it.
     const source = String(local.currentType ?? '')
     const folder = String(local.path ?? '')
-    // a radio station or podcast: the picture it was started with (the app passes it on, spotify-control.js ?cover=)
-    if ((source === 'rss' || source === 'radio') && typeof local.cover === 'string' && local.cover) coverUrl = local.cover
+    // a radio station, a podcast or TIDAL: the picture it was started with (spotify-control.js ?cover=)
+    if ((source === 'rss' || source === 'radio' || source === 'tidal') && typeof local.cover === 'string' && local.cover) coverUrl = local.cover
     if ((source === 'nas' || source === 'local') && folder) {
       const parts = folder.split('/').filter(Boolean)
       // (<category>/<artist>/<album>: the artist is the folder above the album; an album with its files right in
