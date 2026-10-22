@@ -20,6 +20,8 @@ CONFIG=/etc/mupibox/mupiboxconfig.json
 OFF_CONF=/etc/lighttpd/conf-enabled/92-mupibox-admin-off.conf
 # the PHP modules of lighttpd switched off here, to switch the same ones on again
 MODS_FILE=/etc/mupibox/legacy-admin-off.modules
+# switched off by the update (once, 5.0.12): the app's start page says so until someone switches here
+NOTICE=/etc/mupibox/legacy-admin-off-by-update
 
 # lighttpd reads its config again. Gracefully (reload): the app itself goes through lighttpd, and its request that switches
 # this was cut off by a restart - the answer never came. A lighttpd that does not run is started.
@@ -85,8 +87,14 @@ switch_on() {
 }
 
 case "$1" in
-	on) switch_on "$2" ;;
-	off) switch_off "$2" ;;
+	on)
+		rm -f "${NOTICE}"
+		switch_on "$2"
+		;;
+	off)
+		rm -f "${NOTICE}"
+		switch_off "$2"
+		;;
 	status) status ;;
 	reload) lighttpd_again ;;
 	apply)

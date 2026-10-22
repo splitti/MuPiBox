@@ -1395,8 +1395,26 @@ function nextQuiet(schedule) {
 }
 
 async function loadNotices(root) {
-  const [hat, sync, access, auth, tools] = await Promise.all([api('/api/mupihat'), api('/api/spotify-sync/status'), api(`${API}/spotify-access`), api(`${API}/auth-state`), api(`${API}/missing-programs`)])
+  const [hat, sync, access, auth, tools, legacy] = await Promise.all([
+    api('/api/mupihat'),
+    api('/api/spotify-sync/status'),
+    api(`${API}/spotify-access`),
+    api(`${API}/auth-state`),
+    api(`${API}/missing-programs`),
+    api(`${API}/legacy-admin`),
+  ])
   const notes = []
+  // the update to 5.0.12 switched the previous admin interface off (no PHP in the home network): said once, until it is
+  // closed or switched (System › Experten)
+  if (legacy.ok && legacy.body?.offByUpdate && !remembered('mupi-admin-off-notice')) {
+    notes.push([
+      'lock',
+      'Admin-Interface ausgeschaltet',
+      'Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.',
+      'experten',
+      () => remember('mupi-admin-off-notice', '1'),
+    ])
+  }
   // no password, or the login off: everyone in the home network can set up the box - said every time, it is not closed
   // for good (the parents decide on the page Passwort); with the login on but the well-known default password, that
   if (auth.ok && (auth.body?.passwordSet === false || auth.body?.loginRequired === false)) {

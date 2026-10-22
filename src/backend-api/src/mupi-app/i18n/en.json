@@ -2924,5 +2924,7 @@
  "Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.": "The previous interface with PHP. This app can do everything it could. Off, nothing on the box answers with PHP any more – a security flaw in PHP cannot hit it then.",
  "Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.": "For help on Discord: a zip with the library, the settings (without passwords, tokens and accounts), the network and system state and the box’s logs.",
  "Gerät": "Device",
- "Start dauerte": "Start took"
+ "Start dauerte": "Start took",
+ "Admin-Interface ausgeschaltet": "Admin interface switched off",
+ "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Since this update the previous interface is off – safer, and this app can do everything it could. Tap to switch it on again under System › Experts."
 }

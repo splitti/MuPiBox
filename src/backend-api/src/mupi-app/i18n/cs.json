@@ -2924,5 +2924,7 @@
  "Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.": "Dosavadní rozhraní v PHP. Tato aplikace umí vše, co umělo ono. Když je vypnuté, na krabičce už nic neodpovídá přes PHP – bezpečnostní chyba v PHP ji pak nezasáhne.",
  "Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.": "Pro pomoc na Discordu: zip s knihovnou, nastavením (bez hesel, tokenů a účtů), stavem sítě a systému a protokoly krabičky.",
  "Gerät": "Zařízení",
- "Start dauerte": "Spuštění trvalo"
+ "Start dauerte": "Spuštění trvalo",
+ "Admin-Interface ausgeschaltet": "Administrační rozhraní vypnuto",
+ "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Od této aktualizace je dosavadní rozhraní vypnuté – bezpečnější, a tato aplikace umí vše, co umělo ono. Klepnutím ho znovu zapnete v Systém › Experti."
 }

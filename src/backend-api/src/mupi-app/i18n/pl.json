@@ -2924,5 +2924,7 @@
  "Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.": "Dotychczasowy interfejs w PHP. Ta aplikacja potrafi wszystko, co on. Po wyłączeniu nic na pudełku nie odpowiada już przez PHP – luka bezpieczeństwa w PHP nie może go wtedy dotknąć.",
  "Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.": "Do pomocy na Discordzie: plik zip z biblioteką, ustawieniami (bez haseł, tokenów i kont), stanem sieci i systemu oraz dziennikami pudełka.",
  "Gerät": "Urządzenie",
- "Start dauerte": "Uruchamianie trwało"
+ "Start dauerte": "Uruchamianie trwało",
+ "Admin-Interface ausgeschaltet": "Interfejs administracyjny wyłączony",
+ "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Od tej aktualizacji dotychczasowy interfejs jest wyłączony – bezpieczniej, a ta aplikacja potrafi wszystko, co on. Dotknij, aby włączyć go ponownie w System › Eksperci."
 }

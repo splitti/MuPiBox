@@ -2924,5 +2924,7 @@
  "Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.": "Det tidigare gränssnittet med PHP. Den här appen kan allt det kunde. Av svarar inget på boxen längre med PHP – en säkerhetsbrist i PHP kan då inte träffa den.",
  "Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.": "För hjälp på Discord: en zip med biblioteket, inställningarna (utan lösenord, token och konton), nätverks- och systemstatus och boxens loggar.",
  "Gerät": "Enhet",
- "Start dauerte": "Starten tog"
+ "Start dauerte": "Starten tog",
+ "Admin-Interface ausgeschaltet": "Administrationsgränssnittet avstängt",
+ "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Sedan den här uppdateringen är det tidigare gränssnittet avstängt – säkrare, och den här appen kan allt det kunde. Tryck för att slå på det igen under System › Experter."
 }

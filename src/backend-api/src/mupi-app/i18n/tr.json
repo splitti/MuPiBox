@@ -2924,5 +2924,7 @@
  "Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.": "PHP ile çalışan eski arayüz. Bu uygulama onun yapabildiği her şeyi yapabilir. Kapalıyken kutuda artık hiçbir şey PHP ile yanıt vermez – PHP’deki bir güvenlik açığı ona ulaşamaz.",
  "Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.": "Discord’da yardım için: kütüphane, ayarlar (parolalar, belirteçler ve hesaplar olmadan), ağ ve sistem durumu ile kutunun günlüklerini içeren bir zip.",
  "Gerät": "Cihaz",
- "Start dauerte": "Başlatma süresi"
+ "Start dauerte": "Başlatma süresi",
+ "Admin-Interface ausgeschaltet": "Yönetim arayüzü kapatıldı",
+ "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Bu güncellemeden beri eski arayüz kapalı – daha güvenli, ve bu uygulama onun yapabildiği her şeyi yapabilir. Yeniden açmak için Sistem › Uzman altına dokunun."
 }

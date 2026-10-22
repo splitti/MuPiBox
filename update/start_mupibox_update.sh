@@ -291,6 +291,13 @@ rm -f /tmp/mupibox-update-failed
 		echo -e "## apt-get install ${package}  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	done
 
+	# Security updates of PHP (the previous admin interface's language - PHP2Shell, CVE-2026-109618/-109619 of October
+	# 2026): whoever switches the admin interface on again has the fixed version. Only the PHP packages installed.
+	PHP_PKGS=$(dpkg-query -W -f='${Package} ${Status}\n' 'php*' 2>/dev/null | awk '/install ok installed/ {print $1}')
+	if [ -n "${PHP_PKGS}" ]; then
+		apt-get --yes --only-upgrade install ${PHP_PKGS} >&3 2>&3
+	fi
+
 	# What a part of the box needs (the list of scripts/mupibox/install_missing.sh - mpv plays everything but Spotify,
 	# mplayer is gone; rsvg-convert and Pillow put the start pictures together; xdotool and feh the goodbye picture):
 	# asked once more with fresh package lists when the loop above could not install it
@@ -1218,9 +1225,20 @@ rm -f /tmp/mupibox-update-failed
 	lighty-enable-mod ssl  >&3 2>&3
 	# restart, not reload: new modules and the new certificate (root only) are only taken over by a new start
 	systemctl restart lighttpd >&3 2>&3
-	# the previous admin interface as chosen in the app (System › Experten): an update may bring PHP and lighttpd's PHP
-	# module back - switched off, they go again (not chosen: as it is)
+	# The previous admin interface: off since 5.0.12 on a box where nobody chose (the app does everything it did, and no
+	# PHP answers in the home network) - once, with this update; a marker that outlasts a reset of the configuration
+	# keeps it to this once: switched on again in the app (System › Experten), it stays on. The app's start page says it
+	# was switched off. Afterwards as chosen: an update may bring PHP and lighttpd's PHP module back - off, they go again.
 	if [ -x /usr/local/bin/mupibox/legacy_admin.sh ]; then
+		if [ ! -e /etc/mupibox/legacy-admin-default.done ]; then
+			if [ -z "$(/usr/bin/jq -r '.mupibox.legacyAdmin // empty' ${CONFIG} 2>/dev/null)" ] && [ "$(/usr/local/bin/mupibox/legacy_admin.sh status)" = "on" ]; then
+				tmp_cfg=$(mktemp /etc/mupibox/.cfg.XXXXXX) && /usr/bin/jq '.mupibox.legacyAdmin = false' ${CONFIG} > "${tmp_cfg}" && chown --reference=${CONFIG} "${tmp_cfg}" && chmod --reference=${CONFIG} "${tmp_cfg}" && mv -f "${tmp_cfg}" ${CONFIG}
+				rm -f "${tmp_cfg}"
+				/usr/local/bin/mupibox/legacy_admin.sh off >&3 2>&3
+				touch /etc/mupibox/legacy-admin-off-by-update
+			fi
+			touch /etc/mupibox/legacy-admin-default.done
+		fi
 		/usr/local/bin/mupibox/legacy_admin.sh apply >&3 2>&3
 	fi
 	after=$(date +%s)

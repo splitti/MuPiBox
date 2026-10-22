@@ -2924,5 +2924,7 @@
  "Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.": "La vecchia interfaccia in PHP. Questa app sa fare tutto ciò che faceva. Disattivata, sul box nulla risponde più in PHP – una falla di sicurezza di PHP non può colpirlo.",
  "Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.": "Per l’aiuto su Discord: uno zip con la libreria, le impostazioni (senza password, token e account), lo stato di rete e sistema e i log del box.",
  "Gerät": "Dispositivo",
- "Start dauerte": "L’avvio è durato"
+ "Start dauerte": "L’avvio è durato",
+ "Admin-Interface ausgeschaltet": "Interfaccia di amministrazione disattivata",
+ "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Da questo aggiornamento la vecchia interfaccia è disattivata – più sicuro, e questa app sa fare tutto ciò che faceva. Tocca per riattivarla in Sistema › Esperti."
 }
