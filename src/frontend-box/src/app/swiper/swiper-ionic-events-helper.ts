@@ -12,6 +12,12 @@ import { SwiperComponent } from './swiper.component'
 export class SwiperIonicEventsHelper {
   protected swiperComponent = viewChild(SwiperComponent)
 
+  // At the start of the page change, not only at its end: the list is drawn while the page comes in (back from the
+  // player: the covers are there as the page fades in, not three quarters of a second later)
+  public ionViewWillEnter(): void {
+    this.swiperComponent()?.ionViewWillEnter()
+  }
+
   public ionViewDidEnter(): void {
     this.swiperComponent().ionViewDidEnter()
   }

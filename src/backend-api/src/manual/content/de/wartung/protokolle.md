@@ -4,7 +4,7 @@
 
 **Einstellungen › System › Zustand der Box** zeigt auf einen Blick, ob alles in Ordnung ist: **Speicherplatz**, **Temperatur**, **Stromversorgung**, **SD-Karte**, **Arbeitsspeicher**, **Dienste der Box**, **Internet**, **NAS**, **Spotify-Anmeldung**, **Zertifikat (HTTPS)** und **Gespeicherte Podcast-Folgen**. Stimmt etwas nicht, steht dabei, was zu tun ist. **Neu prüfen** prüft noch einmal.
 
-Ähnliches steht auf der Seite **Über die Box**: **Version**, **Hostname**, **Läuft seit**, **CPU-Last**, **Temperatur**, **Arbeitsspeicher** und der Platz auf der **SD-Karte**. Darunter zeigt ein **Verlauf** der letzten 1, 6 oder 24 Stunden, wie sich die Werte entwickelt haben. Gemessen wird einmal pro Minute, nur im Arbeitsspeicher der Box. Nach einem Neustart beginnt der Verlauf neu.
+Ähnliches steht auf der Seite **Über die Box**: **Version**, **Hostname**, **Gerät** (das Pi-Modell), **System** (Betriebssystem und Architektur), **Läuft seit**, **Start dauerte** (Zeit bis die Box ganz hochgefahren war), **CPU-Last**, **Temperatur**, **Arbeitsspeicher** und der Platz auf der **SD-Karte**. Darunter zeigt ein **Verlauf** der letzten 1, 6 oder 24 Stunden, wie sich die Werte entwickelt haben. Gemessen wird einmal pro Minute, nur im Arbeitsspeicher der Box. Nach einem Neustart beginnt der Verlauf neu.
 
 ## Protokolle
 
@@ -20,7 +20,7 @@ Mit **Ausführliches Player-Log** schreibt der Player viel mehr in sein Log (`sp
 
 ## Support-Infos für die Hilfe
 
-Brauchst du Hilfe, zum Beispiel im [Discord](https://discord.gg/4EjCgpCbbe), tippe unter **Einstellungen › System › Über die Box › Support** auf **Support-Infos herunterladen**. Das Zip enthält die Bibliothek (`data.json`), die Einstellungen ohne Passwörter, Tokens und Konten, den Zustand von Display und Netzwerk und die Versionen. Logs sind nicht dabei: Lade sie bei Bedarf unter **Protokolle** mit **Herunterladen** dazu.
+Brauchst du Hilfe, zum Beispiel im [Discord](https://discord.gg/4EjCgpCbbe), tippe unter **Einstellungen › System › Über die Box › Support** auf **Support-Infos herunterladen**. Das Zip enthält die Bibliothek (`data.json`), die Einstellungen ohne Passwörter, Tokens und Konten, den Zustand von Display und Netzwerk, die Versionen und die **Logs** von Server und Player (auch die älteren) sowie das Debug-Log des Browsers, wenn **Chrome-Debugging** an ist – von jedem Log die letzten 5 MB. Schau es dir vor dem Teilen kurz an: Logs können Namen aus deiner Bibliothek enthalten.
 
 ## Die Logs schonen die SD-Karte
 

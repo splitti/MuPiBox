@@ -71,7 +71,7 @@
    "id": "g-dienste",
    "title": "Dienste",
    "icon": "plug",
-   "description": "Spotify, NAS, Podcast- und Radiosuche · Telegram, MQTT, Home Assistant, WLED · Samba, FTP, VNC"
+   "description": "Spotify, TIDAL, NAS, Podcast- und Radiosuche · Telegram, MQTT, Home Assistant, WLED · Samba, FTP, VNC"
   },
   {
    "id": "g-sicherheit",
@@ -631,6 +631,16 @@
    "title": "Radiosender suchen",
    "description": "",
    "icon": "vol",
+   "sections": []
+  },
+  {
+   "id": "tidalsuche",
+   "slug": "tidal-search",
+   "area": "bibliothek",
+   "parent": "bibliothek",
+   "title": "Auf TIDAL suchen",
+   "description": "",
+   "icon": "search",
    "sections": []
   },
   {
@@ -3667,6 +3677,16 @@
    "sections": []
   },
   {
+   "id": "tidal",
+   "slug": "tidal",
+   "area": "einstellungen",
+   "parent": "g-dienste",
+   "title": "TIDAL",
+   "description": "Inoffizielle Anbindung an TIDAL",
+   "icon": "music",
+   "sections": []
+  },
+  {
    "id": "wled",
    "slug": "wled",
    "area": "einstellungen",
@@ -4778,7 +4798,7 @@
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "Dienste",
-   "description": "Spotify, NAS, Podcast- und Radiosuche · Telegram, MQTT, Home Assistant, WLED · Samba, FTP, VNC",
+   "description": "Spotify, TIDAL, NAS, Podcast- und Radiosuche · Telegram, MQTT, Home Assistant, WLED · Samba, FTP, VNC",
    "icon": "plug",
    "sections": [
     {
@@ -4790,6 +4810,12 @@
        "label": "Spotify",
        "target": "spotify",
        "subtitle": "Anmeldung und Smart-Sync · Bibliothek › Spotify"
+      },
+      {
+       "type": "nav",
+       "label": "TIDAL",
+       "target": "tidal",
+       "subtitle": "Anmeldung mit Code, inoffiziell · Bibliothek › Hinzufügen"
       },
       {
        "type": "nav",
@@ -5108,6 +5134,11 @@
    "l": "Radiosender suchen",
    "where": "Bibliothek › Radiosender suchen",
    "id": "radiosuche"
+  },
+  {
+   "l": "Auf TIDAL suchen",
+   "where": "Bibliothek › Auf TIDAL suchen",
+   "id": "tidalsuche"
   },
   {
    "l": "Auf Spotify suchen",

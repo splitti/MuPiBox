@@ -173,6 +173,11 @@ export function tokenStillValid(store: SpotifyTokenStore, slackSeconds = 300): b
  * returns a discriminated result.
  */
 let refreshRunning: ReturnType<typeof refreshAccessToken> | null = null
+// A refresh that failed is not tried again before this (ms): Spotify's Retry-After for a 429, a short pause for anything
+// else - each caller after it (the next playlist, the sync, the album lists) asked Spotify again at once. For the same
+// login only: a new login or another Spotify app (Client ID) is tried at once.
+const REFRESH_PAUSE_MS = 30_000
+let refreshFailed: { key: string; until: number; failure: RefreshFailure } | null = null
 
 export async function getValidAccessToken(
   store: SpotifyTokenStore,
@@ -183,6 +188,11 @@ export async function getValidAccessToken(
   }
   // (one refresh at a time: the sync and the app's album lists refreshed at the same moment - with a refresh token
   // Spotify renews at each use, the second one was refused, and the parents were told the login failed)
+  const key = `${store.clientId}\n${store.refreshToken}`
+  if (refreshFailed && refreshFailed.key === key && Date.now() < refreshFailed.until) {
+    const left = Math.max(1, Math.ceil((refreshFailed.until - Date.now()) / 1000))
+    return { ok: false, failure: { ...refreshFailed.failure, retryAfterSeconds: refreshFailed.failure.kind === 'rate-limit' ? left : refreshFailed.failure.retryAfterSeconds } }
+  }
   if (!refreshRunning) {
     refreshRunning = refreshAccessToken(store).finally(() => {
       refreshRunning = null
@@ -193,8 +203,11 @@ export async function getValidAccessToken(
     // outcome is the failure variant here; strip the `ok: false` flag
     // before passing back so the caller doesn't have to re-narrow.
     const { ok: _ok, ...failure } = outcome
+    const pause = failure.kind === 'rate-limit' && failure.retryAfterSeconds ? failure.retryAfterSeconds * 1000 : REFRESH_PAUSE_MS
+    refreshFailed = { key, until: Date.now() + pause, failure }
     return { ok: false, failure }
   }
+  refreshFailed = null
   const newStore = await persistRefreshedToken(outcome.result, store, updateCfg)
   return { ok: true, token: newStore.accessToken, store: newStore }
 }

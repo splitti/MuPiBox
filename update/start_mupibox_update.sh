@@ -291,6 +291,20 @@ rm -f /tmp/mupibox-update-failed
 		echo -e "## apt-get install ${package}  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	done
 
+	# Security updates of PHP (the previous admin interface's language - PHP2Shell, CVE-2026-109618/-109619 of October
+	# 2026): whoever switches the admin interface on again has the fixed version. Only the PHP packages installed.
+	# Failed twice (the second time with fresh package lists): kept in a file the app shows while the admin interface is
+	# on (with it off no PHP answers); the MuPiBox update itself goes on - the box is fine. The next update tries again.
+	PHP_PKGS=$(dpkg-query -W -f='${Package} ${Status}\n' 'php*' 2>/dev/null | awk '/install ok installed/ {print $1}')
+	if [ -n "${PHP_PKGS}" ]; then
+		if apt-get --yes --only-upgrade install ${PHP_PKGS} >&3 2>&3 || { apt-get update >&3 2>&3; apt-get --yes --only-upgrade install ${PHP_PKGS} >&3 2>&3; }; then
+			rm -f /etc/mupibox/php-security-update.failed
+		else
+			echo "PHP security update failed: ${PHP_PKGS}" >&3
+			date '+%Y-%m-%d %H:%M' > /etc/mupibox/php-security-update.failed
+		fi
+	fi
+
 	# What a part of the box needs (the list of scripts/mupibox/install_missing.sh - mpv plays everything but Spotify,
 	# mplayer is gone; rsvg-convert and Pillow put the start pictures together; xdotool and feh the goodbye picture):
 	# asked once more with fresh package lists when the loop above could not install it
@@ -852,6 +866,10 @@ rm -f /tmp/mupibox-update-failed
 	mv -f ${MUPI_SRC}/config/services/mupi_autoconnect-wifi.service /etc/systemd/system/mupi_autoconnect-wifi.service  >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_mqtt.service /etc/systemd/system/mupi_mqtt.service  >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_rotary.service /etc/systemd/system/mupi_rotary.service  >&3 2>&3
+	# TIDAL (unofficial, see scripts/mupibox/tidal_service.py): on only when switched on in the app (below)
+	if [ -f ${MUPI_SRC}/config/services/mupi_tidal.service ]; then
+		mv -f ${MUPI_SRC}/config/services/mupi_tidal.service /etc/systemd/system/mupi_tidal.service >&3 2>&3
+	fi
 	# LAN without waiting at boot, and an address at once when a cable is plugged in (see scripts/mupibox/mupi_ethernet.sh)
 	if [ -f ${MUPI_SRC}/config/services/mupi_ethernet.service ]; then
 		mv -f ${MUPI_SRC}/config/services/mupi_ethernet.service /etc/systemd/system/mupi_ethernet.service >&3 2>&3
@@ -864,18 +882,24 @@ rm -f /tmp/mupibox-update-failed
 		mv -f ${MUPI_SRC}/config/services/mupi_goodbye.service /etc/systemd/system/mupi_goodbye.service >&3 2>&3
 		MUPI_GOODBYE=1
 	fi
+	# No DietPi banner (logo, system data, "Running warm...") on the display's console while the box starts: DietPi shows
+	# it at the autologin unless ~/.hushlogin exists - for dietpi, and for root, who logs in there on DietPi 10 / Debian 13
+	touch /home/dietpi/.hushlogin /root/.hushlogin >&3 2>&3
 	# The display's autologin without the 5 s Type=idle wait (see config/services/getty@tty1.service.d/mupibox.conf)
 	if [ -f "${MUPI_SRC}/config/services/getty@tty1.service.d/mupibox.conf" ]; then
 		mkdir -p "/etc/systemd/system/getty@tty1.service.d" >&3 2>&3
 		cp -f "${MUPI_SRC}/config/services/getty@tty1.service.d/mupibox.conf" "/etc/systemd/system/getty@tty1.service.d/mupibox.conf" >&3 2>&3
 	fi
-	# Admin interface, Samba share and DietPi dashboard 45 s after the start: not needed for the display, which they
-	# were competing with (see config/services/mupibox-delayed-start.conf)
-	if [ -f "${MUPI_SRC}/config/services/mupibox-delayed-start.conf" ]; then
-		for delayed in lighttpd smbd dietpi-dashboard $(systemctl list-unit-files "php*-fpm.service" --no-legend 2>/dev/null | awk '{print $1}' | sed 's/\.service$//'); do
-			mkdir -p "/etc/systemd/system/${delayed}.service.d" >&3 2>&3
-			cp -f "${MUPI_SRC}/config/services/mupibox-delayed-start.conf" "/etc/systemd/system/${delayed}.service.d/mupibox-delayed-start.conf" >&3 2>&3
-		done
+	# Admin interface, Samba share and DietPi dashboard after the display shows the start page, one after the other: not
+	# needed for the display, which they were competing with (was: 45 s after the start, see
+	# scripts/mupibox/install_start_order.sh)
+	if [ -f /usr/local/bin/mupibox/install_start_order.sh ]; then
+		bash /usr/local/bin/mupibox/install_start_order.sh >&3 2>&3
+	fi
+	# initial_turbo for a faster start, and zram swap on a Pi with 1 GB - each only when nothing was chosen for it (see
+	# scripts/mupibox/boot_tuning.sh)
+	if [ -f /usr/local/bin/mupibox/boot_tuning.sh ]; then
+		bash /usr/local/bin/mupibox/boot_tuning.sh >&3 2>&3
 	fi
 	# Samba, FTP and VNC on a box that does not have them yet (issue #178): installed and set up, but off - the app's
 	# switches (eltern/services.ts) then only start and stop them, at once and without internet; a fresh installation
@@ -1049,6 +1073,11 @@ rm -f /tmp/mupibox-update-failed
 	if [ "${MUPI_GOODBYE}" = "1" ]; then
 		systemctl enable --now mupi_goodbye.service >&3 2>&3
 	fi
+	# TIDAL switched on in the app: its Python brought to the version the box is tested with, and the service started
+	# again with the new tidal_service.py (the sign-in stays). Without internet now: it keeps running as it was.
+	if [ -x /usr/local/bin/mupibox/tidal_setup.sh ] && [ "$(/usr/bin/jq -r '.tidal.enabled // false' /etc/mupibox/mupiboxconfig.json 2>/dev/null)" = "true" ]; then
+		/usr/local/bin/mupibox/tidal_setup.sh on >&3 2>&3 || echo "## WARNING: TIDAL could not be set up - the app's switch tries again ##" >&3 2>&3
+	fi
 	after=$(date +%s)
 	echo -e "## Restarting services  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
@@ -1203,6 +1232,29 @@ rm -f /tmp/mupibox-update-failed
 	lighty-enable-mod ssl  >&3 2>&3
 	# restart, not reload: new modules and the new certificate (root only) are only taken over by a new start
 	systemctl restart lighttpd >&3 2>&3
+	# The previous admin interface: off since 5.0.12 on a box where nobody chose (the app does everything it did, and no
+	# PHP answers in the home network) - once, with this update; a marker that outlasts a reset of the configuration
+	# keeps it to this once: switched on again in the app (System › Experten), it stays on. The app's start page says it
+	# was switched off. Afterwards as chosen: an update may bring PHP and lighttpd's PHP module back - off, they go again.
+	if [ -x /usr/local/bin/mupibox/legacy_admin.sh ]; then
+		migrate=""
+		if [ ! -e /etc/mupibox/legacy-admin-default.done ]; then
+			migrate=1
+			if [ -z "$(/usr/bin/jq -r '.mupibox.legacyAdmin // empty' ${CONFIG} 2>/dev/null)" ] && [ "$(/usr/local/bin/mupibox/legacy_admin.sh status)" = "on" ]; then
+				# (the notice first: an update cut off after the switch still explains it - the app shows it only while
+				# the admin interface is off. Switched off below by "apply" as the config now says: "off" is a switch made
+				# by someone and takes the notice away.)
+				touch /etc/mupibox/legacy-admin-off-by-update
+				tmp_cfg=$(mktemp /etc/mupibox/.cfg.XXXXXX) && /usr/bin/jq '.mupibox.legacyAdmin = false' ${CONFIG} > "${tmp_cfg}" && chown --reference=${CONFIG} "${tmp_cfg}" && chmod --reference=${CONFIG} "${tmp_cfg}" && mv -f "${tmp_cfg}" ${CONFIG}
+				rm -f "${tmp_cfg}"
+			fi
+		fi
+		/usr/local/bin/mupibox/legacy_admin.sh apply >&3 2>&3
+		# done only when it holds: chosen on (the key says so) or off - else the next update tries again
+		if [ -n "${migrate}" ] && { [ "$(/usr/bin/jq -r '.mupibox.legacyAdmin' ${CONFIG} 2>/dev/null)" = "true" ] || [ "$(/usr/local/bin/mupibox/legacy_admin.sh status)" = "off" ]; }; then
+			touch /etc/mupibox/legacy-admin-default.done
+		fi
+	fi
 	after=$(date +%s)
 	echo -e "## Network optimization ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))

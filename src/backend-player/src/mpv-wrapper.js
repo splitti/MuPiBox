@@ -323,6 +323,11 @@ const createPlayer = (options = {}) => {
         // network streams are buffered before they start (as mplayer's cache-min did)
         '--cache=yes',
         '--demuxer-readahead-secs=20',
+        // ...but in bounds: by default mpv keeps up to 150 MiB read ahead and 50 MiB of what was played, for every
+        // file (local and NAS ones too, with --cache=yes) - 100 to 250 MB for an idle mpv, too much for a Pi with 1 GB
+        // (it ran out of memory). 16 MiB hold more than the 20 s even of a hi-res FLAC; 4 MiB back for a jump back.
+        '--demuxer-max-bytes=16MiB',
+        '--demuxer-max-back-bytes=4MiB',
         '--cache-pause-initial=yes',
         '--network-timeout=20',
         // how mpv names itself to every server, its default written out: the box's own servers refuse it (a foreign

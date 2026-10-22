@@ -307,7 +307,9 @@ STEP=0
 
 	echo -e "XXX\n${STEP}\nCreate hushlogin and MuPiBox config... \nXXX"
 	before=$(date +%s)
-	touch /home/dietpi/.hushlogin >&3 2>&3
+	# No DietPi banner (logo, system data, "Running warm...") on the display's console while the box starts: for dietpi,
+	# and for root, who logs in there on DietPi 10 / Debian 13 (the agetty line below is not the same there)
+	touch /home/dietpi/.hushlogin /root/.hushlogin >&3 2>&3
 	mv -f ${MUPI_SRC}/config/templates/mupiboxconfig.json ${CONFIG} >&3 2>&3
 	chown root:www-data ${CONFIG} >&3 2>&3
 	chmod 775 ${CONFIG} >&3 2>&3
@@ -687,12 +689,11 @@ STEP=0
 	mkdir -p "/etc/systemd/system/getty@tty1.service.d" >&3 2>&3
 	cp -f "${MUPI_SRC}/config/services/getty@tty1.service.d/mupibox.conf" "/etc/systemd/system/getty@tty1.service.d/mupibox.conf" >&3 2>&3
 	
-	# Admin interface, DietPi dashboard and the Samba share (once the app switches it on) 45 s after the start
-	# (see config/services/mupibox-delayed-start.conf)
-	for delayed in lighttpd smbd dietpi-dashboard $(systemctl list-unit-files "php*-fpm.service" --no-legend 2>/dev/null | awk '{print $1}' | sed 's/\.service$//'); do
-		mkdir -p "/etc/systemd/system/${delayed}.service.d" >&3 2>&3
-		cp -f "${MUPI_SRC}/config/services/mupibox-delayed-start.conf" "/etc/systemd/system/${delayed}.service.d/mupibox-delayed-start.conf" >&3 2>&3
-	done
+	# Admin interface, DietPi dashboard and the Samba share (once the app switches it on) after the display shows the
+	# start page, one after the other (was: 45 s after the start, see scripts/mupibox/install_start_order.sh)
+	bash /usr/local/bin/mupibox/install_start_order.sh >&3 2>&3
+	# initial_turbo for a faster start, and zram swap on a Pi with 1 GB (see scripts/mupibox/boot_tuning.sh)
+	bash /usr/local/bin/mupibox/boot_tuning.sh >&3 2>&3
 	systemctl daemon-reload >&3 2>&3
 	
 	# (not the Samba share: off until the app switches it on, see "Preconfigure Samba")
@@ -748,6 +749,13 @@ STEP=0
 	lighty-enable-mod ssl >&3 2>&3
 	# restart, not reload: new modules and the new certificate (root only) are only taken over by a new start
 	systemctl restart lighttpd >&3 2>&3
+	# The previous admin interface (PHP) is off on a new box: the app does everything it did, and no PHP answers in the
+	# home network (switch: app › System › Experten; see scripts/mupibox/legacy_admin.sh)
+	tmp_cfg=$(mktemp /etc/mupibox/.cfg.XXXXXX) && jq '.mupibox.legacyAdmin = false' /etc/mupibox/mupiboxconfig.json > "$tmp_cfg" && chown --reference=/etc/mupibox/mupiboxconfig.json "$tmp_cfg" && chmod --reference=/etc/mupibox/mupiboxconfig.json "$tmp_cfg" && mv -f "$tmp_cfg" /etc/mupibox/mupiboxconfig.json
+	rm -f "$tmp_cfg"
+	/usr/local/bin/mupibox/legacy_admin.sh off >&3 2>&3
+	# (the update switches it off once on boxes of before - not here again)
+	touch /etc/mupibox/legacy-admin-default.done
 	after=$(date +%s)
 	echo -e "## Activate SSL ## finished after $((after - before)) seconds" >&3 2>&3
 	STEP=$((STEP + 1))

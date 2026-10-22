@@ -16,7 +16,7 @@ PODCAST_INDEX="/home/dietpi/MuPiBox/podcasts/index.json"
 offline_filter() {
 	local index="${PODCAST_INDEX}"
 	/usr/bin/jq -e 'type == "object"' "${index}" > /dev/null 2>&1 || index=/dev/null
-	/usr/bin/jq --slurpfile off "${index}" '([$off[0].files[]?.feed] + [$off[0].files[]?.url]) as $feeds | .[] | select(.type != "spotify" and .type != "radio" and (.type != "rss" or (.id as $i | any($feeds[]; . == $i))))' < "$1"
+	/usr/bin/jq --slurpfile off "${index}" '([$off[0].files[]?.feed] + [$off[0].files[]?.url]) as $feeds | .[] | select(.type != "spotify" and .type != "radio" and .type != "tidal" and (.type != "rss" or (.id as $i | any($feeds[]; . == $i))))' < "$1"
 }
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"

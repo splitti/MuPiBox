@@ -11,10 +11,10 @@ Diese Einstellungen unter **Einstellungen › System** brauchst du selten. Sie s
 | **SD-Karte übertakten** | schnellerer Zugriff auf die SD-Karte. Manche Karten laufen damit nicht stabil, die App fragt deshalb vorher nach |
 | **PM2-Logs im RAM** | die Logs von Server und Player im Arbeitsspeicher statt auf der SD-Karte. Das schont sie, die Logs gehen aber beim Neustart verloren |
 | **Beim Start auf Netzwerk warten** | die Box wartet beim Hochfahren aufs Netzwerk (langsamerer Start, dafür gleich online) |
-| **Turbo beim Start** | höherer Takt in den ersten 30 Sekunden, für einen schnelleren Start |
+| **Turbo beim Start** | höherer Takt in den ersten 30 Sekunden, für einen schnelleren Start. Installation und Update schalten ihn ein, wenn er noch nie eingestellt wurde |
 | **CPU-Governor** | die Art, wie der Prozessor seinen Takt regelt (zum Beispiel ondemand = nach Bedarf) |
 | **Unterspannungs-Warnungen ausblenden** | blendet das Blitz-Symbol bei zu schwacher Stromversorgung aus |
-| **SWAP** | Auslagerungsdatei auf der SD-Karte |
+| **SWAP** | Auslagerungsdatei auf der SD-Karte. Auf einem Pi mit 1 GB legt die Installation und das Update den Swap komprimiert im Arbeitsspeicher an (zram) – das ist auf langsamen Karten und USB-Sticks viel schneller. Ein abgeschalteter Swap bleibt aus |
 
 > [!WARNING]
 > Eine Unterspannungs-Warnung heißt, dass das Netzteil oder das Kabel zu schwach ist. Das ist die häufigste Ursache für Aussetzer. Behebe sie, statt sie auszublenden.
@@ -39,6 +39,7 @@ Die Änderungen gelten nach einem Neustart des Displays. Den startest du gleich 
 
 - **Hostname**: der Name der Box im Netzwerk, zum Beispiel `mupibox` (erreichbar als `mupibox.local`). Nur Buchstaben, Ziffern und Bindestrich. Wird nach einem Neustart übernommen.
 - **Weitere Werkzeuge**: das **DietPi-Dashboard** (Systemverwaltung von DietPi) und das **Admin-Interface** (Legacy, die bisherige Oberfläche). Beide öffnen sich in einem neuen Fenster. Das DietPi-Dashboard hat ein Terminal mit Root-Rechten und ist deshalb ab Werk aus: Mit **DietPi-Dashboard erlauben** schaltest du es ein. Es öffnet sich dann nur über die App, ohne eigene Anmeldung. Wer Port 5252 direkt im Browser aufruft, landet bei einer Passwortabfrage, an der niemand vorbeikommt.
+- **Admin-Interface ein oder aus**: der Schalter unter **Weitere Werkzeuge** schaltet die bisherige Oberfläche ein oder aus. Diese App kann alles, was sie konnte. Ist sie aus, antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP (wie die vom Oktober 2026) trifft die Box dann nicht. Die Anmeldeseite bietet sie dann nicht mehr an, und eine Spotify-Anmeldung über die alte Adresse `https://<box>/spotify.php` geht weiter. Mit dem Update auf 5.0.12 wurde sie einmalig ausgeschaltet (auf einer neu installierten Box ist sie ohnehin aus); die Startseite der App sagt das. Schaltest du sie wieder ein, bleibt sie bei späteren Updates an. Das Update spielt außerdem die Sicherheitsupdates von PHP ein.
 - **Konfiguration direkt bearbeiten**: ein Editor für die JSON-Dateien der Box. Unter **Datei** wählst du, welche, zum Beispiel `mupiboxconfig.json` (Box), `data.json` (Bibliothek) oder `config.json` (Server).
 - **Zurücksetzen**: **Box-Konfiguration zurücksetzen** (alle Einstellungen auf den Stand der installierten Version, das Passwort bleibt), **Bibliothek leeren** (alle Einträge der Bibliothek weg, die Dateien bleiben) und **Server-Konfiguration zurücksetzen**.
 

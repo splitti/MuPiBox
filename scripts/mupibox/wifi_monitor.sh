@@ -18,6 +18,32 @@
 	readonly PINGS=3           # packets per check; one answer is enough
 	readonly FAILS_ALLOWED=3   # failed checks in a row (about 30 seconds) before re-connecting
 	FAILS=0
+
+	# Starts an adapter over so that it gets its address again. A plain "ifdown; ifup" is not enough with the roaming
+	# setup (wpa-roam: the address comes from the logical interface "<adapter>=default" when wpa_supplicant reports the
+	# connection): the old clients and ifupdown's state stayed, no address and no default route came back, and every
+	# check after that failed again - the adapter seemed to be gone for good.
+	reconnect() {
+		local adapter=$1 n
+		ifdown --force "${adapter}=default" &> /dev/null
+		ifdown --force "$adapter" &> /dev/null
+		pkill -f "wpa_supplicant.* -i ${adapter} " &> /dev/null
+		pkill -f "dhclient.*/run/dhclient\.${adapter}\.pid" &> /dev/null
+		rm -f "/run/wpa_supplicant/${adapter}"
+		G_SLEEP 1
+		ifup "$adapter"
+		# the address comes with the connection: wait for it (the connection itself may take a few seconds)
+		for ((n = 0; n < 25; n++))
+		do
+			ip -4 addr show dev "$adapter" scope global 2> /dev/null | grep -q 'inet ' && return 0
+			G_SLEEP 1
+		done
+		# connected, but no address asked for: ask for it
+		if wpa_cli -i "$adapter" status 2> /dev/null | grep -q 'wpa_state=COMPLETED'
+		then
+			ifup "${adapter}=default" &> /dev/null
+		fi
+	}
 	G_DIETPI-NOTIFY 2 "Checking connection for $ADAPTER via ping to default gateway every $TICKRATE seconds (re-connect after $FAILS_ALLOWED failed checks)"
 	while G_SLEEP "$TICKRATE"
 	do
@@ -40,9 +66,7 @@
 			continue
 		fi
 		G_DIETPI-NOTIFY 2 "Detected $ADAPTER connection loss. Reconnecting..."
-		ifdown "$ADAPTER"
-		G_SLEEP 1
-		ifup "$ADAPTER"
+		reconnect "$ADAPTER"
 		G_DIETPI-NOTIFY 0 'Completed'
 		FAILS=0
 	done

@@ -66,6 +66,8 @@ import { KmThemeService } from '../theme/km-theme.service'
 export class HomePage extends SwiperIonicEventsHelper {
   private settingsAccessTimerMs = 3000
   private settingsPressTimer = 0
+  // WiFi/battery held (for the settings): a light surface shows it is being held
+  protected readonly settingsHolding = signal(false)
   // km themes: the resume button has the design's clock-with-arrow symbol
   protected readonly km = inject(KmThemeService).isKm
   /** the round-2 header (categories, "Läuft gerade", WiFi/battery): km themes and coverflow */
@@ -297,13 +299,16 @@ export class HomePage extends SwiperIonicEventsHelper {
 
   protected settingsButtonPointerDown(): void {
     window.clearTimeout(this.settingsPressTimer)
+    this.settingsHolding.set(true)
     this.settingsPressTimer = window.setTimeout(() => {
+      this.settingsHolding.set(false)
       this.router.navigate(['/settings'])
     }, this.settingsAccessTimerMs)
   }
 
   protected settingsButtonPointerUp(): void {
     window.clearTimeout(this.settingsPressTimer)
+    this.settingsHolding.set(false)
   }
 
   protected resume(): void {

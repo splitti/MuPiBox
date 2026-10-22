@@ -52,10 +52,12 @@ import { registerCustomBootRoutes } from './bootscreen-custom'
 import { registerFeedHostRoutes } from './feed-hosts'
 import { registerPinnedCardRoutes } from './pinned-cards'
 import { dropStatic, registerWifiStaticRoutes, startWifiStaticWatch } from './wifi-static'
-import { decodeWpaSsid } from '../wpa-ssid'
+import { decodeWpaSsid, parseWpaCliScanResults } from '../wpa-ssid'
 import { fanSpeedNow, registerHardwareRoutes } from './hardware'
 import { registerDietpiDashboardRoutes, startDietpiDashboard } from './dietpi-dashboard'
+import { legacyAdminOn, registerLegacyAdminRoutes } from './legacy-admin'
 import { registerServicesRoutes } from './services'
+import { registerTidalRoutes } from './tidal'
 import { registerSystemRoutes } from './system'
 import { registerAdminRoutes } from './admin'
 import { bootDrive } from './boot-drive'
@@ -66,6 +68,7 @@ import { type LocalLibraryDeps, registerLocalUploadRoutes } from './upload'
 import { registerLocalDownloadRoutes } from './local-download'
 import { registerPodcastRoutes } from './podcasts'
 import { registerHealthRoutes } from './health'
+import { SLEEP_TIMER_MAX_MINUTES, SleepTimerError, sleepTimerState, startSleepTimer, stopSleepTimer } from '../sleep-timer'
 import { playlogSummary } from './playlog'
 import { weeklySummaryOn } from './weekly-summary'
 import { isArdFeed } from '../ard-sounds'
@@ -414,8 +417,10 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   registerHardwareRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   // (the DietPi-Dashboard behind the app: port 5252 answered by this server, see dietpi-dashboard.ts)
   registerDietpiDashboardRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  registerLegacyAdminRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   startDietpiDashboard({ getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerServicesRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  registerTidalRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerSystemRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   // (pm2 runs server.js from its folder: templates/ lies next to it)
   registerAdminRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig, serverDir: process.cwd() })
@@ -502,6 +507,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * itself, POST /admin-ticket/redeem {ticket}. 60 seconds, single use.
    */
   router.post('/admin-ticket', requireSession, requireCsrf, (_req, res) => {
+    if (!legacyAdminOn(deps.getMupiboxConfig())) return void res.status(409).json({ error: 'admin_off' })
     const now = Date.now()
     for (const [t, until] of adminTickets) if (until < now) adminTickets.delete(t)
     const ticket = randomBytes(32).toString('hex')
@@ -580,7 +586,12 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    *  screen can decide whether to offer a password-login form. Returns only
    *  a boolean; never the hash. */
   router.get('/auth-info', (_req, res) => {
-    res.json({ passwordConfigured: hasAppPassword(deps.getMupiboxConfig()), loginRequired: appLoginRequired(deps.getMupiboxConfig()) })
+    // (legacyAdmin: whether the login offers the previous admin interface at all)
+    res.json({
+      passwordConfigured: hasAppPassword(deps.getMupiboxConfig()),
+      loginRequired: appLoginRequired(deps.getMupiboxConfig()),
+      legacyAdmin: legacyAdminOn(deps.getMupiboxConfig()),
+    })
   })
 
   /** POST /api/app/login  {password}  (Phase 17h)
@@ -1178,57 +1189,36 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
 
   /**
    * GET /api/app/sleeptimer  (Phase 17i)
-   * Read the runtime state of the poweroff-countdown timer. The countdown
-   * itself is the existing `sleep_timer.sh` background process (started by
-   * AdminInterface/mupi.php today) which writes the remaining seconds to
-   * `/tmp/.time2sleep` once per second and runs `poweroff` when it hits zero.
-   * The file only exists while a timer is active.
+   * The power-off timer of the box - the one Home Assistant, Telegram and the old admin interface set as well
+   * (sleep-timer.ts: its deadline, and whether its countdown runs; a /tmp/.time2sleep left behind no longer counts).
    */
-  router.get('/sleeptimer', requireSession, (_req, res) => {
-    try {
-      const raw = readFileSync('/tmp/.time2sleep', 'utf8').trim()
-      const remaining = Number.parseInt(raw, 10)
-      if (Number.isFinite(remaining) && remaining > 0) {
-        const until = new Date(Date.now() + remaining * 1000)
-        res.json({ active: true, remaining_seconds: remaining, until_iso: until.toISOString() })
-        return
-      }
-    } catch {
-      // file missing — no timer running, fall through
+  router.get('/sleeptimer', requireSession, async (_req, res) => {
+    const t = await sleepTimerState()
+    if (t.active && t.ends_at) {
+      res.json({ active: true, remaining_seconds: t.remaining_s, until_iso: new Date(t.ends_at).toISOString(), ends_at: t.ends_at, shutting_down: t.shutting_down })
+      return
     }
     res.json({ active: false })
   })
 
   /**
    * POST /api/app/sleeptimer/start  {minutes}  (Phase 17i)
-   * Mirrors the mupi.php behaviour: spawn `sleep_timer.sh <seconds>` detached
-   * via sudo. Accepts 1..1440 minutes (same cap the admin UI uses). The shell
-   * script writes the remaining time to /tmp/.time2sleep and runs `poweroff`
-   * when it hits zero; everything else is just observation.
+   * Starts the box's power-off timer (1..1440 minutes, the cap the admin UI uses); a running one is replaced - the
+   * answer comes once the old countdown has ended, so it can no longer switch the box off.
    */
   router.post('/sleeptimer/start', requireSession, requireCsrf, async (req, res) => {
     const body = (req.body as { minutes?: unknown } | undefined) ?? {}
     const minutes = Math.floor(Number(body.minutes))
-    if (!Number.isFinite(minutes) || minutes < 1 || minutes > 1440) {
-      res.status(400).json({ error: 'minutes must be an integer between 1 and 1440' })
+    if (!Number.isFinite(minutes) || minutes < 1 || minutes > SLEEP_TIMER_MAX_MINUTES) {
+      res.status(400).json({ error: `minutes must be an integer between 1 and ${SLEEP_TIMER_MAX_MINUTES}` })
       return
     }
     const seconds = minutes * 60
     try {
-      // A timer that is already running is replaced, not joined by a second one: correcting
-      // 30 to 90 minutes used to leave the 30-minute timer running, and it shut the box down.
-      await new Promise<void>((resolve) => {
-        execFile('sudo', ['pkill', '-f', 'sleep_timer.sh'], { timeout: 5000 }, () => resolve())
-      })
-      const child = spawn('sudo', ['/usr/local/bin/mupibox/sleep_timer.sh', String(seconds)], {
-        detached: true,
-        stdio: 'ignore',
-      })
-      // (a start that fails - sudo or the script missing - comes as an 'error' event: unhandled it ended the server)
-      child.on('error', (err) => console.warn(`${new Date().toLocaleString()}: [eltern] sleep timer: ${err.message}`))
-      child.unref()
+      await startSleepTimer(seconds)
     } catch (err) {
-      res.status(500).json({ error: `spawn failed: ${(err as Error).message}` })
+      const shutting = err instanceof SleepTimerError && err.code === 'shutting_down'
+      res.status(shutting ? 409 : 503).json({ error: shutting ? 'shutting_down' : (err as Error).message })
       return
     }
     res.json({ ok: true, minutes, seconds })
@@ -1236,16 +1226,18 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
 
   /**
    * POST /api/app/sleeptimer/stop  (Phase 17i)
-   * Mirrors mupi.php's "Stop running timer" button: `pkill -f sleep_timer.sh`
-   * then remove `/tmp/.time2sleep`. Both are idempotent — calling stop when
-   * no timer runs returns ok without erroring.
+   * Stops the box's power-off timer - also when none runs (ok then as well). Once it ran out and the box shuts down
+   * it cannot be stopped any more: 409.
    */
-  router.post('/sleeptimer/stop', requireSession, requireCsrf, (_req, res) => {
-    execFile('sudo', ['pkill', '-f', 'sleep_timer.sh'], { timeout: 5000 }, () => {
-      execFile('sudo', ['rm', '-f', '/tmp/.time2sleep'], { timeout: 5000 }, () => {
-        res.json({ ok: true })
-      })
-    })
+  router.post('/sleeptimer/stop', requireSession, requireCsrf, async (_req, res) => {
+    try {
+      await stopSleepTimer()
+    } catch (err) {
+      const shutting = err instanceof SleepTimerError && err.code === 'shutting_down'
+      res.status(shutting ? 409 : 503).json({ error: shutting ? 'shutting_down' : (err as Error).message })
+      return
+    }
+    res.json({ ok: true })
   })
 
   /**
@@ -1473,27 +1465,65 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * dedup by SSID (keep the strongest signal) and drop hidden networks
    * (empty SSID). Slow — iwlist takes ~3-5 s.
    */
+  // The scan of the supplicant, for when iwlist has nothing: wpa_cli lists what the adapter found ("bssid / frequency /
+  // signal level / flags / ssid"). iwlist's old interface hands back an empty list on some drivers (a USB adapter's:
+  // too many networks for its buffer, or the adapter not up yet).
+  type ScanNet = { ssid: string; signal_dbm: number; encrypted: boolean }
+  const wpaScan = (): Promise<ScanNet[]> =>
+    new Promise((resolve) => {
+      const iface = wifiIface()
+      execFile('sudo', ['wpa_cli', '-i', iface, 'scan'], { timeout: 5000 }, () => {
+        setTimeout(() => {
+          execFile('sudo', ['wpa_cli', '-i', iface, 'scan_results'], { timeout: 5000 }, (err, stdout) => {
+            // (read as the box's WiFi page reads it: a name with umlauts comes as \xNN from wpa_cli, a hidden network
+            // with an empty or all-zero name)
+            const nets: ScanNet[] = err
+              ? []
+              : [...parseWpaCliScanResults(stdout)].map(([ssid, n]) => ({ ssid, signal_dbm: n.signalDbm, encrypted: n.secured }))
+            resolve(nets)
+          })
+        }, 4000)
+      })
+    })
+
+  const bestPerSsid = (list: ScanNet[]): ScanNet[] => {
+    const byBest = new Map<string, ScanNet>()
+    for (const n of list) {
+      const prev = byBest.get(n.ssid)
+      if (!prev || n.signal_dbm > prev.signal_dbm) byBest.set(n.ssid, n)
+    }
+    return [...byBest.values()].sort((a, b) => b.signal_dbm - a.signal_dbm)
+  }
+
   router.get(['/wifi/scan', '/wlan/scan'], requireSession, (_req, res) => {
-    iwlistScan().then((stdout) => {
-      const blocks = stdout.split(/Cell \d+ -/)
-      const byBest = new Map<string, { ssid: string; signal_dbm: number; encrypted: boolean }>()
-      for (const blk of blocks) {
-        const ssidMatch = blk.match(/ESSID:"([^"]*)"/)
-        if (!ssidMatch) continue
-        const ssid = ssidMatch[1]
-        if (!ssid) continue // hidden network
-        const sigMatch = blk.match(/Signal level=(-?\d+)\s*dBm/)
-        const signal_dbm = sigMatch ? Number.parseInt(sigMatch[1], 10) : -100
-        const encrypted = /Encryption key:on/.test(blk)
-        const prev = byBest.get(ssid)
-        if (!prev || signal_dbm > prev.signal_dbm) {
-          byBest.set(ssid, { ssid, signal_dbm, encrypted })
-        }
-      }
-      const networks = [...byBest.values()].sort((a, b) => b.signal_dbm - a.signal_dbm)
-      res.json({ networks })
-    }, (err: Error) => {
-      res.status(500).json({ error: `iwlist failed: ${err.message}` })
+    // (an adapter that is down finds nothing: switched on first - harmless when it is already up)
+    execFile('sudo', ['/usr/sbin/ip', 'link', 'set', wifiIface(), 'up'], { timeout: 3000 }, () => {
+      iwlistScan().then(
+        async (stdout) => {
+          const found: ScanNet[] = []
+          for (const blk of stdout.split(/Cell \d+ -/)) {
+            const ssidMatch = blk.match(/ESSID:"([^"]*)"/)
+            if (!ssidMatch || !ssidMatch[1]) continue // not a network block, or a hidden network
+            // (iwlist prints a character outside ASCII as \xNN per byte, as wpa_cli does: 'Åsna-Müller' came as
+            // '\xC3\x85sna-M\xC3\xBCller'; a hidden network may come as zero bytes)
+            const ssid = decodeWpaSsid(ssidMatch[1])
+            if (ssid.replaceAll('\0', '').trim() === '') continue
+            const sigMatch = blk.match(/Signal level=(-?\d+)\s*dBm/)
+            found.push({
+              ssid,
+              signal_dbm: sigMatch ? Number.parseInt(sigMatch[1], 10) : -100,
+              encrypted: /Encryption key:on/.test(blk),
+            })
+          }
+          res.json({ networks: bestPerSsid(found.length ? found : await wpaScan()) })
+        },
+        async (err: Error) => {
+          // iwlist failed: the supplicant's list before giving up
+          const nets = await wpaScan()
+          if (nets.length) res.json({ networks: bestPerSsid(nets) })
+          else res.status(500).json({ error: `iwlist failed: ${err.message}` })
+        },
+      )
     })
   })
 
@@ -1838,7 +1868,17 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     // One album of an entry that subscribes a whole Spotify artist (only artistid): the app lists the artist's albums
     // and plays the one tapped - only for an artist that is in the library.
     const albumId = body.albumId
-    if (albumId !== undefined) {
+    if (albumId !== undefined && type === 'tidal') {
+      // one album of an entry of a whole TIDAL artist (tidalKind 'artist'), as the app lists them
+      if (typeof albumId !== 'string' || !/^\d{1,15}$/.test(albumId) || item.tidalKind !== 'artist') {
+        res.status(400).json({ error: 'invalid_album' })
+        return
+      }
+      url = `musicsearch/tidal/album:${albumId}`
+      // (the album's own picture, as the app shows it - only one of TIDAL's; else the artist's)
+      const albumCover = (body as { cover?: unknown }).cover
+      cover = typeof albumCover === 'string' && albumCover.startsWith('https://resources.tidal.com/') && albumCover.length < 300 ? albumCover : ownCover(item.cover)
+    } else if (albumId !== undefined) {
       if (typeof albumId !== 'string' || !/^[A-Za-z0-9]{10,40}$/.test(albumId) || type !== 'spotify' || !item.artistid) {
         res.status(400).json({ error: 'invalid_album' })
         return
@@ -1888,6 +1928,22 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         const artist = episode.show || String(item.artist ?? '')
         url = `rss/${enc(episode.url)}/${enc(episode.title)}:title:artist:${enc(artist)}`
         cover = ownCover(item.cover_override) || episode.cover
+        break
+      }
+      case 'tidal': {
+        // an album or a playlist of TIDAL, played by the box's TIDAL service (see eltern/tidal.ts)
+        const id = String(item.id ?? '')
+        if (!/^[A-Za-z0-9-]{1,64}$/.test(id)) {
+          res.status(400).json({ error: 'tidal_id_missing' })
+          return
+        }
+        // (a whole artist plays one of its albums - the app asks with albumId)
+        if (item.tidalKind === 'artist') {
+          res.status(400).json({ error: 'tidal_artist_needs_album' })
+          return
+        }
+        url = `musicsearch/tidal/${item.tidalKind === 'playlist' ? 'playlist' : 'album'}:${enc(id)}`
+        cover = ownCover(item.cover_override) || ownCover(item.cover) || ownCover(item.artistcover)
         break
       }
       default:
@@ -2702,7 +2758,29 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * (os + fs.statfs + the thermal sysfs node) — no shell-out. Reboot/Shutdown
    * actions reuse the existing /api/reboot|/api/shutdown endpoints.
    */
+  // (the device and the system do not change while the box runs; the time of its start is known once it has finished)
+  let deviceModel: string | undefined
+  let osName: string | undefined
+  let bootSeconds: number | null = null
+  const bootTime = (): Promise<number | null> =>
+    bootSeconds !== null
+      ? Promise.resolve(bootSeconds)
+      : new Promise((resolve) => {
+          execFile('systemd-analyze', ['time'], { timeout: 5000 }, (err, stdout) => {
+            // "Startup finished in 1.333s (kernel) + 27.029s (userspace) = 28.363s" ("1min 4.2s" on a slow one)
+            const total = /= (?:(\d+)min )?([\d.]+)s/.exec(String(stdout ?? ''))
+            if (!err && total) bootSeconds = Math.round((Number(total[1] ?? 0) * 60 + Number(total[2])) * 10) / 10
+            resolve(bootSeconds)
+          })
+        })
+
   router.get('/system', requireSession, async (_req, res) => {
+    if (deviceModel === undefined) {
+      deviceModel = (await fsp.readFile('/sys/firmware/devicetree/base/model', 'utf8').catch(() => '')).replace(/\0/g, '').trim()
+    }
+    if (osName === undefined) {
+      osName = /^PRETTY_NAME="?([^"\n]*)"?$/m.exec(await fsp.readFile('/etc/os-release', 'utf8').catch(() => ''))?.[1] ?? ''
+    }
     let cpuTempC: number | null = null
     try {
       const milli = Number.parseInt(readFileSync('/sys/class/thermal/thermal_zone0/temp', 'utf8').trim(), 10)
@@ -2730,6 +2808,11 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       disk,
       // (SD card or USB drive, and a USB 3 stick in a USB 2.0 port - see boot-drive.ts)
       drive: bootDrive(),
+      // (shown before by the admin interface only)
+      model: deviceModel || null,
+      os_name: osName || null,
+      arch: os.machine(),
+      boot_seconds: await bootTime(),
     })
   })
 

@@ -142,3 +142,9 @@ body.mupi-header-hidden {
         word-break: break-word;
     }
 }
+
+// The lock screen stands back for the parents' settings (app/parent-access): room at the bottom for its bar on the
+// pages with lists (the four tiles of the settings fit above it - with the room their page scrolled, with a scrollbar)
+body.mupi-parent-access :is(app-wifi, app-wifi-add, app-bluetooth) ion-content {
+    --padding-bottom: 76px;
+}

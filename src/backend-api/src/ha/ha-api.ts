@@ -30,6 +30,7 @@ import { announce, speechOf } from '../speech'
 import { isLoopback } from '../request-guard'
 import { type PlaybackCovers, playbackSnapshot } from '../playback-snapshot'
 import { withVolumeLock } from '../volume-lock'
+import { haSleepTimer, parseHaSleepTimerRequest, SleepTimerError, sleepTimerAvailable, sleepTimerState, startSleepTimer, stopSleepTimer } from '../sleep-timer'
 import { clientByToken, deviceId, type HaClient, HA_DIR, readClients, type Scope, SCOPES, tokenHash, updateClients } from './ha-store'
 
 export const HA_PORT = 8443
@@ -478,7 +479,8 @@ function powerAction(action: 'reboot' | 'poweroff', client?: HaClient): void {
   setTimeout(() => execFile('sudo', ['sh', '-c', `${script} &`], { timeout: 10000 }, () => undefined), 1500)
 }
 
-function buildApp(deps: HaDeps): Express {
+/** The API app of port 8443 (without its TLS server) - exported for the tests */
+export function buildApp(deps: HaDeps): Express {
   const app = express()
   app.disable('x-powered-by')
   app.use((_req, res, next) => {
@@ -522,14 +524,22 @@ function buildApp(deps: HaDeps): Express {
       software_version: String(mb.version ?? '') || null,
       manufacturer: 'MuPiBox',
       model: 'MuPiBox Classic',
-      capabilities: CAPABILITIES,
+      // (sleep_timer only where the box has the shared timer: the script of this version and systemd-run)
+      capabilities: (await sleepTimerAvailable()) ? [...CAPABILITIES, 'sleep_timer'] : CAPABILITIES,
       // (splitti's integration shows whether announcements can be made)
       tts: { enabled: speechOf(deps.getMupiboxConfig()).engine !== 'off' },
     })
   })
 
   v1.get('/state', requireScope('read'), async (_req, res) => {
-    const [snap, bat, dbm, mute, sys] = await Promise.all([playbackSnapshot(deps.covers).catch(() => null), battery(deps), wifiSignalDbm(), muted(), metrics()])
+    const [snap, bat, dbm, mute, sys, timer] = await Promise.all([
+      playbackSnapshot(deps.covers).catch(() => null),
+      battery(deps),
+      wifiSignalDbm(),
+      muted(),
+      metrics(),
+      sleepTimerState().catch(() => null),
+    ])
     // (Spotify's cover as its own address - splitti's integration takes only i.scdn.co/mosaic.scdn.co; the box's own
     // pictures through /media/cover/current)
     const spotifyCover = snap?.coverUrl && /^https:\/\/(i|mosaic)\.scdn\.co\//.test(snap.coverUrl) ? snap.coverUrl : null
@@ -560,6 +570,8 @@ function buildApp(deps: HaDeps): Express {
         ...((s) => (s ? { power_state: s } : {}))(await powerState(deps, snap)),
       },
       metrics: sys,
+      // the box's power-off timer - the same one the app, Telegram and the admin interface set (contract: sleep timer)
+      sleep_timer: haSleepTimer(timer ?? { active: false, ends_at: null, remaining_s: 0, shutting_down: false }),
     })
   })
 
@@ -703,6 +715,26 @@ function buildApp(deps: HaDeps): Express {
     if (action !== 'reboot' && action !== 'poweroff') return fail(res, 400, 'invalid_value', 'action must be reboot or poweroff')
     powerAction(action, (req as Request & { haClient?: HaClient }).haClient)
     res.status(202).json({ success: true, accepted: true })
+  })
+
+  /**
+   * POST /sleep_timer {minutes: 0..720} (power) - the box's power-off timer, the one of the app, Telegram and the admin
+   * interface (sleep-timer.ts): 1..720 start it or replace a running one, 0 stops it (also when none runs). The answer
+   * comes once the change is made - a replaced timer can no longer switch the box off. Contract: sleep timer.
+   */
+  v1.post('/sleep_timer', requireScope('power'), async (req, res) => {
+    const parsed = parseHaSleepTimerRequest(Boolean(req.is('application/json')), req.body)
+    if (!parsed.ok) return fail(res, 400, parsed.error, parsed.message)
+    const who = (req as Request & { haClient?: HaClient }).haClient?.client_name ?? '?'
+    try {
+      const t = parsed.minutes === 0 ? await stopSleepTimer() : await startSleepTimer(parsed.minutes * 60)
+      log(parsed.minutes === 0 ? `sleep timer stopped by "${who}"` : `sleep timer set to ${parsed.minutes} min by "${who}"`)
+      res.json({ success: true, sleep_timer: haSleepTimer(t) })
+    } catch (err) {
+      const shutting = err instanceof SleepTimerError && err.code === 'shutting_down'
+      warn(`sleep timer (${parsed.minutes} min): ${(err as Error).message}`)
+      fail(res, 503, 'temporarily_unavailable', shutting ? 'The timer ran out - the box is shutting down' : 'The timer could not be changed')
+    }
   })
 
   v1.post('/control', async (req, res) => {

@@ -124,6 +124,10 @@ export class PlayerService {
         url = `musicsearch/nas/${encodeURIComponent(media.nasPath)}`
         break
       }
+      case 'tidal': {
+        url = `musicsearch/tidal/${tidalRef(media)}${this.coverQuery(media)}`
+        break
+      }
       case 'spotify': {
         const isHealthy = await this.spotifyService.ensurePlayerReady()
 
@@ -212,6 +216,15 @@ export class PlayerService {
     return true
   }
 
+  // A TIDAL album or playlist where it was left (the player starts it at the track and the part of it)
+  async resumeTidalMedia(media: Media): Promise<boolean> {
+    const trackNr = media.resumelocalcurrentTracknr || 1
+    const progressPct = Math.round(media.resumelocalprogressTime || 0)
+    this.currentMediaService.set(media)
+    this.sendRequest(`musicsearch/tidal/resume/${tidalRef(media)}:${trackNr}:${progressPct}${this.coverQuery(media)}`)
+    return true
+  }
+
   /**
    * Jump playback to a specific track/episode/chapter within the currently playing
    * Spotify album, playlist, show or audiobook.
@@ -227,6 +240,8 @@ export class PlayerService {
       url = `localtrack:${entry.position}`
     } else if (media.type === 'nas') {
       url = `nastrack:${entry.position}`
+    } else if (media.type === 'tidal') {
+      url = `tidaltrack:${entry.position}`
     } else if (media.playlistid) {
       url = `spotify/now/spotify:playlist:${encodeURIComponent(media.playlistid)}:${entry.position}:0`
     } else if (media.audiobookid) {
@@ -273,6 +288,11 @@ export class PlayerService {
     )
   }
 
+  /** The tracks of a TIDAL album or playlist, from the box's TIDAL service through the player. */
+  getTidalTracklist(media: Media): Observable<{ position: number; name: string }[]> {
+    return this.http.get<{ position: number; name: string }[]>(`${environment.backend.playerUrl}/tidal/tracklist/${tidalRef(media)}`)
+  }
+
   private say(text: string) {
     this.getConfig().subscribe((config) => {
       let url = `say/${encodeURIComponent(text)}`
@@ -297,4 +317,9 @@ export class PlayerService {
     const baseUrl = `${environment.backend.playerUrl}/${room}/`
     this.http.get(baseUrl + url).subscribe()
   }
+}
+
+// A TIDAL entry for the player: <album|playlist>:<id>
+function tidalRef(media: Media): string {
+  return `${media.tidalKind === 'playlist' ? 'playlist' : 'album'}:${encodeURIComponent(media.id)}`
 }

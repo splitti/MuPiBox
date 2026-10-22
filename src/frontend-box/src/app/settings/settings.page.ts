@@ -21,8 +21,10 @@ import {
 import { addIcons } from 'ionicons'
 import { arrowBackOutline } from 'ionicons/icons'
 import { Observable, of } from 'rxjs'
+import { DisplayTextsService } from '../display-texts.service'
 import { ElternMagicLinkService } from '../eltern-magic-link.service'
 import { MediaService } from '../media.service'
+import { ParentAccessService } from '../parent-access/parent-access.service'
 import { StatusComponent } from '../status/status.component'
 
 export interface SettingsMenuEntry {
@@ -57,28 +59,32 @@ export interface SettingsMenuEntry {
 export class SettingsPage {
   private mediaService = inject(MediaService)
   private elternMagicLink = inject(ElternMagicLinkService)
+  // (in the box's display language, as the lock screen and the other overlays)
+  protected readonly texts = inject(DisplayTextsService)
+  // (locked and the parent access over: nothing acts - see ParentAccessService.lockedOut)
+  private parentAccess = inject(ParentAccessService)
   protected network = toSignal(this.mediaService.network$, { initialValue: null })
 
   protected menuEntries: Signal<SettingsMenuEntry[]> = computed(() => {
     // ("Add media" is gone: the library is kept in the app now - the parents' web app below)
     const out: SettingsMenuEntry[] = [
       {
-        name: 'Network settings',
+        name: this.texts.text('settingsNetwork'),
         imgSrc: of('../../assets/wifi.svg'),
         data: 'wifi',
       },
       {
-        name: 'Bluetooth settings',
+        name: this.texts.text('settingsBluetooth'),
         imgSrc: of('../../assets/bluetooth.svg'),
         data: 'bluetooth',
       },
       {
-        name: 'Reboot / Shutdown',
+        name: this.texts.text('settingsPower'),
         imgSrc: of('../../assets/power.svg'),
         data: 'shutdown',
       },
       {
-        name: 'Parent web app',
+        name: this.texts.text('settingsParentApp'),
         imgSrc: of('../../assets/eltern.svg'),
         data: 'eltern-webapp',
       },
@@ -102,6 +108,7 @@ export class SettingsPage {
     } else if (entry.data === 'shutdown') {
       this.shutdownMessage()
     } else if (entry.data === 'eltern-webapp') {
+      if (this.parentAccess.lockedOut()) return
       // Shows the magic-link QR overlay. The box IP comes from the network
       // signal; generateAndShow() handles the undefined case itself by
       // falling back to the hostname.
@@ -112,12 +119,13 @@ export class SettingsPage {
   private async shutdownMessage() {
     const alert = await this.alertController.create({
       cssClass: 'alert',
-      header: 'Reboot / Shutdown',
-      message: 'Do you want to reboot or shutdown the MuPiBox?',
+      header: this.texts.text('settingsPower'),
+      message: this.texts.text('powerQuestion'),
       buttons: [
         {
-          text: 'Shutdown',
+          text: this.texts.text('powerShutdown'),
           handler: () => {
+            if (this.parentAccess.lockedOut()) return
             // LOW-6: previously `subscribe()` with no error handler. A
             // failed POST (network blip, backend down) silently disappeared,
             // and the user got an Ionic alert dismiss with no feedback that
@@ -129,8 +137,9 @@ export class SettingsPage {
           },
         },
         {
-          text: 'Reboot',
+          text: this.texts.text('powerReboot'),
           handler: () => {
+            if (this.parentAccess.lockedOut()) return
             // LOW-6: same fix.
             this.http.post('/api/reboot', {}).subscribe({
               error: (err) => console.error('[settings] /api/reboot failed:', err),
@@ -138,11 +147,13 @@ export class SettingsPage {
           },
         },
         {
-          text: 'Cancel',
+          text: this.texts.text('powerCancel'),
         },
       ],
     })
 
+    // (the parent access ended while the question was being made: not shown)
+    if (this.parentAccess.lockedOut()) return
     await alert.present()
   }
 }

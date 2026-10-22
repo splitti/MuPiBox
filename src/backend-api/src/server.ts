@@ -30,6 +30,10 @@ import type { SpotifyValidationRequest, SpotifyValidationResponse } from './mode
 import { CoverCacheService } from './services/cover-cache.service'
 import { SpotifyApiService } from './services/spotify-api.service'
 import { SpotifyMediaInfo } from './services/spotify-media-info.service'
+import { fetchFullPlaylistTracks } from './services/spotify-playlist-full'
+import { getValidAccessToken } from './spotify-sync/auth'
+import { SpotifyApiException } from './spotify-sync/playlists'
+import { loadSpotifyTokenStore } from './spotify-sync/config-loader'
 import { createSpotifySyncRouter } from './spotify-sync/routes'
 import { startScheduler } from './spotify-sync/scheduler'
 import type { RunSyncDeps } from './spotify-sync/state-machine'
@@ -54,7 +58,7 @@ import { OnlineCovers } from './online-covers'
 import { ardFeed, isArdFeed } from './ard-sounds'
 import { isEpisodePick } from './episode-pick'
 import { feedHostKey, feedHostsOf, isPrivateHost, neverFetched } from './lan-feeds'
-import { decodeWpaSsid } from './wpa-ssid'
+import { decodeWpaSsid, parseWpaCliScanResults, type WifiScanEntry, wifiBandOf } from './wpa-ssid'
 import { registerAudioOutputRoutes, startAudioWatch } from './audio-output'
 import { episodeKey, MAX_KEEP, type OfflineEpisode, PodcastOffline } from './podcast-offline'
 import { setFeedHeadReader } from './podcast-search'
@@ -363,6 +367,24 @@ setupMupiboxConfigWatch()
 
 // Initialize Spotify services
 const spotifyMediaInfo = new SpotifyMediaInfo()
+// The embed page a playlist is read from lists 100 tracks at most: the rest comes from the Web API with the Spotify login
+spotifyMediaInfo.fullPlaylistTracks = async (playlistId, kept) => {
+  const store = loadSpotifyTokenStore(await getMupiboxConfig())
+  if (!store) return undefined
+  const token = await getValidAccessToken(store, updateMupiboxConfig)
+  if (!token.ok) {
+    // (a login Spotify refused counts as none; a block or the network as a failure that may pass - asked again in an
+    // hour, the refresh itself waits for Spotify's Retry-After, see getValidAccessToken)
+    const f = token.failure
+    if (f.kind === 'auth') return undefined
+    throw new SpotifyApiException(
+      f.kind === 'rate-limit'
+        ? { kind: 'rate-limit', reason: `token refresh: ${f.reason}`, retryAfterSeconds: f.retryAfterSeconds ?? 60 }
+        : { kind: f.kind, reason: `token refresh: ${f.reason}` },
+    )
+  }
+  return fetchFullPlaylistTracks(playlistId, token.token, kept)
+}
 let spotifyApiService: SpotifyApiService | undefined
 
 // We export the app so we can use it in testing.
@@ -1617,6 +1639,76 @@ async function warmRssEpisodeCovers(feed: any, count: number): Promise<void> {
   }
 }
 
+// The pictures of a podcast on the box: its channel cover (a file named by the feed's key, see downloadRssCover) and the
+// pictures of its episodes (named by their address, see rssImageLocalFile) - the episodes found in the feed as the box
+// has cached it.
+async function rssPictureFiles(feedUrl: string): Promise<string[]> {
+  const cacheKey = rssCacheKeyFor(feedUrl)
+  const files = new Set<string>()
+  try {
+    for (const name of await readdir(rssCoverDir)) {
+      if (name.startsWith(`${cacheKey}.`)) files.add(path.join(rssCoverDir, name))
+    }
+  } catch {
+    // no cover folder yet
+  }
+  try {
+    const feed = JSON.parse(await readFile(rssCacheFilePath(cacheKey), 'utf8'))
+    const items = feed?.rss?.channel?.item
+    for (const item of Array.isArray(items) ? items : items ? [items] : []) {
+      const href = item?.['itunes:image']?._attributes?.href
+      const local = typeof href === 'string' ? rssImageLocalFile(href) : undefined
+      if (local) files.add(local.file)
+    }
+  } catch {
+    // the feed was never cached: only the channel cover (found above) is there
+  }
+  return [...files]
+}
+
+// A podcast was taken out of the library: its pictures go with it - the cover folder kept one file for every picture
+// ever shown, for ever, and so did the small copies of them (thumbs). The same podcast twice in the library keeps them.
+// (The feed itself stays in the cache; episodes kept on the SD card are not touched.)
+async function removeRssPictures(removed: unknown, remaining: unknown[]): Promise<void> {
+  const entry = removed as { type?: unknown; id?: unknown } | undefined
+  if (entry?.type !== 'rss' || typeof entry.id !== 'string' || !entry.id) return
+  const otherFeeds = remaining
+    .filter((e) => (e as { type?: unknown } | undefined)?.type === 'rss')
+    .map((e) => (e as { id?: unknown }).id)
+    .filter((id): id is string => typeof id === 'string' && id !== '')
+  if (otherFeeds.includes(entry.id)) return
+  // (the episodes' pictures are named by their address, not by their podcast: one another podcast still shows - the
+  // same feed under http and https, two podcasts of one maker - stays)
+  const stillUsed = new Set<string>()
+  for (const other of otherFeeds) for (const file of await rssPictureFiles(other)) stillUsed.add(file)
+  // (added again right away, its feed is fetched anew at the next request: the cover comes back at once, not after the
+  // refresh interval - the kept feed still points at the pictures deleted here)
+  const cacheKey = rssCacheKeyFor(entry.id)
+  rssLastRefresh.delete(cacheKey)
+  let gone = 0
+  let thumbNames: Set<string> | undefined
+  for (const file of await rssPictureFiles(entry.id)) {
+    if (stillUsed.has(file)) continue
+    let size: number
+    try {
+      size = (await stat(file)).size
+    } catch {
+      continue // not there (any more)
+    }
+    await rm(file, { force: true })
+    gone++
+    // The small copies are named by a hash with the size asked for in it (see getThumbnail / sendRssImage): all sizes
+    // the box hands out (64 to 800 px) are tried.
+    thumbNames ??= new Set(await readdir(thumbDir).catch(() => [] as string[]))
+    for (let px = 64; px <= 800; px++) {
+      const name = `${crypto.createHash('sha1').update(`rss|${file}|${size}|${px}`).digest('hex')}.jpg`
+      if (thumbNames.has(name)) await rm(path.join(thumbDir, name), { force: true })
+    }
+  }
+  // (not the feed's address: a private feed has its key in it)
+  if (gone) console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Podcast removed: ${gone} cover file(s) deleted (feed ${cacheKey})`)
+}
+
 app.get('/api/data', (_req, res) => {
   // Mirror /api/resume: when active_data.json is missing the frontend would
   // otherwise hang on its loading spinner, because the previous code's missing
@@ -1664,11 +1756,16 @@ app.get('/api/data-version', (_req, res) => {
   // by check_network.sh; statSync follows it. mtime+size flips whenever the
   // Smart-Sync rewrites the library, so the frontend can re-fetch /api/data
   // only when something actually changed — no full-list polling.
+  // (tidal: TIDAL switched on in the app - off, the box leaves its entries out; part of the version, so the lists are
+  // made again when it is switched)
+  const cfg = getMupiboxConfigSync() as (Record<string, unknown> & { tidal?: { enabled?: unknown } }) | undefined
+  const tidal = cfg?.tidal?.enabled === true
+  const nasTab = nasTabWanted(nasSettings(getMupiboxConfigSync()))
   try {
     const st = fs.statSync(activedataFile)
-    res.json({ version: `${Math.floor(st.mtimeMs)}-${st.size}`, local: String(localLibraryVersion), nasTab: nasTabWanted(nasSettings(getMupiboxConfigSync())) })
+    res.json({ version: `${Math.floor(st.mtimeMs)}-${st.size}-${tidal ? 't' : 'n'}`, local: String(localLibraryVersion), nasTab, tidal })
   } catch {
-    res.json({ version: '0', local: String(localLibraryVersion), nasTab: nasTabWanted(nasSettings(getMupiboxConfigSync())) })
+    res.json({ version: `0-${tidal ? 't' : 'n'}`, local: String(localLibraryVersion), nasTab, tidal })
   }
 })
 
@@ -1978,6 +2075,16 @@ function withLiveOverride(data: Record<string, unknown>): Record<string, unknown
   return { ...data, override: { ...current, forceBlockUntil: Number(ov.forceBlockUntil) || 0, allowUntil: Number(ov.allowUntil) || 0 } }
 }
 
+// Has the box had the time from the network since it was switched on? The Pi has no clock of its own: switched on
+// without a network it goes on from the time it was switched off (fake-hwclock) - a quiet time or the day's limit of
+// then may still hold. systemd-timesyncd leaves this file once it has set the time (/run is emptied at every start);
+// without timesyncd (no such folder) it is not known - the lock screen then says nothing about it.
+const TIMESYNC_DIR = '/run/systemd/timesync'
+function clockSynced(): boolean | undefined {
+  if (fs.existsSync(`${TIMESYNC_DIR}/synchronized`)) return true
+  return fs.existsSync(TIMESYNC_DIR) ? false : undefined
+}
+
 app.get('/api/playtime', (_req, res) => {
   const disabled: PlaytimeStatus = { enabled: false }
   if (!fs.existsSync(playtimeFile)) {
@@ -1990,7 +2097,7 @@ app.get('/api/playtime', (_req, res) => {
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
       res.json(disabled)
     } else {
-      res.json(data && typeof data === 'object' ? withLiveOverride(data as Record<string, unknown>) : data)
+      res.json(data && typeof data === 'object' ? { ...withLiveOverride(data as Record<string, unknown>), clockSynced: clockSynced() } : data)
     }
   })
 })
@@ -2932,57 +3039,6 @@ app.get('/api/wifi/status', async (_req, res) => {
   }
 })
 
-// wpa_cli prints SSIDs with non-ASCII / special bytes as \xNN escapes.
-
-interface WifiScanEntry {
-  signalDbm: number
-  secured: boolean
-  bands: string[] // "2.4", "5" (and "6"): every band the network is broadcast on
-}
-
-function wifiBandOf(frequencyMhz: number): string | undefined {
-  if (frequencyMhz >= 2400 && frequencyMhz < 2500) {
-    return '2.4'
-  }
-  if (frequencyMhz >= 4900 && frequencyMhz < 5900) {
-    return '5'
-  }
-  if (frequencyMhz >= 5925) {
-    return '6'
-  }
-  return undefined
-}
-
-// "bssid / frequency / signal level / flags / ssid" per line; the strongest access
-// point wins when a network is broadcast by several.
-function parseWpaCliScanResults(stdout: string): Map<string, WifiScanEntry> {
-  const networks = new Map<string, WifiScanEntry>()
-  for (const line of stdout.split('\n').slice(1)) {
-    const parts = line.trim().split('\t')
-    if (parts.length < 5) {
-      continue
-    }
-    const signalDbm = Number.parseInt(parts[2], 10)
-    const ssid = decodeWpaSsid(parts.slice(4).join('\t'))
-    // Hidden networks show up with an empty or all-zero SSID.
-    if (Number.isNaN(signalDbm) || ssid.replaceAll('\0', '').trim() === '') {
-      continue
-    }
-    const band = wifiBandOf(Number.parseInt(parts[1], 10))
-    const previous = networks.get(ssid)
-    const bands = new Set(previous?.bands ?? [])
-    if (band) {
-      bands.add(band)
-    }
-    if (!previous || signalDbm > previous.signalDbm) {
-      networks.set(ssid, { signalDbm, secured: /WPA|WEP|RSN/.test(parts[3]), bands: [...bands] })
-    } else {
-      previous.bands = [...bands]
-    }
-  }
-  return networks
-}
-
 // Rough dBm -> percent (-100 dBm = 0 %, -50 dBm and better = 100 %).
 function wifiSignalPercent(signalDbm: number): number {
   return Math.min(100, Math.max(0, 2 * (signalDbm + 100)))
@@ -3116,9 +3172,33 @@ interface EthernetConfig {
   dns: string
 }
 
-async function readInterfacesFile(): Promise<string> {
-  const { stdout } = await execFileAsync('sudo', ['cat', INTERFACES_FILE])
+// DietPi 10 (Debian 13) keeps each adapter in a file of its own (interfaces.d/eth0.conf, read by "source
+// interfaces.d/*"): the LAN view answered "no ethernet interface configured" there, and its switch did nothing
+const INTERFACES_D = '/etc/network/interfaces.d'
+
+async function catFile(file: string): Promise<string> {
+  const { stdout } = await execFileAsync('sudo', ['cat', file])
   return stdout
+}
+
+// The file with the ethernet stanza: /etc/network/interfaces, else interfaces.d/eth*.conf
+async function ethernetInterfacesPath(): Promise<string> {
+  if (parseEthernetStanza(await catFile(INTERFACES_FILE))) return INTERFACES_FILE
+  let names: string[] = []
+  try {
+    names = (await fs.promises.readdir(INTERFACES_D)).filter((n) => /^eth\w*\.conf$/.test(n)).sort()
+  } catch {
+    // no interfaces.d
+  }
+  for (const name of names) {
+    const file = path.join(INTERFACES_D, name)
+    if (parseEthernetStanza(await catFile(file).catch(() => ''))) return file
+  }
+  return INTERFACES_FILE
+}
+
+async function readInterfacesFile(): Promise<string> {
+  return catFile(await ethernetInterfacesPath())
 }
 
 // Finds the "iface ethN inet dhcp|static" line and the address/netmask/gateway/dns-nameservers lines that
@@ -3162,7 +3242,8 @@ function renderEthernetStanza(cfg: EthernetConfig): string {
 }
 
 async function writeEthernetConfig(next: EthernetConfig): Promise<void> {
-  const text = await readInterfacesFile()
+  const file = await ethernetInterfacesPath()
+  const text = await catFile(file)
   const parsed = parseEthernetStanza(text)
   if (!parsed) {
     throw new Error('no ethernet interface configured in /etc/network/interfaces')
@@ -3172,15 +3253,17 @@ async function writeEthernetConfig(next: EthernetConfig): Promise<void> {
     return
   }
   const tmpPath = `/tmp/.interfaces.${process.pid}.${Date.now()}`
-  const nextPath = `${INTERFACES_FILE}.mupibox-new`
+  // (in /etc/network, not next to a file in interfaces.d: everything in there is read as a definition - a new version
+  // left there by a power cut would have been one)
+  const nextPath = path.join(path.dirname(INTERFACES_FILE), `.${path.basename(file)}.mupibox-new`)
   await writeFile(tmpPath, updated, { mode: 0o644 })
   try {
     // Same atomic replace as the WPA config (new file next to it, same owner and mode, then rename) so a
     // power cut mid-write cannot leave the box without a valid interfaces file.
     await execFileAsync('sudo', ['cp', tmpPath, nextPath])
-    await execFileAsync('sudo', ['chown', '--reference', INTERFACES_FILE, nextPath])
-    await execFileAsync('sudo', ['chmod', '--reference', INTERFACES_FILE, nextPath])
-    await execFileAsync('sudo', ['mv', '-f', nextPath, INTERFACES_FILE])
+    await execFileAsync('sudo', ['chown', '--reference', file, nextPath])
+    await execFileAsync('sudo', ['chmod', '--reference', file, nextPath])
+    await execFileAsync('sudo', ['mv', '-f', nextPath, file])
   } finally {
     await fs.promises.rm(tmpPath, { force: true })
   }
@@ -3343,7 +3426,9 @@ app.post('/api/network/ethernet/restart', localOrElternSession, async (_req, res
     if (!fs.existsSync(LAN_OFF_FILE)) {
       await execFileAsync('sudo', ['ifdown', '--force', parsed.iface]).catch(() => undefined)
       await execFileAsync('sudo', ['ip', 'link', 'set', parsed.iface, 'up'])
-      await execFileAsync('sudo', ['ifup', '--allow=hotplug', parsed.iface], { timeout: 30000 }).catch(() => undefined)
+      // (not --allow=hotplug: DietPi 10 writes eth0 without allow-hotplug when it was set up over WiFi - ifup then did
+      // nothing; LAN on/off is the box's own switch, lan.off)
+      await execFileAsync('sudo', ['ifup', parsed.iface], { timeout: 30000 }).catch(() => undefined)
       execFile('sudo', ['/usr/local/bin/mupibox/mupi_wifi_select.sh'], { timeout: 300000 }, () => undefined)
     }
     res.send('ok')
@@ -3904,7 +3989,7 @@ app.post('/api/delete', (req, res) => {
       res.status(problem === 'library changed' ? 409 : 400).send(problem)
       return
     }
-    data.splice(req.body.index, 1)
+    const [removed] = data.splice(req.body.index, 1)
     renumberLibrary(data)
     writeJsonAtomic(dataFile, data, (writeError) => {
       releaseLock(dataLock, '/api/delete')
@@ -3913,6 +3998,10 @@ app.post('/api/delete', (req, res) => {
         res.status(500).send('error')
         return
       }
+      // a podcast: its pictures go as well (in the background - the answer does not wait for them)
+      removeRssPictures(removed, data).catch((error) => {
+        console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Could not remove the pictures of a podcast: ${error}`)
+      })
       res.status(200).send('ok')
     })
   })

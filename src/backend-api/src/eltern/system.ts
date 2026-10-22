@@ -15,6 +15,65 @@ export interface SystemDeps {
   updateMupiboxConfig: (mutate: (cfg: Record<string, unknown>) => void) => Promise<void>
 }
 
+// Access data a log may carry, blacked out before it goes into the support zip (it is shared on Discord): a user and
+// password in an address (http://user:pass@…), token-like parameters of an address (a radio stream's ?token=…, a
+// feed's key, Spotify's code) - also URL-encoded, as the player logs an address it got from the display
+// (%3Ftoken%3D…) -, Bearer tokens, Telegram bot tokens. Every pattern starts at a fixed word and stops at a separator:
+// linear in the text (an open scheme name like [a-z][a-z0-9+.-]*:// tried the rest of every long word again - a log of
+// such lines held the whole server up).
+const SECRET_PARAMS = 'token|access_token|refresh_token|id_token|auth|authorization|key|apikey|api_key|secret|client_secret|password|passwd|pass|pw|pwd|sig|signature|session|sessionid|sid|code|ticket'
+// (the whole part before the host - user, password, a token as password -, of any length; it ends at the next / so the
+// search stays short, and at the end of the string it stands in: the characters that are never part of an address
+// unencoded - double quotes, backticks, the delimiters of JSON and HTML - else a JSON line ran on to an @ fields later
+// ("contact":"help@…") and lost everything in between. An apostrophe may be part of the credentials (and
+// encodeURIComponent leaves it as it is): it ends them only where the address itself stands in single quotes
+// (href='…'). Plain and URL-encoded: %3A%2F%2F … %40.)
+const SCHEMES = 'https?|rtsp|rtmp|mms|icy|ftps?|sftp|smb|nfs|wss?|davs?'
+const NOT_IN_URL = '\\s/@?#"`<>{}\\[\\]\\\\'
+const URL_CREDENTIALS = new RegExp(`(?<!')\\b(${SCHEMES}):\\/\\/[^${NOT_IN_URL}]+@`, 'gi')
+const URL_CREDENTIALS_QUOTED = new RegExp(`(?<=')(${SCHEMES}):\\/\\/[^${NOT_IN_URL}']+@`, 'gi')
+const URL_CREDENTIALS_ENCODED = new RegExp(`(?<!')\\b(${SCHEMES})%3A%2F%2F(?:(?!%2F|%40|%3F|%23|%22)[^${NOT_IN_URL}&])+%40`, 'gi')
+const URL_CREDENTIALS_ENCODED_QUOTED = new RegExp(`(?<=')(${SCHEMES})%3A%2F%2F(?:(?!%2F|%40|%3F|%23|%22)[^${NOT_IN_URL}&'])+%40`, 'gi')
+const PARAM_PLAIN = new RegExp(`([?&;](?:${SECRET_PARAMS})=)[^&;\\s"'<>]+`, 'gi')
+// (encoded: ? & ; = as %3F %26 %3B %3D - the value ends at the next encoded separator)
+const PARAM_ENCODED = new RegExp(`((?:%3F|%26|%3B)(?:${SECRET_PARAMS})%3D)(?:(?!%26|%3B)[^&;\\s"'<>])+`, 'gi')
+export function withoutLogSecrets(text: string): string {
+  return text
+    .replace(URL_CREDENTIALS, '$1://***@')
+    .replace(URL_CREDENTIALS_QUOTED, '$1://***@')
+    .replace(URL_CREDENTIALS_ENCODED, '$1%3A%2F%2F***%40')
+    .replace(URL_CREDENTIALS_ENCODED_QUOTED, '$1%3A%2F%2F***%40')
+    .replace(PARAM_PLAIN, '$1***')
+    .replace(PARAM_ENCODED, '$1***')
+    .replace(/\b(Bearer\s+)[A-Za-z0-9._~+/=-]{8,}/g, '$1***')
+    .replace(/\bbot\d{6,}:[A-Za-z0-9_-]{20,}/g, 'bot***')
+}
+
+// The end of a log (at most maxBytes): a log of days can be large, the support zip goes to Discord - without the
+// access data in it (withoutLogSecrets)
+async function copyTail(from: string, to: string, maxBytes: number): Promise<void> {
+  const fh = await fsp.open(from, 'r')
+  try {
+    const { size } = await fh.stat()
+    const length = Math.min(size, maxBytes)
+    const buf = Buffer.alloc(length)
+    await fh.read(buf, 0, length, size - length)
+    // (cut off at its start: the first, partial line goes - a token whose ?token= lay before the cut stayed unnoticed,
+    // and a character cut in two came out broken)
+    // (no line break at all in a cut window: all of it is that one partial line - it goes as well)
+    const cut = size > length
+    const nl = cut ? buf.indexOf(0x0a) : -1
+    const text = !cut
+      ? buf.toString('utf8')
+      : nl >= 0
+        ? buf.subarray(nl + 1).toString('utf8')
+        : '[the last line of this log is longer than the part kept and is left out]\n'
+    await fsp.writeFile(to, withoutLogSecrets(text))
+  } finally {
+    await fh.close()
+  }
+}
+
 function run(cmd: string, args: string[], timeoutMs = 30000): Promise<{ ok: boolean; stdout: string }> {
   return new Promise((resolve) => {
     execFile(cmd, args, { timeout: timeoutMs, maxBuffer: 8 * 1024 * 1024 }, (err, stdout) => resolve({ ok: !err, stdout: stdout ?? '' }))
@@ -273,7 +332,7 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
 
   /**
    * GET /api/app/support-info - a zip for the support (Discord): the library, the config without secrets, the
-   * monitor and network state, versions. As the admin interface's support_data.php, but the secrets are removed by
+   * monitor and network state, versions, the logs (pm2, Chromium's debug log). As the admin interface's support_data.php, but the secrets are removed by
    * key (its line filter let multi-line values through).
    */
   router.get('/support-info', requireSession, async (_req, res) => {
@@ -295,7 +354,19 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
       const model = (await fsp.readFile('/sys/firmware/devicetree/base/model', 'utf8').catch(() => '')).replace(/\0/g, '')
       const jq = await run('jq', ['--version'], 5000)
       const version = String((deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined)?.version ?? '')
-      await fsp.writeFile(`${dir}/mupi.info`, [osRelease, model, os.hostname(), os.arch(), `MuPiBox ${version}`, jq.stdout.trim()].join('\n'))
+      const boot = await run('systemd-analyze', ['time'], 5000)
+      await fsp.writeFile(`${dir}/mupi.info`, [osRelease, model, os.hostname(), os.arch(), os.machine(), `MuPiBox ${version}`, jq.stdout.trim(), boot.stdout.trim()].join('\n'))
+      // The logs of the server and the player, also the rotated ones (the app's log page shows their last lines only),
+      // and Chromium's debug log when its switch is on (System › Experten) - each its last 5 MB (as the admin
+      // interface's pm2logs.php and debug.php, which sent them whole)
+      const logs = '/home/dietpi/.pm2/logs'
+      const names = await fsp.readdir(logs).catch(() => [] as string[])
+      if (names.length) await fsp.mkdir(`${dir}/pm2-logs`)
+      for (const name of names) {
+        if (!/^[\w.-]+$/.test(name)) continue
+        await copyTail(path.join(logs, name), path.join(dir, 'pm2-logs', name), 5 * 1024 * 1024).catch(() => undefined)
+      }
+      await copyTail('/home/dietpi/.config/chromium/chrome_debug.log', `${dir}/chrome_debug.log`, 5 * 1024 * 1024).catch(() => undefined)
       const zip = `${dir}.zip`
       const z = await run('sh', ['-c', `cd '${dir}' && zip -q -r '${zip}' .`], 30000)
       if (!z.ok) {
@@ -370,9 +441,11 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
   /** GET /api/app/logs/view?kind=log|service&key=&grep=&lines= - the end of a log or the state of a service, as text. */
   router.get('/logs/view', requireSession, async (req, res) => {
     const kind = String(req.query.kind ?? 'log')
-    // (only a key of the table - 'constructor' and the like are inherited by every object)
+    // (only a key of the table - 'constructor' and the like are inherited by every object; a service is checked against
+    // its own list: checked against the logs' table, every service came back as unknown - "Das Protokoll ließ sich
+    // nicht lesen")
     const rawKey = String(req.query.key ?? '')
-    const key = Object.hasOwn(LOGS, rawKey) ? rawKey : ''
+    const key = kind === 'service' ? (SERVICES.includes(rawKey) ? rawKey : '') : Object.hasOwn(LOGS, rawKey) ? rawKey : ''
     const grep = String(req.query.grep ?? '').slice(0, 100)
     const lines = Math.max(20, Math.min(2000, Number.parseInt(String(req.query.lines ?? '200'), 10) || 200))
     let text = ''

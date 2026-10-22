@@ -53,6 +53,9 @@ export function buildResumeMedia(
     resume.id = `nas:${resume.nasPath}`
     resume.resumelocalcurrentTracknr = local?.currentTracknr || 0
     resume.resumelocalprogressTime = local?.progressTime || 0
+  } else if (resume.type === 'tidal') {
+    resume.resumelocalcurrentTracknr = local?.currentTracknr || 0
+    resume.resumelocalprogressTime = local?.progressTime || 0
   } else if (resume.type === 'rss') {
     resume.resumerssprogressTime = local?.progressTime || 0
   }

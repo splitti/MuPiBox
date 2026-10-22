@@ -2,8 +2,21 @@ import fs from 'node:fs'
 import path from 'node:path'
 import type { SpotifyPlaylistData, SpotifyPlaylistMetadata } from '../models/spotify-media-info.model'
 import type { SpotifyTrack } from '../models/spotify-shared.model'
+import { SpotifyApiException } from '../spotify-sync/playlists'
+import type { FullPlaylist } from './spotify-playlist-full'
 
 export class SpotifyMediaInfo {
+  // The embed page gives 100 tracks at most; a list that long is probably cut (see fetchPlaylistDataSync)
+  private static readonly EMBED_TRACK_CAP = 100
+  // A cut list is asked for again after this long, if the rest could not be loaded (no Spotify login, a block)
+  private static readonly FULL_LIST_RETRY_MS = 60 * 60 * 1000
+
+  /**
+   * Every track of a playlist from the Web API (set by the server: it knows the Spotify login); its answer undefined:
+   * no Spotify login. `kept`: the full list read before, taken again while Spotify names the same snapshot.
+   */
+  public fullPlaylistTracks: ((playlistId: string, kept?: FullPlaylist) => Promise<FullPlaylist | undefined>) | undefined
+
   private cacheDir = path.join(process.cwd(), 'cache', 'spotify')
   private cacheExpiry = 12 * 60 * 60 * 1000 // 12 hours in milliseconds
 
@@ -71,6 +84,38 @@ export class SpotifyMediaInfo {
 
       const nextData = JSON.parse(match[1])
       const playlistData = this.transformEmbedData(nextData)
+
+      // The embed page lists 100 tracks at most: a playlist of 340 showed 100 (and "Track 5/100"). Such a list is
+      // completed from the Web API; without a Spotify login or when that fails, the 100 stay - or the full list read
+      // before, which the embed's 100 do not replace.
+      if (playlistData.tracks.length >= SpotifyMediaInfo.EMBED_TRACK_CAP && this.fullPlaylistTracks) {
+        const before = this.readCache(playlistId)
+        const kept =
+          before?.fullList && before.fullListSnapshot && Array.isArray(before.tracks)
+            ? { snapshot: before.fullListSnapshot, tracks: before.tracks }
+            : undefined
+        const useFull = (full: FullPlaylist) => {
+          playlistData.tracks = full.tracks
+          playlistData.playlist.tracks.total = full.tracks.length
+          playlistData.fullList = true
+          playlistData.fullListSnapshot = full.snapshot
+        }
+        try {
+          const all = await this.fullPlaylistTracks(playlistId, kept)
+          if (all && all.tracks.length >= playlistData.tracks.length) useFull(all)
+          else if (kept) useFull(kept)
+        } catch (error) {
+          if (kept) useFull(kept)
+          // (asked again in an hour only when it may work then - a block, the network; a playlist Spotify does not
+          // give out waits for the 12 hours like any other list)
+          else if (error instanceof SpotifyApiException && (error.detail.kind === 'rate-limit' || error.detail.kind === 'network')) {
+            playlistData.fullListAttemptAt = Date.now()
+          }
+          console.warn(
+            `${logPrefix} Rest of playlist ${playlistId} not loaded: ${error instanceof Error ? error.message : String(error)}`,
+          )
+        }
+      }
 
       await this.saveToCache(playlistId, playlistData)
       return playlistData
@@ -155,9 +200,17 @@ export class SpotifyMediaInfo {
       }
 
       const stats = fs.statSync(cacheFile)
-      const isStale = Date.now() - stats.mtime.getTime() > this.cacheExpiry
 
       const cachedData = JSON.parse(fs.readFileSync(cacheFile, 'utf8'))
+      // (a list kept at the embed page's 100 tracks because its rest could not be loaded for a while - a block, the
+      // network - is completed after an hour, not after 12; without a Spotify login there is no such attempt)
+      const cut =
+        this.fullPlaylistTracks !== undefined &&
+        !cachedData?.fullList &&
+        typeof cachedData?.fullListAttemptAt === 'number' &&
+        (cachedData?.tracks?.length ?? 0) >= SpotifyMediaInfo.EMBED_TRACK_CAP &&
+        Date.now() - cachedData.fullListAttemptAt > SpotifyMediaInfo.FULL_LIST_RETRY_MS
+      const isStale = cut || Date.now() - stats.mtime.getTime() > this.cacheExpiry
 
       if (isStale) {
         console.info(`📦 Cache stale for ${type} ${id}, will update in background`)
@@ -169,6 +222,15 @@ export class SpotifyMediaInfo {
     } catch (error) {
       console.error(`Error reading cache for ${type} ${id}:`, error)
       return { data: null, isStale: false }
+    }
+  }
+
+  /** The cached list as it is, without a log line (undefined: none or unreadable). */
+  private readCache(id: string): SpotifyPlaylistData | undefined {
+    try {
+      return JSON.parse(fs.readFileSync(this.getCacheFilePath(id, 'playlist'), 'utf8')) as SpotifyPlaylistData
+    } catch {
+      return undefined
     }
   }
 

@@ -2,7 +2,7 @@
 #
 
 
-until pids=$(pgrep -f "chromium-browser")
+until pids=$(pgrep -f "chromium")
 do
 	sleep 1
 done

@@ -53,6 +53,11 @@ svg {
     transform: scale(0.92);
   }
 
+  // (only showing where the sound goes - no choice on the display: nothing to press)
+  &.oc-static:active {
+    transform: none;
+  }
+
   &.oc-on {
     background: var(--km-apricot);
     color: var(--km-ink);

@@ -20,7 +20,7 @@
         } @else if (media.audiobookid && spotify?.audiobook) {
           <div>{{spotify?.audiobook?.name}}</div>
         } @else {
-          @if (media.type ==='library' || media.type ==='nas') {
+          @if (media.type ==='library' || media.type ==='nas' || media.type ==='tidal') {
             <div>{{local?.album}}</div>
           } @else {
             @if (media.type ==='rss') {
@@ -41,7 +41,7 @@
         } @else if (media.audiobookid && spotify?.audiobook) {
           <div>{{spotify?.item?.name}}</div>
         } @else {
-          @if (media.type ==='library' || media.type ==='nas') {
+          @if (media.type ==='library' || media.type ==='nas' || media.type ==='tidal') {
             <div>{{local?.currentTrackname}}</div>
           } @else {
             @if (media.type ==='rss') {
@@ -54,7 +54,7 @@
       }
 </ng-template>
 <ng-template #counterTpl>
-      @if (media.type ==='library' || media.type ==='nas') {
+      @if (media.type ==='library' || media.type ==='nas' || media.type ==='tidal') {
         <div>{{local?.currentTracknr}}/{{local?.totalTracks}}</div>
       } @else {
         @if (media.type ==='spotify') {
@@ -220,9 +220,10 @@
       <div class="kp-cover" [class.km-pressing]="pressingCover" (pointerdown)="coverPointerDown()" (pointerup)="coverPointerUp()" (pointerleave)="coverPointerUp()" (pointercancel)="coverPointerUp()">
         <img [src]="shownCover()" (error)="coverFailed()" draggable="false" ondragstart="return false;" alt="">
         @if ((media.type === 'radio' || media.type === 'rss') && currentPlayedLocal?.loading) {
+          <!-- stream connecting: three bouncing dots on the cover, in every theme (as in the overview) -->
           <div class="km-cover-dots"><i></i><i></i><i></i></div>
         }
-        @if (media.type === 'spotify' || media.type === 'library' || media.type === 'nas') {
+        @if (media.type === 'spotify' || media.type === 'library' || media.type === 'nas' || media.type === 'tidal') {
           <div class="press-indicator" [class.active]="pressingCover" [style.--press-duration.ms]="listViewTimerMs">
             <svg viewBox="0 0 48 48">
               <circle class="press-indicator-track" cx="24" cy="24" r="20"></circle>
@@ -286,19 +287,11 @@
           } @else {
             <img [src]="shownCover()" (error)="coverFailed()" draggable="false" style="-moz-user-select: none;" ondragstart="return false;">
           }
-          @if ((media.type === 'radio' || media.type === 'rss') && currentPlayedLocal?.loading && km()) {
-            <!-- km themes: three bouncing dots on the cover while the stream connects -->
+          @if ((media.type === 'radio' || media.type === 'rss') && currentPlayedLocal?.loading) {
+            <!-- stream connecting: three bouncing dots on the cover, in every theme (as in the overview) -->
             <div class="km-cover-dots"><i></i><i></i><i></i></div>
-          } @else if ((media.type === 'radio' || media.type === 'rss') && currentPlayedLocal?.loading) {
-            <!-- Stream is being buffered: a ring in the middle of the cover that gets smaller until playback starts. -->
-            <div class="load-indicator">
-              <svg viewBox="0 0 48 48">
-                <circle class="load-indicator-track" cx="24" cy="24" r="20"></circle>
-                <circle class="load-indicator-ring" [class.waiting]="loadProgress === 0" cx="24" cy="24" [attr.r]="loadRingRadius"></circle>
-              </svg>
-            </div>
           }
-          @if (media.type === 'spotify' || media.type === 'library' || media.type === 'nas') {
+          @if (media.type === 'spotify' || media.type === 'library' || media.type === 'nas' || media.type === 'tidal') {
             <div class="press-indicator" [class.active]="pressingCover" [style.--press-duration.ms]="listViewTimerMs">
               <svg viewBox="0 0 48 48">
                 <circle class="press-indicator-track" cx="24" cy="24" r="20"></circle>

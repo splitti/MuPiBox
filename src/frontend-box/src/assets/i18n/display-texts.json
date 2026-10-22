@@ -45,7 +45,18 @@
         "haScopeNotify": "messages and announcements",
         "haScopePower": "restart and switch off",
         "haAllowAll": "Allow all",
-        "haOnlyBasic": "Only show and control"
+        "haOnlyBasic": "Only show and control",
+        "settingsTitle": "Settings",
+        "settingsNetwork": "Network",
+        "settingsBluetooth": "Bluetooth",
+        "settingsPower": "Restart / Shut down",
+        "settingsParentApp": "Parent web app",
+        "powerQuestion": "Restart or shut down the MuPiBox?",
+        "powerShutdown": "Shut down",
+        "powerReboot": "Restart",
+        "powerCancel": "Cancel",
+        "clockNotSynced": "Time not synchronised",
+        "parentAccessHint": "Parent access – the lock still applies. Back to the start page, or 2 minutes without a touch: the lock screen comes back."
       }
     },
     "de": {
@@ -92,7 +103,18 @@
         "haScopeNotify": "Nachrichten und Ansagen",
         "haScopePower": "Neustart und Ausschalten",
         "haAllowAll": "Alles erlauben",
-        "haOnlyBasic": "Nur anzeigen und steuern"
+        "haOnlyBasic": "Nur anzeigen und steuern",
+        "settingsTitle": "Einstellungen",
+        "settingsNetwork": "Netzwerk",
+        "settingsBluetooth": "Bluetooth",
+        "settingsPower": "Neustart / Ausschalten",
+        "settingsParentApp": "Eltern-WebApp",
+        "powerQuestion": "MuPiBox neu starten oder ausschalten?",
+        "powerShutdown": "Ausschalten",
+        "powerReboot": "Neu starten",
+        "powerCancel": "Abbrechen",
+        "clockNotSynced": "Uhrzeit nicht abgeglichen",
+        "parentAccessHint": "Eltern-Zugang – die Sperre gilt weiter. Zurück zur Startseite oder 2 Minuten ohne Berührung: wieder das Sperrbild."
       }
     },
     "fr": {
@@ -139,7 +161,18 @@
         "haScopeNotify": "messages et annonces",
         "haScopePower": "redémarrer et éteindre",
         "haAllowAll": "Tout autoriser",
-        "haOnlyBasic": "Seulement afficher et piloter"
+        "haOnlyBasic": "Seulement afficher et piloter",
+        "settingsTitle": "Réglages",
+        "settingsNetwork": "Réseau",
+        "settingsBluetooth": "Bluetooth",
+        "settingsPower": "Redémarrer / Éteindre",
+        "settingsParentApp": "Appli parents",
+        "powerQuestion": "Redémarrer ou éteindre la MuPiBox ?",
+        "powerShutdown": "Éteindre",
+        "powerReboot": "Redémarrer",
+        "powerCancel": "Annuler",
+        "clockNotSynced": "Heure non synchronisée",
+        "parentAccessHint": "Accès parents – le blocage reste actif. Retour à l’accueil, ou 2 minutes sans toucher : l’écran de blocage revient."
       }
     },
     "es": {
@@ -186,7 +219,18 @@
         "haScopeNotify": "mensajes y anuncios",
         "haScopePower": "reiniciar y apagar",
         "haAllowAll": "Permitir todo",
-        "haOnlyBasic": "Solo mostrar y controlar"
+        "haOnlyBasic": "Solo mostrar y controlar",
+        "settingsTitle": "Ajustes",
+        "settingsNetwork": "Red",
+        "settingsBluetooth": "Bluetooth",
+        "settingsPower": "Reiniciar / Apagar",
+        "settingsParentApp": "App para padres",
+        "powerQuestion": "¿Reiniciar o apagar la MuPiBox?",
+        "powerShutdown": "Apagar",
+        "powerReboot": "Reiniciar",
+        "powerCancel": "Cancelar",
+        "clockNotSynced": "Hora no sincronizada",
+        "parentAccessHint": "Acceso para padres: el bloqueo sigue activo. Al volver al inicio, o tras 2 minutos sin tocar, vuelve la pantalla de bloqueo."
       }
     },
     "it": {
@@ -233,7 +277,18 @@
         "haScopeNotify": "messaggi e annunci",
         "haScopePower": "riavviare e spegnere",
         "haAllowAll": "Consenti tutto",
-        "haOnlyBasic": "Solo mostrare e controllare"
+        "haOnlyBasic": "Solo mostrare e controllare",
+        "settingsTitle": "Impostazioni",
+        "settingsNetwork": "Rete",
+        "settingsBluetooth": "Bluetooth",
+        "settingsPower": "Riavvia / Spegni",
+        "settingsParentApp": "App genitori",
+        "powerQuestion": "Riavviare o spegnere la MuPiBox?",
+        "powerShutdown": "Spegni",
+        "powerReboot": "Riavvia",
+        "powerCancel": "Annulla",
+        "clockNotSynced": "Ora non sincronizzata",
+        "parentAccessHint": "Accesso genitori – il blocco resta attivo. Tornando alla pagina iniziale, o dopo 2 minuti senza tocchi, torna la schermata di blocco."
       }
     },
     "nl": {
@@ -280,7 +335,18 @@
         "haScopeNotify": "berichten en aankondigingen",
         "haScopePower": "herstarten en uitschakelen",
         "haAllowAll": "Alles toestaan",
-        "haOnlyBasic": "Alleen tonen en bedienen"
+        "haOnlyBasic": "Alleen tonen en bedienen",
+        "settingsTitle": "Instellingen",
+        "settingsNetwork": "Netwerk",
+        "settingsBluetooth": "Bluetooth",
+        "settingsPower": "Herstarten / Uitschakelen",
+        "settingsParentApp": "Ouder-webapp",
+        "powerQuestion": "MuPiBox herstarten of uitschakelen?",
+        "powerShutdown": "Uitschakelen",
+        "powerReboot": "Herstarten",
+        "powerCancel": "Annuleren",
+        "clockNotSynced": "Tijd niet gesynchroniseerd",
+        "parentAccessHint": "Oudertoegang – de blokkering blijft gelden. Terug naar het startscherm, of 2 minuten niets aanraken: het blokkeerscherm komt terug."
       }
     },
     "sv": {
@@ -327,7 +393,18 @@
         "haScopeNotify": "meddelanden och utrop",
         "haScopePower": "starta om och stänga av",
         "haAllowAll": "Tillåt allt",
-        "haOnlyBasic": "Bara visa och styra"
+        "haOnlyBasic": "Bara visa och styra",
+        "settingsTitle": "Inställningar",
+        "settingsNetwork": "Nätverk",
+        "settingsBluetooth": "Bluetooth",
+        "settingsPower": "Starta om / Stäng av",
+        "settingsParentApp": "Föräldraapp",
+        "powerQuestion": "Starta om eller stänga av MuPiBox?",
+        "powerShutdown": "Stäng av",
+        "powerReboot": "Starta om",
+        "powerCancel": "Avbryt",
+        "clockNotSynced": "Tiden är inte synkroniserad",
+        "parentAccessHint": "Föräldraåtkomst – spärren gäller fortfarande. Tillbaka till startsidan, eller 2 minuter utan beröring: spärrskärmen kommer tillbaka."
       }
     },
     "da": {
@@ -374,7 +451,18 @@
         "haScopeNotify": "beskeder og meddelelser",
         "haScopePower": "genstart og sluk",
         "haAllowAll": "Tillad alt",
-        "haOnlyBasic": "Kun vise og styre"
+        "haOnlyBasic": "Kun vise og styre",
+        "settingsTitle": "Indstillinger",
+        "settingsNetwork": "Netværk",
+        "settingsBluetooth": "Bluetooth",
+        "settingsPower": "Genstart / Sluk",
+        "settingsParentApp": "Forældre-webapp",
+        "powerQuestion": "Genstart eller sluk MuPiBox?",
+        "powerShutdown": "Sluk",
+        "powerReboot": "Genstart",
+        "powerCancel": "Annuller",
+        "clockNotSynced": "Tiden er ikke synkroniseret",
+        "parentAccessHint": "Forældreadgang – spærringen gælder stadig. Tilbage til startsiden, eller 2 minutter uden berøring: spærreskærmen vender tilbage."
       }
     },
     "nb": {
@@ -421,7 +509,18 @@
         "haScopeNotify": "meldinger og kunngjøringer",
         "haScopePower": "omstart og slå av",
         "haAllowAll": "Tillat alt",
-        "haOnlyBasic": "Bare vise og styre"
+        "haOnlyBasic": "Bare vise og styre",
+        "settingsTitle": "Innstillinger",
+        "settingsNetwork": "Nettverk",
+        "settingsBluetooth": "Bluetooth",
+        "settingsPower": "Start på nytt / Slå av",
+        "settingsParentApp": "Foreldre-webapp",
+        "powerQuestion": "Starte MuPiBox på nytt eller slå den av?",
+        "powerShutdown": "Slå av",
+        "powerReboot": "Start på nytt",
+        "powerCancel": "Avbryt",
+        "clockNotSynced": "Tiden er ikke synkronisert",
+        "parentAccessHint": "Foreldretilgang – sperren gjelder fortsatt. Tilbake til startsiden, eller 2 minutter uten berøring: sperreskjermen kommer tilbake."
       }
     },
     "fi": {
@@ -468,7 +567,18 @@
         "haScopeNotify": "viestit ja kuulutukset",
         "haScopePower": "uudelleenkäynnistys ja sammutus",
         "haAllowAll": "Salli kaikki",
-        "haOnlyBasic": "Vain näyttää ja ohjata"
+        "haOnlyBasic": "Vain näyttää ja ohjata",
+        "settingsTitle": "Asetukset",
+        "settingsNetwork": "Verkko",
+        "settingsBluetooth": "Bluetooth",
+        "settingsPower": "Uudelleenkäynnistys / Sammutus",
+        "settingsParentApp": "Vanhempien sovellus",
+        "powerQuestion": "Käynnistetäänkö MuPiBox uudelleen vai sammutetaanko se?",
+        "powerShutdown": "Sammuta",
+        "powerReboot": "Käynnistä uudelleen",
+        "powerCancel": "Peruuta",
+        "clockNotSynced": "Aikaa ei ole synkronoitu",
+        "parentAccessHint": "Vanhempien pääsy – lukitus on yhä voimassa. Takaisin aloitussivulle tai 2 minuuttia koskematta: lukitusnäkymä palaa."
       }
     },
     "pl": {
@@ -515,7 +625,18 @@
         "haScopeNotify": "wiadomości i komunikaty",
         "haScopePower": "ponowne uruchomienie i wyłączanie",
         "haAllowAll": "Zezwól na wszystko",
-        "haOnlyBasic": "Tylko pokazywać i sterować"
+        "haOnlyBasic": "Tylko pokazywać i sterować",
+        "settingsTitle": "Ustawienia",
+        "settingsNetwork": "Sieć",
+        "settingsBluetooth": "Bluetooth",
+        "settingsPower": "Restart / Wyłączenie",
+        "settingsParentApp": "Aplikacja dla rodziców",
+        "powerQuestion": "Uruchomić MuPiBox ponownie czy wyłączyć?",
+        "powerShutdown": "Wyłącz",
+        "powerReboot": "Uruchom ponownie",
+        "powerCancel": "Anuluj",
+        "clockNotSynced": "Czas nie jest zsynchronizowany",
+        "parentAccessHint": "Dostęp dla rodziców – blokada nadal obowiązuje. Powrót do strony startowej lub 2 minuty bez dotyku: ekran blokady wraca."
       }
     },
     "pt": {
@@ -562,7 +683,18 @@
         "haScopeNotify": "mensagens e anúncios",
         "haScopePower": "reiniciar e desligar",
         "haAllowAll": "Permitir tudo",
-        "haOnlyBasic": "Só mostrar e controlar"
+        "haOnlyBasic": "Só mostrar e controlar",
+        "settingsTitle": "Definições",
+        "settingsNetwork": "Rede",
+        "settingsBluetooth": "Bluetooth",
+        "settingsPower": "Reiniciar / Desligar",
+        "settingsParentApp": "App para pais",
+        "powerQuestion": "Reiniciar ou desligar a MuPiBox?",
+        "powerShutdown": "Desligar",
+        "powerReboot": "Reiniciar",
+        "powerCancel": "Cancelar",
+        "clockNotSynced": "Hora não sincronizada",
+        "parentAccessHint": "Acesso dos pais – o bloqueio continua ativo. Ao voltar ao início, ou após 2 minutos sem tocar, o ecrã de bloqueio volta."
       }
     },
     "tr": {
@@ -609,7 +741,18 @@
         "haScopeNotify": "mesajlar ve anonslar",
         "haScopePower": "yeniden başlatma ve kapatma",
         "haAllowAll": "Hepsine izin ver",
-        "haOnlyBasic": "Yalnızca göster ve kontrol et"
+        "haOnlyBasic": "Yalnızca göster ve kontrol et",
+        "settingsTitle": "Ayarlar",
+        "settingsNetwork": "Ağ",
+        "settingsBluetooth": "Bluetooth",
+        "settingsPower": "Yeniden başlat / Kapat",
+        "settingsParentApp": "Ebeveyn uygulaması",
+        "powerQuestion": "MuPiBox yeniden başlatılsın mı, kapatılsın mı?",
+        "powerShutdown": "Kapat",
+        "powerReboot": "Yeniden başlat",
+        "powerCancel": "İptal",
+        "clockNotSynced": "Saat eşitlenmedi",
+        "parentAccessHint": "Ebeveyn erişimi – kilit geçerliliğini koruyor. Başlangıç sayfasına dönünce ya da 2 dakika dokunulmazsa kilit ekranı geri gelir."
       }
     },
     "uk": {
@@ -656,7 +799,18 @@
         "haScopeNotify": "повідомлення й оголошення",
         "haScopePower": "перезапуск і вимкнення",
         "haAllowAll": "Дозволити все",
-        "haOnlyBasic": "Лише показувати й керувати"
+        "haOnlyBasic": "Лише показувати й керувати",
+        "settingsTitle": "Налаштування",
+        "settingsNetwork": "Мережа",
+        "settingsBluetooth": "Bluetooth",
+        "settingsPower": "Перезапуск / Вимкнення",
+        "settingsParentApp": "Застосунок для батьків",
+        "powerQuestion": "Перезапустити чи вимкнути MuPiBox?",
+        "powerShutdown": "Вимкнути",
+        "powerReboot": "Перезапустити",
+        "powerCancel": "Скасувати",
+        "clockNotSynced": "Час не синхронізовано",
+        "parentAccessHint": "Доступ для батьків – блокування діє далі. Повернення на головну або 2 хвилини без дотику: знову екран блокування."
       }
     },
     "ru": {
@@ -703,7 +857,18 @@
         "haScopeNotify": "сообщения и объявления",
         "haScopePower": "перезапуск и выключение",
         "haAllowAll": "Разрешить всё",
-        "haOnlyBasic": "Только показывать и управлять"
+        "haOnlyBasic": "Только показывать и управлять",
+        "settingsTitle": "Настройки",
+        "settingsNetwork": "Сеть",
+        "settingsBluetooth": "Bluetooth",
+        "settingsPower": "Перезагрузка / Выключение",
+        "settingsParentApp": "Приложение для родителей",
+        "powerQuestion": "Перезагрузить или выключить MuPiBox?",
+        "powerShutdown": "Выключить",
+        "powerReboot": "Перезагрузить",
+        "powerCancel": "Отмена",
+        "clockNotSynced": "Время не синхронизировано",
+        "parentAccessHint": "Доступ для родителей – блокировка продолжает действовать. Возврат на главную или 2 минуты без касания: снова экран блокировки."
       }
     },
     "cs": {
@@ -750,7 +915,18 @@
         "haScopeNotify": "zprávy a hlášení",
         "haScopePower": "restart a vypnutí",
         "haAllowAll": "Povolit vše",
-        "haOnlyBasic": "Jen zobrazovat a ovládat"
+        "haOnlyBasic": "Jen zobrazovat a ovládat",
+        "settingsTitle": "Nastavení",
+        "settingsNetwork": "Síť",
+        "settingsBluetooth": "Bluetooth",
+        "settingsPower": "Restart / Vypnutí",
+        "settingsParentApp": "Aplikace pro rodiče",
+        "powerQuestion": "Restartovat, nebo vypnout MuPiBox?",
+        "powerShutdown": "Vypnout",
+        "powerReboot": "Restartovat",
+        "powerCancel": "Zrušit",
+        "clockNotSynced": "Čas není synchronizován",
+        "parentAccessHint": "Rodičovský přístup – blokování dál platí. Návrat na úvodní stránku nebo 2 minuty bez dotyku: znovu obrazovka blokování."
       }
     },
     "el": {
@@ -797,7 +973,18 @@
         "haScopeNotify": "μηνύματα και ανακοινώσεις",
         "haScopePower": "επανεκκίνηση και απενεργοποίηση",
         "haAllowAll": "Να επιτρέπονται όλα",
-        "haOnlyBasic": "Μόνο εμφάνιση και έλεγχος"
+        "haOnlyBasic": "Μόνο εμφάνιση και έλεγχος",
+        "settingsTitle": "Ρυθμίσεις",
+        "settingsNetwork": "Δίκτυο",
+        "settingsBluetooth": "Bluetooth",
+        "settingsPower": "Επανεκκίνηση / Απενεργοποίηση",
+        "settingsParentApp": "Εφαρμογή γονέων",
+        "powerQuestion": "Επανεκκίνηση ή απενεργοποίηση του MuPiBox;",
+        "powerShutdown": "Απενεργοποίηση",
+        "powerReboot": "Επανεκκίνηση",
+        "powerCancel": "Ακύρωση",
+        "clockNotSynced": "Η ώρα δεν έχει συγχρονιστεί",
+        "parentAccessHint": "Πρόσβαση γονέων – το κλείδωμα ισχύει ακόμα. Επιστροφή στην αρχική ή 2 λεπτά χωρίς άγγιγμα: επιστρέφει η οθόνη κλειδώματος."
       }
     }
   }

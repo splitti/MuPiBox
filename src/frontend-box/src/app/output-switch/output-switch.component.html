@@ -1,9 +1,11 @@
-<div class="oc" [class.oc-solo]="!choosable()" role="group">
-  @if (choosable()) {
+<div class="oc" [class.oc-solo]="!field()" role="group">
+  @if (field()) {
     <button
       class="oc-field"
       type="button"
       [class.oc-on]="symbol() !== 'speaker'"
+      [class.oc-static]="!choosable()"
+      [attr.aria-disabled]="!choosable() || null"
       [attr.data-state]="state()"
       (click)="click()"
       (pointerdown)="holdBegin($event)"
@@ -41,8 +43,8 @@
     </button>
     <span class="oc-sep" aria-hidden="true"></span>
   }
-  <span class="oc-vol" [class.oc-vol-plain]="choosable()">
-    @if (!choosable()) {
+  <span class="oc-vol" [class.oc-vol-plain]="field()">
+    @if (!field()) {
       <svg viewBox="0 0 24 24" aria-hidden="true"><path class="fill" d="M3 9.2h3.6L11.2 5v14l-4.6-4.2H3z" /><path d="M15 9.5a3.5 3.5 0 0 1 0 5" /></svg>
     }{{ volume() }} %
   </span>

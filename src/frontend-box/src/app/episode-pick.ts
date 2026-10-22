@@ -1,17 +1,20 @@
 /**
  * A podcast's choice of episodes (its library entry's field episodePick, set in the web app): 'newest:N' (always the
- * N newest), 'oldest:N' (the N oldest the feed has) or 'range:A-B' (episodes A to B). Counted by date: episode 1 is
- * the oldest of the feed. The same counting as the box's server (backend-api, episode-pick.ts).
+ * N newest), 'oldest:N' (the N oldest the feed has), 'span:A-B' (episodes A to B, counted from the newest: 0 is the
+ * newest episode) or 'range:A-B' (as chosen before the span: counted from the oldest, 1 is the oldest). The same
+ * counting as the box's server (backend-api, episode-pick.ts).
  */
 export function pickEpisodes<T>(newestFirst: T[], pick: string | undefined | null): T[] {
-  const m = /^(?:(newest|oldest):(\d{1,4})|range:(\d{1,5})-(\d{1,5}))$/.exec(pick ?? '')
+  const m = /^(?:(newest|oldest):(\d{1,4})|(range|span):(\d{1,5})-(\d{1,5}))$/.exec(pick ?? '')
   if (!m) return newestFirst
   const n = newestFirst.length
   if (m[1] === 'newest') return newestFirst.slice(0, Number(m[2]))
   if (m[1] === 'oldest') return newestFirst.slice(Math.max(0, n - Number(m[2])))
-  const from = Math.min(Number(m[3]), Number(m[4]))
-  const to = Math.max(Number(m[3]), Number(m[4]))
-  // (episode k is at index n - k of the newest-first list)
+  const from = Math.min(Number(m[4]), Number(m[5]))
+  const to = Math.max(Number(m[4]), Number(m[5]))
+  // span: episode k is at index k of the newest-first list
+  if (m[3] === 'span') return newestFirst.slice(from, to + 1)
+  // range (counted from the oldest): episode k is at index n - k
   return newestFirst.slice(Math.max(0, n - to), Math.max(0, n - from + 1))
 }
 

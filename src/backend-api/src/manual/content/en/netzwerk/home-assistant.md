@@ -28,6 +28,7 @@ The code is shown only on the box's display, so whoever enters it has the box in
 - **Messages** (right "messages and announcements"): a short text appears on the display until its time is up or someone taps it.
 - **Announcements** (right "messages and announcements"): the box speaks a text with its speech output. A voice has to be set under **Settings › Audio › Speech output** for this.
 - **Restart and switch off** (right "restart and switch off"): the box restarts or shuts down, as with the button in the app.
+- **Power-off timer** (right "restart and switch off"): Home Assistant sets the box's [sleep timer](../spielzeit/schlaftimer.md), replaces it or stops it (0 minutes), up to 720 minutes. It is the same timer as in the app and in Telegram: whoever sets it where, all see the same time left. Home Assistant sees the time left and the end with the right to show alone as well. From version 5.0.12 of the box, with the integration from the version that knows the timer.
 
 During a quiet time the box shows no messages and speaks no announcements.
 
@@ -40,3 +41,5 @@ Under **Paired** the app lists every Home Assistant with its rights. **Remove** 
 - The volume from Home Assistant keeps to the box's maximum, with headphones to the limit for headphones.
 - Listening time and quiet times apply to Home Assistant too. If playback is blocked, Home Assistant cannot start anything either.
 - If the box's IP address or name changes, the pairing stays: the box's key does not change with it.
+- A pairing from before without the right "restart and switch off" does not get it afterwards. For Home Assistant to set the timer, remove the pairing and pair again with this right.
+- For developers: the interface is described in the [shared API contract](https://github.com/splitti/MuPiBox-homeassistant/blob/main/docs/classic-api-contract.md).

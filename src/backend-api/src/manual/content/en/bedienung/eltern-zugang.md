@@ -6,18 +6,33 @@ A few things can be set directly on the display, without a phone. They are meant
 
 Press and hold the **status indicator** at the top right of the display (the symbols for Wi-Fi, battery and the like). The hold time can be set from 1 to 10 seconds under **Settings › Display & controls › Controls on the display › Hold times › Hold time for settings access**. Below 3 seconds children easily get in.
 
-The settings on the display open with four tiles:
+The settings on the display open with four tiles, labelled in the box's language (**Settings › System › Language**; English when none is chosen):
 
 | Tile | Effect |
 | --- | --- |
-| **Network settings** | set up Wi-Fi and LAN (see below) |
-| **Bluetooth settings** | pair headphones and speakers ([Bluetooth](../hardware/bluetooth.md)) |
-| **Reboot / Shutdown** | restart the box or switch it off |
+| **Network** | set up Wi-Fi and LAN (see below) |
+| **Bluetooth** | pair headphones and speakers ([Bluetooth](../hardware/bluetooth.md)) |
+| **Restart / Shut down** | restart the box or switch it off |
 | **Parent web app** | shows the QR code for the app |
 
 At the top you see the box's hostname and IP address.
 
 ![The settings on the display](display-settings.png)
+
+## During a quiet time or after the daily limit
+
+The lock screen ("Quiet time", "That's enough music for today") also shows the status indicator with Wi-Fi and battery at the top right, and the **time** at the top left. Press and hold the status indicator as usual: the lock screen steps back and the settings open. This way you reach the Wi-Fi and the QR code for the app while the box is locked.
+
+The **lock still applies**: the box plays nothing while the quiet time runs or the limit is reached. A note at the bottom says so. When you go back to the start page, or do not touch the display for 2 minutes, the lock screen is back. You can only lift the lock in the app or through Telegram ([Instant actions](../spielzeit/schlaftimer.md)).
+
+![The lock screen with time, Wi-Fi and battery](display-locked.png)
+
+If **"Time not synchronised"** shows under the time, the box has not fetched the time from the network since it was switched on. The Raspberry Pi has no clock of its own: without a network it carries on from the time it was switched off, and a quiet time or the limit from back then may still apply. On the road, your phone's hotspot helps:
+
+1. Switch on the hotspot on your phone.
+2. Press and hold the status indicator on the display and connect the box to the hotspot under **Network**.
+3. The box fetches the time. If the lock no longer applies, it goes away by itself.
+4. If it still applies, tap **Parent web app**, scan the QR code (the phone is in the same network) and tap **Lift lock** in the app.
 
 ## The QR code for parents
 
@@ -25,7 +40,7 @@ Tap **Parent web app**. A **QR code** appears. Scan it with your phone: you are 
 
 ## Network settings
 
-The **Network settings** tile opens the network settings. If there is a LAN port, you choose between **WiFi** and **LAN** at the top (the LAN settings are also there when no cable is plugged in).
+The **Network** tile opens the network settings. If there is a LAN port, you choose between **WiFi** and **LAN** at the top (the LAN settings are also there when no cable is plugged in).
 
 ### Wi-Fi
 

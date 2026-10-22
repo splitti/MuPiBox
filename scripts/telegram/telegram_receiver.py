@@ -104,6 +104,20 @@ def clamp_sleep_minutes(raw):
         return None
     return max(1, min(v, 1440))  # 1 min … 24 h
 
+SLEEP_TIMER = "/usr/local/bin/mupibox/sleep_timer.sh"
+
+def start_sleep_timer(mins):
+    """The box's one power-off timer (sleep_timer.sh start, the same the app and Home Assistant set): a running one
+    is replaced - a second "nohup sleep_timer.sh" used to run beside it and shut the box down at its own time.
+    Returns the key of the answer: sleep_set, sleep_shutting_down (it ran out already) or sleep_failed."""
+    try:
+        r = subprocess.run(["sudo", SLEEP_TIMER, "start", str(mins * 60)], capture_output=True, timeout=120)
+    except (OSError, subprocess.TimeoutExpired):
+        return 'sleep_failed'
+    if r.returncode == 0:
+        return 'sleep_set'
+    return 'sleep_shutting_down' if r.returncode == 3 else 'sleep_failed'
+
 def call_api_post(path, body=None):
     try:
         r = requests.post(f'{API_BASE}{path}', json=(body or {}), timeout=5)
@@ -263,8 +277,7 @@ def on_chat_message(msg):
         if mins is None:
             bot.sendMessage(chat_id, tr('usage_sleep'))
         else:
-            subprocess.Popen(["sudo", "nohup", "/usr/local/bin/mupibox/./sleep_timer.sh", str(mins * 60)])
-            bot.sendMessage(chat_id, tr('sleep_set', mins=mins))
+            bot.sendMessage(chat_id, tr(start_sleep_timer(mins), mins=mins))
     elif command == '/status':
         status_code, body = call_api_get('/playtime')
         if status_code == 200:
@@ -510,8 +523,7 @@ def handle_callback(query_data, chat_id, keyboard_msg, answer):
         if mins is None:
             answer(text=tr('sleep_invalid'), show_alert=True)
         else:
-            subprocess.Popen(["sudo", "nohup", "/usr/local/bin/mupibox/./sleep_timer.sh", str(mins * 60)])
-            bot.sendMessage(chat_id, tr('sleep_set', mins=mins))
+            bot.sendMessage(chat_id, tr(start_sleep_timer(mins), mins=mins))
     elif query_data == 'play':
         url = 'http://127.0.0.1:5005//play'  # local: the player only takes commands from the box itself or its own pages
         answer(text=tr('play'), show_alert=True)

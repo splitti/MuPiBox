@@ -126,16 +126,20 @@ def sigterm_handler(*_):
         led_control(int(JSON_DATA["led_max_brightness"]), 0, 0.003)
     sys.exit(0)
 
+def browser_running():
+    # (the kiosk's browser, found by its command line with the page's address: its program is called "chromium-browser" on
+    # Debian 12 and "chromium" on Debian 13 - waiting for the old name only, the LED blinked for ever there)
+    return os.popen("ps -ef | grep chromium | grep http | grep -v grep").read() != ""
+
+
 def init():
     if not HARDWARE_PWM:  # (with the PWM hardware the pin must stay on its PWM function)
         GPIO.setup(JSON_DATA["led_gpio"], GPIO.OUT)
         GPIO.output(JSON_DATA["led_gpio"], GPIO.HIGH)
-    tmp =os.popen("ps -ef | grep chromium-browser | grep http | grep -v grep").read()
-    while tmp == "":
+    while not browser_running():
         for x in range(0, 10, +1):
             led_control(0, int(JSON_DATA["led_max_brightness"]), 0.003)
             led_control(int(JSON_DATA["led_max_brightness"]), 0, 0.003)
-        tmp = os.popen("ps -ef | grep chromium-browser | grep http | grep -v grep").read()
     led_control(0, int(JSON_DATA["led_max_brightness"]), 0.01)
 
 

@@ -73,53 +73,6 @@ ion-back-button {
     }
 }
 
-// Loading ring of a radio stream / podcast: same look and place as the long-press ring.
-.load-indicator {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 90px;
-    height: 90px;
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-
-    svg {
-        width: 100%;
-        height: 100%;
-    }
-
-    circle {
-        stroke-width: 4;
-    }
-
-    .load-indicator-track {
-        fill: rgba(0, 0, 0, 0.35);
-        stroke: rgba(255, 255, 255, 0.3);
-    }
-
-    .load-indicator-ring {
-        fill: none;
-        stroke: var(--ion-color-primary, #2dd6c7);
-        stroke-linecap: round;
-        transition: r 0.9s linear;
-
-        // Still connecting (nothing buffered yet): the full ring breathes.
-        &.waiting {
-            animation: load-indicator-waiting 1.2s ease-in-out infinite;
-        }
-    }
-}
-
-@keyframes load-indicator-waiting {
-    0%,
-    100% {
-        opacity: 0.35;
-    }
-    50% {
-        opacity: 1;
-    }
-}
-
 @keyframes press-indicator-countdown {
     from {
         stroke-dashoffset: 0;
@@ -349,6 +302,38 @@ ion-content.player-content.tracklist-active {
     padding: 40px;
 }
 
+// Stream connecting: three bouncing dots in the middle of the cover - every theme (the km themes give them their
+// colours below; elsewhere white with a shadow, readable on any cover)
+.km-cover-dots {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 2;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap: 14px;
+    pointer-events: none;
+
+    i {
+        width: 22px;
+        height: 22px;
+        border-radius: 11px;
+        background: var(--km-moon, #ffffff);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+        animation: km-cover-dots-bounce 1100ms ease-in-out infinite;
+
+        &:nth-child(2) {
+            background: var(--km-apricot, #ffffff);
+            animation-delay: 150ms;
+        }
+
+        &:nth-child(3) {
+            background: var(--km-lavender, #ffffff);
+            animation-delay: 300ms;
+        }
+    }
+}
+
 // --- km themes (children's themes, body.km - see theme/km-theme.service.ts) ------------------------------------
 // Cover 320 on the left (40 px below the header), the controls centred in a column on the right, button sizes by
 // role. A button with a color attribute takes --ion-color-base (not --background) in Ionic.
@@ -418,8 +403,7 @@ ion-content.player-content.tracklist-active {
             }
         }
 
-        .press-indicator-progress,
-        .load-indicator-ring {
+        .press-indicator-progress {
             stroke: var(--km-apricot);
         }
 

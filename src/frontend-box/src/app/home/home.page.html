@@ -19,7 +19,7 @@
         </div>
       }
       <mupi-now-playing-pill class="km-pill-slot"></mupi-now-playing-pill>
-      <mupi-km-status-group (pointerdown)="settingsButtonPointerDown()" (pointerup)="settingsButtonPointerUp()" (pointerleave)="settingsButtonPointerUp()" (pointercancel)="settingsButtonPointerUp()"></mupi-km-status-group>
+      <mupi-km-status-group [class.km-holding]="settingsHolding()" (pointerdown)="settingsButtonPointerDown()" (pointerup)="settingsButtonPointerUp()" (pointerleave)="settingsButtonPointerUp()" (pointercancel)="settingsButtonPointerUp()"></mupi-km-status-group>
     </div>
   } @else {
   <ion-toolbar color="light">

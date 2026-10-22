@@ -12,6 +12,10 @@ There are three ways to add a podcast:
 
 When opened, the box shows the **episode list**, newest episode first.
 
+### Which episodes go on the box
+
+When adding and editing you choose under **Which episodes on the box**: all, the newest or the first (oldest) N episodes, or an **own range**. The own range counts by date from the newest episode: **0 is the newest**, so 0 to 9 are the ten newest. When a new episode comes out, the range moves along with it. The preview below shows which episodes go on the box. A range saved before version 5.0.12 still counts from the oldest and is listed as **Range as before** until you choose something else.
+
 ### Listening progress and new episodes
 
 For every episode the box remembers where it stopped and can mark new episodes. A dot on the podcast and on the episode shows what is new. A bar shows how far episodes that were started have been heard, a tick marks those heard to the end. All rules are on [Continue and “Now playing”](../bedienung/fortsetzen.md).
