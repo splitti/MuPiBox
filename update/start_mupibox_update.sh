@@ -293,9 +293,16 @@ rm -f /tmp/mupibox-update-failed
 
 	# Security updates of PHP (the previous admin interface's language - PHP2Shell, CVE-2026-109618/-109619 of October
 	# 2026): whoever switches the admin interface on again has the fixed version. Only the PHP packages installed.
+	# Failed twice (the second time with fresh package lists): kept in a file the app shows while the admin interface is
+	# on (with it off no PHP answers); the MuPiBox update itself goes on - the box is fine. The next update tries again.
 	PHP_PKGS=$(dpkg-query -W -f='${Package} ${Status}\n' 'php*' 2>/dev/null | awk '/install ok installed/ {print $1}')
 	if [ -n "${PHP_PKGS}" ]; then
-		apt-get --yes --only-upgrade install ${PHP_PKGS} >&3 2>&3
+		if apt-get --yes --only-upgrade install ${PHP_PKGS} >&3 2>&3 || { apt-get update >&3 2>&3; apt-get --yes --only-upgrade install ${PHP_PKGS} >&3 2>&3; }; then
+			rm -f /etc/mupibox/php-security-update.failed
+		else
+			echo "PHP security update failed: ${PHP_PKGS}" >&3
+			date '+%Y-%m-%d %H:%M' > /etc/mupibox/php-security-update.failed
+		fi
 	fi
 
 	# What a part of the box needs (the list of scripts/mupibox/install_missing.sh - mpv plays everything but Spotify,
@@ -1223,12 +1230,19 @@ rm -f /tmp/mupibox-update-failed
 	if [ -x /usr/local/bin/mupibox/legacy_admin.sh ]; then
 		if [ ! -e /etc/mupibox/legacy-admin-default.done ]; then
 			if [ -z "$(/usr/bin/jq -r '.mupibox.legacyAdmin // empty' ${CONFIG} 2>/dev/null)" ] && [ "$(/usr/local/bin/mupibox/legacy_admin.sh status)" = "on" ]; then
+				# (the notice first: an update cut off after the switch still explains it - the app shows it only while
+				# the admin interface is off)
+				touch /etc/mupibox/legacy-admin-off-by-update
 				tmp_cfg=$(mktemp /etc/mupibox/.cfg.XXXXXX) && /usr/bin/jq '.mupibox.legacyAdmin = false' ${CONFIG} > "${tmp_cfg}" && chown --reference=${CONFIG} "${tmp_cfg}" && chmod --reference=${CONFIG} "${tmp_cfg}" && mv -f "${tmp_cfg}" ${CONFIG}
 				rm -f "${tmp_cfg}"
 				/usr/local/bin/mupibox/legacy_admin.sh off >&3 2>&3
+				# (legacy_admin.sh off takes the notice away as a switch made by someone: put back)
 				touch /etc/mupibox/legacy-admin-off-by-update
 			fi
-			touch /etc/mupibox/legacy-admin-default.done
+			# done only when it holds: chosen (the key is there) or off - else the next update tries again
+			if [ -n "$(/usr/bin/jq -r '.mupibox.legacyAdmin // empty' ${CONFIG} 2>/dev/null)" ] || [ "$(/usr/local/bin/mupibox/legacy_admin.sh status)" = "off" ]; then
+				touch /etc/mupibox/legacy-admin-default.done
+			fi
 		fi
 		/usr/local/bin/mupibox/legacy_admin.sh apply >&3 2>&3
 	fi

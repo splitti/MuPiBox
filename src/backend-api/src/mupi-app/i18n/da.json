@@ -2870,5 +2870,7 @@
  "Gerät": "Enhed",
  "Start dauerte": "Opstarten tog",
  "Admin-Interface ausgeschaltet": "Administrationsgrænseflade slået fra",
- "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Siden denne opdatering er den tidligere brugerflade slået fra – sikrere, og denne app kan alt, hvad den kunne. Tryk for at slå den til igen under System › Eksperter."
+ "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Siden denne opdatering er den tidligere brugerflade slået fra – sikrere, og denne app kan alt, hvad den kunne. Tryk for at slå den til igen under System › Eksperter.",
+ "PHP-Sicherheitsupdate fehlgeschlagen": "PHP-sikkerhedsopdatering mislykkedes",
+ "Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.": "Administrationsgrænsefladen er slået til og bruger stadig en sårbar PHP-version. Tryk for at slå den fra – eller start opdateringen igen senere."
 }
