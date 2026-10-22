@@ -2870,5 +2870,7 @@
  "Gerät": "Συσκευή",
  "Start dauerte": "Η εκκίνηση διήρκεσε",
  "Admin-Interface ausgeschaltet": "Η διεπαφή διαχείρισης απενεργοποιήθηκε",
- "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Από αυτή την ενημέρωση η προηγούμενη διεπαφή είναι απενεργοποιημένη – πιο ασφαλές, και αυτή η εφαρμογή μπορεί να κάνει ό,τι μπορούσε εκείνη. Πατήστε για να την ενεργοποιήσετε ξανά στο Σύστημα › Για προχωρημένους."
+ "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Από αυτή την ενημέρωση η προηγούμενη διεπαφή είναι απενεργοποιημένη – πιο ασφαλές, και αυτή η εφαρμογή μπορεί να κάνει ό,τι μπορούσε εκείνη. Πατήστε για να την ενεργοποιήσετε ξανά στο Σύστημα › Για προχωρημένους.",
+ "PHP-Sicherheitsupdate fehlgeschlagen": "Η ενημέρωση ασφαλείας της PHP απέτυχε",
+ "Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.": "Η διεπαφή διαχείρισης είναι ενεργή και χρησιμοποιεί ακόμα μια ευάλωτη έκδοση της PHP. Πατήστε για να την απενεργοποιήσετε – ή ξεκινήστε ξανά την ενημέρωση αργότερα."
 }
