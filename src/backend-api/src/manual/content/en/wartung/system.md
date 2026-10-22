@@ -11,10 +11,10 @@ You rarely need these settings under **Settings › System**. They are for advan
 | **Overclock SD card** | faster access to the SD card. Some cards do not run stably with it, so the app asks first |
 | **PM2 logs in RAM** | the logs of the server and the player in memory instead of on the SD card. This spares the card, but the logs are lost on restart |
 | **Wait for the network at startup** | the box waits for the network at boot (slower start, but online right away) |
-| **Turbo at startup** | higher clock speed in the first 30 seconds, for a faster start |
+| **Turbo at startup** | higher clock speed in the first 30 seconds, for a faster start. The installation and the update switch it on if it was never set |
 | **CPU governor** | the way the processor regulates its clock (for example ondemand = as needed) |
 | **Hide undervoltage warnings** | hides the lightning icon for a power supply that is too weak |
-| **SWAP** | swap file on the SD card |
+| **SWAP** | swap file on the SD card. On a Pi with 1 GB the installation and the update put the swap compressed into the memory (zram) – much faster on slow cards and USB sticks. A swap switched off stays off |
 
 > [!WARNING]
 > An undervoltage warning means the power supply or cable is too weak. That is the most common cause of dropouts. Fix it instead of hiding it.
@@ -39,6 +39,7 @@ The changes apply after a restart of the display. You restart it right away with
 
 - **Hostname**: the box's name on the network, for example `mupibox` (reachable as `mupibox.local`). Only letters, digits and hyphen. Applied after a restart.
 - **More tools**: the **DietPi Dashboard** (DietPi system management) and the **Admin interface** (legacy, the previous interface). Both open in a new window. The DietPi Dashboard has a terminal with root rights and is therefore off by default: switch it on with **Allow DietPi Dashboard**. It then opens through the app only, without a login of its own. Whoever opens port 5252 directly in the browser gets a password prompt nobody gets past.
+- **Admin interface on or off**: the switch under **More tools** turns the previous interface on or off. This app can do everything it could. Off, nothing on the box answers with PHP any more – a security flaw in PHP (like the ones of October 2026) cannot hit the box then. The login page no longer offers it, and a Spotify login through the old address `https://<box>/spotify.php` still works. On a newly installed box it is off; an updated box keeps its setting.
 - **Edit configuration directly**: an editor for the box's JSON files. Under **File** you choose which one, for example `mupiboxconfig.json` (box), `data.json` (library) or `config.json` (server).
 - **Reset**: **Reset box configuration** (all settings back to the state of the installed version; the password stays), **Clear library** (all entries of the library gone; the files stay) and **Reset server configuration**.
 

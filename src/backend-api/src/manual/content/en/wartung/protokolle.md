@@ -4,7 +4,7 @@
 
 **Settings › System › Box health** shows at a glance whether everything is in order: **Storage space**, **Temperature**, **Power supply**, **SD card**, **Memory (RAM)**, **Box services**, **Internet**, **NAS**, **Spotify login**, **Certificate (HTTPS)** and **Saved podcast episodes**. If something is wrong, it says what to do. **Check again** checks once more.
 
-Similar things are on the **About the box** page: **version**, **hostname**, **uptime**, **CPU load**, **temperature**, **memory** and the space on the **SD card**. Below it a **history** of the last 1, 6 or 24 hours shows how the values have developed. It is measured once a minute, only in the box's memory. After a restart the history starts over.
+Similar things are on the **About the box** page: **version**, **hostname**, **device** (the Pi model), **system** (operating system and architecture), **uptime**, **start took** (time until the box had fully started), **CPU load**, **temperature**, **memory** and the space on the **SD card**. Below it a **history** of the last 1, 6 or 24 hours shows how the values have developed. It is measured once a minute, only in the box's memory. After a restart the history starts over.
 
 ## Logs
 
@@ -20,7 +20,7 @@ With **Detailed player log** the player writes much more into its log (`spotify-
 
 ## Support info for getting help
 
-If you need help, for example on [Discord](https://discord.gg/4EjCgpCbbe), tap **Download support info** under **Settings › System › About the box › Support**. The zip contains the library (`data.json`), the settings without passwords, tokens and accounts, the state of the display and the network, and the versions. Logs are not included: download them under **Logs** with **Download** if needed.
+If you need help, for example on [Discord](https://discord.gg/4EjCgpCbbe), tap **Download support info** under **Settings › System › About the box › Support**. The zip contains the library (`data.json`), the settings without passwords, tokens and accounts, the state of the display and the network, the versions and the **logs** of the server and the player (the older ones too), plus the browser's debug log when **Chrome debugging** is on – the last 5 MB of each log. Have a quick look before you share it: logs can contain names from your library.
 
 ## The logs spare the SD card
 

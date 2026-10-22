@@ -1,9 +1,12 @@
 import { HttpClient } from '@angular/common/http'
-import { Injectable, inject, signal } from '@angular/core'
+import { computed, Injectable, inject, signal } from '@angular/core'
 import { NavigationEnd, Router } from '@angular/router'
+import { AlertController } from '@ionic/angular/standalone'
 import { filter } from 'rxjs'
 import { environment } from '../../environments/environment'
+import { ElternMagicLinkService } from '../eltern-magic-link.service'
 import type { MupiboxConfig } from '../mupibox-config.model'
+import { PlaytimeService } from '../playtime.service'
 
 // The parents' way into the settings while playback is locked (quiet time, the day's limit): held on WiFi/battery of
 // the lock screen - as on the start page - the lock screen stands back for the settings pages. Nothing plays meanwhile:
@@ -13,6 +16,9 @@ import type { MupiboxConfig } from '../mupibox-config.model'
 export class ParentAccessService {
   private router = inject(Router)
   private http = inject(HttpClient)
+  private alerts = inject(AlertController)
+  private magicLink = inject(ElternMagicLinkService)
+  private playtime = inject(PlaytimeService)
 
   // the pages it opens (a path and what is below it: /wifi/add)
   private static readonly PAGES = ['/settings', '/wifi', '/bluetooth']
@@ -24,6 +30,15 @@ export class ParentAccessService {
   public holdMs = 3000
 
   private idleTimer: number | undefined
+
+  /**
+   * Locked and not (or no longer) in the parent access: what the settings offer must not act now - a restart / shut down
+   * question still open after the 2 minutes (Ionic shows it above the lock screen) restarted the box without the parents.
+   */
+  public readonly lockedOut = computed(() => {
+    const s = this.playtime.status()
+    return s.enabled === true && s.state === 'blocked' && !this.active()
+  })
 
   public constructor() {
     this.http.get<MupiboxConfig>(`${environment.backend.apiUrl}/config`).subscribe({
@@ -55,10 +70,22 @@ export class ParentAccessService {
     void this.router.navigate(['/settings'])
   }
 
-  /** The lock screen again (left the settings, the lock ended, nothing touched for a while). */
-  public end(): void {
+  /**
+   * The lock screen again (left the settings, the lock ended, nothing touched for a while). closeDialogs: what the settings
+   * opened goes too - the restart / shut down question and the QR code for the app (a login) lay above the lock screen;
+   * not when the lock itself ended (the parents may go on).
+   */
+  public end(closeDialogs = true): void {
+    if (!this.active()) return
     window.clearTimeout(this.idleTimer)
     this.active.set(false)
+    if (!closeDialogs) return
+    this.magicLink.close()
+    void (async () => {
+      for (let top = await this.alerts.getTop(); top; top = await this.alerts.getTop()) {
+        if (!(await top.dismiss())) break
+      }
+    })()
   }
 
   private restartIdle(): void {
