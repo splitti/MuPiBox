@@ -441,9 +441,11 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
   /** GET /api/app/logs/view?kind=log|service&key=&grep=&lines= - the end of a log or the state of a service, as text. */
   router.get('/logs/view', requireSession, async (req, res) => {
     const kind = String(req.query.kind ?? 'log')
-    // (only a key of the table - 'constructor' and the like are inherited by every object)
+    // (only a key of the table - 'constructor' and the like are inherited by every object; a service is checked against
+    // its own list: checked against the logs' table, every service came back as unknown - "Das Protokoll ließ sich
+    // nicht lesen")
     const rawKey = String(req.query.key ?? '')
-    const key = Object.hasOwn(LOGS, rawKey) ? rawKey : ''
+    const key = kind === 'service' ? (SERVICES.includes(rawKey) ? rawKey : '') : Object.hasOwn(LOGS, rawKey) ? rawKey : ''
     const grep = String(req.query.grep ?? '').slice(0, 100)
     const lines = Math.max(20, Math.min(2000, Number.parseInt(String(req.query.lines ?? '200'), 10) || 200))
     let text = ''
