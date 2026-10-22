@@ -754,6 +754,8 @@ STEP=0
 	tmp_cfg=$(mktemp /etc/mupibox/.cfg.XXXXXX) && jq '.mupibox.legacyAdmin = false' /etc/mupibox/mupiboxconfig.json > "$tmp_cfg" && chown --reference=/etc/mupibox/mupiboxconfig.json "$tmp_cfg" && chmod --reference=/etc/mupibox/mupiboxconfig.json "$tmp_cfg" && mv -f "$tmp_cfg" /etc/mupibox/mupiboxconfig.json
 	rm -f "$tmp_cfg"
 	/usr/local/bin/mupibox/legacy_admin.sh off >&3 2>&3
+	# (the update switches it off once on boxes of before - not here again)
+	touch /etc/mupibox/legacy-admin-default.done
 	after=$(date +%s)
 	echo -e "## Activate SSL ## finished after $((after - before)) seconds" >&3 2>&3
 	STEP=$((STEP + 1))

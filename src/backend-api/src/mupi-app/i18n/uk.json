@@ -2868,5 +2868,7 @@
  "Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.": "Попередній інтерфейс на PHP. Цей застосунок уміє все, що вмів він. Коли вимкнено, на коробці ніщо більше не відповідає через PHP – вразливість у PHP її тоді не зачепить.",
  "Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.": "Для допомоги в Discord: zip-архів із бібліотекою, налаштуваннями (без паролів, токенів і облікових записів), станом мережі й системи та журналами коробки.",
  "Gerät": "Пристрій",
- "Start dauerte": "Запуск тривав"
+ "Start dauerte": "Запуск тривав",
+ "Admin-Interface ausgeschaltet": "Адмін-інтерфейс вимкнено",
+ "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Після цього оновлення попередній інтерфейс вимкнено – так безпечніше, а цей застосунок уміє все, що вмів він. Торкніться, щоб знову увімкнути його в Система › Для досвідчених."
 }
