@@ -2868,5 +2868,7 @@
  "Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.": "L’ancienne interface en PHP. Cette appli sait faire tout ce qu’elle faisait. Désactivée, plus rien ne répond en PHP sur la box – une faille de sécurité de PHP ne peut alors plus l’atteindre.",
  "Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.": "Pour l’aide sur Discord : un zip avec la bibliothèque, les réglages (sans mots de passe, jetons ni comptes), l’état du réseau et du système et les journaux de la box.",
  "Gerät": "Appareil",
- "Start dauerte": "Durée du démarrage"
+ "Start dauerte": "Durée du démarrage",
+ "Admin-Interface ausgeschaltet": "Interface d’administration désactivée",
+ "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Depuis cette mise à jour, l’ancienne interface est désactivée – plus sûr, et cette appli sait faire tout ce qu’elle faisait. Touchez pour la réactiver sous Système › Experts."
 }

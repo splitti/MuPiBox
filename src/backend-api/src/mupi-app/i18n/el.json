@@ -2868,5 +2868,7 @@
  "Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.": "Η προηγούμενη διεπαφή με PHP. Αυτή η εφαρμογή μπορεί να κάνει ό,τι μπορούσε εκείνη. Όταν είναι απενεργοποιημένη, τίποτα στο κουτί δεν απαντά πια με PHP – ένα κενό ασφαλείας της PHP δεν μπορεί να το πλήξει.",
  "Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.": "Για βοήθεια στο Discord: ένα zip με τη βιβλιοθήκη, τις ρυθμίσεις (χωρίς κωδικούς, tokens και λογαριασμούς), την κατάσταση δικτύου και συστήματος και τα αρχεία καταγραφής του κουτιού.",
  "Gerät": "Συσκευή",
- "Start dauerte": "Η εκκίνηση διήρκεσε"
+ "Start dauerte": "Η εκκίνηση διήρκεσε",
+ "Admin-Interface ausgeschaltet": "Η διεπαφή διαχείρισης απενεργοποιήθηκε",
+ "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Από αυτή την ενημέρωση η προηγούμενη διεπαφή είναι απενεργοποιημένη – πιο ασφαλές, και αυτή η εφαρμογή μπορεί να κάνει ό,τι μπορούσε εκείνη. Πατήστε για να την ενεργοποιήσετε ξανά στο Σύστημα › Για προχωρημένους."
 }

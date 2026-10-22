@@ -2868,5 +2868,7 @@
  "Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.": "Aiempi PHP-käyttöliittymä. Tämä sovellus osaa kaiken, mitä se osasi. Pois päältä laatikossa ei enää vastaa mikään PHP:llä – PHP:n tietoturva-aukko ei silloin voi osua siihen.",
  "Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.": "Apua varten Discordissa: zip, jossa on kirjasto, asetukset (ilman salasanoja, tunnuksia ja tilejä), verkon ja järjestelmän tila sekä laatikon lokit.",
  "Gerät": "Laite",
- "Start dauerte": "Käynnistys kesti"
+ "Start dauerte": "Käynnistys kesti",
+ "Admin-Interface ausgeschaltet": "Ylläpitoliittymä poistettu käytöstä",
+ "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Tästä päivityksestä lähtien aiempi käyttöliittymä on pois päältä – turvallisempaa, ja tämä sovellus osaa kaiken, mitä se osasi. Napauta kytkeäksesi sen takaisin kohdassa Järjestelmä › Asiantuntijat."
 }

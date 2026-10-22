@@ -2868,5 +2868,7 @@
  "Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.": "A interface anterior com PHP. Esta app faz tudo o que ela fazia. Desligada, nada na caixa responde mais com PHP – uma falha de segurança no PHP não a pode atingir.",
  "Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.": "Para ajuda no Discord: um zip com a biblioteca, as definições (sem palavras-passe, tokens e contas), o estado da rede e do sistema e os registos da caixa.",
  "Gerät": "Dispositivo",
- "Start dauerte": "O arranque demorou"
+ "Start dauerte": "O arranque demorou",
+ "Admin-Interface ausgeschaltet": "Interface de administração desligada",
+ "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Desde esta atualização a interface anterior está desligada – mais seguro, e esta app faz tudo o que ela fazia. Toca para a voltar a ligar em Sistema › Avançado."
 }

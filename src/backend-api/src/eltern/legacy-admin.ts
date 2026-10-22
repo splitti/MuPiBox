@@ -18,6 +18,8 @@ const SCRIPT = '/usr/local/bin/mupibox/legacy_admin.sh'
 // written by the script when it switches off (lighttpd sends the .php addresses to the app): the state as the web
 // server has it - the config's key can be gone (a reset of the box configuration) while the admin interface stays off
 const OFF_CONF = '/etc/lighttpd/conf-enabled/92-mupibox-admin-off.conf'
+// left by the update that switched it off (once, 5.0.12; see update/start_mupibox_update.sh), gone with a switch here
+const OFF_BY_UPDATE = '/etc/mupibox/legacy-admin-off-by-update'
 
 /** The admin interface is on: as the web server has it (the config's key only where that cannot be seen). */
 export function legacyAdminOn(cfg: MupiboxConfig | undefined): boolean {
@@ -38,10 +40,14 @@ function run(args: string[], timeoutMs: number): Promise<{ ok: boolean; stdout: 
 let switching: Promise<unknown> = Promise.resolve()
 
 export function registerLegacyAdminRoutes(router: Router, deps: LegacyAdminDeps): void {
-  /** GET /api/app/legacy-admin - {on}: the admin interface is switched on (as the box has it) */
+  /**
+   * GET /api/app/legacy-admin - {on, offByUpdate}: the admin interface is switched on (as the box has it); switched off
+   * by the update to 5.0.12, nobody switched since (the start page's notice)
+   */
   router.get('/legacy-admin', requireSession, async (_req, res) => {
     const status = (await run(['status'], 10000)).stdout.trim()
-    res.json({ on: status === 'off' ? false : status === 'on' ? true : legacyAdminOn(deps.getMupiboxConfig()) })
+    const on = status === 'off' ? false : status === 'on' ? true : legacyAdminOn(deps.getMupiboxConfig())
+    res.json({ on, offByUpdate: !on && existsSync(OFF_BY_UPDATE) })
   })
 
   /** POST /api/app/legacy-admin {on} - the admin interface on or off */
