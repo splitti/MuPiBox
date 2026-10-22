@@ -20,6 +20,8 @@ const SCRIPT = '/usr/local/bin/mupibox/legacy_admin.sh'
 const OFF_CONF = '/etc/lighttpd/conf-enabled/92-mupibox-admin-off.conf'
 // left by the update that switched it off (once, 5.0.12; see update/start_mupibox_update.sh), gone with a switch here
 const OFF_BY_UPDATE = '/etc/mupibox/legacy-admin-off-by-update'
+// left by an update whose PHP security update failed twice (gone with the next one that works)
+const PHP_UPDATE_FAILED = '/etc/mupibox/php-security-update.failed'
 
 /** The admin interface is on: as the web server has it (the config's key only where that cannot be seen). */
 export function legacyAdminOn(cfg: MupiboxConfig | undefined): boolean {
@@ -41,13 +43,15 @@ let switching: Promise<unknown> = Promise.resolve()
 
 export function registerLegacyAdminRoutes(router: Router, deps: LegacyAdminDeps): void {
   /**
-   * GET /api/app/legacy-admin - {on, offByUpdate}: the admin interface is switched on (as the box has it); switched off
-   * by the update to 5.0.12, nobody switched since (the start page's notice)
+   * GET /api/app/legacy-admin - {on, offByUpdate, phpUpdateFailed}: the admin interface is switched on (as the box has
+   * it); switched off by the update to 5.0.12, nobody switched since (the start page's notice); on, and PHP's security
+   * update of the last update failed
    */
   router.get('/legacy-admin', requireSession, async (_req, res) => {
     const status = (await run(['status'], 10000)).stdout.trim()
     const on = status === 'off' ? false : status === 'on' ? true : legacyAdminOn(deps.getMupiboxConfig())
-    res.json({ on, offByUpdate: !on && existsSync(OFF_BY_UPDATE) })
+    // (phpUpdateFailed: only while it is on - off, no PHP answers)
+    res.json({ on, offByUpdate: !on && existsSync(OFF_BY_UPDATE), phpUpdateFailed: on && existsSync(PHP_UPDATE_FAILED) })
   })
 
   /** POST /api/app/legacy-admin {on} - the admin interface on or off */

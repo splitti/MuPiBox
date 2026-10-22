@@ -1415,6 +1415,10 @@ async function loadNotices(root) {
       () => remember('mupi-admin-off-notice', '1'),
     ])
   }
+  // the admin interface on, and the update could not install PHP's security update: its PHP may be open to attacks
+  if (legacy.ok && legacy.body?.phpUpdateFailed) {
+    notes.push(['lock', 'PHP-Sicherheitsupdate fehlgeschlagen', 'Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.', 'experten'])
+  }
   // no password, or the login off: everyone in the home network can set up the box - said every time, it is not closed
   // for good (the parents decide on the page Passwort); with the login on but the well-known default password, that
   if (auth.ok && (auth.body?.passwordSet === false || auth.body?.loginRequired === false)) {

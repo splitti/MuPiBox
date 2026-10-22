@@ -2926,5 +2926,7 @@
  "Gerät": "Urządzenie",
  "Start dauerte": "Uruchamianie trwało",
  "Admin-Interface ausgeschaltet": "Interfejs administracyjny wyłączony",
- "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Od tej aktualizacji dotychczasowy interfejs jest wyłączony – bezpieczniej, a ta aplikacja potrafi wszystko, co on. Dotknij, aby włączyć go ponownie w System › Eksperci."
+ "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Od tej aktualizacji dotychczasowy interfejs jest wyłączony – bezpieczniej, a ta aplikacja potrafi wszystko, co on. Dotknij, aby włączyć go ponownie w System › Eksperci.",
+ "PHP-Sicherheitsupdate fehlgeschlagen": "Aktualizacja zabezpieczeń PHP nie powiodła się",
+ "Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.": "Interfejs administracyjny jest włączony i nadal używa podatnej wersji PHP. Dotknij, aby go wyłączyć – albo uruchom aktualizację później ponownie."
 }

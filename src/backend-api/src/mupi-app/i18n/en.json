@@ -2926,5 +2926,7 @@
  "Gerät": "Device",
  "Start dauerte": "Start took",
  "Admin-Interface ausgeschaltet": "Admin interface switched off",
- "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Since this update the previous interface is off – safer, and this app can do everything it could. Tap to switch it on again under System › Experts."
+ "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Since this update the previous interface is off – safer, and this app can do everything it could. Tap to switch it on again under System › Experts.",
+ "PHP-Sicherheitsupdate fehlgeschlagen": "PHP security update failed",
+ "Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.": "The admin interface is on and still uses a vulnerable PHP version. Tap to switch it off – or start the update again later."
 }

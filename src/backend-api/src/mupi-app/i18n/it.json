@@ -2926,5 +2926,7 @@
  "Gerät": "Dispositivo",
  "Start dauerte": "L’avvio è durato",
  "Admin-Interface ausgeschaltet": "Interfaccia di amministrazione disattivata",
- "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Da questo aggiornamento la vecchia interfaccia è disattivata – più sicuro, e questa app sa fare tutto ciò che faceva. Tocca per riattivarla in Sistema › Esperti."
+ "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Da questo aggiornamento la vecchia interfaccia è disattivata – più sicuro, e questa app sa fare tutto ciò che faceva. Tocca per riattivarla in Sistema › Esperti.",
+ "PHP-Sicherheitsupdate fehlgeschlagen": "Aggiornamento di sicurezza PHP non riuscito",
+ "Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.": "L’interfaccia di amministrazione è attiva e usa ancora una versione vulnerabile di PHP. Tocca per disattivarla – oppure riavvia l’aggiornamento più tardi."
 }

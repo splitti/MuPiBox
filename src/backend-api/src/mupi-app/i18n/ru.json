@@ -2926,5 +2926,7 @@
  "Gerät": "Устройство",
  "Start dauerte": "Запуск занял",
  "Admin-Interface ausgeschaltet": "Админ-интерфейс выключен",
- "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "После этого обновления прежний интерфейс выключен – так безопаснее, а это приложение умеет всё, что умел он. Нажмите, чтобы снова включить его в Система › Для экспертов."
+ "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "После этого обновления прежний интерфейс выключен – так безопаснее, а это приложение умеет всё, что умел он. Нажмите, чтобы снова включить его в Система › Для экспертов.",
+ "PHP-Sicherheitsupdate fehlgeschlagen": "Не удалось обновить безопасность PHP",
+ "Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.": "Админ-интерфейс включён и всё ещё использует уязвимую версию PHP. Нажмите, чтобы выключить его, – или запустите обновление позже ещё раз."
 }

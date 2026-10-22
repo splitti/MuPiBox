@@ -2926,5 +2926,7 @@
  "Gerät": "Dispositivo",
  "Start dauerte": "El arranque tardó",
  "Admin-Interface ausgeschaltet": "Interfaz de administración desactivada",
- "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Desde esta actualización la interfaz anterior está desactivada: más seguro, y esta app puede hacer todo lo que hacía. Toca para volver a activarla en Sistema › Expertos."
+ "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Desde esta actualización la interfaz anterior está desactivada: más seguro, y esta app puede hacer todo lo que hacía. Toca para volver a activarla en Sistema › Expertos.",
+ "PHP-Sicherheitsupdate fehlgeschlagen": "Falló la actualización de seguridad de PHP",
+ "Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.": "La interfaz de administración está activada y aún usa una versión vulnerable de PHP. Toca para desactivarla, o vuelve a iniciar la actualización más tarde."
 }

@@ -2926,5 +2926,7 @@
  "Gerät": "Dispositivo",
  "Start dauerte": "O arranque demorou",
  "Admin-Interface ausgeschaltet": "Interface de administração desligada",
- "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Desde esta atualização a interface anterior está desligada – mais seguro, e esta app faz tudo o que ela fazia. Toca para a voltar a ligar em Sistema › Avançado."
+ "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Desde esta atualização a interface anterior está desligada – mais seguro, e esta app faz tudo o que ela fazia. Toca para a voltar a ligar em Sistema › Avançado.",
+ "PHP-Sicherheitsupdate fehlgeschlagen": "A atualização de segurança do PHP falhou",
+ "Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.": "A interface de administração está ligada e ainda usa uma versão vulnerável do PHP. Toca para a desligar – ou volta a iniciar a atualização mais tarde."
 }

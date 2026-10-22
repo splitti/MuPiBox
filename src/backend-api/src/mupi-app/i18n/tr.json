@@ -2926,5 +2926,7 @@
  "Gerät": "Cihaz",
  "Start dauerte": "Başlatma süresi",
  "Admin-Interface ausgeschaltet": "Yönetim arayüzü kapatıldı",
- "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Bu güncellemeden beri eski arayüz kapalı – daha güvenli, ve bu uygulama onun yapabildiği her şeyi yapabilir. Yeniden açmak için Sistem › Uzman altına dokunun."
+ "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Bu güncellemeden beri eski arayüz kapalı – daha güvenli, ve bu uygulama onun yapabildiği her şeyi yapabilir. Yeniden açmak için Sistem › Uzman altına dokunun.",
+ "PHP-Sicherheitsupdate fehlgeschlagen": "PHP güvenlik güncellemesi başarısız oldu",
+ "Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.": "Yönetim arayüzü açık ve hâlâ güvenlik açığı olan bir PHP sürümü kullanıyor. Kapatmak için dokunun – ya da güncellemeyi daha sonra yeniden başlatın."
 }
