@@ -52,7 +52,7 @@ import { registerCustomBootRoutes } from './bootscreen-custom'
 import { registerFeedHostRoutes } from './feed-hosts'
 import { registerPinnedCardRoutes } from './pinned-cards'
 import { dropStatic, registerWifiStaticRoutes, startWifiStaticWatch } from './wifi-static'
-import { decodeWpaSsid } from '../wpa-ssid'
+import { decodeWpaSsid, parseWpaCliScanResults } from '../wpa-ssid'
 import { fanSpeedNow, registerHardwareRoutes } from './hardware'
 import { registerDietpiDashboardRoutes, startDietpiDashboard } from './dietpi-dashboard'
 import { legacyAdminOn, registerLegacyAdminRoutes } from './legacy-admin'
@@ -1465,27 +1465,65 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * dedup by SSID (keep the strongest signal) and drop hidden networks
    * (empty SSID). Slow — iwlist takes ~3-5 s.
    */
+  // The scan of the supplicant, for when iwlist has nothing: wpa_cli lists what the adapter found ("bssid / frequency /
+  // signal level / flags / ssid"). iwlist's old interface hands back an empty list on some drivers (a USB adapter's:
+  // too many networks for its buffer, or the adapter not up yet).
+  type ScanNet = { ssid: string; signal_dbm: number; encrypted: boolean }
+  const wpaScan = (): Promise<ScanNet[]> =>
+    new Promise((resolve) => {
+      const iface = wifiIface()
+      execFile('sudo', ['wpa_cli', '-i', iface, 'scan'], { timeout: 5000 }, () => {
+        setTimeout(() => {
+          execFile('sudo', ['wpa_cli', '-i', iface, 'scan_results'], { timeout: 5000 }, (err, stdout) => {
+            // (read as the box's WiFi page reads it: a name with umlauts comes as \xNN from wpa_cli, a hidden network
+            // with an empty or all-zero name)
+            const nets: ScanNet[] = err
+              ? []
+              : [...parseWpaCliScanResults(stdout)].map(([ssid, n]) => ({ ssid, signal_dbm: n.signalDbm, encrypted: n.secured }))
+            resolve(nets)
+          })
+        }, 4000)
+      })
+    })
+
+  const bestPerSsid = (list: ScanNet[]): ScanNet[] => {
+    const byBest = new Map<string, ScanNet>()
+    for (const n of list) {
+      const prev = byBest.get(n.ssid)
+      if (!prev || n.signal_dbm > prev.signal_dbm) byBest.set(n.ssid, n)
+    }
+    return [...byBest.values()].sort((a, b) => b.signal_dbm - a.signal_dbm)
+  }
+
   router.get(['/wifi/scan', '/wlan/scan'], requireSession, (_req, res) => {
-    iwlistScan().then((stdout) => {
-      const blocks = stdout.split(/Cell \d+ -/)
-      const byBest = new Map<string, { ssid: string; signal_dbm: number; encrypted: boolean }>()
-      for (const blk of blocks) {
-        const ssidMatch = blk.match(/ESSID:"([^"]*)"/)
-        if (!ssidMatch) continue
-        const ssid = ssidMatch[1]
-        if (!ssid) continue // hidden network
-        const sigMatch = blk.match(/Signal level=(-?\d+)\s*dBm/)
-        const signal_dbm = sigMatch ? Number.parseInt(sigMatch[1], 10) : -100
-        const encrypted = /Encryption key:on/.test(blk)
-        const prev = byBest.get(ssid)
-        if (!prev || signal_dbm > prev.signal_dbm) {
-          byBest.set(ssid, { ssid, signal_dbm, encrypted })
-        }
-      }
-      const networks = [...byBest.values()].sort((a, b) => b.signal_dbm - a.signal_dbm)
-      res.json({ networks })
-    }, (err: Error) => {
-      res.status(500).json({ error: `iwlist failed: ${err.message}` })
+    // (an adapter that is down finds nothing: switched on first - harmless when it is already up)
+    execFile('sudo', ['/usr/sbin/ip', 'link', 'set', wifiIface(), 'up'], { timeout: 3000 }, () => {
+      iwlistScan().then(
+        async (stdout) => {
+          const found: ScanNet[] = []
+          for (const blk of stdout.split(/Cell \d+ -/)) {
+            const ssidMatch = blk.match(/ESSID:"([^"]*)"/)
+            if (!ssidMatch || !ssidMatch[1]) continue // not a network block, or a hidden network
+            // (iwlist prints a character outside ASCII as \xNN per byte, as wpa_cli does: 'Åsna-Müller' came as
+            // '\xC3\x85sna-M\xC3\xBCller'; a hidden network may come as zero bytes)
+            const ssid = decodeWpaSsid(ssidMatch[1])
+            if (ssid.replaceAll('\0', '').trim() === '') continue
+            const sigMatch = blk.match(/Signal level=(-?\d+)\s*dBm/)
+            found.push({
+              ssid,
+              signal_dbm: sigMatch ? Number.parseInt(sigMatch[1], 10) : -100,
+              encrypted: /Encryption key:on/.test(blk),
+            })
+          }
+          res.json({ networks: bestPerSsid(found.length ? found : await wpaScan()) })
+        },
+        async (err: Error) => {
+          // iwlist failed: the supplicant's list before giving up
+          const nets = await wpaScan()
+          if (nets.length) res.json({ networks: bestPerSsid(nets) })
+          else res.status(500).json({ error: `iwlist failed: ${err.message}` })
+        },
+      )
     })
   })
 

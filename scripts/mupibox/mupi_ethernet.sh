@@ -40,7 +40,10 @@ LINK=0
 # (never ifdown here: it takes the link down, which would read as a pulled cable)
 connect() {
 	(
-		ifquery --state "${IF}" >/dev/null 2>&1 || ifup --allow=hotplug "${IF}" >/dev/null 2>&1
+		# (not --allow=hotplug: DietPi 10 writes the stanza without allow-hotplug when the box was set up over WiFi
+		# (AUTO_SETUP_NET_ETHERNET_ENABLED=0) - the cable had a link and never got an address. Whether LAN is on is
+		# the box's own switch, lan.off above.)
+		ifquery --state "${IF}" >/dev/null 2>&1 || ifup "${IF}" >/dev/null 2>&1
 		/usr/local/bin/mupibox/mupi_wifi_select.sh
 	) &
 }
