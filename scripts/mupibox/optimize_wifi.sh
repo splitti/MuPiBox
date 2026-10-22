@@ -3,6 +3,8 @@
 
 WPACONF="/etc/wpa_supplicant/wpa_supplicant.conf"
 NETWORKINTERFACES="/etc/network/interfaces"
+# DietPi on Debian 13 and later: one file per adapter (wlan0.conf, wlan1.conf, ...), read by "source interfaces.d/*"
+NETWORKINTERFACESD="/etc/network/interfaces.d"
 # The new version is written next to the file (the same file system: the exchange is one step, nothing half written
 # when the power goes) and readable by root only - it holds the WiFi passwords. Built in /tmp (another file system,
 # so mv copied) it came out readable by everyone (0644).
@@ -40,12 +42,53 @@ if ! grep -q "wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf" "$NETWORKINTERFA
 	cp "$NETWORKINTERFACES" "$NETWORKINTERFACES.bak"
 	sed -i 's|wpa-conf /etc/wpa_supplicant/wpa_supplicant.conf|wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf|' $NETWORKINTERFACES
 	sed -i 's|iface wlan0 inet dhcp|iface wlan0 inet manual|' $NETWORKINTERFACES
-	echo "iface default inet dhcp" | tee -a $NETWORKINTERFACES > /dev/null
+fi
+
+# The adapters defined in interfaces.d (see above) get the same roaming setup - one that gets its address by DHCP: a
+# fixed address set in DietPi (iface wlanX inet static) stays as it is, with wpa-roam that stanza would be "manual"
+# and the address lost. Their backup goes next to /etc/network/interfaces, not into interfaces.d: everything in there
+# is read as a definition.
+for conf in "$NETWORKINTERFACESD"/wlan[0-9].conf; do
+	[ -f "$conf" ] || continue
+	if grep -q "^wpa-conf /etc/wpa_supplicant/wpa_supplicant.conf" "$conf" && grep -q "^iface wlan[0-9] inet dhcp" "$conf"; then
+		cp "$conf" "/etc/network/$(basename "$conf").bak"
+		sed -i -e 's|^wpa-conf /etc/wpa_supplicant/wpa_supplicant.conf|wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf|' -e 's|^iface \(wlan[0-9]\) inet dhcp|iface \1 inet manual|' "$conf"
+	fi
+done
+# the roaming setup brings the address by the logical interface "default": it has to be defined once - one line for
+# every run before (with the adapters in interfaces.d, /etc/network/interfaces never had wpa-roam: each run added one).
+# A "default" set up otherwise (inet static: a fixed address for every network) stays as it is, without DHCP beside it.
+if ! grep -qs "^iface[[:space:]]\+default[[:space:]]\+inet[[:space:]]" "$NETWORKINTERFACES" "$NETWORKINTERFACESD"/*; then
+	echo "iface default inet dhcp" >> "$NETWORKINTERFACES"
 fi
 
 # A second WiFi adapter (a USB one) is called wlan1: it is set up like the onboard one. Which of the two
 # is used is decided by mupi_wifi_select.sh (USB preferred, onboard as fallback).
-if ! grep -q "allow-hotplug wlan1" "$NETWORKINTERFACES"; then
+# One definition per adapter: an adapter that is defined twice (here and in interfaces.d/wlan1.conf, as an earlier
+# version of this script left it) starts two wpa_supplicant that stop each other - the link comes up and goes down
+# again a few seconds later, with no address. The IPv4 one here goes ("iface wlan1 inet", an "inet6" one beside it is
+# a setting of its own and stays), with its options up to the next stanza - empty lines and comments in between do not
+# end it (an option after them still belongs to it; left, it went to the stanza before, e.g. eth0's), the ones right
+# before the next stanza stay. "allow-hotplug wlan1" / "auto wlan1" go only when interfaces.d starts it too.
+WLAN1_IPV4="^iface[[:space:]]\+wlan1[[:space:]]\+inet[[:space:]]"
+if grep -qs "$WLAN1_IPV4" "$NETWORKINTERFACESD"/*.conf && grep -q "$WLAN1_IPV4" "$NETWORKINTERFACES"; then
+	started_there=0
+	grep -qsE "^[[:space:]]*(allow-hotplug|auto)[[:space:]]+wlan1[[:space:]]*$" "$NETWORKINTERFACESD"/*.conf && started_there=1
+	cp "$NETWORKINTERFACES" "$NETWORKINTERFACES.bak-wlan1"
+	awk -v started_there="$started_there" '
+		function stanza() { return $0 ~ /^[ \t]*(iface|mapping|auto|allow-[^ \t]+|source|source-directory|rename|no-auto-down|no-scripts)([ \t]|$)/ }
+		skip && stanza() { skip = 0; printf "%s", held; held = "" }
+		skip && (/^[ \t]*$/ || /^[ \t]*#/) { held = held $0 "\n"; next }
+		skip { held = ""; next }
+		/^[ \t]*iface[ \t]+wlan1[ \t]+inet[ \t]/ { skip = 1; held = ""; next }
+		started_there && /^[ \t]*(allow-hotplug|auto)[ \t]+wlan1[ \t]*$/ { next }
+		{ print }
+		END { printf "%s", held }
+	' "$NETWORKINTERFACES.bak-wlan1" > "$NETWORKINTERFACES.mupibox-new" &&
+		chmod 644 "$NETWORKINTERFACES.mupibox-new" &&
+		mv "$NETWORKINTERFACES.mupibox-new" "$NETWORKINTERFACES"
+fi
+if ! grep -qs "$WLAN1_IPV4" "$NETWORKINTERFACES" "$NETWORKINTERFACESD"/*; then
 	{
 		echo ""
 		echo "allow-hotplug wlan1"
