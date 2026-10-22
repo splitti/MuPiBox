@@ -1228,23 +1228,23 @@ rm -f /tmp/mupibox-update-failed
 	# keeps it to this once: switched on again in the app (System › Experten), it stays on. The app's start page says it
 	# was switched off. Afterwards as chosen: an update may bring PHP and lighttpd's PHP module back - off, they go again.
 	if [ -x /usr/local/bin/mupibox/legacy_admin.sh ]; then
+		migrate=""
 		if [ ! -e /etc/mupibox/legacy-admin-default.done ]; then
+			migrate=1
 			if [ -z "$(/usr/bin/jq -r '.mupibox.legacyAdmin // empty' ${CONFIG} 2>/dev/null)" ] && [ "$(/usr/local/bin/mupibox/legacy_admin.sh status)" = "on" ]; then
 				# (the notice first: an update cut off after the switch still explains it - the app shows it only while
-				# the admin interface is off)
+				# the admin interface is off. Switched off below by "apply" as the config now says: "off" is a switch made
+				# by someone and takes the notice away.)
 				touch /etc/mupibox/legacy-admin-off-by-update
 				tmp_cfg=$(mktemp /etc/mupibox/.cfg.XXXXXX) && /usr/bin/jq '.mupibox.legacyAdmin = false' ${CONFIG} > "${tmp_cfg}" && chown --reference=${CONFIG} "${tmp_cfg}" && chmod --reference=${CONFIG} "${tmp_cfg}" && mv -f "${tmp_cfg}" ${CONFIG}
 				rm -f "${tmp_cfg}"
-				/usr/local/bin/mupibox/legacy_admin.sh off >&3 2>&3
-				# (legacy_admin.sh off takes the notice away as a switch made by someone: put back)
-				touch /etc/mupibox/legacy-admin-off-by-update
-			fi
-			# done only when it holds: chosen (the key is there) or off - else the next update tries again
-			if [ -n "$(/usr/bin/jq -r '.mupibox.legacyAdmin // empty' ${CONFIG} 2>/dev/null)" ] || [ "$(/usr/local/bin/mupibox/legacy_admin.sh status)" = "off" ]; then
-				touch /etc/mupibox/legacy-admin-default.done
 			fi
 		fi
 		/usr/local/bin/mupibox/legacy_admin.sh apply >&3 2>&3
+		# done only when it holds: chosen on (the key says so) or off - else the next update tries again
+		if [ -n "${migrate}" ] && { [ "$(/usr/bin/jq -r '.mupibox.legacyAdmin' ${CONFIG} 2>/dev/null)" = "true" ] || [ "$(/usr/local/bin/mupibox/legacy_admin.sh status)" = "off" ]; }; then
+			touch /etc/mupibox/legacy-admin-default.done
+		fi
 	fi
 	after=$(date +%s)
 	echo -e "## Network optimization ##  finished after $((after - $before)) seconds" >&3 2>&3
