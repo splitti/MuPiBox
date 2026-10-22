@@ -23,20 +23,26 @@ export interface SystemDeps {
 // such lines held the whole server up).
 const SECRET_PARAMS = 'token|access_token|refresh_token|id_token|auth|authorization|key|apikey|api_key|secret|client_secret|password|passwd|pass|pw|pwd|sig|signature|session|sessionid|sid|code|ticket'
 // (the whole part before the host - user, password, a token as password -, of any length; it ends at the next / so the
-// search stays short, and at the end of the string it stands in: quotes and the delimiters of JSON and HTML are never
-// part of an address unencoded - else a JSON line ran on to an @ fields later ("contact":"help@…") and lost everything
-// in between; plain and URL-encoded: %3A%2F%2F … %40)
+// search stays short, and at the end of the string it stands in: the characters that are never part of an address
+// unencoded - double quotes, backticks, the delimiters of JSON and HTML - else a JSON line ran on to an @ fields later
+// ("contact":"help@…") and lost everything in between. An apostrophe may be part of the credentials (and
+// encodeURIComponent leaves it as it is): it ends them only where the address itself stands in single quotes
+// (href='…'). Plain and URL-encoded: %3A%2F%2F … %40.)
 const SCHEMES = 'https?|rtsp|rtmp|mms|icy|ftps?|sftp|smb|nfs|wss?|davs?'
-const NOT_IN_URL = '\\s/@?#"\'`<>{}\\[\\]\\\\'
-const URL_CREDENTIALS = new RegExp(`\\b(${SCHEMES}):\\/\\/[^${NOT_IN_URL}]+@`, 'gi')
-const URL_CREDENTIALS_ENCODED = new RegExp(`\\b(${SCHEMES})%3A%2F%2F(?:(?!%2F|%40|%3F|%23|%22)[^${NOT_IN_URL}&])+%40`, 'gi')
+const NOT_IN_URL = '\\s/@?#"`<>{}\\[\\]\\\\'
+const URL_CREDENTIALS = new RegExp(`(?<!')\\b(${SCHEMES}):\\/\\/[^${NOT_IN_URL}]+@`, 'gi')
+const URL_CREDENTIALS_QUOTED = new RegExp(`(?<=')(${SCHEMES}):\\/\\/[^${NOT_IN_URL}']+@`, 'gi')
+const URL_CREDENTIALS_ENCODED = new RegExp(`(?<!')\\b(${SCHEMES})%3A%2F%2F(?:(?!%2F|%40|%3F|%23|%22)[^${NOT_IN_URL}&])+%40`, 'gi')
+const URL_CREDENTIALS_ENCODED_QUOTED = new RegExp(`(?<=')(${SCHEMES})%3A%2F%2F(?:(?!%2F|%40|%3F|%23|%22)[^${NOT_IN_URL}&'])+%40`, 'gi')
 const PARAM_PLAIN = new RegExp(`([?&;](?:${SECRET_PARAMS})=)[^&;\\s"'<>]+`, 'gi')
 // (encoded: ? & ; = as %3F %26 %3B %3D - the value ends at the next encoded separator)
 const PARAM_ENCODED = new RegExp(`((?:%3F|%26|%3B)(?:${SECRET_PARAMS})%3D)(?:(?!%26|%3B)[^&;\\s"'<>])+`, 'gi')
 export function withoutLogSecrets(text: string): string {
   return text
     .replace(URL_CREDENTIALS, '$1://***@')
+    .replace(URL_CREDENTIALS_QUOTED, '$1://***@')
     .replace(URL_CREDENTIALS_ENCODED, '$1%3A%2F%2F***%40')
+    .replace(URL_CREDENTIALS_ENCODED_QUOTED, '$1%3A%2F%2F***%40')
     .replace(PARAM_PLAIN, '$1***')
     .replace(PARAM_ENCODED, '$1***')
     .replace(/\b(Bearer\s+)[A-Za-z0-9._~+/=-]{8,}/g, '$1***')
