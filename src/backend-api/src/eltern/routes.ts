@@ -2163,11 +2163,32 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       await fsp.symlink(to, newLink)
       await fsp.rename(newLink, symlinkPath)
     }
-    const before = await fsp.readlink(symlinkPath).catch(() => null)
+    // what is there now, to put back: a link (its target), a file (e.g. copied in by hand: kept next to it until the
+    // change counts), or nothing
+    const kept = `${symlinkPath}.before`
+    let before: { link: string } | { file: true } | null = null
+    try {
+      const st = await fsp.lstat(symlinkPath)
+      if (st.isSymbolicLink()) before = { link: await fsp.readlink(symlinkPath) }
+      else if (st.isFile()) {
+        await fsp.copyFile(symlinkPath, kept)
+        before = { file: true }
+      } else return { status: 500, body: { error: 'active_theme.css is neither a link nor a file' } }
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code
+      if (code === 'EACCES' || code === 'EPERM') return { status: 500, body: { error: 'theme_link_denied', owner: await ownerName(wwwDir) } }
+      if (code !== 'ENOENT') return { status: 500, body: { error: `theme link not readable: ${(err as Error).message}` } }
+    }
+    const putBack = async () => {
+      if (before && 'link' in before) await swapIn(before.link)
+      else if (before) await fsp.rename(kept, symlinkPath)
+      else await fsp.rm(symlinkPath, { force: true })
+    }
     try {
       await swapIn(`/home/dietpi/MuPiBox/themes/${theme}.css`)
     } catch (err) {
       await fsp.rm(newLink, { force: true }).catch(() => {})
+      await fsp.rm(kept, { force: true }).catch(() => {})
       const code = (err as NodeJS.ErrnoException).code
       if (code === 'EACCES' || code === 'EPERM') {
         // the display's folder belongs to someone else (e.g. files copied in by hand as root) - the box's start gives
@@ -2183,10 +2204,11 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         c.mupibox = m
       })
     } catch (err) {
-      await (before ? swapIn(before) : fsp.rm(symlinkPath, { force: true })).catch(() => {})
+      await putBack().catch(() => {})
       await fsp.rm(newLink, { force: true }).catch(() => {})
       return { status: 500, body: { error: `theme setting not saved: ${(err as Error).message}` } }
     }
+    await fsp.rm(kept, { force: true }).catch(() => {})
     return { status: 200, body: { ok: true, theme } }
   }
 

@@ -37,10 +37,15 @@ def new_session():
     """A tidalapi session whose requests (the API, the sign-in, the renewal) all have a time limit."""
     s = tidalapi.Session()
     send = s.request_session.request
+    # the last answer TIDAL gave this session (see passing: tidalapi does not always keep it with the error it raises)
+    s.last_response = None
 
     def request(method, url, **kw):
         kw.setdefault("timeout", TIMEOUT)
-        return send(method, url, **kw)
+        s.last_response = None
+        response = send(method, url, **kw)
+        s.last_response = response
+        return response
 
     s.request_session.request = request
     return s
@@ -94,15 +99,29 @@ def save_session():
     saved_tokens = t
 
 
-def passing(e):
-    """An error that goes by: no network yet (at the start of the box it often comes a few seconds after this service),
-    no answer, TIDAL busy (429) or down for a moment (5xx). Anything else - a refused or expired sign-in - stays."""
-    if isinstance(e, (requests.exceptions.ConnectionError, requests.exceptions.Timeout, tidalapi.exceptions.TooManyRequests)):
-        return True
+def asked_wait(response):
+    """The seconds TIDAL asked to wait (Retry-After), 0 when it did not say."""
+    value = str(response.headers.get("Retry-After", "")).strip() if response is not None else ""
+    return int(value) if value.isdigit() else 0
+
+
+def passing(e, last=None):
+    """Whether an error goes by: no network yet (at the start of the box it often comes a few seconds after this
+    service), no answer, TIDAL busy (429) or down for a moment (5xx) - then the seconds TIDAL asked to wait (0 when it
+    did not say), else None (a refused or expired sign-in stays). last: the last answer of the session (new_session) -
+    tidalapi raises a 5xx page as a JSON error, and a failed renewal as an AuthenticationError, without the answer."""
+    if isinstance(e, tidalapi.exceptions.TooManyRequests):
+        return max(0, getattr(e, "retry_after", 0) or 0)
+    if isinstance(e, (requests.exceptions.ConnectionError, requests.exceptions.Timeout)):
+        return 0
     response = getattr(e, "response", None)
     if response is None and isinstance(e.__cause__, requests.HTTPError):
         response = e.__cause__.response
-    return response is not None and response.status_code >= 500
+    if response is None:
+        response = last
+    if response is not None and (response.status_code == 429 or response.status_code >= 500):
+        return asked_wait(response)
+    return None
 
 
 def generation():
@@ -112,16 +131,16 @@ def generation():
 
 
 def load_session(quiet=False, gen=None):
-    """The saved sign-in, taken up again: "done" (signed in, refused, none saved, or overtaken) or "retry" (TIDAL could
-    not be asked for now, see passing). gen: what it may replace (see generation) - kept by keep_loading over all its
-    tries, so a sign-in or sign-out in between always counts."""
+    """The saved sign-in, taken up again: ("done", 0) - signed in, refused, none saved, or overtaken - or ("retry",
+    seconds TIDAL asked to wait) when TIDAL could not be asked for now (see passing). gen: what it may replace (see
+    generation) - kept by keep_loading over all its tries, so a sign-in or sign-out in between always counts."""
     global session, saved_tokens
     first, mine_round = gen or generation()
     try:
         with open(SESSION_FILE) as f:
             t = json.load(f)
     except (OSError, ValueError):
-        return "done"
+        return "done", 0
     exp = None
     if t.get("expiry_time"):
         try:
@@ -133,38 +152,41 @@ def load_session(quiet=False, gen=None):
     try:
         ok = s.load_oauth_session(t.get("token_type", "Bearer"), t.get("access_token", ""), t.get("refresh_token"), exp)
     except Exception as e:  # tidalapi raises different errors for a refused or expired sign-in
-        if passing(e):
+        wait = passing(e, s.last_response)
+        if wait is not None:
             if not quiet:
                 log(f"TIDAL cannot be asked yet, the saved sign-in is tried again: {e}")
-            return "retry"
+            return "retry", wait
         log(f"the saved sign-in does not work any more: {e}")
-        return "done"
+        return "done", 0
     with lock:
         # signed in, signed out or a sign-in started (also one still waiting for its code) since: that counts, not the
         # file read before
         if session is not first or login_round != mine_round or pending is not None or session.user is not None:
-            return "done"
+            return "done", 0
         if not ok:
             log("the saved sign-in was not accepted")
-            return "done"
+            return "done", 0
         session = s
         saved_tokens = t
         log("signed in again with the saved sign-in")
         save_session()
-    return "done"
+    return "done", 0
 
 
-def keep_loading(gen):
-    """Tries the saved sign-in again until TIDAL answers - after 15 s, then twice as long each time up to 5 minutes
-    (logged once, see load_session). Ends as soon as someone signs in or out (gen, see load_session)."""
-    wait = 15
+def keep_loading(gen, asked=0):
+    """Tries the saved sign-in again until TIDAL answers - after 15 s, then twice as long each time up to 5 minutes, and
+    never before the time TIDAL asked to wait (Retry-After, at most an hour). Logged once, see load_session. Ends as
+    soon as someone signs in or out (gen, see load_session)."""
+    backoff = 15
     while True:
-        time.sleep(wait)
+        time.sleep(max(backoff, min(asked, 3600)))
         if generation() != gen:
             return
-        if load_session(quiet=True, gen=gen) != "retry":
+        result, asked = load_session(quiet=True, gen=gen)
+        if result != "retry":
             return
-        wait = min(wait * 2, 300)
+        backoff = min(backoff * 2, 300)
 
 
 def signed_in(s):
@@ -547,8 +569,9 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     start_gen = generation()
-    if load_session(gen=start_gen) == "retry":
-        threading.Thread(target=keep_loading, args=(start_gen,), daemon=True).start()
+    result, asked = load_session(gen=start_gen)
+    if result == "retry":
+        threading.Thread(target=keep_loading, args=(start_gen, asked), daemon=True).start()
     server = ThreadingHTTPServer((HOST, PORT), Handler)
     log(f"listening on {HOST}:{PORT}")
     server.serve_forever()
