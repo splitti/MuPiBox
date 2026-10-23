@@ -12,7 +12,9 @@
 # refresh and changes the refresh token then too, so it is written again whenever it changed.
 
 import datetime
+import email.utils
 import json
+import math
 import os
 import threading
 import time
@@ -100,9 +102,17 @@ def save_session():
 
 
 def asked_wait(response):
-    """The seconds TIDAL asked to wait (Retry-After), 0 when it did not say."""
+    """The seconds TIDAL asked to wait (Retry-After: seconds, or the HTTP date until when), 0 when it did not say."""
     value = str(response.headers.get("Retry-After", "")).strip() if response is not None else ""
-    return int(value) if value.isdigit() else 0
+    if value.isdigit():
+        return int(value)
+    try:
+        until = email.utils.parsedate_to_datetime(value)
+        if until.tzinfo is None:
+            until = until.replace(tzinfo=datetime.timezone.utc)
+        return max(0, math.ceil((until - datetime.datetime.now(datetime.timezone.utc)).total_seconds()))
+    except (TypeError, ValueError, IndexError, OverflowError):
+        return 0
 
 
 def passing(e, last=None):
@@ -111,7 +121,8 @@ def passing(e, last=None):
     did not say), else None (a refused or expired sign-in stays). last: the last answer of the session (new_session) -
     tidalapi raises a 5xx page as a JSON error, and a failed renewal as an AuthenticationError, without the answer."""
     if isinstance(e, tidalapi.exceptions.TooManyRequests):
-        return max(0, getattr(e, "retry_after", 0) or 0)
+        # (tidalapi reads Retry-After as seconds only: -1 for a date - the answer itself is asked as well)
+        return max(0, getattr(e, "retry_after", 0) or 0, asked_wait(getattr(e, "response", None) or last))
     if isinstance(e, (requests.exceptions.ConnectionError, requests.exceptions.Timeout)):
         return 0
     response = getattr(e, "response", None)
@@ -174,13 +185,21 @@ def load_session(quiet=False, gen=None):
     return "done", 0
 
 
+# longer than this asked by TIDAL (Retry-After): no more tries by themselves - the next start of the service or a sign-in
+# in the app tries again
+LONGEST_ASKED_WAIT = 6 * 3600
+
+
 def keep_loading(gen, asked=0):
     """Tries the saved sign-in again until TIDAL answers - after 15 s, then twice as long each time up to 5 minutes, and
-    never before the time TIDAL asked to wait (Retry-After, at most an hour). Logged once, see load_session. Ends as
-    soon as someone signs in or out (gen, see load_session)."""
+    never before the time TIDAL asked to wait (Retry-After, never shortened; see LONGEST_ASKED_WAIT). Logged once, see
+    load_session. Ends as soon as someone signs in or out (gen, see load_session)."""
     backoff = 15
     while True:
-        time.sleep(max(backoff, min(asked, 3600)))
+        if asked > LONGEST_ASKED_WAIT:
+            log(f"TIDAL asked to wait {asked} s - the saved sign-in is not tried again by itself (restart or sign in)")
+            return
+        time.sleep(max(backoff, asked))
         if generation() != gen:
             return
         result, asked = load_session(quiet=True, gen=gen)
