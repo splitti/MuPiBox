@@ -2928,5 +2928,6 @@
  "Admin-Interface ausgeschaltet": "Interface d’administration désactivée",
  "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Depuis cette mise à jour, l’ancienne interface est désactivée – plus sûr, et cette appli sait faire tout ce qu’elle faisait. Touchez pour la réactiver sous Système › Experts.",
  "PHP-Sicherheitsupdate fehlgeschlagen": "Échec de la mise à jour de sécurité PHP",
- "Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.": "L’interface d’administration est activée et utilise encore une version vulnérable de PHP. Touchez pour la désactiver – ou relancez la mise à jour plus tard."
+ "Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.": "L’interface d’administration est activée et utilise encore une version vulnérable de PHP. Touchez pour la désactiver – ou relancez la mise à jour plus tard.",
+ "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "Impossible d’appliquer le thème : le dossier de l’affichage appartient à « {} » au lieu de dietpi (p. ex. après des fichiers copiés à la main). Redémarrer la box corrige cela."
 }

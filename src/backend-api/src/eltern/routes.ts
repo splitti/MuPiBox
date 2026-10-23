@@ -146,6 +146,18 @@ const BT_MAC_RE = /^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/
 
 // Boot and maintenance screens (see media/bootscreens and MuPi-Conf): the installed scenes and their settings file.
 const BOOTSCREENS_DIR = '/home/dietpi/MuPiBox/sysmedia/bootscreens'
+
+/** The name of the user a file belongs to (from /etc/passwd), else its number - for a message that names it */
+async function ownerName(file: string): Promise<string> {
+  try {
+    const { uid } = await fsp.stat(file)
+    const passwd = await fsp.readFile('/etc/passwd', 'utf8').catch(() => '')
+    const line = passwd.split('\n').find((l) => l.split(':')[2] === String(uid))
+    return line?.split(':')[0] || String(uid)
+  } catch {
+    return ''
+  }
+}
 type BootscreensFile = { bootscreens: Record<string, unknown>[]; defaultBootscreen?: string; nameMaxLength?: number }
 
 function readBootscreens(): BootscreensFile | undefined {
@@ -2131,20 +2143,33 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(400).json({ error: 'theme not in installed-themes whitelist' })
       return
     }
+    // The link first, then the setting: a link that cannot be changed left the setting on the new theme and the display
+    // on the old one. Made next to it and swapped in, so the display never finds no link.
+    const wwwDir = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www'
+    const symlinkPath = `${wwwDir}/active_theme.css`
+    const newLink = `${symlinkPath}.new`
+    const target = `/home/dietpi/MuPiBox/themes/${theme}.css`
+    try {
+      await fsp.rm(newLink, { force: true })
+      await fsp.symlink(target, newLink)
+      await fsp.rename(newLink, symlinkPath)
+    } catch (err) {
+      await fsp.rm(newLink, { force: true }).catch(() => {})
+      const code = (err as NodeJS.ErrnoException).code
+      if (code === 'EACCES' || code === 'EPERM') {
+        // the display's folder belongs to someone else (e.g. files copied in by hand as root) - the box's start gives
+        // it back to dietpi (mupi_startup.sh)
+        res.status(500).json({ error: 'theme_link_denied', owner: await ownerName(wwwDir) })
+        return
+      }
+      res.status(500).json({ error: `symlink update failed: ${(err as Error).message}` })
+      return
+    }
     await deps.updateMupiboxConfig((c) => {
       const m = ((c.mupibox as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
       m.theme = theme
       c.mupibox = m
     })
-    const symlinkPath = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme.css'
-    const target = `/home/dietpi/MuPiBox/themes/${theme}.css`
-    try {
-      await fsp.rm(symlinkPath, { force: true })
-      await fsp.symlink(target, symlinkPath)
-    } catch (err) {
-      res.status(500).json({ error: `symlink update failed: ${(err as Error).message}` })
-      return
-    }
     res.json({ ok: true, theme })
   })
 

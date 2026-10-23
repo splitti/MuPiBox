@@ -2928,5 +2928,6 @@
  "Admin-Interface ausgeschaltet": "Ylläpitoliittymä poistettu käytöstä",
  "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Tästä päivityksestä lähtien aiempi käyttöliittymä on pois päältä – turvallisempaa, ja tämä sovellus osaa kaiken, mitä se osasi. Napauta kytkeäksesi sen takaisin kohdassa Järjestelmä › Asiantuntijat.",
  "PHP-Sicherheitsupdate fehlgeschlagen": "PHP:n tietoturvapäivitys epäonnistui",
- "Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.": "Ylläpitoliittymä on päällä ja käyttää yhä haavoittuvaa PHP-versiota. Napauta kytkeäksesi sen pois – tai käynnistä päivitys myöhemmin uudelleen."
+ "Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.": "Ylläpitoliittymä on päällä ja käyttää yhä haavoittuvaa PHP-versiota. Napauta kytkeäksesi sen pois – tai käynnistä päivitys myöhemmin uudelleen.",
+ "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "Teemaa ei voitu asettaa: näytön kansio kuuluu käyttäjälle ”{}” eikä dietpille (esim. käsin kopioitujen tiedostojen jälkeen). Laatikon uudelleenkäynnistys korjaa tämän."
 }

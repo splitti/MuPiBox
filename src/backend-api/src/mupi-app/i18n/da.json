@@ -2928,5 +2928,6 @@
  "Admin-Interface ausgeschaltet": "Administrationsgrænseflade slået fra",
  "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Siden denne opdatering er den tidligere brugerflade slået fra – sikrere, og denne app kan alt, hvad den kunne. Tryk for at slå den til igen under System › Eksperter.",
  "PHP-Sicherheitsupdate fehlgeschlagen": "PHP-sikkerhedsopdatering mislykkedes",
- "Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.": "Administrationsgrænsefladen er slået til og bruger stadig en sårbar PHP-version. Tryk for at slå den fra – eller start opdateringen igen senere."
+ "Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.": "Administrationsgrænsefladen er slået til og bruger stadig en sårbar PHP-version. Tryk for at slå den fra – eller start opdateringen igen senere.",
+ "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "Temaet kunne ikke indstilles: skærmens mappe tilhører “{}” i stedet for dietpi (f.eks. efter filer, der er kopieret ind i hånden). En genstart af boksen løser det."
 }

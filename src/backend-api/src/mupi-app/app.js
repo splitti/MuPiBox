@@ -6192,6 +6192,17 @@ function pollNasIndex() {
 
 const disp = { theme: null, opts: null, power: null, bs: null, bsSel: '', dt: null, dtLangs: {}, dtScreen: 'blocked' }
 
+// a theme that could not be set: the reason, when the server knows it (the display's folder belongs to someone else)
+function themeFailed(r) {
+  if (r.body?.error === 'theme_link_denied') {
+    return toast(
+      `Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „${r.body.owner || '?'}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.`,
+      'info',
+    )
+  }
+  return toast('Das hat nicht geklappt', 'info')
+}
+
 async function loadTheme() {
   const r = await api(`${API}/theme`)
   if (!r.ok) throw new Error(`theme ${r.status}`)
@@ -6278,7 +6289,7 @@ function mountTheme(root, page) {
             close()
             const before = disp.theme.current
             const r = await api(`${API}/theme`, { method: 'POST', body: { theme: name } })
-            if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+            if (!r.ok) return themeFailed(r)
             let note = 'Das Display zeigt es nach dem nächsten Neuladen.'
             if (now) {
               // the cover-flow theme builds its page differently: switching to or from it needs the page loaded again
@@ -6535,7 +6546,7 @@ function ctAskPicture(page) {
         const c = { ...disp.custom, mode: 'auto', resolved: m?.light ? 'light' : 'dark' }
         await ctSave(c)
         const r = await api(`${API}/theme`, { method: 'POST', body: { theme: 'custom' } })
-        if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+        if (!r.ok) return themeFailed(r)
         const rl = await api(`${API}/display/reload-page`, { method: 'POST', body: {} })
         toast(rl.ok && rl.body?.ok !== false ? '„Eigenes“ ist aktiv. Das Display lädt neu.' : '„Eigenes“ ist aktiv. Das Display zeigt es nach dem nächsten Neuladen.')
         await loadTheme()

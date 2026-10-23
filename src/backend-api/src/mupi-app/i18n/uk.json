@@ -2928,5 +2928,6 @@
  "Admin-Interface ausgeschaltet": "Адмін-інтерфейс вимкнено",
  "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Після цього оновлення попередній інтерфейс вимкнено – так безпечніше, а цей застосунок уміє все, що вмів він. Торкніться, щоб знову увімкнути його в Система › Для досвідчених.",
  "PHP-Sicherheitsupdate fehlgeschlagen": "Не вдалося оновити безпеку PHP",
- "Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.": "Адмін-інтерфейс увімкнено, і він досі використовує вразливу версію PHP. Торкніться, щоб вимкнути його, – або запустіть оновлення пізніше ще раз."
+ "Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.": "Адмін-інтерфейс увімкнено, і він досі використовує вразливу версію PHP. Торкніться, щоб вимкнути його, – або запустіть оновлення пізніше ще раз.",
+ "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "Не вдалося встановити тему: тека дисплея належить «{}», а не dietpi (наприклад, після файлів, скопійованих вручну). Перезапуск бокса це виправить."
 }

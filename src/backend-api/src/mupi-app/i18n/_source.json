@@ -804,6 +804,7 @@
  "Das Protokoll ließ sich nicht lesen.",
  "Das Senderverzeichnis ist gerade nicht erreichbar.",
  "Das System erkennt gerade keine Soundkarte.",
+ "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.",
  "Das Update ist abgebrochen. Die bisherige Installation ist noch da; Einstellungen und Bibliothek liegen zusätzlich in /home/dietpi/mupibox-backups.",
  "Das Update ließ sich nicht starten",
  "Das verbundene Netz lässt sich hier nicht ändern",
