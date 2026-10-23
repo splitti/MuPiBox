@@ -19,6 +19,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
+import requests
 import tidalapi
 
 HOST = "127.0.0.1"
@@ -92,27 +93,52 @@ def save_session():
     saved_tokens = t
 
 
-def load_session():
-    global saved_tokens
+def load_session(quiet=False):
+    """The saved sign-in, taken up again: "done" (signed in, refused, or none saved) or "retry" (TIDAL could not be
+    reached - at the start of the box the network often comes a few seconds after this service)."""
+    global session, saved_tokens
+    with lock:
+        first, mine_round = session, login_round
     try:
         with open(SESSION_FILE) as f:
             t = json.load(f)
     except (OSError, ValueError):
-        return
+        return "done"
     exp = None
     if t.get("expiry_time"):
         try:
             exp = datetime.datetime.fromisoformat(t["expiry_time"])
         except ValueError:
             exp = None
+    # (into a session of its own, outside the lock: TIDAL is asked)
+    s = new_session()
     try:
-        ok = session.load_oauth_session(t.get("token_type", "Bearer"), t.get("access_token", ""), t.get("refresh_token"), exp)
+        ok = s.load_oauth_session(t.get("token_type", "Bearer"), t.get("access_token", ""), t.get("refresh_token"), exp)
+    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+        if not quiet:
+            log(f"TIDAL not reachable yet, the saved sign-in is tried again every 15 s: {e}")
+        return "retry"
     except Exception as e:  # tidalapi raises different errors for a refused or expired sign-in
         log(f"the saved sign-in does not work any more: {e}")
-        return
-    saved_tokens = t
-    log("signed in again with the saved sign-in" if ok else "the saved sign-in was not accepted")
-    save_session()
+        return "done"
+    with lock:
+        # signed in, signed out or a sign-in started meanwhile: that counts, not the file read before
+        if session is not first or login_round != mine_round or session.user is not None:
+            return "done"
+        if not ok:
+            log("the saved sign-in was not accepted")
+            return "done"
+        session = s
+        saved_tokens = t
+        log("signed in again with the saved sign-in")
+        save_session()
+    return "done"
+
+
+def keep_loading():
+    """Tries the saved sign-in again every 15 s until TIDAL answers (logged once, see load_session)."""
+    while load_session(quiet=True) == "retry":
+        time.sleep(15)
 
 
 def signed_in(s):
@@ -494,7 +520,8 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    load_session()
+    if load_session() == "retry":
+        threading.Thread(target=keep_loading, daemon=True).start()
     server = ThreadingHTTPServer((HOST, PORT), Handler)
     log(f"listening on {HOST}:{PORT}")
     server.serve_forever()

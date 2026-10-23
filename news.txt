@@ -1,3 +1,9 @@
+<h3>DEV 5.0.13 - changes compared to 5.0.12</h3>
+<b>TIDAL</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>After switching the box on, TIDAL showed as signed out until the next restart of the box - its service often starts a few seconds before the network, and it tried the saved sign-in only once. It now tries again every 15 s until TIDAL answers; the sign-in itself was never lost.</li>
+</ul>
 <h3>DEV 5.0.12 - changes compared to 5.0.11</h3>
 <b>Sleep timer and Home Assistant</b>
 </ul>
