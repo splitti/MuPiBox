@@ -3512,6 +3512,12 @@ app.get('/tidal/tracklist/:ref', async (req, res) => {
     res.status(400).json({ error: 'invalid list' })
     return
   }
+  // the list that plays: as mpv has it (tidaltrack:N jumps by position) - asked anew, a playlist changed on TIDAL since
+  // its start (a track added in front) would put every pick one track off
+  if (currentMeta.currentType === 'tidal' && currentMeta.path === `${kind}:${id}` && currentTidalTracks.length > 0) {
+    res.json(currentTidalTracks.map((track, i) => ({ position: i + 1, name: track.name })))
+    return
+  }
   try {
     const response = await fetch(`${TIDAL_SERVICE}/tracks?kind=${kind}&id=${encodeURIComponent(id)}`, { signal: AbortSignal.timeout(45000) })
     const body = response.ok ? await response.json() : null

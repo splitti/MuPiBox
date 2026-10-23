@@ -2,7 +2,7 @@
 <b>TIDAL</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
-<li id='linews' class='linews'>After switching the box on, TIDAL showed as signed out until the next restart of the box - its service often starts a few seconds before the network, and it tried the saved sign-in only once. It now tries again every 15 s until TIDAL answers; the sign-in itself was never lost.</li>
+<li id='linews' class='linews'>After switching the box on, TIDAL showed as signed out until the next restart of the box - its service often starts a few seconds before the network, and it tried the saved sign-in only once. It now tries again until TIDAL answers - after 15 s, then less often (at most every 5 minutes), also when TIDAL is down for a moment - and stops as soon as someone signs in or out in the app; the sign-in itself was never lost.</li>
 </ul>
 <b>App</b>
 </ul>

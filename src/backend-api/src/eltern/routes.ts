@@ -2127,6 +2127,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * for a colour change). Theme name is validated against installedThemes
    * to prevent symlink-target injection.
    */
+  let themeTurn: Promise<unknown> = Promise.resolve()
   router.post('/theme', requireSession, requireCsrf, async (req, res) => {
     const cfg = deps.getMupiboxConfig()
     if (!cfg) {
@@ -2143,35 +2144,51 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(400).json({ error: 'theme not in installed-themes whitelist' })
       return
     }
-    // The link first, then the setting: a link that cannot be changed left the setting on the new theme and the display
-    // on the old one. Made next to it and swapped in, so the display never finds no link.
+    // One change after the other (two at once could leave the link of one and the setting of the other).
+    const turn = themeTurn.then(() => switchTheme(theme))
+    themeTurn = turn.catch(() => {})
+    const r = await turn.catch((err: Error) => ({ status: 500, body: { error: `theme change failed: ${err.message}` } }))
+    res.status(r.status).json(r.body)
+  })
+
+  // The link first, then the setting: a link that cannot be changed left the setting on the new theme and the display
+  // on the old one. Made next to it and swapped in, so the display never finds no link; a setting that cannot be saved
+  // puts the link back.
+  async function switchTheme(theme: string): Promise<{ status: number; body: Record<string, unknown> }> {
     const wwwDir = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www'
     const symlinkPath = `${wwwDir}/active_theme.css`
     const newLink = `${symlinkPath}.new`
-    const target = `/home/dietpi/MuPiBox/themes/${theme}.css`
-    try {
+    const swapIn = async (to: string) => {
       await fsp.rm(newLink, { force: true })
-      await fsp.symlink(target, newLink)
+      await fsp.symlink(to, newLink)
       await fsp.rename(newLink, symlinkPath)
+    }
+    const before = await fsp.readlink(symlinkPath).catch(() => null)
+    try {
+      await swapIn(`/home/dietpi/MuPiBox/themes/${theme}.css`)
     } catch (err) {
       await fsp.rm(newLink, { force: true }).catch(() => {})
       const code = (err as NodeJS.ErrnoException).code
       if (code === 'EACCES' || code === 'EPERM') {
         // the display's folder belongs to someone else (e.g. files copied in by hand as root) - the box's start gives
         // it back to dietpi (mupi_startup.sh)
-        res.status(500).json({ error: 'theme_link_denied', owner: await ownerName(wwwDir) })
-        return
+        return { status: 500, body: { error: 'theme_link_denied', owner: await ownerName(wwwDir) } }
       }
-      res.status(500).json({ error: `symlink update failed: ${(err as Error).message}` })
-      return
+      return { status: 500, body: { error: `symlink update failed: ${(err as Error).message}` } }
     }
-    await deps.updateMupiboxConfig((c) => {
-      const m = ((c.mupibox as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
-      m.theme = theme
-      c.mupibox = m
-    })
-    res.json({ ok: true, theme })
-  })
+    try {
+      await deps.updateMupiboxConfig((c) => {
+        const m = ((c.mupibox as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
+        m.theme = theme
+        c.mupibox = m
+      })
+    } catch (err) {
+      await (before ? swapIn(before) : fsp.rm(symlinkPath, { force: true })).catch(() => {})
+      await fsp.rm(newLink, { force: true }).catch(() => {})
+      return { status: 500, body: { error: `theme setting not saved: ${(err as Error).message}` } }
+    }
+    return { status: 200, body: { ok: true, theme } }
+  }
 
   /**
    * POST /api/app/theme-stage  {stage?, autoRead?, headerBand?, playerPanel?, fullscreenGestures?}
