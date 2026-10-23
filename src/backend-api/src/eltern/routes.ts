@@ -57,6 +57,7 @@ import { fanSpeedNow, registerHardwareRoutes } from './hardware'
 import { registerDietpiDashboardRoutes, startDietpiDashboard } from './dietpi-dashboard'
 import { legacyAdminOn, registerLegacyAdminRoutes } from './legacy-admin'
 import { registerServicesRoutes } from './services'
+import { registerTidalRoutes } from './tidal'
 import { registerSystemRoutes } from './system'
 import { registerAdminRoutes } from './admin'
 import { bootDrive } from './boot-drive'
@@ -145,6 +146,18 @@ const BT_MAC_RE = /^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/
 
 // Boot and maintenance screens (see media/bootscreens and MuPi-Conf): the installed scenes and their settings file.
 const BOOTSCREENS_DIR = '/home/dietpi/MuPiBox/sysmedia/bootscreens'
+
+/** The name of the user a file belongs to (from /etc/passwd), else its number - for a message that names it */
+async function ownerName(file: string): Promise<string> {
+  try {
+    const { uid } = await fsp.stat(file)
+    const passwd = await fsp.readFile('/etc/passwd', 'utf8').catch(() => '')
+    const line = passwd.split('\n').find((l) => l.split(':')[2] === String(uid))
+    return line?.split(':')[0] || String(uid)
+  } catch {
+    return ''
+  }
+}
 type BootscreensFile = { bootscreens: Record<string, unknown>[]; defaultBootscreen?: string; nameMaxLength?: number }
 
 function readBootscreens(): BootscreensFile | undefined {
@@ -419,6 +432,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   registerLegacyAdminRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   startDietpiDashboard({ getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerServicesRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  registerTidalRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerSystemRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   // (pm2 runs server.js from its folder: templates/ lies next to it)
   registerAdminRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig, serverDir: process.cwd() })
@@ -1866,7 +1880,17 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     // One album of an entry that subscribes a whole Spotify artist (only artistid): the app lists the artist's albums
     // and plays the one tapped - only for an artist that is in the library.
     const albumId = body.albumId
-    if (albumId !== undefined) {
+    if (albumId !== undefined && type === 'tidal') {
+      // one album of an entry of a whole TIDAL artist (tidalKind 'artist'), as the app lists them
+      if (typeof albumId !== 'string' || !/^\d{1,15}$/.test(albumId) || item.tidalKind !== 'artist') {
+        res.status(400).json({ error: 'invalid_album' })
+        return
+      }
+      url = `musicsearch/tidal/album:${albumId}`
+      // (the album's own picture, as the app shows it - only one of TIDAL's; else the artist's)
+      const albumCover = (body as { cover?: unknown }).cover
+      cover = typeof albumCover === 'string' && albumCover.startsWith('https://resources.tidal.com/') && albumCover.length < 300 ? albumCover : ownCover(item.cover)
+    } else if (albumId !== undefined) {
       if (typeof albumId !== 'string' || !/^[A-Za-z0-9]{10,40}$/.test(albumId) || type !== 'spotify' || !item.artistid) {
         res.status(400).json({ error: 'invalid_album' })
         return
@@ -1916,6 +1940,22 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         const artist = episode.show || String(item.artist ?? '')
         url = `rss/${enc(episode.url)}/${enc(episode.title)}:title:artist:${enc(artist)}`
         cover = ownCover(item.cover_override) || episode.cover
+        break
+      }
+      case 'tidal': {
+        // an album or a playlist of TIDAL, played by the box's TIDAL service (see eltern/tidal.ts)
+        const id = String(item.id ?? '')
+        if (!/^[A-Za-z0-9-]{1,64}$/.test(id)) {
+          res.status(400).json({ error: 'tidal_id_missing' })
+          return
+        }
+        // (a whole artist plays one of its albums - the app asks with albumId)
+        if (item.tidalKind === 'artist') {
+          res.status(400).json({ error: 'tidal_artist_needs_album' })
+          return
+        }
+        url = `musicsearch/tidal/${item.tidalKind === 'playlist' ? 'playlist' : 'album'}:${enc(id)}`
+        cover = ownCover(item.cover_override) || ownCover(item.cover) || ownCover(item.artistcover)
         break
       }
       default:
@@ -2087,6 +2127,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * for a colour change). Theme name is validated against installedThemes
    * to prevent symlink-target injection.
    */
+  let themeTurn: Promise<unknown> = Promise.resolve()
   router.post('/theme', requireSession, requireCsrf, async (req, res) => {
     const cfg = deps.getMupiboxConfig()
     if (!cfg) {
@@ -2103,22 +2144,73 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(400).json({ error: 'theme not in installed-themes whitelist' })
       return
     }
-    await deps.updateMupiboxConfig((c) => {
-      const m = ((c.mupibox as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
-      m.theme = theme
-      c.mupibox = m
-    })
-    const symlinkPath = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme.css'
-    const target = `/home/dietpi/MuPiBox/themes/${theme}.css`
-    try {
-      await fsp.rm(symlinkPath, { force: true })
-      await fsp.symlink(target, symlinkPath)
-    } catch (err) {
-      res.status(500).json({ error: `symlink update failed: ${(err as Error).message}` })
-      return
-    }
-    res.json({ ok: true, theme })
+    // One change after the other (two at once could leave the link of one and the setting of the other).
+    const turn = themeTurn.then(() => switchTheme(theme))
+    themeTurn = turn.catch(() => {})
+    const r = await turn.catch((err: Error) => ({ status: 500, body: { error: `theme change failed: ${err.message}` } }))
+    res.status(r.status).json(r.body)
   })
+
+  // The link first, then the setting: a link that cannot be changed left the setting on the new theme and the display
+  // on the old one. Made next to it and swapped in, so the display never finds no link; a setting that cannot be saved
+  // puts the link back.
+  async function switchTheme(theme: string): Promise<{ status: number; body: Record<string, unknown> }> {
+    const wwwDir = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www'
+    const symlinkPath = `${wwwDir}/active_theme.css`
+    const newLink = `${symlinkPath}.new`
+    const swapIn = async (to: string) => {
+      await fsp.rm(newLink, { force: true })
+      await fsp.symlink(to, newLink)
+      await fsp.rename(newLink, symlinkPath)
+    }
+    // what is there now, to put back: a link (its target), a file (e.g. copied in by hand: kept next to it until the
+    // change counts), or nothing
+    const kept = `${symlinkPath}.before`
+    let before: { link: string } | { file: true } | null = null
+    try {
+      const st = await fsp.lstat(symlinkPath)
+      if (st.isSymbolicLink()) before = { link: await fsp.readlink(symlinkPath) }
+      else if (st.isFile()) {
+        await fsp.copyFile(symlinkPath, kept)
+        before = { file: true }
+      } else return { status: 500, body: { error: 'active_theme.css is neither a link nor a file' } }
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code
+      if (code === 'EACCES' || code === 'EPERM') return { status: 500, body: { error: 'theme_link_denied', owner: await ownerName(wwwDir) } }
+      if (code !== 'ENOENT') return { status: 500, body: { error: `theme link not readable: ${(err as Error).message}` } }
+    }
+    const putBack = async () => {
+      if (before && 'link' in before) await swapIn(before.link)
+      else if (before) await fsp.rename(kept, symlinkPath)
+      else await fsp.rm(symlinkPath, { force: true })
+    }
+    try {
+      await swapIn(`/home/dietpi/MuPiBox/themes/${theme}.css`)
+    } catch (err) {
+      await fsp.rm(newLink, { force: true }).catch(() => {})
+      await fsp.rm(kept, { force: true }).catch(() => {})
+      const code = (err as NodeJS.ErrnoException).code
+      if (code === 'EACCES' || code === 'EPERM') {
+        // the display's folder belongs to someone else (e.g. files copied in by hand as root) - the box's start gives
+        // it back to dietpi (mupi_startup.sh)
+        return { status: 500, body: { error: 'theme_link_denied', owner: await ownerName(wwwDir) } }
+      }
+      return { status: 500, body: { error: `symlink update failed: ${(err as Error).message}` } }
+    }
+    try {
+      await deps.updateMupiboxConfig((c) => {
+        const m = ((c.mupibox as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
+        m.theme = theme
+        c.mupibox = m
+      })
+    } catch (err) {
+      await putBack().catch(() => {})
+      await fsp.rm(newLink, { force: true }).catch(() => {})
+      return { status: 500, body: { error: `theme setting not saved: ${(err as Error).message}` } }
+    }
+    await fsp.rm(kept, { force: true }).catch(() => {})
+    return { status: 200, body: { ok: true, theme } }
+  }
 
   /**
    * POST /api/app/theme-stage  {stage?, autoRead?, headerBand?, playerPanel?, fullscreenGestures?}

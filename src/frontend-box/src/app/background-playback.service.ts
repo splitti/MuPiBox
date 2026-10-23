@@ -264,7 +264,7 @@ export class BackgroundPlaybackService {
   async stop(): Promise<void> {
     const stopping = this.media()
     const source = this.currentMediaService.get()
-    const resumable = source && ['spotify', 'library', 'nas', 'rss'].includes(source.type) && !this.shuffled
+    const resumable = source && ['spotify', 'library', 'nas', 'tidal', 'rss'].includes(source.type) && !this.shuffled
     if (source && resumable && this.currentMediaService.shouldPersistResume()) {
       // The place where it is now, read before the stop (afterwards it is gone). Each look has a time limit: the
       // stop must not wait for a player that does not answer, and without a position nothing is saved.

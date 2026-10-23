@@ -232,6 +232,7 @@ The installer (or the box, when a function needs them) fetches these from their 
 | noVNC | git clone to /usr/share/novnc (autosetup, update where missing; used only when remote control is switched on) | MPL-2.0 (parts under other licenses) | https://github.com/novnc/noVNC |
 | Piper | 2023.11.14-2 (piper_linux_aarch64.tar.gz from github.com/rhasspy/piper), only when the first voice is loaded under Speech output | MIT; the archive also holds espeak-ng and its data (GPL-3.0-or-later), ONNX Runtime 1.14.1 (MIT), piper-phonemize (MIT) and the libtashkeel model (MIT) | https://github.com/rhasspy/piper - speaks announcements and names offline |
 | Piper voices | each one when it is loaded under Speech output (huggingface.co/rhasspy/piper-voices) | per voice (e.g. CC0, CC BY 4.0, MIT) - the app shows each voice's licence and source | https://huggingface.co/rhasspy/piper-voices |
+| tidalapi (python-tidal) | 0.8.11 from PyPI with its dependencies, into its own Python at /opt/mupibox-tidal - only when TIDAL is switched on in the app (scripts/mupibox/tidal_setup.sh) | LGPL-3.0-or-later (dependencies per package) | https://github.com/EbbLabs/python-tidal - the unofficial TIDAL connection; not endorsed by TIDAL, use at your own risk |
 
 ## C. Installed from Debian / Raspberry Pi OS / DietPi packages
 

@@ -1,0 +1,18 @@
+[Unit]
+# TIDAL (unofficial, python-tidal): the box's small TIDAL service on 127.0.0.1:5011, see
+# /usr/local/bin/mupibox/tidal_service.py. Only on when TIDAL is switched on in the app (tidal_setup.sh on).
+StartLimitIntervalSec=0
+Description=MuPiBox TIDAL Service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/tmp/
+User=root
+ExecStart=/opt/mupibox-tidal/bin/python -B /usr/local/bin/mupibox/tidal_service.py
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
