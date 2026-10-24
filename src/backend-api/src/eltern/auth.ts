@@ -562,6 +562,31 @@ export async function usesDefaultPassword(cfg: unknown): Promise<boolean> {
   return defaultCheck.result
 }
 
+let onlyDefaultCheck: { key: string; result: boolean } | undefined
+
+/** Is the well-known default the only password there is - no password of one's own beside it? (An older config can
+ *  hold both: the default in interfacelogin.password and one's own parents' password in eltern.password. Then the
+ *  own one is still asked for when the password is replaced - usesDefaultPassword is true for either.) */
+export async function onlyDefaultPassword(cfg: unknown): Promise<boolean> {
+  if (!hasAppPassword(cfg)) return false
+  const e = (cfg as { eltern?: { password?: unknown } } | undefined)?.eltern?.password
+  const h = adminHash(cfg)
+  const key = `${h ?? ''}|${typeof e === 'string' ? e : JSON.stringify(e ?? null)}`
+  if (onlyDefaultCheck?.key !== key) {
+    let adminDefault = true
+    if (h) {
+      try {
+        adminDefault = await bcrypt.compare(DEFAULT_PASSWORD, h)
+      } catch {
+        adminDefault = false
+      }
+    }
+    const elternDefault = !hasElternPassword(cfg) || (await verifyElternPassword(DEFAULT_PASSWORD, cfg))
+    onlyDefaultCheck = { key, result: adminDefault && elternDefault }
+  }
+  return onlyDefaultCheck.result
+}
+
 /** Sets the one password (bcrypt, readable by the admin interface too); the old parents' password goes. */
 export async function setAppPassword(
   plain: string,

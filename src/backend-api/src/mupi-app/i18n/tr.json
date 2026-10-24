@@ -2932,5 +2932,6 @@
  "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "Tema ayarlanamadı: ekranın klasörü dietpi yerine “{}” kullanıcısına ait (ör. elle kopyalanan dosyalardan sonra). Kutuyu yeniden başlatmak bunu düzeltir.",
  "Erst ein eigenes Passwort festlegen": "Önce kendi şifreni belirle",
  "Erst ein eigenes Passwort festlegen, dann lässt sich die Anmeldung einschalten.": "Önce kendi şifreni belirle, ardından oturum açma etkinleştirilebilir.",
- "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Her kılavuzda yazan varsayılan şifre hâlâ geçerli. Buradan kendi şifreni belirle – bunun için eskisine gerek yok."
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Her kılavuzda yazan varsayılan şifre hâlâ geçerli. Buradan kendi şifreni belirle – bunun için eskisine gerek yok.",
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest.": "Her kılavuzda yazan varsayılan şifre hâlâ geçerli. Buradan kendi şifreni belirle."
 }

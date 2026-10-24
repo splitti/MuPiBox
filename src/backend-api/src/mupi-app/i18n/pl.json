@@ -2932,5 +2932,6 @@
  "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "Nie udało się ustawić motywu: folder wyświetlacza należy do „{}” zamiast dietpi (np. po plikach skopiowanych ręcznie). Ponowne uruchomienie pudełka to naprawi.",
  "Erst ein eigenes Passwort festlegen": "Najpierw ustaw własne hasło",
  "Erst ein eigenes Passwort festlegen, dann lässt sich die Anmeldung einschalten.": "Najpierw ustaw własne hasło, potem można włączyć logowanie.",
- "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Nadal obowiązuje hasło domyślne podane w każdej instrukcji. Ustaw tutaj własne – stare nie jest do tego potrzebne."
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Nadal obowiązuje hasło domyślne podane w każdej instrukcji. Ustaw tutaj własne – stare nie jest do tego potrzebne.",
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest.": "Nadal obowiązuje hasło domyślne podane w każdej instrukcji. Ustaw tutaj własne."
 }

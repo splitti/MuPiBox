@@ -2932,5 +2932,6 @@
  "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "The theme could not be set: the display’s folder belongs to “{}” instead of dietpi (e.g. after files were copied in by hand). Restarting the box fixes this.",
  "Erst ein eigenes Passwort festlegen": "Set a password of your own first",
  "Erst ein eigenes Passwort festlegen, dann lässt sich die Anmeldung einschalten.": "Set a password of your own first, then sign-in can be switched on.",
- "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "The default password from every manual still applies. Set one of your own here – you don’t need the old one for that."
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "The default password from every manual still applies. Set one of your own here – you don’t need the old one for that.",
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest.": "The default password from every manual still applies. Set one of your own here."
 }

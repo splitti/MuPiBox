@@ -2932,5 +2932,6 @@
  "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "Δεν ήταν δυνατή η ρύθμιση του θέματος: ο φάκελος της οθόνης ανήκει στον «{}» αντί για τον dietpi (π.χ. μετά από αρχεία που αντιγράφηκαν με το χέρι). Η επανεκκίνηση του κουτιού το διορθώνει.",
  "Erst ein eigenes Passwort festlegen": "Όρισε πρώτα δικό σου κωδικό",
  "Erst ein eigenes Passwort festlegen, dann lässt sich die Anmeldung einschalten.": "Όρισε πρώτα δικό σου κωδικό· μετά μπορεί να ενεργοποιηθεί η σύνδεση.",
- "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Ισχύει ακόμα ο προεπιλεγμένος κωδικός που αναφέρεται σε κάθε οδηγό. Όρισε εδώ δικό σου – δεν χρειάζεσαι τον παλιό γι’ αυτό."
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Ισχύει ακόμα ο προεπιλεγμένος κωδικός που αναφέρεται σε κάθε οδηγό. Όρισε εδώ δικό σου – δεν χρειάζεσαι τον παλιό γι’ αυτό.",
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest.": "Ισχύει ακόμα ο προεπιλεγμένος κωδικός που αναφέρεται σε κάθε οδηγό. Όρισε εδώ δικό σου."
 }

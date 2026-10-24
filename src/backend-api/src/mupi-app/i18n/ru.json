@@ -2932,5 +2932,6 @@
  "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "Не удалось установить тему: папка дисплея принадлежит «{}», а не dietpi (например, после файлов, скопированных вручную). Перезапуск бокса это исправит.",
  "Erst ein eigenes Passwort festlegen": "Сначала задай собственный пароль",
  "Erst ein eigenes Passwort festlegen, dann lässt sich die Anmeldung einschalten.": "Сначала задай собственный пароль, тогда можно будет включить вход.",
- "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Всё ещё действует стандартный пароль, указанный в каждой инструкции. Задай здесь собственный – старый для этого не нужен."
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Всё ещё действует стандартный пароль, указанный в каждой инструкции. Задай здесь собственный – старый для этого не нужен.",
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest.": "Всё ещё действует стандартный пароль, указанный в каждой инструкции. Задай здесь собственный."
 }

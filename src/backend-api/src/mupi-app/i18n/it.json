@@ -2932,5 +2932,6 @@
  "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "Impossibile impostare il tema: la cartella del display appartiene a «{}» invece che a dietpi (ad es. dopo file copiati a mano). Riavviare il box risolve il problema.",
  "Erst ein eigenes Passwort festlegen": "Imposta prima una password tua",
  "Erst ein eigenes Passwort festlegen, dann lässt sich die Anmeldung einschalten.": "Imposta prima una password tua, poi si potrà attivare l’accesso.",
- "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "È ancora attiva la password predefinita riportata in ogni guida. Impostane qui una tua – non ti serve quella vecchia."
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "È ancora attiva la password predefinita riportata in ogni guida. Impostane qui una tua – non ti serve quella vecchia.",
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest.": "È ancora attiva la password predefinita riportata in ogni guida. Impostane qui una tua."
 }

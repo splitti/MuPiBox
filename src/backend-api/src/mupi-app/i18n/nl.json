@@ -2932,5 +2932,6 @@
  "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "Het thema kon niet worden ingesteld: de map van het scherm is van ‘{}’ in plaats van dietpi (bijv. na met de hand gekopieerde bestanden). Een herstart van de box lost dit op.",
  "Erst ein eigenes Passwort festlegen": "Stel eerst een eigen wachtwoord in",
  "Erst ein eigenes Passwort festlegen, dann lässt sich die Anmeldung einschalten.": "Stel eerst een eigen wachtwoord in, daarna kan het aanmelden worden ingeschakeld.",
- "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Het standaardwachtwoord uit elke handleiding geldt nog. Stel hier een eigen wachtwoord in – het oude heb je daarvoor niet nodig."
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Het standaardwachtwoord uit elke handleiding geldt nog. Stel hier een eigen wachtwoord in – het oude heb je daarvoor niet nodig.",
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest.": "Het standaardwachtwoord uit elke handleiding geldt nog. Stel hier een eigen wachtwoord in."
 }

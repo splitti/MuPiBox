@@ -2932,5 +2932,6 @@
  "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "Temaet kunne ikke indstilles: skærmens mappe tilhører “{}” i stedet for dietpi (f.eks. efter filer, der er kopieret ind i hånden). En genstart af boksen løser det.",
  "Erst ein eigenes Passwort festlegen": "Angiv først din egen adgangskode",
  "Erst ein eigenes Passwort festlegen, dann lässt sich die Anmeldung einschalten.": "Angiv først din egen adgangskode, derefter kan login slås til.",
- "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Standardadgangskoden fra alle vejledninger gælder stadig. Angiv din egen her – den gamle behøver du ikke til det."
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Standardadgangskoden fra alle vejledninger gælder stadig. Angiv din egen her – den gamle behøver du ikke til det.",
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest.": "Standardadgangskoden fra alle vejledninger gælder stadig. Angiv din egen her."
 }

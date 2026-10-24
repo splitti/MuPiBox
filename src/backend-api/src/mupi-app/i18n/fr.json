@@ -2932,5 +2932,6 @@
  "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "Impossible d’appliquer le thème : le dossier de l’affichage appartient à « {} » au lieu de dietpi (p. ex. après des fichiers copiés à la main). Redémarrer la box corrige cela.",
  "Erst ein eigenes Passwort festlegen": "Définis d’abord ton propre mot de passe",
  "Erst ein eigenes Passwort festlegen, dann lässt sich die Anmeldung einschalten.": "Définis d’abord ton propre mot de passe, ensuite la connexion pourra être activée.",
- "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Le mot de passe par défaut, indiqué dans tous les guides, est toujours actif. Définis ici ton propre mot de passe – l’ancien n’est pas nécessaire pour cela."
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Le mot de passe par défaut, indiqué dans tous les guides, est toujours actif. Définis ici ton propre mot de passe – l’ancien n’est pas nécessaire pour cela.",
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest.": "Le mot de passe par défaut, indiqué dans tous les guides, est toujours actif. Définis ici ton propre mot de passe."
 }

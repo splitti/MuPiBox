@@ -31,6 +31,7 @@ import {
   appLoginRequired,
   hasAppPassword,
   usesDefaultPassword,
+  onlyDefaultPassword,
   setAppPassword,
   verifyAppPassword,
   PERSISTENT_TTL_MS,
@@ -645,6 +646,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       loginRequired: appLoginRequired(cfg),
       loginSwitch: (cfg as { interfacelogin?: { state?: unknown } } | undefined)?.interfacelogin?.state === true,
       defaultPassword: await usesDefaultPassword(cfg),
+      // (the default is the only password: a new one goes without the current, the login waits for one of one's own)
+      defaultOnly: await onlyDefaultPassword(cfg),
       keptDevices: keptSessionCount(),
     })
   })
@@ -674,8 +677,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /** POST /api/app/auth/password {current, password} - the one password; the current one is needed when one of one's
-   *  own is set. The well-known default password is not asked for: it showed only in the admin interface, which is off
-   *  since 5.0.12 - a new box could not replace it (and whoever is signed in got past it, or came with the QR code). */
+   *  own is set. The well-known default password is not asked for when it is the only one (onlyDefaultPassword): it
+   *  showed only in the admin interface, which is off since 5.0.12 - a new box could not replace it (and whoever is
+   *  signed in got past it, or came with the QR code). An own parents' password beside it is asked for. */
   router.post('/auth/password', requireSession, requireCsrf, ipRateLimit(5), async (req, res) => {
     const body = (req.body ?? {}) as { current?: unknown; password?: unknown }
     const current = typeof body.current === 'string' ? body.current : ''
@@ -684,7 +688,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     if (
       hasAppPassword(cfg) &&
       !mayResetPassword(req.elternSessionId) &&
-      !(await usesDefaultPassword(cfg)) &&
+      !(await onlyDefaultPassword(cfg)) &&
       !(await verifyAppPassword(current, cfg))
     ) {
       res.status(403).json({ error: 'wrong_password' })
@@ -719,7 +723,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     const wasOn = (cfg as { interfacelogin?: { state?: unknown } } | undefined)?.interfacelogin?.state === true
     // switched on with the default password: the app asked then for a password that shows nowhere (the admin interface
     // is off) - one's own first. (Already on: stays switchable off.)
-    if (body.required && !wasOn && (await usesDefaultPassword(cfg))) {
+    if (body.required && !wasOn && (await onlyDefaultPassword(cfg))) {
       res.status(409).json({ error: 'default_password' })
       return
     }

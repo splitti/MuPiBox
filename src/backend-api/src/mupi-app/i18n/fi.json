@@ -2932,5 +2932,6 @@
  "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "Teemaa ei voitu asettaa: näytön kansio kuuluu käyttäjälle ”{}” eikä dietpille (esim. käsin kopioitujen tiedostojen jälkeen). Laatikon uudelleenkäynnistys korjaa tämän.",
  "Erst ein eigenes Passwort festlegen": "Aseta ensin oma salasana",
  "Erst ein eigenes Passwort festlegen, dann lässt sich die Anmeldung einschalten.": "Aseta ensin oma salasana, sitten kirjautumisen voi ottaa käyttöön.",
- "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Käytössä on yhä jokaisessa ohjeessa mainittu oletussalasana. Aseta tässä oma – vanhaa et tarvitse siihen."
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Käytössä on yhä jokaisessa ohjeessa mainittu oletussalasana. Aseta tässä oma – vanhaa et tarvitse siihen.",
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest.": "Käytössä on yhä jokaisessa ohjeessa mainittu oletussalasana. Aseta tässä oma."
 }

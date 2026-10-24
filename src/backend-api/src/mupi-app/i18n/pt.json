@@ -2932,5 +2932,6 @@
  "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "Não foi possível definir o tema: a pasta do ecrã pertence a «{}» em vez de dietpi (p. ex. depois de ficheiros copiados à mão). Reiniciar a caixa resolve isto.",
  "Erst ein eigenes Passwort festlegen": "Define primeiro uma palavra-passe própria",
  "Erst ein eigenes Passwort festlegen, dann lässt sich die Anmeldung einschalten.": "Define primeiro uma palavra-passe própria; depois o início de sessão pode ser ativado.",
- "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Ainda está ativa a palavra-passe predefinida que consta de todos os guias. Define aqui uma tua – não precisas da antiga para isso."
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Ainda está ativa a palavra-passe predefinida que consta de todos os guias. Define aqui uma tua – não precisas da antiga para isso.",
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest.": "Ainda está ativa a palavra-passe predefinida que consta de todos os guias. Define aqui uma tua."
 }

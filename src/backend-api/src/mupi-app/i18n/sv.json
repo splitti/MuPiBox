@@ -2932,5 +2932,6 @@
  "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "Temat kunde inte ställas in: skärmens mapp tillhör ”{}” i stället för dietpi (t.ex. efter filer som kopierats för hand). En omstart av boxen åtgärdar det.",
  "Erst ein eigenes Passwort festlegen": "Ange först ett eget lösenord",
  "Erst ein eigenes Passwort festlegen, dann lässt sich die Anmeldung einschalten.": "Ange först ett eget lösenord, sedan kan inloggningen slås på.",
- "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Standardlösenordet som står i varje guide gäller fortfarande. Ange ett eget här – det gamla behövs inte för det."
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Standardlösenordet som står i varje guide gäller fortfarande. Ange ett eget här – det gamla behövs inte för det.",
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest.": "Standardlösenordet som står i varje guide gäller fortfarande. Ange ett eget här."
 }

@@ -2932,5 +2932,6 @@
  "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "Motiv se nepodařilo nastavit: složka displeje patří „{}“ místo dietpi (např. po ručně nakopírovaných souborech). Restart boxu to opraví.",
  "Erst ein eigenes Passwort festlegen": "Nejdřív nastav vlastní heslo",
  "Erst ein eigenes Passwort festlegen, dann lässt sich die Anmeldung einschalten.": "Nejdřív nastav vlastní heslo, pak lze přihlašování zapnout.",
- "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Stále platí výchozí heslo uvedené v každém návodu. Nastav si tu vlastní – staré k tomu nepotřebuješ."
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Stále platí výchozí heslo uvedené v každém návodu. Nastav si tu vlastní – staré k tomu nepotřebuješ.",
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest.": "Stále platí výchozí heslo uvedené v každém návodu. Nastav si tu vlastní."
 }
