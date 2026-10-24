@@ -2929,5 +2929,8 @@
  "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Sinds deze update staat de vorige interface uit – veiliger, en deze app kan alles wat die kon. Tik om hem weer aan te zetten onder Systeem › Experts.",
  "PHP-Sicherheitsupdate fehlgeschlagen": "PHP-beveiligingsupdate mislukt",
  "Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.": "De beheerinterface staat aan en gebruikt nog een kwetsbare PHP-versie. Tik om hem uit te zetten – of start de update later opnieuw.",
- "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "Het thema kon niet worden ingesteld: de map van het scherm is van ‘{}’ in plaats van dietpi (bijv. na met de hand gekopieerde bestanden). Een herstart van de box lost dit op."
+ "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "Het thema kon niet worden ingesteld: de map van het scherm is van ‘{}’ in plaats van dietpi (bijv. na met de hand gekopieerde bestanden). Een herstart van de box lost dit op.",
+ "Erst ein eigenes Passwort festlegen": "Stel eerst een eigen wachtwoord in",
+ "Erst ein eigenes Passwort festlegen, dann lässt sich die Anmeldung einschalten.": "Stel eerst een eigen wachtwoord in, daarna kan het aanmelden worden ingeschakeld.",
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Het standaardwachtwoord uit elke handleiding geldt nog. Stel hier een eigen wachtwoord in – het oude heb je daarvoor niet nodig."
 }

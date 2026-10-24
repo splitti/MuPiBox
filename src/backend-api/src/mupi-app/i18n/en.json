@@ -2929,5 +2929,8 @@
  "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Since this update the previous interface is off – safer, and this app can do everything it could. Tap to switch it on again under System › Experts.",
  "PHP-Sicherheitsupdate fehlgeschlagen": "PHP security update failed",
  "Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.": "The admin interface is on and still uses a vulnerable PHP version. Tap to switch it off – or start the update again later.",
- "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "The theme could not be set: the display’s folder belongs to “{}” instead of dietpi (e.g. after files were copied in by hand). Restarting the box fixes this."
+ "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "The theme could not be set: the display’s folder belongs to “{}” instead of dietpi (e.g. after files were copied in by hand). Restarting the box fixes this.",
+ "Erst ein eigenes Passwort festlegen": "Set a password of your own first",
+ "Erst ein eigenes Passwort festlegen, dann lässt sich die Anmeldung einschalten.": "Set a password of your own first, then sign-in can be switched on.",
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "The default password from every manual still applies. Set one of your own here – you don’t need the old one for that."
 }

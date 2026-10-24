@@ -2929,5 +2929,8 @@
  "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Desde esta atualização a interface anterior está desligada – mais seguro, e esta app faz tudo o que ela fazia. Toca para a voltar a ligar em Sistema › Avançado.",
  "PHP-Sicherheitsupdate fehlgeschlagen": "A atualização de segurança do PHP falhou",
  "Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.": "A interface de administração está ligada e ainda usa uma versão vulnerável do PHP. Toca para a desligar – ou volta a iniciar a atualização mais tarde.",
- "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "Não foi possível definir o tema: a pasta do ecrã pertence a «{}» em vez de dietpi (p. ex. depois de ficheiros copiados à mão). Reiniciar a caixa resolve isto."
+ "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "Não foi possível definir o tema: a pasta do ecrã pertence a «{}» em vez de dietpi (p. ex. depois de ficheiros copiados à mão). Reiniciar a caixa resolve isto.",
+ "Erst ein eigenes Passwort festlegen": "Define primeiro uma palavra-passe própria",
+ "Erst ein eigenes Passwort festlegen, dann lässt sich die Anmeldung einschalten.": "Define primeiro uma palavra-passe própria; depois o início de sessão pode ser ativado.",
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Ainda está ativa a palavra-passe predefinida que consta de todos os guias. Define aqui uma tua – não precisas da antiga para isso."
 }

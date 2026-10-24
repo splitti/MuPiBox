@@ -8086,9 +8086,9 @@ function securityTop() {
   return [
     `<section class="card" data-col="1"><div class="card-head"><h2>Passwort</h2><span class="chip ${st.passwordSet && !st.defaultPassword ? 'ok' : 'warn'}">${st.passwordSet ? (st.defaultPassword ? 'Standardpasswort' : 'gesetzt') : 'nicht gesetzt'}</span></div>
       <p class="help">Ein Passwort für diese App und das bisherige Admin-Interface.</p>
-      ${st.defaultPassword ? `<div class="note warn">${icon('info', 18)}<span>Es gilt noch das Standardpasswort, das im Admin-Interface steht. Bitte ein eigenes festlegen.</span></div>` : ''}
-      ${st.resetOpen ? `<div class="note">${icon('info', 18)}<span>Du bist über den QR-Code oder Telegram hereingekommen: Ein paar Minuten lang geht ein neues Passwort ohne das alte.</span></div>` : ''}
-      ${st.passwordSet && !st.resetOpen ? `<div class="field"><label for="sec-cur">Aktuelles Passwort</label><div class="input-wrap"><input class="input has-eye" id="sec-cur" type="password" autocomplete="current-password">${eye}</div></div>` : ''}
+      ${st.defaultPassword ? `<div class="note warn">${icon('info', 18)}<span>Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.</span></div>` : ''}
+      ${st.resetOpen && !st.defaultPassword ? `<div class="note">${icon('info', 18)}<span>Du bist über den QR-Code oder Telegram hereingekommen: Ein paar Minuten lang geht ein neues Passwort ohne das alte.</span></div>` : ''}
+      ${st.passwordSet && !st.resetOpen && !st.defaultPassword ? `<div class="field"><label for="sec-cur">Aktuelles Passwort</label><div class="input-wrap"><input class="input has-eye" id="sec-cur" type="password" autocomplete="current-password">${eye}</div></div>` : ''}
       <div class="field"><label for="sec-new">Neues Passwort</label><div class="input-wrap"><input class="input has-eye" id="sec-new" type="password" autocomplete="new-password"><button class="eye" id="sec-eye2" aria-label="Anzeigen">${icon('eye', 18)}</button></div><small id="sec-len">Mindestens 6 Zeichen.</small></div>
       <div class="field"><label for="sec-new2">Neues Passwort wiederholen</label><input class="input" id="sec-new2" type="password" autocomplete="new-password"><small id="sec-match"></small></div>
       <p class="help" style="margin:0">Ein neues Passwort meldet alle anderen Geräte ab.</p>
@@ -8096,8 +8096,8 @@ function securityTop() {
       <details class="more"><summary>Passwort vergessen?</summary><p class="help" style="margin:0">${esc('Über den QR-Code am Display (die Status-Symbole oben lange drücken) oder /login beim Telegram-Bot kommst du ohne Passwort in die App. Danach lässt sich hier 10 Minuten lang ein neues Passwort ohne das alte festlegen.')}</p></details></section>`,
     `<section class="card" data-col="2"><div class="card-head"><h2>Anmeldung</h2><span class="chip ${st.loginRequired ? 'ok' : 'warn'}">${st.loginRequired ? 'an' : 'aus'}</span></div>
       <div class="row"><span class="lbl"><b>Anmeldung verlangen</b><small>Der QR-Code am Display und der Telegram-Link gehen immer.</small></span>
-        <label class="switch"><input type="checkbox" id="sec-login" ${st.loginSwitch ? 'checked' : ''} ${st.passwordSet ? '' : 'disabled'} aria-label="Anmeldung verlangen"><span></span></label></div>
-      ${st.passwordSet ? '' : '<p class="help" style="margin:0">Erst ein Passwort festlegen, dann lässt sich die Anmeldung einschalten.</p>'}
+        <label class="switch"><input type="checkbox" id="sec-login" ${st.loginSwitch ? 'checked' : ''} ${st.passwordSet && (st.loginSwitch || !st.defaultPassword) ? '' : 'disabled'} aria-label="Anmeldung verlangen"><span></span></label></div>
+      ${!st.passwordSet || (st.defaultPassword && !st.loginSwitch) ? '<p class="help" style="margin:0">Erst ein eigenes Passwort festlegen, dann lässt sich die Anmeldung einschalten.</p>' : ''}
       ${st.loginRequired ? '<div class="status-line"><span class="dot ok"></span><span>Die App fragt im Heimnetz nach dem Passwort.</span></div>' : `<div class="note warn">${icon('info', 18)}<span>Jeder im Heimnetz kann die App ohne Passwort bedienen.</span></div>`}</section>`,
     `<section class="card" data-col="2"><h2>Angemeldete Geräte</h2>${devices}
       <div class="btns"><button class="btn danger" id="sec-others">Alle anderen abmelden</button></div></section>`,
@@ -8193,7 +8193,16 @@ function mountSecurity(root, page) {
     const r = await api(`${API}/auth/login-required`, { method: 'POST', body: required ? { required } : { required, confirmed: true } })
     if (!r.ok) {
       e.target.checked = !required
-      return toast(r.body?.error === 'wrong_password' ? 'Das Passwort stimmt nicht' : r.status === 429 ? 'Zu viele Versuche – bitte kurz warten' : 'Nicht gespeichert', 'info')
+      return toast(
+        r.body?.error === 'default_password'
+          ? 'Erst ein eigenes Passwort festlegen'
+          : r.body?.error === 'wrong_password'
+            ? 'Das Passwort stimmt nicht'
+            : r.status === 429
+              ? 'Zu viele Versuche – bitte kurz warten'
+              : 'Nicht gespeichert',
+        'info',
+      )
     }
     toast(required ? 'Anmeldung eingeschaltet' : 'Anmeldung ausgeschaltet')
     await loadAuthState()

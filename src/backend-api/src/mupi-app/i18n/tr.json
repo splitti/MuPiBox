@@ -2929,5 +2929,8 @@
  "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Bu güncellemeden beri eski arayüz kapalı – daha güvenli, ve bu uygulama onun yapabildiği her şeyi yapabilir. Yeniden açmak için Sistem › Uzman altına dokunun.",
  "PHP-Sicherheitsupdate fehlgeschlagen": "PHP güvenlik güncellemesi başarısız oldu",
  "Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.": "Yönetim arayüzü açık ve hâlâ güvenlik açığı olan bir PHP sürümü kullanıyor. Kapatmak için dokunun – ya da güncellemeyi daha sonra yeniden başlatın.",
- "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "Tema ayarlanamadı: ekranın klasörü dietpi yerine “{}” kullanıcısına ait (ör. elle kopyalanan dosyalardan sonra). Kutuyu yeniden başlatmak bunu düzeltir."
+ "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "Tema ayarlanamadı: ekranın klasörü dietpi yerine “{}” kullanıcısına ait (ör. elle kopyalanan dosyalardan sonra). Kutuyu yeniden başlatmak bunu düzeltir.",
+ "Erst ein eigenes Passwort festlegen": "Önce kendi şifreni belirle",
+ "Erst ein eigenes Passwort festlegen, dann lässt sich die Anmeldung einschalten.": "Önce kendi şifreni belirle, ardından oturum açma etkinleştirilebilir.",
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "Her kılavuzda yazan varsayılan şifre hâlâ geçerli. Buradan kendi şifreni belirle – bunun için eskisine gerek yok."
 }

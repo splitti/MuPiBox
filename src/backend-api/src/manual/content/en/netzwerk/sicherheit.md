@@ -9,10 +9,10 @@ Under **Password & sign-in** you set the password for the whole app. It applies 
 | Card | What you do there |
 | --- | --- |
 | **Password** | **Set password** (the first time) or **Change password**: enter the current password and the new one twice, at least 6 characters. A new password signs out all other devices |
-| **Sign-in** | **Require sign-in**: the app asks for the password in the home network. This additionally protects the box's display page and interface against access from the network. Takes effect at once and can only be switched on once a password is set |
+| **Sign-in** | **Require sign-in**: the app asks for the password in the home network. This additionally protects the box's display page and interface against access from the network. Takes effect at once and can only be switched on once a password of your own is set |
 | **Signed-in devices** | the devices that are currently signed in. You sign out single ones with **Sign out**, all except this one with **Sign out all others** |
 
-If the card shows **Default password**, the password from the admin interface still applies. Then set one of your own.
+If the card shows **Default password**, the password every MuPiBox comes with (`MuP1B0x`) still applies. Then set one of your own: you only enter the new one, the app does not ask for the default password.
 
 Signing in also works without a password: by **QR code on the display** (long-press the status icons at the top, see [Settings on the display](../bedienung/eltern-zugang.md)) or with a **link via Telegram** (`/login`, see [Telegram](telegram.md)).
 

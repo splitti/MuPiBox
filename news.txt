@@ -7,6 +7,7 @@
 <b>App</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Default password: a new box could not get a password of its own - the app asked for the current one, and the default showed only in the admin interface, which is off since 5.0.12. While the default password applies, the app no longer asks for it when a new one is set, and sign-in can only be switched on once the box has a password of its own (before, a box with sign-in switched on asked for a password nobody saw). The manual names the default password.</li>
 <li id='linews' class='linews'>Themes: when the display's folder belonged to another user than dietpi (e.g. after files were copied in by hand as root, or unpacked from another computer), switching the theme only said 'That did not work' - and the setting changed while the display kept the old theme. The app now names the reason and leaves the setting as it was; the start of the box gives such files back to dietpi (only those, nothing is written on a box where all is right). The update also gave the themes' pictures to root - no longer.</li>
 </ul>
 <h3>DEV 5.0.12 - changes compared to 5.0.11</h3>

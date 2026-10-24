@@ -2929,5 +2929,8 @@
  "Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.": "Da questo aggiornamento la vecchia interfaccia è disattivata – più sicuro, e questa app sa fare tutto ciò che faceva. Tocca per riattivarla in Sistema › Esperti.",
  "PHP-Sicherheitsupdate fehlgeschlagen": "Aggiornamento di sicurezza PHP non riuscito",
  "Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.": "L’interfaccia di amministrazione è attiva e usa ancora una versione vulnerabile di PHP. Tocca per disattivarla – oppure riavvia l’aggiornamento più tardi.",
- "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "Impossibile impostare il tema: la cartella del display appartiene a «{}» invece che a dietpi (ad es. dopo file copiati a mano). Riavviare il box risolve il problema."
+ "Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „{}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.": "Impossibile impostare il tema: la cartella del display appartiene a «{}» invece che a dietpi (ad es. dopo file copiati a mano). Riavviare il box risolve il problema.",
+ "Erst ein eigenes Passwort festlegen": "Imposta prima una password tua",
+ "Erst ein eigenes Passwort festlegen, dann lässt sich die Anmeldung einschalten.": "Imposta prima una password tua, poi si potrà attivare l’accesso.",
+ "Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.": "È ancora attiva la password predefinita riportata in ogni guida. Impostane qui una tua – non ti serve quella vecchia."
 }

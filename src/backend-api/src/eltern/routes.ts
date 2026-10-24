@@ -673,13 +673,20 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     res.json({ ok: true, ended })
   })
 
-  /** POST /api/app/auth/password {current, password} - the one password; the current one is needed when one is set. */
+  /** POST /api/app/auth/password {current, password} - the one password; the current one is needed when one of one's
+   *  own is set. The well-known default password is not asked for: it showed only in the admin interface, which is off
+   *  since 5.0.12 - a new box could not replace it (and whoever is signed in got past it, or came with the QR code). */
   router.post('/auth/password', requireSession, requireCsrf, ipRateLimit(5), async (req, res) => {
     const body = (req.body ?? {}) as { current?: unknown; password?: unknown }
     const current = typeof body.current === 'string' ? body.current : ''
     const next = typeof body.password === 'string' ? body.password : ''
     const cfg = deps.getMupiboxConfig()
-    if (hasAppPassword(cfg) && !mayResetPassword(req.elternSessionId) && !(await verifyAppPassword(current, cfg))) {
+    if (
+      hasAppPassword(cfg) &&
+      !mayResetPassword(req.elternSessionId) &&
+      !(await usesDefaultPassword(cfg)) &&
+      !(await verifyAppPassword(current, cfg))
+    ) {
       res.status(403).json({ error: 'wrong_password' })
       return
     }
@@ -710,6 +717,12 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       return
     }
     const wasOn = (cfg as { interfacelogin?: { state?: unknown } } | undefined)?.interfacelogin?.state === true
+    // switched on with the default password: the app asked then for a password that shows nowhere (the admin interface
+    // is off) - one's own first. (Already on: stays switchable off.)
+    if (body.required && !wasOn && (await usesDefaultPassword(cfg))) {
+      res.status(409).json({ error: 'default_password' })
+      return
+    }
     if (!body.required && wasOn && (body as { confirmed?: unknown }).confirmed !== true) {
       res.status(400).json({ error: 'confirm_needed' })
       return
