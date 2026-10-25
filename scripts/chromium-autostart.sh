@@ -13,9 +13,10 @@
 # ever): a large Chromium window without "MuPiBox" in its title for two looks in a row, or no Chromium window at all after
 # 150 s (the display did not come up), restarts the kiosk. At most 3 restarts per start of the box (the count is kept in
 # /tmp, the restarted kiosk runs this watchdog again); the start page being open ends it, and the count with it.
-# Without xwininfo (package x11-utils - not on every DietPi that was updated from an older version) the watchdog cannot see
-# the window at all: it took "no window" for a failed start and restarted the kiosk three times, every 160 s, although the
-# start page was open (seen on a box updated from 4.0.11). It then stays off.
+# The watchdog looks for the window by its class: "chromium" (Debian 13) or "chromium-browser" (Debian 12). Looking for
+# the first only, it saw no window on a Debian 12 box, took that for a failed start and restarted the kiosk three times,
+# every 160 s, although the start page was open (log: "window: none"). Without xwininfo (package x11-utils) it cannot
+# see any window at all - it then stays off.
 (
 	if ! command -v xwininfo >/dev/null 2>&1; then
 		logger -t mupibox-kiosk "xwininfo is missing (package x11-utils), the kiosk watchdog stays off"
@@ -29,8 +30,9 @@
 	bad=0
 	while [ "$waited" -le 420 ]; do
 		export DISPLAY=:0 XAUTHORITY="$(ls -t /tmp/serverauth.* 2>/dev/null | head -1)"
-		# the kiosk's window: the large one of Chromium (the other is a 10 x 10 helper window)
-		win=$(xwininfo -root -tree 2>/dev/null | awk '/\("chromium" "Chromium"\)/ { split($(NF - 1), g, "x"); if (g[1] + 0 >= 400) { print; exit } }')
+		# the kiosk's window: the large one of Chromium (the other is a 10 x 10 helper window). Its window class is
+		# "chromium" on Debian 13 but "chromium-browser" on Debian 12 (the program has that name there, see FP_CHROMIUM below).
+		win=$(xwininfo -root -tree 2>/dev/null | awk 'tolower($0) ~ /\("chromium[a-z-]*" "chromium[a-z-]*"\)/ { split($(NF - 1), g, "x"); if (g[1] + 0 >= 400) { print; exit } }')
 		case "$win" in
 			*'"MuPiBox'*)
 				rm -f "$COUNT"
