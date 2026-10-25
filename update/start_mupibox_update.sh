@@ -48,14 +48,24 @@ started_by_php() {
 # hold is put in at the handover and again right after the update installed its new scripts (they include restart.sh);
 # restart.sh of 5.0.13 and later also checks for the unit itself.
 HOLD_MARK='MUPIBOX-UPDATE-HOLD'
+# $1 put in as $2: written next to it, on the card, then renamed - a power cut leaves the old file or the new one,
+# never a cut one (restart.sh is what the box restarts with)
+put_atomic() {
+	cp -p "$1" "$2.mupibox-new" && sync "$2.mupibox-new" && mv -f "$2.mupibox-new" "$2" && sync "$(dirname "$2")"
+}
 hold_restart() {
 	# $1: where the real restart.sh is kept meanwhile
 	local held=/usr/local/bin/mupibox/restart.sh
 	[ -f "${held}" ] || return 0
-	grep -q "${HOLD_MARK}" "${held}" || cp -p "${held}" "$1"
-	# (holds only while the unit runs: left behind - the power went off during the update - it restarts as before)
-	printf '#!/bin/sh\n# %s: an update runs (mupibox-update-admin) - the box restarts when it is done\nif systemctl is-active --quiet mupibox-update-admin; then\n\tlogger -t mupibox "restart held: an update runs (mupibox-update-admin)"\n\texit 0\nfi\nif [ -f %s ]; then\n\texec /bin/bash %s "$@"\nfi\nexec reboot\n' "${HOLD_MARK}" "$1" "$1" > "${held}"
-	chmod 755 "${held}"
+	if ! grep -q "${HOLD_MARK}" "${held}"; then
+		put_atomic "${held}" "$1" || return 1
+	fi
+	# (holds while the handover prepares - its lock is held - and while the unit runs; left behind - the power went off
+	# during the update - it restarts as before: the lock is in /run, gone at the start)
+	printf '#!/bin/sh\n# %s: an update runs (mupibox-update-admin) - the box restarts when it is done\nif systemctl is-active --quiet mupibox-update-admin || ! flock -n /run/lock/mupibox-update-admin.lock true 2>/dev/null; then\n\tlogger -t mupibox "restart held: an update runs (mupibox-update-admin)"\n\texit 0\nfi\nif [ -f %s ]; then\n\texec /bin/bash %s "$@"\nfi\nexec reboot\n' "${HOLD_MARK}" "$1" "$1" > "${held}.mupibox-hold"
+	chmod 755 "${held}.mupibox-hold"
+	put_atomic "${held}.mupibox-hold" "${held}"
+	rm -f "${held}.mupibox-hold"
 }
 if [ -z "${MUPIBOX_UPDATE_HANDED_OVER:-}" ] && [ ! -t 1 ] && started_by_php; then
 	HD=/var/lib/mupibox-update-admin
@@ -76,13 +86,17 @@ if [ -z "${MUPIBOX_UPDATE_HANDED_OVER:-}" ] && [ ! -t 1 ] && started_by_php; the
 	mkdir -p ${HD}/bin
 	HOLD_MINE=0
 	if [ -f ${HELD} ] && ! grep -q "${HOLD_MARK}" ${HELD}; then
-		hold_restart ${HD}/restart.sh.held
+		if ! hold_restart ${HD}/restart.sh.held; then
+			# (the admin interface restarts the box in 5 s - nothing is started that it would cut off)
+			echo "Error: the update could not be prepared (no space left?) - nothing was changed."
+			exit 1
+		fi
 		HOLD_MINE=1
 	fi
 	# (nothing started: only the hold this call put in goes again)
 	unhold_mine() {
 		if [ "${HOLD_MINE}" = "1" ] && ! systemctl is-active --quiet ${HUNIT} && [ -f ${HD}/restart.sh.held ]; then
-			cp -p ${HD}/restart.sh.held ${HELD}
+			put_atomic ${HD}/restart.sh.held ${HELD}
 		fi
 	}
 	if ! curl -fsSL --retry 3 --retry-delay 3 -m 120 -o ${HD}/start_mupibox_update.sh https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh \
@@ -106,9 +120,10 @@ systemctl stop mupi_idle_shutdown 2>/dev/null
 cd /home/dietpi
 MUPIBOX_UPDATE_HANDED_OVER=1 PATH="${HD}/bin:${PATH}" bash ${HD}/start_mupibox_update.sh "$@"
 RC=$?
-# restart.sh back - the one the update installed, or the one before when it stopped earlier
+# restart.sh back - the one the update installed, or the one before when it stopped earlier (written next to it, on
+# the card, then renamed: see put_atomic in start_mupibox_update.sh)
 if grep -q 'MUPIBOX-UPDATE-HOLD' ${HELD} 2>/dev/null && [ -f ${HD}/restart.sh.held ]; then
-	cp -p ${HD}/restart.sh.held ${HELD}
+	cp -p ${HD}/restart.sh.held ${HELD}.mupibox-new && sync ${HELD}.mupibox-new && mv -f ${HELD}.mupibox-new ${HELD} && sync /usr/local/bin/mupibox
 fi
 if [ "${RC}" = "0" ] && [ ! -e /tmp/mupibox-update-nostart ]; then
 	echo "Update finished - the box restarts."
