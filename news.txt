@@ -3,6 +3,7 @@
 </ul>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Updating from 4.2.4 with the update buttons of the old admin interface: the update did nothing (after a moment the page showed an error 500) - it ran inside the admin interface's request, without the terminal its progress bar needs, and it would have stopped itself on the way (5.0.12 switches the old admin interface off, and with it the update) or been cut off by the admin interface's own restart 5 s later. Started from there, the update now runs on in the background as the app runs it: the page returns at once, the display shows the maintenance screen, and the box restarts by itself when the update is done (up to 30 minutes on older boxes).</li>
+<li id='linews' class='linews'>Display restarted three times after the start (on boxes that came from 4.x, with Chromium's package chromium-browser): the kiosk watchdog of 5.0.12 looked for Chromium's window under the name "chromium" only, found none and restarted the display although the start page was open. It now finds it under both names. The tool it looks with (xwininfo, package x11-utils) is installed by the installation and the update and offered on the app's start page when it is missing; without it the watchdog stays off instead of restarting the display.</li>
 </ul>
 <b>TIDAL</b>
 </ul>
