@@ -53,7 +53,8 @@ hold_restart() {
 	local held=/usr/local/bin/mupibox/restart.sh
 	[ -f "${held}" ] || return 0
 	grep -q "${HOLD_MARK}" "${held}" || cp -p "${held}" "$1"
-	printf '#!/bin/sh\n# %s: an update runs (mupibox-update-admin) - the box restarts when it is done\nexit 0\n' "${HOLD_MARK}" > "${held}"
+	# (holds only while the unit runs: left behind - the power went off during the update - it restarts as before)
+	printf '#!/bin/sh\n# %s: an update runs (mupibox-update-admin) - the box restarts when it is done\nif systemctl is-active --quiet mupibox-update-admin; then\n\tlogger -t mupibox "restart held: an update runs (mupibox-update-admin)"\n\texit 0\nfi\nif [ -f %s ]; then\n\texec /bin/bash %s "$@"\nfi\nexec reboot\n' "${HOLD_MARK}" "$1" "$1" > "${held}"
 	chmod 755 "${held}"
 }
 if [ -z "${MUPIBOX_UPDATE_HANDED_OVER:-}" ] && [ ! -t 1 ] && started_by_php; then
@@ -61,7 +62,9 @@ if [ -z "${MUPIBOX_UPDATE_HANDED_OVER:-}" ] && [ ! -t 1 ] && started_by_php; the
 	HUNIT=mupibox-update-admin
 	HELD=/usr/local/bin/mupibox/restart.sh
 	# one handover at a time (two clicks, two admin sessions): checking, preparing and starting under one lock - a second
-	# one waits for it and then finds the unit running
+	# one waits for it and then finds the unit running. (Waiting runs out only while the first holds the lock - and that
+	# one holds restart.sh before anything that takes long: the admin interface's restart after the second click does
+	# nothing either.)
 	exec 8> /run/lock/mupibox-update-admin.lock
 	flock -w 120 8 || { echo "Another update is being started - please wait a moment and look again."; exit 0; }
 	if systemctl is-active --quiet ${HUNIT}; then
@@ -69,20 +72,28 @@ if [ -z "${MUPIBOX_UPDATE_HANDED_OVER:-}" ] && [ ! -t 1 ] && started_by_php; the
 		echo "An update is running already (${HUNIT}) - the box restarts when it is done."
 		exit 0
 	fi
+	# restart.sh held at once, before the download (which may take minutes): see hold_restart
 	mkdir -p ${HD}/bin
+	HOLD_MINE=0
+	if [ -f ${HELD} ] && ! grep -q "${HOLD_MARK}" ${HELD}; then
+		hold_restart ${HD}/restart.sh.held
+		HOLD_MINE=1
+	fi
+	# (nothing started: only the hold this call put in goes again)
+	unhold_mine() {
+		if [ "${HOLD_MINE}" = "1" ] && ! systemctl is-active --quiet ${HUNIT} && [ -f ${HD}/restart.sh.held ]; then
+			cp -p ${HD}/restart.sh.held ${HELD}
+		fi
+	}
 	if ! curl -fsSL --retry 3 --retry-delay 3 -m 120 -o ${HD}/start_mupibox_update.sh https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh \
 	   || ! bash -n ${HD}/start_mupibox_update.sh; then
+		unhold_mine
 		echo "Error: the update script could not be downloaded - nothing was changed. Please try again."
 		exit 1
 	fi
 	# (whiptail's progress bar has no terminal here: its input is only read away)
 	printf '#!/bin/sh\ncat > /dev/null\n' > ${HD}/bin/whiptail
 	chmod 755 ${HD}/bin/whiptail
-	HOLD_MINE=0
-	if [ -f ${HELD} ] && ! grep -q "${HOLD_MARK}" ${HELD}; then
-		hold_restart ${HD}/restart.sh.held
-		HOLD_MINE=1
-	fi
 	cat > ${HD}/run.sh <<'HANDOVER'
 #!/bin/bash
 # The update handed over by the admin interface of 4.x (see start_mupibox_update.sh): $@ = its arguments
@@ -117,10 +128,7 @@ fi
 HANDOVER
 	chmod 755 ${HD}/run.sh
 	if ! systemd-run --unit=${HUNIT} --collect --quiet /bin/bash ${HD}/run.sh "$@"; then
-		# (only the hold this call put in, and only when no update runs)
-		if [ "${HOLD_MINE}" = "1" ] && ! systemctl is-active --quiet ${HUNIT} && [ -f ${HD}/restart.sh.held ]; then
-			cp -p ${HD}/restart.sh.held ${HELD}
-		fi
+		unhold_mine
 		echo "Error: the update could not be started in the background - nothing was changed."
 		exit 1
 	fi
