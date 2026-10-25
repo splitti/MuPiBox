@@ -222,13 +222,14 @@ rm -f /tmp/mupibox-update-failed
 
 	echo -e "XXX\n0\nPrepare Update... \nXXX"	 >&3 2>&3
 	systemctl stop mupi_idle_shutdown.service >&3 2>&3
-	
+
+	mkdir -p /home/dietpi/.mupibox/chromium_cache >&3 2>&3	
 	mkdir -p /home/dietpi/MuPiBox/media/{audiobook,music,other,cover,youtube-dl} >&3 2>&3
 	if [ "$RELEASE" = "dev" ]; then
 		mkdir /home/dietpi/MuPiBox/media/NAS >&3 2>&3
 	fi
 
-	chown -R dietpi:dietpi /home/dietpi/MuPiBox/media >&3 2>&3
+	chown dietpi:dietpi /home/dietpi/MuPiBox/media/{audiobook,music,other,cover,youtube-dl} >&3 2>&3
 
 	STEP=$(($STEP + 1))
 
