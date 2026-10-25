@@ -26,6 +26,80 @@ else
 	RELEASE="stable"
 fi
 
+# Started by the admin interface of 4.x (its update buttons run "curl ... | sudo bash" inside the PHP request): there
+# is no terminal for whiptail (the update stopped at its first step), the update stops php-fpm on the way (the admin
+# interface is off by default since 5.0.12 - the update, a child of php-fpm, went down with it), and the admin
+# interface restarts the box 5 s after the call returns (footer.php: restart.sh). So the update is handed over to a
+# systemd unit of its own, as the app runs it: the request returns at once, restart.sh is held until the update is
+# done, and the unit restarts the box at its end. The display shows the maintenance screen meanwhile.
+started_by_php() {
+	local pid=$PPID comm i
+	for i in 1 2 3 4 5 6 7 8; do
+		[ -n "${pid}" ] && [ "${pid}" -gt 1 ] 2>/dev/null || return 1
+		comm=$(cat /proc/${pid}/comm 2>/dev/null)
+		case "${comm}" in php-fpm*|php-cgi*|php[0-9]*) return 0 ;; esac
+		# (the parent: the field after the ")" that ends the command's name)
+		pid=$(sed 's/.*) //' /proc/${pid}/stat 2>/dev/null | cut -d' ' -f2)
+	done
+	return 1
+}
+if [ -z "${MUPIBOX_UPDATE_HANDED_OVER:-}" ] && [ ! -t 1 ] && started_by_php; then
+	HD=/var/lib/mupibox-update-admin
+	HUNIT=mupibox-update-admin
+	if systemctl is-active --quiet ${HUNIT}; then
+		echo "An update is running already (${HUNIT}) - the box restarts when it is done."
+		exit 0
+	fi
+	mkdir -p ${HD}/bin
+	if ! curl -fsSL --retry 3 --retry-delay 3 -m 120 -o ${HD}/start_mupibox_update.sh https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh \
+	   || ! bash -n ${HD}/start_mupibox_update.sh; then
+		echo "Error: the update script could not be downloaded - nothing was changed. Please try again."
+		exit 1
+	fi
+	# (whiptail's progress bar has no terminal here: its input is only read away)
+	printf '#!/bin/sh\ncat > /dev/null\n' > ${HD}/bin/whiptail
+	chmod 755 ${HD}/bin/whiptail
+	HELD=/usr/local/bin/mupibox/restart.sh
+	if [ -f ${HELD} ] && ! grep -q 'MUPIBOX-UPDATE-HOLD' ${HELD}; then
+		cp -p ${HELD} ${HD}/restart.sh.held
+		printf '#!/bin/sh\n# MUPIBOX-UPDATE-HOLD: an update runs (%s) - the box restarts when it is done\nexit 0\n' "${HUNIT}" > ${HELD}
+		chmod 755 ${HELD}
+	fi
+	cat > ${HD}/run.sh <<'HANDOVER'
+#!/bin/bash
+# The update handed over by the admin interface of 4.x (see start_mupibox_update.sh): $@ = its arguments
+HD=/var/lib/mupibox-update-admin
+HELD=/usr/local/bin/mupibox/restart.sh
+exec > ${HD}/output.txt 2>&1
+# (the admin interface saves its settings right after the call returned: they are written before the update starts)
+sleep 20
+systemctl stop mupi_idle_shutdown 2>/dev/null
+cd /home/dietpi
+MUPIBOX_UPDATE_HANDED_OVER=1 PATH="${HD}/bin:${PATH}" bash ${HD}/start_mupibox_update.sh "$@"
+RC=$?
+# restart.sh back as it was, unless the update put in its new one
+if grep -q 'MUPIBOX-UPDATE-HOLD' ${HELD} 2>/dev/null && [ -f ${HD}/restart.sh.held ]; then
+	cp -p ${HD}/restart.sh.held ${HELD}
+fi
+if [ "${RC}" = "0" ] && [ ! -e /tmp/mupibox-update-nostart ]; then
+	echo "Update finished - the box restarts."
+	sleep 5
+	systemctl reboot
+else
+	echo "The update did not finish (code ${RC}) - see /boot/mupibox_update.log; the box is not restarted."
+	systemctl start mupi_idle_shutdown 2>/dev/null
+fi
+HANDOVER
+	chmod 755 ${HD}/run.sh
+	if ! systemd-run --unit=${HUNIT} --collect --quiet /bin/bash ${HD}/run.sh "$@"; then
+		[ -f ${HD}/restart.sh.held ] && cp -p ${HD}/restart.sh.held ${HELD}
+		echo "Error: the update could not be started in the background - nothing was changed."
+		exit 1
+	fi
+	echo "The update runs in the background (${HUNIT}, log ${HD}/output.txt) - the box restarts when it is done (up to 30 minutes)."
+	exit 0
+fi
+
 # The Pi's boot files: /boot/firmware/ on newer DietPi (v10, Debian 13 "Trixie"), /boot/ before (as autosetup.sh)
 BOOT_CONFIG="/boot/config.txt"
 BOOT_CMDLINE="/boot/cmdline.txt"

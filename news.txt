@@ -1,4 +1,9 @@
 <h3>DEV 5.0.13 - changes compared to 5.0.12</h3>
+<b>Update</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Updating from 4.2.4 with the update buttons of the old admin interface: the update did nothing (after a moment the page showed an error 500) - it ran inside the admin interface's request, without the terminal its progress bar needs, and it would have stopped itself on the way (5.0.12 switches the old admin interface off, and with it the update) or been cut off by the admin interface's own restart 5 s later. Started from there, the update now runs on in the background as the app runs it: the page returns at once, the display shows the maintenance screen, and the box restarts by itself when the update is done (up to 30 minutes on older boxes).</li>
+</ul>
 <b>TIDAL</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
