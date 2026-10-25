@@ -700,8 +700,8 @@ rm -f /tmp/mupibox-update-failed
 	# (the admin interface shows those). New ones: add the id here, in conf_update.sh and in autosetup.sh.
 	KM_THEMES="kuschelmond moosnest sonnenhof pferdehof fussball fahrzeuge buecherregal kassettenrekorder unterwasser bastelpapier prinzessin einhorn feenschloss weltraum dinoland piratenbucht tagundnacht feuerwehr ritterburg eisenbahn roboter heldenstadt safari eiswelt zirkus meerjungfrau ballett kaetzchen zuckerland schmetterlinge"
 	
-	# the old themes in the km layout (legacy in km-themes.json): their mascots and cover placeholders (their pictures and
-	# fonts were moved above already); coverflow stays as it is
+	# the old themes in the km layout (legacy in km-themes.json): their pictures, fonts, mascots and cover placeholders;
+	# coverflow stays as it is
 	KM_LEGACY_THEMES="axolotl blue captainamerica chocolate cinema clone-wars comic custom danger dark darkred deepblue dinosaur earth enterprise fantasybutterflies forms green ironman light lines matrix mint mystic orange pikachu pink purple red spiderman steampunk supermario unicorn vintage wall-e wood xmas"
 	
 	for theme in ${KM_THEMES} ${KM_LEGACY_THEMES} _fonts; do
@@ -714,10 +714,8 @@ rm -f /tmp/mupibox-update-failed
 	# the name fonts these themes had before (their licenses do not allow passing them on as part of MuPiBox)
 	rm -f /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/supermario/NewSuperMarioFontU.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/akaPosse.ttf >&3 2>&3
 	
-	chown dietpi:dietpi -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/
-	
-	# (copied after the chown above: they belonged to root)
-	chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data >&3 2>&3
+	# (after the copies above: the theme pictures are dietpi's too)
+	chown dietpi:dietpi -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
 	cp -f ${MUPI_SRC}/themes/km-themes.json /home/dietpi/MuPiBox/themes/km-themes.json >&3 2>&3
 	mv ${MUPI_SRC}/themes/*.css /home/dietpi/MuPiBox/themes/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/chromium-autostart.sh /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
