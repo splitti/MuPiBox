@@ -62,10 +62,18 @@ hold_restart() {
 	fi
 	# (holds while the handover prepares - its lock is held - and while the unit runs; left behind - the power went off
 	# during the update - it restarts as before: the lock is in /run, gone at the start)
-	printf '#!/bin/sh\n# %s: an update runs (mupibox-update-admin) - the box restarts when it is done\nif systemctl is-active --quiet mupibox-update-admin || ! flock -n /run/lock/mupibox-update-admin.lock true 2>/dev/null; then\n\tlogger -t mupibox "restart held: an update runs (mupibox-update-admin)"\n\texit 0\nfi\nif [ -f %s ]; then\n\texec /bin/bash %s "$@"\nfi\nexec reboot\n' "${HOLD_MARK}" "$1" "$1" > "${held}.mupibox-hold"
-	chmod 755 "${held}.mupibox-hold"
-	put_atomic "${held}.mupibox-hold" "${held}"
-	rm -f "${held}.mupibox-hold"
+	# (every step checked: success only with the whole placeholder written, read back and in place as restart.sh - a cut
+	# one, put in whole, would hold nothing; the first and the last line are looked for)
+	local tmp="${held}.mupibox-hold"
+	if ! printf '#!/bin/sh\n# %s: an update runs (mupibox-update-admin) - the box restarts when it is done\nif systemctl is-active --quiet mupibox-update-admin || ! flock -n /run/lock/mupibox-update-admin.lock true 2>/dev/null; then\n\tlogger -t mupibox "restart held: an update runs (mupibox-update-admin)"\n\texit 0\nfi\nif [ -f %s ]; then\n\texec /bin/bash %s "$@"\nfi\nexec reboot\n' "${HOLD_MARK}" "$1" "$1" > "${tmp}" \
+	   || [ "$(head -n 1 "${tmp}")" != '#!/bin/sh' ] || [ "$(tail -n 1 "${tmp}")" != 'exec reboot' ] \
+	   || ! chmod 755 "${tmp}" || ! put_atomic "${tmp}" "${held}"; then
+		rm -f "${tmp}" "${held}.mupibox-new"
+		return 1
+	fi
+	rm -f "${tmp}"
+	# (in place: the one that is restart.sh now)
+	grep -q "${HOLD_MARK}" "${held}" && [ "$(tail -n 1 "${held}")" = 'exec reboot' ]
 }
 if [ -z "${MUPIBOX_UPDATE_HANDED_OVER:-}" ] && [ ! -t 1 ] && started_by_php; then
 	HD=/var/lib/mupibox-update-admin
@@ -747,7 +755,9 @@ rm -f /tmp/mupibox-update-failed
 	mv ${MUPI_SRC}/scripts/mupibox/* /usr/local/bin/mupibox/ >&3 2>&3
 	# (handed over by the admin interface of 4.x: the new restart.sh is held too - see hold_restart at the top)
 	if [ -n "${MUPIBOX_UPDATE_HANDED_OVER:-}" ]; then
-		hold_restart /var/lib/mupibox-update-admin/restart.sh.held
+		# (not held: logged - stopping here would harm more; restart.sh of 5.0.13 and later checks for the unit itself)
+		hold_restart /var/lib/mupibox-update-admin/restart.sh.held \
+			|| echo "## WARNING: restart.sh could not be held again - a restart click now cuts the update off" >&3 2>&3
 	fi
 	mv ${MUPI_SRC}/scripts/bluetooth/* /usr/local/bin/mupibox/ >&3 2>&3
 	# The battery of Bluetooth headphones (display and app, issue #176): BlueZ 5.66 takes it from PulseAudio only with
