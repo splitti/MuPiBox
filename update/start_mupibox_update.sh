@@ -223,7 +223,7 @@ service mupi_idle_shutdown stop
 # One list for every channel (stable and beta kept the list of before until 5.0.10 - without xdotool, which the display's
 # window and the goodbye picture need, and with the packages above that nothing uses).
 # libwidevinecdm0 stays: the display plays Spotify through the Web Playback SDK in Chromium, which needs Widevine
-packages2install="lighttpd-mod-openssl gpiod git mpv pulseaudio-module-bluetooth python3-pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt python3-smbus2 pigpio libjson-c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh xdotool rfkill"
+packages2install="lighttpd-mod-openssl gpiod git mpv pulseaudio-module-bluetooth python3-pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt python3-smbus2 pigpio libjson-c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh xdotool rfkill x11-utils"
 # packages the update removes (apt-get remove, only when installed) - none at the moment; Debian's jq goes where the
 # update puts its own jq (see "Copy binaries")
 packages2remove=""
@@ -383,7 +383,7 @@ rm -f /tmp/mupibox-update-failed
 	# mplayer is gone; rsvg-convert and Pillow put the start pictures together; xdotool and feh the goodbye picture):
 	# asked once more with fresh package lists when the loop above could not install it
 	MISSING_NOW=""
-	for p in mpv librsvg2-bin python3-pil xdotool feh; do
+	for p in mpv librsvg2-bin python3-pil xdotool feh x11-utils; do
 		dpkg-query -W -f='${Status}' "${p}" 2>/dev/null | grep -q "install ok installed" || MISSING_NOW="${MISSING_NOW} ${p}"
 	done
 	if [ -n "${MISSING_NOW}" ]; then
