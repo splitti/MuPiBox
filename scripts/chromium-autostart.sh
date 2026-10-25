@@ -13,7 +13,14 @@
 # ever): a large Chromium window without "MuPiBox" in its title for two looks in a row, or no Chromium window at all after
 # 150 s (the display did not come up), restarts the kiosk. At most 3 restarts per start of the box (the count is kept in
 # /tmp, the restarted kiosk runs this watchdog again); the start page being open ends it, and the count with it.
+# Without xwininfo (package x11-utils - not on every DietPi that was updated from an older version) the watchdog cannot see
+# the window at all: it took "no window" for a failed start and restarted the kiosk three times, every 160 s, although the
+# start page was open (seen on a box updated from 4.0.11). It then stays off.
 (
+	if ! command -v xwininfo >/dev/null 2>&1; then
+		logger -t mupibox-kiosk "xwininfo is missing (package x11-utils), the kiosk watchdog stays off"
+		exit 0
+	fi
 	COUNT=/tmp/kiosk-watchdog-tries
 	FIRST=50      # seconds until the first look, then one every 10 s
 	NO_WINDOW=150 # seconds after which a missing Chromium window counts as a failure

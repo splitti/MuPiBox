@@ -80,7 +80,7 @@ STEP=0
 	#   autoconf - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
 	#   automake - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
 	# libwidevinecdm0 stays: the display plays Spotify through the Web Playback SDK in Chromium, which needs Widevine
-	packages2install="lighttpd-mod-openssl gpiod git mpv pulseaudio-module-bluetooth python3-pip bluez zip unzip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt python3-smbus2 pigpio libjson-c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh rfkill xdotool"
+	packages2install="lighttpd-mod-openssl gpiod git mpv pulseaudio-module-bluetooth python3-pip bluez zip unzip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt python3-smbus2 pigpio libjson-c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh rfkill xdotool x11-utils"
 
 	###############################################################################################
 
@@ -124,7 +124,7 @@ STEP=0
 	# What a part of the box needs (the list of scripts/mupibox/install_missing.sh: mpv, the start pictures, the goodbye
 	# picture): asked once more with fresh package lists when the loop could not install it
 	MISSING_NOW=""
-	for p in mpv librsvg2-bin python3-pil xdotool feh; do
+	for p in mpv librsvg2-bin python3-pil xdotool feh x11-utils; do
 		dpkg-query -W -f='${Status}' "${p}" 2>/dev/null | grep -q "install ok installed" || MISSING_NOW="${MISSING_NOW} ${p}"
 	done
 	if [ -n "${MISSING_NOW}" ]; then
