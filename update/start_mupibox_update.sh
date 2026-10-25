@@ -43,10 +43,29 @@ started_by_php() {
 	done
 	return 1
 }
+# The hold of restart.sh while a handed-over update runs: the admin interface of 4.x calls restart.sh 5 s after every
+# update click (footer.php, whatever the click answered) - also when it only heard "an update is running already". The
+# hold is put in at the handover and again right after the update installed its new scripts (they include restart.sh);
+# restart.sh of 5.0.13 and later also checks for the unit itself.
+HOLD_MARK='MUPIBOX-UPDATE-HOLD'
+hold_restart() {
+	# $1: where the real restart.sh is kept meanwhile
+	local held=/usr/local/bin/mupibox/restart.sh
+	[ -f "${held}" ] || return 0
+	grep -q "${HOLD_MARK}" "${held}" || cp -p "${held}" "$1"
+	printf '#!/bin/sh\n# %s: an update runs (mupibox-update-admin) - the box restarts when it is done\nexit 0\n' "${HOLD_MARK}" > "${held}"
+	chmod 755 "${held}"
+}
 if [ -z "${MUPIBOX_UPDATE_HANDED_OVER:-}" ] && [ ! -t 1 ] && started_by_php; then
 	HD=/var/lib/mupibox-update-admin
 	HUNIT=mupibox-update-admin
+	HELD=/usr/local/bin/mupibox/restart.sh
+	# one handover at a time (two clicks, two admin sessions): checking, preparing and starting under one lock - a second
+	# one waits for it and then finds the unit running
+	exec 8> /run/lock/mupibox-update-admin.lock
+	flock -w 120 8 || { echo "Another update is being started - please wait a moment and look again."; exit 0; }
 	if systemctl is-active --quiet ${HUNIT}; then
+		# (not touching restart.sh: it is held for the running update)
 		echo "An update is running already (${HUNIT}) - the box restarts when it is done."
 		exit 0
 	fi
@@ -59,11 +78,10 @@ if [ -z "${MUPIBOX_UPDATE_HANDED_OVER:-}" ] && [ ! -t 1 ] && started_by_php; the
 	# (whiptail's progress bar has no terminal here: its input is only read away)
 	printf '#!/bin/sh\ncat > /dev/null\n' > ${HD}/bin/whiptail
 	chmod 755 ${HD}/bin/whiptail
-	HELD=/usr/local/bin/mupibox/restart.sh
-	if [ -f ${HELD} ] && ! grep -q 'MUPIBOX-UPDATE-HOLD' ${HELD}; then
-		cp -p ${HELD} ${HD}/restart.sh.held
-		printf '#!/bin/sh\n# MUPIBOX-UPDATE-HOLD: an update runs (%s) - the box restarts when it is done\nexit 0\n' "${HUNIT}" > ${HELD}
-		chmod 755 ${HELD}
+	HOLD_MINE=0
+	if [ -f ${HELD} ] && ! grep -q "${HOLD_MARK}" ${HELD}; then
+		hold_restart ${HD}/restart.sh.held
+		HOLD_MINE=1
 	fi
 	cat > ${HD}/run.sh <<'HANDOVER'
 #!/bin/bash
@@ -77,7 +95,7 @@ systemctl stop mupi_idle_shutdown 2>/dev/null
 cd /home/dietpi
 MUPIBOX_UPDATE_HANDED_OVER=1 PATH="${HD}/bin:${PATH}" bash ${HD}/start_mupibox_update.sh "$@"
 RC=$?
-# restart.sh back as it was, unless the update put in its new one
+# restart.sh back - the one the update installed, or the one before when it stopped earlier
 if grep -q 'MUPIBOX-UPDATE-HOLD' ${HELD} 2>/dev/null && [ -f ${HD}/restart.sh.held ]; then
 	cp -p ${HD}/restart.sh.held ${HELD}
 fi
@@ -85,14 +103,24 @@ if [ "${RC}" = "0" ] && [ ! -e /tmp/mupibox-update-nostart ]; then
 	echo "Update finished - the box restarts."
 	sleep 5
 	systemctl reboot
+elif [ -e /tmp/mupibox-update-nostart ]; then
+	# (the way back did not complete: nothing is started on that installation - the next start of the box finishes it)
+	echo "The update stopped and the way back is not complete - restart the box (see /boot/mupibox_update.log)."
 else
-	echo "The update did not finish (code ${RC}) - see /boot/mupibox_update.log; the box is not restarted."
+	echo "The update did not finish (code ${RC}) - see /boot/mupibox_update.log; the box goes on with the version before."
 	systemctl start mupi_idle_shutdown 2>/dev/null
+	# the display back (the update ended Chromium at its start) - unless the update already started it again
+	if ! pgrep -x chromium >/dev/null && ! pgrep -x chromium-browse >/dev/null; then
+		sudo -i -u dietpi bash -c "setsid nohup /usr/local/bin/mupibox/restart_kiosk.sh >/dev/null 2>&1 < /dev/null &"
+	fi
 fi
 HANDOVER
 	chmod 755 ${HD}/run.sh
 	if ! systemd-run --unit=${HUNIT} --collect --quiet /bin/bash ${HD}/run.sh "$@"; then
-		[ -f ${HD}/restart.sh.held ] && cp -p ${HD}/restart.sh.held ${HELD}
+		# (only the hold this call put in, and only when no update runs)
+		if [ "${HOLD_MINE}" = "1" ] && ! systemctl is-active --quiet ${HUNIT} && [ -f ${HD}/restart.sh.held ]; then
+			cp -p ${HD}/restart.sh.held ${HELD}
+		fi
 		echo "Error: the update could not be started in the background - nothing was changed."
 		exit 1
 	fi
@@ -165,6 +193,8 @@ fail_update() {
 	else
 		echo "## (your installation is as it was before the update)" >&3 2>&3
 		sudo -H -u dietpi bash -c "pm2 start server; pm2 start spotify-control" >&3 2>&3
+		# the display too: the update ended Chromium at its start, and it stayed off (also from the app or the terminal)
+		sudo -i -u dietpi bash -c "setsid nohup /usr/local/bin/mupibox/restart_kiosk.sh >/dev/null 2>&1 < /dev/null &" >&3 2>&3
 	fi
 	service mupi_idle_shutdown start >&3 2>&3
 	# (the exit below ends only the part in the progress bar - the script after it reads this and ends with an error
@@ -784,6 +814,10 @@ rm -f /tmp/mupibox-update-failed
 	# full colours in the display on a Pi with 2 GB or more: takes DietPi's "low-end device mode" out again (see the file)
 	mkdir -p /etc/chromium.d && tr -d '\r' < ${MUPI_SRC}/config/chromium/zz-mupibox > /etc/chromium.d/zz-mupibox && chmod 644 /etc/chromium.d/zz-mupibox
 	mv ${MUPI_SRC}/scripts/mupibox/* /usr/local/bin/mupibox/ >&3 2>&3
+	# (handed over by the admin interface of 4.x: the new restart.sh is held too - see hold_restart at the top)
+	if [ -n "${MUPIBOX_UPDATE_HANDED_OVER:-}" ]; then
+		hold_restart /var/lib/mupibox-update-admin/restart.sh.held
+	fi
 	mv ${MUPI_SRC}/scripts/bluetooth/* /usr/local/bin/mupibox/ >&3 2>&3
 	# The battery of Bluetooth headphones (display and app, issue #176): BlueZ 5.66 takes it from PulseAudio only with
 	# its experimental interfaces (BatteryProviderManager1). Applies after the restart.
