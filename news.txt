@@ -1,4 +1,11 @@
 <h3>DEV 5.0.13 - changes compared to 5.0.12</h3>
+<b>Display models</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New in the app under Settings › Display &amp; controls › Display model: which display is on the ribbon cable (DSI) - the official 7" of the 1st generation (also HDMI or no display; how the boxes so far run), the Raspberry Pi Touch Display 2 (5", 7", 10"), Waveshare 5" and 4.3" (800 × 480), Waveshare DSI 7" to 12.3" (the exact model: "DSI LCD" and "DSI-TOUCH" are different designs, also at the same size), EDATEC 7" or 10", or an own setting (the app leaves config.txt alone). A box that shows a picture has its model preselected (from config.txt). A display on the ribbon cable does not say what it is, and a wrong model leaves it dark: the box restarts with the new model, and the app (on the start page too) and the display ask "Do you see a picture?" - a tap on "Keep" keeps it; without an answer within 3 minutes the box sets the display of before again and restarts once more. Tested on a MuPiBox: the Touch Display 2 7"; the others use the drivers of the Raspberry Pi kernel.</li>
+<li id='linews' class='linews'>Rotation of these displays (all but the official 7"): four tiles 0°, 90°, 180°, 270° - picture and touch turn together, and so do the start, maintenance and goodbye pictures (they came up small and upright on a Touch Display 2); the display restarts briefly, the box does not. "Landscape" marks where the MuPiBox stands right. The display's size is taken from the display itself, turned (the resolution setting does not show there).</li>
+<li id='linews' class='linews'>Installing on a box with such a display (its line in config.txt before the installation): the installation switched off the graphics driver these displays need (KMS) - the display stayed dark. It stays on now. With KMS the dimming of the LED ring and WLED while the display is off works too (it asked the firmware, which does not know these displays).</li>
+</ul>
 <b>Update</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
@@ -13,6 +20,7 @@
 <b>App</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>The MuPiBox lettering on top of the side bar (PC, tablet), on top of the settings (phone) and on the login page - the same as in the MuPiBox NG. Under it a badge with CLASSIC and the version installed: "Up to date", "Development version", or lit with a newer version ("Update: …"); a tap opens the updates.</li>
 <li id='linews' class='linews'>Default password: a new box could not get a password of its own - the app asked for the current one, and the default showed only in the admin interface, which is off since 5.0.12. While the default password applies, the app no longer asks for it when a new one is set, and sign-in can only be switched on once the box has a password of its own (before, a box with sign-in switched on asked for a password nobody saw). The manual names the default password.</li>
 <li id='linews' class='linews'>Themes: when the display's folder belonged to another user than dietpi (e.g. after files were copied in by hand as root, or unpacked from another computer), switching the theme only said 'That did not work' - and the setting changed while the display kept the old theme. The app now names the reason and leaves the setting as it was; the start of the box gives such files back to dietpi (only those, nothing is written on a box where all is right). The update also gave the themes' pictures to root - no longer.</li>
 </ul>

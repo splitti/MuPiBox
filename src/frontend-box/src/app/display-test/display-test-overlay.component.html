@@ -1,0 +1,9 @@
+@if (test().running && test().endsAt) {
+  <div class="dt-overlay">
+    <div class="dt-card">
+      <h2>{{ texts.text('displayTestTitle') }}</h2>
+      <p>{{ texts.text('displayTestText', { s: left() }) }}</p>
+      <button type="button" class="dt-keep" [disabled]="sending()" (click)="keep()">{{ texts.text('displayTestKeep') }}</button>
+    </div>
+  </div>
+}

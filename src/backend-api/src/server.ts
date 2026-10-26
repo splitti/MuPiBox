@@ -64,6 +64,7 @@ import { episodeKey, MAX_KEEP, type OfflineEpisode, PodcastOffline } from './pod
 import { setFeedHeadReader } from './podcast-search'
 import { EpisodeState, episodeStateSettings } from './episode-state'
 import { uiScale } from './ui-scale'
+import { confirmDisplayTest, displayTestState } from './eltern/display-profile'
 import { browserGuard, corsOptionsFor, isAllowedHost, isLoopback, localOnly, localOrElternSession, logValue, PROXY_PORT, setConfiguredHosts, viaProxy } from './request-guard'
 
 // Force IPv4 for DNS lookups to avoid EAI_AGAIN errors on Raspberry Pi
@@ -2790,6 +2791,15 @@ app.get('/api/network', (_req, res) => {
   } else {
     res.status(404).send(`File Not Found: ${networkFile}`)
   }
+})
+
+// The test of a new display model (app: Display-Modell): the display asks whether one runs and confirms it - from the
+// box itself only (its kiosk)
+app.get('/api/display-test', localOnly, async (_req, res) => {
+  res.json(await displayTestState())
+})
+app.post('/api/display-test/confirm', localOnly, async (_req, res) => {
+  res.json({ ok: await confirmDisplayTest() })
 })
 
 app.get('/api/monitor', (req, res) => {

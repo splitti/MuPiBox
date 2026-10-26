@@ -75,6 +75,10 @@ export const DEFAULT_DISPLAY_TEXTS = {
   clockNotSynced: 'Time not synchronised',
   // the bar while the lock screen stands back for the parents' menu (see parent-access.service.ts)
   parentAccessHint: 'Parent access – the lock still applies. Back to the start page, or 2 minutes without a touch: the lock screen comes back.',
+  // a new display model waiting for its answer (app: Display-Modell; display-test overlay): {s} = the time left (m:ss)
+  displayTestTitle: 'New display',
+  displayTestText: 'Do you see this picture? Then tap “Keep”. Otherwise the box goes back to the display before in {s}.',
+  displayTestKeep: 'Keep',
 }
 export type DisplayTextKey = keyof typeof DEFAULT_DISPLAY_TEXTS
 type TextSet = Partial<Record<DisplayTextKey, string>>

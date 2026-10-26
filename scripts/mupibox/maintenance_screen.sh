@@ -4,6 +4,9 @@
 # The scene: the one chosen in MuPi-Conf, "same as boot screen" = the boot screen shown at this start.
 # Without generated pictures the old installation.jpg.
 
+# a display with KMS that is turned: the picture turned with it (see fbv_options.sh)
+FBV_OPTS=$(/usr/local/bin/mupibox/fbv_options.sh 2>/dev/null)
+
 KIND="${1:-update}"
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 OUT="/home/dietpi/MuPiBox/sysmedia/images/bootscreen"
@@ -21,4 +24,4 @@ LANG_DIR=$(/usr/bin/jq -r '.mupibox.bootscreenLanguage // "en"' "${CONFIG}" 2>/d
 [ -f "${PIC}" ] || PIC="${READY}/${LANG_DIR}/maintenance-karte-${KIND}.png"
 [ -f "${PIC}" ] || PIC="${READY}/en/maintenance-karte-${KIND}.png"
 [ -f "${PIC}" ] || PIC="${FALLBACK}"
-/usr/bin/fbv -c -y "${PIC}" &
+/usr/bin/fbv ${FBV_OPTS} -c -y "${PIC}" &

@@ -286,7 +286,7 @@ service mupi_idle_shutdown stop
 # One list for every channel (stable and beta kept the list of before until 5.0.10 - without xdotool, which the display's
 # window and the goodbye picture need, and with the packages above that nothing uses).
 # libwidevinecdm0 stays: the display plays Spotify through the Web Playback SDK in Chromium, which needs Widevine
-packages2install="lighttpd-mod-openssl gpiod git mpv pulseaudio-module-bluetooth python3-pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt python3-smbus2 pigpio libjson-c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh xdotool rfkill x11-utils"
+packages2install="lighttpd-mod-openssl gpiod git mpv pulseaudio-module-bluetooth python3-pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt python3-smbus2 pigpio libjson-c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh xdotool rfkill x11-utils x11-xserver-utils"
 # packages the update removes (apt-get remove, only when installed) - none at the moment; Debian's jq goes where the
 # update puts its own jq (see "Copy binaries")
 packages2remove=""

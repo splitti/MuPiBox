@@ -80,7 +80,7 @@ STEP=0
 	#   autoconf - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
 	#   automake - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
 	# libwidevinecdm0 stays: the display plays Spotify through the Web Playback SDK in Chromium, which needs Widevine
-	packages2install="lighttpd-mod-openssl gpiod git mpv pulseaudio-module-bluetooth python3-pip bluez zip unzip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt python3-smbus2 pigpio libjson-c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh rfkill xdotool x11-utils"
+	packages2install="lighttpd-mod-openssl gpiod git mpv pulseaudio-module-bluetooth python3-pip bluez zip unzip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt python3-smbus2 pigpio libjson-c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh rfkill xdotool x11-utils x11-xserver-utils"
 
 	###############################################################################################
 
@@ -654,7 +654,14 @@ STEP=0
 	sed -i 's/ExecStart\=-\/sbin\/agetty -a dietpi -J \%I \$TERM/ExecStart\=-\/sbin\/agetty --skip-login --noclear --noissue --login-options "-f dietpi" \%I \$TERM/g' /etc/systemd/system/getty@tty1.service.d/dietpi-autologin.conf >&3 2>&3
 	/boot/dietpi/func/dietpi-set_hardware gpumemsplit 128 >&3 2>&3
 	/boot/dietpi/func/dietpi-set_hardware headless 0 >&3 2>&3
-	/boot/dietpi/func/dietpi-set_hardware rpi-opengl disable >&3 2>&3
+	# The display of the firmware (the official 7" of the 1st generation, HDMI) needs no KMS - a display with KMS on the
+	# ribbon cable (Touch Display 2, Waveshare, EDATEC: its overlay in config.txt before the installation) needs it: there
+	# it stays (switched off, that display stayed dark). The model is chosen later in the app (Display-Modell).
+	if grep -qE '^[[:space:]]*dtoverlay=vc4-kms-dsi-' "${BOOT_CONFIG}"; then
+		/boot/dietpi/func/dietpi-set_hardware rpi-opengl vc4-kms-v3d >&3 2>&3
+	else
+		/boot/dietpi/func/dietpi-set_hardware rpi-opengl disable >&3 2>&3
+	fi
 	su - -c ". /boot/dietpi/func/dietpi-globals && G_CHECK_ROOT_USER && G_CHECK_ROOTFS_RW && G_INIT && G_CONFIG_INJECT 'framebuffer_width=' \"framebuffer_width=800\" ${BOOT_CONFIG}" >&3 2>&3
 	su - -c ". /boot/dietpi/func/dietpi-globals && G_CHECK_ROOT_USER && G_CHECK_ROOTFS_RW && G_INIT && G_CONFIG_INJECT 'framebuffer_height=' \"framebuffer_height=480\" ${BOOT_CONFIG}" >&3 2>&3
 	after=$(date +%s)

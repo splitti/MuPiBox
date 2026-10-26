@@ -91,6 +91,7 @@ async function boot() {
     setTimeout(() => toast(back.has('spotify_connected') ? 'Mit Spotify verbunden' : `Spotify-Anmeldung fehlgeschlagen (${back.get('spotify_error')})`, back.has('spotify_connected') ? 'ok' : 'info'), 300)
   }
   loadBoxName()
+  loadVersion()
   // (back and forward: popstate; an address typed or a link with #/…: hashchange)
   window.addEventListener('popstate', routeIfMoved)
   window.addEventListener('hashchange', routeIfMoved)
@@ -298,6 +299,30 @@ async function changeAppLanguage(code) {
   toast(`Sprache: ${code === 'auto' ? 'Automatisch' : LANGS[code]}`)
 }
 
+// The installed version for the badge under the MuPiBox logo (side bar, settings on the phone): CLASSIC, its number
+// and whether a newer one is there - asked once at the start (GitHub may take a moment: the badge fills in then)
+async function loadVersion() {
+  const r = await api(`${API}/updates`)
+  if (!r.ok) return
+  state.ver = { installed: r.body.installed ?? '', channel: r.body.channel ?? 'stable', update: r.body.update ?? null }
+  for (const el of document.querySelectorAll('[data-ver-badge]')) {
+    el.outerHTML = versionBadge()
+  }
+  for (const el of document.querySelectorAll('[data-ver-badge]')) el.onclick = () => go('updates')
+}
+
+// "CLASSIC · v5.0.13" and under it: Aktuell / Entwicklerversion / Beta - or, lit, "Update: 5.0.14"; opens the updates
+function versionBadge() {
+  const v = state.ver
+  const num = /\d+(?:\.\d+)+/.exec(v?.installed ?? '')?.[0]
+  const sub = !v ? '' : v.update ? `Update: ${v.update.version}` : v.channel === 'dev' ? 'Entwicklerversion' : v.channel === 'beta' ? 'Beta' : 'Aktuell'
+  const kind = v?.update ? ' new' : v?.channel === 'dev' ? ' dev' : ''
+  return `<button type="button" class="ver-badge${kind}" data-ver-badge data-go="updates" aria-label="${esc(`MuPiBox Classic ${num ?? ''} – Updates`)}"><span class="ed" translate="no">CLASSIC</span><span class="num"><b translate="no">${num ? `v${esc(num)}` : '…'}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span><span class="go">${icon('chevron', 16)}</span></button>`
+}
+
+// The MuPiBox lettering (the same in Classic and NG)
+const LOGO = '<img class="mupi-logo" src="mupibox-logo.webp" alt="MuPiBox" width="560" height="99">'
+
 // MuPi: with an outline on the light design (white on light blue is too weak), the plain one on the dark
 function mupiImg(attrs = '') {
   return `<img class="mupi-d" src="mupi.svg" alt="" ${attrs}><img class="mupi-l" src="mupi-hell.svg" alt="" ${attrs}>`
@@ -334,7 +359,7 @@ function renderChrome(page) {
     return p?.id?.startsWith('g-') ? p.id : p?.parent
   })()
   $('#sidebar').innerHTML = `
-    <div class="brand"><span class="brand-dot">${mupiImg()}</span><span>${esc(state.boxName)}</span></div>
+    <div class="brand-block">${LOGO}${versionBadge()}</div>
     ${AREAS.map(
       (a) => `<button class="side-link" data-go="${a.id}" ${a.id === area && !(area === 'einstellungen' && page.id !== 'einstellungen') ? 'aria-current="page"' : ''}>${icon(a.icon)}${a.title}</button>
       ${a.id === 'einstellungen' ? groups.map((g) => `<button class="side-link sub" data-go="${g.id}" ${g.id === groupOf ? 'aria-current="page"' : ''}>${icon(g.icon, 18)}${esc(g.title)}</button>`).join('') : ''}`,
@@ -645,6 +670,8 @@ function childNav(page) {
   // the settings: a card per group (as the design; two columns on the PC)
   if (page.id === 'einstellungen') {
     return [
+      // (on the phone, which has no side bar: the logo and the version on top of the settings)
+      `<div class="card brand-card">${LOGO}${versionBadge()}</div>`,
       `<div class="group-grid wide">${kids
         .map(
           (k) =>
@@ -1418,6 +1445,12 @@ async function loadNotices(root) {
   // the admin interface on, and the update could not install PHP's security update: its PHP may be open to attacks
   if (legacy.ok && legacy.body?.phpUpdateFailed) {
     notes.push(['lock', 'PHP-Sicherheitsupdate fehlgeschlagen', 'Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.', 'experten'])
+  }
+  // a new display model waiting for its answer (Display & Bedienung): from the start page too, first of all - without
+  // an answer the box goes back to the display before
+  const dm = await api(`${API}/display-profile`)
+  if (dm.ok && dm.body?.test?.running) {
+    notes.unshift(['display', 'Neues Display testen', 'Siehst du ein Bild auf dem Display? Antippen, um es zu bestätigen – ohne Antwort geht die Box nach 3 Minuten zum bisherigen Display zurück.', 'displaysettings'])
   }
   // no password, or the login off: everyone in the home network can set up the box - said every time, it is not closed
   // for good (the parents decide on the page Passwort); with the login on but the well-known default password, that
@@ -6947,6 +6980,196 @@ const RES_PRESETS = [
 const DISPLAY_OFF_STOPS = [0, 1, 2, 5, 10, 15, 20, 30, 45, 60, 90, 120]
 
 // A rotation as tiles: a small screen turned as the display will be (its top marked), the mirrorings flipped
+// The display models (Display & Bedienung › Display-Modell; the ids are the server's and display_profile.sh's): a
+// group, and for some of them the exact model below it
+const DISPLAY_MODELS = [
+  { id: 'official7', label: 'Offizielles 7″ (1. Generation)', sub: '800 × 480 · auch HDMI und ohne Display' },
+  {
+    id: 'td2',
+    label: 'Touch Display 2',
+    sub: '5″ · 7″ · 10″ von Raspberry Pi',
+    tested: true,
+    pick: 'Größe',
+    variants: [
+      ['td2-7', '7″ (720 × 1280)'],
+      ['td2-5', '5″ (720 × 1280)'],
+      ['td2-10', '10,1″ (1200 × 1920)'],
+    ],
+  },
+  { id: 'ws-5', label: 'Waveshare 5″ DSI', sub: '800 × 480' },
+  { id: 'ws-43', label: 'Waveshare 4,3″ DSI', sub: '800 × 480' },
+  {
+    id: 'ws-panel',
+    label: 'Waveshare DSI 7″ bis 12,3″',
+    sub: 'Modell auf der Rückseite oder der Packung',
+    pick: 'Modell',
+    variants: [
+      ['ws-v2-7_0_inch_a', '7,0″ DSI-TOUCH-A (720 × 1280)'],
+      ['ws-v2-7_0_inch_b', '7,0″ DSI-TOUCH-B (720 × 1280)'],
+      ['ws-v2-7_0_inch_c', '7,0″ DSI-TOUCH-C (1024 × 600)'],
+      ['ws-v1-7_0_inchC', '7,0″ DSI LCD (C) (1024 × 600)'],
+      ['ws-v1-7_0_inchH', '7,0″ DSI LCD (H) (1280 × 720)'],
+      ['ws-v1-7_9_inch', '7,9″ DSI LCD (400 × 1280)'],
+      ['ws-v1-8_0_inch', '8,0″ DSI LCD (1280 × 800)'],
+      ['ws-v2-8_0_inch_a', '8,0″ DSI-TOUCH-A (800 × 1280)'],
+      ['ws-v1-8_8_inch', '8,8″ DSI LCD (480 × 1920)'],
+      ['ws-v2-8_8_inch_a', '8,8″ DSI-TOUCH-A (480 × 1920)'],
+      ['ws-v2-9_0_inch_b', '9,0″ DSI-TOUCH-B (720 × 1280)'],
+      ['ws-v1-10_1_inch', '10,1″ DSI LCD (1280 × 800)'],
+      ['ws-v2-10_1_inch_a', '10,1″ DSI-TOUCH-A (800 × 1280)'],
+      ['ws-v2-10_1_inch_b', '10,1″ DSI-TOUCH-B (720 × 1280)'],
+      ['ws-v1-11_9_inch', '11,9″ DSI LCD (320 × 1480)'],
+      ['ws-v2-12_3_inch_a_4lane', '12,3″ DSI-TOUCH-A (720 × 1920, nur Pi 5)'],
+    ],
+  },
+  {
+    id: 'edatec',
+    label: 'EDATEC DSI 7″ oder 10″',
+    sub: '',
+    pick: 'Größe',
+    variants: [
+      ['edatec-7', '7″'],
+      ['edatec-10', '10,1″'],
+    ],
+  },
+  { id: 'custom', label: 'Eigene Einstellung', sub: 'Die App lässt die config.txt so, wie sie ist' },
+]
+const dmGroupOf = (id) => DISPLAY_MODELS.find((g) => g.id === id || g.variants?.some(([v]) => v === id)) ?? DISPLAY_MODELS.at(-1)
+// short, for the badge in the card's head: the model without its resolution
+const dmShort = (id) => dmLabel(id).replace(/ \([^)]*\)$/, '')
+const dmLabel = (id) => {
+  const g = dmGroupOf(id)
+  const v = g.variants?.find(([x]) => x === id)
+  return v ? `${g.label} · ${v[1]}` : g.label
+}
+
+// The card Display-Modell: the model now (preselected from config.txt), or the running test with its countdown
+function displayModelHtml() {
+  const d = disp.dp
+  if (!d) return ''
+  if (d.test?.running) {
+    const before = dmLabel(d.test.previous)
+    return `<div class="dm-test" data-dm-test>
+      <p class="help" style="margin:0">${esc(`${dmLabel(d.test.profile)} ist eingestellt. Siehst du auf dem Display ein Bild?`)}</p>
+      ${d.test.endsAt ? `<div class="dm-count" data-dm-count>…</div><div class="dm-bar"><i data-dm-bar></i></div>` : `<div class="note">${icon('info', 18)}<span>${esc('Die Box startet gerade neu – danach läuft die Zeit.')}</span></div>`}
+      <p class="help" style="margin:0;text-align:center">${esc(`Ohne Antwort kommt danach das bisherige Display (${before}) zurück.`)}</p>
+      <div class="btns"><button class="btn" data-dm-revert>Nein, zurück</button><button class="btn primary" data-dm-keep>Ja, behalten</button></div>
+    </div>`
+  }
+  const sel = disp.dmSel ?? d.current
+  const group = dmGroupOf(sel)
+  const rows = DISPLAY_MODELS.map((g) => {
+    const on = g.id === group.id
+    const sub = g.sub ? `<small>${esc(g.sub)}</small>` : ''
+    const variantSel =
+      on && g.variants
+        ? `<div class="field dm-variant"><label>${esc(g.pick)}</label><select class="input" data-dm-variant>${g.variants.map(([v, l]) => `<option value="${esc(v)}" ${v === sel ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>`
+        : ''
+    return `<button type="button" class="dm-opt" role="radio" aria-checked="${on}" data-dm-group="${esc(g.id)}"><span class="r"></span><span class="lbl"><b>${esc(g.label)}${g.tested ? `<span class="dm-tag">${esc('Getestet')}</span>` : ''}</b>${sub}</span></button>${variantSel}`
+  }).join('')
+  const untested = sel !== d.current && !group.tested && !['official7', 'custom'].includes(group.id)
+  return `<p class="help" style="margin:0 0 6px">${esc('Welches Display am Flachbandkabel (DSI) hängt. Ein falsches Modell lässt das Display dunkel – die Box nimmt es dann nach 3 Minuten selbst zurück.')}</p>
+    <div class="dm-list" role="radiogroup" aria-label="${esc('Display-Modell')}">${rows}</div>
+    ${untested ? `<div class="note warn">${icon('info', 18)}<span>${esc('Noch nicht auf einer MuPiBox getestet – nutzt die Treiber aus dem Raspberry-Pi-Kernel.')}</span></div>` : ''}
+    <div class="btns"><button class="btn primary" data-dm-apply ${sel === d.current || group.id === 'custom' ? 'disabled' : ''}>Übernehmen und neu starten</button></div>`
+}
+
+// The four tiles of a display with KMS: picture and touch turned together (QUER: where it lies as the MuPiBox needs it)
+function kmsRotTiles() {
+  const d = disp.dp
+  const [w, h] = (d.native ?? '').split('x').map(Number)
+  const upright = h > w
+  return `<div class="rot-tiles">${[0, 90, 180, 270]
+    .map((deg) => {
+      const lies = upright ? deg % 180 !== 0 : deg % 180 === 0
+      // (the screen as it then stands: lying or upright, the picture's top up - or down for 180 and 270 degrees)
+      const shape = lies ? '' : 'width:26px;height:40px;'
+      return `<button type="button" class="rot-tile" data-krot="${deg}" aria-pressed="${deg === d.rotation}"><span class="scr" style="${shape}transform:rotate(${deg >= 180 ? 180 : 0}deg)"><i></i><b>F</b></span><small>${deg}°</small>${lies ? `<span class="dm-tag">${esc('Quer')}</span>` : ''}</button>`
+    })
+    .join('')}</div>`
+}
+
+// The countdown of the test (until the box goes back by itself)
+function startDmCountdown(root, page) {
+  clearInterval(disp.dmTimer)
+  const ends = disp.dp?.test?.endsAt
+  if (!ends) return
+  const tick = () => {
+    const el = $('[data-dm-count]', root)
+    if (!el || !el.isConnected) return clearInterval(disp.dmTimer)
+    const left = Math.max(0, Math.round((ends - Date.now()) / 1000))
+    el.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`
+    const bar = $('[data-dm-bar]', root)
+    if (bar) bar.style.width = `${Math.min(100, (left / 180) * 100)}%`
+    if (left === 0) {
+      clearInterval(disp.dmTimer)
+      toast('Keine Antwort – die Box nimmt das Display zurück und startet neu', 'info')
+    }
+  }
+  tick()
+  disp.dmTimer = setInterval(tick, 1000)
+}
+
+function mountDisplayModel(root, page) {
+  for (const b of root.querySelectorAll('[data-dm-group]')) {
+    b.onclick = () => {
+      const g = DISPLAY_MODELS.find((x) => x.id === b.dataset.dmGroup)
+      disp.dmSel = g.variants ? (g.variants.some(([v]) => v === disp.dp.current) ? disp.dp.current : g.variants[0][0]) : g.id
+      renderPage(page, false)
+    }
+  }
+  const variant = $('[data-dm-variant]', root)
+  if (variant)
+    variant.onchange = () => {
+      disp.dmSel = variant.value
+      renderPage(page, false)
+    }
+  const apply = $('[data-dm-apply]', root)
+  if (apply)
+    apply.onclick = async () => {
+      const to = disp.dmSel
+      const text = `Neu: ${dmLabel(to)} · bisher: ${dmLabel(disp.dp.current)}. Die Box startet neu (gut eine Minute). Danach fragen die App und das Display: „Siehst du ein Bild?“ Ohne Antwort stellt die Box nach 3 Minuten das bisherige Display wieder ein und startet noch einmal neu.`
+      if (!(await ask('Display umstellen?', text, 'Umstellen'))) return
+      const r = await api(`${API}/display-profile`, { method: 'POST', body: { profile: to } })
+      if (!r.ok) return toast(r.body?.error === 'test_running' ? 'Ein Test läuft schon – bitte erst beantworten' : 'Das hat nicht geklappt', 'info')
+      disp.dmSel = undefined
+      toast('Die Box startet neu – danach hier oder am Display bestätigen')
+    }
+  const keep = $('[data-dm-keep]', root)
+  if (keep)
+    keep.onclick = async () => {
+      const r = await api(`${API}/display-profile/confirm`, { method: 'POST', body: {} })
+      if (!r.ok || r.body?.ok === false) return toast('Das hat nicht geklappt', 'info')
+      toast(`${dmLabel(disp.dp.test.profile)} bleibt eingestellt`)
+      await loadDisplayModel()
+      renderPage(page, false)
+    }
+  const revert = $('[data-dm-revert]', root)
+  if (revert)
+    revert.onclick = async () => {
+      const r = await api(`${API}/display-profile/revert`, { method: 'POST', body: {} })
+      if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+      toast('Das bisherige Display kommt zurück – die Box startet neu')
+    }
+  for (const b of root.querySelectorAll('[data-krot]')) {
+    b.onclick = async () => {
+      const degrees = Number(b.dataset.krot)
+      if (degrees === disp.dp.rotation) return
+      const r = await api(`${API}/display-rotation`, { method: 'POST', body: { degrees } })
+      if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+      disp.dp.rotation = degrees
+      toast(`Gedreht um ${degrees}° – die Anzeige startet kurz neu`)
+      renderPage(page, false)
+    }
+  }
+  startDmCountdown(root, page)
+}
+
+async function loadDisplayModel() {
+  const r = await api(`${API}/display-profile`)
+  disp.dp = r.ok ? r.body : null
+}
+
 function rotTiles(key, list) {
   const now = state.values.get(key)
   const look = { 'Aus (Standard)': ['0°', 'rotate(0)'], '90°': ['90°', 'rotate(90deg)'], '180°': ['180°', 'rotate(180deg)'], '270°': ['270°', 'rotate(270deg)'], 'Horizontal spiegeln': ['Spiegeln ↔', 'scaleX(-1)'], 'Vertikal spiegeln': ['Spiegeln ↕', 'scaleY(-1)'] }
@@ -6962,7 +7185,7 @@ const rotLabel = (list, v) => list.find(([, x]) => x === String(v))?.[0] ?? list
 const rotValue = (list, label) => list.find(([l]) => l === label)?.[1] ?? '0'
 
 async function loadDisplaySettings() {
-  const [, power] = await Promise.all([loadDisplayOptions(), api(`${API}/power-config`)])
+  const [, power] = await Promise.all([loadDisplayOptions(), api(`${API}/power-config`), loadDisplayModel()])
   const o = disp.opts
   disp.power = power.body ?? {}
   if (o.brightness != null) state.values.set('bright', o.brightness)
@@ -10636,7 +10859,17 @@ const CONTROLLERS = {
       const custom = !RES_PRESETS.some(([, x, y]) => x === Number(state.values.get('resX')) && y === Number(state.values.get('resY')))
       state.values.set('resCustom', custom)
       state.values.set('resPreset', custom ? 'Eigene …' : `${state.values.get('resX')} × ${state.values.get('resY')}`)
+      const dp = disp.dp
       return [
+        ...(dp
+          ? [
+              {
+                title: dp.test?.running ? 'Neues Display testen' : 'Display-Modell',
+                badge: dp.test?.running ? { text: 'Test läuft', kind: 'warn' } : { text: dmShort(dp.current), kind: dp.current === 'custom' ? '' : 'ok' },
+                items: [{ type: 'html', html: displayModelHtml() }],
+              },
+            ]
+          : []),
         {
           title: 'Helligkeit & Ausschalten',
           help: 'Gilt sofort.',
@@ -10656,7 +10889,13 @@ const CONTROLLERS = {
             { type: 'toggle', key: 'ndQuiet', label: 'Auch während der Ruhezeiten', help: 'Zum Beispiel zur Schlafenszeit, auch wenn sie außerhalb der Uhrzeiten liegt.', dep: 'ndOn' },
           ],
         },
-        {
+        dp?.kms
+          ? {
+              title: 'Drehung',
+              help: 'Bild und Touch drehen sich zusammen. Gilt sofort (die Anzeige startet kurz neu), auch für Start- und Ausschaltbild.',
+              items: [{ type: 'html', html: kmsRotTiles() }],
+            }
+          : {
           title: 'Drehung',
           help: 'Gilt nach einem Neustart der Box.',
           items: [
@@ -10668,6 +10907,10 @@ const CONTROLLERS = {
             },
           ],
         },
+        // (a display with KMS: the kiosk takes the panel's own size, turned - see chromium-autostart.sh)
+        ...(dp?.kms
+          ? []
+          : [
         {
           title: 'Auflösung',
           help: 'Die Auflösung deines Displays. Ist sie größer als 800 × 480, wird die Oberfläche passend vergrößert – scharf und im gleichen Aufbau. Das Display startet damit gleich neu.',
@@ -10677,9 +10920,11 @@ const CONTROLLERS = {
             { type: 'buttons', buttons: [['Auflösung übernehmen', 'primary', 'toast:Gespeichert']] },
           ],
         },
+            ]),
       ]
     },
     mount(root, page) {
+      mountDisplayModel(root, page)
       for (const b of root.querySelectorAll('[data-rot-key]')) {
         b.onclick = () => {
           const key = b.dataset.rotKey
@@ -12015,6 +12260,7 @@ async function renderLogin(hasSession = state.loginHasSession ?? false) {
     $('#content').innerHTML = `
     <div class="login">
       <div class="logo">${mupiImg('width="64" height="67"')}</div>
+      <div class="login-brand">${LOGO}<span class="ed-tag" translate="no">CLASSIC</span></div>
       <div class="login-head"><h1>Willkommen zurück</h1>${portals.length > 1 ? '<p class="help">Wohin möchtest du?</p>' : ''}</div>
       <form class="card" id="login-form">
         ${

@@ -70,6 +70,18 @@ rm ~/.config/chromium/Singleton*
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 RES_X=$(/usr/bin/jq -r .chromium.resX ${CONFIG})
 RES_Y=$(/usr/bin/jq -r .chromium.resY ${CONFIG})
+# A display with KMS on the ribbon cable (Touch Display 2, Waveshare, EDATEC - app: Display-Modell): the window is the
+# screen as the X server shows it, turned (Drehung) - the panel says its size, the setting would be a guess
+for c in /sys/class/drm/card*-DSI-*/status; do
+	if [ -e "${c}" ] && [ "$(cat "${c}")" = "connected" ]; then
+		SCREEN=$(xrandr --current 2>/dev/null | sed -n 's/^Screen 0:.* current \([0-9]*\) x \([0-9]*\),.*/\1 \2/p')
+		if [ -n "${SCREEN}" ]; then
+			RES_X=${SCREEN% *}
+			RES_Y=${SCREEN#* }
+		fi
+		break
+	fi
+done
 DEBUG=$(/usr/bin/jq -r .chromium.debug ${CONFIG})
 FORCE_GPU=$(/usr/bin/jq -r .chromium.gpu ${CONFIG})
 SCROLL_ANIMATION=$(/usr/bin/jq -r .chromium.sccrollanimation ${CONFIG})
