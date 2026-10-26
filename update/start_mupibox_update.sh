@@ -49,9 +49,11 @@ started_by_php() {
 # restart.sh of 5.0.13 and later also checks for the unit itself.
 HOLD_MARK='MUPIBOX-UPDATE-HOLD'
 # $1 put in as $2: written next to it, on the card, then renamed - a power cut leaves the old file or the new one,
-# never a cut one (restart.sh is what the box restarts with)
+# never a cut one (restart.sh is what the box restarts with). Always executable: the restart.sh kept right after the
+# update moved its scripts in is not yet (the update makes them executable a step later) - put back as it was, the
+# box's restart button did nothing ("command not found").
 put_atomic() {
-	cp -p "$1" "$2.mupibox-new" && sync "$2.mupibox-new" && mv -f "$2.mupibox-new" "$2" && sync "$(dirname "$2")"
+	cp -p "$1" "$2.mupibox-new" && chmod 755 "$2.mupibox-new" && sync "$2.mupibox-new" && mv -f "$2.mupibox-new" "$2" && sync "$(dirname "$2")"
 }
 hold_restart() {
 	# $1: where the real restart.sh is kept meanwhile
@@ -131,7 +133,7 @@ RC=$?
 # restart.sh back - the one the update installed, or the one before when it stopped earlier (written next to it, on
 # the card, then renamed: see put_atomic in start_mupibox_update.sh)
 if grep -q 'MUPIBOX-UPDATE-HOLD' ${HELD} 2>/dev/null && [ -f ${HD}/restart.sh.held ]; then
-	cp -p ${HD}/restart.sh.held ${HELD}.mupibox-new && sync ${HELD}.mupibox-new && mv -f ${HELD}.mupibox-new ${HELD} && sync /usr/local/bin/mupibox
+	cp -p ${HD}/restart.sh.held ${HELD}.mupibox-new && chmod 755 ${HELD}.mupibox-new && sync ${HELD}.mupibox-new && mv -f ${HELD}.mupibox-new ${HELD} && sync /usr/local/bin/mupibox
 fi
 if [ "${RC}" = "0" ] && [ ! -e /tmp/mupibox-update-nostart ]; then
 	echo "Update finished - the box restarts."
