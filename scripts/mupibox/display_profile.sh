@@ -145,15 +145,23 @@ restore_before() {
 	fi
 	# the test file first, and for sure (on the card): only then the copies - a test file left over with its copies gone
 	# would take the rotation away at the next start without anything to put back
-	end_test || { log "display test: the test file could not be removed - the copies stay"; return 1; }
+	end_test
+	case $? in
+		0) ;;
+		# (removed, only not yet sure on the card: everything is back, so the box restarts all the same - a clean
+		# shutdown writes it; should the file be there after all, that start goes back once more, with the copies)
+		2) log "display test: the removal of the test file is not sure on the card - the copies stay" ;;
+		*) log "display test: the test file could not be removed - the copies stay"; return 1 ;;
+	esac
 	stop_timers
 	return 0
 }
 
 # the test is over: its file removed and that on the card - then its copies (what is left of them does no harm: the next
-# test writes its own)
+# test writes its own). 1: not removed; 2: removed, but not sure on the card (sync failed)
 end_test() {
-	rm -f "${TEST}" && sync "${STATE}" || return 1
+	rm -f "${TEST}" || return 1
+	sync "${STATE}" || return 2
 	rm -f "${BEFORE}" "${STATE}"/rot.*
 	sync "${STATE}"
 	return 0
