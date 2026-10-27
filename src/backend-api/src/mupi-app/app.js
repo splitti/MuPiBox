@@ -7084,7 +7084,16 @@ function kmsRotTiles() {
       const lies = upright ? deg % 180 !== 0 : deg % 180 === 0
       // (the screen as it then stands: lying or upright, the picture's top up - or down for 180 and 270 degrees)
       const shape = lies ? '' : 'width:26px;height:40px;'
-      return `<button type="button" class="rot-tile" data-krot="${deg}" aria-pressed="${deg === d.rotation}"><span class="scr" style="${shape}transform:rotate(${deg >= 180 ? 180 : 0}deg)"><i></i><b>F</b></span><small>${deg}°</small>${lies ? `<span class="dm-tag">${esc('Quer')}</span>` : ''}</button>`
+      return `<button type="button" class="rot-tile" data-krot="${deg}" aria-pressed="${deg === d.rotation && !d.mirror}"><span class="scr" style="${shape}transform:rotate(${deg >= 180 ? 180 : 0}deg)"><i></i><b>F</b></span><small>${deg}°</small>${lies ? `<span class="dm-tag">${esc('Quer')}</span>` : ''}</button>`
+    })
+    .join('')}${[
+    ['x', 'Spiegeln ↔', 'scaleX(-1)'],
+    ['y', 'Spiegeln ↕', 'scaleY(-1)'],
+  ]
+    // (mirrored in the display's own way up - as 0°: upright when the panel is built upright)
+    .map(([m, text, tf]) => {
+      const shape = upright ? 'width:26px;height:40px;' : ''
+      return `<button type="button" class="rot-tile" data-kmirror="${m}" aria-pressed="${d.mirror === m}"><span class="scr" style="${shape}transform:${tf}"><i></i><b>F</b></span><small>${esc(text)}</small></button>`
     })
     .join('')}</div>`
 }
@@ -7154,11 +7163,24 @@ function mountDisplayModel(root, page) {
   for (const b of root.querySelectorAll('[data-krot]')) {
     b.onclick = async () => {
       const degrees = Number(b.dataset.krot)
-      if (degrees === disp.dp.rotation) return
+      if (degrees === disp.dp.rotation && !disp.dp.mirror) return
       const r = await api(`${API}/display-rotation`, { method: 'POST', body: { degrees } })
       if (!r.ok) return toast('Das hat nicht geklappt', 'info')
       disp.dp.rotation = degrees
+      disp.dp.mirror = null
       toast(`Gedreht um ${degrees}° – die Anzeige startet kurz neu`)
+      renderPage(page, false)
+    }
+  }
+  for (const b of root.querySelectorAll('[data-kmirror]')) {
+    b.onclick = async () => {
+      const mirror = b.dataset.kmirror
+      if (mirror === disp.dp.mirror) return
+      const r = await api(`${API}/display-rotation`, { method: 'POST', body: { mirror } })
+      if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+      disp.dp.rotation = 0
+      disp.dp.mirror = mirror
+      toast('Gespiegelt – die Anzeige startet kurz neu')
       renderPage(page, false)
     }
   }

@@ -45,7 +45,7 @@ With **Evening dimming** the display gets darker in the evening and normally bri
 If the display stands upside down or sideways, you rotate the picture. What you see for it depends on the display model:
 
 - **Official 7″ (1st generation):** For a **Display on the HDMI port** you choose off, 90°, 180°, 270°, mirror horizontally or vertically. For a **Display on the ribbon cable (DSI/LCD)** there are (folded) **LCD rotation** and **Display LCD rotation**, each off or 180°. The rotation applies after a restart of the box.
-- **All other models:** four tiles **0°**, **90°**, **180°** and **270°**. Picture and touch turn together, and so do the start, maintenance and goodbye pictures. The display restarts briefly, the box does not. **Landscape** marks the positions in which the MuPiBox stands right – many of these displays are built upright (such as the Touch Display 2), then it is 90° or 270°, depending on how the display is mounted.
+- **All other models:** tiles **0°**, **90°**, **180°** and **270°** as well as **Mirror ↔** (left-right) and **Mirror ↕** (top-bottom) – turned or mirrored, not both. Picture and touch turn or mirror together; when turned, the start, maintenance and goodbye pictures turn too (mirrored, these pictures stay as they are). The display restarts briefly, the box does not. **Landscape** marks the positions in which the MuPiBox stands right – many of these displays are built upright (such as the Touch Display 2), then it is 90° or 270°, depending on how the display is mounted.
 
 ## Resolution
 

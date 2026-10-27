@@ -3,7 +3,8 @@
 # The options for fbv (start, maintenance and goodbye picture) on a display that runs with KMS and is turned (see
 # display_rotation.sh): the framebuffer is not turned by the X server - the pictures came up in the panel's own way up
 # (a Touch Display 2: small and upright in the middle). Turned like the X server, covering the screen (a few percent
-# of the edges cut, nothing stretched). Nothing for the official 7" of the 1st generation (the firmware turns).
+# of the edges cut, nothing stretched). Nothing for the official 7" of the 1st generation (the firmware turns), and
+# nothing for a mirrored display (displayMirror, rotation 0): fbv cannot mirror, the pictures stay as they are.
 #
 #   FBV_OPTS=$(/usr/local/bin/mupibox/fbv_options.sh)
 

@@ -45,7 +45,7 @@ Mit **Abends dunkler** wird das Display abends dunkler und morgens wieder normal
 Steht das Display auf dem Kopf oder quer, drehst du das Bild. Was du dafür siehst, hängt vom Display-Modell ab:
 
 - **Offizielles 7″ (1. Generation):** Für ein **Display am HDMI-Anschluss** wählst du aus, 90°, 180°, 270°, horizontal oder vertikal spiegeln. Für ein **Display am Flachbandkabel (DSI/LCD)** gibt es (zugeklappt) **LCD-Drehung** und **Display-LCD-Drehung**, jeweils aus oder 180°. Die Drehung gilt nach einem Neustart der Box.
-- **Alle anderen Modelle:** vier Kacheln **0°**, **90°**, **180°** und **270°**. Bild und Touch drehen sich zusammen, ebenso das Start-, Wartungs- und Ausschaltbild. Die Anzeige startet kurz neu, die Box nicht. **Quer** markiert die Lagen, in denen die MuPiBox richtig steht – viele dieser Displays sind hochkant gebaut (etwa das Touch Display 2), dann ist es 90° oder 270°, je nachdem, wie das Display eingebaut ist.
+- **Alle anderen Modelle:** Kacheln **0°**, **90°**, **180°** und **270°** sowie **Spiegeln ↔** (links-rechts) und **Spiegeln ↕** (oben-unten) – gedreht oder gespiegelt, nicht beides. Bild und Touch drehen bzw. spiegeln sich zusammen, beim Drehen auch das Start-, Wartungs- und Ausschaltbild (gespiegelt bleiben diese Bilder, wie sie sind). Die Anzeige startet kurz neu, die Box nicht. **Quer** markiert die Lagen, in denen die MuPiBox richtig steht – viele dieser Displays sind hochkant gebaut (etwa das Touch Display 2), dann ist es 90° oder 270°, je nachdem, wie das Display eingebaut ist.
 
 ## Auflösung
 

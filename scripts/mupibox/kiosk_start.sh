@@ -42,6 +42,14 @@ fi
 # and kept the setting - 800 x 480 on a 1280 x 720 panel, scale 1 instead of 1.5). The scale as in chromium-autostart.sh.
 for c in /sys/class/drm/card*-DSI-*/status; do
 	if [ -e "${c}" ] && [ "$(cat "${c}")" = "connected" ]; then
+		# mirrored (app: Drehung, display_rotation.sh): by xrandr - the KMS driver ignores the X server's option for it
+		REFLECT=$(cat /etc/X11/mupibox-reflect 2>/dev/null)
+		case "${REFLECT}" in
+			x | y)
+				OUT=$(basename "$(dirname "${c}")" | sed 's/^card[0-9]*-//')
+				xrandr --output "${OUT}" --reflect "${REFLECT}" 2>/dev/null
+				;;
+		esac
 		SCREEN=$(xrandr --current 2>/dev/null | sed -n 's/^Screen 0:.* current \([0-9]*\) x \([0-9]*\),.*/\1 \2/p')
 		if [ -n "${SCREEN}" ]; then
 			RES_X=${SCREEN% *}

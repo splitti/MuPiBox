@@ -121,6 +121,8 @@ export function registerDisplayProfileRoutes(router: Router, deps: DisplayProfil
       // (its own way up: '720x1280' is upright - turned by 90 or 270 degrees it lies as the MuPiBox needs it)
       native,
       rotation: [0, 90, 180, 270].includes(rotation) ? rotation : 0,
+      // mirrored left-right ('x') or top-bottom ('y') instead of turned; null = not
+      mirror: mb.displayMirror === 'x' || mb.displayMirror === 'y' ? mb.displayMirror : null,
       test: await displayTestState(),
     })
   })
@@ -167,23 +169,28 @@ export function registerDisplayProfileRoutes(router: Router, deps: DisplayProfil
     res.json({ ok: true, rebooting: true })
   })
 
-  /** POST /api/app/display-rotation {degrees} - a display with KMS turned (picture and touch); the kiosk restarts */
+  /**
+   * POST /api/app/display-rotation {degrees} or {mirror: 'x'|'y'} - a display with KMS turned or mirrored (picture and
+   * touch, not both - as display_hdmi_rotate); the kiosk restarts
+   */
   router.post('/display-rotation', requireSession, requireCsrf, async (req, res) => {
-    const degrees = Number((req.body as { degrees?: unknown } | undefined)?.degrees)
-    if (![0, 90, 180, 270].includes(degrees)) {
-      res.status(400).json({ error: 'degrees must be 0, 90, 180 or 270' })
+    const body = (req.body ?? {}) as { degrees?: unknown; mirror?: unknown }
+    const degrees = Number(body.degrees)
+    const mirror = body.mirror === 'x' || body.mirror === 'y' ? body.mirror : null
+    if (!mirror && ![0, 90, 180, 270].includes(degrees)) {
+      res.status(400).json({ error: "degrees must be 0, 90, 180 or 270, or mirror 'x' or 'y'" })
       return
     }
     if (!(await connectedDsi())) {
       res.status(409).json({ error: 'no_kms_display' })
       return
     }
-    const r = await run('sudo', [ROTATION_SH, String(degrees)])
+    const r = await run('sudo', [ROTATION_SH, mirror ? `mirror-${mirror}` : String(degrees)])
     if (!r.ok) {
       res.status(500).json({ error: 'rotation_failed' })
       return
     }
     detached('sudo -i -u dietpi bash -c "setsid nohup /usr/local/bin/mupibox/restart_kiosk.sh >/dev/null 2>&1 < /dev/null &"')
-    res.json({ ok: true, degrees })
+    res.json({ ok: true, degrees: mirror ? 0 : degrees, mirror })
   })
 }
