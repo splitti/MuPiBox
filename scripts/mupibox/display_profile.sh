@@ -109,9 +109,11 @@ clear_rotation() {
 	udevadm control --reload 2>/dev/null
 }
 
-# the timers of the test (its 3 minutes, and tries again of a way back that failed)
+# the timers of the test (its 3 minutes, and tries again of a way back that failed). A timer that is not there (none
+# after a restart) is no failure: systemctl says so with an error, and a successful way back counted as failed - the box
+# then did not restart and stayed on the wrong model.
 stop_timers() {
-	systemctl stop "${TIMER_UNIT}.timer" "${TIMER_UNIT}-retry-*.timer" 2>/dev/null
+	systemctl stop "${TIMER_UNIT}.timer" "${TIMER_UNIT}-retry-*.timer" 2>/dev/null || true
 }
 
 # config.txt, the rotation and the settings of before back (PREVIOUS, PREV_ROT, PREV_MIRROR); the test is set to
@@ -142,6 +144,7 @@ restore_before() {
 	rm -f "${TEST}" "${BEFORE}" "${STATE}"/rot.*
 	sync "${STATE}"
 	stop_timers
+	return 0
 }
 
 # a way back that failed: tried again in a minute (a unit of its own - this one may be the timer's), for this test only
