@@ -105,8 +105,10 @@ set_profile_in_config() {
 # no rotation or mirroring by the X server and no touch matrix (the official 7" turns with the firmware's settings; a
 # new panel starts its own way up)
 clear_rotation() {
-	rm -f "${XROT}" "${TOUCHROT}" "${REFLECT}"
+	local failed=0
+	rm -f "${XROT}" "${TOUCHROT}" "${REFLECT}" || failed=1
 	udevadm control --reload 2>/dev/null
+	return ${failed}
 }
 
 # the timers of the test (its 3 minutes, and tries again of a way back that failed). A timer that is not there (none
@@ -125,7 +127,7 @@ restore_before() {
 	if [ -s "${BEFORE}" ]; then
 		put_atomic "${BEFORE}" "${BOOT_CONFIG}" || { log "display test: config.txt could not be put back"; return 1; }
 	fi
-	clear_rotation
+	clear_rotation || failed=1
 	if [ -f "${STATE}/rot.xorg" ]; then
 		{ mkdir -p "$(dirname "${XROT}")" && put_atomic "${STATE}/rot.xorg" "${XROT}"; } || failed=1
 	fi
@@ -141,15 +143,28 @@ restore_before() {
 		log "display test: the rotation or the settings of before could not be put back - the copies stay"
 		return 1
 	fi
-	rm -f "${TEST}" "${BEFORE}" "${STATE}"/rot.*
-	sync "${STATE}"
+	# the test file first, and for sure (on the card): only then the copies - a test file left over with its copies gone
+	# would take the rotation away at the next start without anything to put back
+	end_test || { log "display test: the test file could not be removed - the copies stay"; return 1; }
 	stop_timers
 	return 0
 }
 
-# a way back that failed: tried again in a minute (a unit of its own - this one may be the timer's), for this test only
+# the test is over: its file removed and that on the card - then its copies (what is left of them does no harm: the next
+# test writes its own)
+end_test() {
+	rm -f "${TEST}" && sync "${STATE}" || return 1
+	rm -f "${BEFORE}" "${STATE}"/rot.*
+	sync "${STATE}"
+	return 0
+}
+
+# a way back that failed: tried again in a minute (a unit of its own - this one may be the timer's), for this test only.
+# Without a timer (systemd-run failed) the test stays as it is: its next start goes back (state reverting).
 retry_later() {
-	systemd-run --unit="${TIMER_UNIT}-retry-$(date +%s%N)" --on-active=${RETRY_S} --collect --quiet /bin/bash "$0" timeout "${TEST_ID}" 2>/dev/null
+	log "display test: the way back failed - again in ${RETRY_S} s"
+	systemd-run --unit="${TIMER_UNIT}-retry-$(date +%s%N)" --on-active=${RETRY_S} --collect --quiet /bin/bash "$0" timeout "${TEST_ID}" 2>/dev/null \
+		|| log "display test: no new try could be planned - the next start of the box goes back"
 }
 
 exec 9> /run/lock/mupibox-display-profile.lock
@@ -173,14 +188,17 @@ case "${1:-}" in
 		if [ -f "${REFLECT}" ]; then put_atomic "${REFLECT}" "${STATE}/rot.reflect" || fail_copies "the mirroring could not be kept"; fi
 		PREV_ROT=$(/usr/bin/jq -r '.mupibox.displayRotation // 0' "${CONFIG}" 2>/dev/null)
 		PREV_MIRROR=$(/usr/bin/jq -r '.mupibox.displayMirror // ""' "${CONFIG}" 2>/dev/null)
-		write_test prepare || fail_copies "the test could not be noted"
+		if ! write_test prepare; then
+			# (it may be on the card all the same - renamed, and only the sync failed: its copies stay with it then, its
+			# next start goes back with them)
+			rm -f "${TEST}" "${TEST}.new" && sync "${STATE}" && fail_copies "the test could not be noted"
+			echo "the test could not be noted - the next start of the box goes back"
+			exit 1
+		fi
 		# from here on a failure puts back what was before (or tries it again a minute later)
 		rollback() {
 			log "display model ${PREVIOUS} -> ${PROFILE}: $1 - back to the model before"
-			if ! restore_before; then
-				log "display test: the way back failed - again in ${RETRY_S} s"
-				retry_later
-			fi
+			restore_before || retry_later
 			exit 1
 		}
 		# KMS: DietPi's own switch (it writes or removes the vc4-kms-v3d line); the firmware's display: off
@@ -203,7 +221,7 @@ case "${1:-}" in
 		fi
 		[ -s "${NEW}" ] || { rm -f "${NEW}"; rollback "config.txt came out empty"; }
 		{ sync "${NEW}" && mv -f "${NEW}" "${BOOT_CONFIG}" && sync "$(dirname "${BOOT_CONFIG}")"; } || { rm -f "${NEW}"; rollback "config.txt could not be written"; }
-		clear_rotation
+		clear_rotation || rollback "the rotation could not be removed"
 		set_profile_in_config "${PROFILE}" 0 "" || rollback "the model could not be noted in the settings"
 		write_test ready || rollback "the test could not be noted"
 		log "display model ${PREVIOUS} -> ${PROFILE} (${OVERLAY:-firmware}): test after the restart"
@@ -223,7 +241,9 @@ case "${1:-}" in
 		read_test
 		write_test ready "$(date +%s)" || { log "display test: the start could not be noted - back to the model before"; exec "$0" revert; }
 		stop_timers
-		systemd-run --unit=${TIMER_UNIT} --on-active=${WAIT_S} --collect --quiet /bin/bash "$0" timeout "${TEST_ID}"
+		# (without the timer nothing would go back by itself: back at once instead)
+		systemd-run --unit=${TIMER_UNIT} --on-active=${WAIT_S} --collect --quiet /bin/bash "$0" timeout "${TEST_ID}" \
+			|| { log "display test: no timer for the answer - back to the model before"; exec "$0" revert; }
 		log "display test: ${WAIT_S} s for an answer"
 		;;
 	confirm)
@@ -234,9 +254,9 @@ case "${1:-}" in
 			echo "the box has not started with the new model yet, or goes back"
 			exit 4
 		fi
+		# (the test file goes first: if it cannot, the confirmation failed - and its timer still runs)
+		end_test || { echo "the confirmation could not be noted"; exit 1; }
 		stop_timers
-		rm -f "${TEST}" "${BEFORE}" "${STATE}"/rot.*
-		sync "${STATE}"
 		log "display test: confirmed, the model stays"
 		;;
 	timeout | revert)
@@ -249,7 +269,6 @@ case "${1:-}" in
 		systemctl stop ${TIMER_UNIT}.timer 2>/dev/null
 		if ! restore_before; then
 			# (no restart: a box that starts again on the half way back would only try once more and restart again)
-			log "display test: the way back failed - again in ${RETRY_S} s"
 			retry_later
 			exit 1
 		fi
