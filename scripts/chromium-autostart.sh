@@ -70,18 +70,8 @@ rm ~/.config/chromium/Singleton*
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 RES_X=$(/usr/bin/jq -r .chromium.resX ${CONFIG})
 RES_Y=$(/usr/bin/jq -r .chromium.resY ${CONFIG})
-# A display with KMS on the ribbon cable (Touch Display 2, Waveshare, EDATEC - app: Display-Modell): the window is the
-# screen as the X server shows it, turned (Drehung) - the panel says its size, the setting would be a guess
-for c in /sys/class/drm/card*-DSI-*/status; do
-	if [ -e "${c}" ] && [ "$(cat "${c}")" = "connected" ]; then
-		SCREEN=$(xrandr --current 2>/dev/null | sed -n 's/^Screen 0:.* current \([0-9]*\) x \([0-9]*\),.*/\1 \2/p')
-		if [ -n "${SCREEN}" ]; then
-			RES_X=${SCREEN% *}
-			RES_Y=${SCREEN#* }
-		fi
-		break
-	fi
-done
+# (a display with KMS on the ribbon cable - Touch Display 2, Waveshare, EDATEC: kiosk_start.sh sets the window and the
+# scale by the screen once the X server runs)
 DEBUG=$(/usr/bin/jq -r .chromium.debug ${CONFIG})
 FORCE_GPU=$(/usr/bin/jq -r .chromium.gpu ${CONFIG})
 SCROLL_ANIMATION=$(/usr/bin/jq -r .chromium.sccrollanimation ${CONFIG})
@@ -115,7 +105,7 @@ CHROMIUM_OPTS="${CHROMIUM_OPTS} --window-size=${RES_X:-1280},${RES_Y:-720} --win
 # A display larger than the design size 800 x 480 (e.g. the Raspberry Pi Touch Display 2, 1280 x 720): the page is drawn
 # larger by the smaller of the two factors (1280 x 720: 1.5, the page is then 853 x 480) - sharp, and the themes keep
 # their layout. The same as uiScale() in the backend, which makes the covers that much larger. (LC_ALL=C: a German
-# locale would print 1,50.)
+# locale would print 1,50.) The same formula in kiosk_start.sh, for a display with KMS.
 UI_SCALE=$(LC_ALL=C awk -v x="${RES_X}" -v y="${RES_Y}" 'BEGIN { if (x + 0 <= 0 || y + 0 <= 0) { print 1; exit } s = x / 800; if (y / 480 < s) s = y / 480; if (s > 3) s = 3; if (s > 1) printf "%.2f", s; else print 1 }')
 if [ "${UI_SCALE}" != "1" ]; then
 	CHROMIUM_OPTS="${CHROMIUM_OPTS} --force-device-scale-factor=${UI_SCALE}"

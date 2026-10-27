@@ -7053,7 +7053,7 @@ function displayModelHtml() {
       <p class="help" style="margin:0">${esc(`${dmLabel(d.test.profile)} ist eingestellt. Siehst du auf dem Display ein Bild?`)}</p>
       ${d.test.endsAt ? `<div class="dm-count" data-dm-count>…</div><div class="dm-bar"><i data-dm-bar></i></div>` : `<div class="note">${icon('info', 18)}<span>${esc('Die Box startet gerade neu – danach läuft die Zeit.')}</span></div>`}
       <p class="help" style="margin:0;text-align:center">${esc(`Ohne Antwort kommt danach das bisherige Display (${before}) zurück.`)}</p>
-      <div class="btns"><button class="btn" data-dm-revert>Nein, zurück</button><button class="btn primary" data-dm-keep>Ja, behalten</button></div>
+      <div class="btns"><button class="btn" data-dm-revert>Nein, zurück</button><button class="btn primary" data-dm-keep ${d.test.endsAt ? '' : 'disabled'}>Ja, behalten</button></div>
     </div>`
   }
   const sel = disp.dmSel ?? d.current

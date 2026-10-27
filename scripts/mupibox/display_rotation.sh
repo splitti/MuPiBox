@@ -9,6 +9,7 @@
 
 set -u
 CONFIG=/etc/mupibox/mupiboxconfig.json
+CONFIG_LOCK=/tmp/.mupiboxconfig.lock
 XROT=/etc/X11/xorg.conf.d/90-mupibox-rotate.conf
 TOUCHROT=/etc/udev/rules.d/99-mupibox-touch-rotate.rules
 
@@ -32,6 +33,11 @@ for c in /sys/class/drm/card*-DSI-*; do
 done
 [ -n "${OUTPUT}" ] || { echo "no display with KMS on the ribbon cable (DSI) - it turns with the firmware's settings"; exit 3; }
 
+# one change of the display at a time (the lock of display_profile.sh): two quick taps wrote the picture of one and the
+# touch of the other
+exec 9> /run/lock/mupibox-display-profile.lock
+flock -w 60 9 || { echo "busy"; exit 1; }
+
 # $1 (content) into $2: next to it, on the card, renamed
 write_file() {
 	mkdir -p "$(dirname "$2")" && printf '%s\n' "$1" > "$2.mupibox-new" && sync "$2.mupibox-new" && mv -f "$2.mupibox-new" "$2"
@@ -51,11 +57,17 @@ fi
 udevadm control --reload 2>/dev/null
 udevadm trigger --subsystem-match=input --action=change 2>/dev/null
 
-tmp=$(mktemp /etc/mupibox/.cfg.XXXXXX) || exit 1
-if /usr/bin/jq --argjson r "${DEG}" '.mupibox.displayRotation = $r' "${CONFIG}" > "${tmp}" && [ -s "${tmp}" ]; then
-	chown --reference="${CONFIG}" "${tmp}" && chmod --reference="${CONFIG}" "${tmp}" && mv -f "${tmp}" "${CONFIG}"
-else
+# the rotation in the settings, under the lock the server and the admin interface take for the file (a setting saved
+# meanwhile is not overwritten)
+[ -e "${CONFIG_LOCK}" ] || { : > "${CONFIG_LOCK}"; chmod 666 "${CONFIG_LOCK}"; }
+(
+	flock -w 15 8 || exit 1
+	tmp=$(mktemp /etc/mupibox/.cfg.XXXXXX) || exit 1
+	if /usr/bin/jq --argjson r "${DEG}" '.mupibox.displayRotation = $r' "${CONFIG}" > "${tmp}" && [ -s "${tmp}" ] &&
+		chown --reference="${CONFIG}" "${tmp}" && chmod --reference="${CONFIG}" "${tmp}" && mv -f "${tmp}" "${CONFIG}"; then
+		exit 0
+	fi
 	rm -f "${tmp}"
 	exit 1
-fi
+) 8<"${CONFIG_LOCK}" || exit 1
 logger -t mupibox-display "rotation ${DEG} degrees (${OUTPUT})"

@@ -91,16 +91,19 @@ export interface DisplayTest {
   endsAt?: number | null
 }
 
-/** The test of a new model: waiting for its answer (endsAt: when the box goes back; null before the restart) */
+/** The test of a new model: waiting for its answer (endsAt: when the box goes back; null before the restart with it) */
 export async function displayTestState(): Promise<DisplayTest> {
   const text = await fsp.readFile(TEST_FILE, 'utf8').catch(() => '')
   if (!text) return { running: false }
   const get = (k: string) => new RegExp(`^${k}=(.*)$`, 'm').exec(text)?.[1]?.trim() ?? ''
-  const booted = Number(get('booted'))
+  // (state=prepare: the change is being written, or was cut off - the next start goes back)
+  const booted = get('state') === 'ready' ? Number(get('booted')) : 0
   return { running: true, profile: get('profile'), previous: get('previous'), endsAt: booted > 0 ? (booted + TEST_SECONDS) * 1000 : null }
 }
 
+/** The picture of the new model is there - only after the start with it (before, the old display still shows one) */
 export async function confirmDisplayTest(): Promise<boolean> {
+  if (!(await displayTestState()).endsAt) return false
   return (await run('sudo', [PROFILE_SH, 'confirm'])).ok
 }
 
