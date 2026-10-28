@@ -8852,6 +8852,12 @@ const SPEECH_LEVELS = [
   [0.7, 'mittel'],
   [1, 'wie die Musik'],
 ]
+// names read out while something plays: what the music does meanwhile (speech.ts playName)
+const NAMES_MUSIC_HELP = {
+  duck: 'Die Musik wird kurz leiser, damit man den Namen versteht.',
+  pause: 'Die Musik hält für den Namen an und läuft danach weiter. Beim schnellen Wischen stockt sie dann öfter.',
+  over: 'Der Name läuft über die Musik, die bleibt, wie sie ist.',
+}
 const fmtMB = (bytes) => `${Math.max(1, Math.round(bytes / 1e6)).toLocaleString(LOCALE)} MB`
 
 async function loadSpeech() {
@@ -8960,6 +8966,16 @@ function speechTop() {
       <div class="field-pick"><input class="input" id="sp-tpl-new" maxlength="300" dir="auto" placeholder="${esc('Neue Vorlage, z. B. „Oma ist da!“')}" ${NO_PW_MANAGER}><button type="button" class="btn" id="sp-tpl-add">${icon('plus', 16)}Hinzufügen</button></div>
       ${sw('sp-gong', 'Gong vorher', 'Ein kurzer Ton, damit das Kind aufhorcht.', c.parents.gong)}
       ${sw('sp-pause', 'Wiedergabe anhalten und danach weiter', 'Sonst wird die Musik während der Durchsage nur leiser.', c.parents.pause)}</section>`,
+    `<section class="card" data-col="2" data-card="namen-vorlesen"><div class="card-head"><h2>Vorgelesene Namen</h2></div>
+      ${sw('sp-autoread', 'Namen vorlesen, wenn das Cover stehen bleibt', disp.theme?.stage === false ? 'Nur mit der Cover-Flow-Ansicht – die ist gerade aus (Aussehen › Ansicht).' : 'Beim Wischen, sobald ein Cover in der Mitte stehen bleibt.', disp.theme?.stageAutoRead === true)}
+      <div class="field"><label>Musik währenddessen</label><div class="seg" id="sp-names-music">${[
+        ['duck', 'Leiser'],
+        ['pause', 'Anhalten'],
+        ['over', 'Unverändert'],
+      ]
+        .map(([v, l]) => `<button aria-pressed="${(c.names?.music ?? 'duck') === v}" data-v="${v}">${esc(l)}</button>`)
+        .join('')}</div>
+        <small>${esc(NAMES_MUSIC_HELP[c.names?.music ?? 'duck'])}</small></div></section>`,
   ]
 }
 
@@ -9004,6 +9020,25 @@ function mountSpeech(root, page) {
   seg('sp-fallback', (v) => speechSave({ fallback: v }).then(again))
   seg('sp-rest-min', (v) => speechSave({ rest: { minutes: Number(v) } }))
   seg('sp-level', (v) => speechSave({ level: Number(v) }))
+  // names read out: the music meanwhile (the line under it follows the choice)
+  seg('sp-names-music', async (v) => {
+    if (!(await speechSave({ names: { music: v } }))) return again()
+    d.config.names = { ...(d.config.names ?? {}), music: v }
+    const small = $('#sp-names-music', root)?.parentElement?.querySelector('small')
+    if (small) small.textContent = tr(NAMES_MUSIC_HELP[v] ?? '')
+  })
+  // (reading names out when a cover stops: a setting of the cover flow stage, saved where it was before - theme-stage)
+  const autoRead = $('#sp-autoread', root)
+  if (autoRead)
+    autoRead.onchange = async () => {
+      const r = await api(`${API}/theme-stage`, { method: 'POST', body: { autoRead: autoRead.checked } })
+      if (!r.ok) {
+        autoRead.checked = !autoRead.checked
+        return toast('Nicht gespeichert', 'info')
+      }
+      if (disp.theme) disp.theme.stageAutoRead = autoRead.checked
+      toast(autoRead.checked ? 'Vorlesen an' : 'Vorlesen aus')
+    }
   // switches (and what belongs to them)
   for (const [id, body] of [
     ['sp-rest', (on) => ({ rest: { on } })],
@@ -10992,7 +11027,6 @@ const CONTROLLERS = {
     async load() {
       await Promise.all([loadTheme(), loadDisplayOptions()])
       state.values.set('stage', disp.theme.stage === true)
-      state.values.set('tts', disp.theme.stageAutoRead === true)
       state.values.set('names', disp.opts.coverflowShowNames)
       state.values.set('scrollbar', disp.opts.hideScrollbar ? 'Ausblenden' : disp.opts.scrollbarStyle === 'full' ? 'Durchgehend' : 'Standard')
       state.values.set('headerBand', disp.theme.headerBand !== false)
@@ -11012,8 +11046,6 @@ const CONTROLLERS = {
           .map((it) => {
           const cur = themeLabel(disp.theme?.current ?? '')
           if (it.key === 'stage') return { ...it, help: `Große Cover in der Mitte, für die Kinder-Themes${isKidsTheme(disp.theme?.current) ? '' : ` – das aktive Theme (${cur}) nutzt sie nicht`}.` }
-          // (reading names out works only with the cover flow: shown under it while it is on)
-          if (it.key === 'tts') return { ...it, dep: 'stage' }
           // (the scroll bar is below the covers in every view - the stage's, the cover flow's and the three side by side)
           if (it.key === 'scrollbar') return { ...it, helpId: 'sb-help', help: SCROLLBAR_HELP[state.values.get('scrollbar')] ?? SCROLLBAR_HELP.Standard }
           if (it.key === 'names') return { ...it, help: disp.theme?.current === 'coverflow' ? 'Nur beim Theme „coverflow“.' : `Nur beim Theme „coverflow“ – aktiv ist gerade „${cur}“.` }
@@ -11027,10 +11059,6 @@ const CONTROLLERS = {
       if (key === 'stage') {
         const r = await api(`${API}/theme-stage`, { method: 'POST', body: { stage: v } })
         return toast(r.ok ? (v ? 'Cover-Flow-Ansicht an' : 'Cover-Flow-Ansicht aus') : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
-      }
-      if (key === 'tts') {
-        const r = await api(`${API}/theme-stage`, { method: 'POST', body: { autoRead: v } })
-        return toast(r.ok ? (v ? 'Vorlesen an' : 'Vorlesen aus') : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
       }
       if (key === 'headerBand' || key === 'playerPanel' || key === 'fullscreenGestures') {
         const r = await api(`${API}/theme-stage`, { method: 'POST', body: { [key]: v } })
@@ -11506,7 +11534,8 @@ const CONTROLLERS = {
     },
   },
   bluetooth: { load: loadBluetooth, top: btTop, sections: () => [], mount: mountBluetooth },
-  sprachausgabe: { load: loadSpeech, top: speechTop, sections: () => [], mount: mountSpeech },
+  // (the theme too: reading names out depends on the cover flow stage, see "Vorgelesene Namen")
+  sprachausgabe: { load: () => Promise.all([loadSpeech(), loadTheme()]), top: speechTop, sections: () => [], mount: mountSpeech },
   akku: {
     load: loadBattery,
     top: batteryTop,

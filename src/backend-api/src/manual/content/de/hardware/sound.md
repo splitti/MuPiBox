@@ -69,6 +69,11 @@ Für Kopfhörer und Lautsprecher per Bluetooth und für die Kopfhörerbuchse gib
 
 Die Box kann Namen vorlesen und Ansagen sprechen. Stimme und Sprache stellst du unter **Einstellungen › Audio › Sprachausgabe** ein.
 
+Unter **Vorgelesene Namen** auf derselben Seite:
+
+- **Namen vorlesen, wenn das Cover stehen bleibt**: beim Wischen, sobald ein Cover in der Mitte stehen bleibt – nur mit der Cover-Flow-Ansicht (**Aussehen › Ansicht**),
+- **Musik währenddessen**: **Leiser** (Standard) – die Musik wird kurz leiser, damit man den Namen versteht, und kommt nach dem letzten Namen wieder; **Anhalten** – die Musik hält für den Namen an und läuft kurz nach dem letzten weiter (beim schnellen Wischen stockt sie dann öfter); **Unverändert** – der Name läuft über die Musik.
+
 ## Beim Ausschalten
 
 Beim Ausschalten spielt die Box einen Abschiedston. Läuft zu diesem Zeitpunkt noch Musik, wird sie zuerst gestoppt, damit sie nicht kurz lauter wird, bevor der Ton kommt.

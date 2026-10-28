@@ -1873,7 +1873,7 @@
    "area": "einstellungen",
    "parent": "g-aussehen",
    "title": "Ansicht",
-   "description": "Cover Flow, Namen vorlesen, Scrollleiste",
+   "description": "Cover Flow, Namen, Scrollleiste",
    "icon": "grid",
    "sections": [
     {
@@ -1886,13 +1886,6 @@
        "key": "stage",
        "default": true,
        "help": "Großes Cover in der Mitte, Nachbarn kleiner."
-      },
-      {
-       "type": "toggle",
-       "label": "Namen vorlesen, wenn das Cover stehen bleibt",
-       "key": "tts",
-       "default": false,
-       "help": "Liest den Namen vor, wenn beim Wischen ein Cover in der Mitte stehen bleibt. Stimme und Sprache: Audio › Sprachausgabe."
       },
       {
        "type": "toggle",
@@ -4616,7 +4609,7 @@
        "type": "nav",
        "label": "Ansicht",
        "target": "ansicht",
-       "subtitle": "Cover Flow, Namen vorlesen, Scrollleiste"
+       "subtitle": "Cover Flow, Namen, Scrollleiste"
       },
       {
        "type": "nav",
@@ -5522,8 +5515,13 @@
   },
   {
    "l": "Namen beim Anhalten vorlesen",
-   "where": "Aussehen › Ansicht",
-   "id": "ansicht"
+   "where": "Audio › Sprachausgabe",
+   "id": "sprachausgabe"
+  },
+  {
+   "l": "Musik beim Vorlesen der Namen",
+   "where": "Audio › Sprachausgabe",
+   "id": "sprachausgabe"
   },
   {
    "l": "Start- und Wartungsbilder",

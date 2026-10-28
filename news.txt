@@ -23,7 +23,7 @@
 <b>Display</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
-<li id='linews' class='linews'>Names read out while something plays (the cover stops, or a tap on it): the name replaced the music - the mini player showed a string of letters and numbers (the sound's file name) and went away a few seconds later, nothing played any more. The name is now read next to the music, which goes on.</li>
+<li id='linews' class='linews'>Names read out while something plays (the cover stops, or a tap on it): the name replaced the music - the mini player showed a string of letters and numbers (the sound's file name) and went away a few seconds later, nothing played any more. The name is now read next to the music, which goes on - quieter for a moment by default, so the name can be understood. New in the app under Audio › Speech output › Names read aloud: the music meanwhile quieter, paused (it goes on a little after the last name) or unchanged; the switch for reading names out when a cover stops moved there too (it was under Appearance › View).</li>
 <li id='linews' class='linews'>After an announcement of the parents (app, Telegram) the display opened the big player, away from where the child was looking for something. It stays where it is now; the music goes on as before.</li>
 </ul>
 <b>App</b>

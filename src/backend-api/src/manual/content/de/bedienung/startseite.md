@@ -24,11 +24,12 @@ Beim Hinzufügen eines Inhalts legst du fest, in welche Kategorie er kommt ([Inh
 Unter **Einstellungen › Aussehen › Ansicht** stellst du ein:
 
 - **Cover-Flow-Ansicht (Bühne)**: an (Standard) oder aus, für alle Themes außer coverflow,
-- **Namen vorlesen, wenn das Cover stehen bleibt**: nur mit der Cover-Flow-Ansicht (Stimme und Sprache: **Audio › Sprachausgabe**),
 - **Ordner- und Albumnamen anzeigen**: nur beim Theme coverflow,
 - **Scrollleiste unter den Covern**: **Standard** (wie im Theme vorgesehen), **Durchgehend** (über die ganze Breite und dicker, mit großen Fingern leicht zu treffen) oder **Ausblenden**. An der Leiste kannst du ziehen, auch bei der Cover-Flow-Ansicht: Die Cover laufen mit, beim Loslassen rastet das nächste ein,
 - **Kopfzeile mit Hintergrund** und **Player mit Hintergrundfläche**: nur bei den älteren schlichten Themes (etwa blue, green, red, dark). Ausgeschaltet liegt die Kopfzeile ohne farbiges Band auf dem Hintergrund, und die Knöpfe des Players stehen ohne Fläche da, in den Farben der Kopfzeile,
 - **Vollbild per Wischgeste**: nur beim Theme coverflow, siehe unten.
+
+Ob die Box den Namen vorliest, wenn ein Cover in der Mitte stehen bleibt, und was die Musik dabei macht, stellst du unter **Einstellungen › Audio › Sprachausgabe › Vorgelesene Namen** ein ([Sound](../hardware/sound.md#sprachausgabe)). Das Vorlesen geht nur mit der Cover-Flow-Ansicht.
 
 ## Vollbild beim Theme coverflow
 

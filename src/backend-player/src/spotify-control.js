@@ -2650,12 +2650,29 @@ function playFile(playedFile) {
   playNameSound(`/home/dietpi/MuPiBox/tts_files/${playedTitel}`)
 }
 
-// A name read out: by an mpv of its own over PulseAudio (as the backend's announcements, speech.ts), next to the
-// music. It went through the music's player: what played was replaced by the name - the mini player showed the sound's
-// file name, and when the name was over nothing played any more. A name while the one before is still read (quick
-// scrolling) cuts that one off.
-let nameSound = null
+// A name read out, next to the music: by the backend, which makes the music quieter or pauses it as set (Sprachausgabe
+// › Vorgelesene Namen, speech.ts playName); without an answer from it, by an mpv of its own over the music. It went
+// through the music's player: what played was replaced by the name - the mini player showed the sound's file name, and
+// when the name was over nothing played any more.
 function playNameSound(file) {
+  fetch('http://127.0.0.1:8200/api/app/speech/name', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ file }),
+    signal: AbortSignal.timeout(3000),
+  })
+    .then((r) => {
+      if (!r.ok) throw new Error(`backend ${r.status}`)
+    })
+    .catch((err) => {
+      log.debug(`${now()}: [Spotify Control] name read here (backend: ${err?.message || err})`)
+      playNameSoundHere(file)
+    })
+}
+
+// (a name while the one before is still read - quick scrolling - cuts that one off)
+let nameSound = null
+function playNameSoundHere(file) {
   if (nameSound) {
     try {
       nameSound.kill()
