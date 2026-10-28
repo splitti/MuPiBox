@@ -860,26 +860,33 @@ export async function playName(getConfig: () => unknown, file: string): Promise<
   if (seq !== names.seq) return
   // the first name of a row: the music quieter or paused, once (two names at once both made it quieter, the second
   // took the lowered volume for the one to go back to)
-  if (mode !== 'over' && !names.restore && names.pauseToken === null) {
-    if (!names.starting) {
-      names.starting = (async () => {
-        if (mode === 'pause') {
-          // (the player pauses only what plays - asked and done in one step there; the number is kept whatever it
-          // answered, the going on after the row asks with it and does nothing when it was not that pause)
-          const token = ++pauseNumber
-          names.pauseToken = token
-          if (await speechPause(token)) await new Promise((r) => setTimeout(r, 300))
-        } else if (await playingNow()) names.restore = await duck()
-      })()
-        .catch(() => undefined)
-        .finally(() => {
-          names.starting = null
-        })
-    }
-    await names.starting
+  if (mode !== 'over' && !names.restore && names.pauseToken === null && !names.starting) {
+    names.starting = (async () => {
+      if (mode === 'pause') {
+        // (the player pauses only what plays - asked and done in one step there; the number is kept whatever it
+        // answered, the going on after the row asks with it and does nothing when it was not that pause)
+        const token = ++pauseNumber
+        names.pauseToken = token
+        if (await speechPause(token)) await new Promise((r) => setTimeout(r, 300))
+      } else if (await playingNow()) names.restore = await duck()
+    })()
+      .catch(() => undefined)
+      .finally(() => {
+        names.starting = null
+        // (the row may have ended meanwhile - a short name over before the player answered: its end waited for this,
+        // and is made now; a name still waiting to be read starts after this and takes the timer back)
+        if (!names.child && !names.endTimer) names.endTimer = setTimeout(() => void endNameRow(), NAME_END_MS[mode])
+      })
   }
+  // (every name waits for the music to be made quieter or paused - also one that came after the number was set: it
+  // played at once, and the row's end was lost while the player's answer was outstanding)
+  if (names.starting) await names.starting
   // (a newer name came meanwhile: it is read instead)
   if (seq !== names.seq) return
+  if (names.endTimer) {
+    clearTimeout(names.endTimer)
+    names.endTimer = null
+  }
   const child = spawn('mpv', ['--no-video', '--really-quiet', '--no-config', '--ao=pulse,alsa', '--volume=100', file], { stdio: 'ignore' })
   names.child = child
   const done = () => {
