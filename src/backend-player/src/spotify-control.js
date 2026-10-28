@@ -2633,9 +2633,7 @@ async function sayName(text) {
     const b = await r.json()
     if (b.off) return
     if (b.file) {
-      writeplayerstatePlay()
-      player.play(b.file)
-      player.setVolume(volumeStart)
+      playNameSound(b.file)
       return
     }
   } catch (err) {
@@ -2648,12 +2646,31 @@ async function sayName(text) {
 
 function playFile(playedFile) {
   const playedTitel = `${playedFile}.mp3`
-  log.debug(`${now()}: [Spotify Control] Starting currentMeta.playing:${playedTitel}`)
-  //currentMeta.playing = true;
-  writeplayerstatePlay()
-  player.play(`/home/dietpi/MuPiBox/tts_files/${playedTitel}`)
-  player.setVolume(volumeStart)
-  log.debug(`${now()}: /home/dietpi/MuPiBox/tts_files/${playedTitel}`)
+  log.debug(`${now()}: [Spotify Control] Name read: ${playedTitel}`)
+  playNameSound(`/home/dietpi/MuPiBox/tts_files/${playedTitel}`)
+}
+
+// A name read out: by an mpv of its own over PulseAudio (as the backend's announcements, speech.ts), next to the
+// music. It went through the music's player: what played was replaced by the name - the mini player showed the sound's
+// file name, and when the name was over nothing played any more. A name while the one before is still read (quick
+// scrolling) cuts that one off.
+let nameSound = null
+function playNameSound(file) {
+  if (nameSound) {
+    try {
+      nameSound.kill()
+    } catch {
+      /* gone already */
+    }
+  }
+  const child = require('node:child_process').spawn('mpv', ['--no-video', '--really-quiet', '--no-config', '--ao=pulse,alsa', `--volume=${volumeStart}`, file], {
+    stdio: 'ignore',
+  })
+  nameSound = child
+  child.on('error', (e) => log.debug(`${now()}: [Spotify Control] Name not read: ${e?.message || e}`))
+  child.on('exit', () => {
+    if (nameSound === child) nameSound = null
+  })
 }
 
 // A radio link may be a playlist (m3u / pls) instead of the stream itself: its FIRST stream is played (see
@@ -3571,14 +3588,19 @@ app.use((req, res) => {
     pathname = u.pathname
     const src = u.searchParams.get('src')
     if (src && /^[a-z0-9_-]{1,20}$/i.test(src)) triggerSource = src
+    // (an announcement pauses the music and goes on afterwards: no start - the display jumped to the big player after
+    // every announcement, away from where the child was looking for something)
+    if (triggerSource === 'speech') triggerSource = null
     // (only a picture address of the box's own API or of the web - it lands in an <img> on the display)
     const cover = u.searchParams.get('cover') ?? ''
     if (cover.length < 2000 && /^(\/api\/|https?:\/\/)/.test(cover)) triggerCover = cover
   } catch {
     /* malformed — bleibt 'box', pathname bleibt req.url */
   }
-  currentMeta.triggerSource = triggerSource
-  currentMeta.triggerAt = Date.now()
+  if (triggerSource !== null) {
+    currentMeta.triggerSource = triggerSource
+    currentMeta.triggerAt = Date.now()
+  }
 
   const command = path.parse(pathname)
   log.debug(`${now()}: [Spotify Control]name: ${command.name}`)

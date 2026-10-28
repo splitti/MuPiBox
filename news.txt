@@ -20,6 +20,12 @@
 <li id='linews' class='linews'>Spotify, own playlists: Search on Spotify now shows "My playlists" - the account's own playlists and the ones it follows, also private ones the search does not find, own first. Marked when Smart-Sync brings one anyway, and when it is Spotify's own (its mixes often do not play for apps like the box's). Gentle with Spotify: asked when the page opens (pages of 50, through the box's pacing and its Spotify block) and kept 5 minutes.</li>
 <li id='linews' class='linews'>Own playlists: TIDAL's search does not find playlists made by users. Search on TIDAL now shows "My playlists" - the account's own playlists and the ones it saved, own first - and takes a TIDAL link (Share › Copy link in TIDAL) to a playlist or an album someone sent. They are added like any other playlist; a playlist changed on TIDAL plays in its new state.</li>
 </ul>
+<b>Display</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Names read out while something plays (the cover stops, or a tap on it): the name replaced the music - the mini player showed a string of letters and numbers (the sound's file name) and went away a few seconds later, nothing played any more. The name is now read next to the music, which goes on.</li>
+<li id='linews' class='linews'>After an announcement of the parents (app, Telegram) the display opened the big player, away from where the child was looking for something. It stays where it is now; the music goes on as before.</li>
+</ul>
 <b>App</b>
 </ul>
 <ul id='ulnews' class='ulnews'>

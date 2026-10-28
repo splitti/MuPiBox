@@ -718,7 +718,9 @@ async function playingNow(): Promise<boolean> {
     return false
   }
 }
-const player = (action: 'pause' | 'play') => fetch(`http://127.0.0.1:5005/${action}?src=eltern`, { signal: AbortSignal.timeout(3000) }).catch(() => undefined)
+// (src=speech: the player takes the pause and the going on of an announcement for no start - with src=eltern the display
+// followed it to the big player after every announcement, away from where the child was looking for something)
+const player = (action: 'pause' | 'play') => fetch(`http://127.0.0.1:5005/${action}?src=speech`, { signal: AbortSignal.timeout(3000) }).catch(() => undefined)
 
 // The other sounds quieter while the box speaks (PulseAudio's streams), and back
 async function duck(): Promise<() => Promise<void>> {
