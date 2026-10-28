@@ -198,8 +198,9 @@ def pd_contract(valid, vbus):
         pd_state.update(value=None, plugged=False)
         return None
     if not pd_state["plugged"]:
-        # (just plugged in: nothing known of this supply yet)
-        pd_state.update(value=None, plugged=True, at=0.0)
+        # (just plugged in: nothing known of this supply yet - and the failed tries with the one before do not count, the
+        # new one is asked every 8 s again)
+        pd_state.update(value=None, plugged=True, at=0.0, fails=0)
     every = PD_EVERY_S if pd_state["value"] is not None else (PD_FIRST_EVERY_S if pd_state["fails"] < 4 else PD_GIVE_UP_EVERY_S)
     now = time.monotonic()
     if now - pd_state["at"] >= every:
