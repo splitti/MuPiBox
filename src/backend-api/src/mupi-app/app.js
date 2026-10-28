@@ -7707,6 +7707,15 @@ const batteryCharging = (h) => Number.isFinite(h?.Ibat) && h.Ibat > 50
 // The charge goes on but no current flows just now: the chip reports "Done" now and then on a weak input, far below its
 // limit, and the estimate does not take it (Charge_Phase stays the one of the charge) - "vollständig geladen" was wrong
 const batteryChargePaused = (h) => !batteryCharging(h) && ['precharge', 'cc', 'cv', 'topoff'].includes(h?.Charge_Phase) && Number.isFinite(h?.Vbus) && h.Vbus > 4000
+// The power supply's USB-PD contract (mupihat.py, tps25730.py): what the MuPiHAT agreed on with it - only with a
+// supply plugged in and the contract read twice the same; else no row at all (a bare "USB 12 V" read as odd)
+function pdRow(h) {
+  const mv = h?.PD_Voltage_mV
+  const ma = h?.PD_Current_mA
+  if (!Number.isFinite(mv) || !Number.isFinite(ma) || mv <= 0 || ma <= 0) return ''
+  const num = (x, d) => x.toLocaleString(LOCALE, { maximumFractionDigits: d })
+  return `<div><dt>Netzteil (USB-PD)</dt><dd>${esc(`${num(mv / 1000, 1)} V · bis ${num(ma / 1000, 2)} A (${num((mv * ma) / 1e6, 0)} W)`)}</dd></div>`
+}
 // full: as the estimate says, when the HAT service has one (Charge_Phase), else as the chip says
 const batteryFull = (h) => (h?.Charge_Phase ? h.Charge_Phase === 'done' : /termination|done/i.test(h?.Charger_Status ?? ''))
 // (the box saw it for 10 minutes: /api/mupihat ChargeProblemSince, see checkCharging in server.ts)
@@ -7729,7 +7738,7 @@ function batteryTop() {
   if (noBattery(h)) {
     return [
       `<section class="card"><h2>Akku-Stand</h2><div class="bat-now"><div class="bat-pct">Netzbetrieb</div><small>${esc(NO_BATTERY_TEXT)}</small></div>
-      <dl class="kv"><div><dt>USB-Spannung</dt><dd>${volt(h.Vbus)}</dd></div><div><dt>Temperatur Lade-Chip</dt><dd>${Number.isFinite(h.Temp) ? `${h.Temp.toLocaleString(LOCALE)} °C` : '–'}</dd></div></dl></section>`,
+      <dl class="kv"><div><dt>USB-Spannung</dt><dd>${volt(h.Vbus)}</dd></div>${pdRow(h)}<div><dt>Temperatur Lade-Chip</dt><dd>${Number.isFinite(h.Temp) ? `${h.Temp.toLocaleString(LOCALE)} °C` : '–'}</dd></div></dl></section>`,
     ]
   }
   let pct = h.Bat_Percent
@@ -7788,7 +7797,7 @@ function batteryTop() {
            <div class="btns"><button class="btn" id="hat-reboot">Box neu starten</button></div>`
         : ''
     }<div class="bat-now"><div class="bat-pct">${Number.isFinite(pct) ? `${pct} %` : '–'}</div><small>${esc([health, state, charging && etaText ? (etaMin < 5 ? etaText : `voll in etwa ${etaText}`) : ''].filter(Boolean).join(' · '))}</small>${chargeNote ? `<small class="help">${esc(chargeNote)}</small>` : ''}${startNote ? `<div class="note warn">${icon('info', 18)}<span>${esc(startNote)}</span></div>` : ''}</div>
-      <dl class="kv"><div><dt>Akku-Spannung</dt><dd>${v(h.Vbat)}</dd></div><div><dt>USB-Spannung</dt><dd>${v(h.Vbus)}</dd></div>
+      <dl class="kv"><div><dt>Akku-Spannung</dt><dd>${v(h.Vbat)}</dd></div><div><dt>USB-Spannung</dt><dd>${v(h.Vbus)}</dd></div>${pdRow(h)}
         <div><dt>Akku-Strom</dt><dd>${Number.isFinite(h.Ibat) ? `${h.Ibat.toLocaleString(LOCALE)} mA` : '–'}</dd></div><div><dt>Temperatur Lade-Chip</dt><dd>${Number.isFinite(h.Temp) ? `${h.Temp.toLocaleString(LOCALE)} °C` : '–'}</dd></div>
         <div><dt>Ladegerät</dt><dd>${esc(status)}</dd></div>${charging ? `<div><dt>Voll in etwa</dt><dd>${esc(etaText || (Number.isFinite(h.Bat_Capacity_mAh) ? 'lässt sich gerade nicht schätzen' : 'Kapazität des Akkus unbekannt'))}</dd></div>` : ''}</dl></section>`,
     `<section class="card"><h2>Verlauf (24 h)</h2>${

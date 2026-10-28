@@ -37,6 +37,7 @@ from datetime import datetime
 from flask import Flask, render_template, jsonify
 from threading import Thread, Lock
 from mupihat_bq25792 import bq25792
+import tps25730
 
 app = Flask(__name__)
 
@@ -180,6 +181,40 @@ def check_charger():
     return not unresolved
 
 
+# The USB-PD contract of the power supply (tps25730.py, the app's "Netzteil (USB-PD)"): only while the charger sees a
+# USB voltage (the PD chip is powered from USB-C and does not answer without it). Asked again every 30 s - it changes
+# only with another supply -, right after plugging in every 8 s until it is known; a HAT without the chip (or one that
+# does not answer) is asked only every 5 minutes after a few tries. A failed read keeps the value known for this supply.
+PD_EVERY_S = 30
+PD_FIRST_EVERY_S = 8
+PD_GIVE_UP_EVERY_S = 300
+pd_state = {"at": 0.0, "value": None, "plugged": False, "fails": 0}
+
+
+def pd_contract(valid, vbus):
+    """The power supply's PD contract ({"mv", "ma", ...}) or None. Called under i2c_lock."""
+    plugged = bool(valid) and isinstance(vbus, (int, float)) and vbus >= 4500
+    if not plugged:
+        pd_state.update(value=None, plugged=False)
+        return None
+    if not pd_state["plugged"]:
+        # (just plugged in: nothing known of this supply yet)
+        pd_state.update(value=None, plugged=True, at=0.0)
+    every = PD_EVERY_S if pd_state["value"] is not None else (PD_FIRST_EVERY_S if pd_state["fails"] < 4 else PD_GIVE_UP_EVERY_S)
+    now = time.monotonic()
+    if now - pd_state["at"] >= every:
+        pd_state["at"] = now
+        try:
+            value = tps25730.read_contract(hat.bq)
+        except Exception:
+            value = None
+        if value is not None:
+            pd_state.update(value=value, fails=0)
+        else:
+            pd_state["fails"] += 1
+    return pd_state["value"]
+
+
 def periodic_json_dump():
     """Periodically writes the register values to a JSON file."""
     global json_flag, json_file
@@ -217,6 +252,11 @@ def periodic_json_dump():
                     # mupihat_automation.sh, Telegram)
                     if not valid:
                         snapshot["Bat_Stat"] = "UNKNOWN"
+                    # the power supply's USB-PD contract (none without a supply, or not known: left out)
+                    pd = pd_contract(valid, snapshot.get("Vbus"))
+                    if pd:
+                        snapshot["PD_Voltage_mV"] = pd["mv"]
+                        snapshot["PD_Current_mA"] = pd["ma"]
                 if log_flag:
                     log_register_values()
         except Exception as e:

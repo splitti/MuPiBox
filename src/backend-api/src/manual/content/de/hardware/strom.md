@@ -8,6 +8,8 @@ Unter **Einstellungen › Akku & Strom** findest du alles zur Stromversorgung.
 
 Beim Laden zeigt die Spannung zu viel an, weil das Ladegerät den Akku über seine Ruhespannung hebt. Die Box rechnet deshalb beim Laden mit der Menge, die hineingeht, ausgehend vom Stand vor dem Einstecken, und zeigt dazu **voll in etwa …**. Auch kurz nach dem Laden, wenn die Spannung noch erhöht ist, zählt sie weiter, erst danach wieder nach der Spannung. Die Zeit ist eine Schätzung: Spielt die Box gleichzeitig, bekommt der Akku weniger Strom ab, und mit einem schwachen 5-V-Netzteil lädt er deutlich langsamer.
 
+Steckt ein Netzteil mit **USB-PD** (Power Delivery) am MuPiHAT, zeigt die Seite zusätzlich **Netzteil (USB-PD)**, etwa „12 V · bis 2,25 A (27 W)“: die Stufe, auf die sich der MuPiHAT mit dem Netzteil geeinigt hat. Er nimmt höchstens 12 V. Ohne Netzteil oder mit einem Netzteil ohne USB-PD fehlt die Zeile. Der Pi 3 und 4 lesen den Chip dafür nicht immer fehlerfrei; die Box zeigt deshalb nur Werte, die sie zweimal gleich gelesen hat.
+
 ## MuPiHAT und Akku-Profil
 
 Der **MuPiHAT** ist eine Platine mit Akku-Verwaltung, die auf den Raspberry Pi gesteckt wird. Unter **MuPiHAT & Akku-Profil** stellst du ein:
