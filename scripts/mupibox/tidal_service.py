@@ -2,8 +2,9 @@
 # TIDAL for the box (unofficial: python-tidal, "tidalapi", signs in the way TIDAL's own apps do - TIDAL's developer
 # platform gives other apps 30-second previews only). A small service on the box itself (127.0.0.1:5011) that the
 # app's server asks: sign in with a code (link.tidal.com, the TIDAL password never comes to the box), the state of
-# the sign-in, sign out; searching (albums, artists, playlists), an artist's albums, the tracks of an album or a
-# playlist - and /stream/<track>, which the player's mpv plays: it sends mpv on to the track's address at TIDAL, asked
+# the sign-in, sign out; searching (albums, artists, playlists), the account's own and kept playlists (/mine), an
+# artist's albums, the tracks of an album or a playlist - and /stream/<track>, which the player's mpv plays: it sends
+# mpv on to the track's address at TIDAL, asked
 # for at that moment (they run out after a while). Only plain streams: one TIDAL sends encrypted (DRM) is refused,
 # the box does not decrypt anything.
 #
@@ -19,7 +20,7 @@ import os
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urljoin, urlparse
 
 import requests
 import tidalapi
@@ -421,6 +422,40 @@ def paged(fetch, most=1000, step=100):
     return out[:most]
 
 
+def my_playlists():
+    """The playlists of the account signed in: its own and the ones it keeps (favourites) - TIDAL's search does not
+    find playlists made by users. Its own first (own: made by this account).
+    Asked as TIDAL's apps do (my-collection: own and kept ones in one list, its top folder), page by page with the
+    cursor TIDAL hands out: tidalapi's own calls took 12-15 s for 76 playlists (playlistsAndFavoritePlaylists, users/…/
+    playlists), and its paging of this list by offset gave the first 50 again and again (TIDAL ignores the offset)."""
+    s = ready()
+    me = str(getattr(s.user, "id", "") or "")
+    url = urljoin(s.config.api_v2_location, "my-collection/playlists/folders")
+    params = {"folderId": "root", "offset": 0, "limit": 50, "includeOnly": "PLAYLIST", "order": "DATE", "orderDirection": "DESC"}
+    entries = []
+    cursor = None
+    for _ in range(20):  # (at most 1000)
+        page = s.request.request("GET", url, params={**params, **({"cursor": cursor} if cursor else {})}).json()
+        part = page.get("items") or []
+        entries.extend(part)
+        cursor = page.get("cursor")
+        if not cursor or not part:
+            break
+    renewed()
+    items = [s.parse_playlist(e["data"]) for e in entries if e.get("itemType") == "PLAYLIST" and isinstance(e.get("data"), dict)]
+    seen = set()
+    out = []
+    for p in items:
+        if not isinstance(p, tidalapi.Playlist) or str(p.id) in seen:
+            continue
+        seen.add(str(p.id))
+        item = playlist_json(p)
+        item["own"] = bool(me) and str(getattr(getattr(p, "creator", None), "id", "") or "") == me
+        out.append(item)
+    out.sort(key=lambda x: not x["own"])
+    return {"playlists": out}
+
+
 def artist_albums(artist_id):
     s = ready()
     artist = s.artist(artist_id)
@@ -540,6 +575,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(400, {"error": "no_query"})
                 limit = max(1, min(50, int(q.get("limit", "20") or 20)))
                 return self._send(200, search(text, limit))
+            if url.path == "/mine":
+                return self._send(200, my_playlists())
             if len(parts) == 3 and parts[0] == "artist" and parts[2] == "albums" and parts[1].isdigit():
                 return self._send(200, narrowed(artist_albums(parts[1]), q))
             if url.path == "/tracks" and q.get("kind") in ("album", "playlist") and q.get("id"):

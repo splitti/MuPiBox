@@ -22,6 +22,13 @@ Unter **Bibliothek › Hinzufügen › Auf TIDAL suchen** suchst du nach Hörspi
 - Ein **Album** oder eine **Playlist** antippen, die Kategorie wählen (Hörbuch/Hörspiel, Musik oder Radio & Podcasts) und **Hinzufügen**.
 - Ein **Künstler** zeigt seine Alben, EPs und Singles zum einzelnen Hinzufügen; Suchfeld, **Alle**, **Alben**, **EPs & Singles** und die **Reihenfolge** helfen bei vielen Alben. **Ganzen Künstler hinzufügen** legt einen Eintrag für alle seine Alben an: Box und App zeigen ihn als Ordner mit allen Alben, auch mit solchen, die später erscheinen. **Zurück zur Suche** führt zur Trefferliste.
 
+Eigene Playlists findet die TIDAL-Suche nicht. Dafür gibt es auf derselben Seite:
+
+- **Meine Playlists**: deine eigenen Playlists und die, die du dir bei TIDAL gemerkt hast – eigene zuerst. Antippen und hinzufügen wie oben. Playlists, die du in TIDAL in einen Ordner gelegt hast, stehen nicht in der Liste; die fügst du über ihren Link hinzu.
+- **TIDAL-Link**: eine Playlist oder ein Album, das dir jemand geschickt hat. In TIDAL unter **Teilen › Link kopieren** den Link holen, einfügen und **Link öffnen**. Eine private Playlist eines anderen Kontos kann TIDAL dabei nicht öffnen.
+
+Ändert sich eine Playlist bei TIDAL, spielt die Box beim nächsten Start den neuen Stand.
+
 TIDAL führt manche Alben mehrfach (in verschiedenen Qualitäten); die Box zeigt jedes nur einmal.
 
 Bei einem ganzen Künstler stellst du in der **Bibliothek** (Eintrag antippen) unter **Folgen und Alben** einen Bereich ein, **Folge von** und **Folge bis**: „Folge“ ist die Position nach Erscheinungsdatum, 1 ist das älteste Album. Einzelne Alben schaltest du dort mit ihrem Schalter ab. **Speichern** übernimmt beides; Box und App zeigen dann nur diese Alben.

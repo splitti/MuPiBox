@@ -22,6 +22,13 @@ Under **Library › Add › Search on TIDAL** you search for audiobooks, albums,
 - Tap an **album** or a **playlist**, choose the category (Audiobook, Music or Radio & podcasts) and tap **Add**.
 - An **artist** shows their albums, EPs and singles to add one by one; a search field, **All**, **Albums**, **EPs & singles** and the **Order** help with many albums. **Add the whole artist** creates one entry for all of their albums: the box and the app show it as a folder with all albums, including ones released later. **Back to search** returns to the results.
 
+TIDAL's search does not find your own playlists. For them the same page has:
+
+- **My playlists**: your own playlists and the ones you saved on TIDAL – your own first. Tap one and add it as above. Playlists you put into a folder in TIDAL are not in the list; add those through their link.
+- **TIDAL link**: a playlist or an album someone sent you. In TIDAL, get the link under **Share › Copy link**, paste it and tap **Open link**. TIDAL cannot open a private playlist of another account this way.
+
+When a playlist changes on TIDAL, the box plays its new state the next time it starts it.
+
 TIDAL lists some albums several times (in different qualities); the box shows each one once.
 
 For a whole artist, set a range in the **Library** (tap the entry) under **Episodes and albums**, **Episode from** and **Episode to**: “episode” is the position by release date, 1 is the oldest album. Switch off single albums there with their switch. **Save** applies both; the box and the app then show only these albums.

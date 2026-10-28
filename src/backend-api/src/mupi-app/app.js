@@ -4182,7 +4182,8 @@ async function openRadioStation(s) {
 
 // the last search (type: what of it is shown), and an artist opened from it (its albums, with the way back); the
 // category is chosen when adding (addSheet) - the one chosen last starts the next sheet, as on Spotify (search.cat)
-const tds = { q: '', type: 'Alle', result: null, artist: null, busy: false, have: new Set() }
+// (mine: the account's own and kept playlists - TIDAL's search does not find playlists made by users)
+const tds = { q: '', type: 'Alle', result: null, artist: null, busy: false, have: new Set(), mine: null, link: '' }
 
 function tidalSearchTop() {
   if (!svc.tidal) {
@@ -4199,7 +4200,79 @@ function tidalSearchTop() {
       <div class="btns"><button class="btn primary" id="tds-go">Suchen</button></div>
     </section>`,
     `<div id="tds-results" class="wide-stack"></div>`,
+    `<section class="card wide">
+      <h2>${esc('Meine Playlists')}</h2>
+      <p class="help" style="margin:0">${esc('Deine eigenen Playlists und die, die du dir bei TIDAL gemerkt hast – die Suche findet sie nicht.')}</p>
+      <div class="rows" id="tds-mine"></div>
+    </section>`,
+    `<section class="card wide">
+      <h2>${esc('TIDAL-Link')}</h2>
+      <p class="help" style="margin:0">${esc('Eine Playlist oder ein Album, das dir jemand geschickt hat: den Link einfügen (in TIDAL unter Teilen › Link kopieren).')}</p>
+      <div class="search">${icon('link')}<input class="input" id="tds-link" type="url" inputmode="url" placeholder="https://tidal.com/playlist/…" autocomplete="off" value="${esc(tds.link)}"></div>
+      <div class="btns"><button class="btn" id="tds-link-go">${esc('Link öffnen')}</button></div>
+    </section>`,
   ]
+}
+
+// A TIDAL link (tidal.com, listen.tidal.com, also …/browse/…) to a playlist (its uuid) or an album (digits)
+function tidalLinkOf(text) {
+  const m = /(?:^|\/\/|\.)tidal\.com\/(?:browse\/)?(playlist|album)\/([0-9a-fA-F-]{36}|\d{1,15})(?=[/?#]|$)/.exec(String(text).trim())
+  if (!m) return null
+  const kind = m[1]
+  const id = m[2]
+  if (kind === 'album' ? !/^\d+$/.test(id) : !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null
+  return { kind, id }
+}
+
+async function openTidalLink() {
+  const link = tidalLinkOf(tds.link)
+  if (!link) return toast('Das ist kein Link zu einer TIDAL-Playlist oder einem Album', 'info')
+  const btn = $('#tds-link-go')
+  if (btn) btn.disabled = true
+  const [r, have] = await Promise.all([api(`${API}/tidal/item/${link.kind}/${encodeURIComponent(link.id)}`), libraryHave('tidal')])
+  if (btn) btn.disabled = false
+  tds.have = have
+  if (!r.ok) return toast(r.status === 404 ? 'TIDAL kennt diesen Link nicht – ist die Playlist privat oder gelöscht?' : tidalFailText(r), 'info')
+  openTidalItem({ ...r.body, kind: link.kind })
+}
+
+// "Meine Playlists": the account's own first, then the ones it keeps
+async function loadTidalMine() {
+  const el = $('#tds-mine')
+  if (!el) return
+  if (!tds.mine) el.innerHTML = `<div class="loading"><p>${esc('Lade …')}</p></div>`
+  const [r, have] = await Promise.all([api(`${API}/tidal/mine`), libraryHave('tidal')])
+  tds.have = have
+  if (!el.isConnected) return
+  if (!r.ok) {
+    el.innerHTML = `<p class="help" style="margin:0">${esc(tidalFailText(r))}</p>`
+    return
+  }
+  tds.mine = r.body?.playlists ?? []
+  drawTidalMine()
+}
+
+function drawTidalMine() {
+  const el = $('#tds-mine')
+  if (!el || !tds.mine) return
+  if (!tds.mine.length) {
+    el.innerHTML = `<p class="help" style="margin:0">${esc('In deinem TIDAL-Konto sind noch keine Playlists.')}</p>`
+    return
+  }
+  // (an account can have dozens: the first few, the rest on a tap)
+  const shown = tds.mineAll ? tds.mine : tds.mine.slice(0, 8)
+  el.innerHTML =
+    shown
+      .map((x, i) => resultRow({ ...tidalRow(x), s: [x.own ? 'Eigene Playlist' : 'Gemerkt', x.tracks ? `${x.tracks} Titel` : ''].filter(Boolean).join(' · ') }, i, 'mine', tds.have))
+      .join('') + (shown.length < tds.mine.length ? `<div class="btns"><button class="btn" id="tds-mine-all">${esc(`Alle ${tds.mine.length} zeigen`)}</button></div>` : '')
+  for (const img of el.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+  for (const b of el.querySelectorAll('[data-list]')) b.onclick = () => openTidalItem(tds.mine[Number(b.dataset.i)])
+  const all = $('#tds-mine-all', el)
+  if (all)
+    all.onclick = () => {
+      tds.mineAll = true
+      drawTidalMine()
+    }
 }
 
 // Why the box's TIDAL service could not answer
@@ -4331,6 +4404,7 @@ async function openTidalItem(x) {
       search.cat = category
       tds.have.add(`${kind}:${x.id}`)
       drawTidal()
+      drawTidalMine()
       toast(`Hinzugefügt: ${x.name}`)
       libChanged()
       lib.items = null
@@ -4509,6 +4583,9 @@ async function addLink(page) {
           'info',
         )
       Object.assign(body, { type: 'spotify', query: url, artist: label })
+    } else if (/(^|\/\/|\.)tidal\.com\//i.test(url)) {
+      // (a TIDAL link has its own place: the search page lists its playlists and opens links)
+      return toast(svc.tidal ? 'TIDAL-Links fügst du unter Auf TIDAL suchen › TIDAL-Link ein' : 'TIDAL ist ausgeschaltet – einschalten unter Einstellungen › Dienste › TIDAL', 'info')
     } else if (type === 'Spotify-Link') {
       if (!url.startsWith('https://open.spotify.com/')) return toast('Spotify-Links beginnen mit https://open.spotify.com/', 'info')
       const kinds = [['playlist', 'playlistid', 'playlist'], ['artist', 'artistid', 'artist'], ['album', 'id', 'album'], ['show', 'showid', 'show'], ['audiobook', 'audiobookid', 'audiobook']]
@@ -10620,6 +10697,13 @@ const CONTROLLERS = {
         drawTidal()
       }
       if (tds.artist || tds.result) drawTidal()
+      const link = $('#tds-link', root)
+      link.addEventListener('input', () => (tds.link = link.value))
+      link.addEventListener('keydown', (e) => e.key === 'Enter' && openTidalLink())
+      $('#tds-link-go', root).onclick = openTidalLink
+      // (shown at once from the last time, then asked anew: a playlist made since comes in)
+      drawTidalMine()
+      loadTidalMine()
     },
   },
   radiosuche: {

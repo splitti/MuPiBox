@@ -97,6 +97,29 @@ export function registerTidalRoutes(router: Router, deps: TidalDeps): void {
     relay(await service('GET', `/search?q=${encodeURIComponent(q)}&limit=20`, 20000), res)
   })
 
+  /** GET /api/app/tidal/mine - the account's own playlists and the ones it keeps (TIDAL's search does not find them) */
+  router.get('/tidal/mine', requireSession, async (_req, res) => {
+    if (!enabled()) return void res.status(409).json({ error: 'tidal_off' })
+    relay(await service('GET', '/mine', 30000), res)
+  })
+
+  /**
+   * GET /api/app/tidal/item/:kind/:id - an album or a playlist by its id (a TIDAL link pasted in the app): its name,
+   * cover and number of tracks, without the list itself
+   */
+  router.get('/tidal/item/:kind/:id', requireSession, async (req, res) => {
+    if (!enabled()) return void res.status(409).json({ error: 'tidal_off' })
+    const kind = String(req.params.kind)
+    const id = String(req.params.id)
+    // (an album: digits; a playlist: its uuid)
+    if (!((kind === 'album' && /^\d{1,15}$/.test(id)) || (kind === 'playlist' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)))) {
+      return void res.status(400).json({ error: 'bad_id' })
+    }
+    const r = await service('GET', `/tracks?kind=${kind}&id=${encodeURIComponent(id)}`, 30000)
+    if (r.ok) delete r.body.list
+    relay(r, res)
+  })
+
   /** GET /api/app/tidal/artist/:id/albums - an artist's albums, EPs and singles */
   router.get('/tidal/artist/:id/albums', requireSession, async (req, res) => {
     if (!enabled()) return void res.status(409).json({ error: 'tidal_off' })
