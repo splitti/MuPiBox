@@ -805,26 +805,26 @@ const names: {
   // the music made quieter / paused for this row (what puts it back), the way there while it is made, and the way
   // back while it is made (a new row waits for it: it read the volume half restored and kept that one)
   restore: (() => Promise<void>) | null
-  paused: boolean
-  // the player's last command when the row paused it (its /local triggerAt): it goes on only if none came since -
-  // a pause from the display, the app or Telegram meanwhile is kept
-  pausedAt: number | null
+  // the player's pause of this row (its token, see spotify-control.js /speechpause): it goes on with it only while no
+  // other command came - the player decides that itself, a pause from the display, the app or Telegram is kept
+  pauseToken: number | null
   starting: Promise<void> | null
   ending: Promise<void> | null
   endTimer: NodeJS.Timeout | null
-} = { child: null, seq: 0, restore: null, paused: false, pausedAt: null, starting: null, ending: null, endTimer: null }
+} = { child: null, seq: 0, restore: null, pauseToken: null, starting: null, ending: null, endTimer: null }
 
-// The player's last command (none: null) - its pauses and goings on of announcements and the names it reads out do not
-// count (spotify-control.js: src=speech, say/)
-async function lastPlayerCommand(): Promise<number | null> {
+// The player's pause for names, under a number of the row's own (kept even when the player's answer gets lost - the
+// player goes on with that number only if it paused with it): whether it paused (false: nothing played, or not known)
+let pauseNumber = Date.now()
+async function speechPause(token: number): Promise<boolean> {
   try {
-    const r = await fetch('http://127.0.0.1:5005/local', { signal: AbortSignal.timeout(3000) })
-    const at = ((await r.json()) as { triggerAt?: unknown }).triggerAt
-    return typeof at === 'number' ? at : null
+    const r = await fetch(`http://127.0.0.1:5005/speechpause?token=${token}`, { signal: AbortSignal.timeout(3000) })
+    return ((await r.json()) as { paused?: unknown }).paused === true
   } catch {
-    return null
+    return false
   }
 }
+const speechResume = (token: number) => fetch(`http://127.0.0.1:5005/speechresume?token=${token}`, { signal: AbortSignal.timeout(3000) }).catch(() => undefined)
 
 async function endNameRow(): Promise<void> {
   names.endTimer = null
@@ -832,15 +832,10 @@ async function endNameRow(): Promise<void> {
   names.ending = (async () => {
     try {
       if (names.restore) await names.restore().catch(() => undefined)
-      if (names.paused) {
-        // (not known - the player did not answer: on all the same, rather than leaving the music paused for good)
-        const since = await lastPlayerCommand()
-        if (since === null || since === names.pausedAt) await player('play')
-      }
+      if (names.pauseToken !== null) await speechResume(names.pauseToken)
     } finally {
       names.restore = null
-      names.paused = false
-      names.pausedAt = null
+      names.pauseToken = null
     }
   })().finally(() => {
     names.ending = null
@@ -865,16 +860,16 @@ export async function playName(getConfig: () => unknown, file: string): Promise<
   if (seq !== names.seq) return
   // the first name of a row: the music quieter or paused, once (two names at once both made it quieter, the second
   // took the lowered volume for the one to go back to)
-  if (mode !== 'over' && !names.restore && !names.paused) {
+  if (mode !== 'over' && !names.restore && names.pauseToken === null) {
     if (!names.starting) {
       names.starting = (async () => {
-        if (!(await playingNow())) return
         if (mode === 'pause') {
-          await player('pause')
-          names.paused = true
-          names.pausedAt = await lastPlayerCommand()
-          await new Promise((r) => setTimeout(r, 300))
-        } else names.restore = await duck()
+          // (the player pauses only what plays - asked and done in one step there; the number is kept whatever it
+          // answered, the going on after the row asks with it and does nothing when it was not that pause)
+          const token = ++pauseNumber
+          names.pauseToken = token
+          if (await speechPause(token)) await new Promise((r) => setTimeout(r, 300))
+        } else if (await playingNow()) names.restore = await duck()
       })()
         .catch(() => undefined)
         .finally(() => {

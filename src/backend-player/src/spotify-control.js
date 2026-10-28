@@ -3593,6 +3593,31 @@ app.get('/tidal/artist/:id/albums', async (req, res) => {
 
 /*sonos-kids-controller sends commands via http get and uses path names for encoding*/
 /*commands are as defined in sonos-kids-controller and mapped spotify calls*/
+// The pause for names read out (speech.ts playName, "Anhalten"): the backend pauses what plays for a row of names and
+// lets it go on after the last one - only if it is still its pause. Asked and done here in one step (the backend
+// checked the last command first and sent play afterwards: a pause from the display in between was undone). Any other
+// command (display, app, Telegram) takes the pause over; names read out and announcements do not (see the command
+// handler below). token: which pause - the backend's own number for it (it knows it even when this answer gets lost),
+// 0 = none of the backend's.
+let speechPauseToken = 0
+app.get('/speechpause', (req, res) => {
+  const token = Number(req.query.token)
+  if (!Number.isSafeInteger(token) || token <= 0) return res.status(400).json({ paused: false })
+  if (!isActuallyPlaying()) return res.json({ paused: false })
+  pause()
+  speechPauseToken = token
+  res.json({ paused: true })
+})
+app.get('/speechresume', (req, res) => {
+  const token = Number(req.query.token)
+  if (!token || token !== speechPauseToken) return res.json({ resumed: false })
+  speechPauseToken = 0
+  // (playtime over or a quiet time began meanwhile: it stays paused, as a play would be refused)
+  if (isPlaybackBlocked()) return res.json({ resumed: false, blocked: true })
+  play()
+  res.json({ resumed: true })
+})
+
 app.use((req, res) => {
   // Phase 19 Stufe B: Quelle aus optionalem ?src=... Query lesen.
   // path.parse() ignoriert Query nicht — parsen wir vorher mit URL().
@@ -3608,9 +3633,9 @@ app.use((req, res) => {
     // (an announcement pauses the music and goes on afterwards: no start - the display jumped to the big player after
     // every announcement, away from where the child was looking for something)
     if (triggerSource === 'speech') triggerSource = null
-    // (a name read out is no command either: the backend goes on after a row of names only if no command came meanwhile
-    // - speech.ts playName - and every name of the row counted as one)
-    if (/^\/say\//.test(u.pathname)) triggerSource = null
+    // (a name read out is no command either - the display sends it as /<device>/say/<name>: every name of a row counted
+    // as one and the music paused for the names did not go on, see /speechpause)
+    if (/\/say\//.test(u.pathname)) triggerSource = null
     // (only a picture address of the box's own API or of the web - it lands in an <img> on the display)
     const cover = u.searchParams.get('cover') ?? ''
     if (cover.length < 2000 && /^(\/api\/|https?:\/\/)/.test(cover)) triggerCover = cover
@@ -3620,6 +3645,8 @@ app.use((req, res) => {
   if (triggerSource !== null) {
     currentMeta.triggerSource = triggerSource
     currentMeta.triggerAt = Date.now()
+    // (a command of the display, the app, Telegram …: the pause for names read out is not the backend's any more)
+    speechPauseToken = 0
   }
 
   const command = path.parse(pathname)
