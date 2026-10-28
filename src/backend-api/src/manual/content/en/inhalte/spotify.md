@@ -34,6 +34,13 @@ You can look at and change the credentials later under **Library › Spotify ›
 
 The category chosen last is preselected the next time you add something.
 
+Below the search is **My playlists**: your own playlists and the ones you follow on Spotify – private ones too, which the search does not find. Your own come first; you see 8 at first, **Show all …** shows the rest. Tap one and add it as above. Two hints in the list:
+
+- **comes via Smart Sync**: Smart Sync brings this playlist onto the box already; added as well, it would be there twice.
+- **by Spotify · may not play**: a playlist by Spotify itself, such as a mix. Spotify often does not hand such playlists out to apps like the box.
+
+The box fetches the list when the page opens and keeps it for 5 minutes; a playlist you have just made in Spotify shows up after 5 minutes at the latest.
+
 ### Paste link
 
 **Library › Paste link** takes a Spotify address directly: album, playlist, artist, podcast or audiobook. As the **Type** you choose **Spotify link**. More fields:

@@ -34,6 +34,13 @@ Die Zugangsdaten siehst und änderst du später unter **Bibliothek › Spotify �
 
 Die zuletzt gewählte Kategorie ist beim nächsten Hinzufügen vorausgewählt.
 
+Unter der Suche stehen **Meine Playlists**: deine eigenen Playlists und die, denen du bei Spotify folgst – auch private, die die Suche nicht findet. Eigene stehen zuerst; zuerst siehst du 8, **Alle … zeigen** zeigt den Rest. Antippen und hinzufügen wie oben. Zwei Hinweise in der Liste:
+
+- **kommt über Smart-Sync**: Diese Playlist bringt Smart-Sync schon auf die Box; zusätzlich hinzugefügt stünde sie dort zweimal.
+- **von Spotify · spielt evtl. nicht**: eine Playlist von Spotify selbst, etwa ein Mix. Spotify gibt solche Playlists Apps wie der Box oft nicht heraus.
+
+Die Box holt die Liste beim Öffnen der Seite und behält sie 5 Minuten; eine Playlist, die du gerade in Spotify angelegt hast, erscheint also spätestens nach 5 Minuten.
+
 ### Link einfügen
 
 **Bibliothek › Link einfügen** nimmt direkt eine Spotify-Adresse: Album, Playlist, Interpret, Podcast oder Hörbuch. Als **Typ** wählst du **Spotify-Link**. Weitere Felder:

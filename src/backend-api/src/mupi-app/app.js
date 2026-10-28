@@ -3563,7 +3563,8 @@ async function loadSubAlbums(a, box) {
 
 // (cat: the category chosen last - the next sheet starts with it; artist: one opened from the search, its albums with
 // the way back to the search; have: what is in the library already, see libraryHave)
-const search = { q: '', type: 'Alle', cat: 'audiobook', result: null, busy: false, artist: null, have: new Set() }
+// (mine: the account's own and followed playlists - the search finds public ones only)
+const search = { q: '', type: 'Alle', cat: 'audiobook', result: null, busy: false, artist: null, have: new Set(), mine: null, mineAll: false }
 
 function searchTop() {
   return [
@@ -3574,7 +3575,80 @@ function searchTop() {
       <div class="btns"><button class="btn primary" id="s-go">Suchen</button></div>
     </section>`,
     `<div id="s-results" class="wide-stack"></div>`,
+    `<section class="card wide">
+      <h2>${esc('Meine Playlists')}</h2>
+      <p class="help" style="margin:0">${esc('Deine eigenen Playlists und die, denen du bei Spotify folgst – auch private, die die Suche nicht findet.')}</p>
+      <div class="rows" id="s-mine"></div>
+    </section>`,
   ]
+}
+
+// "Meine Playlists": the account's own first, then the followed ones (the server keeps the list 5 minutes - opening
+// the page again asks Spotify nothing)
+async function loadSpotifyMine() {
+  const el = $('#s-mine')
+  if (!el) return
+  if (!search.mine) el.innerHTML = `<div class="loading"><p>${esc('Lade …')}</p></div>`
+  const [r, have] = await Promise.all([api(`${SYNC_API}/my-playlists`), libraryHave('spotify')])
+  if (!el.isConnected) return
+  search.have = have
+  if (!r.ok) {
+    const why =
+      r.status === 409
+        ? 'Die Liste braucht eine eingerichtete Spotify-Verbindung (Bibliothek › Spotify).'
+        : r.status === 429
+          ? 'Spotify sperrt die Box gerade – bitte später noch einmal.'
+          : 'Spotify ist gerade nicht erreichbar.'
+    if (!search.mine) el.innerHTML = `<p class="help" style="margin:0">${esc(why)}</p>`
+    return
+  }
+  search.mine = r.body?.playlists ?? []
+  drawSpotifyMine()
+}
+
+const spMineSub = (p) =>
+  [
+    p.own ? 'Eigene Playlist' : p.by_spotify ? 'von Spotify' : p.owner ? `von ${p.owner}` : '',
+    p.tracks ? `${p.tracks} Titel` : '',
+    p.via_sync ? 'kommt über Smart-Sync' : p.by_spotify ? 'spielt evtl. nicht' : '',
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
+function drawSpotifyMine() {
+  const el = $('#s-mine')
+  if (!el || !search.mine) return
+  if (!search.mine.length) {
+    el.innerHTML = `<p class="help" style="margin:0">${esc('In deinem Spotify-Konto sind noch keine Playlists.')}</p>`
+    return
+  }
+  // (an account can have dozens: the first few, the rest on a tap)
+  const shown = search.mineAll ? search.mine : search.mine.slice(0, 8)
+  el.innerHTML =
+    shown.map((p, i) => resultRow({ kind: 'playlist', id: p.id, t: p.name, s: spMineSub(p), img: p.thumb || p.cover }, i, 'mine', search.have)).join('') +
+    (shown.length < search.mine.length ? `<div class="btns"><button class="btn" id="s-mine-all">${esc(`Alle ${search.mine.length} zeigen`)}</button></div>` : '')
+  for (const img of el.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+  for (const b of el.querySelectorAll('[data-list]')) {
+    const p = search.mine[Number(b.dataset.i)]
+    b.onclick = () =>
+      openSpotifyPlaylist({
+        id: p.id,
+        name: p.name,
+        s: spMineSub(p),
+        img: p.cover || p.thumb,
+        note: p.via_sync
+          ? 'Diese Playlist bringt Smart-Sync schon auf die Box. Zusätzlich hinzugefügt stünde sie dort zweimal.'
+          : p.by_spotify
+            ? 'Eine Playlist von Spotify selbst (z. B. ein Mix): Spotify gibt sie Apps wie der Box oft nicht heraus – sie spielt dann nicht.'
+            : '',
+      })
+  }
+  const all = $('#s-mine-all', el)
+  if (all)
+    all.onclick = () => {
+      search.mineAll = true
+      drawSpotifyMine()
+    }
 }
 
 // What of a source is in the library already, as "kind:id" (album, playlist, artist): the search marks it. Spotify:
@@ -3795,6 +3869,7 @@ function addSheet({ title, sub, img, have, haveText, cat, text, okLabel }, onAdd
 function markHave(key) {
   search.have.add(key)
   drawSearch()
+  drawSpotifyMine()
 }
 
 async function openSpotifyAlbum(r) {
@@ -3815,7 +3890,8 @@ async function openSpotifyAlbum(r) {
 
 // A playlist: an entry of the library as a pasted link makes it (the box fetches its tracks when it plays)
 async function openSpotifyPlaylist(r) {
-  addSheet({ title: r.name, sub: r.s, img: r.img, have: search.have.has(`playlist:${r.id}`), cat: search.cat === 'audiobook' ? 'music' : search.cat }, async (category) => {
+  // (note: a hint of "Meine Playlists" - Smart-Sync brings it already, or Spotify's own)
+  addSheet({ title: r.name, sub: r.s, img: r.img, text: r.note, have: search.have.has(`playlist:${r.id}`), cat: search.cat === 'audiobook' ? 'music' : search.cat }, async (category) => {
     const body = { type: 'spotify', playlistid: r.id, spotify_url: `https://open.spotify.com/playlist/${r.id}`, artist: r.name, category, source: 'manual' }
     const res = await api('/api/add', { method: 'POST', body })
     if (!libWriteOk(res)) return false
@@ -10641,6 +10717,9 @@ const CONTROLLERS = {
       }
       $('#s-go', root).onclick = doSpotifySearch
       drawSearch()
+      // (shown at once from the last time, then asked anew)
+      drawSpotifyMine()
+      loadSpotifyMine()
     },
   },
   podsuche: {

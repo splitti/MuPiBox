@@ -15,7 +15,8 @@ import { promises as fsPromises } from 'node:fs'
 import { Router } from 'express'
 import { loadSpotifySyncConfig, loadSpotifyTokenStore } from './config-loader'
 import { getValidAccessToken, requiresReAuth, tokenStillValid } from './auth'
-import { fetchArtistAlbums, SpotifyApiException } from './playlists'
+import { fetchArtistAlbums, SpotifyApiException, spotifyGet } from './playlists'
+import { playlistMatchesPrefix } from './categorizer'
 import { spotifyBlock } from '../spotify-block'
 import { readStateFile } from './state-file'
 import { triggerManualSync } from './scheduler'
@@ -251,5 +252,109 @@ export function createSpotifySyncRouter(deps: RunSyncDeps): Router {
     })
   })
 
+  /**
+   * GET /api/spotify-sync/my-playlists
+   * The account's playlists for the app's "Meine Playlists" (Auf Spotify suchen): its own and the ones it follows,
+   * own first - Spotify's search finds public playlists only, and Smart-Sync only those with the prefix. Each with
+   * whether it is the account's own, Spotify's own (its mixes often do not play for apps like the box's since Spotify's
+   * changes of November 2024) and whether Smart-Sync brings it anyway (the prefix, sync switched on).
+   * Gentle with Spotify: pages of 50 (the most it allows), at most 10, one after the other through the box's pacing
+   * and its one Spotify block (spotifyGet); the list is kept 5 minutes, so opening the page again asks nothing.
+   */
+  router.get('/my-playlists', localOrElternSession, async (_req, res) => {
+    const tokenStore = loadSpotifyTokenStore(deps.getMupiboxConfig())
+    if (!tokenStore) {
+      res.status(409).json({ error: 'spotify not configured' })
+      return
+    }
+    // (the account: its client id and sign-in - another sign-in is another list)
+    const accountKey = `${tokenStore.clientId}:${tokenStore.refreshToken}`
+    const config = loadSpotifySyncConfig(deps.getMupiboxConfig())
+    const prefix = config.playlist_prefix.trim()
+    // (Smart-Sync takes either the playlists named - then the prefix does not count - or those with the prefix)
+    const explicit = config.playlist_explicit_ids
+    const mark = (list: MyPlaylist[]) =>
+      list.map((p) => ({
+        ...p,
+        via_sync: config.enabled && (explicit.length > 0 ? explicit.includes(p.id) : prefix.length >= 2 && playlistMatchesPrefix(p.name, prefix)),
+      }))
+    if (myPlaylistsCache && myPlaylistsCache.client === accountKey && Date.now() - myPlaylistsCache.at < MY_PLAYLISTS_KEEP_MS) {
+      res.json({ playlists: mark(myPlaylistsCache.list), cached: true })
+      return
+    }
+    const tok = await getValidAccessToken(tokenStore, deps.updateMupiboxConfig)
+    if (!tok.ok) {
+      res.status(502).json({ error: 'token unavailable', detail: tok.failure.reason })
+      return
+    }
+    try {
+      const me = await spotifyGet<{ id?: string }>('/me', tok.token, 'display')
+      const list: MyPlaylist[] = []
+      let offset = 0
+      for (let page = 0; page < 10; page++) {
+        const data = await spotifyGet<{ items?: Array<SpotifyPlaylistItem | null>; next?: string | null }>(
+          `/me/playlists?limit=50&offset=${offset}`,
+          tok.token,
+          'display',
+        )
+        const items = data.items ?? []
+        for (const p of items) {
+          // (Spotify sends null for a playlist that is not available)
+          if (!p?.id || !p.name) continue
+          const ownerId = p.owner?.id ?? ''
+          list.push({
+            id: p.id,
+            name: p.name,
+            owner: p.owner?.display_name ?? ownerId,
+            own: !!me.id && ownerId === me.id,
+            by_spotify: ownerId === 'spotify',
+            // (`tracks` is named `items` since Spotify's February 2026 changes)
+            tracks: p.items?.total ?? p.tracks?.total ?? 0,
+            cover: p.images?.[0]?.url,
+            thumb: [...(p.images ?? [])].sort((a, b) => (a.width ?? 0) - (b.width ?? 0)).find((i) => (i.width ?? 0) >= 120)?.url ?? p.images?.[0]?.url,
+          })
+        }
+        offset += items.length
+        if (!data.next || items.length === 0) break
+      }
+      // own first, the order of Spotify within (newest first as the account sees it)
+      list.sort((a, b) => Number(b.own) - Number(a.own))
+      myPlaylistsCache = { at: Date.now(), client: accountKey, list }
+      res.json({ playlists: mark(list) })
+    } catch (err) {
+      if (err instanceof SpotifyApiException && err.detail.kind === 'rate-limit') {
+        res.status(429).json({ error: 'spotify_blocked', retryAfterSeconds: err.detail.retryAfterSeconds })
+        return
+      }
+      if (err instanceof SpotifyApiException && err.detail.kind === 'auth') {
+        res.status(401).json({ error: 'spotify_auth' })
+        return
+      }
+      res.status(502).json({ error: `playlists fetch failed: ${(err as Error).message}` })
+    }
+  })
+
   return router
 }
+
+interface SpotifyPlaylistItem {
+  id?: string
+  name?: string
+  owner?: { id?: string; display_name?: string }
+  images?: Array<{ url?: string; width?: number | null }> | null
+  items?: { total?: number }
+  tracks?: { total?: number }
+}
+interface MyPlaylist {
+  id: string
+  name: string
+  owner: string
+  own: boolean
+  by_spotify: boolean
+  tracks: number
+  cover?: string
+  thumb?: string
+}
+// the account's playlists as last asked (for the app's list; per sign-in)
+const MY_PLAYLISTS_KEEP_MS = 5 * 60_000
+let myPlaylistsCache: { at: number; client: string; list: MyPlaylist[] } | null = null

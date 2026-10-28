@@ -17,6 +17,7 @@
 </ul>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>After switching the box on, TIDAL showed as signed out until the next restart of the box - its service often starts a few seconds before the network, and it tried the saved sign-in only once. It now tries again until TIDAL answers - after 15 s, then less often (at most every 5 minutes), also when TIDAL is down for a moment, and never sooner than TIDAL asks (when it asks for more than 6 hours, only the next start or a sign-in tries again) - and stops as soon as someone signs in or out in the app; the sign-in itself was never lost.</li>
+<li id='linews' class='linews'>Spotify, own playlists: Search on Spotify now shows "My playlists" - the account's own playlists and the ones it follows, also private ones the search does not find, own first. Marked when Smart-Sync brings one anyway, and when it is Spotify's own (its mixes often do not play for apps like the box's). Gentle with Spotify: asked when the page opens (pages of 50, through the box's pacing and its Spotify block) and kept 5 minutes.</li>
 <li id='linews' class='linews'>Own playlists: TIDAL's search does not find playlists made by users. Search on TIDAL now shows "My playlists" - the account's own playlists and the ones it saved, own first - and takes a TIDAL link (Share › Copy link in TIDAL) to a playlist or an album someone sent. They are added like any other playlist; a playlist changed on TIDAL plays in its new state.</li>
 </ul>
 <b>App</b>
