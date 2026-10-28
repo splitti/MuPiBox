@@ -10216,10 +10216,12 @@ function updJobCard() {
   const head = {
     running: 'Läuft …',
     rebooting: 'Fertig – die Box startet neu',
-    ok: `Fertig${j.finished ? ` am ${when(j.finished)}` : ''}`,
+    ok: `Fertig${j.finished ? ` am ${when(j.finished)}` : ''}${j.restarted ? ' – die Box wurde danach neu gestartet' : ''}`,
     failed: `Nicht geklappt${j.finished ? ` (${when(j.finished)})` : ''}`,
   }[j.phase] ?? j.phase
   const pct = j.phase === 'running' ? j.percent : 100
+  // (restarted since: the script's "please reboot" at its end is done - left out, it read as still to do)
+  const output = j.restarted ? String(j.output ?? '').split('\n').filter((l) => !/please reboot|reboot (the|your) system/i.test(l)).join('\n') : j.output
   const note = upd.offline
     ? `<div class="note">${icon('info', 18)}<span>Die Box antwortet gerade nicht. Beim MuPiBox-Update ist das normal, der Server wird ausgetauscht. Die Seite fragt weiter nach.</span></div>`
     : j.phase === 'failed'
@@ -10229,8 +10231,8 @@ function updJobCard() {
     <div class="bar"><div class="slider-head"><b>${esc(head)}</b><span class="value-pill">${pct} %</span></div>
       <div class="track"><i style="--w:${pct}%"></i></div>${j.step && j.phase === 'running' ? `<small>${esc(j.step)}</small>` : ''}</div>
     ${note}
-    ${j.phase === 'ok' && j.kind === 'os' ? `<div class="btns"><button class="btn primary" id="upd-reboot">Box neu starten</button></div>` : ''}
-    ${j.output ? `<details id="upd-out"${upd.showOut ? ' open' : ''}><summary class="help">Ausgabe</summary><pre class="logview" style="height:240px">${esc(j.output)}</pre></details>` : ''}</section>`
+    ${j.phase === 'ok' && j.kind === 'os' && !j.restarted ? `<div class="btns"><button class="btn primary" id="upd-reboot">Box neu starten</button></div>` : ''}
+    ${output ? `<details id="upd-out"${upd.showOut ? ' open' : ''}><summary class="help">Ausgabe</summary><pre class="logview" style="height:240px">${esc(output)}</pre></details>` : ''}</section>`
 }
 
 function updatesTop() {

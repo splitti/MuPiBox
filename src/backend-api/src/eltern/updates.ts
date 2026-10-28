@@ -210,11 +210,15 @@ async function jobState() {
   const alive = active === 'active' || active === 'activating'
   if (phase === 'running' && !alive) phase = 'failed'
   if (phase === 'rebooting' && !alive) phase = 'ok'
+  const finished = Number(state.finished) * 1000 || null
+  // the box started again since the job ended (its "please reboot" is done - the app leaves it out then)
+  const restarted = !!finished && Date.now() - os.uptime() * 1000 > finished
   return {
     kind: state.kind,
     phase, // running | rebooting | ok | failed
     started: Number(state.started) * 1000 || null,
-    finished: Number(state.finished) * 1000 || null,
+    finished,
+    restarted,
     percent: Number(percent) || 0,
     step: step ?? '',
     // the last lines, without the terminal's control characters
