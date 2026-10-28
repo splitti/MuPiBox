@@ -3608,6 +3608,9 @@ app.use((req, res) => {
     // (an announcement pauses the music and goes on afterwards: no start - the display jumped to the big player after
     // every announcement, away from where the child was looking for something)
     if (triggerSource === 'speech') triggerSource = null
+    // (a name read out is no command either: the backend goes on after a row of names only if no command came meanwhile
+    // - speech.ts playName - and every name of the row counted as one)
+    if (/^\/say\//.test(u.pathname)) triggerSource = null
     // (only a picture address of the box's own API or of the web - it lands in an <img> on the display)
     const cover = u.searchParams.get('cover') ?? ''
     if (cover.length < 2000 && /^(\/api\/|https?:\/\/)/.test(cover)) triggerCover = cover

@@ -802,23 +802,50 @@ const NAME_END_MS: Record<NamesMusic, number> = { duck: 400, pause: 1500, over: 
 const names: {
   child: ChildProcess | null
   seq: number
-  // the music made quieter / paused for this row (what puts it back), and the way there while it is made
+  // the music made quieter / paused for this row (what puts it back), the way there while it is made, and the way
+  // back while it is made (a new row waits for it: it read the volume half restored and kept that one)
   restore: (() => Promise<void>) | null
   paused: boolean
+  // the player's last command when the row paused it (its /local triggerAt): it goes on only if none came since -
+  // a pause from the display, the app or Telegram meanwhile is kept
+  pausedAt: number | null
   starting: Promise<void> | null
+  ending: Promise<void> | null
   endTimer: NodeJS.Timeout | null
-} = { child: null, seq: 0, restore: null, paused: false, starting: null, endTimer: null }
+} = { child: null, seq: 0, restore: null, paused: false, pausedAt: null, starting: null, ending: null, endTimer: null }
+
+// The player's last command (none: null) - its pauses and goings on of announcements and the names it reads out do not
+// count (spotify-control.js: src=speech, say/)
+async function lastPlayerCommand(): Promise<number | null> {
+  try {
+    const r = await fetch('http://127.0.0.1:5005/local', { signal: AbortSignal.timeout(3000) })
+    const at = ((await r.json()) as { triggerAt?: unknown }).triggerAt
+    return typeof at === 'number' ? at : null
+  } catch {
+    return null
+  }
+}
 
 async function endNameRow(): Promise<void> {
   names.endTimer = null
-  if (names.child || names.starting) return
-  const restore = names.restore
-  names.restore = null
-  if (restore) await restore().catch(() => undefined)
-  if (names.paused) {
-    names.paused = false
-    await player('play')
-  }
+  if (names.child || names.starting || names.ending) return
+  names.ending = (async () => {
+    try {
+      if (names.restore) await names.restore().catch(() => undefined)
+      if (names.paused) {
+        // (not known - the player did not answer: on all the same, rather than leaving the music paused for good)
+        const since = await lastPlayerCommand()
+        if (since === null || since === names.pausedAt) await player('play')
+      }
+    } finally {
+      names.restore = null
+      names.paused = false
+      names.pausedAt = null
+    }
+  })().finally(() => {
+    names.ending = null
+  })
+  await names.ending
 }
 
 /** A name read out (a sound of the box: a Piper WAV or Google's MP3), the music as set. */
@@ -833,6 +860,9 @@ export async function playName(getConfig: () => unknown, file: string): Promise<
     names.child.kill()
     names.child = null
   }
+  // (the row before still going back: this one starts from the music as it was)
+  if (names.ending) await names.ending
+  if (seq !== names.seq) return
   // the first name of a row: the music quieter or paused, once (two names at once both made it quieter, the second
   // took the lowered volume for the one to go back to)
   if (mode !== 'over' && !names.restore && !names.paused) {
@@ -842,6 +872,7 @@ export async function playName(getConfig: () => unknown, file: string): Promise<
         if (mode === 'pause') {
           await player('pause')
           names.paused = true
+          names.pausedAt = await lastPlayerCommand()
           await new Promise((r) => setTimeout(r, 300))
         } else names.restore = await duck()
       })()

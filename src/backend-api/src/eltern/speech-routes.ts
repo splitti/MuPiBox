@@ -67,7 +67,7 @@ export function registerSpeechRoutes(router: Router, deps: SpeechDeps): void {
     const configured = saved && sp.engine !== 'off' && sp.parents.on && (sp.engine !== 'piper' || !!active || sp.fallback === 'google')
     res.json({
       configured,
-      config: { engine: sp.engine, fallback: sp.fallback, voices: sp.voices, rest: sp.rest, bedtime: sp.bedtime, sleepEnd: sp.sleepEnd, level: sp.level, parents: sp.parents },
+      config: { engine: sp.engine, fallback: sp.fallback, voices: sp.voices, rest: sp.rest, bedtime: sp.bedtime, sleepEnd: sp.sleepEnd, level: sp.level, parents: sp.parents, names: sp.names },
       boxLanguage: box,
       lang,
       // (the announcements' texts: the box's language; the sentence to try a voice with: the language of the list)
