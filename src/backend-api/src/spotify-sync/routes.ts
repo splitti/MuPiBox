@@ -267,8 +267,10 @@ export function createSpotifySyncRouter(deps: RunSyncDeps): Router {
       res.status(409).json({ error: 'spotify not configured' })
       return
     }
-    // (the account: its client id and sign-in - another sign-in is another list)
-    const accountKey = `${tokenStore.clientId}:${tokenStore.refreshToken}`
+    // (the account: its client id and the moment of its sign-in - set by a new sign-in only, see spotify-auth-age.ts;
+    // the refresh token changes with every renewal of the access and emptied the list kept here each time)
+    const authorizedAt = (deps.getMupiboxConfig() as unknown as { spotify?: { authorizedAt?: unknown } } | undefined)?.spotify?.authorizedAt
+    const accountKey = `${tokenStore.clientId}:${typeof authorizedAt === 'string' ? authorizedAt : ''}`
     const config = loadSpotifySyncConfig(deps.getMupiboxConfig())
     const prefix = config.playlist_prefix.trim()
     // (Smart-Sync takes either the playlists named - then the prefix does not count - or those with the prefix)
@@ -282,46 +284,25 @@ export function createSpotifySyncRouter(deps: RunSyncDeps): Router {
       res.json({ playlists: mark(myPlaylistsCache.list), cached: true })
       return
     }
-    const tok = await getValidAccessToken(tokenStore, deps.updateMupiboxConfig)
-    if (!tok.ok) {
-      res.status(502).json({ error: 'token unavailable', detail: tok.failure.reason })
-      return
+    // (one fetch per sign-in at a time: several phones opening the page together wait for the same one - each used to
+    // ask Spotify for every page itself)
+    let job = myPlaylistsJobs.get(accountKey)
+    if (!job) {
+      job = fetchMyPlaylists(tokenStore, deps.updateMupiboxConfig)
+        .then((list) => {
+          myPlaylistsCache = { at: Date.now(), client: accountKey, list }
+          return list
+        })
+        .finally(() => myPlaylistsJobs.delete(accountKey))
+      myPlaylistsJobs.set(accountKey, job)
     }
     try {
-      const me = await spotifyGet<{ id?: string }>('/me', tok.token, 'display')
-      const list: MyPlaylist[] = []
-      let offset = 0
-      for (let page = 0; page < 10; page++) {
-        const data = await spotifyGet<{ items?: Array<SpotifyPlaylistItem | null>; next?: string | null }>(
-          `/me/playlists?limit=50&offset=${offset}`,
-          tok.token,
-          'display',
-        )
-        const items = data.items ?? []
-        for (const p of items) {
-          // (Spotify sends null for a playlist that is not available)
-          if (!p?.id || !p.name) continue
-          const ownerId = p.owner?.id ?? ''
-          list.push({
-            id: p.id,
-            name: p.name,
-            owner: p.owner?.display_name ?? ownerId,
-            own: !!me.id && ownerId === me.id,
-            by_spotify: ownerId === 'spotify',
-            // (`tracks` is named `items` since Spotify's February 2026 changes)
-            tracks: p.items?.total ?? p.tracks?.total ?? 0,
-            cover: p.images?.[0]?.url,
-            thumb: [...(p.images ?? [])].sort((a, b) => (a.width ?? 0) - (b.width ?? 0)).find((i) => (i.width ?? 0) >= 120)?.url ?? p.images?.[0]?.url,
-          })
-        }
-        offset += items.length
-        if (!data.next || items.length === 0) break
-      }
-      // own first, the order of Spotify within (newest first as the account sees it)
-      list.sort((a, b) => Number(b.own) - Number(a.own))
-      myPlaylistsCache = { at: Date.now(), client: accountKey, list }
-      res.json({ playlists: mark(list) })
+      res.json({ playlists: mark(await job) })
     } catch (err) {
+      if (err instanceof TokenUnavailable) {
+        res.status(502).json({ error: 'token unavailable', detail: err.message })
+        return
+      }
       if (err instanceof SpotifyApiException && err.detail.kind === 'rate-limit') {
         res.status(429).json({ error: 'spotify_blocked', retryAfterSeconds: err.detail.retryAfterSeconds })
         return
@@ -355,6 +336,46 @@ interface MyPlaylist {
   cover?: string
   thumb?: string
 }
-// the account's playlists as last asked (for the app's list; per sign-in)
+// the account's playlists as last asked (for the app's list; per sign-in), and the fetch at work per sign-in
 const MY_PLAYLISTS_KEEP_MS = 5 * 60_000
 let myPlaylistsCache: { at: number; client: string; list: MyPlaylist[] } | null = null
+const myPlaylistsJobs = new Map<string, Promise<MyPlaylist[]>>()
+
+class TokenUnavailable extends Error {}
+
+/** The account's playlists from Spotify: who it is (/me), then pages of 50 (at most 10), own first */
+async function fetchMyPlaylists(
+  tokenStore: NonNullable<ReturnType<typeof loadSpotifyTokenStore>>,
+  updateMupiboxConfig: RunSyncDeps['updateMupiboxConfig'],
+): Promise<MyPlaylist[]> {
+  const tok = await getValidAccessToken(tokenStore, updateMupiboxConfig)
+  if (!tok.ok) throw new TokenUnavailable(tok.failure.reason)
+  const me = await spotifyGet<{ id?: string }>('/me', tok.token, 'display')
+  const list: MyPlaylist[] = []
+  let offset = 0
+  for (let page = 0; page < 10; page++) {
+    const data = await spotifyGet<{ items?: Array<SpotifyPlaylistItem | null>; next?: string | null }>(`/me/playlists?limit=50&offset=${offset}`, tok.token, 'display')
+    const items = data.items ?? []
+    for (const p of items) {
+      // (Spotify sends null for a playlist that is not available)
+      if (!p?.id || !p.name) continue
+      const ownerId = p.owner?.id ?? ''
+      list.push({
+        id: p.id,
+        name: p.name,
+        owner: p.owner?.display_name ?? ownerId,
+        own: !!me.id && ownerId === me.id,
+        by_spotify: ownerId === 'spotify',
+        // (`tracks` is named `items` since Spotify's February 2026 changes)
+        tracks: p.items?.total ?? p.tracks?.total ?? 0,
+        cover: p.images?.[0]?.url,
+        thumb: [...(p.images ?? [])].sort((a, b) => (a.width ?? 0) - (b.width ?? 0)).find((i) => (i.width ?? 0) >= 120)?.url ?? p.images?.[0]?.url,
+      })
+    }
+    offset += items.length
+    if (!data.next || items.length === 0) break
+  }
+  // own first, the order of Spotify within (newest first as the account sees it)
+  list.sort((a, b) => Number(b.own) - Number(a.own))
+  return list
+}

@@ -3593,12 +3593,15 @@ async function loadSpotifyMine() {
   if (!el.isConnected) return
   search.have = have
   if (!r.ok) {
-    const why =
-      r.status === 409
-        ? 'Die Liste braucht eine eingerichtete Spotify-Verbindung (Bibliothek › Spotify).'
-        : r.status === 429
-          ? 'Spotify sperrt die Box gerade – bitte später noch einmal.'
-          : 'Spotify ist gerade nicht erreichbar.'
+    // (no connection any more - disconnected, or the sign-in refused: the list of before goes, it was that account's)
+    const gone = r.status === 409 || r.status === 401
+    if (gone) search.mine = null
+    const why = gone
+      ? 'Die Liste braucht eine eingerichtete Spotify-Verbindung (Bibliothek › Spotify).'
+      : r.status === 429
+        ? 'Spotify sperrt die Box gerade – bitte später noch einmal.'
+        : 'Spotify ist gerade nicht erreichbar.'
+    // (for a moment unreachable or blocked: the list of before stays)
     if (!search.mine) el.innerHTML = `<p class="help" style="margin:0">${esc(why)}</p>`
     return
   }
@@ -5267,6 +5270,9 @@ function mountSpotify(root, page) {
       confirmSheet('Trennen', 'Die Spotify-Anmeldung löschen? Smart-Sync hört auf, und der Player verliert beim nächsten Neustart den Zugang zu Spotify.', async () => {
         const r = await api(`${API}/spotify-oauth/disconnect`, { method: 'POST' })
         if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+        // (the playlists of "Meine Playlists" were that account's)
+        search.mine = null
+        search.mineAll = false
         again('Getrennt')
       }),
     cache: () =>
