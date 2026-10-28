@@ -4183,7 +4183,7 @@ async function openRadioStation(s) {
 // the last search (type: what of it is shown), and an artist opened from it (its albums, with the way back); the
 // category is chosen when adding (addSheet) - the one chosen last starts the next sheet, as on Spotify (search.cat)
 // (mine: the account's own and kept playlists - TIDAL's search does not find playlists made by users)
-const tds = { q: '', type: 'Alle', result: null, artist: null, busy: false, have: new Set(), mine: null, link: '' }
+const tds = { q: '', type: 'Alle', result: null, artist: null, busy: false, have: new Set(), mine: null, link: '', linkGen: 0 }
 
 function tidalSearchTop() {
   if (!svc.tidal) {
@@ -4229,8 +4229,11 @@ async function openTidalLink() {
   if (!link) return toast('Das ist kein Link zu einer TIDAL-Playlist oder einem Album', 'info')
   const btn = $('#tds-link-go')
   if (btn) btn.disabled = true
+  // (an answer that comes late - another link opened meanwhile, or the page left: dropped, no sheet over another page)
+  const gen = ++tds.linkGen
   const [r, have] = await Promise.all([api(`${API}/tidal/item/${link.kind}/${encodeURIComponent(link.id)}`), libraryHave('tidal')])
   if (btn) btn.disabled = false
+  if (gen !== tds.linkGen || !btn?.isConnected) return
   tds.have = have
   if (!r.ok) return toast(r.status === 404 ? 'TIDAL kennt diesen Link nicht – ist die Playlist privat oder gelöscht?' : tidalFailText(r), 'info')
   openTidalItem({ ...r.body, kind: link.kind })

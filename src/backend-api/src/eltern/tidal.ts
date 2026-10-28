@@ -115,9 +115,8 @@ export function registerTidalRoutes(router: Router, deps: TidalDeps): void {
     if (!((kind === 'album' && /^\d{1,15}$/.test(id)) || (kind === 'playlist' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)))) {
       return void res.status(400).json({ error: 'bad_id' })
     }
-    const r = await service('GET', `/tracks?kind=${kind}&id=${encodeURIComponent(id)}`, 30000)
-    if (r.ok) delete r.body.list
-    relay(r, res)
+    // (without the tracks: a long playlist's list took one request to TIDAL per 100 tracks)
+    relay(await service('GET', `/item?kind=${kind}&id=${encodeURIComponent(id)}`, 20000), res)
   })
 
   /** GET /api/app/tidal/artist/:id/albums - an artist's albums, EPs and singles */

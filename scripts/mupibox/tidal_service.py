@@ -538,6 +538,15 @@ def tracks(kind, item_id):
     return head
 
 
+def item(kind, item_id):
+    """An album or a playlist without its tracks (a link pasted in the app): name, cover, number of tracks - one
+    request, where the tracks of a long playlist take one per 100."""
+    s = ready()
+    head = playlist_json(s.playlist(item_id)) if kind == "playlist" else album_json(s.album(item_id))
+    renewed()
+    return head
+
+
 def stream_url(track_id):
     """The address of the track at TIDAL, plain (no DRM) and as one file - else Refused."""
     s = ready()
@@ -579,11 +588,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, my_playlists())
             if len(parts) == 3 and parts[0] == "artist" and parts[2] == "albums" and parts[1].isdigit():
                 return self._send(200, narrowed(artist_albums(parts[1]), q))
-            if url.path == "/tracks" and q.get("kind") in ("album", "playlist") and q.get("id"):
+            if url.path in ("/tracks", "/item") and q.get("kind") in ("album", "playlist") and q.get("id"):
                 item_id = q["id"]
                 if not all(c.isalnum() or c == "-" for c in item_id) or len(item_id) > 64:
                     return self._send(400, {"error": "bad_id"})
-                return self._send(200, tracks(q["kind"], item_id))
+                return self._send(200, (tracks if url.path == "/tracks" else item)(q["kind"], item_id))
             if len(parts) == 2 and parts[0] == "stream" and parts[1].isdigit():
                 target = stream_url(parts[1])
                 self.send_response(302)
