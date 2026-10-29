@@ -2093,6 +2093,12 @@ function topTiles() {
     } else {
       const groups = new Map()
       for (const it of items) {
+        // (as on the box: a playlist or a radio station without an artist is a tile of its own - never in a folder
+        // that has its name)
+        if (!itemArtist(it) && (isPlaylistEntry(it) || it.type === 'radio')) {
+          tiles.push(entryTile(it))
+          continue
+        }
         const a = itemArtist(it) || itemTitle(it)
         if (!groups.has(a)) groups.set(a, [])
         groups.get(a).push(it)

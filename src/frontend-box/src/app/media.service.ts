@@ -107,8 +107,11 @@ function fillFailedRows(media: Media[], kept: Media[] | undefined): Media[] {
     // (a TIDAL artist without kept albums: none - its placeholder is no album to show or play)
     if (!fromKept.length) return m.type === 'tidal' ? [] : [m]
     for (const k of fromKept) if (k.id) present.add(k.id)
+    // (a playlist: its folder and name as the library has them now - moved to a tile of its own or renamed while the
+    // kept one is older; the placeholder's artist is the library's, none for a tile of its own)
+    const place = m.playlistid ? { artist: m.artist, ...(m.libraryTitle ? { title: m.libraryTitle } : {}) } : {}
     // (with the row: the list made now is the kept one of the next time)
-    return fromKept.map((k) => ({ ...k, category: m.category, index: m.index, row: m.row }))
+    return fromKept.map((k) => ({ ...k, ...place, category: m.category, index: m.index, row: m.row }))
   })
 }
 import type { WLAN } from './wlan'
@@ -1079,7 +1082,9 @@ export class MediaService {
                       .pipe(
                         // (the name given in the app - "Name der Kachel" - before the playlist's name at Spotify, also on
                         // the placeholder of one that could not be fetched)
-                        map((currentItem) => [!resume && item.title ? { ...currentItem, title: item.title } : currentItem]),
+                        map((currentItem) => [
+                          !resume && item.title ? { ...currentItem, title: item.title, ...(currentItem.unavailable ? { libraryTitle: item.title } : {}) } : currentItem,
+                        ]),
                         overwriteArtist(item),
                       ),
                     iif(
