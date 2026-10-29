@@ -2076,6 +2076,10 @@ async function loadHear() {
   ;['audiobook', 'music', 'other'].forEach((c, i) => (hear.local[c] = Array.isArray(local[i].body) ? local[i].body : []))
 }
 
+// As on the box: a playlist or a radio station without an artist is a tile of its own - never in a folder that has
+// its name (neither on the top level nor when that folder is opened)
+const isStandaloneEntry = (it) => !itemArtist(it) && (isPlaylistEntry(it) || it.type === 'radio')
+
 // The tiles of the top level: library entries grouped by artist (like the box), local folders and NAS folders
 function topTiles() {
   const cat = hear.cat
@@ -2093,9 +2097,7 @@ function topTiles() {
     } else {
       const groups = new Map()
       for (const it of items) {
-        // (as on the box: a playlist or a radio station without an artist is a tile of its own - never in a folder
-        // that has its name)
-        if (!itemArtist(it) && (isPlaylistEntry(it) || it.type === 'radio')) {
+        if (isStandaloneEntry(it)) {
           tiles.push(entryTile(it))
           continue
         }
@@ -2137,7 +2139,7 @@ function levelTiles() {
   const match = (t) => !q || norm(t).includes(q)
   if (top.kind === 'artist') {
     return hear.items
-      .filter((it) => playable(it) && (hear.cat === 'all' || catOf(it) === hear.cat) && (itemArtist(it) || itemTitle(it)) === top.path)
+      .filter((it) => playable(it) && (hear.cat === 'all' || catOf(it) === hear.cat) && !isStandaloneEntry(it) && (itemArtist(it) || itemTitle(it)) === top.path)
       .filter((it) => match(itemTitle(it)))
       .map(entryTile)
       .sort((a, b) => a.title.localeCompare(b.title, 'de', { numeric: true }))
