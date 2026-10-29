@@ -702,7 +702,8 @@ function playFile(file: string, level: number): Promise<void> {
   const tries: [string, string[]][] = file.endsWith('.wav')
     ? [['paplay', [`--volume=${Math.round(level * 65536)}`, file]]]
     : [
-        ['mpv', ['--no-video', '--really-quiet', '--no-config', '--ao=pulse', `--volume=${percent}`, file]],
+        // (a name of its own for PulseAudio, as for the names read out: the music's mpv made quieter made this one as quiet)
+        ['mpv', ['--no-video', '--really-quiet', '--no-config', '--ao=pulse', '--audio-client-name=mupibox-speech', `--volume=${percent}`, file]],
       ]
   const attempt = (i: number): Promise<void> =>
     new Promise((resolve) => {
@@ -887,7 +888,11 @@ export async function playName(getConfig: () => unknown, file: string): Promise<
     clearTimeout(names.endTimer)
     names.endTimer = null
   }
-  const child = spawn('mpv', ['--no-video', '--really-quiet', '--no-config', '--ao=pulse,alsa', '--volume=100', file], { stdio: 'ignore' })
+  // (a name of its own for PulseAudio: it keeps the volume per program name, and the music's mpv made quieter for the
+  // name made the name itself just as quiet - it was not to be heard)
+  const child = spawn('mpv', ['--no-video', '--really-quiet', '--no-config', '--ao=pulse,alsa', '--audio-client-name=mupibox-name', '--volume=100', file], {
+    stdio: 'ignore',
+  })
   names.child = child
   const done = () => {
     if (names.child !== child) return

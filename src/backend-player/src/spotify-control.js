@@ -2680,7 +2680,8 @@ function playNameSoundHere(file) {
       /* gone already */
     }
   }
-  const child = require('node:child_process').spawn('mpv', ['--no-video', '--really-quiet', '--no-config', '--ao=pulse,alsa', `--volume=${volumeStart}`, file], {
+  // (a name of its own for PulseAudio, which keeps the volume per program name - see speech.ts playName)
+  const child = require('node:child_process').spawn('mpv', ['--no-video', '--really-quiet', '--no-config', '--ao=pulse,alsa', '--audio-client-name=mupibox-name', `--volume=${volumeStart}`, file], {
     stdio: 'ignore',
   })
   nameSound = child
