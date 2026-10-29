@@ -1019,6 +1019,13 @@ textarea[hidden] { display: none; }
 .choice .radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--mp-border); flex: none; }
 .choice.on { border-color: var(--mp-primary); background: var(--mp-primary-soft); }
 .choice.on .radio { border: 6px solid var(--mp-primary); }
+/* a playlist "in einem Ordner": its name, the folders there are as chips */
+.place-folder { display: flex; flex-direction: column; gap: 8px; padding-left: 34px; }
+.place-folder[hidden] { display: none; }
+.place-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.place-chips:empty { display: none; }
+.place-chips .chip { border: 0; font: inherit; font-size: 13px; font-weight: 700; color: var(--mp-text); cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.place-chips .chip.on { background: var(--mp-primary); color: var(--mp-on-primary); }
 .entry.voice .icon-btn { width: 36px; height: 36px; flex: none; }
 .say-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .say-tile { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 10px 12px; border-radius: var(--mp-r); border: 1px solid var(--mp-border); background: var(--mp-surface); color: var(--mp-text); font: inherit; font-weight: 700; text-align: left; cursor: pointer; }

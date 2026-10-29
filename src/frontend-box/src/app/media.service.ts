@@ -67,6 +67,13 @@ function storedSpotifyAlbum(item: Media): Media | undefined {
   return { ...item, type: 'spotify', artist: item.artist || 'Unknown Artist', cover: localizeCoverUrl(item.cover) }
 }
 
+// A playlist (Spotify or TIDAL) or a radio station without an artist: a tile of its own on the start page, a tap plays
+// it (with an artist it is in that artist's folder)
+export function isStandaloneMedia(media: Media | undefined): boolean {
+  if (!media || media.artist) return false
+  return !!media.playlistid || media.type === 'radio' || (media.type === 'tidal' && media.tidalKind === 'playlist')
+}
+
 // The data.json row a Spotify entry comes from (Media.row): what is looked up for it
 function rowKey(item: Media): string | undefined {
   if (item.query) return `q:${item.query}`
@@ -643,9 +650,9 @@ export class MediaService {
         const standalonePlaylistsData: Artist[] = []
 
         for (const currentMedia of media) {
-          // A playlist or a radio station without an artist gets an entry of its own (a tap plays it right away).
-          // Without this a station added without a label was not shown at all.
-          if ((currentMedia.playlistid || currentMedia.type === 'radio') && !currentMedia.artist) {
+          // A playlist (Spotify or TIDAL) or a radio station without an artist gets an entry of its own (a tap plays
+          // it right away). Without this a station added without a label was not shown at all.
+          if (isStandaloneMedia(currentMedia)) {
             standalonePlaylistsData.push({
               name: currentMedia.title || (currentMedia.type === 'radio' ? 'Radio' : 'Unknown Playlist'),
               albumCount: '1', // Playlists have 1 "album" (themselves)
@@ -1070,7 +1077,9 @@ export class MediaService {
                         item.resumespotifytrack_number,
                       )
                       .pipe(
-                        map((currentItem) => [currentItem]),
+                        // (the name given in the app - "Name der Kachel" - before the playlist's name at Spotify, also on
+                        // the placeholder of one that could not be fetched)
+                        map((currentItem) => [!resume && item.title ? { ...currentItem, title: item.title } : currentItem]),
                         overwriteArtist(item),
                       ),
                     iif(

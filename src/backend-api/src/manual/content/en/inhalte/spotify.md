@@ -29,7 +29,7 @@ You can look at and change the credentials later under **Library › Spotify ›
 
 - an **album** shows its cover and details; there you choose the category under **Add as** and tap **Add**,
 - a **track** comes onto the box the same way, with its whole album,
-- a **playlist** comes onto the box as one entry (the box fetches its tracks when it plays),
+- a **playlist** comes onto the box as one entry (the box fetches its tracks when it plays); how it shows on the start page you choose under **On the start page** (see below),
 - an **artist** shows their albums to add one by one; a search field, **All**, **Albums** and **EPs & singles** and the **Order** (newest, oldest first or alphabetical) help with artists who have many albums. **Subscribe to the whole artist** creates an artist subscription: all episodes come onto the box, new ones later by themselves ([Managing content](verwalten.md)). **Back to search** returns to the results.
 
 The category chosen last is preselected the next time you add something.
@@ -41,13 +41,22 @@ Below the search is **My playlists**: your own playlists and the ones you follow
 
 The box fetches the list when the page opens and keeps it for 5 minutes; a playlist you have just made in Spotify shows up after 5 minutes at the latest.
 
+### Playlists: a tile of its own or a folder
+
+When you add a playlist, you choose under **On the start page**:
+
+- **Tile of its own** (preselected): the playlist stands alone on the start page, one tap plays it right away.
+- **In a folder**: it stands together with other entries under one name. Enter the name or tap an existing folder, also the one of an artist with albums.
+
+You can change this later in the **Library** on the entry. There the playlist's name is called **Tile name**; left empty, the box shows Spotify's name. Playlists you added before version 5.0.13 each stand in a folder of their own with their name; **Tile of its own** saves a tap on the box. The same goes for playlists from TIDAL.
+
 ### Paste link
 
 **Library › Paste link** takes a Spotify address directly: album, playlist, artist, podcast or audiobook. As the **Type** you choose **Spotify link**. More fields:
 
 | Field | Meaning |
 | --- | --- |
-| **Artist / name** (optional) | your own name for the entry |
+| **Artist / name** (optional) | your own name for the entry; for a playlist the folder it stands in (empty = a tile of its own) |
 | **Category** | Audiobook, Music or Radio & podcasts |
 | **Cover** and **Artist cover** (optional) | picture addresses, if Spotify's picture does not fit |
 | **Sort order** | Default (podcasts: newest episode first, otherwise alphabetical), A–Z, Z–A, oldest or newest first |

@@ -19,7 +19,7 @@ The page then shows **Connected to TIDAL** and the account's country. The sign-i
 
 Under **Library › Add › Search on TIDAL** you search for audiobooks, albums, artists and playlists; **All**, **Artist**, **Albums** and **Playlists** filter the results. What is in the library already has a tick.
 
-- Tap an **album** or a **playlist**, choose the category (Audiobook, Music or Radio & podcasts) and tap **Add**.
+- Tap an **album** or a **playlist**, choose the category (Audiobook, Music or Radio & podcasts) and tap **Add**. For a playlist you also choose under **On the start page** whether it gets a **tile of its own** (one tap plays it right away) or stands **in a folder**, as with [Spotify](spotify.md).
 - An **artist** shows their albums, EPs and singles to add one by one; a search field, **All**, **Albums**, **EPs & singles** and the **Order** help with many albums. **Add the whole artist** creates one entry for all of their albums: the box and the app show it as a folder with all albums, including ones released later. **Back to search** returns to the results.
 
 TIDAL's search does not find your own playlists. For them the same page has:

@@ -19,7 +19,7 @@ Danach zeigt die Seite **Mit TIDAL verbunden** und das Land des Kontos. Die Anme
 
 Unter **Bibliothek › Hinzufügen › Auf TIDAL suchen** suchst du nach Hörspielen, Alben, Künstlern und Playlists; **Alle**, **Künstler**, **Alben** und **Playlists** filtern die Treffer. Was schon in der Bibliothek ist, trägt einen Haken.
 
-- Ein **Album** oder eine **Playlist** antippen, die Kategorie wählen (Hörbuch/Hörspiel, Musik oder Radio & Podcasts) und **Hinzufügen**.
+- Ein **Album** oder eine **Playlist** antippen, die Kategorie wählen (Hörbuch/Hörspiel, Musik oder Radio & Podcasts) und **Hinzufügen**. Bei einer Playlist wählst du außerdem unter **Auf der Startseite**, ob sie eine **eigene Kachel** bekommt (ein Tipp spielt sie sofort) oder **in einem Ordner** steht, wie bei [Spotify](spotify.md).
 - Ein **Künstler** zeigt seine Alben, EPs und Singles zum einzelnen Hinzufügen; Suchfeld, **Alle**, **Alben**, **EPs & Singles** und die **Reihenfolge** helfen bei vielen Alben. **Ganzen Künstler hinzufügen** legt einen Eintrag für alle seine Alben an: Box und App zeigen ihn als Ordner mit allen Alben, auch mit solchen, die später erscheinen. **Zurück zur Suche** führt zur Trefferliste.
 
 Eigene Playlists findet die TIDAL-Suche nicht. Dafür gibt es auf derselben Seite:

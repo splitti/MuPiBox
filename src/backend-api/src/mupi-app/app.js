@@ -2841,25 +2841,34 @@ function openEntrySheet(item, back = null) {
   // a radio station or a podcast: its address (stream / feed) can be changed too
   // (not for a show of ARD Sounds: its "address" is the ARD's id of the show)
   const addressLabel = !isSync && !isArdEntry(item) && { radio: 'Stream-Adresse (URL)', rss: 'Feed-Adresse (URL)' }[item.type]
+  // a playlist: "Auf der Startseite" (a tile of its own or a folder - the artist) in place of the artist
+  const place = !isSync && isPlaylistEntry(item)
   const fields = [
-    ['artist', 'Interpret'],
-    ['title', 'Titel'],
+    ...(place ? [] : [['artist', 'Interpret']]),
+    ['title', place ? 'Name der Kachel' : 'Titel'],
     ...(addressLabel ? [['id', addressLabel]] : []),
     ['cover', 'Cover (Bild-URL)'],
-    ['artistcover', 'Interpret-Cover (Bild-URL)'],
+    ['artistcover', place ? 'Ordner-Cover (Bild-URL)' : 'Interpret-Cover (Bild-URL)'],
   ]
   const val = (k) => item[`${k}_override`] ?? (isSync ? '' : item[k] ?? '')
+  const folder = place ? String(item.artist ?? '').trim() : ''
+  // (alone in its folder - as the app added playlists before, in one of their own name: a tile spares a tap)
+  const aloneInFolder = !!folder && (lib.items ?? []).filter((it) => it && !it.isResume && it.category === item.category && String(it.artist ?? '').trim() === folder).length === 1
   openSheet(
     `${back ? `<button class="sheet-back" data-back>${icon('back', 18)}<span translate="no">${esc(back.title)}</span></button>` : ''}
      <h2 translate="no">${esc(item.title_override ?? item.title ?? item.artist_override ?? item.artist ?? 'Eintrag')}</h2>
      <p class="help" style="margin:0">${isSync ? 'Kommt vom Spotify-Sync. Was du hier einträgst, gilt statt der Werte von Spotify; leer = der Wert von Spotify.' : 'Von Hand hinzugefügt.'}</p>
      ${fields
        .map(([k, l]) => {
-         const input = `<input class="input" id="e-${k}"${k === 'id' ? ' type="url" inputmode="url" spellcheck="false" translate="no"' : ''} value="${esc(val(k))}" placeholder="${esc(isSync ? item[k] ?? '' : '')}" autocomplete="off">`
+         const input = `<input class="input" id="e-${k}"${k === 'id' ? ' type="url" inputmode="url" spellcheck="false" translate="no"' : ''} value="${esc(val(k))}" placeholder="${esc(isSync ? item[k] ?? '' : place && k === 'title' && item.type === 'spotify' ? 'leer = Name der Playlist' : '')}" autocomplete="off">`
          // the picture fields: also chosen from a search or the device (see openCoverPicker)
          return k.endsWith('cover')
            ? `<div class="field"><label for="e-${k}">${l}</label><div class="field-pick">${input}<button type="button" class="icon-btn soft" data-pick="${k}" aria-label="Bild suchen oder hochladen">${icon('image', 18)}</button></div></div>`
-           : `<div class="field"><label for="e-${k}">${l}</label>${input}</div>`
+           : `<div class="field"><label for="e-${k}">${l}</label>${input}</div>${
+               k === 'title' && place
+                 ? `${placeField('e', folder)}${aloneInFolder ? `<p class="help" style="margin:0">${esc('Sie steht heute allein in einem Ordner. Als eigene Kachel spielt sie auf der Box mit einem Tipp.')}</p>` : ''}`
+                 : ''
+             }`
        })
        .join('')}
      <div class="field"><label for="e-cat">Kategorie</label>${catSelect('e-cat', item.category_override ?? (isSync ? '' : item.category === 'radio' ? 'other' : item.category), isSync)}</div>
@@ -2872,6 +2881,8 @@ function openEntrySheet(item, back = null) {
     (sheet, close) => {
       sheet.querySelector('[data-close]').onclick = back ? back.open : close
       sheet.querySelector('[data-back]')?.addEventListener('click', back?.open)
+      const placer = place ? wirePlace(sheet, 'e', () => sheet.querySelector('#e-cat').value) : null
+      if (placer) sheet.querySelector('#e-cat').addEventListener('change', () => void placer.reload())
       if (wholeArtist) loadArtistAlbums(item, sheet.querySelector('#e-albums'))
       if (tidalArtist) wireTidalRange(item, sheet)
       if (item.type === 'rss') loadOfflineStatus(item.id, sheet.querySelector('#e-offline-status'))
@@ -2917,6 +2928,17 @@ function openEntrySheet(item, back = null) {
           const key = isSync ? `${k}_override` : k
           if (v) updated[key] = v
           else delete updated[key]
+        }
+        if (placer) {
+          const to = placer.value()
+          if (to === null) {
+            sheet.querySelector('#e-folder').focus()
+            return toast('Bitte einen Namen für den Ordner eintragen', 'info')
+          }
+          if (to) updated.artist = to
+          else delete updated.artist
+          // (a TIDAL playlist has its name only from here - the box asks Spotify for a playlist's, TIDAL's not)
+          if (item.type === 'tidal' && !updated.title && item.title) updated.title = item.title
         }
         if (playOptions) {
           const sorting = sheet.querySelector('#e-sort').value
@@ -3843,9 +3865,83 @@ async function openSpotifyArtist(r) {
   drawSearch()
 }
 
+// A playlist of Spotify or TIDAL: on the box's start page a tile of its own (no artist) or in a folder (its artist)
+const isPlaylistEntry = (it) => !!it && !it.isResume && ((it.type === 'spotify' && !!it.playlistid) || (it.type === 'tidal' && it.tidalKind === 'playlist'))
+
+// The folders of the start page in a category: the artists of the library's entries, as the box groups them (the
+// folders of the SD card and the NAS are tiles of their own) - the most used first
+async function placeFolders(category) {
+  const items = lib.items ?? (await api('/api/data')).body
+  const count = new Map()
+  for (const it of Array.isArray(items) ? items : []) {
+    if (!it || it.isResume === true || it.category === 'resume' || it.type === 'library') continue
+    const cat = it.category_override ?? (it.category === 'radio' ? 'other' : it.category)
+    const artist = String(it.artist_override ?? it.artist ?? '').trim()
+    if (cat !== category || !artist) continue
+    count.set(artist, (count.get(artist) ?? 0) + 1)
+  }
+  return [...count].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'de', { numeric: true })).slice(0, 12).map(([name]) => name)
+}
+
+// "Auf der Startseite" of a playlist (see isPlaylistEntry): p is the prefix of the ids, folder the folder now ('' = a
+// tile of its own)
+function placeField(p, folder) {
+  const opt = (v, label, help) => {
+    const on = (v === 'folder') === !!folder
+    return `<button type="button" class="choice${on ? ' on' : ''}" data-place="${v}" aria-pressed="${on}"><span class="radio"></span><span class="lbl"><b>${esc(label)}</b><small>${esc(help)}</small></span></button>`
+  }
+  return `<div class="field"><label>Auf der Startseite</label><div class="choices">
+      ${opt('own', 'Eigene Kachel', 'Ein Tipp auf der Box spielt sie sofort')}
+      ${opt('folder', 'In einem Ordner', 'Zusammen mit anderen Einträgen unter einem Namen')}
+      <div class="place-folder" id="${p}-folderbox"${folder ? '' : ' hidden'}>
+        <input class="input" id="${p}-folder" value="${esc(folder)}" placeholder="Name des Ordners" aria-label="Name des Ordners" autocomplete="off" translate="no">
+        <div class="place-chips" id="${p}-folders"></div>
+        <p class="help" style="margin:0">Vorhandenen Ordner antippen oder einen neuen Namen eintragen.</p>
+      </div></div></div>`
+}
+
+// catOf: the category chosen in the sheet (its folders as suggestions). value(): '' a tile of its own, the folder's
+// name, null a folder without a name
+function wirePlace(sheet, p, catOf) {
+  const box = sheet.querySelector(`#${p}-folderbox`)
+  const input = sheet.querySelector(`#${p}-folder`)
+  const chips = sheet.querySelector(`#${p}-folders`)
+  let folders = []
+  let seq = 0
+  const drawChips = () => {
+    const v = input.value.trim()
+    chips.innerHTML = folders.map((f) => `<button type="button" class="chip${f === v ? ' on' : ''}" translate="no">${esc(f)}</button>`).join('')
+    for (const c of chips.children)
+      c.onclick = () => {
+        input.value = c.textContent
+        drawChips()
+      }
+  }
+  const load = async () => {
+    const mine = ++seq
+    const found = await placeFolders(catOf())
+    if (mine !== seq) return
+    folders = found
+    drawChips()
+  }
+  for (const b of sheet.querySelectorAll('[data-place]'))
+    b.onclick = () => {
+      for (const o of sheet.querySelectorAll('[data-place]')) {
+        o.classList.toggle('on', o === b)
+        o.setAttribute('aria-pressed', String(o === b))
+      }
+      box.hidden = b.dataset.place !== 'folder'
+      if (!box.hidden) input.focus()
+    }
+  input.addEventListener('input', drawChips)
+  void load()
+  return { reload: load, value: () => (box.hidden ? '' : input.value.trim() || null) }
+}
+
 // The sheet to add something from a search to the box: picture, what it is, the category - chosen here, not before the
-// search - and the button. have: already in the library (only closing then). onAdd(category) returns true when done.
-function addSheet({ title, sub, img, have, haveText, cat, text, okLabel }, onAdd) {
+// search - and the button. have: already in the library (only closing then). place: a playlist, "Auf der Startseite"
+// (a tile of its own first). onAdd(category, folder) returns true when done ('' = a tile of its own).
+function addSheet({ title, sub, img, have, haveText, cat, text, okLabel, place }, onAdd) {
   openSheet(
     `<div class="ard-head">${img ? `<img src="${esc(img)}" alt="">` : ''}<span class="lbl"><h2 translate="no" style="margin:0">${esc(title)}</h2><small translate="no">${esc(sub ?? '')}</small></span></div>
      ${text ? `<p class="help" style="margin:0">${esc(text)}</p>` : ''}
@@ -3853,14 +3949,22 @@ function addSheet({ title, sub, img, have, haveText, cat, text, okLabel }, onAdd
        have
          ? `<p class="help" style="margin:0">${esc(haveText ?? 'Schon in der Bibliothek.')}</p><div class="btns"><button class="btn" data-close>Schließen</button></div>`
          : `<div class="field"><label for="add-cat">Hinzufügen als</label>${catSelect('add-cat', cat, false)}</div>
+            ${place ? placeField('add', '') : ''}
             <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-add>${icon('plus', 18)}${esc(okLabel ?? 'Hinzufügen')}</button></div>`
      }`,
     (sheet, close) => {
       for (const b of sheet.querySelectorAll('[data-close]')) b.onclick = close
+      const placer = place && !have ? wirePlace(sheet, 'add', () => sheet.querySelector('#add-cat').value) : null
+      if (placer) sheet.querySelector('#add-cat').addEventListener('change', () => void placer.reload())
       sheet.querySelector('[data-add]')?.addEventListener('click', async (e) => {
         const btn = e.currentTarget
+        const folder = placer ? placer.value() : ''
+        if (folder === null) {
+          sheet.querySelector('#add-folder').focus()
+          return toast('Bitte einen Namen für den Ordner eintragen', 'info')
+        }
         btn.disabled = true
-        const done = await onAdd(sheet.querySelector('#add-cat').value)
+        const done = await onAdd(sheet.querySelector('#add-cat').value, folder)
         btn.disabled = false
         if (done) close()
       })
@@ -3894,8 +3998,9 @@ async function openSpotifyAlbum(r) {
 // A playlist: an entry of the library as a pasted link makes it (the box fetches its tracks when it plays)
 async function openSpotifyPlaylist(r) {
   // (note: a hint of "Meine Playlists" - Smart-Sync brings it already, or Spotify's own)
-  addSheet({ title: r.name, sub: r.s, img: r.img, text: r.note, have: search.have.has(`playlist:${r.id}`), cat: search.cat === 'audiobook' ? 'music' : search.cat }, async (category) => {
-    const body = { type: 'spotify', playlistid: r.id, spotify_url: `https://open.spotify.com/playlist/${r.id}`, artist: r.name, category, source: 'manual' }
+  addSheet({ title: r.name, sub: r.s, img: r.img, text: r.note, have: search.have.has(`playlist:${r.id}`), cat: search.cat === 'audiobook' ? 'music' : search.cat, place: true }, async (category, folder) => {
+    // (no artist: a tile of its own on the box, named as the playlist)
+    const body = { type: 'spotify', playlistid: r.id, spotify_url: `https://open.spotify.com/playlist/${r.id}`, title: r.name, ...(folder ? { artist: folder } : {}), category, source: 'manual' }
     const res = await api('/api/add', { method: 'POST', body })
     if (!libWriteOk(res)) return false
     search.cat = category
@@ -4476,11 +4581,12 @@ async function openTidalItem(x) {
       have,
       cat: x.kind === 'playlist' ? 'music' : search.cat,
       text: kind === 'artist' ? 'Die Box zeigt alle Alben des Künstlers als einen Eintrag, auch Alben, die später dazukommen. Einen Bereich (Folge von–bis) und einzelne Alben stellst du danach in der Bibliothek ein.' : '',
+      place: kind === 'playlist',
     },
-    async (category) => {
-      // (a playlist under its own name: it has no artist of its own)
-      const artist = kind === 'playlist' ? x.name : x.artist || x.name
-      const body = { type: 'tidal', tidalKind: kind, id: x.id, artist, title: x.name, category, source: 'manual', ...(x.cover ? { cover: x.cover } : {}) }
+    async (category, folder) => {
+      // (a playlist has no artist of its own: a tile of its own, or in the folder chosen)
+      const artist = kind === 'playlist' ? folder : x.artist || x.name
+      const body = { type: 'tidal', tidalKind: kind, id: x.id, ...(artist ? { artist } : {}), title: x.name, category, source: 'manual', ...(x.cover ? { cover: x.cover } : {}) }
       const r = await api('/api/add', { method: 'POST', body })
       if (!libWriteOk(r)) return false
       search.cat = category

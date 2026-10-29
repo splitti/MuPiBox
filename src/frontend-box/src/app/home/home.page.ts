@@ -30,7 +30,7 @@ import { CoverFlipService } from '../cover-flip.service'
 import { HeaderVisibilityService } from '../header-visibility.service'
 import { LoadingComponent } from '../loading/loading.component'
 import type { CategoryType } from '../media'
-import { MediaService } from '../media.service'
+import { isStandaloneMedia, MediaService } from '../media.service'
 import { MediaUnavailableComponent } from '../media-unavailable/media-unavailable.component'
 import type { MupiboxConfig } from '../mupibox-config.model'
 import { StatusComponent } from '../status/status.component'
@@ -269,7 +269,7 @@ export class HomePage extends SwiperIonicEventsHelper {
     const isPlayableNasFolder = artist.coverMedia?.type === 'nas' && !artist.coverMedia.nasIsContainer
     const isPlayableLibraryFolder =
       artist.coverMedia?.type === 'library' && !!artist.coverMedia.libraryPath && !artist.coverMedia.libraryIsContainer
-    const isStandalone = (!!artist.coverMedia?.playlistid || artist.coverMedia?.type === 'radio') && !artist.coverMedia?.artist
+    const isStandalone = isStandaloneMedia(artist.coverMedia)
     if (isPlayableNasFolder || isPlayableLibraryFolder || isStandalone) {
       // This is a standalone playlist or radio station - start playback directly
       const navigationExtras: NavigationExtras = {

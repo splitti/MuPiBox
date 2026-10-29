@@ -29,7 +29,7 @@ Die Zugangsdaten siehst und änderst du später unter **Bibliothek › Spotify �
 
 - ein **Album** zeigt Cover und Angaben; dort wählst du unter **Hinzufügen als** die Kategorie und tippst auf **Hinzufügen**,
 - ein **Titel** kommt genauso mit seinem ganzen Album auf die Box,
-- eine **Playlist** kommt als ein Eintrag auf die Box (die Box holt ihre Titel beim Abspielen),
+- eine **Playlist** kommt als ein Eintrag auf die Box (die Box holt ihre Titel beim Abspielen); wie sie auf der Startseite erscheint, wählst du unter **Auf der Startseite** (siehe unten),
 - ein **Künstler** zeigt seine Alben zum einzelnen Hinzufügen; ein Suchfeld, **Alle**, **Alben** und **EPs & Singles** und die **Reihenfolge** (neueste, älteste zuerst oder alphabetisch) helfen bei Künstlern mit vielen Alben. **Ganzen Künstler abonnieren** legt ein Künstler-Abo an: Alle Folgen kommen auf die Box, neue später von selbst ([Inhalte verwalten](verwalten.md)). **Zurück zur Suche** führt zur Trefferliste.
 
 Die zuletzt gewählte Kategorie ist beim nächsten Hinzufügen vorausgewählt.
@@ -41,13 +41,22 @@ Unter der Suche stehen **Meine Playlists**: deine eigenen Playlists und die, den
 
 Die Box holt die Liste beim Öffnen der Seite und behält sie 5 Minuten; eine Playlist, die du gerade in Spotify angelegt hast, erscheint also spätestens nach 5 Minuten.
 
+### Playlists: eigene Kachel oder Ordner
+
+Beim Hinzufügen einer Playlist wählst du unter **Auf der Startseite**:
+
+- **Eigene Kachel** (vorgewählt): Die Playlist steht allein auf der Startseite, ein Tipp spielt sie sofort.
+- **In einem Ordner**: Sie steht zusammen mit anderen Einträgen unter einem Namen. Den Namen trägst du ein oder tippst einen vorhandenen Ordner an, auch den eines Interpreten mit Alben.
+
+Ändern kannst du das später in der **Bibliothek** am Eintrag. Dort heißt der Name der Playlist **Name der Kachel**; leer zeigt die Box den Namen von Spotify. Playlists, die du vor Version 5.0.13 hinzugefügt hast, stehen jeweils in einem eigenen Ordner mit ihrem Namen; mit **Eigene Kachel** sparst du auf der Box einen Tipp. Für Playlists von TIDAL gilt dasselbe.
+
 ### Link einfügen
 
 **Bibliothek › Link einfügen** nimmt direkt eine Spotify-Adresse: Album, Playlist, Interpret, Podcast oder Hörbuch. Als **Typ** wählst du **Spotify-Link**. Weitere Felder:
 
 | Feld | Bedeutung |
 | --- | --- |
-| **Interpret / Name** (optional) | eigener Name für den Eintrag |
+| **Interpret / Name** (optional) | eigener Name für den Eintrag; bei einer Playlist der Ordner, in dem sie steht (leer = eigene Kachel) |
 | **Kategorie** | Hörbuch/Hörspiel, Musik oder Radio & Podcasts |
 | **Cover** und **Interpret-Cover** (optional) | Bild-Adressen, wenn Spotifys Bild nicht passt |
 | **Sortierung** | Standard (Podcasts: neueste Folge zuerst, sonst alphabetisch), A–Z, Z–A, älteste oder neueste zuerst |
