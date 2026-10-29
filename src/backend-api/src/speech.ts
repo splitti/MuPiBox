@@ -799,7 +799,7 @@ export async function announce(getConfig: () => unknown, text: string, opts: { g
 // quieter (or pauses) once for the whole row and comes back after the last name - a new name cuts off the one before.
 // (the end of a row: a short while after the last name - for "pause" a bit longer, so the music does not start and stop
 // between two covers)
-const NAME_END_MS: Record<NamesMusic, number> = { duck: 400, pause: 1500, over: 0 }
+const NAME_END_MS: Record<NamesMusic, number> = { duck: 400, pause: 3000, over: 0 }
 const names: {
   child: ChildProcess | null
   seq: number
