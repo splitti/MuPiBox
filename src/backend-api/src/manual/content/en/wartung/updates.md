@@ -22,7 +22,7 @@ Tap **Install** at the channel you want (or **Reinstall** if this version is alr
 A box with MuPiBox 4.x does not have this app yet. There you start the update in the former **admin interface** with its update button. The page answers at once and the update goes on in the background: the display shows the maintenance screen, and the box restarts by itself at the end (after up to 30 minutes on older Raspberry Pis). Until then, please do not switch it off. The old page may say "Update complete" before it is; another tap on the button does not start a second update. Afterwards you go on in this app ([Opening the app](../erste-schritte/app-oeffnen.md)); the admin interface is then off and can be switched on again under [System](system.md).
 
 > [!WARNING]
-> This way the box makes **no automatic backup**, and there is no **Output** view. Make a backup in the admin interface first; it can be restored in this app later ([Backup](backup.md)). What the update did is on the boot partition of the memory card (readable on a PC too): in `mupibox_update.log` while the update runs, in `<date>_update_<version>.log` afterwards.
+> This way the box makes **no automatic backup**, and there is no **Output** view. Make a backup in the admin interface first; it can be restored in this app later ([Backup](backup.md)). What the update did is in `/boot/mupibox_update.log`; after a successful update the file is called `/boot/<date>_update_<version>.log`. If the update fails right at the start, the error is in `/var/lib/mupibox-update-admin/output.txt`. Where the boot partition is mounted at `/boot` (as on DietPi), the files in `/boot` can be read on a PC from the memory card too.
 
 ### If an update goes wrong
 
