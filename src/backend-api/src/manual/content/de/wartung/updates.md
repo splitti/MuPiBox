@@ -19,11 +19,14 @@ Tippe beim gewünschten Kanal auf **Installieren** (oder **Neu installieren**, w
 
 ### Von einer Box mit 4.x
 
-Eine Box mit MuPiBox 4.x hat diese App noch nicht. Dort startest du das Update im bisherigen **Admin-Interface** mit dessen Update-Knopf. Die Seite antwortet sofort, das Update läuft im Hintergrund weiter: Das Display zeigt das Wartungsbild, und die Box startet am Ende von selbst neu (auf älteren Raspberry Pis nach bis zu 30 Minuten). Bis dahin bitte nicht ausschalten und nicht noch einmal auf den Knopf tippen. Danach geht es in dieser App weiter ([App öffnen](../erste-schritte/app-oeffnen.md)); das Admin-Interface ist dann aus und lässt sich unter [System](system.md) wieder einschalten.
+Eine Box mit MuPiBox 4.x hat diese App noch nicht. Dort startest du das Update im bisherigen **Admin-Interface** mit dessen Update-Knopf. Die Seite antwortet sofort, das Update läuft im Hintergrund weiter: Das Display zeigt das Wartungsbild, und die Box startet am Ende von selbst neu (auf älteren Raspberry Pis nach bis zu 30 Minuten). Bis dahin bitte nicht ausschalten. Die alte Seite meldet unter Umständen schon vorher „Update complete“; ein zweiter Tipp auf den Knopf startet kein zweites Update. Danach geht es in dieser App weiter ([App öffnen](../erste-schritte/app-oeffnen.md)); das Admin-Interface ist dann aus und lässt sich unter [System](system.md) wieder einschalten.
+
+> [!WARNING]
+> Auf diesem Weg legt die Box **keine automatische Sicherung** an, und die Anzeige unter **Ausgabe** gibt es nicht. Mache vorher im Admin-Interface ein Backup; es lässt sich später in dieser App einspielen ([Backup](backup.md)). Was das Update getan hat, steht auf der Boot-Partition der Speicherkarte (auch am PC lesbar): während des Updates in `mupibox_update.log`, danach in `<Datum>_update_<Version>.log`.
 
 ### Wenn ein Update schiefgeht
 
-Vor jedem Update sichert die Box Einstellungen, Bibliothek und Cover auf der Speicherkarte: in `/home/dietpi/mupibox-backups/before-update-….zip` (die drei neuesten bleiben). Scheitert schon das Herunterladen oder das Auspacken der neuen Version, bleibt die bisherige Installation erhalten. Ein vollständiges Zurückrollen auf den alten Stand gibt es sonst nicht. Bricht ein Update ab, zeigt die Seite unter **Ausgabe**, was passiert ist.
+Vor jedem Update aus dieser App sichert die Box Einstellungen, Bibliothek und Cover auf der Speicherkarte: in `/home/dietpi/mupibox-backups/before-update-….zip` (die drei neuesten bleiben). Scheitert schon das Herunterladen oder das Auspacken der neuen Version, bleibt die bisherige Installation erhalten. Ein vollständiges Zurückrollen auf den alten Stand gibt es sonst nicht. Bricht ein Update aus dieser App ab, zeigt die Seite unter **Ausgabe**, was passiert ist.
 
 ## Neuigkeiten
 
