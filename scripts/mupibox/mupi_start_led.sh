@@ -81,7 +81,15 @@ do
 
 		#ledMin=$(echo "scale=2; $ledMin/100" | bc)
 		#ledMax=$(echo "scale=2; $ledMax/100" | bc)
-		displayState=`vcgencmd display_power | grep -o '.$'`
+		displayState=$(vcgencmd display_power 2>/dev/null | grep -o '[01]$')
+		# a display with KMS (Touch Display 2, Waveshare, EDATEC): the firmware does not know it ("Can't open device
+		# file") - what get_monitor.sh found with the X server instead
+		if [ -z "${displayState}" ]; then
+			case "$(/usr/bin/jq -r '.monitor // "On"' /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json 2>/dev/null)" in
+				Off) displayState=0 ;;
+				*) displayState=1 ;;
+			esac
+		fi
 		if [ ${displayState} -eq 1 ] && [ ${OLD_STATE} -ne ${displayState} ]
 		then
 			if [ ${wled_active} = true ]; then

@@ -1019,6 +1019,13 @@ textarea[hidden] { display: none; }
 .choice .radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--mp-border); flex: none; }
 .choice.on { border-color: var(--mp-primary); background: var(--mp-primary-soft); }
 .choice.on .radio { border: 6px solid var(--mp-primary); }
+/* a playlist "in einem Ordner": its name, the folders there are as chips */
+.place-folder { display: flex; flex-direction: column; gap: 8px; padding-left: 34px; }
+.place-folder[hidden] { display: none; }
+.place-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.place-chips:empty { display: none; }
+.place-chips .chip { border: 0; font: inherit; font-size: 13px; font-weight: 700; color: var(--mp-text); cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.place-chips .chip.on { background: var(--mp-primary); color: var(--mp-on-primary); }
 .entry.voice .icon-btn { width: 36px; height: 36px; flex: none; }
 .say-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .say-tile { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 10px 12px; border-radius: var(--mp-r); border: 1px solid var(--mp-border); background: var(--mp-surface); color: var(--mp-text); font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
@@ -1147,3 +1154,43 @@ textarea[hidden] { display: none; }
   align-items: center;
   margin-inline-start: 6px;
 }
+
+/* The MuPiBox lettering and the version badge under it: side bar (PC), on top of the settings (phone), login page */
+.mupi-logo { display: block; width: 100%; height: auto; }
+.sidebar .brand-block { display: flex; flex-direction: column; gap: 12px; padding: 6px 6px 16px; }
+.ver-badge {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px 8px 12px; text-align: start;
+  border-radius: var(--mp-r); border: 1.5px solid var(--mp-border); background: var(--mp-chip); color: var(--mp-text); cursor: pointer;
+}
+.ver-badge .ed { flex: none; font-weight: 900; font-size: 11px; letter-spacing: .1em; color: var(--mp-muted); }
+.ver-badge .num { display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 1.15; }
+.ver-badge .num b { font-size: 15px; font-weight: 800; }
+.ver-badge .num small { font-size: 12px; color: var(--mp-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ver-badge .go { flex: none; color: var(--mp-muted); display: grid; place-items: center; width: 16px; }
+.ver-badge.dev .num small { color: var(--mp-primary-text); }
+.ver-badge.new { border-color: var(--mp-accent); background: var(--mp-accent-soft); box-shadow: 0 0 0 4px var(--mp-accent-glow); }
+.ver-badge.new .ed, .ver-badge.new .num small, .ver-badge.new .go { color: var(--mp-accent-text); }
+.brand-card { display: flex; flex-direction: column; gap: 12px; }
+.brand-card .mupi-logo { max-width: 260px; }
+@media (min-width: 960px) { .brand-card { display: none; } }
+.login-brand { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: -6px; }
+.login-brand .mupi-logo { width: 236px; max-width: 80%; }
+.login-brand .ed-tag { font-size: 11px; font-weight: 900; letter-spacing: .16em; color: var(--mp-muted); border: 1px solid var(--mp-border); border-radius: 999px; padding: 3px 10px; }
+
+/* Display & Bedienung › Display-Modell: the models as a list to pick one from, the test with its countdown */
+.dm-list { display: flex; flex-direction: column; gap: 2px; }
+.dm-opt { display: flex; gap: 10px; align-items: flex-start; width: 100%; padding: 9px 10px; border-radius: var(--mp-r); border: 1px solid transparent; background: none; color: var(--mp-text); text-align: start; cursor: pointer; }
+.dm-opt .r { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--mp-muted); flex: none; margin-top: 2px; }
+.dm-opt[aria-checked="true"] { background: var(--mp-primary-soft); border-color: var(--mp-primary); }
+.dm-opt[aria-checked="true"] .r { border-color: var(--mp-primary); background: radial-gradient(circle, var(--mp-primary) 0 4px, transparent 5px); }
+.dm-opt .lbl b { display: block; font-size: 14px; }
+.dm-opt .lbl small { display: block; font-size: 12px; color: var(--mp-muted); line-height: 1.35; }
+.dm-variant { margin: 4px 0 6px 38px; }
+.dm-tag { font-size: 10.5px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; color: var(--mp-success); margin-inline-start: 6px; }
+.rot-tile .dm-tag { display: block; margin: 2px 0 0; }
+.dm-test { display: flex; flex-direction: column; gap: 10px; }
+.dm-count { font-size: 30px; font-weight: 900; text-align: center; color: var(--mp-accent-text); }
+.dm-bar { height: 6px; border-radius: 6px; background: var(--mp-chip); overflow: hidden; }
+.dm-bar i { display: block; height: 100%; width: 100%; background: var(--mp-accent); transition: width 1s linear; }
+.dm-test .btns { display: flex; gap: 8px; }
+.dm-test .btns .btn { flex: 1; }

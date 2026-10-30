@@ -13,7 +13,15 @@
 # ever): a large Chromium window without "MuPiBox" in its title for two looks in a row, or no Chromium window at all after
 # 150 s (the display did not come up), restarts the kiosk. At most 3 restarts per start of the box (the count is kept in
 # /tmp, the restarted kiosk runs this watchdog again); the start page being open ends it, and the count with it.
+# The watchdog looks for the window by its class: "chromium" (Debian 13) or "chromium-browser" (Debian 12). Looking for
+# the first only, it saw no window on a Debian 12 box, took that for a failed start and restarted the kiosk three times,
+# every 160 s, although the start page was open (log: "window: none"). Without xwininfo (package x11-utils) it cannot
+# see any window at all - it then stays off.
 (
+	if ! command -v xwininfo >/dev/null 2>&1; then
+		logger -t mupibox-kiosk "xwininfo is missing (package x11-utils), the kiosk watchdog stays off"
+		exit 0
+	fi
 	COUNT=/tmp/kiosk-watchdog-tries
 	FIRST=50      # seconds until the first look, then one every 10 s
 	NO_WINDOW=150 # seconds after which a missing Chromium window counts as a failure
@@ -22,8 +30,9 @@
 	bad=0
 	while [ "$waited" -le 420 ]; do
 		export DISPLAY=:0 XAUTHORITY="$(ls -t /tmp/serverauth.* 2>/dev/null | head -1)"
-		# the kiosk's window: the large one of Chromium (the other is a 10 x 10 helper window)
-		win=$(xwininfo -root -tree 2>/dev/null | awk '/\("chromium" "Chromium"\)/ { split($(NF - 1), g, "x"); if (g[1] + 0 >= 400) { print; exit } }')
+		# the kiosk's window: the large one of Chromium (the other is a 10 x 10 helper window). Its window class is
+		# "chromium" on Debian 13 but "chromium-browser" on Debian 12 (the program has that name there, see FP_CHROMIUM below).
+		win=$(xwininfo -root -tree 2>/dev/null | awk 'tolower($0) ~ /\("chromium[a-z-]*" "chromium[a-z-]*"\)/ { split($(NF - 1), g, "x"); if (g[1] + 0 >= 400) { print; exit } }')
 		case "$win" in
 			*'"MuPiBox'*)
 				rm -f "$COUNT"
@@ -61,6 +70,8 @@ rm ~/.config/chromium/Singleton*
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 RES_X=$(/usr/bin/jq -r .chromium.resX ${CONFIG})
 RES_Y=$(/usr/bin/jq -r .chromium.resY ${CONFIG})
+# (a display with KMS on the ribbon cable - Touch Display 2, Waveshare, EDATEC: kiosk_start.sh sets the window and the
+# scale by the screen once the X server runs)
 DEBUG=$(/usr/bin/jq -r .chromium.debug ${CONFIG})
 FORCE_GPU=$(/usr/bin/jq -r .chromium.gpu ${CONFIG})
 SCROLL_ANIMATION=$(/usr/bin/jq -r .chromium.sccrollanimation ${CONFIG})
@@ -94,7 +105,7 @@ CHROMIUM_OPTS="${CHROMIUM_OPTS} --window-size=${RES_X:-1280},${RES_Y:-720} --win
 # A display larger than the design size 800 x 480 (e.g. the Raspberry Pi Touch Display 2, 1280 x 720): the page is drawn
 # larger by the smaller of the two factors (1280 x 720: 1.5, the page is then 853 x 480) - sharp, and the themes keep
 # their layout. The same as uiScale() in the backend, which makes the covers that much larger. (LC_ALL=C: a German
-# locale would print 1,50.)
+# locale would print 1,50.) The same formula in kiosk_start.sh, for a display with KMS.
 UI_SCALE=$(LC_ALL=C awk -v x="${RES_X}" -v y="${RES_Y}" 'BEGIN { if (x + 0 <= 0 || y + 0 <= 0) { print 1; exit } s = x / 800; if (y / 480 < s) s = y / 480; if (s > 3) s = 3; if (s > 1) printf "%.2f", s; else print 1 }')
 if [ "${UI_SCALE}" != "1" ]; then
 	CHROMIUM_OPTS="${CHROMIUM_OPTS} --force-device-scale-factor=${UI_SCALE}"

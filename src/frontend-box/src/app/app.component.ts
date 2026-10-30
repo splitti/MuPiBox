@@ -15,6 +15,7 @@ import type { PlaytimePlayState } from './playtime.model'
 import { PlaytimeService } from './playtime.service'
 import { ElternMagicLinkOverlayComponent } from './eltern-magic-link/eltern-magic-link-overlay.component'
 import { HaPairingOverlayComponent } from './ha-pairing/ha-pairing-overlay.component'
+import { DisplayTestOverlayComponent } from './display-test/display-test-overlay.component'
 import { ParentAccessBarComponent } from './parent-access/parent-access-bar.component'
 import { ParentAccessService } from './parent-access/parent-access.service'
 import { PlaytimeBlockedOverlayComponent } from './playtime-blocked-overlay/playtime-blocked-overlay.component'
@@ -34,6 +35,7 @@ import { KmThemeService } from './theme/km-theme.service'
     PlaytimeChipComponent,
     ElternMagicLinkOverlayComponent,
     HaPairingOverlayComponent,
+    DisplayTestOverlayComponent,
     ParentAccessBarComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,

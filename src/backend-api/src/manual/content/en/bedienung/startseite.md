@@ -24,11 +24,12 @@ When you add content you decide which category it goes into ([Adding content](..
 Under **Settings › Appearance › View** you set:
 
 - **Cover flow view (stage)**: on (default) or off, for all themes except coverflow,
-- **Read the name aloud when the cover stops**: only with the cover flow view (voice and language: **Audio › Speech output**),
 - **Show folder and album names**: only with the theme coverflow,
 - **Scroll bar below the covers**: **Default** (as the theme has it), **Full width** (across the whole width and thicker, easy to hit with big fingers) or **Hide**. You can drag the bar, also in the cover flow view: the covers follow, and on release the nearest one snaps into place,
 - **Header with background** and **Player with background panel**: only for the older plain themes (such as blue, green, red, dark). Switched off, the header lies on the background without a coloured band, and the player's buttons stand without a panel, in the colours of the header,
 - **Full screen by swipe gesture**: only with the theme coverflow, see below.
+
+Whether the box reads out the name when a cover stops in the middle, and what the music does meanwhile, you set under **Settings › Audio › Speech output › Names read aloud** ([Sound](../hardware/sound.md#speech-output)). Reading names out works only with the cover flow view.
 
 ## Full screen in the theme coverflow
 

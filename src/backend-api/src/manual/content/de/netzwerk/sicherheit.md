@@ -9,10 +9,10 @@ Unter **Passwort & Anmeldung** vergibst du das Passwort für die ganze App. Es g
 | Karte | Was du dort tust |
 | --- | --- |
 | **Passwort** | **Passwort festlegen** (beim ersten Mal) oder **Passwort ändern**: das aktuelle Passwort und zweimal das neue eintragen, mindestens 6 Zeichen. Ein neues Passwort meldet alle anderen Geräte ab |
-| **Anmeldung** | **Anmeldung verlangen**: Die App fragt im Heimnetz nach dem Passwort. Das schützt zusätzlich die Display-Seite und die Schnittstelle der Box vor Zugriffen aus dem Netzwerk. Wirkt sofort und lässt sich erst einschalten, wenn ein Passwort festgelegt ist |
+| **Anmeldung** | **Anmeldung verlangen**: Die App fragt im Heimnetz nach dem Passwort. Das schützt zusätzlich die Display-Seite und die Schnittstelle der Box vor Zugriffen aus dem Netzwerk. Wirkt sofort und lässt sich erst einschalten, wenn ein eigenes Passwort festgelegt ist |
 | **Angemeldete Geräte** | die Geräte, die gerade angemeldet sind. Einzelne meldest du mit **Abmelden** ab, alle außer diesem mit **Alle anderen abmelden** |
 
-Zeigt die Karte **Standardpasswort**, gilt noch das Passwort aus dem Admin-Interface. Lege dann ein eigenes fest.
+Zeigt die Karte **Standardpasswort**, gilt noch das Passwort, mit dem jede MuPiBox ausgeliefert wird (`MuP1B0x`). Lege dann ein eigenes fest: Dafür trägst du nur das neue ein, das Standardpasswort fragt die App nicht ab.
 
 Das Anmelden geht auch ohne Passwort: per **QR-Code am Display** (die Status-Symbole oben lange drücken, siehe [Einstellungen am Display](../bedienung/eltern-zugang.md)) oder mit einem **Link über Telegram** (`/login`, siehe [Telegram](telegram.md)).
 

@@ -56,7 +56,10 @@
         "powerReboot": "Restart",
         "powerCancel": "Cancel",
         "clockNotSynced": "Time not synchronised",
-        "parentAccessHint": "Parent access – the lock still applies. Back to the start page, or 2 minutes without a touch: the lock screen comes back."
+        "parentAccessHint": "Parent access – the lock still applies. Back to the start page, or 2 minutes without a touch: the lock screen comes back.",
+        "displayTestTitle": "New display",
+        "displayTestText": "Do you see this picture? Then tap “Keep”. Otherwise the box goes back to the display before in {s}.",
+        "displayTestKeep": "Keep"
       }
     },
     "de": {
@@ -114,7 +117,10 @@
         "powerReboot": "Neu starten",
         "powerCancel": "Abbrechen",
         "clockNotSynced": "Uhrzeit nicht abgeglichen",
-        "parentAccessHint": "Eltern-Zugang – die Sperre gilt weiter. Zurück zur Startseite oder 2 Minuten ohne Berührung: wieder das Sperrbild."
+        "parentAccessHint": "Eltern-Zugang – die Sperre gilt weiter. Zurück zur Startseite oder 2 Minuten ohne Berührung: wieder das Sperrbild.",
+        "displayTestTitle": "Neues Display",
+        "displayTestText": "Siehst du dieses Bild? Dann tippe auf „Behalten“. Sonst stellt die Box in {s} das vorige Display wieder ein.",
+        "displayTestKeep": "Behalten"
       }
     },
     "fr": {
@@ -172,7 +178,10 @@
         "powerReboot": "Redémarrer",
         "powerCancel": "Annuler",
         "clockNotSynced": "Heure non synchronisée",
-        "parentAccessHint": "Accès parents – le blocage reste actif. Retour à l’accueil, ou 2 minutes sans toucher : l’écran de blocage revient."
+        "parentAccessHint": "Accès parents – le blocage reste actif. Retour à l’accueil, ou 2 minutes sans toucher : l’écran de blocage revient.",
+        "displayTestTitle": "Nouvel écran",
+        "displayTestText": "Vois-tu cette image ? Touche alors « Garder ». Sinon, la box revient à l’écran précédent dans {s}.",
+        "displayTestKeep": "Garder"
       }
     },
     "es": {
@@ -230,7 +239,10 @@
         "powerReboot": "Reiniciar",
         "powerCancel": "Cancelar",
         "clockNotSynced": "Hora no sincronizada",
-        "parentAccessHint": "Acceso para padres: el bloqueo sigue activo. Al volver al inicio, o tras 2 minutos sin tocar, vuelve la pantalla de bloqueo."
+        "parentAccessHint": "Acceso para padres: el bloqueo sigue activo. Al volver al inicio, o tras 2 minutos sin tocar, vuelve la pantalla de bloqueo.",
+        "displayTestTitle": "Pantalla nueva",
+        "displayTestText": "¿Ves esta imagen? Entonces toca «Mantener». Si no, la caja vuelve a la pantalla anterior en {s}.",
+        "displayTestKeep": "Mantener"
       }
     },
     "it": {
@@ -288,7 +300,10 @@
         "powerReboot": "Riavvia",
         "powerCancel": "Annulla",
         "clockNotSynced": "Ora non sincronizzata",
-        "parentAccessHint": "Accesso genitori – il blocco resta attivo. Tornando alla pagina iniziale, o dopo 2 minuti senza tocchi, torna la schermata di blocco."
+        "parentAccessHint": "Accesso genitori – il blocco resta attivo. Tornando alla pagina iniziale, o dopo 2 minuti senza tocchi, torna la schermata di blocco.",
+        "displayTestTitle": "Nuovo display",
+        "displayTestText": "Vedi questa immagine? Allora tocca «Mantieni». Altrimenti il box torna al display precedente tra {s}.",
+        "displayTestKeep": "Mantieni"
       }
     },
     "nl": {
@@ -346,7 +361,10 @@
         "powerReboot": "Herstarten",
         "powerCancel": "Annuleren",
         "clockNotSynced": "Tijd niet gesynchroniseerd",
-        "parentAccessHint": "Oudertoegang – de blokkering blijft gelden. Terug naar het startscherm, of 2 minuten niets aanraken: het blokkeerscherm komt terug."
+        "parentAccessHint": "Oudertoegang – de blokkering blijft gelden. Terug naar het startscherm, of 2 minuten niets aanraken: het blokkeerscherm komt terug.",
+        "displayTestTitle": "Nieuw scherm",
+        "displayTestText": "Zie je dit beeld? Tik dan op ‘Houden’. Anders gaat de box over {s} terug naar het vorige scherm.",
+        "displayTestKeep": "Houden"
       }
     },
     "sv": {
@@ -404,7 +422,10 @@
         "powerReboot": "Starta om",
         "powerCancel": "Avbryt",
         "clockNotSynced": "Tiden är inte synkroniserad",
-        "parentAccessHint": "Föräldraåtkomst – spärren gäller fortfarande. Tillbaka till startsidan, eller 2 minuter utan beröring: spärrskärmen kommer tillbaka."
+        "parentAccessHint": "Föräldraåtkomst – spärren gäller fortfarande. Tillbaka till startsidan, eller 2 minuter utan beröring: spärrskärmen kommer tillbaka.",
+        "displayTestTitle": "Ny skärm",
+        "displayTestText": "Ser du den här bilden? Tryck då på ”Behåll”. Annars går boxen tillbaka till den tidigare skärmen om {s}.",
+        "displayTestKeep": "Behåll"
       }
     },
     "da": {
@@ -462,7 +483,10 @@
         "powerReboot": "Genstart",
         "powerCancel": "Annuller",
         "clockNotSynced": "Tiden er ikke synkroniseret",
-        "parentAccessHint": "Forældreadgang – spærringen gælder stadig. Tilbage til startsiden, eller 2 minutter uden berøring: spærreskærmen vender tilbage."
+        "parentAccessHint": "Forældreadgang – spærringen gælder stadig. Tilbage til startsiden, eller 2 minutter uden berøring: spærreskærmen vender tilbage.",
+        "displayTestTitle": "Ny skærm",
+        "displayTestText": "Kan du se dette billede? Så tryk på “Behold”. Ellers går boksen tilbage til den tidligere skærm om {s}.",
+        "displayTestKeep": "Behold"
       }
     },
     "nb": {
@@ -520,7 +544,10 @@
         "powerReboot": "Start på nytt",
         "powerCancel": "Avbryt",
         "clockNotSynced": "Tiden er ikke synkronisert",
-        "parentAccessHint": "Foreldretilgang – sperren gjelder fortsatt. Tilbake til startsiden, eller 2 minutter uten berøring: sperreskjermen kommer tilbake."
+        "parentAccessHint": "Foreldretilgang – sperren gjelder fortsatt. Tilbake til startsiden, eller 2 minutter uten berøring: sperreskjermen kommer tilbake.",
+        "displayTestTitle": "Ny skjerm",
+        "displayTestText": "Ser du dette bildet? Trykk da på «Behold». Ellers går boksen tilbake til den forrige skjermen om {s}.",
+        "displayTestKeep": "Behold"
       }
     },
     "fi": {
@@ -578,7 +605,10 @@
         "powerReboot": "Käynnistä uudelleen",
         "powerCancel": "Peruuta",
         "clockNotSynced": "Aikaa ei ole synkronoitu",
-        "parentAccessHint": "Vanhempien pääsy – lukitus on yhä voimassa. Takaisin aloitussivulle tai 2 minuuttia koskematta: lukitusnäkymä palaa."
+        "parentAccessHint": "Vanhempien pääsy – lukitus on yhä voimassa. Takaisin aloitussivulle tai 2 minuuttia koskematta: lukitusnäkymä palaa.",
+        "displayTestTitle": "Uusi näyttö",
+        "displayTestText": "Näetkö tämän kuvan? Napauta silloin ”Pidä”. Muuten laatikko palaa aiempaan näyttöön ajassa {s}.",
+        "displayTestKeep": "Pidä"
       }
     },
     "pl": {
@@ -636,7 +666,10 @@
         "powerReboot": "Uruchom ponownie",
         "powerCancel": "Anuluj",
         "clockNotSynced": "Czas nie jest zsynchronizowany",
-        "parentAccessHint": "Dostęp dla rodziców – blokada nadal obowiązuje. Powrót do strony startowej lub 2 minuty bez dotyku: ekran blokady wraca."
+        "parentAccessHint": "Dostęp dla rodziców – blokada nadal obowiązuje. Powrót do strony startowej lub 2 minuty bez dotyku: ekran blokady wraca.",
+        "displayTestTitle": "Nowy wyświetlacz",
+        "displayTestText": "Widzisz ten obraz? Dotknij wtedy „Zachowaj”. W przeciwnym razie pudełko wróci do poprzedniego wyświetlacza za {s}.",
+        "displayTestKeep": "Zachowaj"
       }
     },
     "pt": {
@@ -694,7 +727,10 @@
         "powerReboot": "Reiniciar",
         "powerCancel": "Cancelar",
         "clockNotSynced": "Hora não sincronizada",
-        "parentAccessHint": "Acesso dos pais – o bloqueio continua ativo. Ao voltar ao início, ou após 2 minutos sem tocar, o ecrã de bloqueio volta."
+        "parentAccessHint": "Acesso dos pais – o bloqueio continua ativo. Ao voltar ao início, ou após 2 minutos sem tocar, o ecrã de bloqueio volta.",
+        "displayTestTitle": "Ecrã novo",
+        "displayTestText": "Vês esta imagem? Então toca em «Manter». Caso contrário, a caixa volta ao ecrã anterior dentro de {s}.",
+        "displayTestKeep": "Manter"
       }
     },
     "tr": {
@@ -752,7 +788,10 @@
         "powerReboot": "Yeniden başlat",
         "powerCancel": "İptal",
         "clockNotSynced": "Saat eşitlenmedi",
-        "parentAccessHint": "Ebeveyn erişimi – kilit geçerliliğini koruyor. Başlangıç sayfasına dönünce ya da 2 dakika dokunulmazsa kilit ekranı geri gelir."
+        "parentAccessHint": "Ebeveyn erişimi – kilit geçerliliğini koruyor. Başlangıç sayfasına dönünce ya da 2 dakika dokunulmazsa kilit ekranı geri gelir.",
+        "displayTestTitle": "Yeni ekran",
+        "displayTestText": "Bu görüntüyü görüyor musun? O zaman “Kalsın”a dokun. Yoksa kutu {s} içinde önceki ekrana döner.",
+        "displayTestKeep": "Kalsın"
       }
     },
     "uk": {
@@ -810,7 +849,10 @@
         "powerReboot": "Перезапустити",
         "powerCancel": "Скасувати",
         "clockNotSynced": "Час не синхронізовано",
-        "parentAccessHint": "Доступ для батьків – блокування діє далі. Повернення на головну або 2 хвилини без дотику: знову екран блокування."
+        "parentAccessHint": "Доступ для батьків – блокування діє далі. Повернення на головну або 2 хвилини без дотику: знову екран блокування.",
+        "displayTestTitle": "Новий дисплей",
+        "displayTestText": "Бачиш це зображення? Тоді торкнися «Залишити». Інакше бокс повернеться до попереднього дисплея через {s}.",
+        "displayTestKeep": "Залишити"
       }
     },
     "ru": {
@@ -868,7 +910,10 @@
         "powerReboot": "Перезагрузить",
         "powerCancel": "Отмена",
         "clockNotSynced": "Время не синхронизировано",
-        "parentAccessHint": "Доступ для родителей – блокировка продолжает действовать. Возврат на главную или 2 минуты без касания: снова экран блокировки."
+        "parentAccessHint": "Доступ для родителей – блокировка продолжает действовать. Возврат на главную или 2 минуты без касания: снова экран блокировки.",
+        "displayTestTitle": "Новый дисплей",
+        "displayTestText": "Видишь это изображение? Тогда нажми «Оставить». Иначе бокс вернётся к прежнему дисплею через {s}.",
+        "displayTestKeep": "Оставить"
       }
     },
     "cs": {
@@ -926,7 +971,10 @@
         "powerReboot": "Restartovat",
         "powerCancel": "Zrušit",
         "clockNotSynced": "Čas není synchronizován",
-        "parentAccessHint": "Rodičovský přístup – blokování dál platí. Návrat na úvodní stránku nebo 2 minuty bez dotyku: znovu obrazovka blokování."
+        "parentAccessHint": "Rodičovský přístup – blokování dál platí. Návrat na úvodní stránku nebo 2 minuty bez dotyku: znovu obrazovka blokování.",
+        "displayTestTitle": "Nový displej",
+        "displayTestText": "Vidíš tento obraz? Pak klepni na „Ponechat“. Jinak se box za {s} vrátí k předchozímu displeji.",
+        "displayTestKeep": "Ponechat"
       }
     },
     "el": {
@@ -984,7 +1032,10 @@
         "powerReboot": "Επανεκκίνηση",
         "powerCancel": "Ακύρωση",
         "clockNotSynced": "Η ώρα δεν έχει συγχρονιστεί",
-        "parentAccessHint": "Πρόσβαση γονέων – το κλείδωμα ισχύει ακόμα. Επιστροφή στην αρχική ή 2 λεπτά χωρίς άγγιγμα: επιστρέφει η οθόνη κλειδώματος."
+        "parentAccessHint": "Πρόσβαση γονέων – το κλείδωμα ισχύει ακόμα. Επιστροφή στην αρχική ή 2 λεπτά χωρίς άγγιγμα: επιστρέφει η οθόνη κλειδώματος.",
+        "displayTestTitle": "Νέα οθόνη",
+        "displayTestText": "Βλέπεις αυτή την εικόνα; Τότε πάτησε «Κράτα». Αλλιώς το κουτί επιστρέφει στην προηγούμενη οθόνη σε {s}.",
+        "displayTestKeep": "Κράτα"
       }
     }
   }

@@ -2,8 +2,9 @@
 # TIDAL for the box (unofficial: python-tidal, "tidalapi", signs in the way TIDAL's own apps do - TIDAL's developer
 # platform gives other apps 30-second previews only). A small service on the box itself (127.0.0.1:5011) that the
 # app's server asks: sign in with a code (link.tidal.com, the TIDAL password never comes to the box), the state of
-# the sign-in, sign out; searching (albums, artists, playlists), an artist's albums, the tracks of an album or a
-# playlist - and /stream/<track>, which the player's mpv plays: it sends mpv on to the track's address at TIDAL, asked
+# the sign-in, sign out; searching (albums, artists, playlists), the account's own and kept playlists (/mine), an
+# artist's albums, the tracks of an album or a playlist - and /stream/<track>, which the player's mpv plays: it sends
+# mpv on to the track's address at TIDAL, asked
 # for at that moment (they run out after a while). Only plain streams: one TIDAL sends encrypted (DRM) is refused,
 # the box does not decrypt anything.
 #
@@ -12,14 +13,18 @@
 # refresh and changes the refresh token then too, so it is written again whenever it changed.
 
 import datetime
+import email.utils
 import json
+import math
 import os
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urljoin, urlparse
 
+import requests
 import tidalapi
+import tidalapi.exceptions
 
 HOST = "127.0.0.1"
 PORT = 5011
@@ -35,10 +40,15 @@ def new_session():
     """A tidalapi session whose requests (the API, the sign-in, the renewal) all have a time limit."""
     s = tidalapi.Session()
     send = s.request_session.request
+    # the last answer TIDAL gave this session (see passing: tidalapi does not always keep it with the error it raises)
+    s.last_response = None
 
     def request(method, url, **kw):
         kw.setdefault("timeout", TIMEOUT)
-        return send(method, url, **kw)
+        s.last_response = None
+        response = send(method, url, **kw)
+        s.last_response = response
+        return response
 
     s.request_session.request = request
     return s
@@ -92,27 +102,111 @@ def save_session():
     saved_tokens = t
 
 
-def load_session():
-    global saved_tokens
+def asked_wait(response):
+    """The seconds TIDAL asked to wait (Retry-After: seconds, or the HTTP date until when), 0 when it did not say."""
+    value = str(response.headers.get("Retry-After", "")).strip() if response is not None else ""
+    if value.isdigit():
+        return int(value)
+    try:
+        until = email.utils.parsedate_to_datetime(value)
+        if until.tzinfo is None:
+            until = until.replace(tzinfo=datetime.timezone.utc)
+        return max(0, math.ceil((until - datetime.datetime.now(datetime.timezone.utc)).total_seconds()))
+    except (TypeError, ValueError, IndexError, OverflowError):
+        return 0
+
+
+def passing(e, last=None):
+    """Whether an error goes by: no network yet (at the start of the box it often comes a few seconds after this
+    service), no answer, TIDAL busy (429) or down for a moment (5xx) - then the seconds TIDAL asked to wait (0 when it
+    did not say), else None (a refused or expired sign-in stays). last: the last answer of the session (new_session) -
+    tidalapi raises a 5xx page as a JSON error, and a failed renewal as an AuthenticationError, without the answer."""
+    if isinstance(e, tidalapi.exceptions.TooManyRequests):
+        # (tidalapi reads Retry-After as seconds only: -1 for a date - the answer itself is asked as well)
+        return max(0, getattr(e, "retry_after", 0) or 0, asked_wait(getattr(e, "response", None) or last))
+    if isinstance(e, (requests.exceptions.ConnectionError, requests.exceptions.Timeout)):
+        return 0
+    response = getattr(e, "response", None)
+    if response is None and isinstance(e.__cause__, requests.HTTPError):
+        response = e.__cause__.response
+    if response is None:
+        response = last
+    if response is not None and (response.status_code == 429 or response.status_code >= 500):
+        return asked_wait(response)
+    return None
+
+
+def generation():
+    """What the saved sign-in may replace: the session as it is now and the number of the latest sign-in attempt."""
+    with lock:
+        return session, login_round
+
+
+def load_session(quiet=False, gen=None):
+    """The saved sign-in, taken up again: ("done", 0) - signed in, refused, none saved, or overtaken - or ("retry",
+    seconds TIDAL asked to wait) when TIDAL could not be asked for now (see passing). gen: what it may replace (see
+    generation) - kept by keep_loading over all its tries, so a sign-in or sign-out in between always counts."""
+    global session, saved_tokens
+    first, mine_round = gen or generation()
     try:
         with open(SESSION_FILE) as f:
             t = json.load(f)
     except (OSError, ValueError):
-        return
+        return "done", 0
     exp = None
     if t.get("expiry_time"):
         try:
             exp = datetime.datetime.fromisoformat(t["expiry_time"])
         except ValueError:
             exp = None
+    # (into a session of its own, outside the lock: TIDAL is asked)
+    s = new_session()
     try:
-        ok = session.load_oauth_session(t.get("token_type", "Bearer"), t.get("access_token", ""), t.get("refresh_token"), exp)
+        ok = s.load_oauth_session(t.get("token_type", "Bearer"), t.get("access_token", ""), t.get("refresh_token"), exp)
     except Exception as e:  # tidalapi raises different errors for a refused or expired sign-in
+        wait = passing(e, s.last_response)
+        if wait is not None:
+            if not quiet:
+                log(f"TIDAL cannot be asked yet, the saved sign-in is tried again: {e}")
+            return "retry", wait
         log(f"the saved sign-in does not work any more: {e}")
-        return
-    saved_tokens = t
-    log("signed in again with the saved sign-in" if ok else "the saved sign-in was not accepted")
-    save_session()
+        return "done", 0
+    with lock:
+        # signed in, signed out or a sign-in started (also one still waiting for its code) since: that counts, not the
+        # file read before
+        if session is not first or login_round != mine_round or pending is not None or session.user is not None:
+            return "done", 0
+        if not ok:
+            log("the saved sign-in was not accepted")
+            return "done", 0
+        session = s
+        saved_tokens = t
+        log("signed in again with the saved sign-in")
+        save_session()
+    return "done", 0
+
+
+# longer than this asked by TIDAL (Retry-After): no more tries by themselves - the next start of the service or a sign-in
+# in the app tries again
+LONGEST_ASKED_WAIT = 6 * 3600
+
+
+def keep_loading(gen, asked=0):
+    """Tries the saved sign-in again until TIDAL answers - after 15 s, then twice as long each time up to 5 minutes, and
+    never before the time TIDAL asked to wait (Retry-After, never shortened; see LONGEST_ASKED_WAIT). Logged once, see
+    load_session. Ends as soon as someone signs in or out (gen, see load_session)."""
+    backoff = 15
+    while True:
+        if asked > LONGEST_ASKED_WAIT:
+            log(f"TIDAL asked to wait {asked} s - the saved sign-in is not tried again by itself (restart or sign in)")
+            return
+        time.sleep(max(backoff, asked))
+        if generation() != gen:
+            return
+        result, asked = load_session(quiet=True, gen=gen)
+        if result != "retry":
+            return
+        backoff = min(backoff * 2, 300)
 
 
 def signed_in(s):
@@ -328,6 +422,40 @@ def paged(fetch, most=1000, step=100):
     return out[:most]
 
 
+def my_playlists():
+    """The playlists of the account signed in: its own and the ones it keeps (favourites) - TIDAL's search does not
+    find playlists made by users. Its own first (own: made by this account).
+    Asked as TIDAL's apps do (my-collection: own and kept ones in one list, its top folder), page by page with the
+    cursor TIDAL hands out: tidalapi's own calls took 12-15 s for 76 playlists (playlistsAndFavoritePlaylists, users/…/
+    playlists), and its paging of this list by offset gave the first 50 again and again (TIDAL ignores the offset)."""
+    s = ready()
+    me = str(getattr(s.user, "id", "") or "")
+    url = urljoin(s.config.api_v2_location, "my-collection/playlists/folders")
+    params = {"folderId": "root", "offset": 0, "limit": 50, "includeOnly": "PLAYLIST", "order": "DATE", "orderDirection": "DESC"}
+    entries = []
+    cursor = None
+    for _ in range(20):  # (at most 1000)
+        page = s.request.request("GET", url, params={**params, **({"cursor": cursor} if cursor else {})}).json()
+        part = page.get("items") or []
+        entries.extend(part)
+        cursor = page.get("cursor")
+        if not cursor or not part:
+            break
+    renewed()
+    items = [s.parse_playlist(e["data"]) for e in entries if e.get("itemType") == "PLAYLIST" and isinstance(e.get("data"), dict)]
+    seen = set()
+    out = []
+    for p in items:
+        if not isinstance(p, tidalapi.Playlist) or str(p.id) in seen:
+            continue
+        seen.add(str(p.id))
+        item = playlist_json(p)
+        item["own"] = bool(me) and str(getattr(getattr(p, "creator", None), "id", "") or "") == me
+        out.append(item)
+    out.sort(key=lambda x: not x["own"])
+    return {"playlists": out}
+
+
 def artist_albums(artist_id):
     s = ready()
     artist = s.artist(artist_id)
@@ -410,6 +538,15 @@ def tracks(kind, item_id):
     return head
 
 
+def item(kind, item_id):
+    """An album or a playlist without its tracks (a link pasted in the app): name, cover, number of tracks - one
+    request, where the tracks of a long playlist take one per 100."""
+    s = ready()
+    head = playlist_json(s.playlist(item_id)) if kind == "playlist" else album_json(s.album(item_id))
+    renewed()
+    return head
+
+
 def stream_url(track_id):
     """The address of the track at TIDAL, plain (no DRM) and as one file - else Refused."""
     s = ready()
@@ -447,13 +584,15 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(400, {"error": "no_query"})
                 limit = max(1, min(50, int(q.get("limit", "20") or 20)))
                 return self._send(200, search(text, limit))
+            if url.path == "/mine":
+                return self._send(200, my_playlists())
             if len(parts) == 3 and parts[0] == "artist" and parts[2] == "albums" and parts[1].isdigit():
                 return self._send(200, narrowed(artist_albums(parts[1]), q))
-            if url.path == "/tracks" and q.get("kind") in ("album", "playlist") and q.get("id"):
+            if url.path in ("/tracks", "/item") and q.get("kind") in ("album", "playlist") and q.get("id"):
                 item_id = q["id"]
                 if not all(c.isalnum() or c == "-" for c in item_id) or len(item_id) > 64:
                     return self._send(400, {"error": "bad_id"})
-                return self._send(200, tracks(q["kind"], item_id))
+                return self._send(200, (tracks if url.path == "/tracks" else item)(q["kind"], item_id))
             if len(parts) == 2 and parts[0] == "stream" and parts[1].isdigit():
                 target = stream_url(parts[1])
                 self.send_response(302)
@@ -494,7 +633,10 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    load_session()
+    start_gen = generation()
+    result, asked = load_session(gen=start_gen)
+    if result == "retry":
+        threading.Thread(target=keep_loading, args=(start_gen, asked), daemon=True).start()
     server = ThreadingHTTPServer((HOST, PORT), Handler)
     log(f"listening on {HOST}:{PORT}")
     server.serve_forever()

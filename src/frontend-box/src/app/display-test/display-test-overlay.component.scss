@@ -1,0 +1,43 @@
+// as the Home Assistant overlay: a dark card on a dimmed screen - over everything (also the lock screen), so the new
+// display can be confirmed whatever the box shows
+.dt-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dt-card {
+  background: #1a1c20;
+  color: #e4e4e7;
+  border-radius: 16px;
+  padding: 20px 26px;
+  max-width: min(520px, 92vw);
+  text-align: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+
+  h2 {
+    margin: 0 0 8px;
+    font-size: 22px;
+  }
+
+  p {
+    margin: 0 0 14px;
+    font-size: 15px;
+    color: #a1a1aa;
+  }
+}
+
+.dt-keep {
+  font-size: 18px;
+  font-weight: 700;
+  padding: 14px 32px;
+  border: none;
+  border-radius: 14px;
+  background: #56b6ea;
+  color: #0b1220;
+}

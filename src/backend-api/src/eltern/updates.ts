@@ -42,8 +42,11 @@ KIND="$1"
 PHASE=running
 STARTED=$(date +%s)
 FINISHED=
+# (boot: the start of the box the update ran in - the app tells by it whether the box restarted since; the clock is no
+# help there, it is set right a while after the start)
+BOOT=$(cat /proc/sys/kernel/random/boot_id 2>/dev/null)
 write_state() {
-	printf 'kind=%s\\nphase=%s\\nstarted=%s\\nfinished=%s\\n' "$KIND" "$PHASE" "$STARTED" "$FINISHED" > "$D/state.tmp" && mv "$D/state.tmp" "$D/state"
+	printf 'kind=%s\\nphase=%s\\nstarted=%s\\nfinished=%s\\nboot=%s\\n' "$KIND" "$PHASE" "$STARTED" "$FINISHED" "$BOOT" > "$D/state.tmp" && mv "$D/state.tmp" "$D/state"
 }
 finish() {
 	PHASE="$1"
@@ -210,11 +213,18 @@ async function jobState() {
   const alive = active === 'active' || active === 'activating'
   if (phase === 'running' && !alive) phase = 'failed'
   if (phase === 'rebooting' && !alive) phase = 'ok'
+  const finished = Number(state.finished) * 1000 || null
+  // the box started again since the job ended (its "please reboot" is done - the app leaves it out then): another boot
+  // id than the one the job ran in. Not by the clock: set right after the start, it made a start out of a correction.
+  // (a state of before has no boot id: not known, taken as not restarted)
+  const bootNow = (await fsp.readFile('/proc/sys/kernel/random/boot_id', 'utf8').catch(() => '')).trim()
+  const restarted = !!finished && !!state.boot && !!bootNow && state.boot !== bootNow
   return {
     kind: state.kind,
     phase, // running | rebooting | ok | failed
     started: Number(state.started) * 1000 || null,
-    finished: Number(state.finished) * 1000 || null,
+    finished,
+    restarted,
     percent: Number(percent) || 0,
     step: step ?? '',
     // the last lines, without the terminal's control characters

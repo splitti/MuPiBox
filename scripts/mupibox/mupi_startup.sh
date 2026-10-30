@@ -23,6 +23,17 @@
 
 #sudo /usr/local/bin/mupibox/./get_network.sh
 
+# The display's files belong to dietpi: the app's server (dietpi) changes the theme link there. Files copied in by hand
+# (as root, or unpacked from another computer with its user's number) took that away - the app then could not switch
+# the theme. Only those are given back: on a box where all is right nothing is written.
+DISPLAY_WWW=/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www
+if [ -d "${DISPLAY_WWW}" ]; then
+	find "${DISPLAY_WWW}" ! -user dietpi -exec chown -h dietpi:dietpi {} + 2>/dev/null
+fi
+
+# A new display model waiting for its answer (app: Display-Modell): 3 minutes from now, then it goes back by itself
+[ -x /usr/local/bin/mupibox/display_profile.sh ] && /usr/local/bin/mupibox/display_profile.sh boot
+
 # The display brightness chosen in the app (mupibox.displayBrightness, percent; missing = as the display starts).
 # At least 10 %, so a mistake never leaves a black display after a restart.
 BRIGHTNESS=$(/usr/bin/jq -r '.mupibox.displayBrightness // empty' /etc/mupibox/mupiboxconfig.json 2>/dev/null)

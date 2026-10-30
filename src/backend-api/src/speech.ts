@@ -10,7 +10,7 @@
  * ist (der Hörschutz gilt für die Box selbst).
  */
 
-import { execFile, spawn } from 'node:child_process'
+import { type ChildProcess, execFile, spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { promises as fsp, existsSync, createWriteStream } from 'node:fs'
 import * as path from 'node:path'
@@ -41,6 +41,8 @@ export interface SpeechTexts {
   bedtime: string
   sleepEnd: string
 }
+export type NamesMusic = 'duck' | 'pause' | 'over'
+const NAMES_MUSIC: NamesMusic[] = ['duck', 'pause', 'over']
 export interface SpeechConfig {
   engine: SpeechEngine
   /** without a Piper voice for the box's language */
@@ -53,6 +55,8 @@ export interface SpeechConfig {
   /** how loud against the box: 0.4 quiet, 0.7 medium, 1 as the music */
   level: number
   parents: { on: boolean; gong: boolean; pause: boolean }
+  /** names read out on the display while something plays: the music quieter, paused, or as it is */
+  names: { music: NamesMusic }
   /** own texts per language (missing: the language's default) */
   texts: Record<string, Partial<SpeechTexts>>
   templates: Record<string, string[]>
@@ -92,6 +96,9 @@ export const SPEECH_DEFAULT_CONFIG: SpeechConfig = {
   sleepEnd: { on: false },
   level: 1,
   parents: { on: true, gong: true, pause: true },
+  // (quieter: over the music the name was hard to understand, and pausing for every name made it stop and go while
+  // swiping through the covers)
+  names: { music: 'duck' },
   texts: {},
   templates: {},
 }
@@ -115,6 +122,7 @@ export function speechOf(cfg: unknown): SpeechConfig {
     sleepEnd: { on: bool(obj(raw.sleepEnd).on, d.sleepEnd.on) },
     level: LEVELS.includes(raw.level as number) ? (raw.level as number) : d.level,
     parents: { on: bool(parents.on, d.parents.on), gong: bool(parents.gong, d.parents.gong), pause: bool(parents.pause, d.parents.pause) },
+    names: { music: NAMES_MUSIC.includes(obj(raw.names).music as NamesMusic) ? (obj(raw.names).music as NamesMusic) : d.names.music },
     texts: obj(raw.texts) as Record<string, Partial<SpeechTexts>>,
     templates: obj(raw.templates) as Record<string, string[]>,
   }
@@ -150,6 +158,11 @@ export function parseSpeech(body: unknown, current: SpeechConfig): SpeechConfig 
       if (typeof v !== 'boolean') return null
       ;(next[part] as Record<string, unknown>)[k] = v
     }
+  }
+  const names = b.names as Record<string, unknown> | undefined
+  if (names?.music !== undefined) {
+    if (!NAMES_MUSIC.includes(names.music as NamesMusic)) return null
+    next.names.music = names.music as NamesMusic
   }
   const rest = b.rest as Record<string, unknown> | undefined
   if (rest?.minutes !== undefined) {
@@ -689,7 +702,8 @@ function playFile(file: string, level: number): Promise<void> {
   const tries: [string, string[]][] = file.endsWith('.wav')
     ? [['paplay', [`--volume=${Math.round(level * 65536)}`, file]]]
     : [
-        ['mpv', ['--no-video', '--really-quiet', '--no-config', '--ao=pulse', `--volume=${percent}`, file]],
+        // (a name of its own for PulseAudio, as for the names read out: the music's mpv made quieter made this one as quiet)
+        ['mpv', ['--no-video', '--really-quiet', '--no-config', '--ao=pulse', '--audio-client-name=mupibox-speech', `--volume=${percent}`, file]],
       ]
   const attempt = (i: number): Promise<void> =>
     new Promise((resolve) => {
@@ -718,7 +732,9 @@ async function playingNow(): Promise<boolean> {
     return false
   }
 }
-const player = (action: 'pause' | 'play') => fetch(`http://127.0.0.1:5005/${action}?src=eltern`, { signal: AbortSignal.timeout(3000) }).catch(() => undefined)
+// (src=speech: the player takes the pause and the going on of an announcement for no start - with src=eltern the display
+// followed it to the big player after every announcement, away from where the child was looking for something)
+const player = (action: 'pause' | 'play') => fetch(`http://127.0.0.1:5005/${action}?src=speech`, { signal: AbortSignal.timeout(3000) }).catch(() => undefined)
 
 // The other sounds quieter while the box speaks (PulseAudio's streams), and back
 async function duck(): Promise<() => Promise<void>> {
@@ -776,6 +792,115 @@ export async function announce(getConfig: () => unknown, text: string, opts: { g
       return false
     },
   )
+}
+
+// Names read out on the display (the player's sayName): the music as set under Sprachausgabe › Vorgelesene Namen -
+// quieter (default), paused, or as it is. Swiping through the covers reads one name after the other: the music goes
+// quieter (or pauses) once for the whole row and comes back after the last name - a new name cuts off the one before.
+// (the end of a row: a short while after the last name - for "pause" a bit longer, so the music does not start and stop
+// between two covers)
+const NAME_END_MS: Record<NamesMusic, number> = { duck: 400, pause: 3000, over: 0 }
+const names: {
+  child: ChildProcess | null
+  seq: number
+  // the music made quieter / paused for this row (what puts it back), the way there while it is made, and the way
+  // back while it is made (a new row waits for it: it read the volume half restored and kept that one)
+  restore: (() => Promise<void>) | null
+  // the player's pause of this row (its token, see spotify-control.js /speechpause): it goes on with it only while no
+  // other command came - the player decides that itself, a pause from the display, the app or Telegram is kept
+  pauseToken: number | null
+  starting: Promise<void> | null
+  ending: Promise<void> | null
+  endTimer: NodeJS.Timeout | null
+} = { child: null, seq: 0, restore: null, pauseToken: null, starting: null, ending: null, endTimer: null }
+
+// The player's pause for names, under a number of the row's own (kept even when the player's answer gets lost - the
+// player goes on with that number only if it paused with it): whether it paused (false: nothing played, or not known)
+let pauseNumber = Date.now()
+async function speechPause(token: number): Promise<boolean> {
+  try {
+    const r = await fetch(`http://127.0.0.1:5005/speechpause?token=${token}`, { signal: AbortSignal.timeout(3000) })
+    return ((await r.json()) as { paused?: unknown }).paused === true
+  } catch {
+    return false
+  }
+}
+const speechResume = (token: number) => fetch(`http://127.0.0.1:5005/speechresume?token=${token}`, { signal: AbortSignal.timeout(3000) }).catch(() => undefined)
+
+async function endNameRow(): Promise<void> {
+  names.endTimer = null
+  if (names.child || names.starting || names.ending) return
+  names.ending = (async () => {
+    try {
+      if (names.restore) await names.restore().catch(() => undefined)
+      if (names.pauseToken !== null) await speechResume(names.pauseToken)
+    } finally {
+      names.restore = null
+      names.pauseToken = null
+    }
+  })().finally(() => {
+    names.ending = null
+  })
+  await names.ending
+}
+
+/** A name read out (a sound of the box: a Piper WAV or Google's MP3), the music as set. */
+export async function playName(getConfig: () => unknown, file: string): Promise<void> {
+  const mode = speechOf(getConfig()).names.music
+  const seq = ++names.seq
+  if (names.endTimer) {
+    clearTimeout(names.endTimer)
+    names.endTimer = null
+  }
+  if (names.child) {
+    names.child.kill()
+    names.child = null
+  }
+  // (the row before still going back: this one starts from the music as it was)
+  if (names.ending) await names.ending
+  if (seq !== names.seq) return
+  // the first name of a row: the music quieter or paused, once (two names at once both made it quieter, the second
+  // took the lowered volume for the one to go back to)
+  if (mode !== 'over' && !names.restore && names.pauseToken === null && !names.starting) {
+    names.starting = (async () => {
+      if (mode === 'pause') {
+        // (the player pauses only what plays - asked and done in one step there; the number is kept whatever it
+        // answered, the going on after the row asks with it and does nothing when it was not that pause)
+        const token = ++pauseNumber
+        names.pauseToken = token
+        if (await speechPause(token)) await new Promise((r) => setTimeout(r, 300))
+      } else if (await playingNow()) names.restore = await duck()
+    })()
+      .catch(() => undefined)
+      .finally(() => {
+        names.starting = null
+        // (the row may have ended meanwhile - a short name over before the player answered: its end waited for this,
+        // and is made now; a name still waiting to be read starts after this and takes the timer back)
+        if (!names.child && !names.endTimer) names.endTimer = setTimeout(() => void endNameRow(), NAME_END_MS[mode])
+      })
+  }
+  // (every name waits for the music to be made quieter or paused - also one that came after the number was set: it
+  // played at once, and the row's end was lost while the player's answer was outstanding)
+  if (names.starting) await names.starting
+  // (a newer name came meanwhile: it is read instead)
+  if (seq !== names.seq) return
+  if (names.endTimer) {
+    clearTimeout(names.endTimer)
+    names.endTimer = null
+  }
+  // (a name of its own for PulseAudio: it keeps the volume per program name, and the music's mpv made quieter for the
+  // name made the name itself just as quiet - it was not to be heard)
+  const child = spawn('mpv', ['--no-video', '--really-quiet', '--no-config', '--ao=pulse,alsa', '--audio-client-name=mupibox-name', '--volume=100', file], {
+    stdio: 'ignore',
+  })
+  names.child = child
+  const done = () => {
+    if (names.child !== child) return
+    names.child = null
+    names.endTimer = setTimeout(() => void endNameRow(), NAME_END_MS[mode])
+  }
+  child.on('exit', done)
+  child.on('error', done)
 }
 
 /** The language the box speaks in (mupibox.ttsLanguage, as the names it reads out). */

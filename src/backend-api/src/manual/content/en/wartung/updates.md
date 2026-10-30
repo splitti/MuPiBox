@@ -17,9 +17,16 @@ Tap **Install** at the channel you want (or **Reinstall** if this version is alr
 > [!WARNING]
 > **Make a backup first** ([Backup](backup.md)). The **development version can damage the installation.** For an update make sure the box is not interrupted: power and Wi-Fi must hold until the end. Ideally the box is on the power supply.
 
+### From a box with 4.x
+
+A box with MuPiBox 4.x does not have this app yet. There you start the update in the former **admin interface** with its update button. The page answers at once and the update goes on in the background: the display shows the maintenance screen, and the box restarts by itself at the end (after up to 30 minutes on older Raspberry Pis). Until then, please do not switch it off. The old page may say "Update complete" before it is; another tap on the button does not start a second update. Afterwards you go on in this app ([Opening the app](../erste-schritte/app-oeffnen.md)); the admin interface is then off and can be switched on again under [System](system.md).
+
+> [!WARNING]
+> This way the box makes **no automatic backup**, and there is no **Output** view. Make a backup in the admin interface first; it can be restored in this app later ([Backup](backup.md)). What the update did is in `/boot/mupibox_update.log`; after a successful update the file is called `/boot/<date>_update_<version>.log`. Early errors in the background, before this log (e.g. while helper programs are downloaded), are in `/var/lib/mupibox-update-admin/output.txt`. If already the handover to the background fails (e.g. because the update script cannot be downloaded), nothing changes and no new log is written; the box then restarts with the version it had, as after every update button of the admin interface. Where the boot partition is mounted at `/boot` (as on DietPi), the files in `/boot` can be read on a PC from the memory card too.
+
 ### If an update goes wrong
 
-Before every update the box saves settings, library and covers on the memory card: in `/home/dietpi/mupibox-backups/before-update-….zip` (the newest three are kept). If already the download or the unpacking of the new version fails, the previous installation stays. Apart from that there is no complete rollback to the old state. If an update stops, the page shows under **Output** what happened.
+Before every update from this app the box saves settings, library and covers on the memory card: in `/home/dietpi/mupibox-backups/before-update-….zip` (the newest three are kept). If already the download or the unpacking of the new version fails, the previous installation stays. Apart from that there is no complete rollback to the old state. If an update from this app stops, the page shows under **Output** what happened.
 
 ## News
 

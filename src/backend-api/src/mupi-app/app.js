@@ -91,6 +91,7 @@ async function boot() {
     setTimeout(() => toast(back.has('spotify_connected') ? 'Mit Spotify verbunden' : `Spotify-Anmeldung fehlgeschlagen (${back.get('spotify_error')})`, back.has('spotify_connected') ? 'ok' : 'info'), 300)
   }
   loadBoxName()
+  loadVersion()
   // (back and forward: popstate; an address typed or a link with #/…: hashchange)
   window.addEventListener('popstate', routeIfMoved)
   window.addEventListener('hashchange', routeIfMoved)
@@ -298,6 +299,30 @@ async function changeAppLanguage(code) {
   toast(`Sprache: ${code === 'auto' ? 'Automatisch' : LANGS[code]}`)
 }
 
+// The installed version for the badge under the MuPiBox logo (side bar, settings on the phone): CLASSIC, its number
+// and whether a newer one is there - asked once at the start (GitHub may take a moment: the badge fills in then)
+async function loadVersion() {
+  const r = await api(`${API}/updates`)
+  if (!r.ok) return
+  state.ver = { installed: r.body.installed ?? '', channel: r.body.channel ?? 'stable', update: r.body.update ?? null }
+  for (const el of document.querySelectorAll('[data-ver-badge]')) {
+    el.outerHTML = versionBadge()
+  }
+  for (const el of document.querySelectorAll('[data-ver-badge]')) el.onclick = () => go('updates')
+}
+
+// "CLASSIC · v5.0.13" and under it: Aktuell / Entwicklerversion / Beta - or, lit, "Update: 5.0.14"; opens the updates
+function versionBadge() {
+  const v = state.ver
+  const num = /\d+(?:\.\d+)+/.exec(v?.installed ?? '')?.[0]
+  const sub = !v ? '' : v.update ? `Update: ${v.update.version}` : v.channel === 'dev' ? 'Entwicklerversion' : v.channel === 'beta' ? 'Beta' : 'Aktuell'
+  const kind = v?.update ? ' new' : v?.channel === 'dev' ? ' dev' : ''
+  return `<button type="button" class="ver-badge${kind}" data-ver-badge data-go="updates" aria-label="${esc(`MuPiBox Classic ${num ?? ''} – Updates`)}"><span class="ed" translate="no">CLASSIC</span><span class="num"><b translate="no">${num ? `v${esc(num)}` : '…'}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span><span class="go">${icon('chevron', 16)}</span></button>`
+}
+
+// The MuPiBox lettering (the same in Classic and NG)
+const LOGO = '<img class="mupi-logo" src="mupibox-logo.webp" alt="MuPiBox" width="560" height="99">'
+
 // MuPi: with an outline on the light design (white on light blue is too weak), the plain one on the dark
 function mupiImg(attrs = '') {
   return `<img class="mupi-d" src="mupi.svg" alt="" ${attrs}><img class="mupi-l" src="mupi-hell.svg" alt="" ${attrs}>`
@@ -334,7 +359,7 @@ function renderChrome(page) {
     return p?.id?.startsWith('g-') ? p.id : p?.parent
   })()
   $('#sidebar').innerHTML = `
-    <div class="brand"><span class="brand-dot">${mupiImg()}</span><span>${esc(state.boxName)}</span></div>
+    <div class="brand-block">${LOGO}${versionBadge()}</div>
     ${AREAS.map(
       (a) => `<button class="side-link" data-go="${a.id}" ${a.id === area && !(area === 'einstellungen' && page.id !== 'einstellungen') ? 'aria-current="page"' : ''}>${icon(a.icon)}${a.title}</button>
       ${a.id === 'einstellungen' ? groups.map((g) => `<button class="side-link sub" data-go="${g.id}" ${g.id === groupOf ? 'aria-current="page"' : ''}>${icon(g.icon, 18)}${esc(g.title)}</button>`).join('') : ''}`,
@@ -645,6 +670,8 @@ function childNav(page) {
   // the settings: a card per group (as the design; two columns on the PC)
   if (page.id === 'einstellungen') {
     return [
+      // (on the phone, which has no side bar: the logo and the version on top of the settings)
+      `<div class="card brand-card">${LOGO}${versionBadge()}</div>`,
       `<div class="group-grid wide">${kids
         .map(
           (k) =>
@@ -1419,6 +1446,12 @@ async function loadNotices(root) {
   if (legacy.ok && legacy.body?.phpUpdateFailed) {
     notes.push(['lock', 'PHP-Sicherheitsupdate fehlgeschlagen', 'Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.', 'experten'])
   }
+  // a new display model waiting for its answer (Display & Bedienung): from the start page too, first of all - without
+  // an answer the box goes back to the display before
+  const dm = await api(`${API}/display-profile`)
+  if (dm.ok && dm.body?.test?.running) {
+    notes.unshift(['display', 'Neues Display testen', 'Siehst du ein Bild auf dem Display? Antippen, um es zu bestätigen – ohne Antwort geht die Box nach 3 Minuten zum bisherigen Display zurück.', 'displaysettings'])
+  }
   // no password, or the login off: everyone in the home network can set up the box - said every time, it is not closed
   // for good (the parents decide on the page Passwort); with the login on but the well-known default password, that
   if (auth.ok && (auth.body?.passwordSet === false || auth.body?.loginRequired === false)) {
@@ -2043,6 +2076,10 @@ async function loadHear() {
   ;['audiobook', 'music', 'other'].forEach((c, i) => (hear.local[c] = Array.isArray(local[i].body) ? local[i].body : []))
 }
 
+// As on the box: a playlist or a radio station without an artist is a tile of its own - never in a folder that has
+// its name (neither on the top level nor when that folder is opened)
+const isStandaloneEntry = (it) => !itemArtist(it) && (isPlaylistEntry(it) || it.type === 'radio')
+
 // The tiles of the top level: library entries grouped by artist (like the box), local folders and NAS folders
 function topTiles() {
   const cat = hear.cat
@@ -2060,6 +2097,10 @@ function topTiles() {
     } else {
       const groups = new Map()
       for (const it of items) {
+        if (isStandaloneEntry(it)) {
+          tiles.push(entryTile(it))
+          continue
+        }
         const a = itemArtist(it) || itemTitle(it)
         if (!groups.has(a)) groups.set(a, [])
         groups.get(a).push(it)
@@ -2098,7 +2139,7 @@ function levelTiles() {
   const match = (t) => !q || norm(t).includes(q)
   if (top.kind === 'artist') {
     return hear.items
-      .filter((it) => playable(it) && (hear.cat === 'all' || catOf(it) === hear.cat) && (itemArtist(it) || itemTitle(it)) === top.path)
+      .filter((it) => playable(it) && (hear.cat === 'all' || catOf(it) === hear.cat) && !isStandaloneEntry(it) && (itemArtist(it) || itemTitle(it)) === top.path)
       .filter((it) => match(itemTitle(it)))
       .map(entryTile)
       .sort((a, b) => a.title.localeCompare(b.title, 'de', { numeric: true }))
@@ -2808,25 +2849,34 @@ function openEntrySheet(item, back = null) {
   // a radio station or a podcast: its address (stream / feed) can be changed too
   // (not for a show of ARD Sounds: its "address" is the ARD's id of the show)
   const addressLabel = !isSync && !isArdEntry(item) && { radio: 'Stream-Adresse (URL)', rss: 'Feed-Adresse (URL)' }[item.type]
+  // a playlist: "Auf der Startseite" (a tile of its own or a folder - the artist) in place of the artist
+  const place = !isSync && isPlaylistEntry(item)
   const fields = [
-    ['artist', 'Interpret'],
-    ['title', 'Titel'],
+    ...(place ? [] : [['artist', 'Interpret']]),
+    ['title', place ? 'Name der Kachel' : 'Titel'],
     ...(addressLabel ? [['id', addressLabel]] : []),
     ['cover', 'Cover (Bild-URL)'],
-    ['artistcover', 'Interpret-Cover (Bild-URL)'],
+    ['artistcover', place ? 'Ordner-Cover (Bild-URL)' : 'Interpret-Cover (Bild-URL)'],
   ]
   const val = (k) => item[`${k}_override`] ?? (isSync ? '' : item[k] ?? '')
+  const folder = place ? String(item.artist ?? '').trim() : ''
+  // (alone in its folder - as the app added playlists before, in one of their own name: a tile spares a tap)
+  const aloneInFolder = !!folder && (lib.items ?? []).filter((it) => it && !it.isResume && it.category === item.category && String(it.artist ?? '').trim() === folder).length === 1
   openSheet(
     `${back ? `<button class="sheet-back" data-back>${icon('back', 18)}<span translate="no">${esc(back.title)}</span></button>` : ''}
      <h2 translate="no">${esc(item.title_override ?? item.title ?? item.artist_override ?? item.artist ?? 'Eintrag')}</h2>
      <p class="help" style="margin:0">${isSync ? 'Kommt vom Spotify-Sync. Was du hier einträgst, gilt statt der Werte von Spotify; leer = der Wert von Spotify.' : 'Von Hand hinzugefügt.'}</p>
      ${fields
        .map(([k, l]) => {
-         const input = `<input class="input" id="e-${k}"${k === 'id' ? ' type="url" inputmode="url" spellcheck="false" translate="no"' : ''} value="${esc(val(k))}" placeholder="${esc(isSync ? item[k] ?? '' : '')}" autocomplete="off">`
+         const input = `<input class="input" id="e-${k}"${k === 'id' ? ' type="url" inputmode="url" spellcheck="false" translate="no"' : ''} value="${esc(val(k))}" placeholder="${esc(isSync ? item[k] ?? '' : place && k === 'title' && item.type === 'spotify' ? 'leer = Name der Playlist' : '')}" autocomplete="off">`
          // the picture fields: also chosen from a search or the device (see openCoverPicker)
          return k.endsWith('cover')
            ? `<div class="field"><label for="e-${k}">${l}</label><div class="field-pick">${input}<button type="button" class="icon-btn soft" data-pick="${k}" aria-label="Bild suchen oder hochladen">${icon('image', 18)}</button></div></div>`
-           : `<div class="field"><label for="e-${k}">${l}</label>${input}</div>`
+           : `<div class="field"><label for="e-${k}">${l}</label>${input}</div>${
+               k === 'title' && place
+                 ? `${placeField('e', folder)}${aloneInFolder ? `<p class="help" style="margin:0">${esc('Sie steht heute allein in einem Ordner. Als eigene Kachel spielt sie auf der Box mit einem Tipp.')}</p>` : ''}`
+                 : ''
+             }`
        })
        .join('')}
      <div class="field"><label for="e-cat">Kategorie</label>${catSelect('e-cat', item.category_override ?? (isSync ? '' : item.category === 'radio' ? 'other' : item.category), isSync)}</div>
@@ -2839,6 +2889,8 @@ function openEntrySheet(item, back = null) {
     (sheet, close) => {
       sheet.querySelector('[data-close]').onclick = back ? back.open : close
       sheet.querySelector('[data-back]')?.addEventListener('click', back?.open)
+      const placer = place ? wirePlace(sheet, 'e', () => sheet.querySelector('#e-cat').value) : null
+      if (placer) sheet.querySelector('#e-cat').addEventListener('change', () => void placer.reload())
       if (wholeArtist) loadArtistAlbums(item, sheet.querySelector('#e-albums'))
       if (tidalArtist) wireTidalRange(item, sheet)
       if (item.type === 'rss') loadOfflineStatus(item.id, sheet.querySelector('#e-offline-status'))
@@ -2884,6 +2936,17 @@ function openEntrySheet(item, back = null) {
           const key = isSync ? `${k}_override` : k
           if (v) updated[key] = v
           else delete updated[key]
+        }
+        if (placer) {
+          const to = placer.value()
+          if (to === null) {
+            sheet.querySelector('#e-folder').focus()
+            return toast('Bitte einen Namen für den Ordner eintragen', 'info')
+          }
+          if (to) updated.artist = to
+          else delete updated.artist
+          // (a TIDAL playlist has its name only from here - the box asks Spotify for a playlist's, TIDAL's not)
+          if (item.type === 'tidal' && !updated.title && item.title) updated.title = item.title
         }
         if (playOptions) {
           const sorting = sheet.querySelector('#e-sort').value
@@ -3530,7 +3593,8 @@ async function loadSubAlbums(a, box) {
 
 // (cat: the category chosen last - the next sheet starts with it; artist: one opened from the search, its albums with
 // the way back to the search; have: what is in the library already, see libraryHave)
-const search = { q: '', type: 'Alle', cat: 'audiobook', result: null, busy: false, artist: null, have: new Set() }
+// (mine: the account's own and followed playlists - the search finds public ones only)
+const search = { q: '', type: 'Alle', cat: 'audiobook', result: null, busy: false, artist: null, have: new Set(), mine: null, mineAll: false }
 
 function searchTop() {
   return [
@@ -3541,7 +3605,83 @@ function searchTop() {
       <div class="btns"><button class="btn primary" id="s-go">Suchen</button></div>
     </section>`,
     `<div id="s-results" class="wide-stack"></div>`,
+    `<section class="card wide">
+      <h2>${esc('Meine Playlists')}</h2>
+      <p class="help" style="margin:0">${esc('Deine eigenen Playlists und die, denen du bei Spotify folgst – auch private, die die Suche nicht findet.')}</p>
+      <div class="rows" id="s-mine"></div>
+    </section>`,
   ]
+}
+
+// "Meine Playlists": the account's own first, then the followed ones (the server keeps the list 5 minutes - opening
+// the page again asks Spotify nothing)
+async function loadSpotifyMine() {
+  const el = $('#s-mine')
+  if (!el) return
+  if (!search.mine) el.innerHTML = `<div class="loading"><p>${esc('Lade …')}</p></div>`
+  const [r, have] = await Promise.all([api(`${SYNC_API}/my-playlists`), libraryHave('spotify')])
+  if (!el.isConnected) return
+  search.have = have
+  if (!r.ok) {
+    // (no connection any more - disconnected, or the sign-in refused: the list of before goes, it was that account's)
+    const gone = r.status === 409 || r.status === 401
+    if (gone) search.mine = null
+    const why = gone
+      ? 'Die Liste braucht eine eingerichtete Spotify-Verbindung (Bibliothek › Spotify).'
+      : r.status === 429
+        ? 'Spotify sperrt die Box gerade – bitte später noch einmal.'
+        : 'Spotify ist gerade nicht erreichbar.'
+    // (for a moment unreachable or blocked: the list of before stays)
+    if (!search.mine) el.innerHTML = `<p class="help" style="margin:0">${esc(why)}</p>`
+    return
+  }
+  search.mine = r.body?.playlists ?? []
+  drawSpotifyMine()
+}
+
+const spMineSub = (p) =>
+  [
+    p.own ? 'Eigene Playlist' : p.by_spotify ? 'von Spotify' : p.owner ? `von ${p.owner}` : '',
+    p.tracks ? `${p.tracks} Titel` : '',
+    p.via_sync ? 'kommt über Smart-Sync' : p.by_spotify ? 'spielt evtl. nicht' : '',
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
+function drawSpotifyMine() {
+  const el = $('#s-mine')
+  if (!el || !search.mine) return
+  if (!search.mine.length) {
+    el.innerHTML = `<p class="help" style="margin:0">${esc('In deinem Spotify-Konto sind noch keine Playlists.')}</p>`
+    return
+  }
+  // (an account can have dozens: the first few, the rest on a tap)
+  const shown = search.mineAll ? search.mine : search.mine.slice(0, 8)
+  el.innerHTML =
+    shown.map((p, i) => resultRow({ kind: 'playlist', id: p.id, t: p.name, s: spMineSub(p), img: p.thumb || p.cover }, i, 'mine', search.have)).join('') +
+    (shown.length < search.mine.length ? `<div class="btns"><button class="btn" id="s-mine-all">${esc(`Alle ${search.mine.length} zeigen`)}</button></div>` : '')
+  for (const img of el.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+  for (const b of el.querySelectorAll('[data-list]')) {
+    const p = search.mine[Number(b.dataset.i)]
+    b.onclick = () =>
+      openSpotifyPlaylist({
+        id: p.id,
+        name: p.name,
+        s: spMineSub(p),
+        img: p.cover || p.thumb,
+        note: p.via_sync
+          ? 'Diese Playlist bringt Smart-Sync schon auf die Box. Zusätzlich hinzugefügt stünde sie dort zweimal.'
+          : p.by_spotify
+            ? 'Eine Playlist von Spotify selbst (z. B. ein Mix): Spotify gibt sie Apps wie der Box oft nicht heraus – sie spielt dann nicht.'
+            : '',
+      })
+  }
+  const all = $('#s-mine-all', el)
+  if (all)
+    all.onclick = () => {
+      search.mineAll = true
+      drawSpotifyMine()
+    }
 }
 
 // What of a source is in the library already, as "kind:id" (album, playlist, artist): the search marks it. Spotify:
@@ -3733,9 +3873,83 @@ async function openSpotifyArtist(r) {
   drawSearch()
 }
 
+// A playlist of Spotify or TIDAL: on the box's start page a tile of its own (no artist) or in a folder (its artist)
+const isPlaylistEntry = (it) => !!it && !it.isResume && ((it.type === 'spotify' && !!it.playlistid) || (it.type === 'tidal' && it.tidalKind === 'playlist'))
+
+// The folders of the start page in a category: the artists of the library's entries, as the box groups them (the
+// folders of the SD card and the NAS are tiles of their own) - the most used first
+async function placeFolders(category) {
+  const items = lib.items ?? (await api('/api/data')).body
+  const count = new Map()
+  for (const it of Array.isArray(items) ? items : []) {
+    if (!it || it.isResume === true || it.category === 'resume' || it.type === 'library') continue
+    const cat = it.category_override ?? (it.category === 'radio' ? 'other' : it.category)
+    const artist = String(it.artist_override ?? it.artist ?? '').trim()
+    if (cat !== category || !artist) continue
+    count.set(artist, (count.get(artist) ?? 0) + 1)
+  }
+  return [...count].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'de', { numeric: true })).slice(0, 12).map(([name]) => name)
+}
+
+// "Auf der Startseite" of a playlist (see isPlaylistEntry): p is the prefix of the ids, folder the folder now ('' = a
+// tile of its own)
+function placeField(p, folder) {
+  const opt = (v, label, help) => {
+    const on = (v === 'folder') === !!folder
+    return `<button type="button" class="choice${on ? ' on' : ''}" data-place="${v}" aria-pressed="${on}"><span class="radio"></span><span class="lbl"><b>${esc(label)}</b><small>${esc(help)}</small></span></button>`
+  }
+  return `<div class="field"><label>Auf der Startseite</label><div class="choices">
+      ${opt('own', 'Eigene Kachel', 'Ein Tipp auf der Box spielt sie sofort')}
+      ${opt('folder', 'In einem Ordner', 'Zusammen mit anderen Einträgen unter einem Namen')}
+      <div class="place-folder" id="${p}-folderbox"${folder ? '' : ' hidden'}>
+        <input class="input" id="${p}-folder" value="${esc(folder)}" placeholder="Name des Ordners" aria-label="Name des Ordners" autocomplete="off" translate="no">
+        <div class="place-chips" id="${p}-folders"></div>
+        <p class="help" style="margin:0">Vorhandenen Ordner antippen oder einen neuen Namen eintragen.</p>
+      </div></div></div>`
+}
+
+// catOf: the category chosen in the sheet (its folders as suggestions). value(): '' a tile of its own, the folder's
+// name, null a folder without a name
+function wirePlace(sheet, p, catOf) {
+  const box = sheet.querySelector(`#${p}-folderbox`)
+  const input = sheet.querySelector(`#${p}-folder`)
+  const chips = sheet.querySelector(`#${p}-folders`)
+  let folders = []
+  let seq = 0
+  const drawChips = () => {
+    const v = input.value.trim()
+    chips.innerHTML = folders.map((f) => `<button type="button" class="chip${f === v ? ' on' : ''}" translate="no">${esc(f)}</button>`).join('')
+    for (const c of chips.children)
+      c.onclick = () => {
+        input.value = c.textContent
+        drawChips()
+      }
+  }
+  const load = async () => {
+    const mine = ++seq
+    const found = await placeFolders(catOf())
+    if (mine !== seq) return
+    folders = found
+    drawChips()
+  }
+  for (const b of sheet.querySelectorAll('[data-place]'))
+    b.onclick = () => {
+      for (const o of sheet.querySelectorAll('[data-place]')) {
+        o.classList.toggle('on', o === b)
+        o.setAttribute('aria-pressed', String(o === b))
+      }
+      box.hidden = b.dataset.place !== 'folder'
+      if (!box.hidden) input.focus()
+    }
+  input.addEventListener('input', drawChips)
+  void load()
+  return { reload: load, value: () => (box.hidden ? '' : input.value.trim() || null) }
+}
+
 // The sheet to add something from a search to the box: picture, what it is, the category - chosen here, not before the
-// search - and the button. have: already in the library (only closing then). onAdd(category) returns true when done.
-function addSheet({ title, sub, img, have, haveText, cat, text, okLabel }, onAdd) {
+// search - and the button. have: already in the library (only closing then). place: a playlist, "Auf der Startseite"
+// (a tile of its own first). onAdd(category, folder) returns true when done ('' = a tile of its own).
+function addSheet({ title, sub, img, have, haveText, cat, text, okLabel, place }, onAdd) {
   openSheet(
     `<div class="ard-head">${img ? `<img src="${esc(img)}" alt="">` : ''}<span class="lbl"><h2 translate="no" style="margin:0">${esc(title)}</h2><small translate="no">${esc(sub ?? '')}</small></span></div>
      ${text ? `<p class="help" style="margin:0">${esc(text)}</p>` : ''}
@@ -3743,14 +3957,22 @@ function addSheet({ title, sub, img, have, haveText, cat, text, okLabel }, onAdd
        have
          ? `<p class="help" style="margin:0">${esc(haveText ?? 'Schon in der Bibliothek.')}</p><div class="btns"><button class="btn" data-close>Schließen</button></div>`
          : `<div class="field"><label for="add-cat">Hinzufügen als</label>${catSelect('add-cat', cat, false)}</div>
+            ${place ? placeField('add', '') : ''}
             <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-add>${icon('plus', 18)}${esc(okLabel ?? 'Hinzufügen')}</button></div>`
      }`,
     (sheet, close) => {
       for (const b of sheet.querySelectorAll('[data-close]')) b.onclick = close
+      const placer = place && !have ? wirePlace(sheet, 'add', () => sheet.querySelector('#add-cat').value) : null
+      if (placer) sheet.querySelector('#add-cat').addEventListener('change', () => void placer.reload())
       sheet.querySelector('[data-add]')?.addEventListener('click', async (e) => {
         const btn = e.currentTarget
+        const folder = placer ? placer.value() : ''
+        if (folder === null) {
+          sheet.querySelector('#add-folder').focus()
+          return toast('Bitte einen Namen für den Ordner eintragen', 'info')
+        }
         btn.disabled = true
-        const done = await onAdd(sheet.querySelector('#add-cat').value)
+        const done = await onAdd(sheet.querySelector('#add-cat').value, folder)
         btn.disabled = false
         if (done) close()
       })
@@ -3762,6 +3984,7 @@ function addSheet({ title, sub, img, have, haveText, cat, text, okLabel }, onAdd
 function markHave(key) {
   search.have.add(key)
   drawSearch()
+  drawSpotifyMine()
 }
 
 async function openSpotifyAlbum(r) {
@@ -3782,8 +4005,10 @@ async function openSpotifyAlbum(r) {
 
 // A playlist: an entry of the library as a pasted link makes it (the box fetches its tracks when it plays)
 async function openSpotifyPlaylist(r) {
-  addSheet({ title: r.name, sub: r.s, img: r.img, have: search.have.has(`playlist:${r.id}`), cat: search.cat === 'audiobook' ? 'music' : search.cat }, async (category) => {
-    const body = { type: 'spotify', playlistid: r.id, spotify_url: `https://open.spotify.com/playlist/${r.id}`, artist: r.name, category, source: 'manual' }
+  // (note: a hint of "Meine Playlists" - Smart-Sync brings it already, or Spotify's own)
+  addSheet({ title: r.name, sub: r.s, img: r.img, text: r.note, have: search.have.has(`playlist:${r.id}`), cat: search.cat === 'audiobook' ? 'music' : search.cat, place: true }, async (category, folder) => {
+    // (no artist: a tile of its own on the box, named as the playlist)
+    const body = { type: 'spotify', playlistid: r.id, spotify_url: `https://open.spotify.com/playlist/${r.id}`, title: r.name, ...(folder ? { artist: folder } : {}), category, source: 'manual' }
     const res = await api('/api/add', { method: 'POST', body })
     if (!libWriteOk(res)) return false
     search.cat = category
@@ -4149,7 +4374,8 @@ async function openRadioStation(s) {
 
 // the last search (type: what of it is shown), and an artist opened from it (its albums, with the way back); the
 // category is chosen when adding (addSheet) - the one chosen last starts the next sheet, as on Spotify (search.cat)
-const tds = { q: '', type: 'Alle', result: null, artist: null, busy: false, have: new Set() }
+// (mine: the account's own and kept playlists - TIDAL's search does not find playlists made by users)
+const tds = { q: '', type: 'Alle', result: null, artist: null, busy: false, have: new Set(), mine: null, link: '', linkGen: 0 }
 
 function tidalSearchTop() {
   if (!svc.tidal) {
@@ -4166,7 +4392,82 @@ function tidalSearchTop() {
       <div class="btns"><button class="btn primary" id="tds-go">Suchen</button></div>
     </section>`,
     `<div id="tds-results" class="wide-stack"></div>`,
+    `<section class="card wide">
+      <h2>${esc('Meine Playlists')}</h2>
+      <p class="help" style="margin:0">${esc('Deine eigenen Playlists und die, die du dir bei TIDAL gemerkt hast – die Suche findet sie nicht.')}</p>
+      <div class="rows" id="tds-mine"></div>
+    </section>`,
+    `<section class="card wide">
+      <h2>${esc('TIDAL-Link')}</h2>
+      <p class="help" style="margin:0">${esc('Eine Playlist oder ein Album, das dir jemand geschickt hat: den Link einfügen (in TIDAL unter Teilen › Link kopieren).')}</p>
+      <div class="search">${icon('link')}<input class="input" id="tds-link" type="url" inputmode="url" placeholder="https://tidal.com/playlist/…" autocomplete="off" value="${esc(tds.link)}"></div>
+      <div class="btns"><button class="btn" id="tds-link-go">${esc('Link öffnen')}</button></div>
+    </section>`,
   ]
+}
+
+// A TIDAL link (tidal.com, listen.tidal.com, also …/browse/…) to a playlist (its uuid) or an album (digits)
+function tidalLinkOf(text) {
+  const m = /(?:^|\/\/|\.)tidal\.com\/(?:browse\/)?(playlist|album)\/([0-9a-fA-F-]{36}|\d{1,15})(?=[/?#]|$)/.exec(String(text).trim())
+  if (!m) return null
+  const kind = m[1]
+  const id = m[2]
+  if (kind === 'album' ? !/^\d+$/.test(id) : !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null
+  return { kind, id }
+}
+
+async function openTidalLink() {
+  const link = tidalLinkOf(tds.link)
+  if (!link) return toast('Das ist kein Link zu einer TIDAL-Playlist oder einem Album', 'info')
+  const btn = $('#tds-link-go')
+  if (btn) btn.disabled = true
+  // (an answer that comes late - another link opened meanwhile, or the page left: dropped, no sheet over another page)
+  const gen = ++tds.linkGen
+  const [r, have] = await Promise.all([api(`${API}/tidal/item/${link.kind}/${encodeURIComponent(link.id)}`), libraryHave('tidal')])
+  if (btn) btn.disabled = false
+  if (gen !== tds.linkGen || !btn?.isConnected) return
+  tds.have = have
+  if (!r.ok) return toast(r.status === 404 ? 'TIDAL kennt diesen Link nicht – ist die Playlist privat oder gelöscht?' : tidalFailText(r), 'info')
+  openTidalItem({ ...r.body, kind: link.kind })
+}
+
+// "Meine Playlists": the account's own first, then the ones it keeps
+async function loadTidalMine() {
+  const el = $('#tds-mine')
+  if (!el) return
+  if (!tds.mine) el.innerHTML = `<div class="loading"><p>${esc('Lade …')}</p></div>`
+  const [r, have] = await Promise.all([api(`${API}/tidal/mine`), libraryHave('tidal')])
+  tds.have = have
+  if (!el.isConnected) return
+  if (!r.ok) {
+    el.innerHTML = `<p class="help" style="margin:0">${esc(tidalFailText(r))}</p>`
+    return
+  }
+  tds.mine = r.body?.playlists ?? []
+  drawTidalMine()
+}
+
+function drawTidalMine() {
+  const el = $('#tds-mine')
+  if (!el || !tds.mine) return
+  if (!tds.mine.length) {
+    el.innerHTML = `<p class="help" style="margin:0">${esc('In deinem TIDAL-Konto sind noch keine Playlists.')}</p>`
+    return
+  }
+  // (an account can have dozens: the first few, the rest on a tap)
+  const shown = tds.mineAll ? tds.mine : tds.mine.slice(0, 8)
+  el.innerHTML =
+    shown
+      .map((x, i) => resultRow({ ...tidalRow(x), s: [x.own ? 'Eigene Playlist' : 'Gemerkt', x.tracks ? `${x.tracks} Titel` : ''].filter(Boolean).join(' · ') }, i, 'mine', tds.have))
+      .join('') + (shown.length < tds.mine.length ? `<div class="btns"><button class="btn" id="tds-mine-all">${esc(`Alle ${tds.mine.length} zeigen`)}</button></div>` : '')
+  for (const img of el.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+  for (const b of el.querySelectorAll('[data-list]')) b.onclick = () => openTidalItem(tds.mine[Number(b.dataset.i)])
+  const all = $('#tds-mine-all', el)
+  if (all)
+    all.onclick = () => {
+      tds.mineAll = true
+      drawTidalMine()
+    }
 }
 
 // Why the box's TIDAL service could not answer
@@ -4288,16 +4589,18 @@ async function openTidalItem(x) {
       have,
       cat: x.kind === 'playlist' ? 'music' : search.cat,
       text: kind === 'artist' ? 'Die Box zeigt alle Alben des Künstlers als einen Eintrag, auch Alben, die später dazukommen. Einen Bereich (Folge von–bis) und einzelne Alben stellst du danach in der Bibliothek ein.' : '',
+      place: kind === 'playlist',
     },
-    async (category) => {
-      // (a playlist under its own name: it has no artist of its own)
-      const artist = kind === 'playlist' ? x.name : x.artist || x.name
-      const body = { type: 'tidal', tidalKind: kind, id: x.id, artist, title: x.name, category, source: 'manual', ...(x.cover ? { cover: x.cover } : {}) }
+    async (category, folder) => {
+      // (a playlist has no artist of its own: a tile of its own, or in the folder chosen)
+      const artist = kind === 'playlist' ? folder : x.artist || x.name
+      const body = { type: 'tidal', tidalKind: kind, id: x.id, ...(artist ? { artist } : {}), title: x.name, category, source: 'manual', ...(x.cover ? { cover: x.cover } : {}) }
       const r = await api('/api/add', { method: 'POST', body })
       if (!libWriteOk(r)) return false
       search.cat = category
       tds.have.add(`${kind}:${x.id}`)
       drawTidal()
+      drawTidalMine()
       toast(`Hinzugefügt: ${x.name}`)
       libChanged()
       lib.items = null
@@ -4476,6 +4779,9 @@ async function addLink(page) {
           'info',
         )
       Object.assign(body, { type: 'spotify', query: url, artist: label })
+    } else if (/(^|\/\/|\.)tidal\.com\//i.test(url)) {
+      // (a TIDAL link has its own place: the search page lists its playlists and opens links)
+      return toast(svc.tidal ? 'TIDAL-Links fügst du unter Auf TIDAL suchen › TIDAL-Link ein' : 'TIDAL ist ausgeschaltet – einschalten unter Einstellungen › Dienste › TIDAL', 'info')
     } else if (type === 'Spotify-Link') {
       if (!url.startsWith('https://open.spotify.com/')) return toast('Spotify-Links beginnen mit https://open.spotify.com/', 'info')
       const kinds = [['playlist', 'playlistid', 'playlist'], ['artist', 'artistid', 'artist'], ['album', 'id', 'album'], ['show', 'showid', 'show'], ['audiobook', 'audiobookid', 'audiobook']]
@@ -5078,6 +5384,9 @@ function mountSpotify(root, page) {
       confirmSheet('Trennen', 'Die Spotify-Anmeldung löschen? Smart-Sync hört auf, und der Player verliert beim nächsten Neustart den Zugang zu Spotify.', async () => {
         const r = await api(`${API}/spotify-oauth/disconnect`, { method: 'POST' })
         if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+        // (the playlists of "Meine Playlists" were that account's)
+        search.mine = null
+        search.mineAll = false
         again('Getrennt')
       }),
     cache: () =>
@@ -6192,6 +6501,17 @@ function pollNasIndex() {
 
 const disp = { theme: null, opts: null, power: null, bs: null, bsSel: '', dt: null, dtLangs: {}, dtScreen: 'blocked' }
 
+// a theme that could not be set: the reason, when the server knows it (the display's folder belongs to someone else)
+function themeFailed(r) {
+  if (r.body?.error === 'theme_link_denied') {
+    return toast(
+      `Das Theme ließ sich nicht setzen: Der Ordner der Anzeige gehört „${r.body.owner || '?'}“ statt dietpi (z. B. nach Dateien, die von Hand eingespielt wurden). Ein Neustart der Box behebt das.`,
+      'info',
+    )
+  }
+  return toast('Das hat nicht geklappt', 'info')
+}
+
 async function loadTheme() {
   const r = await api(`${API}/theme`)
   if (!r.ok) throw new Error(`theme ${r.status}`)
@@ -6278,7 +6598,7 @@ function mountTheme(root, page) {
             close()
             const before = disp.theme.current
             const r = await api(`${API}/theme`, { method: 'POST', body: { theme: name } })
-            if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+            if (!r.ok) return themeFailed(r)
             let note = 'Das Display zeigt es nach dem nächsten Neuladen.'
             if (now) {
               // the cover-flow theme builds its page differently: switching to or from it needs the page loaded again
@@ -6535,7 +6855,7 @@ function ctAskPicture(page) {
         const c = { ...disp.custom, mode: 'auto', resolved: m?.light ? 'light' : 'dark' }
         await ctSave(c)
         const r = await api(`${API}/theme`, { method: 'POST', body: { theme: 'custom' } })
-        if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+        if (!r.ok) return themeFailed(r)
         const rl = await api(`${API}/display/reload-page`, { method: 'POST', body: {} })
         toast(rl.ok && rl.body?.ok !== false ? '„Eigenes“ ist aktiv. Das Display lädt neu.' : '„Eigenes“ ist aktiv. Das Display zeigt es nach dem nächsten Neuladen.')
         await loadTheme()
@@ -6936,6 +7256,218 @@ const RES_PRESETS = [
 const DISPLAY_OFF_STOPS = [0, 1, 2, 5, 10, 15, 20, 30, 45, 60, 90, 120]
 
 // A rotation as tiles: a small screen turned as the display will be (its top marked), the mirrorings flipped
+// The display models (Display & Bedienung › Display-Modell; the ids are the server's and display_profile.sh's): a
+// group, and for some of them the exact model below it
+const DISPLAY_MODELS = [
+  { id: 'official7', label: 'Offizielles 7″ (1. Generation)', sub: '800 × 480 · auch HDMI und ohne Display' },
+  {
+    id: 'td2',
+    label: 'Touch Display 2',
+    sub: '5″ · 7″ · 10″ von Raspberry Pi',
+    tested: true,
+    pick: 'Größe',
+    variants: [
+      ['td2-7', '7″ (720 × 1280)'],
+      ['td2-5', '5″ (720 × 1280)'],
+      ['td2-10', '10,1″ (1200 × 1920)'],
+    ],
+  },
+  { id: 'ws-5', label: 'Waveshare 5″ DSI', sub: '800 × 480' },
+  { id: 'ws-43', label: 'Waveshare 4,3″ DSI', sub: '800 × 480' },
+  {
+    id: 'ws-panel',
+    label: 'Waveshare DSI 7″ bis 12,3″',
+    sub: 'Modell auf der Rückseite oder der Packung',
+    pick: 'Modell',
+    variants: [
+      ['ws-v2-7_0_inch_a', '7,0″ DSI-TOUCH-A (720 × 1280)'],
+      ['ws-v2-7_0_inch_b', '7,0″ DSI-TOUCH-B (720 × 1280)'],
+      ['ws-v2-7_0_inch_c', '7,0″ DSI-TOUCH-C (1024 × 600)'],
+      ['ws-v1-7_0_inchC', '7,0″ DSI LCD (C) (1024 × 600)'],
+      ['ws-v1-7_0_inchH', '7,0″ DSI LCD (H) (1280 × 720)'],
+      ['ws-v1-7_9_inch', '7,9″ DSI LCD (400 × 1280)'],
+      ['ws-v1-8_0_inch', '8,0″ DSI LCD (1280 × 800)'],
+      ['ws-v2-8_0_inch_a', '8,0″ DSI-TOUCH-A (800 × 1280)'],
+      ['ws-v1-8_8_inch', '8,8″ DSI LCD (480 × 1920)'],
+      ['ws-v2-8_8_inch_a', '8,8″ DSI-TOUCH-A (480 × 1920)'],
+      ['ws-v2-9_0_inch_b', '9,0″ DSI-TOUCH-B (720 × 1280)'],
+      ['ws-v1-10_1_inch', '10,1″ DSI LCD (1280 × 800)'],
+      ['ws-v2-10_1_inch_a', '10,1″ DSI-TOUCH-A (800 × 1280)'],
+      ['ws-v2-10_1_inch_b', '10,1″ DSI-TOUCH-B (720 × 1280)'],
+      ['ws-v1-11_9_inch', '11,9″ DSI LCD (320 × 1480)'],
+      ['ws-v2-12_3_inch_a_4lane', '12,3″ DSI-TOUCH-A (720 × 1920, nur Pi 5)'],
+    ],
+  },
+  {
+    id: 'edatec',
+    label: 'EDATEC DSI 7″ oder 10″',
+    sub: '',
+    pick: 'Größe',
+    variants: [
+      ['edatec-7', '7″'],
+      ['edatec-10', '10,1″'],
+    ],
+  },
+  { id: 'custom', label: 'Eigene Einstellung', sub: 'Die App lässt die config.txt so, wie sie ist' },
+]
+const dmGroupOf = (id) => DISPLAY_MODELS.find((g) => g.id === id || g.variants?.some(([v]) => v === id)) ?? DISPLAY_MODELS.at(-1)
+// short, for the badge in the card's head: the model without its resolution
+const dmShort = (id) => dmLabel(id).replace(/ \([^)]*\)$/, '')
+const dmLabel = (id) => {
+  const g = dmGroupOf(id)
+  const v = g.variants?.find(([x]) => x === id)
+  return v ? `${g.label} · ${v[1]}` : g.label
+}
+
+// The card Display-Modell: the model now (preselected from config.txt), or the running test with its countdown
+function displayModelHtml() {
+  const d = disp.dp
+  if (!d) return ''
+  if (d.test?.running) {
+    const before = dmLabel(d.test.previous)
+    return `<div class="dm-test" data-dm-test>
+      <p class="help" style="margin:0">${esc(`${dmLabel(d.test.profile)} ist eingestellt. Siehst du auf dem Display ein Bild?`)}</p>
+      ${d.test.endsAt ? `<div class="dm-count" data-dm-count>…</div><div class="dm-bar"><i data-dm-bar></i></div>` : `<div class="note">${icon('info', 18)}<span>${esc('Die Box startet gerade neu – danach läuft die Zeit.')}</span></div>`}
+      <p class="help" style="margin:0;text-align:center">${esc(`Ohne Antwort kommt danach das bisherige Display (${before}) zurück.`)}</p>
+      <div class="btns"><button class="btn" data-dm-revert>Nein, zurück</button><button class="btn primary" data-dm-keep ${d.test.endsAt ? '' : 'disabled'}>Ja, behalten</button></div>
+    </div>`
+  }
+  const sel = disp.dmSel ?? d.current
+  const group = dmGroupOf(sel)
+  const rows = DISPLAY_MODELS.map((g) => {
+    const on = g.id === group.id
+    const sub = g.sub ? `<small>${esc(g.sub)}</small>` : ''
+    const variantSel =
+      on && g.variants
+        ? `<div class="field dm-variant"><label>${esc(g.pick)}</label><select class="input" data-dm-variant>${g.variants.map(([v, l]) => `<option value="${esc(v)}" ${v === sel ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>`
+        : ''
+    return `<button type="button" class="dm-opt" role="radio" aria-checked="${on}" data-dm-group="${esc(g.id)}"><span class="r"></span><span class="lbl"><b>${esc(g.label)}${g.tested ? `<span class="dm-tag">${esc('Getestet')}</span>` : ''}</b>${sub}</span></button>${variantSel}`
+  }).join('')
+  const untested = sel !== d.current && !group.tested && !['official7', 'custom'].includes(group.id)
+  return `<p class="help" style="margin:0 0 6px">${esc('Welches Display am Flachbandkabel (DSI) hängt. Ein falsches Modell lässt das Display dunkel – die Box nimmt es dann nach 3 Minuten selbst zurück.')}</p>
+    <div class="dm-list" role="radiogroup" aria-label="${esc('Display-Modell')}">${rows}</div>
+    ${untested ? `<div class="note warn">${icon('info', 18)}<span>${esc('Noch nicht auf einer MuPiBox getestet – nutzt die Treiber aus dem Raspberry-Pi-Kernel.')}</span></div>` : ''}
+    <div class="btns"><button class="btn primary" data-dm-apply ${sel === d.current || group.id === 'custom' ? 'disabled' : ''}>Übernehmen und neu starten</button></div>`
+}
+
+// The four tiles of a display with KMS: picture and touch turned together (QUER: where it lies as the MuPiBox needs it)
+function kmsRotTiles() {
+  const d = disp.dp
+  const [w, h] = (d.native ?? '').split('x').map(Number)
+  const upright = h > w
+  return `<div class="rot-tiles">${[0, 90, 180, 270]
+    .map((deg) => {
+      const lies = upright ? deg % 180 !== 0 : deg % 180 === 0
+      // (the screen as it then stands: lying or upright, the picture's top up - or down for 180 and 270 degrees)
+      const shape = lies ? '' : 'width:26px;height:40px;'
+      return `<button type="button" class="rot-tile" data-krot="${deg}" aria-pressed="${deg === d.rotation && !d.mirror}"><span class="scr" style="${shape}transform:rotate(${deg >= 180 ? 180 : 0}deg)"><i></i><b>F</b></span><small>${deg}°</small>${lies ? `<span class="dm-tag">${esc('Quer')}</span>` : ''}</button>`
+    })
+    .join('')}${[
+    ['x', 'Spiegeln ↔', 'scaleX(-1)'],
+    ['y', 'Spiegeln ↕', 'scaleY(-1)'],
+  ]
+    // (mirrored in the display's own way up - as 0°: upright when the panel is built upright)
+    .map(([m, text, tf]) => {
+      const shape = upright ? 'width:26px;height:40px;' : ''
+      return `<button type="button" class="rot-tile" data-kmirror="${m}" aria-pressed="${d.mirror === m}"><span class="scr" style="${shape}transform:${tf}"><i></i><b>F</b></span><small>${esc(text)}</small></button>`
+    })
+    .join('')}</div>`
+}
+
+// The countdown of the test (until the box goes back by itself)
+function startDmCountdown(root, page) {
+  clearInterval(disp.dmTimer)
+  const ends = disp.dp?.test?.endsAt
+  if (!ends) return
+  const tick = () => {
+    const el = $('[data-dm-count]', root)
+    if (!el || !el.isConnected) return clearInterval(disp.dmTimer)
+    const left = Math.max(0, Math.round((ends - Date.now()) / 1000))
+    el.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`
+    const bar = $('[data-dm-bar]', root)
+    if (bar) bar.style.width = `${Math.min(100, (left / 180) * 100)}%`
+    if (left === 0) {
+      clearInterval(disp.dmTimer)
+      toast('Keine Antwort – die Box nimmt das Display zurück und startet neu', 'info')
+    }
+  }
+  tick()
+  disp.dmTimer = setInterval(tick, 1000)
+}
+
+function mountDisplayModel(root, page) {
+  for (const b of root.querySelectorAll('[data-dm-group]')) {
+    b.onclick = () => {
+      const g = DISPLAY_MODELS.find((x) => x.id === b.dataset.dmGroup)
+      disp.dmSel = g.variants ? (g.variants.some(([v]) => v === disp.dp.current) ? disp.dp.current : g.variants[0][0]) : g.id
+      renderPage(page, false)
+    }
+  }
+  const variant = $('[data-dm-variant]', root)
+  if (variant)
+    variant.onchange = () => {
+      disp.dmSel = variant.value
+      renderPage(page, false)
+    }
+  const apply = $('[data-dm-apply]', root)
+  if (apply)
+    apply.onclick = async () => {
+      const to = disp.dmSel
+      const text = `Neu: ${dmLabel(to)} · bisher: ${dmLabel(disp.dp.current)}. Die Box startet neu (gut eine Minute). Danach fragen die App und das Display: „Siehst du ein Bild?“ Ohne Antwort stellt die Box nach 3 Minuten das bisherige Display wieder ein und startet noch einmal neu.`
+      if (!(await ask('Display umstellen?', text, 'Umstellen'))) return
+      const r = await api(`${API}/display-profile`, { method: 'POST', body: { profile: to } })
+      if (!r.ok) return toast(r.body?.error === 'test_running' ? 'Ein Test läuft schon – bitte erst beantworten' : 'Das hat nicht geklappt', 'info')
+      disp.dmSel = undefined
+      toast('Die Box startet neu – danach hier oder am Display bestätigen')
+    }
+  const keep = $('[data-dm-keep]', root)
+  if (keep)
+    keep.onclick = async () => {
+      const r = await api(`${API}/display-profile/confirm`, { method: 'POST', body: {} })
+      if (!r.ok || r.body?.ok === false) return toast('Das hat nicht geklappt', 'info')
+      toast(`${dmLabel(disp.dp.test.profile)} bleibt eingestellt`)
+      await loadDisplayModel()
+      renderPage(page, false)
+    }
+  const revert = $('[data-dm-revert]', root)
+  if (revert)
+    revert.onclick = async () => {
+      const r = await api(`${API}/display-profile/revert`, { method: 'POST', body: {} })
+      if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+      toast('Das bisherige Display kommt zurück – die Box startet neu')
+    }
+  for (const b of root.querySelectorAll('[data-krot]')) {
+    b.onclick = async () => {
+      const degrees = Number(b.dataset.krot)
+      if (degrees === disp.dp.rotation && !disp.dp.mirror) return
+      const r = await api(`${API}/display-rotation`, { method: 'POST', body: { degrees } })
+      if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+      disp.dp.rotation = degrees
+      disp.dp.mirror = null
+      toast(`Gedreht um ${degrees}° – die Anzeige startet kurz neu`)
+      renderPage(page, false)
+    }
+  }
+  for (const b of root.querySelectorAll('[data-kmirror]')) {
+    b.onclick = async () => {
+      const mirror = b.dataset.kmirror
+      if (mirror === disp.dp.mirror) return
+      const r = await api(`${API}/display-rotation`, { method: 'POST', body: { mirror } })
+      if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+      disp.dp.rotation = 0
+      disp.dp.mirror = mirror
+      toast('Gespiegelt – die Anzeige startet kurz neu')
+      renderPage(page, false)
+    }
+  }
+  startDmCountdown(root, page)
+}
+
+async function loadDisplayModel() {
+  const r = await api(`${API}/display-profile`)
+  disp.dp = r.ok ? r.body : null
+}
+
 function rotTiles(key, list) {
   const now = state.values.get(key)
   const look = { 'Aus (Standard)': ['0°', 'rotate(0)'], '90°': ['90°', 'rotate(90deg)'], '180°': ['180°', 'rotate(180deg)'], '270°': ['270°', 'rotate(270deg)'], 'Horizontal spiegeln': ['Spiegeln ↔', 'scaleX(-1)'], 'Vertikal spiegeln': ['Spiegeln ↕', 'scaleY(-1)'] }
@@ -6951,7 +7483,7 @@ const rotLabel = (list, v) => list.find(([, x]) => x === String(v))?.[0] ?? list
 const rotValue = (list, label) => list.find(([l]) => l === label)?.[1] ?? '0'
 
 async function loadDisplaySettings() {
-  const [, power] = await Promise.all([loadDisplayOptions(), api(`${API}/power-config`)])
+  const [, power] = await Promise.all([loadDisplayOptions(), api(`${API}/power-config`), loadDisplayModel()])
   const o = disp.opts
   disp.power = power.body ?? {}
   if (o.brightness != null) state.values.set('bright', o.brightness)
@@ -7289,6 +7821,15 @@ const batteryCharging = (h) => Number.isFinite(h?.Ibat) && h.Ibat > 50
 // The charge goes on but no current flows just now: the chip reports "Done" now and then on a weak input, far below its
 // limit, and the estimate does not take it (Charge_Phase stays the one of the charge) - "vollständig geladen" was wrong
 const batteryChargePaused = (h) => !batteryCharging(h) && ['precharge', 'cc', 'cv', 'topoff'].includes(h?.Charge_Phase) && Number.isFinite(h?.Vbus) && h.Vbus > 4000
+// The power supply's USB-PD contract (mupihat.py, tps25730.py): what the MuPiHAT agreed on with it - only with a
+// supply plugged in and the contract read twice the same; else no row at all (a bare "USB 12 V" read as odd)
+function pdRow(h) {
+  const mv = h?.PD_Voltage_mV
+  const ma = h?.PD_Current_mA
+  if (!Number.isFinite(mv) || !Number.isFinite(ma) || mv <= 0 || ma <= 0) return ''
+  const num = (x, d) => x.toLocaleString(LOCALE, { maximumFractionDigits: d })
+  return `<div><dt>Netzteil (USB-PD)</dt><dd>${esc(`${num(mv / 1000, 1)} V · bis ${num(ma / 1000, 2)} A (${num((mv * ma) / 1e6, 0)} W)`)}</dd></div>`
+}
 // full: as the estimate says, when the HAT service has one (Charge_Phase), else as the chip says
 const batteryFull = (h) => (h?.Charge_Phase ? h.Charge_Phase === 'done' : /termination|done/i.test(h?.Charger_Status ?? ''))
 // (the box saw it for 10 minutes: /api/mupihat ChargeProblemSince, see checkCharging in server.ts)
@@ -7311,7 +7852,7 @@ function batteryTop() {
   if (noBattery(h)) {
     return [
       `<section class="card"><h2>Akku-Stand</h2><div class="bat-now"><div class="bat-pct">Netzbetrieb</div><small>${esc(NO_BATTERY_TEXT)}</small></div>
-      <dl class="kv"><div><dt>USB-Spannung</dt><dd>${volt(h.Vbus)}</dd></div><div><dt>Temperatur Lade-Chip</dt><dd>${Number.isFinite(h.Temp) ? `${h.Temp.toLocaleString(LOCALE)} °C` : '–'}</dd></div></dl></section>`,
+      <dl class="kv"><div><dt>USB-Spannung</dt><dd>${volt(h.Vbus)}</dd></div>${pdRow(h)}<div><dt>Temperatur Lade-Chip</dt><dd>${Number.isFinite(h.Temp) ? `${h.Temp.toLocaleString(LOCALE)} °C` : '–'}</dd></div></dl></section>`,
     ]
   }
   let pct = h.Bat_Percent
@@ -7370,7 +7911,7 @@ function batteryTop() {
            <div class="btns"><button class="btn" id="hat-reboot">Box neu starten</button></div>`
         : ''
     }<div class="bat-now"><div class="bat-pct">${Number.isFinite(pct) ? `${pct} %` : '–'}</div><small>${esc([health, state, charging && etaText ? (etaMin < 5 ? etaText : `voll in etwa ${etaText}`) : ''].filter(Boolean).join(' · '))}</small>${chargeNote ? `<small class="help">${esc(chargeNote)}</small>` : ''}${startNote ? `<div class="note warn">${icon('info', 18)}<span>${esc(startNote)}</span></div>` : ''}</div>
-      <dl class="kv"><div><dt>Akku-Spannung</dt><dd>${v(h.Vbat)}</dd></div><div><dt>USB-Spannung</dt><dd>${v(h.Vbus)}</dd></div>
+      <dl class="kv"><div><dt>Akku-Spannung</dt><dd>${v(h.Vbat)}</dd></div><div><dt>USB-Spannung</dt><dd>${v(h.Vbus)}</dd></div>${pdRow(h)}
         <div><dt>Akku-Strom</dt><dd>${Number.isFinite(h.Ibat) ? `${h.Ibat.toLocaleString(LOCALE)} mA` : '–'}</dd></div><div><dt>Temperatur Lade-Chip</dt><dd>${Number.isFinite(h.Temp) ? `${h.Temp.toLocaleString(LOCALE)} °C` : '–'}</dd></div>
         <div><dt>Ladegerät</dt><dd>${esc(status)}</dd></div>${charging ? `<div><dt>Voll in etwa</dt><dd>${esc(etaText || (Number.isFinite(h.Bat_Capacity_mAh) ? 'lässt sich gerade nicht schätzen' : 'Kapazität des Akkus unbekannt'))}</dd></div>` : ''}</dl></section>`,
     `<section class="card"><h2>Verlauf (24 h)</h2>${
@@ -8075,9 +8616,9 @@ function securityTop() {
   return [
     `<section class="card" data-col="1"><div class="card-head"><h2>Passwort</h2><span class="chip ${st.passwordSet && !st.defaultPassword ? 'ok' : 'warn'}">${st.passwordSet ? (st.defaultPassword ? 'Standardpasswort' : 'gesetzt') : 'nicht gesetzt'}</span></div>
       <p class="help">Ein Passwort für diese App und das bisherige Admin-Interface.</p>
-      ${st.defaultPassword ? `<div class="note warn">${icon('info', 18)}<span>Es gilt noch das Standardpasswort, das im Admin-Interface steht. Bitte ein eigenes festlegen.</span></div>` : ''}
-      ${st.resetOpen ? `<div class="note">${icon('info', 18)}<span>Du bist über den QR-Code oder Telegram hereingekommen: Ein paar Minuten lang geht ein neues Passwort ohne das alte.</span></div>` : ''}
-      ${st.passwordSet && !st.resetOpen ? `<div class="field"><label for="sec-cur">Aktuelles Passwort</label><div class="input-wrap"><input class="input has-eye" id="sec-cur" type="password" autocomplete="current-password">${eye}</div></div>` : ''}
+      ${st.defaultPassword ? `<div class="note warn">${icon('info', 18)}<span>${st.defaultOnly ? 'Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.' : 'Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest.'}</span></div>` : ''}
+      ${st.resetOpen && !st.defaultOnly ? `<div class="note">${icon('info', 18)}<span>Du bist über den QR-Code oder Telegram hereingekommen: Ein paar Minuten lang geht ein neues Passwort ohne das alte.</span></div>` : ''}
+      ${st.passwordSet && !st.resetOpen && !st.defaultOnly ? `<div class="field"><label for="sec-cur">Aktuelles Passwort</label><div class="input-wrap"><input class="input has-eye" id="sec-cur" type="password" autocomplete="current-password">${eye}</div></div>` : ''}
       <div class="field"><label for="sec-new">Neues Passwort</label><div class="input-wrap"><input class="input has-eye" id="sec-new" type="password" autocomplete="new-password"><button class="eye" id="sec-eye2" aria-label="Anzeigen">${icon('eye', 18)}</button></div><small id="sec-len">Mindestens 6 Zeichen.</small></div>
       <div class="field"><label for="sec-new2">Neues Passwort wiederholen</label><input class="input" id="sec-new2" type="password" autocomplete="new-password"><small id="sec-match"></small></div>
       <p class="help" style="margin:0">Ein neues Passwort meldet alle anderen Geräte ab.</p>
@@ -8085,8 +8626,8 @@ function securityTop() {
       <details class="more"><summary>Passwort vergessen?</summary><p class="help" style="margin:0">${esc('Über den QR-Code am Display (die Status-Symbole oben lange drücken) oder /login beim Telegram-Bot kommst du ohne Passwort in die App. Danach lässt sich hier 10 Minuten lang ein neues Passwort ohne das alte festlegen.')}</p></details></section>`,
     `<section class="card" data-col="2"><div class="card-head"><h2>Anmeldung</h2><span class="chip ${st.loginRequired ? 'ok' : 'warn'}">${st.loginRequired ? 'an' : 'aus'}</span></div>
       <div class="row"><span class="lbl"><b>Anmeldung verlangen</b><small>Der QR-Code am Display und der Telegram-Link gehen immer.</small></span>
-        <label class="switch"><input type="checkbox" id="sec-login" ${st.loginSwitch ? 'checked' : ''} ${st.passwordSet ? '' : 'disabled'} aria-label="Anmeldung verlangen"><span></span></label></div>
-      ${st.passwordSet ? '' : '<p class="help" style="margin:0">Erst ein Passwort festlegen, dann lässt sich die Anmeldung einschalten.</p>'}
+        <label class="switch"><input type="checkbox" id="sec-login" ${st.loginSwitch ? 'checked' : ''} ${st.passwordSet && (st.loginSwitch || !st.defaultOnly) ? '' : 'disabled'} aria-label="Anmeldung verlangen"><span></span></label></div>
+      ${!st.passwordSet || (st.defaultOnly && !st.loginSwitch) ? '<p class="help" style="margin:0">Erst ein eigenes Passwort festlegen, dann lässt sich die Anmeldung einschalten.</p>' : ''}
       ${st.loginRequired ? '<div class="status-line"><span class="dot ok"></span><span>Die App fragt im Heimnetz nach dem Passwort.</span></div>' : `<div class="note warn">${icon('info', 18)}<span>Jeder im Heimnetz kann die App ohne Passwort bedienen.</span></div>`}</section>`,
     `<section class="card" data-col="2"><h2>Angemeldete Geräte</h2>${devices}
       <div class="btns"><button class="btn danger" id="sec-others">Alle anderen abmelden</button></div></section>`,
@@ -8182,7 +8723,16 @@ function mountSecurity(root, page) {
     const r = await api(`${API}/auth/login-required`, { method: 'POST', body: required ? { required } : { required, confirmed: true } })
     if (!r.ok) {
       e.target.checked = !required
-      return toast(r.body?.error === 'wrong_password' ? 'Das Passwort stimmt nicht' : r.status === 429 ? 'Zu viele Versuche – bitte kurz warten' : 'Nicht gespeichert', 'info')
+      return toast(
+        r.body?.error === 'default_password'
+          ? 'Erst ein eigenes Passwort festlegen'
+          : r.body?.error === 'wrong_password'
+            ? 'Das Passwort stimmt nicht'
+            : r.status === 429
+              ? 'Zu viele Versuche – bitte kurz warten'
+              : 'Nicht gespeichert',
+        'info',
+      )
     }
     toast(required ? 'Anmeldung eingeschaltet' : 'Anmeldung ausgeschaltet')
     await loadAuthState()
@@ -8425,6 +8975,12 @@ const SPEECH_LEVELS = [
   [0.7, 'mittel'],
   [1, 'wie die Musik'],
 ]
+// names read out while something plays: what the music does meanwhile (speech.ts playName)
+const NAMES_MUSIC_HELP = {
+  duck: 'Die Musik wird kurz leiser, damit man den Namen versteht.',
+  pause: 'Die Musik hält für den Namen an und läuft danach weiter. Beim schnellen Wischen stockt sie dann öfter.',
+  over: 'Der Name läuft über die Musik, die bleibt, wie sie ist.',
+}
 const fmtMB = (bytes) => `${Math.max(1, Math.round(bytes / 1e6)).toLocaleString(LOCALE)} MB`
 
 async function loadSpeech() {
@@ -8533,6 +9089,16 @@ function speechTop() {
       <div class="field-pick"><input class="input" id="sp-tpl-new" maxlength="300" dir="auto" placeholder="${esc('Neue Vorlage, z. B. „Oma ist da!“')}" ${NO_PW_MANAGER}><button type="button" class="btn" id="sp-tpl-add">${icon('plus', 16)}Hinzufügen</button></div>
       ${sw('sp-gong', 'Gong vorher', 'Ein kurzer Ton, damit das Kind aufhorcht.', c.parents.gong)}
       ${sw('sp-pause', 'Wiedergabe anhalten und danach weiter', 'Sonst wird die Musik während der Durchsage nur leiser.', c.parents.pause)}</section>`,
+    `<section class="card" data-col="2" data-card="namen-vorlesen"><div class="card-head"><h2>Vorgelesene Namen</h2></div>
+      ${sw('sp-autoread', 'Namen vorlesen, wenn das Cover stehen bleibt', disp.theme?.stage === false ? 'Nur mit der Cover-Flow-Ansicht – die ist gerade aus (Aussehen › Ansicht).' : 'Beim Wischen, sobald ein Cover in der Mitte stehen bleibt.', disp.theme?.stageAutoRead === true)}
+      <div class="field"><label>Musik währenddessen</label><div class="seg" id="sp-names-music">${[
+        ['duck', 'Leiser'],
+        ['pause', 'Anhalten'],
+        ['over', 'Unverändert'],
+      ]
+        .map(([v, l]) => `<button aria-pressed="${(c.names?.music ?? 'duck') === v}" data-v="${v}">${esc(l)}</button>`)
+        .join('')}</div>
+        <small>${esc(NAMES_MUSIC_HELP[c.names?.music ?? 'duck'])}</small></div></section>`,
   ]
 }
 
@@ -8577,6 +9143,25 @@ function mountSpeech(root, page) {
   seg('sp-fallback', (v) => speechSave({ fallback: v }).then(again))
   seg('sp-rest-min', (v) => speechSave({ rest: { minutes: Number(v) } }))
   seg('sp-level', (v) => speechSave({ level: Number(v) }))
+  // names read out: the music meanwhile (the line under it follows the choice)
+  seg('sp-names-music', async (v) => {
+    if (!(await speechSave({ names: { music: v } }))) return again()
+    d.config.names = { ...(d.config.names ?? {}), music: v }
+    const small = $('#sp-names-music', root)?.parentElement?.querySelector('small')
+    if (small) small.textContent = tr(NAMES_MUSIC_HELP[v] ?? '')
+  })
+  // (reading names out when a cover stops: a setting of the cover flow stage, saved where it was before - theme-stage)
+  const autoRead = $('#sp-autoread', root)
+  if (autoRead)
+    autoRead.onchange = async () => {
+      const r = await api(`${API}/theme-stage`, { method: 'POST', body: { autoRead: autoRead.checked } })
+      if (!r.ok) {
+        autoRead.checked = !autoRead.checked
+        return toast('Nicht gespeichert', 'info')
+      }
+      if (disp.theme) disp.theme.stageAutoRead = autoRead.checked
+      toast(autoRead.checked ? 'Vorlesen an' : 'Vorlesen aus')
+    }
   // switches (and what belongs to them)
   for (const [id, body] of [
     ['sp-rest', (on) => ({ rest: { on } })],
@@ -9789,10 +10374,12 @@ function updJobCard() {
   const head = {
     running: 'Läuft …',
     rebooting: 'Fertig – die Box startet neu',
-    ok: `Fertig${j.finished ? ` am ${when(j.finished)}` : ''}`,
+    ok: `Fertig${j.finished ? ` am ${when(j.finished)}` : ''}${j.restarted ? ' – die Box wurde danach neu gestartet' : ''}`,
     failed: `Nicht geklappt${j.finished ? ` (${when(j.finished)})` : ''}`,
   }[j.phase] ?? j.phase
   const pct = j.phase === 'running' ? j.percent : 100
+  // (restarted since: the script's "please reboot" at its end is done - left out, it read as still to do)
+  const output = j.restarted ? String(j.output ?? '').split('\n').filter((l) => !/please reboot|reboot (the|your) system/i.test(l)).join('\n') : j.output
   const note = upd.offline
     ? `<div class="note">${icon('info', 18)}<span>Die Box antwortet gerade nicht. Beim MuPiBox-Update ist das normal, der Server wird ausgetauscht. Die Seite fragt weiter nach.</span></div>`
     : j.phase === 'failed'
@@ -9802,8 +10389,8 @@ function updJobCard() {
     <div class="bar"><div class="slider-head"><b>${esc(head)}</b><span class="value-pill">${pct} %</span></div>
       <div class="track"><i style="--w:${pct}%"></i></div>${j.step && j.phase === 'running' ? `<small>${esc(j.step)}</small>` : ''}</div>
     ${note}
-    ${j.phase === 'ok' && j.kind === 'os' ? `<div class="btns"><button class="btn primary" id="upd-reboot">Box neu starten</button></div>` : ''}
-    ${j.output ? `<details id="upd-out"${upd.showOut ? ' open' : ''}><summary class="help">Ausgabe</summary><pre class="logview" style="height:240px">${esc(j.output)}</pre></details>` : ''}</section>`
+    ${j.phase === 'ok' && j.kind === 'os' && !j.restarted ? `<div class="btns"><button class="btn primary" id="upd-reboot">Box neu starten</button></div>` : ''}
+    ${output ? `<details id="upd-out"${upd.showOut ? ' open' : ''}><summary class="help">Ausgabe</summary><pre class="logview" style="height:240px">${esc(output)}</pre></details>` : ''}</section>`
 }
 
 function updatesTop() {
@@ -10296,6 +10883,9 @@ const CONTROLLERS = {
       }
       $('#s-go', root).onclick = doSpotifySearch
       drawSearch()
+      // (shown at once from the last time, then asked anew)
+      drawSpotifyMine()
+      loadSpotifyMine()
     },
   },
   podsuche: {
@@ -10355,6 +10945,13 @@ const CONTROLLERS = {
         drawTidal()
       }
       if (tds.artist || tds.result) drawTidal()
+      const link = $('#tds-link', root)
+      link.addEventListener('input', () => (tds.link = link.value))
+      link.addEventListener('keydown', (e) => e.key === 'Enter' && openTidalLink())
+      $('#tds-link-go', root).onclick = openTidalLink
+      // (shown at once from the last time, then asked anew: a playlist made since comes in)
+      drawTidalMine()
+      loadTidalMine()
     },
   },
   radiosuche: {
@@ -10553,7 +11150,6 @@ const CONTROLLERS = {
     async load() {
       await Promise.all([loadTheme(), loadDisplayOptions()])
       state.values.set('stage', disp.theme.stage === true)
-      state.values.set('tts', disp.theme.stageAutoRead === true)
       state.values.set('names', disp.opts.coverflowShowNames)
       state.values.set('scrollbar', disp.opts.hideScrollbar ? 'Ausblenden' : disp.opts.scrollbarStyle === 'full' ? 'Durchgehend' : 'Standard')
       state.values.set('headerBand', disp.theme.headerBand !== false)
@@ -10573,8 +11169,6 @@ const CONTROLLERS = {
           .map((it) => {
           const cur = themeLabel(disp.theme?.current ?? '')
           if (it.key === 'stage') return { ...it, help: `Große Cover in der Mitte, für die Kinder-Themes${isKidsTheme(disp.theme?.current) ? '' : ` – das aktive Theme (${cur}) nutzt sie nicht`}.` }
-          // (reading names out works only with the cover flow: shown under it while it is on)
-          if (it.key === 'tts') return { ...it, dep: 'stage' }
           // (the scroll bar is below the covers in every view - the stage's, the cover flow's and the three side by side)
           if (it.key === 'scrollbar') return { ...it, helpId: 'sb-help', help: SCROLLBAR_HELP[state.values.get('scrollbar')] ?? SCROLLBAR_HELP.Standard }
           if (it.key === 'names') return { ...it, help: disp.theme?.current === 'coverflow' ? 'Nur beim Theme „coverflow“.' : `Nur beim Theme „coverflow“ – aktiv ist gerade „${cur}“.` }
@@ -10588,10 +11182,6 @@ const CONTROLLERS = {
       if (key === 'stage') {
         const r = await api(`${API}/theme-stage`, { method: 'POST', body: { stage: v } })
         return toast(r.ok ? (v ? 'Cover-Flow-Ansicht an' : 'Cover-Flow-Ansicht aus') : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
-      }
-      if (key === 'tts') {
-        const r = await api(`${API}/theme-stage`, { method: 'POST', body: { autoRead: v } })
-        return toast(r.ok ? (v ? 'Vorlesen an' : 'Vorlesen aus') : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
       }
       if (key === 'headerBand' || key === 'playerPanel' || key === 'fullscreenGestures') {
         const r = await api(`${API}/theme-stage`, { method: 'POST', body: { [key]: v } })
@@ -10616,7 +11206,17 @@ const CONTROLLERS = {
       const custom = !RES_PRESETS.some(([, x, y]) => x === Number(state.values.get('resX')) && y === Number(state.values.get('resY')))
       state.values.set('resCustom', custom)
       state.values.set('resPreset', custom ? 'Eigene …' : `${state.values.get('resX')} × ${state.values.get('resY')}`)
+      const dp = disp.dp
       return [
+        ...(dp
+          ? [
+              {
+                title: dp.test?.running ? 'Neues Display testen' : 'Display-Modell',
+                badge: dp.test?.running ? { text: 'Test läuft', kind: 'warn' } : { text: dmShort(dp.current), kind: dp.current === 'custom' ? '' : 'ok' },
+                items: [{ type: 'html', html: displayModelHtml() }],
+              },
+            ]
+          : []),
         {
           title: 'Helligkeit & Ausschalten',
           help: 'Gilt sofort.',
@@ -10636,7 +11236,13 @@ const CONTROLLERS = {
             { type: 'toggle', key: 'ndQuiet', label: 'Auch während der Ruhezeiten', help: 'Zum Beispiel zur Schlafenszeit, auch wenn sie außerhalb der Uhrzeiten liegt.', dep: 'ndOn' },
           ],
         },
-        {
+        dp?.kms
+          ? {
+              title: 'Drehung',
+              help: 'Bild und Touch drehen sich zusammen. Gilt sofort (die Anzeige startet kurz neu), auch für Start- und Ausschaltbild.',
+              items: [{ type: 'html', html: kmsRotTiles() }],
+            }
+          : {
           title: 'Drehung',
           help: 'Gilt nach einem Neustart der Box.',
           items: [
@@ -10648,6 +11254,10 @@ const CONTROLLERS = {
             },
           ],
         },
+        // (a display with KMS: the kiosk takes the panel's own size, turned - see chromium-autostart.sh)
+        ...(dp?.kms
+          ? []
+          : [
         {
           title: 'Auflösung',
           help: 'Die Auflösung deines Displays. Ist sie größer als 800 × 480, wird die Oberfläche passend vergrößert – scharf und im gleichen Aufbau. Das Display startet damit gleich neu.',
@@ -10657,9 +11267,11 @@ const CONTROLLERS = {
             { type: 'buttons', buttons: [['Auflösung übernehmen', 'primary', 'toast:Gespeichert']] },
           ],
         },
+            ]),
       ]
     },
     mount(root, page) {
+      mountDisplayModel(root, page)
       for (const b of root.querySelectorAll('[data-rot-key]')) {
         b.onclick = () => {
           const key = b.dataset.rotKey
@@ -11045,7 +11657,8 @@ const CONTROLLERS = {
     },
   },
   bluetooth: { load: loadBluetooth, top: btTop, sections: () => [], mount: mountBluetooth },
-  sprachausgabe: { load: loadSpeech, top: speechTop, sections: () => [], mount: mountSpeech },
+  // (the theme too: reading names out depends on the cover flow stage, see "Vorgelesene Namen")
+  sprachausgabe: { load: () => Promise.all([loadSpeech(), loadTheme()]), top: speechTop, sections: () => [], mount: mountSpeech },
   akku: {
     load: loadBattery,
     top: batteryTop,
@@ -11995,6 +12608,7 @@ async function renderLogin(hasSession = state.loginHasSession ?? false) {
     $('#content').innerHTML = `
     <div class="login">
       <div class="logo">${mupiImg('width="64" height="67"')}</div>
+      <div class="login-brand">${LOGO}<span class="ed-tag" translate="no">CLASSIC</span></div>
       <div class="login-head"><h1>Willkommen zurück</h1>${portals.length > 1 ? '<p class="help">Wohin möchtest du?</p>' : ''}</div>
       <form class="card" id="login-form">
         ${

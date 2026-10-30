@@ -69,6 +69,11 @@ For headphones and speakers over Bluetooth and for the headphone jack there is a
 
 The box can read out names and speak announcements. You set the voice and language under **Settings › Audio › Speech output**.
 
+Under **Names read aloud** on the same page:
+
+- **Read the name aloud when the cover stops**: while swiping, as soon as a cover stops in the middle – only with the cover flow view (**Appearance › View**),
+- **Music meanwhile**: **Quieter** (default) – the music goes quieter for a moment so the name can be understood, and comes back after the last name; **Pause** – the music pauses for the name and goes on a little after the last one (when swiping quickly it stops and starts more often); **Unchanged** – the name plays over the music.
+
 ## When switching off
 
 When switching off, the box plays a goodbye sound. If music is still playing at that moment, it is stopped first so that it does not briefly get louder before the sound comes.

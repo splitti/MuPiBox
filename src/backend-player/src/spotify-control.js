@@ -2633,9 +2633,7 @@ async function sayName(text) {
     const b = await r.json()
     if (b.off) return
     if (b.file) {
-      writeplayerstatePlay()
-      player.play(b.file)
-      player.setVolume(volumeStart)
+      playNameSound(b.file)
       return
     }
   } catch (err) {
@@ -2648,12 +2646,49 @@ async function sayName(text) {
 
 function playFile(playedFile) {
   const playedTitel = `${playedFile}.mp3`
-  log.debug(`${now()}: [Spotify Control] Starting currentMeta.playing:${playedTitel}`)
-  //currentMeta.playing = true;
-  writeplayerstatePlay()
-  player.play(`/home/dietpi/MuPiBox/tts_files/${playedTitel}`)
-  player.setVolume(volumeStart)
-  log.debug(`${now()}: /home/dietpi/MuPiBox/tts_files/${playedTitel}`)
+  log.debug(`${now()}: [Spotify Control] Name read: ${playedTitel}`)
+  playNameSound(`/home/dietpi/MuPiBox/tts_files/${playedTitel}`)
+}
+
+// A name read out, next to the music: by the backend, which makes the music quieter or pauses it as set (Sprachausgabe
+// › Vorgelesene Namen, speech.ts playName); without an answer from it, by an mpv of its own over the music. It went
+// through the music's player: what played was replaced by the name - the mini player showed the sound's file name, and
+// when the name was over nothing played any more.
+function playNameSound(file) {
+  fetch('http://127.0.0.1:8200/api/app/speech/name', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ file }),
+    signal: AbortSignal.timeout(3000),
+  })
+    .then((r) => {
+      if (!r.ok) throw new Error(`backend ${r.status}`)
+    })
+    .catch((err) => {
+      log.debug(`${now()}: [Spotify Control] name read here (backend: ${err?.message || err})`)
+      playNameSoundHere(file)
+    })
+}
+
+// (a name while the one before is still read - quick scrolling - cuts that one off)
+let nameSound = null
+function playNameSoundHere(file) {
+  if (nameSound) {
+    try {
+      nameSound.kill()
+    } catch {
+      /* gone already */
+    }
+  }
+  // (a name of its own for PulseAudio, which keeps the volume per program name - see speech.ts playName)
+  const child = require('node:child_process').spawn('mpv', ['--no-video', '--really-quiet', '--no-config', '--ao=pulse,alsa', '--audio-client-name=mupibox-name', `--volume=${volumeStart}`, file], {
+    stdio: 'ignore',
+  })
+  nameSound = child
+  child.on('error', (e) => log.debug(`${now()}: [Spotify Control] Name not read: ${e?.message || e}`))
+  child.on('exit', () => {
+    if (nameSound === child) nameSound = null
+  })
 }
 
 // A radio link may be a playlist (m3u / pls) instead of the stream itself: its FIRST stream is played (see
@@ -3512,6 +3547,12 @@ app.get('/tidal/tracklist/:ref', async (req, res) => {
     res.status(400).json({ error: 'invalid list' })
     return
   }
+  // the list that plays: as mpv has it (tidaltrack:N jumps by position) - asked anew, a playlist changed on TIDAL since
+  // its start (a track added in front) would put every pick one track off
+  if (currentMeta.currentType === 'tidal' && currentMeta.path === `${kind}:${id}` && currentTidalTracks.length > 0) {
+    res.json(currentTidalTracks.map((track, i) => ({ position: i + 1, name: track.name })))
+    return
+  }
   try {
     const response = await fetch(`${TIDAL_SERVICE}/tracks?kind=${kind}&id=${encodeURIComponent(id)}`, { signal: AbortSignal.timeout(45000) })
     const body = response.ok ? await response.json() : null
@@ -3553,6 +3594,31 @@ app.get('/tidal/artist/:id/albums', async (req, res) => {
 
 /*sonos-kids-controller sends commands via http get and uses path names for encoding*/
 /*commands are as defined in sonos-kids-controller and mapped spotify calls*/
+// The pause for names read out (speech.ts playName, "Anhalten"): the backend pauses what plays for a row of names and
+// lets it go on after the last one - only if it is still its pause. Asked and done here in one step (the backend
+// checked the last command first and sent play afterwards: a pause from the display in between was undone). Any other
+// command (display, app, Telegram) takes the pause over; names read out and announcements do not (see the command
+// handler below). token: which pause - the backend's own number for it (it knows it even when this answer gets lost),
+// 0 = none of the backend's.
+let speechPauseToken = 0
+app.get('/speechpause', (req, res) => {
+  const token = Number(req.query.token)
+  if (!Number.isSafeInteger(token) || token <= 0) return res.status(400).json({ paused: false })
+  if (!isActuallyPlaying()) return res.json({ paused: false })
+  pause()
+  speechPauseToken = token
+  res.json({ paused: true })
+})
+app.get('/speechresume', (req, res) => {
+  const token = Number(req.query.token)
+  if (!token || token !== speechPauseToken) return res.json({ resumed: false })
+  speechPauseToken = 0
+  // (playtime over or a quiet time began meanwhile: it stays paused, as a play would be refused)
+  if (isPlaybackBlocked()) return res.json({ resumed: false, blocked: true })
+  play()
+  res.json({ resumed: true })
+})
+
 app.use((req, res) => {
   // Phase 19 Stufe B: Quelle aus optionalem ?src=... Query lesen.
   // path.parse() ignoriert Query nicht — parsen wir vorher mit URL().
@@ -3565,14 +3631,24 @@ app.use((req, res) => {
     pathname = u.pathname
     const src = u.searchParams.get('src')
     if (src && /^[a-z0-9_-]{1,20}$/i.test(src)) triggerSource = src
+    // (an announcement pauses the music and goes on afterwards: no start - the display jumped to the big player after
+    // every announcement, away from where the child was looking for something)
+    if (triggerSource === 'speech') triggerSource = null
+    // (a name read out is no command either - the display sends it as /<device>/say/<name>: every name of a row counted
+    // as one and the music paused for the names did not go on, see /speechpause)
+    if (/\/say\//.test(u.pathname)) triggerSource = null
     // (only a picture address of the box's own API or of the web - it lands in an <img> on the display)
     const cover = u.searchParams.get('cover') ?? ''
     if (cover.length < 2000 && /^(\/api\/|https?:\/\/)/.test(cover)) triggerCover = cover
   } catch {
     /* malformed — bleibt 'box', pathname bleibt req.url */
   }
-  currentMeta.triggerSource = triggerSource
-  currentMeta.triggerAt = Date.now()
+  if (triggerSource !== null) {
+    currentMeta.triggerSource = triggerSource
+    currentMeta.triggerAt = Date.now()
+    // (a command of the display, the app, Telegram …: the pause for names read out is not the backend's any more)
+    speechPauseToken = 0
+  }
 
   const command = path.parse(pathname)
   log.debug(`${now()}: [Spotify Control]name: ${command.name}`)

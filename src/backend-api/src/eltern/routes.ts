@@ -31,6 +31,7 @@ import {
   appLoginRequired,
   hasAppPassword,
   usesDefaultPassword,
+  onlyDefaultPassword,
   setAppPassword,
   verifyAppPassword,
   PERSISTENT_TTL_MS,
@@ -47,6 +48,7 @@ import {
 import { ipRateLimit, localNetworkOnly, parseCookie, requireCsrf, requireSession } from './middleware'
 import { registerCustomCoverRoutes } from './covers'
 import { registerDisplayRoutes } from './display'
+import { registerDisplayProfileRoutes } from './display-profile'
 import { registerSpeechRoutes } from './speech-routes'
 import { registerCustomBootRoutes } from './bootscreen-custom'
 import { registerFeedHostRoutes } from './feed-hosts'
@@ -146,6 +148,18 @@ const BT_MAC_RE = /^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/
 
 // Boot and maintenance screens (see media/bootscreens and MuPi-Conf): the installed scenes and their settings file.
 const BOOTSCREENS_DIR = '/home/dietpi/MuPiBox/sysmedia/bootscreens'
+
+/** The name of the user a file belongs to (from /etc/passwd), else its number - for a message that names it */
+async function ownerName(file: string): Promise<string> {
+  try {
+    const { uid } = await fsp.stat(file)
+    const passwd = await fsp.readFile('/etc/passwd', 'utf8').catch(() => '')
+    const line = passwd.split('\n').find((l) => l.split(':')[2] === String(uid))
+    return line?.split(':')[0] || String(uid)
+  } catch {
+    return ''
+  }
+}
 type BootscreensFile = { bootscreens: Record<string, unknown>[]; defaultBootscreen?: string; nameMaxLength?: number }
 
 function readBootscreens(): BootscreensFile | undefined {
@@ -407,6 +421,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   // (and back: a track, an album or a folder of the card as a download - local-download.ts)
   if (deps.localLibrary) registerLocalDownloadRoutes(router, deps.localLibrary)
   registerDisplayRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  registerDisplayProfileRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig })
   registerSpeechRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerCustomBootRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerFeedHostRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
@@ -633,6 +648,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       loginRequired: appLoginRequired(cfg),
       loginSwitch: (cfg as { interfacelogin?: { state?: unknown } } | undefined)?.interfacelogin?.state === true,
       defaultPassword: await usesDefaultPassword(cfg),
+      // (the default is the only password: a new one goes without the current, the login waits for one of one's own)
+      defaultOnly: await onlyDefaultPassword(cfg),
       keptDevices: keptSessionCount(),
     })
   })
@@ -661,13 +678,21 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     res.json({ ok: true, ended })
   })
 
-  /** POST /api/app/auth/password {current, password} - the one password; the current one is needed when one is set. */
+  /** POST /api/app/auth/password {current, password} - the one password; the current one is needed when one of one's
+   *  own is set. The well-known default password is not asked for when it is the only one (onlyDefaultPassword): it
+   *  showed only in the admin interface, which is off since 5.0.12 - a new box could not replace it (and whoever is
+   *  signed in got past it, or came with the QR code). An own parents' password beside it is asked for. */
   router.post('/auth/password', requireSession, requireCsrf, ipRateLimit(5), async (req, res) => {
     const body = (req.body ?? {}) as { current?: unknown; password?: unknown }
     const current = typeof body.current === 'string' ? body.current : ''
     const next = typeof body.password === 'string' ? body.password : ''
     const cfg = deps.getMupiboxConfig()
-    if (hasAppPassword(cfg) && !mayResetPassword(req.elternSessionId) && !(await verifyAppPassword(current, cfg))) {
+    if (
+      hasAppPassword(cfg) &&
+      !mayResetPassword(req.elternSessionId) &&
+      !(await onlyDefaultPassword(cfg)) &&
+      !(await verifyAppPassword(current, cfg))
+    ) {
       res.status(403).json({ error: 'wrong_password' })
       return
     }
@@ -698,6 +723,12 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       return
     }
     const wasOn = (cfg as { interfacelogin?: { state?: unknown } } | undefined)?.interfacelogin?.state === true
+    // switched on with the default password: the app asked then for a password that shows nowhere (the admin interface
+    // is off) - one's own first. (Already on: stays switchable off.)
+    if (body.required && !wasOn && (await onlyDefaultPassword(cfg))) {
+      res.status(409).json({ error: 'default_password' })
+      return
+    }
     if (!body.required && wasOn && (body as { confirmed?: unknown }).confirmed !== true) {
       res.status(400).json({ error: 'confirm_needed' })
       return
@@ -2115,6 +2146,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * for a colour change). Theme name is validated against installedThemes
    * to prevent symlink-target injection.
    */
+  let themeTurn: Promise<unknown> = Promise.resolve()
   router.post('/theme', requireSession, requireCsrf, async (req, res) => {
     const cfg = deps.getMupiboxConfig()
     if (!cfg) {
@@ -2131,22 +2163,73 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(400).json({ error: 'theme not in installed-themes whitelist' })
       return
     }
-    await deps.updateMupiboxConfig((c) => {
-      const m = ((c.mupibox as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
-      m.theme = theme
-      c.mupibox = m
-    })
-    const symlinkPath = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme.css'
-    const target = `/home/dietpi/MuPiBox/themes/${theme}.css`
-    try {
-      await fsp.rm(symlinkPath, { force: true })
-      await fsp.symlink(target, symlinkPath)
-    } catch (err) {
-      res.status(500).json({ error: `symlink update failed: ${(err as Error).message}` })
-      return
-    }
-    res.json({ ok: true, theme })
+    // One change after the other (two at once could leave the link of one and the setting of the other).
+    const turn = themeTurn.then(() => switchTheme(theme))
+    themeTurn = turn.catch(() => {})
+    const r = await turn.catch((err: Error) => ({ status: 500, body: { error: `theme change failed: ${err.message}` } }))
+    res.status(r.status).json(r.body)
   })
+
+  // The link first, then the setting: a link that cannot be changed left the setting on the new theme and the display
+  // on the old one. Made next to it and swapped in, so the display never finds no link; a setting that cannot be saved
+  // puts the link back.
+  async function switchTheme(theme: string): Promise<{ status: number; body: Record<string, unknown> }> {
+    const wwwDir = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www'
+    const symlinkPath = `${wwwDir}/active_theme.css`
+    const newLink = `${symlinkPath}.new`
+    const swapIn = async (to: string) => {
+      await fsp.rm(newLink, { force: true })
+      await fsp.symlink(to, newLink)
+      await fsp.rename(newLink, symlinkPath)
+    }
+    // what is there now, to put back: a link (its target), a file (e.g. copied in by hand: kept next to it until the
+    // change counts), or nothing
+    const kept = `${symlinkPath}.before`
+    let before: { link: string } | { file: true } | null = null
+    try {
+      const st = await fsp.lstat(symlinkPath)
+      if (st.isSymbolicLink()) before = { link: await fsp.readlink(symlinkPath) }
+      else if (st.isFile()) {
+        await fsp.copyFile(symlinkPath, kept)
+        before = { file: true }
+      } else return { status: 500, body: { error: 'active_theme.css is neither a link nor a file' } }
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code
+      if (code === 'EACCES' || code === 'EPERM') return { status: 500, body: { error: 'theme_link_denied', owner: await ownerName(wwwDir) } }
+      if (code !== 'ENOENT') return { status: 500, body: { error: `theme link not readable: ${(err as Error).message}` } }
+    }
+    const putBack = async () => {
+      if (before && 'link' in before) await swapIn(before.link)
+      else if (before) await fsp.rename(kept, symlinkPath)
+      else await fsp.rm(symlinkPath, { force: true })
+    }
+    try {
+      await swapIn(`/home/dietpi/MuPiBox/themes/${theme}.css`)
+    } catch (err) {
+      await fsp.rm(newLink, { force: true }).catch(() => {})
+      await fsp.rm(kept, { force: true }).catch(() => {})
+      const code = (err as NodeJS.ErrnoException).code
+      if (code === 'EACCES' || code === 'EPERM') {
+        // the display's folder belongs to someone else (e.g. files copied in by hand as root) - the box's start gives
+        // it back to dietpi (mupi_startup.sh)
+        return { status: 500, body: { error: 'theme_link_denied', owner: await ownerName(wwwDir) } }
+      }
+      return { status: 500, body: { error: `symlink update failed: ${(err as Error).message}` } }
+    }
+    try {
+      await deps.updateMupiboxConfig((c) => {
+        const m = ((c.mupibox as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
+        m.theme = theme
+        c.mupibox = m
+      })
+    } catch (err) {
+      await putBack().catch(() => {})
+      await fsp.rm(newLink, { force: true }).catch(() => {})
+      return { status: 500, body: { error: `theme setting not saved: ${(err as Error).message}` } }
+    }
+    await fsp.rm(kept, { force: true }).catch(() => {})
+    return { status: 200, body: { ok: true, theme } }
+  }
 
   /**
    * POST /api/app/theme-stage  {stage?, autoRead?, headerBand?, playerPanel?, fullscreenGestures?}

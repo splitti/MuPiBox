@@ -36,6 +36,41 @@ fi
 	xsetroot -solid black 2>/dev/null
 ) &
 
+# A display with KMS on the ribbon cable (Touch Display 2, Waveshare, EDATEC - app: Display-Modell): the window and the
+# scale go by the screen as the X server shows it, turned (Drehung) - the panel says its size, the setting would be a
+# guess. Asked here, with X running (chromium-autostart.sh runs before the X server: at a cold start it got no answer
+# and kept the setting - 800 x 480 on a 1280 x 720 panel, scale 1 instead of 1.5). The scale as in chromium-autostart.sh.
+for c in /sys/class/drm/card*-DSI-*/status; do
+	if [ -e "${c}" ] && [ "$(cat "${c}")" = "connected" ]; then
+		# mirrored (app: Drehung, display_rotation.sh): by xrandr - the KMS driver ignores the X server's option for it
+		REFLECT=$(cat /etc/X11/mupibox-reflect 2>/dev/null)
+		case "${REFLECT}" in
+			x | y)
+				OUT=$(basename "$(dirname "${c}")" | sed 's/^card[0-9]*-//')
+				xrandr --output "${OUT}" --reflect "${REFLECT}" 2>/dev/null
+				;;
+		esac
+		SCREEN=$(xrandr --current 2>/dev/null | sed -n 's/^Screen 0:.* current \([0-9]*\) x \([0-9]*\),.*/\1 \2/p')
+		if [ -n "${SCREEN}" ]; then
+			RES_X=${SCREEN% *}
+			RES_Y=${SCREEN#* }
+			UI_SCALE=$(LC_ALL=C awk -v x="${RES_X}" -v y="${RES_Y}" 'BEGIN { if (x + 0 <= 0 || y + 0 <= 0) { print 1; exit } s = x / 800; if (y / 480 < s) s = y / 480; if (s > 3) s = 3; if (s > 1) printf "%.2f", s; else print 1 }')
+			# the arguments without the window size and scale of the setting, then the screen's
+			n=$#
+			for a in "$@"; do
+				case "$a" in
+					--window-size=* | --force-device-scale-factor=*) ;;
+					*) set -- "$@" "$a" ;;
+				esac
+			done
+			shift "$n"
+			set -- "$@" "--window-size=${RES_X},${RES_Y}"
+			[ "${UI_SCALE}" != "1" ] && set -- "$@" "--force-device-scale-factor=${UI_SCALE}"
+		fi
+		break
+	fi
+done
+
 i=0
 while [ "$i" -lt 240 ] && ! curl -s -o /dev/null --max-time 1 http://localhost:8200/assets/icon/favicon.png; do
 	sleep 0.25

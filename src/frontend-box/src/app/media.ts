@@ -75,6 +75,9 @@ export interface Media {
   // The data.json row a Spotify entry was looked up from (e.g. 'a:<artistid>', see media.service rowKey): a list made
   // while Spotify failed takes that row's entries from the list kept before instead of a placeholder.
   row?: string
+  // The placeholder of a Spotify playlist that could not be fetched: its name in the library ("Name der Kachel"), which
+  // the entry of the list kept before takes over (renamed meanwhile) - its folder (artist) is the placeholder's
+  libraryTitle?: string
   // Set by /api/addresume to Date.now() on every save. Frontend sorts the
   // resume page by this DESC so "most recently played" lands at position 1
   // even when the entry was already in the file (addresume's update-in-

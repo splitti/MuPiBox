@@ -2,6 +2,7 @@
 // (speech.ts). Telegram's /sag and the player's reading out of names come from the box itself (localOnly).
 
 import { promises as fsp } from 'node:fs'
+import * as path from 'node:path'
 import { Readable } from 'node:stream'
 import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
@@ -19,6 +20,7 @@ import {
   prepareNames,
   parseSpeech,
   piperWav,
+  playName,
   removeVoice,
   sampleUrl,
   speechOf,
@@ -65,7 +67,7 @@ export function registerSpeechRoutes(router: Router, deps: SpeechDeps): void {
     const configured = saved && sp.engine !== 'off' && sp.parents.on && (sp.engine !== 'piper' || !!active || sp.fallback === 'google')
     res.json({
       configured,
-      config: { engine: sp.engine, fallback: sp.fallback, voices: sp.voices, rest: sp.rest, bedtime: sp.bedtime, sleepEnd: sp.sleepEnd, level: sp.level, parents: sp.parents },
+      config: { engine: sp.engine, fallback: sp.fallback, voices: sp.voices, rest: sp.rest, bedtime: sp.bedtime, sleepEnd: sp.sleepEnd, level: sp.level, parents: sp.parents, names: sp.names },
       boxLanguage: box,
       lang,
       // (the announcements' texts: the box's language; the sentence to try a voice with: the language of the list)
@@ -203,4 +205,22 @@ export function registerSpeechRoutes(router: Router, deps: SpeechDeps): void {
     }
     res.json({ file: voice && text ? await piperWav(text, voice) : null })
   })
+
+  /** POST /api/app/speech/name {file} - from the box's player: a name's sound (from render above, or Google's MP3) read
+   *  out here, the music as set (Vorgelesene Namen: quieter, paused or as it is). Only the box's own speech sounds. */
+  router.post('/speech/name', localOnly, async (req, res) => {
+    const file = String((req.body as { file?: unknown } | undefined)?.file ?? '')
+    // (as it really is: a link in the folder pointing elsewhere does not count)
+    const real = file ? await fsp.realpath(path.resolve(file)).catch(() => '') : ''
+    const base = await fsp.realpath(TTS_DIR).catch(() => TTS_DIR)
+    if (!real.startsWith(`${base}/`) || !/\.(wav|mp3)$/i.test(real)) {
+      res.status(400).json({ error: 'not a speech sound of the box' })
+      return
+    }
+    void playName(deps.getMupiboxConfig, real)
+    res.json({ ok: true })
+  })
 }
+
+// where the box keeps its speech sounds (Piper's below it in piper/, Google's MP3s of the player)
+const TTS_DIR = '/home/dietpi/MuPiBox/tts_files'

@@ -14,8 +14,8 @@
 
 # what each one is needed for: mpv plays everything but Spotify; rsvg-convert and Pillow put the start pictures together
 # (bootscreens/tools/compose_bootscreen.py); xdotool hides the display's window for the goodbye picture; feh shows
-# pictures on the screen
-NEEDED="mpv librsvg2-bin python3-pil xdotool feh"
+# pictures on the screen; xwininfo (x11-utils) is what the kiosk watchdog looks at the display's window with
+NEEDED="mpv librsvg2-bin python3-pil xdotool feh x11-utils"
 LOG="/tmp/mupibox-install-missing.log"
 
 not_installed() {
