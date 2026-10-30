@@ -105,6 +105,8 @@ Kept, with what uses them:
 | `python3-pil` | cover thumbnails of the API server (falls back to the original pictures without it) |
 | `python3-pip`, `python3-dev` | `telepot` (Telegram scripts) is installed with pip; `python3-dev` in case pip has to build a part of it. `requests` and `pyserial` come from the package list (`python3-requests`, `python3-serial`), no longer also from pip |
 | `rfkill` | switching the onboard WiFi (`set_onboard_wifi.sh`, the app) - in the update's list too since 5.0.10 |
+| `x11-utils` | `xwininfo`, with which the kiosk watchdog (in `scripts/chromium-autostart.sh`) looks for Chromium's window; without it the watchdog stays off (5.0.13) |
+| `x11-xserver-utils` | `xrandr` for turning and mirroring the picture of a display (`scripts/mupibox/display_rotation.sh`, `kiosk_start.sh`; 5.0.13) |
 
 No longer installed (commented out in `update/start_mupibox_update.sh` and `autosetup/autosetup.sh`
 with the date and reason):
