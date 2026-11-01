@@ -37,23 +37,33 @@ function since(seconds: number): string {
   return m === 1 ? '1 Minute' : `${m} Minuten`
 }
 
+/** the box's local date of a time as "YYYY-MM-DD" (as in the names of the logs) */
+const localDate = (t: Date) => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`
+
 /**
- * The last updates, from the logs in /boot: <date>_update_<version>.log once an update finished; mupibox_update.log
- * newer than those while one runs or after one that did not finish.
+ * The last updates, from the logs in /boot: <date>_update_<version>.log once an update finished (one from a branch
+ * leaves <date>_update_.log, without a version); mupibox_update.log written later than those while one runs or after
+ * one that did not finish. (The finished log is moved there, so its time is when that update ended.)
  */
 async function updates(): Promise<string> {
   const names = await fsp.readdir('/boot').catch(() => [] as string[])
-  const done = names
-    .map((n) => /^(\d{4}-\d{2}-\d{2})_update_(.+)\.log$/.exec(n))
-    .filter((m): m is RegExpExecArray => m !== null)
-    .map((m) => ({ date: m[1], version: m[2] }))
-    .sort((a, b) => a.date.localeCompare(b.date))
+  const found = names.map((n) => ({ name: n, m: /^(\d{4}-\d{2}-\d{2})_update_(.*)\.log$/.exec(n) }))
+  const done = (
+    await Promise.all(
+      found
+        .filter((f): f is { name: string; m: RegExpExecArray } => f.m !== null)
+        .map(async ({ name, m }) => ({
+          date: m[1],
+          version: m[2] || 'Branch-Update',
+          mtime: (await fsp.stat(`/boot/${name}`).catch(() => null))?.mtimeMs ?? 0,
+        })),
+    )
+  ).sort((a, b) => a.date.localeCompare(b.date) || a.mtime - b.mtime)
   const steps = done.slice(-3).map((u) => `${u.version} (${day(u.date)})`)
   let open = ''
   try {
     const st = await fsp.stat('/boot/mupibox_update.log')
-    const last = done.at(-1)?.date ?? ''
-    if (!last || st.mtime.toISOString().slice(0, 10) >= last) open = `letztes Update nicht fertig (${day(st.mtime.toISOString().slice(0, 10))}, /boot/mupibox_update.log)`
+    if (st.mtimeMs > Math.max(0, ...done.map((u) => u.mtime))) open = `letztes Update nicht fertig (${day(localDate(st.mtime))}, /boot/mupibox_update.log)`
   } catch {
     // none: the last one finished
   }
@@ -73,10 +83,15 @@ async function display(cfg: MupiboxConfig | undefined): Promise<string> {
   return `${name}${turned}${mirrored}`
 }
 
+/** the battery profiles the box comes with (config/templates/mupiboxconfig.json) */
+const KNOWN_BATTERIES = ['Ansmann 2S1P', 'ENERpower 2S2P 10.000mAh', 'ENERpower 2S3P 15.000mAh', 'USB-C mode (no battery)', 'Custom']
+
 async function hat(cfg: MupiboxConfig | undefined): Promise<string> {
   const h = section(cfg, 'mupihat')
   if (h.hat_active !== true) return 'keiner'
-  const battery = typeof h.selected_battery === 'string' && h.selected_battery ? ` · ${h.selected_battery}` : ''
+  // (an own profile only as such - its name may say whose box it is)
+  const chosen = typeof h.selected_battery === 'string' ? h.selected_battery : ''
+  const battery = !chosen ? '' : KNOWN_BATTERIES.includes(chosen) ? ` · ${chosen}` : ' · eigenes Akkuprofil'
   try {
     const j = JSON.parse(await fsp.readFile('/tmp/mupihat.json', 'utf8')) as { Bat_Percent?: unknown; IBus?: unknown; Measurement_Valid?: unknown }
     const pct = Number(j.Bat_Percent)
