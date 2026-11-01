@@ -583,6 +583,8 @@ select.input { appearance: auto; }
 .chip.cat-music { background: var(--mp-primary-soft); color: var(--mp-primary-text); }
 
 /* ---------- System ---------- */
+/* the box's profile for the Discord (Über die Box › Support): as it is pasted, selectable */
+pre.summary { margin: 0; padding: 12px; max-height: 50vh; overflow: auto; border-radius: var(--mp-r); background: var(--mp-bg); border: 1.5px solid var(--mp-border); font: 12px/1.55 ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; }
 .news { margin: 0; max-height: 320px; overflow: auto; white-space: pre-wrap; font: 13px/1.5 var(--mp-font); color: var(--mp-muted); }
 .logview { margin: 0; height: 420px; overflow: auto; padding: 10px 12px; border-radius: var(--mp-r-sm); background: var(--mp-field); font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
 a.btn { text-decoration: none; color: inherit; }

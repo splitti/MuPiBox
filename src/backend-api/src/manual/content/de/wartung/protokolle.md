@@ -18,9 +18,15 @@
 
 Mit **Ausführliches Player-Log** schreibt der Player viel mehr in sein Log (`spotify-control`). Der Player startet dafür neu. Schalte es nur ein, wenn du einem Problem auf der Spur bist, und danach wieder aus, denn es füllt die Logs.
 
+## Steckbrief für eine Rückmeldung
+
+Für eine kurze Rückmeldung im [Discord](https://discord.gg/4EjCgpCbbe), etwa nach einem Update, tippe unter **Einstellungen › System › Über die Box › Support** auf **Für Discord kopieren**. Die App legt einen Steckbrief der Box in die Zwischenablage und zeigt ihn an: Version und die letzten Updates (und ob das letzte fertig wurde), Pi-Modell und Arbeitsspeicher, System, Laufwerk mit freiem Platz, Display-Modell und Drehung, MuPiHAT mit Akkustand, Soundkarte und Player, welche Dienste an sind, WLAN-Band und Signal sowie Temperatur und Laufzeit. Füge ihn im Discord ein und schreib darunter, was passiert ist. Er ist immer deutsch und bei allen Boxen gleich aufgebaut, damit die Helfer ihn schnell lesen können.
+
+Der Steckbrief enthält nichts, was deine Box, dein Zuhause oder eine Person verrät: keine IP-Adresse, keinen WLAN-Namen, keinen Boxnamen, keine Konten und nichts aus der Bibliothek. Klappt das Kopieren nicht (manche Browser erlauben es über `http://` nicht), ist der Text markiert, und du kopierst ihn selbst.
+
 ## Support-Infos für die Hilfe
 
-Brauchst du Hilfe, zum Beispiel im [Discord](https://discord.gg/4EjCgpCbbe), tippe unter **Einstellungen › System › Über die Box › Support** auf **Support-Infos herunterladen**. Das Zip enthält die Bibliothek (`data.json`), die Einstellungen ohne Passwörter, Tokens und Konten, den Zustand von Display und Netzwerk, die Versionen und die **Logs** von Server und Player (auch die älteren) sowie das Debug-Log des Browsers, wenn **Chrome-Debugging** an ist – von jedem Log die letzten 5 MB. Schau es dir vor dem Teilen kurz an: Logs können Namen aus deiner Bibliothek enthalten.
+Klemmt etwas und wirst du nach mehr gefragt, tippe unter **Einstellungen › System › Über die Box › Support** auf **Support-Infos herunterladen**. Das Zip enthält die Bibliothek (`data.json`), die Einstellungen ohne Passwörter, Tokens und Konten, den Zustand von Display und Netzwerk, die Versionen und die **Logs** von Server und Player (auch die älteren) sowie das Debug-Log des Browsers, wenn **Chrome-Debugging** an ist – von jedem Log die letzten 5 MB. Schau es dir vor dem Teilen kurz an: Logs können Namen aus deiner Bibliothek enthalten.
 
 ## Die Logs schonen die SD-Karte
 

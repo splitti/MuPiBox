@@ -9,6 +9,7 @@ import * as path from 'node:path'
 import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { requireCsrf, requireSession } from './middleware'
+import { supportSummary } from './support-summary'
 
 export interface SystemDeps {
   getMupiboxConfig: () => MupiboxConfig | undefined
@@ -331,6 +332,14 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
   })
 
   /**
+   * GET /api/app/support-summary - the box's profile for a report in the Discord, as text (see support-summary.ts):
+   * the app copies it. Nothing in it names the box, the home or a person.
+   */
+  router.get('/support-summary', requireSession, async (_req, res) => {
+    res.set('Cache-Control', 'no-store').json({ text: await supportSummary(deps.getMupiboxConfig()) })
+  })
+
+  /**
    * GET /api/app/support-info - a zip for the support (Discord): the library, the config without secrets, the
    * monitor and network state, versions, the logs (pm2, Chromium's debug log). As the admin interface's support_data.php, but the secrets are removed by
    * key (its line filter let multi-line values through).
@@ -355,6 +364,9 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
       const jq = await run('jq', ['--version'], 5000)
       const version = String((deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined)?.version ?? '')
       const boot = await run('systemd-analyze', ['time'], 5000)
+      // (the profile the app copies for the Discord, as text)
+      await fsp.writeFile(`${dir}/steckbrief.txt`, `${await supportSummary(deps.getMupiboxConfig()).catch(() => '')}
+`)
       await fsp.writeFile(`${dir}/mupi.info`, [osRelease, model, os.hostname(), os.arch(), os.machine(), `MuPiBox ${version}`, jq.stdout.trim(), boot.stdout.trim()].join('\n'))
       // The logs of the server and the player, also the rotated ones (the app's log page shows their last lines only),
       // and Chromium's debug log when its switch is on (System › Experten) - each its last 5 MB (as the admin

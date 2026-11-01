@@ -9421,7 +9421,10 @@ function aboutTop() {
     `<section class="card"><h2>Name der Box</h2><p class="help">Steht auf dem Startbild und oben in der App.</p>
       <div class="field"><label for="ab-name">Name der Box (höchstens ${max} Zeichen)</label><input class="input" id="ab-name" maxlength="${max}" value="${esc(sys.bs?.current?.boxName ?? '')}" placeholder="${esc(sys.bs?.screens?.defaultName ?? 'MuPiBox')}"></div>
       <div class="btns"><button class="btn primary" id="ab-save">Speichern</button></div></section>`,
-    `<section class="card"><h2>Support</h2><p class="help">Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.</p>
+    // (the profile for a report in the Discord first; the zip when more is asked for)
+    `<section class="card"><h2>Support</h2><p class="help">Für eine Rückmeldung im Discord: ein kurzer Steckbrief der Box zum Einfügen. Ohne IP, WLAN-Namen, Boxnamen und Konten.</p>
+      <div class="btns"><button class="btn primary" id="ab-summary">${icon('copy', 18)}Für Discord kopieren</button></div>
+      <p class="help">Wenn etwas klemmt und nach mehr gefragt wird: das Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.</p>
       <div class="btns"><a class="btn" href="${API}/support-info" download>${icon('save', 18)}Support-Infos herunterladen</a></div></section>`,
     `<section class="card wide"><div class="hist-head"><h2>Verlauf</h2><div class="pills small" id="ab-range">${[1, 6, 24].map((h) => `<button aria-selected="${sys.range === h}" data-h="${h}">${h} h</button>`).join('')}</div></div>
       <div class="hist-grid" id="ab-charts"><div class="loading"><p>Lade …</p></div></div>
@@ -9508,6 +9511,32 @@ function mountAbout(root) {
     sys.range = Number(b.dataset.h)
     for (const x of b.parentElement.children) x.setAttribute('aria-selected', String(x === b))
     drawSystemHistory(root)
+  }
+  // The profile is fetched with the page and copied right at the tap: the browser lets the old way of copying (the app
+  // on http) work only in the tap itself, not after waiting for the box
+  sys.summary = null
+  api(`${API}/support-summary`).then((r) => {
+    if (r.ok && typeof r.body?.text === 'string') sys.summary = r.body.text
+  })
+  $('#ab-summary', root).onclick = async () => {
+    if (sys.summary == null) {
+      const r = await api(`${API}/support-summary`)
+      if (!(r.ok && typeof r.body?.text === 'string')) return toast('Der Steckbrief ließ sich nicht erstellen', 'info')
+      sys.summary = r.body.text
+    }
+    // (as a code block: the Discord shows it in a fixed font, the same on every box)
+    const fence = '```'
+    const text = `${fence}\n${sys.summary}\n${fence}`
+    openSheet(
+      `<h2>Steckbrief der Box</h2><p class="help">Im Discord einfügen und darunter beschreiben, was passiert ist.</p>
+      <pre class="summary" id="ab-summary-text">${esc(text)}</pre>
+      <div class="btns"><button class="btn" data-close>Schließen</button><button class="btn primary" id="ab-summary-copy">${icon('copy', 18)}Nochmal kopieren</button></div>`,
+      (sheet, close) => {
+        $('[data-close]', sheet).onclick = close
+        $('#ab-summary-copy', sheet).onclick = () => copyText(text, $('#ab-summary-text', sheet))
+      },
+    )
+    copyText(text, $('#ab-summary-text'))
   }
   $('#ab-save', root).onclick = async () => {
     const name = $('#ab-name', root).value.trim()

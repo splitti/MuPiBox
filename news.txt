@@ -1,3 +1,9 @@
+<h3>DEV 5.0.14 - changes compared to 5.0.13</h3>
+<b>Support</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New in the app under Settings › System › About the box › Support: "Copy for Discord" puts a short profile of the box on the clipboard and shows it - the version and the last three updates (and whether the last one finished), the Pi model and its memory, the system, the drive and its free space, the display model and its rotation, the MuPiHAT and its battery level, the sound card and the player, which services are on, the WiFi band and signal, the temperature and uptime. Pasted on Discord as a code block, laid out the same on every box (always in German), so a report says at once what the box is. Nothing in it names the box, the home or a person: no address, no WiFi name, no box name, no accounts, nothing of the library. When the browser does not allow copying (the app over http), the text is selected to copy by hand. The same profile is in the support zip too (steckbrief.txt), which stays for the closer look when something is stuck.</li>
+</ul>
 <h3>DEV 5.0.13 - changes compared to 5.0.12</h3>
 <b>Display models</b>
 </ul>
