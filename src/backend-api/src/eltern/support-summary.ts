@@ -132,7 +132,8 @@ async function network(): Promise<string> {
   if (up(/^(eth|en)/)) parts.push('Kabel')
   if (up(/^(wlan|wl)/)) {
     let wifi = 'WLAN'
-    const link = await run('iw', ['dev', 'wlan0', 'link'])
+    // (by its path: the server's PATH has no /usr/sbin)
+    const link = await run('/usr/sbin/iw', ['dev', 'wlan0', 'link'])
     const freq = Number(/freq:\s*(\d+)/.exec(link.stdout)?.[1])
     if (freq) wifi += freq >= 5900 ? ' 6 GHz' : freq >= 4900 ? ' 5 GHz' : ' 2,4 GHz'
     try {
