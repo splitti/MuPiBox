@@ -83,8 +83,8 @@ async function display(cfg: MupiboxConfig | undefined): Promise<string> {
   return `${name}${turned}${mirrored}`
 }
 
-/** the battery profiles the box comes with (config/templates/mupiboxconfig.json) */
-const KNOWN_BATTERIES = ['Ansmann 2S1P', 'ENERpower 2S2P 10.000mAh', 'ENERpower 2S3P 15.000mAh', 'USB-C mode (no battery)', 'Custom']
+/** the battery profiles the box comes with (config/templates/mupiboxconfig.json; its selected_battery is "USB-C mode") */
+const KNOWN_BATTERIES = ['Ansmann 2S1P', 'ENERpower 2S2P 10.000mAh', 'ENERpower 2S3P 15.000mAh', 'USB-C mode (no battery)', 'USB-C mode', 'Custom']
 
 async function hat(cfg: MupiboxConfig | undefined): Promise<string> {
   const h = section(cfg, 'mupihat')
@@ -126,19 +126,23 @@ async function services(cfg: MupiboxConfig | undefined): Promise<string> {
 
 /** WLAN with its band and signal, or the cable (no name, no address) */
 async function network(): Promise<string> {
+  // the first interface of a kind with an address (the WiFi: the one that is connected - wlan1 for a USB stick, with
+  // the built-in one switched off)
   const up = (prefix: RegExp) =>
-    Object.entries(os.networkInterfaces()).some(([name, list]) => prefix.test(name) && (list ?? []).some((a) => a.family === 'IPv4' && !a.internal))
+    Object.entries(os.networkInterfaces()).find(([name, list]) => prefix.test(name) && (list ?? []).some((a) => a.family === 'IPv4' && !a.internal))?.[0]
   const parts: string[] = []
   if (up(/^(eth|en)/)) parts.push('Kabel')
-  if (up(/^(wlan|wl)/)) {
+  const wlan = up(/^(wlan|wl)/)
+  if (wlan) {
     let wifi = 'WLAN'
     // (by its path: the server's PATH has no /usr/sbin)
-    const link = await run('/usr/sbin/iw', ['dev', 'wlan0', 'link'])
+    const link = await run('/usr/sbin/iw', ['dev', wlan, 'link'])
     const freq = Number(/freq:\s*(\d+)/.exec(link.stdout)?.[1])
     if (freq) wifi += freq >= 5900 ? ' 6 GHz' : freq >= 4900 ? ' 5 GHz' : ' 2,4 GHz'
     try {
-      // /proc/net/wireless: "wlan0: 0000   58.  -52.  -256 ..." (level in dBm)
-      const dbm = Number(/^\s*\w+:\s+\S+\s+\S+\s+(-?\d+)\./m.exec(await fsp.readFile('/proc/net/wireless', 'utf8'))?.[1])
+      // /proc/net/wireless: "wlan0: 0000   58.  -52.  -256 ..." (level in dBm) - the line of that interface
+      const line = (await fsp.readFile('/proc/net/wireless', 'utf8')).split('\n').find((l) => l.trim().startsWith(`${wlan}:`)) ?? ''
+      const dbm = Number(/^\s*[\w.-]+:\s+\S+\s+\S+\s+(-?\d+)\./.exec(line)?.[1])
       if (Number.isFinite(dbm) && dbm >= -120 && dbm < 0) wifi += ` · Signal ${Math.max(0, Math.min(100, 2 * (dbm + 100)))} % (${dbm} dBm)`
     } catch {
       // no wireless statistics
@@ -152,6 +156,16 @@ async function network(): Promise<string> {
 async function bootSeconds(): Promise<number | null> {
   const total = /= (?:(\d+)min )?([\d.]+)s/.exec((await run('systemd-analyze', ['time'])).stdout)
   return total ? Math.round(Number(total[1] ?? 0) * 60 + Number(total[2])) : null
+}
+
+/**
+ * The installed version without a version number: a branch ("DEV <branch> <date>", or a label of its own). Not its
+ * name - a branch can be named after the child or the room - only that it is one, and its date.
+ */
+function branchState(installed: string): string {
+  if (!installed) return 'unbekannt'
+  const date = /\b(\d{4}-\d{2}-\d{2})\b/.exec(installed)?.[1]
+  return `Branch-Stand${date ? ` vom ${day(date)}` : ''}`
 }
 
 export async function supportSummary(cfg: MupiboxConfig | undefined): Promise<string> {
@@ -182,7 +196,7 @@ export async function supportSummary(cfg: MupiboxConfig | undefined): Promise<st
   const mem = os.totalmem() / 1024 ** 3
   const memText = mem < 0.75 ? `${Math.round((mem * 1024) / 64) * 64} MB` : `${de(Math.round(mem))} GB`
   const lines = [
-    `MuPiBox ${number ?? (installed || 'unbekannt')} · ${{ stable: 'Stable', beta: 'Beta', dev: 'Dev' }[channel]}`,
+    `MuPiBox ${number ?? branchState(installed)} · ${{ stable: 'Stable', beta: 'Beta', dev: 'Dev' }[channel]}`,
     `Updates: ${await updates()}`,
     `Gerät: ${model || 'unbekannt'} · ${memText}`,
     `System: ${dv[0] && dv[1] ? `DietPi ${dv[0]}.${dv[1]}${dv[2] && dv[2] !== '0' ? `.${dv[2]}` : ''} · ` : ''}${osName || os.release()} (${os.machine()})`,

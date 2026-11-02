@@ -643,14 +643,16 @@ STEP=0
 	cp -f ${MUPI_SRC}/scripts/chromium-autostart.sh /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	# The display logs in as dietpi (dietpi.txt AUTO_SETUP_AUTOSTART_LOGIN_USER, read by dietpi-autostart): a fresh DietPi
 	# card has root there - the kiosk then ran as root, Chromium without its sandbox, its profile and log under /root (not
-	# in the support zip), and the login line below did not apply
-	if [ -f "${DIETPI_TXT}" ]; then
-		if grep -qE '^[[:space:]]*AUTO_SETUP_AUTOSTART_LOGIN_USER=' "${DIETPI_TXT}"; then
-			sed -i -E 's/^[[:space:]]*AUTO_SETUP_AUTOSTART_LOGIN_USER=.*/AUTO_SETUP_AUTOSTART_LOGIN_USER=dietpi/' "${DIETPI_TXT}" >&3 2>&3
+	# in the support zip), and the login line below did not apply. In every dietpi.txt there is: dietpi-autostart reads
+	# /boot/dietpi.txt, on newer systems there can be one under /boot/firmware as well.
+	for txt in /boot/dietpi.txt /boot/firmware/dietpi.txt; do
+		[ -f "${txt}" ] || continue
+		if grep -qE '^[[:space:]]*AUTO_SETUP_AUTOSTART_LOGIN_USER=' "${txt}"; then
+			sed -i --follow-symlinks -E 's/^[[:space:]]*AUTO_SETUP_AUTOSTART_LOGIN_USER=.*/AUTO_SETUP_AUTOSTART_LOGIN_USER=dietpi/' "${txt}" >&3 2>&3
 		else
-			echo 'AUTO_SETUP_AUTOSTART_LOGIN_USER=dietpi' >> "${DIETPI_TXT}"
+			echo 'AUTO_SETUP_AUTOSTART_LOGIN_USER=dietpi' >> "${txt}"
 		fi
-	fi
+	done
 	/boot/dietpi/dietpi-autostart 11 >&3 2>&3
 	chmod 755 /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	# full colours in the display on a Pi with 2 GB or more: takes DietPi's "low-end device mode" out again (see the file)

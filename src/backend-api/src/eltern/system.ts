@@ -59,20 +59,26 @@ async function copyTail(from: string, to: string, maxBytes: number): Promise<voi
     const length = Math.min(size, maxBytes)
     const buf = Buffer.alloc(length)
     await fh.read(buf, 0, length, size - length)
-    // (cut off at its start: the first, partial line goes - a token whose ?token= lay before the cut stayed unnoticed,
-    // and a character cut in two came out broken)
-    // (no line break at all in a cut window: all of it is that one partial line - it goes as well)
-    const cut = size > length
-    const nl = cut ? buf.indexOf(0x0a) : -1
-    const text = !cut
-      ? buf.toString('utf8')
-      : nl >= 0
-        ? buf.subarray(nl + 1).toString('utf8')
-        : '[the last line of this log is longer than the part kept and is left out]\n'
-    await fsp.writeFile(to, withoutLogSecrets(text))
+    await fsp.writeFile(to, withoutLogSecrets(keptTail(buf, size > length)))
   } finally {
     await fh.close()
   }
+}
+
+// The end of a log as text. Cut off at its start: the first, partial line goes - a token whose ?token= lay before the
+// cut stayed unnoticed, and a character cut in two came out broken. (No line break at all in a cut window: all of it is
+// that one partial line - it goes as well.)
+function keptTail(buf: Buffer, cut: boolean): string {
+  if (!cut) return buf.toString('utf8')
+  const nl = buf.indexOf(0x0a)
+  return nl >= 0 ? buf.subarray(nl + 1).toString('utf8') : '[the last line of this log is longer than the part kept and is left out]\n'
+}
+
+// A command's output as bytes (a log's end through sudo); null when it failed
+function runBuffer(cmd: string, args: string[], timeoutMs: number): Promise<Buffer | null> {
+  return new Promise((resolve) => {
+    execFile(cmd, args, { timeout: timeoutMs, maxBuffer: 6 * 1024 * 1024, encoding: 'buffer' }, (err, stdout) => resolve(err ? null : stdout))
+  })
 }
 
 function run(cmd: string, args: string[], timeoutMs = 30000): Promise<{ ok: boolean; stdout: string }> {
@@ -348,7 +354,12 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
     const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'mupibox-support-'))
     try {
       const server = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config'
-      await fsp.copyFile(`${server}/data.json`, `${dir}/data.json`).catch(() => undefined)
+      // (the library with the access data of its addresses blacked out as in the logs: a private radio stream's
+      // ?token=… is its entry's id)
+      await fsp
+        .readFile(`${server}/data.json`, 'utf8')
+        .then((text) => fsp.writeFile(`${dir}/data.json`, withoutLogSecrets(text)))
+        .catch(() => undefined)
       await fsp.writeFile(`${dir}/mupiboxconfig.json`, JSON.stringify(withoutSecrets(deps.getMupiboxConfig() ?? {}), null, 2))
       for (const f of ['monitor.json', 'network.json']) {
         try {
@@ -379,17 +390,17 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
         await copyTail(path.join(logs, name), path.join(dir, 'pm2-logs', name), 5 * 1024 * 1024).catch(() => undefined)
       }
       // (a display that logs in as root - AUTO_SETUP_AUTOSTART_LOGIN_USER=root in dietpi.txt, set up before 5.0.14 -
-      // writes it under /root, which this server cannot read: copied for it first)
+      // writes it under /root, which this server cannot read: its end read through sudo, into memory only - no copy of
+      // it on the card, whole or unfiltered)
       const chromeLog = `${dir}/chrome_debug.log`
       const fromDietpi = await copyTail('/home/dietpi/.config/chromium/chrome_debug.log', chromeLog, 5 * 1024 * 1024).then(
         () => true,
         () => false,
       )
       if (!fromDietpi) {
-        const raw = `${dir}/chrome_debug.raw`
-        const cp = await run('sudo', ['install', '-m', '600', '-o', String(os.userInfo().uid), '/root/.config/chromium/chrome_debug.log', raw], 15000)
-        if (cp.ok) await copyTail(raw, chromeLog, 5 * 1024 * 1024).catch(() => undefined)
-        await fsp.rm(raw, { force: true })
+        const max = 5 * 1024 * 1024
+        const end = await runBuffer('sudo', ['tail', '-c', String(max + 1), '/root/.config/chromium/chrome_debug.log'], 15000)
+        if (end) await fsp.writeFile(chromeLog, withoutLogSecrets(keptTail(end.subarray(Math.max(0, end.length - max)), end.length > max)))
       }
       const zip = `${dir}.zip`
       const z = await run('sh', ['-c', `cd '${dir}' && zip -q -r '${zip}' .`], 30000)

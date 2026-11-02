@@ -65,9 +65,11 @@ if [ -n "${MIRROR}" ]; then
 else
 	rm -f "${REFLECT}" || exit 1
 fi
+# (the touch of the display on the ribbon cable only - its chip is on I2C: a touch monitor on HDMI with its touch on USB
+# keeps its own way, its picture is not turned)
 if [ -n "${MATRIX}" ]; then
 	write_file "# MuPiBox (app: Display & Bedienung > Drehung): the touch turned or mirrored with the picture (${WHAT})
-ENV{ID_INPUT_TOUCHSCREEN}==\"1\", ENV{LIBINPUT_CALIBRATION_MATRIX}=\"${MATRIX}\"" "${TOUCHROT}" || exit 1
+ENV{ID_INPUT_TOUCHSCREEN}==\"1\", SUBSYSTEMS==\"i2c\", ENV{LIBINPUT_CALIBRATION_MATRIX}=\"${MATRIX}\"" "${TOUCHROT}" || exit 1
 else
 	rm -f "${TOUCHROT}" || exit 1
 fi

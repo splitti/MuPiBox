@@ -142,7 +142,7 @@ turn_new_panel() {
 		done
 	} > "${XROT}.mupibox-new" && sync "${XROT}.mupibox-new" && mv -f "${XROT}.mupibox-new" "${XROT}" || return 1
 	printf '%s\n%s\n' "# MuPiBox (app: Display & Bedienung > Drehung): the touch turned or mirrored with the picture (90)" \
-		'ENV{ID_INPUT_TOUCHSCREEN}=="1", ENV{LIBINPUT_CALIBRATION_MATRIX}="0 1 0 -1 0 1"' > "${TOUCHROT}.mupibox-new" \
+		'ENV{ID_INPUT_TOUCHSCREEN}=="1", SUBSYSTEMS=="i2c", ENV{LIBINPUT_CALIBRATION_MATRIX}="0 1 0 -1 0 1"' > "${TOUCHROT}.mupibox-new" \
 		&& sync "${TOUCHROT}.mupibox-new" && mv -f "${TOUCHROT}.mupibox-new" "${TOUCHROT}" || return 1
 	udevadm control --reload 2>/dev/null
 	return 0

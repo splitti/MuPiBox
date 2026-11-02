@@ -22,11 +22,14 @@ unbound() {
 
 [ -n "$(unbound)" ] || exit 0
 
-# the display first (its panel switches the touch's power on): up to 30 s
+# the display first (its panel switches the touch's power on): up to 30 s. Without a display on the ribbon cable the
+# chip is none of its (a touch chip left without its driver on purpose, e.g. on the GPIO's I2C): left as it is.
+DSI=""
 for _ in $(seq 1 30); do
-	grep -qx connected /sys/class/drm/card*-DSI-*/status 2>/dev/null && break
+	grep -qx connected /sys/class/drm/card*-DSI-*/status 2>/dev/null && DSI=1 && break
 	sleep 1
 done
+[ -n "${DSI}" ] || exit 0
 
 for try in 1 2 3 4 5; do
 	sleep 2
