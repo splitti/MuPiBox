@@ -377,9 +377,18 @@ rm -f /tmp/mupibox-update-failed
 	# a dpkg stopped halfway before (power gone during an installation) makes apt refuse every package until it is
 	# finished, and dependencies left broken by that as well
 	dpkg --configure -a >&3 2>&3
-	# (whether the lists are fresh: with old ones an upgrade finds nothing newer and still succeeds - see Chromium below)
+	# (whether the lists are fresh: with old ones an upgrade finds nothing newer and still succeeds - see Chromium below.
+	# A list it could not fetch - a DNS error, the server away - leaves the old one with a warning, and apt-get still
+	# ends with 0: so its words are read, too.)
+	apt_lists_update() {
+		local out rc
+		out=$(apt-get update 2>&1)
+		rc=$?
+		printf '%s\n' "${out}" >&3
+		[ ${rc} -eq 0 ] && ! printf '%s\n' "${out}" | grep -qE '^(Err:|W: (Failed to fetch|Some index files failed))'
+	}
 	APT_LISTS_FRESH=""
-	apt-get update >&3 2>&3 && APT_LISTS_FRESH=1
+	apt_lists_update && APT_LISTS_FRESH=1
 	apt-get --yes -f install >&3 2>&3
 	after=$(date +%s)
 
@@ -466,7 +475,7 @@ rm -f /tmp/mupibox-update-failed
 		}
 		# (the lists fetched again first when that failed at the start: with old lists the upgrade "succeeds" on the old
 		# version; a failed upgrade is tried once more with fresh ones)
-		[ -n "${APT_LISTS_FRESH}" ] || { apt-get update >&3 2>&3 && APT_LISTS_FRESH=1; }
+		[ -n "${APT_LISTS_FRESH}" ] || { apt_lists_update && APT_LISTS_FRESH=1; }
 		if ! chromium_upgrade; then
 			apt-get update >&3 2>&3
 			chromium_upgrade || echo "Chromium could not be updated (${CHROMIUM_PKG} ${CHROMIUM_BEFORE}) - the display goes on with it" >&3
@@ -1445,17 +1454,20 @@ rm -f /tmp/mupibox-update-failed
 		sync
 		# The update counts as done once "done" is on the card: what is left over then is only cleared up - a power cut
 		# while the old installation is being deleted must not bring a half deleted one back
+		# On a box that came back from 5.1 (its folders are there): the right of the admin interface's PHP pages to run
+		# commands as root (restart, shutdown, its settings), as the installation gives it - 5.1 runs no PHP and took it
+		# away, its way back leaves it to this update. Before "done", with a note that this update wrote it: a way back
+		# to 5.1 (restore_interrupted_update.sh, at once or at the next start) takes it away again, after "done" it stays
+		# - no moment a power cut leaves it on 5.1 or 5.0.14 without it. Missing or empty only - a file of the owner's
+		# own is left as it is.
+		if [ "${FINISH_OK}" = 1 ] && [ -d /home/dietpi/.mupibox/server ] && [ ! -s /etc/sudoers.d/www-data ]; then
+			touch /etc/mupibox/sudoers-www-data.by-update && sync
+			{ echo "www-data ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/www-data && chmod 440 /etc/sudoers.d/www-data && sync; } >&3 2>&3 \
+				|| echo "Note: /etc/sudoers.d/www-data could not be written - the admin interface's restart and shutdown do not work" >&3
+		fi
 		[ "${FINISH_OK}" = 1 ] && mark_update done || FINISH_OK=0
 		if [ "${FINISH_OK}" = 1 ]; then
-			# On a box that came back from 5.1 (its folders are there): the right of the admin interface's PHP pages to run
-			# commands as root (restart, shutdown, its settings), as the installation gives it - 5.1 runs no PHP and took
-			# it away, its way back leaves it to this update. Only now, after "done": nothing goes back to 5.1 from here
-			# (written before, a power cut or a step that failed brought 5.1 back with it). Missing or empty only - a file
-			# of the owner's own is left as it is.
-			if [ -d /home/dietpi/.mupibox/server ] && [ ! -s /etc/sudoers.d/www-data ]; then
-				{ echo "www-data ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/www-data && chmod 440 /etc/sudoers.d/www-data; } >&3 2>&3 \
-					|| echo "Note: /etc/sudoers.d/www-data could not be written - the admin interface's restart and shutdown do not work" >&3
-			fi
+			rm -f /etc/mupibox/sudoers-www-data.by-update
 			rm -rf "${USERDATA_BAK}" "${BAK_DIR}" >&3 2>&3
 			clear_update_mark
 		fi

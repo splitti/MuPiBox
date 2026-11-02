@@ -79,15 +79,37 @@ function keptTail(buf: Buffer, cut: boolean): string {
 // a host of its own can carry a name. Wherever it stands in a value - at its start, after a space, without a scheme
 // (//host/…) or within a text. Read as JSON and written as JSON - a pattern over the text cut a title with quotes in it
 // and left a file that did not parse. The rest (types, titles, folders) stays for the support.
-const ADDRESS = /([a-z][a-z0-9+.-]*:)?\/\/(?:[^\s/?#@]*@)?(\[[^\]\s]*\]|[^\s/?#:@]+)\S*/gi
+//
+// Found by its "//", not by a pattern over the whole value: one that looked for a scheme at every letter took seconds
+// for a long title, with the server held up meanwhile. The host is what follows the last @ before the path (as URL
+// has it: a password may hold an @ itself), without its port; an address runs to the next space.
+function cutAddresses(value: string): string {
+  let out = ''
+  let from = 0
+  let i = value.indexOf('//')
+  while (i >= 0) {
+    const afterSlashes = value.slice(i + 2)
+    const space = afterSlashes.search(/\s/)
+    const address = space < 0 ? afterSlashes : afterSlashes.slice(0, space)
+    const authority = address.split(/[/?#]/, 1)[0]
+    const hostPort = authority.slice(authority.lastIndexOf('@') + 1)
+    const rawHost = hostPort.startsWith('[') ? hostPort.slice(0, hostPort.indexOf(']') + 1) : hostPort.split(':', 1)[0]
+    if (rawHost) {
+      // (the scheme right in front, a word of at most 32 characters ending in ':')
+      const scheme = /[a-z][a-z0-9+.-]{0,31}:$/i.exec(value.slice(Math.max(from, i - 33), i))?.[0] ?? ''
+      const host = /^[\d.]*$|^\[/.test(rawHost) ? rawHost : rawHost.split('.').slice(-2).join('.')
+      out += `${value.slice(from, i - scheme.length)}${scheme}//${host}/…`
+      from = i + 2 + address.length
+      i = value.indexOf('//', from)
+    } else {
+      i = value.indexOf('//', i + 2)
+    }
+  }
+  return out + value.slice(from)
+}
 function libraryForSupport(text: string): string {
   const cut = (value: unknown): unknown => {
-    if (typeof value === 'string') {
-      return value.replace(ADDRESS, (_all, scheme: string | undefined, rawHost: string) => {
-        const host = /^[\d.]*$|^\[/.test(rawHost) ? rawHost : rawHost.split('.').slice(-2).join('.')
-        return `${scheme ?? ''}//${host}/…`
-      })
-    }
+    if (typeof value === 'string') return value.includes('//') ? cutAddresses(value) : value
     if (Array.isArray(value)) return value.map(cut)
     if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, cut(v)]))
     return value

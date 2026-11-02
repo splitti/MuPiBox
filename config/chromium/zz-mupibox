@@ -5,14 +5,14 @@
 # draws pictures with 16 bits per pixel, and photos and covers show bands of colour instead of smooth tones. A Pi with
 # 2 GB or more has the memory for full colours, so the flag is taken out again here; a Pi with 1 GB or less keeps the
 # mode, it saves memory there - but with full colours (--disable-rgba-4444-textures: only the 16-bit pictures go, the
-# rest of the mode stays). DietPi's own file is not changed (an update of DietPi may write it anew).
+# rest of the mode stays). Given there whether the flag is set or not: Chromium takes the mode on its own on a Pi with
+# 512 MB (and newer DietPi no longer sets the flag); without the mode it changes nothing. DietPi's own file is not
+# changed (an update of DietPi may write it anew).
 mupibox_mem_kb=$(awk '/^MemTotal:/ {print $2}' /proc/meminfo 2>/dev/null)
 if [ "${mupibox_mem_kb:-0}" -ge 1500000 ] 2>/dev/null; then
 	CHROMIUM_FLAGS=$(printf '%s' "$CHROMIUM_FLAGS" | sed 's/[[:space:]]*--enable-low-end-device-mode//g')
 	export CHROMIUM_FLAGS
 else
-	case " $CHROMIUM_FLAGS " in
-		*" --enable-low-end-device-mode "*) export CHROMIUM_FLAGS="$CHROMIUM_FLAGS --disable-rgba-4444-textures" ;;
-	esac
+	export CHROMIUM_FLAGS="$CHROMIUM_FLAGS --disable-rgba-4444-textures"
 fi
 unset mupibox_mem_kb

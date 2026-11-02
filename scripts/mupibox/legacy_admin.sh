@@ -98,6 +98,22 @@ switch_on() {
 		systemctl enable --now "${unit}" >/dev/null 2>&1
 		systemctl is-active -q "${unit}" && running=1
 	done
+	# ... and what lighttpd hands .php to is there: the socket its module names (DietPi: /run/php/php-fpm.sock, a link
+	# to the PHP version chosen) - a php-fpm of another version may run while the one it names does not. A module that
+	# starts PHP itself (bin-path) has no socket before lighttpd runs it.
+	local socks="" sock n
+	for f in /etc/lighttpd/conf-enabled/*-fastcgi-php*.conf; do
+		[ -e "${f}" ] || continue
+		grep -q '"bin-path"' "${f}" && continue
+		socks="${socks} $(sed -nE 's/.*"socket"[[:space:]]*=>[[:space:]]*"([^"]+)".*/\1/p' "${f}")"
+	done
+	for sock in ${socks}; do
+		for n in 1 2 3 4 5 6 7 8 9 10; do
+			[ -S "${sock}" ] && break
+			sleep 1
+		done
+		[ -S "${sock}" ] || running=""
+	done
 	# (php-fpm there, but it does not run - masked, or it fails - or lighttpd does not hand .php to it: off again, and
 	# the switch says so)
 	if [ -z "${running}" ] || [ -z "${php_mod}" ]; then
