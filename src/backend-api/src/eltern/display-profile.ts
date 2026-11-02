@@ -97,8 +97,18 @@ export async function displayTestState(): Promise<DisplayTest> {
   if (!text) return { running: false }
   const get = (k: string) => new RegExp(`^${k}=(.*)$`, 'm').exec(text)?.[1]?.trim() ?? ''
   // (state=prepare: the change is being written, or was cut off - the next start goes back)
-  const booted = get('state') === 'ready' ? Number(get('booted')) : 0
-  return { running: true, profile: get('profile'), previous: get('previous'), endsAt: booted > 0 ? (booted + TEST_SECONDS) * 1000 : null }
+  const ready = get('state') === 'ready'
+  const booted = ready ? Number(get('booted')) : 0
+  // The end from the time the box has run since its start (booted_uptime): the clock was not right yet when the test
+  // was noted - a Pi starts with the time it last saved and is set from the network later, minutes on, and the end
+  // came that much too early here (the box's own timer counts from the start, not by the clock). The clock only for a
+  // test noted before.
+  const sinceStart = ready ? Number(get('booted_uptime')) : 0
+  const uptime = Number((await fsp.readFile('/proc/uptime', 'utf8').catch(() => '')).split(' ')[0])
+  let endsAt: number | null = null
+  if (sinceStart > 0 && uptime > 0) endsAt = Date.now() + Math.max(0, TEST_SECONDS - (uptime - sinceStart)) * 1000
+  else if (booted > 0) endsAt = (booted + TEST_SECONDS) * 1000
+  return { running: true, profile: get('profile'), previous: get('previous'), endsAt }
 }
 
 /** The picture of the new model is there - only after the start with it (before, the old display still shows one) */

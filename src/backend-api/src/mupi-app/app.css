@@ -1196,3 +1196,24 @@ textarea[hidden] { display: none; }
 .dm-bar i { display: block; height: 100%; width: 100%; background: var(--mp-accent); transition: width 1s linear; }
 .dm-test .btns { display: flex; gap: 8px; }
 .dm-test .btns .btn { flex: 1; }
+/* the test of a new display model in its sheet (openDisplayTest) */
+.dmt { display: flex; flex-direction: column; gap: 12px; }
+.dmt > .chip { align-self: flex-start; }
+.dmt .btns { display: flex; gap: 8px; }
+.dmt .btns .btn { flex: 1; }
+.dmt-rows { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; font-size: 14px; }
+.dmt-rows dt { color: var(--mp-muted); }
+.dmt-rows dd { margin: 0; font-weight: 700; }
+.dmt-plan { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; counter-reset: dmt; font-size: 14px; }
+.dmt-plan li { counter-increment: dmt; display: flex; align-items: center; gap: 10px; }
+.dmt-plan li::before { content: counter(dmt); flex: 0 0 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 800; background: var(--mp-chip); color: var(--mp-muted); }
+.dmt-plan.steps li.now { font-weight: 700; }
+.dmt-plan.steps li.now::before { background: var(--mp-primary); color: var(--mp-on-primary); }
+.dmt-plan.steps li.done::before { content: "✓"; background: var(--mp-success-soft); color: var(--mp-success); }
+.dmt-wait { display: flex; justify-content: center; color: var(--mp-primary); }
+.dmt-wait .spin { width: 30px; height: 30px; border-width: 3px; }
+.dmt-big { width: 56px; height: 56px; border-radius: 50%; margin: 4px auto 0; display: grid; place-items: center; }
+.dmt-big.ok { background: var(--mp-success-soft); color: var(--mp-success); }
+.dmt-big.back { background: var(--mp-warn-soft); color: var(--mp-warn); }
+.dmt-center { text-align: center; }
+@media (prefers-reduced-motion: reduce) { .dmt-wait .spin { animation-duration: 2.4s; } }

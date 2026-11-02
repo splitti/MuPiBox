@@ -15,7 +15,7 @@ A display on the ribbon cable (DSI) does not say what it is. So you choose here 
 | **EDATEC DSI 7″ or 10″** | choose the size |
 | **Own setting** | the app leaves `config.txt` alone – for displays you set up yourself |
 
-With **Apply and restart** the box restarts with the new model. Then the app (on the start page too) and the display ask: **Do you see a picture?** Tap **Keep** on the display or **Yes, keep** in the app, and the model stays. Without an answer within **3 minutes** – for instance because the display stays dark – the box sets the previous display again and restarts once more. **No, back** does that at once.
+With **Apply and restart** the app first shows what changes and, after **Switch**, restarts the box with the new model. A window in the app waits for the restart – no need to reload – and then asks by itself, as the display does: **Do you see a picture?** Opening the app during the test (on another device too) brings that question at once. Tap **Keep** on the display or **Yes, keep** in the app, and the model stays. Without an answer within **3 minutes** – for instance because the display stays dark – the box sets the previous display again and restarts once more. **No, back** does that at once.
 
 The **Touch Display 2** is built upright. When you choose it here, the box starts it lying right away (**90°**, picture and touch). If it is upside down in your case, take **270°** under [Rotation](#rotation).
 

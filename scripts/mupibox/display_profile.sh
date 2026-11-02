@@ -65,10 +65,12 @@ put_atomic() {
 }
 
 # the test file: state ($1: prepare|ready|reverting), its id, the model, the one of before with its rotation and
-# mirroring, the start with it ($2)
+# mirroring, the start with it ($2) - and how long the box had run then ($3, seconds of /proc/uptime): the clock is not
+# right yet at that moment (a Pi has none of its own: it starts with the time it last saved and is set from the
+# network later - minutes off), the time since the start is
 write_test() {
-	printf 'state=%s\nid=%s\nprofile=%s\nprevious=%s\nprevious_rotation=%s\nprevious_mirror=%s\nbooted=%s\n' \
-		"$1" "${TEST_ID}" "${PROFILE}" "${PREVIOUS}" "${PREV_ROT:-0}" "${PREV_MIRROR:-}" "${2:-}" > "${TEST}.new" \
+	printf 'state=%s\nid=%s\nprofile=%s\nprevious=%s\nprevious_rotation=%s\nprevious_mirror=%s\nbooted=%s\nbooted_uptime=%s\n' \
+		"$1" "${TEST_ID}" "${PROFILE}" "${PREVIOUS}" "${PREV_ROT:-0}" "${PREV_MIRROR:-}" "${2:-}" "${3:-${BOOTED_UPTIME:-}}" > "${TEST}.new" \
 		&& sync "${TEST}.new" && mv -f "${TEST}.new" "${TEST}" && sync "${STATE}"
 }
 test_value() { sed -n "s/^$1=//p" "${TEST}" 2>/dev/null; }
@@ -79,6 +81,7 @@ read_test() {
 	PREV_ROT=$(test_value previous_rotation)
 	PREV_MIRROR=$(test_value previous_mirror)
 	BOOTED=$(test_value booted)
+	BOOTED_UPTIME=$(test_value booted_uptime)
 }
 
 # the model ($1), its rotation in degrees ($2) and mirroring ($3: x, y or empty) in the settings - under the lock the
@@ -224,6 +227,7 @@ case "${1:-}" in
 		mkdir -p "${STATE}" || exit 1
 		TEST_ID="$(date +%s)-$$"
 		BOOTED=""
+		BOOTED_UPTIME=""
 		# the copies of before (config.txt, the rotation), then the test file - all before the first change
 		rm -f "${STATE}"/rot.* "${BEFORE}"
 		fail_copies() { rm -f "${STATE}"/rot.* "${BEFORE}" "${TEST}.new"; echo "$1"; exit 1; }
@@ -288,7 +292,7 @@ case "${1:-}" in
 			exec "$0" revert
 		fi
 		read_test
-		write_test ready "$(date +%s)" || { log "display test: the start could not be noted - back to the model before"; exec "$0" revert; }
+		write_test ready "$(date +%s)" "$(cut -d. -f1 /proc/uptime)" || { log "display test: the start could not be noted - back to the model before"; exec "$0" revert; }
 		stop_timers
 		# (without the timer nothing would go back by itself: back at once instead)
 		systemd-run --unit=${TIMER_UNIT} --on-active=${WAIT_S} --collect --quiet /bin/bash "$0" timeout "${TEST_ID}" \
