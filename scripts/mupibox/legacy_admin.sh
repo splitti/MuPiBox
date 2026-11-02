@@ -57,6 +57,8 @@ switch_off() {
 	done
 	# (a later "off" finds no module any more: the list of the first one is kept)
 	[ -n "${mods}" ] && echo "${mods# }" > "${MODS_FILE}"
+	# (5.1's redirect, left after its way back, goes: the same block twice - lighttpd does not start with that)
+	rm -f "${NO_PHP_CONF}"
 	cat > "${OFF_CONF}" <<'EOF'
 # MuPiBox: the previous admin interface is switched off (app: Einstellungen › System › Experten; scripts/mupibox/
 # legacy_admin.sh). No PHP runs: every .php address goes to the app - without this a .php file would be sent as it is.
@@ -88,9 +90,17 @@ switch_on() {
 		done
 		rm -f "${MODS_FILE}"
 	fi
+	local running=""
 	for unit in $(fpm_units); do
 		systemctl enable --now "${unit}" >/dev/null 2>&1
+		systemctl is-active -q "${unit}" && running=1
 	done
+	# (php-fpm there, but it does not run - masked, or it fails: off again, and the switch says so)
+	if [ -z "${running}" ]; then
+		echo "PHP (php-fpm) does not start - the admin interface stays off" >&2
+		switch_off "${reload}"
+		exit 3
+	fi
 	[ "${reload}" = "noreload" ] || lighttpd_again
 }
 

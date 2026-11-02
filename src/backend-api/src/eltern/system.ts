@@ -74,6 +74,29 @@ function keptTail(buf: Buffer, cut: boolean): string {
   return nl >= 0 ? buf.subarray(nl + 1).toString('utf8') : '[the last line of this log is longer than the part kept and is left out]\n'
 }
 
+// The library for the support zip: every address in it down to its scheme and the end of its host
+// (https://ddns.net/…): access data can be in its query, its path or before the host, in any spelling (%74oken=), and
+// a host of its own can carry a name. Read as JSON and written as JSON - a pattern over the text cut a title with
+// quotes in it and left a file that did not parse. The rest (types, titles, folders) stays for the support.
+function libraryForSupport(text: string): string {
+  const cut = (value: unknown): unknown => {
+    if (typeof value === 'string') {
+      const m = /^([a-z][a-z0-9+.-]*):\/\/(?:[^/?#]*@)?(\[[^\]]*\]|[^/?#:]*)/i.exec(value)
+      if (!m) return value
+      const host = /^[\d.]+$|^\[/.test(m[2]) ? m[2] : m[2].split('.').slice(-2).join('.')
+      return `${m[1]}://${host}/…`
+    }
+    if (Array.isArray(value)) return value.map(cut)
+    if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, cut(v)]))
+    return value
+  }
+  try {
+    return JSON.stringify(cut(JSON.parse(text)), null, 2)
+  } catch {
+    return JSON.stringify({ error: 'the library could not be read' })
+  }
+}
+
 // A command's output as bytes (a log's end through sudo); null when it failed
 function runBuffer(cmd: string, args: string[], timeoutMs: number): Promise<Buffer | null> {
   return new Promise((resolve) => {
@@ -354,11 +377,10 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
     const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'mupibox-support-'))
     try {
       const server = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config'
-      // (the library with the access data of its addresses blacked out as in the logs: a private radio stream's
-      // ?token=… is its entry's id)
+      // (the library with its addresses cut down: a private radio stream's or feed's access data is its entry's id)
       await fsp
         .readFile(`${server}/data.json`, 'utf8')
-        .then((text) => fsp.writeFile(`${dir}/data.json`, withoutLogSecrets(text)))
+        .then((text) => fsp.writeFile(`${dir}/data.json`, libraryForSupport(text)))
         .catch(() => undefined)
       await fsp.writeFile(`${dir}/mupiboxconfig.json`, JSON.stringify(withoutSecrets(deps.getMupiboxConfig() ?? {}), null, 2))
       for (const f of ['monitor.json', 'network.json']) {

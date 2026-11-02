@@ -170,7 +170,10 @@ function branchState(installed: string): string {
 
 export async function supportSummary(cfg: MupiboxConfig | undefined): Promise<string> {
   const installed = String(section(cfg, 'mupibox').version ?? '')
-  const { number, channel } = parseInstalled(installed)
+  const { channel } = parseInstalled(installed)
+  // (a release only as the update writes it - "5.0.13 stable", "DEV 5.0.13 <date>": a dotted number elsewhere is a
+  // branch's name, e.g. an address in it)
+  const number = /^(?:(?:DEV|BETA)\s+)?(\d+\.\d+(?:\.\d+)?)(?=\s|$)/i.exec(installed.trim())?.[1] ?? null
   const model = (await fsp.readFile('/sys/firmware/devicetree/base/model', 'utf8').catch(() => '')).replace(/\0/g, '').trim()
   const osName = /^PRETTY_NAME="?([^"\n]*)"?$/m.exec(await fsp.readFile('/etc/os-release', 'utf8').catch(() => ''))?.[1] ?? ''
   const dietpi = await fsp.readFile('/boot/dietpi/.version', 'utf8').catch(() => '')

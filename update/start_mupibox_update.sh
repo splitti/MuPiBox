@@ -1287,6 +1287,12 @@ rm -f /tmp/mupibox-update-failed
 	# PHP answers in the home network) - once, with this update; a marker that outlasts a reset of the configuration
 	# keeps it to this once: switched on again in the app (System › Experten), it stays on. The app's start page says it
 	# was switched off. Afterwards as chosen: an update may bring PHP and lighttpd's PHP module back - off, they go again.
+	# On a box that came back from 5.1 (its folders are there): the right of the admin interface's PHP pages to run
+	# commands as root (restart, shutdown, its settings), as the installation gives it - 5.1 runs no PHP and took it
+	# away, and its way back leaves it to this update (written only once this version is in place).
+	if [ -d /home/dietpi/.mupibox/server ] && [ ! -e /etc/sudoers.d/www-data ]; then
+		echo "www-data ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/www-data && chmod 440 /etc/sudoers.d/www-data
+	fi
 	if [ -x /usr/local/bin/mupibox/legacy_admin.sh ]; then
 		migrate=""
 		if [ ! -e /etc/mupibox/legacy-admin-default.done ]; then
