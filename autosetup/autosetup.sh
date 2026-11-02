@@ -641,6 +641,16 @@ STEP=0
 	# Installing Chromium writes DietPi's own kiosk script, which opens SOFTWARE_CHROMIUM_AUTOSTART_URL (dietpi.com):
 	# the MuPiBox script goes in again after it (a fresh install showed the DietPi website until the first update)
 	cp -f ${MUPI_SRC}/scripts/chromium-autostart.sh /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
+	# The display logs in as dietpi (dietpi.txt AUTO_SETUP_AUTOSTART_LOGIN_USER, read by dietpi-autostart): a fresh DietPi
+	# card has root there - the kiosk then ran as root, Chromium without its sandbox, its profile and log under /root (not
+	# in the support zip), and the login line below did not apply
+	if [ -f "${DIETPI_TXT}" ]; then
+		if grep -qE '^[[:space:]]*AUTO_SETUP_AUTOSTART_LOGIN_USER=' "${DIETPI_TXT}"; then
+			sed -i -E 's/^[[:space:]]*AUTO_SETUP_AUTOSTART_LOGIN_USER=.*/AUTO_SETUP_AUTOSTART_LOGIN_USER=dietpi/' "${DIETPI_TXT}" >&3 2>&3
+		else
+			echo 'AUTO_SETUP_AUTOSTART_LOGIN_USER=dietpi' >> "${DIETPI_TXT}"
+		fi
+	fi
 	/boot/dietpi/dietpi-autostart 11 >&3 2>&3
 	chmod 755 /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	# full colours in the display on a Pi with 2 GB or more: takes DietPi's "low-end device mode" out again (see the file)
@@ -701,6 +711,17 @@ STEP=0
 	bash /usr/local/bin/mupibox/install_start_order.sh >&3 2>&3
 	# initial_turbo for a faster start, and zram swap on a Pi with 1 GB (see scripts/mupibox/boot_tuning.sh)
 	bash /usr/local/bin/mupibox/boot_tuning.sh >&3 2>&3
+	# A display on the ribbon cable that stands upright of itself (the Touch Display 2: 720 x 1280) lies as the MuPiBox
+	# needs it turned by 90 degrees - picture and touch, as the app's Drehung does it (and as the app's Display-Modell
+	# sets it for that display); one that lies already stays as it is
+	for c in /sys/class/drm/card*-DSI-*; do
+		[ "$(cat "${c}/status" 2>/dev/null)" = "connected" ] || continue
+		MODE=$(head -n 1 "${c}/modes" 2>/dev/null)
+		if [[ "${MODE}" =~ ^([0-9]+)x([0-9]+) ]] && [ "${BASH_REMATCH[2]}" -gt "${BASH_REMATCH[1]}" ]; then
+			bash /usr/local/bin/mupibox/display_rotation.sh 90 >&3 2>&3
+		fi
+		break
+	done
 	systemctl daemon-reload >&3 2>&3
 	
 	# (not the Samba share: off until the app switches it on, see "Preconfigure Samba")

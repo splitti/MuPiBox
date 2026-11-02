@@ -4,7 +4,8 @@
 #
 #   display_profile.sh apply <profile> <previous>   writes the model's lines into config.txt (a marked block, KMS on or
 #                                                   off with DietPi's own tool), keeps the config.txt and the rotation
-#                                                   of before and starts the test: the box is restarted by the caller
+#                                                   of before, sets the model's way up (Touch Display 2: 90 degrees)
+#                                                   and starts the test: the box is restarted by the caller
 #   display_profile.sh boot                         at every start (mupi_startup.sh): a test that waits for its answer
 #                                                   gets 3 minutes; a second start without one goes back at once
 #   display_profile.sh confirm                      the picture is there (app or display): the model stays - only once
@@ -103,12 +104,48 @@ set_profile_in_config() {
 }
 
 # no rotation or mirroring by the X server and no touch matrix (the official 7" turns with the firmware's settings; a
-# new panel starts its own way up)
+# new panel starts its own way up, or as upright_rotation turns it)
 clear_rotation() {
 	local failed=0
 	rm -f "${XROT}" "${TOUCHROT}" "${REFLECT}" || failed=1
 	udevadm control --reload 2>/dev/null
 	return ${failed}
+}
+
+# The way up a new panel starts with: the Touch Display 2 (5", 7" and 10") stands upright of itself (720 x 1280,
+# 1200 x 1920) - the MuPiBox needs it lying, turned by 90 degrees; the others start at 0 (the official 7" turns with the
+# firmware's settings, Waveshare and EDATEC lie already)
+upright_rotation() {
+	case "$1" in
+		td2-*) echo 90 ;;
+		*) echo 0 ;;
+	esac
+}
+
+# The new panel turned by 90 degrees, picture and touch, as display_rotation.sh writes it (the app's Drehung changes it
+# later). The X server's name of the output: the display with KMS there now - from the firmware's display (KMS off) it
+# is known only after the restart: DSI-1 on a Pi 4, DSI-1 or DSI-2 on a Pi 5 (a section for an output that is not there
+# does nothing).
+turn_new_panel() {
+	local c outputs="" out
+	for c in /sys/class/drm/card*-DSI-*; do
+		[ "$(cat "${c}/status" 2>/dev/null)" = "connected" ] || continue
+		outputs=$(basename "${c}" | sed 's/^card[0-9]*-//')
+		break
+	done
+	[ -n "${outputs}" ] || outputs="DSI-1 DSI-2"
+	mkdir -p "$(dirname "${XROT}")" || return 1
+	{
+		echo "# MuPiBox (app: Display & Bedienung > Drehung): the display turned by 90 degrees"
+		for out in ${outputs}; do
+			printf 'Section "Monitor"\n\tIdentifier "%s"\n\tOption "Rotate" "right"\nEndSection\n' "${out}"
+		done
+	} > "${XROT}.mupibox-new" && sync "${XROT}.mupibox-new" && mv -f "${XROT}.mupibox-new" "${XROT}" || return 1
+	printf '%s\n%s\n' "# MuPiBox (app: Display & Bedienung > Drehung): the touch turned or mirrored with the picture (90)" \
+		'ENV{ID_INPUT_TOUCHSCREEN}=="1", ENV{LIBINPUT_CALIBRATION_MATRIX}="0 1 0 -1 0 1"' > "${TOUCHROT}.mupibox-new" \
+		&& sync "${TOUCHROT}.mupibox-new" && mv -f "${TOUCHROT}.mupibox-new" "${TOUCHROT}" || return 1
+	udevadm control --reload 2>/dev/null
+	return 0
 }
 
 # the timers of the test (its 3 minutes, and tries again of a way back that failed). A timer that is not there (none
@@ -230,7 +267,11 @@ case "${1:-}" in
 		[ -s "${NEW}" ] || { rm -f "${NEW}"; rollback "config.txt came out empty"; }
 		{ sync "${NEW}" && mv -f "${NEW}" "${BOOT_CONFIG}" && sync "$(dirname "${BOOT_CONFIG}")"; } || { rm -f "${NEW}"; rollback "config.txt could not be written"; }
 		clear_rotation || rollback "the rotation could not be removed"
-		set_profile_in_config "${PROFILE}" 0 "" || rollback "the model could not be noted in the settings"
+		ROT=$(upright_rotation "${PROFILE}")
+		if [ "${ROT}" != "0" ]; then
+			turn_new_panel || rollback "the rotation could not be written"
+		fi
+		set_profile_in_config "${PROFILE}" "${ROT}" "" || rollback "the model could not be noted in the settings"
 		write_test ready || rollback "the test could not be noted"
 		log "display model ${PREVIOUS} -> ${PROFILE} (${OVERLAY:-firmware}): test after the restart"
 		;;

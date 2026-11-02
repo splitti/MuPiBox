@@ -3,6 +3,18 @@
 </ul>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>New in the app under Settings › System › About the box › Support: "Copy for Discord" puts a short profile of the box on the clipboard and shows it - the version and the last three updates (and whether the last one finished), the Pi model and its memory, the system, the drive and its free space, the display model and its rotation, the MuPiHAT and its battery level, the sound card and the player, which services are on, the WiFi band and signal, the temperature and uptime. Pasted on Discord as a code block, laid out the same on every box (always in German), so a report says at once what the box is. Nothing in it names the box, the home or a person: no address, no WiFi name, no box name, no accounts, nothing of the library. When the browser does not allow copying (the app over http), the text is selected to copy by hand. The same profile is in the support zip too (steckbrief.txt), which stays for the closer look when something is stuck.</li>
+<li id='linews' class='linews'>Support zip of a box whose display logs in as root (see Installation below): Chromium's debug log (Settings › System › Browser › Chrome debugging) was missing from it - it is written under /root then. It is taken from there too now.</li>
+</ul>
+<b>Display</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Touch Display 2: the display is built upright, the MuPiBox lies. Chosen under Settings › Display &amp; controls › Display model, it now starts turned by 90° (picture and touch) - before it came up upright and had to be turned under Rotation, during the 3 minutes of its test. An installation with this display on the box (its line in config.txt) sets 90° too. Upside down in its case: 270° under Rotation.</li>
+<li id='linews' class='linews'>Touch Display 2: now and then the touch did not work after the start, the picture did (until the next start). Its touch chip takes its power from the display and was sometimes asked before it had it. Once the display is there, the box asks a touch chip that gave up at the start once more.</li>
+</ul>
+<b>Installation</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Installing on a fresh DietPi card: DietPi's dietpi.txt logs in as root at the start unless it was changed before - the display (Chromium) then ran as root, without the browser's sandbox, with its profile and log under /root. The installation now sets the login of the display to dietpi itself, as on the MuPiBox image.</li>
 </ul>
 <h3>DEV 5.0.13 - changes compared to 5.0.12</h3>
 <b>Display models</b>

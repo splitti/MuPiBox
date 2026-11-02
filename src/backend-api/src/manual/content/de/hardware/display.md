@@ -17,6 +17,8 @@ Ein Display am Flachbandkabel (DSI) meldet nicht, was es ist. Deshalb wählst du
 
 Mit **Übernehmen und neu starten** startet die Box mit dem neuen Modell neu. Danach fragen die App (auch auf der Startseite) und das Display: **Siehst du ein Bild?** Tippst du am Display auf **Behalten** oder in der App auf **Ja, behalten**, bleibt das Modell. Kommt innerhalb von **3 Minuten** keine Antwort – etwa weil das Display dunkel bleibt –, stellt die Box das bisherige Display wieder ein und startet noch einmal neu. Mit **Nein, zurück** geht das sofort.
 
+Das **Touch Display 2** ist hochkant gebaut. Wählst du es hier, startet die Box es gleich quer (**90°**, Bild und Touch). Steht es in deinem Gehäuse auf dem Kopf, nimm unter [Drehung](#drehung) **270°**.
+
 > [!NOTE]
 > Bleibt das Display auch mit dem richtigen Modell dunkel, prüf die Stromversorgung: Die meisten DSI-Displays bekommen ihre 5 V nicht über das Flachbandkabel, sondern über ein eigenes Kabel (am MuPiHAT an **J2**, oben 5V, darunter GND). Bis auf das offizielle 7″ nutzen alle Modelle die Treiber aus dem Raspberry-Pi-Kernel.
 
@@ -45,7 +47,7 @@ Mit **Abends dunkler** wird das Display abends dunkler und morgens wieder normal
 Steht das Display auf dem Kopf oder quer, drehst du das Bild. Was du dafür siehst, hängt vom Display-Modell ab:
 
 - **Offizielles 7″ (1. Generation):** Für ein **Display am HDMI-Anschluss** wählst du aus, 90°, 180°, 270°, horizontal oder vertikal spiegeln. Für ein **Display am Flachbandkabel (DSI/LCD)** gibt es (zugeklappt) **LCD-Drehung** und **Display-LCD-Drehung**, jeweils aus oder 180°. Die Drehung gilt nach einem Neustart der Box.
-- **Alle anderen Modelle:** Kacheln **0°**, **90°**, **180°** und **270°** sowie **Spiegeln ↔** (links-rechts) und **Spiegeln ↕** (oben-unten) – gedreht oder gespiegelt, nicht beides. Bild und Touch drehen bzw. spiegeln sich zusammen, beim Drehen auch das Start-, Wartungs- und Ausschaltbild (gespiegelt bleiben diese Bilder, wie sie sind). Die Anzeige startet kurz neu, die Box nicht. **Quer** markiert die Lagen, in denen die MuPiBox richtig steht – viele dieser Displays sind hochkant gebaut (etwa das Touch Display 2), dann ist es 90° oder 270°, je nachdem, wie das Display eingebaut ist.
+- **Alle anderen Modelle:** Kacheln **0°**, **90°**, **180°** und **270°** sowie **Spiegeln ↔** (links-rechts) und **Spiegeln ↕** (oben-unten) – gedreht oder gespiegelt, nicht beides. Bild und Touch drehen bzw. spiegeln sich zusammen, beim Drehen auch das Start-, Wartungs- und Ausschaltbild (gespiegelt bleiben diese Bilder, wie sie sind). Die Anzeige startet kurz neu, die Box nicht. **Quer** markiert die Lagen, in denen die MuPiBox richtig steht – viele dieser Displays sind hochkant gebaut (etwa das Touch Display 2), dann ist es 90° oder 270°, je nachdem, wie das Display eingebaut ist. Das Touch Display 2 stellt die Box beim Wählen des Modells und bei einer Installation mit diesem Display schon auf 90°.
 
 ## Auflösung
 

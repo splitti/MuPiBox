@@ -378,7 +378,19 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
         if (!/^[\w.-]+$/.test(name)) continue
         await copyTail(path.join(logs, name), path.join(dir, 'pm2-logs', name), 5 * 1024 * 1024).catch(() => undefined)
       }
-      await copyTail('/home/dietpi/.config/chromium/chrome_debug.log', `${dir}/chrome_debug.log`, 5 * 1024 * 1024).catch(() => undefined)
+      // (a display that logs in as root - AUTO_SETUP_AUTOSTART_LOGIN_USER=root in dietpi.txt, set up before 5.0.14 -
+      // writes it under /root, which this server cannot read: copied for it first)
+      const chromeLog = `${dir}/chrome_debug.log`
+      const fromDietpi = await copyTail('/home/dietpi/.config/chromium/chrome_debug.log', chromeLog, 5 * 1024 * 1024).then(
+        () => true,
+        () => false,
+      )
+      if (!fromDietpi) {
+        const raw = `${dir}/chrome_debug.raw`
+        const cp = await run('sudo', ['install', '-m', '600', '-o', String(os.userInfo().uid), '/root/.config/chromium/chrome_debug.log', raw], 15000)
+        if (cp.ok) await copyTail(raw, chromeLog, 5 * 1024 * 1024).catch(() => undefined)
+        await fsp.rm(raw, { force: true })
+      }
       const zip = `${dir}.zip`
       const z = await run('sh', ['-c', `cd '${dir}' && zip -q -r '${zip}' .`], 30000)
       if (!z.ok) {
