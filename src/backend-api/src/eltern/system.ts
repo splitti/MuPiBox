@@ -76,15 +76,17 @@ function keptTail(buf: Buffer, cut: boolean): string {
 
 // The library for the support zip: every address in it down to its scheme and the end of its host
 // (https://ddns.net/…): access data can be in its query, its path or before the host, in any spelling (%74oken=), and
-// a host of its own can carry a name. Read as JSON and written as JSON - a pattern over the text cut a title with
-// quotes in it and left a file that did not parse. The rest (types, titles, folders) stays for the support.
+// a host of its own can carry a name. Wherever it stands in a value - at its start, after a space, without a scheme
+// (//host/…) or within a text. Read as JSON and written as JSON - a pattern over the text cut a title with quotes in it
+// and left a file that did not parse. The rest (types, titles, folders) stays for the support.
+const ADDRESS = /([a-z][a-z0-9+.-]*:)?\/\/(?:[^\s/?#@]*@)?(\[[^\]\s]*\]|[^\s/?#:@]+)\S*/gi
 function libraryForSupport(text: string): string {
   const cut = (value: unknown): unknown => {
     if (typeof value === 'string') {
-      const m = /^([a-z][a-z0-9+.-]*):\/\/(?:[^/?#]*@)?(\[[^\]]*\]|[^/?#:]*)/i.exec(value)
-      if (!m) return value
-      const host = /^[\d.]+$|^\[/.test(m[2]) ? m[2] : m[2].split('.').slice(-2).join('.')
-      return `${m[1]}://${host}/…`
+      return value.replace(ADDRESS, (_all, scheme: string | undefined, rawHost: string) => {
+        const host = /^[\d.]*$|^\[/.test(rawHost) ? rawHost : rawHost.split('.').slice(-2).join('.')
+        return `${scheme ?? ''}//${host}/…`
+      })
     }
     if (Array.isArray(value)) return value.map(cut)
     if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, cut(v)]))

@@ -562,14 +562,16 @@ export class SwiperComponent<T> {
   // Cover Flow: the centered cover faces front; every other cover is tilted by the same
   // angle towards the center, packed closely, with a gap around the centered one.
   // (Swiper's built-in coverflow effect rotates further the further away a slide is.)
-  // (the list's row - the scroll container of Swiper's css mode - out of it and back for a moment: its place stays)
+  // (the list's row - the scroll container of Swiper's css mode - out of it and back for a moment: its place stays.
+  // The place is read before Swiper counts anew: a restore just put the row there by its scroll position, and Swiper,
+  // which learns the new slide from the next scroll event only, set it back to the one before.)
   private renewScroller(): void {
     const sw = this.swiper() as (Swiper & { wrapperEl?: HTMLElement; update?: () => void }) | undefined
     if (!sw || !this.pageIsShown()) return
-    sw.update?.()
     const row = sw.wrapperEl
+    const left = row?.scrollLeft ?? 0
+    sw.update?.()
     if (!row || this.coverflow()) return
-    const left = row.scrollLeft
     row.style.overflowX = 'hidden'
     void row.offsetWidth
     row.style.overflowX = ''

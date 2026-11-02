@@ -377,7 +377,9 @@ rm -f /tmp/mupibox-update-failed
 	# a dpkg stopped halfway before (power gone during an installation) makes apt refuse every package until it is
 	# finished, and dependencies left broken by that as well
 	dpkg --configure -a >&3 2>&3
-	apt-get update >&3 2>&3
+	# (whether the lists are fresh: with old ones an upgrade finds nothing newer and still succeeds - see Chromium below)
+	APT_LISTS_FRESH=""
+	apt-get update >&3 2>&3 && APT_LISTS_FRESH=1
 	apt-get --yes -f install >&3 2>&3
 	after=$(date +%s)
 
@@ -462,6 +464,9 @@ rm -f /tmp/mupibox-update-failed
 			DEBIAN_FRONTEND=noninteractive apt-get --yes -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold \
 				--only-upgrade install ${CHROMIUM_UPGRADE} >&3 2>&3
 		}
+		# (the lists fetched again first when that failed at the start: with old lists the upgrade "succeeds" on the old
+		# version; a failed upgrade is tried once more with fresh ones)
+		[ -n "${APT_LISTS_FRESH}" ] || { apt-get update >&3 2>&3 && APT_LISTS_FRESH=1; }
 		if ! chromium_upgrade; then
 			apt-get update >&3 2>&3
 			chromium_upgrade || echo "Chromium could not be updated (${CHROMIUM_PKG} ${CHROMIUM_BEFORE}) - the display goes on with it" >&3
@@ -1319,12 +1324,7 @@ rm -f /tmp/mupibox-update-failed
 	# PHP answers in the home network) - once, with this update; a marker that outlasts a reset of the configuration
 	# keeps it to this once: switched on again in the app (System › Experten), it stays on. The app's start page says it
 	# was switched off. Afterwards as chosen: an update may bring PHP and lighttpd's PHP module back - off, they go again.
-	# On a box that came back from 5.1 (its folders are there): the right of the admin interface's PHP pages to run
-	# commands as root (restart, shutdown, its settings), as the installation gives it - 5.1 runs no PHP and took it
-	# away, and its way back leaves it to this update (written only once this version is in place).
-	if [ -d /home/dietpi/.mupibox/server ] && [ ! -e /etc/sudoers.d/www-data ]; then
-		echo "www-data ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/www-data && chmod 440 /etc/sudoers.d/www-data
-	fi
+	# (On a box that came back from 5.1 the right of its PHP pages to run commands as root is given after "done", below.)
 	if [ -x /usr/local/bin/mupibox/legacy_admin.sh ]; then
 		migrate=""
 		if [ ! -e /etc/mupibox/legacy-admin-default.done ]; then
@@ -1447,6 +1447,15 @@ rm -f /tmp/mupibox-update-failed
 		# while the old installation is being deleted must not bring a half deleted one back
 		[ "${FINISH_OK}" = 1 ] && mark_update done || FINISH_OK=0
 		if [ "${FINISH_OK}" = 1 ]; then
+			# On a box that came back from 5.1 (its folders are there): the right of the admin interface's PHP pages to run
+			# commands as root (restart, shutdown, its settings), as the installation gives it - 5.1 runs no PHP and took
+			# it away, its way back leaves it to this update. Only now, after "done": nothing goes back to 5.1 from here
+			# (written before, a power cut or a step that failed brought 5.1 back with it). Missing or empty only - a file
+			# of the owner's own is left as it is.
+			if [ -d /home/dietpi/.mupibox/server ] && [ ! -s /etc/sudoers.d/www-data ]; then
+				{ echo "www-data ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/www-data && chmod 440 /etc/sudoers.d/www-data; } >&3 2>&3 \
+					|| echo "Note: /etc/sudoers.d/www-data could not be written - the admin interface's restart and shutdown do not work" >&3
+			fi
 			rm -rf "${USERDATA_BAK}" "${BAK_DIR}" >&3 2>&3
 			clear_update_mark
 		fi

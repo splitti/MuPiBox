@@ -84,23 +84,28 @@ switch_on() {
 		exit 3
 	fi
 	rm -f "${OFF_CONF}" "${NO_PHP_CONF}"
-	if [ -s "${MODS_FILE}" ]; then
-		for name in $(cat "${MODS_FILE}"); do
-			lighty-enable-mod "${name}" >/dev/null 2>&1
-		done
-		rm -f "${MODS_FILE}"
-	fi
-	local running=""
+	# lighttpd's PHP modules: the ones switched off here, else those of DietPi's PHP (none kept: PHP was taken off by 5.1
+	# and installed again later). The list goes only when PHP runs - else it stays for the next try.
+	local mods="fastcgi fastcgi-php-fpm" running="" php_mod="" f
+	[ -s "${MODS_FILE}" ] && mods=$(cat "${MODS_FILE}")
+	for name in ${mods}; do
+		lighty-enable-mod "${name}" >/dev/null 2>&1
+	done
+	for f in /etc/lighttpd/conf-enabled/*-fastcgi-php*.conf; do
+		[ -e "${f}" ] && php_mod=1
+	done
 	for unit in $(fpm_units); do
 		systemctl enable --now "${unit}" >/dev/null 2>&1
 		systemctl is-active -q "${unit}" && running=1
 	done
-	# (php-fpm there, but it does not run - masked, or it fails: off again, and the switch says so)
-	if [ -z "${running}" ]; then
-		echo "PHP (php-fpm) does not start - the admin interface stays off" >&2
+	# (php-fpm there, but it does not run - masked, or it fails - or lighttpd does not hand .php to it: off again, and
+	# the switch says so)
+	if [ -z "${running}" ] || [ -z "${php_mod}" ]; then
+		echo "PHP does not run (php-fpm, or lighttpd's PHP module) - the admin interface stays off" >&2
 		switch_off "${reload}"
 		exit 3
 	fi
+	rm -f "${MODS_FILE}"
 	[ "${reload}" = "noreload" ] || lighttpd_again
 }
 
