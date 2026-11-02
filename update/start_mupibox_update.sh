@@ -438,12 +438,13 @@ rm -f /tmp/mupibox-update-failed
 		fi
 	fi
 
-	# The display's Chromium, when it is old: the 4.2.4 image brings 122 (early 2024), and nothing updated it since - on
-	# it a list of covers could not be swiped any more once it was drawn anew, and its security updates were missing.
-	# Only below 130, only the browser's package (chromium-browser of Raspberry Pi OS on Debian 12, chromium on 13) and
-	# Widevine with it when it is there (Spotify plays through it). Its files in /etc/chromium.d as they are (keep the
-	# changed ones, no question - there is no terminal here). Failed twice (the second time with fresh package lists):
-	# the update goes on, the display with the Chromium it had.
+	# The display's Chromium up to date with every update (the box itself is rarely updated otherwise): the 4.2.4 image
+	# brought 122 (early 2024) and nothing updated it since - on it a list of covers could not be swiped any more once it
+	# was drawn anew, and its security updates were missing. Nothing is loaded when it is current. Only the browser's
+	# package (chromium-browser of Raspberry Pi OS on Debian 12, chromium on 13) and Widevine with it when it is there
+	# (Spotify plays through it). Its files in /etc/chromium.d as they are (keep the changed ones, no question - there is
+	# no terminal here). Failed twice (the second time with fresh package lists): the update goes on, the display with
+	# the Chromium it had.
 	CHROMIUM_PKG=""
 	for p in chromium-browser chromium; do
 		if dpkg-query -W -f='${Status}' "${p}" 2>/dev/null | grep -q "install ok installed"; then
@@ -452,23 +453,21 @@ rm -f /tmp/mupibox-update-failed
 		fi
 	done
 	if [ -n "${CHROMIUM_PKG}" ]; then
-		CHROMIUM_MAJOR=$(dpkg-query -W -f='${Version}' "${CHROMIUM_PKG}" 2>/dev/null | sed -E 's/^([0-9]+:)?([0-9]+).*/\2/')
-		if [[ "${CHROMIUM_MAJOR}" =~ ^[0-9]+$ ]] && [ "${CHROMIUM_MAJOR}" -lt 130 ]; then
-			echo -e "XXX\n${STEP}\nUpdate Chromium (${CHROMIUM_MAJOR})\nXXX"
-			before=$(date +%s)
-			CHROMIUM_UPGRADE="${CHROMIUM_PKG}"
-			dpkg-query -W -f='${Status}' libwidevinecdm0 2>/dev/null | grep -q "install ok installed" && CHROMIUM_UPGRADE="${CHROMIUM_UPGRADE} libwidevinecdm0"
-			chromium_upgrade() {
-				DEBIAN_FRONTEND=noninteractive apt-get --yes -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold \
-					--only-upgrade install ${CHROMIUM_UPGRADE} >&3 2>&3
-			}
-			if ! chromium_upgrade; then
-				apt-get update >&3 2>&3
-				chromium_upgrade || echo "Chromium could not be updated (${CHROMIUM_PKG} ${CHROMIUM_MAJOR}) - the display goes on with it" >&3
-			fi
-			after=$(date +%s)
-			echo -e "## Chromium ${CHROMIUM_MAJOR} -> $(dpkg-query -W -f='${Version}' "${CHROMIUM_PKG}" 2>/dev/null) ##  finished after $((after - before)) seconds" >&3 2>&3
+		CHROMIUM_BEFORE=$(dpkg-query -W -f='${Version}' "${CHROMIUM_PKG}" 2>/dev/null)
+		echo -e "XXX\n${STEP}\nUpdate Chromium\nXXX"
+		before=$(date +%s)
+		CHROMIUM_UPGRADE="${CHROMIUM_PKG}"
+		dpkg-query -W -f='${Status}' libwidevinecdm0 2>/dev/null | grep -q "install ok installed" && CHROMIUM_UPGRADE="${CHROMIUM_UPGRADE} libwidevinecdm0"
+		chromium_upgrade() {
+			DEBIAN_FRONTEND=noninteractive apt-get --yes -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold \
+				--only-upgrade install ${CHROMIUM_UPGRADE} >&3 2>&3
+		}
+		if ! chromium_upgrade; then
+			apt-get update >&3 2>&3
+			chromium_upgrade || echo "Chromium could not be updated (${CHROMIUM_PKG} ${CHROMIUM_BEFORE}) - the display goes on with it" >&3
 		fi
+		after=$(date +%s)
+		echo -e "## Chromium ${CHROMIUM_BEFORE} -> $(dpkg-query -W -f='${Version}' "${CHROMIUM_PKG}" 2>/dev/null) ##  finished after $((after - before)) seconds" >&3 2>&3
 	fi
 
 	# What a part of the box needs (the list of scripts/mupibox/install_missing.sh - mpv plays everything but Spotify,
