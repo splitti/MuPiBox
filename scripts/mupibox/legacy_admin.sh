@@ -18,6 +18,8 @@
 
 CONFIG=/etc/mupibox/mupiboxconfig.json
 OFF_CONF=/etc/lighttpd/conf-enabled/92-mupibox-admin-off.conf
+# the same redirect as 5.1 writes it (it took PHP off): left on a box that went back from 5.1 and got no PHP again
+NO_PHP_CONF=/etc/lighttpd/conf-enabled/92-mupibox-no-php.conf
 # the PHP modules of lighttpd switched off here, to switch the same ones on again
 MODS_FILE=/etc/mupibox/legacy-admin-off.modules
 # switched off by the update (once, 5.0.12): the app's start page says so until someone switches here
@@ -38,7 +40,7 @@ fpm_units() {
 }
 
 status() {
-	if [ -e "${OFF_CONF}" ]; then echo off; else echo on; fi
+	if [ -e "${OFF_CONF}" ] || [ -e "${NO_PHP_CONF}" ]; then echo off; else echo on; fi
 }
 
 switch_off() {
@@ -73,7 +75,13 @@ EOF
 
 switch_on() {
 	local reload="$1" unit name
-	rm -f "${OFF_CONF}"
+	# (no PHP on the box - taken off by 5.1, and not installed again on the way back: nothing to switch on, the
+	# redirect stays and the switch says so)
+	if [ -z "$(fpm_units)" ]; then
+		echo "PHP (php-fpm) is not installed - the admin interface cannot be switched on" >&2
+		exit 3
+	fi
+	rm -f "${OFF_CONF}" "${NO_PHP_CONF}"
 	if [ -s "${MODS_FILE}" ]; then
 		for name in $(cat "${MODS_FILE}"); do
 			lighty-enable-mod "${name}" >/dev/null 2>&1
