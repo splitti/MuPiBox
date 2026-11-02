@@ -335,20 +335,6 @@ export class SwiperComponent<T> {
       setTimeout(() => this.applyCoverflow(), 400)
     })
 
-    // The row drawn into a swiper that stood empty (the list is emptied while its page is away, see shownData): an older
-    // Chromium (122, the package of Bookworm) did not take it for something to scroll by touch then - a swipe on the
-    // covers did nothing, the scrollbar could still be dragged (and the covers after that), until the folder was opened
-    // again. Swiper counts the slides anew and the row is laid out once more as a scroll container. (A long list did not
-    // show it: growing in parts, it is counted anew on the way.)
-    let hadSlides = false
-    effect(() => {
-      const count = this.shownData().length
-      const was = hadSlides
-      hadSlides = count > 0
-      if (was || count === 0) return
-      setTimeout(() => this.renewScroller(), 0)
-    })
-
     // Drive progressive expansion. Tracks pageIsShown + data().length.
     // When the input data grows (typical: empty array → full array once
     // the parent's HTTP fetch resolves), kick off the chunked render
@@ -562,22 +548,6 @@ export class SwiperComponent<T> {
   // Cover Flow: the centered cover faces front; every other cover is tilted by the same
   // angle towards the center, packed closely, with a gap around the centered one.
   // (Swiper's built-in coverflow effect rotates further the further away a slide is.)
-  // (the list's row - the scroll container of Swiper's css mode - out of it and back for a moment: its place stays.
-  // The place is read before Swiper counts anew: a restore just put the row there by its scroll position, and Swiper,
-  // which learns the new slide from the next scroll event only, set it back to the one before.)
-  private renewScroller(): void {
-    const sw = this.swiper() as (Swiper & { wrapperEl?: HTMLElement; update?: () => void }) | undefined
-    if (!sw || !this.pageIsShown()) return
-    const row = sw.wrapperEl
-    const left = row?.scrollLeft ?? 0
-    sw.update?.()
-    if (!row || this.coverflow()) return
-    row.style.overflowX = 'hidden'
-    void row.offsetWidth
-    row.style.overflowX = ''
-    row.scrollLeft = left
-  }
-
   public applyCoverflow(): void {
     if (!this.coverflow()) {
       return
