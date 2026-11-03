@@ -85,20 +85,21 @@ function keptTail(buf: Buffer, cut: boolean): string {
 // character once - no search over the rest for every "//"). Its host is what follows the last @ before the path (as
 // URL has it: a password may hold an @ itself), without its port, and after any further slashes (https:///user:pw@host
 // is read by URL as well). An address without a host to be found goes whole, down to its "//". Tabs and line breaks
-// belong to it: URL takes them out (https://\nuser:pw@host is https://user:pw@host) - the next line goes with it then.
+// belong to it, also between its two slashes: URL takes them out (https:/\n/user:pw@host is https://user:pw@host) -
+// the next line goes with it then.
+const SLASHES = /\/[\t\n\r]*\//g
+const HAS_SLASHES = /\/[\t\n\r]*\//
 const NOT_SPACE = /[^ \f\v\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]*/y
 function cutAddresses(value: string): string {
   let out = ''
   let from = 0
-  let i = value.indexOf('//')
-  while (i >= 0) {
-    NOT_SPACE.lastIndex = i + 2
+  SLASHES.lastIndex = 0
+  for (let m = SLASHES.exec(value); m; m = SLASHES.exec(value)) {
+    const i = m.index
+    NOT_SPACE.lastIndex = i + m[0].length
     const address = NOT_SPACE.exec(value)?.[0] ?? ''
-    if (!address) {
-      // ("a // b": no address)
-      i = value.indexOf('//', i + 2)
-      continue
-    }
+    // ("a // b": no address)
+    if (!address) continue
     const authority = address.replace(/[\t\n\r]/g, '').replace(/^\/+/, '').split(/[/?#]/, 1)[0]
     const hostPort = authority.slice(authority.lastIndexOf('@') + 1)
     const rawHost = hostPort.startsWith('[') ? hostPort.slice(0, hostPort.indexOf(']') + 1) : hostPort.split(':', 1)[0]
@@ -106,14 +107,14 @@ function cutAddresses(value: string): string {
     const scheme = /[a-z][a-z0-9+.-]{0,31}:$/i.exec(value.slice(Math.max(from, i - 33), i))?.[0] ?? ''
     const host = !rawHost ? '' : /^[\d.]*$|^\[/.test(rawHost) ? rawHost : rawHost.split('.').slice(-2).join('.')
     out += `${value.slice(from, i - scheme.length)}${scheme}//${host ? `${host}/` : ''}…`
-    from = i + 2 + address.length
-    i = value.indexOf('//', from)
+    from = i + m[0].length + address.length
+    SLASHES.lastIndex = from
   }
   return out + value.slice(from)
 }
 function libraryForSupport(text: string): string {
   const cut = (value: unknown): unknown => {
-    if (typeof value === 'string') return value.includes('//') ? cutAddresses(value) : value
+    if (typeof value === 'string') return HAS_SLASHES.test(value) ? cutAddresses(value) : value
     if (Array.isArray(value)) return value.map(cut)
     if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, cut(v)]))
     return value

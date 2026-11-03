@@ -1027,12 +1027,14 @@ function action(act, label, page) {
 /* ---------- talking to the box ---------- */
 
 // JSON request with the session's CSRF token on everything that changes something. Never throws.
-async function api(path, { method = 'GET', body } = {}) {
+// (timeoutMs: given up after it - a box that went away while restarting may leave a request open for minutes)
+async function api(path, { method = 'GET', body, timeoutMs } = {}) {
   const headers = {}
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   // (also on reading: some routes of the box take the app's session only with its token, see localOrElternSession)
   if (state.csrf) headers['x-mupibox-csrf'] = state.csrf
-  const r = await fetch(path, { method, credentials: 'same-origin', headers, body: body === undefined ? undefined : JSON.stringify(body) }).catch(() => null)
+  const signal = timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined
+  const r = await fetch(path, { method, credentials: 'same-origin', headers, body: body === undefined ? undefined : JSON.stringify(body), signal }).catch(() => null)
   if (!r) return { ok: false, status: 0, body: null, text: '' }
   const text = await r.text().catch(() => '')
   let data = null
@@ -7546,7 +7548,7 @@ function openDisplayTest(start) {
   if (dmt.open) return
   dmt.open = true
   // (asked: "Nein" was tapped here - the box goes back, whatever time it still has)
-  const t = { phase: start.phase, id: start.id ?? '', profile: start.profile, previous: start.previous, rotation: start.rotation ?? 0, endsAt: start.endsAt ?? null, since: Date.now(), down: false, asked: start.asked ?? false, busy: false, seq: 0, gone: false }
+  const t = { phase: start.phase, id: start.id ?? '', profile: start.profile, previous: start.previous, rotation: start.rotation ?? 0, endsAt: start.endsAt ?? null, since: Date.now(), down: false, asked: start.asked ?? false, busy: false, asking: false, gone: false }
   let poll = 0
   let tick = 0
   openSheet(
@@ -7616,10 +7618,14 @@ function openDisplayTest(start) {
       // The box as it answers: the test with its time after the restart with the new model, no test once it ended
       const step = async () => {
         if (!dmt.open || t.phase === 'kept' || t.phase === 'back') return
-        // (only the answer to the last question counts: one that came late would show a test of before)
-        const seq = ++t.seq
-        const r = await api(`${API}/display-profile`)
-        if (!dmt.open || t.gone || seq !== t.seq) return
+        // (one question at a time: an answer that came late would show a test of before - and with a slow network
+        // every answer would come late)
+        if (t.asking) return
+        t.asking = true
+        const r = await api(`${API}/display-profile`, { timeoutMs: 10_000 }).finally(() => {
+          t.asking = false
+        })
+        if (!dmt.open || t.gone) return
         if (!r.ok) {
           t.down = true
           return
