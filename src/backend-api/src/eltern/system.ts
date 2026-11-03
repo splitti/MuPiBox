@@ -84,8 +84,9 @@ function keptTail(buf: Buffer, cut: boolean): string {
 // for a long title, with the server held up meanwhile. An address runs to the next space and is read once (each
 // character once - no search over the rest for every "//"). Its host is what follows the last @ before the path (as
 // URL has it: a password may hold an @ itself), without its port, and after any further slashes (https:///user:pw@host
-// is read by URL as well). An address without a host to be found goes whole, down to its "//".
-const NOT_SPACE = /\S*/y
+// is read by URL as well). An address without a host to be found goes whole, down to its "//". Tabs and line breaks
+// belong to it: URL takes them out (https://\nuser:pw@host is https://user:pw@host) - the next line goes with it then.
+const NOT_SPACE = /[^ \f\v\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]*/y
 function cutAddresses(value: string): string {
   let out = ''
   let from = 0
@@ -98,7 +99,7 @@ function cutAddresses(value: string): string {
       i = value.indexOf('//', i + 2)
       continue
     }
-    const authority = address.replace(/^\/+/, '').split(/[/?#]/, 1)[0]
+    const authority = address.replace(/[\t\n\r]/g, '').replace(/^\/+/, '').split(/[/?#]/, 1)[0]
     const hostPort = authority.slice(authority.lastIndexOf('@') + 1)
     const rawHost = hostPort.startsWith('[') ? hostPort.slice(0, hostPort.indexOf(']') + 1) : hostPort.split(':', 1)[0]
     // (the scheme right in front, a word of at most 32 characters ending in ':')

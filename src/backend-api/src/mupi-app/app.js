@@ -7546,7 +7546,7 @@ function openDisplayTest(start) {
   if (dmt.open) return
   dmt.open = true
   // (asked: "Nein" was tapped here - the box goes back, whatever time it still has)
-  const t = { phase: start.phase, id: start.id ?? '', profile: start.profile, previous: start.previous, rotation: start.rotation ?? 0, endsAt: start.endsAt ?? null, since: Date.now(), down: false, asked: start.asked ?? false, busy: false }
+  const t = { phase: start.phase, id: start.id ?? '', profile: start.profile, previous: start.previous, rotation: start.rotation ?? 0, endsAt: start.endsAt ?? null, since: Date.now(), down: false, asked: start.asked ?? false, busy: false, seq: 0, gone: false }
   let poll = 0
   let tick = 0
   openSheet(
@@ -7567,8 +7567,11 @@ function openDisplayTest(start) {
         $('[data-dmt-keep]', root)?.addEventListener('click', async () => {
           if (t.busy) return
           t.busy = true
-          const r = await api(`${API}/display-profile/confirm`, { method: 'POST', body: { id: t.id || undefined } })
+          const asked = t.id
+          const r = await api(`${API}/display-profile/confirm`, { method: 'POST', body: { id: asked || undefined } })
           t.busy = false
+          // (an answer that came late: the sheet closed meanwhile, or follows another test now - not for that one)
+          if (t.gone || t.id !== asked) return
           if (!r.ok || r.body?.ok === false) {
             // (answered meanwhile, or another test runs now: as the box has it)
             toast('Das hat nicht geklappt', 'info')
@@ -7580,8 +7583,10 @@ function openDisplayTest(start) {
         $('[data-dmt-revert]', root)?.addEventListener('click', async () => {
           if (t.busy) return
           t.busy = true
-          const r = await api(`${API}/display-profile/revert`, { method: 'POST', body: { id: t.id || undefined } })
+          const asked = t.id
+          const r = await api(`${API}/display-profile/revert`, { method: 'POST', body: { id: asked || undefined } })
           t.busy = false
+          if (t.gone || t.id !== asked) return
           if (!r.ok) {
             toast('Das hat nicht geklappt', 'info')
             return step()
@@ -7611,8 +7616,10 @@ function openDisplayTest(start) {
       // The box as it answers: the test with its time after the restart with the new model, no test once it ended
       const step = async () => {
         if (!dmt.open || t.phase === 'kept' || t.phase === 'back') return
+        // (only the answer to the last question counts: one that came late would show a test of before)
+        const seq = ++t.seq
         const r = await api(`${API}/display-profile`)
-        if (!dmt.open) return
+        if (!dmt.open || t.gone || seq !== t.seq) return
         if (!r.ok) {
           t.down = true
           return
@@ -7652,6 +7659,7 @@ function openDisplayTest(start) {
       step()
     },
     async () => {
+      t.gone = true
       clearInterval(poll)
       clearInterval(tick)
       dmt.open = false
