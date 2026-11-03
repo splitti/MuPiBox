@@ -164,7 +164,7 @@ turn_new_panel() {
 # after a restart) is no failure: systemctl says so with an error, and a successful way back counted as failed - the box
 # then did not restart and stayed on the wrong model.
 stop_timers() {
-	systemctl stop "${TIMER_UNIT}.timer" "${TIMER_UNIT}-retry-*.timer" 2>/dev/null || true
+	systemctl stop "${TIMER_UNIT}.timer" "${TIMER_UNIT}-asked.timer" "${TIMER_UNIT}-retry-*.timer" 2>/dev/null || true
 }
 
 # config.txt, the rotation and the settings of before back (PREVIOUS, PREV_ROT, PREV_MIRROR); the test is set to
@@ -320,12 +320,13 @@ case "${1:-}" in
 		[ "${LEFT}" -gt "${WAIT_S}" ] && LEFT=${WAIT_S}
 		# (its time nearly over already: the timer of the start goes on)
 		[ "${LEFT}" -gt 5 ] || exit 0
+		# A timer of its own beside the one of the start, which goes on: whatever happens here (cut off, no timer), the
+		# box goes back after the 6 minutes all the same. Noted first: cut off before the timer, the app shows 3 minutes
+		# and the box waits longer - never the other way round.
 		ASKED_UPTIME=${NOW}
 		write_test ready "${BOOTED}" || exit 1
-		systemctl stop "${TIMER_UNIT}.timer" 2>/dev/null
-		# (no new timer, with the old one stopped: back at once, as at the start)
-		systemd-run --unit=${TIMER_UNIT} --on-active=${LEFT} --collect --quiet /bin/bash "$0" timeout "${TEST_ID}" \
-			|| { log "display test: no timer for the answer - back to the model before"; exec "$0" revert; }
+		systemd-run --unit=${TIMER_UNIT}-asked --on-active=${LEFT} --collect --quiet /bin/bash "$0" timeout "${TEST_ID}" \
+			|| { log "display test: no timer for the 3 minutes - back after the 6"; exit 1; }
 		log "display test: the app asks - ${LEFT} s for an answer"
 		;;
 	confirm)
@@ -353,7 +354,7 @@ case "${1:-}" in
 		if [ -n "${2:-}" ] && [ "$2" != "${TEST_ID}" ]; then
 			exit 0
 		fi
-		systemctl stop ${TIMER_UNIT}.timer 2>/dev/null
+		systemctl stop ${TIMER_UNIT}.timer ${TIMER_UNIT}-asked.timer 2>/dev/null
 		if ! restore_before; then
 			# (no restart: a box that starts again on the half way back would only try once more and restart again)
 			retry_later

@@ -140,16 +140,19 @@ export async function confirmDisplayTest(id?: unknown): Promise<boolean> {
 export function registerDisplayProfileRoutes(router: Router, deps: DisplayProfileDeps): void {
   /** GET /api/app/display-profile - the model now (from config.txt), the rotation and a running test */
   router.get('/display-profile', requireSession, async (_req, res) => {
+    // (the app reaches the box after the start with a new model: its 3 minutes begin - once, the script knows)
+    const first = await displayTestState()
+    if (first.endsAt && !/^asked_uptime=\d/m.test(await fsp.readFile(TEST_FILE, 'utf8').catch(() => ''))) {
+      await run('sudo', [PROFILE_SH, 'asked'], 20000)
+    }
+    // The test before the model: the way back puts config.txt and the settings back first and removes the test file
+    // last - a test read as over has its model of before in place, read after it (the other way round, a way back
+    // finished in between showed the tested model with no test: "kept")
+    const test = await displayTestState()
     const mb = (deps.getMupiboxConfig()?.mupibox ?? {}) as Record<string, unknown>
     const configTxt = await fsp.readFile(await bootConfigPath(), 'utf8').catch(() => '')
     const { output, native } = await dsiDisplay()
     const rotation = Number(mb.displayRotation)
-    // (the app reaches the box after the start with a new model: its 3 minutes begin - once, the script knows)
-    let test = await displayTestState()
-    if (test.endsAt && !/^asked_uptime=\d/m.test(await fsp.readFile(TEST_FILE, 'utf8').catch(() => ''))) {
-      await run('sudo', [PROFILE_SH, 'asked'], 20000)
-      test = await displayTestState()
-    }
     res.json({
       current: detectDisplayProfile(configTxt, mb.displayProfile),
       kms: output !== '',
