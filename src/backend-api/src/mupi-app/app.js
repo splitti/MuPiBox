@@ -1036,7 +1036,9 @@ async function api(path, { method = 'GET', body, timeoutMs } = {}) {
   const signal = timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined
   const r = await fetch(path, { method, credentials: 'same-origin', headers, body: body === undefined ? undefined : JSON.stringify(body), signal }).catch(() => null)
   if (!r) return { ok: false, status: 0, body: null, text: '' }
-  const text = await r.text().catch(() => '')
+  // (cut off while its body came - given up, or the box went away: no answer, not an empty one)
+  const text = await r.text().catch(() => null)
+  if (text === null) return { ok: false, status: 0, body: null, text: '' }
   let data = null
   try {
     data = JSON.parse(text)
@@ -7626,7 +7628,8 @@ function openDisplayTest(start) {
           t.asking = false
         })
         if (!dmt.open || t.gone) return
-        if (!r.ok) {
+        // (only a whole answer of the box counts - the state is read from it)
+        if (!r.ok || typeof r.body?.test?.running !== 'boolean') {
           t.down = true
           return
         }
@@ -7715,7 +7718,7 @@ function displayTestHtml(t) {
 // when the page was loaded anew meanwhile, with how it ended (or where it is now: the way back may still restart)
 async function checkDisplayTest() {
   const r = await api(`${API}/display-profile`)
-  if (!r.ok) return
+  if (!r.ok || typeof r.body?.test?.running !== 'boolean') return
   const test = dmLocal(r.body?.test)
   const followed = dmtRemembered()
   if (test?.running) {
