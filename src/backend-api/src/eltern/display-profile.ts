@@ -15,6 +15,7 @@ const PROFILE_SH = '/usr/local/bin/mupibox/display_profile.sh'
 const ROTATION_SH = '/usr/local/bin/mupibox/display_rotation.sh'
 const TEST_FILE = '/var/lib/mupibox/display-profile/test'
 const TEST_SECONDS = 180
+const MAX_SECONDS = 360
 
 // id -> its overlay ('' = the display of the firmware: the official 7" of the 1st generation, HDMI)
 const WS_V1 = ['7_0_inchC', '7_0_inchH', '7_9_inch', '8_0_inch', '8_8_inch', '10_1_inch', '11_9_inch']
@@ -110,11 +111,16 @@ export async function displayTestState(): Promise<DisplayTest> {
   // was noted - a Pi starts with the time it last saved and is set from the network later, minutes on, and the end
   // came that much too early here (the box's own timer counts from the start, not by the clock). The clock only for a
   // test noted before.
+  // The 3 minutes from the app's first visit after that start (asked_uptime), within 6 from the start - without the
+  // app the box waits those 6 (display_profile.sh asked).
   const sinceStart = ready ? Number(get('booted_uptime')) : 0
+  const asked = Number(get('asked_uptime'))
   const uptime = Number((await fsp.readFile('/proc/uptime', 'utf8').catch(() => '')).split(' ')[0])
   let endsAt: number | null = null
-  if (sinceStart > 0 && uptime > 0) endsAt = Date.now() + Math.max(0, TEST_SECONDS - (uptime - sinceStart)) * 1000
-  else if (booted > 0) endsAt = (booted + TEST_SECONDS) * 1000
+  if (sinceStart > 0 && uptime > 0) {
+    const end = asked > 0 ? Math.min(asked + TEST_SECONDS, sinceStart + MAX_SECONDS) : sinceStart + MAX_SECONDS
+    endsAt = Date.now() + Math.max(0, end - uptime) * 1000
+  } else if (booted > 0) endsAt = (booted + TEST_SECONDS) * 1000
   const left = endsAt === null ? null : Math.max(0, Math.round((endsAt - Date.now()) / 1000))
   return { running: true, id: get('id'), profile: get('profile'), previous: get('previous'), reverting: get('state') === 'reverting', endsAt, left }
 }
@@ -138,6 +144,12 @@ export function registerDisplayProfileRoutes(router: Router, deps: DisplayProfil
     const configTxt = await fsp.readFile(await bootConfigPath(), 'utf8').catch(() => '')
     const { output, native } = await dsiDisplay()
     const rotation = Number(mb.displayRotation)
+    // (the app reaches the box after the start with a new model: its 3 minutes begin - once, the script knows)
+    let test = await displayTestState()
+    if (test.endsAt && !/^asked_uptime=\d/m.test(await fsp.readFile(TEST_FILE, 'utf8').catch(() => ''))) {
+      await run('sudo', [PROFILE_SH, 'asked'], 20000)
+      test = await displayTestState()
+    }
     res.json({
       current: detectDisplayProfile(configTxt, mb.displayProfile),
       kms: output !== '',
@@ -147,7 +159,7 @@ export function registerDisplayProfileRoutes(router: Router, deps: DisplayProfil
       rotation: [0, 90, 180, 270].includes(rotation) ? rotation : 0,
       // mirrored left-right ('x') or top-bottom ('y') instead of turned; null = not
       mirror: mb.displayMirror === 'x' || mb.displayMirror === 'y' ? mb.displayMirror : null,
-      test: await displayTestState(),
+      test,
     })
   })
 

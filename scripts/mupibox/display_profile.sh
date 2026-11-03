@@ -7,12 +7,18 @@
 #                                                   of before, sets the model's way up (Touch Display 2: 90 degrees)
 #                                                   and starts the test: the box is restarted by the caller
 #   display_profile.sh boot                         at every start (mupi_startup.sh): a test that waits for its answer
-#                                                   gets 3 minutes; a second start without one goes back at once
-#   display_profile.sh confirm                      the picture is there (app or display): the model stays - only once
+#                                                   gets at most 6 minutes; a second start without one goes back at once
+#   display_profile.sh asked                        the app reaches the box for the first time after that start (the
+#                                                   app's server): 3 minutes from now, within those 6
+#   display_profile.sh confirm [<id>]               the picture is there (app or display): the model stays - only once
 #                                                   the box has started with it
-#   display_profile.sh revert                       back to the model, config.txt and rotation of before, restart
-#   display_profile.sh timeout [<id>]               the 3 minutes are over: revert, unless it was confirmed meanwhile
+#   display_profile.sh revert [<id>]                back to the model, config.txt and rotation of before, restart
+#   display_profile.sh timeout [<id>]               the time is over: revert, unless it was confirmed meanwhile
 #                                                   (a timer gives the test's id: it does nothing for a later test)
+#
+# The 3 minutes count from the app's first visit, not from the start: a box on a weak WLAN is reached minutes after
+# its start, and the question came with seconds left. Without the app (a display that shows its picture is answered
+# on the display) the box goes back 6 minutes after its start.
 #
 # A display on the ribbon cable (DSI) does not say what it is (no EDID as with HDMI): a wrong model leaves the display
 # dark - so every change is a test that goes back by itself without an answer.
@@ -37,6 +43,7 @@ TOUCHROT=/etc/udev/rules.d/99-mupibox-touch-rotate.rules
 REFLECT=/etc/X11/mupibox-reflect
 TIMER_UNIT=mupibox-display-test
 WAIT_S=180
+MAX_S=360
 RETRY_S=60
 
 # The models: their overlay line (empty: the display of the firmware - the official 7" of the 1st generation, HDMI)
@@ -67,10 +74,11 @@ put_atomic() {
 # the test file: state ($1: prepare|ready|reverting), its id, the model, the one of before with its rotation and
 # mirroring, the start with it ($2) - and how long the box had run then ($3, seconds of /proc/uptime): the clock is not
 # right yet at that moment (a Pi has none of its own: it starts with the time it last saved and is set from the
-# network later - minutes off), the time since the start is
+# network later - minutes off), the time since the start is. Then how long it had run when the app first asked
+# (ASKED_UPTIME, see asked).
 write_test() {
-	printf 'state=%s\nid=%s\nprofile=%s\nprevious=%s\nprevious_rotation=%s\nprevious_mirror=%s\nbooted=%s\nbooted_uptime=%s\n' \
-		"$1" "${TEST_ID}" "${PROFILE}" "${PREVIOUS}" "${PREV_ROT:-0}" "${PREV_MIRROR:-}" "${2:-}" "${3:-${BOOTED_UPTIME:-}}" > "${TEST}.new" \
+	printf 'state=%s\nid=%s\nprofile=%s\nprevious=%s\nprevious_rotation=%s\nprevious_mirror=%s\nbooted=%s\nbooted_uptime=%s\nasked_uptime=%s\n' \
+		"$1" "${TEST_ID}" "${PROFILE}" "${PREVIOUS}" "${PREV_ROT:-0}" "${PREV_MIRROR:-}" "${2:-}" "${3:-${BOOTED_UPTIME:-}}" "${ASKED_UPTIME:-}" > "${TEST}.new" \
 		&& sync "${TEST}.new" && mv -f "${TEST}.new" "${TEST}" && sync "${STATE}"
 }
 test_value() { sed -n "s/^$1=//p" "${TEST}" 2>/dev/null; }
@@ -82,6 +90,7 @@ read_test() {
 	PREV_MIRROR=$(test_value previous_mirror)
 	BOOTED=$(test_value booted)
 	BOOTED_UPTIME=$(test_value booted_uptime)
+	ASKED_UPTIME=$(test_value asked_uptime)
 }
 
 # the model ($1), its rotation in degrees ($2) and mirroring ($3: x, y or empty) in the settings - under the lock the
@@ -228,6 +237,7 @@ case "${1:-}" in
 		TEST_ID="$(date +%s)-$$"
 		BOOTED=""
 		BOOTED_UPTIME=""
+		ASKED_UPTIME=""
 		# the copies of before (config.txt, the rotation), then the test file - all before the first change
 		rm -f "${STATE}"/rot.* "${BEFORE}"
 		fail_copies() { rm -f "${STATE}"/rot.* "${BEFORE}" "${TEST}.new"; echo "$1"; exit 1; }
@@ -292,12 +302,31 @@ case "${1:-}" in
 			exec "$0" revert
 		fi
 		read_test
+		ASKED_UPTIME=""
 		write_test ready "$(date +%s)" "$(cut -d. -f1 /proc/uptime)" || { log "display test: the start could not be noted - back to the model before"; exec "$0" revert; }
 		stop_timers
 		# (without the timer nothing would go back by itself: back at once instead)
-		systemd-run --unit=${TIMER_UNIT} --on-active=${WAIT_S} --collect --quiet /bin/bash "$0" timeout "${TEST_ID}" \
+		systemd-run --unit=${TIMER_UNIT} --on-active=${MAX_S} --collect --quiet /bin/bash "$0" timeout "${TEST_ID}" \
 			|| { log "display test: no timer for the answer - back to the model before"; exec "$0" revert; }
-		log "display test: ${WAIT_S} s for an answer"
+		log "display test: at most ${MAX_S} s for an answer, ${WAIT_S} s once the app asks"
+		;;
+	asked)
+		[ -e "${TEST}" ] || exit 0
+		read_test
+		# (once, after the start with the new model, and not while it goes back)
+		[ "$(test_value state)" = "ready" ] && [ -n "${BOOTED_UPTIME}" ] && [ -z "${ASKED_UPTIME}" ] || exit 0
+		NOW=$(cut -d. -f1 /proc/uptime)
+		LEFT=$((BOOTED_UPTIME + MAX_S - NOW))
+		[ "${LEFT}" -gt "${WAIT_S}" ] && LEFT=${WAIT_S}
+		# (its time nearly over already: the timer of the start goes on)
+		[ "${LEFT}" -gt 5 ] || exit 0
+		ASKED_UPTIME=${NOW}
+		write_test ready "${BOOTED}" || exit 1
+		systemctl stop "${TIMER_UNIT}.timer" 2>/dev/null
+		# (no new timer, with the old one stopped: back at once, as at the start)
+		systemd-run --unit=${TIMER_UNIT} --on-active=${LEFT} --collect --quiet /bin/bash "$0" timeout "${TEST_ID}" \
+			|| { log "display test: no timer for the answer - back to the model before"; exec "$0" revert; }
+		log "display test: the app asks - ${LEFT} s for an answer"
 		;;
 	confirm)
 		[ -e "${TEST}" ] || exit 0
@@ -334,7 +363,7 @@ case "${1:-}" in
 		systemctl reboot
 		;;
 	*)
-		echo "usage: $0 apply <profile> <previous> | boot | confirm [<id>] | revert [<id>] | timeout [<id>]"
+		echo "usage: $0 apply <profile> <previous> | boot | asked | confirm [<id>] | revert [<id>] | timeout [<id>]"
 		exit 2
 		;;
 esac
