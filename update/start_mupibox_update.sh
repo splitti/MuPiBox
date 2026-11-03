@@ -382,7 +382,8 @@ rm -f /tmp/mupibox-update-failed
 	# ends with 0: so its words are read, too.)
 	apt_lists_update() {
 		local out rc
-		out=$(apt-get update 2>&1)
+		# (in English: its words are read - with another language of the box they are other ones)
+		out=$(LC_ALL=C apt-get update 2>&1)
 		rc=$?
 		printf '%s\n' "${out}" >&3
 		[ ${rc} -eq 0 ] && ! printf '%s\n' "${out}" | grep -qE '^(Err:|W: (Failed to fetch|Some index files failed))'

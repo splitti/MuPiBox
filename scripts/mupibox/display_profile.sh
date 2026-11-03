@@ -301,6 +301,11 @@ case "${1:-}" in
 		;;
 	confirm)
 		[ -e "${TEST}" ] || exit 0
+		# (the answer to another test - this one ended and the next began meanwhile: not for this one)
+		if [ -n "${2:-}" ] && [ "$2" != "$(test_value id)" ]; then
+			echo "another test runs now"
+			exit 5
+		fi
 		# only for a picture of the new model: after the start with it (before, the old display still shows one), and
 		# not while it goes back
 		if [ "$(test_value state)" != "ready" ] || ! grep -q '^booted=[0-9]' "${TEST}"; then
@@ -315,8 +320,8 @@ case "${1:-}" in
 	timeout | revert)
 		[ -e "${TEST}" ] || exit 0
 		read_test
-		# (a timer of an earlier test: not this one's business)
-		if [ "$1" = "timeout" ] && [ -n "${2:-}" ] && [ "$2" != "${TEST_ID}" ]; then
+		# (a timer of an earlier test, or "Nein" to it: not this one's business)
+		if [ -n "${2:-}" ] && [ "$2" != "${TEST_ID}" ]; then
 			exit 0
 		fi
 		systemctl stop ${TIMER_UNIT}.timer 2>/dev/null
@@ -329,7 +334,7 @@ case "${1:-}" in
 		systemctl reboot
 		;;
 	*)
-		echo "usage: $0 apply <profile> <previous> | boot | confirm | revert | timeout [<id>]"
+		echo "usage: $0 apply <profile> <previous> | boot | confirm [<id>] | revert [<id>] | timeout [<id>]"
 		exit 2
 		;;
 esac

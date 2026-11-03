@@ -7420,13 +7420,17 @@ function mountDisplayModel(root, page) {
       const r = await api(`${API}/display-profile`, { method: 'POST', body: { profile: to } })
       if (!r.ok) return toast(r.body?.error === 'test_running' ? 'Ein Test läuft schon – bitte erst beantworten' : 'Das hat nicht geklappt', 'info')
       disp.dmSel = undefined
-      openDisplayTest({ phase: 'restart', profile: to, previous: r.body?.previous ?? from })
+      openDisplayTest({ phase: 'restart', id: r.body?.id, profile: to, previous: r.body?.previous ?? from })
     }
   const keep = $('[data-dm-keep]', root)
   if (keep)
     keep.onclick = async () => {
-      const r = await api(`${API}/display-profile/confirm`, { method: 'POST', body: {} })
-      if (!r.ok || r.body?.ok === false) return toast('Das hat nicht geklappt', 'info')
+      const r = await api(`${API}/display-profile/confirm`, { method: 'POST', body: { id: disp.dp.test.id || undefined } })
+      if (!r.ok || r.body?.ok === false) {
+        toast('Das hat nicht geklappt', 'info')
+        await loadDisplayModel()
+        return renderPage(page, false)
+      }
       toast(`${dmLabel(disp.dp.test.profile)} bleibt eingestellt`)
       await loadDisplayModel()
       renderPage(page, false)
@@ -7434,8 +7438,12 @@ function mountDisplayModel(root, page) {
   const revert = $('[data-dm-revert]', root)
   if (revert)
     revert.onclick = async () => {
-      const r = await api(`${API}/display-profile/revert`, { method: 'POST', body: {} })
-      if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+      const r = await api(`${API}/display-profile/revert`, { method: 'POST', body: { id: disp.dp.test.id || undefined } })
+      if (!r.ok) {
+        toast('Das hat nicht geklappt', 'info')
+        await loadDisplayModel()
+        return renderPage(page, false)
+      }
       toast('Das bisherige Display kommt zurück – die Box startet neu')
     }
   for (const b of root.querySelectorAll('[data-krot]')) {
@@ -7468,6 +7476,14 @@ function mountDisplayModel(root, page) {
 async function loadDisplayModel() {
   const r = await api(`${API}/display-profile`)
   disp.dp = r.ok ? r.body : null
+  dmLocal(disp.dp?.test)
+}
+
+// The end of a test by this device's clock - from the seconds the box has left: its own clock may be minutes off
+// this one's (after its start, before the network set it), and the end would lie in the past here
+function dmLocal(test) {
+  if (test?.running && typeof test.left === 'number') test.endsAt = Date.now() + test.left * 1000
+  return test
 }
 
 // The way up a new model starts with (display_profile.sh upright_rotation): the Touch Display 2 lying, turned by 90°
@@ -7503,10 +7519,11 @@ function askDisplayChange(to, from) {
 //   restart    the box restarts with the new model (asked every 2 s until it answers with the test's time)
 //   question   "Siehst du ein Bild?" - keep, or back
 //   reverting  no answer in time, or "Nein": the box goes back and restarts once more
-//   kept / back how it ended
-// The page is loaded anew while the box restarts (a box without login hands out a new session after it, see
-// sessionGone): the test this browser follows is kept for that tab (sessionStorage), so the sheet comes back - with how
-// it ended, when the test is over by then.
+//   kept / back how it ended - by the model the box runs with then, not by the time (another device may have answered)
+// Answers name their test (id): one ended on another device and the next begun meanwhile is not answered by this
+// sheet - it follows the new one from its start. The page is loaded anew while the box restarts (a box without login
+// hands out a new session after it, see sessionGone): the test this browser follows is kept for that tab
+// (sessionStorage), so the sheet comes back - with how it ended, when the test is over by then.
 const dmt = { open: false }
 const DMT_KEY = 'mupi-display-test'
 function dmtRemembered() {
@@ -7519,7 +7536,7 @@ function dmtRemembered() {
 }
 function dmtRemember(t) {
   try {
-    if (t) sessionStorage.setItem(DMT_KEY, JSON.stringify({ profile: t.profile, previous: t.previous, phase: t.phase, at: Date.now() }))
+    if (t) sessionStorage.setItem(DMT_KEY, JSON.stringify({ id: t.id, profile: t.profile, previous: t.previous, phase: t.phase, asked: t.asked, at: Date.now() }))
     else sessionStorage.removeItem(DMT_KEY)
   } catch {
     // no storage: the sheet is not brought back after a reload
@@ -7528,7 +7545,8 @@ function dmtRemember(t) {
 function openDisplayTest(start) {
   if (dmt.open) return
   dmt.open = true
-  const t = { phase: start.phase, profile: start.profile, previous: start.previous, rotation: start.rotation ?? 0, endsAt: start.endsAt ?? null, since: Date.now(), down: start.down ?? false, busy: false }
+  // (asked: "Nein" was tapped here - the box goes back, whatever time it still has)
+  const t = { phase: start.phase, id: start.id ?? '', profile: start.profile, previous: start.previous, rotation: start.rotation ?? 0, endsAt: start.endsAt ?? null, since: Date.now(), down: false, asked: start.asked ?? false, busy: false }
   let poll = 0
   let tick = 0
   openSheet(
@@ -7549,18 +7567,26 @@ function openDisplayTest(start) {
         $('[data-dmt-keep]', root)?.addEventListener('click', async () => {
           if (t.busy) return
           t.busy = true
-          const r = await api(`${API}/display-profile/confirm`, { method: 'POST', body: {} })
+          const r = await api(`${API}/display-profile/confirm`, { method: 'POST', body: { id: t.id || undefined } })
           t.busy = false
-          if (!r.ok || r.body?.ok === false) return toast('Das hat nicht geklappt', 'info')
+          if (!r.ok || r.body?.ok === false) {
+            // (answered meanwhile, or another test runs now: as the box has it)
+            toast('Das hat nicht geklappt', 'info')
+            return step()
+          }
           t.phase = 'kept'
           draw()
         })
         $('[data-dmt-revert]', root)?.addEventListener('click', async () => {
           if (t.busy) return
           t.busy = true
-          const r = await api(`${API}/display-profile/revert`, { method: 'POST', body: {} })
+          const r = await api(`${API}/display-profile/revert`, { method: 'POST', body: { id: t.id || undefined } })
           t.busy = false
-          if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+          if (!r.ok) {
+            toast('Das hat nicht geklappt', 'info')
+            return step()
+          }
+          t.asked = true
           goBack()
           draw()
         })
@@ -7591,27 +7617,34 @@ function openDisplayTest(start) {
           t.down = true
           return
         }
-        const before = t.phase
-        const test = r.body?.test
+        const before = `${t.phase} ${t.id} ${t.profile}`
+        const test = dmLocal(r.body?.test)
         if (test?.running) {
+          if (t.id && test.id && test.id !== t.id) {
+            // (another test: this one ended on another device and the next began - followed from its start)
+            Object.assign(t, { phase: 'restart', endsAt: null, since: Date.now(), down: false, asked: false })
+          }
+          if (test.id) t.id = test.id
           if (test.profile) t.profile = test.profile
           if (test.previous) t.previous = test.previous
-          if (test.endsAt) {
+          if (test.reverting || t.asked) {
+            // (the time ran out on the box, or "Nein" - here, on another device or on the display: it goes back)
+            if (t.phase !== 'reverting') goBack()
+          } else if (test.endsAt) {
             t.endsAt = test.endsAt
             t.rotation = Number(r.body?.rotation) || 0
-            if (t.phase === 'restart') t.phase = 'question'
-          } else if (t.phase === 'question') {
-            // (the time ran out on the box, or "Nein" was tapped on the display: it goes back)
-            goBack()
+            // (also back from 'reverting' when it was only this device's countdown: the box still waits for the answer)
+            if (test.left > 0) t.phase = 'question'
+            else if (t.phase === 'question') goBack()
           }
-        } else if (r.body?.current === t.profile && t.phase !== 'reverting') {
-          // (kept - here or on the display)
+        } else if (r.body?.current === t.profile) {
+          // (kept - here, on another device or on the display; the way back puts the model of before first)
           t.phase = 'kept'
         } else if (t.down || Date.now() - t.since > 120_000) {
           // back at the model of before, after the restart of the way back (or the box came up without the test)
           t.phase = 'back'
         }
-        if (t.phase !== before) draw()
+        if (`${t.phase} ${t.id} ${t.profile}` !== before) draw()
       }
       draw()
       tick = setInterval(update, 1000)
@@ -7669,18 +7702,20 @@ function displayTestHtml(t) {
 async function checkDisplayTest() {
   const r = await api(`${API}/display-profile`)
   if (!r.ok) return
-  const test = r.body?.test
+  const test = dmLocal(r.body?.test)
   const followed = dmtRemembered()
   if (test?.running) {
-    // (a test that goes back has no time: still restarting, or on its way back once it was asked)
-    const back = !test.endsAt && followed && ['question', 'reverting'].includes(followed.phase)
-    openDisplayTest({ phase: test.endsAt ? 'question' : back ? 'reverting' : 'restart', profile: test.profile, previous: test.previous, rotation: Number(r.body?.rotation) || 0, endsAt: test.endsAt })
+    // ("Nein" tapped here before the page was loaded anew: for this test only)
+    const asked = Boolean(followed?.asked && followed.id === test.id)
+    const phase = test.reverting || asked ? 'reverting' : test.left > 0 ? 'question' : test.endsAt ? 'reverting' : 'restart'
+    openDisplayTest({ phase, id: test.id, profile: test.profile, previous: test.previous, rotation: Number(r.body?.rotation) || 0, endsAt: test.endsAt, asked })
     return
   }
   if (!followed) return
   if (['kept', 'back'].includes(followed.phase) || r.body?.current === followed.profile || r.body?.current === followed.previous) {
-    const phase = followed.phase === 'kept' || (followed.phase !== 'reverting' && r.body?.current === followed.profile) ? 'kept' : 'back'
-    openDisplayTest({ phase, profile: followed.profile, previous: followed.previous, rotation: Number(r.body?.rotation) || 0 })
+    // (by the model the box runs with now: the way back puts the one of before first)
+    const phase = r.body?.current === followed.profile || (followed.phase === 'kept' && r.body?.current !== followed.previous) ? 'kept' : 'back'
+    openDisplayTest({ phase, id: followed.id, profile: followed.profile, previous: followed.previous, rotation: Number(r.body?.rotation) || 0 })
   } else {
     dmtRemember(null)
   }

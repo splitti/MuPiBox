@@ -86,10 +86,17 @@ const connectedDsi = async () => (await dsiDisplay()).output
 
 export interface DisplayTest {
   running: boolean
+  // (which test: an answer names it - another device may have ended this one and started the next meanwhile)
+  id?: string
   profile?: string
   previous?: string
+  // the box goes back (its time ran out, or "Nein")
+  reverting?: boolean
   endsAt?: number | null
+  // seconds until the box goes back (null before the restart with it): for a browser, whose clock may be another
+  left?: number | null
 }
+const TEST_ID = /^\d+-\d+$/
 
 /** The test of a new model: waiting for its answer (endsAt: when the box goes back; null before the restart with it) */
 export async function displayTestState(): Promise<DisplayTest> {
@@ -108,13 +115,20 @@ export async function displayTestState(): Promise<DisplayTest> {
   let endsAt: number | null = null
   if (sinceStart > 0 && uptime > 0) endsAt = Date.now() + Math.max(0, TEST_SECONDS - (uptime - sinceStart)) * 1000
   else if (booted > 0) endsAt = (booted + TEST_SECONDS) * 1000
-  return { running: true, profile: get('profile'), previous: get('previous'), endsAt }
+  const left = endsAt === null ? null : Math.max(0, Math.round((endsAt - Date.now()) / 1000))
+  return { running: true, id: get('id'), profile: get('profile'), previous: get('previous'), reverting: get('state') === 'reverting', endsAt, left }
 }
 
-/** The picture of the new model is there - only after the start with it (before, the old display still shows one) */
-export async function confirmDisplayTest(): Promise<boolean> {
-  if (!(await displayTestState()).endsAt) return false
-  return (await run('sudo', [PROFILE_SH, 'confirm'])).ok
+/**
+ * The picture of the new model is there - only after the start with it (before, the old display still shows one), and
+ * for the test the answer was given to (id; checked again by the script under its lock)
+ */
+export async function confirmDisplayTest(id?: unknown): Promise<boolean> {
+  const test = await displayTestState()
+  if (!test.endsAt) return false
+  if (id === undefined) return (await run('sudo', [PROFILE_SH, 'confirm'])).ok
+  if (typeof id !== 'string' || !TEST_ID.test(id) || id !== test.id) return false
+  return (await run('sudo', [PROFILE_SH, 'confirm', id])).ok
 }
 
 export function registerDisplayProfileRoutes(router: Router, deps: DisplayProfileDeps): void {
@@ -159,23 +173,31 @@ export function registerDisplayProfileRoutes(router: Router, deps: DisplayProfil
       res.status(500).json({ error: 'apply_failed', detail: r.stdout.trim().slice(-200) })
       return
     }
+    const { id } = await displayTestState()
     // (after the answer: the restart cuts the connection)
     detached('sleep 2; sudo /usr/local/bin/mupibox/restart.sh')
-    res.json({ ok: true, profile, previous: before, rebooting: true })
+    res.json({ ok: true, id, profile, previous: before, rebooting: true })
   })
 
-  /** POST /api/app/display-profile/confirm - the picture is there: the model stays */
-  router.post('/display-profile/confirm', requireSession, requireCsrf, async (_req, res) => {
-    res.json({ ok: await confirmDisplayTest() })
+  /** POST /api/app/display-profile/confirm {id} - the picture is there: the model stays */
+  router.post('/display-profile/confirm', requireSession, requireCsrf, async (req, res) => {
+    res.json({ ok: await confirmDisplayTest((req.body as { id?: unknown } | undefined)?.id) })
   })
 
-  /** POST /api/app/display-profile/revert - no picture: back to the model of before (the box restarts) */
-  router.post('/display-profile/revert', requireSession, requireCsrf, async (_req, res) => {
-    if (!(await displayTestState()).running) {
+  /** POST /api/app/display-profile/revert {id} - no picture: back to the model of before (the box restarts) */
+  router.post('/display-profile/revert', requireSession, requireCsrf, async (req, res) => {
+    const id = (req.body as { id?: unknown } | undefined)?.id
+    const test = await displayTestState()
+    if (!test.running) {
       res.status(409).json({ error: 'no_test' })
       return
     }
-    detached(`sleep 1; sudo ${PROFILE_SH} revert`)
+    if (id !== undefined && (typeof id !== 'string' || !TEST_ID.test(id) || id !== test.id)) {
+      res.status(409).json({ error: 'other_test' })
+      return
+    }
+    // (the id once more for the script: this test ended and another began within that second - not that one)
+    detached(`sleep 1; sudo ${PROFILE_SH} revert${id === undefined ? '' : ` ${id}`}`)
     res.json({ ok: true, rebooting: true })
   })
 
