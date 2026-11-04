@@ -89,6 +89,16 @@ function rowKey(item: Media): string | undefined {
 // entries of the list kept before - an artist stayed a grey "not available" tile for as long as Spotify blocked
 // (hours), or was gone from the list. Lists kept before rows were noted: the kept entries of the placeholder's artist
 // the new list lacks.
+// What the app sets for a podcast, for the episodes that stand in for it: as the library has it now, also when removed.
+const rssSettings = (m: Media): Partial<Media> => ({
+  shuffle: m.shuffle,
+  aPartOfAll: m.aPartOfAll,
+  aPartOfAllMin: m.aPartOfAllMin,
+  aPartOfAllMax: m.aPartOfAllMax,
+  episodePick: m.episodePick,
+  sorting: m.sorting,
+})
+
 function fillFailedRows(media: Media[], kept: Media[] | undefined): Media[] {
   const failed = new Set(media.filter((m) => m.unavailable && m.row).map((m) => m.row as string))
   // (a TIDAL artist or a podcast that could not be asked for and has nothing kept: left out, see below)
@@ -110,7 +120,12 @@ function fillFailedRows(media: Media[], kept: Media[] | undefined): Media[] {
     for (const k of fromKept) if (k.id) present.add(k.id)
     // (a playlist: its folder and name as the library has them now - moved to a tile of its own or renamed while the
     // kept one is older; the placeholder's artist is the library's, none for a tile of its own)
-    const place = m.playlistid ? { artist: m.artist, ...(m.libraryTitle ? { title: m.libraryTitle } : {}) } : {}
+    // (a podcast: its settings and its folder as the library has them now)
+    const place = m.playlistid
+      ? { artist: m.artist, ...(m.libraryTitle ? { title: m.libraryTitle } : {}) }
+      : m.type === 'rss'
+        ? { ...rssSettings(m), ...(m.artist ? { artist: m.artist } : {}), ...(m.artistcover ? { artistcover: m.artistcover } : {}) }
+        : {}
     // (with the row: the list made now is the kept one of the next time)
     return fromKept.map((k) => ({ ...k, ...place, category: m.category, index: m.index, row: m.row }))
   })
@@ -1212,7 +1227,7 @@ export class MediaService {
     return this.rssFeedService.getRssFeed(item.id, item.category, item.index, item).pipe(
       catchError(() => {
         this.rssFailures++
-        return of(resume ? [] : [{ type: 'rss', id: item.id, artist: item.artist, category: item.category, index: item.index, unavailable: true } as Media])
+        return of(resume ? [] : [{ type: 'rss', id: item.id, artist: item.artist, artistcover: item.artistcover, category: item.category, index: item.index, unavailable: true, ...rssSettings(item) } as Media])
       }),
     )
   }

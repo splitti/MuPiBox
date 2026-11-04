@@ -13,6 +13,7 @@ export interface RssFeed {
     }
     /** set by the box when it is offline: the feed holds only the episodes on the SD card */
     _offline?: boolean
+    _error?: string
   }
 }
 

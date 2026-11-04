@@ -22,6 +22,8 @@ export class RssFeedService {
     this.url = `${environment.backend.apiUrl}/rssfeed/cached?url=${encodeURIComponent(id)}`
     return this.http.get(this.url).pipe(
       map((response: RssFeed) => {
+        // (the server answers a feed it could not fetch with an empty list and the reason, not with an HTTP error)
+        if (response.rss?._error) throw new Error(response.rss._error)
         return response.rss.channel.item.map((item) => {
           // LOW-7: removed `console.log(item)` — fired once per feed item
           // on every load, polluting chrome_debug.log (which we already
