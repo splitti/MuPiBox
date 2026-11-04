@@ -797,7 +797,8 @@ export class MediaService {
 
   private homeListIsCurrent(category: CategoryType, version: string): boolean {
     const kept = this.homeLists.get(category)
-    return !!kept && version !== '' && kept.version === version && Date.now() - kept.at < MediaService.HOME_LIST_MAX_AGE_MS
+    // (an empty one never counts: kept once, a tab stayed empty for hours with its entries in data.json)
+    return !!kept?.media.length && version !== '' && kept.version === version && Date.now() - kept.at < MediaService.HOME_LIST_MAX_AGE_MS
   }
 
   // made again from data.json (one run per category at a time), then kept here and on the box
@@ -816,7 +817,7 @@ export class MediaService {
           // (a run for an older data.json that ends after the newer one: not kept - it put the old list back, also
           // on the box)
           if (this.newestHomeListRun.get(category) !== version) return
-          const complete = this.spotifyService.failures === failuresBefore && this.tidalFailures === tidalFailuresBefore
+          const complete = media.length > 0 && this.spotifyService.failures === failuresBefore && this.tidalFailures === tidalFailuresBefore
           this.homeLists.set(category, { version: complete ? version : '', at: Date.now(), media })
           if (version !== '' && complete) {
             this.http.put(`${this.getApiBackendUrl()}/home-lists/${category}`, { version, media }).subscribe({ error: () => undefined })

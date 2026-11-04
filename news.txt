@@ -16,6 +16,11 @@
 <li id='linews' class='linews'>When a WiFi network was added, its password ended up in the system log (in memory until the next restart). It no longer does.</li>
 <li id='linews' class='linews'>Removing a WiFi network or changing its password or band left the WiFi configuration, with the keys of all networks, readable by every user of the box. It now stays readable by root only, and a file left open earlier is closed at the next start.</li>
 </ul>
+<b>Library</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>A tab of the display could stay empty for hours although its entries were in the library: an empty list had been kept as the current one. An empty list no longer counts as current and is made again.</li>
+</ul>
 <b>Support</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
