@@ -91,8 +91,9 @@ function rowKey(item: Media): string | undefined {
 // the new list lacks.
 function fillFailedRows(media: Media[], kept: Media[] | undefined): Media[] {
   const failed = new Set(media.filter((m) => m.unavailable && m.row).map((m) => m.row as string))
-  // (a TIDAL artist that could not be asked for and has nothing kept: left out, see below)
-  if (failed.size === 0 || !kept?.length) return media.filter((m) => !(m.unavailable && m.type === 'tidal'))
+  // (a TIDAL artist or a podcast that could not be asked for and has nothing kept: left out, see below)
+  const leftOut = (m: Media) => m.type === 'tidal' || m.type === 'rss'
+  if (failed.size === 0 || !kept?.length) return media.filter((m) => !(m.unavailable && leftOut(m)))
   const present = new Set(media.filter((m) => !m.unavailable && m.id).map((m) => m.id))
   return media.flatMap((m) => {
     if (!(m.unavailable && m.row && failed.has(m.row))) return [m]
@@ -104,8 +105,8 @@ function fillFailedRows(media: Media[], kept: Media[] | undefined): Media[] {
       )
     }
     failed.delete(m.row) // (once per row)
-    // (a TIDAL artist without kept albums: none - its placeholder is no album to show or play)
-    if (!fromKept.length) return m.type === 'tidal' ? [] : [m]
+    // (a TIDAL artist without kept albums, a podcast without kept episodes: none - the placeholder is nothing to show or play)
+    if (!fromKept.length) return leftOut(m) ? [] : [m]
     for (const k of fromKept) if (k.id) present.add(k.id)
     // (a playlist: its folder and name as the library has them now - moved to a tile of its own or renamed while the
     // kept one is older; the placeholder's artist is the library's, none for a tile of its own)
@@ -554,9 +555,10 @@ export class MediaService {
     // (a lookup that failed meanwhile - Spotify blocking requests, a timeout - leaves the list short or empty; it is
     // shown, but not kept: the next tap loads it anew instead of showing the gap for ten minutes)
     const failuresBefore = this.spotifyService.failures
+    const rssFailuresBefore = this.rssFailures
     const media = this.loadMediaFromArtist(artist, category).pipe(
       tap(() => {
-        if (this.spotifyService.failures !== failuresBefore) this.artistMediaCache.delete(key)
+        if (this.spotifyService.failures !== failuresBefore || this.rssFailures !== rssFailuresBefore) this.artistMediaCache.delete(key)
       }),
       catchError((error) => {
         this.artistMediaCache.delete(key) // don't keep a failed load
@@ -761,6 +763,8 @@ export class MediaService {
   private homeLists = new Map<CategoryType, { version: string; at: number; media: Media[] }>()
   // how often the albums of a TIDAL artist could not be asked for (see tidalArtistAlbums; as SpotifyService.failures)
   private tidalFailures = 0
+  // how often a podcast could not be fetched (see rssEpisodes)
+  private rssFailures = 0
   private homeListsLoaded$?: Observable<void>
   // (keyed by category and data.json version: a run for an older version does not stand in for the new one)
   private homeListRuns = new Map<string, Observable<Media[]>>()
@@ -797,7 +801,7 @@ export class MediaService {
 
   private homeListIsCurrent(category: CategoryType, version: string): boolean {
     const kept = this.homeLists.get(category)
-    // (an empty one never counts: kept once, a tab stayed empty for hours with its entries in data.json)
+    // (an empty one is always looked at again: kept once by mistake, a tab stayed empty for hours with its entries in data.json)
     return !!kept?.media.length && version !== '' && kept.version === version && Date.now() - kept.at < MediaService.HOME_LIST_MAX_AGE_MS
   }
 
@@ -810,6 +814,7 @@ export class MediaService {
       // entries. Shown, but not kept as the current one: it is made again at the next chance, see SpotifyService.failures)
       const failuresBefore = this.spotifyService.failures
       const tidalFailuresBefore = this.tidalFailures
+      const rssFailuresBefore = this.rssFailures
       this.newestHomeListRun.set(category, version)
       run = this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category).pipe(
         map((media) => fillFailedRows(media, this.homeLists.get(category)?.media)),
@@ -817,7 +822,8 @@ export class MediaService {
           // (a run for an older data.json that ends after the newer one: not kept - it put the old list back, also
           // on the box)
           if (this.newestHomeListRun.get(category) !== version) return
-          const complete = media.length > 0 && this.spotifyService.failures === failuresBefore && this.tidalFailures === tidalFailuresBefore
+          // (an empty list without a failure is one: the category was emptied, and the old list must not come back at the next start)
+          const complete = this.spotifyService.failures === failuresBefore && this.tidalFailures === tidalFailuresBefore && this.rssFailures === rssFailuresBefore
           this.homeLists.set(category, { version: complete ? version : '', at: Date.now(), media })
           if (version !== '' && complete) {
             this.http.put(`${this.getApiBackendUrl()}/home-lists/${category}`, { version, media }).subscribe({ error: () => undefined })
@@ -986,11 +992,11 @@ export class MediaService {
     //   service call. fetchActiveResumeData's sort then sees zeros and the
     //   user's most-recently-played item ends up at a random swiper position.
     // - isResume: marks resume entries; same loss-on-service-call risk.
-    // - row: the data.json row of a Spotify entry (see fillFailedRows)
+    // - row: the data.json row of a Spotify entry or a podcast (see fillFailedRows)
     const overwriteArtist =
       (item: Media) =>
       (source$: Observable<Media[]>): Observable<Media[]> => {
-        const row = !resume && item.type === 'spotify' ? rowKey(item) : undefined
+        const row = !resume && (item.type === 'spotify' || item.type === 'rss') ? rowKey(item) : undefined
         return source$.pipe(
           map((items) => {
             for (const currentItem of items) {
@@ -1005,7 +1011,8 @@ export class MediaService {
       }
 
     // (TIDAL switched off in the app: its entries are left out - they stay in the library, to be managed there)
-    return forkJoin([this.http.get<Media[]>(url), this.versions().pipe(take(1))]).pipe(
+    // (the library could not be read for a moment: asked again, the server answers with an error then, not an empty list)
+    return forkJoin([this.http.get<Media[]>(url).pipe(retry({ count: 2, delay: () => timer(2000) })), this.versions().pipe(take(1))]).pipe(
       map(([items, v]) => (v.tidal ? items : items.filter((it) => it?.type !== 'tidal'))),
       // Filter to get only items for the chosen category.
       map((items) => {
@@ -1103,9 +1110,7 @@ export class MediaService {
                       // network round-trip needed for resume rendering.
                       // (an entry without an id - a resume entry written without the feed - must not end the whole list)
                       () => !!(item.type === 'rss' && item.id && item.id.length > 0 && !isResumeEntry(item)),
-                      this.rssFeedService
-                        .getRssFeed(item.id, item.category, item.index, item)
-                        .pipe(overwriteArtist(item)),
+                      this.rssEpisodes(item, resume).pipe(overwriteArtist(item)),
                       iif(
                         // Get media by album (resume).
                         () => !!(item.type === 'spotify' && item.id && item.id.length > 0),
@@ -1198,6 +1203,18 @@ export class MediaService {
 
   private getPlayerBackendUrl(): string {
     return environment.backend.playerUrl
+  }
+
+  // The episodes of a podcast. Could not be fetched: a placeholder of the row - the episodes of the list kept before
+  // stand in for it (fillFailedRows), else none - and the list counts as not complete: without this a podcast was gone
+  // for six hours, its tab having other entries.
+  private rssEpisodes(item: Media, resume: boolean): Observable<Media[]> {
+    return this.rssFeedService.getRssFeed(item.id, item.category, item.index, item).pipe(
+      catchError(() => {
+        this.rssFailures++
+        return of(resume ? [] : [{ type: 'rss', id: item.id, artist: item.artist, category: item.category, index: item.index, unavailable: true } as Media])
+      }),
+    )
   }
 
   // The albums of a TIDAL artist entry (tidalKind 'artist'), each a TIDAL album of the entry's artist and category - the

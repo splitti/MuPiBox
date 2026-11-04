@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
-import { type Observable, of } from 'rxjs'
-import { catchError, map, mergeAll, toArray } from 'rxjs/operators'
+import type { Observable } from 'rxjs'
+import { map, mergeAll, toArray } from 'rxjs/operators'
 import { environment } from 'src/environments/environment'
 import { newestFirst, pickEpisodes } from './episode-pick'
 import type { CategoryType, Media } from './media'
@@ -57,11 +57,7 @@ export class RssFeedService {
         for (const e of episodes) if (!chosen.has(e)) e.episodeNew = false
         return episodes
       }),
-      // LOW-7: previously a feed-fetch error rejected the observable, so
-      // upstream callers got an error and the medialist crashed. Return
-      // an empty array on error so the page just shows "no episodes" and
-      // the user can navigate away cleanly.
-      catchError(() => of([] as Media[])),
+      // (a failed fetch is an error here: the list knows then that it lacks this feed, see MediaService.rssEpisodes)
     )
   }
 

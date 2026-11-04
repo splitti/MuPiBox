@@ -82,9 +82,12 @@ ensure_symlink() {
 	local target="$1"
 	local link="$2"
 	if [ ! -L "$link" ] || [ "$(readlink "$link")" != "$target" ]; then
-		rm -f "$link"
-		ln -s "$target" "$link"
-		chown -h dietpi:dietpi "$link" 2>/dev/null || sudo chown -h dietpi:dietpi "$link"
+		# (replaced in one step: between rm and ln a request for the library found no file)
+		local new="${link}.new.$$"
+		rm -f "$new"
+		ln -s "$target" "$new"
+		chown -h dietpi:dietpi "$new" 2>/dev/null || sudo chown -h dietpi:dietpi "$new"
+		mv -Tf "$new" "$link"
 	fi
 }
 

@@ -20,6 +20,7 @@
 </ul>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>A tab of the display could stay empty for hours although its entries were in the library: an empty list had been kept as the current one. An empty list no longer counts as current and is made again.</li>
+<li id='linews' class='linews'>A library file that could not be read for a moment no longer counts as an empty library, and a podcast that could not be fetched keeps its episodes of the last list instead of being gone for hours.</li>
 </ul>
 <b>Support</b>
 </ul>

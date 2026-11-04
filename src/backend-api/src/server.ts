@@ -1713,8 +1713,9 @@ async function removeRssPictures(removed: unknown, remaining: unknown[]): Promis
 app.get('/api/data', (_req, res) => {
   // Mirror /api/resume: when active_data.json is missing the frontend would
   // otherwise hang on its loading spinner, because the previous code's missing
-  // else-branch never sent a response.
-  if (!fs.existsSync(activedataFile)) {
+  // else-branch never sent a response. Only a box without a library is an empty list: a library that cannot be read
+  // answered [] too, and the display took that for an emptied library (see homeListIsCurrent there).
+  if (!fs.existsSync(activedataFile) && !fs.existsSync(dataFile)) {
     res.json([])
     return
   }
@@ -1722,7 +1723,7 @@ app.get('/api/data', (_req, res) => {
     if (error) {
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/data read active_data.json`)
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
-      res.json([])
+      res.status(503).json({ error: 'library_not_readable' })
     } else {
       res.json(data)
     }
