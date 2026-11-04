@@ -24,6 +24,12 @@ for _ in $(seq 1 30); do
 done
 [ -d "/sys/class/net/${IF}" ] || exit 0
 
+# A box set up over WiFi on DietPi 10 has no definition of the port at all: ifup failed with "unknown interface", the
+# cable got no address and the LAN page of the app stayed empty.
+if command -v ifquery >/dev/null && ! ifquery "${IF}" >/dev/null 2>&1 && [ ! -e "/etc/network/interfaces.d/${IF}.conf" ]; then
+	printf 'iface %s inet dhcp\n' "${IF}" > "/etc/network/interfaces.d/${IF}.conf"
+fi
+
 # LAN switched off (WiFi settings / the app, /api/network/ethernet/power): the port stays down while this file
 # exists, also after a restart. Without it, a port set down read as a pulled cable below and was set up again at once.
 LAN_OFF=/etc/mupibox/lan.off
