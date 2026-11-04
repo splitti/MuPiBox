@@ -61,15 +61,23 @@ LOCK=/tmp/.mupiboxconfig.lock
 (
 	flock -w 15 9 || exit 1
 	TMP="${MUPIBOX_CONFIG}.mupihat-new"
-	# (the MuPiHAT has the LED of its on/off switch on GPIO 13 - a box coming from an older version kept another pin, and
-	# the LED stayed dark. Not over a fan that is switched on and runs on that pin.)
-	if jq --arg c "${CARD}" '.mupibox.physicalDevice = $c | if (.fan.fan_active == true and (.fan.fan_gpio | tostring) == "13") then . else .shim.ledPin = "13" end' "${MUPIBOX_CONFIG}" > "${TMP}" && [ -s "${TMP}" ] &&
+	# The MuPiHAT's pins, by its schematic: the LED of its on/off switch on GPIO 13 (J15), KILL on 4, the button's INT on
+	# 17 - a box coming from an older version kept other pins, and the LED stayed dark. Not over a fan that is switched on
+	# and runs on GPIO 13, and not for a restored backup (MUPIHAT_KEEP_PINS=1): its pins are the ones the box is wired for.
+	if jq --arg c "${CARD}" --arg keep "${MUPIHAT_KEEP_PINS:-}" '.mupibox.physicalDevice = $c
+		| if $keep == "1" then . else
+			.shim.poweroffPin = "4" | .shim.triggerPin = "17"
+			| if (.fan.fan_active == true and (.fan.fan_gpio | tostring) == "13") then . else .shim.ledPin = "13" end
+		end' "${MUPIBOX_CONFIG}" > "${TMP}" && [ -s "${TMP}" ] &&
 		chown --reference="${MUPIBOX_CONFIG}" "${TMP}" && chmod --reference="${MUPIBOX_CONFIG}" "${TMP}" && mv -f "${TMP}" "${MUPIBOX_CONFIG}"; then
 		exit 0
 	fi
 	rm -f "${TMP}"
 	exit 1
 ) 9<"${LOCK}" || ERR=1
+
+# KILL in the boot configuration too (the pin is only in effect from there)
+[ "${MUPIHAT_KEEP_PINS:-}" = "1" ] || sed -i --follow-symlinks -E 's/^(dtoverlay=gpio-poweroff,gpiopin=)[0-9]+/\14/' "${BOOT_CONFIG}" || ERR=1
 
 # the 3.5 mm output switched on in the app: DietPi's switch of the card has blocked it again (see onboard_audio.sh;
 # after the card is written above, the script goes by it)
