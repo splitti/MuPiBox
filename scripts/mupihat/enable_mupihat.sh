@@ -32,6 +32,14 @@ effective() {
 }
 DRIVER=('dtparam=i2c_arm=on' 'dtparam=i2c1=on' 'dtparam=i2c_arm_baudrate=50000' 'dtoverlay=max98357a,sdmode-pin=16' 'dtoverlay=i2s-mmap')
 
+# KILL as the MuPiHAT has it: GPIO 4, active low - a line of its own, not only the pin changed: with active_low=0 left in
+# it, the driver pulled KILL low at its start, and the box went off while booting. Not for a restored backup, and not next
+# to a button on gpio-shutdown or in a line that loads further overlays (see start_mupibox_update.sh).
+if [ "${MUPIHAT_KEEP_PINS:-}" != "1" ] && ! grep -qE '^[[:space:]]*dtoverlay=.*gpio-shutdown' "${BOOT_CONFIG}"; then
+	sed -i --follow-symlinks -E '/^[[:space:]]*dtoverlay=gpio-poweroff(,.*)?[[:space:]]*$/d' "${BOOT_CONFIG}" || ERR=1
+	grep -qE '^[[:space:]]*dtoverlay=.*gpio-poweroff' "${BOOT_CONFIG}" || DRIVER+=('dtoverlay=gpio-poweroff,gpiopin=4,active_low=1')
+fi
+
 # boot configuration (a line already in force is not added again)
 missing=()
 for line in "${DRIVER[@]}"; do effective "${line}" "${BOOT_CONFIG}" || missing+=("${line}"); done
@@ -75,9 +83,6 @@ LOCK=/tmp/.mupiboxconfig.lock
 	rm -f "${TMP}"
 	exit 1
 ) 9<"${LOCK}" || ERR=1
-
-# KILL in the boot configuration too (the pin is only in effect from there)
-[ "${MUPIHAT_KEEP_PINS:-}" = "1" ] || sed -i --follow-symlinks -E 's/^(dtoverlay=gpio-poweroff,gpiopin=)[0-9]+/\14/' "${BOOT_CONFIG}" || ERR=1
 
 # the 3.5 mm output switched on in the app: DietPi's switch of the card has blocked it again (see onboard_audio.sh;
 # after the card is written above, the script goes by it)
