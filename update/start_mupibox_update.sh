@@ -649,6 +649,10 @@ rm -f /tmp/mupibox-update-failed
 	# clean abort instead of a half-installed box.
 	[ -d "${MUPI_SRC}" ] || fail_update "Expected source directory ${MUPI_SRC} not found after unzip"
 	[ -s "${MUPI_SRC}/bin/nodejs/deploy.zip" ] || fail_update "Backend deploy.zip missing or empty in update package"
+	# a box without the maintenance screen and without the old picture (the 4.0.4 image) showed only an empty screen so far
+	if [ ! -x /usr/local/bin/mupibox/maintenance_screen.sh ] && [ -s "${MUPI_SRC}/media/images/installation.jpg" ]; then
+		/usr/bin/fbv "${MUPI_SRC}/media/images/installation.jpg" >&3 2>&3 &
+	fi
 	# a version with the app (its source in the package) must have it in deploy.zip too - else the box is left without it
 	if [ -d "${MUPI_SRC}/src/backend-api/src/mupi-app" ]; then
 		unzip -l "${MUPI_SRC}/bin/nodejs/deploy.zip" 2>/dev/null | grep -q " mupi-app/index.html$" || fail_update "The app (mupi-app) is missing in deploy.zip of the update package"
