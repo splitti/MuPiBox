@@ -18,6 +18,9 @@ restart_network() {
 	sudo wpa_cli -i $(/usr/local/bin/mupibox/mupi_wifi_iface.sh) reconfigure
 }
 
+# (a file left readable by everyone by an earlier save_config: it holds the key of every network)
+sudo chmod 600 "${WPACONF}" 2>/dev/null
+
 while true
 do
 	if test -f "${MUPIWIFI}"

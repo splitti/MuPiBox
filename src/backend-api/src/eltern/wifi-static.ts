@@ -23,7 +23,7 @@ import dns from 'node:dns'
 import { promises as fsp } from 'node:fs'
 import net from 'node:net'
 import type { RequestHandler, Router } from 'express'
-import { decodeWpaSsid } from '../wpa-ssid'
+import { decodeWpaSsid, wifiConfigPrivate } from '../wpa-ssid'
 import { requireCsrf, requireSession } from './middleware'
 
 export interface WifiStatic {
@@ -175,7 +175,10 @@ async function networkOf(iface: string, ssid: string): Promise<{ id: string; act
 async function setIdStr(iface: string, id: string, idStr: string): Promise<boolean> {
   const before = idStr ? (await cli(iface, 'get_network', id, 'id_str')).stdout.trim() : ''
   if (!/OK/.test((await cli(iface, 'set_network', id, 'id_str', `"${idStr}"`)).stdout)) return false
-  if (/OK/.test((await cli(iface, 'save_config')).stdout)) return true
+  if (/OK/.test((await cli(iface, 'save_config')).stdout)) {
+    await wifiConfigPrivate()
+    return true
+  }
   if (idStr) await cli(iface, 'set_network', id, 'id_str', /^"[^"]*"$/.test(before) ? before : '""')
   return false
 }

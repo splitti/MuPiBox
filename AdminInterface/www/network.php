@@ -218,7 +218,8 @@
 		$wifinr = isset($_POST['wifinr']) ? intval($_POST['wifinr']) : -1;
 		if ($wifinr >= 0)
 			{
-			$command = "sudo wpa_cli remove_network " . $wifinr . " && sudo wpa_cli save_config";
+			// (save_config writes the file anew, readable by everyone: back to root only)
+			$command = "sudo wpa_cli remove_network " . $wifinr . " && sudo wpa_cli save_config && sudo chmod 600 /etc/wpa_supplicant/wpa_supplicant.conf";
 			exec($command, $output, $result );
 			$change=1;
 			$CHANGE_TXT=$CHANGE_TXT."<li>Wifi deleted</li>";

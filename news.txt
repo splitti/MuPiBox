@@ -14,6 +14,7 @@
 <li id='linews' class='linews'>A box set up over WiFi on DietPi 10 had no definition for the LAN port: a cable got no address and the LAN page stayed empty. The port is now defined at the start.</li>
 <li id='linews' class='linews'>After a quick change of network or access point the WiFi could disconnect itself again and again. The box now keeps a connection that is already back.</li>
 <li id='linews' class='linews'>When a WiFi network was added, its password ended up in the system log (in memory until the next restart). It no longer does.</li>
+<li id='linews' class='linews'>Removing a WiFi network or changing its password or band left the WiFi configuration, with the keys of all networks, readable by every user of the box. It now stays readable by root only, and a file left open earlier is closed at the next start.</li>
 </ul>
 <b>Support</b>
 </ul>

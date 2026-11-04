@@ -58,7 +58,7 @@ import { OnlineCovers } from './online-covers'
 import { ardFeed, isArdFeed } from './ard-sounds'
 import { isEpisodePick } from './episode-pick'
 import { feedHostKey, feedHostsOf, isPrivateHost, neverFetched } from './lan-feeds'
-import { decodeWpaSsid, parseWpaCliScanResults, type WifiScanEntry, wifiBandOf } from './wpa-ssid'
+import { decodeWpaSsid, parseWpaCliScanResults, type WifiScanEntry, wifiBandOf, wifiConfigPrivate } from'./wpa-ssid'
 import { registerAudioOutputRoutes, startAudioWatch } from './audio-output'
 import { episodeKey, MAX_KEEP, type OfflineEpisode, PodcastOffline } from './podcast-offline'
 import { setFeedHeadReader } from './podcast-search'
@@ -3140,6 +3140,7 @@ function wifiSaveConfig(wifi: string, adjust?: (entries: WifiBandEntry[]) => voi
     const entries = await wifiBandEntries()
     adjust?.(entries)
     await execFileAsync('sudo', ['wpa_cli', '-i', wifi, 'save_config'])
+    await wifiConfigPrivate()
     try {
       await wifiWriteBandEntries(entries)
       return true
