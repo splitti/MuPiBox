@@ -1316,10 +1316,16 @@ rm -f /tmp/mupibox-update-failed
 	# The web server's certificate: the box's own, from its small authority for the home network (the app offers it to
 	# install on the phones; an own one uploaded in the app stays) - no longer a new self-signed one on every run, which
 	# no phone can trust and every browser asked about again. Checked at every start too (mupi_tls.service).
-	/usr/local/bin/mupibox/tls_cert.sh ensure >&3 2>&3
-	systemctl enable mupi_tls.service >&3 2>&3
-	systemctl daemon-reload >&3 2>&3
-	systemctl enable --now mupi_tls.timer >&3 2>&3
+	if [ -x /usr/local/bin/mupibox/tls_cert.sh ]; then
+		/usr/local/bin/mupibox/tls_cert.sh ensure >&3 2>&3
+		systemctl enable mupi_tls.service >&3 2>&3
+		systemctl daemon-reload >&3 2>&3
+		systemctl enable --now mupi_tls.timer >&3 2>&3
+	elif [ ! -s /etc/lighttpd/server.pem ]; then
+		# a version without tls_cert.sh (stable 4.x, from a box that has no certificate yet: the 4.0.4 image): the simple
+		# self-signed certificate as before - without one the web server does not start with SSL on
+		openssl req -new -x509 -keyout /etc/lighttpd/server.pem -out /etc/lighttpd/server.pem -days 3650 -nodes -subj "/C=DE/CN=mupibox" >&3 2>&3
+	fi
 	# no scripts or pages from the media folder behind /cover (see the file)
 	cp -f ${MUPI_SRC}/config/lighttpd/99-mupibox-media-noexec.conf /etc/lighttpd/conf-enabled/99-mupibox-media-noexec.conf >&3 2>&3
 	# the app on port 80/443 too: its login at /, the app at /app (see the file)
