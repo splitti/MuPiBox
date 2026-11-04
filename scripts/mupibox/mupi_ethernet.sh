@@ -25,14 +25,16 @@ done
 [ -d "/sys/class/net/${IF}" ] || exit 0
 
 # A box set up over WiFi on DietPi 10 has no definition of the port at all: ifup failed with "unknown interface", the
-# cable got no address and the LAN page of the app stayed empty. Into a file of its own where interfaces.d is read; else
-# (or that file is there and has no definition) into /etc/network/interfaces, which always is.
-if command -v ifquery >/dev/null && ! ifquery "${IF}" >/dev/null 2>&1; then
-	if grep -qE '^[[:space:]]*source[[:space:]]+(/etc/network/)?interfaces\.d/\*' /etc/network/interfaces && [ ! -e "/etc/network/interfaces.d/${IF}.conf" ]; then
+# cable got no address and the LAN page of the app stayed empty. Only for that error: ifquery also fails on a mistake
+# anywhere in the configuration, and a further definition would then be added at every start. Into a file of its own
+# if that is read; else into /etc/network/interfaces, which always is.
+if_unknown() { LC_ALL=C ifquery "${IF}" 2>&1 | grep -q 'unknown interface'; }
+if command -v ifquery >/dev/null && if_unknown; then
+	if [ ! -e "/etc/network/interfaces.d/${IF}.conf" ]; then
 		printf 'iface %s inet dhcp\n' "${IF}" > "/etc/network/interfaces.d/${IF}.conf"
-	else
-		printf '\niface %s inet dhcp\n' "${IF}" >> /etc/network/interfaces
+		if_unknown && rm -f "/etc/network/interfaces.d/${IF}.conf"
 	fi
+	if_unknown && printf '\niface %s inet dhcp\n' "${IF}" >> /etc/network/interfaces
 fi
 
 # LAN switched off (WiFi settings / the app, /api/network/ethernet/power): the port stays down while this file
