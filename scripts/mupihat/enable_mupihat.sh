@@ -61,7 +61,9 @@ LOCK=/tmp/.mupiboxconfig.lock
 (
 	flock -w 15 9 || exit 1
 	TMP="${MUPIBOX_CONFIG}.mupihat-new"
-	if jq --arg c "${CARD}" '.mupibox.physicalDevice = $c' "${MUPIBOX_CONFIG}" > "${TMP}" && [ -s "${TMP}" ] &&
+	# (the MuPiHAT has the LED of its on/off switch on GPIO 13 - a box coming from an older version kept another pin, and
+	# the LED stayed dark. Not over a fan that is switched on and runs on that pin.)
+	if jq --arg c "${CARD}" '.mupibox.physicalDevice = $c | if (.fan.fan_active == true and (.fan.fan_gpio | tostring) == "13") then . else .shim.ledPin = "13" end' "${MUPIBOX_CONFIG}" > "${TMP}" && [ -s "${TMP}" ] &&
 		chown --reference="${MUPIBOX_CONFIG}" "${TMP}" && chmod --reference="${MUPIBOX_CONFIG}" "${TMP}" && mv -f "${TMP}" "${MUPIBOX_CONFIG}"; then
 		exit 0
 	fi

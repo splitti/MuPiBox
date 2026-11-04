@@ -45,7 +45,7 @@ Mit einem **OnOff SHIM** (Ein-/Aus-Taster mit Betriebs-LED) schaltest du die Box
 | Einstellung | Wirkung |
 | --- | --- |
 | **Verzögerung des Ausschalt-Tasters** | so lange hältst du den Taster, bis die Box ausgeht, 0 bis 5 Sekunden (nach der Installation 2). Gilt nach einem Neustart |
-| **LED-Pin (OnOffShim)** | der GPIO-Pin der LED (nach der Installation 13). Gilt nach einem Neustart |
+| **LED-Pin (OnOffShim)** | der GPIO-Pin der LED (nach der Installation 13; beim Einschalten des MuPiHAT wird er auf 13 gesetzt). Gilt nach einem Neustart |
 | **LED-Helligkeit normal** | Helligkeit im Betrieb, 0 bis 100 % |
 | **LED-Helligkeit gedimmt** | Helligkeit, wenn gedimmt wird, 0 bis 100 % |
 

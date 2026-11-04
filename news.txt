@@ -13,6 +13,7 @@
 <li id='linews' class='linews'>Add network: the chosen network is marked clearly, and the connected network can no longer be chosen there. A hidden saved network no longer reads "out of reach" when it only is not in the scan.</li>
 <li id='linews' class='linews'>A box set up over WiFi on DietPi 10 had no definition for the LAN port: a cable got no address and the LAN page stayed empty. The port is now defined at the start.</li>
 <li id='linews' class='linews'>After a quick change of network or access point the WiFi could disconnect itself again and again. The box now keeps a connection that is already back.</li>
+<li id='linews' class='linews'>Switching the MuPiHAT on now also sets the LED of its on/off switch to GPIO 13: a box coming from an older version kept another pin, and the LED stayed dark.</li>
 <li id='linews' class='linews'>Start of the box: the display could stay dark or show the console for about 2.5 minutes when the router sent the box's name in other letters (the box took it over a few seconds after the display had started, and the display lost its connection). The box now keeps its own name.</li>
 <li id='linews' class='linews'>When a WiFi network was added, its password ended up in the system log (in memory until the next restart). It no longer does.</li>
 <li id='linews' class='linews'>Removing a WiFi network or changing its password or band left the WiFi configuration, with the keys of all networks, readable by every user of the box. It now stays readable by root only, and a file left open earlier is closed at the next start.</li>
