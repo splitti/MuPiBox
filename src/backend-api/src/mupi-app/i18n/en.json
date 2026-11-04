@@ -3081,5 +3081,10 @@
  "Siehst du auf dem Display ein Bild?": "Do you see a picture on the display?",
  "Steht das Bild falsch herum? Unter Drehung lässt es sich jederzeit drehen.": "Is the picture the wrong way round? You can turn it under Rotation at any time.",
  "Wieder bei {}": "Back at {}",
- "Zurück zu {}": "Back to {}"
+ "Zurück zu {}": "Back to {}",
+ "Die Box ist gerade ohne Internet.": "The box has no internet right now.",
+ "Internet läuft hierüber": "Internet runs through this",
+ "nicht gefunden": "not found",
+ "{} dBm": "{} dBm",
+ "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "After adding a network, the box chooses its network anew and may lose the connection for a moment."
 }

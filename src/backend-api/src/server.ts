@@ -3331,6 +3331,7 @@ app.get('/api/network/ethernet', async (_req, res) => {
       currentIp,
       currentIpv6: ipv6AddressesOf(parsed.iface),
       currentGateway,
+      mac: fs.existsSync(`/sys/class/net/${parsed.iface}/address`) ? fs.readFileSync(`/sys/class/net/${parsed.iface}/address`, 'utf8').trim() : undefined,
       linkUp,
       // a cable plugged in (null: not known - the port is down)
       carrier,

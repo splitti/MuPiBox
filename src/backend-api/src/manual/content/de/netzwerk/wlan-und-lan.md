@@ -6,7 +6,7 @@
 
 ### Verbindung und gespeicherte Netze
 
-Die Seite **WLAN** zeigt die aktuelle **Verbindung** (mit IP-Adresse, unter **Details** auch Signal, Gateway, DNS und MAC) und die **gespeicherten Netze**. Die Box kennt beliebig viele Netze und verbindet sich mit dem, das sie findet.
+Die Seite **WLAN** zeigt die aktuelle **Verbindung** (mit IP-Adresse, unter **Details** auch Signal, Gateway, DNS und MAC) und die **gespeicherten Netze**. Steckt ein LAN-Kabel und ist verbunden, steht es mit eigener IP-Adresse und eigenen **Details** darunter. Die Box kennt beliebig viele Netze und verbindet sich mit dem, das sie findet.
 
 Bei jedem gespeicherten Netz gibt es **Adresse** (feste IP-Adresse, siehe unten), **Passwort** (das neue Passwort, wenn der Router eines bekommen hat) und **Entfernen**.
 
@@ -21,7 +21,7 @@ Bei jedem gespeicherten Netz gibt es **Adresse** (feste IP-Adresse, siehe unten)
 
 Ein Netz, das seinen Namen nicht zeigt, trägst du unter **Verstecktes Netz eingeben** ein: **Netzname (SSID)** und **Passwort** (leer bei einem offenen Netz), dann **Hinzufügen**.
 
-Die Box bleibt im aktuellen Netz und nimmt das neue, wenn es in Reichweite und besser ist. So bleibt sie auch bei einem Tippfehler erreichbar.
+Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren. Bei einem Tippfehler im Passwort kommt sie ins bisherige Netz zurück, versucht das neue aber immer wieder. Entferne es dann oder trage über **Passwort** das richtige ein.
 
 ### Feste IP-Adresse
 

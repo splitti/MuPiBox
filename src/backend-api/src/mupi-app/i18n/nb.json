@@ -3081,5 +3081,10 @@
  "Siehst du auf dem Display ein Bild?": "Ser du et bilde på skjermen?",
  "Steht das Bild falsch herum? Unter Drehung lässt es sich jederzeit drehen.": "Står bildet opp ned? Under Rotasjon kan du dreie det når som helst.",
  "Wieder bei {}": "Tilbake på {}",
- "Zurück zu {}": "Tilbake til {}"
+ "Zurück zu {}": "Tilbake til {}",
+ "Die Box ist gerade ohne Internet.": "Boksen er uten internett akkurat nå.",
+ "Internet läuft hierüber": "Internett går gjennom denne",
+ "nicht gefunden": "ikke funnet",
+ "{} dBm": "{} dBm",
+ "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "Etter at nettverket er lagt til, velger boksen nettverk på nytt og kan miste forbindelsen en kort stund."
 }

@@ -3081,5 +3081,10 @@
  "Siehst du auf dem Display ein Bild?": "Vês uma imagem no ecrã?",
  "Steht das Bild falsch herum? Unter Drehung lässt es sich jederzeit drehen.": "A imagem está ao contrário? Em Rotação podes rodá-la a qualquer momento.",
  "Wieder bei {}": "De volta a {}",
- "Zurück zu {}": "Voltar a {}"
+ "Zurück zu {}": "Voltar a {}",
+ "Die Box ist gerade ohne Internet.": "A caixa está sem internet neste momento.",
+ "Internet läuft hierüber": "A internet passa por aqui",
+ "nicht gefunden": "não encontrada",
+ "{} dBm": "{} dBm",
+ "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "Depois de adicionar, a caixa volta a escolher a rede e pode perder a ligação por um momento."
 }

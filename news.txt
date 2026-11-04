@@ -1,4 +1,20 @@
 <h3>DEV 5.0.14 - changes compared to 5.0.13</h3>
+<b>Updates</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Update of a box without a certificate (the 4.0.4 image) to stable 4.2.4: the admin interface was gone afterwards, the web server had SSL switched on and no certificate. The update now creates the simple certificate 4.2.4 expects.</li>
+<li id='linews' class='linews'>Update from the 4.0.4 image: the display no longer stays empty, it shows the installation picture.</li>
+<li id='linews' class='linews'>A version installed directly from a branch shows "DEV" in the app instead of "...".</li>
+</ul>
+<b>WiFi and LAN</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>The WiFi page showed the address of the cable as the address of the WiFi, and nothing else of the cable. WiFi and a connected cable now each have their own address and details.</li>
+<li id='linews' class='linews'>Add network: the chosen network is marked clearly, and the connected network can no longer be chosen there. A hidden saved network no longer reads "out of reach" when it only is not in the scan.</li>
+<li id='linews' class='linews'>A box set up over WiFi on DietPi 10 had no definition for the LAN port: a cable got no address and the LAN page stayed empty. The port is now defined at the start.</li>
+<li id='linews' class='linews'>After a quick change of network or access point the WiFi could disconnect itself again and again. The box now keeps a connection that is already back.</li>
+<li id='linews' class='linews'>When a WiFi network was added, its password ended up in the system log (in memory until the next restart). It no longer does.</li>
+</ul>
 <b>Support</b>
 </ul>
 <ul id='ulnews' class='ulnews'>

@@ -3081,5 +3081,10 @@
  "Siehst du auf dem Display ein Bild?": "Näetkö näytöllä kuvan?",
  "Steht das Bild falsch herum? Unter Drehung lässt es sich jederzeit drehen.": "Onko kuva väärin päin? Kohdassa Kierto voit kääntää sen milloin tahansa.",
  "Wieder bei {}": "Taas käytössä: {}",
- "Zurück zu {}": "Takaisin: {}"
+ "Zurück zu {}": "Takaisin: {}",
+ "Die Box ist gerade ohne Internet.": "Boksilla ei ole juuri nyt internetiä.",
+ "Internet läuft hierüber": "Internet kulkee tätä kautta",
+ "nicht gefunden": "ei löytynyt",
+ "{} dBm": "{} dBm",
+ "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "Lisäämisen jälkeen boksi valitsee verkon uudelleen ja yhteys voi katketa hetkeksi."
 }

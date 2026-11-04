@@ -3081,5 +3081,10 @@
  "Siehst du auf dem Display ein Bild?": "Видишь изображение на дисплее?",
  "Steht das Bild falsch herum? Unter Drehung lässt es sich jederzeit drehen.": "Изображение перевёрнуто? В разделе «Поворот» его можно повернуть в любой момент.",
  "Wieder bei {}": "Снова {}",
- "Zurück zu {}": "Возврат к {}"
+ "Zurück zu {}": "Возврат к {}",
+ "Die Box ist gerade ohne Internet.": "Сейчас у бокса нет интернета.",
+ "Internet läuft hierüber": "Интернет идёт через это подключение",
+ "nicht gefunden": "не найдена",
+ "{} dBm": "{} dBm",
+ "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "После добавления бокс заново выбирает сеть и может ненадолго потерять соединение."
 }

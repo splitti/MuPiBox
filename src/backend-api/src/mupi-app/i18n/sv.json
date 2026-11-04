@@ -3081,5 +3081,10 @@
  "Siehst du auf dem Display ein Bild?": "Ser du en bild på skärmen?",
  "Steht das Bild falsch herum? Unter Drehung lässt es sich jederzeit drehen.": "Är bilden upp och ner? Under Rotation kan du vrida den när som helst.",
  "Wieder bei {}": "Tillbaka på {}",
- "Zurück zu {}": "Tillbaka till {}"
+ "Zurück zu {}": "Tillbaka till {}",
+ "Die Box ist gerade ohne Internet.": "Boxen har inget internet just nu.",
+ "Internet läuft hierüber": "Internet går den här vägen",
+ "nicht gefunden": "hittades inte",
+ "{} dBm": "{} dBm",
+ "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "Efter att nätverket lagts till väljer boxen nätverk på nytt och kan tappa anslutningen en kort stund."
 }

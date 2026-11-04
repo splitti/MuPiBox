@@ -6,7 +6,7 @@
 
 ### Connection and saved networks
 
-The **Wi-Fi** page shows the current **connection** (with the IP address, under **Details** also signal, gateway, DNS and MAC) and the **saved networks**. The box knows any number of networks and connects to the one it finds.
+The **Wi-Fi** page shows the current **connection** (with the IP address, under **Details** also signal, gateway, DNS and MAC) and the **saved networks**. A LAN cable that is plugged in and connected is listed below it, with its own IP address and **Details**. The box knows any number of networks and connects to the one it finds.
 
 Each saved network has **Address** (fixed IP address, see below), **Password** (the new password if the router got one) and **Remove**.
 
@@ -21,7 +21,7 @@ Each saved network has **Address** (fixed IP address, see below), **Password** (
 
 A network that does not show its name is entered under **Enter hidden network**: **Network name (SSID)** and **Password** (empty for an open network), then **Add**.
 
-The box stays in the current network and takes the new one when it is in range and better. So it stays reachable even after a typing mistake.
+After adding a network, the box chooses its network anew and may lose the connection for a moment. With a mistyped password it comes back to the previous network but keeps trying the new one. Then remove it or enter the correct one under **Password**.
 
 ### Fixed IP address
 

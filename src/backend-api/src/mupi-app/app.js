@@ -317,9 +317,11 @@ async function loadVersion() {
 function versionBadge() {
   const v = state.ver
   const num = /\d+(?:\.\d+)+/.exec(v?.installed ?? '')?.[0]
+  // (a branch installed directly has no number: "DEV <branch> <date>")
+  const dev = !num && v?.installed?.startsWith('DEV')
   const sub = !v ? '' : v.update ? `Update: ${v.update.version}` : v.channel === 'dev' ? 'Entwicklerversion' : v.channel === 'beta' ? 'Beta' : 'Aktuell'
   const kind = v?.update ? ' new' : v?.channel === 'dev' ? ' dev' : ''
-  return `<button type="button" class="ver-badge${kind}" data-ver-badge data-go="updates" aria-label="${esc(`MuPiBox Classic ${num ?? ''} – Updates`)}"><span class="ed" translate="no">CLASSIC</span><span class="num"><b translate="no">${num ? `v${esc(num)}` : '…'}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span><span class="go">${icon('chevron', 16)}</span></button>`
+  return `<button type="button" class="ver-badge${kind}" data-ver-badge data-go="updates" aria-label="${esc(`MuPiBox Classic ${num ?? ''} – Updates`)}"><span class="ed" translate="no">CLASSIC</span><span class="num"><b translate="no">${num ? `v${esc(num)}` : dev ? 'DEV' : '…'}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span><span class="go">${icon('chevron', 16)}</span></button>`
 }
 
 // The MuPiBox lettering (the same in Classic and NG)
@@ -8326,8 +8328,11 @@ const net = { status: null, scan: null, scanning: false, saved: null, shares: nu
 /* WLAN */
 
 async function loadWlan() {
-  const [st, saved, fixed] = await Promise.all([api('/api/network'), api(`${API}/wifi/saved`), api(`${API}/wifi/static`)])
+  const [st, saved, fixed, wifi, lan] = await Promise.all([api('/api/network'), api(`${API}/wifi/saved`), api(`${API}/wifi/static`), api('/api/wifi/status'), api('/api/network/ethernet')])
   net.status = st.ok ? st.body : null
+  // (the WiFi and the cable as they are now: the address in network.json is the box's first one, with a cable that of the cable)
+  net.wifi = wifi.ok ? wifi.body : null
+  net.lan = lan.ok ? lan.body : null
   net.saved = saved.ok ? saved.body?.networks ?? [] : null
   // (the networks with a fixed address, by name - see eltern/wifi-static.ts; reverted: one the box took back to DHCP)
   net.fixed = fixed.ok ? fixed.body?.networks ?? {} : {}
@@ -8456,19 +8461,33 @@ const signalBars = (dbm) => {
 function wlanTop() {
   const n = net.status ?? {}
   const row = (k, v) => (v ? `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>` : '')
-  const dbm = Number.parseInt(String(n.wifisignal ?? ''), 10)
+  const live = net.wifi
+  const name = live ? live.ssid : n.wifi
+  const dbm = live ? live.signalDbm : Number.parseInt(String(n.wifisignal ?? ''), 10)
+  const wifiIpv6 = name && Array.isArray(n.ipv6) ? n.ipv6 : []
+  // the cable only when it is connected; the internet goes where the default route is
+  const cable = net.lan && !net.lan.off && net.lan.carrier === true ? net.lan : null
+  const viaCable = Boolean(cable?.currentGateway)
   const online = n.onlinestate === 'online'
-  const name = n.wifi || (n.interface?.startsWith('eth') ? 'LAN-Kabel' : '')
   const scan = net.scan ?? []
   const inRange = new Map(scan.map((w) => [w.ssid, w.signal_dbm]))
   const saved = new Set((net.saved ?? []).map((w) => w.ssid))
   const pick = net.pick
   return [
     `<section class="card" data-col="1"><div class="card-head"><h2>Verbindung</h2><button class="icon-btn soft" id="w-refresh" aria-label="Aktualisieren">${icon('sync', 18)}</button></div>
-      <div class="wifi-now"><span class="avatar">${icon('wifi', 18)}</span><span class="lbl"><b translate="no">${esc(name || 'Nicht verbunden')}</b>
-        <small>${Number.isFinite(dbm) ? `${signalBars(dbm)} Empfang ${signalWord(dbm)}` : ''}</small></span><span class="chip ${online ? 'ok' : 'warn'}">${online ? 'online' : 'offline'}</span></div>
-      <dl class="kv">${row('IP-Adresse', n.ip)}${(Array.isArray(n.ipv6) ? n.ipv6 : []).map((a) => row('IPv6-Adresse', a)).join('')}</dl>
-      <details class="more"><summary>Details</summary><dl class="kv">${row('Signal', n.wifisignal)}${row('Gateway', n.gateway)}${row('DNS', n.dns)}${row('MAC', n.mac)}</dl></details></section>`,
+      <div class="wifi-link"><div class="wifi-now"><span class="avatar">${icon('wifi', 18)}</span><span class="lbl"><b translate="no">${esc(name || 'Nicht verbunden')}</b>
+        <small>${Number.isFinite(dbm) ? `${signalBars(dbm)} Empfang ${signalWord(dbm)}` : ''}</small></span><span class="chip ${name ? 'ok' : 'warn'}">${name ? 'verbunden' : 'nicht verbunden'}</span></div>
+      <dl class="kv">${row('IP-Adresse', live?.ip)}${wifiIpv6.map((a) => row('IPv6-Adresse', a)).join('')}</dl>
+      <details class="more"><summary>Details</summary><dl class="kv">${row('Signal', Number.isFinite(dbm) ? `${dbm} dBm` : '')}${row('Gateway', live ? live.gateway : n.gateway)}${viaCable ? '' : row('DNS', n.dns)}${row('MAC', n.mac)}</dl></details></div>
+      ${
+        cable
+          ? `<div class="wifi-link"><div class="wifi-now"><span class="avatar">${icon('plug', 18)}</span><span class="lbl"><b>LAN-Kabel</b>
+        <small>${viaCable && online ? 'Internet läuft hierüber' : ''}</small></span><span class="chip ok">verbunden</span></div>
+      <dl class="kv">${row('IP-Adresse', cable.currentIp)}${(cable.currentIpv6 ?? []).map((a) => row('IPv6-Adresse', a)).join('')}</dl>
+      <details class="more"><summary>Details</summary><dl class="kv">${row('Gateway', cable.currentGateway)}${viaCable ? row('DNS', n.dns) : ''}${row('MAC', cable.mac)}</dl></details></div>`
+          : ''
+      }
+      ${n.onlinestate === 'offline' ? '<p class="help" style="margin:0">Die Box ist gerade ohne Internet.</p>' : ''}</section>`,
     `<section class="card" data-col="1"><h2>Gespeicherte Netze</h2>${
       net.reverted
         ? `<div class="note warn">${icon('info', 18)}<span>${esc(`Mit der festen Adresse hat die Box im Netz „${net.reverted.ssid}“ ihren Router nicht erreicht. Dort holt sie sich ihre Adresse jetzt wieder vom Router (DHCP).`)}</span><button class="btn sm" id="w-rev-ok">OK</button></div>`
@@ -8479,7 +8498,8 @@ function wlanTop() {
           ? `<div class="rows">${net.saved
               .map((w, i) => {
                 const sig = inRange.get(w.ssid)
-                const where = w.active ? 'verbunden' : sig !== undefined ? `in Reichweite · ${signalWord(sig)}` : net.scan ? 'nicht in Reichweite' : ''
+                // (a hidden network is never in the scan: "not found", not "out of reach")
+                const where = w.active ? 'verbunden' : sig !== undefined ? `in Reichweite · ${signalWord(sig)}` : net.scan ? 'nicht gefunden' : ''
                 const fixed = net.fixed?.[w.ssid]
                 // (the buttons in a group of their own: on a phone it goes below the name, see .wifi-net)
                 return `<div class="entry wifi-net"><span class="avatar">${icon('wifi', 16)}</span><span class="lbl"><b translate="no">${esc(w.ssid)}</b>${where ? `<small>${sig !== undefined && !w.active ? signalBars(sig) : ''} ${esc(where)}</small>` : ''}${fixed ? `<small>${esc(fixed.paused ? `feste Adresse ${fixed.ip} pausiert` : `feste Adresse ${fixed.ip}`)}</small>` : ''}</span>
@@ -8496,8 +8516,12 @@ function wlanTop() {
           ? net.scan.length
             ? `<div class="rows">${net.scan
                 .map(
-                  (w, i) =>
-                    `<button class="entry lib-row${pick === w.ssid ? ' picked' : ''}" data-w="${i}"><span class="avatar">${signalBars(w.signal_dbm)}</span><span class="lbl"><b translate="no">${esc(w.ssid)}</b><small>${esc(signalWord(w.signal_dbm))}${w.encrypted ? '' : ' · offen'}</small></span>${n.wifi === w.ssid ? '<span class="chip ok">verbunden</span>' : saved.has(w.ssid) ? '<span class="chip">gespeichert</span>' : ''}${w.encrypted ? `<span class="chev">${icon('lock', 16)}</span>` : ''}</button>`,
+                  (w, i) => {
+                    const inner = `<span class="avatar">${signalBars(w.signal_dbm)}</span><span class="lbl"><b translate="no">${esc(w.ssid)}</b><small>${esc(signalWord(w.signal_dbm))}${w.encrypted ? '' : ' · offen'}</small></span>`
+                    // (the connected network is nothing to add: no button, no password field)
+                    if (name === w.ssid) return `<div class="entry lib-row wifi-row">${inner}<span class="chip ok">verbunden</span></div>`
+                    return `<button class="entry lib-row wifi-row${pick === w.ssid ? ' picked' : ''}" data-w="${i}">${inner}${saved.has(w.ssid) ? '<span class="chip">gespeichert</span>' : ''}${w.encrypted ? `<span class="chev">${icon('lock', 16)}</span>` : ''}<span class="wifi-check">${icon('check', 14)}</span></button>`
+                  },
                 )
                 .join('')}</div>`
             : `<p class="help" style="margin:0">${net.scanFailed ? 'Die Suche hat nicht geklappt – bitte noch einmal.' : 'Keine Netze gefunden.'}</p>`
@@ -8511,7 +8535,7 @@ function wlanTop() {
         <div class="field"><label for="w-ssid">Netzname (SSID)</label><input class="input" id="w-ssid" maxlength="32" ${NO_PW_MANAGER}></div>
         <div class="field"><label for="w-pw2">Passwort</label><div class="input-wrap"><input class="input has-eye" id="w-pw2" type="password" maxlength="63" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div><small>8–63 Zeichen, leer bei einem offenen Netz.</small></div>
         <div class="btns"><button class="btn primary" id="w-add2">Hinzufügen</button></div></details>
-      <p class="help" style="margin:0">Die Box bleibt im aktuellen Netz und nimmt das neue, wenn es in Reichweite und besser ist.</p></section>`,
+      <p class="help" style="margin:0">Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.</p></section>`,
   ]
 }
 

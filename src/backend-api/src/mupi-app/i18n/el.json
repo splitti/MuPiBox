@@ -3081,5 +3081,10 @@
  "Siehst du auf dem Display ein Bild?": "Βλέπεις εικόνα στην οθόνη;",
  "Steht das Bild falsch herum? Unter Drehung lässt es sich jederzeit drehen.": "Είναι η εικόνα ανάποδα; Στην Περιστροφή μπορείς να τη γυρίσεις οποιαδήποτε στιγμή.",
  "Wieder bei {}": "Ξανά στο {}",
- "Zurück zu {}": "Επιστροφή στο {}"
+ "Zurück zu {}": "Επιστροφή στο {}",
+ "Die Box ist gerade ohne Internet.": "Το κουτί δεν έχει αυτή τη στιγμή internet.",
+ "Internet läuft hierüber": "Το internet περνά από εδώ",
+ "nicht gefunden": "δεν βρέθηκε",
+ "{} dBm": "{} dBm",
+ "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "Μετά την προσθήκη το κουτί επιλέγει ξανά δίκτυο και μπορεί να χάσει για λίγο τη σύνδεση."
 }

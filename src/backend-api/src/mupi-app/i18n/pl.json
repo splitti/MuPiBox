@@ -3081,5 +3081,10 @@
  "Siehst du auf dem Display ein Bild?": "Czy widzisz obraz na wyświetlaczu?",
  "Steht das Bild falsch herum? Unter Drehung lässt es sich jederzeit drehen.": "Obraz jest odwrócony? W sekcji Obrót możesz go obrócić w każdej chwili.",
  "Wieder bei {}": "Znów {}",
- "Zurück zu {}": "Powrót do {}"
+ "Zurück zu {}": "Powrót do {}",
+ "Die Box ist gerade ohne Internet.": "Box nie ma teraz internetu.",
+ "Internet läuft hierüber": "Internet idzie tędy",
+ "nicht gefunden": "nie znaleziono",
+ "{} dBm": "{} dBm",
+ "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "Po dodaniu box ponownie wybiera sieć i może na chwilę stracić połączenie."
 }
