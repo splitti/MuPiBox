@@ -18,8 +18,11 @@ restart_network() {
 	sudo wpa_cli -i $(/usr/local/bin/mupibox/mupi_wifi_iface.sh) reconfigure
 }
 
-# (a file left readable by everyone by an earlier save_config: it holds the key of every network)
+# The configuration holds the key of every network. A file left readable by everyone by an earlier save_config goes back
+# to root only; the folder keeps others out while save_config writes it (its temporary file is readable by everyone, and
+# chmod afterwards does not help whoever has opened it). wpa_supplicant and its scripts run as root.
 sudo chmod 600 "${WPACONF}" 2>/dev/null
+sudo chmod 700 "$(dirname "${WPACONF}")" 2>/dev/null
 
 while true
 do

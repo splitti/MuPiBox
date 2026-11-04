@@ -3036,7 +3036,8 @@ app.get('/api/wifi/status', async (_req, res) => {
     res.json({
       interface: wifi,
       state,
-      ssid: connected ? field('ssid') : undefined,
+      // (wpa_cli prints a name with an umlaut as \xNN per byte)
+      ssid: connected ? decodeWpaSsid(field('ssid') ?? '') : undefined,
       band: connected && frequency ? wifiBandOf(Number.parseInt(frequency, 10)) : undefined,
       ip: connected ? field('ip_address') : undefined,
       gateway: connected ? gateway : undefined,
