@@ -77,7 +77,8 @@ do
 			# by hand. So: check the length first, then the exit code and the shape of the output.
 			if [ ${#PSK} -lt 8 ] || [ ${#PSK} -gt 63 ]; then
 				echo "add_wifi.sh: password for '${SSID}' rejected (must be 8..63 characters)" >&2
-			elif ! WIFI_RESULT=$(sudo wpa_passphrase "${SSID}" "${PSK}") || ! grep -q '^network={' <<< "${WIFI_RESULT}"; then
+			# (the password over stdin: sudo writes its command line to the system log)
+			elif ! WIFI_RESULT=$(sudo wpa_passphrase "${SSID}" <<< "${PSK}") || ! grep -q '^network={' <<< "${WIFI_RESULT}"; then
 				echo "add_wifi.sh: wpa_passphrase failed for '${SSID}', nothing written" >&2
 			else
 				# drop the plain-text "#psk=" comment, add scan_ssid=1 after the ssid line
