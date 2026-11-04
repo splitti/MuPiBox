@@ -6,7 +6,7 @@
 
 ### Verbindung und gespeicherte Netze
 
-Die Seite **WLAN** zeigt die aktuelle **Verbindung** (mit IP-Adresse, unter **Details** auch Signal, Gateway, DNS und MAC) und die **gespeicherten Netze**. Steckt ein LAN-Kabel und ist verbunden, steht es mit eigener IP-Adresse und eigenen **Details** darunter. Die Box kennt beliebig viele Netze und verbindet sich mit dem, das sie findet.
+Die Seite **WLAN** zeigt die aktuelle **Verbindung** (mit IP-Adresse, unter **Details** auch Signal, Gateway, DNS und MAC) und die **gespeicherten Netze**. Die Box kennt beliebig viele Netze und verbindet sich mit dem, das sie findet.
 
 Bei jedem gespeicherten Netz gibt es **Adresse** (feste IP-Adresse, siehe unten), **Passwort** (das neue Passwort, wenn der Router eines bekommen hat) und **Entfernen**.
 
@@ -48,7 +48,7 @@ Das eingebaute WLAN lässt sich ausschalten (**Onboard-WLAN an**). Wieder einsch
 Die Seite **LAN** gehört dem Kabelanschluss:
 
 - **LAN an** schaltet ihn ein oder aus. Mit Kabel hat LAN Vorrang vor dem WLAN,
-- die Seite zeigt, ob ein Kabel steckt, und die aktuelle Adresse,
+- **Verbindung** zeigt, ob ein Kabel verbunden ist, und die aktuelle IP-Adresse, unter **Details** auch Gateway, DNS und MAC,
 - **Adresse beziehen**: **DHCP** oder **Statisch**,
 - bei **Statisch** trägst du **IP-Adresse** und **Netzmaske** ein. **Router (optional)** und **DNS-Server (optional)** darfst du leer lassen. Ohne Router bleibt das Internet beim WLAN. Das ist praktisch, wenn ein PC direkt an die Box angeschlossen ist,
 - **Speichern** übernimmt die Werte, **LAN neu starten** startet den Anschluss neu,

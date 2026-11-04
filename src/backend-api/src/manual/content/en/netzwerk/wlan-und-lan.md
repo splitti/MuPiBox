@@ -6,7 +6,7 @@
 
 ### Connection and saved networks
 
-The **Wi-Fi** page shows the current **connection** (with the IP address, under **Details** also signal, gateway, DNS and MAC) and the **saved networks**. A LAN cable that is plugged in and connected is listed below it, with its own IP address and **Details**. The box knows any number of networks and connects to the one it finds.
+The **Wi-Fi** page shows the current **connection** (with the IP address, under **Details** also signal, gateway, DNS and MAC) and the **saved networks**. The box knows any number of networks and connects to the one it finds.
 
 Each saved network has **Address** (fixed IP address, see below), **Password** (the new password if the router got one) and **Remove**.
 
@@ -48,7 +48,7 @@ The built-in Wi-Fi can be switched off (**Onboard Wi-Fi on**). It can also be sw
 The **LAN** page belongs to the cable connection:
 
 - **LAN on** switches it on or off. With a cable, LAN has priority over the Wi-Fi,
-- the page shows whether a cable is plugged in, and the current address,
+- **Connection** shows whether a cable is connected and the current IP address, under **Details** also gateway, DNS and MAC,
 - **Obtain address**: **DHCP** or **Static**,
 - with **Static** you enter **IP address** and **Subnet mask**. **Router (optional)** and **DNS server (optional)** may stay empty. Without a router the internet stays with the Wi-Fi. That is handy when a PC is connected directly to the box,
 - **Save** applies the values, **Restart LAN** restarts the connection,

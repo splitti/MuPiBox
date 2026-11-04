@@ -8328,11 +8328,10 @@ const net = { status: null, scan: null, scanning: false, saved: null, shares: nu
 /* WLAN */
 
 async function loadWlan() {
-  const [st, saved, fixed, wifi, lan] = await Promise.all([api('/api/network'), api(`${API}/wifi/saved`), api(`${API}/wifi/static`), api('/api/wifi/status'), api('/api/network/ethernet')])
+  const [st, saved, fixed, wifi] = await Promise.all([api('/api/network'), api(`${API}/wifi/saved`), api(`${API}/wifi/static`), api('/api/wifi/status')])
   net.status = st.ok ? st.body : null
-  // (the WiFi and the cable as they are now: the address in network.json is the box's first one, with a cable that of the cable)
+  // (the WiFi as it is now: the address in network.json is the box's first one, with a cable that of the cable)
   net.wifi = wifi.ok ? wifi.body : null
-  net.lan = lan.ok ? lan.body : null
   net.saved = saved.ok ? saved.body?.networks ?? [] : null
   // (the networks with a fixed address, by name - see eltern/wifi-static.ts; reverted: one the box took back to DHCP)
   net.fixed = fixed.ok ? fixed.body?.networks ?? {} : {}
@@ -8465,10 +8464,6 @@ function wlanTop() {
   const name = live ? live.ssid : n.wifi
   const dbm = live ? live.signalDbm : Number.parseInt(String(n.wifisignal ?? ''), 10)
   const wifiIpv6 = name && Array.isArray(n.ipv6) ? n.ipv6 : []
-  // the cable only when it is connected; the internet goes where the default route is
-  const cable = net.lan && !net.lan.off && net.lan.carrier === true ? net.lan : null
-  const viaCable = Boolean(cable?.currentGateway)
-  const online = n.onlinestate === 'online'
   const scan = net.scan ?? []
   const inRange = new Map(scan.map((w) => [w.ssid, w.signal_dbm]))
   const saved = new Set((net.saved ?? []).map((w) => w.ssid))
@@ -8478,15 +8473,7 @@ function wlanTop() {
       <div class="wifi-link"><div class="wifi-now"><span class="avatar">${icon('wifi', 18)}</span><span class="lbl"><b translate="no">${esc(name || 'Nicht verbunden')}</b>
         <small>${Number.isFinite(dbm) ? `${signalBars(dbm)} Empfang ${signalWord(dbm)}` : ''}</small></span><span class="chip ${name ? 'ok' : 'warn'}">${name ? 'verbunden' : 'nicht verbunden'}</span></div>
       <dl class="kv">${row('IP-Adresse', live?.ip)}${wifiIpv6.map((a) => row('IPv6-Adresse', a)).join('')}</dl>
-      <details class="more"><summary>Details</summary><dl class="kv">${row('Signal', Number.isFinite(dbm) ? `${dbm} dBm` : '')}${row('Gateway', live ? live.gateway : n.gateway)}${viaCable ? '' : row('DNS', n.dns)}${row('MAC', n.mac)}</dl></details></div>
-      ${
-        cable
-          ? `<div class="wifi-link"><div class="wifi-now"><span class="avatar">${icon('plug', 18)}</span><span class="lbl"><b>LAN-Kabel</b>
-        <small>${viaCable && online ? 'Internet läuft hierüber' : ''}</small></span><span class="chip ok">verbunden</span></div>
-      <dl class="kv">${row('IP-Adresse', cable.currentIp)}${(cable.currentIpv6 ?? []).map((a) => row('IPv6-Adresse', a)).join('')}</dl>
-      <details class="more"><summary>Details</summary><dl class="kv">${row('Gateway', cable.currentGateway)}${viaCable ? row('DNS', n.dns) : ''}${row('MAC', cable.mac)}</dl></details></div>`
-          : ''
-      }
+      <details class="more"><summary>Details</summary><dl class="kv">${row('Signal', Number.isFinite(dbm) ? `${dbm} dBm` : '')}${row('Gateway', live ? live.gateway : n.gateway)}${row('DNS', n.dns)}${row('MAC', n.mac)}</dl></details></div>
       ${n.onlinestate === 'offline' ? '<p class="help" style="margin:0">Die Box ist gerade ohne Internet.</p>' : ''}</section>`,
     `<section class="card" data-col="1"><h2>Gespeicherte Netze</h2>${
       net.reverted
@@ -10309,15 +10296,34 @@ function dhcpItems(which) {
   ]
 }
 
-// Netzwerk › LAN: the cable
+// Netzwerk › LAN: the connection as on the WLAN page (wlanTop). The internet goes where the default route is.
+function lanTop() {
+  const l = nopt.lan
+  if (!l) return []
+  const n = net.status ?? {}
+  const row = (k, v) => (v ? `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>` : '')
+  const connected = !l.off && l.carrier === true
+  const note = l.off ? 'Anschluss ausgeschaltet' : l.carrier === false ? 'kein Kabel' : connected && l.currentGateway && n.onlinestate === 'online' ? 'Internet läuft hierüber' : ''
+  return [
+    `<section class="card" data-col="1"><div class="card-head"><h2>Verbindung</h2><button class="icon-btn soft" id="lan-refresh" aria-label="Aktualisieren">${icon('sync', 18)}</button></div>
+      <div class="wifi-link"><div class="wifi-now"><span class="avatar">${icon('plug', 18)}</span><span class="lbl"><b>LAN-Kabel</b>
+        <small>${esc(note)}</small></span><span class="chip ${connected ? 'ok' : 'warn'}">${connected ? 'verbunden' : 'nicht verbunden'}</span></div>
+      <dl class="kv">${row('IP-Adresse', l.currentIp)}${(l.currentIpv6 ?? []).map((a) => row('IPv6-Adresse', a)).join('')}</dl>
+      <details class="more"><summary>Details</summary><dl class="kv">${row('Gateway', l.currentGateway)}${connected ? row('DNS', n.dns) : ''}${row('MAC', l.mac)}</dl></details></div></section>`,
+  ]
+}
+
+// (also the box's state: internet, DNS)
+async function loadLan() {
+  const [st] = await Promise.all([api('/api/network'), loadNetOptions()])
+  net.status = st.ok ? st.body : null
+}
+
 function lanSections() {
   const l = nopt.lan
   if (!l) return [{ title: 'LAN', items: [{ type: 'note', text: 'Diese Box hat keinen LAN-Anschluss, oder er ließ sich nicht lesen.' }] }]
-  const cable = l.off ? 'Anschluss ausgeschaltet' : l.carrier === true ? 'verbunden' : l.carrier === false ? 'kein Kabel' : '–'
-  const now = [['Kabel', cable], ['Adresse', l.currentIp ?? '–'], ...(l.currentIpv6 ?? []).map((a) => ['IPv6-Adresse', a]), ['Router', l.currentGateway ?? '–']]
   const lan = [
     { type: 'toggle', label: 'LAN an', key: 'lanOn', help: l.off ? 'Ausgeschaltet – bleibt aus, bis es hier wieder eingeschaltet wird.' : 'Mit Kabel hat LAN Vorrang vor dem WLAN.' },
-    { type: 'kv', rows: now },
     { type: 'seg', label: 'Adresse beziehen', key: 'lanMode', options: ['DHCP', 'Statisch'] },
   ]
   if (state.values.get('lanMode') === 'Statisch') {
@@ -10474,7 +10480,22 @@ const wlanCtrl = {
 }
 
 // Netzwerk › LAN: the cable - on, its address now, DHCP or a fixed one
-const lanCtrl = { load: loadNetOptions, sections: lanSections, change: changeNetOption, act: netOptionsCtrl.act }
+const lanCtrl = {
+  load: loadLan,
+  top: lanTop,
+  sections: lanSections,
+  mount(root, page) {
+    const refresh = $('#lan-refresh', root)
+    if (!refresh) return
+    refresh.onclick = async () => {
+      await loadLan().catch(() => undefined)
+      toast('Aktualisiert')
+      if (currentPage()?.id === page.id) renderPage(page, false)
+    }
+  },
+  change: changeNetOption,
+  act: netOptionsCtrl.act,
+}
 
 /* Experten */
 
