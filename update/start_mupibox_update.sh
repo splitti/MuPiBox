@@ -306,8 +306,9 @@ ARCH=$(uname -m) >&3 2>&3
 # maintenance screen of the box (boot screen scene, text in the box's language); the old picture without one
 if [ -x /usr/local/bin/mupibox/maintenance_screen.sh ]; then
 	/usr/local/bin/mupibox/maintenance_screen.sh update >&3 2>&3
-else
-	/usr/bin/fbv /home/dietpi/MuPiBox/sysmedia/images/installation.jpg & >&3 2>&3
+elif [ -s /home/dietpi/MuPiBox/sysmedia/images/installation.jpg ]; then
+	# (on the display's terminal: fbv shows nothing without one, and the handed-over update has none)
+	/usr/bin/fbv /home/dietpi/MuPiBox/sysmedia/images/installation.jpg </dev/tty1 >/dev/tty1 2>&3 &
 fi
 
 if [ -z "$BRANCH" ]; then
@@ -652,8 +653,7 @@ rm -f /tmp/mupibox-update-failed
 	[ -d "${MUPI_SRC}" ] || fail_update "Expected source directory ${MUPI_SRC} not found after unzip"
 	[ -s "${MUPI_SRC}/bin/nodejs/deploy.zip" ] || fail_update "Backend deploy.zip missing or empty in update package"
 	# a box without the maintenance screen and without the old picture (the 4.0.4 image) showed only an empty screen so far
-	if [ ! -x /usr/local/bin/mupibox/maintenance_screen.sh ] && [ -s "${MUPI_SRC}/media/images/installation.jpg" ]; then
-		# (on the display's terminal: fbv shows nothing without one, and the handed-over update has none)
+	if [ ! -x /usr/local/bin/mupibox/maintenance_screen.sh ] && [ ! -s /home/dietpi/MuPiBox/sysmedia/images/installation.jpg ] && [ -s "${MUPI_SRC}/media/images/installation.jpg" ]; then
 		/usr/bin/fbv "${MUPI_SRC}/media/images/installation.jpg" </dev/tty1 >/dev/tty1 2>&3 &
 	fi
 	# a version with the app (its source in the package) must have it in deploy.zip too - else the box is left without it
@@ -807,7 +807,10 @@ rm -f /tmp/mupibox-update-failed
 	mv ${MUPI_SRC}/themes/*.css /home/dietpi/MuPiBox/themes/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/chromium-autostart.sh /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	# full colours in the display on a Pi with 2 GB or more: takes DietPi's "low-end device mode" out again (see the file)
-	mkdir -p /etc/chromium.d && tr -d '\r' < ${MUPI_SRC}/config/chromium/zz-mupibox > /etc/chromium.d/zz-mupibox && chmod 644 /etc/chromium.d/zz-mupibox
+	# (not in stable 4.x)
+	if [ -f ${MUPI_SRC}/config/chromium/zz-mupibox ]; then
+		mkdir -p /etc/chromium.d && tr -d '\r' < ${MUPI_SRC}/config/chromium/zz-mupibox > /etc/chromium.d/zz-mupibox && chmod 644 /etc/chromium.d/zz-mupibox
+	fi
 	mv ${MUPI_SRC}/scripts/mupibox/* /usr/local/bin/mupibox/ >&3 2>&3
 	# (handed over by the admin interface of 4.x: the new restart.sh is held too - see hold_restart at the top)
 	if [ -n "${MUPIBOX_UPDATE_HANDED_OVER:-}" ]; then
