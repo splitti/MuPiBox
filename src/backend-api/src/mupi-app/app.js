@@ -8230,6 +8230,12 @@ async function loadHat() {
   for (const [key, field] of PROFILE_KEYS) state.values.set(key, p[field] != null ? String(p[field]) : '')
 }
 
+// The battery's size in the profile's name, as the box reads it (mupihat_bq25792.py): "ENERpower 2S3P 15.000mAh" = 15000
+function capacityOfName(name) {
+  const m = /(\d+)[.,]?(\d{3})\s*mAh/.exec(String(name ?? ''))
+  return m ? `${m[1]}${m[2]}` : ''
+}
+
 // What the battery reads now, under the choice of the profile: "7,85 V · 82 % · lädt"
 function hatNowLine() {
   const h = hw.hat
@@ -12060,7 +12066,14 @@ const CONTROLLERS = {
           col: 1,
           items: [
             it('vreg', { label: 'Ladeschluss', sub: 'VREG', unit: 'mV', help: 'Leer = Standard des Lade-Chips. Bei zwei Zellen in Reihe höchstens 8400 mV (4,2 V je Zelle) – höher schadet dem Akku.' }),
-            it('capacity', { label: 'Kapazität', sub: 'für die Zeit bis voll', unit: 'mAh', help: 'Die Größe des Akkus. Leer = die Größe aus dem Namen des Profils, sonst gibt es keine Zeit bis voll.' }),
+            // (empty: the size the box reads from the profile's name, shown in grey - not saved)
+            it('capacity', {
+              label: 'Kapazität',
+              sub: 'für die Zeit bis voll',
+              unit: 'mAh',
+              placeholder: capacityOfName(hw.data.mupihat.battery),
+              help: capacityOfName(hw.data.mupihat.battery) ? 'Aus dem Namen des Profils. Nur eintragen, wenn dein Akku anders ist.' : 'Die Größe des Akkus. Ohne sie gibt es keine Zeit bis voll.',
+            }),
           ],
         },
         { bar: true, items: [{ type: 'buttons', buttons: [['Profil speichern', 'primary', 'toast:Gespeichert']] }] },

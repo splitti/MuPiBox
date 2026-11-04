@@ -3086,5 +3086,7 @@
  "Internet läuft hierüber": "İnternet buradan geçiyor",
  "nicht gefunden": "bulunamadı",
  "{} dBm": "{} dBm",
- "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "Ekledikten sonra kutu ağını yeniden seçer ve bağlantı kısa süreliğine kesilebilir."
+ "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "Ekledikten sonra kutu ağını yeniden seçer ve bağlantı kısa süreliğine kesilebilir.",
+ "Aus dem Namen des Profils. Nur eintragen, wenn dein Akku anders ist.": "Profil adından alınır. Yalnızca piliniz farklıysa girin.",
+ "Die Größe des Akkus. Ohne sie gibt es keine Zeit bis voll.": "Pilin boyutu. Bu olmadan dolana kadarki süre gösterilmez."
 }

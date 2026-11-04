@@ -3086,5 +3086,7 @@
  "Internet läuft hierüber": "Internet runs through this",
  "nicht gefunden": "not found",
  "{} dBm": "{} dBm",
- "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "After adding a network, the box chooses its network anew and may lose the connection for a moment."
+ "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "After adding a network, the box chooses its network anew and may lose the connection for a moment.",
+ "Aus dem Namen des Profils. Nur eintragen, wenn dein Akku anders ist.": "From the profile's name. Only enter a value if your battery differs.",
+ "Die Größe des Akkus. Ohne sie gibt es keine Zeit bis voll.": "The size of the battery. Without it there is no time until full."
 }

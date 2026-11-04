@@ -3086,5 +3086,7 @@
  "Internet läuft hierüber": "Internet jde tudy",
  "nicht gefunden": "nenalezeno",
  "{} dBm": "{} dBm",
- "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "Po přidání box znovu vybere síť a může na chvíli ztratit připojení."
+ "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "Po přidání box znovu vybere síť a může na chvíli ztratit připojení.",
+ "Aus dem Namen des Profils. Nur eintragen, wenn dein Akku anders ist.": "Z názvu profilu. Vyplňte jen tehdy, pokud je vaše baterie jiná.",
+ "Die Größe des Akkus. Ohne sie gibt es keine Zeit bis voll.": "Velikost baterie. Bez ní se nezobrazí čas do plného nabití."
 }

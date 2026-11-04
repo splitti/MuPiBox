@@ -3086,5 +3086,7 @@
  "Internet läuft hierüber": "Интернет идёт через это подключение",
  "nicht gefunden": "не найдена",
  "{} dBm": "{} dBm",
- "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "После добавления бокс заново выбирает сеть и может ненадолго потерять соединение."
+ "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "После добавления бокс заново выбирает сеть и может ненадолго потерять соединение.",
+ "Aus dem Namen des Profils. Nur eintragen, wenn dein Akku anders ist.": "Из названия профиля. Указывайте, только если ваш аккумулятор другой.",
+ "Die Größe des Akkus. Ohne sie gibt es keine Zeit bis voll.": "Ёмкость аккумулятора. Без неё время до полной зарядки не показывается."
 }

@@ -3086,5 +3086,7 @@
  "Internet läuft hierüber": "Internet går den här vägen",
  "nicht gefunden": "hittades inte",
  "{} dBm": "{} dBm",
- "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "Efter att nätverket lagts till väljer boxen nätverk på nytt och kan tappa anslutningen en kort stund."
+ "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "Efter att nätverket lagts till väljer boxen nätverk på nytt och kan tappa anslutningen en kort stund.",
+ "Aus dem Namen des Profils. Nur eintragen, wenn dein Akku anders ist.": "Från profilens namn. Fyll bara i om ditt batteri är annorlunda.",
+ "Die Größe des Akkus. Ohne sie gibt es keine Zeit bis voll.": "Batteriets storlek. Utan den visas ingen tid till fulladdat."
 }

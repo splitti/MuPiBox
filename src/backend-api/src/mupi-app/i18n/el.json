@@ -3086,5 +3086,7 @@
  "Internet läuft hierüber": "Το internet περνά από εδώ",
  "nicht gefunden": "δεν βρέθηκε",
  "{} dBm": "{} dBm",
- "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "Μετά την προσθήκη το κουτί επιλέγει ξανά δίκτυο και μπορεί να χάσει για λίγο τη σύνδεση."
+ "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "Μετά την προσθήκη το κουτί επιλέγει ξανά δίκτυο και μπορεί να χάσει για λίγο τη σύνδεση.",
+ "Aus dem Namen des Profils. Nur eintragen, wenn dein Akku anders ist.": "Από το όνομα του προφίλ. Συμπληρώστε το μόνο αν η μπαταρία σας διαφέρει.",
+ "Die Größe des Akkus. Ohne sie gibt es keine Zeit bis voll.": "Το μέγεθος της μπαταρίας. Χωρίς αυτό δεν εμφανίζεται χρόνος έως την πλήρη φόρτιση."
 }

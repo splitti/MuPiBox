@@ -3086,5 +3086,7 @@
  "Internet läuft hierüber": "Internet kulkee tätä kautta",
  "nicht gefunden": "ei löytynyt",
  "{} dBm": "{} dBm",
- "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "Lisäämisen jälkeen boksi valitsee verkon uudelleen ja yhteys voi katketa hetkeksi."
+ "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "Lisäämisen jälkeen boksi valitsee verkon uudelleen ja yhteys voi katketa hetkeksi.",
+ "Aus dem Namen des Profils. Nur eintragen, wenn dein Akku anders ist.": "Profiilin nimestä. Täytä vain, jos akkusi on erilainen.",
+ "Die Größe des Akkus. Ohne sie gibt es keine Zeit bis voll.": "Akun koko. Ilman sitä aikaa täyteen ei näytetä."
 }
