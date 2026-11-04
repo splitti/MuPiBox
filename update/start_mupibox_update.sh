@@ -109,7 +109,9 @@ if [ -z "${MUPIBOX_UPDATE_HANDED_OVER:-}" ] && [ ! -t 1 ] && started_by_php; the
 			put_atomic ${HD}/restart.sh.held ${HELD}
 		fi
 	}
-	if ! curl -fsSL --retry 3 --retry-delay 3 -m 120 -o ${HD}/start_mupibox_update.sh https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh \
+	# (MUPIBOX_UPDATE_SCRIPT_URL: another copy of this script, to test one before it is on main: without it the handed-over
+	# run was always the one from main, whatever the admin interface had started)
+	if ! curl -fsSL --retry 3 --retry-delay 3 -m 120 -o ${HD}/start_mupibox_update.sh "${MUPIBOX_UPDATE_SCRIPT_URL:-https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh}" \
 	   || ! bash -n ${HD}/start_mupibox_update.sh; then
 		unhold_mine
 		echo "Error: the update script could not be downloaded - nothing was changed. Please try again."
@@ -651,7 +653,8 @@ rm -f /tmp/mupibox-update-failed
 	[ -s "${MUPI_SRC}/bin/nodejs/deploy.zip" ] || fail_update "Backend deploy.zip missing or empty in update package"
 	# a box without the maintenance screen and without the old picture (the 4.0.4 image) showed only an empty screen so far
 	if [ ! -x /usr/local/bin/mupibox/maintenance_screen.sh ] && [ -s "${MUPI_SRC}/media/images/installation.jpg" ]; then
-		/usr/bin/fbv "${MUPI_SRC}/media/images/installation.jpg" >&3 2>&3 &
+		# (on the display's terminal: fbv shows nothing without one, and the handed-over update has none)
+		/usr/bin/fbv "${MUPI_SRC}/media/images/installation.jpg" </dev/tty1 >/dev/tty1 2>&3 &
 	fi
 	# a version with the app (its source in the package) must have it in deploy.zip too - else the box is left without it
 	if [ -d "${MUPI_SRC}/src/backend-api/src/mupi-app" ]; then
