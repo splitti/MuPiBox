@@ -32,3 +32,16 @@ export function newestFirst<T extends { id?: string; release_date?: string }>(li
     .sort((x, y) => y.at - x.at)
     .map((x) => x.t)
 }
+
+/**
+ * With a choice of episodes only a chosen one is "new": the tile's dot is not for one the box does not show. Not in the
+ * offline view (only the kept episodes, the choice counts on all of the feed's).
+ */
+export function newOnlyOnChosen<T extends { id?: string; release_date?: string; episodeNew?: boolean; offlineView?: boolean }>(
+  episodes: T[],
+  pick: string | undefined | null,
+): void {
+  if (!pick || episodes.some((e) => e.offlineView)) return
+  const chosen = new Set(pickEpisodes(newestFirst(episodes), pick))
+  for (const e of episodes) if (!chosen.has(e)) e.episodeNew = false
+}

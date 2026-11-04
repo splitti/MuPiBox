@@ -53,6 +53,7 @@ import { Mupihat } from './mupihat'
 import type { Network } from './network'
 import { NetworkService } from './network.service'
 import { RssFeedService } from './rssfeed.service'
+import { newOnlyOnChosen } from './episode-pick'
 import { SpotifyService } from './spotify.service'
 import { type ExtraDataMedia, localizeCoverUrl } from './utils'
 
@@ -127,7 +128,9 @@ function fillFailedRows(media: Media[], kept: Media[] | undefined): Media[] {
         ? { ...rssSettings(m), ...(m.artist ? { artist: m.artist } : {}), ...(m.artistcover ? { artistcover: m.artistcover } : {}) }
         : {}
     // (with the row: the list made now is the kept one of the next time)
-    return fromKept.map((k) => ({ ...k, ...place, category: m.category, index: m.index, row: m.row }))
+    const standIns = fromKept.map((k) => ({ ...k, ...place, category: m.category, index: m.index, row: m.row }))
+    if (m.type === 'rss') newOnlyOnChosen(standIns, m.episodePick)
+    return standIns
   })
 }
 import type { WLAN } from './wlan'

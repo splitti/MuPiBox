@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core'
 import type { Observable } from 'rxjs'
 import { map, mergeAll, toArray } from 'rxjs/operators'
 import { environment } from 'src/environments/environment'
-import { newestFirst, pickEpisodes } from './episode-pick'
+import { newOnlyOnChosen } from './episode-pick'
 import type { CategoryType, Media } from './media'
 import type { RssFeed } from './rssfeed'
 import { ExtraDataMedia, Utils } from './utils'
@@ -54,9 +54,7 @@ export class RssFeedService {
       toArray(),
       // (with a choice of episodes only a chosen one is "new" - the tile's dot is not for one the box does not show)
       map((episodes) => {
-        if (!extraDataSource?.episodePick || episodes.some((e) => e.offlineView)) return episodes
-        const chosen = new Set(pickEpisodes(newestFirst(episodes), extraDataSource.episodePick))
-        for (const e of episodes) if (!chosen.has(e)) e.episodeNew = false
+        newOnlyOnChosen(episodes, extraDataSource?.episodePick)
         return episodes
       }),
       // (a failed fetch is an error here: the list knows then that it lacks this feed, see MediaService.rssEpisodes)
