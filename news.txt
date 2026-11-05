@@ -6,6 +6,11 @@
 <li id='linews' class='linews'>Update from the 4.0.4 image: the display no longer stays empty, it shows the installation picture.</li>
 <li id='linews' class='linews'>A version installed directly from a branch shows "DEV" in the app instead of "...".</li>
 </ul>
+<b>Display</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>A turned display with KMS (Touch Display 2, for example) shows the start, maintenance and goodbye pictures again: the picture program ended with an error there, and the console stayed on the screen.</li>
+</ul>
 <b>Telegram</b>
 </ul>
 <ul id='ulnews' class='ulnews'>

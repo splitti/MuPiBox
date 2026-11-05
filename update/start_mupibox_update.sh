@@ -652,9 +652,15 @@ rm -f /tmp/mupibox-update-failed
 	# clean abort instead of a half-installed box.
 	[ -d "${MUPI_SRC}" ] || fail_update "Expected source directory ${MUPI_SRC} not found after unzip"
 	[ -s "${MUPI_SRC}/bin/nodejs/deploy.zip" ] || fail_update "Backend deploy.zip missing or empty in update package"
-	# a box without the maintenance screen and without the old picture (the 4.0.4 image) showed only an empty screen so far
-	if [ ! -x /usr/local/bin/mupibox/maintenance_screen.sh ] && [ ! -s /home/dietpi/MuPiBox/sysmedia/images/installation.jpg ] && [ -s "${MUPI_SRC}/media/images/installation.jpg" ]; then
-		/usr/bin/fbv "${MUPI_SRC}/media/images/installation.jpg" </dev/tty1 >/dev/tty1 2>&3 &
+	# a box without the maintenance screen (4.x, it has at most the old picture, the 4.0.4 image not even that): the new one
+	# from the package, as soon as it is there; the old picture only from a package without it (stable 4.2.4)
+	if [ ! -x /usr/local/bin/mupibox/maintenance_screen.sh ]; then
+		if [ -s "${MUPI_SRC}/media/bootscreens/prerendered/en/maintenance-karte-update.png" ]; then
+			pkill -x fbv >&3 2>&3
+			/usr/bin/fbv "${MUPI_SRC}/media/bootscreens/prerendered/en/maintenance-karte-update.png" </dev/tty1 >/dev/tty1 2>&3 &
+		elif [ ! -s /home/dietpi/MuPiBox/sysmedia/images/installation.jpg ] && [ -s "${MUPI_SRC}/media/images/installation.jpg" ]; then
+			/usr/bin/fbv "${MUPI_SRC}/media/images/installation.jpg" </dev/tty1 >/dev/tty1 2>&3 &
+		fi
 	fi
 	# a version with the app (its source in the package) must have it in deploy.zip too - else the box is left without it
 	if [ -d "${MUPI_SRC}/src/backend-api/src/mupi-app" ]; then
@@ -923,6 +929,11 @@ rm -f /tmp/mupibox-update-failed
 	# boot and maintenance screens (scenes, texts, tool; the pictures are put together at the end of the update)
 	rm -rf /home/dietpi/MuPiBox/sysmedia/bootscreens >&3 2>&3
 	cp -r ${MUPI_SRC}/media/bootscreens /home/dietpi/MuPiBox/sysmedia/bootscreens >&3 2>&3
+	# the maintenance screen once more, with the new scripts and pictures: a Touch Display 2 had none from 5.0.13's fbv_options.sh
+	if [ -x /usr/local/bin/mupibox/maintenance_screen.sh ]; then
+		pkill -x fbv >&3 2>&3
+		/usr/local/bin/mupibox/maintenance_screen.sh update >&3 2>&3
+	fi
 	mkdir -p /usr/local/share/fonts/mupibox >&3 2>&3
 	cp ${MUPI_SRC}/themes/_fonts/Fredoka-Variable.ttf /usr/local/share/fonts/mupibox/ >&3 2>&3
 	fc-cache -f >&3 2>&3
