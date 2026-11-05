@@ -62,11 +62,14 @@ request = b"\xff" * 6 + mac + b"\x08\x06" + struct.pack("!HHBBH", 1, 0x0800, 6, 
 for _ in range(2):
     s.send(request)
     end = time.monotonic() + 1
-    while (left := end - time.monotonic()) > 0:
+    while True:
+        left = end - time.monotonic()
+        if left <= 0:
+            break
         s.settimeout(left)
         try:
             frame = s.recv(64)
-        except TimeoutError:
+        except socket.timeout:
             break
         if frame[20:22] == b"\0\2" and frame[28:32] == gateway and frame[32:38] == mac:
             sys.exit(0)
