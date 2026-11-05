@@ -10285,11 +10285,15 @@ function wlanNetSections() {
       : 'Nicht installiert'
   const hardware = [
     { type: 'toggle', label: 'Onboard-WLAN an', key: 'wOnboard', help: onboardHelp },
-    { type: 'select', label: 'USB-WLAN-Treiber', key: 'usbDrv', options: (o.drivers ?? []).map((x) => x.id), help: driverState },
   ]
+  // Debian 13 and later: no driver can be built (see network.ts); one that is there can still be removed
+  const canBuild = o.driversBuildable !== false
+  if (canBuild || (o.drivers ?? []).some((x) => x.installed)) {
+    hardware.push({ type: 'select', label: 'USB-WLAN-Treiber', key: 'usbDrv', options: (o.drivers ?? []).map((x) => x.id), help: driverState })
+  }
   if (job.headersMissing) hardware.push({ type: 'warn', text: 'Die Kernel-Header fehlen, der Treiber ließ sich nicht bauen. In /boot/config.txt muss arm_64bit zum System passen.' })
   else if (job.ok === false && !job.running) hardware.push({ type: 'warn', text: 'Das hat nicht geklappt – Details unter System › Protokolle.' })
-  if (!job.running) hardware.push({ type: 'buttons', buttons: [[d?.installed ? 'Treiber entfernen' : 'Treiber installieren', d?.installed ? 'danger' : 'ghost', 'driver']] })
+  if (!job.running && (canBuild || d?.installed)) hardware.push({ type: 'buttons', buttons: [[d?.installed ? 'Treiber entfernen' : 'Treiber installieren', d?.installed ? 'danger' : 'ghost', 'driver']] })
   if (d?.installed) {
     hardware.push({ type: 'select', label: 'Stromsparen des USB-Adapters', key: 'usbPm', options: ['Aus', 'Minimal', 'Maximal'], help: 'Aus = stabilere Verbindung bei manchen Adaptern. Gilt nach einem Neustart.' })
   }

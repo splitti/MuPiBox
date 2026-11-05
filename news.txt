@@ -14,6 +14,7 @@
 <b>WiFi and LAN</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Debian 13 (trixie): the buttons that install the USB WiFi drivers RTL88X2BU and RTL8821AU are not shown, they cannot be built there yet.</li>
 <li id='linews' class='linews'>The WiFi page showed the address of the cable as the address of the WiFi. It now shows the WiFi's own address and details, and the LAN page has the same "Connection" card for the cable.</li>
 <li id='linews' class='linews'>Add network: the chosen network is marked clearly, and the connected network can no longer be chosen there. A hidden saved network no longer reads "out of reach" when it only is not in the scan.</li>
 <li id='linews' class='linews'>A box set up over WiFi on DietPi 10 had no definition for the LAN port: a cable got no address and the LAN page stayed empty. The port is now defined at the start.</li>

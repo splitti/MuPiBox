@@ -50,6 +50,12 @@ async function powerLevel(module: string): Promise<string | null> {
   return new RegExp(`^options\\s+${module}\\b[^\\n]*\\brtw_power_mgnt=(\\d)`, 'm').exec(text)?.[1] ?? null
 }
 
+// The driver scripts build against raspberrypi-kernel-headers, which Debian 13 (trixie) no longer has: not offered there.
+async function driversBuildable(): Promise<boolean> {
+  const version = /^VERSION_ID="?(\d+)/m.exec(await fsp.readFile('/etc/os-release', 'utf8').catch(() => ''))?.[1]
+  return version === undefined || Number(version) < 13
+}
+
 export function registerNetworkRoutes(router: Router, deps: NetworkDeps): void {
   router.get('/network-options', requireSession, async (_req, res) => {
     const configTxt = await fsp.readFile(await bootConfigPath(), 'utf8').catch(() => '')
@@ -68,6 +74,7 @@ export function registerNetworkRoutes(router: Router, deps: NetworkDeps): void {
       usbIface: (await run('/usr/local/bin/mupibox/mupi_wifi_iface.sh', ['usb'], 5000)).stdout.trim(),
       wifiIface: await wifiIface(),
       drivers,
+      driversBuildable: await driversBuildable(),
       dhcpTimeout: /^timeout 10;/m.test(dhclient),
       wifiMonitor: await enabled('dietpi-wifi-monitor'),
       bestConnection: await enabled('mupi_autoconnect-wifi'),
@@ -149,6 +156,10 @@ export function registerNetworkRoutes(router: Router, deps: NetworkDeps): void {
     const d = Object.hasOwn(DRIVERS, String(driver)) ? DRIVERS[String(driver)] : undefined
     if (!d || (action !== 'install' && action !== 'remove')) {
       res.status(400).json({ error: 'invalid driver or action' })
+      return
+    }
+    if (action === 'install' && !(await driversBuildable())) {
+      res.status(409).json({ error: 'drivers cannot be built on this system' })
       return
     }
     if (Object.values(driverJobs).some((j) => j.running)) {
