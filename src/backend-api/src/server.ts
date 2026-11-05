@@ -3034,6 +3034,7 @@ async function wifiAdapters() {
       const state = field('wpa_state') ?? (hanging ? 'UNKNOWN' : 'INTERFACE_DISABLED')
       const connected = state === 'COMPLETED'
       let signalDbm: number | undefined
+      let gateway: string | undefined
       if (connected) {
         try {
           const rssi = /^RSSI=(-?\d+)/m.exec((await execFileAsync('sudo', ['wpa_cli', '-i', name, 'signal_poll'], { timeout: 1000 })).stdout)?.[1]
@@ -3041,8 +3042,25 @@ async function wifiAdapters() {
         } catch {
           // no signal value right now
         }
+        try {
+          gateway = /via (\S+)/.exec((await execFileAsync('ip', ['-4', 'route', 'show', 'default', 'dev', name], { timeout: 1000 })).stdout)?.[1]
+        } catch {
+          // no default route on this adapter
+        }
       }
-      return { interface: name, usb, mac, state, ssid: connected ? decodeWpaSsid(field('ssid') ?? '') : undefined, ip: connected ? field('ip_address') : undefined, signalDbm }
+      const frequency = field('freq')
+      return {
+        interface: name,
+        usb,
+        mac,
+        state,
+        ssid: connected ? decodeWpaSsid(field('ssid') ?? '') : undefined,
+        band: connected && frequency ? wifiBandOf(Number.parseInt(frequency, 10)) : undefined,
+        ip: connected ? field('ip_address') : undefined,
+        gateway,
+        signalDbm,
+        signal: signalDbm === undefined ? undefined : wifiSignalPercent(signalDbm),
+      }
     }),
   )
 }

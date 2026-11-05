@@ -11,6 +11,15 @@
     <ion-title>
       @if (address(); as a) {
         Address<span class="wifi-interface">{{ a.ssid }}</span>
+      } @else if (twoAdapters()) {
+        <!-- Two WiFi adapters: one tab each by what it is (wlan0 and wlan1 change between starts), the dot on the one in use -->
+        <span class="view-toggle" role="group" aria-label="View">
+          <button type="button" [class.on]="view() === 'wifi' && selectedAdapter()?.usb === false" (click)="chooseAdapter(false)">@if (usedAdapter()?.usb === false) {<i class="used-dot"></i>}Onboard</button>
+          <button type="button" [class.on]="view() === 'wifi' && selectedAdapter()?.usb === true" (click)="chooseAdapter(true)">@if (usedAdapter()?.usb === true) {<i class="used-dot"></i>}USB</button>
+          @if (ethernetAvailable()) {
+            <button type="button" [class.on]="view() === 'lan'" (click)="chooseView('lan')">LAN</button>
+          }
+        </span>
       } @else if (ethernetAvailable()) {
         <!-- WiFi or LAN: the LAN settings also when the cable is not the link in use (set up before plugging in) -->
         <span class="view-toggle" role="group" aria-label="View">
@@ -229,29 +238,41 @@
             <div class="ssid-detail">{{ card().detail }}@if (fixedNow()) { · <span class="fixed-text">fixed address</span>}</div>
           </div>
         </div>
-        <div class="status-ip">
-          <div class="ip-label">Box IP address</div>
-          <div class="ip-value">{{ card().ip }}</div>
-          <div class="gateway-value">Router: {{ card().gateway }}</div>
-        </div>
+        @if (card().ip !== '—' || !selectedAdapter()) {
+          <div class="status-ip">
+            <div class="ip-label">Box IP address</div>
+            <div class="ip-value">{{ card().ip }}</div>
+            @if (card().gateway !== '—' || !selectedAdapter()) {
+              <div class="gateway-value">Router: {{ card().gateway }}</div>
+            }
+          </div>
+        }
         @if (!fixedNow() && card().ip !== '—') {
-          <ion-button class="renew-button" fill="outline" size="small" (click)="renewAddressButtonPressed()">Renew address</ion-button>
+          <ion-button class="renew-button" fill="outline" size="small" (click)="renewAddressButtonPressed(selectedAdapter()?.interface)">Renew address</ion-button>
+        }
+        @if (selectedAdapter()?.usb === false && selectedAdapter()?.state === 'INTERFACE_DISABLED' && onboardWifi()?.available && !onboardWifi()?.enabled) {
+          <ion-button class="renew-button" size="small" (click)="onboardWifiButtonPressed()">Switch on</ion-button>
         }
       </div>
     </ion-card>
 
     <div class="list-header">
-      <ion-label>Networks in range</ion-label>
-      <div class="list-actions">
-        <ion-button size="small" fill="outline" (click)="loadNetworks()" [disabled]="loading()">
-          <ion-icon slot="start" name="scan-outline"></ion-icon>
-          Scan
-        </ion-button>
-        <ion-button size="small" (click)="addNetworkButtonPressed()">
-          <ion-icon slot="start" name="add-outline"></ion-icon>
-          Add network
-        </ion-button>
-      </div>
+      @if (otherTab()) {
+        <!-- One list of saved networks for both adapters: it is changed on the tab of the one in use -->
+        <ion-label>Networks apply to both adapters. Change them on the {{ usedAdapter()?.usb ? 'USB' : 'Onboard' }} tab.</ion-label>
+      } @else {
+        <ion-label>Networks in range</ion-label>
+        <div class="list-actions">
+          <ion-button size="small" fill="outline" (click)="loadNetworks()" [disabled]="loading()">
+            <ion-icon slot="start" name="scan-outline"></ion-icon>
+            Scan
+          </ion-button>
+          <ion-button size="small" (click)="addNetworkButtonPressed()">
+            <ion-icon slot="start" name="add-outline"></ion-icon>
+            Add network
+          </ion-button>
+        </div>
+      }
     </div>
 
     @if (loading()) {
@@ -288,7 +309,9 @@
                 @if (fixed()[wifi.ssid]; as f) { &nbsp;&middot;&nbsp;<span class="fixed-text">fixed address {{ f.ip }}{{ f.paused ? ' paused' : '' }}</span>}
               </p>
             </ion-label>
-            @if (wifi.id !== undefined) {
+            @if (otherTab()) {
+              <!-- (to look at only, see above) -->
+            } @else if (wifi.id !== undefined) {
               <div slot="end" class="row-actions">
               @if (canChooseBand(wifi)) {
                 <div class="band-toggle" role="group" aria-label="Band">

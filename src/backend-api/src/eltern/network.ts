@@ -205,7 +205,7 @@ export function registerNetworkRoutes(router: Router, deps: NetworkDeps): void {
 /** The address of the WiFi (lan: of that cable adapter) fetched anew - for the app and the display (see server.ts) */
 export async function renewDhcp(lan: unknown): Promise<{ status: number; body: Record<string, unknown> }> {
   // (an adapter of the system - also without an address, so not by os.networkInterfaces)
-  const known = typeof lan === 'string' && /^(eth|en)[\w.-]{0,12}$/.test(lan) && (await fsp.stat(`/sys/class/net/${lan}`).catch(() => null))
+  const known = typeof lan === 'string' && /^(eth|en|wlan)[\w.-]{0,12}$/.test(lan) && (await fsp.stat(`/sys/class/net/${lan}`).catch(() => null))
   if (lan !== undefined && !known) return { status: 400, body: { error: 'invalid_interface' } }
   const iface = typeof lan === 'string' ? lan : await wifiIface()
   if (!/^[\w.-]{1,15}$/.test(iface)) return { status: 400, body: { error: 'invalid_interface' } }

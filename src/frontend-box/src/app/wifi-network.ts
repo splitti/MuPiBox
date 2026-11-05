@@ -30,6 +30,21 @@ export interface WifiStatus {
   gateway?: string
   signalDbm?: number
   signal?: number
+  /** Every WiFi adapter of the box (an older server has no list) */
+  adapters?: WifiAdapter[]
+}
+
+export interface WifiAdapter {
+  interface: string
+  /** on the USB bus (false: the built-in one, null: not known) */
+  usb: boolean | null
+  state: string
+  ssid?: string | null
+  band?: string | null
+  ip?: string | null
+  gateway?: string | null
+  signalDbm?: number | null
+  signal?: number | null
 }
 
 export interface WifiConfiguredNetwork {
