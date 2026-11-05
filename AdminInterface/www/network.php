@@ -19,8 +19,9 @@
 			),
 		);
 
-	// The install scripts build against raspberrypi-kernel-headers, which Debian 13 (trixie) no longer has: not offered there.
-	$usb_wifi_can_build = !preg_match('/^VERSION_ID="?(\d+)/m', (string)@file_get_contents('/etc/os-release'), $os_version) || (int)$os_version[1] < 13;
+	// The install scripts build against raspberrypi-kernel-headers, which Debian 13 (trixie) no longer has: not offered there,
+	// and not on a system whose version cannot be told either (the scripts end the display first).
+	$usb_wifi_can_build = preg_match('/^VERSION_ID="?(\d+)/m', (string)@file_get_contents('/etc/os-release'), $os_version) && (int)$os_version[1] < 13;
 	$usb_wifi_any_installed = count(array_filter($usb_wifi_drivers, function ($d) { return is_dir($d['path']); })) > 0;
 
 	// Asked by the driver dropdown's onchange (fetch, not a form submit) so picking a

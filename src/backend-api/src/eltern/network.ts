@@ -50,10 +50,11 @@ async function powerLevel(module: string): Promise<string | null> {
   return new RegExp(`^options\\s+${module}\\b[^\\n]*\\brtw_power_mgnt=(\\d)`, 'm').exec(text)?.[1] ?? null
 }
 
-// The driver scripts build against raspberrypi-kernel-headers, which Debian 13 (trixie) no longer has: not offered there.
+// The driver scripts build against raspberrypi-kernel-headers, which Debian 13 (trixie) no longer has: not offered there,
+// and not on a system whose version cannot be told either (the scripts end the display first).
 async function driversBuildable(): Promise<boolean> {
   const version = /^VERSION_ID="?(\d+)/m.exec(await fsp.readFile('/etc/os-release', 'utf8').catch(() => ''))?.[1]
-  return version === undefined || Number(version) < 13
+  return version !== undefined && Number(version) < 13
 }
 
 export function registerNetworkRoutes(router: Router, deps: NetworkDeps): void {
