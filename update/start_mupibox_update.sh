@@ -288,7 +288,7 @@ service mupi_idle_shutdown stop
 # One list for every channel (stable and beta kept the list of before until 5.0.10 - without xdotool, which the display's
 # window and the goodbye picture need, and with the packages above that nothing uses).
 # libwidevinecdm0 stays: the display plays Spotify through the Web Playback SDK in Chromium, which needs Widevine
-packages2install="lighttpd-mod-openssl gpiod git mpv pulseaudio-module-bluetooth python3-pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt python3-smbus2 pigpio libjson-c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh xdotool rfkill x11-utils x11-xserver-utils"
+packages2install="lighttpd-mod-openssl gpiod git mpv pulseaudio-module-bluetooth python3-pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt python3-smbus2 python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh xdotool rfkill x11-utils x11-xserver-utils"
 # packages the update removes (apt-get remove, only when installed) - none at the moment; Debian's jq goes where the
 # update puts its own jq (see "Copy binaries")
 packages2remove=""
@@ -936,15 +936,8 @@ rm -f /tmp/mupibox-update-failed
 	echo -e "XXX\n${STEP}\nInstall LED Control... \nXXX"	
 	
 	before=$(date +%s)
-	rm /usr/local/bin/mupibox/led_control >&3 2>&3
-	gcc -o ${MUPI_SRC}/scripts/led/led_control ${MUPI_SRC}/scripts/led/led_control.c -lpigpio -ljson-c >&3 2>&3
-	#if [ `getconf LONG_BIT` == 32 ]; then
-	#	mv -f ${MUPI_SRC}/bin/led_control/led_control_32 /usr/local/bin/mupibox/led_control >&3 2>&3
-	#else
-	#	mv -f ${MUPI_SRC}/bin/led_control/led_control_64 /usr/local/bin/mupibox/led_control >&3 2>&3
-	#fi
-	mv -f ${MUPI_SRC}/scripts/led/led_control /usr/local/bin/mupibox/led_control >&3 2>&3
-	#/usr/bin/chmod 755 /usr/local/bin/mupibox/led_control >&3 2>&3
+	# (led_control.py drives the LED; the C program of old is no longer built, and goes from a box that still has it)
+	rm -f /usr/local/bin/mupibox/led_control >&3 2>&3
 	after=$(date +%s)
 	echo -e "## LED-Control  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
