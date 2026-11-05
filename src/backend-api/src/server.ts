@@ -3006,6 +3006,44 @@ app.get('/api/wifi/configured', async (_req, res) => {
   }
 })
 
+// Every WiFi adapter as it is now, for the WiFi page: the names wlan0 and wlan1 change between starts, so an adapter is
+// told by its bus. (Its own wpa_cli answers; one switched off has none.)
+async function wifiAdapters() {
+  const names = fs.existsSync('/sys/class/net') ? fs.readdirSync('/sys/class/net').filter((n) => /^wlan\d+$/.test(n)).sort() : []
+  return Promise.all(
+    names.map(async (name) => {
+      const base = `/sys/class/net/${name}`
+      let usb: boolean | null = null
+      let mac: string | undefined
+      try {
+        usb = fs.realpathSync(`${base}/device`).includes('/usb')
+        mac = fs.readFileSync(`${base}/address`, 'utf8').trim()
+      } catch {
+        // gone again
+      }
+      let status = ''
+      try {
+        status = (await execFileAsync('sudo', ['wpa_cli', '-i', name, 'status'])).stdout
+      } catch {
+        // no wpa_supplicant on it
+      }
+      const field = (key: string) => new RegExp('^' + key + '=(.*)$', 'm').exec(status)?.[1]
+      const state = field('wpa_state') ?? 'INTERFACE_DISABLED'
+      const connected = state === 'COMPLETED'
+      let signalDbm: number | undefined
+      if (connected) {
+        try {
+          const rssi = /^RSSI=(-?\d+)/m.exec((await execFileAsync('sudo', ['wpa_cli', '-i', name, 'signal_poll'])).stdout)?.[1]
+          signalDbm = rssi === undefined ? undefined : Number.parseInt(rssi, 10)
+        } catch {
+          // no signal value right now
+        }
+      }
+      return { interface: name, usb, mac, state, ssid: connected ? decodeWpaSsid(field('ssid') ?? '') : undefined, ip: connected ? field('ip_address') : undefined, signalDbm }
+    }),
+  )
+}
+
 // The WiFi link as it is right now, for the WiFi page: network.json is only rewritten by a cron job every
 // 30 seconds, so a network change would show up there with a delay - and it names the adapter that is not
 // necessarily the one in use.
@@ -3044,6 +3082,7 @@ app.get('/api/wifi/status', async (_req, res) => {
       gateway: connected ? gateway : undefined,
       signalDbm,
       signal: signalDbm === undefined ? undefined : wifiSignalPercent(signalDbm),
+      adapters: await wifiAdapters(),
     })
   } catch (error) {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error reading wifi status: ${error}`)

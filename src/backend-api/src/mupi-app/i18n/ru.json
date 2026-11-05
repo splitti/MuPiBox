@@ -3088,5 +3088,14 @@
  "{} dBm": "{} dBm",
  "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "После добавления бокс заново выбирает сеть и может ненадолго потерять соединение.",
  "Aus dem Namen des Profils. Nur eintragen, wenn dein Akku anders ist.": "Из названия профиля. Указывайте, только если ваш аккумулятор другой.",
- "Die Größe des Akkus. Ohne sie gibt es keine Zeit bis voll.": "Ёмкость аккумулятора. Без неё время до полной зарядки не показывается."
+ "Die Größe des Akkus. Ohne sie gibt es keine Zeit bis voll.": "Ёмкость аккумулятора. Без неё время до полной зарядки не показывается.",
+ "USB-WLAN": "USB Wi-Fi",
+ "Onboard-WLAN": "Встроенный Wi-Fi",
+ "in Benutzung": "используется",
+ "sucht ein Netz": "ищет сеть",
+ "ausgeschaltet": "выключен",
+ "Akku-Profil fehlt": "Нет профиля аккумулятора",
+ "Der MuPiHAT ist an, aber es ist kein Akku-Profil gewählt.": "MuPiHAT включён, но профиль аккумулятора не выбран.",
+ "Bitte wähle dein Akku-Profil": "Выберите профиль аккумулятора",
+ "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "До этого HAT заряжает с базовой настройкой, а уровень заряда и время до полной зарядки неверны."
 }

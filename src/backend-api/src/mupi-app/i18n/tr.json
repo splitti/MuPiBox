@@ -3088,5 +3088,14 @@
  "{} dBm": "{} dBm",
  "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "Ekledikten sonra kutu ağını yeniden seçer ve bağlantı kısa süreliğine kesilebilir.",
  "Aus dem Namen des Profils. Nur eintragen, wenn dein Akku anders ist.": "Profil adından alınır. Yalnızca piliniz farklıysa girin.",
- "Die Größe des Akkus. Ohne sie gibt es keine Zeit bis voll.": "Pilin boyutu. Bu olmadan dolana kadarki süre gösterilmez."
+ "Die Größe des Akkus. Ohne sie gibt es keine Zeit bis voll.": "Pilin boyutu. Bu olmadan dolana kadarki süre gösterilmez.",
+ "USB-WLAN": "USB Wi-Fi",
+ "Onboard-WLAN": "Dahili Wi-Fi",
+ "in Benutzung": "kullanımda",
+ "sucht ein Netz": "ağ arıyor",
+ "ausgeschaltet": "kapalı",
+ "Akku-Profil fehlt": "Pil profili eksik",
+ "Der MuPiHAT ist an, aber es ist kein Akku-Profil gewählt.": "MuPiHAT açık, ancak pil profili seçilmemiş.",
+ "Bitte wähle dein Akku-Profil": "Pil profilinizi seçin",
+ "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "O zamana kadar HAT temel ayarıyla şarj eder; şarj düzeyi ve dolma süresi doğru olmaz."
 }

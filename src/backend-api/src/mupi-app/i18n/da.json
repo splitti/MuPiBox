@@ -3088,5 +3088,14 @@
  "{} dBm": "{} dBm",
  "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "Efter tilføjelsen vælger boksen netværk på ny og kan kortvarigt miste forbindelsen.",
  "Aus dem Namen des Profils. Nur eintragen, wenn dein Akku anders ist.": "Fra profilens navn. Udfyld kun, hvis dit batteri er anderledes.",
- "Die Größe des Akkus. Ohne sie gibt es keine Zeit bis voll.": "Batteriets størrelse. Uden den vises ingen tid til fuld opladning."
+ "Die Größe des Akkus. Ohne sie gibt es keine Zeit bis voll.": "Batteriets størrelse. Uden den vises ingen tid til fuld opladning.",
+ "USB-WLAN": "USB-Wi-Fi",
+ "Onboard-WLAN": "Indbygget Wi-Fi",
+ "in Benutzung": "i brug",
+ "sucht ein Netz": "søger netværk",
+ "ausgeschaltet": "slukket",
+ "Akku-Profil fehlt": "Batteriprofil mangler",
+ "Der MuPiHAT ist an, aber es ist kein Akku-Profil gewählt.": "MuPiHAT er tændt, men der er ikke valgt nogen batteriprofil.",
+ "Bitte wähle dein Akku-Profil": "Vælg din batteriprofil",
+ "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "Indtil da oplader HAT med sin grundindstilling, og ladeniveau og tid til fuld opladning passer ikke."
 }

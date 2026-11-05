@@ -3088,5 +3088,14 @@
  "{} dBm": "{} dBm",
  "Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.": "Na het toevoegen kiest de box opnieuw een netwerk en kan de verbinding even wegvallen.",
  "Aus dem Namen des Profils. Nur eintragen, wenn dein Akku anders ist.": "Uit de naam van het profiel. Vul alleen in als je accu afwijkt.",
- "Die Größe des Akkus. Ohne sie gibt es keine Zeit bis voll.": "De grootte van de accu. Zonder deze is er geen tijd tot vol."
+ "Die Größe des Akkus. Ohne sie gibt es keine Zeit bis voll.": "De grootte van de accu. Zonder deze is er geen tijd tot vol.",
+ "USB-WLAN": "USB-wifi",
+ "Onboard-WLAN": "Ingebouwde wifi",
+ "in Benutzung": "in gebruik",
+ "sucht ein Netz": "zoekt een netwerk",
+ "ausgeschaltet": "uitgeschakeld",
+ "Akku-Profil fehlt": "Accuprofiel ontbreekt",
+ "Der MuPiHAT ist an, aber es ist kein Akku-Profil gewählt.": "De MuPiHAT staat aan, maar er is geen accuprofiel gekozen.",
+ "Bitte wähle dein Akku-Profil": "Kies je accuprofiel",
+ "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "Tot die tijd laadt de HAT met de basisinstelling, en de laadstand en de tijd tot vol kloppen niet."
 }

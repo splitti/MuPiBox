@@ -1496,6 +1496,7 @@ async function loadNotices(root) {
   }
   const pct = hat.body?.Bat_Percent
   const battery = hat.ok && !noBattery(hat.body)
+  if (hat.ok && batteryProfileMissing(hat.body)) notes.push(['bat', 'Akku-Profil fehlt', 'Der MuPiHAT ist an, aber es ist kein Akku-Profil gewählt.', 'akku'])
   if (battery && hat.body?.ChargeProblemSince) notes.push(['plug', 'Akku lädt nicht', NOT_CHARGING, 'akku'])
   if (hat.body?.BatteryStaleSince) notes.push(['bat', 'Akku-Werte veraltet', BATTERY_STALE, 'akku'])
   if (battery && Number.isFinite(pct) && pct <= 15 && !batteryCharging(hat.body)) {
@@ -8203,6 +8204,9 @@ const batteryLabel = (n) => BATTERY_NAMES[n] ?? n
 // with the placeholder profile, which read as an empty battery before.
 const USB_C_PROFILE = Object.keys(BATTERY_NAMES).find((n) => /^USB-C/.test(n))
 // (Bat_PercentSource "none": the HAT runs with the placeholder profile, see v_100 <= 10 in mupihat_bq25792.py)
+// A battery on the MuPiHAT and no profile for it: the service then runs with its defaults ("Default"), the charger with
+// its own standard. "USB-C mode" in a new configuration is no profile of the list either.
+const batteryProfileMissing = (h) => h?.Bat_Type === 'Default' && h?.BatteryConnected !== 0
 const noBattery = (h) => h?.BatteryConnected === 0 || h?.Bat_PercentSource === 'none' || hw.data?.mupihat?.battery === USB_C_PROFILE
 const NO_BATTERY_TEXT = 'Kein Akku – die Box läuft über USB-C (Netzteil oder Powerbank).'
 // The profiles as offered: the batteries in the order of the config, the two special ones (no battery, own
@@ -8468,18 +8472,30 @@ function wlanTop() {
   const row = (k, v) => (v ? `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>` : '')
   const live = net.wifi
   const name = live ? live.ssid : n.wifi
-  const dbm = live ? live.signalDbm : Number.parseInt(String(n.wifisignal ?? ''), 10)
-  const wifiIpv6 = name && Array.isArray(n.ipv6) ? n.ipv6 : []
+  // every adapter by what it is - wlan0 and wlan1 change between starts - the one in use first; an older answer without
+  // the list: what the box knows of the one
+  const adapters = live?.adapters?.length
+    ? [...live.adapters].sort((a, b) => (b.interface === live.interface) - (a.interface === live.interface))
+    : [{ interface: live?.interface ?? n.interface, usb: null, ssid: name, ip: live?.ip, signalDbm: live ? live.signalDbm : Number.parseInt(String(n.wifisignal ?? ''), 10), mac: n.mac }]
+  const connectedCount = adapters.filter((a) => a.ssid).length
+  const adapterBlock = (a) => {
+    const used = a.interface === (live?.interface ?? n.interface)
+    const kind = a.usb === true ? 'USB-WLAN' : a.usb === false ? 'Onboard-WLAN' : ''
+    const state = a.ssid ? (Number.isFinite(a.signalDbm) ? `${signalBars(a.signalDbm)} Empfang ${signalWord(a.signalDbm)}` : '') : a.state === 'INTERFACE_DISABLED' ? 'ausgeschaltet' : 'sucht ein Netz'
+    const ipv6 = used && a.ssid && Array.isArray(n.ipv6) ? n.ipv6 : []
+    return `<div class="wifi-link"><div class="wifi-now"><span class="avatar" translate="no">${a.usb === null ? icon('wifi', 18) : a.usb ? 'USB' : 'Pi'}</span><span class="lbl"><b translate="no">${esc(a.ssid || kind || 'Nicht verbunden')}</b>
+        <small>${a.ssid && kind ? `${kind} · ` : ''}${state}</small></span><span class="chip ${a.ssid ? 'ok' : connectedCount ? '' : 'warn'}">${!a.ssid ? 'nicht verbunden' : used && connectedCount > 1 ? 'in Benutzung' : 'verbunden'}</span></div>
+      ${a.ssid ? `<dl class="kv">${row('IP-Adresse', a.ip)}${ipv6.map((v6) => row('IPv6-Adresse', v6)).join('')}</dl>
+      <details class="more"><summary>Details</summary><dl class="kv">${row('Signal', Number.isFinite(a.signalDbm) ? `${a.signalDbm} dBm` : '')}${used ? row('Gateway', live ? live.gateway : n.gateway) + row('DNS', n.dns) : ''}${row('MAC', a.mac)}${row('Schnittstelle', a.interface)}</dl></details>` : ''}</div>`
+  }
+  const connectedNames = new Set(adapters.map((a) => a.ssid).filter(Boolean))
   const scan = net.scan ?? []
   const inRange = new Map(scan.map((w) => [w.ssid, w.signal_dbm]))
   const saved = new Set((net.saved ?? []).map((w) => w.ssid))
   const pick = net.pick
   return [
     `<section class="card" data-col="1"><div class="card-head"><h2>Verbindung</h2><button class="icon-btn soft" id="w-refresh" aria-label="Aktualisieren">${icon('sync', 18)}</button></div>
-      <div class="wifi-link"><div class="wifi-now"><span class="avatar">${icon('wifi', 18)}</span><span class="lbl"><b translate="no">${esc(name || 'Nicht verbunden')}</b>
-        <small>${Number.isFinite(dbm) ? `${signalBars(dbm)} Empfang ${signalWord(dbm)}` : ''}</small></span><span class="chip ${name ? 'ok' : 'warn'}">${name ? 'verbunden' : 'nicht verbunden'}</span></div>
-      <dl class="kv">${row('IP-Adresse', live?.ip)}${wifiIpv6.map((a) => row('IPv6-Adresse', a)).join('')}</dl>
-      <details class="more"><summary>Details</summary><dl class="kv">${row('Signal', Number.isFinite(dbm) ? `${dbm} dBm` : '')}${row('Gateway', live ? live.gateway : n.gateway)}${row('DNS', n.dns)}${row('MAC', n.mac)}</dl></details></div>
+      ${adapters.map(adapterBlock).join('')}
       ${n.onlinestate === 'offline' ? '<p class="help" style="margin:0">Die Box ist gerade ohne Internet.</p>' : ''}</section>`,
     `<section class="card" data-col="1"><h2>Gespeicherte Netze</h2>${
       net.reverted
@@ -8512,7 +8528,7 @@ function wlanTop() {
                   (w, i) => {
                     const inner = `<span class="avatar">${signalBars(w.signal_dbm)}</span><span class="lbl"><b translate="no">${esc(w.ssid)}</b><small>${esc(signalWord(w.signal_dbm))}${w.encrypted ? '' : ' · offen'}</small></span>`
                     // (the connected network is nothing to add: no button, no password field)
-                    if (name === w.ssid) return `<div class="entry lib-row wifi-row">${inner}<span class="chip ok">verbunden</span></div>`
+                    if (connectedNames.has(w.ssid)) return `<div class="entry lib-row wifi-row">${inner}<span class="chip ok">verbunden</span></div>`
                     return `<button class="entry lib-row wifi-row${pick === w.ssid ? ' picked' : ''}" data-w="${i}">${inner}${saved.has(w.ssid) ? '<span class="chip">gespeichert</span>' : ''}${w.encrypted ? `<span class="chev">${icon('lock', 16)}</span>` : ''}<span class="wifi-check">${icon('check', 14)}</span></button>`
                   },
                 )
@@ -12036,6 +12052,9 @@ const CONTROLLERS = {
         items: [
           it('hatOn', { help: 'Umschalten stellt auch die Soundkarte um und startet die Box neu.' }),
           it('battery', { options: batteryOptions(hw.data.mupihat.batteries), help: usbOnly ? NO_BATTERY_TEXT : 'Die Spannungen gehören zu diesem Profil.' }),
+          ...(hw.data.mupihat.active && batteryProfileMissing(hw.hat)
+            ? [{ type: 'html', html: `<div class="note warn">${icon('info', 18)}<span><b>Bitte wähle dein Akku-Profil</b><br>Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.</span></div>` }]
+            : []),
           { type: 'html', html: hatNowLine() },
         ],
       }
