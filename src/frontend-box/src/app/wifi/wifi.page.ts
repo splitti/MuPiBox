@@ -19,7 +19,7 @@ import {
   IonToolbar,
 } from '@ionic/angular/standalone'
 import { addIcons } from 'ionicons'
-import { Subscription, catchError, EMPTY, map, of, switchMap, timer } from 'rxjs'
+import { Subscription, catchError, EMPTY, exhaustMap, map, of, switchMap, timeout, timer } from 'rxjs'
 import { addOutline, arrowBackOutline, gitNetworkOutline, lockClosedOutline, refresh, scanOutline, wifiOutline } from 'ionicons/icons'
 import Keyboard from 'simple-keyboard'
 import { MediaService } from '../media.service'
@@ -204,7 +204,8 @@ export class WifiPage {
     this.loadNetworks()
     this.loadFixed()
     this.statusPolling = timer(0, 3000)
-      .pipe(switchMap(() => this.wifiService.getStatus().pipe(catchError(() => EMPTY))))
+      // (the next one only when the last has answered, at most 10 s: dropped every 3 s, a slower answer never came through)
+      .pipe(exhaustMap(() => this.wifiService.getStatus().pipe(timeout(10000), catchError(() => EMPTY))))
       .subscribe((status) => this.status.set(status))
     this.linkPolling = timer(0, 3000)
       .pipe(switchMap(() => this.wifiService.getLink().pipe(catchError(() => EMPTY))))

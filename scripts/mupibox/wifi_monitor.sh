@@ -20,7 +20,7 @@
 	FAILS=0
 	WAIT=0                     # checks until the next re-connect is allowed
 	WAIT_NEXT=1                # doubled by every re-connect that did not help: no network in reach is no reason to start the WiFi over all the time
-	ANSWERED=0                 # the gateway has answered a ping since this start
+	CONNECTION=""              # adapter, network and gateway the state above belongs to
 
 	# Starts an adapter over so that it gets its address again. A plain "ifdown; ifup" is not enough with the roaming
 	# setup (wpa-roam: the address comes from the logical interface "<adapter>=default" when wpa_supplicant reports the
@@ -47,6 +47,13 @@
 			ifup "${adapter}=default" &> /dev/null
 		fi
 	}
+	# The gateway answers on the link, whether or not it answers pings (guest networks often do not): it answers ARP, which an
+	# adapter that has stopped sending never gets to see. The old entry goes first, it would still say so for a while.
+	link_answers() {
+		ip neigh flush to "$2" dev "$1" &> /dev/null
+		ping -nq -c 1 -W 2 -I "$1" "$2" &> /dev/null
+		ip neigh show to "$2" dev "$1" 2> /dev/null | grep -q 'lladdr'
+	}
 	G_DIETPI-NOTIFY 2 "Checking connection for $ADAPTER via ping to default gateway every $TICKRATE seconds (re-connect after $FAILS_ALLOWED failed checks)"
 	while G_SLEEP "$TICKRATE"
 	do
@@ -64,19 +71,21 @@
 			FAILS=0
 			continue
 		fi
-		if GATEWAY=$(G_GET_NET -i "$ADAPTER" gateway) && ping -nq -c "$PINGS" -W 2 -I "$ADAPTER" "$GATEWAY" &> /dev/null
+		GATEWAY=$(G_GET_NET -i "$ADAPTER" gateway) || GATEWAY=""
+		# Another network or gateway: what was tried on the old one says nothing about this one.
+		NOW="$ADAPTER $(wpa_cli -i "$ADAPTER" status 2> /dev/null | sed -n 's/^ssid=//p') $GATEWAY"
+		if [[ $NOW != "$CONNECTION" ]]
+		then
+			CONNECTION=$NOW
+			FAILS=0
+			WAIT=0
+			WAIT_NEXT=1
+		fi
+		if [[ $GATEWAY ]] && { ping -nq -c "$PINGS" -W 2 -I "$ADAPTER" "$GATEWAY" &> /dev/null || link_answers "$ADAPTER" "$GATEWAY"; }
 		then
 			FAILS=0
 			WAIT=0
 			WAIT_NEXT=1
-			ANSWERED=1
-			continue
-		fi
-		# A gateway that has never answered and a connection that stands: a router that does not answer pings (guest
-		# networks), not a lost connection.
-		if (( ! ANSWERED )) && [[ $GATEWAY ]] && wpa_cli -i "$ADAPTER" status 2> /dev/null | grep -q 'wpa_state=COMPLETED'
-		then
-			FAILS=0
 			continue
 		fi
 		if (( WAIT > 0 ))

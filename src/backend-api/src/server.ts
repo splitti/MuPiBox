@@ -3021,19 +3021,22 @@ async function wifiAdapters() {
       } catch {
         // gone again
       }
+      // (1 s each: an adapter that hangs must not hold up the status of the one in use - the display asks every 3 s)
       let status = ''
+      let hanging = false
       try {
-        status = (await execFileAsync('sudo', ['wpa_cli', '-i', name, 'status'])).stdout
-      } catch {
-        // no wpa_supplicant on it
+        status = (await execFileAsync('sudo', ['wpa_cli', '-i', name, 'status'], { timeout: 1000 })).stdout
+      } catch (error) {
+        // no wpa_supplicant on it, or no answer
+        hanging = (error as { killed?: boolean }).killed === true
       }
       const field = (key: string) => new RegExp('^' + key + '=(.*)$', 'm').exec(status)?.[1]
-      const state = field('wpa_state') ?? 'INTERFACE_DISABLED'
+      const state = field('wpa_state') ?? (hanging ? 'UNKNOWN' : 'INTERFACE_DISABLED')
       const connected = state === 'COMPLETED'
       let signalDbm: number | undefined
       if (connected) {
         try {
-          const rssi = /^RSSI=(-?\d+)/m.exec((await execFileAsync('sudo', ['wpa_cli', '-i', name, 'signal_poll'])).stdout)?.[1]
+          const rssi = /^RSSI=(-?\d+)/m.exec((await execFileAsync('sudo', ['wpa_cli', '-i', name, 'signal_poll'], { timeout: 1000 })).stdout)?.[1]
           signalDbm = rssi === undefined ? undefined : Number.parseInt(rssi, 10)
         } catch {
           // no signal value right now
