@@ -16,7 +16,7 @@ Die **GPIO-Pins** sind die Anschlüsse auf der Stiftleiste des Raspberry Pi. Zub
 | {rotary-button} Drehregler | Taster | 10 | nein |
 | {poweroff} OnOff SHIM (auch das MuPiHAT) | Signal zum Ausschalten (`gpio-poweroff`) | 4 | in der Konfiguration (`shim.poweroffPin`) |
 | {trigger} OnOff SHIM (auch das MuPiHAT) | Taster (Trigger) | 17 | in der Konfiguration (`shim.triggerPin`) |
-| {cut} Stromabschaltung (setzt die Box, nicht der SHIM) | Signal bei Ausschalten | 27 | in der Konfiguration (`shim.cutPin`) |
+| {cut} Stromabschaltung (setzt die Box, nicht der SHIM; mit MuPiHAT nicht gesetzt) | Signal bei Ausschalten | 27 | in der Konfiguration (`shim.cutPin`) |
 | {led} Betriebs-LED (eigene LED, nicht Teil des SHIM) | Status-LED | 13 | ja, **Einstellungen › Akku & Strom › Ein-/Ausschalter und LED** |
 | {fan} Lüfter | PWM-Signal | 12 | ja, **Einstellungen › Akku & Strom › Lüfter** |
 

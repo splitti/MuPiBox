@@ -58,7 +58,8 @@ if [ -f "$WIFI_FILE" ]; then
 		killall -s 9 -w -q -r chromium
 		/usr/local/bin/mupibox/maintenance_screen.sh wlan
 		#sudo wget -q -O ${WIFI_FILE} ${JSON_TEMPLATE}
-		WIFI_RESULT=$(sudo -i wpa_passphrase "${SSID}" "${PSK}") 
+		# (the password over stdin: sudo writes its command line to the system log)
+		WIFI_RESULT=$(sudo wpa_passphrase "${SSID}" <<< "${PSK}")
 		IFS=$'\n'
 		i=0
 		for LINES in ${WIFI_RESULT}

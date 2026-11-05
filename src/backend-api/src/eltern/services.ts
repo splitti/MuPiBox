@@ -121,7 +121,8 @@ export function registerServicesRoutes(router: Router, deps: ServicesDeps): void
     if (wasActive) await run('sudo', ['systemctl', 'stop', 'mupi_telegram'])
     const chats = new Map<string, string>()
     try {
-      const r = await fetch(`https://api.telegram.org/bot${token}/getUpdates?timeout=40&allowed_updates=${encodeURIComponent('["message"]')}`, {
+      // (Telegram keeps allowed_updates for the bot: with "message" alone, the taps on the buttons of /help no longer reached it)
+      const r = await fetch(`https://api.telegram.org/bot${token}/getUpdates?timeout=40&allowed_updates=${encodeURIComponent('["message","callback_query"]')}`, {
         signal: AbortSignal.timeout(50000),
       })
       const body = (await r.json().catch(() => ({}))) as { result?: { message?: { chat?: { id?: number; first_name?: string; last_name?: string; title?: string; username?: string } } }[] }

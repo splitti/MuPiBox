@@ -2,9 +2,10 @@
 #
 # The options for fbv (start, maintenance and goodbye picture) on a display that runs with KMS and is turned (see
 # display_rotation.sh): the framebuffer is not turned by the X server - the pictures came up in the panel's own way up
-# (a Touch Display 2: small and upright in the middle). Turned like the X server, covering the screen (a few percent
-# of the edges cut, nothing stretched). Nothing for the official 7" of the 1st generation (the firmware turns), and
-# nothing for a mirrored display (displayMirror, rotation 0): fbv cannot mirror, the pictures stay as they are.
+# (a Touch Display 2: small and upright in the middle). Turned like the X server and enlarged to fit, nothing stretched
+# (-f -e, not -x "cover the screen": this fbv reads -x without its argument and ends with a segmentation fault - no picture at all. -f for a picture larger than the screen, it would be cut off).
+# Nothing for the official 7" of the 1st generation (the firmware turns), and nothing for a mirrored display
+# (displayMirror, rotation 0): fbv cannot mirror, the pictures stay as they are.
 #
 #   FBV_OPTS=$(/usr/local/bin/mupibox/fbv_options.sh)
 
@@ -15,7 +16,7 @@ for c in /sys/class/drm/card*-DSI-*/status; do
 done
 [ "${kms_dsi}" = "1" ] || exit 0
 case "${ROT}" in
-	90) echo "-o 1 -x 10" ;;
-	180) echo "-o 2 -x 10" ;;
-	270) echo "-o 3 -x 10" ;;
+	90) echo "-o 1 -f -e" ;;
+	180) echo "-o 2 -f -e" ;;
+	270) echo "-o 3 -f -e" ;;
 esac

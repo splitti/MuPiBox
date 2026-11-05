@@ -18,6 +18,12 @@ restart_network() {
 	sudo wpa_cli -i $(/usr/local/bin/mupibox/mupi_wifi_iface.sh) reconfigure
 }
 
+# The configuration holds the key of every network. A file left readable by everyone by an earlier save_config goes back
+# to root only; the folder keeps others out while save_config writes it (its temporary file is readable by everyone, and
+# chmod afterwards does not help whoever has opened it). wpa_supplicant and its scripts run as root.
+sudo chmod 600 "${WPACONF}" 2>/dev/null
+sudo chmod 700 "$(dirname "${WPACONF}")" 2>/dev/null
+
 while true
 do
 	if test -f "${MUPIWIFI}"
@@ -77,7 +83,8 @@ do
 			# by hand. So: check the length first, then the exit code and the shape of the output.
 			if [ ${#PSK} -lt 8 ] || [ ${#PSK} -gt 63 ]; then
 				echo "add_wifi.sh: password for '${SSID}' rejected (must be 8..63 characters)" >&2
-			elif ! WIFI_RESULT=$(sudo wpa_passphrase "${SSID}" "${PSK}") || ! grep -q '^network={' <<< "${WIFI_RESULT}"; then
+			# (the password over stdin: sudo writes its command line to the system log)
+			elif ! WIFI_RESULT=$(sudo wpa_passphrase "${SSID}" <<< "${PSK}") || ! grep -q '^network={' <<< "${WIFI_RESULT}"; then
 				echo "add_wifi.sh: wpa_passphrase failed for '${SSID}', nothing written" >&2
 			else
 				# drop the plain-text "#psk=" comment, add scan_ssid=1 after the ssid line

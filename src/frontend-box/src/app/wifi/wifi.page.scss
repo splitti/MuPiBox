@@ -327,6 +327,16 @@ ion-content.wifi-content::part(scroll) {
 }
 
 // WiFi | LAN in the title: the LAN settings also when the cable is not the link in use. Same look as the mode toggle.
+.used-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 6px;
+    border-radius: 50%;
+    background: var(--ion-color-success, #2dd36f);
+    vertical-align: middle;
+}
+
 .view-toggle {
     display: inline-flex;
     vertical-align: middle;

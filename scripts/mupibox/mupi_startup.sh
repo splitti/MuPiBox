@@ -33,6 +33,9 @@ fi
 
 # A new display model waiting for its answer (app: Display-Modell): 3 minutes from now, then it goes back by itself
 [ -x /usr/local/bin/mupibox/display_profile.sh ] && /usr/local/bin/mupibox/display_profile.sh boot
+# The touch of a display on the ribbon cable that gave up at the start (Touch Display 2: its chip came before its power),
+# once more - beside the rest of the start
+[ -f /usr/local/bin/mupibox/display_touch.sh ] && bash /usr/local/bin/mupibox/display_touch.sh &
 
 # The display brightness chosen in the app (mupibox.displayBrightness, percent; missing = as the display starts).
 # At least 10 %, so a mistake never leaves a black display after a restart.

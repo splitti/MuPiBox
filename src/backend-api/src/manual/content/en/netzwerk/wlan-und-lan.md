@@ -21,7 +21,7 @@ Each saved network has **Address** (fixed IP address, see below), **Password** (
 
 A network that does not show its name is entered under **Enter hidden network**: **Network name (SSID)** and **Password** (empty for an open network), then **Add**.
 
-The box stays in the current network and takes the new one when it is in range and better. So it stays reachable even after a typing mistake.
+After adding a network, the box chooses its network anew and may lose the connection for a moment. With a mistyped password it comes back to the previous network but keeps trying the new one. Then remove it or enter the correct one under **Password**.
 
 ### Fixed IP address
 
@@ -31,7 +31,7 @@ For every saved network a **fixed IP address** can be set via **Address** (**Obt
 
 | Setting | Effect |
 | --- | --- |
-| **Wi-Fi watchdog (DietPi-WiFi-Monitor)** | rebuilds the connection when it drops |
+| **Wi-Fi watchdog (DietPi-WiFi-Monitor)** | rebuilds the connection when it drops (on after a new installation). With a cable, or with no network in reach, it does not step in all the time |
 | **Look for the best connection** | switches to the strongest of several saved networks |
 | **Restart Wi-Fi** | restarts the Wi-Fi |
 
@@ -43,12 +43,14 @@ For every saved network a **fixed IP address** can be set via **Address** (**Obt
 
 The built-in Wi-Fi can be switched off (**Onboard Wi-Fi on**). It can also be switched on again on the display: tap the Wi-Fi symbol at the top of the Wi-Fi page. If it was already off at the start, it is back after a restart – the display offers one. For a **USB Wi-Fi stick** you choose the **USB Wi-Fi driver** (RTL88X2BU or RTL8821AU) and tap **Install driver**. The driver is built on the box, which takes a few minutes. Then restart the box. Once the driver is installed, you set **Power saving for the USB adapter** (**Off**, **Minimum** or **Maximum**). **Off** makes the connection more stable with some adapters.
 
+On Debian 13 (Trixie) these two drivers cannot be built yet, so the choice is not shown there. A stick whose driver is part of the system works without them. On Trixie the built-in Wi-Fi is the better choice: older Realtek sticks can drop out there.
+
 ## LAN (cable)
 
 The **LAN** page belongs to the cable connection:
 
 - **LAN on** switches it on or off. With a cable, LAN has priority over the Wi-Fi,
-- the page shows whether a cable is plugged in, and the current address,
+- **Connection** shows whether a cable is connected and the current IP address, under **Details** also gateway, DNS and MAC,
 - **Obtain address**: **DHCP** or **Static**,
 - with **Static** you enter **IP address** and **Subnet mask**. **Router (optional)** and **DNS server (optional)** may stay empty. Without a router the internet stays with the Wi-Fi. That is handy when a PC is connected directly to the box,
 - **Save** applies the values, **Restart LAN** restarts the connection,

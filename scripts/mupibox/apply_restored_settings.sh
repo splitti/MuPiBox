@@ -24,7 +24,8 @@ CARD_ARG=()
 if [ "$(j '.mupihat.hat_active // false')" = "true" ]; then
 	if ! enabled mupi_hat.service; then
 		echo "MuPiHAT on (restored configuration)"
-		"${B}/enable_mupihat.sh" "${CARD_ARG[@]}"
+		# (the backup's pins stay: they are the ones its box is wired for)
+		MUPIHAT_KEEP_PINS=1 "${B}/enable_mupihat.sh" "${CARD_ARG[@]}"
 	fi
 elif enabled mupi_hat.service; then
 	echo "MuPiHAT off (restored configuration)"

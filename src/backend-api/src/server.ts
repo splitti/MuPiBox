@@ -58,7 +58,7 @@ import { OnlineCovers } from './online-covers'
 import { ardFeed, isArdFeed } from './ard-sounds'
 import { isEpisodePick } from './episode-pick'
 import { feedHostKey, feedHostsOf, isPrivateHost, neverFetched } from './lan-feeds'
-import { decodeWpaSsid, parseWpaCliScanResults, type WifiScanEntry, wifiBandOf } from './wpa-ssid'
+import { decodeWpaSsid, parseWpaCliScanResults, type WifiScanEntry, wifiBandOf, wifiConfigPrivate } from'./wpa-ssid'
 import { registerAudioOutputRoutes, startAudioWatch } from './audio-output'
 import { episodeKey, MAX_KEEP, type OfflineEpisode, PodcastOffline } from './podcast-offline'
 import { setFeedHeadReader } from './podcast-search'
@@ -1713,8 +1713,9 @@ async function removeRssPictures(removed: unknown, remaining: unknown[]): Promis
 app.get('/api/data', (_req, res) => {
   // Mirror /api/resume: when active_data.json is missing the frontend would
   // otherwise hang on its loading spinner, because the previous code's missing
-  // else-branch never sent a response.
-  if (!fs.existsSync(activedataFile)) {
+  // else-branch never sent a response. Only a box without a library is an empty list: a library that cannot be read
+  // answered [] too, and the display took that for an emptied library (see homeListIsCurrent there).
+  if (!fs.existsSync(activedataFile) && !fs.existsSync(dataFile)) {
     res.json([])
     return
   }
@@ -1722,7 +1723,7 @@ app.get('/api/data', (_req, res) => {
     if (error) {
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/data read active_data.json`)
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
-      res.json([])
+      res.status(503).json({ error: 'library_not_readable' })
     } else {
       res.json(data)
     }
@@ -3005,6 +3006,65 @@ app.get('/api/wifi/configured', async (_req, res) => {
   }
 })
 
+// Every WiFi adapter as it is now, for the WiFi page: the names wlan0 and wlan1 change between starts, so an adapter is
+// told by its bus. (Its own wpa_cli answers; one switched off has none.)
+async function wifiAdapters() {
+  const names = fs.existsSync('/sys/class/net') ? fs.readdirSync('/sys/class/net').filter((n) => /^wlan\d+$/.test(n)).sort() : []
+  return Promise.all(
+    names.map(async (name) => {
+      const base = `/sys/class/net/${name}`
+      let usb: boolean | null = null
+      let mac: string | undefined
+      try {
+        usb = fs.realpathSync(`${base}/device`).includes('/usb')
+        mac = fs.readFileSync(`${base}/address`, 'utf8').trim()
+      } catch {
+        // gone again
+      }
+      // (1 s each: an adapter that hangs must not hold up the status of the one in use - the display asks every 3 s)
+      let status = ''
+      let hanging = false
+      try {
+        status = (await execFileAsync('sudo', ['wpa_cli', '-i', name, 'status'], { timeout: 1000 })).stdout
+      } catch (error) {
+        // no wpa_supplicant on it, or no answer
+        hanging = (error as { killed?: boolean }).killed === true
+      }
+      const field = (key: string) => new RegExp('^' + key + '=(.*)$', 'm').exec(status)?.[1]
+      const state = field('wpa_state') ?? (hanging ? 'UNKNOWN' : 'INTERFACE_DISABLED')
+      const connected = state === 'COMPLETED'
+      let signalDbm: number | undefined
+      let gateway: string | undefined
+      if (connected) {
+        try {
+          const rssi = /^RSSI=(-?\d+)/m.exec((await execFileAsync('sudo', ['wpa_cli', '-i', name, 'signal_poll'], { timeout: 1000 })).stdout)?.[1]
+          signalDbm = rssi === undefined ? undefined : Number.parseInt(rssi, 10)
+        } catch {
+          // no signal value right now
+        }
+        try {
+          gateway = /via (\S+)/.exec((await execFileAsync('ip', ['-4', 'route', 'show', 'default', 'dev', name], { timeout: 1000 })).stdout)?.[1]
+        } catch {
+          // no default route on this adapter
+        }
+      }
+      const frequency = field('freq')
+      return {
+        interface: name,
+        usb,
+        mac,
+        state,
+        ssid: connected ? decodeWpaSsid(field('ssid') ?? '') : undefined,
+        band: connected && frequency ? wifiBandOf(Number.parseInt(frequency, 10)) : undefined,
+        ip: connected ? field('ip_address') : undefined,
+        gateway,
+        signalDbm,
+        signal: signalDbm === undefined ? undefined : wifiSignalPercent(signalDbm),
+      }
+    }),
+  )
+}
+
 // The WiFi link as it is right now, for the WiFi page: network.json is only rewritten by a cron job every
 // 30 seconds, so a network change would show up there with a delay - and it names the adapter that is not
 // necessarily the one in use.
@@ -3036,12 +3096,14 @@ app.get('/api/wifi/status', async (_req, res) => {
     res.json({
       interface: wifi,
       state,
-      ssid: connected ? field('ssid') : undefined,
+      // (wpa_cli prints a name with an umlaut as \xNN per byte)
+      ssid: connected ? decodeWpaSsid(field('ssid') ?? '') : undefined,
       band: connected && frequency ? wifiBandOf(Number.parseInt(frequency, 10)) : undefined,
       ip: connected ? field('ip_address') : undefined,
       gateway: connected ? gateway : undefined,
       signalDbm,
       signal: signalDbm === undefined ? undefined : wifiSignalPercent(signalDbm),
+      adapters: await wifiAdapters(),
     })
   } catch (error) {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error reading wifi status: ${error}`)
@@ -3140,6 +3202,7 @@ function wifiSaveConfig(wifi: string, adjust?: (entries: WifiBandEntry[]) => voi
     const entries = await wifiBandEntries()
     adjust?.(entries)
     await execFileAsync('sudo', ['wpa_cli', '-i', wifi, 'save_config'])
+    await wifiConfigPrivate()
     try {
       await wifiWriteBandEntries(entries)
       return true
@@ -3331,6 +3394,7 @@ app.get('/api/network/ethernet', async (_req, res) => {
       currentIp,
       currentIpv6: ipv6AddressesOf(parsed.iface),
       currentGateway,
+      mac: fs.existsSync(`/sys/class/net/${parsed.iface}/address`) ? fs.readFileSync(`/sys/class/net/${parsed.iface}/address`, 'utf8').trim() : undefined,
       linkUp,
       // a cable plugged in (null: not known - the port is down)
       carrier,

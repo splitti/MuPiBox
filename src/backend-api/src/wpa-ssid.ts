@@ -1,3 +1,17 @@
+import { execFile } from 'node:child_process'
+
+// save_config writes the WiFi configuration anew, readable by everyone (wpa_supplicant's umask): back to root only - it
+// holds the key of every network. Everything that reads it goes through sudo. (While it is written, the folder keeps
+// others out, see add_wifi.sh.)
+export function wifiConfigPrivate(): Promise<void> {
+  return new Promise((resolve) =>
+    execFile('sudo', ['chmod', '600', '/etc/wpa_supplicant/wpa_supplicant.conf'], { timeout: 5000 }, (err) => {
+      if (err) console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] WiFi configuration stays readable: ${err.message}`)
+      resolve()
+    }),
+  )
+}
+
 /**
  * The network's name as wpa_cli prints it (list_networks, status, get_network): a character outside ASCII comes as
  * \xNN per byte, a backslash as \\. Decoded here to the name as the box's user wrote it.

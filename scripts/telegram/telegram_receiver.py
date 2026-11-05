@@ -591,8 +591,10 @@ def handle_callback(query_data, chat_id, keyboard_msg, answer):
 TOKEN = config['telegram']['token']
 bot = telepot.Bot(TOKEN)
 
+# allowed_updates: Telegram keeps the last setting for the bot. The app's "detect chats" asked for messages only up to
+# 5.0.13, and the taps on the buttons of /help stayed away for good; said here at every start, that repairs itself.
 MessageLoop(bot, {'chat': on_chat_message,
-                  'callback_query': on_callback_query}).run_as_thread()
+                  'callback_query': on_callback_query}).run_as_thread(allowed_updates=['message', 'callback_query'])
 print ('Listening ...')
 
 while 1:

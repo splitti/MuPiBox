@@ -16,7 +16,7 @@ The **GPIO pins** are the connections on the Raspberry Pi's pin header. The MuPi
 | {rotary-button} Rotary knob | Button | 10 | no |
 | {poweroff} OnOff SHIM (also the MuPiHAT) | signal to shut down (`gpio-poweroff`) | 4 | in the configuration (`shim.poweroffPin`) |
 | {trigger} OnOff SHIM (also the MuPiHAT) | button (trigger) | 17 | in the configuration (`shim.triggerPin`) |
-| {cut} Power cut (set by the box, not by the SHIM) | signal when switching off | 27 | in the configuration (`shim.cutPin`) |
+| {cut} Power cut (set by the box, not by the SHIM; not set with the MuPiHAT) | signal when switching off | 27 | in the configuration (`shim.cutPin`) |
 | {led} Status LED (a separate LED, not part of the SHIM) | status LED | 13 | yes, **Settings › Battery & Power › Power switch and LED** |
 | {fan} Fan | PWM signal | 12 | yes, **Settings › Battery & Power › Fan** |
 

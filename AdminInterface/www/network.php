@@ -19,6 +19,11 @@
 			),
 		);
 
+	// The install scripts build against raspberrypi-kernel-headers, which Debian 13 (trixie) no longer has: not offered there,
+	// and not on a system whose version cannot be told either (the scripts end the display first).
+	$usb_wifi_can_build = preg_match('/^VERSION_ID="?(\d+)/m', (string)@file_get_contents('/etc/os-release'), $os_version) && (int)$os_version[1] < 13;
+	$usb_wifi_any_installed = count(array_filter($usb_wifi_drivers, function ($d) { return is_dir($d['path']); })) > 0;
+
 	// Asked by the driver dropdown's onchange (fetch, not a form submit) so picking a
 	// different driver updates "State: ..." and the button label without reloading the
 	// whole page (that used to also re-scan the embedded WiFi iframe and jump the scroll).
@@ -55,7 +60,7 @@
 
 	$usb_wifi_driver = isset($_POST['usb_wifi_driver']) && isset($usb_wifi_drivers[$_POST['usb_wifi_driver']]) ? $_POST['usb_wifi_driver'] : 'RTL88X2BU';
 
-	if( $_POST['USB_WIFI_DRIVER'] == "Install driver" )
+	if( $_POST['USB_WIFI_DRIVER'] == "Install driver" && $usb_wifi_can_build )
 		{
 		$command = "cd; curl -L ".$usb_wifi_drivers[$usb_wifi_driver]['install_url']." | sudo su dietpi -c bash";
 		exec($command, $output, $result );
@@ -218,7 +223,8 @@
 		$wifinr = isset($_POST['wifinr']) ? intval($_POST['wifinr']) : -1;
 		if ($wifinr >= 0)
 			{
-			$command = "sudo wpa_cli remove_network " . $wifinr . " && sudo wpa_cli save_config";
+			// (save_config writes the file anew, readable by everyone: back to root only)
+			$command = "sudo wpa_cli remove_network " . $wifinr . " && sudo wpa_cli save_config && sudo chmod 600 /etc/wpa_supplicant/wpa_supplicant.conf";
 			exec($command, $output, $result );
 			$change=1;
 			$CHANGE_TXT=$CHANGE_TXT."<li>Wifi deleted</li>";
@@ -414,6 +420,7 @@
 			</p>
 			<input id="saveForm" class="button_text" type="submit" name="renew_dhcp" value="Renew DHCP-Lease" />
 		</li>
+		<?php if ($usb_wifi_can_build || $usb_wifi_any_installed) { ?>
 		<li class="li_1"><h2>Install USB-Wlan drivers</h2>
 			<p>
 			These drivers are for several network cards like these:
@@ -447,6 +454,7 @@
 			</b></p><p>Please notice: Installation takes a long long time! If you want to install manually and see the installation status, check out this blog post: <a href="https://mupibox.de/pimp-die-mupibox-mit-schneller-netzwerkkarte/" target="_blank">Blog Post</a></p>
 			<input id="usb_wifi_driver_button" class="button_text" type="submit" name="USB_WIFI_DRIVER" value="<?php print $change_usb_wifi_driver; ?>" />
 		</li>
+		<?php } ?>
 		<li class="li_1"><h2>Power management USB-driver</h2>
 			<p>
 			Power saving of the USB WiFi adapter. With power saving the adapter dozes between data packets: with a weak signal packets can get lost or delayed and the connection is set up again. <b>Off</b> keeps the adapter awake, it uses a little more power and gets slightly warmer. Takes effect after the next reboot.

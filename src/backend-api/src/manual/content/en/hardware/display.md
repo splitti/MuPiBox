@@ -15,7 +15,9 @@ A display on the ribbon cable (DSI) does not say what it is. So you choose here 
 | **EDATEC DSI 7″ or 10″** | choose the size |
 | **Own setting** | the app leaves `config.txt` alone – for displays you set up yourself |
 
-With **Apply and restart** the box restarts with the new model. Then the app (on the start page too) and the display ask: **Do you see a picture?** Tap **Keep** on the display or **Yes, keep** in the app, and the model stays. Without an answer within **3 minutes** – for instance because the display stays dark – the box sets the previous display again and restarts once more. **No, back** does that at once.
+With **Apply and restart** the app first shows what changes and, after **Switch**, restarts the box with the new model. A window in the app waits for the restart – no need to reload – and then asks by itself, as the display does: **Do you see a picture?** Opening the app during the test (on another device too) brings that question at once. Tap **Keep** on the display or **Yes, keep** in the app, and the model stays. Without an answer within **3 minutes** – for instance because the display stays dark – the box sets the previous display again and restarts once more. **No, back** does that at once. The 3 minutes run from the moment the app reaches the box after the restart – on a weak WLAN that can take a while. If nobody opens the app, the box waits at most 6 minutes after its start.
+
+The **Touch Display 2** is built upright. When you choose it here, the box starts it lying right away (**90°**, picture and touch). If it is upside down in your case, take **270°** under [Rotation](#rotation).
 
 > [!NOTE]
 > If the display stays dark with the right model too, check its power: most DSI displays do not get their 5 V over the ribbon cable but over a cable of their own (on the MuPiHAT at **J2**, 5V on top, GND below). Apart from the official 7″, all models use the drivers of the Raspberry Pi kernel.
@@ -45,7 +47,7 @@ With **Evening dimming** the display gets darker in the evening and normally bri
 If the display stands upside down or sideways, you rotate the picture. What you see for it depends on the display model:
 
 - **Official 7″ (1st generation):** For a **Display on the HDMI port** you choose off, 90°, 180°, 270°, mirror horizontally or vertically. For a **Display on the ribbon cable (DSI/LCD)** there are (folded) **LCD rotation** and **Display LCD rotation**, each off or 180°. The rotation applies after a restart of the box.
-- **All other models:** tiles **0°**, **90°**, **180°** and **270°** as well as **Mirror ↔** (left-right) and **Mirror ↕** (top-bottom) – turned or mirrored, not both. Picture and touch turn or mirror together; when turned, the start, maintenance and goodbye pictures turn too (mirrored, these pictures stay as they are). The display restarts briefly, the box does not. **Landscape** marks the positions in which the MuPiBox stands right – many of these displays are built upright (such as the Touch Display 2), then it is 90° or 270°, depending on how the display is mounted.
+- **All other models:** tiles **0°**, **90°**, **180°** and **270°** as well as **Mirror ↔** (left-right) and **Mirror ↕** (top-bottom) – turned or mirrored, not both. Picture and touch turn or mirror together; when turned, the start, maintenance and goodbye pictures turn too (mirrored, these pictures stay as they are). The display restarts briefly, the box does not. **Landscape** marks the positions in which the MuPiBox stands right – many of these displays are built upright (such as the Touch Display 2), then it is 90° or 270°, depending on how the display is mounted. The box sets the Touch Display 2 to 90° already when its model is chosen and when it is installed with this display.
 
 ## Resolution
 

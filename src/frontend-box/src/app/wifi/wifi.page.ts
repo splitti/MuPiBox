@@ -19,7 +19,7 @@ import {
   IonToolbar,
 } from '@ionic/angular/standalone'
 import { addIcons } from 'ionicons'
-import { Subscription, catchError, EMPTY, map, of, switchMap, timer } from 'rxjs'
+import { Subscription, catchError, EMPTY, exhaustMap, map, of, switchMap, timeout, timer } from 'rxjs'
 import { addOutline, arrowBackOutline, gitNetworkOutline, lockClosedOutline, refresh, scanOutline, wifiOutline } from 'ionicons/icons'
 import Keyboard from 'simple-keyboard'
 import { MediaService } from '../media.service'
@@ -89,6 +89,21 @@ export class WifiPage {
   // `network` comes from, is only rewritten every 30 seconds)
   private status = signal<WifiStatus | null>(null)
   private statusPolling?: Subscription
+  // Two WiFi adapters: a tab each, known by the bus (wlan0 and wlan1 change between starts)
+  private adapters = computed(() => (this.status()?.adapters ?? []).filter((a) => a.usb !== null))
+  protected twoAdapters = computed(() => this.adapters().some((a) => a.usb === true) && this.adapters().some((a) => a.usb === false))
+  protected usedAdapter = computed(() => this.adapters().find((a) => a.interface === this.status()?.interface) ?? null)
+  private chosenAdapterUsb = signal<boolean | null>(null)
+  protected selectedAdapter = computed(() => {
+    if (!this.twoAdapters()) return null
+    const usb = this.chosenAdapterUsb()
+    return (usb === null ? this.usedAdapter() : this.adapters().find((a) => a.usb === usb)) ?? null
+  })
+  // The tab of the adapter not in use: the networks to look at only (they are one list, for both)
+  protected otherTab = computed(() => {
+    const selected = this.selectedAdapter()
+    return !!selected && selected.interface !== this.status()?.interface
+  })
   // What the top card shows: the live link, until the first answer the network.json values
   protected card = computed(() => {
     const live = this.status()
@@ -100,6 +115,26 @@ export class WifiPage {
         detail: `${stored?.wifilink ?? ''} · ${stored?.wifisignal ?? ''}`,
         ip: stored?.ip ?? '—',
         gateway: stored?.gateway ?? '—',
+      }
+    }
+    const adapter = this.selectedAdapter()
+    if (adapter) {
+      const kind = adapter.usb ? 'USB WiFi' : 'Onboard WiFi'
+      return {
+        interface: adapter.interface,
+        name: adapter.ssid ?? kind,
+        detail: adapter.ssid
+          ? [kind, adapter.signal != null ? `${adapter.signal} %` : '', adapter.signalDbm != null ? `${adapter.signalDbm} dBm` : '', adapter.band ? `${adapter.band} GHz` : '']
+              .filter((part) => part !== '')
+              .join(' · ')
+          : adapter.state === 'INTERFACE_DISABLED'
+            ? // Off is the radio switch of the header. With a USB adapter connected the onboard one is only taken down, and comes back when the USB adapter goes.
+              !adapter.usb && this.onboardWifi()?.enabled === false
+              ? 'switched off'
+              : 'not in use'
+            : 'looking for a network',
+        ip: adapter.ip ?? '—',
+        gateway: adapter.gateway ?? '—',
       }
     }
     const connected = live.state === 'COMPLETED' && live.ssid
@@ -204,7 +239,8 @@ export class WifiPage {
     this.loadNetworks()
     this.loadFixed()
     this.statusPolling = timer(0, 3000)
-      .pipe(switchMap(() => this.wifiService.getStatus().pipe(catchError(() => EMPTY))))
+      // (the next one only when the last has answered, at most 10 s: dropped every 3 s, a slower answer never came through)
+      .pipe(exhaustMap(() => this.wifiService.getStatus().pipe(timeout(10000), catchError(() => EMPTY))))
       .subscribe((status) => this.status.set(status))
     this.linkPolling = timer(0, 3000)
       .pipe(switchMap(() => this.wifiService.getLink().pipe(catchError(() => EMPTY))))
@@ -385,6 +421,11 @@ export class WifiPage {
     if (view === 'lan' && !this.ethernet()) this.loadEthernetConfig()
   }
 
+  protected chooseAdapter(usb: boolean) {
+    this.chosenAdapterUsb.set(usb)
+    this.chooseView('wifi')
+  }
+
   /** The saved networks with a fixed address, and the note of one taken back to DHCP */
   protected loadFixed() {
     this.wifiService
@@ -401,7 +442,7 @@ export class WifiPage {
     const alert = await this.alertController.create({
       cssClass: 'alert',
       header: 'Renew address',
-      message: `The box gets its ${lan ? 'LAN' : 'WiFi'} address anew from the router. The connection is gone for a moment.`,
+      message: `The box gets its ${lan && !lan.startsWith('wlan') ? 'LAN' : 'WiFi'} address anew from the router. The connection is gone for a moment.`,
       buttons: [{ text: 'Renew', handler: () => this.wifiService.renewAddress(lan).pipe(catchError(() => EMPTY)).subscribe() }, { text: 'Cancel' }],
     })
     await alert.present()

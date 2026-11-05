@@ -45,7 +45,7 @@ With an **OnOff SHIM** (on/off button with status LED) you switch the box on and
 | Setting | Effect |
 | --- | --- |
 | **Delay of the shutdown button** | how long you hold the button until the box goes off, 0 to 5 seconds (2 after installation). Applies after a restart |
-| **LED pin (OnOffShim)** | the GPIO pin of the LED (13 after installation). Applies after a restart |
+| **LED pin (OnOffShim)** | the GPIO pin of the LED (13 after installation; switching the MuPiHAT on sets its pins, the LED to 13). Applies after a restart |
 | **LED brightness normal** | brightness in operation, 0 to 100 % |
 | **LED brightness dimmed** | brightness when dimmed, 0 to 100 % |
 

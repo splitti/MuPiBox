@@ -4,14 +4,21 @@
 #
 #   display_profile.sh apply <profile> <previous>   writes the model's lines into config.txt (a marked block, KMS on or
 #                                                   off with DietPi's own tool), keeps the config.txt and the rotation
-#                                                   of before and starts the test: the box is restarted by the caller
+#                                                   of before, sets the model's way up (Touch Display 2: 90 degrees)
+#                                                   and starts the test: the box is restarted by the caller
 #   display_profile.sh boot                         at every start (mupi_startup.sh): a test that waits for its answer
-#                                                   gets 3 minutes; a second start without one goes back at once
-#   display_profile.sh confirm                      the picture is there (app or display): the model stays - only once
+#                                                   gets at most 6 minutes; a second start without one goes back at once
+#   display_profile.sh asked                        the app reaches the box for the first time after that start (the
+#                                                   app's server): 3 minutes from now, within those 6
+#   display_profile.sh confirm [<id>]               the picture is there (app or display): the model stays - only once
 #                                                   the box has started with it
-#   display_profile.sh revert                       back to the model, config.txt and rotation of before, restart
-#   display_profile.sh timeout [<id>]               the 3 minutes are over: revert, unless it was confirmed meanwhile
+#   display_profile.sh revert [<id>]                back to the model, config.txt and rotation of before, restart
+#   display_profile.sh timeout [<id>]               the time is over: revert, unless it was confirmed meanwhile
 #                                                   (a timer gives the test's id: it does nothing for a later test)
+#
+# The 3 minutes count from the app's first visit, not from the start: a box on a weak WLAN is reached minutes after
+# its start, and the question came with seconds left. Without the app (a display that shows its picture is answered
+# on the display) the box goes back 6 minutes after its start.
 #
 # A display on the ribbon cable (DSI) does not say what it is (no EDID as with HDMI): a wrong model leaves the display
 # dark - so every change is a test that goes back by itself without an answer.
@@ -36,6 +43,7 @@ TOUCHROT=/etc/udev/rules.d/99-mupibox-touch-rotate.rules
 REFLECT=/etc/X11/mupibox-reflect
 TIMER_UNIT=mupibox-display-test
 WAIT_S=180
+MAX_S=360
 RETRY_S=60
 
 # The models: their overlay line (empty: the display of the firmware - the official 7" of the 1st generation, HDMI)
@@ -64,10 +72,13 @@ put_atomic() {
 }
 
 # the test file: state ($1: prepare|ready|reverting), its id, the model, the one of before with its rotation and
-# mirroring, the start with it ($2)
+# mirroring, the start with it ($2) - and how long the box had run then ($3, seconds of /proc/uptime): the clock is not
+# right yet at that moment (a Pi has none of its own: it starts with the time it last saved and is set from the
+# network later - minutes off), the time since the start is. Then how long it had run when the app first asked
+# (ASKED_UPTIME, see asked).
 write_test() {
-	printf 'state=%s\nid=%s\nprofile=%s\nprevious=%s\nprevious_rotation=%s\nprevious_mirror=%s\nbooted=%s\n' \
-		"$1" "${TEST_ID}" "${PROFILE}" "${PREVIOUS}" "${PREV_ROT:-0}" "${PREV_MIRROR:-}" "${2:-}" > "${TEST}.new" \
+	printf 'state=%s\nid=%s\nprofile=%s\nprevious=%s\nprevious_rotation=%s\nprevious_mirror=%s\nbooted=%s\nbooted_uptime=%s\nasked_uptime=%s\n' \
+		"$1" "${TEST_ID}" "${PROFILE}" "${PREVIOUS}" "${PREV_ROT:-0}" "${PREV_MIRROR:-}" "${2:-}" "${3:-${BOOTED_UPTIME:-}}" "${ASKED_UPTIME:-}" > "${TEST}.new" \
 		&& sync "${TEST}.new" && mv -f "${TEST}.new" "${TEST}" && sync "${STATE}"
 }
 test_value() { sed -n "s/^$1=//p" "${TEST}" 2>/dev/null; }
@@ -78,6 +89,8 @@ read_test() {
 	PREV_ROT=$(test_value previous_rotation)
 	PREV_MIRROR=$(test_value previous_mirror)
 	BOOTED=$(test_value booted)
+	BOOTED_UPTIME=$(test_value booted_uptime)
+	ASKED_UPTIME=$(test_value asked_uptime)
 }
 
 # the model ($1), its rotation in degrees ($2) and mirroring ($3: x, y or empty) in the settings - under the lock the
@@ -103,7 +116,7 @@ set_profile_in_config() {
 }
 
 # no rotation or mirroring by the X server and no touch matrix (the official 7" turns with the firmware's settings; a
-# new panel starts its own way up)
+# new panel starts its own way up, or as upright_rotation turns it)
 clear_rotation() {
 	local failed=0
 	rm -f "${XROT}" "${TOUCHROT}" "${REFLECT}" || failed=1
@@ -111,11 +124,47 @@ clear_rotation() {
 	return ${failed}
 }
 
+# The way up a new panel starts with: the Touch Display 2 (5", 7" and 10") stands upright of itself (720 x 1280,
+# 1200 x 1920) - the MuPiBox needs it lying, turned by 90 degrees; the others start at 0 (the official 7" turns with the
+# firmware's settings, Waveshare and EDATEC lie already)
+upright_rotation() {
+	case "$1" in
+		td2-*) echo 90 ;;
+		*) echo 0 ;;
+	esac
+}
+
+# The new panel turned by 90 degrees, picture and touch, as display_rotation.sh writes it (the app's Drehung changes it
+# later). The X server's name of the output: the display with KMS there now - from the firmware's display (KMS off) it
+# is known only after the restart: DSI-1 on a Pi 4, DSI-1 or DSI-2 on a Pi 5 (a section for an output that is not there
+# does nothing).
+turn_new_panel() {
+	local c outputs="" out
+	for c in /sys/class/drm/card*-DSI-*; do
+		[ "$(cat "${c}/status" 2>/dev/null)" = "connected" ] || continue
+		outputs=$(basename "${c}" | sed 's/^card[0-9]*-//')
+		break
+	done
+	[ -n "${outputs}" ] || outputs="DSI-1 DSI-2"
+	mkdir -p "$(dirname "${XROT}")" || return 1
+	{
+		echo "# MuPiBox (app: Display & Bedienung > Drehung): the display turned by 90 degrees"
+		for out in ${outputs}; do
+			printf 'Section "Monitor"\n\tIdentifier "%s"\n\tOption "Rotate" "right"\nEndSection\n' "${out}"
+		done
+	} > "${XROT}.mupibox-new" && sync "${XROT}.mupibox-new" && mv -f "${XROT}.mupibox-new" "${XROT}" || return 1
+	printf '%s\n%s\n' "# MuPiBox (app: Display & Bedienung > Drehung): the touch turned or mirrored with the picture (90)" \
+		'ENV{ID_INPUT_TOUCHSCREEN}=="1", SUBSYSTEMS=="i2c", ENV{LIBINPUT_CALIBRATION_MATRIX}="0 1 0 -1 0 1"' > "${TOUCHROT}.mupibox-new" \
+		&& sync "${TOUCHROT}.mupibox-new" && mv -f "${TOUCHROT}.mupibox-new" "${TOUCHROT}" || return 1
+	udevadm control --reload 2>/dev/null
+	return 0
+}
+
 # the timers of the test (its 3 minutes, and tries again of a way back that failed). A timer that is not there (none
 # after a restart) is no failure: systemctl says so with an error, and a successful way back counted as failed - the box
 # then did not restart and stayed on the wrong model.
 stop_timers() {
-	systemctl stop "${TIMER_UNIT}.timer" "${TIMER_UNIT}-retry-*.timer" 2>/dev/null || true
+	systemctl stop "${TIMER_UNIT}.timer" "${TIMER_UNIT}-asked.timer" "${TIMER_UNIT}-retry-*.timer" 2>/dev/null || true
 }
 
 # config.txt, the rotation and the settings of before back (PREVIOUS, PREV_ROT, PREV_MIRROR); the test is set to
@@ -187,6 +236,8 @@ case "${1:-}" in
 		mkdir -p "${STATE}" || exit 1
 		TEST_ID="$(date +%s)-$$"
 		BOOTED=""
+		BOOTED_UPTIME=""
+		ASKED_UPTIME=""
 		# the copies of before (config.txt, the rotation), then the test file - all before the first change
 		rm -f "${STATE}"/rot.* "${BEFORE}"
 		fail_copies() { rm -f "${STATE}"/rot.* "${BEFORE}" "${TEST}.new"; echo "$1"; exit 1; }
@@ -230,7 +281,11 @@ case "${1:-}" in
 		[ -s "${NEW}" ] || { rm -f "${NEW}"; rollback "config.txt came out empty"; }
 		{ sync "${NEW}" && mv -f "${NEW}" "${BOOT_CONFIG}" && sync "$(dirname "${BOOT_CONFIG}")"; } || { rm -f "${NEW}"; rollback "config.txt could not be written"; }
 		clear_rotation || rollback "the rotation could not be removed"
-		set_profile_in_config "${PROFILE}" 0 "" || rollback "the model could not be noted in the settings"
+		ROT=$(upright_rotation "${PROFILE}")
+		if [ "${ROT}" != "0" ]; then
+			turn_new_panel || rollback "the rotation could not be written"
+		fi
+		set_profile_in_config "${PROFILE}" "${ROT}" "" || rollback "the model could not be noted in the settings"
 		write_test ready || rollback "the test could not be noted"
 		log "display model ${PREVIOUS} -> ${PROFILE} (${OVERLAY:-firmware}): test after the restart"
 		;;
@@ -247,15 +302,40 @@ case "${1:-}" in
 			exec "$0" revert
 		fi
 		read_test
-		write_test ready "$(date +%s)" || { log "display test: the start could not be noted - back to the model before"; exec "$0" revert; }
+		ASKED_UPTIME=""
+		write_test ready "$(date +%s)" "$(cut -d. -f1 /proc/uptime)" || { log "display test: the start could not be noted - back to the model before"; exec "$0" revert; }
 		stop_timers
 		# (without the timer nothing would go back by itself: back at once instead)
-		systemd-run --unit=${TIMER_UNIT} --on-active=${WAIT_S} --collect --quiet /bin/bash "$0" timeout "${TEST_ID}" \
+		systemd-run --unit=${TIMER_UNIT} --on-active=${MAX_S} --collect --quiet /bin/bash "$0" timeout "${TEST_ID}" \
 			|| { log "display test: no timer for the answer - back to the model before"; exec "$0" revert; }
-		log "display test: ${WAIT_S} s for an answer"
+		log "display test: at most ${MAX_S} s for an answer, ${WAIT_S} s once the app asks"
+		;;
+	asked)
+		[ -e "${TEST}" ] || exit 0
+		read_test
+		# (once, after the start with the new model, and not while it goes back)
+		[ "$(test_value state)" = "ready" ] && [ -n "${BOOTED_UPTIME}" ] && [ -z "${ASKED_UPTIME}" ] || exit 0
+		NOW=$(cut -d. -f1 /proc/uptime)
+		LEFT=$((BOOTED_UPTIME + MAX_S - NOW))
+		[ "${LEFT}" -gt "${WAIT_S}" ] && LEFT=${WAIT_S}
+		# (its time nearly over already: the timer of the start goes on)
+		[ "${LEFT}" -gt 5 ] || exit 0
+		# A timer of its own beside the one of the start, which goes on: whatever happens here (cut off, no timer), the
+		# box goes back after the 6 minutes all the same. Noted first: cut off before the timer, the app shows 3 minutes
+		# and the box waits longer - never the other way round.
+		ASKED_UPTIME=${NOW}
+		write_test ready "${BOOTED}" || exit 1
+		systemd-run --unit=${TIMER_UNIT}-asked --on-active=${LEFT} --collect --quiet /bin/bash "$0" timeout "${TEST_ID}" \
+			|| { log "display test: no timer for the 3 minutes - back after the 6"; exit 1; }
+		log "display test: the app asks - ${LEFT} s for an answer"
 		;;
 	confirm)
 		[ -e "${TEST}" ] || exit 0
+		# (the answer to another test - this one ended and the next began meanwhile: not for this one)
+		if [ -n "${2:-}" ] && [ "$2" != "$(test_value id)" ]; then
+			echo "another test runs now"
+			exit 5
+		fi
 		# only for a picture of the new model: after the start with it (before, the old display still shows one), and
 		# not while it goes back
 		if [ "$(test_value state)" != "ready" ] || ! grep -q '^booted=[0-9]' "${TEST}"; then
@@ -270,11 +350,11 @@ case "${1:-}" in
 	timeout | revert)
 		[ -e "${TEST}" ] || exit 0
 		read_test
-		# (a timer of an earlier test: not this one's business)
-		if [ "$1" = "timeout" ] && [ -n "${2:-}" ] && [ "$2" != "${TEST_ID}" ]; then
+		# (a timer of an earlier test, or "Nein" to it: not this one's business)
+		if [ -n "${2:-}" ] && [ "$2" != "${TEST_ID}" ]; then
 			exit 0
 		fi
-		systemctl stop ${TIMER_UNIT}.timer 2>/dev/null
+		systemctl stop ${TIMER_UNIT}.timer ${TIMER_UNIT}-asked.timer 2>/dev/null
 		if ! restore_before; then
 			# (no restart: a box that starts again on the half way back would only try once more and restart again)
 			retry_later
@@ -284,7 +364,7 @@ case "${1:-}" in
 		systemctl reboot
 		;;
 	*)
-		echo "usage: $0 apply <profile> <previous> | boot | confirm | revert | timeout [<id>]"
+		echo "usage: $0 apply <profile> <previous> | boot | asked | confirm [<id>] | revert [<id>] | timeout [<id>]"
 		exit 2
 		;;
 esac

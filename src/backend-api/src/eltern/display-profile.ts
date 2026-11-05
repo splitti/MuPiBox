@@ -15,6 +15,7 @@ const PROFILE_SH = '/usr/local/bin/mupibox/display_profile.sh'
 const ROTATION_SH = '/usr/local/bin/mupibox/display_rotation.sh'
 const TEST_FILE = '/var/lib/mupibox/display-profile/test'
 const TEST_SECONDS = 180
+const MAX_SECONDS = 360
 
 // id -> its overlay ('' = the display of the firmware: the official 7" of the 1st generation, HDMI)
 const WS_V1 = ['7_0_inchC', '7_0_inchH', '7_9_inch', '8_0_inch', '8_8_inch', '10_1_inch', '11_9_inch']
@@ -86,10 +87,17 @@ const connectedDsi = async () => (await dsiDisplay()).output
 
 export interface DisplayTest {
   running: boolean
+  // (which test: an answer names it - another device may have ended this one and started the next meanwhile)
+  id?: string
   profile?: string
   previous?: string
+  // the box goes back (its time ran out, or "Nein")
+  reverting?: boolean
   endsAt?: number | null
+  // seconds until the box goes back (null before the restart with it): for a browser, whose clock may be another
+  left?: number | null
 }
+const TEST_ID = /^\d+-\d+$/
 
 /** The test of a new model: waiting for its answer (endsAt: when the box goes back; null before the restart with it) */
 export async function displayTestState(): Promise<DisplayTest> {
@@ -97,19 +105,50 @@ export async function displayTestState(): Promise<DisplayTest> {
   if (!text) return { running: false }
   const get = (k: string) => new RegExp(`^${k}=(.*)$`, 'm').exec(text)?.[1]?.trim() ?? ''
   // (state=prepare: the change is being written, or was cut off - the next start goes back)
-  const booted = get('state') === 'ready' ? Number(get('booted')) : 0
-  return { running: true, profile: get('profile'), previous: get('previous'), endsAt: booted > 0 ? (booted + TEST_SECONDS) * 1000 : null }
+  const ready = get('state') === 'ready'
+  const booted = ready ? Number(get('booted')) : 0
+  // The end from the time the box has run since its start (booted_uptime): the clock was not right yet when the test
+  // was noted - a Pi starts with the time it last saved and is set from the network later, minutes on, and the end
+  // came that much too early here (the box's own timer counts from the start, not by the clock). The clock only for a
+  // test noted before.
+  // The 3 minutes from the app's first visit after that start (asked_uptime), within 6 from the start - without the
+  // app the box waits those 6 (display_profile.sh asked).
+  const sinceStart = ready ? Number(get('booted_uptime')) : 0
+  const asked = Number(get('asked_uptime'))
+  const uptime = Number((await fsp.readFile('/proc/uptime', 'utf8').catch(() => '')).split(' ')[0])
+  let endsAt: number | null = null
+  if (sinceStart > 0 && uptime > 0) {
+    const end = asked > 0 ? Math.min(asked + TEST_SECONDS, sinceStart + MAX_SECONDS) : sinceStart + MAX_SECONDS
+    endsAt = Date.now() + Math.max(0, end - uptime) * 1000
+  } else if (booted > 0) endsAt = (booted + TEST_SECONDS) * 1000
+  const left = endsAt === null ? null : Math.max(0, Math.round((endsAt - Date.now()) / 1000))
+  return { running: true, id: get('id'), profile: get('profile'), previous: get('previous'), reverting: get('state') === 'reverting', endsAt, left }
 }
 
-/** The picture of the new model is there - only after the start with it (before, the old display still shows one) */
-export async function confirmDisplayTest(): Promise<boolean> {
-  if (!(await displayTestState()).endsAt) return false
-  return (await run('sudo', [PROFILE_SH, 'confirm'])).ok
+/**
+ * The picture of the new model is there - only after the start with it (before, the old display still shows one), and
+ * for the test the answer was given to (id; checked again by the script under its lock)
+ */
+export async function confirmDisplayTest(id?: unknown): Promise<boolean> {
+  const test = await displayTestState()
+  if (!test.endsAt) return false
+  if (id === undefined) return (await run('sudo', [PROFILE_SH, 'confirm'])).ok
+  if (typeof id !== 'string' || !TEST_ID.test(id) || id !== test.id) return false
+  return (await run('sudo', [PROFILE_SH, 'confirm', id])).ok
 }
 
 export function registerDisplayProfileRoutes(router: Router, deps: DisplayProfileDeps): void {
   /** GET /api/app/display-profile - the model now (from config.txt), the rotation and a running test */
   router.get('/display-profile', requireSession, async (_req, res) => {
+    // (the app reaches the box after the start with a new model: its 3 minutes begin - once, the script knows)
+    const first = await displayTestState()
+    if (first.endsAt && !/^asked_uptime=\d/m.test(await fsp.readFile(TEST_FILE, 'utf8').catch(() => ''))) {
+      await run('sudo', [PROFILE_SH, 'asked'], 20000)
+    }
+    // The test before the model: the way back puts config.txt and the settings back first and removes the test file
+    // last - a test read as over has its model of before in place, read after it (the other way round, a way back
+    // finished in between showed the tested model with no test: "kept")
+    const test = await displayTestState()
     const mb = (deps.getMupiboxConfig()?.mupibox ?? {}) as Record<string, unknown>
     const configTxt = await fsp.readFile(await bootConfigPath(), 'utf8').catch(() => '')
     const { output, native } = await dsiDisplay()
@@ -123,7 +162,7 @@ export function registerDisplayProfileRoutes(router: Router, deps: DisplayProfil
       rotation: [0, 90, 180, 270].includes(rotation) ? rotation : 0,
       // mirrored left-right ('x') or top-bottom ('y') instead of turned; null = not
       mirror: mb.displayMirror === 'x' || mb.displayMirror === 'y' ? mb.displayMirror : null,
-      test: await displayTestState(),
+      test,
     })
   })
 
@@ -149,23 +188,31 @@ export function registerDisplayProfileRoutes(router: Router, deps: DisplayProfil
       res.status(500).json({ error: 'apply_failed', detail: r.stdout.trim().slice(-200) })
       return
     }
+    const { id } = await displayTestState()
     // (after the answer: the restart cuts the connection)
     detached('sleep 2; sudo /usr/local/bin/mupibox/restart.sh')
-    res.json({ ok: true, profile, previous: before, rebooting: true })
+    res.json({ ok: true, id, profile, previous: before, rebooting: true })
   })
 
-  /** POST /api/app/display-profile/confirm - the picture is there: the model stays */
-  router.post('/display-profile/confirm', requireSession, requireCsrf, async (_req, res) => {
-    res.json({ ok: await confirmDisplayTest() })
+  /** POST /api/app/display-profile/confirm {id} - the picture is there: the model stays */
+  router.post('/display-profile/confirm', requireSession, requireCsrf, async (req, res) => {
+    res.json({ ok: await confirmDisplayTest((req.body as { id?: unknown } | undefined)?.id) })
   })
 
-  /** POST /api/app/display-profile/revert - no picture: back to the model of before (the box restarts) */
-  router.post('/display-profile/revert', requireSession, requireCsrf, async (_req, res) => {
-    if (!(await displayTestState()).running) {
+  /** POST /api/app/display-profile/revert {id} - no picture: back to the model of before (the box restarts) */
+  router.post('/display-profile/revert', requireSession, requireCsrf, async (req, res) => {
+    const id = (req.body as { id?: unknown } | undefined)?.id
+    const test = await displayTestState()
+    if (!test.running) {
       res.status(409).json({ error: 'no_test' })
       return
     }
-    detached(`sleep 1; sudo ${PROFILE_SH} revert`)
+    if (id !== undefined && (typeof id !== 'string' || !TEST_ID.test(id) || id !== test.id)) {
+      res.status(409).json({ error: 'other_test' })
+      return
+    }
+    // (the id once more for the script: this test ended and another began within that second - not that one)
+    detached(`sleep 1; sudo ${PROFILE_SH} revert${id === undefined ? '' : ` ${id}`}`)
     res.json({ ok: true, rebooting: true })
   })
 

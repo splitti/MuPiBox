@@ -9,6 +9,14 @@ NETWORKINTERFACESD="/etc/network/interfaces.d"
 # when the power goes) and readable by root only - it holds the WiFi passwords. Built in /tmp (another file system,
 # so mv copied) it came out readable by everyone (0644).
 TMP_FILE="${WPACONF}.mupibox-new"
+
+# The box keeps its own name. dhclient-script took the name the router sends (the same in other letters: "mupibox" for
+# "MuPiBox"), a few seconds after the display had started: X lets in only the name it started under, Chromium ended with
+# "Missing X server", and the display stayed on the console until the kiosk's watchdog restarted it, 150 s later.
+mkdir -p /etc/dhcp/dhclient-enter-hooks.d
+printf '# MuPiBox: the box keeps its own name, whatever the router sends (see optimize_wifi.sh)\nunset new_host_name\n' > /etc/dhcp/dhclient-enter-hooks.d/mupibox-keep-hostname
+chmod 644 /etc/dhcp/dhclient-enter-hooks.d/mupibox-keep-hostname
+
 umask 077
 
 add_config() {

@@ -583,6 +583,8 @@ select.input { appearance: auto; }
 .chip.cat-music { background: var(--mp-primary-soft); color: var(--mp-primary-text); }
 
 /* ---------- System ---------- */
+/* the box's profile for the Discord (Über die Box › Support): as it is pasted, selectable */
+pre.summary { margin: 0; padding: 12px; max-height: 50vh; overflow: auto; border-radius: var(--mp-r); background: var(--mp-bg); border: 1.5px solid var(--mp-border); font: 12px/1.55 ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; }
 .news { margin: 0; max-height: 320px; overflow: auto; white-space: pre-wrap; font: 13px/1.5 var(--mp-font); color: var(--mp-muted); }
 .logview { margin: 0; height: 420px; overflow: auto; padding: 10px 12px; border-radius: var(--mp-r-sm); background: var(--mp-field); font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
 a.btn { text-decoration: none; color: inherit; }
@@ -980,7 +982,12 @@ details.more > .field + .row, details.more > .row + .row { border-top: 1px solid
 .wifi-now .lbl b { font-size: 17px; }
 .wifi-now small { display: flex; align-items: center; gap: 6px; }
 .entry .lbl small .sig { vertical-align: -1px; margin-right: 2px; }
-.lib-row.picked { background: var(--mp-primary-soft); }
+.wifi-link + .wifi-link { border-top: 1px solid var(--mp-border); margin-top: 10px; padding-top: 10px; }
+.wifi-row.picked { background: var(--mp-primary-soft); box-shadow: inset 0 0 0 1.5px var(--mp-primary); border-radius: var(--mp-r-sm); border-top-color: transparent; margin: 0 -8px; padding-left: 8px; padding-right: 8px; width: calc(100% + 16px); }
+.wifi-row.picked + .entry { border-top-color: transparent; }
+.wifi-row .wifi-check { display: none; width: 22px; height: 22px; border-radius: 50%; background: var(--mp-primary); color: var(--mp-bg); place-items: center; flex: none; }
+.wifi-row.picked .wifi-check { display: grid; }
+.wifi-row.picked .chev { display: none; }
 .wifi-form[hidden] { display: none; }
 .wifi-form { display: flex; flex-direction: column; gap: 12px; padding-top: 4px; }
 .life { height: 8px; border-radius: 4px; background: var(--mp-track); overflow: hidden; }
@@ -1194,3 +1201,24 @@ textarea[hidden] { display: none; }
 .dm-bar i { display: block; height: 100%; width: 100%; background: var(--mp-accent); transition: width 1s linear; }
 .dm-test .btns { display: flex; gap: 8px; }
 .dm-test .btns .btn { flex: 1; }
+/* the test of a new display model in its sheet (openDisplayTest) */
+.dmt { display: flex; flex-direction: column; gap: 12px; }
+.dmt > .chip { align-self: flex-start; }
+.dmt .btns { display: flex; gap: 8px; }
+.dmt .btns .btn { flex: 1; }
+.dmt-rows { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; font-size: 14px; }
+.dmt-rows dt { color: var(--mp-muted); }
+.dmt-rows dd { margin: 0; font-weight: 700; }
+.dmt-plan { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; counter-reset: dmt; font-size: 14px; }
+.dmt-plan li { counter-increment: dmt; display: flex; align-items: center; gap: 10px; }
+.dmt-plan li::before { content: counter(dmt); flex: 0 0 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 800; background: var(--mp-chip); color: var(--mp-muted); }
+.dmt-plan.steps li.now { font-weight: 700; }
+.dmt-plan.steps li.now::before { background: var(--mp-primary); color: var(--mp-on-primary); }
+.dmt-plan.steps li.done::before { content: "✓"; background: var(--mp-success-soft); color: var(--mp-success); }
+.dmt-wait { display: flex; justify-content: center; color: var(--mp-primary); }
+.dmt-wait .spin { width: 30px; height: 30px; border-width: 3px; }
+.dmt-big { width: 56px; height: 56px; border-radius: 50%; margin: 4px auto 0; display: grid; place-items: center; }
+.dmt-big.ok { background: var(--mp-success-soft); color: var(--mp-success); }
+.dmt-big.back { background: var(--mp-warn-soft); color: var(--mp-warn); }
+.dmt-center { text-align: center; }
+@media (prefers-reduced-motion: reduce) { .dmt-wait .spin { animation-duration: 2.4s; } }

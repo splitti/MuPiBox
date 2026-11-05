@@ -79,7 +79,10 @@ case "${ACTION}" in
 	# always (else the address of the first one would have been kept in the other).
 	CONNECTED)
 		after=$(connected_net)
-		if [ ${rc} -eq 0 ] && [ -n "${after}" ] && [ "${after}" = "${before}" ] && is_event_net "${after}"; then
+		# Not connected yet before it (an ifdown of ours had just taken the link down, ifup brought it back): the address
+		# is from the network that is up now as well. Noting nothing here kept the circle going: the late DISCONNECTED
+		# came with nothing to compare, its ifdown took the working connection down, again and again.
+		if [ ${rc} -eq 0 ] && [ -n "${after}" ] && { [ -z "${before}" ] || [ "${after}" = "${before}" ]; } && is_event_net "${after}"; then
 			echo "${after}" > "${LAST}"
 		else
 			rm -f "${LAST}" "${SKIPPED}"

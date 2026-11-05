@@ -21,7 +21,7 @@ Bei jedem gespeicherten Netz gibt es **Adresse** (feste IP-Adresse, siehe unten)
 
 Ein Netz, das seinen Namen nicht zeigt, trägst du unter **Verstecktes Netz eingeben** ein: **Netzname (SSID)** und **Passwort** (leer bei einem offenen Netz), dann **Hinzufügen**.
 
-Die Box bleibt im aktuellen Netz und nimmt das neue, wenn es in Reichweite und besser ist. So bleibt sie auch bei einem Tippfehler erreichbar.
+Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren. Bei einem Tippfehler im Passwort kommt sie ins bisherige Netz zurück, versucht das neue aber immer wieder. Entferne es dann oder trage über **Passwort** das richtige ein.
 
 ### Feste IP-Adresse
 
@@ -31,7 +31,7 @@ Für jedes gespeicherte Netz lässt sich über **Adresse** eine **feste IP-Adres
 
 | Einstellung | Wirkung |
 | --- | --- |
-| **WLAN-Wächter (DietPi-WiFi-Monitor)** | baut die Verbindung neu auf, wenn sie abreißt |
+| **WLAN-Wächter (DietPi-WiFi-Monitor)** | baut die Verbindung neu auf, wenn sie abreißt (nach einer Neuinstallation an). Steckt ein Kabel oder ist kein Netz in Reichweite, greift er nicht laufend ein |
 | **Beste Verbindung suchen** | wechselt bei mehreren gespeicherten Netzen zum stärksten |
 | **WLAN neu starten** | startet das WLAN neu |
 
@@ -43,12 +43,14 @@ Für jedes gespeicherte Netz lässt sich über **Adresse** eine **feste IP-Adres
 
 Das eingebaute WLAN lässt sich ausschalten (**Onboard-WLAN an**). Wieder einschalten geht auch am Display: auf der WLAN-Seite oben das WLAN-Symbol antippen. War es schon beim Start aus, ist es nach einem Neustart wieder da – das Display bietet ihn an. Für einen **USB-WLAN-Stick** wählst du den **USB-WLAN-Treiber** (RTL88X2BU oder RTL8821AU) und tippst auf **Treiber installieren**. Der Treiber wird auf der Box gebaut, das dauert einige Minuten. Danach startest du die Box neu. Ist der Treiber installiert, stellst du **Stromsparen des USB-Adapters** ein (**Aus**, **Minimal** oder **Maximal**). **Aus** macht die Verbindung bei manchen Adaptern stabiler.
 
+Auf Debian 13 (Trixie) lassen sich diese beiden Treiber noch nicht bauen, die Auswahl fehlt dort. Ein Stick, dessen Treiber im System enthalten ist, läuft auch ohne sie. Auf Trixie ist das eingebaute WLAN die bessere Wahl: Ältere Realtek-Sticks können dort aussetzen.
+
 ## LAN (Kabel)
 
 Die Seite **LAN** gehört dem Kabelanschluss:
 
 - **LAN an** schaltet ihn ein oder aus. Mit Kabel hat LAN Vorrang vor dem WLAN,
-- die Seite zeigt, ob ein Kabel steckt, und die aktuelle Adresse,
+- **Verbindung** zeigt, ob ein Kabel verbunden ist, und die aktuelle IP-Adresse, unter **Details** auch Gateway, DNS und MAC,
 - **Adresse beziehen**: **DHCP** oder **Statisch**,
 - bei **Statisch** trägst du **IP-Adresse** und **Netzmaske** ein. **Router (optional)** und **DNS-Server (optional)** darfst du leer lassen. Ohne Router bleibt das Internet beim WLAN. Das ist praktisch, wenn ein PC direkt an die Box angeschlossen ist,
 - **Speichern** übernimmt die Werte, **LAN neu starten** startet den Anschluss neu,

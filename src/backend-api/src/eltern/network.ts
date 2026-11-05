@@ -50,6 +50,13 @@ async function powerLevel(module: string): Promise<string | null> {
   return new RegExp(`^options\\s+${module}\\b[^\\n]*\\brtw_power_mgnt=(\\d)`, 'm').exec(text)?.[1] ?? null
 }
 
+// The driver scripts build against raspberrypi-kernel-headers, which Debian 13 (trixie) no longer has: not offered there,
+// and not on a system whose version cannot be told either (the scripts end the display first).
+async function driversBuildable(): Promise<boolean> {
+  const version = /^VERSION_ID="?(\d+)/m.exec(await fsp.readFile('/etc/os-release', 'utf8').catch(() => ''))?.[1]
+  return version !== undefined && Number(version) < 13
+}
+
 export function registerNetworkRoutes(router: Router, deps: NetworkDeps): void {
   router.get('/network-options', requireSession, async (_req, res) => {
     const configTxt = await fsp.readFile(await bootConfigPath(), 'utf8').catch(() => '')
@@ -68,6 +75,7 @@ export function registerNetworkRoutes(router: Router, deps: NetworkDeps): void {
       usbIface: (await run('/usr/local/bin/mupibox/mupi_wifi_iface.sh', ['usb'], 5000)).stdout.trim(),
       wifiIface: await wifiIface(),
       drivers,
+      driversBuildable: await driversBuildable(),
       dhcpTimeout: /^timeout 10;/m.test(dhclient),
       wifiMonitor: await enabled('dietpi-wifi-monitor'),
       bestConnection: await enabled('mupi_autoconnect-wifi'),
@@ -151,6 +159,10 @@ export function registerNetworkRoutes(router: Router, deps: NetworkDeps): void {
       res.status(400).json({ error: 'invalid driver or action' })
       return
     }
+    if (action === 'install' && !(await driversBuildable())) {
+      res.status(409).json({ error: 'drivers cannot be built on this system' })
+      return
+    }
     if (Object.values(driverJobs).some((j) => j.running)) {
       res.status(409).json({ error: 'a driver job is running' })
       return
@@ -205,7 +217,7 @@ export function registerNetworkRoutes(router: Router, deps: NetworkDeps): void {
 /** The address of the WiFi (lan: of that cable adapter) fetched anew - for the app and the display (see server.ts) */
 export async function renewDhcp(lan: unknown): Promise<{ status: number; body: Record<string, unknown> }> {
   // (an adapter of the system - also without an address, so not by os.networkInterfaces)
-  const known = typeof lan === 'string' && /^(eth|en)[\w.-]{0,12}$/.test(lan) && (await fsp.stat(`/sys/class/net/${lan}`).catch(() => null))
+  const known = typeof lan === 'string' && /^(eth|en|wlan)[\w.-]{0,12}$/.test(lan) && (await fsp.stat(`/sys/class/net/${lan}`).catch(() => null))
   if (lan !== undefined && !known) return { status: 400, body: { error: 'invalid_interface' } }
   const iface = typeof lan === 'string' ? lan : await wifiIface()
   if (!/^[\w.-]{1,15}$/.test(iface)) return { status: 400, body: { error: 'invalid_interface' } }

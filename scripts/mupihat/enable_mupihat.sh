@@ -32,6 +32,14 @@ effective() {
 }
 DRIVER=('dtparam=i2c_arm=on' 'dtparam=i2c1=on' 'dtparam=i2c_arm_baudrate=50000' 'dtoverlay=max98357a,sdmode-pin=16' 'dtoverlay=i2s-mmap')
 
+# KILL as the MuPiHAT has it: GPIO 4, active low - a line of its own, not only the pin changed: with active_low=0 left in
+# it, the driver pulled KILL low at its start, and the box went off while booting. Not for a restored backup, and not next
+# to a button on gpio-shutdown or in a line that loads further overlays (see start_mupibox_update.sh).
+if [ "${MUPIHAT_KEEP_PINS:-}" != "1" ] && ! grep -qE '^[[:space:]]*dtoverlay=.*gpio-shutdown' "${BOOT_CONFIG}"; then
+	sed -i --follow-symlinks -E '/^[[:space:]]*dtoverlay=gpio-poweroff(,.*)?[[:space:]]*$/d' "${BOOT_CONFIG}" || ERR=1
+	grep -qE '^[[:space:]]*dtoverlay=.*gpio-poweroff' "${BOOT_CONFIG}" || DRIVER+=('dtoverlay=gpio-poweroff,gpiopin=4,active_low=1')
+fi
+
 # boot configuration (a line already in force is not added again)
 missing=()
 for line in "${DRIVER[@]}"; do effective "${line}" "${BOOT_CONFIG}" || missing+=("${line}"); done
@@ -61,7 +69,14 @@ LOCK=/tmp/.mupiboxconfig.lock
 (
 	flock -w 15 9 || exit 1
 	TMP="${MUPIBOX_CONFIG}.mupihat-new"
-	if jq --arg c "${CARD}" '.mupibox.physicalDevice = $c' "${MUPIBOX_CONFIG}" > "${TMP}" && [ -s "${TMP}" ] &&
+	# The MuPiHAT's pins, by its schematic: the LED of its on/off switch on GPIO 13 (J15), KILL on 4, the button's INT on
+	# 17 - a box coming from an older version kept other pins, and the LED stayed dark. Not over a fan that is switched on
+	# and runs on GPIO 13, and not for a restored backup (MUPIHAT_KEEP_PINS=1): its pins are the ones the box is wired for.
+	if jq --arg c "${CARD}" --arg keep "${MUPIHAT_KEEP_PINS:-}" '.mupibox.physicalDevice = $c
+		| if $keep == "1" then . else
+			.shim.poweroffPin = "4" | .shim.triggerPin = "17"
+			| if (.fan.fan_active == true and (.fan.fan_gpio | tostring) == "13") then . else .shim.ledPin = "13" end
+		end' "${MUPIBOX_CONFIG}" > "${TMP}" && [ -s "${TMP}" ] &&
 		chown --reference="${MUPIBOX_CONFIG}" "${TMP}" && chmod --reference="${MUPIBOX_CONFIG}" "${TMP}" && mv -f "${TMP}" "${MUPIBOX_CONFIG}"; then
 		exit 0
 	fi

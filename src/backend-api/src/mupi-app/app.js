@@ -97,6 +97,8 @@ async function boot() {
   window.addEventListener('hashchange', routeIfMoved)
   refreshOnReturn()
   route()
+  // (a new display model waiting for its answer: its sheet at once, on whatever page)
+  checkDisplayTest()
   window.mupiBootStep = ''
 }
 
@@ -315,9 +317,11 @@ async function loadVersion() {
 function versionBadge() {
   const v = state.ver
   const num = /\d+(?:\.\d+)+/.exec(v?.installed ?? '')?.[0]
+  // (a branch installed directly has no number: "DEV <branch> <date>")
+  const dev = !num && v?.installed?.startsWith('DEV')
   const sub = !v ? '' : v.update ? `Update: ${v.update.version}` : v.channel === 'dev' ? 'Entwicklerversion' : v.channel === 'beta' ? 'Beta' : 'Aktuell'
   const kind = v?.update ? ' new' : v?.channel === 'dev' ? ' dev' : ''
-  return `<button type="button" class="ver-badge${kind}" data-ver-badge data-go="updates" aria-label="${esc(`MuPiBox Classic ${num ?? ''} – Updates`)}"><span class="ed" translate="no">CLASSIC</span><span class="num"><b translate="no">${num ? `v${esc(num)}` : '…'}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span><span class="go">${icon('chevron', 16)}</span></button>`
+  return `<button type="button" class="ver-badge${kind}" data-ver-badge data-go="updates" aria-label="${esc(`MuPiBox Classic ${num ?? ''} – Updates`)}"><span class="ed" translate="no">CLASSIC</span><span class="num"><b translate="no">${num ? `v${esc(num)}` : dev ? 'DEV' : '…'}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span><span class="go">${icon('chevron', 16)}</span></button>`
 }
 
 // The MuPiBox lettering (the same in Classic and NG)
@@ -1025,14 +1029,18 @@ function action(act, label, page) {
 /* ---------- talking to the box ---------- */
 
 // JSON request with the session's CSRF token on everything that changes something. Never throws.
-async function api(path, { method = 'GET', body } = {}) {
+// (timeoutMs: given up after it - a box that went away while restarting may leave a request open for minutes)
+async function api(path, { method = 'GET', body, timeoutMs } = {}) {
   const headers = {}
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   // (also on reading: some routes of the box take the app's session only with its token, see localOrElternSession)
   if (state.csrf) headers['x-mupibox-csrf'] = state.csrf
-  const r = await fetch(path, { method, credentials: 'same-origin', headers, body: body === undefined ? undefined : JSON.stringify(body) }).catch(() => null)
+  const signal = timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined
+  const r = await fetch(path, { method, credentials: 'same-origin', headers, body: body === undefined ? undefined : JSON.stringify(body), signal }).catch(() => null)
   if (!r) return { ok: false, status: 0, body: null, text: '' }
-  const text = await r.text().catch(() => '')
+  // (cut off while its body came - given up, or the box went away: no answer, not an empty one)
+  const text = await r.text().catch(() => null)
+  if (text === null) return { ok: false, status: 0, body: null, text: '' }
   let data = null
   try {
     data = JSON.parse(text)
@@ -1488,6 +1496,7 @@ async function loadNotices(root) {
   }
   const pct = hat.body?.Bat_Percent
   const battery = hat.ok && !noBattery(hat.body)
+  if (hat.ok && batteryProfileMissing(hat.body)) notes.push(['bat', 'Akku-Profil fehlt', 'Der MuPiHAT ist an, aber es ist kein Akku-Profil gewählt.', 'akku'])
   if (battery && hat.body?.ChargeProblemSince) notes.push(['plug', 'Akku lädt nicht', NOT_CHARGING, 'akku'])
   if (hat.body?.BatteryStaleSince) notes.push(['bat', 'Akku-Werte veraltet', BATTERY_STALE, 'akku'])
   if (battery && Number.isFinite(pct) && pct <= 15 && !batteryCharging(hat.body)) {
@@ -7413,18 +7422,22 @@ function mountDisplayModel(root, page) {
   if (apply)
     apply.onclick = async () => {
       const to = disp.dmSel
-      const text = `Neu: ${dmLabel(to)} · bisher: ${dmLabel(disp.dp.current)}. Die Box startet neu (gut eine Minute). Danach fragen die App und das Display: „Siehst du ein Bild?“ Ohne Antwort stellt die Box nach 3 Minuten das bisherige Display wieder ein und startet noch einmal neu.`
-      if (!(await ask('Display umstellen?', text, 'Umstellen'))) return
+      const from = disp.dp.current
+      if (!(await askDisplayChange(to, from))) return
       const r = await api(`${API}/display-profile`, { method: 'POST', body: { profile: to } })
       if (!r.ok) return toast(r.body?.error === 'test_running' ? 'Ein Test läuft schon – bitte erst beantworten' : 'Das hat nicht geklappt', 'info')
       disp.dmSel = undefined
-      toast('Die Box startet neu – danach hier oder am Display bestätigen')
+      openDisplayTest({ phase: 'restart', id: r.body?.id, profile: to, previous: r.body?.previous ?? from })
     }
   const keep = $('[data-dm-keep]', root)
   if (keep)
     keep.onclick = async () => {
-      const r = await api(`${API}/display-profile/confirm`, { method: 'POST', body: {} })
-      if (!r.ok || r.body?.ok === false) return toast('Das hat nicht geklappt', 'info')
+      const r = await api(`${API}/display-profile/confirm`, { method: 'POST', body: { id: disp.dp.test.id || undefined } })
+      if (!r.ok || r.body?.ok === false) {
+        toast('Das hat nicht geklappt', 'info')
+        await loadDisplayModel()
+        return renderPage(page, false)
+      }
       toast(`${dmLabel(disp.dp.test.profile)} bleibt eingestellt`)
       await loadDisplayModel()
       renderPage(page, false)
@@ -7432,8 +7445,12 @@ function mountDisplayModel(root, page) {
   const revert = $('[data-dm-revert]', root)
   if (revert)
     revert.onclick = async () => {
-      const r = await api(`${API}/display-profile/revert`, { method: 'POST', body: {} })
-      if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+      const r = await api(`${API}/display-profile/revert`, { method: 'POST', body: { id: disp.dp.test.id || undefined } })
+      if (!r.ok) {
+        toast('Das hat nicht geklappt', 'info')
+        await loadDisplayModel()
+        return renderPage(page, false)
+      }
       toast('Das bisherige Display kommt zurück – die Box startet neu')
     }
   for (const b of root.querySelectorAll('[data-krot]')) {
@@ -7466,6 +7483,262 @@ function mountDisplayModel(root, page) {
 async function loadDisplayModel() {
   const r = await api(`${API}/display-profile`)
   disp.dp = r.ok ? r.body : null
+  dmLocal(disp.dp?.test)
+}
+
+// The end of a test by this device's clock - from the seconds the box has left: its own clock may be minutes off
+// this one's (after its start, before the network set it), and the end would lie in the past here
+function dmLocal(test) {
+  if (test?.running && typeof test.left === 'number') test.endsAt = Date.now() + test.left * 1000
+  return test
+}
+
+// The way up a new model starts with (display_profile.sh upright_rotation): the Touch Display 2 lying, turned by 90°
+const dmStartRotation = (id) => (/^td2-/.test(id) ? 90 : 0)
+const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+
+// Before a new display model: what changes, and the three steps in front of it
+function askDisplayChange(to, from) {
+  const rot = to === 'official7' ? '' : `${dmStartRotation(to)}°${dmStartRotation(to) ? ' (quer)' : ''}`
+  return new Promise((resolve) => {
+    let answer = false
+    openSheet(
+      `<h2>Display umstellen?</h2>
+       <dl class="dmt-rows"><dt>Neu</dt><dd>${esc(dmShort(to))}</dd><dt>Bisher</dt><dd>${esc(dmShort(from))}</dd>${rot ? `<dt>Drehung</dt><dd>${esc(rot)}</dd>` : ''}</dl>
+       <ol class="dmt-plan"><li>Die Box startet neu, gut eine Minute.</li><li>Danach fragt diese App: Siehst du ein Bild?</li><li>Ohne Antwort nach 3 Minuten: zurück zum bisherigen Display.</li></ol>
+       <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Umstellen</button></div>`,
+      (sheet, close) => {
+        sheet.querySelector('[data-close]').onclick = close
+        sheet.querySelector('[data-ok]').onclick = () => {
+          answer = true
+          close()
+        }
+      },
+      () => setTimeout(() => resolve(answer)),
+    )
+  })
+}
+
+// The test of a new display model in one sheet: it waits for the restart, asks whether there is a picture (with the
+// countdown) and says how it ended - without loading the page again. Opened by the change and, while a test waits for
+// its answer, at the start of the app (on another device, or later). The card Display-Modell keeps its countdown for
+// whoever closes the sheet.
+//   restart    the box restarts with the new model (asked every 2 s until it answers with the test's time)
+//   question   "Siehst du ein Bild?" - keep, or back
+//   reverting  no answer in time, or "Nein": the box goes back and restarts once more
+//   kept / back how it ended - by the model the box runs with then, not by the time (another device may have answered)
+// Answers name their test (id): one ended on another device and the next begun meanwhile is not answered by this
+// sheet - it follows the new one from its start. The page is loaded anew while the box restarts (a box without login
+// hands out a new session after it, see sessionGone): the test this browser follows is kept for that tab
+// (sessionStorage), so the sheet comes back - with how it ended, when the test is over by then.
+const dmt = { open: false }
+const DMT_KEY = 'mupi-display-test'
+function dmtRemembered() {
+  try {
+    const v = JSON.parse(sessionStorage.getItem(DMT_KEY) ?? 'null')
+    return v && Date.now() - v.at < 15 * 60_000 ? v : null
+  } catch {
+    return null
+  }
+}
+function dmtRemember(t) {
+  try {
+    if (t) sessionStorage.setItem(DMT_KEY, JSON.stringify({ id: t.id, profile: t.profile, previous: t.previous, phase: t.phase, asked: t.asked, at: Date.now() }))
+    else sessionStorage.removeItem(DMT_KEY)
+  } catch {
+    // no storage: the sheet is not brought back after a reload
+  }
+}
+function openDisplayTest(start) {
+  if (dmt.open) return
+  dmt.open = true
+  // (asked: "Nein" was tapped here - the box goes back, whatever time it still has)
+  const t = { phase: start.phase, id: start.id ?? '', profile: start.profile, previous: start.previous, rotation: start.rotation ?? 0, endsAt: start.endsAt ?? null, since: Date.now(), down: false, asked: start.asked ?? false, busy: false, asking: false, gone: false }
+  let poll = 0
+  let tick = 0
+  openSheet(
+    '<div class="dmt" data-dmt aria-live="polite"></div>',
+    (sheet, close) => {
+      const root = $('[data-dmt]', sheet)
+      // (not closed by a tap beside it while the box restarts - "Fertig" or Escape does)
+      $('#sheet-scrim').onclick = null
+      const goBack = () => {
+        t.phase = 'reverting'
+        t.since = Date.now()
+        t.down = false
+      }
+      const draw = () => {
+        root.innerHTML = displayTestHtml(t)
+        dmtRemember(t)
+        $('[data-dmt-done]', root)?.addEventListener('click', close)
+        $('[data-dmt-keep]', root)?.addEventListener('click', async () => {
+          if (t.busy) return
+          t.busy = true
+          const asked = t.id
+          const r = await api(`${API}/display-profile/confirm`, { method: 'POST', body: { id: asked || undefined } })
+          t.busy = false
+          // (an answer that came late: the sheet closed meanwhile, or follows another test now - not for that one)
+          if (t.gone || t.id !== asked) return
+          if (!r.ok || r.body?.ok === false) {
+            // (answered meanwhile, or another test runs now: as the box has it)
+            toast('Das hat nicht geklappt', 'info')
+            return step()
+          }
+          t.phase = 'kept'
+          draw()
+        })
+        $('[data-dmt-revert]', root)?.addEventListener('click', async () => {
+          if (t.busy) return
+          t.busy = true
+          const asked = t.id
+          const r = await api(`${API}/display-profile/revert`, { method: 'POST', body: { id: asked || undefined } })
+          t.busy = false
+          if (t.gone || t.id !== asked) return
+          if (!r.ok) {
+            toast('Das hat nicht geklappt', 'info')
+            return step()
+          }
+          t.asked = true
+          goBack()
+          draw()
+        })
+        update()
+      }
+      const update = () => {
+        const count = $('[data-dmt-count]', root)
+        if (count && t.endsAt) {
+          const left = Math.max(0, Math.round((t.endsAt - Date.now()) / 1000))
+          count.textContent = mmss(left)
+          const bar = $('[data-dmt-bar]', root)
+          if (bar) bar.style.width = `${Math.min(100, (left / 180) * 100)}%`
+          if (left === 0 && t.phase === 'question') {
+            goBack()
+            draw()
+            return
+          }
+        }
+        const elapsed = $('[data-dmt-elapsed]', root)
+        if (elapsed) elapsed.textContent = mmss(Math.round((Date.now() - t.since) / 1000))
+      }
+      // The box as it answers: the test with its time after the restart with the new model, no test once it ended
+      const step = async () => {
+        if (!dmt.open || t.phase === 'kept' || t.phase === 'back') return
+        // (one question at a time: an answer that came late would show a test of before - and with a slow network
+        // every answer would come late)
+        if (t.asking) return
+        t.asking = true
+        const r = await api(`${API}/display-profile`, { timeoutMs: 10_000 }).finally(() => {
+          t.asking = false
+        })
+        if (!dmt.open || t.gone) return
+        // (only a whole answer of the box counts - the state is read from it)
+        if (!r.ok || typeof r.body?.test?.running !== 'boolean') {
+          t.down = true
+          return
+        }
+        const before = `${t.phase} ${t.id} ${t.profile}`
+        const test = dmLocal(r.body?.test)
+        if (test?.running) {
+          if (t.id && test.id && test.id !== t.id) {
+            // (another test: this one ended on another device and the next began - followed from its start)
+            Object.assign(t, { phase: 'restart', endsAt: null, since: Date.now(), down: false, asked: false })
+          }
+          if (test.id) t.id = test.id
+          if (test.profile) t.profile = test.profile
+          if (test.previous) t.previous = test.previous
+          if (test.reverting || t.asked) {
+            // (the time ran out on the box, or "Nein" - here, on another device or on the display: it goes back)
+            if (t.phase !== 'reverting') goBack()
+          } else if (test.endsAt) {
+            t.endsAt = test.endsAt
+            t.rotation = Number(r.body?.rotation) || 0
+            // (also back from 'reverting' when it was only this device's countdown: the box still waits for the answer)
+            if (test.left > 0) t.phase = 'question'
+            else if (t.phase === 'question') goBack()
+          }
+        } else if (r.body?.current === t.profile) {
+          // (kept - here, on another device or on the display; the way back puts the model of before first)
+          t.phase = 'kept'
+        } else if (t.down || Date.now() - t.since > 120_000) {
+          // back at the model of before, after the restart of the way back (or the box came up without the test)
+          t.phase = 'back'
+        }
+        if (`${t.phase} ${t.id} ${t.profile}` !== before) draw()
+      }
+      draw()
+      tick = setInterval(update, 1000)
+      poll = setInterval(step, 2000)
+      step()
+    },
+    async () => {
+      t.gone = true
+      clearInterval(poll)
+      clearInterval(tick)
+      dmt.open = false
+      dmtRemember(null)
+      if (currentPage()?.id === 'displaysettings') {
+        await loadDisplayModel()
+        renderPage(currentPage(), false)
+      }
+    },
+  )
+}
+
+function displayTestHtml(t) {
+  const plan = (n) =>
+    `<ol class="dmt-plan steps">${['Neustart', 'Bild prüfen', 'Fertig']
+      .map((s, i) => `<li class="${i < n ? 'done' : i === n ? 'now' : ''}"><span>${esc(s)}${i === n && n === 0 ? ` (<span data-dmt-elapsed>0:00</span>)` : ''}</span></li>`)
+      .join('')}</ol>`
+  const turned = t.rotation ? `, gedreht auf ${t.rotation}°` : ''
+  switch (t.phase) {
+    case 'restart':
+      return `<span class="chip warn">Test läuft</span><h2>Die Box startet neu …</h2><div class="dmt-wait"><span class="spin"></span></div>${plan(0)}
+        <div class="note">${icon('info', 18)}<span>${esc('Lass dieses Fenster offen. Die App fragt gleich von selbst nach dem Bild.')}</span></div>`
+    case 'question':
+      return `<span class="chip warn">Test läuft</span><h2>Siehst du auf dem Display ein Bild?</h2>
+        <p class="help" style="margin:0">${esc(`${dmShort(t.profile)} ist eingestellt${turned}.`)}</p>
+        <div class="dm-count" data-dmt-count>…</div><div class="dm-bar"><i data-dmt-bar></i></div>
+        <p class="help" style="margin:0;text-align:center">${esc(`Ohne Antwort kommt danach ${dmShort(t.previous)} zurück.`)}</p>
+        <div class="btns"><button class="btn" data-dmt-revert>Nein, zurück</button><button class="btn primary" data-dmt-keep>Ja, behalten</button></div>
+        <div class="note">${icon('info', 18)}<span>${esc('Am Display kannst du auch selbst auf „Behalten“ tippen.')}</span></div>`
+    case 'kept':
+      return `<div class="dmt-big ok">${icon('check', 28)}</div><h2 class="dmt-center">${esc(`${dmShort(t.profile)} bleibt`)}</h2>${plan(3)}
+        <div class="note">${icon('info', 18)}<span>${esc('Steht das Bild falsch herum? Unter Drehung lässt es sich jederzeit drehen.')}</span></div>
+        <div class="btns"><button class="btn primary" data-dmt-done>Fertig</button></div>`
+    case 'reverting':
+      return `<div class="dmt-big back">${icon('sync', 28)}</div><h2 class="dmt-center">${esc(`Zurück zu ${dmShort(t.previous)}`)}</h2>
+        <p class="help dmt-center" style="margin:0">${esc('Die Box startet noch einmal neu und nimmt das bisherige Display mit seiner Drehung.')}</p>
+        <div class="dmt-wait"><span class="spin"></span></div>
+        <div class="note warn">${icon('info', 18)}<span>${esc('Bleibt das Display dunkel, ist vielleicht eine andere Größe oder ein anderes Modell richtig.')}</span></div>`
+    default:
+      return `<div class="dmt-big back">${icon('sync', 28)}</div><h2 class="dmt-center">${esc(`Wieder bei ${dmShort(t.previous)}`)}</h2>
+        <p class="help dmt-center" style="margin:0">${esc('Die Box läuft wieder mit dem bisherigen Display.')}</p>
+        <div class="btns"><button class="btn primary" data-dmt-done>Fertig</button></div>`
+  }
+}
+
+// At the start of the app: a test that waits for its answer opens its sheet at once - and the one this tab followed
+// when the page was loaded anew meanwhile, with how it ended (or where it is now: the way back may still restart)
+async function checkDisplayTest() {
+  const r = await api(`${API}/display-profile`)
+  if (!r.ok || typeof r.body?.test?.running !== 'boolean') return
+  const test = dmLocal(r.body?.test)
+  const followed = dmtRemembered()
+  if (test?.running) {
+    // ("Nein" tapped here before the page was loaded anew: for this test only)
+    const asked = Boolean(followed?.asked && followed.id === test.id)
+    const phase = test.reverting || asked ? 'reverting' : test.left > 0 ? 'question' : test.endsAt ? 'reverting' : 'restart'
+    openDisplayTest({ phase, id: test.id, profile: test.profile, previous: test.previous, rotation: Number(r.body?.rotation) || 0, endsAt: test.endsAt, asked })
+    return
+  }
+  if (!followed) return
+  if (['kept', 'back'].includes(followed.phase) || r.body?.current === followed.profile || r.body?.current === followed.previous) {
+    // (by the model the box runs with now: the way back puts the one of before first)
+    const phase = r.body?.current === followed.profile || (followed.phase === 'kept' && r.body?.current !== followed.previous) ? 'kept' : 'back'
+    openDisplayTest({ phase, id: followed.id, profile: followed.profile, previous: followed.previous, rotation: Number(r.body?.rotation) || 0 })
+  } else {
+    dmtRemember(null)
+  }
 }
 
 function rotTiles(key, list) {
@@ -7931,6 +8204,9 @@ const batteryLabel = (n) => BATTERY_NAMES[n] ?? n
 // with the placeholder profile, which read as an empty battery before.
 const USB_C_PROFILE = Object.keys(BATTERY_NAMES).find((n) => /^USB-C/.test(n))
 // (Bat_PercentSource "none": the HAT runs with the placeholder profile, see v_100 <= 10 in mupihat_bq25792.py)
+// A battery on the MuPiHAT and no profile for it: the service then runs with its defaults ("Default"), the charger with
+// its own standard. "USB-C mode" in a new configuration is no profile of the list either.
+const batteryProfileMissing = (h) => h?.Bat_Type === 'Default' && h?.BatteryConnected !== 0
 const noBattery = (h) => h?.BatteryConnected === 0 || h?.Bat_PercentSource === 'none' || hw.data?.mupihat?.battery === USB_C_PROFILE
 const NO_BATTERY_TEXT = 'Kein Akku – die Box läuft über USB-C (Netzteil oder Powerbank).'
 // The profiles as offered: the batteries in the order of the config, the two special ones (no battery, own
@@ -7956,6 +8232,12 @@ async function loadHat() {
   state.values.set('battery', batteryLabel(hw.data.mupihat.battery))
   const p = hw.power.battery?.profile ?? {}
   for (const [key, field] of PROFILE_KEYS) state.values.set(key, p[field] != null ? String(p[field]) : '')
+}
+
+// The battery's size in the profile's name, as the box reads it (mupihat_bq25792.py): "ENERpower 2S3P 15.000mAh" = 15000
+function capacityOfName(name) {
+  const m = /(\d+)[.,]?(\d{3})\s*mAh/.exec(String(name ?? ''))
+  return m ? `${m[1]}${m[2]}` : ''
 }
 
 // What the battery reads now, under the choice of the profile: "7,85 V · 82 % · lädt"
@@ -8056,8 +8338,10 @@ const net = { status: null, scan: null, scanning: false, saved: null, shares: nu
 /* WLAN */
 
 async function loadWlan() {
-  const [st, saved, fixed] = await Promise.all([api('/api/network'), api(`${API}/wifi/saved`), api(`${API}/wifi/static`)])
+  const [st, saved, fixed, wifi] = await Promise.all([api('/api/network'), api(`${API}/wifi/saved`), api(`${API}/wifi/static`), api('/api/wifi/status')])
   net.status = st.ok ? st.body : null
+  // (the WiFi as it is now: the address in network.json is the box's first one, with a cable that of the cable)
+  net.wifi = wifi.ok ? wifi.body : null
   net.saved = saved.ok ? saved.body?.networks ?? [] : null
   // (the networks with a fixed address, by name - see eltern/wifi-static.ts; reverted: one the box took back to DHCP)
   net.fixed = fixed.ok ? fixed.body?.networks ?? {} : {}
@@ -8186,19 +8470,33 @@ const signalBars = (dbm) => {
 function wlanTop() {
   const n = net.status ?? {}
   const row = (k, v) => (v ? `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>` : '')
-  const dbm = Number.parseInt(String(n.wifisignal ?? ''), 10)
-  const online = n.onlinestate === 'online'
-  const name = n.wifi || (n.interface?.startsWith('eth') ? 'LAN-Kabel' : '')
+  const live = net.wifi
+  const name = live ? live.ssid : n.wifi
+  // every adapter by what it is - wlan0 and wlan1 change between starts - the one in use first; an older answer without
+  // the list: what the box knows of the one
+  const adapters = live?.adapters?.length
+    ? [...live.adapters].sort((a, b) => (b.interface === live.interface) - (a.interface === live.interface))
+    : [{ interface: live?.interface ?? n.interface, usb: null, ssid: name, ip: live?.ip, signalDbm: live ? live.signalDbm : Number.parseInt(String(n.wifisignal ?? ''), 10), mac: n.mac }]
+  const connectedCount = adapters.filter((a) => a.ssid).length
+  const adapterBlock = (a) => {
+    const used = a.interface === (live?.interface ?? n.interface)
+    const kind = a.usb === true ? 'USB-WLAN' : a.usb === false ? 'Onboard-WLAN' : ''
+    const state = a.ssid ? (Number.isFinite(a.signalDbm) ? `${signalBars(a.signalDbm)} Empfang ${signalWord(a.signalDbm)}` : '') : a.state === 'INTERFACE_DISABLED' ? 'ausgeschaltet' : 'sucht ein Netz'
+    const ipv6 = used && a.ssid && Array.isArray(n.ipv6) ? n.ipv6 : []
+    return `<div class="wifi-link"><div class="wifi-now"><span class="avatar" translate="no">${a.usb === null ? icon('wifi', 18) : a.usb ? 'USB' : 'Pi'}</span><span class="lbl"><b translate="no">${esc(a.ssid || kind || 'Nicht verbunden')}</b>
+        <small>${a.ssid && kind ? `${kind} · ` : ''}${state}</small></span><span class="chip ${a.ssid ? 'ok' : connectedCount ? '' : 'warn'}">${!a.ssid ? 'nicht verbunden' : used && connectedCount > 1 ? 'in Benutzung' : 'verbunden'}</span></div>
+      ${a.ssid ? `<dl class="kv">${row('IP-Adresse', a.ip)}${ipv6.map((v6) => row('IPv6-Adresse', v6)).join('')}</dl>
+      <details class="more"><summary>Details</summary><dl class="kv">${row('Signal', Number.isFinite(a.signalDbm) ? `${a.signalDbm} dBm` : '')}${used ? row('Gateway', live ? live.gateway : n.gateway) + row('DNS', n.dns) : ''}${row('MAC', a.mac)}${row('Schnittstelle', a.interface)}</dl></details>` : ''}</div>`
+  }
+  const connectedNames = new Set(adapters.map((a) => a.ssid).filter(Boolean))
   const scan = net.scan ?? []
   const inRange = new Map(scan.map((w) => [w.ssid, w.signal_dbm]))
   const saved = new Set((net.saved ?? []).map((w) => w.ssid))
   const pick = net.pick
   return [
     `<section class="card" data-col="1"><div class="card-head"><h2>Verbindung</h2><button class="icon-btn soft" id="w-refresh" aria-label="Aktualisieren">${icon('sync', 18)}</button></div>
-      <div class="wifi-now"><span class="avatar">${icon('wifi', 18)}</span><span class="lbl"><b translate="no">${esc(name || 'Nicht verbunden')}</b>
-        <small>${Number.isFinite(dbm) ? `${signalBars(dbm)} Empfang ${signalWord(dbm)}` : ''}</small></span><span class="chip ${online ? 'ok' : 'warn'}">${online ? 'online' : 'offline'}</span></div>
-      <dl class="kv">${row('IP-Adresse', n.ip)}${(Array.isArray(n.ipv6) ? n.ipv6 : []).map((a) => row('IPv6-Adresse', a)).join('')}</dl>
-      <details class="more"><summary>Details</summary><dl class="kv">${row('Signal', n.wifisignal)}${row('Gateway', n.gateway)}${row('DNS', n.dns)}${row('MAC', n.mac)}</dl></details></section>`,
+      ${adapters.map(adapterBlock).join('')}
+      ${n.onlinestate === 'offline' ? '<p class="help" style="margin:0">Die Box ist gerade ohne Internet.</p>' : ''}</section>`,
     `<section class="card" data-col="1"><h2>Gespeicherte Netze</h2>${
       net.reverted
         ? `<div class="note warn">${icon('info', 18)}<span>${esc(`Mit der festen Adresse hat die Box im Netz „${net.reverted.ssid}“ ihren Router nicht erreicht. Dort holt sie sich ihre Adresse jetzt wieder vom Router (DHCP).`)}</span><button class="btn sm" id="w-rev-ok">OK</button></div>`
@@ -8209,7 +8507,8 @@ function wlanTop() {
           ? `<div class="rows">${net.saved
               .map((w, i) => {
                 const sig = inRange.get(w.ssid)
-                const where = w.active ? 'verbunden' : sig !== undefined ? `in Reichweite · ${signalWord(sig)}` : net.scan ? 'nicht in Reichweite' : ''
+                // (a hidden network is never in the scan: "not found", not "out of reach")
+                const where = w.active ? 'verbunden' : sig !== undefined ? `in Reichweite · ${signalWord(sig)}` : net.scan ? 'nicht gefunden' : ''
                 const fixed = net.fixed?.[w.ssid]
                 // (the buttons in a group of their own: on a phone it goes below the name, see .wifi-net)
                 return `<div class="entry wifi-net"><span class="avatar">${icon('wifi', 16)}</span><span class="lbl"><b translate="no">${esc(w.ssid)}</b>${where ? `<small>${sig !== undefined && !w.active ? signalBars(sig) : ''} ${esc(where)}</small>` : ''}${fixed ? `<small>${esc(fixed.paused ? `feste Adresse ${fixed.ip} pausiert` : `feste Adresse ${fixed.ip}`)}</small>` : ''}</span>
@@ -8226,8 +8525,12 @@ function wlanTop() {
           ? net.scan.length
             ? `<div class="rows">${net.scan
                 .map(
-                  (w, i) =>
-                    `<button class="entry lib-row${pick === w.ssid ? ' picked' : ''}" data-w="${i}"><span class="avatar">${signalBars(w.signal_dbm)}</span><span class="lbl"><b translate="no">${esc(w.ssid)}</b><small>${esc(signalWord(w.signal_dbm))}${w.encrypted ? '' : ' · offen'}</small></span>${n.wifi === w.ssid ? '<span class="chip ok">verbunden</span>' : saved.has(w.ssid) ? '<span class="chip">gespeichert</span>' : ''}${w.encrypted ? `<span class="chev">${icon('lock', 16)}</span>` : ''}</button>`,
+                  (w, i) => {
+                    const inner = `<span class="avatar">${signalBars(w.signal_dbm)}</span><span class="lbl"><b translate="no">${esc(w.ssid)}</b><small>${esc(signalWord(w.signal_dbm))}${w.encrypted ? '' : ' · offen'}</small></span>`
+                    // (the connected network is nothing to add: no button, no password field)
+                    if (connectedNames.has(w.ssid)) return `<div class="entry lib-row wifi-row">${inner}<span class="chip ok">verbunden</span></div>`
+                    return `<button class="entry lib-row wifi-row${pick === w.ssid ? ' picked' : ''}" data-w="${i}">${inner}${saved.has(w.ssid) ? '<span class="chip">gespeichert</span>' : ''}${w.encrypted ? `<span class="chev">${icon('lock', 16)}</span>` : ''}<span class="wifi-check">${icon('check', 14)}</span></button>`
+                  },
                 )
                 .join('')}</div>`
             : `<p class="help" style="margin:0">${net.scanFailed ? 'Die Suche hat nicht geklappt – bitte noch einmal.' : 'Keine Netze gefunden.'}</p>`
@@ -8241,7 +8544,7 @@ function wlanTop() {
         <div class="field"><label for="w-ssid">Netzname (SSID)</label><input class="input" id="w-ssid" maxlength="32" ${NO_PW_MANAGER}></div>
         <div class="field"><label for="w-pw2">Passwort</label><div class="input-wrap"><input class="input has-eye" id="w-pw2" type="password" maxlength="63" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div><small>8–63 Zeichen, leer bei einem offenen Netz.</small></div>
         <div class="btns"><button class="btn primary" id="w-add2">Hinzufügen</button></div></details>
-      <p class="help" style="margin:0">Die Box bleibt im aktuellen Netz und nimmt das neue, wenn es in Reichweite und besser ist.</p></section>`,
+      <p class="help" style="margin:0">Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.</p></section>`,
   ]
 }
 
@@ -9421,7 +9724,10 @@ function aboutTop() {
     `<section class="card"><h2>Name der Box</h2><p class="help">Steht auf dem Startbild und oben in der App.</p>
       <div class="field"><label for="ab-name">Name der Box (höchstens ${max} Zeichen)</label><input class="input" id="ab-name" maxlength="${max}" value="${esc(sys.bs?.current?.boxName ?? '')}" placeholder="${esc(sys.bs?.screens?.defaultName ?? 'MuPiBox')}"></div>
       <div class="btns"><button class="btn primary" id="ab-save">Speichern</button></div></section>`,
-    `<section class="card"><h2>Support</h2><p class="help">Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.</p>
+    // (the profile for a report in the Discord first; the zip when more is asked for)
+    `<section class="card"><h2>Support</h2><p class="help">Für eine Rückmeldung im Discord: ein kurzer Steckbrief der Box zum Einfügen. Ohne IP, WLAN-Namen, Boxnamen und Konten.</p>
+      <div class="btns"><button class="btn primary" id="ab-summary">${icon('copy', 18)}Für Discord kopieren</button></div>
+      <p class="help">Wenn etwas klemmt und nach mehr gefragt wird: das Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.</p>
       <div class="btns"><a class="btn" href="${API}/support-info" download>${icon('save', 18)}Support-Infos herunterladen</a></div></section>`,
     `<section class="card wide"><div class="hist-head"><h2>Verlauf</h2><div class="pills small" id="ab-range">${[1, 6, 24].map((h) => `<button aria-selected="${sys.range === h}" data-h="${h}">${h} h</button>`).join('')}</div></div>
       <div class="hist-grid" id="ab-charts"><div class="loading"><p>Lade …</p></div></div>
@@ -9508,6 +9814,32 @@ function mountAbout(root) {
     sys.range = Number(b.dataset.h)
     for (const x of b.parentElement.children) x.setAttribute('aria-selected', String(x === b))
     drawSystemHistory(root)
+  }
+  // The profile is fetched with the page and copied right at the tap: the browser lets the old way of copying (the app
+  // on http) work only in the tap itself, not after waiting for the box
+  sys.summary = null
+  api(`${API}/support-summary`).then((r) => {
+    if (r.ok && typeof r.body?.text === 'string') sys.summary = r.body.text
+  })
+  $('#ab-summary', root).onclick = async () => {
+    if (sys.summary == null) {
+      const r = await api(`${API}/support-summary`)
+      if (!(r.ok && typeof r.body?.text === 'string')) return toast('Der Steckbrief ließ sich nicht erstellen', 'info')
+      sys.summary = r.body.text
+    }
+    // (as a code block: the Discord shows it in a fixed font, the same on every box)
+    const fence = '```'
+    const text = `${fence}\n${sys.summary}\n${fence}`
+    openSheet(
+      `<h2>Steckbrief der Box</h2><p class="help">Im Discord einfügen und darunter beschreiben, was passiert ist.</p>
+      <pre class="summary" id="ab-summary-text">${esc(text)}</pre>
+      <div class="btns"><button class="btn" data-close>Schließen</button><button class="btn primary" id="ab-summary-copy">${icon('copy', 18)}Nochmal kopieren</button></div>`,
+      (sheet, close) => {
+        $('[data-close]', sheet).onclick = close
+        $('#ab-summary-copy', sheet).onclick = () => copyText(text, $('#ab-summary-text', sheet))
+      },
+    )
+    copyText(text, $('#ab-summary-text'))
   }
   $('#ab-save', root).onclick = async () => {
     const name = $('#ab-name', root).value.trim()
@@ -9953,11 +10285,15 @@ function wlanNetSections() {
       : 'Nicht installiert'
   const hardware = [
     { type: 'toggle', label: 'Onboard-WLAN an', key: 'wOnboard', help: onboardHelp },
-    { type: 'select', label: 'USB-WLAN-Treiber', key: 'usbDrv', options: (o.drivers ?? []).map((x) => x.id), help: driverState },
   ]
+  // Debian 13 and later: no driver can be built (see network.ts); one that is there can still be removed
+  const canBuild = o.driversBuildable !== false
+  if (canBuild || (o.drivers ?? []).some((x) => x.installed)) {
+    hardware.push({ type: 'select', label: 'USB-WLAN-Treiber', key: 'usbDrv', options: (o.drivers ?? []).map((x) => x.id), help: driverState })
+  }
   if (job.headersMissing) hardware.push({ type: 'warn', text: 'Die Kernel-Header fehlen, der Treiber ließ sich nicht bauen. In /boot/config.txt muss arm_64bit zum System passen.' })
   else if (job.ok === false && !job.running) hardware.push({ type: 'warn', text: 'Das hat nicht geklappt – Details unter System › Protokolle.' })
-  if (!job.running) hardware.push({ type: 'buttons', buttons: [[d?.installed ? 'Treiber entfernen' : 'Treiber installieren', d?.installed ? 'danger' : 'ghost', 'driver']] })
+  if (!job.running && (canBuild || d?.installed)) hardware.push({ type: 'buttons', buttons: [[d?.installed ? 'Treiber entfernen' : 'Treiber installieren', d?.installed ? 'danger' : 'ghost', 'driver']] })
   if (d?.installed) {
     hardware.push({ type: 'select', label: 'Stromsparen des USB-Adapters', key: 'usbPm', options: ['Aus', 'Minimal', 'Maximal'], help: 'Aus = stabilere Verbindung bei manchen Adaptern. Gilt nach einem Neustart.' })
   }
@@ -9986,15 +10322,34 @@ function dhcpItems(which) {
   ]
 }
 
-// Netzwerk › LAN: the cable
+// Netzwerk › LAN: the connection as on the WLAN page (wlanTop). The internet goes where the default route is.
+function lanTop() {
+  const l = nopt.lan
+  if (!l) return []
+  const n = net.status ?? {}
+  const row = (k, v) => (v ? `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>` : '')
+  const connected = !l.off && l.carrier === true
+  const note = l.off ? 'Anschluss ausgeschaltet' : l.carrier === false ? 'kein Kabel' : connected && l.currentGateway && n.onlinestate === 'online' ? 'Internet läuft hierüber' : ''
+  return [
+    `<section class="card" data-col="1"><div class="card-head"><h2>Verbindung</h2><button class="icon-btn soft" id="lan-refresh" aria-label="Aktualisieren">${icon('sync', 18)}</button></div>
+      <div class="wifi-link"><div class="wifi-now"><span class="avatar">${icon('plug', 18)}</span><span class="lbl"><b>LAN-Kabel</b>
+        <small>${esc(note)}</small></span><span class="chip ${connected ? 'ok' : 'warn'}">${connected ? 'verbunden' : 'nicht verbunden'}</span></div>
+      <dl class="kv">${row('IP-Adresse', l.currentIp)}${(l.currentIpv6 ?? []).map((a) => row('IPv6-Adresse', a)).join('')}</dl>
+      <details class="more"><summary>Details</summary><dl class="kv">${row('Gateway', l.currentGateway)}${connected ? row('DNS', n.dns) : ''}${row('MAC', l.mac)}</dl></details></div></section>`,
+  ]
+}
+
+// (also the box's state: internet, DNS)
+async function loadLan() {
+  const [st] = await Promise.all([api('/api/network'), loadNetOptions()])
+  net.status = st.ok ? st.body : null
+}
+
 function lanSections() {
   const l = nopt.lan
   if (!l) return [{ title: 'LAN', items: [{ type: 'note', text: 'Diese Box hat keinen LAN-Anschluss, oder er ließ sich nicht lesen.' }] }]
-  const cable = l.off ? 'Anschluss ausgeschaltet' : l.carrier === true ? 'verbunden' : l.carrier === false ? 'kein Kabel' : '–'
-  const now = [['Kabel', cable], ['Adresse', l.currentIp ?? '–'], ...(l.currentIpv6 ?? []).map((a) => ['IPv6-Adresse', a]), ['Router', l.currentGateway ?? '–']]
   const lan = [
     { type: 'toggle', label: 'LAN an', key: 'lanOn', help: l.off ? 'Ausgeschaltet – bleibt aus, bis es hier wieder eingeschaltet wird.' : 'Mit Kabel hat LAN Vorrang vor dem WLAN.' },
-    { type: 'kv', rows: now },
     { type: 'seg', label: 'Adresse beziehen', key: 'lanMode', options: ['DHCP', 'Statisch'] },
   ]
   if (state.values.get('lanMode') === 'Statisch') {
@@ -10151,7 +10506,22 @@ const wlanCtrl = {
 }
 
 // Netzwerk › LAN: the cable - on, its address now, DHCP or a fixed one
-const lanCtrl = { load: loadNetOptions, sections: lanSections, change: changeNetOption, act: netOptionsCtrl.act }
+const lanCtrl = {
+  load: loadLan,
+  top: lanTop,
+  sections: lanSections,
+  mount(root, page) {
+    const refresh = $('#lan-refresh', root)
+    if (!refresh) return
+    refresh.onclick = async () => {
+      await loadLan().catch(() => undefined)
+      toast('Aktualisiert')
+      if (currentPage()?.id === page.id) renderPage(page, false)
+    }
+  },
+  change: changeNetOption,
+  act: netOptionsCtrl.act,
+}
 
 /* Experten */
 
@@ -11686,6 +12056,9 @@ const CONTROLLERS = {
         items: [
           it('hatOn', { help: 'Umschalten stellt auch die Soundkarte um und startet die Box neu.' }),
           it('battery', { options: batteryOptions(hw.data.mupihat.batteries), help: usbOnly ? NO_BATTERY_TEXT : 'Die Spannungen gehören zu diesem Profil.' }),
+          ...(hw.data.mupihat.active && batteryProfileMissing(hw.hat)
+            ? [{ type: 'html', html: `<div class="note warn">${icon('info', 18)}<span><b>Bitte wähle dein Akku-Profil</b><br>Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.</span></div>` }]
+            : []),
           { type: 'html', html: hatNowLine() },
         ],
       }
@@ -11716,7 +12089,14 @@ const CONTROLLERS = {
           col: 1,
           items: [
             it('vreg', { label: 'Ladeschluss', sub: 'VREG', unit: 'mV', help: 'Leer = Standard des Lade-Chips. Bei zwei Zellen in Reihe höchstens 8400 mV (4,2 V je Zelle) – höher schadet dem Akku.' }),
-            it('capacity', { label: 'Kapazität', sub: 'für die Zeit bis voll', unit: 'mAh', help: 'Die Größe des Akkus. Leer = die Größe aus dem Namen des Profils, sonst gibt es keine Zeit bis voll.' }),
+            // (empty: the size the box reads from the profile's name, shown in grey - not saved)
+            it('capacity', {
+              label: 'Kapazität',
+              sub: 'für die Zeit bis voll',
+              unit: 'mAh',
+              placeholder: capacityOfName(hw.data.mupihat.battery),
+              help: capacityOfName(hw.data.mupihat.battery) ? 'Aus dem Namen des Profils. Nur eintragen, wenn dein Akku anders ist.' : 'Die Größe des Akkus. Ohne sie gibt es keine Zeit bis voll.',
+            }),
           ],
         },
         { bar: true, items: [{ type: 'buttons', buttons: [['Profil speichern', 'primary', 'toast:Gespeichert']] }] },

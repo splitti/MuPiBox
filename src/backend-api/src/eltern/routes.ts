@@ -54,7 +54,7 @@ import { registerCustomBootRoutes } from './bootscreen-custom'
 import { registerFeedHostRoutes } from './feed-hosts'
 import { registerPinnedCardRoutes } from './pinned-cards'
 import { dropStatic, registerWifiStaticRoutes, startWifiStaticWatch } from './wifi-static'
-import { decodeWpaSsid, parseWpaCliScanResults } from '../wpa-ssid'
+import { decodeWpaSsid, parseWpaCliScanResults, wifiConfigPrivate } from '../wpa-ssid'
 import { fanSpeedNow, registerHardwareRoutes } from './hardware'
 import { registerDietpiDashboardRoutes, startDietpiDashboard } from './dietpi-dashboard'
 import { legacyAdminOn, registerLegacyAdminRoutes } from './legacy-admin'
@@ -1666,6 +1666,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(500).json({ error: 'not_set' })
       return
     }
+    await wifiConfigPrivate()
     res.json({ ok: true })
   })
 
@@ -1717,6 +1718,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
             res.status(500).json({ error: `save_config failed: ${saveErr?.message ?? saveOut.trim()}` })
             return
           }
+          void wifiConfigPrivate()
           // (its fixed address, if it had one, goes with it)
           void dropStatic(wifiIface(), ssid).catch(() => undefined)
           res.json({ ok: true })

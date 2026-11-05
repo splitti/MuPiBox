@@ -20,8 +20,11 @@ set_pin() {
 if [ "$1" = "poweroff" ]; then
     echo "$(date): Initiating poweroff sequence"
 
-    # CUT_PIN setzen (z. B. Stromzufuhr abschalten)
-    set_pin ${CUT_PIN} 1
+    # CUT_PIN setzen (z. B. Stromzufuhr abschalten) - not with the MuPiHAT: it goes off by KILL, and GPIO 27 is the
+    # interrupt line of its charger there, which is not to be driven
+    if [ "$(/usr/bin/jq -r .mupihat.hat_active ${CONFIG})" != "true" ]; then
+        set_pin ${CUT_PIN} 1
+    fi
 
     # POWEROFF_PIN setzen (Signal an OnOff SHIM)
     set_pin ${POWEROFF_PIN} 0

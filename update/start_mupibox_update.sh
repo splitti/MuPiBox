@@ -109,7 +109,9 @@ if [ -z "${MUPIBOX_UPDATE_HANDED_OVER:-}" ] && [ ! -t 1 ] && started_by_php; the
 			put_atomic ${HD}/restart.sh.held ${HELD}
 		fi
 	}
-	if ! curl -fsSL --retry 3 --retry-delay 3 -m 120 -o ${HD}/start_mupibox_update.sh https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh \
+	# (MUPIBOX_UPDATE_SCRIPT_URL: another copy of this script, to test one before it is on main: without it the handed-over
+	# run was always the one from main, whatever the admin interface had started)
+	if ! curl -fsSL --retry 3 --retry-delay 3 -m 120 -o ${HD}/start_mupibox_update.sh "${MUPIBOX_UPDATE_SCRIPT_URL:-https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh}" \
 	   || ! bash -n ${HD}/start_mupibox_update.sh; then
 		unhold_mine
 		echo "Error: the update script could not be downloaded - nothing was changed. Please try again."
@@ -286,7 +288,7 @@ service mupi_idle_shutdown stop
 # One list for every channel (stable and beta kept the list of before until 5.0.10 - without xdotool, which the display's
 # window and the goodbye picture need, and with the packages above that nothing uses).
 # libwidevinecdm0 stays: the display plays Spotify through the Web Playback SDK in Chromium, which needs Widevine
-packages2install="lighttpd-mod-openssl gpiod git mpv pulseaudio-module-bluetooth python3-pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt python3-smbus2 pigpio libjson-c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh xdotool rfkill x11-utils x11-xserver-utils"
+packages2install="lighttpd-mod-openssl gpiod git mpv pulseaudio-module-bluetooth python3-pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt python3-smbus2 python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh xdotool rfkill x11-utils x11-xserver-utils"
 # packages the update removes (apt-get remove, only when installed) - none at the moment; Debian's jq goes where the
 # update puts its own jq (see "Copy binaries")
 packages2remove=""
@@ -304,8 +306,9 @@ ARCH=$(uname -m) >&3 2>&3
 # maintenance screen of the box (boot screen scene, text in the box's language); the old picture without one
 if [ -x /usr/local/bin/mupibox/maintenance_screen.sh ]; then
 	/usr/local/bin/mupibox/maintenance_screen.sh update >&3 2>&3
-else
-	/usr/bin/fbv /home/dietpi/MuPiBox/sysmedia/images/installation.jpg & >&3 2>&3
+elif [ -s /home/dietpi/MuPiBox/sysmedia/images/installation.jpg ]; then
+	# (on the display's terminal: fbv shows nothing without one, and the handed-over update has none)
+	/usr/bin/fbv /home/dietpi/MuPiBox/sysmedia/images/installation.jpg </dev/tty1 >/dev/tty1 2>&3 &
 fi
 
 if [ -z "$BRANCH" ]; then
@@ -377,7 +380,19 @@ rm -f /tmp/mupibox-update-failed
 	# a dpkg stopped halfway before (power gone during an installation) makes apt refuse every package until it is
 	# finished, and dependencies left broken by that as well
 	dpkg --configure -a >&3 2>&3
-	apt-get update >&3 2>&3
+	# (whether the lists are fresh: with old ones an upgrade finds nothing newer and still succeeds - see Chromium below.
+	# A list it could not fetch - a DNS error, the server away - leaves the old one with a warning, and apt-get still
+	# ends with 0: so its words are read, too.)
+	apt_lists_update() {
+		local out rc
+		# (in English: its words are read - with another language of the box they are other ones)
+		out=$(LC_ALL=C apt-get update 2>&1)
+		rc=$?
+		printf '%s\n' "${out}" >&3
+		[ ${rc} -eq 0 ] && ! printf '%s\n' "${out}" | grep -qE '^(Err:|W: (Failed to fetch|Some index files failed))'
+	}
+	APT_LISTS_FRESH=""
+	apt_lists_update && APT_LISTS_FRESH=1
 	apt-get --yes -f install >&3 2>&3
 	after=$(date +%s)
 
@@ -436,6 +451,41 @@ rm -f /tmp/mupibox-update-failed
 			echo "PHP security update failed: ${PHP_PKGS}" >&3
 			date '+%Y-%m-%d %H:%M' > /etc/mupibox/php-security-update.failed
 		fi
+	fi
+
+	# The display's Chromium up to date with every update (the box itself is rarely updated otherwise): the 4.2.4 image
+	# brought 122 (early 2024) and nothing updated it since - on it a list of covers could not be swiped any more once it
+	# was drawn anew, and its security updates were missing. Nothing is loaded when it is current. Only the browser's
+	# package (chromium-browser of Raspberry Pi OS on Debian 12, chromium on 13) and Widevine with it when it is there
+	# (Spotify plays through it). Its files in /etc/chromium.d as they are (keep the changed ones, no question - there is
+	# no terminal here). Failed twice (the second time with fresh package lists): the update goes on, the display with
+	# the Chromium it had.
+	CHROMIUM_PKG=""
+	for p in chromium-browser chromium; do
+		if dpkg-query -W -f='${Status}' "${p}" 2>/dev/null | grep -q "install ok installed"; then
+			CHROMIUM_PKG=${p}
+			break
+		fi
+	done
+	if [ -n "${CHROMIUM_PKG}" ]; then
+		CHROMIUM_BEFORE=$(dpkg-query -W -f='${Version}' "${CHROMIUM_PKG}" 2>/dev/null)
+		echo -e "XXX\n${STEP}\nUpdate Chromium\nXXX"
+		before=$(date +%s)
+		CHROMIUM_UPGRADE="${CHROMIUM_PKG}"
+		dpkg-query -W -f='${Status}' libwidevinecdm0 2>/dev/null | grep -q "install ok installed" && CHROMIUM_UPGRADE="${CHROMIUM_UPGRADE} libwidevinecdm0"
+		chromium_upgrade() {
+			DEBIAN_FRONTEND=noninteractive apt-get --yes -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold \
+				--only-upgrade install ${CHROMIUM_UPGRADE} >&3 2>&3
+		}
+		# (the lists fetched again first when that failed at the start: with old lists the upgrade "succeeds" on the old
+		# version; a failed upgrade is tried once more with fresh ones)
+		[ -n "${APT_LISTS_FRESH}" ] || { apt_lists_update && APT_LISTS_FRESH=1; }
+		if ! chromium_upgrade; then
+			apt-get update >&3 2>&3
+			chromium_upgrade || echo "Chromium could not be updated (${CHROMIUM_PKG} ${CHROMIUM_BEFORE}) - the display goes on with it" >&3
+		fi
+		after=$(date +%s)
+		echo -e "## Chromium ${CHROMIUM_BEFORE} -> $(dpkg-query -W -f='${Version}' "${CHROMIUM_PKG}" 2>/dev/null) ##  finished after $((after - before)) seconds" >&3 2>&3
 	fi
 
 	# What a part of the box needs (the list of scripts/mupibox/install_missing.sh - mpv plays everything but Spotify,
@@ -602,6 +652,16 @@ rm -f /tmp/mupibox-update-failed
 	# clean abort instead of a half-installed box.
 	[ -d "${MUPI_SRC}" ] || fail_update "Expected source directory ${MUPI_SRC} not found after unzip"
 	[ -s "${MUPI_SRC}/bin/nodejs/deploy.zip" ] || fail_update "Backend deploy.zip missing or empty in update package"
+	# a box without the maintenance screen (4.x, it has at most the old picture, the 4.0.4 image not even that): the new one
+	# from the package, as soon as it is there; the old picture only from a package without it (stable 4.2.4)
+	if [ ! -x /usr/local/bin/mupibox/maintenance_screen.sh ]; then
+		if [ -s "${MUPI_SRC}/media/bootscreens/prerendered/en/maintenance-karte-update.png" ]; then
+			pkill -x fbv >&3 2>&3
+			/usr/bin/fbv "${MUPI_SRC}/media/bootscreens/prerendered/en/maintenance-karte-update.png" </dev/tty1 >/dev/tty1 2>&3 &
+		elif [ ! -s /home/dietpi/MuPiBox/sysmedia/images/installation.jpg ] && [ -s "${MUPI_SRC}/media/images/installation.jpg" ]; then
+			/usr/bin/fbv "${MUPI_SRC}/media/images/installation.jpg" </dev/tty1 >/dev/tty1 2>&3 &
+		fi
+	fi
 	# a version with the app (its source in the package) must have it in deploy.zip too - else the box is left without it
 	if [ -d "${MUPI_SRC}/src/backend-api/src/mupi-app" ]; then
 		unzip -l "${MUPI_SRC}/bin/nodejs/deploy.zip" 2>/dev/null | grep -q " mupi-app/index.html$" || fail_update "The app (mupi-app) is missing in deploy.zip of the update package"
@@ -753,7 +813,10 @@ rm -f /tmp/mupibox-update-failed
 	mv ${MUPI_SRC}/themes/*.css /home/dietpi/MuPiBox/themes/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/chromium-autostart.sh /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	# full colours in the display on a Pi with 2 GB or more: takes DietPi's "low-end device mode" out again (see the file)
-	mkdir -p /etc/chromium.d && tr -d '\r' < ${MUPI_SRC}/config/chromium/zz-mupibox > /etc/chromium.d/zz-mupibox && chmod 644 /etc/chromium.d/zz-mupibox
+	# (not in stable 4.x)
+	if [ -f ${MUPI_SRC}/config/chromium/zz-mupibox ]; then
+		mkdir -p /etc/chromium.d && tr -d '\r' < ${MUPI_SRC}/config/chromium/zz-mupibox > /etc/chromium.d/zz-mupibox && chmod 644 /etc/chromium.d/zz-mupibox
+	fi
 	mv ${MUPI_SRC}/scripts/mupibox/* /usr/local/bin/mupibox/ >&3 2>&3
 	# (handed over by the admin interface of 4.x: the new restart.sh is held too - see hold_restart at the top)
 	if [ -n "${MUPIBOX_UPDATE_HANDED_OVER:-}" ]; then
@@ -866,6 +929,11 @@ rm -f /tmp/mupibox-update-failed
 	# boot and maintenance screens (scenes, texts, tool; the pictures are put together at the end of the update)
 	rm -rf /home/dietpi/MuPiBox/sysmedia/bootscreens >&3 2>&3
 	cp -r ${MUPI_SRC}/media/bootscreens /home/dietpi/MuPiBox/sysmedia/bootscreens >&3 2>&3
+	# the maintenance screen once more, with the new scripts and pictures: a Touch Display 2 had none from 5.0.13's fbv_options.sh
+	if [ -x /usr/local/bin/mupibox/maintenance_screen.sh ]; then
+		pkill -x fbv >&3 2>&3
+		/usr/local/bin/mupibox/maintenance_screen.sh update >&3 2>&3
+	fi
 	mkdir -p /usr/local/share/fonts/mupibox >&3 2>&3
 	cp ${MUPI_SRC}/themes/_fonts/Fredoka-Variable.ttf /usr/local/share/fonts/mupibox/ >&3 2>&3
 	fc-cache -f >&3 2>&3
@@ -879,15 +947,8 @@ rm -f /tmp/mupibox-update-failed
 	echo -e "XXX\n${STEP}\nInstall LED Control... \nXXX"	
 	
 	before=$(date +%s)
-	rm /usr/local/bin/mupibox/led_control >&3 2>&3
-	gcc -o ${MUPI_SRC}/scripts/led/led_control ${MUPI_SRC}/scripts/led/led_control.c -lpigpio -ljson-c >&3 2>&3
-	#if [ `getconf LONG_BIT` == 32 ]; then
-	#	mv -f ${MUPI_SRC}/bin/led_control/led_control_32 /usr/local/bin/mupibox/led_control >&3 2>&3
-	#else
-	#	mv -f ${MUPI_SRC}/bin/led_control/led_control_64 /usr/local/bin/mupibox/led_control >&3 2>&3
-	#fi
-	mv -f ${MUPI_SRC}/scripts/led/led_control /usr/local/bin/mupibox/led_control >&3 2>&3
-	#/usr/bin/chmod 755 /usr/local/bin/mupibox/led_control >&3 2>&3
+	# (led_control.py drives the LED; the C program of old is no longer built, and goes from a box that still has it)
+	rm -f /usr/local/bin/mupibox/led_control >&3 2>&3
 	after=$(date +%s)
 	echo -e "## LED-Control  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
@@ -1269,10 +1330,16 @@ rm -f /tmp/mupibox-update-failed
 	# The web server's certificate: the box's own, from its small authority for the home network (the app offers it to
 	# install on the phones; an own one uploaded in the app stays) - no longer a new self-signed one on every run, which
 	# no phone can trust and every browser asked about again. Checked at every start too (mupi_tls.service).
-	/usr/local/bin/mupibox/tls_cert.sh ensure >&3 2>&3
-	systemctl enable mupi_tls.service >&3 2>&3
-	systemctl daemon-reload >&3 2>&3
-	systemctl enable --now mupi_tls.timer >&3 2>&3
+	if [ -x /usr/local/bin/mupibox/tls_cert.sh ]; then
+		/usr/local/bin/mupibox/tls_cert.sh ensure >&3 2>&3
+		systemctl enable mupi_tls.service >&3 2>&3
+		systemctl daemon-reload >&3 2>&3
+		systemctl enable --now mupi_tls.timer >&3 2>&3
+	elif [ ! -s /etc/lighttpd/server.pem ]; then
+		# a version without tls_cert.sh (stable 4.x, from a box that has no certificate yet: the 4.0.4 image): the simple
+		# self-signed certificate as before - without one the web server does not start with SSL on
+		openssl req -new -x509 -keyout /etc/lighttpd/server.pem -out /etc/lighttpd/server.pem -days 3650 -nodes -subj "/C=DE/CN=mupibox" >&3 2>&3
+	fi
 	# no scripts or pages from the media folder behind /cover (see the file)
 	cp -f ${MUPI_SRC}/config/lighttpd/99-mupibox-media-noexec.conf /etc/lighttpd/conf-enabled/99-mupibox-media-noexec.conf >&3 2>&3
 	# the app on port 80/443 too: its login at /, the app at /app (see the file)
@@ -1287,6 +1354,7 @@ rm -f /tmp/mupibox-update-failed
 	# PHP answers in the home network) - once, with this update; a marker that outlasts a reset of the configuration
 	# keeps it to this once: switched on again in the app (System › Experten), it stays on. The app's start page says it
 	# was switched off. Afterwards as chosen: an update may bring PHP and lighttpd's PHP module back - off, they go again.
+	# (On a box that came back from 5.1 the right of its PHP pages to run commands as root is given after "done", below.)
 	if [ -x /usr/local/bin/mupibox/legacy_admin.sh ]; then
 		migrate=""
 		if [ ! -e /etc/mupibox/legacy-admin-default.done ]; then
@@ -1407,8 +1475,20 @@ rm -f /tmp/mupibox-update-failed
 		sync
 		# The update counts as done once "done" is on the card: what is left over then is only cleared up - a power cut
 		# while the old installation is being deleted must not bring a half deleted one back
+		# On a box that came back from 5.1 (its folders are there): the right of the admin interface's PHP pages to run
+		# commands as root (restart, shutdown, its settings), as the installation gives it - 5.1 runs no PHP and took it
+		# away, its way back leaves it to this update. Before "done", with a note that this update wrote it: a way back
+		# to 5.1 (restore_interrupted_update.sh, at once or at the next start) takes it away again, after "done" it stays
+		# - no moment a power cut leaves it on 5.1 or 5.0.14 without it. Missing or empty only - a file of the owner's
+		# own is left as it is.
+		if [ "${FINISH_OK}" = 1 ] && [ -d /home/dietpi/.mupibox/server ] && [ ! -s /etc/sudoers.d/www-data ]; then
+			touch /etc/mupibox/sudoers-www-data.by-update && sync
+			{ echo "www-data ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/www-data && chmod 440 /etc/sudoers.d/www-data && sync; } >&3 2>&3 \
+				|| echo "Note: /etc/sudoers.d/www-data could not be written - the admin interface's restart and shutdown do not work" >&3
+		fi
 		[ "${FINISH_OK}" = 1 ] && mark_update done || FINISH_OK=0
 		if [ "${FINISH_OK}" = 1 ]; then
+			rm -f /etc/mupibox/sudoers-www-data.by-update
 			rm -rf "${USERDATA_BAK}" "${BAK_DIR}" >&3 2>&3
 			clear_update_mark
 		fi

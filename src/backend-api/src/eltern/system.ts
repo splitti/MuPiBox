@@ -9,6 +9,7 @@ import * as path from 'node:path'
 import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { requireCsrf, requireSession } from './middleware'
+import { supportSummary } from './support-summary'
 
 export interface SystemDeps {
   getMupiboxConfig: () => MupiboxConfig | undefined
@@ -58,20 +59,78 @@ async function copyTail(from: string, to: string, maxBytes: number): Promise<voi
     const length = Math.min(size, maxBytes)
     const buf = Buffer.alloc(length)
     await fh.read(buf, 0, length, size - length)
-    // (cut off at its start: the first, partial line goes - a token whose ?token= lay before the cut stayed unnoticed,
-    // and a character cut in two came out broken)
-    // (no line break at all in a cut window: all of it is that one partial line - it goes as well)
-    const cut = size > length
-    const nl = cut ? buf.indexOf(0x0a) : -1
-    const text = !cut
-      ? buf.toString('utf8')
-      : nl >= 0
-        ? buf.subarray(nl + 1).toString('utf8')
-        : '[the last line of this log is longer than the part kept and is left out]\n'
-    await fsp.writeFile(to, withoutLogSecrets(text))
+    await fsp.writeFile(to, withoutLogSecrets(keptTail(buf, size > length)))
   } finally {
     await fh.close()
   }
+}
+
+// The end of a log as text. Cut off at its start: the first, partial line goes - a token whose ?token= lay before the
+// cut stayed unnoticed, and a character cut in two came out broken. (No line break at all in a cut window: all of it is
+// that one partial line - it goes as well.)
+function keptTail(buf: Buffer, cut: boolean): string {
+  if (!cut) return buf.toString('utf8')
+  const nl = buf.indexOf(0x0a)
+  return nl >= 0 ? buf.subarray(nl + 1).toString('utf8') : '[the last line of this log is longer than the part kept and is left out]\n'
+}
+
+// The library for the support zip: every address in it down to its scheme and the end of its host
+// (https://ddns.net/…): access data can be in its query, its path or before the host, in any spelling (%74oken=), and
+// a host of its own can carry a name. Wherever it stands in a value - at its start, after a space, without a scheme
+// (//host/…) or within a text. Read as JSON and written as JSON - a pattern over the text cut a title with quotes in it
+// and left a file that did not parse. The rest (types, titles, folders) stays for the support.
+//
+// Found by its "//", not by a pattern over the whole value: one that looked for a scheme at every letter took seconds
+// for a long title, with the server held up meanwhile. An address runs to the next space and is read once (each
+// character once - no search over the rest for every "//"). Its host is what follows the last @ before the path (as
+// URL has it: a password may hold an @ itself), without its port, and after any further slashes (https:///user:pw@host
+// is read by URL as well). An address without a host to be found goes whole, down to its "//". Tabs and line breaks
+// belong to it, also between its two slashes: URL takes them out (https:/\n/user:pw@host is https://user:pw@host) -
+// the next line goes with it then.
+const SLASHES = /\/[\t\n\r]*\//g
+const HAS_SLASHES = /\/[\t\n\r]*\//
+const NOT_SPACE = /[^ \f\v\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]*/y
+function cutAddresses(value: string): string {
+  let out = ''
+  let from = 0
+  SLASHES.lastIndex = 0
+  for (let m = SLASHES.exec(value); m; m = SLASHES.exec(value)) {
+    const i = m.index
+    NOT_SPACE.lastIndex = i + m[0].length
+    const address = NOT_SPACE.exec(value)?.[0] ?? ''
+    // ("a // b": no address)
+    if (!address) continue
+    const authority = address.replace(/[\t\n\r]/g, '').replace(/^\/+/, '').split(/[/?#]/, 1)[0]
+    const hostPort = authority.slice(authority.lastIndexOf('@') + 1)
+    const rawHost = hostPort.startsWith('[') ? hostPort.slice(0, hostPort.indexOf(']') + 1) : hostPort.split(':', 1)[0]
+    // (the scheme right in front, a word of at most 32 characters ending in ':')
+    const scheme = /[a-z][a-z0-9+.-]{0,31}:$/i.exec(value.slice(Math.max(from, i - 33), i))?.[0] ?? ''
+    const host = !rawHost ? '' : /^[\d.]*$|^\[/.test(rawHost) ? rawHost : rawHost.split('.').slice(-2).join('.')
+    out += `${value.slice(from, i - scheme.length)}${scheme}//${host ? `${host}/` : ''}…`
+    from = i + m[0].length + address.length
+    SLASHES.lastIndex = from
+  }
+  return out + value.slice(from)
+}
+function libraryForSupport(text: string): string {
+  const cut = (value: unknown): unknown => {
+    if (typeof value === 'string') return HAS_SLASHES.test(value) ? cutAddresses(value) : value
+    if (Array.isArray(value)) return value.map(cut)
+    if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, cut(v)]))
+    return value
+  }
+  try {
+    return JSON.stringify(cut(JSON.parse(text)), null, 2)
+  } catch {
+    return JSON.stringify({ error: 'the library could not be read' })
+  }
+}
+
+// A command's output as bytes (a log's end through sudo); null when it failed
+function runBuffer(cmd: string, args: string[], timeoutMs: number): Promise<Buffer | null> {
+  return new Promise((resolve) => {
+    execFile(cmd, args, { timeout: timeoutMs, maxBuffer: 6 * 1024 * 1024, encoding: 'buffer' }, (err, stdout) => resolve(err ? null : stdout))
+  })
 }
 
 function run(cmd: string, args: string[], timeoutMs = 30000): Promise<{ ok: boolean; stdout: string }> {
@@ -331,6 +390,14 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
   })
 
   /**
+   * GET /api/app/support-summary - the box's profile for a report in the Discord, as text (see support-summary.ts):
+   * the app copies it. Nothing in it names the box, the home or a person.
+   */
+  router.get('/support-summary', requireSession, async (_req, res) => {
+    res.set('Cache-Control', 'no-store').json({ text: await supportSummary(deps.getMupiboxConfig()) })
+  })
+
+  /**
    * GET /api/app/support-info - a zip for the support (Discord): the library, the config without secrets, the
    * monitor and network state, versions, the logs (pm2, Chromium's debug log). As the admin interface's support_data.php, but the secrets are removed by
    * key (its line filter let multi-line values through).
@@ -339,7 +406,11 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
     const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'mupibox-support-'))
     try {
       const server = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config'
-      await fsp.copyFile(`${server}/data.json`, `${dir}/data.json`).catch(() => undefined)
+      // (the library with its addresses cut down: a private radio stream's or feed's access data is its entry's id)
+      await fsp
+        .readFile(`${server}/data.json`, 'utf8')
+        .then((text) => fsp.writeFile(`${dir}/data.json`, libraryForSupport(text)))
+        .catch(() => undefined)
       await fsp.writeFile(`${dir}/mupiboxconfig.json`, JSON.stringify(withoutSecrets(deps.getMupiboxConfig() ?? {}), null, 2))
       for (const f of ['monitor.json', 'network.json']) {
         try {
@@ -355,6 +426,9 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
       const jq = await run('jq', ['--version'], 5000)
       const version = String((deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined)?.version ?? '')
       const boot = await run('systemd-analyze', ['time'], 5000)
+      // (the profile the app copies for the Discord, as text)
+      await fsp.writeFile(`${dir}/steckbrief.txt`, `${await supportSummary(deps.getMupiboxConfig()).catch(() => '')}
+`)
       await fsp.writeFile(`${dir}/mupi.info`, [osRelease, model, os.hostname(), os.arch(), os.machine(), `MuPiBox ${version}`, jq.stdout.trim(), boot.stdout.trim()].join('\n'))
       // The logs of the server and the player, also the rotated ones (the app's log page shows their last lines only),
       // and Chromium's debug log when its switch is on (System › Experten) - each its last 5 MB (as the admin
@@ -366,7 +440,19 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
         if (!/^[\w.-]+$/.test(name)) continue
         await copyTail(path.join(logs, name), path.join(dir, 'pm2-logs', name), 5 * 1024 * 1024).catch(() => undefined)
       }
-      await copyTail('/home/dietpi/.config/chromium/chrome_debug.log', `${dir}/chrome_debug.log`, 5 * 1024 * 1024).catch(() => undefined)
+      // (a display that logs in as root - AUTO_SETUP_AUTOSTART_LOGIN_USER=root in dietpi.txt, set up before 5.0.14 -
+      // writes it under /root, which this server cannot read: its end read through sudo, into memory only - no copy of
+      // it on the card, whole or unfiltered)
+      const chromeLog = `${dir}/chrome_debug.log`
+      const fromDietpi = await copyTail('/home/dietpi/.config/chromium/chrome_debug.log', chromeLog, 5 * 1024 * 1024).then(
+        () => true,
+        () => false,
+      )
+      if (!fromDietpi) {
+        const max = 5 * 1024 * 1024
+        const end = await runBuffer('sudo', ['tail', '-c', String(max + 1), '/root/.config/chromium/chrome_debug.log'], 15000)
+        if (end) await fsp.writeFile(chromeLog, withoutLogSecrets(keptTail(end.subarray(Math.max(0, end.length - max)), end.length > max)))
+      }
       const zip = `${dir}.zip`
       const z = await run('sh', ['-c', `cd '${dir}' && zip -q -r '${zip}' .`], 30000)
       if (!z.ok) {

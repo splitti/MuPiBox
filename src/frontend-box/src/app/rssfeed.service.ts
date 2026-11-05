@@ -1,9 +1,9 @@
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
-import { type Observable, of } from 'rxjs'
-import { catchError, map, mergeAll, toArray } from 'rxjs/operators'
+import type { Observable } from 'rxjs'
+import { map, mergeAll, toArray } from 'rxjs/operators'
 import { environment } from 'src/environments/environment'
-import { newestFirst, pickEpisodes } from './episode-pick'
+import { newOnlyOnChosen } from './episode-pick'
 import type { CategoryType, Media } from './media'
 import type { RssFeed } from './rssfeed'
 import { ExtraDataMedia, Utils } from './utils'
@@ -22,6 +22,8 @@ export class RssFeedService {
     this.url = `${environment.backend.apiUrl}/rssfeed/cached?url=${encodeURIComponent(id)}`
     return this.http.get(this.url).pipe(
       map((response: RssFeed) => {
+        // (the server answers a feed it could not fetch with an empty list and the reason, not with an HTTP error)
+        if (response.rss?._error) throw new Error(response.rss._error)
         return response.rss.channel.item.map((item) => {
           // LOW-7: removed `console.log(item)` — fired once per feed item
           // on every load, polluting chrome_debug.log (which we already
@@ -52,16 +54,10 @@ export class RssFeedService {
       toArray(),
       // (with a choice of episodes only a chosen one is "new" - the tile's dot is not for one the box does not show)
       map((episodes) => {
-        if (!extraDataSource?.episodePick || episodes.some((e) => e.offlineView)) return episodes
-        const chosen = new Set(pickEpisodes(newestFirst(episodes), extraDataSource.episodePick))
-        for (const e of episodes) if (!chosen.has(e)) e.episodeNew = false
+        newOnlyOnChosen(episodes, extraDataSource?.episodePick)
         return episodes
       }),
-      // LOW-7: previously a feed-fetch error rejected the observable, so
-      // upstream callers got an error and the medialist crashed. Return
-      // an empty array on error so the page just shows "no episodes" and
-      // the user can navigate away cleanly.
-      catchError(() => of([] as Media[])),
+      // (a failed fetch is an error here: the list knows then that it lacks this feed, see MediaService.rssEpisodes)
     )
   }
 

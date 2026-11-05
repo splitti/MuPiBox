@@ -18,6 +18,8 @@
 
 CONFIG=/etc/mupibox/mupiboxconfig.json
 OFF_CONF=/etc/lighttpd/conf-enabled/92-mupibox-admin-off.conf
+# the same redirect as 5.1 writes it (it took PHP off): left on a box that went back from 5.1 and got no PHP again
+NO_PHP_CONF=/etc/lighttpd/conf-enabled/92-mupibox-no-php.conf
 # the PHP modules of lighttpd switched off here, to switch the same ones on again
 MODS_FILE=/etc/mupibox/legacy-admin-off.modules
 # switched off by the update (once, 5.0.12): the app's start page says so until someone switches here
@@ -38,7 +40,7 @@ fpm_units() {
 }
 
 status() {
-	if [ -e "${OFF_CONF}" ]; then echo off; else echo on; fi
+	if [ -e "${OFF_CONF}" ] || [ -e "${NO_PHP_CONF}" ]; then echo off; else echo on; fi
 }
 
 switch_off() {
@@ -55,6 +57,8 @@ switch_off() {
 	done
 	# (a later "off" finds no module any more: the list of the first one is kept)
 	[ -n "${mods}" ] && echo "${mods# }" > "${MODS_FILE}"
+	# (5.1's redirect, left after its way back, goes: the same block twice - lighttpd does not start with that)
+	rm -f "${NO_PHP_CONF}"
 	cat > "${OFF_CONF}" <<'EOF'
 # MuPiBox: the previous admin interface is switched off (app: Einstellungen › System › Experten; scripts/mupibox/
 # legacy_admin.sh). No PHP runs: every .php address goes to the app - without this a .php file would be sent as it is.
@@ -73,16 +77,51 @@ EOF
 
 switch_on() {
 	local reload="$1" unit name
-	rm -f "${OFF_CONF}"
-	if [ -s "${MODS_FILE}" ]; then
-		for name in $(cat "${MODS_FILE}"); do
-			lighty-enable-mod "${name}" >/dev/null 2>&1
-		done
-		rm -f "${MODS_FILE}"
+	# (no PHP on the box - taken off by 5.1, and not installed again on the way back: nothing to switch on, the
+	# redirect stays and the switch says so)
+	if [ -z "$(fpm_units)" ]; then
+		echo "PHP (php-fpm) is not installed - the admin interface cannot be switched on" >&2
+		exit 3
 	fi
+	rm -f "${OFF_CONF}" "${NO_PHP_CONF}"
+	# lighttpd's PHP modules: the ones switched off here, else those of DietPi's PHP (none kept: PHP was taken off by 5.1
+	# and installed again later). The list goes only when PHP runs - else it stays for the next try.
+	local mods="fastcgi fastcgi-php-fpm" running="" php_mod="" f
+	[ -s "${MODS_FILE}" ] && mods=$(cat "${MODS_FILE}")
+	for name in ${mods}; do
+		lighty-enable-mod "${name}" >/dev/null 2>&1
+	done
+	for f in /etc/lighttpd/conf-enabled/*-fastcgi-php*.conf; do
+		[ -e "${f}" ] && php_mod=1
+	done
 	for unit in $(fpm_units); do
 		systemctl enable --now "${unit}" >/dev/null 2>&1
+		systemctl is-active -q "${unit}" && running=1
 	done
+	# ... and what lighttpd hands .php to is there: the socket its module names (DietPi: /run/php/php-fpm.sock, a link
+	# to the PHP version chosen) - a php-fpm of another version may run while the one it names does not. A module that
+	# starts PHP itself (bin-path) has no socket before lighttpd runs it.
+	local socks="" sock n
+	for f in /etc/lighttpd/conf-enabled/*-fastcgi-php*.conf; do
+		[ -e "${f}" ] || continue
+		grep -q '"bin-path"' "${f}" && continue
+		socks="${socks} $(sed -nE 's/.*"socket"[[:space:]]*=>[[:space:]]*"([^"]+)".*/\1/p' "${f}")"
+	done
+	for sock in ${socks}; do
+		for n in 1 2 3 4 5 6 7 8 9 10; do
+			[ -S "${sock}" ] && break
+			sleep 1
+		done
+		[ -S "${sock}" ] || running=""
+	done
+	# (php-fpm there, but it does not run - masked, or it fails - or lighttpd does not hand .php to it: off again, and
+	# the switch says so)
+	if [ -z "${running}" ] || [ -z "${php_mod}" ]; then
+		echo "PHP does not run (php-fpm, or lighttpd's PHP module) - the admin interface stays off" >&2
+		switch_off "${reload}"
+		exit 3
+	fi
+	rm -f "${MODS_FILE}"
 	[ "${reload}" = "noreload" ] || lighttpd_again
 }
 
