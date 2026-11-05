@@ -6,6 +6,11 @@
 <li id='linews' class='linews'>Update from the 4.0.4 image: the display no longer stays empty, it shows the installation picture.</li>
 <li id='linews' class='linews'>A version installed directly from a branch shows "DEV" in the app instead of "...".</li>
 </ul>
+<b>Telegram</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>The buttons of /help work again after "Detect chats" in the app: it had limited the bot to text messages for good. The bot sets this right at its next start.</li>
+</ul>
 <b>WiFi and LAN</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
