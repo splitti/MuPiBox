@@ -3,13 +3,8 @@
 </ul>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Update of a box without a certificate (the 4.0.4 image) to stable 4.2.4: the admin interface was gone afterwards, the web server had SSL switched on and no certificate. The update now creates the simple certificate 4.2.4 expects.</li>
-<li id='linews' class='linews'>Update from the 4.0.4 image: the display no longer stays empty, it shows the installation picture.</li>
+<li id='linews' class='linews'>Update from the 4.0.4 image: the display no longer stays empty, it shows the new maintenance picture as soon as the package is unpacked.</li>
 <li id='linews' class='linews'>A version installed directly from a branch shows "DEV" in the app instead of "...".</li>
-</ul>
-<b>Display</b>
-</ul>
-<ul id='ulnews' class='ulnews'>
-<li id='linews' class='linews'>A turned display with KMS (Touch Display 2, for example) shows the start, maintenance and goodbye pictures again: the picture program ended with an error there, and the console stayed on the screen.</li>
 </ul>
 <b>Telegram</b>
 </ul>
@@ -20,17 +15,22 @@
 </ul>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Debian 13 (trixie): the buttons that install the USB WiFi drivers RTL88X2BU and RTL8821AU are not shown, they cannot be built there yet.</li>
+<li id='linews' class='linews'>Known limit on Debian 13 (trixie): older Realtek USB sticks (driver rtl8192cu) can drop out again and again there, and the box can then be out of reach for a while. The built-in WiFi is the better choice there.</li>
 <li id='linews' class='linews'>The WiFi page showed the address of the cable as the address of the WiFi. It now shows the WiFi's own address and details, and the LAN page has the same "Connection" card for the cable.</li>
 <li id='linews' class='linews'>Add network: the chosen network is marked clearly, and the connected network can no longer be chosen there. A hidden saved network no longer reads "out of reach" when it only is not in the scan.</li>
 <li id='linews' class='linews'>A box set up over WiFi on DietPi 10 had no definition for the LAN port: a cable got no address and the LAN page stayed empty. The port is now defined at the start.</li>
 <li id='linews' class='linews'>After a quick change of network or access point the WiFi could disconnect itself again and again. The box now keeps a connection that is already back.</li>
-<li id='linews' class='linews'>Switching the MuPiHAT on now also sets the pins of its on/off switch by its schematic (LED on GPIO 13, shutdown on 4, button on 17): a box coming from an older version kept other pins, and the LED stayed dark. A restored backup keeps its pins. With the MuPiHAT, the box no longer drives GPIO 27 at shutdown: there it is the interrupt line of the charger.</li>
 <li id='linews' class='linews'>The WiFi page names each WiFi adapter by what it is (built-in or USB), with its own address and details: the names wlan0 and wlan1 can change between starts.</li>
-<li id='linews' class='linews'>With the MuPiHAT on and no battery profile chosen, the app now asks for one (on the battery page and the start page).</li>
-<li id='linews' class='linews'>The WiFi watchdog is now on after a new installation (an update leaves the choice of the box). It no longer starts the WiFi over with a cable plugged in or when the router does not answer pings, and waits longer between attempts when no network is in reach.</li>
+<li id='linews' class='linews'>The WiFi watchdog is now on after a new installation (an update leaves the choice of the box). It no longer starts the WiFi over with a cable plugged in or when the router does not answer pings, and waits longer between attempts when no network is in reach. Restarting the watchdog or switching it off no longer takes the WiFi down with it.</li>
 <li id='linews' class='linews'>Start of the box: the display could stay dark or show the console for about 2.5 minutes when the router sent the box's name in other letters (the box took it over a few seconds after the display had started, and the display lost its connection). The box now keeps its own name.</li>
 <li id='linews' class='linews'>When a WiFi network was added, its password ended up in the system log (in memory until the next restart). It no longer does.</li>
 <li id='linews' class='linews'>Removing a WiFi network or changing its password or band left the WiFi configuration, with the keys of all networks, readable by every user of the box. It now stays readable by root only, and a file left open earlier is closed at the next start.</li>
+</ul>
+<b>MuPiHAT</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Switching the MuPiHAT on now also sets the pins of its on/off switch by its schematic (LED on GPIO 13, shutdown on 4, button on 17): a box coming from an older version kept other pins, and the LED stayed dark. A restored backup keeps its pins. With the MuPiHAT, the box no longer drives GPIO 27 at shutdown: there it is the interrupt line of the charger.</li>
+<li id='linews' class='linews'>With the MuPiHAT on and no battery profile chosen, the app now asks for one (on the battery page and the start page).</li>
 </ul>
 <b>Library</b>
 </ul>
@@ -47,6 +47,7 @@
 <b>Display</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>A turned display with KMS (Touch Display 2, for example) shows the start, maintenance and goodbye pictures again: the picture program ended with an error there, and the console stayed on the screen.</li>
 <li id='linews' class='linews'>Changing the display model in the app (Settings › Display &amp; controls › Display model) is now led through in one window: first what changes (new and previous model, the rotation) and the three steps; then it waits for the restart by itself and asks "Do you see a picture?" with the countdown as soon as the box is back - before, only a short note came and the question showed after loading the page again. Then how it ended: the model stays, or the box goes back to the previous display. Opening the app during a test (on another device too) brings the window at once, also when the page loads anew while the box restarts.</li>
 <li id='linews' class='linews'>The countdown of that test (app and display) ended too early, often by minutes: it was counted from the clock at the start of the box, which a Raspberry Pi takes from the time it last saved until the network sets it. It now counts from the time since the start, as the box itself does.</li>
 <li id='linews' class='linews'>The 3 minutes of that test now run from the moment the app reaches the box after the restart, not from the start of the box: on a weak WLAN the app got there minutes later, and the question came with seconds left. If nobody opens the app (a display with a picture is answered on the display), the box goes back 6 minutes after its start.</li>
