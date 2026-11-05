@@ -52,7 +52,8 @@
 	link_answers() {
 		ip neigh flush to "$2" dev "$1" &> /dev/null
 		ping -nq -c 1 -W 2 -I "$1" "$2" &> /dev/null
-		ip neigh show to "$2" dev "$1" 2> /dev/null | grep -q 'lladdr'
+		# (REACHABLE only: an answer to this probe. An address alone says nothing - a fixed entry stays, a request coming in writes one.)
+		ip neigh show to "$2" dev "$1" 2> /dev/null | grep -q ' REACHABLE'
 	}
 	G_DIETPI-NOTIFY 2 "Checking connection for $ADAPTER via ping to default gateway every $TICKRATE seconds (re-connect after $FAILS_ALLOWED failed checks)"
 	while G_SLEEP "$TICKRATE"
@@ -73,8 +74,10 @@
 		fi
 		GATEWAY=$(G_GET_NET -i "$ADAPTER" gateway) || GATEWAY=""
 		# Another network or gateway: what was tried on the old one says nothing about this one.
-		NOW="$ADAPTER $(wpa_cli -i "$ADAPTER" status 2> /dev/null | sed -n 's/^ssid=//p') $GATEWAY"
-		if [[ $NOW != "$CONNECTION" ]]
+		# (Only a name and a gateway both known count as another one: a status that fails now and then must not keep the count at 0.)
+		SSID=$(wpa_cli -i "$ADAPTER" status 2> /dev/null | sed -n 's/^ssid=//p')
+		NOW="$ADAPTER $SSID $GATEWAY"
+		if [[ $SSID && $GATEWAY && $NOW != "$CONNECTION" ]]
 		then
 			CONNECTION=$NOW
 			FAILS=0

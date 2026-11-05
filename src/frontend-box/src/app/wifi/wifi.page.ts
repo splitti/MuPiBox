@@ -128,7 +128,10 @@ export class WifiPage {
               .filter((part) => part !== '')
               .join(' · ')
           : adapter.state === 'INTERFACE_DISABLED'
-            ? 'switched off'
+            ? // Off is the radio switch of the header. With a USB adapter connected the onboard one is only taken down, and comes back when the USB adapter goes.
+              !adapter.usb && this.onboardWifi()?.enabled === false
+              ? 'switched off'
+              : 'not in use'
             : 'looking for a network',
         ip: adapter.ip ?? '—',
         gateway: adapter.gateway ?? '—',

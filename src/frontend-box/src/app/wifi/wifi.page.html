@@ -225,7 +225,9 @@
       <!-- The box took a fixed address back to DHCP (it did not reach its router with it) -->
       <div class="reverted-note">
         <span><b>Back to DHCP:</b> with the fixed address {{ fixed()[r.ssid]?.ip }} the box did not reach its router in “{{ r.ssid }}”. It gets its address from the router there again.</span>
-        <ion-button size="small" fill="outline" color="warning" (click)="revertedCorrect()">Correct</ion-button>
+        @if (!otherTab()) {
+          <ion-button size="small" fill="outline" color="warning" (click)="revertedCorrect()">Correct</ion-button>
+        }
         <ion-button size="small" fill="outline" (click)="revertedOk()">OK</ion-button>
       </div>
     }
