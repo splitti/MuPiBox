@@ -696,6 +696,9 @@ STEP=0
 	# Tolerant replacement for DietPi's WiFi monitor (see scripts/mupibox/wifi_monitor.sh)
 	mkdir -p /etc/systemd/system/dietpi-wifi-monitor.service.d >&3 2>&3
 	cp -f ${MUPI_SRC}/config/services/dietpi-wifi-monitor-override.conf /etc/systemd/system/dietpi-wifi-monitor.service.d/override.conf >&3 2>&3
+	# On from the start: a child cannot repair a WiFi that hangs (a USB stick whose driver stops sending, seen on Kernel 6.18).
+	# An update leaves the choice of the box as it is; the app switches it off.
+	systemctl enable dietpi-wifi-monitor.service >&3 2>&3
 	# USB WiFi adapter preferred, onboard WiFi as fallback (see scripts/mupibox/mupi_wifi_select.sh)
 	cp -f ${MUPI_SRC}/config/udev/99-mupibox-wifi.rules /etc/udev/rules.d/99-mupibox-wifi.rules >&3 2>&3
 	# LAN takes over from WiFi again on carrier loss/return of the ethernet cable (same script)

@@ -13,11 +13,14 @@
 	# It is asked again for every check - the adapters can come and go.
 	IFACE_TOOL="/usr/local/bin/mupibox/mupi_wifi_iface.sh"
 	ADAPTER=$("${IFACE_TOOL}")
-	[[ $ADAPTER ]] || { G_DIETPI-NOTIFY 1 'No WiFi adapter has been found. Exiting...'; exit 1; }
 	readonly TICKRATE=10       # seconds between two checks
 	readonly PINGS=3           # packets per check; one answer is enough
 	readonly FAILS_ALLOWED=3   # failed checks in a row (about 30 seconds) before re-connecting
+	readonly WAIT_MAX=30       # at most this many checks (about 5 minutes and more) between two re-connects that do not help
 	FAILS=0
+	WAIT=0                     # checks until the next re-connect is allowed
+	WAIT_NEXT=1                # doubled by every re-connect that did not help: no network in reach is no reason to start the WiFi over all the time
+	ANSWERED=0                 # the gateway has answered a ping since this start
 
 	# Starts an adapter over so that it gets its address again. A plain "ifdown; ifup" is not enough with the roaming
 	# setup (wpa-roam: the address comes from the logical interface "<adapter>=default" when wpa_supplicant reports the
@@ -48,15 +51,37 @@
 	while G_SLEEP "$TICKRATE"
 	do
 		ADAPTER=$("${IFACE_TOOL}")
-		if [[ ! -e /sys/class/net/$ADAPTER ]]
+		if [[ ! $ADAPTER || ! -e /sys/class/net/$ADAPTER ]]
 		then
-			# An adapter that has been unplugged: mupi_wifi_select.sh brings up the other one.
+			# No adapter (yet), or one that has been unplugged: mupi_wifi_select.sh brings up the other one.
+			FAILS=0
+			continue
+		fi
+		# The default route on another adapter (a cable): the WiFi has no gateway of its own to ask, which is no failure.
+		ROUTE_DEV=$(ip -4 route show default | awk '{ for (i = 1; i < NF; i++) if ($i == "dev") { print $(i + 1); exit } }')
+		if [[ $ROUTE_DEV && $ROUTE_DEV != "$ADAPTER" ]]
+		then
 			FAILS=0
 			continue
 		fi
 		if GATEWAY=$(G_GET_NET -i "$ADAPTER" gateway) && ping -nq -c "$PINGS" -W 2 -I "$ADAPTER" "$GATEWAY" &> /dev/null
 		then
 			FAILS=0
+			WAIT=0
+			WAIT_NEXT=1
+			ANSWERED=1
+			continue
+		fi
+		# A gateway that has never answered and a connection that stands: a router that does not answer pings (guest
+		# networks), not a lost connection.
+		if (( ! ANSWERED )) && [[ $GATEWAY ]] && wpa_cli -i "$ADAPTER" status 2> /dev/null | grep -q 'wpa_state=COMPLETED'
+		then
+			FAILS=0
+			continue
+		fi
+		if (( WAIT > 0 ))
+		then
+			WAIT=$((WAIT - 1))
 			continue
 		fi
 		FAILS=$((FAILS + 1))
@@ -69,6 +94,8 @@
 		reconnect "$ADAPTER"
 		G_DIETPI-NOTIFY 0 'Completed'
 		FAILS=0
+		WAIT=$WAIT_NEXT
+		WAIT_NEXT=$(( WAIT_NEXT * 2 > WAIT_MAX ? WAIT_MAX : WAIT_NEXT * 2 ))
 	done
 	exit 0
 }

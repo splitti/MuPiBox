@@ -31,7 +31,7 @@ For every saved network a **fixed IP address** can be set via **Address** (**Obt
 
 | Setting | Effect |
 | --- | --- |
-| **Wi-Fi watchdog (DietPi-WiFi-Monitor)** | rebuilds the connection when it drops |
+| **Wi-Fi watchdog (DietPi-WiFi-Monitor)** | rebuilds the connection when it drops (on after a new installation). With a cable, or with no network in reach, it does not step in all the time |
 | **Look for the best connection** | switches to the strongest of several saved networks |
 | **Restart Wi-Fi** | restarts the Wi-Fi |
 

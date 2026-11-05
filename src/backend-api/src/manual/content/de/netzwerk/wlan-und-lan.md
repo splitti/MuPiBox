@@ -31,7 +31,7 @@ Für jedes gespeicherte Netz lässt sich über **Adresse** eine **feste IP-Adres
 
 | Einstellung | Wirkung |
 | --- | --- |
-| **WLAN-Wächter (DietPi-WiFi-Monitor)** | baut die Verbindung neu auf, wenn sie abreißt |
+| **WLAN-Wächter (DietPi-WiFi-Monitor)** | baut die Verbindung neu auf, wenn sie abreißt (nach einer Neuinstallation an). Steckt ein Kabel oder ist kein Netz in Reichweite, greift er nicht laufend ein |
 | **Beste Verbindung suchen** | wechselt bei mehreren gespeicherten Netzen zum stärksten |
 | **WLAN neu starten** | startet das WLAN neu |
 
