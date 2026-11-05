@@ -48,12 +48,40 @@
 		fi
 	}
 	# The gateway answers on the link, whether or not it answers pings (guest networks often do not): it answers ARP, which an
-	# adapter that has stopped sending never gets to see. The old entry goes first, it would still say so for a while.
+	# adapter that has stopped sending never gets to see.
+	# Asked with an ARP request of its own and read from the answer: the neighbour table cannot say (a fixed entry never asks,
+	# a request coming in writes one). arping is not installed everywhere, python3 is.
 	link_answers() {
-		ip neigh flush to "$2" dev "$1" &> /dev/null
-		ping -nq -c 1 -W 2 -I "$1" "$2" &> /dev/null
-		# (REACHABLE only: an answer to this probe. An address alone says nothing - a fixed entry stays, a request coming in writes one.)
-		ip neigh show to "$2" dev "$1" 2> /dev/null | grep -q ' REACHABLE'
+		python3 -c '
+import socket, struct, sys, time
+iface, source, gateway = sys.argv[1], socket.inet_aton(sys.argv[2]), socket.inet_aton(sys.argv[3])
+s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(0x0806))
+s.bind((iface, 0x0806))
+mac = s.getsockname()[4]
+request = b"\xff" * 6 + mac + b"\x08\x06" + struct.pack("!HHBBH", 1, 0x0800, 6, 4, 1) + mac + source + b"\0" * 6 + gateway
+for _ in range(2):
+    s.send(request)
+    end = time.monotonic() + 1
+    while (left := end - time.monotonic()) > 0:
+        s.settimeout(left)
+        try:
+            frame = s.recv(64)
+        except TimeoutError:
+            break
+        if frame[20:22] == b"\0\2" and frame[28:32] == gateway and frame[32:38] == mac:
+            sys.exit(0)
+sys.exit(1)
+' "$1" "$(ip -4 -o addr show dev "$1" scope global 2> /dev/null | awk '{ split($4, a, "/"); print a[1]; exit }')" "$2" &> /dev/null
+	}
+	# A stop while the adapter is down must not leave it down: the programs that were ended are started again first.
+	# (Only the monitor itself gets the signal, see KillMode in its override; systemd waits for it.)
+	reconnect_whole() {
+		local stopping=0
+		trap 'stopping=1' TERM INT
+		reconnect "$1"
+		trap - TERM INT
+		(( stopping )) && exit 0
+		return 0
 	}
 	G_DIETPI-NOTIFY 2 "Checking connection for $ADAPTER via ping to default gateway every $TICKRATE seconds (re-connect after $FAILS_ALLOWED failed checks)"
 	while G_SLEEP "$TICKRATE"
@@ -103,7 +131,7 @@
 			continue
 		fi
 		G_DIETPI-NOTIFY 2 "Detected $ADAPTER connection loss. Reconnecting..."
-		reconnect "$ADAPTER"
+		reconnect_whole "$ADAPTER"
 		G_DIETPI-NOTIFY 0 'Completed'
 		FAILS=0
 		WAIT=$WAIT_NEXT
