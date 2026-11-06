@@ -2,7 +2,7 @@
 
 ## Final setup steps
 
-The boot partition (the one a PC sees) is `/boot` up to DietPi 9 and `/boot/firmware` on DietPi 10 (Debian 13): on DietPi 10, use `/boot/firmware` instead of `/boot` in the steps below for `add_wifi.json`, `config.txt`, `System Volume Information`, `Automation_Custom_Script.sh` and `autosetup.log`.
+The boot partition (the one a PC sees) is `/boot` up to DietPi 9 and `/boot/firmware` on DietPi 10 (Debian 13): on DietPi 10, use `/boot/firmware` instead of `/boot` in the steps below for `add_wifi.json`, `config.txt`, `System Volume Information` and `autosetup.log`. `Automation_Custom_Script.sh` is the exception: DietPi puts a downloaded one in `/boot` on every version, a copied one is on the boot partition - remove it from both places (`sudo rm -f /boot/Automation_Custom_Script.sh /boot/firmware/Automation_Custom_Script.sh`).
 
 1. Check crontab: ```crontab -l```
 1. Check pm2 status: ```pm2 status```

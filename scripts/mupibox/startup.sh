@@ -2,18 +2,23 @@
 
 #JSON_TEMPLATE="https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/add_wifi.json"
 # On the partition a PC sees: /boot/firmware on DietPi 10 (Debian 13), /boot before. The file of an installation of
-# before, under /boot (not to be seen there from a PC), moves over once - only when the new place has none yet.
+# before, under /boot (not to be seen there from a PC), is copied over once - only when the new place has none yet. The
+# old one stays (nothing saved there can be lost); a note says it was taken over. Copied next to the new place and
+# renamed there, one step on that partition. Could it not be copied (full partition): nothing else of the file this
+# start - no template in its place, which would stop the next try.
 WIFI_FILE="/boot/add_wifi.json"
+WIFI_SKIP=""
 if [ -f /boot/firmware/config.txt ]; then
 	WIFI_FILE="/boot/firmware/add_wifi.json"
-	if [ -f /boot/add_wifi.json ] && [ ! -e "${WIFI_FILE}" ]; then
-		# (copied next to it and renamed there - one step on that partition; the old one goes only when it is still the
-		# same as the copy: a mv across file systems copies and then deletes, and a save in between was lost)
+	WIFI_MOVED="/var/lib/mupibox/add_wifi.taken-over"
+	if [ -f /boot/add_wifi.json ] && [ ! -e "${WIFI_FILE}" ] && [ ! -e "${WIFI_MOVED}" ]; then
 		WIFI_TMP="${WIFI_FILE}.new.$$"
 		if sudo cp /boot/add_wifi.json "${WIFI_TMP}" && sudo mv -f "${WIFI_TMP}" "${WIFI_FILE}"; then
-			sudo cmp -s /boot/add_wifi.json "${WIFI_FILE}" && sudo rm -f /boot/add_wifi.json
+			sudo mkdir -p "$(dirname "${WIFI_MOVED}")" && sudo touch "${WIFI_MOVED}"
 		else
 			sudo rm -f "${WIFI_TMP}"
+			WIFI_SKIP=1
+			echo "startup.sh: /boot/add_wifi.json could not be copied to ${WIFI_FILE} - tried again at the next start" >&2
 		fi
 		unset WIFI_TMP
 	fi
@@ -58,7 +63,9 @@ fi
 
 # Exactly one JSON object in the file, else nothing is taken from it and the file stays as it is, to be corrected (jq
 # answers for an object at the start and only then fails on what follows: {...}, with a comma behind it was taken)
-if [ -f "$WIFI_FILE" ] && ! /usr/bin/jq -e -s 'length == 1 and (.[0] | type) == "object"' "${WIFI_FILE}" > /dev/null 2>&1; then
+if [ -n "${WIFI_SKIP}" ]; then
+	:
+elif [ -f "$WIFI_FILE" ] && ! /usr/bin/jq -e -s 'length == 1 and (.[0] | type) == "object"' "${WIFI_FILE}" > /dev/null 2>&1; then
 	echo "startup.sh: ${WIFI_FILE} is not one JSON object - nothing taken from it, the file is left as it is" >&2
 elif [ -f "$WIFI_FILE" ]; then
 	SSID="$(/usr/bin/jq -r .ssid ${WIFI_FILE})"
