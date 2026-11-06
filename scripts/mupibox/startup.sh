@@ -40,17 +40,13 @@ fi
 
 ### Check for new wifi network in /boot/add_wifi.json
 
-if [ -f "$WIFI_FILE" ]; then
-	# Exactly one JSON object in the file, else nothing is taken from it (as with an empty file): jq answers for an
-	# object at the start and only then fails on what follows ({...}, with a comma behind it was taken as it was)
-	if /usr/bin/jq -e -s 'length == 1 and (.[0] | type) == "object"' "${WIFI_FILE}" > /dev/null 2>&1; then
-		SSID="$(/usr/bin/jq -r .ssid ${WIFI_FILE})"
-		PSK="$(/usr/bin/jq -r .password ${WIFI_FILE})"
-	else
-		echo "startup.sh: ${WIFI_FILE} is not one JSON object - nothing taken from it" >&2
-		SSID=""
-		PSK=""
-	fi
+# Exactly one JSON object in the file, else nothing is taken from it and the file stays as it is, to be corrected (jq
+# answers for an object at the start and only then fails on what follows: {...}, with a comma behind it was taken)
+if [ -f "$WIFI_FILE" ] && ! /usr/bin/jq -e -s 'length == 1 and (.[0] | type) == "object"' "${WIFI_FILE}" > /dev/null 2>&1; then
+	echo "startup.sh: ${WIFI_FILE} is not one JSON object - nothing taken from it, the file is left as it is" >&2
+elif [ -f "$WIFI_FILE" ]; then
+	SSID="$(/usr/bin/jq -r .ssid ${WIFI_FILE})"
+	PSK="$(/usr/bin/jq -r .password ${WIFI_FILE})"
 	if [ "${SSID}" = "" ] || [ "${PSK}" = "" ]; then
 		init_add_wifi
 	elif [ "${SSID}" = "clear" ] && [ "${PSK}" = "all"  ]; then
