@@ -2,9 +2,11 @@
 
 ## Final setup steps
 
+The boot partition (the one a PC sees) is `/boot` up to DietPi 9 and `/boot/firmware` on DietPi 10 (Debian 13): on DietPi 10, use `/boot/firmware` instead of `/boot` in the steps below for `add_wifi.json`, `config.txt`, `System Volume Information`, `Automation_Custom_Script.sh` and `autosetup.log`.
+
 1. Check crontab: ```crontab -l```
 1. Check pm2 status: ```pm2 status```
-1. Check add_wifi.json ```sudo cat /boot/add_wifi.json```
+1. Check add_wifi.json ```sudo cat /boot/add_wifi.json``` (DietPi 10: ```sudo cat /boot/firmware/add_wifi.json```)
 1. Create File in boot: ```touch /home/dietpi/.mupi.install```
 1. Check setting arm_64bit=0 in v7: ```sudo nano /boot/config.txt```
 1. Delete Windows directory: ```sudo rm -R /boot/System\ Volume\ Information/```

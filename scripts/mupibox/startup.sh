@@ -7,7 +7,15 @@ WIFI_FILE="/boot/add_wifi.json"
 if [ -f /boot/firmware/config.txt ]; then
 	WIFI_FILE="/boot/firmware/add_wifi.json"
 	if [ -f /boot/add_wifi.json ] && [ ! -e "${WIFI_FILE}" ]; then
-		sudo mv /boot/add_wifi.json "${WIFI_FILE}"
+		# (copied next to it and renamed there - one step on that partition; the old one goes only when it is still the
+		# same as the copy: a mv across file systems copies and then deletes, and a save in between was lost)
+		WIFI_TMP="${WIFI_FILE}.new.$$"
+		if sudo cp /boot/add_wifi.json "${WIFI_TMP}" && sudo mv -f "${WIFI_TMP}" "${WIFI_FILE}"; then
+			sudo cmp -s /boot/add_wifi.json "${WIFI_FILE}" && sudo rm -f /boot/add_wifi.json
+		else
+			sudo rm -f "${WIFI_TMP}"
+		fi
+		unset WIFI_TMP
 	fi
 fi
 FIRST_INSTALL="/home/dietpi/.mupi.install"
