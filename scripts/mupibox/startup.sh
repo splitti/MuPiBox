@@ -63,7 +63,9 @@ if [ -f "$WIFI_FILE" ]; then
 		# password was cut and saved as a wrong key without a word
 		# (no line break in it either: wpa_passphrase reads one line, the rest was dropped without a word)
 		PSK_BYTES=$(printf '%s' "${PSK}" | LC_ALL=C wc -c)
-		if [[ ${PSK} == *$'\n'* || ${PSK} == *$'\r'* ]]; then
+		# (asked in the JSON itself: $(...) has already dropped line breaks at the end of PSK)
+		PSK_BREAK=$(/usr/bin/jq -r '(.password // "") | tostring | test("[\r\n]")' "${WIFI_FILE}" 2>/dev/null)
+		if [ "${PSK_BREAK}" != "false" ] || [[ ${PSK} == *$'\n'* || ${PSK} == *$'\r'* ]]; then
 			WIFI_RESULT=""
 			echo "startup.sh: the password in ${WIFI_FILE} has a line break - nothing written" >&2
 		elif [ "${PSK_BYTES}" -ge 8 ] && [ "${PSK_BYTES}" -le 63 ]; then
@@ -82,7 +84,7 @@ if [ -f "$WIFI_FILE" ]; then
 		else
 			echo "startup.sh: no network written from ${WIFI_FILE} (wpa_passphrase gave no complete block)" >&2
 		fi
-		unset WIFI_RESULT WIFI_BLOCK PSK_BYTES
+		unset WIFI_RESULT WIFI_BLOCK PSK_BYTES PSK_BREAK
 		init_add_wifi
 		restart_network
 		sleep 2
