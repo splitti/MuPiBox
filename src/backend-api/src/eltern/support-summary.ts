@@ -105,9 +105,13 @@ async function hat(cfg: MupiboxConfig | undefined): Promise<string> {
     // No battery, no empty one: the driver says so with the source "none"; an older one gave 0 % from the voltage - then
     // only the profile without a battery together with the charger seeing none counts (a battery on that profile keeps
     // its percent)
+    // its percent). A battery the charger sees on such a profile: said so - its percent would be the profile's 0.
     const usbProfile = chosen === 'USB-C mode (no battery)' || chosen === 'USB-C mode'
     const noneSeen = j.BatteryConnected === 0 || j.BatteryConnected === false
-    if (j.Bat_PercentSource === 'none' || (usbProfile && noneSeen)) return `MuPiHAT${battery} · ohne Akku${Number(j.IBus) > 0 ? ', am Netzteil' : ''}`
+    const batterySeen = j.BatteryConnected === 1 || j.BatteryConnected === true
+    const atCharger = Number(j.IBus) > 0 ? ', am Netzteil' : ''
+    if ((j.Bat_PercentSource === 'none' || usbProfile) && batterySeen) return `MuPiHAT${battery} · Akku erkannt, kein passendes Akkuprofil${atCharger}`
+    if (j.Bat_PercentSource === 'none' || (usbProfile && noneSeen)) return `MuPiHAT${battery} · ohne Akku${atCharger}`
     return `MuPiHAT${battery} · Akku ${Math.round(pct)} %${Number(j.IBus) > 0 ? ', am Netzteil' : ''}`
   } catch {
     return `MuPiHAT${battery} · keine Messwerte (Dienst läuft nicht?)`

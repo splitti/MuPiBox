@@ -61,8 +61,12 @@ if [ -f "$WIFI_FILE" ]; then
 		# (the password over stdin: sudo writes its command line to the system log)
 		# 8 to 63 characters (bytes), checked here: wpa_passphrase 2.9 reads only the first 63 from stdin, and a longer
 		# password was cut and saved as a wrong key without a word
+		# (no line break in it either: wpa_passphrase reads one line, the rest was dropped without a word)
 		PSK_BYTES=$(printf '%s' "${PSK}" | LC_ALL=C wc -c)
-		if [ "${PSK_BYTES}" -ge 8 ] && [ "${PSK_BYTES}" -le 63 ]; then
+		if [[ ${PSK} == *$'\n'* || ${PSK} == *$'\r'* ]]; then
+			WIFI_RESULT=""
+			echo "startup.sh: the password in ${WIFI_FILE} has a line break - nothing written" >&2
+		elif [ "${PSK_BYTES}" -ge 8 ] && [ "${PSK_BYTES}" -le 63 ]; then
 			WIFI_RESULT=$(sudo wpa_passphrase "${SSID}" <<< "${PSK}")
 		else
 			WIFI_RESULT=""

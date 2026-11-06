@@ -83,6 +83,9 @@
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Driver removed</li>";
 		}
+	// (the scripts above changed the folders: PHP would still answer from its cache of before)
+	clearstatcache();
+	$usb_wifi_any_installed = count(array_filter($usb_wifi_drivers, function ($d) { return is_dir($d['path']); })) > 0;
 	// What the page shows - after the request above, never instead of it. Nothing can be built here: only the drivers
 	// that are there are offered (to remove them), one of them chosen.
 	if (!$usb_wifi_can_build && !is_dir($usb_wifi_drivers[$usb_wifi_driver]['path'])) {
