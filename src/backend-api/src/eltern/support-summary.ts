@@ -96,13 +96,18 @@ async function hat(cfg: MupiboxConfig | undefined): Promise<string> {
     const j = JSON.parse(await fsp.readFile('/tmp/mupihat.json', 'utf8')) as {
       Bat_Percent?: unknown
       Bat_PercentSource?: unknown
+      BatteryConnected?: unknown
       IBus?: unknown
       Measurement_Valid?: unknown
     }
     const pct = Number(j.Bat_Percent)
     if (j.Measurement_Valid === false || !Number.isFinite(pct)) return `MuPiHAT${battery} · keine Messwerte`
-    // (the profile without a battery: the driver says 0 % with the source "none" - no empty battery)
-    if (j.Bat_PercentSource === 'none') return `MuPiHAT${battery} · ohne Akku${Number(j.IBus) > 0 ? ', am Netzteil' : ''}`
+    // No battery, no empty one: the driver says so with the source "none"; an older one gave 0 % from the voltage - then
+    // only the profile without a battery together with the charger seeing none counts (a battery on that profile keeps
+    // its percent)
+    const usbProfile = chosen === 'USB-C mode (no battery)' || chosen === 'USB-C mode'
+    const noneSeen = j.BatteryConnected === 0 || j.BatteryConnected === false
+    if (j.Bat_PercentSource === 'none' || (usbProfile && noneSeen)) return `MuPiHAT${battery} · ohne Akku${Number(j.IBus) > 0 ? ', am Netzteil' : ''}`
     return `MuPiHAT${battery} · Akku ${Math.round(pct)} %${Number(j.IBus) > 0 ? ', am Netzteil' : ''}`
   } catch {
     return `MuPiHAT${battery} · keine Messwerte (Dienst läuft nicht?)`

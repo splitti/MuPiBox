@@ -59,13 +59,6 @@
 	$BITRATE=exec($commandB);
 
 	$usb_wifi_driver = isset($_POST['usb_wifi_driver']) && isset($usb_wifi_drivers[$_POST['usb_wifi_driver']]) ? $_POST['usb_wifi_driver'] : 'RTL88X2BU';
-	// Nothing can be built here: only the drivers that are there are offered (to remove them), one of them chosen
-	if (!$usb_wifi_can_build && !is_dir($usb_wifi_drivers[$usb_wifi_driver]['path'])) {
-		foreach ($usb_wifi_drivers as $key => $driver) {
-			if (is_dir($driver['path'])) { $usb_wifi_driver = $key; break; }
-		}
-	}
-
 	if( $_POST['USB_WIFI_DRIVER'] == "Install driver" && $usb_wifi_can_build )
 		{
 		$command = "cd; curl -L ".$usb_wifi_drivers[$usb_wifi_driver]['install_url']." | sudo su dietpi -c bash";
@@ -81,7 +74,8 @@
 			$CHANGE_TXT=$CHANGE_TXT."<li>Driver installed</li>";
 			}
 		}
-	if( $_POST['USB_WIFI_DRIVER'] == "Remove driver" )
+	// (only the driver asked for, and only when it is there: a page of before must not remove another one)
+	if( $_POST['USB_WIFI_DRIVER'] == "Remove driver" && is_dir($usb_wifi_drivers[$usb_wifi_driver]['path']) )
 		{
 		$command = "cd; curl -L ".$usb_wifi_drivers[$usb_wifi_driver]['remove_url']." | sudo su dietpi -c bash";
 		exec($command, $output, $result );
@@ -89,6 +83,13 @@
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Driver removed</li>";
 		}
+	// What the page shows - after the request above, never instead of it. Nothing can be built here: only the drivers
+	// that are there are offered (to remove them), one of them chosen.
+	if (!$usb_wifi_can_build && !is_dir($usb_wifi_drivers[$usb_wifi_driver]['path'])) {
+		foreach ($usb_wifi_drivers as $key => $driver) {
+			if (is_dir($driver['path'])) { $usb_wifi_driver = $key; break; }
+		}
+	}
 	// Power saving of an installed USB WiFi adapter: the rtw_power_mgnt option of its driver (RTL88X2BU or
 	// RTL8821AU) in /etc/modprobe.d/<module>.conf (0 = off, 1 = minimal, 2 = maximum). The driver reads it
 	// when it is loaded, so a change is active after the next boot.

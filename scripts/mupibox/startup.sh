@@ -59,7 +59,15 @@ if [ -f "$WIFI_FILE" ]; then
 		/usr/local/bin/mupibox/maintenance_screen.sh wlan
 		#sudo wget -q -O ${WIFI_FILE} ${JSON_TEMPLATE}
 		# (the password over stdin: sudo writes its command line to the system log)
-		WIFI_RESULT=$(sudo wpa_passphrase "${SSID}" <<< "${PSK}")
+		# 8 to 63 characters (bytes), checked here: wpa_passphrase 2.9 reads only the first 63 from stdin, and a longer
+		# password was cut and saved as a wrong key without a word
+		PSK_BYTES=$(printf '%s' "${PSK}" | LC_ALL=C wc -c)
+		if [ "${PSK_BYTES}" -ge 8 ] && [ "${PSK_BYTES}" -le 63 ]; then
+			WIFI_RESULT=$(sudo wpa_passphrase "${SSID}" <<< "${PSK}")
+		else
+			WIFI_RESULT=""
+			echo "startup.sh: the password in ${WIFI_FILE} has ${PSK_BYTES} bytes, 8 to 63 are allowed - nothing written" >&2
+		fi
 		# The network block as a whole, without the plain-text "#psk=" comment - not lines 1, 2, 4 and 5: wpa_passphrase 2.9
 		# (Bullseye) prints "# reading passphrase from stdin" first on stdout, and those lines lost the ssid and the closing
 		# brace and kept the password in plain text. Written only when the block is complete (a wrong password length gives
@@ -70,7 +78,7 @@ if [ -f "$WIFI_FILE" ]; then
 		else
 			echo "startup.sh: no network written from ${WIFI_FILE} (wpa_passphrase gave no complete block)" >&2
 		fi
-		unset WIFI_RESULT WIFI_BLOCK
+		unset WIFI_RESULT WIFI_BLOCK PSK_BYTES
 		init_add_wifi
 		restart_network
 		sleep 2
