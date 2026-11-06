@@ -495,7 +495,8 @@ STEP=0
 	mv ${MUPI_SRC}/scripts/mqtt/* /usr/local/bin/mupibox/ >&3 2>&3
 	# (the app's backup restore runs it from here, as the admin interface does)
 	cp ${MUPI_SRC}/update/conf_update.sh /usr/local/bin/mupibox/conf_update.sh >&3 2>&3
-	mv ${MUPI_SRC}/config/templates/add_wifi.json /boot/add_wifi.json >&3 2>&3
+	# (on the partition a PC sees - /boot/firmware on DietPi 10; startup.sh reads it there)
+	mv ${MUPI_SRC}/config/templates/add_wifi.json "${BOOT_DIR}/add_wifi.json" >&3 2>&3
 	mv ${MUPI_SRC}/config/templates/.bashrc /home/dietpi/.bashrc >&3 2>&3
 	chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ /home/dietpi/MuPiBox /home/dietpi/.bashrc >&3 2>&3
 	chmod 755 /usr/local/bin/mupibox/* >&3 2>&3

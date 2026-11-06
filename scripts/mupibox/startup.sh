@@ -1,7 +1,15 @@
 #!/bin/bash
 
 #JSON_TEMPLATE="https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/add_wifi.json"
+# On the partition a PC sees: /boot/firmware on DietPi 10 (Debian 13), /boot before. The file of an installation of
+# before, under /boot (not to be seen there from a PC), moves over once - only when the new place has none yet.
 WIFI_FILE="/boot/add_wifi.json"
+if [ -f /boot/firmware/config.txt ]; then
+	WIFI_FILE="/boot/firmware/add_wifi.json"
+	if [ -f /boot/add_wifi.json ] && [ ! -e "${WIFI_FILE}" ]; then
+		sudo mv /boot/add_wifi.json "${WIFI_FILE}"
+	fi
+fi
 FIRST_INSTALL="/home/dietpi/.mupi.install"
 WPACONF="/etc/wpa_supplicant/wpa_supplicant.conf"
 MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json"
