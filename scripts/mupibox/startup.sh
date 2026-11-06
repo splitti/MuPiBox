@@ -41,8 +41,16 @@ fi
 ### Check for new wifi network in /boot/add_wifi.json
 
 if [ -f "$WIFI_FILE" ]; then
-	SSID="$(/usr/bin/jq -r .ssid ${WIFI_FILE})"
-	PSK="$(/usr/bin/jq -r .password ${WIFI_FILE})"
+	# Exactly one JSON object in the file, else nothing is taken from it (as with an empty file): jq answers for an
+	# object at the start and only then fails on what follows ({...}, with a comma behind it was taken as it was)
+	if /usr/bin/jq -e -s 'length == 1 and (.[0] | type) == "object"' "${WIFI_FILE}" > /dev/null 2>&1; then
+		SSID="$(/usr/bin/jq -r .ssid ${WIFI_FILE})"
+		PSK="$(/usr/bin/jq -r .password ${WIFI_FILE})"
+	else
+		echo "startup.sh: ${WIFI_FILE} is not one JSON object - nothing taken from it" >&2
+		SSID=""
+		PSK=""
+	fi
 	if [ "${SSID}" = "" ] || [ "${PSK}" = "" ]; then
 		init_add_wifi
 	elif [ "${SSID}" = "clear" ] && [ "${PSK}" = "all"  ]; then
@@ -64,7 +72,7 @@ if [ -f "$WIFI_FILE" ]; then
 		# (no line break in it either: wpa_passphrase reads one line, the rest was dropped without a word)
 		PSK_BYTES=$(printf '%s' "${PSK}" | LC_ALL=C wc -c)
 		# (asked in the JSON itself: $(...) has already dropped line breaks at the end of PSK)
-		PSK_BREAK=$(/usr/bin/jq -r '(.password // "") | tostring | test("[\r\n]")' "${WIFI_FILE}" 2>/dev/null)
+		PSK_BREAK=$(/usr/bin/jq -r '(.password // "") | tostring | test("[\r\n]")' "${WIFI_FILE}" 2>/dev/null) || PSK_BREAK="error"
 		if [ "${PSK_BREAK}" != "false" ] || [[ ${PSK} == *$'\n'* || ${PSK} == *$'\r'* ]]; then
 			WIFI_RESULT=""
 			echo "startup.sh: the password in ${WIFI_FILE} has a line break - nothing written" >&2
