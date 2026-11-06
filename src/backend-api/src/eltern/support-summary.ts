@@ -93,9 +93,16 @@ async function hat(cfg: MupiboxConfig | undefined): Promise<string> {
   const chosen = typeof h.selected_battery === 'string' ? h.selected_battery : ''
   const battery = !chosen ? '' : KNOWN_BATTERIES.includes(chosen) ? ` · ${chosen}` : ' · eigenes Akkuprofil'
   try {
-    const j = JSON.parse(await fsp.readFile('/tmp/mupihat.json', 'utf8')) as { Bat_Percent?: unknown; IBus?: unknown; Measurement_Valid?: unknown }
+    const j = JSON.parse(await fsp.readFile('/tmp/mupihat.json', 'utf8')) as {
+      Bat_Percent?: unknown
+      Bat_PercentSource?: unknown
+      IBus?: unknown
+      Measurement_Valid?: unknown
+    }
     const pct = Number(j.Bat_Percent)
     if (j.Measurement_Valid === false || !Number.isFinite(pct)) return `MuPiHAT${battery} · keine Messwerte`
+    // (the profile without a battery: the driver says 0 % with the source "none" - no empty battery)
+    if (j.Bat_PercentSource === 'none') return `MuPiHAT${battery} · ohne Akku${Number(j.IBus) > 0 ? ', am Netzteil' : ''}`
     return `MuPiHAT${battery} · Akku ${Math.round(pct)} %${Number(j.IBus) > 0 ? ', am Netzteil' : ''}`
   } catch {
     return `MuPiHAT${battery} · keine Messwerte (Dienst läuft nicht?)`

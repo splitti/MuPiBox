@@ -60,16 +60,17 @@ if [ -f "$WIFI_FILE" ]; then
 		#sudo wget -q -O ${WIFI_FILE} ${JSON_TEMPLATE}
 		# (the password over stdin: sudo writes its command line to the system log)
 		WIFI_RESULT=$(sudo wpa_passphrase "${SSID}" <<< "${PSK}")
-		IFS=$'\n'
-		i=0
-		for LINES in ${WIFI_RESULT}
-		do
-				i=$((i+1))
-				if [ "${i}" = "1" ] || [ "${i}" = "2" ] || [ "${i}" = "4" ] || [ "${i}" = "5" ]; then
-					echo $LINES | sudo tee -a ${WPACONF}
-				fi
-		done
-		unset IFS
+		# The network block as a whole, without the plain-text "#psk=" comment - not lines 1, 2, 4 and 5: wpa_passphrase 2.9
+		# (Bullseye) prints "# reading passphrase from stdin" first on stdout, and those lines lost the ssid and the closing
+		# brace and kept the password in plain text. Written only when the block is complete (a wrong password length gives
+		# an error text and no block: nothing written, the WiFi stays as it was).
+		WIFI_BLOCK=$(sed -n '/^network={$/,/^}$/p' <<< "${WIFI_RESULT}" | grep -v '^[[:space:]]*#psk=')
+		if grep -q '^network={$' <<< "${WIFI_BLOCK}" && grep -q '^[[:space:]]*psk=[0-9a-f]\{64\}$' <<< "${WIFI_BLOCK}" && grep -q '^}$' <<< "${WIFI_BLOCK}"; then
+			printf '%s\n' "${WIFI_BLOCK}" | sudo tee -a ${WPACONF} > /dev/null
+		else
+			echo "startup.sh: no network written from ${WIFI_FILE} (wpa_passphrase gave no complete block)" >&2
+		fi
+		unset WIFI_RESULT WIFI_BLOCK
 		init_add_wifi
 		restart_network
 		sleep 2
