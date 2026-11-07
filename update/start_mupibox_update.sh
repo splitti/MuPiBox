@@ -923,6 +923,11 @@ rm -f /tmp/mupibox-update-failed
 	# while this update ran, from the terminal too): the new restart.sh goes behind it, the placeholder stays. Moved in
 	# over it, the restart.sh of a version without the update's lock (4.x) restarted the box at that click's restart,
 	# in the middle of this update. (The placeholder goes to it once no update runs.)
+	# (under the lock the admin interface's call holds while it puts the placeholder in: one coming in at the same
+	# moment puts it in before the look below or after the scripts are in - not in between, where the new one went over
+	# it unheld; not got in 120 s - a call holding it that long: done all the same)
+	exec 7> /run/lock/mupibox-update-admin.lock
+	flock -w 120 7 || echo "## WARNING: the admin interface's lock was not free - scripts put in without it" >&3 2>&3
 	HOLD_KEPT=/var/lib/mupibox-update-admin/restart.sh.held
 	WAS_HELD=0
 	if grep -q "${HOLD_MARK}" /usr/local/bin/mupibox/restart.sh 2>/dev/null && grep -qF "${HOLD_KEPT}" /usr/local/bin/mupibox/restart.sh; then
@@ -931,7 +936,11 @@ rm -f /tmp/mupibox-update-failed
 			if put_atomic ${MUPI_SRC}/scripts/mupibox/restart.sh ${HOLD_KEPT}; then
 				rm -f ${MUPI_SRC}/scripts/mupibox/restart.sh
 			else
-				echo "## WARNING: the new restart.sh could not be put behind its hold - held again below" >&3 2>&3
+				# (not over the placeholder that works: the box restarts with the restart.sh of before - the one behind it -
+				# until the next update)
+				rm -f ${HOLD_KEPT}.mupibox-new
+				mv -f ${MUPI_SRC}/scripts/mupibox/restart.sh ${MUPI_SRC}/restart.sh.not-put-in >&3 2>&3
+				echo "## WARNING: the new restart.sh could not be put behind its hold (no space left?) - the one before stays" >&3 2>&3
 			fi
 		fi
 	fi
@@ -943,6 +952,7 @@ rm -f /tmp/mupibox-update-failed
 		hold_restart /var/lib/mupibox-update-admin/restart.sh.held \
 			|| echo "## WARNING: restart.sh could not be held again - a restart click now cuts the update off" >&3 2>&3
 	fi
+	exec 7>&-
 	mv ${MUPI_SRC}/scripts/bluetooth/* /usr/local/bin/mupibox/ >&3 2>&3
 	# The battery of Bluetooth headphones (display and app, issue #176): BlueZ 5.66 takes it from PulseAudio only with
 	# its experimental interfaces (BatteryProviderManager1). Applies after the restart.
