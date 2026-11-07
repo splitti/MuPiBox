@@ -28,6 +28,7 @@
 </ul>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>"Copy for Discord": a MuPiHAT run without a battery (profile "USB-C mode") showed "Akku 0 %". It now says "ohne Akku".</li>
+<li id='linews' class='linews'>The support file (About the box) also holds the sound: the box's volume, the volume of each program that plays (Spotify on the display, mpv) - one of them far below 100 % makes only that quiet -, the sound card and the versions of Chromium, mpv and PulseAudio. Best downloaded while something plays.</li>
 </ul>
 <h3>DEV 5.0.14 - changes compared to 5.0.13</h3>
 <b>Updates</b>
