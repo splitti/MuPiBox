@@ -105,6 +105,11 @@ if [ "$RC" = "0" ] && [ ! -e /boot/mupibox_update.log ] && [ "$(cut -f1 "$D/prog
 	finish rebooting
 	sleep 10
 	systemctl reboot
+elif [ "$RC" = "75" ]; then
+	# another update runs (started in the terminal or by the admin interface): this one changed nothing - the display,
+	# the server and the idle shutdown belong to that one (its end restarts the box)
+	echo "Another update is running already - this one changed nothing."
+	finish failed
 elif [ -e /tmp/mupibox-update-nostart ]; then
 	# the update could not go back to the previous installation completely (fail_update ... nostart): nothing is
 	# started on an installation in that state - the next start of the box finishes the way back before pm2 starts

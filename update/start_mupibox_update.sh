@@ -26,6 +26,51 @@ else
 	RELEASE="stable"
 fi
 
+# One update at a time: two of them (one from the terminal while the app's or the admin interface's still ran) took each
+# other's download away (both use /home/dietpi/mupibox.zip) and replaced the installation at the same time. The one
+# running writes "<pid> <start time of that process>" here (/run: gone at the next start of the box; the start time:
+# a process that ended without removing it - killed - is told from a new one that got its number).
+UPDATE_LOCK=/run/mupibox-update.pid
+# (a process's start time: the 22nd field of its stat, counted after the name in brackets - a name may hold spaces)
+proc_start() { sed 's/^.*) //' "/proc/$1/stat" 2>/dev/null | cut -d' ' -f20; }
+# the pid of the update that runs, nothing when none does
+update_lock_holder() {
+	local pid start
+	read -r pid start 2>/dev/null < "${UPDATE_LOCK}" || return 0
+	case "${pid}" in '' | *[!0-9]*) return 0 ;; esac
+	[ -n "${start}" ] && [ "$(proc_start "${pid}")" = "${start}" ] && echo "${pid}"
+}
+# 75: another update runs - this one stops before it changes anything (whoever started it starts nothing again either:
+# the display and the server belong to the update that runs)
+UPDATE_BUSY=75
+take_update_lock() {
+	local holder i
+	# (started by the update that holds it - a version switch: it goes on under its lock)
+	holder=$(update_lock_holder)
+	if [ -n "${holder}" ] && [ "${holder}" = "${MUPIBOX_UPDATE_LOCK_OWNER:-}" ]; then
+		return 0
+	fi
+	for i in 1 2; do
+		# (written only when there is none: two updates starting at the same moment - one of them gets it)
+		if ( set -C; printf '%s %s\n' "$$" "$(proc_start $$)" > "${UPDATE_LOCK}" ) 2>/dev/null; then
+			export MUPIBOX_UPDATE_LOCK_OWNER=$$
+			trap 'release_update_lock' EXIT
+			return 0
+		fi
+		[ -n "$(update_lock_holder)" ] && return 1
+		# (left by an update that ended without removing it)
+		rm -f "${UPDATE_LOCK}"
+	done
+	return 1
+}
+release_update_lock() {
+	[ "$(update_lock_holder)" = "$$" ] && rm -f "${UPDATE_LOCK}"
+	return 0
+}
+update_busy_message() {
+	echo "Another MuPiBox update is running already (process $(update_lock_holder)) - nothing was changed. Wait until it is done: the box restarts at its end (started in the terminal: it says \"Update finished\")."
+}
+
 # Started by the admin interface of 4.x (its update buttons run "curl ... | sudo bash" inside the PHP request): there
 # is no terminal for whiptail (the update stopped at its first step), the update stops php-fpm on the way (the admin
 # interface is off by default since 5.0.12 - the update, a child of php-fpm, went down with it), and the admin
@@ -92,6 +137,11 @@ if [ -z "${MUPIBOX_UPDATE_HANDED_OVER:-}" ] && [ ! -t 1 ] && started_by_php; the
 		echo "An update is running already (${HUNIT}) - the box restarts when it is done."
 		exit 0
 	fi
+	# (one started elsewhere - the terminal, the app: nothing handed over; restart.sh holds for it too)
+	if [ -n "$(update_lock_holder)" ]; then
+		update_busy_message
+		exit 0
+	fi
 	# restart.sh held at once, before the download (which may take minutes): see hold_restart
 	mkdir -p ${HD}/bin
 	HOLD_MINE=0
@@ -141,6 +191,10 @@ if [ "${RC}" = "0" ] && [ ! -e /tmp/mupibox-update-nostart ]; then
 	echo "Update finished - the box restarts."
 	sleep 5
 	systemctl reboot
+elif [ "${RC}" = "75" ]; then
+	# (another update ran - started after the check above: this one changed nothing, the display and the idle shutdown
+	# belong to that one)
+	echo "Another update is running - this one changed nothing."
 elif [ -e /tmp/mupibox-update-nostart ]; then
 	# (the way back did not complete: nothing is started on that installation - the next start of the box finishes it)
 	echo "The update stopped and the way back is not complete - restart the box (see /boot/mupibox_update.log)."
@@ -161,6 +215,12 @@ HANDOVER
 	fi
 	echo "The update runs in the background (${HUNIT}, log ${HD}/output.txt) - the box restarts when it is done (up to 30 minutes)."
 	exit 0
+fi
+
+# (before anything of the box is touched - the display, the update log, the download)
+if ! take_update_lock; then
+	update_busy_message
+	exit ${UPDATE_BUSY}
 fi
 
 # The Pi's boot files: /boot/firmware/ on newer DietPi (v10, Debian 13 "Trixie"), /boot/ before (as autosetup.sh)
