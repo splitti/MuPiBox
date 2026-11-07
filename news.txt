@@ -8,6 +8,11 @@
 <li id='linews' class='linews'>One answer from the internet missing no longer switches the display and the library to offline: the box asks again after a few seconds and goes offline only when that fails too (on a WiFi with several access points the display showed offline for a moment again and again).</li>
 <li id='linews' class='linews'>Debian 13 (trixie), old admin interface: with one USB WiFi driver installed, the choice also offered the other one with an "Install driver" button that did nothing. It now offers only the drivers that are there, to remove them.</li>
 </ul>
+<b>Updates</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>A dev version could show "null" instead of its date (e.g. "DEV 5.0.14 null") when GitHub did not answer the question for it - too many questions from the home network in an hour. The day of the update stands there then.</li>
+</ul>
 <b>MQTT</b>
 </ul>
 <ul id='ulnews' class='ulnews'>

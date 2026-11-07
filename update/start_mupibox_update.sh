@@ -330,14 +330,22 @@ else
 	MUPI_SRC="/home/dietpi/MuPiBox-${VERSION}" >&3 2>&3
 fi
 
+# The date of a dev version from the GitHub API: without an answer (no network, or more than 60 questions an hour from
+# the home network - GitHub then answers with an error) it was "null" and stood so in the app ("DEV 5.0.14 null").
+# Only a real date is taken, else the day of the update.
+github_date() {
+  local d
+  d=$(curl -s -m 20 "$1" | jq -r "$2" 2>/dev/null | cut -d'T' -f1)
+  case "$d" in [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) echo "$d" ;; *) date +%F ;; esac
+}
 if [ -n "$BRANCH" ]; then
   if [ -n "$VERSION_LABEL" ]; then
     VERSION_LONG="${VERSION_LABEL}"
   else
-    VERSION_LONG="DEV ${BRANCH} $(curl -s 'https://api.github.com/repos/'"$REPO"'/branches/'"$BRANCH" | jq -r '.commit.commit.committer.date' | cut -d'T' -f1)" >&3 2>&3
+    VERSION_LONG="DEV ${BRANCH} $(github_date "https://api.github.com/repos/${REPO}/branches/${BRANCH}" '.commit.commit.committer.date')"
   fi
 elif [ "$RELEASE" = "dev" ]; then
-	VERSION_LONG="DEV ${VERSION} $(curl -s "https://api.github.com/repos/splitti/MuPiBox" | jq -r '.pushed_at' | cut -d'T' -f1)"  >&3 2>&3
+	VERSION_LONG="DEV ${VERSION} $(github_date "https://api.github.com/repos/splitti/MuPiBox" '.pushed_at')"
 else
 	VERSION_LONG="${VERSION} ${RELEASE}"
 fi
