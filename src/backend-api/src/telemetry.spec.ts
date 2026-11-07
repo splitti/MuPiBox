@@ -32,7 +32,7 @@ test('current consent and valid token are required before any report is due', ()
   assert.equal(reportDue({ enabled: true, token, device_proof, consent_version: CONSENT_VERSION }, '5.0', now), true)
 })
 
-test('consented Classic report uses separate product and required fields, at most once daily', async () => {
+test('consented Classic report uses separate product and required fields, at most once monthly', async () => {
   const { cfg, requests, deps } = harness({
     installationStatistics: { enabled: true, token, device_proof, consent_version: CONSENT_VERSION },
   })
@@ -82,4 +82,15 @@ test('a restored Classic configuration does not authorize another Raspberry Pi',
   await runStatisticsOnce({ ...deps, serial: () => '0000000099999999' })
   assert.equal(requests.length, 0)
   assert.equal((cfg.installationStatistics as Record<string, unknown>).enabled, false)
+})
+
+test('background reports stay monthly even when software version changes', () => {
+  const now = new Date('2026-11-07T20:00:00Z')
+  const state = {
+    enabled: true, token, consent_version: CONSENT_VERSION, device_proof,
+    last_report: '2026-11-01T08:30:00Z', last_version: '5.0.0'
+  }
+  assert.equal(reportDue(state, '5.0.1', now), false)
+  assert.equal(reportDue(state, '5.0.1', now, true), true)
+  assert.equal(reportDue({ ...state, last_report: '2026-10-31T23:00:00Z' }, '5.0.1', now), true)
 })

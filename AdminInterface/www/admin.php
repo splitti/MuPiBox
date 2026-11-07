@@ -198,6 +198,20 @@
 		if (preg_match('/^Serial\s*:\s*([a-f0-9]{8,32})\s*$/im', $cpu, $m)) return strtolower($m[1]);
 		return null;
 	}
+	// These two Admin popup switches never alter the voluntary statistics opt-in.
+	if (isset($_POST['classic_notice_save'])) {
+		$notices = is_array($data['adminNotices'] ?? null) ? $data['adminNotices'] : [];
+		$notices['donation_popup_enabled'] = isset($_POST['classic_donation_popup']) && $_POST['classic_donation_popup'] === '1';
+		$notices['statistics_popup_enabled'] = isset($_POST['classic_statistics_popup']) && $_POST['classic_statistics_popup'] === '1';
+		$data['adminNotices'] = $notices;
+		if (save_mupiboxconfig($data, $classicNoticeError)) {
+			$CHANGE_TXT .= '<li>Popup preferences saved / Hinweise gespeichert.</li>';
+		} else {
+			$CHANGE_TXT .= '<li>Could not save popup preferences: ' . htmlspecialchars((string)$classicNoticeError, ENT_QUOTES, 'UTF-8') . '</li>';
+		}
+		$change = 4;
+	}
+
 	// Voluntary, separate installation statistics. No kiosk/service restart is needed.
 	if (isset($_POST['classic_stat_save']) || isset($_POST['classic_stat_send'])) {
 		$stat = is_array($data['installationStatistics'] ?? null) ? $data['installationStatistics'] : [];
@@ -620,11 +634,24 @@
 		</ul>
 	</details>
 
+\t<details id="classic-about-box">
+		<summary><i class="fa-solid fa-circle-info"></i> Über die Box / About this box · Hinweise</summary>
+		<ul><li class="li_norm">
+			<h2>Optionale Pop-ups / Optional reminders</h2>
+			<p>Spenden- und Statistikhinweise erscheinen jeweils höchstens einmal pro Kalendermonat auf dieser Box.
+			Beide lassen sich unabhängig deaktivieren. Diese Schalter beeinflussen nicht die freiwillige Einwilligung zur Statistik.</p>
+			<?php $classicNotices = is_array($data['adminNotices'] ?? null) ? $data['adminNotices'] : []; ?>
+			<p><label style="display:inline"><input type="checkbox" name="classic_donation_popup" value="1" <?= ($classicNotices['donation_popup_enabled'] ?? true) ? 'checked="checked"' : '' ?> /> Monatlichen Spendenhinweis anzeigen / Show donation reminder</label></p>
+			<p><label style="display:inline"><input type="checkbox" name="classic_statistics_popup" value="1" <?= ($classicNotices['statistics_popup_enabled'] ?? true) ? 'checked="checked"' : '' ?> /> Monatlichen Statistikhinweis anzeigen / Show statistics reminder</label></p>
+			<input class="button_text" type="submit" name="classic_notice_save" value="Hinweise speichern / Save reminders" />
+		</li></ul>
+	</details>
+
 	<details id="classic-statistics">
 		<summary><i class="fa-solid fa-chart-simple"></i> Voluntary installation statistics / Freiwillige Statistik</summary>
 		<ul><li class="li_norm">
 			<p>Help improve MuPiBox Classic with optional, technical installation and hardware statistics. No listening history, account, media titles or usage times are transmitted. <strong>Off by default.</strong></p>
-			<p>With your consent, up to once daily and additionally after a software update or on manual request, the Classic version, Raspberry Pi model and serial number, OS/Debian version, display resolution, configured soundcard category, MuPiHAT/HiFiBerry, controller and webcam information are sent over HTTPS. The serial number is used only to calculate a monthly pseudonymous device identifier, and is not stored by the statistics server. The connection IP is technically processed.</p>
+			<p>With your consent, once per calendar month in the background, or additionally only on explicit manual request, the Classic version, Raspberry Pi model and serial number, OS/Debian version, display resolution, configured soundcard category, MuPiHAT/HiFiBerry, controller and webcam information are sent over HTTPS. The serial number is used only to calculate a monthly pseudonymous device identifier, and is not stored by the statistics server. The connection IP is technically processed.</p>
 			<p>Device-level entries are removed 45 days after each month ends; only aggregated monthly counts remain. You can withdraw consent at any time. Disabling queues a deletion request for existing device-level entries, even if the server is temporarily unavailable.</p>
 			<p><a href="https://stat.mupibox.de/datenschutz/" target="_blank" rel="noopener noreferrer">Privacy policy / Datenschutzhinweise</a></p>
 			<?php $classicStat = is_array($data['installationStatistics'] ?? null) ? $data['installationStatistics'] : [];

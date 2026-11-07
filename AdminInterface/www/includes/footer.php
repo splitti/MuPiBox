@@ -172,7 +172,11 @@ document.addEventListener("submit", function () {
 <?php
     // No identifier, token, device data or other statistics are embedded in HTML.
     $__classicStats = is_array($data['installationStatistics'] ?? null) ? $data['installationStatistics'] : [];
+    $__classicNoticeSettings = is_array($data['adminNotices'] ?? null) ? $data['adminNotices'] : [];
     $__classicNoticeState = [
+        'donationPopupEnabled' => ($__classicNoticeSettings['donation_popup_enabled'] ?? true) === true,
+        'statisticsPopupEnabled' => ($__classicNoticeSettings['statistics_popup_enabled'] ?? true) === true,
+        'lastDonationMonth' => (string)($__classicNoticeSettings['last_donation_month'] ?? ''),
         'enabled' => ($__classicStats['enabled'] ?? false) === true
             && ($__classicStats['consent_version'] ?? '') === '2026-11-07-v2',
         'lastReminderMonth' => (string)($__classicStats['last_reminder_month'] ?? ''),

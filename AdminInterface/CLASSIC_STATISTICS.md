@@ -13,8 +13,8 @@ Wiedergabe. Spendenhinweise werden ausschließlich in der Admin-Oberfläche ange
   wird lokal gespeichert, zufällig tokenisiert und an die Geräte-Seriennummer
   kryptografisch gebunden. Beim Wiederherstellen der Konfiguration auf einem
   anderen Raspberry Pi wird sie nicht übernommen.
-- **Meldung:** Höchstens täglich, zusätzlich nach Versionswechsel oder
-  bewusster Anforderung im Admin-Bereich. Ziel:
+- **Meldung:** Höchstens einmal pro Kalendermonat im Hintergrund,
+  zusätzlich nur bei bewusster manueller Anforderung im Admin-Bereich. Ziel:
   `https://stat.mupibox.de/api/v1/report.php`.
 - **Felder:** Classic-Version, Pi-Modell, DietPi/Debian, Displayauflösung,
   Hauptaudiohardware (Konfiguration, nicht nur aktive Senke), grobe
@@ -45,9 +45,13 @@ an einem ungeprüften Server als bereits durchgeführt ausgeben.
 
 ## Spendenhinweise
 
+Unter **Admin > Über die Box** lassen sich Spenden-Pop-up und
+Statistik-Pop-up unabhängig deaktivieren, ohne das Statistik-Opt-in zu ändern.
+Die zuletzt angezeigten Monate werden lokal pro Box gespeichert.
+
 Die Admin-Oberfläche zeigt einen Link zur freiwilligen Projektförderung
 (`https://mupibox.de/spenden/`) im Footer. Zusätzlich erscheint im
-jeweiligen Admin-Browser höchstens einmal alle sieben Tage ein
+jeweiligen Admin-Browser höchstens einmal pro Kalendermonat ein
 Spendenhinweis. Spenden und Statistik sind vollständig voneinander
 unabhängig. Die Nutzung ist ohne Spende nicht eingeschränkt.
 

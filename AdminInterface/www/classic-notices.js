@@ -1,13 +1,12 @@
 'use strict';
 // Classic admin notices only. No statistics request is ever made here.
 function monthlyReminderDue(state, month) {
-  return Boolean(state && state.enabled === false &&
+  return Boolean(state && state.enabled === false && state.statisticsPopupEnabled !== false &&
     /^\d{4}-(0[1-9]|1[0-2])$/.test(month) && state.lastReminderMonth !== month);
 }
-function donationDue(last, now) {
-  const value = Number(last);
-  return !Number.isFinite(value) || value <= 0 || value > now ||
-    now - value >= 7 * 24 * 60 * 60 * 1000;
+function donationDue(state, month) {
+  return Boolean(state && state.donationPopupEnabled !== false &&
+    /^\d{4}-(0[1-9]|1[0-2])$/.test(month) && state.lastDonationMonth !== month);
 }
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { monthlyReminderDue, donationDue };
@@ -19,7 +18,7 @@ if (typeof document !== 'undefined') {
     const de = /^de\b/i.test(navigator.language || '');
     const t = (german, english) => de ? german : english;
     const donationUrl = 'https://mupibox.de/spenden/';
-    const weekKey = 'mupibox-classic-admin-donation-last-shown-v1';
+    const legacyKey = 'mupibox-classic-admin-donation-last-shown-v1';
     const month = new Date().toISOString().slice(0, 7);
     const dialogs = [];
 
@@ -27,13 +26,20 @@ if (typeof document !== 'undefined') {
       const section = document.getElementById('classic-statistics');
       if (section) { section.open = true; setTimeout(() => section.scrollIntoView({block: 'start'}), 60); }
     }
-    function readLast() {
-      try { return localStorage.getItem(weekKey); }
-      catch (_) { try { return sessionStorage.getItem(weekKey); } catch (_) { return null; } }
+    function legacyShownThisMonth() {
+      try {
+        const value = Number(localStorage.getItem(legacyKey));
+        return Number.isFinite(value) && value > 0 &&
+          new Date(value).toISOString().slice(0, 7) === month;
+      } catch (_) { return false; }
     }
-    function writeLast(now) {
-      try { localStorage.setItem(weekKey, String(now)); }
-      catch (_) { try { sessionStorage.setItem(weekKey, String(now)); } catch (_) {} }
+    function recordShown(kind) {
+      const body = new URLSearchParams({csrf_token: String(state.csrf || ''), kind});
+      fetch('statistics_reminder.php', {
+        method: 'POST', credentials: 'same-origin',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: body.toString()
+      }).catch(() => {}); // Local calendar marker only, no statistics sent.
     }
     function item(kind, title, description) {
       const dialog = document.createElement('dialog');
@@ -62,7 +68,7 @@ if (typeof document !== 'undefined') {
       dialogs.push({kind, dialog, button});
       return {dialog, button};
     }
-    if (donationDue(readLast(), Date.now())) {
+    if (donationDue(state, month) && !legacyShownThisMonth()) {
       const d = item('donation',
         t('MuPiBox Classic ist ein Hobbyprojekt', 'MuPiBox Classic is a hobby project'),
         t('Ich entwickle MuPiBox in meiner Freizeit und stelle sie kostenlos zur Verfügung. Wenn dir das Projekt gefällt, kannst du die Weiterentwicklung mit einer freiwilligen Spende unterstützen. Natürlich bleibt MuPiBox ohne Spende uneingeschränkt nutzbar.',
@@ -91,16 +97,8 @@ if (typeof document !== 'undefined') {
       if (!next) return;
       try {
         next.dialog.showModal();
-        if (next.kind === 'donation') writeLast(Date.now());
-        if (next.kind === 'statistics') {
-          shown = true;
-          const body = new URLSearchParams({csrf_token: String(state.csrf || '')});
-          fetch('statistics_reminder.php', {
-            method: 'POST', credentials: 'same-origin',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: body.toString()
-          }).catch(() => {}); // Failure must never block Admin.
-        }
+        if (next.kind === 'donation') recordShown('donation');
+        if (next.kind === 'statistics') { shown = true; recordShown('statistics'); }
       } catch (_) { next.dialog.remove(); showNext(); }
     }
     // Display these notices only in the Admin UI (this script is included after its auth gate).

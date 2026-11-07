@@ -20,13 +20,24 @@ if ($loginRequired && (
     exit;
 }
 csrf_check();
+$kind = (string)($_POST['kind'] ?? 'statistics');
+if (!in_array($kind, ['statistics', 'donation'], true)) {
+    http_response_code(400);
+    exit;
+}
+$noticeSettings = is_array($config['adminNotices'] ?? null) ? $config['adminNotices'] : [];
 $stats = is_array($config['installationStatistics'] ?? null) ? $config['installationStatistics'] : [];
-if (($stats['enabled'] ?? false) !== true || ($stats['consent_version'] ?? '') !== '2026-11-07-v2') {
-    $stats['last_reminder_month'] = gmdate('Y-m');
-    $config['installationStatistics'] = $stats;
-    if (!save_mupiboxconfig($config)) {
-        http_response_code(500);
-        exit;
+if ($kind === 'statistics') {
+    if (($noticeSettings['statistics_popup_enabled'] ?? true) === true && ($stats['enabled'] ?? false) !== true) {
+        $stats['last_reminder_month'] = gmdate('Y-m');
+        $config['installationStatistics'] = $stats;
     }
+} elseif (($noticeSettings['donation_popup_enabled'] ?? true) === true) {
+    $noticeSettings['last_donation_month'] = gmdate('Y-m');
+    $config['adminNotices'] = $noticeSettings;
+}
+if (!save_mupiboxconfig($config)) {
+    http_response_code(500);
+    exit;
 }
 http_response_code(204);

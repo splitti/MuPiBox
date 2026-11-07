@@ -138,11 +138,12 @@ export function consentBelongsToDevice(state: State, serial: string | null): boo
   return timingSafeEqual(expected, Buffer.from(state.device_proof, 'hex'))
 }
 
-export function reportDue(state: State, version: string, now: Date, forced = false): boolean {
+export function reportDue(state: State, _version: string, now: Date, forced = false): boolean {
   if (state.enabled !== true || state.consent_version !== CONSENT_VERSION || !validToken(state.token)) return false
-  if (forced || state.send_now === true || state.last_version !== version) return true
+  if (forced || state.send_now === true) return true
+  // This runs without an open Admin UI and is limited to one report per UTC month.
   const last = Date.parse(state.last_report ?? '')
-  return !Number.isFinite(last) || now.getTime() - last >= 24 * 60 * 60 * 1000
+  return !Number.isFinite(last) || new Date(last).toISOString().slice(0, 7) !== now.toISOString().slice(0, 7)
 }
 
 async function defaultPost(url: string, body: Record<string, unknown>): Promise<void> {
