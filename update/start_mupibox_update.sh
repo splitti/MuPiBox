@@ -159,7 +159,16 @@ if [ -z "${MUPIBOX_UPDATE_HANDED_OVER:-}" ] && [ ! -t 1 ] && started_by_php; the
 	if [ -n "$(update_lock_holder)" ]; then
 		if [ -f ${HELD} ] && ! grep -q "${HOLD_MARK}" ${HELD} && ! grep -q 'mupibox-update.pid' ${HELD}; then
 			mkdir -p ${HD}
-			hold_restart ${HD}/restart.sh.held || echo "Warning: restart.sh could not be held - do not restart the box until the update is done."
+			if ! hold_restart ${HD}/restart.sh.held; then
+				# (not held - no space left?: the admin interface restarts only after this call returned (footer.php, in the
+				# same request) - it returns when that update is done. That update stops php-fpm on its way: the request
+				# ends with it, without the restart. The handover's lock is let go meanwhile: a further click waiting for
+				# it 120 s returned "being started" - and its restart came.)
+				exec 8>&-
+				while [ -n "$(update_lock_holder)" ]; do sleep 5; done
+				echo "Another MuPiBox update was running - it is done now, nothing was changed by this one."
+				exit 0
+			fi
 		fi
 		update_busy_message
 		exit 0
@@ -206,8 +215,10 @@ cd /home/dietpi
 MUPIBOX_UPDATE_LOCK_FOR=$$ MUPIBOX_UPDATE_HANDED_OVER=1 PATH="${HD}/bin:${PATH}" bash ${HD}/start_mupibox_update.sh "$@"
 RC=$?
 # restart.sh back - the one the update installed, or the one before when it stopped earlier (written next to it, on
-# the card, then renamed: see put_atomic in start_mupibox_update.sh)
-if grep -q 'MUPIBOX-UPDATE-HOLD' ${HELD} 2>/dev/null && [ -f ${HD}/restart.sh.held ]; then
+# the card, then renamed: see put_atomic in start_mupibox_update.sh). Not when another update runs (75): the placeholder
+# waits for that one too, and goes to the one kept here after it - the one before knows nothing of it (4.x) and
+# restarted the box in the middle of it at the admin interface's next update click.
+if [ "${RC}" != "75" ] && grep -q 'MUPIBOX-UPDATE-HOLD' ${HELD} 2>/dev/null && [ -f ${HD}/restart.sh.held ]; then
 	cp -p ${HD}/restart.sh.held ${HELD}.mupibox-new && chmod 755 ${HELD}.mupibox-new && sync ${HELD}.mupibox-new && mv -f ${HELD}.mupibox-new ${HELD} && sync /usr/local/bin/mupibox
 fi
 if [ "${RC}" = "0" ] && [ ! -e /tmp/mupibox-update-nostart ]; then
