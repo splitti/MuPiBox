@@ -98,7 +98,8 @@ chown -R dietpi:dietpi /home/dietpi/mupibox-backups
 ls -1t /home/dietpi/mupibox-backups/before-update-*.zip 2>/dev/null | tail -n +4 | xargs -r rm -f
 
 cd /home/dietpi
-PATH="$D/bin:$PATH" bash "$D/start_mupibox_update.sh" "$KIND"
+# (the update's lock held for this run: up to the restart below - see take_update_lock in start_mupibox_update.sh)
+MUPIBOX_UPDATE_LOCK_FOR=$$ PATH="$D/bin:$PATH" bash "$D/start_mupibox_update.sh" "$KIND"
 RC=$?
 # done: the script moves its log away at its very end (/boot/mupibox_update.log); an aborted run leaves it there
 if [ "$RC" = "0" ] && [ ! -e /boot/mupibox_update.log ] && [ "$(cut -f1 "$D/progress")" = "100" ]; then

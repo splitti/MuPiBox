@@ -43,32 +43,47 @@ update_lock_holder() {
 # 75: another update runs - this one stops before it changes anything (whoever started it starts nothing again either:
 # the display and the server belong to the update that runs)
 UPDATE_BUSY=75
+# The lock is held for the process given in MUPIBOX_UPDATE_LOCK_FOR when one started this script and restarts the box
+# after it (the app's update unit, the handover of the admin interface): held until that restart - this script ending
+# well before it left a few seconds in which another update began and was cut off by that restart. It goes when that
+# process ends (a process that is gone holds nothing).
 take_update_lock() {
-	local holder i
-	# (started by the update that holds it - a version switch: it goes on under its lock)
-	holder=$(update_lock_holder)
-	if [ -n "${holder}" ] && [ "${holder}" = "${MUPIBOX_UPDATE_LOCK_OWNER:-}" ]; then
-		return 0
-	fi
-	for i in 1 2; do
-		# (written only when there is none: two updates starting at the same moment - one of them gets it)
-		if ( set -C; printf '%s %s\n' "$$" "$(proc_start $$)" > "${UPDATE_LOCK}" ) 2>/dev/null; then
-			export MUPIBOX_UPDATE_LOCK_OWNER=$$
-			trap 'release_update_lock' EXIT
-			return 0
-		fi
-		[ -n "$(update_lock_holder)" ] && return 1
-		# (left by an update that ended without removing it)
-		rm -f "${UPDATE_LOCK}"
-	done
-	return 1
+	local me=$$
+	case "${MUPIBOX_UPDATE_LOCK_FOR:-}" in
+		'' | *[!0-9]*) ;;
+		*) [ -d "/proc/${MUPIBOX_UPDATE_LOCK_FOR}" ] && me=${MUPIBOX_UPDATE_LOCK_FOR} ;;
+	esac
+	# Checked and written under a short flock (not one held for the whole update: every program it starts - pm2, the
+	# display - would keep holding it on, past the update): two updates starting at the same moment, or both finding a
+	# lock that was left behind, one of them gets it.
+	( flock -w 30 9 || exit 2
+	  holder=$(update_lock_holder)
+	  if [ -n "${holder}" ]; then
+		# (the one the lock is for, or the update that holds it started this one - a version switch: it goes on under it)
+		if [ "${holder}" = "${me}" ] || [ "${holder}" = "${MUPIBOX_UPDATE_LOCK_OWNER:-}" ]; then exit 0; fi
+		exit 1
+	  fi
+	  # (written next to it, then renamed: never a cut one)
+	  printf '%s %s\n' "${me}" "$(proc_start "${me}")" > "${UPDATE_LOCK}.new" && mv -f "${UPDATE_LOCK}.new" "${UPDATE_LOCK}" || exit 2
+	) 9> /run/lock/mupibox-update.guard || return 1
+	export MUPIBOX_UPDATE_LOCK_OWNER=$(update_lock_holder)
+	# (held for this script itself: gone at its end - one held for the caller goes with the caller)
+	[ "${MUPIBOX_UPDATE_LOCK_OWNER}" = "$$" ] && trap 'release_update_lock' EXIT
+	return 0
 }
 release_update_lock() {
+	# (replaced only once its holder is gone: while this one runs, nothing else writes it)
 	[ "$(update_lock_holder)" = "$$" ] && rm -f "${UPDATE_LOCK}"
 	return 0
 }
 update_busy_message() {
-	echo "Another MuPiBox update is running already (process $(update_lock_holder)) - nothing was changed. Wait until it is done: the box restarts at its end (started in the terminal: it says \"Update finished\")."
+	local holder
+	holder=$(update_lock_holder)
+	if [ -n "${holder}" ]; then
+		echo "Another MuPiBox update is running already (process ${holder}) - nothing was changed. Wait until it is done: the box restarts at its end (started in the terminal: it says \"Update finished\")."
+	else
+		echo "The update could not check whether another one runs - nothing was changed. Please try again in a moment."
+	fi
 }
 
 # Started by the admin interface of 4.x (its update buttons run "curl ... | sudo bash" inside the PHP request): there
@@ -112,7 +127,7 @@ hold_restart() {
 	# (every step checked: success only with the whole placeholder written, read back and in place as restart.sh - a cut
 	# one, put in whole, would hold nothing; the first and the last line are looked for)
 	local tmp="${held}.mupibox-hold"
-	if ! printf '#!/bin/sh\n# %s: an update runs (mupibox-update-admin) - the box restarts when it is done\nif systemctl is-active --quiet mupibox-update-admin || ! flock -n /run/lock/mupibox-update-admin.lock true 2>/dev/null; then\n\tlogger -t mupibox "restart held: an update runs (mupibox-update-admin)"\n\texit 0\nfi\nif [ -f %s ]; then\n\texec /bin/bash %s "$@"\nfi\nexec reboot\n' "${HOLD_MARK}" "$1" "$1" > "${tmp}" \
+	if ! printf '#!/bin/sh\n# %s: an update runs (mupibox-update-admin) - the box restarts when it is done\nif systemctl is-active --quiet mupibox-update-admin || ! flock -n /run/lock/mupibox-update-admin.lock true 2>/dev/null \\\n   || { read -r upid ustart 2>/dev/null < /run/mupibox-update.pid \\\n        && [ -n "$ustart" ] && [ "$(sed "s/^.*) //" "/proc/$upid/stat" 2>/dev/null | cut -d" " -f20)" = "$ustart" ]; }; then\n\tlogger -t mupibox "restart held: an update runs (mupibox-update-admin)"\n\texit 0\nfi\nif [ -f %s ]; then\n\texec /bin/bash %s "$@"\nfi\nexec reboot\n' "${HOLD_MARK}" "$1" "$1" > "${tmp}" \
 	   || [ "$(head -n 1 "${tmp}")" != '#!/bin/sh' ] || [ "$(tail -n 1 "${tmp}")" != 'exec reboot' ] \
 	   || ! chmod 755 "${tmp}" || ! put_atomic "${tmp}" "${held}"; then
 		rm -f "${tmp}" "${held}.mupibox-new"
@@ -137,8 +152,15 @@ if [ -z "${MUPIBOX_UPDATE_HANDED_OVER:-}" ] && [ ! -t 1 ] && started_by_php; the
 		echo "An update is running already (${HUNIT}) - the box restarts when it is done."
 		exit 0
 	fi
-	# (one started elsewhere - the terminal, the app: nothing handed over; restart.sh holds for it too)
+	# (one started elsewhere - the terminal, the app: nothing handed over. The admin interface still calls restart.sh in
+	# 5 s: the one of 5.0.15 and later waits for that update itself; an older one - that update has not put its scripts in
+	# yet - is held: the placeholder waits for it too, and goes when that update puts in the new restart.sh; one that
+	# stops before leaves it, and it restarts as the old one after the update)
 	if [ -n "$(update_lock_holder)" ]; then
+		if [ -f ${HELD} ] && ! grep -q "${HOLD_MARK}" ${HELD} && ! grep -q 'mupibox-update.pid' ${HELD}; then
+			mkdir -p ${HD}
+			hold_restart ${HD}/restart.sh.held || echo "Warning: restart.sh could not be held - do not restart the box until the update is done."
+		fi
 		update_busy_message
 		exit 0
 	fi
@@ -180,7 +202,8 @@ exec > ${HD}/output.txt 2>&1
 sleep 20
 systemctl stop mupi_idle_shutdown 2>/dev/null
 cd /home/dietpi
-MUPIBOX_UPDATE_HANDED_OVER=1 PATH="${HD}/bin:${PATH}" bash ${HD}/start_mupibox_update.sh "$@"
+# (the update's lock held for this run: up to the restart at its end - see take_update_lock)
+MUPIBOX_UPDATE_LOCK_FOR=$$ MUPIBOX_UPDATE_HANDED_OVER=1 PATH="${HD}/bin:${PATH}" bash ${HD}/start_mupibox_update.sh "$@"
 RC=$?
 # restart.sh back - the one the update installed, or the one before when it stopped earlier (written next to it, on
 # the card, then renamed: see put_atomic in start_mupibox_update.sh)
