@@ -919,9 +919,26 @@ rm -f /tmp/mupibox-update-failed
 	if [ -f ${MUPI_SRC}/config/chromium/zz-mupibox ]; then
 		mkdir -p /etc/chromium.d && tr -d '\r' < ${MUPI_SRC}/config/chromium/zz-mupibox > /etc/chromium.d/zz-mupibox && chmod 644 /etc/chromium.d/zz-mupibox
 	fi
+	# restart.sh held (the placeholder of hold_restart in place - a handover, or a click in the admin interface of 4.x
+	# while this update ran, from the terminal too): the new restart.sh goes behind it, the placeholder stays. Moved in
+	# over it, the restart.sh of a version without the update's lock (4.x) restarted the box at that click's restart,
+	# in the middle of this update. (The placeholder goes to it once no update runs.)
+	HOLD_KEPT=/var/lib/mupibox-update-admin/restart.sh.held
+	WAS_HELD=0
+	if grep -q "${HOLD_MARK}" /usr/local/bin/mupibox/restart.sh 2>/dev/null && grep -qF "${HOLD_KEPT}" /usr/local/bin/mupibox/restart.sh; then
+		WAS_HELD=1
+		if [ -f ${MUPI_SRC}/scripts/mupibox/restart.sh ]; then
+			if put_atomic ${MUPI_SRC}/scripts/mupibox/restart.sh ${HOLD_KEPT}; then
+				rm -f ${MUPI_SRC}/scripts/mupibox/restart.sh
+			else
+				echo "## WARNING: the new restart.sh could not be put behind its hold - held again below" >&3 2>&3
+			fi
+		fi
+	fi
 	mv ${MUPI_SRC}/scripts/mupibox/* /usr/local/bin/mupibox/ >&3 2>&3
-	# (handed over by the admin interface of 4.x: the new restart.sh is held too - see hold_restart at the top)
-	if [ -n "${MUPIBOX_UPDATE_HANDED_OVER:-}" ]; then
+	# (handed over by the admin interface of 4.x, or held before: the new restart.sh is held too, when it was moved in
+	# above all the same - see hold_restart at the top)
+	if { [ -n "${MUPIBOX_UPDATE_HANDED_OVER:-}" ] || [ "${WAS_HELD}" = "1" ]; } && ! grep -q "${HOLD_MARK}" /usr/local/bin/mupibox/restart.sh 2>/dev/null; then
 		# (not held: logged - stopping here would harm more; restart.sh of 5.0.13 and later checks for the unit itself)
 		hold_restart /var/lib/mupibox-update-admin/restart.sh.held \
 			|| echo "## WARNING: restart.sh could not be held again - a restart click now cuts the update off" >&3 2>&3
