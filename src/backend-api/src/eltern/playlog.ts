@@ -45,15 +45,16 @@ export async function playlogSummary(
   for (const ln of raw.split('\n')) {
     if (!ln) continue
     try {
-      const e = JSON.parse(ln) as Entry
-      if (Date.parse(e.ts) >= cutoffMs) entries.push(e)
+      // (all lines: the range is checked on the plays below - a start written with the clock of before the network
+      // set it is from "yesterday" and would be dropped here, and its stop with it)
+      entries.push(JSON.parse(ln) as Entry)
     } catch {
       /* skip malformed line */
     }
   }
 
   type Play = { tsMs: number; source: string; title: string; artist: string; album: string; duration: number }
-  const plays: Play[] = []
+  const allPlays: Play[] = []
   let pending: { tsMs: number; source: string; title: string; artist: string; album: string } | null = null
   // A start without a stop (box switched off, backend killed): how long it really played is unknown.
   // Counting it up to the next start put hours of a switched-off box on the history, so it counts at
@@ -64,7 +65,7 @@ export async function playlogSummary(
   for (const e of entries) {
     if (e.event === 'start') {
       if (pending !== null) {
-        plays.push({ ...pending, duration: orphanSeconds(pending.tsMs, Date.parse(e.ts)) })
+        allPlays.push({ ...pending, duration: orphanSeconds(pending.tsMs, Date.parse(e.ts)) })
       }
       pending = {
         tsMs: Date.parse(e.ts),
@@ -78,7 +79,7 @@ export async function playlogSummary(
       // network set it after a start of the box, the day it was last switched off; see server.ts)
       const duration = e.duration_seconds ?? 0
       const end = Date.parse(e.ts)
-      plays.push({ ...pending, tsMs: Number.isFinite(end) ? end - duration * 1000 : pending.tsMs, duration })
+      allPlays.push({ ...pending, tsMs: Number.isFinite(end) ? end - duration * 1000 : pending.tsMs, duration })
       pending = null
     }
   }
@@ -89,11 +90,13 @@ export async function playlogSummary(
     // own time may be from before the clock was set)
     const running = currentPlayLogStart?.()
     if (running != null) {
-      plays.push({ ...pending, tsMs: running, duration: Math.max(0, Math.round((Date.now() - running) / 1000)) })
+      allPlays.push({ ...pending, tsMs: running, duration: Math.max(0, Math.round((Date.now() - running) / 1000)) })
     } else {
-      plays.push({ ...pending, duration: orphanSeconds(pending.tsMs, Date.now()) })
+      allPlays.push({ ...pending, duration: orphanSeconds(pending.tsMs, Date.now()) })
     }
   }
+  // the range: by when each play began (as corrected above), not by the time its start line was written
+  const plays = allPlays.filter((p) => Number.isFinite(p.tsMs) && p.tsMs >= cutoffMs)
 
   const totalSeconds = plays.reduce((s, p) => s + p.duration, 0)
   const totalMinutes = Math.round(totalSeconds / 60)
