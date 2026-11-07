@@ -46,8 +46,10 @@ export async function playlogSummary(
     if (!ln) continue
     try {
       // (all lines: the range is checked on the plays below - a start written with the clock of before the network
-      // set it is from "yesterday" and would be dropped here, and its stop with it)
-      entries.push(JSON.parse(ln) as Entry)
+      // set it is from "yesterday" and would be dropped here, and its stop with it; a line without a time that can be
+      // read is left out, as before - it gave the start before it no length that could be counted)
+      const e = JSON.parse(ln) as Entry
+      if (e && typeof e.ts === 'string' && Number.isFinite(Date.parse(e.ts))) entries.push(e)
     } catch {
       /* skip malformed line */
     }
@@ -77,9 +79,9 @@ export async function playlogSummary(
     } else if (e.event === 'stop' && pending !== null) {
       // (when it began: the stop's time minus its length - the start's own time can be the clock of before the
       // network set it after a start of the box, the day it was last switched off; see server.ts)
-      const duration = e.duration_seconds ?? 0
-      const end = Date.parse(e.ts)
-      allPlays.push({ ...pending, tsMs: Number.isFinite(end) ? end - duration * 1000 : pending.tsMs, duration })
+      const d = Number(e.duration_seconds ?? 0)
+      const duration = Number.isFinite(d) && d > 0 ? Math.round(d) : 0
+      allPlays.push({ ...pending, tsMs: Date.parse(e.ts) - duration * 1000, duration })
       pending = null
     }
   }
@@ -96,7 +98,10 @@ export async function playlogSummary(
     }
   }
   // the range: by when each play began (as corrected above), not by the time its start line was written
-  const plays = allPlays.filter((p) => Number.isFinite(p.tsMs) && p.tsMs >= cutoffMs)
+  // (and only lengths that can be summed - one NaN made every total of the range null)
+  const plays = allPlays.filter(
+    (p) => Number.isFinite(p.tsMs) && p.tsMs >= cutoffMs && Number.isFinite(p.duration) && p.duration >= 0,
+  )
 
   const totalSeconds = plays.reduce((s, p) => s + p.duration, 0)
   const totalMinutes = Math.round(totalSeconds / 60)
