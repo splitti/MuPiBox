@@ -2218,6 +2218,13 @@ const PLAYER_HOST = 'http://127.0.0.1:5005'
 
 let lastPlayFingerprint: string | null = null
 let lastPlayStartTs: number | null = null
+// The same moments on the clock that only counts up (performance.now): a Raspberry Pi has no clock of its own - after
+// a start it runs from the time it last saved (often the evening before) until the network sets it. A track that
+// began before that got the whole time the box was off as its length (25 hours of radio on one day), and its start
+// the day it was last switched off. Lengths come from this clock; the stop's time is then right, the start is the
+// stop minus the length (see eltern/playlog.ts).
+let lastPlayStartMono: number | null = null
+let lastPlaySeenMono: number | null = null
 let lastPlayMeta: { source: string; title: string; artist: string; album: string } | null = null
 
 async function fetchCurrentPlayerState(): Promise<
@@ -2312,12 +2319,15 @@ function trimPlayLog(): void {
 const PLAY_LOG_STALE_MS = 60_000
 let lastPlaySeenTs: number | null = null
 
-function closePlayLogEntry(endMs: number, sync = false): void {
-  if (lastPlayFingerprint !== null && lastPlayStartTs !== null && lastPlayMeta !== null) {
+/** Closes the running track - at the moment it was last seen playing (atLastSeen), else now. */
+function closePlayLogEntry(atLastSeen: boolean, sync = false): void {
+  if (lastPlayFingerprint !== null && lastPlayStartMono !== null && lastPlayMeta !== null) {
+    const nowMono = performance.now()
+    const endMono = atLastSeen && lastPlaySeenMono !== null ? lastPlaySeenMono : nowMono
     const line = {
-      ts: new Date(endMs).toISOString(),
+      ts: new Date(Date.now() - (nowMono - endMono)).toISOString(),
       event: 'stop',
-      duration_seconds: Math.max(0, Math.round((endMs - lastPlayStartTs) / 1000)),
+      duration_seconds: Math.max(0, Math.round((endMono - lastPlayStartMono) / 1000)),
       ...lastPlayMeta,
     }
     if (sync) {
@@ -2332,13 +2342,16 @@ function closePlayLogEntry(endMs: number, sync = false): void {
   }
   lastPlayFingerprint = null
   lastPlayStartTs = null
+  lastPlayStartMono = null
   lastPlayMeta = null
   lastPlaySeenTs = null
+  lastPlaySeenMono = null
 }
 
-/** Start of the track the history is timing right now (null when nothing plays). */
+/** Start of the track the history is timing right now (null when nothing plays) - by the clock as it is now: one that
+ *  was set by the network meanwhile moves it to when it really began. */
 function currentPlayLogStart(): number | null {
-  return lastPlayStartTs
+  return lastPlayStartMono === null ? null : Date.now() - (performance.now() - lastPlayStartMono)
 }
 
 async function tickPlayLog(): Promise<void> {
@@ -2346,15 +2359,18 @@ async function tickPlayLog(): Promise<void> {
   const now = Date.now()
   if (state === null) {
     // transient — skip this tick, unless the player has been gone for a while
-    if (lastPlaySeenTs !== null && now - lastPlaySeenTs > PLAY_LOG_STALE_MS) closePlayLogEntry(lastPlaySeenTs)
+    if (lastPlaySeenMono !== null && performance.now() - lastPlaySeenMono > PLAY_LOG_STALE_MS) closePlayLogEntry(true)
     return
   }
   if (state.fingerprint === lastPlayFingerprint) {
-    if (lastPlayFingerprint !== null) lastPlaySeenTs = now
+    if (lastPlayFingerprint !== null) {
+      lastPlaySeenTs = now
+      lastPlaySeenMono = performance.now()
+    }
     return // no change
   }
 
-  closePlayLogEntry(now)
+  closePlayLogEntry(false)
   if (state.fingerprint !== null && state.meta !== null) {
     appendPlayLogLine({
       ts: new Date(now).toISOString(),
@@ -2363,8 +2379,10 @@ async function tickPlayLog(): Promise<void> {
     })
     lastPlayFingerprint = state.fingerprint
     lastPlayStartTs = now
+    lastPlayStartMono = performance.now()
     lastPlayMeta = state.meta
     lastPlaySeenTs = now
+    lastPlaySeenMono = lastPlayStartMono
     if (state.player === 'spotify') notifySpotifyTrack()
   }
 }
@@ -2400,7 +2418,7 @@ function startPlayLogPoller(): void {
   // pm2 restart / shutdown: close the running track, otherwise the history counts it until the next start.
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.once(signal, () => {
-      closePlayLogEntry(lastPlaySeenTs ?? Date.now(), true)
+      closePlayLogEntry(true, true)
       process.exit(0)
     })
   }

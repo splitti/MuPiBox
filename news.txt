@@ -8,6 +8,11 @@
 <li id='linews' class='linews'>One answer from the internet missing no longer switches the display and the library to offline: the box asks again after a few seconds and goes offline only when that fails too (on a WiFi with several access points the display showed offline for a moment again and again).</li>
 <li id='linews' class='linews'>Debian 13 (trixie), old admin interface: with one USB WiFi driver installed, the choice also offered the other one with an "Install driver" button that did nothing. It now offers only the drivers that are there, to remove them.</li>
 </ul>
+<b>Play history</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>A title that began right after the box was switched on could count the whole time the box had been off (25 hours of radio on one day), on the day it was last switched off: the box has no clock of its own and runs with the time it last saved until the network sets it. Lengths are now measured independently of the clock. Entries already in the history stay as they are until they are older than 7 days.</li>
+</ul>
 <b>Support</b>
 </ul>
 <ul id='ulnews' class='ulnews'>

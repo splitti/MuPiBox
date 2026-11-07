@@ -74,19 +74,25 @@ export async function playlogSummary(
         album: e.album ?? '',
       }
     } else if (e.event === 'stop' && pending !== null) {
-      plays.push({ ...pending, duration: e.duration_seconds ?? 0 })
+      // (when it began: the stop's time minus its length - the start's own time can be the clock of before the
+      // network set it after a start of the box, the day it was last switched off; see server.ts)
+      const duration = e.duration_seconds ?? 0
+      const end = Date.parse(e.ts)
+      plays.push({ ...pending, tsMs: Number.isFinite(end) ? end - duration * 1000 : pending.tsMs, duration })
       pending = null
     }
   }
   if (pending !== null) {
     // Currently still playing (the poller times exactly this start) — count up to now so today's
     // number reflects reality. Otherwise it's a start left over from before a restart.
+    // (the last start without a stop is the one the poller times; its start as the poller has it now - the line's
+    // own time may be from before the clock was set)
     const running = currentPlayLogStart?.()
-    const isRunning = running != null && Math.abs(running - pending.tsMs) < 2000
-    const duration = isRunning
-      ? Math.max(0, Math.round((Date.now() - pending.tsMs) / 1000))
-      : orphanSeconds(pending.tsMs, Date.now())
-    plays.push({ ...pending, duration })
+    if (running != null) {
+      plays.push({ ...pending, tsMs: running, duration: Math.max(0, Math.round((Date.now() - running) / 1000)) })
+    } else {
+      plays.push({ ...pending, duration: orphanSeconds(pending.tsMs, Date.now()) })
+    }
   }
 
   const totalSeconds = plays.reduce((s, p) => s + p.duration, 0)
