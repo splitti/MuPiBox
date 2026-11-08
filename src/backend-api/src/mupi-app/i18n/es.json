@@ -3097,5 +3097,19 @@
  "Akku-Profil fehlt": "Falta el perfil de batería",
  "Der MuPiHAT ist an, aber es ist kein Akku-Profil gewählt.": "El MuPiHAT está encendido, pero no se ha elegido ningún perfil de batería.",
  "Bitte wähle dein Akku-Profil": "Elige el perfil de tu batería",
- "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "Hasta entonces, el HAT carga con su ajuste básico, y el nivel de carga y el tiempo hasta la carga completa no son correctos."
+ "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "Hasta entonces, el HAT carga con su ajuste básico, y el nivel de carga y el tiempo hasta la carga completa no son correctos.",
+ "„{}“ abbestellen? Seine Folgen ({}) gehen gleich von der Box.": "¿Cancelar la suscripción a «{}»? Sus episodios ({}) se quitan de la caja enseguida.",
+ "„{}“ von der Box entfernen? Es kommt auch beim nächsten Sync nicht wieder.": "¿Quitar «{}» de la caja? Tampoco volverá con la próxima sincronización.",
+ "{} entfernt": "Eliminados: {}",
+ "{} entfernt, dann hat es nicht geklappt": "Eliminados: {}; después no ha funcionado",
+ "Abo beenden": "Cancelar suscripción",
+ "Abo beendet: {}": "Suscripción cancelada: {}",
+ "Alle {} Einträge von „{}“ aus der Bibliothek entfernen?": "¿Quitar de la biblioteca los {} elementos de «{}»?",
+ "Alle {} Einträge von „{}“ aus der Bibliothek entfernen? Einträge aus einer Spotify-Playlist ({}) bleiben – die gehen in Spotify.": "¿Quitar de la biblioteca los {} elementos de «{}»? Los elementos de una playlist de Spotify ({}) se quedan – esos se quitan en Spotify.",
+ "Alle entfernen": "Quitar todo",
+ "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.": "Todos los episodios llegan a la caja. Smart-Sync está desactivado: los episodios que salgan más tarde solo llegan solos con Smart-Sync (Biblioteca › Spotify). Después puedes acotar el rango en «Contenidos gestionados».",
+ "Aus = kein Abgleich der Playlists, auch nicht von Hand (Knopf, Telegram /resync), und keine später erschienenen Folgen von selbst. Was du unter „Verwaltete Inhalte“ abonnierst oder hinzufügst, kommt trotzdem auf die Box. Die Inhalte auf der Box bleiben.": "Apagado = sin sincronizar las playlists, tampoco a mano (botón, Telegram /resync), y sin episodios publicados más tarde de forma automática. Aquello a lo que te suscribas o que añadas en «Contenidos gestionados» llega igualmente a la caja. Los contenidos de la caja se mantienen.",
+ "Es kommt jetzt auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).": "Ahora llega a la caja. Smart-Sync está desactivado: la caja no trae sola los episodios que salgan más tarde – para eso, activa Smart-Sync (Biblioteca › Spotify).",
+ "In {} s kommt es auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).": "Llegará a la caja en {} s. Smart-Sync está desactivado: la caja no trae sola los episodios que salgan más tarde – para eso, activa Smart-Sync (Biblioteca › Spotify).",
+ "Kommt aus einer deiner Spotify-Playlists: Entfernen geht dort – in Spotify aus der Playlist nehmen, der nächste Sync nimmt es dann von der Box.": "Viene de una de tus playlists de Spotify: se quita allí – sácalo de la playlist en Spotify y la próxima sincronización lo quitará de la caja."
 }

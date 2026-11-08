@@ -3097,5 +3097,19 @@
  "Akku-Profil fehlt": "Accuprofiel ontbreekt",
  "Der MuPiHAT ist an, aber es ist kein Akku-Profil gewählt.": "De MuPiHAT staat aan, maar er is geen accuprofiel gekozen.",
  "Bitte wähle dein Akku-Profil": "Kies je accuprofiel",
- "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "Tot die tijd laadt de HAT met de basisinstelling, en de laadstand en de tijd tot vol kloppen niet."
+ "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "Tot die tijd laadt de HAT met de basisinstelling, en de laadstand en de tijd tot vol kloppen niet.",
+ "„{}“ abbestellen? Seine Folgen ({}) gehen gleich von der Box.": "„{}” opzeggen? De afleveringen ({}) gaan meteen van de box.",
+ "„{}“ von der Box entfernen? Es kommt auch beim nächsten Sync nicht wieder.": "„{}” van de box verwijderen? Het komt ook bij de volgende sync niet terug.",
+ "{} entfernt": "{} verwijderd",
+ "{} entfernt, dann hat es nicht geklappt": "{} verwijderd, daarna is het niet gelukt",
+ "Abo beenden": "Abonnement opzeggen",
+ "Abo beendet: {}": "Abonnement opgezegd: {}",
+ "Alle {} Einträge von „{}“ aus der Bibliothek entfernen?": "Alle {} items van „{}” uit de bibliotheek verwijderen?",
+ "Alle {} Einträge von „{}“ aus der Bibliothek entfernen? Einträge aus einer Spotify-Playlist ({}) bleiben – die gehen in Spotify.": "Alle {} items van „{}” uit de bibliotheek verwijderen? Items uit een Spotify-playlist ({}) blijven – die verwijder je in Spotify.",
+ "Alle entfernen": "Alles verwijderen",
+ "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.": "Alle afleveringen komen op de box. Smart-Sync staat uit: afleveringen die later verschijnen, komen alleen vanzelf met Smart-Sync (Bibliotheek › Spotify). Het bereik kun je daarna beperken onder „Beheerde inhoud”.",
+ "Aus = kein Abgleich der Playlists, auch nicht von Hand (Knopf, Telegram /resync), und keine später erschienenen Folgen von selbst. Was du unter „Verwaltete Inhalte“ abonnierst oder hinzufügst, kommt trotzdem auf die Box. Die Inhalte auf der Box bleiben.": "Uit = geen sync van de playlists, ook niet handmatig (knop, Telegram /resync), en geen later verschenen afleveringen vanzelf. Waar je je onder „Beheerde inhoud” op abonneert of wat je daar toevoegt, komt toch op de box. De inhoud op de box blijft.",
+ "Es kommt jetzt auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).": "Het komt nu op de box. Smart-Sync staat uit: afleveringen die later verschijnen, haalt de box niet vanzelf op – schakel daarvoor Smart-Sync in (Bibliotheek › Spotify).",
+ "In {} s kommt es auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).": "Over {} s komt het op de box. Smart-Sync staat uit: afleveringen die later verschijnen, haalt de box niet vanzelf op – schakel daarvoor Smart-Sync in (Bibliotheek › Spotify).",
+ "Kommt aus einer deiner Spotify-Playlists: Entfernen geht dort – in Spotify aus der Playlist nehmen, der nächste Sync nimmt es dann von der Box.": "Komt uit een van je Spotify-playlists: verwijderen gaat daar – haal het in Spotify uit de playlist, dan haalt de volgende sync het van de box."
 }

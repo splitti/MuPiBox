@@ -3097,5 +3097,19 @@
  "Akku-Profil fehlt": "Batteriprofil mangler",
  "Der MuPiHAT ist an, aber es ist kein Akku-Profil gewählt.": "MuPiHAT er tændt, men der er ikke valgt nogen batteriprofil.",
  "Bitte wähle dein Akku-Profil": "Vælg din batteriprofil",
- "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "Indtil da oplader HAT med sin grundindstilling, og ladeniveau og tid til fuld opladning passer ikke."
+ "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "Indtil da oplader HAT med sin grundindstilling, og ladeniveau og tid til fuld opladning passer ikke.",
+ "„{}“ abbestellen? Seine Folgen ({}) gehen gleich von der Box.": "Afmelde „{}“? Afsnittene ({}) forsvinder straks fra boksen.",
+ "„{}“ von der Box entfernen? Es kommt auch beim nächsten Sync nicht wieder.": "Fjerne „{}“ fra boksen? Det kommer heller ikke tilbage ved næste sync.",
+ "{} entfernt": "{} fjernet",
+ "{} entfernt, dann hat es nicht geklappt": "{} fjernet, så lykkedes det ikke",
+ "Abo beenden": "Afslut abonnement",
+ "Abo beendet: {}": "Abonnement afsluttet: {}",
+ "Alle {} Einträge von „{}“ aus der Bibliothek entfernen?": "Fjerne alle {} poster af „{}“ fra biblioteket?",
+ "Alle {} Einträge von „{}“ aus der Bibliothek entfernen? Einträge aus einer Spotify-Playlist ({}) bleiben – die gehen in Spotify.": "Fjerne alle {} poster af „{}“ fra biblioteket? Poster fra en Spotify-playliste ({}) bliver – dem fjerner du i Spotify.",
+ "Alle entfernen": "Fjern alle",
+ "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.": "Alle afsnit kommer på boksen. Smart-Sync er slået fra: afsnit, der udkommer senere, kommer kun af sig selv med Smart-Sync (Bibliotek › Spotify). Omfanget kan du derefter begrænse under „Administreret indhold“.",
+ "Aus = kein Abgleich der Playlists, auch nicht von Hand (Knopf, Telegram /resync), und keine später erschienenen Folgen von selbst. Was du unter „Verwaltete Inhalte“ abonnierst oder hinzufügst, kommt trotzdem auf die Box. Die Inhalte auf der Box bleiben.": "Fra = ingen sync af playlisterne, heller ikke manuelt (knap, Telegram /resync), og ingen senere udkomne afsnit af sig selv. Det, du abonnerer på eller tilføjer under „Administreret indhold“, kommer alligevel på boksen. Indholdet på boksen bevares.",
+ "Es kommt jetzt auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).": "Det kommer på boksen nu. Smart-Sync er slået fra: afsnit, der udkommer senere, henter boksen ikke af sig selv – tænd Smart-Sync for det (Bibliotek › Spotify).",
+ "In {} s kommt es auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).": "Om {} s kommer det på boksen. Smart-Sync er slået fra: afsnit, der udkommer senere, henter boksen ikke af sig selv – tænd Smart-Sync for det (Bibliotek › Spotify).",
+ "Kommt aus einer deiner Spotify-Playlists: Entfernen geht dort – in Spotify aus der Playlist nehmen, der nächste Sync nimmt es dann von der Box.": "Kommer fra en af dine Spotify-playlister: fjern det dér – tag det ud af playlisten i Spotify, så fjerner næste sync det fra boksen."
 }

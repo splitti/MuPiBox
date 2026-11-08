@@ -3097,5 +3097,19 @@
  "Akku-Profil fehlt": "Battery profile missing",
  "Der MuPiHAT ist an, aber es ist kein Akku-Profil gewählt.": "The MuPiHAT is on, but no battery profile is chosen.",
  "Bitte wähle dein Akku-Profil": "Please choose your battery profile",
- "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "Until then the HAT charges with its basic setting, and the charge level and the time until full are not right."
+ "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "Until then the HAT charges with its basic setting, and the charge level and the time until full are not right.",
+ "„{}“ abbestellen? Seine Folgen ({}) gehen gleich von der Box.": "Unsubscribe from “{}”? Its episodes ({}) will be removed from the box right away.",
+ "„{}“ von der Box entfernen? Es kommt auch beim nächsten Sync nicht wieder.": "Remove “{}” from the box? It won’t come back with the next sync either.",
+ "{} entfernt": "{} removed",
+ "{} entfernt, dann hat es nicht geklappt": "{} removed, then it didn’t work",
+ "Abo beenden": "End subscription",
+ "Abo beendet: {}": "Subscription ended: {}",
+ "Alle {} Einträge von „{}“ aus der Bibliothek entfernen?": "Remove all {} entries of “{}” from the library?",
+ "Alle {} Einträge von „{}“ aus der Bibliothek entfernen? Einträge aus einer Spotify-Playlist ({}) bleiben – die gehen in Spotify.": "Remove all {} entries of “{}” from the library? Entries from a Spotify playlist ({}) stay – you remove those in Spotify.",
+ "Alle entfernen": "Remove all",
+ "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.": "All episodes come onto the box. Smart Sync is off: episodes released later only arrive by themselves with Smart Sync (Library › Spotify). You can narrow the range afterwards under “Managed items”.",
+ "Aus = kein Abgleich der Playlists, auch nicht von Hand (Knopf, Telegram /resync), und keine später erschienenen Folgen von selbst. Was du unter „Verwaltete Inhalte“ abonnierst oder hinzufügst, kommt trotzdem auf die Box. Die Inhalte auf der Box bleiben.": "Off = no playlist sync, not even manually (button, Telegram /resync), and no episodes released later by themselves. What you subscribe to or add under “Managed items” still comes onto the box. The items on the box stay.",
+ "Es kommt jetzt auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).": "It’s coming onto the box now. Smart Sync is off: the box won’t fetch episodes released later by itself – turn on Smart Sync for that (Library › Spotify).",
+ "In {} s kommt es auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).": "It will come onto the box in {} s. Smart Sync is off: the box won’t fetch episodes released later by itself – turn on Smart Sync for that (Library › Spotify).",
+ "Kommt aus einer deiner Spotify-Playlists: Entfernen geht dort – in Spotify aus der Playlist nehmen, der nächste Sync nimmt es dann von der Box.": "Comes from one of your Spotify playlists: remove it there – take it out of the playlist in Spotify, and the next sync will take it off the box."
 }

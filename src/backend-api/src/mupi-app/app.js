@@ -2689,7 +2689,7 @@ function openLibGroup(g) {
       sheet.querySelector('[data-unsub]')?.addEventListener('click', () => {
         close()
         const own = items.filter((it) => isSyncItem(it) && syncRemovable(it))
-        confirmSheet('Abo beenden', `„${g.artist}“ abbestellen? ${own.length === 1 ? 'Die Folge geht' : `Die ${own.length} Folgen gehen`} gleich von der Box.`, async () => {
+        confirmSheet('Abo beenden', `„${g.artist}“ abbestellen? Seine Folgen (${own.length}) gehen gleich von der Box.`, async () => {
           const r = await api(`${API}/library/unsubscribe-artist`, { method: 'POST', body: { artistId: sub.id } })
           if (!r.ok) return toast('Das hat nicht geklappt', 'info')
           await removeLibEntries(own, { subscriptionEnded: true })
@@ -2702,7 +2702,9 @@ function openLibGroup(g) {
         const n = removable.length
         confirmSheet(
           'Alle entfernen',
-          `${n === 1 ? 'Einen Eintrag' : `Alle ${n} Einträge`} von „${g.artist}“ aus der Bibliothek entfernen?${kept ? ` ${kept} aus einer Spotify-Playlist ${kept === 1 ? 'bleibt' : 'bleiben'} – ${kept === 1 ? 'der geht' : 'die gehen'} in Spotify.` : ''}`,
+          kept
+            ? `Alle ${n} Einträge von „${g.artist}“ aus der Bibliothek entfernen? Einträge aus einer Spotify-Playlist (${kept}) bleiben – die gehen in Spotify.`
+            : `Alle ${n} Einträge von „${g.artist}“ aus der Bibliothek entfernen?`,
           async () => {
             const done = await removeLibEntries(removable)
             if (done) toast(`${done} entfernt`)
@@ -2729,7 +2731,9 @@ async function fireSync(subs = true) {
   const r = await api(`${SYNC_API}/trigger?source=webapp${subs ? '&subscriptions=1' : ''}`, { method: 'POST' })
   const b = r.body ?? {}
   if (r.status === 202 && b.subscriptionsOnly) {
-    return `${b.status === 'scheduled' ? `In ${b.scheduledInSeconds ?? 60} s kommt es auf die Box.` : 'Es kommt jetzt auf die Box.'} Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).`
+    return b.status === 'scheduled'
+      ? `In ${b.scheduledInSeconds ?? 60} s kommt es auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).`
+      : 'Es kommt jetzt auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).'
   }
   if (r.status === 202 && b.status === 'scheduled') return `Der Sync läuft in ${b.scheduledInSeconds ?? 60} s.`
   if (r.status === 202) return 'Der Sync läuft.'

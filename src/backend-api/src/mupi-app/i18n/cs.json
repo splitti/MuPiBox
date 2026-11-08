@@ -3097,5 +3097,19 @@
  "Akku-Profil fehlt": "Chybí profil baterie",
  "Der MuPiHAT ist an, aber es ist kein Akku-Profil gewählt.": "MuPiHAT je zapnutý, ale není vybrán žádný profil baterie.",
  "Bitte wähle dein Akku-Profil": "Vyberte profil baterie",
- "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "Do té doby HAT nabíjí se základním nastavením a stav nabití ani čas do plného nabití nejsou správné."
+ "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "Do té doby HAT nabíjí se základním nastavením a stav nabití ani čas do plného nabití nejsou správné.",
+ "„{}“ abbestellen? Seine Folgen ({}) gehen gleich von der Box.": "Zrušit odběr „{}“? Jeho díly ({}) hned zmizí z boxu.",
+ "„{}“ von der Box entfernen? Es kommt auch beim nächsten Sync nicht wieder.": "Odebrat „{}“ z boxu? Ani při příští synchronizaci se nevrátí.",
+ "{} entfernt": "Odebráno: {}",
+ "{} entfernt, dann hat es nicht geklappt": "Odebráno: {}, pak se to nepovedlo",
+ "Abo beenden": "Zrušit odběr",
+ "Abo beendet: {}": "Odběr zrušen: {}",
+ "Alle {} Einträge von „{}“ aus der Bibliothek entfernen?": "Odebrat z knihovny všechny položky „{1}“ ({0})?",
+ "Alle {} Einträge von „{}“ aus der Bibliothek entfernen? Einträge aus einer Spotify-Playlist ({}) bleiben – die gehen in Spotify.": "Odebrat z knihovny všechny položky „{1}“ ({0})? Položky z playlistu Spotify ({2}) zůstanou – ty se odebírají ve Spotify.",
+ "Alle entfernen": "Odebrat vše",
+ "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.": "Všechny díly se dostanou na box. Smart-Sync je vypnutý: díly, které vyjdou později, přicházejí samy jen se Smart-Sync (Knihovna › Spotify). Rozsah můžete poté omezit v části „Spravovaný obsah“.",
+ "Aus = kein Abgleich der Playlists, auch nicht von Hand (Knopf, Telegram /resync), und keine später erschienenen Folgen von selbst. Was du unter „Verwaltete Inhalte“ abonnierst oder hinzufügst, kommt trotzdem auf die Box. Die Inhalte auf der Box bleiben.": "Vypnuto = žádná synchronizace playlistů, ani ručně (tlačítko, Telegram /resync), a žádné později vydané díly samy od sebe. Co odebíráte nebo přidáte v části „Spravovaný obsah“, se na box přesto dostane. Obsah na boxu zůstane.",
+ "Es kommt jetzt auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).": "Teď se to dostane na box. Smart-Sync je vypnutý: díly, které vyjdou později, box sám nestáhne – k tomu zapněte Smart-Sync (Knihovna › Spotify).",
+ "In {} s kommt es auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).": "Za {} s se to dostane na box. Smart-Sync je vypnutý: díly, které vyjdou později, box sám nestáhne – k tomu zapněte Smart-Sync (Knihovna › Spotify).",
+ "Kommt aus einer deiner Spotify-Playlists: Entfernen geht dort – in Spotify aus der Playlist nehmen, der nächste Sync nimmt es dann von der Box.": "Pochází z jednoho z vašich playlistů Spotify: odebrat to jde tam – ve Spotify to vyřaďte z playlistu, příští synchronizace to pak odebere z boxu."
 }

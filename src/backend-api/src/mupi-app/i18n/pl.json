@@ -3097,5 +3097,19 @@
  "Akku-Profil fehlt": "Brak profilu akumulatora",
  "Der MuPiHAT ist an, aber es ist kein Akku-Profil gewählt.": "MuPiHAT jest włączony, ale nie wybrano profilu akumulatora.",
  "Bitte wähle dein Akku-Profil": "Wybierz profil akumulatora",
- "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "Do tego czasu HAT ładuje z ustawieniem podstawowym, a poziom naładowania i czas do pełna są niepoprawne."
+ "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "Do tego czasu HAT ładuje z ustawieniem podstawowym, a poziom naładowania i czas do pełna są niepoprawne.",
+ "„{}“ abbestellen? Seine Folgen ({}) gehen gleich von der Box.": "Zrezygnować z subskrypcji „{}”? Jego odcinki ({}) od razu znikną z Boxa.",
+ "„{}“ von der Box entfernen? Es kommt auch beim nächsten Sync nicht wieder.": "Usunąć „{}” z Boxa? Nie wróci też przy następnej synchronizacji.",
+ "{} entfernt": "Usunięto: {}",
+ "{} entfernt, dann hat es nicht geklappt": "Usunięto: {}, potem się nie udało",
+ "Abo beenden": "Zakończ subskrypcję",
+ "Abo beendet: {}": "Subskrypcja zakończona: {}",
+ "Alle {} Einträge von „{}“ aus der Bibliothek entfernen?": "Usunąć z biblioteki wszystkie pozycje „{1}” ({0})?",
+ "Alle {} Einträge von „{}“ aus der Bibliothek entfernen? Einträge aus einer Spotify-Playlist ({}) bleiben – die gehen in Spotify.": "Usunąć z biblioteki wszystkie pozycje „{1}” ({0})? Pozycje z playlisty Spotify ({2}) zostają – te usuwa się w Spotify.",
+ "Alle entfernen": "Usuń wszystko",
+ "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.": "Wszystkie odcinki trafią na Boxa. Smart-Sync jest wyłączony: odcinki, które ukażą się później, przychodzą same tylko ze Smart-Sync (Biblioteka › Spotify). Zakres możesz potem zawęzić w „Zarządzane treści”.",
+ "Aus = kein Abgleich der Playlists, auch nicht von Hand (Knopf, Telegram /resync), und keine später erschienenen Folgen von selbst. Was du unter „Verwaltete Inhalte“ abonnierst oder hinzufügst, kommt trotzdem auf die Box. Die Inhalte auf der Box bleiben.": "Wył. = brak synchronizacji playlist, także ręcznej (przycisk, Telegram /resync), i żadnych później wydanych odcinków automatycznie. To, co subskrybujesz lub dodajesz w „Zarządzane treści”, i tak trafi na Boxa. Treści na Boxie pozostają.",
+ "Es kommt jetzt auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).": "Teraz trafia na Boxa. Smart-Sync jest wyłączony: odcinków, które ukażą się później, Box nie pobierze sam – w tym celu włącz Smart-Sync (Biblioteka › Spotify).",
+ "In {} s kommt es auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).": "Za {} s trafi na Boxa. Smart-Sync jest wyłączony: odcinków, które ukażą się później, Box nie pobierze sam – w tym celu włącz Smart-Sync (Biblioteka › Spotify).",
+ "Kommt aus einer deiner Spotify-Playlists: Entfernen geht dort – in Spotify aus der Playlist nehmen, der nächste Sync nimmt es dann von der Box.": "Pochodzi z jednej z twoich playlist Spotify: usunąć można tylko tam – wyjmij to z playlisty w Spotify, a następna synchronizacja usunie to z Boxa."
 }

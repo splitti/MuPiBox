@@ -3097,5 +3097,19 @@
  "Akku-Profil fehlt": "Akkuprofiili puuttuu",
  "Der MuPiHAT ist an, aber es ist kein Akku-Profil gewählt.": "MuPiHAT on päällä, mutta akkuprofiilia ei ole valittu.",
  "Bitte wähle dein Akku-Profil": "Valitse akkuprofiilisi",
- "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "Siihen asti HAT lataa perusasetuksella, eivätkä varaustaso ja aika täyteen pidä paikkaansa."
+ "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "Siihen asti HAT lataa perusasetuksella, eivätkä varaustaso ja aika täyteen pidä paikkaansa.",
+ "„{}“ abbestellen? Seine Folgen ({}) gehen gleich von der Box.": "Peruutetaanko tilaus ”{}”? Sen jaksot ({}) poistuvat laatikosta heti.",
+ "„{}“ von der Box entfernen? Es kommt auch beim nächsten Sync nicht wieder.": "Poistetaanko ”{}” laatikosta? Se ei palaa seuraavassakaan synkronoinnissa.",
+ "{} entfernt": "{} poistettu",
+ "{} entfernt, dann hat es nicht geklappt": "{} poistettu, sitten se ei onnistunut",
+ "Abo beenden": "Peru tilaus",
+ "Abo beendet: {}": "Tilaus peruttu: {}",
+ "Alle {} Einträge von „{}“ aus der Bibliothek entfernen?": "Poistetaanko kaikki ”{1}”-merkinnät ({0}) kirjastosta?",
+ "Alle {} Einträge von „{}“ aus der Bibliothek entfernen? Einträge aus einer Spotify-Playlist ({}) bleiben – die gehen in Spotify.": "Poistetaanko kaikki ”{1}”-merkinnät ({0}) kirjastosta? Spotify-soittolistan merkinnät ({2}) jäävät – ne poistetaan Spotifyssa.",
+ "Alle entfernen": "Poista kaikki",
+ "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.": "Kaikki jaksot tulevat laatikkoon. Smart-Sync on pois päältä: myöhemmin ilmestyvät jaksot tulevat itsestään vain Smart-Syncin kanssa (Kirjasto › Spotify). Laajuutta voit rajata sen jälkeen kohdassa ”Hallitut sisällöt”.",
+ "Aus = kein Abgleich der Playlists, auch nicht von Hand (Knopf, Telegram /resync), und keine später erschienenen Folgen von selbst. Was du unter „Verwaltete Inhalte“ abonnierst oder hinzufügst, kommt trotzdem auf die Box. Die Inhalte auf der Box bleiben.": "Pois = soittolistoja ei synkronoida, ei myöskään käsin (painike, Telegram /resync), eivätkä myöhemmin ilmestyvät jaksot tule itsestään. Mitä tilaat tai lisäät kohdassa ”Hallitut sisällöt”, tulee silti laatikkoon. Sisällöt säilyvät laatikossa.",
+ "Es kommt jetzt auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).": "Se tulee nyt laatikkoon. Smart-Sync on pois päältä: myöhemmin ilmestyviä jaksoja laatikko ei hae itsestään – ota sitä varten Smart-Sync käyttöön (Kirjasto › Spotify).",
+ "In {} s kommt es auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).": "Se tulee laatikkoon {} s kuluttua. Smart-Sync on pois päältä: myöhemmin ilmestyviä jaksoja laatikko ei hae itsestään – ota sitä varten Smart-Sync käyttöön (Kirjasto › Spotify).",
+ "Kommt aus einer deiner Spotify-Playlists: Entfernen geht dort – in Spotify aus der Playlist nehmen, der nächste Sync nimmt es dann von der Box.": "Tulee yhdeltä Spotify-soittolistaltasi: poistaminen tehdään siellä – ota se pois soittolistalta Spotifyssa, niin seuraava synkronointi poistaa sen laatikosta."
 }

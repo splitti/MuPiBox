@@ -3097,5 +3097,19 @@
  "Akku-Profil fehlt": "Λείπει το προφίλ μπαταρίας",
  "Der MuPiHAT ist an, aber es ist kein Akku-Profil gewählt.": "Το MuPiHAT είναι ενεργό, αλλά δεν έχει επιλεγεί προφίλ μπαταρίας.",
  "Bitte wähle dein Akku-Profil": "Επιλέξτε το προφίλ της μπαταρίας σας",
- "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "Μέχρι τότε το HAT φορτίζει με τη βασική ρύθμιση και η στάθμη φόρτισης και ο χρόνος έως την πλήρη φόρτιση δεν είναι σωστά."
+ "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "Μέχρι τότε το HAT φορτίζει με τη βασική ρύθμιση και η στάθμη φόρτισης και ο χρόνος έως την πλήρη φόρτιση δεν είναι σωστά.",
+ "„{}“ abbestellen? Seine Folgen ({}) gehen gleich von der Box.": "Να καταργηθεί η συνδρομή στο «{}»; Τα επεισόδιά του ({}) φεύγουν αμέσως από το κουτί.",
+ "„{}“ von der Box entfernen? Es kommt auch beim nächsten Sync nicht wieder.": "Αφαίρεση του «{}» από το κουτί; Δεν θα ξαναέρθει ούτε στον επόμενο συγχρονισμό.",
+ "{} entfernt": "Αφαιρέθηκαν: {}",
+ "{} entfernt, dann hat es nicht geklappt": "Αφαιρέθηκαν: {}, μετά δεν πέτυχε",
+ "Abo beenden": "Κατάργηση συνδρομής",
+ "Abo beendet: {}": "Η συνδρομή καταργήθηκε: {}",
+ "Alle {} Einträge von „{}“ aus der Bibliothek entfernen?": "Αφαίρεση και των {} καταχωρίσεων του «{}» από τη βιβλιοθήκη;",
+ "Alle {} Einträge von „{}“ aus der Bibliothek entfernen? Einträge aus einer Spotify-Playlist ({}) bleiben – die gehen in Spotify.": "Αφαίρεση και των {} καταχωρίσεων του «{}» από τη βιβλιοθήκη; Οι καταχωρίσεις από λίστα αναπαραγωγής Spotify ({}) μένουν – αυτές αφαιρούνται στο Spotify.",
+ "Alle entfernen": "Αφαίρεση όλων",
+ "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.": "Όλα τα επεισόδια έρχονται στο κουτί. Το Smart-Sync είναι ανενεργό: επεισόδια που βγαίνουν αργότερα έρχονται μόνα τους μόνο με το Smart-Sync (Βιβλιοθήκη › Spotify). Το εύρος μπορείς μετά να το περιορίσεις στα «Διαχειριζόμενα περιεχόμενα».",
+ "Aus = kein Abgleich der Playlists, auch nicht von Hand (Knopf, Telegram /resync), und keine später erschienenen Folgen von selbst. Was du unter „Verwaltete Inhalte“ abonnierst oder hinzufügst, kommt trotzdem auf die Box. Die Inhalte auf der Box bleiben.": "Ανενεργό = καθόλου συγχρονισμός των λιστών αναπαραγωγής, ούτε χειροκίνητα (κουμπί, Telegram /resync), και κανένα επεισόδιο που βγαίνει αργότερα δεν έρχεται μόνο του. Όσα βάζεις σε συνδρομή ή προσθέτεις στα «Διαχειριζόμενα περιεχόμενα» έρχονται κανονικά στο κουτί. Το περιεχόμενο στο κουτί παραμένει.",
+ "Es kommt jetzt auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).": "Έρχεται τώρα στο κουτί. Το Smart-Sync είναι ανενεργό: επεισόδια που βγαίνουν αργότερα το κουτί δεν τα φέρνει μόνο του – γι’ αυτό ενεργοποίησε το Smart-Sync (Βιβλιοθήκη › Spotify).",
+ "In {} s kommt es auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).": "Σε {} δευτ. έρχεται στο κουτί. Το Smart-Sync είναι ανενεργό: επεισόδια που βγαίνουν αργότερα το κουτί δεν τα φέρνει μόνο του – γι’ αυτό ενεργοποίησε το Smart-Sync (Βιβλιοθήκη › Spotify).",
+ "Kommt aus einer deiner Spotify-Playlists: Entfernen geht dort – in Spotify aus der Playlist nehmen, der nächste Sync nimmt es dann von der Box.": "Προέρχεται από μία από τις λίστες αναπαραγωγής σου στο Spotify: η αφαίρεση γίνεται εκεί – βγάλ’ το από τη λίστα στο Spotify και ο επόμενος συγχρονισμός θα το αφαιρέσει από το κουτί."
 }

@@ -3097,5 +3097,19 @@
  "Akku-Profil fehlt": "Pil profili eksik",
  "Der MuPiHAT ist an, aber es ist kein Akku-Profil gewählt.": "MuPiHAT açık, ancak pil profili seçilmemiş.",
  "Bitte wähle dein Akku-Profil": "Pil profilinizi seçin",
- "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "O zamana kadar HAT temel ayarıyla şarj eder; şarj düzeyi ve dolma süresi doğru olmaz."
+ "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "O zamana kadar HAT temel ayarıyla şarj eder; şarj düzeyi ve dolma süresi doğru olmaz.",
+ "„{}“ abbestellen? Seine Folgen ({}) gehen gleich von der Box.": "„{}“ aboneliği sonlandırılsın mı? Bölümleri ({}) hemen kutudan kaldırılır.",
+ "„{}“ von der Box entfernen? Es kommt auch beim nächsten Sync nicht wieder.": "„{}“ kutudan kaldırılsın mı? Sonraki senkronizasyonda da geri gelmez.",
+ "{} entfernt": "{} kaldırıldı",
+ "{} entfernt, dann hat es nicht geklappt": "{} kaldırıldı, sonra işe yaramadı",
+ "Abo beenden": "Aboneliği sonlandır",
+ "Abo beendet: {}": "Abonelik sonlandırıldı: {}",
+ "Alle {} Einträge von „{}“ aus der Bibliothek entfernen?": "„{1}“ için {0} kaydın tümü kütüphaneden kaldırılsın mı?",
+ "Alle {} Einträge von „{}“ aus der Bibliothek entfernen? Einträge aus einer Spotify-Playlist ({}) bleiben – die gehen in Spotify.": "„{1}“ için {0} kaydın tümü kütüphaneden kaldırılsın mı? Bir Spotify çalma listesinden gelen kayıtlar ({2}) kalır – onlar Spotify'da kaldırılır.",
+ "Alle entfernen": "Tümünü kaldır",
+ "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.": "Tüm bölümler kutuya gelir. Smart-Sync kapalı: daha sonra çıkan bölümler yalnızca Smart-Sync ile kendiliğinden gelir (Kütüphane › Spotify). Aralığı sonra „Yönetilen içerikler“ altında daraltabilirsin.",
+ "Aus = kein Abgleich der Playlists, auch nicht von Hand (Knopf, Telegram /resync), und keine später erschienenen Folgen von selbst. Was du unter „Verwaltete Inhalte“ abonnierst oder hinzufügst, kommt trotzdem auf die Box. Die Inhalte auf der Box bleiben.": "Kapalı = çalma listeleri eşitlenmez, elle de (düğme, Telegram /resync), ve sonradan çıkan bölümler kendiliğinden gelmez. „Yönetilen içerikler“ altında abone olduğun veya eklediğin şeyler yine de kutuya gelir. Kutudaki içerikler kalır.",
+ "Es kommt jetzt auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).": "Şimdi kutuya geliyor. Smart-Sync kapalı: daha sonra çıkan bölümleri kutu kendiliğinden almaz – bunun için Smart-Sync'i aç (Kütüphane › Spotify).",
+ "In {} s kommt es auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).": "{} sn içinde kutuya gelir. Smart-Sync kapalı: daha sonra çıkan bölümleri kutu kendiliğinden almaz – bunun için Smart-Sync'i aç (Kütüphane › Spotify).",
+ "Kommt aus einer deiner Spotify-Playlists: Entfernen geht dort – in Spotify aus der Playlist nehmen, der nächste Sync nimmt es dann von der Box.": "Spotify çalma listelerinden birinden geliyor: kaldırma orada yapılır – Spotify'da çalma listesinden çıkar, sonraki senkronizasyon onu kutudan kaldırır."
 }

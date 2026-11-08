@@ -3097,5 +3097,19 @@
  "Akku-Profil fehlt": "Нет профиля аккумулятора",
  "Der MuPiHAT ist an, aber es ist kein Akku-Profil gewählt.": "MuPiHAT включён, но профиль аккумулятора не выбран.",
  "Bitte wähle dein Akku-Profil": "Выберите профиль аккумулятора",
- "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "До этого HAT заряжает с базовой настройкой, а уровень заряда и время до полной зарядки неверны."
+ "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "До этого HAT заряжает с базовой настройкой, а уровень заряда и время до полной зарядки неверны.",
+ "„{}“ abbestellen? Seine Folgen ({}) gehen gleich von der Box.": "Отписаться от «{}»? Его эпизоды ({}) сразу будут удалены с устройства.",
+ "„{}“ von der Box entfernen? Es kommt auch beim nächsten Sync nicht wieder.": "Удалить «{}» с устройства? Это не вернётся и при следующей синхронизации.",
+ "{} entfernt": "Удалено: {}",
+ "{} entfernt, dann hat es nicht geklappt": "Удалено: {}, затем не получилось",
+ "Abo beenden": "Отписаться",
+ "Abo beendet: {}": "Подписка отменена: {}",
+ "Alle {} Einträge von „{}“ aus der Bibliothek entfernen?": "Удалить из библиотеки все записи «{1}» ({0})?",
+ "Alle {} Einträge von „{}“ aus der Bibliothek entfernen? Einträge aus einer Spotify-Playlist ({}) bleiben – die gehen in Spotify.": "Удалить из библиотеки все записи «{1}» ({0})? Записи из плейлиста Spotify ({2}) останутся – их удаляют в Spotify.",
+ "Alle entfernen": "Удалить все",
+ "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.": "Все эпизоды попадут на устройство. Smart-Sync выключен: эпизоды, которые выйдут позже, приходят сами только со Smart-Sync (Библиотека › Spotify). Диапазон потом можно сузить в разделе «Управляемые материалы».",
+ "Aus = kein Abgleich der Playlists, auch nicht von Hand (Knopf, Telegram /resync), und keine später erschienenen Folgen von selbst. Was du unter „Verwaltete Inhalte“ abonnierst oder hinzufügst, kommt trotzdem auf die Box. Die Inhalte auf der Box bleiben.": "Выкл = плейлисты не синхронизируются, даже вручную (кнопка, Telegram /resync), и эпизоды, вышедшие позже, сами не приходят. Подписки и добавленное в разделе «Управляемые материалы» всё равно попадут на устройство. Материалы на устройстве останутся.",
+ "Es kommt jetzt auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).": "Сейчас это попадёт на устройство. Smart-Sync выключен: эпизоды, которые выйдут позже, устройство само не загрузит – для этого включите Smart-Sync (Библиотека › Spotify).",
+ "In {} s kommt es auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).": "Через {} с это попадёт на устройство. Smart-Sync выключен: эпизоды, которые выйдут позже, устройство само не загрузит – для этого включите Smart-Sync (Библиотека › Spotify).",
+ "Kommt aus einer deiner Spotify-Playlists: Entfernen geht dort – in Spotify aus der Playlist nehmen, der nächste Sync nimmt es dann von der Box.": "Взято из одного из ваших плейлистов Spotify: удалять нужно там – уберите это из плейлиста в Spotify, и следующая синхронизация уберёт это с устройства."
 }

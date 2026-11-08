@@ -3097,5 +3097,19 @@
  "Akku-Profil fehlt": "Немає профілю акумулятора",
  "Der MuPiHAT ist an, aber es ist kein Akku-Profil gewählt.": "MuPiHAT увімкнено, але профіль акумулятора не вибрано.",
  "Bitte wähle dein Akku-Profil": "Виберіть профіль акумулятора",
- "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "До того часу HAT заряджає з базовим налаштуванням, а рівень заряду та час до повного заряду неправильні."
+ "Bis dahin lädt der HAT mit seiner Grundeinstellung, und Ladestand und Zeit bis voll stimmen nicht.": "До того часу HAT заряджає з базовим налаштуванням, а рівень заряду та час до повного заряду неправильні.",
+ "„{}“ abbestellen? Seine Folgen ({}) gehen gleich von der Box.": "Скасувати підписку «{}»? Його епізоди ({}) одразу зникнуть з бокса.",
+ "„{}“ von der Box entfernen? Es kommt auch beim nächsten Sync nicht wieder.": "Видалити «{}» з бокса? Воно не повернеться і під час наступної синхронізації.",
+ "{} entfernt": "Видалено: {}",
+ "{} entfernt, dann hat es nicht geklappt": "Видалено: {}, далі не вдалося",
+ "Abo beenden": "Скасувати підписку",
+ "Abo beendet: {}": "Підписку скасовано: {}",
+ "Alle {} Einträge von „{}“ aus der Bibliothek entfernen?": "Видалити з бібліотеки всі записи «{1}» ({0})?",
+ "Alle {} Einträge von „{}“ aus der Bibliothek entfernen? Einträge aus einer Spotify-Playlist ({}) bleiben – die gehen in Spotify.": "Видалити з бібліотеки всі записи «{1}» ({0})? Записи з плейлиста Spotify ({2}) залишаться – їх видаляють у Spotify.",
+ "Alle entfernen": "Видалити все",
+ "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.": "Усі епізоди потраплять на бокс. Smart-Sync вимкнено: епізоди, що вийдуть пізніше, приходять самі лише зі Smart-Sync (Бібліотека › Spotify). Діапазон потім можна звузити в розділі «Керований вміст».",
+ "Aus = kein Abgleich der Playlists, auch nicht von Hand (Knopf, Telegram /resync), und keine später erschienenen Folgen von selbst. Was du unter „Verwaltete Inhalte“ abonnierst oder hinzufügst, kommt trotzdem auf die Box. Die Inhalte auf der Box bleiben.": "Вимк. = плейлисти не синхронізуються, навіть вручну (кнопка, Telegram /resync), і епізоди, що вийшли пізніше, самі не приходять. Підписки та додане в розділі «Керований вміст» усе одно потрапляють на бокс. Вміст на боксі залишиться.",
+ "Es kommt jetzt auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).": "Зараз це потрапить на бокс. Smart-Sync вимкнено: епізоди, що вийдуть пізніше, бокс сам не завантажить – для цього увімкніть Smart-Sync (Бібліотека › Spotify).",
+ "In {} s kommt es auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).": "Через {} с це потрапить на бокс. Smart-Sync вимкнено: епізоди, що вийдуть пізніше, бокс сам не завантажить – для цього увімкніть Smart-Sync (Бібліотека › Spotify).",
+ "Kommt aus einer deiner Spotify-Playlists: Entfernen geht dort – in Spotify aus der Playlist nehmen, der nächste Sync nimmt es dann von der Box.": "Походить з одного з ваших плейлистів Spotify: видаляти треба там – приберіть це з плейлиста в Spotify, і наступна синхронізація прибере це з бокса."
 }
