@@ -3032,9 +3032,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   /**
    * POST /api/app/library/remove-synced  {albumId | albumIds, artist?}
    * An album of the Spotify sync taken off the box from the library ("Entfernen"): out of the albums added one by one,
-   * and left out of the artist subscriptions it may come from (those of that artist; none of that name: all of them -
-   * a left-out album that is not one of a subscription's changes nothing there). The app then deletes the entry itself
-   * (/api/delete), so it goes at once, also with Smart-Sync off - and no sync brings it back. Back again: the album's
+   * and left out of every artist subscription (a left-out album that is not one of a subscription's changes nothing
+   * there). The app then deletes the entry itself (/api/delete-many), so it goes at once, also with Smart-Sync off - and no sync brings it back. Back again: the album's
    * switch in the subscription (Verwaltete Inhalte) or adding it anew.
    */
   router.post('/library/remove-synced', requireSession, requireCsrf, async (req, res) => {
@@ -3047,7 +3046,6 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       return
     }
     const gone = new Set(ids)
-    const artist = typeof body.artist === 'string' ? body.artist.trim() : ''
     let pinned = 0
     let leftOut = 0
     await deps.updateMupiboxConfig((cfg) => {
@@ -3055,10 +3053,11 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       const pins = Array.isArray(ss.explicit_albums) ? (ss.explicit_albums as Array<Record<string, unknown>>) : []
       pinned = pins.filter((a) => gone.has(String(a?.id))).length
       ss.explicit_albums = pins.filter((a) => !gone.has(String(a?.id)))
+      // (every subscription: an album of two subscribed artists - a joint one - left out of one only came back through
+      // the other; one that is not a subscription's own changes nothing there)
       const subs = Array.isArray(ss.artists) ? (ss.artists as Array<Record<string, unknown>>) : []
-      const named = subs.filter((a) => artist && typeof a?.name === 'string' && a.name.trim() === artist)
       leftOut = 0
-      for (const sub of named.length ? named : subs) {
+      for (const sub of subs) {
         if (!sub || typeof sub !== 'object') continue
         const ex = new Set(Array.isArray(sub.exclude_album_ids) ? (sub.exclude_album_ids as unknown[]).filter((x): x is string => typeof x === 'string') : [])
         for (const id of ids) ex.add(id)

@@ -2631,8 +2631,8 @@ function syncRemovable(item) {
   )
 }
 
-// Takes entries out of the library: those of the sync first out of what the sync brings (see remove-synced, once per
-// artist), then all deleted in one step per 300 (/api/delete-many: the library written once - one by one, a
+// Takes entries out of the library: those of the sync first out of what the sync brings (see remove-synced, one call),
+// then all deleted in one step per 300 (/api/delete-many: the library written once - one by one, a
 // subscription of 250 albums took minutes). From the last place to the first, so the places of the others stay. The
 // number done; a failure is said.
 const LIB_ID_KEYS = ['type', 'id', 'artistid', 'playlistid', 'showid', 'audiobookid', 'title', 'artist', 'category']
@@ -2641,15 +2641,12 @@ async function removeLibEntries(items, { subscriptionEnded = false } = {}) {
   const list = items.filter((it) => !isSync(it) || syncRemovable(it)).sort((a, b) => libPlace(b) - libPlace(a))
   if (!list.length) return 0
   // (the subscription they came from is gone: only deleted - not left out of the other subscriptions)
-  if (!subscriptionEnded) {
-    const byArtist = new Map()
-    for (const it of list.filter(isSync)) byArtist.set(it.artist ?? '', [...(byArtist.get(it.artist ?? '') ?? []), it.id])
-    for (const [artist, albumIds] of byArtist) {
-      const r = await api(`${API}/library/remove-synced`, { method: 'POST', body: { albumIds, artist } })
-      if (!r.ok) {
-        toast('Das hat nicht geklappt', 'info')
-        return 0
-      }
+  const albumIds = subscriptionEnded ? [] : list.filter(isSync).map((it) => it.id)
+  if (albumIds.length) {
+    const r = await api(`${API}/library/remove-synced`, { method: 'POST', body: { albumIds } })
+    if (!r.ok) {
+      toast('Das hat nicht geklappt', 'info')
+      return 0
     }
   }
   // (only the fields the server compares, see sameLibraryEntry: a request of hundreds of entries stays small)

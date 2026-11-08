@@ -149,6 +149,12 @@ export function computeSyncDiff(
       const kept = (match.spotify_sync_playlists ?? []).filter((id) => failedPlaylists.has(id) && !item.playlistIds.includes(id))
       if (kept.length) item.playlistIds = [...item.playlistIds, ...kept]
     }
+    // (a run without the playlists - Smart-Sync off: an album both in a playlist and of a subscription keeps its
+    // playlists; replaced by none, a later run of only the subscriptions - that one ended - removed it from the box)
+    if (opts.keepPlaylistEntries) {
+      const kept = (match.spotify_sync_playlists ?? []).filter((id) => !item.playlistIds.includes(id))
+      if (kept.length) item.playlistIds = [...item.playlistIds, ...kept]
+    }
     if (syncEntryDiffersFromItem(match, item)) {
       updates.push({ existing: match, item })
     }

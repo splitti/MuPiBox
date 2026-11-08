@@ -196,7 +196,8 @@ const SERVICES = [
 ]
 
 // Keys whose values never leave the box (support infos): tokens, passwords, ids of accounts and chats
-const SECRET = /pass|token|secret|clientid|deviceid|username|chatid|account|hash|salt|fingerprint/i
+// (proof: the voluntary statistics' device_proof, see telemetry.ts)
+const SECRET = /pass|token|secret|clientid|deviceid|username|chatid|account|hash|salt|fingerprint|proof/i
 function withoutSecrets(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(withoutSecrets)
   if (value && typeof value === 'object') {

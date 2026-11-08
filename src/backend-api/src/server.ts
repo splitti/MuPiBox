@@ -4757,7 +4757,9 @@ app.get('/api/sonos', (_req, res) => {
 // (cors *), and it returned the whole file: Spotify client secret and tokens, Telegram bot token,
 // MQTT and Synology passwords, the admin password hash and the parents' password hash + salt.
 // The box frontend only needs display settings, so these keys are dropped at any depth.
-const SECRET_CONFIG_KEYS = /^(password|pass|pwd|pw|psk|secret|clientsecret|token|accesstoken|refreshtoken|hash|salt|sid|apikey|api_key|username|user|cookie)$/i
+// (device_proof, pending_delete_tokens: the voluntary statistics' own - see eltern/telemetry.ts)
+const SECRET_CONFIG_KEYS =
+  /^(password|pass|pwd|pw|psk|secret|clientsecret|token|accesstoken|refreshtoken|hash|salt|sid|apikey|api_key|username|user|cookie|device_proof|pending_delete_tokens)$/i
 
 function redactSecrets(value: unknown): unknown {
   if (Array.isArray(value)) {
