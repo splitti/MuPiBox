@@ -656,6 +656,11 @@ STEP=0
 	chmod 755 /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	# full colours in the display on a Pi with 2 GB or more: takes DietPi's "low-end device mode" out again (see the file)
 	mkdir -p /etc/chromium.d && tr -d '\r' < ${MUPI_SRC}/config/chromium/zz-mupibox > /etc/chromium.d/zz-mupibox && chmod 644 /etc/chromium.d/zz-mupibox
+	# PulseAudio keeps no volume of a program's stream for its next one (see the file; issue #191)
+	if [ -f /etc/pulse/system.pa ] && grep -q 'system.pa.d' /etc/pulse/system.pa; then
+		mkdir -p /etc/pulse/system.pa.d && tr -d '\r' < ${MUPI_SRC}/config/pulse/mupibox-stream-volume.pa > /etc/pulse/system.pa.d/mupibox-stream-volume.pa \
+			&& chmod 644 /etc/pulse/system.pa.d/mupibox-stream-volume.pa
+	fi
 	apt-get install xserver-xorg-legacy -y >&3 2>&3
 	sed -i 's/allowed_users\=console/allowed_users\=anybody/g' /etc/X11/Xwrapper.config >&3 2>&3
 	mv -f ${MUPI_SRC}/config/templates/98-dietpi-disable_dpms.conf /etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf >&3 2>&3

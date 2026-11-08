@@ -919,6 +919,16 @@ rm -f /tmp/mupibox-update-failed
 	if [ -f ${MUPI_SRC}/config/chromium/zz-mupibox ]; then
 		mkdir -p /etc/chromium.d && tr -d '\r' < ${MUPI_SRC}/config/chromium/zz-mupibox > /etc/chromium.d/zz-mupibox && chmod 644 /etc/chromium.d/zz-mupibox
 	fi
+	# PulseAudio keeps no volume of a program's stream for its next one (see the file; issue #191) - from the next start
+	# of PulseAudio (the restart after the update). system.pa reads system.pa.d (PulseAudio 15 and later).
+	if [ -f ${MUPI_SRC}/config/pulse/mupibox-stream-volume.pa ] && [ -f /etc/pulse/system.pa ]; then
+		if grep -q 'system.pa.d' /etc/pulse/system.pa; then
+			mkdir -p /etc/pulse/system.pa.d && tr -d '\r' < ${MUPI_SRC}/config/pulse/mupibox-stream-volume.pa > /etc/pulse/system.pa.d/mupibox-stream-volume.pa \
+				&& chmod 644 /etc/pulse/system.pa.d/mupibox-stream-volume.pa
+		else
+			echo "## PulseAudio does not read system.pa.d - the volume of a program's stream is still kept" >&3 2>&3
+		fi
+	fi
 	# restart.sh held (the placeholder of hold_restart in place - a handover, or a click in the admin interface of 4.x
 	# while this update ran, from the terminal too): the new restart.sh goes behind it, the placeholder stays. Moved in
 	# over it, the restart.sh of a version without the update's lock (4.x) restarted the box at that click's restart,

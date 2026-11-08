@@ -24,6 +24,11 @@
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>A title that began right after the box was switched on could count the whole time the box had been off (25 hours of radio on one day), on the day it was last switched off: the box has no clock of its own and runs with the time it last saved until the network sets it. Lengths are now measured independently of the clock. Entries already in the history stay as they are until they are older than 7 days.</li>
 </ul>
+<b>Sound</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Music, podcasts and the start and shutdown sounds could become very quiet - also at 100 % and with Bluetooth headphones -, names read out not (issue #191). The music is made quieter while a name is read out; when its title changed or it stopped meanwhile, it was not made loud again, and the sound system kept that volume for every later music (each further name made it quieter still). It now keeps no volume of its own per program: every stream starts at the box's volume again. Applies from the restart after the update.</li>
+</ul>
 <b>Support</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
