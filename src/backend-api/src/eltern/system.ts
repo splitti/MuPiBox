@@ -432,7 +432,9 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
       await fsp.writeFile(`${dir}/mupi.info`, [osRelease, model, os.hostname(), os.arch(), os.machine(), `MuPiBox ${version}`, jq.stdout.trim(), boot.stdout.trim()].join('\n'))
       // The sound: the box's volume is the output's (PulseAudio, system-wide), every program plays as a stream of its own
       // with a volume of its own that PulseAudio keeps - Chromium (Spotify) or mpv far below 100 % makes only that quiet
-      // (issue #191). Read while it plays: a stream shows only then. (Fixed text, nothing of a request in it.)
+      // (issue #191). Read while it plays: a stream shows only then. (Fixed text, nothing of a request in it.) Not the
+      // stream's title (media.name): mpv names a stream without a title of its own by its address, a private stream's
+      // access token with it - and what is left goes through the logs' filter too.
       const audio = await run(
         'sh',
         [
@@ -440,14 +442,14 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
           `export PULSE_SERVER=unix:/var/run/pulse/native LC_ALL=C
 echo "== pactl info"; pactl info 2>&1 | grep -E "Server Name|Server Version|Default Sink"
 echo "== sinks"; pactl list sinks 2>&1 | grep -E "^Sink|^[[:space:]]*(State|Name|Mute|Volume|Base Volume):"
-echo "== sink inputs (only while something plays)"; pactl list sink-inputs 2>&1 | grep -E "^Sink Input|^[[:space:]]*(Mute|Volume):|application.name|media.name|module-stream-restore.id"
+echo "== sink inputs (only while something plays)"; pactl list sink-inputs 2>&1 | grep -E "^Sink Input|^[[:space:]]*(Mute|Volume):|application.name|module-stream-restore.id"
 echo "== amixer Master"; amixer sget Master 2>&1 | tail -n 4
 echo "== cards"; aplay -l 2>&1 | grep -E "^card"
 echo "== packages"; dpkg-query -W -f='\${Package} \${Version}\\n' chromium chromium-browser mpv pulseaudio 2>/dev/null`,
         ],
         10000,
       )
-      await fsp.writeFile(`${dir}/audio.txt`, audio.stdout)
+      await fsp.writeFile(`${dir}/audio.txt`, withoutLogSecrets(audio.stdout))
       // The logs of the server and the player, also the rotated ones (the app's log page shows their last lines only),
       // and Chromium's debug log when its switch is on (System › Experten) - each its last 5 MB (as the admin
       // interface's pm2logs.php and debug.php, which sent them whole)
