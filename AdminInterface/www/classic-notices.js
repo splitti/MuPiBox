@@ -70,9 +70,9 @@ if (typeof document !== 'undefined') {
     }
     if (donationDue(state, month) && !legacyShownThisMonth()) {
       const d = item('donation',
-        t('MuPiBox Classic ist ein Hobbyprojekt', 'MuPiBox Classic is a hobby project'),
-        t('Ich entwickle MuPiBox in meiner Freizeit und stelle sie kostenlos zur Verfügung. Wenn dir das Projekt gefällt, kannst du die Weiterentwicklung mit einer freiwilligen Spende unterstützen. Natürlich bleibt MuPiBox ohne Spende uneingeschränkt nutzbar.',
-          'I develop MuPiBox in my free time and provide it for free. If you enjoy the project, you can support its development with a voluntary donation. All features remain available without donating.'));
+        t('MuPiBox Classic ist ein Community-Projekt', 'MuPiBox Classic is a community project'),
+        t('Wir entwickeln MuPiBox gemeinsam mit der Community in unserer Freizeit und stellen das Projekt kostenlos zur Verfügung. Wenn dir MuPiBox gefällt, kannst du uns und die Weiterentwicklung mit einer freiwilligen Spende unterstützen. Natürlich bleibt MuPiBox ohne Spende uneingeschränkt nutzbar.',
+          'We develop MuPiBox together with the community in our spare time and make the project available free of charge. If you enjoy MuPiBox, you can support us and its continued development with a voluntary donation. All features remain available without donating.'));
       d.button(t('Projekt unterstützen', 'Support the project'), () => {
         window.open(donationUrl, '_blank', 'noopener,noreferrer');
         d.dialog.close();
