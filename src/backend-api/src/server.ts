@@ -4100,6 +4100,61 @@ app.post('/api/delete', (req, res) => {
   })
 })
 
+// Several entries at once ({ entries: [{ index, original }] }): a whole group of the app ("Alle entfernen", "Abo beenden")
+// - checked all first, and the library written once (one by one, a subscription of 250 albums wrote it 250 times and
+// took minutes). Nothing is deleted when one of them does not match any more (409, as /api/delete).
+app.post('/api/delete-many', (req, res) => {
+  const list = req.body?.entries
+  if (!Array.isArray(list) || list.length === 0 || list.length > 2000) {
+    res.status(400).send('entries missing')
+    return
+  }
+  const lockResult = acquireLock(dataLock, '/api/delete-many')
+  if (lockResult === 'locked') {
+    res.status(200).send('locked')
+    return
+  }
+  if (lockResult === 'error') {
+    res.status(200).send('error')
+    return
+  }
+  jsonfile.readFile(dataFile, (error, data) => {
+    if (error || !Array.isArray(data)) {
+      releaseLock(dataLock, '/api/delete-many')
+      res.status(error ? 200 : 500).send(error ? 'error' : 'data.json is not a list')
+      return
+    }
+    const places = new Set<number>()
+    for (const e of list) {
+      const problem = libraryIndexProblem(data, e?.index, e?.original)
+      if (problem || places.has(e.index)) {
+        releaseLock(dataLock, '/api/delete-many')
+        res.status(problem === 'library changed' ? 409 : 400).send(problem ?? 'twice')
+        return
+      }
+      places.add(e.index)
+    }
+    // (from the last place to the first: the places before stay where they were)
+    const removed: unknown[] = []
+    for (const i of [...places].sort((a, b) => b - a)) removed.push(...data.splice(i, 1))
+    renumberLibrary(data)
+    writeJsonAtomic(dataFile, data, (writeError) => {
+      releaseLock(dataLock, '/api/delete-many')
+      if (writeError) {
+        console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/delete-many write failed:`, writeError)
+        res.status(500).send('error')
+        return
+      }
+      for (const entry of removed) {
+        removeRssPictures(entry, data).catch((e) => {
+          console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Could not remove the pictures of a podcast: ${e}`)
+        })
+      }
+      res.status(200).send('ok')
+    })
+  })
+})
+
 app.post('/api/edit', (req, res) => {
   // The new entry comes as { index, data }. Without data (the web app used to send the fields next to
   // index) splice() put null into the library, and that entry was gone.

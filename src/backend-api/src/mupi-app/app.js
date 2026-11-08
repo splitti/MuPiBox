@@ -2631,31 +2631,35 @@ function syncRemovable(item) {
   )
 }
 
-// Takes entries out of the library: one of the sync first out of what the sync brings (see remove-synced), then each
-// deleted - from the last place to the first, so the places of the others stay as they are. The number done, 0 when
-// the first already failed (said).
+// Takes entries out of the library: those of the sync first out of what the sync brings (see remove-synced, once per
+// artist), then all deleted in one step per 300 (/api/delete-many: the library written once - one by one, a
+// subscription of 250 albums took minutes). From the last place to the first, so the places of the others stay. The
+// number done; a failure is said.
+const LIB_ID_KEYS = ['type', 'id', 'artistid', 'playlistid', 'showid', 'audiobookid', 'title', 'artist', 'category']
 async function removeLibEntries(items, { subscriptionEnded = false } = {}) {
-  const list = [...items].sort((a, b) => libPlace(b) - libPlace(a))
-  let done = 0
-  for (const item of list) {
-    if ((item.source ?? 'manual') === 'spotify-sync') {
-      if (!syncRemovable(item)) continue
-      // (the subscription they came from is gone: only deleted - left out of every other subscription they were not)
-      if (subscriptionEnded) {
-        const r = await api('/api/delete', { method: 'POST', body: { index: libPlace(item), original: item } })
-        if (!libWriteOk(r)) return done
-        done++
-        continue
-      }
-      const r = await api(`${API}/library/remove-synced`, { method: 'POST', body: { albumId: item.id, artist: item.artist ?? '' } })
+  const isSync = (it) => (it.source ?? 'manual') === 'spotify-sync'
+  const list = items.filter((it) => !isSync(it) || syncRemovable(it)).sort((a, b) => libPlace(b) - libPlace(a))
+  if (!list.length) return 0
+  // (the subscription they came from is gone: only deleted - not left out of the other subscriptions)
+  if (!subscriptionEnded) {
+    const byArtist = new Map()
+    for (const it of list.filter(isSync)) byArtist.set(it.artist ?? '', [...(byArtist.get(it.artist ?? '') ?? []), it.id])
+    for (const [artist, albumIds] of byArtist) {
+      const r = await api(`${API}/library/remove-synced`, { method: 'POST', body: { albumIds, artist } })
       if (!r.ok) {
-        toast(done ? `${done} entfernt, dann hat es nicht geklappt` : 'Das hat nicht geklappt', 'info')
-        return done
+        toast('Das hat nicht geklappt', 'info')
+        return 0
       }
     }
-    const r = await api('/api/delete', { method: 'POST', body: { index: libPlace(item), original: item } })
+  }
+  // (only the fields the server compares, see sameLibraryEntry: a request of hundreds of entries stays small)
+  const ids = (it) => Object.fromEntries(LIB_ID_KEYS.map((k) => [k, it[k] ?? null]))
+  let done = 0
+  for (let i = 0; i < list.length; i += 300) {
+    const part = list.slice(i, i + 300)
+    const r = await api('/api/delete-many', { method: 'POST', body: { entries: part.map((it) => ({ index: libPlace(it), original: ids(it) })) } })
     if (!libWriteOk(r)) return done
-    done++
+    done += part.length
   }
   return done
 }
