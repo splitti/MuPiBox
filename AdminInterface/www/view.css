@@ -1588,3 +1588,20 @@ details > ul {
 .error { color: #ff5555; }
 
 .hidden { display: none; }
+/* Classic admin donation/statistics reminders; independent of the kiosk/player. */
+.classic-notice-dialog {
+  border: 1px solid #cbd5e1; border-radius: 14px; padding: 26px;
+  width: min(92vw, 510px); max-height: 86vh; overflow: auto;
+  background: #fff; color: #172334; box-shadow: 0 20px 65px rgba(0,0,0,.3);
+}
+.classic-notice-dialog::backdrop { background: rgba(9, 21, 38, .62); }
+.classic-notice-dialog h2 { font-size: 22px; line-height: 1.3; margin: 0 0 14px; color: inherit; }
+.classic-notice-dialog p { line-height: 1.65; font-size: 15px; color: inherit; }
+.classic-notice-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.classic-notice-actions button { cursor: pointer; padding: 10px 16px; border-radius: 8px; border: 1px solid #9ba9b8; background: #f3f6f9; color: #1e293b; }
+.classic-notice-actions button.classic-notice-primary { background: #145a96; border-color: #145a96; color: white; }
+.classic-notice-dialog button:focus-visible { outline: 3px solid #ed9b39; outline-offset: 2px; }
+@media (prefers-color-scheme: dark) {
+  .classic-notice-dialog { background: #1b2534; border-color: #48586b; color: #f3f6fa; }
+  .classic-notice-actions button:not(.classic-notice-primary) { background: #334155; color: white; }
+}

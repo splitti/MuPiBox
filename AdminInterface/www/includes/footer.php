@@ -4,6 +4,7 @@
 					<ul>
 						<li><a href="https://mupibox.de/" target="_blank">MuPiBox.de</a></li>
 						<li><a href="https://discord.gg/4EjCgpCbbe" target="_blank">Support on Discord</a></li>
+						<li><a href="https://mupibox.de/spenden/" target="_blank" rel="noopener noreferrer">MuPiBox freiwillig unterstützen / Donate</a></li>
 						<li><a href="https://www.youtube.com/@mupibox" target="_blank">MuPiBox on Youtube</a></li>
 					</ul>
 				</div>
@@ -166,6 +167,24 @@ document.addEventListener("submit", function () {
 })();
 
 </script>
+
+
+<?php
+    // No identifier, token, device data or other statistics are embedded in HTML.
+    $__classicStats = is_array($data['installationStatistics'] ?? null) ? $data['installationStatistics'] : [];
+    $__classicNoticeSettings = is_array($data['adminNotices'] ?? null) ? $data['adminNotices'] : [];
+    $__classicNoticeState = [
+        'donationPopupEnabled' => ($__classicNoticeSettings['donation_popup_enabled'] ?? true) === true,
+        'statisticsPopupEnabled' => ($__classicNoticeSettings['statistics_popup_enabled'] ?? true) === true,
+        'lastDonationMonth' => (string)($__classicNoticeSettings['last_donation_month'] ?? ''),
+        'enabled' => ($__classicStats['enabled'] ?? false) === true
+            && ($__classicStats['consent_version'] ?? '') === '2026-11-07-v2',
+        'lastReminderMonth' => (string)($__classicStats['last_reminder_month'] ?? ''),
+        'csrf' => csrf_token(),
+    ];
+?>
+<script>window.classicAdminStatistics = <?= json_encode($__classicNoticeState, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;</script>
+<script src="classic-notices.js?v=<?= (int)@filemtime(__DIR__ . '/../classic-notices.js') ?>"></script>
 
 	</body>
 </html>

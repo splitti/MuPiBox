@@ -41,6 +41,7 @@ import { buildElternLandingHandler, createElternApiRouter, registerDisplayNetwor
 import { startSpotifyLoginWatch } from './eltern/spotify-auth-age'
 import { startTlsWatch } from './eltern/tls'
 import { startWeeklySummary } from './eltern/weekly-summary'
+import { startInstallationStatistics } from './eltern/telemetry'
 import { startNightDim } from './eltern/night-dim'
 import { bootConfigPath } from './eltern/boot-paths'
 import { startSpeech } from './speech'
@@ -8724,6 +8725,7 @@ if (!testServe) {
   // the Home Assistant API, when it is switched on (ha/ha-api.ts)
   startHaApi(haDeps)
   startWeeklySummary({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig, currentPlayLogStart })
+  startInstallationStatistics({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
   // "Abends dunkler": the display's brightness in the evening (eltern/night-dim.ts)
   startNightDim(getMupiboxConfigSync)
   // the automatic announcements (speech.ts)
