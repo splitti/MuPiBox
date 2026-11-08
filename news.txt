@@ -13,6 +13,7 @@
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>A dev version could show "null" instead of its date (e.g. "DEV 5.0.14 null") when GitHub did not answer the question for it - too many questions from the home network in an hour. The day of the update stands there then.</li>
 <li id='linews' class='linews'>Only one update at a time: an update started while another one still ran (in the terminal while the one from the app or the admin interface went on, or twice in the terminal) took the other one's download away and stopped with a strange error ("Expected source directory ... not found"), both replacing the installation at once. A second update now stops at once and changes nothing, with a note that one is running; the box's restart waits for the running update too.</li>
+<li id='linews' class='linews'>An update on a weak WiFi stopped at its very first download when the connection broke off in the middle ("curl: (18) Transferred a partial file", "could not download jq"). The update's downloads are now tried up to four times. And an update that stopped before it changed anything no longer restarts the display and the server - that looked like a restart of the box while the music played on.</li>
 </ul>
 <b>MQTT</b>
 </ul>

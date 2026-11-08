@@ -86,6 +86,21 @@ update_busy_message() {
 	fi
 }
 
+# A download, tried up to four times: $1 the address, $2 the file, $3 the time for one try in seconds. curl's own --retry
+# leaves out a connection cut in the middle ("curl: (18) Transferred a partial file" - the update stopped at once on a
+# weak WiFi); --retry-all-errors would, but older curl (before 7.71) does not know it. A failed try leaves no file.
+fetch_retry() {
+	local i
+	for i in 1 2 3 4; do
+		if curl -fsSL --retry 2 --retry-delay 3 -m "$3" -o "$2" "$1"; then
+			return 0
+		fi
+		rm -f "$2"
+		[ "$i" -lt 4 ] && sleep 5
+	done
+	return 1
+}
+
 # Started by the admin interface of 4.x (its update buttons run "curl ... | sudo bash" inside the PHP request): there
 # is no terminal for whiptail (the update stopped at its first step), the update stops php-fpm on the way (the admin
 # interface is off by default since 5.0.12 - the update, a child of php-fpm, went down with it), and the admin
@@ -192,7 +207,7 @@ if [ -z "${MUPIBOX_UPDATE_HANDED_OVER:-}" ] && [ ! -t 1 ] && started_by_php; the
 	}
 	# (MUPIBOX_UPDATE_SCRIPT_URL: another copy of this script, to test one before it is on main: without it the handed-over
 	# run was always the one from main, whatever the admin interface had started)
-	if ! curl -fsSL --retry 3 --retry-delay 3 -m 120 -o ${HD}/start_mupibox_update.sh "${MUPIBOX_UPDATE_SCRIPT_URL:-https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh}" \
+	if ! fetch_retry "${MUPIBOX_UPDATE_SCRIPT_URL:-https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh}" ${HD}/start_mupibox_update.sh 120 \
 	   || ! bash -n ${HD}/start_mupibox_update.sh; then
 		unhold_mine
 		echo "Error: the update script could not be downloaded - nothing was changed. Please try again."
@@ -273,7 +288,7 @@ if [ `getconf LONG_BIT` == 32 ]; then
 else
   JQ_ARCH="arm64"
 fi
-if ! curl -fsSL --retry 3 --retry-delay 3 -m 180 -o ${PREFLIGHT_DIR}/jq https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-linux-${JQ_ARCH} \
+if ! fetch_retry https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-linux-${JQ_ARCH} ${PREFLIGHT_DIR}/jq 180 \
    || ! chmod 755 ${PREFLIGHT_DIR}/jq || ! ${PREFLIGHT_DIR}/jq --version > /dev/null 2>&1; then
   echo "Error: could not download jq (no internet / DNS problem?). Nothing was changed - please try again."
   rm -rf ${PREFLIGHT_DIR}

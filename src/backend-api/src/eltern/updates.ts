@@ -82,7 +82,16 @@ if [ "$KIND" = "os" ]; then
 fi
 
 progress 1 "Download"
-if ! curl -fsSL --retry 3 --retry-delay 3 -m 120 -o "$D/start_mupibox_update.sh" "${REPO_RAW}/update/start_mupibox_update.sh" || ! bash -n "$D/start_mupibox_update.sh"; then
+# (up to four tries: curl's own --retry leaves out a connection cut in the middle, "partial file")
+GOT=0
+for TRY in 1 2 3 4; do
+	if curl -fsSL --retry 2 --retry-delay 3 -m 120 -o "$D/start_mupibox_update.sh" "${REPO_RAW}/update/start_mupibox_update.sh" && bash -n "$D/start_mupibox_update.sh"; then
+		GOT=1
+		break
+	fi
+	[ "$TRY" -lt 4 ] && sleep 5
+done
+if [ "$GOT" != "1" ]; then
 	echo "The update script could not be downloaded - nothing was changed."
 	[ "$IDLE_WAS_ACTIVE" = "active" ] && systemctl start mupi_idle_shutdown
 	finish failed
@@ -122,9 +131,14 @@ else
 	finish failed
 	# the display was ended by the update script: back to the box's normal state
 	[ "$IDLE_WAS_ACTIVE" = "active" ] && systemctl start mupi_idle_shutdown
-	# (the update stops the server early on; an aborted run may leave it stopped)
-	sudo -H -u dietpi bash -c "pm2 start server"
-	sudo -i -u dietpi /usr/local/bin/mupibox/restart_kiosk.sh
+	# (the update stops the server early on; an aborted run may leave it stopped) - only what is not running: one that
+	# stopped before it changed anything (a download cut off) left both running, and starting them again looked like a
+	# restart of the box, the music playing on
+	SERVER_PID=$(sudo -H -u dietpi bash -c "pm2 pid server" 2>/dev/null | tail -n 1)
+	case "$SERVER_PID" in '' | 0 | *[!0-9]*) sudo -H -u dietpi bash -c "pm2 start server" ;; esac
+	if ! pgrep -x chromium > /dev/null && ! pgrep -x chromium-browse > /dev/null; then
+		sudo -i -u dietpi /usr/local/bin/mupibox/restart_kiosk.sh
+	fi
 fi
 `
 
