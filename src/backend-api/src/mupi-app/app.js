@@ -2620,20 +2620,96 @@ function drawLib() {
   for (const b of list.querySelectorAll('.lib-row')) b.onclick = () => openLibGroup(libShown[Number(b.dataset.i)])
 }
 
+// An album of the Spotify sync that can be taken off here: one the search added or a subscription brought (an album,
+// no playlist left in it) - one that came from one of the user's playlists comes back with the next sync, it goes there
+function syncRemovable(item) {
+  return (
+    (item?.source ?? 'manual') === 'spotify-sync' &&
+    item.type === 'spotify' &&
+    /^[A-Za-z0-9]{22}$/.test(String(item.id ?? '')) &&
+    !(Array.isArray(item.spotify_sync_playlists) && item.spotify_sync_playlists.length)
+  )
+}
+
+// Takes entries out of the library: one of the sync first out of what the sync brings (see remove-synced), then each
+// deleted - from the last place to the first, so the places of the others stay as they are. The number done, 0 when
+// the first already failed (said).
+async function removeLibEntries(items, { subscriptionEnded = false } = {}) {
+  const list = [...items].sort((a, b) => libPlace(b) - libPlace(a))
+  let done = 0
+  for (const item of list) {
+    if ((item.source ?? 'manual') === 'spotify-sync') {
+      if (!syncRemovable(item)) continue
+      // (the subscription they came from is gone: only deleted - left out of every other subscription they were not)
+      if (subscriptionEnded) {
+        const r = await api('/api/delete', { method: 'POST', body: { index: libPlace(item), original: item } })
+        if (!libWriteOk(r)) return done
+        done++
+        continue
+      }
+      const r = await api(`${API}/library/remove-synced`, { method: 'POST', body: { albumId: item.id, artist: item.artist ?? '' } })
+      if (!r.ok) {
+        toast(done ? `${done} entfernt, dann hat es nicht geklappt` : 'Das hat nicht geklappt', 'info')
+        return done
+      }
+    }
+    const r = await api('/api/delete', { method: 'POST', body: { index: libPlace(item), original: item } })
+    if (!libWriteOk(r)) return done
+    done++
+  }
+  return done
+}
+
 // A group: one entry opens right away, several are listed first
 function openLibGroup(g) {
   if (g.kind === 'local') return openLocalSheet(g.folder)
   if (g.kind === 'nas') return openNasSheet(g.folder)
   if (g.entries.length === 1) return openEntrySheet(g.entries[0].item)
   const entries = [...g.entries].sort((a, b) => a.title.localeCompare(b.title, 'de', { numeric: true }))
+  // Taking the whole group off: a subscribed artist's albums by ending the subscription, else every entry that can go
+  // here (a playlist's entries of the sync stay - they go in Spotify)
+  const items = entries.map((e) => e.item)
+  const isSyncItem = (it) => (it.source ?? 'manual') === 'spotify-sync'
+  const sub = (lib.subs?.artists ?? []).find((a) => a?.name && a.name === g.artist && items.some((it) => isSyncItem(it)))
+  const removable = items.filter((it) => !isSyncItem(it) || syncRemovable(it))
+  const kept = items.length - removable.length
+  const groupBtn = sub
+    ? `<button class="btn danger" data-unsub>Abo beenden</button>`
+    : removable.length > 1
+      ? `<button class="btn danger" data-delall>Alle entfernen</button>`
+      : ''
   openSheet(
     `<h2 translate="no">${esc(g.artist)}</h2><p class="help" style="margin:0">${esc(libSub(g))}${g.src === 'spotify-sync' ? ' – kommt vom Spotify-Sync, Abo und Bereich unter „Verwaltete Inhalte“.' : ''}</p>
      <div class="rows">${entries
        .map((e, i) => `<button class="entry lib-row" data-e="${i}"><span class="lbl"><b translate="no">${esc(e.title)}</b></span><span class="chev">${icon('chevron', 18)}</span></button>`)
        .join('')}</div>
-     <div class="btns"><button class="btn" data-close>Schließen</button></div>`,
+     <div class="btns">${groupBtn}<button class="btn" data-close>Schließen</button></div>`,
     (sheet, close) => {
       sheet.querySelector('[data-close]').onclick = close
+      sheet.querySelector('[data-unsub]')?.addEventListener('click', () => {
+        close()
+        const own = items.filter((it) => isSyncItem(it) && syncRemovable(it))
+        confirmSheet('Abo beenden', `„${g.artist}“ abbestellen? ${own.length === 1 ? 'Die Folge geht' : `Die ${own.length} Folgen gehen`} gleich von der Box.`, async () => {
+          const r = await api(`${API}/library/unsubscribe-artist`, { method: 'POST', body: { artistId: sub.id } })
+          if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+          await removeLibEntries(own, { subscriptionEnded: true })
+          toast(`Abo beendet: ${g.artist}`)
+          libReload()
+        })
+      })
+      sheet.querySelector('[data-delall]')?.addEventListener('click', () => {
+        close()
+        const n = removable.length
+        confirmSheet(
+          'Alle entfernen',
+          `${n === 1 ? 'Einen Eintrag' : `Alle ${n} Einträge`} von „${g.artist}“ aus der Bibliothek entfernen?${kept ? ` ${kept} aus einer Spotify-Playlist ${kept === 1 ? 'bleibt' : 'bleiben'} – ${kept === 1 ? 'der geht' : 'die gehen'} in Spotify.` : ''}`,
+          async () => {
+            const done = await removeLibEntries(removable)
+            if (done) toast(`${done} entfernt`)
+            libReload()
+          },
+        )
+      })
       // (back from an entry: the list where it was)
       if (g.scrollTop) sheet.scrollTop = g.scrollTop
       for (const b of sheet.querySelectorAll('[data-e]')) {
@@ -2647,9 +2723,14 @@ function openLibGroup(g) {
 }
 
 // Starts a sync run and says what happens; used after every change of the managed content
-async function fireSync() {
-  const r = await api(`${SYNC_API}/trigger?source=webapp`, { method: 'POST' })
+// (subs: after a change of the artists or albums managed here - those come also with Smart-Sync off, only the
+// playlists then stay as they are; "Jetzt abgleichen" on the Spotify page asks without it)
+async function fireSync(subs = true) {
+  const r = await api(`${SYNC_API}/trigger?source=webapp${subs ? '&subscriptions=1' : ''}`, { method: 'POST' })
   const b = r.body ?? {}
+  if (r.status === 202 && b.subscriptionsOnly) {
+    return `${b.status === 'scheduled' ? `In ${b.scheduledInSeconds ?? 60} s kommt es auf die Box.` : 'Es kommt jetzt auf die Box.'} Smart-Sync ist aus: Folgen, die später erscheinen, holt die Box nicht von selbst – dafür den Smart-Sync einschalten (Bibliothek › Spotify).`
+  }
   if (r.status === 202 && b.status === 'scheduled') return `Der Sync läuft in ${b.scheduledInSeconds ?? 60} s.`
   if (r.status === 202) return 'Der Sync läuft.'
   if (r.status === 409) return 'Ein Sync läuft gerade.'
@@ -2891,10 +2972,10 @@ function openEntrySheet(item, back = null) {
      <div class="field"><label for="e-cat">Kategorie</label>${catSelect('e-cat', item.category_override ?? (isSync ? '' : item.category === 'radio' ? 'other' : item.category), isSync)}</div>
      ${playOptions ? entryPlayFields(item) : ''}
      ${item.type === 'rss' ? offlineField(item) : ''}
-     ${isSync ? `<p class="help" style="margin:0">Entfernen geht über Bibliothek › Verwaltete Inhalte oder die Spotify-Playlist.</p>` : ''}
+     ${isSync && !syncRemovable(item) ? `<p class="help" style="margin:0">Kommt aus einer deiner Spotify-Playlists: Entfernen geht dort – in Spotify aus der Playlist nehmen, der nächste Sync nimmt es dann von der Box.</p>` : ''}
      ${wholeArtist ? `<div class="section-label" style="margin:0">Alben</div><div id="e-albums"><p class="help">Lade die Alben von Spotify …</p></div>` : ''}
      ${tidalArtist ? tidalRangeFields(item) : ''}
-     <div class="btns">${isSync ? '' : `<button class="btn danger" data-del>Löschen</button>`}<button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Speichern</button></div>`,
+     <div class="btns">${!isSync || syncRemovable(item) ? `<button class="btn danger" data-del>${isSync ? 'Entfernen' : 'Löschen'}</button>` : ''}<button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Speichern</button></div>`,
     (sheet, close) => {
       sheet.querySelector('[data-close]').onclick = back ? back.open : close
       sheet.querySelector('[data-back]')?.addEventListener('click', back?.open)
@@ -3007,12 +3088,17 @@ function openEntrySheet(item, back = null) {
       }
       sheet.querySelector('[data-del]')?.addEventListener('click', () => {
         close()
-        confirmSheet('Löschen', `„${item.title ?? item.artist ?? 'Eintrag'}“ aus der Bibliothek löschen?`, async () => {
-          const r = await api('/api/delete', { method: 'POST', body: { index: libPlace(item), original: item } })
-          if (!libWriteOk(r)) return
-          toast('Gelöscht')
-          libReload()
-        })
+        const name = item.title ?? item.artist ?? 'Eintrag'
+        confirmSheet(
+          isSync ? 'Entfernen' : 'Löschen',
+          isSync ? `„${name}“ von der Box entfernen? Es kommt auch beim nächsten Sync nicht wieder.` : `„${name}“ aus der Bibliothek löschen?`,
+          async () => {
+            const done = await removeLibEntries([item])
+            if (!done) return
+            toast(isSync ? 'Entfernt' : 'Gelöscht')
+            libReload()
+          },
+        )
       })
     },
   )
@@ -4039,7 +4125,11 @@ async function subscribeSpotifyArtist(a) {
       have: search.have.has(`artist:${a.id}`),
       haveText: 'Schon abonniert – Bereich und Kategorie änderst du unter „Verwaltete Inhalte“.',
       cat: search.cat,
-      text: 'Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.',
+      // (Smart-Sync off: they come all the same, see fireSync - but nothing that appears later)
+      text:
+        lib.sync && !lib.sync.enabled
+          ? 'Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.'
+          : 'Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.',
       okLabel: 'Abonnieren',
     },
     async (category) => {
@@ -5369,7 +5459,7 @@ function mountSpotify(root, page) {
     sync: async () => {
       // the result comes when the run ended: asked every 3 s for up to two minutes (a run takes a while)
       const before = spot.status?.state?.last_sync_end
-      toast(await fireSync())
+      toast(await fireSync(false))
       for (let i = 0; i < 40; i++) {
         await new Promise((r) => setTimeout(r, 3000))
         if (currentPage()?.id !== page.id) return
@@ -11490,7 +11580,7 @@ const CONTROLLERS = {
     sections: (page) =>
       page.sections.map((sec) => ({
         ...sec,
-        items: sec.items.map((it) => (it.key === 'syncOn' ? { ...it, help: 'Aus = gar kein Sync, auch nicht von Hand (Knopf, Telegram /resync). Die Inhalte auf der Box bleiben.' } : it)),
+        items: sec.items.map((it) => (it.key === 'syncOn' ? { ...it, help: 'Aus = kein Abgleich der Playlists, auch nicht von Hand (Knopf, Telegram /resync), und keine später erschienenen Folgen von selbst. Was du unter „Verwaltete Inhalte“ abonnierst oder hinzufügst, kommt trotzdem auf die Box. Die Inhalte auf der Box bleiben.' } : it)),
       })),
     byLabel: {
       async Speichern() {

@@ -3030,6 +3030,44 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
+   * POST /api/app/library/remove-synced  {albumId, artist?}
+   * An album of the Spotify sync taken off the box from the library ("Entfernen"): out of the albums added one by one,
+   * and left out of the artist subscriptions it may come from (those of that artist; none of that name: all of them -
+   * a left-out album that is not one of a subscription's changes nothing there). The app then deletes the entry itself
+   * (/api/delete), so it goes at once, also with Smart-Sync off - and no sync brings it back. Back again: the album's
+   * switch in the subscription (Verwaltete Inhalte) or adding it anew.
+   */
+  router.post('/library/remove-synced', requireSession, requireCsrf, async (req, res) => {
+    const body = (req.body as { albumId?: unknown; artist?: unknown } | undefined) ?? {}
+    const albumId = String(body.albumId ?? '').trim()
+    if (!/^[A-Za-z0-9]{22}$/.test(albumId)) {
+      res.status(400).json({ error: 'invalid albumId (expected 22-char Spotify id)' })
+      return
+    }
+    const artist = typeof body.artist === 'string' ? body.artist.trim() : ''
+    let pinned = false
+    let leftOut = 0
+    await deps.updateMupiboxConfig((cfg) => {
+      const ss = ((cfg.spotify_sync as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
+      const pins = Array.isArray(ss.explicit_albums) ? (ss.explicit_albums as Array<Record<string, unknown>>) : []
+      pinned = pins.some((a) => a?.id === albumId)
+      ss.explicit_albums = pins.filter((a) => a?.id !== albumId)
+      const subs = Array.isArray(ss.artists) ? (ss.artists as Array<Record<string, unknown>>) : []
+      const named = subs.filter((a) => artist && typeof a?.name === 'string' && a.name.trim() === artist)
+      leftOut = 0
+      for (const sub of named.length ? named : subs) {
+        if (!sub || typeof sub !== 'object') continue
+        const ex = new Set(Array.isArray(sub.exclude_album_ids) ? (sub.exclude_album_ids as unknown[]).filter((x): x is string => typeof x === 'string') : [])
+        ex.add(albumId)
+        sub.exclude_album_ids = [...ex]
+        leftOut++
+      }
+      cfg.spotify_sync = ss
+    })
+    res.json({ ok: true, pinned, leftOut })
+  })
+
+  /**
    * POST /api/app/library/artist-exclude  {artistId, albumId, excluded}
    * (Phase 17e) Toggle a single album of a subscribed artist on/off the
    * subscription's exclude list. Excluded albums are skipped on the next sync

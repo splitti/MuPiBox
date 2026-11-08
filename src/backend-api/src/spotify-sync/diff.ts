@@ -108,7 +108,9 @@ function fromFailedSource(entry: BoxLibraryEntry, failed: FailedSource[]): boole
 export function computeSyncDiff(
   syncItems: Map<string, SyncItem>,
   library: BoxLibraryEntry[],
-  opts: { noRemovals?: boolean; failedSources?: FailedSource[] } = {},
+  // keepPlaylistEntries: a run without the playlists (Smart-Sync off, see runSync) - an entry that came from a playlist
+  // was not looked for, and stays
+  opts: { noRemovals?: boolean; failedSources?: FailedSource[]; keepPlaylistEntries?: boolean } = {},
 ): SyncDiff {
   const additions: SyncItem[] = []
   const updates: SyncDiff['updates'] = []
@@ -163,6 +165,7 @@ export function computeSyncDiff(
     for (const entry of library) {
       if ((entry.source ?? 'manual') !== 'spotify-sync') continue
       if (matchedLibrary.has(entry)) continue
+      if (opts.keepPlaylistEntries && (entry.spotify_sync_playlists ?? []).length > 0) continue
       if (opts.failedSources?.length && fromFailedSource(entry, opts.failedSources)) continue
       removals.push(entry)
     }

@@ -21,6 +21,8 @@ let inflight: Promise<RunSyncResult> | null = null
 // we arm a single timer that fires one run when the cooldown elapses, so a
 // burst of WebApp edits still all land without waiting for the next poll.
 let trailingTimer: ReturnType<typeof setTimeout> | null = null
+// (the armed trailing run may run with Smart-Sync off - asked so by the app, see triggerManualSync)
+let trailingAllowWhenOff = false
 
 /**
  * Schedule the next sync after `delaySeconds`. Re-arms itself after each
@@ -90,41 +92,49 @@ function scheduleNext(delaySeconds: number, deps: RunSyncDeps): void {
 export async function triggerManualSync(
   source: Extract<SyncTrigger, 'webapp' | 'telegram'>,
   deps: RunSyncDeps,
+  // (the app after a change of the artists or albums it manages: also with Smart-Sync off - then a run of only those,
+  // see runSync. The bot's /resync and the timer stay off with it.)
+  opts: { subscriptions?: boolean } = {},
 ): Promise<
-  | { ok: true; status: 'queued'; estimatedSeconds: number }
-  | { ok: true; status: 'scheduled'; scheduledInSeconds: number }
+  | { ok: true; status: 'queued'; estimatedSeconds: number; subscriptionsOnly?: boolean }
+  | { ok: true; status: 'scheduled'; scheduledInSeconds: number; subscriptionsOnly?: boolean }
   | { ok: false; status: 'running' }
   | { ok: false; status: 'disabled' }
 > {
   const config = loadSpotifySyncConfig(deps.getMupiboxConfig())
-  if (!config.enabled) return { ok: false, status: 'disabled' }
+  const allowWhenOff = opts.subscriptions === true && source === 'webapp'
+  if (!config.enabled && !allowWhenOff) return { ok: false, status: 'disabled' }
+  const only = config.enabled ? {} : { subscriptionsOnly: true }
   const cooldownLeft = getManualThrottleRemaining(config.manual_throttle_seconds)
 
   if (inflight) {
     // A run is in flight, but it may have started *before* this edit's config
     // write — so it might not include the change. Arm a trailing run so the
     // edit still lands without waiting for the next 15-min poll.
-    armTrailingRun(source, deps, cooldownLeft)
+    armTrailingRun(source, deps, cooldownLeft, allowWhenOff)
     return { ok: false, status: 'running' }
   }
   if (cooldownLeft > 0) {
     // Throttled — don't drop the request; arm one trailing run for when the
     // cooldown ends. A burst of edits coalesces into a single run.
-    armTrailingRun(source, deps, cooldownLeft)
-    return { ok: true, status: 'scheduled', scheduledInSeconds: cooldownLeft }
+    armTrailingRun(source, deps, cooldownLeft, allowWhenOff)
+    return { ok: true, status: 'scheduled', scheduledInSeconds: cooldownLeft, ...only }
   }
   markManualTrigger()
   // An immediate run supersedes any pending trailing run.
+  let allow = allowWhenOff
   if (trailingTimer) {
     clearTimeout(trailingTimer)
     trailingTimer = null
+    allow = allow || trailingAllowWhenOff
+    trailingAllowWhenOff = false
   }
   // Fire and forget — caller polls /status. Estimate is a hand-tuned
   // ~3s typical run; not load-bearing for correctness, only for UX.
-  runOnce(source, deps).catch((err) => {
+  runOnce(source, deps, allow).catch((err) => {
     console.error(`${new Date().toLocaleString()}: [spotify-sync] manual run threw: ${(err as Error).message}`)
   })
-  return { ok: true, status: 'queued', estimatedSeconds: 3 }
+  return { ok: true, status: 'queued', estimatedSeconds: 3, ...only }
 }
 
 /**
@@ -133,7 +143,9 @@ export async function triggerManualSync(
  * When it fires it re-arms itself if a run is still in flight, so the edit
  * always gets a run that starts *after* it.
  */
-function armTrailingRun(source: SyncTrigger, deps: RunSyncDeps, delaySeconds: number): void {
+function armTrailingRun(source: SyncTrigger, deps: RunSyncDeps, delaySeconds: number, allowWhenOff = false): void {
+  // (one asked with allowWhenOff while another is armed: the armed one takes it on)
+  if (allowWhenOff) trailingAllowWhenOff = true
   if (trailingTimer) return
   const fire = (): void => {
     if (inflight) {
@@ -144,7 +156,9 @@ function armTrailingRun(source: SyncTrigger, deps: RunSyncDeps, delaySeconds: nu
     }
     trailingTimer = null
     markManualTrigger()
-    runOnce(source, deps).catch((err) => {
+    const allow = trailingAllowWhenOff
+    trailingAllowWhenOff = false
+    runOnce(source, deps, allow).catch((err) => {
       console.error(`${new Date().toLocaleString()}: [spotify-sync] trailing run threw: ${(err as Error).message}`)
     })
   }
@@ -177,9 +191,9 @@ function markManualTrigger(): void {
 }
 
 /** Internal: run sync, tracking inflight state for the running-guard. */
-async function runOnce(trigger: SyncTrigger, deps: RunSyncDeps): Promise<RunSyncResult> {
+async function runOnce(trigger: SyncTrigger, deps: RunSyncDeps, allowWhenOff = false): Promise<RunSyncResult> {
   if (inflight) return inflight
-  inflight = runSync(trigger, deps).finally(() => {
+  inflight = runSync(trigger, deps, { allowWhenOff }).finally(() => {
     inflight = null
   })
   return inflight

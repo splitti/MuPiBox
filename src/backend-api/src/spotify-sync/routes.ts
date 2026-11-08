@@ -62,7 +62,8 @@ export function createSpotifySyncRouter(deps: RunSyncDeps): Router {
   router.post('/trigger', localOrElternSession, async (req, res) => {
     const sourceRaw = typeof req.query.source === 'string' ? req.query.source : 'webapp'
     const source: 'webapp' | 'telegram' = sourceRaw === 'telegram' ? 'telegram' : 'webapp'
-    const result = await triggerManualSync(source, deps)
+    // (?subscriptions=1: after a change of the artists or albums the app manages - runs also with Smart-Sync off)
+    const result = await triggerManualSync(source, deps, { subscriptions: req.query.subscriptions === '1' })
     if (!result.ok) {
       const code = result.status === 'running' ? 409 : 400
       res.status(code).json(result)
