@@ -85,7 +85,7 @@ progress 1 "Download"
 # (up to four tries: curl's own --retry leaves out a connection cut in the middle, "partial file")
 GOT=0
 for TRY in 1 2 3 4; do
-	if curl -fsSL --retry 2 --retry-delay 3 -m 120 -o "$D/start_mupibox_update.sh" "${REPO_RAW}/update/start_mupibox_update.sh" && bash -n "$D/start_mupibox_update.sh"; then
+	if curl -fsSL --connect-timeout 20 -m 120 -o "$D/start_mupibox_update.sh" "${REPO_RAW}/update/start_mupibox_update.sh" && bash -n "$D/start_mupibox_update.sh"; then
 		GOT=1
 		break
 	fi

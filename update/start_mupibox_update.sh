@@ -92,7 +92,7 @@ update_busy_message() {
 fetch_retry() {
 	local i
 	for i in 1 2 3 4; do
-		if curl -fsSL --retry 2 --retry-delay 3 -m "$3" -o "$2" "$1"; then
+		if curl -fsSL --connect-timeout 20 -m "$3" -o "$2" "$1"; then
 			return 0
 		fi
 		rm -f "$2"
