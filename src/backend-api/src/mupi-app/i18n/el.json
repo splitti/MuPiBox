@@ -3144,5 +3144,14 @@
  "Vielleicht später": "Ίσως αργότερα",
  "Was genau gemeldet wird": "Τι ακριβώς αποστέλλεται",
  "Wir entwickeln MuPiBox gemeinsam mit der Community in unserer Freizeit und stellen das Projekt kostenlos zur Verfügung. Wenn dir MuPiBox gefällt, kannst du uns und die Weiterentwicklung mit einer freiwilligen Spende unterstützen. Ohne Spende bleibt alles uneingeschränkt nutzbar.": "Αναπτύσσουμε το MuPiBox μαζί με την κοινότητα στον ελεύθερο χρόνο μας και διαθέτουμε το έργο δωρεάν. Αν σου αρέσει το MuPiBox, μπορείς να στηρίξεις εμάς και την περαιτέρω ανάπτυξη με μια εθελοντική δωρεά. Χωρίς δωρεά όλα παραμένουν πλήρως διαθέσιμα.",
- "Zuletzt gemeldet:": "Τελευταία αποστολή:"
+ "Zuletzt gemeldet:": "Τελευταία αποστολή:",
+ "– kommt vom Spotify-Sync.": "– προέρχεται από το Spotify-Sync.",
+ "„{}“ abbestellen?": "Να καταργηθεί η συνδρομή στο «{}»;",
+ "wartet auf den Sync": "αναμένει τον συγχρονισμό",
+ "Abo · wartet auf den Sync · Spotify · Smart-Sync": "Συνδρομή · αναμένει τον συγχρονισμό · Spotify · Smart-Sync",
+ "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Όλα τα επεισόδια έρχονται στο κουτί, τα νέα αργότερα μόνα τους. Το εύρος μπορείς μετά να το περιορίσεις στη βιβλιοθήκη, στη σελίδα του καλλιτέχνη.",
+ "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Όλα τα επεισόδια έρχονται στο κουτί. Το Smart-Sync είναι ανενεργό: επεισόδια που βγαίνουν αργότερα έρχονται μόνα τους μόνο με το Smart-Sync (Βιβλιοθήκη › Spotify). Το εύρος μπορείς μετά να το περιορίσεις στη βιβλιοθήκη, στη σελίδα του καλλιτέχνη.",
+ "Auf der Box": "Στο κουτί",
+ "Noch keine Folgen auf der Box – sie kommen mit dem nächsten Sync.": "Δεν υπάρχουν ακόμα επεισόδια στο κουτί – έρχονται με τον επόμενο συγχρονισμό.",
+ "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Έχεις ήδη εγγραφεί – το εύρος το αλλάζεις στη βιβλιοθήκη, στη σελίδα του καλλιτέχνη."
 }

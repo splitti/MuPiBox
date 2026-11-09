@@ -3144,5 +3144,14 @@
  "Vielleicht später": "Może później",
  "Was genau gemeldet wird": "Co dokładnie jest wysyłane",
  "Wir entwickeln MuPiBox gemeinsam mit der Community in unserer Freizeit und stellen das Projekt kostenlos zur Verfügung. Wenn dir MuPiBox gefällt, kannst du uns und die Weiterentwicklung mit einer freiwilligen Spende unterstützen. Ohne Spende bleibt alles uneingeschränkt nutzbar.": "Rozwijamy MuPiBox razem ze społecznością w wolnym czasie i udostępniamy projekt bezpłatnie. Jeśli podoba ci się MuPiBox, możesz wesprzeć nas i dalszy rozwój dobrowolną darowizną. Bez darowizny wszystko pozostaje w pełni dostępne.",
- "Zuletzt gemeldet:": "Ostatnio wysłano:"
+ "Zuletzt gemeldet:": "Ostatnio wysłano:",
+ "– kommt vom Spotify-Sync.": "– pochodzi z synchronizacji Spotify.",
+ "„{}“ abbestellen?": "Zrezygnować z subskrypcji „{}”?",
+ "wartet auf den Sync": "czeka na synchronizację",
+ "Abo · wartet auf den Sync · Spotify · Smart-Sync": "Subskrypcja · czeka na synchronizację · Spotify · Smart-Sync",
+ "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Wszystkie odcinki trafią na Boxa, nowe później same. Zakres możesz potem zawęzić w bibliotece przy artyście.",
+ "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Wszystkie odcinki trafią na Boxa. Smart-Sync jest wyłączony: odcinki, które ukażą się później, przychodzą same tylko ze Smart-Sync (Biblioteka › Spotify). Zakres możesz potem zawęzić w bibliotece przy artyście.",
+ "Auf der Box": "Na Boxie",
+ "Noch keine Folgen auf der Box – sie kommen mit dem nächsten Sync.": "Na Boxie nie ma jeszcze odcinków – trafią tu przy następnej synchronizacji.",
+ "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Już subskrybowane – zakres zmienisz w bibliotece przy artyście."
 }

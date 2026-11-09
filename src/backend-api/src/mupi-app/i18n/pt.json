@@ -3144,5 +3144,14 @@
  "Vielleicht später": "Talvez mais tarde",
  "Was genau gemeldet wird": "O que é enviado exatamente",
  "Wir entwickeln MuPiBox gemeinsam mit der Community in unserer Freizeit und stellen das Projekt kostenlos zur Verfügung. Wenn dir MuPiBox gefällt, kannst du uns und die Weiterentwicklung mit einer freiwilligen Spende unterstützen. Ohne Spende bleibt alles uneingeschränkt nutzbar.": "Desenvolvemos o MuPiBox em conjunto com a comunidade no nosso tempo livre e disponibilizamos o projeto gratuitamente. Se gostas do MuPiBox, podes apoiar-nos a nós e ao desenvolvimento com um donativo voluntário. Sem donativo, tudo continua a poder ser usado sem restrições.",
- "Zuletzt gemeldet:": "Último envio:"
+ "Zuletzt gemeldet:": "Último envio:",
+ "– kommt vom Spotify-Sync.": "– vem da sincronização do Spotify.",
+ "„{}“ abbestellen?": "Cancelar a subscrição de «{}»?",
+ "wartet auf den Sync": "à espera da sincronização",
+ "Abo · wartet auf den Sync · Spotify · Smart-Sync": "Subscrição · à espera da sincronização · Spotify · Smart-Sync",
+ "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Todos os episódios chegam à caixa, os novos mais tarde sozinhos. Depois podes limitar o intervalo na biblioteca, na página do artista.",
+ "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Todos os episódios chegam à caixa. O Smart-Sync está desligado: os episódios que saírem mais tarde só chegam sozinhos com o Smart-Sync (Biblioteca › Spotify). Depois podes limitar o intervalo na biblioteca, na página do artista.",
+ "Auf der Box": "Na caixa",
+ "Noch keine Folgen auf der Box – sie kommen mit dem nächsten Sync.": "Ainda não há episódios na caixa – chegam com a próxima sincronização.",
+ "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Já subscrito – o intervalo alteras na biblioteca, na página do artista."
 }

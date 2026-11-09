@@ -3144,5 +3144,14 @@
  "Vielleicht später": "Forse più tardi",
  "Was genau gemeldet wird": "Cosa viene inviato esattamente",
  "Wir entwickeln MuPiBox gemeinsam mit der Community in unserer Freizeit und stellen das Projekt kostenlos zur Verfügung. Wenn dir MuPiBox gefällt, kannst du uns und die Weiterentwicklung mit einer freiwilligen Spende unterstützen. Ohne Spende bleibt alles uneingeschränkt nutzbar.": "Sviluppiamo MuPiBox insieme alla community nel nostro tempo libero e mettiamo il progetto a disposizione gratuitamente. Se MuPiBox ti piace, puoi sostenere noi e lo sviluppo futuro con una donazione volontaria. Anche senza donazione tutto resta utilizzabile senza limitazioni.",
- "Zuletzt gemeldet:": "Ultimo invio:"
+ "Zuletzt gemeldet:": "Ultimo invio:",
+ "– kommt vom Spotify-Sync.": "– proviene dalla sincronizzazione Spotify.",
+ "„{}“ abbestellen?": "Annullare l'iscrizione a «{}»?",
+ "wartet auf den Sync": "in attesa della sincronizzazione",
+ "Abo · wartet auf den Sync · Spotify · Smart-Sync": "Abbonamento · in attesa della sincronizzazione · Spotify · Smart-Sync",
+ "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Tutti gli episodi arrivano sul box, i nuovi più tardi da soli. L'intervallo lo puoi poi limitare nella libreria, nella pagina dell'artista.",
+ "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Tutti gli episodi arrivano sul box. Smart-Sync è spento: gli episodi che escono più tardi arrivano da soli solo con Smart-Sync (Libreria › Spotify). L'intervallo lo puoi poi limitare nella libreria, nella pagina dell'artista.",
+ "Auf der Box": "Sul box",
+ "Noch keine Folgen auf der Box – sie kommen mit dem nächsten Sync.": "Ancora nessun episodio sul box – arrivano con la prossima sincronizzazione.",
+ "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Già abbonato – l'intervallo lo cambi nella libreria, nella pagina dell'artista."
 }

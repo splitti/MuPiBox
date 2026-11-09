@@ -3144,5 +3144,14 @@
  "Vielleicht später": "Можливо, пізніше",
  "Was genau gemeldet wird": "Що саме надсилається",
  "Wir entwickeln MuPiBox gemeinsam mit der Community in unserer Freizeit und stellen das Projekt kostenlos zur Verfügung. Wenn dir MuPiBox gefällt, kannst du uns und die Weiterentwicklung mit einer freiwilligen Spende unterstützen. Ohne Spende bleibt alles uneingeschränkt nutzbar.": "Ми розвиваємо MuPiBox разом зі спільнотою у вільний час і надаємо проєкт безкоштовно. Якщо вам подобається MuPiBox, ви можете підтримати нас і подальший розвиток добровільною пожертвою. Без пожертви все залишається доступним без обмежень.",
- "Zuletzt gemeldet:": "Востаннє надіслано:"
+ "Zuletzt gemeldet:": "Востаннє надіслано:",
+ "– kommt vom Spotify-Sync.": "– походить від синхронізації Spotify.",
+ "„{}“ abbestellen?": "Скасувати підписку «{}»?",
+ "wartet auf den Sync": "очікує синхронізації",
+ "Abo · wartet auf den Sync · Spotify · Smart-Sync": "Підписка · очікує синхронізації · Spotify · Smart-Sync",
+ "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Усі епізоди потраплять на бокс, нові пізніше самі. Діапазон потім можна звузити в бібліотеці на сторінці виконавця.",
+ "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Усі епізоди потраплять на бокс. Smart-Sync вимкнено: епізоди, що вийдуть пізніше, приходять самі лише зі Smart-Sync (Бібліотека › Spotify). Діапазон потім можна звузити в бібліотеці на сторінці виконавця.",
+ "Auf der Box": "На боксі",
+ "Noch keine Folgen auf der Box – sie kommen mit dem nächsten Sync.": "На боксі ще немає епізодів – вони з’являться з наступною синхронізацією.",
+ "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Підписка вже є – діапазон можна змінити в бібліотеці на сторінці виконавця."
 }

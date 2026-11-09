@@ -3144,5 +3144,14 @@
  "Vielleicht später": "Peut-être plus tard",
  "Was genau gemeldet wird": "Ce qui est envoyé exactement",
  "Wir entwickeln MuPiBox gemeinsam mit der Community in unserer Freizeit und stellen das Projekt kostenlos zur Verfügung. Wenn dir MuPiBox gefällt, kannst du uns und die Weiterentwicklung mit einer freiwilligen Spende unterstützen. Ohne Spende bleibt alles uneingeschränkt nutzbar.": "Nous développons MuPiBox avec la communauté pendant notre temps libre et mettons le projet gratuitement à disposition. Si tu aimes MuPiBox, tu peux nous soutenir, ainsi que son développement, par un don volontaire. Sans don, tout reste utilisable sans restriction.",
- "Zuletzt gemeldet:": "Dernier envoi :"
+ "Zuletzt gemeldet:": "Dernier envoi :",
+ "– kommt vom Spotify-Sync.": "– vient de la synchro Spotify.",
+ "„{}“ abbestellen?": "Se désabonner de « {} » ?",
+ "wartet auf den Sync": "en attente de la synchro",
+ "Abo · wartet auf den Sync · Spotify · Smart-Sync": "Abonnement · en attente de la synchro · Spotify · Smart-Sync",
+ "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Tous les épisodes arrivent sur la Box, les nouveaux plus tard d'eux-mêmes. Tu peux ensuite limiter la plage dans la bibliothèque, sur la page de l'artiste.",
+ "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Tous les épisodes arrivent sur la Box. Smart-Sync est désactivé : les épisodes qui sortent plus tard n'arrivent d'eux-mêmes qu'avec Smart-Sync (Bibliothèque › Spotify). Tu peux ensuite limiter la plage dans la bibliothèque, sur la page de l'artiste.",
+ "Auf der Box": "Sur la Box",
+ "Noch keine Folgen auf der Box – sie kommen mit dem nächsten Sync.": "Pas encore d'épisodes sur la Box – ils arrivent avec la prochaine synchro.",
+ "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Déjà abonné – tu peux changer la plage dans la bibliothèque, sur la page de l'artiste."
 }

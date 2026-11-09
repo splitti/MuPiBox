@@ -3144,5 +3144,14 @@
  "Vielleicht später": "Может быть, позже",
  "Was genau gemeldet wird": "Что именно отправляется",
  "Wir entwickeln MuPiBox gemeinsam mit der Community in unserer Freizeit und stellen das Projekt kostenlos zur Verfügung. Wenn dir MuPiBox gefällt, kannst du uns und die Weiterentwicklung mit einer freiwilligen Spende unterstützen. Ohne Spende bleibt alles uneingeschränkt nutzbar.": "Мы развиваем MuPiBox вместе с сообществом в свободное время и предоставляем проект бесплатно. Если вам нравится MuPiBox, вы можете поддержать нас и дальнейшую разработку добровольным пожертвованием. Без пожертвования всё остаётся доступным без ограничений.",
- "Zuletzt gemeldet:": "Последняя отправка:"
+ "Zuletzt gemeldet:": "Последняя отправка:",
+ "– kommt vom Spotify-Sync.": "– берётся из синхронизации Spotify.",
+ "„{}“ abbestellen?": "Отписаться от «{}»?",
+ "wartet auf den Sync": "ожидает синхронизации",
+ "Abo · wartet auf den Sync · Spotify · Smart-Sync": "Подписка · ожидает синхронизации · Spotify · Smart-Sync",
+ "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Все эпизоды попадут на устройство, новые позже сами. Диапазон потом можно сузить в библиотеке на странице исполнителя.",
+ "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Все эпизоды попадут на устройство. Smart-Sync выключен: эпизоды, которые выйдут позже, приходят сами только со Smart-Sync (Библиотека › Spotify). Диапазон потом можно сузить в библиотеке на странице исполнителя.",
+ "Auf der Box": "На устройстве",
+ "Noch keine Folgen auf der Box – sie kommen mit dem nächsten Sync.": "На устройстве пока нет эпизодов – они появятся при следующей синхронизации.",
+ "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Подписка уже есть – диапазон можно изменить в библиотеке на странице исполнителя."
 }

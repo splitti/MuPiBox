@@ -3144,5 +3144,14 @@
  "Vielleicht später": "Kanskje senere",
  "Was genau gemeldet wird": "Nøyaktig hva som rapporteres",
  "Wir entwickeln MuPiBox gemeinsam mit der Community in unserer Freizeit und stellen das Projekt kostenlos zur Verfügung. Wenn dir MuPiBox gefällt, kannst du uns und die Weiterentwicklung mit einer freiwilligen Spende unterstützen. Ohne Spende bleibt alles uneingeschränkt nutzbar.": "Vi utvikler MuPiBox sammen med fellesskapet på fritiden og gjør prosjektet tilgjengelig gratis. Hvis du liker MuPiBox, kan du støtte oss og videreutviklingen med en frivillig donasjon. Uten donasjon kan alt fortsatt brukes uten begrensninger.",
- "Zuletzt gemeldet:": "Sist rapportert:"
+ "Zuletzt gemeldet:": "Sist rapportert:",
+ "– kommt vom Spotify-Sync.": "– kommer fra Spotify-synk.",
+ "„{}“ abbestellen?": "Si opp «{}»?",
+ "wartet auf den Sync": "venter på synk",
+ "Abo · wartet auf den Sync · Spotify · Smart-Sync": "Abonnement · venter på synk · Spotify · Smart-Sync",
+ "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Alle episoder kommer på boksen, nye senere av seg selv. Omfanget kan du deretter begrense i biblioteket hos artisten.",
+ "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Alle episoder kommer på boksen. Smart-Sync er av: episoder som kommer ut senere, kommer bare av seg selv med Smart-Sync (Bibliotek › Spotify). Omfanget kan du deretter begrense i biblioteket hos artisten.",
+ "Auf der Box": "På boksen",
+ "Noch keine Folgen auf der Box – sie kommen mit dem nächsten Sync.": "Ingen episoder på boksen ennå – de kommer med neste synk.",
+ "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Allerede abonnert – området endrer du i biblioteket hos artisten."
 }

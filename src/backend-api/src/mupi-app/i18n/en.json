@@ -3144,5 +3144,14 @@
  "Vielleicht später": "Maybe later",
  "Was genau gemeldet wird": "What exactly is reported",
  "Wir entwickeln MuPiBox gemeinsam mit der Community in unserer Freizeit und stellen das Projekt kostenlos zur Verfügung. Wenn dir MuPiBox gefällt, kannst du uns und die Weiterentwicklung mit einer freiwilligen Spende unterstützen. Ohne Spende bleibt alles uneingeschränkt nutzbar.": "We develop MuPiBox together with the community in our spare time and provide the project free of charge. If you like MuPiBox, you can support us and further development with a voluntary donation. Without a donation, everything remains fully usable.",
- "Zuletzt gemeldet:": "Last reported:"
+ "Zuletzt gemeldet:": "Last reported:",
+ "– kommt vom Spotify-Sync.": "– comes from Spotify sync.",
+ "„{}“ abbestellen?": "Unsubscribe from “{}”?",
+ "wartet auf den Sync": "waiting for sync",
+ "Abo · wartet auf den Sync · Spotify · Smart-Sync": "Subscription · waiting for sync · Spotify · Smart-Sync",
+ "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "All episodes come onto the box, new ones later by themselves. You can narrow the range afterwards in the library on the artist's page.",
+ "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "All episodes come onto the box. Smart Sync is off: episodes released later only arrive by themselves with Smart Sync (Library › Spotify). You can narrow the range afterwards in the library on the artist's page.",
+ "Auf der Box": "On the box",
+ "Noch keine Folgen auf der Box – sie kommen mit dem nächsten Sync.": "No episodes on the box yet – they come with the next sync.",
+ "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Already subscribed – you can change the range in the library on the artist's page."
 }

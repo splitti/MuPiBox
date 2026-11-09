@@ -3144,5 +3144,14 @@
  "Vielleicht später": "Quizá más tarde",
  "Was genau gemeldet wird": "Qué se envía exactamente",
  "Wir entwickeln MuPiBox gemeinsam mit der Community in unserer Freizeit und stellen das Projekt kostenlos zur Verfügung. Wenn dir MuPiBox gefällt, kannst du uns und die Weiterentwicklung mit einer freiwilligen Spende unterstützen. Ohne Spende bleibt alles uneingeschränkt nutzbar.": "Desarrollamos MuPiBox junto con la comunidad en nuestro tiempo libre y ofrecemos el proyecto de forma gratuita. Si te gusta MuPiBox, puedes apoyarnos a nosotros y al desarrollo futuro con una donación voluntaria. Sin donación, todo sigue siendo utilizable sin restricciones.",
- "Zuletzt gemeldet:": "Último envío:"
+ "Zuletzt gemeldet:": "Último envío:",
+ "– kommt vom Spotify-Sync.": "– viene del Spotify-Sync.",
+ "„{}“ abbestellen?": "¿Cancelar la suscripción a «{}»?",
+ "wartet auf den Sync": "esperando la sincronización",
+ "Abo · wartet auf den Sync · Spotify · Smart-Sync": "Suscripción · esperando la sincronización · Spotify · Smart-Sync",
+ "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Todos los episodios llegan a la caja, los nuevos más tarde solos. Después puedes acotar el rango en la biblioteca, en la página del artista.",
+ "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Todos los episodios llegan a la caja. Smart-Sync está desactivado: los episodios que salgan más tarde solo llegan solos con Smart-Sync (Biblioteca › Spotify). Después puedes acotar el rango en la biblioteca, en la página del artista.",
+ "Auf der Box": "En la caja",
+ "Noch keine Folgen auf der Box – sie kommen mit dem nächsten Sync.": "Todavía no hay episodios en la caja – llegarán con la próxima sincronización.",
+ "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Ya suscrito – el rango lo cambias en la biblioteca, en la página del artista."
 }

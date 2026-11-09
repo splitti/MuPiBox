@@ -3144,5 +3144,14 @@
  "Vielleicht später": "Belki sonra",
  "Was genau gemeldet wird": "Tam olarak neler gönderilir",
  "Wir entwickeln MuPiBox gemeinsam mit der Community in unserer Freizeit und stellen das Projekt kostenlos zur Verfügung. Wenn dir MuPiBox gefällt, kannst du uns und die Weiterentwicklung mit einer freiwilligen Spende unterstützen. Ohne Spende bleibt alles uneingeschränkt nutzbar.": "MuPiBox'ı toplulukla birlikte boş zamanımızda geliştiriyor ve projeyi ücretsiz sunuyoruz. MuPiBox'ı beğendiysen bizi ve geliştirmenin devamını gönüllü bir bağışla destekleyebilirsin. Bağış yapmasan da her şey sınırsız şekilde kullanılabilir kalır.",
- "Zuletzt gemeldet:": "Son gönderim:"
+ "Zuletzt gemeldet:": "Son gönderim:",
+ "– kommt vom Spotify-Sync.": "– Spotify Sync'ten gelir.",
+ "„{}“ abbestellen?": "„{}“ aboneliği sonlandırılsın mı?",
+ "wartet auf den Sync": "senkronizasyon bekleniyor",
+ "Abo · wartet auf den Sync · Spotify · Smart-Sync": "Abonelik · senkronizasyon bekleniyor · Spotify · Smart-Sync",
+ "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Tüm bölümler kutuya gelir, yeniler daha sonra kendiliğinden. Aralığı sonra kütüphanede sanatçının sayfasında daraltabilirsin.",
+ "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Tüm bölümler kutuya gelir. Smart-Sync kapalı: daha sonra çıkan bölümler yalnızca Smart-Sync ile kendiliğinden gelir (Kütüphane › Spotify). Aralığı sonra kütüphanede sanatçının sayfasında daraltabilirsin.",
+ "Auf der Box": "Kutuda",
+ "Noch keine Folgen auf der Box – sie kommen mit dem nächsten Sync.": "Kutuda henüz bölüm yok – bir sonraki senkronizasyonla gelecekler.",
+ "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Zaten abone olundu – aralığı kütüphanede sanatçının sayfasında değiştirebilirsin."
 }
