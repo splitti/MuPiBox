@@ -3157,5 +3157,8 @@
  "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "No episodes on the box. Whatever the range and the switches allow comes with the next sync.",
  "Aus dem Abo ausgeschlossen: {}. Kommt es nur über dieses Abo, nimmt der nächste Sync es von der Box.": "Left out of the subscription: {}. If it comes only through this subscription, the next sync takes it off the box.",
  "Bild von Spotify verwenden": "Use Spotify's picture",
- "Mit „Speichern“ zeigt die Box wieder das Bild von Spotify": "After “Save” the box shows Spotify's picture again"
+ "Mit „Speichern“ zeigt die Box wieder das Bild von Spotify": "After “Save” the box shows Spotify's picture again",
+ "Bild von TIDAL verwenden": "Use TIDAL's picture",
+ "Das Bild von TIDAL ließ sich nicht laden": "TIDAL's picture could not be loaded",
+ "Mit „Speichern“ zeigt die Box wieder das Bild von TIDAL": "After “Save” the box shows TIDAL's picture again"
 }

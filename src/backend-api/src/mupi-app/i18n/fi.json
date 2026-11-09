@@ -3157,5 +3157,8 @@
  "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "Boksissa ei ole jaksoja. Mitä väli ja kytkimet sallivat, tulee seuraavassa synkronoinnissa.",
  "Aus dem Abo ausgeschlossen: {}. Kommt es nur über dieses Abo, nimmt der nächste Sync es von der Box.": "Jätetty pois tilauksesta: {}. Jos se tulee vain tämän tilauksen kautta, seuraava synkronointi poistaa sen boksista.",
  "Bild von Spotify verwenden": "Käytä Spotifyn kuvaa",
- "Mit „Speichern“ zeigt die Box wieder das Bild von Spotify": "”Tallenna” jälkeen boksi näyttää taas Spotifyn kuvan"
+ "Mit „Speichern“ zeigt die Box wieder das Bild von Spotify": "”Tallenna” jälkeen boksi näyttää taas Spotifyn kuvan",
+ "Bild von TIDAL verwenden": "Käytä TIDALin kuvaa",
+ "Das Bild von TIDAL ließ sich nicht laden": "TIDALin kuvaa ei voitu ladata",
+ "Mit „Speichern“ zeigt die Box wieder das Bild von TIDAL": "”Tallenna” jälkeen boksi näyttää taas TIDALin kuvan"
 }

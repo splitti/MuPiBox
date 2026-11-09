@@ -3157,5 +3157,8 @@
  "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "Inga avsnitt på boxen. Det som intervallet och reglagen tillåter kommer med nästa synk.",
  "Aus dem Abo ausgeschlossen: {}. Kommt es nur über dieses Abo, nimmt der nächste Sync es von der Box.": "Utesluten ur prenumerationen: {}. Kommer den bara via den här prenumerationen tar nästa synk bort den från boxen.",
  "Bild von Spotify verwenden": "Använd bilden från Spotify",
- "Mit „Speichern“ zeigt die Box wieder das Bild von Spotify": "Med ”Spara” visar boxen bilden från Spotify igen"
+ "Mit „Speichern“ zeigt die Box wieder das Bild von Spotify": "Med ”Spara” visar boxen bilden från Spotify igen",
+ "Bild von TIDAL verwenden": "Använd bilden från TIDAL",
+ "Das Bild von TIDAL ließ sich nicht laden": "Bilden från TIDAL kunde inte laddas",
+ "Mit „Speichern“ zeigt die Box wieder das Bild von TIDAL": "Med ”Spara” visar boxen bilden från TIDAL igen"
 }

@@ -3157,5 +3157,8 @@
  "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "Nessun episodio sul box. Ciò che l'intervallo e gli interruttori consentono arriva con la prossima sincronizzazione.",
  "Aus dem Abo ausgeschlossen: {}. Kommt es nur über dieses Abo, nimmt der nächste Sync es von der Box.": "Escluso dall'abbonamento: {}. Se arriva solo tramite questo abbonamento, la prossima sincronizzazione lo toglie dal box.",
  "Bild von Spotify verwenden": "Usa l'immagine di Spotify",
- "Mit „Speichern“ zeigt die Box wieder das Bild von Spotify": "Con «Salva» il box mostra di nuovo l'immagine di Spotify"
+ "Mit „Speichern“ zeigt die Box wieder das Bild von Spotify": "Con «Salva» il box mostra di nuovo l'immagine di Spotify",
+ "Bild von TIDAL verwenden": "Usa l'immagine di TIDAL",
+ "Das Bild von TIDAL ließ sich nicht laden": "Impossibile caricare l'immagine di TIDAL",
+ "Mit „Speichern“ zeigt die Box wieder das Bild von TIDAL": "Con «Salva» il box mostra di nuovo l'immagine di TIDAL"
 }

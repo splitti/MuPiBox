@@ -3071,6 +3071,9 @@ function openEntrySheet(item, back = null) {
   // picture fields emptied)
   const fromSpotify = (u) => /^https:\/\/i\.scdn\.co\//.test(u) || u.startsWith('/api/spotify/cover')
   const spotifyPictureBack = item.type === 'spotify' && !!serviceCover(item) && [val('cover'), val('artistcover')].some((v) => v && !fromSpotify(String(v)))
+  // the same for TIDAL: its picture is kept in the entry itself (an own one replaced it) - asked from TIDAL again
+  const tidalKind = item.type === 'tidal' && ['album', 'playlist', 'artist'].includes(item.tidalKind) && item.id ? item.tidalKind : ''
+  const tidalPictureBack = !!tidalKind && [val('cover'), val('artistcover')].some((v) => v && !/^https:\/\/resources\.tidal\.com\//.test(String(v)))
   const folder = place ? String(item.artist ?? '').trim() : ''
   // (alone in its folder - as the app added playlists before, in one of their own name: a tile spares a tap)
   const aloneInFolder = !!folder && (lib.items ?? []).filter((it) => it && !it.isResume && it.category === item.category && String(it.artist ?? '').trim() === folder).length === 1
@@ -3092,6 +3095,7 @@ function openEntrySheet(item, back = null) {
        })
        .join('')}
      ${spotifyPictureBack ? `<div class="btns"><button type="button" class="btn" data-svc-pic>${icon('image', 18)}Bild von Spotify verwenden</button></div>` : ''}
+     ${tidalPictureBack ? `<div class="btns"><button type="button" class="btn" data-tidal-pic>${icon('image', 18)}Bild von TIDAL verwenden</button></div>` : ''}
      <div class="field"><label for="e-cat">Kategorie</label>${catSelect('e-cat', item.category_override ?? (isSync ? '' : item.category === 'radio' ? 'other' : item.category), isSync)}</div>
      ${playOptions ? entryPlayFields(item) : ''}
      ${item.type === 'rss' ? offlineField(item) : ''}
@@ -3114,6 +3118,22 @@ function openEntrySheet(item, back = null) {
         }
         e.currentTarget.disabled = true
         toast('Mit „Speichern“ zeigt die Box wieder das Bild von Spotify')
+      })
+      // (TIDAL's picture asked again and put into the cover field, the artist's field emptied - saved with "Speichern")
+      const tidalBtn = sheet.querySelector('[data-tidal-pic]')
+      tidalBtn?.addEventListener('click', async () => {
+        tidalBtn.disabled = true
+        const r = await api(`${API}/tidal/item/${tidalKind}/${encodeURIComponent(item.id)}`)
+        const picture = r.ok && typeof r.body?.cover === 'string' && /^https:\/\//.test(r.body.cover) ? r.body.cover : ''
+        if (!picture) {
+          tidalBtn.disabled = false
+          return toast(r.status === 409 ? 'TIDAL ist ausgeschaltet – einschalten unter Einstellungen › Dienste › TIDAL' : 'Das Bild von TIDAL ließ sich nicht laden', 'info')
+        }
+        const cover = sheet.querySelector('#e-cover')
+        const artistcover = sheet.querySelector('#e-artistcover')
+        if (cover) cover.value = picture
+        if (artistcover) artistcover.value = ''
+        toast('Mit „Speichern“ zeigt die Box wieder das Bild von TIDAL')
       })
       if (item.type === 'rss') loadOfflineStatus(item.id, sheet.querySelector('#e-offline-status'))
       if (playOptions && item.type === 'rss') {
