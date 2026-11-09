@@ -3777,8 +3777,9 @@ async function loadSubAlbums(a, box) {
         return toast('Das hat nicht geklappt', 'info')
       }
       const sync = await fireSync()
-      // (left out: the sync takes it off - its words say what comes onto the box, so they fit only the way back)
-      toast(cb.checked ? `Wieder dabei: ${al.name}. ${sync}` : `Ausgeschlossen: ${al.name}. Der nächste Sync nimmt es von der Box.`)
+      // (left out of this subscription: the sync takes it off unless a playlist or the search added it too - the sync's
+      // words say what comes onto the box, so they fit only the way back)
+      toast(cb.checked ? `Wieder dabei: ${al.name}. ${sync}` : `Aus dem Abo ausgeschlossen: ${al.name}. Kommt es nur über dieses Abo, nimmt der nächste Sync es von der Box.`)
       libChanged()
     }
   }

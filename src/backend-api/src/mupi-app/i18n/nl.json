@@ -3151,9 +3151,9 @@
  "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Alle afleveringen komen op de box. Smart-Sync staat uit: afleveringen die later verschijnen, komen alleen vanzelf met Smart-Sync (Bibliotheek › Spotify). Het bereik kun je daarna beperken in de bibliotheek bij de artiest.",
  "Auf der Box": "Op de box",
  "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Al geabonneerd – het bereik wijzig je in de bibliotheek bij de artiest.",
- "Ausgeschlossen: {}. Der nächste Sync nimmt es von der Box.": "Uitgesloten: {}. De volgende sync haalt het van de box.",
  "Wieder dabei: {}. {}": "Weer erbij: {}. {}",
  "Abo · noch keine Folgen · Spotify · Smart-Sync": "Abonnement · nog geen afleveringen · Spotify · Smart-Sync",
  "noch keine Folgen": "nog geen afleveringen",
- "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "Geen afleveringen op de box. Wat het bereik en de schakelaars toelaten, komt met de volgende sync."
+ "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "Geen afleveringen op de box. Wat het bereik en de schakelaars toelaten, komt met de volgende sync.",
+ "Aus dem Abo ausgeschlossen: {}. Kommt es nur über dieses Abo, nimmt der nächste Sync es von der Box.": "Uitgesloten van het abonnement: {}. Komt het alleen via dit abonnement, dan haalt de volgende sync het van de box."
 }

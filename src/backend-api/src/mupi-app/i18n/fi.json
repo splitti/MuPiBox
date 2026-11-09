@@ -3151,9 +3151,9 @@
  "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Kaikki jaksot tulevat laatikkoon. Smart-Sync on pois päältä: myöhemmin ilmestyvät jaksot tulevat itsestään vain Smart-Syncin kanssa (Kirjasto › Spotify). Laajuutta voit rajata sen jälkeen kirjastossa artistin kohdalla.",
  "Auf der Box": "Laatikossa",
  "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Jo tilattu – alueen voit muuttaa kirjastossa artistin kohdalla.",
- "Ausgeschlossen: {}. Der nächste Sync nimmt es von der Box.": "Jätetty pois: {}. Seuraava synkronointi poistaa sen boksista.",
  "Wieder dabei: {}. {}": "Taas mukana: {}. {}",
  "Abo · noch keine Folgen · Spotify · Smart-Sync": "Tilaus · ei vielä jaksoja · Spotify · Smart-Sync",
  "noch keine Folgen": "ei vielä jaksoja",
- "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "Boksissa ei ole jaksoja. Mitä väli ja kytkimet sallivat, tulee seuraavassa synkronoinnissa."
+ "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "Boksissa ei ole jaksoja. Mitä väli ja kytkimet sallivat, tulee seuraavassa synkronoinnissa.",
+ "Aus dem Abo ausgeschlossen: {}. Kommt es nur über dieses Abo, nimmt der nächste Sync es von der Box.": "Jätetty pois tilauksesta: {}. Jos se tulee vain tämän tilauksen kautta, seuraava synkronointi poistaa sen boksista."
 }

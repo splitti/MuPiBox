@@ -3151,9 +3151,9 @@
  "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Všechny díly se dostanou na box. Smart-Sync je vypnutý: díly, které vyjdou později, přicházejí samy jen se Smart-Sync (Knihovna › Spotify). Rozsah můžete poté omezit v knihovně u interpreta.",
  "Auf der Box": "Na Boxu",
  "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Už odebíráte – rozsah změníte v knihovně u interpreta.",
- "Ausgeschlossen: {}. Der nächste Sync nimmt es von der Box.": "Vyloučeno: {}. Příští synchronizace ho z boxu odebere.",
  "Wieder dabei: {}. {}": "Znovu zahrnuto: {}. {}",
  "Abo · noch keine Folgen · Spotify · Smart-Sync": "Odběr · zatím žádné díly · Spotify · Smart-Sync",
  "noch keine Folgen": "zatím žádné díly",
- "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "Na boxu nejsou žádné díly. Co rozsah a přepínače dovolí, přinese příští synchronizace."
+ "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "Na boxu nejsou žádné díly. Co rozsah a přepínače dovolí, přinese příští synchronizace.",
+ "Aus dem Abo ausgeschlossen: {}. Kommt es nur über dieses Abo, nimmt der nächste Sync es von der Box.": "Vyloučeno z odběru: {}. Pokud přichází jen přes tento odběr, příští synchronizace ho z boxu odebere."
 }

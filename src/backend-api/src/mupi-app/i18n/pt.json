@@ -3151,9 +3151,9 @@
  "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Todos os episódios chegam à caixa. O Smart-Sync está desligado: os episódios que saírem mais tarde só chegam sozinhos com o Smart-Sync (Biblioteca › Spotify). Depois podes limitar o intervalo na biblioteca, na página do artista.",
  "Auf der Box": "Na caixa",
  "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Já subscrito – o intervalo alteras na biblioteca, na página do artista.",
- "Ausgeschlossen: {}. Der nächste Sync nimmt es von der Box.": "Excluído: {}. A próxima sincronização retira-o da caixa.",
  "Wieder dabei: {}. {}": "De novo incluído: {}. {}",
  "Abo · noch keine Folgen · Spotify · Smart-Sync": "Subscrição · ainda sem episódios · Spotify · Smart-Sync",
  "noch keine Folgen": "ainda sem episódios",
- "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "Não há episódios na caixa. O que o intervalo e os interruptores permitirem chega com a próxima sincronização."
+ "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "Não há episódios na caixa. O que o intervalo e os interruptores permitirem chega com a próxima sincronização.",
+ "Aus dem Abo ausgeschlossen: {}. Kommt es nur über dieses Abo, nimmt der nächste Sync es von der Box.": "Excluído da subscrição: {}. Se só vier por esta subscrição, a próxima sincronização retira-o da caixa."
 }

@@ -3151,9 +3151,9 @@
  "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Alla avsnitt kommer på boxen. Smart-Sync är av: avsnitt som kommer ut senare kommer bara av sig själva med Smart-Sync (Bibliotek › Spotify). Omfånget kan du sedan begränsa i biblioteket hos artisten.",
  "Auf der Box": "På boxen",
  "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Redan prenumererat – intervallet ändrar du i biblioteket hos artisten.",
- "Ausgeschlossen: {}. Der nächste Sync nimmt es von der Box.": "Utesluten: {}. Nästa synk tar bort den från boxen.",
  "Wieder dabei: {}. {}": "Med igen: {}. {}",
  "Abo · noch keine Folgen · Spotify · Smart-Sync": "Prenumeration · inga avsnitt än · Spotify · Smart-Sync",
  "noch keine Folgen": "inga avsnitt än",
- "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "Inga avsnitt på boxen. Det som intervallet och reglagen tillåter kommer med nästa synk."
+ "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "Inga avsnitt på boxen. Det som intervallet och reglagen tillåter kommer med nästa synk.",
+ "Aus dem Abo ausgeschlossen: {}. Kommt es nur über dieses Abo, nimmt der nächste Sync es von der Box.": "Utesluten ur prenumerationen: {}. Kommer den bara via den här prenumerationen tar nästa synk bort den från boxen."
 }

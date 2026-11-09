@@ -3151,9 +3151,9 @@
  "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Tüm bölümler kutuya gelir. Smart-Sync kapalı: daha sonra çıkan bölümler yalnızca Smart-Sync ile kendiliğinden gelir (Kütüphane › Spotify). Aralığı sonra kütüphanede sanatçının sayfasında daraltabilirsin.",
  "Auf der Box": "Kutuda",
  "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Zaten abone olundu – aralığı kütüphanede sanatçının sayfasında değiştirebilirsin.",
- "Ausgeschlossen: {}. Der nächste Sync nimmt es von der Box.": "Hariç tutuldu: {}. Bir sonraki eşitleme onu kutudan kaldırır.",
  "Wieder dabei: {}. {}": "Yeniden dahil: {}. {}",
  "Abo · noch keine Folgen · Spotify · Smart-Sync": "Abonelik · henüz bölüm yok · Spotify · Smart-Sync",
  "noch keine Folgen": "henüz bölüm yok",
- "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "Kutuda bölüm yok. Aralığın ve anahtarların izin verdiği, bir sonraki eşitlemeyle gelir."
+ "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "Kutuda bölüm yok. Aralığın ve anahtarların izin verdiği, bir sonraki eşitlemeyle gelir.",
+ "Aus dem Abo ausgeschlossen: {}. Kommt es nur über dieses Abo, nimmt der nächste Sync es von der Box.": "Abonelikten hariç tutuldu: {}. Yalnızca bu abonelikle geliyorsa bir sonraki eşitleme onu kutudan kaldırır."
 }

@@ -3151,9 +3151,9 @@
  "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "All episodes come onto the box. Smart Sync is off: episodes released later only arrive by themselves with Smart Sync (Library › Spotify). You can narrow the range afterwards in the library on the artist's page.",
  "Auf der Box": "On the box",
  "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Already subscribed – you can change the range in the library on the artist's page.",
- "Ausgeschlossen: {}. Der nächste Sync nimmt es von der Box.": "Left out: {}. The next sync takes it off the box.",
  "Wieder dabei: {}. {}": "Back in: {}. {}",
  "Abo · noch keine Folgen · Spotify · Smart-Sync": "Subscription · no episodes yet · Spotify · Smart-Sync",
  "noch keine Folgen": "no episodes yet",
- "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "No episodes on the box. Whatever the range and the switches allow comes with the next sync."
+ "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "No episodes on the box. Whatever the range and the switches allow comes with the next sync.",
+ "Aus dem Abo ausgeschlossen: {}. Kommt es nur über dieses Abo, nimmt der nächste Sync es von der Box.": "Left out of the subscription: {}. If it comes only through this subscription, the next sync takes it off the box."
 }

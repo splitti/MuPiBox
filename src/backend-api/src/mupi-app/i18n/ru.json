@@ -3151,9 +3151,9 @@
  "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Все эпизоды попадут на устройство. Smart-Sync выключен: эпизоды, которые выйдут позже, приходят сами только со Smart-Sync (Библиотека › Spotify). Диапазон потом можно сузить в библиотеке на странице исполнителя.",
  "Auf der Box": "На устройстве",
  "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Подписка уже есть – диапазон можно изменить в библиотеке на странице исполнителя.",
- "Ausgeschlossen: {}. Der nächste Sync nimmt es von der Box.": "Исключено: {}. Следующая синхронизация удалит его с бокса.",
  "Wieder dabei: {}. {}": "Снова включено: {}. {}",
  "Abo · noch keine Folgen · Spotify · Smart-Sync": "Подписка · пока нет эпизодов · Spotify · Smart-Sync",
  "noch keine Folgen": "пока нет эпизодов",
- "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "На боксе нет эпизодов. То, что разрешают диапазон и переключатели, придёт со следующей синхронизацией."
+ "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "На боксе нет эпизодов. То, что разрешают диапазон и переключатели, придёт со следующей синхронизацией.",
+ "Aus dem Abo ausgeschlossen: {}. Kommt es nur über dieses Abo, nimmt der nächste Sync es von der Box.": "Исключено из подписки: {}. Если оно приходит только через эту подписку, следующая синхронизация удалит его с бокса."
 }
