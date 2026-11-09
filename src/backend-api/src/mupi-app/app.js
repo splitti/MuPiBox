@@ -2649,9 +2649,51 @@ function syncRemovable(item) {
 
 // The albums a subscription brought onto the box (the sync marks them with the artist's id; one of before without it:
 // by the name)
+const subOwns = (a, it) => (it.artistid ? it.artistid === a.id : !!a.name && it.artist === a.name)
 function subEntries(a) {
-  return (lib.items ?? []).filter(
-    (it) => it && !it.isResume && (it.source ?? 'manual') === 'spotify-sync' && (it.artistid ? it.artistid === a.id : !!a.name && it.artist === a.name),
+  return (lib.items ?? []).filter((it) => it && !it.isResume && (it.source ?? 'manual') === 'spotify-sync' && subOwns(a, it))
+}
+const subSummary = (a) =>
+  `${subRange(a)} · ${catLabel(a.category === 'radio' ? 'other' : a.category || 'audiobook')}${a.exclude_album_ids?.length ? ` · ${a.exclude_album_ids.length} ausgeschlossen` : ''}`
+
+// after a change of a subscription's rule in the library: the sync brings it, the library is read again
+async function libSubDone(text) {
+  const sync = await fireSync()
+  toast(`${text} ${sync}`)
+  libReload()
+}
+
+// Ends a subscription and takes its albums off at once: they are found in the whole library (not only in the group or
+// the search shown) - those of a playlist and those added one by one from the search stay
+function endSubscription(a) {
+  const explicit = new Set((lib.subs?.explicit_albums ?? []).map((x) => x?.id).filter(Boolean))
+  const own = subEntries(a).filter((it) => syncRemovable(it) && !explicit.has(it.id))
+  const name = a.name || a.id
+  confirmSheet('Abo beenden', own.length ? `„${name}“ abbestellen? Seine Folgen (${own.length}) gehen gleich von der Box.` : `„${name}“ abbestellen?`, async () => {
+    const r = await api(`${API}/library/unsubscribe-artist`, { method: 'POST', body: { artistId: a.id } })
+    if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+    await removeLibEntries(own, { subscriptionEnded: true })
+    toast(`Abo beendet: ${name}`)
+    libReload()
+  })
+}
+
+// One of several subscriptions in a group (see openLibGroup): its rule and its end, with the way back to the group
+function openLibSubSheet(a, back) {
+  openSheet(
+    `<button class="sheet-back" data-back>${icon('back', 18)}<span translate="no">${esc(back.title)}</span></button>
+     <h2 translate="no">${esc(a.name || a.id)}</h2><p class="help" style="margin:0">${esc(subSummary(a))}</p>
+     ${subControlsHtml(a)}
+     <div class="btns"><button class="btn danger" data-unsub>Abo beenden</button><button class="btn" data-close>Schließen</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      sheet.querySelector('[data-back]').onclick = () => back.open()
+      mountSubControls(sheet, a, close, libSubDone)
+      sheet.querySelector('[data-unsub]').onclick = () => {
+        close()
+        endSubscription(a)
+      }
+    },
   )
 }
 
@@ -2694,24 +2736,29 @@ function openLibGroup(g) {
   // here (a playlist's entries of the sync stay - they go in Spotify)
   const items = entries.map((e) => e.item)
   const isSyncItem = (it) => (it.source ?? 'manual') === 'spotify-sync'
-  // (the subscription the group's albums came from: its rule is changed here, above its albums)
-  const sub =
-    g.sub ??
-    (lib.subs?.artists ?? []).find((a) => a?.id && items.some((it) => isSyncItem(it) && (it.artistid ? it.artistid === a.id : !!a.name && it.artist === a.name)))
-  if (!sub && entries.length === 1) return openEntrySheet(entries[0].item)
+  // (the subscriptions the group's albums came from: one - its rule is changed here, above its albums; several - an
+  // artist field renamed to the same folder name: each is offered on its own, none is guessed)
+  const subsHere = g.sub ? [g.sub] : (lib.subs?.artists ?? []).filter((a) => a?.id && items.some((it) => isSyncItem(it) && subOwns(a, it)))
+  const sub = subsHere.length === 1 ? subsHere[0] : null
+  if (!subsHere.length && entries.length === 1) return openEntrySheet(entries[0].item)
   const removable = items.filter((it) => !isSyncItem(it) || syncRemovable(it))
   const kept = items.length - removable.length
   const groupBtn = sub
     ? `<button class="btn danger" data-unsub>Abo beenden</button>`
-    : removable.length > 1
+    : !subsHere.length && removable.length > 1
       ? `<button class="btn danger" data-delall>Alle entfernen</button>`
       : ''
   const subBlock = sub
     ? `<div class="section-label" style="margin:0">Abo</div>
-       <p class="help" style="margin:0">${esc(`${subRange(sub)} · ${catLabel(sub.category === 'radio' ? 'other' : sub.category || 'audiobook')}${sub.exclude_album_ids?.length ? ` · ${sub.exclude_album_ids.length} ausgeschlossen` : ''}`)}</p>
+       <p class="help" style="margin:0">${esc(subSummary(sub))}</p>
        ${subControlsHtml(sub)}
        <div class="section-label" style="margin:0">Auf der Box</div>`
-    : ''
+    : subsHere.length
+      ? `<div class="section-label" style="margin:0">Abos</div><div class="rows">${subsHere
+          .map((a, i) => `<button class="entry lib-row" data-subi="${i}"><span class="lbl"><b translate="no">${esc(a.name || a.id)}</b><small>${esc(subSummary(a))}</small></span><span class="chev">${icon('chevron', 18)}</span></button>`)
+          .join('')}</div>
+         <div class="section-label" style="margin:0">Auf der Box</div>`
+      : ''
   openSheet(
     `<h2 translate="no">${esc(g.artist)}</h2><p class="help" style="margin:0">${esc(libSub(g))}${g.src === 'spotify-sync' && !sub ? ' – kommt vom Spotify-Sync.' : ''}</p>
      ${subBlock}
@@ -2725,24 +2772,14 @@ function openLibGroup(g) {
      <div class="btns">${groupBtn}<button class="btn" data-close>Schließen</button></div>`,
     (sheet, close) => {
       sheet.querySelector('[data-close]').onclick = close
-      if (sub) {
-        mountSubControls(sheet, sub, close, async (text) => {
-          const sync = await fireSync()
-          toast(`${text} ${sync}`)
-          libReload()
-        })
-      }
+      if (sub) mountSubControls(sheet, sub, close, libSubDone)
       sheet.querySelector('[data-unsub]')?.addEventListener('click', () => {
         close()
-        const own = items.filter((it) => isSyncItem(it) && syncRemovable(it))
-        confirmSheet('Abo beenden', own.length ? `„${g.artist}“ abbestellen? Seine Folgen (${own.length}) gehen gleich von der Box.` : `„${g.artist}“ abbestellen?`, async () => {
-          const r = await api(`${API}/library/unsubscribe-artist`, { method: 'POST', body: { artistId: sub.id } })
-          if (!r.ok) return toast('Das hat nicht geklappt', 'info')
-          await removeLibEntries(own, { subscriptionEnded: true })
-          toast(`Abo beendet: ${g.artist}`)
-          libReload()
-        })
+        endSubscription(sub)
       })
+      for (const b of sheet.querySelectorAll('[data-subi]')) {
+        b.onclick = () => openLibSubSheet(subsHere[Number(b.dataset.subi)], { title: g.artist, open: () => openLibGroup(g) })
+      }
       sheet.querySelector('[data-delall]')?.addEventListener('click', () => {
         close()
         const n = removable.length
