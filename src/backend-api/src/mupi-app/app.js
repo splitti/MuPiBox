@@ -2045,13 +2045,28 @@ function serviceCover(it) {
 }
 // (no cover of its own and none from the service - a radio station, a local entry: the artist's cover, if one is set)
 const coverOf = (it) => ownCover(it.cover_override ?? it.cover ?? (serviceCover(it) || it.artistcover_override || it.artistcover || ''))
-// A picture of the box's own cover folder (Bibliothek › Cover, saved as http://<box name>/cover/<file>): through the
-// app's own address - a phone does not know the box's name (MuPiBox), the box's display does. Only a name without a
-// dot (the box's) or the address the app is opened with; a picture of another server stays as it is.
+// A picture of the box's own cover folder (Bibliothek › Cover, saved as http://<box name>/cover/<file>, see covers.ts):
+// through the app's own address - a phone does not know the box's name (MuPiBox), the box's display does. Only the
+// box's names: the one it has (/api/network, also with .local), the default one (a cover chosen before a new name
+// keeps it) and the address the app is opened with - a picture of another server ("nas") stays as it is.
+const boxHosts = new Set(['mupibox', 'mupibox.local', location.hostname.toLowerCase()])
+let boxHostsAsked = null
+function loadBoxHosts() {
+  boxHostsAsked ??= api('/api/network')
+    .then((r) => {
+      const host = String(r.body?.host ?? '').trim().toLowerCase()
+      if (host) {
+        boxHosts.add(host)
+        boxHosts.add(`${host}.local`)
+      }
+    })
+    .catch(() => undefined)
+  return boxHostsAsked
+}
 function ownCover(url) {
   const m = /^https?:\/\/([^/:?#]+)(?::(?:80|443))?\/cover\/([^/?#]+)$/i.exec(String(url ?? ''))
   if (!m) return url
-  return !m[1].includes('.') || m[1] === location.hostname ? `/cover/${m[2]}` : url
+  return boxHosts.has(m[1].toLowerCase()) ? `/cover/${m[2]}` : url
 }
 
 // Spotify entries that only name an artist are not playable on their own (the box looks their albums up itself)
@@ -2086,7 +2101,8 @@ async function loadHear() {
   // (whether TIDAL is on: its entries only then - see playable)
   await loadServices().catch(() => undefined)
   const [data, nas, ...local] = await Promise.all([
-    api('/api/data'),
+    // (the box's names first: its own pictures go through the app's address, see ownCover)
+    loadBoxHosts().then(() => api('/api/data')),
     api('/api/nas/artists?expand=1'),
     ...['audiobook', 'music', 'other'].map((c) => api(`/api/library/artists?category=${c}`)),
   ])
@@ -2127,7 +2143,7 @@ function topTiles() {
       }
       for (const [artist, list] of groups) {
         if (list.length === 1) tiles.push(entryTile(list[0]))
-        else tiles.push({ kind: 'artist', title: artist, sub: `${list.length} Einträge`, cover: list[0].artistcover ?? coverOf(list[0]), badge: badgeOf(list[0]), folder: true, path: artist })
+        else tiles.push({ kind: 'artist', title: artist, sub: `${list.length} Einträge`, cover: ownCover(list[0].artistcover ?? coverOf(list[0])), badge: badgeOf(list[0]), folder: true, path: artist })
       }
     }
     for (const c of cat === 'all' ? ['audiobook', 'music', 'other'] : [cat]) {
@@ -2247,7 +2263,7 @@ function drawHear() {
   grid.innerHTML = hearTiles
     .map(
       (t, i) => `<button class="cover-tile" data-i="${i}" aria-label="${esc(`${t.folder ? 'Öffnen' : 'Abspielen'}: ${t.title}`)}">
-        <span class="cover-img">${t.cover ? `<img src="${esc(t.cover)}" alt="" loading="lazy">` : ''}<span class="cover-ph">${icon(t.folder ? 'folder' : 'music', 28)}</span>
+        <span class="cover-img">${t.cover ? `<img src="${esc(ownCover(t.cover))}" alt="" loading="lazy">` : ''}<span class="cover-ph">${icon(t.folder ? 'folder' : 'music', 28)}</span>
           ${t.badge ? `<span class="cover-badge">${esc(t.badge)}</span>` : ''}${t.folder ? `<span class="cover-folder">${icon('folder', 14)}</span>` : ''}</span>
         <b translate="no">${esc(t.title)}</b>${t.sub ? `<small${t.subIsName ? ' translate="no"' : ''}>${esc(t.sub)}</small>` : ''}</button>`,
     )
@@ -2437,7 +2453,8 @@ const lib = { items: null, local: {}, nas: [], cat: 'all', src: 'all', q: '', sy
 
 async function loadLib() {
   const [data, sync, nas, subs, profiles, covers, ...local] = await Promise.all([
-    api('/api/data'),
+    // (the box's names first: its own pictures go through the app's address, see ownCover)
+    loadBoxHosts().then(() => api('/api/data')),
     api(`${SYNC_API}/status`),
     api('/api/nas/artists'),
     api(`${API}/library/subscriptions`),
