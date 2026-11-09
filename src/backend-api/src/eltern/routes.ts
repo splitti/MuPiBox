@@ -61,6 +61,7 @@ import { legacyAdminOn, registerLegacyAdminRoutes } from './legacy-admin'
 import { registerServicesRoutes } from './services'
 import { registerTidalRoutes } from './tidal'
 import { registerSystemRoutes } from './system'
+import { markNoticeShown, noticeState, requestReportNow, setNoticeSwitches, setStatisticsConsent } from './telemetry'
 import { registerAdminRoutes } from './admin'
 import { bootDrive } from './boot-drive'
 import { registerNetworkRoutes, renewDhcp } from './network'
@@ -484,6 +485,56 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       Object.assign(mb, set)
       cfg.mupibox = mb
     })
+    res.json({ ok: true })
+  })
+
+  /**
+   * The project's monthly notices (a donation, the voluntary statistics) and the statistics' consent - what the admin
+   * interface had (admin.php, statistics_reminder.php), now in the app: the admin interface is off by default.
+   * GET /notices: the switches, which notice is due this month, the consent's state (no token, no serial).
+   */
+  router.get('/notices', requireSession, (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store')
+    res.json(noticeState(deps.getMupiboxConfig()))
+  })
+  // POST /notices/shown {kind}: shown - not again this month (kept in the configuration, the same for every device)
+  router.post('/notices/shown', requireSession, requireCsrf, async (req, res) => {
+    const kind = (req.body as { kind?: unknown } | undefined)?.kind
+    if (kind !== 'donation' && kind !== 'statistics') {
+      res.status(400).json({ error: 'kind must be donation or statistics' })
+      return
+    }
+    await markNoticeShown(deps, kind)
+    res.json({ ok: true })
+  })
+  // POST /notices/settings {donationPopup?, statisticsPopup?}: the notices on or off (never the consent itself)
+  router.post('/notices/settings', requireSession, requireCsrf, async (req, res) => {
+    const body = (req.body ?? {}) as { donationPopup?: unknown; statisticsPopup?: unknown }
+    for (const key of ['donationPopup', 'statisticsPopup'] as const) {
+      if (body[key] !== undefined && typeof body[key] !== 'boolean') {
+        res.status(400).json({ error: `${key} must be true or false` })
+        return
+      }
+    }
+    await setNoticeSwitches(deps, { donationPopup: body.donationPopup as boolean | undefined, statisticsPopup: body.statisticsPopup as boolean | undefined })
+    res.json(noticeState(deps.getMupiboxConfig()))
+  })
+  // POST /statistics {enabled}: the voluntary consent given or withdrawn
+  router.post('/statistics', requireSession, requireCsrf, async (req, res) => {
+    const enabled = (req.body as { enabled?: unknown } | undefined)?.enabled
+    if (typeof enabled !== 'boolean') {
+      res.status(400).json({ error: 'enabled must be true or false' })
+      return
+    }
+    const r = await setStatisticsConsent(deps, enabled)
+    res.json({ ...noticeState(deps.getMupiboxConfig()), ...(r.error ? { error: r.error } : {}) })
+  })
+  // POST /statistics/send: the report now ("Jetzt melden"; only with a current consent)
+  router.post('/statistics/send', requireSession, requireCsrf, async (_req, res) => {
+    if (!(await requestReportNow(deps))) {
+      res.status(409).json({ error: 'statistics are off' })
+      return
+    }
     res.json({ ok: true })
   })
 

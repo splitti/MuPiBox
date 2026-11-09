@@ -1140,6 +1140,8 @@ function mountStart(root) {
   loadStatus(root)
   loadVolumeCap(root)
   loadNotices(root)
+  // (the project's monthly notices: a moment after the start page is there, while it still is)
+  setTimeout(() => root.isConnected && showProjectNotices(), 1500)
   every(5000, () => loadNow(root))
   every(30000, () => loadStatus(root))
   $('#q-plus', root).onclick = async () => {
@@ -9786,10 +9788,11 @@ function newsText(html) {
 
 
 async function loadAbout() {
-  const [info, version, bs] = await Promise.all([api(`${API}/system`), api(`${API}/version`), api(`${API}/bootscreen`)])
+  const [info, version, bs, notices] = await Promise.all([api(`${API}/system`), api(`${API}/version`), api(`${API}/bootscreen`), api(`${API}/notices`)])
   sys.info = info.ok ? info.body : null
   sys.version = version.body?.version ?? ''
   sys.bs = bs.ok ? bs.body : null
+  sys.notices = notices.ok ? notices.body : null
   api(`${API}/news`).then((r) => {
     sys.news = r.body?.text ?? ''
     const box = $('#ab-news')
@@ -9824,11 +9827,147 @@ function aboutTop() {
       <div class="btns"><button class="btn primary" id="ab-summary">${icon('copy', 18)}Für Discord kopieren</button></div>
       <p class="help">Wenn etwas klemmt und nach mehr gefragt wird: das Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand und den Protokollen der Box.</p>
       <div class="btns"><a class="btn" href="${API}/support-info" download>${icon('save', 18)}Support-Infos herunterladen</a></div></section>`,
+    ...projectCards(),
     `<section class="card wide"><div class="hist-head"><h2>Verlauf</h2><div class="pills small" id="ab-range">${[1, 6, 24].map((h) => `<button aria-selected="${sys.range === h}" data-h="${h}">${h} h</button>`).join('')}</div></div>
       <div class="hist-grid" id="ab-charts"><div class="loading"><p>Lade …</p></div></div>
       <p class="help" style="margin:0"><span id="ab-since"></span> Einmal pro Minute gemessen, nur im Arbeitsspeicher der Box – nach einem Neustart beginnt der Verlauf neu.</p></section>`,
     `<section class="card wide"><h2>Neuigkeiten</h2><pre class="news" id="ab-news">${esc(sys.news ? newsText(sys.news) : tr('Lade …'))}</pre></section>`,
   ]
+}
+
+/* The project: the voluntary statistics and the donation (what the admin interface had - admin.php, classic-notices.js -
+   in the app, since the admin interface is off by default). Both notices at most once a month and each can be switched
+   off; the consent to the statistics is its own switch and off until it is given. */
+const STAT_ERRORS = {
+  'Statistics server unavailable': 'Der Statistik-Server war nicht erreichbar. Die Box versucht es später noch einmal.',
+  'Deletion request unsuccessful': 'Die Löschanfrage kam nicht durch. Die Box versucht es später noch einmal.',
+  'Consent not valid for this device': 'Die Einwilligung stammte von einer anderen Box (wiederhergestellte Sicherung) und wurde zurückgesetzt.',
+  'Raspberry Pi serial unavailable': 'Die Seriennummer des Raspberry Pi ließ sich nicht lesen.',
+  'Raspberry Pi serial unavailable for deletion': 'Die Seriennummer des Raspberry Pi ließ sich nicht lesen.',
+}
+function projectCards() {
+  const n = sys.notices
+  if (!n) return []
+  const st = n.statistics ?? {}
+  const sw = (id, label, help, on) =>
+    `<div class="row"><span class="lbl"><b>${esc(tr(label))}</b>${help ? `<small>${esc(tr(help))}</small>` : ''}</span><label class="switch"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} aria-label="${esc(tr(label))}"><span></span></label></div>`
+  const when = st.lastReport ? new Date(st.lastReport) : null
+  const lines = [
+    when && Number.isFinite(when.getTime()) ? `<p class="help" style="margin:0">${esc(tr('Zuletzt gemeldet:'))} <span translate="no">${esc(when.toLocaleDateString(LOCALE))}</span></p>` : '',
+    st.pendingDelete ? `<p class="help" style="margin:0">${esc(tr('Die Löschung der bisherigen Angaben wird beim nächsten Kontakt mit dem Server angefragt.'))}</p>` : '',
+    st.lastError ? `<div class="note warn">${icon('info', 18)}<span>${esc(tr(STAT_ERRORS[st.lastError] ?? 'Die Statistik meldet einen Fehler. Die Box versucht es später noch einmal.'))}</span></div>` : '',
+  ].join('')
+  return [
+    `<section class="card" id="ab-stat"><div class="card-head"><h2>Freiwillige Statistik</h2><span class="chip ${st.enabled ? 'ok' : ''}">${st.enabled ? 'an' : 'aus'}</span></div>
+      <p class="help">Hilf mit, MuPiBox weiterzuentwickeln: Mit deiner Einwilligung meldet die Box einmal im Monat technische Angaben zu Version und Hardware. Es werden keine abgespielten Inhalte, keine Konten und keine Nutzungszeiten übertragen. Im Standard aus, jederzeit widerrufbar.</p>
+      <details class="more"><summary>Was genau gemeldet wird</summary><p class="help">MuPiBox-Version, Modell und Seriennummer des Raspberry Pi, Betriebssystem und Debian-Version, Auflösung des Displays, Art der Soundkarte, MuPiHAT bzw. HiFiBerry und ob ein Controller oder eine Webcam angeschlossen ist – verschlüsselt an stat.mupibox.de. Aus der Seriennummer entsteht nur eine monatlich wechselnde, pseudonyme Kennung; die Seriennummer selbst speichert der Server nicht. Die IP-Adresse der Verbindung wird technisch verarbeitet. Einträge einzelner Boxen werden 45 Tage nach Monatsende gelöscht, danach bleiben nur zusammengezählte Monatswerte. Beim Ausschalten der Statistik bittet die Box den Server, ihre Einträge zu löschen.</p></details>
+      ${sw('ab-stat-on', 'Technische Statistik senden', 'Ich willige freiwillig ein, die oben beschriebenen technischen Angaben zu senden.', st.enabled)}
+      ${lines}
+      <div class="btns"><a class="btn" href="${esc(st.privacyUrl ?? 'https://stat.mupibox.de/datenschutz/')}" target="_blank" rel="noopener noreferrer">${icon('lock', 18)}Datenschutzhinweise</a>${st.enabled ? `<button class="btn" id="ab-stat-send">${icon('up', 18)}Jetzt melden</button>` : ''}</div></section>`,
+    `<section class="card" id="ab-support"><h2>MuPiBox unterstützen</h2>
+      <p class="help">Wir entwickeln MuPiBox gemeinsam mit der Community in unserer Freizeit und stellen das Projekt kostenlos zur Verfügung. Wenn dir MuPiBox gefällt, kannst du uns und die Weiterentwicklung mit einer freiwilligen Spende unterstützen. Ohne Spende bleibt alles uneingeschränkt nutzbar.</p>
+      <div class="btns"><a class="btn primary" href="${esc(n.donation?.url ?? 'https://mupibox.de/spenden/')}" target="_blank" rel="noopener noreferrer">${icon('link', 18)}Projekt unterstützen</a></div>
+      ${sw('ab-pop-donation', 'Monatlicher Spendenhinweis', 'Höchstens einmal im Monat beim Öffnen der App.', n.donation?.popup !== false)}
+      ${sw('ab-pop-stat', 'Monatlicher Statistikhinweis', 'Nur solange die Statistik aus ist, höchstens einmal im Monat.', st.popup !== false)}</section>`,
+  ]
+}
+
+function mountProject(root, page) {
+  const again = async (r) => {
+    if (r?.ok && r.body?.statistics) sys.notices = r.body
+    else {
+      const n = await api(`${API}/notices`)
+      if (n.ok) sys.notices = n.body
+    }
+    if (currentPage()?.id === page.id) renderPage(page, false)
+  }
+  $('#ab-stat-on', root)?.addEventListener('change', async (e) => {
+    const on = e.target.checked
+    const r = await api(`${API}/statistics`, { method: 'POST', body: { enabled: on } })
+    if (!r.ok) {
+      e.target.checked = !on
+      return toast('Das hat nicht geklappt', 'info')
+    }
+    if (r.body?.error === 'serial_unavailable') toast('Die Seriennummer des Raspberry Pi ließ sich nicht lesen – die Statistik bleibt aus', 'info')
+    else toast(on ? 'Danke! Die Box meldet sich gleich' : 'Statistik aus – die bisherigen Angaben werden gelöscht', 'ok')
+    again(r)
+  })
+  $('#ab-stat-send', root)?.addEventListener('click', async () => {
+    const r = await api(`${API}/statistics/send`, { method: 'POST', body: {} })
+    toast(r.ok ? 'Die Box meldet sich gleich' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+    setTimeout(() => again(), 10_000)
+  })
+  const popupSwitch = (id, body) => {
+    $(id, root)?.addEventListener('change', async (e) => {
+      const r = await api(`${API}/notices/settings`, { method: 'POST', body: body(e.target.checked) })
+      if (!r.ok) {
+        e.target.checked = !e.target.checked
+        return toast('Das hat nicht geklappt', 'info')
+      }
+      toast('Gespeichert')
+      if (r.body?.statistics) sys.notices = r.body
+    })
+  }
+  popupSwitch('#ab-pop-donation', (on) => ({ donationPopup: on }))
+  popupSwitch('#ab-pop-stat', (on) => ({ statisticsPopup: on }))
+}
+
+// The monthly notices, on the start page: at most one each month (the month is kept on the box - not again on another
+// phone), and only once per visit of the app. The donation first, then the statistics.
+let projectNoticesAsked = false
+async function showProjectNotices() {
+  // (the app on the box's own display: no notice there - a child might see it, and a link would open on the box)
+  if (projectNoticesAsked || location.hostname === 'localhost' || location.hostname === '127.0.0.1') return
+  projectNoticesAsked = true
+  const r = await api(`${API}/notices`)
+  if (!r.ok) return
+  const queue = []
+  if (r.body?.donation?.due) {
+    queue.push({
+      kind: 'donation',
+      title: 'MuPiBox ist ein Community-Projekt',
+      text: 'Wir entwickeln MuPiBox gemeinsam mit der Community in unserer Freizeit und stellen das Projekt kostenlos zur Verfügung. Wenn dir MuPiBox gefällt, kannst du uns und die Weiterentwicklung mit einer freiwilligen Spende unterstützen. Ohne Spende bleibt alles uneingeschränkt nutzbar.',
+      ok: 'Projekt unterstützen',
+      no: 'Vielleicht später',
+      go: () => window.open(r.body.donation.url, '_blank', 'noopener,noreferrer'),
+    })
+  }
+  if (r.body?.statistics?.due) {
+    queue.push({
+      kind: 'statistics',
+      title: 'Hilf mit freiwilliger Statistik',
+      text: 'Mit deiner Einwilligung helfen rein technische Angaben zu Version und Hardware bei der Weiterentwicklung. Abgespielte Inhalte und Nutzungszeiten werden nicht erfasst. Die Statistik ist im Standard aus und jederzeit widerrufbar.',
+      ok: 'Statistik-Einstellungen',
+      no: 'Nicht jetzt',
+      go: () => {
+        go('ueber')
+        setTimeout(() => $('#ab-stat')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 400)
+      },
+    })
+  }
+  const next = () => {
+    const n = queue.shift()
+    if (!n) return
+    // (another sheet open - the parents already do something: no notice over it, it comes on another visit)
+    if (!$('#sheet').hidden) return
+    api(`${API}/notices/shown`, { method: 'POST', body: { kind: n.kind } })
+    let chosen = false
+    openSheet(
+      `<h2>${esc(tr(n.title))}</h2><p class="help" style="margin:0">${esc(tr(n.text))}</p>
+       <div class="btns"><button class="btn" data-close>${esc(tr(n.no))}</button><button class="btn primary" data-ok>${esc(tr(n.ok))}</button></div>`,
+      (sheet, close) => {
+        sheet.querySelector('[data-close]').onclick = close
+        sheet.querySelector('[data-ok]').onclick = () => {
+          chosen = true
+          close()
+          n.go()
+        }
+      },
+      // (after the donation the statistics' notice; after "Statistik-Einstellungen" nothing more)
+      () => setTimeout(() => !chosen && next(), 300),
+    )
+  }
+  next()
 }
 
 // CPU, RAM and temperature over the last hours (the admin interface's rrd graphs): /system-history, a minute apart
@@ -9900,7 +10039,8 @@ function lineChart(rows, k, { title, unit, min, max, color, digits = 0, fmt, gap
     <small>${esc(`Zwischen ${fmt(low, digits)} und ${fmt(high, digits)} ${unit}`)}</small></div>`
 }
 
-function mountAbout(root) {
+function mountAbout(root, page) {
+  mountProject(root, page)
   drawSystemHistory(root)
   every(60_000, () => drawSystemHistory(root))
   $('#ab-range', root).onclick = (e) => {

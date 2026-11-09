@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { createHmac } from 'node:crypto'
-import { CONSENT_VERSION, ERASE_URL, REPORT_URL, consentBelongsToDevice, primaryAudioDevice, reportDue, runStatisticsOnce } from './eltern/telemetry'
+import { CONSENT_VERSION, ERASE_URL, REPORT_URL, consentBelongsToDevice, markNoticeShown, noticeState, primaryAudioDevice, reportDue, requestReportNow, runStatisticsOnce, setNoticeSwitches, setStatisticsConsent } from './eltern/telemetry'
 
 const token = 'a'.repeat(64)
 const device_proof = createHmac('sha256', token).update('0000000012345678').digest('hex')
@@ -93,4 +93,96 @@ test('background reports stay monthly even when software version changes', () =>
   assert.equal(reportDue(state, '5.0.1', now), false)
   assert.equal(reportDue(state, '5.0.1', now, true), true)
   assert.equal(reportDue({ ...state, last_report: '2026-10-31T23:00:00Z' }, '5.0.1', now), true)
+})
+
+// ---------- the parents' app: consent and monthly notices ----------
+function appHarness(initial: Record<string, unknown> = {}) {
+  const cfg: Record<string, unknown> = { mupibox: { version: '5.0.15' }, ...initial }
+  let runs = 0
+  const deps = { getMupiboxConfig: () => cfg, updateMupiboxConfig: async (mutate: (data: Record<string, unknown>) => void) => { mutate(cfg) } }
+  return { cfg, deps, run: () => { runs++ }, runs: () => runs }
+}
+const stat = (cfg: Record<string, unknown>) => cfg.installationStatistics as Record<string, unknown>
+
+test('app: both monthly notices are due on a fresh box, and not again in the month they were shown', async () => {
+  const { cfg, deps } = appHarness()
+  const now = new Date('2026-11-09T10:00:00Z')
+  let s = noticeState(cfg, now)
+  assert.equal(s.donation.due, true)
+  assert.equal(s.statistics.due, true)
+  assert.equal(s.statistics.enabled, false)
+  await markNoticeShown(deps, 'donation', now)
+  await markNoticeShown(deps, 'statistics', now)
+  s = noticeState(cfg, now)
+  assert.equal(s.donation.due, false)
+  assert.equal(s.statistics.due, false)
+  // (the next month: due again)
+  s = noticeState(cfg, new Date('2026-12-01T00:00:01Z'))
+  assert.equal(s.donation.due, true)
+  assert.equal(s.statistics.due, true)
+})
+
+test('app: switched-off notices are never due and switching them never touches the consent', async () => {
+  const { cfg, deps } = appHarness({ installationStatistics: { enabled: true, token, device_proof, consent_version: CONSENT_VERSION } })
+  await setNoticeSwitches(deps, { donationPopup: false, statisticsPopup: false })
+  const s = noticeState(cfg)
+  assert.equal(s.donation.due, false)
+  assert.equal(s.statistics.due, false)
+  assert.equal(s.statistics.enabled, true)
+  assert.equal(stat(cfg).token, token)
+})
+
+test('app: the statistics notice is not due while the consent is on', () => {
+  const s = noticeState({ installationStatistics: { enabled: true, token, device_proof, consent_version: CONSENT_VERSION } })
+  assert.equal(s.statistics.due, false)
+})
+
+test('app: consent on binds a new token to the serial and asks for a report; the state shows no token', async () => {
+  const { cfg, deps, run, runs } = appHarness()
+  const r = await setStatisticsConsent(deps, true, { serial: () => '0000000012345678', run })
+  assert.deepEqual(r, { enabled: true })
+  const st = stat(cfg)
+  assert.match(String(st.token), /^[a-f0-9]{64}$/)
+  assert.equal(st.consent_version, CONSENT_VERSION)
+  assert.equal(st.send_now, true)
+  assert.equal(consentBelongsToDevice(st, '0000000012345678'), true)
+  assert.equal(runs(), 1)
+  assert.equal(JSON.stringify(noticeState(cfg)).includes(String(st.token)), false)
+  // (on again: the same token stays)
+  await setStatisticsConsent(deps, true, { serial: () => '0000000012345678', run })
+  assert.equal(stat(cfg).token, st.token)
+})
+
+test('app: consent off queues the old token for deletion, without a serial no consent', async () => {
+  const { cfg, deps, run } = appHarness({ installationStatistics: { enabled: true, token, device_proof, consent_version: CONSENT_VERSION } })
+  await setStatisticsConsent(deps, false, { serial: () => '0000000012345678', run, now: new Date('2026-11-09T10:00:00Z') })
+  const st = stat(cfg)
+  assert.equal(st.enabled, false)
+  assert.equal(st.token, '')
+  assert.deepEqual(st.pending_delete_tokens, [token])
+  assert.equal(st.last_reminder_month, '2026-11')
+  assert.equal(noticeState(cfg).statistics.pendingDelete, true)
+  const none = appHarness()
+  const r = await setStatisticsConsent(none.deps, true, { serial: () => null, run: none.run })
+  assert.deepEqual(r, { enabled: false, error: 'serial_unavailable' })
+  assert.equal(stat(none.cfg).enabled, false)
+})
+
+test('app: a consent restored from another Pi is renewed with a new token, the old one is not queued', async () => {
+  const { cfg, deps, run } = appHarness({ installationStatistics: { enabled: true, token, device_proof, consent_version: CONSENT_VERSION } })
+  await setStatisticsConsent(deps, true, { serial: () => 'ffffffff87654321', run })
+  const st = stat(cfg)
+  assert.notEqual(st.token, token)
+  assert.deepEqual(st.pending_delete_tokens, [])
+  assert.equal(consentBelongsToDevice(st, 'ffffffff87654321'), true)
+})
+
+test('app: report now only with a current consent', async () => {
+  const off = appHarness()
+  assert.equal(await requestReportNow(off.deps, off.run), false)
+  assert.equal(off.runs(), 0)
+  const on = appHarness({ installationStatistics: { enabled: true, token, device_proof, consent_version: CONSENT_VERSION } })
+  assert.equal(await requestReportNow(on.deps, on.run), true)
+  assert.equal(stat(on.cfg).send_now, true)
+  assert.equal(on.runs(), 1)
 })

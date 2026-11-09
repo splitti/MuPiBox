@@ -1,6 +1,6 @@
 // Voluntary Classic installation statistics, compatible with the NG statistics server.
 // Nothing is collected or transmitted without an explicit, current consent.
-import { createHmac, timingSafeEqual } from 'node:crypto'
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -243,8 +243,144 @@ export async function runStatisticsOnce(deps: Deps): Promise<void> {
     inFlight = false
   }
 }
+let liveDeps: Deps | null = null
+/** A report or a deletion right now (after the consent changed in the app), with the deps of the running server. */
+export function runStatisticsNow(): void {
+  if (liveDeps) void runStatisticsOnce(liveDeps)
+}
+
 export function startInstallationStatistics(deps: Deps): void {
+  liveDeps = deps
   const tick = () => void runStatisticsOnce(deps)
   setTimeout(tick, 30_000).unref()
   setInterval(tick, 5 * 60_000).unref()
+}
+
+// ---------- the parents' app: the consent and the monthly notices (as the admin interface: admin.php, statistics_reminder.php) ----------
+
+export const DONATION_URL = 'https://mupibox.de/spenden/'
+export const PRIVACY_URL = 'https://stat.mupibox.de/datenschutz/'
+type Notices = { donation_popup_enabled?: boolean; statistics_popup_enabled?: boolean; last_donation_month?: string }
+type ConfigDeps = {
+  getMupiboxConfig: () => unknown
+  updateMupiboxConfig: (mutate: (cfg: Record<string, unknown>) => void) => Promise<void>
+}
+const utcMonth = (now: Date): string => now.toISOString().slice(0, 7)
+const noticesOf = (cfg?: Config): Notices => {
+  const n = (cfg as { adminNotices?: unknown } | undefined)?.adminNotices
+  return n && typeof n === 'object' ? (n as Notices) : {}
+}
+const consentActive = (state: State): boolean => state.enabled === true && state.consent_version === CONSENT_VERSION
+
+export interface NoticeState {
+  donation: { popup: boolean; due: boolean; url: string }
+  statistics: { popup: boolean; due: boolean; enabled: boolean; lastReport: string; lastError: string; pendingDelete: boolean; privacyUrl: string }
+}
+/** What the app shows: the switches, whether a monthly notice is due, the state of the consent (no token, no serial). */
+export function noticeState(cfg: unknown, now = new Date()): NoticeState {
+  const config = cfg as Config | undefined
+  const notices = noticesOf(config)
+  const state = statState(config)
+  const month = utcMonth(now)
+  const donationPopup = notices.donation_popup_enabled !== false
+  const statisticsPopup = notices.statistics_popup_enabled !== false
+  const active = consentActive(state)
+  return {
+    donation: { popup: donationPopup, due: donationPopup && notices.last_donation_month !== month, url: DONATION_URL },
+    statistics: {
+      popup: statisticsPopup,
+      due: statisticsPopup && !active && state.last_reminder_month !== month,
+      enabled: active,
+      lastReport: typeof state.last_report === 'string' ? state.last_report : '',
+      lastError: typeof state.last_error === 'string' ? state.last_error : '',
+      pendingDelete: (state.pending_delete_tokens ?? []).some(validToken),
+      privacyUrl: PRIVACY_URL,
+    },
+  }
+}
+
+/** A monthly notice was shown: not again this month (on any device - the month is kept in the box's configuration). */
+export async function markNoticeShown(deps: ConfigDeps, kind: 'donation' | 'statistics', now = new Date()): Promise<void> {
+  const month = utcMonth(now)
+  await deps.updateMupiboxConfig((cfg) => {
+    const c = cfg as Config
+    const notices = { ...noticesOf(c) }
+    if (kind === 'donation') {
+      if (notices.donation_popup_enabled === false) return
+      cfg.adminNotices = { ...notices, last_donation_month: month }
+    } else {
+      const state = statState(c)
+      if (notices.statistics_popup_enabled === false || consentActive(state)) return
+      c.installationStatistics = { ...state, last_reminder_month: month }
+    }
+  })
+}
+
+/** The two switches of the monthly notices; they never change the consent itself. */
+export async function setNoticeSwitches(deps: ConfigDeps, set: { donationPopup?: boolean; statisticsPopup?: boolean }): Promise<void> {
+  await deps.updateMupiboxConfig((cfg) => {
+    const notices = { ...noticesOf(cfg as Config) }
+    if (set.donationPopup !== undefined) notices.donation_popup_enabled = set.donationPopup
+    if (set.statisticsPopup !== undefined) notices.statistics_popup_enabled = set.statisticsPopup
+    cfg.adminNotices = notices
+  })
+}
+
+/**
+ * The consent switched on or off (admin.php "classic_stat_save"): on - a new random token bound to this Pi's serial (a
+ * configuration restored on another Pi never carries it over); off - the token goes to the deletion list, the server is
+ * asked to remove what it has. Then the report or the deletion runs at once.
+ */
+export async function setStatisticsConsent(
+  deps: ConfigDeps,
+  enabled: boolean,
+  options: { serial?: () => string | null; now?: Date; run?: () => void } = {},
+): Promise<{ enabled: boolean; error?: 'serial_unavailable' }> {
+  const serial = (options.serial ?? piSerial)()
+  const month = utcMonth(options.now ?? new Date())
+  let result: { enabled: boolean; error?: 'serial_unavailable' } = { enabled }
+  await deps.updateMupiboxConfig((cfg) => {
+    const c = cfg as Config
+    const stat: State = { ...statState(c) }
+    const oldToken = stat.token ?? ''
+    const pending = (stat.pending_delete_tokens ?? []).filter(validToken)
+    const currentValid = consentActive(stat) && validToken(oldToken) && consentBelongsToDevice(stat, serial)
+    let on = enabled
+    if (!on || !currentValid) {
+      // (a consent given before is withdrawn or renewed: what the server has of it is deleted)
+      if (currentValid && !pending.includes(oldToken)) pending.push(oldToken)
+      if (on && !serial) {
+        on = false
+        result = { enabled: false, error: 'serial_unavailable' }
+      }
+      stat.token = on ? randomBytes(32).toString('hex') : ''
+      stat.device_proof = on && serial ? createHmac('sha256', stat.token).update(serial).digest('hex') : ''
+      stat.last_report = ''
+      stat.last_version = ''
+      stat.last_attempt = ''
+    }
+    stat.enabled = on
+    stat.consent_version = CONSENT_VERSION
+    stat.pending_delete_tokens = [...new Set(pending)]
+    stat.send_now = on
+    stat.last_error = ''
+    if (!on) stat.last_reminder_month = month
+    c.installationStatistics = stat
+  })
+  ;(options.run ?? runStatisticsNow)()
+  return result
+}
+
+/** "Jetzt melden": the report once more, now (only with a current consent). */
+export async function requestReportNow(deps: ConfigDeps, run: () => void = runStatisticsNow): Promise<boolean> {
+  let ok = false
+  await deps.updateMupiboxConfig((cfg) => {
+    const c = cfg as Config
+    const state = statState(c)
+    if (!consentActive(state)) return
+    c.installationStatistics = { ...state, send_now: true }
+    ok = true
+  })
+  if (ok) run()
+  return ok
 }
