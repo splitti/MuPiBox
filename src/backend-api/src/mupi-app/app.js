@@ -3122,17 +3122,20 @@ function openEntrySheet(item, back = null) {
       // (TIDAL's picture asked again and put into the cover field, the artist's field emptied - saved with "Speichern")
       const tidalBtn = sheet.querySelector('[data-tidal-pic]')
       tidalBtn?.addEventListener('click', async () => {
+        // (this sheet's own fields, taken before asking: the sheet is built anew for every entry - an answer that comes
+        // after it was closed or another entry opened is dropped, it never lands in another entry's fields)
+        const cover = sheet.querySelector('#e-cover')
+        const artistcover = sheet.querySelector('#e-artistcover')
         tidalBtn.disabled = true
         const r = await api(`${API}/tidal/item/${tidalKind}/${encodeURIComponent(item.id)}`)
+        if (!tidalBtn.isConnected || sheet.hidden) return
         const picture = r.ok && typeof r.body?.cover === 'string' && /^https:\/\//.test(r.body.cover) ? r.body.cover : ''
         if (!picture) {
           tidalBtn.disabled = false
           return toast(r.status === 409 ? 'TIDAL ist ausgeschaltet – einschalten unter Einstellungen › Dienste › TIDAL' : 'Das Bild von TIDAL ließ sich nicht laden', 'info')
         }
-        const cover = sheet.querySelector('#e-cover')
-        const artistcover = sheet.querySelector('#e-artistcover')
-        if (cover) cover.value = picture
-        if (artistcover) artistcover.value = ''
+        if (cover?.isConnected) cover.value = picture
+        if (artistcover?.isConnected) artistcover.value = ''
         toast('Mit „Speichern“ zeigt die Box wieder das Bild von TIDAL')
       })
       if (item.type === 'rss') loadOfflineStatus(item.id, sheet.querySelector('#e-offline-status'))
