@@ -1141,7 +1141,8 @@ function mountStart(root) {
   loadVolumeCap(root)
   loadNotices(root)
   // (the project's monthly notices: a moment after the start page is there, while it still is)
-  setTimeout(() => root.isConnected && showProjectNotices(), 1500)
+  // (root is the page container, there for every page: whether the start page still shows decides)
+  setTimeout(() => currentPage()?.id === 'start' && showProjectNotices(), 1500)
   every(5000, () => loadNow(root))
   every(30000, () => loadStatus(root))
   $('#q-plus', root).onclick = async () => {
@@ -9948,8 +9949,9 @@ async function showProjectNotices() {
   const next = () => {
     const n = queue.shift()
     if (!n) return
-    // (another sheet open - the parents already do something: no notice over it, it comes on another visit)
-    if (!$('#sheet').hidden) return
+    // (another page chosen meanwhile, or another sheet open - the parents already do something: no notice over it, it
+    // comes on another visit)
+    if (currentPage()?.id !== 'start' || !$('#sheet').hidden) return
     api(`${API}/notices/shown`, { method: 'POST', body: { kind: n.kind } })
     let chosen = false
     openSheet(
