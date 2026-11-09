@@ -2052,15 +2052,20 @@ const coverOf = (it) => ownCover(it.cover_override ?? it.cover ?? (serviceCover(
 const boxHosts = new Set(['mupibox', 'mupibox.local', location.hostname.toLowerCase()])
 let boxHostsAsked = null
 function loadBoxHosts() {
+  // (no name in the answer - the box not reachable for a moment: asked again with the next page)
   boxHostsAsked ??= api('/api/network')
     .then((r) => {
-      const host = String(r.body?.host ?? '').trim().toLowerCase()
-      if (host) {
-        boxHosts.add(host)
-        boxHosts.add(`${host}.local`)
+      const host = r.ok ? String(r.body?.host ?? '').trim().toLowerCase() : ''
+      if (!host) {
+        boxHostsAsked = null
+        return
       }
+      boxHosts.add(host)
+      boxHosts.add(`${host}.local`)
     })
-    .catch(() => undefined)
+    .catch(() => {
+      boxHostsAsked = null
+    })
   return boxHostsAsked
 }
 function ownCover(url) {
