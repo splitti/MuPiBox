@@ -1,9 +1,62 @@
+<h3>DEV 5.0.15 - changes compared to 5.0.14</h3>
+<b>WiFi and LAN</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>A WiFi network added with add_wifi.json on the boot partition broke the WiFi configuration on boxes with Debian 11 (bullseye): the network lost its name and its closing line, and the password stayed in it in plain text. The network is now taken as a whole, and nothing is written when its entry is not complete.</li>
+<li id='linews' class='linews'>DietPi 10 (Debian 13): add_wifi.json was put in /boot, which a PC does not see on the memory card, and a file put on the card by hand was not read. It is now on the boot partition (/boot/firmware) and read there; one from /boot is copied over once (the old one stays where it was). A file that is not one JSON object is left as it is, to be corrected, instead of being replaced by the template.</li>
+<li id='linews' class='linews'>An open WiFi network (without a password) whose name contains a quotation mark or a backslash was saved with an extra backslash in its name, and the box never found it. It is now saved as it is called.</li>
+<li id='linews' class='linews'>One answer from the internet missing no longer switches the display and the library to offline: the box asks again after a few seconds and goes offline only when that fails too (on a WiFi with several access points the display showed offline for a moment again and again).</li>
+<li id='linews' class='linews'>Debian 13 (trixie), old admin interface: with one USB WiFi driver installed, the choice also offered the other one with an "Install driver" button that did nothing. It now offers only the drivers that are there, to remove them.</li>
+</ul>
+<b>Updates</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>A dev version could show "null" instead of its date (e.g. "DEV 5.0.14 null") when GitHub did not answer the question for it - too many questions from the home network in an hour. The day of the update stands there then.</li>
+<li id='linews' class='linews'>Only one update at a time: an update started while another one still ran (in the terminal while the one from the app or the admin interface went on, or twice in the terminal) took the other one's download away and stopped with a strange error ("Expected source directory ... not found"), both replacing the installation at once. A second update now stops at once and changes nothing, with a note that one is running; the box's restart waits for the running update too.</li>
+<li id='linews' class='linews'>An update on a weak WiFi stopped at its very first download when the connection broke off in the middle ("curl: (18) Transferred a partial file", "could not download jq"). The update's downloads are now tried up to four times. And an update that stopped before it changed anything no longer restarts the display and the server - that looked like a restart of the box while the music played on.</li>
+</ul>
+<b>MQTT</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>A command sent to the box as a retained message (volume, play, pause, reboot, shutdown - some smart home systems send them that way) came again from the broker with every connection, so after every start of the box: it started at that volume, or played on its own. Retained commands are now ignored; send them without retain.</li>
+</ul>
+<b>Play history</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>A title that began right after the box was switched on could count the whole time the box had been off (25 hours of radio on one day), on the day it was last switched off: the box has no clock of its own and runs with the time it last saved until the network sets it. Lengths are now measured independently of the clock. Entries already in the history stay as they are until they are older than 7 days.</li>
+</ul>
+<b>Library</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>An artist subscribed or an album added from the Spotify search on a box with Smart-Sync off never came - it was only noted. It now comes at once; only the playlists stay as they are, and episodes that appear later come by themselves only with Smart-Sync on (the app says so before subscribing).</li>
+<li id='linews' class='linews'>An album of the Spotify sync can be taken off the box from the library itself ("Entfernen"), at once and for good: it is left out of its subscription and does not come back with the next sync (before, the way was Verwaltete Inhalte only). One that came from one of your Spotify playlists goes in Spotify - the app says so.</li>
+<li id='linews' class='linews'>A whole group goes at once: "Alle entfernen" for entries added by hand (e.g. the radio episodes of one name), "Abo beenden" for a subscribed artist - its albums go right away.</li>
+<li id='linews' class='linews'>A subscribed artist is changed where it is: in the library, the artist shows its subscription above its albums - the range of episodes, the albums let in or left out, "Abo beenden". A subscription none of whose albums is on the box yet is listed too ("no episodes yet", with the artist's picture from Spotify). "Verwaltete Inhalte" stays as before.</li>
+<li id='linews' class='linews'>A picture chosen for an entry from the box's own cover folder (saved as http://&lt;box name&gt;/cover/…) did not show in the app on a phone - the phone does not know the box's name - only the initials. The app now loads it through its own address. A Spotify entry with a picture of its own has a button "Bild von Spotify verwenden": both picture fields emptied, after "Speichern" the box shows Spotify's picture again. The same for TIDAL ("Bild von TIDAL verwenden"): the box asks TIDAL for the picture of the album, playlist or artist again.</li>
+</ul>
+<b>Sound</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Music, podcasts and the start and shutdown sounds could become very quiet - also at 100 % and with Bluetooth headphones -, names read out not (issue #191). The music is made quieter while a name is read out; when its title changed or it stopped meanwhile, it was not made loud again, and the sound system kept that volume for every later music (each further name made it quieter still). It now keeps no volume of its own per program: every stream starts at the box's volume again. Applies from the restart after the update.</li>
+</ul>
+<b>Support</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>"Copy for Discord": a MuPiHAT run without a battery (profile "USB-C mode") showed "Akku 0 %". It now says "ohne Akku".</li>
+<li id='linews' class='linews'>The support file (About the box) also holds the sound: the box's volume, the volume of each program that plays (Spotify on the display, mpv) - one of them far below 100 % makes only that quiet -, the sound card and the versions of Chromium, mpv and PulseAudio. Best downloaded while something plays.</li>
+</ul>
+<b>Voluntary statistics and donations</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>About the box has two new cards: "Voluntary statistics" - with your consent the box reports technical facts about its version and hardware once a month (no listening content, no accounts, no usage times; off by default, can be withdrawn at any time, switching it off asks the server to delete the box's entries) - and "Support MuPiBox" with a link to a voluntary donation.</li>
+<li id='linews' class='linews'>When the app is opened, a notice about the donation and - while the statistics are off - one about the statistics come at most once a month (the month is kept on the box, not on each phone). Both can be switched off on About the box. Never on the box's own display.</li>
+</ul>
 <h3>DEV 5.0.14 - changes compared to 5.0.13</h3>
 <b>Updates</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Update of a box without a certificate (the 4.0.4 image) to stable 4.2.4: the admin interface was gone afterwards, the web server had SSL switched on and no certificate. The update now creates the simple certificate 4.2.4 expects.</li>
-<li id='linews' class='linews'>Update from the 4.0.4 image: the display no longer stays empty, it shows the new maintenance picture as soon as the package is unpacked.</li>
+<li id='linews' class='linews'>Update from the 4.0.4 image: the display no longer stays empty. An update to 5.x shows the new maintenance picture as soon as the package is unpacked, an update to stable 4.2.4 the old installation picture.</li>
 <li id='linews' class='linews'>A version installed directly from a branch shows "DEV" in the app instead of "...".</li>
 </ul>
 <b>Telegram</b>
@@ -50,7 +103,7 @@
 <li id='linews' class='linews'>A turned display with KMS (Touch Display 2, for example) shows the start, maintenance and goodbye pictures again: the picture program ended with an error there, and the console stayed on the screen.</li>
 <li id='linews' class='linews'>Changing the display model in the app (Settings › Display &amp; controls › Display model) is now led through in one window: first what changes (new and previous model, the rotation) and the three steps; then it waits for the restart by itself and asks "Do you see a picture?" with the countdown as soon as the box is back - before, only a short note came and the question showed after loading the page again. Then how it ended: the model stays, or the box goes back to the previous display. Opening the app during a test (on another device too) brings the window at once, also when the page loads anew while the box restarts.</li>
 <li id='linews' class='linews'>The countdown of that test (app and display) ended too early, often by minutes: it was counted from the clock at the start of the box, which a Raspberry Pi takes from the time it last saved until the network sets it. It now counts from the time since the start, as the box itself does.</li>
-<li id='linews' class='linews'>The 3 minutes of that test now run from the moment the app reaches the box after the restart, not from the start of the box: on a weak WLAN the app got there minutes later, and the question came with seconds left. If nobody opens the app (a display with a picture is answered on the display), the box goes back 6 minutes after its start.</li>
+<li id='linews' class='linews'>The 3 minutes of that test now run from the moment the app reaches the box after the restart, not from the start of the box: on a weak WLAN the app got there minutes later, and the question came with seconds left. At the latest 6 minutes after its start the box goes back all the same, also when the app comes later; if nobody opens the app (a display with a picture is answered on the display), it waits those 6 minutes.</li>
 <li id='linews' class='linews'>Touch Display 2: the display is built upright, the MuPiBox lies. Chosen under Settings › Display &amp; controls › Display model, it now starts turned by 90° (picture and touch) - before it came up upright and had to be turned under Rotation, during the 3 minutes of its test. An installation with this display on the box (its line in config.txt) sets 90° too. Upside down in its case: 270° under Rotation.</li>
 <li id='linews' class='linews'>Touch Display 2: now and then the touch did not work after the start, the picture did (until the next start). Its touch chip takes its power from the display and was sometimes asked before it had it. Once the display is there, the box asks a touch chip that gave up at the start once more.</li>
 <li id='linews' class='linews'>The update now brings the display's Chromium up to date every time: boxes set up from the 4.2.4 image still ran the browser of early 2024 (122), and its security updates were missing. On it, lists of covers without the "Stage" view could not be swiped any more once a folder was opened a second time - only the scrollbar moved them, until the next folder; with a current Chromium they swipe as they should. Only the browser and Widevine (which Spotify needs); when it is current nothing is loaded, the first time from 122 it takes a few minutes and about 100 MB more. Does that fail, the update goes on and the display keeps the Chromium it had.</li>

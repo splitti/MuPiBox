@@ -66,7 +66,7 @@ export interface RunSyncResult {
  * Run one sync cycle. Idempotent under failure — leaves the state file
  * with the latest run outcome, never partially applies a diff.
  */
-export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<RunSyncResult> {
+export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps, opts: { allowWhenOff?: boolean } = {}): Promise<RunSyncResult> {
   const startedAt = new Date()
   const startedAtIso = startedAt.toISOString()
   const previousState = readStateFile(deps.stateFilePath)
@@ -154,9 +154,12 @@ export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<
     return result
   }
 
-  // 0. Config enabled?
+  // 0. Config enabled? (off: a run the app asked for after a change of the artists or albums it manages still brings
+  // those - only them: no playlist is asked, and an entry that came from a playlist is never removed by it. Without it
+  // an artist subscribed on a box with Smart-Sync off never came, and an album taken out of the library stayed.)
   const config = loadSpotifySyncConfig(deps.getMupiboxConfig())
-  if (!config.enabled) {
+  const subscriptionsOnly = !config.enabled
+  if (subscriptionsOnly && !opts.allowWhenOff) {
     failureCounters = {} // reset on disable
     return finalise('IDLE', undefined, { reason: 'spotify_sync.enabled is false' })
   }
@@ -219,7 +222,7 @@ export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<
     const failedSources: FailedSource[] = []
     let playlistsDiscovered
     try {
-      playlistsDiscovered = await discoverPlaylists(accessToken, config, failures, failedSources)
+      playlistsDiscovered = subscriptionsOnly ? [] : await discoverPlaylists(accessToken, config, failures, failedSources)
     } catch (err) {
       return mapSpotifyError(err, (kind) => { failureCounters = bumpFailureCounter(failureCounters, kind) }, finalise)
     }
@@ -258,7 +261,7 @@ export async function runSync(trigger: SyncTrigger, deps: RunSyncDeps): Promise<
       const library = parsed as BoxLibraryEntry[]
       if (failures.length) console.warn(`${new Date().toLocaleString()}: [spotify-sync] not read in this run (${failures.join(', ')}) - their entries are kept`)
       // (removals held back only for the entries of what could not be read; a failure of unknown source holds back all)
-      diff = computeSyncDiff(resolved.items, library, { noRemovals: failures.length > failedSources.length, failedSources })
+      diff = computeSyncDiff(resolved.items, library, { noRemovals: failures.length > failedSources.length, failedSources, keepPlaylistEntries: subscriptionsOnly })
       applyResult = await applyDiff(diff, library, deps.dataFile, new Date())
     } catch (err) {
       deps.releaseDataLock()

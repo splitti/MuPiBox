@@ -61,6 +61,7 @@ import { legacyAdminOn, registerLegacyAdminRoutes } from './legacy-admin'
 import { registerServicesRoutes } from './services'
 import { registerTidalRoutes } from './tidal'
 import { registerSystemRoutes } from './system'
+import { markNoticeShown, noticeState, requestReportNow, setNoticeSwitches, setStatisticsConsent } from './telemetry'
 import { registerAdminRoutes } from './admin'
 import { bootDrive } from './boot-drive'
 import { registerNetworkRoutes, renewDhcp } from './network'
@@ -484,6 +485,56 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       Object.assign(mb, set)
       cfg.mupibox = mb
     })
+    res.json({ ok: true })
+  })
+
+  /**
+   * The project's monthly notices (a donation, the voluntary statistics) and the statistics' consent - what the admin
+   * interface had (admin.php, statistics_reminder.php), now in the app: the admin interface is off by default.
+   * GET /notices: the switches, which notice is due this month, the consent's state (no token, no serial).
+   */
+  router.get('/notices', requireSession, (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store')
+    res.json(noticeState(deps.getMupiboxConfig()))
+  })
+  // POST /notices/shown {kind}: shown - not again this month (kept in the configuration, the same for every device)
+  router.post('/notices/shown', requireSession, requireCsrf, async (req, res) => {
+    const kind = (req.body as { kind?: unknown } | undefined)?.kind
+    if (kind !== 'donation' && kind !== 'statistics') {
+      res.status(400).json({ error: 'kind must be donation or statistics' })
+      return
+    }
+    await markNoticeShown(deps, kind)
+    res.json({ ok: true })
+  })
+  // POST /notices/settings {donationPopup?, statisticsPopup?}: the notices on or off (never the consent itself)
+  router.post('/notices/settings', requireSession, requireCsrf, async (req, res) => {
+    const body = (req.body ?? {}) as { donationPopup?: unknown; statisticsPopup?: unknown }
+    for (const key of ['donationPopup', 'statisticsPopup'] as const) {
+      if (body[key] !== undefined && typeof body[key] !== 'boolean') {
+        res.status(400).json({ error: `${key} must be true or false` })
+        return
+      }
+    }
+    await setNoticeSwitches(deps, { donationPopup: body.donationPopup as boolean | undefined, statisticsPopup: body.statisticsPopup as boolean | undefined })
+    res.json(noticeState(deps.getMupiboxConfig()))
+  })
+  // POST /statistics {enabled}: the voluntary consent given or withdrawn
+  router.post('/statistics', requireSession, requireCsrf, async (req, res) => {
+    const enabled = (req.body as { enabled?: unknown } | undefined)?.enabled
+    if (typeof enabled !== 'boolean') {
+      res.status(400).json({ error: 'enabled must be true or false' })
+      return
+    }
+    const r = await setStatisticsConsent(deps, enabled)
+    res.json({ ...noticeState(deps.getMupiboxConfig()), ...(r.error ? { error: r.error } : {}) })
+  })
+  // POST /statistics/send: the report now ("Jetzt melden"; only with a current consent)
+  router.post('/statistics/send', requireSession, requireCsrf, async (_req, res) => {
+    if (!(await requestReportNow(deps))) {
+      res.status(409).json({ error: 'statistics are off' })
+      return
+    }
     res.json({ ok: true })
   })
 
@@ -3027,6 +3078,46 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       cfg.spotify_sync = ss
     })
     res.json({ ok: true })
+  })
+
+  /**
+   * POST /api/app/library/remove-synced  {albumId | albumIds, artist?}
+   * An album of the Spotify sync taken off the box from the library ("Entfernen"): out of the albums added one by one,
+   * and left out of every artist subscription (a left-out album that is not one of a subscription's changes nothing
+   * there). The app then deletes the entry itself (/api/delete-many), so it goes at once, also with Smart-Sync off - and no sync brings it back. Back again: the album's
+   * switch in the subscription (Verwaltete Inhalte) or adding it anew.
+   */
+  router.post('/library/remove-synced', requireSession, requireCsrf, async (req, res) => {
+    // (albumIds: several of one artist at once - a whole group, the config written once)
+    const body = (req.body as { albumId?: unknown; albumIds?: unknown; artist?: unknown } | undefined) ?? {}
+    const raw = Array.isArray(body.albumIds) ? body.albumIds : [body.albumId]
+    const ids = [...new Set(raw.map((x) => String(x ?? '').trim()))]
+    if (ids.length === 0 || ids.length > 2000 || !ids.every((id) => /^[A-Za-z0-9]{22}$/.test(id))) {
+      res.status(400).json({ error: 'invalid albumId (expected 22-char Spotify ids)' })
+      return
+    }
+    const gone = new Set(ids)
+    let pinned = 0
+    let leftOut = 0
+    await deps.updateMupiboxConfig((cfg) => {
+      const ss = ((cfg.spotify_sync as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
+      const pins = Array.isArray(ss.explicit_albums) ? (ss.explicit_albums as Array<Record<string, unknown>>) : []
+      pinned = pins.filter((a) => gone.has(String(a?.id))).length
+      ss.explicit_albums = pins.filter((a) => !gone.has(String(a?.id)))
+      // (every subscription: an album of two subscribed artists - a joint one - left out of one only came back through
+      // the other; one that is not a subscription's own changes nothing there)
+      const subs = Array.isArray(ss.artists) ? (ss.artists as Array<Record<string, unknown>>) : []
+      leftOut = 0
+      for (const sub of subs) {
+        if (!sub || typeof sub !== 'object') continue
+        const ex = new Set(Array.isArray(sub.exclude_album_ids) ? (sub.exclude_album_ids as unknown[]).filter((x): x is string => typeof x === 'string') : [])
+        for (const id of ids) ex.add(id)
+        sub.exclude_album_ids = [...ex]
+        leftOut++
+      }
+      cfg.spotify_sync = ss
+    })
+    res.json({ ok: true, pinned, leftOut })
   })
 
   /**

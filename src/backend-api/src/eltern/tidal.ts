@@ -111,8 +111,8 @@ export function registerTidalRoutes(router: Router, deps: TidalDeps): void {
     if (!enabled()) return void res.status(409).json({ error: 'tidal_off' })
     const kind = String(req.params.kind)
     const id = String(req.params.id)
-    // (an album: digits; a playlist: its uuid)
-    if (!((kind === 'album' && /^\d{1,15}$/.test(id)) || (kind === 'playlist' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)))) {
+    // (an album or an artist: digits - an artist for its picture, "Bild von TIDAL verwenden"; a playlist: its uuid)
+    if (!(((kind === 'album' || kind === 'artist') && /^\d{1,15}$/.test(id)) || (kind === 'playlist' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)))) {
       return void res.status(400).json({ error: 'bad_id' })
     }
     // (without the tracks: a long playlist's list took one request to TIDAL per 100 tracks)

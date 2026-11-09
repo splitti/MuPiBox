@@ -82,7 +82,16 @@ if [ "$KIND" = "os" ]; then
 fi
 
 progress 1 "Download"
-if ! curl -fsSL --retry 3 --retry-delay 3 -m 120 -o "$D/start_mupibox_update.sh" "${REPO_RAW}/update/start_mupibox_update.sh" || ! bash -n "$D/start_mupibox_update.sh"; then
+# (up to four tries: curl's own --retry leaves out a connection cut in the middle, "partial file")
+GOT=0
+for TRY in 1 2 3 4; do
+	if curl -fsSL --connect-timeout 20 -m 120 -o "$D/start_mupibox_update.sh" "${REPO_RAW}/update/start_mupibox_update.sh" && bash -n "$D/start_mupibox_update.sh"; then
+		GOT=1
+		break
+	fi
+	[ "$TRY" -lt 4 ] && sleep 5
+done
+if [ "$GOT" != "1" ]; then
 	echo "The update script could not be downloaded - nothing was changed."
 	[ "$IDLE_WAS_ACTIVE" = "active" ] && systemctl start mupi_idle_shutdown
 	finish failed
@@ -98,13 +107,19 @@ chown -R dietpi:dietpi /home/dietpi/mupibox-backups
 ls -1t /home/dietpi/mupibox-backups/before-update-*.zip 2>/dev/null | tail -n +4 | xargs -r rm -f
 
 cd /home/dietpi
-PATH="$D/bin:$PATH" bash "$D/start_mupibox_update.sh" "$KIND"
+# (the update's lock held for this run: up to the restart below - see take_update_lock in start_mupibox_update.sh)
+MUPIBOX_UPDATE_LOCK_FOR=$$ PATH="$D/bin:$PATH" bash "$D/start_mupibox_update.sh" "$KIND"
 RC=$?
 # done: the script moves its log away at its very end (/boot/mupibox_update.log); an aborted run leaves it there
 if [ "$RC" = "0" ] && [ ! -e /boot/mupibox_update.log ] && [ "$(cut -f1 "$D/progress")" = "100" ]; then
 	finish rebooting
 	sleep 10
 	systemctl reboot
+elif [ "$RC" = "75" ]; then
+	# another update runs (started in the terminal or by the admin interface): this one changed nothing - the display,
+	# the server and the idle shutdown belong to that one (its end restarts the box)
+	echo "Another update is running already - this one changed nothing."
+	finish failed
 elif [ -e /tmp/mupibox-update-nostart ]; then
 	# the update could not go back to the previous installation completely (fail_update ... nostart): nothing is
 	# started on an installation in that state - the next start of the box finishes the way back before pm2 starts
@@ -116,9 +131,14 @@ else
 	finish failed
 	# the display was ended by the update script: back to the box's normal state
 	[ "$IDLE_WAS_ACTIVE" = "active" ] && systemctl start mupi_idle_shutdown
-	# (the update stops the server early on; an aborted run may leave it stopped)
-	sudo -H -u dietpi bash -c "pm2 start server"
-	sudo -i -u dietpi /usr/local/bin/mupibox/restart_kiosk.sh
+	# (the update stops the server early on; an aborted run may leave it stopped) - only what is not running: one that
+	# stopped before it changed anything (a download cut off) left both running, and starting them again looked like a
+	# restart of the box, the music playing on
+	SERVER_PID=$(sudo -H -u dietpi bash -c "pm2 pid server" 2>/dev/null | tail -n 1)
+	case "$SERVER_PID" in '' | 0 | *[!0-9]*) sudo -H -u dietpi bash -c "pm2 start server" ;; esac
+	if ! pgrep -x chromium > /dev/null && ! pgrep -x chromium-browse > /dev/null; then
+		sudo -i -u dietpi /usr/local/bin/mupibox/restart_kiosk.sh
+	fi
 fi
 `
 

@@ -495,7 +495,8 @@ STEP=0
 	mv ${MUPI_SRC}/scripts/mqtt/* /usr/local/bin/mupibox/ >&3 2>&3
 	# (the app's backup restore runs it from here, as the admin interface does)
 	cp ${MUPI_SRC}/update/conf_update.sh /usr/local/bin/mupibox/conf_update.sh >&3 2>&3
-	mv ${MUPI_SRC}/config/templates/add_wifi.json /boot/add_wifi.json >&3 2>&3
+	# (on the partition a PC sees - /boot/firmware on DietPi 10; startup.sh reads it there)
+	mv ${MUPI_SRC}/config/templates/add_wifi.json "${BOOT_DIR}/add_wifi.json" >&3 2>&3
 	mv ${MUPI_SRC}/config/templates/.bashrc /home/dietpi/.bashrc >&3 2>&3
 	chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ /home/dietpi/MuPiBox /home/dietpi/.bashrc >&3 2>&3
 	chmod 755 /usr/local/bin/mupibox/* >&3 2>&3
@@ -655,6 +656,11 @@ STEP=0
 	chmod 755 /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	# full colours in the display on a Pi with 2 GB or more: takes DietPi's "low-end device mode" out again (see the file)
 	mkdir -p /etc/chromium.d && tr -d '\r' < ${MUPI_SRC}/config/chromium/zz-mupibox > /etc/chromium.d/zz-mupibox && chmod 644 /etc/chromium.d/zz-mupibox
+	# PulseAudio keeps no volume of a program's stream for its next one (see the file; issue #191)
+	if [ -f /etc/pulse/system.pa ] && grep -q 'system.pa.d' /etc/pulse/system.pa; then
+		mkdir -p /etc/pulse/system.pa.d && tr -d '\r' < ${MUPI_SRC}/config/pulse/mupibox-stream-volume.pa > /etc/pulse/system.pa.d/mupibox-stream-volume.pa \
+			&& chmod 644 /etc/pulse/system.pa.d/mupibox-stream-volume.pa
+	fi
 	apt-get install xserver-xorg-legacy -y >&3 2>&3
 	sed -i 's/allowed_users\=console/allowed_users\=anybody/g' /etc/X11/Xwrapper.config >&3 2>&3
 	mv -f ${MUPI_SRC}/config/templates/98-dietpi-disable_dpms.conf /etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf >&3 2>&3

@@ -70,10 +70,11 @@ do
 			if [[ "${SSID}" == *$'\n'* ]]; then
 				echo "add_wifi.sh: SSID rejected (newline in name)" >&2
 			else
-				_ESCAPED_SSID="${SSID//\\/\\\\}"
-				_ESCAPED_SSID="${_ESCAPED_SSID//\"/\\\"}"
+				# Not escaped: wpa_supplicant reads a quoted ssid up to the LAST quote of its line (wpa_config_parse_string)
+				# and knows no escapes there - a \" put in became part of the name, and the box never found the network.
+				# One line can hold any name without a line break, as wpa_passphrase writes it for the other networks.
 				# key_mgmt=NONE: without it wpa_supplicant takes the network for WPA and never connects to it
-				printf 'network={\n\tssid="%s"\n\tscan_ssid=1\n\tkey_mgmt=NONE\n}\n' "${_ESCAPED_SSID}" | sudo tee -a ${WPACONF} >/dev/null
+				printf 'network={\n\tssid="%s"\n\tscan_ssid=1\n\tkey_mgmt=NONE\n}\n' "${SSID}" | sudo tee -a ${WPACONF} >/dev/null
 				restart_network
 			fi
 		else

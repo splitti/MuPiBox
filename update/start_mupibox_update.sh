@@ -26,6 +26,81 @@ else
 	RELEASE="stable"
 fi
 
+# One update at a time: two of them (one from the terminal while the app's or the admin interface's still ran) took each
+# other's download away (both use /home/dietpi/mupibox.zip) and replaced the installation at the same time. The one
+# running writes "<pid> <start time of that process>" here (/run: gone at the next start of the box; the start time:
+# a process that ended without removing it - killed - is told from a new one that got its number).
+UPDATE_LOCK=/run/mupibox-update.pid
+# (a process's start time: the 22nd field of its stat, counted after the name in brackets - a name may hold spaces)
+proc_start() { sed 's/^.*) //' "/proc/$1/stat" 2>/dev/null | cut -d' ' -f20; }
+# the pid of the update that runs, nothing when none does
+update_lock_holder() {
+	local pid start
+	read -r pid start 2>/dev/null < "${UPDATE_LOCK}" || return 0
+	case "${pid}" in '' | *[!0-9]*) return 0 ;; esac
+	[ -n "${start}" ] && [ "$(proc_start "${pid}")" = "${start}" ] && echo "${pid}"
+}
+# 75: another update runs - this one stops before it changes anything (whoever started it starts nothing again either:
+# the display and the server belong to the update that runs)
+UPDATE_BUSY=75
+# The lock is held for the process given in MUPIBOX_UPDATE_LOCK_FOR when one started this script and restarts the box
+# after it (the app's update unit, the handover of the admin interface): held until that restart - this script ending
+# well before it left a few seconds in which another update began and was cut off by that restart. It goes when that
+# process ends (a process that is gone holds nothing).
+take_update_lock() {
+	local me=$$
+	case "${MUPIBOX_UPDATE_LOCK_FOR:-}" in
+		'' | *[!0-9]*) ;;
+		*) [ -d "/proc/${MUPIBOX_UPDATE_LOCK_FOR}" ] && me=${MUPIBOX_UPDATE_LOCK_FOR} ;;
+	esac
+	# Checked and written under a short flock (not one held for the whole update: every program it starts - pm2, the
+	# display - would keep holding it on, past the update): two updates starting at the same moment, or both finding a
+	# lock that was left behind, one of them gets it.
+	( flock -w 30 9 || exit 2
+	  holder=$(update_lock_holder)
+	  if [ -n "${holder}" ]; then
+		# (the one the lock is for, or the update that holds it started this one - a version switch: it goes on under it)
+		if [ "${holder}" = "${me}" ] || [ "${holder}" = "${MUPIBOX_UPDATE_LOCK_OWNER:-}" ]; then exit 0; fi
+		exit 1
+	  fi
+	  # (written next to it, then renamed: never a cut one)
+	  printf '%s %s\n' "${me}" "$(proc_start "${me}")" > "${UPDATE_LOCK}.new" && mv -f "${UPDATE_LOCK}.new" "${UPDATE_LOCK}" || exit 2
+	) 9> /run/lock/mupibox-update.guard || return 1
+	export MUPIBOX_UPDATE_LOCK_OWNER=$(update_lock_holder)
+	# (held for this script itself: gone at its end - one held for the caller goes with the caller)
+	[ "${MUPIBOX_UPDATE_LOCK_OWNER}" = "$$" ] && trap 'release_update_lock' EXIT
+	return 0
+}
+release_update_lock() {
+	# (replaced only once its holder is gone: while this one runs, nothing else writes it)
+	[ "$(update_lock_holder)" = "$$" ] && rm -f "${UPDATE_LOCK}"
+	return 0
+}
+update_busy_message() {
+	local holder
+	holder=$(update_lock_holder)
+	if [ -n "${holder}" ]; then
+		echo "Another MuPiBox update is running already (process ${holder}) - nothing was changed. Wait until it is done: the box restarts at its end (started in the terminal: it says \"Update finished\")."
+	else
+		echo "The update could not check whether another one runs - nothing was changed. Please try again in a moment."
+	fi
+}
+
+# A download, tried up to four times: $1 the address, $2 the file, $3 the time for one try in seconds. curl's own --retry
+# leaves out a connection cut in the middle ("curl: (18) Transferred a partial file" - the update stopped at once on a
+# weak WiFi); --retry-all-errors would, but older curl (before 7.71) does not know it. A failed try leaves no file.
+fetch_retry() {
+	local i
+	for i in 1 2 3 4; do
+		if curl -fsSL --connect-timeout 20 -m "$3" -o "$2" "$1"; then
+			return 0
+		fi
+		rm -f "$2"
+		[ "$i" -lt 4 ] && sleep 5
+	done
+	return 1
+}
+
 # Started by the admin interface of 4.x (its update buttons run "curl ... | sudo bash" inside the PHP request): there
 # is no terminal for whiptail (the update stopped at its first step), the update stops php-fpm on the way (the admin
 # interface is off by default since 5.0.12 - the update, a child of php-fpm, went down with it), and the admin
@@ -67,7 +142,7 @@ hold_restart() {
 	# (every step checked: success only with the whole placeholder written, read back and in place as restart.sh - a cut
 	# one, put in whole, would hold nothing; the first and the last line are looked for)
 	local tmp="${held}.mupibox-hold"
-	if ! printf '#!/bin/sh\n# %s: an update runs (mupibox-update-admin) - the box restarts when it is done\nif systemctl is-active --quiet mupibox-update-admin || ! flock -n /run/lock/mupibox-update-admin.lock true 2>/dev/null; then\n\tlogger -t mupibox "restart held: an update runs (mupibox-update-admin)"\n\texit 0\nfi\nif [ -f %s ]; then\n\texec /bin/bash %s "$@"\nfi\nexec reboot\n' "${HOLD_MARK}" "$1" "$1" > "${tmp}" \
+	if ! printf '#!/bin/sh\n# %s: an update runs (mupibox-update-admin) - the box restarts when it is done\nif systemctl is-active --quiet mupibox-update-admin || ! flock -n /run/lock/mupibox-update-admin.lock true 2>/dev/null \\\n   || { read -r upid ustart 2>/dev/null < /run/mupibox-update.pid \\\n        && [ -n "$ustart" ] && [ "$(sed "s/^.*) //" "/proc/$upid/stat" 2>/dev/null | cut -d" " -f20)" = "$ustart" ]; }; then\n\tlogger -t mupibox "restart held: an update runs (mupibox-update-admin)"\n\texit 0\nfi\nif [ -f %s ]; then\n\texec /bin/bash %s "$@"\nfi\nexec reboot\n' "${HOLD_MARK}" "$1" "$1" > "${tmp}" \
 	   || [ "$(head -n 1 "${tmp}")" != '#!/bin/sh' ] || [ "$(tail -n 1 "${tmp}")" != 'exec reboot' ] \
 	   || ! chmod 755 "${tmp}" || ! put_atomic "${tmp}" "${held}"; then
 		rm -f "${tmp}" "${held}.mupibox-new"
@@ -92,6 +167,27 @@ if [ -z "${MUPIBOX_UPDATE_HANDED_OVER:-}" ] && [ ! -t 1 ] && started_by_php; the
 		echo "An update is running already (${HUNIT}) - the box restarts when it is done."
 		exit 0
 	fi
+	# (one started elsewhere - the terminal, the app: nothing handed over. The admin interface still calls restart.sh in
+	# 5 s: the one of 5.0.15 and later waits for that update itself; an older one - that update has not put its scripts in
+	# yet - is held: the placeholder waits for it too, and goes when that update puts in the new restart.sh; one that
+	# stops before leaves it, and it restarts as the old one after the update)
+	if [ -n "$(update_lock_holder)" ]; then
+		if [ -f ${HELD} ] && ! grep -q "${HOLD_MARK}" ${HELD} && ! grep -q 'mupibox-update.pid' ${HELD}; then
+			mkdir -p ${HD}
+			if ! hold_restart ${HD}/restart.sh.held; then
+				# (not held - no space left?: the admin interface restarts only after this call returned (footer.php, in the
+				# same request) - it returns when that update is done. That update stops php-fpm on its way: the request
+				# ends with it, without the restart. The handover's lock is let go meanwhile: a further click waiting for
+				# it 120 s returned "being started" - and its restart came.)
+				exec 8>&-
+				while [ -n "$(update_lock_holder)" ]; do sleep 5; done
+				echo "Another MuPiBox update was running - it is done now, nothing was changed by this one."
+				exit 0
+			fi
+		fi
+		update_busy_message
+		exit 0
+	fi
 	# restart.sh held at once, before the download (which may take minutes): see hold_restart
 	mkdir -p ${HD}/bin
 	HOLD_MINE=0
@@ -111,7 +207,7 @@ if [ -z "${MUPIBOX_UPDATE_HANDED_OVER:-}" ] && [ ! -t 1 ] && started_by_php; the
 	}
 	# (MUPIBOX_UPDATE_SCRIPT_URL: another copy of this script, to test one before it is on main: without it the handed-over
 	# run was always the one from main, whatever the admin interface had started)
-	if ! curl -fsSL --retry 3 --retry-delay 3 -m 120 -o ${HD}/start_mupibox_update.sh "${MUPIBOX_UPDATE_SCRIPT_URL:-https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh}" \
+	if ! fetch_retry "${MUPIBOX_UPDATE_SCRIPT_URL:-https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh}" ${HD}/start_mupibox_update.sh 120 \
 	   || ! bash -n ${HD}/start_mupibox_update.sh; then
 		unhold_mine
 		echo "Error: the update script could not be downloaded - nothing was changed. Please try again."
@@ -130,17 +226,24 @@ exec > ${HD}/output.txt 2>&1
 sleep 20
 systemctl stop mupi_idle_shutdown 2>/dev/null
 cd /home/dietpi
-MUPIBOX_UPDATE_HANDED_OVER=1 PATH="${HD}/bin:${PATH}" bash ${HD}/start_mupibox_update.sh "$@"
+# (the update's lock held for this run: up to the restart at its end - see take_update_lock)
+MUPIBOX_UPDATE_LOCK_FOR=$$ MUPIBOX_UPDATE_HANDED_OVER=1 PATH="${HD}/bin:${PATH}" bash ${HD}/start_mupibox_update.sh "$@"
 RC=$?
 # restart.sh back - the one the update installed, or the one before when it stopped earlier (written next to it, on
-# the card, then renamed: see put_atomic in start_mupibox_update.sh)
-if grep -q 'MUPIBOX-UPDATE-HOLD' ${HELD} 2>/dev/null && [ -f ${HD}/restart.sh.held ]; then
+# the card, then renamed: see put_atomic in start_mupibox_update.sh). Not when another update runs (75): the placeholder
+# waits for that one too, and goes to the one kept here after it - the one before knows nothing of it (4.x) and
+# restarted the box in the middle of it at the admin interface's next update click.
+if [ "${RC}" != "75" ] && grep -q 'MUPIBOX-UPDATE-HOLD' ${HELD} 2>/dev/null && [ -f ${HD}/restart.sh.held ]; then
 	cp -p ${HD}/restart.sh.held ${HELD}.mupibox-new && chmod 755 ${HELD}.mupibox-new && sync ${HELD}.mupibox-new && mv -f ${HELD}.mupibox-new ${HELD} && sync /usr/local/bin/mupibox
 fi
 if [ "${RC}" = "0" ] && [ ! -e /tmp/mupibox-update-nostart ]; then
 	echo "Update finished - the box restarts."
 	sleep 5
 	systemctl reboot
+elif [ "${RC}" = "75" ]; then
+	# (another update ran - started after the check above: this one changed nothing, the display and the idle shutdown
+	# belong to that one)
+	echo "Another update is running - this one changed nothing."
 elif [ -e /tmp/mupibox-update-nostart ]; then
 	# (the way back did not complete: nothing is started on that installation - the next start of the box finishes it)
 	echo "The update stopped and the way back is not complete - restart the box (see /boot/mupibox_update.log)."
@@ -163,6 +266,12 @@ HANDOVER
 	exit 0
 fi
 
+# (before anything of the box is touched - the display, the update log, the download)
+if ! take_update_lock; then
+	update_busy_message
+	exit ${UPDATE_BUSY}
+fi
+
 # The Pi's boot files: /boot/firmware/ on newer DietPi (v10, Debian 13 "Trixie"), /boot/ before (as autosetup.sh)
 BOOT_CONFIG="/boot/config.txt"
 BOOT_CMDLINE="/boot/cmdline.txt"
@@ -179,7 +288,7 @@ if [ `getconf LONG_BIT` == 32 ]; then
 else
   JQ_ARCH="arm64"
 fi
-if ! curl -fsSL --retry 3 --retry-delay 3 -m 180 -o ${PREFLIGHT_DIR}/jq https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-linux-${JQ_ARCH} \
+if ! fetch_retry https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-linux-${JQ_ARCH} ${PREFLIGHT_DIR}/jq 180 \
    || ! chmod 755 ${PREFLIGHT_DIR}/jq || ! ${PREFLIGHT_DIR}/jq --version > /dev/null 2>&1; then
   echo "Error: could not download jq (no internet / DNS problem?). Nothing was changed - please try again."
   rm -rf ${PREFLIGHT_DIR}
@@ -330,14 +439,22 @@ else
 	MUPI_SRC="/home/dietpi/MuPiBox-${VERSION}" >&3 2>&3
 fi
 
+# The date of a dev version from the GitHub API: without an answer (no network, or more than 60 questions an hour from
+# the home network - GitHub then answers with an error) it was "null" and stood so in the app ("DEV 5.0.14 null").
+# Only a real date is taken, else the day of the update.
+github_date() {
+  local d
+  d=$(curl -s -m 20 "$1" | jq -r "$2" 2>/dev/null | cut -d'T' -f1)
+  case "$d" in [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) echo "$d" ;; *) date +%F ;; esac
+}
 if [ -n "$BRANCH" ]; then
   if [ -n "$VERSION_LABEL" ]; then
     VERSION_LONG="${VERSION_LABEL}"
   else
-    VERSION_LONG="DEV ${BRANCH} $(curl -s 'https://api.github.com/repos/'"$REPO"'/branches/'"$BRANCH" | jq -r '.commit.commit.committer.date' | cut -d'T' -f1)" >&3 2>&3
+    VERSION_LONG="DEV ${BRANCH} $(github_date "https://api.github.com/repos/${REPO}/branches/${BRANCH}" '.commit.commit.committer.date')"
   fi
 elif [ "$RELEASE" = "dev" ]; then
-	VERSION_LONG="DEV ${VERSION} $(curl -s "https://api.github.com/repos/splitti/MuPiBox" | jq -r '.pushed_at' | cut -d'T' -f1)"  >&3 2>&3
+	VERSION_LONG="DEV ${VERSION} $(github_date "https://api.github.com/repos/splitti/MuPiBox" '.pushed_at')"
 else
 	VERSION_LONG="${VERSION} ${RELEASE}"
 fi
@@ -817,13 +934,50 @@ rm -f /tmp/mupibox-update-failed
 	if [ -f ${MUPI_SRC}/config/chromium/zz-mupibox ]; then
 		mkdir -p /etc/chromium.d && tr -d '\r' < ${MUPI_SRC}/config/chromium/zz-mupibox > /etc/chromium.d/zz-mupibox && chmod 644 /etc/chromium.d/zz-mupibox
 	fi
+	# PulseAudio keeps no volume of a program's stream for its next one (see the file; issue #191) - from the next start
+	# of PulseAudio (the restart after the update). system.pa reads system.pa.d (PulseAudio 15 and later).
+	if [ -f ${MUPI_SRC}/config/pulse/mupibox-stream-volume.pa ] && [ -f /etc/pulse/system.pa ]; then
+		if grep -q 'system.pa.d' /etc/pulse/system.pa; then
+			mkdir -p /etc/pulse/system.pa.d && tr -d '\r' < ${MUPI_SRC}/config/pulse/mupibox-stream-volume.pa > /etc/pulse/system.pa.d/mupibox-stream-volume.pa \
+				&& chmod 644 /etc/pulse/system.pa.d/mupibox-stream-volume.pa
+		else
+			echo "## PulseAudio does not read system.pa.d - the volume of a program's stream is still kept" >&3 2>&3
+		fi
+	fi
+	# restart.sh held (the placeholder of hold_restart in place - a handover, or a click in the admin interface of 4.x
+	# while this update ran, from the terminal too): the new restart.sh goes behind it, the placeholder stays. Moved in
+	# over it, the restart.sh of a version without the update's lock (4.x) restarted the box at that click's restart,
+	# in the middle of this update. (The placeholder goes to it once no update runs.)
+	# (under the lock the admin interface's call holds while it puts the placeholder in: one coming in at the same
+	# moment puts it in before the look below or after the scripts are in - not in between, where the new one went over
+	# it unheld; not got in 120 s - a call holding it that long: done all the same)
+	exec 7> /run/lock/mupibox-update-admin.lock
+	flock -w 120 7 || echo "## WARNING: the admin interface's lock was not free - scripts put in without it" >&3 2>&3
+	HOLD_KEPT=/var/lib/mupibox-update-admin/restart.sh.held
+	WAS_HELD=0
+	if grep -q "${HOLD_MARK}" /usr/local/bin/mupibox/restart.sh 2>/dev/null && grep -qF "${HOLD_KEPT}" /usr/local/bin/mupibox/restart.sh; then
+		WAS_HELD=1
+		if [ -f ${MUPI_SRC}/scripts/mupibox/restart.sh ]; then
+			if put_atomic ${MUPI_SRC}/scripts/mupibox/restart.sh ${HOLD_KEPT}; then
+				rm -f ${MUPI_SRC}/scripts/mupibox/restart.sh
+			else
+				# (not over the placeholder that works: the box restarts with the restart.sh of before - the one behind it -
+				# until the next update)
+				rm -f ${HOLD_KEPT}.mupibox-new
+				mv -f ${MUPI_SRC}/scripts/mupibox/restart.sh ${MUPI_SRC}/restart.sh.not-put-in >&3 2>&3
+				echo "## WARNING: the new restart.sh could not be put behind its hold (no space left?) - the one before stays" >&3 2>&3
+			fi
+		fi
+	fi
 	mv ${MUPI_SRC}/scripts/mupibox/* /usr/local/bin/mupibox/ >&3 2>&3
-	# (handed over by the admin interface of 4.x: the new restart.sh is held too - see hold_restart at the top)
-	if [ -n "${MUPIBOX_UPDATE_HANDED_OVER:-}" ]; then
+	# (handed over by the admin interface of 4.x, or held before: the new restart.sh is held too, when it was moved in
+	# above all the same - see hold_restart at the top)
+	if { [ -n "${MUPIBOX_UPDATE_HANDED_OVER:-}" ] || [ "${WAS_HELD}" = "1" ]; } && ! grep -q "${HOLD_MARK}" /usr/local/bin/mupibox/restart.sh 2>/dev/null; then
 		# (not held: logged - stopping here would harm more; restart.sh of 5.0.13 and later checks for the unit itself)
 		hold_restart /var/lib/mupibox-update-admin/restart.sh.held \
 			|| echo "## WARNING: restart.sh could not be held again - a restart click now cuts the update off" >&3 2>&3
 	fi
+	exec 7>&-
 	mv ${MUPI_SRC}/scripts/bluetooth/* /usr/local/bin/mupibox/ >&3 2>&3
 	# The battery of Bluetooth headphones (display and app, issue #176): BlueZ 5.66 takes it from PulseAudio only with
 	# its experimental interfaces (BatteryProviderManager1). Applies after the restart.

@@ -1,0 +1,10 @@
+# MuPiBox (installed by the installation and the update as /etc/pulse/system.pa.d/mupibox-stream-volume.pa):
+# the box's volume is the output's - every program plays at 100 % of it. PulseAudio kept the volume of each program's
+# stream for its next one (module-stream-restore): the music made quieter for names read out (speech.ts, duck) and
+# its stream ended meanwhile (another title, a stop) - its volume was not put back, and every later stream of mpv or
+# Chromium started that quiet, also the start and shutdown sounds; the next duck made it quieter again (issue #191).
+# Loaded anew without that: a stream starts at 100 %; the device a program played on is still kept.
+.nofail
+unload-module module-stream-restore
+.fail
+load-module module-stream-restore restore_volume=false

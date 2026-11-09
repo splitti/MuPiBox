@@ -45,15 +45,18 @@ export async function playlogSummary(
   for (const ln of raw.split('\n')) {
     if (!ln) continue
     try {
+      // (all lines: the range is checked on the plays below - a start written with the clock of before the network
+      // set it is from "yesterday" and would be dropped here, and its stop with it; a line without a time that can be
+      // read is left out, as before - it gave the start before it no length that could be counted)
       const e = JSON.parse(ln) as Entry
-      if (Date.parse(e.ts) >= cutoffMs) entries.push(e)
+      if (e && typeof e.ts === 'string' && Number.isFinite(Date.parse(e.ts))) entries.push(e)
     } catch {
       /* skip malformed line */
     }
   }
 
   type Play = { tsMs: number; source: string; title: string; artist: string; album: string; duration: number }
-  const plays: Play[] = []
+  const allPlays: Play[] = []
   let pending: { tsMs: number; source: string; title: string; artist: string; album: string } | null = null
   // A start without a stop (box switched off, backend killed): how long it really played is unknown.
   // Counting it up to the next start put hours of a switched-off box on the history, so it counts at
@@ -64,7 +67,7 @@ export async function playlogSummary(
   for (const e of entries) {
     if (e.event === 'start') {
       if (pending !== null) {
-        plays.push({ ...pending, duration: orphanSeconds(pending.tsMs, Date.parse(e.ts)) })
+        allPlays.push({ ...pending, duration: orphanSeconds(pending.tsMs, Date.parse(e.ts)) })
       }
       pending = {
         tsMs: Date.parse(e.ts),
@@ -74,20 +77,31 @@ export async function playlogSummary(
         album: e.album ?? '',
       }
     } else if (e.event === 'stop' && pending !== null) {
-      plays.push({ ...pending, duration: e.duration_seconds ?? 0 })
+      // (when it began: the stop's time minus its length - the start's own time can be the clock of before the
+      // network set it after a start of the box, the day it was last switched off; see server.ts)
+      const d = Number(e.duration_seconds ?? 0)
+      const duration = Number.isFinite(d) && d > 0 ? Math.round(d) : 0
+      allPlays.push({ ...pending, tsMs: Date.parse(e.ts) - duration * 1000, duration })
       pending = null
     }
   }
   if (pending !== null) {
     // Currently still playing (the poller times exactly this start) — count up to now so today's
     // number reflects reality. Otherwise it's a start left over from before a restart.
+    // (the last start without a stop is the one the poller times; its start as the poller has it now - the line's
+    // own time may be from before the clock was set)
     const running = currentPlayLogStart?.()
-    const isRunning = running != null && Math.abs(running - pending.tsMs) < 2000
-    const duration = isRunning
-      ? Math.max(0, Math.round((Date.now() - pending.tsMs) / 1000))
-      : orphanSeconds(pending.tsMs, Date.now())
-    plays.push({ ...pending, duration })
+    if (running != null) {
+      allPlays.push({ ...pending, tsMs: running, duration: Math.max(0, Math.round((Date.now() - running) / 1000)) })
+    } else {
+      allPlays.push({ ...pending, duration: orphanSeconds(pending.tsMs, Date.now()) })
+    }
   }
+  // the range: by when each play began (as corrected above), not by the time its start line was written
+  // (and only lengths that can be summed - one NaN made every total of the range null)
+  const plays = allPlays.filter(
+    (p) => Number.isFinite(p.tsMs) && p.tsMs >= cutoffMs && Number.isFinite(p.duration) && p.duration >= 0,
+  )
 
   const totalSeconds = plays.reduce((s, p) => s + p.duration, 0)
   const totalMinutes = Math.round(totalSeconds / 60)

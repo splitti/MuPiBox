@@ -1,7 +1,28 @@
 #!/bin/bash
 
 #JSON_TEMPLATE="https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/add_wifi.json"
+# On the partition a PC sees: /boot/firmware on DietPi 10 (Debian 13), /boot before. The file of an installation of
+# before, under /boot (not to be seen there from a PC), is copied over once - only when the new place has none yet. The
+# old one stays (nothing saved there can be lost); a note says it was taken over. Copied next to the new place and
+# renamed there, one step on that partition. Could it not be copied (full partition): nothing else of the file this
+# start - no template in its place, which would stop the next try.
 WIFI_FILE="/boot/add_wifi.json"
+WIFI_SKIP=""
+if [ -f /boot/firmware/config.txt ]; then
+	WIFI_FILE="/boot/firmware/add_wifi.json"
+	WIFI_MOVED="/var/lib/mupibox/add_wifi.taken-over"
+	if [ -f /boot/add_wifi.json ] && [ ! -e "${WIFI_FILE}" ] && [ ! -e "${WIFI_MOVED}" ]; then
+		WIFI_TMP="${WIFI_FILE}.new.$$"
+		if sudo cp /boot/add_wifi.json "${WIFI_TMP}" && sudo mv -f "${WIFI_TMP}" "${WIFI_FILE}"; then
+			sudo mkdir -p "$(dirname "${WIFI_MOVED}")" && sudo touch "${WIFI_MOVED}"
+		else
+			sudo rm -f "${WIFI_TMP}"
+			WIFI_SKIP=1
+			echo "startup.sh: /boot/add_wifi.json could not be copied to ${WIFI_FILE} - tried again at the next start" >&2
+		fi
+		unset WIFI_TMP
+	fi
+fi
 FIRST_INSTALL="/home/dietpi/.mupi.install"
 WPACONF="/etc/wpa_supplicant/wpa_supplicant.conf"
 MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json"
@@ -40,7 +61,13 @@ fi
 
 ### Check for new wifi network in /boot/add_wifi.json
 
-if [ -f "$WIFI_FILE" ]; then
+# Exactly one JSON object in the file, else nothing is taken from it and the file stays as it is, to be corrected (jq
+# answers for an object at the start and only then fails on what follows: {...}, with a comma behind it was taken)
+if [ -n "${WIFI_SKIP}" ]; then
+	:
+elif [ -f "$WIFI_FILE" ] && ! /usr/bin/jq -e -s 'length == 1 and (.[0] | type) == "object"' "${WIFI_FILE}" > /dev/null 2>&1; then
+	echo "startup.sh: ${WIFI_FILE} is not one JSON object - nothing taken from it, the file is left as it is" >&2
+elif [ -f "$WIFI_FILE" ]; then
 	SSID="$(/usr/bin/jq -r .ssid ${WIFI_FILE})"
 	PSK="$(/usr/bin/jq -r .password ${WIFI_FILE})"
 	if [ "${SSID}" = "" ] || [ "${PSK}" = "" ]; then
@@ -59,17 +86,32 @@ if [ -f "$WIFI_FILE" ]; then
 		/usr/local/bin/mupibox/maintenance_screen.sh wlan
 		#sudo wget -q -O ${WIFI_FILE} ${JSON_TEMPLATE}
 		# (the password over stdin: sudo writes its command line to the system log)
-		WIFI_RESULT=$(sudo wpa_passphrase "${SSID}" <<< "${PSK}")
-		IFS=$'\n'
-		i=0
-		for LINES in ${WIFI_RESULT}
-		do
-				i=$((i+1))
-				if [ "${i}" = "1" ] || [ "${i}" = "2" ] || [ "${i}" = "4" ] || [ "${i}" = "5" ]; then
-					echo $LINES | sudo tee -a ${WPACONF}
-				fi
-		done
-		unset IFS
+		# 8 to 63 characters (bytes), checked here: wpa_passphrase 2.9 reads only the first 63 from stdin, and a longer
+		# password was cut and saved as a wrong key without a word
+		# (no line break in it either: wpa_passphrase reads one line, the rest was dropped without a word)
+		PSK_BYTES=$(printf '%s' "${PSK}" | LC_ALL=C wc -c)
+		# (asked in the JSON itself: $(...) has already dropped line breaks at the end of PSK)
+		PSK_BREAK=$(/usr/bin/jq -r '(.password // "") | tostring | test("[\r\n]")' "${WIFI_FILE}" 2>/dev/null) || PSK_BREAK="error"
+		if [ "${PSK_BREAK}" != "false" ] || [[ ${PSK} == *$'\n'* || ${PSK} == *$'\r'* ]]; then
+			WIFI_RESULT=""
+			echo "startup.sh: the password in ${WIFI_FILE} has a line break - nothing written" >&2
+		elif [ "${PSK_BYTES}" -ge 8 ] && [ "${PSK_BYTES}" -le 63 ]; then
+			WIFI_RESULT=$(sudo wpa_passphrase "${SSID}" <<< "${PSK}")
+		else
+			WIFI_RESULT=""
+			echo "startup.sh: the password in ${WIFI_FILE} has ${PSK_BYTES} bytes, 8 to 63 are allowed - nothing written" >&2
+		fi
+		# The network block as a whole, without the plain-text "#psk=" comment - not lines 1, 2, 4 and 5: wpa_passphrase 2.9
+		# (Bullseye) prints "# reading passphrase from stdin" first on stdout, and those lines lost the ssid and the closing
+		# brace and kept the password in plain text. Written only when the block is complete (a wrong password length gives
+		# an error text and no block: nothing written, the WiFi stays as it was).
+		WIFI_BLOCK=$(sed -n '/^network={$/,/^}$/p' <<< "${WIFI_RESULT}" | grep -v '^[[:space:]]*#psk=')
+		if grep -q '^network={$' <<< "${WIFI_BLOCK}" && grep -q '^[[:space:]]*psk=[0-9a-f]\{64\}$' <<< "${WIFI_BLOCK}" && grep -q '^}$' <<< "${WIFI_BLOCK}"; then
+			printf '%s\n' "${WIFI_BLOCK}" | sudo tee -a ${WPACONF} > /dev/null
+		else
+			echo "startup.sh: no network written from ${WIFI_FILE} (wpa_passphrase gave no complete block)" >&2
+		fi
+		unset WIFI_RESULT WIFI_BLOCK PSK_BYTES PSK_BREAK
 		init_add_wifi
 		restart_network
 		sleep 2

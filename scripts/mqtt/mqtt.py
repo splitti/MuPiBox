@@ -856,6 +856,12 @@ def get_screenshot():
 
 
 def on_message(client, userdata, msg):
+    # A command the broker kept (retained) comes again with every connection - after every start of the box: a
+    # volume, "play" or even "shutdown" sent once that way was done again each time (the box started at the volume of
+    # that command, or played on its own). Commands only as they are sent.
+    if msg.retain:
+        print("Ignored a retained command on " + msg.topic + " (send commands without retain)", flush=True)
+        return
     #print("Topic: " + msg.topic)
     #print("Message: " + str(msg.payload.decode("utf-8")))
     if msg.topic == mqtt_topic + '/' + mqtt_clientId + '/reboot/set' and str(msg.payload.decode("utf-8")) == "reboot":

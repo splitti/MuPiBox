@@ -2219,6 +2219,13 @@ const PLAYER_HOST = 'http://127.0.0.1:5005'
 
 let lastPlayFingerprint: string | null = null
 let lastPlayStartTs: number | null = null
+// The same moments on the clock that only counts up (performance.now): a Raspberry Pi has no clock of its own - after
+// a start it runs from the time it last saved (often the evening before) until the network sets it. A track that
+// began before that got the whole time the box was off as its length (25 hours of radio on one day), and its start
+// the day it was last switched off. Lengths come from this clock; the stop's time is then right, the start is the
+// stop minus the length (see eltern/playlog.ts).
+let lastPlayStartMono: number | null = null
+let lastPlaySeenMono: number | null = null
 let lastPlayMeta: { source: string; title: string; artist: string; album: string } | null = null
 
 async function fetchCurrentPlayerState(): Promise<
@@ -2313,12 +2320,15 @@ function trimPlayLog(): void {
 const PLAY_LOG_STALE_MS = 60_000
 let lastPlaySeenTs: number | null = null
 
-function closePlayLogEntry(endMs: number, sync = false): void {
-  if (lastPlayFingerprint !== null && lastPlayStartTs !== null && lastPlayMeta !== null) {
+/** Closes the running track - at the moment it was last seen playing (atLastSeen), else now. */
+function closePlayLogEntry(atLastSeen: boolean, sync = false): void {
+  if (lastPlayFingerprint !== null && lastPlayStartMono !== null && lastPlayMeta !== null) {
+    const nowMono = performance.now()
+    const endMono = atLastSeen && lastPlaySeenMono !== null ? lastPlaySeenMono : nowMono
     const line = {
-      ts: new Date(endMs).toISOString(),
+      ts: new Date(Date.now() - (nowMono - endMono)).toISOString(),
       event: 'stop',
-      duration_seconds: Math.max(0, Math.round((endMs - lastPlayStartTs) / 1000)),
+      duration_seconds: Math.max(0, Math.round((endMono - lastPlayStartMono) / 1000)),
       ...lastPlayMeta,
     }
     if (sync) {
@@ -2333,13 +2343,16 @@ function closePlayLogEntry(endMs: number, sync = false): void {
   }
   lastPlayFingerprint = null
   lastPlayStartTs = null
+  lastPlayStartMono = null
   lastPlayMeta = null
   lastPlaySeenTs = null
+  lastPlaySeenMono = null
 }
 
-/** Start of the track the history is timing right now (null when nothing plays). */
+/** Start of the track the history is timing right now (null when nothing plays) - by the clock as it is now: one that
+ *  was set by the network meanwhile moves it to when it really began. */
 function currentPlayLogStart(): number | null {
-  return lastPlayStartTs
+  return lastPlayStartMono === null ? null : Date.now() - (performance.now() - lastPlayStartMono)
 }
 
 async function tickPlayLog(): Promise<void> {
@@ -2347,15 +2360,18 @@ async function tickPlayLog(): Promise<void> {
   const now = Date.now()
   if (state === null) {
     // transient — skip this tick, unless the player has been gone for a while
-    if (lastPlaySeenTs !== null && now - lastPlaySeenTs > PLAY_LOG_STALE_MS) closePlayLogEntry(lastPlaySeenTs)
+    if (lastPlaySeenMono !== null && performance.now() - lastPlaySeenMono > PLAY_LOG_STALE_MS) closePlayLogEntry(true)
     return
   }
   if (state.fingerprint === lastPlayFingerprint) {
-    if (lastPlayFingerprint !== null) lastPlaySeenTs = now
+    if (lastPlayFingerprint !== null) {
+      lastPlaySeenTs = now
+      lastPlaySeenMono = performance.now()
+    }
     return // no change
   }
 
-  closePlayLogEntry(now)
+  closePlayLogEntry(false)
   if (state.fingerprint !== null && state.meta !== null) {
     appendPlayLogLine({
       ts: new Date(now).toISOString(),
@@ -2364,8 +2380,10 @@ async function tickPlayLog(): Promise<void> {
     })
     lastPlayFingerprint = state.fingerprint
     lastPlayStartTs = now
+    lastPlayStartMono = performance.now()
     lastPlayMeta = state.meta
     lastPlaySeenTs = now
+    lastPlaySeenMono = lastPlayStartMono
     if (state.player === 'spotify') notifySpotifyTrack()
   }
 }
@@ -2401,7 +2419,7 @@ function startPlayLogPoller(): void {
   // pm2 restart / shutdown: close the running track, otherwise the history counts it until the next start.
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.once(signal, () => {
-      closePlayLogEntry(lastPlaySeenTs ?? Date.now(), true)
+      closePlayLogEntry(true, true)
       process.exit(0)
     })
   }
@@ -4082,6 +4100,61 @@ app.post('/api/delete', (req, res) => {
   })
 })
 
+// Several entries at once ({ entries: [{ index, original }] }): a whole group of the app ("Alle entfernen", "Abo beenden")
+// - checked all first, and the library written once (one by one, a subscription of 250 albums wrote it 250 times and
+// took minutes). Nothing is deleted when one of them does not match any more (409, as /api/delete).
+app.post('/api/delete-many', (req, res) => {
+  const list = req.body?.entries
+  if (!Array.isArray(list) || list.length === 0 || list.length > 2000) {
+    res.status(400).send('entries missing')
+    return
+  }
+  const lockResult = acquireLock(dataLock, '/api/delete-many')
+  if (lockResult === 'locked') {
+    res.status(200).send('locked')
+    return
+  }
+  if (lockResult === 'error') {
+    res.status(200).send('error')
+    return
+  }
+  jsonfile.readFile(dataFile, (error, data) => {
+    if (error || !Array.isArray(data)) {
+      releaseLock(dataLock, '/api/delete-many')
+      res.status(error ? 200 : 500).send(error ? 'error' : 'data.json is not a list')
+      return
+    }
+    const places = new Set<number>()
+    for (const e of list) {
+      const problem = libraryIndexProblem(data, e?.index, e?.original)
+      if (problem || places.has(e.index)) {
+        releaseLock(dataLock, '/api/delete-many')
+        res.status(problem === 'library changed' ? 409 : 400).send(problem ?? 'twice')
+        return
+      }
+      places.add(e.index)
+    }
+    // (from the last place to the first: the places before stay where they were)
+    const removed: unknown[] = []
+    for (const i of [...places].sort((a, b) => b - a)) removed.push(...data.splice(i, 1))
+    renumberLibrary(data)
+    writeJsonAtomic(dataFile, data, (writeError) => {
+      releaseLock(dataLock, '/api/delete-many')
+      if (writeError) {
+        console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/delete-many write failed:`, writeError)
+        res.status(500).send('error')
+        return
+      }
+      for (const entry of removed) {
+        removeRssPictures(entry, data).catch((e) => {
+          console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Could not remove the pictures of a podcast: ${e}`)
+        })
+      }
+      res.status(200).send('ok')
+    })
+  })
+})
+
 app.post('/api/edit', (req, res) => {
   // The new entry comes as { index, data }. Without data (the web app used to send the fields next to
   // index) splice() put null into the library, and that entry was gone.
@@ -4684,7 +4757,9 @@ app.get('/api/sonos', (_req, res) => {
 // (cors *), and it returned the whole file: Spotify client secret and tokens, Telegram bot token,
 // MQTT and Synology passwords, the admin password hash and the parents' password hash + salt.
 // The box frontend only needs display settings, so these keys are dropped at any depth.
-const SECRET_CONFIG_KEYS = /^(password|pass|pwd|pw|psk|secret|clientsecret|token|accesstoken|refreshtoken|hash|salt|sid|apikey|api_key|username|user|cookie)$/i
+// (device_proof, pending_delete_tokens: the voluntary statistics' own - see eltern/telemetry.ts)
+const SECRET_CONFIG_KEYS =
+  /^(password|pass|pwd|pw|psk|secret|clientsecret|token|accesstoken|refreshtoken|hash|salt|sid|apikey|api_key|username|user|cookie|device_proof|pending_delete_tokens)$/i
 
 function redactSecrets(value: unknown): unknown {
   if (Array.isArray(value)) {

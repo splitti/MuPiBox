@@ -23,6 +23,7 @@ NETWORKCONFIG="/tmp/network.json"
 OLDSTATE="starting"
 TRUESTATE="online"
 FALSESTATE="offline"
+MISSES=0                 # checks in a row without an answer
 DATA_LOCK="/tmp/.data.lock"
 RESUME_LOCK="/tmp/.resume.lock"
 
@@ -104,12 +105,20 @@ do
 	# ONLINESTATE keeps its "online"/"offline" values for downstream
 	# consumers of /tmp/network.json.
 	if /usr/bin/python3 /usr/local/bin/mupibox/check_network.py; then
+		MISSES=0
 		ONLINESTATE=${TRUESTATE}
 		# Reconcile every tick (cheap when it is a no-op) instead of only on
 		# state change — self-healing if a symlink was wrong.
 		ensure_symlink "${DATA_FILE}" "${ACTIVE_FILE}"
 		ensure_symlink "${RESUME_FILE}" "${ACTIVERESUME_FILE}"
 	else
+		MISSES=$((MISSES + 1))
+		# Online before: one answer missing (5 s without one, a moment of the WiFi between two access points) is no reason
+		# to switch the display and the library to offline - asked again in a few seconds, offline only when that fails too.
+		if [ "${OLDSTATE}" = "${TRUESTATE}" ] && [ "${MISSES}" -lt 2 ]; then
+			sleep 3
+			continue
+		fi
 		ONLINESTATE=${FALSESTATE}
 		if [ ! -f ${OFFLINE_FILE} ]; then
 			echo -n "[" > ${OFFLINE_FILE}
