@@ -2554,7 +2554,8 @@ function libGroups() {
         const artist = String(a.name || a.id)
         if (lib.cat !== 'all' && cat !== lib.cat) continue
         if (q && !norm(artist).includes(q)) continue
-        add(`sub|${a.id}`, { kind: 'sub', artist, src: 'spotify-sync', cat, sub: a })
+        // (no album yet to take the picture from: the artist's own from Spotify, cached by the box)
+        add(`sub|${a.id}`, { kind: 'sub', artist, src: 'spotify-sync', cat, sub: a, cover: `/api/spotify/cover-for/artist/${encodeURIComponent(a.id)}` })
       }
     }
   }
@@ -2597,7 +2598,7 @@ function libSub(g) {
         : first?.type === 'tidal'
           ? 'TIDAL'
           : (SOURCE_LABEL[g.src] ?? '')
-  if (g.kind === 'sub') return 'Abo · wartet auf den Sync · Spotify · Smart-Sync'
+  if (g.kind === 'sub') return 'Abo · noch keine Folgen · Spotify · Smart-Sync'
   if (g.kind === 'local') return `${g.folder.libraryIsContainer ? 'Ordner' : 'Album'} · ${src}`
   if (g.kind === 'nas') return `${g.folder.nasIsContainer ? 'Ordner' : 'Album'} · ${src}`
   if (g.entries.length === 1) {
@@ -2767,7 +2768,7 @@ function openLibGroup(g) {
          ? `<div class="rows">${entries
              .map((e, i) => `<button class="entry lib-row" data-e="${i}"><span class="lbl"><b translate="no">${esc(e.title)}</b></span><span class="chev">${icon('chevron', 18)}</span></button>`)
              .join('')}</div>`
-         : `<p class="help" style="margin:0">Noch keine Folgen auf der Box – sie kommen mit dem nächsten Sync.</p>`
+         : `<p class="help" style="margin:0">Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.</p>`
      }
      <div class="btns">${groupBtn}<button class="btn" data-close>Schließen</button></div>`,
     (sheet, close) => {
@@ -3776,7 +3777,8 @@ async function loadSubAlbums(a, box) {
         return toast('Das hat nicht geklappt', 'info')
       }
       const sync = await fireSync()
-      toast(`${cb.checked ? 'Wieder dabei' : 'Ausgeschlossen'}: ${al.name}. ${sync}`)
+      // (left out: the sync takes it off - its words say what comes onto the box, so they fit only the way back)
+      toast(cb.checked ? `Wieder dabei: ${al.name}. ${sync}` : `Ausgeschlossen: ${al.name}. Der nächste Sync nimmt es von der Box.`)
       libChanged()
     }
   }

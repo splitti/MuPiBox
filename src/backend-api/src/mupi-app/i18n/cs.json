@@ -3147,11 +3147,13 @@
  "Zuletzt gemeldet:": "Naposledy odesláno:",
  "– kommt vom Spotify-Sync.": "– pochází ze synchronizace Spotify.",
  "„{}“ abbestellen?": "Zrušit odběr „{}“?",
- "wartet auf den Sync": "čeká na synchronizaci",
- "Abo · wartet auf den Sync · Spotify · Smart-Sync": "Odběr · čeká na synchronizaci · Spotify · Smart-Sync",
  "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Všechny díly se dostanou na box, nové později samy. Rozsah můžete poté omezit v knihovně u interpreta.",
  "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Všechny díly se dostanou na box. Smart-Sync je vypnutý: díly, které vyjdou později, přicházejí samy jen se Smart-Sync (Knihovna › Spotify). Rozsah můžete poté omezit v knihovně u interpreta.",
  "Auf der Box": "Na Boxu",
- "Noch keine Folgen auf der Box – sie kommen mit dem nächsten Sync.": "Na boxu zatím nejsou žádné díly – přijdou s příští synchronizací.",
- "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Už odebíráte – rozsah změníte v knihovně u interpreta."
+ "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Už odebíráte – rozsah změníte v knihovně u interpreta.",
+ "Ausgeschlossen: {}. Der nächste Sync nimmt es von der Box.": "Vyloučeno: {}. Příští synchronizace ho z boxu odebere.",
+ "Wieder dabei: {}. {}": "Znovu zahrnuto: {}. {}",
+ "Abo · noch keine Folgen · Spotify · Smart-Sync": "Odběr · zatím žádné díly · Spotify · Smart-Sync",
+ "noch keine Folgen": "zatím žádné díly",
+ "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "Na boxu nejsou žádné díly. Co rozsah a přepínače dovolí, přinese příští synchronizace."
 }

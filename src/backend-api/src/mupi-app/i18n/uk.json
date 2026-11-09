@@ -3147,11 +3147,13 @@
  "Zuletzt gemeldet:": "Востаннє надіслано:",
  "– kommt vom Spotify-Sync.": "– походить від синхронізації Spotify.",
  "„{}“ abbestellen?": "Скасувати підписку «{}»?",
- "wartet auf den Sync": "очікує синхронізації",
- "Abo · wartet auf den Sync · Spotify · Smart-Sync": "Підписка · очікує синхронізації · Spotify · Smart-Sync",
  "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Усі епізоди потраплять на бокс, нові пізніше самі. Діапазон потім можна звузити в бібліотеці на сторінці виконавця.",
  "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Усі епізоди потраплять на бокс. Smart-Sync вимкнено: епізоди, що вийдуть пізніше, приходять самі лише зі Smart-Sync (Бібліотека › Spotify). Діапазон потім можна звузити в бібліотеці на сторінці виконавця.",
  "Auf der Box": "На боксі",
- "Noch keine Folgen auf der Box – sie kommen mit dem nächsten Sync.": "На боксі ще немає епізодів – вони з’являться з наступною синхронізацією.",
- "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Підписка вже є – діапазон можна змінити в бібліотеці на сторінці виконавця."
+ "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Підписка вже є – діапазон можна змінити в бібліотеці на сторінці виконавця.",
+ "Ausgeschlossen: {}. Der nächste Sync nimmt es von der Box.": "Виключено: {}. Наступна синхронізація прибере його з бокса.",
+ "Wieder dabei: {}. {}": "Знову включено: {}. {}",
+ "Abo · noch keine Folgen · Spotify · Smart-Sync": "Підписка · ще немає епізодів · Spotify · Smart-Sync",
+ "noch keine Folgen": "ще немає епізодів",
+ "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "На боксі немає епізодів. Те, що дозволяють діапазон і перемикачі, прийде з наступною синхронізацією."
 }

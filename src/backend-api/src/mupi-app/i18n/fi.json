@@ -3147,11 +3147,13 @@
  "Zuletzt gemeldet:": "Viimeksi lähetetty:",
  "– kommt vom Spotify-Sync.": "– tulee Spotify-synkronoinnista.",
  "„{}“ abbestellen?": "Peruutetaanko tilaus ”{}”?",
- "wartet auf den Sync": "odottaa synkronointia",
- "Abo · wartet auf den Sync · Spotify · Smart-Sync": "Tilaus · odottaa synkronointia · Spotify · Smart-Sync",
  "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Kaikki jaksot tulevat laatikkoon, uudet myöhemmin itsestään. Laajuutta voit rajata sen jälkeen kirjastossa artistin kohdalla.",
  "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Kaikki jaksot tulevat laatikkoon. Smart-Sync on pois päältä: myöhemmin ilmestyvät jaksot tulevat itsestään vain Smart-Syncin kanssa (Kirjasto › Spotify). Laajuutta voit rajata sen jälkeen kirjastossa artistin kohdalla.",
  "Auf der Box": "Laatikossa",
- "Noch keine Folgen auf der Box – sie kommen mit dem nächsten Sync.": "Laatikossa ei ole vielä jaksoja – ne tulevat seuraavan synkronoinnin mukana.",
- "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Jo tilattu – alueen voit muuttaa kirjastossa artistin kohdalla."
+ "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Jo tilattu – alueen voit muuttaa kirjastossa artistin kohdalla.",
+ "Ausgeschlossen: {}. Der nächste Sync nimmt es von der Box.": "Jätetty pois: {}. Seuraava synkronointi poistaa sen boksista.",
+ "Wieder dabei: {}. {}": "Taas mukana: {}. {}",
+ "Abo · noch keine Folgen · Spotify · Smart-Sync": "Tilaus · ei vielä jaksoja · Spotify · Smart-Sync",
+ "noch keine Folgen": "ei vielä jaksoja",
+ "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "Boksissa ei ole jaksoja. Mitä väli ja kytkimet sallivat, tulee seuraavassa synkronoinnissa."
 }

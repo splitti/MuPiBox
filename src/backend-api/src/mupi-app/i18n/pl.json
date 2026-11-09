@@ -3147,11 +3147,13 @@
  "Zuletzt gemeldet:": "Ostatnio wysłano:",
  "– kommt vom Spotify-Sync.": "– pochodzi z synchronizacji Spotify.",
  "„{}“ abbestellen?": "Zrezygnować z subskrypcji „{}”?",
- "wartet auf den Sync": "czeka na synchronizację",
- "Abo · wartet auf den Sync · Spotify · Smart-Sync": "Subskrypcja · czeka na synchronizację · Spotify · Smart-Sync",
  "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Wszystkie odcinki trafią na Boxa, nowe później same. Zakres możesz potem zawęzić w bibliotece przy artyście.",
  "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Wszystkie odcinki trafią na Boxa. Smart-Sync jest wyłączony: odcinki, które ukażą się później, przychodzą same tylko ze Smart-Sync (Biblioteka › Spotify). Zakres możesz potem zawęzić w bibliotece przy artyście.",
  "Auf der Box": "Na Boxie",
- "Noch keine Folgen auf der Box – sie kommen mit dem nächsten Sync.": "Na Boxie nie ma jeszcze odcinków – trafią tu przy następnej synchronizacji.",
- "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Już subskrybowane – zakres zmienisz w bibliotece przy artyście."
+ "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Już subskrybowane – zakres zmienisz w bibliotece przy artyście.",
+ "Ausgeschlossen: {}. Der nächste Sync nimmt es von der Box.": "Wykluczono: {}. Następna synchronizacja usunie go z Boxa.",
+ "Wieder dabei: {}. {}": "Znów uwzględniono: {}. {}",
+ "Abo · noch keine Folgen · Spotify · Smart-Sync": "Subskrypcja · jeszcze bez odcinków · Spotify · Smart-Sync",
+ "noch keine Folgen": "jeszcze bez odcinków",
+ "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "Brak odcinków na Boxie. To, na co pozwalają zakres i przełączniki, przyniesie następna synchronizacja."
 }

@@ -3147,11 +3147,13 @@
  "Zuletzt gemeldet:": "Τελευταία αποστολή:",
  "– kommt vom Spotify-Sync.": "– προέρχεται από το Spotify-Sync.",
  "„{}“ abbestellen?": "Να καταργηθεί η συνδρομή στο «{}»;",
- "wartet auf den Sync": "αναμένει τον συγχρονισμό",
- "Abo · wartet auf den Sync · Spotify · Smart-Sync": "Συνδρομή · αναμένει τον συγχρονισμό · Spotify · Smart-Sync",
  "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Όλα τα επεισόδια έρχονται στο κουτί, τα νέα αργότερα μόνα τους. Το εύρος μπορείς μετά να το περιορίσεις στη βιβλιοθήκη, στη σελίδα του καλλιτέχνη.",
  "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Όλα τα επεισόδια έρχονται στο κουτί. Το Smart-Sync είναι ανενεργό: επεισόδια που βγαίνουν αργότερα έρχονται μόνα τους μόνο με το Smart-Sync (Βιβλιοθήκη › Spotify). Το εύρος μπορείς μετά να το περιορίσεις στη βιβλιοθήκη, στη σελίδα του καλλιτέχνη.",
  "Auf der Box": "Στο κουτί",
- "Noch keine Folgen auf der Box – sie kommen mit dem nächsten Sync.": "Δεν υπάρχουν ακόμα επεισόδια στο κουτί – έρχονται με τον επόμενο συγχρονισμό.",
- "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Έχεις ήδη εγγραφεί – το εύρος το αλλάζεις στη βιβλιοθήκη, στη σελίδα του καλλιτέχνη."
+ "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Έχεις ήδη εγγραφεί – το εύρος το αλλάζεις στη βιβλιοθήκη, στη σελίδα του καλλιτέχνη.",
+ "Ausgeschlossen: {}. Der nächste Sync nimmt es von der Box.": "Εξαιρέθηκε: {}. Ο επόμενος συγχρονισμός το αφαιρεί από το κουτί.",
+ "Wieder dabei: {}. {}": "Ξανά μέσα: {}. {}",
+ "Abo · noch keine Folgen · Spotify · Smart-Sync": "Συνδρομή · ακόμα κανένα επεισόδιο · Spotify · Smart-Sync",
+ "noch keine Folgen": "ακόμα κανένα επεισόδιο",
+ "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "Κανένα επεισόδιο στο κουτί. Ό,τι επιτρέπουν το εύρος και οι διακόπτες το φέρνει ο επόμενος συγχρονισμός."
 }

@@ -3147,11 +3147,13 @@
  "Zuletzt gemeldet:": "Último envío:",
  "– kommt vom Spotify-Sync.": "– viene del Spotify-Sync.",
  "„{}“ abbestellen?": "¿Cancelar la suscripción a «{}»?",
- "wartet auf den Sync": "esperando la sincronización",
- "Abo · wartet auf den Sync · Spotify · Smart-Sync": "Suscripción · esperando la sincronización · Spotify · Smart-Sync",
  "Alle Folgen kommen auf die Box, neue später von selbst. Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Todos los episodios llegan a la caja, los nuevos más tarde solos. Después puedes acotar el rango en la biblioteca, en la página del artista.",
  "Alle Folgen kommen auf die Box. Smart-Sync ist aus: Folgen, die später erscheinen, kommen nur mit Smart-Sync von selbst (Bibliothek › Spotify). Den Bereich kannst du danach in der Bibliothek beim Künstler eingrenzen.": "Todos los episodios llegan a la caja. Smart-Sync está desactivado: los episodios que salgan más tarde solo llegan solos con Smart-Sync (Biblioteca › Spotify). Después puedes acotar el rango en la biblioteca, en la página del artista.",
  "Auf der Box": "En la caja",
- "Noch keine Folgen auf der Box – sie kommen mit dem nächsten Sync.": "Todavía no hay episodios en la caja – llegarán con la próxima sincronización.",
- "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Ya suscrito – el rango lo cambias en la biblioteca, en la página del artista."
+ "Schon abonniert – den Bereich änderst du in der Bibliothek beim Künstler.": "Ya suscrito – el rango lo cambias en la biblioteca, en la página del artista.",
+ "Ausgeschlossen: {}. Der nächste Sync nimmt es von der Box.": "Excluido: {}. La próxima sincronización lo quita de la caja.",
+ "Wieder dabei: {}. {}": "De nuevo incluido: {}. {}",
+ "Abo · noch keine Folgen · Spotify · Smart-Sync": "Suscripción · aún sin episodios · Spotify · Smart-Sync",
+ "noch keine Folgen": "aún sin episodios",
+ "Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.": "No hay episodios en la caja. Lo que permitan el rango y los interruptores llega con la próxima sincronización."
 }
