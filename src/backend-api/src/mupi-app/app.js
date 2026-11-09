@@ -3045,6 +3045,10 @@ function openEntrySheet(item, back = null) {
     ['artistcover', place ? 'Ordner-Cover (Bild-URL)' : 'Interpret-Cover (Bild-URL)'],
   ]
   const val = (k) => item[`${k}_override`] ?? (isSync ? '' : item[k] ?? '')
+  // an own picture in a Spotify entry (not one of Spotify's, as most entries keep): one tap back to Spotify's (both
+  // picture fields emptied)
+  const fromSpotify = (u) => /^https:\/\/i\.scdn\.co\//.test(u) || u.startsWith('/api/spotify/cover')
+  const spotifyPictureBack = item.type === 'spotify' && !!serviceCover(item) && [val('cover'), val('artistcover')].some((v) => v && !fromSpotify(String(v)))
   const folder = place ? String(item.artist ?? '').trim() : ''
   // (alone in its folder - as the app added playlists before, in one of their own name: a tile spares a tap)
   const aloneInFolder = !!folder && (lib.items ?? []).filter((it) => it && !it.isResume && it.category === item.category && String(it.artist ?? '').trim() === folder).length === 1
@@ -3065,6 +3069,7 @@ function openEntrySheet(item, back = null) {
              }`
        })
        .join('')}
+     ${spotifyPictureBack ? `<div class="btns"><button type="button" class="btn" data-svc-pic>${icon('image', 18)}Bild von Spotify verwenden</button></div>` : ''}
      <div class="field"><label for="e-cat">Kategorie</label>${catSelect('e-cat', item.category_override ?? (isSync ? '' : item.category === 'radio' ? 'other' : item.category), isSync)}</div>
      ${playOptions ? entryPlayFields(item) : ''}
      ${item.type === 'rss' ? offlineField(item) : ''}
@@ -3079,6 +3084,15 @@ function openEntrySheet(item, back = null) {
       if (placer) sheet.querySelector('#e-cat').addEventListener('change', () => void placer.reload())
       if (wholeArtist) loadArtistAlbums(item, sheet.querySelector('#e-albums'))
       if (tidalArtist) wireTidalRange(item, sheet)
+      // (the own pictures out of the fields - saved with "Speichern", then the box shows Spotify's picture again)
+      sheet.querySelector('[data-svc-pic]')?.addEventListener('click', (e) => {
+        for (const k of ['cover', 'artistcover']) {
+          const input = sheet.querySelector(`#e-${k}`)
+          if (input) input.value = ''
+        }
+        e.currentTarget.disabled = true
+        toast('Mit „Speichern“ zeigt die Box wieder das Bild von Spotify')
+      })
       if (item.type === 'rss') loadOfflineStatus(item.id, sheet.querySelector('#e-offline-status'))
       if (playOptions && item.type === 'rss') {
         wireEpisodePick(sheet, 'e', () =>

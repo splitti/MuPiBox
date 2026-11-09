@@ -32,7 +32,7 @@
 <li id='linews' class='linews'>An album of the Spotify sync can be taken off the box from the library itself ("Entfernen"), at once and for good: it is left out of its subscription and does not come back with the next sync (before, the way was Verwaltete Inhalte only). One that came from one of your Spotify playlists goes in Spotify - the app says so.</li>
 <li id='linews' class='linews'>A whole group goes at once: "Alle entfernen" for entries added by hand (e.g. the radio episodes of one name), "Abo beenden" for a subscribed artist - its albums go right away.</li>
 <li id='linews' class='linews'>A subscribed artist is changed where it is: in the library, the artist shows its subscription above its albums - the range of episodes, the albums let in or left out, "Abo beenden". A subscription none of whose albums is on the box yet is listed too ("no episodes yet", with the artist's picture from Spotify). "Verwaltete Inhalte" stays as before.</li>
-<li id='linews' class='linews'>A picture chosen for an entry from the box's own cover folder (saved as http://&lt;box name&gt;/cover/…) did not show in the app on a phone - the phone does not know the box's name - only the initials. The app now loads it through its own address.</li>
+<li id='linews' class='linews'>A picture chosen for an entry from the box's own cover folder (saved as http://&lt;box name&gt;/cover/…) did not show in the app on a phone - the phone does not know the box's name - only the initials. The app now loads it through its own address. A Spotify entry with a picture of its own has a button "Bild von Spotify verwenden": both picture fields emptied, after "Speichern" the box shows Spotify's picture again.</li>
 </ul>
 <b>Sound</b>
 </ul>
