@@ -2044,7 +2044,15 @@ function serviceCover(it) {
   return ref ? `/api/spotify/cover-for/${ref[0]}/${encodeURIComponent(ref[1])}` : ''
 }
 // (no cover of its own and none from the service - a radio station, a local entry: the artist's cover, if one is set)
-const coverOf = (it) => it.cover_override ?? it.cover ?? (serviceCover(it) || it.artistcover_override || it.artistcover || '')
+const coverOf = (it) => ownCover(it.cover_override ?? it.cover ?? (serviceCover(it) || it.artistcover_override || it.artistcover || ''))
+// A picture of the box's own cover folder (Bibliothek › Cover, saved as http://<box name>/cover/<file>): through the
+// app's own address - a phone does not know the box's name (MuPiBox), the box's display does. Only a name without a
+// dot (the box's) or the address the app is opened with; a picture of another server stays as it is.
+function ownCover(url) {
+  const m = /^https?:\/\/([^/:?#]+)(?::(?:80|443))?\/cover\/([^/?#]+)$/i.exec(String(url ?? ''))
+  if (!m) return url
+  return !m[1].includes('.') || m[1] === location.hostname ? `/cover/${m[2]}` : url
+}
 
 // Spotify entries that only name an artist are not playable on their own (the box looks their albums up itself)
 // Entries that subscribe a whole Spotify artist (only artistid): a folder of that artist's albums (as on the box)
@@ -2053,7 +2061,7 @@ const spotifyArtistTile = (it) => ({
   kind: 'spartist',
   title: itemArtist(it) || itemTitle(it),
   sub: catOf(it) === 'music' ? 'Alle Alben' : 'Alle Folgen',
-  cover: it.artistcover_override ?? it.artistcover ?? it.cover_override ?? it.cover ?? `/api/spotify/cover-for/artist/${encodeURIComponent(it.artistid)}`,
+  cover: ownCover(it.artistcover_override ?? it.artistcover ?? it.cover_override ?? it.cover ?? `/api/spotify/cover-for/artist/${encodeURIComponent(it.artistid)}`),
   badge: 'Spotify',
   folder: true,
   path: it.artistid,
@@ -2065,7 +2073,7 @@ const tidalArtistTile = (it) => ({
   kind: 'tdartist',
   title: itemArtist(it) || itemTitle(it),
   sub: catOf(it) === 'music' ? 'Alle Alben' : 'Alle Folgen',
-  cover: it.artistcover_override ?? it.artistcover ?? it.cover_override ?? it.cover ?? '',
+  cover: ownCover(it.artistcover_override ?? it.artistcover ?? it.cover_override ?? it.cover ?? ''),
   badge: 'TIDAL',
   folder: true,
   path: it.id,
@@ -3195,6 +3203,7 @@ function openEntrySheet(item, back = null) {
 // A cover of the SD card after it was changed: the same address, so the browser is told it is new (its memory would
 // show the old picture)
 function stampedCover(url) {
+  url = ownCover(url)
   return url && lib.coverStamp && String(url).startsWith('/api/library/file') ? `${url}&v=${lib.coverStamp}` : url
 }
 const localCoverUrl = (path) => `/api/library/file?path=${encodeURIComponent(path)}&w=400`
