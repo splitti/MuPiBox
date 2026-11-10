@@ -57,10 +57,14 @@ const safe = (value: string, pattern: RegExp, fallback = 'unknown'): string =>
   pattern.test(value) ? value : fallback
 const first = (value: string): string => value.split('\n', 1)[0].trim()
 
-/** Classic updater stores versions like "5.0.15 dev"; the stats API needs one word. */
+/** Classic's updater writes "DEV 5.0.16 2026-11-10" for dev tags.
+ * Accept that actual on-device format, as well as "5.0.16 stable".
+ * The server's software_version field only accepts a single safe word. */
 export function classicTelemetryVersion(cfg?: Config): string {
   const raw = String(cfg?.mupibox?.version ?? '').trim()
   if (/^[a-zA-Z0-9._+\-]{1,64}$/.test(raw)) return raw
+  const dev = /^DEV\s+(\d{1,4}\.\d{1,4}(?:\.\d{1,4})?)(?:\s|$)/i.exec(raw)
+  if (dev) return dev[1] + '-dev'
   const match = /^(\d{1,4}\.\d{1,4}(?:\.\d{1,4})?)(?:\s+(stable|beta|dev|alpha))?(?:\s|$)/i.exec(raw)
   if (!match) return 'unknown'
   return match[1] + (match[2] ? '-' + match[2].toLowerCase() : '')

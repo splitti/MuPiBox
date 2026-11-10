@@ -188,8 +188,25 @@ test('app: report now only with a current consent', async () => {
 })
 
 test('Classic telemetry normalises an installed version with release channel', () => {
+  assert.equal(classicTelemetryVersion({ mupibox: { version: 'DEV 5.0.16 2026-11-10' } }), '5.0.16-dev')
+  assert.equal(classicTelemetryVersion({ mupibox: { version: 'DEV 5.0.17 2026-11-10' } }), '5.0.17-dev')
   assert.equal(classicTelemetryVersion({ mupibox: { version: '5.0.15 dev' } }), '5.0.15-dev')
   assert.equal(classicTelemetryVersion({ mupibox: { version: '5.0.15 beta' } }), '5.0.15-beta')
   assert.equal(classicTelemetryVersion({ mupibox: { version: '5.0.15' } }), '5.0.15')
   assert.equal(classicTelemetryVersion({ mupibox: { version: '' } }), 'unknown')
+})
+
+
+test('manual resend updates the existing month using normalized DEV version', async () => {
+  const { requests, cfg, deps } = harness({
+    mupibox: { version: 'DEV 5.0.16 2026-11-10' },
+    installationStatistics: {
+      enabled: true, token, device_proof, consent_version: CONSENT_VERSION,
+      last_report: '2026-11-02T20:00:00Z', last_version: 'unknown', send_now: true,
+    },
+  })
+  await runStatisticsOnce(deps)
+  assert.equal(requests.length, 1)
+  assert.equal(requests[0].body.version, '5.0.16-dev')
+  assert.equal((cfg.installationStatistics as Record<string, unknown>).last_version, '5.0.16-dev')
 })
