@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { createHmac } from 'node:crypto'
-import { CONSENT_VERSION, ERASE_URL, REPORT_URL, consentBelongsToDevice, markNoticeShown, noticeState, primaryAudioDevice, reportDue, requestReportNow, runStatisticsOnce, setNoticeSwitches, setStatisticsConsent } from './eltern/telemetry'
+import { CONSENT_VERSION, ERASE_URL, REPORT_URL, classicTelemetryVersion, consentBelongsToDevice, markNoticeShown, noticeState, primaryAudioDevice, reportDue, requestReportNow, runStatisticsOnce, setNoticeSwitches, setStatisticsConsent } from './eltern/telemetry'
 
 const token = 'a'.repeat(64)
 const device_proof = createHmac('sha256', token).update('0000000012345678').digest('hex')
@@ -185,4 +185,11 @@ test('app: report now only with a current consent', async () => {
   assert.equal(await requestReportNow(on.deps, on.run), true)
   assert.equal(stat(on.cfg).send_now, true)
   assert.equal(on.runs(), 1)
+})
+
+test('Classic telemetry normalises an installed version with release channel', () => {
+  assert.equal(classicTelemetryVersion({ mupibox: { version: '5.0.15 dev' } }), '5.0.15-dev')
+  assert.equal(classicTelemetryVersion({ mupibox: { version: '5.0.15 beta' } }), '5.0.15-beta')
+  assert.equal(classicTelemetryVersion({ mupibox: { version: '5.0.15' } }), '5.0.15')
+  assert.equal(classicTelemetryVersion({ mupibox: { version: '' } }), 'unknown')
 })

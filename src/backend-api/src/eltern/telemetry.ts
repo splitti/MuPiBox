@@ -57,6 +57,15 @@ const safe = (value: string, pattern: RegExp, fallback = 'unknown'): string =>
   pattern.test(value) ? value : fallback
 const first = (value: string): string => value.split('\n', 1)[0].trim()
 
+/** Classic updater stores versions like "5.0.15 dev"; the stats API needs one word. */
+export function classicTelemetryVersion(cfg?: Config): string {
+  const raw = String(cfg?.mupibox?.version ?? '').trim()
+  if (/^[a-zA-Z0-9._+\-]{1,64}$/.test(raw)) return raw
+  const match = /^(\d{1,4}\.\d{1,4}(?:\.\d{1,4})?)(?:\s+(stable|beta|dev|alpha))?(?:\s|$)/i.exec(raw)
+  if (!match) return 'unknown'
+  return match[1] + (match[2] ? '-' + match[2].toLowerCase() : '')
+}
+
 export function primaryAudioDevice(cfg?: Config): string {
   const selected = String(cfg?.mupibox?.physicalDevice ?? '').toLowerCase()
   if (cfg?.mupihat?.hat_active === true || /mupihat/.test(selected)) return 'mupihat'
@@ -205,7 +214,7 @@ export async function runStatisticsOnce(deps: Deps): Promise<void> {
     }
     const config = deps.getMupiboxConfig() as Config | undefined
     state = statState(config)
-    const version = safe(String(config?.mupibox?.version ?? ''), /^[a-zA-Z0-9._+\-]{1,64}$/)
+    const version = classicTelemetryVersion(config)
     if (!reportDue(state, version, now)) return
     const lastAttempt = Date.parse(state.last_attempt ?? '')
     if (state.send_now !== true && Number.isFinite(lastAttempt) &&
