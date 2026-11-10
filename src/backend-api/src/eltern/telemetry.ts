@@ -60,6 +60,10 @@ const first = (value: string): string => value.split('\n', 1)[0].trim()
 /** Classic updater stores versions like "5.0.15 dev"; the stats API needs one word. */
 export function classicTelemetryVersion(cfg?: Config): string {
   const raw = String(cfg?.mupibox?.version ?? '').trim()
+  // (the update writes "DEV 5.0.16 2026-11-10" in the dev channel - the version after DEV, the day of it left out;
+  // a branch install, "DEV main 2026-11-10", has no version: unknown)
+  const dev = /^dev\s+(\d{1,4}\.\d{1,4}(?:\.\d{1,4})?)(?:\s|$)/i.exec(raw)
+  if (dev) return `${dev[1]}-dev`
   if (/^[a-zA-Z0-9._+\-]{1,64}$/.test(raw)) return raw
   const match = /^(\d{1,4}\.\d{1,4}(?:\.\d{1,4})?)(?:\s+(stable|beta|dev|alpha))?(?:\s|$)/i.exec(raw)
   if (!match) return 'unknown'

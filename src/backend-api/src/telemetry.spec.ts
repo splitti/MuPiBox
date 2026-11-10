@@ -193,3 +193,10 @@ test('Classic telemetry normalises an installed version with release channel', (
   assert.equal(classicTelemetryVersion({ mupibox: { version: '5.0.15' } }), '5.0.15')
   assert.equal(classicTelemetryVersion({ mupibox: { version: '' } }), 'unknown')
 })
+
+test('Classic telemetry: the version as the update writes it (dev channel with its day, stable, a branch)', () => {
+  assert.equal(classicTelemetryVersion({ mupibox: { version: 'DEV 5.0.16 2026-11-10' } }), '5.0.16-dev')
+  assert.equal(classicTelemetryVersion({ mupibox: { version: 'DEV 5.0.16' } }), '5.0.16-dev')
+  assert.equal(classicTelemetryVersion({ mupibox: { version: '5.0.16 stable' } }), '5.0.16-stable')
+  assert.equal(classicTelemetryVersion({ mupibox: { version: 'DEV main 2026-11-10' } }), 'unknown')
+})
