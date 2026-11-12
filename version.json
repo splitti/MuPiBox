@@ -170,6 +170,11 @@
 			"version": "4.2.4",
 			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/4.2.4.zip",
 			"releaseinfo": "Stable version with Spotify support."
+			},
+			{
+			"version": "5.0.17",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/5.0.17.zip",
+			"releaseinfo": "New Admin UI (mobile-friendly), New Themes & Coverflow, NAS / WebDAV Support, TIDAL Integration (experimental), Improved Spotify & Smart Sync, Advanced Parental Controls, Home Assistant Integration, Improved Bluetooth & Audio Playback, Multilingual TTS, Improved WiFi & Hardware Support, Safer Updates, Backups & Security, and much more..."
 			}		]
 	}
 }
