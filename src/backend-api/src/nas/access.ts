@@ -4,20 +4,12 @@
 
 import { type NasProvider, NasSessionExpiredError } from './provider'
 
-/** How a login made in the app reaches the NAS (shown in the app instead of the config's, which may be older). */
-export interface NasLoginInfo {
-  protocol: 'webdav' | 'smb'
-  address: string
-  https: boolean
-  share: string
-  domain: string
-  account: string
-}
-
 export interface NasConnectResult {
   provider?: NasProvider
   /** the NAS did not answer at all: it is marked away for a while */
   unreachable?: boolean
+  /** the NAS refused the login (password, account, share): not tried again for a longer while */
+  refused?: boolean
 }
 
 export class NasAccess {
@@ -27,14 +19,16 @@ export class NasAccess {
   private lastWorking: NasProvider | undefined
   // bumped by use() and clear(): a sign-in that was under way before must not put its provider back after them
   private generation = 0
-  // the login made in the app: used again after the NAS was away, instead of the remembered one of the config (that
-  // may be older, or another protocol - a login without "merken" is not in the config at all)
-  private pinned: { provider: NasProvider; info?: NasLoginInfo } | undefined
+  // a login made in the app without "merken": its password is in no config, it is used again after the NAS was away
+  // (until signed off or restarted). With "merken" the config holds it and is read again.
+  private pinned: NasProvider | undefined
+  private refusedLogin = false
 
   /** connect: signs in with the remembered login (undefined provider: none remembered, refused, or away) */
   constructor(
     private readonly connect: () => Promise<NasConnectResult>,
     private readonly awayMs = 30000,
+    private readonly refusedMs = 10 * 60_000,
   ) {}
 
   /** The signed-in provider without signing in (undefined: none yet, or dropped after a failure). */
@@ -65,15 +59,24 @@ export class NasAccess {
     this.current = undefined
   }
 
-  /** The login made in the app, while it is the box's (until signed off or restarted). */
-  get appLogin(): NasLoginInfo | undefined {
-    return this.pinned?.info
+  /** The NAS refused the login (twice in a row, or when signing in): not tried again for 10 minutes. */
+  get refused(): boolean {
+    return this.refusedLogin && this.isAway()
   }
 
-  /** A login in the app worked: this provider from now on (until signed off or restarted), and the NAS is there. */
-  use(provider: NasProvider, info?: NasLoginInfo): void {
+  /** The login was refused: away for longer - a Synology or QNAP blocks the box's address after a few refusals. */
+  markRefused(): void {
+    this.awayUntil = Date.now() + this.refusedMs
+    this.current = undefined
+    this.refusedLogin = true
+  }
+
+  /** A login in the app worked: this provider from now on, and the NAS is there. keep: without "merken" (no password
+   * in the config) - used again after the NAS was away, until signed off or restarted. */
+  use(provider: NasProvider, keep = false): void {
     this.generation++
-    this.pinned = { provider, info }
+    this.pinned = keep ? provider : undefined
+    this.refusedLogin = false
     this.current = provider
     this.lastWorking = provider
     this.awayUntil = 0
@@ -107,8 +110,8 @@ export class NasAccess {
   private async signIn(): Promise<NasProvider | undefined> {
     if (this.pinned) {
       // (the login of the app again: WebDAV signs in with every request anyway, SMB mounts again by itself)
-      this.current = this.pinned.provider
-      this.lastWorking = this.pinned.provider
+      this.current = this.pinned
+      this.lastWorking = this.pinned
       return this.current
     }
     const generation = this.generation
@@ -118,9 +121,11 @@ export class NasAccess {
       return this.current
     }
     if (!result.provider) {
-      if (result.unreachable) this.markAway()
+      if (result.refused) this.markRefused()
+      else if (result.unreachable) this.markAway()
       return undefined
     }
+    this.refusedLogin = false
     this.current = result.provider
     this.lastWorking = result.provider
     return result.provider
@@ -141,7 +146,13 @@ export class NasAccess {
         if (!provider) {
           return undefined
         }
-        return await fn(provider)
+        try {
+          return await fn(provider)
+        } catch (again) {
+          // refused once more right after signing in: the login itself is refused (password changed on the NAS)
+          if (again instanceof NasSessionExpiredError) this.markRefused()
+          throw again
+        }
       }
       throw error
     }

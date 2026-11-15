@@ -248,20 +248,51 @@ test('NAS access: a sign-in under way does not undo a login in the app or a sign
   assert.equal(access.signedIn, undefined)
 })
 
-test('NAS access: the login made in the app is used again after the NAS was away, not the remembered one', async () => {
+test('NAS access: a login without "merken" is used again after the NAS was away; with it the config is read again', async () => {
   const provider = (n: number) => ({ kind: 'webdav', n }) as unknown as NasProvider
   let connects = 0
   const access = new NasAccess(async () => ({ provider: provider(100 + ++connects) }), 20)
-  const app = provider(1)
-  access.use(app, { protocol: 'smb', address: 'nas', https: false, share: 'Musik', domain: '', account: 'box' })
-  assert.equal(access.appLogin?.share, 'Musik')
+  const kept = provider(1)
+  access.use(kept, true)
   access.markAway()
   await new Promise((r) => setTimeout(r, 30))
-  assert.equal(await access.active(), app)
+  assert.equal(await access.active(), kept)
   assert.equal(connects, 0)
-  // signed off: the remembered login again
+  // with "merken": the config (connect) after the NAS was away - a restored backup counts without a restart
+  access.use(provider(2))
+  access.markAway()
+  await new Promise((r) => setTimeout(r, 30))
+  assert.equal(((await access.active()) as unknown as { n: number }).n, 101)
+  // signed off: nothing kept
+  access.use(kept, true)
   access.clear()
-  assert.equal(access.appLogin, undefined)
-  assert.notEqual(await access.active(), app)
+  assert.notEqual(await access.active(), kept)
+})
+
+test('NAS access: a refused login waits 10 minutes - when signing in, and when refused twice in a row', async () => {
+  const provider = (n: number) => ({ kind: 'webdav', n }) as unknown as NasProvider
+  let answer: { provider?: NasProvider; refused?: boolean } = { refused: true }
+  let connects = 0
+  const access = new NasAccess(async () => (connects++, answer), 20, 200)
+  assert.equal(await access.active(), undefined)
+  assert.equal(access.refused, true)
+  await new Promise((r) => setTimeout(r, 30))
+  assert.equal(await access.active(), undefined, 'not tried again after the short wait')
   assert.equal(connects, 1)
+  await new Promise((r) => setTimeout(r, 200))
+  answer = { provider: provider(1) }
+  assert.ok(await access.active())
+  assert.equal(access.refused, false)
+  // signed in, then the NAS refuses every request: after the second refusal in a row it waits
+  let calls = 0
+  await assert.rejects(
+    access.withSession(async () => {
+      calls++
+      throw new NasSessionExpiredError('401')
+    }),
+    NasSessionExpiredError,
+  )
+  assert.equal(calls, 2)
+  assert.equal(access.refused, true)
+  assert.equal(await access.active(), undefined)
 })

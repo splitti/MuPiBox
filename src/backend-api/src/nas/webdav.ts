@@ -339,6 +339,8 @@ export interface WebDavLoginResult {
   certificate?: NasCertificateInfo
   /** the NAS did not answer at all (switched off, wrong address, network) - not a refused login */
   unreachable?: boolean
+  /** the NAS refused the account or password */
+  refused?: boolean
 }
 
 // Signs in to a WebDAV NAS: a PROPFIND on its top level must answer and list at least one folder.
@@ -348,7 +350,7 @@ export async function webdavLogin(base: string, account: string, password: strin
     const response = await provider.top(AbortSignal.timeout(timeoutMs))
     const body = response.body
     if (response.status === 401 || response.status === 403) {
-      return { success: false, error: 'Wrong account name or password (or no WebDAV permission for this account).' }
+      return { success: false, refused: true, error: 'Wrong account name or password (or no WebDAV permission for this account).' }
     }
     if (response.status === 207 || response.status === 200) {
       // A NAS always shows at least one folder. An empty answer means this is not the WebDAV service (e.g. the DSM web

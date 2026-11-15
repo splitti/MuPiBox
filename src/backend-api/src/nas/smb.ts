@@ -310,7 +310,7 @@ export class SmbConnection {
   private failure(error: SmbError): SmbError {
     this.answering = false
     this.lastError = error
-    const refused = error === 'auth' || error === 'notfound' || error === 'smb1'
+    const refused = error === 'auth' || error === 'notfound'
     this.retryAt = Date.now() + (this.system.retryMs ?? (refused ? REFUSED_RETRY_MS : RETRY_MS))
     return error
   }
@@ -631,7 +631,10 @@ export async function smbDisconnect(system?: SmbSystem): Promise<void> {
   const before = current
   current = undefined
   if (before) await before.close()
-  else if (system && (await system.mountedSource())) await system.script(['umount'], undefined, MOUNT_MS).catch(() => undefined)
+  else if (system && (await system.mountedSource()) && !current) {
+    // (no login came in the meantime - its share must not be unmounted)
+    await system.script(['umount'], undefined, MOUNT_MS).catch(() => undefined)
+  }
 }
 
 /** Why the remembered share is not used right now (shown in the app), undefined: nothing to tell. */

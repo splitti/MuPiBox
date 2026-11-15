@@ -5167,9 +5167,8 @@ async function nasConnectRemembered(): Promise<NasConnectResult> {
         console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS (SMB): ${smbErrorText(result.error ?? 'other')}`)
         nasSmbLogged = result.error
       }
-      // (away for the usual 30 s in any case: requests in between fall back to the local copies at once; the
-      // connection itself waits longer before it tries a refused login again)
-      return { unreachable: true }
+      // (a refused login waits 10 minutes - the connection itself does too; else away for the usual 30 s)
+      return result.error === 'auth' || result.error === 'notfound' ? { refused: true } : { unreachable: true }
     }
     nasSmbLogged = undefined
     return { provider: result.provider }
@@ -5181,7 +5180,7 @@ async function nasConnectRemembered(): Promise<NasConnectResult> {
   // up. 4 s marked such a NAS offline for 30 s, and every tap in that time failed.
   const result = await webdavLogin(base, syn.account, password, 15000, syn.certFingerprint)
   if (!result.success || !result.provider) {
-    return { unreachable: result.unreachable }
+    return { unreachable: result.unreachable, refused: result.refused }
   }
   if (!syn.password.startsWith(nasSecretPrefix)) {
     // A clear-text password from an older config: store it encrypted from now on.
@@ -5267,7 +5266,8 @@ const photoNas: PhotoNasAccess = {
   },
   info() {
     const c = nasSettings(getMupiboxConfigSync())
-    return { connected: Boolean(c?.address && c.account && c.password && c.rememberMe), name: c?.address ?? null }
+    // (signed in now - also a login without "merken" -, or one remembered)
+    return { connected: Boolean(c?.address && c.account && (nasAccess.signedIn || (c.password && c.rememberMe))), name: c?.address ?? null }
   },
 }
 
@@ -6083,26 +6083,27 @@ app.post('/api/nas/login', localOrElternSession, async (req, res) => {
     return
   }
 
-  nasAccess.use(result.provider, { protocol: 'webdav', address, https: Boolean(useHttps), share: '', domain: '', account })
+  // (without "merken": kept in memory until signed off or restarted - its password is in no config)
+  nasAccess.use(result.provider, rememberMe !== true)
   nasListCacheClear() // another NAS or account: its folders
   smbDisconnect(nasSmb).catch(() => undefined) // (a share mounted before is not needed any more)
 
-  if (rememberMe === true) {
-    try {
-      await updateNasConfig({
-        protocol: 'webdav',
-        address,
-        https: Boolean(useHttps),
-        account,
-        password: nasEncrypt(password),
-        rememberMe: true,
-        certFingerprint: fingerprint ?? '',
-        share: '',
-        domain: '',
-      })
-    } catch (error) {
-      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to save NAS login: ${error}`)
-    }
+  // The config holds the latest login in any case (the NAS page, profiles, photos and the backup read it there) - its
+  // password only with "merken".
+  try {
+    await updateNasConfig({
+      protocol: 'webdav',
+      address,
+      https: Boolean(useHttps),
+      account,
+      password: rememberMe === true ? nasEncrypt(password) : '',
+      rememberMe: rememberMe === true,
+      certFingerprint: fingerprint ?? '',
+      share: '',
+      domain: '',
+    })
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to save NAS login: ${error}`)
   }
 
   res.json({ success: true })
@@ -6140,24 +6141,23 @@ async function nasLoginSmb(
     res.json({ success: false, reason, error: smbErrorText(reason) })
     return
   }
-  nasAccess.use(result.provider, { protocol: 'smb', address: target.host, https: false, share: target.share, domain: login.domain, account: login.account })
+  nasAccess.use(result.provider, !login.rememberMe)
   nasListCacheClear()
-  if (login.rememberMe) {
-    try {
-      await updateNasConfig({
-        protocol: 'smb',
-        address: target.host,
-        share: target.share,
-        domain: login.domain,
-        https: false,
-        account: login.account,
-        password: nasEncrypt(login.password),
-        rememberMe: true,
-        certFingerprint: '',
-      })
-    } catch (error) {
-      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to save NAS login: ${error}`)
-    }
+  // (the latest login in the config in any case, its password only with "merken" - see the WebDAV login)
+  try {
+    await updateNasConfig({
+      protocol: 'smb',
+      address: target.host,
+      share: target.share,
+      domain: login.domain,
+      https: false,
+      account: login.account,
+      password: login.rememberMe ? nasEncrypt(login.password) : '',
+      rememberMe: login.rememberMe,
+      certFingerprint: '',
+    })
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to save NAS login: ${error}`)
   }
   // (the folder given below the share: the app opens the tree there)
   res.json({ success: true, folder: `/${[target.share, ...target.folder.split('/').filter(Boolean)].join('/')}` })
@@ -6250,7 +6250,9 @@ async function buildNasIndex(): Promise<void> {
     for (let depth = 0; level.length > 0 && depth < nasIndexMaxDepth && found.length < nasIndexMaxFolders; depth++) {
       const listings = await mapWithConcurrency(level, 4, async (folder) => {
         try {
-          const files = await nasAccess.withSession((session) => session.list(folder, undefined, { foldersOnly: true }))
+          const list = () => nasAccess.withSession((session) => session.list(folder, undefined, { foldersOnly: true }))
+          // (a shown folder on a disk that wakes up: once more after a moment before the run fails)
+          const files = depth === 0 ? await list().catch(async () => (await new Promise((r) => setTimeout(r, 3000)), list())) : await list()
           if (files === undefined) {
             throw new Error('Not logged in to the NAS')
           }
@@ -6308,25 +6310,27 @@ async function buildNasIndex(): Promise<void> {
 app.get('/api/nas/state', localOrElternSession, async (_req, res) => {
   const syn = nasSettings(await getMupiboxConfig())
   const session = nasAccess.signedIn ?? (await Promise.race([nasAccess.active(), new Promise<undefined>((r) => setTimeout(() => r(undefined), 8000))]))
-  // (the login made in the app while it is the box's - also one without "merken", which the config does not hold)
-  const live = nasAccess.appLogin
-  const protocol = live ? live.protocol : syn?.protocol === 'smb' ? 'smb' : 'webdav'
-  const address = live ? live.address : (syn?.address ?? '')
-  const share = live ? live.share : (syn?.share ?? '')
+  const protocol = syn?.protocol === 'smb' ? 'smb' : 'webdav'
+  const address = syn?.address ?? ''
+  const share = syn?.share ?? ''
+  // why the box is not signed in although it has a login: refused (WebDAV and SMB), SMB being set up or not installable
+  const smbWhy = protocol === 'smb' ? smbWaiting() : undefined
+  const why = smbWhy && smbWhy !== 'unreachable' && smbWhy !== 'resolve' && smbWhy !== 'other' ? smbWhy : nasAccess.refused ? 'auth' : ''
   res.json({
     success: true,
     address,
-    https: live ? live.https : syn?.https === true,
+    https: syn?.https === true,
     protocol,
     share,
-    domain: live ? live.domain : (syn?.domain ?? ''),
+    domain: syn?.domain ?? '',
     unc: protocol === 'smb' && address && share ? smbDisplayAddress(address, share) : '',
-    account: live ? live.account : (syn?.account ?? ''),
+    account: syn?.account ?? '',
     rememberMe: syn?.rememberMe === true,
     hasPassword: Boolean(syn?.password),
-    loggedIn: Boolean(session),
-    offline: nasAccess.isAway(),
-    loginError: protocol === 'smb' ? (smbWaiting() ?? '') : '',
+    // (a login the NAS refuses is no login: the app shows the form with the reason)
+    loggedIn: Boolean(session) && !why,
+    offline: nasAccess.isAway() && !why,
+    loginError: why,
     artistFolders: syn?.artistFolders ?? [],
     hiddenFolders: syn?.hiddenFolders ?? [],
     downloadFolders: syn?.downloadFolders ?? [],
