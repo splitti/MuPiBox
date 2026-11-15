@@ -148,13 +148,16 @@ def worker():
 pins = None
 
 
-def main():
+def setup():
     global pins
     pins = gpio_compat.Gpio()
     for pin in (PIN_A, PIN_B, PIN_BUTTON):
         pins.setup_input(pin)
     if pins.refused:
         print("rotary control: RPi.GPIO does not work here (%s), using %s" % (pins.refused, pins.name), flush=True)
+
+
+def main():
     read = pins.read
     threading.Thread(target=worker, daemon=True).start()
 
@@ -192,10 +195,16 @@ def main():
 
 if __name__ == "__main__":
     try:
-        main()
-    except Exception as error:  # no GPIO library, no access to the GPIO, a board neither library knows: nothing to do, no restart loop
-        print("rotary control: GPIO not usable (%s), stopped" % error, flush=True)
-        sys.exit(0)
+        try:
+            setup()
+        except Exception as error:  # no GPIO library, no access to the GPIO, a board neither library knows: nothing to do, no restart loop
+            print("rotary control: GPIO not usable (%s), stopped" % error, flush=True)
+            sys.exit(0)
+        try:
+            main()
+        except Exception as error:  # (a read that failed while it ran - lgpio on a Pi 5: systemd starts it again, Restart=on-failure)
+            print("rotary control: stopped (%s)" % error, flush=True)
+            sys.exit(1)
     finally:
         if pins is not None:
             pins.close()

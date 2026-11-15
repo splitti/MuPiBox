@@ -4120,5 +4120,13 @@
  "USB-Leser": "Lettore USB",
  "Der USB-Leser braucht nichts außer dem Stecker; ein Name hilft nur, wenn noch eine USB-Tastatur steckt.": "Il lettore USB non richiede altro che la spina; un nome serve solo se è collegata anche una tastiera USB.",
  "RC522 und PN532 lesen ISO 14443 A: NTAG, MIFARE und die meisten Karten und Sticker. ISO 15693 (ICODE, SLIX) lesen sie nicht.": "L'RC522 e il PN532 leggono ISO 14443 A: NTAG, MIFARE e la maggior parte di carte e adesivi. Non leggono ISO 15693 (ICODE, SLIX).",
- "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.": "Un lettore USB segnala il numero che digita. Segnala solo l'appoggio, non la rimozione."
+ "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.": "Un lettore USB segnala il numero che digita. Segnala solo l'appoggio, non la rimozione.",
+ "{} – so geht beides nicht. Den Pin des Drehreglers unten umstellen.": "{} – così non possono funzionare entrambi. Cambia qui sotto il pin dell’encoder rotativo.",
+ "Abends dunkler: von Sonnenuntergang bis Sonnenaufgang": "Più scuro la sera: dal tramonto all’alba",
+ "Der Drehregler läuft gerade nicht – nach einem Neustart der Box wieder, oder einen Pin neu wählen.": "L’encoder rotativo al momento non funziona – riparte al riavvio della box, oppure scegli di nuovo un pin.",
+ "Drehregler an GPIO {}/{}, Taster an GPIO {}. Zur Wahl stehen nur Pins, die nichts anderes nutzt.": "Encoder rotativo su GPIO {}/{}, pulsante su GPIO {}. Si possono scegliere solo pin che nient’altro usa.",
+ "Gespeichert – der Drehregler startet gerade nicht": "Salvato – l’encoder rotativo al momento non si avvia",
+ "GPIO {} nutzt auch: {}": "GPIO {} è usato anche da: {}",
+ "Heute {} von {} min{}.": "Oggi {} di {} min{}.",
+ "(+{} min heute)": "(+{} min oggi)"
 }

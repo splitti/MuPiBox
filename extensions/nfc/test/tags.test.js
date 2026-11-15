@@ -189,9 +189,11 @@ const feedReady = (nfc) => nfc.feed({ event: 'ready', firmware: '4.0', product: 
 test('the API part: arm with a medium, lay a new tag on, the display is told to start it, taking it off pauses', async () => {
   const realFetch = global.fetch
   const player = []
+  // (the player's number of the playback: the display's start of the tag's medium is 7, another start later 8)
+  let generation = 7
   global.fetch = async (url) => {
     const u = String(url)
-    if (u.startsWith('http://player.test/local')) return { ok: true, json: async () => ({ currentPlayer: 'mplayer', currentType: 'local', playing: false }) }
+    if (u.startsWith('http://player.test/local')) return { ok: true, json: async () => ({ currentPlayer: 'mplayer', currentType: 'local', playing: false, generation, triggerAt: Date.now() }) }
     player.push(u)
     return { ok: true, json: async () => ({}) }
   }
@@ -235,15 +237,22 @@ test('the API part: arm with a medium, lay a new tag on, the display is told to 
     assert.deepStrictEqual((await call(routes['post /tagsfor'], { body: {} })).body.items, [])
     assert.strictEqual((await call(routes['post /tagimage'], { body: { id: 'DEADBEEF', image: '' } })).status, 404)
 
-    // taken off: pause; laid on again soon, while it is paused: goes on instead of starting again
+    // taken off: pause; laid on again at once (it slipped), while it is paused: goes on instead of starting again
     nfc.feed({ event: 'gone' })
     await later()
     assert.ok(player.some((u) => u.startsWith('http://player.test/pause?src=nfc')))
-    await later(2100)
     nfc.feed({ event: 'tag', tech: 'ISO14443A', uid: '04A1B2C3' })
     await later()
     assert.ok(player.some((u) => u.startsWith('http://player.test/play?src=nfc')))
     assert.deepStrictEqual((await call(routes['get /pending'])).body, {})
+
+    // another album started on the display meanwhile: taking the tag off leaves it playing
+    generation = 8
+    player.length = 0
+    nfc.feed({ event: 'gone' })
+    await later()
+    assert.ok(!player.some((u) => u.startsWith('http://player.test/pause')), 'what the display started is not the tag of the reader')
+    generation = 7
 
     // removed, it is new again and plays nothing
     assert.strictEqual((await call(routes['post /tagremove'], { body: { id: '04A1B2C3' } })).body.ok, true)
@@ -344,6 +353,20 @@ test('a podcast tag starts an episode: the one begun, else the newest not heard,
   assert.strictEqual(tags.pickEpisode(feed([{ title: 'no file' }]), podcast), null)
   assert.strictEqual(tags.pickEpisode(feed([episode(1)]), { ...podcast, artistcover: undefined }).artistcover, '/api/rssfeed/image?local=abc.jpg&w=400')
   assert.strictEqual(tags.pickEpisode(null, podcast), null)
+})
+
+test("a podcast tag keeps to the tile: the parents' choice of episodes and the entry's sorting", () => {
+  const dated = (n, extra = {}) => episode(n, { pubDate: `Mon, ${String(n).padStart(2, '0')} Jan 2026 10:00:00 GMT`, ...extra })
+  // (a feed that lists the oldest first: the dates decide)
+  const items = [dated(1), dated(2), dated(3), dated(4)]
+  const pick = (entry, list = items, extra) => tags.pickEpisode(feed(list, extra), { ...podcast, ...entry }).id
+  assert.strictEqual(pick({}), 'https://cdn.example/4.mp3', 'the newest by date, not the first of the feed')
+  assert.strictEqual(pick({ episodePick: 'oldest:2' }), 'https://cdn.example/2.mp3', 'only the two oldest are on the tile')
+  assert.strictEqual(pick({ episodePick: 'newest:2' }, [dated(1), dated(2), dated(3, { _pct: 20 }), dated(4)]), 'https://cdn.example/3.mp3')
+  assert.strictEqual(pick({ episodePick: 'newest:1' }, [dated(1, { _pct: 20 }), dated(2), dated(3), dated(4)]), 'https://cdn.example/4.mp3', 'one begun outside the choice does not count')
+  assert.strictEqual(pick({ sorting: 'ReleaseDateAscending' }, [dated(1, { _done: true }), dated(2), dated(3), dated(4)]), 'https://cdn.example/2.mp3', 'a series from the oldest: the next one not heard')
+  // without internet the feed holds only the episodes on the SD card: no choice applied again
+  assert.strictEqual(pick({ episodePick: 'newest:1' }, [dated(1), dated(2)], { _offline: true }), 'https://cdn.example/2.mp3')
 })
 
 test('the API part: the display is told to play an episode of the podcast, not its feed', async () => {

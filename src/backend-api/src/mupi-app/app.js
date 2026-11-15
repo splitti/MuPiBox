@@ -9208,6 +9208,11 @@ async function loadRotary() {
   const free = await api(`${API}/rotary-pins`, { timeoutMs: 20000 })
   // (no answer: the pins it has stay, nothing else is offered)
   hw.rotaryFree = free.ok && Array.isArray(free.body?.pins) ? free.body.pins.filter((p) => !(p.holders ?? []).length).map((p) => Number(p.pin)) : []
+  // (a pin of its own that something else uses as well - the SPI bus switched on for an NFC reader on GPIO 10, its default
+  // button pin: neither works; the page says so at the pin)
+  const own = new Set(Object.values(r.pins ?? {}).map(Number))
+  hw.rotaryClash = new Map(free.ok && Array.isArray(free.body?.pins) ? free.body.pins.filter((p) => own.has(Number(p.pin)) && (p.holders ?? []).length).map((p) => [Number(p.pin), p.holders]) : [])
+  hw.rotaryStopped = r.active === true && r.running === false
   for (const [key, name] of ROTARY_PIN_ITEMS) state.values.set(key, rotaryPinText(r.pins[name]))
 }
 
@@ -17691,9 +17696,14 @@ const CONTROLLERS = {
     sections: (page) => {
       const chosen = new Map(ROTARY_PIN_ITEMS.map(([key]) => [key, rotaryPinNumber(state.values.get(key))]))
       const buttonPin = chosen.get('rotPinBtn')
+      const clash = [...(hw.rotaryClash ?? new Map())].map(([pin, holders]) => `GPIO ${pin} nutzt auch: ${holders.map(extWho).join(', ')}`)
       return withoutSave(page).map((sec) => ({
         ...sec,
-        help: `Drehregler an GPIO ${chosen.get('rotPinA')}/${chosen.get('rotPinB')}, Taster an GPIO ${buttonPin}. Zur Wahl stehen nur Pins, die nichts anderes nutzt.`,
+        help: [
+          `Drehregler an GPIO ${chosen.get('rotPinA')}/${chosen.get('rotPinB')}, Taster an GPIO ${buttonPin}. Zur Wahl stehen nur Pins, die nichts anderes nutzt.`,
+          ...(clash.length ? [`${clash.join(' · ')} – so geht beides nicht. Den Pin des Drehreglers unten umstellen.`] : []),
+          ...(hw.rotaryStopped ? ['Der Drehregler läuft gerade nicht – nach einem Neustart der Box wieder, oder einen Pin neu wählen.'] : []),
+        ].join(' '),
         items: sec.items.flatMap((it) => {
           if (it.key !== 'btnFn') return [it]
           const pinItems = ROTARY_PIN_ITEMS.map(([key, , , label]) => {
@@ -17725,6 +17735,12 @@ const CONTROLLERS = {
           renderPage(currentPage(), false)
         }
         return toast(r.body.error === 'gpio_twice' ? 'Die drei Pins müssen verschieden sein' : `GPIO ${r.body.pin} ist schon belegt: ${String(r.body.by ?? '').split(', ').map(extWho).join(', ')}`, 'info')
+      }
+      // (saved, but the service did not start - the pins changed too often in a row, say: the page says it)
+      if (r.ok && r.body?.running === false) {
+        await loadRotary()
+        renderPage(currentPage(), false)
+        return toast('Gespeichert – der Drehregler startet gerade nicht', 'info')
       }
       if (r.ok && pinItem) {
         // (the pin it let go is free for the others, the one it took is not)

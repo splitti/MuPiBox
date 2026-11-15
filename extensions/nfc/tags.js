@@ -182,16 +182,54 @@ const feedPicture = (url) => (!url ? undefined : url.startsWith('/rss-covers/') 
 // (what the entry says about how to play it goes along with the episode, as the app copies it)
 const ENTRY_KEYS = ['artistcover', 'shuffle', 'aPartOfAll', 'aPartOfAllMin', 'aPartOfAllMax', 'episodePick', 'sorting']
 
+// The episodes of the podcast's tile in the order of its list on the display - the parents' choice (episodePick: the newest
+// or oldest N, episodes A to B; the older aPartOfAll) and the entry's sorting, the newest first unless it says otherwise.
+// The same as the box's server does for "next" in the player (backend-api episode-neighbour.ts, episode-pick.ts).
+// offline: the feed holds only the episodes on the SD card - the chosen ones already, no choice is applied again.
+const dateOf = (item) => Date.parse(feedText(item.pubDate))
+function newestFirst(items) {
+  return items
+    .map((item, index) => ({ item, at: Number.isFinite(dateOf(item)) ? dateOf(item) : -index - 1e15 }))
+    .sort((a, b) => b.at - a.at)
+    .map((entry) => entry.item)
+}
+function pickEpisodes(list, pick) {
+  const m = /^(?:(newest|oldest):(\d{1,4})|(range|span):(\d{1,5})-(\d{1,5}))$/.exec(typeof pick === 'string' ? pick : '')
+  if (!m) return list
+  const n = list.length
+  if (m[1] === 'newest') return list.slice(0, Number(m[2]))
+  if (m[1] === 'oldest') return list.slice(Math.max(0, n - Number(m[2])))
+  const from = Math.min(Number(m[4]), Number(m[5]))
+  const to = Math.max(Number(m[4]), Number(m[5]))
+  if (m[3] === 'span') return list.slice(from, to + 1)
+  return list.slice(Math.max(0, n - to), Math.max(0, n - from + 1))
+}
+function tileOrder(items, entry, offline) {
+  let list = items
+  if (!offline && entry?.episodePick) list = pickEpisodes(newestFirst(list), entry.episodePick)
+  else if (entry?.aPartOfAll) list = list.slice(Math.max(0, (Number(entry.aPartOfAllMin) || 1) - 1), Number(entry.aPartOfAllMax) || list.length)
+  const sorting = entry?.sorting
+  if (sorting === 'AlphabeticalAscending' || sorting === 'AlphabeticalDescending') {
+    const sign = sorting === 'AlphabeticalAscending' ? 1 : -1
+    return [...list].sort((a, b) => sign * feedText(a.title).localeCompare(feedText(b.title), undefined, { numeric: true, sensitivity: 'base' }))
+  }
+  const byDate = newestFirst(list)
+  if (sorting !== 'ReleaseDateAscending') return byDate
+  const dated = byDate.filter((item) => Number.isFinite(dateOf(item)))
+  return [...dated.reverse(), ...byDate.filter((item) => !Number.isFinite(dateOf(item)))]
+}
+
 /**
  * The episode a podcast tag starts, as the medium the display plays: `body` is the answer of /api/rssfeed/cached (with `_pct` for how far
- * an episode was heard and `_done`, set by the box), `entry` the podcast the tag has. Null when the feed has no episode.
+ * an episode was heard and `_done`, set by the box), `entry` the podcast the tag has. Among the episodes its tile shows, in their order:
+ * the one begun, else the first not heard (the newest unless the entry sorts otherwise), else the first. Null when there is none.
  */
 function pickEpisode(body, entry) {
   const channel = body?.rss?.channel
   const raw = channel?.item
-  const episodes = (Array.isArray(raw) ? raw : raw ? [raw] : []).filter((item) => typeof item?.enclosure?._attributes?.url === 'string' && item.enclosure._attributes.url !== '')
+  const all = (Array.isArray(raw) ? raw : raw ? [raw] : []).filter((item) => typeof item?.enclosure?._attributes?.url === 'string' && item.enclosure._attributes.url !== '')
+  const episodes = tileOrder(all, entry, body?.rss?._offline === true)
   if (episodes.length === 0) return null
-  // (the order of the feed: the newest first)
   const open = episodes.filter((item) => item._done !== true)
   const item = open.find((it) => typeof it._pct === 'number' && it._pct > 0) ?? open[0] ?? episodes[0]
   const picture = item['itunes:image']?._attributes?.href

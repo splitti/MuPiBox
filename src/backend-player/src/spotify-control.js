@@ -2568,36 +2568,65 @@ function play() {
   }
 }
 
-// "next" and "previous" at a podcast episode: the list of a feed has the newest episode first, so - as with an album - "next" starts the
-// older episode and "previous" the newer one. The neighbour in the feed is asked from the backend API, which knows the cached feeds (the
-// player knows no feed address). At the newest (oldest) episode the same one starts again, from its beginning. It is started as the display starts an episode (the same route), so the tile time, the listening time and the
-// pause rules count as for any start; the source "skip" makes the display's player page follow to the new episode (the navigator).
-async function skipEpisode(direction) {
-  const current = currentMeta.episode
+// "next" and "previous" at a podcast episode: the episode below (above) in the list of its tile, as the display lists it
+// - the parents' choice of episodes, the entry's sorting, without internet the episodes on the SD card. The backend API
+// knows the list (/api/rssfeed/neighbour: the player knows no feed address). At an end the same episode starts again,
+// from its beginning. It is started as the display starts an episode (the same route), so the tile time, the listening
+// time and the pause rules count as for any start; the source "skip" makes the display's player page follow to the new
+// episode (the navigator). Presses while one is asked are added up: three detents of the knob go three episodes.
+const episodeSkip = { pending: 0, running: false }
+function skipEpisode(steps) {
+  episodeSkip.pending += steps
+  if (!episodeSkip.running) void runEpisodeSkips()
+}
+
+async function runEpisodeSkips() {
+  episodeSkip.running = true
+  let base = currentMeta.episode
+  // (the episode that played and the ones these presses started: another start than these ends the presses)
+  const ours = new Set([base])
   try {
-    const response = await fetch(`http://127.0.0.1:8200/api/rssfeed/neighbour?url=${encodeURIComponent(current)}&dir=${direction}`, { signal: AbortSignal.timeout(4000) })
-    const found = response.ok ? await response.json() : null
-    if (!found?.found || typeof found.url !== 'string') return log.debug(`${now()}: [Spotify Control] ${direction}: no neighbour of the episode found`)
-    // (another start came meanwhile: it stays)
-    if (currentMeta.currentType !== 'rss' || currentMeta.episode !== current) return
-    if (found.same) episodeFromStart = found.url
-    const query = new URLSearchParams({ src: 'skip' })
-    if (typeof found.cover === 'string' && /^\/api\//.test(found.cover)) query.set('cover', found.cover)
-    if (tileState.current) query.set('tile', tileState.current)
-    const start = await fetch(
-      `http://127.0.0.1:${config.server.port}/rss/${encodeURIComponent(found.url)}/${encodeURIComponent(String(found.title ?? ''))}:title:artist:${encodeURIComponent(String(found.artist ?? currentMeta.album ?? ''))}?${query}`,
-      { signal: AbortSignal.timeout(4000) },
-    )
-    if (!start.ok) episodeFromStart = ''
+    while (episodeSkip.pending !== 0) {
+      const steps = episodeSkip.pending
+      episodeSkip.pending = 0
+      const query = new URLSearchParams({ url: base, dir: steps > 0 ? 'next' : 'previous', steps: String(Math.abs(steps)) })
+      const tile = tileState.raw || tileState.current
+      if (tile) query.set('tile', tile)
+      const response = await fetch(`http://127.0.0.1:8200/api/rssfeed/neighbour?${query}`, { signal: AbortSignal.timeout(4000) })
+      const found = response.ok ? await response.json() : null
+      if (!found?.found || typeof found.url !== 'string') {
+        log.debug(`${now()}: [Spotify Control] skip at an episode: no neighbour found`)
+        break
+      }
+      // (another start came meanwhile: it stays)
+      if (currentMeta.currentType !== 'rss' || !ours.has(currentMeta.episode)) break
+      if (found.same) episodeFromStart = found.url
+      const start = new URLSearchParams({ src: 'skip' })
+      if (typeof found.cover === 'string' && found.cover.startsWith('/api/')) start.set('cover', found.cover)
+      if (tileState.current) start.set('tile', tileState.current)
+      const started = await fetch(
+        `http://127.0.0.1:${config.server.port}/rss/${encodeURIComponent(found.url)}/${encodeURIComponent(String(found.title ?? ''))}:title:artist:${encodeURIComponent(String(found.artist || currentMeta.album || ''))}?${start}`,
+        { signal: AbortSignal.timeout(4000) },
+      )
+      if (!started.ok) {
+        episodeFromStart = ''
+        break
+      }
+      base = found.url
+      ours.add(found.url)
+    }
   } catch (err) {
     episodeFromStart = ''
-    log.debug(`${now()}: [Spotify Control] ${direction} at an episode failed: ${err}`)
+    log.debug(`${now()}: [Spotify Control] skip at an episode failed: ${err}`)
+  } finally {
+    episodeSkip.pending = 0
+    episodeSkip.running = false
   }
 }
 
 function next() {
   forgetSpotifyState()
-  if (currentMeta.currentPlayer === 'mplayer' && currentMeta.currentType === 'rss' && currentMeta.episode) return void skipEpisode('older')
+  if (currentMeta.currentPlayer === 'mplayer' && currentMeta.currentType === 'rss' && currentMeta.episode) return void skipEpisode(1)
   if (currentMeta.currentPlayer === 'spotify') {
     if (spotifyBlockedUntil()) return log.debug(`${now()}: [Spotify Control] next: Spotify blocks the requests`)
     spotifyApi.skipToNext(ownSpotifyDeviceOptions()).then(
@@ -2625,7 +2654,7 @@ function next() {
 
 function previous() {
   forgetSpotifyState()
-  if (currentMeta.currentPlayer === 'mplayer' && currentMeta.currentType === 'rss' && currentMeta.episode) return void skipEpisode('newer')
+  if (currentMeta.currentPlayer === 'mplayer' && currentMeta.currentType === 'rss' && currentMeta.episode) return void skipEpisode(-1)
   if (currentMeta.currentPlayer === 'spotify') {
     if (spotifyBlockedUntil()) return log.debug(`${now()}: [Spotify Control] previous: Spotify blocks the requests`)
     spotifyApi.skipToPrevious(ownSpotifyDeviceOptions()).then(

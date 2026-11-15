@@ -4120,5 +4120,13 @@
  "USB-Leser": "USB-lezer",
  "Der USB-Leser braucht nichts außer dem Stecker; ein Name hilft nur, wenn noch eine USB-Tastatur steckt.": "De USB-lezer heeft alleen de stekker nodig; een naam helpt alleen als er ook een USB-toetsenbord zit.",
  "RC522 und PN532 lesen ISO 14443 A: NTAG, MIFARE und die meisten Karten und Sticker. ISO 15693 (ICODE, SLIX) lesen sie nicht.": "De RC522 en de PN532 lezen ISO 14443 A: NTAG, MIFARE en de meeste kaarten en stickers. ISO 15693 (ICODE, SLIX) lezen ze niet.",
- "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.": "Een USB-lezer meldt het nummer dat hij intypt. Hij meldt alleen het opleggen, niet het weghalen."
+ "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.": "Een USB-lezer meldt het nummer dat hij intypt. Hij meldt alleen het opleggen, niet het weghalen.",
+ "{} – so geht beides nicht. Den Pin des Drehreglers unten umstellen.": "{} – zo werkt het niet allebei. Wijzig hieronder de pin van de draaiknop.",
+ "Abends dunkler: von Sonnenuntergang bis Sonnenaufgang": "’s Avonds donkerder: van zonsondergang tot zonsopgang",
+ "Der Drehregler läuft gerade nicht – nach einem Neustart der Box wieder, oder einen Pin neu wählen.": "De draaiknop draait nu niet – na een herstart van de box weer, of kies opnieuw een pin.",
+ "Drehregler an GPIO {}/{}, Taster an GPIO {}. Zur Wahl stehen nur Pins, die nichts anderes nutzt.": "Draaiknop op GPIO {}/{}, knop op GPIO {}. Alleen pins die niets anders gebruikt, zijn te kiezen.",
+ "Gespeichert – der Drehregler startet gerade nicht": "Opgeslagen – de draaiknop start nu niet",
+ "GPIO {} nutzt auch: {}": "GPIO {} wordt ook gebruikt door: {}",
+ "Heute {} von {} min{}.": "Vandaag {} van {} min{}.",
+ "(+{} min heute)": "(+{} min vandaag)"
 }

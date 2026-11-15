@@ -73,7 +73,8 @@ import { episodeKey, MAX_KEEP, type OfflineEpisode, PodcastOffline } from './pod
 import { setFeedHeadReader } from './podcast-search'
 import { EpisodeState, episodeStateSettings } from './episode-state'
 import { HEARD_KEY, HeardStore, heardSettings } from './heard'
-import { episodeList, neighbourEpisode } from './episode-neighbour'
+import { feedHas, listOf, locateIn, neighbourOf, type Located, type PodcastEntry } from './episode-neighbour'
+import { tileKeyOfRow } from './app-api/tile-key'
 import { uiScale } from './ui-scale'
 import { confirmDisplayTest, displayTestState } from './app-api/display-profile'
 import { browserGuard, corsOptionsFor, isAllowedHost, isLoopback, localOnly, localOrElternSession, logValue, PROXY_PORT, setConfiguredHosts, viaProxy } from './request-guard'
@@ -1261,42 +1262,91 @@ app.get('/api/rssfeed/episode-duration', async (req, res) => {
   res.json({ seconds: feedDurations.byKey.get(episodeKey(url)) ?? 0 })
 })
 
-// The feeds in the cache, for what is asked about an episode only (the player and the display know no feed address of it)
-async function cachedFeeds(): Promise<unknown[]> {
-  const feeds: unknown[] = []
-  for (const name of await readdir(rssCacheDataDir).catch(() => [] as string[])) {
-    if (!name.endsWith('.json')) continue
-    try {
-      feeds.push(JSON.parse(await readFile(path.join(rssCacheDataDir, name), 'utf8')))
-    } catch {
-      // a cache file being written: the next time
-    }
+// A cached feed, parsed once while its file stays the same: a skip, the list in the player and its counter ask often,
+// and a feed of thousands of episodes takes a while to parse on a Pi
+const parsedFeeds = new Map<string, { mtimeMs: number; size: number; feed: unknown }>()
+async function parsedFeed(file: string): Promise<unknown | undefined> {
+  const info = await stat(file).catch(() => undefined)
+  if (!info) return undefined
+  const hit = parsedFeeds.get(file)
+  if (hit && hit.mtimeMs === info.mtimeMs && hit.size === info.size) return hit.feed
+  try {
+    const feed = JSON.parse(await readFile(file, 'utf8')) as unknown
+    parsedFeeds.delete(file)
+    parsedFeeds.set(file, { mtimeMs: info.mtimeMs, size: info.size, feed })
+    while (parsedFeeds.size > 40) parsedFeeds.delete(parsedFeeds.keys().next().value as string)
+    return feed
+  } catch {
+    return undefined // (being written: the next time)
   }
-  return feeds
 }
 
-// The episode newer (older) than the one that plays - for "previous" and "next" at a podcast, asked by the player: the feeds in the cache
-// are searched for the episode, see episode-neighbour.ts. { found: false } when none has it.
+/**
+ * The episodes of the podcast tile an episode belongs to, in the order of its list on the display (episode-neighbour.ts):
+ * the library entry whose cached feed has the episode - with several (the same feed on two tiles) the one of `tile`
+ * (the key the start named). Without internet only the episodes on the SD card, as the display lists them then. Not in
+ * the library (started from the app's search): all of its feed, the newest first.
+ */
+async function podcastTileEpisodes(url: string, tile: string): Promise<Located | null> {
+  let entries: (PodcastEntry & Record<string, unknown>)[] = []
+  try {
+    const data = JSON.parse(await readFile(dataFile, 'utf8')) as unknown
+    if (Array.isArray(data)) entries = data.filter((e) => e?.type === 'rss' && typeof e.id === 'string' && e.id !== '')
+  } catch {
+    // (being written: as if not in the library)
+  }
+  let chosen: { entry: PodcastEntry & Record<string, unknown>; feed: unknown } | undefined
+  for (const entry of entries) {
+    const feed = await parsedFeed(rssCacheFilePath(rssCacheKeyFor(entry.id as string)))
+    if (!feed || !feedHas(feed, url)) continue
+    const title = extractRssText((feed as { rss?: { channel?: { title?: unknown } } }).rss?.channel?.title) || undefined
+    if (!chosen || (tile && tileKeyOfRow(entry, title) === tile)) chosen = { entry, feed }
+    if (!tile || tileKeyOfRow(entry, title) === tile) break
+  }
+  if (chosen) {
+    let onCard: Set<string> | undefined
+    if (boxOffline()) {
+      const files = await podcastOffline.list(chosen.entry.id as string)
+      if (Object.keys(files).length > 0) onCard = new Set(Object.keys(files))
+    }
+    return locateIn(chosen.feed, url, chosen.entry, onCard)
+  }
+  for (const name of await readdir(rssCacheDataDir).catch(() => [] as string[])) {
+    if (!name.endsWith('.json')) continue
+    const feed = await parsedFeed(path.join(rssCacheDataDir, name))
+    const found = feed ? locateIn(feed, url) : null
+    if (found) return found
+  }
+  return null
+}
+
+const queryText = (value: unknown, max = 2000): string => (typeof value === 'string' && value.length <= max ? value : '')
+
+// The episode next to the one that plays - for "next" (dir=next, steps places further) and "previous" at a podcast,
+// asked by the player. { found: false } when no feed has it. (older/newer: the first names, the list being newest first)
 app.get('/api/rssfeed/neighbour', async (req, res) => {
-  const url = typeof req.query.url === 'string' ? req.query.url : ''
-  const direction = req.query.dir === 'newer' ? 'newer' : req.query.dir === 'older' ? 'older' : ''
-  if (!url || !direction) {
+  const url = queryText(req.query.url)
+  const dir = req.query.dir === 'next' || req.query.dir === 'older' ? 1 : req.query.dir === 'previous' || req.query.dir === 'newer' ? -1 : 0
+  const steps = Math.max(1, Math.min(50, Math.floor(Number(req.query.steps) || 1)))
+  if (!url || !dir) {
     res.status(400).json({ error: 'url or dir missing' })
     return
   }
-  const found = neighbourEpisode(await cachedFeeds(), url, direction)
+  const located = await podcastTileEpisodes(url, queryText(req.query.tile, 400))
+  const found = located ? neighbourOf(located, dir * steps) : null
   res.json(found ? { found: true, ...found } : { found: false })
 })
 
-// The list of episodes of the podcast the episode belongs to (newest first), for the list in the display's player
+// The episodes of the podcast tile the episode belongs to (as its list on the display), for the list in the display's
+// player and its counter - at most 300 around the one that plays
 app.get('/api/rssfeed/episodes', async (req, res) => {
-  const url = typeof req.query.url === 'string' ? req.query.url : ''
+  const url = queryText(req.query.url)
   if (!url) {
     res.status(400).json({ error: 'url missing' })
     return
   }
-  const list = episodeList(await cachedFeeds(), url)
-  res.json(list ? { found: true, ...list } : { found: false })
+  const located = await podcastTileEpisodes(url, queryText(req.query.tile, 400))
+  res.json(located ? { found: true, ...listOf(located) } : { found: false })
 })
 
 // "New" and how far heard at a podcast's episodes (episode-state.ts)

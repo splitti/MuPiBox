@@ -4120,5 +4120,13 @@
  "USB-Leser": "USB-läsare",
  "Der USB-Leser braucht nichts außer dem Stecker; ein Name hilft nur, wenn noch eine USB-Tastatur steckt.": "USB-läsaren behöver bara kontakten; ett namn hjälper bara om ett USB-tangentbord också är anslutet.",
  "RC522 und PN532 lesen ISO 14443 A: NTAG, MIFARE und die meisten Karten und Sticker. ISO 15693 (ICODE, SLIX) lesen sie nicht.": "RC522 och PN532 läser ISO 14443 A: NTAG, MIFARE och de flesta kort och klistermärken. ISO 15693 (ICODE, SLIX) läser de inte.",
- "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.": "En USB-läsare rapporterar numret den skriver. Den rapporterar bara att taggen läggs på, inte att den tas bort."
+ "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.": "En USB-läsare rapporterar numret den skriver. Den rapporterar bara att taggen läggs på, inte att den tas bort.",
+ "{} – so geht beides nicht. Den Pin des Drehreglers unten umstellen.": "{} – båda kan inte fungera så. Byt pinnen för vridreglaget nedan.",
+ "Abends dunkler: von Sonnenuntergang bis Sonnenaufgang": "Mörkare på kvällen: från solnedgång till soluppgång",
+ "Der Drehregler läuft gerade nicht – nach einem Neustart der Box wieder, oder einen Pin neu wählen.": "Vridreglaget körs inte just nu – det startar igen när boxen startas om, eller välj en pinne på nytt.",
+ "Drehregler an GPIO {}/{}, Taster an GPIO {}. Zur Wahl stehen nur Pins, die nichts anderes nutzt.": "Vridreglage på GPIO {}/{}, knapp på GPIO {}. Bara pinnar som inget annat använder kan väljas.",
+ "Gespeichert – der Drehregler startet gerade nicht": "Sparat – vridreglaget startar inte just nu",
+ "GPIO {} nutzt auch: {}": "GPIO {} används också av: {}",
+ "Heute {} von {} min{}.": "I dag {} av {} min{}.",
+ "(+{} min heute)": "(+{} min i dag)"
 }

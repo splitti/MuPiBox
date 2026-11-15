@@ -4120,5 +4120,13 @@
  "USB-Leser": "Αναγνώστης USB",
  "Der USB-Leser braucht nichts außer dem Stecker; ein Name hilft nur, wenn noch eine USB-Tastatur steckt.": "Ο αναγνώστης USB χρειάζεται μόνο το βύσμα· ένα όνομα βοηθά μόνο αν είναι συνδεδεμένο και ένα πληκτρολόγιο USB.",
  "RC522 und PN532 lesen ISO 14443 A: NTAG, MIFARE und die meisten Karten und Sticker. ISO 15693 (ICODE, SLIX) lesen sie nicht.": "Τα RC522 και PN532 διαβάζουν ISO 14443 A: NTAG, MIFARE και τις περισσότερες κάρτες και αυτοκόλλητα. Δεν διαβάζουν ISO 15693 (ICODE, SLIX).",
- "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.": "Ένας αναγνώστης USB αναφέρει τον αριθμό που πληκτρολογεί. Αναφέρει μόνο την τοποθέτηση της ετικέτας, όχι την αφαίρεσή της."
+ "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.": "Ένας αναγνώστης USB αναφέρει τον αριθμό που πληκτρολογεί. Αναφέρει μόνο την τοποθέτηση της ετικέτας, όχι την αφαίρεσή της.",
+ "{} – so geht beides nicht. Den Pin des Drehreglers unten umstellen.": "{} – έτσι δεν μπορούν να λειτουργήσουν και τα δύο. Αλλάξτε παρακάτω το pin του περιστροφικού κουμπιού.",
+ "Abends dunkler: von Sonnenuntergang bis Sonnenaufgang": "Πιο σκοτεινά το βράδυ: από τη δύση έως την ανατολή του ηλίου",
+ "Der Drehregler läuft gerade nicht – nach einem Neustart der Box wieder, oder einen Pin neu wählen.": "Το περιστροφικό κουμπί δεν λειτουργεί αυτή τη στιγμή – ξεκινά ξανά με επανεκκίνηση του κουτιού ή επιλέξτε ξανά ένα pin.",
+ "Drehregler an GPIO {}/{}, Taster an GPIO {}. Zur Wahl stehen nur Pins, die nichts anderes nutzt.": "Περιστροφικό κουμπί στο GPIO {}/{}, κουμπί πίεσης στο GPIO {}. Επιλέγονται μόνο pins που δεν χρησιμοποιεί τίποτε άλλο.",
+ "Gespeichert – der Drehregler startet gerade nicht": "Αποθηκεύτηκε – το περιστροφικό κουμπί δεν ξεκινά αυτή τη στιγμή",
+ "GPIO {} nutzt auch: {}": "Το GPIO {} χρησιμοποιείται επίσης από: {}",
+ "Heute {} von {} min{}.": "Σήμερα {} από {} min{}.",
+ "(+{} min heute)": "(+{} min σήμερα)"
 }

@@ -199,7 +199,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
     const m = this.media
     if (m.type === 'library' || m.type === 'nas' || m.type === 'tidal') return pair(local?.currentTracknr, local?.totalTracks)
     // (a podcast: the place of the episode in its feed, the newest being the first - as the list has it)
-    if (m.type === 'rss') return pair(this.rssPlace > 0 ? this.rssPlace : undefined, this.rssEpisodes.length)
+    if (m.type === 'rss') return pair(this.rssPlace > 0 ? this.rssPlace : undefined, this.rssCount)
     if (m.type !== 'spotify') return ''
     if (m.playlistid && (spotify?.playlist?.total_tracks ?? 0) > 0) return pair(spotify?.playlist?.current_track_position, spotify?.playlist?.total_tracks)
     if (m.showid && spotify?.show_details) return pair(spotify.show_details.current_episode_position, spotify.show_details.total_episodes)
@@ -383,6 +383,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
   // The episodes of the podcast that plays (newest first) and the place of this one in them (1 = the newest, 0 = not known)
   private rssEpisodes: TrackListEntry[] = []
   private rssPlace = 0
+  // (all episodes of the tile - the list holds at most 300 of them)
+  private rssCount = 0
   trackList: TrackListEntry[] = []
   trackListTitle = ''
   pressingCover = false
@@ -1153,17 +1155,21 @@ export class PlayerPage implements OnInit, AfterViewInit {
     try {
       const feed = await firstValueFrom(this.playerService.getRssEpisodes(this.media))
       const episodes = feed.found ? (feed.episodes ?? []) : []
+      const offset = feed.found ? (feed.offset ?? 0) : 0
+      this.rssCount = feed.found ? (feed.count ?? episodes.length) : 0
       this.rssEpisodes = episodes.map((episode, index) => ({
-        position: index + 1,
+        position: offset + index + 1,
         id: episode.url,
         name: episode.title,
         duration_ms: episode.seconds > 0 ? episode.seconds * 1000 : undefined,
       }))
-      this.rssPlace = this.rssEpisodes.findIndex((entry) => this.isCurrentTrack(entry)) + 1
+      const at = this.rssEpisodes.findIndex((entry) => this.isCurrentTrack(entry))
+      this.rssPlace = at < 0 ? 0 : offset + at + 1
     } catch {
       // (the box could not say: no counter, an empty list)
       this.rssEpisodes = []
       this.rssPlace = 0
+      this.rssCount = 0
     }
   }
 

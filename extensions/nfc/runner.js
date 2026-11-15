@@ -6,6 +6,13 @@
 const { spawn, execFile } = require('node:child_process')
 const { readEvent } = require('./logic.js')
 
+// What a new start does not change by itself (a package, SPI/I2C/the serial port switched off, a pin another program
+// holds, several keyboards): tried again only every 10 minutes, and said in the log only when it is something new - a
+// reader set up wrongly wrote three warnings a minute to the SD card, day and night. (A USB reader that is not plugged
+// in, no_device, is tried as before: it comes when it is plugged in.)
+const LASTING = new Set(['no_python', 'no_spi', 'no_i2c', 'no_serial', 'gpio', 'several_devices'])
+const LASTING_RETRY_MS = 10 * 60 * 1000
+
 /** The number of the gpiochip with the header pins, from `gpiodetect` ("gpiochip0 [pinctrl-rp1] (54 lines)"); 0 when it cannot be told. */
 function headerChipNumber(gpiodetectOutput) {
   const chips = []
@@ -35,12 +42,14 @@ function createRunner({ command, args, onEvent, onEnd = () => undefined, log = c
   let stopped = false
   let retry = null
   let delay = 3000
+  let lastSaid = ''
 
   const launch = () => {
     if (stopped) return
     state.starts++
     let buffer = ''
     let lastError = ''
+    let lastCode = ''
     const started = now()
     const proc = spawnFn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] })
     child = proc
@@ -59,6 +68,7 @@ function createRunner({ command, args, onEvent, onEnd = () => undefined, log = c
             /* not one of its reports */
           }
           if (event) {
+            if (event.event === 'error') lastCode = String(event.code ?? '')
             try {
               onEvent(event)
             } catch (error) {
@@ -79,16 +89,22 @@ function createRunner({ command, args, onEvent, onEnd = () => undefined, log = c
       state.running = false
       if (stopped) return
       state.lastExit = lastError || why
-      log.warn(`[nfc] the reader program ended (${state.lastExit}) - starting it again in ${Math.round(delay / 1000)} s`)
+      const lasting = LASTING.has(lastCode)
+      // (it ran for a while: the next start is soon again; it ends at once every time: more and more slowly, up to a minute)
+      if (now() - started > 30000) delay = 3000
+      const wait = lasting ? LASTING_RETRY_MS : delay
+      const said = `${lastCode} ${state.lastExit}`
+      const line = `[nfc] the reader program ended (${state.lastExit}) - starting it again in ${Math.round(wait / 1000)} s`
+      if (said !== lastSaid) log.warn(line)
+      else log.debug?.(line)
       try {
-        onEnd(state.lastExit)
+        onEnd(state.lastExit, said !== lastSaid)
       } catch (error) {
         log.warn(`[nfc] handler failed: ${error}`)
       }
-      // (it ran for a while: the next start is soon again; it ends at once every time: more and more slowly, up to a minute)
-      if (now() - started > 30000) delay = 3000
-      retry = setTimer(launch, delay)
-      delay = Math.min(60000, delay * 2)
+      lastSaid = said
+      retry = setTimer(launch, wait)
+      if (!lasting) delay = Math.min(60000, delay * 2)
     }
     proc.on('error', (error) => ended(error.code === 'ENOENT' ? 'python3 is not installed' : String(error.message ?? error)))
     proc.on('exit', (code, signal) => ended(`exit ${code ?? signal}`))

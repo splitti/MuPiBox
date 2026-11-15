@@ -4120,5 +4120,13 @@
  "USB-Leser": "Leitor USB",
  "Der USB-Leser braucht nichts außer dem Stecker; ein Name hilft nur, wenn noch eine USB-Tastatur steckt.": "O leitor USB só precisa da ficha; um nome só ajuda se houver também um teclado USB ligado.",
  "RC522 und PN532 lesen ISO 14443 A: NTAG, MIFARE und die meisten Karten und Sticker. ISO 15693 (ICODE, SLIX) lesen sie nicht.": "O RC522 e o PN532 leem ISO 14443 A: NTAG, MIFARE e a maioria dos cartões e autocolantes. Não leem ISO 15693 (ICODE, SLIX).",
- "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.": "Um leitor USB indica o número que digita. Só indica a aproximação da tag, não a retirada."
+ "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.": "Um leitor USB indica o número que digita. Só indica a aproximação da tag, não a retirada.",
+ "{} – so geht beides nicht. Den Pin des Drehreglers unten umstellen.": "{} – assim os dois não funcionam. Muda abaixo o pino do botão rotativo.",
+ "Abends dunkler: von Sonnenuntergang bis Sonnenaufgang": "Mais escuro à noite: do pôr ao nascer do sol",
+ "Der Drehregler läuft gerade nicht – nach einem Neustart der Box wieder, oder einen Pin neu wählen.": "O botão rotativo não está a funcionar agora – volta a arrancar ao reiniciar a caixa, ou escolhe de novo um pino.",
+ "Drehregler an GPIO {}/{}, Taster an GPIO {}. Zur Wahl stehen nur Pins, die nichts anderes nutzt.": "Botão rotativo no GPIO {}/{}, botão de pressão no GPIO {}. Só se podem escolher pinos que mais nada usa.",
+ "Gespeichert – der Drehregler startet gerade nicht": "Guardado – o botão rotativo não arranca agora",
+ "GPIO {} nutzt auch: {}": "O GPIO {} também é usado por: {}",
+ "Heute {} von {} min{}.": "Hoje {} de {} min{}.",
+ "(+{} min heute)": "(+{} min hoje)"
 }

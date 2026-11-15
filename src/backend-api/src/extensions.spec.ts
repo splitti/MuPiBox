@@ -24,6 +24,11 @@ describe('udev rules of an extension', () => {
     assert.ok(checkUdevRules('SUBSYSTEM=="block", PROGRAM="/bin/sh -c id"'))
     assert.ok(checkUdevRules('SUBSYSTEM=="block", IMPORT{program}="x"'))
     assert.ok(checkUdevRules('SUBSYSTEM=="block", ENV{X}="1"'))
+    assert.ok(checkUdevRules('SUBSYSTEM=="input", ENV{ID_INPUT_KEYBOARD}="1"'), 'the kind of an input device: only to match by')
+    assert.ok(checkUdevRules('SUBSYSTEM=="input", ENV{SYSTEMD_WANTS}=="x"'))
+  })
+  it('matches an input device by its kind (the NFC extension: only USB keyboards)', () => {
+    assert.strictEqual(checkUdevRules('SUBSYSTEM=="input", SUBSYSTEMS=="usb", KERNEL=="event[0-9]*", ENV{ID_INPUT_KEYBOARD}=="1", GROUP="gpio", MODE="0660"'), null)
   })
   it('refuses an empty file and text that is no rule', () => {
     assert.ok(checkUdevRules('# only a comment\n'))

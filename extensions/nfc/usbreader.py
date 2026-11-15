@@ -88,9 +88,10 @@ def choose_device(devices, wanted):
     keyboards = [d for d in devices if d['usb'] and d['keyboard']]
     wanted = (wanted or '').strip()
     if wanted:
-        for d in devices:
-            if wanted == d['event'] or wanted.lower() in d['name'].lower():
-                return d
+        # (a reader often has a mouse or consumer-control device of the same name next to it: the keyboard of them first)
+        named = [d for d in devices if wanted == d['event'] or wanted.lower() in d['name'].lower()]
+        for d in sorted(named, key=lambda d: not (d['usb'] and d['keyboard'])):
+            return d
         raise ReaderError('no_device', 'no input device "%s" (found: %s)' % (wanted, ', '.join(d['name'] for d in keyboards) or 'no USB keyboard'))
     if len(keyboards) == 1:
         return keyboards[0]

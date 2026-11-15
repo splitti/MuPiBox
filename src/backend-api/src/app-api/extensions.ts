@@ -254,6 +254,9 @@ export async function publicSettings(manifest: Manifest): Promise<Record<string,
 
 const SAFE_RULE_KEY = /^(KERNEL|SUBSYSTEM|SUBSYSTEMS|DRIVER|ACTION|ATTR\{[A-Za-z0-9_]+\}|ATTRS\{[A-Za-z0-9_]+\}|TAG|SYMLINK|MODE|GROUP|OWNER)$/
 const RULE_TOKEN = /^\s*([A-Za-z]+(?:\{[A-Za-z0-9_]+\})?)\s*(==|!=|=|\+=)\s*"([^"\n]*)"\s*$/
+// (what the kernel's input layer says of a device - ID_INPUT_KEYBOARD and the like: only to match by, never to set - an
+// ENV{} set can start a program, SYSTEMD_WANTS)
+const RULE_MATCH_ONLY = /^ENV\{ID_INPUT(?:_[A-Z]+)?\}$/
 
 /** A udev rule file that holds only matches and the assignments of mode, group, owner, tag and symlink - nothing that runs a program. */
 export function checkUdevRules(text: string): string | null {
@@ -265,6 +268,10 @@ export function checkUdevRules(text: string): string | null {
     for (const token of tokens) {
       const m = RULE_TOKEN.exec(token)
       if (!m) return `not a plain rule: ${token.trim().slice(0, 40)}`
+      if (RULE_MATCH_ONLY.test(m[1])) {
+        if (m[2] !== '==' && m[2] !== '!=') return `only to match by: ${m[1]}`
+        continue
+      }
       if (!SAFE_RULE_KEY.test(m[1])) return `not allowed in a rule: ${m[1]}`
     }
   }
@@ -787,8 +794,11 @@ async function installExtension(id: string, deps: ExtensionDeps, uploaded?: Pack
     if ((sys.udev ?? []).length > 0 || staleRules.length > 0) {
       await run('sudo', ['udevadm', 'control', '--reload'], 20000)
       await run('sudo', ['udevadm', 'trigger', '--subsystem-match=block', '--action=change'], 20000)
-      // (a rule for the SPI bus - an NFC reader, say - applies to the device that is there already)
+      // (a rule for the SPI or I2C bus or a USB input device - an NFC reader, say - applies to the device that is there
+      // already: a PN532 at I2C said "no access" until the box was restarted)
       await run('sudo', ['udevadm', 'trigger', '--subsystem-match=spidev', '--action=change'], 20000)
+      await run('sudo', ['udevadm', 'trigger', '--subsystem-match=i2c-dev', '--action=change'], 20000)
+      await run('sudo', ['udevadm', 'trigger', '--subsystem-match=input', '--action=change'], 20000)
     }
     for (const group of sys.groups ?? []) {
       const r = await run('sudo', ['usermod', '-aG', group, 'dietpi'], 20000)

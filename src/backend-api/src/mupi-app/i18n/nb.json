@@ -4120,5 +4120,13 @@
  "USB-Leser": "USB-leser",
  "Der USB-Leser braucht nichts außer dem Stecker; ein Name hilft nur, wenn noch eine USB-Tastatur steckt.": "USB-leseren trenger bare kontakten; et navn hjelper bare hvis et USB-tastatur også er koblet til.",
  "RC522 und PN532 lesen ISO 14443 A: NTAG, MIFARE und die meisten Karten und Sticker. ISO 15693 (ICODE, SLIX) lesen sie nicht.": "RC522 og PN532 leser ISO 14443 A: NTAG, MIFARE og de fleste kort og klistremerker. ISO 15693 (ICODE, SLIX) leser de ikke.",
- "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.": "En USB-leser melder nummeret den taster inn. Den melder bare at taggen legges på, ikke at den tas bort."
+ "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.": "En USB-leser melder nummeret den taster inn. Den melder bare at taggen legges på, ikke at den tas bort.",
+ "{} – so geht beides nicht. Den Pin des Drehreglers unten umstellen.": "{} – slik kan ikke begge fungere. Bytt pinnen til dreiebryteren nedenfor.",
+ "Abends dunkler: von Sonnenuntergang bis Sonnenaufgang": "Mørkere om kvelden: fra solnedgang til soloppgang",
+ "Der Drehregler läuft gerade nicht – nach einem Neustart der Box wieder, oder einen Pin neu wählen.": "Dreiebryteren kjører ikke akkurat nå – den starter igjen når boksen startes på nytt, eller velg en pinne på nytt.",
+ "Drehregler an GPIO {}/{}, Taster an GPIO {}. Zur Wahl stehen nur Pins, die nichts anderes nutzt.": "Dreiebryter på GPIO {}/{}, knapp på GPIO {}. Bare pinner som ingenting annet bruker, kan velges.",
+ "Gespeichert – der Drehregler startet gerade nicht": "Lagret – dreiebryteren starter ikke akkurat nå",
+ "GPIO {} nutzt auch: {}": "GPIO {} brukes også av: {}",
+ "Heute {} von {} min{}.": "I dag {} av {} min{}.",
+ "(+{} min heute)": "(+{} min i dag)"
 }

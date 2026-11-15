@@ -4120,5 +4120,13 @@
  "USB-Leser": "Czytnik USB",
  "Der USB-Leser braucht nichts außer dem Stecker; ein Name hilft nur, wenn noch eine USB-Tastatur steckt.": "Czytnik USB potrzebuje tylko wtyczki; nazwa pomaga tylko wtedy, gdy podłączona jest też klawiatura USB.",
  "RC522 und PN532 lesen ISO 14443 A: NTAG, MIFARE und die meisten Karten und Sticker. ISO 15693 (ICODE, SLIX) lesen sie nicht.": "RC522 i PN532 czytają ISO 14443 A: NTAG, MIFARE i większość kart i naklejek. ISO 15693 (ICODE, SLIX) nie czytają.",
- "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.": "Czytnik USB zgłasza numer, który wpisuje. Zgłasza tylko przyłożenie taga, nie jego zdjęcie."
+ "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.": "Czytnik USB zgłasza numer, który wpisuje. Zgłasza tylko przyłożenie taga, nie jego zdjęcie.",
+ "{} – so geht beides nicht. Den Pin des Drehreglers unten umstellen.": "{} – tak oba nie mogą działać. Zmień poniżej pin pokrętła.",
+ "Abends dunkler: von Sonnenuntergang bis Sonnenaufgang": "Ciemniej wieczorem: od zachodu do wschodu słońca",
+ "Der Drehregler läuft gerade nicht – nach einem Neustart der Box wieder, oder einen Pin neu wählen.": "Pokrętło teraz nie działa – ruszy po ponownym uruchomieniu pudełka albo po ponownym wyborze pinu.",
+ "Drehregler an GPIO {}/{}, Taster an GPIO {}. Zur Wahl stehen nur Pins, die nichts anderes nutzt.": "Pokrętło na GPIO {}/{}, przycisk na GPIO {}. Do wyboru są tylko piny, których nic innego nie używa.",
+ "Gespeichert – der Drehregler startet gerade nicht": "Zapisano – pokrętło teraz się nie uruchamia",
+ "GPIO {} nutzt auch: {}": "GPIO {} używa też: {}",
+ "Heute {} von {} min{}.": "Dziś {} z {} min{}.",
+ "(+{} min heute)": "(+{} min dziś)"
 }

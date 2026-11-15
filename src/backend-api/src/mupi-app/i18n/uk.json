@@ -4120,5 +4120,13 @@
  "USB-Leser": "USB-зчитувач",
  "Der USB-Leser braucht nichts außer dem Stecker; ein Name hilft nur, wenn noch eine USB-Tastatur steckt.": "USB-зчитувачу потрібен лише роз'єм; назва допомагає, лише якщо підключено ще й USB-клавіатуру.",
  "RC522 und PN532 lesen ISO 14443 A: NTAG, MIFARE und die meisten Karten und Sticker. ISO 15693 (ICODE, SLIX) lesen sie nicht.": "RC522 і PN532 читають ISO 14443 A: NTAG, MIFARE та більшість карток і наліпок. ISO 15693 (ICODE, SLIX) вони не читають.",
- "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.": "USB-зчитувач повідомляє номер, який він вводить. Він повідомляє лише про прикладання мітки, а не про її зняття."
+ "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.": "USB-зчитувач повідомляє номер, який він вводить. Він повідомляє лише про прикладання мітки, а не про її зняття.",
+ "{} – so geht beides nicht. Den Pin des Drehreglers unten umstellen.": "{} – так обидва не працюватимуть. Змініть нижче пін поворотного регулятора.",
+ "Abends dunkler: von Sonnenuntergang bis Sonnenaufgang": "Темніше ввечері: від заходу до сходу сонця",
+ "Der Drehregler läuft gerade nicht – nach einem Neustart der Box wieder, oder einen Pin neu wählen.": "Поворотний регулятор зараз не працює – він запуститься після перезапуску коробки, або виберіть пін ще раз.",
+ "Drehregler an GPIO {}/{}, Taster an GPIO {}. Zur Wahl stehen nur Pins, die nichts anderes nutzt.": "Поворотний регулятор на GPIO {}/{}, кнопка на GPIO {}. Можна вибрати лише піни, які ніщо інше не використовує.",
+ "Gespeichert – der Drehregler startet gerade nicht": "Збережено – поворотний регулятор зараз не запускається",
+ "GPIO {} nutzt auch: {}": "GPIO {} також використовує: {}",
+ "Heute {} von {} min{}.": "Сьогодні {} з {} min{}.",
+ "(+{} min heute)": "(+{} min сьогодні)"
 }

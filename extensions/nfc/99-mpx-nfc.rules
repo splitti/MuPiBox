@@ -3,6 +3,7 @@
 SUBSYSTEM=="spidev", KERNEL=="spidev[0-9]*.[0-9]*", GROUP="gpio", MODE="0660"
 # The I2C bus (the PN532 at the header) is root:i2c as well.
 SUBSYSTEM=="i2c-dev", KERNEL=="i2c-[0-9]*", GROUP="gpio", MODE="0660"
-# A USB reader that types the card number like a keyboard (HID): its device is root:input. Only devices on the USB bus, and the
-# program that reads it takes it for itself, so the digits do not land in the console or the browser of the display.
-SUBSYSTEM=="input", SUBSYSTEMS=="usb", KERNEL=="event[0-9]*", GROUP="gpio", MODE="0660"
+# A USB reader that types the card number like a keyboard (HID): its device is root:input. Only keyboards on the USB bus (not a
+# mouse or a touch screen), and the program that reads it takes it for itself, so the digits do not land in the console or the
+# browser of the display.
+SUBSYSTEM=="input", SUBSYSTEMS=="usb", KERNEL=="event[0-9]*", ENV{ID_INPUT_KEYBOARD}=="1", GROUP="gpio", MODE="0660"

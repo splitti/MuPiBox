@@ -204,6 +204,9 @@ export function parseBootGpio(text: string): { pin: number; by: string }[] {
   // (max98357a: the amplifier of the MuPiHAT and the box's own I2S amplifier - its pins were offered for buttons, and a
   // button there made the speaker silent until the next restart)
   const i2sCards = /^(hifiberry-|iqaudio-|justboom-|allo-|audioinjector|rpi-cirrus|pcm5102|googlevoicehat|adau7002|applepi-dac|dionaudio-|fe-pi-audio|i-sabre-q2m|rpi-dac|rpi-proto|sc16is|merus-amp|max98357a|i2s-dac)/
+  // (the cards whose overlay switches the I2C bus on by itself, for the codec's controls - no dtparam=i2c_arm: SDA and SCL
+  // were offered, and a button there took the volume control of the card away at every start)
+  const i2cCards = /^(hifiberry-(dacplus|amp|digi|dacplushd|dacplusadc|dacplusdsp)|iqaudio-(dacplus|digiampplus|codec|dac)|allo-(boss|piano|katana|digione)|justboom-(dac|both|digi)|audioinjector-|rpi-cirrus|i-sabre-q2m|merus-amp|applepi-dac|dionaudio-loco-v2|fe-pi-audio)/
   for (const raw of text.split('\n')) {
     const line = raw.trim()
     if (line.startsWith('#') || !line) continue
@@ -236,6 +239,7 @@ export function parseBootGpio(text: string): { pin: number; by: string }[] {
     }
     if (!named && fixed[name]) for (const p of fixed[name]) mark(p, by)
     if (i2sCards.test(name)) for (const p of [18, 19, 20, 21]) mark(p, by)
+    if (i2cCards.test(name)) for (const p of [2, 3]) mark(p, by)
   }
   return out
 }

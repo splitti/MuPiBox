@@ -4120,5 +4120,13 @@
  "USB-Leser": "USB-læser",
  "Der USB-Leser braucht nichts außer dem Stecker; ein Name hilft nur, wenn noch eine USB-Tastatur steckt.": "USB-læseren behøver kun stikket; et navn hjælper kun, hvis der også sidder et USB-tastatur.",
  "RC522 und PN532 lesen ISO 14443 A: NTAG, MIFARE und die meisten Karten und Sticker. ISO 15693 (ICODE, SLIX) lesen sie nicht.": "RC522 og PN532 læser ISO 14443 A: NTAG, MIFARE og de fleste kort og klistermærker. ISO 15693 (ICODE, SLIX) læser de ikke.",
- "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.": "En USB-læser melder det nummer, den skriver. Den melder kun, at tagget lægges på, ikke at det fjernes."
+ "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.": "En USB-læser melder det nummer, den skriver. Den melder kun, at tagget lægges på, ikke at det fjernes.",
+ "{} – so geht beides nicht. Den Pin des Drehreglers unten umstellen.": "{} – sådan kan begge ikke fungere. Skift drejeknappens pin nedenfor.",
+ "Abends dunkler: von Sonnenuntergang bis Sonnenaufgang": "Mørkere om aftenen: fra solnedgang til solopgang",
+ "Der Drehregler läuft gerade nicht – nach einem Neustart der Box wieder, oder einen Pin neu wählen.": "Drejeknappen kører ikke lige nu – den starter igen, når boksen genstartes, eller vælg en pin igen.",
+ "Drehregler an GPIO {}/{}, Taster an GPIO {}. Zur Wahl stehen nur Pins, die nichts anderes nutzt.": "Drejeknap på GPIO {}/{}, knap på GPIO {}. Kun pins, som intet andet bruger, kan vælges.",
+ "Gespeichert – der Drehregler startet gerade nicht": "Gemt – drejeknappen starter ikke lige nu",
+ "GPIO {} nutzt auch: {}": "GPIO {} bruges også af: {}",
+ "Heute {} von {} min{}.": "I dag {} af {} min{}.",
+ "(+{} min heute)": "(+{} min i dag)"
 }

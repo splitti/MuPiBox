@@ -273,11 +273,13 @@ export class PlayerService {
     this.sendRequest(url, media)
   }
 
-  /** The episodes of the podcast an episode belongs to, newest first - found by the box in the feeds it has cached (no feed address here). */
-  getRssEpisodes(media: Media): Observable<{ found: boolean; artist?: string; current?: number; episodes?: { url: string; title: string; seconds: number }[] }> {
-    return this.http.get<{ found: boolean; artist?: string; current?: number; episodes?: { url: string; title: string; seconds: number }[] }>(
-      `${environment.backend.apiUrl}/rssfeed/episodes?url=${encodeURIComponent(media.id)}`,
-    )
+  /**
+   * The episodes of the podcast tile an episode belongs to, as its list shows them (the parents' choice, the entry's
+   * sorting) - found by the box from the episode and the tile (no feed address here). At most 300 around the one that
+   * plays: offset is the place of the first, count the number of all.
+   */
+  getRssEpisodes(media: Media): Observable<RssEpisodeList> {
+    return this.http.get<RssEpisodeList>(`${environment.backend.apiUrl}/rssfeed/episodes?url=${encodeURIComponent(media.id)}${tileQuery('?', media)}`)
   }
 
   /**
@@ -364,6 +366,15 @@ export class PlayerService {
       },
     })
   }
+}
+
+export interface RssEpisodeList {
+  found: boolean
+  artist?: string
+  current?: number
+  count?: number
+  offset?: number
+  episodes?: { url: string; title: string; seconds: number }[]
 }
 
 // A TIDAL entry for the player: <album|playlist>:<id>

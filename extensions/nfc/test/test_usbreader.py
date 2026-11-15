@@ -87,6 +87,10 @@ class DevicesTest(unittest.TestCase):
             choose_device([device('vc4-hdmi', usb=False)], '')
         self.assertEqual(caught.exception.code, 'no_device')
 
+    def test_of_the_devices_with_the_name_the_keyboard_is_taken(self):
+        devices = [device('HXGCoLtd Keyboard Mouse', '/dev/input/event4', keyboard=False), device('HXGCoLtd Keyboard', '/dev/input/event0')]
+        self.assertEqual(choose_device(devices, 'hxgco')['event'], '/dev/input/event0')
+
     def test_the_device_can_be_named_by_a_part_of_its_name_or_by_its_path(self):
         devices = [device('Logitech USB Keyboard', '/dev/input/event1'), device('HXGCoLtd Keyboard', '/dev/input/event0')]
         self.assertEqual(choose_device(devices, 'hxgco')['event'], '/dev/input/event0')

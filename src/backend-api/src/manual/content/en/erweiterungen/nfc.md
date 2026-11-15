@@ -1,6 +1,6 @@
 # NFC extension
 
-The **NFC extension** connects an **NFC reader** to the box. It supports the **PN5180** (NXP), the **RC522** and the **PN532** on the Raspberry Pi, and **USB readers** that type the card number like a keyboard. It reads the **UID** of tags and cards when one comes close and when it is taken away. Every tag can **start an album, an audio-play folder or a station**; the assignment works as with TeddyCloud: choose media, lay the tag on, done. The settings also show whether the reader is running and which tag was read last.
+The **NFC extension** connects an **NFC reader** to the box. It supports the **PN5180** (NXP), the **RC522** and the **PN532** on the Raspberry Pi, and **USB readers** that type the card number like a keyboard. It reads the **UID** of tags and cards when one comes close and when it is taken away. Every tag can **start an album, an audio-play folder, a station or a podcast**; the assignment works as with TeddyCloud: choose media, lay the tag on, done. The settings also show whether the reader is running and which tag was read last.
 
 The PN5180 reads both worlds: **ISO 14443 A** (NTAG, MIFARE and most cards and stickers) and **ISO 15693** (ICODE, SLIX).
 
@@ -26,7 +26,7 @@ Wire with the box switched off. The PN5180 needs **both** supplies: **5 V** for 
 The pins **SCK, MOSI, MISO and NSS** are fixed by the SPI port. You choose **BUSY and RST** in the settings; GPIO 25 and GPIO 23 are free on most boxes, and the choice locks pins that are taken. The PN5180 tells through BUSY when it is ready; it does not work without it. The IRQ pin is not needed, the extension asks the chip.
 
 > [!WARNING]
-> The box's **rotary encoder** uses GPIO 10 for its button, which is also MOSI of the SPI port. With the rotary encoder switched on the reader cannot be used.
+> The box's **rotary encoder** has its button on GPIO 10 by default, which is also MOSI of the SPI port. With a rotary encoder, move its button to a free pin under **Settings › Rotary encoder** (GPIO 5, say); the page shows a hint while a pin of the rotary encoder is also taken by the SPI port.
 
 Short wires help (up to about 15 cm), ideally with an extra ground wire. The labels differ from board to board: check the labels on yours, especially 5V and 3.3V. The whole header is shown in the appendix [GPIO assignment](../anhang/gpio.md).
 
@@ -73,7 +73,7 @@ The RC522 (MFRC522) is the small blue board. It reads **ISO 14443 A**, not ISO 1
 | RST | a free pin, for example GPIO 25 | 22 |
 | IRQ | leave free | – |
 
-The **RST pin** is optional: without a pin the extension resets the chip with its software reset. As with the PN5180 the **rotary encoder** uses GPIO 10 (MOSI); the reader does not work with it.
+The **RST pin** is optional: without a pin the extension resets the chip with its software reset. As with the PN5180, move the **rotary encoder's** button (GPIO 10 by default, MOSI) to another pin.
 
 ### PN532
 
@@ -89,7 +89,7 @@ Supply: 3.3 V or 5 V, depending on the board (check its label), and ground. The 
 
 - **I2C** needs `dtparam=i2c_arm=on` in `config.txt` and the module `i2c-dev` (a line `i2c-dev` in `/etc/modules`), then a restart. Then `/dev/i2c-1` exists.
 - **SPI** is switched on as above.
-- **Serial** needs `enable_uart=1` in `config.txt`; the console on the port must be off (in `dietpi-config` under **Advanced Options › Serial/UART**). Choose `/dev/serial0` as the **serial port**; on the Pi 5 `/dev/ttyAMA0` is the port on pins 8 and 10.
+- **Serial** needs `enable_uart=1` in `config.txt`; the console on the port must be off (in `dietpi-config` under **Advanced Options › Serial/UART**). Choose `/dev/serial0` as the **serial port**; on the Pi 5 `/dev/ttyAMA0` is the port on pins 8 and 10. On a Pi 3 and 4 the box's **Bluetooth** is on `/dev/ttyAMA0` – do not choose `/dev/ttyAMA0` there.
 
 ### USB reader (keyboard)
 
@@ -111,9 +111,9 @@ A tag gets its medium where you find the medium: in the **library**.
 
 A medium can have **several tags**, for instance one for each child: the window **NFC tag** lists them all, and **Add another NFC tag** adds one.
 
-From then on the tag starts its medium every time it lies on the reader, without you setting anything. If the tag had a medium already, the new one replaces it; the window names the old one ("Before: …"). An assignment waits for at most **ten minutes**; if you close the window, it is cancelled.
+From then on the tag starts its medium every time it lies on the reader, without you setting anything. If the tag had a medium already, the new one replaces it; the window names the old one ("Before: …"). An assignment waits for at most **ten minutes**, and only while the window is open: if you close it, lock the phone or reload the app, it is cancelled after a few seconds.
 
-**Podcasts:** A tag with a podcast plays an **episode** of it: the one that was begun and not heard to the end, else the newest one you have not heard, else the newest. For this the box needs the feed (internet, or the box's cache); when it cannot be reached, nothing starts.
+**Podcasts:** A tag with a podcast plays an **episode** of it, and only one that the tile shows too (your choice of episodes and the entry's sorting count): the one that was begun and not heard to the end, else the first one not heard (without a sorting of your own the newest), else the first. For this the box needs the feed (internet, or the box's cache); when it cannot be reached, nothing starts.
 
 Not every entry can be given to a tag: a folder that only holds other folders, and a whole artist (Spotify, TIDAL), have no single medium. There the button is missing, or the box says "This medium cannot be given to a tag".
 
@@ -136,7 +136,7 @@ The sub page **Assigned tags** holds these settings too:
 | Setting | Effect |
 | --- | --- |
 | **Tag starts its medium** | Off: tags are only read and assigned, nothing starts. |
-| **When taken off** | **Pause** (default), **Stop** or **Keep playing**. Only a tag that has a medium triggers it. |
+| **When taken off** | **Pause** (default), **Stop** or **Keep playing**. Only a tag that has a medium triggers it, and only while what it started still plays: if the child chose something else on the display meanwhile, that goes on. |
 
 With **Pause** an audio play goes on where it was when the same tag is laid on again within half an hour. With another tag its medium starts as with a tap on the tile.
 

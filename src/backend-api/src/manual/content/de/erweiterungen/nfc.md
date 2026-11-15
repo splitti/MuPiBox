@@ -1,6 +1,6 @@
 # NFC-Extension
 
-Die Erweiterung **NFC-Extension** bringt einen **NFC-Leser** an die Box. Unterstützt werden der **PN5180** (NXP), der **RC522** und der **PN532** am Raspberry Pi sowie **USB-Leser**, die die Kartennummer wie eine Tastatur tippen. Er liest die **UID** von Tags und Karten, im Moment der Annäherung wie beim Entfernen. Jeder Tag kann ein **Album, einen Hörspiel-Ordner oder einen Sender starten**; die Zuordnung funktioniert wie bei TeddyCloud: Medium wählen, Tag auflegen, fertig. Die Einstellungen zeigen außerdem, ob der Leser läuft und welches Tag zuletzt gelesen wurde.
+Die Erweiterung **NFC-Extension** bringt einen **NFC-Leser** an die Box. Unterstützt werden der **PN5180** (NXP), der **RC522** und der **PN532** am Raspberry Pi sowie **USB-Leser**, die die Kartennummer wie eine Tastatur tippen. Er liest die **UID** von Tags und Karten, im Moment der Annäherung wie beim Entfernen. Jeder Tag kann ein **Album, einen Hörspiel-Ordner, einen Sender oder einen Podcast starten**; die Zuordnung funktioniert wie bei TeddyCloud: Medium wählen, Tag auflegen, fertig. Die Einstellungen zeigen außerdem, ob der Leser läuft und welches Tag zuletzt gelesen wurde.
 
 Der PN5180 liest beide Welten: **ISO 14443 A** (NTAG, MIFARE und die meisten Karten und Sticker) und **ISO 15693** (ICODE, SLIX).
 
@@ -26,7 +26,7 @@ Verdrahte bei ausgeschalteter Box. Der PN5180 braucht **beide** Versorgungen: **
 Die Pins **SCK, MOSI, MISO und NSS** hat der SPI-Anschluss fest. **BUSY und RST** wählst du in den Einstellungen selbst; GPIO 25 und GPIO 23 sind auf den meisten Boxen frei, die Auswahl sperrt Pins, die schon belegt sind. Der PN5180 meldet über BUSY, wann er bereit ist, ohne BUSY geht es nicht. Der IRQ-Anschluss wird nicht gebraucht, die Erweiterung fragt den Chip ab.
 
 > [!WARNING]
-> Der **Drehregler** der Box nutzt GPIO 10 für seinen Taster, das ist auch MOSI des SPI-Anschlusses. Mit eingeschaltetem Drehregler lässt sich der Leser nicht betreiben.
+> Der **Drehregler** der Box hat seinen Taster ab Werk an GPIO 10, das ist auch MOSI des SPI-Anschlusses. Mit Drehregler legst du den Taster deshalb unter **Einstellungen › Drehregler** auf einen freien Pin um (zum Beispiel GPIO 5); die Seite zeigt einen Hinweis, solange ein Pin des Drehreglers auch vom SPI-Anschluss belegt ist.
 
 Kurze Leitungen helfen (bis etwa 15 cm), am besten mit einer zusätzlichen Masseleitung. Die Pinbeschriftung der Platinen unterscheidet sich: Prüfe die Beschriftung auf deiner, besonders bei 5V und 3.3V. Die ganze Leiste zeigt der Anhang [GPIO-Belegung](../anhang/gpio.md).
 
@@ -73,7 +73,7 @@ Der RC522 (MFRC522) ist die kleine blaue Platine. Er liest **ISO 14443 A**, kein
 | RST | ein freier Pin, zum Beispiel GPIO 25 | 22 |
 | IRQ | frei lassen | – |
 
-Der **RST-Pin** ist freiwillig: Ohne Pin setzt die Erweiterung den Chip über seinen Software-Reset zurück. Wie beim PN5180 gilt: Der **Drehregler** nutzt GPIO 10 (MOSI), mit ihm geht der Leser nicht.
+Der **RST-Pin** ist freiwillig: Ohne Pin setzt die Erweiterung den Chip über seinen Software-Reset zurück. Wie beim PN5180 gilt: Den Taster des **Drehreglers** (ab Werk GPIO 10, MOSI) legst du auf einen anderen Pin.
 
 ### PN532
 
@@ -89,7 +89,7 @@ Versorgung: 3,3 V oder 5 V, je nach Platine (die Beschriftung prüfen), und Mass
 
 - **I2C** braucht `dtparam=i2c_arm=on` in der `config.txt` und das Modul `i2c-dev` (Zeile `i2c-dev` in `/etc/modules`), danach einen Neustart. Dann gibt es `/dev/i2c-1`.
 - **SPI** wird wie oben eingeschaltet.
-- **Seriell** braucht `enable_uart=1` in der `config.txt`; die Konsole auf der Schnittstelle muss aus sein (in `dietpi-config` unter **Advanced Options › Serial/UART**). Als **Serielle Schnittstelle** wählst du `/dev/serial0`; auf dem Pi 5 ist `/dev/ttyAMA0` die Schnittstelle an Pin 8 und 10.
+- **Seriell** braucht `enable_uart=1` in der `config.txt`; die Konsole auf der Schnittstelle muss aus sein (in `dietpi-config` unter **Advanced Options › Serial/UART**). Als **Serielle Schnittstelle** wählst du `/dev/serial0`; auf dem Pi 5 ist `/dev/ttyAMA0` die Schnittstelle an Pin 8 und 10. Auf einem Pi 3 und 4 hängt an `/dev/ttyAMA0` das **Bluetooth** der Box – dort nicht `/dev/ttyAMA0` wählen.
 
 ### USB-Leser (Tastatur)
 
@@ -111,9 +111,9 @@ Ein Tag bekommt sein Medium dort, wo du das Medium findest: in der **Bibliothek*
 
 Ein Medium kann **mehrere Tags** haben, etwa einen für jedes Kind: Im Fenster **NFC-Tag** stehen alle, und **Weiteren NFC-Tag hinzufügen** ergänzt einen.
 
-Der Tag startet sein Medium von da an jedes Mal, wenn er auf dem Leser liegt, ohne dass du etwas einstellst. Hatte der Tag schon ein Medium, ersetzt das neue es; das Fenster nennt das alte („Vorher: …“). Eine Zuordnung wartet höchstens **zehn Minuten**; schließt du das Fenster, ist sie abgebrochen.
+Der Tag startet sein Medium von da an jedes Mal, wenn er auf dem Leser liegt, ohne dass du etwas einstellst. Hatte der Tag schon ein Medium, ersetzt das neue es; das Fenster nennt das alte („Vorher: …“). Eine Zuordnung wartet höchstens **zehn Minuten** und nur, solange das Fenster offen ist: Schließt du es, sperrst du das Handy oder lädst du die App neu, ist sie nach wenigen Sekunden abgebrochen.
 
-**Podcasts:** Ein Tag mit einem Podcast spielt eine **Folge** davon: die begonnene, die noch nicht fertig gehört ist, sonst die neueste, die du noch nicht gehört hast, sonst die neueste. Dafür braucht die Box den Feed (Internet oder der Zwischenspeicher der Box); ist er nicht erreichbar, startet nichts.
+**Podcasts:** Ein Tag mit einem Podcast spielt eine **Folge** davon, und zwar nur eine, die auch die Kachel zeigt (deine Auswahl der Folgen und die Sortierung des Eintrags gelten): die begonnene, die noch nicht fertig gehört ist, sonst die erste noch nicht gehörte (ohne eigene Sortierung die neueste), sonst die erste. Dafür braucht die Box den Feed (Internet oder der Zwischenspeicher der Box); ist er nicht erreichbar, startet nichts.
 
 Nicht jeder Eintrag lässt sich auf einen Tag legen: ein Ordner, der nur weitere Ordner enthält, und ein ganzer Künstler (Spotify, TIDAL) haben kein einzelnes Medium. Dort steht der Knopf nicht, oder die Box sagt „Dieses Medium lässt sich keinem Tag zuordnen“.
 
@@ -136,7 +136,7 @@ Auf der Unterseite **Zugeordnete Tags** stehen auch diese Einstellungen:
 | Einstellung | Wirkung |
 | --- | --- |
 | **Tag startet sein Medium** | Aus: Tags werden nur gelesen und zugeordnet, nichts startet. |
-| **Beim Abnehmen** | **Pausieren** (Standard), **Stoppen** oder **Weiterspielen**. Nur ein Tag, der ein Medium hat, löst das aus. |
+| **Beim Abnehmen** | **Pausieren** (Standard), **Stoppen** oder **Weiterspielen**. Nur ein Tag, der ein Medium hat, löst das aus, und nur, solange noch läuft, was er gestartet hat: Hat das Kind inzwischen am Display etwas anderes gewählt, läuft das weiter. |
 
 Mit **Pausieren** geht ein Hörspiel dort weiter, wo es war, wenn derselbe Tag innerhalb einer halben Stunde wieder aufliegt. Bei einem anderen Tag startet dessen Medium wie bei einem Tipp auf die Kachel.
 
