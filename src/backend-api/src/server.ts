@@ -5173,7 +5173,8 @@ async function nasConnectRemembered(): Promise<NasConnectResult> {
     nasSmbLogged = undefined
     return { provider: result.provider }
   }
-  smbDisconnect().catch(() => undefined) // (the NAS is a WebDAV one now: nothing mounted)
+  // (no smbDisconnect here: a login in the app over SMB may be under way, or one made without "merken" - a share is
+  // unmounted by a WebDAV login in the app and by signing off)
   const base = nasResolveBase(syn.address, Boolean(syn.https))
   // A NAS that is switched off answers at once (no route / refused); one whose disks sleep needs 10-20 s to wake
   // up. 4 s marked such a NAS offline for 30 s, and every tap in that time failed.
@@ -5789,8 +5790,11 @@ const nasProfileNamePattern = /^[\p{L}\p{N}][\p{L}\p{N} .()-]{0,39}$/u
 // The NAS of an address: "nas:5005" (WebDAV) and "nas" (SMB) are the same NAS - its shares are the top folders both
 // ways, so a profile made over WebDAV fits the SMB login too.
 function nasAddressKey(address: string | undefined): string {
-  const host = (address ?? '').trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '').toLowerCase()
-  return host.replace(/^\[(.*)\](?::\d+)?$/, '$1').replace(/^([^:]*):\d+$/, '$1')
+  const text = (address ?? '').trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '').toLowerCase()
+  const slash = text.indexOf('/')
+  const host = slash < 0 ? text : text.slice(0, slash)
+  const rest = slash < 0 ? '' : text.slice(slash)
+  return host.replace(/^\[(.*)\](?::\d+)?$/, '$1').replace(/^([^:]*):\d+$/, '$1') + rest
 }
 
 // A profile created before any login (no address/account yet) is not bound to a NAS and fits any login.
@@ -6166,17 +6170,18 @@ const nasIndexMaxFolders = 200000
 interface NasFolderIndex {
   updated: number
   folders: string[]
-  // the folders it was made below (the shown ones); none: the whole NAS
+  // the folders it was made below (the shown ones)
   roots?: string[]
+  // 2: made below the shown folders (before: the whole NAS, also with roots [])
+  v?: number
 }
 
 // What the search of the app's NAS page looks through: the shown folders and all below them - the box needs no index
 // for showing them (it lists them live), the search is for picking subfolders there. Nothing shown: nothing to
 // search, the NAS is not walked at all (the tree of the page shows its folders). NAS paths, none inside another.
 function nasIndexRoots(settings: NasConfig | undefined): string[] {
-  const hidden = new Set(settings?.hiddenFolders ?? [])
-  const paths = (settings?.artistFolders ?? [])
-    .filter((v) => typeof v === 'string' && !hidden.has(v))
+  const paths = nasShownFolders(settings)
+    .filter((v) => typeof v === 'string')
     .map((v) => v.split('/').filter(Boolean))
     .filter((parts) => parts.length > 0 && !parts.some((p) => p === '.' || p === '..'))
     .map((parts) => `/${parts.join('/')}`)
@@ -6222,11 +6227,12 @@ async function buildNasIndex(): Promise<void> {
   nasIndexLastAttempt = Date.now()
   let again = false
   try {
-    const roots = nasIndexRoots(nasSettings(await getMupiboxConfig()))
+    const settings = nasSettings(await getMupiboxConfig())
+    const roots = nasIndexRoots(settings)
+    const hiddenFolders = settings?.hiddenFolders ?? []
     nasIndexLastRoots = roots
     // (the shown folders themselves are found too - the search finds "Hörspiele" as well)
     const found: string[] = [...roots]
-    const hidden = new Set(nasSettings(await getMupiboxConfig())?.hiddenFolders ?? [])
     let skipped = 0
     let unanswered = 0 // of those: the NAS did not answer at all (not "gone" or "no permission")
     let level = roots // (none shown: an empty index at once)
@@ -6253,7 +6259,7 @@ async function buildNasIndex(): Promise<void> {
       const next: string[] = []
       for (const files of listings) {
         for (const file of files) {
-          if (file.isdir && !nasIndexSkip(file.name) && !hidden.has(file.path)) {
+          if (file.isdir && !nasIndexSkip(file.name) && !nasIsHidden(file.path, hiddenFolders)) {
             found.push(file.path)
             next.push(file.path)
           }
@@ -6272,7 +6278,7 @@ async function buildNasIndex(): Promise<void> {
     if (unanswered > 0 && (nasAccess.isAway() || unanswered >= 10)) {
       throw new Error(`The NAS stopped answering during the index (${unanswered} folders not read)`)
     }
-    const index: NasFolderIndex = { updated: Date.now(), folders: found, roots }
+    const index: NasFolderIndex = { updated: Date.now(), folders: found, roots, v: 2 }
     await mkdir(path.dirname(nasIndexPath), { recursive: true })
     const tmp = `${nasIndexPath}.tmp`
     await writeFile(tmp, JSON.stringify(index), 'utf8')
@@ -6339,7 +6345,7 @@ app.get('/api/nas/index/status', localOrElternSession, async (_req, res) => {
   const index = await loadNasIndex()
   const roots = nasIndexRoots(nasSettings(await getMupiboxConfig()))
   // (made for other shown folders than now: made anew at once)
-  const changed = Boolean(index) && !sameRoots(index?.roots, roots)
+  const changed = Boolean(index) && (index?.v !== 2 || !sameRoots(index?.roots, roots))
   const stale = !index || Date.now() - index.updated > nasIndexMaxAgeMs || changed
   const firstForThese = changed && !sameRoots(nasIndexLastRoots, roots)
   if (stale && !nasIndexJob.running && (firstForThese || Date.now() - nasIndexLastAttempt > nasIndexRetryMs) && (await nasAccess.active())) {

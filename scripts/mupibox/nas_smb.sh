@@ -65,7 +65,7 @@ mount)
 	has_cifs || { echo "error=install"; exit 3; }
 	# a name the box cannot look up (a Windows name without DNS): say so, instead of "not reachable"
 	if ! [[ "${host}" =~ ^[0-9.]+$ ]]; then
-		getent ahosts "${host}" >/dev/null 2>&1 || { echo "error=resolve"; exit 4; }
+		timeout 10 getent ahosts "${host}" >/dev/null 2>&1 || { echo "error=resolve"; exit 4; }
 	fi
 	# a NAS that does not answer: said at once - a mount to it can hang in the kernel where no timeout ends it
 	timeout 6 bash -c 'exec 3<>"/dev/tcp/$1/445"' _ "${host}" 2>/dev/null || { echo "error=unreachable"; exit 6; }
@@ -76,6 +76,9 @@ mount)
 	uid=$(id -u "${OWNER}") && gid=$(id -g "${OWNER}") || { echo "error=other owner"; exit 2; }
 	# the login only for the mount, in a file only root reads, gone right after it
 	cred=$(mktemp /run/mupibox/.smb.XXXXXX) || { echo "error=other"; exit 2; }
+	# (gone in any case - also when the server ends the script: bash runs the trap once the mount has returned)
+	trap 'rm -f "${cred}"' EXIT
+	trap 'rm -f "${cred}"; exit 143' TERM INT
 	chmod 600 "${cred}"
 	{
 		printf 'username=%s\n' "${account}"

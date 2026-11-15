@@ -358,3 +358,58 @@ test('NAS SMB helper: the probe fails when nothing is mounted (an empty folder o
     await rm(root, { recursive: true, force: true })
   }
 })
+
+test('NAS SMB: the remembered login in the background does not replace a login from the app; a share that does not answer a read is an error', async () => {
+  const root = await shareFolder()
+  const fake = await fakeSystem(root)
+  try {
+    // a login in the app with a new password; the config still holds the old one
+    const app = await smbConnect({ ...LOGIN, password: 'new' }, fake, true)
+    assert.ok(app.provider)
+    fake.calls = []
+    const background = await smbConnect({ ...LOGIN, password: 'old' }, fake)
+    assert.ok(background.provider, 'the background sign-in uses the share the app mounted')
+    assert.deepEqual(fake.calls, [])
+
+    // a read the share does not answer (503 from the helper): thrown, as a request that failed
+    const server = fake.servers[fake.servers.length - 1]
+    const [handler] = server.listeners('request') as Array<(req: http.IncomingMessage, res: http.ServerResponse) => void>
+    server.removeAllListeners('request')
+    server.on('request', (req: http.IncomingMessage, res: http.ServerResponse) => {
+      if (req.url?.startsWith('/file')) return void res.writeHead(503, { 'Content-Type': 'application/json' }).end('{"code":"EIO"}')
+      handler(req, res)
+    })
+    await assert.rejects(app.provider.read('/Musik/Hörspiele/Folge 1.mp3'), /not answering/)
+    await smbDisconnect()
+
+    // a login in the app that fails with nothing before it: the remembered login gets its turn again
+    fake.calls = []
+    fake.mount = { code: 1, out: 'error=auth' }
+    assert.equal((await smbConnect({ ...LOGIN, password: 'falsch' }, fake, true)).error, 'auth')
+    fake.mount = { code: 0, out: 'mounted' }
+    assert.ok((await smbConnect(LOGIN, fake)).provider)
+    assert.deepEqual(fake.calls.filter((c) => c.startsWith('mount')), ['mount 192.168.1.20 Musik <box>', 'mount 192.168.1.20 Musik <box>'])
+    await smbDisconnect()
+
+    // the remembered login without cifs-utils: installed in the background, said as "installing"
+    fake.calls = []
+    fake.cifs = false
+    const realScript = fake.script
+    let finish: () => void = () => undefined
+    fake.script = async (args, input, ms) => {
+      if (args[0] === 'install') {
+        fake.calls.push('install')
+        await new Promise<void>((r) => (finish = r))
+        fake.cifs = true
+        return { code: 0, out: '' }
+      }
+      return realScript(args, input, ms)
+    }
+    assert.equal((await smbConnect(LOGIN, fake)).error, 'installing')
+    finish()
+    fake.script = realScript
+  } finally {
+    await smbDisconnect()
+    await rm(root, { recursive: true, force: true })
+  }
+})

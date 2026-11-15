@@ -62,7 +62,7 @@ export function smbDisplayAddress(host: string, share: string): string {
 }
 
 /** Why a share could not be mounted (nas_smb.sh prints "error=<reason>"). */
-export type SmbError = 'unreachable' | 'resolve' | 'auth' | 'notfound' | 'smb1' | 'install' | 'other'
+export type SmbError = 'unreachable' | 'resolve' | 'auth' | 'notfound' | 'smb1' | 'install' | 'installing' | 'other'
 
 export function smbErrorOf(output: string): SmbError {
   const m = /error=(\w+)/.exec(output)
@@ -85,6 +85,8 @@ export function smbErrorText(error: SmbError): string {
       return 'The NAS only speaks SMB1, which the box does not use. Switch on SMB2 or SMB3 on the NAS.'
     case 'install':
       return 'The SMB support (cifs-utils) could not be installed. Is the box online?'
+    case 'installing':
+      return 'The SMB support (cifs-utils) is being installed.'
     default:
       return 'The share could not be mounted.'
   }
@@ -239,12 +241,17 @@ export class SmbConnection {
   private installing: Promise<void> | undefined
   private token = ''
 
+  /** made by a login in the app (not the remembered one of the config) */
+  readonly byApp: boolean
+
   /** fresh: mount anew at the first open (a login in the app); else a share mounted already is used as it is */
   constructor(
     readonly login: SmbLogin,
     private readonly system: SmbSystem,
     private fresh = false,
-  ) {}
+  ) {
+    this.byApp = fresh
+  }
 
   /** Same NAS, share and login (the password too: after a change the share is mounted anew). */
   sameAs(login: SmbLogin): boolean {
@@ -296,7 +303,7 @@ export class SmbConnection {
           .finally(() => {
             this.installing = undefined
           })
-        return 'install'
+        return 'installing'
       }
       const installed = await this.system.script(['install'], undefined, 15 * 60_000)
       if (installed.code !== 0 || !(await this.system.hasCifs())) return 'install'
@@ -416,6 +423,11 @@ export class SmbConnection {
     }
   }
 
+  /** The probe did not answer: away for a while, as a failed open. */
+  notAnswering(): SmbError {
+    return this.failure('unreachable')
+  }
+
   /** Not used any more, the mount is someone else's now: only its helper is ended. */
   abandon(): void {
     this.closed = true
@@ -504,7 +516,14 @@ export class SmbProvider implements NasProvider {
   async read(file: string, options: NasReadOptions = {}): Promise<Response> {
     const inner = this.inner(file)
     if (inner === undefined) return new Response(null, { status: 404 })
-    return await this.connection.request(`/file?path=${enc(inner)}`, { headers: options.range ? { Range: options.range } : {}, signal: options.signal })
+    const response = await this.connection.request(`/file?path=${enc(inner)}`, { headers: options.range ? { Range: options.range } : {}, signal: options.signal })
+    if (response.status === 503) {
+      // (the share did not answer: as a request that failed - the stream tries again, the NAS may count as away)
+      await response.arrayBuffer().catch(() => undefined)
+      this.connection.suspect()
+      throw new Error('NAS (SMB) not answering (503)')
+    }
+    return response
   }
 
   private async status(route: string, method: string, signal: AbortSignal | undefined, body?: Buffer): Promise<NasWriteResult> {
@@ -544,9 +563,12 @@ let current: SmbConnection | undefined
  * the one mounted reuses it while it answers. fresh: mount anew in any case (the login in the app).
  */
 export async function smbConnect(login: SmbLogin, system: SmbSystem, fresh = false): Promise<SmbConnectResult> {
-  if (current && current.sameAs(login) && !fresh) {
-    if (current.running && (await current.probe())) {
-      return { provider: new SmbProvider(current) }
+  // The remembered login (not fresh) uses the share there: its own - or one a login in the app made, whose login is
+  // newer than the config's (a login without "merken", or one still mounting while the old password is stored).
+  if (current && !fresh && (current.sameAs(login) || current.byApp)) {
+    if (current.running) {
+      if (await current.probe()) return { provider: new SmbProvider(current) }
+      return { error: current.notAnswering() }
     }
     // (failed a moment ago - a refused login 10 minutes ago: not tried again yet)
     const waiting = current.waiting
@@ -568,6 +590,10 @@ export async function smbConnect(login: SmbLogin, system: SmbSystem, fresh = fal
     next.abandon()
     current = before
     await before.reopen()
+  } else if (fresh) {
+    // (none before: the remembered login gets its turn again, not this one that failed)
+    next.abandon()
+    current = undefined
   }
   // (else it stays the current one: the remembered login is tried again after its wait, not on every request)
   return { error }
