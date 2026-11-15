@@ -119,7 +119,8 @@ Everything here happens once, at install time, with root rights, and **only thes
 
 ### `udev`: access to a device
 `{ "name": "99-mpx-<id>.rules", "file": "99-mpx-<id>.rules" }`. The file may only match (`KERNEL`, `SUBSYSTEM`, `ATTRS{…}`, …) and
-assign `MODE`, `GROUP`, `OWNER`, `TAG` and `SYMLINK`. `RUN`, `PROGRAM`, `IMPORT` and `ENV` are refused.
+assign `MODE`, `GROUP`, `OWNER`, `TAG` and `SYMLINK`. `RUN`, `PROGRAM`, `IMPORT` and `ENV` are refused - except (`hostApi` 9)
+`ENV{ID_INPUT…}` to compare with `==` or `!=` (`ENV{ID_INPUT_KEYBOARD}=="1"`: keyboards only).
 
 ### `units`: systemd services and timers from the package
 `{ "name": "mpx-<id>[-suffix].service" | ".timer", "file": "units/<name>" }`, at most four.

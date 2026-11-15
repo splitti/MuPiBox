@@ -25,6 +25,8 @@ const ARM_UNASKED_MS = 15000
 // a tag still lying on the reader when its driver started again (settings changed, the driver fell over): reported anew,
 // it does not start its medium again - unless it was taken off and laid on after that time
 const AGAIN_AFTER_RESTART_MS = 90000
+// the display starts a medium within a second or two of taking it: a new start later than this is not the tag's
+const NOTE_WITHIN_MS = 10000
 
 exports.activate = (host) => {
   const log = host.log ?? console
@@ -120,8 +122,12 @@ exports.activate = (host) => {
     // (first: a tag slipped off and laid on again within the 2 s goes on - the lock below is for the same report twice)
     if (paused && paused.uid === tag.uid && now - paused.at < RESUME_WITHIN_MS) {
       paused = null
-      lastStart = { uid: tag.uid, at: now }
-      if (isPaused(await playerMeta()) && (await player('play'))) return
+      // (only what this tag started and is still paused: something else chosen meanwhile, or stopped, starts the tag's medium anew)
+      const meta = await playerMeta()
+      if (isPaused(meta) && ownPlayback(meta) && (await player('play'))) {
+        lastStart = { uid: tag.uid, at: now }
+        return
+      }
     }
     if (lastStart.uid === tag.uid && now - lastStart.at < SAME_TAG_MS) return
     lastStart = { uid: tag.uid, at: now }
@@ -133,23 +139,20 @@ exports.activate = (host) => {
 
   // The player's number of the playback the display started for the tag (it counts every new start): taken once the start
   // was made - what plays then is the tag's as long as that number stays (a podcast's next episode by a button too)
+  // (the player's /local: origin - the start what plays comes from, kept by a podcast's next episode; older players: generation)
+  const originOf = (meta) => (typeof meta?.origin === 'number' ? meta.origin : typeof meta?.generation === 'number' ? meta.generation : null)
   const noteGeneration = async () => {
-    if (!handed || handed.generation !== null) return
+    if (!handed || handed.generation !== null || Date.now() - handed.at > NOTE_WITHIN_MS) return
     const meta = await playerMeta()
-    if (handed && handed.generation === null && typeof meta?.generation === 'number' && Number(meta.triggerAt) >= handed.at) handed.generation = meta.generation
+    const origin = originOf(meta)
+    // (a start refused - the tile's limit, the listening time, Spotify blocked - makes no new one: nothing is the tag's)
+    if (handed && handed.generation === null && origin !== null && origin !== handed.before) handed.generation = origin
   }
+  const ownPlayback = (meta) => handed !== null && handed.generation !== null && originOf(meta) === handed.generation
   const playsThisTag = async (tag) => {
     if (!handed || handed.uid !== tag.uid) return false
     await noteGeneration()
-    const meta = await playerMeta()
-    if (!meta || handed.generation === null) return false
-    if (meta.generation === handed.generation) return true
-    // (a podcast went on to another episode by a button, the knob or the list: still the tag's podcast)
-    if (handed.rss && meta.currentType === 'rss' && meta.triggerSource === 'skip' && Number(meta.triggerAt) > handed.at) {
-      handed.generation = meta.generation
-      return true
-    }
-    return false
+    return ownPlayback(await playerMeta())
   }
 
   const onTag = async (event) => {
@@ -227,15 +230,16 @@ exports.activate = (host) => {
         const chip = next.reader === 'none' || next.problem ? 0 : headerChipNumber(await detect())
         const wanted = next.reader === 'none' || next.problem ? '' : JSON.stringify([driverScript(next), ...driverArgs(next, chip)])
         // (only another setting of the app - on taking off, start on laying on: the driver goes on, the medium plays on)
-        if (runner && wanted !== '' && wanted === running) {
+        if (runner && wanted !== '' && wanted === running && view.phase !== 'error') {
           config = next
           view.config = next
           return
         }
         if (runner) {
           await runner.stop()
-          // (the tag on the reader is reported again by the new driver: no new start of what plays)
-          if (inField) restarted = { uid: inField.uid, until: Date.now() + AGAIN_AFTER_RESTART_MS }
+          // (the tag on the reader is reported again by the new driver: no new start of what plays - not for a USB reader,
+          // which says only when a card comes, never when it goes: its last card lies there no longer)
+          if (inField && config.reader !== 'hid') restarted = { uid: inField.uid, until: Date.now() + AGAIN_AFTER_RESTART_MS }
         }
         runner = null
         running = ''
@@ -256,7 +260,7 @@ exports.activate = (host) => {
             // (the driver says what is wrong before it ends; if it did not - it fell over - this is all there is to say)
             if (view.phase !== 'error') Object.assign(view, { phase: 'error', errorCode: 'other' })
             view.inField = false
-            if (inField) restarted = { uid: inField.uid, until: Date.now() + AGAIN_AFTER_RESTART_MS }
+            if (inField && config.reader !== 'hid') restarted = { uid: inField.uid, until: Date.now() + AGAIN_AFTER_RESTART_MS }
             inField = null
             if (isNew) log.warn(`[nfc] reader program: ${reason}`)
           },
@@ -408,12 +412,14 @@ exports.activate = (host) => {
 
   // What the display asks for every second: the medium to start (once - it is gone when it was handed over, and a start older
   // than a few seconds is not wanted any more: the display was away)
-  host.route('get', '/pending', (_req, res) => {
+  host.route('get', '/pending', async (_req, res) => {
+    // (what plays before the display starts the tag's medium: only a start after it is the tag's)
+    const origin = pending ? originOf(await playerMeta()) : null
     const now = Date.now()
     const command = pending && now - pending.at < PENDING_MS ? pending : null
     pending = null
     if (command) {
-      handed = { uid: command.uid, at: now, rss: command.media?.type === 'rss', generation: null }
+      handed = { uid: command.uid, at: now, before: origin, generation: null }
       // (the display starts it within a second or two: its number is taken then, before another start can come)
       setTimeout(() => noteGeneration().catch(() => undefined), 4000).unref?.()
     }

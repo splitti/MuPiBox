@@ -4121,12 +4121,12 @@
  "Der USB-Leser braucht nichts außer dem Stecker; ein Name hilft nur, wenn noch eine USB-Tastatur steckt.": "USB okuyucu için fişi takmak yeterlidir; ad yalnızca bir USB klavye de takılıysa işe yarar.",
  "RC522 und PN532 lesen ISO 14443 A: NTAG, MIFARE und die meisten Karten und Sticker. ISO 15693 (ICODE, SLIX) lesen sie nicht.": "RC522 ve PN532 ISO 14443 A okur: NTAG, MIFARE ve çoğu kart ve etiket. ISO 15693'ü (ICODE, SLIX) okumazlar.",
  "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.": "USB okuyucu yazdığı numarayı bildirir. Yalnızca etiketin konduğunu bildirir, kaldırıldığını değil.",
- "{} – so geht beides nicht. Den Pin des Drehreglers unten umstellen.": "{} – ikisi bu şekilde çalışamaz. Aşağıda döner düğmenin pinini değiştir.",
  "Abends dunkler: von Sonnenuntergang bis Sonnenaufgang": "Akşamları daha karanlık: gün batımından gün doğumuna",
- "Der Drehregler läuft gerade nicht – nach einem Neustart der Box wieder, oder einen Pin neu wählen.": "Döner düğme şu anda çalışmıyor – kutu yeniden başlatılınca tekrar çalışır ya da yeniden bir pin seç.",
  "Drehregler an GPIO {}/{}, Taster an GPIO {}. Zur Wahl stehen nur Pins, die nichts anderes nutzt.": "Döner düğme GPIO {}/{}, buton GPIO {} üzerinde. Yalnızca başka hiçbir şeyin kullanmadığı pinler seçilebilir.",
  "Gespeichert – der Drehregler startet gerade nicht": "Kaydedildi – döner düğme şu anda başlamıyor",
  "GPIO {} nutzt auch: {}": "GPIO {} şunun tarafından da kullanılıyor: {}",
  "Heute {} von {} min{}.": "Bugün {} / {} min{}.",
- "(+{} min heute)": "(bugün +{} min)"
+ "(+{} min heute)": "(bugün +{} min)",
+ "So geht beides nicht: den Pin des Drehreglers unten umstellen und danach die Box neu starten.": "İkisi bu şekilde çalışamaz: aşağıda döner düğmenin pinini değiştir, ardından kutuyu yeniden başlat.",
+ "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "Döner düğme şu anda çalışmıyor. Başka bir pin seç ya da kutuyu yeniden başlat."
 }

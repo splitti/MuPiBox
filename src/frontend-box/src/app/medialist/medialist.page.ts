@@ -335,6 +335,14 @@ export class MedialistPage extends SwiperIonicEventsHelper {
   }
 
   private sortMedia(coverMedia: Media, media: Media[], defaultSorting: MediaSorting): Media[] {
+    // by date (sign 1: the oldest first); one without a date after all dated ones, in the order it came (as the server
+    // orders a podcast's episodes for "next" in the player, episode-neighbour.ts)
+    const byDate = (a: Media, b: Media, sign: 1 | -1) => {
+      const x = new Date(a.release_date).getTime()
+      const y = new Date(b.release_date).getTime()
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return (Number.isFinite(x) ? 0 : 1) - (Number.isFinite(y) ? 0 : 1)
+      return sign * (x - y)
+    }
     // The folder's own audio files (next to its subfolders) stay in front, whatever the order of the rest.
     const own = media.filter((m) => m.ownFiles)
     if (own.length > 0) {
@@ -350,9 +358,9 @@ export class MedialistPage extends SwiperIonicEventsHelper {
           }),
         )
       case MediaSorting.ReleaseDateAscending:
-        return media.sort((a, b) => new Date(a.release_date).getTime() - new Date(b.release_date).getTime())
+        return media.sort((a, b) => byDate(a, b, 1))
       case MediaSorting.ReleaseDateDescending:
-        return media.sort((a, b) => new Date(b.release_date).getTime() - new Date(a.release_date).getTime())
+        return media.sort((a, b) => byDate(a, b, -1))
       default: // MediaList.Alphabetical.Ascending
         return media.sort((a, b) =>
           a.title.localeCompare(b.title, undefined, {

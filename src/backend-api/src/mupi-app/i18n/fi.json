@@ -4121,12 +4121,12 @@
  "Der USB-Leser braucht nichts außer dem Stecker; ein Name hilft nur, wenn noch eine USB-Tastatur steckt.": "USB-lukija tarvitsee vain pistokkeen; nimestä on apua vain, jos mukana on myös USB-näppäimistö.",
  "RC522 und PN532 lesen ISO 14443 A: NTAG, MIFARE und die meisten Karten und Sticker. ISO 15693 (ICODE, SLIX) lesen sie nicht.": "RC522 ja PN532 lukevat ISO 14443 A:n: NTAG, MIFARE sekä useimmat kortit ja tarrat. ISO 15693:a (ICODE, SLIX) ne eivät lue.",
  "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.": "USB-lukija ilmoittaa numeron, jonka se kirjoittaa. Se ilmoittaa vain asettamisen, ei poistamista.",
- "{} – so geht beides nicht. Den Pin des Drehreglers unten umstellen.": "{} – molemmat eivät voi toimia näin. Vaihda kiertosäätimen pinni alta.",
  "Abends dunkler: von Sonnenuntergang bis Sonnenaufgang": "Tummempi illalla: auringonlaskusta auringonnousuun",
- "Der Drehregler läuft gerade nicht – nach einem Neustart der Box wieder, oder einen Pin neu wählen.": "Kiertosäädin ei ole nyt käynnissä – se käynnistyy taas, kun laatikko käynnistetään uudelleen, tai valitse pinni uudelleen.",
  "Drehregler an GPIO {}/{}, Taster an GPIO {}. Zur Wahl stehen nur Pins, die nichts anderes nutzt.": "Kiertosäädin GPIO {}/{}, painike GPIO {}. Valittavana vain pinnit, joita mikään muu ei käytä.",
  "Gespeichert – der Drehregler startet gerade nicht": "Tallennettu – kiertosäädin ei käynnisty juuri nyt",
  "GPIO {} nutzt auch: {}": "GPIO {} on myös käytössä: {}",
  "Heute {} von {} min{}.": "Tänään {} / {} min{}.",
- "(+{} min heute)": "(+{} min tänään)"
+ "(+{} min heute)": "(+{} min tänään)",
+ "So geht beides nicht: den Pin des Drehreglers unten umstellen und danach die Box neu starten.": "Molemmat eivät voi toimia näin: vaihda kiertosäätimen pinni alta ja käynnistä laatikko sitten uudelleen.",
+ "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "Kiertosäädin ei ole nyt käynnissä. Valitse toinen pinni tai käynnistä laatikko uudelleen."
 }

@@ -26,7 +26,7 @@ Wire with the box switched off. The PN5180 needs **both** supplies: **5 V** for 
 The pins **SCK, MOSI, MISO and NSS** are fixed by the SPI port. You choose **BUSY and RST** in the settings; GPIO 25 and GPIO 23 are free on most boxes, and the choice locks pins that are taken. The PN5180 tells through BUSY when it is ready; it does not work without it. The IRQ pin is not needed, the extension asks the chip.
 
 > [!WARNING]
-> The box's **rotary encoder** has its button on GPIO 10 by default, which is also MOSI of the SPI port. With a rotary encoder, move its button to a free pin under **Settings › Rotary encoder** (GPIO 5, say); the page shows a hint while a pin of the rotary encoder is also taken by the SPI port.
+> The box's **rotary encoder** has its button on GPIO 10 by default, which is also MOSI of the SPI port. With a rotary encoder, move its button to a free pin under **Settings › Rotary encoder** (GPIO 5, say) and restart the box afterwards (until then GPIO 10 stays blocked for the reader); the page shows a hint while a pin of the rotary encoder is also taken by the SPI port.
 
 Short wires help (up to about 15 cm), ideally with an extra ground wire. The labels differ from board to board: check the labels on yours, especially 5V and 3.3V. The whole header is shown in the appendix [GPIO assignment](../anhang/gpio.md).
 

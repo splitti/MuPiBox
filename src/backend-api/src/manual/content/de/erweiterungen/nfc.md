@@ -26,7 +26,7 @@ Verdrahte bei ausgeschalteter Box. Der PN5180 braucht **beide** Versorgungen: **
 Die Pins **SCK, MOSI, MISO und NSS** hat der SPI-Anschluss fest. **BUSY und RST** wählst du in den Einstellungen selbst; GPIO 25 und GPIO 23 sind auf den meisten Boxen frei, die Auswahl sperrt Pins, die schon belegt sind. Der PN5180 meldet über BUSY, wann er bereit ist, ohne BUSY geht es nicht. Der IRQ-Anschluss wird nicht gebraucht, die Erweiterung fragt den Chip ab.
 
 > [!WARNING]
-> Der **Drehregler** der Box hat seinen Taster ab Werk an GPIO 10, das ist auch MOSI des SPI-Anschlusses. Mit Drehregler legst du den Taster deshalb unter **Einstellungen › Drehregler** auf einen freien Pin um (zum Beispiel GPIO 5); die Seite zeigt einen Hinweis, solange ein Pin des Drehreglers auch vom SPI-Anschluss belegt ist.
+> Der **Drehregler** der Box hat seinen Taster ab Werk an GPIO 10, das ist auch MOSI des SPI-Anschlusses. Mit Drehregler legst du den Taster deshalb unter **Einstellungen › Drehregler** auf einen freien Pin um (zum Beispiel GPIO 5) und startest die Box danach neu (bis dahin bleibt GPIO 10 für den Leser gesperrt); die Seite zeigt einen Hinweis, solange ein Pin des Drehreglers auch vom SPI-Anschluss belegt ist.
 
 Kurze Leitungen helfen (bis etwa 15 cm), am besten mit einer zusätzlichen Masseleitung. Die Pinbeschriftung der Platinen unterscheidet sich: Prüfe die Beschriftung auf deiner, besonders bei 5V und 3.3V. Die ganze Leiste zeigt der Anhang [GPIO-Belegung](../anhang/gpio.md).
 

@@ -189,8 +189,8 @@ const feedReady = (nfc) => nfc.feed({ event: 'ready', firmware: '4.0', product: 
 test('the API part: arm with a medium, lay a new tag on, the display is told to start it, taking it off pauses', async () => {
   const realFetch = global.fetch
   const player = []
-  // (the player's number of the playback: the display's start of the tag's medium is 7, another start later 8)
-  let generation = 7
+  // (the player's number of the playback: 6 before, the display's start of the tag's medium makes it 7, another start later 8)
+  let generation = 6
   global.fetch = async (url) => {
     const u = String(url)
     if (u.startsWith('http://player.test/local')) return { ok: true, json: async () => ({ currentPlayer: 'mplayer', currentType: 'local', playing: false, generation, triggerAt: Date.now() }) }
@@ -218,6 +218,7 @@ test('the API part: arm with a medium, lay a new tag on, the display is told to 
     nfc.feed({ event: 'tag', tech: 'ISO14443A', uid: '04A1B2C3' })
     await later()
     const command = (await call(routes['get /pending'])).body
+    generation = 7 // (the display started it)
     assert.strictEqual(command.media.libraryPath, 'audiobook/Astrid Lindgren/Pippi Langstrumpf')
     assert.deepStrictEqual((await call(routes['get /pending'])).body, {})
     const done = (await call(routes['get /armstate'], { query: { id: armed.id } })).body
@@ -253,6 +254,19 @@ test('the API part: arm with a medium, lay a new tag on, the display is told to 
     await later()
     assert.ok(!player.some((u) => u.startsWith('http://player.test/pause')), 'what the display started is not the tag of the reader')
     generation = 7
+
+    // paused by taking it off, then the display stopped it (or started something else): laid on again it starts anew at once
+    player.length = 0
+    nfc.feed({ event: 'tag', tech: 'ISO14443A', uid: '04A1B2C3' })
+    await later(2100)
+    nfc.feed({ event: 'gone' })
+    await later()
+    assert.ok(player.some((u) => u.startsWith('http://player.test/pause?src=nfc')))
+    generation = 9 // (stopped on the display)
+    nfc.feed({ event: 'tag', tech: 'ISO14443A', uid: '04A1B2C3' })
+    await later()
+    assert.ok(!player.some((u) => u.startsWith('http://player.test/play')), 'what is not the tag’s is not resumed')
+    assert.strictEqual((await call(routes['get /pending'])).body.media?.libraryPath, 'audiobook/Astrid Lindgren/Pippi Langstrumpf', 'a new start, at the first laying on')
 
     // removed, it is new again and plays nothing
     assert.strictEqual((await call(routes['post /tagremove'], { body: { id: '04A1B2C3' } })).body.ok, true)

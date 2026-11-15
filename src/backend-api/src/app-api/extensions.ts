@@ -33,7 +33,7 @@ if (!process.env.MUPIBOX_EXT_DIR && process.env.NODE_ENV !== 'test' && process.e
     // (the other process was faster, or it is not possible: then they stay where they are and are not found - logged by the load)
   }
 }
-export const HOST_API = 8
+export const HOST_API = 9
 // (the catalog of the MuPiBox, in its repository: what is in it is trusted - an extension can do everything on the box; while 5.1
 // is not with splitti yet, the 5.1 branch of the fork that builds it)
 const DEFAULT_CATALOG = 'https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/catalog.json'
@@ -798,7 +798,10 @@ async function installExtension(id: string, deps: ExtensionDeps, uploaded?: Pack
       // already: a PN532 at I2C said "no access" until the box was restarted)
       await run('sudo', ['udevadm', 'trigger', '--subsystem-match=spidev', '--action=change'], 20000)
       await run('sudo', ['udevadm', 'trigger', '--subsystem-match=i2c-dev', '--action=change'], 20000)
-      await run('sudo', ['udevadm', 'trigger', '--subsystem-match=input', '--action=change'], 20000)
+      // (input devices only for a rule of them, and only the USB keyboards: Xorg takes a change of an input device as
+      // removed and added again - the touch screen let go of a finger on it)
+      const inputRule = (sys.udev ?? []).some((rule) => /SUBSYSTEM=="input"/.test((files.get(rule.file) as Buffer | undefined)?.toString('utf8') ?? ''))
+      if (inputRule) await run('sudo', ['udevadm', 'trigger', '--subsystem-match=input', '--property-match=ID_INPUT_KEYBOARD=1', '--action=change'], 20000)
     }
     for (const group of sys.groups ?? []) {
       const r = await run('sudo', ['usermod', '-aG', group, 'dietpi'], 20000)

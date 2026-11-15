@@ -18,7 +18,6 @@ import os
 import re
 import shutil
 import signal
-import sys
 import tempfile
 
 try:
@@ -44,7 +43,12 @@ def _lg():
         # (systemd ends the scripts with SIGTERM, which skips atexit: a directory with its pipes stayed behind at every stop -
         # a script with a handler of its own keeps it)
         if signal.getsignal(signal.SIGTERM) in (signal.SIG_DFL, None):
-            signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+
+            def ended(*_):
+                shutil.rmtree(directory, True)
+                os._exit(0)
+
+            signal.signal(signal.SIGTERM, ended)
         os.environ["LG_WD"] = directory
         try:
             import lgpio as module

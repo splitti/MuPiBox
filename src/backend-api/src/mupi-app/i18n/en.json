@@ -4137,12 +4137,12 @@
  "Der USB-Leser braucht nichts außer dem Stecker; ein Name hilft nur, wenn noch eine USB-Tastatur steckt.": "The USB reader needs nothing but its plug; a name only helps if a USB keyboard is plugged in as well.",
  "RC522 und PN532 lesen ISO 14443 A: NTAG, MIFARE und die meisten Karten und Sticker. ISO 15693 (ICODE, SLIX) lesen sie nicht.": "The RC522 and PN532 read ISO 14443 A: NTAG, MIFARE and most cards and stickers. They do not read ISO 15693 (ICODE, SLIX).",
  "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.": "A USB reader reports the number it types. It only reports the laying on, not the taking off.",
- "{} – so geht beides nicht. Den Pin des Drehreglers unten umstellen.": "{} – both cannot work like this. Change the pin of the rotary encoder below.",
  "Abends dunkler: von Sonnenuntergang bis Sonnenaufgang": "Darker in the evening: from sunset to sunrise",
- "Der Drehregler läuft gerade nicht – nach einem Neustart der Box wieder, oder einen Pin neu wählen.": "The rotary encoder is not running right now – it starts again when the box restarts, or choose a pin again.",
  "Drehregler an GPIO {}/{}, Taster an GPIO {}. Zur Wahl stehen nur Pins, die nichts anderes nutzt.": "Rotary encoder on GPIO {}/{}, button on GPIO {}. Only pins nothing else uses can be chosen.",
  "Gespeichert – der Drehregler startet gerade nicht": "Saved – the rotary encoder does not start right now",
  "GPIO {} nutzt auch: {}": "GPIO {} is also used by: {}",
  "Heute {} von {} min{}.": "Today {} of {} min{}.",
- "(+{} min heute)": "(+{} min today)"
+ "(+{} min heute)": "(+{} min today)",
+ "So geht beides nicht: den Pin des Drehreglers unten umstellen und danach die Box neu starten.": "Both cannot work like this: change the pin of the rotary encoder below, then restart the box.",
+ "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "The rotary encoder is not running right now. Choose another pin or restart the box."
 }

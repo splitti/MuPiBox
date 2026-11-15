@@ -17701,9 +17701,12 @@ const CONTROLLERS = {
         ...sec,
         help: [
           `Drehregler an GPIO ${chosen.get('rotPinA')}/${chosen.get('rotPinB')}, Taster an GPIO ${buttonPin}. Zur Wahl stehen nur Pins, die nichts anderes nutzt.`,
-          ...(clash.length ? [`${clash.join(' · ')} – so geht beides nicht. Den Pin des Drehreglers unten umstellen.`] : []),
-          ...(hw.rotaryStopped ? ['Der Drehregler läuft gerade nicht – nach einem Neustart der Box wieder, oder einen Pin neu wählen.'] : []),
-        ].join(' '),
+          ...clash,
+          ...(clash.length ? ['So geht beides nicht: den Pin des Drehreglers unten umstellen und danach die Box neu starten.'] : []),
+          ...(hw.rotaryStopped ? ['Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.'] : []),
+        ]
+          .map((part) => tr(part))
+          .join(' '),
         items: sec.items.flatMap((it) => {
           if (it.key !== 'btnFn') return [it]
           const pinItems = ROTARY_PIN_ITEMS.map(([key, , , label]) => {
@@ -17742,8 +17745,8 @@ const CONTROLLERS = {
         renderPage(currentPage(), false)
         return toast('Gespeichert – der Drehregler startet gerade nicht', 'info')
       }
-      if (r.ok && pinItem) {
-        // (the pin it let go is free for the others, the one it took is not)
+      if (r.ok && (pinItem || key === 'rotary')) {
+        // (the pin it let go is free for the others, the one it took is not; switched on or off: whether it runs, what it shares)
         await loadRotary()
         renderPage(currentPage(), false)
       }

@@ -56,7 +56,9 @@ const cleanPlace = (text: string): string => text.replace(/[\u0000-\u001f\u007f]
 export function parseNightDim(body: unknown): NightDim | null {
   const b = (body ?? {}) as Record<string, unknown>
   if (typeof b.enabled !== 'boolean' || typeof b.withQuiet !== 'boolean') return null
-  if (typeof b.from !== 'string' || !TIME.test(b.from) || typeof b.to !== 'string' || !TIME.test(b.to) || b.from === b.to) return null
+  if (typeof b.from !== 'string' || !TIME.test(b.from) || typeof b.to !== 'string' || !TIME.test(b.to)) return null
+  // (equal times are no window - but by the sun they are not used)
+  if (b.from === b.to && b.sunset !== true) return null
   if (!Number.isInteger(b.level) || (b.level as number) < 5 || (b.level as number) > 100) return null
   if (!NIGHT_DIM_FADES.includes(b.fade as number)) return null
   // (the place: both coordinates or none; sunset needs them)

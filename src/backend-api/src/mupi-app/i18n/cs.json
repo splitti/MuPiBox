@@ -4121,12 +4121,12 @@
  "Der USB-Leser braucht nichts außer dem Stecker; ein Name hilft nur, wenn noch eine USB-Tastatur steckt.": "USB čtečka potřebuje jen zástrčku; jméno pomůže, jen když je zapojena i USB klávesnice.",
  "RC522 und PN532 lesen ISO 14443 A: NTAG, MIFARE und die meisten Karten und Sticker. ISO 15693 (ICODE, SLIX) lesen sie nicht.": "RC522 a PN532 čtou ISO 14443 A: NTAG, MIFARE a většinu karet a samolepek. ISO 15693 (ICODE, SLIX) nečtou.",
  "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.": "USB čtečka hlásí číslo, které zadává. Hlásí jen přiložení tagu, ne jeho sejmutí.",
- "{} – so geht beides nicht. Den Pin des Drehreglers unten umstellen.": "{} – takhle nemůžou fungovat obě věci. Změňte níže pin otočného ovladače.",
  "Abends dunkler: von Sonnenuntergang bis Sonnenaufgang": "Večer tmavší: od západu do východu slunce",
- "Der Drehregler läuft gerade nicht – nach einem Neustart der Box wieder, oder einen Pin neu wählen.": "Otočný ovladač teď neběží – znovu se spustí po restartu krabičky, nebo vyberte pin znovu.",
  "Drehregler an GPIO {}/{}, Taster an GPIO {}. Zur Wahl stehen nur Pins, die nichts anderes nutzt.": "Otočný ovladač na GPIO {}/{}, tlačítko na GPIO {}. Na výběr jsou jen piny, které nic jiného nepoužívá.",
  "Gespeichert – der Drehregler startet gerade nicht": "Uloženo – otočný ovladač se teď nespouští",
  "GPIO {} nutzt auch: {}": "GPIO {} používá také: {}",
  "Heute {} von {} min{}.": "Dnes {} z {} min{}.",
- "(+{} min heute)": "(+{} min dnes)"
+ "(+{} min heute)": "(+{} min dnes)",
+ "So geht beides nicht: den Pin des Drehreglers unten umstellen und danach die Box neu starten.": "Takhle nemůžou fungovat obě věci: změňte níže pin otočného ovladače a potom krabičku restartujte.",
+ "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "Otočný ovladač teď neběží. Vyberte jiný pin nebo krabičku restartujte."
 }

@@ -4121,12 +4121,12 @@
  "Der USB-Leser braucht nichts außer dem Stecker; ein Name hilft nur, wenn noch eine USB-Tastatur steckt.": "USB-считывателю нужен только разъём; имя помогает, только если подключена ещё и USB-клавиатура.",
  "RC522 und PN532 lesen ISO 14443 A: NTAG, MIFARE und die meisten Karten und Sticker. ISO 15693 (ICODE, SLIX) lesen sie nicht.": "RC522 и PN532 читают ISO 14443 A: NTAG, MIFARE и большинство карт и наклеек. ISO 15693 (ICODE, SLIX) они не читают.",
  "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.": "USB-считыватель сообщает номер, который он вводит. Он сообщает только о прикладывании метки, а не о её снятии.",
- "{} – so geht beides nicht. Den Pin des Drehreglers unten umstellen.": "{} – так оба работать не будут. Измените ниже пин поворотного регулятора.",
  "Abends dunkler: von Sonnenuntergang bis Sonnenaufgang": "Темнее вечером: от заката до рассвета",
- "Der Drehregler läuft gerade nicht – nach einem Neustart der Box wieder, oder einen Pin neu wählen.": "Поворотный регулятор сейчас не работает – он запустится после перезапуска коробки, или выберите пин заново.",
  "Drehregler an GPIO {}/{}, Taster an GPIO {}. Zur Wahl stehen nur Pins, die nichts anderes nutzt.": "Поворотный регулятор на GPIO {}/{}, кнопка на GPIO {}. Можно выбрать только пины, которые больше ничто не использует.",
  "Gespeichert – der Drehregler startet gerade nicht": "Сохранено – поворотный регулятор сейчас не запускается",
  "GPIO {} nutzt auch: {}": "GPIO {} также использует: {}",
  "Heute {} von {} min{}.": "Сегодня {} из {} min{}.",
- "(+{} min heute)": "(+{} min сегодня)"
+ "(+{} min heute)": "(+{} min сегодня)",
+ "So geht beides nicht: den Pin des Drehreglers unten umstellen und danach die Box neu starten.": "Так оба работать не будут: измените ниже пин поворотного регулятора, а затем перезапустите коробку.",
+ "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "Поворотный регулятор сейчас не работает. Выберите другой пин или перезапустите коробку."
 }

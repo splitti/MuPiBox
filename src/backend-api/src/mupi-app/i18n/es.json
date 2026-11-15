@@ -4121,12 +4121,12 @@
  "Der USB-Leser braucht nichts außer dem Stecker; ein Name hilft nur, wenn noch eine USB-Tastatur steckt.": "El lector USB solo necesita el enchufe; un nombre solo ayuda si también hay un teclado USB conectado.",
  "RC522 und PN532 lesen ISO 14443 A: NTAG, MIFARE und die meisten Karten und Sticker. ISO 15693 (ICODE, SLIX) lesen sie nicht.": "El RC522 y el PN532 leen ISO 14443 A: NTAG, MIFARE y la mayoría de tarjetas y pegatinas. No leen ISO 15693 (ICODE, SLIX).",
  "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.": "Un lector USB indica el número que teclea. Solo avisa de que se acerca la etiqueta, no de que se retira.",
- "{} – so geht beides nicht. Den Pin des Drehreglers unten umstellen.": "{}: así no pueden funcionar los dos. Cambia abajo el pin del mando giratorio.",
  "Abends dunkler: von Sonnenuntergang bis Sonnenaufgang": "Más oscuro por la noche: desde la puesta hasta la salida del sol",
- "Der Drehregler läuft gerade nicht – nach einem Neustart der Box wieder, oder einen Pin neu wählen.": "El mando giratorio no funciona ahora mismo: vuelve a arrancar al reiniciar la caja, o elige de nuevo un pin.",
  "Drehregler an GPIO {}/{}, Taster an GPIO {}. Zur Wahl stehen nur Pins, die nichts anderes nutzt.": "Mando giratorio en GPIO {}/{}, botón en GPIO {}. Solo se ofrecen pines que nada más usa.",
  "Gespeichert – der Drehregler startet gerade nicht": "Guardado: el mando giratorio no arranca ahora mismo",
  "GPIO {} nutzt auch: {}": "GPIO {} también lo usa: {}",
  "Heute {} von {} min{}.": "Hoy {} de {} min{}.",
- "(+{} min heute)": "(+{} min hoy)"
+ "(+{} min heute)": "(+{} min hoy)",
+ "So geht beides nicht: den Pin des Drehreglers unten umstellen und danach die Box neu starten.": "Así no pueden funcionar los dos: cambia abajo el pin del mando giratorio y después reinicia la caja.",
+ "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "El mando giratorio no funciona ahora mismo. Elige otro pin o reinicia la caja."
 }

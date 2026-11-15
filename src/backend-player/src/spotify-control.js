@@ -2394,6 +2394,9 @@ let playbackGeneration = 0
 // Begins at the start time of this process: after a restart of the player the numbers are new - a stop the display
 // still had for a playback before the restart stopped the first new one, which had the same number.
 let playbackRequest = Date.now()
+// the start what plays comes from (/local "origin"): the number of that start - kept by a podcast's next episode (src=skip),
+// so an NFC tag taken off still pauses the podcast it started after "next"
+let playbackOrigin = playbackRequest
 // Bumped by every play and pause: a play that waited for the box's device is not made after a pause meanwhile
 let playPauseRequest = 0
 // An album paused while its track list was loading (NAS): not started then - the start of the list takes a
@@ -2442,6 +2445,7 @@ function stop() {
   forgetSpotifyState()
   playbackGeneration++
   playbackRequest++
+  playbackOrigin = playbackRequest
   currentMeta.finished = false
   clearLibraryResumeTimers()
   if (telegramPlaybackNotices())
@@ -2605,7 +2609,7 @@ async function runEpisodeSkips() {
       if (typeof found.cover === 'string' && found.cover.startsWith('/api/')) start.set('cover', found.cover)
       if (tileState.current) start.set('tile', tileState.current)
       const started = await fetch(
-        `http://127.0.0.1:${config.server.port}/rss/${encodeURIComponent(found.url)}/${encodeURIComponent(String(found.title ?? ''))}:title:artist:${encodeURIComponent(String(found.artist || currentMeta.album || ''))}?${start}`,
+        `http://127.0.0.1:${config.server.port}/rss/${encodeURIComponent(found.url)}/${encodeURIComponent(String(found.title ?? ''))}:title:artist:${encodeURIComponent(String(currentMeta.album || found.artist || ''))}?${start}`,
         { signal: AbortSignal.timeout(4000) },
       )
       if (!started.ok) {
@@ -4482,6 +4486,7 @@ app.get('/queue/add', async (req, res) => {
 async function playQueueFiles(files, label) {
   playbackGeneration++
   playbackRequest++
+  playbackOrigin = playbackRequest
   resetLocalShuffle()
   clearLibraryResumeTimers()
   switchToMplayer()
@@ -4502,6 +4507,7 @@ async function playQueueFiles(files, label) {
 async function playQueueNas(tracks, label) {
   playbackGeneration++
   playbackRequest++
+  playbackOrigin = playbackRequest
   resetLocalShuffle()
   clearLibraryResumeTimers()
   switchToMplayer()
@@ -4580,7 +4586,7 @@ app.get('/local', (_req, res) => {
   // landen nicht in der Response, obwohl die Mutationen am Objekt
   // ankommen.
   // (generation: which start this is - a stop of the display's background playback names it, see ?gen=)
-  res.json({ ...currentMeta, generation: playbackRequest, shuffleSupported: typeof player.setShuffle === 'function' })
+  res.json({ ...currentMeta, generation: playbackRequest, origin: playbackOrigin, shuffleSupported: typeof player.setShuffle === 'function' })
 })
 
 app.get('/spotify/token', (_req, res) => {
@@ -4826,6 +4832,7 @@ app.use((req, res) => {
   if (newMedia) {
     resetLocalShuffle()
     playbackRequest++
+    if (triggerSource !== 'skip') playbackOrigin = playbackRequest
     startHeard(triggerHeard)
     currentMeta.pause = false
     if (['library', 'nas', 'tidal'].some((segment) => hasDirSegment(command, segment))) currentMeta.cover = triggerCover

@@ -73,7 +73,7 @@ import { episodeKey, MAX_KEEP, type OfflineEpisode, PodcastOffline } from './pod
 import { setFeedHeadReader } from './podcast-search'
 import { EpisodeState, episodeStateSettings } from './episode-state'
 import { HEARD_KEY, HeardStore, heardSettings } from './heard'
-import { feedHas, listOf, locateIn, neighbourOf, type Located, type PodcastEntry } from './episode-neighbour'
+import { feedItems, listOf, locateIn, neighbourOf, type Located, type PodcastEntry } from './episode-neighbour'
 import { tileKeyOfRow } from './app-api/tile-key'
 import { uiScale } from './ui-scale'
 import { confirmDisplayTest, displayTestState } from './app-api/display-profile'
@@ -1281,6 +1281,26 @@ async function parsedFeed(file: string): Promise<unknown | undefined> {
   }
 }
 
+// Which episodes a cached feed has, and its title: small, kept for every feed while its file stays the same - the search
+// for the feed of an episode goes through all podcasts of the library (more than the parsed feeds kept above)
+const feedIndex = new Map<string, { mtimeMs: number; size: number; keys: Set<string>; title?: string }>()
+async function feedIndexOf(file: string): Promise<{ keys: Set<string>; title?: string } | undefined> {
+  const info = await stat(file).catch(() => undefined)
+  if (!info) {
+    feedIndex.delete(file)
+    return undefined
+  }
+  const hit = feedIndex.get(file)
+  if (hit && hit.mtimeMs === info.mtimeMs && hit.size === info.size) return hit
+  const feed = await parsedFeed(file)
+  if (!feed) return undefined
+  const { channel, items } = feedItems(feed)
+  const url = (item: Record<string, unknown>) => String((item.enclosure as { _attributes?: { url?: unknown } } | undefined)?._attributes?.url ?? '')
+  const index = { mtimeMs: info.mtimeMs, size: info.size, keys: new Set(items.map((item) => episodeKey(url(item)))), title: extractRssText(channel?.title) || undefined }
+  feedIndex.set(file, index)
+  return index
+}
+
 /**
  * The episodes of the podcast tile an episode belongs to, in the order of its list on the display (episode-neighbour.ts):
  * the library entry whose cached feed has the episode - with several (the same feed on two tiles) the one of `tile`
@@ -1295,26 +1315,31 @@ async function podcastTileEpisodes(url: string, tile: string): Promise<Located |
   } catch {
     // (being written: as if not in the library)
   }
-  let chosen: { entry: PodcastEntry & Record<string, unknown>; feed: unknown } | undefined
+  const wanted = episodeKey(url)
+  let chosen: { entry: PodcastEntry & Record<string, unknown>; file: string } | undefined
   for (const entry of entries) {
-    const feed = await parsedFeed(rssCacheFilePath(rssCacheKeyFor(entry.id as string)))
-    if (!feed || !feedHas(feed, url)) continue
-    const title = extractRssText((feed as { rss?: { channel?: { title?: unknown } } }).rss?.channel?.title) || undefined
-    if (!chosen || (tile && tileKeyOfRow(entry, title) === tile)) chosen = { entry, feed }
-    if (!tile || tileKeyOfRow(entry, title) === tile) break
+    const file = rssCacheFilePath(rssCacheKeyFor(entry.id as string))
+    const index = await feedIndexOf(file)
+    if (!index?.keys.has(wanted)) continue
+    const mine = tile !== '' && tileKeyOfRow(entry, index.title) === tile
+    if (!chosen || mine) chosen = { entry, file }
+    if (!tile || mine) break
   }
-  if (chosen) {
+  const feed = chosen ? await parsedFeed(chosen.file) : undefined
+  if (chosen && feed) {
     let onCard: Set<string> | undefined
     if (boxOffline()) {
       const files = await podcastOffline.list(chosen.entry.id as string)
       if (Object.keys(files).length > 0) onCard = new Set(Object.keys(files))
     }
-    return locateIn(chosen.feed, url, chosen.entry, onCard)
+    return locateIn(feed, url, chosen.entry, onCard)
   }
   for (const name of await readdir(rssCacheDataDir).catch(() => [] as string[])) {
     if (!name.endsWith('.json')) continue
-    const feed = await parsedFeed(path.join(rssCacheDataDir, name))
-    const found = feed ? locateIn(feed, url) : null
+    const file = path.join(rssCacheDataDir, name)
+    if (!(await feedIndexOf(file))?.keys.has(wanted)) continue
+    const other = await parsedFeed(file)
+    const found = other ? locateIn(other, url) : null
     if (found) return found
   }
   return null

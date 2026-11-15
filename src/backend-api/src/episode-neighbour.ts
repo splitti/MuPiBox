@@ -86,11 +86,11 @@ function sortLike(items: Item[], sorting: unknown): Item[] {
     const sign = sorting === 'AlphabeticalAscending' ? 1 : -1
     return [...items].sort((a, b) => sign * title(a).localeCompare(title(b), undefined, { numeric: true, sensitivity: 'base' }))
   }
-  const byDate = newestFirst(items)
-  if (sorting !== 'ReleaseDateAscending') return byDate
-  // the oldest first; the ones without a date stay at the end
-  const dated = byDate.filter((item) => Number.isFinite(dateOf(item)))
-  return [...dated.reverse(), ...byDate.filter((item) => !Number.isFinite(dateOf(item)))]
+  if (sorting !== 'ReleaseDateAscending') return newestFirst(items)
+  // the oldest first, stable as the display sorts (episodes of the same date keep the feed's order); the ones without a
+  // date at the end, in the feed's order
+  const dated = items.filter((item) => Number.isFinite(dateOf(item))).sort((a, b) => dateOf(a) - dateOf(b))
+  return [...dated, ...items.filter((item) => !Number.isFinite(dateOf(item)))]
 }
 
 /**

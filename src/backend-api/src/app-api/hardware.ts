@@ -363,7 +363,10 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
       // (every pin chosen restarts it: five within 5 minutes and systemd refused the sixth start - StartLimitBurst - and the
       // encoder stayed dead while the app said "saved")
       await run('sudo', ['systemctl', 'reset-failed', 'mupi_rotary.service'])
-      running = (await run('sudo', ['systemctl', 'restart', 'mupi_rotary.service'])).ok
+      await run('sudo', ['systemctl', 'restart', 'mupi_rotary.service'])
+      // (a pin it cannot take ends it at once, with no restart: whether it still runs a moment later)
+      await new Promise((resolve) => setTimeout(resolve, 2500))
+      running = (await run('systemctl', ['is-active', 'mupi_rotary.service'], 5000)).stdout.trim() === 'active'
     } else if (values.active === false) {
       await run('sudo', ['systemctl', 'stop', 'mupi_rotary.service'])
       await run('sudo', ['systemctl', 'disable', 'mupi_rotary.service'])

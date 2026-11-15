@@ -1271,10 +1271,13 @@ export class PlayerPage implements OnInit, AfterViewInit {
   @ViewChild('ktScroll', { static: false, read: ElementRef }) private ktScroll: ElementRef<HTMLElement> | undefined
 
   protected trackOfText(): string {
-    const total = this.trackList.length
     const index = this.trackList.findIndex((entry) => this.isCurrentTrack(entry))
+    // (a podcast's list holds at most 300 of its episodes: the place among all of them)
+    const rss = this.media.type === 'rss'
+    const total = rss ? this.rssCount : this.trackList.length
     if (total === 0 || index < 0) return ''
-    return this.displayTexts.text('trackOf').replace('{n}', String(index + 1)).replace('{t}', String(total))
+    const place = rss ? this.trackList[index].position : index + 1
+    return this.displayTexts.text('trackOf').replace('{n}', String(place)).replace('{t}', String(total))
   }
 
   protected pageTrackList(direction: 1 | -1): void {

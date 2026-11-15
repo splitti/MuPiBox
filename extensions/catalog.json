@@ -61,10 +61,10 @@
     "version": "0.7.0",
     "description": "Ein NFC-Leser liest Tags und Karten: der PN5180 (ISO 14443 A und ISO 15693), der RC522 und der PN532 (ISO 14443 A) oder ein USB-Leser, der die Kartennummer wie eine Tastatur tippt. Jeder Tag kann ein Album, ein Hörspiel, einen Sender oder einen Podcast starten: In der Bibliothek das Medium öffnen, „NFC-Tag“ antippen und den Tag auflegen. Die Einstellungen stehen unter System › NFC-Extension.",
     "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjE1MCAxNTAgNTAwIDUwMCI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iNDIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTI1NSA2MDBDMjE4IDU4NiAxOTggNTU4IDE5OCA1MjJWMjc1UTE5OCAxOTggMjc1IDE5OEg0MDVRNDk3IDE5OCA0OTcgMjkwVjUzN0wzNzIgNDMwIi8+PHBhdGggZD0iTTU0NSAxOThDNTgzIDIxMiA2MDIgMjQwIDYwMiAyNzdWNTI1UTYwMiA2MDIgNTI1IDYwMkg0MDBRMzAzIDYwMiAzMDMgNTEwVjI2Mkw0MzAgMzcyIi8+PC9nPjwvc3ZnPgo=",
-    "hostApi": 8,
+    "hostApi": 9,
     "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/nfc-0.7.0.mpx",
-    "sha256": "7e038fd149cf38d189085bef4751ac0d7e7ee9c28b2f2226b0953267caed70d5",
-    "size": 39390,
+    "sha256": "e0608c4598d3f9554147de69c820888c0f393107a36495a3c638b1f79404ddf5",
+    "size": 39643,
     "resources": {},
     "system": {
       "udev": 1,
