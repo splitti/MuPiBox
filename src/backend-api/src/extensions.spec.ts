@@ -337,6 +337,20 @@ describe('GPIO pins the user chooses, and a page of its own (hostApi 5)', () => 
     assert.ok(checkManifest(base({ id: 'xy', hostApi: 4, settings, ui: { title: 'T', items: Array.from({ length: 21 }, () => field) } }), files()), 'twenty before hostApi 5')
   })
 
+  it('a field that is shown only while a choice has one of its values (showIf)', () => {
+    const settings = { reader: { type: 'string', default: 'a', options: ['a', 'b', 'c'] }, t: { type: 'string' } }
+    const ok = (showIf: unknown) => checkManifest(manifest(settings, { items: [{ key: 't', label: 'T', showIf }, { type: 'heading', label: 'H', showIf }] }), files())
+    assert.strictEqual(ok({ key: 'reader', is: ['a', 'c'] }), null)
+    assert.ok(ok({ key: 't', is: ['a'] }), 'a text has no values to choose from')
+    assert.ok(ok({ key: 'nothing', is: ['a'] }))
+    assert.ok(ok({ key: 'reader', is: ['z'] }), 'a value the setting does not have')
+    assert.ok(ok({ key: 'reader', is: [] }))
+    assert.ok(ok({ key: 'reader' }))
+    assert.ok(ok({ key: 'constructor', is: ['a'] }))
+    const page = { type: 'heading', label: 'P', page: true, showIf: { key: 'reader', is: ['a'] } }
+    assert.ok(checkManifest(manifest(settings, { place: 'system', items: [page] }, 8), files()), 'a page cannot be hidden')
+  })
+
   it('a page of its own under System, and the pages of the core it may take over', () => {
     assert.strictEqual(checkManifest(manifest({}, { place: 'system' }), files()), null)
     assert.strictEqual(checkManifest(manifest({}, { place: 'system', adopt: ['rotary'] }), files()), null)
@@ -346,6 +360,68 @@ describe('GPIO pins the user chooses, and a page of its own (hostApi 5)', () => 
     assert.ok(checkManifest(manifest({}, { place: 'system', adopt: ['passwort'] }), files()), 'only what the core lets go')
     assert.ok(checkManifest(manifest({}, { place: 'system', adopt: ['rotary', 'rotary'] }), files()))
     assert.ok(checkManifest(manifest({}, { place: 'system', adopt: 'rotary' }), files()))
+  })
+})
+
+describe('a status block (hostApi 6)', () => {
+  const manifest = (items: unknown[], hostApi = 6) => base({ id: 'xy', hostApi, settings: { t: { type: 'string' } }, ui: { title: 'T', items } })
+  it('a status block names a route of the extension that tells what to show', () => {
+    assert.strictEqual(checkManifest(manifest([{ type: 'status', label: 'Leser', state: '/api/ext/xy/state' }, { key: 't', label: 'T' }]), files()), null)
+    assert.match(String(checkManifest(manifest([{ type: 'status', label: 'Leser', state: '/api/ext/xy/state' }], 5), files())), /status needs hostApi 6/)
+    assert.match(String(checkManifest(manifest([{ type: 'status', label: 'Leser' }]), files())), /status address/)
+    assert.match(String(checkManifest(manifest([{ type: 'status', label: 'Leser', state: '/api/ext/other/state' }]), files())), /status address/)
+    assert.match(String(checkManifest(manifest([{ type: 'status', label: 'Leser', state: '/api/ext/xy/../state' }]), files())), /status address/)
+    assert.ok(checkManifest(manifest([{ type: 'status', label: 'Leser', state: '/api/ext/xy/state', key: 't' }]), files()), 'no setting')
+    assert.ok(checkManifest(manifest([{ type: 'status', label: 'Leser', state: '/api/ext/xy/state', choices: [] }]), files()))
+  })
+})
+
+describe('a button (hostApi 7)', () => {
+  const manifest = (items: unknown[], hostApi = 7) => base({ id: 'xy', hostApi, settings: { t: { type: 'string' } }, ui: { title: 'T', items } })
+  it('a button names a route of the extension that its tap asks, and has no setting', () => {
+    assert.strictEqual(checkManifest(manifest([{ type: 'action', label: 'Start', post: '/api/ext/xy/arm' }, { key: 't', label: 'T' }]), files()), null)
+    assert.strictEqual(checkManifest(manifest([{ type: 'action', label: 'Löschen', post: '/api/ext/xy/forget', confirm: 'Wirklich?', help: 'Hilfe' }]), files()), null)
+    assert.match(String(checkManifest(manifest([{ type: 'action', label: 'Start', post: '/api/ext/xy/arm' }], 6), files())), /action needs hostApi 7/)
+    assert.match(String(checkManifest(manifest([{ type: 'action', label: 'Start' }]), files())), /action address/)
+    assert.match(String(checkManifest(manifest([{ type: 'action', label: 'Start', post: '/api/ext/other/arm' }]), files())), /action address/)
+    assert.match(String(checkManifest(manifest([{ type: 'action', label: 'Start', post: '/api/ext/xy/../arm' }]), files())), /action address/)
+    assert.match(String(checkManifest(manifest([{ type: 'action', label: 'Start', post: '/api/ext/xy/arm', confirm: '' }]), files())), /action question/)
+    assert.ok(checkManifest(manifest([{ type: 'action', label: 'Start', post: '/api/ext/xy/arm', key: 't' }]), files()), 'no setting')
+    assert.ok(checkManifest(manifest([{ type: 'action', label: 'Start', post: '/api/ext/xy/arm', state: '/api/ext/xy/state' }]), files()), 'no status')
+  })
+})
+
+describe('a list (hostApi 8)', () => {
+  const manifest = (items: unknown[], hostApi = 8) => base({ id: 'xy', hostApi, settings: { t: { type: 'string' } }, ui: { title: 'T', items } })
+  it('names a route of the extension that answers its entries, and has no setting', () => {
+    assert.strictEqual(checkManifest(manifest([{ type: 'list', label: 'Tags', list: '/api/ext/xy/tags' }, { key: 't', label: 'T' }]), files()), null)
+    assert.strictEqual(checkManifest(manifest([{ type: 'list', label: 'Tags', list: '/api/ext/xy/tags', empty: 'Nichts da', help: 'Hilfe' }]), files()), null)
+    assert.match(String(checkManifest(manifest([{ type: 'list', label: 'Tags', list: '/api/ext/xy/tags' }], 7), files())), /list needs hostApi 8/)
+    assert.match(String(checkManifest(manifest([{ type: 'list', label: 'Tags' }]), files())), /list address/)
+    assert.match(String(checkManifest(manifest([{ type: 'list', label: 'Tags', list: '/api/ext/other/tags' }]), files())), /list address/)
+    assert.match(String(checkManifest(manifest([{ type: 'list', label: 'Tags', list: '/api/ext/xy/../tags' }]), files())), /list address/)
+    assert.match(String(checkManifest(manifest([{ type: 'list', label: 'Tags', list: '/api/ext/xy/tags', empty: '' }]), files())), /list text/)
+    assert.ok(checkManifest(manifest([{ type: 'list', label: 'Tags', list: '/api/ext/xy/tags', key: 't' }]), files()), 'no setting')
+    assert.ok(checkManifest(manifest([{ type: 'list', label: 'Tags', list: '/api/ext/xy/tags', post: '/api/ext/xy/x' }]), files()), 'no button of its own')
+  })
+})
+
+describe('sub pages (hostApi 7)', () => {
+  const page = (label: string, extra: object = {}) => ({ type: 'heading', label, page: true, ...extra })
+  const manifest = (items: unknown[], hostApi = 7, place: string | null = 'system') => base({ id: 'xy', hostApi, settings: { t: { type: 'string' }, s: { type: 'boolean' } }, ui: { title: 'T', place: place ?? undefined, items } })
+  it('a heading can start a page of its own: two or more, the first line starts the first', () => {
+    assert.strictEqual(checkManifest(manifest([page('A'), { key: 't', label: 'T' }, { type: 'heading', label: 'Group' }, page('B'), { key: 's', label: 'S' }]), files()), null)
+    assert.match(String(checkManifest(manifest([page('A'), { key: 't', label: 'T' }]), files())), /two to six/)
+    assert.match(String(checkManifest(manifest([{ key: 't', label: 'T' }, page('A'), page('B')]), files())), /two to six/)
+    assert.match(String(checkManifest(manifest([page('A'), page('B'), page('C'), page('D'), page('E'), page('F'), page('G')]), files())), /two to six/)
+  })
+  it('needs hostApi 7 and a page of its own for the extension, and no group tricks', () => {
+    assert.match(String(checkManifest(manifest([page('A'), page('B')], 6), files())), /a page needs hostApi 7/)
+    assert.match(String(checkManifest(manifest([page('A'), page('B')], 7, null), files())), /a page needs hostApi 7/)
+    assert.match(String(checkManifest(manifest([page('A', { rename: 't' }), page('B')]), files())), /a page needs hostApi 7/)
+    assert.match(String(checkManifest(manifest([page('A', { optional: 's' }), page('B')]), files())), /a page needs hostApi 7/)
+    assert.match(String(checkManifest(manifest([page('A', { dep: 's' }), page('B')]), files())), /a page needs hostApi 7/)
+    assert.match(String(checkManifest(manifest([{ type: 'heading', label: 'A', page: false }, page('B')]), files())), /a page needs hostApi 7/)
   })
 })
 
@@ -373,6 +449,56 @@ describe('the buttons extension of this repository', () => {
     const checked = verifyPackage(bytes)
     assert.strictEqual(checked.ok, true)
     if (checked.ok) assert.deepStrictEqual(checked.pkg.manifest, buttons, 'the package holds the manifest of the repository')
+  })
+})
+
+describe('the NFC extension of this repository', () => {
+  const extDir = path.join(process.cwd(), '..', '..', 'extensions')
+  const nfc = JSON.parse(readFileSync(path.join(extDir, 'nfc', 'manifest.json'), 'utf8')) as Manifest
+  it('has a manifest the installer accepts: a status block, two pins to choose, a page under System', () => {
+    assert.strictEqual(checkManifest(nfc, files('api.js', 'display.js', 'icon.svg', '99-mpx-nfc.rules')), null)
+    assert.strictEqual(nfc.hostApi, 8)
+    assert.strictEqual(nfc.ui?.place, 'system')
+    assert.strictEqual(nfc.name, 'NFC-Extension')
+    assert.deepStrictEqual(nfc.ui?.items.filter((i) => i.type === 'heading' && i.page).map((i) => i.label), ['NFC-Reader', 'Zugeordnete Tags'], 'two sub pages')
+    assert.deepStrictEqual(nfc.resources, {}, 'no pin of its own: the user chooses BUSY and RST')
+    assert.deepStrictEqual(nfc.system?.packages, ['python3-spidev', 'python3-lgpio'])
+  })
+  it('lists the tags with their pictures, and what to do when a tag is taken off', () => {
+    const items = nfc.ui?.items ?? []
+    assert.strictEqual(items.find((i) => i.type === 'list')?.list, '/api/ext/nfc/tags')
+    assert.strictEqual(items.filter((i) => i.type === 'action' || i.type === 'lookup').length, 0, 'the medium is given in the library, not on this page')
+    assert.strictEqual(checkSettings(nfc, { onRemove: 'stop', playOnTag: false }).ok, true)
+    assert.strictEqual(checkSettings(nfc, { onRemove: 'rewind' }).ok, false)
+  })
+  it('has a udev rule that opens the SPI device for the group of the header pins - and nothing that runs a program', () => {
+    const rule = readFileSync(path.join(extDir, 'nfc', '99-mpx-nfc.rules'), 'utf8')
+    assert.strictEqual(checkUdevRules(rule), null)
+    assert.match(rule, /SUBSYSTEM=="spidev"/)
+    assert.match(rule, /GROUP="gpio"/)
+  })
+  it('takes the settings the app sends: a reader, a chip select, two pins, the kinds of tags', () => {
+    assert.strictEqual(checkSettings(nfc, { reader: 'pn5180', spiDevice: '0.1', busyPin: 25, resetPin: 23, tech: 'v' }).ok, true)
+    for (const reader of ['rc522', 'pn532', 'hid']) assert.strictEqual(checkSettings(nfc, { reader }).ok, true, reader)
+    assert.strictEqual(checkSettings(nfc, { reader: 'pn532', pn532Link: 'uart', uartDevice: '/dev/ttyAMA0' }).ok, true)
+    assert.strictEqual(checkSettings(nfc, { reader: 'hid', hidDevice: 'IC Reader' }).ok, true)
+    assert.strictEqual(checkSettings(nfc, { reader: 'mfrc' }).ok, false)
+    assert.strictEqual(checkSettings(nfc, { pn532Link: 'usb' }).ok, false)
+    assert.strictEqual(checkSettings(nfc, { uartDevice: '/etc/passwd' }).ok, false)
+    assert.strictEqual(checkSettings(nfc, { hidDevice: 'a; rm -rf /' }).ok, false, 'a name is plain text')
+    assert.strictEqual(checkSettings(nfc, { spiDevice: '1.0' }).ok, false)
+    assert.strictEqual(checkSettings(nfc, { busyPin: 40 }).ok, false)
+  })
+  it('is packed as the catalog says, with its Python driver in it', () => {
+    const entry = JSON.parse(readFileSync(path.join(extDir, 'catalog.json'), 'utf8')).find((e: { id: string }) => e.id === 'nfc')
+    const bytes = readFileSync(path.join(extDir, 'dist', `nfc-${entry.version}.mpx`))
+    assert.strictEqual(createHash('sha256').update(bytes).digest('hex'), entry.sha256)
+    const checked = verifyPackage(bytes)
+    assert.strictEqual(checked.ok, true)
+    if (checked.ok) {
+      assert.deepStrictEqual(checked.pkg.manifest, nfc, 'the package holds the manifest of the repository')
+      for (const driver of ['pn5180.py', 'rc522.py', 'pn532.py', 'usbreader.py']) assert.ok(checked.pkg.files.has(driver), driver)
+    }
   })
 })
 

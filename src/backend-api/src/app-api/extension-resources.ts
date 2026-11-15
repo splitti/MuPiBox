@@ -264,8 +264,24 @@ export function parseUnitFiles(text: string): string[] {
 }
 
 /** What the core of the box holds, from its configuration (the same file the scripts read). */
-// (the rotary encoder has its pins fixed: the two of the knob and the one of its button)
-const ROTARY_GPIO = [26, 24, 10]
+// The rotary encoder: the two pins of the knob and the one of its button (rotary.pinA, pinB, pinButton in the configuration;
+// the pins the box shipped with while nothing is chosen)
+export const ROTARY_DEFAULT_PINS = { a: 26, b: 24, button: 10 }
+export interface RotaryPins {
+  a: number
+  b: number
+  button: number
+}
+/** The pins of the rotary encoder in a configuration: three different pins of 2-27 that are set, else the default ones. */
+export function rotaryPins(config: Record<string, unknown> | undefined): RotaryPins {
+  const rotary = config?.rotary && typeof config.rotary === 'object' ? (config.rotary as Record<string, unknown>) : {}
+  const pin = (v: unknown) => (/^\d+$/.test(String(v ?? '')) ? Number(v) : NaN)
+  const chosen = { a: pin(rotary.pinA), b: pin(rotary.pinB), button: pin(rotary.pinButton) }
+  const values = Object.values(chosen)
+  const fine = values.every((n) => Number.isInteger(n) && n >= 2 && n <= 27) && new Set(values).size === 3
+  return fine ? chosen : { ...ROTARY_DEFAULT_PINS }
+}
+const rotaryPinList = (config: Record<string, unknown> | undefined): number[] => Object.values(rotaryPins(config))
 function rotaryOn(config: Record<string, unknown> | undefined): boolean {
   const rotary = config?.rotary && typeof config.rotary === 'object' ? (config.rotary as Record<string, unknown>) : {}
   return rotary.active === true || rotary.active === 'true' || rotary.rotary_active === true
@@ -273,7 +289,7 @@ function rotaryOn(config: Record<string, unknown> | undefined): boolean {
 
 /** Pins a part of the core would use once it is switched on: free now, but worth a word to whoever chooses a pin. */
 export function idleCoreGpio(config: Record<string, unknown> | undefined): { pin: number; by: string }[] {
-  return rotaryOn(config) ? [] : ROTARY_GPIO.map((pin) => ({ pin, by: 'MuPiBox (rotary encoder, switched off)' }))
+  return rotaryOn(config) ? [] : rotaryPinList(config).map((pin) => ({ pin, by: 'MuPiBox (rotary encoder, switched off)' }))
 }
 
 export function coreResources(config: Record<string, unknown> | undefined): { ports: { proto: 'tcp' | 'udp'; port: number; by: string }[]; gpio: { pin: number; by: string }[] } {
@@ -302,7 +318,7 @@ export function coreResources(config: Record<string, unknown> | undefined): { po
   take(shim.ledPin, 'MuPiBox (power LED)')
   const fan = section('fan')
   if (fan.fan_active === true || fan.fan_active === 'true') take(fan.fan_gpio, 'MuPiBox (fan)')
-  if (rotaryOn(config)) for (const p of ROTARY_GPIO) take(p, 'MuPiBox (rotary encoder)')
+  if (rotaryOn(config)) for (const p of rotaryPinList(config)) take(p, 'MuPiBox (rotary encoder)')
   const hat = section('mupihat')
   if (hat.hat_active === true || hat.hat_active === 'true') {
     for (const p of [2, 3]) take(p, 'MuPiBox (MuPiHAT, I2C)')

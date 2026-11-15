@@ -25,12 +25,13 @@ This page is the guideline for people who write extensions. The reference for th
 | `player.js` | the player (`spotify-control`, Node, CommonJS) | playback, devices, album sources |
 | `api.js` | the API (`server`, Node, CommonJS) | routes under `/api/ext/<id>/…`, background work |
 | `display.js` | the display (Chromium, ES module) | tabs, buttons, header items, overlays |
+| `*.py` | a child process of the API part | Python programs the API part starts itself (`hostApi` 6), for what Node cannot do, such as speaking SPI; never served |
 | `icon.svg` | the app | a small SVG shown on the extensions page (up to 4 KB it is also shown before the install) |
 | `units/*.service`, `units/*.timer` | systemd | services of the extension, see section 5 |
 | `*.rules` | udev | access rights for a device, see section 5 |
 
 Every part is optional: bring only what you need. Allowed file types are `js`, `mjs`, `json`, `svg`, `png`, `jpg`, `css`, `txt`,
-`md`, `html`, `rules`, `service` and `timer`. A package is at most **16 MB**, and what is in it may be up to three times that unpacked. The whole file is held in memory while the box reads it, so keep it as small as you can. The web app never runs code of an extension: it draws the
+`md`, `html`, `rules`, `service`, `timer` and (`hostApi` 6) `py`. A package is at most **16 MB**, and what is in it may be up to three times that unpacked. The whole file is held in memory while the box reads it, so keep it as small as you can. The web app never runs code of an extension: it draws the
 settings card from what the manifest declares.
 
 ## 3. `manifest.json`
@@ -62,7 +63,7 @@ settings card from what the manifest declares.
 - **`id`**: lowercase letters, digits and `-`, 2–31 characters, starting with a letter. It never changes.
 - **`version`**: `major.minor.patch`. Raise it with every change you publish; the box offers an update when the catalog has a higher
   number than the installed one.
-- **`hostApi`**: the number of the interface you wrote the extension for (`1` to `5`; `3` is needed for an `order` field, `4` for a `roster`, `5` for a `gpio` setting, a `heading` or a page of your own, see below). A box does not load an extension made for a
+- **`hostApi`**: the number of the interface you wrote the extension for (`1` to `6`; `3` is needed for an `order` field, `4` for a `roster`, `5` for a `gpio` setting, a `heading` or a page of your own, `6` for a `status` block, see below). A box does not load an extension made for a
   newer interface than its own.
 - **`resources`** is **required** (`{}` means "needs nothing"), see section 4.
 - **`settings`** and **`ui`**: what the extension stores and how the settings card looks. Types are `boolean`, `string`, `number`
@@ -86,6 +87,10 @@ settings card from what the manifest declares.
   the user adds with a "+" and removes again (groups in a row with the same label share one "+"; removing clears the group's pins and name).
   `"place": "system"` in `ui` gives the extension a page of its own under Settings › System › "The box";
   `"adopt": ["rotary"]` shows the core's "rotary encoder and buttons" page there and hides it in its old place while the extension is on.
+  With `hostApi` 6 a `ui` item can be a **status block**: `{ "type": "status", "label": "…", "state": "/api/ext/<id>/<name>" }` (no `key`). The
+  route is in your API part and needs the login of the parents; it answers `{ "rows": [{ "label": "…", "value": "…", "tone": "ok|warn|error" }] }`
+  (at most 12 rows), and the app asks it every 2.5 seconds while the card is open. Report fixed sentences, not composed ones: the app translates a
+  text if it knows it exactly.
 - **`system`**: what the box sets up as root, see section 5.
 - Texts in the manifest are shown as written. The app translates a text only if it knows it exactly, so write yours in English
   unless the extension is meant for one language only. (The extensions shipped in this repository are written in German, the source

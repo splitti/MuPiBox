@@ -8,7 +8,8 @@ import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { requireCsrf, requireSession } from './middleware'
 import { bootConfigPath } from './boot-paths'
-import { extensionGpio } from './extensions'
+import { rotaryPins } from './extension-resources'
+import { extensionGpio, takenForRotary } from './extensions'
 import { hdmiAudioWritten, onboardAudioWritten, reapplyOnboardAudio, setHdmiAudio, setOnboardAudio } from '../audio-output'
 
 export interface HardwareDeps {
@@ -18,8 +19,13 @@ export interface HardwareDeps {
 
 // the GPIO pins the admin interface offers for the LED and the fan
 const PINS = ['4', '12', '13', '17', '18', '21', '22', '23', '24', '25', '27']
-// the pins of the rotary encoder and its push button (rotary_control.py)
-const ROTARY_PINS = [26, 24, 10]
+// the pins the rotary encoder (rotary_control.py) may have: any pin of the header, as long as nothing else holds it
+const ROTARY_CHOICE = Array.from({ length: 26 }, (_, i) => i + 2)
+const ROTARY_PIN_KEYS = [
+  ['pinA', 'a'],
+  ['pinB', 'b'],
+  ['pinButton', 'button'],
+] as const
 
 /** The GPIO pins extensions hold (declared in their manifest or chosen in their settings): not for the LED, the fan or the rotary encoder. */
 async function extensionPins(): Promise<{ pin: number; by: string }[]> {
@@ -96,6 +102,9 @@ function rebootSoon(): void {
   detached('( flock -n 9 || exit 0; sleep 5; sudo /usr/local/bin/mupibox/restart.sh ) 9>/tmp/.mupibox.reboot.lock')
 }
 
+// (the pins of the rotary encoder as the configuration has them)
+const rotaryPinsOf = (cfg: MupiboxConfig | undefined) => rotaryPins(cfg as unknown as Record<string, unknown> | undefined)
+
 const section = (deps: HardwareDeps, key: string) => ((deps.getMupiboxConfig() as Record<string, unknown> | undefined)?.[key] ?? {}) as Record<string, unknown>
 
 const int = (v: unknown, min: number, max: number): number | undefined => {
@@ -125,6 +134,9 @@ export async function fanSpeedNow(): Promise<number | null> {
 }
 
 export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void {
+  // the pins the rotary encoder holds (none while it is off): not for the LED or the fan
+  const rotaryHeld = (): string[] => (section(deps, 'rotary').active === true ? Object.values(rotaryPinsOf(deps.getMupiboxConfig())).map(String) : [])
+
   /** GET /api/app/hardware - everything the pages Soundkarte, Drehregler, MuPiHAT, Taster and Lüfter show. */
   router.get('/hardware', requireSession, async (_req, res) => {
     const mb = section(deps, 'mupibox')
@@ -169,7 +181,7 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
           active: /HDMI/i.test(await fsp.readFile('/proc/asound/cards', 'utf8').catch(() => '')),
         },
       },
-      rotary: { active: rotary.active === true, running: rotaryActive, step: int(rotary.step, 1, 10) ?? 5, button: BUTTON.includes(String(rotary.button)) ? rotary.button : 'off' },
+      rotary: { active: rotary.active === true, running: rotaryActive, pins: rotaryPinsOf(deps.getMupiboxConfig()), step: int(rotary.step, 1, 10) ?? 5, button: BUTTON.includes(String(rotary.button)) ? rotary.button : 'off' },
       mupihat: {
         active: hat.hat_active === true,
         battery: typeof hat.selected_battery === 'string' ? hat.selected_battery : '',
@@ -208,6 +220,7 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
     const fan = section(deps, 'fan')
     res.set('Cache-Control', 'no-store').json({
       rotary: section(deps, 'rotary').active === true,
+      rotaryPins: Object.values(rotaryPinsOf(deps.getMupiboxConfig())).map(String),
       fan: { active: fan.fan_active === true, gpio: String(fan.fan_gpio ?? '13') },
       shim: {
         poweroffPin: String(shim.poweroffPin ?? '4'),
@@ -287,17 +300,52 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
     res.json({ ok: true, reboot: r.changed })
   })
 
-  /** POST /api/app/rotary {active?, step?, button?} - the rotary encoder (volume) and its push button. */
+  /**
+   * GET /api/app/rotary-pins - the pins the rotary encoder has now and which of the header it may have: every pin that nothing
+   * else holds (the core, the boot configuration, the extensions, a program that runs); its own count as free.
+   */
+  router.get('/rotary-pins', requireSession, async (_req, res) => {
+    const config = deps.getMupiboxConfig() as unknown as Record<string, unknown> | undefined
+    const taken = await takenForRotary(config)
+    res.json({
+      current: rotaryPinsOf(deps.getMupiboxConfig()),
+      pins: ROTARY_CHOICE.map((pin) => ({ pin, holders: taken.gpio.get(pin) ?? [] })),
+      blind: taken.blind,
+    })
+  })
+
+  /** POST /api/app/rotary {active?, step?, button?, pinA?, pinB?, pinButton?} - the rotary encoder (volume), its push button and its pins. */
   router.post('/rotary', requireSession, requireCsrf, async (req, res) => {
     const body = (req.body ?? {}) as Record<string, unknown>
     const values: Record<string, unknown> = {}
-    if (body.active !== undefined) {
-      if (typeof body.active !== 'boolean') return void res.status(400).json({ error: 'invalid active' })
-      // (its pins are fixed: switched on only while no extension has one of them - a button of the buttons extension, say)
-      const held = body.active ? (await extensionPins()).find((g) => ROTARY_PINS.includes(g.pin)) : undefined
-      if (held) return void res.status(409).json({ error: 'gpio_taken', pin: held.pin, by: held.by })
-      values.active = body.active
+    if (body.active !== undefined && typeof body.active !== 'boolean') return void res.status(400).json({ error: 'invalid active' })
+    // the pins as they would be: three different pins of the header
+    const before = rotaryPinsOf(deps.getMupiboxConfig())
+    const pins = { ...before }
+    let pinsGiven = false
+    for (const [key, name] of ROTARY_PIN_KEYS) {
+      if (body[key] === undefined) continue
+      const pin = int(body[key], 2, 27)
+      if (pin === undefined) return void res.status(400).json({ error: `${key} must be 2-27` })
+      pins[name] = pin
+      pinsGiven = true
     }
+    if (pinsGiven && new Set([pins.a, pins.b, pins.button]).size !== 3) return void res.status(409).json({ error: 'gpio_twice' })
+    const pinsChanged = pins.a !== before.a || pins.b !== before.b || pins.button !== before.button
+    const willBeOn = typeof body.active === 'boolean' ? body.active : section(deps, 'rotary').active === true
+    // (a pin another part holds - the fan, an extension's button, the boot configuration, a running program - is not to be chosen: the
+    // pins are checked when they change and when the encoder is switched on, not for a step or a button function)
+    if ((pinsChanged || body.active === true) && (willBeOn || pinsGiven)) {
+      const taken = (await takenForRotary(deps.getMupiboxConfig() as unknown as Record<string, unknown> | undefined)).gpio
+      // (what the encoder keeps is its own, a pin of an earlier choice that something else holds now is only an error when it is switched on)
+      const check = body.active === true ? [pins.a, pins.b, pins.button] : [pins.a, pins.b, pins.button].filter((pin) => pin !== before.a && pin !== before.b && pin !== before.button)
+      for (const pin of check) {
+        const holders = taken.get(pin)
+        if (holders?.length) return void res.status(409).json({ error: 'gpio_taken', pin, by: holders.join(', ') })
+      }
+    }
+    if (body.active !== undefined) values.active = body.active
+    if (pinsGiven) Object.assign(values, { pinA: pins.a, pinB: pins.b, pinButton: pins.button })
     if (body.step !== undefined) {
       const step = int(body.step, 1, 10)
       if (step === undefined) return void res.status(400).json({ error: 'step must be 1-10' })
@@ -308,8 +356,8 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
       values.button = body.button
     }
     await merge(deps, 'rotary', values)
-    // step and button are read live by rotary_control.py; switching goes through the service
-    if (values.active === true) {
+    // step and button are read live by rotary_control.py; the pins and switching go through the service (it reads the pins at its start)
+    if (values.active === true || (pinsChanged && willBeOn && values.active === undefined)) {
       await run('sudo', ['systemctl', 'enable', 'mupi_rotary.service'])
       await run('sudo', ['systemctl', 'restart', 'mupi_rotary.service'])
     } else if (values.active === false) {
@@ -383,7 +431,7 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
     }
     if (body.ledPin !== undefined) {
       const pin = String(body.ledPin)
-      const reserved = [...['poweroffPin', 'triggerPin', 'cutPin'].map((k) => String(section(deps, 'shim')[k] ?? '')), ...(await extensionPins()).map((g) => String(g.pin))]
+      const reserved = [...['poweroffPin', 'triggerPin', 'cutPin'].map((k) => String(section(deps, 'shim')[k] ?? '')), ...(await extensionPins()).map((g) => String(g.pin)), ...rotaryHeld()]
       if (!PINS.includes(pin) || reserved.includes(pin)) return void res.status(400).json({ error: 'pin not allowed' })
       shim.ledPin = pin
       reboot = true
@@ -414,7 +462,7 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
     const body = (req.body ?? {}) as Record<string, unknown>
     if (typeof body.active !== 'boolean') return void res.status(400).json({ error: 'active must be true or false' })
     const gpio = String(body.gpio ?? '')
-    const reserved = [...['poweroffPin', 'triggerPin', 'cutPin', 'ledPin'].map((k) => String(section(deps, 'shim')[k] ?? '')), ...(await extensionPins()).map((g) => String(g.pin))]
+    const reserved = [...['poweroffPin', 'triggerPin', 'cutPin', 'ledPin'].map((k) => String(section(deps, 'shim')[k] ?? '')), ...(await extensionPins()).map((g) => String(g.pin)), ...rotaryHeld()]
     // (a pin the OnOffShim or its LED uses only matters for a running fan: some boxes have both on 13 from the template)
     if (!PINS.includes(gpio) || (body.active && reserved.includes(gpio))) return void res.status(400).json({ error: 'pin not allowed' })
     const t = ['t100', 't75', 't50', 't25'].map((k) => int(body[k], 20, 90))

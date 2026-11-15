@@ -232,8 +232,8 @@
           </div>
         }
       </div>
-      <!-- (a podcast episode has no track list) -->
-      @if (!radio && media.type !== 'rss') {
+      <!-- (a radio station has no track list; a podcast's list is its episodes) -->
+      @if (!radio) {
         <button class="kp-tbtn" type="button" (click)="openTrackList()">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10" /></svg>
           <span class="kp-tcount">{{ trackCounter(spotify, local) }}</span>

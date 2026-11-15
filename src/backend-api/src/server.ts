@@ -72,6 +72,7 @@ import { episodeKey, MAX_KEEP, type OfflineEpisode, PodcastOffline } from './pod
 import { setFeedHeadReader } from './podcast-search'
 import { EpisodeState, episodeStateSettings } from './episode-state'
 import { HEARD_KEY, HeardStore, heardSettings } from './heard'
+import { episodeList, neighbourEpisode } from './episode-neighbour'
 import { uiScale } from './ui-scale'
 import { confirmDisplayTest, displayTestState } from './app-api/display-profile'
 import { browserGuard, corsOptionsFor, isAllowedHost, isLoopback, localOnly, localOrElternSession, logValue, PROXY_PORT, setConfiguredHosts, viaProxy } from './request-guard'
@@ -1257,6 +1258,44 @@ app.get('/api/rssfeed/episode-duration', async (req, res) => {
     feedDurations = { at: Date.now(), byKey }
   }
   res.json({ seconds: feedDurations.byKey.get(episodeKey(url)) ?? 0 })
+})
+
+// The feeds in the cache, for what is asked about an episode only (the player and the display know no feed address of it)
+async function cachedFeeds(): Promise<unknown[]> {
+  const feeds: unknown[] = []
+  for (const name of await readdir(rssCacheDataDir).catch(() => [] as string[])) {
+    if (!name.endsWith('.json')) continue
+    try {
+      feeds.push(JSON.parse(await readFile(path.join(rssCacheDataDir, name), 'utf8')))
+    } catch {
+      // a cache file being written: the next time
+    }
+  }
+  return feeds
+}
+
+// The episode newer (older) than the one that plays - for "previous" and "next" at a podcast, asked by the player: the feeds in the cache
+// are searched for the episode, see episode-neighbour.ts. { found: false } when none has it.
+app.get('/api/rssfeed/neighbour', async (req, res) => {
+  const url = typeof req.query.url === 'string' ? req.query.url : ''
+  const direction = req.query.dir === 'newer' ? 'newer' : req.query.dir === 'older' ? 'older' : ''
+  if (!url || !direction) {
+    res.status(400).json({ error: 'url or dir missing' })
+    return
+  }
+  const found = neighbourEpisode(await cachedFeeds(), url, direction)
+  res.json(found ? { found: true, ...found } : { found: false })
+})
+
+// The list of episodes of the podcast the episode belongs to (newest first), for the list in the display's player
+app.get('/api/rssfeed/episodes', async (req, res) => {
+  const url = typeof req.query.url === 'string' ? req.query.url : ''
+  if (!url) {
+    res.status(400).json({ error: 'url missing' })
+    return
+  }
+  const list = episodeList(await cachedFeeds(), url)
+  res.json(list ? { found: true, ...list } : { found: false })
 })
 
 // "New" and how far heard at a podcast's episodes (episode-state.ts)

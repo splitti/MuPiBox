@@ -178,8 +178,14 @@ export class ExternalPlaybackNavigatorService {
   /** Which media plays, to tell a new album from a pause/resume of the same one. */
   private playingKey(data: CurrentMPlayer): string {
     if (data.currentPlayer === 'spotify') return `spotify|${data.activeSpotifyId ?? ''}`
-    if (data.currentPlayer === 'mplayer') return `${data.currentType ?? ''}|${data.path ?? ''}|${data.album ?? ''}`
+    // (a podcast: the episode too - "next" and "previous" start another one of the same podcast, and the page shows its title)
+    if (data.currentPlayer === 'mplayer') return `${data.currentType ?? ''}|${data.path ?? ''}|${data.album ?? ''}|${data.currentType === 'rss' ? (data.episode ?? '') : ''}`
     return ''
+  }
+
+  /** Ask /local again in a moment: a "next" at a podcast starts another episode in the player, and the page follows it. */
+  public checkSoon(): void {
+    for (const delay of [800, 2500]) setTimeout(() => this.pollNow$.next(), delay)
   }
 
   /** The parents' web app switched the theme and asked for it to show now. Rides on the /local poll

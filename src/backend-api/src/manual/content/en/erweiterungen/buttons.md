@@ -37,7 +37,7 @@ Every change is saved at once and takes effect at once. No restart is needed.
 
 Pins that are already taken cannot be chosen. The list says **who** holds the pin: the box itself (power button, LED, fan, a switched-on rotary knob, MuPiHAT), the boot configuration (for example the sound card), another extension or another button of this page.
 
-The three pins of the **rotary knob** (26, 24 and 10) are free as long as the rotary knob is switched off; the list then shows them with the note "Rotary knob (switched off)". If a button has one of these pins, the rotary knob cannot be switched on until the pin is free again. The other way round, the LED and the fan do not take a pin that a button has.
+The three pins of the **rotary knob** (default 26, 24 and 10, changeable in its settings) are free as long as the rotary knob is switched off; the list then shows them with the note "Rotary knob (switched off)". If a button has one of these pins, the rotary knob cannot be switched on until the pin is free again. The other way round, the LED and the fan do not take a pin that a button has.
 
 ## Short and long press
 

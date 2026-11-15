@@ -16,6 +16,7 @@ import {
   parseListening,
   parseUnitFiles,
   type Probe,
+  rotaryPins,
   sameResources,
 } from './app-api/extension-resources'
 import { checkManifest } from './app-api/extensions'
@@ -153,6 +154,27 @@ describe('extension resources: reading the box', () => {
       { pin: 17, consumer: 'gpiomon' },
     ])
     assert.deepEqual(parseUnitFiles('lighttpd.service enabled enabled\nmupi_fan.service disabled enabled\nfoo.target static -\n'), ['lighttpd.service', 'mupi_fan.service'])
+  })
+
+  it('the rotary encoder has the pins of its configuration - three different ones of 2-27, else the ones it shipped with', () => {
+    assert.deepEqual(rotaryPins(undefined), { a: 26, b: 24, button: 10 })
+    assert.deepEqual(rotaryPins({ rotary: { active: true } }), { a: 26, b: 24, button: 10 })
+    assert.deepEqual(rotaryPins({ rotary: { pinA: 5, pinB: 6, pinButton: 13 } }), { a: 5, b: 6, button: 13 })
+    assert.deepEqual(rotaryPins({ rotary: { pinA: '5', pinB: '6', pinButton: '13' } }), { a: 5, b: 6, button: 13 })
+    // (the same pin twice, a pin outside the header, a missing one: all three fall back, never a half choice)
+    for (const rotary of [{ pinA: 5, pinB: 5, pinButton: 13 }, { pinA: 1, pinB: 6, pinButton: 13 }, { pinA: 5, pinB: 6, pinButton: 28 }, { pinA: 5, pinB: 6 }, { pinA: 'x', pinB: 6, pinButton: 13 }]) {
+      assert.deepEqual(rotaryPins({ rotary }), { a: 26, b: 24, button: 10 })
+    }
+    const chosen = { rotary: { active: true, pinA: 5, pinB: 6, pinButton: 13 } }
+    assert.deepEqual(coreResources(chosen).gpio.map((g) => g.pin), [5, 6, 13])
+    assert.deepEqual(idleCoreGpio({ rotary: { ...chosen.rotary, active: false } }).map((g) => g.pin), [5, 6, 13])
+    // (the pins of the old default are free for others once the encoder is somewhere else)
+    assert.ok(!coreResources(chosen).gpio.some((g) => [26, 24, 10].includes(g.pin)))
+  })
+
+  it('the amplifier of the MuPiHAT takes the I2S pins, also under its own name', () => {
+    const pins = parseBootGpio(['dtoverlay=max98357a,sdmode-pin=16', 'dtoverlay=i2s-mmap'].join(String.fromCharCode(10))).map((p) => p.pin)
+    assert.deepEqual([...new Set(pins)].sort((a, b) => a - b), [16, 18, 19, 20, 21])
   })
 
   it('the core: its ports, the pins of its configuration - the fan, the rotary encoder and the HAT only when they are on', () => {

@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # Rotary encoder for the volume, with push button (KY-040 style).
-#   GPIO 26 = encoder A (CLK), GPIO 24 = encoder B (DT), GPIO 10 = push button (to GND)
+#   default pins: GPIO 26 = encoder A (CLK), GPIO 24 = encoder B (DT), GPIO 10 = push button (to GND);
+#   rotary.pinA, rotary.pinB and rotary.pinButton in mupiboxconfig.json choose others (read when the service starts)
 # Turning changes the volume by rotary.step percent per detent (the player keeps the max volume and the display in sync), the push button
 # does what is chosen in the admin interface (rotary.button in mupiboxconfig.json, read again when it changed).
 # With "track selection" chosen the button works as a switch (with "next track" a press skips one track, as before): the first press turns the knob into a track selector (every
@@ -16,17 +17,27 @@ import threading
 import time
 import urllib.request
 
-try:
-    import RPi.GPIO as GPIO
-except Exception as error:  # no GPIO library (or a board it doesn't support): nothing to do, don't restart in a loop
-    print("rotary control: no GPIO (%s), not started" % error, flush=True)
-    sys.exit(0)
+import gpio_compat  # RPi.GPIO, or lgpio on a Raspberry Pi 5
 
 CONFIG = "/etc/mupibox/mupiboxconfig.json"
 PLAYER = "http://localhost:5005"
-PIN_A = 26
-PIN_B = 24
-PIN_BUTTON = 10
+DEFAULT_PINS = (26, 24, 10)
+
+
+def configured_pins():
+    # three different pins of 2..27 from the config, else the pins the box shipped with
+    try:
+        with open(CONFIG) as file:
+            rotary = json.load(file).get("rotary", {}) or {}
+        pins = tuple(int(rotary[key]) for key in ("pinA", "pinB", "pinButton"))
+    except Exception:
+        return DEFAULT_PINS
+    if len(set(pins)) == 3 and all(2 <= pin <= 27 for pin in pins):
+        return pins
+    return DEFAULT_PINS
+
+
+PIN_A, PIN_B, PIN_BUTTON = configured_pins()
 
 # Gray code: previous state (A<<1|B) and new state -> +1 clockwise (A falls first while B is high, as on a KY-040),
 # -1 counter clockwise, 0 bounce / invalid. A rotary turning the wrong way: swap the A and B wires.
@@ -134,21 +145,27 @@ def worker():
             player("%+d" % (event * volume_step()))
 
 
+pins = None
+
+
 def main():
-    GPIO.setwarnings(False)
-    GPIO.setmode(GPIO.BCM)
+    global pins
+    pins = gpio_compat.Gpio()
     for pin in (PIN_A, PIN_B, PIN_BUTTON):
-        GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        pins.setup_input(pin)
+    if pins.refused:
+        print("rotary control: RPi.GPIO does not work here (%s), using %s" % (pins.refused, pins.name), flush=True)
+    read = pins.read
     threading.Thread(target=worker, daemon=True).start()
 
-    state = (GPIO.input(PIN_A) << 1) | GPIO.input(PIN_B)
+    state = (read(PIN_A) << 1) | read(PIN_B)
     accumulated = 0
-    button_down = GPIO.input(PIN_BUTTON) == 0
+    button_down = read(PIN_BUTTON) == 0
     fast_until = 0.0
     print("rotary control started (A=%d B=%d button=%d)" % (PIN_A, PIN_B, PIN_BUTTON), flush=True)
 
     while True:
-        new_state = (GPIO.input(PIN_A) << 1) | GPIO.input(PIN_B)
+        new_state = (read(PIN_A) << 1) | read(PIN_B)
         if new_state != state:
             fast_until = time.monotonic() + FAST_FOR_S
             accumulated += TRANSITIONS.get((state, new_state), 0)
@@ -162,10 +179,10 @@ def main():
             if state == 3 and abs(accumulated) < STEPS_PER_DETENT:
                 accumulated = 0  # resting position without a full detent: it was a bounce
 
-        pressed = GPIO.input(PIN_BUTTON) == 0
+        pressed = read(PIN_BUTTON) == 0
         if pressed and not button_down:
             time.sleep(0.03)  # debounce
-            if GPIO.input(PIN_BUTTON) == 0:
+            if read(PIN_BUTTON) == 0:
                 button_down = True
                 events.put("button")
         elif not pressed:
@@ -176,8 +193,9 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except RuntimeError as error:  # e.g. no access to the GPIO or a board RPi.GPIO doesn't know
+    except Exception as error:  # no GPIO library, no access to the GPIO, a board neither library knows: nothing to do, no restart loop
         print("rotary control: GPIO not usable (%s), stopped" % error, flush=True)
         sys.exit(0)
     finally:
-        GPIO.cleanup()
+        if pins is not None:
+            pins.close()

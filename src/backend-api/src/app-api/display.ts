@@ -14,7 +14,7 @@ import { imageSize } from './covers'
 import { requireCsrf, requireSession } from './middleware'
 import { episodeStateSettings } from '../episode-state'
 import { heardSettings } from '../heard'
-import { applyNightDim, nightDimmed, nightDimOf, parseNightDim } from './night-dim'
+import { applyNightDim, nightDimmed, nightDimOf, parseNightDim, sunriseLabel, sunsetLabel } from './night-dim'
 import { CUSTOM_THEME_CSS, customThemeCss, customThemeOf } from './custom-theme'
 import { bootConfigPath } from './boot-paths'
 import { activateSkin, addSkin, ensureDefaultSkin, listSkins, removeSkinById } from './winamp-skin'
@@ -133,7 +133,7 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
       resY: num(chromium.resY, 200, 4320) ?? 480,
       // (the normal brightness, not the one of the evening: that is lower while "Abends dunkler" dims)
       brightness: await readBrightness().then((now) => (now === null ? null : typeof mb.displayBrightness === 'number' ? mb.displayBrightness : now)),
-      nightDim: { ...nightDimOf(cfg), dimmed: nightDimmed() },
+      nightDim: { ...nightDimOf(cfg), dimmed: nightDimmed(), sunsetAt: sunsetLabel(nightDimOf(cfg), new Date()), sunriseAt: sunriseLabel(nightDimOf(cfg), new Date()) },
       rotation: await readRotations(),
       ttsLanguage: typeof mb.ttsLanguage === 'string' ? mb.ttsLanguage : 'en',
       ttsLanguages: langs.map((l) => ({ code: String(l['iso639-1'] ?? ''), name: String(l.Language ?? '') })).filter((l) => l.code),
@@ -145,6 +145,25 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
    * Answer: what happened on top of saving - reloaded (the display page), restartKiosk (resolution), reboot (rotation),
    * restartPlayer (reading-aloud language).
    */
+  // The place of the box for "Abends dunkler" at sunset: a name looked up at Open-Meteo's geocoding (only the name the parents typed
+  // goes out - no coordinates, nothing of the box). The app can also take the coordinates from the phone or have them typed.
+  router.get('/geocode', requireSession, async (req, res) => {
+    const q = String(req.query.q ?? '').trim().slice(0, 80)
+    if (q.length < 2) return res.status(400).json({ error: 'query too short' })
+    const language = /^[a-z]{2}$/.test(String(req.query.lang ?? '')) ? String(req.query.lang) : 'en'
+    try {
+      const response = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&format=json&language=${language}`, { signal: AbortSignal.timeout(8000) })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const body = (await response.json()) as { results?: { name?: string; admin1?: string; country?: string; latitude?: number; longitude?: number }[] }
+      const results = (Array.isArray(body.results) ? body.results : [])
+        .filter((r) => typeof r.name === 'string' && typeof r.latitude === 'number' && typeof r.longitude === 'number' && Math.abs(r.latitude) <= 90 && Math.abs(r.longitude) <= 180)
+        .map((r) => ({ name: String(r.name), region: typeof r.admin1 === 'string' ? r.admin1 : '', country: typeof r.country === 'string' ? r.country : '', lat: Math.round((r.latitude as number) * 1000) / 1000, lon: Math.round((r.longitude as number) * 1000) / 1000 }))
+      res.json({ results })
+    } catch (error) {
+      res.status(502).json({ error: `geocoding: ${(error as Error).message}` })
+    }
+  })
+
   router.post('/display-options', requireSession, requireCsrf, async (req, res) => {
     const body = (req.body ?? {}) as Record<string, unknown>
     const mb: Record<string, unknown> = {}
@@ -238,6 +257,8 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
     if (brightness !== undefined || body.nightDim !== undefined) {
       await applyNightDim(deps.getMupiboxConfig(), true)
       result.dimmed = nightDimmed()
+      result.sunsetAt = sunsetLabel(nightDimOf(deps.getMupiboxConfig()), new Date())
+      result.sunriseAt = sunriseLabel(nightDimOf(deps.getMupiboxConfig()), new Date())
     }
     // rotation: into config.txt as the admin interface does (DietPi's G_CONFIG_INJECT); needs a restart
     const bootConfig = await bootConfigPath()

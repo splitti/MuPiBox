@@ -273,6 +273,22 @@ export class PlayerService {
     this.sendRequest(url, media)
   }
 
+  /** The episodes of the podcast an episode belongs to, newest first - found by the box in the feeds it has cached (no feed address here). */
+  getRssEpisodes(media: Media): Observable<{ found: boolean; artist?: string; current?: number; episodes?: { url: string; title: string; seconds: number }[] }> {
+    return this.http.get<{ found: boolean; artist?: string; current?: number; episodes?: { url: string; title: string; seconds: number }[] }>(
+      `${environment.backend.apiUrl}/rssfeed/episodes?url=${encodeURIComponent(media.id)}`,
+    )
+  }
+
+  /**
+   * Another episode of the podcast, chosen in the list of the player. Started like "next" at an episode: with the source "skip" the display's
+   * player page follows to it (ExternalPlaybackNavigatorService) and shows its title. The picture of the episode before does not go along.
+   */
+  playRssEpisode(media: Media, episode: { id: string; name: string }): void {
+    const started: Media = { ...media, id: episode.id, title: episode.name }
+    this.sendRequest(`rss/${encodeURIComponent(episode.id)}/${encodeURIComponent(episode.name)}:title:artist:${encodeURIComponent(media.artist)}?src=skip`, started)
+  }
+
   /**
    * Get the ordered list of track file names for a local library album,
    * read from its playlist.m3u by the player backend.

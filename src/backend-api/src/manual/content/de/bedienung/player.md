@@ -45,6 +45,8 @@ Von Haus aus läuft die Musik weiter, wenn das Kind den Player mit dem Zurück-K
 
 Bei Podcasts merkt sich die Box die Stelle, an der eine Folge aufgehört wurde, und markiert neue Folgen mit einem Punkt. Ein Balken zeigt angefangene Folgen, ein Haken zu Ende gehörte. Das stellst du unter **Bedienung am Display › Weiterhören** und **› Podcasts** ein ([Podcasts und Radio](../inhalte/podcasts-und-radio.md)).
 
+Ein Podcast hat im Player auch eine **Titelliste**: Sie zeigt die Folgen, die neueste zuerst, und der Knopf unter dem Cover nennt die Stelle der Folge („3 / 120“). Tippe eine Folge an, um sie abzuspielen. Wie bei einem Album gilt: **Nächster Titel** geht in der Liste weiter, also zur **nächsten, älteren** Folge, und **Vorheriger Titel** zurück zur **vorherigen, neueren** Folge. Das gilt am Display genauso wie bei den Tasten der Box (Knöpfe, Drehregler, NFC). Läuft schon die neueste Folge, startet „vorheriger“ sie von vorn neu, bei der ältesten Folge startet „nächster“ sie von vorn neu. Die Box findet die Folgen in den Podcast-Feeds, die sie schon geladen hat; ein Podcast, dessen Feed sie noch nie geladen hat, hat keine Liste und springt nicht.
+
 ## Wenn die Spielzeit aufgebraucht ist
 
 Ist das Tageslimit erreicht oder läuft eine Ruhezeit, zeigt das Display statt des Players einen Hinweis für das Kind. Den Text kannst du unter **Einstellungen › Aussehen › Texte auf dem Display** ändern ([Spielzeit und Ruhezeiten](../spielzeit/index.md)).

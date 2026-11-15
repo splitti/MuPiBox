@@ -9,11 +9,11 @@ A **rotary knob with button** (rotary encoder in the style of the KY-040) makes 
 
 | Rotary knob connection | GPIO pin of the Raspberry Pi |
 | --- | --- |
-| A (CLK) | **26** |
-| B (DT) | **24** |
-| Button | **10** (the button switches to GND) |
+| A (CLK) | **26** (default) |
+| B (DT) | **24** (default) |
+| Button | **10** (default; the button switches to GND) |
 
-If the knob turns the wrong way, swap connections A and B.
+The three pins are the default after installation. You can change them in the settings (see below), for example when a pin is already needed for something else. If the knob turns the wrong way, swap connections A and B.
 
 ## Settings
 
@@ -21,9 +21,16 @@ If the knob turns the wrong way, swap connections A and B.
 | --- | --- |
 | **Rotary knob for the volume** | switches the knob on (after installation it is off) |
 | **Step per detent** | how many percent each detent changes the volume, 1 to 10 (default 5) |
-| **Function of the button (GPIO 10)** | **Off**, **Play/Pause**, **Next track**, **Track selection (press to switch)** or **Fast-forward** |
+| **GPIO pin A (CLK)**, **GPIO pin B (DT)**, **GPIO pin (button)** | the pins the knob is connected to (see "Changing the pins") |
+| **Function of the button (GPIO …)** | **Off**, **Play/Pause**, **Next track**, **Track selection (press to switch)** or **Fast-forward** |
 
 The volume **maximum** (**Audio › Volume › Maximum (hearing protection)**) also applies to the knob: it never turns louder than allowed ([Sound and volume](sound.md)). The choice of button behaviour and the step size take effect at once. Switching the knob on and off restarts its service.
+
+## Changing the pins
+
+The three lists offer **only pins that suit the rotary knob and are free**: all pins of the header that nothing else uses. Not offered are pins of the box itself (power button, LED, fan, MuPiHAT), pins the boot configuration takes (for example I²C, SPI or the sound card), pins of extensions and pins a program holds right now. A pin that one of the three connections already has is no longer offered in the other two lists. The current pin always stays in its list.
+
+A change takes effect at once: if the knob is running, the box restarts its service with the new pins. Rewire the knob first (best with the box switched off) or switch it off for a moment. Switching on checks the pins once more; if one has been taken meanwhile, the knob stays off and the app says who holds the pin. The LED and the fan do not offer the pins of a switched-on knob.
 
 ## The button
 
@@ -50,6 +57,6 @@ Track selection also ends by itself: **10 seconds** after the last press or the 
 ## If it does not react
 
 - Is the **Rotary knob for the volume** switch on? The service only starts then.
-- Check the wiring of pins 26, 24 and 10 ([GPIO assignment](../anhang/gpio.md)).
-- If the knob cannot be switched on and the app names a GPIO pin in use, a button of the extension [Buttons & GPIO Input](../erweiterungen/buttons.md) has one of the three pins. Free the pin there.
+- Check the wiring of the three pins (default 26, 24 and 10; the chosen ones are in the settings and in the [GPIO assignment](../anhang/gpio.md)).
+- If the knob cannot be switched on and the app names a GPIO pin in use, a button of the extension [Buttons & GPIO Input](../erweiterungen/buttons.md) (or something else) has one of the three pins. Choose a free pin.
 - The service is called `mupi_rotary`.

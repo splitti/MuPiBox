@@ -9,11 +9,11 @@ Ein **Drehregler mit Taster** (Drehgeber im Stil des KY-040) macht die Lautstär
 
 | Anschluss des Drehreglers | GPIO-Pin des Raspberry Pi |
 | --- | --- |
-| A (CLK) | **26** |
-| B (DT) | **24** |
-| Taster | **10** (der Taster schaltet gegen GND) |
+| A (CLK) | **26** (Vorgabe) |
+| B (DT) | **24** (Vorgabe) |
+| Taster | **10** (Vorgabe; der Taster schaltet gegen GND) |
 
-Dreht der Regler in die falsche Richtung, tausche die Anschlüsse A und B.
+Die drei Pins sind die Vorgabe nach der Installation. Du kannst sie in den Einstellungen ändern (siehe unten), zum Beispiel wenn ein Pin schon für etwas anderes gebraucht wird. Dreht der Regler in die falsche Richtung, tausche die Anschlüsse A und B.
 
 ## Einstellungen
 
@@ -21,9 +21,16 @@ Dreht der Regler in die falsche Richtung, tausche die Anschlüsse A und B.
 | --- | --- |
 | **Drehregler für die Lautstärke** | schaltet den Regler ein (nach der Installation ist er aus) |
 | **Schritt pro Raste** | wie viel Prozent jede Raste die Lautstärke ändert, 1 bis 10 (Standard 5) |
-| **Funktion des Tasters (GPIO 10)** | **Aus**, **Play/Pause**, **Nächster Titel**, **Titelwahl (Drücken schaltet um)** oder **Vorspulen** |
+| **GPIO-Pin A (CLK)**, **GPIO-Pin B (DT)**, **GPIO-Pin Taster** | die Pins, an denen der Regler angeschlossen ist (siehe „Die Pins ändern“) |
+| **Funktion des Tasters (GPIO …)** | **Aus**, **Play/Pause**, **Nächster Titel**, **Titelwahl (Drücken schaltet um)** oder **Vorspulen** |
 
 Das **Maximum** der Lautstärke (**Audio › Lautstärke › Maximum (Hörschutz)**) gilt auch für den Regler: Er dreht nie lauter als erlaubt ([Sound und Lautstärke](sound.md)). Die Wahl des Taster-Verhaltens und die Schrittweite wirken sofort. Das Ein- und Ausschalten des Reglers startet seinen Dienst neu.
+
+## Die Pins ändern
+
+In den drei Listen stehen **nur Pins, die zum Drehregler passen und frei sind**: alle Pins der Stiftleiste, die nichts anderes nutzt. Nicht angeboten werden Pins der Box selbst (Ein-/Aus-Taster, LED, Lüfter, MuPiHAT), Pins, die die Boot-Konfiguration belegt (zum Beispiel I²C, SPI oder die Soundkarte), Pins von Erweiterungen und Pins, die gerade ein Programm hält. Ein Pin, den schon einer der drei Anschlüsse hat, steht in den anderen beiden Listen nicht mehr zur Wahl. Der aktuelle Pin bleibt immer in seiner Liste.
+
+Eine Änderung gilt sofort: Läuft der Regler, startet die Box seinen Dienst mit den neuen Pins neu. Verdrahte den Regler vorher um (am besten bei ausgeschalteter Box) oder schalte ihn kurz aus. Das Einschalten prüft die Pins noch einmal; ist einer inzwischen belegt, bleibt der Regler aus und die App nennt, wer den Pin hält. LED und Lüfter bieten die Pins eines eingeschalteten Reglers nicht an.
 
 ## Der Taster
 
@@ -50,6 +57,6 @@ Die Titelwahl endet auch von selbst: **10 Sekunden** nach dem letzten Druck oder
 ## Wenn er nicht reagiert
 
 - Ist der Schalter **Drehregler für die Lautstärke** eingeschaltet? Der Dienst startet nur dann.
-- Prüfe die Verkabelung der Pins 26, 24 und 10 ([GPIO-Belegung](../anhang/gpio.md)).
-- Lässt sich der Regler nicht einschalten und die App nennt einen belegten GPIO-Pin, hat ein Taster der Erweiterung [Buttons & GPIO Input](../erweiterungen/buttons.md) einen der drei Pins. Gib den Pin dort frei.
+- Prüfe die Verkabelung der drei Pins (Vorgabe 26, 24 und 10; die gewählten stehen in den Einstellungen und in der [GPIO-Belegung](../anhang/gpio.md)).
+- Lässt sich der Regler nicht einschalten und die App nennt einen belegten GPIO-Pin, hat ein Taster der Erweiterung [Buttons & GPIO Input](../erweiterungen/buttons.md) (oder etwas anderes) einen der drei Pins. Wähle einen freien Pin.
 - Der Dienst heißt `mupi_rotary`.

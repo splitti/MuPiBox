@@ -1039,6 +1039,7 @@ details.legal .legal-text { height: auto; max-height: 60vh; margin-top: 8px; }
 .row + .pair, .field + .pair, .pair + .row, .pair + .field, .pair + .pair, .dep + .row, .dep + .field, .row + .dep, .field + .dep, .dimmable + .dimmable, .row + .dimmable { border-top: 1px solid var(--mp-border); padding-top: 14px; }
 @media (max-width: 560px) { .pair:not(.keep) { grid-template-columns: minmax(0, 1fr); } }
 .dep { margin-left: 14px; padding-left: 12px !important; border-left: 2px solid var(--mp-primary-soft); }
+.dep.flat { margin-left: 0; padding-left: 0 !important; border-left: 0; }
 .dep[hidden] { display: none; }
 .dimmable { transition: opacity .15s; }
 .dimmable.off { opacity: .5; }
@@ -1369,6 +1370,7 @@ textarea[hidden] { display: none; }
 .ext-text { min-width: 0; }
 .ext-text p { margin: 4px 0 0; font-size: 14px; color: var(--mp-muted); }
 .ext-text small { color: var(--mp-muted); }
+.ext-glyph { display: inline-block; flex: none; background: currentColor; -webkit-mask: var(--g) center / contain no-repeat; mask: var(--g) center / contain no-repeat; }
 .ext-ico { flex: none; width: 44px; height: 44px; border-radius: 12px; background: var(--mp-primary-soft); color: var(--mp-primary-text); position: relative; }
 .ext-ico:not(.letter)::after { content: ""; position: absolute; inset: 9px; background: currentColor; -webkit-mask: var(--ext-icon) center / contain no-repeat; mask: var(--ext-icon) center / contain no-repeat; }
 .ext-ico.letter { display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 20px; }
@@ -1409,10 +1411,33 @@ textarea[hidden] { display: none; }
 .field.ext-pin > label { flex: 0 0 auto; }
 .field.ext-pin > select { flex: 1 1 200px; min-width: 0; }
 .field.ext-pin > small { flex-basis: 100%; }
+/* the lines an extension reports about itself (a "status" field): a label, and what it says, with a colour for good and bad */
+.ext-status-rows { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 4px 0 0; padding: 10px 12px; border: 1px solid var(--mp-border); border-radius: var(--mp-r); background: var(--mp-surface); font-size: 15px; }
+.ext-status-rows dt { color: var(--mp-muted, inherit); opacity: .8; }
+.ext-status-rows dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.ext-status-rows dd.ext-status-ok { color: var(--mp-ok, #2e9d57); }
+.ext-status-rows dd.ext-status-warn { color: var(--mp-warn, #c98a00); }
+.ext-status-rows dd.ext-status-error { color: var(--mp-danger, #d64545); }
 /* a list to put in order by dragging (an "order" field of an extension) */
 .ext-order { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .ext-order li { display: flex; align-items: center; gap: 12px; padding: 4px 12px 4px 4px; border: 1px solid var(--mp-border); border-radius: var(--mp-r); background: var(--mp-surface); font-size: 15px; font-weight: 600; user-select: none; }
 .ext-order li.dragging { position: relative; z-index: 2; box-shadow: 0 6px 18px rgba(0, 0, 0, .35); border-color: var(--mp-primary); }
+.ext-tags { list-style: none; margin: 4px 0 8px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.ext-tag { display: flex; align-items: flex-start; gap: 12px; padding: 10px; border: 1px solid var(--mp-border); border-radius: var(--mp-r); background: var(--mp-surface); }
+.ext-tag-pic { width: 64px; height: 64px; }
+.ext-tag-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.ext-tag-main b { font-size: 15px; font-weight: 700; overflow-wrap: anywhere; }
+.ext-tag-main small { color: var(--mp-muted); }
+.nfc-head { display: flex; align-items: center; gap: 14px; }
+.nfc-head .album-cover { width: 72px; align-self: auto; flex: none; box-shadow: none; }
+.nfc-head .album-title { text-align: left; min-width: 0; }
+.ext-tag-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.nfc-flex { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+.nfc-ok { color: var(--mp-ok, #3fb950); font-weight: 700; }
+.nfc-warn { color: var(--mp-warn, #d29922); font-weight: 600; }
+.nfc-wait { font-weight: 700; animation: nfc-pulse 1.6s ease-in-out infinite; }
+@keyframes nfc-pulse { 50% { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) { .nfc-wait { animation: none; } }
 .ext-roster { list-style: none; margin: 4px 0 8px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .ext-roster li { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 12px; border: 1px solid var(--mp-border); border-radius: var(--mp-r); background: var(--mp-surface); font-size: 15px; font-weight: 600; }
 .ext-roster li.current { border-color: var(--mp-primary); }

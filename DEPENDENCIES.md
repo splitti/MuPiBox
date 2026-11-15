@@ -97,7 +97,7 @@ Kept, with what uses them:
 | `build-essential`, `pigpio`, `libjson-c-dev` | autosetup compiles `scripts/led/led_control.c` (`-lpigpio -ljson-c`) |
 | `gpiod` | power button/shim scripts (`scripts/OnOffShim`) |
 | `python3-smbus2` | MuPiHAT (`scripts/mupihat`) |
-| `python3-rpi.gpio`, `python3-lgpio` | LED and fan control (`RPi.GPIO`); `lgpio` is not imported by any script, it is kept as the GPIO backend for the Raspberry Pi 5 |
+| `python3-rpi.gpio`, `python3-lgpio` | rotary encoder, LED and fan control, through `scripts/mupibox/gpio_compat.py`: `RPi.GPIO` on a Pi 4 and older, `lgpio` on a Raspberry Pi 5 (RPi.GPIO does not know its RP1 chip) |
 | `python3-serial` | WLED scripts |
 | `python3-requests` | many scripts (Telegram, network check, MQTT) |
 | `python3-paho-mqtt`, `python3-netifaces` | `scripts/mqtt/mqtt.py` (Home Assistant) |

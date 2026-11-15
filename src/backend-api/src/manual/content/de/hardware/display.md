@@ -37,6 +37,7 @@ Das Display schaltet sich nach der eingestellten Zeit ohne Bedienung aus, die Bo
 
 Mit **Abends dunkler** wird das Display abends dunkler und morgens wieder normal hell:
 
+- **An Sonnenuntergang anpassen**: das Display wird dunkler, sobald die Sonne untergeht, und morgens beim Sonnenaufgang wieder normal hell. Die Felder **Ab** und **Bis** verschwinden dann. Dazu sagst du der Box, wo sie steht (**Ort wählen**): Ort suchen, den **Standort dieses Geräts** nehmen (nur wenn die Webapp über eine sichere Adresse, also `https://`, geöffnet ist) oder **Koordinaten eingeben** (Breitengrad und Längengrad, etwa 52.52 und 13.40 für Berlin). Die Box rechnet den Sonnenuntergang selbst aus und zeigt dir den von heute; sie braucht dafür kein Internet. Nur für die Ortssuche geht der getippte Ortsname an Open-Meteo, sonst nichts. Geht die Sonne an einem Tag nicht auf oder unter (Polartag oder Polarnacht), und solange noch kein Ort gewählt ist, gelten **Ab** und **Bis**; die Felder erscheinen dann wieder.
 - **Ab** und **Bis**: die Uhrzeiten,
 - **Helligkeit am Abend**: 5 bis 100 %, nie heller als die normale Helligkeit,
 - **Sanft abdunkeln über**: sofort oder über 15, 30 oder 60 Minuten,

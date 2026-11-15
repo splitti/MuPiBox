@@ -37,6 +37,7 @@ The display switches itself off after the set time without use, the box itself k
 
 With **Evening dimming** the display gets darker in the evening and normally bright again in the morning:
 
+- **Follow the sunset**: the display gets darker as soon as the sun sets and normally bright again at sunrise. The **From** and **To** fields disappear then. For this you tell the box where it stands (**Choose place**): search for a place, take the **location of this device** (only when the web app is opened over a secure address, that is `https://`) or **enter coordinates** (latitude and longitude, such as 52.52 and 13.40 for Berlin). The box works the sunset out itself and shows you today's; it needs no internet for that. Only for the place search the typed name goes to Open-Meteo, nothing else. If the sun does not rise or set on a day (polar day or night), and as long as no place is chosen, **From** and **To** apply; the fields appear again then.
 - **From** and **To**: the times,
 - **Evening brightness**: 5 to 100 %, never brighter than the normal brightness,
 - **Fade gently over**: at once or over 15, 30 or 60 minutes,

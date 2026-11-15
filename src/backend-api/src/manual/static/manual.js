@@ -151,9 +151,9 @@
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((s) => {
         const rows = {
-          'rotary-a': { on: s.rotary },
-          'rotary-b': { on: s.rotary },
-          'rotary-button': { on: s.rotary },
+          'rotary-a': { on: s.rotary, pin: s.rotaryPins?.[0] },
+          'rotary-b': { on: s.rotary, pin: s.rotaryPins?.[1] },
+          'rotary-button': { on: s.rotary, pin: s.rotaryPins?.[2] },
           poweroff: { on: true, pin: s.shim.poweroffPin },
           trigger: { on: true, pin: s.shim.triggerPin },
           cut: { on: true, pin: s.shim.cutPin },

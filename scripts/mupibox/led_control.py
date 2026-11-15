@@ -15,7 +15,7 @@ import signal
 import sys
 import json
 from time import sleep
-import RPi.GPIO as GPIO
+import gpio_compat  # RPi.GPIO, or lgpio on a Raspberry Pi 5
 
 DEFAULT_PWM_FREQUENCY = 3000
 
@@ -23,10 +23,11 @@ DEFAULT_PWM_FREQUENCY = 3000
 class HardwarePwm:
     """The LED on the Pi's own PWM (config.txt: dtoverlay=pwm,pin=<12|13>,func=4, set by the install/update when the
     LED is on one of these pins): the chip makes the signal. The software PWM of RPi.GPIO took about 9 % of a CPU
-    core at 3000 Hz, all the time the LED is dimmed (i.e. always). Same calls as RPi.GPIO's PWM."""
+    core at 3000 Hz, all the time the LED is dimmed (i.e. always). Same calls as RPi.GPIO's PWM.
+    On a Pi 5 the same pins (12 = channel 0, 13 = channel 1) are on the PWM0 of the RP1, which is not always pwmchip0."""
 
     CHANNEL = {12: 0, 13: 1}
-    CHIP = "/sys/class/pwm/pwmchip0"
+    CHIP = gpio_compat.pwm_chip() or "/sys/class/pwm/pwmchip0"
 
     @staticmethod
     def available(gpio):
@@ -63,7 +64,10 @@ class HardwarePwm:
     def _pin_to_pwm(gpio):
         """The pin back on its PWM function (ALT0 for GPIO 12/13) - the overlay sets it at boot, but a software PWM
         of RPi.GPIO before (e.g. after a failed start) had made it a plain output. Through /dev/gpiomem: the
-        function select register of GPIO 10-19 (GPFSEL1, offset 4), 3 bits per pin, ALT0 = 0b100."""
+        function select register of GPIO 10-19 (GPFSEL1, offset 4), 3 bits per pin, ALT0 = 0b100.
+        A Pi 5 has no /dev/gpiomem (its pins are on the RP1): there nothing has made the pin an output before, the overlay's function stays."""
+        if not os.path.exists("/dev/gpiomem"):
+            return
         import mmap
         import struct
 
@@ -133,9 +137,8 @@ def browser_running():
 
 
 def init():
-    if not HARDWARE_PWM:  # (with the PWM hardware the pin must stay on its PWM function)
-        GPIO.setup(JSON_DATA["led_gpio"], GPIO.OUT)
-        GPIO.output(JSON_DATA["led_gpio"], GPIO.HIGH)
+    if not HARDWARE_PWM and not GPIO.lgpio:  # (with the PWM hardware the pin must stay on its PWM function; lgpio's PWM owns the pin)
+        GPIO.write(JSON_DATA["led_gpio"], 1)
     while not browser_running():
         for x in range(0, 10, +1):
             led_control(0, int(JSON_DATA["led_max_brightness"]), 0.003)
@@ -171,9 +174,9 @@ if __name__ == "__main__":
         except (OSError, ValueError) as error:
             print("PWM hardware not usable, software PWM: " + str(error), flush=True)
     if not HARDWARE_PWM:
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(JSON_DATA["led_gpio"], GPIO.OUT)
-        POWER_LED = GPIO.PWM(JSON_DATA["led_gpio"], pwm_frequency)
+        GPIO = gpio_compat.Gpio()
+        GPIO.setup_output(JSON_DATA["led_gpio"], 0)
+        POWER_LED = GPIO.pwm(JSON_DATA["led_gpio"], pwm_frequency)
     POWER_LED.start(0)
     init()
     signal.signal(signal.SIGTERM, sigterm_handler)
