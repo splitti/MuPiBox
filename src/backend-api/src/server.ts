@@ -46,6 +46,7 @@ import { registerPhotoDisplayRoutes } from './app-api/photos/albums'
 import type { PhotoNasAccess } from './app-api/photos/nas'
 import { NasAccess, type NasConnectResult } from './nas/access'
 import { NasApiError, type NasFileEntry, type NasProvider, NasSessionExpiredError } from './nas/provider'
+import { parseSmbAddress, smbConnect, smbDisconnect, smbDisplayAddress, smbErrorText, smbSystem } from './nas/smb'
 import { nasResolveBase, webdavLogin } from './nas/webdav'
 import { applyPhotoTimeAction } from './app-api/photos/settings'
 import { applyTileTimeAction } from './app-api/tile-limits'
@@ -5140,6 +5141,9 @@ const nasDownloadMarker = '.mupibox-nas-download'
 
 const nasAudioExtensions = ['.mp3', '.flac', '.wav', '.wma', '.ogg', '.m4a']
 
+// The share of an SMB NAS is mounted by nas_smb.sh and read by a helper process next to server.js (nas/smb.ts).
+const nasSmb = smbSystem(path.join(serverDir, 'nas-smb-helper.js'))
+
 // Signs in with the login remembered in the config. Shared by all requests and marked away after a failure, see
 // nas/access.ts.
 async function nasConnectRemembered(): Promise<NasConnectResult> {
@@ -5153,6 +5157,16 @@ async function nasConnectRemembered(): Promise<NasConnectResult> {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] The stored NAS password can not be decrypted on this box - please sign in to the NAS again.`)
     return {}
   }
+  if (syn.protocol === 'smb') {
+    if (!syn.share) return {}
+    const result = await smbConnect({ host: syn.address, share: syn.share, account: syn.account, password, domain: syn.domain || undefined }, nasSmb)
+    if (!result.provider) {
+      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS (SMB): ${smbErrorText(result.error ?? 'other')}`)
+      return { unreachable: true }
+    }
+    return { provider: result.provider }
+  }
+  smbDisconnect().catch(() => undefined) // (the NAS is a WebDAV one now: nothing mounted)
   const base = nasResolveBase(syn.address, Boolean(syn.https))
   // A NAS that is switched off answers at once (no route / refused); one whose disks sleep needs 10-20 s to wake
   // up. 4 s marked such a NAS offline for 30 s, and every tap in that time failed.
@@ -5765,8 +5779,11 @@ function updateNasConfig(
 const nasDefaultProfile = 'standard'
 const nasProfileNamePattern = /^[\p{L}\p{N}][\p{L}\p{N} .()-]{0,39}$/u
 
+// The NAS of an address: "nas:5005" (WebDAV) and "nas" (SMB) are the same NAS - its shares are the top folders both
+// ways, so a profile made over WebDAV fits the SMB login too.
 function nasAddressKey(address: string | undefined): string {
-  return (address ?? '').trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '').toLowerCase()
+  const host = (address ?? '').trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '').toLowerCase()
+  return host.replace(/^\[(.*)\](?::\d+)?$/, '$1').replace(/^([^:]*):\d+$/, '$1')
 }
 
 // A profile created before any login (no address/account yet) is not bound to a NAS and fits any login.
@@ -5794,6 +5811,7 @@ function nasProfileSnapshot(settings: NasConfig | undefined, created = Date.now(
     downloadFolders: [...(settings?.downloadFolders ?? [])],
     folderCategories: { ...(settings?.folderCategories ?? {}) },
     folderSplit: [...(settings?.folderSplit ?? [])],
+    indexFolders: [...(settings?.indexFolders ?? [])],
   }
 }
 
@@ -5829,6 +5847,7 @@ function nasTrackActiveProfile(settings: NasConfig | undefined, changes: Record<
         downloadFolders: pick('downloadFolders'),
         folderCategories: (changes.folderCategories as NasConfig['folderCategories']) ?? settings?.folderCategories ?? {},
         folderSplit: (changes.folderSplit as string[] | undefined) ?? settings?.folderSplit ?? [],
+        indexFolders: (changes.indexFolders as string[] | undefined) ?? settings?.indexFolders ?? [],
       },
     },
     activeProfile: active,
@@ -5923,6 +5942,7 @@ app.post('/api/nas/profiles/load', localOrElternSession, async (req, res) => {
         downloadFolders: [...bound.downloadFolders],
         folderCategories: { ...(bound.folderCategories ?? {}) },
         folderSplit: [...(bound.folderSplit ?? [])],
+        indexFolders: [...(bound.indexFolders ?? settings?.indexFolders ?? [])],
         profiles: { ...profiles, [name]: bound },
         activeProfile: name,
       }
@@ -6020,9 +6040,13 @@ app.post('/api/nas/profiles/delete', localOrElternSession, async (req, res) => {
 // interface calls these routes server-side through localhost (nas.php), the new app with its parents' session and
 // CSRF token (localOrElternSession). Open to the LAN they exposed the box's NAS login and the whole NAS to anyone.
 app.post('/api/nas/login', localOrElternSession, async (req, res) => {
-  const { address, https: useHttps, account, password, rememberMe, certFingerprint } = req.body ?? {}
+  const { address, https: useHttps, account, password, rememberMe, certFingerprint, protocol, domain } = req.body ?? {}
   if (typeof address !== 'string' || !address || typeof account !== 'string' || !account || typeof password !== 'string' || !password) {
     res.status(400).json({ success: false, error: 'address, account and password are required.' })
+    return
+  }
+  if (protocol === 'smb') {
+    await nasLoginSmb(res, { address, account, password, rememberMe: rememberMe === true, domain: typeof domain === 'string' ? domain.trim() : '' })
     return
   }
 
@@ -6052,16 +6076,20 @@ app.post('/api/nas/login', localOrElternSession, async (req, res) => {
 
   nasAccess.use(result.provider)
   nasListCacheClear() // another NAS or account: its folders
+  smbDisconnect().catch(() => undefined) // (a share mounted before is not needed any more)
 
   if (rememberMe === true) {
     try {
       await updateNasConfig({
+        protocol: 'webdav',
         address,
         https: Boolean(useHttps),
         account,
         password: nasEncrypt(password),
         rememberMe: true,
         certFingerprint: fingerprint ?? '',
+        share: '',
+        domain: '',
       })
     } catch (error) {
       console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to save NAS login: ${error}`)
@@ -6070,6 +6098,54 @@ app.post('/api/nas/login', localOrElternSession, async (req, res) => {
 
   res.json({ success: true })
 })
+
+// The login to a share (\\nas\Musik): mounted anew with this login - cifs-utils installed first when the box has none
+// (a minute or two, once). The reason of a failure goes to the app as `reason`.
+async function nasLoginSmb(
+  res: express.Response,
+  login: { address: string; account: string; password: string; rememberMe: boolean; domain: string },
+): Promise<void> {
+  const target = parseSmbAddress(login.address)
+  if (!target || neverFetched(target.host)) {
+    res.status(400).json({ success: false, reason: 'address', error: 'address is not a share address (\\\\NAS\\share).' })
+    return
+  }
+  if (login.domain.length > 64 || /[\r\n]/.test(login.domain) || /[\r\n]/.test(login.account) || /[\r\n]/.test(login.password)) {
+    res.status(400).json({ success: false, reason: 'auth', error: 'account, password or domain not usable.' })
+    return
+  }
+  const result = await smbConnect(
+    { host: target.host, share: target.share, account: login.account, password: login.password, domain: login.domain || undefined },
+    nasSmb,
+    true,
+  )
+  if (!result.provider) {
+    const reason = result.error ?? 'other'
+    res.json({ success: false, reason, error: smbErrorText(reason) })
+    return
+  }
+  nasAccess.use(result.provider)
+  nasListCacheClear()
+  if (login.rememberMe) {
+    try {
+      await updateNasConfig({
+        protocol: 'smb',
+        address: target.host,
+        share: target.share,
+        domain: login.domain,
+        https: false,
+        account: login.account,
+        password: nasEncrypt(login.password),
+        rememberMe: true,
+        certFingerprint: '',
+      })
+    } catch (error) {
+      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to save NAS login: ${error}`)
+    }
+  }
+  // (the folder given below the share: the app opens the tree there)
+  res.json({ success: true, folder: `/${[target.share, ...target.folder.split('/').filter(Boolean)].join('/')}` })
+}
 
 // --- Folder index for the admin page's "Filter folders" ----------------------
 // Walking a big NAS folder by folder takes minutes, so the admin page filters against an index
@@ -6086,7 +6162,26 @@ const nasIndexMaxFolders = 200000
 interface NasFolderIndex {
   updated: number
   folders: string[]
+  // the folders it was made below ("Suche nur in"); none: the whole NAS
+  roots?: string[]
 }
+
+// "Suche nur in" as stored: NAS paths ("/Freigabe/Hörspiele"), none inside another, at most 20
+function nasIndexRoots(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  const paths = value
+    .filter((v): v is string => typeof v === 'string' && v.length <= 500 && !v.includes('\0'))
+    .map((v) => v.split('/').filter(Boolean))
+    .filter((parts) => parts.length > 0 && !parts.some((p) => p === '.' || p === '..'))
+    .map((parts) => `/${parts.join('/')}`)
+  const unique = [...new Set(paths)].sort()
+  return unique.filter((p) => !unique.some((q) => q !== p && p.startsWith(`${q}/`))).slice(0, 20)
+}
+
+const sameRoots = (a: string[] | undefined, b: string[]) => (a ?? []).length === b.length && (a ?? []).every((p, i) => p === b[i])
+
+// Bumped when the setting changes: a run for the folders before stops and starts again.
+let nasIndexGeneration = 0
 
 let nasIndexCache: NasFolderIndex | undefined
 let nasIndexLoaded = false
@@ -6121,16 +6216,22 @@ async function buildNasIndex(): Promise<void> {
   nasIndexJob.folders = 0
   nasIndexJob.error = ''
   nasIndexLastAttempt = Date.now()
+  const generation = nasIndexGeneration
+  let again = false
   try {
-    const found: string[] = []
+    const roots = nasIndexRoots(nasSettings(await getMupiboxConfig())?.indexFolders)
+    // (the chosen folders themselves are found too - the search finds "Hörspiele" as well)
+    const found: string[] = [...roots]
     let skipped = 0
-    let level = ['/']
+    let unanswered = 0 // of those: the NAS did not answer at all (not "gone" or "no permission")
+    let level = roots.length > 0 ? roots : ['/']
     // Level by level, at most 4 requests in flight (same limit as elsewhere: a big NAS behind a
-    // DDNS address does not cope with bursts).
+    // DDNS address does not cope with bursts). Over SMB too: with 8 the kernel's requests to the NAS piled up until
+    // a listing ran into its time limit and the NAS counted as away.
     for (let depth = 0; level.length > 0 && depth < nasIndexMaxDepth && found.length < nasIndexMaxFolders; depth++) {
       const listings = await mapWithConcurrency(level, 4, async (folder) => {
         try {
-          const files = await nasAccess.withSession((session) => session.list(folder))
+          const files = await nasAccess.withSession((session) => session.list(folder, undefined, { foldersOnly: true }))
           if (files === undefined) {
             throw new Error('Not logged in to the NAS')
           }
@@ -6140,6 +6241,7 @@ async function buildNasIndex(): Promise<void> {
             throw error
           }
           skipped++ // one unreadable folder must not fail the whole run
+          if (!(error instanceof NasApiError || error instanceof NasSessionExpiredError)) unanswered++
           return []
         }
       })
@@ -6154,8 +6256,17 @@ async function buildNasIndex(): Promise<void> {
       }
       nasIndexJob.folders = found.length
       level = next
+      if (generation !== nasIndexGeneration) {
+        again = true
+        throw new Error('The folders of the search were changed - started again')
+      }
     }
-    const index: NasFolderIndex = { updated: Date.now(), folders: found }
+    // The NAS went away during the run: the folders skipped are not unreadable, they were not asked - the index
+    // before is kept, the run is tried again later (one in such a gap saved 13 of 44,000 folders).
+    if (unanswered > 0 && (nasAccess.isAway() || unanswered >= 10)) {
+      throw new Error(`The NAS stopped answering during the index (${unanswered} folders not read)`)
+    }
+    const index: NasFolderIndex = { updated: Date.now(), folders: found, roots }
     await mkdir(path.dirname(nasIndexPath), { recursive: true })
     const tmp = `${nasIndexPath}.tmp`
     await writeFile(tmp, JSON.stringify(index), 'utf8')
@@ -6164,11 +6275,12 @@ async function buildNasIndex(): Promise<void> {
     nasIndexLoaded = true
     console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS folder index built: ${found.length} folders (${skipped} unreadable skipped)`)
   } catch (error) {
-    nasIndexJob.error = error instanceof Error ? error.message : String(error)
-    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS folder index failed: ${nasIndexJob.error}`)
+    nasIndexJob.error = again ? '' : error instanceof Error ? error.message : String(error)
+    if (!again) console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS folder index failed: ${nasIndexJob.error}`)
   } finally {
     nasIndexJob.running = false
   }
+  if (again) void buildNasIndex()
 }
 
 // The NAS login as it is stored (never the password) and whether the box is signed in, plus the saved selection,
@@ -6180,6 +6292,10 @@ app.get('/api/nas/state', localOrElternSession, async (_req, res) => {
     success: true,
     address: syn?.address ?? '',
     https: syn?.https === true,
+    protocol: syn?.protocol === 'smb' ? 'smb' : 'webdav',
+    share: syn?.share ?? '',
+    domain: syn?.domain ?? '',
+    unc: syn?.protocol === 'smb' && syn.address && syn.share ? smbDisplayAddress(syn.address, syn.share) : '',
     account: syn?.account ?? '',
     rememberMe: syn?.rememberMe === true,
     hasPassword: Boolean(syn?.password),
@@ -6190,6 +6306,7 @@ app.get('/api/nas/state', localOrElternSession, async (_req, res) => {
     downloadFolders: syn?.downloadFolders ?? [],
     folderCategories: syn?.folderCategories ?? {},
     folderSplit: syn?.folderSplit ?? [],
+    indexFolders: nasIndexRoots(syn?.indexFolders),
   })
 })
 
@@ -6199,6 +6316,7 @@ app.get('/api/nas/state', localOrElternSession, async (_req, res) => {
 app.post('/api/nas/logout', localOrElternSession, async (_req, res) => {
   nasAccess.clear()
   nasListCacheClear()
+  await smbDisconnect().catch(() => undefined)
   try {
     await updateNasConfig({ password: '', rememberMe: false })
   } catch (error) {
@@ -6212,7 +6330,8 @@ app.post('/api/nas/logout', localOrElternSession, async (_req, res) => {
 
 app.get('/api/nas/index/status', localOrElternSession, async (_req, res) => {
   const index = await loadNasIndex()
-  const stale = !index || Date.now() - index.updated > nasIndexMaxAgeMs
+  const roots = nasIndexRoots(nasSettings(await getMupiboxConfig())?.indexFolders)
+  const stale = !index || Date.now() - index.updated > nasIndexMaxAgeMs || !sameRoots(index.roots, roots)
   if (stale && !nasIndexJob.running && Date.now() - nasIndexLastAttempt > nasIndexRetryMs && (await nasAccess.active())) {
     void buildNasIndex()
   }
@@ -6234,6 +6353,25 @@ app.post('/api/nas/index/refresh', localOrElternSession, async (_req, res) => {
   }
   void buildNasIndex()
   res.json({ success: true, running: true })
+})
+
+// "Suche nur in": the folders the search index is made below (none: the whole NAS) - saved, the index made anew.
+app.post('/api/nas/index/folders', localOrElternSession, async (req, res) => {
+  if (!Array.isArray(req.body?.folders)) {
+    res.status(400).json({ success: false, error: 'folders must be a list' })
+    return
+  }
+  const folders = nasIndexRoots(req.body.folders)
+  try {
+    await updateNasConfig((settings) => ({ indexFolders: folders, ...nasTrackActiveProfile(settings, { indexFolders: folders }) }))
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to save the folders of the NAS search: ${error}`)
+    res.status(500).json({ success: false })
+    return
+  }
+  nasIndexGeneration++
+  if (await nasAccess.active()) void buildNasIndex()
+  res.json({ success: true, folders, running: nasIndexJob.running })
 })
 
 // Folders whose own name contains q (case-insensitive), as full paths.

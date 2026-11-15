@@ -1,4 +1,4 @@
-// The NAS as the rest of the box sees it. One provider stands for one signed-in connection to a NAS (WebDAV today);
+// The NAS as the rest of the box sees it. One provider stands for one signed-in connection to a NAS (WebDAV or SMB);
 // music, the folder index, local copies, covers and the photo display only talk to this interface, never to the
 // protocol behind it. Paths are NAS paths: "/" + the folders, as the parents chose them in the app.
 
@@ -26,13 +26,18 @@ export interface NasReadOptions {
   signal?: AbortSignal
 }
 
+export interface NasListOptions {
+  /** only the subfolders are needed (the folder index): a provider may leave the files out, it need not */
+  foldersOnly?: boolean
+}
+
 export interface NasProvider {
-  readonly kind: 'webdav'
+  readonly kind: 'webdav' | 'smb'
   /**
    * The children of a folder, system entries left out. Throws NasSessionExpiredError when the login is refused,
    * NasApiError when the NAS answers with an error for this folder; any other error means it did not answer.
    */
-  list(folder: string, signal?: AbortSignal): Promise<NasFileEntry[]>
+  list(folder: string, signal?: AbortSignal, options?: NasListOptions): Promise<NasFileEntry[]>
   /** Whether a folder exists (false: gone). Throws NasApiError on another answer, and when the NAS does not answer. */
   folderExists(folder: string, signal?: AbortSignal): Promise<boolean>
   /**

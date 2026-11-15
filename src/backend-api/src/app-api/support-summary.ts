@@ -133,7 +133,7 @@ async function services(cfg: MupiboxConfig | undefined): Promise<string> {
   return [
     onOff('Spotify', typeof spotify.refreshToken === 'string' && spotify.refreshToken !== ''),
     onOff('TIDAL', tidal),
-    onOff('NAS', typeof section(cfg, 'nas').address === 'string' && section(cfg, 'nas').address !== ''),
+    onOff(section(cfg, 'nas').protocol === 'smb' ? 'NAS (SMB)' : 'NAS', typeof section(cfg, 'nas').address === 'string' && section(cfg, 'nas').address !== ''),
     onOff('Home Assistant', section(cfg, 'homeAssistant').enabled === true),
     onOff('MQTT', section(cfg, 'mqtt').active === true),
     onOff('Telegram', section(cfg, 'telegram').active === true),

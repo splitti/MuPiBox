@@ -6,16 +6,32 @@ Die Einrichtung findest du unter **Bibliothek › NAS**.
 
 ## Anmeldung
 
-Die Box meldet sich per **WebDAV** beim NAS an. Auf dem NAS muss dafür ein WebDAV-Server laufen (bei Synology zum Beispiel Port 5005, für HTTPS 5006).
+Zuerst wählst du, wie die Box dein NAS erreicht:
+
+- **Windows-Freigabe (SMB)**: so, wie ein Windows-PC auf das NAS zugreift. Synology, QNAP, eine FRITZ!Box mit USB-Speicher und ein Windows-PC mit freigegebenem Ordner können das ohne weitere Einrichtung. Für die meisten ist das der einfachste Weg.
+- **WebDAV**: auf dem NAS muss dafür ein WebDAV-Server laufen (bei Synology zum Beispiel Port 5005, für HTTPS 5006).
 
 | Feld | Bedeutung |
 | --- | --- |
-| **Server (Adresse:Port)** | Adresse des NAS mit dem WebDAV-Port, zum Beispiel `192.168.1.10:5005` |
-| **HTTPS** | verschlüsselt verbinden |
+| **Freigabe** (SMB) | die Freigabe wie im Windows-Explorer, zum Beispiel `\\192.168.1.10\Musik`; auch `smb://192.168.1.10/Musik` geht. Steht ein Unterordner dahinter, öffnet die Seite den Ordnerbaum dort |
+| **Domäne** (SMB) | meist leer; nur, wenn das NAS zu einer Windows-Domäne gehört |
+| **Server (Adresse:Port)** (WebDAV) | Adresse des NAS mit dem WebDAV-Port, zum Beispiel `192.168.1.10:5005` |
+| **HTTPS** (WebDAV) | verschlüsselt verbinden |
 | **Benutzer** und **Passwort** | die Zugangsdaten für das NAS |
 | **Anmeldung merken** | ohne diesen Schalter vergisst die Box das Passwort beim nächsten Neustart, der NAS-Reiter ist dann leer; gespeichert wird es verschlüsselt |
 
-**Anmelden** verbindet die Box mit dem NAS. Danach zeigt die Seite Server, Benutzer und Status. **Andere Anmeldung** wechselt zu einem anderen NAS oder Konto, **Abmelden** trennt die Verbindung.
+**Anmelden** verbindet die Box mit dem NAS. Danach zeigt die Seite Freigabe oder Server, Benutzer und Status. **Andere Anmeldung** wechselt zu einem anderen NAS oder Konto, **Abmelden** trennt die Verbindung.
+
+> [!TIP]
+> Nimm bei SMB die **IP-Adresse** des NAS. Den Windows-Namen eines Geräts (zum Beispiel `\\NAS`) kennt die Box oft nicht; ein Name mit `.local` oder `.fritz.box` geht meist.
+
+Gut zu wissen bei SMB:
+
+- Beim ersten Anmelden richtet die Box SMB ein (das Paket `cifs-utils`). Das dauert ein, zwei Minuten und braucht Internet.
+- Die Box nutzt SMB2 und SMB3. Ein NAS, das nur das alte SMB1 kann, meldet die App; schalte dann SMB2 oder SMB3 auf dem NAS ein.
+- Im Ordnerbaum ist die Freigabe der oberste Ordner. Ordner, die du vorher über WebDAV vom selben NAS gewählt hast, bleiben gewählt, wenn sie in dieser Freigabe liegen.
+- Antwortet das NAS nicht mehr, spielt die Box die geladenen Ordner von der Speicherkarte und versucht es nach einer halben Minute wieder.
+- Ein Cover, das du in der App für einen NAS-Ordner wählst, legt die Box auch per SMB in den Ordner, wenn der Benutzer dort schreiben darf.
 
 ## Ordner auswählen
 
@@ -28,6 +44,7 @@ Nach der Anmeldung zeigt die Box die Ordner des NAS als Baum. Für jeden Ordner 
 Praktisch dafür:
 
 - Das Suchfeld **Ordner auf dem ganzen NAS suchen** findet Ordner auch tief im Baum. Dafür braucht die Box einen Suchindex; **Index aktualisieren** liest die Ordner neu ein, wenn sich auf dem NAS etwas geändert hat.
+- **Suche in** legt fest, unter welchen Ordnern der Suchindex sucht, zum Beispiel nur „Hörspiele“. Ohne Auswahl ist es das ganze NAS; bei einem großen NAS dauert der Index dann lange (per SMB bei 40.000 Ordnern eine halbe Stunde und mehr). Die Wahl gehört zum Profil.
 - **Nur die Auswahl zeigen** listet nur die Ordner, die du angezeigt, ausgeblendet oder zum Laden markiert hast.
 - **Alle anzeigen**, **Keine anzeigen**, **Alle laden** und **Keine laden** markieren schnell.
 

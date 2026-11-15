@@ -129,14 +129,16 @@ async function internet(): Promise<HealthCheck> {
 
 // The NAS: set up at all, and its address answering (a connection to its port, nothing more)
 async function nas(cfg: MupiboxConfig | undefined): Promise<HealthCheck | null> {
-  const address = String((cfg as { nas?: { address?: string } } | undefined)?.nas?.address ?? '').trim()
+  const settings = (cfg as { nas?: { address?: string; protocol?: string } } | undefined)?.nas
+  const address = String(settings?.address ?? '').trim()
   if (!address) return null
   let host = ''
   let port = 0
   try {
     const u = new URL(/^https?:\/\//.test(address) ? address : `http://${address}`)
     host = u.hostname
-    port = Number(u.port) || (u.protocol === 'https:' ? 443 : 80)
+    // SMB: the address is the host, the share is reached on 445
+    port = settings?.protocol === 'smb' ? 445 : Number(u.port) || (u.protocol === 'https:' ? 443 : 80)
   } catch {
     return { id: 'nas', status: 'warn', value: address, hint: 'nas_address' }
   }

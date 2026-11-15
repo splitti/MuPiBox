@@ -1594,6 +1594,11 @@ rm -f /tmp/mupibox-update-failed
 			/usr/local/bin/mupibox/photos_setup.sh video >&3 2>&3 || echo "## WARNING: ffmpeg could not be installed - the app tries again ##" >&3 2>&3
 		fi
 	fi
+	# The NAS over SMB: cifs-utils (a reinstalled box has it again). Without internet now: the server tries again when
+	# it mounts the share.
+	if [ -x /usr/local/bin/mupibox/nas_smb.sh ] && [ "$(/usr/bin/jq -r '.nas.protocol // ""' /etc/mupibox/mupiboxconfig.json 2>/dev/null)" = "smb" ]; then
+		/usr/local/bin/mupibox/nas_smb.sh install >&3 2>&3 || echo "## WARNING: cifs-utils could not be installed - the box tries again ##" >&3 2>&3
+	fi
 	after=$(date +%s)
 	echo -e "## Restarting services  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))

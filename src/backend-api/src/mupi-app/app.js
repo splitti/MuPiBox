@@ -6641,15 +6641,32 @@ function nasTop() {
   return [
     `<section class="card"><h2>Anmeldung</h2>${
       loginForm
-        ? `<p class="help">Die Box meldet sich per WebDAV beim NAS an (z. B. Synology: WebDAV-Server einschalten, Port 5005 bzw. 5006 für HTTPS).</p>
-          <div class="field"><label for="n-addr">Server (Adresse:Port)</label><input class="input" id="n-addr" value="${esc(st.address ?? '')}" placeholder="z. B. 192.168.1.10:5005" autocomplete="off"></div>
-          ${sw('n-https', 'HTTPS', st.https)}
+        ? `<div class="field"><label>Wie erreicht die Box dein NAS?</label><div class="seg" id="n-proto">${[
+            ['smb', 'Windows-Freigabe (SMB)'],
+            ['webdav', 'WebDAV'],
+          ]
+            .map(([v, label]) => `<button aria-pressed="${nasProto() === v}" data-v="${v}">${label}</button>`)
+            .join('')}</div></div>
+          <div id="n-smb" ${nasProto() === 'smb' ? '' : 'hidden'}>
+            <p class="help">Die Freigabe wie im Windows-Explorer, z. B. <b translate="no">\\\\192.168.1.10\\Musik</b> – Synology, QNAP, FRITZ!Box und Windows können das ohne Einrichtung. Am sichersten mit der IP-Adresse des NAS. Ein Unterordner darf dahinter stehen.</p>
+            <div class="field"><label for="n-unc">Freigabe</label><input class="input" id="n-unc" value="${esc(st.protocol === 'smb' ? (st.unc ?? '') : '')}" placeholder="\\\\192.168.1.10\\Musik" autocomplete="off" autocapitalize="off" spellcheck="false" translate="no"></div>
+            <div class="field"><label for="n-dom">Domäne (meist leer)</label><input class="input" id="n-dom" value="${esc(st.domain ?? '')}" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+          </div>
+          <div id="n-dav" ${nasProto() === 'webdav' ? '' : 'hidden'}>
+            <p class="help">Die Box meldet sich per WebDAV beim NAS an (z. B. Synology: WebDAV-Server einschalten, Port 5005 bzw. 5006 für HTTPS).</p>
+            <div class="field"><label for="n-addr">Server (Adresse:Port)</label><input class="input" id="n-addr" value="${esc(st.protocol === 'smb' ? '' : (st.address ?? ''))}" placeholder="z. B. 192.168.1.10:5005" autocomplete="off"></div>
+            ${sw('n-https', 'HTTPS', st.https)}
+          </div>
           <div class="field"><label for="n-acc">Benutzer</label><input class="input" id="n-acc" value="${esc(st.account ?? '')}" autocomplete="off"></div>
           <div class="field"><label for="n-pw">Passwort</label><div class="input-wrap"><input class="input has-eye" id="n-pw" type="password" autocomplete="new-password"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>
           ${sw('n-remember', 'Anmeldung merken', st.rememberMe || !st.address)}
           <p class="help" style="margin:0">Ohne „merken“ vergisst die Box das Passwort beim nächsten Neustart – der NAS-Reiter ist dann leer. Gespeichert wird es verschlüsselt.</p>
           <div class="btns"><button class="btn primary" id="n-login">Anmelden</button>${nas.loginOpen ? '<button class="btn" id="n-cancel">Abbrechen</button>' : ''}</div>`
-        : `<dl class="kv"><div><dt>Server</dt><dd>${esc(st.address)}${st.https ? ' (HTTPS)' : ''}</dd></div><div><dt>Benutzer</dt><dd>${esc(st.account)}</dd></div>
+        : `<dl class="kv">${
+            st.protocol === 'smb'
+              ? `<div><dt>Freigabe</dt><dd translate="no">${esc(st.unc)}</dd></div><div><dt>Verbindung</dt><dd>SMB</dd></div>`
+              : `<div><dt>Server</dt><dd>${esc(st.address)}${st.https ? ' (HTTPS)' : ''}</dd></div><div><dt>Verbindung</dt><dd>WebDAV</dd></div>`
+          }<div><dt>Benutzer</dt><dd>${esc(st.account)}</dd></div>
             <div><dt>Status</dt><dd>${st.offline ? 'Gerade nicht erreichbar' : 'Angemeldet'}</dd></div></dl>
           <div class="btns"><button class="btn" id="n-other">Andere Anmeldung</button><button class="btn" id="n-logout">Abmelden</button></div>`
     }</section>`,
@@ -6667,6 +6684,7 @@ function nasTop() {
       ? `<section class="card wide"><h2>Ordner</h2><p class="help">Anzeigen = erscheint auf der Box – antippen und wählen, wo: in Hörspiele, Musik oder Radio & Podcasts (neben SD-Karte und Spotify) oder im NAS-Reiter. Ausblenden = bleibt verborgen (auch alles darunter). Laden = auf die SD-Karte kopieren, damit es auch ohne NAS spielt.</p>
         <div class="search">${icon('search')}<input class="input" id="n-q" type="search" placeholder="Ordner auf dem ganzen NAS suchen" autocomplete="off" value="${esc(nas.q)}"></div>
         <p class="help" id="n-index" style="margin:0"></p>
+        <div class="row"><span class="lbl"><b>Suche in</b><small id="n-roots" translate="no"></small></span><button class="btn sm" id="n-roots-edit">Ändern</button></div>
         ${sw('n-only', 'Nur die Auswahl zeigen', nas.onlySel)}
         <div class="rows" id="n-list"><div class="loading"><p>Lade …</p></div></div>
         <div class="btns"><button class="btn sm" data-bulk="show1">Alle anzeigen</button><button class="btn sm" data-bulk="show0">Keine anzeigen</button><button class="btn sm" data-bulk="dl1">Alle laden</button><button class="btn sm" data-bulk="dl0">Keine laden</button></div>
@@ -6817,6 +6835,11 @@ function drawNasFolders() {
 }
 
 function drawNasIndex() {
+  const roots = $('#n-roots')
+  const chosen = nas.st?.indexFolders ?? []
+  if (roots) {
+    roots.textContent = chosen.length ? chosen.map((p) => p.split('/').filter(Boolean).slice(-2).join(' › ')).join(', ') : tr('ganzes NAS')
+  }
   const el = $('#n-index')
   const ix = nas.index
   if (!el || !ix) return
@@ -6973,22 +6996,40 @@ async function saveNasSelection() {
   return true
 }
 
+// How the login form reaches the NAS: as chosen there, else as the box does now - a box without NAS starts with SMB
+function nasProto() {
+  const st = nas.st ?? {}
+  return nas.proto ?? (st.address ? st.protocol || 'webdav' : 'smb')
+}
+
 async function nasLogin(root, page, fingerprint) {
-  const address = $('#n-addr', root).value.trim()
+  const smb = nasProto() === 'smb'
+  const address = $(smb ? '#n-unc' : '#n-addr', root).value.trim()
   const account = $('#n-acc', root).value.trim()
   const password = $('#n-pw', root).value
-  if (!address || !account || !password) return toast('Bitte Server, Benutzer und Passwort eintragen', 'info')
-  const body = { address, https: $('#n-https', root).checked, account, password, rememberMe: $('#n-remember', root).checked, ...(fingerprint ? { certFingerprint: fingerprint } : {}) }
+  if (!address || !account || !password) return toast(smb ? 'Bitte Freigabe, Benutzer und Passwort eintragen' : 'Bitte Server, Benutzer und Passwort eintragen', 'info')
+  const body = smb
+    ? { protocol: 'smb', address, domain: $('#n-dom', root).value.trim(), account, password, rememberMe: $('#n-remember', root).checked }
+    : { address, https: $('#n-https', root).checked, account, password, rememberMe: $('#n-remember', root).checked, ...(fingerprint ? { certFingerprint: fingerprint } : {}) }
   const btn = $('#n-login', root)
   btn.disabled = true
   btn.textContent = 'Melde an …'
+  // (the first SMB login installs its part of the box first: a minute or two)
+  const slow = smb ? setTimeout(() => toast('Die Box richtet SMB ein – das dauert beim ersten Mal ein, zwei Minuten …', 'info'), 8000) : 0
   const r = await api('/api/nas/login', { method: 'POST', body })
+  clearTimeout(slow)
   btn.disabled = false
   btn.textContent = 'Anmelden'
   if (r.body?.success) {
     nas.loginOpen = false
+    nas.proto = undefined
     nas.path = ''
     nas.edits.clear()
+    // (a folder below the share in the address: the tree opens there)
+    if (r.body.folder) {
+      nas.open.add(r.body.folder)
+      openNasPath(r.body.folder)
+    }
     toast('Beim NAS angemeldet')
     libChanged()
     await loadNas().catch(() => undefined)
@@ -7010,13 +7051,29 @@ async function nasLogin(root, page, fingerprint) {
       },
     )
   }
-  toast(r.body?.error ? tr(`Anmeldung fehlgeschlagen: ${nasLoginError(r.body.error)}`) : 'Anmeldung fehlgeschlagen', 'info')
+  const why = r.body?.reason ? nasSmbError(r.body.reason) : r.body?.error ? nasLoginError(r.body.error) : ''
+  toast(why ? tr(`Anmeldung fehlgeschlagen: ${why}`) : 'Anmeldung fehlgeschlagen', 'info')
+}
+
+// Why a share could not be used (the server's `reason`, nas/smb.ts)
+function nasSmbError(reason) {
+  return (
+    {
+      address: tr('Das ist keine Freigabe-Adresse. Schreib sie wie im Windows-Explorer: zwei Schrägstriche, NAS, Freigabe.'),
+      unreachable: tr('Das NAS ist nicht erreichbar. Prüfe die Adresse und ob SMB (Windows-Dateifreigabe) auf dem NAS an ist.'),
+      resolve: tr('Den Namen des NAS kennt die Box nicht. Nimm die IP-Adresse des NAS (oder name.local).'),
+      auth: tr('Benutzer oder Passwort falsch – oder der Benutzer darf diese Freigabe nicht nutzen.'),
+      notfound: tr('Eine Freigabe mit diesem Namen gibt es auf dem NAS nicht.'),
+      smb1: tr('Das NAS kann nur SMB1, das die Box nicht nutzt. Schalte SMB2 oder SMB3 auf dem NAS ein.'),
+      install: tr('Die Box konnte SMB nicht einrichten. Ist sie mit dem Internet verbunden?'),
+    }[reason] ?? tr('Die Freigabe ließ sich nicht einbinden.')
+  )
 }
 
 // The server's reasons for a failed NAS sign-in (English, also for the admin interface) in the app's words
 function nasLoginError(msg) {
   const m = String(msg)
-  const status = /HTTP (d+)/.exec(m)
+  const status = /HTTP (\d+)/.exec(m)
   if (/^Could not reach the NAS/.test(m)) return tr('Das NAS ist nicht erreichbar. Prüfe die Adresse (mit WebDAV-Port) und ob die Box das NAS im Netz erreichen darf.')
   if (/^Wrong account name or password/.test(m)) return tr('Benutzer oder Passwort falsch – oder der Benutzer darf WebDAV nicht nutzen.')
   if (/lists no folders/.test(m)) return tr('Das NAS antwortet, zeigt aber keine Ordner. Prüfe den WebDAV-Port (Synology: 5006 für HTTPS, 5005 für HTTP) und ob der Benutzer WebDAV nutzen darf.')
@@ -7034,8 +7091,18 @@ function mountNas(root, page) {
     if (currentPage()?.id === page.id) renderPage(page, false)
   }
   $('#n-login', root)?.addEventListener('click', () => nasLogin(root, page))
+  // SMB or WebDAV: only the fields of the one chosen (what is typed in the others stays)
+  $('#n-proto', root)?.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-v]')
+    if (!b) return
+    nas.proto = b.dataset.v
+    for (const x of $('#n-proto', root).querySelectorAll('button')) x.setAttribute('aria-pressed', String(x === b))
+    $('#n-smb', root).hidden = nas.proto !== 'smb'
+    $('#n-dav', root).hidden = nas.proto !== 'webdav'
+  })
   $('#n-cancel', root)?.addEventListener('click', () => {
     nas.loginOpen = false
+    nas.proto = undefined
     renderPage(page, false)
   })
   $('#n-other', root)?.addEventListener('click', () => {
@@ -7163,6 +7230,7 @@ function mountNas(root, page) {
     const r = await api('/api/nas/covers/refresh', { method: 'POST', body: {} })
     toast(r.body?.success ? 'Cover neu geladen' : r.body?.error ?? 'Das hat nicht geklappt', r.body?.success ? 'ok' : 'info')
   }
+  $('#n-roots-edit', root).onclick = () => nasRootsSheet()
   $('#n-reindex', root).onclick = async () => {
     const r = await api('/api/nas/index/refresh', { method: 'POST', body: {} })
     if (!r.body?.success) return toast('Das hat nicht geklappt', 'info')
@@ -7179,6 +7247,47 @@ function mountNas(root, page) {
   else loadNasFolder()
   if (nas.dl?.running) pollNasDownload()
   if (nas.index?.running) pollNasIndex()
+}
+
+// "Suche in": the folders the search index is made below (the top two levels to tick; none = the whole NAS). A big NAS
+// over SMB takes half an hour for all its folders - the box only needs the ones it shows.
+async function nasRootsSheet() {
+  const chosen = new Set(nas.st?.indexFolders ?? [])
+  const rows = []
+  const top = await api('/api/nas/browse?path=%2F')
+  if (!top.ok) return toast('Das NAS antwortet gerade nicht.', 'info')
+  for (const t of (top.body?.entries ?? []).slice(0, 12)) {
+    rows.push({ path: t.path, name: t.name, depth: 0 })
+    const sub = await api(`/api/nas/browse?path=${encodeURIComponent(t.path)}`)
+    for (const c of (sub.body?.entries ?? []).slice(0, 60)) rows.push({ path: c.path, name: c.name, depth: 1 })
+  }
+  // (a folder chosen deeper down, e.g. by an older choice: listed too)
+  for (const p of chosen) if (!rows.some((r) => r.path === p)) rows.push({ path: p, name: p.split('/').filter(Boolean).join(' › '), depth: 0 })
+  openSheet(
+    `<h2>Suche in</h2><p class="help" style="margin:0">Der Suchindex enthält nur die Ordner unter den gewählten. Nichts gewählt: das ganze NAS – bei einem großen NAS dauert das lange.</p>
+     <div class="rows">${rows
+       .map(
+         (r, i) =>
+           `<div class="row" style="padding-left:${r.depth * 18}px"><span class="lbl"><b translate="no">${esc(r.name)}</b></span><label class="switch"><input type="checkbox" data-root="${i}" ${chosen.has(r.path) ? 'checked' : ''} aria-label="${esc(r.name)}"><span></span></label></div>`,
+       )
+       .join('')}</div>
+     <div class="btns"><button class="btn" data-all>Ganzes NAS</button><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Übernehmen</button></div>`,
+    (sheet, close) => {
+      const save = async (folders) => {
+        const r = await api('/api/nas/index/folders', { method: 'POST', body: { folders } })
+        if (!r.body?.success) return toast('Nicht gespeichert', 'info')
+        close()
+        if (nas.st) nas.st.indexFolders = r.body.folders
+        nas.index = { ...(nas.index ?? {}), running: true, folders: 0 }
+        drawNasIndex()
+        toast('Der Suchindex wird neu erstellt')
+        pollNasIndex()
+      }
+      sheet.querySelector('[data-close]').onclick = close
+      sheet.querySelector('[data-all]').onclick = () => save([])
+      sheet.querySelector('[data-ok]').onclick = () => save([...sheet.querySelectorAll('[data-root]')].filter((x) => x.checked).map((x) => rows[Number(x.dataset.root)].path))
+    },
+  )
 }
 
 // The download's and the search index's progress, each its own timer (the one ending must not stop the other), and
