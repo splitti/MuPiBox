@@ -5191,6 +5191,11 @@ async function nasConnectRemembered(): Promise<NasConnectResult> {
 
 const nasAccess = new NasAccess(nasConnectRemembered)
 
+/** The box has a login while the NAS is away: one that worked before (also without "merken"), or a remembered one. */
+function nasHasLogin(syn: NasConfig | undefined): boolean {
+  return nasAccess.last !== undefined || Boolean(syn?.address && syn.account && syn.password && syn.rememberMe)
+}
+
 // --- Local copies ("Download local") --------------------------------------
 
 function nasPathParts(nasPath: string): string[] | undefined {
@@ -6327,8 +6332,9 @@ app.get('/api/nas/state', localOrElternSession, async (_req, res) => {
     account: syn?.account ?? '',
     rememberMe: syn?.rememberMe === true,
     hasPassword: Boolean(syn?.password),
-    // (a login the NAS refuses is no login: the app shows the form with the reason)
-    loggedIn: Boolean(session) && !why,
+    // (a login the NAS refuses is no login: the app shows the form with the reason; while the NAS is away the login
+    // the box keeps still is one - the app shows "not reachable", not the form)
+    loggedIn: (Boolean(session) || (nasAccess.isAway() && nasHasLogin(syn))) && !why,
     offline: nasAccess.isAway() && !why,
     loginError: why,
     artistFolders: syn?.artistFolders ?? [],
@@ -6482,12 +6488,20 @@ app.get('/api/nas/browse', localOrElternSession, async (req, res) => {
     })
 
     if (result === undefined) {
+      // (the NAS is away with a login the box keeps: not answering, not signed off)
+      if (nasAccess.isAway() && !nasAccess.refused && nasHasLogin(nasSettings(await getMupiboxConfig()))) {
+        res.status(502).json({ success: false, error: 'nas_unreachable' })
+        return
+      }
       res.status(401).json({ success: false, error: 'not_logged_in' })
       return
     }
     res.json({ success: true, path: folderPath, entries: result })
   } catch (error) {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to browse NAS path ${folderPath}: ${error}`)
+    // the NAS did not answer (not: it answered with an error): away for a while, as for the box's own listings - the
+    // app shows "not reachable", the kids' screens use the copies on the SD card at once
+    if (!(error instanceof NasApiError || error instanceof NasSessionExpiredError)) nasAccess.markAway()
     res.status(502).json({ success: false, error: 'nas_unreachable' })
   }
 })
