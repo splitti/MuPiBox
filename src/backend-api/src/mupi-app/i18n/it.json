@@ -3953,9 +3953,6 @@
  "Das NAS kann nur SMB1, das die Box nicht nutzt. Schalte SMB2 oder SMB3 auf dem NAS ein.": "Il NAS parla solo SMB1, che il box non usa. Attiva SMB2 o SMB3 sul NAS.",
  "Die Box konnte SMB nicht einrichten. Ist sie mit dem Internet verbunden?": "Il box non è riuscito a configurare SMB. È connesso a Internet?",
  "Die Freigabe ließ sich nicht einbinden.": "Non è stato possibile montare la condivisione.",
- "Suche in": "Cerca in",
- "ganzes NAS": "tutto il NAS",
- "Ganzes NAS": "Tutto il NAS",
- "Der Suchindex wird neu erstellt": "L’indice di ricerca viene ricreato",
- "Der Suchindex enthält nur die Ordner unter den gewählten. Nichts gewählt: das ganze NAS – bei einem großen NAS dauert das lange.": "L’indice di ricerca contiene solo le cartelle sotto quelle scelte. Nessuna scelta: tutto il NAS – su un NAS grande ci vuole molto."
+ "In den angezeigten Ordnern suchen": "Cerca nelle cartelle mostrate",
+ "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Indice delle cartelle mostrate: {} cartelle, aggiornato {}"
 }

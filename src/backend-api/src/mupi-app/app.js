@@ -6682,9 +6682,8 @@ function nasTop() {
       : '',
     st.loggedIn
       ? `<section class="card wide"><h2>Ordner</h2><p class="help">Anzeigen = erscheint auf der Box – antippen und wählen, wo: in Hörspiele, Musik oder Radio & Podcasts (neben SD-Karte und Spotify) oder im NAS-Reiter. Ausblenden = bleibt verborgen (auch alles darunter). Laden = auf die SD-Karte kopieren, damit es auch ohne NAS spielt.</p>
-        <div class="search">${icon('search')}<input class="input" id="n-q" type="search" placeholder="Ordner auf dem ganzen NAS suchen" autocomplete="off" value="${esc(nas.q)}"></div>
+        <div class="search">${icon('search')}<input class="input" id="n-q" type="search" placeholder="${(nas.index?.roots ?? 0) > 0 ? 'In den angezeigten Ordnern suchen' : 'Ordner auf dem ganzen NAS suchen'}" autocomplete="off" value="${esc(nas.q)}"></div>
         <p class="help" id="n-index" style="margin:0"></p>
-        <div class="row"><span class="lbl"><b>Suche in</b><small id="n-roots" translate="no"></small></span><button class="btn sm" id="n-roots-edit">Ändern</button></div>
         ${sw('n-only', 'Nur die Auswahl zeigen', nas.onlySel)}
         <div class="rows" id="n-list"><div class="loading"><p>Lade …</p></div></div>
         <div class="btns"><button class="btn sm" data-bulk="show1">Alle anzeigen</button><button class="btn sm" data-bulk="show0">Keine anzeigen</button><button class="btn sm" data-bulk="dl1">Alle laden</button><button class="btn sm" data-bulk="dl0">Keine laden</button></div>
@@ -6835,15 +6834,10 @@ function drawNasFolders() {
 }
 
 function drawNasIndex() {
-  const roots = $('#n-roots')
-  const chosen = nas.st?.indexFolders ?? []
-  if (roots) {
-    roots.textContent = chosen.length ? chosen.map((p) => p.split('/').filter(Boolean).slice(-2).join(' › ')).join(', ') : tr('ganzes NAS')
-  }
   const el = $('#n-index')
   const ix = nas.index
   if (!el || !ix) return
-  el.textContent = ix.running ? `Suchindex wird erstellt … (${ix.folders ?? 0} Ordner)` : ix.exists ? `Suchindex: ${ix.count} Ordner, Stand ${relTime(new Date(ix.updated).toISOString())}` : 'Noch kein Suchindex – „Index aktualisieren“.'
+  el.textContent = ix.running ? `Suchindex wird erstellt … (${ix.folders ?? 0} Ordner)` : ix.exists ? (ix.roots > 0 ? `Suchindex der angezeigten Ordner: ${ix.count} Ordner, Stand ${relTime(new Date(ix.updated).toISOString())}` : `Suchindex: ${ix.count} Ordner, Stand ${relTime(new Date(ix.updated).toISOString())}`) : 'Noch kein Suchindex – „Index aktualisieren“.'
 }
 
 function drawNasDownload() {
@@ -7230,7 +7224,6 @@ function mountNas(root, page) {
     const r = await api('/api/nas/covers/refresh', { method: 'POST', body: {} })
     toast(r.body?.success ? 'Cover neu geladen' : r.body?.error ?? 'Das hat nicht geklappt', r.body?.success ? 'ok' : 'info')
   }
-  $('#n-roots-edit', root).onclick = () => nasRootsSheet()
   $('#n-reindex', root).onclick = async () => {
     const r = await api('/api/nas/index/refresh', { method: 'POST', body: {} })
     if (!r.body?.success) return toast('Das hat nicht geklappt', 'info')
@@ -7247,47 +7240,6 @@ function mountNas(root, page) {
   else loadNasFolder()
   if (nas.dl?.running) pollNasDownload()
   if (nas.index?.running) pollNasIndex()
-}
-
-// "Suche in": the folders the search index is made below (the top two levels to tick; none = the whole NAS). A big NAS
-// over SMB takes half an hour for all its folders - the box only needs the ones it shows.
-async function nasRootsSheet() {
-  const chosen = new Set(nas.st?.indexFolders ?? [])
-  const rows = []
-  const top = await api('/api/nas/browse?path=%2F')
-  if (!top.ok) return toast('Das NAS antwortet gerade nicht.', 'info')
-  for (const t of (top.body?.entries ?? []).slice(0, 12)) {
-    rows.push({ path: t.path, name: t.name, depth: 0 })
-    const sub = await api(`/api/nas/browse?path=${encodeURIComponent(t.path)}`)
-    for (const c of (sub.body?.entries ?? []).slice(0, 60)) rows.push({ path: c.path, name: c.name, depth: 1 })
-  }
-  // (a folder chosen deeper down, e.g. by an older choice: listed too)
-  for (const p of chosen) if (!rows.some((r) => r.path === p)) rows.push({ path: p, name: p.split('/').filter(Boolean).join(' › '), depth: 0 })
-  openSheet(
-    `<h2>Suche in</h2><p class="help" style="margin:0">Der Suchindex enthält nur die Ordner unter den gewählten. Nichts gewählt: das ganze NAS – bei einem großen NAS dauert das lange.</p>
-     <div class="rows">${rows
-       .map(
-         (r, i) =>
-           `<div class="row" style="padding-left:${r.depth * 18}px"><span class="lbl"><b translate="no">${esc(r.name)}</b></span><label class="switch"><input type="checkbox" data-root="${i}" ${chosen.has(r.path) ? 'checked' : ''} aria-label="${esc(r.name)}"><span></span></label></div>`,
-       )
-       .join('')}</div>
-     <div class="btns"><button class="btn" data-all>Ganzes NAS</button><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Übernehmen</button></div>`,
-    (sheet, close) => {
-      const save = async (folders) => {
-        const r = await api('/api/nas/index/folders', { method: 'POST', body: { folders } })
-        if (!r.body?.success) return toast('Nicht gespeichert', 'info')
-        close()
-        if (nas.st) nas.st.indexFolders = r.body.folders
-        nas.index = { ...(nas.index ?? {}), running: true, folders: 0 }
-        drawNasIndex()
-        toast('Der Suchindex wird neu erstellt')
-        pollNasIndex()
-      }
-      sheet.querySelector('[data-close]').onclick = close
-      sheet.querySelector('[data-all]').onclick = () => save([])
-      sheet.querySelector('[data-ok]').onclick = () => save([...sheet.querySelectorAll('[data-root]')].filter((x) => x.checked).map((x) => rows[Number(x.dataset.root)].path))
-    },
-  )
 }
 
 // The download's and the search index's progress, each its own timer (the one ending must not stop the other), and

@@ -10,7 +10,6 @@ export interface NasProfile {
   downloadFolders: string[]
   folderCategories?: Record<string, NasBoxCategory>
   folderSplit?: string[]
-  indexFolders?: string[]
 }
 
 /** A category tab of the box a shown NAS folder can be put into (instead of the NAS tab). */
@@ -35,8 +34,6 @@ export interface NasConfig {
   // a tile of its own, its episodes inside) - else the folder is one tile.
   folderCategories?: Record<string, NasBoxCategory>
   folderSplit?: string[]
-  // "Suche nur in": the folder search of the app's NAS page (its index) only below these folders; none: the whole NAS
-  indexFolders?: string[]
   profiles?: Record<string, NasProfile>
   activeProfile?: string
   // SHA-256 fingerprint of the NAS certificate confirmed in the admin interface (https with a self-signed one)

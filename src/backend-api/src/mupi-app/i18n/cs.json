@@ -3953,9 +3953,6 @@
  "Das NAS kann nur SMB1, das die Box nicht nutzt. Schalte SMB2 oder SMB3 auf dem NAS ein.": "NAS umí jen SMB1, které box nepoužívá. Zapni na NAS SMB2 nebo SMB3.",
  "Die Box konnte SMB nicht einrichten. Ist sie mit dem Internet verbunden?": "Box nemohl nastavit SMB. Je připojený k internetu?",
  "Die Freigabe ließ sich nicht einbinden.": "Sdílenou složku se nepodařilo připojit.",
- "Suche in": "Hledat v",
- "ganzes NAS": "celý NAS",
- "Ganzes NAS": "Celý NAS",
- "Der Suchindex wird neu erstellt": "Vyhledávací index se vytváří znovu",
- "Der Suchindex enthält nur die Ordner unter den gewählten. Nichts gewählt: das ganze NAS – bei einem großen NAS dauert das lange.": "Vyhledávací index obsahuje jen složky pod vybranými. Nic nevybráno: celý NAS – u velkého NAS to trvá dlouho."
+ "In den angezeigten Ordnern suchen": "Hledat v zobrazených složkách",
+ "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Index zobrazených složek: {} složek, stav {}"
 }

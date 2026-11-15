@@ -3953,9 +3953,6 @@
  "Das NAS kann nur SMB1, das die Box nicht nutzt. Schalte SMB2 oder SMB3 auf dem NAS ein.": "De NAS spreekt alleen SMB1, dat de box niet gebruikt. Zet SMB2 of SMB3 aan op de NAS.",
  "Die Box konnte SMB nicht einrichten. Ist sie mit dem Internet verbunden?": "De box kon SMB niet inrichten. Is hij met internet verbonden?",
  "Die Freigabe ließ sich nicht einbinden.": "De share kon niet worden gekoppeld.",
- "Suche in": "Zoeken in",
- "ganzes NAS": "hele NAS",
- "Ganzes NAS": "Hele NAS",
- "Der Suchindex wird neu erstellt": "De zoekindex wordt opnieuw gemaakt",
- "Der Suchindex enthält nur die Ordner unter den gewählten. Nichts gewählt: das ganze NAS – bei einem großen NAS dauert das lange.": "De zoekindex bevat alleen de mappen onder de gekozen mappen. Niets gekozen: de hele NAS – bij een grote NAS duurt dat lang."
+ "In den angezeigten Ordnern suchen": "Zoeken in de getoonde mappen",
+ "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Zoekindex van de getoonde mappen: {} mappen, stand {}"
 }

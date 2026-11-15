@@ -3953,9 +3953,6 @@
  "Das NAS kann nur SMB1, das die Box nicht nutzt. Schalte SMB2 oder SMB3 auf dem NAS ein.": "NAS yalnızca kutunun kullanmadığı SMB1’i destekliyor. NAS’ta SMB2 veya SMB3’ü aç.",
  "Die Box konnte SMB nicht einrichten. Ist sie mit dem Internet verbunden?": "Kutu SMB’yi kuramadı. İnternete bağlı mı?",
  "Die Freigabe ließ sich nicht einbinden.": "Paylaşım bağlanamadı.",
- "Suche in": "Şurada ara",
- "ganzes NAS": "tüm NAS",
- "Ganzes NAS": "Tüm NAS",
- "Der Suchindex wird neu erstellt": "Arama dizini yeniden oluşturuluyor",
- "Der Suchindex enthält nur die Ordner unter den gewählten. Nichts gewählt: das ganze NAS – bei einem großen NAS dauert das lange.": "Arama dizini yalnızca seçilen klasörlerin altındaki klasörleri içerir. Hiçbir şey seçilmezse: tüm NAS – büyük bir NAS’ta uzun sürer."
+ "In den angezeigten Ordnern suchen": "Gösterilen klasörlerde ara",
+ "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Gösterilen klasörlerin arama dizini: {} klasör, durum {}"
 }

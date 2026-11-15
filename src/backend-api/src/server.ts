@@ -5811,7 +5811,6 @@ function nasProfileSnapshot(settings: NasConfig | undefined, created = Date.now(
     downloadFolders: [...(settings?.downloadFolders ?? [])],
     folderCategories: { ...(settings?.folderCategories ?? {}) },
     folderSplit: [...(settings?.folderSplit ?? [])],
-    indexFolders: [...(settings?.indexFolders ?? [])],
   }
 }
 
@@ -5847,7 +5846,6 @@ function nasTrackActiveProfile(settings: NasConfig | undefined, changes: Record<
         downloadFolders: pick('downloadFolders'),
         folderCategories: (changes.folderCategories as NasConfig['folderCategories']) ?? settings?.folderCategories ?? {},
         folderSplit: (changes.folderSplit as string[] | undefined) ?? settings?.folderSplit ?? [],
-        indexFolders: (changes.indexFolders as string[] | undefined) ?? settings?.indexFolders ?? [],
       },
     },
     activeProfile: active,
@@ -5942,7 +5940,6 @@ app.post('/api/nas/profiles/load', localOrElternSession, async (req, res) => {
         downloadFolders: [...bound.downloadFolders],
         folderCategories: { ...(bound.folderCategories ?? {}) },
         folderSplit: [...(bound.folderSplit ?? [])],
-        indexFolders: [...(bound.indexFolders ?? settings?.indexFolders ?? [])],
         profiles: { ...profiles, [name]: bound },
         activeProfile: name,
       }
@@ -6162,26 +6159,25 @@ const nasIndexMaxFolders = 200000
 interface NasFolderIndex {
   updated: number
   folders: string[]
-  // the folders it was made below ("Suche nur in"); none: the whole NAS
+  // the folders it was made below (the shown ones); none: the whole NAS
   roots?: string[]
 }
 
-// "Suche nur in" as stored: NAS paths ("/Freigabe/Hörspiele"), none inside another, at most 20
-function nasIndexRoots(value: unknown): string[] {
-  if (!Array.isArray(value)) return []
-  const paths = value
-    .filter((v): v is string => typeof v === 'string' && v.length <= 500 && !v.includes('\0'))
+// What the search of the app's NAS page looks through: the shown folders and all below them - the box needs no index
+// for showing them (it lists them live), the search is for picking subfolders there. Nothing shown yet (the first
+// setup): the whole NAS. NAS paths, none inside another.
+function nasIndexRoots(settings: NasConfig | undefined): string[] {
+  const hidden = new Set(settings?.hiddenFolders ?? [])
+  const paths = (settings?.artistFolders ?? [])
+    .filter((v) => typeof v === 'string' && !hidden.has(v))
     .map((v) => v.split('/').filter(Boolean))
     .filter((parts) => parts.length > 0 && !parts.some((p) => p === '.' || p === '..'))
     .map((parts) => `/${parts.join('/')}`)
   const unique = [...new Set(paths)].sort()
-  return unique.filter((p) => !unique.some((q) => q !== p && p.startsWith(`${q}/`))).slice(0, 20)
+  return unique.filter((p) => !unique.some((q) => q !== p && p.startsWith(`${q}/`)))
 }
 
 const sameRoots = (a: string[] | undefined, b: string[]) => (a ?? []).length === b.length && (a ?? []).every((p, i) => p === b[i])
-
-// Bumped when the setting changes: a run for the folders before stops and starts again.
-let nasIndexGeneration = 0
 
 let nasIndexCache: NasFolderIndex | undefined
 let nasIndexLoaded = false
@@ -6216,11 +6212,10 @@ async function buildNasIndex(): Promise<void> {
   nasIndexJob.folders = 0
   nasIndexJob.error = ''
   nasIndexLastAttempt = Date.now()
-  const generation = nasIndexGeneration
   let again = false
   try {
-    const roots = nasIndexRoots(nasSettings(await getMupiboxConfig())?.indexFolders)
-    // (the chosen folders themselves are found too - the search finds "Hörspiele" as well)
+    const roots = nasIndexRoots(nasSettings(await getMupiboxConfig()))
+    // (the shown folders themselves are found too - the search finds "Hörspiele" as well)
     const found: string[] = [...roots]
     let skipped = 0
     let unanswered = 0 // of those: the NAS did not answer at all (not "gone" or "no permission")
@@ -6256,9 +6251,10 @@ async function buildNasIndex(): Promise<void> {
       }
       nasIndexJob.folders = found.length
       level = next
-      if (generation !== nasIndexGeneration) {
+      // (other folders shown in the meantime: started again for them)
+      if (!sameRoots(roots, nasIndexRoots(nasSettings(await getMupiboxConfig())))) {
         again = true
-        throw new Error('The folders of the search were changed - started again')
+        throw new Error('The shown folders changed - started again')
       }
     }
     // The NAS went away during the run: the folders skipped are not unreadable, they were not asked - the index
@@ -6306,7 +6302,6 @@ app.get('/api/nas/state', localOrElternSession, async (_req, res) => {
     downloadFolders: syn?.downloadFolders ?? [],
     folderCategories: syn?.folderCategories ?? {},
     folderSplit: syn?.folderSplit ?? [],
-    indexFolders: nasIndexRoots(syn?.indexFolders),
   })
 })
 
@@ -6330,9 +6325,11 @@ app.post('/api/nas/logout', localOrElternSession, async (_req, res) => {
 
 app.get('/api/nas/index/status', localOrElternSession, async (_req, res) => {
   const index = await loadNasIndex()
-  const roots = nasIndexRoots(nasSettings(await getMupiboxConfig())?.indexFolders)
-  const stale = !index || Date.now() - index.updated > nasIndexMaxAgeMs || !sameRoots(index.roots, roots)
-  if (stale && !nasIndexJob.running && Date.now() - nasIndexLastAttempt > nasIndexRetryMs && (await nasAccess.active())) {
+  const roots = nasIndexRoots(nasSettings(await getMupiboxConfig()))
+  // (made for other shown folders than now: made anew at once)
+  const changed = Boolean(index) && !sameRoots(index?.roots, roots)
+  const stale = !index || Date.now() - index.updated > nasIndexMaxAgeMs || changed
+  if (stale && !nasIndexJob.running && (changed || Date.now() - nasIndexLastAttempt > nasIndexRetryMs) && (await nasAccess.active())) {
     void buildNasIndex()
   }
   res.json({
@@ -6342,6 +6339,8 @@ app.get('/api/nas/index/status', localOrElternSession, async (_req, res) => {
     count: index?.folders.length ?? 0,
     running: nasIndexJob.running,
     folders: nasIndexJob.folders,
+    // below how many shown folders the search looks (0: the whole NAS - nothing shown yet)
+    roots: roots.length,
     error: nasIndexJob.running ? '' : nasIndexJob.error,
   })
 })
@@ -6353,25 +6352,6 @@ app.post('/api/nas/index/refresh', localOrElternSession, async (_req, res) => {
   }
   void buildNasIndex()
   res.json({ success: true, running: true })
-})
-
-// "Suche nur in": the folders the search index is made below (none: the whole NAS) - saved, the index made anew.
-app.post('/api/nas/index/folders', localOrElternSession, async (req, res) => {
-  if (!Array.isArray(req.body?.folders)) {
-    res.status(400).json({ success: false, error: 'folders must be a list' })
-    return
-  }
-  const folders = nasIndexRoots(req.body.folders)
-  try {
-    await updateNasConfig((settings) => ({ indexFolders: folders, ...nasTrackActiveProfile(settings, { indexFolders: folders }) }))
-  } catch (error) {
-    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to save the folders of the NAS search: ${error}`)
-    res.status(500).json({ success: false })
-    return
-  }
-  nasIndexGeneration++
-  if (await nasAccess.active()) void buildNasIndex()
-  res.json({ success: true, folders, running: nasIndexJob.running })
 })
 
 // Folders whose own name contains q (case-insensitive), as full paths.

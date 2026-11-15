@@ -44,7 +44,7 @@ Nach der Anmeldung zeigt die Box die Ordner des NAS als Baum. Für jeden Ordner 
 Praktisch dafür:
 
 - Das Suchfeld **Ordner auf dem ganzen NAS suchen** findet Ordner auch tief im Baum. Dafür braucht die Box einen Suchindex; **Index aktualisieren** liest die Ordner neu ein, wenn sich auf dem NAS etwas geändert hat.
-- **Suche in** legt fest, unter welchen Ordnern der Suchindex sucht, zum Beispiel nur „Hörspiele“. Ohne Auswahl ist es das ganze NAS; bei einem großen NAS dauert der Index dann lange (per SMB bei 40.000 Ordnern eine halbe Stunde und mehr). Die Wahl gehört zum Profil.
+- Die Suche schaut in die angezeigten Ordner und alles darunter, zum Beispiel um in „Hörspiele“ eine Serie zum Laden zu finden. Solange noch kein Ordner angezeigt ist, sucht sie auf dem ganzen NAS; bei einem großen NAS dauert der Index dann lange (per SMB bei 40.000 Ordnern eine halbe Stunde und mehr). Zeigst du andere Ordner an, baut die Box den Index neu.
 - **Nur die Auswahl zeigen** listet nur die Ordner, die du angezeigt, ausgeblendet oder zum Laden markiert hast.
 - **Alle anzeigen**, **Keine anzeigen**, **Alle laden** und **Keine laden** markieren schnell.
 

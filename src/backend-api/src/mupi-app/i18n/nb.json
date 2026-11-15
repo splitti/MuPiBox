@@ -3953,9 +3953,6 @@
  "Das NAS kann nur SMB1, das die Box nicht nutzt. Schalte SMB2 oder SMB3 auf dem NAS ein.": "NAS-en kan bare SMB1, som boksen ikke bruker. Slå på SMB2 eller SMB3 på NAS-en.",
  "Die Box konnte SMB nicht einrichten. Ist sie mit dem Internet verbunden?": "Boksen kunne ikke sette opp SMB. Er den koblet til internett?",
  "Die Freigabe ließ sich nicht einbinden.": "Delingen kunne ikke monteres.",
- "Suche in": "Søk i",
- "ganzes NAS": "hele NAS-en",
- "Ganzes NAS": "Hele NAS-en",
- "Der Suchindex wird neu erstellt": "Søkeindeksen bygges på nytt",
- "Der Suchindex enthält nur die Ordner unter den gewählten. Nichts gewählt: das ganze NAS – bei einem großen NAS dauert das lange.": "Søkeindeksen inneholder bare mappene under de valgte. Ingenting valgt: hele NAS-en – på en stor NAS tar det lang tid."
+ "In den angezeigten Ordnern suchen": "Søk i de viste mappene",
+ "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Søkeindeks for de viste mappene: {} mapper, per {}"
 }

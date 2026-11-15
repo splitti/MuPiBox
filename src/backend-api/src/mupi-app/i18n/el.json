@@ -3953,9 +3953,6 @@
  "Das NAS kann nur SMB1, das die Box nicht nutzt. Schalte SMB2 oder SMB3 auf dem NAS ein.": "Το NAS μιλά μόνο SMB1, που το κουτί δεν χρησιμοποιεί. Ενεργοποίησε SMB2 ή SMB3 στο NAS.",
  "Die Box konnte SMB nicht einrichten. Ist sie mit dem Internet verbunden?": "Το κουτί δεν μπόρεσε να ρυθμίσει το SMB. Είναι συνδεδεμένο στο διαδίκτυο;",
  "Die Freigabe ließ sich nicht einbinden.": "Ο κοινόχρηστος φάκελος δεν μπόρεσε να προσαρτηθεί.",
- "Suche in": "Αναζήτηση σε",
- "ganzes NAS": "όλο το NAS",
- "Ganzes NAS": "Όλο το NAS",
- "Der Suchindex wird neu erstellt": "Το ευρετήριο αναζήτησης δημιουργείται ξανά",
- "Der Suchindex enthält nur die Ordner unter den gewählten. Nichts gewählt: das ganze NAS – bei einem großen NAS dauert das lange.": "Το ευρετήριο αναζήτησης περιέχει μόνο τους φακέλους κάτω από τους επιλεγμένους. Τίποτα επιλεγμένο: όλο το NAS – σε μεγάλο NAS διαρκεί πολύ."
+ "In den angezeigten Ordnern suchen": "Αναζήτηση στους εμφανιζόμενους φακέλους",
+ "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Ευρετήριο εμφανιζόμενων φακέλων: {} φάκελοι, κατάσταση {}"
 }

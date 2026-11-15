@@ -3969,9 +3969,6 @@
  "Das NAS kann nur SMB1, das die Box nicht nutzt. Schalte SMB2 oder SMB3 auf dem NAS ein.": "The NAS only speaks SMB1, which the box does not use. Switch on SMB2 or SMB3 on the NAS.",
  "Die Box konnte SMB nicht einrichten. Ist sie mit dem Internet verbunden?": "The box could not set up SMB. Is it connected to the internet?",
  "Die Freigabe ließ sich nicht einbinden.": "The share could not be mounted.",
- "Suche in": "Search in",
- "ganzes NAS": "whole NAS",
- "Ganzes NAS": "Whole NAS",
- "Der Suchindex wird neu erstellt": "The search index is being rebuilt",
- "Der Suchindex enthält nur die Ordner unter den gewählten. Nichts gewählt: das ganze NAS – bei einem großen NAS dauert das lange.": "The search index only holds the folders below the chosen ones. Nothing chosen: the whole NAS – on a big NAS this takes long."
+ "In den angezeigten Ordnern suchen": "Search the shown folders",
+ "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Search index of the shown folders: {} folders, as of {}"
 }

@@ -3953,9 +3953,6 @@
  "Das NAS kann nur SMB1, das die Box nicht nutzt. Schalte SMB2 oder SMB3 auf dem NAS ein.": "NAS поддерживает только SMB1, который устройство не использует. Включите на NAS SMB2 или SMB3.",
  "Die Box konnte SMB nicht einrichten. Ist sie mit dem Internet verbunden?": "Устройству не удалось настроить SMB. Оно подключено к интернету?",
  "Die Freigabe ließ sich nicht einbinden.": "Не удалось подключить общую папку.",
- "Suche in": "Искать в",
- "ganzes NAS": "весь NAS",
- "Ganzes NAS": "Весь NAS",
- "Der Suchindex wird neu erstellt": "Поисковый индекс создаётся заново",
- "Der Suchindex enthält nur die Ordner unter den gewählten. Nichts gewählt: das ganze NAS – bei einem großen NAS dauert das lange.": "Поисковый индекс содержит только папки под выбранными. Ничего не выбрано: весь NAS — на большом NAS это долго."
+ "In den angezeigten Ordnern suchen": "Искать в показанных папках",
+ "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Поисковый индекс показанных папок: {} папок, состояние {}"
 }

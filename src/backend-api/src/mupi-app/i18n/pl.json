@@ -3953,9 +3953,6 @@
  "Das NAS kann nur SMB1, das die Box nicht nutzt. Schalte SMB2 oder SMB3 auf dem NAS ein.": "NAS obsługuje tylko SMB1, którego urządzenie nie używa. Włącz SMB2 lub SMB3 na NAS.",
  "Die Box konnte SMB nicht einrichten. Ist sie mit dem Internet verbunden?": "Urządzenie nie mogło skonfigurować SMB. Czy jest połączone z internetem?",
  "Die Freigabe ließ sich nicht einbinden.": "Nie udało się zamontować udziału.",
- "Suche in": "Szukaj w",
- "ganzes NAS": "cały NAS",
- "Ganzes NAS": "Cały NAS",
- "Der Suchindex wird neu erstellt": "Indeks wyszukiwania jest tworzony od nowa",
- "Der Suchindex enthält nur die Ordner unter den gewählten. Nichts gewählt: das ganze NAS – bei einem großen NAS dauert das lange.": "Indeks wyszukiwania zawiera tylko foldery pod wybranymi. Nic nie wybrano: cały NAS – przy dużym NAS trwa to długo."
+ "In den angezeigten Ordnern suchen": "Szukaj w pokazanych folderach",
+ "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Indeks pokazanych folderów: {} folderów, stan {}"
 }

@@ -3953,9 +3953,6 @@
  "Das NAS kann nur SMB1, das die Box nicht nutzt. Schalte SMB2 oder SMB3 auf dem NAS ein.": "NAS osaa vain SMB1:tä, jota laite ei käytä. Ota SMB2 tai SMB3 käyttöön NAS:ssa.",
  "Die Box konnte SMB nicht einrichten. Ist sie mit dem Internet verbunden?": "Laite ei voinut ottaa SMB:tä käyttöön. Onko se yhteydessä internetiin?",
  "Die Freigabe ließ sich nicht einbinden.": "Jakoa ei voitu liittää.",
- "Suche in": "Hae kohteesta",
- "ganzes NAS": "koko NAS",
- "Ganzes NAS": "Koko NAS",
- "Der Suchindex wird neu erstellt": "Hakuhakemisto luodaan uudelleen",
- "Der Suchindex enthält nur die Ordner unter den gewählten. Nichts gewählt: das ganze NAS – bei einem großen NAS dauert das lange.": "Hakuhakemistossa ovat vain valittujen kansioiden alla olevat kansiot. Ei valintaa: koko NAS – suurella NAS:lla se kestää kauan."
+ "In den angezeigten Ordnern suchen": "Hae näytetyistä kansioista",
+ "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Näytettyjen kansioiden hakuhakemisto: {} kansiota, tilanne {}"
 }
