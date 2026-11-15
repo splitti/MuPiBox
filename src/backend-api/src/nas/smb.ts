@@ -205,12 +205,36 @@ export function smbSystem(helperFile: string): SmbSystem {
   }
 }
 
+// cifs-utils: installed once at a time for the whole box (a login in the app and the remembered one in the background
+// would lock each other out of apt); after a failure (no internet, broken package list) not again for 30 minutes - apt
+// every 30 s wears the SD card.
+let installRun: Promise<boolean> | undefined
+let installFailedAt = 0
+const INSTALL_RETRY_MS = 30 * 60_000
+
+function installCifs(system: SmbSystem): Promise<boolean> {
+  installRun ??= system
+    .script(['install'], undefined, 15 * 60_000)
+    .then(async (r) => r.code === 0 && (await system.hasCifs()))
+    .catch(() => false)
+    .then((ok) => {
+      if (!ok) installFailedAt = Date.now()
+      return ok
+    })
+    .finally(() => {
+      installRun = undefined
+    })
+  return installRun
+}
+
 export interface SmbConnectResult {
   provider?: SmbProvider
   error?: SmbError
 }
 
-const PROBE_MS = 12_000 // a NAS whose disks sleep takes 10-20 s for its first answer; one that hangs never answers
+// a NAS whose disks sleep takes 10-20 s for its first answer; one that hangs never answers (a skipped track or a
+// stopped preload makes the connection probe too - a sleeping NAS must not count as away then)
+const PROBE_MS = 25_000
 const RETRY_MS = 30_000
 // a login the NAS refused is not tried every 30 s: a Synology or QNAP blocks the box's address after a few
 const REFUSED_RETRY_MS = 10 * 60_000
@@ -238,7 +262,6 @@ export class SmbConnection {
   private retryAt = 0
   private lastError: SmbError | undefined
   private closed = false
-  private installing: Promise<void> | undefined
   private token = ''
 
   /** made by a login in the app (not the remembered one of the config) */
@@ -297,16 +320,11 @@ export class SmbConnection {
       // A login in the app waits for it (a minute or two, once). The remembered login does not: every NAS request
       // waits on it - it is installed in the background, the NAS counts as away until then.
       if (!this.fresh) {
-        this.installing ??= this.system
-          .script(['install'], undefined, 15 * 60_000)
-          .then(() => undefined)
-          .finally(() => {
-            this.installing = undefined
-          })
+        if (Date.now() - installFailedAt < INSTALL_RETRY_MS && !installRun) return 'install'
+        void installCifs(this.system)
         return 'installing'
       }
-      const installed = await this.system.script(['install'], undefined, 15 * 60_000)
-      if (installed.code !== 0 || !(await this.system.hasCifs())) return 'install'
+      if (!(await installCifs(this.system))) return 'install'
     }
     const { host, share, account, password, domain } = this.login
     const mounted = await this.system.script(['mount', host, share], `${account}\n${password}\n${domain ?? ''}\n`, MOUNT_MS)
@@ -323,6 +341,11 @@ export class SmbConnection {
       const error = await this.mount()
       if (error) return this.failure(error)
       this.fresh = false
+      if (this.closed) {
+        // (signed off while it mounted: nothing stays mounted after a sign-off)
+        await this.system.script(['umount'], undefined, MOUNT_MS).catch(() => undefined)
+        return 'other'
+      }
     }
     if (this.closed) return 'other'
     if (!this.helper) {
@@ -434,18 +457,18 @@ export class SmbConnection {
     this.stopHelper()
   }
 
-  /** Back in use after a login that failed (its share is mounted again). */
-  reopen(): Promise<SmbError | undefined> {
+  /** Back in use after a login in the app that failed: mounted again with the next request (after its own wait). */
+  revive(): void {
     this.closed = false
     this.fresh = true
-    return this.open()
   }
 
   /** Signed off, or another NAS: helper ended, share unmounted. */
   async close(): Promise<void> {
     this.closed = true
     this.stopHelper()
-    await this.system.script(['umount'], undefined, 30_000).catch(() => undefined)
+    // (as long as a mount under way may hold the script's lock)
+    await this.system.script(['umount'], undefined, MOUNT_MS).catch(() => undefined)
   }
 }
 
@@ -589,7 +612,7 @@ export async function smbConnect(login: SmbLogin, system: SmbSystem, fresh = fal
     // the one the box uses; the failed one's helper is ended)
     next.abandon()
     current = before
-    await before.reopen()
+    before.revive()
   } else if (fresh) {
     // (none before: the remembered login gets its turn again, not this one that failed)
     next.abandon()
@@ -604,6 +627,11 @@ export async function smbDisconnect(): Promise<void> {
   const before = current
   current = undefined
   if (before) await before.close()
+}
+
+/** The login of a share mounted by a login in the app (with or without "merken"): the box keeps using it. */
+export function smbAppLogin(): SmbLogin | undefined {
+  return current?.byApp ? current.login : undefined
 }
 
 /** Why the remembered share is not used right now (shown in the app), undefined: nothing to tell. */

@@ -215,16 +215,17 @@ test('NAS SMB: why a mount failed, cifs-utils installed first, the share before 
     assert.ok((await smbConnect(LOGIN, fake)).provider)
     assert.deepEqual(fake.calls, [])
 
-    // another login in the app that is refused: the share before is mounted again and keeps working
+    // another login in the app that is refused: the answer comes at once; the share before is mounted again with the
+    // next request (not right away - its own login may be one the NAS just refused) and keeps working
     fake.calls = []
     fake.mount = { code: 1, out: 'mount error(13): Permission denied\nerror=auth' }
     const wrong = await smbConnect({ ...LOGIN, account: 'other', password: 'nope' }, fake, true)
     assert.equal(wrong.provider, undefined)
     assert.equal(wrong.error, 'auth')
-    assert.deepEqual(fake.calls, ['umount', 'mount 192.168.1.20 Musik <other>', 'mount 192.168.1.20 Musik <box>'])
+    assert.deepEqual([...fake.calls], ['umount', 'mount 192.168.1.20 Musik <other>'])
     fake.mount = { code: 0, out: 'mounted' }
-    await new Promise((r) => setTimeout(r, 80))
     assert.equal((await first.provider.list('/Musik/Hörspiele')).length, 3)
+    assert.deepEqual(fake.calls.slice(2), ['mount 192.168.1.20 Musik <box>', 'helper'])
 
     fake.mount = { code: 1, out: 'error=smb1' }
     assert.equal((await smbConnect({ ...LOGIN, share: 'Alt' }, fake, true)).error, 'smb1')

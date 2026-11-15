@@ -102,7 +102,7 @@ mount)
 	13 | 1) echo "error=auth" ;;
 	2 | 6) echo "error=notfound" ;;
 	95) echo "error=smb1" ;;
-	19) echo "error=install cifs module" ;;
+	19) echo "error=other cifs module (restart the box)" ;;
 	110 | 111 | 112 | 113 | 115 | 101 | 104) echo "error=unreachable" ;;
 	*)
 		if [ "${rc}" -eq 137 ] || [ "${rc}" -eq 124 ]; then

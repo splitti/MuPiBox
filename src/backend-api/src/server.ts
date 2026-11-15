@@ -46,7 +46,7 @@ import { registerPhotoDisplayRoutes } from './app-api/photos/albums'
 import type { PhotoNasAccess } from './app-api/photos/nas'
 import { NasAccess, type NasConnectResult } from './nas/access'
 import { NasApiError, type NasFileEntry, type NasProvider, NasSessionExpiredError } from './nas/provider'
-import { parseSmbAddress, smbConnect, smbDisconnect, smbDisplayAddress, smbErrorText, smbSystem, smbWaiting } from './nas/smb'
+import { parseSmbAddress, smbAppLogin, smbConnect, smbDisconnect, smbDisplayAddress, smbErrorText, smbSystem, smbWaiting } from './nas/smb'
 import { nasResolveBase, webdavLogin } from './nas/webdav'
 import { applyPhotoTimeAction } from './app-api/photos/settings'
 import { applyTileTimeAction } from './app-api/tile-limits'
@@ -5148,6 +5148,13 @@ let nasSmbLogged: string | undefined // (the reason logged last: not every 30 s 
 // Signs in with the login remembered in the config. Shared by all requests and marked away after a failure, see
 // nas/access.ts.
 async function nasConnectRemembered(): Promise<NasConnectResult> {
+  // A share a login in the app mounted (also without "merken") is the one the box uses until it restarts - not the
+  // config's older login. Signing off or a WebDAV login in the app ends it.
+  const appLogin = smbAppLogin()
+  if (appLogin) {
+    const result = await smbConnect(appLogin, nasSmb)
+    return result.provider ? { provider: result.provider } : { unreachable: true }
+  }
   const config = await getMupiboxConfig()
   const syn = nasSettings(config)
   if (!syn?.rememberMe || !syn.address || !syn.account || !syn.password) {
@@ -6122,6 +6129,13 @@ async function nasLoginSmb(
     res.status(400).json({ success: false, reason: 'auth', error: 'account, password or domain not usable.' })
     return
   }
+  // (SMB does not care about upper and lower case, the box's paths do: the share as the folders chosen before spell
+  // it - "\\nas\Music" for a share whose folders were chosen over WebDAV as "/music/...")
+  const chosen = nasSettings(await getMupiboxConfig())
+  const spelled = [...(chosen?.artistFolders ?? []), ...(chosen?.hiddenFolders ?? []), ...(chosen?.downloadFolders ?? [])]
+    .map((p) => p.split('/').filter(Boolean)[0])
+    .find((first) => first && first !== target.share && first.toLowerCase() === target.share.toLowerCase())
+  if (spelled) target.share = spelled
   const result = await smbConnect(
     { host: target.host, share: target.share, account: login.account, password: login.password, domain: login.domain || undefined },
     nasSmb,
@@ -6384,8 +6398,10 @@ app.get('/api/nas/index/search', localOrElternSession, async (req, res) => {
   const limit = 3000
   const paths: string[] = []
   let truncated = false
+  const roots = nasIndexRoots(nasSettings(await getMupiboxConfig()))
+  const below = (folder: string) => roots.some((r) => folder === r || folder.startsWith(`${r}/`))
   for (const folder of index.folders) {
-    if (folder.slice(folder.lastIndexOf('/') + 1).toLowerCase().includes(q)) {
+    if (below(folder) && folder.slice(folder.lastIndexOf('/') + 1).toLowerCase().includes(q)) {
       if (paths.length >= limit) {
         truncated = true
         break
