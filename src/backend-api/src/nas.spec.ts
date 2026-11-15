@@ -247,3 +247,21 @@ test('NAS access: a sign-in under way does not undo a login in the app or a sign
   assert.equal(await again, undefined)
   assert.equal(access.signedIn, undefined)
 })
+
+test('NAS access: the login made in the app is used again after the NAS was away, not the remembered one', async () => {
+  const provider = (n: number) => ({ kind: 'webdav', n }) as unknown as NasProvider
+  let connects = 0
+  const access = new NasAccess(async () => ({ provider: provider(100 + ++connects) }), 20)
+  const app = provider(1)
+  access.use(app, { protocol: 'smb', address: 'nas', https: false, share: 'Musik', domain: '', account: 'box' })
+  assert.equal(access.appLogin?.share, 'Musik')
+  access.markAway()
+  await new Promise((r) => setTimeout(r, 30))
+  assert.equal(await access.active(), app)
+  assert.equal(connects, 0)
+  // signed off: the remembered login again
+  access.clear()
+  assert.equal(access.appLogin, undefined)
+  assert.notEqual(await access.active(), app)
+  assert.equal(connects, 1)
+})

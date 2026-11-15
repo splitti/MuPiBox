@@ -46,7 +46,7 @@ import { registerPhotoDisplayRoutes } from './app-api/photos/albums'
 import type { PhotoNasAccess } from './app-api/photos/nas'
 import { NasAccess, type NasConnectResult } from './nas/access'
 import { NasApiError, type NasFileEntry, type NasProvider, NasSessionExpiredError } from './nas/provider'
-import { parseSmbAddress, smbAppLogin, smbConnect, smbDisconnect, smbDisplayAddress, smbErrorText, smbSystem, smbWaiting } from './nas/smb'
+import { parseSmbAddress, smbConnect, smbDisconnect, smbDisplayAddress, smbErrorText, smbSystem, smbWaiting } from './nas/smb'
 import { nasResolveBase, webdavLogin } from './nas/webdav'
 import { applyPhotoTimeAction } from './app-api/photos/settings'
 import { applyTileTimeAction } from './app-api/tile-limits'
@@ -5148,13 +5148,7 @@ let nasSmbLogged: string | undefined // (the reason logged last: not every 30 s 
 // Signs in with the login remembered in the config. Shared by all requests and marked away after a failure, see
 // nas/access.ts.
 async function nasConnectRemembered(): Promise<NasConnectResult> {
-  // A share a login in the app mounted (also without "merken") is the one the box uses until it restarts - not the
-  // config's older login. Signing off or a WebDAV login in the app ends it.
-  const appLogin = smbAppLogin()
-  if (appLogin) {
-    const result = await smbConnect(appLogin, nasSmb)
-    return result.provider ? { provider: result.provider } : { unreachable: true }
-  }
+  // (a login made in the app is not signed in here: NasAccess keeps using it until signed off or restarted)
   const config = await getMupiboxConfig()
   const syn = nasSettings(config)
   if (!syn?.rememberMe || !syn.address || !syn.account || !syn.password) {
@@ -6089,9 +6083,9 @@ app.post('/api/nas/login', localOrElternSession, async (req, res) => {
     return
   }
 
-  nasAccess.use(result.provider)
+  nasAccess.use(result.provider, { protocol: 'webdav', address, https: Boolean(useHttps), share: '', domain: '', account })
   nasListCacheClear() // another NAS or account: its folders
-  smbDisconnect().catch(() => undefined) // (a share mounted before is not needed any more)
+  smbDisconnect(nasSmb).catch(() => undefined) // (a share mounted before is not needed any more)
 
   if (rememberMe === true) {
     try {
@@ -6146,7 +6140,7 @@ async function nasLoginSmb(
     res.json({ success: false, reason, error: smbErrorText(reason) })
     return
   }
-  nasAccess.use(result.provider)
+  nasAccess.use(result.provider, { protocol: 'smb', address: target.host, https: false, share: target.share, domain: login.domain, account: login.account })
   nasListCacheClear()
   if (login.rememberMe) {
     try {
@@ -6262,8 +6256,8 @@ async function buildNasIndex(): Promise<void> {
           }
           return files
         } catch (error) {
-          if (folder === '/') {
-            throw error
+          if (folder === '/' || (depth === 0 && !(error instanceof NasApiError || error instanceof NasSessionExpiredError))) {
+            throw error // (a shown folder the NAS did not answer for: no index of the start folders only)
           }
           skipped++ // one unreadable folder must not fail the whole run
           if (!(error instanceof NasApiError || error instanceof NasSessionExpiredError)) unanswered++
@@ -6314,20 +6308,25 @@ async function buildNasIndex(): Promise<void> {
 app.get('/api/nas/state', localOrElternSession, async (_req, res) => {
   const syn = nasSettings(await getMupiboxConfig())
   const session = nasAccess.signedIn ?? (await Promise.race([nasAccess.active(), new Promise<undefined>((r) => setTimeout(() => r(undefined), 8000))]))
+  // (the login made in the app while it is the box's - also one without "merken", which the config does not hold)
+  const live = nasAccess.appLogin
+  const protocol = live ? live.protocol : syn?.protocol === 'smb' ? 'smb' : 'webdav'
+  const address = live ? live.address : (syn?.address ?? '')
+  const share = live ? live.share : (syn?.share ?? '')
   res.json({
     success: true,
-    address: syn?.address ?? '',
-    https: syn?.https === true,
-    protocol: syn?.protocol === 'smb' ? 'smb' : 'webdav',
-    share: syn?.share ?? '',
-    domain: syn?.domain ?? '',
-    unc: syn?.protocol === 'smb' && syn.address && syn.share ? smbDisplayAddress(syn.address, syn.share) : '',
-    account: syn?.account ?? '',
+    address,
+    https: live ? live.https : syn?.https === true,
+    protocol,
+    share,
+    domain: live ? live.domain : (syn?.domain ?? ''),
+    unc: protocol === 'smb' && address && share ? smbDisplayAddress(address, share) : '',
+    account: live ? live.account : (syn?.account ?? ''),
     rememberMe: syn?.rememberMe === true,
     hasPassword: Boolean(syn?.password),
     loggedIn: Boolean(session),
     offline: nasAccess.isAway(),
-    loginError: syn?.protocol === 'smb' ? (smbWaiting() ?? '') : '',
+    loginError: protocol === 'smb' ? (smbWaiting() ?? '') : '',
     artistFolders: syn?.artistFolders ?? [],
     hiddenFolders: syn?.hiddenFolders ?? [],
     downloadFolders: syn?.downloadFolders ?? [],
@@ -6350,7 +6349,7 @@ app.post('/api/nas/logout', localOrElternSession, async (_req, res) => {
   }
   nasAccess.clear()
   nasListCacheClear()
-  await smbDisconnect().catch(() => undefined)
+  await smbDisconnect(nasSmb).catch(() => undefined)
   console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS: signed out, remembered password deleted`)
   res.json({ success: true })
 })

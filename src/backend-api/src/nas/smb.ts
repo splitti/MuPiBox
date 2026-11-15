@@ -526,7 +526,8 @@ export class SmbProvider implements NasProvider {
   async folderExists(folder: string, signal?: AbortSignal): Promise<boolean> {
     if (folder.split('/').filter(Boolean).length === 0) return true
     const inner = this.inner(folder)
-    if (inner === undefined) return false
+    // (a folder on another share - a profile made over WebDAV sees all of them: unknown here, not gone)
+    if (inner === undefined) throw new Error('NAS (SMB): the folder is on another share')
     try {
       const info = await this.json<{ isdir: boolean }>(`/stat?path=${enc(inner)}`, signal ?? AbortSignal.timeout(8000))
       return info.isdir
@@ -622,16 +623,15 @@ export async function smbConnect(login: SmbLogin, system: SmbSystem, fresh = fal
   return { error }
 }
 
-/** Signed off, or the NAS is a WebDAV one now: nothing mounted any more. */
-export async function smbDisconnect(): Promise<void> {
+/**
+ * Signed off, or the NAS is a WebDAV one now: nothing mounted any more - also a share mounted before the server
+ * started again (system: to find and unmount that one).
+ */
+export async function smbDisconnect(system?: SmbSystem): Promise<void> {
   const before = current
   current = undefined
   if (before) await before.close()
-}
-
-/** The login of a share mounted by a login in the app (with or without "merken"): the box keeps using it. */
-export function smbAppLogin(): SmbLogin | undefined {
-  return current?.byApp ? current.login : undefined
+  else if (system && (await system.mountedSource())) await system.script(['umount'], undefined, MOUNT_MS).catch(() => undefined)
 }
 
 /** Why the remembered share is not used right now (shown in the app), undefined: nothing to tell. */

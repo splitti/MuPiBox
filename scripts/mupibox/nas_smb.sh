@@ -103,7 +103,9 @@ mount)
 	2 | 6) echo "error=notfound" ;;
 	95) echo "error=smb1" ;;
 	19) echo "error=other cifs module (restart the box)" ;;
-	110 | 111 | 112 | 113 | 115 | 101 | 104) echo "error=unreachable" ;;
+	# (112 "Host is down" although 445 answered just before: the usual answer of a NAS that speaks only SMB1)
+	112) echo "error=smb1" ;;
+	110 | 111 | 113 | 115 | 101 | 104) echo "error=unreachable" ;;
 	*)
 		if [ "${rc}" -eq 137 ] || [ "${rc}" -eq 124 ]; then
 			echo "error=unreachable"

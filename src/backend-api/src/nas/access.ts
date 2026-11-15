@@ -4,6 +4,16 @@
 
 import { type NasProvider, NasSessionExpiredError } from './provider'
 
+/** How a login made in the app reaches the NAS (shown in the app instead of the config's, which may be older). */
+export interface NasLoginInfo {
+  protocol: 'webdav' | 'smb'
+  address: string
+  https: boolean
+  share: string
+  domain: string
+  account: string
+}
+
 export interface NasConnectResult {
   provider?: NasProvider
   /** the NAS did not answer at all: it is marked away for a while */
@@ -17,6 +27,9 @@ export class NasAccess {
   private lastWorking: NasProvider | undefined
   // bumped by use() and clear(): a sign-in that was under way before must not put its provider back after them
   private generation = 0
+  // the login made in the app: used again after the NAS was away, instead of the remembered one of the config (that
+  // may be older, or another protocol - a login without "merken" is not in the config at all)
+  private pinned: { provider: NasProvider; info?: NasLoginInfo } | undefined
 
   /** connect: signs in with the remembered login (undefined provider: none remembered, refused, or away) */
   constructor(
@@ -52,9 +65,15 @@ export class NasAccess {
     this.current = undefined
   }
 
-  /** A login in the app worked: this provider from now on, and the NAS is there. */
-  use(provider: NasProvider): void {
+  /** The login made in the app, while it is the box's (until signed off or restarted). */
+  get appLogin(): NasLoginInfo | undefined {
+    return this.pinned?.info
+  }
+
+  /** A login in the app worked: this provider from now on (until signed off or restarted), and the NAS is there. */
+  use(provider: NasProvider, info?: NasLoginInfo): void {
     this.generation++
+    this.pinned = { provider, info }
     this.current = provider
     this.lastWorking = provider
     this.awayUntil = 0
@@ -63,6 +82,7 @@ export class NasAccess {
   /** Signed off in the app. */
   clear(): void {
     this.generation++
+    this.pinned = undefined
     this.current = undefined
     this.lastWorking = undefined
   }
@@ -85,6 +105,12 @@ export class NasAccess {
   }
 
   private async signIn(): Promise<NasProvider | undefined> {
+    if (this.pinned) {
+      // (the login of the app again: WebDAV signs in with every request anyway, SMB mounts again by itself)
+      this.current = this.pinned.provider
+      this.lastWorking = this.pinned.provider
+      return this.current
+    }
     const generation = this.generation
     const result = await this.connect()
     if (generation !== this.generation) {

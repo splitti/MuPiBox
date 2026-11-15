@@ -152,7 +152,8 @@ test('NAS SMB provider: the share as top folder, listing, exists, read whole and
     assert.equal(await provider.folderExists('/Musik'), true)
     assert.equal(await provider.folderExists('/Musik/Hörspiele/Teil 2'), true)
     assert.equal(await provider.folderExists('/Musik/Hörspiele/weg'), false)
-    assert.equal(await provider.folderExists('/Andere'), false)
+    // (another share: unknown here, not gone - a profile made over WebDAV must not drop its folders)
+    await assert.rejects(provider.folderExists('/Andere'), /another share/)
 
     const whole = await provider.read('/Musik/Hörspiele/Folge 1.mp3')
     assert.equal(whole.status, 200)
