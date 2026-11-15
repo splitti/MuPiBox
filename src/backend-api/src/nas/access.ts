@@ -15,6 +15,8 @@ export class NasAccess {
   private pending: Promise<NasProvider | undefined> | undefined
   private awayUntil = 0
   private lastWorking: NasProvider | undefined
+  // bumped by use() and clear(): a sign-in that was under way before must not put its provider back after them
+  private generation = 0
 
   /** connect: signs in with the remembered login (undefined provider: none remembered, refused, or away) */
   constructor(
@@ -52,6 +54,7 @@ export class NasAccess {
 
   /** A login in the app worked: this provider from now on, and the NAS is there. */
   use(provider: NasProvider): void {
+    this.generation++
     this.current = provider
     this.lastWorking = provider
     this.awayUntil = 0
@@ -59,6 +62,7 @@ export class NasAccess {
 
   /** Signed off in the app. */
   clear(): void {
+    this.generation++
     this.current = undefined
     this.lastWorking = undefined
   }
@@ -81,7 +85,12 @@ export class NasAccess {
   }
 
   private async signIn(): Promise<NasProvider | undefined> {
+    const generation = this.generation
     const result = await this.connect()
+    if (generation !== this.generation) {
+      // (a login in the app or a sign-off came in the meantime: theirs counts)
+      return this.current
+    }
     if (!result.provider) {
       if (result.unreachable) this.markAway()
       return undefined

@@ -131,7 +131,9 @@ export function smbSystem(helperFile: string): SmbSystem {
       return new Promise((resolve) => {
         const child = spawn('sudo', ['bash', SMB_SCRIPT, ...args], { stdio: ['pipe', 'pipe', 'pipe'] })
         let out = ''
-        const timer = setTimeout(() => child.kill('SIGKILL'), timeoutMs)
+        // (SIGTERM: sudo passes it on to the script - a SIGKILL ended only sudo, and the script went on as root,
+        // holding its lock and mounting after the server had given up)
+        const timer = setTimeout(() => child.kill('SIGTERM'), timeoutMs)
         child.stdout.on('data', (d) => (out += d))
         child.stderr.on('data', (d) => (out += d))
         child.on('error', () => undefined)
@@ -208,6 +210,10 @@ export interface SmbConnectResult {
 
 const PROBE_MS = 12_000 // a NAS whose disks sleep takes 10-20 s for its first answer; one that hangs never answers
 const RETRY_MS = 30_000
+// a login the NAS refused is not tried every 30 s: a Synology or QNAP blocks the box's address after a few
+const REFUSED_RETRY_MS = 10 * 60_000
+// longer than nas_smb.sh may take itself (its lock up to 90 s, the check of 445 6 s, the mount 45 s)
+const MOUNT_MS = 160_000
 
 function isAbort(error: unknown): boolean {
   const name = (error as Error)?.name
@@ -228,7 +234,10 @@ export class SmbConnection {
   private probing: Promise<boolean> | undefined
   private lastProbe = 0
   private retryAt = 0
+  private lastError: SmbError | undefined
   private closed = false
+  private installing: Promise<void> | undefined
+  private token = ''
 
   /** fresh: mount anew at the first open (a login in the app); else a share mounted already is used as it is */
   constructor(
@@ -253,6 +262,11 @@ export class SmbConnection {
     return Boolean(this.helper) && this.answering
   }
 
+  /** Why the last try failed while it is not tried again yet (the remembered login is not tried every request). */
+  get waiting(): SmbError | undefined {
+    return !this.running && Date.now() < this.retryAt ? this.lastError : undefined
+  }
+
   /** Mounts the share if needed, starts the helper if needed, and probes - undefined when it answers, else why not. */
   open(): Promise<SmbError | undefined> {
     if (!this.opening) {
@@ -265,46 +279,63 @@ export class SmbConnection {
 
   private failure(error: SmbError): SmbError {
     this.answering = false
-    this.retryAt = Date.now() + (this.system.retryMs ?? RETRY_MS)
+    this.lastError = error
+    const refused = error === 'auth' || error === 'notfound' || error === 'smb1'
+    this.retryAt = Date.now() + (this.system.retryMs ?? (refused ? REFUSED_RETRY_MS : RETRY_MS))
     return error
   }
 
   private async mount(): Promise<SmbError | undefined> {
     if (!(await this.system.hasCifs())) {
+      // A login in the app waits for it (a minute or two, once). The remembered login does not: every NAS request
+      // waits on it - it is installed in the background, the NAS counts as away until then.
+      if (!this.fresh) {
+        this.installing ??= this.system
+          .script(['install'], undefined, 15 * 60_000)
+          .then(() => undefined)
+          .finally(() => {
+            this.installing = undefined
+          })
+        return 'install'
+      }
       const installed = await this.system.script(['install'], undefined, 15 * 60_000)
       if (installed.code !== 0 || !(await this.system.hasCifs())) return 'install'
     }
     const { host, share, account, password, domain } = this.login
-    const mounted = await this.system.script(['mount', host, share], `${account}\n${password}\n${domain ?? ''}\n`, 60_000)
+    const mounted = await this.system.script(['mount', host, share], `${account}\n${password}\n${domain ?? ''}\n`, MOUNT_MS)
     return mounted.code === 0 ? undefined : smbErrorOf(mounted.out)
   }
 
   private async doOpen(): Promise<SmbError | undefined> {
-    if (this.fresh || !this.helper) {
-      const { host, share } = this.login
-      const source = await this.system.mountedSource()
-      if (this.fresh || source?.toLowerCase() !== `//${host}/${share}`.toLowerCase()) {
-        this.stopHelper()
-        const error = await this.mount()
-        if (error) return this.failure(error)
-        this.fresh = false
+    const { host, share } = this.login
+    // (checked every time, also with a helper running: a share that is not mounted any more leaves an empty folder,
+    // whose answers looked like a share with nothing in it)
+    const source = await this.system.mountedSource()
+    if (this.fresh || source?.toLowerCase() !== `//${host}/${share}`.toLowerCase()) {
+      this.stopHelper()
+      const error = await this.mount()
+      if (error) return this.failure(error)
+      this.fresh = false
+    }
+    if (this.closed) return 'other'
+    if (!this.helper) {
+      let handle: SmbHelperHandle
+      try {
+        handle = await this.system.startHelper(SMB_MOUNT_POINT, (this.token = randomBytes(24).toString('hex')))
+      } catch {
+        return this.failure('other')
       }
-      if (this.closed) return 'other'
-      if (!this.helper) {
-        try {
-          const token = randomBytes(24).toString('hex')
-          const handle = await this.system.startHelper(SMB_MOUNT_POINT, token)
-          this.helper = { ...handle, token }
-          handle.onExit(() => {
-            if (this.helper?.port === handle.port) {
-              this.helper = undefined
-              this.answering = false
-            }
-          })
-        } catch {
-          return this.failure('other')
+      if (this.closed) {
+        handle.kill() // (signed off while it started)
+        return 'other'
+      }
+      this.helper = { ...handle, token: this.token }
+      handle.onExit(() => {
+        if (this.helper?.port === handle.port) {
+          this.helper = undefined
+          this.answering = false
         }
-      }
+      })
     }
     if (!(await this.probe())) return this.failure('unreachable')
     this.answering = true
@@ -383,6 +414,12 @@ export class SmbConnection {
       if (isAbort(error)) this.suspect()
       throw error
     }
+  }
+
+  /** Not used any more, the mount is someone else's now: only its helper is ended. */
+  abandon(): void {
+    this.closed = true
+    this.stopHelper()
   }
 
   /** Back in use after a login that failed (its share is mounted again). */
@@ -511,6 +548,9 @@ export async function smbConnect(login: SmbLogin, system: SmbSystem, fresh = fal
     if (current.running && (await current.probe())) {
       return { provider: new SmbProvider(current) }
     }
+    // (failed a moment ago - a refused login 10 minutes ago: not tried again yet)
+    const waiting = current.waiting
+    if (waiting) return { error: waiting }
     const error = await current.open()
     return error ? { error } : { provider: new SmbProvider(current) }
   }
@@ -520,12 +560,16 @@ export async function smbConnect(login: SmbLogin, system: SmbSystem, fresh = fal
   if (before) await before.close()
   const error = await next.open()
   if (!error) return { provider: new SmbProvider(next) }
-  if (before && current === next) {
+  if (current !== next) {
+    next.abandon() // (another login came in the meantime: this one's helper must not stay behind)
+  } else if (fresh && before) {
     // (a login in the app that did not work: the share that worked before is mounted again - its provider is still
-    // the one the box uses)
+    // the one the box uses; the failed one's helper is ended)
+    next.abandon()
     current = before
     await before.reopen()
   }
+  // (else it stays the current one: the remembered login is tried again after its wait, not on every request)
   return { error }
 }
 
@@ -536,7 +580,7 @@ export async function smbDisconnect(): Promise<void> {
   if (before) await before.close()
 }
 
-/** Whether a share is in use (the login of the app's NAS page is SMB). */
-export function smbInUse(): boolean {
-  return Boolean(current)
+/** Why the remembered share is not used right now (shown in the app), undefined: nothing to tell. */
+export function smbWaiting(): SmbError | undefined {
+  return current?.waiting
 }

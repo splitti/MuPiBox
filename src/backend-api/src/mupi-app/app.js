@@ -6641,7 +6641,7 @@ function nasTop() {
   return [
     `<section class="card"><h2>Anmeldung</h2>${
       loginForm
-        ? `<div class="field"><label>Wie erreicht die Box dein NAS?</label><div class="seg" id="n-proto">${[
+        ? `${st.loginError && !nas.loginOpen ? `<p class="help" style="margin:0"><b>${esc(tr(`Anmeldung fehlgeschlagen: ${nasSmbError(st.loginError)}`))}</b></p>` : ''}<div class="field"><label>Wie erreicht die Box dein NAS?</label><div class="seg" id="n-proto">${[
             ['smb', 'Windows-Freigabe (SMB)'],
             ['webdav', 'WebDAV'],
           ]

@@ -12,7 +12,7 @@ if (!root || token.length < 16) {
   process.exit(2)
 }
 
-startSmbHelper(root, token)
+startSmbHelper(root, token, 0, { requireMount: true })
   .then((server) => {
     const address = server.address()
     process.stdout.write(`port=${typeof address === 'object' && address ? address.port : 0}\n`)

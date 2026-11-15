@@ -46,7 +46,7 @@ import { registerPhotoDisplayRoutes } from './app-api/photos/albums'
 import type { PhotoNasAccess } from './app-api/photos/nas'
 import { NasAccess, type NasConnectResult } from './nas/access'
 import { NasApiError, type NasFileEntry, type NasProvider, NasSessionExpiredError } from './nas/provider'
-import { parseSmbAddress, smbConnect, smbDisconnect, smbDisplayAddress, smbErrorText, smbSystem } from './nas/smb'
+import { parseSmbAddress, smbConnect, smbDisconnect, smbDisplayAddress, smbErrorText, smbSystem, smbWaiting } from './nas/smb'
 import { nasResolveBase, webdavLogin } from './nas/webdav'
 import { applyPhotoTimeAction } from './app-api/photos/settings'
 import { applyTileTimeAction } from './app-api/tile-limits'
@@ -5143,6 +5143,7 @@ const nasAudioExtensions = ['.mp3', '.flac', '.wav', '.wma', '.ogg', '.m4a']
 
 // The share of an SMB NAS is mounted by nas_smb.sh and read by a helper process next to server.js (nas/smb.ts).
 const nasSmb = smbSystem(path.join(serverDir, 'nas-smb-helper.js'))
+let nasSmbLogged: string | undefined // (the reason logged last: not every 30 s again)
 
 // Signs in with the login remembered in the config. Shared by all requests and marked away after a failure, see
 // nas/access.ts.
@@ -5161,9 +5162,15 @@ async function nasConnectRemembered(): Promise<NasConnectResult> {
     if (!syn.share) return {}
     const result = await smbConnect({ host: syn.address, share: syn.share, account: syn.account, password, domain: syn.domain || undefined }, nasSmb)
     if (!result.provider) {
-      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS (SMB): ${smbErrorText(result.error ?? 'other')}`)
+      if (nasSmbLogged !== result.error) {
+        console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS (SMB): ${smbErrorText(result.error ?? 'other')}`)
+        nasSmbLogged = result.error
+      }
+      // (away for the usual 30 s in any case: requests in between fall back to the local copies at once; the
+      // connection itself waits longer before it tries a refused login again)
       return { unreachable: true }
     }
+    nasSmbLogged = undefined
     return { provider: result.provider }
   }
   smbDisconnect().catch(() => undefined) // (the NAS is a WebDAV one now: nothing mounted)
@@ -6182,6 +6189,7 @@ const sameRoots = (a: string[] | undefined, b: string[]) => (a ?? []).length ===
 let nasIndexCache: NasFolderIndex | undefined
 let nasIndexLoaded = false
 let nasIndexLastAttempt = 0
+let nasIndexLastRoots: string[] | undefined // the shown folders the last run was for
 const nasIndexJob = { running: false, folders: 0, error: '' }
 
 async function loadNasIndex(): Promise<NasFolderIndex | undefined> {
@@ -6215,8 +6223,10 @@ async function buildNasIndex(): Promise<void> {
   let again = false
   try {
     const roots = nasIndexRoots(nasSettings(await getMupiboxConfig()))
+    nasIndexLastRoots = roots
     // (the shown folders themselves are found too - the search finds "Hörspiele" as well)
     const found: string[] = [...roots]
+    const hidden = new Set(nasSettings(await getMupiboxConfig())?.hiddenFolders ?? [])
     let skipped = 0
     let unanswered = 0 // of those: the NAS did not answer at all (not "gone" or "no permission")
     let level = roots.length > 0 ? roots : ['/']
@@ -6243,7 +6253,7 @@ async function buildNasIndex(): Promise<void> {
       const next: string[] = []
       for (const files of listings) {
         for (const file of files) {
-          if (file.isdir && !nasIndexSkip(file.name)) {
+          if (file.isdir && !nasIndexSkip(file.name) && !hidden.has(file.path)) {
             found.push(file.path)
             next.push(file.path)
           }
@@ -6297,6 +6307,7 @@ app.get('/api/nas/state', localOrElternSession, async (_req, res) => {
     hasPassword: Boolean(syn?.password),
     loggedIn: Boolean(session),
     offline: nasAccess.isAway(),
+    loginError: syn?.protocol === 'smb' ? (smbWaiting() ?? '') : '',
     artistFolders: syn?.artistFolders ?? [],
     hiddenFolders: syn?.hiddenFolders ?? [],
     downloadFolders: syn?.downloadFolders ?? [],
@@ -6309,9 +6320,7 @@ app.get('/api/nas/state', localOrElternSession, async (_req, res) => {
 // request would just sign in again). Address and account stay for the next login; the NAS tab of the box is empty
 // until then, the downloaded folders stay playable.
 app.post('/api/nas/logout', localOrElternSession, async (_req, res) => {
-  nasAccess.clear()
-  nasListCacheClear()
-  await smbDisconnect().catch(() => undefined)
+  // (the remembered password first: a request between dropping the session and deleting it signed in again with it)
   try {
     await updateNasConfig({ password: '', rememberMe: false })
   } catch (error) {
@@ -6319,6 +6328,9 @@ app.post('/api/nas/logout', localOrElternSession, async (_req, res) => {
     res.status(500).json({ success: false })
     return
   }
+  nasAccess.clear()
+  nasListCacheClear()
+  await smbDisconnect().catch(() => undefined)
   console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS: signed out, remembered password deleted`)
   res.json({ success: true })
 })
@@ -6329,7 +6341,8 @@ app.get('/api/nas/index/status', localOrElternSession, async (_req, res) => {
   // (made for other shown folders than now: made anew at once)
   const changed = Boolean(index) && !sameRoots(index?.roots, roots)
   const stale = !index || Date.now() - index.updated > nasIndexMaxAgeMs || changed
-  if (stale && !nasIndexJob.running && (changed || Date.now() - nasIndexLastAttempt > nasIndexRetryMs) && (await nasAccess.active())) {
+  const firstForThese = changed && !sameRoots(nasIndexLastRoots, roots)
+  if (stale && !nasIndexJob.running && (firstForThese || Date.now() - nasIndexLastAttempt > nasIndexRetryMs) && (await nasAccess.active())) {
     void buildNasIndex()
   }
   res.json({

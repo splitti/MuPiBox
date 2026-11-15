@@ -221,3 +221,29 @@ test('NAS access: one login for requests at the same time, away after no answer,
     NasApiError,
   )
 })
+
+test('NAS access: a sign-in under way does not undo a login in the app or a sign-off', async () => {
+  const provider = (n: number) => ({ kind: 'smb', n }) as unknown as NasProvider
+  let release: () => void = () => undefined
+  const access = new NasAccess(async () => {
+    await new Promise<void>((r) => (release = r))
+    return { provider: provider(1) }
+  }, 50)
+  const pending = access.active()
+  await new Promise((r) => setTimeout(r, 5))
+  const manual = provider(2)
+  access.use(manual)
+  release()
+  assert.equal(await pending, manual)
+  assert.equal(access.signedIn, manual)
+
+  const again = (async () => {
+    access.clear()
+    return access.active()
+  })()
+  await new Promise((r) => setTimeout(r, 5))
+  access.clear() // signed off while it signs in
+  release()
+  assert.equal(await again, undefined)
+  assert.equal(access.signedIn, undefined)
+})

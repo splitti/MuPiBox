@@ -3,11 +3,15 @@
 //
 // Why a process of its own: a NAS that hangs or vanishes blocks every file access to its mount for up to a minute, in
 // the thread pool of the process that made it. In the server that stopped all its file accesses (config, covers,
-// photos) - here only the helper waits, the server sees a request that does not answer, kills the helper and mounts
-// the share again later (nas/smb.ts). Only Node's own modules: it is bundled into nas-smb-helper.js on its own.
+// photos) - here only the helper waits, the server sees a request that does not answer and counts the NAS as away
+// (nas/smb.ts). Only Node's own modules: it is bundled into nas-smb-helper.js on its own.
+//
+// Links on the share are followed by the box's kernel, not by the NAS: one pointing out of the share (a link to /etc
+// made on the NAS) would be read or written on the box. Every path is checked to stay inside the share.
 
 import { randomBytes, timingSafeEqual } from 'node:crypto'
-import { mkdir, open, readdir, rename, stat, unlink, writeFile } from 'node:fs/promises'
+import { constants } from 'node:fs'
+import { open, readdir, realpath, rename, stat, unlink } from 'node:fs/promises'
 import http from 'node:http'
 import path from 'node:path'
 
@@ -54,14 +58,47 @@ export function smbHelperResolve(root: string, nasPath: unknown): string | undef
   return path.join(root, ...parts)
 }
 
-// The HTTP status of a failed file access: gone, refused - or the NAS did not answer (503: the server takes it as away)
+// errors of the connection to the NAS (the server takes them as "away"); any other is about this one path
+const AWAY_CODES = new Set([
+  'EIO',
+  'EHOSTDOWN',
+  'EHOSTUNREACH',
+  'ETIMEDOUT',
+  'ECONNRESET',
+  'ECONNABORTED',
+  'ECONNREFUSED',
+  'ENOTCONN',
+  'ENETDOWN',
+  'ENETUNREACH',
+  'EAGAIN',
+  'ESTALE',
+  'EPIPE',
+  'ENODEV',
+  'ENXIO',
+  'EBUSY',
+  'ENOMEM',
+  'NOTMOUNTED',
+])
+
+// The HTTP status of a failed file access: gone, refused, not usable - or the NAS did not answer (503: away). A name
+// the NAS cannot hold (EINVAL), a link loop or a name too long is about that one path, not the NAS.
 function statusOf(error: unknown): number {
   const code = (error as NodeJS.ErrnoException)?.code
   if (code === 'ENOENT' || code === 'ENOTDIR') return 404
-  if (code === 'EACCES' || code === 'EPERM' || code === 'EROFS') return 403
+  if (code === 'EACCES' || code === 'EPERM' || code === 'EROFS' || code === 'ELOOP' || code === 'OUTSIDE') return 403
   if (code === 'EEXIST' || code === 'ENOTEMPTY') return 412
   if (code === 'EISDIR') return 409
-  return 503
+  if (!code || AWAY_CODES.has(code)) return 503
+  return 404
+}
+
+const coded = (code: string) => Object.assign(new Error(code), { code })
+
+/** The path itself, after following its links - when it stays inside the share (root: the share's real path). */
+async function inside(root: string, target: string): Promise<string> {
+  const real = await realpath(target)
+  if (real !== root && !real.startsWith(`${root}${path.sep}`)) throw coded('OUTSIDE')
+  return real
 }
 
 function send(res: http.ServerResponse, status: number, body?: unknown) {
@@ -193,10 +230,12 @@ async function exists(file: string): Promise<boolean> {
 
 /**
  * The helper's HTTP server on 127.0.0.1 (port 0: any free one). root: the mount point; token: required in
- * "x-mupibox-token" (other programs on the box must not read the NAS through it).
+ * "x-mupibox-token" (other programs on the box must not read the NAS through it). requireMount: the probe fails when
+ * nothing is mounted at root (the box; the tests use a plain folder).
  */
-export function startSmbHelper(root: string, token: string, port = 0): Promise<http.Server> {
+export async function startSmbHelper(root: string, token: string, port = 0, options: { requireMount?: boolean } = {}): Promise<http.Server> {
   const expected = Buffer.from(token)
+  const realRoot = await realpath(root)
   const server = http.createServer(async (req, res) => {
     const given = Buffer.from(String(req.headers['x-mupibox-token'] ?? ''))
     if (given.length !== expected.length || !timingSafeEqual(given, expected)) {
@@ -208,6 +247,11 @@ export function startSmbHelper(root: string, token: string, port = 0): Promise<h
     try {
       switch (`${req.method} ${url.pathname}`) {
         case 'GET /probe': {
+          // the share still mounted: the mount point is on another device than its parent folder
+          if (options.requireMount) {
+            const [own, parent] = await Promise.all([stat(root), stat(path.dirname(root))])
+            if (own.dev === parent.dev) throw coded('NOTMOUNTED')
+          }
           // a name that is not there: the NAS has to be asked (a cached folder answers "ok" while the NAS hangs)
           try {
             await stat(path.join(root, `.mupibox-probe-${randomBytes(6).toString('hex')}`))
@@ -219,40 +263,56 @@ export function startSmbHelper(root: string, token: string, port = 0): Promise<h
         }
         case 'GET /list':
           if (!target) return send(res, 400)
-          send(res, 200, await list(target, url.searchParams.get('folders') === '1'))
+          send(res, 200, await list(await inside(realRoot, target), url.searchParams.get('folders') === '1'))
           return
         case 'GET /stat': {
           if (!target) return send(res, 400)
-          const info = await stat(target)
+          const info = await stat(await inside(realRoot, target))
           send(res, 200, { isdir: info.isDirectory(), size: info.isDirectory() ? 0 : info.size, mtimeMs: Math.round(info.mtimeMs) })
           return
         }
         case 'GET /file':
         case 'HEAD /file':
           if (!target) return send(res, 400)
-          await readFileRange(target, req, res)
+          await readFileRange(await inside(realRoot, target), req, res)
           return
         case 'PUT /file': {
           if (!target || target === root) return send(res, 400)
           const data = await readBody(req)
           if (!data) return send(res, 413)
-          await mkdir(path.dirname(target), { recursive: true })
+          // (into a folder there - as over WebDAV; never through a link: O_NOFOLLOW)
+          const folder = await inside(realRoot, path.dirname(target))
           // without overwrite an existing file stays (412), as WebDAV's "Overwrite: F"
-          await writeFile(target, data, { flag: url.searchParams.get('overwrite') === '1' ? 'w' : 'wx' })
+          const handle = await open(
+            path.join(folder, path.basename(target)),
+            constants.O_WRONLY |
+              constants.O_CREAT |
+              (url.searchParams.get('overwrite') === '1' ? constants.O_TRUNC : constants.O_EXCL) |
+              (constants.O_NOFOLLOW ?? 0),
+            0o644,
+          )
+          try {
+            await handle.writeFile(data)
+          } finally {
+            await handle.close()
+          }
           send(res, 201, { ok: true })
           return
         }
         case 'POST /move': {
           const to = smbHelperResolve(root, url.searchParams.get('to'))
           if (!target || !to || target === root || to === root) return send(res, 400)
-          if (url.searchParams.get('overwrite') !== '1' && (await exists(to))) return send(res, 412)
-          await rename(target, to)
+          // (renaming and deleting do not follow a link of the last part - the folders above must stay inside)
+          const from = path.join(await inside(realRoot, path.dirname(target)), path.basename(target))
+          const dest = path.join(await inside(realRoot, path.dirname(to)), path.basename(to))
+          if (url.searchParams.get('overwrite') !== '1' && (await exists(dest))) return send(res, 412)
+          await rename(from, dest)
           send(res, 201, { ok: true })
           return
         }
         case 'DELETE /file':
           if (!target || target === root) return send(res, 400)
-          await unlink(target)
+          await unlink(path.join(await inside(realRoot, path.dirname(target)), path.basename(target)))
           send(res, 204)
           return
         default:

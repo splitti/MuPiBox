@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import type http from 'node:http'
 import type { AddressInfo } from 'node:net'
 import os from 'node:os'
@@ -284,6 +284,77 @@ test('NAS SMB: a share that hangs counts as away - nothing ended, nothing unmoun
     assert.deepEqual(fake.calls, ['helper'])
   } finally {
     await smbDisconnect()
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('NAS SMB: a refused remembered login waits, a failed login in the app leaves no helper, links out of the share are refused', async () => {
+  const root = await shareFolder()
+  const outside = await mkdtemp(path.join(os.tmpdir(), 'mupibox-box-'))
+  await writeFile(path.join(outside, 'secret.txt'), 'box file')
+  const fake = await fakeSystem(root)
+  try {
+    // the remembered login refused: not mounted again on the next tries while it waits
+    fake.retryMs = 60_000
+    fake.mount = { code: 1, out: 'error=auth' }
+    assert.equal((await smbConnect(LOGIN, fake)).error, 'auth')
+    assert.equal((await smbConnect(LOGIN, fake)).error, 'auth')
+    assert.deepEqual(fake.calls, ['mount 192.168.1.20 Musik <box>'])
+    await smbDisconnect()
+
+    // a working share, then a login in the app whose share mounts but does not answer: its helper is ended
+    fake.retryMs = 50
+    fake.mount = { code: 0, out: 'mounted' }
+    const first = await smbConnect(LOGIN, fake, true)
+    assert.ok(first.provider)
+    const helpersBefore = fake.servers.length
+    const realStart = fake.startHelper
+    fake.startHelper = async (r, t) => {
+      const h = await realStart(r, t)
+      fake.hang = true // (this share's NAS does not answer)
+      return h
+    }
+    assert.equal((await smbConnect({ ...LOGIN, share: 'Andere' }, fake, true)).error, 'unreachable')
+    fake.startHelper = realStart
+    fake.hang = false
+    const failedHelper = fake.servers[helpersBefore]
+    assert.equal(failedHelper.listening, false, 'the failed login left its helper running')
+    await new Promise((r) => setTimeout(r, 80))
+    assert.equal((await first.provider.list('/Musik/Hörspiele')).length, 3)
+
+    // a link on the share pointing out of it (on a NAS the box's kernel would follow it)
+    let linked = true
+    try {
+      await symlink(path.join(outside, 'secret.txt'), path.join(root, 'Hörspiele', 'link.mp3'))
+      await symlink(outside, path.join(root, 'Hörspiele', 'linkdir'), 'dir')
+    } catch {
+      linked = false // (no right to make links here: Windows without developer mode)
+    }
+    if (linked) {
+      const read = await first.provider.read('/Musik/Hörspiele/link.mp3')
+      assert.equal(read.status, 403)
+      await read.arrayBuffer()
+      await assert.rejects(first.provider.list('/Musik/Hörspiele/linkdir'), NasApiError)
+      assert.equal(await first.provider.write('/Musik/Hörspiele/linkdir/x.jpg', Buffer.from('x'), { contentType: 'image/jpeg', overwrite: true }), 'denied')
+      assert.equal(await first.provider.write('/Musik/Hörspiele/link.mp3', Buffer.from('x'), { contentType: 'image/jpeg', overwrite: true }), 'denied')
+      assert.equal(await readFile(path.join(outside, 'secret.txt'), 'utf8'), 'box file')
+    }
+  } finally {
+    await smbDisconnect()
+    await rm(root, { recursive: true, force: true })
+    await rm(outside, { recursive: true, force: true })
+  }
+})
+
+test('NAS SMB helper: the probe fails when nothing is mounted (an empty folder of the box)', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'mupibox-smb-'))
+  const server = await startSmbHelper(root, 'x'.repeat(32), 0, { requireMount: true })
+  try {
+    const r = await fetch(`http://127.0.0.1:${(server.address() as AddressInfo).port}/probe`, { headers: { 'x-mupibox-token': 'x'.repeat(32) } })
+    assert.equal(r.status, 503)
+    assert.equal(((await r.json()) as { code: string }).code, 'NOTMOUNTED')
+  } finally {
+    server.close()
     await rm(root, { recursive: true, force: true })
   }
 })
