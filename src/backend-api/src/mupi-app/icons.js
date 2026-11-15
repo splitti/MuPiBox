@@ -64,6 +64,10 @@ export const ICONS = {
 }
 
 export function icon(name, size = 20) {
+  // (the picture of an extension - a file of the box, drawn through a mask in the colour of the text)
+  if (/^\/api\/ext-files\/[a-z][a-z0-9-]*\/[A-Za-z0-9._-]+$/.test(String(name))) {
+    return `<span class="ic ext-glyph" style="width:${size}px;height:${size}px;--g:url('${name}')" aria-hidden="true"></span>`
+  }
   const d = ICONS[name] ?? ICONS.info
   return `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`
 }

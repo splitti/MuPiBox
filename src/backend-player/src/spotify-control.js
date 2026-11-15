@@ -2568,8 +2568,36 @@ function play() {
   }
 }
 
+// "next" and "previous" at a podcast episode: the list of a feed has the newest episode first, so - as with an album - "next" starts the
+// older episode and "previous" the newer one. The neighbour in the feed is asked from the backend API, which knows the cached feeds (the
+// player knows no feed address). At the newest (oldest) episode the same one starts again, from its beginning. It is started as the display starts an episode (the same route), so the tile time, the listening time and the
+// pause rules count as for any start; the source "skip" makes the display's player page follow to the new episode (the navigator).
+async function skipEpisode(direction) {
+  const current = currentMeta.episode
+  try {
+    const response = await fetch(`http://127.0.0.1:8200/api/rssfeed/neighbour?url=${encodeURIComponent(current)}&dir=${direction}`, { signal: AbortSignal.timeout(4000) })
+    const found = response.ok ? await response.json() : null
+    if (!found?.found || typeof found.url !== 'string') return log.debug(`${now()}: [Spotify Control] ${direction}: no neighbour of the episode found`)
+    // (another start came meanwhile: it stays)
+    if (currentMeta.currentType !== 'rss' || currentMeta.episode !== current) return
+    if (found.same) episodeFromStart = found.url
+    const query = new URLSearchParams({ src: 'skip' })
+    if (typeof found.cover === 'string' && /^\/api\//.test(found.cover)) query.set('cover', found.cover)
+    if (tileState.current) query.set('tile', tileState.current)
+    const start = await fetch(
+      `http://127.0.0.1:${config.server.port}/rss/${encodeURIComponent(found.url)}/${encodeURIComponent(String(found.title ?? ''))}:title:artist:${encodeURIComponent(String(found.artist ?? currentMeta.album ?? ''))}?${query}`,
+      { signal: AbortSignal.timeout(4000) },
+    )
+    if (!start.ok) episodeFromStart = ''
+  } catch (err) {
+    episodeFromStart = ''
+    log.debug(`${now()}: [Spotify Control] ${direction} at an episode failed: ${err}`)
+  }
+}
+
 function next() {
   forgetSpotifyState()
+  if (currentMeta.currentPlayer === 'mplayer' && currentMeta.currentType === 'rss' && currentMeta.episode) return void skipEpisode('older')
   if (currentMeta.currentPlayer === 'spotify') {
     if (spotifyBlockedUntil()) return log.debug(`${now()}: [Spotify Control] next: Spotify blocks the requests`)
     spotifyApi.skipToNext(ownSpotifyDeviceOptions()).then(
@@ -2597,6 +2625,7 @@ function next() {
 
 function previous() {
   forgetSpotifyState()
+  if (currentMeta.currentPlayer === 'mplayer' && currentMeta.currentType === 'rss' && currentMeta.episode) return void skipEpisode('newer')
   if (currentMeta.currentPlayer === 'spotify') {
     if (spotifyBlockedUntil()) return log.debug(`${now()}: [Spotify Control] previous: Spotify blocks the requests`)
     spotifyApi.skipToPrevious(ownSpotifyDeviceOptions()).then(
@@ -3402,6 +3431,7 @@ function saveEpisodePositions() {
   }
 }
 setInterval(saveEpisodePositions, 60 * 1000)
+let episodeFromStart = ''
 // The play of an episode starts: the one before is written away. Returns where it goes on (seconds), or null to
 // start from the beginning.
 function startEpisode(url) {
@@ -3409,6 +3439,11 @@ function startEpisode(url) {
   if (pendingEpisodeSeek) endEpisodeSeek()
   playingEpisode = url
   loadEpisodeFeedLength(url)
+  // ("next" at the newest episode starts it again: from its beginning, not where it was left)
+  if (episodeFromStart === url) {
+    episodeFromStart = ''
+    return null
+  }
   if (!episodeResumeOn()) return null
   const p = positionOf(url)
   if (!p || p.done || !(p.pos > 10) || (p.len && p.pos > p.len - 30)) return null

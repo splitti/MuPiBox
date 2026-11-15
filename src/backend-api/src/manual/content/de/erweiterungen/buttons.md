@@ -37,7 +37,7 @@ Jede Änderung wird sofort gespeichert und gilt sofort. Ein Neustart ist nicht n
 
 Pins, die schon vergeben sind, lassen sich nicht wählen. Die Liste nennt, **wer** den Pin hält: die Box selbst (Ein-/Aus-Taster, LED, Lüfter, eingeschalteter Drehregler, MuPiHAT), die Boot-Konfiguration (zum Beispiel die Soundkarte), eine andere Erweiterung oder ein anderer Taster dieser Seite.
 
-Die drei Pins des **Drehreglers** (26, 24 und 10) sind frei, solange der Drehregler ausgeschaltet ist; die Liste zeigt sie dann mit dem Hinweis „Drehregler (ausgeschaltet)". Hat ein Taster einen dieser Pins, lässt sich der Drehregler nicht einschalten, bis der Pin wieder frei ist. Umgekehrt nehmen LED und Lüfter keinen Pin, den ein Taster hat.
+Die drei Pins des **Drehreglers** (Vorgabe 26, 24 und 10, in seinen Einstellungen änderbar) sind frei, solange der Drehregler ausgeschaltet ist; die Liste zeigt sie dann mit dem Hinweis „Drehregler (ausgeschaltet)". Hat ein Taster einen dieser Pins, lässt sich der Drehregler nicht einschalten, bis der Pin wieder frei ist. Umgekehrt nehmen LED und Lüfter keinen Pin, den ein Taster hat.
 
 ## Kurz und lang drücken
 

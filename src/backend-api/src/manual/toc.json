@@ -388,6 +388,13 @@
           "de": "Wetter",
           "en": "Weather"
         }
+      },
+      {
+        "id": "nfc",
+        "title": {
+          "de": "NFC-Extension",
+          "en": "NFC extension"
+        }
       }
     ]
   },

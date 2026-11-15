@@ -303,6 +303,9 @@ fi
 if [ "$(/usr/bin/jq -r .rotary.step ${CONFIG})" == "null" ]; then
 	update_config '.rotary.step = 5'
 fi
+if [ "$(/usr/bin/jq -r .rotary.pinA ${CONFIG})" == "null" ]; then
+	update_config '.rotary.pinA = 26 | .rotary.pinB = 24 | .rotary.pinButton = 10'
+fi
 
 ensure_theme forms
 ensure_theme comic

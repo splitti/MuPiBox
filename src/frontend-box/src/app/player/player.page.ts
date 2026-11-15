@@ -198,6 +198,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
     const pair = (a?: number | string, b?: number | string) => (a !== undefined && a !== '' && b !== undefined && b !== '' && Number(b) > 0 ? `${a} / ${b}` : '')
     const m = this.media
     if (m.type === 'library' || m.type === 'nas' || m.type === 'tidal') return pair(local?.currentTracknr, local?.totalTracks)
+    // (a podcast: the place of the episode in its feed, the newest being the first - as the list has it)
+    if (m.type === 'rss') return pair(this.rssPlace > 0 ? this.rssPlace : undefined, this.rssEpisodes.length)
     if (m.type !== 'spotify') return ''
     if (m.playlistid && (spotify?.playlist?.total_tracks ?? 0) > 0) return pair(spotify?.playlist?.current_track_position, spotify?.playlist?.total_tracks)
     if (m.showid && spotify?.show_details) return pair(spotify.show_details.current_episode_position, spotify.show_details.total_episodes)
@@ -378,6 +380,9 @@ export class PlayerPage implements OnInit, AfterViewInit {
   loadingTrackList = false
   // (Spotify did not answer for the list - blocking the box, offline: said so instead of "no tracks")
   trackListFailed = false
+  // The episodes of the podcast that plays (newest first) and the place of this one in them (1 = the newest, 0 = not known)
+  private rssEpisodes: TrackListEntry[] = []
+  private rssPlace = 0
   trackList: TrackListEntry[] = []
   trackListTitle = ''
   pressingCover = false
@@ -475,6 +480,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   }
 
   ngOnInit() {
+    void this.loadRssEpisodes()
     // Handle case where no media object was provided (external playback)
     if (!this.media) {
       this.handleExternalPlayback()
@@ -1069,6 +1075,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
       this.playing = true
       this.playerService.sendCmd(PlayerCmds.PREVIOUS)
     }
+    // (a podcast: the player starts the episode before this one - the page shows it as soon as it plays)
+    if (this.media.type === 'rss') this.externalNavigator.checkSoon()
   }
 
   skipNext() {
@@ -1079,6 +1087,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
       this.playing = true
       this.playerService.sendCmd(PlayerCmds.NEXT)
     }
+    if (this.media.type === 'rss') this.externalNavigator.checkSoon()
   }
 
   toggleshuffle() {
@@ -1122,7 +1131,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   // --------------------------------------------
 
   coverPointerDown() {
-    if (this.media.type !== 'spotify' && this.media.type !== 'library' && this.media.type !== 'nas' && this.media.type !== 'tidal') {
+    if (this.media.type !== 'spotify' && this.media.type !== 'library' && this.media.type !== 'nas' && this.media.type !== 'tidal' && this.media.type !== 'rss') {
       return
     }
     clearTimeout(this.longPressTimer)
@@ -1138,6 +1147,26 @@ export class PlayerPage implements OnInit, AfterViewInit {
     this.pressingCover = false
   }
 
+  // The episodes of this podcast (the box finds the feed from the episode); the counter under the cover and the list use them
+  private async loadRssEpisodes(): Promise<void> {
+    if (this.media?.type !== 'rss' || !this.media.id) return
+    try {
+      const feed = await firstValueFrom(this.playerService.getRssEpisodes(this.media))
+      const episodes = feed.found ? (feed.episodes ?? []) : []
+      this.rssEpisodes = episodes.map((episode, index) => ({
+        position: index + 1,
+        id: episode.url,
+        name: episode.title,
+        duration_ms: episode.seconds > 0 ? episode.seconds * 1000 : undefined,
+      }))
+      this.rssPlace = this.rssEpisodes.findIndex((entry) => this.isCurrentTrack(entry)) + 1
+    } catch {
+      // (the box could not say: no counter, an empty list)
+      this.rssEpisodes = []
+      this.rssPlace = 0
+    }
+  }
+
   async openTrackList() {
     this.updateListFontFamily()
     this.showTrackList = true
@@ -1146,7 +1175,11 @@ export class PlayerPage implements OnInit, AfterViewInit {
     this.trackListFailed = false
 
     try {
-      if (this.media.type === 'library') {
+      if (this.media.type === 'rss') {
+        await this.loadRssEpisodes()
+        this.trackListTitle = this.media.artist
+        this.trackList = this.rssEpisodes
+      } else if (this.media.type === 'library') {
         const tracks = await firstValueFrom(this.playerService.getLocalTracklist(this.media))
         this.trackListTitle = this.media.title
         this.trackList = (tracks ?? []).map((track) => ({
@@ -1264,6 +1297,15 @@ export class PlayerPage implements OnInit, AfterViewInit {
   private pendingTrackTimer: ReturnType<typeof setTimeout> | undefined
 
   playTrackFromList(entry: TrackListEntry) {
+    // (a podcast: another episode - the player starts it and this page is opened again for it, see skipNext)
+    if (this.media.type === 'rss') {
+      this.closeTrackList()
+      if (!this.isCurrentTrack(entry)) {
+        this.playerService.playRssEpisode(this.media, entry)
+        this.externalNavigator.checkSoon()
+      }
+      return
+    }
     if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal') {
       clearTimeout(this.pendingTrackTimer)
       this.pendingTrackPosition = entry.position
@@ -1275,6 +1317,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   }
 
   isCurrentTrack(entry: TrackListEntry): boolean {
+    if (this.media.type === 'rss') return sameEpisode(entry.id, this.media.id)
     if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal') {
       const actualPosition = this.currentPlayedLocal?.currentTracknr
       if (this.pendingTrackPosition !== undefined) {
@@ -1308,5 +1351,18 @@ export class PlayerPage implements OnInit, AfterViewInit {
     const minutes = Math.floor(totalSeconds / 60)
     const seconds = totalSeconds % 60
     return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  }
+}
+
+// The same episode, as the file the feed names: host and path (the address of an episode may carry another query or scheme)
+function sameEpisode(a: string | undefined, b: string | undefined): boolean {
+  if (!a || !b) return false
+  if (a === b) return true
+  try {
+    const x = new URL(a)
+    const y = new URL(b)
+    return x.host.toLowerCase() === y.host.toLowerCase() && x.pathname === y.pathname
+  } catch {
+    return false
   }
 }

@@ -15,7 +15,7 @@ import express, { type NextFunction, type Request, type RequestHandler, type Res
 import { acquireLock, DATA_LOCK, RESUME_LOCK, releaseLock } from '../file-lock'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { DATA_DIR, EXTENSIONS_DIR, EXTENSIONS_DIR_BEFORE, LIBRARY_DIR } from '../paths'
-import { checkResources, type Conflict, describeResources, findConflicts, idleCoreGpio, type GpioUse, gatherTaken, realProbe, type Resources, sameResources } from './extension-resources'
+import { checkResources, type Conflict, describeResources, findConflicts, idleCoreGpio, type GpioUse, gatherTaken, realProbe, type Resources, rotaryPins, sameResources } from './extension-resources'
 import { localNetworkOnly, requireCsrf, requireSession } from './middleware'
 import { readZip } from './winamp-skin'
 
@@ -33,7 +33,7 @@ if (!process.env.MUPIBOX_EXT_DIR && process.env.NODE_ENV !== 'test' && process.e
     // (the other process was faster, or it is not possible: then they stay where they are and are not found - logged by the load)
   }
 }
-export const HOST_API = 5
+export const HOST_API = 8
 // (the catalog of the MuPiBox, in its repository: what is in it is trusted - an extension can do everything on the box; while 5.1
 // is not with splitti yet, the 5.1 branch of the fork that builds it)
 const DEFAULT_CATALOG = 'https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/catalog.json'
@@ -48,7 +48,8 @@ const FILE = /^[A-Za-z0-9_][A-Za-z0-9_./-]{0,100}$/
 // what a package may hold (a file of another kind is a reason to refuse it)
 const ALLOWED_FILES = /\.(js|mjs|json|svg|png|jpg|css|txt|md|rules|html)$/i
 // ... and what a package may hold beyond that: the unit files of its systemd services (never served to a browser)
-const PACKAGE_FILES = /\.(js|mjs|json|svg|png|jpg|css|txt|md|rules|html|service|timer)$/i
+// (hostApi 6: also Python programs, which the API part starts itself - a driver that talks to a device needs more than Node has; never served either)
+const PACKAGE_FILES = /\.(js|mjs|json|svg|png|jpg|css|txt|md|rules|html|service|timer|py)$/i
 const GROUPS = new Set(['cdrom', 'audio', 'video', 'plugdev'])
 // (a Debian package name; never one that ends in - : apt-get reads "name-" as "remove name" - "g++" is a real one)
 const PACKAGE = /^[a-z0-9][a-z0-9+.-]{0,59}[a-z0-9+]$/
@@ -73,7 +74,7 @@ export interface Manifest {
   icon?: string
   // the settings page of the extension in the app, declared (no code of the extension runs in the app): a card with these fields
   // (place, adopt - hostApi 5: the settings as a page of their own under Einstellungen > System, and pages of the core shown there)
-  ui?: { title: string; heading?: string; help?: string; place?: 'system'; adopt?: string[]; items: { key: string; label: string; help?: string; dep?: string; choices?: { value: string | number; label: string }[]; type?: 'lookup' | 'order' | 'roster' | 'heading'; rename?: string; optional?: string; extra?: { key: string; label?: string; when: (string | number)[]; choices: { value: string | number; label: string }[] }; search?: string; list?: string; add?: string; remove?: string; select?: string; color?: string; restore?: string; addFrom?: boolean }[] }
+  ui?: { title: string; heading?: string; help?: string; place?: 'system'; adopt?: string[]; items: { key: string; label: string; help?: string; dep?: string; showIf?: { key: string; is: string[] }; choices?: { value: string | number; label: string }[]; type?: 'lookup' | 'order' | 'roster' | 'heading' | 'status' | 'action' | 'list'; state?: string; post?: string; confirm?: string; empty?: string; page?: boolean; rename?: string; optional?: string; extra?: { key: string; label?: string; when: (string | number)[]; choices: { value: string | number; label: string }[] }; search?: string; list?: string; add?: string; remove?: string; select?: string; color?: string; restore?: string; addFrom?: boolean }[] }
   settings?: Record<string, { type: 'boolean' | 'string' | 'number' | 'secret' | 'gpio'; default?: unknown; pattern?: string; options?: (string | number)[]; min?: number; max?: number; legacy?: string }>
   system?: { udev?: { name: string; file: string }[]; units?: { name: string; file: string }[]; groups?: string[]; packages?: string[] }
   /** what it needs from the box: ports, GPIO pins, services (required; {} for nothing) - tested against the box before it is installed */
@@ -166,6 +167,23 @@ async function takenByOthers(id: string, deps: ExtensionDeps) {
     self: id,
     selfDeclared: self ? await heldResources(self) : undefined,
     config: deps.getMupiboxConfig() as unknown as Record<string, unknown> | undefined,
+    others: await Promise.all(installed.map(async (m) => ({ id: m.id, resources: await heldResources(m) }))),
+    probe: realProbe((cmd, args) => run(cmd, args, 15000)),
+  })
+}
+
+/**
+ * Everything that is taken on the box, for the choice of the pins of the rotary encoder: its own pins are its own (also while it
+ * runs and holds them), whatever else the core, the boot configuration, the extensions or a running program hold is not.
+ */
+export async function takenForRotary(config: Record<string, unknown> | undefined): Promise<Awaited<ReturnType<typeof gatherTaken>>> {
+  const installed = await installedManifests()
+  const own = rotaryPins(config)
+  const rotary = config?.rotary && typeof config.rotary === 'object' ? (config.rotary as Record<string, unknown>) : {}
+  return gatherTaken({
+    selfDeclared: { gpio: [own.a, own.b, own.button].map((pin) => ({ pin })) },
+    // (switched off for the test: the pins it holds now are not "taken by others")
+    config: { ...(config ?? {}), rotary: { ...rotary, active: false } },
     others: await Promise.all(installed.map(async (m) => ({ id: m.id, resources: await heldResources(m) }))),
     probe: realProbe((cmd, args) => run(cmd, args, 15000)),
   })
@@ -374,8 +392,17 @@ export function checkManifest(m: unknown, files: Set<string>): string | null {
     const settings = x.settings ?? {}
     for (const item of ui.items) {
       // (a roster is a list of things the extension keeps itself - users, say - and needs no setting; a heading is only a line of text)
-      if (item?.type !== 'roster' && item?.type !== 'heading' && !Object.hasOwn(settings, String(item?.key))) return `ui: no such setting: ${item?.key}`
+      if (item?.type !== 'roster' && item?.type !== 'heading' && item?.type !== 'status' && item?.type !== 'action' && item?.type !== 'list' && !Object.hasOwn(settings, String(item?.key))) return `ui: no such setting: ${item?.key}`
       if (typeof item.label !== 'string' || item.label.length > 100 || (item.help !== undefined && (typeof item.help !== 'string' || item.help.length > 800))) return `ui: bad text: ${item.key}`
+      // (a field that is shown only while a choice has one of the values named: `showIf: { key, is: [...] }`, the key a setting with
+      // `options` - the fields of one of several readers, say. A box that does not know it shows the field always.)
+      if (item.showIf !== undefined) {
+        const s = item.showIf
+        const spec = typeof s?.key === 'string' && Object.hasOwn(settings, s.key) ? settings[s.key] : undefined
+        if (!spec || spec.type !== 'string' || !Array.isArray(spec.options)) return `ui: showIf needs a setting with options: ${item.label}`
+        if (!Array.isArray(s.is) || s.is.length < 1 || s.is.some((v) => !spec.options?.includes(v))) return `ui: showIf names a value the setting does not have: ${item.label}`
+        if (item.type === 'heading' && item.page !== undefined) return `ui: a page cannot be shown or hidden: ${item.label}`
+      }
       // (a field that depends on another: shown while a switch is on, or - hostApi 5 - while a pin is chosen)
       const depType = item.dep !== undefined && Object.hasOwn(settings, String(item.dep)) ? settings[item.dep].type : undefined
       if (item.dep !== undefined && depType !== 'boolean' && !(x.hostApi >= 5 && depType === GPIO_SETTING)) return `ui: dep must be a switch: ${item.key}`
@@ -387,6 +414,32 @@ export function checkManifest(m: unknown, files: Set<string>): string | null {
         // or while one of its pins is chosen)
         if (item.rename !== undefined && !(Object.hasOwn(settings, String(item.rename)) && settings[item.rename].type === 'string' && settings[item.rename].options === undefined)) return `ui: rename must be a text setting: ${item.label}`
         if (item.optional !== undefined && !(Object.hasOwn(settings, String(item.optional)) && settings[item.optional].type === 'boolean')) return `ui: optional must be a switch: ${item.label}`
+        // (hostApi 7) a heading that starts a page of its own under the page of the extension (a category with sub categories)
+        if (item.page !== undefined && (item.page !== true || x.hostApi < 7 || ui.place !== 'system' || item.optional !== undefined || item.rename !== undefined || item.dep !== undefined)) return `ui: a page needs hostApi 7, a page of its own for the extension, and no rename, optional or dep: ${item.label}`
+        continue
+      }
+      if (item.type === 'status') {
+        // (hostApi 6) a read-only block of lines the extension's own API part reports: the app asks the route now and then while the
+        // card is open and shows what it answers ({ rows: [{ label, value, tone }] }) - whether a device is there, what it saw last
+        if (x.hostApi < 6 || item.key !== undefined || item.choices !== undefined || item.extra !== undefined || item.dep !== undefined) return `ui: a status needs hostApi 6 and has no setting: ${item.label}`
+        if (typeof item.state !== 'string' || !new RegExp(`^/api/ext/${x.id}/[a-z]{1,30}$`).test(item.state)) return `ui: bad status address: ${item.label}`
+        continue
+      }
+      if (item.type === 'action') {
+        // (hostApi 7) a button: a tap makes the app ask a route of the extension's own API part (POST, with the login of the parents) and
+        // show what it answers ({ ok, message }) - start a job, cancel one, forget something. Nothing is saved in the settings.
+        if (x.hostApi < 7 || item.key !== undefined || item.choices !== undefined || item.extra !== undefined || item.state !== undefined) return `ui: an action needs hostApi 7 and has no setting: ${item.label}`
+        if (typeof item.post !== 'string' || !new RegExp(`^/api/ext/${x.id}/[a-z]{1,30}$`).test(item.post)) return `ui: bad action address: ${item.label}`
+        if (item.confirm !== undefined && (typeof item.confirm !== 'string' || item.confirm.length < 1 || item.confirm.length > 160)) return `ui: bad action question: ${item.label}`
+        continue
+      }
+      if (item.type === 'list') {
+        // (hostApi 8) a list the extension keeps itself, with a picture for each entry (the tags of an NFC reader, say): the route answers
+        // { items: [{ id, title, text, image, coverPost, actions: [{ label, post, confirm }] }] }. Its buttons POST { id } to the routes
+        // they name; `coverPost` takes { id, image } with the picture the user chose. Nothing is saved in the settings.
+        if (x.hostApi < 8 || item.key !== undefined || item.choices !== undefined || item.extra !== undefined || item.state !== undefined || item.post !== undefined || item.dep !== undefined) return `ui: a list needs hostApi 8 and has no setting: ${item.label}`
+        if (typeof item.list !== 'string' || !new RegExp(`^/api/ext/${x.id}/[a-z]{1,30}$`).test(item.list)) return `ui: bad list address: ${item.label}`
+        if (item.empty !== undefined && (typeof item.empty !== 'string' || item.empty.length < 1 || item.empty.length > 160)) return `ui: bad list text: ${item.label}`
         continue
       }
       // (a pin is chosen from the pins of the box: the app draws the choice, the manifest has no say in it)
@@ -433,6 +486,11 @@ export function checkManifest(m: unknown, files: Set<string>): string | null {
         if (!Array.isArray(extra.choices) || extra.choices.length !== spec.options.length || extra.choices.some((c) => !spec.options?.includes(c?.value as never) || typeof c.label !== 'string' || c.label.length > 60)) return `ui: bad extra choices: ${item.key}`
       }
     }
+  }
+  if (x.ui !== undefined) {
+    // (hostApi 7) with sub pages everything stands on one of them: the first line is the heading of the first page
+    const starts = x.ui.items.filter((i) => i?.type === 'heading' && i.page === true)
+    if (starts.length > 0 && (x.ui.items[0] !== starts[0] || starts.length > 6 || starts.length < 2)) return 'ui: sub pages start with the first line and are two to six'
   }
   const system = x.system ?? {}
   for (const rule of system.udev ?? []) {
@@ -729,6 +787,8 @@ async function installExtension(id: string, deps: ExtensionDeps, uploaded?: Pack
     if ((sys.udev ?? []).length > 0 || staleRules.length > 0) {
       await run('sudo', ['udevadm', 'control', '--reload'], 20000)
       await run('sudo', ['udevadm', 'trigger', '--subsystem-match=block', '--action=change'], 20000)
+      // (a rule for the SPI bus - an NFC reader, say - applies to the device that is there already)
+      await run('sudo', ['udevadm', 'trigger', '--subsystem-match=spidev', '--action=change'], 20000)
     }
     for (const group of sys.groups ?? []) {
       const r = await run('sudo', ['usermod', '-aG', group, 'dietpi'], 20000)
@@ -937,7 +997,9 @@ export function registerExtensionRoutes(router: Router, deps: ExtensionDeps): vo
     const out = []
     for (const m of await enabledManifests()) {
       if (m.ui?.place !== 'system') continue
-      out.push({ id: m.id, name: m.name, title: m.ui.title, description: m.description ?? '', icon: m.icon ? `/api/ext-files/${m.id}/${m.icon}` : null, adopt: m.ui.adopt ?? [] })
+      // (pages: the sub pages of the extension - the lines that start a page, hostApi 7)
+      const pages = m.ui.items.filter((i) => i.type === 'heading' && i.page === true).map((i) => ({ title: i.label, help: i.help ?? '' }))
+      out.push({ id: m.id, name: m.name, title: m.ui.title, description: m.description ?? '', icon: m.icon ? `/api/ext-files/${m.id}/${m.icon}` : null, adopt: m.ui.adopt ?? [], pages })
     }
     res.json(out)
   })

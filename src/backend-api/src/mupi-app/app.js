@@ -727,10 +727,10 @@ function value(item) {
 }
 
 // A building block that belongs to a switch (it.dep: its key): shown only while the switch is on, a little indented;
-// it.dim: shown, but dimmed while it is off (see wire)
+// it.flat: without the indent and the line at the side; it.dim: shown, but dimmed while it is off (see wire)
 function renderItem(it) {
   const html = renderItemOnly(it)
-  if (it.dep) return `<div class="dep" data-dep="${esc(it.dep)}"${state.values.get(it.dep) ? '' : ' hidden'}>${html}</div>`
+  if (it.dep) return `<div class="dep${it.flat ? ' flat' : ''}" data-dep="${esc(it.dep)}"${state.values.get(it.dep) ? '' : ' hidden'}>${html}</div>`
   if (it.dim) return `<div class="dimmable${state.values.get(it.dim) ? '' : ' off'}" data-dim="${esc(it.dim)}">${html}</div>`
   return html
 }
@@ -3531,6 +3531,7 @@ function openEntrySheet(item, back = null) {
      ${isSync && !syncRemovable(item) && isPinned(item.id) ? `<p class="help" style="margin:0">Außerdem einzeln über die Suche hinzugefügt: Das hält es auf der Box, auch wenn es aus der Playlist geht.</p><div class="btns"><button type="button" class="btn" data-unpin>Einzeln hinzugefügt aufheben</button></div>` : ''}
      ${wholeArtist ? `<div class="section-label" style="margin:0">Alben</div><div id="e-albums"><p class="help">Lade die Alben von Spotify …</p></div>` : ''}
      ${tidalArtist ? tidalRangeFields(item) : ''}
+     ${wholeArtist || tidalArtist || item.isResume || !item.type ? '' : `<div class="btns">${nfcButtonHtml()}</div>`}
      <div class="btns">${!isSync || syncRemovable(item) ? `<button class="btn danger" data-del>${isSync ? 'Entfernen' : 'Löschen'}</button>` : ''}<button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Speichern</button></div>`,
     (sheet, close) => {
       sheet.querySelector('[data-close]').onclick = back ? back.open : close
@@ -3540,6 +3541,7 @@ function openEntrySheet(item, back = null) {
       const placer = place ? wirePlace(sheet, 'e', () => sheet.querySelector('#e-cat').value) : null
       if (placer) sheet.querySelector('#e-cat').addEventListener('change', () => void placer.reload())
       if (wholeArtist) loadArtistAlbums(item, sheet.querySelector('#e-albums'))
+      wireNfc(sheet, close, nfcMediaOfEntry(item), () => openEntrySheet(item, back))
       if (tidalArtist) wireTidalRange(item, sheet)
       // (only the mark of "added one by one" goes - the entry stays while the playlist has it)
       sheet.querySelector('[data-unpin]')?.addEventListener('click', async () => {
@@ -3907,7 +3909,7 @@ function openNasAlbumSheet(album, parent) {
      ${parent ? '' : nasPlaceLine(album)}
      ${parent ? '' : tileLimitField()}
      <button class="btn primary block" data-play>${icon('phones', 18)}Abspielen</button>
-     <div class="btns"><button class="btn" data-cover>${icon('image', 18)}${album.cover ? 'Cover ändern' : 'Cover wählen'}</button><button class="btn" data-admin>NAS-Verwaltung</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
+     <div class="btns"><button class="btn" data-cover>${icon('image', 18)}${album.cover ? 'Cover ändern' : 'Cover wählen'}</button>${nfcButtonHtml()}<button class="btn" data-admin>NAS-Verwaltung</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
     (sheet, close) => {
       for (const img of sheet.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
       const back = () => (parent ? openNasSheet(parent) : close())
@@ -3924,6 +3926,7 @@ function openNasAlbumSheet(album, parent) {
       sheet.querySelector('[data-cover]').onclick = () => pickNasCover(album, parent, (f) => openNasAlbumSheet(f, parent))
       if (!parent) void mountTileLimit(sheet, [`nas:${album.nasPath}`], String(album.title ?? ''))
       wireHeard(sheet, [], () => openNasAlbumSheet(album, parent))
+      wireNfc(sheet, close, album, () => openNasAlbumSheet(album, parent))
       sheet.querySelector('[data-place]')?.addEventListener('click', () => changeNasPlace(album, (f) => openNasAlbumSheet(f, null)))
     },
   )
@@ -4003,6 +4006,7 @@ function openLocalAlbumSheet(album, parent) {
      ${heardLine(`lib:${album.libraryPath}`)}
      <button class="btn primary block" data-cover>${icon('image', 18)}${album.cover ? 'Cover ändern' : 'Cover wählen'}</button>
      ${parent ? '' : tileLimitField()}
+     ${nfcButtonHtml() ? `<div class="btns">${nfcButtonHtml()}</div>` : ''}
      <div id="dl-album"></div><div class="section-label dl-head" id="dl-head" hidden><span>Titel</span><span></span></div><div class="rows" id="dl-tracks"></div>
      <div class="btns"><button class="btn danger" data-del>Album löschen</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
     (sheet, close) => {
@@ -4013,6 +4017,7 @@ function openLocalAlbumSheet(album, parent) {
       sheet.querySelector('[data-cover]').onclick = () => pickLocalCover(album, parent, (f) => openLocalAlbumSheet(f, parent))
       if (!parent) void mountTileLimit(sheet, [`lib:${album.libraryPath}`], String(album.title ?? ''))
       wireHeard(sheet, [], () => openLocalAlbumSheet(album, parent))
+      wireNfc(sheet, close, album, () => openLocalAlbumSheet(album, parent))
       fillAlbumDownloads(sheet, album)
       sheet.querySelector('[data-del]').onclick = () => {
         close()
@@ -4020,6 +4025,268 @@ function openLocalAlbumSheet(album, parent) {
       }
     },
   )
+}
+
+/* NFC extension (hostApi 8): "NFC-Tag hinzufügen" on the sheet of an album, a station or a podcast. The extension's API part
+   keeps the tags (extensions/nfc/api.js): the sheet asks it to give this medium to the next tag that is laid on the reader, and
+   watches what comes of it. */
+const NFC_ROUTE = '/api/ext/nfc'
+const nfcExt = () => extPages.list.find((e) => e.id === 'nfc') ?? null
+
+// the button, when the extension is on (the sheets put it among their buttons and wire it with wireNfc)
+function nfcButtonHtml() {
+  const ext = nfcExt()
+  return ext ? `<button type="button" class="btn" data-nfc>${icon(ext.icon || 'plug', 18)}NFC-Tag</button>` : ''
+}
+// (an entry of data.json: what a Smart-Sync entry has been given instead - the display shows it so, and so the tag should)
+function nfcMediaOfEntry(item) {
+  const media = { ...item }
+  for (const k of ['artist', 'title', 'cover', 'artistcover', 'category']) if (item[`${k}_override`]) media[k] = item[`${k}_override`]
+  return media
+}
+// the picture the tiles show for the medium (a podcast or a Spotify entry has none in its data: the app asks the service) - the tag
+// takes it along when it is assigned, so the list shows it too
+const nfcCover = (media) => String(coverOf(media) || '')
+
+// media: what the display starts (the entry, or the folder of the NAS or the SD card); back: reopens the sheet this came from
+function wireNfc(sheet, close, media, back) {
+  sheet.querySelector('[data-nfc]')?.addEventListener('click', () => {
+    close()
+    openNfcTagsSheet(media, back)
+  })
+}
+
+// "NFC-Tag" in the library: the tags this medium has (a picture for each, the picture can be changed, the tag taken away), and
+// "add a tag" - which opens the sheet that waits for the next tag. back: reopens the sheet this came from.
+function openNfcTagsSheet(media, back = null) {
+  const title = String(media.title_override ?? media.title ?? media.artist ?? '')
+  const again = () => openNfcTagsSheet(media, back)
+  const cover = nfcCover(media)
+  openSheet(
+    `<div class="nfc-head"><span class="album-cover" id="nt-pic">${cover ? `<img src="${esc(cover)}" alt="">` : icon('image', 40)}</span>
+       <div class="album-title"><h2 translate="no">${esc(title)}</h2><p class="help" style="margin:0">Diesem Medium zugeordnete NFC-Tags</p></div></div>
+     <ul class="ext-tags" id="nt-list" aria-live="polite"><li class="help">Lade …</li></ul>
+     <div class="btns"><button type="button" class="btn primary" id="nt-add">${icon('plus', 18)}<span>NFC-Tag hinzufügen</span></button><button type="button" class="btn" data-close>${back ? 'Zurück' : 'Schließen'}</button></div>`,
+    (sheet, close) => {
+      for (const img of sheet.querySelectorAll('#nt-pic img')) img.addEventListener('error', () => img.remove(), { once: true })
+      sheet.querySelector('[data-close]').onclick = back ? back : close
+      // (the sheet that waits for a tag: its "Zurück" and "Fertig" come back here, where the new tag is in the list)
+      sheet.querySelector('#nt-add').onclick = () => {
+        close()
+        openNfcSheet(media, { back: again })
+      }
+      const list = sheet.querySelector('#nt-list')
+      void api(`${NFC_ROUTE}/tagsfor`, { method: 'POST', body: { media }, timeoutMs: 15000 }).then((r) => {
+        if (!list.isConnected) return
+        list.textContent = ''
+        if (!r.ok || !Array.isArray(r.body?.items)) {
+          const failed = document.createElement('li')
+          failed.className = 'help'
+          failed.textContent = tr('Die Liste konnte nicht geladen werden.')
+          return list.append(failed)
+        }
+        if (r.body.items.length === 0) {
+          const none = document.createElement('li')
+          none.className = 'help'
+          none.textContent = tr('Für dieses Medium gibt es noch keinen NFC-Tag.')
+          return list.append(none)
+        }
+        sheet.querySelector('#nt-add span').textContent = tr('Weiteren NFC-Tag hinzufügen')
+        fillTagRows(list, r.body.items, again)
+      })
+    },
+  )
+}
+
+function openNfcSheet(media, { back = null, image = '' } = {}) {
+  const title = String(media.title_override ?? media.title ?? media.artist ?? '')
+  const cover = nfcCover(media)
+  let alive = true
+  let id = 0
+  let timer = 0
+  let finished = false
+  const cancel = () => {
+    if (id && !finished) void api(`${NFC_ROUTE}/cancel`, { method: 'POST', body: { id } })
+  }
+  openSheet(
+    `<span class="album-cover" id="nfc-pic"></span>
+     <div class="album-title"><h2 translate="no">${esc(title)}</h2><p class="help" style="margin:0" id="nfc-line" aria-live="polite"></p></div>
+     <label class="nfc-flex" id="nfc-flexrow"><input type="checkbox" id="nfc-flex"><span>Flex-Tag</span></label>
+     <p class="help" style="margin:0" id="nfc-flexhelp">Ein Flex-Tag hat immer das Medium, das du zuletzt dafür gewählt hast.</p>
+     <div class="btns"><button type="button" class="btn" id="nfc-image">${icon('image', 18)}Bild wählen</button><button type="button" class="btn" id="nfc-retry" hidden>Nochmal</button><button type="button" class="btn primary" data-close>${back ? 'Zurück' : 'Abbrechen'}</button></div>`,
+    (sheet, close) => {
+      const line = sheet.querySelector('#nfc-line')
+      const say = (text, tone = '') => {
+        line.textContent = tr(text)
+        line.className = `help${tone ? ` nfc-${tone}` : ''}`
+      }
+      const shown = () => image || cover
+      const drawPic = () => {
+        const pic = sheet.querySelector('#nfc-pic')
+        pic.innerHTML = shown() ? `<img src="${esc(shown())}" alt="">` : icon('image', 40)
+        for (const img of pic.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+        sheet.querySelector('#nfc-image').lastChild.textContent = tr(shown() ? 'Bild ändern' : 'Bild wählen')
+      }
+      const leave = () => (back ? back() : close())
+      sheet.querySelector('[data-close]').onclick = leave
+      drawPic()
+      const done = (r) => {
+        clearInterval(timer)
+        finished = true
+        for (const sel of ['#nfc-flexrow', '#nfc-flexhelp', '#nfc-image', '#nfc-retry']) sheet.querySelector(sel).hidden = true
+        say(r.flex ? 'Fertig – der Flex-Tag hat jetzt dieses Medium.' : 'Fertig – der Tag gehört jetzt zu diesem Medium.', 'ok')
+        if (r.previous) {
+          const was = document.createElement('p')
+          was.className = 'help'
+          was.style.margin = '0'
+          was.append(`${tr('Vorher')}: `)
+          const name = document.createElement('span')
+          name.translate = false
+          name.textContent = String(r.previous)
+          was.append(name)
+          line.after(was)
+        }
+        const ok = sheet.querySelector('[data-close]')
+        ok.textContent = tr('Fertig')
+        ok.onclick = leave
+      }
+      const poll = async () => {
+        const r = await api(`${NFC_ROUTE}/armstate?id=${id}`, { timeoutMs: 5000 })
+        if (!alive || finished || !r.ok) return
+        if (r.body?.state === 'done') done(r.body)
+        else if (r.body?.state === 'gone') {
+          clearInterval(timer)
+          say('Die Zuordnung ist abgelaufen.', 'warn')
+          sheet.querySelector('#nfc-retry').hidden = false
+        }
+      }
+      const arm = async () => {
+        clearInterval(timer)
+        cancel()
+        id = 0
+        sheet.querySelector('#nfc-retry').hidden = true
+        say('Wird vorbereitet …')
+        const r = await api(`${NFC_ROUTE}/arm`, { method: 'POST', body: { media, image, cover, flex: sheet.querySelector('#nfc-flex').checked }, timeoutMs: 15000 })
+        if (!alive) {
+          if (r.ok && r.body?.id) void api(`${NFC_ROUTE}/cancel`, { method: 'POST', body: { id: r.body.id } })
+          return
+        }
+        if (!r.ok) {
+          const why = { no_reader: 'Der NFC-Leser ist nicht bereit – bitte unter System › NFC-Extension einrichten.', not_startable: 'Dieses Medium lässt sich keinem Tag zuordnen.' }
+          return say(why[r.body?.error] ?? 'Das hat nicht geklappt', 'warn')
+        }
+        id = r.body.id
+        if (r.body.state === 'done') return done({ flex: true })
+        say('Lege jetzt den NFC-Tag auf den Leser.', 'wait')
+        timer = setInterval(poll, 1000)
+      }
+      sheet.querySelector('#nfc-flex').onchange = arm
+      sheet.querySelector('#nfc-retry').onclick = arm
+      // (the picture of the tag: this sheet makes room for the picker and comes back with the picture, or as it was)
+      sheet.querySelector('#nfc-image').onclick = () => {
+        const reopen = (next) => () => openNfcSheet(media, { back, image: next })
+        close()
+        openCoverPicker({
+          target: 'own:nfc-tag',
+          title,
+          query: title.replace(/\s+–\s+/, ' '),
+          fallbacks: [],
+          current: shown(),
+          onDone: (body) => reopen(String(body?.url ?? image))(),
+          onCancel: reopen(image),
+        })
+      }
+      arm()
+    },
+    () => {
+      alive = false
+      clearInterval(timer)
+      cancel()
+    },
+  )
+}
+
+// The rows of a list of tags (the list of the extension page, hostApi 8 `list`, and the sheet "NFC-Tag" of a medium): a picture for each
+// row, a button for the picture and the extension's own buttons; each posts { id }. redraw(): the list asks again after a change.
+function fillTagRows(box, rows, redraw) {
+  const post = (route, body) => api(route, { method: 'POST', body, timeoutMs: 20000 })
+  const said = (r, fallback) => (typeof r.body?.message === 'string' ? tr(r.body.message.slice(0, 120)) : tr(fallback))
+  for (const row of rows) {
+    const li = document.createElement('li')
+    li.className = 'ext-tag'
+    const pic = document.createElement('span')
+    pic.className = 'lib-thumb ext-tag-pic'
+    if (/^(\/api\/|https:\/\/|http:\/\/)/.test(String(row.image ?? ''))) {
+      const img = document.createElement('img')
+      img.src = row.image
+      img.alt = ''
+      img.loading = 'lazy'
+      img.referrerPolicy = 'no-referrer'
+      img.addEventListener('error', () => img.remove(), { once: true })
+      pic.append(img)
+    }
+    pic.insertAdjacentHTML('afterbegin', icon('image', 22))
+    const main = document.createElement('div')
+    main.className = 'ext-tag-main'
+    const name = document.createElement('b')
+    name.translate = false
+    name.textContent = String(row.title ?? '')
+    const sub = document.createElement('small')
+    sub.textContent = (Array.isArray(row.text) ? row.text : []).map((t) => tr(String(t))).join(' · ')
+    const buttons = document.createElement('div')
+    buttons.className = 'ext-tag-btns'
+    const add = (label, onclick, danger = false) => {
+      const b = document.createElement('button')
+      b.type = 'button'
+      b.className = `btn sm${danger ? ' danger' : ''}`
+      b.textContent = tr(label)
+      b.onclick = async () => {
+        b.disabled = true
+        await onclick()
+        if (b.isConnected) b.disabled = false
+      }
+      buttons.append(b)
+    }
+    if (typeof row.coverPost === 'string') {
+      add(row.image ? 'Bild ändern' : 'Bild wählen', async () => {
+        openCoverPicker({
+          target: `own:nfc-${String(row.id).slice(0, 20)}`,
+          title: String(row.title ?? ''),
+          query: String(row.title ?? '').replace(/\s+–\s+/, ' '),
+          fallbacks: [],
+          current: String(row.image ?? ''),
+          onDone: async (body) => {
+            const saved = await post(row.coverPost, { id: row.id, image: String(body?.url ?? '') })
+            toast(said(saved, 'Hat nicht geklappt'), saved.ok ? 'ok' : 'info')
+            redraw()
+          },
+          onCancel: redraw,
+        })
+      })
+      if (row.imageOwn) {
+        add('Cover des Mediums nehmen', async () => {
+          const saved = await post(row.coverPost, { id: row.id, image: '' })
+          toast(said(saved, 'Hat nicht geklappt'), saved.ok ? 'ok' : 'info')
+          redraw()
+        })
+      }
+    }
+    for (const action of Array.isArray(row.actions) ? row.actions.slice(0, 4) : []) {
+      add(
+        String(action.label ?? ''),
+        async () => {
+          if (action.confirm && !(await ask(tr(action.label), tr(action.confirm), tr('OK')))) return
+          const done = await post(action.post, { id: row.id })
+          toast(said(done, done.ok ? 'Erledigt' : 'Hat nicht geklappt'), done.ok ? 'ok' : 'info')
+          redraw()
+        },
+        true,
+      )
+    }
+    main.append(name, sub, buttons)
+    li.append(pic, main)
+    box.append(li)
+  }
 }
 
 // the services of the cover search, as their badge on a result
@@ -4030,7 +4297,8 @@ const COVER_SOURCES = { itunes: 'iTunes', deezer: 'Deezer', spotify: 'Spotify' }
 // target: 'local:<path>' (the folder gets it as cover.jpg) or 'own:<name>' (stored among the own pictures, onDone gets
 // its address); query: the search it starts with, fallbacks: shorter ones when it finds nothing; current: the picture
 // shown now. onHide (folders): "Kein Cover" (hide true) or, when hidden, "Cover wieder zeigen" (false); true when done
-function openCoverPicker({ target, title, query, fallbacks, current, hidden = false, onDone, onHide }) {
+function openCoverPicker({ target, title, query, fallbacks, current, hidden = false, onDone, onHide, onCancel }) {
+  let finished = false // (done or hidden: onCancel is for a picker that was left without)
   let results = []
   let chosen = null // { i } of a result, or { blob, url } of an own picture
   const coverError = (r) =>
@@ -4118,6 +4386,7 @@ function openCoverPicker({ target, title, query, fallbacks, current, hidden = fa
       if (hideButton) {
         hideButton.onclick = async () => {
           hideButton.disabled = true
+          finished = true
           close()
           await onHide(!hidden)
         }
@@ -4141,6 +4410,7 @@ function openCoverPicker({ target, title, query, fallbacks, current, hidden = fa
           ok.textContent = 'Übernehmen'
           return toast(coverError(r), 'info')
         }
+        finished = true
         close()
         onDone?.(r.body)
       }
@@ -4151,6 +4421,8 @@ function openCoverPicker({ target, title, query, fallbacks, current, hidden = fa
     },
     () => {
       if (chosen?.url) URL.revokeObjectURL(chosen.url)
+      // (after the sheet is gone: the caller may open one)
+      if (!finished && onCancel) setTimeout(onCancel, 0)
     },
   )
 }
@@ -7304,6 +7576,114 @@ function displayNote(b) {
   return ''
 }
 
+/* "Abends dunkler" at sunset: the place of the box. The box works the sunset out itself (night-dim.ts); here the parents say where it
+   stands - a place looked up by name (the name goes to Open-Meteo's search, nothing else), the position of this phone or tablet when the
+   browser allows it (only on a secure page), or typed coordinates. */
+const ndCurrent = () => {
+  const nd = disp.opts?.nightDim ?? {}
+  return {
+    enabled: !!state.values.get('ndOn'),
+    from: String(state.values.get('ndFrom')),
+    to: String(state.values.get('ndTo')),
+    level: Number(state.values.get('ndLevel')),
+    fade: Number(state.values.get('ndFade')),
+    withQuiet: !!state.values.get('ndQuiet'),
+    sunset: !!state.values.get('ndSun'),
+    lat: nd.lat ?? null,
+    lon: nd.lon ?? null,
+    place: nd.place ?? '',
+  }
+}
+
+// "Ab"/"Bis" are only asked for when the window is not sunset to sunrise: sunset is off, or the box has no place / today no sunset or sunrise
+const ndFixedNow = (nd) => !state.values.get('ndSun') || !(nd.sunsetAt && nd.sunriseAt)
+
+// the lines of the block: the place, and the sunset and sunrise of today
+function drawNdPlace() {
+  const nd = disp.opts?.nightDim ?? {}
+  const fixed = !!state.values.get('ndOn') && ndFixedNow(nd)
+  state.values.set('ndFixed', fixed)
+  for (const d of document.querySelectorAll('[data-dep="ndFixed"]')) d.hidden = !fixed
+  const box = $('#nd-place-box')
+  if (!box) return
+  box.hidden = !state.values.get('ndSun')
+  const has = typeof nd.lat === 'number' && typeof nd.lon === 'number'
+  $('#nd-place-line').innerHTML = has ? `<b translate="no">${esc(nd.place || `${nd.lat.toFixed(2)}, ${nd.lon.toFixed(2)}`)}</b>` : esc(tr('Noch kein Ort gewählt'))
+  $('#nd-sun-line').textContent = !has ? '' : nd.sunsetAt && nd.sunriseAt ? `${tr('Sonnenuntergang heute')}: ${nd.sunsetAt} · ${tr('Sonnenaufgang heute')}: ${nd.sunriseAt}` : tr('Heute geht die Sonne nicht auf oder unter – es gilt die Uhrzeit bei „Ab“ und „Bis“.')
+}
+
+function ndPlaceHtml() {
+  return `<div class="field" id="nd-place-box" hidden><label>Ort der Box</label><p style="margin:0 0 4px" id="nd-place-line"></p><p class="help" style="margin:0 0 8px" id="nd-sun-line"></p><div class="btns"><button type="button" class="btn" id="nd-place-btn">Ort wählen</button></div></div>`
+}
+
+// the sheet that chooses the place; onChosen(): the place is saved; onCancel(): it was left without one
+function openNdPlaceSheet({ onChosen, onCancel }) {
+  let chosen = false
+  let results = []
+  const geo = window.isSecureContext && navigator.geolocation
+  openSheet(
+    `<h2>Ort der Box</h2>
+     <p class="help" style="margin:0">Für den Sonnenuntergang braucht die Box den Ort, an dem sie steht. Der Ortsname geht für die Suche an Open-Meteo, sonst nichts.</p>
+     <form class="cover-search" id="nd-form"><div class="search">${icon('search')}<input class="input" id="nd-q" type="search" autocomplete="off" enterkeyhint="search" placeholder="Ort suchen" aria-label="Ort suchen"></div><button class="btn" type="submit">Suchen</button></form>
+     <div class="opts" id="nd-results" role="listbox"></div>
+     ${geo ? `<div class="btns"><button type="button" class="btn" id="nd-here">${icon('globe', 18)}Standort dieses Geräts</button></div>` : ''}
+     <details class="more"><summary>Koordinaten eingeben</summary>
+       <div class="rule-times"><div class="field"><label for="nd-lat">Breitengrad</label><input class="input" id="nd-lat" inputmode="decimal" placeholder="52.52" autocomplete="off"></div>
+         <div class="field"><label for="nd-lon">Längengrad</label><input class="input" id="nd-lon" inputmode="decimal" placeholder="13.40" autocomplete="off"></div></div>
+       <p class="help" style="margin:0">Norden und Osten sind positiv (Süden und Westen negativ), zum Beispiel 52.52 und 13.40 für Berlin.</p>
+       <div class="btns"><button type="button" class="btn" id="nd-coords">Übernehmen</button></div></details>
+     <div class="btns"><button class="btn" data-close>Abbrechen</button></div>`,
+    (sheet, close) => {
+      const list = $('#nd-results', sheet)
+      const save = async (lat, lon, place) => {
+        const r = await saveDisplayOptions({ nightDim: { ...ndCurrent(), sunset: true, lat, lon, place: String(place).slice(0, 80) } }, 'Ort gespeichert')
+        if (!r) return
+        disp.opts.nightDim = { ...(disp.opts.nightDim ?? {}), sunset: true, lat, lon, place: String(place).slice(0, 80), sunsetAt: r.sunsetAt ?? null, sunriseAt: r.sunriseAt ?? null, dimmed: r.dimmed === true }
+        chosen = true
+        close()
+        onChosen?.()
+      }
+      const nameOf = (r) => [r.name, r.region].filter(Boolean).join(', ')
+      $('#nd-form', sheet).onsubmit = async (e) => {
+        e.preventDefault()
+        $('#nd-q', sheet).blur()
+        const q = $('#nd-q', sheet).value.trim()
+        if (q.length < 2) return
+        list.innerHTML = `<div class="loading"><p>${esc(tr('Suche …'))}</p></div>`
+        const r = await api(`${API}/geocode?q=${encodeURIComponent(q)}&lang=${getLang()}`, { timeoutMs: 15000 })
+        if (!sheet.contains(list)) return
+        if (!r.ok) {
+          list.innerHTML = `<p class="help covers-empty">${esc(tr('Die Suche hat nicht geklappt – sind Box und Internet erreichbar? Die Koordinaten lassen sich auch eintippen.'))}</p>`
+          return
+        }
+        results = r.body?.results ?? []
+        list.innerHTML = results.length
+          ? results.map((x, i) => `<button type="button" class="opt" role="option" data-i="${i}"><span translate="no">${esc([nameOf(x), x.country].filter(Boolean).join(' · '))}</span></button>`).join('')
+          : `<p class="help covers-empty">${esc(tr('Nichts gefunden – anders suchen oder die Koordinaten eintippen.'))}</p>`
+        for (const b of list.querySelectorAll('[data-i]')) b.onclick = () => save(results[Number(b.dataset.i)].lat, results[Number(b.dataset.i)].lon, nameOf(results[Number(b.dataset.i)]))
+      }
+      $('#nd-here', sheet)?.addEventListener('click', () => {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => save(Math.round(pos.coords.latitude * 1000) / 1000, Math.round(pos.coords.longitude * 1000) / 1000, tr('Standort dieses Geräts')),
+          () => toast('Der Standort ließ sich nicht abfragen', 'info'),
+          { timeout: 15000 },
+        )
+      })
+      $('#nd-coords', sheet).onclick = () => {
+        const lat = Number($('#nd-lat', sheet).value.trim().replace(',', '.'))
+        const lon = Number($('#nd-lon', sheet).value.trim().replace(',', '.'))
+        if ($('#nd-lat', sheet).value.trim() === '' || $('#nd-lon', sheet).value.trim() === '' || !(Math.abs(lat) <= 90) || !(Math.abs(lon) <= 180)) return toast('Bitte gültige Koordinaten eintragen', 'info')
+        save(lat, lon, `${lat.toFixed(2)}, ${lon.toFixed(2)}`)
+      }
+      sheet.querySelector('[data-close]').onclick = close
+    },
+    // (after the sheet is gone: the caller may change the page)
+    () => {
+      if (!chosen) setTimeout(() => onCancel?.(), 0)
+    },
+  )
+}
+
 async function saveDisplayOptions(body, done = 'Gespeichert') {
   const r = await api(`${API}/display-options`, { method: 'POST', body })
   if (!r.ok) {
@@ -8645,6 +9025,8 @@ async function loadDisplaySettings() {
   state.values.set('ndLevel', nd.level ?? 30)
   state.values.set('ndFade', nd.fade ?? 30)
   state.values.set('ndQuiet', nd.withQuiet === true)
+  state.values.set('ndSun', nd.sunset === true)
+  state.values.set('ndFixed', nd.enabled === true && (nd.sunset !== true || !(nd.sunsetAt && nd.sunriseAt)))
 }
 
 async function loadControls() {
@@ -8805,6 +9187,29 @@ const BTN_FN = [
   ['Titelwahl (Drücken schaltet um)', 'tracks'],
   ['Vorspulen', 'ffwd'],
 ]
+
+// The three pins of the rotary encoder: the setting, the name in the box's answer and in its configuration, what the field is called.
+// The fields offer only pins the box found free (the header's pins that nothing else holds: the core, the boot configuration, the
+// extensions, a running program) - and the pin the encoder has now.
+const ROTARY_PIN_ITEMS = [
+  ['rotPinA', 'a', 'pinA', 'GPIO-Pin A (CLK)'],
+  ['rotPinB', 'b', 'pinB', 'GPIO-Pin B (DT)'],
+  ['rotPinBtn', 'button', 'pinButton', 'GPIO-Pin Taster'],
+]
+const rotaryPinText = (pin) => `GPIO ${pin} (Pin ${GPIO_HEADER[pin] ?? '?'})`
+const rotaryPinNumber = (text) => Number(/GPIO (\d+)/.exec(String(text ?? ''))?.[1])
+
+async function loadRotary() {
+  await loadHardware()
+  const r = hw.data.rotary
+  state.values.set('rotary', r.active)
+  state.values.set('rotStep', r.step)
+  state.values.set('btnFn', BTN_FN.find(([, v]) => v === r.button)?.[0] ?? 'Aus')
+  const free = await api(`${API}/rotary-pins`, { timeoutMs: 20000 })
+  // (no answer: the pins it has stay, nothing else is offered)
+  hw.rotaryFree = free.ok && Array.isArray(free.body?.pins) ? free.body.pins.filter((p) => !(p.holders ?? []).length).map((p) => Number(p.pin)) : []
+  for (const [key, name] of ROTARY_PIN_ITEMS) state.values.set(key, rotaryPinText(r.pins[name]))
+}
 
 /* Bluetooth */
 
@@ -9200,7 +9605,7 @@ function pinsInUse(without) {
   const used = [...(d.shim?.reserved ?? [])]
   if (without !== 'led' && d.shim?.ledPin) used.push(String(d.shim.ledPin))
   if (without !== 'fan' && d.fan?.active && d.fan?.gpio) used.push(String(d.fan.gpio))
-  if (d.rotary?.active) used.push('26', '24', '10')
+  if (d.rotary?.active) used.push(...Object.values(d.rotary.pins ?? { a: 26, b: 24, button: 10 }).map(String))
   // (pins an extension holds - the buttons of the buttons extension, say)
   used.push(...(d.extPins ?? []).map(String))
   return used
@@ -15089,7 +15494,7 @@ async function loadExtensions() {
   if (!r.ok) throw new Error(`extensions ${r.status}`)
   Object.assign(exts, { installed: [], catalog: [], catalogError: null }, r.body)
   // (an extension switched on or off, installed or removed: its page comes or goes with it)
-  setExtPages(exts.installed.filter((e) => e.enabled && e.ui?.place === 'system').map((e) => ({ id: e.id, title: e.ui.title, adopt: e.ui.adopt ?? [] })))
+  setExtPages(exts.installed.filter((e) => e.enabled && e.ui?.place === 'system').map((e) => ({ id: e.id, title: e.ui.title, icon: e.icon, adopt: e.ui.adopt ?? [], pages: e.ui.items.filter((i) => i.type === 'heading' && i.page).map((i) => ({ title: i.label, help: i.help ?? '' })) })))
   for (const e of exts.installed) {
     for (const [k, t] of Object.entries(e.settingTypes ?? {})) state.values.set(`ext.${e.id}.${k}`, t === 'secret' ? '' : e.settings?.[k])
   }
@@ -15333,6 +15738,19 @@ function extFormHtml(e, fields) {
         // The label stands left of the list.
         return `<div class="field ext-pin" data-ext-dep="${esc(it.dep ?? '')}"><label for="xg-${k}">${esc(it.label)}</label><select class="input" id="xg-${k}" data-xgpio="${k}" translate="no"><option value="0">–</option></select>${help}</div>`
       }
+      if (it.type === 'status') {
+        // a few lines the extension reports about itself (hostApi 6: is the device there, what did it see last): filled in and kept up
+        // to date by extFormMount
+        return `<div class="field ext-status" data-ext-dep=""><label>${esc(it.label)}</label><dl class="ext-status-rows" data-xstatus="${index}" aria-live="polite"></dl>${help}</div>`
+      }
+      if (it.type === 'action') {
+        // a button (hostApi 7): a tap asks a route of the extension's own API part (wired by extFormMount); nothing is saved
+        return `<div class="field ext-action" data-ext-dep="${esc(it.dep ?? '')}"><button type="button" class="btn" data-xaction="${index}">${esc(it.label)}</button>${help}</div>`
+      }
+      if (it.type === 'list') {
+        // a list with a picture for each entry (hostApi 8): drawn by extFormMount from what the extension's route answers
+        return `<div class="field ext-list"><label>${esc(it.label)}</label><ul class="ext-tags" data-xlist="${index}" aria-live="polite"></ul>${help}</div>`
+      }
       if (it.type === 'roster') {
         // a list the extension keeps itself (the users of the box, say): to look at, to add to, to take from and to choose from
         return `<div class="field"><label>${esc(it.label)}</label><ul class="ext-roster" data-xroster="${index}" aria-live="polite"></ul><div class="row" style="gap:8px"><input class="input" type="text" maxlength="24" data-xradd="${index}" placeholder="Name" autocomplete="off" aria-label="${esc(it.label)}" ${NO_PW_MANAGER}><button type="button" class="btn" data-xraddgo="${index}">Anlegen</button></div>${it.addFrom ? `<div class="field ext-roster-from"><label for="xrfrom-${index}">Bibliothek</label><select class="input" id="xrfrom-${index}" data-xrfrom="${index}"><option value="">Leere Bibliothek</option></select></div>` : ''}<div data-xrtrash="${index}"></div>${help}</div>`
@@ -15372,12 +15790,14 @@ function extFormHtml(e, fields) {
     .map((it, index) => {
       // (every field knows its group, data-xgroup: the index of its heading; after the last field of a series stands its "+")
       const g = groups.findLast((x) => x.index <= index)
-      const html = one(it, index).replace('<div ', `<div data-xgroup="${g ? g.index : ''}" `)
+      // (showIf: a field of one of several readers, shown while the choice has one of its values - see dep() in extFormMount)
+      const showIf = it.showIf ? ` data-xshow="${esc(JSON.stringify(it.showIf))}"` : ''
+      const html = one(it, index).replace('<div ', `<div data-xgroup="${g ? g.index : ''}"${showIf} `)
       const lastOfSeries = g && g.last === index && groups.findLast((x) => x.series === g.series) === g && groups.some((x) => x.series === g.series && x.heading.optional)
       return lastOfSeries ? `${html}<div class="ext-add" data-xaddrow="${g.series}"><button type="button" class="btn" data-xadd="${g.series}"><span aria-hidden="true">+</span> <span>${esc(g.heading.label)}</span></button></div>` : html
     })
     .join('')
-  const hasText = fields.some((it) => type(it) !== 'boolean' && type(it) !== 'gpio' && !it.choices && it.type !== 'lookup' && it.type !== 'roster' && it.type !== 'heading')
+  const hasText = fields.some((it) => type(it) !== 'boolean' && type(it) !== 'gpio' && !it.choices && it.type !== 'lookup' && it.type !== 'roster' && it.type !== 'heading' && it.type !== 'status' && it.type !== 'action' && it.type !== 'list')
   return { form, hasText }
 }
 
@@ -15402,7 +15822,10 @@ function extFormMount(sheet, e, fields, saved) {
       const name = d.dataset.extDep
       const g = d.dataset.xgroup === '' ? null : groups.find((x) => String(x.index) === d.dataset.xgroup)
       const on = !name ? true : e.settingTypes?.[name] === 'gpio' ? Number(e.settings?.[name] ?? 0) !== 0 : sheet.querySelector(`[data-xk="${CSS.escape(name)}"]`)?.checked !== false
-      d.hidden = !on || (g ? !groupOn(g) : false)
+      // (shown only while a choice has one of the values: the fields of the reader that is chosen)
+      const only = d.dataset.xshow ? JSON.parse(d.dataset.xshow) : null
+      const shown = !only || only.is.includes(String(e.settings?.[only.key]))
+      d.hidden = !on || !shown || (g ? !groupOn(g) : false)
     }
     // (the second choice beside a field: there while the field has one of its values)
     for (const x of sheet.querySelectorAll('[data-xwhen]')) x.hidden = !JSON.parse(x.dataset.xwhen).includes(String(e.settings?.[x.dataset.xof]))
@@ -15662,6 +16085,70 @@ function extFormMount(sheet, e, fields, saved) {
       keep()
     })
   }
+  // (a status: the route of the extension answers { rows: [{ label, value, tone }] }; drawn now and again every few seconds for as
+  // long as the card is on the page)
+  fields.forEach((item, index) => {
+    if (item.type !== 'status') return
+    const box = sheet.querySelector(`[data-xstatus="${index}"]`)
+    if (!box) return
+    let timer = 0
+    const draw = async () => {
+      if (!box.isConnected) return clearInterval(timer)
+      const r = await api(item.state, { timeoutMs: 8000 })
+      if (!box.isConnected) return clearInterval(timer)
+      const rows = r.ok && Array.isArray(r.body?.rows) ? r.body.rows : [{ label: 'Status', value: 'Nicht erreichbar', tone: 'warn' }]
+      box.textContent = ''
+      for (const row of rows.slice(0, 12)) {
+        const dt = document.createElement('dt')
+        dt.textContent = tr(String(row.label ?? ''))
+        const dd = document.createElement('dd')
+        dd.textContent = tr(String(row.value ?? ''))
+        if (['ok', 'warn', 'error'].includes(row.tone)) dd.className = `ext-status-${row.tone}`
+        box.append(dt, dd)
+      }
+    }
+    draw()
+    timer = setInterval(draw, 2500)
+  })
+  // (a button: it asks the POST route of the extension and shows the answer { ok, message }; the status above it shows what changed)
+  fields.forEach((item, index) => {
+    if (item.type !== 'action') return
+    const button = sheet.querySelector(`[data-xaction="${index}"]`)
+    if (!button) return
+    button.onclick = async () => {
+      if (item.confirm && !(await ask(tr(item.label), tr(item.confirm), tr('OK')))) return
+      button.disabled = true
+      const r = await api(item.post, { method: 'POST', body: {}, timeoutMs: 20000 })
+      button.disabled = false
+      const said = typeof r.body?.message === 'string' ? tr(r.body.message.slice(0, 120)) : ''
+      toast(said || tr(r.ok ? 'Erledigt' : 'Hat nicht geklappt'), r.ok ? 'ok' : 'info')
+    }
+  })
+  // (a list, hostApi 8: the extension's route answers { items: [{ id, title, text: [..], image, imageOwn, coverPost, actions: [{ label,
+  // post, confirm }] }] } - a picture for each entry, a button for the picture and the extension's own buttons; each posts { id })
+  fields.forEach((item, index) => {
+    if (item.type !== 'list') return
+    const box = sheet.querySelector(`[data-xlist="${index}"]`)
+    if (!box) return
+    const draw = async () => {
+      const r = await api(item.list, { timeoutMs: 15000 })
+      if (!box.isConnected) return
+      box.textContent = ''
+      if (!r.ok || !Array.isArray(r.body?.items)) {
+        box.textContent = tr('Die Liste konnte nicht geladen werden.')
+        return
+      }
+      if (r.body.items.length === 0) {
+        const empty = document.createElement('li')
+        empty.className = 'help'
+        empty.textContent = tr(item.empty ?? 'Hier ist noch nichts.')
+        box.append(empty)
+        return
+      }
+      fillTagRows(box, r.body.items.slice(0, 300), draw)
+    }
+    draw()
+  })
   // (a roster: the extension's list route says who is there and who is the current one; a change goes through the add, remove
   // and select routes. Choosing takes the box a while - it restarts - so the app waits for it and then loads itself again.)
   fields.forEach((item, index) => {
@@ -15941,28 +16428,42 @@ const EXT_ADOPTABLE = { rotary: 'drehregler' }
 const EXT_ADOPTED_TITLE = { drehregler: 'Drehregler' }
 // list: the pages there are now; adopted: page of the core -> the page of the extension that shows it
 const extPages = { list: [], adopted: new Map() }
+// (the picture of an extension: a file of its own, shown through a mask in the colour of the text, see icon())
+const EXT_ICON = /^\/api\/ext-files\/[a-z][a-z0-9-]*\/[A-Za-z0-9._-]+$/
 
 // list: [{ id, title, adopt }] - the extensions that are on and have a page of their own
 function setExtPages(list) {
   for (const old of extPages.list) {
-    state.pages.delete(old.pageId)
-    state.bySlug.delete(old.pageId)
-    delete CONTROLLERS[old.pageId]
+    for (const id of [old.pageId, ...old.subIds]) {
+      state.pages.delete(id)
+      state.bySlug.delete(id)
+      delete CONTROLLERS[id]
+    }
   }
   state.schema.pages = state.schema.pages.filter((p) => !p.extId)
   extPages.adopted.clear()
   extPages.list = list
     .filter((e) => /^[a-z][a-z0-9-]{1,30}$/.test(String(e?.id)))
-    .map((e) => ({ id: e.id, title: String(e.title ?? e.id), pageId: `ext-${e.id}`, adopt: (Array.isArray(e.adopt) ? e.adopt : []).map((a) => EXT_ADOPTABLE[a]).filter((id) => id && state.pages.has(id)) }))
+    .map((e) => ({ id: e.id, title: String(e.title ?? e.id), pageId: `ext-${e.id}`, subIds: [], icon: EXT_ICON.test(String(e.icon)) ? e.icon : '', pages: (Array.isArray(e.pages) ? e.pages : []).slice(0, 6).map((p) => ({ title: String(p?.title ?? '').slice(0, 100), help: String(p?.help ?? '').slice(0, 800) })), adopt: (Array.isArray(e.adopt) ? e.adopt : []).map((a) => EXT_ADOPTABLE[a]).filter((id) => id && state.pages.has(id)) }))
   for (const e of extPages.list) {
     // (a page of the core goes to one extension only: the first that asks)
     for (const id of e.adopt) if (!extPages.adopted.has(id)) extPages.adopted.set(id, e.pageId)
     e.adopt = e.adopt.filter((id) => extPages.adopted.get(id) === e.pageId)
-    const page = { id: e.pageId, slug: e.pageId, area: 'einstellungen', parent: 'g-system', title: e.title, description: '', icon: state.pages.get(e.adopt[0])?.icon || 'plug', sections: [], extId: e.id }
+    const symbol = e.icon || state.pages.get(e.adopt[0])?.icon || 'plug'
+    const page = { id: e.pageId, slug: e.pageId, area: 'einstellungen', parent: 'g-system', title: e.title, description: '', icon: symbol, sections: [], extId: e.id }
     state.pages.set(page.id, page)
     state.bySlug.set(page.slug, page.id)
     state.schema.pages.push(page)
-    CONTROLLERS[page.id] = extPageController(e)
+    CONTROLLERS[page.id] = extPageController(e, 0)
+    // (the sub pages of the extension, hostApi 7: the page above lists them, each shows its part of the settings)
+    e.pages.forEach((sub, n) => {
+      const child = { id: `${e.pageId}-${n + 1}`, slug: `${e.pageId}-${n + 1}`, area: 'einstellungen', parent: e.pageId, title: sub.title, description: '', icon: symbol, sections: [], extId: e.id }
+      state.pages.set(child.id, child)
+      state.bySlug.set(child.slug, child.id)
+      state.schema.pages.push(child)
+      CONTROLLERS[child.id] = extPageController(e, n + 1)
+      e.subIds.push(child.id)
+    })
   }
 }
 
@@ -15979,9 +16480,16 @@ function withoutAdopted(sections) {
   return sections.map((sec) => ((sec.items || []).some(moved) ? { ...sec, items: sec.items.filter((i) => !moved(i)) } : sec)).filter((sec, i) => sec === sections[i] || sec.items.length > 0)
 }
 
-function extPageController(entry) {
+function extPageController(entry, sub = 0) {
   const own = { e: null }
-  const adopted = () => entry.adopt.map((id) => ({ page: state.pages.get(id), ctrl: CONTROLLERS[id] })).filter((a) => a.page && a.ctrl)
+  // (sub page n shows the lines after the n-th heading that starts a page, up to the next one)
+  const starts = () => own.e.ui.items.flatMap((it, i) => (it.type === 'heading' && it.page ? [i] : []))
+  const slice = () => {
+    if (!sub) return own.e.ui.items
+    const at = starts()
+    return own.e.ui.items.slice(at[sub - 1] + 1, at[sub] ?? own.e.ui.items.length)
+  }
+  const adopted = () => (sub ? [] : entry.adopt).map((id) => ({ page: state.pages.get(id), ctrl: CONTROLLERS[id] })).filter((a) => a.page && a.ctrl)
   return {
     async load() {
       const r = await api(`${API}/ext/${entry.id}/info`)
@@ -15992,9 +16500,14 @@ function extPageController(entry) {
     top() {
       const e = own.e
       if (!e?.ui) return []
-      const { form, hasText } = extFormHtml(e, e.enabled ? e.ui.items : [])
+      // (the page above the sub pages: its text, and the rows that lead to them - see childNav)
+      if (!sub && entry.pages.length) {
+        return [`<section class="card wide ext-page" id="ext-page-card"><h2>${esc(e.ui.heading ?? e.ui.title)}</h2><p class="help" style="margin:0">${esc(e.ui.help ?? '')}</p>${e.enabled ? '' : '<p class="help" style="margin:0">Die Einstellungen gibt es, solange die Erweiterung an ist.</p>'}</section>`]
+      }
+      const { form, hasText } = extFormHtml(e, e.enabled ? slice() : [])
+      const named = sub ? e.ui.items[starts()[sub - 1]] : null
       return [
-        `<section class="card wide ext-page" id="ext-page-card"><h2>${esc(e.ui.heading ?? e.ui.title)}</h2><p class="help" style="margin:0">${esc(e.ui.help ?? '')}</p>
+        `<section class="card wide ext-page" id="ext-page-card"><h2>${esc(named ? named.label : (e.ui.heading ?? e.ui.title))}</h2><p class="help" style="margin:0">${esc(named ? (named.help ?? '') : (e.ui.help ?? ''))}</p>
          ${e.enabled ? form : '<p class="help" style="margin:0">Die Einstellungen gibt es, solange die Erweiterung an ist.</p>'}
          ${hasText ? '<div class="btns"><button class="btn primary" data-xsave>Speichern</button></div>' : ''}</section>`,
       ]
@@ -16007,7 +16520,7 @@ function extPageController(entry) {
     },
     mount(root, page) {
       const card = $('#ext-page-card', root)
-      if (card && own.e?.enabled && own.e.ui) extFormMount(card, own.e, own.e.ui.items, () => renderPage(page, true))
+      if (card && own.e?.enabled && own.e.ui && (sub || !entry.pages.length)) extFormMount(card, own.e, slice(), () => renderPage(page, true))
       for (const a of adopted()) a.ctrl.mount?.(root, a.page)
     },
   }
@@ -16575,10 +17088,12 @@ const CONTROLLERS = {
           badge: state.values.get('ndOn') ? (disp.opts?.nightDim?.dimmed ? { text: 'gerade gedimmt', kind: 'ok' } : { text: 'an', kind: 'ok' }) : { text: 'aus' },
           items: [
             { type: 'toggle', key: 'ndOn', label: 'Abends dunkler', help: 'Das Display wird abends dunkler und morgens wieder normal hell.', disabled: disp.opts?.brightness == null },
-            { type: 'pair', keep: true, dep: 'ndOn', items: [{ type: 'text', kind: 'time', key: 'ndFrom', label: 'Ab' }, { type: 'text', kind: 'time', key: 'ndTo', label: 'Bis' }] },
-            { type: 'slider', key: 'ndLevel', label: 'Helligkeit am Abend', min: 5, max: 100, step: 5, unit: ' %', dep: 'ndOn', help: 'Nie heller als die normale Helligkeit.' },
-            { type: 'slider', key: 'ndFade', label: 'Sanft abdunkeln über', stops: [0, 15, 30, 60], unit: ' min', zero: 'Sofort', dep: 'ndOn' },
-            { type: 'toggle', key: 'ndQuiet', label: 'Auch während der Ruhezeiten', help: 'Zum Beispiel zur Schlafenszeit, auch wenn sie außerhalb der Uhrzeiten liegt.', dep: 'ndOn' },
+            { type: 'toggle', key: 'ndSun', label: 'An Sonnenuntergang anpassen', help: 'Das Display wird dunkler, sobald die Sonne untergeht, und morgens beim Sonnenaufgang wieder heller – statt zu festen Uhrzeiten. Die Box rechnet beides selbst aus, dafür braucht sie den Ort.', dep: 'ndOn', flat: true },
+            { type: 'html', dep: 'ndOn', flat: true, html: ndPlaceHtml() },
+            { type: 'pair', keep: true, dep: 'ndFixed', flat: true, items: [{ type: 'text', kind: 'time', key: 'ndFrom', label: 'Ab' }, { type: 'text', kind: 'time', key: 'ndTo', label: 'Bis' }] },
+            { type: 'slider', key: 'ndLevel', label: 'Helligkeit am Abend', min: 5, max: 100, step: 5, unit: ' %', dep: 'ndOn', flat: true, help: 'Nie heller als die normale Helligkeit.' },
+            { type: 'slider', key: 'ndFade', label: 'Sanft abdunkeln über', stops: [0, 15, 30, 60], unit: ' min', zero: 'Sofort', dep: 'ndOn', flat: true },
+            { type: 'toggle', key: 'ndQuiet', label: 'Auch während der Ruhezeiten', help: 'Zum Beispiel zur Schlafenszeit, auch wenn sie außerhalb der Uhrzeiten liegt.', dep: 'ndOn', flat: true },
           ],
         },
         dp?.kms
@@ -16617,6 +17132,8 @@ const CONTROLLERS = {
     },
     mount(root, page) {
       mountDisplayModel(root, page)
+      drawNdPlace()
+      $('#nd-place-btn')?.addEventListener('click', () => openNdPlaceSheet({ onChosen: drawNdPlace }))
       for (const b of root.querySelectorAll('[data-rot-key]')) {
         b.onclick = () => {
           const key = b.dataset.rotKey
@@ -16628,10 +17145,32 @@ const CONTROLLERS = {
     },
     async change(key, v) {
       if (key === 'bright') return saveDisplayOptions({ brightness: v }, `Helligkeit ${v} %`)
-      if (['ndOn', 'ndFrom', 'ndTo', 'ndLevel', 'ndFade', 'ndQuiet'].includes(key)) {
-        const nightDim = { enabled: !!state.values.get('ndOn'), from: String(state.values.get('ndFrom')), to: String(state.values.get('ndTo')), level: Number(state.values.get('ndLevel')), fade: Number(state.values.get('ndFade')), withQuiet: !!state.values.get('ndQuiet') }
-        if (nightDim.from === nightDim.to) return toast('Beginn und Ende brauchen verschiedene Uhrzeiten', 'info')
-        return saveDisplayOptions({ nightDim }, key === 'ndOn' ? (nightDim.enabled ? `Abends dunkler: ${nightDim.from}–${nightDim.to} Uhr` : 'Abends dunkler ist aus') : 'Gespeichert')
+      if (['ndOn', 'ndFrom', 'ndTo', 'ndLevel', 'ndFade', 'ndQuiet', 'ndSun'].includes(key)) {
+        const nightDim = ndCurrent()
+        // (at sunset without a place: the place is asked for first, and the switch goes back when there is none)
+        if (key === 'ndSun' && nightDim.sunset && nightDim.lat === null) {
+          openNdPlaceSheet({
+            onChosen: drawNdPlace,
+            onCancel: () => {
+              state.values.set('ndSun', false)
+              shownValues.set('ndSun', false)
+              const box = document.querySelector('input[data-key="ndSun"]')
+              if (box) box.checked = false
+              drawNdPlace()
+            },
+          })
+          drawNdPlace()
+          return
+        }
+        drawNdPlace()
+        if (!nightDim.sunset && nightDim.from === nightDim.to) return toast('Beginn und Ende brauchen verschiedene Uhrzeiten', 'info')
+        const saved = await saveDisplayOptions({ nightDim }, key === 'ndOn' ? (nightDim.enabled ? (nightDim.sunset ? 'Abends dunkler: von Sonnenuntergang bis Sonnenaufgang' : `Abends dunkler: ${nightDim.from}–${nightDim.to} Uhr`) : 'Abends dunkler ist aus') : 'Gespeichert')
+        // (what the page shows: the sunset of today follows the place and the switch)
+        if (saved) {
+          disp.opts.nightDim = { ...(disp.opts.nightDim ?? {}), ...nightDim, sunsetAt: saved.sunsetAt ?? null, sunriseAt: saved.sunriseAt ?? null, dimmed: saved.dimmed === true }
+          drawNdPlace()
+        }
+        return saved
       }
       if (key === 'dispOff') {
         const r = await api(`${API}/power-config`, { method: 'POST', body: { idleDisplayOff: Number(v) } })
@@ -17148,29 +17687,49 @@ const CONTROLLERS = {
     },
   },
   drehregler: {
-    async load() {
-      await loadHardware()
-      const r = hw.data.rotary
-      state.values.set('rotary', r.active)
-      state.values.set('rotStep', r.step)
-      state.values.set('btnFn', BTN_FN.find(([, v]) => v === r.button)?.[0] ?? 'Aus')
-    },
-    sections: (page) =>
-      withoutSave(page).map((sec) => ({
+    load: loadRotary,
+    sections: (page) => {
+      const chosen = new Map(ROTARY_PIN_ITEMS.map(([key]) => [key, rotaryPinNumber(state.values.get(key))]))
+      const buttonPin = chosen.get('rotPinBtn')
+      return withoutSave(page).map((sec) => ({
         ...sec,
-        help: 'Drehregler an GPIO 26/24, Taster an GPIO 10.',
-        items: sec.items.map((it) => (it.key === 'btnFn' ? { ...it, label: 'Funktion des Tasters (GPIO 10)' } : it)),
-      })),
+        help: `Drehregler an GPIO ${chosen.get('rotPinA')}/${chosen.get('rotPinB')}, Taster an GPIO ${buttonPin}. Zur Wahl stehen nur Pins, die nichts anderes nutzt.`,
+        items: sec.items.flatMap((it) => {
+          if (it.key !== 'btnFn') return [it]
+          const pinItems = ROTARY_PIN_ITEMS.map(([key, , , label]) => {
+            const mine = chosen.get(key)
+            // (free ones, and its own; not one that another of the three has)
+            const options = [...new Set([mine, ...(hw.rotaryFree ?? [])])]
+              .filter((pin) => Number.isInteger(pin) && GPIO_HEADER[pin] && (pin === mine || ![...chosen].some(([other, p]) => other !== key && p === pin)))
+              .sort((x, y) => x - y)
+              .map(rotaryPinText)
+            return { type: 'select', label, key, default: rotaryPinText(mine), options }
+          })
+          return [...pinItems, { ...it, label: `Funktion des Tasters (GPIO ${buttonPin})` }]
+        }),
+      }))
+    },
     async change(key, v) {
-      const body = key === 'rotary' ? { active: v } : key === 'rotStep' ? { step: v } : key === 'btnFn' ? { button: BTN_FN.find(([l]) => l === v)?.[1] } : null
+      const pinItem = ROTARY_PIN_ITEMS.find(([k]) => k === key)
+      const body = pinItem ? { [pinItem[2]]: rotaryPinNumber(v) } : key === 'rotary' ? { active: v } : key === 'rotStep' ? { step: v } : key === 'btnFn' ? { button: BTN_FN.find(([l]) => l === v)?.[1] } : null
       if (!body) return
       const r = await api(`${API}/rotary`, { method: 'POST', body })
-      if (r.body?.error === 'gpio_taken') {
-        // (one of its pins - 26, 24, 10 - is a button of an extension: it stays off)
-        state.values.set('rotary', false)
-        const el = $('input[data-key="rotary"]')
-        if (el) el.checked = false
-        return toast(`GPIO ${r.body.pin} ist schon belegt: ${tr(`Erweiterung ${r.body.by}`)}`, 'info')
+      if (r.body?.error === 'gpio_taken' || r.body?.error === 'gpio_twice') {
+        // (a pin something else holds - or one the encoder has twice: nothing is saved, the fields show what is)
+        if (key === 'rotary') {
+          state.values.set('rotary', false)
+          const el = $('input[data-key="rotary"]')
+          if (el) el.checked = false
+        } else {
+          await loadRotary()
+          renderPage(currentPage(), false)
+        }
+        return toast(r.body.error === 'gpio_twice' ? 'Die drei Pins müssen verschieden sein' : `GPIO ${r.body.pin} ist schon belegt: ${String(r.body.by ?? '').split(', ').map(extWho).join(', ')}`, 'info')
+      }
+      if (r.ok && pinItem) {
+        // (the pin it let go is free for the others, the one it took is not)
+        await loadRotary()
+        renderPage(currentPage(), false)
       }
       return toast(r.ok ? (key === 'rotary' ? (v ? 'Drehregler an' : 'Drehregler aus') : 'Gespeichert') : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
     },

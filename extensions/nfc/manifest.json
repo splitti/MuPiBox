@@ -1,0 +1,366 @@
+{
+  "id": "nfc",
+  "name": "NFC-Extension",
+  "version": "0.6.1",
+  "description": "Ein NFC-Leser liest Tags und Karten: der PN5180 (ISO 14443 A und ISO 15693), der RC522 und der PN532 (ISO 14443 A) oder ein USB-Leser, der die Kartennummer wie eine Tastatur tippt. Jeder Tag kann ein Album, ein Hörspiel, einen Sender oder einen Podcast starten: In der Bibliothek das Medium öffnen, „NFC-Tag“ antippen und den Tag auflegen. Die Einstellungen stehen unter System › NFC-Extension.",
+  "hostApi": 8,
+  "resources": {},
+  "api": "api.js",
+  "display": "display.js",
+  "icon": "icon.svg",
+  "settings": {
+    "reader": {
+      "type": "string",
+      "default": "none",
+      "options": [
+        "none",
+        "pn5180",
+        "rc522",
+        "pn532",
+        "hid"
+      ]
+    },
+    "spiDevice": {
+      "type": "string",
+      "default": "0.0",
+      "options": [
+        "0.0",
+        "0.1"
+      ]
+    },
+    "busyPin": {
+      "type": "gpio",
+      "default": 0
+    },
+    "resetPin": {
+      "type": "gpio",
+      "default": 0
+    },
+    "pn532Link": {
+      "type": "string",
+      "default": "i2c",
+      "options": [
+        "i2c",
+        "spi",
+        "uart"
+      ]
+    },
+    "uartDevice": {
+      "type": "string",
+      "default": "/dev/serial0",
+      "options": [
+        "/dev/serial0",
+        "/dev/ttyAMA0",
+        "/dev/ttyS0",
+        "/dev/ttyUSB0"
+      ]
+    },
+    "hidDevice": {
+      "type": "string",
+      "default": "",
+      "pattern": "^[A-Za-z0-9 _./:+-]{0,60}$"
+    },
+    "tech": {
+      "type": "string",
+      "default": "both",
+      "options": [
+        "both",
+        "a",
+        "v"
+      ]
+    },
+    "playOnTag": {
+      "type": "boolean",
+      "default": true
+    },
+    "onRemove": {
+      "type": "string",
+      "default": "pause",
+      "options": [
+        "nothing",
+        "pause",
+        "stop"
+      ]
+    }
+  },
+  "system": {
+    "udev": [
+      {
+        "name": "99-mpx-nfc.rules",
+        "file": "99-mpx-nfc.rules"
+      }
+    ],
+    "packages": [
+      "python3-spidev",
+      "python3-lgpio"
+    ]
+  },
+  "ui": {
+    "title": "NFC-Extension",
+    "heading": "NFC-Extension",
+    "help": "Ein NFC-Leser startet Medien, wenn ein Tag aufgelegt wird. Unter „NFC-Reader“ richtest du den Leser ein, unter „Zugeordnete Tags“ siehst du die Tags. Ein Medium bekommt ein Tag in der Bibliothek: Album, Sender oder Podcast öffnen und „NFC-Tag“ antippen.",
+    "place": "system",
+    "items": [
+      {
+        "type": "heading",
+        "label": "NFC-Reader",
+        "page": true,
+        "help": "Wähle den Leser, den du angeschlossen hast. PN5180 und RC522 sprechen über SPI mit der Box (dtparam=spi=on in der config.txt), der PN532 über I2C, SPI oder die serielle Schnittstelle, ein USB-Leser steckt einfach an. Nach dem Einschalten von SPI, I2C oder der seriellen Schnittstelle muss die Box neu starten. Die Belegung steht im Handbuch unter Erweiterungen › NFC-Extension."
+      },
+      {
+        "type": "status",
+        "label": "Zustand",
+        "state": "/api/ext/nfc/state"
+      },
+      {
+        "type": "heading",
+        "label": "Leser"
+      },
+      {
+        "key": "reader",
+        "label": "Typ",
+        "choices": [
+          {
+            "value": "none",
+            "label": "Kein Leser"
+          },
+          {
+            "value": "pn5180",
+            "label": "PN5180"
+          },
+          {
+            "value": "rc522",
+            "label": "RC522"
+          },
+          {
+            "value": "pn532",
+            "label": "PN532"
+          },
+          {
+            "value": "hid",
+            "label": "USB-Leser (Tastatur)"
+          }
+        ]
+      },
+      {
+        "key": "spiDevice",
+        "label": "NSS an",
+        "help": "Für PN5180, RC522 und den PN532 am SPI-Anschluss.",
+        "choices": [
+          {
+            "value": "0.0",
+            "label": "CE0 · Pin 24"
+          },
+          {
+            "value": "0.1",
+            "label": "CE1 · Pin 26"
+          }
+        ],
+        "showIf": {
+          "key": "reader",
+          "is": [
+            "pn5180",
+            "rc522",
+            "pn532"
+          ]
+        }
+      },
+      {
+        "key": "busyPin",
+        "label": "GPIO-Pin BUSY",
+        "help": "Nur für den PN5180, zum Beispiel GPIO 25 (Pin 22).",
+        "showIf": {
+          "key": "reader",
+          "is": [
+            "pn5180"
+          ]
+        }
+      },
+      {
+        "key": "resetPin",
+        "label": "GPIO-Pin RST",
+        "help": "Für den PN5180 nötig, zum Beispiel GPIO 23 (Pin 16). Beim RC522 darf er frei bleiben.",
+        "showIf": {
+          "key": "reader",
+          "is": [
+            "pn5180",
+            "rc522"
+          ]
+        }
+      },
+      {
+        "type": "heading",
+        "label": "PN532",
+        "help": "Der PN532 hat zwei Schalter auf der Platine, die den Anschluss wählen: I2C, SPI oder seriell (HSU).",
+        "showIf": {
+          "key": "reader",
+          "is": [
+            "pn532"
+          ]
+        }
+      },
+      {
+        "key": "pn532Link",
+        "label": "PN532 Anschluss",
+        "choices": [
+          {
+            "value": "i2c",
+            "label": "I2C · Pin 3 und 5"
+          },
+          {
+            "value": "spi",
+            "label": "SPI"
+          },
+          {
+            "value": "uart",
+            "label": "Seriell (UART) · Pin 8 und 10"
+          }
+        ],
+        "showIf": {
+          "key": "reader",
+          "is": [
+            "pn532"
+          ]
+        }
+      },
+      {
+        "key": "uartDevice",
+        "label": "Serielle Schnittstelle",
+        "help": "Nur für den PN532 am seriellen Anschluss. Auf dem Pi 5 ist /dev/ttyAMA0 die Schnittstelle am Pin 8 und 10.",
+        "showIf": {
+          "key": "reader",
+          "is": [
+            "pn532"
+          ]
+        }
+      },
+      {
+        "type": "heading",
+        "label": "USB-Leser",
+        "help": "Der USB-Leser braucht nichts außer dem Stecker; ein Name hilft nur, wenn noch eine USB-Tastatur steckt.",
+        "showIf": {
+          "key": "reader",
+          "is": [
+            "hid"
+          ]
+        }
+      },
+      {
+        "key": "hidDevice",
+        "label": "Name des USB-Lesers",
+        "help": "Leer lassen: die Box findet den Leser selbst. Sonst ein Teil seines Namens (zum Beispiel „IC Reader“) oder der Pfad /dev/input/event3.",
+        "showIf": {
+          "key": "reader",
+          "is": [
+            "hid"
+          ]
+        }
+      },
+      {
+        "type": "heading",
+        "label": "Tags",
+        "help": "ISO 14443 A sind NTAG, MIFARE und die meisten Karten und Sticker, ISO 15693 sind ICODE und SLIX.",
+        "showIf": {
+          "key": "reader",
+          "is": [
+            "pn5180"
+          ]
+        }
+      },
+      {
+        "key": "tech",
+        "label": "Erkennen",
+        "choices": [
+          {
+            "value": "both",
+            "label": "Beide"
+          },
+          {
+            "value": "a",
+            "label": "ISO 14443 A"
+          },
+          {
+            "value": "v",
+            "label": "ISO 15693"
+          }
+        ],
+        "showIf": {
+          "key": "reader",
+          "is": [
+            "pn5180"
+          ]
+        }
+      },
+      {
+        "type": "heading",
+        "label": "Tags",
+        "help": "RC522 und PN532 lesen ISO 14443 A: NTAG, MIFARE und die meisten Karten und Sticker. ISO 15693 (ICODE, SLIX) lesen sie nicht.",
+        "showIf": {
+          "key": "reader",
+          "is": [
+            "rc522",
+            "pn532"
+          ]
+        }
+      },
+      {
+        "type": "heading",
+        "label": "Tags",
+        "help": "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.",
+        "showIf": {
+          "key": "reader",
+          "is": [
+            "hid"
+          ]
+        }
+      },
+      {
+        "type": "heading",
+        "label": "Zugeordnete Tags",
+        "page": true,
+        "help": "Hier stehen die Tags mit ihrem Medium. Neue kommen aus der Bibliothek: Album, Sender oder Podcast öffnen, „NFC-Tag“ antippen und den Tag auflegen. Das Bild eines Tags ist das Cover des Mediums; du kannst ein eigenes wählen."
+      },
+      {
+        "type": "list",
+        "label": "Tags",
+        "list": "/api/ext/nfc/tags",
+        "empty": "Noch kein Tag hat ein Medium."
+      },
+      {
+        "type": "heading",
+        "label": "Auflegen und Abnehmen"
+      },
+      {
+        "key": "playOnTag",
+        "label": "Tag startet sein Medium"
+      },
+      {
+        "key": "onRemove",
+        "label": "Beim Abnehmen",
+        "choices": [
+          {
+            "value": "nothing",
+            "label": "Weiterspielen"
+          },
+          {
+            "value": "pause",
+            "label": "Pausieren"
+          },
+          {
+            "value": "stop",
+            "label": "Stoppen"
+          }
+        ],
+        "help": "Mit „Pausieren“ geht das Hörspiel weiter, wo es war, wenn der Tag innerhalb einer halben Stunde wieder aufliegt.",
+        "showIf": {
+          "key": "reader",
+          "is": [
+            "pn5180",
+            "rc522",
+            "pn532"
+          ]
+        }
+      }
+    ]
+  }
+}

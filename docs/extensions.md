@@ -15,6 +15,7 @@ Ein ZIP (wie die `.wsz`-Skins) mit festen Namen:
 | `api.js` | API (`server`, Node, CommonJS) | `exports.activate(host)` – Routen unter `/api/ext/<id>/`, Dienste |
 | `display.js` | Display (Chromium, ES-Modul) | `export function activate(api)` – Tabs, Knöpfe, Anzeigen |
 | `icon.svg`, weitere Dateien | alle | werden unter `/ext/<id>/…` ausgeliefert (Skripte nur `display.js` und was es lädt; `player.js`/`api.js` nie) |
+| `*.py` | vom API-Teil gestartet | Python-Programme (`hostApi` 6), die der API-Teil als Kindprozess startet, wenn Node nicht reicht (SPI zum Beispiel); nie ausgeliefert |
 
 Die Webapp der Eltern führt **keinen Code** einer Extension aus (sie läuft mit der Anmeldung der Eltern): die Einstellungen
 beschreibt die Extension im Manifest (`ui`), die Webapp zeichnet sie.
@@ -135,14 +136,39 @@ Webapp › Einstellungen › System › **Erweiterungen**: Karten wie auf der Er
 was der Katalog bietet, steht mit „Installieren“ dahinter. Nur mit Anmeldung (Eltern). Nach einer Änderung starten Player, API und Display neu (eine Wiedergabe
 bricht dabei ab; die Webapp sagt es vorher).
 
-## Die Schnittstellen (`hostApi` 1 bis 5)
+## Die Schnittstellen (`hostApi` 1 bis 8)
+
+Die Nummer 8 (NFC-Extension 0.4) bringt im Manifest **`type: "list"`** in `ui.items`: eine Liste mit einem Bild je Eintrag (`label`, `list` = die Adresse einer Route
+des API-Teils, `/api/ext/<id>/<name>`, mit Anmeldung; optional `empty` = der Text bei leerer Liste und `help`; ohne `key`, `choices`, `extra`, `state`, `post`, `dep`).
+Die Route antwortet mit `{ items: [{ id, title, text, image, imageOwn, coverPost, actions }] }` (`text`: eine Liste kurzer Teile, die die Webapp übersetzt und mit „·“
+verbindet; `image`: eine Adresse der Box oder `https://`; `coverPost`: eine Route, an die die Webapp `{ id, image }` schickt, wenn der Nutzer ein Bild gewählt hat
+(Suche bei iTunes, Deezer, Spotify oder ein eigenes Bild, abgelegt bei den eigenen Bildern der Box); `imageOwn`: das Bild ist ein eigenes, die Webapp bietet „Cover des
+Mediums nehmen“ an (`image: ""`); `actions`: bis zu vier Knöpfe `{ label, post, confirm }`, jeder schickt `{ id }` an seine Route). Es wird nichts in den Einstellungen gespeichert.
+
+Die Nummer 7 (NFC-Extension 0.2 und 0.3) bringt zwei Dinge. Erstens **Unterseiten**: Ein Eintrag `{ "type": "heading", "label": "…", "page": true }` in `ui.items` beginnt eine eigene Seite unter der Seite der Erweiterung
+(zwei bis sechs; der erste Eintrag der Liste muss die erste sein; nur mit `ui.place: "system"`, ohne `rename`, `optional` und `dep`). Die Seite der Erweiterung zeigt dann nur Titel und `ui.help` und führt zu den Unterseiten;
+jede hat die Einträge bis zur nächsten Seitenüberschrift. `GET /api/app/extensions/pages` meldet sie als `pages` (`title`, `help`). Zweitens
+im Manifest **`type: "action"`** in `ui.items`: ein Knopf (`label`, `post` = die Adresse einer Route des API-Teils,
+`/api/ext/<id>/<name>`, mit Anmeldung; optional `confirm` = eine Frage, die vorher gestellt wird, und `help`, `dep`; ohne `key`, `choices`, `extra`, `state`).
+Ein Tipp schickt ein POST an die Route; sie antwortet mit `{ ok, message }`, und die Webapp zeigt `message` (ein fester Satz, den sie übersetzt, wenn sie ihn kennt)
+als Hinweis. Es wird nichts in den Einstellungen gespeichert: der Knopf ist für Aufträge („Zuordnung starten“, „Abbrechen“, „Vergessen“), nicht für Werte.
+
+Die Nummer 6 (NFC-Extension) bringt zwei Dinge:
+
+- **`type: "status"`** in `ui.items`: ein Block mit Zeilen, den die Extension selbst meldet (`label`, `state` = die Adresse einer Route ihres API-Teils,
+  `/api/ext/<id>/<name>`, mit Anmeldung; ohne `key`, `dep`, `choices`). Die Route antwortet mit `{ rows: [{ label, value, tone }] }` (`tone`:
+  `ok`, `warn` oder `error`, sonst keine Farbe, höchstens 12 Zeilen); die Webapp fragt sie alle zweieinhalb Sekunden, solange die Karte offen ist.
+  `label` und `value` übersetzt die Webapp, wenn sie den Text genau kennt; also feste Sätze melden, keine zusammengesetzten.
+- Dateien **`*.py`** im Paket: Python-Programme, die der API-Teil als Kindprozess startet (wie die Taster `gpiomon`). Sie werden nie ausgeliefert.
+  Debian-Pakete dafür (`python3-spidev`) kommen über `system.packages`; den Zugriff auf `/dev/spidev…` gibt eine udev-Regel (`GROUP`, `MODE`).
+  Nach dem Einsetzen einer Regel für den SPI-Bus stößt der Kern `udevadm trigger --subsystem-match=spidev` an.
 
 Die Nummer 5 (Taster) bringt im Manifest:
 
 - den Einstellungstyp **`gpio`**: ein Pin, den der Benutzer wählt (`0` = keiner, sonst die BCM-Nummer 2–27; der Standardwert ist `0`, ohne
   `options`, `pattern`, `min`/`max`, `legacy`; höchstens 16 je Extension). Die Webapp zeigt eine Auswahl mit der Nummer am Pfostenstecker und
   sperrt, was schon belegt ist, mit dem Namen dessen, der den Pin hält (`GET /api/app/ext/<id>/gpio` → `{ pins: [{ pin, holders }], hints, blind }`;
-  `hints` sind freie Pins, die ein ausgeschalteter Teil des Kerns bräuchte, die 26/24/10 des Drehreglers: wählbar, mit einem Hinweis in der Liste;
+  `hints` sind freie Pins, die ein ausgeschalteter Teil des Kerns bräuchte, die Pins des Drehreglers (Vorgabe 26/24/10, in seinen Einstellungen `rotary.pinA/pinB/pinButton` änderbar): wählbar, mit einem Hinweis in der Liste;
   der Kern, die Boot-Konfiguration, die anderen Extensions mit ihren `resources` und ihren gewählten Pins, und was `gpioinfo` als belegt meldet).
   Der Kern prüft beim Speichern noch einmal und antwortet mit 409 `gpio_taken` (`{ key, pin, holders }`) oder `gpio_twice` (derselbe Pin in zwei
   Feldern der Extension). Ein gewählter Pin zählt für alle anderen als belegt: im Ressourcentest anderer Extensions und in der Hardware-Seite des
@@ -234,6 +260,12 @@ Extension (`extensions/clock/`, `api.header` im Display); sie ist nicht mehr im 
 `hostApi` 2: `api.overlay`, `api.fetchApi`, `lookup`): Open-Meteo oder MET Norway, die Anzeigen sind die SteelSeries-Messuhren
 (BSD-2, im Paket mitgeliefert). Die vierte sind die Benutzer (`extensions/users/`, `hostApi` 4): jeder Benutzer hat seine Einstellungen und seine Bibliothek, gewechselt wird am Display (rundes Zeichen in der Kopfzeile) oder in der Webapp; der Spotify-Login, WLAN, NAS und die Hardware sind für alle gleich. Beim Wechsel sichert die Extension den Stand des bisherigen Benutzers in ihrem Ordner, lädt den des neuen, und die Box startet neu.
 
+Die sechste ist die NFC-Extension (`extensions/nfc/`, `hostApi` 6): ein Leser mit dem Chip PN5180 am SPI-Anschluss. Der Treiber (`pn5180.py`, Python mit `python3-spidev` und `python3-lgpio`) spricht den Chip an, wie sein Datenblatt es für die Verbindung vorsieht (BUSY-Handshake, Register, `SEND_DATA`/`READ_DATA`), sucht ISO-14443-A-Tags (Anticollision über die drei Cascade-Stufen, bis zu 10 Byte UID) und ISO-15693-Tags (Inventory) und meldet je eine JSON-Zeile (`ready`, `tag`, `gone`, `error`). Der API-Teil (`api.js`, `runner.js`) startet ihn mit den gewählten Pins (BUSY und RST: Einstellungen vom Typ `gpio`), startet ihn nach einem Ende neu (3 s, dann langsamer bis 60 s) und meldet den Zustand mit einem `status`-Block. Getestet ist alles ohne Hardware: ein Modell des Chips beantwortet die Rahmen des Treibers (`python -m unittest discover -s extensions/nfc/test`, `node --test extensions/nfc/test/nfc.test.js`). Was ein Tag auslösen soll (ein Album starten), ist der nächste Schritt; der API-Teil hat dafür die Stelle (`onEvent`, Berichte `tag` und `gone`).
+
+Die NFC-Extension (Version 0.5, `hostApi` 8) ordnet Tags Medien zu, nach dem Vorbild von TeddyCloud (`content/<uid>.json` je Tag, „der nächste unbekannte Tag bekommt die gewählte Datei“, „Flex-Tonie“). Zugeordnet wird dort, wo man das Medium findet: Die Webapp zeigt in den Fenstern eines NAS- oder SD-Karten-Albums und eines Eintrags der Bibliothek (Spotify, Radio, Podcast, TIDAL) den Knopf „NFC-Tag“ (er öffnet die Tags des Mediums, `POST /api/ext/nfc/tagsfor` mit `{ media }` antwortet wie `GET /tags` nur mit den Tags dieses Mediums, erkannt an Art und Adresse; darin „NFC-Tag hinzufügen“ bzw. „Weiteren NFC-Tag hinzufügen“) und schickt `POST /api/ext/nfc/arm` mit `{ media, image?, cover?, flex? }` (`image`: das gewählte Bild, `cover`: das Bild, das die Webapp für das Medium zeigt – ein Podcast oder ein Spotify-Eintrag hat keins in seinen Daten) (das Medium so, wie die Box es der Anzeige gibt; die Erweiterung behält nur, was zum Starten nötig ist). Das Fenster fragt jede Sekunde `GET /api/ext/nfc/armstate?id=` (`waiting`, `done` mit `uid`, `title`, `previous`, oder `gone`); beim Schließen schickt es `POST /cancel`. Der nächste Tag, der aufgelegt wird, bekommt das Medium (ein vorhandenes wird ersetzt); mit `flex` wird er zum Flex-Tag, und hat die Box schon einen, bekommt der es sofort. `tags.js` hält die Zuordnung ohne Dateien und Zeitgeber (Tag → Medium, Bild; Zustand `unknown`, `play`, `assigned`, `flex`), `api.js` verbindet sie mit dem Leser und speichert `tags.json` im `dataDir`. Die Unterseite „Zugeordnete Tags“ ist ein `list`-Eintrag (`GET /tags`, `POST /tagimage`, `POST /tagremove`); das Bild eines Tags ist `image` des Tags, sonst sein `cover`, sonst `cover` seines Mediums. Ein Podcast ist ein Feed, der Player spielt eine Folge: `api.js` fragt dafür `/api/rssfeed/cached` und gibt dem Display die Folge (`tags.pickEpisode`: begonnen, sonst neueste ungehörte, sonst neueste). Gestartet wird nicht vom Server aus: `display.js` fragt jede Sekunde `GET /api/ext/nfc/pending` (die Antwort gibt es einmal) und ruft `api.player.open(media)` auf, damit Kachel-Zeiten, Spielzeit und „Fortsetzen“ wie bei einem Tipp auf die Kachel gelten. Beim Abnehmen schickt der API-Teil `pause` oder `stop` an den Player und setzt bei demselben Tag mit `play` fort. Getestet ohne Leser: `node --test extensions/nfc/test/nfc.test.js extensions/nfc/test/tags.test.js`.
+
+Die NFC-Extension 0.6 kennt vier Leser; die Seite zeigt nur die Felder des gewählten (ein Eintrag in `ui.items` mit **`showIf: { key, is: [...] }`** wird angezeigt, solange die Einstellung `key` – eine Einstellung mit `options` – einen der Werte aus `is` hat; ein Kern, der `showIf` nicht kennt, zeigt das Feld immer, `hostApi` bleibt 8). Jeder hat sein Programm (`logic.js`: `driverScript`, `driverArgs`) und meldet dieselben JSON-Zeilen (`starting`, `ready`, `tag`, `gone`, `error`), die der Läufer (`runner.js`) liest: `pn5180.py`, `rc522.py` (MFRC522 über SPI: Wake-up, Anticollision und Select je Cascade-Stufe, dann Halt; das CRC_A rechnet das Programm selbst; RST freiwillig), `pn532.py` (die Rahmen des Chips, dahinter drei Wege: I2C über `/dev/i2c-1`, SPI mit umgedrehten Bits, die serielle Schnittstelle mit `termios`; nur Python, keine Pakete) und `usbreader.py` (liest `/dev/input/event*` des USB-Geräts, das die Kartennummer tippt, und nimmt es mit `EVIOCGRAB` für sich; die Ziffern bis Enter sind die `uid`, Art `HID`). RC522, PN532 und USB-Leser kennen nur ISO 14443 A (kein ISO 15693); der USB-Leser meldet nie `gone`, `api.js` ruft dafür `onGone` nicht auf. Die Udev-Regeln (`99-mpx-nfc.rules`) geben der Gruppe `gpio` den SPI-Bus, den I2C-Bus und die USB-Eingabegeräte (`SUBSYSTEMS=="usb"`; `ENV` ist in Regeln einer Erweiterung nicht erlaubt). Getestet ohne Hardware: `python -m unittest discover -s extensions/nfc/test -p "test_*.py"` (Modelle des Chips und eines Tags) und `node --test extensions/nfc/test/nfc.test.js`.
+
 Die fünfte sind die Taster (`extensions/buttons/`, „Buttons & GPIO Input“, `hostApi` 5, nur ein API-Teil): bis zu sechs einzelne Taster und zwei
 Tasterpaare an frei wählbaren GPIO-Pins (gegen Masse, der interne Pull-up ist eingeschaltet). Am Anfang steht nur ein Taster da, weitere und die
 Paare kommen mit „+“ dazu, und jeder kann einen eigenen Namen bekommen. Ein Taster hat eine Aktion für kurzes Drücken
@@ -247,7 +279,7 @@ die Logik (`logic.js`) ist ohne Hardware getestet (`node --test extensions/butto
 ## Offen (für Foto/Immich, NFC)
 
 Was eine Foto- oder Immich-Extension noch bräuchte (Ruhezustand im Display, eigene Nutzungsdauer, ein `lookup` ohne Suchwort) und was NFC
-bräuchte (`spi`/`i2c`), steht mit dem Abgleich zu Waldemars Zweig `layout` in `docs/5.1-abstimmung.md`.
+noch bräuchte (der Zugriff auf SPI läuft über die udev-Regel, nicht über `system.groups`; ein Tag startet ein Album: gelöst in 0.2 über `display.js` und `api.player.open`), steht mit dem Abgleich zu Waldemars Zweig `layout` in `docs/5.1-abstimmung.md`.
 Dort steht auch, dass `EXT_DIR` (API und Player) beim Umzug auf die vier Ordner von 5.1 über `paths.ts` gehen soll.
 
 ## Eine Extension bauen
