@@ -2056,7 +2056,6 @@
  "Open Source & Drittanbieter": "Open source i podmioty trzecie",
  "Ordner": "Folder",
  "Ordner als ZIP herunterladen": "Pobierz folder jako ZIP",
- "Ordner auf dem ganzen NAS suchen": "Szukaj folderów w całym NAS",
  "Ordner auf dem NAS": "Folder na NAS",
  "Ordner auf der SD-Karte": "Folder na karcie SD",
  "Ordner fehlen": "Brak folderów",
@@ -3954,5 +3953,6 @@
  "Die Box konnte SMB nicht einrichten. Ist sie mit dem Internet verbunden?": "Urządzenie nie mogło skonfigurować SMB. Czy jest połączone z internetem?",
  "Die Freigabe ließ sich nicht einbinden.": "Nie udało się zamontować udziału.",
  "In den angezeigten Ordnern suchen": "Szukaj w pokazanych folderach",
- "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Indeks pokazanych folderów: {} folderów, stan {}"
+ "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Indeks pokazanych folderów: {} folderów, stan {}",
+ "Noch kein Ordner angezeigt – die Suche findet nur Ordner unter angezeigten.": "Nie pokazano jeszcze żadnego folderu – wyszukiwanie znajduje tylko foldery pod pokazanymi."
 }

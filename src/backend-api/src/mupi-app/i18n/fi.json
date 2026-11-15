@@ -2056,7 +2056,6 @@
  "Open Source & Drittanbieter": "Avoin lähdekoodi ja kolmannet osapuolet",
  "Ordner": "Kansio",
  "Ordner als ZIP herunterladen": "Lataa kansio ZIP-tiedostona",
- "Ordner auf dem ganzen NAS suchen": "Hae kansiota koko NAS:sta",
  "Ordner auf dem NAS": "Kansio NAS-levyllä",
  "Ordner auf der SD-Karte": "Kansio SD-kortilla",
  "Ordner fehlen": "Kansioita puuttuu",
@@ -3954,5 +3953,6 @@
  "Die Box konnte SMB nicht einrichten. Ist sie mit dem Internet verbunden?": "Laite ei voinut ottaa SMB:tä käyttöön. Onko se yhteydessä internetiin?",
  "Die Freigabe ließ sich nicht einbinden.": "Jakoa ei voitu liittää.",
  "In den angezeigten Ordnern suchen": "Hae näytetyistä kansioista",
- "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Näytettyjen kansioiden hakuhakemisto: {} kansiota, tilanne {}"
+ "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Näytettyjen kansioiden hakuhakemisto: {} kansiota, tilanne {}",
+ "Noch kein Ordner angezeigt – die Suche findet nur Ordner unter angezeigten.": "Yhtään kansiota ei vielä näytetä – haku löytää vain näytettyjen alla olevia kansioita."
 }

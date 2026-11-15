@@ -2056,7 +2056,6 @@
  "Open Source & Drittanbieter": "Código aberto e terceiros",
  "Ordner": "Pasta",
  "Ordner als ZIP herunterladen": "Transferir pasta como ZIP",
- "Ordner auf dem ganzen NAS suchen": "Pesquisar pastas em todo o NAS",
  "Ordner auf dem NAS": "Pasta no NAS",
  "Ordner auf der SD-Karte": "Pasta no cartão SD",
  "Ordner fehlen": "Faltam pastas",
@@ -3954,5 +3953,6 @@
  "Die Box konnte SMB nicht einrichten. Ist sie mit dem Internet verbunden?": "A caixa não conseguiu configurar o SMB. Está ligada à Internet?",
  "Die Freigabe ließ sich nicht einbinden.": "Não foi possível montar a partilha.",
  "In den angezeigten Ordnern suchen": "Procurar nas pastas mostradas",
- "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Índice das pastas mostradas: {} pastas, estado {}"
+ "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Índice das pastas mostradas: {} pastas, estado {}",
+ "Noch kein Ordner angezeigt – die Suche findet nur Ordner unter angezeigten.": "Ainda nenhuma pasta mostrada – a pesquisa só encontra pastas abaixo das mostradas."
 }

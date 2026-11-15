@@ -2056,7 +2056,6 @@
  "Open Source & Drittanbieter": "Open source e terze parti",
  "Ordner": "Cartella",
  "Ordner als ZIP herunterladen": "Scarica la cartella come ZIP",
- "Ordner auf dem ganzen NAS suchen": "Cerca cartelle in tutto il NAS",
  "Ordner auf dem NAS": "Cartella sul NAS",
  "Ordner auf der SD-Karte": "Cartella sulla scheda SD",
  "Ordner fehlen": "Cartelle mancanti",
@@ -3954,5 +3953,6 @@
  "Die Box konnte SMB nicht einrichten. Ist sie mit dem Internet verbunden?": "Il box non è riuscito a configurare SMB. È connesso a Internet?",
  "Die Freigabe ließ sich nicht einbinden.": "Non è stato possibile montare la condivisione.",
  "In den angezeigten Ordnern suchen": "Cerca nelle cartelle mostrate",
- "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Indice delle cartelle mostrate: {} cartelle, aggiornato {}"
+ "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Indice delle cartelle mostrate: {} cartelle, aggiornato {}",
+ "Noch kein Ordner angezeigt – die Suche findet nur Ordner unter angezeigten.": "Ancora nessuna cartella mostrata – la ricerca trova solo cartelle sotto quelle mostrate."
 }

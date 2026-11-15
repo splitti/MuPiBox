@@ -2056,7 +2056,6 @@
  "Open Source & Drittanbieter": "Açık kaynak ve üçüncü taraflar",
  "Ordner": "Klasör",
  "Ordner als ZIP herunterladen": "Klasörü ZIP olarak indir",
- "Ordner auf dem ganzen NAS suchen": "Tüm NAS'ta klasör ara",
  "Ordner auf dem NAS": "NAS’taki klasör",
  "Ordner auf der SD-Karte": "SD karttaki klasör",
  "Ordner fehlen": "Klasörler eksik",
@@ -3954,5 +3953,6 @@
  "Die Box konnte SMB nicht einrichten. Ist sie mit dem Internet verbunden?": "Kutu SMB’yi kuramadı. İnternete bağlı mı?",
  "Die Freigabe ließ sich nicht einbinden.": "Paylaşım bağlanamadı.",
  "In den angezeigten Ordnern suchen": "Gösterilen klasörlerde ara",
- "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Gösterilen klasörlerin arama dizini: {} klasör, durum {}"
+ "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Gösterilen klasörlerin arama dizini: {} klasör, durum {}",
+ "Noch kein Ordner angezeigt – die Suche findet nur Ordner unter angezeigten.": "Henüz gösterilen klasör yok – arama yalnızca gösterilenlerin altındaki klasörleri bulur."
 }

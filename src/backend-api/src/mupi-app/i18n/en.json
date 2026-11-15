@@ -2056,7 +2056,6 @@
  "Open Source & Drittanbieter": "Open source & third parties",
  "Ordner": "Folder",
  "Ordner als ZIP herunterladen": "Download folder as ZIP",
- "Ordner auf dem ganzen NAS suchen": "Search folders across the whole NAS",
  "Ordner auf dem NAS": "Folder on the NAS",
  "Ordner auf der SD-Karte": "Folder on the SD card",
  "Ordner fehlen": "Folders missing",
@@ -3970,5 +3969,6 @@
  "Die Box konnte SMB nicht einrichten. Ist sie mit dem Internet verbunden?": "The box could not set up SMB. Is it connected to the internet?",
  "Die Freigabe ließ sich nicht einbinden.": "The share could not be mounted.",
  "In den angezeigten Ordnern suchen": "Search the shown folders",
- "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Search index of the shown folders: {} folders, as of {}"
+ "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Search index of the shown folders: {} folders, as of {}",
+ "Noch kein Ordner angezeigt – die Suche findet nur Ordner unter angezeigten.": "No folder shown yet – the search only finds folders below shown ones."
 }

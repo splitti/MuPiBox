@@ -2056,7 +2056,6 @@
  "Open Source & Drittanbieter": "Código abierto y terceros",
  "Ordner": "Carpeta",
  "Ordner als ZIP herunterladen": "Descargar carpeta como ZIP",
- "Ordner auf dem ganzen NAS suchen": "Buscar carpetas en todo el NAS",
  "Ordner auf dem NAS": "Carpeta en el NAS",
  "Ordner auf der SD-Karte": "Carpeta en la tarjeta SD",
  "Ordner fehlen": "Faltan carpetas",
@@ -3954,5 +3953,6 @@
  "Die Box konnte SMB nicht einrichten. Ist sie mit dem Internet verbunden?": "La caja no pudo configurar SMB. ¿Está conectada a Internet?",
  "Die Freigabe ließ sich nicht einbinden.": "No se pudo montar el recurso compartido.",
  "In den angezeigten Ordnern suchen": "Buscar en las carpetas mostradas",
- "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Índice de las carpetas mostradas: {} carpetas, estado {}"
+ "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Índice de las carpetas mostradas: {} carpetas, estado {}",
+ "Noch kein Ordner angezeigt – die Suche findet nur Ordner unter angezeigten.": "Aún no se muestra ninguna carpeta: la búsqueda solo encuentra carpetas bajo las mostradas."
 }

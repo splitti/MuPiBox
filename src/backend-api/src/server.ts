@@ -6171,8 +6171,8 @@ interface NasFolderIndex {
 }
 
 // What the search of the app's NAS page looks through: the shown folders and all below them - the box needs no index
-// for showing them (it lists them live), the search is for picking subfolders there. Nothing shown yet (the first
-// setup): the whole NAS. NAS paths, none inside another.
+// for showing them (it lists them live), the search is for picking subfolders there. Nothing shown: nothing to
+// search, the NAS is not walked at all (the tree of the page shows its folders). NAS paths, none inside another.
 function nasIndexRoots(settings: NasConfig | undefined): string[] {
   const hidden = new Set(settings?.hiddenFolders ?? [])
   const paths = (settings?.artistFolders ?? [])
@@ -6229,7 +6229,7 @@ async function buildNasIndex(): Promise<void> {
     const hidden = new Set(nasSettings(await getMupiboxConfig())?.hiddenFolders ?? [])
     let skipped = 0
     let unanswered = 0 // of those: the NAS did not answer at all (not "gone" or "no permission")
-    let level = roots.length > 0 ? roots : ['/']
+    let level = roots // (none shown: an empty index at once)
     // Level by level, at most 4 requests in flight (same limit as elsewhere: a big NAS behind a
     // DDNS address does not cope with bursts). Over SMB too: with 8 the kernel's requests to the NAS piled up until
     // a listing ran into its time limit and the NAS counted as away.

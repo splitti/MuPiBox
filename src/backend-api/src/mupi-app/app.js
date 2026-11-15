@@ -6682,7 +6682,7 @@ function nasTop() {
       : '',
     st.loggedIn
       ? `<section class="card wide"><h2>Ordner</h2><p class="help">Anzeigen = erscheint auf der Box – antippen und wählen, wo: in Hörspiele, Musik oder Radio & Podcasts (neben SD-Karte und Spotify) oder im NAS-Reiter. Ausblenden = bleibt verborgen (auch alles darunter). Laden = auf die SD-Karte kopieren, damit es auch ohne NAS spielt.</p>
-        <div class="search">${icon('search')}<input class="input" id="n-q" type="search" placeholder="${(nas.index?.roots ?? 0) > 0 ? 'In den angezeigten Ordnern suchen' : 'Ordner auf dem ganzen NAS suchen'}" autocomplete="off" value="${esc(nas.q)}"></div>
+        <div class="search">${icon('search')}<input class="input" id="n-q" type="search" placeholder="In den angezeigten Ordnern suchen" autocomplete="off" value="${esc(nas.q)}"></div>
         <p class="help" id="n-index" style="margin:0"></p>
         ${sw('n-only', 'Nur die Auswahl zeigen', nas.onlySel)}
         <div class="rows" id="n-list"><div class="loading"><p>Lade …</p></div></div>
@@ -6837,7 +6837,7 @@ function drawNasIndex() {
   const el = $('#n-index')
   const ix = nas.index
   if (!el || !ix) return
-  el.textContent = ix.running ? `Suchindex wird erstellt … (${ix.folders ?? 0} Ordner)` : ix.exists ? (ix.roots > 0 ? `Suchindex der angezeigten Ordner: ${ix.count} Ordner, Stand ${relTime(new Date(ix.updated).toISOString())}` : `Suchindex: ${ix.count} Ordner, Stand ${relTime(new Date(ix.updated).toISOString())}`) : 'Noch kein Suchindex – „Index aktualisieren“.'
+  el.textContent = !ix.running && ix.roots === 0 ? 'Noch kein Ordner angezeigt – die Suche findet nur Ordner unter angezeigten.' : ix.running ? `Suchindex wird erstellt … (${ix.folders ?? 0} Ordner)` : ix.exists ? (ix.roots > 0 ? `Suchindex der angezeigten Ordner: ${ix.count} Ordner, Stand ${relTime(new Date(ix.updated).toISOString())}` : `Suchindex: ${ix.count} Ordner, Stand ${relTime(new Date(ix.updated).toISOString())}`) : 'Noch kein Suchindex – „Index aktualisieren“.'
 }
 
 function drawNasDownload() {

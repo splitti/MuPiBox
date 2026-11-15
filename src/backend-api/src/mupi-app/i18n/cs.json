@@ -2056,7 +2056,6 @@
  "Open Source & Drittanbieter": "Open source a třetí strany",
  "Ordner": "Složka",
  "Ordner als ZIP herunterladen": "Stáhnout složku jako ZIP",
- "Ordner auf dem ganzen NAS suchen": "Hledat složky na celém NAS",
  "Ordner auf dem NAS": "Složka na NAS",
  "Ordner auf der SD-Karte": "Složka na SD kartě",
  "Ordner fehlen": "Chybí složky",
@@ -3954,5 +3953,6 @@
  "Die Box konnte SMB nicht einrichten. Ist sie mit dem Internet verbunden?": "Box nemohl nastavit SMB. Je připojený k internetu?",
  "Die Freigabe ließ sich nicht einbinden.": "Sdílenou složku se nepodařilo připojit.",
  "In den angezeigten Ordnern suchen": "Hledat v zobrazených složkách",
- "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Index zobrazených složek: {} složek, stav {}"
+ "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Index zobrazených složek: {} složek, stav {}",
+ "Noch kein Ordner angezeigt – die Suche findet nur Ordner unter angezeigten.": "Zatím není zobrazená žádná složka – hledání najde jen složky pod zobrazenými."
 }

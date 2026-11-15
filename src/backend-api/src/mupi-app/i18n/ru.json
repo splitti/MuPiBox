@@ -2056,7 +2056,6 @@
  "Open Source & Drittanbieter": "Открытый исходный код и сторонние компоненты",
  "Ordner": "Папка",
  "Ordner als ZIP herunterladen": "Скачать папку как ZIP",
- "Ordner auf dem ganzen NAS suchen": "Искать папки по всему NAS",
  "Ordner auf dem NAS": "Папка на NAS",
  "Ordner auf der SD-Karte": "Папка на SD-карте",
  "Ordner fehlen": "Папки отсутствуют",
@@ -3954,5 +3953,6 @@
  "Die Box konnte SMB nicht einrichten. Ist sie mit dem Internet verbunden?": "Устройству не удалось настроить SMB. Оно подключено к интернету?",
  "Die Freigabe ließ sich nicht einbinden.": "Не удалось подключить общую папку.",
  "In den angezeigten Ordnern suchen": "Искать в показанных папках",
- "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Поисковый индекс показанных папок: {} папок, состояние {}"
+ "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Поисковый индекс показанных папок: {} папок, состояние {}",
+ "Noch kein Ordner angezeigt – die Suche findet nur Ordner unter angezeigten.": "Пока ни одна папка не показана — поиск находит только папки под показанными."
 }

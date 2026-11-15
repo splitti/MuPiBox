@@ -2056,7 +2056,6 @@
  "Open Source & Drittanbieter": "Open source et tiers",
  "Ordner": "Dossier",
  "Ordner als ZIP herunterladen": "Télécharger le dossier en ZIP",
- "Ordner auf dem ganzen NAS suchen": "Rechercher des dossiers sur tout le NAS",
  "Ordner auf dem NAS": "Dossier sur le NAS",
  "Ordner auf der SD-Karte": "Dossier sur la carte SD",
  "Ordner fehlen": "Dossiers manquants",
@@ -3954,5 +3953,6 @@
  "Die Box konnte SMB nicht einrichten. Ist sie mit dem Internet verbunden?": "La box n’a pas pu configurer SMB. Est-elle connectée à Internet ?",
  "Die Freigabe ließ sich nicht einbinden.": "Le partage n’a pas pu être monté.",
  "In den angezeigten Ordnern suchen": "Rechercher dans les dossiers affichés",
- "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Index des dossiers affichés : {} dossiers, état {}"
+ "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Index des dossiers affichés : {} dossiers, état {}",
+ "Noch kein Ordner angezeigt – die Suche findet nur Ordner unter angezeigten.": "Aucun dossier affiché pour l’instant – la recherche ne trouve que les dossiers sous ceux affichés."
 }

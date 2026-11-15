@@ -2056,7 +2056,6 @@
  "Open Source & Drittanbieter": "Ανοιχτός κώδικας και τρίτοι",
  "Ordner": "Φάκελος",
  "Ordner als ZIP herunterladen": "Λήψη φακέλου ως ZIP",
- "Ordner auf dem ganzen NAS suchen": "Αναζήτηση φακέλων σε όλο το NAS",
  "Ordner auf dem NAS": "Φάκελος στο NAS",
  "Ordner auf der SD-Karte": "Φάκελος στην κάρτα SD",
  "Ordner fehlen": "Λείπουν φάκελοι",
@@ -3954,5 +3953,6 @@
  "Die Box konnte SMB nicht einrichten. Ist sie mit dem Internet verbunden?": "Το κουτί δεν μπόρεσε να ρυθμίσει το SMB. Είναι συνδεδεμένο στο διαδίκτυο;",
  "Die Freigabe ließ sich nicht einbinden.": "Ο κοινόχρηστος φάκελος δεν μπόρεσε να προσαρτηθεί.",
  "In den angezeigten Ordnern suchen": "Αναζήτηση στους εμφανιζόμενους φακέλους",
- "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Ευρετήριο εμφανιζόμενων φακέλων: {} φάκελοι, κατάσταση {}"
+ "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Ευρετήριο εμφανιζόμενων φακέλων: {} φάκελοι, κατάσταση {}",
+ "Noch kein Ordner angezeigt – die Suche findet nur Ordner unter angezeigten.": "Δεν εμφανίζεται ακόμη κανένας φάκελος – η αναζήτηση βρίσκει μόνο φακέλους κάτω από τους εμφανιζόμενους."
 }

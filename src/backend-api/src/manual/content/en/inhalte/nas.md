@@ -43,8 +43,8 @@ After signing in, the box shows the NAS's folders as a tree. For every folder yo
 
 Useful for this:
 
-- The search field **Search folders across the whole NAS** also finds folders deep in the tree. For this the box needs a search index; **Update index** reads the folders in again if something has changed on the NAS.
-- The search looks through the shown folders and everything below them, for example to find a series in "Hörspiele" to download. As long as no folder is shown yet, it searches the whole NAS; on a big NAS the index then takes long (over SMB half an hour and more for 40,000 folders). When you show other folders, the box builds the index anew.
+- The search field **Search the shown folders** also finds folders deep below the shown folders, for example a series in "Hörspiele" to download. For this the box keeps a search index of these folders only; when you show other ones, it builds it anew. **Update index** reads the folders in again if something has changed on the NAS.
+- As long as no folder is shown, there is no index and the search finds nothing – you choose the first folder in the tree.
 - **Show only the selection** lists only the folders you have shown, hidden or marked for download.
 - **Show all**, **Show none**, **Download all** and **Download none** mark quickly.
 

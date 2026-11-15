@@ -2056,7 +2056,6 @@
  "Open Source & Drittanbieter": "Open source och tredje part",
  "Ordner": "Mapp",
  "Ordner als ZIP herunterladen": "Ladda ner mappen som ZIP",
- "Ordner auf dem ganzen NAS suchen": "Sök mappar på hela NAS:et",
  "Ordner auf dem NAS": "Mapp på NAS:en",
  "Ordner auf der SD-Karte": "Mapp på SD-kortet",
  "Ordner fehlen": "Mappar saknas",
@@ -3954,5 +3953,6 @@
  "Die Box konnte SMB nicht einrichten. Ist sie mit dem Internet verbunden?": "Boxen kunde inte ställa in SMB. Är den ansluten till internet?",
  "Die Freigabe ließ sich nicht einbinden.": "Delningen kunde inte monteras.",
  "In den angezeigten Ordnern suchen": "Sök i de visade mapparna",
- "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Sökindex för de visade mapparna: {} mappar, från {}"
+ "Suchindex der angezeigten Ordner: {} Ordner, Stand {}": "Sökindex för de visade mapparna: {} mappar, från {}",
+ "Noch kein Ordner angezeigt – die Suche findet nur Ordner unter angezeigten.": "Ingen mapp visas än – sökningen hittar bara mappar under visade."
 }
