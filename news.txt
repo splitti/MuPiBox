@@ -1,4 +1,4 @@
-<h3>DEV 5.1.0 - changes compared to 5.0.15</h3>
+<h3>DEV 5.1.0 - changes compared to 5.0.17</h3>
 <b>Folders of the box</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
@@ -8,6 +8,75 @@
 </ul>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>The previous admin interface (the PHP pages, off by default since 5.0.12) is gone: the app does everything it did. The update removes it together with PHP - nothing on the box answers with PHP any more - and the web server's right to run anything as root, which only the PHP pages used. The box's start page leads straight into the app. A Spotify login through the old address https://&lt;box&gt;/spotify.php goes on to the app, and backups made in the admin interface can still be restored in the app. The pictures of the theme tiles in the app now come with the themes.</li>
+</ul>
+<b>Extensions</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New: extensions - add-on features that are installed only on the boxes that want them (System › Erweiterungen). The page works like a browser's extensions page: search, a card per extension with Details, Entfernen and a switch; switching on one that is not installed installs it after a question, a newer version shows as a line on its card. Extensions come from the catalog of the MuPiBox; own files and an own catalog only in developer mode (a switch in the app, with a warning).</li>
+<li id='linews' class='linews'>Before an install or switching on, the box checks what an extension needs (ports, GPIO pins, services) against what it already uses, and says what clashes. GPIO pins are chosen in the app: the list shows every pin of the header and greys out those in use, with who holds them (the box itself, the boot configuration, another extension); the box checks again when it is saved. An update of an extension that fails puts the version before back.</li>
+<li id='linews' class='linews'>A backup keeps the settings of the installed extensions (pins, the place of the weather ...); restored on a new card, an extension that is installed again finds its settings.</li>
+<li id='linews' class='linews'>In the catalog: "USB-CD-Laufwerk" (audio CDs from a USB drive: a "CD" tab on the display, names, artist and cover from Discogs or MusicBrainz, seeking inside a track, the tray opens from the Winamp theme), "Uhrzeit in der Kopfzeile" (the clock right of the battery, digits or dial, 12/24 hours), "Wetter" (the weather of a place as dials on the display, Open-Meteo or MET Norway, units and order to choose), "Buttons &amp; GPIO Input" (up to six buttons and two twin buttons on GPIO pins, short and long press, repeat while held) and the NFC extension (below).</li>
+</ul>
+<b>NFC</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New extension: an NFC reader starts albums, folders, radio stations and podcasts with tags and cards. Readers: PN5180 (ISO 14443 A and ISO 15693), RC522 and PN532 (I2C, SPI or serial), or a USB reader that types the card number. In the library, "NFC-Tag" at a medium gives it to the next tag laid on the reader, with a picture for each tag; a flex tag always has the medium chosen for it last. Settings under System › NFC-Extension.</li>
+<li id='linews' class='linews'>Taking the tag off pauses - only what the tag started (something else started on the display meanwhile goes on); laying it on again goes on. A tag laid on again while its medium plays lets it play on, one laid on only for a moment starts nothing. A podcast tag plays an episode of the tile's choice.</li>
+</ul>
+<b>Photos</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New: a photo display (Settings › Fotos, off by default). Photos and short videos are uploaded from the phone into albums (Library › Fotos), with a check for space before the upload, progress per file and cancel. Pictures are kept in three sizes, turned as the camera says, without location. iPhone photos (HEIC) are read, also those of newer iPhones on Debian 12. Videos (MP4, MOV, M4V up to 3 minutes) are prepared in the background for the Pi.</li>
+<li id='linews' class='linews'>On the display: a "Fotos" tab right of Radio, the albums as stacks of pictures (a tap on the name reads it out), an album as a grid, full screen with swipe, two-finger zoom and double tap, a slideshow with fading and gentle zoom in three speeds; videos with sound and their own volume buttons, muted while something plays. Only albums released for the display are shown.</li>
+<li id='linews' class='linews'>Screensaver: after a set time without touch a slideshow of the display's albums with a small clock - only in silence (or also during playback), never in quiet hours, under the playtime lock or with the display off.</li>
+<li id='linews' class='linews'>Picture time: counted like the listening time while an album is open on the display - its own limit per weekday or counted on the listening time; +10 min, free today and reset in the app and by Telegram (/photoextend, /photofree). The start tile of the app shows listening and pictures. The box stays on while someone looks at photos.</li>
+<li id='linews' class='linews'>Photo services: folders of the NAS, Immich (albums, people recognised by their face - also two or three together - and favourites), Synology Photos (albums, folders of the personal and shared space, smart albums of people, places, tags and subjects), Nextcloud (albums of the Photos app), PhotoPrism (albums) and shared iCloud albums (by the link of their public website, no Apple ID). Each is kept on the box in display size or shown live, synced at start, at a chosen interval or by hand, a sync can be cancelled. A service that is away changes nothing on the box; passwords and keys are stored encrypted, self-signed certificates are confirmed by their fingerprint.</li>
+<li id='linews' class='linews'>The full backup holds the uploaded photos and videos with their albums (photos of services are fetched again).</li>
+</ul>
+<b>Daily limit per tile</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New: every tile of the start page (an artist, a folder of the SD card or the NAS, a single playlist or station) can get a daily limit (15 to 120 minutes) in its sheet in the library. The box counts while it really plays; at the end the title or album finishes as with the listening time, radio stops at once. On the display a used-up tile stays, paler and with a lock, a bar says "&lt;tile&gt; ist für heute vorbei", and "Noch 5 Minuten &lt;tile&gt;" comes before; the pill top right shows what runs out first. In the app under Spielzeit › Kacheln mit Limit (+10 min, free today), in Telegram with /status and /tiles. It counts on the listening time too.</li>
+</ul>
+<b>Heard marks</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>What of the library was started or heard to the end (issue #180): an album of the SD card, the NAS, TIDAL or Spotify counts as started after a minute and as heard when its last title ran to its last 30 seconds. On the display a yellow or green tick at the cover in the list, in the app too, with "Als gehört markieren" / "Als ungehört markieren" (also for a whole artist or folder). Switch under Bedienung am Display › Weiterhören (on by default).</li>
+</ul>
+<b>Podcasts</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>The player shows the list of episodes; next goes to the older episode, previous to the newer one, as at an album - also with the box's buttons and the rotary encoder. They keep to the tile: its choice of episodes (e.g. the 5 newest), its order and, without internet, the episodes on the SD card. At the end of the list the episode plays on.</li>
+</ul>
+<b>Library</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>"Verwaltete Inhalte" is gone: subscriptions, their range and their albums are changed at the artist in the library, the tile "Abos" shows the library filtered to Smart-Sync. Albums added one by one show there too.</li>
+<li id='linews' class='linews'>TIDAL, a whole artist: the order on the display can be set in its sheet (A-Z with numbers as numbers, Z-A, oldest or newest first by the full release date). "Episode from/to" of audio plays counts the number in the title (Folge 12, 012/..., Teil 3) instead of the place by release date.</li>
+</ul>
+<b>NAS</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Windows share (SMB) besides WebDAV: Synology, QNAP, FRITZ!Box with USB storage and Windows PCs offer SMB without setting anything up. Library › NAS asks how the box reaches the NAS; the share is written as in Windows Explorer (\\192.168.1.10\Musik). Errors with their reason (name unknown, not reachable, login refused, no such share, NAS only speaks SMB1). A refused login is not repeated for 10 minutes, so the NAS does not lock the box out.</li>
+<li id='linews' class='linews'>The folder search of the NAS page searches in the folders shown (and below them); without a shown folder it no longer walks through the whole NAS. While the NAS does not answer, the app says "Gerade nicht erreichbar" instead of "Angemeldet" or the login form.</li>
+</ul>
+<b>Display</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New theme Winamp: a Winamp skin player with equaliser (presets, also per album) and playlist, whose menus edit the queue of local and NAS albums. Skins are uploaded and chosen in the app (link to the Winamp Skin Museum), the base skin comes with it; a compact layout for 800 × 480 displays.</li>
+<li id='linews' class='linews'>Shuffle for local and NAS albums: next and the end of a title choose one not played in this round, previous goes back through the played ones.</li>
+<li id='linews' class='linews'>"Abends dunkler" can follow sunset and sunrise of a place (place search in the app, "Ort entfernen").</li>
+<li id='linews' class='linews'>Updates from the app show their progress on the display: a bar at the foot of the maintenance picture, in the colours of the scene, with a sentence about the step and percent. The percent follows the time of the steps (it raced to 30 % and jumped to 100 at the end). No more blue stripes over the maintenance picture.</li>
+</ul>
+<b>Hardware</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>The three pins of the rotary encoder are chosen in the app; it runs on a Raspberry Pi 5, as do the fan and the power LED. Its button takes its pin only when it has a function and never an SPI or I2C pin, so GPIO 10 stays free for an NFC reader.</li>
+</ul>
+<b>Updates</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>An update started without a terminal (systemd-run, as in the instructions for testing a branch) writes its progress into the journal and restarts the box at its end, as from the app; one that stops before it replaced anything brings the display back.</li>
 </ul>
 <h3>DEV 5.0.15 - changes compared to 5.0.14</h3>
 <b>WiFi and LAN</b>
