@@ -1362,7 +1362,6 @@
  "FTP-Server": "FTP-сервер",
  "Fünf Freunde": "Fünf Freunde",
  "Funktion des Tasters (GPIO 10)": "Функція кнопки (GPIO 10)",
- "Funktion des Tasters an GPIO 10": "Функція кнопки на GPIO 10",
  "Für „{}“ war kein Cover dabei. Soll ich bei iTunes, Deezer und Spotify nach einem suchen? Du wählst dann eins aus – oder nimmst ein eigenes Bild.": "Для «{}» не було обкладинки. Пошукати її в iTunes, Deezer і Spotify? Потім ти вибереш одну – або візьмеш власне зображення.",
  "Für „Eigenes“ brauchst du ein Bild, z. B. ein Foto. Die App schneidet es auf das Format des Displays zu; Schrift und Farben stellst du danach ein.": "Для «Custom» потрібне зображення, наприклад фото. Застосунок обрізає його під формат дисплея; шрифт і кольори налаштуєш потім.",
  "Für {} gibt es noch keine Stimme, die auf der Box läuft. Mit Google spricht die Box die Sprache trotzdem.": "Для мови {} ще немає голосу, що працює на боксі. З Google бокс усе одно говорить цією мовою.",
@@ -1738,7 +1737,6 @@
  "Lautstärke der Ansagen": "Гучність оголошень",
  "Lautstärke jetzt": "Гучність зараз",
  "Lautstärke ließ sich nicht setzen": "Не вдалося встановити гучність",
- "Lautstärke per Drehregler, Taster an GPIO 10": "Гучність через поворотний регулятор, кнопка на GPIO 10",
  "Lautstärke setzen (0–100)": "Встановити гучність (0–100)",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth": "Гучність, звукова карта, поворотний регулятор, Bluetooth",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth, Sprachausgabe": "Гучність, звукова карта, поворотний регулятор, Bluetooth, голосовий вивід",
@@ -4128,5 +4126,9 @@
  "Heute {} von {} min{}.": "Сьогодні {} з {} min{}.",
  "(+{} min heute)": "(+{} min сьогодні)",
  "So geht beides nicht: den Pin des Drehreglers unten umstellen und danach die Box neu starten.": "Так обидва не працюватимуть: змініть нижче пін поворотного регулятора, а потім перезапустіть коробку.",
- "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "Поворотний регулятор зараз не працює. Виберіть інший пін або перезапустіть коробку."
+ "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "Поворотний регулятор зараз не працює. Виберіть інший пін або перезапустіть коробку.",
+ "Lautstärke per Drehregler, dazu ein Taster": "Гучність через поворотний регулятор, а також кнопка",
+ "Funktion des Tasters": "Функція кнопки",
+ "Ort entfernen": "Видалити місце",
+ "Ort entfernt": "Місце видалено"
 }

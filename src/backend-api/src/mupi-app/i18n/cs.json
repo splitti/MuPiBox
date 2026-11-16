@@ -1362,7 +1362,6 @@
  "FTP-Server": "FTP server",
  "Fünf Freunde": "Pět přátel",
  "Funktion des Tasters (GPIO 10)": "Funkce tlačítka (GPIO 10)",
- "Funktion des Tasters an GPIO 10": "Funkce tlačítka na GPIO 10",
  "Für „{}“ war kein Cover dabei. Soll ich bei iTunes, Deezer und Spotify nach einem suchen? Du wählst dann eins aus – oder nimmst ein eigenes Bild.": "K „{}“ nebyl žádný obal. Mám nějaký vyhledat na iTunes, Deezer a Spotify? Pak si jeden vyberete – nebo použijete vlastní obrázek.",
  "Für „Eigenes“ brauchst du ein Bild, z. B. ein Foto. Die App schneidet es auf das Format des Displays zu; Schrift und Farben stellst du danach ein.": "„Custom“ potřebuje obrázek, např. fotku. Aplikace ho ořízne na formát displeje; písmo a barvy nastavíš potom.",
  "Für {} gibt es noch keine Stimme, die auf der Box läuft. Mit Google spricht die Box die Sprache trotzdem.": "Pro {} zatím není žádný hlas, který na boxu funguje. S Googlem box daný jazyk přesto mluví.",
@@ -1738,7 +1737,6 @@
  "Lautstärke der Ansagen": "Hlasitost hlášení",
  "Lautstärke jetzt": "Hlasitost teď",
  "Lautstärke ließ sich nicht setzen": "Hlasitost se nepodařilo nastavit",
- "Lautstärke per Drehregler, Taster an GPIO 10": "Hlasitost otočným ovladačem, tlačítko na GPIO 10",
  "Lautstärke setzen (0–100)": "Nastavit hlasitost (0–100)",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth": "Hlasitost, zvuková karta, otočný ovladač, Bluetooth",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth, Sprachausgabe": "Hlasitost, zvuková karta, otočný ovladač, Bluetooth, hlasový výstup",
@@ -4128,5 +4126,9 @@
  "Heute {} von {} min{}.": "Dnes {} z {} min{}.",
  "(+{} min heute)": "(+{} min dnes)",
  "So geht beides nicht: den Pin des Drehreglers unten umstellen und danach die Box neu starten.": "Takhle nemůžou fungovat obě věci: změňte níže pin otočného ovladače a potom krabičku restartujte.",
- "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "Otočný ovladač teď neběží. Vyberte jiný pin nebo krabičku restartujte."
+ "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "Otočný ovladač teď neběží. Vyberte jiný pin nebo krabičku restartujte.",
+ "Lautstärke per Drehregler, dazu ein Taster": "Hlasitost otočným ovladačem, k tomu tlačítko",
+ "Funktion des Tasters": "Funkce tlačítka",
+ "Ort entfernen": "Odebrat místo",
+ "Ort entfernt": "Místo odebráno"
 }

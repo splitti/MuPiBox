@@ -8,7 +8,7 @@ import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { requireCsrf, requireSession } from './middleware'
 import { bootConfigPath } from './boot-paths'
-import { rotaryPins } from './extension-resources'
+import { rotaryButtonOn, rotaryHeldPins, rotaryPins } from './extension-resources'
 import { extensionGpio, takenForRotary } from './extensions'
 import { hdmiAudioWritten, onboardAudioWritten, reapplyOnboardAudio, setHdmiAudio, setOnboardAudio } from '../audio-output'
 
@@ -134,8 +134,8 @@ export async function fanSpeedNow(): Promise<number | null> {
 }
 
 export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void {
-  // the pins the rotary encoder holds (none while it is off): not for the LED or the fan
-  const rotaryHeld = (): string[] => (section(deps, 'rotary').active === true ? Object.values(rotaryPinsOf(deps.getMupiboxConfig())).map(String) : [])
+  // the pins the rotary encoder holds (none while it is off, the button's only while it does something): not for the LED or the fan
+  const rotaryHeld = (): string[] => (section(deps, 'rotary').active === true ? rotaryHeldPins(deps.getMupiboxConfig() as unknown as Record<string, unknown> | undefined).map(String) : [])
 
   /** GET /api/app/hardware - everything the pages Soundkarte, Drehregler, MuPiHAT, Taster and Lüfter show. */
   router.get('/hardware', requireSession, async (_req, res) => {
@@ -333,16 +333,26 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
     if (pinsGiven && new Set([pins.a, pins.b, pins.button]).size !== 3) return void res.status(409).json({ error: 'gpio_twice' })
     const pinsChanged = pins.a !== before.a || pins.b !== before.b || pins.button !== before.button
     const willBeOn = typeof body.active === 'boolean' ? body.active : section(deps, 'rotary').active === true
+    // (the button's pin is taken only while the button does something - rotary_control.py: a pin of SPI stays the NFC reader's)
+    const buttonBefore = rotaryButtonOn(deps.getMupiboxConfig() as unknown as Record<string, unknown> | undefined)
+    const buttonAfter = body.button !== undefined ? String(body.button) !== 'off' : buttonBefore
     // (a pin another part holds - the fan, an extension's button, the boot configuration, a running program - is not to be chosen: the
     // pins are checked when they change and when the encoder is switched on, not for a step or a button function)
     if ((pinsChanged || body.active === true) && (willBeOn || pinsGiven)) {
       const taken = (await takenForRotary(deps.getMupiboxConfig() as unknown as Record<string, unknown> | undefined)).gpio
       // (what the encoder keeps is its own, a pin of an earlier choice that something else holds now is only an error when it is switched on)
-      const check = body.active === true ? [pins.a, pins.b, pins.button] : [pins.a, pins.b, pins.button].filter((pin) => pin !== before.a && pin !== before.b && pin !== before.button)
+      const check = (body.active === true ? [pins.a, pins.b, pins.button] : [pins.a, pins.b, pins.button].filter((pin) => pin !== before.a && pin !== before.b && pin !== before.button)).filter(
+        (pin) => buttonAfter || pin !== pins.button,
+      )
       for (const pin of check) {
         const holders = taken.get(pin)
         if (holders?.length) return void res.status(409).json({ error: 'gpio_taken', pin, by: holders.join(', ') })
       }
+    }
+    // (the button given a function while the encoder is on: its pin must be free - it is taken from then on)
+    if (willBeOn && buttonAfter && !buttonBefore && !pinsChanged && body.active !== true) {
+      const holders = (await takenForRotary(deps.getMupiboxConfig() as unknown as Record<string, unknown> | undefined)).gpio.get(pins.button)
+      if (holders?.length) return void res.status(409).json({ error: 'gpio_taken', pin: pins.button, by: holders.join(', ') })
     }
     if (body.active !== undefined) values.active = body.active
     if (pinsGiven) Object.assign(values, { pinA: pins.a, pinB: pins.b, pinButton: pins.button })

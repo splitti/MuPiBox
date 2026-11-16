@@ -26,7 +26,7 @@ Wire with the box switched off. The PN5180 needs **both** supplies: **5 V** for 
 The pins **SCK, MOSI, MISO and NSS** are fixed by the SPI port. You choose **BUSY and RST** in the settings; GPIO 25 and GPIO 23 are free on most boxes, and the choice locks pins that are taken. The PN5180 tells through BUSY when it is ready; it does not work without it. The IRQ pin is not needed, the extension asks the chip.
 
 > [!WARNING]
-> The box's **rotary encoder** has its button on GPIO 10 by default, which is also MOSI of the SPI port. With a rotary encoder, move its button to a free pin under **Settings › Rotary encoder** (GPIO 5, say) and restart the box afterwards (until then GPIO 10 stays blocked for the reader); the page shows a hint while a pin of the rotary encoder is also taken by the SPI port.
+> The box's **rotary encoder** has its button on GPIO 10 by default, which is also MOSI of the SPI port. While the button has no function (**Off**), the rotary encoder leaves GPIO 10 free. If you need the button, move it to a free pin under **Settings › Rotary encoder** (GPIO 5, say); the page shows a hint while a pin of the rotary encoder is also taken by the SPI port. The rotary encoder never takes a pin of the SPI port; the button then does nothing.
 
 Short wires help (up to about 15 cm), ideally with an extra ground wire. The labels differ from board to board: check the labels on yours, especially 5V and 3.3V. The whole header is shown in the appendix [GPIO assignment](../anhang/gpio.md).
 
@@ -138,7 +138,7 @@ The sub page **Assigned tags** holds these settings too:
 | **Tag starts its medium** | Off: tags are only read and assigned, nothing starts. |
 | **When taken off** | **Pause** (default), **Stop** or **Keep playing**. Only a tag that has a medium triggers it, and only while what it started still plays: if the child chose something else on the display meanwhile, that goes on. |
 
-With **Pause** an audio play goes on where it was when the same tag is laid on again within half an hour. With another tag its medium starts as with a tap on the tile.
+With **Pause** an audio play goes on where it was when the same tag is laid on again within half an hour. With another tag its medium starts as with a tap on the tile. A tag laid on again while its medium still plays (with a USB reader: every time it is held there) lets it play on instead of starting it from the beginning. With **Pause** or **Stop**, a tag laid on only briefly and taken off before playback begins starts nothing.
 
 The assignments are in `tags.json` in the extension's data folder (`~/.mupibox/data/extensions/nfc/`) and stay through updates. The box starts through the **display** (so tile times, play time and "Resume" count as with a tap); with no display running a tag therefore starts nothing.
 

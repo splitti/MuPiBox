@@ -1362,7 +1362,6 @@
  "FTP-Server": "FTP-palvelin",
  "Fünf Freunde": "Fünf Freunde",
  "Funktion des Tasters (GPIO 10)": "Painikkeen toiminto (GPIO 10)",
- "Funktion des Tasters an GPIO 10": "Painikkeen toiminto GPIO 10:ssä",
  "Für „{}“ war kein Cover dabei. Soll ich bei iTunes, Deezer und Spotify nach einem suchen? Du wählst dann eins aus – oder nimmst ein eigenes Bild.": "Kohteella ”{}” ei ollut kansikuvaa. Haenko sellaisen iTunesista, Deezeristä ja Spotifysta? Valitset sitten yhden – tai käytät omaa kuvaa.",
  "Für „Eigenes“ brauchst du ein Bild, z. B. ein Foto. Die App schneidet es auf das Format des Displays zu; Schrift und Farben stellst du danach ein.": "”Custom” tarvitsee kuvan, esim. valokuvan. Sovellus rajaa sen näytön muotoon; fontin ja värit asetat sen jälkeen.",
  "Für {} gibt es noch keine Stimme, die auf der Box läuft. Mit Google spricht die Box die Sprache trotzdem.": "Kielelle {} ei ole vielä ääntä, joka toimisi laatikossa. Googlen avulla laatikko puhuu kieltä silti.",
@@ -1738,7 +1737,6 @@
  "Lautstärke der Ansagen": "Ilmoitusten äänenvoimakkuus",
  "Lautstärke jetzt": "Äänenvoimakkuus nyt",
  "Lautstärke ließ sich nicht setzen": "Äänenvoimakkuutta ei voitu asettaa",
- "Lautstärke per Drehregler, Taster an GPIO 10": "Äänenvoimakkuus kiertosäätimellä, painike GPIO 10:ssä",
  "Lautstärke setzen (0–100)": "Aseta äänenvoimakkuus (0–100)",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth": "Äänenvoimakkuus, äänikortti, kiertosäädin, Bluetooth",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth, Sprachausgabe": "Äänenvoimakkuus, äänikortti, kiertosäädin, Bluetooth, puhetoiminto",
@@ -4128,5 +4126,9 @@
  "Heute {} von {} min{}.": "Tänään {} / {} min{}.",
  "(+{} min heute)": "(+{} min tänään)",
  "So geht beides nicht: den Pin des Drehreglers unten umstellen und danach die Box neu starten.": "Molemmat eivät voi toimia näin: vaihda kiertosäätimen pinni alta ja käynnistä laatikko sitten uudelleen.",
- "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "Kiertosäädin ei ole nyt käynnissä. Valitse toinen pinni tai käynnistä laatikko uudelleen."
+ "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "Kiertosäädin ei ole nyt käynnissä. Valitse toinen pinni tai käynnistä laatikko uudelleen.",
+ "Lautstärke per Drehregler, dazu ein Taster": "Äänenvoimakkuus kiertosäätimellä, lisäksi painike",
+ "Funktion des Tasters": "Painikkeen toiminto",
+ "Ort entfernen": "Poista paikka",
+ "Ort entfernt": "Paikka poistettu"
 }

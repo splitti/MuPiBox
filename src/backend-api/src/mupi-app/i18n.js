@@ -181,6 +181,12 @@ const withStop = (text) => (text === null ? null : `${text}.`)
 function translateText(core) {
   const whole = translateCore(core)
   if (whole !== null) return whole
+  // (one sentence with the full stop the code put after it: "Abends dunkler: von Sonnenuntergang bis Sonnenaufgang." was
+  // translated in parts - "Evening dimming: von Sonnenuntergang …")
+  if (core.endsWith('.') && !core.endsWith('..')) {
+    const bare = translateCore(core.slice(0, -1))
+    if (bare !== null) return /[.!?…]$/.test(bare) ? bare : withStop(bare)
+  }
   const sentences = core.split(/(?<=[.!?…])\s+(?=\S)/)
   if (sentences.length > 1) {
     // (a sentence may be known without its full stop: "Gespeichert. Das Display lädt neu." has "Gespeichert" as a text)

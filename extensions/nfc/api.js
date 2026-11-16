@@ -25,8 +25,15 @@ const ARM_UNASKED_MS = 15000
 // a tag still lying on the reader when its driver started again (settings changed, the driver fell over): reported anew,
 // it does not start its medium again - unless it was taken off and laid on after that time
 const AGAIN_AFTER_RESTART_MS = 90000
-// the display starts a medium within a second or two of taking it: a new start later than this is not the tag's
-const NOTE_WITHIN_MS = 10000
+// the display starts a medium within a second or two of taking it - Spotify, when the box was silent, takes up to half a
+// minute to start: the first new start within this time is the tag's (asked every second, see watchStart)
+const NOTE_WITHIN_MS = 35000
+// tags.json is written when something of it changes that matters (a new tag, a medium given); when a known tag was laid
+// on only, at most this often - it was written to the SD card at every laying on (a USB reader: at every hold)
+const SEEN_SAVE_MS = 6 * 60 * 60 * 1000
+// the same error of the reader (not connected, a wire loose) is logged once, then again after this time at the earliest:
+// the driver is started again every 10 minutes and says it again each time
+const ERROR_LOG_MS = 6 * 60 * 60 * 1000
 
 exports.activate = (host) => {
   const log = host.log ?? console
@@ -57,7 +64,11 @@ exports.activate = (host) => {
     }
   }
   let data = tags.readData(readJson(tagsFile))
-  const saveTags = () => writeJson(tagsFile, data)
+  let savedAt = 0
+  const saveTags = () => {
+    savedAt = Date.now()
+    writeJson(tagsFile, data)
+  }
 
   let armed = null // what waits for the next tag: { id, target, media, image, cover, title, until }
   let armSeq = 0
@@ -116,17 +127,32 @@ exports.activate = (host) => {
     }
   }
 
-  // A tag with a medium: it goes on where it was paused when the same tag is laid on again soon, else the display starts the medium.
-  const start = async (tag) => {
+  // (taking the tag off pauses or stops: a tag laid on only for a moment starts nothing - not for a USB reader, which never
+  // says that a card went)
+  const removeMatters = (settings) => config.reader !== 'hid' && (settings.onRemove === 'pause' || settings.onRemove === 'stop')
+
+  // A tag with a medium: what it started goes on (it plays on, or a pause is taken back - one made by taking it off only
+  // within RESUME_WITHIN_MS), else the display starts the medium.
+  const start = async (tag, settings) => {
     const now = Date.now()
     // (first: a tag slipped off and laid on again within the 2 s goes on - the lock below is for the same report twice)
-    if (paused && paused.uid === tag.uid && now - paused.at < RESUME_WITHIN_MS) {
-      paused = null
-      // (only what this tag started and is still paused: something else chosen meanwhile, or stopped, starts the tag's medium anew)
+    if (handed && handed.uid === tag.uid) {
+      await noteGeneration()
       const meta = await playerMeta()
-      if (isPaused(meta) && ownPlayback(meta) && (await player('play'))) {
-        lastStart = { uid: tag.uid, at: now }
-        return
+      // (only what this tag started: something else chosen meanwhile, or stopped, starts the tag's medium anew)
+      if (ownPlayback(meta) && meta?.finished !== true) {
+        // (laid on again while it plays - a USB reader at every hold: it plays on, it started from its beginning before)
+        if (!isPaused(meta)) {
+          paused = null
+          lastStart = { uid: tag.uid, at: now }
+          return
+        }
+        const pausedLong = paused && paused.uid === tag.uid && now - paused.at >= RESUME_WITHIN_MS
+        if (!pausedLong && (await player('play'))) {
+          paused = null
+          lastStart = { uid: tag.uid, at: now }
+          return
+        }
       }
     }
     if (lastStart.uid === tag.uid && now - lastStart.at < SAME_TAG_MS) return
@@ -134,6 +160,8 @@ exports.activate = (host) => {
     paused = null
     const media = await playable(tag.media)
     if (!media) return log.warn(`[nfc] tag ${tag.uid}: no episode found for ${tag.title}`)
+    // (taken off while its episode was looked for: nothing starts)
+    if (removeMatters(settings) && inField?.uid !== tag.uid) return log.info(`[nfc] tag ${tag.uid}: taken off before its start`)
     pending = { seq: ++seq, media, at: now, uid: tag.uid }
   }
 
@@ -143,10 +171,20 @@ exports.activate = (host) => {
   const originOf = (meta) => (typeof meta?.origin === 'number' ? meta.origin : typeof meta?.generation === 'number' ? meta.generation : null)
   const noteGeneration = async () => {
     if (!handed || handed.generation !== null || Date.now() - handed.at > NOTE_WITHIN_MS) return
+    const asked = handed
     const meta = await playerMeta()
     const origin = originOf(meta)
     // (a start refused - the tile's limit, the listening time, Spotify blocked - makes no new one: nothing is the tag's)
-    if (handed && handed.generation === null && origin !== null && origin !== handed.before) handed.generation = origin
+    if (handed === asked && handed.generation === null && origin !== null && origin !== handed.before) handed.generation = origin
+  }
+  // (asked every second after the hand-over until the start is there: a slow Spotify start was not seen after 4 s, and
+  // taking the tag off did not pause it)
+  const watchStart = (which) => {
+    const timer = setInterval(() => {
+      if (handed !== which || which.generation !== null || Date.now() - which.at > NOTE_WITHIN_MS) return clearInterval(timer)
+      noteGeneration().catch(() => undefined)
+    }, 1000)
+    timer.unref?.()
   }
   const ownPlayback = (meta) => handed !== null && handed.generation !== null && originOf(meta) === handed.generation
   const playsThisTag = async (tag) => {
@@ -159,10 +197,11 @@ exports.activate = (host) => {
     const settings = (await host.settings()) ?? {}
     const now = Date.now()
     if (armed && (armed.until <= now || now - armed.asked > ARM_UNASKED_MS)) armed = null
+    const known = Boolean(data.tags[tags.normalizeUid(event?.uid) ?? ''])
     const result = tags.tagLaidOn(data, armed, event, now)
     if (result.disarm) armed = null
     if (result.kind === 'ignored') return
-    saveTags()
+    if (!known || result.armedId || result.kind === 'assigned' || result.kind === 'flex' || now - savedAt >= SEEN_SAVE_MS) saveTags()
     const again = restarted && restarted.uid === result.tag.uid && now < restarted.until
     restarted = null
     inField = result.tag
@@ -170,7 +209,7 @@ exports.activate = (host) => {
     log.info(`[nfc] tag ${result.tag.uid}: ${result.kind}${result.tag.title ? ` (${result.tag.title})` : ''}`)
     // (the tag that lay there while the driver started again: its medium plays already)
     if (again && !result.armedId) return
-    if (result.kind !== 'unknown' && settings.playOnTag !== false) await start(result.tag)
+    if (result.kind !== 'unknown' && settings.playOnTag !== false) await start(result.tag, settings)
   }
 
   const onGone = async () => {
@@ -179,6 +218,11 @@ exports.activate = (host) => {
     if (!tag?.media) return
     const settings = (await host.settings()) ?? {}
     if (settings.onRemove !== 'pause' && settings.onRemove !== 'stop') return
+    // (laid on only for a moment: its start the display has not taken yet is not made)
+    if (pending?.uid === tag.uid) {
+      pending = null
+      return
+    }
     // (only when this tag's medium is what plays: another album started meanwhile on the display stays)
     if (!(await playsThisTag(tag))) return
     if (settings.onRemove === 'pause') {
@@ -188,12 +232,14 @@ exports.activate = (host) => {
     }
   }
 
+  let lastError = { code: '', at: 0 } // the last error of the reader that was logged
   const onEvent = (event) => {
     switch (event.event) {
       case 'starting':
         view.phase = 'starting'
         break
       case 'ready':
+        lastError = { code: '', at: 0 }
         Object.assign(view, { phase: 'ready', firmware: event.firmware, product: event.product, errorCode: null })
         log.info(`[nfc] reader ready (${[event.product, event.firmware].filter(Boolean).join(' ')})`)
         break
@@ -214,7 +260,10 @@ exports.activate = (host) => {
       case 'error':
         view.phase = 'error'
         view.errorCode = event.code
-        log.warn(`[nfc] reader: ${event.code}: ${event.message}`)
+        if (event.code !== lastError.code || Date.now() - lastError.at >= ERROR_LOG_MS) {
+          lastError = { code: event.code, at: Date.now() }
+          log.warn(`[nfc] reader: ${event.code}: ${event.message}`)
+        }
         break
       default:
     }
@@ -420,8 +469,9 @@ exports.activate = (host) => {
     pending = null
     if (command) {
       handed = { uid: command.uid, at: now, before: origin, generation: null }
-      // (the display starts it within a second or two: its number is taken then, before another start can come)
-      setTimeout(() => noteGeneration().catch(() => undefined), 4000).unref?.()
+      // (the display starts it within a second or two - Spotify after a silence later: its number is taken then, before
+      // another start can come)
+      watchStart(handed)
     }
     res.json(command ? { seq: command.seq, media: command.media } : {})
   })

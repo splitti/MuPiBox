@@ -2574,8 +2574,8 @@ function play() {
 
 // "next" and "previous" at a podcast episode: the episode below (above) in the list of its tile, as the display lists it
 // - the parents' choice of episodes, the entry's sorting, without internet the episodes on the SD card. The backend API
-// knows the list (/api/rssfeed/neighbour: the player knows no feed address). At an end the same episode starts again,
-// from its beginning. It is started as the display starts an episode (the same route), so the tile time, the listening
+// knows the list (/api/rssfeed/neighbour: the player knows no feed address). At an end of the list the episode plays on
+// where it is (it started again from its beginning before - the place in a long episode was gone). It is started as the display starts an episode (the same route), so the tile time, the listening
 // time and the pause rules count as for any start; the source "skip" makes the display's player page follow to the new
 // episode (the navigator). Presses while one is asked are added up: three detents of the knob go three episodes.
 const episodeSkip = { pending: 0, running: false }
@@ -2596,7 +2596,7 @@ async function runEpisodeSkips() {
       const query = new URLSearchParams({ url: base, dir: steps > 0 ? 'next' : 'previous', steps: String(Math.abs(steps)) })
       const tile = tileState.raw || tileState.current
       if (tile) query.set('tile', tile)
-      const response = await fetch(`http://127.0.0.1:8200/api/rssfeed/neighbour?${query}`, { signal: AbortSignal.timeout(4000) })
+      const response = await fetch(`http://127.0.0.1:8200/api/rssfeed/neighbour?${query}`, { signal: AbortSignal.timeout(20000) })
       const found = response.ok ? await response.json() : null
       if (!found?.found || typeof found.url !== 'string') {
         log.debug(`${now()}: [Spotify Control] skip at an episode: no neighbour found`)
@@ -2604,23 +2604,24 @@ async function runEpisodeSkips() {
       }
       // (another start came meanwhile: it stays)
       if (currentMeta.currentType !== 'rss' || !ours.has(currentMeta.episode)) break
-      if (found.same) episodeFromStart = found.url
+      if (found.same) {
+        log.debug(`${now()}: [Spotify Control] skip at an episode: at the end of the list - it plays on`)
+        break
+      }
       const start = new URLSearchParams({ src: 'skip' })
       if (typeof found.cover === 'string' && found.cover.startsWith('/api/')) start.set('cover', found.cover)
-      if (tileState.current) start.set('tile', tileState.current)
+      // (the key the first start named - the tile it was resolved to would be taken as a start of that tile itself)
+      const startTile = tileState.raw || tileState.current
+      if (startTile) start.set('tile', startTile)
       const started = await fetch(
         `http://127.0.0.1:${config.server.port}/rss/${encodeURIComponent(found.url)}/${encodeURIComponent(String(found.title ?? ''))}:title:artist:${encodeURIComponent(String(currentMeta.album || found.artist || ''))}?${start}`,
         { signal: AbortSignal.timeout(4000) },
       )
-      if (!started.ok) {
-        episodeFromStart = ''
-        break
-      }
+      if (!started.ok) break
       base = found.url
       ours.add(found.url)
     }
   } catch (err) {
-    episodeFromStart = ''
     log.debug(`${now()}: [Spotify Control] skip at an episode failed: ${err}`)
   } finally {
     episodeSkip.pending = 0
@@ -3464,7 +3465,6 @@ function saveEpisodePositions() {
   }
 }
 setInterval(saveEpisodePositions, 60 * 1000)
-let episodeFromStart = ''
 // The play of an episode starts: the one before is written away. Returns where it goes on (seconds), or null to
 // start from the beginning.
 function startEpisode(url) {
@@ -3472,11 +3472,6 @@ function startEpisode(url) {
   if (pendingEpisodeSeek) endEpisodeSeek()
   playingEpisode = url
   loadEpisodeFeedLength(url)
-  // ("next" at the newest episode starts it again: from its beginning, not where it was left)
-  if (episodeFromStart === url) {
-    episodeFromStart = ''
-    return null
-  }
   if (!episodeResumeOn()) return null
   const p = positionOf(url)
   if (!p || p.done || !(p.pos > 10) || (p.len && p.pos > p.len - 30)) return null
@@ -4899,7 +4894,7 @@ app.use((req, res) => {
     switchToMplayer()
     currentMeta.currentType = 'radio'
     currentMeta.cover = triggerCover
-    const parts = decodeURIComponent(command.name).split(':title:artist:')
+    const parts = decodeURIComponent(command.base).split(':title:artist:')
     currentMeta.currentTrackname = parts[0]
     currentMeta.album = parts[1]
     const dir = command.dir
@@ -4914,9 +4909,12 @@ app.use((req, res) => {
     switchToMplayer()
     currentMeta.currentType = 'rss'
     currentMeta.cover = triggerCover
-    const parts = decodeURIComponent(command.name).split(':title:artist:')
+    // (command.base, not command.name: path.parse() took everything after the last dot as an extension - "Folge 12. Der
+    // Dachs" became "Folge 12" and the podcast's name was gone; the display builds its player page from these since
+    // "next" at an episode)
+    const parts = decodeURIComponent(command.base).split(':title:artist:')
     currentMeta.currentTrackname = parts[0]
-    currentMeta.album = parts[1]
+    currentMeta.album = parts[1] ?? ''
     const dir = command.dir
     let rssURL = dir.split('rss/').pop()
     rssURL = decodeURIComponent(rssURL)

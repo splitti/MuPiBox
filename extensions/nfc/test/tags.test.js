@@ -191,9 +191,10 @@ test('the API part: arm with a medium, lay a new tag on, the display is told to 
   const player = []
   // (the player's number of the playback: 6 before, the display's start of the tag's medium makes it 7, another start later 8)
   let generation = 6
+  let playing = false
   global.fetch = async (url) => {
     const u = String(url)
-    if (u.startsWith('http://player.test/local')) return { ok: true, json: async () => ({ currentPlayer: 'mplayer', currentType: 'local', playing: false, generation, triggerAt: Date.now() }) }
+    if (u.startsWith('http://player.test/local')) return { ok: true, json: async () => ({ currentPlayer: 'mplayer', currentType: 'local', playing, generation, triggerAt: Date.now() }) }
     player.push(u)
     return { ok: true, json: async () => ({}) }
   }
@@ -255,10 +256,17 @@ test('the API part: arm with a medium, lay a new tag on, the display is told to 
     assert.ok(!player.some((u) => u.startsWith('http://player.test/pause')), 'what the display started is not the tag of the reader')
     generation = 7
 
-    // paused by taking it off, then the display stopped it (or started something else): laid on again it starts anew at once
+    // laid on again while it plays (a USB reader: at every hold): it plays on, nothing starts anew
+    playing = true
     player.length = 0
     nfc.feed({ event: 'tag', tech: 'ISO14443A', uid: '04A1B2C3' })
     await later(2100)
+    assert.deepStrictEqual(player, [], 'no play, no new start')
+    assert.deepStrictEqual((await call(routes['get /pending'])).body, {})
+    playing = false
+
+    // paused by taking it off, then the display stopped it (or started something else): laid on again it starts anew at once
+    player.length = 0
     nfc.feed({ event: 'gone' })
     await later()
     assert.ok(player.some((u) => u.startsWith('http://player.test/pause?src=nfc')))
@@ -410,6 +418,34 @@ test('the API part: the display is told to play an episode of the podcast, not i
     nfc.feed({ event: 'tag', tech: 'ISO15693', uid: 'E0040350181B0F84' })
     await later(50)
     assert.deepStrictEqual((await call(routes['get /pending'])).body, {})
+  } finally {
+    global.fetch = realFetch
+  }
+})
+
+test('the API part: a tag laid on only for a moment starts nothing when taking it off pauses; a known tag is not written at every laying on', async () => {
+  const realFetch = global.fetch
+  global.fetch = async () => ({ ok: true, json: async () => ({}) })
+  try {
+    const { host, routes, dataDir } = makeHost({ reader: 'none', onRemove: 'pause', playOnTag: true })
+    const nfc = require('../api.js').activate(host)
+    await later(0)
+    feedReady(nfc)
+    await call(routes['post /arm'], { body: { media: radio } })
+    nfc.feed({ event: 'tag', tech: 'ISO15693', uid: 'E0040350181B0F84' })
+    await later()
+    nfc.feed({ event: 'gone' })
+    await later()
+    assert.deepStrictEqual((await call(routes['get /pending'])).body, {}, 'taken off before the display took it')
+    const file = path.join(dataDir, 'tags.json')
+    const written = fs.statSync(file).mtimeMs
+    fs.utimesSync(file, new Date(0), new Date(0))
+    await later(2100)
+    nfc.feed({ event: 'tag', tech: 'ISO15693', uid: 'E0040350181B0F84' })
+    await later()
+    assert.ok(written > 0)
+    assert.strictEqual(fs.statSync(file).mtimeMs, 0, 'laid on again: not written')
+    assert.strictEqual((await call(routes['get /pending'])).body.media?.type, 'radio', 'lying on: it starts')
   } finally {
     global.fetch = realFetch
   }

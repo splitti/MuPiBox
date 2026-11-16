@@ -1262,23 +1262,35 @@ app.get('/api/rssfeed/episode-duration', async (req, res) => {
   res.json({ seconds: feedDurations.byKey.get(episodeKey(url)) ?? 0 })
 })
 
+// A cached feed read and parsed - one read at a time per file (the list in the player, its counter and a skip ask at once)
+const feedReads = new Map<string, Promise<unknown | undefined>>()
+function readFeedFile(file: string): Promise<unknown | undefined> {
+  const running = feedReads.get(file)
+  if (running) return running
+  const read = readFile(file, 'utf8')
+    .then((text) => JSON.parse(text) as unknown)
+    .catch(() => undefined) // (being written: the next time)
+    .finally(() => feedReads.delete(file))
+  feedReads.set(file, read)
+  return read
+}
+
 // A cached feed, parsed once while its file stays the same: a skip, the list in the player and its counter ask often,
-// and a feed of thousands of episodes takes a while to parse on a Pi
+// and a feed of thousands of episodes takes a while to parse on a Pi. Only the last few are kept - a parsed feed of
+// thousands of episodes is many MB, too much to keep dozens of on a Pi 3 (the search for an episode's feed uses the small
+// index below).
 const parsedFeeds = new Map<string, { mtimeMs: number; size: number; feed: unknown }>()
 async function parsedFeed(file: string): Promise<unknown | undefined> {
   const info = await stat(file).catch(() => undefined)
   if (!info) return undefined
   const hit = parsedFeeds.get(file)
   if (hit && hit.mtimeMs === info.mtimeMs && hit.size === info.size) return hit.feed
-  try {
-    const feed = JSON.parse(await readFile(file, 'utf8')) as unknown
-    parsedFeeds.delete(file)
-    parsedFeeds.set(file, { mtimeMs: info.mtimeMs, size: info.size, feed })
-    while (parsedFeeds.size > 40) parsedFeeds.delete(parsedFeeds.keys().next().value as string)
-    return feed
-  } catch {
-    return undefined // (being written: the next time)
-  }
+  const feed = await readFeedFile(file)
+  if (feed === undefined) return undefined
+  parsedFeeds.delete(file)
+  parsedFeeds.set(file, { mtimeMs: info.mtimeMs, size: info.size, feed })
+  while (parsedFeeds.size > 3) parsedFeeds.delete(parsedFeeds.keys().next().value as string)
+  return feed
 }
 
 // Which episodes a cached feed has, and its title: small, kept for every feed while its file stays the same - the search
@@ -1292,7 +1304,9 @@ async function feedIndexOf(file: string): Promise<{ keys: Set<string>; title?: s
   }
   const hit = feedIndex.get(file)
   if (hit && hit.mtimeMs === info.mtimeMs && hit.size === info.size) return hit
-  const feed = await parsedFeed(file)
+  // (read for its index only - not kept parsed: the search goes through every podcast of the library)
+  const kept = parsedFeeds.get(file)
+  const feed = kept && kept.mtimeMs === info.mtimeMs && kept.size === info.size ? kept.feed : await readFeedFile(file)
   if (!feed) return undefined
   const { channel, items } = feedItems(feed)
   const url = (item: Record<string, unknown>) => String((item.enclosure as { _attributes?: { url?: unknown } } | undefined)?._attributes?.url ?? '')
@@ -1316,6 +1330,15 @@ async function podcastTileEpisodes(url: string, tile: string): Promise<Located |
     // (being written: as if not in the library)
   }
   const wanted = episodeKey(url)
+  // (the entries that can be the tile first - its key without the feed's title, or one that needs it: after a restart of
+  // the box every feed looked at is read once, a long while on a Pi 3 with many podcasts)
+  if (tile) {
+    const maybeMine = (e: Record<string, unknown>) => {
+      const key = tileKeyOfRow(e)
+      return key === null || key === tile
+    }
+    entries = [...entries.filter(maybeMine), ...entries.filter((e) => !maybeMine(e))]
+  }
   let chosen: { entry: PodcastEntry & Record<string, unknown>; file: string } | undefined
   for (const entry of entries) {
     const file = rssCacheFilePath(rssCacheKeyFor(entry.id as string))

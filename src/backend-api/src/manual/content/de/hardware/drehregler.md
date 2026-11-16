@@ -34,6 +34,8 @@ Eine Änderung gilt sofort: Läuft der Regler, startet die Box seinen Dienst mit
 
 ## Der Taster
 
+Den Pin des Tasters nimmt der Regler nur, solange der Taster eine Funktion hat; mit **Aus** bleibt er frei für anderes. Wählst du später eine Funktion, prüft die App, ob der Pin noch frei ist. Einen Pin des SPI- oder I²C-Anschlusses (etwa GPIO 10 bei einem NFC-Leser) nimmt der Regler nie: Der Taster bleibt dann ohne Wirkung, der Regler selbst läuft weiter.
+
 | Funktion | Ein Druck |
 | --- | --- |
 | **Play/Pause** | hält die Wiedergabe an oder startet sie wieder |

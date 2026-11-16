@@ -1362,7 +1362,6 @@
  "FTP-Server": "FTP server",
  "Fünf Freunde": "Fünf Freunde",
  "Funktion des Tasters (GPIO 10)": "Function of the button (GPIO 10)",
- "Funktion des Tasters an GPIO 10": "Function of the button on GPIO 10",
  "Für „{}“ war kein Cover dabei. Soll ich bei iTunes, Deezer und Spotify nach einem suchen? Du wählst dann eins aus – oder nimmst ein eigenes Bild.": "There was no cover with “{}”. Shall I search iTunes, Deezer and Spotify for one? You then pick one – or use your own image.",
  "Für „Eigenes“ brauchst du ein Bild, z. B. ein Foto. Die App schneidet es auf das Format des Displays zu; Schrift und Farben stellst du danach ein.": "“Custom” needs a picture, e.g. a photo. The app cuts it to the display’s format; you set the font and colours afterwards.",
  "Für {} gibt es noch keine Stimme, die auf der Box läuft. Mit Google spricht die Box die Sprache trotzdem.": "There is no voice yet for {} that runs on the box. With Google the box still speaks the language.",
@@ -1738,7 +1737,6 @@
  "Lautstärke der Ansagen": "Announcement volume",
  "Lautstärke jetzt": "Volume now",
  "Lautstärke ließ sich nicht setzen": "Volume could not be set",
- "Lautstärke per Drehregler, Taster an GPIO 10": "Volume via rotary knob, button on GPIO 10",
  "Lautstärke setzen (0–100)": "set the volume (0–100)",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth": "Volume, sound card, rotary knob, Bluetooth",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth, Sprachausgabe": "Volume, sound card, rotary knob, Bluetooth, speech output",
@@ -4144,5 +4142,9 @@
  "Heute {} von {} min{}.": "Today {} of {} min{}.",
  "(+{} min heute)": "(+{} min today)",
  "So geht beides nicht: den Pin des Drehreglers unten umstellen und danach die Box neu starten.": "Both cannot work like this: change the pin of the rotary encoder below, then restart the box.",
- "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "The rotary encoder is not running right now. Choose another pin or restart the box."
+ "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "The rotary encoder is not running right now. Choose another pin or restart the box.",
+ "Lautstärke per Drehregler, dazu ein Taster": "Volume via rotary knob, plus a button",
+ "Funktion des Tasters": "Function of the button",
+ "Ort entfernen": "Remove place",
+ "Ort entfernt": "Place removed"
 }

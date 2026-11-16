@@ -26,7 +26,7 @@ Verdrahte bei ausgeschalteter Box. Der PN5180 braucht **beide** Versorgungen: **
 Die Pins **SCK, MOSI, MISO und NSS** hat der SPI-Anschluss fest. **BUSY und RST** wählst du in den Einstellungen selbst; GPIO 25 und GPIO 23 sind auf den meisten Boxen frei, die Auswahl sperrt Pins, die schon belegt sind. Der PN5180 meldet über BUSY, wann er bereit ist, ohne BUSY geht es nicht. Der IRQ-Anschluss wird nicht gebraucht, die Erweiterung fragt den Chip ab.
 
 > [!WARNING]
-> Der **Drehregler** der Box hat seinen Taster ab Werk an GPIO 10, das ist auch MOSI des SPI-Anschlusses. Mit Drehregler legst du den Taster deshalb unter **Einstellungen › Drehregler** auf einen freien Pin um (zum Beispiel GPIO 5) und startest die Box danach neu (bis dahin bleibt GPIO 10 für den Leser gesperrt); die Seite zeigt einen Hinweis, solange ein Pin des Drehreglers auch vom SPI-Anschluss belegt ist.
+> Der **Drehregler** der Box hat seinen Taster ab Werk an GPIO 10, das ist auch MOSI des SPI-Anschlusses. Solange der Taster keine Funktion hat (**Aus**), lässt der Drehregler GPIO 10 frei. Brauchst du den Taster, legst du ihn unter **Einstellungen › Drehregler** auf einen freien Pin um (zum Beispiel GPIO 5); die Seite zeigt einen Hinweis, solange ein Pin des Drehreglers auch vom SPI-Anschluss belegt ist. Einen Pin des SPI-Anschlusses nimmt der Drehregler nie, der Taster bleibt dann ohne Wirkung.
 
 Kurze Leitungen helfen (bis etwa 15 cm), am besten mit einer zusätzlichen Masseleitung. Die Pinbeschriftung der Platinen unterscheidet sich: Prüfe die Beschriftung auf deiner, besonders bei 5V und 3.3V. Die ganze Leiste zeigt der Anhang [GPIO-Belegung](../anhang/gpio.md).
 
@@ -138,7 +138,7 @@ Auf der Unterseite **Zugeordnete Tags** stehen auch diese Einstellungen:
 | **Tag startet sein Medium** | Aus: Tags werden nur gelesen und zugeordnet, nichts startet. |
 | **Beim Abnehmen** | **Pausieren** (Standard), **Stoppen** oder **Weiterspielen**. Nur ein Tag, der ein Medium hat, löst das aus, und nur, solange noch läuft, was er gestartet hat: Hat das Kind inzwischen am Display etwas anderes gewählt, läuft das weiter. |
 
-Mit **Pausieren** geht ein Hörspiel dort weiter, wo es war, wenn derselbe Tag innerhalb einer halben Stunde wieder aufliegt. Bei einem anderen Tag startet dessen Medium wie bei einem Tipp auf die Kachel.
+Mit **Pausieren** geht ein Hörspiel dort weiter, wo es war, wenn derselbe Tag innerhalb einer halben Stunde wieder aufliegt. Bei einem anderen Tag startet dessen Medium wie bei einem Tipp auf die Kachel. Liegt ein Tag wieder auf, während sein Medium noch läuft (beim USB-Leser bei jedem Vorhalten), spielt es einfach weiter und beginnt nicht von vorn. Wird ein Tag mit **Pausieren** oder **Stoppen** nur kurz aufgelegt und gleich wieder abgenommen, bevor die Wiedergabe beginnt, startet nichts.
 
 Die Zuordnungen stehen in `tags.json` im Datenordner der Erweiterung (`~/.mupibox/data/extensions/nfc/`) und bleiben bei Updates erhalten. Beim Start geht die Box über das **Display** (so zählen Kachel-Zeiten, Spielzeit und „Fortsetzen“ wie bei einem Tipp); ohne laufendes Display startet ein Tag also nichts.
 

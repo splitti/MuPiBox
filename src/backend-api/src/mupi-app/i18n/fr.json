@@ -1362,7 +1362,6 @@
  "FTP-Server": "Serveur FTP",
  "Fünf Freunde": "Fünf Freunde",
  "Funktion des Tasters (GPIO 10)": "Fonction du bouton (GPIO 10)",
- "Funktion des Tasters an GPIO 10": "Fonction du bouton sur GPIO 10",
  "Für „{}“ war kein Cover dabei. Soll ich bei iTunes, Deezer und Spotify nach einem suchen? Du wählst dann eins aus – oder nimmst ein eigenes Bild.": "« {} » n'avait pas de pochette. Dois-je en chercher une sur iTunes, Deezer et Spotify ? Tu en choisiras une ensuite – ou tu prendras ta propre image.",
  "Für „Eigenes“ brauchst du ein Bild, z. B. ein Foto. Die App schneidet es auf das Format des Displays zu; Schrift und Farben stellst du danach ein.": "« Custom » a besoin d’une image, par ex. une photo. L’app la recadre au format de l’écran ; tu règles ensuite la police et les couleurs.",
  "Für {} gibt es noch keine Stimme, die auf der Box läuft. Mit Google spricht die Box die Sprache trotzdem.": "Il n’y a pas encore de voix pour {} qui fonctionne sur la Box. Avec Google, la Box parle quand même cette langue.",
@@ -1738,7 +1737,6 @@
  "Lautstärke der Ansagen": "Volume des annonces",
  "Lautstärke jetzt": "Volume actuel",
  "Lautstärke ließ sich nicht setzen": "Impossible de régler le volume",
- "Lautstärke per Drehregler, Taster an GPIO 10": "Volume par la molette, bouton sur GPIO 10",
  "Lautstärke setzen (0–100)": "régler le volume (0–100)",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth": "Volume, carte son, molette, Bluetooth",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth, Sprachausgabe": "Volume, carte son, molette, Bluetooth, synthèse vocale",
@@ -4128,5 +4126,9 @@
  "Heute {} von {} min{}.": "Aujourd’hui {} sur {} min{}.",
  "(+{} min heute)": "(+{} min aujourd’hui)",
  "So geht beides nicht: den Pin des Drehreglers unten umstellen und danach die Box neu starten.": "Les deux ne peuvent pas fonctionner ainsi : change la broche de l’encodeur rotatif ci-dessous, puis redémarre la box.",
- "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "L’encodeur rotatif ne fonctionne pas pour le moment. Choisis une autre broche ou redémarre la box."
+ "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "L’encodeur rotatif ne fonctionne pas pour le moment. Choisis une autre broche ou redémarre la box.",
+ "Lautstärke per Drehregler, dazu ein Taster": "Volume par la molette, avec un bouton",
+ "Funktion des Tasters": "Fonction du bouton",
+ "Ort entfernen": "Supprimer le lieu",
+ "Ort entfernt": "Lieu supprimé"
 }

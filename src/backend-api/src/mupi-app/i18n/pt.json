@@ -1362,7 +1362,6 @@
  "FTP-Server": "Servidor FTP",
  "Fünf Freunde": "Os Cinco",
  "Funktion des Tasters (GPIO 10)": "Função do botão (GPIO 10)",
- "Funktion des Tasters an GPIO 10": "Função do botão no GPIO 10",
  "Für „{}“ war kein Cover dabei. Soll ich bei iTunes, Deezer und Spotify nach einem suchen? Du wählst dann eins aus – oder nimmst ein eigenes Bild.": "«{}» não trazia capa. Pesquiso uma no iTunes, no Deezer e no Spotify? Depois escolhes uma – ou usas uma imagem própria.",
  "Für „Eigenes“ brauchst du ein Bild, z. B. ein Foto. Die App schneidet es auf das Format des Displays zu; Schrift und Farben stellst du danach ein.": "“Custom” precisa de uma imagem, p. ex. uma foto. A app recorta-a no formato do ecrã; depois escolhes a letra e as cores.",
  "Für {} gibt es noch keine Stimme, die auf der Box läuft. Mit Google spricht die Box die Sprache trotzdem.": "Ainda não há nenhuma voz para {} que funcione na caixa. Com o Google, a caixa fala a língua mesmo assim.",
@@ -1738,7 +1737,6 @@
  "Lautstärke der Ansagen": "Volume dos anúncios",
  "Lautstärke jetzt": "Volume agora",
  "Lautstärke ließ sich nicht setzen": "Não foi possível definir o volume",
- "Lautstärke per Drehregler, Taster an GPIO 10": "Volume pelo botão rotativo, botão no GPIO 10",
  "Lautstärke setzen (0–100)": "Definir o volume (0–100)",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth": "Volume, placa de som, botão rotativo, Bluetooth",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth, Sprachausgabe": "Volume, placa de som, botão rotativo, Bluetooth, saída de voz",
@@ -4128,5 +4126,9 @@
  "Heute {} von {} min{}.": "Hoje {} de {} min{}.",
  "(+{} min heute)": "(+{} min hoje)",
  "So geht beides nicht: den Pin des Drehreglers unten umstellen und danach die Box neu starten.": "Assim os dois não funcionam: muda abaixo o pino do botão rotativo e depois reinicia a caixa.",
- "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "O botão rotativo não está a funcionar agora. Escolhe outro pino ou reinicia a caixa."
+ "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "O botão rotativo não está a funcionar agora. Escolhe outro pino ou reinicia a caixa.",
+ "Lautstärke per Drehregler, dazu ein Taster": "Volume pelo botão rotativo, mais um botão",
+ "Funktion des Tasters": "Função do botão",
+ "Ort entfernen": "Remover local",
+ "Ort entfernt": "Local removido"
 }

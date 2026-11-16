@@ -1362,7 +1362,6 @@
  "FTP-Server": "Server FTP",
  "Fünf Freunde": "Fünf Freunde",
  "Funktion des Tasters (GPIO 10)": "Λειτουργία του διακόπτη (GPIO 10)",
- "Funktion des Tasters an GPIO 10": "Λειτουργία του διακόπτη στο GPIO 10",
  "Für „{}“ war kein Cover dabei. Soll ich bei iTunes, Deezer und Spotify nach einem suchen? Du wählst dann eins aus – oder nimmst ein eigenes Bild.": "Για το «{}» δεν υπήρχε εξώφυλλο. Να ψάξω ένα στο iTunes, στο Deezer και στο Spotify; Μετά διαλέγεις ένα – ή παίρνεις δική σου εικόνα.",
  "Für „Eigenes“ brauchst du ein Bild, z. B. ein Foto. Die App schneidet es auf das Format des Displays zu; Schrift und Farben stellst du danach ein.": "Το «Custom» χρειάζεται μια εικόνα, π.χ. μια φωτογραφία. Η εφαρμογή την κόβει στη μορφή της οθόνης· γραμματοσειρά και χρώματα τα ρυθμίζεις μετά.",
  "Für {} gibt es noch keine Stimme, die auf der Box läuft. Mit Google spricht die Box die Sprache trotzdem.": "Για {} δεν υπάρχει ακόμα φωνή που να λειτουργεί στο κουτί. Με το Google το κουτί μιλά τη γλώσσα κανονικά.",
@@ -1738,7 +1737,6 @@
  "Lautstärke der Ansagen": "Ένταση ανακοινώσεων",
  "Lautstärke jetzt": "Ένταση τώρα",
  "Lautstärke ließ sich nicht setzen": "Δεν ήταν δυνατός ο ορισμός της έντασης",
- "Lautstärke per Drehregler, Taster an GPIO 10": "Ένταση με περιστροφικό κουμπί, διακόπτης στο GPIO 10",
  "Lautstärke setzen (0–100)": "Ορισμός έντασης (0–100)",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth": "Ένταση, κάρτα ήχου, περιστροφικό κουμπί, Bluetooth",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth, Sprachausgabe": "Ένταση, κάρτα ήχου, περιστροφικό κουμπί, Bluetooth, φωνητική έξοδος",
@@ -4128,5 +4126,9 @@
  "Heute {} von {} min{}.": "Σήμερα {} από {} min{}.",
  "(+{} min heute)": "(+{} min σήμερα)",
  "So geht beides nicht: den Pin des Drehreglers unten umstellen und danach die Box neu starten.": "Έτσι δεν μπορούν να λειτουργήσουν και τα δύο: αλλάξτε παρακάτω το pin του περιστροφικού κουμπιού και μετά επανεκκινήστε το κουτί.",
- "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "Το περιστροφικό κουμπί δεν λειτουργεί αυτή τη στιγμή. Επιλέξτε άλλο pin ή επανεκκινήστε το κουτί."
+ "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "Το περιστροφικό κουμπί δεν λειτουργεί αυτή τη στιγμή. Επιλέξτε άλλο pin ή επανεκκινήστε το κουτί.",
+ "Lautstärke per Drehregler, dazu ein Taster": "Ένταση με περιστροφικό κουμπί, μαζί με διακόπτη",
+ "Funktion des Tasters": "Λειτουργία του διακόπτη",
+ "Ort entfernen": "Αφαίρεση τόπου",
+ "Ort entfernt": "Ο τόπος αφαιρέθηκε"
 }

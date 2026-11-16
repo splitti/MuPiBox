@@ -1362,7 +1362,6 @@
  "FTP-Server": "FTP-server",
  "Fünf Freunde": "Fünf Freunde",
  "Funktion des Tasters (GPIO 10)": "Functie van de knop (GPIO 10)",
- "Funktion des Tasters an GPIO 10": "Functie van de knop op GPIO 10",
  "Für „{}“ war kein Cover dabei. Soll ich bei iTunes, Deezer und Spotify nach einem suchen? Du wählst dann eins aus – oder nimmst ein eigenes Bild.": "Bij „{}” zat geen cover. Zal ik op iTunes, Deezer en Spotify naar een cover zoeken? Je kiest er dan een uit – of je neemt een eigen afbeelding.",
  "Für „Eigenes“ brauchst du ein Bild, z. B. ein Foto. Die App schneidet es auf das Format des Displays zu; Schrift und Farben stellst du danach ein.": "“Custom” heeft een afbeelding nodig, bijv. een foto. De app snijdt die bij op het formaat van het display; daarna stel je lettertype en kleuren in.",
  "Für {} gibt es noch keine Stimme, die auf der Box läuft. Mit Google spricht die Box die Sprache trotzdem.": "Voor {} is er nog geen stem die op de box werkt. Met Google spreekt de box de taal toch.",
@@ -1738,7 +1737,6 @@
  "Lautstärke der Ansagen": "Volume van de aankondigingen",
  "Lautstärke jetzt": "Volume nu",
  "Lautstärke ließ sich nicht setzen": "Volume kon niet worden ingesteld",
- "Lautstärke per Drehregler, Taster an GPIO 10": "Volume via draairegelaar, knop op GPIO 10",
  "Lautstärke setzen (0–100)": "Volume instellen (0–100)",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth": "Volume, geluidskaart, draairegelaar, bluetooth",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth, Sprachausgabe": "Volume, geluidskaart, draairegelaar, bluetooth, spraakuitvoer",
@@ -4128,5 +4126,9 @@
  "Heute {} von {} min{}.": "Vandaag {} van {} min{}.",
  "(+{} min heute)": "(+{} min vandaag)",
  "So geht beides nicht: den Pin des Drehreglers unten umstellen und danach die Box neu starten.": "Zo werkt het niet allebei: wijzig hieronder de pin van de draaiknop en herstart daarna de box.",
- "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "De draaiknop draait nu niet. Kies een andere pin of herstart de box."
+ "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "De draaiknop draait nu niet. Kies een andere pin of herstart de box.",
+ "Lautstärke per Drehregler, dazu ein Taster": "Volume via draairegelaar, plus een knop",
+ "Funktion des Tasters": "Functie van de knop",
+ "Ort entfernen": "Plaats verwijderen",
+ "Ort entfernt": "Plaats verwijderd"
 }

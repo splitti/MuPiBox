@@ -1362,7 +1362,6 @@
  "FTP-Server": "FTP-server",
  "Fünf Freunde": "Fünf Freunde",
  "Funktion des Tasters (GPIO 10)": "Knappens funktion (GPIO 10)",
- "Funktion des Tasters an GPIO 10": "Knappens funktion på GPIO 10",
  "Für „{}“ war kein Cover dabei. Soll ich bei iTunes, Deezer und Spotify nach einem suchen? Du wählst dann eins aus – oder nimmst ein eigenes Bild.": "Der fulgte intet cover med „{}“. Skal jeg søge efter et på iTunes, Deezer og Spotify? Du vælger så et – eller tager et eget billede.",
  "Für „Eigenes“ brauchst du ein Bild, z. B. ein Foto. Die App schneidet es auf das Format des Displays zu; Schrift und Farben stellst du danach ein.": "”Custom” kræver et billede, f.eks. et foto. Appen beskærer det til skærmens format; skrift og farver indstiller du bagefter.",
  "Für {} gibt es noch keine Stimme, die auf der Box läuft. Mit Google spricht die Box die Sprache trotzdem.": "Der er endnu ingen stemme til {}, der kører på boksen. Med Google taler boksen alligevel sproget.",
@@ -1738,7 +1737,6 @@
  "Lautstärke der Ansagen": "Lydstyrke for meddelelser",
  "Lautstärke jetzt": "Lydstyrke nu",
  "Lautstärke ließ sich nicht setzen": "Lydstyrken kunne ikke indstilles",
- "Lautstärke per Drehregler, Taster an GPIO 10": "Lydstyrke via drejeknap, knap på GPIO 10",
  "Lautstärke setzen (0–100)": "Indstil lydstyrke (0–100)",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth": "Lydstyrke, lydkort, drejeknap, Bluetooth",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth, Sprachausgabe": "Lydstyrke, lydkort, drejeknap, Bluetooth, oplæsning",
@@ -4128,5 +4126,9 @@
  "Heute {} von {} min{}.": "I dag {} af {} min{}.",
  "(+{} min heute)": "(+{} min i dag)",
  "So geht beides nicht: den Pin des Drehreglers unten umstellen und danach die Box neu starten.": "Sådan kan begge ikke fungere: skift drejeknappens pin nedenfor, og genstart derefter boksen.",
- "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "Drejeknappen kører ikke lige nu. Vælg en anden pin, eller genstart boksen."
+ "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "Drejeknappen kører ikke lige nu. Vælg en anden pin, eller genstart boksen.",
+ "Lautstärke per Drehregler, dazu ein Taster": "Lydstyrke via drejeknap, plus en knap",
+ "Funktion des Tasters": "Knappens funktion",
+ "Ort entfernen": "Fjern sted",
+ "Ort entfernt": "Sted fjernet"
 }

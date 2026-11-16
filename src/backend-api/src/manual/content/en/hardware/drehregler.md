@@ -34,6 +34,8 @@ A change takes effect at once: if the knob is running, the box restarts its serv
 
 ## The button
 
+The rotary encoder takes the button's pin only while the button has a function; with **Off** it stays free for other things. If you choose a function later, the app checks whether the pin is still free. The rotary encoder never takes a pin of the SPI or I²C port (GPIO 10 with an NFC reader, say): the button then does nothing, the encoder itself keeps working.
+
 | Function | One press |
 | --- | --- |
 | **Play/Pause** | pauses playback or starts it again |

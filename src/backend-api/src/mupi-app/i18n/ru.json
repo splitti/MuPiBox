@@ -1362,7 +1362,6 @@
  "FTP-Server": "FTP-сервер",
  "Fünf Freunde": "Fünf Freunde",
  "Funktion des Tasters (GPIO 10)": "Функция кнопки (GPIO 10)",
- "Funktion des Tasters an GPIO 10": "Функция кнопки на GPIO 10",
  "Für „{}“ war kein Cover dabei. Soll ich bei iTunes, Deezer und Spotify nach einem suchen? Du wählst dann eins aus – oder nimmst ein eigenes Bild.": "Для «{}» обложки не нашлось. Поискать её в iTunes, Deezer и Spotify? Потом вы выберете одну – или возьмёте своё изображение.",
  "Für „Eigenes“ brauchst du ein Bild, z. B. ein Foto. Die App schneidet es auf das Format des Displays zu; Schrift und Farben stellst du danach ein.": "Для «Custom» нужна картинка, например фото. Приложение обрезает её под формат дисплея; шрифт и цвета настроишь потом.",
  "Für {} gibt es noch keine Stimme, die auf der Box läuft. Mit Google spricht die Box die Sprache trotzdem.": "Для языка {} пока нет голоса, который работает на устройстве. С Google устройство всё равно говорит на этом языке.",
@@ -1738,7 +1737,6 @@
  "Lautstärke der Ansagen": "Громкость объявлений",
  "Lautstärke jetzt": "Текущая громкость",
  "Lautstärke ließ sich nicht setzen": "Не удалось установить громкость",
- "Lautstärke per Drehregler, Taster an GPIO 10": "Громкость регулятором, кнопка на GPIO 10",
  "Lautstärke setzen (0–100)": "Задать громкость (0–100)",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth": "Громкость, звуковая карта, регулятор, Bluetooth",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth, Sprachausgabe": "Громкость, звуковая карта, регулятор, Bluetooth, голосовой вывод",
@@ -4128,5 +4126,9 @@
  "Heute {} von {} min{}.": "Сегодня {} из {} min{}.",
  "(+{} min heute)": "(+{} min сегодня)",
  "So geht beides nicht: den Pin des Drehreglers unten umstellen und danach die Box neu starten.": "Так оба работать не будут: измените ниже пин поворотного регулятора, а затем перезапустите коробку.",
- "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "Поворотный регулятор сейчас не работает. Выберите другой пин или перезапустите коробку."
+ "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "Поворотный регулятор сейчас не работает. Выберите другой пин или перезапустите коробку.",
+ "Lautstärke per Drehregler, dazu ein Taster": "Громкость регулятором, а также кнопка",
+ "Funktion des Tasters": "Функция кнопки",
+ "Ort entfernen": "Удалить место",
+ "Ort entfernt": "Место удалено"
 }

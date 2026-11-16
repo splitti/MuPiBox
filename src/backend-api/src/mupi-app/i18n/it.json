@@ -1362,7 +1362,6 @@
  "FTP-Server": "Server FTP",
  "Fünf Freunde": "Fünf Freunde",
  "Funktion des Tasters (GPIO 10)": "Funzione del pulsante (GPIO 10)",
- "Funktion des Tasters an GPIO 10": "Funzione del pulsante su GPIO 10",
  "Für „{}“ war kein Cover dabei. Soll ich bei iTunes, Deezer und Spotify nach einem suchen? Du wählst dann eins aus – oder nimmst ein eigenes Bild.": "Per «{}» non c'era nessuna copertina. Ne cerco una su iTunes, Deezer e Spotify? Poi ne scegli una – oppure usi una tua immagine.",
  "Für „Eigenes“ brauchst du ein Bild, z. B. ein Foto. Die App schneidet es auf das Format des Displays zu; Schrift und Farben stellst du danach ein.": "“Custom” ha bisogno di un’immagine, ad es. una foto. L’app la ritaglia nel formato del display; poi imposti carattere e colori.",
  "Für {} gibt es noch keine Stimme, die auf der Box läuft. Mit Google spricht die Box die Sprache trotzdem.": "Per {} non c’è ancora una voce che funzioni sulla box. Con Google la box parla comunque questa lingua.",
@@ -1738,7 +1737,6 @@
  "Lautstärke der Ansagen": "Volume degli annunci",
  "Lautstärke jetzt": "Volume attuale",
  "Lautstärke ließ sich nicht setzen": "Non è stato possibile impostare il volume",
- "Lautstärke per Drehregler, Taster an GPIO 10": "Volume tramite manopola, pulsante su GPIO 10",
  "Lautstärke setzen (0–100)": "impostare il volume (0–100)",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth": "Volume, scheda audio, manopola, Bluetooth",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth, Sprachausgabe": "Volume, scheda audio, manopola, Bluetooth, sintesi vocale",
@@ -4128,5 +4126,9 @@
  "Heute {} von {} min{}.": "Oggi {} di {} min{}.",
  "(+{} min heute)": "(+{} min oggi)",
  "So geht beides nicht: den Pin des Drehreglers unten umstellen und danach die Box neu starten.": "Così non possono funzionare entrambi: cambia qui sotto il pin dell’encoder rotativo, poi riavvia la box.",
- "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "L’encoder rotativo al momento non funziona. Scegli un altro pin o riavvia la box."
+ "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "L’encoder rotativo al momento non funziona. Scegli un altro pin o riavvia la box.",
+ "Lautstärke per Drehregler, dazu ein Taster": "Volume tramite manopola, più un pulsante",
+ "Funktion des Tasters": "Funzione del pulsante",
+ "Ort entfernen": "Rimuovi luogo",
+ "Ort entfernt": "Luogo rimosso"
 }

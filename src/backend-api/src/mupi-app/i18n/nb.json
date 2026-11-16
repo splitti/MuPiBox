@@ -1362,7 +1362,6 @@
  "FTP-Server": "FTP-server",
  "Fünf Freunde": "Fünf Freunde",
  "Funktion des Tasters (GPIO 10)": "Knappens funksjon (GPIO 10)",
- "Funktion des Tasters an GPIO 10": "Knappens funksjon på GPIO 10",
  "Für „{}“ war kein Cover dabei. Soll ich bei iTunes, Deezer und Spotify nach einem suchen? Du wählst dann eins aus – oder nimmst ein eigenes Bild.": "Det fulgte ikke med noe cover for «{}». Skal jeg søke etter et på iTunes, Deezer og Spotify? Du velger så ett – eller tar et eget bilde.",
  "Für „Eigenes“ brauchst du ein Bild, z. B. ein Foto. Die App schneidet es auf das Format des Displays zu; Schrift und Farben stellst du danach ein.": "«Custom» trenger et bilde, f.eks. et foto. Appen beskjærer det til skjermens format; skrift og farger stiller du inn etterpå.",
  "Für {} gibt es noch keine Stimme, die auf der Box läuft. Mit Google spricht die Box die Sprache trotzdem.": "Det finnes ennå ingen stemme for {} som fungerer på boksen. Med Google snakker boksen språket likevel.",
@@ -1738,7 +1737,6 @@
  "Lautstärke der Ansagen": "Volum for meldinger",
  "Lautstärke jetzt": "Volum nå",
  "Lautstärke ließ sich nicht setzen": "Volumet lot seg ikke stille inn",
- "Lautstärke per Drehregler, Taster an GPIO 10": "Volum via dreiebryter, knapp på GPIO 10",
  "Lautstärke setzen (0–100)": "Still inn volum (0–100)",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth": "Volum, lydkort, dreiebryter, Bluetooth",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth, Sprachausgabe": "Volum, lydkort, dreiebryter, Bluetooth, opplesning",
@@ -4128,5 +4126,9 @@
  "Heute {} von {} min{}.": "I dag {} av {} min{}.",
  "(+{} min heute)": "(+{} min i dag)",
  "So geht beides nicht: den Pin des Drehreglers unten umstellen und danach die Box neu starten.": "Slik kan ikke begge fungere: bytt pinnen til dreiebryteren nedenfor, og start deretter boksen på nytt.",
- "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "Dreiebryteren kjører ikke akkurat nå. Velg en annen pinne eller start boksen på nytt."
+ "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "Dreiebryteren kjører ikke akkurat nå. Velg en annen pinne eller start boksen på nytt.",
+ "Lautstärke per Drehregler, dazu ein Taster": "Volum via dreiebryter, pluss en knapp",
+ "Funktion des Tasters": "Knappens funksjon",
+ "Ort entfernen": "Fjern sted",
+ "Ort entfernt": "Sted fjernet"
 }

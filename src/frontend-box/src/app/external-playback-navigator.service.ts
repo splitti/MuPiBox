@@ -143,7 +143,10 @@ export class ExternalPlaybackNavigatorService {
           // A start from the parents' web app or Telegram is followed once it really plays. A NAS album (its
           // track list is fetched first) or a stream takes a few seconds: the trigger waits for that instead of
           // being used up by a poll that still saw nothing playing.
-          this.pendingExternalUntil = src !== 'box' ? Date.now() + 30_000 : 0
+          // ("next" at a podcast - src=skip - only moves an open player page on to the new episode: a button or the knob
+          // pressed while the child looks through the library left it there before and took the display to the player)
+          const follows = src !== 'box' && (src !== 'skip' || this.isCurrentlyOnPlayerPage())
+          this.pendingExternalUntil = follows ? Date.now() + 30_000 : 0
           this.pendingExternalSource = src
         }
         const onPlayerPage = this.isCurrentlyOnPlayerPage()

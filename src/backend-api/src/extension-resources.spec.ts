@@ -165,8 +165,12 @@ describe('extension resources: reading the box', () => {
     for (const rotary of [{ pinA: 5, pinB: 5, pinButton: 13 }, { pinA: 1, pinB: 6, pinButton: 13 }, { pinA: 5, pinB: 6, pinButton: 28 }, { pinA: 5, pinB: 6 }, { pinA: 'x', pinB: 6, pinButton: 13 }]) {
       assert.deepEqual(rotaryPins({ rotary }), { a: 26, b: 24, button: 10 })
     }
-    const chosen = { rotary: { active: true, pinA: 5, pinB: 6, pinButton: 13 } }
+    const chosen = { rotary: { active: true, pinA: 5, pinB: 6, pinButton: 13, button: 'playpause' } }
     assert.deepEqual(coreResources(chosen).gpio.map((g) => g.pin), [5, 6, 13])
+    // (the button without a function: its pin stays free - an NFC reader on SPI keeps GPIO 10 - and is named as the encoder's)
+    const noButton = { rotary: { ...chosen.rotary, button: 'off' } }
+    assert.deepEqual(coreResources(noButton).gpio.map((g) => g.pin), [5, 6])
+    assert.deepEqual(idleCoreGpio(noButton), [{ pin: 13, by: 'MuPiBox (rotary encoder button, switched off)' }])
     assert.deepEqual(idleCoreGpio({ rotary: { ...chosen.rotary, active: false } }).map((g) => g.pin), [5, 6, 13])
     // (the pins of the old default are free for others once the encoder is somewhere else)
     assert.ok(!coreResources(chosen).gpio.some((g) => [26, 24, 10].includes(g.pin)))
@@ -187,8 +191,11 @@ describe('extension resources: reading the box', () => {
     // (the pins of the rotary encoder are free while it is off - and named as its own for whoever chooses a pin)
     assert.deepEqual(idleCoreGpio({ rotary: { active: false } }).map((g) => g.pin), [26, 24, 10])
     assert.deepEqual(idleCoreGpio(undefined).map((g) => g.pin), [26, 24, 10])
-    assert.deepEqual(idleCoreGpio({ rotary: { active: true } }), [])
-    assert.deepEqual(coreResources({ rotary: { active: true } }).gpio.map((g) => g.pin), [26, 24, 10])
+    assert.deepEqual(idleCoreGpio({ rotary: { active: true, button: 'next' } }), [])
+    assert.deepEqual(coreResources({ rotary: { active: true, button: 'next' } }).gpio.map((g) => g.pin), [26, 24, 10])
+    assert.deepEqual(coreResources({ rotary: { active: true } }).gpio.map((g) => g.pin), [26, 24])
+    // (the MuPiHAT: I2C, its amplifier and the amplifier's on/off line, before its overlay is written)
+    assert.deepEqual(coreResources({ mupihat: { hat_active: true } }).gpio.map((g) => g.pin), [2, 3, 16, 18, 19, 21])
     const fan = coreResources({ fan: { fan_active: true, fan_gpio: '12' } })
     assert.deepEqual(
       fan.gpio.map((g) => g.pin),

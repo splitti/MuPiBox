@@ -290,10 +290,22 @@ function rotaryOn(config: Record<string, unknown> | undefined): boolean {
   const rotary = config?.rotary && typeof config.rotary === 'object' ? (config.rotary as Record<string, unknown>) : {}
   return rotary.active === true || rotary.active === 'true' || rotary.rotary_active === true
 }
+/** Whether the push button of the rotary encoder does something: rotary_control.py takes its pin only then. */
+export function rotaryButtonOn(config: Record<string, unknown> | undefined): boolean {
+  const rotary = config?.rotary && typeof config.rotary === 'object' ? (config.rotary as Record<string, unknown>) : {}
+  return typeof rotary.button === 'string' && rotary.button !== '' && rotary.button !== 'off'
+}
+/** The pins the rotary encoder holds while it is on: the knob's two, the button's only while the button does something. */
+export function rotaryHeldPins(config: Record<string, unknown> | undefined): number[] {
+  if (!rotaryOn(config)) return []
+  const pins = rotaryPins(config)
+  return rotaryButtonOn(config) ? [pins.a, pins.b, pins.button] : [pins.a, pins.b]
+}
 
 /** Pins a part of the core would use once it is switched on: free now, but worth a word to whoever chooses a pin. */
 export function idleCoreGpio(config: Record<string, unknown> | undefined): { pin: number; by: string }[] {
-  return rotaryOn(config) ? [] : rotaryPinList(config).map((pin) => ({ pin, by: 'MuPiBox (rotary encoder, switched off)' }))
+  if (!rotaryOn(config)) return rotaryPinList(config).map((pin) => ({ pin, by: 'MuPiBox (rotary encoder, switched off)' }))
+  return rotaryButtonOn(config) ? [] : [{ pin: rotaryPins(config).button, by: 'MuPiBox (rotary encoder button, switched off)' }]
 }
 
 export function coreResources(config: Record<string, unknown> | undefined): { ports: { proto: 'tcp' | 'udp'; port: number; by: string }[]; gpio: { pin: number; by: string }[] } {
@@ -322,12 +334,13 @@ export function coreResources(config: Record<string, unknown> | undefined): { po
   take(shim.ledPin, 'MuPiBox (power LED)')
   const fan = section('fan')
   if (fan.fan_active === true || fan.fan_active === 'true') take(fan.fan_gpio, 'MuPiBox (fan)')
-  if (rotaryOn(config)) for (const p of rotaryPinList(config)) take(p, 'MuPiBox (rotary encoder)')
+  for (const p of rotaryHeldPins(config)) take(p, 'MuPiBox (rotary encoder)')
   const hat = section('mupihat')
   if (hat.hat_active === true || hat.hat_active === 'true') {
     for (const p of [2, 3]) take(p, 'MuPiBox (MuPiHAT, I2C)')
-    // (its amplifier on I2S - also before its overlay is written to the boot configuration)
-    for (const p of [18, 19, 21]) take(p, 'MuPiBox (MuPiHAT, sound)')
+    // (its amplifier on I2S and the amplifier's on/off line SDMODE on 16 - also before its overlay is written to the boot
+    // configuration; a button on 16 switched the speaker off. KILL, INT and the LED are the shim's pins above)
+    for (const p of [16, 18, 19, 21]) take(p, 'MuPiBox (MuPiHAT, sound)')
   }
   return { ports, gpio }
 }

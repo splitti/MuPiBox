@@ -1362,7 +1362,6 @@
  "FTP-Server": "FTP sunucusu",
  "Fünf Freunde": "Fünf Freunde",
  "Funktion des Tasters (GPIO 10)": "Butonun işlevi (GPIO 10)",
- "Funktion des Tasters an GPIO 10": "GPIO 10'daki butonun işlevi",
  "Für „{}“ war kein Cover dabei. Soll ich bei iTunes, Deezer und Spotify nach einem suchen? Du wählst dann eins aus – oder nimmst ein eigenes Bild.": "„{}“ için kapak yoktu. iTunes, Deezer ve Spotify'da bir tane arayayım mı? Sonra birini seçersin – ya da kendi resmini alırsın.",
  "Für „Eigenes“ brauchst du ein Bild, z. B. ein Foto. Die App schneidet es auf das Format des Displays zu; Schrift und Farben stellst du danach ein.": "“Custom” için bir resim gerekir, örn. bir fotoğraf. Uygulama onu ekranın biçimine göre kırpar; yazı tipini ve renkleri sonra ayarlarsın.",
  "Für {} gibt es noch keine Stimme, die auf der Box läuft. Mit Google spricht die Box die Sprache trotzdem.": "{} için kutuda çalışan bir ses henüz yok. Google ile kutu bu dili yine de konuşur.",
@@ -1738,7 +1737,6 @@
  "Lautstärke der Ansagen": "Duyuruların ses düzeyi",
  "Lautstärke jetzt": "Şu anki ses düzeyi",
  "Lautstärke ließ sich nicht setzen": "Ses düzeyi ayarlanamadı",
- "Lautstärke per Drehregler, Taster an GPIO 10": "Döner düğmeyle ses düzeyi, GPIO 10'da buton",
  "Lautstärke setzen (0–100)": "Ses düzeyini ayarla (0–100)",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth": "Ses düzeyi, ses kartı, döner düğme, Bluetooth",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth, Sprachausgabe": "Ses düzeyi, ses kartı, döner düğme, Bluetooth, sesli çıkış",
@@ -4128,5 +4126,9 @@
  "Heute {} von {} min{}.": "Bugün {} / {} min{}.",
  "(+{} min heute)": "(bugün +{} min)",
  "So geht beides nicht: den Pin des Drehreglers unten umstellen und danach die Box neu starten.": "İkisi bu şekilde çalışamaz: aşağıda döner düğmenin pinini değiştir, ardından kutuyu yeniden başlat.",
- "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "Döner düğme şu anda çalışmıyor. Başka bir pin seç ya da kutuyu yeniden başlat."
+ "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "Döner düğme şu anda çalışmıyor. Başka bir pin seç ya da kutuyu yeniden başlat.",
+ "Lautstärke per Drehregler, dazu ein Taster": "Döner düğmeyle ses düzeyi, ayrıca bir buton",
+ "Funktion des Tasters": "Butonun işlevi",
+ "Ort entfernen": "Yeri kaldır",
+ "Ort entfernt": "Yer kaldırıldı"
 }

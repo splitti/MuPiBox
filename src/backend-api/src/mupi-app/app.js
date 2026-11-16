@@ -7608,17 +7608,34 @@ function drawNdPlace() {
   if (!box) return
   box.hidden = !state.values.get('ndSun')
   const has = typeof nd.lat === 'number' && typeof nd.lon === 'number'
+  const del = $('#nd-place-del')
+  if (del) del.hidden = !has
   $('#nd-place-line').innerHTML = has ? `<b translate="no">${esc(nd.place || `${nd.lat.toFixed(2)}, ${nd.lon.toFixed(2)}`)}</b>` : esc(tr('Noch kein Ort gewählt'))
   $('#nd-sun-line').textContent = !has ? '' : nd.sunsetAt && nd.sunriseAt ? `${tr('Sonnenuntergang heute')}: ${nd.sunsetAt} · ${tr('Sonnenaufgang heute')}: ${nd.sunriseAt}` : tr('Heute geht die Sonne nicht auf oder unter – es gilt die Uhrzeit bei „Ab“ und „Bis“.')
 }
 
 function ndPlaceHtml() {
-  return `<div class="field" id="nd-place-box" hidden><label>Ort der Box</label><p style="margin:0 0 4px" id="nd-place-line"></p><p class="help" style="margin:0 0 8px" id="nd-sun-line"></p><div class="btns"><button type="button" class="btn" id="nd-place-btn">Ort wählen</button></div></div>`
+  return `<div class="field" id="nd-place-box" hidden><label>Ort der Box</label><p style="margin:0 0 4px" id="nd-place-line"></p><p class="help" style="margin:0 0 8px" id="nd-sun-line"></p><div class="btns"><button type="button" class="btn" id="nd-place-btn">Ort wählen</button><button type="button" class="btn" id="nd-place-del" hidden>Ort entfernen</button></div></div>`
+}
+
+// The place is taken away again (it was kept for good once chosen): "Abends dunkler" goes by "Ab" and "Bis" then
+async function removeNdPlace() {
+  const r = await saveDisplayOptions({ nightDim: { ...ndCurrent(), sunset: false, lat: null, lon: null, place: '' } }, 'Ort entfernt')
+  if (!r) return
+  disp.opts.nightDim = { ...(disp.opts.nightDim ?? {}), sunset: false, lat: null, lon: null, place: '', sunsetAt: null, sunriseAt: null, dimmed: r.dimmed === true }
+  state.values.set('ndSun', false)
+  const box = document.querySelector('input[data-key="ndSun"]')
+  if (box) box.checked = false
+  drawNdPlace()
 }
 
 // the sheet that chooses the place; onChosen(): the place is saved; onCancel(): it was left without one
 function openNdPlaceSheet({ onChosen, onCancel }) {
   let chosen = false
+  // (left with "Abbrechen" or beside it: a search, a position or a save still on its way saves nothing any more - the box
+  // went by the sun after all)
+  let closed = false
+  let saving = false
   let results = []
   const geo = window.isSecureContext && navigator.geolocation
   openSheet(
@@ -7635,12 +7652,26 @@ function openNdPlaceSheet({ onChosen, onCancel }) {
      <div class="btns"><button class="btn" data-close>Abbrechen</button></div>`,
     (sheet, close) => {
       const list = $('#nd-results', sheet)
+      const buttons = (on) => {
+        for (const b of sheet.querySelectorAll('button:not([data-close])')) b.disabled = !on
+      }
       const save = async (lat, lon, place) => {
+        if (closed || saving) return
+        saving = true
+        buttons(false)
         const r = await saveDisplayOptions({ nightDim: { ...ndCurrent(), sunset: true, lat, lon, place: String(place).slice(0, 80) } }, 'Ort gespeichert')
-        if (!r) return
+        saving = false
+        if (!closed) buttons(true)
+        if (!r) {
+          // (closed while it was refused: left without a place after all)
+          if (closed && !chosen) onCancel?.()
+          return
+        }
         disp.opts.nightDim = { ...(disp.opts.nightDim ?? {}), sunset: true, lat, lon, place: String(place).slice(0, 80), sunsetAt: r.sunsetAt ?? null, sunriseAt: r.sunriseAt ?? null, dimmed: r.dimmed === true }
+        // (closed while it was saved: it is saved - the page shows it so, nothing is taken back)
+        const wasClosed = closed
         chosen = true
-        close()
+        if (!wasClosed) close()
         onChosen?.()
       }
       const nameOf = (r) => [r.name, r.region].filter(Boolean).join(', ')
@@ -7664,7 +7695,7 @@ function openNdPlaceSheet({ onChosen, onCancel }) {
       }
       $('#nd-here', sheet)?.addEventListener('click', () => {
         navigator.geolocation.getCurrentPosition(
-          (pos) => save(Math.round(pos.coords.latitude * 1000) / 1000, Math.round(pos.coords.longitude * 1000) / 1000, tr('Standort dieses Geräts')),
+          (pos) => closed || save(Math.round(pos.coords.latitude * 1000) / 1000, Math.round(pos.coords.longitude * 1000) / 1000, tr('Standort dieses Geräts')),
           () => toast('Der Standort ließ sich nicht abfragen', 'info'),
           { timeout: 15000 },
         )
@@ -7675,11 +7706,16 @@ function openNdPlaceSheet({ onChosen, onCancel }) {
         if ($('#nd-lat', sheet).value.trim() === '' || $('#nd-lon', sheet).value.trim() === '' || !(Math.abs(lat) <= 90) || !(Math.abs(lon) <= 180)) return toast('Bitte gültige Koordinaten eintragen', 'info')
         save(lat, lon, `${lat.toFixed(2)}, ${lon.toFixed(2)}`)
       }
-      sheet.querySelector('[data-close]').onclick = close
+      sheet.querySelector('[data-close]').onclick = () => {
+        closed = true
+        close()
+      }
     },
     // (after the sheet is gone: the caller may change the page)
     () => {
-      if (!chosen) setTimeout(() => onCancel?.(), 0)
+      closed = true
+      // (a save on its way: what it brings counts - onChosen when it was saved)
+      if (!chosen && !saving) setTimeout(() => onCancel?.(), 0)
     },
   )
 }
@@ -7690,7 +7726,9 @@ async function saveDisplayOptions(body, done = 'Gespeichert') {
     toast(r.body?.error === 'at least one category must stay visible' ? 'Mindestens eine Kategorie bleibt sichtbar' : 'Nicht gespeichert', 'info')
     return false
   }
-  toast(`${done}. ${displayNote(r.body)}`.trim())
+  // (a full stop only before a note: a text alone is found as it is in the translations)
+  const note = displayNote(r.body)
+  toast(note ? `${done}. ${note}` : done)
   return r.body
 }
 
@@ -9209,8 +9247,9 @@ async function loadRotary() {
   // (no answer: the pins it has stay, nothing else is offered)
   hw.rotaryFree = free.ok && Array.isArray(free.body?.pins) ? free.body.pins.filter((p) => !(p.holders ?? []).length).map((p) => Number(p.pin)) : []
   // (a pin of its own that something else uses as well - the SPI bus switched on for an NFC reader on GPIO 10, its default
-  // button pin: neither works; the page says so at the pin)
-  const own = new Set(Object.values(r.pins ?? {}).map(Number))
+  // button pin: neither works; the page says so at the pin). The button's pin only while the button does something: with
+  // it off the encoder leaves its pin alone.
+  const own = new Set(Object.entries(r.pins ?? {}).filter(([name]) => name !== 'button' || (r.button && r.button !== 'off')).map(([, pin]) => Number(pin)))
   hw.rotaryClash = new Map(free.ok && Array.isArray(free.body?.pins) ? free.body.pins.filter((p) => own.has(Number(p.pin)) && (p.holders ?? []).length).map((p) => [Number(p.pin), p.holders]) : [])
   hw.rotaryStopped = r.active === true && r.running === false
   for (const [key, name] of ROTARY_PIN_ITEMS) state.values.set(key, rotaryPinText(r.pins[name]))
@@ -17139,6 +17178,7 @@ const CONTROLLERS = {
       mountDisplayModel(root, page)
       drawNdPlace()
       $('#nd-place-btn')?.addEventListener('click', () => openNdPlaceSheet({ onChosen: drawNdPlace }))
+      $('#nd-place-del')?.addEventListener('click', () => void removeNdPlace())
       for (const b of root.querySelectorAll('[data-rot-key]')) {
         b.onclick = () => {
           const key = b.dataset.rotKey
@@ -17745,8 +17785,9 @@ const CONTROLLERS = {
         renderPage(currentPage(), false)
         return toast('Gespeichert – der Drehregler startet gerade nicht', 'info')
       }
-      if (r.ok && (pinItem || key === 'rotary')) {
-        // (the pin it let go is free for the others, the one it took is not; switched on or off: whether it runs, what it shares)
+      if (r.ok && (pinItem || key === 'rotary' || key === 'btnFn')) {
+        // (the pin it let go is free for the others, the one it took is not; switched on or off: whether it runs, what it shares;
+        // the button switched off or on: its pin is let go or taken)
         await loadRotary()
         renderPage(currentPage(), false)
       }

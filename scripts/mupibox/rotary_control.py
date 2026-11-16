@@ -39,6 +39,22 @@ def configured_pins():
 
 PIN_A, PIN_B, PIN_BUTTON = configured_pins()
 
+
+def kernel_pins():
+    # pins a driver of the system has: SPI0 while its devices exist (an NFC reader), I2C1 while its bus exists - set up
+    # as an input here, the pin was taken from the driver until the next restart (GPIO 10, the button's default, is the
+    # data line of SPI: the NFC reader stopped at every start of the encoder)
+    taken = set()
+    if os.path.exists("/dev/spidev0.0") or os.path.exists("/dev/spidev0.1"):
+        taken |= {9, 10, 11}
+    if os.path.exists("/dev/spidev0.0"):
+        taken.add(8)
+    if os.path.exists("/dev/spidev0.1"):
+        taken.add(7)
+    if os.path.exists("/dev/i2c-1"):
+        taken |= {2, 3}
+    return taken
+
 # Gray code: previous state (A<<1|B) and new state -> +1 clockwise (A falls first while B is high, as on a KY-040),
 # -1 counter clockwise, 0 bounce / invalid. A rotary turning the wrong way: swap the A and B wires.
 TRANSITIONS = {
@@ -146,15 +162,40 @@ def worker():
 
 
 pins = None
+button_ready = False  # the button's pin is set up: only while the button does something (see button_wanted)
+button_refused = False  # its pin belongs to a driver of the system: never set up
 
 
 def setup():
     global pins
+    held = kernel_pins() & {PIN_A, PIN_B}
+    if held:
+        # (the app shows the clash on the page of the encoder; taking the pin would stop the other device)
+        raise RuntimeError("GPIO %s belongs to SPI or I2C" % ", ".join(str(pin) for pin in sorted(held)))
     pins = gpio_compat.Gpio()
-    for pin in (PIN_A, PIN_B, PIN_BUTTON):
+    for pin in (PIN_A, PIN_B):
         pins.setup_input(pin)
     if pins.refused:
         print("rotary control: RPi.GPIO does not work here (%s), using %s" % (pins.refused, pins.name), flush=True)
+
+
+def button_wanted():
+    # The button's pin is taken once the button has a function (it can be chosen later - read once a second); with the
+    # button off it stays free for others. A pin of SPI or I2C is never taken: the knob works without the button then.
+    global button_ready, button_refused
+    if button_ready or button_refused or rotary_config().get("button", "off") == "off":
+        return button_ready
+    if PIN_BUTTON in kernel_pins():
+        button_refused = True
+        print("rotary control: the button's GPIO %d belongs to SPI or I2C - the button is not used" % PIN_BUTTON, flush=True)
+        return False
+    try:
+        pins.setup_input(PIN_BUTTON)
+        button_ready = True
+    except Exception as error:
+        button_refused = True
+        print("rotary control: the button's GPIO %d cannot be used (%s)" % (PIN_BUTTON, error), flush=True)
+    return button_ready
 
 
 def main():
@@ -163,11 +204,17 @@ def main():
 
     state = (read(PIN_A) << 1) | read(PIN_B)
     accumulated = 0
-    button_down = read(PIN_BUTTON) == 0
+    button = button_wanted()
+    button_down = button and read(PIN_BUTTON) == 0
+    button_checked = time.monotonic()
     fast_until = 0.0
-    print("rotary control started (A=%d B=%d button=%d)" % (PIN_A, PIN_B, PIN_BUTTON), flush=True)
+    print("rotary control started (A=%d B=%d button=%s)" % (PIN_A, PIN_B, PIN_BUTTON if button else "off"), flush=True)
 
     while True:
+        if not button and time.monotonic() - button_checked >= 1.0:
+            button_checked = time.monotonic()
+            button = button_wanted()
+            button_down = button and read(PIN_BUTTON) == 0
         new_state = (read(PIN_A) << 1) | read(PIN_B)
         if new_state != state:
             fast_until = time.monotonic() + FAST_FOR_S
@@ -182,7 +229,7 @@ def main():
             if state == 3 and abs(accumulated) < STEPS_PER_DETENT:
                 accumulated = 0  # resting position without a full detent: it was a bounce
 
-        pressed = read(PIN_BUTTON) == 0
+        pressed = button and read(PIN_BUTTON) == 0
         if pressed and not button_down:
             time.sleep(0.03)  # debounce
             if read(PIN_BUTTON) == 0:

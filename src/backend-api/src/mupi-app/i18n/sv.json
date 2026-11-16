@@ -1362,7 +1362,6 @@
  "FTP-Server": "FTP-server",
  "Fünf Freunde": "Fem vänner",
  "Funktion des Tasters (GPIO 10)": "Knappens funktion (GPIO 10)",
- "Funktion des Tasters an GPIO 10": "Knappens funktion på GPIO 10",
  "Für „{}“ war kein Cover dabei. Soll ich bei iTunes, Deezer und Spotify nach einem suchen? Du wählst dann eins aus – oder nimmst ein eigenes Bild.": "Det fanns inget omslag till „{}“. Ska jag söka efter ett på iTunes, Deezer och Spotify? Du väljer sedan ett – eller tar en egen bild.",
  "Für „Eigenes“ brauchst du ein Bild, z. B. ein Foto. Die App schneidet es auf das Format des Displays zu; Schrift und Farben stellst du danach ein.": "”Custom” behöver en bild, t.ex. ett foto. Appen beskär den till skärmens format; typsnitt och färger ställer du in efteråt.",
  "Für {} gibt es noch keine Stimme, die auf der Box läuft. Mit Google spricht die Box die Sprache trotzdem.": "Det finns ännu ingen röst för {} som fungerar på boxen. Med Google talar boxen ändå språket.",
@@ -1738,7 +1737,6 @@
  "Lautstärke der Ansagen": "Volym för meddelanden",
  "Lautstärke jetzt": "Volym nu",
  "Lautstärke ließ sich nicht setzen": "Volymen gick inte att ställa in",
- "Lautstärke per Drehregler, Taster an GPIO 10": "Volym via vridratt, knapp på GPIO 10",
  "Lautstärke setzen (0–100)": "Ställ in volym (0–100)",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth": "Volym, ljudkort, vridratt, Bluetooth",
  "Lautstärke, Soundkarte, Drehregler, Bluetooth, Sprachausgabe": "Volym, ljudkort, vridratt, Bluetooth, talfunktion",
@@ -4128,5 +4126,9 @@
  "Heute {} von {} min{}.": "I dag {} av {} min{}.",
  "(+{} min heute)": "(+{} min i dag)",
  "So geht beides nicht: den Pin des Drehreglers unten umstellen und danach die Box neu starten.": "Båda kan inte fungera så: byt pinnen för vridreglaget nedan och starta sedan om boxen.",
- "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "Vridreglaget körs inte just nu. Välj en annan pinne eller starta om boxen."
+ "Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.": "Vridreglaget körs inte just nu. Välj en annan pinne eller starta om boxen.",
+ "Lautstärke per Drehregler, dazu ein Taster": "Volym via vridratt, plus en knapp",
+ "Funktion des Tasters": "Knappens funktion",
+ "Ort entfernen": "Ta bort plats",
+ "Ort entfernt": "Platsen borttagen"
 }

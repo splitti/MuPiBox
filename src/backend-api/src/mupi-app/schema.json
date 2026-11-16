@@ -2467,7 +2467,7 @@
    "area": "einstellungen",
    "parent": "g-audio",
    "title": "Drehregler und Taster",
-   "description": "Lautstärke per Drehregler, Taster an GPIO 10",
+   "description": "Lautstärke per Drehregler, dazu ein Taster",
    "icon": "knob",
    "sections": [
     {
@@ -2492,7 +2492,7 @@
       },
       {
        "type": "select",
-       "label": "Funktion des Tasters an GPIO 10",
+       "label": "Funktion des Tasters",
        "key": "btnFn",
        "default": "Play/Pause",
        "options": [
@@ -4688,7 +4688,7 @@
        "type": "nav",
        "label": "Drehregler und Taster",
        "target": "drehregler",
-       "subtitle": "Lautstärke per Drehregler, Taster an GPIO 10"
+       "subtitle": "Lautstärke per Drehregler, dazu ein Taster"
       },
       {
        "type": "nav",
@@ -5717,7 +5717,7 @@
    "id": "drehregler"
   },
   {
-   "l": "Funktion des Tasters an GPIO 10",
+   "l": "Funktion des Tasters",
    "where": "Audio › Drehregler und Taster",
    "id": "drehregler"
   },
