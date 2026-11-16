@@ -25,9 +25,11 @@ const ARM_UNASKED_MS = 15000
 // a tag still lying on the reader when its driver started again (settings changed, the driver fell over): reported anew,
 // it does not start its medium again - unless it was taken off and laid on after that time
 const AGAIN_AFTER_RESTART_MS = 90000
-// the display starts a medium within a second or two of taking it - Spotify, when the box was silent, takes up to half a
-// minute to start: the first new start within this time is the tag's (asked every second, see watchStart)
-const NOTE_WITHIN_MS = 35000
+// the display starts a medium within a second or two of taking it: the first new start within this time is the tag's (asked
+// every second, see watchStart) - Spotify, when the box was silent, takes up to half a minute (a longer time for all made any
+// start of the child within it the tag's, after the tag's own was refused)
+const NOTE_WITHIN_MS = 10000
+const NOTE_SPOTIFY_MS = 35000
 // tags.json is written when something of it changes that matters (a new tag, a medium given); when a known tag was laid
 // on only, at most this often - it was written to the SD card at every laying on (a USB reader: at every hold)
 const SEEN_SAVE_MS = 6 * 60 * 60 * 1000
@@ -86,6 +88,8 @@ exports.activate = (host) => {
   let lastStart = { uid: '', at: 0 }
   // the start the display made for a tag: { uid, at, rss, generation } - the player's number of that playback, once known
   let handed = null
+  // the tag whose medium a laying on tried to go on with ("play"), as long as nothing played since
+  let resumeTried = null
   let restarted = null // the tag in the field when the driver started again: { uid, until }
 
   // What a tag is called in the list (fixed phrases: the app translates the ones it knows)
@@ -137,6 +141,8 @@ exports.activate = (host) => {
     const now = Date.now()
     // (first: a tag slipped off and laid on again within the 2 s goes on - the lock below is for the same report twice)
     if (handed && handed.uid === tag.uid) {
+      // (laid on again before its start came: taking it off counts no more)
+      handed.gone = null
       await noteGeneration()
       const meta = await playerMeta()
       // (only what this tag started: something else chosen meanwhile, or stopped, starts the tag's medium anew)
@@ -144,13 +150,26 @@ exports.activate = (host) => {
         // (laid on again while it plays - a USB reader at every hold: it plays on, it started from its beginning before)
         if (!isPaused(meta)) {
           paused = null
+          resumeTried = null
           lastStart = { uid: tag.uid, at: now }
           return
         }
         const pausedLong = paused && paused.uid === tag.uid && now - paused.at >= RESUME_WITHIN_MS
-        if (!pausedLong && (await player('play'))) {
+        // (a "play" tried at the last laying on and it is still paused - Spotify refused it, a block: it starts anew, the tag
+        // stayed without effect at every laying on)
+        const triedBefore = resumeTried === tag.uid
+        if (!pausedLong && !triedBefore && (await player('play'))) {
           paused = null
+          resumeTried = tag.uid
           lastStart = { uid: tag.uid, at: now }
+          // (it plays a moment later: the try worked - a pause made later on the display is taken back again by the tag)
+          setTimeout(() => {
+            playerMeta()
+              .then((after) => {
+                if (resumeTried === tag.uid && after && !isPaused(after)) resumeTried = null
+              })
+              .catch(() => undefined)
+          }, 5000).unref?.()
           return
         }
       }
@@ -158,6 +177,7 @@ exports.activate = (host) => {
     if (lastStart.uid === tag.uid && now - lastStart.at < SAME_TAG_MS) return
     lastStart = { uid: tag.uid, at: now }
     paused = null
+    resumeTried = null
     const media = await playable(tag.media)
     if (!media) return log.warn(`[nfc] tag ${tag.uid}: no episode found for ${tag.title}`)
     // (taken off while its episode was looked for: nothing starts)
@@ -170,18 +190,29 @@ exports.activate = (host) => {
   // (the player's /local: origin - the start what plays comes from, kept by a podcast's next episode; older players: generation)
   const originOf = (meta) => (typeof meta?.origin === 'number' ? meta.origin : typeof meta?.generation === 'number' ? meta.generation : null)
   const noteGeneration = async () => {
-    if (!handed || handed.generation !== null || Date.now() - handed.at > NOTE_WITHIN_MS) return
+    if (!handed || handed.generation !== null || Date.now() - handed.at > handed.within) return
     const asked = handed
     const meta = await playerMeta()
     const origin = originOf(meta)
     // (a start refused - the tile's limit, the listening time, Spotify blocked - makes no new one: nothing is the tag's)
-    if (handed === asked && handed.generation === null && origin !== null && origin !== handed.before) handed.generation = origin
+    if (handed === asked && handed.generation === null && origin !== null && origin !== handed.before) {
+      handed.generation = origin
+      // (taken off before its start came - a slow Spotify start: what the setting says is done now, it did not play on
+      // without the tag)
+      const gone = handed.gone
+      handed.gone = null
+      if (gone && inField?.uid !== handed.uid) {
+        if (gone === 'pause') {
+          if (await player('pause')) paused = { uid: handed.uid, at: Date.now() }
+        } else if (gone === 'stop') await player('stop')
+      }
+    }
   }
   // (asked every second after the hand-over until the start is there: a slow Spotify start was not seen after 4 s, and
   // taking the tag off did not pause it)
   const watchStart = (which) => {
     const timer = setInterval(() => {
-      if (handed !== which || which.generation !== null || Date.now() - which.at > NOTE_WITHIN_MS) return clearInterval(timer)
+      if (handed !== which || which.generation !== null || Date.now() - which.at > which.within) return clearInterval(timer)
       noteGeneration().catch(() => undefined)
     }, 1000)
     timer.unref?.()
@@ -224,7 +255,12 @@ exports.activate = (host) => {
       return
     }
     // (only when this tag's medium is what plays: another album started meanwhile on the display stays)
-    if (!(await playsThisTag(tag))) return
+    if (!(await playsThisTag(tag))) {
+      // (its start handed over but not there yet: done when it comes, see noteGeneration)
+      if (handed && handed.uid === tag.uid && handed.generation === null && Date.now() - handed.at <= handed.within && inField?.uid !== tag.uid) handed.gone = settings.onRemove
+      return
+    }
+    resumeTried = null
     if (settings.onRemove === 'pause') {
       if (await player('pause')) paused = { uid: tag.uid, at: Date.now() }
     } else if (settings.onRemove === 'stop') {
@@ -468,7 +504,8 @@ exports.activate = (host) => {
     const command = pending && now - pending.at < PENDING_MS ? pending : null
     pending = null
     if (command) {
-      handed = { uid: command.uid, at: now, before: origin, generation: null }
+      handed = { uid: command.uid, at: now, before: origin, generation: null, gone: null, within: command.media?.type === 'spotify' ? NOTE_SPOTIFY_MS : NOTE_WITHIN_MS }
+      resumeTried = null
       // (the display starts it within a second or two - Spotify after a silence later: its number is taken then, before
       // another start can come)
       watchStart(handed)

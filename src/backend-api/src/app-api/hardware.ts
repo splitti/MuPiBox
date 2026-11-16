@@ -368,7 +368,10 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
     await merge(deps, 'rotary', values)
     // step and button are read live by rotary_control.py; the pins and switching go through the service (it reads the pins at its start)
     let running: boolean | undefined
-    if (values.active === true || (pinsChanged && willBeOn && values.active === undefined)) {
+    // (the button switched off: the service lets its pin go only at its start - it stayed an input until the next restart,
+    // and an extension that took it then found it busy)
+    const buttonLetGo = buttonBefore && !buttonAfter && willBeOn && values.active === undefined
+    if (values.active === true || (pinsChanged && willBeOn && values.active === undefined) || buttonLetGo) {
       await run('sudo', ['systemctl', 'enable', 'mupi_rotary.service'])
       // (every pin chosen restarts it: five within 5 minutes and systemd refused the sixth start - StartLimitBurst - and the
       // encoder stayed dead while the app said "saved")

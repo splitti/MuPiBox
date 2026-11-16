@@ -7620,10 +7620,14 @@ function ndPlaceHtml() {
 
 // The place is taken away again (it was kept for good once chosen): "Abends dunkler" goes by "Ab" and "Bis" then
 async function removeNdPlace() {
+  // (without the sun "Ab" and "Bis" count again - the same time for both is refused)
+  const nd = ndCurrent()
+  if (nd.from === nd.to) return toast('Beginn und Ende brauchen verschiedene Uhrzeiten', 'info')
   const r = await saveDisplayOptions({ nightDim: { ...ndCurrent(), sunset: false, lat: null, lon: null, place: '' } }, 'Ort entfernt')
   if (!r) return
   disp.opts.nightDim = { ...(disp.opts.nightDim ?? {}), sunset: false, lat: null, lon: null, place: '', sunsetAt: null, sunriseAt: null, dimmed: r.dimmed === true }
   state.values.set('ndSun', false)
+  shownValues.set('ndSun', false)
   const box = document.querySelector('input[data-key="ndSun"]')
   if (box) box.checked = false
   drawNdPlace()

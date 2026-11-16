@@ -2589,6 +2589,10 @@ async function runEpisodeSkips() {
   let base = currentMeta.episode
   // (the episode that played and the ones these presses started: another start than these ends the presses)
   const ours = new Set([base])
+  // (a stop or a pause while the neighbour was asked for - up to 20 s after a restart of the box: nothing starts; the stop
+  // and the pause left the episode named, the next one started after the child had left the player)
+  let request = playbackRequest
+  let playPause = playPauseRequest
   try {
     while (episodeSkip.pending !== 0) {
       const steps = episodeSkip.pending
@@ -2604,6 +2608,10 @@ async function runEpisodeSkips() {
       }
       // (another start came meanwhile: it stays)
       if (currentMeta.currentType !== 'rss' || !ours.has(currentMeta.episode)) break
+      if (request !== playbackRequest || playPause !== playPauseRequest) {
+        log.debug(`${now()}: [Spotify Control] skip at an episode: stopped or paused meanwhile - nothing starts`)
+        break
+      }
       if (found.same) {
         log.debug(`${now()}: [Spotify Control] skip at an episode: at the end of the list - it plays on`)
         break
@@ -2620,6 +2628,8 @@ async function runEpisodeSkips() {
       if (!started.ok) break
       base = found.url
       ours.add(found.url)
+      request = playbackRequest
+      playPause = playPauseRequest
     }
   } catch (err) {
     log.debug(`${now()}: [Spotify Control] skip at an episode failed: ${err}`)
@@ -4936,7 +4946,11 @@ app.use((req, res) => {
     sayName(nameTTS).catch((err) => console.error(err))
   }
 
-  if (hasDirSegment(command, 'deletelocal')) {
+  // (a start or a name read out is done above: the end of its title after a last dot - "pause. Teil 2", "stop" as a name - is
+  // no command of its own)
+  if (newMedia || hasDirSegment(command, 'say')) {
+    // started above
+  } else if (hasDirSegment(command, 'deletelocal')) {
     deleteLocal(command.name)
   } else if (command.name === 'pause') pause()
   else if (command.name === 'play') play()

@@ -450,3 +450,33 @@ test('the API part: a tag laid on only for a moment starts nothing when taking i
     global.fetch = realFetch
   }
 })
+
+test('the API part: taken off after the display took the start but before it played, it is paused once it comes', async () => {
+  const realFetch = global.fetch
+  const player = []
+  let generation = 6
+  global.fetch = async (url) => {
+    const u = String(url)
+    if (u.startsWith('http://player.test/local')) return { ok: true, json: async () => ({ currentPlayer: 'spotify', pause: false, generation }) }
+    player.push(u)
+    return { ok: true, json: async () => ({}) }
+  }
+  try {
+    const { host, routes } = makeHost({ reader: 'none', onRemove: 'pause', playOnTag: true })
+    const nfc = require('../api.js').activate(host)
+    await later(0)
+    feedReady(nfc)
+    await call(routes['post /arm'], { body: { media: radio } })
+    nfc.feed({ event: 'tag', tech: 'ISO15693', uid: 'E0040350181B0F84' })
+    await later()
+    assert.strictEqual((await call(routes['get /pending'])).body.media?.type, 'radio')
+    nfc.feed({ event: 'gone' })
+    await later()
+    assert.ok(!player.some((u) => u.startsWith('http://player.test/pause')), 'nothing plays yet')
+    generation = 7 // (the slow start comes)
+    await later(1500)
+    assert.ok(player.some((u) => u.startsWith('http://player.test/pause?src=nfc')), 'paused once it came')
+  } finally {
+    global.fetch = realFetch
+  }
+})

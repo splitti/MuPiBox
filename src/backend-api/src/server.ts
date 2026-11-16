@@ -1262,16 +1262,19 @@ app.get('/api/rssfeed/episode-duration', async (req, res) => {
   res.json({ seconds: feedDurations.byKey.get(episodeKey(url)) ?? 0 })
 })
 
-// A cached feed read and parsed - one read at a time per file (the list in the player, its counter and a skip ask at once)
+// A cached feed read and parsed - one read at a time per file as it is now (the list in the player, its counter and a skip
+// ask at once). (By its size and time too: a read begun before the refresh replaced the file gave the old episodes, kept
+// under the new file's stat until the next refresh.)
 const feedReads = new Map<string, Promise<unknown | undefined>>()
-function readFeedFile(file: string): Promise<unknown | undefined> {
-  const running = feedReads.get(file)
+function readFeedFile(file: string, info: { mtimeMs: number; size: number }): Promise<unknown | undefined> {
+  const key = `${info.mtimeMs}|${info.size}|${file}`
+  const running = feedReads.get(key)
   if (running) return running
   const read = readFile(file, 'utf8')
     .then((text) => JSON.parse(text) as unknown)
     .catch(() => undefined) // (being written: the next time)
-    .finally(() => feedReads.delete(file))
-  feedReads.set(file, read)
+    .finally(() => feedReads.delete(key))
+  feedReads.set(key, read)
   return read
 }
 
@@ -1285,7 +1288,7 @@ async function parsedFeed(file: string): Promise<unknown | undefined> {
   if (!info) return undefined
   const hit = parsedFeeds.get(file)
   if (hit && hit.mtimeMs === info.mtimeMs && hit.size === info.size) return hit.feed
-  const feed = await readFeedFile(file)
+  const feed = await readFeedFile(file, info)
   if (feed === undefined) return undefined
   parsedFeeds.delete(file)
   parsedFeeds.set(file, { mtimeMs: info.mtimeMs, size: info.size, feed })
@@ -1306,7 +1309,7 @@ async function feedIndexOf(file: string): Promise<{ keys: Set<string>; title?: s
   if (hit && hit.mtimeMs === info.mtimeMs && hit.size === info.size) return hit
   // (read for its index only - not kept parsed: the search goes through every podcast of the library)
   const kept = parsedFeeds.get(file)
-  const feed = kept && kept.mtimeMs === info.mtimeMs && kept.size === info.size ? kept.feed : await readFeedFile(file)
+  const feed = kept && kept.mtimeMs === info.mtimeMs && kept.size === info.size ? kept.feed : await readFeedFile(file, info)
   if (!feed) return undefined
   const { channel, items } = feedItems(feed)
   const url = (item: Record<string, unknown>) => String((item.enclosure as { _attributes?: { url?: unknown } } | undefined)?._attributes?.url ?? '')
