@@ -1,9 +1,9 @@
 {
   "id": "nfc",
   "name": "NFC-Extension",
-  "version": "0.7.2",
-  "description": "Ein NFC-Leser liest Tags und Karten: der PN5180 (ISO 14443 A und ISO 15693), der RC522 und der PN532 (ISO 14443 A) oder ein USB-Leser, der die Kartennummer wie eine Tastatur tippt. Jeder Tag kann ein Album, ein Hörspiel, einen Sender oder einen Podcast starten: In der Bibliothek das Medium öffnen, „NFC-Tag“ antippen und den Tag auflegen. Die Einstellungen stehen unter System › NFC-Extension.",
-  "hostApi": 9,
+  "version": "0.12.2",
+  "description": "Bis zu drei NFC-Leser lesen Tags und Karten, auch gleichzeitig: der PN5180 (ISO 14443 A und ISO 15693), der RC522 und der PN532 (ISO 14443 A) oder ein USB-Leser, der die Kartennummer wie eine Tastatur tippt (auch ein USB-Barcodeleser). Jeder Tag kann ein Album, ein Hörspiel, einen Sender oder einen Podcast starten: In der Bibliothek das Medium öffnen, „NFC-Tag“ antippen und den Tag auflegen. Die Einstellungen stehen unter System › NFC-Extension.",
+  "hostApi": 12,
   "resources": {},
   "api": "api.js",
   "display": "display.js",
@@ -17,7 +17,8 @@
         "pn5180",
         "rc522",
         "pn532",
-        "hid"
+        "hid",
+        "hid2"
       ]
     },
     "spiDevice": {
@@ -69,6 +70,136 @@
         "v"
       ]
     },
+    "reader2": {
+      "type": "string",
+      "default": "none",
+      "options": [
+        "none",
+        "pn5180",
+        "rc522",
+        "pn532",
+        "hid",
+        "hid2"
+      ]
+    },
+    "spiDevice2": {
+      "type": "string",
+      "default": "0.0",
+      "options": [
+        "0.0",
+        "0.1"
+      ]
+    },
+    "busyPin2": {
+      "type": "gpio",
+      "default": 0
+    },
+    "resetPin2": {
+      "type": "gpio",
+      "default": 0
+    },
+    "pn532Link2": {
+      "type": "string",
+      "default": "i2c",
+      "options": [
+        "i2c",
+        "spi",
+        "uart"
+      ]
+    },
+    "uartDevice2": {
+      "type": "string",
+      "default": "/dev/serial0",
+      "options": [
+        "/dev/serial0",
+        "/dev/ttyAMA0",
+        "/dev/ttyS0",
+        "/dev/ttyUSB0"
+      ]
+    },
+    "hidDevice2": {
+      "type": "string",
+      "default": "",
+      "pattern": "^[A-Za-z0-9 _./:+-]{0,60}$"
+    },
+    "tech2": {
+      "type": "string",
+      "default": "both",
+      "options": [
+        "both",
+        "a",
+        "v"
+      ]
+    },
+    "reader3": {
+      "type": "string",
+      "default": "none",
+      "options": [
+        "none",
+        "pn5180",
+        "rc522",
+        "pn532",
+        "hid",
+        "hid2"
+      ]
+    },
+    "spiDevice3": {
+      "type": "string",
+      "default": "0.0",
+      "options": [
+        "0.0",
+        "0.1"
+      ]
+    },
+    "busyPin3": {
+      "type": "gpio",
+      "default": 0
+    },
+    "resetPin3": {
+      "type": "gpio",
+      "default": 0
+    },
+    "pn532Link3": {
+      "type": "string",
+      "default": "i2c",
+      "options": [
+        "i2c",
+        "spi",
+        "uart"
+      ]
+    },
+    "uartDevice3": {
+      "type": "string",
+      "default": "/dev/serial0",
+      "options": [
+        "/dev/serial0",
+        "/dev/ttyAMA0",
+        "/dev/ttyS0",
+        "/dev/ttyUSB0"
+      ]
+    },
+    "hidDevice3": {
+      "type": "string",
+      "default": "",
+      "pattern": "^[A-Za-z0-9 _./:+-]{0,60}$"
+    },
+    "tech3": {
+      "type": "string",
+      "default": "both",
+      "options": [
+        "both",
+        "a",
+        "v"
+      ]
+    },
+    "reader2On": {
+      "type": "boolean",
+      "default": false
+    },
+    "reader3On": {
+      "type": "boolean",
+      "default": false
+    },
     "playOnTag": {
       "type": "boolean",
       "default": true
@@ -81,6 +212,70 @@
         "pause",
         "stop"
       ]
+    },
+    "sayNoRouterOn": {
+      "type": "boolean",
+      "default": true
+    },
+    "sayNoRouterText": {
+      "type": "string",
+      "default": "Ich habe keine Verbindung zum WLAN-Router."
+    },
+    "sayWifiTroubleOn": {
+      "type": "boolean",
+      "default": true
+    },
+    "sayWifiTroubleText": {
+      "type": "string",
+      "default": "Es gibt ein Problem mit der WLAN-Verbindung oder bei der Synchronisation."
+    },
+    "sayWifiWeakOn": {
+      "type": "boolean",
+      "default": true
+    },
+    "sayWifiWeakText": {
+      "type": "string",
+      "default": "Das WLAN-Signal ist da, aber zu schwach. Bitte stell mich näher an den Router."
+    },
+    "saySlowLoadOn": {
+      "type": "boolean",
+      "default": true
+    },
+    "saySlowLoadText": {
+      "type": "string",
+      "default": "Das Laden der Inhalte dauert zu lange oder wurde abgebrochen. Versuch es gleich noch einmal."
+    },
+    "sayNasDownOn": {
+      "type": "boolean",
+      "default": true
+    },
+    "sayNasDownText": {
+      "type": "string",
+      "default": "Das NAS ist vorübergehend nicht erreichbar."
+    },
+    "saySpotifyDownOn": {
+      "type": "boolean",
+      "default": true
+    },
+    "saySpotifyDownText": {
+      "type": "string",
+      "default": "Spotify ist vorübergehend nicht erreichbar."
+    },
+    "sayTagNewOn": {
+      "type": "boolean",
+      "default": true
+    },
+    "sayTagNewText": {
+      "type": "string",
+      "default": "Dieser NFC-Tag wurde noch nicht zugeordnet."
+    },
+    "sayLowBatteryOn": {
+      "type": "boolean",
+      "default": true
+    },
+    "sayLowBatteryText": {
+      "type": "string",
+      "default": "Bitte stecke mich zum Laden an."
     }
   },
   "system": {
@@ -105,16 +300,38 @@
         "type": "heading",
         "label": "NFC-Reader",
         "page": true,
-        "help": "Wähle den Leser, den du angeschlossen hast. PN5180 und RC522 sprechen über SPI mit der Box (dtparam=spi=on in der config.txt), der PN532 über I2C, SPI oder die serielle Schnittstelle, ein USB-Leser steckt einfach an. Nach dem Einschalten von SPI, I2C oder der seriellen Schnittstelle muss die Box neu starten. Die Belegung steht im Handbuch unter Erweiterungen › NFC-Extension."
+        "help": "Wähle die Leser, die du angeschlossen hast. PN5180 und RC522 sprechen über SPI mit der Box (dtparam=spi=on in der config.txt), der PN532 über I2C, SPI oder die serielle Schnittstelle, ein USB-Leser steckt einfach an. Bis zu drei Leser arbeiten gleichzeitig, solange jeder seinen eigenen Anschluss hat: ein anderes SPI-Gerät (CE0 oder CE1), den I2C-Bus, eine serielle Schnittstelle oder einen USB-Leser. Nach dem Einschalten von SPI, I2C oder der seriellen Schnittstelle muss die Box neu starten. Die Belegung steht im Handbuch unter Erweiterungen › NFC-Extension."
+      },
+      {
+        "type": "heading",
+        "label": "Anschlüsse",
+        "card": true,
+        "help": "PN5180 und RC522 brauchen SPI, der PN532 I2C, SPI oder die serielle Schnittstelle (UART); ein USB-Leser braucht keinen davon. Nach dem Ein- oder Ausschalten muss die Box neu starten."
+      },
+      {
+        "type": "status",
+        "label": "SPI",
+        "state": "/api/ext/nfc/spistate"
+      },
+      {
+        "type": "status",
+        "label": "I2C",
+        "state": "/api/ext/nfc/iicstate"
+      },
+      {
+        "type": "status",
+        "label": "Seriell (UART)",
+        "state": "/api/ext/nfc/uartstate"
+      },
+      {
+        "type": "heading",
+        "label": "Leser",
+        "card": true
       },
       {
         "type": "status",
         "label": "Zustand",
-        "state": "/api/ext/nfc/state"
-      },
-      {
-        "type": "heading",
-        "label": "Leser"
+        "state": "/api/ext/nfc/stateone"
       },
       {
         "key": "reader",
@@ -138,9 +355,14 @@
           },
           {
             "value": "hid",
-            "label": "USB-Leser (Tastatur)"
+            "label": "USB Reader 1"
+          },
+          {
+            "value": "hid2",
+            "label": "USB Reader 2"
           }
-        ]
+        ],
+        "live": "/api/ext/nfc/usbstate"
       },
       {
         "key": "spiDevice",
@@ -162,6 +384,13 @@
             "pn5180",
             "rc522",
             "pn532"
+          ]
+        },
+        "hideIf": {
+          "key": "pn532Link",
+          "is": [
+            "i2c",
+            "uart"
           ]
         }
       },
@@ -189,17 +418,6 @@
         }
       },
       {
-        "type": "heading",
-        "label": "PN532",
-        "help": "Der PN532 hat zwei Schalter auf der Platine, die den Anschluss wählen: I2C, SPI oder seriell (HSU).",
-        "showIf": {
-          "key": "reader",
-          "is": [
-            "pn532"
-          ]
-        }
-      },
-      {
         "key": "pn532Link",
         "label": "PN532 Anschluss",
         "choices": [
@@ -221,7 +439,8 @@
           "is": [
             "pn532"
           ]
-        }
+        },
+        "help": "Der PN532 hat zwei Schalter auf der Platine, die den Anschluss wählen: I2C, SPI oder seriell (HSU)."
       },
       {
         "key": "uartDevice",
@@ -231,39 +450,6 @@
           "key": "reader",
           "is": [
             "pn532"
-          ]
-        }
-      },
-      {
-        "type": "heading",
-        "label": "USB-Leser",
-        "help": "Der USB-Leser braucht nichts außer dem Stecker; ein Name hilft nur, wenn noch eine USB-Tastatur steckt.",
-        "showIf": {
-          "key": "reader",
-          "is": [
-            "hid"
-          ]
-        }
-      },
-      {
-        "key": "hidDevice",
-        "label": "Name des USB-Lesers",
-        "help": "Leer lassen: die Box findet den Leser selbst. Sonst ein Teil seines Namens (zum Beispiel „IC Reader“) oder der Pfad /dev/input/event3.",
-        "showIf": {
-          "key": "reader",
-          "is": [
-            "hid"
-          ]
-        }
-      },
-      {
-        "type": "heading",
-        "label": "Tags",
-        "help": "ISO 14443 A sind NTAG, MIFARE und die meisten Karten und Sticker, ISO 15693 sind ICODE und SLIX.",
-        "showIf": {
-          "key": "reader",
-          "is": [
-            "pn5180"
           ]
         }
       },
@@ -289,30 +475,320 @@
           "is": [
             "pn5180"
           ]
-        }
+        },
+        "help": "ISO 14443 A sind NTAG, MIFARE und die meisten Karten und Sticker, ISO 15693 sind ICODE und SLIX."
       },
       {
         "type": "heading",
-        "label": "Tags",
-        "help": "RC522 und PN532 lesen ISO 14443 A: NTAG, MIFARE und die meisten Karten und Sticker. ISO 15693 (ICODE, SLIX) lesen sie nicht.",
+        "label": "Leser",
+        "optional": "reader2On",
+        "card": true
+      },
+      {
+        "type": "status",
+        "label": "Zustand",
+        "state": "/api/ext/nfc/statetwo"
+      },
+      {
+        "key": "reader2",
+        "label": "Typ",
+        "choices": [
+          {
+            "value": "none",
+            "label": "Kein Leser"
+          },
+          {
+            "value": "pn5180",
+            "label": "PN5180"
+          },
+          {
+            "value": "rc522",
+            "label": "RC522"
+          },
+          {
+            "value": "pn532",
+            "label": "PN532"
+          },
+          {
+            "value": "hid",
+            "label": "USB Reader 1"
+          },
+          {
+            "value": "hid2",
+            "label": "USB Reader 2"
+          }
+        ],
+        "live": "/api/ext/nfc/usbstate"
+      },
+      {
+        "key": "spiDevice2",
+        "label": "NSS an",
+        "help": "Für PN5180, RC522 und den PN532 am SPI-Anschluss.",
+        "choices": [
+          {
+            "value": "0.0",
+            "label": "CE0 · Pin 24"
+          },
+          {
+            "value": "0.1",
+            "label": "CE1 · Pin 26"
+          }
+        ],
         "showIf": {
-          "key": "reader",
+          "key": "reader2",
           "is": [
+            "pn5180",
             "rc522",
+            "pn532"
+          ]
+        },
+        "hideIf": {
+          "key": "pn532Link2",
+          "is": [
+            "i2c",
+            "uart"
+          ]
+        }
+      },
+      {
+        "key": "busyPin2",
+        "label": "GPIO-Pin BUSY",
+        "help": "Nur für den PN5180, zum Beispiel GPIO 25 (Pin 22).",
+        "showIf": {
+          "key": "reader2",
+          "is": [
+            "pn5180"
+          ]
+        }
+      },
+      {
+        "key": "resetPin2",
+        "label": "GPIO-Pin RST",
+        "help": "Für den PN5180 nötig, zum Beispiel GPIO 23 (Pin 16). Beim RC522 darf er frei bleiben.",
+        "showIf": {
+          "key": "reader2",
+          "is": [
+            "pn5180",
+            "rc522"
+          ]
+        }
+      },
+      {
+        "key": "pn532Link2",
+        "label": "PN532 Anschluss",
+        "choices": [
+          {
+            "value": "i2c",
+            "label": "I2C · Pin 3 und 5"
+          },
+          {
+            "value": "spi",
+            "label": "SPI"
+          },
+          {
+            "value": "uart",
+            "label": "Seriell (UART) · Pin 8 und 10"
+          }
+        ],
+        "showIf": {
+          "key": "reader2",
+          "is": [
+            "pn532"
+          ]
+        },
+        "help": "Der PN532 hat zwei Schalter auf der Platine, die den Anschluss wählen: I2C, SPI oder seriell (HSU)."
+      },
+      {
+        "key": "uartDevice2",
+        "label": "Serielle Schnittstelle",
+        "help": "Nur für den PN532 am seriellen Anschluss. Auf dem Pi 5 ist /dev/ttyAMA0 die Schnittstelle am Pin 8 und 10.",
+        "showIf": {
+          "key": "reader2",
+          "is": [
             "pn532"
           ]
         }
       },
       {
-        "type": "heading",
-        "label": "Tags",
-        "help": "Ein USB-Leser meldet die Nummer, die er tippt. Er meldet nur das Auflegen, nicht das Abnehmen.",
+        "key": "tech2",
+        "label": "Erkennen",
+        "choices": [
+          {
+            "value": "both",
+            "label": "Beide"
+          },
+          {
+            "value": "a",
+            "label": "ISO 14443 A"
+          },
+          {
+            "value": "v",
+            "label": "ISO 15693"
+          }
+        ],
         "showIf": {
-          "key": "reader",
+          "key": "reader2",
           "is": [
-            "hid"
+            "pn5180"
+          ]
+        },
+        "help": "ISO 14443 A sind NTAG, MIFARE und die meisten Karten und Sticker, ISO 15693 sind ICODE und SLIX."
+      },
+      {
+        "type": "heading",
+        "label": "Leser",
+        "optional": "reader3On",
+        "card": true
+      },
+      {
+        "type": "status",
+        "label": "Zustand",
+        "state": "/api/ext/nfc/statethree"
+      },
+      {
+        "key": "reader3",
+        "label": "Typ",
+        "choices": [
+          {
+            "value": "none",
+            "label": "Kein Leser"
+          },
+          {
+            "value": "pn5180",
+            "label": "PN5180"
+          },
+          {
+            "value": "rc522",
+            "label": "RC522"
+          },
+          {
+            "value": "pn532",
+            "label": "PN532"
+          },
+          {
+            "value": "hid",
+            "label": "USB Reader 1"
+          },
+          {
+            "value": "hid2",
+            "label": "USB Reader 2"
+          }
+        ],
+        "live": "/api/ext/nfc/usbstate"
+      },
+      {
+        "key": "spiDevice3",
+        "label": "NSS an",
+        "help": "Für PN5180, RC522 und den PN532 am SPI-Anschluss.",
+        "choices": [
+          {
+            "value": "0.0",
+            "label": "CE0 · Pin 24"
+          },
+          {
+            "value": "0.1",
+            "label": "CE1 · Pin 26"
+          }
+        ],
+        "showIf": {
+          "key": "reader3",
+          "is": [
+            "pn5180",
+            "rc522",
+            "pn532"
+          ]
+        },
+        "hideIf": {
+          "key": "pn532Link3",
+          "is": [
+            "i2c",
+            "uart"
           ]
         }
+      },
+      {
+        "key": "busyPin3",
+        "label": "GPIO-Pin BUSY",
+        "help": "Nur für den PN5180, zum Beispiel GPIO 25 (Pin 22).",
+        "showIf": {
+          "key": "reader3",
+          "is": [
+            "pn5180"
+          ]
+        }
+      },
+      {
+        "key": "resetPin3",
+        "label": "GPIO-Pin RST",
+        "help": "Für den PN5180 nötig, zum Beispiel GPIO 23 (Pin 16). Beim RC522 darf er frei bleiben.",
+        "showIf": {
+          "key": "reader3",
+          "is": [
+            "pn5180",
+            "rc522"
+          ]
+        }
+      },
+      {
+        "key": "pn532Link3",
+        "label": "PN532 Anschluss",
+        "choices": [
+          {
+            "value": "i2c",
+            "label": "I2C · Pin 3 und 5"
+          },
+          {
+            "value": "spi",
+            "label": "SPI"
+          },
+          {
+            "value": "uart",
+            "label": "Seriell (UART) · Pin 8 und 10"
+          }
+        ],
+        "showIf": {
+          "key": "reader3",
+          "is": [
+            "pn532"
+          ]
+        },
+        "help": "Der PN532 hat zwei Schalter auf der Platine, die den Anschluss wählen: I2C, SPI oder seriell (HSU)."
+      },
+      {
+        "key": "uartDevice3",
+        "label": "Serielle Schnittstelle",
+        "help": "Nur für den PN532 am seriellen Anschluss. Auf dem Pi 5 ist /dev/ttyAMA0 die Schnittstelle am Pin 8 und 10.",
+        "showIf": {
+          "key": "reader3",
+          "is": [
+            "pn532"
+          ]
+        }
+      },
+      {
+        "key": "tech3",
+        "label": "Erkennen",
+        "choices": [
+          {
+            "value": "both",
+            "label": "Beide"
+          },
+          {
+            "value": "a",
+            "label": "ISO 14443 A"
+          },
+          {
+            "value": "v",
+            "label": "ISO 15693"
+          }
+        ],
+        "showIf": {
+          "key": "reader3",
+          "is": [
+            "pn5180"
+          ]
+        },
+        "help": "ISO 14443 A sind NTAG, MIFARE und die meisten Karten und Sticker, ISO 15693 sind ICODE und SLIX."
       },
       {
         "type": "heading",
@@ -327,12 +803,19 @@
         "empty": "Noch kein Tag hat ein Medium."
       },
       {
-        "type": "heading",
-        "label": "Auflegen und Abnehmen"
+        "type": "action",
+        "label": "Tags exportieren",
+        "download": "/api/ext/nfc/tagexportcsv",
+        "file": "mupibox-nfc-tags",
+        "ext": "csv"
       },
       {
-        "key": "playOnTag",
-        "label": "Tag startet sein Medium"
+        "type": "action",
+        "label": "Tags importieren",
+        "upload": "/api/ext/nfc/tagimport",
+        "confirm": "Die Tags aus einer Datei übernehmen? Neue Tags kommen dazu, ein Tag, den die Box schon kennt, bekommt das Medium aus der Datei.",
+        "beside": true,
+        "accept": ".csv,.json"
       },
       {
         "key": "onRemove",
@@ -351,15 +834,111 @@
             "label": "Stoppen"
           }
         ],
-        "help": "Mit „Pausieren“ geht das Hörspiel weiter, wo es war, wenn der Tag innerhalb einer halben Stunde wieder aufliegt.",
-        "showIf": {
-          "key": "reader",
-          "is": [
-            "pn5180",
-            "rc522",
-            "pn532"
-          ]
-        }
+        "help": "Mit „Pausieren“ geht das Hörspiel weiter, wo es war, wenn der Tag innerhalb einer halben Stunde wieder aufliegt. Ein USB-Leser meldet das Abnehmen nicht: für ihn gilt das nicht."
+      },
+      {
+        "type": "heading",
+        "label": "Sprachausgabe",
+        "page": true,
+        "help": "Das sagt die Box mit ihrer Stimme, wenn etwas im Weg ist oder fehlt. Jede Ansage hat einen Schalter und einen Text, den du ändern kannst. Die Stimme stellst du unter Sprachausgabe ein."
+      },
+      {
+        "type": "heading",
+        "label": "WLAN",
+        "card": true,
+        "help": "Gesagt, wenn ein Tag ein Medium startet, das Internet braucht."
+      },
+      {
+        "key": "sayNoRouterOn",
+        "label": "Keine Verbindung zum WLAN-Router",
+        "help": "Gesagt, wenn ein Tag ein Medium startet, das Internet braucht, und die Box in keinem WLAN angemeldet ist."
+      },
+      {
+        "key": "sayNoRouterText",
+        "label": "Text der Ansage",
+        "dep": "sayNoRouterOn"
+      },
+      {
+        "key": "sayWifiTroubleOn",
+        "label": "WLAN-Verbindungsproblem oder Synchronisationsfehler",
+        "help": "Gesagt, wenn die Box am Router hängt, aber nicht ins Internet kommt."
+      },
+      {
+        "key": "sayWifiTroubleText",
+        "label": "Text der Ansage",
+        "dep": "sayWifiTroubleOn"
+      },
+      {
+        "key": "sayWifiWeakOn",
+        "label": "WLAN-Signal ist da, aber zu schwach",
+        "help": "Gesagt, wenn das Signal schwächer als -75 dBm ist. Das Medium startet trotzdem."
+      },
+      {
+        "key": "sayWifiWeakText",
+        "label": "Text der Ansage",
+        "dep": "sayWifiWeakOn"
+      },
+      {
+        "type": "heading",
+        "label": "Inhalte",
+        "card": true,
+        "help": "Wenn das Medium eines Tags nicht startet."
+      },
+      {
+        "key": "saySlowLoadOn",
+        "label": "Verzögerung oder Abbruch beim Laden der Inhalte",
+        "help": "Gesagt, wenn das Medium eines Tags nicht startet: nach 10 Sekunden, bei Spotify nach 35. Nicht, wenn die Spielzeit oder eine Ruhezeit es sperrt."
+      },
+      {
+        "key": "saySlowLoadText",
+        "label": "Text der Ansage",
+        "dep": "saySlowLoadOn"
+      },
+      {
+        "key": "sayNasDownOn",
+        "label": "NAS vorübergehend nicht erreichbar",
+        "help": "Gesagt, wenn ein Tag mit einem Medium vom NAS nicht startet und das NAS nicht antwortet."
+      },
+      {
+        "key": "sayNasDownText",
+        "label": "Text der Ansage",
+        "dep": "sayNasDownOn"
+      },
+      {
+        "key": "saySpotifyDownOn",
+        "label": "Spotify vorübergehend nicht erreichbar",
+        "help": "Gesagt, wenn ein Tag mit einem Spotify-Medium nicht startet und Spotify nicht antwortet."
+      },
+      {
+        "key": "saySpotifyDownText",
+        "label": "Text der Ansage",
+        "dep": "saySpotifyDownOn"
+      },
+      {
+        "type": "heading",
+        "label": "Tags und Akku",
+        "card": true,
+        "help": "Ein Tag ohne Medium, ein fast leerer Akku."
+      },
+      {
+        "key": "sayTagNewOn",
+        "label": "NFC-Tag noch nicht zugeordnet",
+        "help": "Gesagt, wenn ein Tag aufgelegt wird, der noch kein Medium hat."
+      },
+      {
+        "key": "sayTagNewText",
+        "label": "Text der Ansage",
+        "dep": "sayTagNewOn"
+      },
+      {
+        "key": "sayLowBatteryOn",
+        "label": "Bitte zum Laden anstecken",
+        "help": "Kommt von selbst, wenn der Akku 10 % erreicht und die Box nicht lädt. Einmal, bis der Akku wieder über 15 % war oder geladen wurde."
+      },
+      {
+        "key": "sayLowBatteryText",
+        "label": "Text der Ansage",
+        "dep": "sayLowBatteryOn"
       }
     ]
   }

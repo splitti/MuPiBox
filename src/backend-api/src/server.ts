@@ -36,7 +36,7 @@ import { loadSpotifyTokenStore } from './spotify-sync/config-loader'
 import { createSpotifySyncRouter } from './spotify-sync/routes'
 import { startScheduler } from './spotify-sync/scheduler'
 import type { RunSyncDeps } from './spotify-sync/state-machine'
-import { mountExtensions } from './app-api/extensions'
+import { mountExtensions, noteExtensionCrash } from './app-api/extensions'
 import { buildElternLandingHandler, createElternApiRouter, registerDisplayNetworkRoutes, setOnSpotifyCacheCleared } from './app-api/routes'
 import { startSpotifyLoginWatch } from './app-api/spotify-auth-age'
 import { startTlsWatch } from './app-api/tls'
@@ -513,7 +513,8 @@ app.put('/api/home-lists/:category', express.json({ limit: '20mb' }), (req, res)
   res.json({ ok: true })
 })
 
-app.use(express.json())
+// (1 MB: the list of the NFC tags an extension takes in is more than the 100 kB of the default)
+app.use(express.json({ limit: '1mb' }))
 app.use(express.urlencoded({ extended: false }))
 
 // We only want to serve the Angular app as static files in production so that we can start
@@ -8809,6 +8810,9 @@ process.on('unhandledRejection', (reason) => {
 })
 process.on('uncaughtException', (err) => {
   console.error(`${new Date().toLocaleString()}: [mupibox-backend-api] uncaught exception: ${err.message}`, err.stack)
+  // (an error that went through the files of an extension is written down: one that keeps ending the server is switched off at the
+  // next start - extension-health.ts)
+  noteExtensionCrash(err)
   process.exit(1)
 })
 

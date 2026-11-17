@@ -455,6 +455,16 @@ test('play/pause and shuffle go by what the player says; nothing playing means p
   assert.deepEqual(paused.calls.filter((c) => !c.endsWith('/local')), [`GET ${P}/play?src=buttons`, `GET ${P}/shuffleoff?src=buttons`])
 })
 
+test('repeat goes all -> one -> off -> all by what the player says; an older player knows only on and off', async () => {
+  const modes = []
+  for (const meta of [{ repeatMode: 'off' }, { repeatMode: 'all' }, { repeatMode: 'one' }, { repeat: true }, { repeat: false }, null]) {
+    const box = fakeBox({ meta })
+    await createActions({ playerUrl: P, apiUrl: A, log: quiet, fetchFn: box.fetchFn }).do('repeat')
+    modes.push(box.calls.filter((c) => !c.endsWith('/local')).map((c) => c.replace(`GET ${P}/`, '').replace('?src=buttons', ''))[0])
+  }
+  assert.deepEqual(modes, ['repeatall', 'repeatone', 'repeatoff', 'repeatone', 'repeatall', 'repeatall'])
+})
+
 test('the output goes to the next one - and stays when there is only one', async () => {
   const one = fakeBox()
   await createActions({ playerUrl: P, apiUrl: A, log: quiet, fetchFn: one.fetchFn }).do('output')

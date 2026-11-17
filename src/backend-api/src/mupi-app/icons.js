@@ -61,6 +61,10 @@ export const ICONS = {
   close: "M6 6l12 12M18 6L6 18",
   check: "M5 12l5 5 9-10",
   book: "M4 19V5a2 2 0 0 1 2-2h14v14H6a2 2 0 0 0-2 2zM4 19a2 2 0 0 0 2 2h14v-4",
+  play: "M7 4l13 8-13 8z",
+  trash: "M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6",
+  swap: "M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4",
+  undo: "M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3",
 }
 
 export function icon(name, size = 20) {

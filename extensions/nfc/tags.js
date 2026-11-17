@@ -4,6 +4,8 @@
 // Plain functions and data, no files and no timers: the API part (api.js) does the reading, writing and playing.
 'use strict'
 
+const crypto = require('node:crypto')
+
 const MAX_TAGS = 300
 const ARM_SECONDS = 600
 
@@ -49,7 +51,12 @@ function mediaLabel(media) {
 /** A picture a tag shows in the list of the app: an address of the box (/api/...) or of the web (https://...); '' if it is none. */
 function sanitizeImage(value) {
   const text = typeof value === 'string' ? value.trim() : ''
-  return text.length <= 600 && /^(\/api\/[\w\-./%?=&~+!()*,:;@]*|\/cover\/[\w\-.%]+|https:\/\/[^\s"'<>\\]+|http:\/\/[^\s/"'<>\\]+\/cover\/[\w\-.%]+)$/.test(text) ? text : ''
+  if (text.length > 600) return ''
+  // (an own picture comes as http://<box>/cover/<name>; it is kept as /cover/<name>, so it loads whatever address the box is
+  // reached by - the host name of the box does not resolve everywhere)
+  const own = /^http:\/\/[^\s/"'<>\\]+(\/cover\/[\w\-.%]+)$/.exec(text)
+  if (own) return own[1]
+  return /^(\/api\/[\w\-./%?=&~+!()*,:;@]*|\/cover\/[\w\-.%]+|https:\/\/[^\s"'<>\\]+)$/.test(text) ? text : ''
 }
 
 /** The picture of a tag: the one it was given, else the cover the app showed for its medium when it was assigned (a podcast or a
@@ -85,7 +92,11 @@ function normalizeUid(value) {
   return /^[0-9A-F]{8,20}$/.test(uid) ? uid : null
 }
 
-const emptyData = () => ({ version: 1, flex: null, tags: {} })
+// (the kind of a tag: a USB reader gives a number as typed, no bytes of a chip - the list shows it as it is)
+const techOf = (tech) => (tech === 'ISO15693' || tech === 'HID' ? tech : 'ISO14443A')
+
+// (assignmentsSha: the digest of the assignments as the file of their own held them when tags.json was written last - see api.js)
+const emptyData = () => ({ version: 1, flex: null, assignmentsSha: '', tags: {} })
 
 /** What was read from tags.json as data the code can rely on (a damaged or foreign file gives an empty store, never an error). */
 function readData(raw) {
@@ -97,7 +108,7 @@ function readData(raw) {
     const media = sanitizeMedia(tag.media)
     data.tags[uid] = {
       uid,
-      tech: tag.tech === 'ISO15693' ? 'ISO15693' : 'ISO14443A',
+      tech: techOf(tag.tech),
       media,
       title: media ? mediaLabel(media) : '',
       image: media ? sanitizeImage(tag.image) : '',
@@ -110,6 +121,7 @@ function readData(raw) {
   }
   const flex = normalizeUid(raw.flex)
   data.flex = flex && data.tags[flex] ? flex : null
+  data.assignmentsSha = typeof raw.assignmentsSha === 'string' && /^[0-9a-f]{64}$/.test(raw.assignmentsSha) ? raw.assignmentsSha : ''
   return data
 }
 
@@ -148,7 +160,7 @@ function tagLaidOn(data, armed, event, now) {
   if (!tag) {
     tag = data.tags[uid] = { uid, tech: 'ISO14443A', media: null, title: '', image: '', cover: '', firstSeen: now, lastSeen: now, assignedAt: 0, count: 0 }
   }
-  tag.tech = event.tech === 'ISO15693' ? 'ISO15693' : 'ISO14443A'
+  tag.tech = techOf(event.tech)
   tag.lastSeen = now
   tag.count += 1
   const waiting = armed && armed.media && now < armed.until ? armed : null
@@ -264,6 +276,19 @@ function giveToFlex(data, media, now, image = '', cover = '') {
   return true
 }
 
+/** A known tag gets another medium (the "change tag" of the page of tags): its title, cover and picture go with it, the tag stays what it
+ *  was otherwise (flex or not). False when the tag is not known. */
+function giveToTag(data, uid, media, now, cover = '') {
+  const tag = data.tags[uid]
+  if (!tag) return false
+  tag.media = media
+  tag.title = mediaLabel(media)
+  tag.image = ''
+  tag.cover = sanitizeImage(cover)
+  tag.assignedAt = now
+  return true
+}
+
 /** The tag is forgotten: its entry is gone, a flex tag is none any more. False when it was not known. */
 function forgetTag(data, uid) {
   if (!data.tags[uid]) return false
@@ -272,8 +297,223 @@ function forgetTag(data, uid) {
   return true
 }
 
+// ---- the list of the tags as a file ---------------------------------------------------------------------------------------------
+// The assignments - which tag plays what - are kept in a file of their own (api.js: tag-assignments.json, with copies) and can be saved
+// and taken in again by the user on the page of the tags. The same format serves for all of it. Only tags with a medium are in it: the
+// others carry nothing worth keeping (when they were laid on, how often).
+const EXPORT_FORMAT = 'mupibox-nfc-tags'
+
+/** The tags that have a medium, as the file holds them: { format, version, exportedAt, flex, count, tags: [{ uid, tech, title, media, image, cover, assignedAt }] }. */
+function exportData(data, now = Date.now()) {
+  const list = Object.values(data.tags)
+    .filter((tag) => tag.media)
+    .sort((a, b) => (a.uid < b.uid ? -1 : a.uid > b.uid ? 1 : 0))
+    .map((tag) => ({ uid: tag.uid, tech: tag.tech, title: tag.title, media: tag.media, image: tag.image, cover: tag.cover, assignedAt: tag.assignedAt }))
+  const flex = data.flex && data.tags[data.flex]?.media ? data.flex : null
+  return { format: EXPORT_FORMAT, version: 1, exportedAt: new Date(now).toISOString(), flex, count: list.length, tags: list }
+}
+
+/** A string that is the same for the same assignments (not for when it was exported): what tells whether two stores agree. */
+function assignmentsDigest(data) {
+  const { tags: list, flex } = exportData(data, 0)
+  return crypto.createHash('sha256').update(JSON.stringify({ flex, tags: list.map(({ uid, tech, media, image, cover, assignedAt }) => ({ uid, tech, media, image, cover, assignedAt })) })).digest('hex')
+}
+
+/**
+ * What a file of tags says, checked entry by entry: { ok: true, flex, tags: [{ uid, tech, media, image, cover, assignedAt }], skipped } or
+ * { ok: false, error }. An entry without a usable UID or a medium the box cannot start is skipped (and counted), never taken in. Also read
+ * is the tags.json of the extension itself (its tags are a map, not a list).
+ */
+function parseImport(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, error: 'bad_format' }
+  if (raw.format !== undefined && raw.format !== EXPORT_FORMAT) return { ok: false, error: 'bad_format' }
+  const source = Array.isArray(raw.tags) ? raw.tags : raw.tags && typeof raw.tags === 'object' ? Object.entries(raw.tags).map(([uid, tag]) => ({ uid, ...(tag && typeof tag === 'object' ? tag : {}) })) : null
+  if (!source) return { ok: false, error: 'bad_format' }
+  const byUid = new Map()
+  let skipped = 0
+  for (const entry of source) {
+    const uid = normalizeUid(entry?.uid)
+    const media = sanitizeMedia(entry?.media)
+    if (!uid || !media || (!byUid.has(uid) && byUid.size >= MAX_TAGS)) {
+      skipped += 1
+      continue
+    }
+    byUid.set(uid, { uid, tech: techOf(entry.tech), media, image: sanitizeImage(entry.image), cover: sanitizeImage(entry.cover), assignedAt: Number(entry.assignedAt) || 0 })
+  }
+  const flex = normalizeUid(raw.flex)
+  return { ok: true, flex: flex && byUid.has(flex) ? flex : null, tags: [...byUid.values()], skipped }
+}
+
+/**
+ * Takes the tags of a parsed file into the store: a tag it does not know is added, one it knows gets the medium of the file (what was
+ * seen of it stays). With `replace` the tags that are not in the file lose their medium (a store put back as the file has it). Says what was
+ * done: { added, replaced, removed, skipped }.
+ */
+function applyImport(data, parsed, now, { replace = false } = {}) {
+  let added = 0
+  let replaced = 0
+  let removed = 0
+  const inFile = new Set(parsed.tags.map((tag) => tag.uid))
+  if (replace) {
+    for (const tag of Object.values(data.tags)) {
+      if (tag.media && !inFile.has(tag.uid)) {
+        Object.assign(tag, { media: null, title: '', image: '', cover: '', assignedAt: 0 })
+        removed += 1
+      }
+    }
+  }
+  for (const entry of parsed.tags) {
+    const known = data.tags[entry.uid]
+    if (known?.media) replaced += 1
+    else added += 1
+    const tag = known ?? (data.tags[entry.uid] = { uid: entry.uid, tech: entry.tech, media: null, title: '', image: '', cover: '', firstSeen: now, lastSeen: 0, assignedAt: 0, count: 0 })
+    Object.assign(tag, { media: entry.media, title: mediaLabel(entry.media), image: entry.image, cover: entry.cover, assignedAt: entry.assignedAt })
+    if (!known) tag.tech = entry.tech
+  }
+  if (parsed.flex) data.flex = parsed.flex
+  else if (replace) data.flex = null
+  if (data.flex && !data.tags[data.flex]?.media) data.flex = null
+  prune(data)
+  return { added, replaced, removed, skipped: parsed.skipped }
+}
+
+// ---- the list of the tags as a table (CSV, which Excel opens) --------------------------------------------------------------------
+// One row for each tag with a medium. The columns up to "Cover" are to read (and to write by hand: a new row with a UID, a kind
+// and an address is a tag); the last column holds the whole medium as JSON, so that saving and taking in again loses nothing - when
+// it is there it wins, when it is empty the medium is made from the columns before it. Semicolons (what German Excel splits at),
+// a byte order mark (so that umlauts arrive), CR LF at the end of a line.
+const CSV_COLUMNS = ['UID', 'Titel', 'Art', 'Kategorie', 'Interpret', 'Adresse', 'Flex-Tag', 'Bild', 'Cover', 'Medium (technisch)']
+
+// (a cell Excel would take for a formula gets a ' in front, as OWASP says; taking in again takes it off)
+const csvCell = (value) => {
+  const text = String(value ?? '')
+  const safe = /^[=+\-@\t\r]/.test(text) ? `'${text}` : text
+  return /[";\r\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe
+}
+
+// (the address a medium is found at: the folder, the path on the NAS, the id of the album, the stream)
+const addressOf = (media) => {
+  if (media.type === 'library') return media.libraryPath ?? ''
+  if (media.type === 'nas') return media.nasPath ?? ''
+  if (media.type === 'spotify') return media.id || media.playlistid || media.showid || media.audiobookid || ''
+  return media.id ?? ''
+}
+const ADDRESS_KEY = { library: 'libraryPath', nas: 'nasPath', spotify: 'id', radio: 'id', rss: 'id', tidal: 'id' }
+
+/** The tags with a medium as a table: a string (with the byte order mark) that Excel opens with a double click. */
+function exportCsv(data, now = Date.now()) {
+  const file = exportData(data, now)
+  const rows = file.tags.map((tag) => [
+    tag.uid.match(/.{1,2}/g).join(':'),
+    tag.media.title ?? '',
+    tag.media.type,
+    tag.media.category ?? '',
+    tag.media.artist ?? '',
+    addressOf(tag.media),
+    tag.uid === file.flex ? 'ja' : '',
+    tag.image || '',
+    tag.cover || '',
+    JSON.stringify(tag.media),
+  ])
+  return `﻿${[CSV_COLUMNS, ...rows].map((row) => row.map(csvCell).join(';')).join('\r\n')}\r\n`
+}
+
+/** The cells of a text in CSV: rows of strings. Quotes may hold the delimiter, a doubled quote and a line break. */
+function parseCsv(text) {
+  const head = text.split(/\r?\n/, 1)[0]
+  const count = (ch) => head.split(ch).length - 1
+  const delimiter = [';', ',', '\t'].reduce((best, ch) => (count(ch) > count(best) ? ch : best), ';')
+  const rows = []
+  let row = []
+  let cell = ''
+  let quoted = false
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    if (quoted) {
+      if (ch === '"' && text[i + 1] === '"') {
+        cell += '"'
+        i += 1
+      } else if (ch === '"') quoted = false
+      else cell += ch
+    } else if (ch === '"' && cell === '') quoted = true
+    else if (ch === delimiter) {
+      row.push(cell)
+      cell = ''
+    } else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && text[i + 1] === '\n') i += 1
+      row.push(cell)
+      cell = ''
+      rows.push(row)
+      row = []
+    } else cell += ch
+  }
+  if (cell !== '' || row.length > 0) rows.push([...row, cell])
+  return rows.filter((r) => r.some((c) => c.trim() !== ''))
+}
+
+// (the names of the columns as a person may write them: case, spaces and hyphens do not matter, English works too)
+const COLUMN_NAMES = {
+  uid: 'uid', nummer: 'uid',
+  titel: 'title', title: 'title',
+  art: 'type', type: 'type', typ: 'type',
+  kategorie: 'category', category: 'category',
+  interpret: 'artist', artist: 'artist',
+  adresse: 'address', address: 'address', pfad: 'address', path: 'address',
+  flextag: 'flex', flex: 'flex',
+  bild: 'image', image: 'image',
+  cover: 'cover',
+  mediumtechnisch: 'medium', medium: 'medium', technisch: 'medium',
+}
+const TYPE_NAMES = { bibliothek: 'library', sdkarte: 'library', library: 'library', nas: 'nas', spotify: 'spotify', radio: 'radio', podcast: 'rss', rss: 'rss', tidal: 'tidal' }
+const YES = /^(ja|yes|y|x|1|true|wahr)$/i
+
+/** What a table says, checked like a file of tags (see parseImport): { ok, flex, tags, skipped } or { ok: false, error }. */
+function parseTable(text) {
+  const rows = parseCsv(String(text ?? '').replace(/^﻿/, ''))
+  if (rows.length === 0) return { ok: false, error: 'bad_format' }
+  const columns = rows[0].map((name) => COLUMN_NAMES[name.toLowerCase().replace(/[\s\-()_]/g, '')] ?? null)
+  if (!columns.includes('uid')) return { ok: false, error: 'bad_format' }
+  const untick = (value) => String(value ?? '').trim().replace(/^'([=+\-@\t\r])/, '$1')
+  const entries = []
+  let flex = null
+  for (const row of rows.slice(1)) {
+    const cells = {}
+    columns.forEach((name, i) => {
+      if (name && cells[name] === undefined) cells[name] = untick(row[i])
+    })
+    let media = null
+    if (cells.medium) {
+      try {
+        media = JSON.parse(cells.medium)
+      } catch {
+        media = null
+      }
+    }
+    if (!media) {
+      const type = TYPE_NAMES[(cells.type ?? '').toLowerCase().replace(/[\s\-]/g, '')]
+      media = type ? { type, category: cells.category || (type === 'radio' ? 'music' : ''), artist: cells.artist ?? '', title: cells.title ?? '', [ADDRESS_KEY[type]]: cells.address ?? '' } : null
+    }
+    entries.push({ uid: cells.uid, media, image: cells.image ?? '', cover: cells.cover ?? '' })
+    if (!flex && YES.test(cells.flex ?? '')) flex = cells.uid
+  }
+  return parseImport({ flex, tags: entries })
+}
+
+/** A file the user chose, as text: the JSON of "Tags exportieren" in the old form, or a table. */
+function parseText(text) {
+  const clean = String(text ?? '').replace(/^﻿/, '').trim()
+  if (clean[0] === '{' || clean[0] === '[') {
+    try {
+      return parseImport(JSON.parse(clean))
+    } catch {
+      return { ok: false, error: 'bad_format' }
+    }
+  }
+  return clean ? parseTable(clean) : { ok: false, error: 'bad_format' }
+}
+
 const countAssigned = (data) => Object.values(data.tags).filter((tag) => tag.media).length
 
 module.exports = {
-  MAX_TAGS, ARM_SECONDS, TARGETS, TYPES, sanitizeMedia, mediaLabel, sanitizeImage, tagImage, mediumKey, pickEpisode, normalizeUid, emptyData, readData, tagLaidOn, giveToFlex, forgetTag, countAssigned,
+  MAX_TAGS, ARM_SECONDS, TARGETS, TYPES, sanitizeMedia, mediaLabel, sanitizeImage, tagImage, mediumKey, pickEpisode, normalizeUid, emptyData, readData, EXPORT_FORMAT, exportData, assignmentsDigest, parseImport, applyImport, exportCsv, parseTable, parseText, tagLaidOn, giveToFlex, giveToTag, forgetTag, countAssigned,
 }

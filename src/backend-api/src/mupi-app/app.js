@@ -362,10 +362,12 @@ function renderChrome(page) {
     (a) => `<button class="tab" data-go="${a.id}" ${a.id === area ? 'aria-current="page"' : ''}><span class="pill">${icon(a.icon, 21)}</span><span>${a.title}</span></button>`,
   ).join('')
 
-  const groups = area === 'einstellungen' ? state.schema.settingsGroups : []
+  // (the pages of the extensions stand under the groups: the page of the extension, or the extension a sub page belongs to, is marked)
+  const groups = area === 'einstellungen' ? [...state.schema.settingsGroups, ...extPages.list.map((e) => state.pages.get(e.pageId)).filter(Boolean)] : []
   const groupOf = (() => {
     let p = page
     while (p && p.parent && !p.parent.startsWith('g-') && p.parent !== 'einstellungen') p = state.pages.get(p.parent)
+    if (p?.extId) return p.id
     return p?.id?.startsWith('g-') ? p.id : p?.parent
   })()
   $('#sidebar').innerHTML = `
@@ -398,28 +400,49 @@ function renderPageNav(page) {
     })
     main.append(nav)
   }
-  const siblings = groupPages(page)
-  nav.dataset.sibs = String(siblings.length > 1 ? siblings.length : 0)
+  // (a sub page of an extension stands in the list under the page of its extension, which is in the list of its group)
+  const top = page.extId && page.parent === `ext-${page.extId}` ? state.pages.get(page.parent) : page
+  // (the sub pages of an extension's page; under the shown one the cards of the page to jump to - `jumps`, see updatePageNavSections)
+  const kids = (p) => state.schema.pages.filter((c) => c.parent === p.id && c.extId)
+  const siblings = top ? groupPages(top) : []
+  // (one extension alone still lists its sub pages)
+  const listed = siblings.length > 1 || (siblings.length === 1 && !!top.extId && kids(top).length > 0)
+  nav.dataset.sibs = String(listed ? siblings.length : 0)
+  const under = (p) => {
+    if (p.id !== top?.id) return ''
+    const list = kids(p)
+    if (!list.length) return p.id === page.id ? '<ul class="sub jumps"></ul>' : ''
+    return `<ul class="sub">${list.map((k) => `<li><button data-go="${esc(k.id)}" ${k.id === page.id ? 'aria-current="page"' : ''}>${esc(k.title)}</button>${k.id === page.id ? '<ul class="sub jumps"></ul>' : ''}</li>`).join('')}</ul>`
+  }
   nav.innerHTML = !page.parent
     ? ''
     : `<p>Auf dieser Seite</p>${
-        siblings.length > 1
-          ? `<ul>${siblings.map((p) => `<li><button data-go="${esc(p.id)}" ${p.id === page.id ? 'aria-current="page"' : ''}>${esc(p.title)}</button>${p.id === page.id ? '<ul class="sub"></ul>' : ''}</li>`).join('')}</ul>`
-          : '<ul class="sub"></ul>'
+        listed
+          ? `<ul>${siblings.map((p) => `<li><button data-go="${esc(p.id)}" ${p.id === page.id ? 'aria-current="page"' : ''}${p.id === top.id && page.id !== top.id ? ' class="parent"' : ''}>${esc(p.title)}</button>${under(p)}</li>`).join('')}</ul>`
+          : '<ul class="sub jumps"></ul>'
       }`
   updatePageNavSections(page)
 }
 
+// (a card of an extension page came or went: "Auf dieser Seite" lists the ones that are there)
+document.addEventListener('mupi-cards', () => {
+  const page = state.pages.get($('#content')?.dataset.page)
+  if (page && $('#pagenav')) updatePageNavSections(page)
+})
+
 // The pages a settings group's page leads to (its nav rows, card after card)
-// (the pages of extensions - they have no card in the schema - stand after "Erweiterungen", as on the page of the group itself)
+// (the pages of extensions are no group of the schema: they stand on the page of the settings itself, in a group of their own here)
+const EXT_GROUP = { id: 'g-ext', sections: [] }
 const groupNav = (g) =>
-  (g?.sections || [])
-    .flatMap((s) => (s.items || []).filter((i) => i.type === 'nav' && !extPages.adopted.has(i.target)).map((i) => i.target))
-    .flatMap((id) => (id === 'erweiterungen' ? [id, ...extPages.list.filter((e) => state.pages.get(e.pageId)?.parent === g.id).map((e) => e.pageId)] : [id]))
+  g === EXT_GROUP
+    ? extPages.list.map((e) => e.pageId)
+    : (g?.sections || []).flatMap((s) => (s.items || []).filter((i) => i.type === 'nav' && !extPages.adopted.has(i.target)).map((i) => i.target))
 // The settings group of a page: the one it belongs to, or - a page of another area - the one listing it (Spotify and
 // the NAS are pages of the library that Dienste lists too)
 function groupOf(page) {
   if (!page) return null
+  // (the page of an extension: with the other extensions' pages - not its sub pages, which the list shows under it)
+  if (page.extId && page.parent === 'einstellungen') return EXT_GROUP
   if (page.parent?.startsWith('g-')) return state.pages.get(page.parent) ?? null
   return state.schema.pages.find((g) => g.id.startsWith('g-') && groupNav(g).includes(page.id)) ?? null
 }
@@ -455,12 +478,22 @@ function updatePageNavSections(page) {
   // (the page itself is drawn later: until then only its group's pages count)
   $('.main').classList.toggle('has-pagenav', Number(nav.dataset.sibs) > 1)
   if (!page.parent || content.dataset.page !== page.id) return
-  const cards = [...content.querySelectorAll('section.card')].filter((c) => !c.hidden && c.querySelector(':scope > h2, :scope > .card-head > h2'))
-  const heads = cards.map((c, i) => {
-    c.id ||= `sec-${i}`
-    return { id: c.id, text: c.querySelector('h2').textContent.trim(), card: c }
-  })
-  const sub = nav.querySelector('.sub')
+  // (the card of a group of an extension page has its title in the head of the group - a group the user can name (a button) has a
+  // field there: its name, or while it has none the placeholder, "Taster 1")
+  const title = (c) => c.querySelector(':scope > h2, :scope > .card-head > h2, :scope > .ext-group > .ext-group-head > h3, :scope > .ext-group > .ext-group-head > input.ext-group-name')
+  const titleText = (c) => {
+    const t = title(c)
+    return (t instanceof HTMLInputElement ? t.value || t.placeholder : t.textContent).trim()
+  }
+  const cards = [...content.querySelectorAll('section.card')].filter((c) => !c.hidden && title(c) && titleText(c))
+  // (a sub page of an extension: its first card has the title of the page, which is in the list above it)
+  const heads = cards
+    .map((c, i) => {
+      c.id ||= `sec-${i}`
+      return { id: c.id, text: titleText(c), card: c }
+    })
+    .filter((h) => !(page.extId && page.parent === `ext-${page.extId}` && h.text === page.title))
+  const sub = nav.querySelector('.jumps')
   const useful = heads.length >= 2 && sub
   if (sub) sub.innerHTML = useful ? heads.map((h) => `<li><button data-sec="${esc(h.id)}">${esc(h.text)}</button></li>`).join('') : ''
   $('.main').classList.toggle('has-pagenav', Number(nav.dataset.sibs) > 1 || !!useful)
@@ -562,6 +595,8 @@ async function renderPage(page, reload = true) {
     // (kept for the handlers: a select's options may come from the box, see findItem)
     state.shown = { id: page.id, sections }
     for (const sec of sections) parts.push(renderSection(sec))
+    // (a controller may draw more below its sections, the cards of an extension page that has the pages of the core above them)
+    parts.push(...(ctrl?.after?.(page) ?? []))
   } catch (err) {
     // the box's values did not come (the page cannot be drawn without them): say so, instead of "Lade …" for ever
     console.error(err)
@@ -610,9 +645,13 @@ function balanceCols(main) {
   if (!WIDE_SCREEN.matches || !main.classList.contains('cols') || OWN_LAYOUT.has(main.dataset.page) || main.querySelector(':scope > .col-stack')) return
   const kids = [...main.children]
   const runs = []
+  // (the "+" of a series of cards (extension pages) goes with the last card of the series that is there, it does not split the run)
+  const follow = new Map()
   let run = []
   for (const el of kids) {
+    const last = el.matches('.ext-add') ? run.findLast((c) => !c.hidden) : null
     if (el.matches('.card') && !el.matches('.wide')) run.push(el)
+    else if (last) follow.set(last, [...(follow.get(last) ?? []), el])
     else if (run.length) {
       runs.push(run)
       run = []
@@ -624,7 +663,7 @@ function balanceCols(main) {
   if (!sorted.length) return
   main._order = kids
   for (const cards of sorted) {
-    const heights = cards.map((c) => c.getBoundingClientRect().height)
+    const heights = cards.map((c) => c.getBoundingClientRect().height + (follow.get(c) ?? []).reduce((sum, f) => sum + f.getBoundingClientRect().height, 0))
     const cols = [document.createElement('div'), document.createElement('div')]
     const h = [0, 0]
     for (const c of cols) c.className = 'col-stack auto-col'
@@ -632,6 +671,7 @@ function balanceCols(main) {
     cards.forEach((c, i) => {
       const at = c.dataset.col ? Number(c.dataset.col) - 1 : h[0] <= h[1] ? 0 : 1
       cols[at].appendChild(c)
+      for (const f of follow.get(c) ?? []) cols[at].appendChild(f)
       h[at] += heights[i]
     })
   }
@@ -689,7 +729,7 @@ function childNav(page) {
       `<div class="group-grid wide">${kids
         .map(
           (k) =>
-            `<button class="group-card" data-go="${esc(k.id)}"><span class="tile">${icon(k.icon || 'chevron', 20)}</span><span class="lbl"><b>${esc(k.title)}</b>${k.description ? `<small>${esc(k.description)}</small>` : ''}</span><span class="chev">${icon('chevron', 18)}</span></button>`,
+            `<button class="group-card" data-go="${esc(k.id)}"><span class="tile">${icon(k.icon || 'chevron', 20)}</span><span class="lbl"><b>${esc(k.title)}</b>${k.description || k.extId ? `<small>${esc(k.description || 'Einstellungen der Erweiterung')}</small>` : ''}</span><span class="chev">${icon('chevron', 18)}</span></button>`,
         )
         .join('')}</div>`,
     ]
@@ -1234,6 +1274,89 @@ async function playbackAction(root, action) {
     )
   }
   setTimeout(() => loadNow(root), 600)
+}
+
+// A small player pinned to the bottom of the page of tags (the player of the start page in short: back, play/pause, next, the cover and
+// the title, how far it is, the volume): a tag, a tile of the display or this page starts something - the bar shows and steers it.
+function mountMiniPlayer(root) {
+  root.querySelector('.mini-player')?.remove()
+  const bar = document.createElement('div')
+  bar.className = 'mini-player'
+  bar.setAttribute('role', 'region')
+  bar.setAttribute('aria-label', tr('Player'))
+  bar.innerHTML = `<div class="mini-ctrl">
+      <button type="button" class="mini-btn" data-a="previous" aria-label="${esc(tr('Zurück'))}">${PREV_SVG}</button>
+      <button type="button" class="mini-btn mini-main" data-a="toggle" aria-label="${esc(tr('Play/Pause'))}">${PLAY_SVG}</button>
+      <button type="button" class="mini-btn" data-a="next" aria-label="${esc(tr('Weiter'))}">${NEXT_SVG}</button>
+    </div>
+    <div class="mini-now"><span class="mini-cover"><img alt="" hidden><span>${icon('music', 20)}</span></span><b class="mini-title" translate="no">—</b></div>
+    <div class="mini-prog"><span class="mini-time">0:00 / 0:00</span><div class="track"><i></i></div></div>
+    <div class="mini-vol">${icon('vol', 20)}<input type="range" min="0" max="100" step="1" value="0" aria-label="${esc(tr('Lautstärke'))}"></div>`
+  root.append(bar)
+  const q = (sel) => bar.querySelector(sel)
+  const vol = q('.mini-vol input')
+  let busy = false
+  const refresh = async () => {
+    if (!bar.isConnected) return document.removeEventListener('mupi-nfc-played', soon)
+    const r = await api(`${API}/playback`)
+    if (!bar.isConnected || !r.ok) return
+    const b = r.body ?? {}
+    const has = !!b.player && !!(b.title || b.artist)
+    q('.mini-title').textContent = has ? b.title || b.artist : tr('Gerade läuft nichts.')
+    const img = q('.mini-cover img')
+    if (has && b.coverUrl) {
+      if (img.getAttribute('src') !== b.coverUrl) img.src = b.coverUrl
+      img.hidden = false
+    } else img.hidden = true
+    const toggle = q('[data-a="toggle"]')
+    toggle.dataset.state = b.playing ? 'playing' : 'paused'
+    toggle.innerHTML = b.playing ? PAUSE_SVG : PLAY_SVG
+    const known = Number.isFinite(b.progressMs) && Number.isFinite(b.durationMs) && b.durationMs > 0
+    q('.mini-time').textContent = known ? `${clock(b.progressMs)} / ${clock(b.durationMs)}` : has ? clock(b.progressMs || 0) : ''
+    q('.mini-prog .track i').style.width = known ? `${Math.min(100, (b.progressMs / b.durationMs) * 100)}%` : '0%'
+    if (Number.isFinite(b.volume) && vol.dataset.dragging !== '1') {
+      vol.value = b.volume
+      vol.style.setProperty('--fill', `${b.volume}%`)
+    }
+  }
+  // (a tile of this page started something: the display takes a moment, so the bar looks again a few times)
+  const soon = () => {
+    for (const ms of [1200, 2800, 5000]) setTimeout(() => void refresh(), ms)
+  }
+  document.addEventListener('mupi-nfc-played', soon)
+  for (const btn of bar.querySelectorAll('[data-a]')) {
+    btn.onclick = async () => {
+      if (busy) return
+      busy = true
+      const a = btn.dataset.a === 'toggle' ? (btn.dataset.state === 'playing' ? 'pause' : 'play') : btn.dataset.a
+      const r = await api(`${API}/playback/${a}`, { method: 'POST' })
+      if (!r.ok) {
+        const code = r.body?.error ?? ''
+        toast({ playtime_limit_reached: 'Die Hörzeit für heute ist aufgebraucht.', quiet_hours_active: 'Gerade ist Ruhezeit.', no_active_track: 'Es ist nichts zum Fortsetzen da.' }[code] ?? 'Das hat nicht geklappt', 'info')
+      }
+      busy = false
+      setTimeout(() => void refresh(), 600)
+    }
+  }
+  const hold = (on) => () => (vol.dataset.dragging = on ? '1' : '')
+  vol.addEventListener('pointerdown', hold(true))
+  for (const ev of ['pointerup', 'pointercancel', 'change']) vol.addEventListener(ev, hold(false))
+  let timer = 0
+  vol.addEventListener('input', () => {
+    const v = Number(vol.value)
+    vol.style.setProperty('--fill', `${v}%`)
+    clearTimeout(timer)
+    timer = setTimeout(async () => {
+      const r = await api(`${API}/audio/volume`, { method: 'POST', body: { volume: v } })
+      if (r.ok && r.body?.capped) {
+        toast(`Hörschutz: höchstens ${r.body.applied} %`, 'info')
+        vol.value = r.body.applied
+        vol.style.setProperty('--fill', `${r.body.applied}%`)
+      } else if (!r.ok) toast('Lautstärke ließ sich nicht setzen', 'info')
+    }, 200)
+  })
+  void refresh()
+  every(2500, refresh)
 }
 
 // Where the box plays (backend-api audio-output.ts), for the row above the volume: kept here, the card is drawn anew
@@ -4077,7 +4200,33 @@ const nfcExt = () => extPages.list.find((e) => e.id === 'nfc') ?? null
 // the button, when the extension is on (the sheets put it among their buttons and wire it with wireNfc)
 function nfcButtonHtml() {
   const ext = nfcExt()
-  return ext ? `<button type="button" class="btn" data-nfc>${icon(ext.icon || 'plug', 18)}NFC-Tag</button>` : ''
+  if (!ext) return ''
+  // ("change tag" waits for the album: its button sits right under "NFC-Tag")
+  return `<button type="button" class="btn" data-nfc>${icon(ext.icon || 'plug', 18)}NFC-Tag</button>${nfcChange ? `<button type="button" class="btn nfc-change-here" data-nfc-change>${icon('check', 18)}Weise den NFC-Tag diesem Album zu</button>` : ''}`
+}
+
+// "Tag ändern" on the page of tags: the app goes to the library and waits for the album the tag is to get - { id, title, from }, or null.
+// A bar at the bottom says so (and cancels); the sheets of the library show "Weise den NFC-Tag diesem Album zu" under "NFC-Tag".
+let nfcChange = null
+function endNfcChange() {
+  nfcChange = null
+  document.getElementById('nfc-change-bar')?.remove()
+}
+function startNfcChange(row) {
+  endNfcChange()
+  nfcChange = { id: String(row.id), title: String(row.title ?? ''), from: currentPage()?.id ?? '' }
+  const bar = document.createElement('div')
+  bar.id = 'nfc-change-bar'
+  bar.className = 'nfc-change-bar'
+  bar.setAttribute('role', 'status')
+  bar.innerHTML = `<div class="nfc-change-text"><b>Tag ändern</b><span class="nfc-change-title" translate="no">${esc(nfcChange.title)}</span><span>Öffne das neue Album und tippe auf „Weise den NFC-Tag diesem Album zu“.</span></div><button type="button" class="btn sm">Abbrechen</button>`
+  bar.querySelector('button').onclick = () => {
+    const from = nfcChange?.from
+    endNfcChange()
+    if (from) go(from)
+  }
+  document.body.append(bar)
+  go('bibliothek')
 }
 // (an entry of data.json: what a Smart-Sync entry has been given instead - the display shows it so, and so the tag should)
 function nfcMediaOfEntry(item) {
@@ -4095,6 +4244,23 @@ function wireNfc(sheet, close, media, back) {
     close()
     openNfcTagsSheet(media, back)
   })
+  const here = sheet.querySelector('[data-nfc-change]')
+  if (here) {
+    here.addEventListener('click', async () => {
+      const mode = nfcChange
+      if (!mode) return
+      here.disabled = true
+      const r = await api(`${NFC_ROUTE}/tagchange`, { method: 'POST', body: { id: mode.id, media, cover: nfcCover(media) }, timeoutMs: 20000 })
+      toast(typeof r.body?.message === 'string' ? tr(r.body.message.slice(0, 120)) : tr(r.ok ? 'Tag geändert' : 'Hat nicht geklappt'), r.ok ? 'ok' : 'info')
+      if (!r.ok) {
+        here.disabled = false
+        return
+      }
+      endNfcChange()
+      close()
+      if (mode.from) go(mode.from)
+    })
+  }
 }
 
 // "NFC-Tag" in the library: the tags this medium has (a picture for each, the picture can be changed, the tag taken away), and
@@ -4175,7 +4341,9 @@ function openNfcSheet(media, { back = null, image = '' } = {}) {
         clearInterval(timer)
         finished = true
         for (const sel of ['#nfc-flexrow', '#nfc-flexhelp', '#nfc-image', '#nfc-retry']) sheet.querySelector(sel).hidden = true
-        say(r.flex ? 'Fertig – der Flex-Tag hat jetzt dieses Medium.' : 'Fertig – der Tag gehört jetzt zu diesem Medium.', 'ok')
+        // (with the number of the tag, as it is in the list - a box that does not send it says the sentence without)
+        const tagId = typeof r.id === 'string' ? r.id : ''
+        say(tagId ? (r.flex ? `Fertig – der Flex-Tag (ID ${tagId}) hat jetzt dieses Medium.` : `Fertig – der Tag (ID ${tagId}) gehört jetzt zu diesem Medium.`) : r.flex ? 'Fertig – der Flex-Tag hat jetzt dieses Medium.' : 'Fertig – der Tag gehört jetzt zu diesem Medium.', 'ok')
         if (r.previous) {
           const was = document.createElement('p')
           was.className = 'help'
@@ -4249,15 +4417,18 @@ function openNfcSheet(media, { back = null, image = '' } = {}) {
 
 // The rows of a list of tags (the list of the extension page, hostApi 8 `list`, and the sheet "NFC-Tag" of a medium): a picture for each
 // row, a button for the picture and the extension's own buttons; each posts { id }. redraw(): the list asks again after a change.
-function fillTagRows(box, rows, redraw) {
+// tiles (the page): each row is a tile - the title, the picture, the text and a row of buttons with symbols; an own button of the
+// extension may bring `icon` (a symbol of the app) and `change` (it is "Tag ändern": the app goes to the library to choose the new album).
+function fillTagRows(box, rows, redraw, tiles = false) {
   const post = (route, body) => api(route, { method: 'POST', body, timeoutMs: 20000 })
   const said = (r, fallback) => (typeof r.body?.message === 'string' ? tr(r.body.message.slice(0, 120)) : tr(fallback))
   for (const row of rows) {
     const li = document.createElement('li')
-    li.className = 'ext-tag'
+    li.className = tiles ? 'ext-tag tag-tile' : 'ext-tag'
     const pic = document.createElement('span')
-    pic.className = 'lib-thumb ext-tag-pic'
-    if (/^(\/api\/|https:\/\/|http:\/\/)/.test(String(row.image ?? ''))) {
+    pic.className = tiles ? 'lib-thumb ext-tag-pic tag-tile-pic' : 'lib-thumb ext-tag-pic'
+    // (an own picture is /cover/<name>, the others come through /api/ or from the web)
+    if (/^(\/api\/|\/cover\/|https:\/\/|http:\/\/)/.test(String(row.image ?? ''))) {
       const img = document.createElement('img')
       img.src = row.image
       img.alt = ''
@@ -4266,66 +4437,91 @@ function fillTagRows(box, rows, redraw) {
       img.addEventListener('error', () => img.remove(), { once: true })
       pic.append(img)
     }
-    pic.insertAdjacentHTML('afterbegin', icon('image', 22))
+    pic.insertAdjacentHTML('afterbegin', icon('image', tiles ? 40 : 22))
     const main = document.createElement('div')
     main.className = 'ext-tag-main'
     const name = document.createElement('b')
     name.translate = false
     name.textContent = String(row.title ?? '')
+    // (the tile cuts a long title off: the whole title is in the tooltip)
+    if (tiles) name.title = name.textContent
     const sub = document.createElement('small')
     sub.textContent = (Array.isArray(row.text) ? row.text : []).map((t) => tr(String(t))).join(' · ')
     const buttons = document.createElement('div')
-    buttons.className = 'ext-tag-btns'
-    const add = (label, onclick, danger = false) => {
+    buttons.className = tiles ? 'tag-tile-btns' : 'ext-tag-btns'
+    const add = (label, onclick, { danger = false, glyph = 'info', off = false } = {}) => {
       const b = document.createElement('button')
       b.type = 'button'
-      b.className = `btn sm${danger ? ' danger' : ''}`
-      b.textContent = tr(label)
+      if (tiles) {
+        b.className = `icon-btn tag-tile-btn${danger ? ' danger' : ''}`
+        b.innerHTML = icon(glyph, 20)
+        b.title = tr(label)
+        b.setAttribute('aria-label', tr(label))
+      } else {
+        b.className = `btn sm${danger ? ' danger' : ''}`
+        b.textContent = tr(label)
+      }
+      b.disabled = off
       b.onclick = async () => {
         b.disabled = true
         await onclick()
-        if (b.isConnected) b.disabled = false
+        if (b.isConnected) b.disabled = off
       }
       buttons.append(b)
     }
     if (typeof row.coverPost === 'string') {
-      add(row.image ? 'Bild ändern' : 'Bild wählen', async () => {
-        openCoverPicker({
-          target: `own:nfc-${String(row.id).slice(0, 20)}`,
-          title: String(row.title ?? ''),
-          query: String(row.title ?? '').replace(/\s+–\s+/, ' '),
-          fallbacks: [],
-          current: String(row.image ?? ''),
-          onDone: async (body) => {
-            const saved = await post(row.coverPost, { id: row.id, image: String(body?.url ?? '') })
-            toast(said(saved, 'Hat nicht geklappt'), saved.ok ? 'ok' : 'info')
-            redraw()
-          },
-          onCancel: redraw,
-        })
-      })
-      if (row.imageOwn) {
-        add('Cover des Mediums nehmen', async () => {
-          const saved = await post(row.coverPost, { id: row.id, image: '' })
-          toast(said(saved, 'Hat nicht geklappt'), saved.ok ? 'ok' : 'info')
-          redraw()
-        })
-      }
+      add(
+        row.image ? 'Bild ändern' : 'Bild wählen',
+        async () => {
+          openCoverPicker({
+            target: `own:nfc-${String(row.id).slice(0, 20)}`,
+            title: String(row.title ?? ''),
+            query: String(row.title ?? '').replace(/\s+–\s+/, ' '),
+            fallbacks: [],
+            current: String(row.image ?? ''),
+            onDone: async (body) => {
+              const saved = await post(row.coverPost, { id: row.id, image: String(body?.url ?? '') })
+              toast(said(saved, 'Hat nicht geklappt'), saved.ok ? 'ok' : 'info')
+              redraw()
+            },
+            // ("Cover des Mediums nehmen": beside "Eigenes Bild" in the picker, greyed out while the tag has no picture of its own)
+            reset: {
+              off: !row.imageOwn,
+              run: async () => {
+                const saved = await post(row.coverPost, { id: row.id, image: '' })
+                toast(said(saved, 'Hat nicht geklappt'), saved.ok ? 'ok' : 'info')
+                redraw()
+              },
+            },
+            onCancel: redraw,
+          })
+        },
+        { glyph: 'image' },
+      )
     }
-    for (const action of Array.isArray(row.actions) ? row.actions.slice(0, 4) : []) {
+    for (const action of Array.isArray(row.actions) ? row.actions.slice(0, 6) : []) {
+      const glyph = /^[a-z0-9]{1,12}$/.test(String(action.icon ?? '')) ? action.icon : 'info'
+      if (action.change === true) {
+        add('Tag ändern', async () => startNfcChange(row), { glyph })
+        continue
+      }
       add(
         String(action.label ?? ''),
         async () => {
           if (action.confirm && !(await ask(tr(action.label), tr(action.confirm), tr('OK')))) return
           const done = await post(action.post, { id: row.id })
           toast(said(done, done.ok ? 'Erledigt' : 'Hat nicht geklappt'), done.ok ? 'ok' : 'info')
+          if (done.ok && String(action.post).endsWith('/tagplay')) document.dispatchEvent(new Event('mupi-nfc-played'))
           redraw()
         },
-        true,
+        { glyph, danger: !action.safe },
       )
     }
-    main.append(name, sub, buttons)
-    li.append(pic, main)
+    if (tiles) li.append(name, pic, sub, buttons)
+    else {
+      main.append(name, sub, buttons)
+      li.append(pic, main)
+    }
     box.append(li)
   }
 }
@@ -4338,7 +4534,8 @@ const COVER_SOURCES = { itunes: 'iTunes', deezer: 'Deezer', spotify: 'Spotify' }
 // target: 'local:<path>' (the folder gets it as cover.jpg) or 'own:<name>' (stored among the own pictures, onDone gets
 // its address); query: the search it starts with, fallbacks: shorter ones when it finds nothing; current: the picture
 // shown now. onHide (folders): "Kein Cover" (hide true) or, when hidden, "Cover wieder zeigen" (false); true when done
-function openCoverPicker({ target, title, query, fallbacks, current, hidden = false, onDone, onHide, onCancel }) {
+// reset: { off, run } - a button beside "Eigenes Bild" that takes the picture away again (the medium's own cover shows then)
+function openCoverPicker({ target, title, query, fallbacks, current, hidden = false, onDone, onHide, onCancel, reset }) {
   let finished = false // (done or hidden: onCancel is for a picker that was left without)
   let results = []
   let chosen = null // { i } of a result, or { blob, url } of an own picture
@@ -4363,7 +4560,7 @@ function openCoverPicker({ target, title, query, fallbacks, current, hidden = fa
      <p class="help" style="margin:0">Sucht bei iTunes, Deezer und Spotify – der Suchbegriff geht dafür an Apple, Deezer und Spotify.</p>
      <div class="covers cover-pick" id="cp-list"></div>
      <input type="file" id="cp-file" accept="image/*" hidden>
-     <div class="btns cover-actions"><button class="btn" id="cp-own">${icon('image', 18)}Eigenes Bild</button><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="cp-ok" disabled>Übernehmen</button></div>`,
+     <div class="btns cover-actions"><button class="btn" id="cp-own">${icon('image', 18)}Eigenes Bild</button>${reset ? `<button class="btn" id="cp-reset"${reset.off ? ' disabled' : ''}>${icon('undo', 18)}Cover des Mediums nehmen</button>` : ''}<button class="btn" data-close>Abbrechen</button><button class="btn primary" id="cp-ok" disabled>Übernehmen</button></div>`,
     (sheet, close) => {
       const list = $('#cp-list', sheet)
       const ok = $('#cp-ok', sheet)
@@ -4423,6 +4620,15 @@ function openCoverPicker({ target, title, query, fallbacks, current, hidden = fa
         draw()
       }
       sheet.querySelector('[data-close]').onclick = close
+      const resetButton = $('#cp-reset', sheet)
+      if (resetButton) {
+        resetButton.onclick = async () => {
+          resetButton.disabled = true
+          finished = true
+          close()
+          await reset.run()
+        }
+      }
       const hideButton = $('#cp-hide', sheet)
       if (hideButton) {
         hideButton.onclick = async () => {
@@ -10657,16 +10863,12 @@ const SYS_GROUPS = [
 ]
 
 function systemTop() {
-  // (the pages of extensions that have one: under "Die Box", after the extensions themselves)
-  const withExtensions = (ids) => {
-    const at = ids.indexOf('erweiterungen') + 1
-    return at ? [...ids.slice(0, at), ...extPages.list.map((e) => e.pageId), ...ids.slice(at)] : ids
-  }
+  // (the pages of extensions that have one are not here: they stand on the page of the settings, beside the groups)
   return SYS_GROUPS.map(([title, ids]) => {
-    const rows = withExtensions(ids)
+    const rows = ids
       .map((id) => state.pages.get(id))
       .filter(Boolean)
-      .map((p) => navRow(p.id, p.title, p.extId ? 'Einstellungen der Erweiterung' : p.description, p.icon, `<span class="nav-badge" id="sysb-${p.id}"></span>`))
+      .map((p) => navRow(p.id, p.title, p.description, p.icon, `<span class="nav-badge" id="sysb-${p.id}"></span>`))
       .join('')
     return `<section class="card nav-card"><div class="group-title">${esc(title)}</div><div class="navlist">${rows}</div></section>`
   })
@@ -16389,6 +16591,49 @@ function extReview({ title, resources, system, conflicts, okLabel, extra = [] })
 
 const extRestartNote = () => tr('Danach starten die Dienste der Box neu; eine Wiedergabe bricht dabei ab.')
 
+// A pin of an extension that something else holds (the HAT of the box, say): the report of what collides, and the choice - the pin goes
+// to a free one, or the connection is taken away. The box carries it out (POST /extensions/resolve) and switches the extension on.
+async function resolveGpioConflict(e, conflicts) {
+  const pick = await new Promise((resolve) => {
+    let answer = null
+    openSheet(
+      `<div class="ext-review" translate="no"><h2>${esc(tr(`${e.name} kann nicht eingeschaltet werden`))}</h2>${extReportHtml({ resources: e.resources, conflicts })}<p class="help" style="margin:0">${esc(tr('Was soll mit dem belegten Pin geschehen?'))}</p>
+       <div class="btns"><button class="btn" data-close>${esc(tr('Abbrechen'))}</button><button class="btn" data-pick="remove">${esc(tr('Anschluss entfernen'))}</button><button class="btn primary" data-pick="move">${esc(tr('Auf freien Pin umstellen'))}</button></div></div>`,
+      (sheet, close) => {
+        sheet.querySelector('[data-close]').onclick = close
+        for (const b of sheet.querySelectorAll('[data-pick]'))
+          b.onclick = () => {
+            answer = b.dataset.pick
+            close()
+          }
+      },
+      () => setTimeout(() => resolve(answer)),
+    )
+  })
+  if (!pick) return
+  const r = await api(`${API}/extensions/resolve`, { method: 'POST', body: { id: e.id, action: pick }, timeoutMs: 60000 })
+  if (!r.ok) {
+    if (r.body?.error === 'no_free_pin') return toast(tr('Es ist kein freier Pin mehr da.'), 'info')
+    if (r.body?.error === 'not_resolvable') return toast(tr('Das lässt sich nicht von selbst lösen: etwas anderes als ein Pin ist belegt.'), 'info')
+    if (r.body?.error === 'problem' && r.body.problem?.message) return toast(tr(r.body.problem.message), 'info')
+    return toast('Hat nicht geklappt', 'info')
+  }
+  const lines = (r.body.changes ?? []).map((c) => (c.to ? `${c.label}: GPIO ${c.from} → GPIO ${c.to}` : `${c.label}: GPIO ${c.from} → –`))
+  // (where the device has to be connected now: said in a dialog, not a toast that is gone before it is read)
+  await new Promise((resolve) => {
+    openSheet(
+      `<h2>${esc(tr(pick === 'move' ? 'Pin umgestellt' : 'Anschluss entfernt'))}</h2>${lines.map((l) => `<p style="margin:0" translate="no"><b>${esc(l)}</b></p>`).join('')}<p class="help" style="margin:0">${esc(tr(pick === 'move' ? 'Bitte schließe das Gerät am neuen Pin an. Die Dienste der Box starten gleich neu.' : 'Der Anschluss ist jetzt leer. Die Dienste der Box starten gleich neu.'))}</p>
+       <div class="btns"><button class="btn primary" data-close>${esc(tr('OK'))}</button></div>`,
+      (sheet, close) => {
+        sheet.querySelector('[data-close]').onclick = close
+      },
+      () => setTimeout(resolve),
+    )
+  })
+  toast('Die Dienste starten neu …')
+  setTimeout(() => currentPage()?.id === 'erweiterungen' && renderPage(currentPage(), true), 13000)
+}
+
 // Installs (or updates) an extension of the catalog: the test against the box first, then the report and the question
 async function installExtension(e, kind, doneText) {
   const check = await api(`${API}/extensions/check`, { method: 'POST', body: { id: e.id } })
@@ -16464,7 +16709,7 @@ function extGroups(fields) {
   return groups
 }
 
-function extFormHtml(e, fields) {
+function extFormHtml(e, fields, cards = false) {
   const type = (it) => e.settingTypes?.[it.key]
   const groups = extGroups(fields)
   // (a second choice beside a field with choices - by how much, beside "louder": a list, shown while the field has one of the
@@ -16504,7 +16749,7 @@ function extFormHtml(e, fields) {
       }
       if (it.type === 'list') {
         // a list with a picture for each entry (hostApi 8): drawn by extFormMount from what the extension's route answers
-        return `<div class="field ext-list"><label>${esc(it.label)}</label><ul class="ext-tags" data-xlist="${index}" aria-live="polite"></ul>${help}</div>`
+        return `<div class="field ext-list"><label>${esc(it.label)}</label><ul class="ext-tags tag-grid" data-xlist="${index}" aria-live="polite"></ul>${help}</div>`
       }
       if (it.type === 'roster') {
         // a list the extension keeps itself (the users of the box, say): to look at, to add to, to take from and to choose from
@@ -16529,7 +16774,9 @@ function extFormHtml(e, fields) {
       if (it.choices && it.choices.length > 5) {
         // (a choice from many: a list to pick from instead of a row of buttons)
         const now = e.settings?.[it.key]
-        const select = `<select class="input" id="xs-${k}" data-xsel="${k}">${it.choices.map((c) => `<option value="${esc(c.value)}"${c.value === now ? ' selected' : ''}>${esc(c.label)}</option>`).join('')}</select>`
+        // (live: a route that says which choices are there now and what they are called - wired by extFormMount)
+        const live = it.live ? ` data-xlive="${esc(it.live)}"` : ''
+        const select = `<select class="input" id="xs-${k}" data-xsel="${k}"${live}>${it.choices.map((c) => `<option value="${esc(c.value)}"${c.value === now ? ' selected' : ''}>${esc(c.label)}</option>`).join('')}</select>`
         return `<div class="field" data-ext-dep="${esc(it.dep ?? '')}"><label for="xs-${k}">${esc(it.label)}</label>${it.extra ? `<div class="ext-with">${select}${extra(it)}</div>` : select}${help}</div>`
       }
       if (it.choices) {
@@ -16537,21 +16784,45 @@ function extFormHtml(e, fields) {
         const seg = `<div class="seg" data-xseg="${k}">${it.choices.map((c) => `<button type="button" aria-pressed="${c.value === now}" data-v="${esc(c.value)}">${esc(c.label)}</button>`).join('')}</div>`
         return `<div class="field" data-ext-dep="${esc(it.dep ?? '')}"><label>${esc(it.label)}</label>${it.extra ? `<div class="ext-with">${seg}${extra(it)}</div>` : seg}${help}</div>`
       }
+      // (a number as a slider from min to max; its value stands in a box beside the label, where it can be typed as well)
+      if (it.slider && type(it) === 'number' && Number.isFinite(e.settingRanges?.[it.key]?.min) && Number.isFinite(e.settingRanges?.[it.key]?.max)) {
+        const { min, max } = e.settingRanges[it.key]
+        const now = Math.min(max, Math.max(min, Number(e.settings?.[it.key] ?? min)))
+        return `<div class="field" data-ext-dep="${esc(it.dep ?? '')}"><div class="slider-head"><label for="xk-${k}">${esc(it.label)}</label><input class="input value-num" id="xk-${k}" type="number" min="${min}" max="${max}" step="1" inputmode="numeric" data-xk="${k}" data-secret="false" value="${now}" ${NO_PW_MANAGER}></div>
+          <input type="range" data-xr="${k}" min="${min}" max="${max}" step="1" value="${now}" style="--fill:${((now - min) / (max - min)) * 100}%" aria-label="${esc(it.label)}">
+          <div class="range-ends"><span>${min}</span><span>${max}</span></div>${help}</div>`
+      }
       const secret = type(it) === 'secret'
       const kind = secret ? 'password' : type(it) === 'number' ? 'number' : 'text'
       return `<div class="field" data-ext-dep="${esc(it.dep ?? '')}"><label for="xk-${k}">${esc(it.label)}</label><input class="input" id="xk-${k}" type="${kind}" data-xk="${k}" data-secret="${secret}" value="${secret ? '' : esc(e.settings?.[it.key] ?? '')}" placeholder="${secret && e.settings?.[`${it.key}Set`] ? 'gespeichert' : ''}" ${NO_PW_MANAGER}>${help}</div>`
+  }
+  // (cards: a heading with `card` starts a card of its own - the page of an extension with several readers shows each in one; the
+  // "+" of a series stands between the cards, a card that is not there yet is hidden by extFormMount)
+  const cardMode = cards && fields.some((it) => it.type === 'heading' && it.card)
+  let cardOpen = false
+  const closeCard = () => {
+    const end = cardOpen ? '</section>' : ''
+    cardOpen = false
+    return end
   }
   const form = fields
     .map((it, index) => {
       // (every field knows its group, data-xgroup: the index of its heading; after the last field of a series stands its "+")
       const g = groups.findLast((x) => x.index <= index)
+      // (cards === 'half': the page shares the screen with pages of the core - the cards are one column wide and fall into the two columns)
+      const begin = cardMode && it.type === 'heading' && it.card ? `${closeCard()}<section class="card${cards === 'half' ? '' : ' wide'} ext-page ext-sec" data-xcard="${index}">` : ''
+      if (begin) cardOpen = true
       // (showIf: a field of one of several readers, shown while the choice has one of its values - see dep() in extFormMount)
-      const showIf = it.showIf ? ` data-xshow="${esc(JSON.stringify(it.showIf))}"` : ''
-      const html = one(it, index).replace('<div ', `<div data-xgroup="${g ? g.index : ''}"${showIf} `)
+      const showIf = (it.showIf ? ` data-xshow="${esc(JSON.stringify(it.showIf))}"` : '') + (it.hideIf ? ` data-xhide="${esc(JSON.stringify(it.hideIf))}"` : '')
+      // (hostApi 11: a button that stands beside the one before it - the two are one row)
+      const pairOpen = it.type === 'action' && fields[index + 1]?.type === 'action' && fields[index + 1].beside === true
+      const pairClose = it.type === 'action' && it.beside === true && fields[index - 1]?.type === 'action'
+      const html = `${pairOpen ? '<div class="ext-actions">' : ''}${one(it, index).replace('<div ', `<div data-xgroup="${g ? g.index : ''}"${showIf} `)}${pairClose ? '</div>' : ''}`
       const lastOfSeries = g && g.last === index && groups.findLast((x) => x.series === g.series) === g && groups.some((x) => x.series === g.series && x.heading.optional)
-      return lastOfSeries ? `${html}<div class="ext-add" data-xaddrow="${g.series}"><button type="button" class="btn" data-xadd="${g.series}"><span aria-hidden="true">+</span> <span>${esc(g.heading.label)}</span></button></div>` : html
+      const add = lastOfSeries ? `<div class="ext-add" data-xaddrow="${g.series}"><button type="button" class="btn" data-xadd="${g.series}"><span aria-hidden="true">+</span> <span>${esc(g.heading.label)}</span></button></div>` : ''
+      return `${begin}${html}${cardMode && add ? closeCard() : ''}${add}`
     })
-    .join('')
+    .join('') + closeCard()
   const hasText = fields.some((it) => type(it) !== 'boolean' && type(it) !== 'gpio' && !it.choices && it.type !== 'lookup' && it.type !== 'roster' && it.type !== 'heading' && it.type !== 'status' && it.type !== 'action' && it.type !== 'list')
   return { form, hasText }
 }
@@ -16582,10 +16853,23 @@ function extFormMount(sheet, e, fields, saved) {
       const shown = !only || only.is.includes(String(e.settings?.[only.key]))
       d.hidden = !on || !shown || (g ? !groupOn(g) : false)
     }
+    // (hideIf: hidden while the field it names is shown and has one of the values - a field that is not there takes no part)
+    for (const d of sheet.querySelectorAll('[data-xhide]')) {
+      const hide = JSON.parse(d.dataset.xhide)
+      const named = sheet.querySelector(['xk', 'xseg', 'xsel'].map((a) => `[data-${a}="${CSS.escape(hide.key)}"]`).join(','))?.closest('[data-xgroup]')
+      if (named && !named.hidden && hide.is.includes(String(e.settings?.[hide.key]))) d.hidden = true
+    }
     // (the second choice beside a field: there while the field has one of its values)
     for (const x of sheet.querySelectorAll('[data-xwhen]')) x.hidden = !JSON.parse(x.dataset.xwhen).includes(String(e.settings?.[x.dataset.xof]))
+    // (a card of a group that is not there yet)
+    for (const c of sheet.querySelectorAll('[data-xcard]')) {
+      const g = groups.find((x) => String(x.index) === c.dataset.xcard)
+      c.hidden = g ? !groupOn(g) : false
+    }
     // (the "+" of a series, while one of its groups is not there yet)
     for (const row of sheet.querySelectorAll('[data-xaddrow]')) row.hidden = !groups.some((g) => String(g.series) === row.dataset.xaddrow && !groupOn(g))
+    // ("Auf dieser Seite" lists the cards that are there)
+    document.dispatchEvent(new Event('mupi-cards'))
   }
   dep()
   // (the list of the pins is drawn again when a name or a group changes: it names the groups)
@@ -16610,6 +16894,28 @@ function extFormMount(sheet, e, fields, saved) {
       else input.checked = !input.checked
     }
   }
+  // (a slider with a box for its value: they follow each other; the value is saved with the rest, by the button)
+  for (const range of sheet.querySelectorAll('input[type="range"][data-xr]')) {
+    const box = sheet.querySelector(`input[data-xk="${CSS.escape(range.dataset.xr)}"]`)
+    if (!box) continue
+    const fill = () => range.style.setProperty('--fill', `${((Number(range.value) - Number(range.min)) / (Number(range.max) - Number(range.min))) * 100}%`)
+    range.oninput = () => {
+      box.value = range.value
+      fill()
+    }
+    box.oninput = () => {
+      if (box.value === '' || !Number.isFinite(Number(box.value))) return
+      range.value = String(Math.min(Number(range.max), Math.max(Number(range.min), Number(box.value))))
+      fill()
+    }
+    // (left with a value outside the range or none: it goes back into the range)
+    box.onchange = () => {
+      const clamped = Math.min(Number(range.max), Math.max(Number(range.min), Math.round(Number(box.value) || Number(range.min))))
+      box.value = String(clamped)
+      range.value = box.value
+      fill()
+    }
+  }
   // (the name of a group: saved when the field is left or with Enter)
   for (const input of sheet.querySelectorAll('input[data-xname]')) {
     const key = input.dataset.xname
@@ -16620,6 +16926,8 @@ function extFormMount(sheet, e, fields, saved) {
       if (ok) e.settings[key] = value
       input.value = e.settings?.[key] ?? ''
       redrawPins()
+      // ("Auf dieser Seite" names the card by it)
+      document.dispatchEvent(new Event('mupi-cards'))
     }
     input.onkeydown = (ev) => {
       if (ev.key === 'Enter') input.blur()
@@ -16669,6 +16977,25 @@ function extFormMount(sheet, e, fields, saved) {
       else select.value = String(e.settings?.[key] ?? '')
       dep()
     }
+  }
+  // (a choice that follows what the box finds, `live`: its route says which choices are there now and what they are called - a USB
+  // reader that is not plugged in is greyed out, one that is has the name of the device. The choice that is made stays.)
+  for (const select of sheet.querySelectorAll('select[data-xlive]')) {
+    const route = select.dataset.xlive
+    let timer = 0
+    const draw = async () => {
+      if (!select.isConnected) return clearInterval(timer)
+      const r = await api(route, { timeoutMs: 8000 })
+      if (!select.isConnected || !r.ok || typeof r.body?.options !== 'object' || r.body.options === null) return
+      for (const option of select.options) {
+        const live = r.body.options[option.value]
+        if (!live || typeof live !== 'object') continue
+        if (typeof live.label === 'string' && live.label !== '') option.textContent = live.label.slice(0, 100)
+        option.disabled = live.disabled === true && option.value !== select.value
+      }
+    }
+    draw()
+    timer = setInterval(draw, 4000)
   }
   // (GPIO pins: every pin of the header to choose from. A pin something else holds - the box says who - and a pin another field
   // of this extension has cannot be chosen. Saved at once; the fields that depend on the pin show then.)
@@ -16847,18 +17174,42 @@ function extFormMount(sheet, e, fields, saved) {
     const box = sheet.querySelector(`[data-xstatus="${index}"]`)
     if (!box) return
     let timer = 0
+    let busy = false
     const draw = async () => {
       if (!box.isConnected) return clearInterval(timer)
       const r = await api(item.state, { timeoutMs: 8000 })
       if (!box.isConnected) return clearInterval(timer)
+      // (a button of a row is being used: the rows stay as they are until it is done)
+      if (busy) return
       const rows = r.ok && Array.isArray(r.body?.rows) ? r.body.rows : [{ label: 'Status', value: 'Nicht erreichbar', tone: 'warn' }]
       box.textContent = ''
       for (const row of rows.slice(0, 12)) {
         const dt = document.createElement('dt')
         dt.textContent = tr(String(row.label ?? ''))
         const dd = document.createElement('dd')
-        dd.textContent = tr(String(row.value ?? ''))
-        if (['ok', 'warn', 'error'].includes(row.tone)) dd.className = `ext-status-${row.tone}`
+        const text = document.createElement('span')
+        text.textContent = tr(String(row.value ?? ''))
+        if (['ok', 'warn', 'error'].includes(row.tone)) text.className = `ext-status-${row.tone}`
+        dd.append(text)
+        // (a button at the right of the value, hostApi 8: { label, post, confirm } - a route of an extension, asked with POST like an action)
+        const act = row.button
+        if (act && typeof act.label === 'string' && /^\/api\/ext\/[a-z][a-z0-9-]*\/[a-z]{1,30}$/.test(String(act.post))) {
+          const button = document.createElement('button')
+          button.type = 'button'
+          button.className = 'btn ext-status-btn'
+          button.textContent = tr(act.label.slice(0, 60))
+          button.onclick = async () => {
+            if (act.confirm && !(await ask(tr(act.label), tr(String(act.confirm).slice(0, 300)), tr('OK')))) return
+            busy = true
+            button.disabled = true
+            const done = await api(act.post, { method: 'POST', body: {}, timeoutMs: 60000 })
+            busy = false
+            const said = typeof done.body?.message === 'string' ? tr(done.body.message.slice(0, 120)) : ''
+            toast(said || tr(done.ok ? 'Erledigt' : 'Hat nicht geklappt'), done.ok ? 'ok' : 'info')
+            draw()
+          }
+          dd.append(button)
+        }
         box.append(dt, dd)
       }
     }
@@ -16872,6 +17223,53 @@ function extFormMount(sheet, e, fields, saved) {
     if (!button) return
     button.onclick = async () => {
       if (item.confirm && !(await ask(tr(item.label), tr(item.confirm), tr('OK')))) return
+      // (hostApi 10: a file the extension makes is saved by the browser)
+      if (item.download) {
+        button.disabled = true
+        const r = await api(item.download, { timeoutMs: 20000 })
+        button.disabled = false
+        if (!r.ok || r.body === null || typeof r.body !== 'object') return toast(tr('Hat nicht geklappt'), 'info')
+        // (hostApi 11: a file of another kind than JSON - a table - comes as { text }, saved as it is)
+        const kind = item.ext && item.ext !== 'json' ? item.ext : 'json'
+        if (kind !== 'json' && typeof r.body.text !== 'string') return toast(tr('Hat nicht geklappt'), 'info')
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(kind === 'json' ? new Blob([JSON.stringify(r.body, null, 2)], { type: 'application/json' }) : new Blob([r.body.text], { type: kind === 'csv' ? 'text/csv;charset=utf-8' : 'text/plain;charset=utf-8' }))
+        link.download = `${item.file}-${new Date().toISOString().slice(0, 10)}.${kind}`
+        document.body.append(link)
+        link.click()
+        link.remove()
+        setTimeout(() => URL.revokeObjectURL(link.href), 10000)
+        return toast(tr('Datei gespeichert'), 'ok')
+      }
+      // (hostApi 10: a file the user chooses goes to the extension as { file }; a list on the page draws itself again)
+      if (item.upload) {
+        const input = document.createElement('input')
+        input.type = 'file'
+        // (hostApi 11: `accept` names the kinds of files; one that is not JSON goes to the route as { text })
+        input.accept = item.accept ?? '.json,application/json'
+        input.onchange = async () => {
+          const chosen = input.files?.[0]
+          if (!chosen) return
+          if (chosen.size > 900000) return toast(tr('Die Datei ist zu groß'), 'info')
+          let body
+          if (item.accept && !/\.json$/i.test(chosen.name)) body = { text: await chosen.text() }
+          else {
+            try {
+              body = { file: JSON.parse(await chosen.text()) }
+            } catch {
+              return toast(tr('Das ist keine gültige Datei'), 'info')
+            }
+          }
+          button.disabled = true
+          const r = await api(item.upload, { method: 'POST', body, timeoutMs: 30000 })
+          button.disabled = false
+          const said = typeof r.body?.message === 'string' ? tr(r.body.message.slice(0, 120)) : ''
+          toast(said || tr(r.ok ? 'Erledigt' : 'Hat nicht geklappt'), r.ok ? 'ok' : 'info')
+          if (r.ok) sheet.dispatchEvent(new Event('xlist-refresh'))
+        }
+        input.click()
+        return
+      }
       button.disabled = true
       const r = await api(item.post, { method: 'POST', body: {}, timeoutMs: 20000 })
       button.disabled = false
@@ -16900,9 +17298,11 @@ function extFormMount(sheet, e, fields, saved) {
         box.append(empty)
         return
       }
-      fillTagRows(box, r.body.items.slice(0, 300), draw)
+      fillTagRows(box, r.body.items.slice(0, 300), draw, true)
     }
     draw()
+    // (after a file was taken in by a button of the page)
+    sheet.addEventListener('xlist-refresh', draw)
   })
   // (a roster: the extension's list route says who is there and who is the current one; a change goes through the add, remove
   // and select routes. Choosing takes the box a while - it restarts - so the app waits for it and then loads itself again.)
@@ -17171,8 +17571,8 @@ function extensionDetails(e, installed) {
   )
 }
 
-/* Extensions with a page of their own (manifest: ui.place "system", hostApi 5): a page under Einstellungen › System › "Die Box"
-   with the settings of the extension - and with the pages of the core it takes over while it is on (ui.adopt): "Drehregler und
+/* Extensions with a page of their own (manifest: ui.place "system", hostApi 5): a page on Einstellungen, beside the groups
+   (Audio, System ...), with the settings of the extension - and with the pages of the core it takes over while it is on (ui.adopt): "Drehregler und
    Taster" is shown there instead of under Audio while the buttons extension is on. */
 
 // the pins of the header: BCM number -> the number of the pin on the board
@@ -17205,7 +17605,7 @@ function setExtPages(list) {
     for (const id of e.adopt) if (!extPages.adopted.has(id)) extPages.adopted.set(id, e.pageId)
     e.adopt = e.adopt.filter((id) => extPages.adopted.get(id) === e.pageId)
     const symbol = e.icon || state.pages.get(e.adopt[0])?.icon || 'plug'
-    const page = { id: e.pageId, slug: e.pageId, area: 'einstellungen', parent: 'g-system', title: e.title, description: '', icon: symbol, sections: [], extId: e.id }
+    const page = { id: e.pageId, slug: e.pageId, area: 'einstellungen', parent: 'einstellungen', title: e.title, description: '', icon: symbol, sections: [], extId: e.id }
     state.pages.set(page.id, page)
     state.bySlug.set(page.slug, page.id)
     state.schema.pages.push(page)
@@ -17226,6 +17626,25 @@ function setExtPages(list) {
 async function loadExtPages() {
   const r = await api(`${API}/extensions/pages`)
   if (r.ok && Array.isArray(r.body)) setExtPages(r.body)
+  // (an extension the box switched off by itself: said once for each time it happened, whenever the app is opened)
+  const p = await api(`${API}/extensions/problems`)
+  if (p.ok && Array.isArray(p.body) && p.body.length > 0) {
+    let shown = ''
+    try {
+      shown = sessionStorage.getItem('mupi.extProblems') ?? ''
+    } catch {
+      // (no storage: said at every start)
+    }
+    const key = p.body.map((x) => `${x.id}@${x.at}`).join(',')
+    if (key !== shown) {
+      try {
+        sessionStorage.setItem('mupi.extProblems', key)
+      } catch {
+        // (as above)
+      }
+      toast(`${p.body.map((x) => x.name).join(', ')}: ${tr('wurde ausgeschaltet – Details unter Erweiterungen')}`, 'info')
+    }
+  }
 }
 
 // A page an extension took over is not listed where it was: no nav row leads to it there
@@ -17245,6 +17664,9 @@ function extPageController(entry, sub = 0) {
     return own.e.ui.items.slice(at[sub - 1] + 1, at[sub] ?? own.e.ui.items.length)
   }
   const adopted = () => (sub ? [] : entry.adopt).map((id) => ({ page: state.pages.get(id), ctrl: CONTROLLERS[id] })).filter((a) => a.page && a.ctrl)
+  // (a page of cards that took over pages of the core: those come first - the rotary knob top left - and the cards of the
+  // extension after them, in the two columns; else its cards would be below the pages of the core, or beside them in rows)
+  const split = () => !!own.e?.enabled && adopted().length > 0 && slice().some((it) => it.type === 'heading' && it.card)
   return {
     async load() {
       const r = await api(`${API}/ext/${entry.id}/info`)
@@ -17259,13 +17681,29 @@ function extPageController(entry, sub = 0) {
       if (!sub && entry.pages.length) {
         return [`<section class="card wide ext-page" id="ext-page-card"><h2>${esc(e.ui.heading ?? e.ui.title)}</h2><p class="help" style="margin:0">${esc(e.ui.help ?? '')}</p>${e.enabled ? '' : '<p class="help" style="margin:0">Die Einstellungen gibt es, solange die Erweiterung an ist.</p>'}</section>`]
       }
-      const { form, hasText } = extFormHtml(e, e.enabled ? slice() : [])
+      const cardPage = !!e.enabled && slice().some((it) => it.type === 'heading' && it.card)
       const named = sub ? e.ui.items[starts()[sub - 1]] : null
+      // (its text in a card of its own across the page; the cards follow in after())
+      if (split()) return [`<section class="card wide ext-page"><h2>${esc(named ? named.label : (e.ui.heading ?? e.ui.title))}</h2><p class="help" style="margin:0">${esc(named ? (named.help ?? '') : (e.ui.help ?? ''))}</p></section>`]
+      const { form, hasText } = extFormHtml(e, e.enabled ? slice() : [], cardPage)
+      // (a page of cards: its text in a card of its own, then a card for each group; the wrapper takes no room of its own)
+      if (cardPage) {
+        return [
+          `<div id="ext-page-card" class="ext-cards"><section class="card wide ext-page"><h2>${esc(named ? named.label : (e.ui.heading ?? e.ui.title))}</h2><p class="help" style="margin:0">${esc(named ? (named.help ?? '') : (e.ui.help ?? ''))}</p></section>${form}${hasText ? '<div class="btns"><button class="btn primary" data-xsave>Speichern</button></div>' : ''}</div>`,
+        ]
+      }
+      // (an extension that took over pages of the core - the buttons with the rotary knob - has its card in one column on a wide screen,
+      // so that the cards of the pages it took over stand beside it; else it would take both columns and they would all be below)
       return [
-        `<section class="card wide ext-page" id="ext-page-card"><h2>${esc(named ? named.label : (e.ui.heading ?? e.ui.title))}</h2><p class="help" style="margin:0">${esc(named ? (named.help ?? '') : (e.ui.help ?? ''))}</p>
+        `<section class="card${adopted().length ? '' : ' wide'} ext-page" id="ext-page-card"><h2>${esc(named ? named.label : (e.ui.heading ?? e.ui.title))}</h2><p class="help" style="margin:0">${esc(named ? (named.help ?? '') : (e.ui.help ?? ''))}</p>
          ${e.enabled ? form : '<p class="help" style="margin:0">Die Einstellungen gibt es, solange die Erweiterung an ist.</p>'}
          ${hasText ? '<div class="btns"><button class="btn primary" data-xsave>Speichern</button></div>' : ''}</section>`,
       ]
+    },
+    after() {
+      if (!split()) return []
+      const { form, hasText } = extFormHtml(own.e, slice(), 'half')
+      return [form, hasText ? '<div class="btns wide"><button class="btn primary" data-xsave>Speichern</button></div>' : '']
     },
     // (the pages of the core that moved here: their cards under the extension's own, the first with the title of its page)
     sections: () => adopted().flatMap((a) => (a.ctrl.sections?.(a.page) ?? a.page.sections ?? []).map((sec, i) => ({ ...sec, title: i === 0 ? (EXT_ADOPTED_TITLE[a.page.id] ?? (sec.title || a.page.title)) : sec.title || '' }))),
@@ -17274,8 +17712,11 @@ function extPageController(entry, sub = 0) {
       return owner?.ctrl.change?.(key, v, page)
     },
     mount(root, page) {
-      const card = $('#ext-page-card', root)
+      // (the cards of a split page are among the cards of the pages of the core: the whole page is the form)
+      const card = split() ? root : $('#ext-page-card', root)
       if (card && own.e?.enabled && own.e.ui && (sub || !entry.pages.length)) extFormMount(card, own.e, slice(), () => renderPage(page, true))
+      // (the sub page of the tags has the player pinned at its bottom - not the page above, which lists the sub pages)
+      if (card && sub && own.e?.id === 'nfc' && own.e.enabled && slice().some((it) => it.type === 'list' && it.list === `${NFC_ROUTE}/tags`)) mountMiniPlayer(root)
       for (const a of adopted()) a.ctrl.mount?.(root, a.page)
     },
   }
@@ -17983,9 +18424,16 @@ const CONTROLLERS = {
         const upd = next
           ? `<p class="ext-update">${icon('sync', 16)}<span translate="no">${esc(tr(`Es gibt eine neue Version von ${e.name}: ${next.version}.`))} ${esc(lead)}<button type="button" class="linkbtn" data-ext-details="${esc(e.id)}" data-installed="false" data-ext-new="true">${esc(tr('Details ansehen'))}</button>${esc(mid)}<button type="button" class="linkbtn" data-ext-update="${esc(e.id)}">${esc(tr('jetzt aktualisieren'))}</button>${esc(tail)}</span></p>`
           : ''
+        // (the box switched it off by itself - after an update, say: what went wrong, in the words of the box, and a way to try again;
+        // the detail is the technical line, in English, for whoever has to report it)
+        const bad = installed && e.problem
+          ? `<div class="note warn ext-problem">${icon('info', 18)}<span><b>${esc(tr('Die MuPiBox hat diese Erweiterung ausgeschaltet.'))}</b> ${esc(tr(e.problem.message))}${e.problem.detail ? ` <small translate="no">(${esc(e.problem.detail)})</small>` : ''}</span></div>`
+          : ''
+        const retry = installed && e.problem ? `<button type="button" class="btn sm" data-ext-retry="${esc(e.id)}">Erneut versuchen</button>` : ''
         return `<div class="ext-card${installed ? '' : ' offer'}" data-q="${esc(q)}">
           <div class="ext-head">${ico}<div class="ext-text"><b>${esc(e.name)}</b> <small>${esc(e.version)}</small><p>${esc(e.description)}</p></div></div>
-          <div class="ext-foot"><button type="button" class="btn sm" data-ext-details="${esc(e.id)}" data-installed="${installed}">Details</button>${action}<span class="grow"></span>${sw}</div>
+          ${bad}
+          <div class="ext-foot"><button type="button" class="btn sm" data-ext-details="${esc(e.id)}" data-installed="${installed}">Details</button>${retry}${action}<span class="grow"></span>${sw}</div>
           ${upd}
         </div>`
       }
@@ -18059,6 +18507,15 @@ const CONTROLLERS = {
           await installExtension(e, 'Installieren', `${e.name} ist installiert.`)
         }
       }
+      // (try again = switch it on, with the same question as the switch)
+      for (const b of root.querySelectorAll('[data-ext-retry]')) {
+        b.onclick = () => {
+          const input = [...root.querySelectorAll('[data-ext-toggle]')].find((i) => i.dataset.extToggle === b.dataset.extRetry)
+          if (!input) return
+          input.checked = true
+          input.dispatchEvent(new Event('change'))
+        }
+      }
       for (const b of root.querySelectorAll('[data-ext-remove]')) {
         const e = entry(b.dataset.extRemove)
         b.onclick = () => extensionAction('remove', e.id, `${e.name} entfernen`, 'Die Erweiterung und ihre Geräteregeln werden entfernt. Ihre Einstellungen bleiben, falls du sie wieder installierst. Danach starten die Dienste der Box neu.', 'Entfernen', `${e.name} ist entfernt.`)
@@ -18074,7 +18531,14 @@ const CONTROLLERS = {
           const r = await api(`${API}/extensions/enable`, { method: 'POST', body: { id: e.id, enabled } })
           if (!r.ok) {
             input.checked = !enabled
-            if (r.body?.error === 'conflict') return extReview({ title: tr(`${e.name} kann nicht eingeschaltet werden`), resources: e.resources, conflicts: r.body.conflicts })
+            if (r.body?.error === 'conflict') {
+              // (only pins of its settings in the way: the box can put it right - the pin to a free one, or the connection away)
+              const errors = (r.body.conflicts ?? []).filter((c) => c.severity === 'error')
+              if (errors.length > 0 && errors.every((c) => c.kind === 'gpio') && Object.values(e.settingTypes ?? {}).includes('gpio')) return resolveGpioConflict(e, r.body.conflicts)
+              return extReview({ title: tr(`${e.name} kann nicht eingeschaltet werden`), resources: e.resources, conflicts: r.body.conflicts })
+            }
+            // (the files say it cannot run on this box: the same sentence as on the card)
+            if (r.body?.error === 'problem' && r.body.problem?.message) return toast(tr(r.body.problem.message), 'info')
             return toast('Hat nicht geklappt', 'info')
           }
           toast('Die Dienste starten neu …')

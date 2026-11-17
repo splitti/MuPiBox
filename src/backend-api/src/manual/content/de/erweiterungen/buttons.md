@@ -2,7 +2,7 @@
 
 Mit der Erweiterung **Buttons & GPIO Input** steuern **echte Taster** die Box: Play/Pause, nächster Titel, lauter, leiser und mehr. Jeder Taster hängt an einem GPIO-Pin des Raspberry Pi, den du selbst wählst.
 
-Nach der [Installation](installieren.md) stehen die Einstellungen auf einer eigenen Seite: **Einstellungen › System › Buttons & GPIO Input**. Dort steht dann auch die Karte **Drehregler** ([Drehregler und Taster](../hardware/drehregler.md)), die sonst unter **Einstellungen › Audio** zu finden ist.
+Nach der [Installation](installieren.md) stehen die Einstellungen auf einer eigenen Seite: **Einstellungen › Buttons & GPIO Input**. Dort steht dann auch die Karte **Drehregler** ([Drehregler und Taster](../hardware/drehregler.md)), die sonst unter **Einstellungen › Audio** zu finden ist.
 
 ## Anschluss
 
@@ -77,6 +77,7 @@ Ein Doppeltaster braucht **beide** Pins. Solange nur einer gewählt ist, liest d
 | **Lauter** / **Leiser** | ändert die Lautstärke um den Schritt, der rechts daneben gewählt ist: 1, 2, 3, 5 oder 10 % |
 | **30 Sekunden vor** / **30 Sekunden zurück** | spult im Titel |
 | **Zufallswiedergabe an/aus** | schaltet das Mischen um |
+| **Repeat all/one/off** | schaltet bei jedem Druck weiter: erst **all** (das Album oder die Playlist beginnt am Ende von vorn), dann **one** (der Titel wird immer wieder gespielt), dann **off** (keine Wiederholung). Mit dem nächsten Album beginnt die Wiedergabe wieder ohne Wiederholung |
 | **Ausgabe wechseln** | schaltet zur nächsten Ausgabe: Soundkarten der Box und gekoppelte Bluetooth-Geräte der Reihe nach |
 | **Stopp** | beendet die Wiedergabe |
 | **Box ausschalten** | fährt die Box herunter |

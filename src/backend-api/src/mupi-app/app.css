@@ -135,6 +135,8 @@ a { color: var(--mp-primary-text); }
   }
   .pagenav button:hover { color: var(--mp-text); }
   .pagenav button[aria-current="page"] { color: var(--mp-primary-text); border-left-color: var(--mp-primary); font-weight: 700; }
+  /* the page of an extension while one of its sub pages is shown: marked a little less */
+  .pagenav button.parent { color: var(--mp-text); font-weight: 600; }
   /* the cards of the shown page under it */
   .pagenav .sub { border-left: 0; margin: 0 0 6px 14px; }
   .pagenav .sub button { padding: 4px 12px; font-size: 13px; }
@@ -210,6 +212,7 @@ textarea.input { height: 220px; padding: 12px 14px; resize: vertical; line-heigh
 /* slider: label + value pill, track 8, knob 24 */
 .slider-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .slider-head label, .slider-head > b { font-size: 15px; font-weight: 700; }
+.slider-head .value-num { width: 84px; padding: 4px 10px; text-align: center; font-weight: 700; flex: none; }
 .value-pill { padding: 2px 10px; border-radius: 19px; background: var(--mp-primary-soft); color: var(--mp-primary-text); font-weight: 700; font-size: 14px; white-space: nowrap; }
 input[type="range"] { width: 100%; height: 24px; margin: 0; background: none; -webkit-appearance: none; appearance: none; }
 input[type="range"]::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: linear-gradient(var(--mp-primary), var(--mp-primary)) 0 / var(--fill, 0%) 100% no-repeat, var(--mp-track); }
@@ -1378,6 +1381,14 @@ textarea[hidden] { display: none; }
 .ext-foot .grow { flex: 1; }
 /* a newer version: a line of text under the buttons, in the card (the notice of WordPress) */
 .ext-update { display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 8px 10px; border-left: 3px solid var(--mp-primary); border-radius: 6px; background: var(--mp-primary-soft); font-size: 13px; line-height: 1.4; }
+/* two buttons of an extension side by side (beside) */
+.ext-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+.ext-actions > .field { border-top: 0; padding-top: 0; }
+.ext-actions .btn { width: 100%; }
+.field + .ext-actions { border-top: 1px solid var(--mp-border); padding-top: 14px; }
+/* an extension the box switched off by itself: what went wrong, in the card */
+.ext-problem { margin: 0; font-size: 13px; line-height: 1.4; }
+.ext-problem small { color: var(--mp-muted); word-break: break-word; }
 .ext-update svg { flex: none; margin-top: 1px; color: var(--mp-primary-text); }
 .linkbtn { padding: 0; border: 0; background: none; font: inherit; color: var(--mp-primary-text); text-decoration: underline; cursor: pointer; }
 /* the report of an extension's resources (ports, GPIO pins, services; what it sets up; what collides): plain lists */
@@ -1393,6 +1404,9 @@ textarea[hidden] { display: none; }
 .ext-group h3 { margin: 0; font-size: 15px; font-weight: 600; }
 .ext-page select.input { max-width: 420px; }
 /* (a group the user names: the name is a field, the label of the group its placeholder; right of it the button that removes the group) */
+.ext-cards { display: contents; }
+.ext-cards > .ext-sec[hidden] { display: none; }
+.ext-sec > .ext-group:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
 .ext-group-head { display: flex; align-items: center; gap: 8px; }
 .ext-group-name { flex: 1 1 auto; min-width: 0; max-width: 420px; font-weight: 600; }
 .ext-group-del { margin-left: auto; flex: 0 0 auto; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--mp-border); border-radius: var(--mp-r); background: var(--mp-surface); color: var(--mp-muted); cursor: pointer; }
@@ -1415,9 +1429,19 @@ textarea[hidden] { display: none; }
 .ext-status-rows { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 4px 0 0; padding: 10px 12px; border: 1px solid var(--mp-border); border-radius: var(--mp-r); background: var(--mp-surface); font-size: 15px; }
 .ext-status-rows dt { color: var(--mp-muted, inherit); opacity: .8; }
 .ext-status-rows dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
-.ext-status-rows dd.ext-status-ok { color: var(--mp-ok, #2e9d57); }
-.ext-status-rows dd.ext-status-warn { color: var(--mp-warn, #c98a00); }
-.ext-status-rows dd.ext-status-error { color: var(--mp-danger, #d64545); }
+.ext-status-rows dd span.ext-status-ok { color: var(--mp-ok, #2e9d57); }
+.ext-status-rows dd span.ext-status-warn { color: var(--mp-warn, #c98a00); }
+.ext-status-rows dd span.ext-status-error { color: var(--mp-danger, #d64545); }
+/* rows with buttons: label, value and button on one line in the middle of the row; every row of such a block is as high as one with a button */
+.ext-status-rows { align-items: center; }
+.ext-status-rows:has(.ext-status-btn) dd { min-height: 36px; }
+.ext-status-rows:has(.ext-status-btn) dt { min-height: 36px; display: flex; align-items: center; }
+.ext-status-rows:has(.ext-status-btn) { grid-template-columns: 9em 1fr; }
+.ext-status-rows:has(.ext-status-btn) dt { overflow-wrap: anywhere; }
+/* (the button stays at the right; on a narrow screen, where value and button do not fit side by side, it goes under the value) */
+.ext-status-rows dd { display: flex; align-items: center; justify-content: space-between; gap: 4px 10px; flex-wrap: wrap; }
+.ext-status-rows dd > span { flex: 1 1 8em; min-width: 0; overflow-wrap: normal; }
+.ext-status-rows .ext-status-btn { flex: none; margin-left: auto; white-space: nowrap; min-height: 34px; padding: 4px 12px; font-size: 14px; font-weight: 600; }
 /* a list to put in order by dragging (an "order" field of an extension) */
 .ext-order { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .ext-order li { display: flex; align-items: center; gap: 12px; padding: 4px 12px 4px 4px; border: 1px solid var(--mp-border); border-radius: var(--mp-r); background: var(--mp-surface); font-size: 15px; font-weight: 600; user-select: none; }
@@ -1432,6 +1456,49 @@ textarea[hidden] { display: none; }
 .nfc-head .album-cover { width: 72px; align-self: auto; flex: none; box-shadow: none; }
 .nfc-head .album-title { text-align: left; min-width: 0; }
 .ext-tag-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+/* the page of tags: tiles (one up to 575 px, two from 576 px, three from 1000 px) */
+.ext-tags.tag-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 576px) { .ext-tags.tag-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1000px) { .ext-tags.tag-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.ext-tag.tag-tile { flex-direction: column; align-items: stretch; gap: 0; padding: 0; overflow: hidden; text-align: center; }
+/* (one line for the title: a longer one is cut off with …, so every tile has the same height; the buttons sit at the bottom) */
+.ext-tag.tag-tile > b { padding: 10px 12px; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-bottom: 1px solid var(--mp-border); }
+.ext-tag.tag-tile .tag-tile-pic { width: calc(100% - 24px); height: auto; aspect-ratio: 1; margin: 16px 12px 10px; border-radius: var(--mp-r-sm); }
+.ext-tag.tag-tile > small { flex: 1; padding: 0 12px 12px; color: var(--mp-muted); overflow-wrap: anywhere; }
+.tag-tile-btns { display: flex; justify-content: center; gap: 4px; padding: 10px 6px; border-top: 1px solid var(--mp-border); }
+/* (five buttons in a tile of 190 px: they shrink to 32 px, and are up to 44 px where there is room) */
+.tag-tile-btn { flex: 1 1 0; width: auto; min-width: 32px; max-width: 44px; height: 40px; }
+.tag-tile-btn.danger { color: var(--mp-danger, #e5534b); }
+.tag-tile-btn:disabled { opacity: .35; }
+/* "Tag ändern": the bar that waits for the new album, and the button in the sheets of the library */
+.nfc-change-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--mp-tab-h) + 8px + env(safe-area-inset-bottom)); z-index: 35; width: min(94vw, 560px); display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: var(--mp-r); background: var(--mp-surface); border: 1.5px solid var(--mp-primary); box-shadow: 0 8px 24px rgba(0, 0, 0, .3); }
+.nfc-change-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.nfc-change-title { font-weight: 700; color: var(--mp-primary-text); overflow-wrap: anywhere; }
+.nfc-change-bar .btn { flex: none; }
+.btns .nfc-change-here { flex: 1 1 100%; }
+@media (min-width: 960px) { .nfc-change-bar { bottom: 16px; } }
+/* the small player pinned to the bottom of the page of tags */
+.mini-player { position: sticky; bottom: calc(var(--mp-tab-h) + 8px + env(safe-area-inset-bottom)); z-index: 30; margin-top: 12px; display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr); align-items: center; gap: 10px 16px; padding: 10px 14px; border-radius: var(--mp-r); background: var(--mp-surface); border: 1px solid var(--mp-border); box-shadow: 0 8px 24px rgba(0, 0, 0, .25); }
+@media (min-width: 960px) { .mini-player { bottom: 16px; } }
+.mini-ctrl { display: flex; align-items: center; gap: 6px; }
+.mini-btn { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border: 0; border-radius: 50%; background: none; color: var(--mp-text); }
+.mini-btn.mini-main { width: 46px; height: 46px; border: 1.5px solid var(--mp-border); }
+.mini-btn.mini-main svg { width: 26px; height: 26px; }
+.mini-now { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.mini-cover { position: relative; width: 40px; height: 40px; flex: none; border-radius: var(--mp-r-sm); overflow: hidden; background: var(--mp-chip); display: grid; place-items: center; color: var(--mp-muted); }
+.mini-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.mini-title { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 15px; }
+.mini-prog { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.mini-time { font-size: 13px; font-weight: 600; color: var(--mp-muted); }
+.mini-prog .track { width: 100%; height: 6px; border-radius: 3px; background: var(--mp-track); overflow: hidden; }
+.mini-prog .track i { display: block; height: 100%; background: var(--mp-accent); border-radius: 3px; }
+.mini-vol { display: flex; align-items: center; gap: 8px; color: var(--mp-muted); min-width: 0; }
+/* (on a phone: the buttons and the title in the first row, how far it is and the volume in the second) */
+@media (max-width: 700px) {
+  .mini-player { grid-template-columns: auto minmax(0, 1fr); }
+  .mini-prog { grid-column: 1 / -1; grid-row: 2; }
+  .mini-vol { grid-column: 1 / -1; grid-row: 3; }
+}
 .nfc-flex { display: flex; align-items: center; gap: 10px; font-weight: 600; }
 .nfc-ok { color: var(--mp-ok, #3fb950); font-weight: 700; }
 .nfc-warn { color: var(--mp-warn, #d29922); font-weight: 600; }

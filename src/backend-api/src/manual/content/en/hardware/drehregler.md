@@ -3,7 +3,7 @@
 A **rotary knob with button** (rotary encoder in the style of the KY-040) makes the volume easy to reach for children's hands. You switch it on in the app under **Settings › Audio › Rotary knob and button**.
 
 > [!NOTE]
-> If the extension [Buttons & GPIO Input](../erweiterungen/buttons.md) is switched on, this setting is under **Settings › System › Buttons & GPIO Input** instead, as the card **Rotary knob**. With the extension you can also connect any number of further buttons.
+> If the extension [Buttons & GPIO Input](../erweiterungen/buttons.md) is switched on, this setting is under **Settings › Buttons & GPIO Input** instead, as the card **Rotary knob**. With the extension you can also connect any number of further buttons.
 
 ## Connection
 

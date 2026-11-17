@@ -9,7 +9,7 @@ const TWINS = 2
 const TWIN_KINDS = ['short_a', 'short_b', 'short_ab', 'long_a', 'long_b', 'long_ab']
 
 // what a press can do (the names the settings store)
-const ACTIONS = ['none', 'toggle', 'next', 'prev', 'replay', 'volUp', 'volDown', 'ffwd', 'rewind', 'shuffle', 'output', 'stop', 'shutdown']
+const ACTIONS = ['none', 'toggle', 'next', 'prev', 'replay', 'volUp', 'volDown', 'ffwd', 'rewind', 'shuffle', 'repeat', 'output', 'stop', 'shutdown']
 
 const isPin = (v) => Number.isInteger(v) && v >= 2 && v <= 27
 const action = (v) => (ACTIONS.includes(v) ? v : 'none')

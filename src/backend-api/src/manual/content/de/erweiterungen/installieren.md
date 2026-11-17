@@ -49,6 +49,33 @@ Eine Erweiterung ist eine einzige Datei mit der Endung `.mpx`. Normalerweise kom
 
 Wie man eine Erweiterung baut, steht in der Richtlinie für Entwickler im Repository (`extensions/README.md`).
 
+## Nach einem Update der MuPiBox
+
+Eine Erweiterung liegt in deinen Daten (`~/.mupibox/data/extensions/`), nicht im Programm der Box. Ein Update der MuPiBox lässt sie samt Einstellungen und Daten in Ruhe.
+
+Die Box ist nach dem Update aber eine andere: Vielleicht nimmt sie die Beschreibung der Erweiterung nicht mehr an, oder ein Pin ist jetzt belegt. Darum **prüft die Box bei jedem Start** alle eingeschalteten Erweiterungen:
+
+- Die Beschreibung (`manifest.json`) ist da und wird angenommen, und die Erweiterung ist nicht für eine neuere MuPiBox gemacht.
+- Die Dateien, die sie nennt, sind da.
+- Die Pins und Ports, die sie braucht, hält nicht die Box oder eine andere Erweiterung. Wollen zwei Erweiterungen dasselbe, gibt die zuletzt installierte nach.
+- Ihr Programm lässt sich starten, und sie hat die Box nicht mehrmals kurz hintereinander zum Absturz gebracht.
+
+Besteht eine Erweiterung die Prüfung nicht, **schaltet die Box sie aus** und merkt sich den Grund. Alles andere läuft weiter. Beim nächsten Öffnen der App erscheint ein Hinweis, und auf der Karte der Erweiterung unter **Einstellungen › System › Erweiterungen** steht ein gelber Kasten mit der Ursache (darunter in Klammern die technische Zeile, die du bei einer Fehlermeldung weitergeben kannst).
+
+Was du tun kannst:
+
+- **Ursache beheben** (die MuPiBox oder die Erweiterung aktualisieren, die Erweiterung neu installieren, den doppelt belegten Pin freigeben) und dann auf **Erneut versuchen** tippen. Das schaltet die Erweiterung wieder ein; die Box prüft dabei noch einmal.
+- Die Erweiterung **entfernen**, wenn du sie nicht mehr brauchst.
+
+**Ein Pin ist belegt?** Liegt der Grund an einem Pin, den du in den Einstellungen der Erweiterung gewählt hast (zum Beispiel ein Taster auf einem Pin, den die MuPiBox-HAT jetzt für sich braucht), fragt die App nach **Erneut versuchen**, was geschehen soll:
+
+- **Auf freien Pin umstellen**: Die Box sucht den niedrigsten freien Pin (ab GPIO 4, ohne die serielle Schnittstelle GPIO 14 und 15), trägt ihn in den Einstellungen ein und schaltet die Erweiterung ein. Danach zeigt dir die App, von welchem Pin auf welchen umgestellt wurde. **Schließe das Gerät (zum Beispiel den Taster) an diesem neuen Pin an.**
+- **Anschluss entfernen**: Der Pin wird auf „keiner“ gestellt und die Erweiterung eingeschaltet. Der Taster tut dann nichts, bis du in den Einstellungen einen Pin wählst.
+
+Danach starten die Dienste der Box neu. Ist etwas anderes als ein Pin belegt (ein Port, ein Dienst, ein Pin, den die Erweiterung selbst festlegt), zeigt die App nur die Überschneidung, und du musst sie selbst beheben.
+
+Schaltest du eine Erweiterung selbst aus oder wieder ein, ist der Hinweis weg.
+
 ## Wenn etwas nicht klappt
 
 - **„Es läuft gerade etwas anderes"**: Es wird schon eine Erweiterung installiert oder entfernt. Warte, bis das fertig ist.

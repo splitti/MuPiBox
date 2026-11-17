@@ -1,7 +1,7 @@
 // "Abends dunkler" - the window that starts at sunset: the sunset worked out from the place, and what the display does around it.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { NIGHT_DIM_DEFAULT, nightBrightness, nightDimOf, parseNightDim, sunriseLabel, sunriseMinutes, sunriseUtcMinutes, sunsetLabel, sunsetMinutes, sunsetUtcMinutes, type NightDim } from './app-api/night-dim'
+import { NIGHT_DIM_DEFAULT, nightBrightness, nightDimOf, nightShare, parseNightDim, sunriseLabel, sunriseMinutes, sunriseUtcMinutes, sunsetLabel, sunsetMinutes, sunsetUtcMinutes, type NightDim } from './app-api/night-dim'
 
 const BERLIN = { lat: 52.52, lon: 13.405 }
 // (minutes after midnight UTC for a clock "HH:MM")
@@ -80,6 +80,26 @@ describe('the window from sunset', () => {
     const polar = { ...nd, lat: 69.65, lon: 18.96 }
     assert.strictEqual(nightBrightness(polar, 100, new Date(2026, 5, 21, 23, 0), false).dimmed, true, 'the fixed times take over')
     assert.strictEqual(nightBrightness(polar, 100, new Date(2026, 5, 22, 5, 30), false).dimmed, false)
+  })
+})
+
+describe('how far into the evening the box is (for a lamp of an extension)', () => {
+  const nd: NightDim = { ...NIGHT_DIM_DEFAULT, enabled: true, from: '19:00', to: '07:00', fade: 30 }
+  const at = (h: number, m = 0) => new Date(2026, 5, 21, h, m)
+  it('is 0 by day, grows over the fade and is 1 until the morning', () => {
+    assert.deepStrictEqual(nightShare(nd, at(12), false), { share: 0, dimmed: false })
+    assert.deepStrictEqual(nightShare(nd, at(19, 0), false), { share: 0, dimmed: true })
+    assert.deepStrictEqual(nightShare(nd, at(19, 15), false), { share: 0.5, dimmed: true })
+    assert.deepStrictEqual(nightShare(nd, at(20), false), { share: 1, dimmed: true })
+    assert.deepStrictEqual(nightShare(nd, new Date(2026, 5, 22, 3), false), { share: 1, dimmed: true })
+    assert.deepStrictEqual(nightShare(nd, new Date(2026, 5, 22, 7, 30), false), { share: 0, dimmed: false })
+  })
+  it('takes the quiet hours and the switch into account, and gives the backlight the same value as before', () => {
+    const quiet = { ...nd, withQuiet: true }
+    assert.deepStrictEqual(nightShare(quiet, at(14), true), { share: 1, dimmed: true })
+    assert.deepStrictEqual(nightShare(nd, at(14), true), { share: 0, dimmed: false })
+    assert.deepStrictEqual(nightShare({ ...nd, enabled: false }, at(23), false), { share: 0, dimmed: false })
+    assert.strictEqual(nightBrightness({ ...nd, level: 20 }, 100, at(19, 15), false).value, 60)
   })
 })
 

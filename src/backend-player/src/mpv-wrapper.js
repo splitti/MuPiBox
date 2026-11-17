@@ -538,11 +538,14 @@ const createPlayer = (options = {}) => {
     soundChain = parts.join(',')
     applyFilter()
   }
-  // Repeat of the playlist (the Winamp theme's REP button)
-  out.setRepeat = (on) => {
-    repeatOn = on
-    send(['set_property', 'loop-playlist', on ? 'inf' : 'no'])
+  // Repeat: 'all' (the playlist starts again at its end - the Winamp theme's REP button), 'one' (the track plays again and again)
+  // or 'off'. With 'one' mpv never reaches the end of the file, so neither the end of the playlist nor shuffle comes into play.
+  out.setRepeatMode = (mode) => {
+    repeatOn = mode === 'all'
+    send(['set_property', 'loop-playlist', mode === 'all' ? 'inf' : 'no'])
+    send(['set_property', 'loop-file', mode === 'one' ? 'inf' : 'no'])
   }
+  out.setRepeat = (on) => out.setRepeatMode(on ? 'all' : 'off')
   // Shuffle on / off for the playlist that plays (and until it is switched off: the next ones too, the round starts over)
   out.setShuffle = (on) => {
     shuffleOn = on

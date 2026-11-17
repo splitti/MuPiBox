@@ -577,6 +577,9 @@ STEP=0
 	ln -sf /home/dietpi/MuPiBox/media/cover /var/www/cover >&3 2>&3
 	chown -h www-data:www-data /var/www/cover >&3 2>&3
 	chown -R dietpi:www-data /home/dietpi/MuPiBox/media/cover >&3 2>&3
+	# (the web server runs as www-data and must pass /home/dietpi to reach the covers: a home directory with mode 0700, as newer
+	# Debian makes it, answers every /cover/... with 403 - the pictures of radio stations and of NFC tags)
+	chmod o+x /home/dietpi >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Web server ## finished after $((after - before)) seconds" >&3 2>&3
 	STEP=$((STEP + 1))

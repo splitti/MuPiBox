@@ -36,8 +36,10 @@ if [ ${wled_active} = true ]; then
 	wled_brightness_def=$(/usr/bin/jq -r .wled.brightness_default ${MUPIBOX_CONFIG})
 	# (the browser's program is called chromium-browser on Debian 12 and chromium on Debian 13 - pidof by the program's
 	# name waits for the browser itself, as before; "pgrep -f chromium" also found the kiosk script starting it)
+	# (a box without the DSI display - mupibox.headless - has no browser to wait for)
+	headless=$(/usr/bin/jq -r '.mupibox.headless // false' ${MUPIBOX_CONFIG})
 	pid=$(pidof chromium-browser chromium)
-	while [ -z "${pid}" ] ;
+	while [ -z "${pid}" ] && [ "${headless}" != true ] ;
 	do
 		pid=$(pidof chromium-browser chromium)
 		sleep 3

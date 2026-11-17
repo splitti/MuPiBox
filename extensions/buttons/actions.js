@@ -20,6 +20,13 @@ function nextOutput(data) {
   return targets[(at + 1) % targets.length]
 }
 
+/** The repeat mode a press leads to: all -> one -> off -> all. `meta.repeatMode` is what the player says ('off', 'all', 'one'); a
+ *  player of an older version knows only `repeat` (on = all). Returns the name of the player's command without "repeat". */
+function nextRepeat(meta) {
+  const mode = meta?.repeatMode ?? (meta?.repeat === true ? 'all' : 'off')
+  return mode === 'off' ? 'all' : mode === 'all' ? 'one' : 'off'
+}
+
 /** Is something playing? The same test as the player's own: Spotify says "pause", the local player "playing". */
 function isPlaying(meta) {
   if (meta?.currentPlayer === 'spotify') return meta.pause === false
@@ -49,6 +56,7 @@ function createActions({ playerUrl, apiUrl, log = console, fetchFn = fetch }) {
     ffwd: () => player('seek+30'),
     rewind: () => player('seek-30'),
     shuffle: async () => player((await meta())?.shuffle === true ? 'shuffleoff' : 'shuffleon'),
+    repeat: async () => player(`repeat${nextRepeat(await meta())}`),
     stop: () => player('stop'),
     shutdown: () => player('shutoff'),
     output: async () => {
@@ -80,4 +88,4 @@ function createActions({ playerUrl, apiUrl, log = console, fetchFn = fetch }) {
   }
 }
 
-module.exports = { outputTargets, nextOutput, isPlaying, createActions }
+module.exports = { outputTargets, nextOutput, nextRepeat, isPlaying, createActions }
