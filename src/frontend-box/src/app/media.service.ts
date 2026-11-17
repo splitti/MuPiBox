@@ -1341,13 +1341,15 @@ export class MediaService {
   // later come too), in the series' order (as dates for the list's order "by release"); not reachable: a placeholder of
   // the row, the books kept before stand in for it (fillFailedRows), and the list counts as not complete (audibleFailures).
   private audibleSeriesBooks(item: Media): Observable<Media[]> {
-    const row = `a:${item.id}`
+    // (the books left out in the library's sheet - and the row differs with them, as Jellyfin's artist)
+    const left = new Set((item.exclude_ids ?? []).map(String))
+    const row = `a:${item.id}${left.size ? `-${[...left].sort().join(',')}` : ''}`
     return this.http
       .get<{ books?: { asin: string; title: string; image?: string }[] }>(`${this.getApiBackendUrl()}/audible/series/${encodeURIComponent(item.id)}/books`)
       .pipe(
         timeout(60000),
         map((r) =>
-          (r.books ?? []).map(
+          (r.books ?? []).filter((b) => !left.has(String(b.asin))).map(
             (b, i) =>
               ({
                 type: 'audible',

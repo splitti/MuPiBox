@@ -87,7 +87,7 @@ export function bookOf(raw: unknown): AudibleBook | null {
   }
 }
 
-/** The whole library of the account (up to 3000 entries), only the audiobooks */
+/** The whole library of the account (up to 5000 entries), only the audiobooks */
 export async function fetchLibrary(session: AudibleSession): Promise<AudibleBook[]> {
   for (const size of PAGES) {
     try {
@@ -149,6 +149,8 @@ export function seriesOf(books: AudibleBook[]): AudibleSeries[] {
 export class AudibleLibrary {
   private kept: { key: string; at: number; books: AudibleBook[] } | null = null
   private loading: { key: string; p: Promise<AudibleBook[]> } | null = null
+  // (Audible asked to wait - 429: not asked again before, every look meanwhile fails at once)
+  private waitUntil = 0
 
   constructor(private readonly fetchBooks: (s: AudibleSession) => Promise<AudibleBook[]> = fetchLibrary) {}
 
@@ -156,7 +158,11 @@ export class AudibleLibrary {
   async books(session: AudibleSession, key: string, fresh = false): Promise<AudibleBook[]> {
     if (!fresh && this.kept?.key === key && Date.now() - this.kept.at < FRESH_MS) return this.kept.books
     if (this.loading?.key === key) return this.loading.p
-    const p = this.fetchBooks(session)
+    if (Date.now() < this.waitUntil) throw new AudibleError('rateLimited', 429, Math.ceil((this.waitUntil - Date.now()) / 1000))
+    const p = this.fetchBooks(session).catch((err) => {
+      if (err instanceof AudibleError && err.problem === 'rateLimited') this.waitUntil = Date.now() + (err.retryAfter ?? 60) * 1000
+      throw err
+    })
     this.loading = { key, p }
     try {
       const books = await p
@@ -179,6 +185,7 @@ export class AudibleLibrary {
 
   forget(): void {
     this.kept = null
+    this.waitUntil = 0
   }
 }
 

@@ -60,6 +60,8 @@ export interface Media {
   /** a TIDAL artist's range counts the episodes' numbers in their names, not the positions by release */
   range_by?: 'number'
   exclude_album_ids?: string[]
+  /** an Audible series: the books left out (ASINs) */
+  exclude_ids?: string[]
   // Full NAS path of this entry's folder, used for NAS media (type: 'nas')
   // to browse/stream it live instead of resolving a local file path.
   nasPath?: string

@@ -4293,5 +4293,8 @@
  "Audible ist ausgeschaltet.": "Το Audible είναι απενεργοποιημένο.",
  "Die Box meldet Audible, wo sie in einem Hörbuch ist. Startest du ein Hörbuch an der Box neu, beginnt es dort, wo das Konto aufgehört hat – auch wenn am Handy weitergehört wurde. In Audible zu Ende gehörte Bücher bekommen an der Box den grünen Haken. Hört ihr im selben Konto dasselbe Buch, überschreibt die Box eure Stelle.": "Το κουτί ενημερώνει το Audible σε ποιο σημείο ενός ηχητικού βιβλίου βρίσκεται. Αν ξεκινήσεις ξανά ένα ηχητικό βιβλίο στο κουτί, αρχίζει εκεί όπου σταμάτησε ο λογαριασμός – ακόμη κι αν η ακρόαση συνεχίστηκε στο κινητό. Τα βιβλία που ακούστηκαν ως το τέλος στο Audible παίρνουν στο κουτί το πράσινο τικ. Αν ακούτε το ίδιο βιβλίο στον ίδιο λογαριασμό, το κουτί αντικαθιστά το σημείο σας.",
  "Hörposition mit Audible teilen": "Κοινή χρήση θέσης ακρόασης με το Audible",
- "Schon in der Bibliothek: die ganze Serie ist dort.": "Ήδη στη βιβλιοθήκη: όλη η σειρά είναι εκεί."
+ "Schon in der Bibliothek: die ganze Serie ist dort.": "Ήδη στη βιβλιοθήκη: όλη η σειρά είναι εκεί.",
+ "„Älteste zuerst“ ist die Reihenfolge der Serie.": "«Πρώτα τα παλαιότερα» αντιστοιχεί στην αρίθμηση της σειράς.",
+ "In deinem Konto gehört kein Hörbuch zu dieser Serie.": "Κανένα ηχητικό βιβλίο του λογαριασμού σου δεν ανήκει σε αυτή τη σειρά.",
+ "Lade die Hörbücher von Audible …": "Φόρτωση ηχητικών βιβλίων από το Audible …"
 }

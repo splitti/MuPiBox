@@ -142,7 +142,7 @@ export class AudiblePlayer {
   private loading = new Map<string, Promise<PlayInfo>>()
   // (a licence Audible refused - a title out of the subscription, a format the box cannot play: not asked again for every
   // chapter, for 5 minutes)
-  private refused = new Map<string, { until: number; problem: 'refused' | 'unauthorized' }>()
+  private refused = new Map<string, { until: number; problem: 'refused' | 'unauthorized' | 'rateLimited' }>()
 
   constructor(private readonly fetchText: (url: string) => Promise<string> = defaultFetchText) {}
 
@@ -162,9 +162,14 @@ export class AudiblePlayer {
   }
 
   /** The licence and its pieces (asked anew after 20 min, or when the file refused the address: fresh) */
-  async info(session: AudibleSession, asin: string, fresh = false): Promise<PlayInfo> {
+  /**
+   * The licence and its pieces (asked anew after 20 min, or when the file refused the address: fresh). anyAge: a chapter of
+   * a book that plays takes the kept one however old - its address lasts hours (measured: 2 h and more), and asking Audible
+   * at every chapter made a short outage end the whole book; it is asked anew only when the file refuses it.
+   */
+  async info(session: AudibleSession, asin: string, fresh = false, anyAge = false): Promise<PlayInfo> {
     const kept = this.licences.get(asin)
-    if (!fresh && kept && Date.now() - kept.at < LICENCE_MS) return kept
+    if (!fresh && kept && (anyAge || Date.now() - kept.at < LICENCE_MS)) return kept
     const running = this.loading.get(asin)
     if (running) return running
     const no = this.refused.get(asin)
@@ -193,9 +198,11 @@ export class AudiblePlayer {
       return info
     })()
       .catch((err) => {
-        if (err instanceof AudibleError && (err.problem === 'refused' || err.problem === 'unauthorized')) {
+        if (err instanceof AudibleError && (err.problem === 'refused' || err.problem === 'unauthorized' || err.problem === 'rateLimited')) {
           if (this.refused.size > 200) this.refused.clear()
-          this.refused.set(asin, { until: Date.now() + 5 * 60 * 1000, problem: err.problem })
+          // (asked too often: as long as Audible asks to wait)
+          const ms = err.problem === 'rateLimited' ? (err.retryAfter ?? 60) * 1000 : 5 * 60 * 1000
+          this.refused.set(asin, { until: Date.now() + ms, problem: err.problem })
         }
         throw err
       })

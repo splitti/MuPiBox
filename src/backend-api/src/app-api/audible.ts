@@ -20,6 +20,7 @@ import {
   register,
 } from '../audible/client'
 import { audibleLibrary, seriesOf } from '../audible/library'
+import { audiblePlayer } from '../audible/play'
 import { type AudibleSettings, applyAudibleOptions, audibleSession, audibleSettings, credentialsOf, signedIn } from '../audible/settings'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { requireCsrf, requireSession } from './middleware'
@@ -81,6 +82,9 @@ export function registerAudibleRoutes(router: Router, deps: AudibleDeps): void {
       void deregister(session)
       throw err
     }
+    // (another device, maybe another account: nothing kept of the one before - licences, refusals, the library)
+    audiblePlayer.forget()
+    audibleLibrary.forget()
     const was = before as AudibleSettings | null
     if (was && signedIn(was) && was.serial !== serial) {
       const old = credentialsOf(was, decrypt)
@@ -208,6 +212,8 @@ export function registerAudibleRoutes(router: Router, deps: AudibleDeps): void {
       if (audibleSettings(c).serial !== s.serial) return
       c.audible = { ...a, serial: '', deviceName: '', customerName: '', secret: '' }
     })
+    audiblePlayer.forget()
+    audibleLibrary.forget()
     // (not removed: the key is gone on the box all the same - the device stays in Amazon's list until removed there)
     res.json({ ok: true, removed })
   })

@@ -2431,7 +2431,9 @@ async function openLevel() {
     const r = await api(`/api/audible/series/${encodeURIComponent(top.path)}/books`)
     if (hear.stack.at(-1) !== top) return
     if (!r.ok) hear.levelError = r.status === 409 ? 'Audible ist ausgeschaltet.' : 'Audible antwortet gerade nicht.'
-    hear.level = r.body?.books ?? []
+    const entry = hear.items.find((it) => it?._index === top.index)
+    const left = new Set((entry?.exclude_ids ?? []).map(String))
+    hear.level = (r.body?.books ?? []).filter((b) => !left.has(String(b.asin)))
     drawHear()
     return
   }
@@ -3548,6 +3550,8 @@ function openEntrySheet(item, back = null) {
   const tidalArtist = item.type === 'tidal' && item.tidalKind === 'artist'
   // a whole Jellyfin artist: its order and the albums left out
   const jellyfinArtist = item.type === 'jellyfin' && item.jellyfinKind === 'artist'
+  // a whole Audible series: its order and the books left out
+  const audibleSeries = item.type === 'audible' && item.audibleKind === 'series'
   // (order, shuffle, a part of the episodes: of the entries one adds by hand - Spotify and podcasts)
   const playOptions = !isSync && (item.type === 'spotify' || item.type === 'rss')
   // a radio station or a podcast: its address (stream / feed) can be changed too
@@ -3604,7 +3608,8 @@ function openEntrySheet(item, back = null) {
      ${wholeArtist ? `<div class="section-label" style="margin:0">Alben</div><div id="e-albums"><p class="help">Lade die Alben von Spotify …</p></div>` : ''}
      ${tidalArtist ? tidalRangeFields(item) : ''}
      ${jellyfinArtist ? jellyfinArtistFields(item) : ''}
-     ${wholeArtist || tidalArtist || jellyfinArtist || item.isResume || !item.type ? '' : `<div class="btns">${nfcButtonHtml()}</div>`}
+     ${audibleSeries ? audibleSeriesFields(item) : ''}
+     ${wholeArtist || tidalArtist || jellyfinArtist || item.type === 'audible' || item.type === 'jellyfin' || item.isResume || !item.type ? '' : `<div class="btns">${nfcButtonHtml()}</div>`}
      <div class="btns">${!isSync || syncRemovable(item) ? `<button class="btn danger" data-del>${isSync ? 'Entfernen' : 'Löschen'}</button>` : ''}<button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Speichern</button></div>`,
     (sheet, close) => {
       sheet.querySelector('[data-close]').onclick = back ? back.open : close
@@ -3617,6 +3622,7 @@ function openEntrySheet(item, back = null) {
       wireNfc(sheet, close, nfcMediaOfEntry(item), () => openEntrySheet(item, back))
       if (tidalArtist) wireTidalRange(item, sheet)
       if (jellyfinArtist) wireJellyfinArtist(item, sheet)
+      if (audibleSeries) wireAudibleSeries(item, sheet)
       // (only the mark of "added one by one" goes - the entry stays while the playlist has it)
       sheet.querySelector('[data-unpin]')?.addEventListener('click', async () => {
         close()
@@ -3705,7 +3711,7 @@ function openEntrySheet(item, back = null) {
           if (to) updated.artist = to
           else delete updated.artist
           // (a TIDAL playlist has its name only from here - the box asks Spotify for a playlist's, TIDAL's not)
-          if ((item.type === 'tidal' || item.type === 'jellyfin') && !updated.title && item.title) updated.title = item.title
+          if ((item.type === 'tidal' || item.type === 'jellyfin' || item.type === 'audible') && !updated.title && item.title) updated.title = item.title
         }
         if (playOptions) {
           const sorting = sheet.querySelector('#e-sort').value
@@ -3746,6 +3752,7 @@ function openEntrySheet(item, back = null) {
         else delete updated.offline
         if (tidalArtist && !readTidalRange(sheet, updated)) return toast('Der Bereich passt nicht (von 1 an, „bis“ nicht vor „von“)', 'info')
         if (jellyfinArtist) readJellyfinArtist(sheet, updated)
+        if (audibleSeries) readAudibleSeries(sheet, updated)
         const r = await api('/api/edit', { method: 'POST', body: { index: libPlace(item), data: updated, original: item } })
         if (!libWriteOk(r)) return
         close()
@@ -5769,6 +5776,53 @@ function readJellyfinArtist(sheet, updated) {
   const ex = [...(sheet.jellyfinExcluded ?? [])]
   if (ex.length) updated.exclude_album_ids = ex
   else delete updated.exclude_album_ids
+}
+
+// The library's sheet of a whole Audible series: the order on the display and the books left out - saved with the sheet
+function audibleSeriesFields(item) {
+  const opts = SORTINGS.map(([v, l]) => `<option value="${v}"${(item.sorting ?? '') === v ? ' selected' : ''}>${esc(tr(l))}</option>`).join('')
+  return `<div class="field"><label for="e-asort">${esc(tr('Reihenfolge am Display'))}</label><select class="input" id="e-asort">${opts}</select>
+      <small>${esc(tr('„Älteste zuerst“ ist die Reihenfolge der Serie.'))}</small></div>
+    <div class="section-label" style="margin:0">${esc(tr('Hörbücher'))}</div>
+    <div id="e-abooks"><p class="help">${esc(tr('Lade die Hörbücher von Audible …'))}</p></div>`
+}
+async function wireAudibleSeries(item, sheet) {
+  const box = sheet.querySelector('#e-abooks')
+  sheet.audibleExcluded = new Set((item.exclude_ids ?? []).map(String))
+  const r = await api(`/api/audible/series/${encodeURIComponent(item.id)}/books`)
+  if (!box.isConnected) return
+  if (!r.ok) {
+    box.innerHTML = `<p class="help">${esc(tr(audibleFailText(r)))}</p>`
+    return
+  }
+  const books = r.body?.books ?? []
+  box.innerHTML = books.length
+    ? `<div class="rows">${books
+        .map(
+          (b, i) => `<div class="entry"><span class="lib-thumb">${b.image ? `<img src="${esc(abImg(b.image))}" alt="" loading="lazy">` : ''}</span>
+            <span class="lbl"><b translate="no">${esc(b.title)}</b><small>${esc(b.sequence ?? '')}</small></span>
+            <label class="switch"><input type="checkbox" data-abk="${i}" ${sheet.audibleExcluded.has(b.asin) ? '' : 'checked'} aria-label="${esc(b.title)} ${esc(tr('auf der Box'))}"><span></span></label></div>`,
+        )
+        .join('')}</div>`
+    : `<p class="help">${esc(tr('In deinem Konto gehört kein Hörbuch zu dieser Serie.'))}</p>`
+  for (const img of box.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+  for (const cb of box.querySelectorAll('[data-abk]')) {
+    cb.onchange = () => {
+      const id = books[Number(cb.dataset.abk)].asin
+      if (cb.checked) sheet.audibleExcluded.delete(id)
+      else sheet.audibleExcluded.add(id)
+    }
+  }
+}
+function readAudibleSeries(sheet, updated) {
+  const sort = sheet.querySelector('#e-asort')
+  if (sort) {
+    if (sort.value) updated.sorting = sort.value
+    else delete updated.sorting
+  }
+  const ex = [...(sheet.audibleExcluded ?? [])]
+  if (ex.length) updated.exclude_ids = ex
+  else delete updated.exclude_ids
 }
 
 /* Link einfügen (Spotify-Link, Radiosender, Podcast) */

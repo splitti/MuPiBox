@@ -232,7 +232,7 @@ export function registerAudibleMedia(app: Express, deps: AudibleMediaDeps): Audi
         return void res.status(404).end()
       }
       const at = Math.max(0, Math.min(ch.duration - 1, Number(req.query.at) || 0))
-      let info = await audiblePlayer.info(s, asin)
+      let info = await audiblePlayer.info(s, asin, false, true)
       const read = async (from: number, to: number, signal?: AbortSignal) => {
         const get = (i: typeof info) => fetch(i.file, { redirect: 'error', signal: signal ?? AbortSignal.timeout(20000), headers: { Range: `bytes=${from}-${to}` } })
         let r = await get(info)
@@ -350,8 +350,9 @@ export function registerAudibleMedia(app: Express, deps: AudibleMediaDeps): Audi
           const kept = audibleLibrary.age(key) < 2 * 3600 * 1000 ? audibleLibrary.stale(key) : null
           for (const b of kept ?? (await audibleLibrary.books(s, key))) {
             const key = `audible:book:${b.asin}`
-            if (!b.finished || ticked.has(key) || !(bookIds.has(b.asin) || b.series.some((x) => seriesIds.has(x.asin)))) continue
-            ticked.add(key)
+            // (per device: another account has its own heard-through books)
+            if (!b.finished || ticked.has(`${deps.deviceKey()}:${key}`) || !(bookIds.has(b.asin) || b.series.some((x) => seriesIds.has(x.asin)))) continue
+            ticked.add(`${deps.deviceKey()}:${key}`)
             deps.heardFinished?.(key)
           }
         } catch {

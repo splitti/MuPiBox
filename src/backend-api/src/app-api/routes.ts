@@ -469,6 +469,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     podcastOffline: deps.podcastOffline,
     getMupiboxConfig: deps.getMupiboxConfig,
     updateMupiboxConfig: deps.updateMupiboxConfig,
+    secret: deps.photoSecret,
   })
   registerCustomCoverRoutes(router, {
     dir: '/home/dietpi/MuPiBox/media/cover',

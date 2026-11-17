@@ -711,7 +711,8 @@ function heardKeyPlaying() {
     if (currentMeta.currentType === 'nas') return `nas:${p}`
     if (currentMeta.currentType === 'tidal') return `tidal:${p}`
     if (currentMeta.currentType === 'jellyfin') return `jellyfin:${p}`
-    if (currentMeta.currentType === 'audible') return /^book:[A-Z0-9]{10}$/.test(p) ? `audible:${p}` : null
+    // (an Audible start that failed while something else plays on: no key - not the failed book's, see heardKeyNow)
+    if (currentMeta.currentType === 'audible') return isAudible() ? `audible:${p}` : 'none:'
     return null
   }
   if (currentMeta.currentPlayer === 'spotify') {
@@ -1011,6 +1012,12 @@ function audiblePlayFrom(index, at = 0, fromStart = false) {
   if (!isAudible() || !Number.isFinite(Number(index))) return
   if (heldStart && !fromStart) return
   const i = Math.max(0, Math.min(chapters.length - 1, Math.trunc(Number(index))))
+  // (another chapter chosen - a jump, back, a seek over its border: a new song for the grace "until the end of the song",
+  // as a track change of the other sources; the reload itself is none)
+  if (!fromStart && i !== audibleIndex()) {
+    graceSongBoundary()
+    if (isPlaybackBlocked()) return
+  }
   const place = Math.max(0, Math.min(Math.floor(Number(at) || 0), Math.floor(chapters[i].duration) - 2))
   audibleAt.index = place > 0 ? i : -1
   audibleAt.at = place > 0 ? place : 0

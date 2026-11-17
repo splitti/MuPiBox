@@ -8,7 +8,7 @@
 
 import { promises as fsp } from 'node:fs'
 import { jellyfinSettings, signedIn } from '../jellyfin/settings'
-import { audibleSettings, signedIn as audibleSignedIn } from '../audible/settings'
+import { audibleSession, audibleSettings, signedIn as audibleSignedIn } from '../audible/settings'
 import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { ardKidsShows, ardSearch, ardShowIdFromUrl, type ArdShow } from '../ard-sounds'
@@ -23,6 +23,8 @@ export interface PodcastRouteDeps {
   podcastOffline?: PodcastOffline
   getMupiboxConfig: () => MupiboxConfig | undefined
   updateMupiboxConfig: (mutate: (cfg: Record<string, unknown>) => void) => Promise<void>
+  /** how the box keeps secrets (Audible's device key: offered only when this box can read it) */
+  secret?: { decrypt(stored: string): string | undefined }
 }
 
 const mupiboxOf = (cfg: MupiboxConfig | undefined) => (cfg?.mupibox as Record<string, unknown> | undefined) ?? {}
@@ -70,7 +72,9 @@ export function registerPodcastRoutes(router: Router, deps: PodcastRouteDeps): v
       // (Audible switched on and signed in, see audible.ts: the app offers it when adding and plays its entries)
       audible: (() => {
         const a = audibleSettings(cfg as Record<string, unknown> | undefined)
-        return a.enabled && audibleSignedIn(a)
+        // (a key of another box - a backup: not offered, it would not play)
+        const decrypt = deps.secret ? (x: string) => deps.secret?.decrypt(x) : (x: string) => x
+        return a.enabled && audibleSignedIn(a) && audibleSession(cfg as Record<string, unknown> | undefined, decrypt) !== null
       })(),
       available: Object.entries(CONTENT_LANGUAGES).map(([code, l]) => ({ code, name: l.name })),
     }

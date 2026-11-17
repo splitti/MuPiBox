@@ -197,8 +197,9 @@ const SERVICES = [
 ]
 
 // Keys whose values never leave the box (support infos): tokens, passwords, ids of accounts and chats
-// (proof: the voluntary statistics' device_proof, see telemetry.ts)
-const SECRET = /pass|token|secret|clientid|deviceid|username|chatid|account|hash|salt|fingerprint|proof/i
+// (proof: the voluntary statistics' device_proof, see telemetry.ts; customerName/deviceName: the Audible account holder's
+// first name, in the device's name too)
+const SECRET = /pass|token|secret|clientid|deviceid|username|chatid|account|hash|salt|fingerprint|proof|customername|devicename/i
 function withoutSecrets(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(withoutSecrets)
   if (value && typeof value === 'object') {
