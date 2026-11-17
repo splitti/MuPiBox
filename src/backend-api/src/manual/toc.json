@@ -137,6 +137,13 @@
         }
       },
       {
+        "id": "audible",
+        "title": {
+          "de": "Audible",
+          "en": "Audible"
+        }
+      },
+      {
         "id": "cover",
         "title": {
           "de": "Cover",

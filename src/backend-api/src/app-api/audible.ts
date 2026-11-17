@@ -19,6 +19,7 @@ import {
   type Registration,
   register,
 } from '../audible/client'
+import { audibleLibrary, seriesOf } from '../audible/library'
 import { type AudibleSettings, applyAudibleOptions, audibleSession, audibleSettings, credentialsOf, signedIn } from '../audible/settings'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { requireCsrf, requireSession } from './middleware'
@@ -172,6 +173,25 @@ export function registerAudibleRoutes(router: Router, deps: AudibleDeps): void {
     })
     if (error) return void res.status(400).json({ error })
     res.json({ ok: true, settings: shown(settings()) })
+  })
+
+  /**
+   * GET /api/app/audible/library?fresh=1 - the account's audiobooks and their series, for adding to the box's library
+   * (kept 30 minutes; fresh: asked anew - bought something just now). Audible not answering: the books known, marked stale.
+   */
+  router.get('/audible/library', requireSession, async (req, res) => {
+    const s = settings()
+    const session = audibleSession(cfg(), decrypt)
+    if (!s.enabled || !session) return void res.status(409).json({ error: s.enabled ? 'not_signed_in' : 'audible_off' })
+    try {
+      const books = await audibleLibrary.books(session, s.serial, req.query.fresh === '1')
+      res.json({ books, series: seriesOf(books) })
+    } catch (err) {
+      const p = problemOf(err)
+      const kept = audibleLibrary.stale(s.serial)
+      if (kept && p !== 'unauthorized') return void res.json({ books: kept, series: seriesOf(kept), stale: true })
+      res.status(p === 'unauthorized' ? 401 : p === 'rateLimited' ? 429 : 502).json({ error: p })
+    }
   })
 
   /** POST /api/app/audible/logout - removes the box's device from the account and forgets its key (entries stay) */

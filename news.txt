@@ -68,6 +68,14 @@
 <li id='linews' class='linews'>Played like an album of the memory card: track list, next/previous, seeking, continue listening, heard ticks, daily limit per tile, playing time and quiet hours; from the app under Listen too. The token never leaves the box. "Convert for weak Wi-Fi" lets Jellyfin make MP3 at 192 kbit (no seeking then).</li>
 <li id='linews' class='linews'>"Share progress with Jellyfin" (off by default): the box reports what it plays and where, so tracks heard at the box count as played in Jellyfin; an album or audiobook started anew at the box begins where the account left off (heard on a phone meanwhile), and albums played completely in Jellyfin get the green tick.</li>
 </ul>
+<b>Audible</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New: Audible as a source (Settings › Services › Audible) - unofficial, at your own risk, off by default. The parents sign in on Amazon's page in their own browser and paste the address it ends on; the box registers as a device of its own and keeps only that device's key, encrypted. Password and verification code stay with Amazon. Signing out removes only this device from the account. All Audible stores.</li>
+<li id='linews' class='linews'>Library › Add › From Audible: the audiobooks of the account (no podcasts) and their series, with search and covers kept on the box. A whole series is one entry with all its books in the series' order, also ones bought later.</li>
+<li id='linews' class='linews'>Played like an album, the chapters as tracks: chapter list, next/previous chapter, seeking, continue listening, heard ticks, daily limit per tile, playing time and quiet hours; from the app under Listen too. Audible's stream is played as it is delivered (nothing is decrypted); needs internet - without it the display leaves the entries out.</li>
+<li id='linews' class='linews'>"Share listening position with Audible" (off by default): the box reports where it is in a book, a book started anew at the box begins where the account left off (heard on a phone meanwhile), and books finished in Audible get the green tick.</li>
+</ul>
 <b>Display</b>
 </ul>
 <ul id='ulnews' class='ulnews'>

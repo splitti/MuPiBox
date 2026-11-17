@@ -541,6 +541,16 @@
    "sections": []
   },
   {
+   "id": "audiblesuche",
+   "slug": "audible-library",
+   "area": "bibliothek",
+   "parent": "bibliothek",
+   "title": "Aus Audible",
+   "description": "",
+   "icon": "book",
+   "sections": []
+  },
+  {
    "id": "suche",
    "slug": "spotify-search",
    "area": "bibliothek",
@@ -5142,6 +5152,11 @@
    "l": "Aus Jellyfin",
    "where": "Bibliothek › Aus Jellyfin",
    "id": "jellyfinsuche"
+  },
+  {
+   "l": "Aus Audible",
+   "where": "Bibliothek › Aus Audible",
+   "id": "audiblesuche"
   },
   {
    "l": "Auf Spotify suchen",

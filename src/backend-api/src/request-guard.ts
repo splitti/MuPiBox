@@ -94,8 +94,9 @@ function reject(req: Request, res: Parameters<RequestHandler>[1], reason: string
  */
 const MEDIA_PLAYER_AGENT = /\b(?:lib)?mpv\b|\bLavf\/|\bMPlayer\b|\bffmpeg\b/i
 const MEDIA_PLAYER_PATHS = ['/api/nas/stream']
-// (a Jellyfin track for mpv: /api/jellyfin/stream/<id>, on the box itself only - see jellyfin/media.ts)
-const MEDIA_PLAYER_PREFIXES = ['/api/jellyfin/stream/']
+// (a Jellyfin track for mpv: /api/jellyfin/stream/<id>, an Audible chapter: /api/audible/stream/<asin>/<n> - on the box
+// itself only, see jellyfin/media.ts and audible/media.ts)
+const MEDIA_PLAYER_PREFIXES = ['/api/jellyfin/stream/', '/api/audible/stream/']
 
 export const browserGuard: RequestHandler = (req, res, next) => {
   if (

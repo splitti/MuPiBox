@@ -11,14 +11,14 @@ RESUME_FILE="${MUPI_LIBRARY}/resume.json"
 ACTIVERESUME_FILE="${MUPI_LIBRARY}/active_resume.json"
 OFFLINERESUME_FILE="${MUPI_LIBRARY}/offline_resume.json"
 
-# The library without what needs the internet (Spotify, radio, TIDAL). Podcasts with episodes on the SD card stay
+# The library without what needs the internet (Spotify, radio, TIDAL, Audible). Podcasts with episodes on the SD card stay
 # (their list then shows those only, see podcast-offline.ts; a resume tile of a kept episode too, by its address); the
 # list is made again when that changes too.
 PODCAST_INDEX="/home/dietpi/MuPiBox/podcasts/index.json"
 offline_filter() {
 	local index="${PODCAST_INDEX}"
 	/usr/bin/jq -e 'type == "object"' "${index}" > /dev/null 2>&1 || index=/dev/null
-	/usr/bin/jq --slurpfile off "${index}" '([$off[0].files[]?.feed] + [$off[0].files[]?.url]) as $feeds | .[] | select(.type != "spotify" and .type != "radio" and .type != "tidal" and (.type != "rss" or (.id as $i | any($feeds[]; . == $i))))' < "$1"
+	/usr/bin/jq --slurpfile off "${index}" '([$off[0].files[]?.feed] + [$off[0].files[]?.url]) as $feeds | .[] | select(.type != "spotify" and .type != "radio" and .type != "tidal" and .type != "audible" and (.type != "rss" or (.id as $i | any($feeds[]; . == $i))))' < "$1"
 }
 
 NETWORKCONFIG="/tmp/network.json"

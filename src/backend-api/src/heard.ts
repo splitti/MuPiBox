@@ -19,10 +19,11 @@ import { requireCsrf, requireSession } from './app-api/middleware'
  *   nas:<path>                     a NAS folder
  *   tidal:<album|playlist>:<id>    an album or a playlist of TIDAL
  *   jellyfin:<album|playlist|book>:<id>  an album, a playlist or an audiobook of Jellyfin
+ *   audible:book:<asin>            a book of Audible (a whole series has none: its books do)
  *   spotify:<kind>:<id>            what Spotify plays: album, playlist, episode, show
  */
 
-export const HEARD_KEY = /^(lib|nas|tidal|jellyfin|spotify):[^\n]{1,400}$/
+export const HEARD_KEY = /^(lib|nas|tidal|jellyfin|audible|spotify):[^\n]{1,400}$/
 const MAX_ENTRIES = 5000
 
 export type HeardState = 'started' | 'finished'
@@ -63,6 +64,10 @@ export function heardKeyOf(item: Record<string, unknown> | null | undefined): st
     const kind = str(item.jellyfinKind) || 'album'
     if (kind === 'artist' || !['album', 'playlist', 'book'].includes(kind) || !str(item.id)) return null
     return ok(`jellyfin:${kind}:${str(item.id)}`)
+  }
+  if (type === 'audible') {
+    if (item.audibleKind === 'series' || !/^[A-Z0-9]{10}$/.test(str(item.id))) return null
+    return ok(`audible:book:${str(item.id)}`)
   }
   if (type === 'spotify') {
     // (as the display plays it, see player.service.ts playMedia)

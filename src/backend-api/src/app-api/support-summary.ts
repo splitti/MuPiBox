@@ -9,6 +9,7 @@ import { promises as fsp } from 'node:fs'
 import * as os from 'node:os'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { jellyfinSettings, signedIn } from '../jellyfin/settings'
+import { audibleSettings, signedIn as audibleSignedIn } from '../audible/settings'
 import { bootConfigPath } from './boot-paths'
 import { bootDrive } from './boot-drive'
 import { detectDisplayProfile, DISPLAY_OVERLAYS } from './display-profile'
@@ -138,6 +139,11 @@ async function services(cfg: MupiboxConfig | undefined): Promise<string> {
     (() => {
       const j = jellyfinSettings(cfg as Record<string, unknown> | undefined)
       return j.enabled && signedIn(j) ? `Jellyfin an${j.version ? ` (${j.version})` : ''}` : 'Jellyfin aus'
+    })(),
+    // (switched on and signed in, with the store - a bug report about it needs it)
+    (() => {
+      const a = audibleSettings(cfg as Record<string, unknown> | undefined)
+      return a.enabled && audibleSignedIn(a) ? `Audible an (${a.country})` : 'Audible aus'
     })(),
     onOff(section(cfg, 'nas').protocol === 'smb' ? 'NAS (SMB)' : 'NAS', typeof section(cfg, 'nas').address === 'string' && section(cfg, 'nas').address !== ''),
     onOff('Home Assistant', section(cfg, 'homeAssistant').enabled === true),

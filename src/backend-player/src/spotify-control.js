@@ -238,7 +238,7 @@ const apiAccessToken = {
 player.on('percent_pos', (val) => {
   //console.log('track progress is', val);
   // (a Jellyfin track without a length of its own: its part from the listed length, see time_pos)
-  if (!isCuePlayback() && !albumNow()?.progress && !jellyfinListedLength()) currentMeta.progressTime = val
+  if (!isCuePlayback() && !albumNow()?.progress && !jellyfinListedLength() && !isAudible()) currentMeta.progressTime = val
 })
 
 // --- CUE albums (one audio file, tracks by start time - see /api/nas/tracklist) ---
@@ -288,7 +288,7 @@ player.on('track-change', () => {
 player.on('length', (val) => {
   mpvLength = Number(val) > 0 ? Number(val) : 0
   if (currentCue) currentCue.fileLength = val
-  if (!isCuePlayback() && !albumNow()?.progress) currentMeta.durationSeconds = val
+  if (!isCuePlayback() && !albumNow()?.progress && !isAudible()) currentMeta.durationSeconds = val
 })
 player.on('time_pos', (seconds) => {
   // an album that is no folder (an extension's: the audio CD) says where in its track the playing time of the whole is
@@ -300,6 +300,16 @@ player.on('time_pos', (seconds) => {
       if (at.duration !== undefined) currentMeta.durationSeconds = at.duration
       if (at.progress !== undefined) currentMeta.progressTime = at.progress
     } else currentMeta.positionSeconds = seconds
+    return
+  }
+  if (isAudible()) {
+    const chapter = audibleChapter()
+    const place = audiblePlace(seconds)
+    currentMeta.positionSeconds = place
+    if (chapter?.duration > 0) {
+      currentMeta.durationSeconds = chapter.duration
+      currentMeta.progressTime = Math.max(0, Math.min(100, (place * 100) / chapter.duration))
+    }
     return
   }
   if (!isCuePlayback()) {
@@ -397,6 +407,9 @@ player.on('metadata', (val) => {
   } else if (currentMeta.currentType === 'jellyfin') {
     const track = currentJellyfinTracks[currentMeta.currentTracknr - 1]
     if (track) currentMeta.currentTrackname = track.name
+  } else if (currentMeta.currentType === 'audible') {
+    const chapter = currentAudibleChapters[currentMeta.currentTracknr - 1]
+    if (chapter) currentMeta.currentTrackname = chapter.name
   } else if (albumNow()) {
     // (an album that is no folder - an extension's - names its tracks)
     currentMeta.currentTrackname = albumNow().trackName?.(currentMeta.currentTracknr, val) || val.Title
@@ -533,7 +546,7 @@ player.on('path', (val) => {
     currentMeta.trackFile =
       typeof val === 'string' && val.startsWith(mediaRoot) ? `local:${val.slice(mediaRoot.length)}` : undefined
   }
-  if (!['rss', 'radio', 'nas', 'tidal', 'jellyfin'].includes(currentMeta.currentType) && !albumNow()) {
+  if (!['rss', 'radio', 'nas', 'tidal', 'jellyfin', 'audible'].includes(currentMeta.currentType) && !albumNow()) {
     // The folder holding the file, whatever the folder depth (was: fixed 7th segment).
     const pathParts = val.split('/')
     if (pathParts.length > 2) {
@@ -558,6 +571,7 @@ player.on('track-change', () => {
 // The next song is about to start: in "let the song finish" mode this is the moment to stop. In "let the album
 // finish" mode songs simply run on until the playlist is over.
 function graceSongBoundary() {
+  if (isAudible() && audibleReloading()) return
   if (playtimeState.state === 'grace' && playtimeState.graceMode === 'track') {
     finalizePlaytimeBlock('next track would start during grace period', true)
   }
@@ -609,7 +623,7 @@ function deleteResumeForFinishedLibraryAlbum() {
   // (a streamed list - TIDAL, Jellyfin - also runs out when every track after one fails: the server asleep, the token
   // gone, another access point. Its place stays then; only a last track that really played to its end ends it, as for
   // the heard tick - see heardPlaylistFinished)
-  if (currentMeta.currentType === 'tidal' || currentMeta.currentType === 'jellyfin') {
+  if (currentMeta.currentType === 'tidal' || currentMeta.currentType === 'jellyfin' || currentMeta.currentType === 'audible') {
     const nr = Number(currentMeta.currentTracknr)
     const total = Number(currentMeta.totalTracks)
     const dur = Number(currentMeta.durationSeconds)
@@ -627,6 +641,11 @@ function deleteResumeForFinishedLibraryAlbum() {
     const id = String(rawPath).split(':')[1]
     if (!id) return
     body = JSON.stringify({ type: 'jellyfin', id })
+  } else if (currentMeta.currentType === 'audible') {
+    // (an Audible book: book:<asin>)
+    const id = String(rawPath).split(':')[1]
+    if (!id) return
+    body = JSON.stringify({ type: 'audible', id })
   } else {
     if (currentMeta.currentType !== 'local') return
     const parts = String(rawPath).split('/')
@@ -667,9 +686,9 @@ function deleteResumeForFinishedLibraryAlbum() {
 // (or to its end); the two moments go to the backend (heard.ts), which keeps them. What plays is named with its start
 // (?heard=, by the display and the app), else it is formed from what plays (a start from Telegram, Home Assistant, an
 // extension) - the same keys: lib:<folder>, nas:<path>, tidal:<album|playlist>:<id>, jellyfin:<album|playlist|book>:<id>,
-// spotify:<kind>:<id>.
+// audible:book:<asin>, spotify:<kind>:<id>.
 // Podcast episodes have their own (the episode positions); radio has none.
-const HEARD_KEY = /^(lib|nas|tidal|jellyfin|spotify):[^\n]{1,400}$/
+const HEARD_KEY = /^(lib|nas|tidal|jellyfin|audible|spotify):[^\n]{1,400}$/
 const HEARD_STARTED_S = 60
 const HEARD_END_S = 30
 // given: the key the start named, for the playback it started (gen); key: what is counted now
@@ -692,6 +711,7 @@ function heardKeyPlaying() {
     if (currentMeta.currentType === 'nas') return `nas:${p}`
     if (currentMeta.currentType === 'tidal') return `tidal:${p}`
     if (currentMeta.currentType === 'jellyfin') return `jellyfin:${p}`
+    if (currentMeta.currentType === 'audible') return /^book:[A-Z0-9]{10}$/.test(p) ? `audible:${p}` : null
     return null
   }
   if (currentMeta.currentPlayer === 'spotify') {
@@ -947,6 +967,131 @@ let currentNasTracks = []
 let currentTidalTracks = []
 // the box's TIDAL service (scripts/mupibox/tidal_service.py)
 const TIDAL_SERVICE = 'http://127.0.0.1:5011'
+// Audible (docs/audible-5.1.md, A3): a book's chapters are its tracks; mpv plays an m3u of the backend's
+// /api/audible/stream/<asin>/<chapter>. mpv cannot jump inside a chapter (plain AAC without an index: it would read up to the
+// place), so a place inside one - going on, seeking - is asked of the backend (?at=<seconds>, it starts the chapter there)
+// and the list is loaded anew at that chapter; audibleAt says where the chapter that began inside starts in mpv's time.
+let currentAudibleChapters = []
+// the book whose chapters these are (a start that failed leaves the type 'audible' on what still plays - not Audible's)
+let audibleBook = ''
+const AUDIBLE_API = 'http://127.0.0.1:8200/api/audible'
+const audibleAt = { index: -1, at: 0 }
+// A list loaded anew (a start, a seek, a jump): the chapter it goes to, until mpv plays there - meanwhile mpv's place in the
+// list can still be the old one (or 0 between loading the list and choosing the entry). Also no new song for the grace
+// "until the end of the song" and no report of a place until then.
+let audiblePending = null // { index, until, loaded }
+// A5: the book whose place in Audible was not known at its start (Audible did not answer) - nothing is told for it until the
+// child chooses a place (a seek, a jump): the box's beginning would overwrite the account's place
+let audibleNoReport = ''
+const isAudible = () =>
+  currentMeta.currentPlayer === 'mplayer' && currentMeta.currentType === 'audible' && !!audibleBook && currentMeta.path === `book:${audibleBook}` && currentAudibleChapters.length > 0
+const audibleReloading = () => !!audiblePending && Date.now() < audiblePending.until
+const audibleIndex = () => {
+  const i = player.trackIndex?.() ?? -1
+  if (audibleReloading() && i !== audiblePending.index) return audiblePending.index
+  return i >= 0 ? i : Number(currentMeta.currentTracknr) - 1
+}
+const audibleChapter = () => currentAudibleChapters[audibleIndex()]
+// the place in the chapter: mpv's time, plus where the chapter began when it was started inside
+const audiblePlace = (seconds) => Math.max(0, Number(seconds) || 0) + (audibleIndex() === audibleAt.index ? audibleAt.at : 0)
+// (a new chapter: its place is its beginning - not the end of the one before - until mpv tells its time)
+player.on('track-change', () => {
+  if (!isAudible()) return
+  if (audiblePending && (player.trackIndex?.() ?? -1) === audiblePending.index) audiblePending.loaded = true
+  currentMeta.positionSeconds = audibleIndex() === audibleAt.index ? audibleAt.at : 0
+})
+player.on('time_pos', (seconds) => {
+  // (mpv plays the chapter the list was loaded for, its file loaded after the reload: arrived)
+  if (audiblePending?.loaded && Number(seconds) > 0 && (player.trackIndex?.() ?? -1) === audiblePending.index) audiblePending = null
+})
+// The book from chapter <index> (0-based) at <at> seconds into it: the whole list anew, that chapter starting there.
+// fromStart: the book's own start (a start held while paused begins here; a seek meanwhile waits for it)
+function audiblePlayFrom(index, at = 0, fromStart = false) {
+  const chapters = currentAudibleChapters
+  if (!isAudible() || !Number.isFinite(Number(index))) return
+  if (heldStart && !fromStart) return
+  const i = Math.max(0, Math.min(chapters.length - 1, Math.trunc(Number(index))))
+  const place = Math.max(0, Math.min(Math.floor(Number(at) || 0), Math.floor(chapters[i].duration) - 2))
+  audibleAt.index = place > 0 ? i : -1
+  audibleAt.at = place > 0 ? place : 0
+  const tmpPlaylistPath = '/tmp/audible_playlist.m3u'
+  fs.writeFileSync(tmpPlaylistPath, chapters.map((c, k) => `${AUDIBLE_API}/stream/${audibleBook}/${c.number}${k === i && place > 0 ? `?at=${place}` : ''}`).join('\n'))
+  audiblePending = { index: i, until: Date.now() + 30000, loaded: false }
+  // (a place the child chose: from now on the box tells Audible where it is)
+  if (!fromStart) audibleNoReport = ''
+  currentMeta.currentTracknr = i + 1
+  currentMeta.currentTrackname = chapters[i].name
+  currentMeta.positionSeconds = place
+  currentMeta.durationSeconds = chapters[i].duration
+  currentMeta.progressTime = chapters[i].duration > 0 ? (place * 100) / chapters[i].duration : 0
+  // (loading a list lets mpv play: a seek while paused stays paused, as for the other sources)
+  const paused = !fromStart && currentMeta.pause === true
+  player.playList(tmpPlaylistPath, i > 0 ? { track: i + 1 } : undefined)
+  if (paused) player.command?.(['set_property', 'pause', true])
+}
+// A seek in the playing chapter (progress > 1: a place in percent; 1 / 0: 30 s forward / back) - past its end: the next one
+function audibleSeek(progress) {
+  const i = audibleIndex()
+  const chapter = currentAudibleChapters[i]
+  if (!chapter) return
+  const pos = Number(currentMeta.positionSeconds) || 0
+  const target = progress > 1 ? (Number(progress) * chapter.duration) / 100 : progress ? pos + 30 : pos - 30
+  if (!Number.isFinite(target)) return
+  if (target >= chapter.duration - 1) {
+    if (i + 1 < currentAudibleChapters.length) audiblePlayFrom(i + 1, target - chapter.duration)
+    return
+  }
+  if (target < 0 && progress <= 1 && i > 0) return audiblePlayFrom(i - 1, currentAudibleChapters[i - 1].duration + target)
+  audiblePlayFrom(i, Math.max(0, target))
+}
+
+// A5, "Hörposition mit Audible teilen": where the box is in a book goes to the backend (it passes it on only with the switch
+// on) - every 30 s while it plays, at a pause, and when the book stops or another one starts. Audible keeps one place per
+// book (seconds from its start). Only once mpv plays the chapter: until then the position is the one of before.
+const audibleReport = { asin: null, pos: 0, paused: false, sentAt: 0 }
+let audiblePlaying = false
+player.on('track-change', () => {
+  audiblePlaying = false
+})
+player.on('time_pos', (seconds) => {
+  if (Number(seconds) > 0) audiblePlaying = true
+})
+function sendAudible(asin, position) {
+  fetch(`${AUDIBLE_API}/progress`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ asin, position: Math.max(0, Math.round(position)) }),
+    signal: AbortSignal.timeout(15000),
+  }).catch(() => undefined)
+}
+setInterval(() => {
+  const r = audibleReport
+  const now = isAudible() && !currentMeta.finished ? String(currentMeta.path ?? '').split(':')[1] : null
+  const chapter = now ? audibleChapter() : undefined
+  // (the book before: its last place - stopped, another one started, played to its end)
+  if (r.asin && r.asin !== now) {
+    sendAudible(r.asin, r.pos)
+    r.asin = null
+  }
+  // (a start held while paused: mpv still has the book before; a place not known at the start; mpv not at the chapter
+  // the player counts - a chapter that did not open)
+  if (!now || !chapter || !audiblePlaying || audibleReloading() || heldStart || audibleNoReport === now) return
+  if ((player.trackIndex?.() ?? -1) + 1 !== Number(currentMeta.currentTracknr)) return
+  const pos = chapter.start + Math.min(Number(currentMeta.positionSeconds) || 0, chapter.duration)
+  const paused = currentMeta.pause === true
+  if (r.asin !== now) {
+    Object.assign(r, { asin: now, pos, paused, sentAt: Date.now() })
+    return
+  }
+  r.pos = pos
+  // (a pause at once; while paused nothing more - a long pause is no news)
+  if (paused !== r.paused || (!paused && Date.now() - r.sentAt >= 30000)) {
+    r.paused = paused
+    r.sentAt = Date.now()
+    sendAudible(now, pos)
+  }
+}, 5000)
+
 // the same for a Jellyfin album, playlist or audiobook (playJellyfinList): mpv plays the backend's /api/jellyfin/stream/<id>,
 // which brings the track from Jellyfin with the box's token (docs/jellyfin-5.1.md)
 let currentJellyfinTracks = []
@@ -1882,7 +2027,7 @@ function hasDirSegment(command, segment) {
 function isPlayInitiatingCommand(command) {
   if (command.name?.includes('spotify:')) return true
   // 'nas' was missing: NAS playback ignored the playtime limit and quiet hours
-  if (['library', 'nas', 'tidal', 'jellyfin', 'radio', 'rss', 'say'].some((segment) => hasDirSegment(command, segment))) {
+  if (['library', 'nas', 'tidal', 'jellyfin', 'audible', 'radio', 'rss', 'say'].some((segment) => hasDirSegment(command, segment))) {
     return true
   }
   if (['play', 'next', 'previous', 'replay', 'seek+30', 'seek-30'].includes(command.name)) return true
@@ -2788,6 +2933,8 @@ function previous() {
       seekToCueTrack(currentMeta.currentTracknr - 1) // on the first track this restarts it
       return
     }
+    // (an Audible book: the chapter before, from its start - a list loaded anew, so no chapter keeps a place inside)
+    if (isAudible() && !player.shuffling?.()) return audiblePlayFrom(audibleIndex() - 1, 0)
     if (currentMeta.currentTracknr > 1) {
       currentMeta.currentTracknr = currentMeta.currentTracknr - 2
     }
@@ -2814,6 +2961,7 @@ function replay() {
     if (currentMeta.currentType === 'radio') return
     log.debug(`${now()}: [Spotify Control] From the beginning (track ${currentMeta.currentTracknr})`)
     if (isCuePlayback()) return seekToCueTrack(1)
+    if (isAudible()) return audiblePlayFrom(0, 0)
     // (the first track is playing: back to its start - a jump to the track one is on does nothing)
     if (currentMeta.currentTracknr > 1) return jumpToTrack(1)
     // (an album that is no folder - a CD - knows where its track starts in the whole, as in seek())
@@ -2828,6 +2976,8 @@ function jumpToTrack(targetPosition) {
     seekToCueTrack(targetPosition)
     return
   }
+  // (an Audible chapter from its start, also the one that plays)
+  if (isAudible()) return audiblePlayFrom(targetPosition - 1, 0)
   if (currentMeta.currentPlayer === 'mplayer') {
     const offset = targetPosition - currentMeta.currentTracknr
     if (offset !== 0) {
@@ -3410,6 +3560,66 @@ async function playJellyfinList(ref, resume = null) {
   }
 }
 
+// Plays an Audible book ("book:<asin>"): the backend lists its chapters (from Audible, with the box's device key), mpv plays
+// them as tracks (audiblePlayFrom). Like Jellyfin: the list is fetched on every start, a start overtaken meanwhile is dropped.
+// resume: {trackNr, progressPct}
+async function playAudibleBook(ref, resume = null) {
+  const [kind, asin] = String(ref).split(':')
+  if (kind !== 'book' || !/^[A-Z0-9]{10}$/.test(asin ?? '')) {
+    console.warn(`${now()}: [Spotify Control] Audible: not a book to play: ${ref}`)
+    return
+  }
+  const generation = ++playbackGeneration
+  // (a pause while the list loads: the start is held until "play" - see heldStart)
+  const asked = playPauseRequest
+  clearLibraryResumeTimers()
+  try {
+    const response = await fetch(`${AUDIBLE_API}/tracks?id=${asin}`, { signal: AbortSignal.timeout(30000) })
+    const body = response.ok ? await response.json() : null
+    const chapters = Array.isArray(body?.tracks) ? body.tracks.filter((t) => Number(t?.duration) > 0 && Number.isInteger(t?.number)) : []
+    if (chapters.length === 0) {
+      console.warn(`${now()}: [Spotify Control] Audible ${asin} not started: ${response.ok ? 'no chapters' : `the backend answered ${response.status} (Audible away, not signed in or not in the library?)`}`)
+      return
+    }
+    if (generation !== playbackGeneration || isPlaybackBlocked()) {
+      log.debug(`${now()}: [Spotify Control] Audible ${asin} dropped (stopped, replaced or blocked meanwhile)`)
+      return
+    }
+    // (a start of its own, not "weiterhören": where the account left the book in Audible - heard on a phone; the backend
+    // says it only with "Hörposition mit Audible teilen" on)
+    const at0 = body.resumeAt
+    if (Number(at0?.track) >= 1 && Number(at0.track) <= chapters.length && Number.isFinite(Number(at0?.percent))) {
+      const placeOf = (r) => chapters[r.trackNr - 1].start + (chapters[r.trackNr - 1].duration * (Number(r.progressPct) || 0)) / 100
+      const account = { trackNr: Number(at0.track), progressPct: Number(at0.percent) }
+      // (the box's own place too: the one further on wins - heard on at the phone or at the box)
+      if (!resume || resume.trackNr < 1 || resume.trackNr > chapters.length || placeOf(account) > placeOf(resume)) resume = account
+    }
+    audibleNoReport = body.positionUnknown === true ? asin : ''
+    currentAudibleChapters = chapters
+    audibleBook = asin
+    currentMeta.currentType = 'audible'
+    currentMeta.album = body.name || ''
+    currentMeta.path = `book:${asin}`
+    currentMeta.trackFile = undefined
+    currentMeta.totalTracks = chapters.length
+    const first = resume ? Math.min(Math.max(1, resume.trackNr), chapters.length) : 1
+    const at = resume ? (Math.max(0, Math.min(99, Number(resume.progressPct) || 0)) * chapters[first - 1].duration) / 100 : 0
+    const begin = () => {
+      writeplayerstatePlay()
+      audiblePlayFrom(first - 1, at, true)
+      player.setVolume(volumeStart)
+    }
+    if (pausedSince(asked)) {
+      heldStart = { generation, begin }
+      log.debug(`${now()}: [Spotify Control] Audible ${asin} paused while loading - starts with "play"`)
+      return
+    }
+    begin()
+  } catch (error) {
+    console.warn(`${now()}: [Spotify Control] Audible ${asin} not started: ${error}`)
+  }
+}
+
 // Where a NAS album goes on, for an engine that starts there: { track, percent } - or for a CUE album (one file)
 // { track: 1, startSeconds } at the part of the track in the file
 function nasStartOptions(trackNr, progressPct) {
@@ -3847,6 +4057,7 @@ function seek(progress) {
         )
     }
   } else if (currentMeta.currentPlayer === 'mplayer') {
+    if (isAudible()) return audibleSeek(Number(progress))
     if (progress > 1) {
       // (an album that is no folder: a place in its track, as an absolute time of the whole)
       const albumSeek = albumNow()?.seek?.(progress, player.trackIndex?.() ?? currentMeta.currentTracknr - 1)
@@ -4834,6 +5045,27 @@ app.get('/tidal/tracklist/:ref', async (req, res) => {
   }
 })
 
+/*returns the chapters of an Audible book (book:<asin>) as its track list, from the backend*/
+app.get('/audible/tracklist/:ref', async (req, res) => {
+  const [kind, asin] = String(req.params.ref).split(':')
+  if (kind !== 'book' || !/^[A-Z0-9]{10}$/.test(asin ?? '')) {
+    res.status(400).json([])
+    return
+  }
+  if (currentMeta.currentType === 'audible' && currentMeta.path === `book:${asin}` && currentAudibleChapters.length > 0) {
+    res.json(currentAudibleChapters.map((c) => ({ position: c.number, name: c.name })))
+    return
+  }
+  try {
+    const response = await fetch(`${AUDIBLE_API}/tracks?id=${asin}`, { signal: AbortSignal.timeout(30000) })
+    const body = response.ok ? await response.json() : null
+    res.json(Array.isArray(body?.tracks) ? body.tracks.map((c) => ({ position: c.number, name: c.name })) : [])
+  } catch (error) {
+    log.debug(`${now()}: [Spotify Control] Error fetching Audible chapters for ${asin}: ${error}`)
+    res.json([])
+  }
+})
+
 /*returns the track list of a Jellyfin album, playlist or audiobook (<album|playlist|book>:<id>), from the backend*/
 app.get('/jellyfin/tracklist/:ref', async (req, res) => {
   const [kind, id] = String(req.params.ref).split(':')
@@ -4976,7 +5208,7 @@ app.use((req, res) => {
 
   // Tile time: a start of something new names its tile (or none: it counts for the listening time only); play, next,
   // previous, seek go on with the current one. Its time used up (or what plays of it finishing in its grace period): refused.
-  const newStart = command.name.includes('spotify:') || ['library', 'nas', 'tidal', 'jellyfin', 'radio', 'rss'].some((s) => hasDirSegment(command, s))
+  const newStart = command.name.includes('spotify:') || ['library', 'nas', 'tidal', 'jellyfin', 'audible', 'radio', 'rss'].some((s) => hasDirSegment(command, s))
   if (isPlayInitiatingCommand(command) && !hasDirSegment(command, 'say')) {
     const tile = newStart ? resolveTile(triggerTile) : tileState.current
     const inGrace = tile !== null && tile === tileState.current && tileState.state === 'grace' && !isAllowOverrideActive()
@@ -5012,7 +5244,7 @@ app.use((req, res) => {
   // A new playback starts unpaused and without the picture of the one before: a "pause" of the playback before stayed
   // set (the display showed the play button while the new one played), and a local or NAS album kept the episode
   // picture of a podcast played before it (radio and podcasts set their own below, Spotify brings its own).
-  const newMedia = command.name.includes('spotify:') || ['library', 'nas', 'tidal', 'jellyfin', 'radio', 'rss'].some((segment) => hasDirSegment(command, segment))
+  const newMedia = command.name.includes('spotify:') || ['library', 'nas', 'tidal', 'jellyfin', 'audible', 'radio', 'rss'].some((segment) => hasDirSegment(command, segment))
   // (the tile of what starts now - only here, once the start is not refused any more: a Spotify start refused while
   // Spotify blocks the box left what played counting for the other tile)
   if (newStart && isPlayInitiatingCommand(command) && !hasDirSegment(command, 'say')) setCurrentTile(triggerTile)
@@ -5022,7 +5254,7 @@ app.use((req, res) => {
     if (triggerSource !== 'skip') playbackOrigin = playbackRequest
     startHeard(triggerHeard)
     currentMeta.pause = false
-    if (['library', 'nas', 'tidal', 'jellyfin'].some((segment) => hasDirSegment(command, segment))) currentMeta.cover = triggerCover
+    if (['library', 'nas', 'tidal', 'jellyfin', 'audible'].some((segment) => hasDirSegment(command, segment))) currentMeta.cover = triggerCover
   }
 
   /*this is the first command to be received. It always includes the device id encoded in between two /*/
@@ -5092,6 +5324,18 @@ app.use((req, res) => {
     if (hasDirSegment(command, 'resume') && parts.length === 4 && trackNr >= 1 && Number.isFinite(progressPct)) {
       playJellyfinList(`${parts[0]}:${parts[1]}`, { trackNr, progressPct })
     } else playJellyfinList(`${parts[0]}:${parts[1]}`)
+  }
+
+  if (hasDirSegment(command, 'audible')) {
+    switchToMplayer()
+    currentMeta.currentType = 'audible'
+    // /musicsearch/audible/book:<asin>, to go on: /musicsearch/audible/resume/book:<asin>:<chapterNr>:<progressPct>
+    const parts = command.base.split(':')
+    const trackNr = Number.parseInt(parts[2], 10)
+    const progressPct = Number.parseFloat(parts[3])
+    if (hasDirSegment(command, 'resume') && parts.length === 4 && trackNr >= 1 && Number.isFinite(progressPct)) {
+      playAudibleBook(`${parts[0]}:${parts[1]}`, { trackNr, progressPct })
+    } else playAudibleBook(`${parts[0]}:${parts[1]}`)
   }
 
   if (hasDirSegment(command, 'radio')) {
@@ -5189,7 +5433,7 @@ app.use((req, res) => {
   else if (command.name.includes('localtrack:')) {
     const targetPosition = Number.parseInt(command.name.split(':')[1], 10)
     jumpToTrack(targetPosition)
-  } else if (command.name.includes('nastrack:') || command.name.includes('tidaltrack:') || command.name.includes('jellyfintrack:')) {
+  } else if (command.name.includes('nastrack:') || command.name.includes('tidaltrack:') || command.name.includes('jellyfintrack:') || command.name.includes('audibletrack:')) {
     const targetPosition = Number.parseInt(command.name.split(':')[1], 10)
     jumpToTrack(targetPosition)
   }

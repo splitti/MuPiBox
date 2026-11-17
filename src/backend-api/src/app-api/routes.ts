@@ -2011,6 +2011,17 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       // (the album's own picture when the app saw one - else the artist's)
       const albumCover = (body as { cover?: unknown }).cover
       cover = typeof albumCover === 'string' && albumCover.startsWith(`/api/jellyfin/image/${albumId}`) ? `/api/jellyfin/image/${albumId}?w=400` : ownCover(item.cover)
+    } else if (albumId !== undefined && type === 'audible') {
+      // one book of an entry of a whole Audible series (audibleKind 'series'), as the app lists them
+      if (typeof albumId !== 'string' || !/^[A-Z0-9]{10}$/.test(albumId) || item.audibleKind !== 'series') {
+        res.status(400).json({ error: 'invalid_album' })
+        return
+      }
+      url = `musicsearch/audible/book:${albumId}`
+      heard = `audible:book:${albumId}`
+      // (the book's own picture when the app saw one - else the series')
+      const albumCover = (body as { cover?: unknown }).cover
+      cover = typeof albumCover === 'string' && /^\/api\/audible\/image\/[A-Za-z0-9+_-]{5,60}\?w=\d{1,4}$/.test(albumCover) ? albumCover : ownCover(item.cover)
     } else if (albumId !== undefined) {
       if (typeof albumId !== 'string' || !/^[A-Za-z0-9]{10,40}$/.test(albumId) || type !== 'spotify' || !item.artistid) {
         res.status(400).json({ error: 'invalid_album' })
@@ -2096,6 +2107,21 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
           return
         }
         url = `musicsearch/jellyfin/${kind}:${id}`
+        cover = ownCover(item.cover_override) || ownCover(item.cover) || ownCover(item.artistcover)
+        break
+      }
+      case 'audible': {
+        // a book of Audible, played through the backend (see audible/media.ts) - a whole series plays one of its books
+        const id = String(item.id ?? '')
+        if (!/^[A-Z0-9]{10}$/.test(id)) {
+          res.status(400).json({ error: 'audible_id_missing' })
+          return
+        }
+        if (item.audibleKind === 'series') {
+          res.status(400).json({ error: 'audible_series_needs_book' })
+          return
+        }
+        url = `musicsearch/audible/book:${id}`
         cover = ownCover(item.cover_override) || ownCover(item.cover) || ownCover(item.artistcover)
         break
       }

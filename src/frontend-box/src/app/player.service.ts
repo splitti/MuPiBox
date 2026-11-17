@@ -146,6 +146,10 @@ export class PlayerService {
         url = `musicsearch/jellyfin/${jellyfinRef(media)}${this.coverQuery(media)}`
         break
       }
+      case 'audible': {
+        url = `musicsearch/audible/book:${encodeURIComponent(media.id)}${this.coverQuery(media)}`
+        break
+      }
       case 'spotify': {
         const isHealthy = await this.spotifyService.ensurePlayerReady()
 
@@ -252,6 +256,15 @@ export class PlayerService {
     return true
   }
 
+  // An Audible book where it was left: its chapter and the part of it (as TIDAL)
+  async resumeAudibleMedia(media: Media): Promise<boolean> {
+    const trackNr = media.resumelocalcurrentTracknr || 1
+    const progressPct = Math.round(media.resumelocalprogressTime || 0)
+    this.currentMediaService.set(media)
+    this.sendRequest(`musicsearch/audible/resume/book:${encodeURIComponent(media.id)}:${trackNr}:${progressPct}${this.coverQuery(media)}`, media)
+    return true
+  }
+
   /**
    * Jump playback to a specific track/episode/chapter within the currently playing
    * Spotify album, playlist, show or audiobook.
@@ -271,6 +284,8 @@ export class PlayerService {
       url = `tidaltrack:${entry.position}`
     } else if (media.type === 'jellyfin') {
       url = `jellyfintrack:${entry.position}`
+    } else if (media.type === 'audible') {
+      url = `audibletrack:${entry.position}`
     } else if (media.playlistid) {
       url = `spotify/now/spotify:playlist:${encodeURIComponent(media.playlistid)}:${entry.position}:0`
     } else if (media.audiobookid) {
@@ -344,6 +359,11 @@ export class PlayerService {
   /** The tracks of a Jellyfin album, playlist or audiobook, through the player (the one that plays as mpv has it). */
   getJellyfinTracklist(media: Media): Observable<{ position: number; name: string }[]> {
     return this.http.get<{ position: number; name: string }[]>(`${environment.backend.playerUrl}/jellyfin/tracklist/${jellyfinRef(media)}`)
+  }
+
+  /** The chapters of an Audible book, through the player (the one that plays as mpv has it). */
+  getAudibleTracklist(media: Media): Observable<{ position: number; name: string }[]> {
+    return this.http.get<{ position: number; name: string }[]>(`${environment.backend.playerUrl}/audible/tracklist/book:${encodeURIComponent(media.id)}`)
   }
 
   private say(text: string) {

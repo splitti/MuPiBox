@@ -82,6 +82,8 @@ import { CACHE_DIR, COVERS_DIR, DATA_DIR, LIBRARY_DIR, LOGS_DIR, SERVER_CONFIG_D
 import { jellyfinSession } from './app-api/jellyfin'
 import { registerJellyfinMedia } from './jellyfin/media'
 import { jellyfinSettings, signedIn } from './jellyfin/settings'
+import { registerAudibleMedia } from './audible/media'
+import { audibleSession, audibleSettings } from './audible/settings'
 
 // Force IPv4 for DNS lookups to avoid EAI_AGAIN errors on Raspberry Pi
 // This fixes issues where IPv6 is misconfigured or not supported
@@ -1433,6 +1435,16 @@ app.get('/api/heard', (_req, res) => {
         return []
       }
     })
+  // ("heard through" in Audible the same - see audible/media.ts syncTicks)
+  if (enabled)
+    audibleMedia.syncTicks(() => {
+      try {
+        const rows = JSON.parse(fs.readFileSync(dataFile, 'utf8')) as Record<string, unknown>[]
+        return rows.filter((r) => r?.type === 'audible' && !r.isResume).map((r) => ({ kind: r.audibleKind === 'series' ? 'series' : 'book', id: String(r.id ?? '') }))
+      } catch {
+        return []
+      }
+    })
   res.json({ enabled, items: enabled ? heardStore.all() : {} })
 })
 
@@ -1944,13 +1956,16 @@ app.get('/api/data-version', (_req, res) => {
   const jf = jellyfinSettings(cfg)
   // (and its server answers: off or asleep, the display leaves the entries out until it is back - see jellyfin/media.ts)
   const jellyfin = jf.enabled && signedIn(jf) && jellyfinNow() !== null && jellyfinMedia.reachable()
-  const flags = `${tidal ? 't' : 'n'}${jellyfin ? 'j' : 'n'}`
+  // (Audible: switched on, signed in and its server answers - no internet, the display leaves its entries out)
+  const ab = audibleSettings(cfg)
+  const audible = ab.enabled && audibleNow() !== null && audibleMedia.reachable()
+  const flags = `${tidal ? 't' : 'n'}${jellyfin ? 'j' : 'n'}${audible ? 'a' : 'n'}`
   const nasTab = nasTabWanted(nasSettings(getMupiboxConfigSync()))
   try {
     const st = fs.statSync(activedataFile)
-    res.json({ version: `${Math.floor(st.mtimeMs)}-${st.size}-${flags}`, local: String(localLibraryVersion), nasTab, tidal, jellyfin })
+    res.json({ version: `${Math.floor(st.mtimeMs)}-${st.size}-${flags}`, local: String(localLibraryVersion), nasTab, tidal, jellyfin, audible })
   } catch {
-    res.json({ version: `0-${flags}`, local: String(localLibraryVersion), nasTab, tidal, jellyfin })
+    res.json({ version: `0-${flags}`, local: String(localLibraryVersion), nasTab, tidal, jellyfin, audible })
   }
 })
 
@@ -8670,6 +8685,21 @@ const jellyfinMedia = registerJellyfinMedia(app, {
   session: jellyfinNow,
   transcode: () => jellyfinSettings(getMupiboxConfigSync() as Record<string, unknown> | undefined).transcode,
   shareProgress: () => jellyfinSettings(getMupiboxConfigSync() as Record<string, unknown> | undefined).shareProgress,
+  // (only with the ticks switched on, as the player's own notes - and never back from finished)
+  heardFinished: (key) => {
+    if (heardSettings(getMupiboxConfigSync()?.mupibox as Record<string, unknown> | undefined).enabled && heardStore.stateOf(key) !== 'finished') heardStore.note(key, 'finished')
+  },
+  cacheDir: CACHE_DIR,
+})
+// Audible (docs/audible-5.1.md): its covers for the display and the app - switched off or signed out: nothing of Audible
+const audibleNow = () => {
+  const cfg = getMupiboxConfigSync() as Record<string, unknown> | undefined
+  return audibleSettings(cfg).enabled ? audibleSession(cfg, nasDecrypt) : null
+}
+const audibleMedia = registerAudibleMedia(app, {
+  session: audibleNow,
+  deviceKey: () => audibleSettings(getMupiboxConfigSync() as Record<string, unknown> | undefined).serial,
+  shareProgress: () => audibleSettings(getMupiboxConfigSync() as Record<string, unknown> | undefined).shareProgress,
   // (only with the ticks switched on, as the player's own notes - and never back from finished)
   heardFinished: (key) => {
     if (heardSettings(getMupiboxConfigSync()?.mupibox as Record<string, unknown> | undefined).enabled && heardStore.stateOf(key) !== 'finished') heardStore.note(key, 'finished')

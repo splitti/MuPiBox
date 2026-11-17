@@ -2283,6 +2283,18 @@ const tidalArtistTile = (it) => ({
   index: it._index,
 })
 // A whole Jellyfin artist (jellyfinKind 'artist'): a folder of its albums too, from Jellyfin through the box
+// A whole Audible series (audibleKind 'series'): a folder of its books too, from Audible through the box
+const isAudibleSeries = (it) => it && it.type === 'audible' && it.audibleKind === 'series' && !it.isResume
+const audibleSeriesTile = (it) => ({
+  kind: 'abseries',
+  title: itemArtist(it) || itemTitle(it),
+  sub: 'Alle Hörbücher',
+  cover: ownCover(it.artistcover_override ?? it.artistcover ?? it.cover_override ?? it.cover ?? ''),
+  badge: 'Audible',
+  folder: true,
+  path: it.id,
+  index: it._index,
+})
 const isJellyfinArtist = (it) => it && it.type === 'jellyfin' && it.jellyfinKind === 'artist' && !it.isResume
 const jellyfinArtistTile = (it) => ({
   kind: 'jfartist',
@@ -2295,7 +2307,7 @@ const jellyfinArtistTile = (it) => ({
   index: it._index,
 })
 const playable = (it) =>
-  it && typeof it === 'object' && (it.type !== 'tidal' || svc.tidal) && (it.type !== 'jellyfin' || svc.jellyfin) && !it.isResume && it.category !== 'resume' && it.type !== 'library' && !(it.type === 'spotify' && !it.id && !it.playlistid && !it.showid && !it.audiobookid) && !isTidalArtist(it) && !isJellyfinArtist(it)
+  it && typeof it === 'object' && (it.type !== 'tidal' || svc.tidal) && (it.type !== 'jellyfin' || svc.jellyfin) && (it.type !== 'audible' || svc.audible) && !it.isResume && it.category !== 'resume' && it.type !== 'library' && !(it.type === 'spotify' && !it.id && !it.playlistid && !it.showid && !it.audiobookid) && !isTidalArtist(it) && !isJellyfinArtist(it) && !isAudibleSeries(it)
 
 async function loadHear() {
   // (whether TIDAL is on: its entries only then - see playable)
@@ -2328,6 +2340,7 @@ function topTiles() {
       if (isSpotifyArtist(it) && (cat === 'all' || catOf(it) === cat) && match(`${itemArtist(it)} ${itemTitle(it)}`)) tiles.push(spotifyArtistTile(it))
       if (isTidalArtist(it) && svc.tidal && (cat === 'all' || catOf(it) === cat) && match(`${itemArtist(it)} ${itemTitle(it)}`)) tiles.push(tidalArtistTile(it))
       if (isJellyfinArtist(it) && svc.jellyfin && (cat === 'all' || catOf(it) === cat) && match(`${itemArtist(it)} ${itemTitle(it)}`)) tiles.push(jellyfinArtistTile(it))
+      if (isAudibleSeries(it) && svc.audible && (cat === 'all' || catOf(it) === cat) && match(`${itemArtist(it)} ${itemTitle(it)}`)) tiles.push(audibleSeriesTile(it))
     }
     if (q) {
       for (const it of items) if (match(`${itemTitle(it)} ${itemArtist(it)}`)) tiles.push(entryTile(it))
@@ -2362,6 +2375,7 @@ function badgeOf(it) {
   if (it.type === 'rss') return 'Podcast'
   if (it.type === 'tidal') return 'TIDAL'
   if (it.type === 'jellyfin') return 'Jellyfin'
+  if (it.type === 'audible') return 'Audible'
   return ''
 }
 const ENTRY_IDENT = ['type', 'id', 'playlistid', 'showid', 'audiobookid', 'artistid', 'title', 'artist']
@@ -2398,6 +2412,11 @@ function levelTiles() {
       .filter((a) => a?.id && match(a.name ?? ''))
       .map((a) => ({ kind: 'jfalbum', title: String(a.name ?? '—'), sub: a.year ? String(a.year) : '', cover: a.image ? `/api/jellyfin/image/${a.id}?w=160` : '', badge: 'Jellyfin', index: top.index, albumId: a.id }))
   }
+  if (top.kind === 'abseries') {
+    return (hear.level ?? [])
+      .filter((b) => b?.asin && match(b.title ?? ''))
+      .map((b) => ({ kind: 'abbook', title: String(b.title ?? '—'), sub: b.sequence ? String(b.sequence) : '', cover: b.image ? `/api/audible/image/${b.image}?w=160` : '', badge: 'Audible', index: top.index, albumId: b.asin }))
+  }
   return (hear.level ?? []).filter((f) => match(`${f.title} ${f.artist}`)).map(top.kind === 'nas' ? nasTile : localTile)
 }
 
@@ -2407,6 +2426,15 @@ async function openLevel() {
   hear.levelError = ''
   drawHear()
   if (!top || top.kind === 'artist') return
+  if (top.kind === 'abseries') {
+    // a whole Audible series: the account's books of it in the series' order
+    const r = await api(`/api/audible/series/${encodeURIComponent(top.path)}/books`)
+    if (hear.stack.at(-1) !== top) return
+    if (!r.ok) hear.levelError = r.status === 409 ? 'Audible ist ausgeschaltet.' : 'Audible antwortet gerade nicht.'
+    hear.level = r.body?.books ?? []
+    drawHear()
+    return
+  }
   if (top.kind === 'jfartist') {
     // a whole Jellyfin artist: its albums, newest first, without the ones left out in the library
     const entry = hear.items.find((it) => it?._index === top.index)
@@ -2506,6 +2534,7 @@ function onTile(t) {
   if (t.kind === 'spalbum') return startPlay(t.title, `${API}/library/play`, { index: t.index, albumId: t.albumId })
   if (t.kind === 'tdalbum') return startPlay(t.title, `${API}/library/play`, { index: t.index, albumId: t.albumId, cover: t.cover })
   if (t.kind === 'jfalbum') return startPlay(t.title, `${API}/library/play`, { index: t.index, albumId: t.albumId, cover: t.cover })
+  if (t.kind === 'abbook') return startPlay(t.title, `${API}/library/play`, { index: t.index, albumId: t.albumId, cover: t.cover ? t.cover.replace(/\?w=\d+$/, '?w=500') : '' })
   if (t.kind === 'nas') return startPlay(t.title, `${API}/library/play-nas`, { path: t.path })
   return startPlay(t.title, `${API}/library/play-local`, { path: t.path })
 }
@@ -2715,6 +2744,7 @@ const LIB_SOURCES = [
   ['radio', 'Radio'],
   ['tidal', 'TIDAL'],
   ['jellyfin', 'Jellyfin'],
+  ['audible', 'Audible'],
   ['local', 'SD-Karte'],
   ['nas', 'NAS'],
 ]
@@ -2727,7 +2757,8 @@ const entryInSource = (it, src) =>
   (src === 'podcast' && it.type === 'rss') ||
   (src === 'radio' && it.type === 'radio') ||
   (src === 'tidal' && it.type === 'tidal') ||
-  (src === 'jellyfin' && it.type === 'jellyfin')
+  (src === 'jellyfin' && it.type === 'jellyfin') ||
+  (src === 'audible' && it.type === 'audible')
 // A show of ARD Sounds: a podcast whose "feed" is ard:<show id> (the box builds its episode list from the ARD)
 const isArdEntry = (it) => it?.type === 'rss' && String(it.id ?? '').startsWith('ard:')
 const CAT_SHORT = { audiobook: 'Hörspiel', music: 'Musik', other: 'Radio & Podcasts' }
@@ -2877,7 +2908,9 @@ function libSub(g) {
           ? 'TIDAL'
           : first?.type === 'jellyfin'
             ? 'Jellyfin'
-            : (SOURCE_LABEL[g.src] ?? '')
+            : first?.type === 'audible'
+              ? 'Audible'
+              : (SOURCE_LABEL[g.src] ?? '')
   if (g.kind === 'sub') return 'Abo · noch keine Folgen · Spotify · Smart-Sync'
   if (g.kind === 'pin') return 'Album · noch nicht auf der Box · Spotify · Smart-Sync'
   if (g.kind === 'local') return `${g.folder.libraryIsContainer ? 'Ordner' : 'Album'} · ${src}`
@@ -3139,6 +3172,7 @@ function heardKeyOfItem(it) {
   }
   if (it.type === 'tidal') return it.tidalKind === 'artist' || !it.id ? null : ok(`tidal:${it.tidalKind === 'playlist' ? 'playlist' : 'album'}:${it.id}`)
   if (it.type === 'jellyfin') return !['album', 'playlist', 'book'].includes(it.jellyfinKind ?? 'album') || !it.id ? null : ok(`jellyfin:${it.jellyfinKind ?? 'album'}:${it.id}`)
+  if (it.type === 'audible') return it.audibleKind === 'series' || !it.id ? null : ok(`audible:book:${it.id}`)
   if (it.type === 'spotify') {
     if (it.playlistid) return ok(`spotify:playlist:${it.playlistid}`)
     if (it.id) return ok(`spotify:album:${it.id}`)
@@ -4672,6 +4706,7 @@ async function libraryHave(source) {
     // (TIDAL: its entries - albums, playlists, whole artists)
     if (source === 'tidal' && it.type === 'tidal' && it.id) have.add(`${it.tidalKind ?? 'album'}:${it.id}`)
     if (source === 'jellyfin' && it.type === 'jellyfin' && it.id) have.add(`${it.jellyfinKind ?? 'album'}:${it.id}`)
+    if (source === 'audible' && it.type === 'audible' && it.id) have.add(`${it.audibleKind === 'series' ? 'series' : 'book'}:${it.id}`)
   }
   for (const a of subs?.body?.artists ?? []) have.add(`artist:${a.id ?? a.artistId}`)
   for (const a of subs?.body?.explicit_albums ?? []) have.add(`album:${a.id}`)
@@ -16109,6 +16144,8 @@ function audibleTop() {
       <dl class="kv"><div><dt>${esc(tr('Shop'))}</dt><dd>${esc(tr(AB_COUNTRIES[s.country] ?? s.country))}</dd></div><div><dt>${esc(tr('Konto'))}</dt><dd translate="no">${esc(s.customerName || '—')}</dd></div><div><dt>${esc(tr('Gerät bei Amazon'))}</dt><dd translate="no">${esc(s.deviceName || '—')}</dd></div></dl>
       ${abUnofficial()}
       <div class="btns">${d.state === 'unauthorized' ? `<button class="btn primary" id="ab-relogin">${esc(tr('Neu anmelden'))}</button>` : ''}</div></section>`,
+    `<section class="card wide"><h2>${esc(tr('Wiedergabe'))}</h2>
+      <div class="row"><span class="lbl"><b>${esc(tr('Hörposition mit Audible teilen'))}</b><small>${esc(tr('Die Box meldet Audible, wo sie in einem Hörbuch ist. Startest du ein Hörbuch an der Box neu, beginnt es dort, wo das Konto aufgehört hat – auch wenn am Handy weitergehört wurde. In Audible zu Ende gehörte Bücher bekommen an der Box den grünen Haken. Hört ihr im selben Konto dasselbe Buch, überschreibt die Box eure Stelle.'))}</small></span><label class="switch"><input type="checkbox" id="ab-share" ${s.shareProgress ? 'checked' : ''} aria-label="${esc(tr('Hörposition mit Audible teilen'))}"><span></span></label></div></section>`,
     `<section class="card wide"><div class="navlist"><button class="navrow" id="ab-logout"><span class="tile danger">${icon('close', 18)}</span><span class="lbl"><b class="danger-text">${esc(tr('Abmelden'))}</b><small>${esc(tr('Die Box entfernt ihr Gerät aus deinem Amazon-Konto. Einträge aus Audible bleiben in der Bibliothek, spielen aber erst nach einer neuen Anmeldung.'))}</small></span></button></div></section>`,
   ]
 }
@@ -16173,6 +16210,10 @@ function mountAudible(root, page) {
   $('#ab-on', root)?.addEventListener('change', async (e) => {
     const r = await api(`${API}/audible/settings`, { method: 'POST', body: { enabled: e.target.checked } })
     reload(r.ok ? '' : 'Nicht gespeichert', 'info')
+  })
+  $('#ab-share', root)?.addEventListener('change', async (e) => {
+    const r = await api(`${API}/audible/settings`, { method: 'POST', body: { shareProgress: e.target.checked } })
+    reload(r.ok ? 'Gespeichert' : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
   })
   $('#ab-relogin', root)?.addEventListener('click', () => {
     ab.country = d.settings.country
@@ -16429,6 +16470,224 @@ function mountJellyfinSearch(root) {
       jfs.have = have
       if (gen === jfs.gen) drawJellyfin()
     })
+}
+
+/* Audible, Bibliothek › Hinzufügen › Aus Audible (A2, docs/audible-5.1.md): the account's audiobooks and series, filtered
+   here (the library comes whole, kept by the box 30 min); a book or a whole series becomes an entry of the box's library
+   (type 'audible', audibleKind 'book' | 'series'). Podcasts of Audible are left out (decided). */
+
+const abs = { q: '', view: 'books', data: null, error: '', have: new Set(), series: null, gen: 0, loading: false, limit: 150, timer: 0 }
+// (a big library: the first 150 rows, the rest on a tap - 2000 rows at each keystroke made a phone slow)
+const ABS_ROWS = 150
+
+function audibleFailText(r) {
+  if (r.status === 409) return 'Audible ist ausgeschaltet oder die Box ist nicht angemeldet – unter Einstellungen › Dienste › Audible.'
+  if (r.status === 401) return 'Audible nimmt die Anmeldung der Box nicht mehr an – unter Einstellungen › Dienste › Audible neu anmelden.'
+  if (r.status === 429) return 'Audible bittet um eine Pause. Versuche es in ein paar Minuten noch einmal.'
+  return 'Audible ist gerade nicht erreichbar.'
+}
+
+const abImg = (id, w = 160) => (id ? `/api/audible/image/${encodeURIComponent(id)}?w=${w}` : '')
+const abLength = (min) => (!min ? '' : min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')} min`)
+const abSeriesOf = (b) => b.series?.[0] ?? null
+// the whole series in the box's library this book is part of (its asin, '' none)
+const abWholeSeries = (b) => b.series?.find((x) => abs.have.has(`series:${x.asin}`))?.asin ?? ''
+const abBookRow = (b, via) => {
+  const s = abSeriesOf(b)
+  return {
+    kind: 'book',
+    id: b.asin,
+    t: b.title,
+    s: [s ? `${s.title}${s.sequence ? ` ${s.sequence}` : ''}` : '', b.authors.slice(0, 2).join(', '), abLength(b.minutes), b.finished ? tr('gehört') : ''].filter(Boolean).join(' · '),
+    img: abImg(b.image),
+    name: b.title,
+    date: b.released,
+    book: b,
+    ...(via ? { via, viaText: 'Serie in der Bibliothek' } : {}),
+  }
+}
+const abSeriesRow = (x) => ({ kind: 'series', id: x.asin, t: x.title, s: x.books.length === 1 ? tr(`Serie · ${x.books.length} Hörbuch`) : tr(`Serie · ${x.books.length} Hörbücher`), img: abImg(x.image), name: x.title, series: x })
+
+function audibleSearchTop() {
+  if (!svc.audible) {
+    return [
+      `<section class="card wide"><p class="help" style="margin:0">${esc(tr('Audible ist ausgeschaltet oder die Box ist nicht angemeldet. Einrichten unter Einstellungen › Dienste › Audible.'))}</p>
+        <div class="btns"><button class="btn primary" id="abs-services">${esc(tr('Audible öffnen'))}</button></div></section>`,
+    ]
+  }
+  return [
+    `<section class="card wide">
+      <p class="help" style="margin:0">${esc(tr('Die Hörbücher deines Audible-Kontos. Was du hinzufügst, spielt die Box über das Internet von Audible.'))}</p>
+      <div class="search">${icon('search')}<input class="input" id="abs-q" type="search" placeholder="${esc(tr('Titel, Autor, Sprecher oder Serie'))}" autocomplete="off" value="${esc(abs.q)}" enterkeyhint="search"></div>
+      <div class="seg" id="abs-view">${[
+        ['books', 'Hörbücher'],
+        ['series', 'Serien'],
+      ]
+        .map(([v, l]) => `<button aria-pressed="${abs.view === v}" data-v="${v}">${esc(tr(l))}</button>`)
+        .join('')}</div>
+      <div class="btns"><button class="btn" id="abs-fresh" ${abs.loading ? 'disabled' : ''}>${icon('sync', 18)}${esc(tr(abs.loading ? 'Wird geladen …' : 'Neu laden'))}</button></div>
+    </section>`,
+    `<div id="abs-results" class="wide-stack"></div>`,
+  ]
+}
+
+async function loadAudibleLibrary(fresh) {
+  const gen = ++abs.gen
+  abs.loading = true
+  const [r, have] = await Promise.all([api(`${API}/audible/library${fresh ? '?fresh=1' : ''}`, { timeoutMs: 90000 }), libraryHave('audible')])
+  if (gen !== abs.gen) return false
+  abs.loading = false
+  abs.have = have
+  if (r.ok) {
+    abs.data = r.body
+    abs.error = r.body.stale ? 'Audible antwortet gerade nicht – das ist der zuletzt geladene Stand.' : ''
+  } else {
+    abs.error = audibleFailText(r)
+    // (signed out or another account meanwhile: the books of before are not offered any more)
+    if (r.status === 401 || r.status === 409) abs.data = null
+  }
+  return true
+}
+
+function drawAudible() {
+  const box = $('#abs-results')
+  if (!box) return
+  const lists = {}
+  const rowsOf = (key, rows) => {
+    lists[key] = rows
+    return rows.map((x, i) => resultRow(x, i, key, abs.have)).join('')
+  }
+  const wire = () => {
+    for (const img of box.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+    for (const b of box.querySelectorAll('[data-list]')) {
+      const x = lists[b.dataset.list][Number(b.dataset.i)]
+      b.onclick = () => (x.kind === 'series' ? openAudibleSeries(x.series) : openAudibleItem(x))
+    }
+    const backBtn = $('#abs-back', box)
+    if (backBtn)
+      backBtn.onclick = () => {
+        abs.series = null
+        drawAudible()
+      }
+  }
+  const d = abs.data
+  const note = abs.error ? `<p class="help">${esc(tr(abs.error))}</p>` : ''
+  if (!d) {
+    box.innerHTML = abs.error ? note : '<div class="loading"><p>Lade …</p></div>'
+    return
+  }
+  const byAsin = new Map(d.books.map((b) => [b.asin, b]))
+  if (abs.series) {
+    // (looked up anew: after "Neu laden" with the books bought since)
+    const x = d.series.find((y) => y.asin === abs.series.asin) ?? abs.series
+    const whole = abs.have.has(`series:${x.asin}`)
+    const books = x.books.map((y) => byAsin.get(y.asin)).filter(Boolean)
+    box.innerHTML = `<div class="btns"><button class="btn" id="abs-back">${icon('back', 18)}${esc(tr('Zurück'))}</button></div>${note}
+      <section class="card"><div class="ard-head">${x.image ? `<img src="${esc(abImg(x.image, 500))}" alt="">` : ''}<span class="lbl"><h2 translate="no" style="margin:0">${esc(x.title)}</h2><small>${esc(tr(whole ? 'Serie · ganz in der Bibliothek' : 'Serie in Audible'))}</small></span></div>
+        <p class="help" style="margin:0">${esc(tr('Ganz hinzugefügt zeigt die Box alle Hörbücher der Serie aus deinem Konto, in der Reihenfolge der Serie – auch welche, die du später kaufst. Einzelne fügst du unten hinzu.'))}</p>
+        <div class="btns"><button class="btn primary" id="abs-whole">${icon(whole ? 'check' : 'plus', 18)}${esc(tr(whole ? 'In der Bibliothek' : 'Ganze Serie hinzufügen'))}</button></div></section>
+      <section class="card"><h2>${esc(tr('Hörbücher'))}</h2><div class="rows">${rowsOf('series', books.map((b) => abBookRow(b, whole ? x.asin : '')))}</div></section>`
+    wire()
+    $('#abs-whole', box).onclick = () => openAudibleItem(abSeriesRow(x))
+    return
+  }
+  const q = norm(abs.q.trim())
+  const hit = (...texts) => !q || norm(texts.join(' ')).includes(q)
+  const more = (n) => (n > abs.limit ? `<div class="btns"><button class="btn" id="abs-more">${esc(tr(`Alle ${n} zeigen`))}</button></div>` : '')
+  const wireMore = () => {
+    const b = $('#abs-more', box)
+    if (b) b.onclick = () => {
+      abs.limit = Number.POSITIVE_INFINITY
+      drawAudible()
+    }
+  }
+  if (abs.view === 'series') {
+    const rows = d.series.filter((x) => hit(x.title, ...x.books.map((y) => byAsin.get(y.asin)?.title ?? ''))).map(abSeriesRow)
+    box.innerHTML = `${note}<section class="card"><h2>${esc(tr('Serien'))}</h2>${
+      rows.length ? `<div class="rows">${rowsOf('series-list', rows.slice(0, abs.limit))}</div>${more(rows.length)}` : `<p class="help" style="margin:0">${esc(tr(d.series.length ? 'Nichts gefunden.' : 'In deinem Konto gehört kein Hörbuch zu einer Serie.'))}</p>`
+    }</section>`
+    wireMore()
+    return wire()
+  }
+  const rows = d.books.filter((b) => hit(b.title, b.subtitle, ...b.authors, ...b.narrators, ...b.series.map((s) => s.title))).map((b) => abBookRow(b, abWholeSeries(b)))
+  box.innerHTML = `${note}<section class="card"><h2>${esc(tr('Hörbücher'))}</h2>${
+    rows.length ? `<div class="rows">${rowsOf('books', rows.slice(0, abs.limit))}</div>${more(rows.length)}` : `<p class="help" style="margin:0">${esc(tr(d.books.length ? 'Nichts gefunden.' : 'In deinem Audible-Konto ist noch kein Hörbuch.'))}</p>`
+  }</section>`
+  wireMore()
+  wire()
+}
+
+function openAudibleSeries(x) {
+  abs.series = x
+  drawAudible()
+  $('#abs-results')?.scrollIntoView({ block: 'start' })
+}
+
+// A book or a whole series onto the box, in the category chosen in the sheet
+function openAudibleItem(x) {
+  const kind = x.kind === 'series' ? 'series' : 'book'
+  const b = x.book
+  const inSeries = kind === 'book' && b ? abWholeSeries(b) : ''
+  const have = abs.have.has(`${kind}:${x.id}`) || !!inSeries
+  addSheet(
+    {
+      title: x.t,
+      sub: kind === 'series' ? tr('Serie in Audible') : x.s,
+      img: x.img ? x.img.replace(/\?w=\d+$/, '?w=500') : '',
+      have,
+      ...(inSeries && !abs.have.has(`book:${x.id}`) ? { haveText: 'Schon in der Bibliothek: die ganze Serie ist dort.' } : {}),
+      cat: 'audiobook',
+      text: kind === 'series' ? 'Die Box zeigt alle Hörbücher der Serie aus deinem Konto als einen Eintrag, auch welche, die du später kaufst.' : '',
+    },
+    async (category) => {
+      // (the series is the name of the folder on the display - a book of a series lands next to its siblings)
+      const artist = kind === 'series' ? x.t : abSeriesOf(b)?.title || b.authors[0] || x.t
+      const image = kind === 'series' ? x.series.image : b.image
+      // (a whole series in the order of the series: the display sorts its books "by release", the series' places)
+      const body = { type: 'audible', audibleKind: kind, id: x.id, artist, title: x.t, category, source: 'manual', ...(kind === 'series' ? { sorting: 'ReleaseDateAscending' } : {}), ...(image ? { cover: abImg(image, 500) } : {}) }
+      const r = await api('/api/add', { method: 'POST', body })
+      if (!libWriteOk(r)) return false
+      abs.have.add(`${kind}:${x.id}`)
+      drawAudible()
+      toast(`${tr('Hinzugefügt')}: ${x.t}`)
+      libChanged()
+      lib.items = null
+      return true
+    },
+  )
+}
+
+function mountAudibleSearch(root) {
+  const q = $('#abs-q', root)
+  if (!q) return $('#abs-services', root)?.addEventListener('click', () => go('audible'))
+  // (typing filters the list - the field keeps its focus)
+  q.addEventListener('input', () => {
+    abs.q = q.value
+    abs.series = null
+    abs.limit = ABS_ROWS
+    window.clearTimeout(abs.timer)
+    abs.timer = window.setTimeout(drawAudible, 150)
+  })
+  for (const b of root.querySelectorAll('#abs-view [data-v]')) {
+    b.onclick = () => {
+      abs.view = b.dataset.v
+      abs.series = null
+      abs.limit = ABS_ROWS
+      for (const x of root.querySelectorAll('#abs-view [data-v]')) x.setAttribute('aria-pressed', String(x === b))
+      drawAudible()
+    }
+  }
+  const fetchAgain = async (fresh) => {
+    const btn = $('#abs-fresh', root)
+    if (btn) btn.disabled = true
+    drawAudible()
+    if (await loadAudibleLibrary(fresh)) drawAudible()
+    if (btn?.isConnected) btn.disabled = false
+  }
+  $('#abs-fresh', root).onclick = () => fetchAgain(true)
+  drawAudible()
+  // (on each visit: what is in the library anew - removed meanwhile; the books from the box's copy)
+  fetchAgain(false)
 }
 
 /* Extensions (docs/extensions.md): the catalog on GitHub, install / switch off / remove, and the settings the installed ones declare */
@@ -19004,6 +19263,7 @@ const CONTROLLERS = {
   jellyfin: { load: loadJellyfin, top: jellyfinTop, sections: () => [], mount: mountJellyfin },
   audible: { load: loadAudible, top: audibleTop, sections: () => [], mount: mountAudible },
   jellyfinsuche: { load: loadServices, top: jellyfinSearchTop, sections: () => [], mount: mountJellyfinSearch },
+  audiblesuche: { load: loadServices, top: audibleSearchTop, sections: () => [], mount: mountAudibleSearch },
   fotos: { load: loadPhotoOverview, top: photoOverviewTop, sections: () => [], mount: mountPhotoOverview, ownNav: true },
   fotoalbum: { load: loadPhotoAlbum, top: photoAlbumTop, sections: () => [], mount: mountPhotoAlbum },
   fotoupload: { load: loadPhotoUpload, top: photoUploadTop, sections: () => [], mount: mountPhotoUpload },
@@ -19457,7 +19717,7 @@ function openDay(el, page) {
 // only those - a Spotify search without a Spotify login only ends in an error.
 // podcasts: the podcast search (Apple's directory, for German with the ARD Audiothek); available: the languages it
 // offers ({code, name})
-const svc = { spotify: true, podcasts: true, radio: true, tidal: false, jellyfin: false, available: [], at: 0 }
+const svc = { spotify: true, podcasts: true, radio: true, tidal: false, jellyfin: false, audible: false, available: [], at: 0 }
 async function loadServices() {
   if (Date.now() - svc.at < 30_000) return svc
   const [access, sources] = await Promise.all([api(`${API}/spotify-access`), api(`${API}/sources`)])
@@ -19472,6 +19732,7 @@ function setSources(b) {
   svc.radio = b.radioSearch !== false
   svc.tidal = b.tidal === true
   svc.jellyfin = b.jellyfin === true
+  svc.audible = b.audible === true
   if (Array.isArray(b.available)) svc.available = b.available
 }
 
@@ -19483,6 +19744,7 @@ async function openAdd() {
     ...(svc.radio ? [['radiosuche', 'vol', 'Radiosender suchen', 'Kinderradio und Sender aus vielen Ländern']] : []),
     ...(svc.tidal ? [['tidalsuche', 'search', 'Auf TIDAL suchen', 'Hörspiele, Alben, Künstler und Playlists finden']] : []),
     ...(svc.jellyfin ? [['jellyfinsuche', 'server', 'Aus Jellyfin', 'Alben, Hörbücher, Künstler und Playlists deines Servers']] : []),
+    ...(svc.audible ? [['audiblesuche', 'book', 'Aus Audible', 'Hörbücher und Serien deines Audible-Kontos']] : []),
     ['link', 'link', 'Link einfügen', svc.spotify ? 'Spotify-Link, Radiosender oder Podcast' : 'Radiosender oder Podcast'],
     ['upload', 'up', 'Vom Gerät hochladen', 'Titel oder ganze Ordner auf die SD-Karte'],
   ]

@@ -103,7 +103,7 @@ const rssSettings = (m: Media): Partial<Media> => ({
 function fillFailedRows(media: Media[], kept: Media[] | undefined): Media[] {
   const failed = new Set(media.filter((m) => m.unavailable && m.row).map((m) => m.row as string))
   // (a TIDAL artist or a podcast that could not be asked for and has nothing kept: left out, see below)
-  const leftOut = (m: Media) => m.type === 'tidal' || m.type === 'jellyfin' || m.type === 'rss'
+  const leftOut = (m: Media) => m.type === 'tidal' || m.type === 'jellyfin' || m.type === 'audible' || m.type === 'rss'
   if (failed.size === 0 || !kept?.length) return media.filter((m) => !(m.unavailable && leftOut(m)))
   const present = new Set(media.filter((m) => !m.unavailable && m.id).map((m) => m.id))
   return media.flatMap((m) => {
@@ -413,7 +413,7 @@ export class MediaService {
 
   private libraryVersion$?: Observable<string>
   private dataVersion$?: Observable<string>
-  private versions$?: Observable<{ version: string; local: string; nasTab: boolean; tidal: boolean; jellyfin: boolean }>
+  private versions$?: Observable<{ version: string; local: string; nasTab: boolean; tidal: boolean; jellyfin: boolean; audible: boolean }>
 
   /**
    * Phase 17g: cheap library-change signal. Polls /api/data-version (a stat,
@@ -462,15 +462,15 @@ export class MediaService {
     )
   }
 
-  private versions(): Observable<{ version: string; local: string; nasTab: boolean; tidal: boolean; jellyfin: boolean }> {
+  private versions(): Observable<{ version: string; local: string; nasTab: boolean; tidal: boolean; jellyfin: boolean; audible: boolean }> {
     if (!this.versions$) {
       this.versions$ = interval(20000).pipe(
         startWith(0),
         switchMap(() =>
-          this.http.get<{ version: string; local?: string; nasTab?: boolean; tidal?: boolean; jellyfin?: boolean }>(`${this.getApiBackendUrl()}/data-version`).pipe(
+          this.http.get<{ version: string; local?: string; nasTab?: boolean; tidal?: boolean; jellyfin?: boolean; audible?: boolean }>(`${this.getApiBackendUrl()}/data-version`).pipe(
             // (tidal: an older server without it - its entries are shown, as before; jellyfin the same)
-            map((r) => ({ version: r?.version ?? '', local: r?.local ?? '', nasTab: r?.nasTab !== false, tidal: r?.tidal !== false, jellyfin: r?.jellyfin !== false })),
-            catchError(() => of({ version: '', local: '', nasTab: true, tidal: true, jellyfin: true })),
+            map((r) => ({ version: r?.version ?? '', local: r?.local ?? '', nasTab: r?.nasTab !== false, tidal: r?.tidal !== false, jellyfin: r?.jellyfin !== false, audible: r?.audible !== false })),
+            catchError(() => of({ version: '', local: '', nasTab: true, tidal: true, jellyfin: true, audible: true })),
           ),
         ),
         shareReplay({ bufferSize: 1, refCount: true }),
@@ -783,6 +783,8 @@ export class MediaService {
   private tidalFailures = 0
   // the same for a whole Jellyfin artist (see jellyfinArtistAlbums)
   private jellyfinFailures = 0
+  // the same for a whole Audible series (see audibleSeriesBooks)
+  private audibleFailures = 0
   // how often a podcast could not be fetched (see rssEpisodes)
   private rssFailures = 0
   private homeListsLoaded$?: Observable<void>
@@ -835,6 +837,7 @@ export class MediaService {
       const failuresBefore = this.spotifyService.failures
       const tidalFailuresBefore = this.tidalFailures
       const jellyfinFailuresBefore = this.jellyfinFailures
+      const audibleFailuresBefore = this.audibleFailures
       const rssFailuresBefore = this.rssFailures
       this.newestHomeListRun.set(category, version)
       run = this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category).pipe(
@@ -844,7 +847,7 @@ export class MediaService {
           // on the box)
           if (this.newestHomeListRun.get(category) !== version) return
           // (an empty list without a failure is one: the category was emptied, and the old list must not come back at the next start)
-          const complete = this.spotifyService.failures === failuresBefore && this.tidalFailures === tidalFailuresBefore && this.jellyfinFailures === jellyfinFailuresBefore && this.rssFailures === rssFailuresBefore
+          const complete = this.spotifyService.failures === failuresBefore && this.tidalFailures === tidalFailuresBefore && this.jellyfinFailures === jellyfinFailuresBefore && this.audibleFailures === audibleFailuresBefore && this.rssFailures === rssFailuresBefore
           this.homeLists.set(category, { version: complete ? version : '', at: Date.now(), media })
           if (version !== '' && complete) {
             this.http.put(`${this.getApiBackendUrl()}/home-lists/${category}`, { version, media }).subscribe({ error: () => undefined })
@@ -1031,10 +1034,11 @@ export class MediaService {
         )
       }
 
-    // (TIDAL or Jellyfin switched off in the app: its entries are left out - they stay in the library, to be managed there)
+    // (TIDAL, Jellyfin or Audible switched off in the app - or Jellyfin's server, Audible away: its entries are left out -
+    // they stay in the library, to be managed there)
     // (the library could not be read for a moment: asked again, the server answers with an error then, not an empty list)
     return forkJoin([this.http.get<Media[]>(url).pipe(retry({ count: 2, delay: () => timer(2000) })), this.versions().pipe(take(1))]).pipe(
-      map(([items, v]) => items.filter((it) => (v.tidal || it?.type !== 'tidal') && (v.jellyfin || it?.type !== 'jellyfin'))),
+      map(([items, v]) => items.filter((it) => (v.tidal || it?.type !== 'tidal') && (v.jellyfin || it?.type !== 'jellyfin') && (v.audible || it?.type !== 'audible'))),
       // Filter to get only items for the chosen category.
       map((items) => {
         if (resume) {
@@ -1178,7 +1182,12 @@ export class MediaService {
                               // a whole Jellyfin artist: its albums, from Jellyfin through the backend
                               () => item.type === 'jellyfin' && item.jellyfinKind === 'artist' && !!item.id && !isResumeEntry(item),
                               this.jellyfinArtistAlbums(item),
-                              of([item]), // Single album. Also return as array, so we always have the same data type
+                              iif(
+                                // a whole Audible series: the account's books of it, from Audible through the backend
+                                () => item.type === 'audible' && item.audibleKind === 'series' && !!item.id && !isResumeEntry(item),
+                                this.audibleSeriesBooks(item),
+                                of([item]), // Single album. Also return as array, so we always have the same data type
+                              ),
                             ),
                           ),
                         ),
@@ -1324,6 +1333,42 @@ export class MediaService {
           return of([
             { type: 'jellyfin', jellyfinKind: 'artist', id: item.id, artist: item.artist, category: item.category, sorting: item.sorting, index: item.index, unavailable: true, row } as Media,
           ])
+        }),
+      )
+  }
+
+  // The books of a whole Audible series (audibleKind 'series'), as jellyfinArtistAlbums: asked every time (books bought
+  // later come too), in the series' order (as dates for the list's order "by release"); not reachable: a placeholder of
+  // the row, the books kept before stand in for it (fillFailedRows), and the list counts as not complete (audibleFailures).
+  private audibleSeriesBooks(item: Media): Observable<Media[]> {
+    const row = `a:${item.id}`
+    return this.http
+      .get<{ books?: { asin: string; title: string; image?: string }[] }>(`${this.getApiBackendUrl()}/audible/series/${encodeURIComponent(item.id)}/books`)
+      .pipe(
+        timeout(60000),
+        map((r) =>
+          (r.books ?? []).map(
+            (b, i) =>
+              ({
+                type: 'audible',
+                audibleKind: 'book',
+                id: String(b.asin),
+                title: b.title,
+                artist: item.artist,
+                category: item.category,
+                cover: b.image ? `/api/audible/image/${b.image}?w=500` : (item.cover ?? undefined),
+                artistcover: item.artistcover_override ?? item.artistcover ?? item.cover,
+                // (the series' order: a year per place - "by release" sorts them so)
+                release_date: String(1001 + i),
+                sorting: item.sorting,
+                index: item.index,
+                row,
+              }) as Media,
+          ),
+        ),
+        catchError(() => {
+          this.audibleFailures++
+          return of([{ type: 'audible', audibleKind: 'series', id: item.id, artist: item.artist, category: item.category, sorting: item.sorting, index: item.index, unavailable: true, row } as Media])
         }),
       )
   }

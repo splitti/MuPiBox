@@ -186,3 +186,147 @@ test('audible: the app changes only the switches', () => {
   assert.equal(applyAudibleOptions(t, null), 'no settings')
   assert.equal(t.country, 'de')
 })
+
+// A2: the library
+import { AudibleLibrary, bookOf, imageIdOf, seriesOf } from './audible/library'
+
+const raw = (asin: string, extra: Record<string, unknown> = {}) => ({
+  asin,
+  title: `Buch ${asin}`,
+  content_delivery_type: 'SinglePartBook',
+  authors: [{ name: 'Autorin' }],
+  narrators: [{ name: 'Sprecher' }],
+  runtime_length_min: 73,
+  product_images: { '500': 'https://m.media-amazon.com/images/I/51KJ5zTnw3L._SL500_.jpg' },
+  release_date: '2020-05-01',
+  ...extra,
+})
+
+test('audible: library entries - books only, cover id, series with their place', () => {
+  const b = bookOf(raw('B000000001', { series: [{ asin: 'S000000001', title: 'Die Reihe', sequence: '2' }], is_finished: true }))
+  assert.equal(b?.image, '51KJ5zTnw3L')
+  assert.deepEqual(b?.series, [{ asin: 'S000000001', title: 'Die Reihe', sequence: '2' }])
+  assert.equal(b?.finished, true)
+  assert.equal(b?.minutes, 73)
+  assert.equal(bookOf(raw('B000000002', { content_delivery_type: 'MultiPartBook' }))?.asin, 'B000000002')
+  // (podcasts and broken entries are left out)
+  assert.equal(bookOf(raw('B000000003', { content_delivery_type: 'PodcastParent' })), null)
+  assert.equal(bookOf(raw('kaputt')), null)
+  assert.equal(imageIdOf('https://evil.example/images/I/abc12._SL500_.jpg'), '')
+  assert.equal(imageIdOf('https://m.media-amazon.com/images/I/../../x._SL500_.jpg'), '')
+})
+
+test('audible: series in the series order, then by release; titles sorted', () => {
+  const s = (seq: string) => [{ asin: 'S000000001', title: 'Reihe', sequence: seq }]
+  const books = [
+    bookOf(raw('B000000003', { series: s('3') }))!,
+    bookOf(raw('B000000001', { series: s('1'), product_images: { '500': 'https://m.media-amazon.com/images/I/first01._SL500_.jpg' } }))!,
+    bookOf(raw('B000000010', { series: s('10') }))!,
+    bookOf(raw('B000000099', { series: s(''), release_date: '2024-01-01' }))!,
+    bookOf(raw('B000000002', { series: [{ asin: 'S000000002', title: 'Andere', sequence: '1' }] }))!,
+  ]
+  const series = seriesOf(books)
+  assert.deepEqual(
+    series.map((x) => x.title),
+    ['Andere', 'Reihe'],
+  )
+  assert.deepEqual(
+    series[1].books.map((b) => b.asin),
+    ['B000000001', 'B000000003', 'B000000010', 'B000000099'],
+  )
+  assert.equal(series[1].image, 'first01')
+})
+
+test('audible: the library is kept 30 minutes per device, asked anew when fresh, one fetch at a time', async () => {
+  let calls = 0
+  const lib = new AudibleLibrary(async () => {
+    calls++
+    await new Promise((r) => setTimeout(r, 10))
+    return [bookOf(raw('B000000001'))!]
+  })
+  const [a, b] = await Promise.all([lib.books(session(), 'dev1'), lib.books(session(), 'dev1')])
+  assert.equal(calls, 1)
+  assert.equal(a, b)
+  await lib.books(session(), 'dev1')
+  assert.equal(calls, 1)
+  await lib.books(session(), 'dev1', true)
+  assert.equal(calls, 2)
+  // (another device: another account maybe)
+  assert.equal(lib.stale('dev2'), null)
+  await lib.books(session(), 'dev2')
+  assert.equal(calls, 3)
+})
+
+// A3: playing
+import { adtsStart, byteAt, chaptersOf, parsePieces } from './audible/play'
+
+const M3U8 = [
+  '#EXTM3U',
+  '#EXT-X-VERSION:4',
+  '#EXT-X-TARGETDURATION:20',
+  '#EXT-X-PLAYLIST-TYPE:VOD',
+  '#EXTINF:20,',
+  '#EXT-X-BYTERANGE:1000@0',
+  'bk_x_44_128.aac?ss_sec=20&sr=0&er=999',
+  '#EXTINF:20,',
+  '#EXT-X-BYTERANGE:2000',
+  'bk_x_44_128.aac?ss_sec=20&sr=1000&er=2999',
+  '#EXTINF:10,',
+  '#EXT-X-BYTERANGE:500@3000',
+  'bk_x_44_128.aac?ss_sec=20&sr=3000&er=3499',
+  '#EXT-X-ENDLIST',
+].join('\n')
+
+test('audible: the HLS playlist as pieces of one file; byte places by time', () => {
+  const p = parsePieces(M3U8, 'https://cdn.example/a/b/signed/x.m3u8')
+  assert.ok(p)
+  assert.equal(p.file, 'https://cdn.example/a/b/signed/bk_x_44_128.aac?ss_sec=20&sr=0&er=999')
+  assert.deepEqual(
+    p.pieces.map((x) => [x.t, x.off, x.len]),
+    [
+      [0, 0, 1000],
+      [20, 1000, 2000],
+      [40, 3000, 500],
+    ],
+  )
+  const info = { pieces: p.pieces, end: 3500 }
+  assert.equal(byteAt(info, 0), 0)
+  assert.equal(byteAt(info, 10), 500)
+  assert.equal(byteAt(info, 30), 2000)
+  assert.equal(byteAt(info, 45), 3250)
+  assert.equal(byteAt(info, 99), 3500)
+  // (encrypted, or pieces in two files: not one the box plays)
+  assert.equal(parsePieces(M3U8.replace('#EXT-X-PLAYLIST-TYPE:VOD', '#EXT-X-KEY:METHOD=AES-128,URI="k"'), 'https://cdn.example/x.m3u8'), null)
+  assert.equal(parsePieces(M3U8.replace('bk_x_44_128.aac?ss_sec=20&sr=1000', 'other.aac?ss_sec=20&sr=1000'), 'https://cdn.example/x.m3u8'), null)
+  assert.equal(parsePieces('nonsense', 'https://cdn.example/x.m3u8'), null)
+})
+
+test('audible: the first AAC frame (ADTS) in bytes that begin inside one', () => {
+  // two frames of 10 bytes behind 3 stray bytes; a stray 0xff 0xf1 that is no frame (its length points nowhere useful)
+  const frame = [0xff, 0xf1, 0x50, 0x80, 0x01, 0x5f, 0xfc, 0, 0, 0]
+  assert.equal(adtsStart(Uint8Array.from([1, 2, 3, ...frame, ...frame])), 3)
+  assert.equal(adtsStart(Uint8Array.from([0xff, 0xf1, 0x50, 0x80, 0x01, 0x20, 0, 0, ...frame, ...frame])), 8)
+  assert.equal(adtsStart(Uint8Array.from([1, 2, 3, 4])), -1)
+})
+
+test('audible: chapters flat, sub chapters as tracks, a heading only when it has a length of its own', () => {
+  const chapters = chaptersOf({
+    chapters: [
+      { title: 'Vorspann', start_offset_ms: 0, length_ms: 31000 },
+      { title: 'Teil 1', start_offset_ms: 31000, length_ms: 600000, chapters: [{ title: 'Kapitel 1', start_offset_ms: 33000, length_ms: 300000 }, { title: 'Kapitel 2', start_offset_ms: 333000, length_ms: 298000 }] },
+      { title: '', start_offset_ms: 631000, length_ms: 1000 },
+      { title: 'kaputt', start_offset_ms: -1, length_ms: 5 },
+    ],
+  })
+  assert.deepEqual(
+    chapters.map((c) => [c.number, c.name, c.start, c.duration]),
+    [
+      [1, 'Vorspann', 0, 31],
+      [2, 'Teil 1', 31, 2],
+      [3, 'Kapitel 1', 33, 300],
+      [4, 'Kapitel 2', 333, 298],
+      [5, 'Kapitel 5', 631, 1],
+    ],
+  )
+  assert.deepEqual(chaptersOf(null), [])
+})

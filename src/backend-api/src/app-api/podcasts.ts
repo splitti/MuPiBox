@@ -8,6 +8,7 @@
 
 import { promises as fsp } from 'node:fs'
 import { jellyfinSettings, signedIn } from '../jellyfin/settings'
+import { audibleSettings, signedIn as audibleSignedIn } from '../audible/settings'
 import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { ardKidsShows, ardSearch, ardShowIdFromUrl, type ArdShow } from '../ard-sounds'
@@ -65,6 +66,11 @@ export function registerPodcastRoutes(router: Router, deps: PodcastRouteDeps): v
       jellyfin: (() => {
         const j = jellyfinSettings(cfg as Record<string, unknown> | undefined)
         return j.enabled && signedIn(j)
+      })(),
+      // (Audible switched on and signed in, see audible.ts: the app offers it when adding and plays its entries)
+      audible: (() => {
+        const a = audibleSettings(cfg as Record<string, unknown> | undefined)
+        return a.enabled && audibleSignedIn(a)
       })(),
       available: Object.entries(CONTENT_LANGUAGES).map(([code, l]) => ({ code, name: l.name })),
     }

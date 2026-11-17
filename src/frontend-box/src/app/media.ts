@@ -51,6 +51,9 @@ export interface Media {
   // Jellyfin (type: 'jellyfin', docs/jellyfin-5.1.md): id is Jellyfin's id of the album, playlist, audiobook or artist (a
   // whole artist: the list shows its albums, see MediaService.jellyfinArtistAlbums), played through the backend and mpv
   jellyfinKind?: 'album' | 'playlist' | 'book' | 'artist'
+  // Audible (type: 'audible', docs/audible-5.1.md): id is the ASIN of the book or of a whole series (the list shows the
+  // account's books of it, see MediaService.audibleSeriesBooks), played through the backend and mpv - chapters are tracks
+  audibleKind?: 'book' | 'series'
   // a whole TIDAL artist: only the albums at these positions by release (1 = the oldest), and without these ids
   range_from?: number
   range_to?: number

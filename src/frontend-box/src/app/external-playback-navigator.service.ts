@@ -299,7 +299,7 @@ export class ExternalPlaybackNavigatorService {
         }
       }
     }
-    if (media?.type === 'tidal' || media?.type === 'jellyfin') {
+    if (media?.type === 'tidal' || media?.type === 'jellyfin' || media?.type === 'audible') {
       const entries = await firstValueFrom(
         this.http.get<Media[]>(`${environment.backend.apiUrl}/data`).pipe(
           timeout(3000),
@@ -377,6 +377,20 @@ export class ExternalPlaybackNavigatorService {
         tidalKind: tidal[1] as 'album' | 'playlist',
         id: tidal[2],
         category: 'music',
+        artist: '',
+        title: String(data.album ?? ''),
+        cover: data.cover || undefined,
+        artistcover: data.cover || undefined,
+      } as Media
+    }
+    // An Audible book: path is book:<asin> (looked up as TIDAL's)
+    const audible = /^book:([A-Z0-9]{10})$/.exec(path)
+    if ((data as { currentType?: string }).currentType === 'audible' && audible) {
+      return {
+        type: 'audible',
+        audibleKind: 'book',
+        id: audible[1],
+        category: 'audiobook',
         artist: '',
         title: String(data.album ?? ''),
         cover: data.cover || undefined,
