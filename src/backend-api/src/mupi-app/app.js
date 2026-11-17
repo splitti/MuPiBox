@@ -15996,6 +15996,198 @@ function mountJellyfin(root, page) {
   })
 }
 
+/* Audible (5.1, docs/audible-5.1.md): Dienste › Audible - the store, the sign-in in the parents' own browser (they paste
+   the address Amazon lands on, the box registers a device of its own with the code in it) and the page of the connected
+   account. Unofficial; the box keeps only its device's key. */
+
+const ab = { data: null, step: 0, country: '', login: null, busy: false, error: '', address: '' }
+
+const AB_STEPS = [
+  ['country', 'Land'],
+  ['login', 'Anmelden'],
+]
+
+const AB_COUNTRIES = {
+  de: 'Deutschland, Österreich, Schweiz (audible.de)',
+  uk: 'Großbritannien (audible.co.uk)',
+  us: 'USA (audible.com)',
+  fr: 'Frankreich (audible.fr)',
+  it: 'Italien (audible.it)',
+  es: 'Spanien (audible.es)',
+  ca: 'Kanada (audible.ca)',
+  au: 'Australien (audible.com.au)',
+  in: 'Indien (audible.in)',
+  jp: 'Japan (audible.co.jp)',
+}
+
+const AB_ERRORS = {
+  badCode: ['Keine Anmelde-Adresse', 'In dem eingefügten Text steckt kein Anmeldecode. Kopiere die komplette Adresse aus der Adresszeile der Seite, auf der Amazon nach der Anmeldung landet.'],
+  refused: ['Amazon hat abgelehnt', 'Der Code ist abgelaufen oder schon benutzt. Melde dich über den Knopf noch einmal an und füge die neue Adresse gleich danach ein.'],
+  expired: ['Anmeldung abgelaufen', 'Die Anmeldung hat zu lange gewartet. Starte sie neu.'],
+  unreachable: ['Amazon nicht erreichbar', 'Die Box erreicht Amazon gerade nicht. Prüfe ihre Internetverbindung.'],
+  rateLimited: ['Zu viele Versuche', 'Audible bittet um eine Pause. Versuche es in ein paar Minuten noch einmal.'],
+}
+
+// the store that fits the app's language and region (the parents can choose another)
+function abDefaultCountry() {
+  const [l, r] = String(LOCALE || 'de-DE').split('-')
+  const byRegion = { DE: 'de', AT: 'de', CH: 'de', GB: 'uk', US: 'us', FR: 'fr', IT: 'it', ES: 'es', CA: 'ca', AU: 'au', IN: 'in', JP: 'jp' }
+  const byLang = { de: 'de', en: 'us', fr: 'fr', it: 'it', es: 'es', ja: 'jp' }
+  return byRegion[String(r ?? '').toUpperCase()] ?? byLang[String(l ?? '').toLowerCase()] ?? 'de'
+}
+
+async function loadAudible() {
+  const r = await api(`${API}/audible`)
+  if (!r.ok) throw new Error(`audible ${r.status}`)
+  ab.data = r.body
+  const s = r.body.settings
+  // (a sign-in still waiting - the parents were in the browser and came back: its step; else the account or the start)
+  ab.login = r.body.login ?? null
+  ab.step = ab.login ? 2 : s.signedIn ? 0 : 1
+  ab.country = ab.login?.country || (s.signedIn ? s.country : abDefaultCountry())
+  ab.error = ''
+}
+
+const abError = (e) => AB_ERRORS[e] ?? AB_ERRORS.unreachable
+const abUnofficial = () =>
+  `<div class="note warn">${icon('info', 18)}<span>${esc(tr('Inoffiziell: Audible hat keine öffentliche Schnittstelle. Die Box nutzt die der Audible-App und spielt nur, was Audible zum Streamen ausliefert. Das kann jederzeit aufhören zu funktionieren. Nutzung auf eigene Gefahr.'))}</span></div>`
+
+function audibleSteps() {
+  const s = ab.step
+  const bar = `<ol class="wz-steps" style="grid-template-columns:repeat(${AB_STEPS.length}, minmax(0, 1fr))">${AB_STEPS.map(([, label], i) => {
+    const n = i + 1
+    const done = n < s
+    return `<li class="${done ? 'done' : ''}${n === s ? ' current' : ''}"><button type="button" disabled${n === s ? ' aria-current="step"' : ''}><span class="bar"></span><span class="lbl">${done ? icon('check', 14) : `<i>${n}</i>`}${esc(tr(label))}</span></button></li>`
+  }).join('')}</ol>`
+  const err = ab.error ? abError(ab.error) : null
+  const errHtml = err ? `<div class="note danger">${icon('info', 18)}<span><b>${esc(tr(err[0]))}</b> ${esc(tr(err[1]))}</span></div>` : ''
+  let body
+  let next
+  if (s === 1) {
+    const countries = ab.data?.countries ?? Object.keys(AB_COUNTRIES)
+    body = `<h2>${esc(tr('Wo ist dein Audible-Konto?'))}</h2>${abUnofficial()}
+      <div class="field"><label for="ab-country">${esc(tr('Audible-Shop'))}</label><select class="input" id="ab-country">${countries
+        .map((c) => `<option value="${esc(c)}" ${c === ab.country ? 'selected' : ''}>${esc(tr(AB_COUNTRIES[c] ?? c))}</option>`)
+        .join('')}</select>
+      <small>${esc(tr('Der Shop, bei dem deine Hörbücher gekauft sind. Österreich und die Schweiz nutzen audible.de.'))}</small></div>${errHtml}`
+    next = `<button class="btn primary" id="ab-next" ${ab.busy ? 'disabled' : ''}>${esc(tr(ab.busy ? 'Wird vorbereitet …' : 'Weiter'))}</button>`
+  } else {
+    const url = ab.login?.url ?? ''
+    body = `<h2>${esc(tr('Bei Amazon anmelden'))}</h2>
+      <ol class="help steps-list">
+        <li>${esc(tr('Öffne die Anmeldung und melde dich mit dem Konto an, dessen Audible-Hörbücher die Box spielen soll – auch mit dem Bestätigungscode, falls Amazon danach fragt.'))}</li>
+        <li>${esc(tr('Bietet Amazon an, einen Passkey einzurichten, wähle „Nicht jetzt“ bzw. „Überspringen“.'))}</li>
+        <li>${esc(tr('Am Ende zeigt Amazon eine leere Seite oder „Seite nicht gefunden“. Das ist richtig. Kopiere die komplette Adresse aus der Adresszeile (sie enthält „maplanding“) und füge sie hier ein.'))}</li>
+      </ol>
+      <p class="help" style="margin:0">${esc(tr('Keine Adresszeile zu sehen (etwa in der App vom Home-Bildschirm): über „Teilen“ › „Kopieren“. Öffnet sich stattdessen die Amazon-App, öffne die Anmeldung im Browser oder am Computer.'))}</p>
+      <div class="btns"><a class="btn" id="ab-open" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${icon('link', 18)}${esc(tr('Anmeldung bei Amazon öffnen'))}</a></div>
+      <div class="field"><label for="ab-address">${esc(tr('Adresse der letzten Seite'))}</label><textarea class="input mono" id="ab-address" rows="3" spellcheck="false" placeholder="https://www.amazon.de/ap/maplanding?…" ${NO_PW_MANAGER}>${esc(ab.address)}</textarea>
+      <small>${esc(tr('Dein Passwort bleibt bei Amazon. Die Box bekommt nur einen einmaligen Code und meldet sich damit als eigenes Gerät an. Die Adresse wird nirgends gespeichert.'))}</small></div>${errHtml}`
+    next = `<button class="btn primary" id="ab-finish" ${ab.busy ? 'disabled' : ''}>${esc(tr(ab.busy ? 'Wird verbunden …' : 'Verbinden'))}</button>`
+  }
+  const back = s === 1 ? `<button class="btn" id="ab-cancel">Abbrechen</button>` : `<button class="btn" id="ab-back" ${ab.busy ? 'disabled' : ''}>${icon('back', 18)}Zurück</button>`
+  return [
+    `<section class="card wide wz">${bar}<div class="wz-count">${esc(tr(`Schritt ${s} von ${AB_STEPS.length}`))}</div>${body}
+      <div class="wz-foot">${back}<span class="wz-next">${next}</span></div></section>`,
+  ]
+}
+
+function audibleTop() {
+  const d = ab.data
+  if (!d) return []
+  if (ab.step) return audibleSteps()
+  const s = d.settings
+  const chip = !s.enabled ? 'aus' : d.state === 'ok' ? 'verbunden' : 'gestört'
+  const notes = {
+    unreachable: `<div class="note danger">${icon('info', 18)}<span>${esc(tr('Audible ist gerade nicht erreichbar. Prüfe die Internetverbindung der Box.'))}</span></div>`,
+    unauthorized: `<div class="note danger">${icon('info', 18)}<span>${esc(tr('Audible nimmt die Anmeldung der Box nicht mehr an (das Gerät wurde bei Amazon entfernt oder es ist ein Backup einer anderen Box). Bitte neu anmelden.'))}</span></div>`,
+  }
+  return [
+    `<section class="card wide"><div class="card-head"><h2>Audible</h2><span class="chip ${chip === 'verbunden' ? 'ok' : ''}">${esc(tr(chip))}</span></div>
+      <div class="row"><span class="lbl"><b>${esc(tr('Audible verwenden'))}</b><small>${esc(tr('Aus: Einträge aus Audible bleiben in der Bibliothek, werden aber nicht angezeigt und nicht gespielt.'))}</small></span><label class="switch"><input type="checkbox" id="ab-on" ${s.enabled ? 'checked' : ''} aria-label="${esc(tr('Audible verwenden'))}"><span></span></label></div>
+      ${notes[d.state] ?? ''}
+      <dl class="kv"><div><dt>${esc(tr('Shop'))}</dt><dd>${esc(tr(AB_COUNTRIES[s.country] ?? s.country))}</dd></div><div><dt>${esc(tr('Konto'))}</dt><dd translate="no">${esc(s.customerName || '—')}</dd></div><div><dt>${esc(tr('Gerät bei Amazon'))}</dt><dd translate="no">${esc(s.deviceName || '—')}</dd></div></dl>
+      ${abUnofficial()}
+      <div class="btns">${d.state === 'unauthorized' ? `<button class="btn primary" id="ab-relogin">${esc(tr('Neu anmelden'))}</button>` : ''}</div></section>`,
+    `<section class="card wide"><div class="navlist"><button class="navrow" id="ab-logout"><span class="tile danger">${icon('close', 18)}</span><span class="lbl"><b class="danger-text">${esc(tr('Abmelden'))}</b><small>${esc(tr('Die Box entfernt ihr Gerät aus deinem Amazon-Konto. Einträge aus Audible bleiben in der Bibliothek, spielen aber erst nach einer neuen Anmeldung.'))}</small></span></button></div></section>`,
+  ]
+}
+
+function mountAudible(root, page) {
+  const d = ab.data
+  if (!d) return
+  const redraw = () => currentPage()?.id === page.id && renderPage(page, false)
+  const reload = async (text, kind) => {
+    if (text) toast(text, kind)
+    await loadAudible().catch(() => undefined)
+    svc.at = 0
+    redraw()
+  }
+  $('#ab-cancel', root)?.addEventListener('click', () => (d.settings.signedIn ? ((ab.step = 0), (ab.error = ''), redraw()) : go('g-dienste')))
+  $('#ab-back', root)?.addEventListener('click', () => {
+    api(`${API}/audible/login`, { method: 'DELETE' })
+    ab.login = null
+    ab.error = ''
+    ab.address = ''
+    ab.step = 1
+    redraw()
+  })
+  // (what was pasted stays when the page is drawn anew - e.g. back from another app)
+  $('#ab-address', root)?.addEventListener('input', (e) => (ab.address = e.target.value))
+  $('#ab-country', root)?.addEventListener('change', (e) => (ab.country = e.target.value))
+  $('#ab-next', root)?.addEventListener('click', async () => {
+    ab.country = $('#ab-country', root).value
+    ab.busy = true
+    ab.error = ''
+    redraw()
+    const r = await api(`${API}/audible/login`, { method: 'POST', body: { country: ab.country } })
+    ab.busy = false
+    if (!(r.ok && r.body.ok)) {
+      ab.error = 'unreachable'
+      return redraw()
+    }
+    ab.login = { id: r.body.id, country: ab.country, url: r.body.url, until: r.body.until }
+    ab.step = 2
+    redraw()
+    window.scrollTo(0, 0)
+  })
+  $('#ab-finish', root)?.addEventListener('click', async () => {
+    const address = $('#ab-address', root).value.trim()
+    if (!address) return toast('Bitte die Adresse der letzten Amazon-Seite einfügen', 'info')
+    ab.busy = true
+    ab.error = ''
+    redraw()
+    const r = await api(`${API}/audible/login/finish`, { method: 'POST', body: { id: ab.login?.id, address }, timeoutMs: 30000 })
+    ab.busy = false
+    if (!(r.ok && r.body.ok)) {
+      // (a second tap while it registers: the first one answers)
+      if (r.body?.error === 'busy') return redraw()
+      ab.error = r.body?.error ?? 'unreachable'
+      // (the sign-in itself expired: back to its start)
+      if (ab.error === 'expired') ab.step = 1
+      return redraw()
+    }
+    ab.address = ''
+    reload('Mit Audible verbunden', 'ok')
+  })
+  $('#ab-on', root)?.addEventListener('change', async (e) => {
+    const r = await api(`${API}/audible/settings`, { method: 'POST', body: { enabled: e.target.checked } })
+    reload(r.ok ? '' : 'Nicht gespeichert', 'info')
+  })
+  $('#ab-relogin', root)?.addEventListener('click', () => {
+    ab.country = d.settings.country
+    ab.error = ''
+    ab.step = 1
+    redraw()
+  })
+  $('#ab-logout', root)?.addEventListener('click', async () => {
+    if (!(await ask('Von Audible abmelden?', 'Die Box entfernt ihr Gerät aus deinem Amazon-Konto. Einträge aus Audible bleiben in der Bibliothek und spielen nach einer neuen Anmeldung wieder.', 'Abmelden'))) return
+    const r = await api(`${API}/audible/logout`, { method: 'POST', body: {}, timeoutMs: 30000 })
+    if (r.ok && r.body.removed !== true) return reload('Abgemeldet. Das Gerät ließ sich nicht aus dem Amazon-Konto austragen – entferne es bei Bedarf unter „Geräte verwalten“.', 'info')
+    reload(r.ok ? 'Von Audible abgemeldet' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+  })
+}
+
 /* Jellyfin, Bibliothek › Hinzufügen › Aus Jellyfin (J2): the chosen libraries and a search; an album, a playlist, an
    audiobook or a whole artist becomes an entry of the box's library (type 'jellyfin', see docs/jellyfin-5.1.md) */
 
@@ -18810,6 +19002,7 @@ const CONTROLLERS = {
   homeassistant: { load: loadHa, top: haTop, sections: () => [], mount: mountHa },
   tidal: { load: loadTidal, top: tidalTop, sections: () => [], mount: mountTidal },
   jellyfin: { load: loadJellyfin, top: jellyfinTop, sections: () => [], mount: mountJellyfin },
+  audible: { load: loadAudible, top: audibleTop, sections: () => [], mount: mountAudible },
   jellyfinsuche: { load: loadServices, top: jellyfinSearchTop, sections: () => [], mount: mountJellyfinSearch },
   fotos: { load: loadPhotoOverview, top: photoOverviewTop, sections: () => [], mount: mountPhotoOverview, ownNav: true },
   fotoalbum: { load: loadPhotoAlbum, top: photoAlbumTop, sections: () => [], mount: mountPhotoAlbum },

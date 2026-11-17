@@ -61,6 +61,7 @@ import { registerDietpiDashboardRoutes, startDietpiDashboard } from './dietpi-da
 import { registerServicesRoutes } from './services'
 import { registerTidalRoutes } from './tidal'
 import { registerJellyfinRoutes } from './jellyfin'
+import { registerAudibleRoutes } from './audible'
 import { registerPhotoRoutes } from './photos/routes'
 import type { PhotoNasAccess } from './photos/nas'
 import { registerSystemRoutes } from './system'
@@ -452,6 +453,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   registerTidalRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   // (Jellyfin, Dienste › Jellyfin: the token kept as the NAS password - see jellyfin.ts)
   registerJellyfinRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig, secret: deps.photoSecret })
+  // (Audible, Dienste › Audible: the device's key kept as the NAS password - see audible.ts)
+  registerAudibleRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig, secret: deps.photoSecret })
   // (the photo display, Einstellungen › Fotos - off by default)
   registerPhotoRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig, nas: deps.photoNas, secret: deps.photoSecret })
   registerSystemRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })

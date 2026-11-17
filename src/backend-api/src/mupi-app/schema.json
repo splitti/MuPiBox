@@ -3677,6 +3677,16 @@
    "sections": []
   },
   {
+   "id": "audible",
+   "slug": "audible",
+   "area": "einstellungen",
+   "parent": "g-dienste",
+   "title": "Audible",
+   "description": "Inoffizielle Anbindung an Audible",
+   "icon": "book",
+   "sections": []
+  },
+  {
    "id": "wled",
    "slug": "wled",
    "area": "einstellungen",
@@ -4832,6 +4842,12 @@
        "label": "Jellyfin",
        "target": "jellyfin",
        "subtitle": "Eigener Medienserver, Anmeldung mit Code · Bibliothek › Hinzufügen"
+      },
+      {
+       "type": "nav",
+       "label": "Audible",
+       "target": "audible",
+       "subtitle": "Eigene Hörbücher, Anmeldung bei Amazon, inoffiziell"
       },
       {
        "type": "nav",
@@ -6711,6 +6727,11 @@
    "l": "Jellyfin",
    "where": "Dienste › Jellyfin",
    "id": "jellyfin"
+  },
+  {
+   "l": "Audible",
+   "where": "Dienste › Audible",
+   "id": "audible"
   }
  ],
  "themes": [
