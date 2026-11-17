@@ -97,7 +97,10 @@ function pinned(url: URL, fingerprint: string, init: ServiceRequest, label: stri
             try {
               if (status < 200 || status > 599) throw new Error(`unexpected status ${status}`)
               if (noBody) res.resume()
-              resolve(new Response(noBody ? null : (Readable.toWeb(res) as unknown as ReadableStream), { status, statusText: res.statusMessage, headers }))
+              // (counted in bytes, at most 64 KB ahead: a stream read slowly - an audiobook paused in mpv - must not pile
+              // up in memory while the server goes on sending)
+              const body = noBody ? null : (Readable.toWeb(res, { strategy: new ByteLengthQueuingStrategy({ highWaterMark: 64 * 1024 }) }) as unknown as ReadableStream)
+              resolve(new Response(body, { status, statusText: res.statusMessage, headers }))
             } catch (err) {
               res.destroy()
               reject(err)

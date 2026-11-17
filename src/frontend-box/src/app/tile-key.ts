@@ -24,6 +24,7 @@ export function tileKeyOf(media: Media | undefined): string | null {
     if (media.playlistid) return `single:${cat}:${media.playlistid}`
     if (media.type === 'radio' && media.id) return `single:${cat}:${media.id}`
     if (media.type === 'tidal' && media.tidalKind === 'playlist' && media.id) return `single:${cat}:${media.id}`
+    if (media.type === 'jellyfin' && media.jellyfinKind === 'playlist' && media.id) return `single:${cat}:${media.id}`
     return null
   }
   return `artist:${cat}:${media.artist}`

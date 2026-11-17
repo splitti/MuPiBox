@@ -8,6 +8,7 @@ import { execFile } from 'node:child_process'
 import { promises as fsp } from 'node:fs'
 import * as os from 'node:os'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
+import { jellyfinSettings, signedIn } from '../jellyfin/settings'
 import { bootConfigPath } from './boot-paths'
 import { bootDrive } from './boot-drive'
 import { detectDisplayProfile, DISPLAY_OVERLAYS } from './display-profile'
@@ -133,6 +134,11 @@ async function services(cfg: MupiboxConfig | undefined): Promise<string> {
   return [
     onOff('Spotify', typeof spotify.refreshToken === 'string' && spotify.refreshToken !== ''),
     onOff('TIDAL', tidal),
+    // (switched on and signed in - the version of the server too: a bug report about it needs it)
+    (() => {
+      const j = jellyfinSettings(cfg as Record<string, unknown> | undefined)
+      return j.enabled && signedIn(j) ? `Jellyfin an${j.version ? ` (${j.version})` : ''}` : 'Jellyfin aus'
+    })(),
     onOff(section(cfg, 'nas').protocol === 'smb' ? 'NAS (SMB)' : 'NAS', typeof section(cfg, 'nas').address === 'string' && section(cfg, 'nas').address !== ''),
     onOff('Home Assistant', section(cfg, 'homeAssistant').enabled === true),
     onOff('MQTT', section(cfg, 'mqtt').active === true),

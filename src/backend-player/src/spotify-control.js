@@ -237,7 +237,8 @@ const apiAccessToken = {
 
 player.on('percent_pos', (val) => {
   //console.log('track progress is', val);
-  if (!isCuePlayback() && !albumNow()?.progress) currentMeta.progressTime = val
+  // (a Jellyfin track without a length of its own: its part from the listed length, see time_pos)
+  if (!isCuePlayback() && !albumNow()?.progress && !jellyfinListedLength()) currentMeta.progressTime = val
 })
 
 // --- CUE albums (one audio file, tracks by start time - see /api/nas/tracklist) ---
@@ -272,7 +273,20 @@ function cueSeek(seconds) {
   pendingCueSeek = { seconds, at: Date.now(), tries: 0 }
 }
 
+// the length mpv read from the file that plays (none for a stream made while it plays - Jellyfin's MP3 for a weak WiFi)
+let mpvLength = 0
+// A Jellyfin track without a length of its own: the one Jellyfin listed (0 when mpv has one, or none is listed)
+function jellyfinListedLength() {
+  if (currentMeta.currentType !== 'jellyfin' || mpvLength > 0) return 0
+  const track = currentJellyfinTracks[Number(currentMeta.currentTracknr) - 1]
+  return track?.duration > 0 ? track.duration : 0
+}
+// (a new file: its own length first - the one before must not stand for a file mpv cannot measure)
+player.on('track-change', () => {
+  mpvLength = 0
+})
 player.on('length', (val) => {
+  mpvLength = Number(val) > 0 ? Number(val) : 0
   if (currentCue) currentCue.fileLength = val
   if (!isCuePlayback() && !albumNow()?.progress) currentMeta.durationSeconds = val
 })
@@ -291,6 +305,13 @@ player.on('time_pos', (seconds) => {
   if (!isCuePlayback()) {
     pendingCueSeek = null
     currentMeta.positionSeconds = seconds
+    // (a Jellyfin track made into MP3 for a weak WiFi has no length mpv could read: the one Jellyfin listed, so the bar,
+    // "weiterhören" and the heard tick still work)
+    const listed = jellyfinListedLength()
+    if (listed) {
+      currentMeta.durationSeconds = listed
+      currentMeta.progressTime = Math.max(0, Math.min(100, (Number(seconds) * 100) / listed))
+    }
     noteEpisodePosition(seconds)
     return
   }
@@ -372,6 +393,9 @@ player.on('metadata', (val) => {
     currentMeta.trackFile = track ? `nas:${track.path}` : undefined
   } else if (currentMeta.currentType === 'tidal') {
     const track = currentTidalTracks[currentMeta.currentTracknr - 1]
+    if (track) currentMeta.currentTrackname = track.name
+  } else if (currentMeta.currentType === 'jellyfin') {
+    const track = currentJellyfinTracks[currentMeta.currentTracknr - 1]
     if (track) currentMeta.currentTrackname = track.name
   } else if (albumNow()) {
     // (an album that is no folder - an extension's - names its tracks)
@@ -509,7 +533,7 @@ player.on('path', (val) => {
     currentMeta.trackFile =
       typeof val === 'string' && val.startsWith(mediaRoot) ? `local:${val.slice(mediaRoot.length)}` : undefined
   }
-  if (!['rss', 'radio', 'nas', 'tidal'].includes(currentMeta.currentType) && !albumNow()) {
+  if (!['rss', 'radio', 'nas', 'tidal', 'jellyfin'].includes(currentMeta.currentType) && !albumNow()) {
     // The folder holding the file, whatever the folder depth (was: fixed 7th segment).
     const pathParts = val.split('/')
     if (pathParts.length > 2) {
@@ -582,12 +606,27 @@ function deleteResumeForFinishedLibraryAlbum() {
   if (currentMeta.currentPlayer !== 'mplayer') return
   const rawPath = currentMeta.path
   if (!rawPath) return
+  // (a streamed list - TIDAL, Jellyfin - also runs out when every track after one fails: the server asleep, the token
+  // gone, another access point. Its place stays then; only a last track that really played to its end ends it, as for
+  // the heard tick - see heardPlaylistFinished)
+  if (currentMeta.currentType === 'tidal' || currentMeta.currentType === 'jellyfin') {
+    const nr = Number(currentMeta.currentTracknr)
+    const total = Number(currentMeta.totalTracks)
+    const dur = Number(currentMeta.durationSeconds)
+    const pos = Number(currentMeta.positionSeconds)
+    if (!(dur > 0 && pos >= dur - HEARD_END_S) || (!currentMeta.shuffle && !(total > 0 && nr >= total))) return
+  }
   let body
   if (currentMeta.currentType === 'tidal') {
     // a TIDAL album or playlist: its resume entry is keyed by TIDAL's id (path is <album|playlist>:<id>)
     const id = String(rawPath).split(':')[1]
     if (!id) return
     body = JSON.stringify({ type: 'tidal', id })
+  } else if (currentMeta.currentType === 'jellyfin') {
+    // (the same for Jellyfin: <album|playlist|book>:<id>)
+    const id = String(rawPath).split(':')[1]
+    if (!id) return
+    body = JSON.stringify({ type: 'jellyfin', id })
   } else {
     if (currentMeta.currentType !== 'local') return
     const parts = String(rawPath).split('/')
@@ -627,9 +666,10 @@ function deleteResumeForFinishedLibraryAlbum() {
 // What plays counts as "started" after a minute of playing and as "finished" when its last track played to its last 30 s
 // (or to its end); the two moments go to the backend (heard.ts), which keeps them. What plays is named with its start
 // (?heard=, by the display and the app), else it is formed from what plays (a start from Telegram, Home Assistant, an
-// extension) - the same keys: lib:<folder>, nas:<path>, tidal:<album|playlist>:<id>, spotify:<kind>:<id>.
+// extension) - the same keys: lib:<folder>, nas:<path>, tidal:<album|playlist>:<id>, jellyfin:<album|playlist|book>:<id>,
+// spotify:<kind>:<id>.
 // Podcast episodes have their own (the episode positions); radio has none.
-const HEARD_KEY = /^(lib|nas|tidal|spotify):[^\n]{1,400}$/
+const HEARD_KEY = /^(lib|nas|tidal|jellyfin|spotify):[^\n]{1,400}$/
 const HEARD_STARTED_S = 60
 const HEARD_END_S = 30
 // given: the key the start named, for the playback it started (gen); key: what is counted now
@@ -651,6 +691,7 @@ function heardKeyPlaying() {
     if (currentMeta.currentType === 'local') return `lib:${p}`
     if (currentMeta.currentType === 'nas') return `nas:${p}`
     if (currentMeta.currentType === 'tidal') return `tidal:${p}`
+    if (currentMeta.currentType === 'jellyfin') return `jellyfin:${p}`
     return null
   }
   if (currentMeta.currentPlayer === 'spotify') {
@@ -906,6 +947,64 @@ let currentNasTracks = []
 let currentTidalTracks = []
 // the box's TIDAL service (scripts/mupibox/tidal_service.py)
 const TIDAL_SERVICE = 'http://127.0.0.1:5011'
+// the same for a Jellyfin album, playlist or audiobook (playJellyfinList): mpv plays the backend's /api/jellyfin/stream/<id>,
+// which brings the track from Jellyfin with the box's token (docs/jellyfin-5.1.md)
+let currentJellyfinTracks = []
+const JELLYFIN_API = 'http://127.0.0.1:8200/api/jellyfin'
+
+// J5, "Fortschritt mit Jellyfin teilen": what plays of Jellyfin goes to the backend (it passes it on only with the
+// switch on) - a track's start, every 30 s where it is, a pause, and its stop. Jellyfin sets "played" itself for a track
+// stopped near its end. Looked at every 5 s: a track that changed on its own is reported at its full length.
+const jellyfinReport = { id: null, nr: 0, duration: 0, pos: 0, paused: false, sentAt: 0 }
+// (a track counts only once mpv plays it: the number is set ahead at a start, a jump and "previous", and the position of
+// the track before stays until the first playing time of the new one - reported early, Jellyfin took a track not heard
+// for started (an audiobook's chapter as not played again) or for played to its end)
+let jellyfinPlaying = false
+player.on('track-change', () => {
+  jellyfinPlaying = false
+  if (currentMeta.currentType === 'jellyfin') currentMeta.positionSeconds = 0
+})
+player.on('time_pos', (seconds) => {
+  if (Number(seconds) > 0) jellyfinPlaying = true
+})
+function sendJellyfin(id, event, position, paused) {
+  fetch(`${JELLYFIN_API}/progress`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, event, position, paused }),
+    signal: AbortSignal.timeout(10000),
+  }).catch(() => undefined)
+}
+setInterval(() => {
+  const r = jellyfinReport
+  const nr = Number(currentMeta.currentTracknr)
+  const jellyfinNow = currentMeta.currentPlayer === 'mplayer' && currentMeta.currentType === 'jellyfin' && !currentMeta.finished
+  // (the same track mpv has, and it plays already - see jellyfinPlaying; meanwhile nothing is said, also no stop)
+  const index = player.trackIndex?.() ?? -1
+  if (jellyfinNow && (!jellyfinPlaying || (index >= 0 && index + 1 !== nr))) return
+  const track = jellyfinNow ? currentJellyfinTracks[nr - 1] : undefined
+  const pos = Number(currentMeta.positionSeconds) || 0
+  if (r.id && r.id !== track?.id) {
+    // (the next track came on its own, or the list played to its end: the one before played to its end)
+    const toEnd = ((track && nr === r.nr + 1) || currentMeta.finished) && r.duration > 0 && r.pos >= r.duration - 15
+    sendJellyfin(r.id, 'stop', toEnd ? r.duration : r.pos, false)
+    r.id = null
+  }
+  if (!track) return
+  const paused = currentMeta.pause === true
+  if (r.id !== track.id) {
+    Object.assign(r, { id: track.id, nr, duration: Number(track.duration) || Number(currentMeta.durationSeconds) || 0, pos, paused, sentAt: Date.now() })
+    sendJellyfin(track.id, 'start', pos, paused)
+    return
+  }
+  r.pos = pos
+  // (a pause and its end at once; while paused nothing more - a long pause is no news)
+  if (paused !== r.paused || (!paused && Date.now() - r.sentAt >= 30000)) {
+    r.paused = paused
+    r.sentAt = Date.now()
+    sendJellyfin(track.id, 'progress', pos, paused)
+  }
+}, 5000)
 
 // === Playtime Limit (daily listening cap) ===
 // Per-weekday limit on active playback time. Configured in mupiboxconfig.json
@@ -1783,7 +1882,7 @@ function hasDirSegment(command, segment) {
 function isPlayInitiatingCommand(command) {
   if (command.name?.includes('spotify:')) return true
   // 'nas' was missing: NAS playback ignored the playtime limit and quiet hours
-  if (['library', 'nas', 'tidal', 'radio', 'rss', 'say'].some((segment) => hasDirSegment(command, segment))) {
+  if (['library', 'nas', 'tidal', 'jellyfin', 'radio', 'rss', 'say'].some((segment) => hasDirSegment(command, segment))) {
     return true
   }
   if (['play', 'next', 'previous', 'replay', 'seek+30', 'seek-30'].includes(command.name)) return true
@@ -3254,6 +3353,63 @@ async function playTidalList(ref, resume = null) {
   }
 }
 
+// Plays a Jellyfin album, playlist or audiobook ("album:<id>", "playlist:<id>", "book:<id>"): the backend lists its tracks
+// (from Jellyfin, with the box's token), and mpv plays an m3u of the backend's /api/jellyfin/stream/<track>. Like TIDAL:
+// the list is fetched on every start, a start overtaken meanwhile is dropped. resume: {trackNr, progressPct}
+async function playJellyfinList(ref, resume = null) {
+  const [kind, id] = String(ref).split(':')
+  if (!['album', 'playlist', 'book'].includes(kind) || !/^[0-9a-f]{32}$/i.test(id ?? '')) {
+    console.warn(`${now()}: [Spotify Control] Jellyfin: not a list to play: ${ref}`)
+    return
+  }
+  const generation = ++playbackGeneration
+  // (a pause while the list loads: the start is held until "play" - see heldStart)
+  const asked = playPauseRequest
+  clearLibraryResumeTimers()
+  try {
+    const response = await fetch(`${JELLYFIN_API}/tracks?kind=${kind}&id=${id}`, { signal: AbortSignal.timeout(30000) })
+    const body = response.ok ? await response.json() : null
+    const tracks = Array.isArray(body?.tracks) ? body.tracks.filter((t) => /^[0-9a-f]{32}$/i.test(t?.id ?? '')) : []
+    if (tracks.length === 0) {
+      console.warn(`${now()}: [Spotify Control] Jellyfin ${kind} ${id} not started: ${response.ok ? 'no tracks' : `the backend answered ${response.status} (Jellyfin away or not signed in?)`}`)
+      return
+    }
+    if (generation !== playbackGeneration || isPlaybackBlocked()) {
+      log.debug(`${now()}: [Spotify Control] Jellyfin ${kind} ${id} dropped (stopped, replaced or blocked meanwhile)`)
+      return
+    }
+    // (a start of its own, not "weiterhören": where the account left it in Jellyfin - heard on a phone; the backend says
+    // it only with "Fortschritt mit Jellyfin teilen" on)
+    const at = body.resumeAt
+    if (!resume && Number(at?.track) >= 1 && Number.isFinite(Number(at?.percent))) resume = { trackNr: Number(at.track), progressPct: Number(at.percent) }
+    currentJellyfinTracks = tracks
+    currentMeta.currentType = 'jellyfin'
+    currentMeta.album = body.name || ''
+    currentMeta.path = `${kind}:${id}`
+    currentMeta.trackFile = undefined
+    const first = resume ? Math.min(Math.max(1, resume.trackNr), tracks.length) : 1
+    currentMeta.currentTrackname = tracks[first - 1].name
+    const tmpPlaylistPath = '/tmp/jellyfin_playlist.m3u'
+    fs.writeFileSync(tmpPlaylistPath, tracks.map((track) => `${JELLYFIN_API}/stream/${track.id}`).join('\n'))
+    currentMeta.currentTracknr = first - 1
+    currentMeta.totalTracks = tracks.length
+    const begin = () => {
+      writeplayerstatePlay()
+      const startAt = resume && (first > 1 || resume.progressPct > 1) ? { track: first, percent: resume.progressPct } : null
+      player.playList(tmpPlaylistPath, startAt ?? undefined)
+      player.setVolume(volumeStart)
+    }
+    if (pausedSince(asked)) {
+      heldStart = { generation, begin }
+      log.debug(`${now()}: [Spotify Control] Jellyfin ${kind} ${id} paused while loading - starts with "play"`)
+      return
+    }
+    begin()
+  } catch (error) {
+    console.warn(`${now()}: [Spotify Control] Jellyfin ${kind} ${id} not started: ${error}`)
+  }
+}
+
 // Where a NAS album goes on, for an engine that starts there: { track, percent } - or for a CUE album (one file)
 // { track: 1, startSeconds } at the part of the track in the file
 function nasStartOptions(trackNr, progressPct) {
@@ -4678,6 +4834,32 @@ app.get('/tidal/tracklist/:ref', async (req, res) => {
   }
 })
 
+/*returns the track list of a Jellyfin album, playlist or audiobook (<album|playlist|book>:<id>), from the backend*/
+app.get('/jellyfin/tracklist/:ref', async (req, res) => {
+  const [kind, id] = String(req.params.ref).split(':')
+  if (!['album', 'playlist', 'book'].includes(kind) || !/^[0-9a-f]{32}$/i.test(id ?? '')) {
+    res.status(400).json({ error: 'invalid list' })
+    return
+  }
+  // (the list that plays: as mpv has it - jellyfintrack:N jumps by position)
+  if (currentMeta.currentType === 'jellyfin' && currentMeta.path === `${kind}:${id}` && currentJellyfinTracks.length > 0) {
+    res.json(currentJellyfinTracks.map((track, i) => ({ position: i + 1, name: track.name })))
+    return
+  }
+  try {
+    const response = await fetch(`${JELLYFIN_API}/tracks?kind=${kind}&id=${id}`, { signal: AbortSignal.timeout(30000) })
+    const body = response.ok ? await response.json() : null
+    if (!Array.isArray(body?.tracks)) {
+      res.status(response.status === 401 ? 401 : 502).json({ error: 'tracklist not available' })
+      return
+    }
+    res.json(body.tracks.map((track) => ({ position: track.number, name: track.name })))
+  } catch (error) {
+    log.debug(`${now()}: [Spotify Control] Error fetching Jellyfin tracklist for ${kind}:${id}: ${error}`)
+    res.status(502).json({ error: 'tracklist not available' })
+  }
+})
+
 /*returns the albums of a TIDAL artist (a whole artist in the library: the display lists them), from the box's TIDAL service*/
 app.get('/tidal/artist/:id/albums', async (req, res) => {
   const id = String(req.params.id)
@@ -4794,7 +4976,7 @@ app.use((req, res) => {
 
   // Tile time: a start of something new names its tile (or none: it counts for the listening time only); play, next,
   // previous, seek go on with the current one. Its time used up (or what plays of it finishing in its grace period): refused.
-  const newStart = command.name.includes('spotify:') || ['library', 'nas', 'tidal', 'radio', 'rss'].some((s) => hasDirSegment(command, s))
+  const newStart = command.name.includes('spotify:') || ['library', 'nas', 'tidal', 'jellyfin', 'radio', 'rss'].some((s) => hasDirSegment(command, s))
   if (isPlayInitiatingCommand(command) && !hasDirSegment(command, 'say')) {
     const tile = newStart ? resolveTile(triggerTile) : tileState.current
     const inGrace = tile !== null && tile === tileState.current && tileState.state === 'grace' && !isAllowOverrideActive()
@@ -4830,7 +5012,7 @@ app.use((req, res) => {
   // A new playback starts unpaused and without the picture of the one before: a "pause" of the playback before stayed
   // set (the display showed the play button while the new one played), and a local or NAS album kept the episode
   // picture of a podcast played before it (radio and podcasts set their own below, Spotify brings its own).
-  const newMedia = command.name.includes('spotify:') || ['library', 'nas', 'tidal', 'radio', 'rss'].some((segment) => hasDirSegment(command, segment))
+  const newMedia = command.name.includes('spotify:') || ['library', 'nas', 'tidal', 'jellyfin', 'radio', 'rss'].some((segment) => hasDirSegment(command, segment))
   // (the tile of what starts now - only here, once the start is not refused any more: a Spotify start refused while
   // Spotify blocks the box left what played counting for the other tile)
   if (newStart && isPlayInitiatingCommand(command) && !hasDirSegment(command, 'say')) setCurrentTile(triggerTile)
@@ -4840,7 +5022,7 @@ app.use((req, res) => {
     if (triggerSource !== 'skip') playbackOrigin = playbackRequest
     startHeard(triggerHeard)
     currentMeta.pause = false
-    if (['library', 'nas', 'tidal'].some((segment) => hasDirSegment(command, segment))) currentMeta.cover = triggerCover
+    if (['library', 'nas', 'tidal', 'jellyfin'].some((segment) => hasDirSegment(command, segment))) currentMeta.cover = triggerCover
   }
 
   /*this is the first command to be received. It always includes the device id encoded in between two /*/
@@ -4898,6 +5080,18 @@ app.use((req, res) => {
     if (hasDirSegment(command, 'resume') && parts.length === 4 && trackNr >= 1 && Number.isFinite(progressPct)) {
       playTidalList(`${parts[0]}:${parts[1]}`, { trackNr, progressPct })
     } else playTidalList(`${parts[0]}:${parts[1]}`)
+  }
+
+  if (hasDirSegment(command, 'jellyfin')) {
+    switchToMplayer()
+    currentMeta.currentType = 'jellyfin'
+    // /musicsearch/jellyfin/<album|playlist|book>:<id>, to go on: /musicsearch/jellyfin/resume/<kind>:<id>:<trackNr>:<progressPct>
+    const parts = command.base.split(':')
+    const trackNr = Number.parseInt(parts[2], 10)
+    const progressPct = Number.parseFloat(parts[3])
+    if (hasDirSegment(command, 'resume') && parts.length === 4 && trackNr >= 1 && Number.isFinite(progressPct)) {
+      playJellyfinList(`${parts[0]}:${parts[1]}`, { trackNr, progressPct })
+    } else playJellyfinList(`${parts[0]}:${parts[1]}`)
   }
 
   if (hasDirSegment(command, 'radio')) {
@@ -4995,7 +5189,7 @@ app.use((req, res) => {
   else if (command.name.includes('localtrack:')) {
     const targetPosition = Number.parseInt(command.name.split(':')[1], 10)
     jumpToTrack(targetPosition)
-  } else if (command.name.includes('nastrack:') || command.name.includes('tidaltrack:')) {
+  } else if (command.name.includes('nastrack:') || command.name.includes('tidaltrack:') || command.name.includes('jellyfintrack:')) {
     const targetPosition = Number.parseInt(command.name.split(':')[1], 10)
     jumpToTrack(targetPosition)
   }

@@ -5,6 +5,7 @@ import type { Media } from './media'
 //   lib:<folder>                   a folder of the box's library (its path below the media folder)
 //   nas:<path>                     a NAS folder
 //   tidal:<album|playlist>:<id>    an album or a playlist of TIDAL
+//   jellyfin:<album|playlist|book>:<id>  an album, a playlist or an audiobook of Jellyfin
 //   spotify:<kind>:<id>            what Spotify plays: album, playlist, episode, show (as playMedia starts it)
 // null: no tick - a radio, a podcast (its episodes have their own), a folder that holds folders, a TIDAL artist as a whole.
 
@@ -30,6 +31,11 @@ export function heardKeyOf(media: Media | undefined | null): string | null {
   if (media.type === 'tidal') {
     if (media.tidalKind === 'artist' || !media.id) return null
     return ok(`tidal:${media.tidalKind === 'playlist' ? 'playlist' : 'album'}:${media.id}`)
+  }
+  if (media.type === 'jellyfin') {
+    const kind = media.jellyfinKind ?? 'album'
+    if (kind === 'artist' || !media.id) return null
+    return ok(`jellyfin:${kind}:${media.id}`)
   }
   if (media.type === 'spotify') {
     if (media.playlistid) return ok(`spotify:playlist:${media.playlistid}`)

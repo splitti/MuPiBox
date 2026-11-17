@@ -299,14 +299,14 @@ export class ExternalPlaybackNavigatorService {
         }
       }
     }
-    if (media?.type === 'tidal') {
+    if (media?.type === 'tidal' || media?.type === 'jellyfin') {
       const entries = await firstValueFrom(
         this.http.get<Media[]>(`${environment.backend.apiUrl}/data`).pipe(
           timeout(3000),
           catchError(() => of([] as Media[])),
         ),
       )
-      const own = entries.find((e) => e.type === 'tidal' && String(e.id) === String(media.id))
+      const own = entries.find((e) => e.type === media.type && String(e.id) === String(media.id))
       if (own) {
         media.category = own.category
         media.artist = own.artist
@@ -377,6 +377,20 @@ export class ExternalPlaybackNavigatorService {
         tidalKind: tidal[1] as 'album' | 'playlist',
         id: tidal[2],
         category: 'music',
+        artist: '',
+        title: String(data.album ?? ''),
+        cover: data.cover || undefined,
+        artistcover: data.cover || undefined,
+      } as Media
+    }
+    // A Jellyfin album, playlist or audiobook: path is <album|playlist|book>:<id> (looked up as TIDAL's)
+    const jellyfin = /^(album|playlist|book):([0-9a-f]{32})$/i.exec(path)
+    if ((data as { currentType?: string }).currentType === 'jellyfin' && jellyfin) {
+      return {
+        type: 'jellyfin',
+        jellyfinKind: jellyfin[1] as 'album' | 'playlist' | 'book',
+        id: jellyfin[2],
+        category: jellyfin[1] === 'book' ? 'audiobook' : 'music',
         artist: '',
         title: String(data.album ?? ''),
         cover: data.cover || undefined,

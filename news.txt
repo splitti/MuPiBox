@@ -60,6 +60,14 @@
 <li id='linews' class='linews'>Windows share (SMB) besides WebDAV: Synology, QNAP, FRITZ!Box with USB storage and Windows PCs offer SMB without setting anything up. Library › NAS asks how the box reaches the NAS; the share is written as in Windows Explorer (\\192.168.1.10\Musik). Errors with their reason (name unknown, not reachable, login refused, no such share, NAS only speaks SMB1). A refused login is not repeated for 10 minutes, so the NAS does not lock the box out.</li>
 <li id='linews' class='linews'>The folder search of the NAS page searches in the folders shown (and below them); without a shown folder it no longer walks through the whole NAS. While the NAS does not answer, the app says "Gerade nicht erreichbar" instead of "Angemeldet" or the login form.</li>
 </ul>
+<b>Jellyfin</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New: Jellyfin as a source (Settings › Services › Jellyfin). The box finds the server in the home network and signs in with a Quick Connect code confirmed in a Jellyfin app (or user name and password, used only for signing in); it keeps only an encrypted token and appears in Jellyfin as a device of its own. Self-signed certificates are confirmed by their fingerprint. No internet needed, only the home network.</li>
+<li id='linews' class='linews'>Library › Add › From Jellyfin: albums, whole artists (also albums added later; order and single albums left out in the library), audio playlists and audiobooks (a folder of files is one book; several books in one folder are kept apart by their album tag) from the libraries chosen, with search and covers kept on the box. While the server does not answer, the display leaves its entries out.</li>
+<li id='linews' class='linews'>Played like an album of the memory card: track list, next/previous, seeking, continue listening, heard ticks, daily limit per tile, playing time and quiet hours; from the app under Listen too. The token never leaves the box. "Convert for weak Wi-Fi" lets Jellyfin make MP3 at 192 kbit (no seeking then).</li>
+<li id='linews' class='linews'>"Share progress with Jellyfin" (off by default): the box reports what it plays and where, so tracks heard at the box count as played in Jellyfin; an album or audiobook started anew at the box begins where the account left off (heard on a phone meanwhile), and albums played completely in Jellyfin get the green tick.</li>
+</ul>
 <b>Display</b>
 </ul>
 <ul id='ulnews' class='ulnews'>

@@ -7,6 +7,7 @@
 // /api/edit); /podcast-offline/sync then brings the files in line at once instead of at the next hourly run.
 
 import { promises as fsp } from 'node:fs'
+import { jellyfinSettings, signedIn } from '../jellyfin/settings'
 import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { ardKidsShows, ardSearch, ardShowIdFromUrl, type ArdShow } from '../ard-sounds'
@@ -60,6 +61,11 @@ export function registerPodcastRoutes(router: Router, deps: PodcastRouteDeps): v
       radioSearch: radioSearchOn(cfg),
       // (TIDAL switched on, see tidal.ts: the app offers its search when adding)
       tidal: ((cfg as Record<string, unknown> | undefined)?.tidal as { enabled?: unknown } | undefined)?.enabled === true,
+      // (Jellyfin switched on and signed in, see jellyfin.ts: the app offers it when adding and plays its entries)
+      jellyfin: (() => {
+        const j = jellyfinSettings(cfg as Record<string, unknown> | undefined)
+        return j.enabled && signedIn(j)
+      })(),
       available: Object.entries(CONTENT_LANGUAGES).map(([code, l]) => ({ code, name: l.name })),
     }
   }

@@ -130,6 +130,13 @@
         }
       },
       {
+        "id": "jellyfin",
+        "title": {
+          "de": "Jellyfin",
+          "en": "Jellyfin"
+        }
+      },
+      {
         "id": "cover",
         "title": {
           "de": "Cover",

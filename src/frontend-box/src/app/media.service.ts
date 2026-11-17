@@ -72,7 +72,7 @@ function storedSpotifyAlbum(item: Media): Media | undefined {
 // it (with an artist it is in that artist's folder)
 export function isStandaloneMedia(media: Media | undefined): boolean {
   if (!media || media.artist) return false
-  return !!media.playlistid || media.type === 'radio' || (media.type === 'tidal' && media.tidalKind === 'playlist')
+  return !!media.playlistid || media.type === 'radio' || (media.type === 'tidal' && media.tidalKind === 'playlist') || (media.type === 'jellyfin' && media.jellyfinKind === 'playlist')
 }
 
 // The data.json row a Spotify entry comes from (Media.row): what is looked up for it
@@ -103,7 +103,7 @@ const rssSettings = (m: Media): Partial<Media> => ({
 function fillFailedRows(media: Media[], kept: Media[] | undefined): Media[] {
   const failed = new Set(media.filter((m) => m.unavailable && m.row).map((m) => m.row as string))
   // (a TIDAL artist or a podcast that could not be asked for and has nothing kept: left out, see below)
-  const leftOut = (m: Media) => m.type === 'tidal' || m.type === 'rss'
+  const leftOut = (m: Media) => m.type === 'tidal' || m.type === 'jellyfin' || m.type === 'rss'
   if (failed.size === 0 || !kept?.length) return media.filter((m) => !(m.unavailable && leftOut(m)))
   const present = new Set(media.filter((m) => !m.unavailable && m.id).map((m) => m.id))
   return media.flatMap((m) => {
@@ -413,7 +413,7 @@ export class MediaService {
 
   private libraryVersion$?: Observable<string>
   private dataVersion$?: Observable<string>
-  private versions$?: Observable<{ version: string; local: string; nasTab: boolean; tidal: boolean }>
+  private versions$?: Observable<{ version: string; local: string; nasTab: boolean; tidal: boolean; jellyfin: boolean }>
 
   /**
    * Phase 17g: cheap library-change signal. Polls /api/data-version (a stat,
@@ -462,15 +462,15 @@ export class MediaService {
     )
   }
 
-  private versions(): Observable<{ version: string; local: string; nasTab: boolean; tidal: boolean }> {
+  private versions(): Observable<{ version: string; local: string; nasTab: boolean; tidal: boolean; jellyfin: boolean }> {
     if (!this.versions$) {
       this.versions$ = interval(20000).pipe(
         startWith(0),
         switchMap(() =>
-          this.http.get<{ version: string; local?: string; nasTab?: boolean; tidal?: boolean }>(`${this.getApiBackendUrl()}/data-version`).pipe(
-            // (tidal: an older server without it - its entries are shown, as before)
-            map((r) => ({ version: r?.version ?? '', local: r?.local ?? '', nasTab: r?.nasTab !== false, tidal: r?.tidal !== false })),
-            catchError(() => of({ version: '', local: '', nasTab: true, tidal: true })),
+          this.http.get<{ version: string; local?: string; nasTab?: boolean; tidal?: boolean; jellyfin?: boolean }>(`${this.getApiBackendUrl()}/data-version`).pipe(
+            // (tidal: an older server without it - its entries are shown, as before; jellyfin the same)
+            map((r) => ({ version: r?.version ?? '', local: r?.local ?? '', nasTab: r?.nasTab !== false, tidal: r?.tidal !== false, jellyfin: r?.jellyfin !== false })),
+            catchError(() => of({ version: '', local: '', nasTab: true, tidal: true, jellyfin: true })),
           ),
         ),
         shareReplay({ bufferSize: 1, refCount: true }),
@@ -781,6 +781,8 @@ export class MediaService {
   private homeLists = new Map<CategoryType, { version: string; at: number; media: Media[] }>()
   // how often the albums of a TIDAL artist could not be asked for (see tidalArtistAlbums; as SpotifyService.failures)
   private tidalFailures = 0
+  // the same for a whole Jellyfin artist (see jellyfinArtistAlbums)
+  private jellyfinFailures = 0
   // how often a podcast could not be fetched (see rssEpisodes)
   private rssFailures = 0
   private homeListsLoaded$?: Observable<void>
@@ -832,6 +834,7 @@ export class MediaService {
       // entries. Shown, but not kept as the current one: it is made again at the next chance, see SpotifyService.failures)
       const failuresBefore = this.spotifyService.failures
       const tidalFailuresBefore = this.tidalFailures
+      const jellyfinFailuresBefore = this.jellyfinFailures
       const rssFailuresBefore = this.rssFailures
       this.newestHomeListRun.set(category, version)
       run = this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category).pipe(
@@ -841,7 +844,7 @@ export class MediaService {
           // on the box)
           if (this.newestHomeListRun.get(category) !== version) return
           // (an empty list without a failure is one: the category was emptied, and the old list must not come back at the next start)
-          const complete = this.spotifyService.failures === failuresBefore && this.tidalFailures === tidalFailuresBefore && this.rssFailures === rssFailuresBefore
+          const complete = this.spotifyService.failures === failuresBefore && this.tidalFailures === tidalFailuresBefore && this.jellyfinFailures === jellyfinFailuresBefore && this.rssFailures === rssFailuresBefore
           this.homeLists.set(category, { version: complete ? version : '', at: Date.now(), media })
           if (version !== '' && complete) {
             this.http.put(`${this.getApiBackendUrl()}/home-lists/${category}`, { version, media }).subscribe({ error: () => undefined })
@@ -1028,10 +1031,10 @@ export class MediaService {
         )
       }
 
-    // (TIDAL switched off in the app: its entries are left out - they stay in the library, to be managed there)
+    // (TIDAL or Jellyfin switched off in the app: its entries are left out - they stay in the library, to be managed there)
     // (the library could not be read for a moment: asked again, the server answers with an error then, not an empty list)
     return forkJoin([this.http.get<Media[]>(url).pipe(retry({ count: 2, delay: () => timer(2000) })), this.versions().pipe(take(1))]).pipe(
-      map(([items, v]) => (v.tidal ? items : items.filter((it) => it?.type !== 'tidal'))),
+      map(([items, v]) => items.filter((it) => (v.tidal || it?.type !== 'tidal') && (v.jellyfin || it?.type !== 'jellyfin'))),
       // Filter to get only items for the chosen category.
       map((items) => {
         if (resume) {
@@ -1171,7 +1174,12 @@ export class MediaService {
                             // a whole TIDAL artist: its albums, from the box's TIDAL service (through the player)
                             () => item.type === 'tidal' && item.tidalKind === 'artist' && !!item.id && !isResumeEntry(item),
                             this.tidalArtistAlbums(item),
-                            of([item]), // Single album. Also return as array, so we always have the same data type
+                            iif(
+                              // a whole Jellyfin artist: its albums, from Jellyfin through the backend
+                              () => item.type === 'jellyfin' && item.jellyfinKind === 'artist' && !!item.id && !isResumeEntry(item),
+                              this.jellyfinArtistAlbums(item),
+                              of([item]), // Single album. Also return as array, so we always have the same data type
+                            ),
                           ),
                         ),
                       ),
@@ -1275,6 +1283,46 @@ export class MediaService {
           this.tidalFailures++
           return of([
             { type: 'tidal', tidalKind: 'artist', id: item.id, artist: item.artist, category: item.category, sorting: item.sorting, index: item.index, unavailable: true, row } as Media,
+          ])
+        }),
+      )
+  }
+
+  // The albums of a whole Jellyfin artist (jellyfinKind 'artist'), as tidalArtistAlbums: asked every time (later albums
+  // come too), without the ones left out in the library's sheet; not reachable: a placeholder of the row, the albums
+  // kept before stand in for it (fillFailedRows), and the list counts as not complete (jellyfinFailures).
+  private jellyfinArtistAlbums(item: Media): Observable<Media[]> {
+    const left = new Set((item.exclude_album_ids ?? []).map(String))
+    const row = `j:${item.id}${left.size ? `-${[...left].sort().join(',')}` : ''}`
+    return this.http
+      .get<{ albums?: { id: string; name: string; image?: boolean; year?: number | null; date?: string }[] }>(`${this.getApiBackendUrl()}/jellyfin/artist/${encodeURIComponent(item.id)}/albums`)
+      .pipe(
+        timeout(60000),
+        map((r) =>
+          (r.albums ?? [])
+            .filter((a) => !left.has(String(a.id)))
+            .map(
+              (a) =>
+                ({
+                  type: 'jellyfin',
+                  jellyfinKind: 'album',
+                  id: String(a.id),
+                  title: a.name,
+                  artist: item.artist,
+                  category: item.category,
+                  cover: a.image ? `/api/jellyfin/image/${a.id}?w=400` : (item.cover ?? undefined),
+                  artistcover: item.artistcover_override ?? item.artistcover ?? item.cover,
+                  release_date: a.date || (a.year ? String(a.year) : undefined),
+                  sorting: item.sorting,
+                  index: item.index,
+                  row,
+                }) as Media,
+            ),
+        ),
+        catchError(() => {
+          this.jellyfinFailures++
+          return of([
+            { type: 'jellyfin', jellyfinKind: 'artist', id: item.id, artist: item.artist, category: item.category, sorting: item.sorting, index: item.index, unavailable: true, row } as Media,
           ])
         }),
       )

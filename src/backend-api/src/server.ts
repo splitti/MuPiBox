@@ -79,6 +79,9 @@ import { uiScale } from './ui-scale'
 import { confirmDisplayTest, displayTestState } from './app-api/display-profile'
 import { browserGuard, corsOptionsFor, isAllowedHost, isLoopback, localOnly, localOrElternSession, logValue, PROXY_PORT, setConfiguredHosts, viaProxy } from './request-guard'
 import { CACHE_DIR, COVERS_DIR, DATA_DIR, LIBRARY_DIR, LOGS_DIR, SERVER_CONFIG_DIR } from './paths'
+import { jellyfinSession } from './app-api/jellyfin'
+import { registerJellyfinMedia } from './jellyfin/media'
+import { jellyfinSettings, signedIn } from './jellyfin/settings'
 
 // Force IPv4 for DNS lookups to avoid EAI_AGAIN errors on Raspberry Pi
 // This fixes issues where IPv6 is misconfigured or not supported
@@ -1420,6 +1423,16 @@ const heardStore = new HeardStore(LIBRARY_DIR, () => {
 app.get('/api/heard', (_req, res) => {
   res.setHeader('Cache-Control', 'no-store')
   const { enabled } = heardSettings(getMupiboxConfigSync()?.mupibox as Record<string, unknown> | undefined)
+  // ("played" in Jellyfin as ticks too - at most every 10 minutes, see jellyfin/media.ts syncTicks)
+  if (enabled)
+    jellyfinMedia.syncTicks(() => {
+      try {
+        const rows = JSON.parse(fs.readFileSync(dataFile, 'utf8')) as Record<string, unknown>[]
+        return rows.filter((r) => r?.type === 'jellyfin' && !r.isResume).map((r) => ({ kind: String(r.jellyfinKind ?? 'album'), id: String(r.id ?? '') }))
+      } catch {
+        return []
+      }
+    })
   res.json({ enabled, items: enabled ? heardStore.all() : {} })
 })
 
@@ -1927,12 +1940,17 @@ app.get('/api/data-version', (_req, res) => {
   // made again when it is switched)
   const cfg = getMupiboxConfigSync() as (Record<string, unknown> & { tidal?: { enabled?: unknown } }) | undefined
   const tidal = cfg?.tidal?.enabled === true
+  // (Jellyfin the same: switched on and signed in - see jellyfin/settings.ts)
+  const jf = jellyfinSettings(cfg)
+  // (and its server answers: off or asleep, the display leaves the entries out until it is back - see jellyfin/media.ts)
+  const jellyfin = jf.enabled && signedIn(jf) && jellyfinNow() !== null && jellyfinMedia.reachable()
+  const flags = `${tidal ? 't' : 'n'}${jellyfin ? 'j' : 'n'}`
   const nasTab = nasTabWanted(nasSettings(getMupiboxConfigSync()))
   try {
     const st = fs.statSync(activedataFile)
-    res.json({ version: `${Math.floor(st.mtimeMs)}-${st.size}-${tidal ? 't' : 'n'}`, local: String(localLibraryVersion), nasTab, tidal })
+    res.json({ version: `${Math.floor(st.mtimeMs)}-${st.size}-${flags}`, local: String(localLibraryVersion), nasTab, tidal, jellyfin })
   } catch {
-    res.json({ version: `0-${tidal ? 't' : 'n'}`, local: String(localLibraryVersion), nasTab, tidal })
+    res.json({ version: `0-${flags}`, local: String(localLibraryVersion), nasTab, tidal, jellyfin })
   }
 })
 
@@ -8642,6 +8660,22 @@ app.use(
     },
   }),
 )
+// Jellyfin (docs/jellyfin-5.1.md): its pictures, its tracks and their audio for the display, the app and the player - with
+// the box's token, which never leaves the box. Switched off in the app: nothing of Jellyfin is served.
+const jellyfinNow = () => {
+  const cfg = getMupiboxConfigSync()
+  return jellyfinSettings(cfg as Record<string, unknown> | undefined).enabled ? jellyfinSession(cfg, nasDecrypt) : null
+}
+const jellyfinMedia = registerJellyfinMedia(app, {
+  session: jellyfinNow,
+  transcode: () => jellyfinSettings(getMupiboxConfigSync() as Record<string, unknown> | undefined).transcode,
+  shareProgress: () => jellyfinSettings(getMupiboxConfigSync() as Record<string, unknown> | undefined).shareProgress,
+  // (only with the ticks switched on, as the player's own notes - and never back from finished)
+  heardFinished: (key) => {
+    if (heardSettings(getMupiboxConfigSync()?.mupibox as Record<string, unknown> | undefined).enabled && heardStore.stateOf(key) !== 'finished') heardStore.note(key, 'finished')
+  },
+  cacheDir: CACHE_DIR,
+})
 // Extensions (docs/extensions.md): their files for the display and the app (/ext/<id>/...), the list of the ones that are on
 // (/api/ext/active) and the API parts they bring along (/api/ext/<id>/...). Installing and removing is in the app's routes.
 mountExtensions(app, { getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })

@@ -142,6 +142,10 @@ export class PlayerService {
         url = `musicsearch/tidal/${tidalRef(media)}${this.coverQuery(media)}`
         break
       }
+      case 'jellyfin': {
+        url = `musicsearch/jellyfin/${jellyfinRef(media)}${this.coverQuery(media)}`
+        break
+      }
       case 'spotify': {
         const isHealthy = await this.spotifyService.ensurePlayerReady()
 
@@ -239,6 +243,15 @@ export class PlayerService {
     return true
   }
 
+  // A Jellyfin album, playlist or audiobook where it was left (as TIDAL)
+  async resumeJellyfinMedia(media: Media): Promise<boolean> {
+    const trackNr = media.resumelocalcurrentTracknr || 1
+    const progressPct = Math.round(media.resumelocalprogressTime || 0)
+    this.currentMediaService.set(media)
+    this.sendRequest(`musicsearch/jellyfin/resume/${jellyfinRef(media)}:${trackNr}:${progressPct}${this.coverQuery(media)}`, media)
+    return true
+  }
+
   /**
    * Jump playback to a specific track/episode/chapter within the currently playing
    * Spotify album, playlist, show or audiobook.
@@ -256,6 +269,8 @@ export class PlayerService {
       url = `nastrack:${entry.position}`
     } else if (media.type === 'tidal') {
       url = `tidaltrack:${entry.position}`
+    } else if (media.type === 'jellyfin') {
+      url = `jellyfintrack:${entry.position}`
     } else if (media.playlistid) {
       url = `spotify/now/spotify:playlist:${encodeURIComponent(media.playlistid)}:${entry.position}:0`
     } else if (media.audiobookid) {
@@ -326,6 +341,11 @@ export class PlayerService {
     return this.http.get<{ position: number; name: string }[]>(`${environment.backend.playerUrl}/tidal/tracklist/${tidalRef(media)}`)
   }
 
+  /** The tracks of a Jellyfin album, playlist or audiobook, through the player (the one that plays as mpv has it). */
+  getJellyfinTracklist(media: Media): Observable<{ position: number; name: string }[]> {
+    return this.http.get<{ position: number; name: string }[]>(`${environment.backend.playerUrl}/jellyfin/tracklist/${jellyfinRef(media)}`)
+  }
+
   private say(text: string) {
     this.getConfig().subscribe((config) => {
       let url = `say/${encodeURIComponent(text)}`
@@ -375,6 +395,12 @@ export interface RssEpisodeList {
   count?: number
   offset?: number
   episodes?: { url: string; title: string; seconds: number }[]
+}
+
+// A Jellyfin entry for the player: <album|playlist|book>:<id>
+function jellyfinRef(media: Media): string {
+  const kind = media.jellyfinKind === 'playlist' || media.jellyfinKind === 'book' ? media.jellyfinKind : 'album'
+  return `${kind}:${encodeURIComponent(media.id)}`
 }
 
 // A TIDAL entry for the player: <album|playlist>:<id>

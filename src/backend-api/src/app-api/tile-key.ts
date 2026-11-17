@@ -33,6 +33,7 @@ export function tileKeyOfRow(item: Record<string, unknown>, nameFromSource?: str
     if (str(item.playlistid)) return ok(`single:${cat}:${str(item.playlistid)}`)
     if (item.type === 'radio' && str(item.id)) return ok(`single:${cat}:${str(item.id)}`)
     if (item.type === 'tidal' && item.tidalKind === 'playlist' && str(item.id)) return ok(`single:${cat}:${str(item.id)}`)
+    if (item.type === 'jellyfin' && item.jellyfinKind === 'playlist' && str(item.id)) return ok(`single:${cat}:${str(item.id)}`)
     return null
   }
   return ok(`artist:${cat}:${artist}`)

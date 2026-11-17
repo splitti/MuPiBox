@@ -94,11 +94,13 @@ function reject(req: Request, res: Parameters<RequestHandler>[1], reason: string
  */
 const MEDIA_PLAYER_AGENT = /\b(?:lib)?mpv\b|\bLavf\/|\bMPlayer\b|\bffmpeg\b/i
 const MEDIA_PLAYER_PATHS = ['/api/nas/stream']
+// (a Jellyfin track for mpv: /api/jellyfin/stream/<id>, on the box itself only - see jellyfin/media.ts)
+const MEDIA_PLAYER_PREFIXES = ['/api/jellyfin/stream/']
 
 export const browserGuard: RequestHandler = (req, res, next) => {
   if (
     MEDIA_PLAYER_AGENT.test(String(req.headers['user-agent'] ?? '')) &&
-    !((req.method === 'GET' || req.method === 'HEAD') && MEDIA_PLAYER_PATHS.includes(req.path))
+    !((req.method === 'GET' || req.method === 'HEAD') && (MEDIA_PLAYER_PATHS.includes(req.path) || MEDIA_PLAYER_PREFIXES.some((p) => req.path.startsWith(p))))
   ) {
     reject(req, res, 'media player request')
     return

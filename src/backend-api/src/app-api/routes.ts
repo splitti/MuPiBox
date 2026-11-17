@@ -60,6 +60,7 @@ import { fanSpeedNow, registerHardwareRoutes } from './hardware'
 import { registerDietpiDashboardRoutes, startDietpiDashboard } from './dietpi-dashboard'
 import { registerServicesRoutes } from './services'
 import { registerTidalRoutes } from './tidal'
+import { registerJellyfinRoutes } from './jellyfin'
 import { registerPhotoRoutes } from './photos/routes'
 import type { PhotoNasAccess } from './photos/nas'
 import { registerSystemRoutes } from './system'
@@ -449,6 +450,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   startDietpiDashboard({ getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerServicesRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerTidalRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  // (Jellyfin, Dienste › Jellyfin: the token kept as the NAS password - see jellyfin.ts)
+  registerJellyfinRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig, secret: deps.photoSecret })
   // (the photo display, Einstellungen › Fotos - off by default)
   registerPhotoRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig, nas: deps.photoNas, secret: deps.photoSecret })
   registerSystemRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
@@ -1994,6 +1997,17 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       // (the album's own picture, as the app shows it - only one of TIDAL's; else the artist's)
       const albumCover = (body as { cover?: unknown }).cover
       cover = typeof albumCover === 'string' && albumCover.startsWith('https://resources.tidal.com/') && albumCover.length < 300 ? albumCover : ownCover(item.cover)
+    } else if (albumId !== undefined && type === 'jellyfin') {
+      // one album of an entry of a whole Jellyfin artist (jellyfinKind 'artist'), as the app lists them
+      if (typeof albumId !== 'string' || !/^[0-9a-f]{32}$/i.test(albumId) || item.jellyfinKind !== 'artist') {
+        res.status(400).json({ error: 'invalid_album' })
+        return
+      }
+      url = `musicsearch/jellyfin/album:${albumId}`
+      heard = `jellyfin:album:${albumId}`
+      // (the album's own picture when the app saw one - else the artist's)
+      const albumCover = (body as { cover?: unknown }).cover
+      cover = typeof albumCover === 'string' && albumCover.startsWith(`/api/jellyfin/image/${albumId}`) ? `/api/jellyfin/image/${albumId}?w=400` : ownCover(item.cover)
     } else if (albumId !== undefined) {
       if (typeof albumId !== 'string' || !/^[A-Za-z0-9]{10,40}$/.test(albumId) || type !== 'spotify' || !item.artistid) {
         res.status(400).json({ error: 'invalid_album' })
@@ -2062,6 +2076,23 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
           return
         }
         url = `musicsearch/tidal/${item.tidalKind === 'playlist' ? 'playlist' : 'album'}:${enc(id)}`
+        cover = ownCover(item.cover_override) || ownCover(item.cover) || ownCover(item.artistcover)
+        break
+      }
+      case 'jellyfin': {
+        // an album, a playlist or an audiobook of Jellyfin, played through the backend (see jellyfin/media.ts)
+        const id = String(item.id ?? '')
+        const kind = String(item.jellyfinKind ?? 'album')
+        if (!/^[0-9a-f]{32}$/i.test(id) || !['album', 'playlist', 'book', 'artist'].includes(kind)) {
+          res.status(400).json({ error: 'jellyfin_id_missing' })
+          return
+        }
+        // (a whole artist plays one of its albums - the app asks with albumId)
+        if (kind === 'artist') {
+          res.status(400).json({ error: 'jellyfin_artist_needs_album' })
+          return
+        }
+        url = `musicsearch/jellyfin/${kind}:${id}`
         cover = ownCover(item.cover_override) || ownCover(item.cover) || ownCover(item.artistcover)
         break
       }

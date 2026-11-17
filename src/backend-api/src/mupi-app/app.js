@@ -2282,8 +2282,20 @@ const tidalArtistTile = (it) => ({
   path: it.id,
   index: it._index,
 })
+// A whole Jellyfin artist (jellyfinKind 'artist'): a folder of its albums too, from Jellyfin through the box
+const isJellyfinArtist = (it) => it && it.type === 'jellyfin' && it.jellyfinKind === 'artist' && !it.isResume
+const jellyfinArtistTile = (it) => ({
+  kind: 'jfartist',
+  title: itemArtist(it) || itemTitle(it),
+  sub: catOf(it) === 'music' ? 'Alle Alben' : 'Alle Folgen',
+  cover: ownCover(it.artistcover_override ?? it.artistcover ?? it.cover_override ?? it.cover ?? ''),
+  badge: 'Jellyfin',
+  folder: true,
+  path: it.id,
+  index: it._index,
+})
 const playable = (it) =>
-  it && typeof it === 'object' && (it.type !== 'tidal' || svc.tidal) && !it.isResume && it.category !== 'resume' && it.type !== 'library' && !(it.type === 'spotify' && !it.id && !it.playlistid && !it.showid && !it.audiobookid) && !isTidalArtist(it)
+  it && typeof it === 'object' && (it.type !== 'tidal' || svc.tidal) && (it.type !== 'jellyfin' || svc.jellyfin) && !it.isResume && it.category !== 'resume' && it.type !== 'library' && !(it.type === 'spotify' && !it.id && !it.playlistid && !it.showid && !it.audiobookid) && !isTidalArtist(it) && !isJellyfinArtist(it)
 
 async function loadHear() {
   // (whether TIDAL is on: its entries only then - see playable)
@@ -2315,6 +2327,7 @@ function topTiles() {
     for (const it of hear.items) {
       if (isSpotifyArtist(it) && (cat === 'all' || catOf(it) === cat) && match(`${itemArtist(it)} ${itemTitle(it)}`)) tiles.push(spotifyArtistTile(it))
       if (isTidalArtist(it) && svc.tidal && (cat === 'all' || catOf(it) === cat) && match(`${itemArtist(it)} ${itemTitle(it)}`)) tiles.push(tidalArtistTile(it))
+      if (isJellyfinArtist(it) && svc.jellyfin && (cat === 'all' || catOf(it) === cat) && match(`${itemArtist(it)} ${itemTitle(it)}`)) tiles.push(jellyfinArtistTile(it))
     }
     if (q) {
       for (const it of items) if (match(`${itemTitle(it)} ${itemArtist(it)}`)) tiles.push(entryTile(it))
@@ -2348,6 +2361,7 @@ function badgeOf(it) {
   if (it.type === 'radio' || it.category === 'radio') return 'Radio'
   if (it.type === 'rss') return 'Podcast'
   if (it.type === 'tidal') return 'TIDAL'
+  if (it.type === 'jellyfin') return 'Jellyfin'
   return ''
 }
 const ENTRY_IDENT = ['type', 'id', 'playlistid', 'showid', 'audiobookid', 'artistid', 'title', 'artist']
@@ -2379,6 +2393,11 @@ function levelTiles() {
       .filter((a) => a?.id && match(a.name ?? ''))
       .map((a) => ({ kind: 'tdalbum', title: String(a.name ?? '—'), sub: a.year ? String(a.year) : '', cover: a.thumb || a.cover || '', badge: 'TIDAL', index: top.index, albumId: a.id }))
   }
+  if (top.kind === 'jfartist') {
+    return (hear.level ?? [])
+      .filter((a) => a?.id && match(a.name ?? ''))
+      .map((a) => ({ kind: 'jfalbum', title: String(a.name ?? '—'), sub: a.year ? String(a.year) : '', cover: a.image ? `/api/jellyfin/image/${a.id}?w=160` : '', badge: 'Jellyfin', index: top.index, albumId: a.id }))
+  }
   return (hear.level ?? []).filter((f) => match(`${f.title} ${f.artist}`)).map(top.kind === 'nas' ? nasTile : localTile)
 }
 
@@ -2388,6 +2407,17 @@ async function openLevel() {
   hear.levelError = ''
   drawHear()
   if (!top || top.kind === 'artist') return
+  if (top.kind === 'jfartist') {
+    // a whole Jellyfin artist: its albums, newest first, without the ones left out in the library
+    const entry = hear.items.find((it) => it?._index === top.index)
+    const left = new Set((entry?.exclude_album_ids ?? []).map(String))
+    const r = await api(`/api/jellyfin/artist/${encodeURIComponent(top.path)}/albums`)
+    if (hear.stack.at(-1) !== top) return
+    if (!r.ok) hear.levelError = r.status === 409 ? 'Jellyfin ist ausgeschaltet.' : 'Jellyfin antwortet gerade nicht.'
+    hear.level = (r.body?.albums ?? []).filter((a) => !left.has(String(a.id)))
+    drawHear()
+    return
+  }
   if (top.kind === 'tdartist') {
     // a whole TIDAL artist: its albums as the box's TIDAL service lists them (albums first, then EPs and singles)
     const entry = hear.items.find((it) => it?._index === top.index)
@@ -2475,6 +2505,7 @@ function onTile(t) {
   if (t.kind === 'entry') return startPlay(t.title, `${API}/library/play`, { index: t.index, expect: t.ident })
   if (t.kind === 'spalbum') return startPlay(t.title, `${API}/library/play`, { index: t.index, albumId: t.albumId })
   if (t.kind === 'tdalbum') return startPlay(t.title, `${API}/library/play`, { index: t.index, albumId: t.albumId, cover: t.cover })
+  if (t.kind === 'jfalbum') return startPlay(t.title, `${API}/library/play`, { index: t.index, albumId: t.albumId, cover: t.cover })
   if (t.kind === 'nas') return startPlay(t.title, `${API}/library/play-nas`, { path: t.path })
   return startPlay(t.title, `${API}/library/play-local`, { path: t.path })
 }
@@ -2683,6 +2714,7 @@ const LIB_SOURCES = [
   ['podcast', 'Podcasts'],
   ['radio', 'Radio'],
   ['tidal', 'TIDAL'],
+  ['jellyfin', 'Jellyfin'],
   ['local', 'SD-Karte'],
   ['nas', 'NAS'],
 ]
@@ -2694,7 +2726,8 @@ const entryInSource = (it, src) =>
   (src === 'spotify-sync' && (it.source ?? 'manual') === 'spotify-sync') ||
   (src === 'podcast' && it.type === 'rss') ||
   (src === 'radio' && it.type === 'radio') ||
-  (src === 'tidal' && it.type === 'tidal')
+  (src === 'tidal' && it.type === 'tidal') ||
+  (src === 'jellyfin' && it.type === 'jellyfin')
 // A show of ARD Sounds: a podcast whose "feed" is ard:<show id> (the box builds its episode list from the ARD)
 const isArdEntry = (it) => it?.type === 'rss' && String(it.id ?? '').startsWith('ard:')
 const CAT_SHORT = { audiobook: 'Hörspiel', music: 'Musik', other: 'Radio & Podcasts' }
@@ -2842,7 +2875,9 @@ function libSub(g) {
         ? 'Radio'
         : first?.type === 'tidal'
           ? 'TIDAL'
-          : (SOURCE_LABEL[g.src] ?? '')
+          : first?.type === 'jellyfin'
+            ? 'Jellyfin'
+            : (SOURCE_LABEL[g.src] ?? '')
   if (g.kind === 'sub') return 'Abo · noch keine Folgen · Spotify · Smart-Sync'
   if (g.kind === 'pin') return 'Album · noch nicht auf der Box · Spotify · Smart-Sync'
   if (g.kind === 'local') return `${g.folder.libraryIsContainer ? 'Ordner' : 'Album'} · ${src}`
@@ -3032,7 +3067,7 @@ function tileKeyOfItem(it) {
   if (!artist) {
     // (as the display's isStandaloneMedia: a playlist or a station on a tile of its own)
     if (it.playlistid) return `single:${cat}:${it.playlistid}`
-    if ((it.type === 'radio' || (it.type === 'tidal' && it.tidalKind === 'playlist')) && it.id) return `single:${cat}:${it.id}`
+    if ((it.type === 'radio' || (it.type === 'tidal' && it.tidalKind === 'playlist') || (it.type === 'jellyfin' && it.jellyfinKind === 'playlist')) && it.id) return `single:${cat}:${it.id}`
     return null
   }
   return `artist:${cat}:${artist}`
@@ -3103,6 +3138,7 @@ function heardKeyOfItem(it) {
     return it.artist && it.title ? ok(`lib:${cat || 'audiobook'}/${it.artist}/${it.title}`) : null
   }
   if (it.type === 'tidal') return it.tidalKind === 'artist' || !it.id ? null : ok(`tidal:${it.tidalKind === 'playlist' ? 'playlist' : 'album'}:${it.id}`)
+  if (it.type === 'jellyfin') return !['album', 'playlist', 'book'].includes(it.jellyfinKind ?? 'album') || !it.id ? null : ok(`jellyfin:${it.jellyfinKind ?? 'album'}:${it.id}`)
   if (it.type === 'spotify') {
     if (it.playlistid) return ok(`spotify:playlist:${it.playlistid}`)
     if (it.id) return ok(`spotify:album:${it.id}`)
@@ -3476,6 +3512,8 @@ function openEntrySheet(item, back = null) {
   const wholeArtist = item.type === 'spotify' && item.artistid && !item.id && !item.playlistid && !item.showid && !item.audiobookid
   // a whole TIDAL artist: its range and the albums left out
   const tidalArtist = item.type === 'tidal' && item.tidalKind === 'artist'
+  // a whole Jellyfin artist: its order and the albums left out
+  const jellyfinArtist = item.type === 'jellyfin' && item.jellyfinKind === 'artist'
   // (order, shuffle, a part of the episodes: of the entries one adds by hand - Spotify and podcasts)
   const playOptions = !isSync && (item.type === 'spotify' || item.type === 'rss')
   // a radio station or a podcast: its address (stream / feed) can be changed too
@@ -3531,7 +3569,8 @@ function openEntrySheet(item, back = null) {
      ${isSync && !syncRemovable(item) && isPinned(item.id) ? `<p class="help" style="margin:0">Außerdem einzeln über die Suche hinzugefügt: Das hält es auf der Box, auch wenn es aus der Playlist geht.</p><div class="btns"><button type="button" class="btn" data-unpin>Einzeln hinzugefügt aufheben</button></div>` : ''}
      ${wholeArtist ? `<div class="section-label" style="margin:0">Alben</div><div id="e-albums"><p class="help">Lade die Alben von Spotify …</p></div>` : ''}
      ${tidalArtist ? tidalRangeFields(item) : ''}
-     ${wholeArtist || tidalArtist || item.isResume || !item.type ? '' : `<div class="btns">${nfcButtonHtml()}</div>`}
+     ${jellyfinArtist ? jellyfinArtistFields(item) : ''}
+     ${wholeArtist || tidalArtist || jellyfinArtist || item.isResume || !item.type ? '' : `<div class="btns">${nfcButtonHtml()}</div>`}
      <div class="btns">${!isSync || syncRemovable(item) ? `<button class="btn danger" data-del>${isSync ? 'Entfernen' : 'Löschen'}</button>` : ''}<button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Speichern</button></div>`,
     (sheet, close) => {
       sheet.querySelector('[data-close]').onclick = back ? back.open : close
@@ -3543,6 +3582,7 @@ function openEntrySheet(item, back = null) {
       if (wholeArtist) loadArtistAlbums(item, sheet.querySelector('#e-albums'))
       wireNfc(sheet, close, nfcMediaOfEntry(item), () => openEntrySheet(item, back))
       if (tidalArtist) wireTidalRange(item, sheet)
+      if (jellyfinArtist) wireJellyfinArtist(item, sheet)
       // (only the mark of "added one by one" goes - the entry stays while the playlist has it)
       sheet.querySelector('[data-unpin]')?.addEventListener('click', async () => {
         close()
@@ -3631,7 +3671,7 @@ function openEntrySheet(item, back = null) {
           if (to) updated.artist = to
           else delete updated.artist
           // (a TIDAL playlist has its name only from here - the box asks Spotify for a playlist's, TIDAL's not)
-          if (item.type === 'tidal' && !updated.title && item.title) updated.title = item.title
+          if ((item.type === 'tidal' || item.type === 'jellyfin') && !updated.title && item.title) updated.title = item.title
         }
         if (playOptions) {
           const sorting = sheet.querySelector('#e-sort').value
@@ -3671,6 +3711,7 @@ function openEntrySheet(item, back = null) {
         if (keep) updated.offline = keep
         else delete updated.offline
         if (tidalArtist && !readTidalRange(sheet, updated)) return toast('Der Bereich passt nicht (von 1 an, „bis“ nicht vor „von“)', 'info')
+        if (jellyfinArtist) readJellyfinArtist(sheet, updated)
         const r = await api('/api/edit', { method: 'POST', body: { index: libPlace(item), data: updated, original: item } })
         if (!libWriteOk(r)) return
         close()
@@ -4630,6 +4671,7 @@ async function libraryHave(source) {
     }
     // (TIDAL: its entries - albums, playlists, whole artists)
     if (source === 'tidal' && it.type === 'tidal' && it.id) have.add(`${it.tidalKind ?? 'album'}:${it.id}`)
+    if (source === 'jellyfin' && it.type === 'jellyfin' && it.id) have.add(`${it.jellyfinKind ?? 'album'}:${it.id}`)
   }
   for (const a of subs?.body?.artists ?? []) have.add(`artist:${a.id ?? a.artistId}`)
   for (const a of subs?.body?.explicit_albums ?? []) have.add(`album:${a.id}`)
@@ -4805,7 +4847,7 @@ async function openSpotifyArtist(r) {
 }
 
 // A playlist of Spotify or TIDAL: on the box's start page a tile of its own (no artist) or in a folder (its artist)
-const isPlaylistEntry = (it) => !!it && !it.isResume && ((it.type === 'spotify' && !!it.playlistid) || (it.type === 'tidal' && it.tidalKind === 'playlist'))
+const isPlaylistEntry = (it) => !!it && !it.isResume && ((it.type === 'spotify' && !!it.playlistid) || (it.type === 'tidal' && it.tidalKind === 'playlist') || (it.type === 'jellyfin' && it.jellyfinKind === 'playlist'))
 
 // The folders of the start page in a category: the artists of the library's entries, as the box groups them (the
 // folders of the SD card and the NAS are tiles of their own) - the most used first
@@ -5645,6 +5687,53 @@ function readTidalRange(sheet, updated) {
   if (ex.length) updated.exclude_album_ids = ex
   else delete updated.exclude_album_ids
   return updated
+}
+
+// The library's sheet of a whole Jellyfin artist: the order on the display and the albums left out - saved with the sheet
+function jellyfinArtistFields(item) {
+  const opts = SORTINGS.map(([v, l]) => `<option value="${v}"${(item.sorting ?? '') === v ? ' selected' : ''}>${esc(tr(l))}</option>`).join('')
+  return `<div class="field"><label for="e-jsort">${esc(tr('Reihenfolge am Display'))}</label><select class="input" id="e-jsort">${opts}</select>
+      <small>${esc(tr('Standard: alphabetisch, Zahlen als Zahlen – „Folge 2“ vor „Folge 10“.'))}</small></div>
+    <div class="section-label" style="margin:0">${esc(tr('Alben'))}</div>
+    <div id="e-jalbums"><p class="help">${esc(tr('Lade die Alben von Jellyfin …'))}</p></div>`
+}
+async function wireJellyfinArtist(item, sheet) {
+  const box = sheet.querySelector('#e-jalbums')
+  sheet.jellyfinExcluded = new Set((item.exclude_album_ids ?? []).map(String))
+  const r = await api(`/api/jellyfin/artist/${encodeURIComponent(item.id)}/albums`)
+  if (!box.isConnected) return
+  if (!r.ok) {
+    box.innerHTML = `<p class="help">${esc(tr(jellyfinFailText(r)))}</p>`
+    return
+  }
+  const albums = r.body?.albums ?? []
+  box.innerHTML = albums.length
+    ? `<div class="rows">${albums
+        .map(
+          (al, i) => `<div class="entry"><span class="lib-thumb">${al.image ? `<img src="${esc(`/api/jellyfin/image/${al.id}?w=160`)}" alt="" loading="lazy">` : ''}</span>
+            <span class="lbl"><b translate="no">${esc(al.name)}</b><small>${esc(al.date?.slice(0, 4) ?? '')}</small></span>
+            <label class="switch"><input type="checkbox" data-jal="${i}" ${sheet.jellyfinExcluded.has(al.id) ? '' : 'checked'} aria-label="${esc(al.name)} ${esc(tr('auf der Box'))}"><span></span></label></div>`,
+        )
+        .join('')}</div>`
+    : `<p class="help">${esc(tr('Keine Alben gefunden.'))}</p>`
+  for (const img of box.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+  for (const cb of box.querySelectorAll('[data-jal]')) {
+    cb.onchange = () => {
+      const id = albums[Number(cb.dataset.jal)].id
+      if (cb.checked) sheet.jellyfinExcluded.delete(id)
+      else sheet.jellyfinExcluded.add(id)
+    }
+  }
+}
+function readJellyfinArtist(sheet, updated) {
+  const sort = sheet.querySelector('#e-jsort')
+  if (sort) {
+    if (sort.value) updated.sorting = sort.value
+    else delete updated.sorting
+  }
+  const ex = [...(sheet.jellyfinExcluded ?? [])]
+  if (ex.length) updated.exclude_album_ids = ex
+  else delete updated.exclude_album_ids
 }
 
 /* Link einfügen (Spotify-Link, Radiosender, Podcast) */
@@ -15532,6 +15621,624 @@ function mountTidal(root, page) {
   }
 }
 
+/* Jellyfin (5.1, docs/jellyfin-5.1.md): Dienste › Jellyfin - the assistant (server, sign-in with Quick Connect or a
+   password, libraries) and the page of the connected server. The box keeps only the token. */
+
+const jf = { data: null, step: 0, found: null, finding: false, address: '', fingerprint: '', probe: null, probing: false, mode: 'qc', qc: null, qcError: '', user: '', signing: false, libs: null, chosen: new Set(), changeAddress: false }
+
+const JF_STEPS = [
+  ['server', 'Server'],
+  ['login', 'Anmelden'],
+  ['libs', 'Bibliotheken'],
+]
+
+const JF_ERRORS = {
+  unreachable: ['Server nicht erreichbar', 'Prüfe die Adresse und ob Jellyfin läuft. Die Box muss Jellyfin im Heimnetz erreichen (Port 8096, Firewall).'],
+  notJellyfin: ['Kein Jellyfin', 'Unter dieser Adresse antwortet kein Jellyfin-Server. Prüfe Adresse und Port.'],
+  version: ['Jellyfin-Version zu alt', 'Diese Version wird nicht unterstützt. Bitte Jellyfin aktualisieren (ab Version {}).'],
+  certificate: ['Zertifikat passt nicht', 'Jellyfin zeigt ein anderes Zertifikat als das bestätigte. Wurde es erneuert, prüfe den neuen Fingerabdruck und bestätige ihn.'],
+  unauthorized: ['Anmeldung abgelehnt', 'Benutzername oder Passwort stimmen nicht.'],
+  quickConnectOff: ['Quick Connect ist aus', 'In Jellyfin ist Quick Connect ausgeschaltet (Dashboard › Allgemein). Melde dich mit Benutzername und Passwort an.'],
+  otherServer: ['Anderer Server', 'Unter dieser Adresse läuft ein anderer Jellyfin-Server. Für ihn ist eine neue Anmeldung nötig.'],
+  refused: ['Das hat nicht geklappt', 'Jellyfin hat die Anfrage abgelehnt.'],
+  expired: ['Code abgelaufen', 'Der Code ist abgelaufen. Hol dir einen neuen.'],
+}
+
+async function loadJellyfin() {
+  const r = await api(`${API}/jellyfin`)
+  if (!r.ok) throw new Error(`jellyfin ${r.status}`)
+  jf.data = r.body
+  const s = r.body.settings
+  // (a new visit: the server's page when signed in, a code still waiting its step, else the assistant from its start)
+  jf.step = s.hasToken ? 0 : 1
+  jf.address = s.address || ''
+  jf.fingerprint = s.fingerprint || ''
+  jf.probe = null
+  jf.qc = r.body.quickConnect ? { id: r.body.quickConnect.id, code: r.body.quickConnect.code } : null
+  if (jf.qc) {
+    // (a code still waiting - the page left and opened again: its server as checked then)
+    const w = r.body.quickConnect
+    jf.address = w.address
+    jf.fingerprint = w.fingerprint || ''
+    jf.probe = { ok: true, address: w.address, fingerprint: jf.fingerprint, server: w.server }
+    jf.mode = 'qc'
+    jf.step = 2
+  }
+  jf.libs = null
+  jf.found = null
+  jf.changeAddress = false
+}
+
+const jfError = (e) => JF_ERRORS[e] ?? JF_ERRORS.unreachable
+const jfStep = () => (jf.step === 2 && !jf.probe?.ok && !jf.qc ? 1 : jf.step)
+
+function jellyfinSteps() {
+  const s = jfStep()
+  const bar = `<ol class="wz-steps" style="grid-template-columns:repeat(${JF_STEPS.length}, minmax(0, 1fr))">${JF_STEPS.map(([, label], i) => {
+    const n = i + 1
+    const done = n < s
+    return `<li class="${done ? 'done' : ''}${n === s ? ' current' : ''}"><button type="button" data-jfstep="${n}"${n === s ? ' aria-current="step"' : ''}${done ? '' : ' disabled'}><span class="bar"></span><span class="lbl">${done ? icon('check', 14) : `<i>${n}</i>`}${esc(tr(label))}</span></button></li>`
+  }).join('')}</ol>`
+  let body
+  let next
+  const p = jf.probe
+  if (s === 1) {
+    const found = jf.found
+    const list = found?.length
+      ? `<div class="rows">${found
+          .map(
+            (f) => `<button type="button" class="entry jf-found" data-jfaddr="${esc(f.address)}"><span class="ph-thumb">${icon('server', 20)}</span><span class="lbl"><b translate="no">${esc(f.name || f.address)}</b><small translate="no">${esc(f.address)}</small></span>${icon('chevron', 18)}</button>`,
+          )
+          .join('')}</div>`
+      : found
+        ? `<p class="help" style="margin:0">${esc(tr('Im Heimnetz hat sich kein Jellyfin gemeldet. Trag die Adresse unten ein.'))}</p>`
+        : ''
+    const cert = p?.error === 'certificate' ? p.certificate : null
+    const problem = p && !p.ok && !cert ? jfError(p.error) : null
+    body = `<h2>${esc(tr(jf.changeAddress ? 'Neue Adresse von Jellyfin' : 'Wo läuft dein Jellyfin?'))}</h2>
+      <div class="btns"><button class="btn" id="jf-find" ${jf.finding ? 'disabled' : ''}>${icon('search', 18)}${esc(tr(jf.finding ? 'Wird gesucht …' : 'Im Heimnetz suchen'))}</button></div>${list}
+      <div class="field"><label for="jf-addr">Server-Adresse</label><input class="input mono" id="jf-addr" placeholder="http://192.168.1.20:8096" value="${esc(jf.address)}" ${NO_PW_MANAGER} spellcheck="false">
+      <small>${esc(tr('Ohne Port nimmt die Box 8096. Ein Server nur im Heimnetz reicht.'))}</small></div>
+      ${
+        cert
+          ? `<h2>Zertifikat bestätigen</h2><p class="help" style="margin:0">${esc(tr('Jellyfin nutzt ein eigenes (selbst signiertes) Zertifikat. Vergleiche den Fingerabdruck mit dem im Browser über das Schloss-Symbol. Nur wenn er übereinstimmt:'))}</p>
+        <dl class="kv"><div><dt>Ausgestellt für</dt><dd>${esc(cert.subject)}</dd></div><div><dt>Gültig bis</dt><dd>${esc(cert.validTo)}</dd></div></dl>
+        <p class="mono-block">${esc(cert.fingerprint)}</p>${jf.fingerprint ? `<div class="note warn">${icon('info', 18)}<span>${esc(tr(JF_ERRORS.certificate[1]))}</span></div>` : ''}`
+          : problem
+            ? `<div class="note danger">${icon('info', 18)}<span><b>${esc(tr(problem[0]))}</b> ${esc(tr(problem[1]).replace('{}', jf.data?.minVersion ?? '10.8.0'))}</span></div>`
+            : ''
+      }`
+    next = cert
+      ? `<button class="btn primary" id="jf-trust" data-fp="${esc(cert.fingerprint)}">${esc(tr('Vertrauen und weiter'))}</button>`
+      : `<button class="btn primary" id="jf-next1" ${jf.probing ? 'disabled' : ''}>${esc(tr(jf.probing ? 'Wird geprüft …' : 'Weiter'))}</button>`
+  } else if (s === 2) {
+    const srv = p?.server
+    const head = srv ? `<dl class="kv"><div><dt>Server</dt><dd translate="no">${esc(srv.name || jf.address)}</dd></div><div><dt>Version</dt><dd>${esc(srv.version)}</dd></div></dl>` : ''
+    const err = jf.qcError ? jfError(jf.qcError) : null
+    const errHtml = err ? `<div class="note danger">${icon('info', 18)}<span><b>${esc(tr(err[0]))}</b> ${esc(tr(err[1]))}</span></div>` : ''
+    if (jf.mode === 'qc') {
+      body = `<h2>Mit Quick Connect anmelden</h2>${head}
+        <p class="help">${esc(tr('Öffne Jellyfin auf dem Handy oder im Browser, angemeldet mit dem Konto, dessen Bibliothek die Box spielen soll. Dort unter Profil › Quick Connect diesen Code eingeben:'))}</p>
+        ${jf.qc ? `<p class="mono-block" translate="no" style="font-size:32px;letter-spacing:6px;text-align:center">${esc(jf.qc.code)}</p><p class="help" style="margin:0">${esc(tr('Die Box wartet auf die Bestätigung …'))}</p>` : `<p class="help" style="margin:0">${esc(tr('Wird geladen …'))}</p>`}
+        ${errHtml}<div class="btns"><button class="btn" id="jf-pw">${esc(tr('Stattdessen mit Benutzername und Passwort'))}</button>${jf.qcError ? `<button class="btn" id="jf-qc-again">${esc(tr('Neuer Code'))}</button>` : ''}</div>`
+      next = ''
+    } else {
+      body = `<h2>Mit Benutzername und Passwort anmelden</h2>${head}
+        <div class="field"><label for="jf-user">Benutzername</label><input class="input" id="jf-user" value="${esc(jf.user)}" autocomplete="username" spellcheck="false"></div>
+        <div class="field"><label for="jf-pass">Passwort</label><div class="input-wrap"><input class="input has-eye" id="jf-pass" type="password" autocomplete="current-password"><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div>
+        <small>${esc(tr('Das Passwort wird nur für die Anmeldung genutzt und nicht auf der Box gespeichert.'))}</small></div>
+        ${errHtml}<div class="btns"><button class="btn" id="jf-qc">${esc(tr('Stattdessen mit Quick Connect'))}</button></div>`
+      next = `<button class="btn primary" id="jf-login" ${jf.signing ? 'disabled' : ''}>${esc(tr(jf.signing ? 'Wird angemeldet …' : 'Anmelden'))}</button>`
+    }
+  } else {
+    const list = jf.libs
+    const rows = !list
+      ? `<p class="help" style="margin:0">${esc(tr('Wird geladen …'))}</p>`
+      : list.error
+        ? `<div class="note danger">${icon('info', 18)}<span>${esc(tr('Die Bibliotheken lassen sich gerade nicht laden.'))}</span></div>`
+        : list.libraries.length
+          ? `<div class="rows">${list.libraries
+              .map(
+                (l) => `<div class="entry ph-im-album${l.playable ? '' : ' off'}"><span class="ph-thumb">${icon(l.type === 'books' ? 'book' : l.type === 'playlists' ? 'grid' : 'music', 20)}</span>
+                <span class="lbl"><b translate="no">${esc(l.name)}</b><small>${esc(tr(JF_LIB_TYPES[l.type] ?? 'Kann die Box nicht abspielen'))}</small></span>
+                ${l.playable ? `<button class="ph-check-box" role="checkbox" aria-checked="${jf.chosen.has(l.id)}" data-jflib="${esc(l.id)}" aria-label="${esc(l.name)}">${jf.chosen.has(l.id) ? icon('check', 16) : ''}</button>` : ''}</div>`,
+              )
+              .join('')}</div>`
+          : `<p class="help" style="margin:0">${esc(tr('Jellyfin zeigt diesem Konto noch keine Bibliothek. Jellyfin liest eine neue Bibliothek vielleicht noch ein.'))}</p>`
+    body = `<h2>Welche Bibliotheken?</h2><p class="help">${esc(tr('Nur aus diesen bietet die Bibliothek der App Inhalte zum Hinzufügen an. Keine gewählt: alle, die die Box abspielen kann.'))}</p>${rows}`
+    next = `<button class="btn primary" id="jf-done">Fertig</button>`
+  }
+  const back = s === 1 ? `<button class="btn" id="jf-cancel">Abbrechen</button>` : `<button class="btn" id="jf-back">${icon('back', 18)}Zurück</button>`
+  return [
+    `<section class="card wide wz">${bar}<div class="wz-count">${esc(tr(`Schritt ${s} von ${JF_STEPS.length}`))}</div>${body}
+      <div class="wz-foot">${back}<span class="wz-next">${next}</span></div></section>`,
+  ]
+}
+
+const JF_LIB_TYPES = { music: 'Musik', books: 'Hörbücher', playlists: 'Playlists', mixed: 'Gemischte Inhalte' }
+
+function jellyfinTop() {
+  const d = jf.data
+  if (!d) return []
+  if (jf.step) return jellyfinSteps()
+  const s = d.settings
+  const chip = !s.enabled ? 'aus' : d.state === 'ok' ? 'verbunden' : 'gestört'
+  const notes = {
+    unreachable: `<div class="note danger">${icon('info', 18)}<span>${esc(tr('Jellyfin ist gerade nicht erreichbar. Prüfe, ob der Server läuft und die Adresse stimmt.'))}</span></div>`,
+    unauthorized: `<div class="note danger">${icon('info', 18)}<span>${esc(tr('Jellyfin nimmt die Anmeldung der Box nicht mehr an (in Jellyfin abgemeldet oder ein Backup einer anderen Box). Bitte neu anmelden.'))}</span></div>`,
+    certificate: `<div class="note danger">${icon('info', 18)}<span>${esc(tr(JF_ERRORS.certificate[1]))}</span></div>`,
+  }
+  const libs = s.libraries.length ? tr(`${s.libraries.length} gewählt`) : tr('Alle')
+  return [
+    `<section class="card wide"><div class="card-head"><h2>Jellyfin</h2><span class="chip ${chip === 'verbunden' ? 'ok' : ''}">${esc(tr(chip))}</span></div>
+      <div class="row"><span class="lbl"><b>Jellyfin verwenden</b><small>${esc(tr('Aus: Einträge aus Jellyfin bleiben in der Bibliothek, werden aber nicht angezeigt und nicht gespielt.'))}</small></span><label class="switch"><input type="checkbox" id="jf-on" ${s.enabled ? 'checked' : ''} aria-label="${esc(tr('Jellyfin verwenden'))}"><span></span></label></div>
+      ${notes[d.state] ?? ''}
+      <dl class="kv"><div><dt>Server</dt><dd translate="no">${esc(s.serverName || s.address)}</dd></div><div><dt>Adresse</dt><dd translate="no">${esc(s.address)}</dd></div><div><dt>Version</dt><dd>${esc(s.version)}</dd></div><div><dt>Konto</dt><dd translate="no">${esc(s.userName)}</dd></div><div><dt>Bibliotheken</dt><dd>${esc(libs)}</dd></div></dl>
+      <div class="btns">${d.state === 'unauthorized' ? `<button class="btn primary" id="jf-relogin">${esc(tr('Neu anmelden'))}</button>` : ''}<button class="btn" id="jf-libs">${esc(tr('Bibliotheken wählen'))}</button><button class="btn" id="jf-addr-change">${esc(tr('Adresse ändern'))}</button></div></section>`,
+    `<section class="card wide"><h2>Wiedergabe</h2>
+      <div class="row"><span class="lbl"><b>${esc(tr('Für schwaches WLAN umwandeln'))}</b><small>${esc(tr('Jellyfin wandelt jeden Titel in MP3 mit 192 kbit um. Hilft bei großen Dateien (FLAC) und schlechtem Empfang. Dafür geht Spulen nicht, und Weiterhören beginnt den Titel von vorn.'))}</small></span><label class="switch"><input type="checkbox" id="jf-transcode" ${s.transcode ? 'checked' : ''} aria-label="${esc(tr('Für schwaches WLAN umwandeln'))}"><span></span></label></div>
+      <div class="row"><span class="lbl"><b>${esc(tr('Fortschritt mit Jellyfin teilen'))}</b><small>${esc(tr('Die Box meldet Jellyfin, wo sie in einem Titel ist und was zu Ende gehört ist. Startest du ein Album oder Hörbuch an der Box, beginnt es dort, wo das Konto aufgehört hat – auch wenn am Handy weitergehört wurde. In Jellyfin ganz gespielte Alben bekommen an der Box den grünen Haken.'))}</small></span><label class="switch"><input type="checkbox" id="jf-share" ${s.shareProgress ? 'checked' : ''} aria-label="${esc(tr('Fortschritt mit Jellyfin teilen'))}"><span></span></label></div></section>`,
+    `<section class="card wide"><div class="navlist"><button class="navrow" id="jf-logout"><span class="tile danger">${icon('close', 18)}</span><span class="lbl"><b class="danger-text">Abmelden</b><small>${esc(tr('Die Box meldet sich bei Jellyfin ab (das Gerät verschwindet dort). Einträge aus Jellyfin bleiben in der Bibliothek, spielen aber erst nach einer neuen Anmeldung.'))}</small></span></button></div></section>`,
+  ]
+}
+
+async function jellyfinLoadLibs(redraw) {
+  jf.libs = null
+  redraw()
+  const r = await api(`${API}/jellyfin/libraries`)
+  jf.libs = r.ok ? r.body : { error: true }
+  redraw()
+}
+
+function mountJellyfin(root, page) {
+  const d = jf.data
+  window.clearTimeout(jf.timer)
+  if (!d) return
+  const redraw = () => currentPage()?.id === page.id && renderPage(page, false)
+  const reload = async (text, kind) => {
+    if (text) toast(text, kind)
+    await loadJellyfin().catch(() => undefined)
+    svc.at = 0
+    redraw()
+  }
+  const goStep = (n) => {
+    const addr = $('#jf-addr', root)
+    if (addr) jf.address = addr.value.trim()
+    jf.step = n
+    redraw()
+    window.scrollTo(0, 0)
+  }
+  // Schritt 1: find, type, check the server
+  $('#jf-cancel', root)?.addEventListener('click', () => (d.settings.hasToken ? ((jf.step = 0), redraw()) : go('g-dienste')))
+  $('#jf-back', root)?.addEventListener('click', () => {
+    // (the step to go to first - with the code given up, the step shown changes)
+    const to = jfStep() === 3 && d.settings.hasToken ? 0 : jfStep() - 1
+    if (jfStep() === 2) api(`${API}/jellyfin/quickconnect`, { method: 'DELETE' })
+    jf.qc = null
+    goStep(to)
+  })
+  for (const b of root.querySelectorAll('[data-jfstep]')) b.onclick = () => goStep(Number(b.dataset.jfstep))
+  $('#jf-find', root)?.addEventListener('click', async () => {
+    jf.address = $('#jf-addr', root).value.trim()
+    jf.finding = true
+    redraw()
+    const r = await api(`${API}/jellyfin/discover`, { method: 'POST', body: {}, timeoutMs: 10000 })
+    jf.finding = false
+    jf.found = r.ok ? r.body.servers : []
+    redraw()
+  })
+  for (const b of root.querySelectorAll('[data-jfaddr]')) {
+    b.onclick = () => {
+      jf.address = b.dataset.jfaddr
+      jf.fingerprint = ''
+      jf.probe = null
+      redraw()
+      $('#jf-next1', root)?.click()
+    }
+  }
+  const probe = async () => {
+    jf.probing = true
+    redraw()
+    const r = await api(`${API}/jellyfin/probe`, { method: 'POST', body: { address: jf.address, fingerprint: jf.fingerprint || undefined }, timeoutMs: 20000 })
+    jf.probing = false
+    jf.probe = r.ok ? r.body : { ok: false, error: r.status === 400 ? 'notJellyfin' : 'unreachable' }
+    if (!jf.probe.ok) return redraw()
+    jf.address = jf.probe.address
+    if (jf.changeAddress) {
+      const a = await api(`${API}/jellyfin/address`, { method: 'POST', body: { address: jf.address, fingerprint: jf.fingerprint || undefined }, timeoutMs: 20000 })
+      if (a.ok && a.body.ok) return reload('Adresse gespeichert', 'ok')
+      // (another server: signed in anew there)
+      if (a.body?.error !== 'otherServer') {
+        jf.probe = { ok: false, error: a.body?.error ?? 'unreachable' }
+        return redraw()
+      }
+      toast(tr(JF_ERRORS.otherServer[1]), 'info')
+      jf.changeAddress = false
+    }
+    jf.mode = 'qc'
+    jf.step = 2
+    startQuickConnect()
+  }
+  $('#jf-next1', root)?.addEventListener('click', () => {
+    const v = $('#jf-addr', root).value.trim()
+    if (!v) return toast('Bitte die Adresse von Jellyfin eintragen, z. B. http://192.168.1.20:8096', 'info')
+    if (v !== jf.address) jf.fingerprint = ''
+    jf.address = v
+    probe()
+  })
+  $('#jf-trust', root)?.addEventListener('click', (e) => {
+    jf.fingerprint = e.currentTarget.dataset.fp
+    probe()
+  })
+  // Schritt 2: Quick Connect - a code, then asking every 2 s whether it was confirmed
+  const startQuickConnect = async () => {
+    jf.qc = null
+    jf.qcError = ''
+    redraw()
+    const r = await api(`${API}/jellyfin/quickconnect`, { method: 'POST', body: { address: jf.address, fingerprint: jf.fingerprint || undefined }, timeoutMs: 20000 })
+    if (r.ok && r.body.ok) jf.qc = { id: r.body.id, code: r.body.code }
+    else {
+      jf.qcError = r.body?.error ?? 'unreachable'
+      if (jf.qcError === 'quickConnectOff') jf.mode = 'password'
+    }
+    redraw()
+  }
+  // (one asking at a time: each drawing of the page starts its own and ends the one before - an answer still on its way
+  // finds another generation and stops)
+  const gen = (jf.pollGen = (jf.pollGen ?? 0) + 1)
+  if (jfStep() === 2 && jf.mode === 'qc' && jf.qc) {
+    const id = jf.qc.id
+    const poll = async () => {
+      if (currentPage()?.id !== page.id || jf.qc?.id !== id || jf.pollGen !== gen) return
+      const r = await api(`${API}/jellyfin/quickconnect/${encodeURIComponent(id)}`)
+      if (jf.qc?.id !== id || jf.pollGen !== gen) return
+      const st = r.ok ? r.body.state : 'waiting'
+      if (st === 'done') {
+        jf.qc = null
+        await loadJellyfin().catch(() => undefined)
+        toast('Mit Jellyfin verbunden', 'ok')
+        jf.chosen = new Set(jf.data?.settings.libraries ?? [])
+        jf.step = 3
+        return jellyfinLoadLibs(redraw)
+      }
+      if (st === 'expired') {
+        jf.qc = null
+        jf.qcError = 'expired'
+        return redraw()
+      }
+      if (st === 'error') {
+        jf.qc = null
+        jf.qcError = r.body?.error ?? 'refused'
+        return redraw()
+      }
+      jf.timer = window.setTimeout(poll, 2000)
+    }
+    jf.timer = window.setTimeout(poll, 2000)
+  }
+  $('#jf-qc-again', root)?.addEventListener('click', () => startQuickConnect())
+  $('#jf-pw', root)?.addEventListener('click', () => {
+    api(`${API}/jellyfin/quickconnect`, { method: 'DELETE' })
+    jf.qc = null
+    jf.qcError = ''
+    jf.mode = 'password'
+    redraw()
+  })
+  $('#jf-qc', root)?.addEventListener('click', () => {
+    jf.mode = 'qc'
+    startQuickConnect()
+  })
+  $('#jf-login', root)?.addEventListener('click', async () => {
+    jf.user = $('#jf-user', root).value.trim()
+    const password = $('#jf-pass', root).value
+    if (!jf.user) return toast('Bitte den Benutzernamen eintragen', 'info')
+    jf.signing = true
+    jf.qcError = ''
+    redraw()
+    const r = await api(`${API}/jellyfin/login`, { method: 'POST', body: { address: jf.address, fingerprint: jf.fingerprint || undefined, user: jf.user, password }, timeoutMs: 30000 })
+    jf.signing = false
+    if (!(r.ok && r.body.ok)) {
+      jf.qcError = r.body?.error ?? 'unreachable'
+      return redraw()
+    }
+    await loadJellyfin().catch(() => undefined)
+    toast('Mit Jellyfin verbunden', 'ok')
+    jf.chosen = new Set(jf.data?.settings.libraries ?? [])
+    jf.step = 3
+    jellyfinLoadLibs(redraw)
+  })
+  // Schritt 3: the libraries
+  for (const b of root.querySelectorAll('[data-jflib]')) {
+    b.onclick = () => {
+      const id = b.dataset.jflib
+      if (jf.chosen.has(id)) jf.chosen.delete(id)
+      else jf.chosen.add(id)
+      redraw()
+    }
+  }
+  $('#jf-done', root)?.addEventListener('click', async () => {
+    const r = await api(`${API}/jellyfin/settings`, { method: 'POST', body: { libraries: [...jf.chosen] } })
+    if (!r.ok) return toast('Nicht gespeichert', 'info')
+    reload('Gespeichert', 'ok')
+  })
+  // the page of the connected server
+  $('#jf-on', root)?.addEventListener('change', async (e) => {
+    const r = await api(`${API}/jellyfin/settings`, { method: 'POST', body: { enabled: e.target.checked } })
+    reload(r.ok ? '' : 'Nicht gespeichert', 'info')
+  })
+  $('#jf-transcode', root)?.addEventListener('change', async (e) => {
+    const r = await api(`${API}/jellyfin/settings`, { method: 'POST', body: { transcode: e.target.checked } })
+    reload(r.ok ? (e.target.checked ? 'Ab dem nächsten Titel umgewandelt' : 'Ab dem nächsten Titel im Original') : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+  })
+  $('#jf-share', root)?.addEventListener('change', async (e) => {
+    const r = await api(`${API}/jellyfin/settings`, { method: 'POST', body: { shareProgress: e.target.checked } })
+    reload(r.ok ? 'Gespeichert' : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+  })
+  $('#jf-libs', root)?.addEventListener('click', () => {
+    jf.chosen = new Set(d.settings.libraries)
+    jf.step = 3
+    jellyfinLoadLibs(redraw)
+  })
+  $('#jf-addr-change', root)?.addEventListener('click', () => {
+    jf.changeAddress = true
+    jf.probe = null
+    jf.found = null
+    goStep(1)
+  })
+  $('#jf-relogin', root)?.addEventListener('click', () => {
+    jf.changeAddress = false
+    jf.probe = null
+    goStep(1)
+  })
+  $('#jf-logout', root)?.addEventListener('click', async () => {
+    if (!(await ask('Von Jellyfin abmelden?', 'Die Box meldet sich bei Jellyfin ab. Einträge aus Jellyfin bleiben in der Bibliothek und spielen nach einer neuen Anmeldung wieder.', 'Abmelden'))) return
+    const r = await api(`${API}/jellyfin/logout`, { method: 'POST', body: {} })
+    reload(r.ok ? 'Von Jellyfin abgemeldet' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+  })
+}
+
+/* Jellyfin, Bibliothek › Hinzufügen › Aus Jellyfin (J2): the chosen libraries and a search; an album, a playlist, an
+   audiobook or a whole artist becomes an entry of the box's library (type 'jellyfin', see docs/jellyfin-5.1.md) */
+
+const jfs = { q: '', result: null, busy: false, libs: null, libsError: '', lib: null, view: '', list: null, listError: '', artist: null, have: new Set(), gen: 0 }
+
+// (a library of mixed content: Jellyfin makes audiobooks only in a books library - its albums)
+const JFS_VIEWS = { music: [['artists', 'Künstler'], ['albums', 'Alben']], books: [['books', 'Hörbücher']], playlists: [['playlists', 'Playlists']], mixed: [['albums', 'Alben']] }
+
+// why Jellyfin could not answer
+function jellyfinFailText(r) {
+  if (r.status === 409) return 'Jellyfin ist ausgeschaltet oder die Box ist nicht angemeldet – unter Einstellungen › Dienste › Jellyfin.'
+  if (r.status === 401) return 'Jellyfin nimmt die Anmeldung der Box nicht mehr an – unter Einstellungen › Dienste › Jellyfin neu anmelden.'
+  return 'Jellyfin ist gerade nicht erreichbar.'
+}
+
+const jfImg = (x, w = 160) => (x.image ? `/api/jellyfin/image/${encodeURIComponent(x.id)}?w=${w}` : '')
+const jfSub = (x) =>
+  x.kind === 'artist'
+    ? x.count
+      ? `Künstler · ${x.count} ${x.count === 1 ? 'Album' : 'Alben'}`
+      : 'Künstler'
+    : [x.kind === 'playlist' ? 'Playlist' : x.kind === 'book' ? 'Hörbuch' : '', x.artist, x.year, x.count ? `${x.count} ${x.kind === 'book' && x.count === 1 ? 'Datei' : x.kind === 'book' ? 'Dateien' : 'Titel'}` : ''].filter(Boolean).join(' · ')
+// (as resultRow wants it; an album of an artist that is in the library as a whole: there through that entry)
+const jfRow = (x) => ({ ...x, t: x.name, s: jfSub(x), img: jfImg(x), name: x.name, date: x.date || (x.year ? String(x.year) : ''), single: false })
+
+function jellyfinSearchTop() {
+  if (!svc.jellyfin) {
+    return [
+      `<section class="card wide"><p class="help" style="margin:0">${esc('Jellyfin ist ausgeschaltet oder die Box ist nicht angemeldet. Einrichten unter Einstellungen › Dienste › Jellyfin.')}</p>
+        <div class="btns"><button class="btn primary" id="jfs-services">Jellyfin öffnen</button></div></section>`,
+    ]
+  }
+  return [
+    `<section class="card wide">
+      <p class="help" style="margin:0">${esc('Alben, Hörbücher, Künstler und Playlists deines Jellyfin-Servers. Was du hinzufügst, spielt die Box von dort.')}</p>
+      <div class="search">${icon('search')}<input class="input" id="jfs-q" type="search" placeholder="${esc('Suchen – z. B. ein Hörspiel oder eine Band')}" autocomplete="off" value="${esc(jfs.q)}" enterkeyhint="search"></div>
+      <div class="btns"><button class="btn primary" id="jfs-go">Suchen</button></div>
+    </section>`,
+    `<div id="jfs-results" class="wide-stack"></div>`,
+  ]
+}
+
+async function loadJellyfinLibs() {
+  const [r, have] = await Promise.all([api(`${API}/jellyfin/browse`), libraryHave('jellyfin')])
+  jfs.have = have
+  jfs.libs = r.ok ? r.body.libraries : []
+  jfs.libsError = r.ok ? '' : jellyfinFailText(r)
+}
+
+async function openJellyfinLibrary(lib, view) {
+  const gen = ++jfs.gen
+  jfs.lib = lib
+  jfs.view = view ?? JFS_VIEWS[lib.type]?.[0]?.[0] ?? 'albums'
+  jfs.list = null
+  jfs.listError = ''
+  jfs.artist = null
+  jfs.result = null
+  artistView.q = ''
+  drawJellyfin()
+  const r = await api(`${API}/jellyfin/library/${encodeURIComponent(lib.id)}?view=${jfs.view}`)
+  if (gen !== jfs.gen) return
+  jfs.list = r.ok ? r.body.items : []
+  jfs.listError = r.ok ? '' : jellyfinFailText(r)
+  drawJellyfin()
+}
+
+async function openJellyfinArtist(a) {
+  const gen = ++jfs.gen
+  artistView.q = ''
+  jfs.artist = { ...a, albums: null }
+  drawJellyfin()
+  $('#jfs-results')?.scrollIntoView({ block: 'start' })
+  const r = await api(`${API}/jellyfin/artist/${encodeURIComponent(a.id)}/albums`)
+  if (gen !== jfs.gen || jfs.artist?.id !== a.id) return
+  jfs.artist.albums = r.ok ? r.body.items : []
+  jfs.artist.error = r.ok ? '' : jellyfinFailText(r)
+  drawJellyfin()
+}
+
+async function doJellyfinSearch() {
+  const q = jfs.q.trim()
+  if (q.length < 2) return toast('Bitte mindestens 2 Zeichen eingeben', 'info')
+  if (jfs.busy) return
+  const box = $('#jfs-results')
+  box.innerHTML = `<div class="loading"><p>Suche …</p></div>`
+  jfs.busy = true
+  const gen = ++jfs.gen
+  const [r, have] = await Promise.all([api(`${API}/jellyfin/search?${new URLSearchParams({ q })}`, { timeoutMs: 30000 }), libraryHave('jellyfin')])
+  jfs.busy = false
+  if (gen !== jfs.gen || !box.isConnected) return
+  jfs.have = have
+  if (!r.ok) {
+    box.innerHTML = `<p class="help">${esc(jellyfinFailText(r))}</p>`
+    return
+  }
+  jfs.result = r.body
+  jfs.artist = null
+  jfs.lib = null
+  drawJellyfin()
+}
+
+function drawJellyfin() {
+  const box = $('#jfs-results')
+  if (!box) return
+  const lists = {}
+  const rowsOf = (key, items) => {
+    lists[key] = items
+    return items.map((x, i) => resultRow(x, i, key, jfs.have)).join('')
+  }
+  const card = (key, title, items) => (items.length ? `<section class="card"><h2>${esc(title)}</h2><div class="rows">${rowsOf(key, items.map(jfRow))}</div></section>` : '')
+  const wire = () => {
+    for (const img of box.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+    for (const b of box.querySelectorAll('[data-list]')) {
+      const x = lists[b.dataset.list][Number(b.dataset.i)]
+      b.onclick = () => (x.kind === 'artist' ? openJellyfinArtist(x) : openJellyfinItem(x))
+    }
+    for (const b of box.querySelectorAll('[data-jflibopen]')) b.onclick = () => openJellyfinLibrary(jfs.libs[Number(b.dataset.jflibopen)])
+    // (onclick: wire() runs again with each keystroke in the artist's album filter - one handler, not one per run)
+    const backBtn = $('#jfs-back', box)
+    if (backBtn) backBtn.onclick = () => {
+      jfs.gen++
+      if (jfs.artist && (jfs.lib || jfs.result)) jfs.artist = null
+      else {
+        jfs.artist = null
+        jfs.lib = null
+        jfs.result = null
+      }
+      drawJellyfin()
+    }
+  }
+  const back = (text) => `<div class="btns"><button class="btn" id="jfs-back">${icon('back', 18)}${esc(text)}</button></div>`
+  if (jfs.artist) {
+    const a = jfs.artist
+    const whole = jfs.have.has(`artist:${a.id}`)
+    box.innerHTML = `${back(jfs.lib ? `Zurück zu ${jfs.lib.name}` : 'Zurück zur Suche')}
+      <section class="card"><div class="ard-head">${a.image ? `<img src="${esc(jfImg(a, 400))}" alt="">` : ''}<span class="lbl"><h2 translate="no" style="margin:0">${esc(a.name)}</h2><small>${esc(whole ? 'Künstler in Jellyfin · ganz in der Bibliothek' : 'Künstler in Jellyfin')}</small></span></div>
+        <p class="help" style="margin:0">${esc('Ganz hinzugefügt zeigt die Box alle Alben des Künstlers, auch neue. Einzelne Alben fügst du unten hinzu.')}</p>
+        <div class="btns"><button class="btn primary" id="jfs-whole">${icon(whole ? 'check' : 'plus', 18)}${esc(whole ? 'In der Bibliothek' : 'Ganzen Künstler hinzufügen')}</button></div></section>
+      <section class="card"><h2>${esc('Alben')}</h2>${artistControls('jfs')}<div class="rows" id="jfs-alist"></div></section>`
+    const list = () => {
+      const el = $('#jfs-alist', box)
+      if (!a.albums) el.innerHTML = '<div class="loading"><p>Lade …</p></div>'
+      else {
+        const rows = filterAlbums(a.albums.map((x) => ({ ...jfRow(x), ...(whole ? { via: a.id, viaText: 'Künstler in der Bibliothek' } : {}) })))
+        el.innerHTML = rows.length ? rowsOf('albums', rows) : `<p class="help" style="margin:0">${esc(a.error || (a.albums.length ? 'Nichts gefunden.' : 'Keine Alben gefunden.'))}</p>`
+      }
+      wire()
+    }
+    list()
+    wireArtistControls(box, 'jfs', list)
+    $('#jfs-whole', box).onclick = () => openJellyfinItem({ ...a, kind: 'artist' })
+    return
+  }
+  if (jfs.result) {
+    const res = jfs.result
+    const html = card('artists', 'Künstler', res.artists ?? []) + card('albums', 'Alben', res.albums ?? []) + card('books', 'Hörbücher', res.books ?? []) + card('playlists', 'Playlists', res.playlists ?? [])
+    box.innerHTML = back('Zu den Bibliotheken') + (html || `<p class="help">${esc('Nichts gefunden.')}</p>`)
+    return wire()
+  }
+  if (jfs.lib) {
+    const views = JFS_VIEWS[jfs.lib.type] ?? JFS_VIEWS.mixed
+    const seg = views.length > 1 ? `<div class="seg" id="jfs-view">${views.map(([v, l]) => `<button aria-pressed="${jfs.view === v}" data-v="${v}">${esc(l)}</button>`).join('')}</div>` : ''
+    const items = jfs.list
+    const body = !items
+      ? '<div class="loading"><p>Lade …</p></div>'
+      : jfs.listError
+        ? `<p class="help" style="margin:0">${esc(jfs.listError)}</p>`
+        : items.length
+          ? `<div class="rows">${rowsOf('lib', items.map(jfRow))}</div>`
+          : `<p class="help" style="margin:0">${esc('Hier ist nichts. Jellyfin liest eine neue Bibliothek vielleicht noch ein.')}</p>`
+    box.innerHTML = `${back('Zu den Bibliotheken')}<section class="card"><h2 translate="no">${esc(jfs.lib.name)}</h2>${seg}${body}</section>`
+    for (const b of box.querySelectorAll('#jfs-view [data-v]')) b.onclick = () => openJellyfinLibrary(jfs.lib, b.dataset.v)
+    return wire()
+  }
+  const libs = jfs.libs
+  box.innerHTML = `<section class="card"><h2>${esc('Bibliotheken')}</h2>${
+    !libs
+      ? '<div class="loading"><p>Lade …</p></div>'
+      : jfs.libsError
+        ? `<p class="help" style="margin:0">${esc(jfs.libsError)}</p>`
+        : libs.length
+          ? `<div class="rows">${libs
+              .map(
+                (l, i) =>
+                  `<button class="entry lib-row" data-jflibopen="${i}"><span class="lib-thumb">${icon(l.type === 'books' ? 'book' : l.type === 'playlists' ? 'grid' : 'music', 18)}</span><span class="lbl"><b translate="no">${esc(l.name)}</b><small>${esc(JF_LIB_TYPES[l.type] ?? '')}</small></span><span class="chev">${icon('chevron', 18)}</span></button>`,
+              )
+              .join('')}</div>`
+          : `<p class="help" style="margin:0">${esc('Keine Bibliothek gewählt, die die Box abspielen kann – unter Einstellungen › Dienste › Jellyfin.')}</p>`
+  }</section>`
+  wire()
+}
+
+// An album, a playlist, an audiobook or a whole artist onto the box, in the category chosen in the sheet
+function openJellyfinItem(x) {
+  const kind = ['artist', 'playlist', 'book'].includes(x.kind) ? x.kind : 'album'
+  const have = jfs.have.has(`${kind}:${x.id}`)
+  addSheet(
+    {
+      title: x.name,
+      sub: kind === 'artist' ? 'Künstler in Jellyfin' : jfSub(x),
+      img: jfImg(x, 400),
+      have,
+      cat: kind === 'book' ? 'audiobook' : kind === 'playlist' ? 'music' : search.cat,
+      text: kind === 'artist' ? 'Die Box zeigt alle Alben des Künstlers als einen Eintrag, auch Alben, die später dazukommen.' : '',
+      place: kind === 'playlist',
+    },
+    async (category, folder) => {
+      // (a playlist has no artist of its own: a tile of its own, or in the folder chosen)
+      const artist = kind === 'playlist' ? folder : x.artist || x.name
+      const body = { type: 'jellyfin', jellyfinKind: kind, id: x.id, ...(artist ? { artist } : {}), title: x.name, category, source: 'manual', ...(x.image ? { cover: jfImg(x, 400) } : {}) }
+      const r = await api('/api/add', { method: 'POST', body })
+      if (!libWriteOk(r)) return false
+      search.cat = category
+      jfs.have.add(`${kind}:${x.id}`)
+      drawJellyfin()
+      toast(`Hinzugefügt: ${x.name}`)
+      libChanged()
+      lib.items = null
+      return true
+    },
+  )
+}
+
+function mountJellyfinSearch(root) {
+  const q = $('#jfs-q', root)
+  if (!q) return $('#jfs-services', root)?.addEventListener('click', () => go('jellyfin'))
+  q.addEventListener('input', () => (jfs.q = q.value))
+  q.addEventListener('keydown', (e) => e.key === 'Enter' && doJellyfinSearch())
+  $('#jfs-go', root).onclick = doJellyfinSearch
+  drawJellyfin()
+  // (the libraries anew on each visit - chosen otherwise meanwhile; what is in the library anew too - removed meanwhile.
+  // A search started before the answer keeps its place - gen)
+  const gen = jfs.gen
+  if (!jfs.lib && !jfs.result && !jfs.artist) {
+    jfs.libs = null
+    loadJellyfinLibs().then(() => gen === jfs.gen && drawJellyfin())
+  } else
+    libraryHave('jellyfin').then((have) => {
+      jfs.have = have
+      if (gen === jfs.gen) drawJellyfin()
+    })
+}
+
 /* Extensions (docs/extensions.md): the catalog on GitHub, install / switch off / remove, and the settings the installed ones declare */
 
 // the guideline for people who write extensions (English), in the repository
@@ -18102,6 +18809,8 @@ const CONTROLLERS = {
   telegram: { load: loadTelegram, top: tgTop, sections: () => [], mount: mountTelegram },
   homeassistant: { load: loadHa, top: haTop, sections: () => [], mount: mountHa },
   tidal: { load: loadTidal, top: tidalTop, sections: () => [], mount: mountTidal },
+  jellyfin: { load: loadJellyfin, top: jellyfinTop, sections: () => [], mount: mountJellyfin },
+  jellyfinsuche: { load: loadServices, top: jellyfinSearchTop, sections: () => [], mount: mountJellyfinSearch },
   fotos: { load: loadPhotoOverview, top: photoOverviewTop, sections: () => [], mount: mountPhotoOverview, ownNav: true },
   fotoalbum: { load: loadPhotoAlbum, top: photoAlbumTop, sections: () => [], mount: mountPhotoAlbum },
   fotoupload: { load: loadPhotoUpload, top: photoUploadTop, sections: () => [], mount: mountPhotoUpload },
@@ -18555,7 +19264,7 @@ function openDay(el, page) {
 // only those - a Spotify search without a Spotify login only ends in an error.
 // podcasts: the podcast search (Apple's directory, for German with the ARD Audiothek); available: the languages it
 // offers ({code, name})
-const svc = { spotify: true, podcasts: true, radio: true, tidal: false, available: [], at: 0 }
+const svc = { spotify: true, podcasts: true, radio: true, tidal: false, jellyfin: false, available: [], at: 0 }
 async function loadServices() {
   if (Date.now() - svc.at < 30_000) return svc
   const [access, sources] = await Promise.all([api(`${API}/spotify-access`), api(`${API}/sources`)])
@@ -18569,6 +19278,7 @@ function setSources(b) {
   svc.podcasts = b.podcastSearch !== false
   svc.radio = b.radioSearch !== false
   svc.tidal = b.tidal === true
+  svc.jellyfin = b.jellyfin === true
   if (Array.isArray(b.available)) svc.available = b.available
 }
 
@@ -18579,6 +19289,7 @@ async function openAdd() {
     ...(svc.podcasts ? [['podsuche', 'globe', 'Podcasts suchen', 'Kinderpodcasts und Hörspiele in vielen Sprachen']] : []),
     ...(svc.radio ? [['radiosuche', 'vol', 'Radiosender suchen', 'Kinderradio und Sender aus vielen Ländern']] : []),
     ...(svc.tidal ? [['tidalsuche', 'search', 'Auf TIDAL suchen', 'Hörspiele, Alben, Künstler und Playlists finden']] : []),
+    ...(svc.jellyfin ? [['jellyfinsuche', 'server', 'Aus Jellyfin', 'Alben, Hörbücher, Künstler und Playlists deines Servers']] : []),
     ['link', 'link', 'Link einfügen', svc.spotify ? 'Spotify-Link, Radiosender oder Podcast' : 'Radiosender oder Podcast'],
     ['upload', 'up', 'Vom Gerät hochladen', 'Titel oder ganze Ordner auf die SD-Karte'],
   ]

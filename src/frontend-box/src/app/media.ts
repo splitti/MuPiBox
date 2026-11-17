@@ -48,6 +48,9 @@ export interface Media {
   // TIDAL (type: 'tidal'): id is TIDAL's id of the album, playlist or artist (a whole artist: the list shows its albums,
   // see MediaService.tidalArtistAlbums), played by the box's TIDAL service and mpv
   tidalKind?: 'album' | 'playlist' | 'artist'
+  // Jellyfin (type: 'jellyfin', docs/jellyfin-5.1.md): id is Jellyfin's id of the album, playlist, audiobook or artist (a
+  // whole artist: the list shows its albums, see MediaService.jellyfinArtistAlbums), played through the backend and mpv
+  jellyfinKind?: 'album' | 'playlist' | 'book' | 'artist'
   // a whole TIDAL artist: only the albums at these positions by release (1 = the oldest), and without these ids
   range_from?: number
   range_to?: number
