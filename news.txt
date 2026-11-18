@@ -90,6 +90,13 @@
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>The three pins of the rotary encoder are chosen in the app; it runs on a Raspberry Pi 5, as do the fan and the power LED. Its button takes its pin only when it has a function and never an SPI or I2C pin, so GPIO 10 stays free for an NFC reader.</li>
 </ul>
+<b>WiFi</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>WPA3: a network that only offers WPA3 could not be used, the box saved every network for WPA2. It now sees what the network offers and saves it for that, also when a password is changed. On the Pi's own WiFi (driver brcmfmac: Pi 3B+, 4, 5) a network that offers both is used with WPA2: that chip cannot move to another access point of a WPA3 network while connected (the box was gone for 12 to 16 s every minute), with WPA2 it moves without a gap. A USB stick uses WPA3 there. In a WPA3-only network the Pi's own WiFi does not look for a better access point in the background; if the signal stays below -75 dBm for two minutes, it connects anew once (about 3 s). A network it cannot see at the moment, a hidden one for example, is saved for both. For WPA3 the password is kept as plain text in the box's WiFi configuration, readable by root only: WPA3 needs it that way. Networks saved before stay as they are.</li>
+<li id='linews' class='linews'>A new network is tried right away: connected, the box stays there; not connected (a typing mistake, most likely), it goes back to the previous network and the new one is listed with "No connection - check the password". Before, the box kept leaving the working network for another try.</li>
+<li id='linews' class='linews'>A network added a second time had two entries. Its entry is now replaced; the settings kept with it (band, fixed address) stay. The network the box is connected to right now is left as it is, so a typing mistake cannot take the box offline.</li>
+</ul>
 <b>Updates</b>
 </ul>
 <ul id='ulnews' class='ulnews'>

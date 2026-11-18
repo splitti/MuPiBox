@@ -55,7 +55,7 @@ import { registerCustomBootRoutes } from './bootscreen-custom'
 import { registerFeedHostRoutes } from './feed-hosts'
 import { registerPinnedCardRoutes } from './pinned-cards'
 import { dropStatic, registerWifiStaticRoutes, startWifiStaticWatch } from './wifi-static'
-import { decodeWpaSsid, parseWpaCliScanResults, wifiConfigPrivate } from '../wpa-ssid'
+import { decodeWpaSsid, parseWpaCliScanResults, wifiConfigPrivate, wifiSetPassword } from '../wpa-ssid'
 import { fanSpeedNow, registerHardwareRoutes } from './hardware'
 import { registerDietpiDashboardRoutes, startDietpiDashboard } from './dietpi-dashboard'
 import { registerServicesRoutes } from './services'
@@ -81,7 +81,7 @@ import { weeklySummaryOn } from './weekly-summary'
 import { isArdFeed } from '../ard-sounds'
 import { pickEpisodes } from '../episode-pick'
 import { episodeKey, mayKeep, type PodcastOffline } from '../podcast-offline'
-import { pbkdf2Sync, randomBytes } from 'node:crypto'
+import { randomBytes } from 'node:crypto'
 import { localOnly } from '../request-guard'
 import { clearSpotifyBlock } from '../spotify-block'
 import { clearArtistAlbumsMemory } from '../artist-albums-store'
@@ -1649,14 +1649,30 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * `[CURRENT]` flag marks which one is connected — the WebApp disables
    * "remove" on that row so the box can't be locked out via this UI.
    */
-  router.get(['/wifi/saved', '/wlan/saved'], requireSession, (_req, res) => {
-    execFile('sudo', ['/usr/sbin/wpa_cli', '-i', wifiIface(), 'list_networks'], { timeout: 5000 }, (err, stdout) => {
+  router.get(['/wifi/saved', '/wlan/saved'], requireSession, async (_req, res) => {
+    const wpaCli = (args: string[]) =>
+      new Promise<{ err: Error | null; out: string }>((resolve) =>
+        execFile('sudo', ['/usr/sbin/wpa_cli', '-i', wifiIface(), ...args], { timeout: 5000 }, (err, out) => resolve({ err, out: String(out ?? '') })),
+      )
+    const [listed, status] = await Promise.all([wpaCli(['list_networks']), wpaCli(['status'])])
+    {
+      const { err, out: stdout } = listed
       if (err) {
         res.status(500).json({ error: `wpa_cli failed: ${err.message}` })
         return
       }
+      // [CURRENT] is the network wpa_supplicant works on - also while it only tries it (add_wifi.sh): connected is it
+      // only once the connection is up
+      const connected = /^wpa_state=COMPLETED$/m.test(status.out)
       const lines = stdout.split('\n')
-      const networks: Array<{ id: number; ssid: string; active: boolean }> = []
+      // (while add_wifi.sh tries a new network, the others are disabled for that try only)
+      let trying: string | null = null
+      try {
+        trying = readFileSync('/run/mupibox-wifi-try', 'utf8')
+      } catch {
+        // nothing is being tried
+      }
+      const networks: Array<{ id: number; ssid: string; active: boolean; disabled: boolean }> = []
       for (const ln of lines) {
         // Header line: "network id / ssid / bssid / flags" — skip
         if (!ln || ln.startsWith('network id')) continue
@@ -1664,12 +1680,14 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         if (parts.length < 2) continue
         const id = Number.parseInt(parts[0], 10)
         if (!Number.isFinite(id)) continue
-        const ssid = parts[1] ?? ''
+        // (the name as the user wrote it - wpa_cli prints an umlaut as \xNN; the app sends it back to /wifi/password,
+        // and the fixed addresses and the scan go by that name too)
+        const ssid = decodeWpaSsid(parts[1] ?? '')
         const flags = parts[3] ?? ''
-        networks.push({ id, ssid, active: flags.includes('[CURRENT]') })
+        networks.push({ id, ssid, active: connected && flags.includes('[CURRENT]'), disabled: trying === null && flags.includes('[DISABLED]') })
       }
-      res.json({ networks })
-    })
+      res.json({ networks, trying })
+    }
   })
 
   /**
@@ -1677,9 +1695,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * Queues a new Wi-Fi entry by writing to wlan.json — same mechanism that
    * AdminInterface/network.php has used for ages. The add_wifi.sh daemon
    * polls the file every 2 s, runs `wpa_passphrase` (or appends an open
-   * network if password is empty) and `wpa_cli reconfigure`. The current
-   * connection is NOT touched: wpa_supplicant only switches if the new SSID
-   * is reachable.
+   * network if password is empty) and tries the network once: connected, the
+   * box stays there; failed, the entry is saved as disabled and the box goes
+   * back (see try_network).
    */
   router.post(['/wifi/add', '/wlan/add'], requireSession, requireCsrf, async (req, res) => {
     const body = (req.body as { ssid?: unknown; password?: unknown } | undefined) ?? {}
@@ -1715,8 +1733,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
 
   /**
    * POST /api/app/wifi/password {ssid, password} - a new password for a saved network that is not the one connected
-   * now (the router got a new one). Set as the network's key (WPA-PSK, worked out here as wpa_passphrase does: no
-   * character of the password can break the configuration), then saved.
+   * now (the router got a new one). Set as the network's key for what it asks for (WPA2, WPA3 or both, see
+   * wifiSetPassword), then saved.
    */
   router.post('/wifi/password', requireSession, requireCsrf, async (req, res) => {
     const body = (req.body as { ssid?: unknown; password?: unknown } | undefined) ?? {}
@@ -1746,8 +1764,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(409).json({ error: 'connected_network' })
       return
     }
-    const psk = pbkdf2Sync(password, ssid, 4096, 32, 'sha1').toString('hex')
-    if (!/OK/.test(await cli(['set_network', id, 'psk', psk])) || !/OK/.test(await cli(['save_config']))) {
+    if (!(await wifiSetPassword(wifiIface(), id, Buffer.from(ssid, 'utf8'), password)) || !/OK/.test(await cli(['save_config']))) {
       res.status(500).json({ error: 'not_set' })
       return
     }
@@ -1780,7 +1797,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         if (!ln || ln.startsWith('network id')) continue
         const parts = ln.split('\t')
         if (parts.length < 2) continue
-        if (parts[1] !== ssid) continue
+        // (the name as /wifi/saved gives it: decoded)
+        if (decodeWpaSsid(parts[1]) !== ssid) continue
         targetId = Number.parseInt(parts[0], 10)
         targetActive = (parts[3] ?? '').includes('[CURRENT]')
         break

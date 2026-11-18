@@ -67,7 +67,7 @@ import { OnlineCovers } from './online-covers'
 import { ardFeed, isArdFeed } from './ard-sounds'
 import { isEpisodePick } from './episode-pick'
 import { feedHostKey, feedHostsOf, isPrivateHost, neverFetched } from './lan-feeds'
-import { decodeWpaSsid, parseWpaCliScanResults, type WifiScanEntry, wifiBandOf, wifiConfigPrivate } from'./wpa-ssid'
+import { decodeWpaSsid, parseWpaCliScanResults, type WifiScanEntry, wifiBandOf, wifiConfigPrivate, wifiSetPassword } from './wpa-ssid'
 import { registerAudioOutputRoutes, startAudioWatch } from './audio-output'
 import { episodeKey, MAX_KEEP, type OfflineEpisode, PodcastOffline } from './podcast-offline'
 import { setFeedHeadReader } from './podcast-search'
@@ -3951,13 +3951,12 @@ app.post('/api/wifi/configured/:id/password', async (req, res) => {
   }
 
   try {
-    // The key worked out here as wpa_passphrase does, from the network's name: no character of the password can
+    // The key for what the network asks for (WPA2, WPA3 or both, see wifiSetPassword): no character of the password can
     // break the command (a quote in it ended the quoted value before)
     const rawSsid = (await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'get_network', String(id), 'ssid'])).stdout.trim()
     const ssid = rawSsid.startsWith('"') ? Buffer.from(decodeWpaSsid(rawSsid.slice(1, -1)), 'utf8') : Buffer.from(rawSsid, 'hex')
     if (ssid.length === 0 || ssid.length > 32) throw new Error(`network ${id}: ssid not readable (${rawSsid})`)
-    const psk = crypto.pbkdf2Sync(password, ssid, 4096, 32, 'sha1').toString('hex')
-    await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'set_network', String(id), 'psk', psk])
+    if (!(await wifiSetPassword(await wifiInterface(), String(id), ssid, password))) throw new Error(`network ${id}: key not set`)
     await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'enable_network', String(id)])
     await wifiSaveConfig(await wifiInterface())
     console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Updated password for wifi network ${id}`)

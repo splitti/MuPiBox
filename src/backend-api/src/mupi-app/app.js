@@ -10060,6 +10060,7 @@ async function loadWlan() {
   // (the WiFi as it is now: the address in network.json is the box's first one, with a cable that of the cable)
   net.wifi = wifi.ok ? wifi.body : null
   net.saved = saved.ok ? saved.body?.networks ?? [] : null
+  net.trying = saved.ok ? saved.body?.trying ?? null : null
   // (the networks with a fixed address, by name - see app-api/wifi-static.ts; reverted: one the box took back to DHCP)
   net.fixed = fixed.ok ? fixed.body?.networks ?? {} : {}
   net.reverted = fixed.ok ? fixed.body?.reverted ?? null : null
@@ -10224,8 +10225,7 @@ function wlanTop() {
           ? `<div class="rows">${net.saved
               .map((w, i) => {
                 const sig = inRange.get(w.ssid)
-                // (a hidden network is never in the scan: "not found", not "out of reach")
-                const where = w.active ? 'verbunden' : sig !== undefined ? `in Reichweite · ${signalWord(sig)}` : net.scan ? 'nicht gefunden' : ''
+                const where = w.active ? 'verbunden' : net.trying === w.ssid ? 'wird ausprobiert …' : w.disabled ? 'Keine Verbindung – Passwort prüfen' : sig !== undefined ? `in Reichweite · ${signalWord(sig)}` : net.scan ? 'nicht gefunden' : ''
                 const fixed = net.fixed?.[w.ssid]
                 // (the buttons in a group of their own: on a phone it goes below the name, see .wifi-net)
                 return `<div class="entry wifi-net"><span class="avatar">${icon('wifi', 16)}</span><span class="lbl"><b translate="no">${esc(w.ssid)}</b>${where ? `<small>${sig !== undefined && !w.active ? signalBars(sig) : ''} ${esc(where)}</small>` : ''}${fixed ? `<small>${esc(fixed.paused ? `feste Adresse ${fixed.ip} pausiert` : `feste Adresse ${fixed.ip}`)}</small>` : ''}</span>
@@ -10261,7 +10261,7 @@ function wlanTop() {
         <div class="field"><label for="w-ssid">Netzname (SSID)</label><input class="input" id="w-ssid" maxlength="32" ${NO_PW_MANAGER}></div>
         <div class="field"><label for="w-pw2">Passwort</label><div class="input-wrap"><input class="input has-eye" id="w-pw2" type="password" maxlength="63" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div><small>8–63 Zeichen, leer bei einem offenen Netz.</small></div>
         <div class="btns"><button class="btn primary" id="w-add2">Hinzufügen</button></div></details>
-      <p class="help" style="margin:0">Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.</p></section>`,
+      <p class="help" style="margin:0">Die Box probiert ein neues Netz gleich aus. Klappt es, bleibt sie dort. Klappt es nicht, geht sie ins bisherige Netz zurück.</p></section>`,
   ]
 }
 
@@ -10324,12 +10324,28 @@ function mountWlan(root, page) {
   const add = async (ssid, password) => {
     if (!ssid.trim()) return toast('Bitte den Netznamen eintragen', 'info')
     if (password && (password.length < 8 || password.length > 63)) return toast('Das Passwort hat 8 bis 63 Zeichen', 'info')
+    // (add_wifi.sh leaves the connected network as it is: a mistyped password would take the box offline)
+    if (net.saved?.some((w) => w.active && w.ssid === ssid)) return toast('Mit diesem Netz ist die Box gerade verbunden', 'info')
     const r = await api(`${API}/wifi/add`, { method: 'POST', body: { ssid, password } })
     if (!r.ok) return toast(r.body?.error ?? 'Das hat nicht geklappt', 'info')
     net.pick = null
-    setTimeout(() => again(), 8000)
-    toast(`„${ssid}“ wird eingetragen`)
+    toast(`„${ssid}“ wird ausprobiert. Die App kann dabei kurz die Verbindung verlieren.`)
     renderPage(page, false)
+    // add_wifi.sh tries the network (up to 30 s): its result, also when the box was out of reach for a moment
+    for (let i = 0; i < 20; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 3000))
+      if (currentPage()?.id !== page.id) return
+      await loadWlan().catch(() => undefined)
+      renderPage(page, false)
+      const saved = net.saved?.find((w) => w.ssid === ssid)
+      // (right after the try the box can be between two connections for a few seconds - the address is set up anew in
+      // the new network: asked on until it is connected or the try failed; out of reach, the entry just stays)
+      if (i >= 1 && saved && !net.trying && (saved.active || saved.disabled)) {
+        if (saved.active) toast(`Mit „${ssid}“ verbunden`)
+        else toast(`„${ssid}“: keine Verbindung. Bitte das Passwort prüfen.`, 'info')
+        return
+      }
+    }
   }
   $('#w-add', root).onclick = async () => {
     if (!net.pwChange) return add(net.pick ?? '', $('#w-pw', root).value)

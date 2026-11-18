@@ -21,7 +21,9 @@ Bei jedem gespeicherten Netz gibt es **Adresse** (feste IP-Adresse, siehe unten)
 
 Ein Netz, das seinen Namen nicht zeigt, trägst du unter **Verstecktes Netz eingeben** ein: **Netzname (SSID)** und **Passwort** (leer bei einem offenen Netz), dann **Hinzufügen**.
 
-Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren. Bei einem Tippfehler im Passwort kommt sie ins bisherige Netz zurück, versucht das neue aber immer wieder. Entferne es dann oder trage über **Passwort** das richtige ein.
+Die Box probiert ein neues Netz gleich aus. Klappt es, bleibt sie dort und hat dann meist eine andere Adresse. Klappt es nicht, etwa wegen eines Tippfehlers, geht sie ins bisherige Netz zurück und das neue steht unter den gespeicherten Netzen mit **Keine Verbindung – Passwort prüfen**. Über **Passwort** trägst du es dann richtig ein. Während des Versuchs kann die App kurz die Verbindung verlieren. Ein Netz, das die Box nicht findet, bleibt gespeichert. Sie verbindet sich damit, sobald es in Reichweite ist.
+
+WPA2 und WPA3 erkennt die Box von selbst. Über das eingebaute WLAN des Raspberry Pi (Pi 3B+, 4 und 5) nutzt sie ein Netz, das beides anbietet, mit WPA2: Dieser WLAN-Chip wechselt mit WPA2 ohne Aussetzer zwischen mehreren Access Points (Mesh, Repeater), mit WPA3 kann er das nicht. In einem reinen WPA3-Netz sucht die Box mit ihm deshalb nicht laufend nach einem besseren Access Point. Bleibt das Signal schwach, baut sie die Verbindung einmal neu auf (wenige Sekunden). Ein USB-WLAN-Stick nutzt WPA3 auch im Mischbetrieb. Ein Netz, das sie gerade nicht sieht (etwa ein verstecktes), trägt sie für beide ein. Für WPA3 liegt das Passwort im Klartext in der WLAN-Konfiguration der Box, die nur der Administrator der Box (root) lesen kann. WPA3 braucht das so. Ist ein Netz schon gespeichert, wird sein Eintrag ersetzt statt verdoppelt. Das Netz, mit dem die Box gerade verbunden ist, bleibt dabei unverändert, damit ein Tippfehler sie nicht offline nimmt.
 
 ### Feste IP-Adresse
 
