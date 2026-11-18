@@ -42,9 +42,9 @@ case "${ACTION}" in
 		last=$(cat "${LAST}" 2>/dev/null)
 		# A new network is tried on this adapter (add_wifi.sh, try_network): it left the network it was in on purpose,
 		# and the try ends connected - to the new one, or back in the one before. Not let go, Debian's ifdown took the
-		# adapter down whenever the new connection took longer than the wait below: a USB stick (rtl8192cu) did not find
-		# any network after that until it was pulled out. Let go; the CONNECTED that follows keeps the address (back in
-		# the same network) or sets up the new one's.
+		# adapter's link down in the middle of the try whenever the new connection took longer than the wait below (a
+		# slow USB stick, a weak signal). Let go; the CONNECTED that follows keeps the address (back in the same network)
+		# or sets up the new one's.
 		if [ -f /run/mupibox-wifi-try ] && [ "$(/usr/local/bin/mupibox/mupi_wifi_iface.sh 2>/dev/null)" = "${IFACE}" ]; then
 			log "${IFACE} DISCONNECTED let go - a new network is tried"
 			[ -n "${last}" ] && : > "${SKIPPED}"
