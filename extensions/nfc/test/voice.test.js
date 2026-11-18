@@ -80,14 +80,13 @@ test('the NAS and Jellyfin need the home network only; a podcast episode saved o
   assert.equal(voice.networkMessage(null, { type: 'radio' }), null)
 })
 
-test('the battery message waits for somebody to hear it: not in a quiet time or the evening, while something plays or a tag is laid on', () => {
+test('the battery message waits for somebody to hear it: not in a quiet time, while something plays or a tag is laid on', () => {
   const hat = (percent, extra = {}) => ({ Bat_Percent: percent, Ibat: -300, BatteryConnected: 1, Measurement_Valid: true, ...extra })
   const notice = voice.batteryNotice()
   assert.equal(notice.reading(hat(40)), false)
   assert.equal(notice.reading(hat(10)), true, 'owed at 10 %')
   assert.equal(notice.fits({}), false, 'nothing plays, no tag: nobody hears it')
   assert.equal(notice.fits({ playing: true, quiet: true }), false, 'a quiet time')
-  assert.equal(notice.fits({ tagLaidOn: true, evening: true }), false, 'the evening')
   assert.equal(notice.reading(hat(9)), true, 'still owed')
   assert.equal(notice.fits({ playing: true }), true)
   assert.equal(notice.fits({ tagLaidOn: true }), true)
@@ -107,6 +106,26 @@ test('the battery message waits for somebody to hear it: not in a quiet time or 
   assert.equal(voice.quietNow({ quiet: { inWindow: false, state: 'grace' } }), true)
   assert.equal(voice.quietNow({ quiet: { inWindow: false, state: 'normal' } }), false)
   assert.equal(voice.quietNow(null), false)
+  // (released by the parents: the window stays, the state of all is normal - or allowUntil already says so)
+  const now = 1_700_000_000_000
+  assert.equal(voice.quietNow({ state: 'blocked', quiet: { inWindow: true, state: 'blocked' } }, now), true)
+  assert.equal(voice.quietNow({ state: 'normal', quiet: { inWindow: true, state: 'blocked' } }, now), false, 'released')
+  assert.equal(voice.quietNow({ state: 'blocked', quiet: { inWindow: true, state: 'blocked' }, override: { allowUntil: now + 60000, forceBlockUntil: 0 } }, now), false, 'released just now')
+  assert.equal(voice.quietNow({ state: 'blocked', quiet: { inWindow: true, state: 'blocked' }, override: { allowUntil: now - 1, forceBlockUntil: 0 } }, now), true, 'the release is over')
+  assert.equal(voice.blockedByLimits({ state: 'normal', playtime: { state: 'normal' }, quiet: { inWindow: true, state: 'normal' } }), false, 'a start in a released quiet time is not refused')
+})
+
+test('without the DSI display a start names its tile and what was heard, as the display does', () => {
+  const book = { type: 'library', category: 'audiobook', artist: 'Astrid Lindgren', title: 'Pippi', libraryPath: 'audiobook/Astrid Lindgren/Pippi' }
+  assert.equal(voice.startQuery('musicsearch/library/album/x', book), '?tile=lib%3Aaudiobook%2FAstrid%20Lindgren%2FPippi&heard=lib%3Aaudiobook%2FAstrid%20Lindgren%2FPippi')
+  assert.equal(voice.startQuery('x?cover=y', { type: 'spotify', category: 'music', artist: 'Band', id: 'abc' }), '&tile=artist%3Amusic%3ABand&heard=spotify%3Aalbum%3Aabc')
+  assert.equal(voice.startQuery('x', { type: 'radio', category: 'radio', artist: '', id: 'https://r.example/s' }), '?tile=single%3Aother%3Ahttps%3A%2F%2Fr.example%2Fs', 'a station: no tick')
+  assert.equal(voice.startQuery('x', { type: 'rss', artist: '', id: 'https://feed' }), '', 'a podcast without an artist: neither')
+  assert.equal(voice.heardKeyOf({ type: 'library', category: 'music', artist: 'A', title: 'B' }), 'lib:music/A/B', 'an old entry without a path')
+  assert.equal(voice.heardKeyOf({ type: 'jellyfin', jellyfinKind: 'book', id: 'j1' }), 'jellyfin:book:j1')
+  assert.equal(voice.heardKeyOf({ type: 'tidal', tidalKind: 'artist', id: 't1' }), null)
+  assert.equal(voice.heardKeyOf({ type: 'nas', nasPath: 'Hörspiele/X' }), 'nas:Hörspiele/X')
+  assert.equal(voice.heardKeyOf({ type: 'spotify', showid: 'e1' }), 'spotify:episode:e1')
 })
 
 test('the battery: said once at 10 %, not while charging, again after it was above 15 % or charged', () => {

@@ -42,6 +42,8 @@ MIN_LENGTH = 4  # (a shorter run of keys before Enter is no card)
 MAX_LENGTH = 20
 PAUSE = 1.0  # seconds between two keys of one number; longer and what was typed so far is dropped
 NAME_HINTS = re.compile(r'rfid|reader|card|nfc|\bic\b|sycreader|neuftech|hid', re.IGNORECASE)
+# (the hints that name a reader; 'hid' alone is weak: the kernel calls every nameless device "HID vvvv:pppp", a keyboard dongle too)
+STRONG_HINTS = re.compile(r'rfid|reader|card|nfc|\bic\b|sycreader|neuftech', re.IGNORECASE)
 
 
 def key_bit(bitmap, code):
@@ -161,8 +163,8 @@ def usb_readers(devices):
 def choose_device(devices, wanted, index=0):
     """The device to read: the one named (a part of its name, or its path); else, with `index` (1, 2, ...), the first, second ... of the
     USB readers (usb_readers - the API part asks for that only while two USB readers are set); else the only USB keyboard, else the
-    one that looks like a reader (of several that look like one, the first by port). Returns the device; a ReaderError says what is
-    missing or too many."""
+    one that looks like a reader (of several whose name says reader, the first by port). Returns the device; a ReaderError says what
+    is missing or too many."""
     keyboards = [d for d in devices if d['usb'] and d['keyboard']]
     wanted = (wanted or '').strip()
     if index > 0 and not wanted:
@@ -188,7 +190,11 @@ def choose_device(devices, wanted, index=0):
     # (no keyboard that looks like a reader: the user names it - a keyboard dongle or an IR receiver taken for the reader would be held
     # by the driver, and the reader would type into the display)
     hits = [d for d in usb_readers(keyboards) if NAME_HINTS.search(d['name'] + ' ' + d.get('label', ''))]
-    if hits:
+    strong = [d for d in hits if STRONG_HINTS.search(d['name'] + ' ' + d.get('label', ''))]
+    # (a name that says reader wins over a nameless "HID ..."; two nameless ones cannot be told apart)
+    if strong:
+        return strong[0]
+    if len(hits) == 1:
         return hits[0]
     raise ReaderError('several_devices', 'several USB keyboards: %s - name the reader in the settings' % ', '.join(d.get('label') or d['name'] for d in keyboards))
 

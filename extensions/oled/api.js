@@ -58,7 +58,7 @@ exports.activate = (host) => {
   let timer = null
   let shownView = '' // the view the driver was told last
   let localAt = 0 // when /local was read last
-  let spotifyKept = null // { state, at, key }: the last /state while Spotify is the player
+  let spotifyKept = null // { state, at, key, since }: the last /state while Spotify is the player (since: when its key began)
 
   // ---- the box: files and commands --------------------------------------------------------------------------------------------
   const readText = (file) => {
@@ -145,11 +145,13 @@ exports.activate = (host) => {
     driver.start()
     log.info?.(`[oled] display ${config.controller} ${config.width}x${config.height} at ${config.address} started`)
   }
-  const stopDriver = async () => {
+  // (off: the panel is switched off - another address or controller: should the new driver not find its display, the old picture
+  // stayed on the old one for good)
+  const stopDriver = async (off = false) => {
     const old = driver
     driver = null
     started = null
-    if (old) await old.stop()
+    if (old) await old.stop(off)
   }
 
   // ---- the player and the network ----------------------------------------------------------------------------------------------
@@ -199,15 +201,19 @@ exports.activate = (host) => {
   // started, stopped or a new start came), counted on in between; while it is paused the last answer stays (no Web API for hours)
   const spotifyState = async (local, now) => {
     const playing = logic.spotifyMayPlay(local)
-    const key = `${playing}|${local.generation ?? ''}`
+    // (a command - next, previous - sets triggerAt; the track number where the player has one)
+    const key = `${playing}|${local.generation ?? ''}|${local.triggerAt ?? ''}|${local.currentTracknr ?? ''}`
     const kept = spotifyKept
     const moving = (s) => s?.is_playing === true && typeof s.progress_ms === 'number'
     const progress = kept && moving(kept.state) ? kept.state.progress_ms + (now - kept.at) : kept?.state?.progress_ms
     const over = Boolean(kept) && moving(kept.state) && progress >= (kept.state.item?.duration_ms ?? Number.POSITIVE_INFINITY)
-    const ask = !kept || kept.key !== key || (playing && (now - kept.at >= SPOTIFY_STATE_MS || over) && now - kept.at >= SPOTIFY_GAP_MS)
+    // (right after a start /state often says not playing yet: asked again after the short gap, for the time of one long one)
+    const late = Boolean(kept) && playing && kept.state?.is_playing !== true && now - kept.since < SPOTIFY_STATE_MS
+    const ask = !kept || kept.key !== key || (playing && (now - kept.at >= SPOTIFY_STATE_MS || over || late) && now - kept.at >= SPOTIFY_GAP_MS)
     if (ask) {
       const state = await getJson(`${host.playerUrl}/state`)
-      spotifyKept = { state, at: clock(), key }
+      const at = clock()
+      spotifyKept = { state, at, key, since: kept && kept.key === key ? kept.since : at }
       return state
     }
     if (!kept.state) return null
@@ -296,6 +302,17 @@ exports.activate = (host) => {
     const result = await run('sudo', ['-n', '/boot/dietpi/dietpi-autostart', String(index)])
     if (result.error) throw new Error(`dietpi-autostart: ${result.error.message ?? result.error}`)
   }
+  // The autostart that was there before the switch-on (autostart.json), else the kiosk
+  const restoreAutostart = async () => {
+    let back = KIOSK_AUTOSTART
+    try {
+      const kept = JSON.parse(fs.readFileSync(keepFile(), 'utf8'))
+      if (Number.isInteger(kept?.index) && kept.index > 0 && kept.index < 100) back = kept.index
+    } catch {
+      /* nothing kept: the kiosk */
+    }
+    await setAutostart(back)
+  }
   // (the connectors of the graphics: a DSI one that says "connected" is a DSI display that is plugged in)
   const drmConnectors = () => {
     const drm = deps.drmDir ?? DRM_DIR
@@ -317,7 +334,8 @@ exports.activate = (host) => {
     const flag = flagNow()
     const index = readAutostartIndex()
     // (a switch-on that stopped half-way - autostart 0 written, the flag not: "off" brings the kiosk back all the same)
-    const leftOver = !on && !flag && index === NO_KIOSK_AUTOSTART && fs.existsSync(keepFile())
+    // (DietPi's "0" deletes its index file instead of writing 0: no file is no kiosk too)
+    const leftOver = !on && !flag && (index === null || index === NO_KIOSK_AUTOSTART) && fs.existsSync(keepFile())
     if (on === flag && (on ? index !== KIOSK_AUTOSTART : !leftOver)) {
       headlessNote = null
       return
@@ -325,10 +343,17 @@ exports.activate = (host) => {
     if (on) {
       const refused = await headlessRefusal()
       if (refused) {
-        if (headlessNote?.value !== refused) log.warn(`[oled] headless not switched on: ${phase.phase !== 'ready' ? 'no display answers' : 'a DSI display is connected'}`)
+        if (headlessNote?.value !== refused) log.warn(`[oled] headless not switched on: ${refused === logic.HEADLESS_DSI ? 'a DSI display is connected' : 'no display answers'}`)
         headlessNote = { value: refused, tone: 'warn' }
         // (the flag without autostart 0 - left by a switch-on that stopped half-way: the kiosk starts, so the flag goes too)
         if (flag) await setFlag(false).catch((error) => log.warn(`[oled] headless flag not taken back: ${error?.message ?? error}`))
+        // (autostart 0 without the flag - the other half: no kiosk and no OLED would leave the box without any picture, so what
+        // was there before comes back, as "off" does it)
+        else if ((index === null || index === NO_KIOSK_AUTOSTART) && fs.existsSync(keepFile())) {
+          await restoreAutostart()
+            .then(removeKeep)
+            .catch((error) => log.warn(`[oled] autostart not brought back: ${error?.message ?? error}`))
+        }
         return
       }
     }
@@ -346,18 +371,12 @@ exports.activate = (host) => {
           await setAutostart(NO_KIOSK_AUTOSTART)
         } catch (error) {
           await setFlag(false).catch((back) => log.warn(`[oled] headless flag not taken back: ${back?.message ?? back}`))
-          if (readAutostartIndex() !== NO_KIOSK_AUTOSTART) removeKeep()
+          const after = readAutostartIndex()
+          if (after !== null && after !== NO_KIOSK_AUTOSTART) removeKeep()
           throw error
         }
       } else {
-        let back = KIOSK_AUTOSTART
-        try {
-          const kept = JSON.parse(fs.readFileSync(keepFile(), 'utf8'))
-          if (Number.isInteger(kept?.index) && kept.index > 0 && kept.index < 100) back = kept.index
-        } catch {
-          /* nothing kept: the kiosk */
-        }
-        await setAutostart(back)
+        await restoreAutostart()
         await setFlag(false)
         removeKeep()
       }
@@ -383,7 +402,8 @@ exports.activate = (host) => {
         config = logic.readConfig(settings ?? {})
         await readNight()
         if (!driver || logic.needsRestart(started ?? before, config)) {
-          await stopDriver()
+          const was = started ?? before
+          await stopDriver(was.address !== config.address || was.controller !== config.controller)
           startDriver()
         } else {
           syncContrast()

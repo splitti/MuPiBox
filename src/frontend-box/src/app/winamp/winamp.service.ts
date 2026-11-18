@@ -84,6 +84,8 @@ export class WinampService {
   /** false when the player is mplayer (it has no equaliser) */
   readonly soundSupported = signal(true)
   readonly repeat = signal(false)
+  // (a tap shows its result at once: the player's report comes up to a second later - a second tap meanwhile switched the same way)
+  private readonly repeatTapped = signal<{ on: boolean; until: number } | null>(null)
   private readonly shuffleOn = signal(false)
   // shuffle that this window switched on (and for which media): it is switched off again with the playback
   private shuffledHere = false
@@ -193,7 +195,11 @@ export class WinampService {
       shuffle: localAlbum ? data?.shuffle === true : this.shuffleOn(),
       shuffleAvailable: (spotify && media?.type === 'spotify' && (media.category === 'music' || media.category === 'other')) || (localAlbum && data?.shuffleSupported === true),
       // (as the player says it: a new playback starts without repeat, a button of the box changes it)
-      repeat: busy ? data?.repeat === true : this.repeat(),
+      repeat: (() => {
+        const tapped = this.repeatTapped()
+        if (tapped && this.clock() < tapped.until) return tapped.on
+        return busy ? data?.repeat === true : this.repeat()
+      })(),
       eqOpen: this.right() === 'eq',
       playlistOpen: this.right() === 'pl',
       bitrate: data?.bitrate ?? 0,
@@ -422,6 +428,7 @@ export class WinampService {
     // (from what the button shows - the player's state while something plays)
     const on = !this.main().repeat
     this.repeat.set(on)
+    this.repeatTapped.set({ on, until: Date.now() + 2500 })
     this.player.setRepeat(on)
   }
 

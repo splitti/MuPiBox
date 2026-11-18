@@ -158,7 +158,7 @@ class DisplayTest(unittest.TestCase):
 
     def test_the_end_switches_the_panel_off_and_says_good_bye_only_when_the_box_goes_down(self):
         screens = render.Screens(128, 64)
-        for reason, stopping, bye, off in (('quit', True, False, False), ('stop', False, False, True), ('stop', True, True, True), ('eof', True, False, True)):
+        for reason, stopping, bye, off in (('quit', True, False, False), ('quit-off', True, False, True), ('stop', False, False, True), ('stop', True, True, True), ('eof', True, False, True)):
             bus = FakeBus()
             display = oled.Display(bus, 'ssd1306', 128, 64)
             display.show(Image.new('1', (128, 64), 1))
@@ -206,6 +206,15 @@ class LoopTest(unittest.TestCase):
         os.close(w)
         self.assertEqual(reason, 'quit')
         self.assertIn([0x00, 0x81, 40], bus.commands())
+
+    def test_quit_with_off_says_so(self):
+        display = oled.Display(FakeBus(), 'ssd1306', 128, 64)
+        r, w = os.pipe()
+        os.write(w, b'{"cmd": "quit", "off": true}\n')
+        ticks = iter(range(100))
+        self.assertEqual(oled.run(display, render.Screens(128, 64), stdin_fd=r, clock=lambda: next(ticks)), 'quit-off')
+        os.close(r)
+        os.close(w)
 
     def test_the_view_off_switches_the_panel_off_and_draws_nothing(self):
         bus = FakeBus()

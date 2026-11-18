@@ -304,10 +304,10 @@ function batteryWatch() {
   }
 }
 
-// The battery message waits for a moment somebody hears it: not in a quiet time, not in the evening (the window of "Abends dunkler"),
-// and only while something plays or a tag was just laid on - a box left alone said it to nobody, or woke the child at night. Until
-// then it is owed and said once at the first moment that fits; charging (or a charge above OK_PERCENT) in between makes it void.
-// reading(hat): feed every reading of the HAT, true while it is owed; fits({ quiet, evening, playing, tagLaidOn }): whether now is a
+// The battery message waits for a moment somebody hears it: not in a quiet time, and only while something plays or a tag was just
+// laid on - a box left alone said it to nobody, or woke the child at night. Until then it is owed and said once at the first moment
+// that fits; charging (or a charge above OK_PERCENT) in between makes it void.
+// reading(hat): feed every reading of the HAT, true while it is owed; fits({ quiet, playing, tagLaidOn }): whether now is a
 // moment for it; said(): it was said (or is switched off).
 function batteryNotice() {
   const watch = batteryWatch()
@@ -324,17 +324,21 @@ function batteryNotice() {
     get owed() {
       return owed
     },
-    fits: ({ quiet = false, evening = false, playing = false, tagLaidOn = false } = {}) => owed && !quiet && !evening && (playing || tagLaidOn),
+    fits: ({ quiet = false, playing = false, tagLaidOn = false } = {}) => owed && !quiet && (playing || tagLaidOn),
     said() {
       owed = false
     },
   }
 }
 
-// Whether a quiet time runs now (what GET /api/playtime says: its window, or the player still stopping or refusing in it)
-function quietNow(playtime) {
+// Whether a quiet time runs now (what GET /api/playtime says: its window, or the player still stopping or refusing in it) - not
+// while the parents released it: the window stays, but the state of all is 'normal' (allowUntil, live in override; `now` for the tests)
+function quietNow(playtime, now = Date.now()) {
   const quiet = playtime?.quiet
-  return quiet?.inWindow === true || quiet?.state === 'blocked' || quiet?.state === 'grace'
+  if (!(quiet?.inWindow === true || quiet?.state === 'blocked' || quiet?.state === 'grace')) return false
+  if (playtime?.state === 'normal') return false
+  const override = playtime?.override
+  return !(Number(override?.allowUntil) > now && !(Number(override?.forceBlockUntil) > now))
 }
 
 // ---- how often ------------------------------------------------------------------------------------------------------------------
@@ -424,6 +428,43 @@ function resolveTileKey(key, limitKeys) {
   return best ?? key
 }
 
+// What of the library a medium is, for the ticks of what was heard (frontend-box heard-key.ts heardKeyOf): null for none - a radio,
+// a podcast, a folder of folders, a whole artist or series
+function heardKeyOf(media) {
+  if (!media || typeof media !== 'object') return null
+  const ok = (key) => (key.length <= 400 && !key.includes('\n') ? key : null)
+  if (media.type === 'nas' || media.nasPath) return media.nasIsContainer || !media.nasPath ? null : ok(`nas:${media.nasPath}`)
+  if (media.type === 'library') {
+    if (media.libraryIsContainer) return null
+    if (media.libraryPath) return ok(`lib:${media.libraryPath}`)
+    const category = media.category === 'resume' ? media.resumelocalalbum : media.category
+    return media.artist && media.title ? ok(`lib:${category || 'audiobook'}/${media.artist}/${media.title}`) : null
+  }
+  if (media.type === 'tidal') return media.tidalKind === 'artist' || !media.id ? null : ok(`tidal:${media.tidalKind === 'playlist' ? 'playlist' : 'album'}:${media.id}`)
+  if (media.type === 'audible') return media.audibleKind === 'series' || !media.id ? null : ok(`audible:book:${media.id}`)
+  if (media.type === 'jellyfin') {
+    const kind = media.jellyfinKind ?? 'album'
+    return kind === 'artist' || !media.id ? null : ok(`jellyfin:${kind}:${media.id}`)
+  }
+  if (media.type === 'spotify') {
+    if (media.playlistid) return ok(`spotify:playlist:${media.playlistid}`)
+    if (media.id) return ok(`spotify:album:${media.id}`)
+    if (media.showid) return ok(`spotify:episode:${media.showid}`)
+    if (media.audiobookid) return ok(`spotify:show:${media.audiobookid}`)
+  }
+  return null
+}
+
+// The query parts the display adds to a start (PlayerService.sendRequest: tile-key.ts tileQuery, then heardQuery): the tile, unresolved
+// - the player finds the tile of a folder itself -, and what was heard; '' when there is neither
+function startQuery(url, media) {
+  const tileKey = tileKeyOf(media)
+  const tile = tileKey && tileKey.length <= 400 && !tileKey.includes('\n') ? `${url.includes('?') ? '&' : '?'}tile=${encodeURIComponent(tileKey)}` : ''
+  const heardKey = heardKeyOf(media)
+  const heard = heardKey ? `${(url + tile).includes('?') ? '&' : '?'}heard=${encodeURIComponent(heardKey)}` : ''
+  return tile + heard
+}
+
 // Whether the tile of a medium is used up for today (GET /api/playtime: tiles.list, each { key, blocked })
 function tileUsedUp(playtime, media) {
   const list = Array.isArray(playtime?.tiles?.list) ? playtime.tiles.list.filter((t) => t && typeof t.key === 'string') : []
@@ -464,6 +505,8 @@ module.exports = {
   reachable,
   tcpReachable,
   tileKeyOf,
+  heardKeyOf,
+  startQuery,
   tileUsedUp,
   blockedByLimits,
 }

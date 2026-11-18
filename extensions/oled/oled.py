@@ -6,6 +6,7 @@ The extension (api.js) starts this program and talks to it by lines of JSON on s
     in:   {"cmd": "state", "state": {...}}   what to show (see render.py: view, mode, title, volume ...)
           {"cmd": "contrast", "value": 0..255}
           {"cmd": "quit"}                      leave the picture as it is and end (a restart of the extension)
+          {"cmd": "quit", "off": true}         switch the panel off and end (another address or controller follows)
     out:  {"event": "ready", "controller": "ssd1306", "address": "0x3C"}
           {"event": "error", "code": "no_i2c" | "i2c_access" | "no_display" | "no_pil", "message": "..."}
 
@@ -217,7 +218,7 @@ def run(display, screens, stdin_fd=0, clock=time.monotonic, stop=lambda: False, 
                 elif kind == 'contrast':
                     display.contrast(command.get('value', 127))
                 elif kind == 'quit':
-                    return 'quit'
+                    return 'quit-off' if command.get('off') is True else 'quit'
             if eof:
                 return 'eof'
         now = clock()
@@ -244,9 +245,9 @@ def system_stopping(run_command=subprocess.run):
 
 
 def finish(display, screens, reason, stopping=system_stopping, sleep=time.sleep):
-    """The end of the driver. 'quit': a new driver follows at once, the picture stays (no blink). Otherwise (SIGTERM: the server
-    ends, the extension is switched off or removed; the end of stdin: the server is gone) the panel goes off, so no picture burns in -
-    when the box goes down, after the power-off picture for a moment."""
+    """The end of the driver. 'quit': a new driver follows at once, the picture stays (no blink). Otherwise ('quit-off': a driver for
+    another address or controller follows; SIGTERM: the server ends, the extension is switched off or removed; the end of stdin: the
+    server is gone) the panel goes off, so no picture burns in - when the box goes down, after the power-off picture for a moment."""
     if reason == 'quit':
         return
     if reason == 'stop' and stopping():

@@ -332,6 +332,21 @@ class ByIndexTest(unittest.TestCase):
         devices[2]['name'] = devices[2]['label'] = 'IC Reader'
         self.assertEqual(choose_device(devices, '')['event'], '/dev/input/event0')
 
+    def test_a_nameless_device_is_only_a_weak_hint(self):
+        devices = self.devices()
+        # (a nameless keyboard dongle on the first port, the reader named on the second: the reader)
+        devices[2]['name'] = devices[2]['label'] = 'HID 1234:5678'
+        devices[0]['name'] = devices[0]['label'] = 'Sycreader RFID Technology Co., Ltd SYC ID&IC USB Reader'
+        self.assertEqual(choose_device(devices, '')['event'], '/dev/input/event3')
+        # (one nameless device next to a keyboard with a name: the nameless one, as before)
+        devices[0]['name'] = devices[0]['label'] = 'Logitech USB Keyboard'
+        self.assertEqual(choose_device(devices, '')['event'], '/dev/input/event0')
+        # (two nameless ones: the user names the reader)
+        devices[0]['name'] = devices[0]['label'] = 'HID 0581:011c'
+        with self.assertRaises(ReaderError) as caught:
+            choose_device(devices, '')
+        self.assertEqual(caught.exception.code, 'several_devices')
+
     def test_the_list_says_the_readers_that_are_there(self):
         path = os.path.join(tempfile.mkdtemp(), 'devices')
         with open(path, 'w', encoding='utf8') as handle:

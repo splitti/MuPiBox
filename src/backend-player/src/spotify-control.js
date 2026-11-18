@@ -980,7 +980,8 @@ let audibleBook = ''
 const AUDIBLE_API = 'http://127.0.0.1:8200/api/audible'
 const audibleAt = { index: -1, at: 0 }
 // mpv's last time in the file that plays: a jump back to its beginning is "repeat one" starting the file again
-const audibleLoop = { last: 0 }
+// (and the entry of the list it plays, for "repeat all" coming round again)
+const audibleLoop = { last: 0, index: -1 }
 // A list loaded anew (a start, a seek, a jump): the chapter it goes to, until mpv plays there - meanwhile mpv's place in the
 // list can still be the old one (or 0 between loading the list and choosing the entry). Also no new song for the grace
 // "until the end of the song" and no report of a place until then.
@@ -1002,19 +1003,28 @@ const audiblePlace = (seconds) => Math.max(0, Number(seconds) || 0) + (audibleIn
 // (a new chapter: its place is its beginning - not the end of the one before - until mpv tells its time)
 player.on('track-change', () => {
   if (!isAudible()) return
-  if (audiblePending && (player.trackIndex?.() ?? -1) === audiblePending.index) audiblePending.loaded = true
+  const index = player.trackIndex?.() ?? -1
+  if (audiblePending && index === audiblePending.index) audiblePending.loaded = true
   currentMeta.positionSeconds = audibleIndex() === audibleAt.index ? audibleAt.at : 0
+  // "Repeat all" came round again to the chapter begun inside (going on, a seek): its entry in the list starts at that place -
+  // the list is loaded anew with the chapter from its beginning
+  const before = audibleLoop.index
+  audibleLoop.index = index
+  if (currentMeta.repeatMode === 'all' && !audibleReloading() && audibleAt.index >= 0 && index === audibleAt.index && before > index) {
+    audiblePlayFrom(audibleAt.index, 0)
+  }
 })
 player.on('time_pos', (seconds) => {
   // (a list loaded anew - a seek, a jump - starts its file at 0 too: no repeat; only once it plays there)
-  if (audiblePending) audibleLoop.last = 0
+  if (audibleReloading()) audibleLoop.last = 0
   // (mpv plays the chapter the list was loaded for, its file loaded after the reload: arrived)
   if (audiblePending?.loaded && Number(seconds) > 0 && (player.trackIndex?.() ?? -1) === audiblePending.index) audiblePending = null
   // "Repeat one" of a chapter begun inside (going on, a seek): mpv repeats its file, which starts at that place - once it
   // jumped back to the file's beginning, the chapter is loaded anew from its own beginning (repeated whole from then on)
   const t = Number(seconds) || 0
   if (isAudible() && currentMeta.repeatMode === 'one' && !audibleReloading() && audibleAt.index >= 0 && audibleAt.index === audibleIndex()) {
-    if (audibleLoop.last > 5 && t < 2) {
+    // (back by more than a second to the beginning - also when only the last seconds of the chapter were left)
+    if (audibleLoop.last > t + 1 && t < 2) {
       audibleLoop.last = 0
       audiblePlayFrom(audibleAt.index, 0)
       return
@@ -2214,7 +2224,14 @@ function quietHoursTickStep() {
 // once on entry (not every second while it's still in effect).
 let forceBlockWasActive = false
 
+let graceRepeatTriedAt = 0
 function combinedTick() {
+  // (a repeat still on during a grace - Spotify blocked when the grace began: tried again once it takes requests)
+  // (at most every 30 s: a refused one is not asked again every second)
+  if (inGrace() && (currentMeta.repeatMode !== 'off' || currentMeta.repeat) && !spotifyBlockedUntil() && Date.now() - graceRepeatTriedAt > 30000) {
+    graceRepeatTriedAt = Date.now()
+    endRepeatForGrace()
+  }
   if (isForceBlockActive()) {
     if (!forceBlockWasActive) {
       const until = readPlaybackOverrides().forceBlockUntil
@@ -3055,8 +3072,11 @@ function endRepeatForGrace() {
 }
 
 // Repeat: an album of the box by the engine (mpv-wrapper.js), Spotify by its own setting
+// (counts every change of the repeat: an answer of Spotify that comes late does not take back a newer one)
+let repeatSeq = 0
 function setRepeatMode(mode) {
   if (mode !== 'off' && mode !== 'all' && mode !== 'one') return
+  repeatSeq++
   if (mode !== 'off' && inGrace()) {
     log.debug(`${now()}: [Spotify Control] Repeat ${mode} not set: the grace of a limit runs`)
     return
@@ -3076,6 +3096,7 @@ function setRepeatMode(mode) {
   // (what /local says is what Spotify was told: not while it blocks, and back when it refused)
   if (spotifyBlockedUntil()) return
   const before = { repeatMode: currentMeta.repeatMode, repeat: currentMeta.repeat }
+  const seq = repeatSeq
   currentMeta.repeatMode = mode
   currentMeta.repeat = mode !== 'off'
   if (mode !== 'off') spotifyRepeatMaybeOn = true
@@ -3085,7 +3106,7 @@ function setRepeatMode(mode) {
       if (mode === 'off' && currentMeta.repeatMode === 'off') spotifyRepeatMaybeOn = false
     },
     (err) => {
-      if (currentMeta.repeatMode === mode) Object.assign(currentMeta, before)
+      if (repeatSeq === seq) Object.assign(currentMeta, before)
       if (mode === 'off') spotifyRepeatMaybeOn = true
       handleSpotifyError(err, 'repeat')
     },
@@ -3094,6 +3115,7 @@ function setRepeatMode(mode) {
 // (every playback starts without repeat, as without shuffle: a track that repeats must not hold the next album back)
 function resetRepeat() {
   if (currentMeta.repeatMode === 'off' && !currentMeta.repeat) return
+  repeatSeq++
   const spotify = currentMeta.currentPlayer !== 'mplayer'
   currentMeta.repeatMode = 'off'
   currentMeta.repeat = false
@@ -3232,7 +3254,11 @@ async function playOnDevice(playOptions) {
   // (a repeat Spotify may still have from before: off once the box's player plays - a moment later, it is the active one then)
   started.then(
     () => {
-      if (generation === playbackGeneration) setTimeout(clearSpotifyRepeat, 1500).unref?.()
+      if (generation !== playbackGeneration) return
+      // (still this playback, on the box: another start meanwhile is not told anything)
+      setTimeout(() => {
+        if (generation === playbackGeneration && currentMeta.currentPlayer === 'spotify') clearSpotifyRepeat()
+      }, 1500).unref?.()
     },
     () => undefined,
   )

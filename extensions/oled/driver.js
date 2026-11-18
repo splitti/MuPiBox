@@ -126,8 +126,9 @@ function createDriver({ command, args, onEvent, onEnd = () => undefined, log = c
         return false
       }
     },
-    /** The extension ends (settings changed, the server restarts): the driver leaves the picture as it is. */
-    stop: () => {
+    /** The extension ends (settings changed, the server restarts): the driver leaves the picture as it is - with `off` it switches
+     * the panel off (another display follows, which may not answer). */
+    stop: (off = false) => {
       stopped = true
       if (retry) {
         clearTimer(retry)
@@ -141,7 +142,7 @@ function createDriver({ command, args, onEvent, onEnd = () => undefined, log = c
         const done = () => resolve()
         proc.once?.('close', done)
         try {
-          proc.stdin?.write?.(`${JSON.stringify({ cmd: 'quit' })}\n`)
+          proc.stdin?.write?.(`${JSON.stringify(off ? { cmd: 'quit', off: true } : { cmd: 'quit' })}\n`)
           proc.stdin?.end?.()
         } catch {
           /* it ended already */

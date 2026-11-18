@@ -116,12 +116,13 @@ exports.activate = (host) => {
     keepPrevious()
     // (the digest only of a file that was written: a write that failed left the older file, and the next start took that one,
     // whose digest tags.json did not name, for a restored backup - and gave back the old assignments)
-    if (!writeJson(assignmentsFile, tags.exportData(data), true)) return
+    if (!writeJson(assignmentsFile, { ...tags.exportData(data), saves: data.saves }, true)) return
     data.assignmentsSha = digest
     assignmentsDigest = digest
   }
   const saveTags = () => {
     savedAt = Date.now()
+    data.saves += 1
     saveAssignments()
     writeJson(tagsFile, data)
   }
@@ -134,8 +135,9 @@ exports.activate = (host) => {
       // (no copies yet)
     }
     for (const file of [assignmentsFile, `${assignmentsFile}.bak`, ...daily]) {
-      const parsed = tags.parseImport(readJson(file))
-      if (parsed.ok) return { parsed, file }
+      const raw = readJson(file)
+      const parsed = tags.parseImport(raw)
+      if (parsed.ok) return { parsed, file, saves: tags.saveCount(raw?.saves) }
     }
     return null
   }
@@ -149,16 +151,21 @@ exports.activate = (host) => {
       tags.applyImport(fileData, found.parsed, 0)
       const fileDigest = tags.assignmentsDigest(fileData)
       const ownDigest = tags.assignmentsDigest(data)
+      // (a copy saved later than tags.json - two writes of tags.json failed: both count their saves; files of an older version
+      // have no count, then tags.json counts as the newer)
+      const copyNewer = found.file !== assignmentsFile && data.saves > 0 && found.saves > data.saves
+      // (the count goes on from the higher of the two)
+      data.saves = Math.max(data.saves, found.saves)
       // (the file itself is damaged or gone and only a copy was read - the version before, or one of an earlier day: a tags.json
       // that still holds what it last wrote is intact and newer than any copy - it stays, and the file is written anew from it;
       // a backup that is restored puts back the file itself)
-      if (found.file !== assignmentsFile && fileDigest !== ownDigest && ownDigest === data.assignmentsSha) {
+      if (found.file !== assignmentsFile && fileDigest !== ownDigest && ownDigest === data.assignmentsSha && !copyNewer) {
         log.warn(`[nfc] ${path.basename(assignmentsFile)} is damaged or missing: written anew from tags.json`)
         assignmentsDigest = ''
         saveTags()
         return
       }
-      if (fileDigest !== ownDigest && data.assignmentsSha !== fileDigest) {
+      if (fileDigest !== ownDigest && (data.assignmentsSha !== fileDigest || copyNewer)) {
         const done = tags.applyImport(data, found.parsed, Date.now(), { replace: true })
         log.warn(`[nfc] the tag assignments were taken over from ${path.basename(found.file)}: ${done.added} added, ${done.replaced} changed, ${done.removed} removed`)
         assignmentsDigest = ''
@@ -184,8 +191,10 @@ exports.activate = (host) => {
   // that number again was dropped)
   let seq = Date.now()
   let paused = null // the tag whose medium was paused when it was taken off: { uid, at }
-  let lastStart = { uid: '', at: 0 }
   let startSeq = 0 // counts the starts of start(): one that waited sees whether a newer one came meanwhile
+  // the last start of a tag: { uid, at, seq } - seq: its number of startSeq (a report again counts as the same start only while no
+  // other start came in between)
+  let lastStart = { uid: '', at: 0, seq: 0 }
   // the start the display made for a tag: { uid, at, rss, generation } - the player's number of that playback, once known
   let handed = null
   // the tag whose medium a laying on tried to go on with ("play"), as long as nothing played since
@@ -268,20 +277,14 @@ exports.activate = (host) => {
     await say('slowLoad', settings)
   }
   // The battery: asked every half minute; said once when the charge falls to 10 % while the box is not charging - when somebody hears
-  // it: not in a quiet time or the evening, and while something plays or at the next tag laid on (voice.batteryNotice)
+  // it: not in a quiet time, and while something plays or at the next tag laid on (voice.batteryNotice). Not held back in the evening:
+  // host.nightDim() says dimmed in its window even with "Abends dunkler" off - the evening is the time the children listen
   const battery = voice.batteryNotice()
   const sayBattery = async (tagLaidOn = false) => {
     if (!battery.owed) return
-    let evening = false
-    try {
-      // (the window of "Abends dunkler", hostApi 10 - an older box has no evening to ask for)
-      evening = typeof host.nightDim === 'function' && (await host.nightDim())?.dimmed === true
-    } catch {
-      evening = false
-    }
     const quiet = voice.quietNow(await getJson('/api/playtime'))
-    const playing = !tagLaidOn && !quiet && !evening ? isPlaying(await playerMeta()) : false
-    if (!battery.fits({ quiet, evening, playing, tagLaidOn })) return
+    const playing = !tagLaidOn && !quiet ? isPlaying(await playerMeta()) : false
+    if (!battery.fits({ quiet, playing, tagLaidOn })) return
     const settings = (await host.settings()) ?? {}
     // (switched off: nothing is owed any more)
     if (!voice.textOf(settings, 'lowBattery', 'de')) return battery.said()
@@ -321,7 +324,7 @@ exports.activate = (host) => {
     // (the start is made after the network was said and a podcast's feed came - seconds: a newer start meanwhile, of another tag or of
     // this one again, is the one that counts, and this one is dropped. The same report twice within SAME_TAG_MS is no newer start:
     // the lock below ends it, and the first goes on)
-    const repeat = !force && lastStart.uid === tag.uid && now - lastStart.at < SAME_TAG_MS
+    const repeat = !force && lastStart.uid === tag.uid && now - lastStart.at < SAME_TAG_MS && lastStart.seq === startSeq
     const mine = repeat ? startSeq : ++startSeq
     // (first: a tag slipped off and laid on again within the 2 s goes on - the lock below is for the same report twice)
     if (!force && handed && handed.uid === tag.uid) {
@@ -336,7 +339,7 @@ exports.activate = (host) => {
         if (!isPaused(meta)) {
           paused = null
           resumeTried = null
-          lastStart = { uid: tag.uid, at: now }
+          lastStart = { uid: tag.uid, at: now, seq: mine }
           return
         }
         const pausedLong = paused && paused.uid === tag.uid && now - paused.at >= RESUME_WITHIN_MS
@@ -346,7 +349,7 @@ exports.activate = (host) => {
         if (!pausedLong && !triedBefore && (await player('play'))) {
           paused = null
           resumeTried = tag.uid
-          lastStart = { uid: tag.uid, at: now }
+          lastStart = { uid: tag.uid, at: now, seq: mine }
           // (it plays a moment later: the try worked - a pause made later on the display is taken back again by the tag)
           setTimeout(() => {
             playerMeta()
@@ -359,8 +362,8 @@ exports.activate = (host) => {
         }
       }
     }
-    if (!force && lastStart.uid === tag.uid && now - lastStart.at < SAME_TAG_MS) return
-    lastStart = { uid: tag.uid, at: now }
+    if (!force && lastStart.uid === tag.uid && now - lastStart.at < SAME_TAG_MS && lastStart.seq === mine) return
+    lastStart = { uid: tag.uid, at: now, seq: mine }
     paused = null
     resumeTried = null
     // (a podcast: its feed first - an episode saved on the box needs no network, see voice.networkNeed)
@@ -376,7 +379,8 @@ exports.activate = (host) => {
     }
     // (taken off while its episode was looked for: nothing starts)
     if (!force && removeMatters(settings, reader) && !inAnyField(tag.uid)) return log.info(`[nfc] tag ${tag.uid}: taken off before its start`)
-    pending = { seq: ++seq, media, at: now, uid: tag.uid }
+    // (the time of now, not of the laying on: the network said and a feed read took seconds, and the start counted as too old)
+    pending = { seq: ++seq, media, at: Date.now(), uid: tag.uid }
     // (a box without the DSI display - the extension OLED-Display sets mupibox.headless - has no display page that asks for it: the server starts it)
     if (headless()) await deliver()
   }
@@ -418,7 +422,8 @@ exports.activate = (host) => {
     if (!command) return
     const target = playerPathOf(command.media)
     if (!target) return log.warn(`[nfc] tag ${command.uid}: the medium cannot be started`)
-    const ok = await player(`current/${target}`)
+    // (its tile and what was heard, as the display names them: the tile's day's limit and the ticks of what was heard)
+    const ok = await player(`current/${target}${voice.startQuery(target, command.media)}`)
     if (!ok) log.warn(`[nfc] tag ${command.uid}: the player did not take the start`)
   }
 

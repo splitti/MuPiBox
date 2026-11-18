@@ -99,8 +99,12 @@ function normalizeUid(value) {
 // (the kind of a tag: a USB reader gives a number as typed, no bytes of a chip - the list shows it as it is)
 const techOf = (tech) => (tech === 'ISO15693' || tech === 'HID' ? tech : 'ISO14443A')
 
-// (assignmentsSha: the digest of the assignments as the file of their own held them when tags.json was written last - see api.js)
-const emptyData = () => ({ version: 1, flex: null, assignmentsSha: '', tags: {} })
+// (assignmentsSha: the digest of the assignments as the file of their own held them when tags.json was written last; saves: counts
+// the saves, the file of the assignments carries it too - the higher of the two is the newer, see api.js)
+const emptyData = () => ({ version: 1, flex: null, assignmentsSha: '', saves: 0, tags: {} })
+
+/** The count of the saves a file carries (0: none - a file of an older version) */
+const saveCount = (value) => (Number.isSafeInteger(value) && value > 0 ? value : 0)
 
 /** What was read from tags.json as data the code can rely on (a damaged or foreign file gives an empty store, never an error). */
 function readData(raw) {
@@ -126,6 +130,7 @@ function readData(raw) {
   const flex = normalizeUid(raw.flex)
   data.flex = flex && data.tags[flex] ? flex : null
   data.assignmentsSha = typeof raw.assignmentsSha === 'string' && /^[0-9a-f]{64}$/.test(raw.assignmentsSha) ? raw.assignmentsSha : ''
+  data.saves = saveCount(raw.saves)
   return data
 }
 
@@ -531,5 +536,5 @@ function parseText(text) {
 const countAssigned = (data) => Object.values(data.tags).filter((tag) => tag.media).length
 
 module.exports = {
-  MAX_TAGS, ARM_SECONDS, TARGETS, TYPES, sanitizeMedia, mediaLabel, sanitizeImage, tagImage, mediumKey, pickEpisode, normalizeUid, emptyData, readData, EXPORT_FORMAT, exportData, assignmentsDigest, parseImport, applyImport, exportCsv, parseTable, parseText, tagLaidOn, giveToFlex, giveToTag, forgetTag, countAssigned,
+  MAX_TAGS, ARM_SECONDS, TARGETS, TYPES, sanitizeMedia, mediaLabel, sanitizeImage, tagImage, mediumKey, pickEpisode, normalizeUid, emptyData, readData, EXPORT_FORMAT, exportData, assignmentsDigest, parseImport, applyImport, exportCsv, parseTable, parseText, tagLaidOn, giveToFlex, giveToTag, forgetTag, countAssigned, saveCount,
 }

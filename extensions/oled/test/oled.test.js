@@ -550,6 +550,14 @@ test('a switch-on that stopped half-way (autostart 0, no flag) is undone when th
   await started(own)
   await ext2.apply({ headless: false })
   assert.ok(!own.execs.some((e) => e.join(' ').includes('dietpi-autostart')), JSON.stringify(own.execs))
+  // (DietPi's "dietpi-autostart 0" deletes the index file instead of writing 0 - seen on the box: that is no kiosk too)
+  fs.rmSync(index)
+  fs.writeFileSync(path.join(data, 'autostart.json'), JSON.stringify({ index: 11 }))
+  const gone = fakeHost({ headless: false }, { dataDir: data, deps: { autostartIndexFile: index } })
+  const ext3 = api.activate(gone.host)
+  await started(gone)
+  await ext3.apply({ headless: false })
+  assert.ok(gone.execs.some((e) => e.join(' ') === 'sudo -n /boot/dietpi/dietpi-autostart 11'), JSON.stringify(gone.execs))
   fs.rmSync(data, { recursive: true, force: true })
 })
 
@@ -624,4 +632,105 @@ test('Spotify\'s /state is asked while it plays, once in a while, and not while 
   now += 500
   await ext.tick()
   assert.strictEqual(states(), 4, 'it plays again: at once')
+})
+
+// ---- review 0.1.5 -------------------------------------------------------------------------------------------------------------
+test('Spotify: the next or the previous track is read at once, and a start that is not playing yet is asked again soon', async () => {
+  let now = 1_000_000
+  let triggerAt = 1
+  let playing = false
+  const box = fakeHost({}, { now: () => now, player: () => ({ currentPlayer: 'spotify', pause: false, generation: 3, triggerAt, volume: 30 }), state: () => ({ is_playing: playing, progress_ms: 0, item: { name: 'Lied', duration_ms: 200_000, artists: [{ name: 'Band' }] } }) })
+  const ext = api.activate(box.host)
+  await started(box)
+  const states = () => box.fetched.filter((u) => u === '/state').length
+  await ext.tick()
+  assert.strictEqual(states(), 1)
+  now += 500
+  await ext.tick()
+  assert.strictEqual(states(), 1, 'not before the short gap')
+  now += 3000
+  await ext.tick()
+  assert.strictEqual(states(), 2, 'not playing yet: asked again after the short gap')
+  playing = true
+  now += 3000
+  await ext.tick()
+  assert.strictEqual(states(), 3)
+  now += 3000
+  await ext.tick()
+  assert.strictEqual(states(), 3, 'it plays: once in a while again')
+  triggerAt = 2
+  now += 500
+  await ext.tick()
+  assert.strictEqual(states(), 4, 'the next track: at once')
+  // (Spotify that says "not playing" for good, while /local says it may: asked again soon only for a while)
+  playing = false
+  triggerAt = 3
+  for (let i = 0; i < 120; i++) {
+    now += 500
+    await ext.tick()
+  }
+  // (at once, then every 3 s for 20 s - 6 times -, then once in 20 s: twice in the 40 s left)
+  assert.strictEqual(states(), 4 + 1 + 6 + 2)
+})
+
+test('another address or controller: the old driver switches its panel off; another size leaves the picture', async () => {
+  const box = fakeHost({})
+  const ext = api.activate(box.host)
+  await settle()
+  await settle()
+  const quitOf = (proc) => proc.written.map((l) => JSON.parse(l)).find((m) => m.cmd === 'quit')
+  let applied = ext.apply({ address: '0x3D' })
+  await settle()
+  box.procs[0].emit('close', 0)
+  await applied
+  assert.deepStrictEqual(quitOf(box.procs[0]), { cmd: 'quit', off: true })
+  applied = ext.apply({ address: '0x3D', size: '128x32' })
+  await settle()
+  box.procs[1].emit('close', 0)
+  await applied
+  assert.deepStrictEqual(quitOf(box.procs[1]), { cmd: 'quit' })
+  applied = ext.apply({ address: '0x3D', size: '128x32', controller: 'sh1106' })
+  await settle()
+  box.procs[2].emit('close', 0)
+  await applied
+  assert.deepStrictEqual(quitOf(box.procs[2]), { cmd: 'quit', off: true })
+})
+
+test('a switch-on that stopped half-way (autostart 0, no flag) and no OLED that answers: the kiosk comes back', async () => {
+  const fs = require('node:fs')
+  const path = require('node:path')
+  for (const left of ['0', 'missing']) {
+    const data = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'oled-data-'))
+    const index = path.join(data, 'autostart_index')
+    if (left === '0') fs.writeFileSync(index, '0\n')
+    fs.writeFileSync(path.join(data, 'autostart.json'), JSON.stringify({ index: 11 }))
+    const box = fakeHost({ headless: true }, { dataDir: data, deps: { autostartIndexFile: index } })
+    const warned = []
+    box.host.log = { warn: (text) => warned.push(text), info: () => undefined }
+    const ext = api.activate(box.host)
+    await settle()
+    await settle()
+    box.procs[0].stdout.emit('data', Buffer.from('{"event":"error","code":"no_display","message":"x"}\n'))
+    await ext.apply({ headless: true })
+    assert.strictEqual(box.config.mupibox.headless, false, left)
+    assert.ok(box.execs.some((e) => e.join(' ') === 'sudo -n /boot/dietpi/dietpi-autostart 11'), `${left}: ${JSON.stringify(box.execs)}`)
+    assert.strictEqual(fs.existsSync(path.join(data, 'autostart.json')), false, `${left}: nothing kept any more`)
+    assert.ok(warned.some((w) => w.includes('no display answers')), JSON.stringify(warned))
+    fs.rmSync(data, { recursive: true, force: true })
+  }
+})
+
+test('a DSI display plugged in is the reason the log gives, also while the driver still starts', async () => {
+  const fs = require('node:fs')
+  const path = require('node:path')
+  const drm = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'oled-drm-'))
+  fs.mkdirSync(path.join(drm, 'card1-DSI-1'))
+  fs.writeFileSync(path.join(drm, 'card1-DSI-1', 'status'), 'connected\n')
+  const box = fakeHost({ headless: true }, { deps: { drmDir: drm } })
+  const warned = []
+  box.host.log = { warn: (text) => warned.push(text), info: () => undefined }
+  const ext = api.activate(box.host)
+  await ext.apply({ headless: true })
+  assert.ok(warned.some((w) => w.includes('a DSI display is connected')), JSON.stringify(warned))
+  fs.rmSync(drm, { recursive: true, force: true })
 })

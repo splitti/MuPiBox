@@ -297,6 +297,8 @@ export async function restoreKioskStart(deps: ExtensionDeps, io = { run, readAut
     if (!mb || typeof mb !== 'object' || mb.headless !== true) return false
     delete mb.headless
   })
+  // (what the extension kept is used up: switched on again later, it must not take an autostart 0 the user chose for its own)
+  await fsp.rm(path.join(EXT_DIR, 'data', HEADLESS_BY, KEPT_AUTOSTART), { force: true }).catch(() => undefined)
   console.log(`${new Date().toLocaleString()}: [Extensions] the start without the DSI display is left (the extension ${HEADLESS_BY} is not on): mupibox.headless cleared${index === null ? '' : `, DietPi's autostart set back to ${index}`} - the kiosk starts after the next restart`)
   return true
 }
