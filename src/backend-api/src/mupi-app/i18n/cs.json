@@ -4453,5 +4453,11 @@
  "„Älteste zuerst“ ist die Reihenfolge der Serie.": "„Nejstarší první“ je pořadí série.",
  "In deinem Konto gehört kein Hörbuch zu dieser Serie.": "Žádná audiokniha ve tvém účtu nepatří do této série.",
  "Lade die Hörbücher von Audible …": "Načítám audioknihy z Audible …",
- "Dafür braucht es die NFC-Extension ab Version 0.8 – bitte unter Erweiterungen aktualisieren.": "K tomu je potřeba rozšíření NFC od verze 0.8 – aktualizuj ho v části Rozšíření."
+ "Dafür braucht es die NFC-Extension ab Version 0.8 – bitte unter Erweiterungen aktualisieren.": "K tomu je potřeba rozšíření NFC od verze 0.8 – aktualizuj ho v části Rozšíření.",
+ "Der NFC-Leser ist nicht bereit – bitte unter Einstellungen › NFC-Extension einrichten.": "Čtečka NFC není připravena – nastavte ji v Nastavení › NFC rozšíření.",
+ "Kein OLED-Display bereit, deshalb bleibt das DSI-Display an": "Žádný OLED displej není připraven, proto displej DSI zůstává zapnutý",
+ "Ein DSI-Display ist angeschlossen, deshalb bleibt es an": "Je připojen displej DSI, proto zůstává zapnutý",
+ "I2C bleibt eingeschaltet: Der MuPiHAT braucht es für den Akku.": "I2C zůstává zapnuté: MuPiHAT ho potřebuje pro baterii.",
+ "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Když nic nehraje nebo je přehrávání pozastavené, displej se po této době vypne (šetří se tím). Probudí ho start, tag nebo klepnutí na „Zobrazit adresu krabičky“.",
+ "Bis zu drei NFC-Leser lesen Tags und Karten, auch gleichzeitig: der PN5180 (ISO 14443 A und ISO 15693), der RC522 und der PN532 (ISO 14443 A) oder ein USB-Leser, der die Kartennummer wie eine Tastatur tippt (auch ein USB-Barcodeleser). Jeder Tag kann ein Album, ein Hörspiel, einen Sender oder einen Podcast starten: In der Bibliothek das Medium öffnen, „NFC-Tag“ antippen und den Tag auflegen. Die Einstellungen stehen unter Einstellungen › NFC-Extension.": "Až tři čtečky NFC čtou tagy a karty, i najednou: PN5180 (ISO 14443 A a ISO 15693), RC522 a PN532 (ISO 14443 A) nebo USB čtečka, která zadává číslo karty jako klávesnice (i USB čtečka čárových kódů). Každý tag může spustit album, poslech, stanici nebo podcast: otevřete médium v knihovně, klepněte na „NFC-Tag“ a přiložte tag. Nastavení je v Nastavení › Rozšíření NFC."
 }

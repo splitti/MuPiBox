@@ -462,7 +462,7 @@ test('repeat goes all -> one -> off -> all by what the player says; an older pla
     await createActions({ playerUrl: P, apiUrl: A, log: quiet, fetchFn: box.fetchFn }).do('repeat')
     modes.push(box.calls.filter((c) => !c.endsWith('/local')).map((c) => c.replace(`GET ${P}/`, '').replace('?src=buttons', ''))[0])
   }
-  assert.deepEqual(modes, ['repeatall', 'repeatone', 'repeatoff', 'repeatone', 'repeatall', 'repeatall'])
+  assert.deepEqual(modes, ['repeaton', 'repeatone', 'repeatoff', 'repeatoff', 'repeaton', 'repeaton'])
 })
 
 test('the output goes to the next one - and stays when there is only one', async () => {

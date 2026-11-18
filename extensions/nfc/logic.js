@@ -5,7 +5,8 @@
 const TECH_NAMES = { ISO14443A: 'ISO 14443 A', ISO15693: 'ISO 15693', HID: 'USB-Leser' }
 const TECHS = ['both', 'a', 'v']
 const SPI_DEVICES = ['0.0', '0.1']
-// (hid and hid2: "USB Reader 1" and "USB Reader 2", the first and the second USB device that types, in the order of their ports)
+// (hid and hid2: "USB Reader 1" and "USB Reader 2", the first and the second USB device that types, in the order of their ports - hid
+// alone is found by what it is, see driverArgs)
 const READERS = ['pn5180', 'rc522', 'pn532', 'hid', 'hid2']
 const isUsb = (reader) => reader === 'hid' || reader === 'hid2'
 // the driver program of each reader (Python: Node has no way to speak SPI or I2C)
@@ -80,6 +81,9 @@ function readConfigs(settings) {
     if (held.has(resource)) config.problem = 'conflict'
     else held.add(resource)
   }
+  // (USB Reader 1 next to a USB Reader 2: the two are told apart by their ports - alone it is found as before, see driverArgs)
+  const second = all.some((config) => config.reader === 'hid2' && !config.problem)
+  for (const config of all) if (config.reader === 'hid') config.byPort = second
   return all.filter((config) => config.slot === 1 || config.reader !== 'none')
 }
 
@@ -97,7 +101,10 @@ function driverArgs(config, chip) {
     case 'pn532':
       return ['--link', config.link, '--spi', config.spi, '--uart', config.uart]
     case 'hid':
-      return ['--device', config.device, '--index', '1']
+      // (alone - no USB Reader 2 - the driver finds the reader as it did before the second one came: the only USB keyboard, else the one
+      // whose name says it is a reader. The first by port took a keyboard dongle or an IR receiver on a lower port, held it for itself,
+      // and the reader typed into the display)
+      return ['--device', config.device, ...(config.byPort ? ['--index', '1'] : [])]
     case 'hid2':
       return ['--device', config.device, '--index', '2']
     default:
@@ -211,11 +218,7 @@ function statusRowsAll(views) {
 const ON = '(?:on|true|1|yes)'
 const OFF = '(?:off|false|0|no)'
 const dtparam = (keys, value) => new RegExp(`^\\s*dtparam=(?:[^#\\r\\n]*,)?(?:${keys})=${value}\\b`, 'im')
-const SPI_ON = dtparam('spi', ON)
-const SPI_OFF = dtparam('spi', OFF)
 const I2C_KEYS = ['i2c_arm', 'i2c1', 'i2c']
-const I2C_ON = dtparam(I2C_KEYS.join('|'), ON)
-const I2C_OFF = dtparam(I2C_KEYS.join('|'), OFF)
 const I2C_MODULE = /^\s*i2c[-_]dev\s*$/m
 const UART_ON = /^\s*enable_uart=1\b/m
 const UART_OFF = /^\s*enable_uart=0\b/m
@@ -226,20 +229,38 @@ function i2cKeysOn(configText) {
   return I2C_KEYS.filter((key) => dtparam(key, ON).test(String(configText ?? '')))
 }
 
+// What the last line of the boot configuration that sets one of `keys` says: 'on', 'off' or '' (none). The firmware reads the lines
+// in their order, so a later line wins - "dtparam=i2c_arm=off" added at the end switches off what "dtparam=audio=on,i2c_arm=on" above
+// it switched on (the state said "on" before, and switching off was reported as failed although it worked)
+const ON_VALUE = new RegExp(`^${ON}$`, 'i')
+const OFF_VALUE = new RegExp(`^${OFF}$`, 'i')
+function lastDtparam(configText, keys) {
+  let value = ''
+  for (const line of String(configText ?? '').split(/\r?\n/)) {
+    const m = /^\s*dtparam=([^#]*)/.exec(line)
+    if (!m) continue
+    for (const part of m[1].split(',')) {
+      const [key, setting = ''] = part.trim().split('=')
+      if (!keys.includes(key)) continue
+      if (ON_VALUE.test(setting.trim())) value = 'on'
+      else if (OFF_VALUE.test(setting.trim())) value = 'off'
+    }
+  }
+  return value
+}
+
 /** SPI: on in the boot configuration (dtparam=spi=on), `off` when it says off in so many words; the devices /dev/spidev0.0 ... */
 function spiState(configText, names) {
   const devices = (Array.isArray(names) ? names : []).filter((n) => /^spidev\d+\.\d+$/.test(String(n))).map(String).sort()
-  const text = String(configText ?? '')
-  const configured = SPI_ON.test(text)
-  return { configured, off: !configured && SPI_OFF.test(text), devices }
+  const last = lastDtparam(configText, ['spi'])
+  return { configured: last === 'on', off: last === 'off', devices }
 }
 /** I2C: on in the boot configuration and the module i2c-dev is loaded (listed in /etc/modules); the device is /dev/i2c-1, the bus of the header. */
 function i2cState(configText, modulesText, names, moduleLoaded) {
   const devices = (Array.isArray(names) ? names : []).filter((n) => n === 'i2c-1').map(String)
-  const text = String(configText ?? '')
-  const lineOn = I2C_ON.test(text)
-  const configured = lineOn && (moduleLoaded === true || I2C_MODULE.test(String(modulesText ?? '')))
-  return { configured, off: !lineOn && I2C_OFF.test(text), devices }
+  const last = lastDtparam(configText, I2C_KEYS)
+  const configured = last === 'on' && (moduleLoaded === true || I2C_MODULE.test(String(modulesText ?? '')))
+  return { configured, off: last === 'off', devices }
 }
 
 // The serial port (UART) at the header: enable_uart=1 in the boot configuration, the device /dev/serial0, and no console on it (the

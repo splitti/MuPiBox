@@ -11,7 +11,8 @@ The extension (api.js) starts this program and talks to it by lines of JSON on s
 
 Nothing but the Python standard library and Pillow (python3-pil): the display is written through /dev/i2c-N with the ioctl that
 chooses the device, so it needs neither luma.oled nor RPi.GPIO and runs the same on a Raspberry Pi 4 and a Pi 5.
-A SIGTERM (the box is switched off) shows the power-off picture for a moment first.
+A SIGTERM or the end of stdin switches the panel off (no picture burns in); when the box goes down, the power-off picture is shown
+for a moment first.
 """
 import argparse
 import errno
@@ -19,6 +20,7 @@ import json
 import os
 import select
 import signal
+import subprocess
 import sys
 import time
 
@@ -85,7 +87,8 @@ class Display:
         self.pages = height // 8
         # (the SH1106 has a RAM of 132 columns, the glass shows the middle 128)
         self.column_offset = 2 if controller == 'sh1106' else 0
-        self.last = None
+        self.last = None  # the bytes of the pages that are in the chip
+        self.last_raw = None  # the picture they were made from (an unchanged one is not packed again)
         self.is_on = False
         self._init(contrast)
 
@@ -119,40 +122,55 @@ class Display:
 
     def pack(self, image):
         """The picture (mode '1', width x height) as the bytes the chip wants: pages of eight rows, one byte for each column."""
+        from PIL import Image
+
+        transpose = getattr(Image, 'Transpose', Image)
         if self.rotate:
-            image = image.rotate(180)
-        pixels = image.load()
+            image = image.transpose(transpose.ROTATE_180)
         out = bytearray()
         for page in range(self.pages):
-            base = page * 8
-            for x in range(self.width):
-                value = 0
-                for bit in range(8):
-                    if pixels[x, base + bit]:
-                        value |= 1 << bit
-                out.append(value)
+            # (a strip of eight rows turned clockwise: each column becomes a row of eight pixels, the lowest row of the strip first;
+            # Pillow packs a row with its first pixel as the highest bit - so bit 0 is the top row of the page, as the chip wants)
+            strip = image.crop((0, page * 8, self.width, page * 8 + 8)).transpose(transpose.ROTATE_270)
+            out += strip.tobytes()
         return bytes(out)
 
     def show(self, image):
-        """Draws the picture; nothing is sent while it is the one that is shown already."""
-        data = self.pack(image)
+        """Draws the picture; only the pages that changed are sent, nothing while it is the one that is shown already."""
+        raw = image.tobytes()
         if not self.is_on:
-            self.last = None  # (switched off: the RAM may be gone)
-        if data == self.last:
+            # (switched off: the RAM may be gone)
+            self.last = None
+            self.last_raw = None
+        if raw == self.last_raw:
             return False
-        self.power(True)
+        data = self.pack(image)
+        old = self.last
+        width = self.width
+        changed = [p for p in range(self.pages) if old is None or data[p * width : (p + 1) * width] != old[p * width : (p + 1) * width]]
         if self.controller == 'sh1106':
             # (page mode: every page is addressed on its own)
-            for page in range(self.pages):
-                col = self.column_offset
+            col = self.column_offset
+            for page in changed:
                 self.command(0xB0 + page, 0x00 + (col & 0x0F), 0x10 + (col >> 4))
-                self._data(data[page * self.width : (page + 1) * self.width])
+                self._data(data[page * width : (page + 1) * width])
         else:
-            self.command(0x21, 0, self.width - 1, 0x22, 0, self.pages - 1)
-            for page in range(self.pages):
-                self._data(data[page * self.width : (page + 1) * self.width])
+            # (horizontal mode: one window for each run of pages that changed, the chip moves on from page to page by itself)
+            runs = []
+            for page in changed:
+                if runs and runs[-1][1] == page - 1:
+                    runs[-1][1] = page
+                else:
+                    runs.append([page, page])
+            for first, last in runs:
+                self.command(0x21, 0, width - 1, 0x22, first, last)
+                for page in range(first, last + 1):
+                    self._data(data[page * width : (page + 1) * width])
+        # (on only now that the picture is in the RAM: a display that wakes does not flash the one it had before)
+        self.power(True)
         self.last = data
-        return True
+        self.last_raw = raw
+        return bool(changed)
 
     def _data(self, chunk):
         self.bus.write([0x40, *chunk])
@@ -207,8 +225,34 @@ def run(display, screens, stdin_fd=0, clock=time.monotonic, stop=lambda: False, 
         # (the first picture stays for a moment, whatever is reported meanwhile)
         if now < boot_until:
             shown = {'view': 'boot'}
+        if shown.get('view') == 'off':
+            # (the display sleeps: the panel off, nothing to draw - the picture is sent anew when it wakes)
+            screens.scrolling = False
+            display.power(False)
+            continue
         display.show(screens.render(shown, now))
     return 'stop'
+
+
+def system_stopping(run_command=subprocess.run):
+    """Does the box go down (power off or restart)? systemd says 'stopping' from the moment the shutdown begins."""
+    try:
+        answer = run_command(['systemctl', 'is-system-running'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=2)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return answer.stdout.decode('utf8', 'replace').strip() == 'stopping'
+
+
+def finish(display, screens, reason, stopping=system_stopping, sleep=time.sleep):
+    """The end of the driver. 'quit': a new driver follows at once, the picture stays (no blink). Otherwise (SIGTERM: the server
+    ends, the extension is switched off or removed; the end of stdin: the server is gone) the panel goes off, so no picture burns in -
+    when the box goes down, after the power-off picture for a moment."""
+    if reason == 'quit':
+        return
+    if reason == 'stop' and stopping():
+        display.show(screens.poweroff())
+        sleep(BYE_SECONDS)
+    display.power(False)
 
 
 def main(argv=None):
@@ -263,10 +307,7 @@ def main(argv=None):
         emit(event='error', code='no_display', message='the display cannot be written: %s' % error)
         return 2
     try:
-        if reason in ('stop',):
-            # (the box is switched off: the power-off picture for a moment)
-            display.show(screens.poweroff())
-            time.sleep(BYE_SECONDS)
+        finish(display, screens, reason)
     except (OSError, DriverError):
         pass
     finally:

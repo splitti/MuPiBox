@@ -23,8 +23,10 @@ function nextOutput(data) {
 /** The repeat mode a press leads to: all -> one -> off -> all. `meta.repeatMode` is what the player says ('off', 'all', 'one'); a
  *  player of an older version knows only `repeat` (on = all). Returns the name of the player's command without "repeat". */
 function nextRepeat(meta) {
-  const mode = meta?.repeatMode ?? (meta?.repeat === true ? 'all' : 'off')
-  return mode === 'off' ? 'all' : mode === 'all' ? 'one' : 'off'
+  // (an older player has no repeatMode and knows only repeaton / repeatoff: on and off then; "on" is "all" for the new one too)
+  if (typeof meta?.repeatMode !== 'string') return meta?.repeat === true ? 'off' : 'on'
+  const mode = meta.repeatMode
+  return mode === 'off' ? 'on' : mode === 'all' ? 'one' : 'off'
 }
 
 /** Is something playing? The same test as the player's own: Spotify says "pause", the local player "playing". */

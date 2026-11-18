@@ -196,10 +196,17 @@ test('the PN532 gets its interface, the SPI device and the serial port', () => {
 })
 
 test('the USB reader gets the name that was typed, only if it is a plain name', () => {
-  assert.deepStrictEqual(driverArgs(readConfig({ reader: 'hid' }), 0), ['--device', '', '--index', '1'])
-  assert.deepStrictEqual(driverArgs(readConfig({ reader: 'hid', hidDevice: ' IC Reader ' }), 0), ['--device', 'IC Reader', '--index', '1'])
-  assert.deepStrictEqual(driverArgs(readConfig({ reader: 'hid', hidDevice: '/dev/input/event3' }), 0), ['--device', '/dev/input/event3', '--index', '1'])
-  assert.deepStrictEqual(driverArgs(readConfig({ reader: 'hid', hidDevice: 'a; rm -rf /*' }), 0), ['--device', '', '--index', '1'])
+  assert.deepStrictEqual(driverArgs(readConfig({ reader: 'hid' }), 0), ['--device', ''])
+  assert.deepStrictEqual(driverArgs(readConfig({ reader: 'hid', hidDevice: ' IC Reader ' }), 0), ['--device', 'IC Reader'])
+  assert.deepStrictEqual(driverArgs(readConfig({ reader: 'hid', hidDevice: '/dev/input/event3' }), 0), ['--device', '/dev/input/event3'])
+  assert.deepStrictEqual(driverArgs(readConfig({ reader: 'hid', hidDevice: 'a; rm -rf /*' }), 0), ['--device', ''])
+})
+
+test('USB Reader 1 alone is found as before (no index: not the first keyboard by port); next to USB Reader 2 by its port', () => {
+  assert.deepStrictEqual(readConfigs({ reader: 'hid' }).map((c) => driverArgs(c, 0)), [['--device', '']])
+  assert.deepStrictEqual(readConfigs({ reader: 'hid', reader2On: true, reader2: 'rc522', resetPin2: 24 }).map((c) => driverArgs(c, 0))[0], ['--device', ''])
+  assert.deepStrictEqual(readConfigs({ reader: 'hid', reader2On: true, reader2: 'hid2' }).map((c) => driverArgs(c, 0)), [['--device', '', '--index', '1'], ['--device', '', '--index', '2']])
+  assert.deepStrictEqual(readConfigs({ reader: 'hid2', reader2On: true, reader2: 'hid' }).map((c) => driverArgs(c, 0)), [['--device', '', '--index', '2'], ['--device', '', '--index', '1']])
 })
 
 test('only the PN5180 chooses the kind of tag; the others look for ISO 14443 A', () => {
@@ -391,6 +398,12 @@ test('I2C: switched on with the module, the bus of the header after the restart;
   assert.match(i2cRows(i2cState('dtparam=i2c_arm=off\n', '', ['i2c-1']))[0].value, /Ausgeschaltet, die Box muss neu starten/)
   // (the lines that have the bus on: all are set to off)
   assert.deepStrictEqual(i2cKeysOn('dtparam=i2c_arm=on\ndtparam=i2c1=on\ndtparam=i2c_arm_baudrate=50000\n#dtparam=i2c=on\n'), ['i2c_arm', 'i2c1'])
+  // (the last line wins, as the firmware reads them: "off" added below a line of several parameters switches it off)
+  const after = i2cState('dtparam=audio=on,i2c_arm=on\ndtparam=i2c_arm=off\n', 'i2c-dev\n', [], true)
+  assert.deepStrictEqual([after.configured, after.off], [false, true])
+  assert.strictEqual(i2cState('dtparam=i2c_arm=off\ndtparam=i2c_arm=on\n', 'i2c-dev\n', []).configured, true)
+  assert.strictEqual(i2cState('dtparam=i2c_arm_baudrate=50000\n', 'i2c-dev\n', []).configured, false)
+  assert.deepStrictEqual(spiState('dtparam=audio=on,spi=on\ndtparam=spi=off\n', []), { configured: false, off: true, devices: [] })
 })
 
 test('UART: the port is on, the device is there, and no console on it; the buttons', () => {

@@ -192,7 +192,8 @@ export class WinampService {
       balance: this.balance(),
       shuffle: localAlbum ? data?.shuffle === true : this.shuffleOn(),
       shuffleAvailable: (spotify && media?.type === 'spotify' && (media.category === 'music' || media.category === 'other')) || (localAlbum && data?.shuffleSupported === true),
-      repeat: this.repeat(),
+      // (as the player says it: a new playback starts without repeat, a button of the box changes it)
+      repeat: busy ? data?.repeat === true : this.repeat(),
       eqOpen: this.right() === 'eq',
       playlistOpen: this.right() === 'pl',
       bitrate: data?.bitrate ?? 0,
@@ -418,7 +419,8 @@ export class WinampService {
   }
 
   toggleRepeat(): void {
-    const on = !this.repeat()
+    // (from what the button shows - the player's state while something plays)
+    const on = !this.main().repeat
     this.repeat.set(on)
     this.player.setRepeat(on)
   }

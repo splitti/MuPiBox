@@ -1,7 +1,8 @@
 // OLED display: runs the driver (oled.py) as a child process of the server. The server talks to it by lines of JSON on its stdin
 // (what to show) and reads its reports from stdout (ready, error). When it ends by itself - an error, a display that was pulled -
 // it is started again later, at first quickly, then more slowly; a stop() ends it with "quit" so the picture stays until the next
-// start (a restart of the extension must not blink), kill() with SIGTERM (the box goes off: the driver shows its good-bye picture).
+// start (a restart of the extension must not blink), kill() with SIGTERM (the server ends: the driver switches the panel off - and
+// shows its good-bye picture for a moment first when the box goes down).
 'use strict'
 
 const { spawn } = require('node:child_process')
@@ -156,7 +157,7 @@ function createDriver({ command, args, onEvent, onEnd = () => undefined, log = c
         killer?.unref?.()
       })
     },
-    /** The server ends: SIGTERM, the driver shows its power-off picture. */
+    /** The server ends: SIGTERM, the driver switches the panel off (with its power-off picture first when the box goes down). */
     kill: () => {
       stopped = true
       if (retry) clearTimer(retry)

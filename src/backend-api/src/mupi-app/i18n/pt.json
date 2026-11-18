@@ -4453,5 +4453,11 @@
  "„Älteste zuerst“ ist die Reihenfolge der Serie.": "«Mais antigos primeiro» é a ordem da série.",
  "In deinem Konto gehört kein Hörbuch zu dieser Serie.": "Nenhum audiolivro da tua conta pertence a esta série.",
  "Lade die Hörbücher von Audible …": "A carregar os audiolivros do Audible …",
- "Dafür braucht es die NFC-Extension ab Version 0.8 – bitte unter Erweiterungen aktualisieren.": "Para isto é preciso a extensão NFC a partir da versão 0.8 – atualiza-a em Extensões."
+ "Dafür braucht es die NFC-Extension ab Version 0.8 – bitte unter Erweiterungen aktualisieren.": "Para isto é preciso a extensão NFC a partir da versão 0.8 – atualiza-a em Extensões.",
+ "Der NFC-Leser ist nicht bereit – bitte unter Einstellungen › NFC-Extension einrichten.": "O leitor NFC não está pronto – configure-o em Definições › Extensão NFC.",
+ "Kein OLED-Display bereit, deshalb bleibt das DSI-Display an": "Nenhum ecrã OLED pronto, por isso o ecrã DSI continua ligado",
+ "Ein DSI-Display ist angeschlossen, deshalb bleibt es an": "Está ligado um ecrã DSI, por isso continua ligado",
+ "I2C bleibt eingeschaltet: Der MuPiHAT braucht es für den Akku.": "O I2C continua ligado: o MuPiHAT precisa dele para a bateria.",
+ "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Quando nada toca ou a reprodução está em pausa, o ecrã desliga-se após este tempo (isso poupa-o). Um arranque, uma etiqueta ou um toque em «Mostrar o endereço da caixa» acorda-o.",
+ "Bis zu drei NFC-Leser lesen Tags und Karten, auch gleichzeitig: der PN5180 (ISO 14443 A und ISO 15693), der RC522 und der PN532 (ISO 14443 A) oder ein USB-Leser, der die Kartennummer wie eine Tastatur tippt (auch ein USB-Barcodeleser). Jeder Tag kann ein Album, ein Hörspiel, einen Sender oder einen Podcast starten: In der Bibliothek das Medium öffnen, „NFC-Tag“ antippen und den Tag auflegen. Die Einstellungen stehen unter Einstellungen › NFC-Extension.": "Até três leitores NFC leem tags e cartões, também ao mesmo tempo: o PN5180 (ISO 14443 A e ISO 15693), o RC522 e o PN532 (ISO 14443 A) ou um leitor USB que digita o número do cartão como um teclado (também um leitor de códigos de barras USB). Cada tag pode iniciar um álbum, uma história, uma estação ou um podcast: abra o mídia na biblioteca, toque em “NFC-Tag” e aproxime a tag. As definições estão em Definições › Extensão NFC."
 }

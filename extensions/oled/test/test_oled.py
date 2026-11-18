@@ -118,6 +118,70 @@ class DisplayTest(unittest.TestCase):
         with self.assertRaises(oled.DriverError):
             oled.Display(FakeBus(), 'ssd1327', 128, 64)
 
+    def test_pack_is_the_same_as_reading_the_pixels_one_by_one(self):
+        def by_pixel(image, rotate):
+            if rotate:
+                image = image.rotate(180)
+            pixels = image.load()
+            return bytes(sum(1 << bit for bit in range(8) if pixels[x, page * 8 + bit]) for page in range(image.height // 8) for x in range(image.width))
+        for height in (64, 32):
+            picture = render.Screens(128, height).render(PLAY, 0)
+            for rotate in (False, True):
+                self.assertEqual(oled.Display(FakeBus(), 'ssd1306', 128, height, rotate=rotate).pack(picture), by_pixel(picture, rotate), (height, rotate))
+
+    def test_only_the_pages_that_changed_are_sent(self):
+        image = Image.new('1', (128, 64), 0)
+        for controller, window in (('ssd1306', [[0x00, 0x21, 0, 127, 0x22, 3, 3], [0x00, 0x21, 0, 127, 0x22, 6, 7]]), ('ssd1309', [[0x00, 0x21, 0, 127, 0x22, 3, 3], [0x00, 0x21, 0, 127, 0x22, 6, 7]]), ('sh1106', [[0x00, 0xB3, 0x02, 0x10], [0x00, 0xB6, 0x02, 0x10], [0x00, 0xB7, 0x02, 0x10]])):
+            bus = FakeBus()
+            display = oled.Display(bus, controller, 128, 64)
+            display.show(image)
+            bus.writes.clear()
+            changed = image.copy()
+            changed.putpixel((10, 25), 1)  # page 3
+            changed.putpixel((20, 50), 1)  # page 6
+            changed.putpixel((30, 60), 1)  # page 7
+            self.assertTrue(display.show(changed))
+            self.assertEqual(bus.commands(), window, controller)
+            self.assertEqual(len(bus.data()), 3, controller)
+
+    def test_a_display_that_wakes_gets_its_picture_before_it_goes_on(self):
+        bus = FakeBus()
+        display = oled.Display(bus, 'ssd1306', 128, 64)
+        image = Image.new('1', (128, 64), 1)
+        display.show(image)
+        display.power(False)
+        self.assertEqual(bus.writes[-1], [0x00, 0xAE])
+        bus.writes.clear()
+        self.assertTrue(display.show(image))
+        self.assertEqual(len(bus.data()), 8, 'the whole picture again')
+        self.assertEqual(bus.writes[-1], [0x00, 0xAF], 'on last')
+
+    def test_the_end_switches_the_panel_off_and_says_good_bye_only_when_the_box_goes_down(self):
+        screens = render.Screens(128, 64)
+        for reason, stopping, bye, off in (('quit', True, False, False), ('stop', False, False, True), ('stop', True, True, True), ('eof', True, False, True)):
+            bus = FakeBus()
+            display = oled.Display(bus, 'ssd1306', 128, 64)
+            display.show(Image.new('1', (128, 64), 1))
+            bus.writes.clear()
+            slept = []
+            oled.finish(display, screens, reason, stopping=lambda: stopping, sleep=slept.append)
+            self.assertEqual(bool(bus.data()), bye, reason)
+            self.assertEqual(bool(slept), bye, reason)
+            self.assertEqual(bus.writes[-1:] == [[0x00, 0xAE]], off, reason)
+
+    def test_systemd_tells_whether_the_box_goes_down(self):
+        class Answer:
+            def __init__(self, text):
+                self.stdout = text
+
+        self.assertTrue(oled.system_stopping(lambda *a, **k: Answer(b'stopping\n')))
+        self.assertFalse(oled.system_stopping(lambda *a, **k: Answer(b'running\n')))
+        self.assertFalse(oled.system_stopping(lambda *a, **k: Answer(b'degraded\n')))
+
+        def missing(*_a, **_k):
+            raise FileNotFoundError('systemctl')
+        self.assertFalse(oled.system_stopping(missing))
+
     def test_contrast_is_kept_between_0_and_255(self):
         bus = FakeBus()
         display = oled.Display(bus, 'ssd1306', 128, 64)
@@ -142,6 +206,21 @@ class LoopTest(unittest.TestCase):
         os.close(w)
         self.assertEqual(reason, 'quit')
         self.assertIn([0x00, 0x81, 40], bus.commands())
+
+    def test_the_view_off_switches_the_panel_off_and_draws_nothing(self):
+        bus = FakeBus()
+        display = oled.Display(bus, 'ssd1306', 128, 64)
+        r, w = os.pipe()
+        os.write(w, (json.dumps({'cmd': 'state', 'state': {'view': 'off'}}) + '\n').encode())
+        ticks = iter([0.0, 5.0, 6.0, 7.0])
+        rounds = iter([False, False, True])
+        bus.writes.clear()
+        self.assertEqual(oled.run(display, render.Screens(128, 64), stdin_fd=r, clock=lambda: next(ticks), stop=lambda: next(rounds)), 'stop')
+        os.close(r)
+        os.close(w)
+        self.assertEqual(bus.data(), [], 'nothing drawn')
+        self.assertEqual(bus.commands(), [[0x00, 0xAE]])
+        self.assertFalse(display.is_on)
 
     def test_the_end_of_stdin_ends_the_loop(self):
         display = oled.Display(FakeBus(), 'ssd1306', 128, 64)

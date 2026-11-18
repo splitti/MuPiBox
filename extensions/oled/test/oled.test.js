@@ -145,8 +145,29 @@ test('a track that plays is shown; without anything playing the display idles an
   assert.strictEqual(state({ ui: { idleSince: 1, wake: 6 * 60000 }, now: 5 * 60000 + 1 }).view, 'idle', 'woken')
 })
 
-test('a paused album still shows its title (the box is not off)', () => {
-  assert.strictEqual(state({ play: { player: 'mplayer', playing: false, title: 'Kapitel 1' }, ui: { idleSince: 1 }, now: 99 * 60000 }).view, 'play')
+test('a paused album shows its title for a while, then the display goes off like with nothing playing (no picture burns in)', () => {
+  const paused = { player: 'mplayer', playing: false, title: 'Kapitel 1' }
+  assert.strictEqual(state({ play: paused, ui: { idleSince: 1 }, now: 4 * 60000 }).view, 'play')
+  assert.strictEqual(state({ play: paused, ui: { idleSince: 1 }, now: 99 * 60000 }).view, 'off')
+  assert.strictEqual(state({ play: paused, config: { sleepAfter: 0 }, ui: { idleSince: 1 }, now: 99 * 60000 }).view, 'play', 'never')
+  assert.strictEqual(state({ play: paused, ui: { idleSince: 1, wake: 100 * 60000 }, now: 99 * 60000 }).view, 'play', 'woken')
+  assert.strictEqual(state({ play: { ...paused, playing: true }, ui: { idleSince: 1 }, now: 99 * 60000 }).view, 'play', 'what plays never goes off')
+})
+
+test('Spotify plays as /local says it: its own pause flag, and not while its device is quiet', () => {
+  assert.strictEqual(logic.spotifyMayPlay({ currentPlayer: 'spotify', pause: false }), true)
+  assert.strictEqual(logic.spotifyMayPlay({ currentPlayer: 'spotify', pause: true }), false)
+  assert.strictEqual(logic.spotifyMayPlay({ currentPlayer: 'spotify', pause: false, spotifySilent: true }), false)
+  assert.strictEqual(logic.spotifyMayPlay({ currentPlayer: 'mplayer', pause: false }), false)
+  assert.strictEqual(logic.spotifyMayPlay(null), false)
+})
+
+test('a DSI display is plugged in when one of the DSI connectors says connected - "disconnected" is not', () => {
+  assert.strictEqual(logic.dsiConnected([{ name: 'card1-HDMI-A-1', status: 'connected\n' }, { name: 'card1-DSI-1', status: 'connected\n' }]), true)
+  assert.strictEqual(logic.dsiConnected([{ name: 'card1-DSI-1', status: 'disconnected\n' }]), false)
+  assert.strictEqual(logic.dsiConnected([{ name: 'card1-HDMI-A-1', status: 'connected' }]), false)
+  assert.strictEqual(logic.dsiConnected([{ name: 'card1-DSI-1', status: '' }]), false)
+  assert.strictEqual(logic.dsiConnected(null), false)
 })
 
 test('the page with the address comes before the short pictures, which come before the rest', () => {
@@ -312,32 +333,45 @@ test('stop() says quit, so the picture stays; no new start follows', async () =>
 function fakeHost(settings, over = {}) {
   const routes = {}
   const procs = []
-  const config = { mupibox: { headless: false } }
+  const config = { mupibox: { headless: false, ...(over.mupibox ?? {}) } }
   const execs = []
+  const fetched = []
   const host = {
     log: { warn: () => undefined, info: () => undefined },
     dir: require('node:path').join(__dirname, '..'),
-    dataDir: require('node:os').tmpdir(),
+    dataDir: over.dataDir ?? require('node:os').tmpdir(),
     playerUrl: 'http://player',
     apiUrl: 'http://api',
     settings: async () => settings,
     config: () => config,
-    updateConfig: async (mutate) => mutate(config),
+    updateConfig: over.updateConfig ?? (async (mutate) => mutate(config)),
     onSettings: (fn) => (host.changed = fn),
     route: (method, sub, handler) => (routes[`${method} ${sub}`] = handler),
     deps: {
       spawnFn: () => (procs.push(fakeProcess()), procs.at(-1)),
       fetch: async (url) => {
-        const body = over.player ?? { currentPlayer: 'mplayer', currentType: 'local', playing: true, currentTrackname: 'Kapitel 1', path: 'a/b/c', volume: 40 }
-        return { ok: true, json: async () => (String(url).endsWith('/local') ? body : {}) }
+        fetched.push(String(url).replace(/^http:\/\/[a-z]+/, ''))
+        const player = typeof over.player === 'function' ? over.player() : over.player
+        const body = player ?? { currentPlayer: 'mplayer', currentType: 'local', playing: true, currentTrackname: 'Kapitel 1', path: 'a/b/c', volume: 40 }
+        const state = typeof over.state === 'function' ? over.state() : (over.state ?? {})
+        return { ok: true, json: async () => (String(url).endsWith('/local') ? body : String(url).endsWith('/state') ? state : {}) }
       },
       execFile: (command, args, options, done) => (execs.push([command, ...args]), done(over.execError ?? null, '')),
       now: over.now ?? (() => 1_000_000),
+      ...(over.deps ?? {}),
     },
   }
-  return { host, routes, procs, config, execs }
+  return { host, routes, procs, config, execs, fetched }
 }
 const settle = () => new Promise((resolve) => setImmediate(resolve))
+// (the driver says it found its display)
+const ready = (box, at = 0) => box.procs[at].stdout.emit('data', Buffer.from('{"event":"ready","controller":"ssd1306","address":"0x3C"}\n'))
+const started = async (box) => {
+  await settle()
+  await settle()
+  ready(box)
+}
+const sentStates = (proc) => proc.written.map((l) => JSON.parse(l)).filter((m) => m.cmd === 'state').map((m) => m.state)
 
 test('the extension starts the driver with the settings and tells it what plays', async () => {
   const box = fakeHost({ controller: 'sh1106', address: '0x3D' })
@@ -345,6 +379,7 @@ test('the extension starts the driver with the settings and tells it what plays'
   await settle()
   await settle()
   assert.strictEqual(box.procs.length, 1)
+  ready(box)
   await ext.tick()
   const sent = box.procs[0].written.map((l) => JSON.parse(l)).filter((m) => m.cmd === 'state')
   assert.ok(sent.length >= 1)
@@ -389,8 +424,7 @@ test('in the evening the extension tells the driver the darker contrast - and th
   let now = 1_000_000
   box.host.deps.now = () => now
   const ext = api.activate(box.host)
-  await settle()
-  await settle()
+  await started(box)
   const contrasts = () => box.procs[0].written.map((l) => JSON.parse(l)).filter((m) => m.cmd === 'contrast').map((m) => m.value)
   await ext.tick()
   assert.deepStrictEqual(contrasts(), [], 'daytime: nothing to tell')
@@ -432,10 +466,9 @@ test('the info page and the next mode are routes of the page', async () => {
 
 test('without the DSI display: the flag of the box and DietPi\'s autostart are set, and brought back when the setting goes', async () => {
   const box = fakeHost({ headless: true })
-  api.activate(box.host)
-  await settle()
-  await settle()
-  await settle()
+  const ext = api.activate(box.host)
+  await started(box)
+  await ext.apply({ headless: true })
   assert.strictEqual(box.config.mupibox.headless, true)
   assert.ok(box.execs.some((e) => e.join(' ') === 'sudo -n /boot/dietpi/dietpi-autostart 0'), JSON.stringify(box.execs))
   await box.host.changed({ headless: false })
@@ -443,14 +476,152 @@ test('without the DSI display: the flag of the box and DietPi\'s autostart are s
   assert.ok(box.execs.some((e) => e.join(' ') === 'sudo -n /boot/dietpi/dietpi-autostart 11'), JSON.stringify(box.execs))
 })
 
-test('when DietPi refuses the change the flag stays off and the page says so', async () => {
+test('when DietPi refuses the change the flag goes back off and the page says so', async () => {
   const box = fakeHost({ headless: true }, { execError: new Error('sudo: a password is required') })
-  api.activate(box.host)
-  await settle()
-  await settle()
-  await settle()
+  const ext = api.activate(box.host)
+  await started(box)
+  await ext.apply({ headless: true })
   assert.strictEqual(box.config.mupibox.headless, false)
   let body
   await box.routes['get /state']({}, { json: (b) => (body = b) })
   assert.ok(body.rows.some((r) => r.tone === 'error' && /DSI/.test(r.label)), JSON.stringify(body.rows))
+})
+
+test('when the flag cannot be written DietPi\'s autostart is not touched', async () => {
+  const box = fakeHost({ headless: true }, { updateConfig: async () => Promise.reject(new Error('locked')) })
+  const ext = api.activate(box.host)
+  await started(box)
+  await ext.apply({ headless: true })
+  assert.ok(!box.execs.some((e) => e.join(' ').includes('dietpi-autostart')), JSON.stringify(box.execs))
+})
+
+test('without a display that answers the box keeps its DSI display, and the page says why', async () => {
+  const box = fakeHost({ headless: true })
+  const ext = api.activate(box.host)
+  await settle()
+  await settle()
+  box.procs[0].stdout.emit('data', Buffer.from('{"event":"error","code":"no_display","message":"x"}\n'))
+  await ext.apply({ headless: true })
+  assert.strictEqual(box.config.mupibox.headless, false)
+  assert.ok(!box.execs.some((e) => e.join(' ').includes('dietpi-autostart')), JSON.stringify(box.execs))
+  let body
+  await box.routes['get /state']({}, { json: (b) => (body = b) })
+  assert.ok(body.rows.some((r) => r.value === logic.HEADLESS_NO_OLED && r.tone === 'warn'), JSON.stringify(body.rows))
+  // (the display answers later: the setting takes effect then)
+  box.procs[0].stdout.emit('data', Buffer.from('{"event":"ready"}\n'))
+  await settle()
+  assert.strictEqual(box.config.mupibox.headless, true)
+})
+
+test('with a DSI display plugged in the box keeps it, and the page says why', async () => {
+  const fs = require('node:fs')
+  const path = require('node:path')
+  const drm = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'oled-drm-'))
+  fs.mkdirSync(path.join(drm, 'card1-DSI-1'))
+  fs.writeFileSync(path.join(drm, 'card1-DSI-1', 'status'), 'connected\n')
+  const box = fakeHost({ headless: true }, { deps: { drmDir: drm } })
+  const ext = api.activate(box.host)
+  await started(box)
+  await ext.apply({ headless: true })
+  assert.strictEqual(box.config.mupibox.headless, false)
+  assert.ok(!box.execs.some((e) => e.join(' ').includes('dietpi-autostart')), JSON.stringify(box.execs))
+  let body
+  await box.routes['get /state']({}, { json: (b) => (body = b) })
+  assert.ok(body.rows.some((r) => r.value === logic.HEADLESS_DSI), JSON.stringify(body.rows))
+  fs.rmSync(drm, { recursive: true, force: true })
+})
+
+test('a switch-on that stopped half-way (autostart 0, no flag) is undone when the setting is off', async () => {
+  const fs = require('node:fs')
+  const path = require('node:path')
+  const data = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'oled-data-'))
+  const index = path.join(data, 'autostart_index')
+  fs.writeFileSync(index, '0\n')
+  fs.writeFileSync(path.join(data, 'autostart.json'), JSON.stringify({ index: 7 }))
+  const box = fakeHost({ headless: false }, { dataDir: data, deps: { autostartIndexFile: index } })
+  const ext = api.activate(box.host)
+  await started(box)
+  await ext.apply({ headless: false })
+  assert.ok(box.execs.some((e) => e.join(' ') === 'sudo -n /boot/dietpi/dietpi-autostart 7'), JSON.stringify(box.execs))
+  assert.strictEqual(fs.existsSync(path.join(data, 'autostart.json')), false, 'nothing kept any more')
+  // (an autostart 0 the user chose, without anything the extension kept, is left alone)
+  const own = fakeHost({ headless: false }, { dataDir: data, deps: { autostartIndexFile: index } })
+  const ext2 = api.activate(own.host)
+  await started(own)
+  await ext2.apply({ headless: false })
+  assert.ok(!own.execs.some((e) => e.join(' ').includes('dietpi-autostart')), JSON.stringify(own.execs))
+  fs.rmSync(data, { recursive: true, force: true })
+})
+
+// ---- what the extension asks the player ------------------------------------------------------------------------------------------
+test('nothing is asked while the display program is not ready', async () => {
+  const box = fakeHost({})
+  const ext = api.activate(box.host)
+  await settle()
+  await settle()
+  await ext.tick()
+  assert.deepStrictEqual(box.fetched, [])
+})
+
+test('a paused medium lets the display go off; then only /local is asked now and then, and a start wakes it', async () => {
+  let now = 1_000_000
+  let playing = false
+  const box = fakeHost({ sleepAfter: 1 }, { now: () => now, player: () => ({ currentPlayer: 'mplayer', currentType: 'local', playing, currentTrackname: 'Kapitel 1', path: 'a/b/c', volume: 40 }) })
+  const ext = api.activate(box.host)
+  await started(box)
+  await ext.tick()
+  assert.strictEqual(sentStates(box.procs[0]).at(-1).view, 'play', 'paused: its title for a while')
+  now += 61_000
+  await ext.tick()
+  assert.strictEqual(sentStates(box.procs[0]).at(-1).view, 'off')
+  const asked = box.fetched.length
+  now += 500
+  await ext.tick()
+  now += 500
+  await ext.tick()
+  assert.strictEqual(box.fetched.length, asked, 'off: not every half second')
+  now += 600
+  await ext.tick()
+  assert.deepStrictEqual(box.fetched.slice(asked), ['/local'], 'only /local - no network, no audio routes')
+  const sent = sentStates(box.procs[0]).length
+  now += 60_000
+  await ext.tick()
+  assert.strictEqual(sentStates(box.procs[0]).length, sent, 'the clock is not sent to a dark display')
+  playing = true
+  now += 1600
+  await ext.tick()
+  assert.strictEqual(sentStates(box.procs[0]).at(-1).view, 'overlay', 'the start wakes it')
+})
+
+test('Spotify\'s /state is asked while it plays, once in a while, and not while it is paused', async () => {
+  let now = 1_000_000
+  let pause = false
+  const box = fakeHost({}, { now: () => now, player: () => ({ currentPlayer: 'spotify', pause, generation: 3, volume: 30 }), state: () => ({ is_playing: !pause, progress_ms: 10_000, item: { name: 'Lied', duration_ms: 200_000, artists: [{ name: 'Band' }] } }) })
+  const ext = api.activate(box.host)
+  await started(box)
+  const states = () => box.fetched.filter((u) => u === '/state').length
+  await ext.tick()
+  assert.strictEqual(states(), 1)
+  for (let i = 0; i < 20; i++) {
+    now += 500
+    await ext.tick()
+  }
+  assert.strictEqual(states(), 1, 'not every tick')
+  assert.strictEqual(sentStates(box.procs[0]).at(-1).elapsed, 20, 'the progress counts on in between')
+  now += 10_500
+  await ext.tick()
+  assert.strictEqual(states(), 2, 'after a while again')
+  pause = true
+  now += 500
+  await ext.tick()
+  assert.strictEqual(states(), 3, 'the pause is read at once')
+  for (let i = 0; i < 200; i++) {
+    now += 500
+    await ext.tick()
+  }
+  assert.strictEqual(states(), 3, 'paused: never again')
+  pause = false
+  now += 500
+  await ext.tick()
+  assert.strictEqual(states(), 4, 'it plays again: at once')
 })

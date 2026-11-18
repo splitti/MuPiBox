@@ -126,6 +126,40 @@ async function writeState(state: State): Promise<void> {
   await fsp.rename(tmp, path.join(EXT_DIR, 'state.json'))
 }
 
+// (one change of state.json after the other: the start check, a switch, an install and a removal each read, change and write it -
+// two at the same time lost the change of the first)
+let stateChain: Promise<unknown> = Promise.resolve()
+
+/** Reads state.json, changes it and writes it, after the changes before it. `mutate` returns false: nothing to write. Returns whether it was written. */
+function changeState(mutate: (state: State) => boolean | void): Promise<boolean> {
+  const done = stateChain.then(async () => {
+    const state = await readState()
+    if (mutate(state) === false) return false
+    await writeState(state)
+    return true
+  })
+  stateChain = done.catch(() => undefined)
+  return done
+}
+
+// the names an extension may give what it sets up as root (checked at the install; the cleanup takes no other)
+const ruleNameOf = (id: string) => new RegExp(`^99-mpx-${id}[a-z0-9-]*\\.rules$`)
+const unitNameOf = (id: string) => new RegExp(`^mpx-${id}[a-z0-9-]*\\.(service|timer)$`)
+
+/**
+ * What an installed extension set up as root (its systemd units, its udev rules) and whether it has a part in the player, from its
+ * manifest as it is: for the cleanup when it is switched off or removed - also one made for a newer box, which readManifest does not
+ * return (its units and rules stayed).
+ */
+async function setUpBy(id: string): Promise<{ units: { name: string }[]; udev: { name: string }[]; player: boolean }> {
+  const raw = validId(id) ? await readJson<Record<string, unknown> | null>(path.join(EXT_DIR, id, 'manifest.json'), null) : null
+  if (!raw || typeof raw !== 'object' || raw.id !== id) return { units: [], udev: [], player: false }
+  const system = (raw.system && typeof raw.system === 'object' ? raw.system : {}) as Record<string, unknown>
+  const named = (list: unknown, pattern: RegExp) =>
+    (Array.isArray(list) ? list : []).map((e) => String((e as { name?: unknown } | null)?.name)).filter((name) => pattern.test(name)).map((name) => ({ name }))
+  return { units: named(system.units, unitNameOf(id)), udev: named(system.udev, ruleNameOf(id)), player: typeof raw.player === 'string' }
+}
+
 /** The manifest of an installed extension, or null when it is missing or not for this host. */
 export async function readManifest(id: string): Promise<Manifest | null> {
   if (!validId(id)) return null
@@ -167,13 +201,14 @@ export async function diagnoseFiles(id: string): Promise<{ code: ProblemCode; de
 
 /** Switches an extension off by itself and keeps why (state.json), for the app to say. */
 async function switchOffWithProblem(id: string, problem: Problem): Promise<void> {
-  const state = await readState()
-  if (!state[id]) return
-  state[id] = { ...state[id], enabled: false, problem }
-  await writeState(state)
+  const known = await changeState((state) => {
+    if (!state[id]) return false
+    state[id] = { ...state[id], enabled: false, problem }
+  })
+  if (!known) return
   console.warn(`${new Date().toLocaleString()}: [Extension ${id}] switched off: ${problem.code}${problem.detail ? ` (${problem.detail})` : ''}`)
-  // (its systemd services run while it is on)
-  for (const u of (await readManifest(id))?.system?.units ?? []) await run('sudo', ['systemctl', 'disable', '--now', u.name], 30000)
+  // (its systemd services run while it is on - also those of one made for a newer box)
+  for (const u of (await setUpBy(id)).units) await run('sudo', ['systemctl', 'disable', '--now', u.name], 30000)
 }
 
 // (what the test of the resources at the start looks at: the declarations only, not the running box - that is for the install)
@@ -184,15 +219,19 @@ const declaredOnly = { run: async () => ({ ok: false, out: '' }), readFile: asyn
  * last start (an update): a manifest the box does not accept any more, one made for a newer box, files that are gone, pins or ports
  * that the core or another extension holds now, an extension that crashed the server again and again. One that cannot run is
  * switched off, with the reason in state.json - the app shows it on the card of the extension (and a button to try again).
+ * Returns the ids of those switched off.
  */
-export async function checkInstalledExtensions(deps: ExtensionDeps): Promise<void> {
+export async function checkInstalledExtensions(deps: ExtensionDeps): Promise<string[]> {
   const state = await readState()
   const crashing = new Set(crashingExtensions(EXT_DIR))
   const live: string[] = []
+  const off: string[] = []
   for (const id of Object.keys(state).filter((i) => state[i].enabled !== false)) {
     const found = crashing.has(id) ? ({ code: 'crashing' } as const) : await diagnoseFiles(id)
-    if (found) await switchOffWithProblem(id, makeProblem(found.code, 'detail' in found ? found.detail : undefined))
-    else live.push(id)
+    if (found) {
+      await switchOffWithProblem(id, makeProblem(found.code, 'detail' in found ? found.detail : undefined))
+      off.push(id)
+    } else live.push(id)
   }
   // (the one that came last gives way when two want the same: the list is in the order of the installs)
   for (const id of [...live].reverse()) {
@@ -208,7 +247,58 @@ export async function checkInstalledExtensions(deps: ExtensionDeps): Promise<voi
     if (errors.length === 0) continue
     live.splice(live.indexOf(id), 1)
     await switchOffWithProblem(id, makeProblem('conflict', errors.map((c) => c.message).join(' ')))
+    off.push(id)
   }
+  return off
+}
+
+// The extension that may start the box without the kiosk (extensions/oled: mupibox.headless in the configuration and DietPi's
+// autostart 0) and where it keeps the autostart it replaced; 11 is DietPi's autostart of the kiosk (autosetup.sh)
+const HEADLESS_BY = 'oled'
+const KEPT_AUTOSTART = 'autostart.json'
+const KIOSK_AUTOSTART = 11
+const AUTOSTART_INDEX_FILE = '/boot/dietpi/.dietpi-autostart_index'
+
+const readAutostartIndex = (): number | null => {
+  try {
+    const n = Number.parseInt(readFileSync(AUTOSTART_INDEX_FILE, 'utf8').trim(), 10)
+    return Number.isInteger(n) ? n : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * The start without the kiosk outlives the extension that set it: switched off (by the user or the start check), removed, or the
+ * flag brought along by a backup from another box - then the box started with a dark display and no way back but SSH. While the flag
+ * is set and that extension is not on, DietPi's autostart goes back to what it was (an autostart 0 only: another one the user chose
+ * stays) and the flag is cleared. Returns whether something was done; the flag stays when the autostart could not be set (tried again
+ * at the next start).
+ */
+export async function restoreKioskStart(deps: ExtensionDeps, io = { run, readAutostartIndex }): Promise<boolean> {
+  const mupibox = deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined
+  if (mupibox?.headless !== true || !deps.updateMupiboxConfig) return false
+  const owner = (await readState())[HEADLESS_BY]
+  if (owner && owner.enabled !== false && (await readManifest(HEADLESS_BY))) return false
+  const now = io.readAutostartIndex()
+  let index: number | null = null
+  if (now === null || now === 0) {
+    index = KIOSK_AUTOSTART
+    const kept = await readJson<{ index?: unknown } | null>(path.join(EXT_DIR, 'data', HEADLESS_BY, KEPT_AUTOSTART), null)
+    if (Number.isInteger(kept?.index) && (kept?.index as number) > 0 && (kept?.index as number) < 100) index = kept?.index as number
+    const result = await io.run('sudo', ['-n', '/boot/dietpi/dietpi-autostart', String(index)], 60000)
+    if (!result.ok) {
+      console.warn(`${new Date().toLocaleString()}: [Extensions] the start without the DSI display is left, but DietPi's autostart could not be set back to ${index}: ${result.out.slice(0, 150)}`)
+      return false
+    }
+  }
+  await deps.updateMupiboxConfig((cfg) => {
+    const mb = cfg.mupibox as Record<string, unknown> | undefined
+    if (!mb || typeof mb !== 'object' || mb.headless !== true) return false
+    delete mb.headless
+  })
+  console.log(`${new Date().toLocaleString()}: [Extensions] the start without the DSI display is left (the extension ${HEADLESS_BY} is not on): mupibox.headless cleared${index === null ? '' : `, DietPi's autostart set back to ${index}`} - the kiosk starts after the next restart`)
+  return true
 }
 
 /** Called when the server ends because of an uncaught error: writes down whether it went through the files of an extension. */
@@ -602,14 +692,14 @@ export function checkManifest(m: unknown, files: Set<string>): string | null {
   }
   const system = x.system ?? {}
   for (const rule of system.udev ?? []) {
-    if (!new RegExp(`^99-mpx-${x.id}[a-z0-9-]*\\.rules$`).test(String(rule?.name))) return `bad rule name: ${rule?.name}`
+    if (!ruleNameOf(x.id).test(String(rule?.name))) return `bad rule name: ${rule?.name}`
     if (!FILE.test(String(rule.file)) || !files.has(rule.file)) return `rule file missing: ${rule?.file}`
   }
   const badResources = checkResources(x.resources)
   if (badResources) return badResources
   if ((system.units ?? []).length > 4) return 'too many units'
   for (const unit of system.units ?? []) {
-    if (!new RegExp(`^mpx-${x.id}[a-z0-9-]*\\.(service|timer)$`).test(String(unit?.name))) return `bad unit name: ${unit?.name}`
+    if (!unitNameOf(x.id).test(String(unit?.name))) return `bad unit name: ${unit?.name}`
     if (!FILE.test(String(unit.file)) || unit.file.includes('..') || !files.has(unit.file) || !unit.file.endsWith(unit.name.slice(unit.name.lastIndexOf('.')))) return `unit file missing: ${unit?.file}`
     // (the box tests what is taken before an install: so every unit has to be said in the resources, too)
     if (!(x.resources?.services ?? []).some((sv) => sv.name === unit.name && sv.provides === true)) return `unit ${unit.name} is not in resources.services with "provides": true`
@@ -697,9 +787,18 @@ function run(cmd: string, args: string[], timeoutMs = 60000, env?: NodeJS.Proces
 
 /** After a change the services start again (the API itself too: its answer is sent first) and the display loads its page. */
 function restartServices(): void {
+  restartInBackground('"$PM2" restart spotify-control >/dev/null 2>&1; "$PM2" restart server >/dev/null 2>&1')
+}
+
+/** The player starts again and the display loads its page (the start check switched off an extension the player had loaded already). */
+function restartPlayer(): void {
+  restartInBackground('"$PM2" restart spotify-control >/dev/null 2>&1')
+}
+
+function restartInBackground(restarts: string): void {
   // (pm2 stops the whole process tree of "server" when it restarts it - this script is a child of it. So the work runs in a
   // subshell that is put in the background: when the outer shell ends, init takes it over and it is out of the tree.)
-  const work = 'sleep 1; PM2=$(command -v pm2 || echo /usr/local/bin/pm2); "$PM2" restart spotify-control >/dev/null 2>&1; "$PM2" restart server >/dev/null 2>&1; sleep 10; curl -s -m 5 -X POST http://127.0.0.1:5005/display/reload-page >/dev/null 2>&1'
+  const work = `sleep 1; PM2=$(command -v pm2 || echo /usr/local/bin/pm2); ${restarts}; sleep 10; curl -s -m 5 -X POST http://127.0.0.1:5005/display/reload-page >/dev/null 2>&1`
   const script = `( ${work} ) >/dev/null 2>&1 &`
   const child = spawn('sh', ['-c', script], { detached: true, stdio: 'ignore' })
   child.on('error', () => undefined)
@@ -757,6 +856,8 @@ interface Job {
   error?: string
 }
 const jobs = new Map<string, Job>()
+// (an install or a removal runs: one at a time, and nothing is switched meanwhile)
+const busy = () => [...jobs.values()].some((j) => j.running)
 
 /** The file names in a package, checked: plain relative names of the kinds an extension may hold. */
 function packageFiles(entries: { name: string; data: Buffer }[]): Map<string, Buffer> | string {
@@ -966,10 +1067,10 @@ async function installExtension(id: string, deps: ExtensionDeps, uploaded?: Pack
 
       // the state names the new version while the version before can still come back: a state that cannot be written (a full
       // card) is a failure like any other here - new files beside a state that says the old version is what this is against
-      const state = await readState()
-      state[id] = { version: manifest.version, enabled: true }
       clearCrashes(EXT_DIR, id)
-      await writeState(state)
+      await changeState((state) => {
+        state[id] = { version: manifest.version, enabled: true }
+      })
     } catch (error) {
       await restorePrevious().catch(() => undefined)
       if (unitsChanged) await restoreUnits().catch(() => undefined)
@@ -1036,13 +1137,15 @@ async function setUpUnits(before: { name: string }[], units: { name: string; fil
   return null
 }
 
-async function removeExtension(id: string): Promise<void> {
+async function removeExtension(id: string, deps: ExtensionDeps): Promise<void> {
   const job = jobs.get(id) as Job
   try {
     const manifest = await readManifest(id)
-    await removeUnits(manifest?.system?.units ?? [])
-    for (const rule of manifest?.system?.udev ?? []) await run('sudo', ['rm', '-f', `/etc/udev/rules.d/${rule.name}`], 20000)
-    if ((manifest?.system?.udev ?? []).length > 0) await run('sudo', ['udevadm', 'control', '--reload'], 20000)
+    // (what it set up as root, from its manifest as it is: one made for a newer box has no manifest here, but units and rules)
+    const setUp = await setUpBy(id)
+    await removeUnits(setUp.units)
+    for (const rule of setUp.udev) await run('sudo', ['rm', '-f', `/etc/udev/rules.d/${rule.name}`], 20000)
+    if (setUp.udev.length > 0) await run('sudo', ['udevadm', 'control', '--reload'], 20000)
     await fsp.rm(path.join(EXT_DIR, id), { recursive: true, force: true })
     // (its pins given free: the core counts them free once it is gone - the fan put on one, the extension installed again
     // was refused with no page to choose another; its other settings stay for a new install)
@@ -1054,9 +1157,11 @@ async function removeExtension(id: string): Promise<void> {
         await fsp.writeFile(settingsFile(id), JSON.stringify(have)).catch(() => undefined)
       }
     }
-    const state = await readState()
-    delete state[id]
-    await writeState(state)
+    await changeState((state) => {
+      delete state[id]
+    })
+    // (before the restart: the start without the kiosk goes with the extension that set it)
+    await restoreKioskStart(deps).catch((error) => console.warn(`${new Date().toLocaleString()}: [Extensions] ${error}`))
     Object.assign(job, { running: false, ok: true, step: 'done' })
     restartServices()
   } catch (error) {
@@ -1186,7 +1291,7 @@ export function registerExtensionRoutes(router: Router, deps: ExtensionDeps): vo
         res.status(400).json({ error: 'invalid id' })
         return
       }
-      if ([...jobs.values()].some((j) => j.running)) {
+      if (busy()) {
         res.status(409).json({ error: 'busy' })
         return
       }
@@ -1280,13 +1385,18 @@ export function registerExtensionRoutes(router: Router, deps: ExtensionDeps): vo
     catalogCache = null
     res.json({ ok: true, devMode: on })
   })
-  router.post('/extensions/remove', ...start('remove', removeExtension))
+  router.post('/extensions/remove', ...start('remove', (id) => removeExtension(id, deps)))
 
   router.post('/extensions/enable', requireSession, requireCsrf, async (req, res) => {
     const { id, enabled } = (req.body ?? {}) as { id?: unknown; enabled?: unknown }
     const state = await readState()
     if (typeof id !== 'string' || !state[id] || typeof enabled !== 'boolean') {
       res.status(400).json({ error: 'invalid request' })
+      return
+    }
+    // (not while an extension is installed or removed: its files and its state are changing)
+    if (busy()) {
+      res.status(409).json({ error: 'busy' })
       return
     }
     if (enabled) {
@@ -1304,13 +1414,21 @@ export function registerExtensionRoutes(router: Router, deps: ExtensionDeps): vo
         return
       }
     }
-    state[id].enabled = enabled
-    // (what the box found wrong is over when the user decides: on, it gets a new chance - off, it is off for good)
-    delete state[id].problem
     if (enabled) clearCrashes(EXT_DIR, id)
-    await writeState(state)
+    const known = await changeState((now) => {
+      if (!now[id]) return false
+      now[id].enabled = enabled
+      // (what the box found wrong is over when the user decides: on, it gets a new chance - off, it is off for good)
+      delete now[id].problem
+    })
+    if (!known) {
+      res.status(400).json({ error: 'invalid request' })
+      return
+    }
     // (its systemd services run while it is on)
-    for (const u of (await readManifest(id))?.system?.units ?? []) await run('sudo', ['systemctl', enabled ? 'enable' : 'disable', '--now', u.name], 30000)
+    for (const u of (await setUpBy(id)).units) await run('sudo', ['systemctl', enabled ? 'enable' : 'disable', '--now', u.name], 30000)
+    // (off: the start without the kiosk goes with the extension that set it - before the restart)
+    if (!enabled) await restoreKioskStart(deps).catch((error) => console.warn(`${new Date().toLocaleString()}: [Extensions] ${error}`))
     res.json({ ok: true })
     restartServices()
   })
@@ -1322,6 +1440,10 @@ export function registerExtensionRoutes(router: Router, deps: ExtensionDeps): vo
     const state = await readState()
     if (typeof id !== 'string' || !state[id] || (action !== 'move' && action !== 'remove')) {
       res.status(400).json({ error: 'invalid request' })
+      return
+    }
+    if (busy()) {
+      res.status(409).json({ error: 'busy' })
       return
     }
     const found = await diagnoseFiles(id)
@@ -1358,10 +1480,16 @@ export function registerExtensionRoutes(router: Router, deps: ExtensionDeps): vo
       await fsp.writeFile(settingsFile(id), JSON.stringify({ ...(await readJson(settingsFile(id), {})), ...Object.fromEntries(changes.map((c) => [c.key, c.to])) }))
       await notifySettings(manifest)
     }
-    state[id].enabled = true
-    delete state[id].problem
     clearCrashes(EXT_DIR, id)
-    await writeState(state)
+    const known = await changeState((now) => {
+      if (!now[id]) return false
+      now[id].enabled = true
+      delete now[id].problem
+    })
+    if (!known) {
+      res.status(400).json({ error: 'invalid request' })
+      return
+    }
     for (const u of manifest.system?.units ?? []) await run('sudo', ['systemctl', 'enable', '--now', u.name], 30000)
     res.json({ ok: true, changes })
     restartServices()
@@ -1450,6 +1578,10 @@ const CONTENT_TYPES: Record<string, string> = {
  * What the display and the app read, and the extensions' own API parts - on the app itself, not behind the session (the display of the box
  * asks too): GET /api/ext/active, the files under /ext/<id>/..., and what an extension's api.js adds under /api/ext/<id>/.
  */
+// the bodies of the extensions' routes (the server's own parser leaves /api/ext/ to these, see server.ts)
+const largeJson = express.json({ limit: '1mb' })
+const defaultJson = express.json()
+
 export function mountExtensions(app: express.Express, deps: ExtensionDeps): void {
   app.get('/api/ext/active', localNetworkOnly, async (_req, res) => {
     const out = []
@@ -1503,7 +1635,10 @@ export function mountExtensions(app: express.Express, deps: ExtensionDeps): void
     })
   })
   void (async () => {
-    await checkInstalledExtensions(deps).catch((error) => console.warn(`${new Date().toLocaleString()}: [Extensions] the check at the start failed: ${error}`))
+    const off = await checkInstalledExtensions(deps).catch((error) => {
+      console.warn(`${new Date().toLocaleString()}: [Extensions] the check at the start failed: ${error}`)
+      return [] as string[]
+    })
     for (const manifest of await enabledManifests()) {
       if (!manifest.api) continue
       try {
@@ -1565,7 +1700,9 @@ export function mountExtensions(app: express.Express, deps: ExtensionDeps): void
             if (typeof fn === 'function') settingsListeners.set(manifest.id, [...(settingsListeners.get(manifest.id) ?? []), fn])
           },
           route: (method: 'get' | 'post', sub: string, handler: RequestHandler, options?: { session?: boolean }) => {
-            const chain: RequestHandler[] = options?.session ? [requireSession, ...(method === 'post' ? [requireCsrf] : []), guarded(handler)] : [guarded(handler)]
+            // (the JSON body is read here, not by the server: up to 1 MB behind the session - the list of the NFC tags an extension
+            // takes in is more than the 100 kB of the default -, the default for what is reached without a login)
+            const chain: RequestHandler[] = options?.session ? [requireSession, ...(method === 'post' ? [requireCsrf] : []), largeJson, guarded(handler)] : [defaultJson, guarded(handler)]
             router[method](sub, ...chain)
           },
         })
@@ -1574,7 +1711,17 @@ export function mountExtensions(app: express.Express, deps: ExtensionDeps): void
       } catch (error) {
         console.warn(`${new Date().toLocaleString()}: [Extension ${manifest.id}] API part not started: ${error}`)
         await switchOffWithProblem(manifest.id, makeProblem('api_failed', error instanceof Error ? error.message : String(error))).catch(() => undefined)
+        off.push(manifest.id)
       }
+    }
+    // (once at every start, after the check: the start without the kiosk of an extension that is off now, or of a backup from another box)
+    await restoreKioskStart(deps).catch((error) => console.warn(`${new Date().toLocaleString()}: [Extensions] ${error}`))
+    // (the player may have loaded the part of one switched off here before the check was done: it keeps it until it starts again)
+    const players: string[] = []
+    for (const id of off) if ((await setUpBy(id)).player) players.push(id)
+    if (players.length > 0) {
+      console.log(`${new Date().toLocaleString()}: [Extensions] the player starts again without ${players.join(', ')}`)
+      restartPlayer()
     }
   })()
 }
@@ -1583,6 +1730,8 @@ export function mountExtensions(app: express.Express, deps: ExtensionDeps): void
 export const _forTests = {
   packageFiles,
   readFileSync,
+  setUpBy,
+  changeState,
   /** Runs an install (of a package already in hand) as the route does and returns the job as it ended. */
   install: async (id: string, deps: ExtensionDeps, pkg: Package): Promise<Job> => {
     jobs.set(id, { running: true, action: 'install', step: 'start' })

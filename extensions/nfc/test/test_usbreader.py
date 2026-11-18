@@ -323,6 +323,15 @@ class ByIndexTest(unittest.TestCase):
             choose_device(devices, '')
         self.assertEqual(caught.exception.code, 'several_devices')
 
+    def test_without_an_index_a_keyboard_on_a_lower_port_is_not_taken_for_the_reader(self):
+        devices = self.devices()
+        devices[2]['name'] = devices[2]['label'] = 'Logitech USB Receiver'  # (the first port)
+        devices[0]['name'] = devices[0]['label'] = 'Sycreader RFID Technology Co., Ltd SYC ID&IC USB Reader'
+        self.assertEqual(choose_device(devices, '')['event'], '/dev/input/event3')
+        # (several that look like a reader: the first by port)
+        devices[2]['name'] = devices[2]['label'] = 'IC Reader'
+        self.assertEqual(choose_device(devices, '')['event'], '/dev/input/event0')
+
     def test_the_list_says_the_readers_that_are_there(self):
         path = os.path.join(tempfile.mkdtemp(), 'devices')
         with open(path, 'w', encoding='utf8') as handle:

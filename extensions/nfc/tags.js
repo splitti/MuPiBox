@@ -370,7 +370,9 @@ function applyImport(data, parsed, now, { replace = false } = {}) {
     const known = data.tags[entry.uid]
     if (known?.media) replaced += 1
     else added += 1
-    const tag = known ?? (data.tags[entry.uid] = { uid: entry.uid, tech: entry.tech, media: null, title: '', image: '', cover: '', firstSeen: now, lastSeen: 0, assignedAt: 0, count: 0 })
+    // (a new tag counts as seen now: with lastSeen 0 the store's pruning took it for the longest unused and dropped it at once, while
+    // the answer said it was added)
+    const tag = known ?? (data.tags[entry.uid] = { uid: entry.uid, tech: entry.tech, media: null, title: '', image: '', cover: '', firstSeen: now, lastSeen: now, assignedAt: 0, count: 0 })
     Object.assign(tag, { media: entry.media, title: mediaLabel(entry.media), image: entry.image, cover: entry.cover, assignedAt: entry.assignedAt })
     if (!known) tag.tech = entry.tech
   }
@@ -395,14 +397,24 @@ const csvCell = (value) => {
   return /[";\r\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe
 }
 
-// (the address a medium is found at: the folder, the path on the NAS, the id of the album, the stream)
+// (the address a medium is found at: the folder, the path on the NAS, the id of the album, the stream. Jellyfin has albums, playlists
+// and audiobooks under ids of one kind: its address says which, "album:<id>", "playlist:<id>", "book:<id>" - an id alone is an album
+// (its ids have no colon), another word ("artist:<id>") is no medium a tag can start. Audible has books only: the address is the ASIN)
 const addressOf = (media) => {
   if (media.type === 'library') return media.libraryPath ?? ''
   if (media.type === 'nas') return media.nasPath ?? ''
   if (media.type === 'spotify') return media.id || media.playlistid || media.showid || media.audiobookid || ''
+  if (media.type === 'jellyfin') return media.id ? `${media.jellyfinKind}:${media.id}` : ''
   return media.id ?? ''
 }
-const ADDRESS_KEY = { library: 'libraryPath', nas: 'nasPath', spotify: 'id', radio: 'id', rss: 'id', tidal: 'id' }
+const ADDRESS_KEY = { library: 'libraryPath', nas: 'nasPath', spotify: 'id', radio: 'id', rss: 'id', tidal: 'id', jellyfin: 'id', audible: 'id' }
+// (what a row written by hand gives the medium besides its address: the kind of a Jellyfin or an Audible entry)
+const kindOf = (type, address) => {
+  if (type === 'audible') return { id: address.replace(/^book:/i, ''), audibleKind: 'book' }
+  if (type !== 'jellyfin') return { [ADDRESS_KEY[type]]: address }
+  const m = /^([a-z]+):(.+)$/i.exec(address)
+  return m ? { id: m[2], jellyfinKind: m[1].toLowerCase() } : { id: address, jellyfinKind: 'album' }
+}
 
 /** The tags with a medium as a table: a string (with the byte order mark) that Excel opens with a double click. */
 function exportCsv(data, now = Date.now()) {
@@ -468,7 +480,7 @@ const COLUMN_NAMES = {
   cover: 'cover',
   mediumtechnisch: 'medium', medium: 'medium', technisch: 'medium',
 }
-const TYPE_NAMES = { bibliothek: 'library', sdkarte: 'library', library: 'library', nas: 'nas', spotify: 'spotify', radio: 'radio', podcast: 'rss', rss: 'rss', tidal: 'tidal' }
+const TYPE_NAMES = { bibliothek: 'library', sdkarte: 'library', library: 'library', nas: 'nas', spotify: 'spotify', radio: 'radio', podcast: 'rss', rss: 'rss', tidal: 'tidal', jellyfin: 'jellyfin', audible: 'audible' }
 const YES = /^(ja|yes|y|x|1|true|wahr)$/i
 
 /** What a table says, checked like a file of tags (see parseImport): { ok, flex, tags, skipped } or { ok: false, error }. */
@@ -495,7 +507,7 @@ function parseTable(text) {
     }
     if (!media) {
       const type = TYPE_NAMES[(cells.type ?? '').toLowerCase().replace(/[\s\-]/g, '')]
-      media = type ? { type, category: cells.category || (type === 'radio' ? 'music' : ''), artist: cells.artist ?? '', title: cells.title ?? '', [ADDRESS_KEY[type]]: cells.address ?? '' } : null
+      media = type ? { type, category: cells.category || (type === 'radio' ? 'music' : ''), artist: cells.artist ?? '', title: cells.title ?? '', ...kindOf(type, cells.address ?? '') } : null
     }
     entries.push({ uid: cells.uid, media, image: cells.image ?? '', cover: cells.cover ?? '' })
     if (!flex && YES.test(cells.flex ?? '')) flex = cells.uid

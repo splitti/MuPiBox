@@ -4453,5 +4453,11 @@
  "„Älteste zuerst“ ist die Reihenfolge der Serie.": "”Vanhimmat ensin” on sarjan järjestys.",
  "In deinem Konto gehört kein Hörbuch zu dieser Serie.": "Mikään tilisi äänikirja ei kuulu tähän sarjaan.",
  "Lade die Hörbücher von Audible …": "Ladataan äänikirjoja Audiblesta …",
- "Dafür braucht es die NFC-Extension ab Version 0.8 – bitte unter Erweiterungen aktualisieren.": "Tähän tarvitaan NFC-laajennus versiosta 0.8 alkaen – päivitä se kohdassa Laajennukset."
+ "Dafür braucht es die NFC-Extension ab Version 0.8 – bitte unter Erweiterungen aktualisieren.": "Tähän tarvitaan NFC-laajennus versiosta 0.8 alkaen – päivitä se kohdassa Laajennukset.",
+ "Der NFC-Leser ist nicht bereit – bitte unter Einstellungen › NFC-Extension einrichten.": "NFC-lukija ei ole valmis – määritä se kohdassa Asetukset › NFC-laajennus.",
+ "Kein OLED-Display bereit, deshalb bleibt das DSI-Display an": "Mikään OLED-näyttö ei ole valmis, joten DSI-näyttö pysyy päällä",
+ "Ein DSI-Display ist angeschlossen, deshalb bleibt es an": "DSI-näyttö on kytketty, joten se pysyy päällä",
+ "I2C bleibt eingeschaltet: Der MuPiHAT braucht es für den Akku.": "I2C pysyy päällä: MuPiHAT tarvitsee sitä akkua varten.",
+ "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Kun mitään ei soi tai toisto on tauolla, näyttö sammuu tämän ajan jälkeen (se säästää sitä). Käynnistys, tagi tai napautus kohtaan \"Näytä laatikon osoite\" herättää sen.",
+ "Bis zu drei NFC-Leser lesen Tags und Karten, auch gleichzeitig: der PN5180 (ISO 14443 A und ISO 15693), der RC522 und der PN532 (ISO 14443 A) oder ein USB-Leser, der die Kartennummer wie eine Tastatur tippt (auch ein USB-Barcodeleser). Jeder Tag kann ein Album, ein Hörspiel, einen Sender oder einen Podcast starten: In der Bibliothek das Medium öffnen, „NFC-Tag“ antippen und den Tag auflegen. Die Einstellungen stehen unter Einstellungen › NFC-Extension.": "Jopa kolme NFC-lukijaa lukee tunnisteita ja kortteja, myös samanaikaisesti: PN5180 (ISO 14443 A ja ISO 15693), RC522 ja PN532 (ISO 14443 A) tai USB-lukija, joka kirjoittaa kortin numeron kuin näppäimistö (myös USB-viivakoodinlukija). Jokainen tunniste voi käynnistää albumin, kuunnelman, aseman tai podcastin: avaa media kirjastossa, napauta ”NFC-tunniste” ja aseta tunniste lukijalle. Asetukset ovat kohdassa Asetukset › NFC-laajennus."
 }

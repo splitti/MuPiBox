@@ -6,7 +6,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const { BUTTONS, TWINS, ACTIONS } = require('../inputs.js')
 
-const VERSION = '1.4.0'
+const VERSION = '1.4.1'
 
 const ACTION_LABELS = {
   none: 'Keine Aktion',

@@ -111,6 +111,7 @@ const createPlayer = (options = {}) => {
   // meanwhile: at the end of a file it stops there instead of going on with the next one, and the wrapper chooses.
   let shuffleOn = false
   let repeatOn = false
+  let repeatOne = false
   const shuffler = createShuffler()
   // nothing loaded (before the first file, after a stop or the end): mplayer answered no property then - and
   // "pause" as yes, which the player reads as "not playing"
@@ -332,6 +333,9 @@ const createPlayer = (options = {}) => {
       send(['observe_property', 7, 'eof-reached'])
       // (a new mpv process after a crash: shuffle is told again)
       if (shuffleOn) send(['set_property', 'keep-open', 'always'])
+      // (and repeat: the player still says it repeats)
+      if (repeatOn) send(['set_property', 'loop-playlist', 'inf'])
+      if (repeatOne) send(['set_property', 'loop-file', 'inf'])
       if (audioFilter) send(['set_property', 'af', audioFilter])
       for (const command of queued.splice(0)) send(command)
       debug('connected')
@@ -542,6 +546,7 @@ const createPlayer = (options = {}) => {
   // or 'off'. With 'one' mpv never reaches the end of the file, so neither the end of the playlist nor shuffle comes into play.
   out.setRepeatMode = (mode) => {
     repeatOn = mode === 'all'
+    repeatOne = mode === 'one'
     send(['set_property', 'loop-playlist', mode === 'all' ? 'inf' : 'no'])
     send(['set_property', 'loop-file', mode === 'one' ? 'inf' : 'no'])
   }

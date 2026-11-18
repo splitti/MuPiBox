@@ -50,3 +50,33 @@ describe('rss feeds', () => {
     request(app).get('/api/rssfeed?url=http://example.com').expect(500, done)
   })
 })
+
+describe('the size of a JSON body', () => {
+  // (100 kB, the default, for every route of the server - also those reached without a login; the extensions' routes under
+  // /api/ext/ read their bodies themselves, up to 1 MB only behind the session)
+  const big = JSON.stringify({ text: 'x'.repeat(200 * 1024) })
+
+  // (the parser's 413 ends in the central error handler of the server, as a 500)
+  it('refuses more than the default before any route', async () => {
+    const small = await request(app).post('/api/no-such-route').set('Content-Type', 'application/json').send({ text: 'x' })
+    assert.notEqual(small.status, 500)
+    const large = await request(app).post('/api/no-such-route').set('Content-Type', 'application/json').send(big)
+    assert.equal(large.status, 500)
+  })
+
+  it('leaves the routes of the extensions to them', (_t, done) => {
+    request(app)
+      .post('/api/ext/no-such-extension/x')
+      .set('Content-Type', 'application/json')
+      .send(big)
+      .end((err, res) => {
+        try {
+          assert.ifError(err)
+          assert.notEqual(res.status, 413)
+          done()
+        } catch (error) {
+          done(error)
+        }
+      })
+  })
+})

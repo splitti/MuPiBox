@@ -515,8 +515,10 @@ app.put('/api/home-lists/:category', express.json({ limit: '20mb' }), (req, res)
   res.json({ ok: true })
 })
 
-// (1 MB: the list of the NFC tags an extension takes in is more than the 100 kB of the default)
-app.use(express.json({ limit: '1mb' }))
+// (the default of 100 kB, also for what is reached without a login; the routes of the extensions under /api/ext/ read their bodies
+// themselves - up to 1 MB behind the session, see mountExtensions)
+const jsonBody = express.json()
+app.use((req, res, next) => (req.path.startsWith('/api/ext/') ? next() : jsonBody(req, res, next)))
 app.use(express.urlencoded({ extended: false }))
 
 // We only want to serve the Angular app as static files in production so that we can start

@@ -62,14 +62,17 @@ exports.activate = (host) => {
       return null
     }
   }
+  // (true when the file was written)
   const writeJson = (file, value, pretty = false) => {
     try {
       fs.mkdirSync(dataDir, { recursive: true })
       const temp = `${file}.${process.pid}.tmp`
       fs.writeFileSync(temp, pretty ? JSON.stringify(value, null, 2) : JSON.stringify(value), { mode: 0o600 })
       fs.renameSync(temp, file)
+      return true
     } catch (error) {
       log.warn(`[nfc] cannot write ${path.basename(file)}: ${error?.message ?? error}`)
+      return false
     }
   }
   let data = tags.readData(readJson(tagsFile))
@@ -87,6 +90,8 @@ exports.activate = (host) => {
   const keepPrevious = () => {
     try {
       if (!fs.existsSync(assignmentsFile)) return
+      // (a damaged file is no version to keep: it would replace the good copy, the one the next start falls back to)
+      if (!tags.parseImport(readJson(assignmentsFile)).ok) return
       fs.copyFileSync(assignmentsFile, `${assignmentsFile}.bak`)
       const day = new Date().toISOString().slice(0, 10)
       const daily = path.join(backupDir, `tag-assignments-${day}.json`)
@@ -102,11 +107,17 @@ exports.activate = (host) => {
   // of the two was changed from outside (a restore of the box's backup puts back the file only)
   const saveAssignments = () => {
     const digest = tags.assignmentsDigest(data)
-    data.assignmentsSha = digest
-    if (!fs.existsSync(assignmentsFile) && tags.countAssigned(data) === 0) return // nothing assigned, nothing to keep
-    if (digest === assignmentsDigest && fs.existsSync(assignmentsFile)) return
+    const exists = fs.existsSync(assignmentsFile)
+    // (nothing assigned and no file: nothing to keep; the file holds these already: nothing to write)
+    if ((!exists && tags.countAssigned(data) === 0) || (exists && digest === assignmentsDigest)) {
+      data.assignmentsSha = digest
+      return
+    }
     keepPrevious()
-    writeJson(assignmentsFile, tags.exportData(data), true)
+    // (the digest only of a file that was written: a write that failed left the older file, and the next start took that one,
+    // whose digest tags.json did not name, for a restored backup - and gave back the old assignments)
+    if (!writeJson(assignmentsFile, tags.exportData(data), true)) return
+    data.assignmentsSha = digest
     assignmentsDigest = digest
   }
   const saveTags = () => {
@@ -137,7 +148,17 @@ exports.activate = (host) => {
       const fileData = tags.emptyData()
       tags.applyImport(fileData, found.parsed, 0)
       const fileDigest = tags.assignmentsDigest(fileData)
-      if (fileDigest !== tags.assignmentsDigest(data) && data.assignmentsSha !== fileDigest) {
+      const ownDigest = tags.assignmentsDigest(data)
+      // (the file itself is damaged or gone and only a copy was read - the version before, or one of an earlier day: a tags.json
+      // that still holds what it last wrote is intact and newer than any copy - it stays, and the file is written anew from it;
+      // a backup that is restored puts back the file itself)
+      if (found.file !== assignmentsFile && fileDigest !== ownDigest && ownDigest === data.assignmentsSha) {
+        log.warn(`[nfc] ${path.basename(assignmentsFile)} is damaged or missing: written anew from tags.json`)
+        assignmentsDigest = ''
+        saveTags()
+        return
+      }
+      if (fileDigest !== ownDigest && data.assignmentsSha !== fileDigest) {
         const done = tags.applyImport(data, found.parsed, Date.now(), { replace: true })
         log.warn(`[nfc] the tag assignments were taken over from ${path.basename(found.file)}: ${done.added} added, ${done.replaced} changed, ${done.removed} removed`)
         assignmentsDigest = ''
@@ -164,11 +185,15 @@ exports.activate = (host) => {
   let seq = Date.now()
   let paused = null // the tag whose medium was paused when it was taken off: { uid, at }
   let lastStart = { uid: '', at: 0 }
+  let startSeq = 0 // counts the starts of start(): one that waited sees whether a newer one came meanwhile
   // the start the display made for a tag: { uid, at, rss, generation } - the player's number of that playback, once known
   let handed = null
   // the tag whose medium a laying on tried to go on with ("play"), as long as nothing played since
   let resumeTried = null
-  let restarted = null // the tag in the field when the driver started again: { uid, until }
+  // the tags in the field of a reader whose driver started again: uid -> until (one for each: two readers can restart with a tag each,
+  // and a tag of one reader must not end the protection of the tag on another)
+  const restarted = new Map()
+  const noteRestarted = (uid) => restarted.set(uid, Date.now() + AGAIN_AFTER_RESTART_MS)
 
   // What a tag is called in the list (fixed phrases: the app translates the ones it knows)
   const KINDS = { library: 'SD-Karte', nas: 'NAS', spotify: 'Spotify', radio: 'Radio', rss: 'Podcast', tidal: 'TIDAL', jellyfin: 'Jellyfin', audible: 'Audible' }
@@ -196,6 +221,8 @@ exports.activate = (host) => {
   }
   // (what the player reports for a pause: Spotify says `pause`, mpv `playing`)
   const isPaused = (meta) => (meta?.currentPlayer === 'spotify' ? meta.pause === true : meta?.currentPlayer === 'mplayer' ? meta.playing === false && Boolean(meta.currentType) : false)
+  // (something can be heard: as the player's isActuallyPlaying)
+  const isPlaying = (meta) => (meta?.currentPlayer === 'spotify' ? meta.pause === false && !meta.spotifySilent : meta?.currentPlayer === 'mplayer' ? meta.playing === true : false)
 
   // ---- the spoken messages (voice.js) ----------------------------------------------------------------------------------------
   // What the box says when something is in the way of a tag's medium, when a tag has none, and when the battery is nearly empty. Each
@@ -217,18 +244,19 @@ exports.activate = (host) => {
     }
   }
   // The state of the network before a medium that needs it starts: said when there is no WLAN (or it is weak); the start is tried anyway
+  // (a NAS or Jellyfin in the home network: only no WLAN or a weak one, not the internet being away - see voice.networkMessage)
   const sayNetwork = async (media, settings) => {
     if (!voice.needsNetwork(media)) return false
-    const message = voice.NETWORK_MESSAGE[voice.networkVerdict(await getJson('/api/network'))]
+    const message = voice.networkMessage(voice.networkVerdict(await getJson('/api/network')), media)
     return message ? say(message, settings) : false
   }
   // A start that did not come in time (see watchStart): the NAS or Spotify is not reachable, else the content does not load - but not
-  // when the box's own limits (the playing time, a quiet time) refused it, and not when the tag is gone again
+  // when the box's own limits (the playing time, a quiet time, the day's limit of the tile) refused it, and not when the tag is gone again
   const sayNoStart = async (which) => {
     const media = which.media
     if (!voice.needsNetwork(media)) return
     const settings = (await host.settings()) ?? {}
-    if (voice.blockedByLimits(await getJson('/api/playtime'))) return
+    if (voice.blockedByLimits(await getJson('/api/playtime'), media)) return
     if (!inAnyField(which.uid) && removeMatters(settings, readers[0])) return
     if (await sayNetwork(media, settings)) return
     if (media.type === 'nas') {
@@ -239,13 +267,28 @@ exports.activate = (host) => {
     }
     await say('slowLoad', settings)
   }
-  // The battery: asked every half minute; said once when the charge falls to 10 % while the box is not charging
-  const lowBattery = voice.batteryWatch()
-  const watchBattery = async () => {
-    const hat = await getJson('/api/mupihat')
-    if (!lowBattery(hat)) return
+  // The battery: asked every half minute; said once when the charge falls to 10 % while the box is not charging - when somebody hears
+  // it: not in a quiet time or the evening, and while something plays or at the next tag laid on (voice.batteryNotice)
+  const battery = voice.batteryNotice()
+  const sayBattery = async (tagLaidOn = false) => {
+    if (!battery.owed) return
+    let evening = false
+    try {
+      // (the window of "Abends dunkler", hostApi 10 - an older box has no evening to ask for)
+      evening = typeof host.nightDim === 'function' && (await host.nightDim())?.dimmed === true
+    } catch {
+      evening = false
+    }
+    const quiet = voice.quietNow(await getJson('/api/playtime'))
+    const playing = !tagLaidOn && !quiet && !evening ? isPlaying(await playerMeta()) : false
+    if (!battery.fits({ quiet, evening, playing, tagLaidOn })) return
     const settings = (await host.settings()) ?? {}
-    await say('lowBattery', settings)
+    // (switched off: nothing is owed any more)
+    if (!voice.textOf(settings, 'lowBattery', 'de')) return battery.said()
+    if (await say('lowBattery', settings)) battery.said()
+  }
+  const watchBattery = async () => {
+    if (battery.reading(await getJson('/api/mupihat'))) await sayBattery()
   }
   const batteryTimer = setInterval(() => watchBattery().catch(() => undefined), 30000)
   batteryTimer.unref?.()
@@ -275,12 +318,18 @@ exports.activate = (host) => {
   // `force`: the start asked for on the page of tags ("Album abspielen") - the medium starts anew, whatever plays and whatever just started
   const start = async (tag, settings, reader = null, force = false) => {
     const now = Date.now()
+    // (the start is made after the network was said and a podcast's feed came - seconds: a newer start meanwhile, of another tag or of
+    // this one again, is the one that counts, and this one is dropped. The same report twice within SAME_TAG_MS is no newer start:
+    // the lock below ends it, and the first goes on)
+    const repeat = !force && lastStart.uid === tag.uid && now - lastStart.at < SAME_TAG_MS
+    const mine = repeat ? startSeq : ++startSeq
     // (first: a tag slipped off and laid on again within the 2 s goes on - the lock below is for the same report twice)
     if (!force && handed && handed.uid === tag.uid) {
       // (laid on again before its start came: taking it off counts no more)
       handed.gone = null
       await noteGeneration()
       const meta = await playerMeta()
+      if (mine !== startSeq) return
       // (only what this tag started: something else chosen meanwhile, or stopped, starts the tag's medium anew)
       if (ownPlayback(meta) && meta?.finished !== true) {
         // (laid on again while it plays - a USB reader at every hold: it plays on, it started from its beginning before)
@@ -314,8 +363,12 @@ exports.activate = (host) => {
     lastStart = { uid: tag.uid, at: now }
     paused = null
     resumeTried = null
-    const warned = await sayNetwork(tag.media, settings)
+    // (a podcast: its feed first - an episode saved on the box needs no network, see voice.networkNeed)
+    const podcast = tag.media.type === 'rss'
+    let warned = podcast ? false : await sayNetwork(tag.media, settings)
     const media = await playable(tag.media)
+    if (podcast && mine === startSeq) warned = await sayNetwork(media ?? tag.media, settings)
+    if (mine !== startSeq) return log.info(`[nfc] tag ${tag.uid}: a newer start came first`)
     if (!media) {
       // (a podcast whose feed did not come: the content does not load)
       if (!warned) await say('slowLoad', settings)
@@ -342,6 +395,10 @@ exports.activate = (host) => {
         return media.nasPath ? `musicsearch/nas/${enc(media.nasPath)}` : null
       case 'tidal':
         return media.id ? `musicsearch/tidal/${media.tidalKind === 'playlist' ? 'playlist' : 'album'}:${enc(media.id)}${coverQuery}` : null
+      case 'jellyfin':
+        return media.id ? `musicsearch/jellyfin/${media.jellyfinKind === 'playlist' || media.jellyfinKind === 'book' ? media.jellyfinKind : 'album'}:${enc(media.id)}${coverQuery}` : null
+      case 'audible':
+        return media.id ? `musicsearch/audible/book:${enc(media.id)}${coverQuery}` : null
       case 'spotify':
         if (media.playlistid) return `spotify/now/spotify:playlist:${enc(media.playlistid)}:0:0`
         if (media.id) return `spotify/now/spotify:album:${enc(media.id)}:0:0`
@@ -419,8 +476,9 @@ exports.activate = (host) => {
     if (result.disarm) armed = null
     if (result.kind === 'ignored') return
     if (!known || result.armedId || result.kind === 'assigned' || result.kind === 'flex' || now - savedAt >= SEEN_SAVE_MS) saveTags()
-    const again = restarted && restarted.uid === result.tag.uid && now < restarted.until
-    restarted = null
+    const again = now < (restarted.get(result.tag.uid) ?? 0)
+    restarted.delete(result.tag.uid)
+    for (const [uid, until] of restarted) if (until <= now) restarted.delete(uid)
     reader.inField = result.tag
     if (result.armedId) remember(result.armedId, { uid: result.tag.uid, id: tagNumberText({ reader: result.tag.tech === 'HID' ? 'hid' : '' }, result.tag.uid), title: result.tag.title, previous: result.previous ?? '', flex: result.kind === 'flex' })
     log.info(`[nfc] tag ${result.tag.uid}: ${result.kind}${result.tag.title ? ` (${result.tag.title})` : ''}`)
@@ -429,12 +487,16 @@ exports.activate = (host) => {
     if (result.kind !== 'unknown' && settings.playOnTag !== false) await start(result.tag, settings, reader)
     // (a tag without a medium: the box says so - not while the assignment of one waits for it, then it is being given its medium)
     else if (result.kind === 'unknown' && !result.armedId) await say('tagNew', settings)
+    // (a battery message held back: a child is at the box now)
+    await sayBattery(true)
   }
 
   const onGone = async (reader) => {
     const tag = reader.inField
     reader.inField = null
     if (!tag?.media) return
+    // (it lies on another reader too: taken off one of them, it is not gone)
+    if (inAnyField(tag.uid)) return
     const settings = (await host.settings()) ?? {}
     if (settings.onRemove !== 'pause' && settings.onRemove !== 'stop') return
     // (laid on only for a moment: its start the display has not taken yet is not made)
@@ -448,6 +510,8 @@ exports.activate = (host) => {
       if (handed && handed.uid === tag.uid && handed.generation === null && Date.now() - handed.at <= handed.within && !inAnyField(tag.uid)) handed.gone = settings.onRemove
       return
     }
+    // (laid on again - on this reader or another - while the player was asked)
+    if (inAnyField(tag.uid)) return
     resumeTried = null
     if (settings.onRemove === 'pause') {
       if (await player('pause')) paused = { uid: tag.uid, at: Date.now() }
@@ -519,7 +583,7 @@ exports.activate = (host) => {
               await reader.runner?.stop()
               // (the tag on the reader is reported again by the new driver: no new start of what plays - not for a USB reader,
               // which says only when a card comes, never when it goes: its last card lies there no longer)
-              if (reader.runner && reader.inField && !isUsb(reader.config.reader)) restarted = { uid: reader.inField.uid, until: Date.now() + AGAIN_AFTER_RESTART_MS }
+              if (reader.runner && reader.inField && !isUsb(reader.config.reader)) noteRestarted(reader.inField.uid)
             }),
         )
         readers = configs.map((config) => {
@@ -540,11 +604,13 @@ exports.activate = (host) => {
             command: 'python3',
             args: [path.join(dir, driverScript(config)), ...driverArgs(config, chip)],
             onEvent: (event) => onEvent(reader, event),
+            // (the tests hand in a made-up program; the box has none)
+            ...(typeof host.spawnFn === 'function' ? { spawnFn: host.spawnFn } : {}),
             onEnd: (reason, isNew = true) => {
               // (the driver says what is wrong before it ends; if it did not - it fell over - this is all there is to say)
               if (view.phase !== 'error') Object.assign(view, { phase: 'error', errorCode: 'other' })
               view.inField = false
-              if (reader.inField && !isUsb(config.reader)) restarted = { uid: reader.inField.uid, until: Date.now() + AGAIN_AFTER_RESTART_MS }
+              if (reader.inField && !isUsb(config.reader)) noteRestarted(reader.inField.uid)
               reader.inField = null
               if (isNew) log.warn(`[nfc] reader program${readers.length > 1 ? ` of reader ${config.slot}` : ''}: ${reason}`)
             },
@@ -690,6 +756,9 @@ exports.activate = (host) => {
           failed: 'I2C ließ sich nicht einschalten.',
         },
         off: {
+          // (the MuPiHAT's battery chip is on this bus: without it the box knows no charge any more and does not shut down when the
+          // battery is empty)
+          refused: () => (hatActive() ? 'I2C bleibt eingeschaltet: Der MuPiHAT braucht es für den Akku.' : ''),
           done: (now) => !portIsOn(now),
           // (every line that has the bus on is set to off: the bus is on while one of them is)
           commands: (file) => [...new Set(['i2c_arm', ...i2cKeysOn(readText(file))])].map((key) => inject(`dtparam=${key}=`, `dtparam=${key}=off`, file)),
@@ -741,24 +810,37 @@ exports.activate = (host) => {
     const names = new Set([target, ...uartConsoles(cmdlineText(), target)].filter((n) => /^(?:serial|ttyS|ttyAMA)\d+$/.test(n)))
     return [...names].map((n) => `G_SUDO /boot/dietpi/func/dietpi-set_hardware serialconsole disable ${n}`)
   }
+  // (the MuPiHAT is switched on in the box's settings: mupiboxconfig mupihat.hat_active)
+  const hatActive = () => {
+    const active = host.config?.()?.mupihat?.hat_active
+    return active === true || active === 'true'
+  }
+  // (one action after the other: two at once read and wrote config.txt over each other)
+  let portChain = Promise.resolve()
+  const portAction = async (port, action, step, res) => {
+    const refused = step.refused?.() ?? ''
+    if (refused) return res.status(409).json({ ok: false, error: 'refused', message: refused })
+    if (step.done(await port.now())) return res.json({ ok: true, message: step.already })
+    const file = bootConfigFile()
+    if (!file) return res.status(500).json({ ok: false, error: 'no_config', message: step.failed })
+    const error = await new Promise((resolve) => asDietpi(step.commands(file), resolve))
+    if (error || !step.worked(await port.now())) {
+      log.warn(`[nfc] ${port.name} (${action}) did not work: ${error?.message ?? 'the result is not in the configuration'}`)
+      return res.status(500).json({ ok: false, error: 'failed', message: step.failed })
+    }
+    log.info?.(`[nfc] ${port.name} (${action}) done in the boot configuration (the box has to restart)`)
+    res.json({ ok: true, message: step.said })
+  }
   for (const port of ports) {
     host.route('get', `/${port.route}state`, async (_req, res) => res.json({ rows: port.rows(await port.now()) }), { session: true })
     for (const [action, step] of Object.entries(port.actions)) {
       host.route(
         'post',
         `/${port.route}${action}`,
-        async (_req, res) => {
-          if (step.done(await port.now())) return res.json({ ok: true, message: step.already })
-          const file = bootConfigFile()
-          if (!file) return res.status(500).json({ ok: false, error: 'no_config', message: step.failed })
-          asDietpi(step.commands(file), async (error) => {
-            if (error || !step.worked(await port.now())) {
-              log.warn(`[nfc] ${port.name} (${action}) did not work: ${error?.message ?? 'the result is not in the configuration'}`)
-              return res.status(500).json({ ok: false, error: 'failed', message: step.failed })
-            }
-            log.info?.(`[nfc] ${port.name} (${action}) done in the boot configuration (the box has to restart)`)
-            res.json({ ok: true, message: step.said })
-          })
+        (_req, res) => {
+          const run = portChain.then(() => portAction(port, action, step, res))
+          portChain = run.catch(() => undefined)
+          return run
         },
         { session: true },
       )
@@ -1001,8 +1083,9 @@ exports.activate = (host) => {
     res.json(command ? { seq: command.seq, media: command.media } : {})
   })
 
-  // (the reports of a driver, handed in directly: for the tests; `slot` is the reader that reports, the first by default)
-  return { feed: (event, slot = 1) => onEvent(readers.find((reader) => reader.config.slot === slot) ?? readers[0], event) }
+  // (the reports of a driver, handed in directly: for the tests; `slot` is the reader that reports, the first by default.
+  // checkBattery: one reading of the battery, as the timer makes it every half minute)
+  return { feed: (event, slot = 1) => onEvent(readers.find((reader) => reader.config.slot === slot) ?? readers[0], event), checkBattery: watchBattery }
 }
 
 exports._test = { RESUME_WITHIN_MS }

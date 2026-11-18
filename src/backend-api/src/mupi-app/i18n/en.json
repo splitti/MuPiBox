@@ -4469,5 +4469,11 @@
  "„Älteste zuerst“ ist die Reihenfolge der Serie.": "“Oldest first” is the order of the series.",
  "In deinem Konto gehört kein Hörbuch zu dieser Serie.": "No audiobook in your account belongs to this series.",
  "Lade die Hörbücher von Audible …": "Loading the audiobooks from Audible …",
- "Dafür braucht es die NFC-Extension ab Version 0.8 – bitte unter Erweiterungen aktualisieren.": "This needs the NFC extension version 0.8 or later – please update it under Extensions."
+ "Dafür braucht es die NFC-Extension ab Version 0.8 – bitte unter Erweiterungen aktualisieren.": "This needs the NFC extension version 0.8 or later – please update it under Extensions.",
+ "Der NFC-Leser ist nicht bereit – bitte unter Einstellungen › NFC-Extension einrichten.": "The NFC reader is not ready – please set it up under Settings › NFC extension.",
+ "Kein OLED-Display bereit, deshalb bleibt das DSI-Display an": "No OLED display ready, so the DSI display stays on",
+ "Ein DSI-Display ist angeschlossen, deshalb bleibt es an": "A DSI display is connected, so it stays on",
+ "I2C bleibt eingeschaltet: Der MuPiHAT braucht es für den Akku.": "I2C stays on: the MuPiHAT needs it for the battery.",
+ "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "When nothing plays or playback is paused, the display switches off after this time (this saves it). A start, a tag or a tap on \"Show the address of the box\" wakes it.",
+ "Bis zu drei NFC-Leser lesen Tags und Karten, auch gleichzeitig: der PN5180 (ISO 14443 A und ISO 15693), der RC522 und der PN532 (ISO 14443 A) oder ein USB-Leser, der die Kartennummer wie eine Tastatur tippt (auch ein USB-Barcodeleser). Jeder Tag kann ein Album, ein Hörspiel, einen Sender oder einen Podcast starten: In der Bibliothek das Medium öffnen, „NFC-Tag“ antippen und den Tag auflegen. Die Einstellungen stehen unter Einstellungen › NFC-Extension.": "Up to three NFC readers read tags and cards, also at the same time. Supported readers: PN5180, RC522, PN532 and USB reader"
 }

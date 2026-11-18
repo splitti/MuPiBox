@@ -80,6 +80,46 @@ describe('the check of the installed extensions at the start', () => {
       assert.deepEqual([readState()[id].enabled, readState()[id].problem?.code], [false, 'manifest_missing'], id)
   })
 
+  it('says which ones it switched off (the player starts again when one of them has a part there)', async () => {
+    put('fine')
+    put('future', { hostApi: 99 })
+    state({ fine: on(), future: on() })
+    assert.deepEqual(await ext.checkInstalledExtensions(deps()), ['future'])
+    assert.deepEqual(await ext.checkInstalledExtensions(deps()), [])
+  })
+
+  it('finds what one made for a newer box set up as root, for the cleanup - and only names of its own', async () => {
+    put('future', {
+      hostApi: 99,
+      player: 'player.js',
+      system: {
+        units: [{ name: 'mpx-future.service', file: 'a.service' }, { name: 'ssh.service', file: 'b.service' }],
+        udev: [{ name: '99-mpx-future.rules', file: 'x.rules' }, { name: '99-other.rules', file: 'y.rules' }, null],
+      },
+    })
+    assert.equal(await ext.readManifest('future'), null)
+    assert.deepEqual(await ext._forTests.setUpBy('future'), {
+      units: [{ name: 'mpx-future.service' }],
+      udev: [{ name: '99-mpx-future.rules' }],
+      player: true,
+    })
+    assert.deepEqual(await ext._forTests.setUpBy('nothing-here'), { units: [], udev: [], player: false })
+    assert.deepEqual(await ext._forTests.setUpBy('../x'), { units: [], udev: [], player: false })
+  })
+
+  it('writes the changes of state.json one after the other', async () => {
+    state({})
+    await Promise.all(
+      ['a', 'b', 'c', 'd'].map((id) =>
+        ext._forTests.changeState((s) => {
+          s[id] = on()
+        }),
+      ),
+    )
+    assert.deepEqual(Object.keys(readState()).sort(), ['a', 'b', 'c', 'd'])
+    assert.equal(await ext._forTests.changeState(() => false), false)
+  })
+
   it('switches off one that the box does not accept any more, and one whose files are gone', async () => {
     put('strict', { ui: { title: 'T', items: [{ type: 'action', label: 'Go' }] }, hostApi: 7 })
     put('lost', { api: 'api.js' }, {})
@@ -143,5 +183,104 @@ describe('the check of the installed extensions at the start', () => {
       const m = JSON.parse(readFileSync(path.join(root, id, 'manifest.json'), 'utf8'))
       assert.equal(ext.checkManifest(m, names(id)), null, id)
     }
+  })
+})
+
+describe('the start without the kiosk when the extension that set it is not on', () => {
+  // (a box: its configuration, DietPi's autostart and the commands run - nothing here runs sudo)
+  const box = (headless: unknown, index: number | null, ok = true) => {
+    const b = {
+      config: { mupibox: { headless, version: '5.1.0' } } as Record<string, unknown>,
+      ran: [] as string[],
+      deps: {} as Parameters<Ext['restoreKioskStart']>[0],
+      io: {
+        run: async (cmd: string, args: string[]) => {
+          b.ran.push([cmd, ...args].join(' '))
+          return { ok, out: ok ? '' : 'sudo: a password is required' }
+        },
+        readAutostartIndex: () => index,
+      },
+    }
+    b.deps = {
+      getMupiboxConfig: () => b.config as never,
+      updateMupiboxConfig: async (mutate) => {
+        const copy = JSON.parse(JSON.stringify(b.config))
+        if ((mutate as (cfg: Record<string, unknown>) => unknown)(copy) !== false) b.config = copy
+      },
+    }
+    return b
+  }
+  const headlessOf = (b: ReturnType<typeof box>) => (b.config.mupibox as Record<string, unknown>).headless
+
+  beforeEach(async () => {
+    ext ??= await import('./app-api/extensions')
+    rmSync(dir, { recursive: true, force: true })
+    mkdirSync(dir, { recursive: true })
+  })
+
+  it('leaves everything alone when the flag is not set', async () => {
+    const b = box(false, 0)
+    assert.equal(await ext.restoreKioskStart(b.deps, b.io), false)
+    assert.deepEqual(b.ran, [])
+    assert.equal(headlessOf(b), false)
+  })
+
+  it('leaves everything alone while the extension is on (it switches the start itself)', async () => {
+    put('oled')
+    state({ oled: on() })
+    const b = box(true, 0)
+    assert.equal(await ext.restoreKioskStart(b.deps, b.io), false)
+    assert.deepEqual(b.ran, [])
+    assert.equal(headlessOf(b), true)
+  })
+
+  it('brings the kiosk back when the extension is off, removed or broken', async () => {
+    for (const setup of [
+      () => {
+        put('oled')
+        state({ oled: { version: '1.0.0', enabled: false } })
+      },
+      () => state({}),
+      () => {
+        put('oled', { hostApi: 99 })
+        state({ oled: on() })
+      },
+    ]) {
+      rmSync(dir, { recursive: true, force: true })
+      mkdirSync(dir, { recursive: true })
+      setup()
+      const b = box(true, 0)
+      assert.equal(await ext.restoreKioskStart(b.deps, b.io), true)
+      assert.deepEqual(b.ran, ['sudo -n /boot/dietpi/dietpi-autostart 11'])
+      assert.equal(headlessOf(b), undefined)
+      assert.equal((b.config.mupibox as Record<string, unknown>).version, '5.1.0')
+    }
+  })
+
+  it('brings back the autostart the extension kept', async () => {
+    mkdirSync(path.join(dir, 'data', 'oled'), { recursive: true })
+    writeFileSync(path.join(dir, 'data', 'oled', 'autostart.json'), JSON.stringify({ index: 7 }))
+    const b = box(true, 0)
+    assert.equal(await ext.restoreKioskStart(b.deps, b.io), true)
+    assert.deepEqual(b.ran, ['sudo -n /boot/dietpi/dietpi-autostart 7'])
+    // (a kept value that is no autostart: the kiosk)
+    writeFileSync(path.join(dir, 'data', 'oled', 'autostart.json'), JSON.stringify({ index: 0 }))
+    const c = box(true, 0)
+    await ext.restoreKioskStart(c.deps, c.io)
+    assert.deepEqual(c.ran, ['sudo -n /boot/dietpi/dietpi-autostart 11'])
+  })
+
+  it('only clears the flag when the autostart is not the one without the kiosk (a backup from another box)', async () => {
+    const b = box(true, 11)
+    assert.equal(await ext.restoreKioskStart(b.deps, b.io), true)
+    assert.deepEqual(b.ran, [])
+    assert.equal(headlessOf(b), undefined)
+  })
+
+  it('keeps the flag when the autostart could not be set (tried again at the next start)', async () => {
+    const b = box(true, 0, false)
+    assert.equal(await ext.restoreKioskStart(b.deps, b.io), false)
+    assert.deepEqual(b.ran, ['sudo -n /boot/dietpi/dietpi-autostart 11'])
+    assert.equal(headlessOf(b), true)
   })
 })

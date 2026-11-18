@@ -230,12 +230,27 @@ function buildState({ config, play, ui, net, date, now, version, language }) {
     return { ...base, view: 'info', ssid: net.lan ? '' : (net.ssid ?? ''), ip: net.ip ?? '', version: `OLED ${version}`, infoLeft: Math.max(0, (ui.infoUntil - now) / INFO_MS) }
   }
   if (ui.overlay && now < ui.overlay.until) return { ...base, view: 'overlay', overlay: ui.overlay.kind, volume: ui.overlay.volume ?? play.volume }
-  const something = play.player !== '' && (play.playing || play.title !== '' || play.artist !== '' || play.album !== '')
-  if (something) return { ...base, view: 'play' }
-  // (nothing plays: after the time the user chose the display goes off, a button, a tag or a tap wakes it)
+  if (play.player !== '' && play.playing) return { ...base, view: 'play' }
+  // (nothing plays - a paused medium too, its still picture would burn in: after the time the user chose the display goes off, a
+  // button, a tag or a tap wakes it)
   if (config.sleepAfter > 0 && ui.idleSince && now - ui.idleSince >= config.sleepAfter * 60000 && !(ui.wake && now < ui.wake)) return { ...base, view: 'off' }
-  return { ...base, view: 'idle' }
+  const something = play.player !== '' && (play.title !== '' || play.artist !== '' || play.album !== '')
+  return { ...base, view: something ? 'play' : 'idle' }
 }
+
+/** Does Spotify play, as the player's /local tells it (its own pause flag; `spotifySilent` while the box's Spotify device is quiet)? */
+function spotifyMayPlay(local) {
+  return local?.currentPlayer === 'spotify' && local.pause !== true && local.spotifySilent !== true
+}
+
+/** A DSI display is plugged in: one of the DSI connectors of /sys/class/drm says "connected". `connectors`: [{ name, status }]. */
+function dsiConnected(connectors) {
+  return (Array.isArray(connectors) ? connectors : []).some((c) => /DSI/.test(String(c?.name ?? '')) && String(c?.status ?? '').trim() === 'connected')
+}
+
+// (why the setting "headless" was not switched on - shown in the status block)
+const HEADLESS_NO_OLED = 'Kein OLED-Display bereit, deshalb bleibt das DSI-Display an'
+const HEADLESS_DSI = 'Ein DSI-Display ist angeschlossen, deshalb bleibt es an'
 
 // ---- I2C: is the bus on (the lines of the status block) ------------------------------------------------------------------------------
 const I2C_KEYS = ['i2c_arm', 'i2c1', 'i2c']
@@ -328,5 +343,9 @@ module.exports = {
   errorText,
   kioskRow,
   headlessCommands,
+  spotifyMayPlay,
+  dsiConnected,
+  HEADLESS_NO_OLED,
+  HEADLESS_DSI,
   I2C_KEYS,
 }

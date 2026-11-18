@@ -979,6 +979,8 @@ let currentAudibleChapters = []
 let audibleBook = ''
 const AUDIBLE_API = 'http://127.0.0.1:8200/api/audible'
 const audibleAt = { index: -1, at: 0 }
+// mpv's last time in the file that plays: a jump back to its beginning is "repeat one" starting the file again
+const audibleLoop = { last: 0 }
 // A list loaded anew (a start, a seek, a jump): the chapter it goes to, until mpv plays there - meanwhile mpv's place in the
 // list can still be the old one (or 0 between loading the list and choosing the entry). Also no new song for the grace
 // "until the end of the song" and no report of a place until then.
@@ -1004,8 +1006,21 @@ player.on('track-change', () => {
   currentMeta.positionSeconds = audibleIndex() === audibleAt.index ? audibleAt.at : 0
 })
 player.on('time_pos', (seconds) => {
+  // (a list loaded anew - a seek, a jump - starts its file at 0 too: no repeat; only once it plays there)
+  if (audiblePending) audibleLoop.last = 0
   // (mpv plays the chapter the list was loaded for, its file loaded after the reload: arrived)
   if (audiblePending?.loaded && Number(seconds) > 0 && (player.trackIndex?.() ?? -1) === audiblePending.index) audiblePending = null
+  // "Repeat one" of a chapter begun inside (going on, a seek): mpv repeats its file, which starts at that place - once it
+  // jumped back to the file's beginning, the chapter is loaded anew from its own beginning (repeated whole from then on)
+  const t = Number(seconds) || 0
+  if (isAudible() && currentMeta.repeatMode === 'one' && !audibleReloading() && audibleAt.index >= 0 && audibleAt.index === audibleIndex()) {
+    if (audibleLoop.last > 5 && t < 2) {
+      audibleLoop.last = 0
+      audiblePlayFrom(audibleAt.index, 0)
+      return
+    }
+  }
+  audibleLoop.last = t
 })
 // The book from chapter <index> (0-based) at <at> seconds into it: the whole list anew, that chapter starting there.
 // fromStart: the book's own start (a start held while paused begins here; a seek meanwhile waits for it)
@@ -1743,6 +1758,7 @@ function tileTickStep() {
         tileState.graceMode = graceMode
         tileState.stopUnlessEpisode = stopUnlessEpisode(pt.graceMode)
         tileState.graceEndsAt = Date.now() + graceCapMs(pt)
+        endRepeatForGrace()
         console.log(`${now.toLocaleString()}: [TileTime] Limit of ${key} reached (${a.minutes} min). Letting the ${graceMode} finish.`)
         writePlaytimeCheckpoint()
       } else if (isActuallyPlaying()) {
@@ -2088,6 +2104,7 @@ function playtimeTickStep() {
         playtimeState.graceMode = graceMode
         playtimeState.stopUnlessEpisode = stopUnlessEpisode(cfg.graceMode)
         playtimeState.graceEndsAt = Date.now() + graceCapMs(cfg)
+        endRepeatForGrace()
         console.log(
           `${now.toLocaleString()}: [Playtime] Daily limit reached (${limit} min for ${today.dayKey}${bonus > 0 ? `, +${bonus} bonus` : ''}). Letting the ${graceMode} finish.`,
         )
@@ -2163,6 +2180,7 @@ function quietHoursTickStep() {
         quietHoursState.graceMode = graceMode
         quietHoursState.stopUnlessEpisode = stopUnlessEpisode(cfg.graceMode)
         quietHoursState.graceEndsAt = Date.now() + graceCapMs(cfg)
+        endRepeatForGrace()
         console.log(
           `${now.toLocaleString()}: [QuietHours] Entered window ${window.from}-${window.to}${window.label ? ` (${window.label})` : ''}. Letting the ${graceMode} finish.`,
         )
@@ -3017,24 +3035,60 @@ function resetLocalShuffle() {
   }
 }
 
+// Spotify keeps its repeat over playbacks and devices: possibly still on - set by the box, a switch-off that failed or was not
+// sent while Spotify blocked, a restart of this process that forgot it. Switched off after the box's next Spotify start.
+let spotifyRepeatMaybeOn = true
+function clearSpotifyRepeat() {
+  if (!spotifyRepeatMaybeOn || currentMeta.repeatMode !== 'off' || spotifyBlockedUntil()) return
+  spotifyApi.setRepeat('off', ownSpotifyDeviceOptions()).then(
+    () => {
+      if (currentMeta.repeatMode === 'off') spotifyRepeatMaybeOn = false
+    },
+    () => undefined,
+  )
+}
+// (a limit, the quiet hours or a tile's time running out with "let the song / album finish": a repeat would never let it
+// finish - mpv never reaches the end of the song or the list - so it ends, and stays off until the grace is over)
+const inGrace = () => playtimeState.state === 'grace' || quietHoursState.state === 'grace' || tileState.state === 'grace'
+function endRepeatForGrace() {
+  if (currentMeta.repeatMode !== 'off' || currentMeta.repeat) setRepeatMode('off')
+}
+
 // Repeat: an album of the box by the engine (mpv-wrapper.js), Spotify by its own setting
 function setRepeatMode(mode) {
   if (mode !== 'off' && mode !== 'all' && mode !== 'one') return
-  if (currentMeta.currentPlayer === 'mplayer') {
-    const supported = typeof player.setRepeatMode === 'function'
-    currentMeta.repeatMode = supported ? mode : 'off'
-    currentMeta.repeat = supported && mode !== 'off'
-    player.setRepeatMode?.(mode)
-    log.debug(`${now()}: [Spotify Control] Repeat of the album: ${mode}`)
+  if (mode !== 'off' && inGrace()) {
+    log.debug(`${now()}: [Spotify Control] Repeat ${mode} not set: the grace of a limit runs`)
     return
   }
+  if (currentMeta.currentPlayer === 'mplayer') {
+    const supported = typeof player.setRepeatMode === 'function'
+    // (a CUE album is one file: "one" would repeat the whole album - as shuffle, not for it)
+    const next = !supported || (mode === 'one' && isCuePlayback()) ? 'off' : mode
+    currentMeta.repeatMode = next
+    currentMeta.repeat = next !== 'off'
+    audibleLoop.last = 0
+    player.setRepeatMode?.(next)
+    log.debug(`${now()}: [Spotify Control] Repeat of the album: ${next}`)
+    return
+  }
+  forgetSpotifyState()
+  // (what /local says is what Spotify was told: not while it blocks, and back when it refused)
+  if (spotifyBlockedUntil()) return
+  const before = { repeatMode: currentMeta.repeatMode, repeat: currentMeta.repeat }
   currentMeta.repeatMode = mode
   currentMeta.repeat = mode !== 'off'
-  forgetSpotifyState()
-  if (spotifyBlockedUntil()) return
+  if (mode !== 'off') spotifyRepeatMaybeOn = true
   spotifyApi.setRepeat(mode === 'one' ? 'track' : mode === 'all' ? 'context' : 'off', ownSpotifyDeviceOptions()).then(
-    () => log.debug(`${now()}: [Spotify Control] Repeat: ${mode}`),
-    (err) => handleSpotifyError(err, 'repeat'),
+    () => {
+      log.debug(`${now()}: [Spotify Control] Repeat: ${mode}`)
+      if (mode === 'off' && currentMeta.repeatMode === 'off') spotifyRepeatMaybeOn = false
+    },
+    (err) => {
+      if (currentMeta.repeatMode === mode) Object.assign(currentMeta, before)
+      if (mode === 'off') spotifyRepeatMaybeOn = true
+      handleSpotifyError(err, 'repeat')
+    },
   )
 }
 // (every playback starts without repeat, as without shuffle: a track that repeats must not hold the next album back)
@@ -3043,8 +3097,17 @@ function resetRepeat() {
   const spotify = currentMeta.currentPlayer !== 'mplayer'
   currentMeta.repeatMode = 'off'
   currentMeta.repeat = false
+  audibleLoop.last = 0
   player.setRepeatMode?.('off')
-  if (spotify && !spotifyBlockedUntil()) spotifyApi.setRepeat('off', ownSpotifyDeviceOptions()).catch(() => undefined)
+  // (Spotify: also after the next start of the box's own player, see clearSpotifyRepeat - this one may come too early)
+  if (spotify) spotifyRepeatMaybeOn = true
+  if (spotify && !spotifyBlockedUntil())
+    spotifyApi.setRepeat('off', ownSpotifyDeviceOptions()).then(
+      () => {
+        if (currentMeta.repeatMode === 'off') spotifyRepeatMaybeOn = false
+      },
+      () => undefined,
+    )
 }
 
 function shuffleon() {
@@ -3148,7 +3211,7 @@ async function playOnDevice(playOptions) {
     activeDevice = own
     playOptions = { ...playOptions, device_id: own }
   }
-  return spotifyApi.play(playOptions).catch(async (err) => {
+  const started = spotifyApi.play(playOptions).catch(async (err) => {
     if (err?.statusCode !== 404) throw err
     // the display's device (or, without one, no active device at all): the display signs in anew first
     if (playOptions.device_id === displaySpotifyDevice) {
@@ -3166,6 +3229,14 @@ async function playOnDevice(playOptions) {
     if (activeDevice === playOptions.device_id) activeDevice = null
     throw err
   })
+  // (a repeat Spotify may still have from before: off once the box's player plays - a moment later, it is the active one then)
+  started.then(
+    () => {
+      if (generation === playbackGeneration) setTimeout(clearSpotifyRepeat, 1500).unref?.()
+    },
+    () => undefined,
+  )
+  return started
 }
 
 function playMe() {
@@ -5223,7 +5294,7 @@ app.use((req, res) => {
   if (triggerSource !== null) {
     // (louder, quieter, a jump within the track, shuffle, repeat, pause, stop: nothing new plays - a button or the rotary
     // encoder pressed while the child browsed the library took the display to the player at every press)
-    if (!/\/(?:[+-]\d{1,2}|=\d{1,3}|seek[+-]\d+|seekpos:[^/]*|shuffle(?:on|off)|repeat(?:on|off)|pause|stop|shutoff)$/.test(pathname)) {
+    if (!/\/(?:[+-]\d{1,2}|=\d{1,3}|seek[+-]\d+|seekpos:[^/]*|shuffle(?:on|off)|repeat(?:on|off|all|one)|pause|stop|shutoff)$/.test(pathname)) {
       currentMeta.triggerSource = triggerSource
       currentMeta.triggerAt = Date.now()
     }

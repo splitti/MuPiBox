@@ -4453,5 +4453,11 @@
  "„Älteste zuerst“ ist die Reihenfolge der Serie.": "«Eldste først» er rekkefølgen i serien.",
  "In deinem Konto gehört kein Hörbuch zu dieser Serie.": "Ingen lydbok på kontoen din hører til denne serien.",
  "Lade die Hörbücher von Audible …": "Laster inn lydbøkene fra Audible …",
- "Dafür braucht es die NFC-Extension ab Version 0.8 – bitte unter Erweiterungen aktualisieren.": "Dette krever NFC-utvidelsen fra versjon 0.8 – oppdater den under Utvidelser."
+ "Dafür braucht es die NFC-Extension ab Version 0.8 – bitte unter Erweiterungen aktualisieren.": "Dette krever NFC-utvidelsen fra versjon 0.8 – oppdater den under Utvidelser.",
+ "Der NFC-Leser ist nicht bereit – bitte unter Einstellungen › NFC-Extension einrichten.": "NFC-leseren er ikke klar – sett den opp under Innstillinger › NFC-utvidelse.",
+ "Kein OLED-Display bereit, deshalb bleibt das DSI-Display an": "Ingen OLED-skjerm er klar, derfor forblir DSI-skjermen på",
+ "Ein DSI-Display ist angeschlossen, deshalb bleibt es an": "En DSI-skjerm er koblet til, derfor forblir den på",
+ "I2C bleibt eingeschaltet: Der MuPiHAT braucht es für den Akku.": "I2C forblir på: MuPiHAT trenger det for batteriet.",
+ "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Når ingenting spilles eller avspillingen er satt på pause, slås skjermen av etter denne tiden (det skåner den). En start, en tagg eller et trykk på «Vis adressen til boksen» vekker den.",
+ "Bis zu drei NFC-Leser lesen Tags und Karten, auch gleichzeitig: der PN5180 (ISO 14443 A und ISO 15693), der RC522 und der PN532 (ISO 14443 A) oder ein USB-Leser, der die Kartennummer wie eine Tastatur tippt (auch ein USB-Barcodeleser). Jeder Tag kann ein Album, ein Hörspiel, einen Sender oder einen Podcast starten: In der Bibliothek das Medium öffnen, „NFC-Tag“ antippen und den Tag auflegen. Die Einstellungen stehen unter Einstellungen › NFC-Extension.": "Opptil tre NFC-lesere leser tagger og kort, også samtidig: PN5180 (ISO 14443 A og ISO 15693), RC522 og PN532 (ISO 14443 A) eller en USB-leser som taster inn kortnummeret som et tastatur (også en USB-strekkodeleser). Hver tagg kan starte et album, et hørespill, en stasjon eller en podkast: åpne mediet i biblioteket, trykk på «NFC-tagg» og legg taggen på. Innstillingene finnes under Innstillinger › NFC-utvidelse."
 }

@@ -936,3 +936,286 @@ test('the spoken messages: a tag without a medium, no WLAN before a station, and
     global.fetch = realFetch
   }
 })
+
+// ---- review 0.12.3 -------------------------------------------------------------------------------------------------------------
+
+const importTags = (routes, list) => call(routes['post /tagimport'], { body: { file: { tags: list } } })
+
+test('start: a damaged or missing file of the assignments does not bring back an older copy over an intact tags.json', async () => {
+  const { host, routes, dataDir } = makeHost({ reader: 'none' })
+  require('../api.js').activate(host)
+  await importTags(routes, [{ uid: '04A1B2C3', media: radio }])
+  await importTags(routes, [{ uid: '04A1B2C4', media: book }])
+  const bak = fs.readFileSync(`${assignmentsPath(dataDir)}.bak`, 'utf8')
+  assert.strictEqual(JSON.parse(bak).count, 1)
+  for (const damage of ['damaged', 'missing']) {
+    if (damage === 'damaged') fs.writeFileSync(assignmentsPath(dataDir), '{"format":"mupibox-nfc-ta')
+    else fs.rmSync(assignmentsPath(dataDir))
+    const again = withRoutes(host)
+    require('../api.js').activate(again.host)
+    assert.deepStrictEqual((await call(again.routes['get /tags'])).body.items.map((i) => i.id).sort(), ['04A1B2C3', '04A1B2C4'], damage)
+    assert.strictEqual(JSON.parse(fs.readFileSync(assignmentsPath(dataDir), 'utf8')).count, 2, `${damage}: the file is written anew`)
+    assert.strictEqual(fs.readFileSync(`${assignmentsPath(dataDir)}.bak`, 'utf8'), bak, `${damage}: the good copy is not replaced by the damaged file`)
+  }
+})
+
+test('a file of the assignments that cannot be written: tags.json does not claim it, and the next start keeps the newer assignments', async () => {
+  const { host, routes, dataDir } = makeHost({ reader: 'none' })
+  require('../api.js').activate(host)
+  await importTags(routes, [{ uid: '04A1B2C3', media: radio }])
+  const realRename = fs.renameSync
+  fs.renameSync = (from, to) => {
+    if (String(to).endsWith('tag-assignments.json')) throw new Error('no space left on device')
+    return realRename(from, to)
+  }
+  try {
+    await importTags(routes, [{ uid: '04A1B2C4', media: book }])
+  } finally {
+    fs.renameSync = realRename
+  }
+  assert.strictEqual(JSON.parse(fs.readFileSync(assignmentsPath(dataDir), 'utf8')).count, 1, 'the older file is still there')
+  const again = withRoutes(host)
+  require('../api.js').activate(again.host)
+  assert.deepStrictEqual((await call(again.routes['get /tags'])).body.items.map((i) => i.id).sort(), ['04A1B2C3', '04A1B2C4'])
+  assert.strictEqual(JSON.parse(fs.readFileSync(assignmentsPath(dataDir), 'utf8')).count, 2, 'and written now')
+})
+
+test('a start that waited (the network said, a feed) is dropped when a newer one came meanwhile; the same report twice starts once', async () => {
+  const realFetch = global.fetch
+  global.fetch = async (url) => {
+    const u = String(url)
+    if (u.startsWith('http://api.test/api/network')) return { ok: true, json: async () => ({ onlinestate: 'offline', wifi: '', ip: '' }) }
+    if (u.startsWith('http://player.test/local')) return { ok: true, json: async () => ({ currentPlayer: 'mplayer', currentType: 'local', playing: false, generation: 1 }) }
+    return { ok: true, json: async () => ({}) }
+  }
+  try {
+    const box = async () => {
+      const { host, routes } = makeHost({ reader: 'none', onRemove: 'nothing', playOnTag: true })
+      // (the voice says it, and answers when it is said)
+      const waiting = []
+      host.say = () => new Promise((resolve) => waiting.push(() => resolve(true)))
+      const nfc = require('../api.js').activate(host)
+      await later(0)
+      feedReady(nfc)
+      await importTags(routes, [{ uid: '0A0A0A0A', media: radio }, { uid: '0B0B0B0B', media: book }])
+      return { nfc, routes, waiting }
+    }
+    // the station: "no WLAN" is being said - meanwhile the child lays the book on
+    const one = await box()
+    one.nfc.feed({ event: 'tag', tech: 'ISO14443A', uid: '0A0A0A0A' })
+    await later()
+    assert.strictEqual(one.waiting.length, 1)
+    one.nfc.feed({ event: 'tag', tech: 'ISO14443A', uid: '0B0B0B0B' })
+    await later()
+    one.waiting.shift()()
+    await later()
+    assert.strictEqual((await call(one.routes['get /pending'])).body.media?.type, 'library', 'the book, laid on last')
+    assert.deepStrictEqual((await call(one.routes['get /pending'])).body, {}, 'the station does not replace it afterwards')
+    // the same tag reported twice while its message is said: it starts once
+    const two = await box()
+    two.nfc.feed({ event: 'tag', tech: 'ISO14443A', uid: '0A0A0A0A' })
+    await later()
+    two.nfc.feed({ event: 'tag', tech: 'ISO14443A', uid: '0A0A0A0A' })
+    await later()
+    assert.strictEqual(two.waiting.length, 1)
+    two.waiting.shift()()
+    await later()
+    assert.strictEqual((await call(two.routes['get /pending'])).body.media?.type, 'radio')
+    assert.deepStrictEqual((await call(two.routes['get /pending'])).body, {})
+  } finally {
+    global.fetch = realFetch
+  }
+})
+
+// (a made-up driver program: the readers run, what they report is handed in with feed)
+const fakeSpawn = () => {
+  const made = []
+  const spawnFn = () => {
+    const proc = new (require('node:events').EventEmitter)()
+    proc.stdout = new (require('node:events').EventEmitter)()
+    proc.stderr = new (require('node:events').EventEmitter)()
+    proc.kill = () => setImmediate(() => proc.emit('exit', null, 'SIGTERM'))
+    made.push(proc)
+    return proc
+  }
+  return { spawnFn, made }
+}
+
+test('two readers: a tag taken off one while it lies on the other is not gone; after a restart each tag keeps its own protection', async () => {
+  const realFetch = global.fetch
+  const player = []
+  let generation = 1
+  global.fetch = async (url) => {
+    const u = String(url)
+    if (u.startsWith('http://player.test/local')) return { ok: true, json: async () => ({ currentPlayer: 'mplayer', currentType: 'local', playing: true, generation }) }
+    if (u.startsWith('http://player.test/')) player.push(u)
+    return { ok: true, json: async () => ({}) }
+  }
+  try {
+    const settings = { reader: 'rc522', reader2On: true, reader2: 'rc522', spiDevice2: '0.1', onRemove: 'pause', playOnTag: true }
+    const { host, routes } = makeHost(settings)
+    const { spawnFn, made } = fakeSpawn()
+    host.spawnFn = spawnFn
+    const nfc = require('../api.js').activate(host)
+    for (let i = 0; i < 100 && made.length < 2; i++) await later(20)
+    assert.strictEqual(made.length, 2, 'both drivers started')
+    nfc.feed({ event: 'ready', firmware: '2.0', product: 'MFRC522' }, 1)
+    nfc.feed({ event: 'ready', firmware: '2.0', product: 'MFRC522' }, 2)
+    await importTags(routes, [{ uid: '04A1B2C3', media: book }, { uid: '04D4E5F6', media: radio }])
+    // the book on reader 1: it starts; then the same tag is laid on reader 2 too, and taken off reader 1
+    nfc.feed({ event: 'tag', tech: 'ISO14443A', uid: '04A1B2C3' }, 1)
+    await later()
+    assert.strictEqual((await call(routes['get /pending'])).body.media?.type, 'library')
+    generation = 2 // (the display started it)
+    await later(1100)
+    nfc.feed({ event: 'tag', tech: 'ISO14443A', uid: '04A1B2C3' }, 2)
+    await later()
+    nfc.feed({ event: 'gone' }, 1)
+    await later()
+    assert.ok(!player.some((u) => u.includes('/pause')), 'it still lies on reader 2: not paused')
+    nfc.feed({ event: 'gone' }, 2)
+    await later()
+    assert.ok(player.some((u) => u.startsWith('http://player.test/pause')), 'taken off the last reader: paused')
+
+    // a tag on each reader, then both drivers fall over and report their tags anew: neither starts again
+    nfc.feed({ event: 'tag', tech: 'ISO14443A', uid: '04A1B2C3' }, 1)
+    await later()
+    nfc.feed({ event: 'tag', tech: 'ISO14443A', uid: '04D4E5F6' }, 2)
+    await later()
+    await call(routes['get /pending'])
+    made[0].emit('exit', 1, null)
+    made[1].emit('exit', 1, null)
+    nfc.feed({ event: 'tag', tech: 'ISO14443A', uid: '04A1B2C3' }, 1)
+    await later()
+    nfc.feed({ event: 'tag', tech: 'ISO14443A', uid: '04D4E5F6' }, 2)
+    await later()
+    assert.deepStrictEqual((await call(routes['get /pending'])).body, {}, 'both play already: nothing starts anew')
+  } finally {
+    global.fetch = realFetch
+  }
+})
+
+test('without the DSI display a Jellyfin and an Audible tag are started as the display starts them', async () => {
+  const realFetch = global.fetch
+  const player = []
+  global.fetch = async (url) => {
+    const u = String(url)
+    if (u.startsWith('http://player.test/local')) return { ok: true, json: async () => ({ currentPlayer: 'mplayer', currentType: 'local', playing: false, generation: 1 }) }
+    if (u.startsWith('http://player.test/')) player.push(u)
+    return { ok: true, json: async () => ({}) }
+  }
+  try {
+    const { host, routes } = makeHost({ reader: 'none', onRemove: 'nothing', playOnTag: true })
+    host.config = () => ({ mupibox: { headless: true } })
+    require('../api.js').activate(host)
+    await later(0)
+    await importTags(routes, [
+      { uid: '04000001', media: { type: 'jellyfin', jellyfinKind: 'playlist', id: 'p 1', title: 'Liste', cover: 'http://box.local/api/jellyfin/image/p1' } },
+      { uid: '04000002', media: { type: 'jellyfin', jellyfinKind: 'album', id: 'a1', title: 'Album' } },
+      { uid: '04000003', media: { type: 'audible', audibleKind: 'book', id: 'B0ABCDEFGH', title: 'Buch', cover: '/api/audible/image/51abc?w=500' } },
+    ])
+    for (const id of ['04000001', '04000002', '04000003']) {
+      await call(routes['post /tagplay'], { body: { id } })
+      await later()
+    }
+    assert.deepStrictEqual(player, [
+      'http://player.test/current/musicsearch/jellyfin/playlist:p%201?cover=%2Fapi%2Fjellyfin%2Fimage%2Fp1&src=nfc',
+      'http://player.test/current/musicsearch/jellyfin/album:a1?src=nfc',
+      'http://player.test/current/musicsearch/audible/book:B0ABCDEFGH?cover=%2Fapi%2Faudible%2Fimage%2F51abc%3Fw%3D500&src=nfc',
+    ])
+  } finally {
+    global.fetch = realFetch
+  }
+})
+
+test('the battery message waits: not with nothing playing, not in a quiet time or the evening - then at the next tag, once', async () => {
+  const realFetch = global.fetch
+  let playing = false
+  let quiet = false
+  let evening = false
+  global.fetch = async (url) => {
+    const u = String(url)
+    if (u.startsWith('http://api.test/api/mupihat')) return { ok: true, json: async () => ({ Bat_Percent: 8, Ibat: -300, BatteryConnected: 1, Measurement_Valid: true }) }
+    if (u.startsWith('http://api.test/api/playtime')) return { ok: true, json: async () => ({ playtime: { state: 'normal' }, quiet: { inWindow: quiet } }) }
+    if (u.startsWith('http://player.test/local')) return { ok: true, json: async () => ({ currentPlayer: 'mplayer', currentType: 'local', playing, generation: 1 }) }
+    return { ok: true, json: async () => ({}) }
+  }
+  try {
+    const { host, routes } = makeHost({ reader: 'none', onRemove: 'nothing', playOnTag: true })
+    const said = []
+    host.say = async (text) => (said.push(text), true)
+    host.nightDim = async () => ({ share: evening ? 1 : 0, dimmed: evening })
+    const nfc = require('../api.js').activate(host)
+    await later(0)
+    feedReady(nfc)
+    await importTags(routes, [{ uid: '04A1B2C3', media: book }])
+    await nfc.checkBattery()
+    assert.deepStrictEqual(said, [], 'nothing plays: nobody hears it')
+    playing = true
+    quiet = true
+    await nfc.checkBattery()
+    assert.deepStrictEqual(said, [], 'a quiet time')
+    quiet = false
+    evening = true
+    await nfc.checkBattery()
+    nfc.feed({ event: 'tag', tech: 'ISO14443A', uid: '04A1B2C3' })
+    await later()
+    assert.deepStrictEqual(said, [], 'the evening: also not at a tag')
+    evening = false
+    playing = false
+    await nfc.checkBattery()
+    assert.deepStrictEqual(said, [])
+    await later(2100)
+    nfc.feed({ event: 'tag', tech: 'ISO14443A', uid: '04A1B2C3' })
+    await later()
+    assert.deepStrictEqual(said, ['Bitte stecke mich zum Laden an.'], 'at the next tag laid on')
+    playing = true
+    await nfc.checkBattery()
+    await later(2100)
+    nfc.feed({ event: 'tag', tech: 'ISO14443A', uid: '04A1B2C3' })
+    await later()
+    assert.strictEqual(said.length, 1, 'once')
+  } finally {
+    global.fetch = realFetch
+  }
+})
+
+test('I2C is not switched off while the MuPiHAT is on (its battery chip is on the bus)', async () => {
+  const { host, routes } = makeHost({ reader: 'none' })
+  host.config = () => ({ mupihat: { hat_active: true } })
+  require('../api.js').activate(host)
+  const answer = await call(routes['post /iicoff'])
+  assert.deepStrictEqual([answer.status, answer.body.ok, answer.body.error], [409, false, 'refused'])
+  assert.match(answer.body.message, /MuPiHAT/)
+})
+
+test('imported tags count as seen now: a full store does not drop them at once', () => {
+  const data = tags.emptyData()
+  for (let i = 0; i < tags.MAX_TAGS; i++) tags.tagLaidOn(data, { target: 'any', media: tags.sanitizeMedia(radio), until: NOW + 1000 }, { uid: (0x10000000 + i).toString(16) }, NOW)
+  const parsed = tags.parseImport({ tags: [{ uid: '04A1B2C3', media: book }] })
+  assert.deepStrictEqual(tags.applyImport(data, parsed, NOW + 1000).added, 1)
+  assert.ok(data.tags['04A1B2C3']?.media, 'the imported tag is there')
+  assert.strictEqual(data.tags['04A1B2C3'].lastSeen, NOW + 1000)
+  assert.strictEqual(Object.keys(data.tags).length, tags.MAX_TAGS)
+})
+
+test('a table made by hand: Jellyfin with its kind in the address (an id alone is an album), Audible with the ASIN', () => {
+  const hand = 'UID;Art;Titel;Adresse\r\n04000001;Jellyfin;Liste;playlist:abc123\r\n04000002;jellyfin;Album;def456\r\n04000003;Jellyfin;Hörbuch;book:ghi789\r\n04000004;Audible;Buch;B0ABCDEFGH\r\n04000005;Jellyfin;Künstler;artist:x\r\n'
+  const parsed = tags.parseText(hand)
+  assert.deepStrictEqual([parsed.ok, parsed.tags.length, parsed.skipped], [true, 4, 1], 'a whole artist is no medium')
+  const kinds = parsed.tags.map((t) => [t.uid, t.media.type, t.media.jellyfinKind ?? t.media.audibleKind, t.media.id])
+  assert.deepStrictEqual(kinds, [
+    ['04000001', 'jellyfin', 'playlist', 'abc123'],
+    ['04000002', 'jellyfin', 'album', 'def456'],
+    ['04000003', 'jellyfin', 'book', 'ghi789'],
+    ['04000004', 'audible', 'book', 'B0ABCDEFGH'],
+  ])
+  // (the table the box writes says it the same way, and comes back without its technical column too)
+  const data = tags.emptyData()
+  tags.applyImport(data, parsed, NOW)
+  const csv = tags.exportCsv(data, NOW)
+  assert.ok(csv.includes(';jellyfin;audiobook;;playlist:abc123;'), csv)
+  assert.ok(csv.includes(';audible;audiobook;;B0ABCDEFGH;'), csv)
+  const columns = csv.split('\r\n').map((line) => line.split(';').slice(0, 6).join(';')).join('\r\n')
+  assert.deepStrictEqual(tags.parseText(columns).tags.map((t) => [t.media.type, t.media.jellyfinKind ?? t.media.audibleKind, t.media.id]), kinds.map(([, type, kind, id]) => [type, kind, id]))
+})

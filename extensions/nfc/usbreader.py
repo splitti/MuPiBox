@@ -160,8 +160,9 @@ def usb_readers(devices):
 
 def choose_device(devices, wanted, index=0):
     """The device to read: the one named (a part of its name, or its path); else, with `index` (1, 2, ...), the first, second ... of the
-    USB readers (usb_readers); else the only USB keyboard, else the one that looks like a reader. Returns the device; a ReaderError
-    says what is missing or too many."""
+    USB readers (usb_readers - the API part asks for that only while two USB readers are set); else the only USB keyboard, else the
+    one that looks like a reader (of several that look like one, the first by port). Returns the device; a ReaderError says what is
+    missing or too many."""
     keyboards = [d for d in devices if d['usb'] and d['keyboard']]
     wanted = (wanted or '').strip()
     if index > 0 and not wanted:
@@ -184,8 +185,10 @@ def choose_device(devices, wanted, index=0):
         return keyboards[0]
     if not keyboards:
         raise ReaderError('no_device', 'no USB reader found: plug it in')
-    hits = [d for d in keyboards if NAME_HINTS.search(d['name'] + ' ' + d.get('label', ''))]
-    if len(hits) == 1:
+    # (no keyboard that looks like a reader: the user names it - a keyboard dongle or an IR receiver taken for the reader would be held
+    # by the driver, and the reader would type into the display)
+    hits = [d for d in usb_readers(keyboards) if NAME_HINTS.search(d['name'] + ' ' + d.get('label', ''))]
+    if hits:
         return hits[0]
     raise ReaderError('several_devices', 'several USB keyboards: %s - name the reader in the settings' % ', '.join(d.get('label') or d['name'] for d in keyboards))
 

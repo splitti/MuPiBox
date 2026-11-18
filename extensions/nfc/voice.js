@@ -242,8 +242,24 @@ function networkVerdict(net) {
 // The message for a verdict ('ok' and null: none)
 const NETWORK_MESSAGE = { noRouter: 'noRouter', trouble: 'wifiTrouble', weak: 'wifiWeak' }
 
-// A medium that needs no network: the SD card's own albums
-const needsNetwork = (media) => Boolean(media) && media.type !== 'library'
+// What a medium needs of the network (null: nothing):
+//   'internet' - a service of the web (Spotify, TIDAL, Audible, a station, a podcast's feed)
+//   'home'     - the box's own network only (the NAS, a Jellyfin server): the internet being away is no problem of it
+// The SD card's own albums need none, and neither does a podcast episode saved on the box (offlineView, see tags.pickEpisode).
+function networkNeed(media) {
+  if (!media || typeof media !== 'object' || media.type === 'library') return null
+  if (media.type === 'rss' && media.offlineView === true) return null
+  return media.type === 'nas' || media.type === 'jellyfin' ? 'home' : 'internet'
+}
+const needsNetwork = (media) => networkNeed(media) !== null
+
+// The message for what the network file says, for a medium: none when the medium does not need what is missing - a NAS in the home
+// network plays without the internet ('trouble': joined, but no way out)
+function networkMessage(verdict, media) {
+  const need = networkNeed(media)
+  if (!need || (need === 'home' && verdict === 'trouble')) return null
+  return NETWORK_MESSAGE[verdict] ?? null
+}
 
 // The address the box reaches its NAS at (mupiboxconfig nas.address, with or without http://); '' when none is set
 function nasUrl(config) {
@@ -286,6 +302,39 @@ function batteryWatch() {
     }
     return false
   }
+}
+
+// The battery message waits for a moment somebody hears it: not in a quiet time, not in the evening (the window of "Abends dunkler"),
+// and only while something plays or a tag was just laid on - a box left alone said it to nobody, or woke the child at night. Until
+// then it is owed and said once at the first moment that fits; charging (or a charge above OK_PERCENT) in between makes it void.
+// reading(hat): feed every reading of the HAT, true while it is owed; fits({ quiet, evening, playing, tagLaidOn }): whether now is a
+// moment for it; said(): it was said (or is switched off).
+function batteryNotice() {
+  const watch = batteryWatch()
+  let owed = false
+  return {
+    reading(hat) {
+      if (watch(hat)) owed = true
+      else if (owed && hat && typeof hat === 'object') {
+        const percent = Number(hat.Bat_Percent)
+        if ((Number.isFinite(hat.Ibat) && hat.Ibat > 50) || (Number.isFinite(percent) && percent > OK_PERCENT)) owed = false
+      }
+      return owed
+    },
+    get owed() {
+      return owed
+    },
+    fits: ({ quiet = false, evening = false, playing = false, tagLaidOn = false } = {}) => owed && !quiet && !evening && (playing || tagLaidOn),
+    said() {
+      owed = false
+    },
+  }
+}
+
+// Whether a quiet time runs now (what GET /api/playtime says: its window, or the player still stopping or refusing in it)
+function quietNow(playtime) {
+  const quiet = playtime?.quiet
+  return quiet?.inWindow === true || quiet?.state === 'blocked' || quiet?.state === 'grace'
 }
 
 // ---- how often ------------------------------------------------------------------------------------------------------------------
@@ -345,10 +394,51 @@ function tcpReachable(url, { ms = 6000, connect = net.connect } = {}) {
   })
 }
 
-// Whether a start the player did not take is owed to the box's own limits (the day's playing time, a quiet time): then it is not a
-// problem of the network. `playtime` is what GET /api/playtime says.
-function blockedByLimits(playtime) {
-  return playtime?.playtime?.state === 'blocked' || playtime?.state === 'blocked' || playtime?.quiet?.inWindow === true || playtime?.quiet?.state === 'blocked'
+// The tile of the start page a medium belongs to, as the display names it to the player (frontend-box tile-key.ts tileKeyOf): its
+// day's limit is counted under this key. null: no tile.
+function tileKeyOf(media) {
+  if (!media || typeof media !== 'object') return null
+  if (media.nasPath) return `nas:${media.nasPath}`
+  if (media.type === 'library' && media.libraryPath) return `lib:${media.libraryPath}`
+  const cat = !media.category ? 'audiobook' : media.category === 'radio' ? 'other' : media.category
+  if (!media.artist) {
+    if (media.playlistid) return `single:${cat}:${media.playlistid}`
+    if (media.type === 'radio' && media.id) return `single:${cat}:${media.id}`
+    if (media.type === 'tidal' && media.tidalKind === 'playlist' && media.id) return `single:${cat}:${media.id}`
+    if (media.type === 'jellyfin' && media.jellyfinKind === 'playlist' && media.id) return `single:${cat}:${media.id}`
+    return null
+  }
+  return `artist:${cat}:${media.artist}`
+}
+
+// A folder (lib:, nas:) counts for the tile with a limit whose folder it is in - the longest of them (tile-key.ts resolveTileKey)
+function resolveTileKey(key, limitKeys) {
+  const m = /^(lib|nas):(.*)$/.exec(key)
+  if (!m) return key
+  let best = null
+  for (const k of limitKeys) {
+    if (!k.startsWith(`${m[1]}:`)) continue
+    const p = k.slice(m[1].length + 1)
+    if ((m[2] === p || m[2].startsWith(`${p}/`)) && (!best || k.length > best.length)) best = k
+  }
+  return best ?? key
+}
+
+// Whether the tile of a medium is used up for today (GET /api/playtime: tiles.list, each { key, blocked })
+function tileUsedUp(playtime, media) {
+  const list = Array.isArray(playtime?.tiles?.list) ? playtime.tiles.list.filter((t) => t && typeof t.key === 'string') : []
+  const key = tileKeyOf(media)
+  if (!key || list.length === 0) return false
+  const wanted = resolveTileKey(key, list.map((t) => t.key))
+  return list.some((t) => t.key === wanted && t.blocked === true)
+}
+
+// Whether a start the player did not take is owed to the box's own limits (the day's playing time, a quiet time, the day's limit of
+// the medium's tile): then it is not a problem of the network. `playtime` is what GET /api/playtime says, `media` what was started.
+function blockedByLimits(playtime, media = null) {
+  // (grace: the last track still plays out, a new start is refused already)
+  const limited = [playtime?.playtime?.state, playtime?.state].some((state) => state === 'blocked' || state === 'grace')
+  return limited || quietNow(playtime) || tileUsedUp(playtime, media)
 }
 
 module.exports = {
@@ -362,12 +452,18 @@ module.exports = {
   textOf,
   signalOf,
   networkVerdict,
+  networkNeed,
   needsNetwork,
+  networkMessage,
   nasUrl,
   dischargingPercent,
   batteryWatch,
+  batteryNotice,
+  quietNow,
   makeSpeaker,
   reachable,
   tcpReachable,
+  tileKeyOf,
+  tileUsedUp,
   blockedByLimits,
 }

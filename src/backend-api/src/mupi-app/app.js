@@ -407,7 +407,8 @@ function renderPageNav(page) {
   const siblings = top ? groupPages(top) : []
   // (one extension alone still lists its sub pages)
   const listed = siblings.length > 1 || (siblings.length === 1 && !!top.extId && kids(top).length > 0)
-  nav.dataset.sibs = String(listed ? siblings.length : 0)
+  // (at least 2 when listed: one extension alone with sub pages shows the list too, see has-pagenav)
+  nav.dataset.sibs = String(listed ? Math.max(2, siblings.length) : 0)
   const under = (p) => {
     if (p.id !== top?.id) return ''
     const list = kids(p)
@@ -469,6 +470,7 @@ function pager(page) {
 
 // The cards of the page drawn (headings of its cards) as jumps under the shown page; marks the one being read.
 // Called again whenever the page is drawn.
+let cardIdSeq = 0
 function updatePageNavSections(page) {
   pageNavSpy?.disconnect()
   pageNavSpy = null
@@ -488,8 +490,9 @@ function updatePageNavSections(page) {
   const cards = [...content.querySelectorAll('section.card')].filter((c) => !c.hidden && title(c) && titleText(c))
   // (a sub page of an extension: its first card has the title of the page, which is in the list above it)
   const heads = cards
-    .map((c, i) => {
-      c.id ||= `sec-${i}`
+    .map((c) => {
+      // (a number of its own: a card that appears later took the index of one that had it already as its id)
+      c.id ||= `sec-${++cardIdSeq}`
       return { id: c.id, text: titleText(c), card: c }
     })
     .filter((h) => !(page.extId && page.parent === `ext-${page.extId}` && h.text === page.title))
@@ -4424,7 +4427,7 @@ function openNfcSheet(media, { back = null, image = '' } = {}) {
         if (!r.ok) {
           // (Jellyfin and Audible: a NFC extension before 0.8 does not know them)
           const newKind = media.type === 'jellyfin' || media.type === 'audible'
-          const why = { no_reader: 'Der NFC-Leser ist nicht bereit – bitte unter System › NFC-Extension einrichten.', not_startable: newKind ? 'Dafür braucht es die NFC-Extension ab Version 0.8 – bitte unter Erweiterungen aktualisieren.' : 'Dieses Medium lässt sich keinem Tag zuordnen.' }
+          const why = { no_reader: 'Der NFC-Leser ist nicht bereit – bitte unter Einstellungen › NFC-Extension einrichten.', not_startable: newKind ? 'Dafür braucht es die NFC-Extension ab Version 0.8 – bitte unter Erweiterungen aktualisieren.' : 'Dieses Medium lässt sich keinem Tag zuordnen.' }
           return say(why[r.body?.error] ?? 'Das hat nicht geklappt', 'warn')
         }
         id = r.body.id
@@ -17759,7 +17762,8 @@ function extFormMount(sheet, e, fields, saved) {
           if (!chosen) return
           if (chosen.size > 900000) return toast(tr('Die Datei ist zu groß'), 'info')
           let body
-          if (item.accept && !/\.json$/i.test(chosen.name)) body = { text: await chosen.text() }
+          // (a table saved by Excel is often not UTF-8 but Windows-1252: its umlauts came as replacement characters - read as that then)
+          if (item.accept && !/\.json$/i.test(chosen.name)) body = { text: decodeTable(await chosen.arrayBuffer()) }
           else {
             try {
               body = { file: JSON.parse(await chosen.text()) }
@@ -17805,7 +17809,9 @@ function extFormMount(sheet, e, fields, saved) {
         box.append(empty)
         return
       }
-      fillTagRows(box, r.body.items.slice(0, 300), draw, true)
+      // (as tiles with picture buttons only when every action brings its picture - an older extension's buttons keep their words)
+      const allGlyphs = r.body.items.every((row) => (Array.isArray(row?.actions) ? row.actions : []).every((a) => /^[a-z0-9]{1,12}$/.test(String(a?.icon ?? ''))))
+      fillTagRows(box, r.body.items.slice(0, 300), draw, allGlyphs)
     }
     draw()
     // (after a file was taken in by a button of the page)
@@ -18088,6 +18094,15 @@ const GPIO_HEADER = { 2: 3, 3: 5, 4: 7, 5: 29, 6: 31, 7: 26, 8: 24, 9: 21, 10: 1
 const EXT_ADOPTABLE = { rotary: 'drehregler' }
 // (what the first card of such a page is called on the page of the extension: short, beside the extension's own card)
 const EXT_ADOPTED_TITLE = { drehregler: 'Drehregler' }
+// The text of a table file the user chose: UTF-8 (with or without BOM), else Windows-1252 - what Excel writes for "CSV" on a
+// German Windows; read as UTF-8 its umlauts became replacement characters and the tags with them played nothing any more
+function decodeTable(buffer) {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(buffer)
+  } catch {
+    return new TextDecoder('windows-1252').decode(buffer)
+  }
+}
 // list: the pages there are now; adopted: page of the core -> the page of the extension that shows it
 const extPages = { list: [], adopted: new Map() }
 // (the picture of an extension: a file of its own, shown through a mask in the colour of the text, see icon())
