@@ -614,24 +614,26 @@ test('Spotify\'s /state is asked while it plays, once in a while, and not while 
     now += 500
     await ext.tick()
   }
-  assert.strictEqual(states(), 1, 'not every tick')
-  assert.strictEqual(sentStates(box.procs[0]).at(-1).elapsed, 20, 'the progress counts on in between')
-  now += 10_500
+  assert.strictEqual(states(), 2, 'not every tick - one second look after the start')
+  // (the made-up Spotify says 10 s at each answer: from the second look at 3 s, 7 s counted on)
+  assert.strictEqual(sentStates(box.procs[0]).at(-1).elapsed, 17, 'the progress counts on in between')
+  // (20 s after the second look)
+  now += 13_500
   await ext.tick()
-  assert.strictEqual(states(), 2, 'after a while again')
+  assert.strictEqual(states(), 3, 'after a while again')
   pause = true
   now += 500
   await ext.tick()
-  assert.strictEqual(states(), 3, 'the pause is read at once')
+  assert.strictEqual(states(), 4, 'the pause is read at once')
   for (let i = 0; i < 200; i++) {
     now += 500
     await ext.tick()
   }
-  assert.strictEqual(states(), 3, 'paused: never again')
+  assert.strictEqual(states(), 4, 'paused: never again')
   pause = false
   now += 500
   await ext.tick()
-  assert.strictEqual(states(), 4, 'it plays again: at once')
+  assert.strictEqual(states(), 5, 'it plays again: at once')
 })
 
 // ---- review 0.1.5 -------------------------------------------------------------------------------------------------------------

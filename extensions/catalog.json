@@ -84,8 +84,8 @@
     "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48ZyBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIzMCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB4PSI1NiIgeT0iMTIwIiB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI0MCIgcng9IjM2Ii8+PHBhdGggZD0iTTEyMCAyMDBoMTEyTTEyMCAyNTBoMTgwTTEyMCAzMDBoODAiLz48cGF0aCBkPSJNMzYwIDE5MHYxMTBNMzkwIDIxNXY2ME0zMzAgMjI1djQwIi8+PHBhdGggZD0iTTIwMCA0MjBoMTEyIi8+PC9nPjwvc3ZnPgo=",
     "hostApi": 10,
     "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/oled-0.1.5.mpx",
-    "sha256": "9dd718c20c84abb9ac2e2f129a62149d8cded5dde83fded31ba0febf9f0de9ab",
-    "size": 31451,
+    "sha256": "1bbc1b6060de0bf83ec73ad3684605e2d589f6852f994a6f24569c91ae6a3eb3",
+    "size": 31518,
     "resources": {},
     "system": {
       "udev": 1,

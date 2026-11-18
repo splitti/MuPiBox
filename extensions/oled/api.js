@@ -209,11 +209,14 @@ exports.activate = (host) => {
     const over = Boolean(kept) && moving(kept.state) && progress >= (kept.state.item?.duration_ms ?? Number.POSITIVE_INFINITY)
     // (right after a start /state often says not playing yet: asked again after the short gap, for the time of one long one)
     const late = Boolean(kept) && playing && kept.state?.is_playing !== true && now - kept.since < SPOTIFY_STATE_MS
-    const ask = !kept || kept.key !== key || (playing && (now - kept.at >= SPOTIFY_STATE_MS || over || late) && now - kept.at >= SPOTIFY_GAP_MS)
+    // (a second look once after a change - next, previous, a start: asked at once, Spotify often still told the track before)
+    const again = Boolean(kept?.again) && playing
+    const ask = !kept || kept.key !== key || (playing && (now - kept.at >= SPOTIFY_STATE_MS || over || late || again) && now - kept.at >= SPOTIFY_GAP_MS)
     if (ask) {
       const state = await getJson(`${host.playerUrl}/state`)
       const at = clock()
-      spotifyKept = { state, at, key, since: kept && kept.key === key ? kept.since : at }
+      const changed = !kept || kept.key !== key
+      spotifyKept = { state, at, key, since: changed ? at : kept.since, again: changed }
       return state
     }
     if (!kept.state) return null

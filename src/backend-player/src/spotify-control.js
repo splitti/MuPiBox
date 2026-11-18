@@ -1006,12 +1006,12 @@ player.on('track-change', () => {
   const index = player.trackIndex?.() ?? -1
   if (audiblePending && index === audiblePending.index) audiblePending.loaded = true
   currentMeta.positionSeconds = audibleIndex() === audibleAt.index ? audibleAt.at : 0
-  // "Repeat all" came round again to the chapter begun inside (going on, a seek): its entry in the list starts at that place -
-  // the list is loaded anew with the chapter from its beginning
+  // "Repeat all" goes round again (the last chapter over, back to the first) while a chapter begun inside (going on, a seek) is
+  // in the list with its place: the list is loaded anew without it, from the chapter mpv went round to
   const before = audibleLoop.index
   audibleLoop.index = index
-  if (currentMeta.repeatMode === 'all' && !audibleReloading() && audibleAt.index >= 0 && index === audibleAt.index && before > index) {
-    audiblePlayFrom(audibleAt.index, 0)
+  if (currentMeta.repeatMode === 'all' && !audibleReloading() && audibleAt.index >= 0 && index >= 0 && before > index) {
+    audiblePlayFrom(index, 0)
   }
 })
 player.on('time_pos', (seconds) => {
@@ -2935,6 +2935,8 @@ function next() {
     if (spotifyBlockedUntil()) return log.debug(`${now()}: [Spotify Control] next: Spotify blocks the requests`)
     spotifyApi.skipToNext(ownSpotifyDeviceOptions()).then(
       () => {
+        // (what was asked while the skip was on its way is the track before: asked anew)
+        forgetSpotifyState()
         counter.countskipToNext++
         if (config.server.logLevel === 'debug') {
           writeCounter()
@@ -2963,6 +2965,7 @@ function previous() {
     if (spotifyBlockedUntil()) return log.debug(`${now()}: [Spotify Control] previous: Spotify blocks the requests`)
     spotifyApi.skipToPrevious(ownSpotifyDeviceOptions()).then(
       () => {
+        forgetSpotifyState()
         counter.countskipToPrevious++
         if (config.server.logLevel === 'debug') {
           writeCounter()
