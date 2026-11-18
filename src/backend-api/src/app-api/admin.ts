@@ -15,7 +15,7 @@ import { requireCsrf, requireSession } from './middleware'
 import { bootConfigPath } from './boot-paths'
 import { EXTENSIONS_DIR, LIBRARY_DIR, SERVER_CONFIG_DIR } from '../paths'
 import { restoreKioskStart } from './extensions'
-import { freezeLibrary, thawLibrary } from './photos/store'
+import { copyLibraryTo, freezeLibrary, thawLibrary } from './photos/store'
 
 export interface AdminDeps {
   getMupiboxConfig: () => MupiboxConfig | undefined
@@ -96,9 +96,12 @@ const RESTORE_DIRS = [
 // the photo display's uploaded pictures and clips (5.1, a full backup): the list of the albums and, below upload/, an
 // album's folder and its files - pictures in their sizes, made clips, clips still waiting to be made; nothing else there
 const PHOTO_LIBRARY = 'home/dietpi/.mupibox/data/photos/library.json'
+// (each album's pictures, see photos/store.ts; a backup of before has them in library.json - read as it is)
+const PHOTO_ALBUMS = 'home/dietpi/.mupibox/data/photos/albums/'
 const PHOTO_UPLOAD = 'home/dietpi/.mupibox/data/photos/upload/'
-const PHOTO_FILE = /^home\/dietpi\/\.mupibox\/data\/photos\/upload\/[a-f0-9]{10}\/[a-f0-9]{10}(\.jpg|\.s\.jpg|\.b\.jpg|\.mp4|\.pending)$/
-const PHOTO_DIR = /^home\/dietpi\/\.mupibox\/data\/photos\/upload\/[a-f0-9]{10}\/$/
+const PHOTO_FILE =
+  /^home\/dietpi\/\.mupibox\/data\/photos\/(upload\/[a-f0-9]{10}\/[a-f0-9]{10}(\.jpg|\.s\.jpg|\.b\.jpg|\.mp4|\.pending)|albums\/[a-f0-9]{10}\.json)$/
+const PHOTO_DIR = /^home\/dietpi\/\.mupibox\/data\/photos\/(upload\/[a-f0-9]{10}\/|albums\/)$/
 // the users of the extension "Benutzer" (5.1): the list and each user's folder - the part of the config, the library, the
 // data, the play log, the settings of the extensions (the one signed in is the live state, the others only there)
 const EXT_DATA = 'home/dietpi/.mupibox/data/extensions'
@@ -446,7 +449,7 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
     const present = (f: string) => fsp.access(f).then(() => true, () => false)
     const extras = (await Promise.all([BACKGROUND, ...BOOT_CUSTOM].map(async (f) => ((await present(f)) ? f : '')))).filter(Boolean)
     // (full: the uploaded photos and clips too - those of NAS and Immich are fetched again)
-    const photos = full ? (await Promise.all([`/${PHOTO_LIBRARY}`, `/${PHOTO_UPLOAD}`].map(async (f) => ((await present(f)) ? f : '')))).filter(Boolean) : []
+    const photos = full && (await present(`/${PHOTO_UPLOAD}`)) ? [`/${PHOTO_UPLOAD}`] : []
     // (the users' profiles: with every backup - they hold libraries, as the backup holds the one of the box)
     const users = (await present(`/${USERS_DATA}`)) ? [`/${USERS_DATA}`] : []
     // (the extensions' settings: with every backup - a few KB, and after a broken card every pin chosen anew otherwise.
@@ -462,13 +465,23 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
     // there (the other sources by their full path, stored without the leading /)
     const stage = `/var/tmp/mupibox-backup-${process.pid}-${Date.now()}.d`
     const staged = `${stage}/${LIBRARY_ENTRY_BEFORE}`
+    // (full: the photos' list and its albums' files as one moment of it, copied into the stage under their own names -
+    // stored as the box has them)
+    const photoList =
+      full &&
+      (await copyLibraryTo(`${stage}/${path.dirname(PHOTO_LIBRARY)}`).catch((err) => {
+        console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Backup without the photos' list: ${(err as Error).message}`)
+        return false
+      }))
+        ? [PHOTO_LIBRARY, PHOTO_ALBUMS]
+        : []
     const r = await run(
       'sudo',
       [
         'sh',
         '-c',
         `mkdir -p '${path.dirname(staged)}' && { [ ! -e '${LIBRARY}/data.json' ] || cp '${LIBRARY}/data.json' '${staged}'; } && cd '${stage}' && ` +
-          `zip -q -r '${zip}' $([ -e '${staged}' ] && echo '${LIBRARY_ENTRY_BEFORE}') ${sources.map((s) => `'${s}'`).join(' ')} -x '*.tmp' '*.tmp[0-9]*' '*.part' '*.heic.jpg' '*.poster.jpg' '*/users/.staging/*' '*/users/.old/*' '*/users/trash/*'; ` +
+          `zip -q -r '${zip}' $([ -e '${staged}' ] && echo '${LIBRARY_ENTRY_BEFORE}') ${[...photoList, ...sources].map((s) => `'${s}'`).join(' ')} -x '*.tmp' '*.tmp[0-9]*' '*.part' '*.heic.jpg' '*.poster.jpg' '*/users/.staging/*' '*/users/.old/*' '*/users/trash/*'; ` +
           `chmod 644 '${zip}'; rm -rf '${stage}'`,
       ],
       full ? 3600000 : 120000,
