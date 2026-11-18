@@ -4517,5 +4517,9 @@
  "Hör-Verlauf von": "Historia słuchania:",
  "Bibliothek von": "Biblioteka:",
  "Das geht nur beim aktiven Benutzer": "To działa tylko dla aktywnego użytkownika",
- "Gespeichert. Auf die Box kommt es, wenn {} der aktive Benutzer ist.": "Zapisano. Trafi na boks, gdy {} będzie aktywnym użytkownikiem."
+ "Gespeichert. Auf die Box kommt es, wenn {} der aktive Benutzer ist.": "Zapisano. Trafi na boks, gdy {} będzie aktywnym użytkownikiem.",
+ "„Am Display zeigen“ gilt hier für {}. Die Alben selbst gehören der ganzen Box.": "„Pokaż na wyświetlaczu” dotyczy tu: {}. Same albumy należą do całego boksu.",
+ "Spielzeit von": "Czas słuchania:",
+ "Fotoalben von": "Albumy zdjęć:",
+ "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Edytujesz czas słuchania: {}. Obowiązuje, gdy {} będzie aktywnym użytkownikiem. Odblokowanie i cisza teraz działają tylko dla aktywnego użytkownika, wyłącznik czasowy i wyłączanie dotyczą całego boksu."
 }

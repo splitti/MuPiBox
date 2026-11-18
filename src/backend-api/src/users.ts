@@ -56,8 +56,9 @@ export const USER_KEYS = [
 /** ... whole sections: the play time (with the tiles' limits), the quiet hours, the Spotify subscriptions (they belong to
  *  the library) */
 export const USER_SECTIONS = ['playtimeLimit', 'quietHours', 'spotify_sync'] as const
-/** ... and of "photos" the photo time (the albums and their services are the box's) */
-export const USER_PHOTO_KEYS = ['limitEnabled', 'limitMode', 'dailyMinutes', 'warnMinutes', 'idlePauseSeconds', 'today'] as const
+/** ... and of "photos" the photo time and the albums he does not see on the display (the albums and their services are
+ *  the box's) */
+export const USER_PHOTO_KEYS = ['limitEnabled', 'limitMode', 'dailyMinutes', 'warnMinutes', 'idlePauseSeconds', 'today', 'hiddenAlbums'] as const
 
 /** Files of a user in the box's data folder and in its logs (the library's folder: all of it, see liveLibraryEntries) */
 export const USER_DATA_FILES = ['hidden-covers.json', 'playtime-checkpoint.json'] as const

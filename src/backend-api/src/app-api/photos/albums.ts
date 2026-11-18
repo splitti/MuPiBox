@@ -38,6 +38,20 @@ import {
 
 export interface PhotoAlbumDeps {
   getMupiboxConfig: () => MupiboxConfig | undefined
+  /** several users switched on (../../users.ts): each has the albums he does not see on the display, in his part of the
+   *  configuration (photos.hiddenAlbums) - the box's own switch (album.display) stays for all */
+  usersOn?: () => boolean
+  /** the albums hidden for the user the app named (?user=), null: none named */
+  hiddenOf?: (req: Request) => Promise<string[] | null>
+  /** shown or hidden for the user the app named; false: none named (the box's switch then) */
+  setVisible?: (req: Request, id: string, visible: boolean, shownForAll: boolean) => Promise<boolean>
+}
+
+// The albums hidden for the user in place (the display's), when several users are on
+function hiddenInPlace(deps: PhotoAlbumDeps): Set<string> {
+  if (!deps.usersOn?.()) return new Set()
+  const list = (deps.getMupiboxConfig()?.photos as { hiddenAlbums?: unknown } | undefined)?.hiddenAlbums
+  return new Set(Array.isArray(list) ? list.filter((x): x is string => typeof x === 'string') : [])
 }
 
 // what stays free on the card (the box needs room for its own: logs, covers, updates)
@@ -91,11 +105,11 @@ const summary = (a: PhotoAlbum) => ({
 })
 
 /** The face of a person of an album of people (Immich), as kept by its sync - none kept: 404 (a picture is shown instead) */
-async function sendFace(req: Request, res: Response, onlyShown: boolean): Promise<void> {
+async function sendFace(req: Request, res: Response, onlyShown: boolean, hidden: Set<string> = new Set()): Promise<void> {
   const { album: albumId, n } = req.params as Record<string, string>
   const a = isId(albumId) ? await findAlbum(albumId) : undefined
   const id = a?.faces?.[Number(n)]
-  const file = a && (!onlyShown || a.display) && /^\d$/.test(n) && id ? remoteOf(a.source)?.faceFile(id) : null
+  const file = a && (!onlyShown || (a.display && !hidden.has(a.id))) && /^\d$/.test(n) && id ? remoteOf(a.source)?.faceFile(id) : null
   if (!file) return void res.status(404).end()
   res.sendFile(file, { dotfiles: 'allow', headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'private, max-age=3600' } }, (err) => {
     if (err && !res.headersSent) res.status(404).end()
@@ -103,13 +117,13 @@ async function sendFace(req: Request, res: Response, onlyShown: boolean): Promis
 }
 
 /** Sends one size of a picture of an album (s: grid, f: full, b: background) - only one the list knows */
-async function sendPicture(req: Request, res: Response, onlyShown: boolean): Promise<void> {
+async function sendPicture(req: Request, res: Response, onlyShown: boolean, hidden: Set<string> = new Set()): Promise<void> {
   const { album: albumId, asset: assetId, size } = req.params as Record<string, string>
   const suffix = SIZE_SUFFIX[size]
   if (!isId(albumId) || !isId(assetId) || !suffix) return void res.status(400).end()
   const a = await findAlbum(albumId)
   const asset = a?.assets.find((x) => x.id === assetId)
-  if (!a || (onlyShown && !a.display) || !asset) return void res.status(404).end()
+  if (!a || (onlyShown && (!a.display || hidden.has(a.id))) || !asset) return void res.status(404).end()
   // (a clip still waiting to be made has no picture yet; only a clip has a video)
   if (asset.ready === false || (size === 'v' && asset.kind !== 'video')) return void res.status(404).end()
   // (an album of a photo service shown live: the picture comes from the service; one kept on the box whose picture is not
@@ -176,9 +190,11 @@ export function registerPhotoAlbumRoutes(router: Router, deps: PhotoAlbumDeps): 
     const [space, used, nasUsed, immichUsed, synologyUsed, nextcloudUsed, icloudUsed, photoprismUsed] = req.query.light
       ? [null, 0, 0, 0, 0, 0, 0, 0]
       : await Promise.all([cardSpace(), photoBytes(), photoBytes(NAS_PHOTO_DIR), photoBytes(IMMICH_PHOTO_DIR), photoBytes(SYNOLOGY_PHOTO_DIR), photoBytes(NEXTCLOUD_PHOTO_DIR), photoBytes(ICLOUD_PHOTO_DIR), photoBytes(PHOTOPRISM_PHOTO_DIR)])
+    // (several users: shown on the display for the user the app names - see PhotoAlbumDeps)
+    const hidden = new Set((await deps.hiddenOf?.(req)) ?? [])
     res.json({
       enabled: photoSettings(deps.getMupiboxConfig()).enabled,
-      albums: list.map(summary),
+      albums: list.map((a) => ({ ...summary(a), display: a.display && !hidden.has(a.id) })),
       totals: { photos: list.reduce((n, a) => n + a.assets.length, 0), videos: 0, albums: list.length },
       storage: space ? { total: space.total, free: space.free, photos: used + nasUsed + immichUsed + synologyUsed + nextcloudUsed + icloudUsed + photoprismUsed } : null,
     })
@@ -189,7 +205,9 @@ export function registerPhotoAlbumRoutes(router: Router, deps: PhotoAlbumDeps): 
     res.setHeader('Cache-Control', 'no-store')
     const a = isId(req.params.id) ? await findAlbum(req.params.id) : undefined
     if (!a) return void res.status(404).json({ error: 'no such album' })
-    res.json({ ...summary(a), assets: ordered(a.assets, 'newest').map(({ id, w, h, taken, added, kind, ready, duration }) => ({ id, w, h, taken, added, kind, ready: ready !== false, duration: duration ?? null })) })
+    // (several users: shown on the display for the user the app names, as in the overview)
+    const hidden = new Set((await deps.hiddenOf?.(req)) ?? [])
+    res.json({ ...summary(a), display: a.display && !hidden.has(a.id), assets: ordered(a.assets, 'newest').map(({ id, w, h, taken, added, kind, ready, duration }) => ({ id, w, h, taken, added, kind, ready: ready !== false, duration: duration ?? null })) })
   })
 
   /** POST /api/app/photos/albums {title} - a new album for uploads (shown on the display, last place) */
@@ -223,6 +241,14 @@ export function registerPhotoAlbumRoutes(router: Router, deps: PhotoAlbumDeps): 
     if (title === null) return void res.status(400).json({ error: 'title' })
     if (body.display !== undefined && typeof body.display !== 'boolean') return void res.status(400).json({ error: 'display' })
     if (body.cover !== undefined && !isId(body.cover)) return void res.status(400).json({ error: 'cover' })
+    // (several users: "am Display zeigen" for the user the app names - his list; an album hidden for all so far is shown
+    // for the box then, and stays hidden for the others)
+    const before = isId(req.params.id) ? await findAlbum(req.params.id) : undefined
+    // (what is refused below is refused before a user's list changes)
+    if (!before) return void res.status(404).json({ error: 'missing' })
+    if (title !== undefined && before.source !== 'upload') return void res.status(400).json({ error: 'not_upload' })
+    if (typeof body.cover === 'string' && !before.assets.some((x) => x.id === body.cover)) return void res.status(400).json({ error: 'no_asset' })
+    const forUser = typeof body.display === 'boolean' && deps.setVisible ? await deps.setVisible(req, before.id, body.display, before.display) : false
     const result = await update((lib) => {
       const a = lib.albums.find((x) => x.id === req.params.id)
       if (!a) return 'missing'
@@ -230,7 +256,7 @@ export function registerPhotoAlbumRoutes(router: Router, deps: PhotoAlbumDeps): 
         if (a.source !== 'upload') return 'not_upload'
         a.title = title
       }
-      if (typeof body.display === 'boolean') a.display = body.display
+      if (typeof body.display === 'boolean' && (!forUser || body.display)) a.display = body.display
       if (typeof body.cover === 'string') {
         if (!a.assets.some((x) => x.id === body.cover)) return 'no_asset'
         a.cover = body.cover
@@ -238,7 +264,7 @@ export function registerPhotoAlbumRoutes(router: Router, deps: PhotoAlbumDeps): 
       return summary(a)
     })
     if (typeof result === 'string') return void res.status(result === 'missing' ? 404 : 400).json({ error: result })
-    res.json(result)
+    res.json(forUser ? { ...result, display: body.display === true } : result)
   })
 
   /** POST /api/app/photos/albums/:id/delete - an uploaded album with its pictures, from the card */
@@ -440,7 +466,8 @@ export function registerPhotoDisplayRoutes(app: Express, deps: PhotoAlbumDeps): 
     res.setHeader('Cache-Control', 'no-store')
     const s = photoSettings(deps.getMupiboxConfig())
     if (!s.enabled) return void res.json({ enabled: false, albums: [] })
-    const list = (await albums()).map(withShown).filter((a) => a.display && a.assets.length > 0)
+    const hidden = hiddenInPlace(deps)
+    const list = (await albums()).map(withShown).filter((a) => a.display && !hidden.has(a.id) && a.assets.length > 0)
     // (albums shown live from a photo service while it is away: "Gerade nicht da" on the display; ?check=1 - "Nochmal",
     // or the display asking while albums are not there - asks the services first)
     if (req.query.check === '1') await checkRemotesNow()
@@ -461,7 +488,7 @@ export function registerPhotoDisplayRoutes(app: Express, deps: PhotoAlbumDeps): 
   app.get('/api/photos/album/:id', async (req, res) => {
     res.setHeader('Cache-Control', 'no-store')
     const a = on() && isId(req.params.id) ? await findAlbum(req.params.id) : undefined
-    if (!a || !a.display) return void res.status(404).json({ error: 'no such album' })
+    if (!a || !a.display || hiddenInPlace(deps).has(a.id)) return void res.status(404).json({ error: 'no such album' })
     const order = photoSettings(deps.getMupiboxConfig()).order
     const shown = shownAssets(a)
     if (!shown.length) return void res.status(404).json({ error: 'no such album' })
@@ -475,7 +502,8 @@ export function registerPhotoDisplayRoutes(app: Express, deps: PhotoAlbumDeps): 
     if (!s.enabled || !s.screensaver.enabled) return void res.json({ enabled: false })
     if (req.query.list !== '1') return void res.json({ ...s.screensaver, slideshowSeconds: s.slideshowSeconds })
     // (pictures only: no clip in the screensaver)
-    const shown = (await albums()).map((a) => ({ ...a, assets: a.assets.filter((x) => x.kind !== 'video') })).filter((a) => a.display && a.assets.length > 0)
+    const hidden = hiddenInPlace(deps)
+    const shown = (await albums()).map((a) => ({ ...a, assets: a.assets.filter((x) => x.kind !== 'video') })).filter((a) => a.display && !hidden.has(a.id) && a.assets.length > 0)
     let pictures = shown.flatMap((a) => ordered(a.assets, s.order === 'shuffle' ? 'newest' : s.order).map((x) => ({ album: a.id, id: x.id })))
     if (s.order === 'shuffle') {
       for (let i = pictures.length - 1; i > 0; i--) {
@@ -494,7 +522,8 @@ export function registerPhotoDisplayRoutes(app: Express, deps: PhotoAlbumDeps): 
     const s = photoSettings(deps.getMupiboxConfig())
     if (!s.enabled || !s.screensaver.enabled) return void res.json({ enabled: false })
     const asked: unknown[] = Array.isArray(req.body?.pictures) ? req.body.pictures.slice(0, SCREENSAVER_MAX) : []
-    const there = new Set((await albums()).filter((a) => a.display).flatMap((a) => a.assets.map((x) => `${a.id}/${x.id}`)))
+    const hidden = hiddenInPlace(deps)
+    const there = new Set((await albums()).filter((a) => a.display && !hidden.has(a.id)).flatMap((a) => a.assets.map((x) => `${a.id}/${x.id}`)))
     const pictures = asked.filter(
       (p): p is { album: string; id: string } =>
         !!p && typeof p === 'object' && isId((p as { album?: unknown }).album) && isId((p as { id?: unknown }).id) && there.has(`${(p as { album: string }).album}/${(p as { id: string }).id}`),
@@ -503,11 +532,11 @@ export function registerPhotoDisplayRoutes(app: Express, deps: PhotoAlbumDeps): 
   })
   app.get('/api/photos/file/:album/:asset/:size', (req, res) => {
     if (!on()) return void res.status(404).end()
-    void sendPicture(req, res, true)
+    void sendPicture(req, res, true, hiddenInPlace(deps))
   })
   app.get('/api/photos/face/:album/:n', (req, res) => {
     if (!on()) return void res.status(404).end()
-    void sendFace(req, res, true)
+    void sendFace(req, res, true, hiddenInPlace(deps))
   })
   // photos looked at on the display (touched in the last minutes): the switching off when idle (idle_shutdown.sh)
   // counts the next two minutes as not idle - only the display itself, not a phone's session

@@ -4517,5 +4517,9 @@
  "Hör-Verlauf von": "Lyttehistorik for",
  "Bibliothek von": "Bibliotek for",
  "Das geht nur beim aktiven Benutzer": "Det virker kun for den aktive bruger",
- "Gespeichert. Auf die Box kommt es, wenn {} der aktive Benutzer ist.": "Gemt. Det kommer på boksen, når {} er den aktive bruger."
+ "Gespeichert. Auf die Box kommt es, wenn {} der aktive Benutzer ist.": "Gemt. Det kommer på boksen, når {} er den aktive bruger.",
+ "„Am Display zeigen“ gilt hier für {}. Die Alben selbst gehören der ganzen Box.": "“Vis på displayet” gælder her for {}. Selve albummerne hører til hele boksen.",
+ "Spielzeit von": "Lyttetid for",
+ "Fotoalben von": "Fotoalbum for",
+ "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Du redigerer lyttetiden for {}. Den gælder, så snart {} er den aktive bruger. Frigiv og ro nu virker kun for den aktive bruger, sovetimer og slukning gælder for hele boksen."
 }

@@ -4517,5 +4517,9 @@
  "Hör-Verlauf von": "Historique de",
  "Bibliothek von": "Bibliothèque de",
  "Das geht nur beim aktiven Benutzer": "Cela ne marche que pour l’utilisateur actif",
- "Gespeichert. Auf die Box kommt es, wenn {} der aktive Benutzer ist.": "Enregistré. Cela arrive sur la box quand {} est l’utilisateur actif."
+ "Gespeichert. Auf die Box kommt es, wenn {} der aktive Benutzer ist.": "Enregistré. Cela arrive sur la box quand {} est l’utilisateur actif.",
+ "„Am Display zeigen“ gilt hier für {}. Die Alben selbst gehören der ganzen Box.": "« Afficher sur l’écran » vaut ici pour {}. Les albums eux-mêmes appartiennent à toute la box.",
+ "Spielzeit von": "Temps d’écoute de",
+ "Fotoalben von": "Albums photo de",
+ "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Tu modifies le temps d’écoute de {}. Il s’applique dès que {} est l’utilisateur actif. Libérer et calme immédiat ne marchent que pour l’utilisateur actif, la minuterie et l’arrêt valent pour toute la box."
 }

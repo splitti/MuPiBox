@@ -1325,6 +1325,13 @@ function libraryOf(req: express.Request): LibraryTarget | null {
   if (!f.users.some((u) => u.id === raw)) return null
   return { dataFile: path.join(userFiles.userDir(raw), 'library', 'data.json'), lock: userLibraryLock(raw), current: false }
 }
+// Several users on and at least two: what the app tells apart per user (its chooser, the albums each one sees) - with
+// one user left the box is as one without users, nothing hidden for him alone stays hidden
+function usersShownApart(): boolean {
+  const f = userFiles.read()
+  return f.enabled && f.users.length >= 2
+}
+
 // (another user's library may have no data.json yet - a new user: an empty one)
 function readLibraryFile(lib: LibraryTarget, done: (error: Error | null, data: unknown) => void): void {
   jsonfile.readFile(lib.dataFile, (error, data) => {
@@ -2448,7 +2455,101 @@ function clockSynced(): boolean | undefined {
   return fs.existsSync(TIMESYNC_DIR) ? false : undefined
 }
 
-app.get('/api/playtime', (_req, res) => {
+// Today's play time of a user who is not in place (several users - the app's page Spielzeit for him): from his
+// settings and his counts as he left them (users/<id>/data/playtime-checkpoint.json) - read only, nothing counts for him now
+function otherUserPlaytime(id: string): Record<string, unknown> {
+  const part = userFiles.readConfigPart(id)
+  const pl = ((part?.sections.playtimeLimit as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
+  const resetHour = Number.isInteger(pl.resetHour) ? (pl.resetHour as number) : 0
+  const today = computeLogicalDate(new Date(), resetHour)
+  const dayKey = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][new Date(`${today}T12:00:00`).getDay()]
+  let cp: Record<string, unknown> = {}
+  try {
+    cp = JSON.parse(fs.readFileSync(path.join(userFiles.userDir(id), 'data', 'playtime-checkpoint.json'), 'utf8')) as Record<string, unknown>
+  } catch {
+    // none yet: nothing heard
+  }
+  const used = cp.date === today ? Number(cp.usedSeconds) || 0 : 0
+  const bonus = (pl.todayBonus as { date?: string; minutes?: number } | undefined)?.date === today ? Number((pl.todayBonus as { minutes?: number }).minutes) || 0 : 0
+  const base = Number((pl.limitsMinutes as Record<string, unknown> | undefined)?.[dayKey] ?? 60)
+  const limit = (Number.isFinite(base) ? base : 60) + bonus
+  const enabled = pl.enabled === true
+  const tileUsed = cp.tileDate === today && cp.tileUsed && typeof cp.tileUsed === 'object' ? (cp.tileUsed as Record<string, number>) : {}
+  const tileToday = (pl.tileToday as { date?: string; bonus?: Record<string, number>; free?: string[] } | undefined) ?? {}
+  const tilesToday = tileToday.date === today ? tileToday : {}
+  const tiles = (Array.isArray(pl.tileLimits) ? (pl.tileLimits as { key?: string; minutes?: number }[]) : [])
+    .filter((t) => typeof t?.key === 'string')
+    .map((t) => {
+      const key = t.key as string
+      const usedSeconds = Number(tileUsed[key]) || 0
+      const bonusMinutes = Number(tilesToday.bonus?.[key]) || 0
+      const limitMinutes = (Number(t.minutes) || 0) + bonusMinutes
+      const free = (tilesToday.free ?? []).includes(key)
+      return { key, usedSeconds, limitMinutes, bonusMinutes, free, blocked: !free && usedSeconds >= limitMinutes * 60 }
+    })
+  // (his photo time, as the player says it for the user in place - photoTimeStatus there: the box's switch of the photos,
+  // his own limit)
+  const livePhotos = ((getMupiboxConfigSync() as Record<string, unknown> | undefined)?.photos ?? {}) as Record<string, unknown>
+  const ph = (part?.photos ?? {}) as Record<string, unknown>
+  let photos: Record<string, unknown> | undefined
+  if (livePhotos.enabled === true) {
+    const t = ((ph.today as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
+    const isToday = t.date === today
+    const free = isToday && t.free === true
+    const photoBonus = isToday && Number(t.bonusMinutes) > 0 ? Math.min(1440, Number(t.bonusMinutes)) : 0
+    const dayMinutes = Number((ph.dailyMinutes as Record<string, unknown> | undefined)?.[dayKey])
+    const photoLimit = (Number.isInteger(dayMinutes) && dayMinutes >= 0 ? dayMinutes : 20) + photoBonus
+    const mode = ph.limitMode === 'shared' ? 'shared' : 'separate'
+    const limited = mode === 'separate' && ph.limitEnabled !== false && !free
+    const photoUsed = cp.photoDate === today ? Number(cp.photoUsedSeconds) || 0 : 0
+    const remaining = limited ? Math.max(0, photoLimit * 60 - photoUsed) : null
+    photos = {
+      enabled: true,
+      mode,
+      limitEnabled: ph.limitEnabled !== false,
+      free,
+      limited,
+      limitMinutes: photoLimit,
+      bonusMinutes: photoBonus,
+      usedSeconds: photoUsed,
+      remainingSeconds: remaining,
+      state: limited && remaining !== null && remaining <= 0 ? 'blocked' : 'normal',
+      counting: false,
+    }
+  }
+  return {
+    enabled,
+    otherUser: true,
+    playtime: {
+      enabled,
+      date: today,
+      // (the player counts only with a limit on - without one, the app takes the minutes from his history)
+      ...(enabled ? { usedSeconds: used } : {}),
+      limitMinutes: limit,
+      remainingSeconds: Math.max(0, limit * 60 - used),
+      state: enabled && used >= limit * 60 ? 'blocked' : 'normal',
+      bonusMinutes: bonus,
+    },
+    quiet: { enabled: (part?.sections.quietHours as { enabled?: unknown } | undefined)?.enabled === true },
+    tiles: { list: tiles },
+    ...(photos ? { photos } : {}),
+  }
+}
+
+app.get('/api/playtime', (req, res) => {
+  // (?user=: another user than the one in place - his day as he left it; the one in place: the player's live state)
+  if (req.query?.user !== undefined) {
+    const lib = libraryOf(req)
+    if (!lib) {
+      res.status(404).json({ error: 'no such user' })
+      return
+    }
+    if (!lib.current) {
+      res.setHeader('Cache-Control', 'no-store')
+      res.json(otherUserPlaytime(String(req.query.user)))
+      return
+    }
+  }
   const disabled: PlaytimeStatus = { enabled: false }
   if (!fs.existsSync(playtimeFile)) {
     res.json(disabled)
@@ -2984,8 +3085,16 @@ app.post('/api/playtime/extend', localOrElternSession, async (req, res) => {
     res.status(400).json({ error: 'minutes must be a positive number <= 1440' })
     return
   }
+  // (?user=: today's bonus of the user the app named - also one who is not in place: it counts when he is, today)
+  const named = req.query?.user !== undefined ? libraryOf(req) : null
+  if (req.query?.user !== undefined && !named) {
+    res.status(404).json({ error: 'no such user' })
+    return
+  }
+  const change = (mutate: (cfg: Record<string, unknown>) => void) =>
+    named ? users.updateUserConfig(String(req.query.user), mutate) : updateMupiboxConfig(mutate)
   try {
-    await updateMupiboxConfig((cfg) => {
+    await change((cfg) => {
       let pl = cfg.playtimeLimit as Record<string, unknown> | undefined
       if (!pl || typeof pl !== 'object') {
         pl = {}
@@ -8672,7 +8781,7 @@ app.get('/api/library/children', async (req, res) => {
 
 // Cover images (and audio) of library folders, with Range support.
 // The photo display's albums for the box's display (only with the display switched on - app-api/photos/albums.ts)
-registerPhotoDisplayRoutes(app, { getMupiboxConfig: () => getMupiboxConfigSync() })
+registerPhotoDisplayRoutes(app, { getMupiboxConfig: () => getMupiboxConfigSync(), usersOn: usersShownApart })
 
 app.get('/api/library/file', async (req, res) => {
   const rel = libraryRel(typeof req.query.path === 'string' ? req.query.path : '')
@@ -8866,6 +8975,8 @@ app.use(
     userConfig: (id) => users.userConfig(id),
     updateUserConfig: (id, mutate) => users.updateUserConfig(id, mutate),
     userPlayLog: (id) => path.join(userFiles.userDir(id), 'logs', 'play_log.jsonl'),
+    usersOn: usersShownApart,
+    userIds: () => userFiles.read().users.map((u) => u.id),
     requestedUser: (req) => {
       if (req.query?.user === undefined) return null
       const lib = libraryOf(req)

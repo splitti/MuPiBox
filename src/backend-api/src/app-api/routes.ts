@@ -146,6 +146,9 @@ export interface ElternRouterDeps {
   /** what was heard by a user who is not in place, and his lock around a change of it */
   heardOf?: (id: string) => HeardStore
   withUserLock?: <T>(id: string, work: () => T) => T | 'locked'
+  /** several users switched on, and their ids */
+  usersOn?: () => boolean
+  userIds?: () => string[]
 }
 
 /** Build a Set-Cookie header value. HttpOnly + SameSite=Strict; no Secure
@@ -435,7 +438,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   const router = Router()
   // (several users: a request of the library, the play time or what was heard for a user who is not there - an old list
   // in the app: answered with 404 before anything changes)
-  router.use(['/library', '/tiles', '/caps-config', '/heard', '/playlog'], (req, res, next) => {
+  router.use(['/library', '/tiles', '/caps-config', '/heard', '/playlog', '/photos/settings', '/photos/time', '/photos/overview', '/photos/albums'], (req, res, next) => {
     if (typeof req.query?.user !== 'undefined' && deps.requestedUser?.(req) === undefined) {
       res.status(404).json({ error: 'no such user' })
       return
@@ -501,7 +504,40 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   // (Audible, Dienste › Audible: the device's key kept as the NAS password - see audible.ts)
   registerAudibleRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig, secret: deps.photoSecret })
   // (the photo display, Einstellungen › Fotos - off by default)
-  registerPhotoRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig, nas: deps.photoNas, secret: deps.photoSecret })
+  registerPhotoRoutes(router, {
+    getMupiboxConfig: deps.getMupiboxConfig,
+    updateMupiboxConfig: deps.updateMupiboxConfig,
+    nas: deps.photoNas,
+    secret: deps.photoSecret,
+    // (the photo time of the user the app named, see ../users.ts)
+    userCfgOf: async (req) => ((deps.requestedUser?.(req) ?? null) ? userCfgOf(req) : null),
+    updateUserCfg: (req, mutate) => updateUserCfg(req, mutate),
+    // (the albums a user sees on the display: his list of hidden ones - only with several users on)
+    usersOn: deps.usersOn,
+    hiddenOf: async (req) => {
+      if (!deps.usersOn?.() || !(deps.requestedUser?.(req) ?? null)) return null
+      const list = ((await userCfgOf(req)).photos as { hiddenAlbums?: unknown } | undefined)?.hiddenAlbums
+      return Array.isArray(list) ? list.filter((x): x is string => typeof x === 'string') : []
+    },
+    setVisible: async (req, id, visible, shownForAll) => {
+      const named = deps.requestedUser?.(req) ?? null
+      if (!deps.usersOn?.() || !named) return false
+      const hide = (cfg: Record<string, unknown>, on: boolean) => {
+        const photos = ((cfg.photos as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
+        const list = new Set(Array.isArray(photos.hiddenAlbums) ? (photos.hiddenAlbums as unknown[]).filter((x): x is string => typeof x === 'string') : [])
+        if (on) list.add(id)
+        else list.delete(id)
+        photos.hiddenAlbums = [...list]
+        cfg.photos = photos
+      }
+      await updateUserCfg(req, (cfg) => hide(cfg, !visible))
+      // (an album hidden for all so far, shown for him: the box shows it again - for the others it stays hidden)
+      if (visible && !shownForAll && deps.userIds && deps.updateUserConfig) {
+        for (const other of deps.userIds()) if (other !== named.id) await deps.updateUserConfig(other, (cfg) => hide(cfg, true))
+      }
+      return true
+    },
+  })
   registerSystemRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   // (pm2 runs server.js from its folder: templates/ lies next to it)
   registerAdminRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig, serverDir: process.cwd() })

@@ -4517,5 +4517,9 @@
  "Hör-Verlauf von": "Historial de",
  "Bibliothek von": "Biblioteca de",
  "Das geht nur beim aktiven Benutzer": "Esto solo funciona con el usuario activo",
- "Gespeichert. Auf die Box kommt es, wenn {} der aktive Benutzer ist.": "Guardado. Llega a la caja cuando {} sea el usuario activo."
+ "Gespeichert. Auf die Box kommt es, wenn {} der aktive Benutzer ist.": "Guardado. Llega a la caja cuando {} sea el usuario activo.",
+ "„Am Display zeigen“ gilt hier für {}. Die Alben selbst gehören der ganzen Box.": "«Mostrar en la pantalla» vale aquí para {}. Los álbumes en sí son de toda la caja.",
+ "Spielzeit von": "Tiempo de escucha de",
+ "Fotoalben von": "Álbumes de fotos de",
+ "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Estás editando el tiempo de escucha de {}. Se aplica en cuanto {} sea el usuario activo. Liberar y silencio inmediato solo funcionan con el usuario activo; el temporizador y el apagado valen para toda la caja."
 }

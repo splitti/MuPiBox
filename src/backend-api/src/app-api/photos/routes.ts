@@ -4,7 +4,8 @@
 
 import { existsSync } from 'node:fs'
 import { spawn } from 'node:child_process'
-import type { Router } from 'express'
+import type { Request, Router } from 'express'
+import { USER_PHOTO_KEYS as PHOTO_TIME_KEYS } from '../../users'
 import type { MupiboxConfig } from '../../models/mupibox-config.model'
 import { requireCsrf, requireSession } from '../middleware'
 import { registerPhotoAlbumRoutes } from './albums'
@@ -25,6 +26,14 @@ export interface PhotoDeps {
   nas?: PhotoNasAccess
   /** the box's way to keep a secret (the Immich key - see immich.ts) */
   secret?: PhotoImmichDeps['secret']
+  /** several users (../../users.ts): the photo time of the user the app named (?user=) - his configuration to read
+   *  (null: none named) and to change */
+  userCfgOf?: (req: Request) => Promise<Record<string, unknown> | null>
+  updateUserCfg?: (req: Request, mutate: (cfg: Record<string, unknown>) => void) => Promise<void>
+  /** ... and the albums each user sees on the display (see albums.ts PhotoAlbumDeps) */
+  usersOn?: () => boolean
+  hiddenOf?: (req: Request) => Promise<string[] | null>
+  setVisible?: (req: Request, id: string, visible: boolean, shownForAll: boolean) => Promise<boolean>
 }
 
 const SETUP = '/usr/local/bin/mupibox/photos_setup.sh'
@@ -94,7 +103,7 @@ function installWhatIsNeeded(cfg: MupiboxConfig | undefined): void {
 
 export function registerPhotoRoutes(router: Router, deps: PhotoDeps): void {
   // (Bibliothek › Fotos: overview, albums, upload - see albums.ts)
-  registerPhotoAlbumRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig })
+  registerPhotoAlbumRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, usersOn: deps.usersOn, hiddenOf: deps.hiddenOf, setVisible: deps.setVisible })
   // (Bibliothek › Fotos › NAS-Ordner - see nas.ts)
   registerPhotoNasRoutes(router, deps)
   // (Bibliothek › Fotos › Immich - see immich.ts)
@@ -109,9 +118,22 @@ export function registerPhotoRoutes(router: Router, deps: PhotoDeps): void {
   registerPhotoPhotoprismRoutes(router, deps)
 
   /** GET /api/app/photos/settings - the settings (with their defaults) and the programs' state */
-  router.get('/photos/settings', requireSession, (_req, res) => {
+  // (?user=: the photo time of another user - his part over the box's photo settings; the albums and the rest stay
+  // the box's)
+  const cfgFor = async (req: Request): Promise<MupiboxConfig | undefined> => {
+    const live = deps.getMupiboxConfig()
+    const his = deps.userCfgOf ? await deps.userCfgOf(req) : null
+    if (!his || !live) return live
+    const photos = { ...((live.photos as Record<string, unknown> | undefined) ?? {}) }
+    for (const k of PHOTO_TIME_KEYS) delete photos[k]
+    return { ...live, photos: { ...photos, ...((his.photos as Record<string, unknown> | undefined) ?? {}) } } as MupiboxConfig
+  }
+  const update = (req: Request, mutate: (cfg: Record<string, unknown>) => void): Promise<void> =>
+    deps.updateUserCfg ? deps.updateUserCfg(req, mutate) : deps.updateMupiboxConfig(mutate)
+
+  router.get('/photos/settings', requireSession, async (req, res) => {
     res.setHeader('Cache-Control', 'no-store')
-    res.json(state(deps.getMupiboxConfig()))
+    res.json(state(await cfgFor(req)))
   })
 
   /**
@@ -121,7 +143,7 @@ export function registerPhotoRoutes(router: Router, deps: PhotoDeps): void {
   router.post('/photos/settings', requireSession, requireCsrf, async (req, res) => {
     let error: string | null = null
     try {
-      await deps.updateMupiboxConfig((cfg) => {
+      await update(req, (cfg) => {
         const photos = { ...((cfg.photos as Record<string, unknown> | undefined) ?? {}) }
         error = applyPhotoSettings(photos, req.body)
         if (!error) cfg.photos = photos
@@ -130,9 +152,8 @@ export function registerPhotoRoutes(router: Router, deps: PhotoDeps): void {
       return void res.status(500).json({ error: 'config_not_saved' })
     }
     if (error) return void res.status(400).json({ error })
-    const cfg = deps.getMupiboxConfig()
-    installWhatIsNeeded(cfg)
-    res.json(state(cfg))
+    installWhatIsNeeded(deps.getMupiboxConfig())
+    res.json(state(await cfgFor(req)))
   })
 
   /**
@@ -142,7 +163,7 @@ export function registerPhotoRoutes(router: Router, deps: PhotoDeps): void {
   router.post('/photos/time', requireSession, requireCsrf, async (req, res) => {
     let error: string | null = null
     try {
-      await deps.updateMupiboxConfig((cfg) => {
+      await update(req, (cfg) => {
         error = applyPhotoTimeAction(cfg as Record<string, unknown>, req.body?.action, req.body?.minutes)
       })
     } catch {

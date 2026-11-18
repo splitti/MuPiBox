@@ -571,7 +571,7 @@ let renderToken = 0
 
 // The pages a library of another user is shown on (several users): the library, its pages to add to it and its Spotify
 // subscriptions, the history. On any other page the app is with the user in place again (Hören plays from his).
-const LIB_USER_PAGES = new Set(['bibliothek', 'suche', 'podsuche', 'radiosuche', 'tidalsuche', 'jellyfinsuche', 'audiblesuche', 'link', 'spotify', 'verlauf'])
+const LIB_USER_PAGES = new Set(['bibliothek', 'suche', 'podsuche', 'radiosuche', 'tidalsuche', 'jellyfinsuche', 'audiblesuche', 'link', 'spotify', 'verlauf', 'spielzeit', 'fotos', 'fotoalbum'])
 function libUserShown(page) {
   const s = usersState
   const on = !!s?.enabled && (s.users?.length ?? 0) >= 2 && LIB_USER_PAGES.has(page?.id)
@@ -588,8 +588,16 @@ function libUserTop(page) {
   const chips = s.users
     .map((u) => `<button type="button" class="user-chip" data-lib-user="${esc(u.id)}" aria-pressed="${u.id === shown}">${userDot(u.color)}<span translate="no">${esc(u.name)}</span>${u.id === s.current ? `<small>${esc(tr('aktiv'))}</small>` : ''}</button>`)
     .join('')
-  const note = other ? `<div class="note wide">${icon('info', 18)}<span>${esc(tr(`Du bearbeitest die Bibliothek von ${other.name}. Abspielen geht nur aus der Bibliothek des aktiven Benutzers.`))}</span></div>` : ''
-  return [`<div class="user-bar wide lib-user" id="lib-user"><span class="lib-user-lbl">${esc(tr(page.id === 'verlauf' ? 'Hör-Verlauf von' : 'Bibliothek von'))}</span>${chips}</div>${note}`]
+  const text = !other
+    ? ''
+    : page.id === 'spielzeit'
+      ? tr(`Du bearbeitest die Spielzeit von ${other.name}. Sie gilt, sobald ${other.name} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.`)
+      : page.id === 'fotos' || page.id === 'fotoalbum'
+        ? tr(`„Am Display zeigen“ gilt hier für ${other.name}. Die Alben selbst gehören der ganzen Box.`)
+        : tr(`Du bearbeitest die Bibliothek von ${other.name}. Abspielen geht nur aus der Bibliothek des aktiven Benutzers.`)
+  const note = other ? `<div class="note wide">${icon('info', 18)}<span>${esc(text)}</span></div>` : ''
+  const label = page.id === 'verlauf' ? 'Hör-Verlauf von' : page.id === 'spielzeit' ? 'Spielzeit von' : page.id === 'fotos' || page.id === 'fotoalbum' ? 'Fotoalben von' : 'Bibliothek von'
+  return [`<div class="user-bar wide lib-user" id="lib-user"><span class="lib-user-lbl">${esc(tr(label))}</span>${chips}</div>${note}`]
 }
 
 async function renderPage(page, reload = true) {
@@ -1112,9 +1120,11 @@ function action(act, label, page) {
 // at the display meanwhile does not send a change to the next user); null off those pages.
 const libView = { user: null, shown: null }
 const USER_LIBRARY_ROUTE =
-  /^(\/api\/(data|data-version|add|edit|delete|delete-many)|\/api\/app\/library\/(subscriptions|subscribe-artist|unsubscribe-artist|remove-synced|remove-album|artist-exclude|add-album|episodes)|\/api\/app\/(heard|tiles\/limit|caps-config))$/
-// (what goes for the box or the user in place only: not while another user's library is shown)
-const USER_PLAY_ROUTE = /^\/api\/app\/(library\/(play|play-local|play-nas)|cover-hide|podcast-offline\/(episode|sync))$/
+  /^(\/api\/(data|data-version|add|edit|delete|delete-many|playtime|playtime\/extend)|\/api\/app\/library\/(subscriptions|subscribe-artist|unsubscribe-artist|remove-synced|remove-album|artist-exclude|add-album|episodes)|\/api\/app\/(heard|tiles\/limit|tiles\/time|caps-config|playlog|photos\/settings|photos\/time|photos\/overview|photos\/albums\/[a-f0-9]{10}))$/
+// (what goes for the box or the user in place only: not while another user's library is shown - playing, a release or
+// "quiet now" for the box)
+const USER_PLAY_ROUTE =
+  /^(\/api\/app\/(library\/(play|play-local|play-nas)|cover-hide|podcast-offline\/(episode|sync))|\/api\/(playtime\/release|playtime\/override\/clear|quiethours\/now))$/
 const withUser = (path, user) => `${path}${path.includes('?') ? '&' : '?'}user=${encodeURIComponent(user)}`
 
 // (user: the user a request is for, taken by the caller when it began - a page that loads in several requests does
@@ -1999,7 +2009,10 @@ async function loadCaps() {
 async function refreshPlaytime() {
   const hero = $('#pt-hero')
   if (!hero) return
-  const [st, sleep] = await Promise.all([api('/api/playtime'), api(`${API}/sleeptimer`)])
+  // (the user shown when it began - another chosen meanwhile: his page reads his own, this answer is dropped)
+  const user = libView.shown
+  const [st, sleep] = await Promise.all([api('/api/playtime', { user }), api(`${API}/sleeptimer`)])
+  if (user !== libView.shown) return
   if (st.ok) caps.status = st.body
   caps.sleep = sleep.body?.active ? sleep.body : null
   await listenedToday()
@@ -18710,9 +18723,8 @@ const CONTROLLERS = {
   },
   verlauf: {
     async load() {
-      // (the history of the user shown - several users: another one than the one in place, see libView)
-      const of = (p) => (libView.user ? withUser(p, libView.user) : p)
-      const [today, week] = await Promise.all([api(of(`${API}/playlog?range=today`)), api(of(`${API}/playlog?range=week`))])
+      // (the history of the user shown - several users: api names him, see libView)
+      const [today, week] = await Promise.all([api(`${API}/playlog?range=today`), api(`${API}/playlog?range=week`)])
       if (!today.ok && !week.ok) throw new Error(`playlog ${today.status}`)
       listenLog.today = today.body
       listenLog.week = week.body

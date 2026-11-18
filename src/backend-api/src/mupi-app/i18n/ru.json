@@ -4517,5 +4517,9 @@
  "Hör-Verlauf von": "История прослушивания:",
  "Bibliothek von": "Библиотека:",
  "Das geht nur beim aktiven Benutzer": "Это работает только для активного пользователя",
- "Gespeichert. Auf die Box kommt es, wenn {} der aktive Benutzer ist.": "Сохранено. Это попадёт на бокс, когда {} станет активным пользователем."
+ "Gespeichert. Auf die Box kommt es, wenn {} der aktive Benutzer ist.": "Сохранено. Это попадёт на бокс, когда {} станет активным пользователем.",
+ "„Am Display zeigen“ gilt hier für {}. Die Alben selbst gehören der ganzen Box.": "«Показывать на дисплее» здесь относится к {}. Сами альбомы принадлежат всему боксу.",
+ "Spielzeit von": "Время прослушивания:",
+ "Fotoalben von": "Фотоальбомы:",
+ "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Ты редактируешь время прослушивания {}. Оно действует, как только {} станет активным пользователем. Разрешить и тишина сейчас работают только для активного пользователя, таймер сна и выключение действуют для всего бокса."
 }

@@ -4517,5 +4517,9 @@
  "Hör-Verlauf von": "Kuunteluhistoria:",
  "Bibliothek von": "Kirjasto:",
  "Das geht nur beim aktiven Benutzer": "Tämä toimii vain aktiiviselle käyttäjälle",
- "Gespeichert. Auf die Box kommt es, wenn {} der aktive Benutzer ist.": "Tallennettu. Se tulee laitteelle, kun {} on aktiivinen käyttäjä."
+ "Gespeichert. Auf die Box kommt es, wenn {} der aktive Benutzer ist.": "Tallennettu. Se tulee laitteelle, kun {} on aktiivinen käyttäjä.",
+ "„Am Display zeigen“ gilt hier für {}. Die Alben selbst gehören der ganzen Box.": "”Näytä näytöllä” koskee täällä käyttäjää {}. Albumit itse kuuluvat koko laitteelle.",
+ "Spielzeit von": "Kuunteluaika:",
+ "Fotoalben von": "Valokuva-albumit:",
+ "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Muokkaat käyttäjän {} kuunteluaikaa. Se on voimassa heti, kun {} on aktiivinen käyttäjä. Vapautus ja hiljaisuus nyt toimivat vain aktiiviselle käyttäjälle, uniajastin ja sammutus koskevat koko laitetta."
 }

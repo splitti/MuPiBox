@@ -4517,5 +4517,9 @@
  "Hör-Verlauf von": "Luistergeschiedenis van",
  "Bibliothek von": "Bibliotheek van",
  "Das geht nur beim aktiven Benutzer": "Dit kan alleen bij de actieve gebruiker",
- "Gespeichert. Auf die Box kommt es, wenn {} der aktive Benutzer ist.": "Opgeslagen. Het komt op de box als {} de actieve gebruiker is."
+ "Gespeichert. Auf die Box kommt es, wenn {} der aktive Benutzer ist.": "Opgeslagen. Het komt op de box als {} de actieve gebruiker is.",
+ "„Am Display zeigen“ gilt hier für {}. Die Alben selbst gehören der ganzen Box.": "“Op het display tonen” geldt hier voor {}. De albums zelf horen bij de hele box.",
+ "Spielzeit von": "Luistertijd van",
+ "Fotoalben von": "Fotoalbums van",
+ "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Je bewerkt de luistertijd van {}. Die geldt zodra {} de actieve gebruiker is. Vrijgeven en meteen stil werken alleen bij de actieve gebruiker, slaaptimer en uitschakelen gelden voor de hele box."
 }
