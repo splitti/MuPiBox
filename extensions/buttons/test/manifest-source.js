@@ -6,7 +6,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const { BUTTONS, TWINS, ACTIONS } = require('../inputs.js')
 
-const VERSION = '1.2.1'
+const VERSION = '1.4.0'
 
 const ACTION_LABELS = {
   none: 'Keine Aktion',
@@ -19,6 +19,7 @@ const ACTION_LABELS = {
   ffwd: '30 Sekunden vor',
   rewind: '30 Sekunden zurück',
   shuffle: 'Zufallswiedergabe an/aus',
+  repeat: 'Repeat all/one/off',
   output: 'Ausgabe wechseln',
   stop: 'Stopp',
   shutdown: 'Box ausschalten',
@@ -70,6 +71,7 @@ function build() {
     items.push(
       {
         type: 'heading',
+        card: true,
         label: 'Taster',
         rename: `${k}Name`,
         ...(n > 1 ? { optional: `${k}On` } : {}),
@@ -105,6 +107,7 @@ function build() {
     items.push(
       {
         type: 'heading',
+        card: true,
         label: 'Doppeltaster',
         rename: `${k}Name`,
         optional: `${k}On`,
@@ -122,7 +125,7 @@ function build() {
     name: 'Buttons & GPIO Input',
     version: VERSION,
     description:
-      'Physische Taster an den GPIO-Pins steuern die Box: Play/Pause, Titel, Lautstärke und mehr. Mit Tastern für kurzes und langes Drücken (Dual Action) und Doppeltastern mit sechs Funktionen. Die Einstellungen stehen unter System › Buttons & GPIO Input.',
+      'Physische Taster an den GPIO-Pins steuern die Box: Play/Pause, Titel, Lautstärke und mehr. Mit Tastern für kurzes und langes Drücken (Dual Action) und Doppeltastern mit sechs Funktionen. Die Einstellungen stehen unter Einstellungen › Buttons & GPIO Input.',
     hostApi: 5,
     resources: {},
     api: 'api.js',

@@ -2,16 +2,20 @@
 
 Run: python -m unittest discover -s extensions/nfc/test -p "test_*.py"
 """
+import io
+import json
 import os
 import struct
 import sys
+import tempfile
 import unittest
+from contextlib import redirect_stdout
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import usbreader  # noqa: E402
 from pn5180 import ReaderError  # noqa: E402
-from usbreader import KeyReader, choose_device, key_bit, read_devices  # noqa: E402
+from usbreader import KeyReader, choose_device, describe, key_bit, list_readers, names_of, read_devices, usb_readers, usb_strings  # noqa: E402
 
 NEUFTECH = """I: Bus=0003 Vendor=ffff Product=0035 Version=0110
 N: Name="HXGCoLtd Keyboard"
@@ -203,3 +207,133 @@ class ArgumentsTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+TERA = """I: Bus=0003 Vendor=0581 Product=011c Version=0110
+N: Name="HID 0581:011c"
+P: Phys=usb-xhci-hcd.0-2/input0
+S: Sysfs=/devices/platform/usb1/1-2/1-2:1.0/0003:0581:011C.0001/input/input0
+U: Uniq=
+H: Handlers=sysrq kbd leds event0
+B: PROP=0
+B: EV=120013
+B: KEY=1000000000007 ff800000000007ff f6beffdff3cfffff fffffffffffffffe
+"""
+
+
+SYSFS = '/devices/platform/usb1/1-2/interface/hid/input0'
+
+
+class NamesTest(unittest.TestCase):
+    """The name of a USB reader as the user knows it: its own text, else the database of the system, else the name of the system."""
+
+    def sysroot(self, strings):
+        """A made-up /sys: the folder of the USB device (with its ids and the texts it has) above the folder of the interface."""
+        root = tempfile.mkdtemp()
+        usb = os.path.join(root, 'devices', 'platform', 'usb1', '1-2')
+        interface = os.path.join(usb, 'interface', 'hid', 'input0')  # (no colons in the names: this runs on Windows too)
+        os.makedirs(interface)
+        for name, value in dict(idVendor='0581', idProduct='011c', **strings).items():
+            with open(os.path.join(usb, name), 'w', encoding='utf8') as handle:
+                handle.write(value + chr(10))
+        return root
+
+    def test_the_ids_and_the_sysfs_path_are_read(self):
+        device_ = read_devices(TERA)[0]
+        self.assertEqual((device_['vendor'], device_['product']), ('0581', '011c'))
+        self.assertTrue(device_['sysfs'].endswith('/input/input0'))
+
+    def test_a_reader_that_carries_its_name_is_called_so(self):
+        device_ = read_devices(TERA)[0]
+        device_['sysfs'] = SYSFS
+        root = self.sysroot({'manufacturer': 'Sycreader', 'product': 'RFID  Reader'})
+        self.assertEqual(usb_strings(device_, root), ('Sycreader', 'RFID  Reader'))
+        asked = []
+        self.assertEqual(describe(device_, root, lambda v, p: asked.append((v, p)) or ('x', 'y')), 'RFID Reader')
+        self.assertEqual(asked, [], 'the database is not asked when the device has a name')
+        self.assertEqual(device_['maker'], 'Sycreader')
+
+    def test_a_reader_without_a_name_is_called_what_the_database_calls_its_ids(self):
+        device_ = read_devices(TERA)[0]
+        device_['sysfs'] = SYSFS
+        root = self.sysroot({})
+        self.assertEqual(describe(device_, root, lambda v, p: ('Racal Data Group', 'Tera 5100 dongle') if (v, p) == ('0581', '011c') else ('', '')), 'Tera 5100 dongle')
+        self.assertEqual(device_['maker'], 'Racal Data Group')
+
+    def test_a_reader_nobody_knows_keeps_the_name_of_the_system(self):
+        device_ = read_devices(TERA)[0]
+        device_['sysfs'] = SYSFS
+        self.assertEqual(describe(device_, self.sysroot({}), lambda v, p: ('', '')), 'HID 0581:011c')
+        # (no sysfs path at all, a device that is no USB device: the same)
+        self.assertEqual(describe({'name': 'x', 'label': 'x', 'usb': True, 'vendor': '1', 'product': '2', 'sysfs': ''}, tempfile.mkdtemp(), lambda v, p: ('', '')), 'x')
+        self.assertEqual(describe({'name': 'pwr', 'label': 'pwr', 'usb': False}), 'pwr')
+
+    def test_the_reader_can_be_asked_for_by_any_of_its_names(self):
+        devices = read_devices(TERA + chr(10) + NEUFTECH)
+        for entry in devices:
+            if entry['usb'] and entry['keyboard']:
+                entry['sysfs'] = SYSFS
+                describe(entry, self.sysroot({}), lambda v, p: ('Racal Data Group', 'Tera 5100 dongle') if v == '0581' else ('', ''))
+        for wanted in ('Tera', 'tera 5100', 'racal', '0581:011c', 'HID 0581', '/dev/input/event0'):
+            self.assertEqual(choose_device(devices, wanted)['vendor'], '0581', wanted)
+        self.assertIn('tera 5100 dongle', names_of(devices[0]))
+        with self.assertRaises(ReaderError) as caught:
+            choose_device(devices, 'nothing like it')
+        self.assertIn('Tera 5100 dongle', caught.exception.message, 'what is found is named as the user knows it')
+
+
+class SecondInterfaceTest(unittest.TestCase):
+    """A reader that shows two input devices of the same name (one with keys, one without): the name finds the one that types."""
+
+    def test_a_name_finds_the_keyboard_not_the_other_interface_of_the_reader(self):
+        other = {'name': 'RFID Reader RFID Reader', 'label': 'RFID Reader', 'maker': 'RFID Reader', 'event': '/dev/input/event5', 'usb': True, 'keyboard': False, 'vendor': '1a86', 'product': 'dd01'}
+        typing = dict(other, name='RFID Reader RFID Reader Keyboard', event='/dev/input/event6', keyboard=True)
+        devices = [device('HID 0581:011c', '/dev/input/event0'), other, typing]
+        for wanted in ('RFID Reader', '1a86:dd01', 'rfid'):
+            self.assertEqual(choose_device(devices, wanted)['event'], '/dev/input/event6', wanted)
+        # (its path still names the node exactly; a name that only the other node has is still found, as before)
+        self.assertEqual(choose_device(devices, '/dev/input/event5')['event'], '/dev/input/event5')
+        self.assertEqual(choose_device([other], 'RFID')['event'], '/dev/input/event5')
+
+
+class ByIndexTest(unittest.TestCase):
+    """"USB reader 1", "USB reader 2": the devices that type, by the port they are plugged in, without a name to type."""
+
+    def devices(self):
+        def entry(name, event, sysfs, keyboard=True):
+            return {'name': name, 'label': name, 'maker': '', 'event': event, 'usb': True, 'keyboard': keyboard, 'vendor': 'aaaa', 'product': '0001', 'sysfs': sysfs}
+        return [entry('Second port', '/dev/input/event3', '/devices/usb3/3-2/x'), entry('Nothing types', '/dev/input/event2', '/devices/usb1/1-1/y', keyboard=False),
+                entry('First port', '/dev/input/event0', '/devices/usb1/1-2/x'), device('vc4-hdmi', '/dev/input/event9', usb=False)]
+
+    def test_the_readers_are_in_the_order_of_their_ports(self):
+        self.assertEqual([d['name'] for d in usb_readers(self.devices())], ['First port', 'Second port'])
+
+    def test_the_index_takes_the_first_second_reader(self):
+        devices = self.devices()
+        self.assertEqual(choose_device(devices, '', 1)['name'], 'First port')
+        self.assertEqual(choose_device(devices, '', 2)['name'], 'Second port')
+        with self.assertRaises(ReaderError) as caught:
+            choose_device(devices, '', 3)
+        self.assertEqual(caught.exception.code, 'no_device')
+
+    def test_a_name_wins_over_the_index_and_no_index_is_as_before(self):
+        devices = self.devices()
+        self.assertEqual(choose_device(devices, 'second', 1)['name'], 'Second port')
+        with self.assertRaises(ReaderError) as caught:
+            choose_device(devices, '')
+        self.assertEqual(caught.exception.code, 'several_devices')
+
+    def test_the_list_says_the_readers_that_are_there(self):
+        path = os.path.join(tempfile.mkdtemp(), 'devices')
+        with open(path, 'w', encoding='utf8') as handle:
+            handle.write(TERA)
+        out = io.StringIO()
+        with redirect_stdout(out):
+            self.assertEqual(list_readers(path), 0)
+        found = json.loads(out.getvalue())
+        self.assertEqual([(f['event'], f['ids']) for f in found], [('/dev/input/event0', '0581:011c')])
+        # (nothing to read: an empty list, not an error)
+        out = io.StringIO()
+        with redirect_stdout(out):
+            self.assertEqual(list_readers(os.path.join(tempfile.mkdtemp(), 'none')), 0)
+        self.assertEqual(json.loads(out.getvalue()), [])

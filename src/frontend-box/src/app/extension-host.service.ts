@@ -1,5 +1,6 @@
 import { isPlatformBrowser } from '@angular/common'
 import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core'
+import { Router } from '@angular/router'
 import { NavController } from '@ionic/angular/standalone'
 import { environment } from 'src/environments/environment'
 import { CoverFlipService } from './cover-flip.service'
@@ -80,6 +81,7 @@ export class ExtensionHostService {
   readonly headerItems = signal<{ id: string; item: HeaderItem }[]>([])
   private readonly ejectHandlers: { id: string; fn: () => boolean }[] = []
   private readonly navController = inject(NavController)
+  private readonly router = inject(Router)
   private readonly coverFlip = inject(CoverFlipService)
   private readonly noResumeFolders = new Set<string>()
   private started = false
@@ -235,7 +237,13 @@ export class ExtensionHostService {
       winamp: { onEject: (fn) => void this.ejectHandlers.push({ id, fn }) },
       player: {
         open: (media) => {
-          void this.navController.navigateForward(['/player'], { state: { media }, animation: this.coverFlip.animation })
+          const start = (): void => {
+            void this.navController.navigateForward(['/player'], { state: { media }, animation: this.coverFlip.animation })
+          }
+          // (the player page takes its medium when it is created: with the player page open already, a second start would do nothing -
+          // the page is left first, so the new medium gets a fresh one)
+          if (this.router.url.split(/[?#]/)[0] === '/player') void this.navController.navigateRoot(['/home'], { animated: false }).then(start)
+          else start()
         },
         noResumeFolder: (folder) => void this.noResumeFolders.add(folder),
       },

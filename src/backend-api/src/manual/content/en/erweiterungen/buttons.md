@@ -2,7 +2,7 @@
 
 With the extension **Buttons & GPIO Input**, **real buttons** control the box: play/pause, next track, louder, quieter and more. Each button is connected to a GPIO pin of the Raspberry Pi that you choose yourself.
 
-After [installing](installieren.md) it, its settings are on a page of their own: **Settings › System › Buttons & GPIO Input**. The card **Rotary knob** ([Rotary knob and button](../hardware/drehregler.md)), otherwise found under **Settings › Audio**, is on that page too.
+After [installing](installieren.md) it, its settings are on a page of their own: **Settings › Buttons & GPIO Input**. The card **Rotary knob** ([Rotary knob and button](../hardware/drehregler.md)), otherwise found under **Settings › Audio**, is on that page too.
 
 ## Connection
 
@@ -77,6 +77,7 @@ A twin button needs **both** pins. As long as only one is chosen, the box does n
 | **Louder** / **Quieter** | changes the volume by the step chosen right next to it: 1, 2, 3, 5 or 10 % |
 | **30 seconds forward** / **30 seconds back** | seeks within the track |
 | **Shuffle on/off** | toggles shuffle |
+| **Repeat all/one/off** | goes one step further with every press: first **all** (the album or playlist starts again at its end), then **one** (the track plays again and again), then **off** (no repeat). With the next album, playback starts without repeat again |
 | **Switch output** | switches to the next output: the box's sound cards and paired Bluetooth devices in turn |
 | **Stop** | ends playback |
 | **Switch off the box** | shuts the box down |

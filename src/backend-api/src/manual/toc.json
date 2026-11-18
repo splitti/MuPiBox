@@ -404,10 +404,87 @@
         }
       },
       {
+        "id": "oled",
+        "title": {
+          "de": "OLED-Display",
+          "en": "OLED display"
+        }
+      },
+      {
+        "id": "ohne-dsi-display",
+        "title": {
+          "de": "Ohne DSI-Display",
+          "en": "Without DSI display"
+        }
+      },
+      {
         "id": "nfc",
         "title": {
           "de": "NFC-Extension",
           "en": "NFC extension"
+        }
+      },
+      {
+        "id": "nfc-tag-zuordnen",
+        "title": {
+          "de": "NFC: Tag mit einem Album verknüpfen",
+          "en": "NFC: Linking a tag to an album"
+        }
+      },
+      {
+        "id": "nfc-bild",
+        "title": {
+          "de": "NFC: Bild des Tags ändern",
+          "en": "NFC: Changing the picture of a tag"
+        }
+      },
+      {
+        "id": "nfc-zugeordnete-tags",
+        "title": {
+          "de": "NFC: Zugeordnete Tags",
+          "en": "NFC: Assigned tags"
+        }
+      },
+      {
+        "id": "nfc-sprachnachrichten",
+        "title": {
+          "de": "NFC: Sprachnachrichten",
+          "en": "NFC: Spoken messages"
+        }
+      },
+      {
+        "id": "nfc-leser",
+        "title": {
+          "de": "NFC: Leser hinzufügen",
+          "en": "NFC: Adding readers"
+        }
+      },
+      {
+        "id": "nfc-pn5180",
+        "title": {
+          "de": "NFC: PN5180 anschließen",
+          "en": "NFC: Connecting the PN5180"
+        }
+      },
+      {
+        "id": "nfc-rc522",
+        "title": {
+          "de": "NFC: RC522 anschließen",
+          "en": "NFC: Connecting the RC522"
+        }
+      },
+      {
+        "id": "nfc-pn532",
+        "title": {
+          "de": "NFC: PN532 anschließen",
+          "en": "NFC: Connecting the PN532"
+        }
+      },
+      {
+        "id": "nfc-usb",
+        "title": {
+          "de": "NFC: USB-Leser anschließen",
+          "en": "NFC: Connecting a USB reader"
         }
       }
     ]

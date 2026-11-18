@@ -15,8 +15,11 @@ import express, { type NextFunction, type Request, type RequestHandler, type Res
 import { acquireLock, DATA_LOCK, RESUME_LOCK, releaseLock } from '../file-lock'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { DATA_DIR, EXTENSIONS_DIR, EXTENSIONS_DIR_BEFORE, LIBRARY_DIR } from '../paths'
+import { clearCrashes, crashingExtensions, makeProblem, noteCrash, type PinSetting, planPinFix, type Problem, type ProblemCode, readProblem } from './extension-health'
 import { checkResources, type Conflict, describeResources, findConflicts, idleCoreGpio, type GpioUse, gatherTaken, realProbe, type Resources, rotaryPins, sameResources } from './extension-resources'
 import { localNetworkOnly, requireCsrf, requireSession } from './middleware'
+import { nightDimOf, nightShare, quietNow } from './night-dim'
+import { announce } from '../speech'
 import { readZip } from './winamp-skin'
 
 export const EXT_DIR = process.env.MUPIBOX_EXT_DIR ?? EXTENSIONS_DIR
@@ -33,7 +36,7 @@ if (!process.env.MUPIBOX_EXT_DIR && process.env.NODE_ENV !== 'test' && process.e
     // (the other process was faster, or it is not possible: then they stay where they are and are not found - logged by the load)
   }
 }
-export const HOST_API = 9
+export const HOST_API = 12
 // (the catalog of the MuPiBox, in its repository: what is in it is trusted - an extension can do everything on the box; while 5.1
 // is not with splitti yet, the 5.1 branch of the fork that builds it)
 const DEFAULT_CATALOG = 'https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/catalog.json'
@@ -74,7 +77,7 @@ export interface Manifest {
   icon?: string
   // the settings page of the extension in the app, declared (no code of the extension runs in the app): a card with these fields
   // (place, adopt - hostApi 5: the settings as a page of their own under Einstellungen > System, and pages of the core shown there)
-  ui?: { title: string; heading?: string; help?: string; place?: 'system'; adopt?: string[]; items: { key: string; label: string; help?: string; dep?: string; showIf?: { key: string; is: string[] }; choices?: { value: string | number; label: string }[]; type?: 'lookup' | 'order' | 'roster' | 'heading' | 'status' | 'action' | 'list'; state?: string; post?: string; confirm?: string; empty?: string; page?: boolean; rename?: string; optional?: string; extra?: { key: string; label?: string; when: (string | number)[]; choices: { value: string | number; label: string }[] }; search?: string; list?: string; add?: string; remove?: string; select?: string; color?: string; restore?: string; addFrom?: boolean }[] }
+  ui?: { title: string; heading?: string; help?: string; place?: 'system'; adopt?: string[]; items: { key: string; label: string; help?: string; dep?: string; showIf?: { key: string; is: string[] }; hideIf?: { key: string; is: string[] }; live?: string; choices?: { value: string | number; label: string }[]; type?: 'lookup' | 'order' | 'roster' | 'heading' | 'status' | 'action' | 'list'; state?: string; post?: string; confirm?: string; empty?: string; page?: boolean; card?: boolean; rename?: string; optional?: string; extra?: { key: string; label?: string; when: (string | number)[]; choices: { value: string | number; label: string }[] }; search?: string; list?: string; add?: string; remove?: string; select?: string; color?: string; restore?: string; addFrom?: boolean; slider?: boolean; download?: string; upload?: string; file?: string; ext?: string; accept?: string; beside?: boolean }[] }
   settings?: Record<string, { type: 'boolean' | 'string' | 'number' | 'secret' | 'gpio'; default?: unknown; pattern?: string; options?: (string | number)[]; min?: number; max?: number; legacy?: string }>
   system?: { udev?: { name: string; file: string }[]; units?: { name: string; file: string }[]; groups?: string[]; packages?: string[] }
   /** what it needs from the box: ports, GPIO pins, services (required; {} for nothing) - tested against the box before it is installed */
@@ -103,7 +106,8 @@ export interface ExtensionDeps {
 
 // ---------- reading what is installed ----------
 
-type State = Record<string, { version: string; enabled: boolean }>
+// (problem: why the box switched the extension off by itself - see extension-health.ts)
+type State = Record<string, { version: string; enabled: boolean; problem?: Problem }>
 
 async function readJson<T>(file: string, fallback: T): Promise<T> {
   try {
@@ -148,6 +152,67 @@ async function installedManifests(): Promise<Manifest[]> {
   }
   return out
 }
+
+/** What can be seen of an installed extension from its files alone: why it cannot run on this box, or null. */
+export async function diagnoseFiles(id: string): Promise<{ code: ProblemCode; detail?: string } | null> {
+  const dir = path.join(EXT_DIR, id)
+  const raw = await readJson<Record<string, unknown> | null>(path.join(dir, 'manifest.json'), null)
+  if (!raw || typeof raw !== 'object' || raw.id !== id) return { code: 'manifest_missing' }
+  if (Number.isInteger(raw.hostApi) && (raw.hostApi as number) > HOST_API) return { code: 'newer_box', detail: `it needs hostApi ${raw.hostApi}, this box has ${HOST_API}` }
+  const names = await fsp.readdir(dir, { recursive: true }).catch(() => [] as string[])
+  const problem = checkManifest(raw, new Set(names.map((name) => String(name).replace(/\\/g, '/'))))
+  if (!problem) return null
+  return { code: problem.endsWith(' is named but not in the package') ? 'files_missing' : 'manifest_invalid', detail: problem }
+}
+
+/** Switches an extension off by itself and keeps why (state.json), for the app to say. */
+async function switchOffWithProblem(id: string, problem: Problem): Promise<void> {
+  const state = await readState()
+  if (!state[id]) return
+  state[id] = { ...state[id], enabled: false, problem }
+  await writeState(state)
+  console.warn(`${new Date().toLocaleString()}: [Extension ${id}] switched off: ${problem.code}${problem.detail ? ` (${problem.detail})` : ''}`)
+  // (its systemd services run while it is on)
+  for (const u of (await readManifest(id))?.system?.units ?? []) await run('sudo', ['systemctl', 'disable', '--now', u.name], 30000)
+}
+
+// (what the test of the resources at the start looks at: the declarations only, not the running box - that is for the install)
+const declaredOnly = { run: async () => ({ ok: false, out: '' }), readFile: async (): Promise<string> => { throw new Error('not looked at') } }
+
+/**
+ * At every start of the server: the extensions that are on are checked, because the box they run on may be another one since the
+ * last start (an update): a manifest the box does not accept any more, one made for a newer box, files that are gone, pins or ports
+ * that the core or another extension holds now, an extension that crashed the server again and again. One that cannot run is
+ * switched off, with the reason in state.json - the app shows it on the card of the extension (and a button to try again).
+ */
+export async function checkInstalledExtensions(deps: ExtensionDeps): Promise<void> {
+  const state = await readState()
+  const crashing = new Set(crashingExtensions(EXT_DIR))
+  const live: string[] = []
+  for (const id of Object.keys(state).filter((i) => state[i].enabled !== false)) {
+    const found = crashing.has(id) ? ({ code: 'crashing' } as const) : await diagnoseFiles(id)
+    if (found) await switchOffWithProblem(id, makeProblem(found.code, 'detail' in found ? found.detail : undefined))
+    else live.push(id)
+  }
+  // (the one that came last gives way when two want the same: the list is in the order of the installs)
+  for (const id of [...live].reverse()) {
+    const manifest = await readManifest(id)
+    if (!manifest) continue
+    const others: { id: string; resources: Resources }[] = []
+    for (const other of live.filter((o) => o !== id)) {
+      const m = await readManifest(other)
+      if (m) others.push({ id: other, resources: await heldResources(m) })
+    }
+    const taken = await gatherTaken({ self: id, config: deps.getMupiboxConfig() as unknown as Record<string, unknown> | undefined, others, probe: declaredOnly })
+    const errors = findConflicts(await heldResources(manifest), taken).filter((c) => c.severity === 'error')
+    if (errors.length === 0) continue
+    live.splice(live.indexOf(id), 1)
+    await switchOffWithProblem(id, makeProblem('conflict', errors.map((c) => c.message).join(' ')))
+  }
+}
+
+/** Called when the server ends because of an uncaught error: writes down whether it went through the files of an extension. */
+export const noteExtensionCrash = (error: unknown): string | null => noteCrash(EXT_DIR, error)
 
 /**
  * The test before an install (or before an extension is switched on): what the extension declares it needs, compared with what is
@@ -397,7 +462,7 @@ export function checkManifest(m: unknown, files: Set<string>): string | null {
     if (ui.heading !== undefined && (ui.place === undefined || typeof ui.heading !== 'string' || ui.heading.length < 1 || ui.heading.length > 60)) return 'ui: bad heading'
     if (ui.adopt !== undefined && (ui.place === undefined || !Array.isArray(ui.adopt) || ui.adopt.some((a) => !ADOPTABLE.has(a)) || new Set(ui.adopt).size !== ui.adopt.length)) return 'ui: bad adopt'
     const settings = x.settings ?? {}
-    for (const item of ui.items) {
+    for (const [position, item] of ui.items.entries()) {
       // (a roster is a list of things the extension keeps itself - users, say - and needs no setting; a heading is only a line of text)
       if (item?.type !== 'roster' && item?.type !== 'heading' && item?.type !== 'status' && item?.type !== 'action' && item?.type !== 'list' && !Object.hasOwn(settings, String(item?.key))) return `ui: no such setting: ${item?.key}`
       if (typeof item.label !== 'string' || item.label.length > 100 || (item.help !== undefined && (typeof item.help !== 'string' || item.help.length > 800))) return `ui: bad text: ${item.key}`
@@ -409,6 +474,16 @@ export function checkManifest(m: unknown, files: Set<string>): string | null {
         if (!spec || spec.type !== 'string' || !Array.isArray(spec.options)) return `ui: showIf needs a setting with options: ${item.label}`
         if (!Array.isArray(s.is) || s.is.length < 1 || s.is.some((v) => !spec.options?.includes(v))) return `ui: showIf names a value the setting does not have: ${item.label}`
         if (item.type === 'heading' && item.page !== undefined) return `ui: a page cannot be shown or hidden: ${item.label}`
+      }
+      // (the opposite, for a field that is not needed for one choice of another field: `hideIf: { key, is: [...] }` hides it while the
+      // field `key` is shown and has one of the values - the SPI pin of a reader is not needed while its PN532 is on I2C. A box that
+      // does not know it shows the field always.)
+      if (item.hideIf !== undefined) {
+        const h = item.hideIf
+        const spec = typeof h?.key === 'string' && Object.hasOwn(settings, h.key) ? settings[h.key] : undefined
+        if (!spec || spec.type !== 'string' || !Array.isArray(spec.options)) return `ui: hideIf needs a setting with options: ${item.label}`
+        if (!Array.isArray(h.is) || h.is.length < 1 || h.is.some((v) => !spec.options?.includes(v))) return `ui: hideIf names a value the setting does not have: ${item.label}`
+        if (item.type === 'heading') return `ui: a heading cannot be hidden by hideIf: ${item.label}`
       }
       // (a field that depends on another: shown while a switch is on, or - hostApi 5 - while a pin is chosen)
       const depType = item.dep !== undefined && Object.hasOwn(settings, String(item.dep)) ? settings[item.dep].type : undefined
@@ -423,6 +498,8 @@ export function checkManifest(m: unknown, files: Set<string>): string | null {
         if (item.optional !== undefined && !(Object.hasOwn(settings, String(item.optional)) && settings[item.optional].type === 'boolean')) return `ui: optional must be a switch: ${item.label}`
         // (hostApi 7) a heading that starts a page of its own under the page of the extension (a category with sub categories)
         if (item.page !== undefined && (item.page !== true || x.hostApi < 7 || ui.place !== 'system' || item.optional !== undefined || item.rename !== undefined || item.dep !== undefined)) return `ui: a page needs hostApi 7, a page of its own for the extension, and no rename, optional or dep: ${item.label}`
+        // (a group of its own card on the page: the page shows each group of the page in a card of its own)
+        if (item.card !== undefined && (item.card !== true || item.page !== undefined)) return `ui: card is true, on a heading that is no page: ${item.label}`
         continue
       }
       if (item.type === 'status') {
@@ -436,7 +513,21 @@ export function checkManifest(m: unknown, files: Set<string>): string | null {
         // (hostApi 7) a button: a tap makes the app ask a route of the extension's own API part (POST, with the login of the parents) and
         // show what it answers ({ ok, message }) - start a job, cancel one, forget something. Nothing is saved in the settings.
         if (x.hostApi < 7 || item.key !== undefined || item.choices !== undefined || item.extra !== undefined || item.state !== undefined) return `ui: an action needs hostApi 7 and has no setting: ${item.label}`
-        if (typeof item.post !== 'string' || !new RegExp(`^/api/ext/${x.id}/[a-z]{1,30}$`).test(item.post)) return `ui: bad action address: ${item.label}`
+        // (hostApi 10) the button can also save a file the extension makes (`download`, with `file`: the start of the file name) or send
+        // one the user chooses (`upload`: the file's JSON goes to the route as { file }) - one of the three: post, download or upload
+        const ways = (['post', 'download', 'upload'] as const).filter((w) => item[w] !== undefined)
+        if (ways.length === 0) return `ui: bad action address: ${item.label}`
+        if (ways.length > 1) return `ui: an action has one of post, download and upload: ${item.label}`
+        if (ways[0] !== 'post' && x.hostApi < 10) return `ui: download and upload need hostApi 10: ${item.label}`
+        if (typeof item[ways[0]] !== 'string' || !new RegExp(`^/api/ext/${x.id}/[a-z]{1,30}$`).test(item[ways[0]] as string)) return `ui: bad action address: ${item.label}`
+        if (item.download !== undefined && (typeof item.file !== 'string' || !/^[a-z0-9-]{1,40}$/.test(item.file))) return `ui: bad download file name: ${item.label}`
+        if (item.download === undefined && item.file !== undefined) return `ui: file belongs to a download: ${item.label}`
+        // (hostApi 11) a download can be a text file of another kind than JSON (`ext`: "csv" - the route answers { text }), an upload
+        // says which files the user may choose (`accept`: ".csv,.json" - a file that is not JSON goes to the route as { text }), and a
+        // button can stand beside the one before it (`beside`) instead of under it
+        if (item.ext !== undefined && (item.download === undefined || x.hostApi < 11 || !/^[a-z]{2,5}$/.test(String(item.ext)))) return `ui: ext belongs to a download, from hostApi 11: ${item.label}`
+        if (item.accept !== undefined && (item.upload === undefined || x.hostApi < 11 || !/^\.[a-z]{2,5}(,\.[a-z]{2,5}){0,3}$/.test(String(item.accept)))) return `ui: accept belongs to an upload, from hostApi 11: ${item.label}`
+        if (item.beside !== undefined && (item.beside !== true || x.hostApi < 11 || ui.items[position - 1]?.type !== 'action')) return `ui: beside needs hostApi 11 and a button before it: ${item.label}`
         if (item.confirm !== undefined && (typeof item.confirm !== 'string' || item.confirm.length < 1 || item.confirm.length > 160)) return `ui: bad action question: ${item.label}`
         continue
       }
@@ -450,7 +541,7 @@ export function checkManifest(m: unknown, files: Set<string>): string | null {
         continue
       }
       // (a pin is chosen from the pins of the box: the app draws the choice, the manifest has no say in it)
-      if (item.rename !== undefined || item.optional !== undefined) return `ui: only a heading is renamed or optional: ${item.key}`
+      if (item.rename !== undefined || item.optional !== undefined || item.card !== undefined) return `ui: only a heading is renamed, optional or a card: ${item.key}`
       if (item.type !== 'roster' && settings[item.key].type === GPIO_SETTING && (item.type !== undefined || item.choices !== undefined)) return `ui: a gpio setting is a plain field: ${item.key}`
       if (item.type === 'roster') {
         // a list to look at, to add to, to take from and to choose from (hostApi 4): four routes of the extension's own API part
@@ -476,10 +567,20 @@ export function checkManifest(m: unknown, files: Set<string>): string | null {
         if (item.type !== 'lookup' || settings[item.key].type !== 'string' || item.choices !== undefined) return `ui: bad type: ${item.key}`
         if (typeof item.search !== 'string' || !new RegExp(`^/api/ext/${x.id}/[a-z]{1,30}$`).test(item.search)) return `ui: bad search address: ${item.key}`
       }
+      // a number from min to max as a slider whose value can also be typed (hostApi 10)
+      if (item.slider !== undefined) {
+        const spec = settings[item.key]
+        if (item.slider !== true || x.hostApi < 10 || spec.type !== 'number' || !Number.isFinite(spec.min) || !Number.isFinite(spec.max) || (spec.max as number) <= (spec.min as number) || item.choices !== undefined || item.type !== undefined) return `ui: a slider needs hostApi 10 and a number with min and max: ${item.key}`
+      }
       if (item.choices !== undefined && item.type !== 'order') {
         const options = settings[item.key].options
         if (!options || !Array.isArray(item.choices) || item.choices.length !== options.length) return `ui: choices must name every option: ${item.key}`
         if (item.choices.some((c) => !options.includes(c?.value as never) || typeof c.label !== 'string' || c.label.length > 60)) return `ui: bad choices: ${item.key}`
+        // (a choice that follows what the box finds - the USB readers that are plugged in: `live` is a route of the extension that
+        // answers { options: { <value>: { label?, disabled? } } }; a box that does not know it shows the choices as they are)
+        if (item.live !== undefined && (typeof item.live !== 'string' || !new RegExp(`^/api/ext/${x.id}/[a-z]{1,30}$`).test(item.live))) return `ui: bad live address: ${item.key}`
+      } else if (item.live !== undefined) {
+        return `ui: live belongs to a field with choices: ${item.label}`
       }
       if (item.extra !== undefined) {
         // (hostApi 5) a second choice beside a field with choices, shown while the field has one of the values of `when`:
@@ -867,6 +968,7 @@ async function installExtension(id: string, deps: ExtensionDeps, uploaded?: Pack
       // card) is a failure like any other here - new files beside a state that says the old version is what this is against
       const state = await readState()
       state[id] = { version: manifest.version, enabled: true }
+      clearCrashes(EXT_DIR, id)
       await writeState(state)
     } catch (error) {
       await restorePrevious().catch(() => undefined)
@@ -965,8 +1067,9 @@ async function removeExtension(id: string): Promise<void> {
 // ---------- the routes ----------
 
 /** An installed extension as the app shows it: what it is, what it sets up, its settings page and its settings (no secrets). */
-async function installedEntry(m: Manifest, enabled: boolean) {
+async function installedEntry(m: Manifest, enabled: boolean, problem: Problem | null = null) {
   return {
+    problem,
     id: m.id,
     name: m.name,
     version: m.version,
@@ -977,8 +1080,33 @@ async function installedEntry(m: Manifest, enabled: boolean) {
     resources: describeResources(m.resources),
     ui: m.ui ?? null,
     settingTypes: Object.fromEntries(Object.entries(m.settings ?? {}).map(([k, d]) => [k, d.type])),
+    // (the range of a number: the slider of a field that has one)
+    settingRanges: Object.fromEntries(Object.entries(m.settings ?? {}).filter(([, d]) => d.type === 'number' && Number.isFinite(d.min) && Number.isFinite(d.max)).map(([k, d]) => [k, { min: d.min, max: d.max }])),
     settings: await publicSettings(m),
     job: jobs.get(m.id) ?? null,
+  }
+}
+
+/** An installed extension the box cannot read (no manifest it accepts): a card with the reason, so that it can be tried again or removed. */
+async function brokenEntry(id: string, s: State[string], kept: Problem | null) {
+  const raw = await readJson<{ name?: unknown } | null>(path.join(EXT_DIR, id, 'manifest.json'), null)
+  const found = kept ? null : await diagnoseFiles(id)
+  return {
+    id,
+    name: typeof raw?.name === 'string' ? raw.name.slice(0, 80) : id,
+    version: String(s.version ?? ''),
+    description: '',
+    icon: null,
+    enabled: false,
+    system: {},
+    resources: describeResources(undefined),
+    ui: null,
+    settingTypes: {},
+    settingRanges: {},
+    settings: {},
+    job: jobs.get(id) ?? null,
+    problem: kept ?? (found ? makeProblem(found.code, found.detail) : null),
+    broken: true,
   }
 }
 
@@ -1004,6 +1132,16 @@ async function notifySettings(manifest: Manifest): Promise<void> {
 
 /** The app's routes (behind the session): the catalog, install, on and off, remove, the settings of an extension. */
 export function registerExtensionRoutes(router: Router, deps: ExtensionDeps): void {
+  // The extensions the box switched off by itself, and why: asked when the app starts, for a hint
+  router.get('/extensions/problems', requireSession, async (_req, res) => {
+    const out = []
+    for (const [id, s] of Object.entries(await readState())) {
+      const problem = readProblem(s.problem)
+      if (problem && s.enabled === false) out.push({ id, name: (await readJson<{ name?: unknown } | null>(path.join(EXT_DIR, id, 'manifest.json'), null))?.name ?? id, ...problem })
+    }
+    res.json(out)
+  })
+
   // The extensions that are on and have a page of their own in the app (ui.place, hostApi 5): read when the app starts - without
   // the catalog, so it does not wait for GitHub
   router.get('/extensions/pages', requireSession, async (_req, res) => {
@@ -1022,7 +1160,9 @@ export function registerExtensionRoutes(router: Router, deps: ExtensionDeps): vo
     const installed = []
     for (const [id, s] of Object.entries(state)) {
       const m = await readManifest(id)
-      if (m) installed.push(await installedEntry(m, s.enabled !== false))
+      const kept = readProblem(s.problem)
+      if (m) installed.push(await installedEntry(m, s.enabled !== false, kept))
+      else installed.push(await brokenEntry(id, s, kept))
     }
     let catalog: unknown[] = []
     let catalogError: string | null = null
@@ -1150,7 +1290,13 @@ export function registerExtensionRoutes(router: Router, deps: ExtensionDeps): vo
       return
     }
     if (enabled) {
-      // (switched on: the same test as before an install - another extension or the box may hold what it needs by now)
+      // (switched on: the files first - the box may not accept the extension any more - then the same test as before an install:
+      // another extension or the box may hold what it needs by now)
+      const found = await diagnoseFiles(id)
+      if (found) {
+        res.status(409).json({ error: 'problem', problem: makeProblem(found.code, found.detail) })
+        return
+      }
       const manifest = await readManifest(id)
       const errors = manifest ? (await testResources(manifest, deps)).filter((c) => c.severity === 'error') : []
       if (errors.length > 0) {
@@ -1159,10 +1305,65 @@ export function registerExtensionRoutes(router: Router, deps: ExtensionDeps): vo
       }
     }
     state[id].enabled = enabled
+    // (what the box found wrong is over when the user decides: on, it gets a new chance - off, it is off for good)
+    delete state[id].problem
+    if (enabled) clearCrashes(EXT_DIR, id)
     await writeState(state)
     // (its systemd services run while it is on)
     for (const u of (await readManifest(id))?.system?.units ?? []) await run('sudo', ['systemctl', enabled ? 'enable' : 'disable', '--now', u.name], 30000)
     res.json({ ok: true })
+    restartServices()
+  })
+
+  // An extension that cannot be switched on because a pin of its settings is taken: the pin goes to a free one (`move`) or the
+  // connection is taken away (`remove`), and the extension is switched on - one step, after the user chose in the app
+  router.post('/extensions/resolve', requireSession, requireCsrf, async (req, res) => {
+    const { id, action } = (req.body ?? {}) as { id?: unknown; action?: unknown }
+    const state = await readState()
+    if (typeof id !== 'string' || !state[id] || (action !== 'move' && action !== 'remove')) {
+      res.status(400).json({ error: 'invalid request' })
+      return
+    }
+    const found = await diagnoseFiles(id)
+    if (found) {
+      res.status(409).json({ error: 'problem', problem: makeProblem(found.code, found.detail) })
+      return
+    }
+    const manifest = await readManifest(id)
+    if (!manifest) {
+      res.status(404).json({ error: 'not installed' })
+      return
+    }
+    const errors = (await testResources(manifest, deps)).filter((c) => c.severity === 'error')
+    const settings = await readSettings(manifest)
+    const pinSettings: PinSetting[] = Object.entries(manifest.settings ?? {})
+      .filter(([, spec]) => spec?.type === GPIO_SETTING)
+      .map(([key]) => ({ key, label: String(manifest.ui?.items?.find((i) => i.key === key)?.label ?? key).slice(0, 100), pin: Number(settings[key]) || 0 }))
+    const conflictPins = new Set(errors.filter((c) => c.kind === 'gpio').map((c) => Number(/GPIO (\d+)/.exec(c.what)?.[1])))
+    // (only pins of the settings can be put right: a port, a service or a pin the manifest itself names cannot)
+    if (errors.some((c) => c.kind !== 'gpio') || [...conflictPins].some((pin) => !pinSettings.some((s) => s.pin === pin))) {
+      res.status(409).json({ error: 'not_resolvable' })
+      return
+    }
+    let changes: { key: string; label: string; from: number; to: number }[] = []
+    if (conflictPins.size > 0) {
+      const taken = new Set([...(await takenByOthers(id, deps)).gpio.keys(), ...idleCoreGpio(deps.getMupiboxConfig() as unknown as Record<string, unknown> | undefined).map((g) => g.pin)])
+      const plan = planPinFix({ settings: pinSettings, conflictPins, taken, action })
+      if (!plan.ok) {
+        res.status(409).json({ error: plan.error })
+        return
+      }
+      changes = plan.changes
+      await fsp.mkdir(path.dirname(settingsFile(id)), { recursive: true })
+      await fsp.writeFile(settingsFile(id), JSON.stringify({ ...(await readJson(settingsFile(id), {})), ...Object.fromEntries(changes.map((c) => [c.key, c.to])) }))
+      await notifySettings(manifest)
+    }
+    state[id].enabled = true
+    delete state[id].problem
+    clearCrashes(EXT_DIR, id)
+    await writeState(state)
+    for (const u of manifest.system?.units ?? []) await run('sudo', ['systemctl', 'enable', '--now', u.name], 30000)
+    res.json({ ok: true, changes })
     restartServices()
   })
 
@@ -1184,7 +1385,7 @@ export function registerExtensionRoutes(router: Router, deps: ExtensionDeps): vo
       res.status(404).json({ error: 'not installed' })
       return
     }
-    res.json(await installedEntry(manifest, state[id].enabled !== false))
+    res.json(await installedEntry(manifest, state[id].enabled !== false, readProblem(state[id].problem)))
   })
 
   // The GPIO pins the extension cannot have (hostApi 5, for its settings of the type "gpio"): held by the core, the boot
@@ -1302,6 +1503,7 @@ export function mountExtensions(app: express.Express, deps: ExtensionDeps): void
     })
   })
   void (async () => {
+    await checkInstalledExtensions(deps).catch((error) => console.warn(`${new Date().toLocaleString()}: [Extensions] the check at the start failed: ${error}`))
     for (const manifest of await enabledManifests()) {
       if (!manifest.api) continue
       try {
@@ -1349,6 +1551,16 @@ export function mountExtensions(app: express.Express, deps: ExtensionDeps): void
           // (hostApi 5) the server itself, for its routes the display uses too (/api/audio-output ...); and what is called after
           // the settings of the extension were saved in the app, with the settings as they are then
           apiUrl: 'http://127.0.0.1:8200',
+          // (hostApi 10) the evening of "Abends dunkler" for a lamp of the extension: its window (fixed times or sunset to sunrise at the
+          // place of the box), the gradual dimming and the quiet hours, as the settings of the box say - but whether the extension dims
+          // is its own switch, so the answer does not depend on the switch of the display's backlight. { share: 0 to 1, dimmed }
+          nightDim: async () => {
+            const nd = { ...nightDimOf(deps.getMupiboxConfig()), enabled: true }
+            return nightShare(nd, new Date(), nd.withQuiet ? await quietNow() : false)
+          },
+          // (hostApi 12) the box says a text with its voice (Sprachausgabe: Piper or Google, as the user set it; silent when the voice is
+          // off), without a gong; music that plays is made quieter meanwhile. true when it was said. Texts are cut at 300 letters.
+          say: (text: unknown) => (typeof text === 'string' && text.trim() !== '' ? announce(() => deps.getMupiboxConfig(), text.trim().slice(0, 300), { gong: false, pause: false }) : Promise.resolve(false)),
           onSettings: (fn: (settings: Record<string, unknown>) => unknown) => {
             if (typeof fn === 'function') settingsListeners.set(manifest.id, [...(settingsListeners.get(manifest.id) ?? []), fn])
           },
@@ -1361,6 +1573,7 @@ export function mountExtensions(app: express.Express, deps: ExtensionDeps): void
         console.log(`${new Date().toLocaleString()}: [Extension ${manifest.id}] ${manifest.version} API part started`)
       } catch (error) {
         console.warn(`${new Date().toLocaleString()}: [Extension ${manifest.id}] API part not started: ${error}`)
+        await switchOffWithProblem(manifest.id, makeProblem('api_failed', error instanceof Error ? error.message : String(error))).catch(() => undefined)
       }
     }
   })()

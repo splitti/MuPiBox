@@ -146,24 +146,34 @@ function windowOf(nd: NightDim, now: Date): { from: number; to: number } {
   return { from: minutesOf(nd.from), to: minutesOf(nd.to) }
 }
 
-/** The brightness the display should have now (percent), and whether it is dimmed. */
-export function nightBrightness(nd: NightDim, base: number, now: Date, quietNow: boolean): { value: number; dimmed: boolean } {
-  if (!nd.enabled) return { value: base, dimmed: false }
-  const level = Math.min(base, nd.level)
+/**
+ * How far into the evening the box is: 0 is the normal brightness, 1 the one of the evening, in between while it dims over the minutes
+ * of `fade`; `dimmed` is true from the start of the window on. This is the part every lamp shares (the backlight below, and the OLED
+ * display of the extension, which takes it through the host).
+ */
+export function nightShare(nd: NightDim, now: Date, quietNow: boolean): { share: number; dimmed: boolean } {
+  if (!nd.enabled) return { share: 0, dimmed: false }
   const { from, to } = windowOf(nd, now)
   const length = (to - from + 1440) % 1440
   const since = (now.getHours() * 60 + now.getMinutes() - from + 1440) % 1440
   if (since < length) {
     // (gradually at the start of the window)
-    const share = nd.fade > 0 && since < nd.fade ? since / nd.fade : 1
-    return { value: Math.round(base + (level - base) * share), dimmed: true }
+    return { share: nd.fade > 0 && since < nd.fade ? since / nd.fade : 1, dimmed: true }
   }
-  if (nd.withQuiet && quietNow) return { value: level, dimmed: true }
-  return { value: base, dimmed: false }
+  if (nd.withQuiet && quietNow) return { share: 1, dimmed: true }
+  return { share: 0, dimmed: false }
+}
+
+/** The brightness the display should have now (percent), and whether it is dimmed. */
+export function nightBrightness(nd: NightDim, base: number, now: Date, quietNow: boolean): { value: number; dimmed: boolean } {
+  const { share, dimmed } = nightShare(nd, now, quietNow)
+  if (!dimmed) return { value: base, dimmed: false }
+  const level = Math.min(base, nd.level)
+  return { value: Math.round(base + (level - base) * share), dimmed: true }
 }
 
 // whether a quiet-hours window runs now (the player's state, /tmp/playtime.json)
-async function quietNow(): Promise<boolean> {
+export async function quietNow(): Promise<boolean> {
   try {
     const s = JSON.parse(await fsp.readFile('/tmp/playtime.json', 'utf8')) as { quiet?: { inWindow?: boolean } }
     return s.quiet?.inWindow === true

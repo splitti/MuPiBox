@@ -32,7 +32,7 @@ const walk = (sub) => {
   for (const name of readdirSync(path.join(dir, sub)).sort()) {
     const rel = sub ? `${sub}/${name}` : name
     if (statSync(path.join(dir, rel)).isDirectory()) {
-      if (name !== 'test' && name !== 'node_modules') walk(rel)
+      if (name !== 'test' && name !== 'node_modules' && name !== '__pycache__') walk(rel)
     } else if (!/\.test\.js$|^README/i.test(name)) files.push(rel)
   }
 }

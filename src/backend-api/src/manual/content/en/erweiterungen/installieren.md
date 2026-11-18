@@ -49,6 +49,33 @@ An extension is a single file ending in `.mpx`. Normally it comes from the catal
 
 How to build an extension is described in the guideline for developers in the repository (`extensions/README.md`).
 
+## After an update of the MuPiBox
+
+An extension is kept in your data (`~/.mupibox/data/extensions/`), not in the program of the box. An update of the MuPiBox leaves it alone, with its settings and data.
+
+But after the update the box is another one: it may no longer accept the description of the extension, or a pin may be taken now. So **the box checks every extension that is on at every start**:
+
+- The description (`manifest.json`) is there and is accepted, and the extension is not made for a newer MuPiBox.
+- The files it names are there.
+- The pins and ports it needs are not held by the box or by another extension. If two extensions want the same, the one installed last gives way.
+- Its program can be started, and it has not crashed the box several times in a short time.
+
+If an extension fails the check, **the box switches it off** and keeps the reason. Everything else keeps running. The next time you open the app a hint appears, and the card of the extension under **Settings › System › Extensions** has a yellow box with the cause (below it, in brackets, the technical line you can pass on in a bug report).
+
+What you can do:
+
+- **Remove the cause** (update the MuPiBox or the extension, install the extension again, free the pin that is taken twice) and tap **Try again**. That switches the extension on again; the box checks once more.
+- **Remove** the extension if you do not need it any more.
+
+**A pin is taken?** If the cause is a pin you chose in the settings of the extension (a button on a pin that the MuPiBox HAT needs for itself now, say), the app asks after **Try again** what should happen:
+
+- **Move to a free pin**: the box looks for the lowest free pin (from GPIO 4 on, leaving out the serial port GPIO 14 and 15), enters it in the settings and switches the extension on. Then the app shows you which pin was changed to which. **Connect the device (the button, say) to this new pin.**
+- **Remove connection**: the pin is set to "none" and the extension is switched on. The button then does nothing until you choose a pin in the settings.
+
+After that the services of the box restart. If something other than a pin is taken (a port, a service, a pin the extension fixes itself), the app only shows the overlap and you have to remove it yourself.
+
+If you switch an extension off or on yourself, the hint is gone.
+
 ## If something does not work
 
 - **"Something else is running right now"**: an extension is already being installed or removed. Wait until that is done.

@@ -1,8 +1,8 @@
 {
   "id": "buttons",
   "name": "Buttons & GPIO Input",
-  "version": "1.2.1",
-  "description": "Physische Taster an den GPIO-Pins steuern die Box: Play/Pause, Titel, Lautstärke und mehr. Mit Tastern für kurzes und langes Drücken (Dual Action) und Doppeltastern mit sechs Funktionen. Die Einstellungen stehen unter System › Buttons & GPIO Input.",
+  "version": "1.4.0",
+  "description": "Physische Taster an den GPIO-Pins steuern die Box: Play/Pause, Titel, Lautstärke und mehr. Mit Tastern für kurzes und langes Drücken (Dual Action) und Doppeltastern mit sechs Funktionen. Die Einstellungen stehen unter Einstellungen › Buttons & GPIO Input.",
   "hostApi": 5,
   "resources": {},
   "api": "api.js",
@@ -30,6 +30,7 @@
         "ffwd",
         "rewind",
         "shuffle",
+        "repeat",
         "output",
         "stop",
         "shutdown"
@@ -49,6 +50,7 @@
         "ffwd",
         "rewind",
         "shuffle",
+        "repeat",
         "output",
         "stop",
         "shutdown"
@@ -117,6 +119,7 @@
         "ffwd",
         "rewind",
         "shuffle",
+        "repeat",
         "output",
         "stop",
         "shutdown"
@@ -136,6 +139,7 @@
         "ffwd",
         "rewind",
         "shuffle",
+        "repeat",
         "output",
         "stop",
         "shutdown"
@@ -204,6 +208,7 @@
         "ffwd",
         "rewind",
         "shuffle",
+        "repeat",
         "output",
         "stop",
         "shutdown"
@@ -223,6 +228,7 @@
         "ffwd",
         "rewind",
         "shuffle",
+        "repeat",
         "output",
         "stop",
         "shutdown"
@@ -291,6 +297,7 @@
         "ffwd",
         "rewind",
         "shuffle",
+        "repeat",
         "output",
         "stop",
         "shutdown"
@@ -310,6 +317,7 @@
         "ffwd",
         "rewind",
         "shuffle",
+        "repeat",
         "output",
         "stop",
         "shutdown"
@@ -378,6 +386,7 @@
         "ffwd",
         "rewind",
         "shuffle",
+        "repeat",
         "output",
         "stop",
         "shutdown"
@@ -397,6 +406,7 @@
         "ffwd",
         "rewind",
         "shuffle",
+        "repeat",
         "output",
         "stop",
         "shutdown"
@@ -465,6 +475,7 @@
         "ffwd",
         "rewind",
         "shuffle",
+        "repeat",
         "output",
         "stop",
         "shutdown"
@@ -484,6 +495,7 @@
         "ffwd",
         "rewind",
         "shuffle",
+        "repeat",
         "output",
         "stop",
         "shutdown"
@@ -556,6 +568,7 @@
         "ffwd",
         "rewind",
         "shuffle",
+        "repeat",
         "output",
         "stop",
         "shutdown"
@@ -575,6 +588,7 @@
         "ffwd",
         "rewind",
         "shuffle",
+        "repeat",
         "output",
         "stop",
         "shutdown"
@@ -594,6 +608,7 @@
         "ffwd",
         "rewind",
         "shuffle",
+        "repeat",
         "output",
         "stop",
         "shutdown"
@@ -613,6 +628,7 @@
         "ffwd",
         "rewind",
         "shuffle",
+        "repeat",
         "output",
         "stop",
         "shutdown"
@@ -632,6 +648,7 @@
         "ffwd",
         "rewind",
         "shuffle",
+        "repeat",
         "output",
         "stop",
         "shutdown"
@@ -651,6 +668,7 @@
         "ffwd",
         "rewind",
         "shuffle",
+        "repeat",
         "output",
         "stop",
         "shutdown"
@@ -767,6 +785,7 @@
         "ffwd",
         "rewind",
         "shuffle",
+        "repeat",
         "output",
         "stop",
         "shutdown"
@@ -786,6 +805,7 @@
         "ffwd",
         "rewind",
         "shuffle",
+        "repeat",
         "output",
         "stop",
         "shutdown"
@@ -805,6 +825,7 @@
         "ffwd",
         "rewind",
         "shuffle",
+        "repeat",
         "output",
         "stop",
         "shutdown"
@@ -824,6 +845,7 @@
         "ffwd",
         "rewind",
         "shuffle",
+        "repeat",
         "output",
         "stop",
         "shutdown"
@@ -843,6 +865,7 @@
         "ffwd",
         "rewind",
         "shuffle",
+        "repeat",
         "output",
         "stop",
         "shutdown"
@@ -862,6 +885,7 @@
         "ffwd",
         "rewind",
         "shuffle",
+        "repeat",
         "output",
         "stop",
         "shutdown"
@@ -960,6 +984,7 @@
     "items": [
       {
         "type": "heading",
+        "card": true,
         "label": "Taster",
         "rename": "b1Name",
         "help": "Ein Taster für kurzes und langes Drücken. Ohne lange Aktion wirkt die kurze sofort beim Drücken. Mit langer Aktion wirkt die kurze beim Loslassen und die lange, sobald die Haltezeit erreicht ist."
@@ -1012,6 +1037,10 @@
           {
             "value": "shuffle",
             "label": "Zufallswiedergabe an/aus"
+          },
+          {
+            "value": "repeat",
+            "label": "Repeat all/one/off"
           },
           {
             "value": "output",
@@ -1103,6 +1132,10 @@
             "label": "Zufallswiedergabe an/aus"
           },
           {
+            "value": "repeat",
+            "label": "Repeat all/one/off"
+          },
+          {
             "value": "output",
             "label": "Ausgabe wechseln"
           },
@@ -1181,6 +1214,7 @@
       },
       {
         "type": "heading",
+        "card": true,
         "label": "Taster",
         "rename": "b2Name",
         "optional": "b2On"
@@ -1233,6 +1267,10 @@
           {
             "value": "shuffle",
             "label": "Zufallswiedergabe an/aus"
+          },
+          {
+            "value": "repeat",
+            "label": "Repeat all/one/off"
           },
           {
             "value": "output",
@@ -1324,6 +1362,10 @@
             "label": "Zufallswiedergabe an/aus"
           },
           {
+            "value": "repeat",
+            "label": "Repeat all/one/off"
+          },
+          {
             "value": "output",
             "label": "Ausgabe wechseln"
           },
@@ -1402,6 +1444,7 @@
       },
       {
         "type": "heading",
+        "card": true,
         "label": "Taster",
         "rename": "b3Name",
         "optional": "b3On"
@@ -1454,6 +1497,10 @@
           {
             "value": "shuffle",
             "label": "Zufallswiedergabe an/aus"
+          },
+          {
+            "value": "repeat",
+            "label": "Repeat all/one/off"
           },
           {
             "value": "output",
@@ -1545,6 +1592,10 @@
             "label": "Zufallswiedergabe an/aus"
           },
           {
+            "value": "repeat",
+            "label": "Repeat all/one/off"
+          },
+          {
             "value": "output",
             "label": "Ausgabe wechseln"
           },
@@ -1623,6 +1674,7 @@
       },
       {
         "type": "heading",
+        "card": true,
         "label": "Taster",
         "rename": "b4Name",
         "optional": "b4On"
@@ -1675,6 +1727,10 @@
           {
             "value": "shuffle",
             "label": "Zufallswiedergabe an/aus"
+          },
+          {
+            "value": "repeat",
+            "label": "Repeat all/one/off"
           },
           {
             "value": "output",
@@ -1766,6 +1822,10 @@
             "label": "Zufallswiedergabe an/aus"
           },
           {
+            "value": "repeat",
+            "label": "Repeat all/one/off"
+          },
+          {
             "value": "output",
             "label": "Ausgabe wechseln"
           },
@@ -1844,6 +1904,7 @@
       },
       {
         "type": "heading",
+        "card": true,
         "label": "Taster",
         "rename": "b5Name",
         "optional": "b5On"
@@ -1896,6 +1957,10 @@
           {
             "value": "shuffle",
             "label": "Zufallswiedergabe an/aus"
+          },
+          {
+            "value": "repeat",
+            "label": "Repeat all/one/off"
           },
           {
             "value": "output",
@@ -1987,6 +2052,10 @@
             "label": "Zufallswiedergabe an/aus"
           },
           {
+            "value": "repeat",
+            "label": "Repeat all/one/off"
+          },
+          {
             "value": "output",
             "label": "Ausgabe wechseln"
           },
@@ -2065,6 +2134,7 @@
       },
       {
         "type": "heading",
+        "card": true,
         "label": "Taster",
         "rename": "b6Name",
         "optional": "b6On"
@@ -2117,6 +2187,10 @@
           {
             "value": "shuffle",
             "label": "Zufallswiedergabe an/aus"
+          },
+          {
+            "value": "repeat",
+            "label": "Repeat all/one/off"
           },
           {
             "value": "output",
@@ -2208,6 +2282,10 @@
             "label": "Zufallswiedergabe an/aus"
           },
           {
+            "value": "repeat",
+            "label": "Repeat all/one/off"
+          },
+          {
             "value": "output",
             "label": "Ausgabe wechseln"
           },
@@ -2286,6 +2364,7 @@
       },
       {
         "type": "heading",
+        "card": true,
         "label": "Doppeltaster",
         "rename": "t1Name",
         "optional": "t1On",
@@ -2344,6 +2423,10 @@
           {
             "value": "shuffle",
             "label": "Zufallswiedergabe an/aus"
+          },
+          {
+            "value": "repeat",
+            "label": "Repeat all/one/off"
           },
           {
             "value": "output",
@@ -2435,6 +2518,10 @@
             "label": "Zufallswiedergabe an/aus"
           },
           {
+            "value": "repeat",
+            "label": "Repeat all/one/off"
+          },
+          {
             "value": "output",
             "label": "Ausgabe wechseln"
           },
@@ -2522,6 +2609,10 @@
           {
             "value": "shuffle",
             "label": "Zufallswiedergabe an/aus"
+          },
+          {
+            "value": "repeat",
+            "label": "Repeat all/one/off"
           },
           {
             "value": "output",
@@ -2613,6 +2704,10 @@
             "label": "Zufallswiedergabe an/aus"
           },
           {
+            "value": "repeat",
+            "label": "Repeat all/one/off"
+          },
+          {
             "value": "output",
             "label": "Ausgabe wechseln"
           },
@@ -2700,6 +2795,10 @@
           {
             "value": "shuffle",
             "label": "Zufallswiedergabe an/aus"
+          },
+          {
+            "value": "repeat",
+            "label": "Repeat all/one/off"
           },
           {
             "value": "output",
@@ -2791,6 +2890,10 @@
             "label": "Zufallswiedergabe an/aus"
           },
           {
+            "value": "repeat",
+            "label": "Repeat all/one/off"
+          },
+          {
             "value": "output",
             "label": "Ausgabe wechseln"
           },
@@ -2869,6 +2972,7 @@
       },
       {
         "type": "heading",
+        "card": true,
         "label": "Doppeltaster",
         "rename": "t2Name",
         "optional": "t2On"
@@ -2926,6 +3030,10 @@
           {
             "value": "shuffle",
             "label": "Zufallswiedergabe an/aus"
+          },
+          {
+            "value": "repeat",
+            "label": "Repeat all/one/off"
           },
           {
             "value": "output",
@@ -3017,6 +3125,10 @@
             "label": "Zufallswiedergabe an/aus"
           },
           {
+            "value": "repeat",
+            "label": "Repeat all/one/off"
+          },
+          {
             "value": "output",
             "label": "Ausgabe wechseln"
           },
@@ -3104,6 +3216,10 @@
           {
             "value": "shuffle",
             "label": "Zufallswiedergabe an/aus"
+          },
+          {
+            "value": "repeat",
+            "label": "Repeat all/one/off"
           },
           {
             "value": "output",
@@ -3195,6 +3311,10 @@
             "label": "Zufallswiedergabe an/aus"
           },
           {
+            "value": "repeat",
+            "label": "Repeat all/one/off"
+          },
+          {
             "value": "output",
             "label": "Ausgabe wechseln"
           },
@@ -3284,6 +3404,10 @@
             "label": "Zufallswiedergabe an/aus"
           },
           {
+            "value": "repeat",
+            "label": "Repeat all/one/off"
+          },
+          {
             "value": "output",
             "label": "Ausgabe wechseln"
           },
@@ -3371,6 +3495,10 @@
           {
             "value": "shuffle",
             "label": "Zufallswiedergabe an/aus"
+          },
+          {
+            "value": "repeat",
+            "label": "Repeat all/one/off"
           },
           {
             "value": "output",

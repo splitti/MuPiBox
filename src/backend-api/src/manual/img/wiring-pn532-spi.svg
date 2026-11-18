@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 600" width="1120" height="600" role="img" aria-label="PN532 - Raspberry Pi (SPI, CE0)" font-family="Helvetica, Arial, sans-serif">
+<rect x="0.5" y="0.5" width="1119" height="599" rx="14" fill="#f4f6f8" stroke="#cdd5dd"/>
+<text x="24" y="30" font-size="17" font-weight="700" fill="#1f2933">PN532 - Raspberry Pi (SPI, CE0)</text>
+<text x="1096" y="30" font-size="12" text-anchor="end" fill="#52606d">switches SEL0 0 / SEL1 1</text>
+<rect x="120" y="66" width="360" height="480" rx="12" fill="#0e7a37" stroke="#095a28" stroke-width="2"/>
+<text x="300.0" y="90" font-size="13" font-weight="700" fill="#e8f5ec" text-anchor="middle">Raspberry Pi</text>
+<rect x="174" y="74" width="242" height="444" rx="4" fill="#1b1b1b"/>
+<circle cx="190" cy="96" r="6.5" fill="#ef6c00" stroke="#000" stroke-opacity=".35"/>
+<text x="202" y="100" font-size="10.5" font-weight="700" fill="#ffffff">1  3V3</text>
+<circle cx="400" cy="96" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="388" y="100" font-size="10.5" font-weight="400" fill="#ffffff" text-anchor="end">5V  2</text>
+<circle cx="190" cy="118" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="202" y="122" font-size="10.5" font-weight="400" fill="#ffffff">3  GPIO2 SDA</text>
+<circle cx="400" cy="118" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="388" y="122" font-size="10.5" font-weight="400" fill="#ffffff" text-anchor="end">5V  4</text>
+<circle cx="190" cy="140" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="202" y="144" font-size="10.5" font-weight="400" fill="#ffffff">5  GPIO3 SCL</text>
+<circle cx="400" cy="140" r="6.5" fill="#222222" stroke="#000" stroke-opacity=".35"/>
+<text x="388" y="144" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="end">GND  6</text>
+<circle cx="190" cy="162" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="202" y="166" font-size="10.5" font-weight="400" fill="#ffffff">7  GPIO4</text>
+<circle cx="400" cy="162" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="388" y="166" font-size="10.5" font-weight="400" fill="#ffffff" text-anchor="end">GPIO14 TXD  8</text>
+<circle cx="190" cy="184" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="202" y="188" font-size="10.5" font-weight="400" fill="#ffffff">9  GND</text>
+<circle cx="400" cy="184" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="388" y="188" font-size="10.5" font-weight="400" fill="#ffffff" text-anchor="end">GPIO15 RXD  10</text>
+<circle cx="190" cy="206" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="202" y="210" font-size="10.5" font-weight="400" fill="#ffffff">11  GPIO17</text>
+<circle cx="400" cy="206" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="388" y="210" font-size="10.5" font-weight="400" fill="#ffffff" text-anchor="end">GPIO18  12</text>
+<circle cx="190" cy="228" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="202" y="232" font-size="10.5" font-weight="400" fill="#ffffff">13  GPIO27</text>
+<circle cx="400" cy="228" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="388" y="232" font-size="10.5" font-weight="400" fill="#ffffff" text-anchor="end">GND  14</text>
+<circle cx="190" cy="250" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="202" y="254" font-size="10.5" font-weight="400" fill="#ffffff">15  GPIO22</text>
+<circle cx="400" cy="250" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="388" y="254" font-size="10.5" font-weight="400" fill="#ffffff" text-anchor="end">GPIO23  16</text>
+<circle cx="190" cy="272" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="202" y="276" font-size="10.5" font-weight="400" fill="#ffffff">17  3V3</text>
+<circle cx="400" cy="272" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="388" y="276" font-size="10.5" font-weight="400" fill="#ffffff" text-anchor="end">GPIO24  18</text>
+<circle cx="190" cy="294" r="6.5" fill="#2e9e44" stroke="#000" stroke-opacity=".35"/>
+<text x="202" y="298" font-size="10.5" font-weight="700" fill="#ffffff">19  GPIO10 MOSI</text>
+<circle cx="400" cy="294" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="388" y="298" font-size="10.5" font-weight="400" fill="#ffffff" text-anchor="end">GND  20</text>
+<circle cx="190" cy="316" r="6.5" fill="#f2b01e" stroke="#000" stroke-opacity=".35"/>
+<text x="202" y="320" font-size="10.5" font-weight="700" fill="#ffffff">21  GPIO9 MISO</text>
+<circle cx="400" cy="316" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="388" y="320" font-size="10.5" font-weight="400" fill="#ffffff" text-anchor="end">GPIO25  22</text>
+<circle cx="190" cy="338" r="6.5" fill="#1e88e5" stroke="#000" stroke-opacity=".35"/>
+<text x="202" y="342" font-size="10.5" font-weight="700" fill="#ffffff">23  GPIO11 SCLK</text>
+<circle cx="400" cy="338" r="6.5" fill="#8e24aa" stroke="#000" stroke-opacity=".35"/>
+<text x="388" y="342" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="end">GPIO8 CE0  24</text>
+<circle cx="190" cy="360" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="202" y="364" font-size="10.5" font-weight="400" fill="#ffffff">25  GND</text>
+<circle cx="400" cy="360" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="388" y="364" font-size="10.5" font-weight="400" fill="#ffffff" text-anchor="end">GPIO7 CE1  26</text>
+<circle cx="190" cy="382" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="202" y="386" font-size="10.5" font-weight="400" fill="#ffffff">27  ID_SD</text>
+<circle cx="400" cy="382" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="388" y="386" font-size="10.5" font-weight="400" fill="#ffffff" text-anchor="end">ID_SC  28</text>
+<circle cx="190" cy="404" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="202" y="408" font-size="10.5" font-weight="400" fill="#ffffff">29  GPIO5</text>
+<circle cx="400" cy="404" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="388" y="408" font-size="10.5" font-weight="400" fill="#ffffff" text-anchor="end">GND  30</text>
+<circle cx="190" cy="426" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="202" y="430" font-size="10.5" font-weight="400" fill="#ffffff">31  GPIO6</text>
+<circle cx="400" cy="426" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="388" y="430" font-size="10.5" font-weight="400" fill="#ffffff" text-anchor="end">GPIO12  32</text>
+<circle cx="190" cy="448" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="202" y="452" font-size="10.5" font-weight="400" fill="#ffffff">33  GPIO13</text>
+<circle cx="400" cy="448" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="388" y="452" font-size="10.5" font-weight="400" fill="#ffffff" text-anchor="end">GND  34</text>
+<circle cx="190" cy="470" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="202" y="474" font-size="10.5" font-weight="400" fill="#ffffff">35  GPIO19</text>
+<circle cx="400" cy="470" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="388" y="474" font-size="10.5" font-weight="400" fill="#ffffff" text-anchor="end">GPIO16  36</text>
+<circle cx="190" cy="492" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="202" y="496" font-size="10.5" font-weight="400" fill="#ffffff">37  GPIO26</text>
+<circle cx="400" cy="492" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="388" y="496" font-size="10.5" font-weight="400" fill="#ffffff" text-anchor="end">GPIO20  38</text>
+<circle cx="190" cy="514" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="202" y="518" font-size="10.5" font-weight="400" fill="#ffffff">39  GND</text>
+<circle cx="400" cy="514" r="6.5" fill="#b9bfc6" stroke="#000" stroke-opacity=".35"/>
+<text x="388" y="518" font-size="10.5" font-weight="400" fill="#ffffff" text-anchor="end">GPIO21  40</text>
+<rect x="900" y="68" width="196" height="224" rx="10" fill="#0b4a64" stroke="#073447" stroke-width="2"/>
+<text x="998.0" y="278" font-size="18" font-weight="700" fill="#ffffff" text-anchor="middle">PN532</text>
+<circle cx="900" cy="96" r="6.5" fill="#ef6c00" stroke="#000" stroke-opacity=".35"/>
+<text x="914" y="100" font-size="12" font-weight="700" fill="#ffffff">VCC</text>
+<circle cx="900" cy="124" r="6.5" fill="#222222" stroke="#000" stroke-opacity=".35"/>
+<text x="914" y="128" font-size="12" font-weight="700" fill="#ffffff">GND</text>
+<circle cx="900" cy="152" r="6.5" fill="#1e88e5" stroke="#000" stroke-opacity=".35"/>
+<text x="914" y="156" font-size="12" font-weight="700" fill="#ffffff">SCK</text>
+<circle cx="900" cy="180" r="6.5" fill="#f2b01e" stroke="#000" stroke-opacity=".35"/>
+<text x="914" y="184" font-size="12" font-weight="700" fill="#ffffff">MISO</text>
+<circle cx="900" cy="208" r="6.5" fill="#2e9e44" stroke="#000" stroke-opacity=".35"/>
+<text x="914" y="212" font-size="12" font-weight="700" fill="#ffffff">MOSI</text>
+<circle cx="900" cy="236" r="6.5" fill="#8e24aa" stroke="#000" stroke-opacity=".35"/>
+<text x="914" y="240" font-size="12" font-weight="700" fill="#ffffff">SS</text>
+<path d="M190,96 L108,96 L108,52 L640,52 L640,96 L900,96" fill="none" stroke="#ef6c00" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M400,140 L616,140 L616,124 L900,124" fill="none" stroke="#222222" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M190,338 L102,338 L102,59 L520,59 L520,152 L900,152" fill="none" stroke="#1e88e5" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M190,316 L96,316 L96,66 L544,66 L544,180 L900,180" fill="none" stroke="#f2b01e" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M190,294 L90,294 L90,73 L592,73 L592,208 L900,208" fill="none" stroke="#2e9e44" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M400,338 L568,338 L568,236 L900,236" fill="none" stroke="#8e24aa" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

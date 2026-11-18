@@ -2,13 +2,13 @@
   {
     "id": "buttons",
     "name": "Buttons & GPIO Input",
-    "version": "1.2.1",
-    "description": "Physische Taster an den GPIO-Pins steuern die Box: Play/Pause, Titel, Lautstärke und mehr. Mit Tastern für kurzes und langes Drücken (Dual Action) und Doppeltastern mit sechs Funktionen. Die Einstellungen stehen unter System › Buttons & GPIO Input.",
+    "version": "1.4.0",
+    "description": "Physische Taster an den GPIO-Pins steuern die Box: Play/Pause, Titel, Lautstärke und mehr. Mit Tastern für kurzes und langes Drücken (Dual Action) und Doppeltastern mit sechs Funktionen. Die Einstellungen stehen unter Einstellungen › Buttons & GPIO Input.",
     "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB4PSI3NiIgeT0iMzAwIiB3aWR0aD0iMzYwIiBoZWlnaHQ9IjEyMCIgcng9IjI4IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyOCIvPjxwYXRoIGQ9Ik0xNTYgMzAwdi02NGExMDAgMTAwIDAgMCAxIDIwMCAwdjY0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyOCIvPjxwYXRoIGQ9Ik0yNTYgOTJWNDRNMTUwIDEyNGwtMzAtMzZNMzYyIDEyNGwzMC0zNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMjgiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPgo=",
     "hostApi": 5,
-    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/buttons-1.2.1.mpx",
-    "sha256": "68809a81592c497bbb62c9f4ff12d96be2247f3f4ba62612240fd897ec62731e",
-    "size": 12830,
+    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/buttons-1.4.0.mpx",
+    "sha256": "a2543dc849ff2d4e6743d94cb114c389d7fa44258cc23e2120b0f86a0f31e364",
+    "size": 13090,
     "resources": {},
     "system": {
       "udev": 0,
@@ -58,13 +58,13 @@
   {
     "id": "nfc",
     "name": "NFC-Extension",
-    "version": "0.8.0",
-    "description": "Ein NFC-Leser liest Tags und Karten: der PN5180 (ISO 14443 A und ISO 15693), der RC522 und der PN532 (ISO 14443 A) oder ein USB-Leser, der die Kartennummer wie eine Tastatur tippt. Jeder Tag kann ein Album, ein Hörspiel, einen Sender oder einen Podcast starten: In der Bibliothek das Medium öffnen, „NFC-Tag“ antippen und den Tag auflegen. Die Einstellungen stehen unter System › NFC-Extension.",
+    "version": "0.12.3",
+    "description": "Bis zu drei NFC-Leser lesen Tags und Karten, auch gleichzeitig: der PN5180 (ISO 14443 A und ISO 15693), der RC522 und der PN532 (ISO 14443 A) oder ein USB-Leser, der die Kartennummer wie eine Tastatur tippt (auch ein USB-Barcodeleser). Jeder Tag kann ein Album, ein Hörspiel, einen Sender oder einen Podcast starten: In der Bibliothek das Medium öffnen, „NFC-Tag“ antippen und den Tag auflegen. Die Einstellungen stehen unter System › NFC-Extension.",
     "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjE1MCAxNTAgNTAwIDUwMCI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iNDIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTI1NSA2MDBDMjE4IDU4NiAxOTggNTU4IDE5OCA1MjJWMjc1UTE5OCAxOTggMjc1IDE5OEg0MDVRNDk3IDE5OCA0OTcgMjkwVjUzN0wzNzIgNDMwIi8+PHBhdGggZD0iTTU0NSAxOThDNTgzIDIxMiA2MDIgMjQwIDYwMiAyNzdWNTI1UTYwMiA2MDIgNTI1IDYwMkg0MDBRMzAzIDYwMiAzMDMgNTEwVjI2Mkw0MzAgMzcyIi8+PC9nPjwvc3ZnPgo=",
-    "hostApi": 9,
-    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/nfc-0.8.0.mpx",
-    "sha256": "8869bed4500407ec5599261fd6ee4a3a7de341fdcc07c046696a4871a1563376",
-    "size": 41088,
+    "hostApi": 12,
+    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/nfc-0.12.3.mpx",
+    "sha256": "28e7410c49d87a38ecff7bc82101b09abfb3895b176ce1ca5b1800acfdf885c6",
+    "size": 66798,
     "resources": {},
     "system": {
       "udev": 1,
@@ -73,6 +73,26 @@
       "packages": [
         "python3-spidev",
         "python3-lgpio"
+      ]
+    }
+  },
+  {
+    "id": "oled",
+    "name": "OLED-Display",
+    "version": "0.1.4",
+    "description": "Ein kleines OLED-Display (SSD1306, SH1106 oder SSD1309 am I2C-Anschluss, 128 × 64 oder 128 × 32) zeigt, was die Box spielt: Titel, Interpret, Laufzeit, Titelnummer, Lautstärke, WLAN, Akku, Zufall und Wiederholen, Ausgang (Lautsprecher, Kopfhörer, Bluetooth) und die Uhrzeit. Dazu lässt sich die Box ganz ohne DSI-Display betreiben. Die Einstellungen stehen unter System › OLED-Display.",
+    "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48ZyBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIzMCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB4PSI1NiIgeT0iMTIwIiB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI0MCIgcng9IjM2Ii8+PHBhdGggZD0iTTEyMCAyMDBoMTEyTTEyMCAyNTBoMTgwTTEyMCAzMDBoODAiLz48cGF0aCBkPSJNMzYwIDE5MHYxMTBNMzkwIDIxNXY2ME0zMzAgMjI1djQwIi8+PHBhdGggZD0iTTIwMCA0MjBoMTEyIi8+PC9nPjwvc3ZnPgo=",
+    "hostApi": 10,
+    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/oled-0.1.4.mpx",
+    "sha256": "1c63bb08aefa27e2d52a6a7e7bd1ef560d1d0f4f36dbfa775c5eda36c347a7dc",
+    "size": 27773,
+    "resources": {},
+    "system": {
+      "udev": 1,
+      "units": [],
+      "groups": [],
+      "packages": [
+        "python3-pil"
       ]
     }
   },

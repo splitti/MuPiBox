@@ -932,8 +932,10 @@ const currentMeta = {
   bitrate: 0,
   khz: 0,
   channels: 0,
-  // the playlist starts again at its end (Winamp theme's REP button)
+  // the playlist starts again at its end (Winamp theme's REP button; also true while one track repeats)
   repeat: false,
+  // 'off', 'all' (the album or playlist starts again at its end) or 'one' (the track plays again and again)
+  repeatMode: 'off',
   // Shuffle of a local or NAS album (mpv): "next" and the end of a track choose a track not played yet; the numbers stay
   shuffle: false,
   // Radio streams and podcasts are buffered before they start: how far along that is.
@@ -2720,6 +2722,7 @@ function stop() {
     spotifyRunning = false
   } else if (currentMeta.currentPlayer === 'mplayer') {
     resetLocalShuffle()
+    resetRepeat()
     stopLoading()
     player.stop()
     // mplayer ignores 'stop' while it is still opening a playlist; it then starts playing after all, and
@@ -3012,6 +3015,36 @@ function resetLocalShuffle() {
     currentMeta.shuffle = false
     player.setShuffle?.(false)
   }
+}
+
+// Repeat: an album of the box by the engine (mpv-wrapper.js), Spotify by its own setting
+function setRepeatMode(mode) {
+  if (mode !== 'off' && mode !== 'all' && mode !== 'one') return
+  if (currentMeta.currentPlayer === 'mplayer') {
+    const supported = typeof player.setRepeatMode === 'function'
+    currentMeta.repeatMode = supported ? mode : 'off'
+    currentMeta.repeat = supported && mode !== 'off'
+    player.setRepeatMode?.(mode)
+    log.debug(`${now()}: [Spotify Control] Repeat of the album: ${mode}`)
+    return
+  }
+  currentMeta.repeatMode = mode
+  currentMeta.repeat = mode !== 'off'
+  forgetSpotifyState()
+  if (spotifyBlockedUntil()) return
+  spotifyApi.setRepeat(mode === 'one' ? 'track' : mode === 'all' ? 'context' : 'off', ownSpotifyDeviceOptions()).then(
+    () => log.debug(`${now()}: [Spotify Control] Repeat: ${mode}`),
+    (err) => handleSpotifyError(err, 'repeat'),
+  )
+}
+// (every playback starts without repeat, as without shuffle: a track that repeats must not hold the next album back)
+function resetRepeat() {
+  if (currentMeta.repeatMode === 'off' && !currentMeta.repeat) return
+  const spotify = currentMeta.currentPlayer !== 'mplayer'
+  currentMeta.repeatMode = 'off'
+  currentMeta.repeat = false
+  player.setRepeatMode?.('off')
+  if (spotify && !spotifyBlockedUntil()) spotifyApi.setRepeat('off', ownSpotifyDeviceOptions()).catch(() => undefined)
 }
 
 function shuffleon() {
@@ -4867,6 +4900,7 @@ async function playQueueFiles(files, label) {
   playbackRequest++
   playbackOrigin = playbackRequest
   resetLocalShuffle()
+  resetRepeat()
   clearLibraryResumeTimers()
   switchToMplayer()
   currentCue = null
@@ -4888,6 +4922,7 @@ async function playQueueNas(tracks, label) {
   playbackRequest++
   playbackOrigin = playbackRequest
   resetLocalShuffle()
+  resetRepeat()
   clearLibraryResumeTimers()
   switchToMplayer()
   currentCue = null
@@ -5257,6 +5292,7 @@ app.use((req, res) => {
   if (newStart && isPlayInitiatingCommand(command) && !hasDirSegment(command, 'say')) setCurrentTile(triggerTile)
   if (newMedia) {
     resetLocalShuffle()
+    resetRepeat()
     playbackRequest++
     if (triggerSource !== 'skip') playbackOrigin = playbackRequest
     startHeard(triggerHeard)
@@ -5409,11 +5445,9 @@ app.use((req, res) => {
     setVolume(command.name.startsWith('+') ? 1 : 0, step)
   }
   else if (/^=\d{1,3}$/.test(command.name)) setVolumeTo(Number.parseInt(command.name.slice(1), 10))
-  else if (command.name === 'repeaton' || command.name === 'repeatoff') {
-    // (mpv: the playlist loops; with mplayer nothing changes and the button shows it)
-    currentMeta.repeat = command.name === 'repeaton' && typeof player.setRepeat === 'function'
-    player.setRepeat?.(command.name === 'repeaton')
-  }
+  else if (command.name === 'repeaton' || command.name === 'repeatall') setRepeatMode('all')
+  else if (command.name === 'repeatone') setRepeatMode('one')
+  else if (command.name === 'repeatoff') setRepeatMode('off')
   else if (command.name === 'shuffleon') shuffleon()
   else if (command.name === 'shuffleoff') shuffleoff()
   else if (command.name === 'shutoff') cmdCall('sudo su - -c "/usr/local/bin/mupibox/./shutdown.sh &"')

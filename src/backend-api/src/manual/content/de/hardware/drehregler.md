@@ -3,7 +3,7 @@
 Ein **Drehregler mit Taster** (Drehgeber im Stil des KY-040) macht die Lautstärke für Kinderhände leicht erreichbar. Er wird in der App unter **Einstellungen › Audio › Drehregler und Taster** eingeschaltet.
 
 > [!NOTE]
-> Ist die Erweiterung [Buttons & GPIO Input](../erweiterungen/buttons.md) eingeschaltet, steht diese Einstellung stattdessen unter **Einstellungen › System › Buttons & GPIO Input**, als Karte **Drehregler**. Mit der Erweiterung lassen sich außerdem beliebige weitere Taster anschließen.
+> Ist die Erweiterung [Buttons & GPIO Input](../erweiterungen/buttons.md) eingeschaltet, steht diese Einstellung stattdessen unter **Einstellungen › Buttons & GPIO Input**, als Karte **Drehregler**. Mit der Erweiterung lassen sich außerdem beliebige weitere Taster anschließen.
 
 ## Anschluss
 

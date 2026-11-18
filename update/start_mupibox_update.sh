@@ -1716,6 +1716,9 @@ rm -f /tmp/mupibox-update-failed
 		# self-signed certificate as before - without one the web server does not start with SSL on
 		openssl req -new -x509 -keyout /etc/lighttpd/server.pem -out /etc/lighttpd/server.pem -days 3650 -nodes -subj "/C=DE/CN=mupibox" >&3 2>&3
 	fi
+	# www-data must be able to pass /home/dietpi to reach the covers (/var/www/cover links below it): a home directory with
+	# mode 0700, as newer Debian makes it, answers every /cover/... with 403 - the pictures of radio stations and NFC tags
+	chmod o+x /home/dietpi >&3 2>&3
 	# no scripts or pages from the media folder behind /cover (see the file)
 	cp -f ${MUPI_SRC}/config/lighttpd/99-mupibox-media-noexec.conf /etc/lighttpd/conf-enabled/99-mupibox-media-noexec.conf >&3 2>&3
 	# the app on port 80/443 too: / leads to the app at /app (see the file)
