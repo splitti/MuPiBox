@@ -131,6 +131,21 @@ export interface ElternRouterDeps {
   photoSecret?: { encrypt(plain: string): string; decrypt(stored: string): string | undefined }
   /** What of the library was started or heard to its end (see ../heard.ts). */
   heard?: HeardStore
+  /** Several users (../users.ts): the user a request of the library is for (?user=) when it is not the one in place -
+   *  null for the one in place, undefined for an unknown user; his configuration to read and to change */
+  otherUser?: (req: Request) => string | null | undefined
+  userConfig?: (id: string) => Promise<Record<string, unknown>>
+  updateUserConfig?: (id: string, mutate: (cfg: Record<string, unknown>) => void) => Promise<void>
+  /** his play log (the history) */
+  userPlayLog?: (id: string) => string
+  /** the user the app named (?user=, also the one in place - a switch at the display may come between): undefined for
+   *  an unknown one, null when none was named */
+  requestedUser?: (req: Request) => { id: string; current: boolean } | null | undefined
+  /** the folder of a user's library */
+  userLibraryDir?: (id: string) => string
+  /** what was heard by a user who is not in place, and his lock around a change of it */
+  heardOf?: (id: string) => HeardStore
+  withUserLock?: <T>(id: string, work: () => T) => T | 'locked'
 }
 
 /** Build a Set-Cookie header value. HttpOnly + SameSite=Strict; no Secure
@@ -418,6 +433,26 @@ export function registerDisplayNetworkRoutes(app: Router, guard: RequestHandler)
 
 export function createElternApiRouter(deps: ElternRouterDeps): Router {
   const router = Router()
+  // (several users: a request of the library, the play time or what was heard for a user who is not there - an old list
+  // in the app: answered with 404 before anything changes)
+  router.use(['/library', '/tiles', '/caps-config', '/heard', '/playlog'], (req, res, next) => {
+    if (typeof req.query?.user !== 'undefined' && deps.requestedUser?.(req) === undefined) {
+      res.status(404).json({ error: 'no such user' })
+      return
+    }
+    next()
+  })
+  // The configuration of the user the app named (?user=, see ../users.ts) - his Spotify subscriptions, his play time:
+  // through the users' order of changes (a switch at the display meanwhile: it lands with him, not with the next one);
+  // none named: the configuration in place
+  const updateUserCfg = (req: Request, mutate: (cfg: Record<string, unknown>) => void): Promise<void> => {
+    const r = deps.requestedUser?.(req) ?? null
+    return r && deps.updateUserConfig ? deps.updateUserConfig(r.id, mutate) : deps.updateMupiboxConfig(mutate)
+  }
+  const userCfgOf = async (req: Request): Promise<Record<string, unknown>> => {
+    const r = deps.requestedUser?.(req) ?? null
+    return r && deps.userConfig ? deps.userConfig(r.id) : ((deps.getMupiboxConfig() ?? {}) as Record<string, unknown>)
+  }
   // (a new password ends the sessions issued under the old one)
   usePasswordStamp(deps.getMupiboxConfig)
   const newEpoch = () =>
@@ -434,7 +469,17 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   if (deps.localLibrary) registerLocalDownloadRoutes(router, deps.localLibrary)
   registerDisplayRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   // what of the library was started or heard to its end (../heard.ts)
-  if (deps.heard) registerHeardAppRoutes(router, deps.heard, () => heardSettings(deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined).enabled)
+  if (deps.heard) {
+    const heard = deps.heard
+    registerHeardAppRoutes(router, heard, () => heardSettings(deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined).enabled, (req) => {
+      // (?user=: another user's ticks - his file, a change under his lock; see ../users.ts)
+      const named = deps.requestedUser?.(req) ?? null
+      const lock = deps.withUserLock
+      if (!named || named.current || !deps.heardOf || !lock) return { store: heard, run: (work) => work() }
+      const id = named.id
+      return { store: deps.heardOf(id), run: (work) => lock(id, work) }
+    })
+  }
   // (extensions: the catalog, install, switch on and off, remove, the settings of an extension)
   registerExtensionRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerDisplayProfileRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig })
@@ -963,8 +1008,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * /api/playtime endpoint — this one is just the static configuration
    * side. Phase 15h.
    */
-  router.get('/caps-config', requireSession, (_req, res) => {
-    const cfg = deps.getMupiboxConfig()
+  router.get('/caps-config', requireSession, async (req, res) => {
+    const cfg = await userCfgOf(req)
     const playtime = (cfg?.playtimeLimit as Record<string, unknown> | undefined) ?? {}
     const quiet = (cfg?.quietHours as Record<string, unknown> | undefined) ?? {}
     res.json({
@@ -1077,7 +1122,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       }
       resetHour = h
     }
-    await deps.updateMupiboxConfig((cfg) => {
+    await updateUserCfg(req, (cfg) => {
       if (body.playtimeLimit) {
         const block = ((cfg.playtimeLimit as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
         if (typeof body.playtimeLimit.enabled === 'boolean') block.enabled = body.playtimeLimit.enabled
@@ -1121,7 +1166,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     let error: string | null = null
     let limits: ReturnType<typeof tileLimitsOf> = []
     try {
-      await deps.updateMupiboxConfig((cfg) => {
+      await updateUserCfg(req, (cfg) => {
         error = setTileLimit(cfg as Record<string, unknown>, req.body?.keys, req.body?.name, req.body?.minutes)
         limits = tileLimitsOf(cfg as Record<string, unknown>)
       })
@@ -1136,7 +1181,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   router.post('/tiles/time', requireSession, requireCsrf, async (req, res) => {
     let error: string | null = null
     try {
-      await deps.updateMupiboxConfig((cfg) => {
+      await updateUserCfg(req, (cfg) => {
         error = applyTileTimeAction(cfg as Record<string, unknown>, req.body?.key, req.body?.action, req.body?.minutes)
       })
     } catch {
@@ -1923,9 +1968,14 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    */
   router.get('/library/episodes', requireSession, async (req, res) => {
     const idx = Number(req.query.index)
+    // (?user=: a podcast of another user's library - his list and his positions)
+    const named = deps.requestedUser?.(req) ?? null
+    const other = named && !named.current && deps.userLibraryDir ? named.id : null
+    const libDir = other && deps.userLibraryDir ? deps.userLibraryDir(other) : path.dirname(deps.activeDataPath)
+    const libFile = other ? path.join(libDir, 'data.json') : deps.activeDataPath
     let library: unknown
     try {
-      library = JSON.parse(await fsp.readFile(deps.activeDataPath, 'utf8'))
+      library = JSON.parse(await fsp.readFile(libFile, 'utf8'))
     } catch {
       res.status(500).json({ error: 'library_unavailable' })
       return
@@ -1948,7 +1998,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     const saved = deps.podcastOffline ? await deps.podcastOffline.list(item.id) : {}
     let positions: Record<string, { pos?: number; len?: number; done?: boolean }> = {}
     try {
-      positions = JSON.parse(await fsp.readFile(path.join(path.dirname(deps.activeDataPath), 'episode-positions.json'), 'utf8'))
+      positions = JSON.parse(await fsp.readFile(path.join(libDir, 'episode-positions.json'), 'utf8'))
     } catch {
       positions = {}
     }
@@ -2249,7 +2299,13 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(400).json({ error: 'range must be today or week' })
       return
     }
-    res.json(await playlogSummary(range, deps.currentPlayLogStart))
+    // (?user=: another user's history - several users, ../users.ts)
+    const other = deps.otherUser?.(req) ?? null
+    if (other === undefined) {
+      res.status(404).json({ error: 'no such user' })
+      return
+    }
+    res.json(other && deps.userPlayLog ? await playlogSummary(range, undefined, deps.userPlayLog(other)) : await playlogSummary(range, deps.currentPlayLogStart))
   })
 
   /**
@@ -3076,6 +3132,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * library as source='spotify-sync'. Idempotent — re-adding the same id is a
    * no-op. The WebApp triggers a sync afterwards so it lands promptly.
    */
+  // The Spotify subscriptions of the user the library is shown for (?user=, see ../users.ts): the one in place - the
+  // configuration - or another one, his kept part. An unknown user: an error (the routes answer 400 / 404 below).
+
   router.post('/library/add-album', requireSession, requireCsrf, async (req, res) => {
     const body = (req.body as { albumId?: unknown; category?: unknown; name?: unknown } | undefined) ?? {}
     const albumId = String(body.albumId ?? '').trim()
@@ -3087,7 +3146,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     const catRaw = String(body.category ?? '').trim()
     const category = allowed.includes(catRaw) ? catRaw : undefined
     const name = String(body.name ?? '').trim().slice(0, 120)
-    await deps.updateMupiboxConfig((cfg) => {
+    await updateUserCfg(req, (cfg) => {
       const ss = ((cfg.spotify_sync as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
       const list = Array.isArray(ss.explicit_albums) ? (ss.explicit_albums as Array<Record<string, unknown>>) : []
       if (!list.some((a) => a?.id === albumId)) {
@@ -3126,7 +3185,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     const toNum = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? Math.floor(v) : undefined)
     const rangeFrom = toNum(body.range_from)
     const rangeTo = toNum(body.range_to)
-    await deps.updateMupiboxConfig((cfg) => {
+    await updateUserCfg(req, (cfg) => {
       const ss = ((cfg.spotify_sync as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
       const list = Array.isArray(ss.artists) ? (ss.artists as Array<Record<string, unknown>>) : []
       const existing = list.find((a) => a?.id === artistId)
@@ -3154,8 +3213,12 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
 
   /** GET /api/app/library/subscriptions  (Phase 17d) — current artist subs
    *  + explicit albums, for the management list. */
-  router.get('/library/subscriptions', requireSession, (_req, res) => {
-    const ss = (deps.getMupiboxConfig()?.spotify_sync as Record<string, unknown> | undefined) ?? {}
+  router.get('/library/subscriptions', requireSession, async (req, res) => {
+    if (deps.otherUser?.(req) === undefined) {
+      res.status(404).json({ error: 'no such user' })
+      return
+    }
+    const ss = ((await userCfgOf(req)).spotify_sync as Record<string, unknown> | undefined) ?? {}
     res.json({
       artists: Array.isArray(ss.artists) ? ss.artists : [],
       explicit_albums: Array.isArray(ss.explicit_albums) ? ss.explicit_albums : [],
@@ -3170,7 +3233,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(400).json({ error: 'artistId required' })
       return
     }
-    await deps.updateMupiboxConfig((cfg) => {
+    await updateUserCfg(req, (cfg) => {
       const ss = ((cfg.spotify_sync as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
       ss.artists = (Array.isArray(ss.artists) ? (ss.artists as Array<Record<string, unknown>>) : []).filter(
         (a) => a?.id !== artistId,
@@ -3187,7 +3250,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(400).json({ error: 'albumId required' })
       return
     }
-    await deps.updateMupiboxConfig((cfg) => {
+    await updateUserCfg(req, (cfg) => {
       const ss = ((cfg.spotify_sync as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
       ss.explicit_albums = (
         Array.isArray(ss.explicit_albums) ? (ss.explicit_albums as Array<Record<string, unknown>>) : []
@@ -3216,7 +3279,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     const gone = new Set(ids)
     let pinned = 0
     let leftOut = 0
-    await deps.updateMupiboxConfig((cfg) => {
+    await updateUserCfg(req, (cfg) => {
       const ss = ((cfg.spotify_sync as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
       const pins = Array.isArray(ss.explicit_albums) ? (ss.explicit_albums as Array<Record<string, unknown>>) : []
       pinned = pins.filter((a) => gone.has(String(a?.id))).length
@@ -3253,13 +3316,13 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       return
     }
     const excluded = body.excluded === true || body.excluded === 'true'
-    const cur = (deps.getMupiboxConfig()?.spotify_sync as Record<string, unknown> | undefined) ?? {}
+    const cur = ((await userCfgOf(req)).spotify_sync as Record<string, unknown> | undefined) ?? {}
     const curArtists = Array.isArray(cur.artists) ? (cur.artists as Array<Record<string, unknown>>) : []
     if (!curArtists.some((a) => a?.id === artistId)) {
       res.status(404).json({ error: 'artist not subscribed' })
       return
     }
-    await deps.updateMupiboxConfig((cfg) => {
+    await updateUserCfg(req, (cfg) => {
       const ss = ((cfg.spotify_sync as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
       const list = Array.isArray(ss.artists) ? (ss.artists as Array<Record<string, unknown>>) : []
       const sub = list.find((a) => a?.id === artistId)

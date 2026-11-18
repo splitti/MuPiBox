@@ -363,7 +363,8 @@ export class UserFiles {
         key,
         id: m[1],
         name: cleanName(meta.name) ?? m[1],
-        color: typeof meta.color === 'string' ? meta.color : USER_COLORS[0],
+        // (only a colour of the list: the app puts it into a style)
+        color: typeof meta.color === 'string' && (USER_COLORS as readonly string[]).includes(meta.color) ? meta.color : USER_COLORS[0],
         deletedAt: Number(m[2]),
       })
     }
@@ -423,6 +424,13 @@ function moveOver(from: string, to: string): void {
   fs.renameSync(from, to)
 }
 
+/** The lock of a user's library while he is not the one in place (the app edits it, users-routes / server.ts) - a switch
+ *  takes the locks of both users, so no edit lands in a folder that is being moved */
+export const userLibraryLock = (id: string): string => {
+  if (!ID.test(id)) throw new Error(`no user id: ${id}`)
+  return `/tmp/.data-${id}.lock`
+}
+
 /** A new id, not one of `taken` */
 export function newUserId(taken: Iterable<string>): string {
   const used = new Set(taken)
@@ -441,8 +449,9 @@ export function freeColor(users: User[]): string | null {
 export interface SwitchHooks {
   /** why the box cannot switch now (an update, a restore, a sync, a download), else null */
   busy(): Promise<string | null>
-  /** the library's locks (data.json, resume.json): taken, waiting up to `waitMs`; null when they stayed taken */
-  lock(waitMs: number): Promise<(() => void) | null>
+  /** the library's locks (data.json, resume.json) and those of the two users' libraries (userLibraryLock): taken,
+   *  waiting up to `waitMs`; null when they stayed taken */
+  lock(waitMs: number, users: string[]): Promise<(() => void) | null>
   /** playback stopped, the player's counts written and its writes held */
   playerHold(): Promise<void>
   /** the player reads the counts in place (after a switch, and after one that failed) */
@@ -547,7 +556,7 @@ export class Users {
       if (f.current === id) return f
       const why = await waitNotBusy(this.hooks, 10_000)
       if (why) throw new UserSwitchError('busy', why)
-      const release = await this.hooks.lock(10_000)
+      const release = await this.hooks.lock(10_000, [f.current, id])
       if (!release) throw new UserSwitchError('busy', 'the library is being written')
       const from = f.current
       let moved = false
@@ -614,6 +623,35 @@ export class Users {
       this.files.write(f)
       return user
     })
+  }
+
+  /**
+   * The configuration of a user changed without switching (the app's library: his Spotify subscriptions). `mutate`
+   * gets a configuration with his sections in it - the one in place when he is the user in place (he may have become it
+   * meanwhile), else his kept part.
+   */
+  updateUserConfig(id: string, mutate: (cfg: Record<string, unknown>) => void): Promise<void> {
+    return this.serial(async () => {
+      const f = this.files.read()
+      if (!f.users.some((u) => u.id === id)) throw new UserSwitchError('unknown_user', 'no such user')
+      if (f.current === id) return this.hooks.updateConfig(mutate)
+      // (no kept part - missing or broken: written with only this change, the next switch to him took his theme,
+      // volumes ... away - refused instead)
+      const part = this.files.readConfigPart(id)
+      if (!part) throw new UserSwitchError('failed', 'the settings of this user are not readable')
+      const cfg: Record<string, unknown> = { ...clone(part.sections), mupibox: clone(part.mupibox), photos: clone(part.photos) }
+      mutate(cfg)
+      const next = userConfigOf(cfg)
+      this.files.writeConfigPart(id, next)
+    })
+  }
+
+  /** A user's configuration to read (his kept part, or the one in place for the user in place) */
+  async userConfig(id: string): Promise<Record<string, unknown>> {
+    const f = this.files.read()
+    if (f.current === id) return this.hooks.readConfig()
+    const part = this.files.readConfigPart(id) ?? { mupibox: {}, sections: {}, photos: {} }
+    return { ...clone(part.sections), mupibox: clone(part.mupibox), photos: clone(part.photos) }
   }
 
   rename(id: string, nameRaw: unknown): Promise<void> {

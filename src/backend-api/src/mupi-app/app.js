@@ -92,6 +92,8 @@ async function boot() {
   }
   loadBoxName()
   loadVersion()
+  // (the users of the box: the chooser of the library's pages - several users, see libUserTop)
+  await withinBoot(loadUsers()).catch(() => undefined)
   // (extensions with a page of their own: before the first page is drawn - the address may be one of theirs, and a page of the
   // core may have moved to one; a box that does not answer this in time starts without them)
   await withinBoot(loadExtPages()).catch(() => undefined)
@@ -567,10 +569,38 @@ function toggleTheme() {
 // Counts the drawings: a page whose data arrives after the user went on is not drawn any more
 let renderToken = 0
 
+// The pages a library of another user is shown on (several users): the library, its pages to add to it and its Spotify
+// subscriptions, the history. On any other page the app is with the user in place again (Hören plays from his).
+const LIB_USER_PAGES = new Set(['bibliothek', 'suche', 'podsuche', 'radiosuche', 'tidalsuche', 'jellyfinsuche', 'audiblesuche', 'link', 'spotify', 'verlauf'])
+function libUserShown(page) {
+  const s = usersState
+  const on = !!s?.enabled && (s.users?.length ?? 0) >= 2 && LIB_USER_PAGES.has(page?.id)
+  if (!on || !s.users.some((u) => u.id === libView.user) || libView.user === s.current) libView.user = null
+  libView.shown = on ? (libView.user ?? s.current) : null
+  return on
+}
+// "Bibliothek von [Leni] [Max]" at the top of those pages
+function libUserTop(page) {
+  if (!libUserShown(page)) return []
+  const s = usersState
+  const shown = libView.user ?? s.current
+  const other = s.users.find((u) => u.id === libView.user)
+  const chips = s.users
+    .map((u) => `<button type="button" class="user-chip" data-lib-user="${esc(u.id)}" aria-pressed="${u.id === shown}">${userDot(u.color)}<span translate="no">${esc(u.name)}</span>${u.id === s.current ? `<small>${esc(tr('aktiv'))}</small>` : ''}</button>`)
+    .join('')
+  const note = other ? `<div class="note wide">${icon('info', 18)}<span>${esc(tr(`Du bearbeitest die Bibliothek von ${other.name}. Abspielen geht nur aus der Bibliothek des aktiven Benutzers.`))}</span></div>` : ''
+  return [`<div class="user-bar wide lib-user" id="lib-user"><span class="lib-user-lbl">${esc(tr(page.id === 'verlauf' ? 'Hör-Verlauf von' : 'Bibliothek von'))}</span>${chips}</div>${note}`]
+}
+
 async function renderPage(page, reload = true) {
   const main = $('#content')
   const ctrl = ctrlOf(page)
   const token = ++renderToken
+  // (before the page loads: its requests are for the user shown - or, off the library's pages, the one in place; the
+  // list of the users as it is now - switched off or changed on another phone meanwhile)
+  if (reload && LIB_USER_PAGES.has(page.id) && usersState?.enabled) await loadUsers().catch(() => undefined)
+  if (token !== renderToken) return
+  libUserShown(page)
   if (ctrl?.load && reload) {
     // another page's controls must not stay usable while this one loads
     if (main.dataset.page !== page.id) main.innerHTML = `<div class="loading"><p>Lade …</p></div>`
@@ -592,6 +622,7 @@ async function renderPage(page, reload = true) {
     parts.push(`<div class="preview-note">${icon('info', 18)}<span>Vorschau: Diese Seite ist noch nicht mit der Box verbunden. Änderungen werden nicht gespeichert.</span></div>`)
   }
   try {
+    parts.push(...libUserTop(page))
     parts.push(...customTop(page))
     // a connected page may put its own values into the schema's building blocks (lists, charts, …)
     const sections = withoutAdopted(ctrl?.sections?.(page) ?? page.sections ?? [])
@@ -618,6 +649,13 @@ async function renderPage(page, reload = true) {
   // (a page drawn again sets up its polling again: the timers of the drawing before go, else they pile up)
   stopPageTimers()
   wire(main, page)
+  for (const b of main.querySelectorAll('#lib-user [data-lib-user]')) {
+    b.onclick = () => {
+      const id = b.dataset.libUser
+      libView.user = id === usersState?.current ? null : id
+      renderPage(page)
+    }
+  }
   try {
     if (page.id === 'start') mountStart(main)
     ctrl?.mount?.(main, page)
@@ -1067,7 +1105,28 @@ function action(act, label, page) {
 
 // JSON request with the session's CSRF token on everything that changes something. Never throws.
 // (timeoutMs: given up after it - a box that went away while restarting may leave a request open for minutes)
-async function api(path, { method = 'GET', body, timeoutMs } = {}) {
+// The user whose library the app shows (several users, 5.1 - backend users.ts): null = the one in place. Chosen at the
+// top of the library's pages and the history; the requests of the library carry ?user= then, and nothing plays from
+// it - the box plays the library of the user in place.
+// shown: the user the library's pages show (also the one in place - it is named in every request of them, so a switch
+// at the display meanwhile does not send a change to the next user); null off those pages.
+const libView = { user: null, shown: null }
+const USER_LIBRARY_ROUTE =
+  /^(\/api\/(data|data-version|add|edit|delete|delete-many)|\/api\/app\/library\/(subscriptions|subscribe-artist|unsubscribe-artist|remove-synced|remove-album|artist-exclude|add-album|episodes)|\/api\/app\/(heard|tiles\/limit|caps-config))$/
+// (what goes for the box or the user in place only: not while another user's library is shown)
+const USER_PLAY_ROUTE = /^\/api\/app\/(library\/(play|play-local|play-nas)|cover-hide|podcast-offline\/(episode|sync))$/
+const withUser = (path, user) => `${path}${path.includes('?') ? '&' : '?'}user=${encodeURIComponent(user)}`
+
+// (user: the user a request is for, taken by the caller when it began - a page that loads in several requests does
+// not mix two users when the choice changes meanwhile; undefined: the one shown now)
+async function api(path, { method = 'GET', body, timeoutMs, user } = {}) {
+  const shown = user === undefined ? libView.shown : user
+  const bare = path.split('?')[0]
+  if (libView.user && USER_PLAY_ROUTE.test(bare)) {
+    toast(/\/library\/play/.test(bare) ? 'Abspielen geht nur aus der Bibliothek des aktiven Benutzers' : 'Das geht nur beim aktiven Benutzer', 'info')
+    return { ok: false, status: 409, body: { error: 'other_user' }, text: '' }
+  }
+  if (shown && USER_LIBRARY_ROUTE.test(bare)) path = withUser(path, shown)
   const headers = {}
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   // (also on reading: some routes of the box take the app's session only with its token, see localOrElternSession)
@@ -2858,14 +2917,17 @@ const SYNC_API = '/api/spotify-sync'
 const lib = { items: null, local: {}, nas: [], cat: 'all', src: 'all', q: '', sync: null, subs: null, nasProfile: '', covers: null, mounts: 0 }
 
 async function loadLib() {
+  // (the user shown when it began: all of its requests for him - see api; lib.user says whose lists lib holds)
+  const user = libView.shown
+  lib.user = user
   // (what was heard: the ticks in the sheets)
-  const heardDone = loadHeard()
+  const heardDone = loadHeard(user)
   const [data, sync, nas, subs, profiles, covers, ...local] = await Promise.all([
     // (the box's names first: its own pictures go through the app's address, see ownCover)
-    loadBoxHosts().then(() => api('/api/data')),
+    loadBoxHosts().then(() => api('/api/data', { user })),
     api(`${SYNC_API}/status`),
     api('/api/nas/artists'),
-    api(`${API}/library/subscriptions`),
+    api(`${API}/library/subscriptions`, { user }),
     api('/api/nas/profiles'),
     api('/api/online-covers'),
     ...CATS.map(([c]) => api(`/api/library/artists?category=${c}`)),
@@ -3312,8 +3374,8 @@ async function mountTileLimit(sheet, keys, name) {
    "Alle als ungehört markieren". Switched off (Bedienung › Weiterhören): nothing of it here. */
 
 const heard = { enabled: false, items: {} }
-async function loadHeard() {
-  const r = await api(`${API}/heard`)
+async function loadHeard(user) {
+  const r = await api(`${API}/heard`, { user })
   if (!r.ok) return
   heard.enabled = r.body?.enabled !== false
   heard.items = r.body?.items && typeof r.body.items === 'object' ? r.body.items : {}
@@ -3490,6 +3552,9 @@ function openLibGroup(g) {
 // (subs: after a change of the subscribed artists or albums - those come also with Smart-Sync off, only the
 // playlists then stay as they are; "Jetzt abgleichen" on the Spotify page asks without it)
 async function fireSync(subs = true) {
+  // (another user's subscriptions: the sync runs for the user in place - his come when he is the one in place)
+  const other = libView.user ? usersState?.users?.find((u) => u.id === libView.user) : null
+  if (other) return tr(`Gespeichert. Auf die Box kommt es, wenn ${other.name} der aktive Benutzer ist.`)
   const r = await api(`${SYNC_API}/trigger?source=webapp${subs ? '&subscriptions=1' : ''}`, { method: 'POST' })
   const b = r.body ?? {}
   if (r.status === 202 && b.subscriptionsOnly) {
@@ -18645,7 +18710,9 @@ const CONTROLLERS = {
   },
   verlauf: {
     async load() {
-      const [today, week] = await Promise.all([api(`${API}/playlog?range=today`), api(`${API}/playlog?range=week`)])
+      // (the history of the user shown - several users: another one than the one in place, see libView)
+      const of = (p) => (libView.user ? withUser(p, libView.user) : p)
+      const [today, week] = await Promise.all([api(of(`${API}/playlog?range=today`)), api(of(`${API}/playlog?range=week`))])
       if (!today.ok && !week.ok) throw new Error(`playlog ${today.status}`)
       listenLog.today = today.body
       listenLog.week = week.body
@@ -18654,7 +18721,8 @@ const CONTROLLERS = {
   },
   bibliothek: {
     async load() {
-      if (!lib.items) {
+      // (another user's lists than the one shown now: read anew - see libView)
+      if (!lib.items || lib.user !== libView.shown) {
         await loadLib()
         lib.loadedAt = Date.now()
       }
@@ -18687,7 +18755,7 @@ const CONTROLLERS = {
       }
       drawLib()
       // known state first, then read again (the sync or the box may have changed it)
-      if (Date.now() - (lib.loadedAt ?? 0) > 5000) {
+      if (Date.now() - (lib.loadedAt ?? 0) > 5000 || lib.user !== libView.shown) {
         lib.loadedAt = Date.now()
         loadLib().then(() => {
           if (currentPage()?.id !== 'bibliothek') return

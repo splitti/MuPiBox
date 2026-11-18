@@ -4511,5 +4511,11 @@
  "Benutzer der Box": "Kutunun kullanıcıları",
  "Die Liste hat sich inzwischen geändert.": "Liste bu arada değişti.",
  "Ein Eintrag in der Bibliothek": "Kitaplıkta bir öğe",
- "Einstellungen › Mehrere Benutzer": "Ayarlar › Birden çok kullanıcı"
+ "Einstellungen › Mehrere Benutzer": "Ayarlar › Birden çok kullanıcı",
+ "Abspielen geht nur aus der Bibliothek des aktiven Benutzers": "Çalma yalnızca etkin kullanıcının kitaplığından yapılabilir",
+ "Du bearbeitest die Bibliothek von {}. Abspielen geht nur aus der Bibliothek des aktiven Benutzers.": "{} kitaplığını düzenliyorsun. Çalma yalnızca etkin kullanıcının kitaplığından yapılabilir.",
+ "Hör-Verlauf von": "Dinleme geçmişi:",
+ "Bibliothek von": "Kitaplık:",
+ "Das geht nur beim aktiven Benutzer": "Bu yalnızca etkin kullanıcı için çalışır",
+ "Gespeichert. Auf die Box kommt es, wenn {} der aktive Benutzer ist.": "Kaydedildi. {} etkin kullanıcı olduğunda kutuya gelir."
 }

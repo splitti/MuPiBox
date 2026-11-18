@@ -4511,5 +4511,11 @@
  "Benutzer der Box": "Utenti del box",
  "Die Liste hat sich inzwischen geändert.": "Nel frattempo l’elenco è cambiato.",
  "Ein Eintrag in der Bibliothek": "Una voce nella libreria",
- "Einstellungen › Mehrere Benutzer": "Impostazioni › Più utenti"
+ "Einstellungen › Mehrere Benutzer": "Impostazioni › Più utenti",
+ "Abspielen geht nur aus der Bibliothek des aktiven Benutzers": "Si può riprodurre solo dalla libreria dell’utente attivo",
+ "Du bearbeitest die Bibliothek von {}. Abspielen geht nur aus der Bibliothek des aktiven Benutzers.": "Stai modificando la libreria di {}. Si può riprodurre solo dalla libreria dell’utente attivo.",
+ "Hör-Verlauf von": "Cronologia di",
+ "Bibliothek von": "Libreria di",
+ "Das geht nur beim aktiven Benutzer": "Funziona solo per l’utente attivo",
+ "Gespeichert. Auf die Box kommt es, wenn {} der aktive Benutzer ist.": "Salvato. Arriva sul box quando {} è l’utente attivo."
 }

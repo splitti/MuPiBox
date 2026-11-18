@@ -4511,5 +4511,11 @@
  "Benutzer der Box": "Boxens användare",
  "Die Liste hat sich inzwischen geändert.": "Listan har ändrats under tiden.",
  "Ein Eintrag in der Bibliothek": "En post i biblioteket",
- "Einstellungen › Mehrere Benutzer": "Inställningar › Flera användare"
+ "Einstellungen › Mehrere Benutzer": "Inställningar › Flera användare",
+ "Abspielen geht nur aus der Bibliothek des aktiven Benutzers": "Uppspelning går bara från den aktiva användarens bibliotek",
+ "Du bearbeitest die Bibliothek von {}. Abspielen geht nur aus der Bibliothek des aktiven Benutzers.": "Du redigerar biblioteket för {}. Uppspelning går bara från den aktiva användarens bibliotek.",
+ "Hör-Verlauf von": "Lyssningshistorik för",
+ "Bibliothek von": "Bibliotek för",
+ "Das geht nur beim aktiven Benutzer": "Det går bara för den aktiva användaren",
+ "Gespeichert. Auf die Box kommt es, wenn {} der aktive Benutzer ist.": "Sparat. Det kommer till boxen när {} är den aktiva användaren."
 }

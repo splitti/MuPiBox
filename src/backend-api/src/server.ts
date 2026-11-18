@@ -42,7 +42,7 @@ import { buildElternLandingHandler, createElternApiRouter, registerDisplayNetwor
 import { isRestoreRunning } from './app-api/admin'
 import { updateRunning } from './app-api/updates'
 import { registerUserRoutes } from './app-api/users-routes'
-import { UserFiles, Users } from './users'
+import { UserFiles, userLibraryLock, Users } from './users'
 import { startSpotifyLoginWatch } from './app-api/spotify-auth-age'
 import { startTlsWatch } from './app-api/tls'
 import { startWeeklySummary } from './app-api/weekly-summary'
@@ -1236,20 +1236,24 @@ const users = new Users(userFiles, {
   },
   // The library's locks and the Spotify sync's: a run of the sync that began after the check of busy() read the going
   // user's subscriptions and wrote them into the coming user's library
-  lock: async (waitMs) => {
+  // (and the locks of both users' libraries: the app may edit the library of the one who comes - its file moves now)
+  lock: async (waitMs, ids) => {
     const until = Date.now() + waitMs
+    const locks = [dataLock, resumeLock, ...ids.map(userLibraryLock)]
     for (;;) {
       if (acquireSyncLock(10 * 60 * 1000) === 'acquired') {
-        if (acquireLock(dataLock, 'users switch') === 'acquired') {
-          if (acquireLock(resumeLock, 'users switch') === 'acquired') {
-            return () => {
-              releaseLock(resumeLock, 'users switch')
-              releaseLock(dataLock, 'users switch')
-              releaseSyncLock()
-            }
-          }
-          releaseLock(dataLock, 'users switch')
+        const held: string[] = []
+        for (const l of locks) {
+          if (acquireLock(l, 'users switch') !== 'acquired') break
+          held.push(l)
         }
+        if (held.length === locks.length) {
+          return () => {
+            for (const l of held.reverse()) releaseLock(l, 'users switch')
+            releaseSyncLock()
+          }
+        }
+        for (const l of held.reverse()) releaseLock(l, 'users switch')
         releaseSyncLock()
       }
       if (Date.now() >= until) return null
@@ -1303,6 +1307,35 @@ const users = new Users(userFiles, {
   },
 })
 registerUserRoutes(app, users, { session: requireSession, csrf: requireCsrf })
+
+// The library a request is for (the app edits the library of a user who is not in place - users.ts): ?user=<id>, none
+// or the one in place = data.json in place under the library's lock; another = his data.json under a lock of his own
+// (a switch of the user takes it too). null: no such user.
+interface LibraryTarget {
+  dataFile: string
+  lock: string
+  current: boolean
+}
+function libraryOf(req: express.Request): LibraryTarget | null {
+  // (named twice - ?user=a&user=b: no user)
+  if (req.query?.user !== undefined && typeof req.query.user !== 'string') return null
+  const raw = typeof req.query?.user === 'string' ? req.query.user : ''
+  const f = userFiles.read()
+  if (!raw || raw === f.current) return { dataFile, lock: dataLock, current: true }
+  if (!f.users.some((u) => u.id === raw)) return null
+  return { dataFile: path.join(userFiles.userDir(raw), 'library', 'data.json'), lock: userLibraryLock(raw), current: false }
+}
+// (another user's library may have no data.json yet - a new user: an empty one)
+function readLibraryFile(lib: LibraryTarget, done: (error: Error | null, data: unknown) => void): void {
+  jsonfile.readFile(lib.dataFile, (error, data) => {
+    if (error && !lib.current && (error as NodeJS.ErrnoException).code === 'ENOENT') {
+      fs.mkdirSync(path.dirname(lib.dataFile), { recursive: true })
+      done(null, [])
+      return
+    }
+    done(error, data)
+  })
+}
 
 // The theme the config names, as the display's link (after a switch of the user - his theme; see /api/app/theme)
 async function applyThemeOfConfig(): Promise<void> {
@@ -2014,7 +2047,17 @@ async function removeRssPictures(removed: unknown, remaining: unknown[]): Promis
   if (gone) console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Podcast removed: ${gone} cover file(s) deleted (feed ${cacheKey})`)
 }
 
-app.get('/api/data', (_req, res) => {
+app.get('/api/data', (req, res) => {
+  // (?user=: the library of another user than the one in place, as it is - users.ts)
+  const lib = libraryOf(req)
+  if (!lib) {
+    res.status(404).json({ error: 'no such user' })
+    return
+  }
+  if (!lib.current) {
+    readLibraryFile(lib, (error, data) => (error ? res.status(503).json({ error: 'library_not_readable' }) : res.json(data)))
+    return
+  }
   // Mirror /api/resume: when active_data.json is missing the frontend would
   // otherwise hang on its loading spinner, because the previous code's missing
   // else-branch never sent a response. Only a box without a library is an empty list: a library that cannot be read
@@ -2056,7 +2099,7 @@ app.get('/api/bootscreen/current-splash', (_req, res) => {
 // Spotify part would be looked up again for nothing).
 let localLibraryVersion = Date.now()
 
-app.get('/api/data-version', (_req, res) => {
+app.get('/api/data-version', (req, res) => {
   // Cheap change-token for the box frontend's library-change poll (Phase 17g).
   // activedataFile is a symlink to data.json (or offline_data.json) reconciled
   // by check_network.sh; statSync follows it. mtime+size flips whenever the
@@ -2075,8 +2118,14 @@ app.get('/api/data-version', (_req, res) => {
   const audible = ab.enabled && audibleNow() !== null && audibleMedia.reachable()
   const flags = `${tidal ? 't' : 'n'}${jellyfin ? 'j' : 'n'}${audible ? 'a' : 'n'}`
   const nasTab = nasTabWanted(nasSettings(getMupiboxConfigSync()))
+  // (?user=: the version of another user's library - the app's list of it)
+  const lib = libraryOf(req)
+  if (!lib) {
+    res.status(404).json({ error: 'no such user' })
+    return
+  }
   try {
-    const st = fs.statSync(activedataFile)
+    const st = fs.statSync(lib && !lib.current ? lib.dataFile : activedataFile)
     res.json({ version: `${Math.floor(st.mtimeMs)}-${st.size}-${flags}`, local: String(localLibraryVersion), nasTab, tidal, jellyfin, audible })
   } catch {
     res.json({ version: `0-${flags}`, local: String(localLibraryVersion), nasTab, tidal, jellyfin, audible })
@@ -4085,7 +4134,13 @@ app.post('/api/wifi/configured/:id/password', async (req, res) => {
 })
 
 app.post('/api/add', (req, res) => {
-  const lockResult = acquireLock(dataLock, '/api/add')
+  // (?user=: another user than the one in place - his library, under its own lock; users.ts)
+  const lib = libraryOf(req)
+  if (!lib) {
+    res.status(404).send('no such user')
+    return
+  }
+  const lockResult = acquireLock(lib.lock, '/api/add')
   if (lockResult === 'locked') {
     console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/add data.json is locked`)
     res.status(200).send('locked')
@@ -4095,18 +4150,18 @@ app.post('/api/add', (req, res) => {
     res.status(200).send('error')
     return
   }
-  jsonfile.readFile(dataFile, (error, data) => {
+  readLibraryFile(lib, (error, data) => {
     if (error) {
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/add read data.json`)
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
-      releaseLock(dataLock, '/api/add')
+      releaseLock(lib.lock, '/api/add')
       res.status(200).send('error')
       return
     }
     // (a data.json that is not a list: said, not thrown - a throw in this callback ended the server, pm2 started it
     // again, and the next attempt did the same)
     if (!Array.isArray(data)) {
-      releaseLock(dataLock, '/api/add')
+      releaseLock(lib.lock, '/api/add')
       res.status(500).send('data.json is not a list')
       return
     }
@@ -4122,8 +4177,8 @@ app.post('/api/add', (req, res) => {
     }
     data.push(newEntry)
     renumberLibrary(data)
-    writeJsonAtomic(dataFile, data, (writeError) => {
-      releaseLock(dataLock, '/api/add')
+    writeJsonAtomic(lib.dataFile, data, (writeError) => {
+      releaseLock(lib.lock, '/api/add')
       if (writeError) {
         console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/add write failed:`, writeError)
         res.status(500).send('error')
@@ -4131,7 +4186,7 @@ app.post('/api/add', (req, res) => {
       }
       res.status(200).send('ok')
       // a Spotify album added by its link: its name and cover right away (see spotify-album-fill.ts)
-      if (isBareAlbum(newEntry)) setTimeout(() => void fillSpotifyAlbums(albumFillDeps, 'added'), 1000)
+      if (lib.current && isBareAlbum(newEntry)) setTimeout(() => void fillSpotifyAlbums(albumFillDeps, 'added'), 1000)
     })
   })
 })
@@ -4419,7 +4474,13 @@ function libraryIndexProblem(data: unknown, index: unknown, original: unknown): 
 }
 
 app.post('/api/delete', (req, res) => {
-  const lockResult = acquireLock(dataLock, '/api/delete')
+  // (?user=: another user than the one in place - his library, under its own lock; users.ts)
+  const lib = libraryOf(req)
+  if (!lib) {
+    res.status(404).send('no such user')
+    return
+  }
+  const lockResult = acquireLock(lib.lock, '/api/delete')
   if (lockResult === 'locked') {
     console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/delete data.json is locked`)
     res.status(200).send('locked')
@@ -4429,29 +4490,29 @@ app.post('/api/delete', (req, res) => {
     res.status(200).send('error')
     return
   }
-  jsonfile.readFile(dataFile, (error, data) => {
+  readLibraryFile(lib, (error, data) => {
     if (error) {
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/delete read data.json`)
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
-      releaseLock(dataLock, '/api/delete')
+      releaseLock(lib.lock, '/api/delete')
       res.status(200).send('error')
       return
     }
     if (!Array.isArray(data)) {
-      releaseLock(dataLock, '/api/delete')
+      releaseLock(lib.lock, '/api/delete')
       res.status(500).send('data.json is not a list')
       return
     }
     const problem = libraryIndexProblem(data, req.body?.index, req.body?.original)
     if (problem) {
-      releaseLock(dataLock, '/api/delete')
+      releaseLock(lib.lock, '/api/delete')
       res.status(problem === 'library changed' ? 409 : 400).send(problem)
       return
     }
     const [removed] = data.splice(req.body.index, 1)
     renumberLibrary(data)
-    writeJsonAtomic(dataFile, data, (writeError) => {
-      releaseLock(dataLock, '/api/delete')
+    writeJsonAtomic(lib.dataFile, data, (writeError) => {
+      releaseLock(lib.lock, '/api/delete')
       if (writeError) {
         console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/delete write failed:`, writeError)
         res.status(500).send('error')
@@ -4470,12 +4531,18 @@ app.post('/api/delete', (req, res) => {
 // - checked all first, and the library written once (one by one, a subscription of 250 albums wrote it 250 times and
 // took minutes). Nothing is deleted when one of them does not match any more (409, as /api/delete).
 app.post('/api/delete-many', (req, res) => {
+  // (?user=: another user than the one in place - his library, under its own lock; users.ts)
+  const lib = libraryOf(req)
+  if (!lib) {
+    res.status(404).send('no such user')
+    return
+  }
   const list = req.body?.entries
   if (!Array.isArray(list) || list.length === 0 || list.length > 2000) {
     res.status(400).send('entries missing')
     return
   }
-  const lockResult = acquireLock(dataLock, '/api/delete-many')
+  const lockResult = acquireLock(lib.lock, '/api/delete-many')
   if (lockResult === 'locked') {
     res.status(200).send('locked')
     return
@@ -4484,9 +4551,9 @@ app.post('/api/delete-many', (req, res) => {
     res.status(200).send('error')
     return
   }
-  jsonfile.readFile(dataFile, (error, data) => {
+  readLibraryFile(lib, (error, data) => {
     if (error || !Array.isArray(data)) {
-      releaseLock(dataLock, '/api/delete-many')
+      releaseLock(lib.lock, '/api/delete-many')
       res.status(error ? 200 : 500).send(error ? 'error' : 'data.json is not a list')
       return
     }
@@ -4494,7 +4561,7 @@ app.post('/api/delete-many', (req, res) => {
     for (const e of list) {
       const problem = libraryIndexProblem(data, e?.index, e?.original)
       if (problem || places.has(e.index)) {
-        releaseLock(dataLock, '/api/delete-many')
+        releaseLock(lib.lock, '/api/delete-many')
         res.status(problem === 'library changed' ? 409 : 400).send(problem ?? 'twice')
         return
       }
@@ -4504,8 +4571,8 @@ app.post('/api/delete-many', (req, res) => {
     const removed: unknown[] = []
     for (const i of [...places].sort((a, b) => b - a)) removed.push(...data.splice(i, 1))
     renumberLibrary(data)
-    writeJsonAtomic(dataFile, data, (writeError) => {
-      releaseLock(dataLock, '/api/delete-many')
+    writeJsonAtomic(lib.dataFile, data, (writeError) => {
+      releaseLock(lib.lock, '/api/delete-many')
       if (writeError) {
         console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/delete-many write failed:`, writeError)
         res.status(500).send('error')
@@ -4522,6 +4589,12 @@ app.post('/api/delete-many', (req, res) => {
 })
 
 app.post('/api/edit', (req, res) => {
+  // (?user=: another user than the one in place - his library, under its own lock; users.ts)
+  const lib = libraryOf(req)
+  if (!lib) {
+    res.status(404).send('no such user')
+    return
+  }
   // The new entry comes as { index, data }. Without data (the web app used to send the fields next to
   // index) splice() put null into the library, and that entry was gone.
   const entry = req.body?.data
@@ -4531,7 +4604,7 @@ app.post('/api/edit', (req, res) => {
   }
   // (a podcast's choice of episodes only in its form - see episode-pick.ts)
   if ('episodePick' in entry && !isEpisodePick(entry.episodePick)) delete entry.episodePick
-  const lockResult = acquireLock(dataLock, '/api/edit')
+  const lockResult = acquireLock(lib.lock, '/api/edit')
   if (lockResult === 'locked') {
     console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/edit data.json is locked`)
     res.status(200).send('locked')
@@ -4541,29 +4614,29 @@ app.post('/api/edit', (req, res) => {
     res.status(200).send('error')
     return
   }
-  jsonfile.readFile(dataFile, (error, data) => {
+  readLibraryFile(lib, (error, data) => {
     if (error) {
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/edit read data.json`)
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
-      releaseLock(dataLock, '/api/edit')
+      releaseLock(lib.lock, '/api/edit')
       res.status(200).send('error')
       return
     }
     if (!Array.isArray(data)) {
-      releaseLock(dataLock, '/api/edit')
+      releaseLock(lib.lock, '/api/edit')
       res.status(500).send('data.json is not a list')
       return
     }
     const problem = libraryIndexProblem(data, req.body.index, req.body.original)
     if (problem) {
-      releaseLock(dataLock, '/api/edit')
+      releaseLock(lib.lock, '/api/edit')
       res.status(problem === 'library changed' ? 409 : 400).send(problem)
       return
     }
     data.splice(req.body.index, 1, entry)
     renumberLibrary(data)
-    writeJsonAtomic(dataFile, data, (writeError) => {
-      releaseLock(dataLock, '/api/edit')
+    writeJsonAtomic(lib.dataFile, data, (writeError) => {
+      releaseLock(lib.lock, '/api/edit')
       if (writeError) {
         console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/edit write failed:`, writeError)
         res.status(500).send('error')
@@ -8784,6 +8857,33 @@ app.use(
     // (the Immich key kept as the NAS password: encrypted with this box's own key)
     photoSecret: { encrypt: nasEncrypt, decrypt: nasDecrypt },
     heard: heardStore,
+    // (several users: the app's library of another user than the one in place - users.ts)
+    otherUser: (req) => {
+      const lib = libraryOf(req)
+      if (!lib) return undefined
+      return lib.current ? null : String(req.query.user)
+    },
+    userConfig: (id) => users.userConfig(id),
+    updateUserConfig: (id, mutate) => users.updateUserConfig(id, mutate),
+    userPlayLog: (id) => path.join(userFiles.userDir(id), 'logs', 'play_log.jsonl'),
+    requestedUser: (req) => {
+      if (req.query?.user === undefined) return null
+      const lib = libraryOf(req)
+      if (!lib) return undefined
+      return { id: String(req.query.user), current: lib.current }
+    },
+    userLibraryDir: (id) => path.join(userFiles.userDir(id), 'library'),
+    heardOf: (id) => new HeardStore(path.join(userFiles.userDir(id), 'library')),
+    withUserLock: (id, work) => {
+      const lock = userLibraryLock(id)
+      if (acquireLock(lock, 'user library') !== 'acquired') return 'locked'
+      try {
+        fs.mkdirSync(path.join(userFiles.userDir(id), 'library'), { recursive: true })
+        return work()
+      } finally {
+        releaseLock(lock, 'user library')
+      }
+    },
     localLibrary: {
       root: libraryRoot,
       categories: libraryCategories,

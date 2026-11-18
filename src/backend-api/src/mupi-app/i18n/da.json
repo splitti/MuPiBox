@@ -4511,5 +4511,11 @@
  "Benutzer der Box": "Boksens brugere",
  "Die Liste hat sich inzwischen geändert.": "Listen er ændret i mellemtiden.",
  "Ein Eintrag in der Bibliothek": "Én post i biblioteket",
- "Einstellungen › Mehrere Benutzer": "Indstillinger › Flere brugere"
+ "Einstellungen › Mehrere Benutzer": "Indstillinger › Flere brugere",
+ "Abspielen geht nur aus der Bibliothek des aktiven Benutzers": "Afspilning virker kun fra den aktive brugers bibliotek",
+ "Du bearbeitest die Bibliothek von {}. Abspielen geht nur aus der Bibliothek des aktiven Benutzers.": "Du redigerer biblioteket for {}. Afspilning virker kun fra den aktive brugers bibliotek.",
+ "Hör-Verlauf von": "Lyttehistorik for",
+ "Bibliothek von": "Bibliotek for",
+ "Das geht nur beim aktiven Benutzer": "Det virker kun for den aktive bruger",
+ "Gespeichert. Auf die Box kommt es, wenn {} der aktive Benutzer ist.": "Gemt. Det kommer på boksen, når {} er den aktive bruger."
 }

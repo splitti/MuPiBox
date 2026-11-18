@@ -1546,3 +1546,7 @@ textarea[hidden] { display: none; }
 .user-acts .btn.sm + .btn.sm { margin-left: 0; }
 .user-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--mp-border); background: var(--mp-surface); color: inherit; font-weight: 700; }
 .user-chip[aria-current="true"] { border-color: var(--mp-primary); box-shadow: inset 0 0 0 1px var(--mp-primary); }
+.user-chip[aria-pressed="true"] { border-color: var(--mp-primary); box-shadow: inset 0 0 0 1px var(--mp-primary); }
+.user-chip small { color: var(--mp-muted); font-weight: 500; font-size: 12px; }
+.lib-user { align-items: center; }
+.lib-user-lbl { font-weight: 700; margin-right: 4px; }

@@ -4511,5 +4511,11 @@
  "Benutzer der Box": "Χρήστες του κουτιού",
  "Die Liste hat sich inzwischen geändert.": "Η λίστα άλλαξε στο μεταξύ.",
  "Ein Eintrag in der Bibliothek": "Μία καταχώριση στη βιβλιοθήκη",
- "Einstellungen › Mehrere Benutzer": "Ρυθμίσεις › Πολλοί χρήστες"
+ "Einstellungen › Mehrere Benutzer": "Ρυθμίσεις › Πολλοί χρήστες",
+ "Abspielen geht nur aus der Bibliothek des aktiven Benutzers": "Η αναπαραγωγή γίνεται μόνο από τη βιβλιοθήκη του ενεργού χρήστη",
+ "Du bearbeitest die Bibliothek von {}. Abspielen geht nur aus der Bibliothek des aktiven Benutzers.": "Επεξεργάζεσαι τη βιβλιοθήκη του {}. Η αναπαραγωγή γίνεται μόνο από τη βιβλιοθήκη του ενεργού χρήστη.",
+ "Hör-Verlauf von": "Ιστορικό ακρόασης:",
+ "Bibliothek von": "Βιβλιοθήκη:",
+ "Das geht nur beim aktiven Benutzer": "Αυτό λειτουργεί μόνο για τον ενεργό χρήστη",
+ "Gespeichert. Auf die Box kommt es, wenn {} der aktive Benutzer ist.": "Αποθηκεύτηκε. Θα έρθει στο κουτί όταν ο {} είναι ο ενεργός χρήστης."
 }

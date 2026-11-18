@@ -4511,5 +4511,11 @@
  "Benutzer der Box": "Gebruikers van de box",
  "Die Liste hat sich inzwischen geändert.": "De lijst is intussen veranderd.",
  "Ein Eintrag in der Bibliothek": "Eén item in de bibliotheek",
- "Einstellungen › Mehrere Benutzer": "Instellingen › Meerdere gebruikers"
+ "Einstellungen › Mehrere Benutzer": "Instellingen › Meerdere gebruikers",
+ "Abspielen geht nur aus der Bibliothek des aktiven Benutzers": "Afspelen kan alleen uit de bibliotheek van de actieve gebruiker",
+ "Du bearbeitest die Bibliothek von {}. Abspielen geht nur aus der Bibliothek des aktiven Benutzers.": "Je bewerkt de bibliotheek van {}. Afspelen kan alleen uit de bibliotheek van de actieve gebruiker.",
+ "Hör-Verlauf von": "Luistergeschiedenis van",
+ "Bibliothek von": "Bibliotheek van",
+ "Das geht nur beim aktiven Benutzer": "Dit kan alleen bij de actieve gebruiker",
+ "Gespeichert. Auf die Box kommt es, wenn {} der aktive Benutzer ist.": "Opgeslagen. Het komt op de box als {} de actieve gebruiker is."
 }

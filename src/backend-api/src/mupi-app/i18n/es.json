@@ -4511,5 +4511,11 @@
  "Benutzer der Box": "Usuarios de la caja",
  "Die Liste hat sich inzwischen geändert.": "La lista ha cambiado mientras tanto.",
  "Ein Eintrag in der Bibliothek": "Una entrada en la biblioteca",
- "Einstellungen › Mehrere Benutzer": "Ajustes › Varios usuarios"
+ "Einstellungen › Mehrere Benutzer": "Ajustes › Varios usuarios",
+ "Abspielen geht nur aus der Bibliothek des aktiven Benutzers": "Solo se puede reproducir desde la biblioteca del usuario activo",
+ "Du bearbeitest die Bibliothek von {}. Abspielen geht nur aus der Bibliothek des aktiven Benutzers.": "Estás editando la biblioteca de {}. Solo se puede reproducir desde la biblioteca del usuario activo.",
+ "Hör-Verlauf von": "Historial de",
+ "Bibliothek von": "Biblioteca de",
+ "Das geht nur beim aktiven Benutzer": "Esto solo funciona con el usuario activo",
+ "Gespeichert. Auf die Box kommt es, wenn {} der aktive Benutzer ist.": "Guardado. Llega a la caja cuando {} sea el usuario activo."
 }

@@ -247,6 +247,27 @@ describe('the users', () => {
     assert.ok(fs.existsSync(path.join(root, 'data', 'users', MAIN_ID, 'library', 'data.json')))
   })
 
+  it('changes the configuration of a user who is not in place in his kept part - of the one in place in place', async () => {
+    config.spotify_sync = { artists: [{ id: 'a' }] }
+    const users = new Users(files, hooks)
+    const leni = await users.add('Leni', null)
+    await users.updateUserConfig(leni.id, (cfg) => {
+      cfg.spotify_sync = { artists: [{ id: 'leni' }] }
+    })
+    assert.deepEqual(files.readConfigPart(leni.id)?.sections.spotify_sync, { artists: [{ id: 'leni' }] })
+    assert.deepEqual(config.spotify_sync, { artists: [{ id: 'a' }] })
+    assert.deepEqual((await users.userConfig(leni.id)).spotify_sync, { artists: [{ id: 'leni' }] })
+    await users.updateUserConfig(MAIN_ID, (cfg) => {
+      cfg.spotify_sync = { artists: [{ id: 'main' }] }
+    })
+    assert.deepEqual(config.spotify_sync, { artists: [{ id: 'main' }] })
+    // (and his subscriptions come into place with him)
+    await users.setEnabled(true)
+    await users.switchTo(leni.id)
+    assert.deepEqual(config.spotify_sync, { artists: [{ id: 'leni' }] })
+    await assert.rejects(users.updateUserConfig('nobody', () => undefined))
+  })
+
   it('empties the trash after 30 days', async () => {
     const users = new Users(files, hooks)
     const a = await users.add('Anna', null)

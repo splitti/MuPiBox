@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import type { Router } from 'express'
+import type { Request, Router } from 'express'
 import { requireCsrf, requireSession } from './app-api/middleware'
 import { writeJsonSync } from './json-file'
 
@@ -187,10 +187,16 @@ export class HeardStore {
  * The app (Bibliothek): GET  /api/app/heard          {enabled, items: {key: started|finished}}
  *                        POST /api/app/heard          {keys: [...], state: finished|unheard} - as heard, as not heard
  */
-export function registerHeardAppRoutes(router: Router, store: HeardStore, enabled: () => boolean): void {
-  router.get('/heard', requireSession, (_req, res) => {
+export function registerHeardAppRoutes(
+  router: Router,
+  store: HeardStore,
+  enabled: () => boolean,
+  // (several users: the ticks of the user the app named, and his lock around a change - ../users.ts)
+  forRequest: (req: Request) => { store: HeardStore; run: <T>(work: () => T) => T | 'locked' } = () => ({ store, run: (work) => work() }),
+): void {
+  router.get('/heard', requireSession, (req, res) => {
     res.setHeader('Cache-Control', 'no-store')
-    res.json({ enabled: enabled(), items: store.all() })
+    res.json({ enabled: enabled(), items: forRequest(req).store.all() })
   })
   router.post('/heard', requireSession, requireCsrf, (req, res) => {
     const body = (req.body ?? {}) as { keys?: unknown; state?: unknown }
@@ -203,6 +209,12 @@ export function registerHeardAppRoutes(router: Router, store: HeardStore, enable
       res.status(400).json({ error: 'state' })
       return
     }
-    res.json({ changed: store.set(keys as string[], body.state), items: store.all() })
+    const target = forRequest(req)
+    const changed = target.run(() => target.store.set(keys as string[], body.state as 'finished' | 'unheard'))
+    if (changed === 'locked') {
+      res.status(409).json({ error: 'busy' })
+      return
+    }
+    res.json({ changed, items: target.store.all() })
   })
 }

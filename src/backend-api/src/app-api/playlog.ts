@@ -15,6 +15,8 @@ export interface PlaylogSummary {
 export async function playlogSummary(
   range: 'today' | 'week',
   currentPlayLogStart?: () => number | null,
+  // (another user's history - several users, ../users.ts; nothing of his plays now)
+  file = `${LOGS_DIR}/play_log.jsonl`,
 ): Promise<PlaylogSummary> {
   const now = new Date()
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -29,7 +31,7 @@ export async function playlogSummary(
     // hätte den einzigen Thread des Backends blockiert -- also auch
     // Wiedergabesteuerung und Display-Sync, während jemand den
     // Hör-Verlauf öffnet.
-    raw = await fsp.readFile(`${LOGS_DIR}/play_log.jsonl`, 'utf8')
+    raw = await fsp.readFile(file, 'utf8')
   } catch {
     // file may not exist yet — return empty result
   }

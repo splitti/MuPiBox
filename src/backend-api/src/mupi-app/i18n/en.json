@@ -4527,5 +4527,11 @@
  "Benutzer der Box": "Users of the box",
  "Die Liste hat sich inzwischen geändert.": "The list has changed in the meantime.",
  "Ein Eintrag in der Bibliothek": "One entry in the library",
- "Einstellungen › Mehrere Benutzer": "Settings › Several users"
+ "Einstellungen › Mehrere Benutzer": "Settings › Several users",
+ "Abspielen geht nur aus der Bibliothek des aktiven Benutzers": "Playing only works from the library of the active user",
+ "Du bearbeitest die Bibliothek von {}. Abspielen geht nur aus der Bibliothek des aktiven Benutzers.": "You are editing the library of {}. Playing only works from the library of the active user.",
+ "Hör-Verlauf von": "History of",
+ "Bibliothek von": "Library of",
+ "Das geht nur beim aktiven Benutzer": "This only works for the active user",
+ "Gespeichert. Auf die Box kommt es, wenn {} der aktive Benutzer ist.": "Saved. It comes onto the box when {} is the active user."
 }
