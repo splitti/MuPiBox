@@ -12,6 +12,7 @@
 import { createHash, randomBytes } from 'node:crypto'
 import { promises as fsp } from 'node:fs'
 import path from 'node:path'
+import { writeFileWhole } from '../../json-file'
 import { CACHE_DIR, DATA_DIR } from '../../paths'
 
 export const PHOTOS_DIR = path.join(DATA_DIR, 'photos')
@@ -233,18 +234,9 @@ export function copyLibraryTo(dir: string): Promise<boolean> {
   return run
 }
 
-// A file written next to it, on the card (fsync), then renamed over it: never half a file after a power cut.
-async function writeWhole(file: string, text: string): Promise<void> {
-  const tmp = `${file}.${process.pid}.tmp`
-  const fh = await fsp.open(tmp, 'w')
-  try {
-    await fh.writeFile(text)
-    await fh.sync()
-  } finally {
-    await fh.close()
-  }
-  await fsp.rename(tmp, file)
-}
+// (next to it, on the card (fsync), then renamed over it: never half a file after a power cut - json-file.ts; whether it
+// changed is known here already)
+const writeWhole = (file: string, text: string) => writeFileWhole(file, text, { ifChanged: false })
 
 // The list onto the card: an album's file only when its pictures changed, the list of the albums only when it
 // changed; first the albums, then the list (a new album's pictures are there when the list names it), the files of
@@ -354,10 +346,11 @@ export async function photoBytes(dir = PHOTOS_DIR): Promise<number> {
 export async function sweepLeftovers(): Promise<void> {
   await fsp.rm(INCOMING_DIR, { recursive: true, force: true }).catch(() => undefined)
   for (const f of await fsp.readdir(PHOTOS_DIR).catch(() => [] as string[])) {
-    if (/^library\.json\.\d+\.tmp$/.test(f)) await fsp.rm(path.join(PHOTOS_DIR, f), { force: true }).catch(() => undefined)
+    // (the temporary names of before and of json-file.ts)
+    if (/^library\.json\.(\d+\.tmp|tmp\.\d+\.\d+)$/.test(f)) await fsp.rm(path.join(PHOTOS_DIR, f), { force: true }).catch(() => undefined)
   }
   for (const f of await fsp.readdir(ALBUMS_DIR).catch(() => [] as string[])) {
-    if (/^[a-f0-9]{10}\.json\.\d+\.tmp$/.test(f)) await fsp.rm(path.join(ALBUMS_DIR, f), { force: true }).catch(() => undefined)
+    if (/^[a-f0-9]{10}\.json\.(\d+\.tmp|tmp\.\d+\.\d+)$/.test(f)) await fsp.rm(path.join(ALBUMS_DIR, f), { force: true }).catch(() => undefined)
   }
   for (const root of [UPLOAD_DIR, NAS_PHOTO_DIR, IMMICH_PHOTO_DIR]) {
     let dirs: import('node:fs').Dirent[]

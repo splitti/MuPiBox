@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import type { Router } from 'express'
 import { requireCsrf, requireSession } from './app-api/middleware'
+import { writeJsonSync } from './json-file'
 
 /**
  * What of the library was heard (5.1, issue #180): an album or episode started (a yellow tick at its cover in the list of
@@ -120,10 +121,8 @@ export class HeardStore {
       const last = (e: Entry) => Math.max(e.s ?? 0, e.f ?? 0)
       for (const k of keys.sort((a, b) => last(all[a]) - last(all[b])).slice(0, keys.length - MAX_ENTRIES)) delete all[k]
     }
-    const tmp = `${this.file}.tmp`
     try {
-      fs.writeFileSync(tmp, JSON.stringify(all))
-      fs.renameSync(tmp, this.file)
+      writeJsonSync(this.file, all)
     } catch (err) {
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] heard.json not saved: ${(err as Error).message}`)
     }

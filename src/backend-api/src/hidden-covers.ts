@@ -1,5 +1,5 @@
 import fs from 'node:fs'
-import { rename, writeFile } from 'node:fs/promises'
+import { writeFileWhole } from './json-file'
 import { DATA_DIR } from './paths'
 
 /**
@@ -45,9 +45,7 @@ export function setCoverHidden(type: 'nas' | 'local', folder: string, hide: bool
   writing = writing
     .catch(() => undefined)
     .then(async () => {
-      const tmp = `${FILE}.tmp`
-      await writeFile(tmp, list)
-      await rename(tmp, FILE)
+      await writeFileWhole(FILE, list)
     })
   return writing
 }

@@ -61,6 +61,7 @@ import type { Duplex } from 'node:stream'
 import { SUDO_BACKUP_SNIPPET, backupBeforeWrite } from './file-backup'
 import { readEmbeddedPicture } from './embedded-cover'
 import { acquireLock, DATA_LOCK, RESUME_LOCK, releaseLock, staleReason } from './file-lock'
+import { sweepTempFiles, writeFileWhole } from './json-file'
 import { type AlbumFillDeps, fillSpotifyAlbums, isBareAlbum, startSpotifyAlbumFill } from './spotify-album-fill'
 import { coverHidden } from './hidden-covers'
 import { OnlineCovers } from './online-covers'
@@ -4031,22 +4032,21 @@ const albumFillDeps: AlbumFillDeps = {
 // data.json, resume.json and wlan.json were written straight into the target file: a power cut
 // or a crash mid-write left a cut-off JSON (the library or the resume list unreadable). Written
 // next to the target and renamed over it instead, so a reader sees the old or the new file.
+// (json-file.ts: onto the card with fsync, and not at all when the file holds the same already. Two spaces as Smart Sync
+// (spotify-sync/apply.ts) and jq in the scripts write it: with 4 here, each of them wrote the same library again)
 function writeJsonAtomic(file: string, data: unknown, callback: (error: Error | null) => void): void {
-  // The library: keep the version this write replaces (a bad edit once wiped an entry and there was nothing to go back to).
-  if (file === dataFile) backupBeforeWrite(file)
-  const tmp = `${file}.tmp.${process.pid}.${Date.now()}`
-  jsonfile.writeFile(tmp, data, { spaces: 4 }, (writeError) => {
-    if (writeError) {
-      fs.rm(tmp, { force: true }, () => callback(writeError))
+  const text = `${JSON.stringify(data, null, 2)}\n`
+  fs.readFile(file, 'utf8', (_readError, before) => {
+    if (before === text) {
+      callback(null)
       return
     }
-    fs.rename(tmp, file, (renameError) => {
-      if (renameError) {
-        fs.rm(tmp, { force: true }, () => callback(renameError))
-        return
-      }
-      callback(null)
-    })
+    // The library: keep the version this write replaces (a bad edit once wiped an entry and there was nothing to go back to).
+    if (file === dataFile) backupBeforeWrite(file)
+    writeFileWhole(file, text, { ifChanged: false }).then(
+      () => callback(null),
+      (error: Error) => callback(error),
+    )
   })
 }
 
@@ -8855,6 +8855,8 @@ if (!testServe) {
   // A request may take up to 5 minutes by default: too short for a large file uploaded from the web app over WiFi
   server.requestTimeout = 60 * 60 * 1000
   console.log(`${new Date().toLocaleString()}: [mupibox-backend-api] Server started at http://localhost:8200`)
+  // (what a power cut left of its writes - json-file.ts)
+  for (const dir of [LIBRARY_DIR, DATA_DIR]) void sweepTempFiles(dir)
   // the same app for the web server of port 80/443 (lighttpd proxies /app, /api, ... here; see request-guard.ts)
   const proxied = app.listen(PROXY_PORT, '127.0.0.1')
   proxied.on('upgrade', proxyVncUpgrade)

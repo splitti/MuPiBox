@@ -11,15 +11,8 @@ RESUME_FILE="${MUPI_LIBRARY}/resume.json"
 ACTIVERESUME_FILE="${MUPI_LIBRARY}/active_resume.json"
 OFFLINERESUME_FILE="${MUPI_LIBRARY}/offline_resume.json"
 
-# The library without what needs the internet. Podcasts with episodes on the SD card stay (their list then shows
-# those only, see podcast-offline.ts; a resume tile of a kept episode too, by its address); the list is made again
-# when that changes too.
-PODCAST_INDEX="/home/dietpi/MuPiBox/podcasts/index.json"
-offline_filter() {
-	local index="${PODCAST_INDEX}"
-	/usr/bin/jq -e 'type == "object"' "${index}" > /dev/null 2>&1 || index=/dev/null
-	/usr/bin/jq --slurpfile off "${index}" '([$off[0].files[]?.feed] + [$off[0].files[]?.url]) as $feeds | .[] | select(.type != "spotify" and .type != "radio" and .type != "tidal" and (.type != "rss" or (.id as $i | any($feeds[]; . == $i))))' < "$1"
-}
+# The library and the resume list without what needs the internet: offline_list, shared with check_network.sh
+. /usr/local/bin/mupibox/offline_lists.sh
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 NETWORKCONFIG="/tmp/network.json"
@@ -29,29 +22,8 @@ DATA_LOCK="/tmp/.data.lock"
 RESUME_LOCK="/tmp/.resume.lock"
 
 
-if [ -f "${DATA_LOCK}" ]; then
-	echo "Data-file locked."
-    exit
-else
-	touch ${DATA_LOCK}
-	if [ ! -f ${DATA_FILE} ]; then
-			echo -n "[]" > ${DATA_FILE}
-			chown dietpi:dietpi ${DATA_FILE}
-	fi
-	rm ${DATA_LOCK}
-fi
-
-if [ -f "${RESUME_LOCK}" ]; then
-	echo "Resume-file locked."
-    exit
-else
-	touch ${RESUME_LOCK}
-	if [ ! -f ${RESUME_FILE} ]; then
-			echo -n "[]" > ${RESUME_FILE}
-			chown dietpi:dietpi ${RESUME_FILE}
-	fi
-	rm ${RESUME_LOCK}
-fi
+make_empty "${DATA_FILE}" "${DATA_LOCK}"
+make_empty "${RESUME_FILE}" "${RESUME_LOCK}"
 
 # The file lives in /tmp and is gone after a reboot. It must be created when it is missing AND when
 # it is empty or not a JSON object: every writer below uses jq on the existing file, so once an empty
@@ -69,31 +41,8 @@ else
         OLD_ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 fi
 
-if [ ! -f ${OFFLINE_FILE} ]; then
-        echo -n "[" > ${OFFLINE_FILE}
-        printf '%s' "$(offline_filter ${DATA_FILE} | /usr/bin/jq -c . | paste -sd,)" >> ${OFFLINE_FILE}
-        echo -n "]" >> ${OFFLINE_FILE}
-        sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
-        chown dietpi:dietpi ${OFFLINE_FILE}
-elif [ $(stat --format='%Y' "${DATA_FILE}") -gt $(stat --format='%Y' "${OFFLINE_FILE}") ] || [ "${PODCAST_INDEX}" -nt "${OFFLINE_FILE}" ]; then
-        echo -n "[" > ${OFFLINE_FILE}
-        printf '%s' "$(offline_filter ${DATA_FILE} | /usr/bin/jq -c . | paste -sd,)" >> ${OFFLINE_FILE}
-        echo -n "]" >> ${OFFLINE_FILE}
-        sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
-fi
-
-if [ ! -f ${OFFLINERESUME_FILE} ]; then
-        echo -n "[" > ${OFFLINERESUME_FILE}
-        printf '%s' "$(offline_filter ${RESUME_FILE} | /usr/bin/jq -c . | paste -sd,)" >> ${OFFLINERESUME_FILE}
-        echo -n "]" >> ${OFFLINERESUME_FILE}
-        sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
-        chown dietpi:dietpi ${OFFLINERESUME_FILE}
-elif [ $(stat --format='%Y' "${RESUME_FILE}") -gt $(stat --format='%Y' "${OFFLINERESUME_FILE}") ] || [ "${PODCAST_INDEX}" -nt "${OFFLINERESUME_FILE}" ]; then
-        echo -n "[" > ${OFFLINERESUME_FILE}
-        printf '%s' "$(offline_filter ${RESUME_FILE} | /usr/bin/jq -c . | paste -sd,)" >> ${OFFLINERESUME_FILE}
-        echo -n "]" >> ${OFFLINERESUME_FILE}
-        sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
-fi
+offline_list "${DATA_FILE}" "${OFFLINE_FILE}"
+offline_list "${RESUME_FILE}" "${OFFLINERESUME_FILE}"
 
 # the WiFi adapter in use (a USB adapter if there is one, else the onboard one)
 WIFI_IF=$(/usr/local/bin/mupibox/mupi_wifi_iface.sh)

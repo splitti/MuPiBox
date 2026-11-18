@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { writeJsonSync } from './json-file'
 import { episodeKey } from './podcast-offline'
 
 /**
@@ -68,10 +69,8 @@ export class EpisodeState {
   private saveFirstSeen() {
     if (!this.firstSeenDirty || !this.firstSeen) return
     this.firstSeenDirty = false
-    const tmp = `${this.firstSeenFile}.tmp`
     try {
-      fs.writeFileSync(tmp, JSON.stringify(this.firstSeen))
-      fs.renameSync(tmp, this.firstSeenFile)
+      writeJsonSync(this.firstSeenFile, this.firstSeen)
     } catch {
       this.firstSeenDirty = true
     }
