@@ -6,7 +6,9 @@
 //   what plays                          ->  GET <player>/local once in 0.5 s (once in 1.5 s while the display is off), and /state
 //                                           while Spotify plays, once in 20 s
 //   the status block of the page        ->  GET /state (the lines), POST /iicon (switch I2C on)
-//   the display itself                  ->  POST /info (the page with the address of the box), POST /mode (the next mode), POST /wake
+//   the display itself                  ->  POST /info (the QR code with the address of the box), POST /mode (the next mode), POST /wake
+//   the pictures                        ->  GET /images (the list on the page), POST /imageset (a picture the user chose), POST /imagereset;
+//                                           an update or the shutdown says itself in a file (scripts/mupibox/oled_picture.sh)
 //   without the DSI display             ->  the setting "headless": the flag mupibox.headless in the configuration of the box and the
 //                                           autostart of DietPi (the kiosk is its autologin) - effective after the next start
 'use strict'
@@ -29,6 +31,13 @@ const SPOTIFY_GAP_MS = 3000
 // (switching "headless" on waits this long for the driver to say whether an OLED is there)
 const READY_WAIT_MS = 8000
 const DRM_DIR = '/sys/class/drm'
+// what the box's scripts say: an update runs or the box goes down (scripts/mupibox/oled_picture.sh), and the player's state of the rest times
+const HOLD_FILE = '/run/mupibox-oled-picture'
+const PLAYTIME_FILE = '/tmp/playtime.json'
+// a picture the user chose comes as a PNG the app made (a few hundred kB at most)
+const MAX_PICTURE_BYTES = 900000
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+const DATA_URL_PNG = 'data:image/png;base64,'
 const AUTOSTART_INDEX_FILE = '/boot/dietpi/.dietpi-autostart_index'
 // (the autostart the kiosk uses: DietPi's index 11 is the Chromium kiosk the box was set up with; 0 is the manual login)
 const KIOSK_AUTOSTART = 11
@@ -51,7 +60,13 @@ exports.activate = (host) => {
   let phase = { phase: 'starting', code: '' }
   let play = logic.readPlayback(null, null)
   let previous = null // the reading before this one, for the short pictures
-  const ui = { infoUntil: 0, overlay: null, idleSince: clock(), wake: 0, mode: null }
+  // (ready: the box can play - the start picture stays until the player answers, but not longer than BOOT_MAX_MS)
+  const ui = { infoUntil: 0, overlay: null, select: null, idleSince: clock(), wake: 0, mode: null, ready: false, hold: null, blocked: false, preview: null }
+  const bootDeadline = clock() + logic.BOOT_MAX_MS
+  const imagesDir = path.join(dir, 'images')
+  const customDir = path.join(dataDir, 'images')
+  const holdFile = () => deps.holdFile ?? HOLD_FILE
+  const playtimeFile = () => deps.playtimeFile ?? PLAYTIME_FILE
   let net = { ssid: '', ip: '', wifi: -1, lan: false, at: 0 }
   let headlessNote = null // { value, tone }: why "headless" did not take effect, for the status block
   let busy = false
@@ -75,6 +90,13 @@ exports.activate = (host) => {
       return ''
     }
   })()
+  // (the picture of an update that stood when the server started: that update has ended, or the box was switched off in it. The file is the
+  // box's - written empty, not removed: the server may not remove a file of root's in /run)
+  try {
+    if (logic.holdFrom(readText(holdFile()), clock())?.slot === 'update') fs.writeFileSync(holdFile(), '')
+  } catch {
+    /* nothing to clear */
+  }
   const bootConfigFile = () => ['/boot/firmware/config.txt', '/boot/config.txt'].find((file) => fs.existsSync(file))
   const deviceNames = () => {
     try {
@@ -115,7 +137,7 @@ exports.activate = (host) => {
         })
   const startDriver = () => {
     appliedContrast = logic.eveningContrast(config, night.share)
-    const args = [path.join(dir, 'oled.py'), ...logic.driverArgs({ ...config, contrast: appliedContrast })]
+    const args = [path.join(dir, 'oled.py'), ...logic.driverArgs({ ...config, contrast: appliedContrast }, { images: imagesDir, custom: customDir })]
     started = config
     phase = { phase: 'starting', code: '' }
     driver = createDriver({
@@ -239,11 +261,15 @@ exports.activate = (host) => {
       const reading = logic.readPlayback(local, spotify)
       // (no answer of the player at all: the picture stays as it was - not a short picture for a volume that "changed" to nothing)
       if (local) {
-        const overlay = logic.overlayFor(previous, reading, config.volumeOverlay)
+        const overlay = logic.overlayFor(previous, reading, config.volumeOverlay, config.playOverlay)
         if (overlay) ui.overlay = { ...overlay, until: now + logic.OVERLAY_MS }
         previous = reading
         play = reading
       }
+      // (the start picture goes when the player answers - or when it did not for BOOT_MAX_MS - and a rest time or an update shows its own)
+      if (local || now >= bootDeadline) ui.ready = true
+      ui.hold = logic.holdFrom(readText(holdFile()), now)
+      ui.blocked = logic.blockedFrom(readText(playtimeFile()))
       // (only what plays keeps the display on: a paused medium counts as idle and lets it go off after sleepAfter)
       if (play.player !== '' && play.playing) ui.idleSince = null
       else if (!ui.idleSince) ui.idleSince = now
@@ -455,18 +481,28 @@ exports.activate = (host) => {
     { session: true },
   )
 
-  // The page with the address of the box for ten seconds
+  // The QR code with the address of the box for ten seconds (nothing else on the display)
+  const showAddress = () => {
+    ui.infoUntil = clock() + logic.INFO_MS
+    ui.wake = ui.infoUntil
+    push(true)
+  }
   host.route(
     'post',
     '/info',
     (_req, res) => {
-      ui.infoUntil = clock() + logic.INFO_MS
-      ui.wake = ui.infoUntil
-      push(true)
-      res.json({ ok: true, message: 'Die Adresse der Box steht auf dem Display' })
+      showAddress()
+      res.json({ ok: true, message: 'Der QR-Code mit der Adresse der Box steht auf dem Display' })
     },
     { session: true },
   )
+  // The same for a button of the box (the buttons extension, a knob's button): not behind the login, but only from the box itself
+  host.route('post', '/address', (req, res) => {
+    const from = String(req.socket?.remoteAddress ?? '')
+    if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(from) || req.headers['x-forwarded-for']) return res.status(403).json({ ok: false })
+    showAddress()
+    res.json({ ok: true })
+  })
 
   // The next mode (full, mix, lite) until the settings are saved again
   host.route(
@@ -479,6 +515,132 @@ exports.activate = (host) => {
     },
     { session: true },
   )
+
+  // ---- the pictures ------------------------------------------------------------------------------------------------------------
+  const ownPictures = () => logic.CHANGEABLE_IMAGES.filter((id) => fs.existsSync(path.join(customDir, `${id}.png`)))
+  // (the picture as it is shown: the user's own, else the one of the extension)
+  const pictureFile = (id) => {
+    const own = path.join(customDir, `${id}.png`)
+    if (logic.CHANGEABLE_IMAGES.includes(id) && fs.existsSync(own)) return own
+    const built = path.join(imagesDir, `${id}.png`)
+    return fs.existsSync(built) ? built : ''
+  }
+  const dataUrl = (file) => {
+    try {
+      return file ? `${DATA_URL_PNG}${fs.readFileSync(file).toString('base64')}` : ''
+    } catch {
+      return ''
+    }
+  }
+
+  // The list of the pictures on the page (rows with the picture, where it is shown and the buttons to change it and to take the original back)
+  host.route(
+    'get',
+    '/images',
+    (_req, res) => {
+      const own = ownPictures()
+      const items = logic.imageRows({ own, idleScreen: config.idleScreen }).map((row) => ({
+        id: row.id,
+        title: row.title,
+        translate: true,
+        text: row.text,
+        image: dataUrl(pictureFile(row.id)),
+        wide: true,
+        actions: [
+          { label: 'Zeige Bild', post: '/api/ext/oled/imageshow', safe: true },
+          ...(row.changeable
+            ? [
+                { label: 'Bild ändern', post: '/api/ext/oled/imageset', upload: true, exact: [128, 64], safe: true },
+                ...(row.own ? [{ label: 'Zurücksetzen', post: '/api/ext/oled/imagereset', confirm: 'Das Original wieder zeigen?', safe: true }] : []),
+              ]
+            : []),
+        ],
+      }))
+      res.json({ items })
+    },
+    { session: true },
+  )
+
+  // A picture of the list on the display for 10 seconds ({ id }), then what it showed before (the state decides again by itself)
+  host.route(
+    'post',
+    '/imageshow',
+    (req, res) => {
+      const id = String(req.body?.id ?? '')
+      if (!logic.previewView(id)) return res.status(400).json({ ok: false, error: 'bad_id', message: 'Dieses Bild gibt es nicht' })
+      ui.preview = { id, until: clock() + logic.PREVIEW_MS }
+      push(true)
+      res.json({ ok: true, message: 'Das Bild steht zehn Sekunden auf dem Display' })
+    },
+    { session: true },
+  )
+
+  // A picture the user chose ({ id, image: "data:image/png;base64,..." } - the app checked it and made a PNG of it): taken only if it is a 1-bit
+  // picture of exactly 128 x 64 (oled.py --check says so again, the browser is not to be trusted) and kept in the data folder, where the driver finds it
+  host.route(
+    'post',
+    '/imageset',
+    async (req, res) => {
+      const id = String(req.body?.id ?? '')
+      if (!logic.CHANGEABLE_IMAGES.includes(id)) return res.status(400).json({ ok: false, error: 'bad_id', message: 'Dieses Bild lässt sich nicht ändern' })
+      const text = String(req.body?.image ?? '')
+      const bytes = text.startsWith(DATA_URL_PNG) && text.length <= MAX_PICTURE_BYTES * 1.4 ? Buffer.from(text.slice(DATA_URL_PNG.length), 'base64') : null
+      if (!bytes || bytes.length === 0 || bytes.length > MAX_PICTURE_BYTES || !bytes.subarray(0, 8).equals(PNG_SIGNATURE)) {
+        return res.status(400).json({ ok: false, error: 'not_a_picture', message: 'Das ist kein Bild, das die Box lesen kann' })
+      }
+      const upload = path.join(customDir, `.${id}.upload`)
+      const made = path.join(customDir, `.${id}.png.tmp`)
+      try {
+        fs.mkdirSync(customDir, { recursive: true })
+        fs.writeFileSync(upload, bytes)
+        const result = await run('python3', [path.join(dir, 'oled.py'), '--check', upload, made], 30000)
+        if (result.error || !fs.existsSync(made)) {
+          const code = logic.pictureErrorCode(result.stdout)
+          return res.status(400).json({ ok: false, error: code, message: logic.PICTURE_MESSAGES[code] })
+        }
+        fs.renameSync(made, path.join(customDir, `${id}.png`))
+      } catch (error) {
+        log.warn(`[oled] picture ${id}: ${error?.message ?? error}`)
+        return res.status(500).json({ ok: false, error: 'failed', message: 'Das Bild ließ sich nicht speichern' })
+      } finally {
+        fs.rmSync(upload, { force: true })
+        fs.rmSync(made, { force: true })
+      }
+      push(true)
+      res.json({ ok: true, message: 'Bild gespeichert' })
+    },
+    { session: true },
+  )
+
+  // The original again ({ id }): the picture the user chose is removed
+  host.route(
+    'post',
+    '/imagereset',
+    (req, res) => {
+      const id = String(req.body?.id ?? '')
+      if (!logic.CHANGEABLE_IMAGES.includes(id)) return res.status(400).json({ ok: false, error: 'bad_id', message: 'Dieses Bild lässt sich nicht ändern' })
+      fs.rmSync(path.join(customDir, `${id}.png`), { force: true })
+      push(true)
+      res.json({ ok: true, message: 'Das Original ist wieder da' })
+    },
+    { session: true },
+  )
+
+  // What the rotary knob is on while it chooses an album, a folder or an episode (the NFC extension sends it): { title, artist, index, count,
+  // seconds } shows it where the information of the medium is, { clear: true } brings the picture of the player back. Not behind the login,
+  // but only from the box itself.
+  host.route('post', '/select', (req, res) => {
+    const from = String(req.socket?.remoteAddress ?? '')
+    if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(from) || req.headers['x-forwarded-for']) return res.status(403).json({ ok: false })
+    ui.select = logic.selectionOf(req.body, clock())
+    if (ui.select) {
+      // (a display that went off wakes for it)
+      ui.wake = ui.select.until
+      ui.idleSince = clock()
+    }
+    push(true)
+    res.json({ ok: true })
+  })
 
   // Wakes a display that went off for a while (nothing plays)
   host.route(

@@ -15,6 +15,8 @@ const MEDIA_KEYS = [
   'type', 'category', 'artist', 'title', 'id', 'artistid', 'showid', 'playlistid', 'audiobookid', 'release_date', 'cover', 'artistcover',
   'shuffle', 'aPartOfAll', 'aPartOfAllMin', 'aPartOfAllMax', 'episodePick', 'spotify_url', 'tidalKind', 'range_from', 'range_to',
   'range_by', 'exclude_album_ids', 'jellyfinKind', 'audibleKind', 'nasPath', 'libraryPath', 'ownFiles', 'noResume', 'sorting', 'query',
+  // (the rotary knob, see "collections" below: the artist cover or folder this album belongs to)
+  'browse', 'browseArtist', 'browseCategory', 'browsePath', 'browseTitle', 'browseCover',
 ]
 const TYPES = ['library', 'nas', 'spotify', 'radio', 'rss', 'tidal', 'jellyfin', 'audible']
 
@@ -31,6 +33,8 @@ function sanitizeMedia(raw) {
   }
   if (!media.category) media.category = 'audiobook'
   const has = (k) => typeof media[k] === 'string' && media[k] !== ''
+  // (a collection that is none - an unknown kind, no artist or folder to look at - is not kept)
+  if (!collectionOf(media)) for (const key of BROWSE_KEYS) delete media[key]
   const startable =
     (media.type === 'library' && (has('libraryPath') || (has('artist') && has('title')))) ||
     (media.type === 'nas' && has('nasPath')) ||
@@ -46,6 +50,8 @@ function sanitizeMedia(raw) {
 
 /** The name of a medium as the user reads it ("Title – Artist"), short enough for a field of the app. */
 function mediaLabel(media) {
+  // (an artist cover or a folder: the tag is named after it - the album it plays now is in the list beside it)
+  if (media?.browse && String(media.browseTitle ?? '').trim()) return String(media.browseTitle).trim().slice(0, 90)
   const title = String(media?.title ?? '').trim()
   const artist = String(media?.artist ?? '').trim()
   const text = title && artist && title !== artist ? `${title} – ${artist}` : title || artist || String(media?.libraryPath ?? media?.id ?? '').split('/').pop() || 'Medium'
@@ -82,8 +88,16 @@ function serviceCover(media) {
 // what makes a medium the same medium (not where it was left, not its picture)
 const IDENTITY_KEYS = ['type', 'id', 'playlistid', 'showid', 'audiobookid', 'artistid', 'nasPath', 'libraryPath', 'tidalKind', 'jellyfinKind', 'audibleKind']
 
-/** A string that is the same for the same medium - the library entries without a path are told apart by artist and title. */
+/** A string that is the same for the same medium - the library entries without a path are told apart by artist and title. For an album
+ *  that belongs to a collection it is the collection's: the tags of an artist cover are the tags of that artist cover, whichever album
+ *  each of them plays at the moment (albumKey tells the albums apart). */
 function mediumKey(media) {
+  const collection = collectionOf(media)
+  return collection ? collectionKey(collection) : albumKey(media)
+}
+
+/** A string that is the same for the same album, whatever collection it was reached by. */
+function albumKey(media) {
   if (!media || typeof media !== 'object') return ''
   const parts = IDENTITY_KEYS.map((key) => String(media[key] ?? ''))
   if (media.type === 'library' && !media.libraryPath) parts.push(String(media.artist ?? ''), String(media.title ?? ''))
@@ -94,6 +108,31 @@ function mediumKey(media) {
 function normalizeUid(value) {
   const uid = String(value ?? '').replace(/[^0-9A-Fa-f]/g, '').toUpperCase()
   return /^[0-9A-F]{8,20}$/.test(uid) ? uid : null
+}
+
+// ---- collections: an artist cover or a folder with albums ------------------------------------------------------------------------
+// A tag can belong to a whole artist cover (the albums of an artist in the library, a folder of the SD card or of the NAS) instead of
+// one album. It still plays one album - the one chosen in the list of the tag - but the rotary knob steps through the others (api.js).
+// The collection travels inside the medium of the tag (the browse* keys) so that saving, taking in and the backup carry it.
+const BROWSE_KINDS = ['entries', 'folder', 'nas']
+const BROWSE_KEYS = ['browse', 'browseArtist', 'browseCategory', 'browsePath', 'browseTitle', 'browseCover']
+
+/** The collection a medium (or the description of one the app sends) points at: { browse, browseArtist, ... } or null. */
+function collectionOf(media) {
+  if (!media || typeof media !== 'object' || !BROWSE_KINDS.includes(media.browse)) return null
+  const text = (key) => (typeof media[key] === 'string' ? media[key].slice(0, 600) : '')
+  if (media.browse === 'entries' ? text('browseArtist') === '' : text('browsePath') === '') return null
+  const collection = {}
+  for (const key of BROWSE_KEYS) if (text(key) !== '') collection[key] = text(key)
+  return collection
+}
+
+/** A string that is the same for the same collection. */
+const collectionKey = (collection) => JSON.stringify([collection.browse, collection.browseArtist ?? '', collection.browseCategory ?? '', collection.browsePath ?? ''])
+
+/** An album as a member of a collection: the album's medium with the collection's keys. Null when it cannot be started. */
+function inCollection(album, collection) {
+  return sanitizeMedia({ ...album, ...collection })
 }
 
 // (the kind of a tag: a USB reader gives a number as typed, no bytes of a chip - the list shows it as it is)
@@ -536,5 +575,5 @@ function parseText(text) {
 const countAssigned = (data) => Object.values(data.tags).filter((tag) => tag.media).length
 
 module.exports = {
-  MAX_TAGS, ARM_SECONDS, TARGETS, TYPES, sanitizeMedia, mediaLabel, sanitizeImage, tagImage, mediumKey, pickEpisode, normalizeUid, emptyData, readData, EXPORT_FORMAT, exportData, assignmentsDigest, parseImport, applyImport, exportCsv, parseTable, parseText, tagLaidOn, giveToFlex, giveToTag, forgetTag, countAssigned, saveCount,
+  MAX_TAGS, ARM_SECONDS, TARGETS, TYPES, sanitizeMedia, mediaLabel, sanitizeImage, tagImage, mediumKey, albumKey, collectionOf, collectionKey, inCollection, pickEpisode, normalizeUid, emptyData, readData, EXPORT_FORMAT, exportData, assignmentsDigest, parseImport, applyImport, exportCsv, parseTable, parseText, tagLaidOn, giveToFlex, giveToTag, forgetTag, countAssigned, saveCount,
 }

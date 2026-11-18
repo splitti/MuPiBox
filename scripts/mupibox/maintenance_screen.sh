@@ -15,6 +15,9 @@ KIND="${1:-update}"
 PCT="$2"
 PART="$3"
 
+# The OLED display (extension): its picture of an update, whatever the DSI display shows (nothing without the extension)
+[ "${KIND}" = "update" ] && [ -x /usr/local/bin/mupibox/oled_picture.sh ] && /usr/local/bin/mupibox/oled_picture.sh update >/dev/null 2>&1 &
+
 # The console of the display (tty1) in graphics mode while the picture of an update or an installation stands: in text mode
 # its driver (fbcon) draws over the picture now and then - the console's background (blue) in stripes across it, whenever
 # the cursor blinks or a line is written to tty1. The mode stays when this script has ended; the display's start (X) and a

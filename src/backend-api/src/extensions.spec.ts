@@ -387,6 +387,17 @@ describe('GPIO pins the user chooses, and a page of its own (hostApi 5)', () => 
     assert.ok(checkManifest(manifest({}, { place: 'system', adopt: ['rotary', 'rotary'] }), files()))
     assert.ok(checkManifest(manifest({}, { place: 'system', adopt: 'rotary' }), files()))
   })
+
+  it('a sub page may show a page of the core: only on a heading that starts a page, only what the core lets go', () => {
+    const heading = (extra: Record<string, unknown>) => manifest({}, { place: 'system', items: [{ type: 'heading', label: 'Erste', page: true }, { type: 'heading', label: 'Drehregler', page: true, ...extra }] }, 12)
+    assert.strictEqual(checkManifest(heading({ adopt: ['rotary'] }), files()), null)
+    assert.strictEqual(checkManifest(heading({}), files()), null)
+    assert.ok(checkManifest(heading({ adopt: ['passwort'] }), files()), 'only what the core lets go')
+    assert.ok(checkManifest(heading({ adopt: ['rotary', 'rotary'] }), files()))
+    assert.ok(checkManifest(heading({ adopt: [] }), files()))
+    assert.ok(checkManifest(heading({ adopt: 'rotary' }), files()))
+    assert.ok(checkManifest(manifest({}, { place: 'system', items: [{ type: 'heading', label: 'Karte', card: true, adopt: ['rotary'] }] }, 12), files()), 'a card is no page')
+  })
 })
 
 describe('a status block (hostApi 6)', () => {
@@ -553,7 +564,7 @@ describe('the NFC extension of this repository', () => {
     assert.strictEqual(nfc.hostApi, 12)
     assert.strictEqual(nfc.ui?.place, 'system')
     assert.strictEqual(nfc.name, 'NFC-Extension')
-    assert.deepStrictEqual(nfc.ui?.items.filter((i) => i.type === 'heading' && i.page).map((i) => i.label), ['NFC-Reader', 'Zugeordnete Tags', 'Sprachausgabe'], 'three sub pages')
+    assert.deepStrictEqual(nfc.ui?.items.filter((i) => i.type === 'heading' && i.page).map((i) => i.label), ['NFC-Reader', 'Zugeordnete Tags', 'Drehregler', 'Sprachausgabe'], 'four sub pages')
     assert.deepStrictEqual(nfc.resources, {}, 'no pin of its own: the user chooses BUSY and RST')
     assert.deepStrictEqual(nfc.system?.packages, ['python3-spidev', 'python3-lgpio'])
   })
@@ -622,6 +633,18 @@ describe('the NFC extension of this repository', () => {
     assert.deepStrictEqual(base(shown(2), 2).filter(Boolean), base(shown(1), 1).filter(Boolean), 'the same fields for each reader')
     assert.deepStrictEqual(base(shown(3), 3).filter(Boolean), base(shown(1), 1).filter(Boolean))
   })
+  it('has its own pins for the album knob: three pins of the header, none by default; the knob is no longer the one of the core', () => {
+    for (const key of ['knobA', 'knobB', 'knobButton']) assert.deepStrictEqual(nfc.settings?.[key], { type: 'gpio', default: 0 }, key)
+    assert.strictEqual(nfc.settings?.rotary, undefined, 'no switch that hands the knob of the box over')
+    assert.strictEqual(nfc.ui?.items.some((i) => i.type === 'heading' && i.adopt !== undefined), false, 'the page of the volume knob stays with the core')
+    assert.strictEqual(checkSettings(nfc, { knobA: 5, knobB: 6, knobButton: 13, rotarySeconds: 0 }).ok, true)
+    assert.strictEqual(checkSettings(nfc, { knobA: 40 }).ok, false)
+    assert.strictEqual(checkSettings(nfc, { knobButton: 1 }).ok, false)
+    // (a pin twice, or one something else holds, is refused when the settings are saved)
+    const merged = { knobA: 5, knobB: 5, knobButton: 13 }
+    assert.strictEqual(gpioSettingError(nfc, merged, ['knobB'], new Map())?.error, 'gpio_twice')
+    assert.strictEqual(gpioSettingError(nfc, { knobA: 26, knobB: 6, knobButton: 13 }, ['knobA'], new Map([[26, ['MuPiBox (rotary encoder)']]]))?.error, 'gpio_taken')
+  })
   it('is packed as the catalog says, with its Python driver in it', () => {
     const entry = JSON.parse(readFileSync(path.join(extDir, 'catalog.json'), 'utf8')).find((e: { id: string }) => e.id === 'nfc')
     const bytes = readFileSync(path.join(extDir, 'dist', `nfc-${entry.version}.mpx`))
@@ -630,7 +653,7 @@ describe('the NFC extension of this repository', () => {
     assert.strictEqual(checked.ok, true)
     if (checked.ok) {
       assert.deepStrictEqual(checked.pkg.manifest, nfc, 'the package holds the manifest of the repository')
-      for (const driver of ['pn5180.py', 'rc522.py', 'pn532.py', 'usbreader.py']) assert.ok(checked.pkg.files.has(driver), driver)
+      for (const driver of ['pn5180.py', 'rc522.py', 'pn532.py', 'usbreader.py', 'knob.py']) assert.ok(checked.pkg.files.has(driver), driver)
     }
   })
 })
@@ -654,13 +677,21 @@ describe('the OLED extension of this repository', () => {
     assert.match(rule, /GROUP="gpio"/)
   })
   it('takes the settings the app sends: chip, size, address, mode, the time, sleep and the start without the DSI display', () => {
-    assert.strictEqual(checkSettings(oled, { controller: 'sh1106', size: '128x32', address: '0x3D', rotate: true, contrast: 80, mode: 'mix', clock: false, timeMode: 'down', sleepAfter: 15, headless: true }).ok, true)
+    assert.strictEqual(checkSettings(oled, { controller: 'sh1106', size: '128x32', address: '0x3D', rotate: true, contrast: 80, mode: 'mix', idleScreen: 'clock', timeMode: 'down', sleepAfter: 15, headless: true }).ok, true)
     assert.strictEqual(checkSettings(oled, { controller: 'ssd1331' }).ok, false)
     assert.strictEqual(checkSettings(oled, { size: '64x48' }).ok, false)
     assert.strictEqual(checkSettings(oled, { address: '0x10' }).ok, false)
     assert.strictEqual(checkSettings(oled, { contrast: 300 }).ok, false)
     assert.strictEqual(checkSettings(oled, { sleepAfter: 7 }).ok, false)
     assert.strictEqual(checkSettings(oled, { timeMode: 'sideways' }).ok, false)
+    assert.strictEqual(checkSettings(oled, { idleScreen: 'photo' }).ok, false)
+  })
+  it('has the list of its pictures on the page, and its pictures in the package', () => {
+    assert.deepStrictEqual(oled.ui?.items.filter((i) => i.type === 'list').map((i) => i.list), ['/api/ext/oled/images'])
+    const entry = JSON.parse(readFileSync(path.join(extDir, 'catalog.json'), 'utf8')).find((e: { id: string }) => e.id === 'oled')
+    const checked = verifyPackage(readFileSync(path.join(extDir, 'dist', `oled-${entry.version}.mpx`)))
+    assert.strictEqual(checked.ok, true)
+    if (checked.ok) for (const name of ['boot', 'nfc', 'barcode', 'shutdown', 'update', 'rest']) assert.ok(checked.pkg.files.has(`images/${name}.png`), name)
   })
   it('is packed as the catalog says, with its Python driver and screens in it - and no test', () => {
     const entry = JSON.parse(readFileSync(path.join(extDir, 'catalog.json'), 'utf8')).find((e: { id: string }) => e.id === 'oled')

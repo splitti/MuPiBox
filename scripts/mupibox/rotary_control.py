@@ -1,13 +1,18 @@
 #!/usr/bin/python3
-# Rotary encoder for the volume, with push button (KY-040 style).
-#   default pins: GPIO 26 = encoder A (CLK), GPIO 24 = encoder B (DT), GPIO 10 = push button (to GND);
-#   rotary.pinA, rotary.pinB and rotary.pinButton in mupiboxconfig.json choose others (read when the service starts)
-# Turning changes the volume by rotary.step percent per detent (the player keeps the max volume and the display in sync), the push button
-# does what is chosen in the admin interface (rotary.button in mupiboxconfig.json, read again when it changed).
-# With "track selection" chosen the button works as a switch (with "next track" a press skips one track, as before): the first press turns the knob into a track selector (every
-# detent clockwise = next track, counter clockwise = previous track) for TRACK_MODE_S seconds - each turn starts the
-# time anew, so it lasts as long as the knob is being turned - and the second press (or the time running out) brings
-# the volume back.
+# Rotary encoders with push button (KY-040 style): the first one for the volume, and up to MAX_EXTRA more.
+#   First encoder, default pins: GPIO 26 = encoder A (CLK), GPIO 24 = encoder B (DT), GPIO 10 = push button (to GND);
+#   rotary.pinA, rotary.pinB and rotary.pinButton in mupiboxconfig.json choose others. It runs while rotary.active is set.
+#   More encoders: rotary.extra in mupiboxconfig.json, a list of { id, right, left, pinA, pinB, pinButton, button, step }.
+#   Each pin is 2..27, or 0 for none (without pin A or B the knob does not turn, without a button pin it has no button). What a turn does is
+#   chosen per direction (rotary.right / rotary.left of the first one, right / left of an entry): up = the volume up by `step` percent per
+#   detent, down = the volume down, next = the next track, previous = the previous track, off = nothing. Each knob has its own pins.
+#   (The pins are read when the service starts; the app restarts it when they change. What a turn does is read again while it runs.)
+# The first encoder's push button does what is chosen in the admin interface (rotary.button, read again when it changed); the other
+# encoders' buttons are chosen in their own entry (button: off, playpause, next, ffwd, address - the address of the box as a QR code on the display).
+# With "track selection" chosen the first encoder's button works as a switch (with "next track" a press skips one track, as before): the first press
+# turns the knob into a track selector (every detent clockwise = next track, counter clockwise = previous track) for TRACK_MODE_S seconds - each
+# turn starts the time anew, so it lasts as long as the knob is being turned - and the second press (or the time running out) brings the volume back.
+# (The album knob of the NFC extension is not handled here: the extension reads its own pins itself.)
 
 import json
 import os
@@ -22,22 +27,40 @@ import gpio_compat  # RPi.GPIO, or lgpio on a Raspberry Pi 5
 CONFIG = "/etc/mupibox/mupiboxconfig.json"
 PLAYER = "http://localhost:5005"
 DEFAULT_PINS = (26, 24, 10)
+MAX_EXTRA = 4
+DIRECTIONS = ("off", "up", "down", "next", "previous")
+BUTTONS = ("off", "playpause", "next", "ffwd", "address")
+BOX = "http://localhost:8200"
 
 
-def configured_pins():
-    # three different pins of 2..27 from the config, else the pins the box shipped with
+def read_config():
     try:
         with open(CONFIG) as file:
-            rotary = json.load(file).get("rotary", {}) or {}
-        pins = tuple(int(rotary[key]) for key in ("pinA", "pinB", "pinButton"))
+            return json.load(file).get("rotary", {}) or {}
     except Exception:
-        return DEFAULT_PINS
-    if len(set(pins)) == 3 and all(2 <= pin <= 27 for pin in pins):
+        return {}
+
+
+def pin_of(value):
+    # a pin of 2..27, 0 for none, None for anything else
+    try:
+        number = int(str(value))
+    except (TypeError, ValueError):
+        return None
+    return number if number == 0 or 2 <= number <= 27 else None
+
+
+def first_pins(section):
+    # each pin from the config (2..27 or 0 for none; one that is not set is the one the box shipped with), all different, else the shipped pins
+    pins = tuple(DEFAULT_PINS[i] if section.get(key) in (None, "") else pin_of(section.get(key)) for i, key in enumerate(("pinA", "pinB", "pinButton")))
+    chosen = [pin for pin in pins if pin]
+    if None not in pins and len(set(chosen)) == len(chosen):
         return pins
     return DEFAULT_PINS
 
 
-PIN_A, PIN_B, PIN_BUTTON = configured_pins()
+def direction_of(value, fallback):
+    return value if value in DIRECTIONS else fallback
 
 
 def kernel_pins():
@@ -55,6 +78,7 @@ def kernel_pins():
         taken |= {2, 3}
     return taken
 
+
 # Gray code: previous state (A<<1|B) and new state -> +1 clockwise (A falls first while B is high, as on a KY-040),
 # -1 counter clockwise, 0 bounce / invalid. A rotary turning the wrong way: swap the A and B wires.
 TRANSITIONS = {
@@ -63,10 +87,10 @@ TRANSITIONS = {
 }
 STEPS_PER_DETENT = 4
 
-# How long the knob stays a track selector after the last press or turn (button "next track")
+# How long the first knob stays a track selector after the last press or turn (button "track selection")
 TRACK_MODE_S = 10.0
 
-# The pins are polled: every millisecond while the knob is being used, every 5 ms while it rests (a fifth of the
+# The pins are polled: every millisecond while a knob is being used, every 5 ms while they rest (a fifth of the
 # wake-ups, the box runs on battery). A turn is caught at the first change and sampled fast from then on.
 FAST_POLL_S = 0.001
 IDLE_POLL_S = 0.005
@@ -76,7 +100,6 @@ FAST_FOR_S = 2.0
 # config, so a slow answer never makes the loop miss steps of a turn.
 events = queue.Queue()
 _config = {"mtime": None, "value": {}}
-track_mode_until = 0.0  # monotonic time until which the knob selects tracks (0 = it sets the volume); worker thread only
 
 
 def player(command):
@@ -88,25 +111,26 @@ def player(command):
         return None
 
 
+def show_address():
+    # the QR code with the address of the box on the OLED display (ten seconds; a route of the OLED extension that only the box itself may ask)
+    try:
+        request = urllib.request.Request("%s/api/ext/oled/address" % BOX, data=b"", method="POST")
+        with urllib.request.urlopen(request, timeout=3) as response:
+            response.read()
+    except Exception as error:
+        print("address not shown: %s" % error, flush=True)
+
+
 def rotary_config():
     # read again only when the file changed, so a change in the admin interface takes effect at once
     try:
         mtime = os.path.getmtime(CONFIG)
         if mtime != _config["mtime"]:
-            with open(CONFIG) as file:
-                _config["value"] = json.load(file).get("rotary", {}) or {}
+            _config["value"] = read_config()
             _config["mtime"] = mtime
     except Exception:
         pass
     return _config["value"]
-
-
-def volume_step():
-    # percent per detent (1..10)
-    try:
-        return min(10, max(1, int(rotary_config().get("step", 5))))
-    except (TypeError, ValueError):
-        return 5
 
 
 def playing():
@@ -123,120 +147,214 @@ def playing():
     return False
 
 
-def track_mode():
-    # the knob selects tracks: only while the button is still set to "track selection" and the time has not run out
-    global track_mode_until
-    if rotary_config().get("button", "off") != "tracks":
-        track_mode_until = 0.0  # another function chosen meanwhile: the mode ends, also if it is chosen again later
-    return time.monotonic() < track_mode_until
+class Knob:
+    """One encoder: its pins, what it does, and what its loop has seen so far."""
 
+    def __init__(self, name, a, b, button, legacy=None):
+        self.name = name  # "first", or the id of an entry of rotary.extra
+        self.legacy = legacy  # an entry of the first version had a function (volume, tracks) instead of right and left
+        self.a, self.b, self.button = a, b, button
+        self.state = 0
+        self.accumulated = 0
+        self.button_ready = False  # the button's pin is set up: only while the button does something
+        self.button_refused = False  # its pin belongs to a driver of the system: never set up
+        self.button_down = False
+        self.track_mode_until = 0.0  # first knob only: monotonic time until which it selects tracks (0 = it sets the volume); worker thread only
 
-def button_pressed():
-    global track_mode_until
-    action = rotary_config().get("button", "off")
-    if action == "tracks":
-        # a switch: on the first press the knob selects tracks, on the second one it sets the volume again
-        track_mode_until = 0.0 if track_mode() else time.monotonic() + TRACK_MODE_S
-        print("rotary: %s" % ("track selection" if track_mode_until else "volume"), flush=True)
-        return
-    track_mode_until = 0.0
-    if action == "playpause":
-        player("pause" if playing() else "play")
-    elif action == "next":
-        player("next")
-    elif action == "ffwd":
-        player("seek+30")
+    def settings(self):
+        # the live settings of this knob (the file is read again when it changed)
+        section = rotary_config()
+        if self.name == "first":
+            return section
+        for entry in section.get("extra") or []:
+            if isinstance(entry, dict) and entry.get("id") == self.name:
+                return entry
+        return {}
+
+    def direction(self, side):
+        # what a turn to the right ("right") or to the left ("left") does now
+        settings = self.settings()
+        if self.legacy == "tracks":
+            fallback = "next" if side == "right" else "previous"
+        else:
+            fallback = "up" if side == "right" else "down"
+        return direction_of(settings.get(side), fallback)
+
+    def turns(self):
+        # a knob turns only with both of its pins
+        return bool(self.a and self.b)
+
+    def button_action(self):
+        action = str(self.settings().get("button", "off"))
+        allowed = BUTTONS + (("tracks",) if self.name == "first" else ())
+        return action if action in allowed else "off"
+
+    def step(self):
+        # percent per detent (1..10)
+        try:
+            return min(10, max(1, int(self.settings().get("step", 5))))
+        except (TypeError, ValueError):
+            return 5
+
+    def track_mode(self):
+        # the first knob selects tracks: only while its button is still set to "track selection" and the time has not run out
+        if self.name != "first":
+            return False
+        if self.button_action() != "tracks":
+            self.track_mode_until = 0.0  # another function chosen meanwhile: the mode ends, also if it is chosen again later
+        return time.monotonic() < self.track_mode_until
+
+    def button_pressed(self):
+        action = self.button_action()
+        if action == "tracks":
+            # a switch: on the first press the knob selects tracks, on the second one it sets the volume again
+            self.track_mode_until = 0.0 if self.track_mode() else time.monotonic() + TRACK_MODE_S
+            print("rotary: %s" % ("track selection" if self.track_mode_until else "volume"), flush=True)
+            return
+        self.track_mode_until = 0.0
+        if action == "playpause":
+            player("pause" if playing() else "play")
+        elif action == "next":
+            player("next")
+        elif action == "ffwd":
+            player("seek+30")
+        elif action == "address":
+            show_address()
+
+    def turned(self, direction):
+        if self.track_mode():
+            self.track_mode_until = time.monotonic() + TRACK_MODE_S  # turning keeps the mode alive
+            player("next" if direction > 0 else "previous")
+            return
+        action = self.direction("right" if direction > 0 else "left")
+        if action == "up":
+            player("%+d" % self.step())
+        elif action == "down":
+            player("%+d" % -self.step())
+        elif action == "next":
+            player("next")
+        elif action == "previous":
+            player("previous")
 
 
 def worker():
-    global track_mode_until
     while True:
-        event = events.get()
+        knob, event = events.get()
         if event == "button":
-            button_pressed()
-        elif track_mode():
-            track_mode_until = time.monotonic() + TRACK_MODE_S  # turning keeps the mode alive
-            player("next" if event > 0 else "previous")
+            knob.button_pressed()
         else:
-            player("%+d" % (event * volume_step()))
+            knob.turned(event)
+
+
+def configured_knobs():
+    # the first encoder while it is switched on, and the valid entries of the list of the others (as extension-resources.ts reads them)
+    section = read_config()
+    knobs = []
+    if section.get("active") is True or str(section.get("active")).lower() == "true":
+        knobs.append(Knob("first", *first_pins(section)))
+    seen = set()
+    for entry in (section.get("extra") or [])[:MAX_EXTRA]:
+        if not isinstance(entry, dict):
+            continue
+        pins = tuple(pin_of(entry.get(key)) for key in ("pinA", "pinB", "pinButton"))
+        name = str(entry.get("id", ""))
+        if not name.isalnum() or len(name) > 12 or name in seen:
+            continue
+        chosen = [pin for pin in pins if pin]
+        if None in pins or len(set(chosen)) != len(chosen):
+            continue
+        seen.add(name)
+        knobs.append(Knob(name, *pins, legacy=entry.get("function")))
+    return knobs
 
 
 pins = None
-button_ready = False  # the button's pin is set up: only while the button does something (see button_wanted)
-button_refused = False  # its pin belongs to a driver of the system: never set up
+knobs = []
 
 
 def setup():
-    global pins
-    held = kernel_pins() & {PIN_A, PIN_B}
-    if held:
-        # (the app shows the clash on the page of the encoder; taking the pin would stop the other device)
-        raise RuntimeError("GPIO %s belongs to SPI or I2C" % ", ".join(str(pin) for pin in sorted(held)))
+    global pins, knobs
+    held = kernel_pins()
+    usable = []
+    for knob in configured_knobs():
+        if not knob.turns() and not knob.button:
+            continue  # no pins at all: nothing to read (a knob just added, its pins not chosen yet)
+        if knob.turns() and held & {knob.a, knob.b}:
+            # (the app shows the clash on the page of the encoder; taking the pin would stop the other device)
+            print("rotary control: GPIO %s of encoder %s belongs to SPI or I2C - not used" % (", ".join(str(p) for p in sorted(held & {knob.a, knob.b})), knob.name), flush=True)
+            continue
+        usable.append(knob)
+    if not usable:
+        raise RuntimeError("no encoder with usable pins")
+    knobs = usable
     pins = gpio_compat.Gpio()
-    for pin in (PIN_A, PIN_B):
-        pins.setup_input(pin)
+    for knob in knobs:
+        if knob.turns():
+            for pin in (knob.a, knob.b):
+                pins.setup_input(pin)
     if pins.refused:
         print("rotary control: RPi.GPIO does not work here (%s), using %s" % (pins.refused, pins.name), flush=True)
 
 
-def button_wanted():
+def button_wanted(knob):
     # The button's pin is taken once the button has a function (it can be chosen later - read once a second); with the
     # button off it stays free for others. A pin of SPI or I2C is never taken: the knob works without the button then.
-    global button_ready, button_refused
-    if button_ready or button_refused or rotary_config().get("button", "off") == "off":
-        return button_ready
-    if PIN_BUTTON in kernel_pins():
-        button_refused = True
-        print("rotary control: the button's GPIO %d belongs to SPI or I2C - the button is not used" % PIN_BUTTON, flush=True)
+    if knob.button_ready or knob.button_refused or knob.button_action() == "off" or not knob.button:
+        return knob.button_ready
+    if knob.button in kernel_pins():
+        knob.button_refused = True
+        print("rotary control: the button's GPIO %d of encoder %s belongs to SPI or I2C - the button is not used" % (knob.button, knob.name), flush=True)
         return False
     try:
-        pins.setup_input(PIN_BUTTON)
-        button_ready = True
+        pins.setup_input(knob.button)
+        knob.button_ready = True
     except Exception as error:
-        button_refused = True
-        print("rotary control: the button's GPIO %d cannot be used (%s)" % (PIN_BUTTON, error), flush=True)
-    return button_ready
+        knob.button_refused = True
+        print("rotary control: the button's GPIO %d of encoder %s cannot be used (%s)" % (knob.button, knob.name, error), flush=True)
+    return knob.button_ready
 
 
 def main():
     read = pins.read
     threading.Thread(target=worker, daemon=True).start()
 
-    state = (read(PIN_A) << 1) | read(PIN_B)
-    accumulated = 0
-    button = button_wanted()
-    button_down = button and read(PIN_BUTTON) == 0
+    for knob in knobs:
+        knob.state = (read(knob.a) << 1) | read(knob.b) if knob.turns() else 3
+        button_wanted(knob)
+        knob.button_down = knob.button_ready and read(knob.button) == 0
     button_checked = time.monotonic()
     fast_until = 0.0
-    print("rotary control started (A=%d B=%d button=%s)" % (PIN_A, PIN_B, PIN_BUTTON if button else "off"), flush=True)
+    print("rotary control started (%s)" % ", ".join("%s: A=%d B=%d button=%s" % (k.name, k.a, k.b, k.button if k.button_ready else "off") for k in knobs), flush=True)
 
     while True:
-        if not button and time.monotonic() - button_checked >= 1.0:
+        if time.monotonic() - button_checked >= 1.0:
             button_checked = time.monotonic()
-            button = button_wanted()
-            button_down = button and read(PIN_BUTTON) == 0
-        new_state = (read(PIN_A) << 1) | read(PIN_B)
-        if new_state != state:
-            fast_until = time.monotonic() + FAST_FOR_S
-            accumulated += TRANSITIONS.get((state, new_state), 0)
-            state = new_state
-            if accumulated >= STEPS_PER_DETENT:
-                events.put(1)
-                accumulated = 0
-            elif accumulated <= -STEPS_PER_DETENT:
-                events.put(-1)
-                accumulated = 0
-            if state == 3 and abs(accumulated) < STEPS_PER_DETENT:
-                accumulated = 0  # resting position without a full detent: it was a bounce
+            for knob in knobs:
+                if not knob.button_ready and button_wanted(knob):
+                    knob.button_down = read(knob.button) == 0
+        for knob in knobs:
+            new_state = (read(knob.a) << 1) | read(knob.b) if knob.turns() else knob.state
+            if new_state != knob.state:
+                fast_until = time.monotonic() + FAST_FOR_S
+                knob.accumulated += TRANSITIONS.get((knob.state, new_state), 0)
+                knob.state = new_state
+                if knob.accumulated >= STEPS_PER_DETENT:
+                    events.put((knob, 1))
+                    knob.accumulated = 0
+                elif knob.accumulated <= -STEPS_PER_DETENT:
+                    events.put((knob, -1))
+                    knob.accumulated = 0
+                if knob.state == 3 and abs(knob.accumulated) < STEPS_PER_DETENT:
+                    knob.accumulated = 0  # resting position without a full detent: it was a bounce
 
-        pressed = button and read(PIN_BUTTON) == 0
-        if pressed and not button_down:
-            time.sleep(0.03)  # debounce
-            if read(PIN_BUTTON) == 0:
-                button_down = True
-                events.put("button")
-        elif not pressed:
-            button_down = False
+            pressed = knob.button_ready and read(knob.button) == 0
+            if pressed and not knob.button_down:
+                time.sleep(0.03)  # debounce
+                if read(knob.button) == 0:
+                    knob.button_down = True
+                    events.put((knob, "button"))
+            elif not pressed:
+                knob.button_down = False
         time.sleep(FAST_POLL_S if time.monotonic() < fast_until else IDLE_POLL_S)
 
 
@@ -244,7 +362,7 @@ if __name__ == "__main__":
     try:
         try:
             setup()
-        except Exception as error:  # no GPIO library, no access to the GPIO, a board neither library knows: nothing to do, no restart loop
+        except Exception as error:  # no GPIO library, no access to the GPIO, a board neither library knows, no encoder to run: nothing to do, no restart loop
             print("rotary control: GPIO not usable (%s), stopped" % error, flush=True)
             sys.exit(0)
         try:

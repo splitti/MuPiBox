@@ -748,13 +748,22 @@ function navRow(target, title, subtitle, ic, badge = '') {
 }
 
 function renderSection(sec) {
+  // (items that are drawn in a card of an extension: here only for the handlers, see findItem)
+  if (sec.hidden) return ''
   const items = (sec.items || []).map(renderItem).join('')
   // (the page's save button under its cards, over both columns - not in the last card, as if it saved only that)
   if (sec.bar) return `<div class="btns save-bar wide">${items}</div>`
   const wide = sec.wide === true || (sec.items || []).some((i) => ['themegrid', 'bootgrid', 'log', 'json', 'checks'].includes(i.type))
   const onlyNav = (sec.items || []).length > 0 && sec.items.every((i) => i.type === 'nav')
   // sec.col: the column on the PC (1 left, 2 right; see balanceCols), sec.badge: a chip beside the title
-  const head = sec.title
+  // sec.nameKey: the head is a field for a name the user gives the card (its title is the placeholder, as with the buttons of the
+  // extension of buttons); sec.remove: [action, label] - a trash button beside the name instead of a button in the card
+  const trash = sec.remove
+    ? `<button type="button" class="ext-group-del" data-act="${esc(sec.remove[0])}" data-label="${esc(sec.remove[1])}" aria-label="Entfernen" title="Entfernen"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`
+    : ''
+  const head = sec.nameKey
+    ? `<div class="ext-group"><div class="ext-group-head"><input class="input ext-group-name" type="text" maxlength="30" data-key="${esc(sec.nameKey)}" value="${esc(state.values.get(sec.nameKey) ?? '')}" placeholder="${esc(sec.title)}" aria-label="Name" autocomplete="off" ${NO_PW_MANAGER}>${trash}</div></div>`
+    : sec.title
     ? sec.badge
       ? `<div class="card-head"><h2>${esc(sec.title)}</h2><span class="chip ${esc(sec.badge.kind ?? '')}">${esc(sec.badge.text)}</span></div>`
       : `<h2>${esc(sec.title)}</h2>`
@@ -3415,9 +3424,12 @@ function openLibGroup(g) {
              .join('')}</div>`
          : `<p class="help" style="margin:0">Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.</p>`
      }
+     ${entries.length > 1 && !subsHere.length ? `<div class="btns">${nfcButtonHtml()}</div>` : ''}
      <div class="btns">${heardAllButton(heardKeys)}${groupBtn}<button class="btn" data-close>Schließen</button></div>`,
     (sheet, close) => {
       sheet.querySelector('[data-close]').onclick = close
+      // (a tag for the whole artist cover: it plays an album, the rotary knob chooses among the others)
+      wireNfc(sheet, close, nfcMediaOfCollection('entries', { title: g.artist, artist: g.artist, category: g.cat, cover: nfcGroupCover(g) }), () => openLibGroup(g))
       // (each tile with its own name - the display's name of it - when the group is several of them)
       void mountTileLimit(sheet, tileKeys, Object.fromEntries(tileKeys.map((k) => [k, tileNameOfItem(items.find((it) => tileKeyOfItem(it) === k)) || g.artist])))
       if (sub) mountSubControls(sheet, sub, close, libSubDone)
@@ -3996,9 +4008,11 @@ async function openLocalSheet(folder, parent = null) {
      ${parent ? '' : tileLimitField()}
      ${albums.length ? `<div class="section-label" style="margin:0">Alben</div><div class="rows">${albums.map((a, i) => `<button class="entry lib-row" data-a="${i}">${thumb(a.cover)}<span class="lbl"><b translate="no">${esc(a.title)}</b>${a.libraryIsContainer ? '<small>Ordner</small>' : ''}</span>${a.libraryIsContainer ? '' : heardTick(`lib:${a.libraryPath}`)}<span class="chev">${icon('chevron', 18)}</span></button>`).join('')}</div>` : ''}
      <div class="dl-card" id="dl-card" hidden></div>
+     ${albums.length > 1 ? `<div class="btns">${nfcButtonHtml()}</div>` : ''}
      <div class="btns">${heardAllButton(heardKeys)}<button class="btn danger" data-all>Ganzen Ordner löschen</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
     (sheet, close) => {
       for (const img of sheet.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+      wireNfc(sheet, close, nfcMediaOfCollection('folder', { title: folder.title, path: folder.libraryPath, category: folder.category, cover: folder.cover }), () => openLocalSheet(folder, parent))
       const back = () => (parent ? openLocalSheet(parent) : close())
       sheet.querySelector('[data-close]').onclick = back
       sheet.querySelector('[data-back]')?.addEventListener('click', back)
@@ -4087,9 +4101,10 @@ async function openNasSheet(folder, parent = null) {
      ${parent ? '' : tileLimitField()}
      ${r.ok ? '' : `<p class="help" style="margin:0">Das NAS antwortet gerade nicht.</p>`}
      ${albums.length ? `<div class="section-label" style="margin:0">Alben</div><div class="rows">${albums.map((a, i) => `<button class="entry lib-row" data-a="${i}">${thumb(a.cover)}<span class="lbl"><b translate="no">${esc(a.title)}</b>${a.nasIsContainer ? '<small>Ordner</small>' : ''}</span>${a.nasIsContainer ? '' : heardTick(`nas:${a.nasPath}`)}<span class="chev">${icon('chevron', 18)}</span></button>`).join('')}</div>` : ''}
-     <div class="btns">${heardAllButton(heardKeys)}<button class="btn" data-admin>NAS-Verwaltung</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
+     <div class="btns">${heardAllButton(heardKeys)}${albums.length > 1 ? nfcButtonHtml() : ''}<button class="btn" data-admin>NAS-Verwaltung</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
     (sheet, close) => {
       for (const img of sheet.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+      wireNfc(sheet, close, nfcMediaOfCollection('nas', { title: folder.title, path: folder.nasPath, category: folder.nasCategory ?? '', cover: folder.cover }), () => openNasSheet(folder, parent))
       wireHeard(sheet, heardKeys, () => openNasSheet(folder, parent))
       const back = () => (parent ? openNasSheet(parent) : close())
       sheet.querySelector('[data-close]').onclick = back
@@ -4278,6 +4293,13 @@ function nfcMediaOfEntry(item) {
   for (const k of ['artist', 'title', 'cover', 'artistcover', 'category']) if (item[`${k}_override`]) media[k] = item[`${k}_override`]
   return media
 }
+// An artist cover or a folder as what a tag is given: no album of its own - the extension looks up the albums (the first one plays until
+// the user chooses another in the list of the tag, the rotary knob steps through them). kind: 'entries' (the entries of the box by
+// artist and category), 'folder' (a folder of the SD card) or 'nas'.
+function nfcMediaOfCollection(kind, { title, artist = '', category = '', path = '', cover = '' }) {
+  return { browse: kind, browseTitle: title, browseArtist: artist, browseCategory: category, browsePath: path, browseCover: cover, title, cover, artistcover: cover, category }
+}
+const nfcGroupCover = (g) => String(ownCover(g.cover ?? '') || '')
 // the picture the tiles show for the medium (a podcast or a Spotify entry has none in its data: the app asks the service) - the tag
 // takes it along when it is assigned, so the list shows it too
 const nfcCover = (media) => String(coverOf(media) || '')
@@ -4461,6 +4483,46 @@ function openNfcSheet(media, { back = null, image = '' } = {}) {
   )
 }
 
+// A picture of the device: the file chooser (a promise of the file, null when it was left without one)
+function chooseImageFile() {
+  return new Promise((resolve) => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+    input.onchange = () => resolve(input.files?.[0] ?? null)
+    input.addEventListener('cancel', () => resolve(null))
+    input.click()
+  })
+}
+
+// The picture of a file as a PNG data URL, only when it is exactly w x h points and 1 bit - every point pure black or pure white, nothing
+// transparent. Nothing is scaled or changed. { image } when it is, else { problem }: 'unreadable' (no picture the browser can read), 'size'
+// or 'bits' (the box checks again, see the OLED extension's oled.py --check).
+async function exactPicture(file, w, h) {
+  try {
+    const bitmap = await createImageBitmap(file)
+    const size = bitmap.width === w && bitmap.height === h
+    if (!size) {
+      bitmap.close?.()
+      return { problem: 'size' }
+    }
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    const context = canvas.getContext('2d', { willReadFrequently: true })
+    context.drawImage(bitmap, 0, 0)
+    bitmap.close?.()
+    const data = context.getImageData(0, 0, w, h).data
+    for (let i = 0; i < data.length; i += 4) {
+      const [r, g, b, a] = [data[i], data[i + 1], data[i + 2], data[i + 3]]
+      if (a !== 255 || (r !== 0 && r !== 255) || g !== r || b !== r) return { problem: 'bits' }
+    }
+    return { image: canvas.toDataURL('image/png') }
+  } catch {
+    return { problem: 'unreadable' }
+  }
+}
+
 // The rows of a list of tags (the list of the extension page, hostApi 8 `list`, and the sheet "NFC-Tag" of a medium): a picture for each
 // row, a button for the picture and the extension's own buttons; each posts { id }. redraw(): the list asks again after a change.
 // tiles (the page): each row is a tile - the title, the picture, the text and a row of buttons with symbols; an own button of the
@@ -4473,8 +4535,10 @@ function fillTagRows(box, rows, redraw, tiles = false) {
     li.className = tiles ? 'ext-tag tag-tile' : 'ext-tag'
     const pic = document.createElement('span')
     pic.className = tiles ? 'lib-thumb ext-tag-pic tag-tile-pic' : 'lib-thumb ext-tag-pic'
-    // (an own picture is /cover/<name>, the others come through /api/ or from the web)
-    if (/^(\/api\/|\/cover\/|https:\/\/|http:\/\/)/.test(String(row.image ?? ''))) {
+    // (wide: the picture is a display picture of 2:1 - the OLED extension's pictures - and is not cut square)
+    if (row.wide === true) pic.classList.add('ext-tag-wide')
+    // (an own picture is /cover/<name>, the others come through /api/ or from the web; a PNG as a data URL is a picture the extension drew itself)
+    if (/^(\/api\/|\/cover\/|https:\/\/|http:\/\/|data:image\/png;base64,)/.test(String(row.image ?? ''))) {
       const img = document.createElement('img')
       img.src = row.image
       img.alt = ''
@@ -4488,11 +4552,34 @@ function fillTagRows(box, rows, redraw, tiles = false) {
     main.className = 'ext-tag-main'
     const name = document.createElement('b')
     name.translate = false
-    name.textContent = String(row.title ?? '')
+    // (translate: the title is a text of the extension that the app translates)
+    name.textContent = row.translate === true ? tr(String(row.title ?? '')) : String(row.title ?? '')
     // (the tile cuts a long title off: the whole title is in the tooltip)
     if (tiles) name.title = name.textContent
     const sub = document.createElement('small')
     sub.textContent = (Array.isArray(row.text) ? row.text : []).map((t) => tr(String(t))).join(' · ')
+    // a tag of an artist cover: the album it plays when it is laid on (the rotary knob chooses among the others)
+    let albums = null
+    if (row.select && Array.isArray(row.select.choices) && row.select.choices.length > 0 && typeof row.select.post === 'string') {
+      albums = document.createElement('select')
+      albums.className = 'input tag-album'
+      albums.title = tr(String(row.select.label ?? 'Album beim Auflegen'))
+      albums.setAttribute('aria-label', albums.title)
+      for (const choice of row.select.choices.slice(0, 200)) {
+        const option = document.createElement('option')
+        option.value = String(choice.value)
+        option.textContent = String(choice.label ?? '')
+        option.selected = option.value === String(row.select.value)
+        albums.append(option)
+      }
+      albums.onchange = async () => {
+        albums.disabled = true
+        const saved = await post(row.select.post, { id: row.id, value: albums.value })
+        toast(said(saved, saved.ok ? 'Album gewählt' : 'Hat nicht geklappt'), saved.ok ? 'ok' : 'info')
+        if (!saved.ok) redraw()
+        else albums.disabled = false
+      }
+    }
     const buttons = document.createElement('div')
     buttons.className = tiles ? 'tag-tile-btns' : 'ext-tag-btns'
     const add = (label, onclick, { danger = false, glyph = 'info', off = false } = {}) => {
@@ -4551,6 +4638,26 @@ function fillTagRows(box, rows, redraw, tiles = false) {
         add('Tag ändern', async () => startNfcChange(row), { glyph })
         continue
       }
+      // upload: a picture of the device that has exactly the size the action says (`exact`: [w, h]) and is 1 bit - checked here, nothing is
+      // scaled or converted - and sent as a PNG { id, image }
+      if (action.upload === true) {
+        const [exactW, exactH] = Array.isArray(action.exact) ? action.exact.map((n) => Math.trunc(Number(n))) : [0, 0]
+        add(
+          String(action.label ?? ''),
+          async () => {
+            const file = await chooseImageFile()
+            if (!file) return
+            if (!(exactW > 0 && exactW <= 2048 && exactH > 0 && exactH <= 2048)) return toast(tr('Hat nicht geklappt'), 'info')
+            const { image, problem } = await exactPicture(file, exactW, exactH)
+            if (!image) return toast(tr(problem === 'size' ? 'Das Bild muss genau 128 × 64 Punkte groß sein' : problem === 'bits' ? 'Das Bild darf nur Schwarz und Weiß enthalten (1 Bit)' : 'Das ist kein Bild, das die Box lesen kann'), 'info')
+            const done = await post(action.post, { id: row.id, image })
+            toast(said(done, done.ok ? 'Erledigt' : 'Hat nicht geklappt'), done.ok ? 'ok' : 'info')
+            redraw()
+          },
+          { glyph: /^[a-z0-9]{1,12}$/.test(String(action.icon ?? '')) ? action.icon : 'image' },
+        )
+        continue
+      }
       add(
         String(action.label ?? ''),
         async () => {
@@ -4563,9 +4670,9 @@ function fillTagRows(box, rows, redraw, tiles = false) {
         { glyph, danger: !action.safe },
       )
     }
-    if (tiles) li.append(name, pic, sub, buttons)
+    if (tiles) li.append(name, pic, sub, ...(albums ? [albums] : []), buttons)
     else {
-      main.append(name, sub, buttons)
+      main.append(name, sub, ...(albums ? [albums] : []), buttons)
       li.append(pic, main)
     }
     box.append(li)
@@ -9617,6 +9724,7 @@ const BTN_FN = [
   // (a press switches the knob for 10 s from the volume to the tracks: one track per detent)
   ['Titelwahl (Drücken schaltet um)', 'tracks'],
   ['Vorspulen', 'ffwd'],
+  ['Adresse der Box zeigen', 'address'],
 ]
 
 // The three pins of the rotary encoder: the setting, the name in the box's answer and in its configuration, what the field is called.
@@ -9627,14 +9735,47 @@ const ROTARY_PIN_ITEMS = [
   ['rotPinB', 'b', 'pinB', 'GPIO-Pin B (DT)'],
   ['rotPinBtn', 'button', 'pinButton', 'GPIO-Pin Taster'],
 ]
-const rotaryPinText = (pin) => `GPIO ${pin} (Pin ${GPIO_HEADER[pin] ?? '?'})`
-const rotaryPinNumber = (text) => Number(/GPIO (\d+)/.exec(String(text ?? ''))?.[1])
+// (a pin may be left out: "Kein Pin" is 0 - without pin A or B the knob does not turn, without the button's pin it has no button)
+const ROTARY_NONE = 'Kein Pin'
+const rotaryPinText = (pin) => (Number(pin) === 0 ? ROTARY_NONE : `GPIO ${pin} (Pin ${GPIO_HEADER[pin] ?? '?'})`)
+const rotaryPinNumber = (text) => (String(text ?? '') === ROTARY_NONE ? 0 : Number(/GPIO (\d+)/.exec(String(text ?? ''))?.[1]))
+
+// What a turn of a knob does, for each direction (rotary.right / rotary.left, and right / left of an entry of rotary.extra)
+const RK_DIRECTIONS = [
+  ['Aus', 'off'],
+  ['Lauter', 'up'],
+  ['Leiser', 'down'],
+  ['Nächster Titel', 'next'],
+  ['Voriger Titel', 'previous'],
+]
+const directionText = (value, fallback) => (RK_DIRECTIONS.find(([, v]) => v === value) ?? RK_DIRECTIONS.find(([, v]) => v === fallback))[0]
+const directionValue = (text) => RK_DIRECTIONS.find(([l]) => l === text)?.[1]
+const directionUsesVolume = (...texts) => texts.some((text) => text === 'Lauter' || text === 'Leiser')
+
+// More rotary encoders (rotary.extra): what each does, and what its push button does. Their settings are called rk_<id>_<what>.
+const RK_BUTTONS = [
+  ['Aus', 'off'],
+  ['Play/Pause', 'playpause'],
+  ['Nächster Titel', 'next'],
+  ['Vorspulen', 'ffwd'],
+  ['Adresse der Box zeigen', 'address'],
+]
+const RK_PIN_PARTS = [
+  ['a', 'a', 'pinA', 'GPIO-Pin A (CLK)'],
+  ['b', 'b', 'pinB', 'GPIO-Pin B (DT)'],
+  ['btn', 'button', 'pinButton', 'GPIO-Pin Taster'],
+]
+const rkKey = (id, part) => `rk_${id}_${part}`
+const rkParse = (key) => /^rk_([a-z0-9]+)_(name|right|left|a|b|btn|step|bfn)$/.exec(String(key))
 
 async function loadRotary() {
   await loadHardware()
   const r = hw.data.rotary
   state.values.set('rotary', r.active)
   state.values.set('rotStep', r.step)
+  state.values.set('rotName', r.name ?? '')
+  state.values.set('rotRight', directionText(r.right, 'up'))
+  state.values.set('rotLeft', directionText(r.left, 'down'))
   state.values.set('btnFn', BTN_FN.find(([, v]) => v === r.button)?.[0] ?? 'Aus')
   const free = await api(`${API}/rotary-pins`, { timeoutMs: 20000 })
   // (no answer: the pins it has stay, nothing else is offered)
@@ -9642,10 +9783,24 @@ async function loadRotary() {
   // (a pin of its own that something else uses as well - the SPI bus switched on for an NFC reader on GPIO 10, its default
   // button pin: neither works; the page says so at the pin). The button's pin only while the button does something: with
   // it off the encoder leaves its pin alone.
-  const own = new Set(Object.entries(r.pins ?? {}).filter(([name]) => name !== 'button' || (r.button && r.button !== 'off')).map(([, pin]) => Number(pin)))
+  const own = new Set([
+    ...(r.active ? Object.entries(r.pins ?? {}).filter(([name]) => name !== 'button' || (r.button && r.button !== 'off')).map(([, pin]) => Number(pin)) : []),
+    ...(r.extra ?? []).flatMap((k) => Object.entries(k.pins).filter(([name]) => name !== 'button' || k.button !== 'off').map(([, pin]) => Number(pin))),
+  ])
+  own.delete(0)
   hw.rotaryClash = new Map(free.ok && Array.isArray(free.body?.pins) ? free.body.pins.filter((p) => own.has(Number(p.pin)) && (p.holders ?? []).length).map((p) => [Number(p.pin), p.holders]) : [])
-  hw.rotaryStopped = r.active === true && r.running === false
+  hw.rotaryStopped = (r.active === true || (r.extra ?? []).length > 0) && r.running === false
   for (const [key, name] of ROTARY_PIN_ITEMS) state.values.set(key, rotaryPinText(r.pins[name]))
+  hw.rotaryExtra = r.extra ?? []
+  hw.rotaryExtraMax = r.extraMax ?? 4
+  for (const k of hw.rotaryExtra) {
+    state.values.set(rkKey(k.id, 'name'), k.name ?? '')
+    state.values.set(rkKey(k.id, 'right'), directionText(k.right, 'up'))
+    state.values.set(rkKey(k.id, 'left'), directionText(k.left, 'down'))
+    for (const [part, name] of RK_PIN_PARTS) state.values.set(rkKey(k.id, part), rotaryPinText(k.pins[name]))
+    state.values.set(rkKey(k.id, 'step'), k.step)
+    state.values.set(rkKey(k.id, 'bfn'), RK_BUTTONS.find(([, v]) => v === k.button)?.[0] ?? RK_BUTTONS[0][0])
+  }
 }
 
 /* Bluetooth */
@@ -17538,7 +17693,9 @@ function extFormMount(sheet, e, fields, saved) {
     // (what a field is called in the list of another one: the name of its group, "Taster 2")
     const groupOf = (key) => {
       const g = groups.find((x) => x.keys.includes(key))
-      return g ? groupTitle(g) : tr(fields.find((it) => it.key === key)?.label ?? key)
+      const named = fields.find((it) => it.key === key)
+      // (`holder`: what the field's pin is called in the lists - "Drehregler NFC" - instead of the field's own name)
+      return named?.holder ? tr(named.holder) : g ? groupTitle(g) : tr(named?.label ?? key)
     }
     const draw = () => {
       for (const select of pinSelects) {
@@ -17557,7 +17714,9 @@ function extFormMount(sheet, e, fields, saved) {
           const other = pinSelects.find((o) => o !== select && Number(e.settings?.[o.dataset.xgpio] ?? 0) === pin)
           // (its own pin stays its own, whatever holds it right now - the extension itself reads it)
           const who = pin === now ? '' : other ? groupOf(other.dataset.xgpio) : (taken.get(pin) ?? []).map(extWho).join(', ')
-          const hint = who ? '' : (hints.get(pin) ?? []).map(extWho).join(', ')
+          // (its own pin says what it is for, if the field names that: "Drehregler NFC" - not what the box would use it for otherwise)
+          const own = pin === now ? fields.find((it) => it.key === select.dataset.xgpio)?.holder : ''
+          const hint = who ? '' : own ? tr(own) : (hints.get(pin) ?? []).map(extWho).join(', ')
           add(pin, `GPIO ${pin} (Pin ${GPIO_HEADER[pin]})${who ? ` – ${tr('belegt')}: ${who}` : hint ? ` – ${hint}` : ''}`, !!who)
         }
       }
@@ -18115,6 +18274,9 @@ const GPIO_HEADER = { 2: 3, 3: 5, 4: 7, 5: 29, 6: 31, 7: 26, 8: 24, 9: 21, 10: 1
 const EXT_ADOPTABLE = { rotary: 'drehregler' }
 // (what the first card of such a page is called on the page of the extension: short, beside the extension's own card)
 const EXT_ADOPTED_TITLE = { drehregler: 'Drehregler' }
+// (a page of an extension that shows a page of the core in its own card - the heading's ui.adopt - shows only these items of it: the pins of
+// the knob; not its volume switch, its step or the function of its button)
+const EXT_ADOPT_ITEMS = { rotary: ['rotPinA', 'rotPinB', 'rotPinBtn'] }
 // The text of a table file the user chose: UTF-8 (with or without BOM), else Windows-1252 - what Excel writes for "CSV" on a
 // German Windows; read as UTF-8 its umlauts became replacement characters and the tags with them played nothing any more
 function decodeTable(buffer) {
@@ -18210,12 +18372,24 @@ function extPageController(entry, sub = 0) {
   // (a page of cards that took over pages of the core: those come first - the rotary knob top left - and the cards of the
   // extension after them, in the two columns; else its cards would be below the pages of the core, or beside them in rows)
   const split = () => !!own.e?.enabled && adopted().length > 0 && slice().some((it) => it.type === 'heading' && it.card)
+  // (a sub page can show a part of a page of the core in its own card: its heading says which - the knob's pins on the page of the knob)
+  const merged = () => {
+    const heading = sub && own.e?.ui ? own.e.ui.items[starts()[sub - 1]] : null
+    return (Array.isArray(heading?.adopt) ? heading.adopt : [])
+      .map((a) => ({ keys: EXT_ADOPT_ITEMS[a], page: state.pages.get(EXT_ADOPTABLE[a]), ctrl: CONTROLLERS[EXT_ADOPTABLE[a]] }))
+      .filter((m) => m.keys && m.page && m.ctrl)
+  }
+  const mergedSections = () => merged().flatMap((m) => (m.ctrl.sections?.(m.page) ?? m.page.sections ?? []).map((sec) => ({ m, sec, items: (sec.items || []).filter((it) => m.keys.includes(it.key)) })).filter((x) => x.items.length))
+  const mergedHtml = () => {
+    const parts = mergedSections()
+    return parts.map((x) => `${x.items.map(renderItem).join('')}${x.sec.help ? `<p class="help">${esc(x.sec.help)}</p>` : ''}`).join('')
+  }
   return {
     async load() {
       const r = await api(`${API}/ext/${entry.id}/info`)
       if (!r.ok) throw new Error(`extension ${r.status}`)
       own.e = r.body
-      await Promise.all(adopted().map((a) => a.ctrl.load?.(a.page)))
+      await Promise.all([...adopted(), ...merged()].map((a) => a.ctrl.load?.(a.page)))
     },
     top() {
       const e = own.e
@@ -18239,7 +18413,7 @@ function extPageController(entry, sub = 0) {
       // so that the cards of the pages it took over stand beside it; else it would take both columns and they would all be below)
       return [
         `<section class="card${adopted().length ? '' : ' wide'} ext-page" id="ext-page-card"><h2>${esc(named ? named.label : (e.ui.heading ?? e.ui.title))}</h2><p class="help" style="margin:0">${esc(named ? (named.help ?? '') : (e.ui.help ?? ''))}</p>
-         ${e.enabled ? form : '<p class="help" style="margin:0">Die Einstellungen gibt es, solange die Erweiterung an ist.</p>'}
+         ${e.enabled ? form + mergedHtml() : '<p class="help" style="margin:0">Die Einstellungen gibt es, solange die Erweiterung an ist.</p>'}
          ${hasText ? '<div class="btns"><button class="btn primary" data-xsave>Speichern</button></div>' : ''}</section>`,
       ]
     },
@@ -18248,10 +18422,19 @@ function extPageController(entry, sub = 0) {
       const { form, hasText } = extFormHtml(own.e, slice(), 'half')
       return [form, hasText ? '<div class="btns wide"><button class="btn primary" data-xsave>Speichern</button></div>' : '']
     },
+    // (the buttons of the pages of the core that moved here - "Drehregler hinzufügen" - are run by the page that owns them)
+    act: new Proxy({}, { get: (_, kind) => adopted().map((a) => a.ctrl.act?.[kind]).find(Boolean) }),
     // (the pages of the core that moved here: their cards under the extension's own, the first with the title of its page)
-    sections: () => adopted().flatMap((a) => (a.ctrl.sections?.(a.page) ?? a.page.sections ?? []).map((sec, i) => ({ ...sec, title: i === 0 ? (EXT_ADOPTED_TITLE[a.page.id] ?? (sec.title || a.page.title)) : sec.title || '' }))),
+    sections: () => [
+      ...adopted().flatMap((a) => (a.ctrl.sections?.(a.page) ?? a.page.sections ?? []).map((sec, i) => ({ ...sec, title: i === 0 ? (EXT_ADOPTED_TITLE[a.page.id] ?? (sec.title || a.page.title)) : sec.title || '' }))),
+      // (the part of a page of the core that is drawn in the card of the extension)
+      ...(own.e?.enabled && merged().length ? [{ hidden: true, items: mergedSections().flatMap((x) => x.items) }] : []),
+    ],
     change(key, v, page) {
-      const owner = adopted().find((a) => (a.page.sections || []).some((sec) => (sec.items || []).some((it) => it.key === key)))
+      const part = own.e?.enabled ? merged().find((m) => m.keys.includes(key)) : null
+      if (part) return part.ctrl.change?.(key, v, page)
+      // (the fields a page of the core draws itself - the knobs it was told to add - are not in its schema: its own sections say)
+      const owner = adopted().find((a) => (a.ctrl.sections?.(a.page) ?? a.page.sections ?? []).some((sec) => sec.nameKey === key || (sec.items || []).some((it) => it.key === key)))
       return owner?.ctrl.change?.(key, v, page)
     },
     mount(root, page) {
@@ -18261,6 +18444,17 @@ function extPageController(entry, sub = 0) {
       // (the sub page of the tags has the player pinned at its bottom - not the page above, which lists the sub pages)
       if (card && sub && own.e?.id === 'nfc' && own.e.enabled && slice().some((it) => it.type === 'list' && it.list === `${NFC_ROUTE}/tags`)) mountMiniPlayer(root)
       for (const a of adopted()) a.ctrl.mount?.(root, a.page)
+      // (the knob chooses albums only while the service of the knob runs: switching it on here starts it)
+      if (card && sub && own.e?.enabled && merged().length) {
+        $('input[data-xk="rotary"]', card)?.addEventListener('change', async (ev) => {
+          if (!ev.target.checked || hw.data?.rotary?.active !== false) return
+          const r = await api(`${API}/rotary`, { method: 'POST', body: { active: true } })
+          if (r.ok) {
+            hw.data.rotary.active = true
+            toast('Drehregler an')
+          }
+        })
+      }
     },
   }
 }
@@ -19453,36 +19647,146 @@ const CONTROLLERS = {
     load: loadRotary,
     sections: (page) => {
       const chosen = new Map(ROTARY_PIN_ITEMS.map(([key]) => [key, rotaryPinNumber(state.values.get(key))]))
-      const buttonPin = chosen.get('rotPinBtn')
       const clash = [...(hw.rotaryClash ?? new Map())].map(([pin, holders]) => `GPIO ${pin} nutzt auch: ${holders.map(extWho).join(', ')}`)
-      return withoutSave(page).map((sec) => ({
+      // (the pins of all encoders, each by one only: what another one has is not offered)
+      const extras = hw.rotaryExtra ?? []
+      const everyPin = new Map([...chosen, ...extras.flatMap((k) => RK_PIN_PARTS.map(([part]) => [rkKey(k.id, part), rotaryPinNumber(state.values.get(rkKey(k.id, part)))]))])
+      const pinOptions = (key) => {
+        const mine = everyPin.get(key)
+        return [
+          rotaryPinText(0),
+          ...[...new Set([mine, ...(hw.rotaryFree ?? [])])]
+            .filter((pin) => Number.isInteger(pin) && GPIO_HEADER[pin] && (pin === mine || ![...everyPin].some(([other, p]) => other !== key && p === pin)))
+            .sort((x, y) => x - y)
+            .map(rotaryPinText),
+        ]
+      }
+      // The fields of one knob: each pin (or none), under the two of the knob what a turn in that direction does, the step while the volume
+      // is set, and under the button's pin what the button does - a function is offered only where its pin is there
+      const knobItems = ({ a, b, btn, right, left, step, stepItem, buttonItem }) => {
+        const pin = (label, key) => ({ type: 'select', label, key, default: state.values.get(key), options: pinOptions(key) })
+        const direction = (label, key) => ({ type: 'select', label, key, default: state.values.get(key), options: RK_DIRECTIONS.map(([l]) => l) })
+        const hasA = everyPin.get(a) > 0
+        const hasB = everyPin.get(b) > 0
+        const usesVolume = (hasA && directionUsesVolume(state.values.get(right))) || (hasB && directionUsesVolume(state.values.get(left)))
+        return [
+          pin(RK_PIN_PARTS[0][3], a),
+          ...(hasA ? [direction('Rechts herum drehen', right)] : []),
+          pin(RK_PIN_PARTS[1][3], b),
+          ...(hasB ? [direction('Links herum drehen', left)] : []),
+          ...(usesVolume ? [stepItem(step)] : []),
+          pin(RK_PIN_PARTS[2][3], btn),
+          ...(everyPin.get(btn) > 0 ? [buttonItem(everyPin.get(btn))] : []),
+        ]
+      }
+      const extraSections = extras.map((k, i) => ({
+        title: `${tr('Drehregler')} ${i + 2}`,
+        // (a name of its own in the head, as the buttons have, and the trash beside it - no button in the card)
+        nameKey: rkKey(k.id, 'name'),
+        remove: [`rkdel:${k.id}`, String(state.values.get(rkKey(k.id, 'name')) || `${tr('Drehregler')} ${i + 2}`)],
+        help: tr('Dieser Drehregler tut, was du für jede Drehrichtung wählst. Zum Drehen braucht er Pin A und Pin B.'),
+        items: [
+          ...knobItems({
+            a: rkKey(k.id, 'a'),
+            b: rkKey(k.id, 'b'),
+            btn: rkKey(k.id, 'btn'),
+            right: rkKey(k.id, 'right'),
+            left: rkKey(k.id, 'left'),
+            step: rkKey(k.id, 'step'),
+            stepItem: (key) => ({ type: 'slider', label: 'Schritt pro Raste', key, default: k.step, min: 1, max: 10, step: 1, unit: ' %' }),
+            buttonItem: (pin) => ({ type: 'select', label: `Funktion des Tasters (GPIO ${pin})`, key: rkKey(k.id, 'bfn'), default: state.values.get(rkKey(k.id, 'bfn')), options: RK_BUTTONS.map(([label]) => label) }),
+          }),
+        ],
+      }))
+      const addSection = {
+        title: '',
+        help: tr(extras.length >= (hw.rotaryExtraMax ?? 4) ? 'Mehr Drehregler gehen nicht.' : 'Ein weiterer Drehregler kommt ohne Pins dazu: Die Pins wählst du danach selbst.'),
+        items: extras.length >= (hw.rotaryExtraMax ?? 4) ? [] : [{ type: 'buttons', buttons: [['Drehregler hinzufügen', 'primary', 'rkadd']] }],
+      }
+      return [...withoutSave(page).map((sec) => ({
         ...sec,
+        // (the first knob can be named too: its head is the field - the title is its placeholder)
+        nameKey: 'rotName',
+        title: sec.title || 'Drehregler',
         help: [
-          `Drehregler an GPIO ${chosen.get('rotPinA')}/${chosen.get('rotPinB')}, Taster an GPIO ${buttonPin}. Zur Wahl stehen nur Pins, die nichts anderes nutzt.`,
+          'Zur Wahl stehen nur Pins, die nichts anderes nutzt. „Kein Pin“ lässt einen Anschluss weg. Zum Drehen braucht der Drehregler Pin A und Pin B, für jede Drehrichtung wählst du, was passiert.',
           ...clash,
           ...(clash.length ? ['So geht beides nicht: den Pin des Drehreglers unten umstellen und danach die Box neu starten.'] : []),
           ...(hw.rotaryStopped ? ['Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.'] : []),
         ]
           .map((part) => tr(part))
           .join(' '),
-        items: sec.items.flatMap((it) => {
-          if (it.key !== 'btnFn') return [it]
-          const pinItems = ROTARY_PIN_ITEMS.map(([key, , , label]) => {
-            const mine = chosen.get(key)
-            // (free ones, and its own; not one that another of the three has)
-            const options = [...new Set([mine, ...(hw.rotaryFree ?? [])])]
-              .filter((pin) => Number.isInteger(pin) && GPIO_HEADER[pin] && (pin === mine || ![...chosen].some(([other, p]) => other !== key && p === pin)))
-              .sort((x, y) => x - y)
-              .map(rotaryPinText)
-            return { type: 'select', label, key, default: rotaryPinText(mine), options }
-          })
-          return [...pinItems, { ...it, label: `Funktion des Tasters (GPIO ${buttonPin})` }]
-        }),
-      }))
+        items: [
+          ...sec.items.filter((it) => it.key === 'rotary').map((it) => ({ ...it, label: 'Drehregler' })),
+          ...knobItems({
+            a: 'rotPinA',
+            b: 'rotPinB',
+            btn: 'rotPinBtn',
+            right: 'rotRight',
+            left: 'rotLeft',
+            step: 'rotStep',
+            stepItem: () => sec.items.find((it) => it.key === 'rotStep'),
+            buttonItem: (pin) => ({ ...sec.items.find((it) => it.key === 'btnFn'), label: `Funktion des Tasters (GPIO ${pin})` }),
+          }),
+        ],
+      })), ...extraSections, addSection]
+    },
+    act: {
+      // another encoder: it comes without pins (volume up and down), the person chooses them afterwards
+      async rkadd() {
+        const r = await api(`${API}/rotary-extra`, { method: 'POST', body: { right: 'up', left: 'down', pinA: 0, pinB: 0, pinButton: 0, button: 'off' }, timeoutMs: 30000 })
+        if (!r.ok) return toast(r.body?.error === 'gpio_taken' ? `GPIO ${r.body.pin} ist schon belegt: ${String(r.body.by ?? '').split(', ').map(extWho).join(', ')}` : 'Nicht gespeichert', 'info')
+        await loadRotary()
+        renderPage(currentPage(), false)
+        toast(r.body?.running === false ? 'Gespeichert – der Drehregler startet gerade nicht' : 'Drehregler hinzugefügt', r.body?.running === false ? 'info' : 'ok')
+      },
+      async rkdel(id, label) {
+        if (!(await ask(tr(label), tr('Diesen Drehregler entfernen? Seine Pins sind danach wieder frei.'), tr('Entfernen')))) return
+        const r = await api(`${API}/rotary-extra/${encodeURIComponent(id)}`, { method: 'DELETE', timeoutMs: 30000 })
+        await loadRotary()
+        renderPage(currentPage(), false)
+        toast(r.ok ? 'Drehregler entfernt' : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+      },
     },
     async change(key, v) {
+      const extra = rkParse(key)
+      if (extra) {
+        const [, id, what] = extra
+        const part = RK_PIN_PARTS.find(([name]) => name === what)
+        const body = { id }
+        if (what === 'name') body.name = String(v ?? '').trim()
+        else if (what === 'right' || what === 'left') body[what] = directionValue(v)
+        else if (part) body[part[2]] = rotaryPinNumber(v)
+        else if (what === 'step') body.step = v
+        else if (what === 'bfn') body.button = RK_BUTTONS.find(([l]) => l === v)?.[1]
+        const r = await api(`${API}/rotary-extra`, { method: 'POST', body, timeoutMs: 30000 })
+        if (!r.ok) {
+          // (nothing is saved: the fields show what is)
+          await loadRotary()
+          renderPage(currentPage(), false)
+          return toast(r.body?.error === 'gpio_twice' ? 'Dieser Pin gehört schon einem anderen Drehregler' : r.body?.error === 'gpio_taken' ? `GPIO ${r.body.pin} ist schon belegt: ${String(r.body.by ?? '').split(', ').map(extWho).join(', ')}` : 'Nicht gespeichert', 'info')
+        }
+        // (the function, a pin or the button given or taken away: the page shows the right fields and what the pins share)
+        if (what === 'name') {
+          // (the cards of the page - "Auf dieser Seite" - are named by it)
+          state.values.set(key, body.name)
+          document.dispatchEvent(new Event('mupi-cards'))
+        } else if (what !== 'step') {
+          await loadRotary()
+          renderPage(currentPage(), false)
+        }
+        return toast(r.body?.running === false ? 'Gespeichert – der Drehregler startet gerade nicht' : 'Gespeichert', r.body?.running === false ? 'info' : 'ok')
+      }
+      if (key === 'rotName') {
+        const name = String(v ?? '').trim()
+        const r = await api(`${API}/rotary`, { method: 'POST', body: { name } })
+        if (!r.ok) return toast('Nicht gespeichert', 'info')
+        state.values.set('rotName', name)
+        document.dispatchEvent(new Event('mupi-cards'))
+        return toast('Gespeichert')
+      }
       const pinItem = ROTARY_PIN_ITEMS.find(([k]) => k === key)
-      const body = pinItem ? { [pinItem[2]]: rotaryPinNumber(v) } : key === 'rotary' ? { active: v } : key === 'rotStep' ? { step: v } : key === 'btnFn' ? { button: BTN_FN.find(([l]) => l === v)?.[1] } : null
+      const body = pinItem ? { [pinItem[2]]: rotaryPinNumber(v) } : key === 'rotary' ? { active: v } : key === 'rotStep' ? { step: v } : key === 'rotRight' ? { right: directionValue(v) } : key === 'rotLeft' ? { left: directionValue(v) } : key === 'btnFn' ? { button: BTN_FN.find(([l]) => l === v)?.[1] } : null
       if (!body) return
       const r = await api(`${API}/rotary`, { method: 'POST', body })
       if (r.body?.error === 'gpio_taken' || r.body?.error === 'gpio_twice') {
@@ -19503,7 +19807,7 @@ const CONTROLLERS = {
         renderPage(currentPage(), false)
         return toast('Gespeichert – der Drehregler startet gerade nicht', 'info')
       }
-      if (r.ok && (pinItem || key === 'rotary' || key === 'btnFn')) {
+      if (r.ok && (pinItem || key === 'rotary' || key === 'btnFn' || key === 'rotRight' || key === 'rotLeft')) {
         // (the pin it let go is free for the others, the one it took is not; switched on or off: whether it runs, what it shares;
         // the button switched off or on: its pin is let go or taken)
         await loadRotary()

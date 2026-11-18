@@ -276,16 +276,34 @@ export interface RotaryPins {
   b: number
   button: number
 }
-/** The pins of the rotary encoder in a configuration: three different pins of 2-27 that are set, else the default ones. */
+/**
+ * The pins of the rotary encoder in a configuration: each one a pin of 2-27 or 0 (none: a knob without a pin A or B does not turn, one
+ * without a button pin has no button); a pin that is not set is the one the box shipped with; two pins that are the same: the shipped ones.
+ */
 export function rotaryPins(config: Record<string, unknown> | undefined): RotaryPins {
   const rotary = config?.rotary && typeof config.rotary === 'object' ? (config.rotary as Record<string, unknown>) : {}
-  const pin = (v: unknown) => (/^\d+$/.test(String(v ?? '')) ? Number(v) : NaN)
-  const chosen = { a: pin(rotary.pinA), b: pin(rotary.pinB), button: pin(rotary.pinButton) }
-  const values = Object.values(chosen)
-  const fine = values.every((n) => Number.isInteger(n) && n >= 2 && n <= 27) && new Set(values).size === 3
-  return fine ? chosen : { ...ROTARY_DEFAULT_PINS }
+  const pin = (v: unknown, fallback: number) => {
+    if (v === undefined || v === null || v === '') return fallback
+    const n = /^\d+$/.test(String(v)) ? Number(v) : NaN
+    return n === 0 || (Number.isInteger(n) && n >= 2 && n <= 27) ? n : NaN
+  }
+  const chosen = { a: pin(rotary.pinA, ROTARY_DEFAULT_PINS.a), b: pin(rotary.pinB, ROTARY_DEFAULT_PINS.b), button: pin(rotary.pinButton, ROTARY_DEFAULT_PINS.button) }
+  const set = Object.values(chosen).filter((n) => n !== 0)
+  // (a pin that is not set is the shipped one; a wrong one or the same pin twice: all three are the shipped ones, never a half choice)
+  return !Object.values(chosen).some(Number.isNaN) && new Set(set).size === set.length ? chosen : { ...ROTARY_DEFAULT_PINS }
 }
-const rotaryPinList = (config: Record<string, unknown> | undefined): number[] => Object.values(rotaryPins(config))
+/** The name of an encoder as the configuration has it: a short text, may be empty. */
+export const rotaryName = (v: unknown): string => (typeof v === 'string' ? v.replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 30) : '')
+const rotaryPinList = (config: Record<string, unknown> | undefined): number[] => Object.values(rotaryPins(config)).filter((n) => n !== 0)
+// What a turn of a knob does: nothing, the volume up or down by its step, the next or the previous track
+export const ROTARY_DIRECTIONS = ['off', 'up', 'down', 'next', 'previous'] as const
+export type RotaryDirection = (typeof ROTARY_DIRECTIONS)[number]
+/** What the first knob does turned to the right and to the left (the volume up and down while nothing else is set). */
+export function rotaryDirections(config: Record<string, unknown> | undefined): { right: RotaryDirection; left: RotaryDirection } {
+  const rotary = config?.rotary && typeof config.rotary === 'object' ? (config.rotary as Record<string, unknown>) : {}
+  const pick = (v: unknown, fallback: RotaryDirection) => ROTARY_DIRECTIONS.find((d) => d === v) ?? fallback
+  return { right: pick(rotary.right, 'up'), left: pick(rotary.left, 'down') }
+}
 function rotaryOn(config: Record<string, unknown> | undefined): boolean {
   const rotary = config?.rotary && typeof config.rotary === 'object' ? (config.rotary as Record<string, unknown>) : {}
   return rotary.active === true || rotary.active === 'true' || rotary.rotary_active === true
@@ -295,17 +313,75 @@ export function rotaryButtonOn(config: Record<string, unknown> | undefined): boo
   const rotary = config?.rotary && typeof config.rotary === 'object' ? (config.rotary as Record<string, unknown>) : {}
   return typeof rotary.button === 'string' && rotary.button !== '' && rotary.button !== 'off'
 }
-/** The pins the rotary encoder holds while it is on: the knob's two, the button's only while the button does something. */
+// More rotary encoders (rotary.extra in the configuration, at most ROTARY_EXTRA_MAX): each one has its own three pins and does something
+// for each way it is turned (right, left). They exist as long as they are in the list - there is no switch for them.
+export const ROTARY_EXTRA_MAX = 4
+export interface RotaryExtra {
+  id: string
+  /** the name the user gave it (empty: the page calls it "Drehregler 2" ...) */
+  name: string
+  /** what a turn to the right and to the left does */
+  right: RotaryDirection
+  left: RotaryDirection
+  a: number
+  b: number
+  button: number
+  /** what the push button does: off, playpause, next (a track forward) or ffwd */
+  buttonFn: string
+  /** percent per detent of a volume knob */
+  step: number
+}
+export const ROTARY_EXTRA_BUTTONS = ['off', 'playpause', 'next', 'ffwd', 'address']
+/** The additional rotary encoders of a configuration: the ones whose pins are 0 (none) or different pins of 2-27 (others are left out). */
+export function rotaryExtras(config: Record<string, unknown> | undefined): RotaryExtra[] {
+  const rotary = config?.rotary && typeof config.rotary === 'object' ? (config.rotary as Record<string, unknown>) : {}
+  const list = Array.isArray(rotary.extra) ? rotary.extra : []
+  const pin = (v: unknown) => (/^\d+$/.test(String(v ?? '')) ? Number(v) : NaN)
+  const direction = (v: unknown) => ROTARY_DIRECTIONS.find((d) => d === v)
+  const out: RotaryExtra[] = []
+  for (const entry of list.slice(0, ROTARY_EXTRA_MAX)) {
+    if (!entry || typeof entry !== 'object') continue
+    const e = entry as Record<string, unknown>
+    const pins = [pin(e.pinA), pin(e.pinB), pin(e.pinButton)]
+    if (!/^[a-z0-9]{1,12}$/.test(String(e.id ?? '')) || out.some((o) => o.id === e.id)) continue
+    const set = pins.filter((n) => n !== 0)
+    if (!pins.every((n) => n === 0 || (Number.isInteger(n) && n >= 2 && n <= 27)) || new Set(set).size !== set.length) continue
+    const step = Number(e.step)
+    // (an entry of the first version had a function: the volume, or the tracks)
+    const legacy = e.function === 'tracks' ? { right: 'next', left: 'previous' } : { right: 'up', left: 'down' }
+    out.push({
+      id: String(e.id),
+      name: rotaryName(e.name),
+      right: direction(e.right) ?? (legacy.right as RotaryDirection),
+      left: direction(e.left) ?? (legacy.left as RotaryDirection),
+      a: pins[0],
+      b: pins[1],
+      button: pins[2],
+      buttonFn: ROTARY_EXTRA_BUTTONS.includes(String(e.button)) ? String(e.button) : 'off',
+      step: Number.isInteger(step) && step >= 1 && step <= 10 ? step : 5,
+    })
+  }
+  return out
+}
+/** The pins the additional encoders hold: the knob's two, the button's only while the button does something (a pin that is none holds nothing). */
+export function rotaryExtraHeldPins(config: Record<string, unknown> | undefined): number[] {
+  return rotaryExtras(config)
+    .flatMap((k) => (k.buttonFn !== 'off' ? [k.a, k.b, k.button] : [k.a, k.b]))
+    .filter((pin) => pin !== 0)
+}
+/** The pins the rotary encoders hold while they are on: the knob's two, the button's only while the button does something. */
 export function rotaryHeldPins(config: Record<string, unknown> | undefined): number[] {
-  if (!rotaryOn(config)) return []
+  const extra = rotaryExtraHeldPins(config)
+  if (!rotaryOn(config)) return extra
   const pins = rotaryPins(config)
-  return rotaryButtonOn(config) ? [pins.a, pins.b, pins.button] : [pins.a, pins.b]
+  return [...(rotaryButtonOn(config) ? [pins.a, pins.b, pins.button] : [pins.a, pins.b]).filter((pin) => pin !== 0), ...extra]
 }
 
 /** Pins a part of the core would use once it is switched on: free now, but worth a word to whoever chooses a pin. */
 export function idleCoreGpio(config: Record<string, unknown> | undefined): { pin: number; by: string }[] {
   if (!rotaryOn(config)) return rotaryPinList(config).map((pin) => ({ pin, by: 'MuPiBox (rotary encoder, switched off)' }))
-  return rotaryButtonOn(config) ? [] : [{ pin: rotaryPins(config).button, by: 'MuPiBox (rotary encoder button, switched off)' }]
+  const button = rotaryPins(config).button
+  return rotaryButtonOn(config) || button === 0 ? [] : [{ pin: button, by: 'MuPiBox (rotary encoder button, switched off)' }]
 }
 
 export function coreResources(config: Record<string, unknown> | undefined): { ports: { proto: 'tcp' | 'udp'; port: number; by: string }[]; gpio: { pin: number; by: string }[] } {

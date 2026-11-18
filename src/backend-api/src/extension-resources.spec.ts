@@ -16,6 +16,10 @@ import {
   parseListening,
   parseUnitFiles,
   type Probe,
+  rotaryExtraHeldPins,
+  rotaryDirections,
+  rotaryExtras,
+  rotaryHeldPins,
   rotaryPins,
   sameResources,
 } from './app-api/extension-resources'
@@ -156,15 +160,26 @@ describe('extension resources: reading the box', () => {
     assert.deepEqual(parseUnitFiles('lighttpd.service enabled enabled\nmupi_fan.service disabled enabled\nfoo.target static -\n'), ['lighttpd.service', 'mupi_fan.service'])
   })
 
-  it('the rotary encoder has the pins of its configuration - three different ones of 2-27, else the ones it shipped with', () => {
+  it('the rotary encoder has the pins of its configuration - each 2-27 or 0 (none), all different, else the ones it shipped with', () => {
     assert.deepEqual(rotaryPins(undefined), { a: 26, b: 24, button: 10 })
     assert.deepEqual(rotaryPins({ rotary: { active: true } }), { a: 26, b: 24, button: 10 })
     assert.deepEqual(rotaryPins({ rotary: { pinA: 5, pinB: 6, pinButton: 13 } }), { a: 5, b: 6, button: 13 })
     assert.deepEqual(rotaryPins({ rotary: { pinA: '5', pinB: '6', pinButton: '13' } }), { a: 5, b: 6, button: 13 })
-    // (the same pin twice, a pin outside the header, a missing one: all three fall back, never a half choice)
-    for (const rotary of [{ pinA: 5, pinB: 5, pinButton: 13 }, { pinA: 1, pinB: 6, pinButton: 13 }, { pinA: 5, pinB: 6, pinButton: 28 }, { pinA: 5, pinB: 6 }, { pinA: 'x', pinB: 6, pinButton: 13 }]) {
+    // (the same pin twice, a pin outside the header: all three fall back, never a half choice)
+    for (const rotary of [{ pinA: 5, pinB: 5, pinButton: 13 }, { pinA: 1, pinB: 6, pinButton: 13 }, { pinA: 5, pinB: 6, pinButton: 28 }, { pinA: 'x', pinB: 6, pinButton: 13 }]) {
       assert.deepEqual(rotaryPins({ rotary }), { a: 26, b: 24, button: 10 })
     }
+    // (a pin that is not set is the shipped one; 0 is none and may be there more than once)
+    assert.deepEqual(rotaryPins({ rotary: { pinA: 5, pinB: 6 } }), { a: 5, b: 6, button: 10 })
+    assert.deepEqual(rotaryPins({ rotary: { pinA: 5, pinB: 6, pinButton: 0 } }), { a: 5, b: 6, button: 0 })
+    assert.deepEqual(rotaryPins({ rotary: { pinA: 0, pinB: 0, pinButton: 13 } }), { a: 0, b: 0, button: 13 })
+    assert.deepEqual(coreResources({ rotary: { active: true, pinA: 5, pinB: 6, pinButton: 0, button: 'next' } }).gpio.map((g) => g.pin), [5, 6])
+    assert.deepEqual(idleCoreGpio({ rotary: { active: true, pinA: 5, pinB: 6, pinButton: 0 } }), [])
+    assert.deepEqual(idleCoreGpio({ rotary: { active: false, pinA: 5, pinB: 0, pinButton: 0 } }).map((g) => g.pin), [5])
+    // (what a turn does: the volume up and down while nothing else is chosen)
+    assert.deepEqual(rotaryDirections(undefined), { right: 'up', left: 'down' })
+    assert.deepEqual(rotaryDirections({ rotary: { right: 'next', left: 'previous' } }), { right: 'next', left: 'previous' })
+    assert.deepEqual(rotaryDirections({ rotary: { right: 'sing', left: 'off' } }), { right: 'up', left: 'off' })
     const chosen = { rotary: { active: true, pinA: 5, pinB: 6, pinButton: 13, button: 'playpause' } }
     assert.deepEqual(coreResources(chosen).gpio.map((g) => g.pin), [5, 6, 13])
     // (the button without a function: its pin stays free - an NFC reader on SPI keeps GPIO 10 - and is named as the encoder's)
@@ -174,6 +189,35 @@ describe('extension resources: reading the box', () => {
     assert.deepEqual(idleCoreGpio({ rotary: { ...chosen.rotary, active: false } }).map((g) => g.pin), [5, 6, 13])
     // (the pins of the old default are free for others once the encoder is somewhere else)
     assert.ok(!coreResources(chosen).gpio.some((g) => [26, 24, 10].includes(g.pin)))
+  })
+
+  it('more rotary encoders: each has what a turn does and its pins (2-27 or 0, all different); what is wrong with an entry leaves it out', () => {
+    const good = { id: 'k2', right: 'next', left: 'previous', pinA: 5, pinB: 6, pinButton: 13, button: 'playpause', step: 3 }
+    assert.deepEqual(rotaryExtras({ rotary: { extra: [good] } }), [{ id: 'k2', name: '', right: 'next', left: 'previous', a: 5, b: 6, button: 13, buttonFn: 'playpause', step: 3 }])
+    assert.deepEqual(rotaryExtras({ rotary: { extra: [{ ...good, pinA: '5', step: 99, button: 'tracks' }] } })[0], { id: 'k2', name: '', right: 'next', left: 'previous', a: 5, b: 6, button: 13, buttonFn: 'off', step: 5 })
+    // (no pins at all is fine - a knob just added; an entry of the first version had a function instead of right and left)
+    assert.deepEqual(rotaryExtras({ rotary: { extra: [{ id: 'k3', name: '  Küche ', right: 'down', left: 'off', pinA: 0, pinB: 0, pinButton: 0 }] } }), [{ id: 'k3', name: 'Küche', right: 'down', left: 'off', a: 0, b: 0, button: 0, buttonFn: 'off', step: 5 }])
+    assert.deepEqual(rotaryExtras({ rotary: { extra: [{ id: 'k4', function: 'tracks', pinA: 5, pinB: 6, pinButton: 13 }] } }).map((k) => [k.right, k.left]), [['next', 'previous']])
+    assert.deepEqual(rotaryExtras({ rotary: { extra: [{ id: 'k4', function: 'volume', pinA: 5, pinB: 6, pinButton: 13 }] } }).map((k) => [k.right, k.left]), [['up', 'down']])
+    for (const bad of [{ ...good, pinB: 5 }, { ...good, pinA: 1 }, { ...good, pinButton: 28 }, { ...good, id: '../x' }, { ...good, pinB: undefined }, null, 'x']) {
+      assert.deepEqual(rotaryExtras({ rotary: { extra: [bad] } }), [], JSON.stringify(bad))
+    }
+    assert.deepEqual(rotaryExtras({ rotary: { extra: [good, { ...good, pinA: 17, pinB: 18, pinButton: 19 }] } }).map((k) => k.id), ['k2'], 'an id once')
+    assert.deepEqual(rotaryExtras({ rotary: { extra: Array.from({ length: 9 }, (_, i) => ({ ...good, id: `k${i + 2}`, pinA: 5 + i * 3, pinB: 6 + i * 3, pinButton: 7 + i * 3 })).filter((e) => e.pinButton <= 27) } }).length <= 4, true, 'at most four')
+    assert.deepEqual(rotaryExtras(undefined), [])
+    assert.deepEqual(rotaryExtras({ rotary: { extra: 'x' } }), [])
+  })
+
+  it('the pins of the other encoders are held as long as they are in the list - the pin of a button only while it does something - whatever the first encoder does', () => {
+    const extra = [
+      { id: 'k2', right: 'next', left: 'previous', pinA: 5, pinB: 6, pinButton: 13, button: 'off' },
+      { id: 'k3', right: 'up', left: 'down', pinA: 17, pinB: 18, pinButton: 19, button: 'next' },
+      { id: 'k4', right: 'up', left: 'off', pinA: 0, pinB: 20, pinButton: 0, button: 'next' },
+    ]
+    assert.deepEqual(rotaryExtraHeldPins({ rotary: { extra } }), [5, 6, 17, 18, 19, 20])
+    assert.deepEqual(rotaryHeldPins({ rotary: { active: false, extra } }), [5, 6, 17, 18, 19, 20], 'the first one is off: only the others')
+    assert.deepEqual(rotaryHeldPins({ rotary: { active: true, button: 'off', extra } }), [26, 24, 5, 6, 17, 18, 19, 20])
+    assert.deepEqual(coreResources({ rotary: { extra } }).gpio.map((g) => g.pin), [5, 6, 17, 18, 19, 20])
   })
 
   it('the amplifier of the MuPiHAT takes the I2S pins, also under its own name', () => {

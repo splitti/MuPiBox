@@ -61,6 +61,12 @@ function createActions({ playerUrl, apiUrl, log = console, fetchFn = fetch }) {
     repeat: async () => player(`repeat${nextRepeat(await meta())}`),
     stop: () => player('stop'),
     shutdown: () => player('shutoff'),
+    // (the QR code with the address of the box on the OLED display for ten seconds: a route of that extension, which only the box itself may call;
+    // without the extension there is nothing to show)
+    address: async () => {
+      const response = await fetchFn(`${apiUrl}/api/ext/oled/address`, { method: 'POST', signal: AbortSignal.timeout(4000) })
+      if (!response.ok) log.warn(`[buttons] address not shown: HTTP ${response.status}`)
+    },
     output: async () => {
       const response = await fetchFn(`${apiUrl}/api/audio-output`, { signal: AbortSignal.timeout(8000) })
       if (!response.ok) return

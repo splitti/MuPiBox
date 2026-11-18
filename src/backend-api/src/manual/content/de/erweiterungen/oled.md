@@ -1,6 +1,6 @@
 # OLED-Display
 
-Die Erweiterung **OLED-Display** zeigt auf einem kleinen OLED-Display, was die Box spielt: Titel, Interpret und Album, die Zeit, die Titelnummer, die Lautstärke, das WLAN, den Akku eines MuPiHAT, Zufall und Wiederholen und den Ausgang (Lautsprecher, Kopfhörer, Bluetooth). Wenn nichts spielt, zeigt es die Uhrzeit. Dazu kann die Box **ganz ohne DSI-Display** laufen (siehe [Ohne DSI-Display](ohne-dsi-display.md)).
+Die Erweiterung **OLED-Display** zeigt auf einem kleinen OLED-Display, was die Box spielt: Titel, Interpret und Album, die Zeit, die Titelnummer, die Lautstärke, das WLAN, den Akku eines MuPiHAT, Zufall und Wiederholen und den Ausgang (Lautsprecher, Kopfhörer, Bluetooth). Wenn nichts spielt, zeigt es ein Bild: standardmäßig den NFC-Leser, der auf einen Tag wartet. Beim Start, beim Update, in der Ruhezeit und beim Herunterfahren hat es eigene Bilder, die sich ändern lassen. Dazu kann die Box **ganz ohne DSI-Display** laufen (siehe [Ohne DSI-Display](ohne-dsi-display.md)).
 
 Unterstützt werden die Chips **SSD1306**, **SH1106** und **SSD1309** am **I2C-Anschluss** mit **128 × 64** oder **128 × 32** Pixeln, auf dem **Raspberry Pi 4 und dem Pi 5**. Die Anzeige braucht kein Paket außer `python3-pil`, das die Installation der Erweiterung mitbringt.
 
@@ -32,7 +32,7 @@ Die **Statusleiste** oben zeigt von links nach rechts:
 | Antenne mit Balken | Empfang des WLAN (ohne Balken: keine Verbindung) |
 | Bildschirm mit Netzwerkstecker | die Box hängt am **LAN-Kabel** (das Symbol steht dann anstelle der Antenne) |
 | Zahl mit Batterie | Ladung des Akkus (nur mit einem MuPiHAT) |
-| Pfeile mit **A** oder **1** | **Wiederholen**: die ganze Liste (A) oder ein Titel (1, bei Spotify) |
+| Pfeile mit **A** oder **1** | **Wiederholen**: die ganze Liste (A) oder ein Titel (1). Der Taster für Wiederholen in der Erweiterung Buttons & GPIO Input schaltet durch: alle (A), eins (1), aus |
 | gekreuzte Pfeile | **Zufall** ist an |
 | Zahl und Symbol rechts | Lautstärke und **Ausgang**: Lautsprecher, Kopfhörer oder Bluetooth |
 
@@ -40,15 +40,19 @@ Darunter stehen **Titel**, **Interpret** und **Album**; eine lange Zeile läuft 
 
 ![Die Zeit läuft rückwärts, der Ausgang ist Bluetooth](oled-play-bt.png)
 
-Wenn nichts spielt, zeigt das Display die **Uhrzeit** mit dem Datum (der Wochentag in der Sprache der Box, die du unter **Einstellungen › System › Sprache** wählst; ohne Auswahl deutsch); nach der eingestellten Zeit schaltet es sich aus.
+Wenn nichts spielt, zeigt das Display das Bild, das unter **Anzeige im Leerlauf** gewählt ist: den **NFC-Leser** (eine Hand mit Karte: die Box wartet auf einen Tag, das ist die Voreinstellung), den **Barcodescanner**, die **Uhrzeit** mit dem Datum (der Wochentag in der Sprache der Box, die du unter **Einstellungen › System › Sprache** wählst; ohne Auswahl deutsch) oder ein **eigenes Bild**; nach der eingestellten Zeit schaltet es sich aus.
 
 ![Die Uhr im Leerlauf](oled-idle.png)
 
-Ein kurzes Bild erscheint, wenn die Wiedergabe startet oder pausiert und wenn sich die Lautstärke ändert. Dieses Bild für die Lautstärke lässt sich mit **Lautstärke-Animation zeigen** ausschalten. Mit **Adresse der Box zeigen** erscheint zehn Sekunden lang die **Netzwerkseite**: WLAN-Name (am LAN-Kabel stattdessen **LAN**), Adresse und Version, mit dem Symbol (i) oben.
+Ein kurzes Bild erscheint, wenn die Wiedergabe startet oder pausiert und wenn sich die Lautstärke ändert. Dieses Bild für die Lautstärke lässt sich mit **Lautstärke-Animation zeigen** ausschalten, das Bild für Start und Pause mit **Play/Pause-Animation zeigen**. Mit **Adresse der Box zeigen** erscheint zehn Sekunden lang ein **QR-Code** mit der Adresse der Box und sonst nichts. Das Handy scannt ihn und öffnet die Box im Browser. Dieselbe Aktion lässt sich auch einem Taster, einem Doppeltaster oder dem Drehregler geben ([Buttons & GPIO Input](buttons.md), [Drehregler und Taster](../hardware/drehregler.md)). Hat die Box keine Netzwerkadresse, zeigt die Anzeige stattdessen die **Netzwerkseite** mit WLAN-Name, Adresse und Version.
 
-![Die Netzwerkseite](oled-info.png)
+![Der QR-Code mit der Adresse der Box](oled-info.png)
+
+Wählt der **Drehregler** mit der NFC-Extension ein Album ([NFC: Drehregler](nfc-drehregler.md)), steht in den Informationen der **Name**, bei dem er gerade steht, mit seinem Platz in der Liste. Nach der Wahl kommt die normale Anzeige zurück.
 
 ## Einstellungen
+
+Die Einstellungen stehen in Karten: **Display** (Chip, Größe, Adresse, Drehung), **Anzeige**, **Helligkeit** (Helligkeit, Abends dunkler, Display aus nach), **Bilder** und **Ohne DSI-Display**.
 
 | Einstellung | Wirkung |
 | --- | --- |
@@ -57,8 +61,9 @@ Ein kurzes Bild erscheint, wenn die Wiedergabe startet oder pausiert und wenn si
 | **I2C-Adresse** | **0x3C** oder **0x3D** |
 | **Um 180° drehen** | wenn das Display auf dem Kopf eingebaut ist |
 | **Anzeige beim Spielen** | **Voll** (das Bild oben), **Mix** (die Titelnummer groß) oder **Kompakt** (die Zeit groß) |
-| **Uhrzeit zeigen** | die Uhr im Leerlauf |
-| **Lautstärke-Animation zeigen** | das kurze Bild beim Ändern der Lautstärke; ausgeschaltet bleibt die Anzeige, wie sie ist (Start und Pause zeigen weiter ihr Bild) |
+| **Anzeige im Leerlauf** (Karte **Bilder**) | was das Display zeigt, solange nichts spielt: **NFC-Leser** (Voreinstellung), **Barcodescanner**, **Uhrzeit** oder **Eigenes Bild** |
+| **Lautstärke-Animation zeigen** | das kurze Bild beim Ändern der Lautstärke; ausgeschaltet bleibt die Anzeige, wie sie ist |
+| **Play/Pause-Animation zeigen** | das kurze Bild mit Play oder Pause beim Starten und Anhalten der Wiedergabe; ausgeschaltet bleibt die Anzeige, wie sie ist |
 | **Zeit zeigen** | **Vergangen** (zählt vom Anfang hoch) oder **Restzeit** (zählt mit einem Minus bis zum Ende herunter); bei einem Sender oder Podcast ohne bekannte Länge zählt sie hoch |
 | **Zu lange Texte** | **Immer wieder durchlaufen** (Standard), **Einmal durchlaufen** (die Zeile läuft einmal komplett durch und steht danach mit „…“ am Ende) oder **Nicht durchlaufen** (die Zeile wird mit „…“ gekürzt) |
 | **Helligkeit** | 0 bis 255 |
@@ -70,6 +75,26 @@ Ein kurzes Bild erscheint, wenn die Wiedergabe startet oder pausiert und wenn si
 Die Knöpfe **Adresse der Box zeigen** und **Nächste Anzeige** probieren die Anzeige aus: Der zweite wechselt bis zum nächsten Speichern zwischen **Voll**, **Mix** und **Kompakt**. Eine Änderung von Chip, Größe, Adresse und Drehung startet das Display neu; die anderen gelten sofort.
 
 Das **128 × 32**-Display zeigt Titel, Interpret, Zeit, Lautstärke und WLAN in einer Anzeige.
+
+## Bilder
+
+Die Karte **Bilder** zeigt die Bilder des Displays und wo sie erscheinen. Alle sind **128 × 64** Punkte, weiß auf schwarz.
+
+| Bild | Wann es erscheint | Änderbar |
+| --- | --- | --- |
+| **Startbild** (das MuPiBox-Logo) | beim Hochfahren, sobald die Anzeige startet, bis die Box bereit ist (höchstens zwei Minuten) | ja |
+| **Leerlauf: NFC-Leser** | im Leerlauf, wenn **Anzeige im Leerlauf** auf **NFC-Leser** steht | nein |
+| **Leerlauf: Barcodescanner** | im Leerlauf, wenn **Anzeige im Leerlauf** auf **Barcodescanner** steht | nein |
+| **Leerlauf: Eigenes Bild** | im Leerlauf, wenn **Anzeige im Leerlauf** auf **Eigenes Bild** steht (bis du eins wählst, bleibt der NFC-Leser) | ja |
+| **Update** | solange ein Update läuft | ja |
+| **Ruhezeit und Limit** (ein schlafendes Gesicht) | solange eine Ruhezeit läuft oder das Limit erreicht ist | ja |
+| **Herunterfahren** (das Ein/Aus-Symbol) | sobald die Box herunterfährt | nein |
+
+Jedes Bild hat einen Knopf **Zeige Bild**: Das Bild steht dann **zehn Sekunden** auf dem Display, danach zeigt es wieder, was vorher zu sehen war. So siehst du ein Bild, ohne dass der Anlass eintritt.
+
+Bei einem änderbaren Bild tippst du auf **Bild ändern** und wählst ein Bild vom Gerät. Die Box nimmt **nur Bilder, die genau 128 × 64 Punkte groß sind und nur aus reinem Schwarz und Weiß bestehen (1 Bit)**; Weiß leuchtet. Die App prüft das gleich beim Wählen, die Box noch einmal. Ein Bild mit anderer Größe, Graustufen, Farben oder durchsichtigen Stellen wird **abgelehnt**, nichts wird verkleinert oder umgewandelt. Mach das Bild vorher in einem Grafikprogramm fertig (Größe 128 × 64, Modus „Schwarzweiß“ ohne Dithering oder mit, wie du es willst). Mit **Zurücksetzen** kommt das Original wieder.
+
+Das Update- und das Herunterfahr-Bild zeichnet die Box selbst auf das Display, auch wenn der Server dabei schon steht. Das Startbild erscheint, sobald die Anzeige gestartet ist; ein Bild davor, während Linux noch startet, ist nicht möglich.
 
 ## Wenn das Display dunkel bleibt
 

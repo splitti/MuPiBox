@@ -6,7 +6,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const { BUTTONS, TWINS, ACTIONS } = require('../inputs.js')
 
-const VERSION = '1.4.1'
+const VERSION = '1.5.0'
 
 const ACTION_LABELS = {
   none: 'Keine Aktion',
@@ -21,6 +21,7 @@ const ACTION_LABELS = {
   shuffle: 'Zufallswiedergabe an/aus',
   repeat: 'Repeat all/one/off',
   output: 'Ausgabe wechseln',
+  address: 'Adresse der Box zeigen',
   stop: 'Stopp',
   shutdown: 'Box ausschalten',
 }

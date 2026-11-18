@@ -8,6 +8,10 @@ The extension (api.js) starts this program and talks to it by lines of JSON on s
           {"cmd": "quit"}                      leave the picture as it is and end (a restart of the extension)
           {"cmd": "quit", "off": true}         switch the panel off and end (another address or controller follows)
     out:  {"event": "ready", "controller": "ssd1306", "address": "0x3C"}
+
+Two more jobs without a loop (the box's own scripts use them, see scripts/mupibox/oled_picture.sh):
+    --show NAME --settings FILE   draw one of the pictures (update, shutdown ...) and end; the panel stays on with it
+    --check IN OUT                take a picture the user chose if it is a 1-bit picture of exactly 128 x 64 (black and white points only)
           {"event": "error", "code": "no_i2c" | "i2c_access" | "no_display" | "no_pil", "message": "..."}
 
 Nothing but the Python standard library and Pillow (python3-pil): the display is written through /dev/i2c-N with the ioctl that
@@ -28,7 +32,8 @@ import time
 I2C_SLAVE = 0x0703  # the ioctl that chooses the device of the bus
 CONTROLLERS = ('ssd1306', 'sh1106', 'ssd1309')
 BOOT_SECONDS = 1.2
-BYE_SECONDS = 0.8
+# (the power-off picture stays this long once the extension ends with the box going down; then the panel is switched off)
+BYE_SECONDS = 2.5
 
 
 def emit(**event):
@@ -256,6 +261,50 @@ def finish(display, screens, reason, stopping=system_stopping, sleep=time.sleep)
     display.power(False)
 
 
+def settings_args(args):
+    """The settings file of the extension (controller, size, address, turning, contrast) for a job that draws once: what the file does
+    not say stays as the arguments say."""
+    try:
+        with open(args.settings, encoding='utf8') as handle:
+            settings = json.load(handle)
+    except (OSError, TypeError, ValueError):
+        settings = {}
+    if not isinstance(settings, dict):
+        settings = {}
+    if settings.get('controller') in CONTROLLERS:
+        args.controller = settings['controller']
+    size = str(settings.get('size', ''))
+    if size in ('128x64', '128x32'):
+        args.height = int(size.split('x')[1])
+    if isinstance(settings.get('address'), str):
+        args.address = settings['address']
+    args.rotate = settings.get('rotate') is True
+    if isinstance(settings.get('contrast'), (int, float)):
+        args.contrast = max(0, min(255, int(settings['contrast'])))
+    return args
+
+
+def show_picture(args, screens):
+    """--show: the picture on the display, then the program ends - the picture stays (the panel is not switched off)."""
+    picture = screens.pictures.get(args.show)
+    if picture is None:
+        emit(event='error', code='no_picture', message='there is no picture %s' % args.show)
+        return 3
+    try:
+        bus = I2CBus(args.bus, int(str(args.address), 0))
+        try:
+            Display(bus, args.controller, args.width, args.height, args.rotate, args.contrast).show(picture)
+        finally:
+            bus.close()
+    except DriverError as error:
+        emit(event='error', code=error.code, message=error.message)
+        return 2
+    except (OSError, ValueError) as error:
+        emit(event='error', code='no_display', message='the display cannot be written: %s' % error)
+        return 2
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description='OLED display driver of the MuPiBox')
     parser.add_argument('--controller', choices=CONTROLLERS, default='ssd1306')
@@ -265,18 +314,41 @@ def main(argv=None):
     parser.add_argument('--address', default='0x3C')
     parser.add_argument('--rotate', action='store_true', help='turn the picture by 180 degrees')
     parser.add_argument('--contrast', type=int, default=127)
+    parser.add_argument('--images', help='the folder of the pictures the extension brings (images/)')
+    parser.add_argument('--custom', help='the folder of the pictures the user chose')
+    parser.add_argument('--show', metavar='NAME', help='draw one picture (boot, update, rest, shutdown, nfc, barcode, idle) and end')
+    parser.add_argument('--settings', help='the settings file of the extension: the display --show draws on')
+    parser.add_argument('--check', nargs=2, metavar=('IN', 'OUT'), help='take a picture if it is a 1-bit picture of exactly 128 x 64')
     parser.add_argument('--preview', metavar='PNG', help='draw the state in --state (a JSON file) into a picture and end, no display needed')
     parser.add_argument('--state', help='the state to draw with --preview')
     args = parser.parse_args(argv)
 
     try:
-        from PIL import Image  # noqa: F401
+        from PIL import Image
         import render
     except ImportError as error:
         emit(event='error', code='no_pil', message='python3-pil is missing: %s' % error)
         return 1
 
-    screens = render.Screens(args.width, args.height)
+    if args.check:
+        try:
+            with open(args.check[0], 'rb') as handle:
+                picture = render.check_picture(handle.read(), 128, 64)
+            picture.save(args.check[1], format='PNG')
+        except render.PictureError as error:
+            emit(event='error', code=error.code, message=str(error))
+            return 3
+        except (OSError, ValueError, Image.DecompressionBombError) as error:
+            emit(event='error', code='bad_picture', message='the picture cannot be read: %s' % error)
+            return 3
+        return 0
+
+    if args.show:
+        args = settings_args(args)
+    pictures = render.Pictures(args.images, args.custom, args.width, args.height)
+    screens = render.Screens(args.width, args.height, pictures=pictures)
+    if args.show:
+        return show_picture(args, screens)
     if args.preview:
         with open(args.state, encoding='utf8') as handle:
             state = json.load(handle)

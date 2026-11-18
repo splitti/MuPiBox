@@ -2,10 +2,11 @@
 
 Die Erweiterung **NFC-Extension** bringt bis zu **drei NFC-Leser** an die Box. Ein Leser liest die **UID** von Tags und Karten, im Moment der Annäherung wie beim Entfernen. Jeder Tag kann ein **Album, einen Hörspiel-Ordner, einen Sender oder einen Podcast starten**; die Zuordnung funktioniert wie bei TeddyCloud: Medium wählen, Tag auflegen, fertig.
 
-Nach der [Installation](installieren.md) stehen die Einstellungen unter **Einstellungen › NFC-Extension**. Die Seite hat drei Unterseiten:
+Nach der [Installation](installieren.md) stehen die Einstellungen unter **Einstellungen › NFC-Extension**. Die Seite hat vier Unterseiten:
 
 - **NFC-Reader** richtet die Leser ein: pro Leser eine Karte mit Zustand, Typ und Einstellungen.
 - **Zugeordnete Tags** zeigt alle Tags mit ihrem Medium.
+- **Drehregler** richtet den Album-Drehregler ein: Nach dem Auflegen eines Tags auf einem Artistcover wählt er die Alben. Er hat eigene Pins.
 - **Sprachausgabe** legt fest, was die Box mit ihrer Stimme sagt, wenn etwas im Weg ist (kein WLAN, NAS nicht erreichbar, Tag ohne Medium, Akku fast leer).
 
 ## Die Handbuchseiten zur NFC-Extension
@@ -15,6 +16,7 @@ Nach der [Installation](installieren.md) stehen die Einstellungen unter **Einste
 | [Tag mit einem Album verknüpfen](nfc-tag-zuordnen.md) | Schritt für Schritt: Medium wählen, Tag auflegen, Flex-Tag |
 | [Bild des Tags ändern](nfc-bild.md) | das Cover des Mediums oder ein eigenes Bild |
 | [Zugeordnete Tags](nfc-zugeordnete-tags.md) | die Seite mit allen Tags als Kacheln (abspielen, ändern, entfernen) und die Einstellung beim Abnehmen |
+| [Drehregler](nfc-drehregler.md) | ein Tag auf einem Artistcover: Album beim Auflegen wählen, mit dem Album-Drehregler durch die Alben schalten |
 | [Sprachnachrichten](nfc-sprachnachrichten.md) | die Ansagen der Box: WLAN, NAS, Spotify, Tag ohne Medium, Akku bei 10 % |
 | [Leser hinzufügen](nfc-leser.md) | einen Leser einrichten, bis zu drei gleichzeitig, der Zustand |
 | [PN5180 anschließen](nfc-pn5180.md) | Verdrahtung, SPI, Einstellungen |
