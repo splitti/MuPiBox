@@ -242,7 +242,7 @@ function execCapture(cmd: string, args: string[], timeoutMs = 8000): Promise<{ o
 const withQuery = (url: string, part: string): string => `${url}${url.includes('?') ? '&' : '?'}${part}`
 
 // setting_update.sh in the background: it carries the config into the files of the system and the player
-function runSettingUpdate(restartPlayer = false): void {
+export function runSettingUpdate(restartPlayer = false): void {
   const restart = restartPlayer ? '; PM2=$(command -v pm2 || echo /usr/local/bin/pm2); "$PM2" restart spotify-control >/dev/null 2>&1' : ''
   const child = spawn('sh', ['-c', `sudo /usr/local/bin/mupibox/setting_update.sh >/dev/null 2>&1${restart}`], { detached: true, stdio: 'ignore' })
   child.on('error', () => undefined)

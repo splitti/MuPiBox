@@ -39,7 +39,7 @@ function run(cmd: string, args: string[], timeoutMs = 30000): Promise<{ ok: bool
 // Each update its own unit (mupibox-update-<time>, its name in STATE_DIR/unit): what a failed one started again - the
 // display (kiosk), the picture "Update abgebrochen" - stays in its unit (KillMode=process), and a unit with processes
 // in it stays loaded - under one name for all, the next update from the app could not start until the box restarted
-async function updateRunning(): Promise<boolean> {
+export async function updateRunning(): Promise<boolean> {
   const own = (await fsp.readFile(path.join(STATE_DIR, 'unit'), 'utf8').catch(() => '')).trim()
   const units = [UNIT, ...(/^mupibox-update-\d{1,16}$/.test(own) ? [own] : [])]
   const states = (await run('systemctl', ['is-active', ...units], 5000)).stdout.split('\n').map((s) => s.trim())

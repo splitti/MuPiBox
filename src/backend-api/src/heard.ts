@@ -93,6 +93,11 @@ export class HeardStore {
     return path.join(this.dir, 'heard.json')
   }
 
+  /** Read anew when next asked (after a switch of the user: his file is in place now - users.ts) */
+  forget(): void {
+    this.data = null
+  }
+
   private load(): Record<string, Entry> {
     if (this.data) return this.data
     try {

@@ -17,6 +17,8 @@ const MANUAL_THROTTLE_PATH = '/tmp/.last_sync_trigger'
 
 let timerHandle: ReturnType<typeof setTimeout> | null = null
 let inflight: Promise<RunSyncResult> | null = null
+/** A run of the sync under way (a switch of the user waits for it - users.ts) */
+export const isSyncRunning = (): boolean => inflight !== null
 // Trailing-edge run: when a manual trigger is throttled, we don't drop it —
 // we arm a single timer that fires one run when the cooldown elapses, so a
 // burst of WebApp edits still all land without waiting for the next poll.

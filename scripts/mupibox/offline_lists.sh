@@ -52,10 +52,15 @@ offline_list() {
 		# the server's write takes a moment with fsync - is newer then, and the offline list is made again next time.
 		# With its own time it looked newer than that change and stayed old)
 		local ref="${tmp}.ref"
+		local was
+		was=$(stat -c '%i %y' "${src}" 2> /dev/null) || exit 1
 		touch -r "${src}" "${ref}" 2> /dev/null || exit 1
 		/usr/bin/jq -e 'type == "array"' "${src}" > /dev/null 2>&1 || exit 1
 		offline_filter "${src}" | /usr/bin/jq -s -c . > "${tmp}" || exit 1
 		/usr/bin/jq -e 'type == "array"' "${tmp}" > /dev/null 2>&1 || exit 1
+		# (the list is another file now, or changed: made from what is gone - a switch of the user put another user's
+		# library and his offline list in place meanwhile, users.ts. Made again next time)
+		[ "$(stat -c '%i %y' "${src}" 2> /dev/null)" = "${was}" ] || exit 1
 		touch -r "${ref}" "${tmp}"
 		chown dietpi:dietpi "${tmp}" 2> /dev/null
 		mv -f "${tmp}" "${dst}"

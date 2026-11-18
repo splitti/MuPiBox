@@ -1365,6 +1365,8 @@ const playtimeState = {
 }
 let playtimeLastCheckpointAt = 0
 let playtimeLastCheckpointSeconds = -1
+// a switch of the user under way: nothing of the day's counts and positions written (see "Users", /user/hold)
+let userHold = false
 
 // Quiet hours uses the same state machine but is purely time-window-driven (no counter).
 const quietHoursState = {
@@ -1483,8 +1485,8 @@ function writeCombinedWorking() {
   fs.writeFile(PLAYTIME_WORKING_PATH, JSON.stringify(payload), () => {})
 }
 
-function writePlaytimeCheckpoint() {
-  const payload = {
+function playtimeCheckpointPayload() {
+  return {
     date: playtimeState.date,
     dayKey: playtimeState.dayKey,
     usedSeconds: playtimeState.usedSeconds,
@@ -1495,12 +1497,25 @@ function writePlaytimeCheckpoint() {
     tileDate: tileState.date,
     tileUsed: tileState.used,
   }
+}
+
+function writePlaytimeCheckpoint() {
+  // (a switch of the user under way: the counts were written for the user who goes, the files are being exchanged -
+  // see "Users")
+  if (userHold) return
+  const payload = playtimeCheckpointPayload()
   tileLastCheckpointUsed = tileCheckpointText()
   // (a file of its own first, then renamed: a power cut mid-write left half a file, and the day's count began at 0)
   const tmp = `${PLAYTIME_CHECKPOINT_PATH}.tmp`
   fs.writeFile(tmp, JSON.stringify(payload), (err) => {
     if (err) {
       log.error(`${new Date().toLocaleString()}: [Playtime] Failed to write checkpoint:`, err)
+      return
+    }
+    // (a switch of the user began meanwhile: these counts are in the file written for it already, and put now they would
+    // land at the coming user's place)
+    if (userHold) {
+      fs.rm(tmp, { force: true }, () => {})
       return
     }
     fs.rename(tmp, PLAYTIME_CHECKPOINT_PATH, (e) => {
@@ -3963,7 +3978,7 @@ function loadEpisodePositions() {
 }
 // Written at most once a minute while an episode plays (and when it ends), not every second: the SD card
 function saveEpisodePositions() {
-  if (!episodePositionsDirty || !episodePositions) return
+  if (userHold || !episodePositionsDirty || !episodePositions) return
   episodePositionsDirty = false
   const days = Number(muPiBoxConfig?.mupibox?.episodeResumeDays ?? 180)
   const oldest = days > 0 ? Date.now() - days * 24 * 3600 * 1000 : 0
@@ -4701,6 +4716,72 @@ app.post('/display/reload-page', (_req, res) => {
   currentMeta.pageReloadAt = Date.now()
   res.json({ ok: true })
 })
+
+// === Users (5.1, backend users.ts): several children share the box, each with their own library and settings. A
+// switch exchanges the files of the library and of the box's data (the day's counts in the checkpoint, the episodes'
+// positions) for those of the coming user. Before it the player writes what it holds for the user who goes and stops
+// writing (hold) - a write a moment later landed in the coming user's file; after it it reads the coming user's
+// (changed). After a switch that did not happen the same: the files are those of before (changed reads them again).
+let userHoldTimer = null
+app.post('/user/hold', (_req, res) => {
+  try {
+    // (held already - a switch before whose "changed" did not come: the counts in place may be another user's now)
+    if (!userHold) {
+      playtimeCheckpointNow()
+      episodePositionsDirty = true
+      saveEpisodePositions()
+    }
+    userHold = true
+    // (a backend that went away in the middle: the player writes again after 2 minutes - reading what is there then)
+    clearTimeout(userHoldTimer)
+    userHoldTimer = setTimeout(() => userChanged(), 2 * 60 * 1000)
+    res.json({ ok: true })
+  } catch (err) {
+    res.status(500).json({ ok: false, error: String(err?.message ?? err) })
+  }
+})
+app.post('/user/changed', (_req, res) => {
+  // (no hold before - it failed: nothing was exchanged, the counts in memory are the newest)
+  if (userHold) userChanged()
+  res.json({ ok: true })
+})
+// The counts of the user who goes, on the card before the files are exchanged (not with the timer of every minute)
+function playtimeCheckpointNow() {
+  if (!playtimeState.date) return
+  const tmp = `${PLAYTIME_CHECKPOINT_PATH}.tmp`
+  const fd = fs.openSync(tmp, 'w')
+  try {
+    fs.writeFileSync(fd, JSON.stringify(playtimeCheckpointPayload()))
+    fs.fsyncSync(fd)
+  } finally {
+    fs.closeSync(fd)
+  }
+  fs.renameSync(tmp, PLAYTIME_CHECKPOINT_PATH)
+}
+// The coming user's counts and positions (the day's counts start at 0 where there is no checkpoint of today)
+function userChanged() {
+  clearTimeout(userHoldTimer)
+  userHoldTimer = null
+  // the coming user's settings at once (the watch of the file reads them a moment later: his day may begin at
+  // another hour)
+  const fresh = readMupiBoxConfigFromDisk()
+  if (fresh) muPiBoxConfig = fresh
+  Object.assign(playtimeState, { date: '', dayKey: 'mon', usedSeconds: 0, state: 'normal', graceEndsAt: null, graceMode: null, stopUnlessEpisode: false })
+  Object.assign(quietHoursState, { state: 'normal', graceEndsAt: null, graceMode: null, stopUnlessEpisode: false, activeWindow: null })
+  Object.assign(photoTimeState, { date: '', dayKey: 'mon', usedSeconds: 0, resetApplied: 0 })
+  Object.assign(tileState, { date: '', used: {}, current: null, state: 'normal', graceMode: null, stopUnlessEpisode: false, graceEndsAt: null, raw: null })
+  playtimeGraceIdle = 0
+  quietGraceIdle = 0
+  tileGraceIdle = 0
+  photoActiveUntil = 0
+  playtimeLastCheckpointSeconds = -1
+  photoLastCheckpointSeconds = -1
+  tileLastCheckpointUsed = '{}'
+  episodePositions = null
+  episodePositionsDirty = false
+  userHold = false
+  loadPlaytimeCheckpoint()
+}
 
 // The display: an album is open and the photo time counts (every few seconds while it does - see photoTimeTickStep);
 // {active: false} when it stops counting (the album left, the display off, the grid idle): it stops at once

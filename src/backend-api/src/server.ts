@@ -34,10 +34,15 @@ import { getValidAccessToken } from './spotify-sync/auth'
 import { SpotifyApiException } from './spotify-sync/playlists'
 import { loadSpotifyTokenStore } from './spotify-sync/config-loader'
 import { createSpotifySyncRouter } from './spotify-sync/routes'
-import { startScheduler } from './spotify-sync/scheduler'
+import { isSyncRunning, startScheduler } from './spotify-sync/scheduler'
+import { acquireSyncLock, releaseSyncLock } from './spotify-sync/sync-lock'
 import type { RunSyncDeps } from './spotify-sync/state-machine'
 import { mountExtensions, noteExtensionCrash } from './app-api/extensions'
-import { buildElternLandingHandler, createElternApiRouter, registerDisplayNetworkRoutes, setOnSpotifyCacheCleared } from './app-api/routes'
+import { buildElternLandingHandler, createElternApiRouter, registerDisplayNetworkRoutes, runSettingUpdate, setOnSpotifyCacheCleared } from './app-api/routes'
+import { isRestoreRunning } from './app-api/admin'
+import { updateRunning } from './app-api/updates'
+import { registerUserRoutes } from './app-api/users-routes'
+import { UserFiles, Users } from './users'
 import { startSpotifyLoginWatch } from './app-api/spotify-auth-age'
 import { startTlsWatch } from './app-api/tls'
 import { startWeeklySummary } from './app-api/weekly-summary'
@@ -63,7 +68,7 @@ import { readEmbeddedPicture } from './embedded-cover'
 import { acquireLock, DATA_LOCK, RESUME_LOCK, releaseLock, staleReason } from './file-lock'
 import { sweepTempFiles, writeFileWhole } from './json-file'
 import { type AlbumFillDeps, fillSpotifyAlbums, isBareAlbum, startSpotifyAlbumFill } from './spotify-album-fill'
-import { coverHidden } from './hidden-covers'
+import { coverHidden, forgetHiddenCovers, hiddenCoversWritten } from './hidden-covers'
 import { OnlineCovers } from './online-covers'
 import { ardFeed, isArdFeed } from './ard-sounds'
 import { isEpisodePick } from './episode-pick'
@@ -79,7 +84,7 @@ import { tileKeyOfRow } from './app-api/tile-key'
 import { uiScale } from './ui-scale'
 import { confirmDisplayTest, displayTestState } from './app-api/display-profile'
 import { browserGuard, corsOptionsFor, isAllowedHost, isLoopback, localOnly, localOrElternSession, logValue, PROXY_PORT, setConfiguredHosts, viaProxy } from './request-guard'
-import { CACHE_DIR, COVERS_DIR, DATA_DIR, LIBRARY_DIR, LOGS_DIR, SERVER_CONFIG_DIR } from './paths'
+import { CACHE_DIR, COVERS_DIR, DATA_DIR, LIBRARY_DIR, LOGS_DIR, SERVER_CONFIG_DIR, WWW_DIR } from './paths'
 import { jellyfinSession } from './app-api/jellyfin'
 import { registerJellyfinMedia } from './jellyfin/media'
 import { jellyfinSettings, signedIn } from './jellyfin/settings'
@@ -270,6 +275,19 @@ if (devServe) {
       console.warn(`${new Date().toLocaleString()}: [MuPiBox-Server] ${path.basename(active)} could not be linked to ${path.basename(target)}: ${(err as Error).message}`)
     }
   }
+}
+// The users of the box (5.1, users.ts): their things exchanged in place at a switch. One cut off (a power cut) is
+// finished here, before anything reads the library - the configuration's part when the server runs (see listen).
+const userFiles = new UserFiles({ usersDir: path.join(DATA_DIR, 'users'), libraryDir: LIBRARY_DIR, dataDir: DATA_DIR, logsDir: LOGS_DIR })
+let userSwitchCutOff: { from: string; to: string } | null = null
+let userSwitchRunning = false
+try {
+  userSwitchCutOff = userFiles.recover()
+  if (userSwitchCutOff) {
+    console.warn(`${new Date().toLocaleString()}: [users] a switch from ${userSwitchCutOff.from} to ${userSwitchCutOff.to} was cut off - finished`)
+  }
+} catch (err) {
+  console.error(`${new Date().toLocaleString()}: [users] a switch cut off could not be finished: ${(err as Error).message}`)
 }
 const networkFile = `${configBasePath}/network.json`
 const wlanFile = `${configBasePath}/wlan.json`
@@ -1206,6 +1224,98 @@ registerHaDisplayRoute(app)
 const haRouter = express.Router()
 registerHaAppRoutes(haRouter, haDeps, { session: requireSession, csrf: requireCsrf })
 app.use('/api/app', haRouter)
+
+// The users of the box (5.1, users.ts): what the server does around a switch
+const PLAYER_BASE = 'http://127.0.0.1:5005'
+const users = new Users(userFiles, {
+  busy: async () => {
+    if (isRestoreRunning()) return 'a backup is being restored'
+    if (isSyncRunning()) return 'the Spotify sync runs'
+    if (await updateRunning().catch(() => false)) return 'an update runs'
+    return null
+  },
+  // The library's locks and the Spotify sync's: a run of the sync that began after the check of busy() read the going
+  // user's subscriptions and wrote them into the coming user's library
+  lock: async (waitMs) => {
+    const until = Date.now() + waitMs
+    for (;;) {
+      if (acquireSyncLock(10 * 60 * 1000) === 'acquired') {
+        if (acquireLock(dataLock, 'users switch') === 'acquired') {
+          if (acquireLock(resumeLock, 'users switch') === 'acquired') {
+            return () => {
+              releaseLock(resumeLock, 'users switch')
+              releaseLock(dataLock, 'users switch')
+              releaseSyncLock()
+            }
+          }
+          releaseLock(dataLock, 'users switch')
+        }
+        releaseSyncLock()
+      }
+      if (Date.now() >= until) return null
+      await new Promise((r) => setTimeout(r, 300))
+    }
+  },
+  playerHold: async () => {
+    // the going user's track in his history, his first sightings of podcasts and hidden covers on the card
+    userSwitchRunning = true
+    closePlayLogEntry(false, true)
+    episodeState.flush()
+    await hiddenCoversWritten()
+    // (a player that does not run - the connection refused - writes nothing; one that answers with an error or not in
+    // time may write later, into the coming user's files: the switch does not go on)
+    const ask = async (pathName: string, init?: RequestInit) => {
+      try {
+        return await fetch(`${PLAYER_BASE}${pathName}`, { ...init, signal: AbortSignal.timeout(8000) })
+      } catch (err) {
+        const code = ((err as { cause?: { code?: string } }).cause ?? {}).code
+        if (code === 'ECONNREFUSED') return null
+        throw err
+      }
+    }
+    try {
+      await ask('/stop?src=users')
+      const r = await ask('/user/hold', { method: 'POST' })
+      if (r && !r.ok) throw new Error(`the player did not hold (${r.status})`)
+    } catch (err) {
+      userSwitchRunning = false
+      throw err
+    }
+  },
+  playerChanged: async () => {
+    userSwitchRunning = false
+    await fetch(`${PLAYER_BASE}/user/changed`, { method: 'POST', signal: AbortSignal.timeout(8000) }).catch(() => undefined)
+  },
+  readConfig: async () => (await readJsonFile(mupiboxConfigPath)) as Record<string, unknown>,
+  updateConfig: (mutate) => updateMupiboxConfig((cfg) => mutate(cfg)),
+  forgetCaches: () => {
+    heardStore.forget()
+    episodeState.forget()
+    forgetHiddenCovers()
+    homeCache = {}
+  },
+  reload: async () => {
+    await fs.promises.rm(homeCacheFile, { force: true }).catch(() => undefined)
+    await applyThemeOfConfig().catch((err) => console.warn(`${new Date().toLocaleString()}: [users] theme: ${(err as Error).message}`))
+    // (volumes and the rest the system and the player take from the config)
+    runSettingUpdate()
+    await fetch(`${PLAYER_BASE}/display/reload-page`, { method: 'POST', signal: AbortSignal.timeout(8000) }).catch(() => undefined)
+  },
+})
+registerUserRoutes(app, users, { session: requireSession, csrf: requireCsrf })
+
+// The theme the config names, as the display's link (after a switch of the user - his theme; see /api/app/theme)
+async function applyThemeOfConfig(): Promise<void> {
+  const cfg = (await readJsonFile(mupiboxConfigPath)) as { mupibox?: { theme?: unknown } }
+  const theme = typeof cfg.mupibox?.theme === 'string' ? cfg.mupibox.theme : ''
+  const target = `/home/dietpi/MuPiBox/themes/${theme}.css`
+  if (!/^[A-Za-z0-9_-]{1,40}$/.test(theme) || !fs.existsSync(target)) return
+  const link = `${WWW_DIR}/active_theme.css`
+  if ((await fs.promises.readlink(link).catch(() => '')) === target) return
+  await fs.promises.rm(`${link}.new`, { force: true })
+  await fs.promises.symlink(target, `${link}.new`)
+  await fs.promises.rename(`${link}.new`, link)
+}
 
 // Whether the box has no internet right now (network.json, written every minute by get_network.sh)
 let offlineCheck = { at: 0, offline: false }
@@ -2557,7 +2667,11 @@ function currentPlayLogStart(): number | null {
 }
 
 async function tickPlayLog(): Promise<void> {
+  // (a switch of the user moves the file - users.ts; the going user's track was closed before it)
+  if (userSwitchRunning) return
   const state = await fetchCurrentPlayerState()
+  // (a switch began while the player was asked: what it said is the going user's)
+  if (userSwitchRunning) return
   const now = Date.now()
   if (state === null) {
     // transient — skip this tick, unless the player has been gone for a while
@@ -8857,6 +8971,20 @@ if (!testServe) {
   console.log(`${new Date().toLocaleString()}: [mupibox-backend-api] Server started at http://localhost:8200`)
   // (what a power cut left of its writes - json-file.ts)
   for (const dir of [LIBRARY_DIR, DATA_DIR]) void sweepTempFiles(dir)
+  // (a switch of the user cut off: its files were finished at the start - the configuration's part now; the users'
+  // trash of more than 30 days emptied, then once a day)
+  if (userSwitchCutOff) {
+    users.finishCutOff().catch((err) => console.error(`${new Date().toLocaleString()}: [users] finishing the switch: ${(err as Error).message}`))
+  }
+  const purgeUserTrash = () => {
+    try {
+      userFiles.purgeTrash()
+    } catch (err) {
+      console.warn(`${new Date().toLocaleString()}: [users] trash: ${(err as Error).message}`)
+    }
+  }
+  purgeUserTrash()
+  setInterval(purgeUserTrash, 24 * 60 * 60 * 1000).unref()
   // the same app for the web server of port 80/443 (lighttpd proxies /app, /api, ... here; see request-guard.ts)
   const proxied = app.listen(PROXY_PORT, '127.0.0.1')
   proxied.on('upgrade', proxyVncUpgrade)

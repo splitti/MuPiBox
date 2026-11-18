@@ -159,6 +159,8 @@ async function installFileAs(target: string, source: string): Promise<boolean> {
 const withDataLock = <T>(work: () => Promise<T>) => withLock(DATA_LOCK, 'app admin', work)
 
 let restoreRunning = false
+/** A backup being restored (a switch of the user waits for it - users.ts) */
+export const isRestoreRunning = (): boolean => restoreRunning
 
 // Secrets of the box config in the JSON editor: the value stands there as HIDDEN (only strings; not the dates and lists
 // that share the name, e.g. tokenUpdatedAt, tokenScopes)
