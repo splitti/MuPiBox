@@ -1113,6 +1113,7 @@ function startSkeleton() {
   return [
     `<section class="card hero now" id="now"><div class="now-idle">${icon('music')}<span>Verbinde …</span></div></section>`,
     `<div class="start-side">
+      <div class="user-bar" id="user-bar" hidden></div>
       <div id="notices"></div>
       <div class="tiles" id="tiles">
         ${tile('akku', 'bat', 'Akku', '–')}${tile('spielzeit', 'time', 'Heute gehört', '–')}
@@ -1159,7 +1160,36 @@ function statusSoon(root) {
   for (const ms of [1500, 5000]) setTimeout(() => root.isConnected && loadStatus(root), ms)
 }
 
+// The users of the box (5.1) on the start page: switched on and two or more - one chip each, the active one marked; a
+// tap on another switches after a question
+async function loadUserBar(root) {
+  const bar = $('#user-bar', root)
+  if (!bar) return
+  const r = await api(`${API}/users`)
+  const s = r.body
+  if (!r.ok || !s?.enabled || (s.users?.length ?? 0) < 2) {
+    bar.hidden = true
+    return
+  }
+  usersState = s
+  bar.hidden = false
+  bar.innerHTML = s.users
+    .map((u) => `<button type="button" class="user-chip" data-user="${esc(u.id)}" aria-current="${u.id === s.current}">${userDot(u.color)}<span translate="no">${esc(u.name)}</span></button>`)
+    .join('')
+  for (const b of bar.querySelectorAll('[data-user]')) {
+    const u = s.users.find((x) => x.id === b.dataset.user)
+    b.onclick = () => {
+      if (u.id === usersState.current) return toast(tr(`${u.name} ist aktiv`), 'info')
+      // (the whole start page anew: its tiles, pins and notices are the coming user's)
+      switchUserSheet(u, () => currentPage()?.id === 'start' && renderPage(currentPage()))
+    }
+  }
+}
+
 function mountStart(root) {
+  loadUserBar(root)
+  // (a switch at the display: the bar follows)
+  every(30000, () => loadUserBar(root))
   drawPins(root)
   loadOutput(root)
   every(15000, () => loadOutput(root))
@@ -18265,7 +18295,231 @@ function extPageController(entry, sub = 0) {
   }
 }
 
+/* ---------- users (5.1: several children share the box - backend users.ts) ---------- */
+
+// The list as the box has it (GET /api/app/users): switched on, who is in place, how the display switches, the users
+// with the count of their library, the trash
+let usersState = null
+async function loadUsers() {
+  const r = await api(`${API}/users`)
+  if (!r.ok) throw new Error('users')
+  usersState = r.body
+}
+const userDot = (color, size = 14) => `<span class="user-dot" style="--user-color:${esc(color)};width:${size}px;height:${size}px" aria-hidden="true"></span>`
+const USER_SWITCH_MODES = [
+  ['free', 'Antippen'],
+  ['hold', 'Halten'],
+  ['app', 'Nur in der App'],
+]
+// What the box answered to a change of the users, as a message
+function userError(r) {
+  const e = r.body?.error
+  const reason = String(r.body?.reason ?? '')
+  if (e === 'busy') return 'Die Box ist gerade beschäftigt. Bitte gleich noch einmal.'
+  if (reason === 'too_many') return 'Mehr Benutzer gehen nicht – es gibt nur neun Farben.'
+  if (reason === 'name') return 'Bitte einen Namen mit 1 bis 24 Zeichen eingeben'
+  if (reason === 'current') return 'Der aktive Benutzer lässt sich nicht entfernen.'
+  if (reason === 'color') return 'Diese Farbe hat schon jemand.'
+  // (the list changed meanwhile - on another phone, at the display: it is loaded anew)
+  if (e === 'unknown_user' || e === 'disabled') return 'Die Liste hat sich inzwischen geändert.'
+  return 'Das hat nicht geklappt'
+}
+// A change of the users: the answer is the new list; the page is drawn again. One at a time (a double tap made a user
+// twice); a change that did not happen: the list as the box has it, so the page shows what is true (the switch)
+let userBusy = false
+async function userAction(path, body, okText) {
+  if (userBusy) return false
+  userBusy = true
+  const r = await api(`${API}/users/${path}`, { method: 'POST', body, timeoutMs: 60_000 }).finally(() => {
+    userBusy = false
+  })
+  if (!r.ok) {
+    toast(userError(r), 'info')
+    await loadUsers().catch(() => undefined)
+    if (currentPage()?.id === 'g-benutzer') renderPage(currentPage(), false)
+    return false
+  }
+  usersState = r.body
+  if (okText) toast(okText)
+  if (currentPage()?.id === 'g-benutzer') renderPage(currentPage(), false)
+  return true
+}
+// The switch to another user (page Benutzer, start page): after a question - playback stops, the display loads anew
+// (not confirmSheet: its button is the red one of deleting - a switch deletes nothing)
+function switchUserSheet(u, after) {
+  openSheet(
+    `<h2>${esc(tr('Wechseln'))}</h2><p class="help" style="margin:0">${esc(tr(`Zu ${u.name} wechseln? Die Wiedergabe hält an, und das Display zeigt dann die Bibliothek von ${u.name}.`))}</p>
+     <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Wechseln</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      sheet.querySelector('[data-ok]').onclick = async () => {
+        close()
+        toast(tr(`Wechsle zu ${u.name} …`), 'info')
+        if (await userAction('switch', { id: u.id }, tr(`${u.name} ist jetzt aktiv`))) after?.()
+      }
+    },
+  )
+}
+// A name: a new user (with an empty library or a copy of another's), or another name for one
+function userNameSheet(u) {
+  const others = usersState?.users ?? []
+  const copy = !u
+    ? `<div class="field"><label for="user-from">Bibliothek</label><select class="input" id="user-from">
+        <option value="">Leer anfangen</option>${others.map((o) => `<option value="${esc(o.id)}">${esc(tr(`Kopie der Bibliothek von ${o.name}`))}</option>`).join('')}
+       </select><small>Die Einstellungen kommen vom aktiven Benutzer, die Spotify-Abos nur mit einer Kopie.</small></div>`
+    : ''
+  openSheet(
+    `<h2>${esc(u ? 'Umbenennen' : 'Benutzer anlegen')}</h2>
+     <div class="field"><label for="user-name">Name</label><input class="input" id="user-name" maxlength="24" autocomplete="off" value="${esc(u?.name ?? '')}"></div>
+     ${copy}
+     <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>${esc(u ? 'Speichern' : 'Anlegen')}</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      const ok = async () => {
+        const name = sheet.querySelector('#user-name').value.trim()
+        if (!name) return toast('Bitte einen Namen eingeben', 'info')
+        const done = u
+          ? await userAction('rename', { id: u.id, name }, 'Gespeichert')
+          : await userAction('add', { name, from: sheet.querySelector('#user-from')?.value || undefined }, tr(`${name} ist angelegt`))
+        if (done) close()
+      }
+      sheet.querySelector('[data-ok]').onclick = ok
+      sheet.querySelector('#user-name').addEventListener('keydown', (e) => e.key === 'Enter' && ok())
+    },
+  )
+}
+// A colour nobody else has
+function userColorSheet(u) {
+  const taken = new Set((usersState?.users ?? []).filter((o) => o.id !== u.id).map((o) => o.color))
+  const colors = usersState?.colors ?? []
+  openSheet(
+    `<h2>Farbe</h2><p class="help" style="margin:0">Das Display zeigt die Farbe des aktiven Benutzers als Punkt oben.</p>
+     <div class="user-colors">${colors
+       .map((c, i) => `<button type="button" class="user-color${c === u.color ? ' on' : ''}" data-color="${esc(c)}" ${taken.has(c) ? 'disabled' : ''} aria-label="${esc(tr('Farbe'))} ${i + 1}" ${taken.has(c) ? `title="${esc(tr('Diese Farbe hat schon jemand.'))}"` : ''}>${userDot(c, 28)}</button>`)
+       .join('')}</div>
+     <div class="btns"><button class="btn" data-close>Abbrechen</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      for (const b of sheet.querySelectorAll('[data-color]')) {
+        b.onclick = async () => {
+          if (await userAction('color', { id: u.id, color: b.dataset.color }, 'Gespeichert')) close()
+        }
+      }
+    },
+  )
+}
+// Several users off: with whom the box goes on - the others rest with their things
+function usersOffSheet() {
+  const list = usersState?.users ?? []
+  openSheet(
+    `<h2>Mehrere Benutzer ausschalten</h2>
+     <p class="help" style="margin:0">Mit wem läuft die Box weiter? Die anderen bleiben mit ihrer Bibliothek gespeichert und sind wieder da, wenn du es wieder einschaltest.</p>
+     <div class="opts">${list
+       .map((u) => `<button class="opt" data-keep="${esc(u.id)}">${userDot(u.color)}<span translate="no">${esc(u.name)}</span>${u.id === usersState.current ? `<small>${esc(tr('aktiv'))}</small>` : ''}</button>`)
+       .join('')}</div>
+     <div class="btns"><button class="btn" data-close>Abbrechen</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      for (const b of sheet.querySelectorAll('[data-keep]')) {
+        b.onclick = async () => {
+          close()
+          const keep = list.find((u) => u.id === b.dataset.keep)
+          if (keep && keep.id !== usersState.current) toast(tr(`Wechsle zu ${keep.name} …`), 'info')
+          await userAction('enable', { enabled: false, keep: b.dataset.keep }, 'Mehrere Benutzer aus')
+        }
+      }
+    },
+    () => currentPage()?.id === 'g-benutzer' && renderPage(currentPage(), false),
+  )
+}
+function usersSections() {
+  const s = usersState
+  const on = `<div class="row"><span class="lbl"><b>Mehrere Benutzer</b><small>Jedes Kind hat seine eigene Bibliothek, Spielzeit, Ruhezeit und eigene Einstellungen (Theme, Lautstärke, Startseite). Gemeinsam bleiben Spotify, WLAN, NAS und die Hardware.</small></span><label class="switch"><input type="checkbox" id="users-on" ${s.enabled ? 'checked' : ''} aria-label="Mehrere Benutzer"><span></span></label></div>`
+  if (!s.enabled) return [{ title: '', items: [{ type: 'html', html: on }] }]
+  const date = (ms) => new Date(ms).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })
+  const rows = s.users
+    .map((u) => {
+      const active = u.id === s.current
+      return `<div class="entry user-row">${userDot(u.color, 18)}<span class="lbl"><b translate="no">${esc(u.name)}</b><small>${esc(u.count === 1 ? tr('Ein Eintrag in der Bibliothek') : tr(`${u.count} Einträge in der Bibliothek`))}</small></span>
+        <span class="user-acts">${active ? `<span class="chip ok">${esc(tr('aktiv'))}</span>` : `<button class="btn sm primary" data-user-switch="${esc(u.id)}">Wechseln</button>`}
+        <button class="btn sm" data-user-rename="${esc(u.id)}">Umbenennen</button><button class="btn sm" data-user-color="${esc(u.id)}">Farbe</button>
+        ${active ? '' : `<button class="btn sm danger" data-user-remove="${esc(u.id)}">Entfernen</button>`}</span></div>`
+    })
+    .join('')
+  const full = s.users.length >= s.max
+  const sections = [
+    { title: '', items: [{ type: 'html', html: on }] },
+    {
+      title: 'Benutzer der Box',
+      items: [
+        { type: 'html', html: `<div class="user-list">${rows}</div>` },
+        {
+          type: 'html',
+          html: `<div class="btns"><button class="btn primary" id="user-add" ${full ? 'disabled' : ''}>${icon('plus', 18)}Benutzer anlegen</button></div>${full ? `<p class="help">${esc(tr('Mehr Benutzer gehen nicht – es gibt nur neun Farben.'))}</p>` : ''}`,
+        },
+      ],
+    },
+    {
+      title: 'Wechsel am Display',
+      help: 'Wie das Kind am Display den Benutzer wechselt: über den Punkt in seiner Farbe oben.',
+      items: [
+        {
+          type: 'html',
+          html: `<div class="seg" id="user-mode" role="group" aria-label="${esc(tr('Wechsel am Display'))}">${USER_SWITCH_MODES.map(([v, l]) => `<button type="button" aria-pressed="${s.switchMode === v}" data-mode="${v}">${esc(tr(l))}</button>`).join('')}</div>
+            <p class="help">${esc(tr({ free: 'Ein Tipp auf den Punkt öffnet die Auswahl.', hold: 'Den Punkt drei Sekunden halten – so wechselt niemand aus Versehen.', app: 'Am Display gibt es keinen Wechsel, nur hier in der App.' }[s.switchMode] ?? ''))}</p>`,
+        },
+      ],
+    },
+  ]
+  if (s.trash.length) {
+    sections.push({
+      title: 'Papierkorb',
+      help: 'Entfernte Benutzer bleiben 30 Tage mit ihrer Bibliothek hier.',
+      items: [
+        {
+          type: 'html',
+          html: s.trash
+            .map((t) => `<div class="entry user-row">${userDot(t.color, 18)}<span class="lbl"><b translate="no">${esc(t.name)}</b><small>${esc(tr(`entfernt am ${date(t.deletedAt)}`))}</small></span>
+              <span class="user-acts"><button class="btn sm" data-user-restore="${esc(t.key)}" ${full ? 'disabled' : ''}>Wiederherstellen</button></span></div>`)
+            .join(''),
+        },
+      ],
+    })
+  }
+  return sections
+}
+function mountUsers(root) {
+  const s = usersState
+  const byId = (id) => s.users.find((u) => u.id === id)
+  const on = $('#users-on', root)
+  on.onchange = async () => {
+    if (on.checked) return userAction('enable', { enabled: true }, 'Mehrere Benutzer an')
+    // (with only one user nothing has to be chosen)
+    if (s.users.length <= 1) return userAction('enable', { enabled: false }, 'Mehrere Benutzer aus')
+    on.checked = true
+    usersOffSheet()
+  }
+  $('#user-add', root)?.addEventListener('click', () => userNameSheet(null))
+  for (const b of root.querySelectorAll('[data-user-switch]')) b.onclick = () => switchUserSheet(byId(b.dataset.userSwitch))
+  for (const b of root.querySelectorAll('[data-user-rename]')) b.onclick = () => userNameSheet(byId(b.dataset.userRename))
+  for (const b of root.querySelectorAll('[data-user-color]')) b.onclick = () => userColorSheet(byId(b.dataset.userColor))
+  for (const b of root.querySelectorAll('[data-user-remove]')) {
+    const u = byId(b.dataset.userRemove)
+    b.onclick = () =>
+      confirmSheet('Entfernen', tr(`${u.name} entfernen? Die Bibliothek und die Einstellungen bleiben 30 Tage im Papierkorb.`), () =>
+        userAction('remove', { id: u.id }, tr(`${u.name} ist im Papierkorb`)),
+      )
+  }
+  for (const b of root.querySelectorAll('[data-user-restore]')) b.onclick = () => userAction('restore', { key: b.dataset.userRestore }, 'Wiederhergestellt')
+  for (const b of root.querySelectorAll('#user-mode [data-mode]')) b.onclick = () => userAction('switch-mode', { mode: b.dataset.mode }, 'Gespeichert')
+}
+
 const CONTROLLERS = {
+  'g-benutzer': {
+    load: loadUsers,
+    sections: usersSections,
+    mount: mountUsers,
+  },
   spielzeit: {
     load: loadCaps,
     // ("Display aus nach" in the steps of its own page)

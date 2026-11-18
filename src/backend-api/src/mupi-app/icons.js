@@ -28,6 +28,7 @@ export const ICONS = {
   vol: "M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6",
   plug: "M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0zM12 18v4",
   lock: "M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4",
+  users: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8",
   server: "M4 4h16v6H4zM4 14h16v6H4zM8 7h.01M8 17h.01",
   grid: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
   boot: "M4 5h16v14H4zM9 12l2 2 4-4",

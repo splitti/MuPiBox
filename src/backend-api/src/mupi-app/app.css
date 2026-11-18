@@ -1530,3 +1530,19 @@ textarea[hidden] { display: none; }
 .ext-verdict.bad { color: var(--mp-danger); }
 .ext-bar { display: flex; gap: 10px; align-items: center; }
 .ext-bar .search { flex: 1; }
+
+/* users (5.1, page Benutzer and the start page) */
+.user-dot { display: inline-block; flex: none; border-radius: 50%; background: var(--user-color); box-shadow: 0 0 0 1px var(--mp-border); }
+.user-row { flex-wrap: wrap; }
+.user-row .lbl { min-width: 150px; }
+.user-row .user-acts { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; margin-left: auto; }
+.user-colors { display: flex; flex-wrap: wrap; gap: 10px; padding: 8px 0; }
+.user-color { border: 2px solid transparent; border-radius: 50%; padding: 4px; background: none; }
+.user-color.on { border-color: var(--mp-primary); }
+.user-color:disabled { opacity: 0.25; }
+.sheet .opt .user-dot { margin-right: 4px; }
+.sheet .opt > span:not(.user-dot) { flex: 1; }
+.user-bar { display: flex; flex-wrap: wrap; gap: 8px; }
+.user-acts .btn.sm + .btn.sm { margin-left: 0; }
+.user-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--mp-border); background: var(--mp-surface); color: inherit; font-weight: 700; }
+.user-chip[aria-current="true"] { border-color: var(--mp-primary); box-shadow: inset 0 0 0 1px var(--mp-primary); }

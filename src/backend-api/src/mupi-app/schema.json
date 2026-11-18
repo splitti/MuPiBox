@@ -86,6 +86,12 @@
    "description": "Passwort, Anmeldung, Zertifikat (HTTPS)"
   },
   {
+   "id": "g-benutzer",
+   "title": "Mehrere Benutzer",
+   "icon": "users",
+   "description": "Mehrere Kinder an einer Box, jedes mit eigener Bibliothek und Spielzeit"
+  },
+  {
    "id": "g-system",
    "title": "System",
    "icon": "gear",
@@ -4955,6 +4961,16 @@
    ]
   },
   {
+   "id": "g-benutzer",
+   "slug": "users",
+   "area": "einstellungen",
+   "parent": "einstellungen",
+   "title": "Mehrere Benutzer",
+   "description": "Mehrere Kinder teilen sich die Box: jedes mit eigener Bibliothek, Spielzeit, Ruhezeit und eigenen Einstellungen.",
+   "icon": "users",
+   "sections": []
+  },
+  {
    "id": "g-system",
    "slug": "system",
    "area": "einstellungen",
@@ -6697,6 +6713,21 @@
    "l": "Sicherheit",
    "where": "Sicherheit",
    "id": "g-sicherheit"
+  },
+  {
+   "l": "Mehrere Benutzer",
+   "where": "Einstellungen › Mehrere Benutzer",
+   "id": "g-benutzer"
+  },
+  {
+   "l": "Benutzer der Box",
+   "where": "Einstellungen › Mehrere Benutzer",
+   "id": "g-benutzer"
+  },
+  {
+   "l": "Wechsel am Display",
+   "where": "Einstellungen › Mehrere Benutzer",
+   "id": "g-benutzer"
   },
   {
    "l": "System",
