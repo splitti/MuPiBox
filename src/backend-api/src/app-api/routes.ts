@@ -55,7 +55,7 @@ import { registerCustomBootRoutes } from './bootscreen-custom'
 import { registerFeedHostRoutes } from './feed-hosts'
 import { registerPinnedCardRoutes } from './pinned-cards'
 import { dropStatic, registerWifiStaticRoutes, startWifiStaticWatch } from './wifi-static'
-import { decodeWpaSsid, parseWpaCliScanResults, wifiConfigPrivate, wifiSetPassword } from '../wpa-ssid'
+import { decodeWpaSsid, parseWpaCliScanResults, wifiConfigPrivate, wifiSetPassword, wifiSyncOthers } from '../wpa-ssid'
 import { fanSpeedNow, registerHardwareRoutes } from './hardware'
 import { registerDietpiDashboardRoutes, startDietpiDashboard } from './dietpi-dashboard'
 import { registerServicesRoutes } from './services'
@@ -1769,6 +1769,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       return
     }
     await wifiConfigPrivate()
+    void wifiSyncOthers(wifiIface())
     res.json({ ok: true })
   })
 
@@ -1822,8 +1823,11 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
             return
           }
           void wifiConfigPrivate()
-          // (its fixed address, if it had one, goes with it)
-          void dropStatic(wifiIface(), ssid).catch(() => undefined)
+          // (its fixed address, if it had one, goes with it - dropStatic saves again, and the other adapters read the file
+          // after that, see wifiSyncOthers)
+          void dropStatic(wifiIface(), ssid)
+            .catch(() => undefined)
+            .then(() => wifiSyncOthers(wifiIface()))
           res.json({ ok: true })
         })
       })

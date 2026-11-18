@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process'
 import { pbkdf2Sync } from 'node:crypto'
-import { realpathSync } from 'node:fs'
+import { existsSync, readdirSync, realpathSync } from 'node:fs'
 import { basename } from 'node:path'
 
 // save_config writes the WiFi configuration anew, readable by everyone (wpa_supplicant's umask): back to root only - it
@@ -13,6 +13,25 @@ export function wifiConfigPrivate(): Promise<void> {
       resolve()
     }),
   )
+}
+
+// Two WiFi adapters (a USB stick next to the Pi's own WiFi): each has its own wpa_supplicant, both read the same
+// configuration - but only when they start. A network saved, changed or removed through one stayed as it was in the
+// other's memory, and that one's next save_config (the stick pulled out, the Pi's own WiFi used again) wrote its old list
+// back: a network added in between was gone. After every change to the file, the others read it anew (a connected one
+// reconnects, ~3 s; the address stays, see wpa_action_guard.sh). Call it once the file is complete (band choices back).
+export function wifiSyncOthers(wifi: string): Promise<void> {
+  let others: string[] = []
+  try {
+    others = readdirSync('/sys/class/net').filter((n) => n !== wifi && /^[\w.-]+$/.test(n) && existsSync(`/sys/class/net/${n}/phy80211`))
+  } catch {
+    // (no list of adapters: nothing to do)
+  }
+  return Promise.all(
+    others.map(
+      (n) => new Promise<void>((resolve) => execFile('sudo', ['/usr/sbin/wpa_cli', '-i', n, 'reconfigure'], { timeout: 5000 }, () => resolve())),
+    ),
+  ).then(() => undefined)
 }
 
 /**
@@ -91,12 +110,19 @@ export function parseWpaCliScanResults(stdout: string): Map<string, WifiScanEntr
 
 export type WifiKeyKind = 'psk' | 'sae' | 'both'
 
-// The WiFi interface is the Pi's own (driver brcmfmac: Pi 3B+, 4, 5)? It cannot move to another access point of a WPA3
-// network while it is connected (the authentication there times out; Raspberry Pi sets roamoff=1, the WPA3 handshake runs
-// in wpa_supplicant) - see roams_badly in add_wifi.sh. A USB stick does.
-export function wifiRoamsBadly(wifi: string): boolean {
+// The Pi's own WiFi (driver brcmfmac: Pi 3B+, 4, 5) is there? It cannot move to another access point of a WPA3 network
+// while it is connected (the authentication there times out; Raspberry Pi sets roamoff=1, the WPA3 handshake runs in
+// wpa_supplicant) - see roams_badly in add_wifi.sh. A USB stick does, but next to the Pi's own WiFi both read the same
+// configuration (and the stick may be pulled out later): the entry has to suit the Pi's own WiFi too.
+export function wifiRoamsBadly(): boolean {
   try {
-    return basename(realpathSync(`/sys/class/net/${wifi}/device/driver`)) === 'brcmfmac'
+    return readdirSync('/sys/class/net').some((n) => {
+      try {
+        return basename(realpathSync(`/sys/class/net/${n}/device/driver`)) === 'brcmfmac'
+      } catch {
+        return false
+      }
+    })
   } catch {
     return false
   }
@@ -154,7 +180,7 @@ export function wifiKeyCommands(
 export async function wifiSetPassword(wifi: string, id: string, ssid: Buffer, password: string): Promise<boolean> {
   const cli = (args: string[]) =>
     new Promise<string>((resolve) => execFile('sudo', ['/usr/sbin/wpa_cli', '-i', wifi, ...args], { timeout: 5000 }, (err, out) => resolve(err ? '' : out)))
-  const roamsBadly = wifiRoamsBadly(wifi)
+  const roamsBadly = wifiRoamsBadly()
   let kind = wifiKeyKindOf(await cli(['scan_results']), ssid.toString('utf8'), roamsBadly)
   if (!kind) {
     const saved = await cli(['get_network', id, 'key_mgmt'])

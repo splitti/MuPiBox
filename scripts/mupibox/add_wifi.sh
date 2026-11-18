@@ -21,6 +21,19 @@ restart_network() {
 	sudo wpa_cli -i $(/usr/local/bin/mupibox/mupi_wifi_iface.sh) reconfigure
 }
 
+# A second WiFi adapter (a USB stick next to the Pi's own WiFi) has its own wpa_supplicant, which reads the file only when
+# it starts: it kept its old list, and its next save_config wrote that back (see wifiSyncOthers in wpa-ssid.ts). Called
+# once the file is final - after the try (a failed network saved as disabled).
+sync_others() {
+	local wifi n
+	wifi=$(/usr/local/bin/mupibox/mupi_wifi_iface.sh)
+	for n in /sys/class/net/*/phy80211; do
+		[ -e "${n}" ] || continue
+		n=$(basename "$(dirname "${n}")")
+		[ "${n}" = "${wifi}" ] || sudo wpa_cli -i "${n}" reconfigure > /dev/null 2>&1
+	done
+}
+
 # The configuration holds the key of every network. A file left readable by everyone by an earlier save_config goes back
 # to root only; the folder keeps others out while save_config writes it (its temporary file is readable by everyone, and
 # chmod afterwards does not help whoever has opened it). wpa_supplicant and its scripts run as root.
@@ -51,12 +64,23 @@ scan_flags() {
 		<<< "$(sudo wpa_cli -i "$(/usr/local/bin/mupibox/mupi_wifi_iface.sh)" scan_results)"
 }
 
-# The WiFi in use is the Pi's own (driver brcmfmac: Pi 3B+, 4, 5)? It cannot move to another access point of a WPA3
-# network while it is connected: the authentication there times out (Raspberry Pi sets roamoff=1, the WPA3 handshake
-# runs in wpa_supplicant), the box was gone for 12 to 16 s, and bgscan tried it every minute. With WPA2 it moves without
-# a gap. A USB stick (mt76, rtw88, ...) does both.
+# The Pi's own WiFi (driver brcmfmac: Pi 3B+, 4, 5) is there? It cannot move to another access point of a WPA3 network
+# while it is connected: the authentication there times out (Raspberry Pi sets roamoff=1, the WPA3 handshake runs in
+# wpa_supplicant), the box was gone for 12 to 16 s, and bgscan tried it every minute. With WPA2 it moves without a gap.
+# A USB stick (rtl8192cu, mt76, ...) does both - but next to the Pi's own WiFi both read the same configuration (and
+# the stick may be pulled out later): there the entry has to suit the Pi's own WiFi too.
+own_wifi() {
+	local d
+	for d in /sys/class/net/*/device/driver; do
+		if [ "$(basename "$(readlink -f "${d}" 2>/dev/null)")" = "brcmfmac" ]; then
+			basename "$(dirname "$(dirname "${d}")")"
+			return 0
+		fi
+	done
+	return 1
+}
 roams_badly() {
-	[ "$(basename "$(readlink -f "/sys/class/net/$(/usr/local/bin/mupibox/mupi_wifi_iface.sh)/device/driver" 2>/dev/null)")" = "brcmfmac" ]
+	own_wifi > /dev/null
 }
 
 # What the network asks for: psk (WPA2), sae (only WPA3) or both. A network that offers both is taken as WPA2 on the Pi's
@@ -163,10 +187,12 @@ try_network() {
 		done
 	fi
 	rm -f "${TRY_FILE}"
+	sync_others
 }
 
 # WPA3 on the Pi's own WiFi: bgscan is off for such a network (bgscan="", see roams_badly), and a weak access point
-# would keep the box. Checked once a minute: below SAE_WEAK dBm three times in a row (two minutes), the connection is
+# would keep the box (watched there - also while a USB stick is the WiFi in use: it reads the same entry). Checked once a
+# minute: below SAE_WEAK dBm three times in a row (two minutes), the connection is
 # set up anew (disconnect, reconnect: about 3 s, the address stays - see wpa_action_guard.sh; wpa_supplicant then takes
 # the strongest access point of the network). Back with the same one (no better one in reach): not again for an hour,
 # else not for 10 minutes.
@@ -180,7 +206,7 @@ sae_watch() {
 	[ "${now}" -ge "${sae_tick}" ] || return 0
 	sae_tick=$((now + 60))
 	[ "${now}" -ge "${sae_next}" ] && [ ! -f "${TRY_FILE}" ] || return 0
-	wifi=$(/usr/local/bin/mupibox/mupi_wifi_iface.sh)
+	wifi=$(own_wifi) || return 0
 	status=$(sudo wpa_cli -i "${wifi}" status)
 	rssi=$(sudo wpa_cli -i "${wifi}" signal_poll | sed -n 's/^RSSI=//p')
 	if ! grep -q '^wpa_state=COMPLETED' <<< "${status}" || ! grep -q '^key_mgmt=.*SAE' <<< "${status}" ||
@@ -236,7 +262,8 @@ do
 			sudo mv -f ${TMP_WPACONF} ${WPACONF}
 			sudo chmod 600 ${WPACONF}
 			sudo chown root:root ${WPACONF}
-			restart_network			
+			restart_network
+			sync_others
 		elif [ "${PSK}" = "" ]
 		then
 			# HIGH-12: previous code spliced ${SSID} unquoted into a

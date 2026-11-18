@@ -10326,7 +10326,12 @@ function mountWlan(root, page) {
     if (password && (password.length < 8 || password.length > 63)) return toast('Das Passwort hat 8 bis 63 Zeichen', 'info')
     // (add_wifi.sh leaves the connected network as it is: a mistyped password would take the box offline)
     if (net.saved?.some((w) => w.active && w.ssid === ssid)) return toast('Mit diesem Netz ist die Box gerade verbunden', 'info')
-    const r = await api(`${API}/wifi/add`, { method: 'POST', body: { ssid, password } })
+    // (one at a time: a second tap while the answer was on its way queued the network twice - two tries in a row)
+    if (net.adding) return
+    net.adding = true
+    const r = await api(`${API}/wifi/add`, { method: 'POST', body: { ssid, password } }).finally(() => {
+      net.adding = false
+    })
     if (!r.ok) return toast(r.body?.error ?? 'Das hat nicht geklappt', 'info')
     net.pick = null
     toast(`„${ssid}“ wird ausprobiert. Die App kann dabei kurz die Verbindung verlieren.`)

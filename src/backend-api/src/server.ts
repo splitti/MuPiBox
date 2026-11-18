@@ -67,7 +67,7 @@ import { OnlineCovers } from './online-covers'
 import { ardFeed, isArdFeed } from './ard-sounds'
 import { isEpisodePick } from './episode-pick'
 import { feedHostKey, feedHostsOf, isPrivateHost, neverFetched } from './lan-feeds'
-import { decodeWpaSsid, parseWpaCliScanResults, type WifiScanEntry, wifiBandOf, wifiConfigPrivate, wifiSetPassword } from './wpa-ssid'
+import { decodeWpaSsid, parseWpaCliScanResults, type WifiScanEntry, wifiBandOf, wifiConfigPrivate, wifiSetPassword, wifiSyncOthers } from './wpa-ssid'
 import { registerAudioOutputRoutes, startAudioWatch } from './audio-output'
 import { episodeKey, MAX_KEEP, type OfflineEpisode, PodcastOffline } from './podcast-offline'
 import { setFeedHeadReader } from './podcast-search'
@@ -3479,6 +3479,8 @@ function wifiSaveConfig(wifi: string, adjust?: (entries: WifiBandEntry[]) => voi
     } catch (error) {
       console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Could not keep the WLAN band choices: ${error}`)
       return false
+    } finally {
+      await wifiSyncOthers(wifi)
     }
   })
   wifiSaveChain = run.catch(() => undefined)
