@@ -4312,5 +4312,6 @@
  "Schon in der Bibliothek: die ganze Serie ist dort.": "Already in the library: the whole series is there.",
  "„Älteste zuerst“ ist die Reihenfolge der Serie.": "“Oldest first” is the order of the series.",
  "In deinem Konto gehört kein Hörbuch zu dieser Serie.": "No audiobook in your account belongs to this series.",
- "Lade die Hörbücher von Audible …": "Loading the audiobooks from Audible …"
+ "Lade die Hörbücher von Audible …": "Loading the audiobooks from Audible …",
+ "Dafür braucht es die NFC-Extension ab Version 0.8 – bitte unter Erweiterungen aktualisieren.": "This needs the NFC extension version 0.8 or later – please update it under Extensions."
 }

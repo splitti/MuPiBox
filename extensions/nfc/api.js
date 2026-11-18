@@ -93,7 +93,7 @@ exports.activate = (host) => {
   let restarted = null // the tag in the field when the driver started again: { uid, until }
 
   // What a tag is called in the list (fixed phrases: the app translates the ones it knows)
-  const KINDS = { library: 'SD-Karte', nas: 'NAS', spotify: 'Spotify', radio: 'Radio', rss: 'Podcast', tidal: 'TIDAL' }
+  const KINDS = { library: 'SD-Karte', nas: 'NAS', spotify: 'Spotify', radio: 'Radio', rss: 'Podcast', tidal: 'TIDAL', jellyfin: 'Jellyfin', audible: 'Audible' }
   const fresh = () => ({ config, phase: config.reader === 'none' || config.problem ? 'off' : 'starting', firmware: null, product: null, errorCode: null, inField: false, last: null })
   view = fresh()
 

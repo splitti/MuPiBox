@@ -3609,7 +3609,7 @@ function openEntrySheet(item, back = null) {
      ${tidalArtist ? tidalRangeFields(item) : ''}
      ${jellyfinArtist ? jellyfinArtistFields(item) : ''}
      ${audibleSeries ? audibleSeriesFields(item) : ''}
-     ${wholeArtist || tidalArtist || jellyfinArtist || item.type === 'audible' || item.type === 'jellyfin' || item.isResume || !item.type ? '' : `<div class="btns">${nfcButtonHtml()}</div>`}
+     ${wholeArtist || tidalArtist || jellyfinArtist || audibleSeries || item.isResume || !item.type ? '' : `<div class="btns">${nfcButtonHtml()}</div>`}
      <div class="btns">${!isSync || syncRemovable(item) ? `<button class="btn danger" data-del>${isSync ? 'Entfernen' : 'Löschen'}</button>` : ''}<button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Speichern</button></div>`,
     (sheet, close) => {
       sheet.querySelector('[data-close]').onclick = back ? back.open : close
@@ -4254,7 +4254,9 @@ function openNfcSheet(media, { back = null, image = '' } = {}) {
           return
         }
         if (!r.ok) {
-          const why = { no_reader: 'Der NFC-Leser ist nicht bereit – bitte unter System › NFC-Extension einrichten.', not_startable: 'Dieses Medium lässt sich keinem Tag zuordnen.' }
+          // (Jellyfin and Audible: a NFC extension before 0.8 does not know them)
+          const newKind = media.type === 'jellyfin' || media.type === 'audible'
+          const why = { no_reader: 'Der NFC-Leser ist nicht bereit – bitte unter System › NFC-Extension einrichten.', not_startable: newKind ? 'Dafür braucht es die NFC-Extension ab Version 0.8 – bitte unter Erweiterungen aktualisieren.' : 'Dieses Medium lässt sich keinem Tag zuordnen.' }
           return say(why[r.body?.error] ?? 'Das hat nicht geklappt', 'warn')
         }
         id = r.body.id

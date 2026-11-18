@@ -104,7 +104,7 @@ Cheap USB readers (Neuftech, Sycreader and the like, often "RFID Reader 125 kHz 
 
 A tag gets its medium where you find the medium: in the **library**.
 
-1. In the library open an **album, an audio-play folder, a station or a podcast**: for folders of the SD card and the NAS the window of the album, for Spotify, radio, podcast and TIDAL entries the window of the entry.
+1. In the library open an **album, an audio-play folder, a station or a podcast**: for folders of the SD card and the NAS the window of the album, for Spotify, radio, podcast, TIDAL, Jellyfin and Audible entries the window of the entry.
 2. Tap **NFC tag**. The window shows which tags the medium already has (with a picture) and lets you change a picture or **remove** a tag there.
 3. Tap **Add NFC tag** (for the first tag) or **Add another NFC tag**. The window shows the cover and "Now lay the NFC tag on the reader".
 4. Lay the tag on the reader. The window says "Done – the tag now belongs to this medium", and the medium starts on the display.
@@ -115,7 +115,7 @@ From then on the tag starts its medium every time it lies on the reader, without
 
 **Podcasts:** A tag with a podcast plays an **episode** of it, and only one that the tile shows too (your choice of episodes and the entry's sorting count): the one that was begun and not heard to the end, else the first one not heard (without a sorting of your own the newest), else the first. For this the box needs the feed (internet, or the box's cache); when it cannot be reached, nothing starts.
 
-Not every entry can be given to a tag: a folder that only holds other folders, and a whole artist (Spotify, TIDAL), have no single medium. There the button is missing, or the box says "This medium cannot be given to a tag".
+Not every entry can be given to a tag: a folder that only holds other folders, a whole artist (Spotify, TIDAL, Jellyfin) and a whole Audible series have no single medium; a single audiobook of the series can be added as an entry of its own and given to a tag. There the button is missing, or the box says "This medium cannot be given to a tag".
 
 ### The picture of a tag
 
@@ -127,7 +127,7 @@ With the **Flex tag** tick in the window the tag becomes the **flex tag** (as it
 
 ### Assigned tags
 
-The sub page **Assigned tags** lists all tags with picture, medium, kind (SD card, NAS, Spotify, radio, podcast, TIDAL) and UID. There you change the picture of a tag or **remove** it; a removed tag counts as new the next time it is laid on and plays nothing.
+The sub page **Assigned tags** lists all tags with picture, medium, kind (SD card, NAS, Spotify, radio, podcast, TIDAL, Jellyfin, Audible) and UID. There you change the picture of a tag or **remove** it; a removed tag counts as new the next time it is laid on and plays nothing.
 
 ### Laying on and taking off
 

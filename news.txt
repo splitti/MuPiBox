@@ -22,6 +22,7 @@
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>New extension: an NFC reader starts albums, folders, radio stations and podcasts with tags and cards. Readers: PN5180 (ISO 14443 A and ISO 15693), RC522 and PN532 (I2C, SPI or serial), or a USB reader that types the card number. In the library, "NFC-Tag" at a medium gives it to the next tag laid on the reader, with a picture for each tag; a flex tag always has the medium chosen for it last. Settings under System › NFC-Extension.</li>
 <li id='linews' class='linews'>Taking the tag off pauses - only what the tag started (something else started on the display meanwhile goes on); laying it on again goes on. A tag laid on again while its medium plays lets it play on, one laid on only for a moment starts nothing. A podcast tag plays an episode of the tile's choice.</li>
+<li id='linews' class='linews'>NFC extension 0.8: a tag can also start a Jellyfin album, playlist or audiobook and an Audible book (not a whole artist or series).</li>
 </ul>
 <b>Photos</b>
 </ul>

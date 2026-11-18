@@ -31,6 +31,25 @@ test('what cannot be started is no medium: a folder of folders, an artist, somet
   assert.strictEqual(tags.sanitizeMedia({ type: 'bogus', id: '1' }), null)
 })
 
+test('Jellyfin and Audible: an album, a playlist, an audiobook, a book - not a whole artist or series', () => {
+  const jf = { type: 'jellyfin', jellyfinKind: 'album', id: 'a1b2', artist: 'A', title: 'T', category: 'music', cover: '/api/jellyfin/image/a1b2?w=400' }
+  const media = tags.sanitizeMedia(jf)
+  assert.strictEqual(media.jellyfinKind, 'album')
+  assert.strictEqual(tags.tagImage({ media }), '/api/jellyfin/image/a1b2?w=400')
+  for (const kind of ['playlist', 'book']) assert.notStrictEqual(tags.sanitizeMedia({ ...jf, jellyfinKind: kind }), null)
+  assert.strictEqual(tags.sanitizeMedia({ ...jf, jellyfinKind: 'artist' }), null)
+  assert.strictEqual(tags.sanitizeMedia({ ...jf, jellyfinKind: undefined }), null)
+  assert.strictEqual(tags.sanitizeMedia({ ...jf, id: '' }), null)
+  const ab = { type: 'audible', audibleKind: 'book', id: 'B0ABCDEFGH', artist: 'A', title: 'T', category: 'audiobook', cover: '/api/audible/image/51abc?w=500' }
+  const book2 = tags.sanitizeMedia(ab)
+  assert.strictEqual(book2.audibleKind, 'book')
+  assert.strictEqual(tags.tagImage({ media: book2 }), '/api/audible/image/51abc?w=500')
+  assert.strictEqual(tags.sanitizeMedia({ ...ab, audibleKind: 'series' }), null)
+  assert.strictEqual(tags.sanitizeMedia({ ...ab, audibleKind: undefined }), null)
+  // (the same id as a book and as something else is not the same medium)
+  assert.notStrictEqual(tags.mediumKey(tags.sanitizeMedia({ ...jf, jellyfinKind: 'book' })), tags.mediumKey(media))
+})
+
 test('a medium is named as the user reads it', () => {
   assert.strictEqual(tags.mediaLabel(book), 'Pippi Langstrumpf – Astrid Lindgren')
   assert.strictEqual(tags.mediaLabel({ title: 'Same', artist: 'Same' }), 'Same')
@@ -476,6 +495,38 @@ test('the API part: taken off after the display took the start but before it pla
     generation = 7 // (the slow start comes)
     await later(1500)
     assert.ok(player.some((u) => u.startsWith('http://player.test/pause?src=nfc')), 'paused once it came')
+  } finally {
+    global.fetch = realFetch
+  }
+})
+
+test('the API part: an Audible book and a Jellyfin album go to a tag and the display is told to start them; a whole series is refused', async () => {
+  const realFetch = global.fetch
+  global.fetch = async (url) => {
+    if (String(url).startsWith('http://player.test/local')) return { ok: true, json: async () => ({ currentPlayer: 'mplayer', currentType: 'audible', playing: true, origin: 3 }) }
+    return { ok: true, json: async () => ({}) }
+  }
+  try {
+    const { host, routes } = makeHost({ reader: 'none', onRemove: 'nothing', playOnTag: true })
+    const nfc = require('../api.js').activate(host)
+    await later(0)
+    feedReady(nfc)
+    const ab = { type: 'audible', audibleKind: 'book', id: 'B0ABCDEFGH', artist: 'A', title: 'Buch', category: 'audiobook', cover: '/api/audible/image/51abc?w=500' }
+    assert.strictEqual((await call(routes['post /arm'], { body: { media: { ...ab, audibleKind: 'series' } } })).status, 400)
+    assert.strictEqual((await call(routes['post /arm'], { body: { media: { type: 'jellyfin', jellyfinKind: 'artist', id: 'x1', title: 'K' } } })).status, 400)
+    assert.strictEqual((await call(routes['post /arm'], { body: { media: ab } })).body.state, 'waiting')
+    nfc.feed({ event: 'tag', tech: 'ISO14443A', uid: '04AABBCC' })
+    await later()
+    const command = (await call(routes['get /pending'])).body
+    assert.deepStrictEqual([command.media.type, command.media.audibleKind, command.media.id], ['audible', 'book', 'B0ABCDEFGH'])
+    const jf = { type: 'jellyfin', jellyfinKind: 'album', id: 'a1b2', artist: 'A', title: 'Album', category: 'music' }
+    assert.strictEqual((await call(routes['post /arm'], { body: { media: jf } })).body.state, 'waiting')
+    nfc.feed({ event: 'tag', tech: 'ISO14443A', uid: '04DDEEFF' })
+    await later()
+    assert.strictEqual((await call(routes['get /pending'])).body.media.jellyfinKind, 'album')
+    const kinds = Object.fromEntries((await call(routes['get /tags'])).body.items.map((t) => [t.id, t.text[0]]))
+    assert.deepStrictEqual(kinds, { '04AABBCC': 'Audible', '04DDEEFF': 'Jellyfin' })
+    assert.strictEqual((await call(routes['post /tagsfor'], { body: { media: ab } })).body.items.map((t) => t.id).join(), '04AABBCC')
   } finally {
     global.fetch = realFetch
   }

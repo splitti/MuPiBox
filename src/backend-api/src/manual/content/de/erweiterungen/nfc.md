@@ -104,7 +104,7 @@ Billige USB-Leser (Neuftech, Sycreader und ähnliche, oft „RFID Reader 125 kHz
 
 Ein Tag bekommt sein Medium dort, wo du das Medium findest: in der **Bibliothek**.
 
-1. In der Bibliothek ein **Album, einen Hörspiel-Ordner, einen Sender oder einen Podcast** öffnen: bei Ordnern der SD-Karte und des NAS das Fenster des Albums, bei Spotify-, Radio-, Podcast- und TIDAL-Einträgen das Fenster des Eintrags.
+1. In der Bibliothek ein **Album, einen Hörspiel-Ordner, einen Sender oder einen Podcast** öffnen: bei Ordnern der SD-Karte und des NAS das Fenster des Albums, bei Spotify-, Radio-, Podcast-, TIDAL-, Jellyfin- und Audible-Einträgen das Fenster des Eintrags.
 2. **NFC-Tag** antippen. Das Fenster zeigt, welche Tags das Medium schon hat (mit Bild), und lässt dich dort ein Bild ändern oder einen Tag **entfernen**.
 3. **NFC-Tag hinzufügen** (beim ersten Tag) oder **Weiteren NFC-Tag hinzufügen** antippen. Das Fenster zeigt das Cover und „Lege jetzt den NFC-Tag auf den Leser“.
 4. Den Tag auf den Leser legen. Das Fenster meldet „Fertig – der Tag gehört jetzt zu diesem Medium“, und das Medium startet am Display.
@@ -115,7 +115,7 @@ Der Tag startet sein Medium von da an jedes Mal, wenn er auf dem Leser liegt, oh
 
 **Podcasts:** Ein Tag mit einem Podcast spielt eine **Folge** davon, und zwar nur eine, die auch die Kachel zeigt (deine Auswahl der Folgen und die Sortierung des Eintrags gelten): die begonnene, die noch nicht fertig gehört ist, sonst die erste noch nicht gehörte (ohne eigene Sortierung die neueste), sonst die erste. Dafür braucht die Box den Feed (Internet oder der Zwischenspeicher der Box); ist er nicht erreichbar, startet nichts.
 
-Nicht jeder Eintrag lässt sich auf einen Tag legen: ein Ordner, der nur weitere Ordner enthält, und ein ganzer Künstler (Spotify, TIDAL) haben kein einzelnes Medium. Dort steht der Knopf nicht, oder die Box sagt „Dieses Medium lässt sich keinem Tag zuordnen“.
+Nicht jeder Eintrag lässt sich auf einen Tag legen: ein Ordner, der nur weitere Ordner enthält, und ein ganzer Künstler (Spotify, TIDAL, Jellyfin) und eine ganze Audible-Serie haben kein einzelnes Medium; ein einzelnes Hörbuch der Serie lässt sich als eigener Eintrag hinzufügen und zuordnen. Dort steht der Knopf nicht, oder die Box sagt „Dieses Medium lässt sich keinem Tag zuordnen“.
 
 ### Bild des Tags
 
@@ -127,7 +127,7 @@ Mit dem Haken **Flex-Tag** im Fenster wird der Tag zum **Flex-Tag** (so heißt e
 
 ### Zugeordnete Tags
 
-Die Unterseite **Zugeordnete Tags** listet alle Tags mit Bild, Medium, Art (SD-Karte, NAS, Spotify, Radio, Podcast, TIDAL) und UID. Dort änderst du das Bild eines Tags oder **entfernst** ihn; ein entfernter Tag gilt beim nächsten Auflegen wieder als neu und spielt nichts.
+Die Unterseite **Zugeordnete Tags** listet alle Tags mit Bild, Medium, Art (SD-Karte, NAS, Spotify, Radio, Podcast, TIDAL, Jellyfin, Audible) und UID. Dort änderst du das Bild eines Tags oder **entfernst** ihn; ein entfernter Tag gilt beim nächsten Auflegen wieder als neu und spielt nichts.
 
 ### Auflegen und Abnehmen
 

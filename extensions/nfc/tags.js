@@ -12,9 +12,9 @@ const ARM_SECONDS = 600
 const MEDIA_KEYS = [
   'type', 'category', 'artist', 'title', 'id', 'artistid', 'showid', 'playlistid', 'audiobookid', 'release_date', 'cover', 'artistcover',
   'shuffle', 'aPartOfAll', 'aPartOfAllMin', 'aPartOfAllMax', 'episodePick', 'spotify_url', 'tidalKind', 'range_from', 'range_to',
-  'range_by', 'exclude_album_ids', 'nasPath', 'libraryPath', 'ownFiles', 'noResume', 'sorting', 'query',
+  'range_by', 'exclude_album_ids', 'jellyfinKind', 'audibleKind', 'nasPath', 'libraryPath', 'ownFiles', 'noResume', 'sorting', 'query',
 ]
-const TYPES = ['library', 'nas', 'spotify', 'radio', 'rss', 'tidal']
+const TYPES = ['library', 'nas', 'spotify', 'radio', 'rss', 'tidal', 'jellyfin', 'audible']
 
 /** The part of a medium that is kept; null if it is none or cannot be started (a folder that only opens the next level, an artist). */
 function sanitizeMedia(raw) {
@@ -34,7 +34,11 @@ function sanitizeMedia(raw) {
     (media.type === 'nas' && has('nasPath')) ||
     (media.type === 'spotify' && (has('id') || has('playlistid') || has('showid') || has('audiobookid')) && !(has('artistid') && !has('id') && !has('playlistid'))) ||
     ((media.type === 'radio' || media.type === 'rss') && has('id')) ||
-    (media.type === 'tidal' && has('id') && media.tidalKind !== 'artist')
+    (media.type === 'tidal' && has('id') && media.tidalKind !== 'artist') ||
+    // (Jellyfin: an album, a playlist or an audiobook - a whole artist opens the list of its albums; Audible: one book - a whole
+    // series opens the list of its books)
+    (media.type === 'jellyfin' && has('id') && ['album', 'playlist', 'book'].includes(media.jellyfinKind)) ||
+    (media.type === 'audible' && has('id') && media.audibleKind === 'book')
   return startable ? media : null
 }
 
@@ -69,7 +73,7 @@ function serviceCover(media) {
 }
 
 // what makes a medium the same medium (not where it was left, not its picture)
-const IDENTITY_KEYS = ['type', 'id', 'playlistid', 'showid', 'audiobookid', 'artistid', 'nasPath', 'libraryPath', 'tidalKind']
+const IDENTITY_KEYS = ['type', 'id', 'playlistid', 'showid', 'audiobookid', 'artistid', 'nasPath', 'libraryPath', 'tidalKind', 'jellyfinKind', 'audibleKind']
 
 /** A string that is the same for the same medium - the library entries without a path are told apart by artist and title. */
 function mediumKey(media) {

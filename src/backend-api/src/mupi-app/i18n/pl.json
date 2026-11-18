@@ -4296,5 +4296,6 @@
  "Schon in der Bibliothek: die ganze Serie ist dort.": "Już w bibliotece: jest tam cała seria.",
  "„Älteste zuerst“ ist die Reihenfolge der Serie.": "„Najstarsze najpierw” to kolejność serii.",
  "In deinem Konto gehört kein Hörbuch zu dieser Serie.": "Żaden audiobook na twoim koncie nie należy do tej serii.",
- "Lade die Hörbücher von Audible …": "Wczytywanie audiobooków z Audible …"
+ "Lade die Hörbücher von Audible …": "Wczytywanie audiobooków z Audible …",
+ "Dafür braucht es die NFC-Extension ab Version 0.8 – bitte unter Erweiterungen aktualisieren.": "Do tego potrzebne jest rozszerzenie NFC w wersji 0.8 lub nowszej – zaktualizuj je w sekcji Rozszerzenia."
 }
