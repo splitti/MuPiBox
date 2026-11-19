@@ -1370,6 +1370,11 @@ let userHold = false
 // (counted up at every hold and change of the user: a checkpoint written before - still on its way to the card - is not
 // put in place after one, it would land at the other user's place)
 let userGeneration = 0
+// (right after a change of the user: the first tick finds the coming user's day used up or his quiet hours on and
+// blocks again - without telling the parents once more, they had it when it began; children switching back and forth
+// at the lock screen sent it at every switch)
+let playtimeNoticeSkip = false
+let quietNoticeSkip = false
 
 // Quiet hours uses the same state machine but is purely time-window-driven (no counter).
 const quietHoursState = {
@@ -1864,7 +1869,7 @@ function isPlaybackBlocked() {
 // While allowUntil-override is active, transitions are suppressed — the parent has
 // explicitly green-lit playback for this window, so neither grace nor stop fire.
 // immediate: the song is over (the next one is starting) - stopped at once; else faded out, as a cut into a song
-function finalizePlaytimeBlock(reason, immediate = false) {
+function finalizePlaytimeBlock(reason, immediate = false, silent = false) {
   if (isAllowOverrideActive()) return
   console.log(`${new Date().toLocaleString()}: [Playtime] Finalizing block (${reason})`)
   playtimeState.state = 'blocked'
@@ -1887,18 +1892,18 @@ function finalizePlaytimeBlock(reason, immediate = false) {
   // Notify parents that today's listening time is up. telegram_send_message.py
   // loops over all configured chatIds, so both Family group and individual DMs
   // receive the message.
-  if (hasConfiguredTelegram()) {
+  if (hasConfiguredTelegram() && !silent) {
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py --key n_playtime_used_up')
   }
 }
 
-function finalizeQuietHoursBlock(reason, immediate = false) {
+function finalizeQuietHoursBlock(reason, immediate = false, silent = false) {
   if (isAllowOverrideActive()) return
   console.log(`${new Date().toLocaleString()}: [QuietHours] Finalizing block (${reason})`)
   const label = quietHoursState.activeWindow?.label
   quietHoursState.state = 'blocked'
   quietHoursState.graceEndsAt = null
-  if (hasConfiguredTelegram()) {
+  if (hasConfiguredTelegram() && !silent) {
     // Sent as a text key: telegram_send_message.py puts it into the bot's language (German/English).
     const msg = label ? ['--key', 'n_quiet_started_label', `label=${label}`] : ['--key', 'n_quiet_started']
     // No shell: the label is free text from the parents' UI, and escaping only `"` left
@@ -2093,6 +2098,9 @@ function isPlayInitiatingCommand(command) {
 // Working-state file is written separately by writeCombinedWorking once both
 // sub-systems have ticked, so the payload is consistent.
 function playtimeTickStep() {
+  // (the first tick after a change of the user: see playtimeNoticeSkip)
+  const afterSwitch = playtimeNoticeSkip
+  playtimeNoticeSkip = false
   const cfg = readPlaytimeConfig()
   if (!cfg.enabled) {
     if (playtimeState.state !== 'normal' || playtimeState.graceEndsAt !== null) {
@@ -2139,7 +2147,7 @@ function playtimeTickStep() {
         )
         writePlaytimeCheckpoint()
       } else {
-        finalizePlaytimeBlock(`limit reached (${limit} min, ${!isActuallyPlaying() ? 'nothing playing' : currentMeta.currentType === 'radio' ? 'radio stream' : 'no grace configured'})`)
+        finalizePlaytimeBlock(`limit reached (${limit} min, ${!isActuallyPlaying() ? 'nothing playing' : currentMeta.currentType === 'radio' ? 'radio stream' : 'no grace configured'})`, false, afterSwitch)
       }
     } else if (playtimeState.state === 'grace') {
       // (the song / album ending is handled by the player events and the Spotify check below)
@@ -2185,6 +2193,9 @@ function quietHoursTickStep() {
   // (state already 'blocked'). Skipping the tick keeps state at 'normal'
   // throughout the override, so the post-override tick walks the proper
   // normal -> grace -> blocked path again.
+  // (the first tick after a change of the user: see quietNoticeSkip)
+  const afterSwitch = quietNoticeSkip
+  quietNoticeSkip = false
   if (isAllowOverrideActive()) return
   const cfg = readQuietHoursConfig()
   if (!cfg.enabled) {
@@ -2214,7 +2225,7 @@ function quietHoursTickStep() {
           `${now.toLocaleString()}: [QuietHours] Entered window ${window.from}-${window.to}${window.label ? ` (${window.label})` : ''}. Letting the ${graceMode} finish.`,
         )
       } else {
-        finalizeQuietHoursBlock(`entered window ${window.from}-${window.to} (${!isActuallyPlaying() ? 'nothing playing' : currentMeta.currentType === 'radio' ? 'radio stream' : 'no grace configured'})`)
+        finalizeQuietHoursBlock(`entered window ${window.from}-${window.to} (${!isActuallyPlaying() ? 'nothing playing' : currentMeta.currentType === 'radio' ? 'radio stream' : 'no grace configured'})`, false, afterSwitch)
       }
     } else if (quietHoursState.state === 'grace') {
       // (the window as the settings have it now: its name changed in the app while it runs is the display's heading
@@ -4791,6 +4802,8 @@ function userChanged() {
   episodePositions = null
   episodePositionsDirty = false
   userHold = false
+  playtimeNoticeSkip = true
+  quietNoticeSkip = true
   loadPlaytimeCheckpoint()
 }
 

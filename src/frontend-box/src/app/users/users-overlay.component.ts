@@ -405,6 +405,12 @@ export class UsersOverlayComponent {
     this.digits.set('')
     switch (result.error) {
       case 'pin':
+        // (none was entered: the PIN was set in the app since the display last read the users - it is asked for now)
+        if (pin === undefined) {
+          this.pinFor.set({ ...u, pin: true })
+          void this.users.load()
+          return
+        }
         this.message.set(this.texts.text('usersPinWrong', { n: result.left }))
         return
       case 'pin_locked':

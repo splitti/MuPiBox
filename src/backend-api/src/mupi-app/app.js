@@ -607,7 +607,7 @@ async function renderPage(page, reload = true) {
   const token = ++renderToken
   // (before the page loads: its requests are for the user shown - or, off the library's pages, the one in place; the
   // list of the users as it is now - switched off or changed on another phone meanwhile)
-  if (reload && LIB_USER_PAGES.has(page.id) && usersState?.enabled) await loadUsers().catch(() => undefined)
+  if (reload && LIB_USER_PAGES.has(page.id)) await loadUsers().catch(() => undefined)
   if (token !== renderToken) return
   libUserShown(page)
   if (ctrl?.load && reload) {
@@ -1132,6 +1132,7 @@ const USER_LIBRARY_ROUTE =
 // "quiet now" for the box)
 const USER_PLAY_ROUTE =
   /^(\/api\/app\/(library\/(play|play-local|play-nas)|cover-hide|podcast-offline\/(episode|sync))|\/api\/(playtime\/release|playtime\/override\/clear|quiethours\/now))$/
+let blockedNoticeAt = 0
 const withUser = (path, user) => `${path}${path.includes('?') ? '&' : '?'}user=${encodeURIComponent(user)}`
 
 // (user: the user a request is for, taken by the caller when it began - a page that loads in several requests does
@@ -1141,6 +1142,8 @@ async function api(path, { method = 'GET', body, timeoutMs, user } = {}) {
   const bare = path.split('?')[0]
   if (libView.user && USER_PLAY_ROUTE.test(bare)) {
     toast(/\/library\/play/.test(bare) ? 'Abspielen geht nur aus der Bibliothek des aktiven Benutzers' : 'Das geht nur beim aktiven Benutzer', 'info')
+    // (the caller's own "did not work" right after it: not shown - this one says why)
+    blockedNoticeAt = Date.now()
     return { ok: false, status: 409, body: { error: 'other_user' }, text: '' }
   }
   if (shown && USER_LIBRARY_ROUTE.test(bare)) path = withUser(path, shown)
@@ -1249,6 +1252,10 @@ async function loadUserBar(root) {
   }
   usersState = s
   bar.hidden = false
+  // (every 30 s: drawn again only when something changed - a focus on a chip stays)
+  const sig = JSON.stringify([s.current, s.users.map((u) => [u.id, u.name, u.color])])
+  if (bar.dataset.sig === sig) return
+  bar.dataset.sig = sig
   bar.innerHTML = s.users
     .map((u) => `<button type="button" class="user-chip" data-user="${esc(u.id)}" aria-current="${u.id === s.current}">${userDot(u.color)}<span translate="no">${esc(u.name)}</span></button>`)
     .join('')
@@ -4979,8 +4986,9 @@ async function loadSpotifyMine() {
   const [r, have] = await Promise.all([api(`${SYNC_API}/my-playlists`), libraryHave('spotify')])
   if (!el.isConnected) return
   search.have = have
-  // (the results show what the library has: another user's of before otherwise)
-  drawSearch()
+  // (the results show what the library has: another user's of before otherwise - not while a search runs, its
+  // "Suche …" or its answer stays)
+  if (!search.busy) drawSearch()
   if (!r.ok) {
     // (no connection any more - disconnected, or the sign-in refused: the list of before goes, it was that account's)
     const gone = r.status === 409 || r.status === 401
@@ -5072,7 +5080,10 @@ async function doSpotifySearch() {
   const types = { Alle: 'artist,album,track,playlist', Künstler: 'artist', Alben: 'album', Titel: 'track', Playlists: 'playlist' }[search.type]
   const box = $('#s-results')
   box.innerHTML = `<div class="loading"><p>Suche …</p></div>`
-  const [r, have] = await Promise.all([api(`/api/spotify/search?q=${encodeURIComponent(q)}&types=${types}&limit=8`), libraryHave('spotify')])
+  search.busy = true
+  const [r, have] = await Promise.all([api(`/api/spotify/search?q=${encodeURIComponent(q)}&types=${types}&limit=8`), libraryHave('spotify')]).finally(() => {
+    search.busy = false
+  })
   if (!r.ok) {
     // (the backend's reason is English, e.g. "Failed to search"; 503: Spotify is not set up)
     box.innerHTML = `<p class="help">${r.status === 503 ? 'Die Suche braucht eine eingerichtete Spotify-Verbindung (Bibliothek › Spotify).' : 'Die Suche hat nicht geklappt.'}</p>`
@@ -5805,7 +5816,8 @@ async function loadTidalMine() {
   const [r, have] = await Promise.all([api(`${API}/tidal/mine`), libraryHave('tidal')])
   if (!el.isConnected) return
   tds.have = have
-  drawTidal()
+  // (not while a search runs: see loadSpotifyMine)
+  if (!tds.busy) drawTidal()
   if (!r.ok) {
     el.innerHTML = `<p class="help" style="margin:0">${esc(tidalFailText(r))}</p>`
     return
@@ -18432,6 +18444,7 @@ function userError(r) {
   if (e === 'busy') return 'Die Box ist gerade beschäftigt. Bitte gleich noch einmal.'
   if (reason === 'too_many') return 'Mehr Benutzer gehen nicht – es gibt nur neun Farben.'
   if (reason === 'name') return 'Bitte einen Namen mit 1 bis 24 Zeichen eingeben'
+  if (reason === 'name_taken') return 'Diesen Namen hat schon jemand.'
   if (reason === 'current') return 'Der aktive Benutzer lässt sich nicht entfernen.'
   if (reason === 'color') return 'Diese Farbe hat schon jemand.'
   if (reason === 'pin') return 'Bitte vier Ziffern eingeben'
@@ -18514,7 +18527,7 @@ function userColorSheet(u) {
   openSheet(
     `<h2>Farbe</h2><p class="help" style="margin:0">Das Display zeigt die Farbe des aktiven Benutzers als Punkt oben.</p>
      <div class="user-colors">${colors
-       .map((c, i) => `<button type="button" class="user-color${c === u.color ? ' on' : ''}" aria-pressed="${c === u.color}" data-color="${esc(c)}" ${taken.has(c) ? 'disabled' : ''} aria-label="${esc(tr('Farbe'))} ${i + 1}" ${taken.has(c) ? `title="${esc(tr('Diese Farbe hat schon jemand.'))}"` : ''}>${userDot(c, 28)}</button>`)
+       .map((c, i) => `<button type="button" class="user-color${c === u.color ? ' on' : ''}" aria-pressed="${c === u.color}" data-color="${esc(c)}" ${taken.has(c) ? 'disabled' : ''} aria-label="${esc(tr('Farbe'))} ${i + 1}${taken.has(c) ? ` – ${esc(tr('Diese Farbe hat schon jemand.'))}` : ''}" ${taken.has(c) ? `title="${esc(tr('Diese Farbe hat schon jemand.'))}"` : ''}>${userDot(c, 28)}</button>`)
        .join('')}</div>
      <div class="btns"><button class="btn" data-close>Abbrechen</button></div>`,
     (sheet, close) => {
@@ -18531,7 +18544,7 @@ function userColorSheet(u) {
 function userPinSheet(u) {
   openSheet(
     `<h2>PIN</h2><p class="help" style="margin:0">${esc(tr(`Vier Ziffern, die das Display verlangt, bevor es zu ${un(u.name)} wechselt. Zurück zu einem anderen Benutzer geht ohne PIN, und hier in der App fragt niemand danach.`))}</p>
-     <div class="field"><label for="user-pin">${esc(u.pin ? tr('Neue PIN') : 'PIN')}</label><input class="input user-pin-input" id="user-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="0000" aria-describedby="user-pin-help"><small id="user-pin-help">Nur Ziffern von 0 bis 9, genau vier.</small></div>
+     <div class="field"><label for="user-pin">${esc(u.pin ? tr('Neue PIN') : 'PIN')}</label><input class="input user-pin-input" id="user-pin" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="0000" aria-describedby="user-pin-help"><small id="user-pin-help">Nur Ziffern von 0 bis 9, genau vier.</small></div>
      <div class="btns"><button class="btn" data-close>Abbrechen</button>${u.pin ? '<button class="btn danger" data-clear>PIN entfernen</button>' : ''}<button class="btn primary" data-ok>Speichern</button></div>`,
     (sheet, close) => {
       sheet.querySelector('[data-close]').onclick = close
@@ -18650,9 +18663,10 @@ function mountUsers(root) {
   const byId = (id) => s.users.find((u) => u.id === id)
   const on = $('#users-on', root)
   on.onchange = async () => {
-    if (on.checked) return userAction('enable', { enabled: true }, 'Mehrere Benutzer an')
+    // (nothing done - another change of the users still running: the switch as it is)
+    if (on.checked) return (await userAction('enable', { enabled: true }, 'Mehrere Benutzer an')) || (on.checked = s.enabled)
     // (with only one user nothing has to be chosen)
-    if (s.users.length <= 1) return userAction('enable', { enabled: false }, 'Mehrere Benutzer aus')
+    if (s.users.length <= 1) return (await userAction('enable', { enabled: false }, 'Mehrere Benutzer aus')) || (on.checked = s.enabled)
     on.checked = true
     usersOffSheet()
   }
@@ -20800,6 +20814,11 @@ async function copyText(text, shown) {
 // A message at the bottom. Answers whether it was a success ('ok'): a page's change() that ends with
 // "return toast(…, 'info')" so says the box did not take the change (see commitChange)
 function toast(text, kind = 'ok') {
+  // (a request refused because another user's library is shown: api() said so already - see there)
+  if (kind !== 'ok' && Date.now() - blockedNoticeAt < 1000) {
+    blockedNoticeAt = 0
+    return false
+  }
   const el = document.createElement('div')
   el.className = `toast ${kind}`
   el.innerHTML = `${icon(kind === 'ok' ? 'check' : 'info', 18)}<span>${esc(text)}</span>`

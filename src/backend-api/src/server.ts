@@ -280,6 +280,8 @@ if (devServe) {
 // The users of the box (5.1, users.ts): their things exchanged in place at a switch. One cut off (a power cut) is
 // finished here, before anything reads the library - the configuration's part when the server runs (see listen).
 const userFiles = new UserFiles({ usersDir: path.join(DATA_DIR, 'users'), libraryDir: LIBRARY_DIR, dataDir: DATA_DIR, logsDir: LOGS_DIR })
+// (the trash's 30 days: counted only with the clock set by the time server - not known (no timesyncd): taken as right)
+userFiles.clockSure = () => clockSynced() !== false
 let userSwitchCutOff: { from: string; to: string } | null = null
 // (a restore cut off and put back at the start: the settings of the user in place in the config again, see listen)
 let userRestoreUndone = false
@@ -4399,7 +4401,11 @@ const albumFillDeps: AlbumFillDeps = {
   dataFile,
   dataLock,
   spotify: () => spotifyApiService,
-  write: (data) => new Promise((resolve, reject) => writeJsonAtomic(dataFile, data, (error) => (error ? reject(error) : resolve()))),
+  // (a switch of the user not finished: the library in place is not yet whose the box thinks - see spotifySyncDeps)
+  write: (data) =>
+    userFiles.read().switching
+      ? Promise.reject(new Error('a switch of the user is not finished'))
+      : new Promise((resolve, reject) => writeJsonAtomic(dataFile, data, (error) => (error ? reject(error) : resolve()))),
 }
 // (the library of a user who is not in place: under his own lock - a switch takes it too; gone meanwhile, the fill ends)
 const albumFillDepsOf = (file: string, lock: string): AlbumFillDeps => ({
@@ -9043,7 +9049,9 @@ const spotifySyncDeps: RunSyncDeps = {
   dataFile,
   getMupiboxConfig: getMupiboxConfigSync,
   updateMupiboxConfig,
-  acquireDataLock: () => acquireLock(dataLock, '/api/spotify-sync'),
+  // (a switch of the user not finished - its end failed twice: the library in place is the coming user's, the config
+  // still the going one's; his subscriptions put into the other's library otherwise. Again at the next run.)
+  acquireDataLock: () => (userFiles.read().switching ? 'locked' : acquireLock(dataLock, '/api/spotify-sync')),
   releaseDataLock: () => releaseLock(dataLock, '/api/spotify-sync'),
 }
 app.use('/api/spotify-sync', createSpotifySyncRouter(spotifySyncDeps))

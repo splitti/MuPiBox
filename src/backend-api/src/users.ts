@@ -74,6 +74,8 @@ export const MAIN_ID = 'main'
 const ID = /^[a-z0-9]{2,12}$/
 /** the users of before in the folder a restore puts them aside into (UserFiles.prepareRestore) */
 const RESTORE_BEFORE = 'before.json'
+/** written there when all of them are aside - from then on the users' folder holds the backup's (undoRestore) */
+const RESTORE_MOVED = 'moved.json'
 const TRASH_NAME = /^([a-z0-9]{2,12})\.(\d{10,16})$/
 
 export type SwitchMode = 'free' | 'hold' | 'app'
@@ -111,6 +113,11 @@ export function cleanName(raw: unknown): string | null {
     .replace(/\s+/g, ' ')
     .trim()
   return name.length >= 1 && name.length <= NAME_MAX ? name : null
+}
+
+/** Two names that are the same to a reader (Telegram, MQTT and Home Assistant pick a user by his name) */
+export function sameName(a: string, b: string): boolean {
+  return a.toLocaleLowerCase('de') === b.toLocaleLowerCase('de')
 }
 
 /** The user's part of the configuration, a copy */
@@ -167,6 +174,8 @@ export interface UserTrashEntry {
   deletedAt: number
   /** his PIN's hash: he comes back with it (not to the app - users-routes names the fields it gives) */
   pin?: string
+  /** put there while the clock was not right: deletedAt is not to be trusted (purgeTrash) */
+  clockUnsure?: true
 }
 
 /**
@@ -394,8 +403,17 @@ export class UserFiles {
     const dir = this.userDir(user.id)
     if (fs.existsSync(dir)) fs.renameSync(dir, to)
     else fs.mkdirSync(to, { recursive: true })
-    writeJsonSync(path.join(to, 'user.json'), { id: user.id, name: user.name, color: user.color, ...(user.pin ? { pin: user.pin } : {}) }, { ifChanged: false })
+    writeJsonSync(path.join(to, 'user.json'), { id: user.id, name: user.name, color: user.color, ...(user.pin ? { pin: user.pin } : {}), ...this.clockNote() }, { ifChanged: false })
     return key
+  }
+
+  /** Whether the box's clock is right (server.ts: set by the time server) - not known: taken as right */
+  clockSure: () => boolean = () => true
+
+  /** For user.json in the trash: the time in its name may be wrong (a Pi without a clock, before the time server
+   *  answered) - see purgeTrash */
+  private clockNote(): { clockUnsure?: true } {
+    return this.clockSure() ? {} : { clockUnsure: true }
   }
 
   /**
@@ -412,12 +430,43 @@ export class UserFiles {
     fs.mkdirSync(held, { recursive: true })
     // (the users of before, for a restore cut off - a power cut during the unzip: put back at the next start)
     writeJsonSync(path.join(held, RESTORE_BEFORE), f, { ifChanged: false })
-    this.stash(f.current)
-    for (const n of readdirOrNone(this.dirs.usersDir)) {
-      if (n === 'trash' || n.startsWith('.')) continue
-      fs.renameSync(path.join(this.dirs.usersDir, n), path.join(held, n))
+    try {
+      this.stash(f.current)
+      for (const n of readdirOrNone(this.dirs.usersDir)) {
+        if (n === 'trash' || n.startsWith('.')) continue
+        fs.renameSync(path.join(this.dirs.usersDir, n), path.join(held, n))
+      }
+      // (all of them aside: from here on what lies in the users' folder is the backup's - see undoRestore)
+      writeJsonSync(path.join(held, RESTORE_MOVED), { at: Date.now() }, { ifChanged: false })
+    } catch (err) {
+      // (stopped halfway - a full card: what was put aside back at once, nothing of the backup came)
+      try {
+        this.undoRestore(held, f)
+      } catch {
+        // (left for the next start: recoverRestore)
+      }
+      throw err
     }
     return held
+  }
+
+  /** The users of before as prepareRestore wrote them - `fallback` when that file is not readable */
+  private restoreBefore(held: string, fallback: UsersFile): UsersFile {
+    try {
+      const raw = JSON.parse(fs.readFileSync(path.join(held, RESTORE_BEFORE), 'utf8')) as UsersFile
+      if (raw && Array.isArray(raw.users) && typeof raw.current === 'string' && ID.test(raw.current)) return raw
+    } catch {
+      // (the caller's)
+    }
+    return fallback
+  }
+
+  /** The folder of a restore done or undone away: renamed first (one step), then deleted - a power cut while it is
+   *  deleted leaves no half folder that the next start took for a restore cut off */
+  private dropHeld(held: string): void {
+    const gone = path.join(this.dirs.usersDir, `.restored-${Date.now()}`)
+    fs.renameSync(held, gone)
+    fs.rmSync(gone, { recursive: true, force: true })
   }
 
   /**
@@ -425,7 +474,9 @@ export class UserFiles {
    * not know go into the trash with their things (back from there for 30 days), the rest of before goes. The user in
    * place gets what a switch gives him (lists that are not there yet, empty).
    */
-  finishRestore(held: string, before: UsersFile): void {
+  finishRestore(held: string, fallback: UsersFile): void {
+    // (the list as it was when they were put aside - a user added in between is in it too)
+    const before = this.restoreBefore(held, fallback)
     const now = this.read()
     for (const u of before.users) {
       if (now.users.some((x) => x.id === u.id)) continue
@@ -435,24 +486,38 @@ export class UserFiles {
       fs.mkdirSync(this.trashDir, { recursive: true })
       if (exists(dir)) fs.renameSync(dir, to)
       else fs.mkdirSync(to, { recursive: true })
-      writeJsonSync(path.join(to, 'user.json'), { id: u.id, name: u.name, color: u.color, ...(u.pin ? { pin: u.pin } : {}) }, { ifChanged: false })
+      writeJsonSync(path.join(to, 'user.json'), { id: u.id, name: u.name, color: u.color, ...(u.pin ? { pin: u.pin } : {}), ...this.clockNote() }, { ifChanged: false })
     }
     // (his things the backup holds in his folder - his lists, counts, play log - come in place as at a switch; his library
     // is in place already, from the backup under its own name)
     fs.rmSync(path.join(this.userDir(now.current), 'library', 'data.json'), { force: true })
     this.load(now.current)
     this.dropConfigPart(now.current)
-    fs.rmSync(held, { recursive: true, force: true })
+    this.dropHeld(held)
   }
 
-  /** The restore failed: the folders and the list of before back, the things of the user in place back in place */
-  undoRestore(held: string, before: UsersFile): void {
-    for (const n of readdirOrNone(this.dirs.usersDir)) {
-      if (n === 'trash' || n.startsWith('.')) continue
-      fs.rmSync(path.join(this.dirs.usersDir, n), { recursive: true, force: true })
+  /**
+   * The restore failed (or was cut off): the folders and the list of before back, the things of the user in place back
+   * in place. What lies in the users' folder is deleted only when all of before was aside (RESTORE_MOVED) - else it is
+   * still the box's own, prepareRestore stopped halfway. And then only what is the backup's: a name that comes back
+   * from aside, or one that was no user of before - an undo cut off itself and done again keeps what it put back.
+   */
+  undoRestore(held: string, fallback: UsersFile): void {
+    const before = this.restoreBefore(held, fallback)
+    const moved = exists(path.join(held, RESTORE_MOVED))
+    const back = new Set(readdirOrNone(held).filter((n) => n !== RESTORE_BEFORE && n !== RESTORE_MOVED))
+    if (moved) {
+      const ours = new Set(['users.json', ...before.users.map((u) => u.id)])
+      for (const n of readdirOrNone(this.dirs.usersDir)) {
+        if (n === 'trash' || n.startsWith('.')) continue
+        if (back.has(n) || !ours.has(n)) fs.rmSync(path.join(this.dirs.usersDir, n), { recursive: true, force: true })
+      }
     }
-    for (const n of readdirOrNone(held)) if (n !== RESTORE_BEFORE) fs.renameSync(path.join(held, n), path.join(this.dirs.usersDir, n))
-    fs.rmSync(held, { recursive: true, force: true })
+    for (const n of back) {
+      const to = path.join(this.dirs.usersDir, n)
+      if (!exists(to)) fs.renameSync(path.join(held, n), to)
+    }
+    this.dropHeld(held)
     this.load(before.current)
   }
 
@@ -466,6 +531,11 @@ export class UserFiles {
   recoverRestore(): boolean {
     let found = false
     for (const n of readdirOrNone(this.dirs.usersDir)) {
+      // (one done or undone whose deleting was cut off: see dropHeld)
+      if (n.startsWith('.restored-')) {
+        fs.rmSync(path.join(this.dirs.usersDir, n), { recursive: true, force: true })
+        continue
+      }
       if (!n.startsWith('.restore-')) continue
       const held = path.join(this.dirs.usersDir, n)
       let before: UsersFile | null = null
@@ -504,6 +574,7 @@ export class UserFiles {
         // (only a colour of the list: the app puts it into a style)
         color: typeof meta.color === 'string' && (USER_COLORS as readonly string[]).includes(meta.color) ? meta.color : USER_COLORS[0],
         deletedAt: Number(m[2]),
+        ...(meta.clockUnsure === true ? { clockUnsure: true } : {}),
         ...(typeof meta.pin === 'string' && meta.pin.startsWith('s1$') ? { pin: meta.pin } : {}),
       })
     }
@@ -520,9 +591,23 @@ export class UserFiles {
     fs.rmSync(path.join(to, 'user.json'), { force: true })
   }
 
-  /** What lay in the trash longer than TRASH_DAYS goes */
+  /** What lay in the trash longer than TRASH_DAYS goes - only with the clock right; one put there while it was not
+   *  (its time far back, the box was off for weeks) gets the time of now: its 30 days begin now */
   purgeTrash(now = Date.now()): void {
+    if (!this.clockSure()) return
     for (const t of this.trashList()) {
+      if (t.clockUnsure) {
+        const key = `${t.id}.${now}`
+        fs.renameSync(path.join(this.trashDir, t.key), path.join(this.trashDir, key))
+        const meta = path.join(this.trashDir, key, 'user.json')
+        try {
+          const { clockUnsure: _, ...rest } = obj(JSON.parse(fs.readFileSync(meta, 'utf8')))
+          writeJsonSync(meta, rest, { ifChanged: false })
+        } catch {
+          // (no list of his: the name of the folder is enough)
+        }
+        continue
+      }
       if (now - t.deletedAt > TRASH_DAYS * DAY_MS) fs.rmSync(path.join(this.trashDir, t.key), { recursive: true, force: true })
     }
   }
@@ -660,6 +745,12 @@ export class Users {
     private readonly hooks: SwitchHooks,
   ) {}
 
+  /** A backup being restored: the users of before are aside, the unzip writes the list - a change now got lost in it
+   *  (a user out of the trash: in no list then, and out of the trash) */
+  private notDuringRestore(): void {
+    if (this.files.restoreHeld()) throw new UserSwitchError('busy', 'a backup is being restored')
+  }
+
   private serial<T>(work: () => Promise<T>): Promise<T> {
     const run = this.chain.then(work)
     this.chain = run.catch(() => undefined)
@@ -749,6 +840,9 @@ export class Users {
       if (u.pin && f.current !== id) {
         const left = this.pinPausedUntil - Date.now()
         if (left > 0) throw new UserSwitchError('pin_locked', String(Math.ceil(left / 1000)))
+        // (none sent: the display did not know of the PIN yet - set in the app a moment ago; it asks for it now, that is
+        // no wrong try)
+        if (pin === undefined || pin === null) throw new UserSwitchError('pin', String(PIN_TRIES - this.pinFails))
         if (typeof pin !== 'string' || !PIN_RE.test(pin) || !pinMatches(u.pin, pin)) {
           this.pinFails += 1
           if (this.pinFails >= PIN_TRIES) {
@@ -767,6 +861,7 @@ export class Users {
   /** Set (4 digits) or take away (null, '') the PIN of a user */
   setPin(id: string, pin: unknown): Promise<void> {
     return this.serial(async () => {
+      this.notDuringRestore()
       const f = this.files.read()
       const u = f.users.find((x) => x.id === id)
       if (!u) throw new UserSwitchError('unknown_user', 'no such user')
@@ -849,9 +944,11 @@ export class Users {
    *  that user's), the subscriptions only with a copy - an empty library has none */
   add(nameRaw: unknown, from: string | null): Promise<User> {
     return this.serial(async () => {
+      this.notDuringRestore()
       const f = this.files.read()
       const name = cleanName(nameRaw)
       if (!name) throw new UserSwitchError('failed', 'name')
+      if (f.users.some((u) => sameName(u.name, name))) throw new UserSwitchError('failed', 'name_taken')
       if (f.users.length >= MAX_USERS) throw new UserSwitchError('failed', 'too_many')
       if (from && !f.users.some((u) => u.id === from)) throw new UserSwitchError('unknown_user', 'no such user')
       const color = freeColor(f.users)
@@ -900,11 +997,13 @@ export class Users {
 
   rename(id: string, nameRaw: unknown): Promise<void> {
     return this.serial(async () => {
+      this.notDuringRestore()
       const f = this.files.read()
       const u = f.users.find((x) => x.id === id)
       const name = cleanName(nameRaw)
       if (!u) throw new UserSwitchError('unknown_user', 'no such user')
       if (!name) throw new UserSwitchError('failed', 'name')
+      if (f.users.some((o) => o.id !== id && sameName(o.name, name))) throw new UserSwitchError('failed', 'name_taken')
       u.name = name
       this.files.write(f)
     })
@@ -912,6 +1011,7 @@ export class Users {
 
   setColor(id: string, color: string): Promise<void> {
     return this.serial(async () => {
+      this.notDuringRestore()
       const f = this.files.read()
       const u = f.users.find((x) => x.id === id)
       if (!u) throw new UserSwitchError('unknown_user', 'no such user')
@@ -925,6 +1025,7 @@ export class Users {
 
   setSwitchMode(mode: unknown): Promise<void> {
     return this.serial(async () => {
+      this.notDuringRestore()
       if (mode !== 'free' && mode !== 'hold' && mode !== 'app') throw new UserSwitchError('failed', 'mode')
       const f = this.files.read()
       f.switchMode = mode
@@ -935,6 +1036,7 @@ export class Users {
   /** Into the trash: not the user in place */
   remove(id: string): Promise<void> {
     return this.serial(async () => {
+      this.notDuringRestore()
       const f = this.files.read()
       const u = f.users.find((x) => x.id === id)
       if (!u) throw new UserSwitchError('unknown_user', 'no such user')
@@ -948,6 +1050,7 @@ export class Users {
   /** Back out of the trash, with its colour or a free one */
   restore(key: string): Promise<User> {
     return this.serial(async () => {
+      this.notDuringRestore()
       const f = this.files.read()
       const t = this.files.trashList().find((x) => x.key === key)
       if (!t) throw new UserSwitchError('unknown_user', 'not in the trash')
@@ -955,8 +1058,11 @@ export class Users {
       const id = f.users.some((u) => u.id === t.id) ? newUserId(f.users.map((u) => u.id)) : t.id
       const color = f.users.some((u) => u.color === t.color) ? freeColor(f.users) : t.color
       if (!color) throw new UserSwitchError('failed', 'too_many')
+      // (his name given to another meanwhile: with a number behind it)
+      let name = t.name
+      for (let n = 2; f.users.some((u) => sameName(u.name, name)); n++) name = `${t.name.slice(0, NAME_MAX - String(n).length - 1)} ${n}`
       this.files.untrash(key, id)
-      const user: User = { id, name: t.name, color, ...(t.pin ? { pin: t.pin } : {}) }
+      const user: User = { id, name, color, ...(t.pin ? { pin: t.pin } : {}) }
       f.users.push(user)
       this.files.write(f)
       return user
@@ -967,6 +1073,7 @@ export class Users {
    *  with their things and are back when it is switched on again. */
   setEnabled(enabled: boolean, keep?: string): Promise<UsersFile> {
     return this.serial(async () => {
+      this.notDuringRestore()
       if (!enabled && keep && keep !== this.files.read().current) await this.switchNow(keep, true)
       const f = this.files.read()
       f.enabled = enabled

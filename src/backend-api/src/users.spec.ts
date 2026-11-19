@@ -237,6 +237,21 @@ describe('the users', () => {
     assert.deepEqual(files.trashList(), [])
   })
 
+  it('no two users with the same name - Telegram, MQTT and Home Assistant pick one by it', async () => {
+    const users = new Users(files, hooks)
+    const anna = await users.add('Anna', null)
+    await assert.rejects(users.add(' anna ', null), (e: UserSwitchError) => e.message === 'name_taken')
+    const ben = await users.add('Ben', null)
+    await assert.rejects(users.rename(ben.id, 'ANNA'), (e: UserSwitchError) => e.message === 'name_taken')
+    // (his own name in other letters is no other user's)
+    await users.rename(anna.id, 'ANNA')
+    await users.remove(anna.id)
+    await users.rename(ben.id, 'Anna')
+    const [t] = files.trashList()
+    const back = await users.restore(t.key)
+    assert.equal(back.name, 'ANNA 2')
+  })
+
   it('switched off with another user kept: the box goes on with him, the others rest', async () => {
     const users = new Users(files, hooks)
     await users.setEnabled(true)
@@ -373,11 +388,66 @@ describe('the users', () => {
     assert.equal(files.recoverRestore(), false)
   })
 
+  it('a restore cut off while it put the users aside: at the next start nothing of them deleted', async () => {
+    const users = new Users(files, hooks)
+    await users.setEnabled(true)
+    const anna = await users.add('Anna', null)
+    write(path.join(root, 'data', 'users', anna.id, 'library', 'data.json'), '[{"title":"Anna"}]')
+    const held = files.prepareRestore()
+    // (as if it stopped before Anna's folder went aside: hers still in the users' folder, the mark of "all aside" not written)
+    fs.renameSync(path.join(held, anna.id), path.join(root, 'data', 'users', anna.id))
+    fs.rmSync(path.join(held, 'moved.json'))
+    assert.equal(files.recoverRestore(), true)
+    assert.deepEqual(files.read().users.map((u) => u.name), ['Standard', 'Anna'])
+    assert.equal(read(path.join(lib(), 'data.json')), '[{"title":"A"}]')
+    assert.equal(read(path.join(root, 'data', 'users', anna.id, 'library', 'data.json')), '[{"title":"Anna"}]')
+    assert.deepEqual(fs.readdirSync(path.join(root, 'data', 'users')).filter((n) => n.startsWith('.')), [])
+  })
+
+  it('a restore done whose folder was being deleted at a power cut: only that folder goes at the next start', async () => {
+    const users = new Users(files, hooks)
+    await users.setEnabled(true)
+    write(path.join(root, 'data', 'users', '.restored-1795000000000', 'before.json'), '{"version":1,"enabled":true,"current":"main","users":[]}')
+    assert.equal(files.recoverRestore(), false)
+    assert.deepEqual(fs.readdirSync(path.join(root, 'data', 'users')).filter((n) => n.startsWith('.')), [])
+    assert.deepEqual(files.read().users.map((u) => u.name), ['Standard'])
+  })
+
+  it('no change of the users while a backup is restored - the unzip writes their list', async () => {
+    const users = new Users(files, hooks)
+    await users.setEnabled(true)
+    const anna = await users.add('Anna', null)
+    const held = files.prepareRestore()
+    await assert.rejects(users.add('Ben', null), (e: UserSwitchError) => e.code === 'busy')
+    await assert.rejects(users.rename(anna.id, 'Bea'), (e: UserSwitchError) => e.code === 'busy')
+    files.undoRestore(held, files.read())
+    assert.deepEqual(files.read().users.map((u) => u.name), ['Standard', 'Anna'])
+    await users.add('Ben', null)
+  })
+
   it('empties the trash after 30 days', async () => {
     const users = new Users(files, hooks)
     const a = await users.add('Anna', null)
     await users.remove(a.id)
     files.purgeTrash(Date.now() + 31 * 24 * 60 * 60 * 1000)
+    assert.deepEqual(files.trashList(), [])
+  })
+
+  it('counts the trash days only with the clock right - one put there before the time server answered starts anew', async () => {
+    const users = new Users(files, hooks)
+    const a = await users.add('Anna', null)
+    files.clockSure = () => false
+    await users.remove(a.id)
+    const day = 24 * 60 * 60 * 1000
+    files.purgeTrash(Date.now() + 31 * day)
+    assert.equal(files.trashList().length, 1)
+    files.clockSure = () => true
+    const now = Date.now() + 31 * day
+    files.purgeTrash(now)
+    const [t] = files.trashList()
+    assert.equal(t.deletedAt, now)
+    assert.equal(t.clockUnsure, undefined)
+    files.purgeTrash(now + 31 * day)
     assert.deepEqual(files.trashList(), [])
   })
 })
@@ -400,6 +470,10 @@ describe('the PIN of a user', () => {
     await assert.rejects(users.setPin(leni.id, '12a4'), (e: UserSwitchError) => e.code === 'failed')
     await users.setPin(leni.id, '2580')
     assert.ok(users.state().users.find((u) => u.id === leni.id)?.pin?.startsWith('s1$'))
+    // (none sent - the display did not know of the PIN yet: asked for, no try used up)
+    for (let i = 0; i < PIN_TRIES + 1; i++) {
+      await assert.rejects(users.switchFromDisplay(leni.id, undefined), (e: UserSwitchError) => e.code === 'pin' && e.message === String(PIN_TRIES))
+    }
     for (let i = 1; i < PIN_TRIES; i++) {
       await assert.rejects(users.switchFromDisplay(leni.id, '0000'), (e: UserSwitchError) => e.code === 'pin' && e.message === String(PIN_TRIES - i))
     }
