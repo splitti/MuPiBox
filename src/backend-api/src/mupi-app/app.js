@@ -592,10 +592,10 @@ function libUserTop(page) {
   const text = !other
     ? ''
     : page.id === 'spielzeit'
-      ? tr(`Du bearbeitest die Spielzeit von ${other.name}. Sie gilt, sobald ${other.name} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.`)
+      ? tr(`Du bearbeitest die Spielzeit von ${un(other.name)}. Sie gilt, sobald ${un(other.name)} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.`)
       : page.id === 'fotos' || page.id === 'fotoalbum'
-        ? tr(`„Am Display zeigen“ gilt hier für ${other.name}. Die Alben selbst gehören der ganzen Box.`)
-        : tr(`Du bearbeitest die Bibliothek von ${other.name}. Abspielen geht nur aus der Bibliothek des aktiven Benutzers.`)
+        ? tr(`„Am Display zeigen“ gilt hier für ${un(other.name)}. Die Alben selbst gehören der ganzen Box.`)
+        : tr(`Du bearbeitest die Bibliothek von ${un(other.name)}. Abspielen geht nur aus der Bibliothek des aktiven Benutzers.`)
   const note = other ? `<div class="note wide">${icon('info', 18)}<span>${esc(text)}</span></div>` : ''
   const label = page.id === 'verlauf' ? 'Hör-Verlauf von' : page.id === 'spielzeit' ? 'Spielzeit von' : page.id === 'fotos' || page.id === 'fotoalbum' ? 'Fotoalben von' : 'Bibliothek von'
   return [`<div class="user-bar wide lib-user" id="lib-user"><span class="lib-user-lbl">${esc(tr(label))}</span>${chips}</div>${note}`]
@@ -1123,6 +1123,9 @@ function action(act, label, page) {
 // shown: the user the library's pages show (also the one in place - it is named in every request of them, so a switch
 // at the display meanwhile does not send a change to the next user); null off those pages.
 const libView = { user: null, shown: null }
+// A user's name inside a sentence for tr(): kept as it is - "Standard" became "Default" in English otherwise (i18n.js
+// fill leaves a value in these marks alone; they are invisible, made for text put into other text)
+const un = (name) => `\u2068${name}\u2069`
 const USER_LIBRARY_ROUTE =
   /^(\/api\/(data|data-version|add|edit|delete|delete-many|playtime|playtime\/extend)|\/api\/app\/library\/(subscriptions|subscribe-artist|unsubscribe-artist|remove-synced|remove-album|artist-exclude|add-album|episodes)|\/api\/app\/(heard|tiles\/limit|tiles\/time|caps-config|playlog|photos\/settings|photos\/time|photos\/overview|photos\/albums\/[a-f0-9]{10}))$/
 // (what goes for the box or the user in place only: not while another user's library is shown - playing, a release or
@@ -1252,7 +1255,7 @@ async function loadUserBar(root) {
   for (const b of bar.querySelectorAll('[data-user]')) {
     const u = s.users.find((x) => x.id === b.dataset.user)
     b.onclick = () => {
-      if (u.id === usersState.current) return toast(tr(`${u.name} ist aktiv`), 'info')
+      if (u.id === usersState.current) return toast(tr(`${un(u.name)} ist aktiv`), 'info')
       // (the whole start page anew: its tiles, pins and notices are the coming user's)
       switchUserSheet(u, () => currentPage()?.id === 'start' && renderPage(currentPage()))
     }
@@ -18460,14 +18463,14 @@ async function userAction(path, body, okText) {
 // (not confirmSheet: its button is the red one of deleting - a switch deletes nothing)
 function switchUserSheet(u, after) {
   openSheet(
-    `<h2>${esc(tr('Wechseln'))}</h2><p class="help" style="margin:0">${esc(tr(`Zu ${u.name} wechseln? Die Wiedergabe hält an, und das Display zeigt dann die Bibliothek von ${u.name}.`))}</p>
+    `<h2>${esc(tr('Wechseln'))}</h2><p class="help" style="margin:0">${esc(tr(`Zu ${un(u.name)} wechseln? Die Wiedergabe hält an, und das Display zeigt dann die Bibliothek von ${un(u.name)}.`))}</p>
      <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Wechseln</button></div>`,
     (sheet, close) => {
       sheet.querySelector('[data-close]').onclick = close
       sheet.querySelector('[data-ok]').onclick = async () => {
         close()
-        toast(tr(`Wechsle zu ${u.name} …`), 'info')
-        if (await userAction('switch', { id: u.id }, tr(`${u.name} ist jetzt aktiv`))) {
+        toast(tr(`Wechsle zu ${un(u.name)} …`), 'info')
+        if (await userAction('switch', { id: u.id }, tr(`${un(u.name)} ist jetzt aktiv`))) {
           // (Hören showed the user of before until it read its list again)
           libChanged()
           after?.()
@@ -18481,7 +18484,7 @@ function userNameSheet(u) {
   const others = usersState?.users ?? []
   const copy = !u
     ? `<div class="field"><label for="user-from">Bibliothek</label><select class="input" id="user-from">
-        <option value="">Leer anfangen</option>${others.map((o) => `<option value="${esc(o.id)}">${esc(tr(`Kopie der Bibliothek von ${o.name}`))}</option>`).join('')}
+        <option value="">Leer anfangen</option>${others.map((o) => `<option value="${esc(o.id)}">${esc(tr(`Kopie der Bibliothek von ${un(o.name)}`))}</option>`).join('')}
        </select><small>Die Einstellungen kommen vom aktiven Benutzer, bei einer Kopie von dem kopierten. Spotify-Abos gibt es nur mit einer Kopie.</small></div>`
     : ''
   openSheet(
@@ -18496,7 +18499,7 @@ function userNameSheet(u) {
         if (!name) return toast('Bitte einen Namen eingeben', 'info')
         const done = u
           ? await userAction('rename', { id: u.id, name }, 'Gespeichert')
-          : await userAction('add', { name, from: sheet.querySelector('#user-from')?.value || undefined }, tr(`${name} ist angelegt`))
+          : await userAction('add', { name, from: sheet.querySelector('#user-from')?.value || undefined }, tr(`${un(name)} ist angelegt`))
         if (done) close()
       }
       sheet.querySelector('[data-ok]').onclick = ok
@@ -18527,7 +18530,7 @@ function userColorSheet(u) {
 // The PIN of a user: the display asks it before it switches to him (not the app - the parents' password is enough)
 function userPinSheet(u) {
   openSheet(
-    `<h2>PIN</h2><p class="help" style="margin:0">${esc(tr(`Vier Ziffern, die das Display verlangt, bevor es zu ${u.name} wechselt. Zurück zu einem anderen Benutzer geht ohne PIN, und hier in der App fragt niemand danach.`))}</p>
+    `<h2>PIN</h2><p class="help" style="margin:0">${esc(tr(`Vier Ziffern, die das Display verlangt, bevor es zu ${un(u.name)} wechselt. Zurück zu einem anderen Benutzer geht ohne PIN, und hier in der App fragt niemand danach.`))}</p>
      <div class="field"><label for="user-pin">${esc(u.pin ? tr('Neue PIN') : 'PIN')}</label><input class="input" id="user-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"></div>
      <div class="btns"><button class="btn" data-close>Abbrechen</button>${u.pin ? '<button class="btn danger" data-clear>PIN entfernen</button>' : ''}<button class="btn primary" data-ok>Speichern</button></div>`,
     (sheet, close) => {
@@ -18561,7 +18564,7 @@ function usersOffSheet() {
         b.onclick = async () => {
           close()
           const keep = list.find((u) => u.id === b.dataset.keep)
-          if (keep && keep.id !== usersState.current) toast(tr(`Wechsle zu ${keep.name} …`), 'info')
+          if (keep && keep.id !== usersState.current) toast(tr(`Wechsle zu ${un(keep.name)} …`), 'info')
           await userAction('enable', { enabled: false, keep: b.dataset.keep }, 'Mehrere Benutzer aus')
         }
       }
@@ -18644,8 +18647,8 @@ function mountUsers(root) {
   for (const b of root.querySelectorAll('[data-user-remove]')) {
     const u = byId(b.dataset.userRemove)
     b.onclick = () =>
-      confirmSheet('Entfernen', tr(`${u.name} entfernen? Die Bibliothek und die Einstellungen bleiben 30 Tage im Papierkorb.`), () =>
-        userAction('remove', { id: u.id }, tr(`${u.name} ist im Papierkorb`)),
+      confirmSheet('Entfernen', tr(`${un(u.name)} entfernen? Die Bibliothek und die Einstellungen bleiben 30 Tage im Papierkorb.`), () =>
+        userAction('remove', { id: u.id }, tr(`${un(u.name)} ist im Papierkorb`)),
       )
   }
   for (const b of root.querySelectorAll('[data-user-restore]')) b.onclick = () => userAction('restore', { key: b.dataset.userRestore }, 'Wiederhergestellt')

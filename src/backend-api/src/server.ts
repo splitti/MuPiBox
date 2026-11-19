@@ -42,6 +42,7 @@ import { buildElternLandingHandler, createElternApiRouter, registerDisplayNetwor
 import { isRestoreRunning } from './app-api/admin'
 import { updateRunning } from './app-api/updates'
 import { registerUserRoutes } from './app-api/users-routes'
+import { CUSTOM_THEME_CSS, customThemeCss, customThemeOf } from './app-api/custom-theme'
 import { UserFiles, userLibraryLock, Users } from './users'
 import { startSpotifyLoginWatch } from './app-api/spotify-auth-age'
 import { startTlsWatch } from './app-api/tls'
@@ -1231,6 +1232,22 @@ registerHaAppRoutes(haRouter, haDeps, { session: requireSession, csrf: requireCs
 app.use('/api/app', haRouter)
 
 // The users of the box (5.1, users.ts): what the server does around a switch
+// The Smart-Sync's state file of the user in place (/tmp/.spotify_sync_state.json, state-file.ts) and those of the
+// others (.<id>.json): exchanged at a switch - whose it holds is kept here, so a switch finished twice (cut off) swaps
+// nothing back
+const SYNC_STATE = '/tmp/.spotify_sync_state.json'
+let syncStateOwner = userFiles.read().current
+function swapSyncState(to: string): void {
+  if (to === syncStateOwner) return
+  try {
+    if (fs.existsSync(SYNC_STATE)) fs.renameSync(SYNC_STATE, `/tmp/.spotify_sync_state.${syncStateOwner}.json`)
+    const theirs = `/tmp/.spotify_sync_state.${to}.json`
+    if (fs.existsSync(theirs)) fs.renameSync(theirs, SYNC_STATE)
+  } catch (err) {
+    console.warn(`${new Date().toLocaleString()}: [users] Smart-Sync state: ${(err as Error).message}`)
+  }
+  syncStateOwner = to
+}
 const PLAYER_BASE = 'http://127.0.0.1:5005'
 const users = new Users(userFiles, {
   busy: async () => {
@@ -1298,6 +1315,10 @@ const users = new Users(userFiles, {
   readConfig: async () => (await readJsonFile(mupiboxConfigPath)) as Record<string, unknown>,
   updateConfig: (mutate) => updateMupiboxConfig((cfg) => mutate(cfg)),
   forgetCaches: () => {
+    // (the Smart-Sync's state of the user in place - its last run, its conflicts: under its own name, the box's file is
+    // read by the app, the bot and the reminders - the going user's under his, the coming user's in its place)
+    const s = userFiles.read().switching
+    if (s) swapSyncState(s.to)
     heardStore.forget()
     episodeState.forget()
     forgetHiddenCovers()
@@ -1308,6 +1329,9 @@ const users = new Users(userFiles, {
   reload: async () => {
     await fs.promises.rm(homeCacheFile, { force: true }).catch(() => undefined)
     await applyThemeOfConfig().catch((err) => console.warn(`${new Date().toLocaleString()}: [users] theme: ${(err as Error).message}`))
+    // (the own theme's settings are the user's, its stylesheet the box's one file: written for the coming user)
+    const mb = (getMupiboxConfigSync()?.mupibox ?? {}) as Record<string, unknown>
+    if (mb.theme === 'custom') await fs.promises.writeFile(CUSTOM_THEME_CSS, customThemeCss(customThemeOf(mb.customTheme))).catch(() => undefined)
     // (volumes and the rest the system and the player take from the config)
     runSettingUpdate()
     await fetch(`${PLAYER_BASE}/display/reload-page`, { method: 'POST', signal: AbortSignal.timeout(8000) }).catch(() => undefined)

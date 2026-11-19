@@ -148,7 +148,8 @@ function fill(dst, values) {
   return dst.replace(/\{(\d*)\}/g, (_, n) => {
     const v = values[n === '' ? i++ : Number(n)] ?? ''
     const core = v.trim()
-    if (!core || !/\p{L}/u.test(core)) return v
+    // (a name - app.js un(): as it is)
+    if (!core || !/\p{L}/u.test(core) || core.startsWith('\u2068')) return v
     const t = translateText(core)
     return t === null ? v : v.replace(core, () => t)
   })
