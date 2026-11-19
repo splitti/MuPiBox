@@ -33,9 +33,11 @@ export function createSpotifySyncRouter(deps: RunSyncDeps): Router {
 
   /** GET /api/spotify-sync/status
    *  Returns the current sync state, last run info, and auth status. */
-  router.get('/status', (_req, res) => {
-    const state = readStateFile(deps.stateFilePath)
-    const config = loadSpotifySyncConfig(deps.getMupiboxConfig())
+  router.get('/status', (req, res) => {
+    // (?user=: a user who is not in place - his Smart-Sync on or off and his runs; the sign-in is the box's)
+    const of = (typeof req.query.user === 'string' && otherSyncUser(req.query.user)) || deps
+    const state = readStateFile(of.stateFilePath)
+    const config = loadSpotifySyncConfig(of.getMupiboxConfig())
     const tokenStore = loadSpotifyTokenStore(deps.getMupiboxConfig())
     res.json({
       enabled: config.enabled,

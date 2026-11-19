@@ -50,7 +50,7 @@ Nur beim aktiven Kind gehen **Abspielen**, **Sperren aufheben**, **Ruhe sofort**
 
 ## Was im Hintergrund für alle läuft
 
-- **Smart-Sync**: Die Box gleicht die Spotify-Abos jedes Kindes ab, jeweils in seine eigene Bibliothek, jedes in seinem eigenen Abstand.
+- **Smart-Sync**: Die Box gleicht die Spotify-Abos jedes Kindes ab, jeweils in seine eigene Bibliothek, jedes in seinem eigenen Abstand. Ein- und ausgeschaltet wird er je Kind, während es aktiv ist (**Bibliothek › Spotify**). Ein Kind mit leerer Bibliothek beginnt ohne Smart-Sync: Neue Abos kommen dann einmal auf die Box, spätere Folgen erst, wenn sein Smart-Sync an ist.
 - **Offline-Folgen** von Podcasts liegen einmal auf der SD-Karte. Eine Folge bleibt, solange ein Kind sie behalten will. Hat ein Kind 1 Folge eingestellt und ein anderes 3, liegen die 3 neuesten dort.
 - **Telegram**: Ein Name am Ende eines Befehls meint dieses Kind, ohne Namen das aktive (`/status Leni`, `/extend 30 Leni`, siehe [Telegram](../netzwerk/telegram.md)). Der Wochenrückblick kommt für jedes Kind einzeln.
 

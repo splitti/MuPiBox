@@ -370,15 +370,20 @@ export class UserFiles {
     const dir = this.userDir(id)
     if (fs.existsSync(dir)) fs.rmSync(dir, { recursive: true, force: true })
     fs.mkdirSync(path.join(dir, 'library'), { recursive: true })
-    if (!from) return
-    const src = from === currentId ? this.dirs.libraryDir : path.join(this.userDir(from), 'library')
-    const names = from === currentId ? this.liveLibraryEntries() : readdirOrNone(src).filter((n) => !/\.(tmp|lock|new)(\.|$)/.test(n))
-    // (the library and the lists made of it - not the resume list, the positions, what was heard: the new user has
-    // heard nothing yet)
-    for (const n of names) {
-      if (!['data.json', 'offline_data.json'].includes(n)) continue
-      fs.copyFileSync(path.join(src, n), path.join(dir, 'library', n))
+    if (from) {
+      const src = from === currentId ? this.dirs.libraryDir : path.join(this.userDir(from), 'library')
+      const names = from === currentId ? this.liveLibraryEntries() : readdirOrNone(src).filter((n) => !/\.(tmp|lock|new)(\.|$)/.test(n))
+      // (the library and the lists made of it - not the resume list, the positions, what was heard: the new user has
+      // heard nothing yet)
+      for (const n of names) {
+        if (!['data.json', 'offline_data.json'].includes(n)) continue
+        fs.copyFileSync(path.join(src, n), path.join(dir, 'library', n))
+      }
     }
+    // (none to copy: an empty library - the Smart-Sync of the subscriptions given him in the app writes into it, and
+    // found none)
+    const data = path.join(dir, 'library', 'data.json')
+    if (!fs.existsSync(data)) writeJsonSync(data, [], { ifChanged: false })
   }
 
   /** Into the trash (a user not in place) */
@@ -398,8 +403,11 @@ export class UserFiles {
    * switch), then every user's folder and the list aside into a folder of their own - the backup's come in their
    * place whole, nothing of before mixes in. Returns that folder (for finishRestore / undoRestore).
    */
-  prepareRestore(): string {
+  prepareRestore(config?: Record<string, unknown>): string {
     const f = this.read()
+    // (his part of the configuration goes with him: in the trash, or back after a restore that failed - it was only in
+    // the config the backup replaces)
+    if (config) this.writeConfigPart(f.current, userConfigOf(config))
     const held = path.join(this.dirs.usersDir, `.restore-${Date.now()}`)
     fs.mkdirSync(held, { recursive: true })
     // (the users of before, for a restore cut off - a power cut during the unzip: put back at the next start)
@@ -446,6 +454,11 @@ export class UserFiles {
     for (const n of readdirOrNone(held)) if (n !== RESTORE_BEFORE) fs.renameSync(path.join(held, n), path.join(this.dirs.usersDir, n))
     fs.rmSync(held, { recursive: true, force: true })
     this.load(before.current)
+  }
+
+  /** A restore under way (or cut off): the users of before put aside - the libraries are not whole now */
+  restoreHeld(): boolean {
+    return readdirOrNone(this.dirs.usersDir).some((n) => n.startsWith('.restore-'))
   }
 
   /** A restore cut off (the server ended during it - a power cut, a restart): the users of before back - at the start,
@@ -703,6 +716,18 @@ export class Users {
     this.files.write(f)
     await this.hooks.playerChanged(true).catch(() => undefined)
     await this.hooks.reload().catch(() => undefined)
+  }
+
+  /** After a restore that failed or was cut off: the settings of the user in place (kept in his folder) in the config
+   *  again - it may be the backup's now */
+  reapplyKept(): Promise<void> {
+    return this.serial(async () => {
+      const id = this.files.read().current
+      const part = this.files.readConfigPart(id)
+      if (!part) return
+      await this.hooks.updateConfig((c) => applyUserConfig(c, part))
+      this.files.dropConfigPart(id)
+    })
   }
 
   /** Switch to user `id`: refused while the box is busy (an update, a restore, a sync ...) - after waiting a little */

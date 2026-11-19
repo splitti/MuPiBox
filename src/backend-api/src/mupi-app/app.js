@@ -664,6 +664,7 @@ async function renderPage(page, reload = true) {
       libView.user = id === usersState?.current ? null : id
       // (its buttons went out for the user chosen now already - +10 min, show on the display ...)
       main.innerHTML = `<div class="loading"><p>${esc('Lade …')}</p></div>`
+      stopPageTimers()
       renderPage(page)
     }
   }
@@ -2954,7 +2955,8 @@ async function loadLib() {
   const [data, sync, nas, subs, profiles, covers, ...local] = await Promise.all([
     // (the box's names first: its own pictures go through the app's address, see ownCover)
     loadBoxHosts().then(() => api('/api/data', { user })),
-    api(`${SYNC_API}/status`),
+    // (his Smart-Sync: on or off is each user's - the one in place's said "new ones come by themselves" for another)
+    api(`${SYNC_API}/status${user ? `?user=${encodeURIComponent(user)}` : ''}`),
     api('/api/nas/artists'),
     api(`${API}/library/subscriptions`, { user }),
     api('/api/nas/profiles'),
@@ -15485,9 +15487,12 @@ async function loadPhotoAlbum() {
     } catch {}
   }
   if (!id) throw new Error('no album')
-  const [a, o] = await Promise.all([api(`${API}/photos/albums/${id}`), photoLib.overview && !photoLib.stale && photoLib.user === libView.shown ? null : api(`${API}/photos/overview`)])
+  const user = libView.shown
+  const [a, o] = await Promise.all([api(`${API}/photos/albums/${id}`), photoLib.overview && !photoLib.stale && photoLib.user === user ? null : api(`${API}/photos/overview`)])
+  // (another user chosen meanwhile: his page reads his own - whether the album shows on his display)
+  if (user !== libView.shown) return
   if (!a.ok) throw new Error(`album ${a.status}`)
-  if (o?.ok) Object.assign(photoLib, { overview: o.body, stale: false })
+  if (o?.ok) Object.assign(photoLib, { overview: o.body, stale: false, user })
   photoLib.albumId = id
   photoLib.album = a.body
   // (a NAS or Immich album: the sync's state for its card "Quelle")

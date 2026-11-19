@@ -4756,7 +4756,8 @@ app.post('/user/changed', (req, res) => {
 })
 // The counts of the user who goes, on the card before the files are exchanged (not with the timer of every minute)
 function playtimeCheckpointNow() {
-  if (!playtimeState.date) return
+  // (also with only the tiles' or the photos' time counted - no day's limit: their last minute went otherwise)
+  if (!playtimeState.date && !photoTimeState.date && !tileState.date) return
   const tmp = `${PLAYTIME_CHECKPOINT_PATH}.hold.tmp`
   const fd = fs.openSync(tmp, 'w')
   try {

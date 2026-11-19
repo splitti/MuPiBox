@@ -50,7 +50,7 @@ The pages **Library**, **Playtime** and **Listening history** have a choice at t
 
 ## What runs for everyone in the background
 
-- **Smart-Sync**: the box syncs every child's Spotify subscriptions, each into their own library, each at their own interval.
+- **Smart-Sync**: the box syncs every child's Spotify subscriptions, each into their own library, each at their own interval. It is switched on or off per child, while that child is active (**Library › Spotify**). A child with an empty library starts without Smart-Sync: new subscriptions come to the box once, later episodes only once their Smart-Sync is on.
 - **Offline episodes** of podcasts are on the SD card once. An episode stays as long as any child wants to keep it. If one child keeps 1 episode and another 3, the newest 3 are there.
 - **Telegram**: a name at the end of a command means that child, no name the active one (`/status Leni`, `/extend 30 Leni`, see [Telegram](../netzwerk/telegram.md)). The weekly summary comes for each child separately.
 

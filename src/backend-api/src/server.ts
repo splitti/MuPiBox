@@ -280,10 +280,15 @@ if (devServe) {
 // finished here, before anything reads the library - the configuration's part when the server runs (see listen).
 const userFiles = new UserFiles({ usersDir: path.join(DATA_DIR, 'users'), libraryDir: LIBRARY_DIR, dataDir: DATA_DIR, logsDir: LOGS_DIR })
 let userSwitchCutOff: { from: string; to: string } | null = null
+// (a restore cut off and put back at the start: the settings of the user in place in the config again, see listen)
+let userRestoreUndone = false
 let userSwitchRunning = false
 try {
   // (a restore of a backup cut off: the users of before back first - admin.ts, users.ts prepareRestore)
-  if (userFiles.recoverRestore()) console.warn(`${new Date().toLocaleString()}: [users] a restore was cut off - the users of before are back`)
+  if (userFiles.recoverRestore()) {
+    userRestoreUndone = true
+    console.warn(`${new Date().toLocaleString()}: [users] a restore was cut off - the users of before are back`)
+  }
   userSwitchCutOff = userFiles.recover()
   if (userSwitchCutOff) {
     console.warn(`${new Date().toLocaleString()}: [users] a switch from ${userSwitchCutOff.from} to ${userSwitchCutOff.to} was cut off - finished`)
@@ -2024,7 +2029,9 @@ async function rssPictureFiles(feedUrl: string): Promise<string[]> {
 async function allLibraries(): Promise<unknown[][] | null> {
   return users.hold(async () => {
     const f = userFiles.read()
-    if (f.switching) return null
+    // (a restore under way: the libraries of before are aside, the backup's not whole yet - a library made empty by a
+    // script meanwhile took every kept podcast episode with it)
+    if (f.switching || isRestoreRunning() || userFiles.restoreHeld()) return null
     const others = f.users.filter((u) => u.id !== f.current).map((u) => path.join(userFiles.userDir(u.id), 'library', 'data.json'))
     const out: unknown[][] = []
     for (const file of [dataFile, ...others]) {
@@ -9083,9 +9090,12 @@ app.use(
     backupUsers: {
       hold: (work) => users.hold(work),
       read: () => userFiles.read(),
-      prepareRestore: () => userFiles.prepareRestore(),
+      prepareRestore: () => userFiles.prepareRestore(getMupiboxConfigSync() as Record<string, unknown> | undefined),
       finishRestore: (held, before) => userFiles.finishRestore(held, before),
-      undoRestore: (held, before) => userFiles.undoRestore(held, before),
+      undoRestore: (held, before) => {
+        userFiles.undoRestore(held, before)
+        void users.reapplyKept().catch((err) => console.error(`${new Date().toLocaleString()}: [users] settings after a failed restore: ${(err as Error).message}`))
+      },
     },
     withUserLock: (id, work) => {
       const lock = userLibraryLock(id)
@@ -9286,6 +9296,7 @@ if (!testServe) {
   for (const dir of [LIBRARY_DIR, DATA_DIR]) void sweepTempFiles(dir)
   // (a switch of the user cut off: its files were finished at the start - the configuration's part now; the users'
   // trash of more than 30 days emptied, then once a day)
+  if (userRestoreUndone) users.reapplyKept().catch((err) => console.error(`${new Date().toLocaleString()}: [users] settings after a restore: ${(err as Error).message}`))
   if (userSwitchCutOff) {
     users.finishCutOff().catch((err) => console.error(`${new Date().toLocaleString()}: [users] finishing the switch: ${(err as Error).message}`))
   }

@@ -217,7 +217,8 @@ describe('the users', () => {
     const users = new Users(files, hooks)
     const a = await users.add('Anna', null)
     const b = await users.add('Ben', MAIN_ID)
-    assert.deepEqual(fs.readdirSync(path.join(root, 'data', 'users', a.id, 'library')), [])
+    assert.deepEqual(fs.readdirSync(path.join(root, 'data', 'users', a.id, 'library')), ['data.json'])
+    assert.equal(read(path.join(root, 'data', 'users', a.id, 'library', 'data.json')), '[]')
     assert.equal(read(path.join(root, 'data', 'users', b.id, 'library', 'data.json')), '[{"title":"A"}]')
     assert.equal(files.readConfigPart(a.id)?.sections.spotify_sync, undefined)
     assert.deepEqual(files.readConfigPart(b.id)?.sections.spotify_sync, { enabled: true })
@@ -336,6 +337,23 @@ describe('the users', () => {
     assert.equal(read(path.join(lib(), 'resume.json')), '[{"title":"A1"}]')
     assert.equal(read(path.join(root, 'data', 'users', anna.id, 'library', 'data.json')), '[{"title":"Anna"}]')
     assert.ok(!fs.existsSync(path.join(root, 'data', 'users', 'xx')))
+  })
+
+  it('a restore that does not know the user in place: his settings go with him into the trash', async () => {
+    const users = new Users(files, hooks)
+    await users.setEnabled(true)
+    const anna = await users.add('Anna', null)
+    await users.switchTo(anna.id)
+    config.mupibox = { ...(config.mupibox as Record<string, unknown>), theme: 'annas' }
+    const before = users.state()
+    const held = files.prepareRestore(config)
+    write(files.file, JSON.stringify({ ...before, current: MAIN_ID, users: before.users.filter((u) => u.id !== anna.id) }))
+    write(path.join(lib(), 'data.json'), '[]')
+    files.finishRestore(held, before)
+    const [t] = files.trashList()
+    assert.equal(t.name, 'Anna')
+    const kept = JSON.parse(read(path.join(root, 'data', 'users', 'trash', t.key, 'config.json'))) as { mupibox: { theme: string } }
+    assert.equal(kept.mupibox.theme, 'annas')
   })
 
   it('a restore cut off (a power cut during the unzip): the users of before back at the next start', async () => {
