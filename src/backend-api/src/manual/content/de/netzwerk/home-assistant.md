@@ -23,7 +23,7 @@ Der Code steht nur auf dem Display der Box. Wer ihn eingibt, hat die Box also vo
 
 ## Was Home Assistant noch kann
 
-- **Bildschirmfoto**: Home Assistant kann zeigen, was gerade auf dem Display der Box steht. Während eine Kopplung offen ist, gibt es kein Bildschirmfoto: Der Code ist nur für den, der vor der Box steht.
+- **Bildschirmfoto**: Home Assistant kann zeigen, was gerade auf dem Display der Box steht. Während eine Kopplung offen ist, gibt es kein Bildschirmfoto: Der Code ist nur für den, der vor der Box steht. Ist das Display aus, gibt es auch keins (es wäre schwarz).
 - **Update**: Home Assistant zeigt, ob es eine neuere Version der Box gibt. Installiert wird das Update weiter in der App.
 - **Nachrichten** (Recht „Nachrichten und Ansagen“): Ein kurzer Text erscheint auf dem Display, bis seine Zeit um ist oder jemand darauf tippt.
 - **Ansagen** (Recht „Nachrichten und Ansagen“): Die Box spricht einen Text mit der Sprachausgabe. Dafür muss unter **Einstellungen › Audio › Sprachausgabe** eine Stimme eingestellt sein.

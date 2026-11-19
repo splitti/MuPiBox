@@ -60,7 +60,7 @@ Ist die Auflösung größer als 800 × 480, vergrößert die Box die Oberfläche
 
 ## Display live
 
-Unter **Einstellungen › Display & Bedienung › Display live** siehst du das aktuelle Bild des Displays (es aktualisiert sich alle 5 Sekunden, solange die Seite offen ist) und kannst das Display im Browser **fernsteuern**. Die Fernsteuerung braucht VNC ([Freigaben und Fernsteuerung](../netzwerk/freigaben.md)).
+Unter **Einstellungen › Display & Bedienung › Display live** siehst du das aktuelle Bild des Displays (es aktualisiert sich alle 5 Sekunden, solange die Seite offen ist) und kannst das Display im Browser **fernsteuern**. Ist das Display aus, steht dort „Das Display ist aus“ mit dem letzten Bild und seiner Uhrzeit: Ein ausgeschaltetes Display liefert nur ein schwarzes Bild. Das gilt auch für Telegram (der Titel kommt dann ohne Bild, **/screen** meldet „Display aus“), MQTT (das letzte Bild bleibt) und Home Assistant. Die Fernsteuerung braucht VNC ([Freigaben und Fernsteuerung](../netzwerk/freigaben.md)).
 
 ## Browser-Einstellungen
 

@@ -7,6 +7,24 @@ absolute paths; Python adds the script's directory to sys.path, so a plain
 """
 
 
+import subprocess
+
+SCREEN = '/tmp/telegram_screen.png'
+
+
+def take_screen():
+    """A picture of the display in SCREEN (screenshot.sh).
+
+    0: the picture is there; 3: the display is off and no picture could be taken (rather than a black one); else: none.
+    """
+    subprocess.run(["sudo", "rm", "-f", SCREEN])
+    try:
+        return subprocess.run(["sudo", "-H", "-u", "dietpi", "/usr/local/bin/mupibox/screenshot.sh", SCREEN], timeout=30).returncode
+    except Exception as e:
+        print(f'No picture of the display: {e}')
+        return 1
+
+
 def normalize_chat_ids(value):
     """Return a list of stringified Telegram chat IDs.
 

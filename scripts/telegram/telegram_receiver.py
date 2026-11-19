@@ -12,6 +12,7 @@ import requests
 from telepot.loop import MessageLoop
 from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
 from telegram_i18n import tr
+from telegram_chats import take_screen, SCREEN
 
 with open("/etc/mupibox/mupiboxconfig.json") as file:
     config = json.load(file)
@@ -434,9 +435,7 @@ def on_chat_message(msg):
     if command == '/shutdown':
         subprocess.run(["sudo", "bash", "/usr/local/bin/mupibox/shutdown.sh"])
     elif command == '/screen':
-        subprocess.run(["sudo", "rm", "/tmp/telegram_screen.png"])
-        subprocess.run(["sudo", "-H", "-u", "dietpi", "bash", "-c", "DISPLAY=:0 scrot /tmp/telegram_screen.png"])
-        bot.sendPhoto(chat_id, open('/tmp/telegram_screen.png', 'rb'))
+        send_screen(chat_id)
     elif command == '/reboot':
         subprocess.run(["sudo", "reboot"])
     elif command[:4] == '/vol':
@@ -660,11 +659,19 @@ def on_callback_query(msg):
     finally:
         answer(show_alert=False)
 
+def send_screen(chat_id):
+    """The display's picture - or a word why there is none (the display is off: rather than a black picture)."""
+    rc = take_screen()
+    if rc == 0:
+        with open(SCREEN, 'rb') as f:
+            bot.sendPhoto(chat_id, f)
+    else:
+        bot.sendMessage(chat_id, tr('screen_off' if rc == 3 else 'screen_failed'))
+
+
 def handle_callback(query_data, chat_id, keyboard_msg, answer):
     if query_data == 'screen':
-        subprocess.run(["sudo", "rm", "/tmp/telegram_screen.png"])
-        subprocess.run(["sudo", "-H", "-u", "dietpi", "bash", "-c", "DISPLAY=:0 scrot /tmp/telegram_screen.png"])
-        bot.sendPhoto(chat_id, open('/tmp/telegram_screen.png', 'rb'))
+        send_screen(chat_id)
     elif query_data == 'status':
         status_code, body = call_api_get('/playtime')
         if status_code == 200:

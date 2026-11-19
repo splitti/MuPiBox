@@ -60,7 +60,7 @@ If the resolution is larger than 800 × 480, the box enlarges the interface to m
 
 ## Live display
 
-Under **Settings › Display & controls › Live display** you see the display's current picture (it refreshes every 5 seconds while the page is open) and can **remote-control** the display in the browser. The remote control needs VNC ([Shares and remote control](../netzwerk/freigaben.md)).
+Under **Settings › Display & controls › Live display** you see the display's current picture (it refreshes every 5 seconds while the page is open) and can **remote-control** the display in the browser. While the display is off it says "The display is off" with the last picture and its time: a display that is off only gives a black picture. The same goes for Telegram (a track comes without a picture, **/screen** says the display is off), MQTT (the last picture stays) and Home Assistant. The remote control needs VNC ([Shares and remote control](../netzwerk/freigaben.md)).
 
 ## Browser settings
 

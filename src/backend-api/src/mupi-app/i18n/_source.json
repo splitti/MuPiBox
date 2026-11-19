@@ -1078,6 +1078,8 @@
  "Das Display im Browser bedienen – mit der Anmeldung der App, ohne eigenes Passwort. Dafür muss VNC unter Dienste › Freigaben & Fernzugriff an sein.",
  "Das Display im Browser bedienen (Display & Bedienung › Display live).",
  "Das Display im Browser bedienen. VNC muss unter Dienste › Freigaben & Fernzugriff an sein.",
+ "Das Display ist aus – Stand {}",
+ "Das Display ist aus.",
  "Das Display jetzt neu starten?",
  "Das Display lädt neu.",
  "Das Display startet mit {}",

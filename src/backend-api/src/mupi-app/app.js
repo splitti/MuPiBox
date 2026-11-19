@@ -9777,7 +9777,7 @@ function mountLive(root) {
     const r = await fetch(`${API}/display/screenshot?t=${Date.now()}`, { credentials: 'same-origin', cache: 'no-store' }).catch(() => null)
     if (!img.isConnected) return
     if (!r?.ok) {
-      $('#lv-note', root).textContent = 'Das Bild ließ sich nicht holen.'
+      $('#lv-note', root).textContent = r?.headers.get('x-display') === 'off' ? 'Das Display ist aus.' : 'Das Bild ließ sich nicht holen.'
       return
     }
     const at = Number(r.headers.get('x-shot-at')) || Date.now()
@@ -9785,7 +9785,9 @@ function mountLive(root) {
     if (img.dataset.url) URL.revokeObjectURL(img.dataset.url)
     img.src = url
     img.dataset.url = url
-    $('#lv-note', root).textContent = `Stand ${new Date(at).toLocaleTimeString(LOCALE)}`
+    // (the display is off - a picture would be black: the last one, said so)
+    const time = new Date(at).toLocaleTimeString(LOCALE)
+    $('#lv-note', root).textContent = r.headers.get('x-display') === 'off' ? `Das Display ist aus – Stand ${time}` : `Stand ${time}`
   }
   shot()
   every(5000, () => document.visibilityState === 'visible' && shot())

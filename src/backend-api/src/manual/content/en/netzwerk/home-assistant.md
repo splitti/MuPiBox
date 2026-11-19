@@ -23,7 +23,7 @@ The code is shown only on the box's display, so whoever enters it has the box in
 
 ## What else Home Assistant can do
 
-- **Screenshot**: Home Assistant can show what is on the box's display right now. While a pairing is open there is no screenshot: the code is only for whoever stands at the box.
+- **Screenshot**: Home Assistant can show what is on the box's display right now. While a pairing is open there is no screenshot: the code is only for whoever stands at the box. Nor while the display is off (it would be black).
 - **Update**: Home Assistant shows whether a newer version of the box exists. The update is still installed in the app.
 - **Messages** (right "messages and announcements"): a short text appears on the display until its time is up or someone taps it.
 - **Announcements** (right "messages and announcements"): the box speaks a text with its speech output. A voice has to be set under **Settings › Audio › Speech output** for this.

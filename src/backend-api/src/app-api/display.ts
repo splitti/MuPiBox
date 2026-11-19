@@ -33,6 +33,7 @@ const ROTATIONS: Record<string, string[]> = {
 }
 const BACKGROUND = '/home/dietpi/MuPiBox/themes/custom-bg.jpg'
 const SCREENSHOT = '/tmp/mupibox-app-screenshot.png'
+const SCREENSHOT_SH = '/usr/local/bin/mupibox/screenshot.sh'
 
 function run(cmd: string, args: string[], timeoutMs = 15000): Promise<{ ok: boolean; stdout: string }> {
   return new Promise((resolve) => {
@@ -450,23 +451,28 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
   })
 
   /**
-   * GET /api/app/display/screenshot - what the display shows right now (PNG, scrot on the kiosk's X display).
+   * GET /api/app/display/screenshot - what the display shows right now (PNG, screenshot.sh: scrot on the kiosk's X
+   * display; with the display off - a picture would be black - "X-Display: off" with the last picture and its time).
    * One picture at most every 2 seconds; a request in between gets the last one.
    */
   let lastShot = 0
+  let displayOff = false
   let shooting: Promise<boolean> | undefined
   router.get('/display/screenshot', requireSession, async (_req, res) => {
     if (Date.now() - lastShot > 2000) {
-      shooting ??= run('sh', ['-c', `DISPLAY=:0 XAUTHORITY=/home/dietpi/.Xauthority scrot -o ${SCREENSHOT}`], 8000).then((r) => {
+      shooting ??= run('sh', ['-c', `${SCREENSHOT_SH} ${SCREENSHOT}; echo "rc=$?"`], 15000).then((r) => {
         shooting = undefined
-        if (r.ok) lastShot = Date.now()
-        return r.ok
+        const rc = /rc=(\d+)/.exec(r.stdout)?.[1]
+        displayOff = rc === '3'
+        if (rc === '0') lastShot = Date.now()
+        return rc === '0'
       })
       await shooting
     }
     res.setHeader('Cache-Control', 'no-store')
     // (when the last shot failed the one before comes: its time goes along, the app shows it instead of "now")
     if (lastShot > 0) res.setHeader('X-Shot-At', String(lastShot))
+    if (displayOff) res.setHeader('X-Display', 'off')
     res.sendFile(SCREENSHOT, (err) => {
       if (err && !res.headersSent) res.status(503).json({ error: 'no_screenshot' })
     })

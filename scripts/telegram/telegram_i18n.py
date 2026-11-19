@@ -58,6 +58,8 @@ TEXTS = {
     'help_title': {'de': 'Was möchtest du tun?', 'en': 'Possible commands:'},
     'kb_status': {'de': 'Status', 'en': 'Status'},
     'kb_screen': {'de': 'Bildschirm', 'en': 'Current screen'},
+    'screen_off': {'de': 'Das Display ist gerade aus – ohne Bild.', 'en': 'The display is off right now – no picture.'},
+    'screen_failed': {'de': 'Vom Display kam kein Bild.', 'en': 'No picture came from the display.'},
     'kb_pause': {'de': 'Pause', 'en': 'Pause'},
     'kb_play': {'de': 'Abspielen', 'en': 'Play'},
     'kb_release60': {'de': 'Freigabe 60 min', 'en': 'Release 60 min'},

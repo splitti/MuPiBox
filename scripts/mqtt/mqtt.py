@@ -956,6 +956,8 @@ def on_message(client, userdata, msg):
                 print(f"User: the switch failed: {e!r}", flush=True)
             publish_users()
     if msg.topic == mqtt_topic + '/' + mqtt_clientId + '/take_screenshot/set' and str(msg.payload.decode("utf-8")) == "take_screenshot":
+        # (asked for: a picture now - with the display off the last one stays)
+        subprocess.run(["sudo", "-H", "-u", "dietpi", "/usr/local/bin/mupibox/screenshot.sh", "/tmp/mqtt_screen.png"])
         screenshot = get_screenshot()
         client.publish(mqtt_topic + '/' + mqtt_clientId + '/screenshot', screenshot, qos=0)
 
@@ -1081,8 +1083,8 @@ def main():
                 send_play_information()
                 publish_users()
 
-                subprocess.run(["sudo", "rm", "/tmp/mqtt_screen.png"])
-                subprocess.run(["sudo", "-H", "-u", "dietpi", "bash", "-c", "DISPLAY=:0 scrot /tmp/mqtt_screen.png"])
+                # (screenshot.sh: with the display off the last picture stays rather than a black one)
+                subprocess.run(["sudo", "-H", "-u", "dietpi", "/usr/local/bin/mupibox/screenshot.sh", "/tmp/mqtt_screen.png"])
 
                 if player_active():
                     sleeptime = mqtt_refresh

@@ -476,6 +476,7 @@ async function lastResumeStart(deps: HaDeps): Promise<{ url: string; type: strin
 // ---- phase 2: screenshot, message, quiet time, power -----------------------------------------------------------------
 
 let lastShot = 0
+let displayOff = false
 let shooting: Promise<boolean> | undefined
 /** a message for the display (POST /message), shown until `until` */
 let message: { title: string; text: string; until: number } | null = null
@@ -707,11 +708,14 @@ export function buildApp(deps: HaDeps): Express {
       return busy()
     }
     if (Date.now() - lastShot > 2000) {
-      shooting ??= run('sh', ['-c', `DISPLAY=:0 XAUTHORITY=/home/dietpi/.Xauthority scrot -o ${SCREENSHOT_FILE}`], 8000).then((r) => {
+      // (screenshot.sh: with the display off exit 3 - no picture rather than a black one)
+      shooting ??= run('sh', ['-c', `/usr/local/bin/mupibox/screenshot.sh ${SCREENSHOT_FILE}; echo "rc=$?"`], 15000).then((r) => {
         shooting = undefined
-        lastShot = r.ok && !displaySecret() ? Date.now() : 0
+        const rc = /rc=(\d+)/.exec(r.stdout)?.[1]
+        displayOff = rc === '3'
+        lastShot = rc === '0' && !displaySecret() ? Date.now() : 0
         if (!lastShot) fsp.rm(SCREENSHOT_FILE, { force: true }).catch(() => undefined)
-        return r.ok
+        return rc === '0'
       })
       await shooting
     }
@@ -720,7 +724,7 @@ export function buildApp(deps: HaDeps): Express {
       fsp.rm(SCREENSHOT_FILE, { force: true }).catch(() => undefined)
       return busy()
     }
-    if (!lastShot) return fail(res, 503, 'temporarily_unavailable', 'No picture of the display')
+    if (!lastShot) return fail(res, 503, 'temporarily_unavailable', displayOff ? 'The display is off' : 'No picture of the display')
     res.type('image/png').sendFile(SCREENSHOT_FILE, (err) => {
       if (err && !res.headersSent) fail(res, 503, 'temporarily_unavailable', 'No picture of the display')
     })

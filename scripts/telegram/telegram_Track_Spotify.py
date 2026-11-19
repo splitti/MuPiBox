@@ -6,7 +6,7 @@ import telepot
 import json
 import requests
 import subprocess
-from telegram_chats import normalize_chat_ids, send_to_all, photo_to_all
+from telegram_chats import normalize_chat_ids, send_to_all, photo_to_all, take_screen, SCREEN
 
 with open("/etc/mupibox/mupiboxconfig.json") as file:
     config = json.load(file)
@@ -31,12 +31,10 @@ if player_event == "playing" and POSITION_MS == "0":
         episode = requests.get('http://127.0.0.1:5005/episode', timeout=5).json()
         msg = episode['show']['name'] + "\n" + episode['name']
         send_to_all(bot, msg, chat_ids)
-        subprocess.run(["sudo", "rm", "/tmp/telegram_screen.png"])
-        subprocess.run(["sudo", "-H", "-u", "dietpi", "bash", "-c", "DISPLAY=:0 scrot /tmp/telegram_screen.png"])
-        photo_to_all(bot, '/tmp/telegram_screen.png', chat_ids)
+        if take_screen() == 0:
+            photo_to_all(bot, SCREEN, chat_ids)
         sys.exit()
     msg = state['item']['album']['name'] + "\n" + state['item']['name'] + "\nTrack: " + str(state['item']['track_number']) + "/" + str(state['item']['album']['total_tracks'])
     send_to_all(bot, msg, chat_ids)
-    subprocess.run(["sudo", "rm", "/tmp/telegram_screen.png"])
-    subprocess.run(["sudo", "-H", "-u", "dietpi", "bash", "-c", "DISPLAY=:0 scrot /tmp/telegram_screen.png"])
-    photo_to_all(bot, '/tmp/telegram_screen.png', chat_ids)
+    if take_screen() == 0:
+        photo_to_all(bot, SCREEN, chat_ids)
