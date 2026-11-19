@@ -165,6 +165,12 @@ def user_query(user):
     """?user= for the box's routes - none for the user in place"""
     return '' if not user or user.get('current') else f'?user={user["id"]}'
 
+def who_suffix(user):
+    """ (Name) after a confirmation while several users are on: whom it hit - without a name in the command the user in
+    place, who may have changed since the message the parent answers (a sibling took over from the lock screen)"""
+    u = user or current_user()
+    return f' ({u["name"]})' if u and u.get('name') else ''
+
 def unknown_user_text(name):
     st = users_state()
     names = ', '.join(html.escape(str(u.get('name', ''))) for u in (st or {}).get('users', []))
@@ -466,7 +472,7 @@ def on_chat_message(msg):
             tiles_message(chat_id, user)
         elif cmd == '/photofree':
             key, detail = photo_time_action('free', user=user)
-            bot.sendMessage(chat_id, tr(key, detail=detail))
+            bot.sendMessage(chat_id, tr(key, detail=detail) + (who_suffix(user) if key == 'photofree_done' else ''))
         else:
             # /photoextend: today's photo time (Bildzeit), 10 minutes when none are given (as the app's "+10 min");
             # /extend: bonus minutes, 30 when none are given
@@ -475,11 +481,11 @@ def on_chat_message(msg):
                 bot.sendMessage(chat_id, tr('usage_minutes', cmd=cmd))
             elif cmd == '/photoextend':
                 key, detail = photo_time_action('extend', mins, user)
-                bot.sendMessage(chat_id, tr(key, mins=mins, detail=detail))
+                bot.sendMessage(chat_id, tr(key, mins=mins, detail=detail) + (who_suffix(user) if key == 'photoextend_done' else ''))
             else:
                 status_code, body = call_api_post('/playtime/extend' + user_query(user), {'minutes': mins})
                 if status_code == 200:
-                    bot.sendMessage(chat_id, tr('extend_done', mins=mins) + (f' ({user["name"]})' if user else ''))
+                    bot.sendMessage(chat_id, tr('extend_done', mins=mins) + who_suffix(user))
                 else:
                     bot.sendMessage(chat_id, tr('error', detail=failure_detail(status_code, body)))
     elif command[:8] == '/release':
@@ -505,7 +511,7 @@ def on_chat_message(msg):
             else:
                 status_code, body = call_api_post('/playtime/limit' + user_query(user), {'day': day, 'minutes': mins})
                 if status_code == 200:
-                    bot.sendMessage(chat_id, tr('limit_done', day=day, mins=mins))
+                    bot.sendMessage(chat_id, tr('limit_done', day=day, mins=mins) + who_suffix(user))
                 else:
                     bot.sendMessage(chat_id, tr('error', detail=failure_detail(status_code, body)))
         else:
@@ -669,7 +675,7 @@ def handle_callback(query_data, chat_id, keyboard_msg, answer):
         mins = int(query_data.split('_')[1])
         status_code, body = call_api_post('/playtime/extend', {'minutes': mins})
         if status_code == 200:
-            answer(text=tr('extend_short', mins=mins), show_alert=True)
+            answer(text=tr('extend_short', mins=mins) + who_suffix(None), show_alert=True)
         else:
             answer(text=tr('error', detail=status_code), show_alert=True)
     elif query_data[:8] == 'release_':

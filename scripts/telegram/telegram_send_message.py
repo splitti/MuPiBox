@@ -42,5 +42,18 @@ if key in BATTERY_KEYS and config.get('mupihat', {}).get('hat_active'):
     except (OSError, ValueError, KeyError):
         pass
 
+# Several users on (5.1): whose time it is - the message is read later, a sibling may have taken over meanwhile
+USER_KEYS = {"n_playtime_used_up", "n_quiet_started", "n_quiet_started_label"}
+if key in USER_KEYS:
+    try:
+        with open("/home/dietpi/.mupibox/data/users/users.json") as file:
+            users = json.load(file)
+        if users.get('enabled') and len(users.get('users') or []) >= 2:
+            name = next((u.get('name') for u in users['users'] if u.get('id') == users.get('current')), None)
+            if name:
+                message += f' ({name})'
+    except (OSError, ValueError, AttributeError, TypeError):
+        pass
+
 bot = telepot.Bot(config['telegram']['token'])
 send_to_all(bot, message, chat_ids)
