@@ -1,0 +1,158 @@
+[
+ {
+  "matchID": 83230,
+  "matchDateTime": "2026-11-07T18:30:00",
+  "timeZoneID": null,
+  "leagueId": 4937,
+  "leagueName": "1. Fußball-Bundesliga 2026/2027",
+  "leagueSeason": 2026,
+  "leagueShortcut": "bl1",
+  "matchDateTimeUTC": "2026-11-07T17:30:00Z",
+  "group": {
+   "groupName": "9. Spieltag",
+   "groupOrderID": 9,
+   "groupID": 50641
+  },
+  "team1": {
+   "teamId": 16,
+   "teamName": "VfB Stuttgart",
+   "shortName": "Stuttgart",
+   "teamIconUrl": "https://i.imgur.com/v0tkpNx.png",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": "Q4512"
+  },
+  "team2": {
+   "teamId": 134,
+   "teamName": "SV Werder Bremen",
+   "shortName": "Bremen",
+   "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/b/be/SV-Werder-Bremen-Logo.svg",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": null
+  },
+  "lastUpdateDateTime": "2026-11-08T11:52:08.923",
+  "matchIsFinished": true,
+  "matchResults": [
+   {
+    "resultID": 130967,
+    "resultName": "Halbzeit",
+    "pointsTeam1": 1,
+    "pointsTeam2": 0,
+    "resultOrderID": 1,
+    "resultTypeID": 1,
+    "resultTypeKind": "HalfTime",
+    "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+   },
+   {
+    "resultID": 130968,
+    "resultName": "Endergebnis",
+    "pointsTeam1": 1,
+    "pointsTeam2": 0,
+    "resultOrderID": 2,
+    "resultTypeID": 2,
+    "resultTypeKind": "After90Minutes",
+    "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+   }
+  ],
+  "goals": [
+   {
+    "goalID": 152389,
+    "scoreTeam1": 1,
+    "scoreTeam2": 0,
+    "matchMinute": 7,
+    "goalGetterID": 24990,
+    "goalGetterName": "M. Mittelstädt",
+    "scoringTeamId": 16,
+    "isPenalty": false,
+    "isOwnGoal": false,
+    "isOvertime": false,
+    "comment": null
+   }
+  ],
+  "location": {
+   "locationID": 1493,
+   "locationCity": "Stuttgart",
+   "locationStadium": "MHP-Arena"
+  },
+  "numberOfViewers": 60058
+ },
+ {
+  "matchID": 83243,
+  "matchDateTime": "2026-11-22T17:30:00",
+  "timeZoneID": "W. Europe Standard Time",
+  "leagueId": 4937,
+  "leagueName": "1. Fußball-Bundesliga 2026/2027",
+  "leagueSeason": 2026,
+  "leagueShortcut": "bl1",
+  "matchDateTimeUTC": "2026-11-22T16:30:00Z",
+  "group": {
+   "groupName": "10. Spieltag",
+   "groupOrderID": 10,
+   "groupID": 50642
+  },
+  "team1": {
+   "teamId": 134,
+   "teamName": "SV Werder Bremen",
+   "shortName": "Bremen",
+   "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/b/be/SV-Werder-Bremen-Logo.svg",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": null
+  },
+  "team2": {
+   "teamId": 100,
+   "teamName": "Hamburger SV",
+   "shortName": "HSV",
+   "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/f/f7/Hamburger_SV_logo.svg",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": "Q51974"
+  },
+  "lastUpdateDateTime": "2026-09-10T17:30:25.293",
+  "matchIsFinished": false,
+  "matchResults": [],
+  "goals": [],
+  "location": null,
+  "numberOfViewers": null
+ },
+ {
+  "matchID": 83253,
+  "matchDateTime": "2026-11-27T20:30:00",
+  "timeZoneID": "W. Europe Standard Time",
+  "leagueId": 4937,
+  "leagueName": "1. Fußball-Bundesliga 2026/2027",
+  "leagueSeason": 2026,
+  "leagueShortcut": "bl1",
+  "matchDateTimeUTC": "2026-11-27T19:30:00Z",
+  "group": {
+   "groupName": "11. Spieltag",
+   "groupOrderID": 11,
+   "groupID": 50643
+  },
+  "team1": {
+   "teamId": 134,
+   "teamName": "SV Werder Bremen",
+   "shortName": "Bremen",
+   "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/b/be/SV-Werder-Bremen-Logo.svg",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": null
+  },
+  "team2": {
+   "teamId": 87,
+   "teamName": "Borussia Mönchengladbach",
+   "shortName": "Gladbach",
+   "teamIconUrl": "https://i.imgur.com/KSIk0Eu.png",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": null
+  },
+  "lastUpdateDateTime": "2026-09-10T17:30:53.893",
+  "matchIsFinished": false,
+  "matchResults": [],
+  "goals": [],
+  "location": null,
+  "numberOfViewers": null
+ }
+]

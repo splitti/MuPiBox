@@ -1,0 +1,353 @@
+[
+ {
+  "matchID": 83242,
+  "matchDateTime": "2026-11-21T15:30:00",
+  "timeZoneID": "W. Europe Standard Time",
+  "leagueId": 4937,
+  "leagueName": "1. Fußball-Bundesliga 2026/2027",
+  "leagueSeason": 2026,
+  "leagueShortcut": "bl1",
+  "matchDateTimeUTC": "2026-11-21T14:30:00Z",
+  "group": {
+   "groupName": "10. Spieltag",
+   "groupOrderID": 10,
+   "groupID": 50642
+  },
+  "team1": {
+   "teamId": 87,
+   "teamName": "Borussia Mönchengladbach",
+   "shortName": "Gladbach",
+   "teamIconUrl": "https://i.imgur.com/KSIk0Eu.png",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": null
+  },
+  "team2": {
+   "teamId": 7,
+   "teamName": "Borussia Dortmund",
+   "shortName": "Dortmund",
+   "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Borussia_Dortmund_logo.svg/960px-Borussia_Dortmund_logo.svg.png",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": "Q41420"
+  },
+  "lastUpdateDateTime": "2026-07-03T08:16:35.227",
+  "matchIsFinished": false,
+  "matchResults": [],
+  "goals": [],
+  "location": null,
+  "numberOfViewers": null
+ },
+ {
+  "matchID": 83245,
+  "matchDateTime": "2026-11-21T15:30:00",
+  "timeZoneID": "W. Europe Standard Time",
+  "leagueId": 4937,
+  "leagueName": "1. Fußball-Bundesliga 2026/2027",
+  "leagueSeason": 2026,
+  "leagueShortcut": "bl1",
+  "matchDateTimeUTC": "2026-11-21T14:30:00Z",
+  "group": {
+   "groupName": "10. Spieltag",
+   "groupOrderID": 10,
+   "groupID": 50642
+  },
+  "team1": {
+   "teamId": 198,
+   "teamName": "SV 07 Elversberg",
+   "shortName": "Elversberg",
+   "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/SV_Elversberg_Logo.svg/500px-SV_Elversberg_Logo.svg.png",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": null
+  },
+  "team2": {
+   "teamId": 112,
+   "teamName": "SC Freiburg",
+   "shortName": "Freiburg",
+   "teamIconUrl": "https://i.imgur.com/r3mvi0h.png",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": "Q106394"
+  },
+  "lastUpdateDateTime": "2026-07-03T08:17:04.54",
+  "matchIsFinished": false,
+  "matchResults": [],
+  "goals": [],
+  "location": null,
+  "numberOfViewers": null
+ },
+ {
+  "matchID": 83244,
+  "matchDateTime": "2026-11-21T18:30:00",
+  "timeZoneID": "W. Europe Standard Time",
+  "leagueId": 4937,
+  "leagueName": "1. Fußball-Bundesliga 2026/2027",
+  "leagueSeason": 2026,
+  "leagueShortcut": "bl1",
+  "matchDateTimeUTC": "2026-11-21T17:30:00Z",
+  "group": {
+   "groupName": "10. Spieltag",
+   "groupOrderID": 10,
+   "groupID": 50642
+  },
+  "team1": {
+   "teamId": 9,
+   "teamName": "FC Schalke 04",
+   "shortName": "S04",
+   "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/9/97/FC_Schalke_04_Logo.png",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": "Q32494"
+  },
+  "team2": {
+   "teamId": 16,
+   "teamName": "VfB Stuttgart",
+   "shortName": "Stuttgart",
+   "teamIconUrl": "https://i.imgur.com/v0tkpNx.png",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": "Q4512"
+  },
+  "lastUpdateDateTime": "2026-09-10T17:29:58.837",
+  "matchIsFinished": false,
+  "matchResults": [],
+  "goals": [],
+  "location": null,
+  "numberOfViewers": null
+ },
+ {
+  "matchID": 83240,
+  "matchDateTime": "2026-11-22T15:30:00",
+  "timeZoneID": "W. Europe Standard Time",
+  "leagueId": 4937,
+  "leagueName": "1. Fußball-Bundesliga 2026/2027",
+  "leagueSeason": 2026,
+  "leagueShortcut": "bl1",
+  "matchDateTimeUTC": "2026-11-22T14:30:00Z",
+  "group": {
+   "groupName": "10. Spieltag",
+   "groupOrderID": 10,
+   "groupID": 50642
+  },
+  "team1": {
+   "teamId": 95,
+   "teamName": "FC Augsburg",
+   "shortName": "Augsburg",
+   "teamIconUrl": "https://i.imgur.com/sdE62e2.png",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": "Q15755"
+  },
+  "team2": {
+   "teamId": 81,
+   "teamName": "1. FSV Mainz 05",
+   "shortName": "Mainz",
+   "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/9/9e/Logo_Mainz_05.svg",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": "Q105254"
+  },
+  "lastUpdateDateTime": "2026-09-10T17:30:08.693",
+  "matchIsFinished": false,
+  "matchResults": [],
+  "goals": [],
+  "location": null,
+  "numberOfViewers": null
+ },
+ {
+  "matchID": 83243,
+  "matchDateTime": "2026-11-22T17:30:00",
+  "timeZoneID": "W. Europe Standard Time",
+  "leagueId": 4937,
+  "leagueName": "1. Fußball-Bundesliga 2026/2027",
+  "leagueSeason": 2026,
+  "leagueShortcut": "bl1",
+  "matchDateTimeUTC": "2026-11-22T16:30:00Z",
+  "group": {
+   "groupName": "10. Spieltag",
+   "groupOrderID": 10,
+   "groupID": 50642
+  },
+  "team1": {
+   "teamId": 134,
+   "teamName": "SV Werder Bremen",
+   "shortName": "Bremen",
+   "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/b/be/SV-Werder-Bremen-Logo.svg",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": null
+  },
+  "team2": {
+   "teamId": 100,
+   "teamName": "Hamburger SV",
+   "shortName": "HSV",
+   "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/f/f7/Hamburger_SV_logo.svg",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": "Q51974"
+  },
+  "lastUpdateDateTime": "2026-09-10T17:30:25.293",
+  "matchIsFinished": false,
+  "matchResults": [],
+  "goals": [],
+  "location": null,
+  "numberOfViewers": null
+ },
+ {
+  "matchID": 83237,
+  "matchDateTime": "2026-11-20T20:30:00",
+  "timeZoneID": "W. Europe Standard Time",
+  "leagueId": 4937,
+  "leagueName": "1. Fußball-Bundesliga 2026/2027",
+  "leagueSeason": 2026,
+  "leagueShortcut": "bl1",
+  "matchDateTimeUTC": "2026-11-20T19:30:00Z",
+  "group": {
+   "groupName": "10. Spieltag",
+   "groupOrderID": 10,
+   "groupID": 50642
+  },
+  "team1": {
+   "teamId": 40,
+   "teamName": "FC Bayern München",
+   "shortName": "Bayern",
+   "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/1/1f/Logo_FC_Bayern_M%C3%BCnchen_%282002%E2%80%932017%29.svg",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": "Q15789"
+  },
+  "team2": {
+   "teamId": 65,
+   "teamName": "1. FC Köln",
+   "shortName": "Köln",
+   "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/0/01/1._FC_Koeln_Logo_2014%E2%80%93.svg",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": "Q104770"
+  },
+  "lastUpdateDateTime": "2026-09-10T17:29:43.763",
+  "matchIsFinished": false,
+  "matchResults": [],
+  "goals": [],
+  "location": null,
+  "numberOfViewers": null
+ },
+ {
+  "matchID": 83238,
+  "matchDateTime": "2026-11-21T15:30:00",
+  "timeZoneID": "W. Europe Standard Time",
+  "leagueId": 4937,
+  "leagueName": "1. Fußball-Bundesliga 2026/2027",
+  "leagueSeason": 2026,
+  "leagueShortcut": "bl1",
+  "matchDateTimeUTC": "2026-11-21T14:30:00Z",
+  "group": {
+   "groupName": "10. Spieltag",
+   "groupOrderID": 10,
+   "groupID": 50642
+  },
+  "team1": {
+   "teamId": 6,
+   "teamName": "Bayer 04 Leverkusen",
+   "shortName": "Leverkusen",
+   "teamIconUrl": "https://upload.wikimedia.org/wikipedia/de/f/f7/Bayer_Leverkusen_Logo.svg",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": "Q104761"
+  },
+  "team2": {
+   "teamId": 31,
+   "teamName": "SC Paderborn 07",
+   "shortName": "Paderborn",
+   "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/e/e3/SC_Paderborn_07_Logo.svg",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": "Q160532"
+  },
+  "lastUpdateDateTime": "2026-07-03T08:15:41.453",
+  "matchIsFinished": false,
+  "matchResults": [],
+  "goals": [],
+  "location": null,
+  "numberOfViewers": null
+ },
+ {
+  "matchID": 83239,
+  "matchDateTime": "2026-11-21T15:30:00",
+  "timeZoneID": "W. Europe Standard Time",
+  "leagueId": 4937,
+  "leagueName": "1. Fußball-Bundesliga 2026/2027",
+  "leagueSeason": 2026,
+  "leagueShortcut": "bl1",
+  "matchDateTimeUTC": "2026-11-21T14:30:00Z",
+  "group": {
+   "groupName": "10. Spieltag",
+   "groupOrderID": 10,
+   "groupID": 50642
+  },
+  "team1": {
+   "teamId": 91,
+   "teamName": "Eintracht Frankfurt",
+   "shortName": "Frankfurt",
+   "teamIconUrl": "https://i.imgur.com/X8NFkOb.png",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": "Q38245"
+  },
+  "team2": {
+   "teamId": 175,
+   "teamName": "TSG Hoffenheim",
+   "shortName": "Hoffenheim",
+   "teamIconUrl": "https://i.imgur.com/gF0PfEl.png",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": null
+  },
+  "lastUpdateDateTime": "2026-07-03T08:16:02.887",
+  "matchIsFinished": false,
+  "matchResults": [],
+  "goals": [],
+  "location": null,
+  "numberOfViewers": null
+ },
+ {
+  "matchID": 83241,
+  "matchDateTime": "2026-11-21T15:30:00",
+  "timeZoneID": "W. Europe Standard Time",
+  "leagueId": 4937,
+  "leagueName": "1. Fußball-Bundesliga 2026/2027",
+  "leagueSeason": 2026,
+  "leagueShortcut": "bl1",
+  "matchDateTimeUTC": "2026-11-21T14:30:00Z",
+  "group": {
+   "groupName": "10. Spieltag",
+   "groupOrderID": 10,
+   "groupID": 50642
+  },
+  "team1": {
+   "teamId": 80,
+   "teamName": "1. FC Union Berlin",
+   "shortName": "Union Berlin",
+   "teamIconUrl": "https://assets.dfb.de/uploads/000/018/232/small_union-Berlin.jpg",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": "Q141971"
+  },
+  "team2": {
+   "teamId": 1635,
+   "teamName": "RB Leipzig",
+   "shortName": "Leipzig",
+   "teamIconUrl": "https://i.imgur.com/Rpwsjz1.png",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": null
+  },
+  "lastUpdateDateTime": "2026-07-03T08:16:26.903",
+  "matchIsFinished": false,
+  "matchResults": [],
+  "goals": [],
+  "location": null,
+  "numberOfViewers": null
+ }
+]

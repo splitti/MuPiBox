@@ -1,0 +1,82 @@
+{
+  "id": "football",
+  "name": "Fußball",
+  "version": "0.1.0",
+  "description": "Die Ergebnisse deines Vereins, der Spieltag und die Tabelle auf dem Display. Die Box holt sie im Internet bei OpenLigaDB; jeder Benutzer wählt seinen eigenen Verein.",
+  "hostApi": 13,
+  "resources": {},
+  "api": "api.js",
+  "display": "display.js",
+  "icon": "icon.svg",
+  "settings": {
+    "league": {
+      "type": "string",
+      "default": "bl1",
+      "options": [
+        "bl1",
+        "bl2",
+        "bl3",
+        "dfb",
+        "ffb1"
+      ],
+      "perUser": true
+    },
+    "team": {
+      "type": "string",
+      "default": "",
+      "pattern": "^.{0,80}$",
+      "perUser": true
+    },
+    "teamId": {
+      "type": "number",
+      "default": 0,
+      "min": 0,
+      "max": 99999999,
+      "perUser": true
+    }
+  },
+  "ui": {
+    "title": "Fußball",
+    "help": "Das Display zeigt oben den Reiter „Fußball“: dein Verein, der Spieltag und die Tabelle. Die Ergebnisse trägt die Gemeinschaft von OpenLigaDB ein, meist wenige Minuten nach dem Tor.",
+    "items": [
+      {
+        "key": "league",
+        "label": "Liga",
+        "choices": [
+          {
+            "value": "bl1",
+            "label": "1. Bundesliga"
+          },
+          {
+            "value": "bl2",
+            "label": "2. Bundesliga"
+          },
+          {
+            "value": "bl3",
+            "label": "3. Liga"
+          },
+          {
+            "value": "dfb",
+            "label": "DFB-Pokal"
+          },
+          {
+            "value": "ffb1",
+            "label": "Frauen-Bundesliga"
+          }
+        ]
+      },
+      {
+        "key": "team",
+        "label": "Lieblingsverein",
+        "type": "lookup",
+        "search": "/api/ext/football/teams",
+        "help": "Nach dem Namen suchen und den Verein antippen. Er wird hervorgehoben, und „Mein Verein“ zeigt sein letztes und sein nächstes Spiel."
+      },
+      {
+        "type": "status",
+        "label": "Abfrage",
+        "state": "/api/ext/football/state"
+      }
+    ]
+  }
+}

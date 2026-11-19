@@ -1,0 +1,379 @@
+[
+ {
+  "matchID": 83234,
+  "matchDateTime": "2026-11-06T20:30:00",
+  "timeZoneID": null,
+  "leagueId": 4937,
+  "leagueName": "1. Fußball-Bundesliga 2026/2027",
+  "leagueSeason": 2026,
+  "leagueShortcut": "bl1",
+  "matchDateTimeUTC": "2026-11-06T19:30:00Z",
+  "group": {
+   "groupName": "9. Spieltag",
+   "groupOrderID": 9,
+   "groupID": 50641
+  },
+  "team1": {
+   "teamId": 100,
+   "teamName": "Hamburger SV",
+   "shortName": "HSV",
+   "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/f/f7/Hamburger_SV_logo.svg",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": "Q51974"
+  },
+  "team2": {
+   "teamId": 87,
+   "teamName": "Borussia Mönchengladbach",
+   "shortName": "Gladbach",
+   "teamIconUrl": "https://i.imgur.com/KSIk0Eu.png",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": null
+  },
+  "lastUpdateDateTime": "2026-11-10T22:41:58.83",
+  "matchIsFinished": true,
+  "matchResults": [
+   {
+    "resultID": 130907,
+    "resultName": "Halbzeit",
+    "pointsTeam1": 1,
+    "pointsTeam2": 1,
+    "resultOrderID": 1,
+    "resultTypeID": 1,
+    "resultTypeKind": "HalfTime",
+    "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+   },
+   {
+    "resultID": 130908,
+    "resultName": "Endergebnis",
+    "pointsTeam1": 3,
+    "pointsTeam2": 1,
+    "resultOrderID": 2,
+    "resultTypeID": 2,
+    "resultTypeKind": "After90Minutes",
+    "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+   }
+  ],
+  "goals": [
+   {
+    "goalID": 152301,
+    "scoreTeam1": 1,
+    "scoreTeam2": 0,
+    "matchMinute": 11,
+    "goalGetterID": 19315,
+    "goalGetterName": "M. Muheim",
+    "scoringTeamId": 100,
+    "isPenalty": false,
+    "isOwnGoal": false,
+    "isOvertime": false,
+    "comment": null
+   },
+   {
+    "goalID": 152304,
+    "scoreTeam1": 1,
+    "scoreTeam2": 1,
+    "matchMinute": 44,
+    "goalGetterID": 19101,
+    "goalGetterName": "J. Scally",
+    "scoringTeamId": 87,
+    "isPenalty": false,
+    "isOwnGoal": false,
+    "isOvertime": false,
+    "comment": null
+   },
+   {
+    "goalID": 152305,
+    "scoreTeam1": 2,
+    "scoreTeam2": 1,
+    "matchMinute": 60,
+    "goalGetterID": 28144,
+    "goalGetterName": "Shafiq Nandja",
+    "scoringTeamId": 100,
+    "isPenalty": false,
+    "isOwnGoal": false,
+    "isOvertime": false,
+    "comment": null
+   },
+   {
+    "goalID": 152308,
+    "scoreTeam1": 3,
+    "scoreTeam2": 1,
+    "matchMinute": 70,
+    "goalGetterID": 23262,
+    "goalGetterName": "A. Grønbæk",
+    "scoringTeamId": 100,
+    "isPenalty": false,
+    "isOwnGoal": false,
+    "isOvertime": false,
+    "comment": null
+   }
+  ],
+  "location": {
+   "locationID": 1030,
+   "locationCity": "Hamburg",
+   "locationStadium": "Volksparkstadion"
+  },
+  "numberOfViewers": 57000
+ },
+ {
+  "matchID": 83228,
+  "matchDateTime": "2026-11-07T15:30:00",
+  "timeZoneID": null,
+  "leagueId": 4937,
+  "leagueName": "1. Fußball-Bundesliga 2026/2027",
+  "leagueSeason": 2026,
+  "leagueShortcut": "bl1",
+  "matchDateTimeUTC": "2026-11-07T14:30:00Z",
+  "group": {
+   "groupName": "9. Spieltag",
+   "groupOrderID": 9,
+   "groupID": 50641
+  },
+  "team1": {
+   "teamId": 7,
+   "teamName": "Borussia Dortmund",
+   "shortName": "Dortmund",
+   "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Borussia_Dortmund_logo.svg/960px-Borussia_Dortmund_logo.svg.png",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": "Q41420"
+  },
+  "team2": {
+   "teamId": 198,
+   "teamName": "SV 07 Elversberg",
+   "shortName": "Elversberg",
+   "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/SV_Elversberg_Logo.svg/500px-SV_Elversberg_Logo.svg.png",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": null
+  },
+  "lastUpdateDateTime": "2026-11-08T11:47:57.05",
+  "matchIsFinished": true,
+  "matchResults": [
+   {
+    "resultID": 130954,
+    "resultName": "Halbzeit",
+    "pointsTeam1": 0,
+    "pointsTeam2": 0,
+    "resultOrderID": 1,
+    "resultTypeID": 1,
+    "resultTypeKind": "HalfTime",
+    "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+   },
+   {
+    "resultID": 130955,
+    "resultName": "Endergebnis",
+    "pointsTeam1": 2,
+    "pointsTeam2": 1,
+    "resultOrderID": 2,
+    "resultTypeID": 2,
+    "resultTypeKind": "After90Minutes",
+    "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+   }
+  ],
+  "goals": [
+   {
+    "goalID": 152372,
+    "scoreTeam1": 1,
+    "scoreTeam2": 0,
+    "matchMinute": 55,
+    "goalGetterID": 19605,
+    "goalGetterName": "F. Nmecha",
+    "scoringTeamId": 7,
+    "isPenalty": false,
+    "isOwnGoal": false,
+    "isOvertime": false,
+    "comment": null
+   },
+   {
+    "goalID": 152379,
+    "scoreTeam1": 2,
+    "scoreTeam2": 0,
+    "matchMinute": 71,
+    "goalGetterID": 19605,
+    "goalGetterName": "F. Nmecha",
+    "scoringTeamId": 7,
+    "isPenalty": false,
+    "isOwnGoal": false,
+    "isOvertime": false,
+    "comment": null
+   },
+   {
+    "goalID": 152381,
+    "scoreTeam1": 2,
+    "scoreTeam2": 1,
+    "matchMinute": 81,
+    "goalGetterID": 24917,
+    "goalGetterName": "N. Futkeu",
+    "scoringTeamId": 198,
+    "isPenalty": false,
+    "isOwnGoal": false,
+    "isOvertime": false,
+    "comment": null
+   }
+  ],
+  "location": {
+   "locationID": 35,
+   "locationCity": "Dortmund",
+   "locationStadium": "Signal Iduna Park"
+  },
+  "numberOfViewers": 81365
+ },
+ {
+  "matchID": 83229,
+  "matchDateTime": "2026-11-07T15:30:00",
+  "timeZoneID": null,
+  "leagueId": 4937,
+  "leagueName": "1. Fußball-Bundesliga 2026/2027",
+  "leagueSeason": 2026,
+  "leagueShortcut": "bl1",
+  "matchDateTimeUTC": "2026-11-07T14:30:00Z",
+  "group": {
+   "groupName": "9. Spieltag",
+   "groupOrderID": 9,
+   "groupID": 50641
+  },
+  "team1": {
+   "teamId": 1635,
+   "teamName": "RB Leipzig",
+   "shortName": "Leipzig",
+   "teamIconUrl": "https://i.imgur.com/Rpwsjz1.png",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": null
+  },
+  "team2": {
+   "teamId": 95,
+   "teamName": "FC Augsburg",
+   "shortName": "Augsburg",
+   "teamIconUrl": "https://i.imgur.com/sdE62e2.png",
+   "teamGroupName": null,
+   "tla": null,
+   "wikidataId": "Q15755"
+  },
+  "lastUpdateDateTime": "2026-11-08T11:50:15.6",
+  "matchIsFinished": true,
+  "matchResults": [
+   {
+    "resultID": 130956,
+    "resultName": "Halbzeit",
+    "pointsTeam1": 3,
+    "pointsTeam2": 1,
+    "resultOrderID": 1,
+    "resultTypeID": 1,
+    "resultTypeKind": "HalfTime",
+    "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+   },
+   {
+    "resultID": 130960,
+    "resultName": "Endergebnis",
+    "pointsTeam1": 5,
+    "pointsTeam2": 2,
+    "resultOrderID": 2,
+    "resultTypeID": 2,
+    "resultTypeKind": "After90Minutes",
+    "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+   }
+  ],
+  "goals": [
+   {
+    "goalID": 152355,
+    "scoreTeam1": 0,
+    "scoreTeam2": 1,
+    "matchMinute": 1,
+    "goalGetterID": 24260,
+    "goalGetterName": "A. Kade",
+    "scoringTeamId": 95,
+    "isPenalty": false,
+    "isOwnGoal": false,
+    "isOvertime": false,
+    "comment": null
+   },
+   {
+    "goalID": 152367,
+    "scoreTeam1": 1,
+    "scoreTeam2": 1,
+    "matchMinute": 34,
+    "goalGetterID": 23595,
+    "goalGetterName": "E. Banzuzi",
+    "scoringTeamId": 1635,
+    "isPenalty": false,
+    "isOwnGoal": false,
+    "isOvertime": false,
+    "comment": null
+   },
+   {
+    "goalID": 152368,
+    "scoreTeam1": 2,
+    "scoreTeam2": 1,
+    "matchMinute": 35,
+    "goalGetterID": 18782,
+    "goalGetterName": "C. Nkunku",
+    "scoringTeamId": 1635,
+    "isPenalty": false,
+    "isOwnGoal": false,
+    "isOvertime": false,
+    "comment": null
+   },
+   {
+    "goalID": 152371,
+    "scoreTeam1": 3,
+    "scoreTeam2": 1,
+    "matchMinute": 46,
+    "goalGetterID": 18358,
+    "goalGetterName": "D. Raum",
+    "scoringTeamId": 1635,
+    "isPenalty": false,
+    "isOwnGoal": false,
+    "isOvertime": true,
+    "comment": null
+   },
+   {
+    "goalID": 152375,
+    "scoreTeam1": 4,
+    "scoreTeam2": 1,
+    "matchMinute": 60,
+    "goalGetterID": 7906,
+    "goalGetterName": "Romulo",
+    "scoringTeamId": 1635,
+    "isPenalty": false,
+    "isOwnGoal": false,
+    "isOvertime": false,
+    "comment": null
+   },
+   {
+    "goalID": 152376,
+    "scoreTeam1": 5,
+    "scoreTeam2": 1,
+    "matchMinute": 66,
+    "goalGetterID": 18529,
+    "goalGetterName": "C. Baumgartner",
+    "scoringTeamId": 1635,
+    "isPenalty": false,
+    "isOwnGoal": false,
+    "isOvertime": false,
+    "comment": null
+   },
+   {
+    "goalID": 152384,
+    "scoreTeam1": 5,
+    "scoreTeam2": 2,
+    "matchMinute": 93,
+    "goalGetterID": 28147,
+    "goalGetterName": "Uchenna Ogundu",
+    "scoringTeamId": 95,
+    "isPenalty": false,
+    "isOwnGoal": false,
+    "isOvertime": true,
+    "comment": null
+   }
+  ],
+  "location": {
+   "locationID": 478,
+   "locationCity": "Leipzig",
+   "locationStadium": "Red Bull Arena"
+  },
+  "numberOfViewers": 38292
+ }
+]
