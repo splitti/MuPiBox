@@ -28,6 +28,10 @@
   @if (!textPreview && winamp.active()) {
     <mupi-winamp-shell></mupi-winamp-shell>
   }
+  <!-- several users (5.1): the overview behind the dot in the header, the note on a card of another library -->
+  @if (!textPreview && !monitorOff()) {
+    <mupi-users-overlay></mupi-users-overlay>
+  }
   <!-- a new display model waiting for its answer (app: Display-Modell) -->
   <mupi-display-test-overlay></mupi-display-test-overlay>
   <ion-router-outlet></ion-router-outlet>

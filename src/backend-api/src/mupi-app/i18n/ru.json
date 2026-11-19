@@ -4500,7 +4500,6 @@
  "Halten": "Удержание",
  "Nur in der App": "Только в приложении",
  "Ein Tipp auf den Punkt öffnet die Auswahl.": "Нажатие на точку открывает выбор.",
- "Den Punkt drei Sekunden halten – so wechselt niemand aus Versehen.": "Удерживать точку три секунды – так никто не переключит случайно.",
  "Am Display gibt es keinen Wechsel, nur hier in der App.": "На дисплее не переключается, только здесь, в приложении.",
  "Entfernte Benutzer bleiben 30 Tage mit ihrer Bibliothek hier.": "Удалённые пользователи остаются здесь 30 дней вместе с библиотекой.",
  "entfernt am {}": "удалён {}",
@@ -4521,5 +4520,13 @@
  "„Am Display zeigen“ gilt hier für {}. Die Alben selbst gehören der ganzen Box.": "«Показывать на дисплее» здесь относится к {}. Сами альбомы принадлежат всему боксу.",
  "Spielzeit von": "Время прослушивания:",
  "Fotoalben von": "Фотоальбомы:",
- "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Ты редактируешь время прослушивания {}. Оно действует, как только {} станет активным пользователем. Разрешить и тишина сейчас работают только для активного пользователя, таймер сна и выключение действуют для всего бокса."
+ "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Ты редактируешь время прослушивания {}. Оно действует, как только {} станет активным пользователем. Разрешить и тишина сейчас работают только для активного пользователя, таймер сна и выключение действуют для всего бокса.",
+ "Vier Ziffern, die das Display verlangt, bevor es zu {} wechselt. Zurück zu einem anderen Benutzer geht ohne PIN, und hier in der App fragt niemand danach.": "Четыре цифры, которые дисплей спрашивает перед переключением на {}. Вернуться к другому пользователю можно без PIN, а здесь в приложении его никто не спрашивает.",
+ "Neue PIN": "Новый PIN",
+ "mit PIN": "с PIN",
+ "PIN entfernen": "Удалить PIN",
+ "PIN gespeichert": "PIN сохранён",
+ "PIN entfernt": "PIN удалён",
+ "Bitte vier Ziffern eingeben": "Введи четыре цифры",
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Точка открывает выбор; там удерживай плитку три секунды – так никто не переключит случайно."
 }

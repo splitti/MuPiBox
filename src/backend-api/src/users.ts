@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import { promises as fsp } from 'node:fs'
 import path from 'node:path'
-import { randomBytes } from 'node:crypto'
+import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
 import { writeJsonSync } from './json-file'
 
 /**
@@ -163,6 +163,8 @@ export interface UserTrashEntry {
   name: string
   color: string
   deletedAt: number
+  /** his PIN's hash: he comes back with it (not to the app - users-routes names the fields it gives) */
+  pin?: string
 }
 
 /**
@@ -345,7 +347,7 @@ export class UserFiles {
     const dir = this.userDir(user.id)
     if (fs.existsSync(dir)) fs.renameSync(dir, to)
     else fs.mkdirSync(to, { recursive: true })
-    writeJsonSync(path.join(to, 'user.json'), { id: user.id, name: user.name, color: user.color }, { ifChanged: false })
+    writeJsonSync(path.join(to, 'user.json'), { id: user.id, name: user.name, color: user.color, ...(user.pin ? { pin: user.pin } : {}) }, { ifChanged: false })
     return key
   }
 
@@ -367,6 +369,7 @@ export class UserFiles {
         // (only a colour of the list: the app puts it into a style)
         color: typeof meta.color === 'string' && (USER_COLORS as readonly string[]).includes(meta.color) ? meta.color : USER_COLORS[0],
         deletedAt: Number(m[2]),
+        ...(typeof meta.pin === 'string' && meta.pin.startsWith('s1$') ? { pin: meta.pin } : {}),
       })
     }
     return out.sort((a, b) => b.deletedAt - a.deletedAt)
@@ -468,11 +471,33 @@ export interface SwitchHooks {
 
 export class UserSwitchError extends Error {
   constructor(
-    readonly code: 'busy' | 'unknown_user' | 'disabled' | 'failed',
+    readonly code: 'busy' | 'unknown_user' | 'disabled' | 'failed' | 'mode' | 'pin' | 'pin_locked',
     message: string,
   ) {
     super(message)
   }
+}
+
+// ---- the PIN of a user (asked at the display before switching to him; the app asks none - the parents' password) ------
+/** 4 digits */
+export const PIN_RE = /^\d{4}$/
+/** Wrong PINs in a row at the display, then a pause */
+export const PIN_TRIES = 5
+export const PIN_PAUSE_MS = 60_000
+
+/** A PIN as users.json keeps it: scrypt with a salt of its own, never the digits */
+export function hashPin(pin: string): string {
+  const salt = randomBytes(16)
+  return `s1$${salt.toString('base64')}$${scryptSync(pin, salt, 32).toString('base64')}`
+}
+
+/** Whether `pin` is the one of the hash (false for anything that is not a hash of hashPin) */
+export function pinMatches(stored: string | undefined, pin: string): boolean {
+  const m = /^s1\$([A-Za-z0-9+/=]+)\$([A-Za-z0-9+/=]+)$/.exec(stored ?? '')
+  if (!m) return false
+  const want = Buffer.from(m[2], 'base64')
+  if (want.length !== 32) return false
+  return timingSafeEqual(scryptSync(pin, Buffer.from(m[1], 'base64'), 32), want)
 }
 
 /** Waits for the hooks' busy() to clear, up to `waitMs`; the reason when it does not */
@@ -490,6 +515,10 @@ async function waitNotBusy(hooks: SwitchHooks, waitMs: number): Promise<string |
  */
 export class Users {
   private chain: Promise<unknown> = Promise.resolve()
+  /** wrong PINs at the display in a row (for any user - one counter: trying the users one after the other is no way
+   *  round it), and until when the display may try none */
+  private pinFails = 0
+  private pinPausedUntil = 0
   constructor(
     readonly files: UserFiles,
     private readonly hooks: SwitchHooks,
@@ -537,6 +566,48 @@ export class Users {
   /** Switch to user `id`: refused while the box is busy (an update, a restore, a sync ...) - after waiting a little */
   switchTo(id: string): Promise<UsersFile> {
     return this.serial(() => this.switchNow(id, false))
+  }
+
+  /**
+   * A switch asked at the display: not with "only in the app", and to a user with a PIN only with his PIN - 5 wrong in a
+   * row, then a minute's pause. Going back to the user in place needs none (nothing switches).
+   */
+  switchFromDisplay(id: string, pin: unknown): Promise<UsersFile> {
+    return this.serial(async () => {
+      const f = this.files.read()
+      if (!f.enabled) throw new UserSwitchError('disabled', 'several users are switched off')
+      if (f.switchMode === 'app') throw new UserSwitchError('mode', 'switching only in the app')
+      const u = f.users.find((x) => x.id === id)
+      if (!u) throw new UserSwitchError('unknown_user', 'no such user')
+      if (u.pin && f.current !== id) {
+        const left = this.pinPausedUntil - Date.now()
+        if (left > 0) throw new UserSwitchError('pin_locked', String(Math.ceil(left / 1000)))
+        if (typeof pin !== 'string' || !PIN_RE.test(pin) || !pinMatches(u.pin, pin)) {
+          this.pinFails += 1
+          if (this.pinFails >= PIN_TRIES) {
+            this.pinFails = 0
+            this.pinPausedUntil = Date.now() + PIN_PAUSE_MS
+            throw new UserSwitchError('pin_locked', String(PIN_PAUSE_MS / 1000))
+          }
+          throw new UserSwitchError('pin', String(PIN_TRIES - this.pinFails))
+        }
+        this.pinFails = 0
+      }
+      return this.switchNow(id, false)
+    })
+  }
+
+  /** Set (4 digits) or take away (null, '') the PIN of a user */
+  setPin(id: string, pin: unknown): Promise<void> {
+    return this.serial(async () => {
+      const f = this.files.read()
+      const u = f.users.find((x) => x.id === id)
+      if (!u) throw new UserSwitchError('unknown_user', 'no such user')
+      if (pin === null || pin === '') delete u.pin
+      else if (typeof pin === 'string' && PIN_RE.test(pin)) u.pin = hashPin(pin)
+      else throw new UserSwitchError('failed', 'pin')
+      this.files.write(f)
+    })
   }
 
   private async switchNow(id: string, evenWhenOff: boolean): Promise<UsersFile> {
@@ -713,7 +784,7 @@ export class Users {
       const color = f.users.some((u) => u.color === t.color) ? freeColor(f.users) : t.color
       if (!color) throw new UserSwitchError('failed', 'too_many')
       this.files.untrash(key, id)
-      const user: User = { id, name: t.name, color }
+      const user: User = { id, name: t.name, color, ...(t.pin ? { pin: t.pin } : {}) }
       f.users.push(user)
       this.files.write(f)
       return user

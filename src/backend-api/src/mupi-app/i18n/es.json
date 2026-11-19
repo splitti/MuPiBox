@@ -4500,7 +4500,6 @@
  "Halten": "Mantener",
  "Nur in der App": "Solo en la app",
  "Ein Tipp auf den Punkt öffnet die Auswahl.": "Un toque en el punto abre la selección.",
- "Den Punkt drei Sekunden halten – so wechselt niemand aus Versehen.": "Mantener el punto tres segundos: así nadie cambia por error.",
  "Am Display gibt es keinen Wechsel, nur hier in der App.": "Sin cambio en la pantalla, solo aquí en la app.",
  "Entfernte Benutzer bleiben 30 Tage mit ihrer Bibliothek hier.": "Los usuarios eliminados se quedan aquí 30 días con su biblioteca.",
  "entfernt am {}": "eliminado el {}",
@@ -4521,5 +4520,13 @@
  "„Am Display zeigen“ gilt hier für {}. Die Alben selbst gehören der ganzen Box.": "«Mostrar en la pantalla» vale aquí para {}. Los álbumes en sí son de toda la caja.",
  "Spielzeit von": "Tiempo de escucha de",
  "Fotoalben von": "Álbumes de fotos de",
- "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Estás editando el tiempo de escucha de {}. Se aplica en cuanto {} sea el usuario activo. Liberar y silencio inmediato solo funcionan con el usuario activo; el temporizador y el apagado valen para toda la caja."
+ "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Estás editando el tiempo de escucha de {}. Se aplica en cuanto {} sea el usuario activo. Liberar y silencio inmediato solo funcionan con el usuario activo; el temporizador y el apagado valen para toda la caja.",
+ "Vier Ziffern, die das Display verlangt, bevor es zu {} wechselt. Zurück zu einem anderen Benutzer geht ohne PIN, und hier in der App fragt niemand danach.": "Cuatro cifras que la pantalla pide antes de cambiar a {}. Volver a otro usuario no necesita PIN, y aquí en la app nadie lo pide.",
+ "Neue PIN": "PIN nuevo",
+ "mit PIN": "con PIN",
+ "PIN entfernen": "Quitar PIN",
+ "PIN gespeichert": "PIN guardado",
+ "PIN entfernt": "PIN quitado",
+ "Bitte vier Ziffern eingeben": "Introduce cuatro cifras",
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "El punto abre la selección; mantén allí una casilla tres segundos: así nadie cambia sin querer."
 }

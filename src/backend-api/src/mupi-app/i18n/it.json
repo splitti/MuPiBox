@@ -4500,7 +4500,6 @@
  "Halten": "Tieni premuto",
  "Nur in der App": "Solo nell’app",
  "Ein Tipp auf den Punkt öffnet die Auswahl.": "Un tocco sul punto apre la scelta.",
- "Den Punkt drei Sekunden halten – so wechselt niemand aus Versehen.": "Tenere premuto il punto per tre secondi: così nessuno cambia per sbaglio.",
  "Am Display gibt es keinen Wechsel, nur hier in der App.": "Nessun cambio sul display, solo qui nell’app.",
  "Entfernte Benutzer bleiben 30 Tage mit ihrer Bibliothek hier.": "Gli utenti rimossi restano qui 30 giorni con la loro libreria.",
  "entfernt am {}": "rimosso il {}",
@@ -4521,5 +4520,13 @@
  "„Am Display zeigen“ gilt hier für {}. Die Alben selbst gehören der ganzen Box.": "«Mostra sul display» vale qui per {}. Gli album stessi appartengono a tutto il box.",
  "Spielzeit von": "Tempo di ascolto di",
  "Fotoalben von": "Album di foto di",
- "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Stai modificando il tempo di ascolto di {}. Vale non appena {} è l’utente attivo. Sblocca e silenzio subito funzionano solo per l’utente attivo, il timer e lo spegnimento valgono per tutto il box."
+ "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Stai modificando il tempo di ascolto di {}. Vale non appena {} è l’utente attivo. Sblocca e silenzio subito funzionano solo per l’utente attivo, il timer e lo spegnimento valgono per tutto il box.",
+ "Vier Ziffern, die das Display verlangt, bevor es zu {} wechselt. Zurück zu einem anderen Benutzer geht ohne PIN, und hier in der App fragt niemand danach.": "Quattro cifre che il display chiede prima di passare a {}. Tornare a un altro utente non richiede PIN, e qui nell’app nessuno lo chiede.",
+ "Neue PIN": "Nuovo PIN",
+ "mit PIN": "con PIN",
+ "PIN entfernen": "Rimuovi PIN",
+ "PIN gespeichert": "PIN salvato",
+ "PIN entfernt": "PIN rimosso",
+ "Bitte vier Ziffern eingeben": "Inserisci quattro cifre",
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Il punto apre la scelta; lì tieni premuta una casella per tre secondi – così nessuno cambia per sbaglio."
 }

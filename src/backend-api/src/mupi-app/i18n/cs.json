@@ -4500,7 +4500,6 @@
  "Halten": "Podržení",
  "Nur in der App": "Jen v aplikaci",
  "Ein Tipp auf den Punkt öffnet die Auswahl.": "Klepnutí na tečku otevře výběr.",
- "Den Punkt drei Sekunden halten – so wechselt niemand aus Versehen.": "Podržet tečku tři sekundy – tak nikdo nepřepne omylem.",
  "Am Display gibt es keinen Wechsel, nur hier in der App.": "Na displeji se nepřepíná, jen tady v aplikaci.",
  "Entfernte Benutzer bleiben 30 Tage mit ihrer Bibliothek hier.": "Odebraní uživatelé tu zůstanou 30 dní se svou knihovnou.",
  "entfernt am {}": "odebráno {}",
@@ -4521,5 +4520,13 @@
  "„Am Display zeigen“ gilt hier für {}. Die Alben selbst gehören der ganzen Box.": "„Zobrazit na displeji“ tu platí pro {}. Samotná alba patří celému boxu.",
  "Spielzeit von": "Čas poslechu:",
  "Fotoalben von": "Fotoalba:",
- "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Upravuješ čas poslechu uživatele {}. Platí, jakmile bude {} aktivním uživatelem. Uvolnění a klid hned jdou jen u aktivního uživatele, časovač a vypínání platí pro celý box."
+ "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Upravuješ čas poslechu uživatele {}. Platí, jakmile bude {} aktivním uživatelem. Uvolnění a klid hned jdou jen u aktivního uživatele, časovač a vypínání platí pro celý box.",
+ "Vier Ziffern, die das Display verlangt, bevor es zu {} wechselt. Zurück zu einem anderen Benutzer geht ohne PIN, und hier in der App fragt niemand danach.": "Čtyři číslice, které displej chce před přepnutím na {}. Návrat k jinému uživateli je bez PIN a tady v aplikaci se na něj nikdo neptá.",
+ "Neue PIN": "Nový PIN",
+ "mit PIN": "s PIN",
+ "PIN entfernen": "Odebrat PIN",
+ "PIN gespeichert": "PIN uložen",
+ "PIN entfernt": "PIN odebrán",
+ "Bitte vier Ziffern eingeben": "Zadej čtyři číslice",
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Tečka otevře výběr; tam podrž dlaždici tři sekundy – tak nikdo nepřepne omylem."
 }

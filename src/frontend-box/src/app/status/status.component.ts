@@ -5,6 +5,9 @@ import { ExtensionHostService } from '../extension-host.service'
 import { MediaService } from '../media.service'
 import type { Mupihat } from '../mupihat'
 import { PlayerService } from '../player.service'
+import { DisplayTextsService } from '../display-texts.service'
+import { UsersService } from '../users/users.service'
+import { PlaytimeService } from '../playtime.service'
 
 // The status at the top right, the same in every theme: WiFi and battery, both 24 px high and in line, the
 // percentage inside the battery, and what extensions add right of them (the clock is such an extension). Colours come from --st-* variables (defaults below from the toolbar colour; the
@@ -96,6 +99,19 @@ function signalDbmOf(text: string | undefined): number | undefined {
         </div>
       }
       <span class="st-ext" #ext></span>
+      <!-- several users (5.1): the user in place, a tap opens the overview (not with "only in the app": then the dot only shows) -->
+      @if (users.apart()) {
+        <span
+          class="st-user"
+          [class.st-user--tap]="canSwitch()"
+          role="button"
+          [attr.aria-label]="texts.text('usersDot', { name: users.current()?.name ?? '' })"
+          (pointerdown)="$event.stopPropagation()"
+          (pointerup)="$event.stopPropagation()"
+          (click)="openUsers($event)"
+          ><span class="st-user-dot" [style.background]="users.current()?.color ?? '#808080'"></span
+        ></span>
+      }
     </div>
   `,
   styles: `
@@ -198,6 +214,25 @@ function signalDbmOf(text: string | undefined): number | undefined {
     .st-ext:empty {
       display: none;
     }
+    /* the dot of the user in place (several users): the only part of the status that takes a touch - and only when it opens something */
+    .st-user {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 44px;
+      margin: 0 -4px 0 -2px;
+    }
+    .st-user--tap {
+      pointer-events: auto;
+      cursor: pointer;
+    }
+    .st-user-dot {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px var(--st-on, currentColor);
+    }
   `,
 })
 export class StatusComponent {
@@ -235,6 +270,23 @@ export class StatusComponent {
 
   // What extensions put into the header: each gets its own place, filled again when the list changes
   private readonly extensions = inject(ExtensionHostService)
+  protected readonly users = inject(UsersService)
+  protected readonly texts = inject(DisplayTextsService)
+  private readonly playtime = inject(PlaytimeService)
+  // (not with "only in the app", and not on the lock screen: the play time is the user's - a switch to a brother or
+  // sister would end the lock; there the dot only shows who is in place)
+  protected readonly canSwitch = computed(() => {
+    const s = this.playtime.status()
+    return this.users.state()?.switchMode !== 'app' && !(s.enabled === true && s.state === 'blocked')
+  })
+
+  protected openUsers(ev: Event): void {
+    ev.stopPropagation()
+    ev.preventDefault()
+    if (!this.canSwitch()) return
+    void this.users.load()
+    this.users.overviewOpen.set(true)
+  }
   private readonly extSlot = viewChild<ElementRef<HTMLElement>>('ext')
 
   public constructor(

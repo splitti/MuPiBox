@@ -4500,7 +4500,6 @@
  "Halten": "Maintenir",
  "Nur in der App": "Seulement dans l’app",
  "Ein Tipp auf den Punkt öffnet die Auswahl.": "Un toucher sur le point ouvre le choix.",
- "Den Punkt drei Sekunden halten – so wechselt niemand aus Versehen.": "Maintenir le point trois secondes – ainsi personne ne change par erreur.",
  "Am Display gibt es keinen Wechsel, nur hier in der App.": "Pas de changement sur l’écran, seulement ici dans l’app.",
  "Entfernte Benutzer bleiben 30 Tage mit ihrer Bibliothek hier.": "Les utilisateurs supprimés restent ici 30 jours avec leur bibliothèque.",
  "entfernt am {}": "supprimé le {}",
@@ -4521,5 +4520,13 @@
  "„Am Display zeigen“ gilt hier für {}. Die Alben selbst gehören der ganzen Box.": "« Afficher sur l’écran » vaut ici pour {}. Les albums eux-mêmes appartiennent à toute la box.",
  "Spielzeit von": "Temps d’écoute de",
  "Fotoalben von": "Albums photo de",
- "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Tu modifies le temps d’écoute de {}. Il s’applique dès que {} est l’utilisateur actif. Libérer et calme immédiat ne marchent que pour l’utilisateur actif, la minuterie et l’arrêt valent pour toute la box."
+ "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Tu modifies le temps d’écoute de {}. Il s’applique dès que {} est l’utilisateur actif. Libérer et calme immédiat ne marchent que pour l’utilisateur actif, la minuterie et l’arrêt valent pour toute la box.",
+ "Vier Ziffern, die das Display verlangt, bevor es zu {} wechselt. Zurück zu einem anderen Benutzer geht ohne PIN, und hier in der App fragt niemand danach.": "Quatre chiffres que l’écran demande avant de passer à {}. Revenir à un autre utilisateur se fait sans PIN, et personne ne le demande ici dans l’app.",
+ "Neue PIN": "Nouveau PIN",
+ "mit PIN": "avec PIN",
+ "PIN entfernen": "Supprimer le PIN",
+ "PIN gespeichert": "PIN enregistré",
+ "PIN entfernt": "PIN supprimé",
+ "Bitte vier Ziffern eingeben": "Saisis quatre chiffres",
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Le point ouvre le choix ; maintiens-y une tuile trois secondes – ainsi personne ne change par erreur."
 }

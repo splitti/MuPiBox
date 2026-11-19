@@ -4500,7 +4500,6 @@
  "Halten": "Vasthouden",
  "Nur in der App": "Alleen in de app",
  "Ein Tipp auf den Punkt öffnet die Auswahl.": "Een tik op de stip opent de keuze.",
- "Den Punkt drei Sekunden halten – so wechselt niemand aus Versehen.": "De stip drie seconden vasthouden – zo wisselt niemand per ongeluk.",
  "Am Display gibt es keinen Wechsel, nur hier in der App.": "Geen wisselen op het display, alleen hier in de app.",
  "Entfernte Benutzer bleiben 30 Tage mit ihrer Bibliothek hier.": "Verwijderde gebruikers blijven hier 30 dagen met hun bibliotheek.",
  "entfernt am {}": "verwijderd op {}",
@@ -4521,5 +4520,13 @@
  "„Am Display zeigen“ gilt hier für {}. Die Alben selbst gehören der ganzen Box.": "“Op het display tonen” geldt hier voor {}. De albums zelf horen bij de hele box.",
  "Spielzeit von": "Luistertijd van",
  "Fotoalben von": "Fotoalbums van",
- "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Je bewerkt de luistertijd van {}. Die geldt zodra {} de actieve gebruiker is. Vrijgeven en meteen stil werken alleen bij de actieve gebruiker, slaaptimer en uitschakelen gelden voor de hele box."
+ "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Je bewerkt de luistertijd van {}. Die geldt zodra {} de actieve gebruiker is. Vrijgeven en meteen stil werken alleen bij de actieve gebruiker, slaaptimer en uitschakelen gelden voor de hele box.",
+ "Vier Ziffern, die das Display verlangt, bevor es zu {} wechselt. Zurück zu einem anderen Benutzer geht ohne PIN, und hier in der App fragt niemand danach.": "Vier cijfers die het display vraagt voordat het naar {} wisselt. Terug naar een andere gebruiker gaat zonder PIN, en hier in de app vraagt niemand erom.",
+ "Neue PIN": "Nieuwe PIN",
+ "mit PIN": "met PIN",
+ "PIN entfernen": "PIN verwijderen",
+ "PIN gespeichert": "PIN opgeslagen",
+ "PIN entfernt": "PIN verwijderd",
+ "Bitte vier Ziffern eingeben": "Voer vier cijfers in",
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "De stip opent de keuze; houd daar een tegel drie seconden vast – zo wisselt niemand per ongeluk."
 }

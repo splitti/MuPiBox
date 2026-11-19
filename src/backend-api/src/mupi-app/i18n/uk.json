@@ -4500,7 +4500,6 @@
  "Halten": "Утримання",
  "Nur in der App": "Лише в застосунку",
  "Ein Tipp auf den Punkt öffnet die Auswahl.": "Дотик до точки відкриває вибір.",
- "Den Punkt drei Sekunden halten – so wechselt niemand aus Versehen.": "Утримувати точку три секунди – так ніхто не перемкне випадково.",
  "Am Display gibt es keinen Wechsel, nur hier in der App.": "На дисплеї не перемикається, лише тут, у застосунку.",
  "Entfernte Benutzer bleiben 30 Tage mit ihrer Bibliothek hier.": "Видалені користувачі залишаються тут 30 днів разом із бібліотекою.",
  "entfernt am {}": "видалено {}",
@@ -4521,5 +4520,13 @@
  "„Am Display zeigen“ gilt hier für {}. Die Alben selbst gehören der ganzen Box.": "«Показувати на дисплеї» тут стосується {}. Самі альбоми належать усьому боксу.",
  "Spielzeit von": "Час слухання:",
  "Fotoalben von": "Фотоальбоми:",
- "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Ти редагуєш час слухання {}. Він діє, щойно {} стане активним користувачем. Дозволити й тиша зараз працюють лише для активного користувача, таймер сну й вимкнення діють для всього бокса."
+ "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Ти редагуєш час слухання {}. Він діє, щойно {} стане активним користувачем. Дозволити й тиша зараз працюють лише для активного користувача, таймер сну й вимкнення діють для всього бокса.",
+ "Vier Ziffern, die das Display verlangt, bevor es zu {} wechselt. Zurück zu einem anderen Benutzer geht ohne PIN, und hier in der App fragt niemand danach.": "Чотири цифри, які дисплей питає перед перемиканням на {}. Повернутися до іншого користувача можна без PIN, а тут у застосунку його ніхто не питає.",
+ "Neue PIN": "Новий PIN",
+ "mit PIN": "з PIN",
+ "PIN entfernen": "Видалити PIN",
+ "PIN gespeichert": "PIN збережено",
+ "PIN entfernt": "PIN видалено",
+ "Bitte vier Ziffern eingeben": "Введи чотири цифри",
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Крапка відкриває вибір; там утримуй плитку три секунди – так ніхто не перемкне випадково."
 }

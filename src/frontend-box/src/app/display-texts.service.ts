@@ -122,6 +122,20 @@ export const DEFAULT_DISPLAY_TEXTS = {
   photosRetry: 'Try again',
   photosVolDown: 'Quieter',
   photosVolUp: 'Louder',
+  // several users (5.1): the overview behind the dot in the header, its PIN pad ({name} = the user, {n} tries left,
+  // {s} seconds), a medium of an extension (an NFC card) that is not in the library of the user in place
+  usersTitle: 'Who is listening?',
+  usersHoldHint: 'Hold a tile to switch',
+  usersAppOnly: "Switching is done in the parents' app",
+  usersSwitching: 'Switching to {name} …',
+  usersFailed: 'That did not work. Try again.',
+  usersBusy: 'The box is busy right now. Try again in a moment.',
+  usersPinTitle: 'PIN for {name}',
+  usersPinWrong: 'Wrong PIN. {n} more tries.',
+  usersPinLocked: 'Too many tries. Try again in {s} s.',
+  usersCurrent: 'listening now',
+  usersNotHere: 'That is not in the library of {name}.',
+  usersDot: 'User: {name}',
 }
 export type DisplayTextKey = keyof typeof DEFAULT_DISPLAY_TEXTS
 type TextSet = Partial<Record<DisplayTextKey, string>>

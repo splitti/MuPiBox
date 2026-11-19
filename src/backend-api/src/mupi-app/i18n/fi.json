@@ -4500,7 +4500,6 @@
  "Halten": "Pito",
  "Nur in der App": "Vain sovelluksessa",
  "Ein Tipp auf den Punkt öffnet die Auswahl.": "Napautus pisteeseen avaa valinnan.",
- "Den Punkt drei Sekunden halten – so wechselt niemand aus Versehen.": "Pidä pistettä kolme sekuntia – niin kukaan ei vaihda vahingossa.",
  "Am Display gibt es keinen Wechsel, nur hier in der App.": "Näytöllä ei vaihdeta, vain täällä sovelluksessa.",
  "Entfernte Benutzer bleiben 30 Tage mit ihrer Bibliothek hier.": "Poistetut käyttäjät pysyvät täällä kirjastoineen 30 päivää.",
  "entfernt am {}": "poistettu {}",
@@ -4521,5 +4520,13 @@
  "„Am Display zeigen“ gilt hier für {}. Die Alben selbst gehören der ganzen Box.": "”Näytä näytöllä” koskee täällä käyttäjää {}. Albumit itse kuuluvat koko laitteelle.",
  "Spielzeit von": "Kuunteluaika:",
  "Fotoalben von": "Valokuva-albumit:",
- "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Muokkaat käyttäjän {} kuunteluaikaa. Se on voimassa heti, kun {} on aktiivinen käyttäjä. Vapautus ja hiljaisuus nyt toimivat vain aktiiviselle käyttäjälle, uniajastin ja sammutus koskevat koko laitetta."
+ "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Muokkaat käyttäjän {} kuunteluaikaa. Se on voimassa heti, kun {} on aktiivinen käyttäjä. Vapautus ja hiljaisuus nyt toimivat vain aktiiviselle käyttäjälle, uniajastin ja sammutus koskevat koko laitetta.",
+ "Vier Ziffern, die das Display verlangt, bevor es zu {} wechselt. Zurück zu einem anderen Benutzer geht ohne PIN, und hier in der App fragt niemand danach.": "Neljä numeroa, jotka näyttö kysyy ennen kuin se vaihtaa käyttäjään {}. Takaisin toiseen käyttäjään pääsee ilman PIN-koodia, eikä sitä kysytä täällä sovelluksessa.",
+ "Neue PIN": "Uusi PIN",
+ "mit PIN": "PIN-koodilla",
+ "PIN entfernen": "Poista PIN",
+ "PIN gespeichert": "PIN tallennettu",
+ "PIN entfernt": "PIN poistettu",
+ "Bitte vier Ziffern eingeben": "Anna neljä numeroa",
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Piste avaa valinnan; pidä siellä ruutua painettuna kolme sekuntia – niin kukaan ei vaihda vahingossa."
 }

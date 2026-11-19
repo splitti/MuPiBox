@@ -4516,7 +4516,6 @@
  "Halten": "Hold",
  "Nur in der App": "Only in the app",
  "Ein Tipp auf den Punkt öffnet die Auswahl.": "A tap on the dot opens the choice.",
- "Den Punkt drei Sekunden halten – so wechselt niemand aus Versehen.": "Hold the dot for three seconds – so nobody switches by accident.",
  "Am Display gibt es keinen Wechsel, nur hier in der App.": "No switching on the display, only here in the app.",
  "Entfernte Benutzer bleiben 30 Tage mit ihrer Bibliothek hier.": "Removed users stay here with their library for 30 days.",
  "entfernt am {}": "removed on {}",
@@ -4537,5 +4536,13 @@
  "„Am Display zeigen“ gilt hier für {}. Die Alben selbst gehören der ganzen Box.": "“Show on the display” applies to {} here. The albums themselves belong to the whole box.",
  "Spielzeit von": "Play time of",
  "Fotoalben von": "Photo albums of",
- "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "You are editing the play time of {}. It applies as soon as {} is the active user. Releasing and quiet now only work for the active user, the sleep timer and switching off apply to the whole box."
+ "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "You are editing the play time of {}. It applies as soon as {} is the active user. Releasing and quiet now only work for the active user, the sleep timer and switching off apply to the whole box.",
+ "Vier Ziffern, die das Display verlangt, bevor es zu {} wechselt. Zurück zu einem anderen Benutzer geht ohne PIN, und hier in der App fragt niemand danach.": "Four digits the display asks for before it switches to {}. Going back to another user needs no PIN, and nobody asks for it here in the app.",
+ "Neue PIN": "New PIN",
+ "mit PIN": "with PIN",
+ "PIN entfernen": "Remove PIN",
+ "PIN gespeichert": "PIN saved",
+ "PIN entfernt": "PIN removed",
+ "Bitte vier Ziffern eingeben": "Please enter four digits",
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "The dot opens the choice; hold a tile there for three seconds – so nobody switches by accident."
 }

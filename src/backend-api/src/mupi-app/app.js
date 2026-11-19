@@ -18398,6 +18398,7 @@ function userError(r) {
   if (reason === 'name') return 'Bitte einen Namen mit 1 bis 24 Zeichen eingeben'
   if (reason === 'current') return 'Der aktive Benutzer lässt sich nicht entfernen.'
   if (reason === 'color') return 'Diese Farbe hat schon jemand.'
+  if (reason === 'pin') return 'Bitte vier Ziffern eingeben'
   // (the list changed meanwhile - on another phone, at the display: it is loaded anew)
   if (e === 'unknown_user' || e === 'disabled') return 'Die Liste hat sich inzwischen geändert.'
   return 'Das hat nicht geklappt'
@@ -18486,6 +18487,27 @@ function userColorSheet(u) {
     },
   )
 }
+// The PIN of a user: the display asks it before it switches to him (not the app - the parents' password is enough)
+function userPinSheet(u) {
+  openSheet(
+    `<h2>PIN</h2><p class="help" style="margin:0">${esc(tr(`Vier Ziffern, die das Display verlangt, bevor es zu ${u.name} wechselt. Zurück zu einem anderen Benutzer geht ohne PIN, und hier in der App fragt niemand danach.`))}</p>
+     <div class="field"><label for="user-pin">${esc(u.pin ? tr('Neue PIN') : 'PIN')}</label><input class="input" id="user-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"></div>
+     <div class="btns"><button class="btn" data-close>Abbrechen</button>${u.pin ? '<button class="btn danger" data-clear>PIN entfernen</button>' : ''}<button class="btn primary" data-ok>Speichern</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      const input = sheet.querySelector('#user-pin')
+      const ok = async () => {
+        const pin = input.value.trim()
+        if (!/^\d{4}$/.test(pin)) return toast('Bitte vier Ziffern eingeben', 'info')
+        if (await userAction('pin', { id: u.id, pin }, 'PIN gespeichert')) close()
+      }
+      sheet.querySelector('[data-ok]').onclick = ok
+      input.addEventListener('keydown', (e) => e.key === 'Enter' && ok())
+      const clear = sheet.querySelector('[data-clear]')
+      if (clear) clear.onclick = async () => (await userAction('pin', { id: u.id, pin: '' }, 'PIN entfernt')) && close()
+    },
+  )
+}
 // Several users off: with whom the box goes on - the others rest with their things
 function usersOffSheet() {
   const list = usersState?.users ?? []
@@ -18518,9 +18540,9 @@ function usersSections() {
   const rows = s.users
     .map((u) => {
       const active = u.id === s.current
-      return `<div class="entry user-row">${userDot(u.color, 18)}<span class="lbl"><b translate="no">${esc(u.name)}</b><small>${esc(u.count === 1 ? tr('Ein Eintrag in der Bibliothek') : tr(`${u.count} Einträge in der Bibliothek`))}</small></span>
+      return `<div class="entry user-row">${userDot(u.color, 18)}<span class="lbl"><b translate="no">${esc(u.name)}</b><small>${esc(u.count === 1 ? tr('Ein Eintrag in der Bibliothek') : tr(`${u.count} Einträge in der Bibliothek`))}${u.pin ? ` · ${esc(tr('mit PIN'))}` : ''}</small></span>
         <span class="user-acts">${active ? `<span class="chip ok">${esc(tr('aktiv'))}</span>` : `<button class="btn sm primary" data-user-switch="${esc(u.id)}">Wechseln</button>`}
-        <button class="btn sm" data-user-rename="${esc(u.id)}">Umbenennen</button><button class="btn sm" data-user-color="${esc(u.id)}">Farbe</button>
+        <button class="btn sm" data-user-rename="${esc(u.id)}">Umbenennen</button><button class="btn sm" data-user-color="${esc(u.id)}">Farbe</button><button class="btn sm" data-user-pin="${esc(u.id)}">PIN</button>
         ${active ? '' : `<button class="btn sm danger" data-user-remove="${esc(u.id)}">Entfernen</button>`}</span></div>`
     })
     .join('')
@@ -18544,7 +18566,7 @@ function usersSections() {
         {
           type: 'html',
           html: `<div class="seg" id="user-mode" role="group" aria-label="${esc(tr('Wechsel am Display'))}">${USER_SWITCH_MODES.map(([v, l]) => `<button type="button" aria-pressed="${s.switchMode === v}" data-mode="${v}">${esc(tr(l))}</button>`).join('')}</div>
-            <p class="help">${esc(tr({ free: 'Ein Tipp auf den Punkt öffnet die Auswahl.', hold: 'Den Punkt drei Sekunden halten – so wechselt niemand aus Versehen.', app: 'Am Display gibt es keinen Wechsel, nur hier in der App.' }[s.switchMode] ?? ''))}</p>`,
+            <p class="help">${esc(tr({ free: 'Ein Tipp auf den Punkt öffnet die Auswahl.', hold: 'Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.', app: 'Am Display gibt es keinen Wechsel, nur hier in der App.' }[s.switchMode] ?? ''))}</p>`,
         },
       ],
     },
@@ -18581,6 +18603,7 @@ function mountUsers(root) {
   for (const b of root.querySelectorAll('[data-user-switch]')) b.onclick = () => switchUserSheet(byId(b.dataset.userSwitch))
   for (const b of root.querySelectorAll('[data-user-rename]')) b.onclick = () => userNameSheet(byId(b.dataset.userRename))
   for (const b of root.querySelectorAll('[data-user-color]')) b.onclick = () => userColorSheet(byId(b.dataset.userColor))
+  for (const b of root.querySelectorAll('[data-user-pin]')) b.onclick = () => userPinSheet(byId(b.dataset.userPin))
   for (const b of root.querySelectorAll('[data-user-remove]')) {
     const u = byId(b.dataset.userRemove)
     b.onclick = () =>

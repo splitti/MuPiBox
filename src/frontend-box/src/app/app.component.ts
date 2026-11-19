@@ -30,6 +30,7 @@ import { StalePageReloadService } from './stale-page-reload.service'
 import { KmThemeService } from './theme/km-theme.service'
 import { WinampService } from './winamp/winamp.service'
 import { WinampShellComponent } from './winamp/winamp-shell.component'
+import { UsersOverlayComponent } from './users/users-overlay.component'
 
 @Component({
   selector: 'app-root',
@@ -49,6 +50,7 @@ import { WinampShellComponent } from './winamp/winamp-shell.component'
     PhotoTimeChipComponent,
     PhotoTimeWarningComponent,
     TileTimeNoticeComponent,
+    UsersOverlayComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

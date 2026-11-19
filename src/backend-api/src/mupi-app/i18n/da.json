@@ -4500,7 +4500,6 @@
  "Halten": "Hold",
  "Nur in der App": "Kun i appen",
  "Ein Tipp auf den Punkt öffnet die Auswahl.": "Et tryk på prikken åbner valget.",
- "Den Punkt drei Sekunden halten – so wechselt niemand aus Versehen.": "Hold prikken i tre sekunder – så skifter ingen ved et uheld.",
  "Am Display gibt es keinen Wechsel, nur hier in der App.": "Intet skift på displayet, kun her i appen.",
  "Entfernte Benutzer bleiben 30 Tage mit ihrer Bibliothek hier.": "Fjernede brugere bliver her i 30 dage med deres bibliotek.",
  "entfernt am {}": "fjernet {}",
@@ -4521,5 +4520,13 @@
  "„Am Display zeigen“ gilt hier für {}. Die Alben selbst gehören der ganzen Box.": "“Vis på displayet” gælder her for {}. Selve albummerne hører til hele boksen.",
  "Spielzeit von": "Lyttetid for",
  "Fotoalben von": "Fotoalbum for",
- "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Du redigerer lyttetiden for {}. Den gælder, så snart {} er den aktive bruger. Frigiv og ro nu virker kun for den aktive bruger, sovetimer og slukning gælder for hele boksen."
+ "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Du redigerer lyttetiden for {}. Den gælder, så snart {} er den aktive bruger. Frigiv og ro nu virker kun for den aktive bruger, sovetimer og slukning gælder for hele boksen.",
+ "Vier Ziffern, die das Display verlangt, bevor es zu {} wechselt. Zurück zu einem anderen Benutzer geht ohne PIN, und hier in der App fragt niemand danach.": "Fire cifre, som displayet beder om, før det skifter til {}. Tilbage til en anden bruger kræver ingen PIN, og her i appen spørger ingen om den.",
+ "Neue PIN": "Ny PIN",
+ "mit PIN": "med PIN",
+ "PIN entfernen": "Fjern PIN",
+ "PIN gespeichert": "PIN gemt",
+ "PIN entfernt": "PIN fjernet",
+ "Bitte vier Ziffern eingeben": "Indtast fire cifre",
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Prikken åbner valget; hold der en flise i tre sekunder – så skifter ingen ved et uheld."
 }

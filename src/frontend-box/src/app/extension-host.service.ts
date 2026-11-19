@@ -5,6 +5,7 @@ import { NavController } from '@ionic/angular/standalone'
 import { environment } from 'src/environments/environment'
 import { CoverFlipService } from './cover-flip.service'
 import type { Media } from './media'
+import { UsersService } from './users/users.service'
 
 /** A tab an extension adds after the categories of the home page: no list, a tap runs `onSelect`. */
 export interface ExtensionTab {
@@ -83,6 +84,7 @@ export class ExtensionHostService {
   private readonly navController = inject(NavController)
   private readonly router = inject(Router)
   private readonly coverFlip = inject(CoverFlipService)
+  private readonly users = inject(UsersService)
   private readonly noResumeFolders = new Set<string>()
   private started = false
 
@@ -240,10 +242,14 @@ export class ExtensionHostService {
           const start = (): void => {
             void this.navController.navigateForward(['/player'], { state: { media }, animation: this.coverFlip.animation })
           }
-          // (the player page takes its medium when it is created: with the player page open already, a second start would do nothing -
-          // the page is left first, so the new medium gets a fresh one)
-          if (this.router.url.split(/[?#]/)[0] === '/player') void this.navController.navigateRoot(['/home'], { animated: false }).then(start)
-          else start()
+          // (several users: only what is in the library of the user in place - an NFC card of another plays nothing, a note says so)
+          void this.users.allows(media).then((ok) => {
+            if (!ok) return
+            // (the player page takes its medium when it is created: with the player page open already, a second start would do nothing -
+            // the page is left first, so the new medium gets a fresh one)
+            if (this.router.url.split(/[?#]/)[0] === '/player') void this.navController.navigateRoot(['/home'], { animated: false }).then(start)
+            else start()
+          })
         },
         noResumeFolder: (folder) => void this.noResumeFolders.add(folder),
       },

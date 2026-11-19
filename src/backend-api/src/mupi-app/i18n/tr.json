@@ -4500,7 +4500,6 @@
  "Halten": "Basılı tut",
  "Nur in der App": "Yalnızca uygulamada",
  "Ein Tipp auf den Punkt öffnet die Auswahl.": "Noktaya dokunmak seçimi açar.",
- "Den Punkt drei Sekunden halten – so wechselt niemand aus Versehen.": "Noktayı üç saniye basılı tut – böylece kimse yanlışlıkla geçmez.",
  "Am Display gibt es keinen Wechsel, nur hier in der App.": "Ekranda geçiş yok, yalnızca burada uygulamada.",
  "Entfernte Benutzer bleiben 30 Tage mit ihrer Bibliothek hier.": "Kaldırılan kullanıcılar kitaplıklarıyla 30 gün burada kalır.",
  "entfernt am {}": "{} tarihinde kaldırıldı",
@@ -4521,5 +4520,13 @@
  "„Am Display zeigen“ gilt hier für {}. Die Alben selbst gehören der ganzen Box.": "“Ekranda göster” burada {} için geçerlidir. Albümlerin kendisi tüm kutuya aittir.",
  "Spielzeit von": "Dinleme süresi:",
  "Fotoalben von": "Fotoğraf albümleri:",
- "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "{} için dinleme süresini düzenliyorsun. {} etkin kullanıcı olduğu anda geçerli olur. Serbest bırakma ve hemen sessizlik yalnızca etkin kullanıcı için çalışır, uyku zamanlayıcısı ve kapatma tüm kutu için geçerlidir."
+ "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "{} için dinleme süresini düzenliyorsun. {} etkin kullanıcı olduğu anda geçerli olur. Serbest bırakma ve hemen sessizlik yalnızca etkin kullanıcı için çalışır, uyku zamanlayıcısı ve kapatma tüm kutu için geçerlidir.",
+ "Vier Ziffern, die das Display verlangt, bevor es zu {} wechselt. Zurück zu einem anderen Benutzer geht ohne PIN, und hier in der App fragt niemand danach.": "Ekranın {} kullanıcısına geçmeden önce istediği dört rakam. Başka bir kullanıcıya geri dönmek PIN gerektirmez ve burada uygulamada kimse sormaz.",
+ "Neue PIN": "Yeni PIN",
+ "mit PIN": "PIN ile",
+ "PIN entfernen": "PIN’i kaldır",
+ "PIN gespeichert": "PIN kaydedildi",
+ "PIN entfernt": "PIN kaldırıldı",
+ "Bitte vier Ziffern eingeben": "Lütfen dört rakam gir",
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Nokta seçimi açar; orada bir kutuyu üç saniye basılı tut – böylece kimse yanlışlıkla değiştirmez."
 }

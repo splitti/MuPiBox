@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, it } from 'node:test'
-import { applyUserConfig, MAIN_ID, type SwitchHooks, UserFiles, Users, UserSwitchError, userConfigOf } from './users'
+import { applyUserConfig, hashPin, MAIN_ID, pinMatches, PIN_TRIES, type SwitchHooks, UserFiles, Users, UserSwitchError, userConfigOf } from './users'
 
 // Several users of one box (5.1, users.ts): their things exchanged in place at a switch
 
@@ -274,5 +274,57 @@ describe('the users', () => {
     await users.remove(a.id)
     files.purgeTrash(Date.now() + 31 * 24 * 60 * 60 * 1000)
     assert.deepEqual(files.trashList(), [])
+  })
+})
+
+describe('the PIN of a user', () => {
+  it('is kept as a hash that only its own digits match', () => {
+    const h = hashPin('1234')
+    assert.ok(!h.includes('1234'))
+    assert.ok(pinMatches(h, '1234'))
+    assert.ok(!pinMatches(h, '1235'))
+    assert.ok(!pinMatches(hashPin('1234'), '0000'))
+    assert.ok(!pinMatches(undefined, '1234'))
+    assert.ok(!pinMatches('1234', '1234'))
+  })
+
+  it('is asked at the display before a switch to him - not back, not in the app; 5 wrong, then a pause', async () => {
+    const users = new Users(files, hooks)
+    await users.setEnabled(true)
+    const leni = await users.add('Leni', null)
+    await assert.rejects(users.setPin(leni.id, '12a4'), (e: UserSwitchError) => e.code === 'failed')
+    await users.setPin(leni.id, '2580')
+    assert.ok(users.state().users.find((u) => u.id === leni.id)?.pin?.startsWith('s1$'))
+    for (let i = 1; i < PIN_TRIES; i++) {
+      await assert.rejects(users.switchFromDisplay(leni.id, '0000'), (e: UserSwitchError) => e.code === 'pin' && e.message === String(PIN_TRIES - i))
+    }
+    await assert.rejects(users.switchFromDisplay(leni.id, '0000'), (e: UserSwitchError) => e.code === 'pin_locked')
+    // (paused: even the right one waits)
+    await assert.rejects(users.switchFromDisplay(leni.id, '2580'), (e: UserSwitchError) => e.code === 'pin_locked')
+    assert.equal(users.state().current, MAIN_ID)
+    // the app switches without a PIN; back to a user without one at the display without one
+    await users.switchTo(leni.id)
+    assert.equal(users.state().current, leni.id)
+    await users.switchFromDisplay(MAIN_ID, undefined)
+    assert.equal(users.state().current, MAIN_ID)
+    // "only in the app": the display switches no more
+    await users.setSwitchMode('app')
+    await assert.rejects(users.switchFromDisplay(leni.id, '2580'), (e: UserSwitchError) => e.code === 'mode')
+    // taken away: no more PIN
+    await users.setSwitchMode('free')
+    await users.setPin(leni.id, '')
+    assert.equal(users.state().users.find((u) => u.id === leni.id)?.pin, undefined)
+  })
+
+  it('comes back with him out of the trash', async () => {
+    const users = new Users(files, hooks)
+    await users.setEnabled(true)
+    const leni = await users.add('Leni', null)
+    await users.setPin(leni.id, '2580')
+    await users.remove(leni.id)
+    const [t] = files.trashList()
+    const back = await users.restore(t.key)
+    assert.ok(pinMatches(back.pin, '2580'))
+    assert.ok(pinMatches(users.state().users.find((u) => u.id === back.id)?.pin, '2580'))
   })
 })

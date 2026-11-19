@@ -1306,7 +1306,7 @@ const users = new Users(userFiles, {
     await fetch(`${PLAYER_BASE}/display/reload-page`, { method: 'POST', signal: AbortSignal.timeout(8000) }).catch(() => undefined)
   },
 })
-registerUserRoutes(app, users, { session: requireSession, csrf: requireCsrf })
+registerUserRoutes(app, users, { session: requireSession, csrf: requireCsrf, local: localOnly })
 
 // The library a request is for (the app edits the library of a user who is not in place - users.ts): ?user=<id>, none
 // or the one in place = data.json in place under the library's lock; another = his data.json under a lock of his own

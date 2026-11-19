@@ -4500,7 +4500,6 @@
  "Halten": "Κράτημα",
  "Nur in der App": "Μόνο στην εφαρμογή",
  "Ein Tipp auf den Punkt öffnet die Auswahl.": "Ένα πάτημα στην κουκκίδα ανοίγει την επιλογή.",
- "Den Punkt drei Sekunden halten – so wechselt niemand aus Versehen.": "Κράτα την κουκκίδα τρία δευτερόλεπτα – έτσι κανείς δεν αλλάζει κατά λάθος.",
  "Am Display gibt es keinen Wechsel, nur hier in der App.": "Καμία αλλαγή στην οθόνη, μόνο εδώ στην εφαρμογή.",
  "Entfernte Benutzer bleiben 30 Tage mit ihrer Bibliothek hier.": "Οι χρήστες που αφαιρέθηκαν μένουν εδώ 30 ημέρες με τη βιβλιοθήκη τους.",
  "entfernt am {}": "αφαιρέθηκε στις {}",
@@ -4521,5 +4520,13 @@
  "„Am Display zeigen“ gilt hier für {}. Die Alben selbst gehören der ganzen Box.": "Το «Εμφάνιση στην οθόνη» ισχύει εδώ για τον {}. Τα ίδια τα άλμπουμ ανήκουν σε όλο το κουτί.",
  "Spielzeit von": "Χρόνος ακρόασης:",
  "Fotoalben von": "Άλμπουμ φωτογραφιών:",
- "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Επεξεργάζεσαι τον χρόνο ακρόασης του {}. Ισχύει μόλις ο {} γίνει ο ενεργός χρήστης. Η αποδέσμευση και η άμεση ησυχία λειτουργούν μόνο για τον ενεργό χρήστη, ο χρονοδιακόπτης ύπνου και το σβήσιμο ισχύουν για όλο το κουτί."
+ "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Επεξεργάζεσαι τον χρόνο ακρόασης του {}. Ισχύει μόλις ο {} γίνει ο ενεργός χρήστης. Η αποδέσμευση και η άμεση ησυχία λειτουργούν μόνο για τον ενεργό χρήστη, ο χρονοδιακόπτης ύπνου και το σβήσιμο ισχύουν για όλο το κουτί.",
+ "Vier Ziffern, die das Display verlangt, bevor es zu {} wechselt. Zurück zu einem anderen Benutzer geht ohne PIN, und hier in der App fragt niemand danach.": "Τέσσερα ψηφία που ζητά η οθόνη πριν αλλάξει σε {}. Η επιστροφή σε άλλον χρήστη δεν θέλει PIN, και εδώ στην εφαρμογή κανείς δεν το ζητά.",
+ "Neue PIN": "Νέο PIN",
+ "mit PIN": "με PIN",
+ "PIN entfernen": "Αφαίρεση PIN",
+ "PIN gespeichert": "Το PIN αποθηκεύτηκε",
+ "PIN entfernt": "Το PIN αφαιρέθηκε",
+ "Bitte vier Ziffern eingeben": "Γράψε τέσσερα ψηφία",
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Η κουκκίδα ανοίγει την επιλογή· εκεί κράτα ένα πλακίδιο τρία δευτερόλεπτα – έτσι κανείς δεν αλλάζει κατά λάθος."
 }

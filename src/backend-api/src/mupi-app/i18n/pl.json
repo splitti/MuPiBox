@@ -4500,7 +4500,6 @@
  "Halten": "Przytrzymanie",
  "Nur in der App": "Tylko w aplikacji",
  "Ein Tipp auf den Punkt öffnet die Auswahl.": "Dotknięcie kropki otwiera wybór.",
- "Den Punkt drei Sekunden halten – so wechselt niemand aus Versehen.": "Przytrzymaj kropkę trzy sekundy – tak nikt nie przełączy przez przypadek.",
  "Am Display gibt es keinen Wechsel, nur hier in der App.": "Bez przełączania na wyświetlaczu, tylko tutaj w aplikacji.",
  "Entfernte Benutzer bleiben 30 Tage mit ihrer Bibliothek hier.": "Usunięci użytkownicy zostają tu 30 dni ze swoją biblioteką.",
  "entfernt am {}": "usunięto {}",
@@ -4521,5 +4520,13 @@
  "„Am Display zeigen“ gilt hier für {}. Die Alben selbst gehören der ganzen Box.": "„Pokaż na wyświetlaczu” dotyczy tu: {}. Same albumy należą do całego boksu.",
  "Spielzeit von": "Czas słuchania:",
  "Fotoalben von": "Albumy zdjęć:",
- "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Edytujesz czas słuchania: {}. Obowiązuje, gdy {} będzie aktywnym użytkownikiem. Odblokowanie i cisza teraz działają tylko dla aktywnego użytkownika, wyłącznik czasowy i wyłączanie dotyczą całego boksu."
+ "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Edytujesz czas słuchania: {}. Obowiązuje, gdy {} będzie aktywnym użytkownikiem. Odblokowanie i cisza teraz działają tylko dla aktywnego użytkownika, wyłącznik czasowy i wyłączanie dotyczą całego boksu.",
+ "Vier Ziffern, die das Display verlangt, bevor es zu {} wechselt. Zurück zu einem anderen Benutzer geht ohne PIN, und hier in der App fragt niemand danach.": "Cztery cyfry, o które wyświetlacz pyta przed przełączeniem na: {}. Powrót do innego użytkownika nie wymaga PIN-u, a tutaj w aplikacji nikt o niego nie pyta.",
+ "Neue PIN": "Nowy PIN",
+ "mit PIN": "z PIN-em",
+ "PIN entfernen": "Usuń PIN",
+ "PIN gespeichert": "PIN zapisany",
+ "PIN entfernt": "PIN usunięty",
+ "Bitte vier Ziffern eingeben": "Wpisz cztery cyfry",
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Kropka otwiera wybór; tam przytrzymaj kafelek przez trzy sekundy – tak nikt nie zmieni przez przypadek."
 }

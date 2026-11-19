@@ -4500,7 +4500,6 @@
  "Halten": "Håll",
  "Nur in der App": "Bara i appen",
  "Ein Tipp auf den Punkt öffnet die Auswahl.": "Ett tryck på pricken öppnar valet.",
- "Den Punkt drei Sekunden halten – so wechselt niemand aus Versehen.": "Håll pricken i tre sekunder – så byter ingen av misstag.",
  "Am Display gibt es keinen Wechsel, nur hier in der App.": "Inget byte på skärmen, bara här i appen.",
  "Entfernte Benutzer bleiben 30 Tage mit ihrer Bibliothek hier.": "Borttagna användare stannar här i 30 dagar med sitt bibliotek.",
  "entfernt am {}": "borttagen {}",
@@ -4521,5 +4520,13 @@
  "„Am Display zeigen“ gilt hier für {}. Die Alben selbst gehören der ganzen Box.": "”Visa på skärmen” gäller här för {}. Själva albumen hör till hela boxen.",
  "Spielzeit von": "Lyssningstid för",
  "Fotoalben von": "Fotoalbum för",
- "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Du redigerar lyssningstiden för {}. Den gäller så snart {} är den aktiva användaren. Släpp och tyst nu fungerar bara för den aktiva användaren, sovtimer och avstängning gäller hela boxen."
+ "Du bearbeitest die Spielzeit von {}. Sie gilt, sobald {} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.": "Du redigerar lyssningstiden för {}. Den gäller så snart {} är den aktiva användaren. Släpp och tyst nu fungerar bara för den aktiva användaren, sovtimer och avstängning gäller hela boxen.",
+ "Vier Ziffern, die das Display verlangt, bevor es zu {} wechselt. Zurück zu einem anderen Benutzer geht ohne PIN, und hier in der App fragt niemand danach.": "Fyra siffror som skärmen frågar efter innan den byter till {}. Tillbaka till en annan användare kräver ingen PIN, och här i appen frågar ingen efter den.",
+ "Neue PIN": "Ny PIN",
+ "mit PIN": "med PIN",
+ "PIN entfernen": "Ta bort PIN",
+ "PIN gespeichert": "PIN sparad",
+ "PIN entfernt": "PIN borttagen",
+ "Bitte vier Ziffern eingeben": "Ange fyra siffror",
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Pricken öppnar valet; håll där en ruta i tre sekunder – så byter ingen av misstag."
 }
