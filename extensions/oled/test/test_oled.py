@@ -170,6 +170,15 @@ class DisplayTest(unittest.TestCase):
             self.assertEqual(bool(slept), bye, reason)
             self.assertEqual(bus.writes[-1:] == [[0x00, 0xAE]], off, reason)
 
+    def test_the_power_off_picture_leaves_room_before_pm2_ends_the_driver(self):
+        # (pm2 ends the server 1.6 s after its signal; measured: the driver is gone 0.2-0.3 s after it, plus drawing the picture)
+        self.assertLessEqual(oled.BYE_SECONDS, 0.8)
+        slept = []
+        bus = FakeBus()
+        display = oled.Display(bus, 'ssd1306', 128, 64)
+        oled.finish(display, render.Screens(128, 64), 'stop', stopping=lambda: True, sleep=slept.append)
+        self.assertEqual(slept, [oled.BYE_SECONDS])
+
     def test_systemd_tells_whether_the_box_goes_down(self):
         class Answer:
             def __init__(self, text):
