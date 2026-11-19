@@ -2,13 +2,22 @@
   "id": "football",
   "name": "Fußball",
   "version": "0.1.0",
-  "description": "Die Ergebnisse deines Vereins, der Spieltag und die Tabelle auf dem Display. Die Box holt sie im Internet bei OpenLigaDB; jeder Benutzer wählt seinen eigenen Verein.",
+  "description": "Die Ergebnisse deines Vereins, der Spieltag und die Tabelle auf dem Display. Die Box holt sie im Internet bei OpenLigaDB oder mit eigenem Schlüssel bei football-data.org; jeder Benutzer wählt seinen eigenen Verein.",
   "hostApi": 13,
   "resources": {},
   "api": "api.js",
   "display": "display.js",
   "icon": "icon.svg",
   "settings": {
+    "source": {
+      "type": "string",
+      "default": "openligadb",
+      "options": [
+        "openligadb",
+        "footballdata"
+      ],
+      "perUser": true
+    },
     "league": {
       "type": "string",
       "default": "bl1",
@@ -34,6 +43,19 @@
       "max": 99999999,
       "perUser": true
     },
+    "fdTeam": {
+      "type": "string",
+      "default": "",
+      "pattern": "^.{0,80}$",
+      "perUser": true
+    },
+    "fdTeamId": {
+      "type": "number",
+      "default": 0,
+      "min": 0,
+      "max": 99999999,
+      "perUser": true
+    },
     "startView": {
       "type": "string",
       "default": "club",
@@ -53,12 +75,49 @@
       "type": "boolean",
       "default": false,
       "perUser": true
+    },
+    "fdLeague": {
+      "type": "string",
+      "default": "PL",
+      "options": [
+        "PL",
+        "ELC",
+        "BL1",
+        "PD",
+        "SA",
+        "FL1",
+        "DED",
+        "PPL",
+        "BSA",
+        "CL",
+        "WC",
+        "EC"
+      ],
+      "perUser": true
+    },
+    "apiKey": {
+      "type": "secret"
     }
   },
   "ui": {
     "title": "Fußball",
     "help": "Das Display zeigt oben den Reiter „Fußball“: dein Verein, der Spieltag und die Tabelle. Die Ergebnisse trägt die Gemeinschaft von OpenLigaDB ein, meist wenige Minuten nach dem Tor.",
     "items": [
+      {
+        "key": "source",
+        "label": "Quelle",
+        "help": "OpenLigaDB ist frei und braucht keine Anmeldung, kennt aber vor allem deutsche Ligen. football-data.org hat die großen Ligen Europas und die Champions League, braucht einen eigenen kostenlosen Schlüssel und liefert die Ergebnisse mit Verzögerung.",
+        "choices": [
+          {
+            "value": "openligadb",
+            "label": "OpenLigaDB"
+          },
+          {
+            "value": "footballdata",
+            "label": "football-data.org"
+          }
+        ]
+      },
       {
         "key": "league",
         "label": "Liga",
@@ -83,14 +142,110 @@
             "value": "ffb1",
             "label": "Frauen-Bundesliga"
           }
+        ],
+        "showIf": {
+          "key": "source",
+          "is": [
+            "openligadb"
+          ]
+        }
+      },
+      {
+        "key": "fdLeague",
+        "label": "Wettbewerb",
+        "showIf": {
+          "key": "source",
+          "is": [
+            "footballdata"
+          ]
+        },
+        "choices": [
+          {
+            "value": "PL",
+            "label": "Premier League"
+          },
+          {
+            "value": "ELC",
+            "label": "Championship"
+          },
+          {
+            "value": "BL1",
+            "label": "Bundesliga"
+          },
+          {
+            "value": "PD",
+            "label": "LaLiga"
+          },
+          {
+            "value": "SA",
+            "label": "Serie A"
+          },
+          {
+            "value": "FL1",
+            "label": "Ligue 1"
+          },
+          {
+            "value": "DED",
+            "label": "Eredivisie"
+          },
+          {
+            "value": "PPL",
+            "label": "Primeira Liga"
+          },
+          {
+            "value": "BSA",
+            "label": "Brasileirão"
+          },
+          {
+            "value": "CL",
+            "label": "Champions League"
+          },
+          {
+            "value": "WC",
+            "label": "Weltmeisterschaft"
+          },
+          {
+            "value": "EC",
+            "label": "Europameisterschaft"
+          }
         ]
+      },
+      {
+        "key": "apiKey",
+        "label": "API-Schlüssel",
+        "showIf": {
+          "key": "source",
+          "is": [
+            "footballdata"
+          ]
+        },
+        "help": "Kostenlos auf football-data.org anmelden („Register“), der Schlüssel kommt per E-Mail. Er gilt für die ganze Box. Die Ergebnisse kommen hier mit Verzögerung, auch die Tor-Ansage."
       },
       {
         "key": "team",
         "label": "Lieblingsverein",
         "type": "lookup",
         "search": "/api/ext/football/teams",
-        "help": "Nach dem Namen suchen und den Verein antippen. Er wird hervorgehoben, und „Mein Verein“ zeigt sein letztes und sein nächstes Spiel."
+        "help": "Nach dem Namen suchen und den Verein antippen. Er wird hervorgehoben, und „Mein Verein“ zeigt sein letztes und sein nächstes Spiel.",
+        "showIf": {
+          "key": "source",
+          "is": [
+            "openligadb"
+          ]
+        }
+      },
+      {
+        "key": "fdTeam",
+        "label": "Lieblingsverein",
+        "type": "lookup",
+        "search": "/api/ext/football/teams",
+        "help": "Nach dem Namen suchen und den Verein antippen. Er wird hervorgehoben, und „Mein Verein“ zeigt sein letztes und sein nächstes Spiel.",
+        "showIf": {
+          "key": "source",
+          "is": [
+            "footballdata"
+          ]
+        }
       },
       {
         "key": "startView",

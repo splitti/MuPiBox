@@ -1,6 +1,6 @@
 # Fußball
 
-Die Erweiterung **Fußball** zeigt auf dem Display, wie der **eigene Verein** gespielt hat und wann er wieder spielt, die Spiele des **aktuellen Spieltags** und die **Tabelle**. Sie richtet auf der Box nichts ein; die Ergebnisse holt die Box im Internet bei **OpenLigaDB**.
+Die Erweiterung **Fußball** zeigt auf dem Display, wie der **eigene Verein** gespielt hat und wann er wieder spielt, die Spiele des **aktuellen Spieltags** und die **Tabelle**. Sie richtet auf der Box nichts ein; die Ergebnisse holt die Box im Internet bei **OpenLigaDB** oder, mit einem eigenen Schlüssel, bei **football-data.org**.
 
 Es gibt keine Wetten, keine Werbung, keine Links ins Internet und keine Spielerbilder, nur Wappen, Namen und Zahlen.
 
@@ -24,7 +24,9 @@ Beim **DFB-Pokal** gibt es keine Tabelle. Ohne Lieblingsverein gibt es die Ansic
 
 | Einstellung | Wirkung |
 | --- | --- |
+| **Quelle** | **OpenLigaDB** (frei, ohne Anmeldung, vor allem deutsche Ligen) oder **football-data.org** (mit Schlüssel, siehe unten) |
 | **Liga** | 1. Bundesliga, 2. Bundesliga, 3. Liga, DFB-Pokal oder Frauen-Bundesliga |
+| **Wettbewerb** und **API-Schlüssel** | nur bei football-data.org, siehe unten |
 | **Lieblingsverein** | nach dem Namen suchen und den Verein antippen; **Keinen Verein** nimmt ihn wieder weg |
 | **Ansicht beim Öffnen** | was der Reiter zuerst zeigt |
 | **Ergebnis in der Kopfzeile** | während ein Spiel des Vereins läuft, stehen oben im Display die beiden Wappen und der Spielstand; ein Tipp darauf öffnet die Seite (Standard: an) |
@@ -37,6 +39,17 @@ Beim **DFB-Pokal** gibt es keine Tabelle. Ohne Lieblingsverein gibt es die Ansic
 ### Mehrere Benutzer
 
 Sind [mehrere Benutzer](../bedienung/mehrere-benutzer.md) eingeschaltet, hat **jeder Benutzer seine eigene Liga, seinen eigenen Verein und seine eigene Ansicht**. Über dem Formular steht dann **Einstellungen von** mit einem Knopf für jeden Benutzer: So stellst du den Verein eines Kindes ein, ohne die Box umzuschalten. Die so markierten Felder zeigen **je Benutzer**. Nach einem Wechsel des Benutzers zeigt das Display gleich dessen Verein.
+
+## Andere Ligen: football-data.org
+
+Für die großen Ligen Europas gibt es die zweite Quelle **football-data.org**: Premier League, Championship, Bundesliga, LaLiga, Serie A, Ligue 1, Eredivisie, Primeira Liga, Brasileirão, Champions League sowie Welt- und Europameisterschaft.
+
+1. Melde dich kostenlos auf [football-data.org](https://www.football-data.org) an („Register“). Der Schlüssel kommt per E-Mail.
+2. Wähle unter **Quelle** football-data.org, trage den **API-Schlüssel** ein und tippe auf **Speichern**. Der Schlüssel gilt für die ganze Box; die App zeigt ihn danach nicht mehr an.
+3. Wähle den **Wettbewerb** und suche den **Lieblingsverein**. Jede Quelle hat ihren eigenen Lieblingsverein: Wechselst du zurück, ist der alte wieder da.
+
+> [!NOTE]
+> Die kostenlose Stufe von football-data.org liefert die Ergebnisse **mit Verzögerung**. Unten auf der Seite steht dann **mit Verzögerung**, und auch die Tor-Ansage kommt später. Die Box bleibt dort unter der Grenze von zehn Abfragen pro Minute; bei geschlossener Seite fragt sie höchstens alle zwei Minuten. Als Spiele des Vereins zeigt sie nur die des gewählten Wettbewerbs.
 
 ## Wie oft die Box fragt
 

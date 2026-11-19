@@ -29,6 +29,7 @@ const TEXTS = {
     offlineOld: 'Keine Verbindung zur Quelle – letzter Stand',
     noMatches: 'Für diesen Spieltag sind keine Spiele eingetragen.',
     stand: (t) => `Stand ${t}`,
+    delayed: 'mit Verzögerung',
     head: { played: 'Sp', diff: 'TD', points: 'Pkt' },
     postponed: 'abgesagt',
     halftime: (a, b) => `Halbzeit ${a}:${b}`,
@@ -54,6 +55,9 @@ const TEXTS = {
     offlineOld: 'No connection to the source – last values',
     noMatches: 'No matches for this matchday.',
     stand: (t) => `As of ${t}`,
+    delayed: 'delayed',
+    // (the names of the API part are German: those that are not names of their own)
+    leagues: { 'DFB-Pokal': 'DFB Cup', 'Frauen-Bundesliga': "Women's Bundesliga", Weltmeisterschaft: 'World Cup', Europameisterschaft: 'European Championship' },
     head: { played: 'P', diff: 'GD', points: 'Pts' },
     postponed: 'postponed',
     halftime: (a, b) => `Half time ${a}:${b}`,
@@ -83,6 +87,15 @@ const ZONES = {
   bl2: { up: [1, 2], playoff: [3, 3, 16, 16], down: [17, 18] },
   bl3: { up: [1, 2], playoff: [3, 3], down: [17, 20] },
   ffb1: { up: [1, 3], down: [13, 14] },
+  // (football-data.org: the competitions of its free tier)
+  BL1: { up: [1, 4], playoff: [16, 16], down: [17, 18] },
+  PL: { up: [1, 4], down: [18, 20] },
+  PD: { up: [1, 4], down: [18, 20] },
+  SA: { up: [1, 4], down: [18, 20] },
+  FL1: { up: [1, 3], playoff: [16, 16], down: [17, 18] },
+  ELC: { up: [1, 2], playoff: [3, 6], down: [22, 24] },
+  DED: { up: [1, 2], playoff: [16, 17], down: [18, 18] },
+  PPL: { up: [1, 2], playoff: [16, 16], down: [17, 18] },
 }
 export function zoneOf(league, rank) {
   const z = ZONES[league]
@@ -150,7 +163,11 @@ function ensureStyle() {
 
 export function activate(api) {
   const settings = api.settings() ?? {}
-  const configured = ['bl1', 'bl2', 'bl3', 'dfb', 'ffb1'].includes(settings.league)
+  // (the API part says whether there is anything: a league of OpenLigaDB, or one of football-data.org with a key - the key
+  // itself the display never sees, only that one is set)
+  const configured = settings.source === 'footballdata' ? !!settings.apiKeySet && !!settings.fdLeague : ['bl1', 'bl2', 'bl3', 'dfb', 'ffb1'].includes(settings.league)
+  // (the club of the source chosen now - each source has its own, as the API part counts it)
+  const teamId = settings.source === 'footballdata' ? Number(settings.fdTeamId) || 0 : Number(settings.teamId) || 0
   const crestUrl = (team) => (team?.crest ? `${api.apiUrl}${team.crest}` : '')
 
   /** A crest, or a circle with the short name when there is none (or it does not load). */
@@ -216,7 +233,7 @@ export function activate(api) {
         let closed = false
         // (what opens first: as set in the app; the club's view only with a club)
         let view = ['club', 'matchday', 'table'].includes(settings.startView) ? settings.startView : 'club'
-        if (view === 'club' && !(settings.teamId > 0)) view = 'matchday'
+        if (view === 'club' && !(teamId > 0)) view = 'matchday'
         // (another matchday the user went to: its number and its matches; null = the current one)
         let other = null
         // (the matchday asked for last - the arrows count from it while it comes; answers of older ones are dropped)
@@ -233,7 +250,8 @@ export function activate(api) {
         let centred = false
 
         const drawTabs = () => {
-          const views = [...(data?.teamId ? ['club'] : []), 'matchday', ...(data?.cup || !data?.table ? [] : ['table'])]
+          // (a table when the source has one: the league phase of the Champions League too, never the DFB-Pokal)
+          const views = [...(data?.teamId ? ['club'] : []), 'matchday', ...(data?.table?.length ? ['table'] : [])]
           // (before the first answer the view chosen stays: the club's tab comes with the answer)
           if (data && !views.includes(view)) view = views[0]
           tabs.replaceChildren(
@@ -421,7 +439,7 @@ export function activate(api) {
           else drawMatchday()
           if (view !== 'table' || centred) body.scrollTop = top
           const time = data.fetchedAt ? new Date(data.fetchedAt).toLocaleTimeString(data.lang === 'de' ? 'de-DE' : 'en-GB', { hour: '2-digit', minute: '2-digit' }) : ''
-          foot.textContent = [data.leagueName, data.stale ? t.offlineOld : time ? t.stand(time) : ''].filter(Boolean).join('  ·  ')
+          foot.textContent = [t.leagues?.[data.leagueName] ?? data.leagueName, data.stale ? t.offlineOld : time ? t.stand(time) : '', data.delayed ? t.delayed : ''].filter(Boolean).join('  ·  ')
         }
 
         async function go(n) {
@@ -503,7 +521,7 @@ export function activate(api) {
   // The header: while a match of the club runs, its two crests and the score, small, right of the battery. The API part answers
   // from what it loaded last (it asks every minute while the club plays) and says nothing in the quiet hours or while the box
   // is blocked. A tap opens the page.
-  if (configured && settings.teamId > 0 && settings.header !== false) {
+  if (configured && teamId > 0 && settings.header !== false) {
     // (the header is on several pages at once - one look a minute for all of its places)
     const places = new Set()
     let shared = null

@@ -338,3 +338,53 @@ test('a goal of the club while it plays: said once, not at the first look, not i
   settings.now = { teamId: 134, header: false }
   assert.equal((await call('get /live')).body.live, null)
 })
+
+test('football-data.org: only with a key, the key sent along, the club only when it was chosen there, the delay said', async () => {
+  const asked = []
+  const t = (id, name) => ({ id, name, shortName: name, tla: name.slice(0, 3).toUpperCase(), crest: `https://crests.football-data.org/${id}.png` })
+  const season = { startDate: '2026-08-15', currentMatchday: 12 }
+  const m = { id: 1, matchday: 12, utcDate: '2026-11-29T15:00:00Z', status: 'TIMED', homeTeam: t(57, 'Arsenal'), awayTeam: t(61, 'Chelsea'), season, score: { duration: 'REGULAR', fullTime: { home: null, away: null } } }
+  global.fetch = async (url, init) => {
+    asked.push({ url: String(url), key: init?.headers?.['X-Auth-Token'] })
+    const body = /\/matches$/.test(String(url)) ? { matches: [m] } : /\/standings$/.test(String(url)) ? { standings: [] } : {}
+    return { ok: true, status: 200, headers: new Map(), json: async () => body }
+  }
+  const settings = { now: { source: 'footballdata', fdLeague: 'PL', apiKey: '' } }
+  const { call } = start(settings)
+  assert.deepEqual((await call('get /data', { query: { open: '1' } })).body, { configured: false })
+  assert.equal(asked.length, 0)
+  // (a key: asked with it; the club of OpenLigaDB - Bremen, 134 - is no club here)
+  settings.now = { source: 'footballdata', fdLeague: 'PL', apiKey: 'k3y', teamId: 134 }
+  const r = (await call('get /data', { query: { open: '1' } })).body
+  assert.equal(r.source, 'footballdata')
+  assert.equal(r.leagueName, 'Premier League')
+  assert.equal(r.delayed, true)
+  assert.equal(r.teamId, null)
+  assert.equal(r.matchday.number, 12)
+  assert.ok(asked.every((a) => a.key === 'k3y' && a.url.startsWith('https://api.football-data.org/v4/')))
+  // (the club chosen there)
+  settings.now = { ...settings.now, fdTeamId: 57 }
+  assert.equal((await call('get /data', { query: { open: '1' } })).body.club.team.id, 57)
+  // (the status block: a key missing)
+  settings.now = { source: 'footballdata', fdLeague: 'PL', apiKey: '' }
+  assert.equal((await call('get /state')).body.rows[0].value, 'Schlüssel fehlt')
+})
+
+test('football-data.org: a wrong key is a key refused, not a source away; never more than 8 requests a minute', async () => {
+  let n = 0
+  global.fetch = async () => {
+    n += 1
+    return { ok: false, status: 400, headers: new Map(), text: async () => '{"message":"Your API token is invalid.","errorCode":400}' }
+  }
+  const settings = { now: { source: 'footballdata', fdLeague: 'PL', apiKey: 'wrong' } }
+  const { call, listeners } = start(settings)
+  await call('get /data', { query: { open: '1' } })
+  assert.equal(n, 1)
+  assert.equal((await call('get /state')).body.rows[0].value, 'Schlüssel abgelehnt')
+  // (asked again and again - settings saved each time: the box stops at 8 in a minute)
+  for (let i = 0; i < 12; i++) {
+    for (const fn of listeners) fn({})
+    await call('get /data', { query: { open: '1' } })
+  }
+  assert.equal(n, 8)
+})

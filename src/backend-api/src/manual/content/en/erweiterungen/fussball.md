@@ -1,6 +1,6 @@
 # Football
 
-The extension **Football** shows on the display how **your club** played and when it plays next, the matches of the **current matchday** and the **table**. It sets up nothing on the box; the box gets the results from the internet, from **OpenLigaDB**.
+The extension **Football** shows on the display how **your club** played and when it plays next, the matches of the **current matchday** and the **table**. It sets up nothing on the box; the box gets the results from the internet, from **OpenLigaDB** or, with a key of your own, from **football-data.org**.
 
 There are no bets, no ads, no links to the internet and no pictures of players, only crests, names and numbers.
 
@@ -24,7 +24,9 @@ The **DFB Cup** has no table. Without a favourite club there is no **My club** v
 
 | Setting | Effect |
 | --- | --- |
+| **Source** | **OpenLigaDB** (free, no sign-up, mostly German leagues) or **football-data.org** (with a key, see below) |
 | **League** | 1. Bundesliga, 2. Bundesliga, 3. Liga, DFB Cup or Women's Bundesliga |
+| **Competition** and **API key** | only with football-data.org, see below |
 | **Favourite club** | search for the name and tap the club; **No club** takes it away again |
 | **View when opening** | what the tab shows first |
 | **Score in the header** | while a match of the club runs, the two crests and the score stand at the top of the display; a tap on them opens the page (default: on) |
@@ -37,6 +39,17 @@ The **DFB Cup** has no table. Without a favourite club there is no **My club** v
 ### Several users
 
 When [several users](../bedienung/mehrere-benutzer.md) are switched on, **every user has their own league, club and view**. Above the form there is **Settings of** with a button for each user: that way you set a child's club without switching the box. The fields this applies to are marked **per user**. After a switch of the user, the display shows that user's club at once.
+
+## Other leagues: football-data.org
+
+For the big leagues of Europe there is the second source **football-data.org**: Premier League, Championship, Bundesliga, LaLiga, Serie A, Ligue 1, Eredivisie, Primeira Liga, Brasileirão, Champions League and the World and European Championships.
+
+1. Sign up for free on [football-data.org](https://www.football-data.org) (“Register”). The key comes by e-mail.
+2. Under **Source** choose football-data.org, enter the **API key** and tap **Save**. The key applies to the whole box; the app does not show it again.
+3. Choose the **Competition** and search for the **Favourite club**. Each source has its own favourite club: switch back, and the old one is there again.
+
+> [!NOTE]
+> The free tier of football-data.org gives the results **with a delay**. At the bottom of the page it then says **delayed**, and the goal announcement comes later too. The box stays below the limit of ten requests a minute there; with the page closed it asks at most every two minutes. As the club's matches it shows only those of the chosen competition.
 
 ## How often the box asks
 

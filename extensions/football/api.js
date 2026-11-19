@@ -16,6 +16,7 @@ const crypto = require('node:crypto')
 const fs = require('node:fs')
 const path = require('node:path')
 const L = require('./logic')
+const { footballData } = require('./footballdata')
 
 const OLDB = 'https://api.openligadb.de'
 const TIMEOUT_MS = 15000
@@ -26,6 +27,8 @@ const CREST_BYTES = 512 * 1024
 const CREST_TYPES = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp', 'image/svg+xml': 'svg' }
 const EXT_TYPES = Object.fromEntries(Object.entries(CREST_TYPES).map(([t, e]) => [e, t]))
 const HASH = /^[a-f0-9]{20}$/
+// (football-data.org allows 10 requests a minute; the box keeps to 8)
+const FD_PER_MINUTE = 8
 // (the matchdays the display swiped to: kept a while, then asked again)
 const OTHER_DAY_MS = 10 * L.MIN
 
@@ -34,6 +37,11 @@ async function getJson(url, headers = {}) {
   if (!response.ok) {
     const error = new Error(`HTTP ${response.status}`)
     error.status = response.status
+    // (football-data.org says of a wrong key 400 "Your API token is invalid." - a key refused, as 401)
+    if (response.status === 400) {
+      const text = await response.text().catch(() => '')
+      if (/token/i.test(text)) error.status = 401
+    }
     throw error
   }
   return response.json()
@@ -185,6 +193,8 @@ exports.activate = (host) => {
   /** hash -> when fetching it failed */
   const crestFailed = new Map()
   const otherDays = new Map()
+  /** the teams of a league for the app's search: key -> { at, teams } */
+  const teamLists = new Map()
 
   try {
     const kept = JSON.parse(fs.readFileSync(cacheFile, 'utf8'))
@@ -194,9 +204,25 @@ exports.activate = (host) => {
     // (none yet)
   }
 
-  const keyOf = (s) => `openligadb:${s.league}:${Number(s.teamId) || 0}`
-  const sourceOf = (s) => openLigaDb(s.league)
-  const configured = (s) => typeof s?.league === 'string' && Object.hasOwn(L.OPENLIGADB_LEAGUES, s.league)
+  // (the source chosen: OpenLigaDB, or football-data.org with the user's key)
+  const fd = (s) => s?.source === 'footballdata'
+  const leagueOf = (s) => (fd(s) ? s.fdLeague : s.league)
+  // (each source has its club - the numbers of one mean other clubs at the other)
+  const teamIdOf = (s) => (fd(s) ? Number(s?.fdTeamId) || 0 : Number(s?.teamId) || 0)
+  const keyOf = (s) => `${fd(s) ? 'footballdata' : 'openligadb'}:${leagueOf(s)}:${teamIdOf(s)}`
+  // (football-data.org allows 10 requests a minute for the key: loads, swipes and the app's search together stay at 8 - one more
+  // is refused here as too many, without asking, and the last values stay)
+  const fdAsked = []
+  const fdGetJson = (url, headers) => {
+    const now = Date.now()
+    while (fdAsked.length && now - fdAsked[0] > L.MIN) fdAsked.shift()
+    if (fdAsked.length >= FD_PER_MINUTE) return Promise.reject(Object.assign(new Error('too many requests (box limit)'), { status: 429 }))
+    fdAsked.push(now)
+    return getJson(url, headers)
+  }
+  const sourceOf = (s) => (fd(s) ? footballData(s.fdLeague, String(s.apiKey ?? ''), fdGetJson) : openLigaDb(s.league))
+  const configured = (s) =>
+    fd(s) ? typeof s.fdLeague === 'string' && Object.hasOwn(L.FOOTBALLDATA_LEAGUES, s.fdLeague) && typeof s.apiKey === 'string' && s.apiKey.trim() !== '' : typeof s?.league === 'string' && Object.hasOwn(L.OPENLIGADB_LEAGUES, s.league)
   const pageOpen = () => Date.now() - lastOpenAt < OPEN_MS
 
   /** The crest of a team as an address of the box (the source's address noted for /crest). */
@@ -212,7 +238,12 @@ exports.activate = (host) => {
   /** The teams of what is loaded (for the crests that are still needed) */
   const teamsOfView = () => [...(view?.matchday?.matches ?? []), ...(view?.mine ?? [])].flatMap((m) => [m.home, m.away]).concat((view?.table ?? []).map((r) => r.team))
 
+  let savedKey = ''
+  let savedAt = 0
   function save() {
+    if (view?.key === savedKey && Date.now() - savedAt < 10 * L.MIN) return
+    savedKey = view?.key ?? ''
+    savedAt = Date.now()
     try {
       // (only the crests of what is loaded - and those on the card: an address the source no longer gives is forgotten)
       const wanted = new Set(teamsOfView().filter((t) => t?.crest).map((t) => crestHash(t.crest)))
@@ -250,8 +281,8 @@ exports.activate = (host) => {
     loading = (async () => {
       const src = sourceOf(s)
       try {
-        const got = await src.load(Number(s.teamId) || 0, prev, { full })
-        view = { key, league: s.league, teamId: Number(s.teamId) || 0, fetchedAt: Date.now(), ...got }
+        const got = await src.load(teamIdOf(s), prev, { full })
+        view = { key, league: leagueOf(s), teamId: teamIdOf(s), fetchedAt: Date.now(), ...got }
         errors = got.partial ? errors + 1 : 0
         lastError = got.partial ? lastError || 'offline' : ''
         failedKey = ''
@@ -262,7 +293,7 @@ exports.activate = (host) => {
         errors += 1
         lastError = error?.status === 429 ? 'too_many' : error?.status === 401 || error?.status === 403 ? 'refused' : 'offline'
         failedKey = key
-        host.log.warn(`[Extension football] ${s.league}: ${error?.message}`)
+        host.log.warn(`[Extension football] ${leagueOf(s)}: ${error?.message}`)
         // (the last values stay - for other settings there are none)
         if (!prev) view = null
       }
@@ -322,7 +353,7 @@ exports.activate = (host) => {
     let wait = 5 * L.MIN
     try {
       const s = await host.settings()
-      if (!configured(s) || !(Number(s.teamId) > 0)) return
+      if (!configured(s) || !(teamIdOf(s) > 0)) return
       if (due(s)) await load(s)
       wait = Math.max(5000, nextAt - Date.now())
     } catch (error) {
@@ -358,7 +389,7 @@ exports.activate = (host) => {
     if (due(s)) await load(s)
     const lang = String(host.config()?.displayLanguage ?? 'de').slice(0, 2)
     if (!view || view.key !== keyOf(s)) {
-      res.json({ configured: true, league: s.league, lang, error: lastError || 'offline' })
+      res.json({ configured: true, league: leagueOf(s), lang, error: lastError || 'offline' })
       return
     }
     const src = sourceOf(s)
@@ -371,9 +402,11 @@ exports.activate = (host) => {
     const club = L.myClub([...matches, ...mine], view.table, view.teamId, now)
     res.json({
       configured: true,
-      source: 'openligadb',
-      league: s.league,
+      source: fd(s) ? 'footballdata' : 'openligadb',
+      league: leagueOf(s),
       leagueName: src.leagueName,
+      // (football-data.org gives the scores of its free tier with a delay: the display says so)
+      delayed: !!src.delayed,
       cup: src.cup,
       teamId: view.teamId || null,
       lang,
@@ -391,7 +424,7 @@ exports.activate = (host) => {
   host.route('get', '/live', async (_req, res) => {
     res.set('Cache-Control', 'no-store')
     const s = await host.settings()
-    if (!configured(s) || s.header === false || !(Number(s.teamId) > 0) || view?.key !== keyOf(s)) {
+    if (!configured(s) || s.header === false || !(teamIdOf(s) > 0) || view?.key !== keyOf(s)) {
       res.json({ live: null })
       return
     }
@@ -409,6 +442,11 @@ exports.activate = (host) => {
     res.set('Cache-Control', 'no-store')
     if (!configured(s) || !view || view.key !== keyOf(s) || !Number.isInteger(n) || n < 1 || n > 60) {
       res.status(400).json({ error: 'no matchday' })
+      return
+    }
+    if (Array.isArray(view.all)) {
+      const matches = view.all.filter((m) => m.matchday === n).sort(L.byKickoff)
+      res.json({ number: n, name: '', matches: matches.map(matchOut) })
       return
     }
     const key = `${keyOf(s)}:${view.season}:${n}`
@@ -582,15 +620,19 @@ exports.activate = (host) => {
         return
       }
       try {
-        const season = view?.league === s.league && view.season ? view.season : seasonOf()
-        const teams = await sourceOf(s).teams(season)
+        const season = view?.league === leagueOf(s) && view.season ? view.season : seasonOf()
+        const teamsKey = `${fd(s) ? 'footballdata' : 'openligadb'}:${leagueOf(s)}:${season}`
+        const kept = teamLists.get(teamsKey)
+        const teams = kept && Date.now() - kept.at < L.HOUR ? kept.teams : await sourceOf(s).teams(season)
+        if (!kept || kept.teams !== teams) teamLists.set(teamsKey, { at: Date.now(), teams })
+        if (teamLists.size > 8) teamLists.delete(teamLists.keys().next().value)
         res.json(
           teams
             .filter((t) => !q || t.name.toLocaleLowerCase('de').includes(q) || t.short.toLocaleLowerCase('de').includes(q))
             .slice(0, 9)
-            .map((t) => ({ label: t.name, values: { team: t.name, teamId: t.id } }))
+            .map((t) => ({ label: t.name, values: fd(s) ? { fdTeam: t.name, fdTeamId: t.id } : { team: t.name, teamId: t.id } }))
             // (and one to choose none again - the app lists ten)
-            .concat([{ label: 'Keinen Verein', values: { team: '', teamId: 0 } }]),
+            .concat([{ label: 'Keinen Verein', values: fd(s) ? { fdTeam: '', fdTeamId: 0 } : { team: '', teamId: 0 } }]),
         )
       } catch (error) {
         host.log.warn(`[Extension football] teams: ${error.message}`)
@@ -607,7 +649,8 @@ exports.activate = (host) => {
     async (_req, res) => {
       const s = await host.settings()
       const rows = []
-      if (!configured(s)) rows.push({ label: 'Zustand', value: 'Keine Liga gewählt', tone: 'warn' })
+      if (fd(s) && !(typeof s.apiKey === 'string' && s.apiKey.trim())) rows.push({ label: 'Zustand', value: 'Schlüssel fehlt', tone: 'warn' })
+      else if (!configured(s)) rows.push({ label: 'Zustand', value: 'Keine Liga gewählt', tone: 'warn' })
       else if (lastError === 'too_many') rows.push({ label: 'Zustand', value: 'Zu viele Abfragen, die Box wartet', tone: 'warn' })
       else if (lastError === 'refused') rows.push({ label: 'Zustand', value: 'Schlüssel abgelehnt', tone: 'error' })
       else if (lastError) rows.push({ label: 'Zustand', value: 'Quelle nicht erreichbar', tone: 'error' })

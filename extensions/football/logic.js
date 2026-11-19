@@ -126,6 +126,90 @@ function olTeams(rows) {
     .sort((a, b) => a.name.localeCompare(b.name, 'de'))
 }
 
+// ---- football-data.org (v4, with a key of the user's own) ----
+
+/** The competitions of the free tier of football-data.org. A cup has no table of one league. */
+const FOOTBALLDATA_LEAGUES = {
+  PL: { name: 'Premier League' },
+  ELC: { name: 'Championship' },
+  BL1: { name: 'Bundesliga' },
+  PD: { name: 'LaLiga' },
+  SA: { name: 'Serie A' },
+  FL1: { name: 'Ligue 1' },
+  DED: { name: 'Eredivisie' },
+  PPL: { name: 'Primeira Liga' },
+  BSA: { name: 'Brasileirão' },
+  CL: { name: 'Champions League', cup: true },
+  WC: { name: 'Weltmeisterschaft', cup: true },
+  EC: { name: 'Europameisterschaft', cup: true },
+}
+
+/** A team of football-data.org */
+function fdTeam(t) {
+  const id = Number(t?.id)
+  const name = text(t?.name, 80)
+  const team = { id: Number.isInteger(id) && id > 0 ? id : null, name, short: text(t?.shortName, 40) || name, tla: '', crest: httpsOrEmpty(t?.crest) }
+  team.tla = tlaOf({ tla: t?.tla, short: team.short, name })
+  return team
+}
+
+const FD_STATE = { SCHEDULED: 'scheduled', TIMED: 'scheduled', IN_PLAY: 'live', PAUSED: 'live', LIVE: 'live', FINISHED: 'finished', AWARDED: 'finished', POSTPONED: 'postponed', SUSPENDED: 'postponed', CANCELLED: 'postponed' }
+
+/** A match of football-data.org in the plain form */
+function fdMatch(m, now = Date.now()) {
+  const at = typeof m?.utcDate === 'string' ? Date.parse(m.utcDate) : NaN
+  const kickoff = Number.isFinite(at) ? new Date(at).toISOString() : null
+  const pair = (p) => (p && int(p.home) !== null && int(p.away) !== null ? { home: p.home, away: p.away } : null)
+  const told = FD_STATE[String(m?.status ?? '')]
+  // (the source's word; one it does not give - a status of its own - from the time as with OpenLigaDB)
+  const state = told ?? stateOf({ kickoff, finished: false }, now)
+  const s = m?.score ?? {}
+  // (after a shoot-out the full time holds its goals too: the score is that of the play, the shoot-out beside it)
+  const shootout = s.duration === 'PENALTY_SHOOTOUT' ? pair(s.penalties) : null
+  const played = shootout && pair(s.regularTime) ? { home: s.regularTime.home + (pair(s.extraTime)?.home ?? 0), away: s.regularTime.away + (pair(s.extraTime)?.away ?? 0) } : pair(s.fullTime)
+  const score = state === 'scheduled' || state === 'postponed' ? null : (played ?? (state === 'live' ? { home: 0, away: 0 } : null))
+  return {
+    id: Number(m?.id) || null,
+    kickoff,
+    state,
+    home: fdTeam(m?.homeTeam),
+    away: fdTeam(m?.awayTeam),
+    score,
+    halftime: pair(s.halfTime),
+    penalties: shootout,
+    matchday: Number(m?.matchday) || null,
+    matchdayName: '',
+    competition: text(m?.competition?.code, 20),
+  }
+}
+
+/** The table of football-data.org: the one total table (a competition of groups has several - none then) */
+function fdTable(body) {
+  const totals = (Array.isArray(body?.standings) ? body.standings : []).filter((s) => s?.type === 'TOTAL')
+  if (totals.length !== 1 || !Array.isArray(totals[0].table)) return null
+  return totals[0].table.slice(0, 40).map((r, i) => ({
+    rank: int(r?.position) ?? i + 1,
+    team: fdTeam(r?.team),
+    played: int(r?.playedGames) ?? 0,
+    won: int(r?.won) ?? 0,
+    draw: int(r?.draw) ?? 0,
+    lost: int(r?.lost) ?? 0,
+    goals: int(r?.goalsFor) ?? 0,
+    against: int(r?.goalsAgainst) ?? 0,
+    diff: Number.isInteger(r?.goalDifference) ? r.goalDifference : (int(r?.goalsFor) ?? 0) - (int(r?.goalsAgainst) ?? 0),
+    points: int(r?.points) ?? 0,
+  }))
+}
+
+/** The teams of a competition of football-data.org, sorted by name */
+function fdTeams(body) {
+  const seen = new Set()
+  return (Array.isArray(body?.teams) ? body.teams : [])
+    .map(fdTeam)
+    .filter((t) => t.id && t.name && !seen.has(t.id) && seen.add(t.id))
+    .sort((a, b) => a.name.localeCompare(b.name, 'de'))
+}
+
 /** Matches sorted by kick-off (then by id: the same order on every call). */
 const byKickoff = (a, b) => (Date.parse(a.kickoff) || 0) - (Date.parse(b.kickoff) || 0) || (a.id ?? 0) - (b.id ?? 0)
 
@@ -241,4 +325,4 @@ function goalText(goal, lang = 'de') {
   return t.goal(mine.short || mine.name, goal.score[goal.side], goal.score[other])
 }
 
-module.exports = { OPENLIGADB_LEAGUES, olTeam, olMatch, olTable, olTeams, stateOf, myClub, nextDelay, anyLive, inPlay, newGoals, goalText, byKickoff, playsIn, dedupe, tlaOf, MIN, HOUR }
+module.exports = { OPENLIGADB_LEAGUES, FOOTBALLDATA_LEAGUES, fdTeam, fdMatch, fdTable, fdTeams, olTeam, olMatch, olTable, olTeams, stateOf, myClub, nextDelay, anyLive, inPlay, newGoals, goalText, byKickoff, playsIn, dedupe, tlaOf, MIN, HOUR }
