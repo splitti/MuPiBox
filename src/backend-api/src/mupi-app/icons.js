@@ -66,6 +66,7 @@ export const ICONS = {
   trash: "M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6",
   swap: "M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4",
   undo: "M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3",
+  edit: "M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4",
 }
 
 export function icon(name, size = 20) {

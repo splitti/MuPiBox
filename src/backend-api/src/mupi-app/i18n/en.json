@@ -4543,5 +4543,6 @@
  "PIN entfernt": "PIN removed",
  "Bitte vier Ziffern eingeben": "Please enter four digits",
  "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "The dot opens the choice; hold a tile there for three seconds – so nobody switches by accident.",
- "Die Einstellungen kommen vom aktiven Benutzer, bei einer Kopie von dem kopierten. Spotify-Abos gibt es nur mit einer Kopie.": "The settings come from the active user, with a copy from the user copied. Spotify subscriptions come only with a copy."
+ "Die Einstellungen kommen vom aktiven Benutzer, bei einer Kopie von dem kopierten. Spotify-Abos gibt es nur mit einer Kopie.": "The settings come from the active user, with a copy from the user copied. Spotify subscriptions come only with a copy.",
+ "Nur Ziffern von 0 bis 9, genau vier.": "Digits 0 to 9 only, exactly four."
 }

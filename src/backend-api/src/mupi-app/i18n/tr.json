@@ -4527,5 +4527,6 @@
  "PIN entfernt": "PIN kaldırıldı",
  "Bitte vier Ziffern eingeben": "Lütfen dört rakam gir",
  "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Nokta seçimi açar; orada bir kutuyu üç saniye basılı tut – böylece kimse yanlışlıkla değiştirmez.",
- "Die Einstellungen kommen vom aktiven Benutzer, bei einer Kopie von dem kopierten. Spotify-Abos gibt es nur mit einer Kopie.": "Ayarlar etkin kullanıcıdan, kopyada kopyalanan kullanıcıdan gelir. Spotify abonelikleri yalnızca kopyayla gelir."
+ "Die Einstellungen kommen vom aktiven Benutzer, bei einer Kopie von dem kopierten. Spotify-Abos gibt es nur mit einer Kopie.": "Ayarlar etkin kullanıcıdan, kopyada kopyalanan kullanıcıdan gelir. Spotify abonelikleri yalnızca kopyayla gelir.",
+ "Nur Ziffern von 0 bis 9, genau vier.": "Yalnızca 0 ile 9 arası rakamlar, tam dört tane."
 }

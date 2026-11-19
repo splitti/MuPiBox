@@ -4527,5 +4527,6 @@
  "PIN entfernt": "PIN удалён",
  "Bitte vier Ziffern eingeben": "Введи четыре цифры",
  "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Точка открывает выбор; там удерживай плитку три секунды – так никто не переключит случайно.",
- "Die Einstellungen kommen vom aktiven Benutzer, bei einer Kopie von dem kopierten. Spotify-Abos gibt es nur mit einer Kopie.": "Настройки берутся у активного пользователя, при копии — у копируемого. Подписки Spotify переносятся только при копии."
+ "Die Einstellungen kommen vom aktiven Benutzer, bei einer Kopie von dem kopierten. Spotify-Abos gibt es nur mit einer Kopie.": "Настройки берутся у активного пользователя, при копии — у копируемого. Подписки Spotify переносятся только при копии.",
+ "Nur Ziffern von 0 bis 9, genau vier.": "Только цифры от 0 до 9, ровно четыре."
 }

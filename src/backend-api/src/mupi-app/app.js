@@ -18514,7 +18514,7 @@ function userColorSheet(u) {
   openSheet(
     `<h2>Farbe</h2><p class="help" style="margin:0">Das Display zeigt die Farbe des aktiven Benutzers als Punkt oben.</p>
      <div class="user-colors">${colors
-       .map((c, i) => `<button type="button" class="user-color${c === u.color ? ' on' : ''}" data-color="${esc(c)}" ${taken.has(c) ? 'disabled' : ''} aria-label="${esc(tr('Farbe'))} ${i + 1}" ${taken.has(c) ? `title="${esc(tr('Diese Farbe hat schon jemand.'))}"` : ''}>${userDot(c, 28)}</button>`)
+       .map((c, i) => `<button type="button" class="user-color${c === u.color ? ' on' : ''}" aria-pressed="${c === u.color}" data-color="${esc(c)}" ${taken.has(c) ? 'disabled' : ''} aria-label="${esc(tr('Farbe'))} ${i + 1}" ${taken.has(c) ? `title="${esc(tr('Diese Farbe hat schon jemand.'))}"` : ''}>${userDot(c, 28)}</button>`)
        .join('')}</div>
      <div class="btns"><button class="btn" data-close>Abbrechen</button></div>`,
     (sheet, close) => {
@@ -18531,11 +18531,26 @@ function userColorSheet(u) {
 function userPinSheet(u) {
   openSheet(
     `<h2>PIN</h2><p class="help" style="margin:0">${esc(tr(`Vier Ziffern, die das Display verlangt, bevor es zu ${un(u.name)} wechselt. Zurück zu einem anderen Benutzer geht ohne PIN, und hier in der App fragt niemand danach.`))}</p>
-     <div class="field"><label for="user-pin">${esc(u.pin ? tr('Neue PIN') : 'PIN')}</label><input class="input" id="user-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"></div>
+     <div class="field"><label for="user-pin">${esc(u.pin ? tr('Neue PIN') : 'PIN')}</label><input class="input user-pin-input" id="user-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="0000" aria-describedby="user-pin-help"><small id="user-pin-help">Nur Ziffern von 0 bis 9, genau vier.</small></div>
      <div class="btns"><button class="btn" data-close>Abbrechen</button>${u.pin ? '<button class="btn danger" data-clear>PIN entfernen</button>' : ''}<button class="btn primary" data-ok>Speichern</button></div>`,
     (sheet, close) => {
       sheet.querySelector('[data-close]').onclick = close
       const input = sheet.querySelector('#user-pin')
+      const help = sheet.querySelector('#user-pin-help')
+      // (anything but a digit does not get in - typed or pasted; the note under the field says so for a moment)
+      let flash
+      input.addEventListener('input', () => {
+        const digits = input.value.replace(/\D/g, '').slice(0, 4)
+        if (digits === input.value) return
+        input.value = digits
+        input.classList.add('bad')
+        help.classList.add('err')
+        clearTimeout(flash)
+        flash = setTimeout(() => {
+          input.classList.remove('bad')
+          help.classList.remove('err')
+        }, 1500)
+      })
       const ok = async () => {
         const pin = input.value.trim()
         if (!/^\d{4}$/.test(pin)) return toast('Bitte vier Ziffern eingeben', 'info')
@@ -18580,10 +18595,12 @@ function usersSections() {
   const rows = s.users
     .map((u) => {
       const active = u.id === s.current
-      return `<div class="entry user-row">${userDot(u.color, 18)}<span class="lbl"><b translate="no">${esc(u.name)}</b><small>${esc(u.count === 1 ? tr('Ein Eintrag in der Bibliothek') : tr(`${u.count} Einträge in der Bibliothek`))}${u.pin ? ` · ${esc(tr('mit PIN'))}` : ''}</small></span>
-        <span class="user-acts">${active ? `<span class="chip ok">${esc(tr('aktiv'))}</span>` : `<button class="btn sm primary" data-user-switch="${esc(u.id)}">Wechseln</button>`}
-        <button class="btn sm" data-user-rename="${esc(u.id)}">Umbenennen</button><button class="btn sm" data-user-color="${esc(u.id)}">Farbe</button><button class="btn sm" data-user-pin="${esc(u.id)}">PIN</button>
-        ${active ? '' : `<button class="btn sm danger" data-user-remove="${esc(u.id)}">Entfernen</button>`}</span></div>`
+      // (name, its library and "aktiv" in one line with the dot; switching at its end; what can be changed below, under
+      // the name)
+      return `<div class="entry user-row${active ? ' is-active' : ''}">${userDot(u.color, 28)}<span class="lbl"><b><span translate="no">${esc(u.name)}</span>${active ? `<span class="chip ok">${esc(tr('aktiv'))}</span>` : ''}</b><small>${esc(u.count === 1 ? tr('Ein Eintrag in der Bibliothek') : tr(`${u.count} Einträge in der Bibliothek`))}${u.pin ? ` · ${esc(tr('mit PIN'))}` : ''}</small></span>
+        ${active ? '' : `<button class="btn sm primary" data-user-switch="${esc(u.id)}">Wechseln</button>`}
+        <span class="user-acts"><button class="btn sm" data-user-rename="${esc(u.id)}">${icon('edit', 16)}Umbenennen</button><button class="btn sm" data-user-color="${esc(u.id)}">${userDot(u.color, 14)}Farbe</button><button class="btn sm" data-user-pin="${esc(u.id)}">${icon('lock', 16)}PIN</button>
+        ${active ? '' : `<button class="btn sm danger" data-user-remove="${esc(u.id)}">${icon('trash', 16)}Entfernen</button>`}</span></div>`
     })
     .join('')
   const full = s.users.length >= s.max
