@@ -571,7 +571,8 @@ let renderToken = 0
 
 // The pages a library of another user is shown on (several users): the library, its pages to add to it and its Spotify
 // subscriptions, the history. On any other page the app is with the user in place again (Hören plays from his).
-const LIB_USER_PAGES = new Set(['bibliothek', 'suche', 'podsuche', 'radiosuche', 'tidalsuche', 'jellyfinsuche', 'audiblesuche', 'link', 'spotify', 'verlauf', 'spielzeit', 'fotos', 'fotoalbum'])
+// (not the Spotify page: its Smart-Sync - on or off, its runs and conflicts - is that of the user in place)
+const LIB_USER_PAGES = new Set(['bibliothek', 'suche', 'podsuche', 'radiosuche', 'tidalsuche', 'jellyfinsuche', 'audiblesuche', 'link', 'verlauf', 'spielzeit', 'fotos', 'fotoalbum'])
 function libUserShown(page) {
   const s = usersState
   const on = !!s?.enabled && (s.users?.length ?? 0) >= 2 && LIB_USER_PAGES.has(page?.id)
@@ -661,6 +662,8 @@ async function renderPage(page, reload = true) {
     b.onclick = () => {
       const id = b.dataset.libUser
       libView.user = id === usersState?.current ? null : id
+      // (its buttons went out for the user chosen now already - +10 min, show on the display ...)
+      main.innerHTML = `<div class="loading"><p>${esc('Lade …')}</p></div>`
       renderPage(page)
     }
   }
@@ -3583,8 +3586,9 @@ function openLibGroup(g) {
 // playlists then stay as they are; "Jetzt abgleichen" on the Spotify page asks without it)
 async function fireSync(subs = true) {
   // (another user's subscriptions: the sync runs for his library - the box syncs every user's)
-  const other = libView.user ? usersState?.users?.find((u) => u.id === libView.user) : null
-  const r = await api(`${SYNC_API}/trigger?source=webapp${subs ? '&subscriptions=1' : ''}${other ? `&user=${encodeURIComponent(other.id)}` : ''}`, { method: 'POST' })
+  // (the user shown, also the one in place: switched at the display meanwhile, the subscription went to him - see api)
+  const shown = libView.shown
+  const r = await api(`${SYNC_API}/trigger?source=webapp${subs ? '&subscriptions=1' : ''}${shown ? `&user=${encodeURIComponent(shown)}` : ''}`, { method: 'POST' })
   const b = r.body ?? {}
   if (r.status === 202 && b.subscriptionsOnly) {
     return b.status === 'scheduled'
@@ -4970,6 +4974,8 @@ async function loadSpotifyMine() {
   const [r, have] = await Promise.all([api(`${SYNC_API}/my-playlists`), libraryHave('spotify')])
   if (!el.isConnected) return
   search.have = have
+  // (the results show what the library has: another user's of before otherwise)
+  drawSearch()
   if (!r.ok) {
     // (no connection any more - disconnected, or the sign-in refused: the list of before goes, it was that account's)
     const gone = r.status === 409 || r.status === 401
@@ -5792,8 +5798,9 @@ async function loadTidalMine() {
   if (!el) return
   if (!tds.mine) el.innerHTML = `<div class="loading"><p>${esc('Lade …')}</p></div>`
   const [r, have] = await Promise.all([api(`${API}/tidal/mine`), libraryHave('tidal')])
-  tds.have = have
   if (!el.isConnected) return
+  tds.have = have
+  drawTidal()
   if (!r.ok) {
     el.innerHTML = `<p class="help" style="margin:0">${esc(tidalFailText(r))}</p>`
     return
@@ -12966,9 +12973,13 @@ const PHOTO_SOURCE = { upload: ['mobile', 'Hochgeladen'], nas: ['server', 'NAS']
 const photoFile = (albumId, assetId, size) => `${API}/photos/file/${albumId}/${assetId}/${size}`
 
 async function loadPhotoOverview() {
+  const user = libView.shown
   const [r, nas, immich, synology, nextcloud, icloud, photoprism] = await Promise.all([api(`${API}/photos/overview`), api(`${API}/photos/nas`), api(`${API}/photos/immich`), api(`${API}/photos/synology`), api(`${API}/photos/nextcloud`), api(`${API}/photos/icloud`), api(`${API}/photos/photoprism`)])
+  // (another user chosen meanwhile: his page reads his own - which albums he sees on the display)
+  if (user !== libView.shown) return
   if (!r.ok) throw new Error(`photos ${r.status}`)
   photoLib.overview = r.body
+  photoLib.user = user
   // (the photo services: the NAS folders and Immich - their lines in the overview)
   photoLib.nas = nas.ok ? nas.body : null
   photoLib.immich = immich.ok ? immich.body : null
@@ -15474,7 +15485,7 @@ async function loadPhotoAlbum() {
     } catch {}
   }
   if (!id) throw new Error('no album')
-  const [a, o] = await Promise.all([api(`${API}/photos/albums/${id}`), photoLib.overview && !photoLib.stale ? null : api(`${API}/photos/overview`)])
+  const [a, o] = await Promise.all([api(`${API}/photos/albums/${id}`), photoLib.overview && !photoLib.stale && photoLib.user === libView.shown ? null : api(`${API}/photos/overview`)])
   if (!a.ok) throw new Error(`album ${a.status}`)
   if (o?.ok) Object.assign(photoLib, { overview: o.body, stale: false })
   photoLib.albumId = id
@@ -18451,7 +18462,11 @@ function switchUserSheet(u, after) {
       sheet.querySelector('[data-ok]').onclick = async () => {
         close()
         toast(tr(`Wechsle zu ${u.name} …`), 'info')
-        if (await userAction('switch', { id: u.id }, tr(`${u.name} ist jetzt aktiv`))) after?.()
+        if (await userAction('switch', { id: u.id }, tr(`${u.name} ist jetzt aktiv`))) {
+          // (Hören showed the user of before until it read its list again)
+          libChanged()
+          after?.()
+        }
       }
     },
   )
@@ -18462,7 +18477,7 @@ function userNameSheet(u) {
   const copy = !u
     ? `<div class="field"><label for="user-from">Bibliothek</label><select class="input" id="user-from">
         <option value="">Leer anfangen</option>${others.map((o) => `<option value="${esc(o.id)}">${esc(tr(`Kopie der Bibliothek von ${o.name}`))}</option>`).join('')}
-       </select><small>Die Einstellungen kommen vom aktiven Benutzer, die Spotify-Abos nur mit einer Kopie.</small></div>`
+       </select><small>Die Einstellungen kommen vom aktiven Benutzer, bei einer Kopie von dem kopierten. Spotify-Abos gibt es nur mit einer Kopie.</small></div>`
     : ''
   openSheet(
     `<h2>${esc(u ? 'Umbenennen' : 'Benutzer anlegen')}</h2>

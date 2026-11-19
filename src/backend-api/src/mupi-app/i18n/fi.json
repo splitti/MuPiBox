@@ -4481,7 +4481,6 @@
  "Benutzer anlegen": "Lisää käyttäjä",
  "Leer anfangen": "Aloita tyhjästä",
  "Kopie der Bibliothek von {}": "Kopio käyttäjän {} kirjastosta",
- "Die Einstellungen kommen vom aktiven Benutzer, die Spotify-Abos nur mit einer Kopie.": "Asetukset tulevat aktiiviselta käyttäjältä, Spotify-tilaukset vain kopion mukana.",
  "Bitte einen Namen eingeben": "Anna nimi",
  "{} ist angelegt": "{} on lisätty",
  "Farbe": "Väri",
@@ -4527,5 +4526,6 @@
  "PIN gespeichert": "PIN tallennettu",
  "PIN entfernt": "PIN poistettu",
  "Bitte vier Ziffern eingeben": "Anna neljä numeroa",
- "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Piste avaa valinnan; pidä siellä ruutua painettuna kolme sekuntia – niin kukaan ei vaihda vahingossa."
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Piste avaa valinnan; pidä siellä ruutua painettuna kolme sekuntia – niin kukaan ei vaihda vahingossa.",
+ "Die Einstellungen kommen vom aktiven Benutzer, bei einer Kopie von dem kopierten. Spotify-Abos gibt es nur mit einer Kopie.": "Asetukset tulevat aktiiviselta käyttäjältä, kopiossa kopioidulta. Spotify-tilaukset tulevat vain kopion mukana."
 }

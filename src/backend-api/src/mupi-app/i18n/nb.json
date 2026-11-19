@@ -4481,7 +4481,6 @@
  "Benutzer anlegen": "Legg til bruker",
  "Leer anfangen": "Start tomt",
  "Kopie der Bibliothek von {}": "Kopi av biblioteket til {}",
- "Die Einstellungen kommen vom aktiven Benutzer, die Spotify-Abos nur mit einer Kopie.": "Innstillingene kommer fra den aktive brukeren, Spotify-abonnementene bare med en kopi.",
  "Bitte einen Namen eingeben": "Skriv inn et navn",
  "{} ist angelegt": "{} er lagt til",
  "Farbe": "Farge",
@@ -4527,5 +4526,6 @@
  "PIN gespeichert": "PIN lagret",
  "PIN entfernt": "PIN fjernet",
  "Bitte vier Ziffern eingeben": "Skriv inn fire sifre",
- "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Prikken åpner valget; hold der en flis i tre sekunder – så bytter ingen ved et uhell."
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Prikken åpner valget; hold der en flis i tre sekunder – så bytter ingen ved et uhell.",
+ "Die Einstellungen kommen vom aktiven Benutzer, bei einer Kopie von dem kopierten. Spotify-Abos gibt es nur mit einer Kopie.": "Innstillingene kommer fra den aktive brukeren, ved en kopi fra den kopierte. Spotify-abonnementer følger bare med en kopi."
 }

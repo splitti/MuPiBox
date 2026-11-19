@@ -282,6 +282,8 @@ const userFiles = new UserFiles({ usersDir: path.join(DATA_DIR, 'users'), librar
 let userSwitchCutOff: { from: string; to: string } | null = null
 let userSwitchRunning = false
 try {
+  // (a restore of a backup cut off: the users of before back first - admin.ts, users.ts prepareRestore)
+  if (userFiles.recoverRestore()) console.warn(`${new Date().toLocaleString()}: [users] a restore was cut off - the users of before are back`)
   userSwitchCutOff = userFiles.recover()
   if (userSwitchCutOff) {
     console.warn(`${new Date().toLocaleString()}: [users] a switch from ${userSwitchCutOff.from} to ${userSwitchCutOff.to} was cut off - finished`)
@@ -1284,9 +1286,9 @@ const users = new Users(userFiles, {
       throw err
     }
   },
-  playerChanged: async () => {
+  playerChanged: async (force) => {
     userSwitchRunning = false
-    await fetch(`${PLAYER_BASE}/user/changed`, { method: 'POST', signal: AbortSignal.timeout(8000) }).catch(() => undefined)
+    await fetch(`${PLAYER_BASE}/user/changed${force ? '?force=1' : ''}`, { method: 'POST', signal: AbortSignal.timeout(8000) }).catch(() => undefined)
   },
   readConfig: async () => (await readJsonFile(mupiboxConfigPath)) as Record<string, unknown>,
   updateConfig: (mutate) => updateMupiboxConfig((cfg) => mutate(cfg)),

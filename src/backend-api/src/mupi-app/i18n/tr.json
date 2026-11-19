@@ -4481,7 +4481,6 @@
  "Benutzer anlegen": "Kullanıcı ekle",
  "Leer anfangen": "Boş başla",
  "Kopie der Bibliothek von {}": "{} kitaplığının kopyası",
- "Die Einstellungen kommen vom aktiven Benutzer, die Spotify-Abos nur mit einer Kopie.": "Ayarlar etkin kullanıcıdan gelir, Spotify abonelikleri yalnızca kopyayla.",
  "Bitte einen Namen eingeben": "Lütfen bir ad gir",
  "{} ist angelegt": "{} eklendi",
  "Farbe": "Renk",
@@ -4527,5 +4526,6 @@
  "PIN gespeichert": "PIN kaydedildi",
  "PIN entfernt": "PIN kaldırıldı",
  "Bitte vier Ziffern eingeben": "Lütfen dört rakam gir",
- "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Nokta seçimi açar; orada bir kutuyu üç saniye basılı tut – böylece kimse yanlışlıkla değiştirmez."
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Nokta seçimi açar; orada bir kutuyu üç saniye basılı tut – böylece kimse yanlışlıkla değiştirmez.",
+ "Die Einstellungen kommen vom aktiven Benutzer, bei einer Kopie von dem kopierten. Spotify-Abos gibt es nur mit einer Kopie.": "Ayarlar etkin kullanıcıdan, kopyada kopyalanan kullanıcıdan gelir. Spotify abonelikleri yalnızca kopyayla gelir."
 }

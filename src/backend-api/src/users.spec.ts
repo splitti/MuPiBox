@@ -338,6 +338,23 @@ describe('the users', () => {
     assert.ok(!fs.existsSync(path.join(root, 'data', 'users', 'xx')))
   })
 
+  it('a restore cut off (a power cut during the unzip): the users of before back at the next start', async () => {
+    const users = new Users(files, hooks)
+    await users.setEnabled(true)
+    const anna = await users.add('Anna', null)
+    write(path.join(root, 'data', 'users', anna.id, 'library', 'data.json'), '[{"title":"Anna"}]')
+    files.prepareRestore()
+    // (half unpacked: a list of the backup, no library in place)
+    write(files.file, '{"version":1,"enabled":false,"current":"main","users":[]}')
+    assert.ok(!fs.existsSync(path.join(lib(), 'data.json')))
+    assert.equal(files.recoverRestore(), true)
+    assert.deepEqual(files.read().users.map((u) => u.name), ['Standard', 'Anna'])
+    assert.equal(read(path.join(lib(), 'data.json')), '[{"title":"A"}]')
+    assert.equal(read(path.join(root, 'data', 'users', anna.id, 'library', 'data.json')), '[{"title":"Anna"}]')
+    assert.deepEqual(fs.readdirSync(path.join(root, 'data', 'users')).filter((n) => n.startsWith('.')), [])
+    assert.equal(files.recoverRestore(), false)
+  })
+
   it('empties the trash after 30 days', async () => {
     const users = new Users(files, hooks)
     const a = await users.add('Anna', null)

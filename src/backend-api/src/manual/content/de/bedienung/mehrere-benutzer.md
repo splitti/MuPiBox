@@ -9,7 +9,7 @@ Schalte **Mehrere Benutzer** ein. Der bisherige Stand der Box wird zum ersten Be
 - **Leer anfangen**: eine leere Bibliothek.
 - **Kopie der Bibliothek von …**: die Bibliothek eines anderen Benutzers als Start, mit seinen Spotify-Abos.
 
-Die Einstellungen (Theme, Lautstärke, Startseite …) übernimmt ein neuer Benutzer vom aktiven Benutzer. Jeder Benutzer hat eine eigene **Farbe**. Das Display zeigt sie als Punkt oben rechts. Es gibt neun Farben, also höchstens neun Benutzer.
+Die Einstellungen (Theme, Lautstärke, Startseite …) übernimmt ein neuer Benutzer vom aktiven Benutzer, bei einer Kopie von dem kopierten. Jeder Benutzer hat eine eigene **Farbe**. Das Display zeigt sie als Punkt oben rechts. Es gibt neun Farben, also höchstens neun Benutzer.
 
 ## Was jedes Kind für sich hat
 
@@ -22,7 +22,7 @@ Die Einstellungen (Theme, Lautstärke, Startseite …) übernimmt ein neuer Benu
 | Bildzeit und welche Fotoalben das Display zeigt | NFC-Karten, Tasten, OLED und andere Erweiterungen |
 | Theme, Lautstärken, Startseite, Uhr, Helligkeit | Telegram, Home Assistant, MQTT, Schlaftimer |
 
-Eigene Dateien zeigt die Box allen Kindern. Ausblenden lassen sie sich pro Kind wie jedes andere Cover.
+Eigene Dateien zeigt die Box allen Kindern. Jedes Kind hat seine eigenen ausgeblendeten Cover: Mit **Kein Cover** blendest du eines für das Kind aus, das gerade hört.
 
 ## Wechseln
 
@@ -46,7 +46,7 @@ Jeder Benutzer kann eine **PIN** aus vier Ziffern bekommen (**PIN** in seiner Ze
 
 Auf den Seiten **Bibliothek**, **Spielzeit** und **Hör-Verlauf** steht oben eine Auswahl, für welches Kind du gerade arbeitest. Du kannst die Bibliothek, Abos, Limits und Ruhezeiten eines Kindes ändern, während ein anderes hört. Die Änderungen gelten, sobald es an der Reihe ist. Bonus-Minuten für heute zählen ebenso.
 
-Nur beim aktiven Kind gehen **Abspielen**, **Sperren aufheben** und **Ruhe sofort**, denn sie wirken auf das, was die Box gerade tut.
+Nur beim aktiven Kind gehen **Abspielen**, **Sperren aufheben**, **Ruhe sofort**, **Kein Cover** und einzelne Folgen offline behalten, denn sie wirken auf das, was die Box gerade tut oder zeigt. Smart-Sync ein- und ausschalten und seine Konflikte (**Bibliothek › Spotify**) gelten ebenfalls für das aktive Kind.
 
 ## Was im Hintergrund für alle läuft
 

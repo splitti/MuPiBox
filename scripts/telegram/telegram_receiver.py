@@ -258,14 +258,16 @@ def tile_time_action(t, action, mins=None, user=None):
 
 def tiles_message(chat_id, user=None):
     """/tiles [name]: the tiles with a limit, each with +10 min and free today (of `user`, else of the one in place -
-    the id of one not in place rides along in the buttons)"""
+    his id rides along in the buttons)"""
     tiles = tile_list(user=user)
     if not tiles:
         bot.sendMessage(chat_id, tr('tiles_none'))
         return
     b = InlineKeyboardButton
     rows = []
-    who = f'_{user["id"]}' if user and not user.get('current') else ''
+    # (the user's id always - also the one in place: a switch before the tap gave the tile of another child the minutes)
+    named = user or current_user()
+    who = f'_{named["id"]}' if named else ''
     for t in tiles:
         name = str(t.get('name') or t['key'].split(':', 1)[-1])[:24]
         row = [b(text=f'{name} +10', callback_data=f'tilex_{tile_hash(t["key"])}{who}')]

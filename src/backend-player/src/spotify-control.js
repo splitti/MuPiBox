@@ -2273,6 +2273,9 @@ function combinedTick() {
     console.log(`${new Date().toLocaleString()}: [Override] Force-block ended.`)
     forceBlockWasActive = false
   }
+  // (a switch of the user under way: the coming user's limits are in the config already, the counts still the going
+  // user's - one tick then blocked the box and said "used up" in Telegram; counted again once the counts are his)
+  if (userHold) return
   photoTimeTickStep()
   playtimeTickStep()
   quietHoursTickStep()
@@ -4745,9 +4748,10 @@ app.post('/user/hold', (_req, res) => {
     res.status(500).json({ ok: false, error: String(err?.message ?? err) })
   }
 })
-app.post('/user/changed', (_req, res) => {
-  // (no hold before - it failed: nothing was exchanged, the counts in memory are the newest)
-  if (userHold) userChanged()
+app.post('/user/changed', (req, res) => {
+  // (no hold before - it failed: nothing was exchanged, the counts in memory are the newest. force: a switch cut off and
+  // finished at the start - the player read the files that were in place then, read them again)
+  if (userHold || req.query?.force === '1') userChanged()
   res.json({ ok: true })
 })
 // The counts of the user who goes, on the card before the files are exchanged (not with the timer of every minute)

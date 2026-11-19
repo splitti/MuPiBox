@@ -4481,7 +4481,6 @@
  "Benutzer anlegen": "Přidat uživatele",
  "Leer anfangen": "Začít prázdně",
  "Kopie der Bibliothek von {}": "Kopie knihovny {}",
- "Die Einstellungen kommen vom aktiven Benutzer, die Spotify-Abos nur mit einer Kopie.": "Nastavení přejímá od aktivního uživatele, předplatné Spotify jen s kopií.",
  "Bitte einen Namen eingeben": "Zadej prosím jméno",
  "{} ist angelegt": "{} přidán",
  "Farbe": "Barva",
@@ -4527,5 +4526,6 @@
  "PIN gespeichert": "PIN uložen",
  "PIN entfernt": "PIN odebrán",
  "Bitte vier Ziffern eingeben": "Zadej čtyři číslice",
- "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Tečka otevře výběr; tam podrž dlaždici tři sekundy – tak nikdo nepřepne omylem."
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Tečka otevře výběr; tam podrž dlaždici tři sekundy – tak nikdo nepřepne omylem.",
+ "Die Einstellungen kommen vom aktiven Benutzer, bei einer Kopie von dem kopierten. Spotify-Abos gibt es nur mit einer Kopie.": "Nastavení se převezme od aktivního uživatele, u kopie od kopírovaného. Odběry Spotify jen s kopií."
 }

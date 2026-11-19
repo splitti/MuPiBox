@@ -4481,7 +4481,6 @@
  "Benutzer anlegen": "Gebruiker toevoegen",
  "Leer anfangen": "Leeg beginnen",
  "Kopie der Bibliothek von {}": "Kopie van de bibliotheek van {}",
- "Die Einstellungen kommen vom aktiven Benutzer, die Spotify-Abos nur mit einer Kopie.": "De instellingen komen van de actieve gebruiker, de Spotify-abonnementen alleen bij een kopie.",
  "Bitte einen Namen eingeben": "Voer een naam in",
  "{} ist angelegt": "{} is toegevoegd",
  "Farbe": "Kleur",
@@ -4527,5 +4526,6 @@
  "PIN gespeichert": "PIN opgeslagen",
  "PIN entfernt": "PIN verwijderd",
  "Bitte vier Ziffern eingeben": "Voer vier cijfers in",
- "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "De stip opent de keuze; houd daar een tegel drie seconden vast – zo wisselt niemand per ongeluk."
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "De stip opent de keuze; houd daar een tegel drie seconden vast – zo wisselt niemand per ongeluk.",
+ "Die Einstellungen kommen vom aktiven Benutzer, bei einer Kopie von dem kopierten. Spotify-Abos gibt es nur mit einer Kopie.": "De instellingen komen van de actieve gebruiker, bij een kopie van de gekopieerde. Spotify-abonnementen komen alleen mee met een kopie."
 }

@@ -4481,7 +4481,6 @@
  "Benutzer anlegen": "Додати користувача",
  "Leer anfangen": "Почати з порожньої",
  "Kopie der Bibliothek von {}": "Копія бібліотеки {}",
- "Die Einstellungen kommen vom aktiven Benutzer, die Spotify-Abos nur mit einer Kopie.": "Налаштування беруться в активного користувача, підписки Spotify – лише з копією.",
  "Bitte einen Namen eingeben": "Введи ім’я",
  "{} ist angelegt": "{} додано",
  "Farbe": "Колір",
@@ -4527,5 +4526,6 @@
  "PIN gespeichert": "PIN збережено",
  "PIN entfernt": "PIN видалено",
  "Bitte vier Ziffern eingeben": "Введи чотири цифри",
- "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Крапка відкриває вибір; там утримуй плитку три секунди – так ніхто не перемкне випадково."
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Крапка відкриває вибір; там утримуй плитку три секунди – так ніхто не перемкне випадково.",
+ "Die Einstellungen kommen vom aktiven Benutzer, bei einer Kopie von dem kopierten. Spotify-Abos gibt es nur mit einer Kopie.": "Налаштування беруться в активного користувача, у разі копії — у скопійованого. Підписки Spotify переносяться лише з копією."
 }

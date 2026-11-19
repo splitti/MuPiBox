@@ -4497,7 +4497,6 @@
  "Benutzer anlegen": "Add user",
  "Leer anfangen": "Start empty",
  "Kopie der Bibliothek von {}": "Copy of the library of {}",
- "Die Einstellungen kommen vom aktiven Benutzer, die Spotify-Abos nur mit einer Kopie.": "The settings come from the active user, the Spotify subscriptions only with a copy.",
  "Bitte einen Namen eingeben": "Please enter a name",
  "{} ist angelegt": "{} has been added",
  "Farbe": "Colour",
@@ -4543,5 +4542,6 @@
  "PIN gespeichert": "PIN saved",
  "PIN entfernt": "PIN removed",
  "Bitte vier Ziffern eingeben": "Please enter four digits",
- "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "The dot opens the choice; hold a tile there for three seconds – so nobody switches by accident."
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "The dot opens the choice; hold a tile there for three seconds – so nobody switches by accident.",
+ "Die Einstellungen kommen vom aktiven Benutzer, bei einer Kopie von dem kopierten. Spotify-Abos gibt es nur mit einer Kopie.": "The settings come from the active user, with a copy from the user copied. Spotify subscriptions come only with a copy."
 }

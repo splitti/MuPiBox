@@ -9,7 +9,7 @@ Switch on **Several users**. What the box has so far becomes the first user, **S
 - **Start empty**: an empty library.
 - **Copy of the library of …**: another user's library as a start, with their Spotify subscriptions.
 
-A new user takes the settings (theme, volume, start page …) of the active user. Every user has a **colour** of their own, which the display shows as a dot at the top right. There are nine colours, so at most nine users.
+A new user takes the settings (theme, volume, start page …) of the active user, with a copy those of the user copied. Every user has a **colour** of their own, which the display shows as a dot at the top right. There are nine colours, so at most nine users.
 
 ## What each child has
 
@@ -22,13 +22,13 @@ A new user takes the settings (theme, volume, start page …) of the active user
 | Photo time and which photo albums the display shows | NFC cards, buttons, OLED and other extensions |
 | Theme, volumes, start page, clock, brightness | Telegram, Home Assistant, MQTT, sleep timer |
 
-The box shows its own files to every child. Each child can hide them like any other cover.
+The box shows its own files to every child. Each child has their own hidden covers: **No cover** hides one for the child who is listening.
 
 ## Switching
 
 **In the app** you switch on the start page or under **Settings › Several users** with **Switch**. It takes about a second. Whatever is playing stops, and the display reloads with the other child's theme, start page and library.
 
-**On the display** you tap the coloured **dot** at the top right. **Who's listening?** opens with one tile per child. How the display switches is set under **Switching on the display**:
+**On the display** you tap the coloured **dot** at the top right. **Who is listening?** opens with one tile per child. How the display switches is set under **Switching on the display**:
 
 | Setting | Effect |
 | --- | --- |
@@ -44,9 +44,9 @@ Every user can get a four-digit **PIN** (**PIN** in their row). The display asks
 
 ## Editing another child without switching
 
-The pages **Library**, **Play time** and **Listening history** have a choice at the top: which child you are working on. You can change a child's library, subscriptions, limits and quiet hours while another one is listening. The changes apply as soon as that child's turn comes. Bonus minutes for today count as well.
+The pages **Library**, **Playtime** and **Listening history** have a choice at the top: which child you are working on. You can change a child's library, subscriptions, limits and quiet hours while another one is listening. The changes apply as soon as that child's turn comes. Bonus minutes for today count as well.
 
-**Play**, **Lift lock** and **Quiet now** work only for the active child, because they act on what the box is doing right now.
+**Play**, **Lift lock**, **Quiet now**, **No cover** and keeping single episodes offline work only for the active child, because they act on what the box is doing or showing right now. Switching Smart-Sync on or off and its conflicts (**Library › Spotify**) are the active child's too.
 
 ## What runs for everyone in the background
 

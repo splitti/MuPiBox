@@ -4481,7 +4481,6 @@
  "Benutzer anlegen": "Adicionar utilizador",
  "Leer anfangen": "Começar vazio",
  "Kopie der Bibliothek von {}": "Cópia da biblioteca de {}",
- "Die Einstellungen kommen vom aktiven Benutzer, die Spotify-Abos nur mit einer Kopie.": "As definições vêm do utilizador ativo; as subscrições do Spotify, só com uma cópia.",
  "Bitte einen Namen eingeben": "Escreve um nome",
  "{} ist angelegt": "{} foi adicionado",
  "Farbe": "Cor",
@@ -4527,5 +4526,6 @@
  "PIN gespeichert": "PIN guardado",
  "PIN entfernt": "PIN removido",
  "Bitte vier Ziffern eingeben": "Introduz quatro algarismos",
- "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "O ponto abre a escolha; aí mantém um mosaico premido três segundos – assim ninguém muda sem querer."
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "O ponto abre a escolha; aí mantém um mosaico premido três segundos – assim ninguém muda sem querer.",
+ "Die Einstellungen kommen vom aktiven Benutzer, bei einer Kopie von dem kopierten. Spotify-Abos gibt es nur mit einer Kopie.": "As definições vêm do utilizador ativo; com uma cópia, do utilizador copiado. As subscrições do Spotify só vêm com uma cópia."
 }

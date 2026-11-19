@@ -4481,7 +4481,6 @@
  "Benutzer anlegen": "Lägg till användare",
  "Leer anfangen": "Börja tomt",
  "Kopie der Bibliothek von {}": "Kopia av biblioteket för {}",
- "Die Einstellungen kommen vom aktiven Benutzer, die Spotify-Abos nur mit einer Kopie.": "Inställningarna kommer från den aktiva användaren, Spotify-prenumerationerna bara med en kopia.",
  "Bitte einen Namen eingeben": "Ange ett namn",
  "{} ist angelegt": "{} har lagts till",
  "Farbe": "Färg",
@@ -4527,5 +4526,6 @@
  "PIN gespeichert": "PIN sparad",
  "PIN entfernt": "PIN borttagen",
  "Bitte vier Ziffern eingeben": "Ange fyra siffror",
- "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Pricken öppnar valet; håll där en ruta i tre sekunder – så byter ingen av misstag."
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Pricken öppnar valet; håll där en ruta i tre sekunder – så byter ingen av misstag.",
+ "Die Einstellungen kommen vom aktiven Benutzer, bei einer Kopie von dem kopierten. Spotify-Abos gibt es nur mit einer Kopie.": "Inställningarna kommer från den aktiva användaren, vid en kopia från den kopierade. Spotify-prenumerationer följer bara med en kopia."
 }

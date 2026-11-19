@@ -4481,7 +4481,6 @@
  "Benutzer anlegen": "Προσθήκη χρήστη",
  "Leer anfangen": "Έναρξη κενή",
  "Kopie der Bibliothek von {}": "Αντίγραφο της βιβλιοθήκης του {}",
- "Die Einstellungen kommen vom aktiven Benutzer, die Spotify-Abos nur mit einer Kopie.": "Οι ρυθμίσεις έρχονται από τον ενεργό χρήστη, οι συνδρομές Spotify μόνο με αντίγραφο.",
  "Bitte einen Namen eingeben": "Γράψε ένα όνομα",
  "{} ist angelegt": "Ο {} προστέθηκε",
  "Farbe": "Χρώμα",
@@ -4527,5 +4526,6 @@
  "PIN gespeichert": "Το PIN αποθηκεύτηκε",
  "PIN entfernt": "Το PIN αφαιρέθηκε",
  "Bitte vier Ziffern eingeben": "Γράψε τέσσερα ψηφία",
- "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Η κουκκίδα ανοίγει την επιλογή· εκεί κράτα ένα πλακίδιο τρία δευτερόλεπτα – έτσι κανείς δεν αλλάζει κατά λάθος."
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Η κουκκίδα ανοίγει την επιλογή· εκεί κράτα ένα πλακίδιο τρία δευτερόλεπτα – έτσι κανείς δεν αλλάζει κατά λάθος.",
+ "Die Einstellungen kommen vom aktiven Benutzer, bei einer Kopie von dem kopierten. Spotify-Abos gibt es nur mit einer Kopie.": "Οι ρυθμίσεις έρχονται από τον ενεργό χρήστη, με αντίγραφο από αυτόν που αντιγράφεται. Οι συνδρομές Spotify έρχονται μόνο με αντίγραφο."
 }

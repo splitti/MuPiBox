@@ -72,6 +72,8 @@ export const TRASH_DAYS = 30
 const DAY_MS = 24 * 60 * 60 * 1000
 export const MAIN_ID = 'main'
 const ID = /^[a-z0-9]{2,12}$/
+/** the users of before in the folder a restore puts them aside into (UserFiles.prepareRestore) */
+const RESTORE_BEFORE = 'before.json'
 const TRASH_NAME = /^([a-z0-9]{2,12})\.(\d{10,16})$/
 
 export type SwitchMode = 'free' | 'hold' | 'app'
@@ -398,9 +400,11 @@ export class UserFiles {
    */
   prepareRestore(): string {
     const f = this.read()
-    this.stash(f.current)
     const held = path.join(this.dirs.usersDir, `.restore-${Date.now()}`)
     fs.mkdirSync(held, { recursive: true })
+    // (the users of before, for a restore cut off - a power cut during the unzip: put back at the next start)
+    writeJsonSync(path.join(held, RESTORE_BEFORE), f, { ifChanged: false })
+    this.stash(f.current)
     for (const n of readdirOrNone(this.dirs.usersDir)) {
       if (n === 'trash' || n.startsWith('.')) continue
       fs.renameSync(path.join(this.dirs.usersDir, n), path.join(held, n))
@@ -439,9 +443,34 @@ export class UserFiles {
       if (n === 'trash' || n.startsWith('.')) continue
       fs.rmSync(path.join(this.dirs.usersDir, n), { recursive: true, force: true })
     }
-    for (const n of readdirOrNone(held)) fs.renameSync(path.join(held, n), path.join(this.dirs.usersDir, n))
+    for (const n of readdirOrNone(held)) if (n !== RESTORE_BEFORE) fs.renameSync(path.join(held, n), path.join(this.dirs.usersDir, n))
     fs.rmSync(held, { recursive: true, force: true })
     this.load(before.current)
+  }
+
+  /** A restore cut off (the server ended during it - a power cut, a restart): the users of before back - at the start,
+   *  before anything reads the library. Returns whether there was one. */
+  recoverRestore(): boolean {
+    let found = false
+    for (const n of readdirOrNone(this.dirs.usersDir)) {
+      if (!n.startsWith('.restore-')) continue
+      const held = path.join(this.dirs.usersDir, n)
+      let before: UsersFile | null = null
+      try {
+        const raw = JSON.parse(fs.readFileSync(path.join(held, RESTORE_BEFORE), 'utf8')) as UsersFile
+        if (raw && Array.isArray(raw.users) && typeof raw.current === 'string' && ID.test(raw.current)) before = raw
+      } catch {
+        before = null
+      }
+      // (none written - cut off at its very start, nothing moved yet: only the folder goes)
+      if (!before) {
+        if (readdirOrNone(held).length === 0) fs.rmSync(held, { recursive: true, force: true })
+        continue
+      }
+      this.undoRestore(held, before)
+      found = true
+    }
+    return found
   }
 
   trashList(): UserTrashEntry[] {
@@ -552,7 +581,8 @@ export interface SwitchHooks {
   /** playback stopped, the player's counts written and its writes held */
   playerHold(): Promise<void>
   /** the player reads the counts in place (after a switch, and after one that failed) */
-  playerChanged(): Promise<void>
+  /** force: the player reads the files anew also without a hold before (a switch finished at the start) */
+  playerChanged(force?: boolean): Promise<void>
   readConfig(): Promise<Record<string, unknown>>
   updateConfig(mutate: (cfg: Record<string, unknown>) => void): Promise<void>
   /** what the server keeps of the user in place in memory forgotten (at once after the files moved, before anything
@@ -671,7 +701,7 @@ export class Users {
     f.current = done.to
     delete f.switching
     this.files.write(f)
-    await this.hooks.playerChanged().catch(() => undefined)
+    await this.hooks.playerChanged(true).catch(() => undefined)
     await this.hooks.reload().catch(() => undefined)
   }
 

@@ -4481,7 +4481,6 @@
  "Benutzer anlegen": "Dodaj użytkownika",
  "Leer anfangen": "Zacznij od pustej",
  "Kopie der Bibliothek von {}": "Kopia biblioteki {}",
- "Die Einstellungen kommen vom aktiven Benutzer, die Spotify-Abos nur mit einer Kopie.": "Ustawienia pochodzą od aktywnego użytkownika, subskrypcje Spotify tylko przy kopii.",
  "Bitte einen Namen eingeben": "Wpisz nazwę",
  "{} ist angelegt": "Dodano {}",
  "Farbe": "Kolor",
@@ -4527,5 +4526,6 @@
  "PIN gespeichert": "PIN zapisany",
  "PIN entfernt": "PIN usunięty",
  "Bitte vier Ziffern eingeben": "Wpisz cztery cyfry",
- "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Kropka otwiera wybór; tam przytrzymaj kafelek przez trzy sekundy – tak nikt nie zmieni przez przypadek."
+ "Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.": "Kropka otwiera wybór; tam przytrzymaj kafelek przez trzy sekundy – tak nikt nie zmieni przez przypadek.",
+ "Die Einstellungen kommen vom aktiven Benutzer, bei einer Kopie von dem kopierten. Spotify-Abos gibt es nur mit einer Kopie.": "Ustawienia pochodzą od aktywnego użytkownika, przy kopii od kopiowanego. Subskrypcje Spotify są tylko przy kopii."
 }
