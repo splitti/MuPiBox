@@ -1,6 +1,6 @@
 # OLED display
 
-The **OLED display** extension shows on a small OLED display what the box plays: title, artist and album, the time, the track number, the volume, the WLAN, the battery of a MuPiHAT, shuffle and repeat, and the output (speaker, headphones, Bluetooth). When nothing plays it shows a picture: by default the NFC reader, which waits for a tag. At start, during an update, in the rest time and at shutdown it has pictures of its own, which can be changed. The box can also run **without the DSI display altogether** (see [Without DSI display](ohne-dsi-display.md)).
+The **OLED display** extension shows on a small OLED display what the box plays: title, artist and album, the time, the track number, the volume, the WLAN, the battery of a MuPiHAT, shuffle and repeat, and the output (speaker, headphones, Bluetooth). When nothing plays it shows a picture: by default the NFC reader, which waits for a tag. At start, during an update, in the rest time and at shutdown it has pictures of its own, which can be changed. The box can also run **without the DSI display altogether**; since MuPiBox 5.1 that is a switch of the box itself (see [Without DSI display](ohne-dsi-display.md)).
 
 The chips **SSD1306**, **SH1106** and **SSD1309** on the **I2C connector** are supported, with **128 × 64** or **128 × 32** pixels, on the **Raspberry Pi 4 and the Pi 5**. The display needs no package apart from `python3-pil`, which the installation of the extension brings along.
 
@@ -70,7 +70,7 @@ The settings are in cards: **Display** (chip, size, address, rotation), **Displa
 | **Evening dimming** | the OLED display gets darker in the evening and normally bright again in the morning. The times are those of "Evening dimming" in the display settings (fixed times or sunset to sunrise, gradual dimming, quiet hours); whether the box's own display dims is independent of it |
 | **Evening brightness** | 1 to 255, with the slider or typed straight into the field; never brighter than the normal brightness |
 | **Display off after** | **Never**, 1, 5, 15 minutes or 1 hour, when nothing plays |
-| **Run without DSI display** | see [Without DSI display](ohne-dsi-display.md) |
+| **Without DSI display** | only says what the box does; the switch is under **Settings › Display** (see [Without DSI display](ohne-dsi-display.md)) |
 
 The buttons **Show the address of the box** and **Next layout** try the display out: the second switches between **Full**, **Mix** and **Compact** until the next save. A change of chip, size, address or rotation restarts the display; the others apply at once.
 

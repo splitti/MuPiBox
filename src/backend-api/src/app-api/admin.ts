@@ -800,8 +800,8 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
     await deps.updateMupiboxConfig((cfg) => {
       cfg.mupibox = { ...((cfg.mupibox as Record<string, unknown>) ?? {}), version }
     })
-    // (a backup from a box that started without the DSI display: on this one the extension that set it may not be on - else the
-    // kiosk stayed away at the start after the restore)
+    // (a backup from a box that started without the DSI display, or one from before the switch was on: the switch and DietPi's
+    // autostart have to fit this box - else it stayed dark, or the NFC extension waited for a display - app-api/headless.ts)
     await restoreKioskStart(deps).catch((error) => console.warn(`${new Date().toLocaleString()}: [Backup] ${error}`))
     // what the restored config switches on but lives outside it (MuPiHAT, fan, rotary encoder, 3.5 mm output, the own
     // theme's stylesheet, the start pictures with the own ones): set up as the config says - a fresh box showed the MuPiHAT as active, but it was never set up

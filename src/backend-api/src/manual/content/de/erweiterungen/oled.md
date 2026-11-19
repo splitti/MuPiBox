@@ -1,6 +1,6 @@
 # OLED-Display
 
-Die Erweiterung **OLED-Display** zeigt auf einem kleinen OLED-Display, was die Box spielt: Titel, Interpret und Album, die Zeit, die Titelnummer, die Lautstärke, das WLAN, den Akku eines MuPiHAT, Zufall und Wiederholen und den Ausgang (Lautsprecher, Kopfhörer, Bluetooth). Wenn nichts spielt, zeigt es ein Bild: standardmäßig den NFC-Leser, der auf einen Tag wartet. Beim Start, beim Update, in der Ruhezeit und beim Herunterfahren hat es eigene Bilder, die sich ändern lassen. Dazu kann die Box **ganz ohne DSI-Display** laufen (siehe [Ohne DSI-Display](ohne-dsi-display.md)).
+Die Erweiterung **OLED-Display** zeigt auf einem kleinen OLED-Display, was die Box spielt: Titel, Interpret und Album, die Zeit, die Titelnummer, die Lautstärke, das WLAN, den Akku eines MuPiHAT, Zufall und Wiederholen und den Ausgang (Lautsprecher, Kopfhörer, Bluetooth). Wenn nichts spielt, zeigt es ein Bild: standardmäßig den NFC-Leser, der auf einen Tag wartet. Beim Start, beim Update, in der Ruhezeit und beim Herunterfahren hat es eigene Bilder, die sich ändern lassen. Dazu kann die Box **ganz ohne DSI-Display** laufen; das ist seit MuPiBox 5.1 ein Schalter der Box selbst (siehe [Ohne DSI-Display](ohne-dsi-display.md)).
 
 Unterstützt werden die Chips **SSD1306**, **SH1106** und **SSD1309** am **I2C-Anschluss** mit **128 × 64** oder **128 × 32** Pixeln, auf dem **Raspberry Pi 4 und dem Pi 5**. Die Anzeige braucht kein Paket außer `python3-pil`, das die Installation der Erweiterung mitbringt.
 
@@ -70,7 +70,7 @@ Die Einstellungen stehen in Karten: **Display** (Chip, Größe, Adresse, Drehung
 | **Abends dunkler** | das OLED-Display wird abends dunkler und morgens wieder normal hell. Die Zeiten sind die von „Abends dunkler“ in den Einstellungen des Displays (feste Uhrzeiten oder Sonnenuntergang bis Sonnenaufgang, sanftes Abdunkeln, Ruhezeiten); ob das Display der Box selbst abdunkelt, ist davon unabhängig |
 | **Helligkeit am Abend** | 1 bis 255, mit dem Regler oder direkt in das Feld getippt; nie heller als die normale Helligkeit |
 | **Display aus nach** | **Nie**, 1, 5, 15 Minuten oder 1 Stunde, wenn nichts spielt |
-| **Ohne DSI-Display betreiben** | siehe [Ohne DSI-Display](ohne-dsi-display.md) |
+| **Ohne DSI-Display** | zeigt nur noch, was die Box tut; der Schalter steht unter **Einstellungen › Display** (siehe [Ohne DSI-Display](ohne-dsi-display.md)) |
 
 Die Knöpfe **Adresse der Box zeigen** und **Nächste Anzeige** probieren die Anzeige aus: Der zweite wechselt bis zum nächsten Speichern zwischen **Voll**, **Mix** und **Kompakt**. Eine Änderung von Chip, Größe, Adresse und Drehung startet das Display neu; die anderen gelten sofort.
 

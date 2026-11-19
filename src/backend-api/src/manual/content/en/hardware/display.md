@@ -65,3 +65,7 @@ Under **Settings › Display & controls › Live display** you see the display's
 ## Browser settings
 
 The display is a browser in full-screen mode (Chromium). Its settings, such as GPU support and cache, are under **Settings › System › Browser (Chromium)** ([System and expert settings](../wartung/system.md)).
+
+## Without any display
+
+A box without a screen, operated only with NFC tags and buttons, say, starts without the kiosk and Chromium with the switch **Run without DSI display** under **Settings › Display**. More under [Without DSI display](../erweiterungen/ohne-dsi-display.md).

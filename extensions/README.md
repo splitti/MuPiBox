@@ -63,7 +63,7 @@ settings card from what the manifest declares.
 - **`id`**: lowercase letters, digits and `-`, 2–31 characters, starting with a letter. It never changes.
 - **`version`**: `major.minor.patch`. Raise it with every change you publish; the box offers an update when the catalog has a higher
   number than the installed one.
-- **`hostApi`**: the number of the interface you wrote the extension for (`1` to `13`; `3` is needed for an `order` field, `4` for a `roster`, `5` for a `gpio` setting, a `heading` or a page of your own, `6` for a `status` block, `13` for a setting per user, see below). A box does not load an extension made for a
+- **`hostApi`**: the number of the interface you wrote the extension for (`1` to `14`; `3` is needed for an `order` field, `4` for a `roster`, `5` for a `gpio` setting, a `heading` or a page of your own, `6` for a `status` block, `13` for a setting per user, see below; `14` adds nothing for an extension - from it on the core has the switch "Ohne DSI-Display betreiben" itself, `mupibox.headless`, which an extension only reads). A box does not load an extension made for a
   newer interface than its own.
 - **`resources`** is **required** (`{}` means "needs nothing"), see section 4.
 - **`settings`** and **`ui`**: what the extension stores and how the settings card looks. Types are `boolean`, `string`, `number`

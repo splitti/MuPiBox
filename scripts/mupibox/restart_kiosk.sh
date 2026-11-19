@@ -5,7 +5,7 @@
 # another user, X could not take the console ("Cannot open virtual console 1", seen on a Raspberry Pi 5 that logs in as
 # root while the app restarts as dietpi): the display stayed dark. So it is restarted as that user. (Not always as root:
 # Chromium does not start as root without giving up its sandbox.)
-# A box without the DSI display (mupibox.headless, set by the extension "OLED-Display") has no X server: nothing to restart.
+# A box without the DSI display (mupibox.headless: Einstellungen > Display > Ohne DSI-Display) has no X server: nothing to restart.
 if [ "$(/usr/bin/jq -r '.mupibox.headless // false' /etc/mupibox/mupiboxconfig.json 2>/dev/null)" = "true" ]; then
 	echo "Ohne DSI-Display: kein Kiosk"
 	exit 0

@@ -9695,7 +9695,10 @@ const rotLabel = (list, v) => list.find(([, x]) => x === String(v))?.[0] ?? list
 const rotValue = (list, label) => list.find(([l]) => l === label)?.[1] ?? '0'
 
 async function loadDisplaySettings() {
-  const [, power] = await Promise.all([loadDisplayOptions(), api(`${API}/power-config`), loadDisplayModel()])
+  const [, power, headless] = await Promise.all([loadDisplayOptions(), api(`${API}/power-config`), api(`${API}/headless`), loadDisplayModel()])
+  // (the box without the DSI display - a switch of the core since 5.1)
+  disp.headless = headless.ok ? headless.body : null
+  state.values.set('headless', disp.headless?.on === true)
   const o = disp.opts
   disp.power = power.body ?? {}
   if (o.brightness != null) state.values.set('bright', o.brightness)
@@ -19595,6 +19598,25 @@ const CONTROLLERS = {
           ],
         },
             ]),
+        // The box without the DSI display: only NFC tags, buttons, the app - no kiosk, no Chromium (counts after a restart)
+        ...(disp.headless
+          ? [
+              {
+                title: 'Ohne DSI-Display',
+                badge: disp.headless.pending ? { text: 'gilt nach dem Neustart', kind: 'warn' } : disp.headless.on ? { text: 'an', kind: 'ok' } : { text: 'aus' },
+                items: [
+                  {
+                    type: 'toggle',
+                    key: 'headless',
+                    label: 'Ohne DSI-Display betreiben',
+                    help: 'Für eine Box ohne Bildschirm, etwa nur mit NFC-Tags und Tastern: Sie startet ohne Kiosk und Chromium, wartet nicht auf das Display, und ein NFC-Tag startet sein Medium direkt. Spotify braucht das Display und geht dann nicht. Gilt nach dem nächsten Neustart; ausschalten und neu starten bringt das Display zurück.',
+                    disabled: disp.headless.dsi && !disp.headless.on,
+                  },
+                  ...(disp.headless.dsi && !disp.headless.on ? [{ type: 'html', html: `<p class="help">${esc(tr('Ein DSI-Display ist angeschlossen. Ohne Display zu starten geht erst, wenn es abgezogen ist.'))}</p>` }] : []),
+                ],
+              },
+            ]
+          : []),
       ]
     },
     mount(root, page) {
@@ -19613,6 +19635,20 @@ const CONTROLLERS = {
     },
     async change(key, v) {
       if (key === 'bright') return saveDisplayOptions({ brightness: v }, `Helligkeit ${v} %`)
+      if (key === 'headless') {
+        const r = await api(`${API}/headless`, { method: 'POST', body: { on: v === true } })
+        if (!r.ok) {
+          state.values.set('headless', !v)
+          shownValues.set('headless', !v)
+          toast(r.body?.error === 'dsi_connected' ? 'Ein DSI-Display ist angeschlossen – die Box bliebe dunkel' : 'Nicht gespeichert', 'info')
+          renderPage(currentPage(), false)
+          return
+        }
+        disp.headless = r.body
+        toast(v ? 'Startet nach dem nächsten Neustart ohne DSI-Display' : 'Startet nach dem nächsten Neustart wieder mit DSI-Display')
+        renderPage(currentPage(), false)
+        return
+      }
       if (['ndOn', 'ndFrom', 'ndTo', 'ndLevel', 'ndFade', 'ndQuiet', 'ndSun'].includes(key)) {
         const nightDim = ndCurrent()
         // (at sunset without a place: the place is asked for first, and the switch goes back when there is none)

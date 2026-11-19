@@ -71,7 +71,6 @@ function readConfig(settings = {}) {
     timeMode: pick(settings.timeMode, TIME_MODES, 'up'),
     scroll: pick(settings.scroll, SCROLL_MODES, 'loop'),
     sleepAfter: pick(Number(settings.sleepAfter), SLEEP_MINUTES, 5),
-    headless: settings.headless === true,
   }
 }
 
@@ -370,15 +369,6 @@ function spotifyMayPlay(local) {
   return local?.currentPlayer === 'spotify' && local.pause !== true && local.spotifySilent !== true
 }
 
-/** A DSI display is plugged in: one of the DSI connectors of /sys/class/drm says "connected". `connectors`: [{ name, status }]. */
-function dsiConnected(connectors) {
-  return (Array.isArray(connectors) ? connectors : []).some((c) => /DSI/.test(String(c?.name ?? '')) && String(c?.status ?? '').trim() === 'connected')
-}
-
-// (why the setting "headless" was not switched on - shown in the status block)
-const HEADLESS_NO_OLED = 'Kein OLED-Display bereit, deshalb bleibt das DSI-Display an'
-const HEADLESS_DSI = 'Ein DSI-Display ist angeschlossen, deshalb bleibt es an'
-
 // ---- I2C: is the bus on (the lines of the status block) ------------------------------------------------------------------------------
 const I2C_KEYS = ['i2c_arm', 'i2c1', 'i2c']
 const dtparam = (keys, value) => new RegExp(`^\\s*dtparam=(?:[^,\\n]*,)*(?:${keys})=${value}\\b`, 'm')
@@ -433,14 +423,6 @@ function kioskRow({ headless, running }) {
   return running ? { label: 'DSI-Display', value: 'An', tone: 'ok' } : { label: 'DSI-Display', value: 'Startet nach dem Neustart wieder', tone: 'warn' }
 }
 
-/**
- * The commands that switch the box to a start without the DSI display (the kiosk is the autologin of DietPi: its autostart 0 is
- * "manual login", 11 the Chromium kiosk the box was set up with) and back. They run as root through sudo.
- */
-function headlessCommands(on) {
-  return [['sudo', ['-n', '/boot/dietpi/dietpi-autostart', on ? '0' : '11']]]
-}
-
 module.exports = {
   CONTROLLERS,
   SIZES,
@@ -482,10 +464,6 @@ module.exports = {
   statusRows,
   errorText,
   kioskRow,
-  headlessCommands,
   spotifyMayPlay,
-  dsiConnected,
-  HEADLESS_NO_OLED,
-  HEADLESS_DSI,
   I2C_KEYS,
 }

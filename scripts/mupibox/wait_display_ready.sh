@@ -17,7 +17,7 @@ window_title() {
 		| awk '/\("chromium" "Chromium"\)/ { split($(NF - 1), g, "x"); if (g[1] + 0 >= 400) { print; exit } }'
 }
 
-# (a box that runs without the DSI display - the extension "OLED-Display" sets mupibox.headless: DietPi starts no kiosk, so
+# (a box that runs without the DSI display - the switch Einstellungen > Display > Ohne DSI-Display sets mupibox.headless: DietPi starts no kiosk, so
 # there is no window to wait for)
 if [ "$(/usr/bin/jq -r '.mupibox.headless // false' /etc/mupibox/mupiboxconfig.json 2>/dev/null)" = "true" ]; then
 	logger -t mupibox-display-ready "the box runs without a DSI display - not waiting for it"

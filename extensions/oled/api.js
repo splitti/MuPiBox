@@ -1,5 +1,6 @@
 // OLED display - the API part (runs in the server of the box): starts the driver (oled.py, Python: Node has no way to speak I2C),
-// reads what the player plays and tells the driver what to draw, and keeps the start without the DSI display.
+// reads what the player plays and tells the driver what to draw. (The start without the DSI display is a switch of the core since
+// MuPiBox 5.1 - Einstellungen > Display; the status block still says what the box does.)
 //
 //   settings (type, size, address ...)  ->  logic.js readConfig
 //   the driver program                  ->  driver.js, oled.py, render.py
@@ -9,8 +10,6 @@
 //   the display itself                  ->  POST /info (the QR code with the address of the box), POST /mode (the next mode), POST /wake
 //   the pictures                        ->  GET /images (the list on the page), POST /imageset (a picture the user chose), POST /imagereset;
 //                                           an update or the shutdown says itself in a file (scripts/mupibox/oled_picture.sh)
-//   without the DSI display             ->  the setting "headless": the flag mupibox.headless in the configuration of the box and the
-//                                           autostart of DietPi (the kiosk is its autologin) - effective after the next start
 'use strict'
 
 const fs = require('node:fs')
@@ -28,9 +27,6 @@ const ASLEEP_POLL_MS = 1500
 // or when /local says it started or stopped it is asked at once, but never more than once in SPOTIFY_GAP_MS)
 const SPOTIFY_STATE_MS = 20000
 const SPOTIFY_GAP_MS = 3000
-// (switching "headless" on waits this long for the driver to say whether an OLED is there)
-const READY_WAIT_MS = 8000
-const DRM_DIR = '/sys/class/drm'
 // what the box's scripts say: an update runs or the box goes down (scripts/mupibox/oled_picture.sh), and the player's state of the rest times
 const HOLD_FILE = '/run/mupibox-oled-picture'
 const PLAYTIME_FILE = '/tmp/playtime.json'
@@ -38,14 +34,6 @@ const PLAYTIME_FILE = '/tmp/playtime.json'
 const MAX_PICTURE_BYTES = 900000
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
 const DATA_URL_PNG = 'data:image/png;base64,'
-const AUTOSTART_INDEX_FILE = '/boot/dietpi/.dietpi-autostart_index'
-// (the autostart the kiosk uses: DietPi's index 11 is the Chromium kiosk the box was set up with; 0 is the manual login)
-const KIOSK_AUTOSTART = 11
-const NO_KIOSK_AUTOSTART = 0
-// the user may have chosen something else than the kiosk (a console login, 7): then the extension leaves it alone and "off" brings
-// back what was there before
-const KEEP_AUTOSTART_FILE = 'autostart.json'
-
 exports.activate = (host) => {
   const log = host.log ?? console
   const deps = host.deps ?? {}
@@ -68,7 +56,6 @@ exports.activate = (host) => {
   const holdFile = () => deps.holdFile ?? HOLD_FILE
   const playtimeFile = () => deps.playtimeFile ?? PLAYTIME_FILE
   let net = { ssid: '', ip: '', wifi: -1, lan: false, at: 0 }
-  let headlessNote = null // { value, tone }: why "headless" did not take effect, for the status block
   let busy = false
   let timer = null
   let shownView = '' // the view the driver was told last
@@ -118,23 +105,6 @@ exports.activate = (host) => {
   let started = null // the configuration the running driver was started with
   let night = { share: 0 } // how far into the evening dimming the box is (host.nightDim), 0 to 1
   let appliedContrast = null // the contrast the running driver has
-  let settledWaiters = [] // who waits for the driver to be ready or to fail (switching "headless" on)
-  const settled = () => {
-    const waiters = settledWaiters
-    settledWaiters = []
-    for (const done of waiters) done()
-  }
-  const driverSettled = (ms) =>
-    phase.phase !== 'starting'
-      ? Promise.resolve()
-      : new Promise((resolve) => {
-          const timeout = setTimeout(resolve, ms)
-          timeout.unref?.()
-          settledWaiters.push(() => {
-            clearTimeout(timeout)
-            resolve()
-          })
-        })
   const startDriver = () => {
     appliedContrast = logic.eveningContrast(config, night.share)
     const args = [path.join(dir, 'oled.py'), ...logic.driverArgs({ ...config, contrast: appliedContrast }, { images: imagesDir, custom: customDir })]
@@ -150,15 +120,11 @@ exports.activate = (host) => {
           if (ui.idleSince) ui.idleSince = clock()
           localAt = 0
           push(true)
-          // ("headless" was refused while no display answered: now there is one)
-          if (config.headless && !flagNow() && headlessNote) queueHeadless()
         } else if (event.event === 'error') phase = { phase: 'error', code: event.code }
-        settled()
       },
       onEnd: (reason, isNew, code) => {
         if (phase.phase !== 'error') phase = { phase: 'error', code: code || 'other' }
         if (isNew) log.warn(`[oled] display program: ${reason}`)
-        settled()
       },
       log,
       ...(deps.spawnFn ? { spawnFn: deps.spawnFn } : {}),
@@ -300,7 +266,7 @@ exports.activate = (host) => {
     }
   }
 
-  // ---- the start without the DSI display ---------------------------------------------------------------------------------------
+  // ---- what the status block says of the start without the DSI display (the switch of the core) -------------------------------
   const kioskRunning = async () => {
     for (const name of ['chromium', 'chromium-browser']) {
       const { error } = await run('pidof', [name], 3000)
@@ -308,122 +274,11 @@ exports.activate = (host) => {
     }
     return false
   }
-  const readAutostartIndex = () => {
-    const n = Number.parseInt(readText(deps.autostartIndexFile ?? AUTOSTART_INDEX_FILE).trim(), 10)
-    return Number.isInteger(n) ? n : null
-  }
-  const keepFile = () => path.join(dataDir, KEEP_AUTOSTART_FILE)
+  // (the switch of the core - mupibox.headless, what the status block says)
   const flagNow = () => host.config?.()?.mupibox?.headless === true
-
-  const removeKeep = () => {
-    try {
-      fs.rmSync(keepFile(), { force: true })
-    } catch {
-      /* nothing to remove */
-    }
-  }
-  const setFlag = (on) =>
-    host.updateConfig((cfg) => {
-      cfg.mupibox = cfg.mupibox && typeof cfg.mupibox === 'object' ? cfg.mupibox : {}
-      cfg.mupibox.headless = on
-    })
-  const setAutostart = async (index) => {
-    const result = await run('sudo', ['-n', '/boot/dietpi/dietpi-autostart', String(index)])
-    if (result.error) throw new Error(`dietpi-autostart: ${result.error.message ?? result.error}`)
-  }
-  // The autostart that was there before the switch-on (autostart.json), else the kiosk
-  const restoreAutostart = async () => {
-    let back = KIOSK_AUTOSTART
-    try {
-      const kept = JSON.parse(fs.readFileSync(keepFile(), 'utf8'))
-      if (Number.isInteger(kept?.index) && kept.index > 0 && kept.index < 100) back = kept.index
-    } catch {
-      /* nothing kept: the kiosk */
-    }
-    await setAutostart(back)
-  }
-  // (the connectors of the graphics: a DSI one that says "connected" is a DSI display that is plugged in)
-  const drmConnectors = () => {
-    const drm = deps.drmDir ?? DRM_DIR
-    try {
-      return fs.readdirSync(drm).map((name) => ({ name, status: readText(path.join(drm, name, 'status')) }))
-    } catch {
-      return []
-    }
-  }
-  // Why the box must not start without the DSI display now ('' when it may): a box without any picture could not be set up again
-  const headlessRefusal = async () => {
-    if (logic.dsiConnected(drmConnectors())) return logic.HEADLESS_DSI
-    await driverSettled(READY_WAIT_MS)
-    return phase.phase === 'ready' ? '' : logic.HEADLESS_NO_OLED
-  }
-
-  // Switches the box to the start without the kiosk or back; the flag of the configuration is what the scripts read (jq '.mupibox.headless')
-  const applyHeadless = async (on) => {
-    const flag = flagNow()
-    const index = readAutostartIndex()
-    // (a switch-on that stopped half-way - autostart 0 written, the flag not: "off" brings the kiosk back all the same)
-    // (DietPi's "0" deletes its index file instead of writing 0: no file is no kiosk too)
-    const leftOver = !on && !flag && (index === null || index === NO_KIOSK_AUTOSTART) && fs.existsSync(keepFile())
-    if (on === flag && (on ? index !== KIOSK_AUTOSTART : !leftOver)) {
-      headlessNote = null
-      return
-    }
-    if (on) {
-      const refused = await headlessRefusal()
-      if (refused) {
-        if (headlessNote?.value !== refused) log.warn(`[oled] headless not switched on: ${refused === logic.HEADLESS_DSI ? 'a DSI display is connected' : 'no display answers'}`)
-        headlessNote = { value: refused, tone: 'warn' }
-        // (the flag without autostart 0 - left by a switch-on that stopped half-way: the kiosk starts, so the flag goes too)
-        if (flag) await setFlag(false).catch((error) => log.warn(`[oled] headless flag not taken back: ${error?.message ?? error}`))
-        // (autostart 0 without the flag - the other half: no kiosk and no OLED would leave the box without any picture, so what
-        // was there before comes back, as "off" does it)
-        else if ((index === null || index === NO_KIOSK_AUTOSTART) && fs.existsSync(keepFile())) {
-          await restoreAutostart()
-            .then(removeKeep)
-            .catch((error) => log.warn(`[oled] autostart not brought back: ${error?.message ?? error}`))
-        }
-        return
-      }
-    }
-    try {
-      if (on) {
-        // (what was there before is brought back when the setting goes off: the kiosk, or a choice the user made)
-        if (index !== null && index !== NO_KIOSK_AUTOSTART) {
-          fs.mkdirSync(dataDir, { recursive: true })
-          fs.writeFileSync(keepFile(), JSON.stringify({ index }), { mode: 0o600 })
-        }
-        // (the flag first: should the autostart fail, the flag goes back; should the server end in between, the flag is on and
-        // "off" repairs it)
-        await setFlag(true)
-        try {
-          await setAutostart(NO_KIOSK_AUTOSTART)
-        } catch (error) {
-          await setFlag(false).catch((back) => log.warn(`[oled] headless flag not taken back: ${back?.message ?? back}`))
-          const after = readAutostartIndex()
-          if (after !== null && after !== NO_KIOSK_AUTOSTART) removeKeep()
-          throw error
-        }
-      } else {
-        await restoreAutostart()
-        await setFlag(false)
-        removeKeep()
-      }
-      headlessNote = null
-      log.info?.(`[oled] ${on ? 'the box starts without the DSI display from now on' : 'the box starts with the DSI display again'} (after the next restart)`)
-    } catch (error) {
-      headlessNote = { value: on ? 'Das Abschalten des DSI-Displays hat nicht geklappt' : 'Das Einschalten des DSI-Displays hat nicht geklappt', tone: 'error' }
-      log.warn(`[oled] headless ${on}: ${error?.message ?? error}`)
-    }
-  }
 
   // ---- the settings ------------------------------------------------------------------------------------------------------------
   let chain = Promise.resolve()
-  const canHeadless = () => typeof host.updateConfig === 'function' && typeof host.config === 'function'
-  const queueHeadless = () => {
-    if (!canHeadless()) return
-    chain = chain.then(() => applyHeadless(config.headless)).catch((error) => log.warn(`[oled] headless: ${error?.message ?? error}`))
-  }
   const apply = (settings) => {
     chain = chain
       .then(async () => {
@@ -439,7 +294,6 @@ exports.activate = (host) => {
         }
         ui.mode = null
         push(true)
-        if (canHeadless()) await applyHeadless(config.headless)
       })
       .catch((error) => log.warn(`[oled] not started: ${error?.message ?? error}`))
     return chain
@@ -456,7 +310,6 @@ exports.activate = (host) => {
     '/state',
     async (_req, res) => {
       const rows = logic.statusRows({ config, driver: phase, i2c: i2cNow(), kiosk: { headless: flagNow(), running: await kioskRunning() } })
-      if (headlessNote) rows.push({ label: 'DSI-Display', value: headlessNote.value, tone: headlessNote.tone })
       res.json({ rows, mode: ui.mode ?? config.mode })
     },
     { session: true },

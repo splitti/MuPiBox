@@ -18,7 +18,7 @@ test('the settings of the extension become the arguments of the driver', () => {
 
 test('a setting that makes no sense falls back to its default', () => {
   const c = logic.readConfig({ controller: 'ssd9999', size: '64x48', address: '0x10', contrast: 999, mode: 'x', sleepAfter: 7, idleScreen: 'x' })
-  assert.deepStrictEqual([c.controller, c.width, c.height, c.address, c.contrast, c.mode, c.sleepAfter, c.idleScreen, c.rotate, c.headless], ['ssd1306', 128, 64, '0x3C', 255, 'full', 5, 'clock', false, false])
+  assert.deepStrictEqual([c.controller, c.width, c.height, c.address, c.contrast, c.mode, c.sleepAfter, c.idleScreen, c.rotate], ['ssd1306', 128, 64, '0x3C', 255, 'full', 5, 'clock', false])
   assert.strictEqual(logic.readConfig({ contrast: 'x' }).contrast, 127)
 })
 
@@ -172,11 +172,6 @@ test('Spotify plays as /local says it: its own pause flag, and not while its dev
 })
 
 test('a DSI display is plugged in when one of the DSI connectors says connected - "disconnected" is not', () => {
-  assert.strictEqual(logic.dsiConnected([{ name: 'card1-HDMI-A-1', status: 'connected\n' }, { name: 'card1-DSI-1', status: 'connected\n' }]), true)
-  assert.strictEqual(logic.dsiConnected([{ name: 'card1-DSI-1', status: 'disconnected\n' }]), false)
-  assert.strictEqual(logic.dsiConnected([{ name: 'card1-HDMI-A-1', status: 'connected' }]), false)
-  assert.strictEqual(logic.dsiConnected([{ name: 'card1-DSI-1', status: '' }]), false)
-  assert.strictEqual(logic.dsiConnected(null), false)
 })
 
 test('the page with the address comes before the short pictures, which come before the rest', () => {
@@ -537,104 +532,6 @@ test('the select route: only from the box itself; it shows the name and { clear 
   assert.notStrictEqual(ext.stateNow().view, 'select')
 })
 
-test('without the DSI display: the flag of the box and DietPi\'s autostart are set, and brought back when the setting goes', async () => {
-  const box = fakeHost({ headless: true })
-  const ext = api.activate(box.host)
-  await started(box)
-  await ext.apply({ headless: true })
-  assert.strictEqual(box.config.mupibox.headless, true)
-  assert.ok(box.execs.some((e) => e.join(' ') === 'sudo -n /boot/dietpi/dietpi-autostart 0'), JSON.stringify(box.execs))
-  await box.host.changed({ headless: false })
-  assert.strictEqual(box.config.mupibox.headless, false)
-  assert.ok(box.execs.some((e) => e.join(' ') === 'sudo -n /boot/dietpi/dietpi-autostart 11'), JSON.stringify(box.execs))
-})
-
-test('when DietPi refuses the change the flag goes back off and the page says so', async () => {
-  const box = fakeHost({ headless: true }, { execError: new Error('sudo: a password is required') })
-  const ext = api.activate(box.host)
-  await started(box)
-  await ext.apply({ headless: true })
-  assert.strictEqual(box.config.mupibox.headless, false)
-  let body
-  await box.routes['get /state']({}, { json: (b) => (body = b) })
-  assert.ok(body.rows.some((r) => r.tone === 'error' && /DSI/.test(r.label)), JSON.stringify(body.rows))
-})
-
-test('when the flag cannot be written DietPi\'s autostart is not touched', async () => {
-  const box = fakeHost({ headless: true }, { updateConfig: async () => Promise.reject(new Error('locked')) })
-  const ext = api.activate(box.host)
-  await started(box)
-  await ext.apply({ headless: true })
-  assert.ok(!box.execs.some((e) => e.join(' ').includes('dietpi-autostart')), JSON.stringify(box.execs))
-})
-
-test('without a display that answers the box keeps its DSI display, and the page says why', async () => {
-  const box = fakeHost({ headless: true })
-  const ext = api.activate(box.host)
-  await settle()
-  await settle()
-  box.procs[0].stdout.emit('data', Buffer.from('{"event":"error","code":"no_display","message":"x"}\n'))
-  await ext.apply({ headless: true })
-  assert.strictEqual(box.config.mupibox.headless, false)
-  assert.ok(!box.execs.some((e) => e.join(' ').includes('dietpi-autostart')), JSON.stringify(box.execs))
-  let body
-  await box.routes['get /state']({}, { json: (b) => (body = b) })
-  assert.ok(body.rows.some((r) => r.value === logic.HEADLESS_NO_OLED && r.tone === 'warn'), JSON.stringify(body.rows))
-  // (the display answers later: the setting takes effect then)
-  box.procs[0].stdout.emit('data', Buffer.from('{"event":"ready"}\n'))
-  await settle()
-  assert.strictEqual(box.config.mupibox.headless, true)
-})
-
-test('with a DSI display plugged in the box keeps it, and the page says why', async () => {
-  const fs = require('node:fs')
-  const path = require('node:path')
-  const drm = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'oled-drm-'))
-  fs.mkdirSync(path.join(drm, 'card1-DSI-1'))
-  fs.writeFileSync(path.join(drm, 'card1-DSI-1', 'status'), 'connected\n')
-  const box = fakeHost({ headless: true }, { deps: { drmDir: drm } })
-  const ext = api.activate(box.host)
-  await started(box)
-  await ext.apply({ headless: true })
-  assert.strictEqual(box.config.mupibox.headless, false)
-  assert.ok(!box.execs.some((e) => e.join(' ').includes('dietpi-autostart')), JSON.stringify(box.execs))
-  let body
-  await box.routes['get /state']({}, { json: (b) => (body = b) })
-  assert.ok(body.rows.some((r) => r.value === logic.HEADLESS_DSI), JSON.stringify(body.rows))
-  fs.rmSync(drm, { recursive: true, force: true })
-})
-
-test('a switch-on that stopped half-way (autostart 0, no flag) is undone when the setting is off', async () => {
-  const fs = require('node:fs')
-  const path = require('node:path')
-  const data = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'oled-data-'))
-  const index = path.join(data, 'autostart_index')
-  fs.writeFileSync(index, '0\n')
-  fs.writeFileSync(path.join(data, 'autostart.json'), JSON.stringify({ index: 7 }))
-  const box = fakeHost({ headless: false }, { dataDir: data, deps: { autostartIndexFile: index } })
-  const ext = api.activate(box.host)
-  await started(box)
-  await ext.apply({ headless: false })
-  assert.ok(box.execs.some((e) => e.join(' ') === 'sudo -n /boot/dietpi/dietpi-autostart 7'), JSON.stringify(box.execs))
-  assert.strictEqual(fs.existsSync(path.join(data, 'autostart.json')), false, 'nothing kept any more')
-  // (an autostart 0 the user chose, without anything the extension kept, is left alone)
-  const own = fakeHost({ headless: false }, { dataDir: data, deps: { autostartIndexFile: index } })
-  const ext2 = api.activate(own.host)
-  await started(own)
-  await ext2.apply({ headless: false })
-  assert.ok(!own.execs.some((e) => e.join(' ').includes('dietpi-autostart')), JSON.stringify(own.execs))
-  // (DietPi's "dietpi-autostart 0" deletes the index file instead of writing 0 - seen on the box: that is no kiosk too)
-  fs.rmSync(index)
-  fs.writeFileSync(path.join(data, 'autostart.json'), JSON.stringify({ index: 11 }))
-  const gone = fakeHost({ headless: false }, { dataDir: data, deps: { autostartIndexFile: index } })
-  const ext3 = api.activate(gone.host)
-  await started(gone)
-  await ext3.apply({ headless: false })
-  assert.ok(gone.execs.some((e) => e.join(' ') === 'sudo -n /boot/dietpi/dietpi-autostart 11'), JSON.stringify(gone.execs))
-  fs.rmSync(data, { recursive: true, force: true })
-})
-
-// ---- what the extension asks the player ------------------------------------------------------------------------------------------
 test('nothing is asked while the display program is not ready', async () => {
   const box = fakeHost({})
   const ext = api.activate(box.host)
@@ -771,46 +668,6 @@ test('another address or controller: the old driver switches its panel off; anot
   assert.deepStrictEqual(quitOf(box.procs[2]), { cmd: 'quit', off: true })
 })
 
-test('a switch-on that stopped half-way (autostart 0, no flag) and no OLED that answers: the kiosk comes back', async () => {
-  const fs = require('node:fs')
-  const path = require('node:path')
-  for (const left of ['0', 'missing']) {
-    const data = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'oled-data-'))
-    const index = path.join(data, 'autostart_index')
-    if (left === '0') fs.writeFileSync(index, '0\n')
-    fs.writeFileSync(path.join(data, 'autostart.json'), JSON.stringify({ index: 11 }))
-    const box = fakeHost({ headless: true }, { dataDir: data, deps: { autostartIndexFile: index } })
-    const warned = []
-    box.host.log = { warn: (text) => warned.push(text), info: () => undefined }
-    const ext = api.activate(box.host)
-    await settle()
-    await settle()
-    box.procs[0].stdout.emit('data', Buffer.from('{"event":"error","code":"no_display","message":"x"}\n'))
-    await ext.apply({ headless: true })
-    assert.strictEqual(box.config.mupibox.headless, false, left)
-    assert.ok(box.execs.some((e) => e.join(' ') === 'sudo -n /boot/dietpi/dietpi-autostart 11'), `${left}: ${JSON.stringify(box.execs)}`)
-    assert.strictEqual(fs.existsSync(path.join(data, 'autostart.json')), false, `${left}: nothing kept any more`)
-    assert.ok(warned.some((w) => w.includes('no display answers')), JSON.stringify(warned))
-    fs.rmSync(data, { recursive: true, force: true })
-  }
-})
-
-test('a DSI display plugged in is the reason the log gives, also while the driver still starts', async () => {
-  const fs = require('node:fs')
-  const path = require('node:path')
-  const drm = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'oled-drm-'))
-  fs.mkdirSync(path.join(drm, 'card1-DSI-1'))
-  fs.writeFileSync(path.join(drm, 'card1-DSI-1', 'status'), 'connected\n')
-  const box = fakeHost({ headless: true }, { deps: { drmDir: drm } })
-  const warned = []
-  box.host.log = { warn: (text) => warned.push(text), info: () => undefined }
-  const ext = api.activate(box.host)
-  await ext.apply({ headless: true })
-  assert.ok(warned.some((w) => w.includes('a DSI display is connected')), JSON.stringify(warned))
-  fs.rmSync(drm, { recursive: true, force: true })
-})
-
-// ---- the pictures --------------------------------------------------------------------------------------------------------------
 test('the setting of the idle display: the clock unless another is chosen (as before 0.3.0); the driver gets the folders of the pictures', () => {
   assert.strictEqual(logic.readConfig({}).idleScreen, 'clock')
   // (a box that had the clock off before 0.3.0: the reader's picture, not the new default)

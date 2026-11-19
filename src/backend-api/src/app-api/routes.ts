@@ -49,6 +49,7 @@ import { ipRateLimit, localNetworkOnly, parseCookie, requireCsrf, requireSession
 import { registerCustomCoverRoutes } from './covers'
 import { registerDisplayRoutes } from './display'
 import { registerExtensionRoutes } from './extensions'
+import { registerHeadlessRoutes } from './headless'
 import { registerDisplayProfileRoutes } from './display-profile'
 import { registerSpeechRoutes } from './speech-routes'
 import { registerCustomBootRoutes } from './bootscreen-custom'
@@ -487,6 +488,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   }
   // (extensions: the catalog, install, switch on and off, remove, the settings of an extension)
   registerExtensionRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  // (the box without the DSI display - a switch of the core since 5.1, see headless.ts)
+  registerHeadlessRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerDisplayProfileRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig })
   registerSpeechRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerCustomBootRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })

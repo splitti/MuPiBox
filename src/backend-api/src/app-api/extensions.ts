@@ -20,6 +20,7 @@ import { checkResources, type Conflict, describeResources, findConflicts, idleCo
 import { localNetworkOnly, requireCsrf, requireSession } from './middleware'
 import { nightDimOf, nightShare, quietNow, restNow } from './night-dim'
 import { announce } from '../speech'
+import { checkHeadlessAtStart } from './headless'
 import { readZip } from './winamp-skin'
 
 export const EXT_DIR = process.env.MUPIBOX_EXT_DIR ?? EXTENSIONS_DIR
@@ -36,7 +37,9 @@ if (!process.env.MUPIBOX_EXT_DIR && process.env.NODE_ENV !== 'test' && process.e
     // (the other process was faster, or it is not possible: then they stay where they are and are not found - logged by the load)
   }
 }
-export const HOST_API = 13
+// (14: the start without the DSI display is a switch of the core - app-api/headless.ts; OLED-Display 0.4.0 needs it, an older core
+// would leave a box that started without the kiosk with no switch to come back)
+export const HOST_API = 14
 // (the catalog of the MuPiBox, in its repository: what is in it is trusted - an extension can do everything on the box; while 5.1
 // is not with splitti yet, the 5.1 branch of the fork that builds it)
 const DEFAULT_CATALOG = 'https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/catalog.json'
@@ -252,55 +255,13 @@ export async function checkInstalledExtensions(deps: ExtensionDeps): Promise<str
   return off
 }
 
-// The extension that may start the box without the kiosk (extensions/oled: mupibox.headless in the configuration and DietPi's
-// autostart 0) and where it keeps the autostart it replaced; 11 is DietPi's autostart of the kiosk (autosetup.sh)
-const HEADLESS_BY = 'oled'
-const KEPT_AUTOSTART = 'autostart.json'
-const KIOSK_AUTOSTART = 11
-const AUTOSTART_INDEX_FILE = '/boot/dietpi/.dietpi-autostart_index'
-
-const readAutostartIndex = (): number | null => {
-  try {
-    const n = Number.parseInt(readFileSync(AUTOSTART_INDEX_FILE, 'utf8').trim(), 10)
-    return Number.isInteger(n) ? n : null
-  } catch {
-    return null
-  }
-}
-
 /**
- * The start without the kiosk outlives the extension that set it: switched off (by the user or the start check), removed, or the
- * flag brought along by a backup from another box - then the box started with a dark display and no way back but SSH. While the flag
- * is set and that extension is not on, DietPi's autostart goes back to what it was (an autostart 0 only: another one the user chose
- * stays) and the flag is cleared. Returns whether something was done; the flag stays when the autostart could not be set (tried again
- * at the next start).
+ * The start without the DSI display (5.1: a switch of the core, app-api/headless.ts - before, the extension OLED-Display set it):
+ * at every start of the server and after a restore it is left on a box that has a DSI display (it would stay dark), and a flag
+ * without DietPi's autostart 0 is cleared. Returns whether something was done.
  */
-export async function restoreKioskStart(deps: ExtensionDeps, io = { run, readAutostartIndex }): Promise<boolean> {
-  const mupibox = deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined
-  if (mupibox?.headless !== true || !deps.updateMupiboxConfig) return false
-  const owner = (await readState())[HEADLESS_BY]
-  if (owner && owner.enabled !== false && (await readManifest(HEADLESS_BY))) return false
-  const now = io.readAutostartIndex()
-  let index: number | null = null
-  if (now === null || now === 0) {
-    index = KIOSK_AUTOSTART
-    const kept = await readJson<{ index?: unknown } | null>(path.join(EXT_DIR, 'data', HEADLESS_BY, KEPT_AUTOSTART), null)
-    if (Number.isInteger(kept?.index) && (kept?.index as number) > 0 && (kept?.index as number) < 100) index = kept?.index as number
-    const result = await io.run('sudo', ['-n', '/boot/dietpi/dietpi-autostart', String(index)], 60000)
-    if (!result.ok) {
-      console.warn(`${new Date().toLocaleString()}: [Extensions] the start without the DSI display is left, but DietPi's autostart could not be set back to ${index}: ${result.out.slice(0, 150)}`)
-      return false
-    }
-  }
-  await deps.updateMupiboxConfig((cfg) => {
-    const mb = cfg.mupibox as Record<string, unknown> | undefined
-    if (!mb || typeof mb !== 'object' || mb.headless !== true) return false
-    delete mb.headless
-  })
-  // (what the extension kept is used up: switched on again later, it must not take an autostart 0 the user chose for its own)
-  await fsp.rm(path.join(EXT_DIR, 'data', HEADLESS_BY, KEPT_AUTOSTART), { force: true }).catch(() => undefined)
-  console.log(`${new Date().toLocaleString()}: [Extensions] the start without the DSI display is left (the extension ${HEADLESS_BY} is not on): mupibox.headless cleared${index === null ? '' : `, DietPi's autostart set back to ${index}`} - the kiosk starts after the next restart`)
-  return true
+export async function restoreKioskStart(deps: ExtensionDeps, io?: Parameters<typeof checkHeadlessAtStart>[1]): Promise<boolean> {
+  return checkHeadlessAtStart(deps, io)
 }
 
 /** Called when the server ends because of an uncaught error: writes down whether it went through the files of an extension. */
@@ -577,6 +538,20 @@ export function checkUnitFile(text: string, kind: 'service' | 'timer'): string |
   return null
 }
 
+/**
+ * Versions of an extension this box does not run any more, by id: OLED-Display before 0.4.0 switched the start without the DSI display
+ * itself - since 5.1 that is a switch of the core (app-api/headless.ts), and the old one would turn it back at every start.
+ */
+const MIN_VERSION: Record<string, string> = { oled: '0.4.0' }
+const versionParts = (v: string) => v.split('.').map((n) => Number.parseInt(n, 10) || 0)
+export function tooOld(id: string, version: string): boolean {
+  const min = MIN_VERSION[id]
+  if (!min) return false
+  const [a, b] = [versionParts(version), versionParts(min)]
+  for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] < b[i]
+  return false
+}
+
 /** What is wrong with a manifest (null: nothing). `files`: the names in the package. */
 export function checkManifest(m: unknown, files: Set<string>): string | null {
   const x = m as Manifest
@@ -586,6 +561,7 @@ export function checkManifest(m: unknown, files: Set<string>): string | null {
   if (!VERSION.test(String(x.version))) return 'bad version'
   if (!Number.isInteger(x.hostApi) || x.hostApi < 1) return 'bad hostApi'
   if (x.hostApi > HOST_API) return `made for a newer box (hostApi ${x.hostApi})`
+  if (tooOld(String(x.id), String(x.version))) return `version ${x.version} is too old for this box (it needs ${MIN_VERSION[String(x.id)]} or newer)`
   for (const part of ['player', 'api', 'display', 'icon'] as const) {
     const file = x[part]
     if (file === undefined) continue
@@ -1239,8 +1215,6 @@ async function removeExtension(id: string, deps: ExtensionDeps): Promise<void> {
     await changeState((state) => {
       delete state[id]
     })
-    // (before the restart: the start without the kiosk goes with the extension that set it)
-    await restoreKioskStart(deps).catch((error) => console.warn(`${new Date().toLocaleString()}: [Extensions] ${error}`))
     Object.assign(job, { running: false, ok: true, step: 'done' })
     restartServices()
   } catch (error) {
@@ -1548,8 +1522,6 @@ export function registerExtensionRoutes(router: Router, deps: ExtensionDeps): vo
     }
     // (its systemd services run while it is on)
     for (const u of (await setUpBy(id)).units) await run('sudo', ['systemctl', enabled ? 'enable' : 'disable', '--now', u.name], 30000)
-    // (off: the start without the kiosk goes with the extension that set it - before the restart)
-    if (!enabled) await restoreKioskStart(deps).catch((error) => console.warn(`${new Date().toLocaleString()}: [Extensions] ${error}`))
     res.json({ ok: true })
     restartServices()
   })
@@ -1852,7 +1824,7 @@ export function mountExtensions(app: express.Express, deps: ExtensionDeps): void
         off.push(manifest.id)
       }
     }
-    // (once at every start, after the check: the start without the kiosk of an extension that is off now, or of a backup from another box)
+    // (once at every start: the start without the DSI display has to fit this box - a DSI display plugged in, a backup - headless.ts)
     await restoreKioskStart(deps).catch((error) => console.warn(`${new Date().toLocaleString()}: [Extensions] ${error}`))
     // (the player may have loaded the part of one switched off here before the check was done: it keeps it until it starts again)
     const players: string[] = []

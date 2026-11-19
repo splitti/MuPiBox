@@ -676,8 +676,18 @@ describe('the OLED extension of this repository', () => {
     assert.match(rule, /SUBSYSTEM=="i2c-dev"/)
     assert.match(rule, /GROUP="gpio"/)
   })
-  it('takes the settings the app sends: chip, size, address, mode, the time, sleep and the start without the DSI display', () => {
-    assert.strictEqual(checkSettings(oled, { controller: 'sh1106', size: '128x32', address: '0x3D', rotate: true, contrast: 80, mode: 'mix', idleScreen: 'clock', timeMode: 'down', sleepAfter: 15, headless: true }).ok, true)
+  it('an OLED-Display before 0.4.0 is not taken any more: it switched the start without the DSI display itself, now the core does', () => {
+    const files = new Set(['api.js', 'icon.svg'])
+    const old = { ...oled, version: '0.3.1', settings: {}, ui: undefined, system: undefined }
+    assert.match(String(checkManifest(old, files)), /too old/)
+    assert.strictEqual(checkManifest({ ...old, version: '0.4.0' }, files), null)
+    assert.strictEqual(checkManifest({ ...old, version: '1.0.0' }, files), null)
+    assert.strictEqual(checkManifest({ ...old, id: 'other' }, files), null)
+  })
+  it('takes the settings the app sends: chip, size, address, mode, the time and sleep', () => {
+    assert.strictEqual(checkSettings(oled, { controller: 'sh1106', size: '128x32', address: '0x3D', rotate: true, contrast: 80, mode: 'mix', idleScreen: 'clock', timeMode: 'down', sleepAfter: 15 }).ok, true)
+    // (the start without the DSI display is a switch of the core since 5.1, no setting of the extension any more)
+    assert.strictEqual(checkSettings(oled, { headless: true }).ok, false)
     assert.strictEqual(checkSettings(oled, { controller: 'ssd1331' }).ok, false)
     assert.strictEqual(checkSettings(oled, { size: '64x48' }).ok, false)
     assert.strictEqual(checkSettings(oled, { address: '0x10' }).ok, false)

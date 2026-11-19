@@ -65,3 +65,7 @@ Unter **Einstellungen › Display & Bedienung › Display live** siehst du das a
 ## Browser-Einstellungen
 
 Das Display ist ein Browser im Vollbildmodus (Chromium). Dessen Einstellungen, etwa GPU-Unterstützung und Cache, findest du unter **Einstellungen › System › Browser (Chromium)** ([System- und Experteneinstellungen](../wartung/system.md)).
+
+## Ganz ohne Display
+
+Eine Box ohne Bildschirm, etwa nur mit NFC-Tags und Tastern, startet mit dem Schalter **Ohne DSI-Display betreiben** unter **Einstellungen › Display** ohne Kiosk und Chromium. Mehr dazu unter [Ohne DSI-Display](../erweiterungen/ohne-dsi-display.md).
