@@ -170,17 +170,17 @@ test('another matchday (the swipe of the display)', async () => {
   assert.equal((await call('get /matchday', { query: { n: '99' } })).status, 400)
 })
 
-test('crests of Wikimedia as their small PNG', () => {
-  const { crestSource } = require('../api.js')._test
-  assert.equal(
-    crestSource('https://upload.wikimedia.org/wikipedia/commons/b/be/SV-Werder-Bremen-Logo.svg'),
-    'https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/SV-Werder-Bremen-Logo.svg/120px-SV-Werder-Bremen-Logo.svg.png',
-  )
-  assert.equal(
-    crestSource('https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Borussia_Dortmund_logo.svg/960px-Borussia_Dortmund_logo.svg.png'),
-    'https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Borussia_Dortmund_logo.svg/120px-Borussia_Dortmund_logo.svg.png',
-  )
-  assert.equal(crestSource('https://i.imgur.com/KSIk0Eu.png'), 'https://i.imgur.com/KSIk0Eu.png')
+test('crests of Wikimedia: their small PNGs first, then the address of the source, then the SVG', () => {
+  const { crestCandidates } = require('../api.js')._test
+  const w = 'https://upload.wikimedia.org/wikipedia/commons'
+  assert.deepEqual(crestCandidates(`${w}/b/be/SV-Werder-Bremen-Logo.svg`), [
+    `${w}/thumb/b/be/SV-Werder-Bremen-Logo.svg/120px-SV-Werder-Bremen-Logo.svg.png`,
+    `${w}/thumb/b/be/SV-Werder-Bremen-Logo.svg/250px-SV-Werder-Bremen-Logo.svg.png`,
+    `${w}/b/be/SV-Werder-Bremen-Logo.svg`,
+  ])
+  const dortmund = `${w}/thumb/6/67/Borussia_Dortmund_logo.svg/960px-Borussia_Dortmund_logo.svg.png`
+  assert.deepEqual(crestCandidates(dortmund).slice(2), [dortmund, `${w}/6/67/Borussia_Dortmund_logo.svg`])
+  assert.deepEqual(crestCandidates('https://i.imgur.com/KSIk0Eu.png'), ['https://i.imgur.com/KSIk0Eu.png'])
 })
 
 test('with the page closed the box asks only for the club - and backs off when the first try failed', async () => {
@@ -240,4 +240,30 @@ test('the source with the page closed: nothing while the club does not play, its
   await src.load(134, during, { full: false }, kick + 20 * 60 * 1000)
   assert.equal(state.asked.length, 1)
   assert.match(state.asked[0], /getmatchesbyteamid\/134\//)
+})
+
+test('a crest refused for too many at every address: no crest is asked for a while', async () => {
+  const asked = []
+  const list = JSON.parse(JSON.stringify(current)).slice(0, 3)
+  list.forEach((m, i) => {
+    m.team1.teamIconUrl = `https://upload.wikimedia.org/wikipedia/commons/a/ab/Club${i}a.svg`
+    m.team2.teamIconUrl = `https://upload.wikimedia.org/wikipedia/commons/a/ab/Club${i}b.svg`
+  })
+  global.fetch = async (url) => {
+    asked.push(String(url))
+    if (/getmatchdata\/bl1$/.test(String(url))) return { ok: true, status: 200, headers: new Map(), json: async () => list }
+    if (/upload\.wikimedia\.org/.test(String(url))) return { ok: false, status: 429, headers: new Map([['content-type', 'text/html']]), body: null }
+    return { ok: true, status: 200, headers: new Map(), json: async () => [] }
+  }
+  const { call } = start({ now: {} })
+  const data = (await call('get /data', { query: { open: '1' } })).body
+  const hashes = data.matchday.matches.flatMap((m) => [m.home.crest, m.away.crest]).map((c) => c.split('/').pop())
+  const first = await call('get /crest/:hash', { params: { hash: hashes[0] } })
+  assert.equal(first.status, 404)
+  const wiki = () => asked.filter((u) => /wikimedia/.test(u)).length
+  // (all three addresses of the first crest were tried)
+  assert.equal(wiki(), 3)
+  for (const h of hashes.slice(1)) assert.equal((await call('get /crest/:hash', { params: { hash: h } })).status, 404)
+  // (none of the others: the box waits a quarter of an hour)
+  assert.equal(wiki(), 3)
 })

@@ -43,12 +43,16 @@ async function getJson(url, headers = {}) {
 const seasonOf = (now = new Date()) => (now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1)
 
 /**
- * A crest of Wikimedia as a small PNG of its own thumbnails (an SVG there can be large and is a document, not a picture);
- * other addresses as they are.
+ * The addresses to try for a crest, the smallest first. Wikimedia: its small PNG thumbnails (an SVG can be large), then the
+ * address of the source, then the SVG itself - Wikimedia makes a thumbnail of a new size for a program only now and then (429),
+ * one that exists it gives at once. Other addresses as they are.
  */
-function crestSource(url) {
+function crestCandidates(url) {
   const m = /^https:\/\/upload\.wikimedia\.org\/wikipedia\/([a-z]+)\/(?:thumb\/)?([0-9a-f])\/([0-9a-f]{2})\/([^/?#]+?\.svg)(?:\/\d+px-[^/?#]+)?$/i.exec(url)
-  return m ? `https://upload.wikimedia.org/wikipedia/${m[1]}/thumb/${m[2]}/${m[3]}/${m[4]}/120px-${m[4]}.png` : url
+  if (!m) return [url]
+  const base = `https://upload.wikimedia.org/wikipedia/${m[1]}`
+  const thumb = (px) => `${base}/thumb/${m[2]}/${m[3]}/${m[4]}/${px}px-${m[4]}.png`
+  return [...new Set([thumb(120), thumb(250), url, `${base}/${m[2]}/${m[3]}/${m[4]}`])]
 }
 const crestHash = (url) => crypto.createHash('sha1').update(url).digest('hex').slice(0, 20)
 
@@ -199,9 +203,8 @@ exports.activate = (host) => {
   function withCrests(team) {
     if (!team) return team
     if (!team.crest) return { ...team, crest: '' }
-    const url = crestSource(team.crest)
-    const hash = crestHash(url)
-    crests.set(hash, url)
+    const hash = crestHash(team.crest)
+    crests.set(hash, team.crest)
     return { ...team, crest: `/ext/football/crest/${hash}` }
   }
   const matchOut = (m) => (m ? { ...m, home: withCrests(m.home), away: withCrests(m.away) } : m)
@@ -212,7 +215,7 @@ exports.activate = (host) => {
   function save() {
     try {
       // (only the crests of what is loaded - and those on the card: an address the source no longer gives is forgotten)
-      const wanted = new Set(teamsOfView().filter((t) => t?.crest).map((t) => crestHash(crestSource(t.crest))))
+      const wanted = new Set(teamsOfView().filter((t) => t?.crest).map((t) => crestHash(t.crest)))
       let onCard = new Set()
       try {
         onCard = new Set(fs.readdirSync(crestDir).map((n) => n.split('.')[0]))
@@ -380,7 +383,7 @@ exports.activate = (host) => {
   // large, no redirect) and kept
   host.route('get', '/crest/:hash', async (req, res) => {
     const hash = String(req.params.hash)
-    const none = () => res.status(404).set('Cache-Control', 'public, max-age=3600').end()
+    const none = () => res.status(404).set('Cache-Control', 'public, max-age=900').end()
     if (!HASH.test(hash)) {
       none()
       return
@@ -392,38 +395,117 @@ exports.activate = (host) => {
       if (type === 'image/svg+xml') res.set('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'")
       res.type(type).send(fs.readFileSync(file))
     }
-    for (const ext of Object.keys(EXT_TYPES)) {
-      const file = path.join(crestDir, `${hash}.${ext}`)
-      if (fs.existsSync(file)) {
-        send(file, EXT_TYPES[ext])
-        return
-      }
+    const kept = onCard(hash)
+    if (kept) {
+      send(kept.file, kept.type)
+      return
     }
     const url = crests.get(hash)
-    if (!url || !crestAllowed(url) || Date.now() - (crestFailed.get(hash) ?? 0) < CREST_FAILED_MS) {
+    if (!url || !crestAllowed(url) || Date.now() < busyUntil || Date.now() - (crestFailed.get(hash) ?? 0) < CREST_FAILED_MS) {
       none()
       return
     }
-    try {
-      const response = await fetch(url, { headers: { 'User-Agent': USER_AGENT }, redirect: 'error', signal: AbortSignal.timeout(TIMEOUT_MS) })
-      const type = String(response.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase()
-      if (!response.ok || !CREST_TYPES[type] || Number(response.headers.get('content-length')) > CREST_BYTES) throw new Error(`not a picture (${response.status} ${type})`)
-      const body = await readLimited(response, CREST_BYTES)
-      if (!body || body.length === 0) throw new Error('too large or empty')
-      fs.mkdirSync(crestDir, { recursive: true })
-      const file = path.join(crestDir, `${hash}.${CREST_TYPES[type]}`)
-      fs.writeFileSync(file, body)
-      crestFailed.delete(hash)
-      tidyCrests()
-      send(file, type)
-    } catch (error) {
-      crestFailed.set(hash, Date.now())
-      // (a few hundred at most: the oldest go)
-      if (crestFailed.size > 300) crestFailed.delete(crestFailed.keys().next().value)
-      host.log.warn(`[Extension football] crest: ${error.message}`)
-      none()
+    // (only a few wait for their crest: a page of twenty crests at once would hold the display's other requests - the rest is
+    // fetched in the background, and the display asks for it once more a little later)
+    const job = getCrest(hash, url)
+    if (crestWaiting > CREST_WAIT) {
+      job.catch(() => undefined)
+      res.status(404).set('Cache-Control', 'no-store').end()
+      return
     }
+    const got = await job.catch(() => null)
+    if (got) send(got.file, got.type)
+    else none()
   })
+
+  // (the crests asked for and not fetched yet; how many requests wait for one; until when the servers refused - 429 - and no
+  // crest is asked for)
+  const crestJobs = new Map()
+  let crestWaiting = 0
+  let busyUntil = 0
+  const CREST_WAIT = 3
+  /** The crest `hash` fetched (one at a time) and put on the card: { file, type } */
+  function getCrest(hash, url) {
+    if (crestJobs.has(hash)) return crestJobs.get(hash)
+    crestWaiting += 1
+    const job = crestQueue(async () => {
+      const already = onCard(hash)
+      if (already) return already
+      if (Date.now() < busyUntil || Date.now() - (crestFailed.get(hash) ?? 0) < CREST_FAILED_MS) throw new Error('not now')
+      try {
+        const { type, body } = await fetchCrest(url)
+        fs.mkdirSync(crestDir, { recursive: true })
+        const file = path.join(crestDir, `${hash}.${CREST_TYPES[type]}`)
+        fs.writeFileSync(file, body)
+        crestFailed.delete(hash)
+        tidyCrests()
+        return { file, type }
+      } catch (error) {
+        // (refused for too many: no crest at all for a quarter of an hour; else this one not for an hour)
+        if (error.busy) busyUntil = Date.now() + 15 * L.MIN
+        else crestFailed.set(hash, Date.now())
+        // (a few hundred at most: the oldest go)
+        if (crestFailed.size > 300) crestFailed.delete(crestFailed.keys().next().value)
+        host.log.warn(`[Extension football] crest: ${error.message}`)
+        throw error
+      }
+    }).finally(() => {
+      crestWaiting -= 1
+      crestJobs.delete(hash)
+    })
+    crestJobs.set(hash, job)
+    return job
+  }
+
+  /** The crest when the box has it: { file, type } */
+  function onCard(hash) {
+    for (const ext of Object.keys(EXT_TYPES)) {
+      const file = path.join(crestDir, `${hash}.${ext}`)
+      if (fs.existsSync(file)) return { file, type: EXT_TYPES[ext] }
+    }
+    return null
+  }
+  let crestChain = Promise.resolve()
+  const crestQueue = (work) => {
+    const run = crestChain.then(work)
+    crestChain = run.catch(() => undefined)
+    return run
+  }
+  /** A crest from the first of its addresses that gives a picture: { type, body } */
+  async function fetchCrest(url) {
+    let why = 'no address'
+    let refused = 0
+    let tried = 0
+    for (const candidate of crestCandidates(url)) {
+      tried += 1
+      try {
+        const response = await fetch(candidate, { headers: { 'User-Agent': USER_AGENT }, redirect: 'error', signal: AbortSignal.timeout(TIMEOUT_MS) })
+        const type = String(response.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase()
+        // (too many: Wikimedia says so for a thumbnail it would have to make - the next address may be one it has; refused for
+        // all of them, the box waits, see getCrest)
+        if (response.status === 429) {
+          await response.body?.cancel?.().catch(() => undefined)
+          refused += 1
+          why = 'too many requests (429)'
+          continue
+        }
+        if (!response.ok || !CREST_TYPES[type] || Number(response.headers.get('content-length')) > CREST_BYTES) {
+          why = `not a picture (${response.status} ${type})`
+          await response.body?.cancel?.().catch(() => undefined)
+          continue
+        }
+        const body = await readLimited(response, CREST_BYTES)
+        if (body && body.length > 0) return { type, body }
+        why = 'too large or empty'
+      } catch (error) {
+        why = error.message
+      }
+    }
+    const error = new Error(why)
+    // (every address refused for too many)
+    error.busy = refused > 0 && refused === tried
+    throw error
+  }
 
   /** At most CREST_MAX crests: the oldest go. */
   function tidyCrests() {
@@ -486,4 +568,4 @@ exports.activate = (host) => {
   )
 }
 
-exports._test = { crestSource, crestHash, seasonOf, openLigaDb }
+exports._test = { crestCandidates, crestHash, seasonOf, openLigaDb }
