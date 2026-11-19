@@ -59,7 +59,10 @@ if [ -n "${PCT}" ] && [ -n "${PART}" ]; then
 	# (the picture shown before goes: one fbv at a time; called from the update's unit there is no terminal - fbv shows
 	# nothing without one, so the display's)
 	pkill -x fbv 2>/dev/null
-	/usr/bin/fbv ${FBV_OPTS} -c -y "${PROGRESS_PIC}" </dev/tty1 >/dev/tty1 2>/dev/null &
+	# (in one write - fb_show.py: fbv puts it there point by point, turned and scaled on the way, and on a Pi every step of
+	# the bar flickered; fbv only when that cannot)
+	python3 /usr/local/bin/mupibox/fb_show.py "${PROGRESS_PIC}" ${FBV_OPTS} 2>/dev/null \
+		|| /usr/bin/fbv ${FBV_OPTS} -c -y "${PROGRESS_PIC}" </dev/tty1 >/dev/tty1 2>/dev/null &
 	exit 0
 fi
 # (without a terminal - the app's update runs in a unit - fbv shows nothing: then on the display's; from a terminal as
