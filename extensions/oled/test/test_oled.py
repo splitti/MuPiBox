@@ -413,6 +413,62 @@ class ScreensTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             qr.encode('x' * 135)
 
+    def test_the_track_and_the_volume_of_the_bottom_row_end_at_one_place(self):
+        # (the Mix mode and the 128 x 32 display: the V at the left of its cell, the numbers right-aligned so the ones stay under each other)
+        def rightmost(image, x0, x1, y0, y1):
+            columns = [x for x in range(x0, x1) if lit(image, (x, y0, x + 1, y1))]
+            return max(columns)
+
+        for width, height in ((128, 64), (128, 32)):
+            screens = render.Screens(width, height)
+            top = height - 11
+            for volume, track, tracks in ((5, 1, 7), (55, 12, 34), (100, 3, 9)):
+                state = {'view': 'play', 'mode': 'mix', 'title': 'T', 'playing': True, 'elapsed': 5, 'duration': 50, 'track': track, 'tracks': tracks, 'volume': volume, 'wifi': 4}
+                image = screens.render(state, 0)
+                self.assertGreater(lit(image, (79, top, 86, height)), 8, 'the V')
+                self.assertIn(rightmost(image, 87, 106, top, height - 1), (101, 102, 103), 'the volume ends before the line of its cell (%s)' % volume)
+                if height == 64:
+                    self.assertIn(rightmost(image, 43, 75, top, height - 1), (71, 72, 73), 'the track ends before the line of its cell (%s/%s)' % (track, tracks))
+
+    def test_the_bottom_row_is_drawn_in_the_pixels_of_the_real_display(self):
+        # (V, 30 and 1/44 as photographed on the box: 5 x 7 pixels, a step of 6, the slash one row below the line)
+        def pixels(image, x, y, width, height):
+            return tuple(''.join('#' if image.getpixel((x + dx, y + dy)) else '.' for dx in range(width)) for dy in range(height))
+
+        state = {'view': 'play', 'mode': 'mix', 'title': 'T', 'playing': True, 'elapsed': 292, 'duration': 400, 'track': 1, 'tracks': 44, 'volume': 30, 'wifi': 4}
+        image = render.Screens(128, 64).render(state, 0)
+        top = 64 - 10
+        self.assertEqual(pixels(image, 79, top, 5, 7), ('#...#', '#...#', '.#.#.', '.#.#.', '.#.#.', '..#..', '..#..'), 'the V')
+        # (the volume: "3" and "0" with the dot in its middle, the last pixel at x 103)
+        three = ('.###.', '#...#', '....#', '.###.', '....#', '#...#', '.###.')
+        zero = ('.###.', '#...#', '#...#', '#.#.#', '#...#', '#...#', '.###.')
+        self.assertEqual(pixels(image, 93, top, 5, 7), three)
+        self.assertEqual(pixels(image, 99, top, 5, 7), zero)
+        # (the track: "1/44" ends at x 73 - the slash is the second character, and its eighth row is below the others)
+        self.assertEqual(pixels(image, 57, top, 5, 8)[7], '#....')
+        self.assertEqual(pixels(image, 57, top, 5, 8)[0], '....#')
+        self.assertEqual(pixels(image, 51, top, 5, 7)[6], '#####', 'the 1 stands on its base')
+        # (the time 4:52 from x 1: the 4, the colon of two single dots)
+        self.assertEqual(pixels(image, 1, top, 5, 7)[4], '#####')
+        self.assertEqual(pixels(image, 7, top, 5, 7), ('.....', '.....', '..#..', '.....', '.....', '..#..', '.....'))
+        self.assertTrue(all(len(rows) == 7 and all(len(r) == 5 for r in rows) for ch, rows in render.ROW_FONT.items() if ch != '/'))
+
+    def test_the_number_of_the_compact_mode_is_as_large_as_on_the_photo_of_the_display(self):
+        # (the digits are about 37 pixels high there and stand in the middle of the display; a long time still fits)
+        def rows_lit(image):
+            body = image.crop((0, 4, 128, 52))
+            return body.getbbox()
+
+        screens = render.Screens(128, 64)
+        state = {'view': 'play', 'mode': 'lite', 'title': 'T', 'playing': True, 'elapsed': 83, 'duration': 4000, 'track': 15, 'tracks': 44, 'volume': 30, 'wifi': 4}
+        box = rows_lit(screens.render(state, 0))
+        self.assertGreaterEqual(box[3] - box[1], 33)
+        self.assertLessEqual(abs((box[1] + box[3]) / 2 + 4 - 32), 3, 'in the middle of the display')
+        for elapsed in (83, 3725, 35999):
+            box = rows_lit(screens.render({**state, 'track': 0, 'tracks': 0, 'elapsed': elapsed}, 0))
+            self.assertGreaterEqual(box[0], 0)
+            self.assertLessEqual(box[2], 128, 'a time with hours fits the display')
+
     def test_without_an_address_the_network_page_has_the_text(self):
         self.assertIsNone(self.s.address_qr(''))
         self.assertIsNone(self.s.address_qr('y'))
@@ -422,7 +478,7 @@ class ScreensTest(unittest.TestCase):
     def test_the_network_page_has_the_status_bar_with_the_info_mark_and_three_lines(self):
         info = {'view': 'info', 'ssid': 'Example', 'ip': '', 'version': 'OLED 1', 'wifi': 2}
         image = self.s.render(info, 0)
-        self.assertGreater(lit(image, (84, 0, 96, 9)), 8, 'the (i)')
+        self.assertGreater(lit(image, (20, 0, 29, 9)), 8, 'the (i), 5 pixels after the aerial')
         for row in ((0, 12, 128, 24), (0, 25, 128, 37), (0, 38, 128, 50)):
             self.assertGreater(lit(image, row), 10)
         self.assertEqual(lit(image, (0, 52, 128, 64)), 0, 'no row at the bottom while nothing plays')
@@ -435,16 +491,30 @@ class ScreensTest(unittest.TestCase):
         plain = self.s.render(base, 0)
         self.assertGreater(lit(plain, (0, 0, 16, 9)), 10, 'wireless')
         self.assertEqual(lit(plain, (18, 0, 82, 9)), 0, 'no battery, repeat or shuffle')
-        self.assertGreater(lit(self.s.render({**base, 'battery': 88}, 0), (18, 0, 50, 9)), 40)
-        self.assertGreater(lit(self.s.render({**base, 'shuffle': True}, 0), (68, 0, 82, 9)), 10)
+        self.assertGreater(lit(self.s.render({**base, 'battery': 88}, 0), (18, 0, 54, 9)), 40)
+        # (the elements follow each other 5 pixels apart: without a battery the shuffle and the repeat come right after the aerial)
+        self.assertGreater(lit(self.s.render({**base, 'shuffle': True}, 0), (19, 0, 33, 9)), 10)
         all_ = self.s.render({**base, 'repeat': 'all'}, 0)
         one = self.s.render({**base, 'repeat': 'track'}, 0)
-        self.assertGreater(lit(all_, (50, 0, 66, 9)), 10)
+        self.assertGreater(lit(all_, (19, 0, 40, 9)), 10)
         self.assertNotEqual(all_.tobytes(), one.tobytes())
         pictures = {k: self.s.render({**base, 'output': k}, 0).crop((117, 0, 128, 9)).tobytes() for k in ('speaker', 'headphone', 'bluetooth')}
         self.assertEqual(len(set(pictures.values())), 3, 'the speaker, the headphones and Bluetooth look different')
         self.assertNotEqual(self.s.render({**base, 'volume': 35}, 0).crop((95, 0, 128, 9)).tobytes(), self.s.render({**base, 'volume': 100}, 0).crop((95, 0, 128, 9)).tobytes())
         self.assertEqual(lit(self.s.render({**base, 'wifi': -1}, 0), (9, 0, 16, 9)), 0, 'no bars without wireless')
+
+    def test_the_elements_of_the_status_bar_stand_5_pixels_apart(self):
+        # (aerial, battery, repeat, shuffle and the (i) of the network page: each starts 5 pixels after the one before, whichever are shown)
+        def gaps(image):
+            columns = [x for x in range(0, 100) if lit(image, (x, 0, x + 1, 9))]
+            runs = [b - a - 1 for a, b in zip(columns, columns[1:]) if b - a > 1]
+            return [r for r in runs if r > 3]  # (smaller gaps are inside one element)
+
+        for state in ({'battery': 80, 'repeat': 'all', 'shuffle': True}, {'battery': 80, 'repeat': 'track'}, {'repeat': 'all', 'shuffle': True}, {'shuffle': True}, {'battery': 5, 'shuffle': True}):
+            for lan in (False, True):
+                for view in ('play', 'info'):
+                    shown = {**PLAY, 'view': view, 'volume': 5, 'ssid': 'Haus', 'ip': '', 'version': '1', 'lan': lan, **state}
+                    self.assertTrue(all(g == 5 for g in gaps(self.s.render(shown, 0))), (state, lan, view, gaps(self.s.render(shown, 0))))
 
     def test_the_wired_network_shows_the_plug_in_place_of_the_aerial(self):
         base = {**PLAY, 'battery': None}
@@ -464,7 +534,7 @@ class ScreensTest(unittest.TestCase):
             self.assertTrue(small.render({'view': 'idle', 'clock': True, 'time': '07:45', 'date': 'Mo', 'lan': True}, 0))
 
     def test_the_status_bar_is_the_drawing_pixel_by_pixel(self):
-        # (the pictures of the layout drawing: the grid of each, read off cell by cell; the repeat marker beside the arrows is left out)
+        # (the pictures of the layout drawing: the grid of each, read off cell by cell; the elements stand 5 pixels apart)
         state = {**PLAY, 'wifi': 4, 'battery': 88, 'repeat': 'off', 'shuffle': True, 'output': 'speaker', 'volume': 100, 'timeMode': 'up'}
         image = self.s.render(state, 0)
 
@@ -473,26 +543,47 @@ class ScreensTest(unittest.TestCase):
         antenna = ['#########......', '#...#...#......', '.#..#..#.......', '..#.#.#.......#', '...###......#.#', '....#.....#.#.#', '....#...#.#.#.#', '....#.#.#.#.#.#', '....#.#.#.#.#.#']
         self.assertEqual(grid(0, 0, 15, 9), antenna)
         eighty_eight = ['.###...###.', '#...#.#...#', '#...#.#...#', '#...#.#...#', '.###...###.', '#...#.#...#', '#...#.#...#', '#...#.#...#', '.###...###.']
-        self.assertEqual(grid(17, 0, 11, 9), eighty_eight)
+        self.assertEqual(grid(20, 0, 11, 9), eighty_eight)
         battery = ['..##################', '..#................#', '###.##.##.##.##.##.#', '#.#.##.##.##.##.##.#', '#.#.##.##.##.##.##.#',
                    '#.#.##.##.##.##.##.#', '###.##.##.##.##.##.#', '..#................#', '..##################']
-        self.assertEqual(grid(30, 0, 20, 9), battery)
+        self.assertEqual(grid(33, 0, 20, 9), battery)
         shuffle = ['.........#...', '.........##..', '.####.######.', '....#.#..##..', '.....#...#...', '....#.#..##..', '.####.######.', '.........##..', '.........#...']
-        self.assertEqual(grid(72, 0, 13, 9), shuffle)
+        self.assertEqual(grid(57, 0, 13, 9), shuffle)
         hundred = ['#...###...###.', '#..#...#.#...#', '#..#...#.#...#', '#..#.#.#.#.#.#', '#..#...#.#...#', '#..#...#.#...#', '#...###...###.']
         self.assertEqual(grid(105, 1, 14, 7), hundred)
         speaker = ['.....#', '....##', '.#####', '#..###', '#..###', '#..###', '.#####', '....##', '.....#']
         self.assertEqual(grid(121, 0, 6, 9), speaker)
 
     def test_the_repeat_arrows_are_the_drawing_and_the_marker_follows(self):
-        repeat = ['........#.....', '........##....', '..#########.#.', '........##..#.', '..#...#.#...#.', '.##..##.....#.', '..#.#########.', '..#..##.......', '..#...#.......']
+        repeat = ['........#.....', '........##....', '..#########.#.', '........##..#.', '......#.#...#.', '.....##.....#.', '....#########.', '.....##.......', '......#.......']
         for kind in ('all', 'track'):
             image = self.s.render({**PLAY, 'repeat': kind, 'shuffle': False}, 0)
-            got = [''.join('#' if image.getpixel((51 + i, j)) else '.' for i in range(14)) for j in range(9)]
+            got = [''.join('#' if image.getpixel((18 + i, j)) else '.' for i in range(14)) for j in range(9)]
             self.assertEqual(got, repeat, kind)
-        all_ = self.s.render({**PLAY, 'repeat': 'all', 'shuffle': False}, 0).crop((66, 0, 71, 9)).tobytes()
-        one = self.s.render({**PLAY, 'repeat': 'track', 'shuffle': False}, 0).crop((66, 0, 71, 9)).tobytes()
-        self.assertNotEqual(all_, one, 'A or 1')
+        # (the A beside the arrows when the whole list repeats, a 1 when one track does - the arrows themselves have no stroke like a 1)
+        all_ = self.s.render({**PLAY, 'repeat': 'all', 'shuffle': False}, 0)
+        one = self.s.render({**PLAY, 'repeat': 'track', 'shuffle': False}, 0)
+        mark = lambda image: [''.join('#' if image.getpixel((33 + i, 1 + j)) else '.' for i in range(4)) for j in range(7)]
+        self.assertEqual(mark(all_), list(render.DIGITS['A']), 'the A')
+        self.assertEqual(mark(one), list(render.DIGITS['1']), 'the 1')
+
+    def test_the_time_of_every_mode_counts_up_or_down(self):
+        # ("Zeit zeigen": the Mix mode, the compact mode and the 128 x 32 display count down as well - not only the full mode)
+        self.assertEqual(render.shown_time({'elapsed': 83, 'duration': 190, 'timeMode': 'up'}), '1:23')
+        self.assertEqual(render.shown_time({'elapsed': 83, 'duration': 190, 'timeMode': 'down'}), '-1:47')
+        self.assertEqual(render.shown_time({'elapsed': 83, 'duration': None, 'timeMode': 'down'}), '1:23', 'a stream counts up')
+        self.assertEqual(render.shown_time({'elapsed': 100, 'duration': 7000, 'timeMode': 'down'}), '-1:55:00')
+        self.assertEqual(render.shown_time({'elapsed': 100, 'duration': 7000, 'timeMode': 'down'}, short=True), '-1:55')
+        for size in ((128, 64), (128, 32)):
+            screens = render.Screens(*size)
+            for mode in ('mix', 'lite', 'full'):
+                state = {**PLAY, 'mode': mode, 'tracks': 1, 'track': 1, 'elapsed': 83, 'duration': 190}
+                up = screens.render({**state, 'timeMode': 'up'}, 0)
+                down = screens.render({**state, 'timeMode': 'down'}, 0)
+                self.assertNotEqual(up.tobytes(), down.tobytes(), (size, mode))
+        # (a time with hours and a minus in the narrow cell of the Mix mode still ends before its line)
+        long = render.Screens(128, 64).render({**PLAY, 'mode': 'mix', 'elapsed': 100, 'duration': 7000, 'timeMode': 'down'}, 0)
+        self.assertEqual(lit(long, (38, 53, 40, 64)), 0)
 
     def test_the_bottom_row_counts_up_or_down(self):
         up = self.s.render({**PLAY, 'timeMode': 'up'}, 0)

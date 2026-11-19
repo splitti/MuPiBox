@@ -1,0 +1,68 @@
+{"ts":"2026-11-19T20:06:32.836Z","event":"start","source":"local","title":"Opening Credits","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:06:59.233Z","event":"start","source":"local","title":"Opening Credits","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:07:46.578Z","event":"start","source":"local","title":"Hit A","artist":"","album":"Radio Hits"}
+{"ts":"2026-11-19T20:09:26.655Z","event":"stop","duration_seconds":100,"source":"local","title":"Hit A","artist":"","album":"Radio Hits"}
+{"ts":"2026-11-19T20:09:26.655Z","event":"start","source":"local","title":"Hit B","artist":"","album":"Radio Hits"}
+{"ts":"2026-11-19T20:11:46.757Z","event":"stop","duration_seconds":140,"source":"local","title":"Hit B","artist":"","album":"Radio Hits"}
+{"ts":"2026-11-19T20:11:46.757Z","event":"start","source":"local","title":"Hit C","artist":"","album":"Radio Hits"}
+{"ts":"2026-11-19T20:13:02.595Z","event":"start","source":"local","title":"Hit C","artist":"","album":"Radio Hits"}
+{"ts":"2026-11-19T20:14:08.669Z","event":"start","source":"local","title":"Hit C","artist":"","album":"Radio Hits"}
+{"ts":"2026-11-19T20:14:28.353Z","event":"start","source":"local","title":"Hit C","artist":"","album":"Radio Hits"}
+{"ts":"2026-11-19T20:14:38.345Z","event":"stop","duration_seconds":10,"source":"local","title":"Hit C","artist":"","album":"Radio Hits"}
+{"ts":"2026-11-19T20:19:55.015Z","event":"start","source":"local","title":"Opening Credits","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:21:35.087Z","event":"stop","duration_seconds":100,"source":"local","title":"Opening Credits","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:21:35.087Z","event":"start","source":"local","title":"Walking Down the Road","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:23:55.214Z","event":"start","source":"local","title":"A Very Long Track Name That Does Not Fit In One Line Of The Display","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:23:55.214Z","event":"stop","duration_seconds":140,"source":"local","title":"Walking Down the Road","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:26:45.331Z","event":"stop","duration_seconds":170,"source":"local","title":"A Very Long Track Name That Does Not Fit In One Line Of The Display","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:26:45.331Z","event":"start","source":"local","title":"Interlude","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:28:31.811Z","event":"start","source":"local","title":"Interlude","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:28:44.985Z","event":"start","source":"local","title":"Interlude","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:29:32.650Z","event":"start","source":"local","title":"Opening Credits","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:30:09.730Z","event":"start","source":"local","title":"Opening Credits","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:31:09.737Z","event":"stop","duration_seconds":60,"source":"local","title":"Opening Credits","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:31:09.737Z","event":"start","source":"local","title":"Walking Down the Road","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:33:19.815Z","event":"stop","duration_seconds":130,"source":"local","title":"Walking Down the Road","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:33:19.815Z","event":"start","source":"local","title":"A Very Long Track Name That Does Not Fit In One Line Of The Display","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:36:19.956Z","event":"stop","duration_seconds":180,"source":"local","title":"A Very Long Track Name That Does Not Fit In One Line Of The Display","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:36:19.956Z","event":"start","source":"local","title":"Interlude","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:39:50.131Z","event":"start","source":"local","title":"Sunset","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:39:50.131Z","event":"stop","duration_seconds":210,"source":"local","title":"Interlude","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:41:43.245Z","event":"start","source":"local","title":"Sunset","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:42:09.513Z","event":"start","source":"local","title":"Sunset","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:42:40.771Z","event":"start","source":"local","title":"Sunset","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:44:00.828Z","event":"stop","duration_seconds":80,"source":"local","title":"Sunset","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:44:00.828Z","event":"start","source":"local","title":"Closing Theme","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T20:46:00.926Z","event":"stop","duration_seconds":120,"source":"local","title":"Closing Theme","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:06:21.938Z","event":"start","source":"local","title":"Opening Credits","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:08:02.015Z","event":"stop","duration_seconds":100,"source":"local","title":"Opening Credits","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:08:02.015Z","event":"start","source":"local","title":"Closing Theme","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:10:02.104Z","event":"start","source":"local","title":"Sunset","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:10:02.104Z","event":"stop","duration_seconds":120,"source":"local","title":"Closing Theme","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:13:42.424Z","event":"start","source":"local","title":"Sunset","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:14:20.052Z","event":"start","source":"local","title":"Interlude","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:15:15.563Z","event":"start","source":"local","title":"Interlude","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:17:59.269Z","event":"start","source":"local","title":"Opening Credits","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:19:39.421Z","event":"stop","duration_seconds":100,"source":"local","title":"Opening Credits","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:19:39.421Z","event":"start","source":"local","title":"Sunset","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:23:15.293Z","event":"start","source":"local","title":"Sunset","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:23:34.959Z","event":"start","source":"local","title":"Sunset","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:23:54.987Z","event":"start","source":"local","title":"A Very Long Track Name That Does Not Fit In One Line Of The Display","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:23:54.987Z","event":"stop","duration_seconds":20,"source":"local","title":"Sunset","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:26:45.138Z","event":"start","source":"local","title":"Walking Down the Road","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:26:45.138Z","event":"stop","duration_seconds":170,"source":"local","title":"A Very Long Track Name That Does Not Fit In One Line Of The Display","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:29:05.223Z","event":"stop","duration_seconds":140,"source":"local","title":"Walking Down the Road","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:29:05.223Z","event":"start","source":"local","title":"Interlude","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:31:15.309Z","event":"start","source":"local","title":"Interlude","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:31:34.622Z","event":"start","source":"local","title":"Interlude","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:31:59.913Z","event":"start","source":"local","title":"Interlude","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:32:39.946Z","event":"stop","duration_seconds":40,"source":"local","title":"Interlude","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:32:39.946Z","event":"start","source":"local","title":"Closing Theme","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:34:40.060Z","event":"stop","duration_seconds":120,"source":"local","title":"Closing Theme","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:34:40.060Z","event":"start","source":"local","title":"Walking Down the Road","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:37:00.160Z","event":"stop","duration_seconds":140,"source":"local","title":"Walking Down the Road","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:37:00.160Z","event":"start","source":"local","title":"A Very Long Track Name That Does Not Fit In One Line Of The Display","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:38:58.946Z","event":"start","source":"local","title":"A Very Long Track Name That Does Not Fit In One Line Of The Display","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:39:41.967Z","event":"start","source":"local","title":"A Very Long Track Name That Does Not Fit In One Line Of The Display","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:39:51.981Z","event":"start","source":"local","title":"Sunset","artist":"","album":"Demo Album One"}
+{"ts":"2026-11-19T21:39:51.981Z","event":"stop","duration_seconds":10,"source":"local","title":"A Very Long Track Name That Does Not Fit In One Line Of The Display","artist":"","album":"Demo Album One"}

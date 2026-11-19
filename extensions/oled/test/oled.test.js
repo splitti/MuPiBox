@@ -470,9 +470,18 @@ test('the info page and the next mode are routes of the page', async () => {
   }
   assert.strictEqual((await answer('post /info')).ok, true)
   assert.strictEqual(ext.stateNow().view, 'info')
-  assert.strictEqual((await answer('post /mode')).mode, 'mix')
-  assert.strictEqual((await answer('post /mode')).mode, 'lite')
-  assert.strictEqual((await answer('post /mode')).mode, 'full')
+  // (the next mode is for a button of the box: only from the box itself)
+  const mode = async (req) => {
+    let out = {}
+    const res = { json: (b) => (out = { ...out, body: b }), status: (code) => ({ json: (b) => (out = { status: code, body: b }) }) }
+    await box.routes['post /mode']({ body: {}, headers: {}, socket: { remoteAddress: '127.0.0.1' }, ...req }, res)
+    return out
+  }
+  assert.strictEqual((await mode({ socket: { remoteAddress: '192.168.1.9' } })).status, 403)
+  assert.strictEqual((await mode({ headers: { 'x-forwarded-for': '10.0.0.2' } })).status, 403)
+  assert.strictEqual((await mode({})).body.mode, 'mix')
+  assert.strictEqual((await mode({})).body.mode, 'lite')
+  assert.strictEqual((await mode({})).body.mode, 'full')
 })
 
 test('the address as a QR code for a button of the box: only from the box itself, without the login', async () => {

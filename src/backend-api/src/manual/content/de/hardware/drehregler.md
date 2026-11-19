@@ -24,7 +24,7 @@ Die drei Pins sind die Vorgabe nach der Installation. Du kannst sie in den Einst
 | **GPIO-Pin A (CLK)**, **GPIO-Pin B (DT)**, **GPIO-Pin Taster** | die Pins, an denen der Regler angeschlossen ist (siehe „Die Pins ändern“). Jeder Pin darf auch **Kein Pin** sein |
 | **Rechts herum drehen** (unter Pin A), **Links herum drehen** (unter Pin B) | was eine Raste in dieser Richtung tut: **Lauter**, **Leiser**, **Nächster Titel**, **Voriger Titel** oder **Aus**. Die Voreinstellung ist rechts lauter und links leiser |
 | **Schritt pro Raste** | wie viel Prozent jede Raste die Lautstärke ändert, 1 bis 10 (Standard 5); es erscheint nur, solange eine Richtung **Lauter** oder **Leiser** ist |
-| **Funktion des Tasters (GPIO …)** | **Aus**, **Play/Pause**, **Nächster Titel**, **Titelwahl (Drücken schaltet um)**, **Vorspulen** oder **Adresse der Box zeigen** |
+| **Funktion des Tasters (GPIO …)** | **Aus**, **Play/Pause**, **Nächster Titel**, **Titelwahl (Drücken schaltet um)**, **Vorspulen** oder **IP-Adresse der Box als QR-Code anzeigen** |
 
 Das **Maximum** der Lautstärke (**Audio › Lautstärke › Maximum (Hörschutz)**) gilt auch für den Regler: Er dreht nie lauter als erlaubt ([Sound und Lautstärke](sound.md)). Die Wahl des Taster-Verhaltens und die Schrittweite wirken sofort. Das Ein- und Ausschalten des Reglers startet seinen Dienst neu.
 
@@ -44,7 +44,7 @@ Den Pin des Tasters nimmt der Regler nur, solange der Taster eine Funktion hat; 
 | **Nächster Titel** | springt zum nächsten Titel |
 | **Titelwahl (Drücken schaltet um)** | schaltet den Drehregler zwischen **Lautstärke** und **Titelwahl** um (siehe unten) |
 | **Vorspulen** | springt 30 Sekunden vor |
-| **Adresse der Box zeigen** | zeigt zehn Sekunden lang einen **QR-Code** mit der Adresse der Box auf dem [OLED-Display](../erweiterungen/oled.md) (sonst nichts) |
+| **IP-Adresse der Box als QR-Code anzeigen** | zeigt zehn Sekunden lang einen **QR-Code** mit der IP-Adresse der Box auf dem [OLED-Display](../erweiterungen/oled.md) (sonst nichts) |
 | **Aus** | tut nichts |
 
 ### Titelwahl mit dem Drehknopf
@@ -68,7 +68,7 @@ Unter dem ersten Drehregler steht **Drehregler hinzufügen**. Jeder weitere Dreh
 | **GPIO-Pin A (CLK)**, **GPIO-Pin B (DT)**, **GPIO-Pin Taster** | die drei Pins dieses Drehreglers (jeder darf **Kein Pin** sein; ein neuer Drehregler kommt ohne Pins dazu, du wählst sie danach) |
 | **Rechts herum drehen**, **Links herum drehen** | was eine Raste in dieser Richtung tut: **Lauter**, **Leiser**, **Nächster Titel**, **Voriger Titel** oder **Aus** (Voreinstellung: rechts lauter, links leiser) |
 | **Schritt pro Raste** | bei **Lauter** und **Leiser**: wie viel Prozent eine Raste ändert |
-| **Funktion des Tasters** | **Aus**, **Play/Pause**, **Nächster Titel**, **Vorspulen** oder **Adresse der Box zeigen** |
+| **Funktion des Tasters** | **Aus**, **Play/Pause**, **Nächster Titel**, **Vorspulen** oder **IP-Adresse der Box als QR-Code anzeigen** |
 | **Name** (oben in der Karte) | die Beschriftung des Drehreglers |
 | Mülleimer-Symbol (rechts neben dem Namen) | entfernt den Drehregler; seine Pins sind wieder frei |
 

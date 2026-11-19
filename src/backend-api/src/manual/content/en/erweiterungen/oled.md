@@ -44,7 +44,7 @@ When nothing plays, the display shows what is chosen under **Idle display**: the
 
 ![The clock when idle](oled-idle.png)
 
-A short picture appears when playback starts or pauses and when the volume changes. The picture for the volume can be switched off with **Show the volume animation**, the one for start and pause with **Show the play/pause animation**. With **Show the address of the box** a **QR code** with the address of the box appears for ten seconds, and nothing else. A phone scans it and opens the box in the browser. The same action can also be given to a button, a double button or the rotary knob ([Buttons & GPIO Input](buttons.md), [Rotary knob and button](../hardware/drehregler.md)). If the box has no network address, the display shows the **network page** instead, with WLAN name, address and version.
+A short picture appears when playback starts or pauses and when the volume changes. The picture for the volume can be switched off with **Show the volume animation**, the one for start and pause with **Show the play/pause animation**. With **Show the IP address of the box as a QR code** a **QR code** with the IP address of the box appears for ten seconds, and nothing else. A phone scans it and opens the box in the browser. The same action can also be given to a button, a double button or the rotary knob ([Buttons & GPIO Input](buttons.md), [Rotary knob and button](../hardware/drehregler.md)). If the box has no network address, the display shows the **network page** instead, with WLAN name, address and version.
 
 ![The QR code with the address of the box](oled-info.png)
 
@@ -72,7 +72,7 @@ The settings are in cards: **Display** (chip, size, address, rotation), **Displa
 | **Display off after** | **Never**, 1, 5, 15 minutes or 1 hour, when nothing plays |
 | **Run without DSI display** | see [Without DSI display](ohne-dsi-display.md) |
 
-The buttons **Show the address of the box** and **Next layout** try the display out: the second switches between **Full**, **Mix** and **Compact** until the next save. A change of chip, size, address or rotation restarts the display; the others apply at once.
+The button **Show the IP address of the box as a QR code** tries the QR code out. A change of chip, size, address or rotation restarts the display; the others apply at once.
 
 The **128 × 32** display shows title, artist, time, volume and WLAN in one layout.
 

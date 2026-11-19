@@ -447,6 +447,16 @@ test('every action asks the player what the display would ask it', async () => {
   for (const name of ACTIONS) if (name !== 'none') assert.equal(await known.do(name), true, name)
 })
 
+test('the two actions of the OLED display are routes of that extension: the address as a QR code, and the next layout', async () => {
+  const { calls, fetchFn } = fakeBox({ meta: {} })
+  const actions = createActions({ playerUrl: P, apiUrl: A, log: quiet, fetchFn })
+  await actions.do('address')
+  await actions.do('screen')
+  assert.deepEqual(calls, [`POST ${A}/api/ext/oled/address`, `POST ${A}/api/ext/oled/mode`])
+  assert.equal(source.ACTION_LABELS.address, 'IP-Adresse der Box als QR-Code anzeigen')
+  assert.equal(source.ACTION_LABELS.screen, 'Change OLED screen (Voll / Mix / Kompakt)')
+})
+
 test('play/pause and shuffle go by what the player says; nothing playing means play', async () => {
   const paused = fakeBox({ meta: { currentPlayer: 'spotify', pause: true, shuffle: true } })
   const actions = createActions({ playerUrl: P, apiUrl: A, log: quiet, fetchFn: paused.fetchFn })

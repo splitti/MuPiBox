@@ -44,7 +44,7 @@ Wenn nichts spielt, zeigt das Display das Bild, das unter **Anzeige im Leerlauf*
 
 ![Die Uhr im Leerlauf](oled-idle.png)
 
-Ein kurzes Bild erscheint, wenn die Wiedergabe startet oder pausiert und wenn sich die Lautstärke ändert. Dieses Bild für die Lautstärke lässt sich mit **Lautstärke-Animation zeigen** ausschalten, das Bild für Start und Pause mit **Play/Pause-Animation zeigen**. Mit **Adresse der Box zeigen** erscheint zehn Sekunden lang ein **QR-Code** mit der Adresse der Box und sonst nichts. Das Handy scannt ihn und öffnet die Box im Browser. Dieselbe Aktion lässt sich auch einem Taster, einem Doppeltaster oder dem Drehregler geben ([Buttons & GPIO Input](buttons.md), [Drehregler und Taster](../hardware/drehregler.md)). Hat die Box keine Netzwerkadresse, zeigt die Anzeige stattdessen die **Netzwerkseite** mit WLAN-Name, Adresse und Version.
+Ein kurzes Bild erscheint, wenn die Wiedergabe startet oder pausiert und wenn sich die Lautstärke ändert. Dieses Bild für die Lautstärke lässt sich mit **Lautstärke-Animation zeigen** ausschalten, das Bild für Start und Pause mit **Play/Pause-Animation zeigen**. Mit **IP-Adresse der Box als QR-Code anzeigen** erscheint zehn Sekunden lang ein **QR-Code** mit der IP-Adresse der Box und sonst nichts. Das Handy scannt ihn und öffnet die Box im Browser. Dieselbe Aktion lässt sich auch einem Taster, einem Doppeltaster oder dem Drehregler geben ([Buttons & GPIO Input](buttons.md), [Drehregler und Taster](../hardware/drehregler.md)). Hat die Box keine Netzwerkadresse, zeigt die Anzeige stattdessen die **Netzwerkseite** mit WLAN-Name, Adresse und Version.
 
 ![Der QR-Code mit der Adresse der Box](oled-info.png)
 
@@ -60,7 +60,7 @@ Die Einstellungen stehen in Karten: **Display** (Chip, Größe, Adresse, Drehung
 | **Größe** | **128 × 64** oder **128 × 32** |
 | **I2C-Adresse** | **0x3C** oder **0x3D** |
 | **Um 180° drehen** | wenn das Display auf dem Kopf eingebaut ist |
-| **Anzeige beim Spielen** | **Voll** (das Bild oben), **Mix** (die Titelnummer groß) oder **Kompakt** (die Zeit groß) |
+| **Anzeige beim Spielen** | **Voll** (das Bild oben), **Mix** (die Titelnummer groß) oder **Kompakt** (die Zeit groß). Ein Taster oder Doppeltaster kann mit **Change OLED screen (Voll / Mix / Kompakt)** zur nächsten Anzeige weiterschalten ([Buttons & GPIO Input](buttons.md)); das gilt bis zum nächsten Speichern |
 | **Anzeige im Leerlauf** (Karte **Bilder**) | was das Display zeigt, solange nichts spielt: **NFC-Leser**, **Barcodescanner**, **Uhrzeit** (Voreinstellung) oder **Eigenes Bild** |
 | **Lautstärke-Animation zeigen** | das kurze Bild beim Ändern der Lautstärke; ausgeschaltet bleibt die Anzeige, wie sie ist |
 | **Play/Pause-Animation zeigen** | das kurze Bild mit Play oder Pause beim Starten und Anhalten der Wiedergabe; ausgeschaltet bleibt die Anzeige, wie sie ist |
@@ -72,7 +72,7 @@ Die Einstellungen stehen in Karten: **Display** (Chip, Größe, Adresse, Drehung
 | **Display aus nach** | **Nie**, 1, 5, 15 Minuten oder 1 Stunde, wenn nichts spielt |
 | **Ohne DSI-Display betreiben** | siehe [Ohne DSI-Display](ohne-dsi-display.md) |
 
-Die Knöpfe **Adresse der Box zeigen** und **Nächste Anzeige** probieren die Anzeige aus: Der zweite wechselt bis zum nächsten Speichern zwischen **Voll**, **Mix** und **Kompakt**. Eine Änderung von Chip, Größe, Adresse und Drehung startet das Display neu; die anderen gelten sofort.
+Der Knopf **IP-Adresse der Box als QR-Code anzeigen** probiert den QR-Code aus. Eine Änderung von Chip, Größe, Adresse und Drehung startet das Display neu; die anderen gelten sofort.
 
 Das **128 × 32**-Display zeigt Titel, Interpret, Zeit, Lautstärke und WLAN in einer Anzeige.
 

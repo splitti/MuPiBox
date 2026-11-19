@@ -1,7 +1,7 @@
 {
   "id": "oled",
   "name": "OLED-Display",
-  "version": "0.3.1",
+  "version": "0.5.1",
   "description": "Ein kleines OLED-Display (SSD1306, SH1106 oder SSD1309 am I2C-Anschluss, 128 × 64 oder 128 × 32) zeigt, was die Box spielt: Titel, Interpret, Laufzeit, Titelnummer, Lautstärke, WLAN, Akku, Zufall und Wiederholen, Ausgang (Lautsprecher, Kopfhörer, Bluetooth) und die Uhrzeit. Dazu lässt sich die Box ganz ohne DSI-Display betreiben. Die Einstellungen stehen unter Einstellungen › OLED-Display.",
   "hostApi": 10,
   "resources": {},
@@ -40,7 +40,7 @@
     "contrast": {
       "type": "number",
       "default": 127,
-      "min": 0,
+      "min": 1,
       "max": 255
     },
     "nightDim": {
@@ -202,30 +202,34 @@
       {
         "key": "mode",
         "label": "Anzeige beim Spielen",
-        "help": "Voll zeigt oben die Statusleiste (WLAN, Akku, Wiederholen, Zufall, Lautstärke und Ausgang), darunter Titel, Interpret und Album und unten Zeit und Titelnummer. Mix zeigt die Titelnummer groß, Kompakt die Zeit groß. Auf dem 128 × 32-Display gibt es eine Anzeige.",
         "choices": [
           {
             "value": "full",
-            "label": "Voll"
+            "label": "Voll",
+            "image": "images/mode-full.svg"
           },
           {
             "value": "mix",
-            "label": "Mix"
+            "label": "Mix",
+            "image": "images/mode-mix.svg"
           },
           {
             "value": "lite",
-            "label": "Kompakt"
+            "label": "Kompakt",
+            "image": "images/mode-lite.svg"
           }
         ]
       },
       {
         "key": "volumeOverlay",
         "label": "Lautstärke-Animation zeigen",
+        "tip": true,
         "help": "Beim Ändern der Lautstärke erscheint kurz ein eigenes Bild mit Lautsprecher und Balken. Ist die Option aus, bleibt die Anzeige, wie sie ist."
       },
       {
         "key": "playOverlay",
         "label": "Play/Pause-Animation zeigen",
+        "tip": true,
         "help": "Beim Starten und Anhalten der Wiedergabe erscheint kurz ein eigenes Bild mit Play oder Pause. Ist die Option aus, bleibt die Anzeige, wie sie ist."
       },
       {
@@ -260,25 +264,19 @@
             "value": "off",
             "label": "Nicht durchlaufen"
           }
-        ]
+        ],
+        "tip": true
       },
       {
         "type": "action",
-        "label": "Adresse der Box zeigen",
-        "post": "/api/ext/oled/info",
-        "help": "Zeigt zehn Sekunden lang einen QR-Code mit der Adresse der Box und sonst nichts. Mit dem Handy scannen öffnet die Box."
-      },
-      {
-        "type": "action",
-        "label": "Nächste Anzeige",
-        "post": "/api/ext/oled/mode",
-        "help": "Wechselt bis zum nächsten Speichern zwischen Voll, Mix und Kompakt."
+        "label": "IP-Adresse der Box als QR-Code anzeigen",
+        "post": "/api/ext/oled/info"
       },
       {
         "type": "heading",
-        "label": "Helligkeit",
+        "label": "Helligkeit & Ausschalten",
         "card": true,
-        "help": "Wie hell das Display ist, ob es abends dunkler wird und wann es ausgeht."
+        "core": "brightness"
       },
       {
         "key": "contrast",
@@ -286,21 +284,9 @@
         "help": "0 ist dunkel, 255 am hellsten."
       },
       {
-        "key": "nightDim",
-        "label": "Abends dunkler",
-        "help": "Das OLED-Display wird abends dunkler und morgens wieder normal hell. Die Zeiten kommen von „Abends dunkler“ in den Einstellungen des Displays: feste Uhrzeiten oder Sonnenuntergang bis Sonnenaufgang, das sanfte Abdunkeln und die Ruhezeiten."
-      },
-      {
-        "key": "nightContrast",
-        "label": "Helligkeit am Abend",
-        "help": "1 ist am dunkelsten, 255 am hellsten. Nie heller als die normale Helligkeit. Den Wert kannst du mit dem Regler einstellen oder oben in das Feld eintippen.",
-        "dep": "nightDim",
-        "slider": true
-      },
-      {
         "key": "sleepAfter",
         "label": "Display aus nach",
-        "help": "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.",
+        "help": "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start oder ein Tag weckt es.",
         "choices": [
           {
             "value": 0,
@@ -323,6 +309,24 @@
             "label": "1 Stunde"
           }
         ]
+      },
+      {
+        "type": "heading",
+        "label": "Abends dunkler",
+        "card": true,
+        "core": "evening"
+      },
+      {
+        "key": "nightDim",
+        "label": "Abends dunkler",
+        "help": "Das OLED-Display wird abends dunkler und morgens wieder normal hell. Die Zeiten kommen von „Abends dunkler“ in den Einstellungen des Displays: feste Uhrzeiten oder Sonnenuntergang bis Sonnenaufgang, das sanfte Abdunkeln und die Ruhezeiten."
+      },
+      {
+        "key": "nightContrast",
+        "label": "Helligkeit am Abend",
+        "help": "1 ist am dunkelsten, 255 am hellsten. Nie heller als die normale Helligkeit. Der Regler gilt sofort, die Zahl kannst du auch eintippen.",
+        "dep": "nightDim",
+        "slider": true
       },
       {
         "type": "heading",

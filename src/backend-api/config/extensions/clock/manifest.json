@@ -1,0 +1,47 @@
+{
+  "id": "clock",
+  "name": "Uhrzeit in der Kopfzeile",
+  "version": "1.0.1",
+  "description": "Zeigt die Uhrzeit oben im Display, rechts neben der Akkuanzeige – als Ziffern oder als Zifferblatt.",
+  "hostApi": 1,
+  "resources": {},
+  "display": "display.js",
+  "icon": "icon.svg",
+  "settings": {
+    "style": {
+      "type": "string",
+      "default": "digital",
+      "options": ["digital", "analog"],
+      "legacy": "mupibox.clockStyle"
+    },
+    "hours": {
+      "type": "number",
+      "default": 24,
+      "options": [24, 12],
+      "legacy": "mupibox.clockHours"
+    }
+  },
+  "ui": {
+    "title": "Uhrzeit",
+    "help": "Die Uhrzeit steht in der Kopfzeile des Displays, rechts neben der Akkuanzeige. Eine Änderung gilt sofort, das Display lädt dafür kurz neu.",
+    "items": [
+      {
+        "key": "style",
+        "label": "Anzeige",
+        "choices": [
+          { "value": "digital", "label": "Digital" },
+          { "value": "analog", "label": "Analog" }
+        ]
+      },
+      {
+        "key": "hours",
+        "label": "Format",
+        "help": "Bei der analogen Uhr ändert sich nichts: Das Zifferblatt hat immer 12 Stunden.",
+        "choices": [
+          { "value": 24, "label": "24 Stunden" },
+          { "value": 12, "label": "12 Stunden" }
+        ]
+      }
+    ]
+  }
+}

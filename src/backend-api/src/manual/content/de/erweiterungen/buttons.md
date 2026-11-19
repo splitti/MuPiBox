@@ -79,7 +79,8 @@ Ein Doppeltaster braucht **beide** Pins. Solange nur einer gewählt ist, liest d
 | **Zufallswiedergabe an/aus** | schaltet das Mischen um |
 | **Repeat all/one/off** | schaltet bei jedem Druck weiter: erst **all** (das Album oder die Playlist beginnt am Ende von vorn), dann **one** (der Titel wird immer wieder gespielt), dann **off** (keine Wiederholung). Mit dem nächsten Album beginnt die Wiedergabe wieder ohne Wiederholung |
 | **Ausgabe wechseln** | schaltet zur nächsten Ausgabe: Soundkarten der Box und gekoppelte Bluetooth-Geräte der Reihe nach |
-| **Adresse der Box zeigen** | zeigt zehn Sekunden lang einen QR-Code mit der Adresse der Box auf dem [OLED-Display](oled.md) (sonst nichts); ohne die Erweiterung passiert nichts |
+| **IP-Adresse der Box als QR-Code anzeigen** | zeigt zehn Sekunden lang einen QR-Code mit der IP-Adresse der Box auf dem [OLED-Display](oled.md) (sonst nichts). Das Handy scannt ihn und öffnet die Box im Browser; ohne die Erweiterung passiert nichts |
+| **Change OLED screen (Voll / Mix / Kompakt)** | wechselt bei jedem Druck die Anzeige beim Spielen auf dem [OLED-Display](oled.md) zur nächsten: erst **Voll**, dann **Mix**, dann **Kompakt**, dann wieder **Voll**. Der Wechsel gilt bis zum nächsten Speichern der OLED-Einstellungen; ohne die Erweiterung passiert nichts |
 | **Stopp** | beendet die Wiedergabe |
 | **Box ausschalten** | fährt die Box herunter |
 | **Keine Aktion** | der Druck tut nichts |
