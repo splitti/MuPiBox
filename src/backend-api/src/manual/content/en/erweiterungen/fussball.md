@@ -33,6 +33,7 @@ A club's matches come from **every competition** the source knows: for Bayern th
 | **View when opening** | what the tab shows first |
 | **Score in the header** | while a match of one of your clubs runs, the two crests and the score stand at the top of the display, several matches side by side; a tap on them opens the page (default: on) |
 | **Announce goals** | when one of your clubs scores, the box says so with its voice, for example “Goal for Bremen! 2 to 1.”; music gets quieter meanwhile but does not stop (default: off) |
+| **Show crests** | show the clubs' crests; switched off, a circle with the short name stands there everywhere, and the box fetches no crests. Applies to the whole box (default: on) |
 | **Requests** | whether the last request worked, and when it was |
 
 > [!NOTE]
@@ -67,7 +68,7 @@ If the source does not answer, the last values stay, and at the bottom it says *
 
 At the bottom of the page it says where the data come from: **Data: OpenLigaDB (ODbL)** and, with football-data.org, **Football data provided by the Football-Data.org API**.
 
-The box fetches the **crests** once and keeps them. The display never asks a server outside itself. If a crest is missing, a circle with the club's short name stands there.
+The **crests** are protected by copyright. The box fetches them only for its own display, once, and keeps them; **Show crests** switches them off altogether. The display never asks a server outside itself. If a crest is missing, a circle with the club's short name stands there.
 
 ## If nothing appears
 

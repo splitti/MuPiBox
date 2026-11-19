@@ -83,6 +83,10 @@
     },
     "apiKey": {
       "type": "secret"
+    },
+    "crests": {
+      "type": "boolean",
+      "default": true
     }
   },
   "ui": {
@@ -242,6 +246,11 @@
         "key": "announce",
         "label": "Tore ansagen",
         "help": "Schießt einer deiner Vereine ein Tor, sagt die Box es mit ihrer Stimme an, zum Beispiel „Tor für Bremen! 2 zu 1.“ Musik wird dabei leiser. Nicht in der Ruhezeit und nicht, wenn die Box gesperrt ist."
+      },
+      {
+        "key": "crests",
+        "label": "Wappen zeigen",
+        "help": "Die Wappen der Vereine sind urheberrechtlich geschützt. Die Box holt sie nur für ihr eigenes Display und gibt sie nicht weiter. Ausgeschaltet steht dort ein Kreis mit dem Kürzel des Vereins. Gilt für die ganze Box."
       },
       {
         "type": "status",

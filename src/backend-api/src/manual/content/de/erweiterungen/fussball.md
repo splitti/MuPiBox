@@ -33,6 +33,7 @@ Die Spiele eines Vereins kommen aus **allen Wettbewerben**, die die Quelle kennt
 | **Ansicht beim Öffnen** | was der Reiter zuerst zeigt |
 | **Ergebnis in der Kopfzeile** | während ein Spiel eines deiner Vereine läuft, stehen oben im Display die beiden Wappen und der Spielstand, bei mehreren Spielen nebeneinander; ein Tipp darauf öffnet die Seite (Standard: an) |
 | **Tore ansagen** | schießt einer deiner Vereine ein Tor, sagt die Box es mit ihrer Stimme an, etwa „Tor für Bremen! 2 zu 1.“; Musik wird dabei leiser, angehalten wird sie nicht (Standard: aus) |
+| **Wappen zeigen** | die Wappen der Vereine anzeigen; ausgeschaltet steht dort überall ein Kreis mit dem Kürzel, und die Box holt keine Wappen. Gilt für die ganze Box (Standard: an) |
 | **Abfrage** | ob die letzte Abfrage geklappt hat, und wann sie war |
 
 > [!NOTE]
@@ -67,7 +68,7 @@ Antwortet die Quelle nicht, bleibt der letzte Stand stehen, und unten steht **Ke
 
 Unten auf der Seite steht, woher die Daten kommen: **Daten: OpenLigaDB (ODbL)** und, bei football-data.org, **Football data provided by the Football-Data.org API**.
 
-Die **Wappen** holt die Box einmal und hebt sie auf. Das Display fragt nie selbst einen fremden Server. Fehlt ein Wappen, steht dort ein Kreis mit dem Kürzel des Vereins.
+Die **Wappen** sind urheberrechtlich geschützt. Die Box holt sie nur für ihr eigenes Display, einmal, und hebt sie auf; mit **Wappen zeigen** lassen sie sich ganz abschalten. Das Display fragt nie selbst einen fremden Server. Fehlt ein Wappen, steht dort ein Kreis mit dem Kürzel des Vereins.
 
 ## Wenn nichts erscheint
 

@@ -683,7 +683,8 @@ exports.activate = (host) => {
   host.route('get', '/crest/:hash', async (req, res) => {
     const hash = String(req.params.hash)
     const none = () => res.status(404).set('Cache-Control', 'public, max-age=900').end()
-    if (!HASH.test(hash)) {
+    // (the crests switched off: none served, none fetched)
+    if (!HASH.test(hash) || (await host.settings())?.crests === false) {
       none()
       return
     }

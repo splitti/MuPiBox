@@ -529,3 +529,16 @@ test('after a restart without the internet: the clubs as the card kept them', as
   await routes['get /data']({ query: {} }, res)
   assert.equal(out.body.clubs[0].last.id, 9)
 })
+
+test('the crests switched off: none served, none fetched', async () => {
+  const state = { asked: [] }
+  global.fetch = fakeFetch(state)
+  const settings = { now: { clubs: 'o:134:SV Werder Bremen' } }
+  const { call } = start(settings)
+  const data = (await call('get /data', { query: { open: '1' } })).body
+  const hash = data.clubs[0].team.crest.split('/').pop()
+  settings.now = { ...settings.now, crests: false }
+  const before = state.asked.length
+  assert.equal((await call('get /crest/:hash', { params: { hash } })).status, 404)
+  assert.equal(state.asked.length, before)
+})

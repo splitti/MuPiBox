@@ -217,7 +217,8 @@ export function activate(api) {
   // (the club of the source chosen now - each source has its own, as the API part counts it)
   // (the clubs the user follows - "o:40:FC Bayern München|f:81:FC Barcelona", see logic.clubsOf)
   const clubCount = String(settings.clubs ?? '').split('|').filter((p) => /^[of]:\d{1,8}:/.test(p)).length
-  const crestUrl = (team) => (team?.crest ? `${api.apiUrl}${team.crest}` : '')
+  // (the crests switched off in the app: the circle with the short name everywhere)
+  const crestUrl = (team) => (team?.crest && settings.crests !== false ? `${api.apiUrl}${team.crest}` : '')
 
   /** A crest, or a circle with the short name when there is none (or it does not load). */
   function crest(team, size = 32) {
