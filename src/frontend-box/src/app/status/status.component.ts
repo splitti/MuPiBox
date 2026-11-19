@@ -7,7 +7,6 @@ import type { Mupihat } from '../mupihat'
 import { PlayerService } from '../player.service'
 import { DisplayTextsService } from '../display-texts.service'
 import { UsersService } from '../users/users.service'
-import { PlaytimeService } from '../playtime.service'
 
 // The status at the top right, the same in every theme: WiFi and battery, both 24 px high and in line, the
 // percentage inside the battery, and what extensions add right of them (the clock is such an extension). Colours come from --st-* variables (defaults below from the toolbar colour; the
@@ -272,13 +271,9 @@ export class StatusComponent {
   private readonly extensions = inject(ExtensionHostService)
   protected readonly users = inject(UsersService)
   protected readonly texts = inject(DisplayTextsService)
-  private readonly playtime = inject(PlaytimeService)
-  // (not with "only in the app", and not on the lock screen: the play time is the user's - a switch to a brother or
-  // sister would end the lock; there the dot only shows who is in place)
-  protected readonly canSwitch = computed(() => {
-    const s = this.playtime.status()
-    return this.users.state()?.switchMode !== 'app' && !(s.enabled === true && s.state === 'blocked')
-  })
+  // (not with "only in the app"; on the lock screen too: the play time is each user's own - a brother or sister with time
+  // left may listen, a PIN keeps a child out; a parent's pause stays, it holds for the whole box)
+  protected readonly canSwitch = computed(() => this.users.state()?.switchMode !== 'app')
 
   protected openUsers(ev: Event): void {
     ev.stopPropagation()
