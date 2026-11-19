@@ -4620,5 +4620,9 @@
  "So lange nach dem Auflegen und nach jedem Drehen wählt der Drehregler Alben, danach stellt er wieder die Lautstärke ein. 0 heißt immer aktiv: bis du ein Album mit dem Taster wählst oder einen anderen Tag auflegst.": "Näin kauan tunnisteen asettamisen ja jokaisen kääntämisen jälkeen kiertosäädin valitsee albumeja, sen jälkeen se säätää taas äänenvoimakkuutta. 0 tarkoittaa aina aktiivinen: kunnes valitset albumin painikkeella tai asetat toisen tunnisteen.",
  "Ein Tag auf einem Artistcover (in der Bibliothek den Artisten öffnen, „NFC-Tag“ antippen) spielt das Album, das du in der Liste „Zugeordnete Tags“ gewählt hast. Nach dem Auflegen wählt der Drehregler (KY-040) unter den Alben dieses Artisten: Drehen geht zum nächsten oder vorigen Album, ein Druck auf den Taster spielt es. Ein OLED-Display zeigt dabei den Namen, den der Drehregler gerade hat. Die Anschlüsse des Drehreglers stehen darunter; sein Taster braucht einen eigenen Pin.": "Esittäjän kannessa oleva tunniste (avaa kirjastossa esittäjä ja napauta ”NFC-tunniste”) soittaa albumin, jonka valitsit luettelosta ”Liitetyt tunnisteet”. Tunnisteen asettamisen jälkeen kiertosäädin (KY-040) valitsee tämän esittäjän albumeista: kääntäminen siirtää seuraavaan tai edelliseen albumiin, painikkeen painaminen soittaa sen. OLED-näyttö näyttää nimen, jossa säädin on. Kiertosäätimen liitännät ovat alla; sen painike tarvitsee oman pinnin.",
  "Das Display ist aus – Stand {}": "Näyttö on pois päältä – tilanne klo {}",
- "Das Display ist aus.": "Näyttö on pois päältä."
+ "Das Display ist aus.": "Näyttö on pois päältä.",
+ "Erinnerungen": "Muistot",
+ "Die Fotos von heute vor einem Jahr und mehr – jeden Tag neu, wie in Immich": "Tämän päivän kuvat vuosi sitten ja aiemmin – joka päivä uudet, kuten Immichissä",
+ "Die Erinnerungen brauchen zusätzlich das Recht memory.read. Die Alben gehen auch ohne.": "Muistot tarvitsevat lisäksi oikeuden memory.read. Albumit toimivat ilmankin.",
+ "Für die Erinnerungen zusätzlich memory.read anhaken.": "Valitse muistoja varten myös memory.read."
 }

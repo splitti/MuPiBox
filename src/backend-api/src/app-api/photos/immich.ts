@@ -7,6 +7,9 @@
 // Besides its albums (5.1): people Immich knows by their faces - one, or two or three together (the pictures they are
 // all on) - and the favourites, each an album on the box with the newest pictures; a person's album shows the face on
 // the display (kept with the album's pictures). See docs/immich-personen-5.1.md.
+//
+// And Immich's memories (5.1): "on this day" of the years before and the birthdays of people Immich knows - those of the
+// day as one album, made anew at every sync and after midnight (Immich makes them a week ahead, each for its day).
 
 import { createHash } from 'node:crypto'
 import path from 'node:path'
@@ -77,6 +80,31 @@ const FAVORITES_NAME: Record<string, string> = {
   uk: 'Улюблені',
 }
 
+/** The memories' album, as the box knows it (its "ref") */
+export const MEMORIES_REF = 'memories'
+// its name on the box, in its language
+const MEMORIES_NAME: Record<string, string> = {
+  de: 'Erinnerungen',
+  en: 'Memories',
+  cs: 'Vzpomínky',
+  da: 'Minder',
+  el: 'Αναμνήσεις',
+  es: 'Recuerdos',
+  fi: 'Muistot',
+  fr: 'Souvenirs',
+  it: 'Ricordi',
+  nb: 'Minner',
+  nl: 'Herinneringen',
+  pl: 'Wspomnienia',
+  pt: 'Memórias',
+  ru: 'Воспоминания',
+  sv: 'Minnen',
+  tr: 'Anılar',
+  uk: 'Спогади',
+}
+/** The day as the box has it (its time zone), YYYY-MM-DD - the memories of this day */
+export const localDay = (d = new Date()): string => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
 export interface ImmichSettings {
   /** the server, http(s)://host:port, without /api */
   url: string
@@ -89,6 +117,8 @@ export interface ImmichSettings {
   people: string[][]
   /** the favourites (the heart in Immich) as an album */
   favorites: boolean
+  /** Immich's memories of the day as an album */
+  memories: boolean
   /** pictures at most of an album of people and of the favourites (SEARCH_LIMITS; 0 all); null: as the way they are kept */
   searchLimit: (typeof SEARCH_LIMITS)[number] | null
   keepCopy: boolean
@@ -142,6 +172,7 @@ export function immichSettings(cfg: unknown): ImmichSettings {
     albumIds: Array.isArray(n.albumIds) ? [...new Set(n.albumIds.filter((x): x is string => typeof x === 'string' && UUID.test(x)))].slice(0, ALBUMS_MAX) : [],
     people: peopleList(n.people) ?? [],
     favorites: n.favorites === true,
+    memories: n.memories === true,
     searchLimit: (SEARCH_LIMITS as readonly number[]).includes(n.searchLimit as number) ? (n.searchLimit as ImmichSettings['searchLimit']) : null,
     keepCopy: n.keepCopy !== false,
     syncMinutes: (SYNC_MINUTES as readonly number[]).includes(Number(n.syncMinutes)) ? (Number(n.syncMinutes) as ImmichSettings['syncMinutes']) : 360,
@@ -180,6 +211,10 @@ export function applyImmichSettings(cfg: Record<string, unknown>, patch: unknown
   if (p.favorites !== undefined) {
     if (typeof p.favorites !== 'boolean') return 'favorites'
     next.favorites = p.favorites
+  }
+  if (p.memories !== undefined) {
+    if (typeof p.memories !== 'boolean') return 'memories'
+    next.memories = p.memories
   }
   if (p.searchLimit !== undefined) {
     if (!(SEARCH_LIMITS as readonly unknown[]).includes(p.searchLimit)) return 'searchLimit'
@@ -234,6 +269,16 @@ export interface ImmichAsset {
   checksum?: string
   updatedAt?: string
   exifInfo?: { exifImageWidth?: number | null; exifImageHeight?: number | null; orientation?: string | number | null } | null
+  /** the size as shown (Immich 3 - a memory's pictures come without their EXIF) */
+  width?: number | null
+  height?: number | null
+}
+/** A memory of Immich: "on this day" (data.year) or a birthday (data.personName); shown from showAt to hideAt */
+interface ImmichMemory {
+  type?: string
+  memoryAt?: string
+  data?: { year?: number; personName?: string }
+  assets?: ImmichAsset[]
 }
 
 export class ImmichClient implements RemoteClient {
@@ -309,6 +354,10 @@ export class ImmichClient implements RemoteClient {
       const items = await this.searchChosen({ isFavorite: true }, signal, videos)
       return { name: FAVORITES_NAME[this.language] ?? FAVORITES_NAME.en, items: items.map(itemOf) }
     }
+    if (ref === MEMORIES_REF) {
+      const items = spreadChoice(await this.memories(localDay(), signal, videos), this.limit)
+      return { name: MEMORIES_NAME[this.language] ?? MEMORIES_NAME.en, items: items.map(itemOf) }
+    }
     const people = peopleOfRef(ref)
     if (people) {
       // (each person still there - one deleted or merged in Immich: the album is "no longer there", RemoteRefused 404)
@@ -344,6 +393,33 @@ export class ImmichClient implements RemoteClient {
       page = r.assets?.nextPage ? Number(r.assets.nextPage) : 0
     }
     return spreadChoice(out.slice(0, PICTURES_MAX), this.limit)
+  }
+
+  /**
+   * The pictures of the memories Immich shows on this day (YYYY-MM-DD): the newest year first, a birthday before them;
+   * each picture once. None that day: an empty list (the album is not on the display then) - so too when the key lacks
+   * memory.read (403): that is no key refused, the other albums go on (the app says what is missing).
+   */
+  async memories(day: string, signal: AbortSignal, videos: boolean): Promise<ImmichAsset[]> {
+    let list: ImmichMemory[]
+    try {
+      list = await this.json<ImmichMemory[]>(`/api/memories?for=${day}`, { signal })
+    } catch (err) {
+      if (err instanceof ImmichRefused && err.status === 403) return []
+      throw err
+    }
+    const memories = (Array.isArray(list) ? list : []).filter((m) => m && Array.isArray(m.assets))
+    const at = (m: ImmichMemory) => (typeof m.memoryAt === 'string' ? m.memoryAt : '')
+    memories.sort((a, b) => (a.type === 'birthday') !== (b.type === 'birthday') ? (a.type === 'birthday' ? -1 : 1) : at(b).localeCompare(at(a)))
+    const seen = new Set<string>()
+    const out: ImmichAsset[] = []
+    for (const m of memories)
+      for (const x of shownAssets(m.assets ?? [], videos))
+        if (!seen.has(x.id) && out.length < PICTURES_MAX) {
+          seen.add(x.id)
+          out.push(x)
+        }
+    return out
   }
 
   /** The people Immich knows by name (not those hidden there), by name */
@@ -425,7 +501,7 @@ export class ImmichClient implements RemoteClient {
 }
 
 export type ImmichTest =
-  | { ok: true; version: string; account: string | null; albums: number; assets: number; people: boolean }
+  | { ok: true; version: string; account: string | null; albums: number; assets: number; people: boolean; memories: boolean }
   | { ok: false; error: 'unreachable' | 'unauthorized' | 'permissions' | 'unsupportedVersion' }
 
 /**
@@ -473,6 +549,11 @@ export async function testImmich(client: ImmichClient): Promise<ImmichTest> {
     () => true,
     () => false,
   )
+  // (the memories: only with memory.read - the same)
+  const memories = await client.json(`/api/memories?for=${localDay()}`).then(
+    () => true,
+    () => false,
+  )
   return {
     ok: true,
     version: `${v.major}.${v.minor}.${v.patch}`,
@@ -480,6 +561,7 @@ export async function testImmich(client: ImmichClient): Promise<ImmichTest> {
     albums: list.length,
     assets: list.reduce((n, a) => n + (Number(a.assetCount) || 0), 0),
     people,
+    memories,
   }
 }
 
@@ -488,6 +570,8 @@ export async function testImmich(client: ImmichClient): Promise<ImmichTest> {
 
 // the size of a picture as Immich knows it, turned as it is shown (EXIF orientation 5-8: on its side)
 function dims(x: ImmichAsset): { w: number; h: number } {
+  // (no EXIF - a memory's picture: the size Immich gives it, as shown)
+  if (!x.exifInfo && Number(x.width) > 0 && Number(x.height) > 0) return { w: Number(x.width), h: Number(x.height) }
   const w = Number(x.exifInfo?.exifImageWidth) || 0
   const h = Number(x.exifInfo?.exifImageHeight) || 0
   const o = Number(x.exifInfo?.orientation)
@@ -535,8 +619,8 @@ export function shownAssets(list: ImmichAsset[], videos: boolean): ImmichAsset[]
 }
 const itemOf = (x: ImmichAsset): RemoteItem =>({ ref: x.id, kind: x.type === 'VIDEO' ? 'video' : 'photo', ver: versionOf(x), ...dims(x), taken: takenOf(x), duration: clipSeconds(x.duration) })
 
-/** What the sync takes from Immich: the albums, the albums of people, the favourites */
-export const immichRefs = (s: ImmichSettings): string[] => [...s.albumIds, ...s.people.map(peopleRef), ...(s.favorites ? [FAVORITES_REF] : [])]
+/** What the sync takes from Immich: the albums, the albums of people, the favourites, the memories of the day */
+export const immichRefs = (s: ImmichSettings): string[] => [...s.albumIds, ...s.people.map(peopleRef), ...(s.favorites ? [FAVORITES_REF] : []), ...(s.memories ? [MEMORIES_REF] : [])]
 
 /** Immich for the sync of the albums (remote.ts) */
 function immichSpec(deps: PhotoImmichDeps) {
@@ -549,7 +633,8 @@ function immichSpec(deps: PhotoImmichDeps) {
     faceDir: IMMICH_FACE_DIR,
     settings: (cfg: MupiboxConfig | undefined) => {
       const s = immichSettings(cfg)
-      return { set: !!s.url && !!s.apiKey, albumIds: immichRefs(s), keepCopy: s.keepCopy, syncMinutes: s.syncMinutes, cacheLimitMb: s.cacheLimitMb }
+      // (the memories: a sync after midnight too - they are the day's)
+      return { set: !!s.url && !!s.apiKey, albumIds: immichRefs(s), keepCopy: s.keepCopy, syncMinutes: s.syncMinutes, cacheLimitMb: s.cacheLimitMb, daily: s.memories }
     },
     client: (cfg: MupiboxConfig | undefined) => immichClient(deps, cfg),
     unreadable: 'the key cannot be read on this box, the pictures stay - enter it again in the app',
@@ -574,7 +659,7 @@ function immichClient(deps: PhotoImmichDeps, cfg: MupiboxConfig | undefined): Im
  *   GET  /api/app/photos/immich/thumb/:id   an album's picture from Immich for that list (through the box)
  *   GET  /api/app/photos/immich/people      the people Immich knows by name (to tick)
  *   GET  /api/app/photos/immich/face/:id    a person's face for that list (through the box)
- *   POST /api/app/photos/immich             {url?, apiKey?, account?, albumIds?, people?, favorites?, searchLimit?, keepCopy?, syncMinutes?, cacheLimitMb?}
+ *   POST /api/app/photos/immich             {url?, apiKey?, account?, albumIds?, people?, favorites?, memories?, searchLimit?, keepCopy?, syncMinutes?, cacheLimitMb?}
  *   POST /api/app/photos/immich/sync        a sync now
  *   POST /api/app/photos/immich/remove      "Verbindung trennen": address, key, albums and pictures off the box
  */
@@ -594,6 +679,7 @@ export function registerPhotoImmichRoutes(router: Router, deps: PhotoImmichDeps)
         albumIds: s.albumIds,
         people: s.people,
         favorites: s.favorites,
+        memories: s.memories,
         searchLimit: s.searchLimit,
         keepCopy: s.keepCopy,
         syncMinutes: s.syncMinutes,

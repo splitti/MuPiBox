@@ -104,6 +104,8 @@ export interface RemoteSettings {
   keepCopy: boolean
   syncMinutes: (typeof SYNC_MINUTES)[number]
   cacheLimitMb: (typeof CACHE_LIMITS_MB)[number]
+  /** an album that is the day's (Immich's memories): a sync after midnight too, whatever the interval */
+  daily?: boolean
 }
 
 export interface RemoteSpec {
@@ -208,7 +210,9 @@ export class RemotePhotoSync {
       const s = this.spec.settings(cfg)
       if (!photoSettings(cfg).enabled || s.syncMinutes === 0 || this.state.running || !s.set) return
       const every = (this.state.offlineSince || this.state.retry ? Math.min(15, s.syncMinutes) : s.syncMinutes) * 60_000
-      if (Date.now() - this.lastTry >= every) void this.run()
+      // (a new day: the day's album anew - the last try was on another day of the box's clock)
+      const newDay = s.daily === true && this.lastTry > 0 && new Date(this.lastTry).toDateString() !== new Date().toDateString()
+      if (Date.now() - this.lastTry >= every || newDay) void this.run()
     }
     setTimeout(() => {
       tick()

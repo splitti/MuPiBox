@@ -258,6 +258,58 @@ test('photo Immich: a person, two together and the favourites read from a server
   }
 })
 
+test('photo Immich: the memories of the day - birthday first, then the newest year, each picture once, nothing hidden; no right: none', async () => {
+  const { ImmichClient, MEMORIES_REF, localDay, immichRefs, immichSettings, applyImmichSettings } = await import('./app-api/photos/immich')
+  const http = await import('node:http')
+  const id = (n: number) => `bbbbbbbb-0000-4000-8000-${String(n).padStart(12, '0')}`
+  const pic = (n: number, extra: Record<string, unknown> = {}) => ({ id: id(n), type: 'IMAGE', visibility: 'timeline', checksum: `c${n}`, width: 4000, height: 3000, ...extra })
+  let allowed = true
+  const asked: string[] = []
+  const server = http.createServer((req, res) => {
+    const url = req.url ?? ''
+    asked.push(url)
+    res.writeHead(url.startsWith('/api/memories') ? (allowed ? 200 : 403) : 404, { 'Content-Type': 'application/json' })
+    if (!url.startsWith('/api/memories') || !allowed) return res.end(JSON.stringify({ message: 'Missing required permission: memory.read' }))
+    res.end(
+      JSON.stringify([
+        { type: 'on_this_day', memoryAt: '2023-11-19T00:00:00.000Z', data: { year: 2023 }, assets: [pic(3), pic(4, { visibility: 'hidden' })] },
+        { type: 'on_this_day', memoryAt: '2025-11-19T00:00:00.000Z', data: { year: 2025 }, assets: [pic(1), pic(2, { isTrashed: true }), pic(5, { type: 'VIDEO', duration: 5000 })] },
+        { type: 'birthday', memoryAt: '2026-11-21T00:00:00.000Z', data: { year: 2026, personName: 'Oma' }, assets: [pic(9), pic(1)] },
+        { type: 'on_this_day', memoryAt: '2024-11-19T00:00:00.000Z' },
+      ]),
+    )
+  })
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', () => r()))
+  const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`
+  try {
+    const client = new ImmichClient(base, 'good-key-0123', 'de', 0)
+    const day = await client.album(MEMORIES_REF, AbortSignal.timeout(5000), false)
+    assert.equal(day.name, 'Erinnerungen')
+    assert.deepEqual(
+      day.items.map((x) => x.ref),
+      [id(9), id(1), id(3)],
+    )
+    // (the size as Immich gives it - a memory's pictures have no EXIF)
+    assert.deepEqual([day.items[0].w, day.items[0].h], [4000, 3000])
+    assert.equal(asked[0], `/api/memories?for=${localDay()}`)
+    // clips with "Videos anzeigen"
+    assert.ok((await client.album(MEMORIES_REF, AbortSignal.timeout(5000), true)).items.some((x) => x.ref === id(5) && x.kind === 'video'))
+    // a key without memory.read: no memories, no refused key (the other albums go on)
+    allowed = false
+    assert.deepEqual((await client.album(MEMORIES_REF, AbortSignal.timeout(5000), false)).items, [])
+  } finally {
+    server.close()
+  }
+  // the switch: checked, kept, asked for by the sync, after the favourites
+  const cfg: Record<string, unknown> = {}
+  assert.equal(applyImmichSettings(cfg, { memories: 'yes' }), 'memories')
+  assert.equal(applyImmichSettings(cfg, { url: 'immich.local:2283', apiKey: 'k'.repeat(20), favorites: true, memories: true }), null)
+  const s = immichSettings(cfg)
+  assert.equal(s.memories, true)
+  assert.deepEqual(immichRefs(s), ['favorites', MEMORIES_REF])
+  assert.equal(localDay(new Date(2026, 0, 5, 23, 59)), '2026-01-05')
+})
+
 test('photo Immich: the test and an album against a server like Immich (old version, wrong key, assets searched)', async () => {
   const { ImmichClient, testImmich } = await import('./app-api/photos/immich')
   const http = await import('node:http')
@@ -294,7 +346,7 @@ test('photo Immich: the test and an album against a server like Immich (old vers
   try {
     const base = `http://127.0.0.1:${port}`
     // (no /api/people here: the people are not readable - the albums work all the same)
-    assert.deepEqual(await testImmich(new ImmichClient(base, 'good-key-0123')), { ok: true, version: '1.120.2', account: 'Familie', albums: 1, assets: 2, people: false })
+    assert.deepEqual(await testImmich(new ImmichClient(base, 'good-key-0123')), { ok: true, version: '1.120.2', account: 'Familie', albums: 1, assets: 2, people: false, memories: false })
     assert.deepEqual(await testImmich(new ImmichClient(base, 'wrong-key-0123')), { ok: false, error: 'unauthorized' })
     // (a key with chosen rights: one missing is told apart from a wrong key)
     for (const key of ['no-albums-0123', 'no-view-01234', 'no-read-01234']) assert.deepEqual(await testImmich(new ImmichClient(base, key)), { ok: false, error: 'permissions' }, key)

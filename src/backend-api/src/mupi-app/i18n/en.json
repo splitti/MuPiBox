@@ -4636,5 +4636,9 @@
  "So lange nach dem Auflegen und nach jedem Drehen wählt der Drehregler Alben, danach stellt er wieder die Lautstärke ein. 0 heißt immer aktiv: bis du ein Album mit dem Taster wählst oder einen anderen Tag auflegst.": "For this long after the tag is laid on, and after each turn, the rotary knob chooses albums, then it sets the volume again. 0 means always active: until you choose an album with the button or lay on another tag.",
  "Ein Tag auf einem Artistcover (in der Bibliothek den Artisten öffnen, „NFC-Tag“ antippen) spielt das Album, das du in der Liste „Zugeordnete Tags“ gewählt hast. Nach dem Auflegen wählt der Drehregler (KY-040) unter den Alben dieses Artisten: Drehen geht zum nächsten oder vorigen Album, ein Druck auf den Taster spielt es. Ein OLED-Display zeigt dabei den Namen, den der Drehregler gerade hat. Die Anschlüsse des Drehreglers stehen darunter; sein Taster braucht einen eigenen Pin.": "A tag on an artist cover (in the library open the artist and tap “NFC tag”) plays the album you chose in the list “Assigned tags”. After the tag is laid on, the rotary knob (KY-040) chooses among the albums of that artist: turning goes to the next or previous album, pressing the button plays it. An OLED display shows the name the knob is on. The connections of the rotary knob are below; its button needs a pin of its own.",
  "Das Display ist aus – Stand {}": "The display is off – as of {}",
- "Das Display ist aus.": "The display is off."
+ "Das Display ist aus.": "The display is off.",
+ "Erinnerungen": "Memories",
+ "Die Fotos von heute vor einem Jahr und mehr – jeden Tag neu, wie in Immich": "The photos of this day a year ago and more – new every day, as in Immich",
+ "Die Erinnerungen brauchen zusätzlich das Recht memory.read. Die Alben gehen auch ohne.": "The memories also need the right memory.read. Albums work without it.",
+ "Für die Erinnerungen zusätzlich memory.read anhaken.": "For the memories, also tick memory.read."
 }

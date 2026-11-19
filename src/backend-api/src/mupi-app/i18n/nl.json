@@ -4620,5 +4620,9 @@
  "So lange nach dem Auflegen und nach jedem Drehen wählt der Drehregler Alben, danach stellt er wieder die Lautstärke ein. 0 heißt immer aktiv: bis du ein Album mit dem Taster wählst oder einen anderen Tag auflegst.": "Zo lang na het leggen van de tag en na elke draai kiest de draairegelaar albums, daarna stelt hij weer het volume in. 0 betekent altijd actief: tot je met de knop een album kiest of een andere tag legt.",
  "Ein Tag auf einem Artistcover (in der Bibliothek den Artisten öffnen, „NFC-Tag“ antippen) spielt das Album, das du in der Liste „Zugeordnete Tags“ gewählt hast. Nach dem Auflegen wählt der Drehregler (KY-040) unter den Alben dieses Artisten: Drehen geht zum nächsten oder vorigen Album, ein Druck auf den Taster spielt es. Ein OLED-Display zeigt dabei den Namen, den der Drehregler gerade hat. Die Anschlüsse des Drehreglers stehen darunter; sein Taster braucht einen eigenen Pin.": "Een tag op een artiestencover (open in de bibliotheek de artiest en tik op „NFC-tag”) speelt het album dat je in de lijst „Gekoppelde tags” hebt gekozen. Na het leggen van de tag kiest de draairegelaar (KY-040) uit de albums van die artiest: draaien gaat naar het volgende of vorige album, op de knop drukken speelt het af. Een OLED-display toont de naam waar de regelaar op staat. De aansluitingen van de draairegelaar staan eronder; zijn knop heeft een eigen pin nodig.",
  "Das Display ist aus – Stand {}": "Het display is uit – stand van {}",
- "Das Display ist aus.": "Het display is uit."
+ "Das Display ist aus.": "Het display is uit.",
+ "Erinnerungen": "Herinneringen",
+ "Die Fotos von heute vor einem Jahr und mehr – jeden Tag neu, wie in Immich": "De foto’s van deze dag een jaar geleden en eerder – elke dag nieuw, zoals in Immich",
+ "Die Erinnerungen brauchen zusätzlich das Recht memory.read. Die Alben gehen auch ohne.": "De herinneringen hebben ook het recht memory.read nodig. Albums werken ook zonder.",
+ "Für die Erinnerungen zusätzlich memory.read anhaken.": "Vink voor de herinneringen ook memory.read aan."
 }

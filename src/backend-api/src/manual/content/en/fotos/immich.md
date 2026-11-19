@@ -6,7 +6,7 @@
 
 1. Open Immich in the browser and sign in.
 2. Profile picture at the top right › **Account Settings** › **API Keys** › **New API Key**.
-3. Enter the name "MuPiBox". If Immich asks for permissions, tick only these: `album.read`, `asset.read` and `asset.view`. With `user.read` the test also shows your account name.
+3. Enter the name "MuPiBox". If Immich asks for permissions, tick only these: `album.read`, `asset.read` and `asset.view`. With `user.read` the test also shows your account name. For albums of people also `person.read`, for the memories `memory.read`.
 4. Copy the key at once: Immich shows it only once.
 
 ## Connecting
@@ -26,5 +26,15 @@ The key is kept encrypted on the box and never shown again. It applies only to t
 | **Key invalid** | copy the whole key, or create a new one |
 | **Permissions missing** | create a key with `album.read`, `asset.read` and `asset.view` |
 | **Immich version too old** | update Immich |
+
+## People, favourites and memories
+
+In the last step (**Albums and people**) there is more than the albums:
+
+- **People**: people Immich recognises by their faces and who have a name there. Every person you tick becomes an album of its own; a **shared album** of two or three people shows the photos they are all on. On the display the face is in front. Needs `person.read`.
+- **Favourites**: all photos with a heart in Immich.
+- **Memories**: the photos Immich shows as a memory today – "a year ago today" and more, and in the days before a birthday the photos of that person. The album is new every day; the box syncs it shortly after midnight. On days without a memory it is not on the display. Needs `memory.read`.
+
+People and favourites can have a great many photos: **Pictures per person album** limits them; if there are more, the box picks evenly from all years.
 
 On the Immich page you then change albums, sync, cache, address and key. Whether the box keeps the photos or fetches them live is explained under [Photo services: keep or live](speichern-oder-live.md).

@@ -13958,7 +13958,7 @@ function mountPhotoNas(root, page) {
 
 // (the last step: albums and people - tab; people: the list of Immich, groups: the albums of people chosen, each one
 // to three ids; fav: the favourites)
-const photoImmich = { data: null, step: 0, url: '', key: '', test: null, testing: false, albums: null, chosen: new Set(), timer: 0, tab: 'albums', people: null, groups: [], fav: false, q: '' }
+const photoImmich = { data: null, step: 0, url: '', key: '', test: null, testing: false, albums: null, chosen: new Set(), timer: 0, tab: 'albums', people: null, groups: [], fav: false, mem: false, q: '' }
 
 async function loadPhotoImmich() {
   const r = await api(`${API}/photos/immich`)
@@ -14102,7 +14102,7 @@ function photoImmichSteps() {
     const kept = photoImmichKeyKept()
     body = `<h2>API-Schlüssel anlegen</h2><p class="help">Damit die Box deine Alben lesen darf.</p>
       <ol class="ph-howto"><li>Immich im Browser öffnen und anmelden.</li><li>Kontoeinstellungen › API-Schlüssel › „Neuer API-Schlüssel“.</li>
-      <li>Name „MuPiBox“ eingeben. Fragt Immich nach Rechten, nur diese anhaken: album.read, asset.read und asset.view (gern auch user.read, dann zeigt der Test deinen Kontonamen).</li><li>Für Alben von Personen zusätzlich person.read anhaken.</li><li>Schlüssel kopieren und hier einfügen.</li></ol>
+      <li>Name „MuPiBox“ eingeben. Fragt Immich nach Rechten, nur diese anhaken: album.read, asset.read und asset.view (gern auch user.read, dann zeigt der Test deinen Kontonamen).</li><li>Für Alben von Personen zusätzlich person.read anhaken.</li><li>Für die Erinnerungen zusätzlich memory.read anhaken.</li><li>Schlüssel kopieren und hier einfügen.</li></ol>
       <div class="field"><label for="im-key">API-Schlüssel</label><div class="input-wrap"><input class="input mono has-eye" id="im-key" type="password" value="${esc(photoImmich.key)}" placeholder="${esc(kept ? tr('Gespeichert – leer lassen, um ihn zu behalten') : '')}" ${NO_PW_MANAGER} spellcheck="false"><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div>
       <small>Wird nur auf der Box gespeichert und hier nie wieder angezeigt.</small></div>`
     next = `<button class="btn primary" id="im-test" ${photoImmich.testing ? 'disabled' : ''}>${esc(tr(photoImmich.testing ? 'Wird getestet …' : 'Verbindung testen'))}</button>`
@@ -14110,7 +14110,8 @@ function photoImmichSteps() {
     if (t?.ok) {
       body = `<h2>Verbindung steht</h2><p class="help">Die Box kann deine Alben lesen.</p>
         <dl class="kv">${t.account ? `<div><dt>Konto</dt><dd translate="no">${esc(t.account)}</dd></div>` : ''}<div><dt>Alben</dt><dd>${esc(String(t.albums))}</dd></div><div><dt>Fotos und Videos</dt><dd>${esc(String(t.assets))}</dd></div><div><dt>Version</dt><dd>${esc(t.version)}</dd></div></dl>
-        ${t.people === false ? `<div class="note warn">${icon('info', 18)}<span>${esc(tr('Alben von Personen brauchen zusätzlich das Recht person.read. Die Alben gehen auch ohne.'))}</span></div>` : ''}`
+        ${t.people === false ? `<div class="note warn">${icon('info', 18)}<span>${esc(tr('Alben von Personen brauchen zusätzlich das Recht person.read. Die Alben gehen auch ohne.'))}</span></div>` : ''}
+        ${t.memories === false ? `<div class="note warn">${icon('info', 18)}<span>${esc(tr('Die Erinnerungen brauchen zusätzlich das Recht memory.read. Die Alben gehen auch ohne.'))}</span></div>` : ''}`
       next = `<button class="btn primary" id="im-next3">Weiter</button>`
     } else {
       const [head, text] = IMMICH_ERRORS[t?.error] ?? IMMICH_ERRORS.unreachable
@@ -14137,10 +14138,13 @@ function photoImmichSteps() {
               )
               .join('')}</div>`
           : `<p class="help" style="margin:0">In Immich gibt es noch keine Alben.</p>`
-    // (the favourites: an album of their own, above the albums)
+    // (the favourites and the memories of the day: albums of their own, above the albums)
     const fav = `<div class="rows"><div class="entry ph-im-album"><span class="ph-thumb">${icon('heart', 20)}</span>
       <span class="lbl"><b>${esc(tr('Favoriten'))}</b><small>${esc(tr('Alle Fotos mit Herz in Immich'))}</small></span>
-      <button class="ph-check-box" role="checkbox" aria-checked="${photoImmich.fav}" id="im-fav" aria-label="${esc(tr('Favoriten'))}">${photoImmich.fav ? icon('check', 16) : ''}</button></div></div>`
+      <button class="ph-check-box" role="checkbox" aria-checked="${photoImmich.fav}" id="im-fav" aria-label="${esc(tr('Favoriten'))}">${photoImmich.fav ? icon('check', 16) : ''}</button></div>
+      <div class="entry ph-im-album"><span class="ph-thumb">${icon('hist', 20)}</span>
+      <span class="lbl"><b>${esc(tr('Erinnerungen'))}</b><small>${esc(tr('Die Fotos von heute vor einem Jahr und mehr – jeden Tag neu, wie in Immich'))}</small></span>
+      <button class="ph-check-box" role="checkbox" aria-checked="${photoImmich.mem}" id="im-mem" aria-label="${esc(tr('Erinnerungen'))}">${photoImmich.mem ? icon('check', 16) : ''}</button></div></div>`
     body = `<div class="ph-im-pick">${photoImmichTabs()}${fav}<div class="card-head"><h2>${esc(tr(list?.albums ? `${list.albums.length} Alben in Immich` : 'Alben in Immich'))}</h2>${list?.albums?.length ? '<button class="btn sm" id="im-all">Alle wählen</button>' : ''}</div>
       ${rows}<p class="help" style="margin:0">${esc(tr(`${photoImmich.chosen.size} ${photoImmich.chosen.size === 1 ? 'Album' : 'Alben'} gewählt`))}</p></div>`
     next = `<button class="btn primary" id="im-done">Fertig</button>`
@@ -14176,7 +14180,7 @@ function photoImmichTop() {
       <div class="ph-nas-state ${status[1]}">${status[0]}</div>
       <dl class="kv"><div><dt>Alben</dt><dd>${esc(tr(`${st.albumIds.length} · ${d.pictures} ${d.pictures === 1 ? 'Foto' : 'Fotos'}`))}</dd></div>${
         st.people?.length ? `<div><dt>Personen</dt><dd>${esc(tr(`${st.people.length} ${st.people.length === 1 ? 'Album' : 'Alben'}`))}</dd></div>` : ''
-      }${st.favorites ? `<div><dt>Favoriten</dt><dd>${esc(tr('Eingeschaltet'))}</dd></div>` : ''}</dl>
+      }${st.favorites ? `<div><dt>Favoriten</dt><dd>${esc(tr('Eingeschaltet'))}</dd></div>` : ''}${st.memories ? `<div><dt>Erinnerungen</dt><dd>${esc(tr('Eingeschaltet'))}</dd></div>` : ''}</dl>
       ${s.unauthorized ? `<div class="note danger">${icon('info', 18)}<span>Immich nimmt den Schlüssel nicht mehr an. Die Box zeigt weiter die gespeicherten Fotos. Lege in Immich einen neuen Schlüssel an und ersetze ihn unten.</span></div>` : ''}
       ${s.offlineSince ? `<div class="note danger">${icon('info', 18)}<span>Die Box zeigt weiter die gespeicherten Fotos. Prüfe, ob Immich läuft und die Adresse stimmt.</span></div>` : ''}
       ${s.missing ? `<div class="note warn">${icon('info', 18)}<span>${esc(s.missing === 1 ? tr('Ein gewähltes Album gibt es in Immich nicht mehr.') : tr(`${s.missing} gewählte Alben gibt es in Immich nicht mehr.`))}</span></div>` : ''}
@@ -14229,6 +14233,7 @@ async function photoImmichOpenChoice(redraw) {
   photoImmich.chosen = new Set(st.albumIds)
   photoImmich.groups = (st.people ?? []).map((g) => [...g])
   photoImmich.fav = st.favorites === true
+  photoImmich.mem = st.memories === true
   photoImmich.tab = 'albums'
   photoImmich.q = ''
   photoImmich.people = null
@@ -14312,6 +14317,10 @@ function mountPhotoImmich(root, page) {
     photoImmich.fav = !photoImmich.fav
     redraw()
   })
+  $('#im-mem', root)?.addEventListener('click', () => {
+    photoImmich.mem = !photoImmich.mem
+    redraw()
+  })
   const peopleMax = d.peopleMax ?? 20
   const bindPeople = () => {
     for (const b of root.querySelectorAll('[data-imp]')) {
@@ -14361,8 +14370,8 @@ function mountPhotoImmich(root, page) {
     redraw()
   })
   $('#im-done', root)?.addEventListener('click', async () => {
-    const any = photoImmich.chosen.size || photoImmich.groups.length || photoImmich.fav
-    if (!(await save({ albumIds: [...photoImmich.chosen], people: photoImmich.groups, favorites: photoImmich.fav }, any ? 'Gespeichert – Abgleich gestartet' : 'Gespeichert'))) return
+    const any = photoImmich.chosen.size || photoImmich.groups.length || photoImmich.fav || photoImmich.mem
+    if (!(await save({ albumIds: [...photoImmich.chosen], people: photoImmich.groups, favorites: photoImmich.fav, memories: photoImmich.mem }, any ? 'Gespeichert – Abgleich gestartet' : 'Gespeichert'))) return
     photoImmich.step = 0
     redraw()
   })

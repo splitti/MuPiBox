@@ -4620,5 +4620,9 @@
  "So lange nach dem Auflegen und nach jedem Drehen wählt der Drehregler Alben, danach stellt er wieder die Lautstärke ein. 0 heißt immer aktiv: bis du ein Album mit dem Taster wählst oder einen anderen Tag auflegst.": "Per questo tempo dopo la posa del tag e dopo ogni rotazione, la manopola sceglie gli album, poi regola di nuovo il volume. 0 significa sempre attiva: finché non scegli un album con il pulsante o appoggi un altro tag.",
  "Ein Tag auf einem Artistcover (in der Bibliothek den Artisten öffnen, „NFC-Tag“ antippen) spielt das Album, das du in der Liste „Zugeordnete Tags“ gewählt hast. Nach dem Auflegen wählt der Drehregler (KY-040) unter den Alben dieses Artisten: Drehen geht zum nächsten oder vorigen Album, ein Druck auf den Taster spielt es. Ein OLED-Display zeigt dabei den Namen, den der Drehregler gerade hat. Die Anschlüsse des Drehreglers stehen darunter; sein Taster braucht einen eigenen Pin.": "Un tag sulla copertina di un artista (nella libreria apri l’artista e tocca «Tag NFC») riproduce l’album scelto nell’elenco «Tag assegnati». Dopo la posa del tag, la manopola (KY-040) sceglie tra gli album di quell’artista: ruotare passa all’album successivo o precedente, premere il pulsante lo riproduce. Un display OLED mostra il nome su cui si trova la manopola. I collegamenti della manopola sono qui sotto; il suo pulsante ha bisogno di un pin proprio.",
  "Das Display ist aus – Stand {}": "Il display è spento – stato delle {}",
- "Das Display ist aus.": "Il display è spento."
+ "Das Display ist aus.": "Il display è spento.",
+ "Erinnerungen": "Ricordi",
+ "Die Fotos von heute vor einem Jahr und mehr – jeden Tag neu, wie in Immich": "Le foto di questo giorno di un anno fa e oltre – nuove ogni giorno, come in Immich",
+ "Die Erinnerungen brauchen zusätzlich das Recht memory.read. Die Alben gehen auch ohne.": "I ricordi richiedono anche il permesso memory.read. Gli album funzionano anche senza.",
+ "Für die Erinnerungen zusätzlich memory.read anhaken.": "Per i ricordi, spunta anche memory.read."
 }

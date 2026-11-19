@@ -4620,5 +4620,9 @@
  "So lange nach dem Auflegen und nach jedem Drehen wählt der Drehregler Alben, danach stellt er wieder die Lautstärke ein. 0 heißt immer aktiv: bis du ein Album mit dem Taster wählst oder einen anderen Tag auflegst.": "Så lenge etter at taggen er lagt på og etter hver dreiing velger dreiebryteren album, deretter stiller den inn lydstyrken igjen. 0 betyr alltid aktiv: til du velger et album med knappen eller legger på en annen tagg.",
  "Ein Tag auf einem Artistcover (in der Bibliothek den Artisten öffnen, „NFC-Tag“ antippen) spielt das Album, das du in der Liste „Zugeordnete Tags“ gewählt hast. Nach dem Auflegen wählt der Drehregler (KY-040) unter den Alben dieses Artisten: Drehen geht zum nächsten oder vorigen Album, ein Druck auf den Taster spielt es. Ein OLED-Display zeigt dabei den Namen, den der Drehregler gerade hat. Die Anschlüsse des Drehreglers stehen darunter; sein Taster braucht einen eigenen Pin.": "En tagg på et artistcover (åpne artisten i biblioteket og trykk på «NFC-tagg») spiller albumet du valgte i listen «Tilordnede tagger». Etter pålegging velger dreiebryteren (KY-040) blant albumene til denne artisten: Dreiing går til neste eller forrige album, trykk på knappen spiller det. En OLED-skjerm viser navnet dreiebryteren står på. Tilkoblingene til dreiebryteren står nedenfor; knappen trenger en egen pinne.",
  "Das Display ist aus – Stand {}": "Skjermen er av – status kl. {}",
- "Das Display ist aus.": "Skjermen er av."
+ "Das Display ist aus.": "Skjermen er av.",
+ "Erinnerungen": "Minner",
+ "Die Fotos von heute vor einem Jahr und mehr – jeden Tag neu, wie in Immich": "Bildene fra denne dagen for ett år siden og mer – nye hver dag, som i Immich",
+ "Die Erinnerungen brauchen zusätzlich das Recht memory.read. Die Alben gehen auch ohne.": "Minnene trenger i tillegg rettigheten memory.read. Album fungerer også uten.",
+ "Für die Erinnerungen zusätzlich memory.read anhaken.": "For minnene, kryss også av memory.read."
 }

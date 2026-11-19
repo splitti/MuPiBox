@@ -4620,5 +4620,9 @@
  "So lange nach dem Auflegen und nach jedem Drehen wählt der Drehregler Alben, danach stellt er wieder die Lautstärke ein. 0 heißt immer aktiv: bis du ein Album mit dem Taster wählst oder einen anderen Tag auflegst.": "Po tuto dobu po přiložení tagu a po každém otočení vybírá otočný ovladač alba, poté opět nastavuje hlasitost. 0 znamená stále aktivní: dokud nevyberete album tlačítkem nebo nepřiložíte jiný tag.",
  "Ein Tag auf einem Artistcover (in der Bibliothek den Artisten öffnen, „NFC-Tag“ antippen) spielt das Album, das du in der Liste „Zugeordnete Tags“ gewählt hast. Nach dem Auflegen wählt der Drehregler (KY-040) unter den Alben dieses Artisten: Drehen geht zum nächsten oder vorigen Album, ein Druck auf den Taster spielt es. Ein OLED-Display zeigt dabei den Namen, den der Drehregler gerade hat. Die Anschlüsse des Drehreglers stehen darunter; sein Taster braucht einen eigenen Pin.": "Tag na obalu interpreta (v knihovně otevřete interpreta a klepněte na „NFC tag“) přehraje album, které jste vybrali v seznamu „Přiřazené tagy“. Po přiložení tagu vybírá otočný ovladač (KY-040) mezi alby tohoto interpreta: otočením přejdete na další nebo předchozí album, stisk tlačítka ho přehraje. OLED displej přitom ukazuje název, na kterém ovladač právě stojí. Připojení otočného ovladače jsou níže; jeho tlačítko potřebuje vlastní pin.",
  "Das Display ist aus – Stand {}": "Displej je vypnutý – stav z {}",
- "Das Display ist aus.": "Displej je vypnutý."
+ "Das Display ist aus.": "Displej je vypnutý.",
+ "Erinnerungen": "Vzpomínky",
+ "Die Fotos von heute vor einem Jahr und mehr – jeden Tag neu, wie in Immich": "Fotky z tohoto dne před rokem i dříve – každý den nové, jako v Immichi",
+ "Die Erinnerungen brauchen zusätzlich das Recht memory.read. Die Alben gehen auch ohne.": "Vzpomínky potřebují navíc právo memory.read. Alba fungují i bez něj.",
+ "Für die Erinnerungen zusätzlich memory.read anhaken.": "Pro vzpomínky zaškrtněte také memory.read."
 }

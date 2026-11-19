@@ -4620,5 +4620,9 @@
  "So lange nach dem Auflegen und nach jedem Drehen wählt der Drehregler Alben, danach stellt er wieder die Lautstärke ein. 0 heißt immer aktiv: bis du ein Album mit dem Taster wählst oder einen anderen Tag auflegst.": "Durante este tiempo tras colocar la etiqueta y tras cada giro, el mando giratorio elige álbumes; después vuelve a ajustar el volumen. 0 significa siempre activo: hasta que elijas un álbum con el botón o coloques otra etiqueta.",
  "Ein Tag auf einem Artistcover (in der Bibliothek den Artisten öffnen, „NFC-Tag“ antippen) spielt das Album, das du in der Liste „Zugeordnete Tags“ gewählt hast. Nach dem Auflegen wählt der Drehregler (KY-040) unter den Alben dieses Artisten: Drehen geht zum nächsten oder vorigen Album, ein Druck auf den Taster spielt es. Ein OLED-Display zeigt dabei den Namen, den der Drehregler gerade hat. Die Anschlüsse des Drehreglers stehen darunter; sein Taster braucht einen eigenen Pin.": "Una etiqueta en la portada de un artista (en la biblioteca, abre el artista y pulsa «Etiqueta NFC») reproduce el álbum que elegiste en la lista «Etiquetas asignadas». Tras colocar la etiqueta, el mando giratorio (KY-040) elige entre los álbumes de ese artista: girar pasa al álbum siguiente o anterior, pulsar el botón lo reproduce. Una pantalla OLED muestra el nombre en el que está el mando. Las conexiones del mando giratorio están debajo; su botón necesita un pin propio.",
  "Das Display ist aus – Stand {}": "La pantalla está apagada – estado de las {}",
- "Das Display ist aus.": "La pantalla está apagada."
+ "Das Display ist aus.": "La pantalla está apagada.",
+ "Erinnerungen": "Recuerdos",
+ "Die Fotos von heute vor einem Jahr und mehr – jeden Tag neu, wie in Immich": "Las fotos de este día hace un año o más – nuevas cada día, como en Immich",
+ "Die Erinnerungen brauchen zusätzlich das Recht memory.read. Die Alben gehen auch ohne.": "Los recuerdos necesitan además el permiso memory.read. Los álbumes funcionan sin él.",
+ "Für die Erinnerungen zusätzlich memory.read anhaken.": "Para los recuerdos, marca también memory.read."
 }

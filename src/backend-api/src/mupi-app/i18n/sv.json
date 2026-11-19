@@ -4620,5 +4620,9 @@
  "So lange nach dem Auflegen und nach jedem Drehen wählt der Drehregler Alben, danach stellt er wieder die Lautstärke ein. 0 heißt immer aktiv: bis du ein Album mit dem Taster wählst oder einen anderen Tag auflegst.": "Så länge efter att taggen lagts på och efter varje vridning väljer vridratten album, därefter ställer den in volymen igen. 0 betyder alltid aktiv: tills du väljer ett album med knappen eller lägger på en annan tagg.",
  "Ein Tag auf einem Artistcover (in der Bibliothek den Artisten öffnen, „NFC-Tag“ antippen) spielt das Album, das du in der Liste „Zugeordnete Tags“ gewählt hast. Nach dem Auflegen wählt der Drehregler (KY-040) unter den Alben dieses Artisten: Drehen geht zum nächsten oder vorigen Album, ein Druck auf den Taster spielt es. Ein OLED-Display zeigt dabei den Namen, den der Drehregler gerade hat. Die Anschlüsse des Drehreglers stehen darunter; sein Taster braucht einen eigenen Pin.": "En tagg på en artists omslag (öppna artisten i biblioteket och tryck på ”NFC-tagg”) spelar albumet du valde i listan ”Tilldelade taggar”. Efter att taggen lagts på väljer vridratten (KY-040) bland artistens album: vridning går till nästa eller föregående album, ett tryck på knappen spelar det. En OLED-display visar namnet som vridratten står på. Vridrattens anslutningar står nedan; dess knapp behöver en egen pin.",
  "Das Display ist aus – Stand {}": "Skärmen är avstängd – läge kl. {}",
- "Das Display ist aus.": "Skärmen är avstängd."
+ "Das Display ist aus.": "Skärmen är avstängd.",
+ "Erinnerungen": "Minnen",
+ "Die Fotos von heute vor einem Jahr und mehr – jeden Tag neu, wie in Immich": "Bilderna från den här dagen för ett år sedan och mer – nya varje dag, som i Immich",
+ "Die Erinnerungen brauchen zusätzlich das Recht memory.read. Die Alben gehen auch ohne.": "Minnena behöver dessutom rättigheten memory.read. Album fungerar även utan.",
+ "Für die Erinnerungen zusätzlich memory.read anhaken.": "För minnena, kryssa även i memory.read."
 }

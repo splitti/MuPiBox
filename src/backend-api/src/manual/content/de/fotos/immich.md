@@ -6,7 +6,7 @@
 
 1. Immich im Browser öffnen und anmelden.
 2. Oben rechts aufs Profilbild › **Kontoeinstellungen** › **API-Schlüssel** › **Neuer API-Schlüssel**.
-3. Name „MuPiBox“ eingeben. Fragt Immich nach Rechten, nur diese anhaken: `album.read`, `asset.read` und `asset.view`. Mit `user.read` zeigt der Test zusätzlich deinen Kontonamen.
+3. Name „MuPiBox“ eingeben. Fragt Immich nach Rechten, nur diese anhaken: `album.read`, `asset.read` und `asset.view`. Mit `user.read` zeigt der Test zusätzlich deinen Kontonamen. Für Alben von Personen zusätzlich `person.read`, für die Erinnerungen `memory.read`.
 4. Den Schlüssel sofort kopieren: Immich zeigt ihn nur einmal.
 
 ## Verbinden
@@ -26,5 +26,15 @@ Der Schlüssel wird verschlüsselt auf der Box gespeichert und nie wieder angeze
 | **Schlüssel ungültig** | den ganzen Schlüssel kopieren, notfalls einen neuen anlegen |
 | **Rechte fehlen** | einen Schlüssel mit `album.read`, `asset.read` und `asset.view` anlegen |
 | **Immich-Version zu alt** | Immich aktualisieren |
+
+## Personen, Favoriten und Erinnerungen
+
+Im letzten Schritt (**Alben und Personen**) gibt es neben den Alben:
+
+- **Personen**: Personen, die Immich am Gesicht erkennt und die dort einen Namen haben. Jede angehakte Person wird ein eigenes Album; ein **gemeinsames Album** aus zwei oder drei Personen zeigt die Fotos, auf denen alle sind. Am Display steht vorne das Gesicht. Braucht `person.read`.
+- **Favoriten**: alle Fotos mit Herz in Immich.
+- **Erinnerungen**: die Fotos, die Immich heute als Erinnerung zeigt – „heute vor einem Jahr“ und mehr, und in den Tagen vor einem Geburtstag die Fotos der Person. Das Album ist jeden Tag neu; die Box gleicht es kurz nach Mitternacht ab. An Tagen ohne Erinnerung ist es nicht am Display. Braucht `memory.read`.
+
+Personen und Favoriten können sehr viele Fotos haben: **Bilder je Personen-Album** begrenzt sie; gibt es mehr, wählt die Box gleichmäßig aus allen Jahren aus.
 
 Auf der Seite von Immich änderst du danach Alben, Abgleich, Zwischenspeicher, Adresse und Schlüssel. Ob die Box die Fotos speichert oder live holt, steht unter [Foto-Dienste: speichern oder live](speichern-oder-live.md).
