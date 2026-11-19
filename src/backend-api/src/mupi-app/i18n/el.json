@@ -4624,5 +4624,9 @@
  "Erinnerungen": "Αναμνήσεις",
  "Die Fotos von heute vor einem Jahr und mehr – jeden Tag neu, wie in Immich": "Οι φωτογραφίες αυτής της μέρας πριν από ένα χρόνο και παλαιότερα – κάθε μέρα νέες, όπως στο Immich",
  "Die Erinnerungen brauchen zusätzlich das Recht memory.read. Die Alben gehen auch ohne.": "Οι αναμνήσεις χρειάζονται επιπλέον το δικαίωμα memory.read. Τα άλμπουμ λειτουργούν και χωρίς αυτό.",
- "Für die Erinnerungen zusätzlich memory.read anhaken.": "Για τις αναμνήσεις, επιλέξτε επίσης memory.read."
+ "Für die Erinnerungen zusätzlich memory.read anhaken.": "Για τις αναμνήσεις, επιλέξτε επίσης memory.read.",
+ "Einstellungen von": "Ρυθμίσεις του",
+ "je Benutzer": "ανά χρήστη",
+ "Was mit „je Benutzer“ markiert ist, stellt jeder Benutzer für sich ein. Alles andere gilt für die ganze Box.": "Ό,τι έχει σήμανση «ανά χρήστη» το ρυθμίζει κάθε χρήστης για τον εαυτό του. Όλα τα άλλα ισχύουν για όλο το κουτί.",
+ "Du bearbeitest, was {} für sich einstellt. Es gilt, sobald dieser Benutzer aktiv ist.": "Επεξεργάζεσαι ό,τι ρυθμίζει ο/η {} για τον εαυτό του/της. Ισχύει μόλις αυτός ο χρήστης γίνει ενεργός."
 }

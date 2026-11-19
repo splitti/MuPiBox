@@ -4640,5 +4640,9 @@
  "Erinnerungen": "Memories",
  "Die Fotos von heute vor einem Jahr und mehr – jeden Tag neu, wie in Immich": "The photos of this day a year ago and more – new every day, as in Immich",
  "Die Erinnerungen brauchen zusätzlich das Recht memory.read. Die Alben gehen auch ohne.": "The memories also need the right memory.read. Albums work without it.",
- "Für die Erinnerungen zusätzlich memory.read anhaken.": "For the memories, also tick memory.read."
+ "Für die Erinnerungen zusätzlich memory.read anhaken.": "For the memories, also tick memory.read.",
+ "Einstellungen von": "Settings of",
+ "je Benutzer": "per user",
+ "Was mit „je Benutzer“ markiert ist, stellt jeder Benutzer für sich ein. Alles andere gilt für die ganze Box.": "What is marked “per user” every user sets for themselves. Everything else applies to the whole box.",
+ "Du bearbeitest, was {} für sich einstellt. Es gilt, sobald dieser Benutzer aktiv ist.": "You are editing what {} sets for themselves. It applies as soon as this user is active."
 }

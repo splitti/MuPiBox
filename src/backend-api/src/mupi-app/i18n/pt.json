@@ -4624,5 +4624,9 @@
  "Erinnerungen": "Memórias",
  "Die Fotos von heute vor einem Jahr und mehr – jeden Tag neu, wie in Immich": "As fotos deste dia de há um ano ou mais – novas todos os dias, como no Immich",
  "Die Erinnerungen brauchen zusätzlich das Recht memory.read. Die Alben gehen auch ohne.": "As memórias precisam também da permissão memory.read. Os álbuns funcionam sem ela.",
- "Für die Erinnerungen zusätzlich memory.read anhaken.": "Para as memórias, marque também memory.read."
+ "Für die Erinnerungen zusätzlich memory.read anhaken.": "Para as memórias, marque também memory.read.",
+ "Einstellungen von": "Definições de",
+ "je Benutzer": "por utilizador",
+ "Was mit „je Benutzer“ markiert ist, stellt jeder Benutzer für sich ein. Alles andere gilt für die ganze Box.": "O que está marcado “por utilizador” cada utilizador define para si. Tudo o resto vale para a caixa inteira.",
+ "Du bearbeitest, was {} für sich einstellt. Es gilt, sobald dieser Benutzer aktiv ist.": "Estás a editar o que {} define para si. Aplica-se assim que este utilizador estiver ativo."
 }

@@ -109,6 +109,26 @@ test('settings: the extension\'s own file, the defaults of its manifest behind i
   assert.deepEqual(s.all(), { lookup: false, token: 'abc' })
 })
 
+test('settings per user (hostApi 13): those of the user in place, the box\'s value behind them', () => {
+  // (the users' file is next to the extensions' folder)
+  const root = tmp()
+  const dir = path.join(root, 'extensions')
+  install(dir, 'club', { manifest: { hostApi: 13, settings: { team: { type: 'string', default: '', perUser: true }, league: { type: 'string', default: 'bl1' } } } })
+  const s = E.createSettings(dir, 'club', E.readManifest(dir, 'club'))
+  // (no users' file: the one user "main")
+  s.set('team', 'SVW')
+  s.set('league', 'bl2')
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir, 'settings', 'club.json'), 'utf8')), { '@users': { main: { team: 'SVW' } }, league: 'bl2' })
+  assert.deepEqual(s.all(), { team: 'SVW', league: 'bl2' })
+  fs.mkdirSync(path.join(root, 'users'))
+  fs.writeFileSync(path.join(root, 'users', 'users.json'), JSON.stringify({ current: 'leni', users: [{ id: 'main' }, { id: 'leni' }] }))
+  assert.deepEqual(s.all(), { team: '', league: 'bl2' })
+  s.set('team', 'FCB')
+  assert.equal(s.get('team'), 'FCB')
+  fs.writeFileSync(path.join(root, 'users', 'users.json'), JSON.stringify({ current: 'gone', users: [{ id: 'main' }, { id: 'leni' }] }))
+  assert.equal(s.get('team'), 'SVW')
+})
+
 test('an extension sets only the fields of the playback it may', () => {
   const dir = tmp()
   install(dir, 'meta', { player: `exports.activate = (h) => h.on('track', () => h.setMeta({ album: 'Album', totalTracks: 3, volume: 99 }))` })

@@ -4624,5 +4624,9 @@
  "Erinnerungen": "Воспоминания",
  "Die Fotos von heute vor einem Jahr und mehr – jeden Tag neu, wie in Immich": "Фото этого дня год назад и раньше – каждый день новые, как в Immich",
  "Die Erinnerungen brauchen zusätzlich das Recht memory.read. Die Alben gehen auch ohne.": "Для воспоминаний нужно ещё право memory.read. Альбомы работают и без него.",
- "Für die Erinnerungen zusätzlich memory.read anhaken.": "Для воспоминаний отметьте также memory.read."
+ "Für die Erinnerungen zusätzlich memory.read anhaken.": "Для воспоминаний отметьте также memory.read.",
+ "Einstellungen von": "Настройки:",
+ "je Benutzer": "для каждого пользователя",
+ "Was mit „je Benutzer“ markiert ist, stellt jeder Benutzer für sich ein. Alles andere gilt für die ganze Box.": "То, что отмечено «для каждого пользователя», каждый пользователь настраивает для себя. Всё остальное действует для всего бокса.",
+ "Du bearbeitest, was {} für sich einstellt. Es gilt, sobald dieser Benutzer aktiv ist.": "Ты редактируешь то, что {} настраивает для себя. Это действует, как только этот пользователь станет активным."
 }

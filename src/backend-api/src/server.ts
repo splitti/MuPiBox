@@ -37,7 +37,7 @@ import { createSpotifySyncRouter } from './spotify-sync/routes'
 import { isSyncRunning, startScheduler } from './spotify-sync/scheduler'
 import { acquireSyncLock, releaseSyncLock } from './spotify-sync/sync-lock'
 import type { RunSyncDeps } from './spotify-sync/state-machine'
-import { mountExtensions, noteExtensionCrash } from './app-api/extensions'
+import { mountExtensions, notifyUserChanged, noteExtensionCrash, setExtensionUsers } from './app-api/extensions'
 import { buildElternLandingHandler, createElternApiRouter, registerDisplayNetworkRoutes, runSettingUpdate, setOnSpotifyCacheCleared } from './app-api/routes'
 import { isRestoreRunning } from './app-api/admin'
 import { updateRunning } from './app-api/updates'
@@ -1337,8 +1337,12 @@ const users = new Users(userFiles, {
     // (volumes and the rest the system and the player take from the config)
     runSettingUpdate()
     await fetch(`${PLAYER_BASE}/display/reload-page`, { method: 'POST', signal: AbortSignal.timeout(8000) }).catch(() => undefined)
+    // (the extensions with settings per user: their API parts hear the coming user's)
+    await notifyUserChanged().catch(() => undefined)
   },
 })
+// (the settings of the extensions that every user has for himself, hostApi 13)
+setExtensionUsers({ current: () => userFiles.read().current, exists: (id) => userFiles.read().users.some((u) => u.id === id) })
 registerUserRoutes(app, users, { session: requireSession, csrf: requireCsrf, local: localOnly })
 
 // The library a request is for (the app edits the library of a user who is not in place - users.ts): ?user=<id>, none

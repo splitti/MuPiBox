@@ -18,7 +18,7 @@ import { DATA_DIR, EXTENSIONS_DIR, EXTENSIONS_DIR_BEFORE, LIBRARY_DIR } from '..
 import { clearCrashes, crashingExtensions, makeProblem, noteCrash, type PinSetting, planPinFix, type Problem, type ProblemCode, readProblem } from './extension-health'
 import { checkResources, type Conflict, describeResources, findConflicts, idleCoreGpio, type GpioUse, gatherTaken, realProbe, type Resources, rotaryExtras, rotaryPins, sameResources } from './extension-resources'
 import { localNetworkOnly, requireCsrf, requireSession } from './middleware'
-import { nightDimOf, nightShare, quietNow } from './night-dim'
+import { nightDimOf, nightShare, quietNow, restNow } from './night-dim'
 import { announce } from '../speech'
 import { readZip } from './winamp-skin'
 
@@ -36,7 +36,7 @@ if (!process.env.MUPIBOX_EXT_DIR && process.env.NODE_ENV !== 'test' && process.e
     // (the other process was faster, or it is not possible: then they stay where they are and are not found - logged by the load)
   }
 }
-export const HOST_API = 12
+export const HOST_API = 13
 // (the catalog of the MuPiBox, in its repository: what is in it is trusted - an extension can do everything on the box; while 5.1
 // is not with splitti yet, the 5.1 branch of the fork that builds it)
 const DEFAULT_CATALOG = 'https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/catalog.json'
@@ -78,7 +78,7 @@ export interface Manifest {
   // the settings page of the extension in the app, declared (no code of the extension runs in the app): a card with these fields
   // (place, adopt - hostApi 5: the settings as a page of their own under Einstellungen > System, and pages of the core shown there)
   ui?: { title: string; heading?: string; help?: string; place?: 'system'; adopt?: string[]; items: { key: string; label: string; help?: string; dep?: string; showIf?: { key: string; is: string[] }; hideIf?: { key: string; is: string[] }; live?: string; choices?: { value: string | number; label: string }[]; type?: 'lookup' | 'order' | 'roster' | 'heading' | 'status' | 'action' | 'list'; state?: string; post?: string; confirm?: string; empty?: string; page?: boolean; card?: boolean; rename?: string; optional?: string; extra?: { key: string; label?: string; when: (string | number)[]; choices: { value: string | number; label: string }[] }; search?: string; list?: string; add?: string; remove?: string; select?: string; color?: string; restore?: string; addFrom?: boolean; slider?: boolean; adopt?: string[]; download?: string; upload?: string; file?: string; ext?: string; accept?: string; beside?: boolean; holder?: string }[] }
-  settings?: Record<string, { type: 'boolean' | 'string' | 'number' | 'secret' | 'gpio'; default?: unknown; pattern?: string; options?: (string | number)[]; min?: number; max?: number; legacy?: string }>
+  settings?: Record<string, { type: 'boolean' | 'string' | 'number' | 'secret' | 'gpio'; default?: unknown; pattern?: string; options?: (string | number)[]; min?: number; max?: number; legacy?: string; perUser?: boolean }>
   system?: { udev?: { name: string; file: string }[]; units?: { name: string; file: string }[]; groups?: string[]; packages?: string[] }
   /** what it needs from the box: ports, GPIO pins, services (required; {} for nothing) - tested against the box before it is installed */
   resources?: Resources
@@ -392,15 +392,38 @@ export function gpioSettingError(manifest: Manifest, merged: Record<string, unkn
 
 const settingsFile = (id: string) => path.join(EXT_DIR, 'settings', `${id}.json`)
 
-/** An extension's settings with the defaults of its manifest behind them. */
-export async function readSettings(manifest: Manifest): Promise<Record<string, unknown>> {
+// (hostApi 13) The settings every user has for himself are in the same file, under this key - by the id of the user:
+// { "@users": { "<user>": { "<key>": value } } }. A setting's key cannot be it (letters and digits only), and the backup
+// takes the file as it is. What a user has not set himself is the value for the whole box, else the default.
+export const PER_USER = '@users'
+/** The users of the box, as far as the settings of the extensions need them (server.ts gives them, users.ts) */
+export interface ExtensionUsers {
+  /** the user in place */
+  current(): string
+  exists(id: string): boolean
+}
+let extUsers: ExtensionUsers | null = null
+export function setExtensionUsers(users: ExtensionUsers | null): void {
+  extUsers = users
+}
+const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
+/** The keys of the settings every user has for himself */
+export const perUserKeys = (manifest: Manifest): string[] => Object.entries(manifest.settings ?? {}).filter(([, d]) => d?.perUser === true).map(([k]) => k)
+
+/** An extension's settings with the defaults of its manifest behind them - those per user (hostApi 13) of `user`, without
+ *  one of the user in place. */
+export async function readSettings(manifest: Manifest, user?: string): Promise<Record<string, unknown>> {
   const defaults = Object.fromEntries(Object.entries(manifest.settings ?? {}).filter(([, d]) => d.default !== undefined).map(([k, d]) => [k, d.default]))
-  return { ...defaults, ...(await readJson<Record<string, unknown>>(settingsFile(manifest.id), {})) }
+  const { [PER_USER]: byUser, ...shared } = await readJson<Record<string, unknown>>(settingsFile(manifest.id), {})
+  const who = user ?? extUsers?.current()
+  const keys = perUserKeys(manifest)
+  const mine = who && keys.length > 0 && isObj(byUser) && isObj(byUser[who]) ? byUser[who] : {}
+  return { ...defaults, ...shared, ...Object.fromEntries(keys.filter((k) => Object.hasOwn(mine, k)).map((k) => [k, mine[k]])) }
 }
 
 /** The settings as the display and the app may see them: a secret only as "<key>Set". */
-export async function publicSettings(manifest: Manifest): Promise<Record<string, unknown>> {
-  const all = await readSettings(manifest)
+export async function publicSettings(manifest: Manifest, user?: string): Promise<Record<string, unknown>> {
+  const all = await readSettings(manifest, user)
   const out: Record<string, unknown> = {}
   for (const [key, spec] of Object.entries(manifest.settings ?? {})) {
     if (spec.type === SECRET_SETTING) out[`${key}Set`] = typeof all[key] === 'string' && all[key] !== ''
@@ -534,6 +557,9 @@ export function checkManifest(m: unknown, files: Set<string>): string | null {
       if (spec.options !== undefined || spec.pattern !== undefined || spec.min !== undefined || spec.max !== undefined || spec.legacy !== undefined) return `bad gpio setting: ${key}`
       if (spec.default !== undefined && spec.default !== 0) return `a gpio setting starts without a pin (default 0): ${key}`
     }
+    // (hostApi 13) a setting every user of the box has for himself (a favourite club, say): not a secret and not a pin - those
+    // belong to the box
+    if (spec.perUser !== undefined && (spec.perUser !== true || x.hostApi < 13 || spec.type === SECRET_SETTING || spec.type === GPIO_SETTING)) return `a setting per user needs hostApi 13 and is no secret and no pin: ${key}`
     if (spec.options !== undefined && (!Array.isArray(spec.options) || spec.options.length < 2 || spec.options.length > 20 || spec.type === 'boolean' || spec.options.some((o) => (spec.type === 'number' ? typeof o !== 'number' : typeof o !== 'string')))) return `bad options: ${key}`
     if ((spec.min !== undefined || spec.max !== undefined) && (spec.type !== 'number' || (spec.min !== undefined && !Number.isFinite(spec.min)) || (spec.max !== undefined && !Number.isFinite(spec.max)))) return `bad range: ${key}`
     if (spec.pattern !== undefined) {
@@ -1197,6 +1223,8 @@ async function installedEntry(m: Manifest, enabled: boolean, problem: Problem | 
     // (the range of a number: the slider of a field that has one)
     settingRanges: Object.fromEntries(Object.entries(m.settings ?? {}).filter(([, d]) => d.type === 'number' && Number.isFinite(d.min) && Number.isFinite(d.max)).map(([k, d]) => [k, { min: d.min, max: d.max }])),
     settings: await publicSettings(m),
+    // (hostApi 13) the settings every user has for himself: the app lets choose whose it shows
+    perUser: perUserKeys(m),
     job: jobs.get(m.id) ?? null,
   }
 }
@@ -1218,6 +1246,7 @@ async function brokenEntry(id: string, s: State[string], kept: Problem | null) {
     settingTypes: {},
     settingRanges: {},
     settings: {},
+    perUser: [],
     job: jobs.get(id) ?? null,
     problem: kept ?? (found ? makeProblem(found.code, found.detail) : null),
     broken: true,
@@ -1226,6 +1255,14 @@ async function brokenEntry(id: string, s: State[string], kept: Problem | null) {
 
 // What the API parts want to hear after their settings were saved (host.onSettings, hostApi 5)
 const settingsListeners = new Map<string, ((settings: Record<string, unknown>) => unknown)[]>()
+
+/** Another user is in place (users.ts): the API parts of the extensions with settings per user hear their settings anew
+ *  (host.onSettings), as after saving them. Never fails. */
+export async function notifyUserChanged(): Promise<void> {
+  for (const manifest of await enabledManifests()) {
+    if (perUserKeys(manifest).length > 0) await notifySettings(manifest)
+  }
+}
 
 /** Tells the API part of an extension that its settings changed; waits for it a moment (it frees pins, say), never fails. */
 async function notifySettings(manifest: Manifest): Promise<void> {
@@ -1242,6 +1279,37 @@ async function notifySettings(manifest: Manifest): Promise<void> {
     }),
   )
   await Promise.race([all, new Promise((resolve) => setTimeout(resolve, 3000))])
+}
+
+/**
+ * Settings that were checked (checkSettings) saved over those the extension has: a setting per user (hostApi 13) for `user` -
+ * without, the user in place -, the others for the whole box. Whether something the box uses now changed (false: only settings
+ * of a user who is not in place).
+ */
+export async function writeSettings(manifest: Manifest, clean: Record<string, unknown>, user?: string): Promise<boolean> {
+  const who = user ?? extUsers?.current()
+  const keys = perUserKeys(manifest)
+  const own = who ? Object.keys(clean).filter((k) => keys.includes(k)) : []
+  const have = await readJson<Record<string, unknown>>(settingsFile(manifest.id), {})
+  const next: Record<string, unknown> = { ...have, ...Object.fromEntries(Object.entries(clean).filter(([k]) => !own.includes(k))) }
+  if (who && own.length > 0) {
+    const byUser = isObj(have[PER_USER]) ? { ...have[PER_USER] } : {}
+    byUser[who] = { ...(isObj(byUser[who]) ? byUser[who] : {}), ...Object.fromEntries(own.map((k) => [k, clean[k]])) }
+    next[PER_USER] = byUser
+  }
+  await fsp.mkdir(path.dirname(settingsFile(manifest.id)), { recursive: true })
+  await fsp.writeFile(settingsFile(manifest.id), JSON.stringify(next))
+  return !user || user === extUsers?.current() || Object.keys(clean).some((k) => !own.includes(k))
+}
+
+/** The user a request for settings names (?user=<id>, hostApi 13): undefined for none (the user in place), null for one the box
+ *  does not have */
+function settingsUser(req: Request): string | undefined | null {
+  const raw = req.query?.user
+  if (raw === undefined || raw === '') return undefined
+  if (typeof raw !== 'string' || !/^[a-z0-9]{2,12}$/.test(raw)) return null
+  if (!extUsers) return raw === 'main' ? undefined : null
+  return extUsers.exists(raw) ? raw : null
 }
 
 /** The app's routes (behind the session): the catalog, install, on and off, remove, the settings of an extension. */
@@ -1504,13 +1572,19 @@ export function registerExtensionRoutes(router: Router, deps: ExtensionDeps): vo
     restartServices()
   })
 
+  // (?user=<id>: the settings per user of that user - hostApi 13; without, those of the user in place)
   router.get('/ext/:id/settings', requireSession, async (req, res) => {
     const manifest = await readManifest(String(req.params.id))
     if (!manifest) {
       res.status(404).json({ error: 'not installed' })
       return
     }
-    res.json(await publicSettings(manifest))
+    const user = settingsUser(req)
+    if (user === null) {
+      res.status(400).json({ error: 'unknown user' })
+      return
+    }
+    res.json(await publicSettings(manifest, user))
   })
 
   // One installed extension, as in the list (for its own page in the app)
@@ -1560,13 +1634,19 @@ export function registerExtensionRoutes(router: Router, deps: ExtensionDeps): vo
         return
       }
     }
-    await fsp.mkdir(path.dirname(settingsFile(manifest.id)), { recursive: true })
-    await fsp.writeFile(settingsFile(manifest.id), JSON.stringify({ ...(await readJson(settingsFile(manifest.id), {})), ...checked.clean }))
-    // (the API part hears of it - it may hold pins or timers that follow the settings)
-    await notifySettings(manifest)
-    // (the display reads the settings of its part when its page loads)
-    if (manifest.display) reloadDisplay()
-    res.json({ ok: true, ...(await publicSettings(manifest)) })
+    const user = settingsUser(req)
+    if (user === null) {
+      res.status(400).json({ error: 'unknown user' })
+      return
+    }
+    const inPlace = await writeSettings(manifest, checked.clean, user)
+    if (inPlace) {
+      // (the API part hears of it - it may hold pins or timers that follow the settings)
+      await notifySettings(manifest)
+      // (the display reads the settings of its part when its page loads)
+      if (manifest.display) reloadDisplay()
+    }
+    res.json({ ok: true, ...(await publicSettings(manifest, user)) })
   })
 }
 
@@ -1679,7 +1759,9 @@ export function mountExtensions(app: express.Express, deps: ExtensionDeps): void
           dir,
           dataDir: path.join(EXT_DIR, 'data', manifest.id),
           log: { debug: () => undefined, info: console.log, warn: console.warn },
-          settings: () => readSettings(manifest),
+          // (hostApi 13: with the id of a user his settings per user - a search of the app for a user chosen there; else, and for
+          // a user the box does not have, those of the user in place)
+          settings: (user?: unknown) => readSettings(manifest, typeof user === 'string' && extUsers?.exists(user) ? user : undefined),
           config: () => deps.getMupiboxConfig(),
           playerUrl: 'http://127.0.0.1:5005',
           // (hostApi 4) change the box's configuration (the one file of the core, under its lock); where the box keeps its library
@@ -1705,6 +1787,9 @@ export function mountExtensions(app: express.Express, deps: ExtensionDeps): void
           // (hostApi 12) the box says a text with its voice (Sprachausgabe: Piper or Google, as the user set it; silent when the voice is
           // off), without a gong; music that plays is made quieter meanwhile. true when it was said. Texts are cut at 300 letters.
           say: (text: unknown) => (typeof text === 'string' && text.trim() !== '' ? announce(() => deps.getMupiboxConfig(), text.trim().slice(0, 300), { gong: false, pause: false }) : Promise.resolve(false)),
+          // (hostApi 13) whether the box rests now - quiet hours, or playback blocked (play time used up, a pause of the parents):
+          // an extension says nothing then and shows less. { quiet, blocked }
+          rest: () => restNow(),
           onSettings: (fn: (settings: Record<string, unknown>) => unknown) => {
             if (typeof fn === 'function') settingsListeners.set(manifest.id, [...(settingsListeners.get(manifest.id) ?? []), fn])
           },

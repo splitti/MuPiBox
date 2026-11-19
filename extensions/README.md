@@ -63,7 +63,7 @@ settings card from what the manifest declares.
 - **`id`**: lowercase letters, digits and `-`, 2–31 characters, starting with a letter. It never changes.
 - **`version`**: `major.minor.patch`. Raise it with every change you publish; the box offers an update when the catalog has a higher
   number than the installed one.
-- **`hostApi`**: the number of the interface you wrote the extension for (`1` to `6`; `3` is needed for an `order` field, `4` for a `roster`, `5` for a `gpio` setting, a `heading` or a page of your own, `6` for a `status` block, see below). A box does not load an extension made for a
+- **`hostApi`**: the number of the interface you wrote the extension for (`1` to `13`; `3` is needed for an `order` field, `4` for a `roster`, `5` for a `gpio` setting, a `heading` or a page of your own, `6` for a `status` block, `13` for a setting per user, see below). A box does not load an extension made for a
   newer interface than its own.
 - **`resources`** is **required** (`{}` means "needs nothing"), see section 4.
 - **`settings`** and **`ui`**: what the extension stores and how the settings card looks. Types are `boolean`, `string`, `number`
@@ -91,6 +91,11 @@ settings card from what the manifest declares.
   route is in your API part and needs the login of the parents; it answers `{ "rows": [{ "label": "…", "value": "…", "tone": "ok|warn|error" }] }`
   (at most 12 rows), and the app asks it every 2.5 seconds while the card is open. Report fixed sentences, not composed ones: the app translates a
   text if it knows it exactly.
+  With `hostApi` 13 a setting can be **per user**: `"perUser": true` (not on a `secret` or a `gpio` setting - those belong to the box).
+  Every user of the box (several users, 5.1) then has a value of their own, a favourite club, say; one they have not set is the value
+  of the whole box, else the default. `host.settings()`, the `settings` of the player part and the display always get those of the user
+  in place; after a switch of the user the box calls `host.onSettings(fn)` with the new user's settings and loads the display anew. The
+  app shows a choice of the user above the form and marks these fields.
 - **`system`**: what the box sets up as root, see section 5.
 - Texts in the manifest are shown as written. The app translates a text only if it knows it exactly, so write yours in English
   unless the extension is meant for one language only. (The extensions shipped in this repository are written in German, the source

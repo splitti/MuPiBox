@@ -4624,5 +4624,9 @@
  "Erinnerungen": "Спогади",
  "Die Fotos von heute vor einem Jahr und mehr – jeden Tag neu, wie in Immich": "Фото цього дня рік тому й раніше – щодня нові, як в Immich",
  "Die Erinnerungen brauchen zusätzlich das Recht memory.read. Die Alben gehen auch ohne.": "Для спогадів потрібне ще право memory.read. Альбоми працюють і без нього.",
- "Für die Erinnerungen zusätzlich memory.read anhaken.": "Для спогадів позначте також memory.read."
+ "Für die Erinnerungen zusätzlich memory.read anhaken.": "Для спогадів позначте також memory.read.",
+ "Einstellungen von": "Налаштування:",
+ "je Benutzer": "для кожного користувача",
+ "Was mit „je Benutzer“ markiert ist, stellt jeder Benutzer für sich ein. Alles andere gilt für die ganze Box.": "Те, що позначено «для кожного користувача», кожен користувач налаштовує для себе. Усе інше діє для всього боксу.",
+ "Du bearbeitest, was {} für sich einstellt. Es gilt, sobald dieser Benutzer aktiv ist.": "Ти редагуєш те, що {} налаштовує для себе. Це діє, щойно цей користувач стане активним."
 }

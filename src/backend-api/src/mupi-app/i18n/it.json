@@ -4624,5 +4624,9 @@
  "Erinnerungen": "Ricordi",
  "Die Fotos von heute vor einem Jahr und mehr – jeden Tag neu, wie in Immich": "Le foto di questo giorno di un anno fa e oltre – nuove ogni giorno, come in Immich",
  "Die Erinnerungen brauchen zusätzlich das Recht memory.read. Die Alben gehen auch ohne.": "I ricordi richiedono anche il permesso memory.read. Gli album funzionano anche senza.",
- "Für die Erinnerungen zusätzlich memory.read anhaken.": "Per i ricordi, spunta anche memory.read."
+ "Für die Erinnerungen zusätzlich memory.read anhaken.": "Per i ricordi, spunta anche memory.read.",
+ "Einstellungen von": "Impostazioni di",
+ "je Benutzer": "per utente",
+ "Was mit „je Benutzer“ markiert ist, stellt jeder Benutzer für sich ein. Alles andere gilt für die ganze Box.": "Ciò che è segnato “per utente” lo imposta ogni utente per sé. Tutto il resto vale per tutto il box.",
+ "Du bearbeitest, was {} für sich einstellt. Es gilt, sobald dieser Benutzer aktiv ist.": "Stai modificando ciò che {} imposta per sé. Vale non appena questo utente è attivo."
 }

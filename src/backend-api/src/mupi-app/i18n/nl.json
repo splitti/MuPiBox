@@ -4624,5 +4624,9 @@
  "Erinnerungen": "Herinneringen",
  "Die Fotos von heute vor einem Jahr und mehr – jeden Tag neu, wie in Immich": "De foto’s van deze dag een jaar geleden en eerder – elke dag nieuw, zoals in Immich",
  "Die Erinnerungen brauchen zusätzlich das Recht memory.read. Die Alben gehen auch ohne.": "De herinneringen hebben ook het recht memory.read nodig. Albums werken ook zonder.",
- "Für die Erinnerungen zusätzlich memory.read anhaken.": "Vink voor de herinneringen ook memory.read aan."
+ "Für die Erinnerungen zusätzlich memory.read anhaken.": "Vink voor de herinneringen ook memory.read aan.",
+ "Einstellungen von": "Instellingen van",
+ "je Benutzer": "per gebruiker",
+ "Was mit „je Benutzer“ markiert ist, stellt jeder Benutzer für sich ein. Alles andere gilt für die ganze Box.": "Wat met „per gebruiker” is gemarkeerd, stelt elke gebruiker voor zichzelf in. Al het andere geldt voor de hele box.",
+ "Du bearbeitest, was {} für sich einstellt. Es gilt, sobald dieser Benutzer aktiv ist.": "Je bewerkt wat {} voor zichzelf instelt. Het geldt zodra deze gebruiker actief is."
 }

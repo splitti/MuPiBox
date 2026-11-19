@@ -4624,5 +4624,9 @@
  "Erinnerungen": "Souvenirs",
  "Die Fotos von heute vor einem Jahr und mehr – jeden Tag neu, wie in Immich": "Les photos de ce jour il y a un an et plus – nouvelles chaque jour, comme dans Immich",
  "Die Erinnerungen brauchen zusätzlich das Recht memory.read. Die Alben gehen auch ohne.": "Les souvenirs nécessitent en plus le droit memory.read. Les albums fonctionnent sans.",
- "Für die Erinnerungen zusätzlich memory.read anhaken.": "Pour les souvenirs, cochez aussi memory.read."
+ "Für die Erinnerungen zusätzlich memory.read anhaken.": "Pour les souvenirs, cochez aussi memory.read.",
+ "Einstellungen von": "Réglages de",
+ "je Benutzer": "par utilisateur",
+ "Was mit „je Benutzer“ markiert ist, stellt jeder Benutzer für sich ein. Alles andere gilt für die ganze Box.": "Ce qui est marqué « par utilisateur », chaque utilisateur le règle pour lui-même. Tout le reste vaut pour toute la box.",
+ "Du bearbeitest, was {} für sich einstellt. Es gilt, sobald dieser Benutzer aktiv ist.": "Tu modifies ce que {} règle pour lui-même. Cela s’applique dès que cet utilisateur est actif."
 }

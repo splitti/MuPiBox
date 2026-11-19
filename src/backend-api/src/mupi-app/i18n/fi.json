@@ -4624,5 +4624,9 @@
  "Erinnerungen": "Muistot",
  "Die Fotos von heute vor einem Jahr und mehr – jeden Tag neu, wie in Immich": "Tämän päivän kuvat vuosi sitten ja aiemmin – joka päivä uudet, kuten Immichissä",
  "Die Erinnerungen brauchen zusätzlich das Recht memory.read. Die Alben gehen auch ohne.": "Muistot tarvitsevat lisäksi oikeuden memory.read. Albumit toimivat ilmankin.",
- "Für die Erinnerungen zusätzlich memory.read anhaken.": "Valitse muistoja varten myös memory.read."
+ "Für die Erinnerungen zusätzlich memory.read anhaken.": "Valitse muistoja varten myös memory.read.",
+ "Einstellungen von": "Asetukset:",
+ "je Benutzer": "käyttäjäkohtainen",
+ "Was mit „je Benutzer“ markiert ist, stellt jeder Benutzer für sich ein. Alles andere gilt für die ganze Box.": "Käyttäjäkohtaiseksi merkityt asetukset jokainen käyttäjä tekee itselleen. Kaikki muu koskee koko laitetta.",
+ "Du bearbeitest, was {} für sich einstellt. Es gilt, sobald dieser Benutzer aktiv ist.": "Muokkaat asetuksia, jotka {} tekee itselleen. Ne ovat voimassa heti, kun tämä käyttäjä on aktiivinen."
 }

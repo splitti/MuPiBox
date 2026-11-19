@@ -17311,6 +17311,38 @@ async function loadExtensions() {
   for (const e of exts.installed) {
     for (const [k, t] of Object.entries(e.settingTypes ?? {})) state.values.set(`ext.${e.id}.${k}`, t === 'secret' ? '' : e.settings?.[k])
   }
+  // (hostApi 13: settings every user has for himself - the list of the users for the choice above them, and those of the user
+  // chosen there when it is not the one in place)
+  const perUser = exts.installed.filter((e) => e.perUser?.length)
+  if (perUser.length) {
+    await loadUsers().catch(() => undefined)
+    // (the list holds those of the user in place; the forms load another's themselves when he is chosen - extFormMount)
+    for (const e of perUser) e.settingsUser = usersState?.current
+  }
+}
+
+// (hostApi 13) Whose settings per user the forms of the extensions show: null = the user in place. Chosen above the form, when
+// the box has several users switched on.
+const extView = { user: null }
+// the user chosen there, while he is one of the box and not the one in place (else null again)
+function extUserShown() {
+  const s = usersState
+  if (!s?.enabled || (s.users?.length ?? 0) < 2 || !s.users.some((u) => u.id === extView.user) || extView.user === s.current) extView.user = null
+  return extView.user
+}
+// "Einstellungen von [Leni] [Max]" above the form of an extension with settings per user
+function extUserBar(e) {
+  const s = usersState
+  if (!e.perUser?.length || !s?.enabled || (s.users?.length ?? 0) < 2) return ''
+  const shown = extUserShown() ?? s.current
+  const other = s.users.find((u) => u.id === extView.user)
+  const chips = s.users
+    .map((u) => `<button type="button" class="user-chip" data-ext-user="${esc(u.id)}" aria-pressed="${u.id === shown}">${userDot(u.color)}<span translate="no">${esc(u.name)}</span>${u.id === s.current ? `<small>${esc(tr('aktiv'))}</small>` : ''}</button>`)
+    .join('')
+  const text = other
+    ? tr(`Du bearbeitest, was ${un(other.name)} für sich einstellt. Es gilt, sobald dieser Benutzer aktiv ist.`)
+    : tr('Was mit „je Benutzer“ markiert ist, stellt jeder Benutzer für sich ein. Alles andere gilt für die ganze Box.')
+  return `<div class="user-bar lib-user ext-user"><span class="lib-user-lbl">${esc(tr('Einstellungen von'))}</span>${chips}</div><div class="note">${icon('info', 18)}<span>${esc(text)}</span></div>`
 }
 
 // "1.4.2" > "1.4.1": true when version a is newer than b (numbers part by part; a missing part is 0)
@@ -17655,13 +17687,16 @@ function extFormHtml(e, fields, cards = false) {
   // (cards: a heading with `card` starts a card of its own - the page of an extension with several readers shows each in one; the
   // "+" of a series stands between the cards, a card that is not there yet is hidden by extFormMount)
   const cardMode = cards && fields.some((it) => it.type === 'heading' && it.card)
+  // (hostApi 13: the choice of the user above the fields - only when one of them is a setting per user)
+  const userBar = fields.some((it) => e.perUser?.includes(it.key)) ? extUserBar(e) : ''
   let cardOpen = false
   const closeCard = () => {
     const end = cardOpen ? '</section>' : ''
     cardOpen = false
     return end
   }
-  const form = fields
+  // (on a page of cards the choice is a card of its own)
+  const form = (userBar && cardMode ? `<section class="card wide ext-page">${userBar}</section>` : userBar) + fields
     .map((it, index) => {
       // (every field knows its group, data-xgroup: the index of its heading; after the last field of a series stands its "+")
       const g = groups.findLast((x) => x.index <= index)
@@ -17673,7 +17708,10 @@ function extFormHtml(e, fields, cards = false) {
       // (hostApi 11: a button that stands beside the one before it - the two are one row)
       const pairOpen = it.type === 'action' && fields[index + 1]?.type === 'action' && fields[index + 1].beside === true
       const pairClose = it.type === 'action' && it.beside === true && fields[index - 1]?.type === 'action'
-      const html = `${pairOpen ? '<div class="ext-actions">' : ''}${one(it, index).replace('<div ', `<div data-xgroup="${g ? g.index : ''}"${showIf} `)}${pairClose ? '</div>' : ''}`
+      // (hostApi 13: a setting every user has for himself - marked beside its name while there is a choice of users)
+      let field = one(it, index)
+      if (userBar && it.key && e.perUser.includes(it.key)) field = field.replace(/<\/(label|b)>/, (end) => ` <small class="ext-peruser">${esc(tr('je Benutzer'))}</small>${end}`)
+      const html = `${pairOpen ? '<div class="ext-actions">' : ''}${field.replace('<div ', `<div data-xgroup="${g ? g.index : ''}"${showIf} `)}${pairClose ? '</div>' : ''}`
       const lastOfSeries = g && g.last === index && groups.findLast((x) => x.series === g.series) === g && groups.some((x) => x.series === g.series && x.heading.optional)
       const add = lastOfSeries ? `<div class="ext-add" data-xaddrow="${g.series}"><button type="button" class="btn" data-xadd="${g.series}"><span aria-hidden="true">+</span> <span>${esc(g.heading.label)}</span></button></div>` : ''
       return `${begin}${html}${cardMode && add ? closeCard() : ''}${add}`
@@ -17685,7 +17723,7 @@ function extFormHtml(e, fields, cards = false) {
 
 // ... and the form set up: `sheet` is the element the form is in (the sheet of the details, or the card on the extension's own
 // page), saved() is called after the "Speichern" button stored its fields
-function extFormMount(sheet, e, fields, saved) {
+function extFormMount(sheet, e, fields, saved, redraw) {
   const type = (it) => e.settingTypes?.[it.key]
   // (a group that is optional is there when its switch says so - or while one of its pins is chosen: settings from before the
   // switch existed)
@@ -17728,11 +17766,49 @@ function extFormMount(sheet, e, fields, saved) {
     document.dispatchEvent(new Event('mupi-cards'))
   }
   dep()
+  // (hostApi 13) The user whose settings per user the form shows and saves: the one chosen above it, else the one in place -
+  // always named in the requests, so a switch at the display meanwhile does not send one user's values to the other. The
+  // values the form was drawn with must be his (e.settingsUser): else they are loaded first and the form is drawn anew - the
+  // extension's own page has them from /info, a sheet from the list, both for the user in place.
+  const formUser = e.perUser?.length ? (extUserShown() ?? usersState?.current ?? null) : null
+  let ready = !formUser || e.settingsUser === formUser
+  const loadFor = async (id, chosen) => {
+    const r = await api(`${API}/ext/${e.id}/settings?user=${encodeURIComponent(id)}`)
+    if (!r.ok) {
+      // (a user deleted meanwhile: back to the one in place)
+      if (r.body?.error === 'unknown user') {
+        extView.user = null
+        await loadUsers().catch(() => undefined)
+        e.settingsUser = undefined
+        if (redraw && usersState?.current && usersState.current !== id) return loadFor(usersState.current, false)
+      }
+      toast('Nicht geladen', 'info')
+      return
+    }
+    if (chosen) extView.user = id === usersState?.current ? null : id
+    e.settings = r.body
+    e.settingsUser = id
+    redraw?.()
+  }
+  if (!ready && redraw) void loadFor(formUser, false)
+  for (const chip of sheet.querySelectorAll('[data-ext-user]')) {
+    chip.onclick = () => loadFor(chip.dataset.extUser, true)
+  }
   // (the list of the pins is drawn again when a name or a group changes: it names the groups)
   let redrawPins = () => {}
   const save = async (values, quiet) => {
-    const r = await api(`${API}/ext/${e.id}/settings`, { method: 'POST', body: { values } })
+    // (the form shows another user's values than it would save for: nothing saved - it is being drawn anew)
+    if (!ready) {
+      toast('Nicht geladen', 'info')
+      return false
+    }
+    const r = await api(`${API}/ext/${e.id}/settings${formUser ? `?user=${encodeURIComponent(formUser)}` : ''}`, { method: 'POST', body: { values } })
     if (!r.ok) {
+      if (r.body?.error === 'unknown user') {
+        ready = false
+        void loadFor(usersState?.current ?? formUser, false)
+        return false
+      }
       // (a pin: the box says who has it)
       if (r.body?.error === 'gpio_taken') toast(`GPIO ${r.body.pin} ist schon belegt: ${(r.body.holders ?? []).map(extWho).join(', ')}`, 'info')
       else if (r.body?.error === 'gpio_twice') toast(`GPIO ${r.body.pin} ist in dieser Erweiterung schon vergeben`, 'info')
@@ -17929,7 +18005,8 @@ function extFormMount(sheet, e, fields, saved) {
         return
       }
       list.textContent = 'Suche …'
-      const r = await api(`${item.search}?q=${encodeURIComponent(q)}`, { timeoutMs: 20000 })
+      // (hostApi 13: for the user chosen above the form - his league, say)
+      const r = await api(`${item.search}?q=${encodeURIComponent(q)}${formUser ? `&user=${encodeURIComponent(formUser)}` : ''}`, { timeoutMs: 20000 })
       // (a newer search was started while this one ran: its answer counts)
       if (mine !== latest) return
       list.textContent = ''
@@ -18425,11 +18502,20 @@ function extensionDetails(e, installed) {
           go(ownPage)
         }
       }
-      extFormMount(sheet, e, fields, async () => {
-        await loadExtensions()
-        close()
-        renderPage(currentPage(), false)
-      })
+      extFormMount(
+        sheet,
+        e,
+        fields,
+        async () => {
+          await loadExtensions()
+          close()
+          renderPage(currentPage(), false)
+        },
+        () => {
+          close()
+          extensionDetails(e, installed)
+        },
+      )
     },
   )
 }
@@ -18559,6 +18645,9 @@ function extPageController(entry, sub = 0) {
       const r = await api(`${API}/ext/${entry.id}/info`)
       if (!r.ok) throw new Error(`extension ${r.status}`)
       own.e = r.body
+      // (hostApi 13: settings per user - the users for the choice above the form; whose values /info holds is not named, so
+      // the form loads them for the user it shows, see extFormMount)
+      if (own.e.perUser?.length) await loadUsers().catch(() => undefined)
       await Promise.all([...adopted(), ...merged()].map((a) => a.ctrl.load?.(a.page)))
     },
     top() {
@@ -18610,7 +18699,7 @@ function extPageController(entry, sub = 0) {
     mount(root, page) {
       // (the cards of a split page are among the cards of the pages of the core: the whole page is the form)
       const card = split() ? root : $('#ext-page-card', root)
-      if (card && own.e?.enabled && own.e.ui && (sub || !entry.pages.length)) extFormMount(card, own.e, slice(), () => renderPage(page, true))
+      if (card && own.e?.enabled && own.e.ui && (sub || !entry.pages.length)) extFormMount(card, own.e, slice(), () => renderPage(page, true), () => renderPage(page, false))
       // (the sub page of the tags has the player pinned at its bottom - not the page above, which lists the sub pages)
       if (card && sub && own.e?.id === 'nfc' && own.e.enabled && slice().some((it) => it.type === 'list' && it.list === `${NFC_ROUTE}/tags`)) mountMiniPlayer(root)
       for (const a of adopted()) a.ctrl.mount?.(root, a.page)

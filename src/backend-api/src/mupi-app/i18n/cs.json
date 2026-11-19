@@ -4624,5 +4624,9 @@
  "Erinnerungen": "Vzpomínky",
  "Die Fotos von heute vor einem Jahr und mehr – jeden Tag neu, wie in Immich": "Fotky z tohoto dne před rokem i dříve – každý den nové, jako v Immichi",
  "Die Erinnerungen brauchen zusätzlich das Recht memory.read. Die Alben gehen auch ohne.": "Vzpomínky potřebují navíc právo memory.read. Alba fungují i bez něj.",
- "Für die Erinnerungen zusätzlich memory.read anhaken.": "Pro vzpomínky zaškrtněte také memory.read."
+ "Für die Erinnerungen zusätzlich memory.read anhaken.": "Pro vzpomínky zaškrtněte také memory.read.",
+ "Einstellungen von": "Nastavení:",
+ "je Benutzer": "pro každého uživatele",
+ "Was mit „je Benutzer“ markiert ist, stellt jeder Benutzer für sich ein. Alles andere gilt für die ganze Box.": "Co je označeno „pro každého uživatele“, si každý uživatel nastavuje sám. Vše ostatní platí pro celý box.",
+ "Du bearbeitest, was {} für sich einstellt. Es gilt, sobald dieser Benutzer aktiv ist.": "Upravuješ, co si {} nastavuje sám. Platí, jakmile je tento uživatel aktivní."
 }

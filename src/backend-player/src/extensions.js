@@ -7,7 +7,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 
 // (the same as the API's, app-api/extensions.ts - test/compat.test.js checks it: an extension the API installed for a newer host lost its player part here)
-const HOST_API = 12
+const HOST_API = 13
 // Since 5.1 below data/ (what the box keeps); a box that came over from before has them in ~/.mupibox/extensions: moved once
 // (the API's extensions.ts does the same - whoever is first wins). In development the player's config folder.
 const MUPI_HOME = '/home/dietpi/.mupibox'
@@ -79,17 +79,44 @@ function enabledExtensions(extDir = EXT_DIR) {
     .filter((e) => e.manifest)
 }
 
-/** An extension's settings: its own file, with the defaults of the manifest behind it. */
+// (hostApi 13) the settings every user has for himself are in the same file under this key, by the id of the user (see
+// the server's extensions.ts); the user in place is in the users' file next to the extensions
+const PER_USER = '@users'
+const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v)
+
+/** An extension's settings: its own file, with the defaults of the manifest behind it (those per user: the user's in place). */
 function createSettings(extDir, id, manifest) {
   const file = path.join(extDir, 'settings', `${id}.json`)
   const defaults = Object.fromEntries(Object.entries(manifest.settings ?? {}).filter(([, d]) => 'default' in d).map(([k, d]) => [k, d.default]))
-  const all = () => ({ ...defaults, ...readJson(file, {}) })
+  const perUser = Object.entries(manifest.settings ?? {}).filter(([, d]) => d?.perUser === true).map(([k]) => k)
+  // (as the server's users.ts reads it: the user in place when he is in the list, else the first of the list - no users' file
+  // yet, or a broken one: the one user "main")
+  const current = () => {
+    const users = readJson(path.join(extDir, '..', 'users', 'users.json'), {})
+    const ids = (Array.isArray(users?.users) ? users.users : []).map((u) => u?.id).filter((id) => typeof id === 'string' && /^[a-z0-9]{2,12}$/.test(id))
+    if (ids.length === 0) return 'main'
+    return ids.includes(users.current) ? users.current : ids[0]
+  }
+  const all = () => {
+    const { [PER_USER]: byUser, ...shared } = readJson(file, {})
+    if (perUser.length === 0 || !isObj(byUser)) return { ...defaults, ...shared }
+    const who = current()
+    const mine = isObj(byUser[who]) ? byUser[who] : {}
+    return { ...defaults, ...shared, ...Object.fromEntries(perUser.filter((k) => Object.hasOwn(mine, k)).map((k) => [k, mine[k]])) }
+  }
   return {
     get: (key, fallback) => (key in all() ? all()[key] : fallback),
     all,
     set(key, value) {
       fs.mkdirSync(path.dirname(file), { recursive: true })
-      fs.writeFileSync(file, JSON.stringify({ ...readJson(file, {}), [key]: value }))
+      const have = readJson(file, {})
+      if (perUser.includes(key)) {
+        // (a setting per user: the user's in place)
+        const byUser = isObj(have[PER_USER]) ? { ...have[PER_USER] } : {}
+        const who = current()
+        byUser[who] = { ...(isObj(byUser[who]) ? byUser[who] : {}), [key]: value }
+        fs.writeFileSync(file, JSON.stringify({ ...have, [PER_USER]: byUser }))
+      } else fs.writeFileSync(file, JSON.stringify({ ...have, [key]: value }))
     },
   }
 }

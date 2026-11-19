@@ -4624,5 +4624,9 @@
  "Erinnerungen": "Minner",
  "Die Fotos von heute vor einem Jahr und mehr – jeden Tag neu, wie in Immich": "Bildene fra denne dagen for ett år siden og mer – nye hver dag, som i Immich",
  "Die Erinnerungen brauchen zusätzlich das Recht memory.read. Die Alben gehen auch ohne.": "Minnene trenger i tillegg rettigheten memory.read. Album fungerer også uten.",
- "Für die Erinnerungen zusätzlich memory.read anhaken.": "For minnene, kryss også av memory.read."
+ "Für die Erinnerungen zusätzlich memory.read anhaken.": "For minnene, kryss også av memory.read.",
+ "Einstellungen von": "Innstillinger for",
+ "je Benutzer": "per bruker",
+ "Was mit „je Benutzer“ markiert ist, stellt jeder Benutzer für sich ein. Alles andere gilt für die ganze Box.": "Det som er merket «per bruker», stiller hver bruker inn for seg selv. Alt annet gjelder for hele boksen.",
+ "Du bearbeitest, was {} für sich einstellt. Es gilt, sobald dieser Benutzer aktiv ist.": "Du redigerer det {} stiller inn for seg selv. Det gjelder så snart denne brukeren er aktiv."
 }

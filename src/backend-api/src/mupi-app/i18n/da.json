@@ -4624,5 +4624,9 @@
  "Erinnerungen": "Minder",
  "Die Fotos von heute vor einem Jahr und mehr – jeden Tag neu, wie in Immich": "Billederne fra denne dag for et år siden og mere – nye hver dag, som i Immich",
  "Die Erinnerungen brauchen zusätzlich das Recht memory.read. Die Alben gehen auch ohne.": "Minderne kræver også rettigheden memory.read. Album virker også uden.",
- "Für die Erinnerungen zusätzlich memory.read anhaken.": "For minderne skal du også sætte flueben ved memory.read."
+ "Für die Erinnerungen zusätzlich memory.read anhaken.": "For minderne skal du også sætte flueben ved memory.read.",
+ "Einstellungen von": "Indstillinger for",
+ "je Benutzer": "pr. bruger",
+ "Was mit „je Benutzer“ markiert ist, stellt jeder Benutzer für sich ein. Alles andere gilt für die ganze Box.": "Det, der er markeret “pr. bruger”, indstiller hver bruger for sig selv. Alt andet gælder for hele boksen.",
+ "Du bearbeitest, was {} für sich einstellt. Es gilt, sobald dieser Benutzer aktiv ist.": "Du redigerer, hvad {} indstiller for sig selv. Det gælder, så snart denne bruger er aktiv."
 }

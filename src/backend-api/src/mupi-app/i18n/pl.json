@@ -4624,5 +4624,9 @@
  "Erinnerungen": "Wspomnienia",
  "Die Fotos von heute vor einem Jahr und mehr – jeden Tag neu, wie in Immich": "Zdjęcia z tego dnia sprzed roku i dawniej – codziennie nowe, jak w Immich",
  "Die Erinnerungen brauchen zusätzlich das Recht memory.read. Die Alben gehen auch ohne.": "Wspomnienia wymagają dodatkowo uprawnienia memory.read. Albumy działają i bez niego.",
- "Für die Erinnerungen zusätzlich memory.read anhaken.": "Dla wspomnień zaznacz też memory.read."
+ "Für die Erinnerungen zusätzlich memory.read anhaken.": "Dla wspomnień zaznacz też memory.read.",
+ "Einstellungen von": "Ustawienia:",
+ "je Benutzer": "na użytkownika",
+ "Was mit „je Benutzer“ markiert ist, stellt jeder Benutzer für sich ein. Alles andere gilt für die ganze Box.": "To, co oznaczono „na użytkownika”, każdy użytkownik ustawia dla siebie. Wszystko inne dotyczy całego boksu.",
+ "Du bearbeitest, was {} für sich einstellt. Es gilt, sobald dieser Benutzer aktiv ist.": "Edytujesz to, co {} ustawia dla siebie. Obowiązuje, gdy ten użytkownik jest aktywny."
 }

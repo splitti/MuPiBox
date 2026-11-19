@@ -4624,5 +4624,9 @@
  "Erinnerungen": "Anılar",
  "Die Fotos von heute vor einem Jahr und mehr – jeden Tag neu, wie in Immich": "Bir yıl ve daha önce bugünün fotoğrafları – Immich’teki gibi her gün yeni",
  "Die Erinnerungen brauchen zusätzlich das Recht memory.read. Die Alben gehen auch ohne.": "Anılar için ayrıca memory.read izni gerekir. Albümler onsuz da çalışır.",
- "Für die Erinnerungen zusätzlich memory.read anhaken.": "Anılar için memory.read seçeneğini de işaretleyin."
+ "Für die Erinnerungen zusätzlich memory.read anhaken.": "Anılar için memory.read seçeneğini de işaretleyin.",
+ "Einstellungen von": "Ayarlar:",
+ "je Benutzer": "kullanıcıya özel",
+ "Was mit „je Benutzer“ markiert ist, stellt jeder Benutzer für sich ein. Alles andere gilt für die ganze Box.": "“Kullanıcıya özel” işaretli olanları her kullanıcı kendisi için ayarlar. Geri kalan her şey tüm kutu için geçerlidir.",
+ "Du bearbeitest, was {} für sich einstellt. Es gilt, sobald dieser Benutzer aktiv ist.": "{} kullanıcısının kendisi için ayarladıklarını düzenliyorsun. Bu kullanıcı etkin olduğunda geçerli olur."
 }

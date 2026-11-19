@@ -173,6 +173,17 @@ export function nightBrightness(nd: NightDim, base: number, now: Date, quietNow:
 }
 
 // whether a quiet-hours window runs now (the player's state, /tmp/playtime.json)
+/** Whether the box rests now: in a window of the quiet hours, or playback is blocked (the play time used up, quiet hours, a
+ *  pause of the parents) - what the player writes for the display (/tmp/playtime.json). Not readable: no rest. */
+export async function restNow(): Promise<{ quiet: boolean; blocked: boolean }> {
+  try {
+    const s = JSON.parse(await fsp.readFile('/tmp/playtime.json', 'utf8')) as { state?: string; quiet?: { inWindow?: boolean } }
+    return { quiet: s.quiet?.inWindow === true, blocked: s.state === 'blocked' }
+  } catch {
+    return { quiet: false, blocked: false }
+  }
+}
+
 export async function quietNow(): Promise<boolean> {
   try {
     const s = JSON.parse(await fsp.readFile('/tmp/playtime.json', 'utf8')) as { quiet?: { inWindow?: boolean } }
