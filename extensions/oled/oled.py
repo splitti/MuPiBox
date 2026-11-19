@@ -33,7 +33,8 @@ I2C_SLAVE = 0x0703  # the ioctl that chooses the device of the bus
 CONTROLLERS = ('ssd1306', 'sh1106', 'ssd1309')
 BOOT_SECONDS = 1.2
 # (the power-off picture stays this long once the extension ends with the box going down; then the panel is switched off)
-BYE_SECONDS = 2.5
+# (under pm2's 1.6 s from SIGTERM to SIGKILL at the box's shutdown: killed in the middle, the panel stayed lit)
+BYE_SECONDS = 1.2
 
 
 def emit(**event):

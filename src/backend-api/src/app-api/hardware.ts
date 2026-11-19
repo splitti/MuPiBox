@@ -4,7 +4,7 @@
 
 import { execFile, spawn } from 'node:child_process'
 import { promises as fsp } from 'node:fs'
-import type { Router } from 'express'
+import type { Request, Response, Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { requireCsrf, requireSession } from './middleware'
 import { bootConfigPath } from './boot-paths'
@@ -138,7 +138,8 @@ export async function fanSpeedNow(): Promise<number | null> {
 
 export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void {
   // the pins the rotary encoder holds (none while it is off, the button's only while it does something): not for the LED or the fan
-  const rotaryHeld = (): string[] => (section(deps, 'rotary').active === true ? rotaryHeldPins(deps.getMupiboxConfig() as unknown as Record<string, unknown> | undefined).map(String) : [])
+  // (rotaryHeldPins knows the first one's switch: the others hold theirs also while it is off)
+  const rotaryHeld = (): string[] => rotaryHeldPins(deps.getMupiboxConfig() as unknown as Record<string, unknown> | undefined).map(String)
 
   /** GET /api/app/hardware - everything the pages Soundkarte, Drehregler, MuPiHAT, Taster and Lüfter show. */
   router.get('/hardware', requireSession, async (_req, res) => {
@@ -234,7 +235,8 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
     const fan = section(deps, 'fan')
     res.set('Cache-Control', 'no-store').json({
       rotary: section(deps, 'rotary').active === true,
-      rotaryPins: Object.values(rotaryPinsOf(deps.getMupiboxConfig())).filter((pin) => pin !== 0).map(String),
+      // (by their place - A, B, button -, "Kein Pin" as null: the manual reads them so)
+      rotaryPins: (({ a, b, button }) => [a, b, button].map((pin) => (pin === 0 ? null : String(pin))))(rotaryPinsOf(deps.getMupiboxConfig())),
       fan: { active: fan.fan_active === true, gpio: String(fan.fan_gpio ?? '13') },
       shim: {
         poweroffPin: String(shim.poweroffPin ?? '4'),
@@ -361,7 +363,7 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
     const others = rotaryExtras(deps.getMupiboxConfig() as unknown as Record<string, unknown> | undefined)
       .flatMap((k) => [k.a, k.b, k.button])
       .filter((pin) => pin !== 0)
-    if (pinsGiven) {
+    if (pinsGiven || body.active === true) {
       const twice = set.find((pin) => others.includes(pin))
       if (twice !== undefined) return void res.status(409).json({ error: 'gpio_twice', pin: twice })
     }
@@ -431,7 +433,17 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
    * is added (up to ROTARY_EXTRA_MAX), with the id of one it changes that one. Every pin of the header that nothing else holds can be chosen, each by
    * one encoder only. A new one without pins is fine: the page then asks for them.
    */
-  router.post('/rotary-extra', requireSession, requireCsrf, async (req, res) => {
+  // (one change of the other encoders at a time: each reads the list, waits seconds for the pins in use, then writes the whole list -
+  // two pins chosen quickly, and the later one put the list back without the first)
+  let extraQueue: Promise<unknown> = Promise.resolve()
+  const oneAtATime =
+    (work: (req: Request, res: Response) => Promise<void>) =>
+    (req: Request, res: Response): Promise<void> => {
+      const run = extraQueue.then(() => work(req, res))
+      extraQueue = run.catch(() => undefined)
+      return run
+    }
+  router.post('/rotary-extra', requireSession, requireCsrf, oneAtATime(async (req, res) => {
     const body = (req.body ?? {}) as Record<string, unknown>
     const list = extraNow()
     const current = body.id === undefined ? undefined : list.find((k) => k.id === body.id)
@@ -452,15 +464,15 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
     if (step === undefined) return void res.status(400).json({ error: 'step must be 1-10' })
     const chosen = [pins.a, pins.b, pins.button].filter((p) => p !== 0)
     if (new Set(chosen).size !== chosen.length) return void res.status(409).json({ error: 'gpio_twice' })
-    // (not a pin of another encoder - the first one's pins count while it is on)
+    // (not a pin of another encoder - the first one's count also while it is off: switched on, both read the same pin)
     const config = configNow()
     const usedByOthers = list.filter((k) => k.id !== current?.id).flatMap((k) => [k.a, k.b, k.button])
     const first = rotaryPinsOf(deps.getMupiboxConfig())
-    if (section(deps, 'rotary').active === true) usedByOthers.push(first.a, first.b, first.button)
+    usedByOthers.push(first.a, first.b, first.button)
     const twice = chosen.find((p) => usedByOthers.includes(p))
     if (twice !== undefined) return void res.status(409).json({ error: 'gpio_twice', pin: twice })
     // (what something else holds - the fan, an extension, the boot configuration, a running program - is not to be chosen; what the encoder has is its own)
-    const own = current ? [current.a, current.b, current.button] : []
+    const own = current ? [current.a, current.b, ...(current.buttonFn !== 'off' ? [current.button] : [])] : []
     const taken = (await takenForRotary(config)).gpio
     for (const p of [pins.a, pins.b, ...(buttonFn !== 'off' ? [pins.button] : [])].filter((q) => q !== 0)) {
       const holders = taken.get(p)
@@ -476,17 +488,17 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
     // (a knob without any pin - just added - reads nothing: the service is not started for it, and goes when nothing is left to read)
     const running = pinsChanged ? await restartRotaryService(next) : undefined
     res.json({ ok: true, id, ...(running === false ? { running: false } : {}) })
-  })
+  }))
 
   /** DELETE /api/app/rotary-extra/:id - takes another rotary encoder away; its pins are free again. */
-  router.delete('/rotary-extra/:id', requireSession, requireCsrf, async (req, res) => {
+  router.delete('/rotary-extra/:id', requireSession, requireCsrf, oneAtATime(async (req, res) => {
     const list = extraNow()
     if (!list.some((k) => k.id === req.params.id)) return void res.status(404).json({ error: 'not_found' })
     const next = list.filter((k) => k.id !== req.params.id).map(asEntry)
     await merge(deps, 'rotary', { extra: next })
     await restartRotaryService(next)
     res.json({ ok: true })
-  })
+  }))
 
   /** After the list of the other encoders changed: the service runs while the first encoder is on or one of the others has a pin, else it is stopped. */
   async function restartRotaryService(list: ExtraEntry[]): Promise<boolean | undefined> {

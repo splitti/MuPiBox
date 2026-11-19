@@ -379,9 +379,13 @@ export function rotaryHeldPins(config: Record<string, unknown> | undefined): num
 
 /** Pins a part of the core would use once it is switched on: free now, but worth a word to whoever chooses a pin. */
 export function idleCoreGpio(config: Record<string, unknown> | undefined): { pin: number; by: string }[] {
-  if (!rotaryOn(config)) return rotaryPinList(config).map((pin) => ({ pin, by: 'MuPiBox (rotary encoder, switched off)' }))
+  // (the buttons of the other encoders that do nothing yet: their pin is taken once they get a function)
+  const extra = rotaryExtras(config)
+    .filter((k) => k.buttonFn === 'off' && k.button !== 0)
+    .map((k) => ({ pin: k.button, by: `MuPiBox (button of rotary encoder ${k.name || k.id}, switched off)` }))
+  if (!rotaryOn(config)) return [...rotaryPinList(config).map((pin) => ({ pin, by: 'MuPiBox (rotary encoder, switched off)' })), ...extra]
   const button = rotaryPins(config).button
-  return rotaryButtonOn(config) || button === 0 ? [] : [{ pin: button, by: 'MuPiBox (rotary encoder button, switched off)' }]
+  return [...(rotaryButtonOn(config) || button === 0 ? [] : [{ pin: button, by: 'MuPiBox (rotary encoder button, switched off)' }]), ...extra]
 }
 
 export function coreResources(config: Record<string, unknown> | undefined): { ports: { proto: 'tcp' | 'udp'; port: number; by: string }[]; gpio: { pin: number; by: string }[] } {

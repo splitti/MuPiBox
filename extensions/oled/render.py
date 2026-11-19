@@ -85,7 +85,7 @@ def check_picture(data, width=128, height=64):
     already: exactly width x height points, every point pure black or pure white (no grey, no colour, nothing transparent). Nothing is
     scaled, turned around or dithered: PictureError('bad_size' | 'not_1bit') for any other picture."""
     source = Image.open(io.BytesIO(data))
-    source.load()
+    # (the size from the file's head, before it is unpacked: a small file can hold a picture of many million points)
     if source.size != (width, height):
         raise PictureError('bad_size', 'the picture is %d x %d points, not %d x %d' % (source.width, source.height, width, height))
     rgba = source.convert('RGBA')

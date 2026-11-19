@@ -499,7 +499,8 @@ exports.activate = (host) => {
   // The same for a button of the box (the buttons extension, a knob's button): not behind the login, but only from the box itself
   host.route('post', '/address', (req, res) => {
     const from = String(req.socket?.remoteAddress ?? '')
-    if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(from) || req.headers['x-forwarded-for']) return res.status(403).json({ ok: false })
+    // (the box's web server proxies to 8201: never from there, whatever header it sets)
+    if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(from) || req.headers['x-forwarded-for'] || req.socket?.localPort === 8201) return res.status(403).json({ ok: false })
     showAddress()
     res.json({ ok: true })
   })
@@ -631,7 +632,8 @@ exports.activate = (host) => {
   // but only from the box itself.
   host.route('post', '/select', (req, res) => {
     const from = String(req.socket?.remoteAddress ?? '')
-    if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(from) || req.headers['x-forwarded-for']) return res.status(403).json({ ok: false })
+    // (the box's web server proxies to 8201: never from there, whatever header it sets)
+    if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(from) || req.headers['x-forwarded-for'] || req.socket?.localPort === 8201) return res.status(403).json({ ok: false })
     ui.select = logic.selectionOf(req.body, clock())
     if (ui.select) {
       // (a display that went off wakes for it)

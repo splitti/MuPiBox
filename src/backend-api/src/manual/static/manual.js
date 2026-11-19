@@ -163,7 +163,8 @@
         for (const tr of pinRows) {
           const r = rows[tr.dataset.pin]
           if (!r) continue
-          tr.hidden = !r.on
+          // (null: "Kein Pin" - the row of a pin the box does not use)
+          tr.hidden = !r.on || r.pin === null
           if (r.pin) tr.children[2].textContent = r.pin
         }
       })

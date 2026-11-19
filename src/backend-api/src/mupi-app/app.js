@@ -9938,7 +9938,8 @@ async function loadRotary() {
   ])
   own.delete(0)
   hw.rotaryClash = new Map(free.ok && Array.isArray(free.body?.pins) ? free.body.pins.filter((p) => own.has(Number(p.pin)) && (p.holders ?? []).length).map((p) => [Number(p.pin), p.holders]) : [])
-  hw.rotaryStopped = (r.active === true || (r.extra ?? []).length > 0) && r.running === false
+  // (an encoder only added - no pin yet - runs nothing: not "stopped")
+  hw.rotaryStopped = (r.active === true || (r.extra ?? []).some((k) => Object.values(k.pins ?? {}).some((p) => Number(p) !== 0))) && r.running === false
   for (const [key, name] of ROTARY_PIN_ITEMS) state.values.set(key, rotaryPinText(r.pins[name]))
   hw.rotaryExtra = r.extra ?? []
   hw.rotaryExtraMax = r.extraMax ?? 4
@@ -10346,7 +10347,9 @@ function pinsInUse(without) {
   const used = [...(d.shim?.reserved ?? [])]
   if (without !== 'led' && d.shim?.ledPin) used.push(String(d.shim.ledPin))
   if (without !== 'fan' && d.fan?.active && d.fan?.gpio) used.push(String(d.fan.gpio))
-  if (d.rotary?.active) used.push(...Object.values(d.rotary.pins ?? { a: 26, b: 24, button: 10 }).map(String))
+  if (d.rotary?.active) used.push(...Object.values(d.rotary.pins ?? { a: 26, b: 24, button: 10 }).filter((p) => Number(p) !== 0).map(String))
+  // (the other encoders: theirs also while the first one is off)
+  for (const k of d.rotary?.extra ?? []) used.push(...Object.values(k.pins ?? {}).filter((p) => Number(p) !== 0).map(String))
   // (pins an extension holds - the buttons of the buttons extension, say)
   used.push(...(d.extPins ?? []).map(String))
   return used

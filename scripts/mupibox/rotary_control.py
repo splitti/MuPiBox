@@ -286,12 +286,20 @@ def setup():
         usable.append(knob)
     if not usable:
         raise RuntimeError("no encoder with usable pins")
-    knobs = usable
     pins = gpio_compat.Gpio()
-    for knob in knobs:
-        if knob.turns():
-            for pin in (knob.a, knob.b):
-                pins.setup_input(pin)
+    # (each on its own: a pin one of them cannot take - another program has it - leaves the others working)
+    ready = []
+    for knob in usable:
+        try:
+            if knob.turns():
+                for pin in (knob.a, knob.b):
+                    pins.setup_input(pin)
+            ready.append(knob)
+        except Exception as error:
+            print("rotary control: the pins of encoder %s cannot be used (%s) - not used" % (knob.name, error), flush=True)
+    if not ready:
+        raise RuntimeError("no encoder with usable pins")
+    knobs = ready
     if pins.refused:
         print("rotary control: RPi.GPIO does not work here (%s), using %s" % (pins.refused, pins.name), flush=True)
 

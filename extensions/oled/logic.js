@@ -61,7 +61,9 @@ function readConfig(settings = {}) {
     rotate: settings.rotate === true,
     contrast: Math.round(number(settings.contrast, 127, 0, 255)),
     mode: pick(settings.mode, MODES, 'full'),
-    idleScreen: pick(settings.idleScreen, IDLE_SCREENS, 'nfc'),
+    // (the clock as before 0.3.0 - a box that had "Uhrzeit zeigen" off keeps the reader's picture: its old setting stays in
+    // the saved settings, the new one comes as the manifest's default "clock" then)
+    idleScreen: settings.clock === false && settings.idleScreen === 'clock' ? 'nfc' : pick(settings.idleScreen, IDLE_SCREENS, 'clock'),
     volumeOverlay: settings.volumeOverlay !== false,
     playOverlay: settings.playOverlay !== false,
     nightDim: settings.nightDim === true,

@@ -18,7 +18,7 @@ test('the settings of the extension become the arguments of the driver', () => {
 
 test('a setting that makes no sense falls back to its default', () => {
   const c = logic.readConfig({ controller: 'ssd9999', size: '64x48', address: '0x10', contrast: 999, mode: 'x', sleepAfter: 7, idleScreen: 'x' })
-  assert.deepStrictEqual([c.controller, c.width, c.height, c.address, c.contrast, c.mode, c.sleepAfter, c.idleScreen, c.rotate, c.headless], ['ssd1306', 128, 64, '0x3C', 255, 'full', 5, 'nfc', false, false])
+  assert.deepStrictEqual([c.controller, c.width, c.height, c.address, c.contrast, c.mode, c.sleepAfter, c.idleScreen, c.rotate, c.headless], ['ssd1306', 128, 64, '0x3C', 255, 'full', 5, 'clock', false, false])
   assert.strictEqual(logic.readConfig({ contrast: 'x' }).contrast, 127)
 })
 
@@ -811,11 +811,14 @@ test('a DSI display plugged in is the reason the log gives, also while the drive
 })
 
 // ---- the pictures --------------------------------------------------------------------------------------------------------------
-test('the setting of the idle display: the reader unless another is chosen; the driver gets the folders of the pictures', () => {
-  assert.strictEqual(logic.readConfig({}).idleScreen, 'nfc')
+test('the setting of the idle display: the clock unless another is chosen (as before 0.3.0); the driver gets the folders of the pictures', () => {
+  assert.strictEqual(logic.readConfig({}).idleScreen, 'clock')
+  // (a box that had the clock off before 0.3.0: the reader's picture, not the new default)
+  assert.strictEqual(logic.readConfig({ clock: false, idleScreen: 'clock' }).idleScreen, 'nfc')
+  assert.strictEqual(logic.readConfig({ clock: true, idleScreen: 'clock' }).idleScreen, 'clock')
   for (const value of ['nfc', 'barcode', 'clock', 'custom']) assert.strictEqual(logic.readConfig({ idleScreen: value }).idleScreen, value)
   assert.strictEqual(state({ config: { idleScreen: 'clock' } }).clock, true)
-  assert.deepStrictEqual([state({}).clock, state({}).idle], [false, 'nfc'])
+  assert.deepStrictEqual([state({}).clock, state({}).idle], [true, 'clock'])
   assert.strictEqual(state({ config: { idleScreen: 'barcode' } }).idle, 'barcode')
   const args = logic.driverArgs(logic.readConfig({}), { images: '/x/images', custom: '/d/images' })
   assert.deepStrictEqual(args.slice(-4), ['--images', '/x/images', '--custom', '/d/images'])

@@ -433,11 +433,14 @@ exports.activate = (host) => {
     browseTimer.unref?.()
   }
   // A tag of a collection was laid on: the knob is for its albums now (when the settings allow it)
+  // (counted up at every tag: a list of albums that came late - the NAS slow - is for a tag laid on before, not the one there now)
+  let knobSeq = 0
   const rotaryBegin = async (tag, settings) => {
+    const mine = ++knobSeq
     const collection = tags.collectionOf(tag.media)
     if (!collection || !knobConfig(settings)) return
     const albums = await albumsOf(collection)
-    if (!albums || albums.length < 2) return
+    if (mine !== knobSeq || !albums || albums.length < 2) return
     // (0 seconds: no limit - until a choice is made or another tag is laid on; not set at all: the default)
     const asked = Number(settings.rotarySeconds)
     const seconds = settings.rotarySeconds === undefined || !Number.isFinite(asked) ? ROTARY_SECONDS : Math.max(0, asked)
@@ -648,8 +651,10 @@ exports.activate = (host) => {
     // (the tag that lay there while the driver started again: its medium plays already)
     if (again && !result.armedId) return
     if (result.kind !== 'unknown' && settings.playOnTag !== false) await start(result.tag, settings, reader)
-    // (a tag of an artist cover: the knob chooses among its albums for a while)
-    if (knob.uid && knob.uid !== result.tag.uid && !tags.collectionOf(result.tag.media)) endChoice()
+    // (a tag of an artist cover: the knob chooses among its albums for a while - another tag ends the choice of the one before
+    // at once, also one of an artist whose albums the knob does not get - only one, the NAS away: a press played the album of
+    // the one before otherwise)
+    if (knob.uid && knob.uid !== result.tag.uid) endChoice()
     if (result.kind !== 'unknown') rotaryBegin(result.tag, settings).catch((error) => log.warn(`[nfc] rotary: ${error?.message ?? error}`))
     // (a tag without a medium: the box says so - not while the assignment of one waits for it, then it is being given its medium)
     else if (result.kind === 'unknown' && !result.armedId) await say('tagNew', settings)

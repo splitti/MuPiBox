@@ -40,7 +40,7 @@ Darunter stehen **Titel**, **Interpret** und **Album**; eine lange Zeile läuft 
 
 ![Die Zeit läuft rückwärts, der Ausgang ist Bluetooth](oled-play-bt.png)
 
-Wenn nichts spielt, zeigt das Display das Bild, das unter **Anzeige im Leerlauf** gewählt ist: den **NFC-Leser** (eine Hand mit Karte: die Box wartet auf einen Tag, das ist die Voreinstellung), den **Barcodescanner**, die **Uhrzeit** mit dem Datum (der Wochentag in der Sprache der Box, die du unter **Einstellungen › System › Sprache** wählst; ohne Auswahl deutsch) oder ein **eigenes Bild**; nach der eingestellten Zeit schaltet es sich aus.
+Wenn nichts spielt, zeigt das Display das Bild, das unter **Anzeige im Leerlauf** gewählt ist: den **NFC-Leser** (eine Hand mit Karte: die Box wartet auf einen Tag), den **Barcodescanner**, die **Uhrzeit** mit dem Datum (das ist die Voreinstellung; der Wochentag in der Sprache der Box, die du unter **Einstellungen › System › Sprache** wählst; ohne Auswahl deutsch) oder ein **eigenes Bild**; nach der eingestellten Zeit schaltet es sich aus.
 
 ![Die Uhr im Leerlauf](oled-idle.png)
 
@@ -61,7 +61,7 @@ Die Einstellungen stehen in Karten: **Display** (Chip, Größe, Adresse, Drehung
 | **I2C-Adresse** | **0x3C** oder **0x3D** |
 | **Um 180° drehen** | wenn das Display auf dem Kopf eingebaut ist |
 | **Anzeige beim Spielen** | **Voll** (das Bild oben), **Mix** (die Titelnummer groß) oder **Kompakt** (die Zeit groß) |
-| **Anzeige im Leerlauf** (Karte **Bilder**) | was das Display zeigt, solange nichts spielt: **NFC-Leser** (Voreinstellung), **Barcodescanner**, **Uhrzeit** oder **Eigenes Bild** |
+| **Anzeige im Leerlauf** (Karte **Bilder**) | was das Display zeigt, solange nichts spielt: **NFC-Leser**, **Barcodescanner**, **Uhrzeit** (Voreinstellung) oder **Eigenes Bild** |
 | **Lautstärke-Animation zeigen** | das kurze Bild beim Ändern der Lautstärke; ausgeschaltet bleibt die Anzeige, wie sie ist |
 | **Play/Pause-Animation zeigen** | das kurze Bild mit Play oder Pause beim Starten und Anhalten der Wiedergabe; ausgeschaltet bleibt die Anzeige, wie sie ist |
 | **Zeit zeigen** | **Vergangen** (zählt vom Anfang hoch) oder **Restzeit** (zählt mit einem Minus bis zum Ende herunter); bei einem Sender oder Podcast ohne bekannte Länge zählt sie hoch |

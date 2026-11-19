@@ -40,7 +40,7 @@ Below are **title**, **artist** and **album**; a long line scrolls by itself (or
 
 ![The time counts down, the output is Bluetooth](oled-play-bt.png)
 
-When nothing plays, the display shows what is chosen under **Idle display**: the **NFC reader** (a hand with a card: the box waits for a tag, the default), the **barcode scanner**, the **clock** with the date (the weekday in the language of the box, which you choose under **Settings › System › Language**; German if none is chosen) or **your own picture**; after the time you set it switches off.
+When nothing plays, the display shows what is chosen under **Idle display**: the **NFC reader** (a hand with a card: the box waits for a tag), the **barcode scanner**, the **clock** with the date (the default; the weekday in the language of the box, which you choose under **Settings › System › Language**; German if none is chosen) or **your own picture**; after the time you set it switches off.
 
 ![The clock when idle](oled-idle.png)
 
@@ -61,7 +61,7 @@ The settings are in cards: **Display** (chip, size, address, rotation), **Displa
 | **I2C address** | **0x3C** or **0x3D** |
 | **Turn by 180°** | if the display is mounted upside down |
 | **Display while playing** | **Full** (the picture above), **Mix** (the track number large) or **Compact** (the time large) |
-| **Idle display** (card **Pictures**) | what the display shows while nothing plays: **NFC reader** (default), **Barcode scanner**, **Clock** or **Own picture** |
+| **Idle display** (card **Pictures**) | what the display shows while nothing plays: **NFC reader**, **Barcode scanner**, **Clock** (default) or **Own picture** |
 | **Show the volume animation** | the short picture when the volume changes; when it is off the display stays as it is |
 | **Show the play/pause animation** | the short picture with play or pause when playback starts or stops; when it is off the display stays as it is |
 | **Show the time** | **Elapsed** (counts up from the start) or **Remaining** (counts down to the end, with a minus); a station or podcast of unknown length counts up |
