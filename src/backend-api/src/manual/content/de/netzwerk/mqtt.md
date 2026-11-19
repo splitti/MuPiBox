@@ -47,6 +47,9 @@ Steuern lässt sich die Box über dieselben Themen mit `/set` am Ende:
 | `take_screenshot/set` | `take_screenshot` | Bild vom Display unter `screenshot` |
 | `reboot/set` | `reboot` | Neustart |
 | `power/set` | `shutdown` | Herunterfahren |
+| `user/set` | Name eines Benutzers | dieses Kind wird aktiv, ohne PIN wie in der App |
+
+Sind [mehrere Benutzer](../bedienung/mehrere-benutzer.md) an, meldet die Box unter `user` den Namen des aktiven Kindes. Mit MQTT-Discovery erscheint dazu eine Auswahl **User** mit allen Namen.
 
 ## MQTT-Discovery
 

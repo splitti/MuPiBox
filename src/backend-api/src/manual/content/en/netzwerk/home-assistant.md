@@ -30,6 +30,8 @@ The code is shown only on the box's display, so whoever enters it has the box in
 - **Restart and switch off** (right "restart and switch off"): the box restarts or shuts down, as with the button in the app.
 - **Power-off timer** (right "restart and switch off"): Home Assistant sets the box's [sleep timer](../spielzeit/schlaftimer.md), replaces it or stops it (0 minutes), up to 720 minutes. It is the same timer as in the app and in Telegram: whoever sets it where, all see the same time left. Home Assistant sees the time left and the end with the right to show alone as well. From version 5.0.12 of the box, with the integration from the version that knows the timer.
 
+- **Several users**: with [several users](../bedienung/mehrere-benutzer.md) on, the box reports which child is listening, and Home Assistant can switch, without a PIN like the app. The integration shows this once it knows this part of the interface.
+
 During a quiet time the box shows no messages and speaks no announcements.
 
 ## Paired Home Assistants

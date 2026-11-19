@@ -290,6 +290,46 @@ export class UserFiles {
   }
 
   /**
+   * The entries of the own files (type "library": made from the media folders by the media scan, m3u_generator.sh - the
+   * same for every user, but written into the library in place only): those of the going user, now in his folder,
+   * matched against those of the coming one by what the scan knows them by (category, artist, title): his own stay as
+   * they are (changed in the app, in his order), one whose folder is gone meanwhile goes, a new one comes at the end.
+   * Numbered anew as the scan does (add_index.sh) - only when something changed.
+   */
+  carryOwnFiles(from: string): void {
+    const going = path.join(this.userDir(from), 'library', 'data.json')
+    const here = path.join(this.dirs.libraryDir, 'data.json')
+    let theirs: unknown
+    let mine: unknown
+    try {
+      theirs = JSON.parse(fs.readFileSync(going, 'utf8'))
+      mine = JSON.parse(fs.readFileSync(here, 'utf8'))
+    } catch {
+      return // (one not readable: his list stays as it is)
+    }
+    if (!Array.isArray(theirs) || !Array.isArray(mine)) return
+    const own = (e: unknown): e is Record<string, unknown> => !!e && typeof e === 'object' && (e as { type?: unknown }).type === 'library'
+    const key = (e: Record<string, unknown>) => JSON.stringify([e.category ?? '', e.artist ?? '', e.title ?? ''])
+    const now = new Map<string, Record<string, unknown>>()
+    for (const e of theirs) if (own(e) && !now.has(key(e))) now.set(key(e), e)
+    const kept = new Set<string>()
+    const next: unknown[] = []
+    for (const e of mine) {
+      if (!own(e)) next.push(e)
+      else if (now.has(key(e)) && !kept.has(key(e))) {
+        kept.add(key(e))
+        next.push(e)
+      }
+    }
+    for (const [k, e] of now) if (!kept.has(k)) next.push(clone(e))
+    if (next.length === mine.length && next.every((e, i) => e === mine[i])) return
+    next.forEach((e, i) => {
+      if (e && typeof e === 'object' && !Array.isArray(e)) (e as Record<string, unknown>).index = i
+    })
+    writeJsonSync(here, next, { spaces: 2, ifChanged: false })
+  }
+
+  /**
    * A switch cut off (users.json names it): its files finished - at the server's start, before anything reads the
    * library; the configuration and the player afterwards (Users.finishSwitchConfig). Returns the switch, or null.
    */
@@ -349,6 +389,59 @@ export class UserFiles {
     else fs.mkdirSync(to, { recursive: true })
     writeJsonSync(path.join(to, 'user.json'), { id: user.id, name: user.name, color: user.color, ...(user.pin ? { pin: user.pin } : {}) }, { ifChanged: false })
     return key
+  }
+
+  /**
+   * Before a backup with users is restored (admin.ts): the things in place go to the folder of the user in place (as at a
+   * switch), then every user's folder and the list aside into a folder of their own - the backup's come in their
+   * place whole, nothing of before mixes in. Returns that folder (for finishRestore / undoRestore).
+   */
+  prepareRestore(): string {
+    const f = this.read()
+    this.stash(f.current)
+    const held = path.join(this.dirs.usersDir, `.restore-${Date.now()}`)
+    fs.mkdirSync(held, { recursive: true })
+    for (const n of readdirOrNone(this.dirs.usersDir)) {
+      if (n === 'trash' || n.startsWith('.')) continue
+      fs.renameSync(path.join(this.dirs.usersDir, n), path.join(held, n))
+    }
+    return held
+  }
+
+  /**
+   * The backup is in place (its list, its folders, the library of its user in place): the users of before that it does
+   * not know go into the trash with their things (back from there for 30 days), the rest of before goes. The user in
+   * place gets what a switch gives him (lists that are not there yet, empty).
+   */
+  finishRestore(held: string, before: UsersFile): void {
+    const now = this.read()
+    for (const u of before.users) {
+      if (now.users.some((x) => x.id === u.id)) continue
+      const dir = path.join(held, u.id)
+      const key = `${u.id}.${Date.now()}`
+      const to = path.join(this.trashDir, key)
+      fs.mkdirSync(this.trashDir, { recursive: true })
+      if (exists(dir)) fs.renameSync(dir, to)
+      else fs.mkdirSync(to, { recursive: true })
+      writeJsonSync(path.join(to, 'user.json'), { id: u.id, name: u.name, color: u.color, ...(u.pin ? { pin: u.pin } : {}) }, { ifChanged: false })
+    }
+    // (his things the backup holds in his folder - his lists, counts, play log - come in place as at a switch; his library
+    // is in place already, from the backup under its own name)
+    fs.rmSync(path.join(this.userDir(now.current), 'library', 'data.json'), { force: true })
+    this.load(now.current)
+    this.dropConfigPart(now.current)
+    fs.rmSync(held, { recursive: true, force: true })
+  }
+
+  /** The restore failed: the folders and the list of before back, the things of the user in place back in place */
+  undoRestore(held: string, before: UsersFile): void {
+    for (const n of readdirOrNone(this.dirs.usersDir)) {
+      if (n === 'trash' || n.startsWith('.')) continue
+      fs.rmSync(path.join(this.dirs.usersDir, n), { recursive: true, force: true })
+    }
+    for (const n of readdirOrNone(held)) fs.renameSync(path.join(held, n), path.join(this.dirs.usersDir, n))
+    fs.rmSync(held, { recursive: true, force: true })
+    this.load(before.current)
   }
 
   trashList(): UserTrashEntry[] {
@@ -534,6 +627,12 @@ export class Users {
     return this.files.read()
   }
 
+  /** `work` while no switch runs and none begins (a backup takes the users' folders, the library and the config in place
+   *  as one moment) */
+  hold<T>(work: () => Promise<T>): Promise<T> {
+    return this.serial(work)
+  }
+
   /** A switch cut off: finished (its files at the server's start already - again here, that does nothing) - in the
    *  order of all changes, so no switch begins on the files of one that is not finished */
   finishCutOff(): Promise<void> {
@@ -643,6 +742,11 @@ export class Users {
         f.switching = { from, to: id, step: 'load' }
         this.files.write(f)
         this.files.load(id)
+        try {
+          this.files.carryOwnFiles(from)
+        } catch (err) {
+          console.warn(`${new Date().toLocaleString()}: [users] own files not taken over: ${(err as Error).message}`)
+        }
         // (what the server keeps of the going user in memory: not written into the coming user's files from now on)
         this.hooks.forgetCaches()
         const part = this.files.readConfigPart(id)

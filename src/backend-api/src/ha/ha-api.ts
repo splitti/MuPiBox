@@ -44,7 +44,7 @@ const CA_FILE = '/etc/mupibox/tls/ca.crt'
 const BASIC: Scope[] = ['read', 'control']
 /** granted only when allowed on the display as well */
 const EXTRA: Scope[] = ['notify', 'power']
-const CAPABILITIES = ['play', 'pause', 'stop', 'next', 'previous', 'set_volume', 'mute', 'unmute', 'seek', 'media_metadata', 'outputs', 'screenshot', 'update', 'message', 'speak', 'reboot', 'poweroff']
+const CAPABILITIES = ['play', 'pause', 'stop', 'next', 'previous', 'set_volume', 'mute', 'unmute', 'seek', 'media_metadata', 'outputs', 'screenshot', 'update', 'message', 'speak', 'reboot', 'poweroff', 'users']
 const SCREENSHOT_FILE = '/tmp/mupibox-ha-screenshot.png'
 const PAIRING_WINDOW_S = 60
 const PAIRING_TTL_S = 300
@@ -71,6 +71,26 @@ function run(cmd: string, args: string[], timeout = 30000): Promise<{ ok: boolea
 }
 
 const enabledIn = (deps: HaDeps) => ((deps.getMupiboxConfig()?.homeAssistant as { enabled?: unknown } | undefined)?.enabled ?? false) === true
+
+// ---- several users (5.1, users.ts) -----------------------------------------------------------------------------------
+
+interface BoxUsers {
+  enabled: boolean
+  current: string
+  users: { id: string; name: string; color: string }[]
+}
+/** the users as the display gets them (GET /api/users/state; none while several users are off), or null */
+async function boxUsers(): Promise<BoxUsers | null> {
+  try {
+    const r = await fetch(`${SELF}/api/users/state`, { signal: AbortSignal.timeout(3000) })
+    if (!r.ok) return null
+    const b = (await r.json()) as Partial<BoxUsers>
+    if (!Array.isArray(b.users) || typeof b.current !== 'string') return null
+    return { enabled: b.enabled === true, current: b.current, users: b.users.map((u) => ({ id: String(u.id), name: String(u.name), color: String(u.color) })) }
+  } catch {
+    return null
+  }
+}
 
 // ---- errors (contract §6) -------------------------------------------------------------------------------------------
 
@@ -536,14 +556,17 @@ export function buildApp(deps: HaDeps): Express {
   })
 
   v1.get('/state', requireScope('read'), async (_req, res) => {
-    const [snap, bat, dbm, mute, sys, timer] = await Promise.all([
+    const [snap, bat, dbm, mute, sys, timer, people] = await Promise.all([
       playbackSnapshot(deps.covers).catch(() => null),
       battery(deps),
       wifiSignalDbm(),
       muted(),
       metrics(),
       sleepTimerState().catch(() => null),
+      boxUsers(),
     ])
+    // (several users on and at least two: the one in place - an addition to the contract, null otherwise)
+    const inPlace = people?.enabled && people.users.length >= 2 ? (people.users.find((u) => u.id === people.current) ?? null) : null
     // (Spotify's cover as its own address - splitti's integration takes only i.scdn.co/mosaic.scdn.co; the box's own
     // pictures through /media/cover/current)
     const spotifyCover = snap?.coverUrl && /^https:\/\/(i|mosaic)\.scdn\.co\//.test(snap.coverUrl) ? snap.coverUrl : null
@@ -576,7 +599,39 @@ export function buildApp(deps: HaDeps): Express {
       metrics: sys,
       // the box's power-off timer - the same one the app, Telegram and the admin interface set (contract: sleep timer)
       sleep_timer: haSleepTimer(timer ?? { active: false, ends_at: null, remaining_s: 0, shutting_down: false }),
+      user: inPlace ? { id: inPlace.id, name: inPlace.name } : null,
     })
+  })
+
+  /** GET /users (read) - several users (5.1): switched on, who is in place, the users (none while it is off) */
+  v1.get('/users', requireScope('read'), async (_req, res) => {
+    const people = await boxUsers()
+    if (!people) return fail(res, 503, 'temporarily_unavailable', 'The users could not be read')
+    res.json(people)
+  })
+
+  /** POST /users/select {user_id} or {name} (control) - that user into place, as the app: no PIN; the box plays his
+   *  library from then on (the playback stops) */
+  v1.post('/users/select', requireScope('control'), async (req, res) => {
+    const b = (req.body as { user_id?: unknown; name?: unknown } | undefined) ?? {}
+    const body = typeof b.user_id === 'string' && b.user_id ? { id: b.user_id } : typeof b.name === 'string' && b.name.trim() ? { name: b.name } : null
+    if (!body) return fail(res, 400, 'invalid_request', 'user_id or name is missing')
+    try {
+      const r = await fetch(`${SELF}/api/users/select`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(60000),
+      })
+      if (r.ok) return void res.json({ success: true })
+      const e = ((await r.json().catch(() => ({}))) as { error?: string }).error
+      if (e === 'unknown_user') return fail(res, 400, 'invalid_value', 'Unknown user')
+      if (e === 'disabled') return fail(res, 422, 'unsupported_command', 'Several users are switched off')
+      if (e === 'busy') return fail(res, 409, 'provider_unavailable', 'The box is busy - try again in a moment')
+      return fail(res, 503, 'temporarily_unavailable', `The switch answered ${r.status}`)
+    } catch {
+      fail(res, 503, 'temporarily_unavailable', 'The switch did not answer')
+    }
   })
 
   v1.get('/media/cover/current', requireScope('read'), async (_req, res) => {

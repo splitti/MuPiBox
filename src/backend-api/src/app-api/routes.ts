@@ -66,7 +66,7 @@ import { registerPhotoRoutes } from './photos/routes'
 import type { PhotoNasAccess } from './photos/nas'
 import { registerSystemRoutes } from './system'
 import { markNoticeShown, noticeState, requestReportNow, setNoticeSwitches, setStatisticsConsent } from './telemetry'
-import { registerAdminRoutes } from './admin'
+import { type AdminDeps, registerAdminRoutes } from './admin'
 import { bootDrive } from './boot-drive'
 import { registerNetworkRoutes, renewDhcp } from './network'
 import { registerUpdateRoutes } from './updates'
@@ -146,6 +146,8 @@ export interface ElternRouterDeps {
   /** what was heard by a user who is not in place, and his lock around a change of it */
   heardOf?: (id: string) => HeardStore
   withUserLock?: <T>(id: string, work: () => T) => T | 'locked'
+  /** the users for a backup and its restore (admin.ts) */
+  backupUsers?: AdminDeps['users']
   /** several users switched on, and their ids */
   usersOn?: () => boolean
   userIds?: () => string[]
@@ -540,7 +542,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
   registerSystemRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   // (pm2 runs server.js from its folder: templates/ lies next to it)
-  registerAdminRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig, serverDir: process.cwd() })
+  registerAdminRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig, serverDir: process.cwd(), users: deps.backupUsers })
   registerNetworkRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerUpdateRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig })
   registerTlsRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })

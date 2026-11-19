@@ -18,6 +18,7 @@ import { MAX_USERS, USER_COLORS, type Users, UserSwitchError } from '../users'
  *   GET  /api/users/state            the display: switched on, who is in place, the users (no names of the trash)
  *   POST /api/users/switch           the display (only on the box itself): { id, pin? } - not with "only in the app";
  *                                    403 pin { left } wrong PIN, 429 pin_locked { seconds } after 5 wrong
+ *   POST /api/users/select           the box's tools (MQTT; only on the box itself): { id } or { name } - no PIN
  */
 export function registerUserRoutes(app: Express, users: Users, guard: { session: RequestHandler; csrf: RequestHandler; local: RequestHandler }): void {
   const router = express.Router()
@@ -91,4 +92,23 @@ export function registerUserRoutes(app: Express, users: Users, guard: { session:
       fail(res, err)
     }
   })
+  // the box's own tools of the parents (MQTT - mqtt.py): as the app, without the PIN and whatever the display's way of
+  // switching; by id or by name (Home Assistant sends the name it shows)
+  app.post('/api/users/select', guard.local, express.json(), async (req, res) => {
+    const b = (req.body as Record<string, unknown> | undefined) ?? {}
+    try {
+      await users.switchTo(userIdOf(users, b))
+      res.json({ ok: true, ...displayState() })
+    } catch (err) {
+      fail(res, err)
+    }
+  })
+}
+
+/** The id of the user a tool names: { id } or { name } (case and blanks around it do not count); '' none such */
+export function userIdOf(users: Users, b: Record<string, unknown>): string {
+  const f = users.state()
+  if (typeof b.id === 'string' && f.users.some((u) => u.id === b.id)) return b.id
+  const name = typeof b.name === 'string' ? b.name.trim().toLocaleLowerCase() : ''
+  return (name && f.users.find((u) => u.name.trim().toLocaleLowerCase() === name)?.id) || ''
 }

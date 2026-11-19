@@ -1185,20 +1185,18 @@ const podcastOffline = new PodcastOffline({
   dir: podcastOfflineDir,
   openRemote,
   episodes: feedEpisodes,
+  // (the podcasts of every user's library: the files on the SD card are the box's - one kept by a user who is not in place
+  // now stays. A library not readable right now - being written, broken, a switch under way: the sync leaves the files alone)
   feeds: async () => {
-    try {
-      const data = JSON.parse(await readFile(dataFile, 'utf8')) as { type?: string; id?: unknown; offline?: unknown; episodePick?: unknown }[]
-      return data
-        .filter((e) => e.type === 'rss' && typeof e.id === 'string')
-        .map((e) => ({
-          feed: e.id as string,
-          keep: Math.max(0, Math.min(MAX_KEEP, Number(e.offline) || 0)),
-          ...(isEpisodePick(e.episodePick) ? { pick: e.episodePick } : {}),
-        }))
-    } catch {
-      // (not readable right now - being written, or broken: the sync leaves the files alone)
-      return null
-    }
+    const libraries = await allLibraries()
+    if (!libraries) return null
+    return (libraries.flat() as { type?: string; id?: unknown; offline?: unknown; episodePick?: unknown }[])
+      .filter((e) => e?.type === 'rss' && typeof e.id === 'string')
+      .map((e) => ({
+        feed: e.id as string,
+        keep: Math.max(0, Math.min(MAX_KEEP, Number(e.offline) || 0)),
+        ...(isEpisodePick(e.episodePick) ? { pick: e.episodePick } : {}),
+      }))
   },
   changed: () => undefined,
 })
@@ -1297,6 +1295,8 @@ const users = new Users(userFiles, {
     episodeState.forget()
     forgetHiddenCovers()
     homeCache = {}
+    jellyfinMedia.forgetTicks()
+    audibleMedia.forgetTicks()
   },
   reload: async () => {
     await fs.promises.rm(homeCacheFile, { force: true }).catch(() => undefined)
@@ -2011,13 +2011,42 @@ async function rssPictureFiles(feedUrl: string): Promise<string[]> {
   return [...files]
 }
 
-// A podcast was taken out of the library: its pictures go with it - the cover folder kept one file for every picture
-// ever shown, for ever, and so did the small copies of them (thumbs). The same podcast twice in the library keeps them.
-// (The feed itself stays in the cache; episodes kept on the SD card are not touched.)
-async function removeRssPictures(removed: unknown, remaining: unknown[]): Promise<void> {
+/**
+ * Every user's library (several users, users.ts): the one in place and those of the others in their folders, read while
+ * no switch moves them (a user without a library yet: an empty one). null: one is not readable now - being written,
+ * broken, a switch cut off: whatever would be deleted on that basis stays.
+ */
+async function allLibraries(): Promise<unknown[][] | null> {
+  return users.hold(async () => {
+    const f = userFiles.read()
+    if (f.switching) return null
+    const others = f.users.filter((u) => u.id !== f.current).map((u) => path.join(userFiles.userDir(u.id), 'library', 'data.json'))
+    const out: unknown[][] = []
+    for (const file of [dataFile, ...others]) {
+      try {
+        const data = JSON.parse(await readFile(file, 'utf8')) as unknown
+        if (!Array.isArray(data)) return null
+        out.push(data)
+      } catch (error) {
+        if (file !== dataFile && (error as NodeJS.ErrnoException).code === 'ENOENT') out.push([])
+        else return null
+      }
+    }
+    return out
+  })
+}
+
+// A podcast was taken out of a library: its pictures go with it - the cover folder kept one file for every picture
+// ever shown, for ever, and so did the small copies of them (thumbs). The same podcast twice in a library, or in the
+// library of another user, keeps them. (The feed itself stays in the cache; episodes kept on the SD card are not touched.)
+async function removeRssPictures(removed: unknown): Promise<void> {
   const entry = removed as { type?: unknown; id?: unknown } | undefined
   if (entry?.type !== 'rss' || typeof entry.id !== 'string' || !entry.id) return
-  const otherFeeds = remaining
+  // (read after the library was written: without the podcast taken out)
+  const libraries = await allLibraries()
+  if (!libraries) return
+  const otherFeeds = libraries
+    .flat()
     .filter((e) => (e as { type?: unknown } | undefined)?.type === 'rss')
     .map((e) => (e as { id?: unknown }).id)
     .filter((id): id is string => typeof id === 'string' && id !== '')
@@ -2477,7 +2506,7 @@ function otherUserPlaytime(id: string): Record<string, unknown> {
   const tileUsed = cp.tileDate === today && cp.tileUsed && typeof cp.tileUsed === 'object' ? (cp.tileUsed as Record<string, number>) : {}
   const tileToday = (pl.tileToday as { date?: string; bonus?: Record<string, number>; free?: string[] } | undefined) ?? {}
   const tilesToday = tileToday.date === today ? tileToday : {}
-  const tiles = (Array.isArray(pl.tileLimits) ? (pl.tileLimits as { key?: string; minutes?: number }[]) : [])
+  const tiles = (Array.isArray(pl.tileLimits) ? (pl.tileLimits as { key?: string; name?: string; minutes?: number }[]) : [])
     .filter((t) => typeof t?.key === 'string')
     .map((t) => {
       const key = t.key as string
@@ -2485,7 +2514,7 @@ function otherUserPlaytime(id: string): Record<string, unknown> {
       const bonusMinutes = Number(tilesToday.bonus?.[key]) || 0
       const limitMinutes = (Number(t.minutes) || 0) + bonusMinutes
       const free = (tilesToday.free ?? []).includes(key)
-      return { key, usedSeconds, limitMinutes, bonusMinutes, free, blocked: !free && usedSeconds >= limitMinutes * 60 }
+      return { key, ...(typeof t.name === 'string' ? { name: t.name } : {}), usedSeconds, limitMinutes, bonusMinutes, free, remainingSeconds: Math.max(0, limitMinutes * 60 - usedSeconds), blocked: !free && usedSeconds >= limitMinutes * 60 }
     })
   // (his photo time, as the player says it for the user in place - photoTimeStatus there: the box's switch of the photos,
   // his own limit)
@@ -3079,6 +3108,16 @@ function computeLogicalDate(now: Date, resetHour: number): string {
 // Calling extend repeatedly accumulates: existing bonus for today is kept and
 // added to. Always uses the *current* day at the time of call, so e.g. an
 // /extend at 23:30 with resetHour=4 still applies to "today" until 04:00.
+// The configuration a change of the play time is for: ?user= names a user (the Telegram bot: "/extend 30 Leni") - one
+// not in place in his kept part, which counts when he is (users.ts); none or the one in place: in place. null: no such user.
+function playtimeConfigOf(req: express.Request): ((mutate: (cfg: Record<string, unknown>) => void) => Promise<void>) | null {
+  if (req.query?.user === undefined) return updateMupiboxConfig
+  if (!libraryOf(req)) return null
+  // (also for the one in place through the users: in the order of a switch - one meanwhile does not get his change)
+  const id = String(req.query.user)
+  return (mutate) => users.updateUserConfig(id, mutate)
+}
+
 app.post('/api/playtime/extend', localOrElternSession, async (req, res) => {
   const minutes = Number(req.body?.minutes)
   if (!Number.isFinite(minutes) || minutes <= 0 || minutes > 1440) {
@@ -3164,8 +3203,13 @@ app.post('/api/playtime/limit', localOrElternSession, async (req, res) => {
     res.status(400).json({ error: 'minutes must be in [0, 1440]' })
     return
   }
+  const change = playtimeConfigOf(req)
+  if (!change) {
+    res.status(404).json({ error: 'no such user' })
+    return
+  }
   try {
-    await updateMupiboxConfig((cfg) => {
+    await change((cfg) => {
       let pl = cfg.playtimeLimit as Record<string, unknown> | undefined
       if (!pl || typeof pl !== 'object') {
         pl = {}
@@ -3196,9 +3240,14 @@ app.post('/api/phototime', localOrElternSession, async (req, res) => {
     res.status(400).json({ error: 'action must be extend or free' })
     return
   }
+  const change = playtimeConfigOf(req)
+  if (!change) {
+    res.status(404).json({ error: 'no such user' })
+    return
+  }
   let error: string | null = null
   try {
-    await updateMupiboxConfig((cfg) => {
+    await change((cfg) => {
       error = applyPhotoTimeAction(cfg as Record<string, unknown>, action, req.body?.minutes)
     })
   } catch (err) {
@@ -3219,9 +3268,14 @@ app.post('/api/phototime', localOrElternSession, async (req, res) => {
 // /api/app/tiles/time, from the box itself (the bot) or with the parents' sign-in.
 app.post('/api/tiletime', localOrElternSession, async (req, res) => {
   const action = req.body?.action
+  const change = playtimeConfigOf(req)
+  if (!change) {
+    res.status(404).json({ error: 'no such user' })
+    return
+  }
   let error: string | null = null
   try {
-    await updateMupiboxConfig((cfg) => {
+    await change((cfg) => {
       error = applyTileTimeAction(cfg as Record<string, unknown>, req.body?.key, action, req.body?.minutes)
     })
   } catch (err) {
@@ -4295,7 +4349,10 @@ app.post('/api/add', (req, res) => {
       }
       res.status(200).send('ok')
       // a Spotify album added by its link: its name and cover right away (see spotify-album-fill.ts)
-      if (lib.current && isBareAlbum(newEntry)) setTimeout(() => void fillSpotifyAlbums(albumFillDeps, 'added'), 1000)
+      if (isBareAlbum(newEntry)) {
+        const fill = lib.current ? albumFillDeps : albumFillDepsOf(lib.dataFile, lib.lock)
+        setTimeout(() => void fillSpotifyAlbums(fill, 'added'), 1000)
+      }
     })
   })
 })
@@ -4306,6 +4363,13 @@ const albumFillDeps: AlbumFillDeps = {
   spotify: () => spotifyApiService,
   write: (data) => new Promise((resolve, reject) => writeJsonAtomic(dataFile, data, (error) => (error ? reject(error) : resolve()))),
 }
+// (the library of a user who is not in place: under his own lock - a switch takes it too; gone meanwhile, the fill ends)
+const albumFillDepsOf = (file: string, lock: string): AlbumFillDeps => ({
+  dataFile: file,
+  dataLock: lock,
+  spotify: () => spotifyApiService,
+  write: (data) => new Promise((resolve, reject) => writeJsonAtomic(file, data, (error) => (error ? reject(error) : resolve()))),
+})
 
 // data.json, resume.json and wlan.json were written straight into the target file: a power cut
 // or a crash mid-write left a cut-off JSON (the library or the resume list unreadable). Written
@@ -4628,7 +4692,7 @@ app.post('/api/delete', (req, res) => {
         return
       }
       // a podcast: its pictures go as well (in the background - the answer does not wait for them)
-      removeRssPictures(removed, data).catch((error) => {
+      removeRssPictures(removed).catch((error) => {
         console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Could not remove the pictures of a podcast: ${error}`)
       })
       res.status(200).send('ok')
@@ -4688,7 +4752,7 @@ app.post('/api/delete-many', (req, res) => {
         return
       }
       for (const entry of removed) {
-        removeRssPictures(entry, data).catch((e) => {
+        removeRssPictures(entry).catch((e) => {
           console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Could not remove the pictures of a podcast: ${e}`)
         })
       }
@@ -8945,6 +9009,29 @@ const spotifySyncDeps: RunSyncDeps = {
 }
 app.use('/api/spotify-sync', createSpotifySyncRouter(spotifySyncDeps))
 
+// The sync for a user who is not in place: his library under his own lock (a switch takes it too), the box's config with
+// his subscriptions in it (read anew at every look), the box's sign-in at Spotify (a new token is the box's: written
+// in place), and a state of his own (what the app and /syncstatus show stays that of the one in place)
+function spotifySyncDepsOf(id: string): RunSyncDeps {
+  const lock = userLibraryLock(id)
+  return {
+    dataFile: path.join(userFiles.userDir(id), 'library', 'data.json'),
+    getMupiboxConfig: () => {
+      const cfg = getMupiboxConfigSync()
+      if (!cfg) return cfg
+      const mine = userFiles.readConfigPart(id)?.sections.spotify_sync
+      const out = { ...cfg } as Record<string, unknown>
+      if (mine === undefined) delete out.spotify_sync
+      else out.spotify_sync = mine
+      return out as MupiboxConfig
+    },
+    updateMupiboxConfig,
+    acquireDataLock: () => acquireLock(lock, '/api/spotify-sync user'),
+    releaseDataLock: () => releaseLock(lock, '/api/spotify-sync user'),
+    stateFilePath: `/tmp/.spotify_sync_state.${id}.json`,
+  }
+}
+
 // Phase 14c — the routes of the app (JSON API under /api/app/*; /api/eltern/* the address of before, for links and
 // scripts still using it). The magic-link landing handler at /app redeems
 // ?token=... into a session cookie and redirects to /app (without the query) so the app loads cleanly.
@@ -8985,6 +9072,13 @@ app.use(
     },
     userLibraryDir: (id) => path.join(userFiles.userDir(id), 'library'),
     heardOf: (id) => new HeardStore(path.join(userFiles.userDir(id), 'library')),
+    backupUsers: {
+      hold: (work) => users.hold(work),
+      read: () => userFiles.read(),
+      prepareRestore: () => userFiles.prepareRestore(),
+      finishRestore: (held, before) => userFiles.finishRestore(held, before),
+      undoRestore: (held, before) => userFiles.undoRestore(held, before),
+    },
     withUserLock: (id, work) => {
       const lock = userLibraryLock(id)
       if (acquireLock(lock, 'user library') !== 'acquired') return 'locked'
@@ -9204,15 +9298,39 @@ if (!testServe) {
   // Spotify-sync scheduler — only in production / dev, not under tests.
   // Boot-after-60s lead-in inside startScheduler so initial config load
   // has time to finish before the first sync attempt.
-  startScheduler(spotifySyncDeps)
+  // (several users on: the subscriptions of those not in place too, each in his own library - users.ts; switched off,
+  // the others rest: their files stay, nothing is fetched for them)
+  startScheduler(spotifySyncDeps, {
+    others: () => {
+      const f = userFiles.read()
+      if (f.switching || !f.enabled) return []
+      return f.users.filter((u) => u.id !== f.current).map((u) => ({ id: u.id, deps: spotifySyncDepsOf(u.id) }))
+    },
+  })
   // Spotify albums kept as their id only: name and cover into data.json (spotify-album-fill.ts)
-  startSpotifyAlbumFill(albumFillDeps)
+  startSpotifyAlbumFill(albumFillDeps, () => {
+    const f = userFiles.read()
+    if (f.switching || !f.enabled) return []
+    return f.users.filter((u) => u.id !== f.current).map((u) => albumFillDepsOf(path.join(userFiles.userDir(u.id), 'library', 'data.json'), userLibraryLock(u.id)))
+  })
   // The Spotify login's 6 months: reminders before the end, a message when Spotify refused it (app-api/spotify-auth-age.ts)
   startSpotifyLoginWatch({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
   startTlsWatch({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
   // the Home Assistant API, when it is switched on (ha/ha-api.ts)
   startHaApi(haDeps)
-  startWeeklySummary({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig, currentPlayLogStart })
+  startWeeklySummary({
+    getMupiboxConfig: getMupiboxConfigSync,
+    updateMupiboxConfig,
+    currentPlayLogStart,
+    hold: (work) => users.hold(work),
+    users: () => {
+      if (!usersShownApart()) return null
+      const f = userFiles.read()
+      return f.users.map((u) =>
+        u.id === f.current ? { name: u.name, current: true } : { name: u.name, file: path.join(userFiles.userDir(u.id), 'logs', 'play_log.jsonl'), current: false },
+      )
+    },
+  })
   startInstallationStatistics({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
   // "Abends dunkler": the display's brightness in the evening (app-api/night-dim.ts)
   startNightDim(getMupiboxConfigSync)

@@ -39,6 +39,10 @@ Both hold for today only, as **+10 min** and **Free today** in the app.
 
 When single tiles have a limit per day of their own ([Tiles with a day's limit](../spielzeit/kachel-limit.md)), `/status` tells them with today's minutes. `/tiles` (also the button **Tiles with a limit** under `/help`) shows them with two buttons each: **+10** gives the tile 10 more minutes today, **free** lifts its limit for today.
 
+## Several users
+
+With [several users](../bedienung/mehrere-benutzer.md) on, a **name at the end** of a command means that child; without a name the command is for the active one. This works with `/status`, `/extend`, `/photoextend`, `/photofree`, `/tiles` and `/limit set`, for example `/status Leni` or `/extend 30 Leni`. For a child who is not listening right now, `/status` gives their day so far. Bonus minutes count as soon as that child's turn comes. `/release` and `/quietnow` hold for the whole box. The weekly summary comes for each child separately.
+
 ## Signing in with a link
 
 With `/login` the bot sends you a **link** that signs you in to the app, even without a password ([Opening the app and signing in](../erste-schritte/app-oeffnen.md)).

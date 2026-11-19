@@ -30,6 +30,8 @@ Der Code steht nur auf dem Display der Box. Wer ihn eingibt, hat die Box also vo
 - **Neustart und Ausschalten** (Recht „Neustart und Ausschalten“): Die Box startet neu oder fährt herunter, wie mit dem Knopf in der App.
 - **Ausschalt-Timer** (Recht „Neustart und Ausschalten“): Home Assistant stellt den [Schlaftimer](../spielzeit/schlaftimer.md) der Box, ersetzt ihn oder stoppt ihn (0 Minuten), bis 720 Minuten. Es ist derselbe Timer wie in der App und bei Telegram: Wer ihn wo stellt, alle sehen dieselbe Restzeit. Die Restzeit und das Ende sieht Home Assistant auch nur mit dem Recht zum Anzeigen. Ab Version 5.0.12 der Box, mit der Integration ab der Version, die den Timer kennt.
 
+- **Mehrere Benutzer**: Sind [mehrere Benutzer](../bedienung/mehrere-benutzer.md) an, meldet die Box, welches Kind gerade hört, und Home Assistant kann wechseln, ohne PIN wie die App. Anzeigen kann das die Integration, sobald sie diesen Teil der Schnittstelle kennt.
+
 Während einer Ruhezeit zeigt die Box keine Nachrichten und spricht keine Ansagen.
 
 ## Gekoppelte Home Assistants

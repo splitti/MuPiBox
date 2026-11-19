@@ -133,6 +133,51 @@ def call_api_get(path):
     except Exception as e:
         return 0, str(e)
 
+def users_state():
+    """The users of the box (5.1, several users): {enabled, current, users: [{id, name}]}, or None"""
+    status_code, body = call_api_get('/users/state')
+    if status_code == 200 and isinstance(body, dict) and isinstance(body.get('users'), list):
+        return body
+    return None
+
+def users_apart(st):
+    return bool(st and st.get('enabled') and len(st.get('users') or []) >= 2)
+
+def split_user(command):
+    """The words after a command, a user's name at their end taken off ("/extend 30 Leni", "/status Leni" - a name may
+    have blanks). Returns (user or None, the other words, the name that was not found or None). Without several users on
+    no name is looked for."""
+    words = command.split()[1:]
+    st = users_state()
+    if not users_apart(st):
+        return None, words, None
+    for start in range(len(words)):
+        tail = ' '.join(words[start:]).casefold()
+        for u in st['users']:
+            if str(u.get('name', '')).strip().casefold() == tail:
+                return {**u, 'current': u.get('id') == st.get('current')}, words[:start], None
+    # (a last word that is no number and no keyword of the command: a name that is not there)
+    if words and not words[-1].lstrip('-').isdigit() and words[-1].lower() not in PLAYTIME_DAY_KEYS and words[-1] != 'set':
+        return None, words, words[-1]
+    return None, words, None
+
+def user_query(user):
+    """?user= for the box's routes - none for the user in place"""
+    return '' if not user or user.get('current') else f'?user={user["id"]}'
+
+def unknown_user_text(name):
+    st = users_state()
+    names = ', '.join(html.escape(str(u.get('name', ''))) for u in (st or {}).get('users', []))
+    return tr('user_unknown', name=html.escape(name), names=names)
+
+def first_int(words, default=None):
+    if not words:
+        return default
+    try:
+        return int(words[0])
+    except (ValueError, TypeError):
+        return None
+
 def block_source_name(source):
     key = {'playtime': 'src_playtime', 'quiet': 'src_quiet', 'override': 'src_override'}.get(source)
     return tr(key) if key else str(source)
@@ -155,26 +200,27 @@ def photo_lines(status):
         return [tr('st_photos_blocked', used=used, limit=limit)]
     return [tr('st_photos_limit', used=used, limit=limit, left=fmt_minutes(int(ph.get('remainingSeconds') or 0)))]
 
-def photo_time_limited():
+def photo_time_limited(user=None):
     """Whether the photo time has a limit of its own today (the commands for it make sense then)."""
-    status_code, body = call_api_get('/playtime')
+    status_code, body = call_api_get('/playtime' + user_query(user))
     ph = (body or {}).get('photos') if status_code == 200 and isinstance(body, dict) else None
     return bool(ph and ph.get('enabled') and ph.get('mode') == 'separate' and ph.get('limitEnabled'))
 
-def photo_time_action(action, mins=None):
-    """extend (mins) or free for today's photo time; the key of the text that says how it went."""
-    if not photo_time_limited():
+def photo_time_action(action, mins=None, user=None):
+    """extend (mins) or free for today's photo time (of `user`, else of the one in place); the key of the text that says
+    how it went."""
+    if not photo_time_limited(user):
         return 'photos_no_limit', None
-    status_code, body = call_api_post('/phototime', {'action': action, **({'minutes': mins} if mins else {})})
+    status_code, body = call_api_post('/phototime' + user_query(user), {'action': action, **({'minutes': mins} if mins else {})})
     if status_code == 200:
         return ('photoextend_done' if action == 'extend' else 'photofree_done'), None
     return 'error', failure_detail(status_code, body)
 
-def tile_list(status=None):
+def tile_list(status=None, user=None):
     """The tiles of the start page with a day's limit (5.1, "Kachel-Limit") as the player reports them under "tiles";
-    read from the box when no status is given."""
+    read from the box when no status is given (those of `user`, else of the one in place)."""
     if status is None:
-        status_code, body = call_api_get('/playtime')
+        status_code, body = call_api_get('/playtime' + user_query(user))
         status = body if status_code == 200 and isinstance(body, dict) else {}
     tiles = (status or {}).get('tiles') or {}
     return [t for t in (tiles.get('list') or []) if isinstance(t, dict) and t.get('key')]
@@ -200,42 +246,67 @@ def tile_hash(key):
     """A short mark of a tile for a button (Telegram allows 64 bytes of callback data, a key can be longer)."""
     return hashlib.sha1(key.encode('utf-8')).hexdigest()[:10]
 
-def tile_by_hash(h):
-    return next((t for t in tile_list() if tile_hash(t['key']) == h), None)
+def tile_by_hash(h, user=None):
+    return next((t for t in tile_list(user=user) if tile_hash(t['key']) == h), None)
 
-def tile_time_action(t, action, mins=None):
+def tile_time_action(t, action, mins=None, user=None):
     """extend (mins) or free for today's time of a tile; the key of the text that says how it went."""
-    status_code, body = call_api_post('/tiletime', {'key': t['key'], 'action': action, **({'minutes': mins} if mins else {})})
+    status_code, body = call_api_post('/tiletime' + user_query(user), {'key': t['key'], 'action': action, **({'minutes': mins} if mins else {})})
     if status_code == 200:
         return ('tileextend_done' if action == 'extend' else 'tilefree_done'), None
     return 'error', failure_detail(status_code, body)
 
-def tiles_message(chat_id):
-    """/tiles: the tiles with a limit, each with +10 min and free today"""
-    tiles = tile_list()
+def tiles_message(chat_id, user=None):
+    """/tiles [name]: the tiles with a limit, each with +10 min and free today (of `user`, else of the one in place -
+    the id of one not in place rides along in the buttons)"""
+    tiles = tile_list(user=user)
     if not tiles:
         bot.sendMessage(chat_id, tr('tiles_none'))
         return
     b = InlineKeyboardButton
     rows = []
+    who = f'_{user["id"]}' if user and not user.get('current') else ''
     for t in tiles:
         name = str(t.get('name') or t['key'].split(':', 1)[-1])[:24]
-        row = [b(text=f'{name} +10', callback_data=f'tilex_{tile_hash(t["key"])}')]
+        row = [b(text=f'{name} +10', callback_data=f'tilex_{tile_hash(t["key"])}{who}')]
         if not t.get('free'):
-            row.append(b(text=tr('kb_tilefree', name=name), callback_data=f'tilef_{tile_hash(t["key"])}'))
+            row.append(b(text=tr('kb_tilefree', name=name), callback_data=f'tilef_{tile_hash(t["key"])}{who}'))
         rows.append(row)
-    bot.sendMessage(chat_id, '\n'.join([tr('tiles_head'), *tile_lines({'tiles': {'list': tiles}})]), parse_mode='HTML', reply_markup=InlineKeyboardMarkup(inline_keyboard=rows))
+    head = [user_line(user)] if user else []
+    bot.sendMessage(chat_id, '\n'.join([*head, tr('tiles_head'), *tile_lines({'tiles': {'list': tiles}})]), parse_mode='HTML', reply_markup=InlineKeyboardMarkup(inline_keyboard=rows))
 
-def format_status(status):
+def user_line(user):
+    """Whose values follow: the name, and whether that user is the one in place"""
+    return tr('st_user_current' if user.get('current') else 'st_user_resting', name=html.escape(str(user.get('name', ''))))
+
+def current_user():
+    """The user in place while several users are on (for the head of /status), else None"""
+    st = users_state()
+    if not users_apart(st):
+        return None
+    u = next((u for u in st['users'] if u.get('id') == st.get('current')), None)
+    return {**u, 'current': True} if u else None
+
+def format_status(status, user=None):
+    head = [user_line(user)] if user else []
     if not status or status.get('enabled') is False:
         # (the photo time and the tiles have limits of their own: told even without playtime or quiet hours)
-        return '\n'.join([tr('st_not_configured'), *photo_lines(status), *tile_lines(status)])
+        return '\n'.join([*head, tr('st_not_configured'), *photo_lines(status), *tile_lines(status)])
+    if status.get('otherUser'):
+        # (a user not in place: his day as he left it - no state of the box, no quiet time now)
+        pt = status.get('playtime', {}) or {}
+        lines = list(head)
+        if pt.get('enabled'):
+            lines.append(tr('st_playtime', used=int(pt.get('usedSeconds', 0)) // 60, limit=int(pt.get('limitMinutes', 0)), left=fmt_minutes(int(pt.get('remainingSeconds', 0)))))
+        if (status.get('quiet') or {}).get('enabled'):
+            lines.append(tr('st_quiet_idle'))
+        return '\n'.join([*lines, *photo_lines(status), *tile_lines(status)])
     state = status.get('state', 'normal')
     source = block_source_name(status.get('blockSource'))
     pt = status.get('playtime', {}) or {}
     qh = status.get('quiet', {}) or {}
     ovr = status.get('override', {}) or {}
-    lines = []
+    lines = list(head)
     if state == 'normal':
         lines.append(tr('st_ok'))
     elif state == 'grace':
@@ -376,27 +447,39 @@ def on_chat_message(msg):
             bot.sendMessage(chat_id, tr('usage_sleep'))
         else:
             bot.sendMessage(chat_id, tr(start_sleep_timer(mins), mins=mins))
-    elif command == '/status':
-        status_code, body = call_api_get('/playtime')
-        if status_code == 200:
-            bot.sendMessage(chat_id, format_status(body), parse_mode='HTML')
+    # (several users on: a name at the end names the user - "/extend 30 Leni"; without one it is the user in place.
+    # /release and /quietnow hold for the whole box)
+    elif command.split(' ', 1)[0] in ('/status', '/photoextend', '/photofree', '/tiles', '/extend'):
+        cmd = command.split(' ', 1)[0]
+        user, words, unknown = split_user(command)
+        if unknown:
+            bot.sendMessage(chat_id, unknown_user_text(unknown), parse_mode='HTML')
+        elif cmd == '/status':
+            status_code, body = call_api_get('/playtime' + user_query(user))
+            if status_code == 200:
+                bot.sendMessage(chat_id, format_status(body, user or current_user()), parse_mode='HTML')
+            else:
+                bot.sendMessage(chat_id, tr('status_failed', detail=failure_detail(status_code, body)))
+        elif cmd == '/tiles':
+            tiles_message(chat_id, user)
+        elif cmd == '/photofree':
+            key, detail = photo_time_action('free', user=user)
+            bot.sendMessage(chat_id, tr(key, detail=detail))
         else:
-            bot.sendMessage(chat_id, tr('status_failed', detail=failure_detail(status_code, body)))
-    elif command.split(' ', 1)[0] == '/photoextend':
-        # today's photo time (Bildzeit): minutes added, 10 when none are given (as the app's "+10 min")
-        mins = parse_int_arg(command, default=10)
-        if mins is None or mins <= 0 or mins > 1440:
-            bot.sendMessage(chat_id, tr('usage_minutes', cmd='/photoextend'))
-        else:
-            key, detail = photo_time_action('extend', mins)
-            bot.sendMessage(chat_id, tr(key, mins=mins, detail=detail))
-    elif command.split(' ', 1)[0] == '/photofree':
-        key, detail = photo_time_action('free')
-        bot.sendMessage(chat_id, tr(key, detail=detail))
-    elif command == '/tiles':
-        tiles_message(chat_id)
-    elif command[:7] == '/extend':
-        send_minutes_action(chat_id, command, 30, '/playtime/extend', 'extend_done')
+            # /photoextend: today's photo time (Bildzeit), 10 minutes when none are given (as the app's "+10 min");
+            # /extend: bonus minutes, 30 when none are given
+            mins = first_int(words, default=10 if cmd == '/photoextend' else 30)
+            if mins is None or mins <= 0 or mins > 1440:
+                bot.sendMessage(chat_id, tr('usage_minutes', cmd=cmd))
+            elif cmd == '/photoextend':
+                key, detail = photo_time_action('extend', mins, user)
+                bot.sendMessage(chat_id, tr(key, mins=mins, detail=detail))
+            else:
+                status_code, body = call_api_post('/playtime/extend' + user_query(user), {'minutes': mins})
+                if status_code == 200:
+                    bot.sendMessage(chat_id, tr('extend_done', mins=mins) + (f' ({user["name"]})' if user else ''))
+                else:
+                    bot.sendMessage(chat_id, tr('error', detail=failure_detail(status_code, body)))
     elif command[:8] == '/release':
         send_minutes_action(chat_id, command, 60, '/playtime/release', 'release_done')
     elif command[:9] == '/quietnow':
@@ -405,8 +488,11 @@ def on_chat_message(msg):
         # Usage: /limit set <day> <minutes>   (day = mon..sun, minutes = 0..1440)
         # Mutates playtimeLimit.limitsMinutes.<day> in mupiboxconfig.json.
         # The player picks up the change via fs.watch within ~50 ms.
-        parts = command.split()
-        if len(parts) >= 4 and parts[1] == 'set':
+        user, words, unknown = split_user(command)
+        parts = ['/limit', *words]
+        if unknown:
+            bot.sendMessage(chat_id, unknown_user_text(unknown), parse_mode='HTML')
+        elif len(parts) >= 4 and parts[1] == 'set':
             day = parts[2].lower()
             try:
                 mins = int(parts[3])
@@ -415,7 +501,7 @@ def on_chat_message(msg):
             if day not in PLAYTIME_DAY_KEYS or mins < 0 or mins > 1440:
                 bot.sendMessage(chat_id, tr('usage_limit'))
             else:
-                status_code, body = call_api_post('/playtime/limit', {'day': day, 'minutes': mins})
+                status_code, body = call_api_post('/playtime/limit' + user_query(user), {'day': day, 'minutes': mins})
                 if status_code == 200:
                     bot.sendMessage(chat_id, tr('limit_done', day=day, mins=mins))
                 else:
@@ -599,12 +685,15 @@ def handle_callback(query_data, chat_id, keyboard_msg, answer):
         tiles_message(chat_id)
     elif query_data[:6] in ('tilex_', 'tilef_'):
         # (a tile of the list sent before: found again by its mark - gone meanwhile, it says so)
-        t = tile_by_hash(query_data[6:])
+        # (a user not in place: his id after the mark - the one in place has none)
+        mark, _, uid = query_data[6:].partition('_')
+        user = {'id': uid} if uid else None
+        t = tile_by_hash(mark, user)
         if not t:
             answer(text=tr('tiles_gone'), show_alert=True)
         else:
             extend = query_data[:6] == 'tilex_'
-            key, detail = tile_time_action(t, 'extend' if extend else 'free', 10 if extend else None)
+            key, detail = tile_time_action(t, 'extend' if extend else 'free', 10 if extend else None, user)
             answer(text=tr(key, mins=10, name=str(t.get('name') or ''), detail=detail), show_alert=True)
     elif query_data[:9] == 'quietnow_':
         mins = int(query_data.split('_')[1])

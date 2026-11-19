@@ -50,6 +50,8 @@ export interface AudibleMedia {
   reachable: () => boolean
   /** "finished" in Audible as the box's green tick, for the library's entries - looked at most every 10 minutes */
   syncTicks: (entries: () => { kind: string; id: string }[]) => void
+  /** another user came into place (users.ts): his library gets its ticks anew, at the next look */
+  forgetTicks: () => void
 }
 
 export function registerAudibleMedia(app: Express, deps: AudibleMediaDeps): AudibleMedia {
@@ -334,6 +336,10 @@ export function registerAudibleMedia(app: Express, deps: AudibleMediaDeps): Audi
   let ticksAt = 0
   return {
     reachable: () => answers,
+    forgetTicks: () => {
+      ticked.clear()
+      ticksAt = 0
+    },
     syncTicks: (entries) => {
       const s = deps.session()
       if (!s || !deps.shareProgress() || !deps.heardFinished || Date.now() - ticksAt < 10 * 60 * 1000) return

@@ -13,15 +13,25 @@ import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { DATA_LOCK, withLock } from '../file-lock'
 import { requireCsrf, requireSession } from './middleware'
 import { bootConfigPath } from './boot-paths'
-import { EXTENSIONS_DIR, LIBRARY_DIR, SERVER_CONFIG_DIR } from '../paths'
+import { DATA_DIR, EXTENSIONS_DIR, LIBRARY_DIR, LOGS_DIR, SERVER_CONFIG_DIR } from '../paths'
 import { restoreKioskStart } from './extensions'
 import { copyLibraryTo, freezeLibrary, thawLibrary } from './photos/store'
+import type { UsersFile } from '../users'
 
 export interface AdminDeps {
   getMupiboxConfig: () => MupiboxConfig | undefined
   updateMupiboxConfig: (mutate: (cfg: Record<string, unknown>) => void) => Promise<void>
   /** The folder of server.js (templates/ lies next to it). */
   serverDir: string
+  /** The users of the box (users.ts): a backup takes their moment while no switch runs; a restore puts the users' things
+   *  of before aside and the backup's in their place (those it does not know into the trash). Without (tests): as one user. */
+  users?: {
+    hold: <T>(work: () => Promise<T>) => Promise<T>
+    read: () => UsersFile
+    prepareRestore: () => string
+    finishRestore: (held: string, before: UsersFile) => void
+    undoRestore: (held: string, before: UsersFile) => void
+  }
 }
 
 function run(cmd: string, args: string[], timeoutMs = 60000): Promise<{ ok: boolean; stdout: string; stderr: string }> {
@@ -102,12 +112,52 @@ const PHOTO_UPLOAD = 'home/dietpi/.mupibox/data/photos/upload/'
 const PHOTO_FILE =
   /^home\/dietpi\/\.mupibox\/data\/photos\/(upload\/[a-f0-9]{10}\/[a-f0-9]{10}(\.jpg|\.s\.jpg|\.b\.jpg|\.mp4|\.pending)|albums\/[a-f0-9]{10}\.json)$/
 const PHOTO_DIR = /^home\/dietpi\/\.mupibox\/data\/photos\/(upload\/[a-f0-9]{10}\/|albums\/)$/
-// the users of the extension "Benutzer" (5.1): the list and each user's folder - the part of the config, the library, the
-// data, the play log, the settings of the extensions (the one signed in is the live state, the others only there)
+// the users of the box (5.1, users.ts): their list and the folder of each one not in place - his part of the config, his
+// library, his play time and hidden covers, his play log (the one in place: the config and the library above). Not the
+// trash, nor what a switch put aside. (The extension "Benutzer" of before kept them below extensions/: not taken over.)
 const EXT_DATA = 'home/dietpi/.mupibox/data/extensions'
-const USERS_DATA = `${EXT_DATA}/data/users`
-const USERS_FILE = /^home\/dietpi\/\.mupibox\/data\/extensions\/data\/users\/(users\.json|profiles\/[a-z0-9]{2,12}\/(config\.json|(library|data|settings)\/[A-Za-z0-9_.-]{1,80}\.json|logs\/play_log\.jsonl))$/
-const USERS_DIR = /^home\/dietpi\/\.mupibox\/data\/extensions\/(data\/(users\/(profiles\/([a-z0-9]{2,12}\/((library|data|settings|logs)\/)?)?)?)?)?$/
+const USERS_DATA = 'home/dietpi/.mupibox/data/users'
+const USERS_LIST = `${USERS_DATA}/users.json`
+const USERS_FILE =
+  /^home\/dietpi\/\.mupibox\/data\/users\/(users\.json|(?!trash\/)[a-z0-9]{2,12}\/(config\.json|library\/[A-Za-z0-9_.-]{1,80}\.json|data\/(hidden-covers|playtime-checkpoint)\.json|logs\/play_log\.jsonl))$/
+const USERS_DIR = /^home\/dietpi\/\.mupibox\/data\/users\/((?!trash\/)[a-z0-9]{2,12}\/((library|data|logs)\/)?)?$/
+
+/** The users' folders as they are now into `stage` (only what USERS_FILE names); false: no list of users on this box */
+async function stageUsers(stage: string): Promise<boolean> {
+  if (!(await fsp.access(`/${USERS_LIST}`).then(() => true, () => false))) return false
+  const walk = async (rel: string): Promise<void> => {
+    for (const d of await fsp.readdir(`/${rel}`, { withFileTypes: true }).catch(() => [])) {
+      const name = `${rel}/${d.name}`
+      if (d.isDirectory() && USERS_DIR.test(`${name}/`)) await walk(name)
+      else if (d.isFile() && USERS_FILE.test(name)) {
+        await fsp.mkdir(path.join(stage, rel), { recursive: true })
+        await fsp.copyFile(`/${name}`, path.join(stage, name))
+      }
+    }
+  }
+  await walk(USERS_DATA)
+  // the things of the user in place (his library's lists but the library itself - that one under its own name above -,
+  // his day's counts, hidden covers and play log): into his folder in the backup, as a switch would put them there - a
+  // restore puts them in place again (users.ts finishRestore). Links of the box in the library left out.
+  let current = ''
+  try {
+    current = String((JSON.parse(await fsp.readFile(`/${USERS_LIST}`, 'utf8')) as { current?: unknown }).current ?? '')
+  } catch {
+    return true
+  }
+  if (!/^[a-z0-9]{2,12}$/.test(current) || current === 'trash') return true
+  const own = async (from: string, part: string, name: string) => {
+    const rel = `${USERS_DATA}/${current}/${part}/${name}`
+    const st = await fsp.lstat(from).catch(() => null)
+    if (!st?.isFile() || !USERS_FILE.test(rel)) return
+    await fsp.mkdir(path.join(stage, path.dirname(rel)), { recursive: true })
+    await fsp.copyFile(from, path.join(stage, rel))
+  }
+  for (const name of await fsp.readdir(LIBRARY).catch(() => [] as string[])) if (name !== 'data.json') await own(path.join(LIBRARY, name), 'library', name)
+  for (const name of ['hidden-covers.json', 'playtime-checkpoint.json']) await own(path.join(DATA_DIR, name), 'data', name)
+  await own(path.join(LOGS_DIR, 'play_log.jsonl'), 'logs', 'play_log.jsonl')
+  return true
+}
 // the settings of the extensions (5.1): the pins of "Buttons & GPIO Input", the place of the weather ... - not the
 // extensions themselves nor their list (restored, it named extensions whose files are not there): installed again in
 // the app, an extension finds its settings in place
@@ -452,8 +502,6 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
     const extras = (await Promise.all([BACKGROUND, ...BOOT_CUSTOM].map(async (f) => ((await present(f)) ? f : '')))).filter(Boolean)
     // (full: the uploaded photos and clips too - those of NAS and Immich are fetched again)
     const photos = full && (await present(`/${PHOTO_UPLOAD}`)) ? [`/${PHOTO_UPLOAD}`] : []
-    // (the users' profiles: with every backup - they hold libraries, as the backup holds the one of the box)
-    const users = (await present(`/${USERS_DATA}`)) ? [`/${USERS_DATA}`] : []
     // (the extensions' settings: with every backup - a few KB, and after a broken card every pin chosen anew otherwise.
     // Only those of the extensions installed: one removed left its file, and the app asked to install it again)
     const installedExt = Object.keys(
@@ -462,7 +510,7 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
     const extSettings = (await Promise.all(installedExt.map(async (id) => ((await present(`/${EXT_SETTINGS}/${id}.json`)) ? `/${EXT_SETTINGS}/${id}.json` : '')))).filter(Boolean)
     // (the NFC tag assignments: with every backup - a few kilobytes)
     const nfc = (await present(`/${NFC_FILE}`)) ? [`/${NFC_FILE}`] : []
-    const sources = [full ? '/home/dietpi/MuPiBox/media' : '/home/dietpi/MuPiBox/media/cover', ...BACKUP_FILES, ...extras, ...photos, ...users, ...extSettings, ...nfc]
+    const sources = [full ? '/home/dietpi/MuPiBox/media' : '/home/dietpi/MuPiBox/media/cover', ...extras, ...photos, ...extSettings, ...nfc]
     // the library under its name of before (LIBRARY_ENTRY_BEFORE): copied into a folder of its own, the zip made from
     // there (the other sources by their full path, stored without the leading /)
     const stage = `/var/tmp/mupibox-backup-${process.pid}-${Date.now()}.d`
@@ -477,13 +525,39 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
       }))
         ? [PHOTO_LIBRARY, PHOTO_ALBUMS]
         : []
+    // the library, the config and the users' folders as one moment, copied into the stage while no switch of the user runs
+    // (one between them put the library of one user and the config of the other into the zip)
+    const hold = deps.users?.hold ?? (<T>(work: () => Promise<T>) => work())
+    let moment: string[]
+    try {
+      moment = await hold(async () => {
+        const out: string[] = []
+        await fsp.mkdir(path.dirname(staged), { recursive: true })
+        if (await present(`${LIBRARY}/data.json`)) {
+          await fsp.copyFile(`${LIBRARY}/data.json`, staged)
+          out.push(LIBRARY_ENTRY_BEFORE)
+        }
+        for (const f of BACKUP_FILES) {
+          const rel = f.slice(1)
+          await fsp.mkdir(path.dirname(`${stage}/${rel}`), { recursive: true })
+          // (not readable by the server: taken from its place by the zip, as before)
+          out.push(await fsp.copyFile(f, `${stage}/${rel}`).then(() => rel, () => f))
+        }
+        if (await stageUsers(stage)) out.push(USERS_DATA)
+        return out
+      })
+    } catch (err) {
+      await fsp.rm(stage, { recursive: true, force: true }).catch(() => undefined)
+      res.status(500).json({ error: `zip failed ${(err as Error).message.slice(0, 200)}` })
+      return
+    }
     const r = await run(
       'sudo',
       [
         'sh',
         '-c',
-        `mkdir -p '${path.dirname(staged)}' && { [ ! -e '${LIBRARY}/data.json' ] || cp '${LIBRARY}/data.json' '${staged}'; } && cd '${stage}' && ` +
-          `zip -q -r '${zip}' $([ -e '${staged}' ] && echo '${LIBRARY_ENTRY_BEFORE}') ${[...photoList, ...sources].map((s) => `'${s}'`).join(' ')} -x '*.tmp' '*.tmp[0-9]*' '*.part' '*.heic.jpg' '*.poster.jpg' '*/users/.staging/*' '*/users/.old/*' '*/users/trash/*'; ` +
+        `cd '${stage}' && ` +
+          `zip -q -r '${zip}' ${[...moment, ...photoList, ...sources].map((s) => `'${s}'`).join(' ')} -x '*.tmp' '*.tmp[0-9]*' '*.part' '*.heic.jpg' '*.poster.jpg' '*/users/.staging/*' '*/users/.old/*' '*/users/trash/*'; ` +
           `chmod 644 '${zip}'; rm -rf '${stage}'`,
       ],
       full ? 3600000 : 120000,
@@ -556,6 +630,8 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
     let count = 0
     let photosRestored = false
     let usersRestored = false
+    // (the users' folders only with their list: without it they belonged to no one here)
+    const usersListed = lines.some((l) => l.endsWith(` ${USERS_LIST}`))
     // the extensions whose settings come back (their ids)
     const extSettingsRestored: string[] = []
     let nfcRestored = false
@@ -579,8 +655,8 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
       const inMedia = name.startsWith('home/dietpi/MuPiBox/media/')
       const photo = isDir ? PHOTO_DIR.test(name) : name === PHOTO_LIBRARY || PHOTO_FILE.test(name)
       if (photo) photosRestored = true
-      const user = isDir ? USERS_DIR.test(name) : USERS_FILE.test(name)
-      if (user) usersRestored = true
+      const user = usersListed && (isDir ? USERS_DIR.test(name) : USERS_FILE.test(name))
+      if (user && !isDir) usersRestored = true
       const extSetting = isDir ? EXT_SETTINGS_DIR.test(name) : EXT_SETTINGS_FILE.test(name)
       const extId = isDir ? null : EXT_SETTINGS_FILE.exec(name)?.[1]
       const nfcEntry = isDir ? NFC_DIR.test(name) : name === NFC_FILE
@@ -592,8 +668,9 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
         (photo || user || extSetting || nfcEntry || RESTORE_FILES.includes(name) || (isDir && (RESTORE_DIRS.includes(name) || inMedia)) || (!isDir && inMedia && !FORBIDDEN_MEDIA.test(name)))
       if (!allowed) {
         // (a file or folder of the extensions' data this box does not know - another version of an extension, an extension
-        // this box does not have, a name with a blank: left out, the rest restored; it made the whole backup refused before)
-        if (name.startsWith(`${EXT_DATA}/`) && !name.includes('..') && !name.includes('\\')) {
+        // this box does not have, a name with a blank: left out, the rest restored; it made the whole backup refused before.
+        // The same below the users' folders: a file of a later version, folders without their list)
+        if ((name.startsWith(`${EXT_DATA}/`) || name.startsWith(`${USERS_DATA}/`)) && !name.includes('..') && !name.includes('\\')) {
           skipped.push(name)
           continue
         }
@@ -630,6 +707,10 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
       res.status(413).json({ error: 'not_enough_space' })
       return
     }
+    // A switch of the user that runs now ends first (one that comes later finds the restore running and is refused - the
+    // restore writes the library and the users' folders it moves); then the users this box has now (with a backup that
+    // has users: their things go aside, those the backup does not know into the trash)
+    const usersBefore = await (deps.users?.hold ?? (<T>(work: () => Promise<T>) => work()))(async () => (usersRestored ? (deps.users?.read() ?? null) : null))
     const version = String((deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined)?.version ?? '')
     // the library not with the rest (under its name of before it would go through the links of the old names): taken
     // out of the zip into a folder of its own first (a file: a big library does not fit into a command's output) and
@@ -638,6 +719,8 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
     const libraryEntry = [...LIBRARY_ENTRIES].reverse().find((entry) => files.some((f) => f.name === entry))
     // (anything that fails in here - /tmp full too - ends as "unzip failed": the restore free again, the upload gone)
     let libraryDir = ''
+    // (a backup with users: their things of before, put aside before it is unpacked - users.ts prepareRestore)
+    let held = ''
     const unzip = await (async () => {
       if (libraryEntry) libraryDir = await fsp.mkdtemp('/tmp/.mupibox-restore-')
       const library = `${libraryDir}/data.json`
@@ -648,6 +731,12 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
           return true
         }).catch(() => false))
         if (!readable) return { ok: false }
+      }
+      if (usersBefore && deps.users) {
+        const users = deps.users
+        const r = await withDataLock(async () => users.prepareRestore())
+        if (r === 'locked') return { ok: false }
+        held = r
       }
       const rest = files.some((f) => !LIBRARY_ENTRIES.includes(f.name))
       // (the photos' list comes from the backup: nothing on the box writes it meanwhile - a sync, a clip being made)
@@ -660,22 +749,33 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
     })()
       .catch(() => ({ ok: false }))
       .finally(async () => {
-        restoreRunning = false
         if (libraryDir) await fsp.rm(libraryDir, { recursive: true, force: true }).catch(() => undefined)
       })
     await cleanup()
+    // the users: the backup's in place, or - failed - those of before back (unpacked as root: the server's again first, it
+    // moves and deletes there)
+    if (held && usersBefore && deps.users) {
+      await run('sudo', ['chown', '-R', 'dietpi:dietpi', `/${USERS_DATA}`], 300000)
+      try {
+        if (unzip.ok) deps.users.finishRestore(held, usersBefore)
+        else deps.users.undoRestore(held, usersBefore)
+      } catch (error) {
+        console.warn(`${new Date().toLocaleString()}: [Backup] users ${unzip.ok ? 'after' : 'back after a failed'} restore: ${error}`)
+      }
+    }
     // (the list as it is on the card now: read anew - after a failed restore changes go on, after one that worked the
     // box restarts)
     if (photosRestored) thawLibrary()
     if (photosRestored && unzip.ok) await freezeLibrary()
+    // (after one that worked the restore stays "running" until the box restarts: a switch of the user meanwhile mixed the
+    // restored library and config with the users' folders)
     if (!unzip.ok) {
+      restoreRunning = false
       res.status(500).json({ error: 'unzip failed' })
       return
     }
     // (unpacked as root: the photos the server's again - it adds and deletes there)
     if (photosRestored) await run('sudo', ['chown', '-R', 'dietpi:dietpi', '/home/dietpi/.mupibox/data/photos'], 300000)
-    // (the same for the users' profiles: the extension writes them as the server)
-    if (usersRestored) await run('sudo', ['chown', '-R', 'dietpi:dietpi', `/${USERS_DATA}`], 300000)
     // (the extensions' settings: the server writes them when they are changed in the app)
     if (extSettingsRestored.length > 0) await run('sudo', ['chown', '-R', 'dietpi:dietpi', `/${EXT_SETTINGS}`], 60000)
     // (and the tag assignments: the extension replaces the file with a new one at every change)

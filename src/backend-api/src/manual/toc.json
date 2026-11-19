@@ -84,6 +84,13 @@
           "de": "Einstellungen am Display",
           "en": "Settings on the display"
         }
+      },
+      {
+        "id": "mehrere-benutzer",
+        "title": {
+          "de": "Mehrere Benutzer",
+          "en": "Several users"
+        }
       }
     ]
   },

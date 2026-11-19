@@ -19,7 +19,7 @@ import { fetchArtistAlbums, SpotifyApiException, spotifyGet } from './playlists'
 import { playlistMatchesPrefix } from './categorizer'
 import { spotifyBlock } from '../spotify-block'
 import { readStateFile } from './state-file'
-import { triggerManualSync } from './scheduler'
+import { otherSyncUser, triggerManualSync } from './scheduler'
 import type { RunSyncDeps } from './state-machine'
 import {
   POLLING_INTERVAL_SECONDS_MAX,
@@ -63,7 +63,10 @@ export function createSpotifySyncRouter(deps: RunSyncDeps): Router {
     const sourceRaw = typeof req.query.source === 'string' ? req.query.source : 'webapp'
     const source: 'webapp' | 'telegram' = sourceRaw === 'telegram' ? 'telegram' : 'webapp'
     // (?subscriptions=1: after a change of the artists or albums the app manages - runs also with Smart-Sync off)
-    const result = await triggerManualSync(source, deps, { subscriptions: req.query.subscriptions === '1' })
+    // (?user=: after a change of the subscriptions of a user who is not in place - his library is synced; the one in place
+    // or none: as before)
+    const forUser = typeof req.query.user === 'string' ? otherSyncUser(req.query.user) : undefined
+    const result = await triggerManualSync(source, forUser ?? deps, { subscriptions: req.query.subscriptions === '1' })
     if (!result.ok) {
       const code = result.status === 'running' ? 409 : 400
       res.status(code).json(result)

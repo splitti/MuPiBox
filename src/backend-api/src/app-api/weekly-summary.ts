@@ -13,6 +13,10 @@ interface Deps {
   getMupiboxConfig: () => MupiboxConfig | undefined
   updateMupiboxConfig: (mutate: (cfg: Record<string, unknown>) => void) => Promise<void>
   currentPlayLogStart?: () => number | null
+  /** several users on (users.ts): each one's name and history - one message each; null: the box as one */
+  users?: () => { name: string; file?: string; current: boolean }[] | null
+  /** `work` while no switch of the user runs (users.ts hold): the histories read where they are */
+  hold?: <T>(work: () => Promise<T>) => Promise<T>
 }
 
 type Telegram = Record<string, unknown>
@@ -59,23 +63,32 @@ export function startWeeklySummary(deps: Deps): void {
     await deps.updateMupiboxConfig((c) => {
       c.telegram = { ...((c.telegram as Telegram | undefined) ?? {}), weeklySentFor: today }
     })
-    const week = await playlogSummary('week', deps.currentPlayLogStart)
-    const days = week.timeline.filter((d) => d.minutes >= 1).length
-    if (week.totalMinutes < 1) {
-      telegram('n_weekly_summary_none')
-    } else {
-      // (what has no artist, a radio stream or a file without tags, is not named)
-      const top = week.topArtists
-        .filter((a) => a.name && a.minutes >= 1)
-        .slice(0, 3)
-        .map((a) => `• ${a.name} – ${duration(a.minutes)}`)
-        .join('\n')
-      const values = { total: duration(week.totalMinutes), days, avg: duration(week.totalMinutes / 7) }
-      telegram(top ? 'n_weekly_summary' : 'n_weekly_summary_short', top ? { ...values, top } : values)
+    const hold = deps.hold ?? (<T>(work: () => Promise<T>) => work())
+    const weeks = await hold(async () => {
+      const out: { who: string; week: Awaited<ReturnType<typeof playlogSummary>> }[] = []
+      for (const u of deps.users?.() ?? [null]) {
+        // (several users: whose week it is after the heading - "die Woche (Leni)")
+        const who = u ? ` (${u.name})` : ''
+        out.push({ who, week: await playlogSummary('week', !u || u.current ? deps.currentPlayLogStart : undefined, ...(u?.file ? [u.file] : [])) })
+      }
+      return out
+    })
+    for (const { who, week } of weeks) {
+      const days = week.timeline.filter((d) => d.minutes >= 1).length
+      if (week.totalMinutes < 1) {
+        telegram('n_weekly_summary_none', { who })
+      } else {
+        // (what has no artist, a radio stream or a file without tags, is not named)
+        const top = week.topArtists
+          .filter((a) => a.name && a.minutes >= 1)
+          .slice(0, 3)
+          .map((a) => `• ${a.name} – ${duration(a.minutes)}`)
+          .join('\n')
+        const values = { who, total: duration(week.totalMinutes), days, avg: duration(week.totalMinutes / 7) }
+        telegram(top ? 'n_weekly_summary' : 'n_weekly_summary_short', top ? { ...values, top } : values)
+      }
+      console.log(`${new Date().toLocaleString()}: [weekly] summary sent: ${Math.round(week.totalMinutes)} min on ${days} days`)
     }
-    console.log(
-      `${new Date().toLocaleString()}: [weekly] summary sent: ${Math.round(week.totalMinutes)} min on ${days} days`,
-    )
   }
   const tick = () =>
     void check().catch((err) => console.warn(`${new Date().toLocaleString()}: [weekly] ${(err as Error).message}`))

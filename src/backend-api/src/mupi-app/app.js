@@ -3565,10 +3565,9 @@ function openLibGroup(g) {
 // (subs: after a change of the subscribed artists or albums - those come also with Smart-Sync off, only the
 // playlists then stay as they are; "Jetzt abgleichen" on the Spotify page asks without it)
 async function fireSync(subs = true) {
-  // (another user's subscriptions: the sync runs for the user in place - his come when he is the one in place)
+  // (another user's subscriptions: the sync runs for his library - the box syncs every user's)
   const other = libView.user ? usersState?.users?.find((u) => u.id === libView.user) : null
-  if (other) return tr(`Gespeichert. Auf die Box kommt es, wenn ${other.name} der aktive Benutzer ist.`)
-  const r = await api(`${SYNC_API}/trigger?source=webapp${subs ? '&subscriptions=1' : ''}`, { method: 'POST' })
+  const r = await api(`${SYNC_API}/trigger?source=webapp${subs ? '&subscriptions=1' : ''}${other ? `&user=${encodeURIComponent(other.id)}` : ''}`, { method: 'POST' })
   const b = r.body ?? {}
   if (r.status === 202 && b.subscriptionsOnly) {
     return b.status === 'scheduled'

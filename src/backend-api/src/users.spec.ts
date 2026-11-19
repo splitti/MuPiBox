@@ -268,6 +268,76 @@ describe('the users', () => {
     await assert.rejects(users.updateUserConfig('nobody', () => undefined))
   })
 
+  it('the coming user gets the own files as the media scan made them last (it writes the library in place only)', async () => {
+    const users = new Users(files, hooks)
+    await users.setEnabled(true)
+    const leni = await users.add('Leni', null)
+    write(path.join(lib(), 'data.json'), JSON.stringify([{ type: 'spotify', id: 'a' }, { type: 'library', category: 'music', artist: 'A', title: 'Neu' }, { type: 'library', category: 'music', artist: 'A', title: 'Beide' }]))
+    // (hers: one whose folder is gone, one she changed in the app - her version stays, in her order)
+    write(
+      path.join(root, 'data', 'users', leni.id, 'library', 'data.json'),
+      JSON.stringify([{ type: 'library', category: 'music', artist: 'A', title: 'Beide', cover: 'mine' }, { type: 'library', category: 'music', artist: 'A', title: 'Gelöscht' }, { type: 'rss', id: 'f' }]),
+    )
+    await users.switchTo(leni.id)
+    assert.deepEqual(JSON.parse(read(path.join(lib(), 'data.json'))), [
+      { type: 'library', category: 'music', artist: 'A', title: 'Beide', cover: 'mine', index: 0 },
+      { type: 'rss', id: 'f', index: 1 },
+      { type: 'library', category: 'music', artist: 'A', title: 'Neu', index: 2 },
+    ])
+  })
+
+  it('a restored backup comes in place whole: the users it does not know into the trash with their things', async () => {
+    const users = new Users(files, hooks)
+    await users.setEnabled(true)
+    const anna = await users.add('Anna', null)
+    const ben = await users.add('Ben', null)
+    write(path.join(root, 'data', 'users', ben.id, 'library', 'data.json'), '[{"title":"Ben"}]')
+    await users.switchTo(anna.id)
+    write(path.join(lib(), 'data.json'), '[{"title":"Anna vorher"}]')
+    write(path.join(lib(), 'resume.json'), '[{"title":"Anna weiter"}]')
+    const before = users.state()
+    const held = files.prepareRestore()
+    // (what unzip puts there: the list - the box in place, Anna not - and the folder of Anna; the library in place)
+    write(files.file, JSON.stringify({ ...before, current: MAIN_ID, users: before.users.filter((u) => u.id !== ben.id) }))
+    write(path.join(root, 'data', 'users', anna.id, 'library', 'data.json'), '[{"title":"Anna im Backup"}]')
+    write(path.join(lib(), 'data.json'), '[{"title":"Box im Backup"}]')
+    // (the box's own lists in its folder in the backup - put in place by the restore)
+    write(path.join(root, 'data', 'users', MAIN_ID, 'library', 'resume.json'), '[{"title":"Box weiter"}]')
+    files.finishRestore(held, before)
+    assert.equal(read(path.join(lib(), 'data.json')), '[{"title":"Box im Backup"}]')
+    // (Anna's resume of before is not the box's: the backup's)
+    assert.equal(read(path.join(lib(), 'resume.json')), '[{"title":"Box weiter"}]')
+    assert.ok(!fs.existsSync(path.join(root, 'data', 'users', MAIN_ID, 'library', 'resume.json')))
+    assert.equal(read(path.join(root, 'data', 'users', anna.id, 'library', 'data.json')), '[{"title":"Anna im Backup"}]')
+    assert.ok(!fs.existsSync(path.join(root, 'data', 'users', anna.id, 'library', 'resume.json')))
+    const [t] = files.trashList()
+    assert.equal(t.name, 'Ben')
+    assert.equal(read(path.join(root, 'data', 'users', 'trash', t.key, 'library', 'data.json')), '[{"title":"Ben"}]')
+    assert.deepEqual(
+      fs.readdirSync(path.join(root, 'data', 'users')).filter((n) => n.startsWith('.')),
+      [],
+    )
+    // (no wait for a switch: hold runs in the order of the changes)
+    assert.equal(await users.hold(async () => 'held'), 'held')
+  })
+
+  it('a restore that failed: the users of before back as they were', async () => {
+    const users = new Users(files, hooks)
+    await users.setEnabled(true)
+    const anna = await users.add('Anna', null)
+    write(path.join(root, 'data', 'users', anna.id, 'library', 'data.json'), '[{"title":"Anna"}]')
+    const before = users.state()
+    const held = files.prepareRestore()
+    write(files.file, '{"half": true}')
+    write(path.join(root, 'data', 'users', 'xx', 'config.json'), '{}')
+    files.undoRestore(held, before)
+    assert.deepEqual(files.read().users.map((u) => u.name), ['Standard', 'Anna'])
+    assert.equal(read(path.join(lib(), 'data.json')), '[{"title":"A"}]')
+    assert.equal(read(path.join(lib(), 'resume.json')), '[{"title":"A1"}]')
+    assert.equal(read(path.join(root, 'data', 'users', anna.id, 'library', 'data.json')), '[{"title":"Anna"}]')
+    assert.ok(!fs.existsSync(path.join(root, 'data', 'users', 'xx')))
+  })
+
   it('empties the trash after 30 days', async () => {
     const users = new Users(files, hooks)
     const a = await users.add('Anna', null)
