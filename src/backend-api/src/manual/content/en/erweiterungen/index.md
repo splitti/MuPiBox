@@ -9,6 +9,7 @@ Since MuPiBox 5.1 you can add **extensions**: extra functions that not every box
 | [USB CD drive](cd-laufwerk.md) | play audio CDs from a USB drive |
 | [Time in the header](uhrzeit.md) | the time at the top of the display, digital or analog |
 | [Weather](wetter.md) | the weather of a place as dials on the display |
+| [Football](fussball.md) | your club, the matchday and the table on the display |
 | [NFC extension](nfc.md) | up to three NFC readers (PN5180, RC522, PN532, USB) start media with tags: assigning tags, connecting readers, wiring |
 
 > [!WARNING]

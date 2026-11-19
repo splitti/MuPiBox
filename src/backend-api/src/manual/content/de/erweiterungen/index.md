@@ -9,6 +9,7 @@ Seit MuPiBox 5.1 lassen sich **Erweiterungen** nachinstallieren: Zusatzfunktione
 | [USB-CD-Laufwerk](cd-laufwerk.md) | Audio-CDs vom USB-Laufwerk abspielen |
 | [Uhrzeit in der Kopfzeile](uhrzeit.md) | die Uhrzeit oben im Display, digital oder analog |
 | [Wetter](wetter.md) | das Wetter eines Ortes als Messuhren auf dem Display |
+| [Fußball](fussball.md) | der eigene Verein, der Spieltag und die Tabelle auf dem Display |
 | [NFC-Extension](nfc.md) | bis zu drei NFC-Leser (PN5180, RC522, PN532, USB) starten Medien mit Tags: Tags zuordnen, Leser anschließen, Verdrahtung |
 
 > [!WARNING]

@@ -33,6 +33,16 @@
       "min": 0,
       "max": 99999999,
       "perUser": true
+    },
+    "startView": {
+      "type": "string",
+      "default": "club",
+      "options": [
+        "club",
+        "matchday",
+        "table"
+      ],
+      "perUser": true
     }
   },
   "ui": {
@@ -71,6 +81,25 @@
         "type": "lookup",
         "search": "/api/ext/football/teams",
         "help": "Nach dem Namen suchen und den Verein antippen. Er wird hervorgehoben, und „Mein Verein“ zeigt sein letztes und sein nächstes Spiel."
+      },
+      {
+        "key": "startView",
+        "label": "Ansicht beim Öffnen",
+        "help": "Was der Reiter „Fußball“ zuerst zeigt. Ohne Lieblingsverein beginnt er mit dem Spieltag, beim DFB-Pokal gibt es keine Tabelle.",
+        "choices": [
+          {
+            "value": "club",
+            "label": "Mein Verein"
+          },
+          {
+            "value": "matchday",
+            "label": "Spieltag"
+          },
+          {
+            "value": "table",
+            "label": "Tabelle"
+          }
+        ]
       },
       {
         "type": "status",

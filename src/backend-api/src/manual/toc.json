@@ -411,6 +411,13 @@
         }
       },
       {
+        "id": "fussball",
+        "title": {
+          "de": "Fußball",
+          "en": "Football"
+        }
+      },
+      {
         "id": "oled",
         "title": {
           "de": "OLED-Display",

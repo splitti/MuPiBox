@@ -21,6 +21,7 @@ A new user takes the settings (theme, volume, start page …) of the active user
 | [Daily limits](../spielzeit/tageslimits.md), [quiet hours](../spielzeit/ruhezeiten.md), [tile limits](../spielzeit/kachel-limit.md) | the photo albums themselves |
 | Photo time and which photo albums the display shows | NFC cards, buttons, OLED and other extensions |
 | Theme, volumes, start page, clock, brightness | Telegram, Home Assistant, MQTT, sleep timer |
+| Settings of an extension marked **per user** (the club of [Football](../erweiterungen/fussball.md), say) | |
 
 The box shows its own files to every child. Each child has their own hidden covers: **No cover** hides one for the child who is listening.
 
