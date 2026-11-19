@@ -220,7 +220,9 @@ export function createSpotifySyncRouter(deps: RunSyncDeps): Router {
       res.status(502).json({ error: 'token unavailable', detail: tok.failure.reason })
       return
     }
-    const config = loadSpotifySyncConfig(deps.getMupiboxConfig())
+    // (?user=: the subscription of a user who is not in place - his range and the albums he left out)
+    const of = (typeof req.query.user === 'string' && otherSyncUser(req.query.user)) || deps
+    const config = loadSpotifySyncConfig(of.getMupiboxConfig())
     const sub = (config.artists ?? []).find((a) => a.id === artistId)
     let albums
     try {
@@ -267,7 +269,7 @@ export function createSpotifySyncRouter(deps: RunSyncDeps): Router {
    * Gentle with Spotify: pages of 50 (the most it allows), at most 10, one after the other through the box's pacing
    * and its one Spotify block (spotifyGet); the list is kept 5 minutes, so opening the page again asks nothing.
    */
-  router.get('/my-playlists', localOrElternSession, async (_req, res) => {
+  router.get('/my-playlists', localOrElternSession, async (req, res) => {
     const tokenStore = loadSpotifyTokenStore(deps.getMupiboxConfig())
     if (!tokenStore) {
       res.status(409).json({ error: 'spotify not configured' })
@@ -277,7 +279,9 @@ export function createSpotifySyncRouter(deps: RunSyncDeps): Router {
     // the refresh token changes with every renewal of the access and emptied the list kept here each time)
     const authorizedAt = (deps.getMupiboxConfig() as unknown as { spotify?: { authorizedAt?: unknown } } | undefined)?.spotify?.authorizedAt
     const accountKey = `${tokenStore.clientId}:${typeof authorizedAt === 'string' ? authorizedAt : ''}`
-    const config = loadSpotifySyncConfig(deps.getMupiboxConfig())
+    // (?user=: whether the Smart-Sync of a user who is not in place brings a playlist - his prefix, his switch)
+    const of = (typeof req.query.user === 'string' && otherSyncUser(req.query.user)) || deps
+    const config = loadSpotifySyncConfig(of.getMupiboxConfig())
     const prefix = config.playlist_prefix.trim()
     // (Smart-Sync takes either the playlists named - then the prefix does not count - or those with the prefix)
     const explicit = config.playlist_explicit_ids

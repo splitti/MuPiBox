@@ -1127,7 +1127,7 @@ const libView = { user: null, shown: null }
 // fill leaves a value in these marks alone; they are invisible, made for text put into other text)
 const un = (name) => `\u2068${name}\u2069`
 const USER_LIBRARY_ROUTE =
-  /^(\/api\/(data|data-version|add|edit|delete|delete-many|playtime|playtime\/extend)|\/api\/app\/library\/(subscriptions|subscribe-artist|unsubscribe-artist|remove-synced|remove-album|artist-exclude|add-album|episodes)|\/api\/app\/(heard|tiles\/limit|tiles\/time|caps-config|playlog|photos\/settings|photos\/time|photos\/overview|photos\/albums\/[a-f0-9]{10}))$/
+  /^(\/api\/(data|data-version|add|edit|delete|delete-many|playtime|playtime\/extend)|\/api\/app\/library\/(subscriptions|subscribe-artist|unsubscribe-artist|remove-synced|remove-album|artist-exclude|add-album|episodes)|\/api\/app\/(heard|tiles\/limit|tiles\/time|caps-config|playlog|photos\/settings|photos\/time|photos\/overview|photos\/albums\/[a-f0-9]{10})|\/api\/spotify-sync\/(artist-albums|my-playlists))$/
 // (what goes for the box or the user in place only: not while another user's library is shown - playing, a release or
 // "quiet now" for the box)
 const USER_PLAY_ROUTE =
