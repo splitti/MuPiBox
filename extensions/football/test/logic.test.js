@@ -193,3 +193,12 @@ test('a national team at OpenLigaDB: one entry a day (the one with a result), no
   )
   assert.deepEqual(days.map((x) => x.competition), ['wm26', 'DFBN'])
 })
+
+test('the league of a club: the competition with a table most of its matches are in', () => {
+  const m = (competition) => ({ competition })
+  assert.equal(L.clubLeague('o', [m('bl1'), m('ucl'), m('bl1'), m('dfb')]), 'bl1')
+  assert.equal(L.clubLeague('o', [m('DFBN'), m('wm26')]), null)
+  assert.equal(L.clubLeague('f', [m('CL'), m('PD'), m('PD')]), 'PD')
+  assert.equal(L.leagueName('f', 'PD'), 'LaLiga')
+  assert.equal(L.leagueName('o', 'bl2'), '2. Bundesliga')
+})

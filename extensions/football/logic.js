@@ -260,6 +260,22 @@ function clubDays(matches, teamId) {
   return [...best.values()].sort(byKickoff)
 }
 
+// ---- the tables of the clubs' leagues (F8) ----
+
+/** The competitions with a table of one league, by source (a cup, the Champions League, a national team have none to show) */
+const TABLE_LEAGUES = { o: ['bl1', 'bl2', 'bl3', 'ffb1'], f: ['PL', 'ELC', 'BL1', 'PD', 'SA', 'FL1', 'DED', 'PPL', 'BSA'] }
+/** The league of a club: the competition with a table most of its matches are in; null for none */
+function clubLeague(src, matches) {
+  const allowed = TABLE_LEAGUES[src] ?? []
+  const count = new Map()
+  for (const m of matches ?? []) if (allowed.includes(m.competition)) count.set(m.competition, (count.get(m.competition) ?? 0) + 1)
+  let best = null
+  for (const [code, n] of count) if (!best || n > count.get(best)) best = code
+  return best
+}
+/** The name of a league of a source */
+const leagueName = (src, code) => (src === 'f' ? FOOTBALLDATA_LEAGUES[code]?.name : OPENLIGADB_LEAGUES[code]?.name) ?? code
+
 /** Matches sorted by kick-off (then by id: the same order on every call). */
 const byKickoff = (a, b) => (Date.parse(a.kickoff) || 0) - (Date.parse(b.kickoff) || 0) || (a.id ?? 0) - (b.id ?? 0)
 
@@ -375,4 +391,4 @@ function goalText(goal, lang = 'de') {
   return t.goal(mine.short || mine.name, goal.score[goal.side], goal.score[other])
 }
 
-module.exports = { MAX_CLUBS, SRC, clubsOf, clubsText, clubNames, clubDays, OPENLIGADB_LEAGUES, FOOTBALLDATA_LEAGUES, fdTeam, fdMatch, fdTable, fdTeams, olTeam, olMatch, olTable, olTeams, stateOf, myClub, nextDelay, anyLive, inPlay, newGoals, goalText, byKickoff, playsIn, dedupe, tlaOf, MIN, HOUR }
+module.exports = { TABLE_LEAGUES, clubLeague, leagueName, MAX_CLUBS, SRC, clubsOf, clubsText, clubNames, clubDays, OPENLIGADB_LEAGUES, FOOTBALLDATA_LEAGUES, fdTeam, fdMatch, fdTable, fdTeams, olTeam, olMatch, olTable, olTeams, stateOf, myClub, nextDelay, anyLive, inPlay, newGoals, goalText, byKickoff, playsIn, dedupe, tlaOf, MIN, HOUR }

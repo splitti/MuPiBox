@@ -29,6 +29,7 @@ const TEXTS = {
     offline: 'Keine Verbindung zur Quelle.',
     offlineOld: 'Keine Verbindung zur Quelle – letzter Stand',
     noMatches: 'Für diesen Spieltag sind keine Spiele eingetragen.',
+    noTable: 'Für diese Liga gibt es gerade keine Tabelle.',
     stand: (t) => `Stand ${t}`,
     delayed: 'mit Verzögerung',
     // (what the sources ask for: OpenLigaDB's data are under the ODbL, football-data.org wants its sentence)
@@ -58,6 +59,7 @@ const TEXTS = {
     offline: 'No connection to the source.',
     offlineOld: 'No connection to the source – last values',
     noMatches: 'No matches for this matchday.',
+    noTable: 'There is no table for this league right now.',
     stand: (t) => `As of ${t}`,
     delayed: 'delayed',
     credit: { openligadb: 'Data: OpenLigaDB (ODbL)', footballdata: 'Football data provided by the Football-Data.org API' },
@@ -141,6 +143,9 @@ const STYLE = `
 .fb-day{display:flex;align-items:center;justify-content:center;gap:12px;margin:2px 0 6px;font-weight:600;font-size:18px;line-height:1}
 .fb-arrow{width:48px;height:44px;border-radius:22px;border:0;background:rgba(255,255,255,.12);color:inherit;font-size:24px}
 .fb-arrow:disabled{opacity:.3}
+.fb-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:2px 0 8px}
+.fb-chip{min-height:40px;padding:0 14px;border-radius:20px;border:2px solid rgba(255,255,255,.3);background:transparent;color:inherit;font-weight:600;font-size:16px}
+.fb-chip[aria-pressed="true"]{background:rgba(255,255,255,.18);border-color:currentColor}
 .fb-table{width:100%;border-collapse:collapse;font-size:18px}
 .fb-table th{font-size:14px;font-weight:600;text-align:right;padding:2px 6px;position:sticky;top:-4px;background:var(--fb-bg,#111);color:rgba(255,255,255,.7);z-index:1}
 .fb-table td{padding:4px 6px;text-align:right;white-space:nowrap}
@@ -261,7 +266,7 @@ export function activate(api) {
 
         const drawTabs = () => {
           // (a table when the source has one: the league phase of the Champions League too, never the DFB-Pokal)
-          const views = [...(data?.clubs?.length ? ['club'] : []), 'matchday', ...(data?.table?.length ? ['table'] : [])]
+          const views = [...(data?.clubs?.length ? ['club'] : []), 'matchday', ...(data?.table?.length || data?.tables?.length ? ['table'] : [])]
           // (before the first answer the view chosen stays: the club's tab comes with the answer)
           if (data && !views.includes(view)) view = views[0]
           tabs.replaceChildren(
@@ -344,7 +349,56 @@ export function activate(api) {
           for (const m of day.matches ?? []) body.append(matchRow(m))
         }
 
+        // (the table shown: the league chosen - null - or that of a club, its key and what came for it)
+        let tableKey = null
+        let otherTable = null
+        let tableWanted = null
+        async function showTable(key) {
+          const main = data?.tables?.[0]?.key
+          if (!key || (key === main && data?.table?.length)) {
+            tableKey = null
+            otherTable = null
+            centred = false
+            draw(false)
+            return
+          }
+          tableWanted = key
+          const answer = await api.fetchApi(`/table?l=${encodeURIComponent(key)}`)
+          if (closed || tableWanted !== key) return
+          tableWanted = null
+          tableKey = key
+          otherTable = answer?.table?.length ? answer : { table: null }
+          centred = false
+          draw(false)
+        }
+        const drawTableChoice = () => {
+          const list = data?.tables ?? []
+          if (list.length < 2) return
+          const row = document.createElement('div')
+          row.className = 'fb-chips'
+          const shown = tableKey ?? (data.table?.length ? list[0].key : null)
+          for (const l of list) {
+            const b = document.createElement('button')
+            b.type = 'button'
+            b.className = 'fb-chip'
+            b.textContent = t.leagues?.[l.name] ?? l.name
+            b.setAttribute('aria-pressed', String(l.key === shown))
+            b.onclick = () => void showTable(l.key)
+            row.append(b)
+          }
+          body.append(row)
+        }
+
         const drawTable = () => {
+          drawTableChoice()
+          // (a league of a club, or the one chosen)
+          const rows = tableKey ? otherTable?.table : data.table
+          const league = tableKey ? otherTable?.league : data.league
+          const ids = tableKey ? (otherTable?.teamIds ?? []) : (data.teamIds ?? [])
+          if (!rows?.length) {
+            body.append(message(t.noTable))
+            return
+          }
           const table = document.createElement('table')
           table.className = 'fb-table'
           const head = document.createElement('tr')
@@ -356,16 +410,16 @@ export function activate(api) {
           }
           table.append(head)
           let mineRow = null
-          for (const r of data.table) {
+          for (const r of rows) {
             const tr = document.createElement('tr')
-            if (mine(r.team)) {
+            if (r.team?.id && ids.includes(r.team.id)) {
               tr.className = 'mine'
               mineRow = tr
             }
             const rank = document.createElement('td')
             rank.className = 'rank'
             rank.textContent = String(r.rank)
-            const zone = zoneOf(data.league, r.rank)
+            const zone = zoneOf(league, r.rank)
             if (zone) rank.style.borderLeftColor = ZONE_COLOR[zone]
             const team = document.createElement('td')
             team.className = 'team'
@@ -462,7 +516,9 @@ export function activate(api) {
           const time = data.fetchedAt ? new Date(data.fetchedAt).toLocaleTimeString(data.lang === 'de' ? 'de-DE' : 'en-GB', { hour: '2-digit', minute: '2-digit' }) : ''
           // (the sources of what is shown: the league's, and football-data.org when a club comes from there)
           const credits = [...new Set([data.source, ...(data.clubs ?? []).map((c) => (c.src === 'f' ? 'footballdata' : 'openligadb'))].filter(Boolean))].map((s) => t.credit[s])
-          foot.textContent = [t.leagues?.[data.leagueName] ?? data.leagueName, data.stale ? t.offlineOld : time ? t.stand(time) : '', data.delayed ? t.delayed : '', ...credits].filter(Boolean).join('  ·  ')
+          // (the league of the table shown - another one than chosen when a club's is shown)
+          const shownLeague = view === 'table' && tableKey && otherTable?.name ? otherTable.name : data.leagueName
+          foot.textContent = [t.leagues?.[shownLeague] ?? shownLeague, data.stale ? t.offlineOld : time ? t.stand(time) : '', data.delayed ? t.delayed : '', ...credits].filter(Boolean).join('  ·  ')
         }
 
         async function go(n) {
@@ -489,13 +545,23 @@ export function activate(api) {
         // (the swipe: left for the next matchday, right for the one before)
         let swipe = null
         body.addEventListener('pointerdown', (e) => {
-          swipe = view === 'matchday' ? { x: e.clientX, y: e.clientY } : null
+          swipe = view === 'matchday' || (view === 'table' && (data?.tables?.length ?? 0) > 1) ? { x: e.clientX, y: e.clientY } : null
         })
         body.addEventListener('pointerup', (e) => {
           if (!swipe) return
           const dx = e.clientX - swipe.x
           const dy = e.clientY - swipe.y
           swipe = null
+          if (Math.abs(dx) <= 70 || Math.abs(dx) <= 2 * Math.abs(dy)) return
+          // (the table: the league beside it - the leagues of the clubs)
+          if (view === 'table') {
+            const list = data.tables
+            const now = tableWanted ?? tableKey ?? (data.table?.length ? list[0].key : null)
+            const at = Math.max(0, list.findIndex((l) => l.key === now))
+            const next = list[at + (dx < 0 ? 1 : -1)]
+            if (next) void showTable(next.key)
+            return
+          }
           const day = other ?? data?.matchday
           const base = wanted ?? day?.number
           if (Math.abs(dx) > 70 && Math.abs(dx) > 2 * Math.abs(dy) && Number.isInteger(base)) void go(base + (dx < 0 ? 1 : -1))

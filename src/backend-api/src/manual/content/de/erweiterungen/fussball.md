@@ -16,11 +16,11 @@ Das Display zeigt dann oben den Reiter **Fußball** (ein Ball). Ein Tipp darauf 
 | --- | --- |
 | **Mein Verein** / **Meine Vereine** | je Verein das Wappen, der Tabellenplatz, das letzte Spiel mit Ergebnis und das nächste mit Tag und Uhrzeit; läuft gerade ein Spiel, steht das Ergebnis groß darüber. Mehrere Vereine stehen untereinander |
 | **Spieltag** | alle Spiele des aktuellen Spieltags; mit den Pfeilen oder mit Wischen kommst du zum Spieltag davor und danach. Deine Vereine sind hervorgehoben |
-| **Tabelle** | Platz, Spiele, Tordifferenz und Punkte; beim Öffnen steht dein Verein in der Mitte. Ein farbiger Strich markiert die Plätze für den Aufstieg oder die Champions League (grün), die Relegation (orange) und den Abstieg (rot) |
+| **Tabelle** | Platz, Spiele, Tordifferenz und Punkte; beim Öffnen steht dein Verein in der Mitte. Ein farbiger Strich markiert die Plätze für den Aufstieg oder die Champions League (grün), die Relegation (orange) und den Abstieg (rot). Spielen deine Vereine in verschiedenen Ligen, stehen über der Tabelle Knöpfe je Liga, etwa **1. Bundesliga** und **LaLiga**; Wischen wechselt ebenso |
 
 Beim **DFB-Pokal** gibt es keine Tabelle. Ohne Verein gibt es die Ansicht **Mein Verein** nicht.
 
-Die Spiele eines Vereins kommen aus **allen Wettbewerben**, die die Quelle kennt: bei Bayern also Bundesliga, DFB-Pokal und Champions League, bei Deutschland Länderspiele und Turniere. Der Tabellenplatz steht nur bei einem Verein der gewählten Liga.
+Die Spiele eines Vereins kommen aus **allen Wettbewerben**, die die Quelle kennt: bei Bayern also Bundesliga, DFB-Pokal und Champions League, bei Deutschland Länderspiele und Turniere. Den Tabellenplatz zeigt die Box aus der Tabelle der Liga, in der der Verein spielt. Die Tabellen anderer Ligen holt sie nur bei offener Seite, höchstens stündlich; eine Liga von football-data.org braucht den Schlüssel. Pokale, die Champions League und Nationalmannschaften haben keine eigene Tabelle.
 
 ## Einstellungen
 

@@ -193,6 +193,8 @@ exports.activate = (host) => {
   /** hash -> when fetching it failed */
   const crestFailed = new Map()
   const otherDays = new Map()
+  /** the tables of the clubs' leagues beside the one chosen: "o:bl2" -> { at, table } */
+  const tables = new Map()
   /** the teams of a league for the app's search: key -> { at, teams } */
   const teamLists = new Map()
 
@@ -351,6 +353,8 @@ exports.activate = (host) => {
       }
       // (the clubs: whatever became of the league)
       await loadClubs(s, full).catch(() => undefined)
+      // (the tables of the clubs' other leagues: only for a look at the page)
+      if (full) await loadTables(s).catch(() => undefined)
       save()
       // (the voice takes a few seconds: the load does not wait for it)
       void goals(s, key).catch((error) => host.log.warn(`[Extension football] goal: ${error?.message}`))
@@ -470,7 +474,10 @@ exports.activate = (host) => {
     const matches = (view.matchday?.matches ?? []).map((m) => fresh(m, now))
     // (each club: its last, next and running match; its place when it plays in the league shown)
     const clubs = clubsOfS(s).map((c) => {
-      const got = L.myClub(matchesOfClub(c, now), c.src === srcOf(s) ? view.table : null, c.id, now)
+      // (its place: in the table of its league when the box has it, else in the league chosen)
+      const own = L.clubLeague(c.src, clubData.get(clubKey(c))?.matches)
+      const table = (own && tableOf(s, `${c.src}:${own}`)) || (c.src === srcOf(s) ? view.table : null)
+      const got = L.myClub(matchesOfClub(c, now), table, c.id, now)
       const team = got?.team ?? { id: c.id, name: c.name, short: c.name, tla: L.tlaOf({ name: c.name }), crest: '' }
       return { src: c.src, ...got, team: withCrests(team), live: matchOut(got?.live), last: matchOut(got?.last), next: matchOut(got?.next), known: !clubData.get(clubKey(c))?.failed }
     })
@@ -490,6 +497,8 @@ exports.activate = (host) => {
       error: lastError || null,
       matchday: { number: view.matchday?.number ?? null, name: view.matchday?.name ?? '', matches: matches.map(matchOut) },
       table: view.table ? view.table.map((r) => ({ ...r, team: withCrests(r.team) })) : null,
+      // (the leagues with a table to choose: the one chosen and those of the clubs)
+      tables: tableLeagues(s).map(({ key, name, code }) => ({ key, name, league: code })),
       clubs,
     })
   })
@@ -518,6 +527,63 @@ exports.activate = (host) => {
       if (m && !live.has(`${c.src}:${m.id}`)) live.set(`${c.src}:${m.id}`, matchOut(m))
     }
     res.json({ live: [...live.values()].slice(0, 3) })
+  })
+
+  /** The leagues with a table to choose at the display: the one chosen first (when it has a table), then those of the clubs */
+  function tableLeagues(s) {
+    const out = []
+    const add = (src, code) => {
+      if (!code || out.some((l) => l.src === src && l.code === code)) return
+      out.push({ key: `${src}:${code}`, src, code, name: L.leagueName(src, code) })
+    }
+    if (view?.table?.length) add(srcOf(s), leagueOf(s))
+    for (const c of clubsOfS(s)) {
+      // (football-data.org without a key: no table of its leagues)
+      if (c.src === 'f' && !String(s.apiKey ?? '').trim()) continue
+      add(c.src, L.clubLeague(c.src, clubData.get(clubKey(c))?.matches))
+    }
+    return out
+  }
+  /** The table of a league: the one chosen from the view, the others as kept */
+  const tableOf = (s, key) => (key === `${srcOf(s)}:${leagueOf(s)}` ? (view?.table ?? null) : (tables.get(key)?.table ?? null))
+  /** The tables of the clubs' leagues beside the one chosen: each asked once an hour (after an error ten minutes later) */
+  async function loadTables(s, now = Date.now()) {
+    const wanted = tableLeagues(s).filter((l) => l.key !== `${srcOf(s)}:${leagueOf(s)}`)
+    for (const k of [...tables.keys()]) if (!wanted.some((l) => l.key === k)) tables.delete(k)
+    for (const l of wanted) {
+      const have = tables.get(l.key)
+      if (have && now - have.at < L.HOUR) continue
+      try {
+        let table = null
+        if (l.src === 'o') table = L.olTable(await getJson(`${OLDB}/getbltable/${encodeURIComponent(l.code)}/${seasonOf(new Date(now))}`))
+        else table = L.fdTable(await fdGetJson(`https://api.football-data.org/v4/competitions/${encodeURIComponent(l.code)}/standings`, { 'X-Auth-Token': String(s.apiKey ?? '').trim() }))
+        tables.set(l.key, { at: now, table })
+      } catch (error) {
+        host.log.warn(`[Extension football] table ${l.key}: ${error?.message}`)
+        tables.set(l.key, { at: now - L.HOUR + 10 * L.MIN, table: have?.table ?? null })
+      }
+    }
+  }
+
+  // Another table of the display (the league of a club): as kept, asked when there is none yet
+  host.route('get', '/table', async (req, res) => {
+    const s = await host.settings()
+    res.set('Cache-Control', 'no-store')
+    const l = tableLeagues(s).find((x) => x.key === String(req.query.l ?? ''))
+    if (!configured(s) || !l) {
+      res.status(404).json({ error: 'no table' })
+      return
+    }
+    if (!tableOf(s, l.key) && !tables.has(l.key)) await loadTables(s).catch(() => undefined)
+    const table = tableOf(s, l.key)
+    res.json({
+      key: l.key,
+      name: l.name,
+      league: l.code,
+      table: table ? table.map((r) => ({ ...r, team: withCrests(r.team) })) : null,
+      // (the clubs of this source: highlighted)
+      teamIds: clubsOfS(s).filter((c) => c.src === l.src).map((c) => c.id),
+    })
   })
 
   host.route('get', '/matchday', async (req, res) => {

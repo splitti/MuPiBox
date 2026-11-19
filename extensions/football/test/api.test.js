@@ -482,3 +482,29 @@ test('the source away in the middle of a match: the header shows nothing after t
     Date.now = realNow
   }
 })
+
+test('the tables of the clubs\' leagues: offered beside the one chosen, asked while the page is open, the club\'s place from its own league', async () => {
+  const club = (id, comp) => [{ matchID: id, matchDateTimeUTC: '2026-11-07T14:30:00Z', leagueShortcut: comp, group: { groupOrderID: 10 }, team1: { teamId: id, teamName: `T${id}`, shortName: `T${id}` }, team2: { teamId: 9, teamName: 'X', shortName: 'X' }, matchIsFinished: true, matchResults: [{ resultTypeID: 2, resultOrderID: 2, pointsTeam1: 1, pointsTeam2: 0 }], goals: [] }]
+  const bl2 = [{ teamInfoId: 99, teamName: 'Second', shortName: 'Second', points: 30, matches: 12, won: 9, draw: 3, lost: 0, goals: 25, opponentGoals: 5, goalDiff: 20 }, { teamInfoId: 77, teamName: 'T77', shortName: 'T77', points: 28, matches: 12, won: 9, draw: 1, lost: 2, goals: 20, opponentGoals: 9, goalDiff: 11 }]
+  const asked = []
+  global.fetch = async (url) => {
+    const u = String(url)
+    asked.push(u)
+    const body = /getmatchesbyteamid\/40\//.test(u) ? club(40, 'bl1') : /getmatchesbyteamid\/77\//.test(u) ? club(77, 'bl2') : /getbltable\/bl2\//.test(u) ? bl2 : /getbltable\/bl1\//.test(u) ? table : /getmatchdata\/bl1$/.test(u) ? current : []
+    return { ok: true, status: 200, headers: new Map(), json: async () => body }
+  }
+  const { call } = start({ now: { clubs: 'o:40:FC Bayern München|o:77:T77' } })
+  const data = (await call('get /data', { query: { open: '1' } })).body
+  assert.deepEqual(data.tables.map((l) => l.key), ['o:bl1', 'o:bl2'])
+  assert.equal(data.tables[1].name, '2. Bundesliga')
+  // (asked with the page open, once)
+  assert.equal(asked.filter((u) => /getbltable\/bl2\//.test(u)).length, 1)
+  const r = (await call('get /table', { query: { l: 'o:bl2' } })).body
+  assert.equal(r.league, 'bl2')
+  assert.equal(r.table.length, 2)
+  assert.deepEqual(r.teamIds, [40, 77])
+  // (the place of T77 from the table of its league, a second look at the page)
+  const again = (await call('get /data', { query: { open: '1' } })).body
+  assert.equal(again.clubs.find((c) => c.team.id === 77).rank, 2)
+  assert.equal((await call('get /table', { query: { l: 'o:xx' } })).status, 404)
+})
