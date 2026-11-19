@@ -63,8 +63,8 @@
     "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxLjYiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iOS4yIi8+PHBhdGggZD0iTTEyIDcuNmwzLjIgMi4zLTEuMiAzLjhoLTRsLTEuMi0zLjh6IiBmaWxsPSJjdXJyZW50Q29sb3IiLz48cGF0aCBkPSJNMTIgNy42VjNNMTUuMiA5LjlsNC4zLTEuNE0xNCAxMy43bDIuNyAzLjdNMTAgMTMuN2wtMi43IDMuN004LjggOS45TDQuNSA4LjUiLz48L3N2Zz4K",
     "hostApi": 13,
     "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/football-0.1.0.mpx",
-    "sha256": "d90bb730ba237b632efee771394c14a6ac99eb9d2369ea6f3fabcdbbda37922e",
-    "size": 32266,
+    "sha256": "fc52364a8eb513f626976c3375c9d6dd0db131b824b96f2cd9f0f3564dba5738",
+    "size": 37843,
     "resources": {},
     "system": {
       "udev": 0,

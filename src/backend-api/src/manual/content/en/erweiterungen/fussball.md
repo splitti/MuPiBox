@@ -18,9 +18,9 @@ The display then shows the tab **Football** (a ball) at the top. A tap on it ope
 | **Matchday** | all matches of the current matchday; the arrows or a swipe bring the matchday before and after. Your clubs are highlighted |
 | **Table** | place, matches, goal difference and points; when it opens, your club is in the middle. A coloured line marks the places for promotion or the Champions League (green), the play-off (orange) and relegation (red). If your clubs play in different leagues, buttons above the table choose the league, say **1. Bundesliga** and **LaLiga**; a swipe does the same |
 
-The **DFB Cup** has no table. Without a club there is no **My club** view.
+With the **DFB Cup**, the table shows the leagues of your clubs. Without a club there is no **My club** view.
 
-A club's matches come from **every competition** the source knows: for Bayern the Bundesliga, the DFB Cup and the Champions League, for Germany internationals and tournaments. The box takes the place from the table of the league the club plays in. The tables of other leagues it fetches only while the page is open, at most hourly; a league of football-data.org needs the key. Cups, the Champions League and national teams have no table of their own.
+A club's matches come from **every competition** the source knows: for Bayern the Bundesliga, the DFB Cup and the Champions League, for Germany internationals and tournaments. The box takes the place from the table of the league the club plays in. The tables of other leagues it fetches only while the page is open, at most hourly; a league of football-data.org needs the key. Cups and national teams have no table of their own; the Champions League shows its league phase when you choose it as the competition.
 
 ## Settings
 
@@ -73,5 +73,6 @@ The box fetches the **crests** once and keeps them. The display never asks a ser
 
 - Is the extension switched on under **Settings › System › Extensions**?
 - The results and the club search need the internet.
+- With **football-data.org** chosen as the source but no key saved yet, there is no tab, and the club search finds nothing.
 - During the summer break and between the rounds of the cup the matchday can be empty.
 - The matches of a national team often appear at OpenLigaDB only shortly before: then it says **No match planned**.

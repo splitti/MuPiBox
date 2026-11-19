@@ -52,3 +52,14 @@ test('a match running without a goal yet shows 0:0, one over without a known res
   assert.equal(textsFor('en').penalties(5, 4), 'pens 5:4')
   assert.equal(zoneOf('ffb1', 14), 'down')
 })
+
+test('the name of a matchday: the source\'s in German, its number or the round of a cup in English; the place in English', async () => {
+  const { matchdayLabel, textsFor } = await load()
+  assert.equal(matchdayLabel({ number: 12, name: '12. Spieltag' }, 'de'), '12. Spieltag')
+  assert.equal(matchdayLabel({ number: 12, name: '12. Spieltag' }, 'en'), 'Matchday 12')
+  assert.equal(matchdayLabel({ number: 3, name: 'Achtelfinale' }, 'en'), 'Round of 16')
+  assert.equal(matchdayLabel({ number: null, name: '' }, 'de'), 'Spieltag')
+  assert.equal(textsFor('en').place(1), '1st place')
+  assert.equal(textsFor('en').place(12), '12th place')
+  assert.equal(textsFor('en').place(23), '23rd place')
+})

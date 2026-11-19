@@ -18,9 +18,9 @@ Das Display zeigt dann oben den Reiter **Fußball** (ein Ball). Ein Tipp darauf 
 | **Spieltag** | alle Spiele des aktuellen Spieltags; mit den Pfeilen oder mit Wischen kommst du zum Spieltag davor und danach. Deine Vereine sind hervorgehoben |
 | **Tabelle** | Platz, Spiele, Tordifferenz und Punkte; beim Öffnen steht dein Verein in der Mitte. Ein farbiger Strich markiert die Plätze für den Aufstieg oder die Champions League (grün), die Relegation (orange) und den Abstieg (rot). Spielen deine Vereine in verschiedenen Ligen, stehen über der Tabelle Knöpfe je Liga, etwa **1. Bundesliga** und **LaLiga**; Wischen wechselt ebenso |
 
-Beim **DFB-Pokal** gibt es keine Tabelle. Ohne Verein gibt es die Ansicht **Mein Verein** nicht.
+Beim **DFB-Pokal** zeigt die Tabelle die Ligen deiner Vereine. Ohne Verein gibt es die Ansicht **Mein Verein** nicht.
 
-Die Spiele eines Vereins kommen aus **allen Wettbewerben**, die die Quelle kennt: bei Bayern also Bundesliga, DFB-Pokal und Champions League, bei Deutschland Länderspiele und Turniere. Den Tabellenplatz zeigt die Box aus der Tabelle der Liga, in der der Verein spielt. Die Tabellen anderer Ligen holt sie nur bei offener Seite, höchstens stündlich; eine Liga von football-data.org braucht den Schlüssel. Pokale, die Champions League und Nationalmannschaften haben keine eigene Tabelle.
+Die Spiele eines Vereins kommen aus **allen Wettbewerben**, die die Quelle kennt: bei Bayern also Bundesliga, DFB-Pokal und Champions League, bei Deutschland Länderspiele und Turniere. Den Tabellenplatz zeigt die Box aus der Tabelle der Liga, in der der Verein spielt. Die Tabellen anderer Ligen holt sie nur bei offener Seite, höchstens stündlich; eine Liga von football-data.org braucht den Schlüssel. Pokale und Nationalmannschaften haben keine eigene Tabelle; die Champions League zeigt ihre Ligaphase, wenn du sie als Wettbewerb wählst.
 
 ## Einstellungen
 
@@ -73,5 +73,6 @@ Die **Wappen** holt die Box einmal und hebt sie auf. Das Display fragt nie selbs
 
 - Ist die Erweiterung unter **Einstellungen › System › Erweiterungen** eingeschaltet?
 - Die Ergebnisse und die Vereinssuche brauchen Internet.
+- Ist **football-data.org** als Quelle gewählt, aber noch kein Schlüssel gespeichert, gibt es den Reiter nicht, und die Vereinssuche findet nichts.
 - In der Sommerpause und zwischen den Runden des Pokals kann der Spieltag leer sein.
 - Bei einer Nationalmannschaft stehen Spiele oft erst kurz vorher bei OpenLigaDB: Dann steht dort **Kein Spiel geplant**.

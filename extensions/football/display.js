@@ -23,7 +23,8 @@ const TEXTS = {
     today: 'heute',
     tomorrow: 'morgen',
     loading: 'Lade …',
-    noClub: 'Kein Lieblingsverein gewählt. In der Webapp unter Erweiterungen › Fußball einen Verein suchen.',
+    noClub: 'Noch kein Verein. In der App unter Einstellungen › System › Erweiterungen › Fußball bei „Meine Vereine“ suchen.',
+    matchdayNo: (n) => `${n}. Spieltag`,
     noClubMatches: 'Für deinen Verein sind gerade keine Spiele eingetragen.',
     penalties: (a, b) => `i.E. ${a}:${b}`,
     offline: 'Keine Verbindung zur Quelle.',
@@ -49,11 +50,14 @@ const TEXTS = {
     last: 'Last match',
     next: 'Next match',
     none: 'No match planned',
-    place: (n) => `Place ${n}`,
+    place: (n) => `${n}${[11, 12, 13].includes(n % 100) ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'} place`,
     today: 'today',
     tomorrow: 'tomorrow',
     loading: 'Loading …',
-    noClub: 'No favourite club chosen. Search for one in the web app under Extensions › Football.',
+    noClub: 'No club yet. Search under “My clubs” in the app: Settings › System › Extensions › Football.',
+    matchdayNo: (n) => `Matchday ${n}`,
+    // (the rounds of a cup, as OpenLigaDB names them)
+    rounds: { '1. Runde': 'Round 1', '2. Runde': 'Round 2', '3. Runde': 'Round 3', Achtelfinale: 'Round of 16', Viertelfinale: 'Quarter-finals', Halbfinale: 'Semi-finals', Finale: 'Final' },
     noClubMatches: 'There are no matches of your club right now.',
     penalties: (a, b) => `pens ${a}:${b}`,
     offline: 'No connection to the source.',
@@ -72,6 +76,15 @@ const TEXTS = {
   },
 }
 export const textsFor = (lang) => TEXTS[String(lang ?? '').slice(0, 2)] ?? TEXTS.en
+
+/** The name of a matchday: the source's in German, else its number (a round of a cup in English) */
+export function matchdayLabel(day, lang = 'de') {
+  const t = textsFor(lang)
+  if (String(lang).startsWith('de') && day?.name) return day.name
+  if (day?.name && t.rounds?.[day.name]) return t.rounds[day.name]
+  if (Number.isInteger(day?.number)) return t.matchdayNo(day.number)
+  return day?.name || t.matchday
+}
 
 const pad = (n) => String(n).padStart(2, '0')
 /** When a match starts, as a child reads it: "heute 15:30", "morgen 18:30", "Sa 22.11. 15:30". */
@@ -103,6 +116,7 @@ const ZONES = {
   ELC: { up: [1, 2], playoff: [3, 6], down: [22, 24] },
   DED: { up: [1, 2], playoff: [16, 17], down: [18, 18] },
   PPL: { up: [1, 2], playoff: [16, 16], down: [17, 18] },
+  CL: { up: [1, 8], playoff: [9, 24], down: [25, 36] },
 }
 export function zoneOf(league, rank) {
   const z = ZONES[league]
@@ -113,7 +127,7 @@ export function zoneOf(league, rank) {
   }
   return within(z.up) ? 'up' : within(z.playoff) ? 'playoff' : within(z.down) ? 'down' : ''
 }
-const ZONE_COLOR = { up: '#2e9d57', playoff: '#d68a1c', down: '#c8423b' }
+const ZONE_COLOR = { up: '#3DDC84', playoff: '#FFB23D', down: '#FF5A4F' }
 
 /** The score of a match as text ("2:1"); before it, the kick-off; running without a goal yet 0:0; over without a known result –:– */
 export function scoreText(m, now = Date.now(), lang = 'de') {
@@ -124,46 +138,66 @@ export function scoreText(m, now = Date.now(), lang = 'de') {
   return m?.kickoff ? kickoffText(m.kickoff, now, lang) : ''
 }
 
+// The look: a floodlit evening in a stadium - the pitch as the background (pitch.svg, drawn for this extension), everything on
+// dark green panels that keep it readable, and the scores as on a scoreboard: amber figures on black. No blur, no motion that
+// runs by itself - the Pi draws it at once.
 const STYLE = `
-.fb{position:absolute;inset:0;display:flex;flex-direction:column;color:inherit;font-family:var(--ion-font-family,inherit)}
-.fb-tabs{flex:none;display:flex;gap:8px;justify-content:center;padding:10px 64px 6px}
-.fb-tab{min-height:48px;padding:0 18px;border-radius:24px;border:2px solid rgba(255,255,255,.35);background:transparent;color:inherit;font-weight:600;font-size:18px;line-height:1}
-.fb-tab[aria-pressed="true"]{background:rgba(255,255,255,.18);border-color:currentColor}
-.fb-body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:4px 16px 8px;touch-action:pan-y;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.35) transparent}
-.fb-foot{flex:none;height:26px;display:flex;align-items:center;justify-content:center;font-size:14px;opacity:.7}
+.fb{--fb-night:#0B1F33;--fb-panel:rgba(4,20,13,.8);--fb-panel-hi:rgba(10,40,26,.9);--fb-board:#04100A;--fb-line:rgba(234,244,255,.14);--fb-amber:#FFC23D;--fb-live:#FF5A4F;--fb-text:#F2F7F4;--fb-muted:rgba(242,247,244,.7);position:absolute;inset:0;display:flex;flex-direction:column;color:var(--fb-text);background-color:var(--fb-night);background-repeat:no-repeat;background-position:center bottom;background-size:cover;font-family:var(--ion-font-family,inherit)}
+.fb button{font-family:inherit;-webkit-tap-highlight-color:transparent}
+.fb-tabs{flex:none;align-self:center;display:flex;gap:4px;margin:10px 72px 8px;padding:4px;border-radius:30px;background:var(--fb-panel)}
+.fb-tab{min-height:46px;padding:0 22px;border:0;border-radius:24px;background:transparent;color:var(--fb-muted);font-weight:700;font-size:18px;line-height:1;transition:background-color .15s,color .15s}
+.fb-tab[aria-pressed="true"]{background:var(--fb-amber);color:var(--fb-night)}
+.fb-body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:2px 16px 10px;touch-action:pan-y;scrollbar-width:thin;scrollbar-color:rgba(242,247,244,.35) transparent}
+.fb-body>*{max-width:980px;margin-left:auto;margin-right:auto}
+.fb-foot{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:26px;padding:3px 12px;background:rgba(3,12,8,.72);color:var(--fb-muted);font-size:13px;line-height:1.3;text-align:center}
+.fb-foot small{font-size:11px;opacity:.85}
 .fb-crest{width:var(--s,32px);height:var(--s,32px);object-fit:contain;flex:none}
-.fb-tla{width:var(--s,32px);height:var(--s,32px);border-radius:50%;border:2px solid currentColor;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:calc(var(--s,32px)*.32);flex:none;opacity:.8}
-.fb-row{display:flex;align-items:center;gap:10px;min-height:52px;padding:4px 10px;border-radius:12px}
-.fb-row.mine{background:rgba(255,255,255,.16)}
-.fb-row .name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:19px}
+.fb-tla{width:var(--s,32px);height:var(--s,32px);border-radius:50%;border:2px solid var(--fb-muted);display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:calc(var(--s,32px)*.32);flex:none;color:var(--fb-muted)}
+.fb-row{display:flex;align-items:center;gap:10px;min-height:58px;padding:6px 12px;margin-bottom:8px;border-radius:14px;background:var(--fb-panel)}
+.fb-row.mine{background:var(--fb-panel-hi);box-shadow:inset 5px 0 0 var(--fb-amber)}
+.fb-row .name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:19px;font-weight:600}
 .fb-row .name.away{text-align:right}
-.fb-row .mid{flex:none;min-width:96px;text-align:center;font-weight:700;font-size:20px;line-height:1.1}
-.fb-row .mid small{display:block;font-size:13px;font-weight:500;opacity:.75}
-.fb-live{color:#ff5a4f}
-.fb-day{display:flex;align-items:center;justify-content:center;gap:12px;margin:2px 0 6px;font-weight:600;font-size:18px;line-height:1}
-.fb-arrow{width:48px;height:44px;border-radius:22px;border:0;background:rgba(255,255,255,.12);color:inherit;font-size:24px}
+.fb-score{flex:none;min-width:104px;padding:6px 10px;border-radius:10px;background:var(--fb-board);border:1px solid rgba(255,194,61,.28);color:var(--fb-amber);text-align:center;font-weight:800;font-size:24px;line-height:1.05;font-variant-numeric:tabular-nums;letter-spacing:.04em}
+.fb-score.kick{background:transparent;border-color:transparent;color:var(--fb-text);font-size:16px;font-weight:700;letter-spacing:0}
+.fb-score small{display:block;margin-top:2px;color:var(--fb-muted);font-size:12px;font-weight:600;letter-spacing:0}
+.fb-score.live{border-color:var(--fb-live)}
+.fb-score.live small,.fb-live{color:var(--fb-live)}
+.fb-score.live small::before,.fb-live-word::before{content:"";display:inline-block;width:7px;height:7px;margin-right:5px;border-radius:50%;background:var(--fb-live);vertical-align:1px}
+.fb-day{display:flex;align-items:center;justify-content:center;gap:12px;margin:2px auto 10px}
+.fb-day span{min-width:180px;padding:9px 18px;border-radius:22px;background:var(--fb-panel);text-align:center;font-weight:700;font-size:18px}
+.fb-arrow{width:48px;height:48px;border-radius:50%;border:0;background:var(--fb-panel);color:var(--fb-text);font-size:26px;line-height:1}
 .fb-arrow:disabled{opacity:.3}
-.fb-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:2px 0 8px}
-.fb-chip{min-height:40px;padding:0 14px;border-radius:20px;border:2px solid rgba(255,255,255,.3);background:transparent;color:inherit;font-weight:600;font-size:16px}
-.fb-chip[aria-pressed="true"]{background:rgba(255,255,255,.18);border-color:currentColor}
-.fb-table{width:100%;border-collapse:collapse;font-size:18px}
-.fb-table th{font-size:14px;font-weight:600;text-align:right;padding:2px 6px;position:sticky;top:-4px;background:var(--fb-bg,#111);color:rgba(255,255,255,.7);z-index:1}
-.fb-table td{padding:4px 6px;text-align:right;white-space:nowrap}
-.fb-table td.team{text-align:left;width:100%;max-width:0;overflow:hidden;text-overflow:ellipsis}
-.fb-table td.team span{display:inline-flex;align-items:center;gap:8px;vertical-align:middle}
-.fb-table tr.mine{background:rgba(255,255,255,.16)}
-.fb-table td.rank{border-left:5px solid transparent;font-weight:700}
-.fb-club{display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:6px;text-align:center}
-.fb-club h2{margin:0;font-size:24px}
-.fb-club-small{padding:8px 0 14px;border-bottom:1px solid rgba(255,255,255,.12)}
-.fb-club-head{display:flex;align-items:center;gap:12px;width:min(560px,100%)}
-.fb-club-head h3{margin:0;font-size:20px;flex:1;text-align:left}
-.fb-club-small .fb-big{font-size:36px}
-.fb-club .place{opacity:.8;font-size:17px}
-.fb-big{display:flex;align-items:center;justify-content:center;gap:18px;font-weight:800;font-size:54px;line-height:1}
-.fb-card{width:min(560px,100%);border-radius:16px;background:rgba(255,255,255,.08);padding:10px 14px}
-.fb-card h3{margin:0 0 4px;font-size:15px;font-weight:600;opacity:.75}
-.fb-msg{padding:24px 12px;text-align:center;font-size:18px;opacity:.85}
+.fb-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;width:max-content;max-width:100%;margin:0 auto 10px;padding:4px;border-radius:26px;background:var(--fb-panel)}
+.fb-chip{min-height:40px;padding:0 16px;border:0;border-radius:20px;background:transparent;color:var(--fb-muted);font-weight:700;font-size:16px;transition:background-color .15s,color .15s}
+.fb-chip[aria-pressed="true"]{background:var(--fb-text);color:var(--fb-night)}
+.fb-table{width:100%;border-collapse:separate;border-spacing:0;font-size:18px;border-radius:16px;overflow:hidden;background:var(--fb-panel)}
+.fb-table th{position:sticky;top:-2px;z-index:1;padding:8px 8px 6px;background:#06170F;color:var(--fb-muted);font-size:13px;font-weight:700;text-align:right}
+.fb-table td{padding:6px 8px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--fb-line);font-variant-numeric:tabular-nums}
+.fb-table tr:last-child td{border-bottom:0}
+.fb-table td.team{text-align:left;width:100%;max-width:0;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.fb-table td.team span{display:inline-flex;align-items:center;gap:10px;vertical-align:middle}
+.fb-table td.rank{border-left:5px solid transparent;font-weight:800;color:var(--fb-muted)}
+.fb-table td.points{color:var(--fb-amber);font-weight:800}
+.fb-table tr.mine td{background:rgba(255,194,61,.14)}
+.fb-table tr.mine td.rank{color:var(--fb-text)}
+.fb-club{display:flex;flex-direction:column;align-items:center;gap:10px;padding:4px 0 6px;text-align:center}
+.fb-halo{display:inline-flex;padding:16px;border-radius:50%;background:radial-gradient(circle,rgba(234,244,255,.3) 0,rgba(234,244,255,.08) 55%,transparent 72%)}
+.fb-club h2{margin:0;font-size:28px;font-weight:800;letter-spacing:.01em}
+.fb-place{display:inline-block;padding:3px 12px;border-radius:999px;background:var(--fb-amber);color:var(--fb-night);font-weight:800;font-size:15px}
+.fb-club-small{gap:8px;margin-bottom:14px;padding:10px 12px 12px;border-radius:18px;background:rgba(3,14,9,.55)}
+.fb-club-head{display:flex;align-items:center;gap:12px;width:100%}
+.fb-club-head h3{flex:1;margin:0;font-size:21px;font-weight:800;text-align:left}
+.fb-big{display:flex;align-items:center;justify-content:center;gap:18px}
+.fb-big .fb-score{min-width:150px;padding:8px 16px;font-size:52px;border-radius:14px}
+.fb-club-small .fb-big .fb-score{min-width:116px;font-size:34px}
+.fb-card{width:100%;max-width:620px;padding:8px 10px 2px;border-radius:16px;background:rgba(3,14,9,.5)}
+.fb-card h3{margin:0 0 6px 4px;color:var(--fb-muted);font-size:14px;font-weight:700;text-align:left}
+.fb-card .fb-row{background:var(--fb-panel)}
+.fb-card .fb-row.mine{box-shadow:none;background:var(--fb-panel)}
+.fb-msg{margin:24px auto;padding:18px 20px;max-width:560px;border-radius:16px;background:var(--fb-panel);text-align:center;font-size:18px;line-height:1.4}
+.fb-head-item{display:none;align-items:center;gap:5px;min-height:36px;padding:0 10px;border:0;border-radius:18px;background:rgba(0,0,0,.32);color:inherit;font:inherit;font-weight:800;font-size:16px}
+.fb-head-item b{color:#FFC23D;font-variant-numeric:tabular-nums}
+.fb-head-item i{width:8px}
 `
 
 /** The style of the page and of the header item, once in the page of the display */
@@ -235,6 +269,7 @@ export function activate(api) {
         ensureStyle()
         const root = document.createElement('div')
         root.className = 'fb'
+        root.style.backgroundImage = `url("${api.url('pitch.svg')}")`
         const tabs = document.createElement('div')
         tabs.className = 'fb-tabs'
         const body = document.createElement('div')
@@ -261,7 +296,7 @@ export function activate(api) {
         root.addEventListener('pointerdown', () => {
           touchedAt = Date.now()
         })
-        let t = textsFor('de')
+        let t = textsFor(document.documentElement.lang || 'de')
         let centred = false
 
         const drawTabs = () => {
@@ -307,10 +342,11 @@ export function activate(api) {
             return n
           }
           const mid = document.createElement('span')
-          mid.className = 'mid'
+          // (a score on the board; before the kick-off its day and time, plain)
+          mid.className = m.score || m.state === 'live' || m.state === 'finished' ? 'fb-score' : 'fb-score kick'
           mid.textContent = scoreText(m, Date.now(), data?.lang)
           if (m.state === 'live') {
-            mid.classList.add('fb-live')
+            mid.classList.add('live')
             const s = document.createElement('small')
             s.textContent = t.live
             mid.append(s)
@@ -335,14 +371,14 @@ export function activate(api) {
             b.textContent = dir < 0 ? '‹' : '›'
             b.setAttribute('aria-label', dir < 0 ? '<' : '>')
             // (a league has twice as many matchdays as other teams: no arrow beyond the last)
-            const last = data.table?.length > 1 ? 2 * (data.table.length - 1) : 60
+            const last = data.league === 'CL' ? 8 : data.table?.length > 1 ? 2 * (data.table.length - 1) : 60
             const base = wanted ?? day.number
             b.disabled = !Number.isInteger(base) || base + dir < 1 || base + dir > last
             b.onclick = () => void go((wanted ?? day.number) + dir)
             return b
           }
           const label = document.createElement('span')
-          label.textContent = day.name || (day.number ? `${day.number}. ${t.matchday}` : t.matchday)
+          label.textContent = matchdayLabel(day, data.lang)
           head.append(arrow(-1), label, arrow(1))
           body.append(head)
           if (!day.matches?.length) body.append(message(t.noMatches))
@@ -356,6 +392,7 @@ export function activate(api) {
         async function showTable(key) {
           const main = data?.tables?.[0]?.key
           if (!key || (key === main && data?.table?.length)) {
+            tableWanted = null
             tableKey = null
             otherTable = null
             centred = false
@@ -363,6 +400,8 @@ export function activate(api) {
             return
           }
           tableWanted = key
+          // (the chip shows the choice at once - the table may take a moment)
+          for (const b of body.querySelectorAll('.fb-chip')) b.setAttribute('aria-pressed', String(b.dataset.key === key))
           const answer = await api.fetchApi(`/table?l=${encodeURIComponent(key)}`)
           if (closed || tableWanted !== key) return
           tableWanted = null
@@ -381,6 +420,7 @@ export function activate(api) {
             const b = document.createElement('button')
             b.type = 'button'
             b.className = 'fb-chip'
+            b.dataset.key = l.key
             b.textContent = t.leagues?.[l.name] ?? l.name
             b.setAttribute('aria-pressed', String(l.key === shown))
             b.onclick = () => void showTable(l.key)
@@ -390,6 +430,12 @@ export function activate(api) {
         }
 
         const drawTable = () => {
+          // (the league chosen has no table - a cup: the first of the clubs' leagues)
+          if (!tableKey && !data.table?.length && data.tables?.length) {
+            if (!tableWanted) void showTable(data.tables[0].key)
+            body.append(message(t.loading))
+            return
+          }
           drawTableChoice()
           // (a league of a club, or the one chosen)
           const rows = tableKey ? otherTable?.table : data.table
@@ -426,14 +472,16 @@ export function activate(api) {
             const wrap = document.createElement('span')
             const name = document.createElement('span')
             name.textContent = r.team.short || r.team.name
-            wrap.append(crest(r.team, 26), name)
+            wrap.append(crest(r.team, 28), name)
             team.append(wrap)
             const cell = (v) => {
               const td = document.createElement('td')
               td.textContent = String(v)
               return td
             }
-            tr.append(rank, team, cell(r.played), cell(r.diff > 0 ? `+${r.diff}` : r.diff), cell(r.points))
+            const points = cell(r.points)
+            points.className = 'points'
+            tr.append(rank, team, cell(r.played), cell(r.diff > 0 ? `+${r.diff}` : r.diff), points)
             table.append(tr)
           }
           body.append(table)
@@ -462,12 +510,16 @@ export function activate(api) {
             name.textContent = c.team.name
             const head = document.createElement('div')
             head.className = 'fb-club-head'
-            head.append(crest(c.team, one ? 88 : 40), name)
-            box.append(one ? crest(c.team, 88) : head)
-            if (one) box.append(name)
+            head.append(crest(c.team, one ? 88 : 44), name)
+            if (one) {
+              const halo = document.createElement('span')
+              halo.className = 'fb-halo'
+              halo.append(crest(c.team, 92))
+              box.append(halo, name)
+            } else box.append(head)
             if (c.rank) {
-              const place = document.createElement('div')
-              place.className = 'place'
+              const place = document.createElement('span')
+              place.className = 'fb-place'
               place.textContent = t.place(c.rank)
               ;(one ? box : head).append(place)
             }
@@ -484,12 +536,13 @@ export function activate(api) {
             if (c.live) {
               // (a match that runs: the score large in the middle)
               const big = document.createElement('div')
-              big.className = 'fb-big fb-live'
+              big.className = 'fb-big'
               const score = document.createElement('span')
+              score.className = 'fb-score live'
               score.textContent = scoreText(c.live, Date.now(), data.lang)
               big.append(crest(c.live.home, one ? 64 : 44), score, crest(c.live.away, one ? 64 : 44))
               const when = document.createElement('div')
-              when.className = 'fb-live'
+              when.className = 'fb-live fb-live-word'
               when.textContent = t.live
               box.append(big, when)
             }
@@ -510,15 +563,21 @@ export function activate(api) {
             return
           }
           if (view === 'club') drawClub()
-          else if (view === 'table' && data.table) drawTable()
+          else if (view === 'table') drawTable()
           else drawMatchday()
-          if (view !== 'table' || centred) body.scrollTop = top
+          body.scrollTop = top
           const time = data.fetchedAt ? new Date(data.fetchedAt).toLocaleTimeString(data.lang === 'de' ? 'de-DE' : 'en-GB', { hour: '2-digit', minute: '2-digit' }) : ''
           // (the sources of what is shown: the league's, and football-data.org when a club comes from there)
           const credits = [...new Set([data.source, ...(data.clubs ?? []).map((c) => (c.src === 'f' ? 'footballdata' : 'openligadb'))].filter(Boolean))].map((s) => t.credit[s])
           // (the league of the table shown - another one than chosen when a club's is shown)
           const shownLeague = view === 'table' && tableKey && otherTable?.name ? otherTable.name : data.leagueName
-          foot.textContent = [t.leagues?.[shownLeague] ?? shownLeague, data.stale ? t.offlineOld : time ? t.stand(time) : '', data.delayed ? t.delayed : '', ...credits].filter(Boolean).join('  ·  ')
+          // (scores of football-data.org - the league's or a club's - come with a delay)
+          const delayed = data.delayed || (data.clubs ?? []).some((c) => c.src === 'f')
+          const info = document.createElement('span')
+          info.textContent = [t.leagues?.[shownLeague] ?? shownLeague, data.stale ? t.offlineOld : time ? t.stand(time) : '', delayed ? t.delayed : ''].filter(Boolean).join('  ·  ')
+          const credit = document.createElement('small')
+          credit.textContent = credits.join('  ·  ')
+          foot.replaceChildren(info, credit)
         }
 
         async function go(n) {
@@ -585,6 +644,14 @@ export function activate(api) {
             }
             return
           }
+          // (a table of a club's league shown: anew too)
+          if (view === 'table' && tableKey && !tableWanted) {
+            const other = await api.fetchApi(`/table?l=${encodeURIComponent(tableKey)}`)
+            if (!closed && other?.table?.length && JSON.stringify(other) !== JSON.stringify(otherTable)) {
+              otherTable = other
+              draw()
+            }
+          }
           const text = JSON.stringify(answer)
           if (text === lastAnswer) return
           lastAnswer = text
@@ -625,7 +692,7 @@ export function activate(api) {
         ensureStyle()
         const item = document.createElement('button')
         item.type = 'button'
-        item.style.cssText = 'display:none;align-items:center;gap:4px;padding:0 6px;border:0;background:transparent;color:inherit;font:inherit;font-weight:700;font-size:16px'
+        item.className = 'fb-head-item'
         item.onclick = open
         place.append(item)
         let last = ''
@@ -639,11 +706,12 @@ export function activate(api) {
             return
           }
           const parts = []
-          for (const m of lives) {
-            const score = document.createElement('span')
+          // (a small display has room for two beside the battery, the clock and the network)
+          for (const m of lives.slice(0, window.innerWidth < 1000 ? 2 : 3)) {
+            const score = document.createElement('b')
             score.textContent = scoreText(m)
-            if (parts.length) parts.push(document.createTextNode(' '))
-            parts.push(crest(m.home, 22), score, crest(m.away, 22))
+            if (parts.length) parts.push(document.createElement('i'))
+            parts.push(crest(m.home, 24), score, crest(m.away, 24))
           }
           item.replaceChildren(...parts)
           item.setAttribute('aria-label', lives.map((m) => `${m.home.short} ${scoreText(m)} ${m.away.short}`).join(', '))

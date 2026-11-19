@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#06121F"/>
+      <stop offset="1" stop-color="#0B1F33"/>
+    </linearGradient>
+    <radialGradient id="flood" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#EAF4FF" stop-opacity="0.55"/>
+      <stop offset="0.35" stop-color="#EAF4FF" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#EAF4FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#03100A" stop-opacity="0.15"/>
+      <stop offset="0.55" stop-color="#03100A" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#03100A" stop-opacity="0.7"/>
+    </linearGradient>
+    <clipPath id="field">
+      <polygon points="190,250 1090,250 1480,720 -200,720"/>
+    </clipPath>
+  </defs>
+  <!-- the sky and the stands -->
+  <rect width="1280" height="720" fill="url(#sky)"/>
+  <path d="M0 210 L120 176 L1160 176 L1280 210 L1280 262 L0 262 Z" fill="#081624"/>
+  <path d="M0 228 L1280 228" stroke="#12304A" stroke-width="2" opacity="0.7"/>
+  <path d="M40 244 L1240 244" stroke="#12304A" stroke-width="2" opacity="0.5"/>
+  <!-- the grass, mown in stripes that grow towards the front -->
+  <g clip-path="url(#field)">
+    <rect x="-200" y="250" width="1680" height="470" fill="#145233"/>
+    <rect x="-200" y="262" width="1680" height="20" fill="#1B6640"/>
+    <rect x="-200" y="304" width="1680" height="28" fill="#1B6640"/>
+    <rect x="-200" y="362" width="1680" height="38" fill="#1B6640"/>
+    <rect x="-200" y="442" width="1680" height="52" fill="#1B6640"/>
+    <rect x="-200" y="552" width="1680" height="70" fill="#1B6640"/>
+    <rect x="-200" y="696" width="1680" height="24" fill="#1B6640"/>
+  </g>
+  <!-- the lines of the pitch, seen from behind one goal -->
+  <g fill="none" stroke="#F2FFF6" stroke-opacity="0.55" stroke-width="3" stroke-linejoin="round">
+    <polygon points="190,250 1090,250 1480,720 -200,720"/>
+    <path d="M70 392 L1210 392"/>
+    <ellipse cx="640" cy="392" rx="170" ry="42"/>
+    <path d="M330 720 L408 560 L872 560 L950 720"/>
+    <path d="M500 720 L528 640 L752 640 L780 720"/>
+    <path d="M450 250 L462 272 L818 272 L830 250"/>
+  </g>
+  <circle cx="640" cy="392" r="5" fill="#F2FFF6" fill-opacity="0.6"/>
+  <!-- the floodlights in the corners: their masts and their light -->
+  <g stroke="#1C3550" stroke-width="6">
+    <path d="M70 0 L92 196"/>
+    <path d="M1210 0 L1188 196"/>
+  </g>
+  <rect x="20" y="-10" width="110" height="34" rx="6" fill="#DDEBFA" opacity="0.9"/>
+  <rect x="1150" y="-10" width="110" height="34" rx="6" fill="#DDEBFA" opacity="0.9"/>
+  <ellipse cx="75" cy="10" rx="560" ry="420" fill="url(#flood)"/>
+  <ellipse cx="1205" cy="10" rx="560" ry="420" fill="url(#flood)"/>
+  <!-- calmer towards the bottom, where the lists stand -->
+  <rect width="1280" height="720" fill="url(#shade)"/>
+</svg>

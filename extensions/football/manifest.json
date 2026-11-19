@@ -212,12 +212,12 @@
         "label": "Meine Vereine",
         "type": "lookup",
         "search": "/api/ext/football/teams",
-        "help": "Nach dem Namen suchen: ＋ folgt einem Verein, ✕ hört auf – zum Aufhören also den Namen des Vereins suchen. Bis zu fünf Vereine, auch aus beiden Quellen: etwa Bayern und Deutschland von OpenLigaDB, dazu Barcelona von football-data.org (dafür kurz die Quelle football-data.org mit dem Wettbewerb LaLiga wählen, suchen, dann zurückstellen)."
+        "help": "Nach dem Namen suchen: ＋ folgt einem Verein, ✕ hört auf – zum Aufhören also den Namen des Vereins suchen. Bis zu fünf Vereine, auch aus beiden Quellen: etwa Bayern und Deutschland von OpenLigaDB, dazu Barcelona von football-data.org (dafür kurz die Quelle football-data.org mit dem Wettbewerb LaLiga wählen, den Schlüssel speichern, suchen, dann zurückstellen)."
       },
       {
         "key": "startView",
         "label": "Ansicht beim Öffnen",
-        "help": "Was der Reiter „Fußball“ zuerst zeigt. Ohne Verein beginnt er mit dem Spieltag, beim DFB-Pokal gibt es keine Tabelle.",
+        "help": "Was der Reiter „Fußball“ zuerst zeigt. Ohne Verein beginnt er mit dem Spieltag; beim DFB-Pokal zeigt die Tabelle die Ligen deiner Vereine.",
         "choices": [
           {
             "value": "club",
