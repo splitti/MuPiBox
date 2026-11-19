@@ -210,6 +210,56 @@ function fdTeams(body) {
     .sort((a, b) => a.name.localeCompare(b.name, 'de'))
 }
 
+// ---- the clubs a user follows (F7) ----
+
+/** At most this many clubs per user */
+const MAX_CLUBS = 5
+const SRC = { o: 'openligadb', f: 'footballdata' }
+
+/**
+ * The clubs of the setting `clubs`: "o:40:FC Bayern München|f:81:FC Barcelona" - the source (o OpenLigaDB, f football-data.org),
+ * the number of the club there, its name. Each club once, at most MAX_CLUBS; what does not fit is left out.
+ */
+function clubsOf(textValue) {
+  const out = []
+  for (const part of String(textValue ?? '').split('|')) {
+    const m = /^([of]):(\d{1,8}):(.{0,60})$/.exec(part.trim())
+    if (!m) continue
+    const club = { src: m[1], id: Number(m[2]), name: m[3].trim() || m[2] }
+    if (club.id > 0 && !out.some((c) => c.src === club.src && c.id === club.id)) out.push(club)
+    if (out.length >= MAX_CLUBS) break
+  }
+  return out
+}
+/** The setting `clubs` of a list (names without the separators, short enough for the setting's 300 letters) */
+function clubsText(list) {
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: the control characters are what is taken out
+  const clean = (n) => String(n ?? '').replace(/[|:\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim()
+  let len = 40
+  for (;;) {
+    const text = list.slice(0, MAX_CLUBS).map((c) => `${c.src}:${c.id}:${clean(c.name).slice(0, len)}`).join('|')
+    if (text.length <= 300 || len <= 8) return text.slice(0, 300)
+    len -= 4
+  }
+}
+/** The names for the app: "FC Bayern München, Deutschland" */
+const clubNames = (list) => list.map((c) => c.name).join(', ').slice(0, 300)
+
+// (OpenLigaDB: what its people keep for a national team is spread over several leagues - the same match up to four times - and
+// the under-21 is kept under the same number: those go, and of one day the entry that says most stays)
+const PREFERRED = ['bl1', 'bl2', 'bl3', 'dfb', 'ffb1', 'ucl', 'DFBN', 'wm26']
+function clubDays(matches, teamId) {
+  const best = new Map()
+  const rank = (m) => (m.score ? 0 : 2) + (m.state === 'finished' && !m.score ? 1 : 0) + (PREFERRED.includes(m.competition) ? 0 : 0.5)
+  for (const m of matches) {
+    if (!playsIn(m, teamId) || /(^|[^a-z])u\d{2}/i.test(m.competition ?? '') || /test/i.test(m.competition ?? '')) continue
+    const day = String(m.kickoff ?? '').slice(0, 10)
+    const have = best.get(day)
+    if (!have || rank(m) < rank(have)) best.set(day, m)
+  }
+  return [...best.values()].sort(byKickoff)
+}
+
 /** Matches sorted by kick-off (then by id: the same order on every call). */
 const byKickoff = (a, b) => (Date.parse(a.kickoff) || 0) - (Date.parse(b.kickoff) || 0) || (a.id ?? 0) - (b.id ?? 0)
 
@@ -325,4 +375,4 @@ function goalText(goal, lang = 'de') {
   return t.goal(mine.short || mine.name, goal.score[goal.side], goal.score[other])
 }
 
-module.exports = { OPENLIGADB_LEAGUES, FOOTBALLDATA_LEAGUES, fdTeam, fdMatch, fdTable, fdTeams, olTeam, olMatch, olTable, olTeams, stateOf, myClub, nextDelay, anyLive, inPlay, newGoals, goalText, byKickoff, playsIn, dedupe, tlaOf, MIN, HOUR }
+module.exports = { MAX_CLUBS, SRC, clubsOf, clubsText, clubNames, clubDays, OPENLIGADB_LEAGUES, FOOTBALLDATA_LEAGUES, fdTeam, fdMatch, fdTable, fdTeams, olTeam, olMatch, olTable, olTeams, stateOf, myClub, nextDelay, anyLive, inPlay, newGoals, goalText, byKickoff, playsIn, dedupe, tlaOf, MIN, HOUR }

@@ -89,15 +89,15 @@ test.afterEach(() => {
 test('the data: the matchday, the table, my club - the crests as addresses of the box', async () => {
   const state = { asked: [] }
   global.fetch = fakeFetch(state)
-  const settings = { now: { teamId: 134, team: 'SV Werder Bremen' } }
+  const settings = { now: { clubs: 'o:134:SV Werder Bremen' } }
   const { call, dataDir } = start(settings)
   const r = await call('get /data', { query: { open: '1' } })
   assert.equal(r.body.configured, true)
   assert.equal(r.body.leagueName, '1. Bundesliga')
   assert.equal(r.body.matchday.matches.length, current.length)
   assert.equal(r.body.table.length, table.length)
-  assert.equal(r.body.club.team.id, 134)
-  assert.match(r.body.club.team.crest, /^\/ext\/football\/crest\/[a-f0-9]{20}$/)
+  assert.equal(r.body.clubs[0].team.id, 134)
+  assert.match(r.body.clubs[0].team.crest, /^\/ext\/football\/crest\/[a-f0-9]{20}$/)
   assert.ok(r.body.matchday.matches.every((m) => m.home.crest === '' || m.home.crest.startsWith('/ext/football/crest/')))
   assert.equal(r.body.lang, 'de')
   // (kept on the card for the next start)
@@ -138,9 +138,9 @@ test('a league the box does not offer: not configured', async () => {
 test('a crest: fetched once, kept, served with the right type; one the box has never seen is not fetched', async () => {
   const state = { asked: [] }
   global.fetch = fakeFetch(state)
-  const { call, dataDir } = start({ now: { teamId: 134 } })
+  const { call, dataDir } = start({ now: { clubs: 'o:134:SV Werder Bremen' } })
   const data = (await call('get /data')).body
-  const crest = data.club.team.crest.split('/').pop()
+  const crest = data.clubs[0].team.crest.split('/').pop()
   const r = await call('get /crest/:hash', { params: { hash: crest } })
   assert.equal(r.type, 'image/png')
   assert.equal(r.headers['X-Content-Type-Options'], 'nosniff')
@@ -154,13 +154,21 @@ test('a crest: fetched once, kept, served with the right type; one the box has n
   assert.equal((await call('get /crest/:hash', { params: { hash: '../x' } })).status, 404)
 })
 
-test('the search of the club: the teams of the league that fit, and one to choose none', async () => {
+test('the search of the clubs: the teams that fit to follow (＋), the clubs followed to stop (✕), each with the whole new list', async () => {
   global.fetch = fakeFetch({ asked: [] })
-  const { call } = start({ now: {} })
+  const settings = { now: {} }
+  const { call } = start(settings)
   const r = await call('get /teams', { query: { q: 'bremen' } })
-  assert.deepEqual(r.body.at(-1), { label: 'Keinen Verein', values: { team: '', teamId: 0 } })
-  assert.equal(r.body[0].values.teamId, 134)
-  assert.ok(r.body.length <= 10)
+  assert.deepEqual(r.body[0], { label: '＋ SV Werder Bremen', values: { clubs: 'o:134:SV Werder Bremen', clubNames: 'SV Werder Bremen' } })
+  settings.now = { clubs: 'o:134:SV Werder Bremen|f:81:FC Barcelona' }
+  const two = (await call('get /teams', { query: { q: 'bay' } })).body
+  const add = two.find((x) => x.label.startsWith('＋'))
+  assert.equal(add.values.clubs.split('|').length, 3)
+  assert.match(add.values.clubNames, /^SV Werder Bremen, FC Barcelona, /)
+  // (Bremen is followed: not offered again, offered to stop)
+  assert.ok(!two.some((x) => x.label === '＋ SV Werder Bremen'))
+  assert.deepEqual(two.find((x) => x.label === '✕ SV Werder Bremen').values, { clubs: 'f:81:FC Barcelona', clubNames: 'FC Barcelona' })
+  assert.ok(two.length <= 10)
 })
 
 test('another matchday (the swipe of the display)', async () => {
@@ -189,7 +197,7 @@ test('crests of Wikimedia: their small PNGs first, then the address of the sourc
 test('with the page closed the box asks only for the club - and backs off when the first try failed', async () => {
   const state = { asked: [] }
   global.fetch = fakeFetch(state)
-  const { call, listeners } = start({ now: { teamId: 134 } })
+  const { call, listeners } = start({ now: { clubs: 'o:134:SV Werder Bremen' } })
   await call('get /data', { query: { open: '1' } })
   // (later, the page closed long ago: a new look asks for the club's matches only when it is due)
   const { activate } = require('../api.js')
@@ -291,52 +299,54 @@ test('a goal of the club while it plays: said once, not at the first look, not i
     const body = /getmatchdata\/bl1$/.test(u) || /getmatchesbyteamid/.test(u) ? [now] : /getbltable/.test(u) ? table : []
     return { ok: true, status: 200, headers: new Map(), json: async () => body }
   }
-  const settings = { now: { teamId: 134, announce: true } }
+  const settings = { now: { clubs: 'o:134:SV Werder Bremen', announce: true } }
   const { call, listeners, host } = start(settings)
   const wait = () => new Promise((r) => setTimeout(r, 20))
+  // (the clock a minute on for each new look: the box asks a club that plays once a minute)
+  const realNow = Date.now
+  let shift = 0
+  Date.now = () => realNow() + shift
+  const later = () => {
+    shift += 61 * 1000
+    for (const fn of listeners) fn({})
+  }
   await call('get /data', { query: { open: '1' } })
   await wait()
   assert.deepEqual(host.said, [])
   const live = (await call('get /live')).body.live
-  assert.equal(live.score.home, 1)
+  assert.equal(live[0].score.home, 1)
   // (a goal: said)
   now = match(2, 0)
-  for (const fn of listeners) fn({})
+  later()
   await call('get /data', { query: { open: '1' } })
   await wait()
   assert.deepEqual(host.said, ['Tor für Bremen! 2 zu 0.'])
-  // (another goal within the minute: kept - said at the next look a minute later)
+  // (the next goal at the next look, a minute later)
   now = match(3, 0)
-  for (const fn of listeners) fn({})
+  later()
   await call('get /data', { query: { open: '1' } })
   await wait()
-  assert.equal(host.said.length, 1)
-  const realNow = Date.now
-  Date.now = () => realNow() + 61 * 1000
-  for (const fn of listeners) fn({})
-  await call('get /data', { query: { open: '1' } })
-  await wait()
-  Date.now = realNow
   assert.deepEqual(host.said, ['Tor für Bremen! 2 zu 0.', 'Tor für Bremen! 3 zu 0.'])
   host.said.length = 1
   // (a goal of the other side: nothing)
   now = match(2, 1)
-  for (const fn of listeners) fn({})
+  later()
   await call('get /data', { query: { open: '1' } })
   await wait()
   assert.equal(host.said.length, 1)
   // (in the quiet hours: nothing said, nothing in the header)
   settings.rest = { quiet: true, blocked: false }
   now = match(3, 1)
-  for (const fn of listeners) fn({})
+  later()
   await call('get /data', { query: { open: '1' } })
   await wait()
   assert.equal(host.said.length, 1)
-  assert.equal((await call('get /live')).body.live, null)
+  assert.deepEqual((await call('get /live')).body.live, [])
   // (the header switched off)
   settings.rest = undefined
-  settings.now = { teamId: 134, header: false }
-  assert.equal((await call('get /live')).body.live, null)
+  settings.now = { clubs: 'o:134:SV Werder Bremen', header: false }
+  assert.deepEqual((await call('get /live')).body.live, [])
+  Date.now = realNow
 })
 
 test('football-data.org: only with a key, the key sent along, the club only when it was chosen there, the delay said', async () => {
@@ -354,17 +364,21 @@ test('football-data.org: only with a key, the key sent along, the club only when
   assert.deepEqual((await call('get /data', { query: { open: '1' } })).body, { configured: false })
   assert.equal(asked.length, 0)
   // (a key: asked with it; the club of OpenLigaDB - Bremen, 134 - is no club here)
-  settings.now = { source: 'footballdata', fdLeague: 'PL', apiKey: 'k3y', teamId: 134 }
+  settings.now = { source: 'footballdata', fdLeague: 'PL', apiKey: 'k3y', clubs: 'o:134:SV Werder Bremen' }
   const r = (await call('get /data', { query: { open: '1' } })).body
   assert.equal(r.source, 'footballdata')
   assert.equal(r.leagueName, 'Premier League')
   assert.equal(r.delayed, true)
-  assert.equal(r.teamId, null)
+  assert.deepEqual(r.teamIds, [])
   assert.equal(r.matchday.number, 12)
-  assert.ok(asked.every((a) => a.key === 'k3y' && a.url.startsWith('https://api.football-data.org/v4/')))
+  // (the key only to football-data.org - the club of OpenLigaDB is asked there, without it)
+  assert.ok(asked.filter((a) => a.url.startsWith('https://api.football-data.org/')).every((a) => a.key === 'k3y'))
+  assert.ok(asked.filter((a) => !a.url.startsWith('https://api.football-data.org/')).every((a) => a.key === undefined))
   // (the club chosen there)
-  settings.now = { ...settings.now, fdTeamId: 57 }
-  assert.equal((await call('get /data', { query: { open: '1' } })).body.club.team.id, 57)
+  settings.now = { ...settings.now, clubs: 'f:57:Arsenal' }
+  const withClub = (await call('get /data', { query: { open: '1' } })).body
+  assert.equal(withClub.clubs[0].team.id, 57)
+  assert.deepEqual(withClub.teamIds, [57])
   // (the status block: a key missing)
   settings.now = { source: 'footballdata', fdLeague: 'PL', apiKey: '' }
   assert.equal((await call('get /state')).body.rows[0].value, 'Schlüssel fehlt')
@@ -387,4 +401,84 @@ test('football-data.org: a wrong key is a key refused, not a source away; never 
     await call('get /data', { query: { open: '1' } })
   }
   assert.equal(n, 8)
+})
+
+test('several clubs: each asked, each with its last and next match, both running in the header, a goal of either said', async () => {
+  const kickoff = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+  const match = (id, home, away, h, a) => ({
+    matchID: id,
+    matchDateTimeUTC: kickoff,
+    leagueShortcut: 'bl1',
+    group: { groupName: '10. Spieltag', groupOrderID: 10 },
+    team1: { teamId: home, teamName: `T${home}`, shortName: `T${home}`, teamIconUrl: '' },
+    team2: { teamId: away, teamName: `T${away}`, shortName: `T${away}`, teamIconUrl: '' },
+    matchIsFinished: false,
+    matchResults: [],
+    goals: h + a > 0 ? [{ scoreTeam1: h, scoreTeam2: a }] : [],
+  })
+  let score = { a: [0, 0], b: [0, 0] }
+  const asked = []
+  global.fetch = async (url) => {
+    const u = String(url)
+    asked.push(u)
+    const body = /getmatchesbyteamid\/40\//.test(u) ? [match(1, 40, 7, ...score.a)] : /getmatchesbyteamid\/139\//.test(u) ? [match(2, 139, 5, ...score.b)] : /getmatchdata\/bl1$/.test(u) ? current : /getbltable/.test(u) ? table : []
+    return { ok: true, status: 200, headers: new Map(), json: async () => body }
+  }
+  const settings = { now: { clubs: 'o:40:FC Bayern München|o:139:Deutschland', announce: true } }
+  const { call, listeners, host } = start(settings)
+  const wait = () => new Promise((r) => setTimeout(r, 20))
+  // (the clock a minute on for each new look: the box asks a club that plays once a minute)
+  const realNow = Date.now
+  let shift = 0
+  Date.now = () => realNow() + shift
+  const later = () => {
+    shift += 61 * 1000
+    for (const fn of listeners) fn({})
+  }
+  const data = (await call('get /data', { query: { open: '1' } })).body
+  assert.deepEqual(data.clubs.map((c) => c.team.id), [40, 139])
+  assert.deepEqual(data.teamIds, [40, 139])
+  assert.ok(asked.some((u) => /getmatchesbyteamid\/40\//.test(u)) && asked.some((u) => /getmatchesbyteamid\/139\//.test(u)))
+  assert.equal((await call('get /live')).body.live.length, 2)
+  await wait()
+  assert.deepEqual(host.said, [])
+  score = { a: [0, 0], b: [1, 0] }
+  later()
+  await call('get /data', { query: { open: '1' } })
+  await wait()
+  assert.deepEqual(host.said, ['Tor für T139! 1 zu 0.'])
+  // (a club no longer followed: forgotten, its match gone from the header)
+  settings.now = { clubs: 'o:40:FC Bayern München', announce: true }
+  later()
+  await call('get /data', { query: { open: '1' } })
+  assert.equal((await call('get /live')).body.live.length, 1)
+  Date.now = realNow
+})
+
+test('the source away in the middle of a match: the header shows nothing after three minutes, not an old score as running', async () => {
+  const kickoff = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+  const m = { matchID: 5, matchDateTimeUTC: kickoff, leagueShortcut: 'bl1', group: { groupOrderID: 10 }, team1: { teamId: 40, teamName: 'Bayern', shortName: 'Bayern' }, team2: { teamId: 7, teamName: 'BVB', shortName: 'BVB' }, matchIsFinished: false, matchResults: [], goals: [{ scoreTeam1: 1, scoreTeam2: 0 }] }
+  let down = false
+  global.fetch = async (url) => {
+    if (down) throw new Error('offline')
+    const body = /getmatchesbyteamid/.test(String(url)) ? [m] : /getmatchdata\/bl1$/.test(String(url)) ? current : []
+    return { ok: true, status: 200, headers: new Map(), json: async () => body }
+  }
+  const realNow = Date.now
+  let shift = 0
+  Date.now = () => realNow() + shift
+  try {
+    const { call, listeners } = start({ now: { clubs: 'o:40:FC Bayern München' } })
+    await call('get /data', { query: { open: '1' } })
+    assert.equal((await call('get /live')).body.live.length, 1)
+    down = true
+    for (let i = 0; i < 4; i++) {
+      shift += 61 * 1000
+      for (const fn of listeners) fn({})
+      await call('get /data', { query: { open: '1' } })
+    }
+    assert.deepEqual((await call('get /live')).body.live, [])
+  } finally {
+    Date.now = realNow
+  }
 })

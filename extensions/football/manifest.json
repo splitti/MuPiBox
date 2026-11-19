@@ -2,7 +2,7 @@
   "id": "football",
   "name": "Fußball",
   "version": "0.1.0",
-  "description": "Die Ergebnisse deines Vereins, der Spieltag und die Tabelle auf dem Display. Die Box holt sie im Internet bei OpenLigaDB oder mit eigenem Schlüssel bei football-data.org; jeder Benutzer wählt seinen eigenen Verein.",
+  "description": "Die Ergebnisse deiner Vereine, der Spieltag und die Tabelle auf dem Display. Die Box holt sie im Internet bei OpenLigaDB oder mit eigenem Schlüssel bei football-data.org; jeder Benutzer folgt seinen eigenen Vereinen.",
   "hostApi": 13,
   "resources": {},
   "api": "api.js",
@@ -30,30 +30,16 @@
       ],
       "perUser": true
     },
-    "team": {
+    "clubs": {
       "type": "string",
       "default": "",
-      "pattern": "^.{0,80}$",
+      "pattern": "^.{0,300}$",
       "perUser": true
     },
-    "teamId": {
-      "type": "number",
-      "default": 0,
-      "min": 0,
-      "max": 99999999,
-      "perUser": true
-    },
-    "fdTeam": {
+    "clubNames": {
       "type": "string",
       "default": "",
-      "pattern": "^.{0,80}$",
-      "perUser": true
-    },
-    "fdTeamId": {
-      "type": "number",
-      "default": 0,
-      "min": 0,
-      "max": 99999999,
+      "pattern": "^.{0,300}$",
       "perUser": true
     },
     "startView": {
@@ -101,7 +87,7 @@
   },
   "ui": {
     "title": "Fußball",
-    "help": "Das Display zeigt oben den Reiter „Fußball“: dein Verein, der Spieltag und die Tabelle. Die Ergebnisse trägt die Gemeinschaft von OpenLigaDB ein, meist wenige Minuten nach dem Tor.",
+    "help": "Das Display zeigt oben den Reiter „Fußball“: deine Vereine, der Spieltag und die Tabelle. Die Ergebnisse trägt die Gemeinschaft von OpenLigaDB ein, meist wenige Minuten nach dem Tor.",
     "items": [
       {
         "key": "source",
@@ -222,39 +208,20 @@
         "help": "Kostenlos auf football-data.org anmelden („Register“), der Schlüssel kommt per E-Mail. Er gilt für die ganze Box. Die Ergebnisse kommen hier mit Verzögerung, auch die Tor-Ansage."
       },
       {
-        "key": "team",
-        "label": "Lieblingsverein",
+        "key": "clubNames",
+        "label": "Meine Vereine",
         "type": "lookup",
         "search": "/api/ext/football/teams",
-        "help": "Nach dem Namen suchen und den Verein antippen. Er wird hervorgehoben, und „Mein Verein“ zeigt sein letztes und sein nächstes Spiel.",
-        "showIf": {
-          "key": "source",
-          "is": [
-            "openligadb"
-          ]
-        }
-      },
-      {
-        "key": "fdTeam",
-        "label": "Lieblingsverein",
-        "type": "lookup",
-        "search": "/api/ext/football/teams",
-        "help": "Nach dem Namen suchen und den Verein antippen. Er wird hervorgehoben, und „Mein Verein“ zeigt sein letztes und sein nächstes Spiel.",
-        "showIf": {
-          "key": "source",
-          "is": [
-            "footballdata"
-          ]
-        }
+        "help": "Nach dem Namen suchen: ＋ folgt einem Verein, ✕ hört auf – zum Aufhören also den Namen des Vereins suchen. Bis zu fünf Vereine, auch aus beiden Quellen: etwa Bayern und Deutschland von OpenLigaDB, dazu Barcelona von football-data.org (dafür kurz die Quelle football-data.org mit dem Wettbewerb LaLiga wählen, suchen, dann zurückstellen)."
       },
       {
         "key": "startView",
         "label": "Ansicht beim Öffnen",
-        "help": "Was der Reiter „Fußball“ zuerst zeigt. Ohne Lieblingsverein beginnt er mit dem Spieltag, beim DFB-Pokal gibt es keine Tabelle.",
+        "help": "Was der Reiter „Fußball“ zuerst zeigt. Ohne Verein beginnt er mit dem Spieltag, beim DFB-Pokal gibt es keine Tabelle.",
         "choices": [
           {
             "value": "club",
-            "label": "Mein Verein"
+            "label": "Meine Vereine"
           },
           {
             "value": "matchday",
@@ -269,12 +236,12 @@
       {
         "key": "header",
         "label": "Ergebnis in der Kopfzeile",
-        "help": "Während ein Spiel des Lieblingsvereins läuft, stehen oben im Display die beiden Wappen und der Spielstand."
+        "help": "Während ein Spiel eines deiner Vereine läuft, stehen oben im Display die beiden Wappen und der Spielstand."
       },
       {
         "key": "announce",
         "label": "Tore ansagen",
-        "help": "Schießt der Lieblingsverein ein Tor, sagt die Box es mit ihrer Stimme an, zum Beispiel „Tor für Bremen! 2 zu 1.“ Musik wird dabei leiser. Nicht in der Ruhezeit und nicht, wenn die Box gesperrt ist."
+        "help": "Schießt einer deiner Vereine ein Tor, sagt die Box es mit ihrer Stimme an, zum Beispiel „Tor für Bremen! 2 zu 1.“ Musik wird dabei leiser. Nicht in der Ruhezeit und nicht, wenn die Box gesperrt ist."
       },
       {
         "type": "status",

@@ -12,6 +12,7 @@ const TEXTS = {
   de: {
     title: 'Fußball',
     club: 'Mein Verein',
+    clubs: 'Meine Vereine',
     matchday: 'Spieltag',
     table: 'Tabelle',
     live: 'läuft',
@@ -30,6 +31,8 @@ const TEXTS = {
     noMatches: 'Für diesen Spieltag sind keine Spiele eingetragen.',
     stand: (t) => `Stand ${t}`,
     delayed: 'mit Verzögerung',
+    // (what the sources ask for: OpenLigaDB's data are under the ODbL, football-data.org wants its sentence)
+    credit: { openligadb: 'Daten: OpenLigaDB (ODbL)', footballdata: 'Football data provided by the Football-Data.org API' },
     head: { played: 'Sp', diff: 'TD', points: 'Pkt' },
     postponed: 'abgesagt',
     halftime: (a, b) => `Halbzeit ${a}:${b}`,
@@ -38,6 +41,7 @@ const TEXTS = {
   en: {
     title: 'Football',
     club: 'My club',
+    clubs: 'My clubs',
     matchday: 'Matchday',
     table: 'Table',
     live: 'live',
@@ -56,6 +60,7 @@ const TEXTS = {
     noMatches: 'No matches for this matchday.',
     stand: (t) => `As of ${t}`,
     delayed: 'delayed',
+    credit: { openligadb: 'Data: OpenLigaDB (ODbL)', footballdata: 'Football data provided by the Football-Data.org API' },
     // (the names of the API part are German: those that are not names of their own)
     leagues: { 'DFB-Pokal': 'DFB Cup', 'Frauen-Bundesliga': "Women's Bundesliga", Weltmeisterschaft: 'World Cup', Europameisterschaft: 'European Championship' },
     head: { played: 'P', diff: 'GD', points: 'Pts' },
@@ -145,6 +150,10 @@ const STYLE = `
 .fb-table td.rank{border-left:5px solid transparent;font-weight:700}
 .fb-club{display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:6px;text-align:center}
 .fb-club h2{margin:0;font-size:24px}
+.fb-club-small{padding:8px 0 14px;border-bottom:1px solid rgba(255,255,255,.12)}
+.fb-club-head{display:flex;align-items:center;gap:12px;width:min(560px,100%)}
+.fb-club-head h3{margin:0;font-size:20px;flex:1;text-align:left}
+.fb-club-small .fb-big{font-size:36px}
 .fb-club .place{opacity:.8;font-size:17px}
 .fb-big{display:flex;align-items:center;justify-content:center;gap:18px;font-weight:800;font-size:54px;line-height:1}
 .fb-card{width:min(560px,100%);border-radius:16px;background:rgba(255,255,255,.08);padding:10px 14px}
@@ -167,7 +176,8 @@ export function activate(api) {
   // itself the display never sees, only that one is set)
   const configured = settings.source === 'footballdata' ? !!settings.apiKeySet && !!settings.fdLeague : ['bl1', 'bl2', 'bl3', 'dfb', 'ffb1'].includes(settings.league)
   // (the club of the source chosen now - each source has its own, as the API part counts it)
-  const teamId = settings.source === 'footballdata' ? Number(settings.fdTeamId) || 0 : Number(settings.teamId) || 0
+  // (the clubs the user follows - "o:40:FC Bayern München|f:81:FC Barcelona", see logic.clubsOf)
+  const clubCount = String(settings.clubs ?? '').split('|').filter((p) => /^[of]:\d{1,8}:/.test(p)).length
   const crestUrl = (team) => (team?.crest ? `${api.apiUrl}${team.crest}` : '')
 
   /** A crest, or a circle with the short name when there is none (or it does not load). */
@@ -233,7 +243,7 @@ export function activate(api) {
         let closed = false
         // (what opens first: as set in the app; the club's view only with a club)
         let view = ['club', 'matchday', 'table'].includes(settings.startView) ? settings.startView : 'club'
-        if (view === 'club' && !(teamId > 0)) view = 'matchday'
+        if (view === 'club' && clubCount === 0) view = 'matchday'
         // (another matchday the user went to: its number and its matches; null = the current one)
         let other = null
         // (the matchday asked for last - the arrows count from it while it comes; answers of older ones are dropped)
@@ -251,7 +261,7 @@ export function activate(api) {
 
         const drawTabs = () => {
           // (a table when the source has one: the league phase of the Champions League too, never the DFB-Pokal)
-          const views = [...(data?.teamId ? ['club'] : []), 'matchday', ...(data?.table?.length ? ['table'] : [])]
+          const views = [...(data?.clubs?.length ? ['club'] : []), 'matchday', ...(data?.table?.length ? ['table'] : [])]
           // (before the first answer the view chosen stays: the club's tab comes with the answer)
           if (data && !views.includes(view)) view = views[0]
           tabs.replaceChildren(
@@ -259,7 +269,7 @@ export function activate(api) {
               const b = document.createElement('button')
               b.type = 'button'
               b.className = 'fb-tab'
-              b.textContent = t[v]
+              b.textContent = v === 'club' && data?.clubs?.length > 1 ? t.clubs : t[v]
               b.setAttribute('aria-pressed', String(v === view))
               b.onclick = () => {
                 view = v
@@ -278,11 +288,13 @@ export function activate(api) {
           return p
         }
 
+        // (a team the user follows - of the source shown: its numbers are those of this source)
+        const mine = (team) => !!team?.id && (data?.teamIds ?? []).includes(team.id)
         // One match as a row: home crest and name, the score (or the time), away name and crest
         const matchRow = (m) => {
           const row = document.createElement('div')
           row.className = 'fb-row'
-          if (data?.teamId && (m.home.id === data.teamId || m.away.id === data.teamId)) row.classList.add('mine')
+          if (mine(m.home) || mine(m.away)) row.classList.add('mine')
           const name = (team, away) => {
             const n = document.createElement('span')
             n.className = away ? 'name away' : 'name'
@@ -343,12 +355,12 @@ export function activate(api) {
             head.append(th)
           }
           table.append(head)
-          let mine = null
+          let mineRow = null
           for (const r of data.table) {
             const tr = document.createElement('tr')
-            if (data.teamId && r.team.id === data.teamId) {
+            if (mine(r.team)) {
               tr.className = 'mine'
-              mine = tr
+              mineRow = tr
             }
             const rank = document.createElement('td')
             rank.className = 'rank'
@@ -372,56 +384,65 @@ export function activate(api) {
           }
           body.append(table)
           // (the club in the middle when the table opens; afterwards the user scrolls)
-          if (mine && !centred) {
+          if (mineRow && !centred) {
             centred = true
             requestAnimationFrame(() => {
-              body.scrollTop = Math.max(0, mine.offsetTop - body.clientHeight / 2 + mine.offsetHeight / 2)
+              body.scrollTop = Math.max(0, mineRow.offsetTop - body.clientHeight / 2 + mineRow.offsetHeight / 2)
             })
           }
         }
 
+        // One club: its crest large, its place, a match that runs large, the last and the next match. Several: each smaller, one
+        // under the other (the page scrolls).
         const drawClub = () => {
-          const c = data.club
-          const box = document.createElement('div')
-          box.className = 'fb-club'
-          if (!c?.team) {
-            box.append(message(data.teamId ? t.noClubMatches : t.noClub))
-            body.append(box)
+          const list = data.clubs ?? []
+          if (list.length === 0) {
+            body.append(message(t.noClub))
             return
           }
-          const name = document.createElement('h2')
-          name.textContent = c.team.name
-          box.append(crest(c.team, 88), name)
-          if (c.rank) {
-            const place = document.createElement('div')
-            place.className = 'place'
-            place.textContent = t.place(c.rank)
-            box.append(place)
+          const one = list.length === 1
+          for (const c of list) {
+            const box = document.createElement('div')
+            box.className = one ? 'fb-club' : 'fb-club fb-club-small'
+            const name = document.createElement(one ? 'h2' : 'h3')
+            name.textContent = c.team.name
+            const head = document.createElement('div')
+            head.className = 'fb-club-head'
+            head.append(crest(c.team, one ? 88 : 40), name)
+            box.append(one ? crest(c.team, 88) : head)
+            if (one) box.append(name)
+            if (c.rank) {
+              const place = document.createElement('div')
+              place.className = 'place'
+              place.textContent = t.place(c.rank)
+              ;(one ? box : head).append(place)
+            }
+            const card = (title, m) => {
+              const el = document.createElement('div')
+              el.className = 'fb-card'
+              const h = document.createElement('h3')
+              // (the last match with its day; the next one has its day in the row already)
+              h.textContent = m && m.state === 'finished' && m.kickoff ? `${title} · ${kickoffText(m.kickoff, Date.now(), data.lang)}` : title
+              el.append(h)
+              el.append(m ? matchRow(m) : message(t.none))
+              return el
+            }
+            if (c.live) {
+              // (a match that runs: the score large in the middle)
+              const big = document.createElement('div')
+              big.className = 'fb-big fb-live'
+              const score = document.createElement('span')
+              score.textContent = scoreText(c.live, Date.now(), data.lang)
+              big.append(crest(c.live.home, one ? 64 : 44), score, crest(c.live.away, one ? 64 : 44))
+              const when = document.createElement('div')
+              when.className = 'fb-live'
+              when.textContent = t.live
+              box.append(big, when)
+            }
+            if (!c.last && !c.next && !c.live) box.append(message(c.known === false ? t.offline : t.noClubMatches))
+            else box.append(card(t.last, c.last), card(t.next, c.next))
+            body.append(box)
           }
-          const card = (title, m) => {
-            const el = document.createElement('div')
-            el.className = 'fb-card'
-            const h = document.createElement('h3')
-            // (the last match with its day; the next one has its day in the row already)
-            h.textContent = m && m.state === 'finished' && m.kickoff ? `${title} · ${kickoffText(m.kickoff, Date.now(), data.lang)}` : title
-            el.append(h)
-            el.append(m ? matchRow(m) : message(t.none))
-            return el
-          }
-          if (c.live) {
-            // (a match that runs: the score large in the middle)
-            const big = document.createElement('div')
-            big.className = 'fb-big fb-live'
-            const score = document.createElement('span')
-            score.textContent = scoreText(c.live, Date.now(), data.lang)
-            big.append(crest(c.live.home, 64), score, crest(c.live.away, 64))
-            const when = document.createElement('div')
-            when.className = 'fb-live'
-            when.textContent = t.live
-            box.append(big, when)
-          }
-          box.append(card(t.last, c.last), card(t.next, c.next))
-          body.append(box)
         }
 
         /** Draws the page; `keep`: where the list was scrolled stays (a new answer), else it starts at the top (another view or matchday) */
@@ -439,7 +460,9 @@ export function activate(api) {
           else drawMatchday()
           if (view !== 'table' || centred) body.scrollTop = top
           const time = data.fetchedAt ? new Date(data.fetchedAt).toLocaleTimeString(data.lang === 'de' ? 'de-DE' : 'en-GB', { hour: '2-digit', minute: '2-digit' }) : ''
-          foot.textContent = [t.leagues?.[data.leagueName] ?? data.leagueName, data.stale ? t.offlineOld : time ? t.stand(time) : '', data.delayed ? t.delayed : ''].filter(Boolean).join('  ·  ')
+          // (the sources of what is shown: the league's, and football-data.org when a club comes from there)
+          const credits = [...new Set([data.source, ...(data.clubs ?? []).map((c) => (c.src === 'f' ? 'footballdata' : 'openligadb'))].filter(Boolean))].map((s) => t.credit[s])
+          foot.textContent = [t.leagues?.[data.leagueName] ?? data.leagueName, data.stale ? t.offlineOld : time ? t.stand(time) : '', data.delayed ? t.delayed : '', ...credits].filter(Boolean).join('  ·  ')
         }
 
         async function go(n) {
@@ -521,14 +544,14 @@ export function activate(api) {
   // The header: while a match of the club runs, its two crests and the score, small, right of the battery. The API part answers
   // from what it loaded last (it asks every minute while the club plays) and says nothing in the quiet hours or while the box
   // is blocked. A tap opens the page.
-  if (configured && teamId > 0 && settings.header !== false) {
+  if (configured && clubCount > 0 && settings.header !== false) {
     // (the header is on several pages at once - one look a minute for all of its places)
     const places = new Set()
-    let shared = null
+    let shared = []
     let looking = null
     const lookAll = async () => {
       const answer = await api.fetchApi('/live')
-      shared = answer?.live ?? null
+      shared = Array.isArray(answer?.live) ? answer.live : []
       for (const draw of places) draw(shared)
     }
     api.header.add({
@@ -540,19 +563,24 @@ export function activate(api) {
         item.onclick = open
         place.append(item)
         let last = ''
-        const draw = (m) => {
-          const text = m ? `${m.id}:${scoreText(m)}` : ''
+        const draw = (lives) => {
+          const text = lives.map((m) => `${m.id}:${scoreText(m)}`).join(',')
           if (text === last) return
           last = text
-          if (!m) {
+          if (lives.length === 0) {
             item.style.display = 'none'
             item.replaceChildren()
             return
           }
-          const score = document.createElement('span')
-          score.textContent = scoreText(m)
-          item.replaceChildren(crest(m.home, 22), score, crest(m.away, 22))
-          item.setAttribute('aria-label', `${m.home.short} ${scoreText(m)} ${m.away.short}`)
+          const parts = []
+          for (const m of lives) {
+            const score = document.createElement('span')
+            score.textContent = scoreText(m)
+            if (parts.length) parts.push(document.createTextNode(' '))
+            parts.push(crest(m.home, 22), score, crest(m.away, 22))
+          }
+          item.replaceChildren(...parts)
+          item.setAttribute('aria-label', lives.map((m) => `${m.home.short} ${scoreText(m)} ${m.away.short}`).join(', '))
           item.style.display = 'inline-flex'
         }
         places.add(draw)

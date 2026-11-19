@@ -21,7 +21,7 @@ Die Einstellungen (Theme, Lautstärke, Startseite …) übernimmt ein neuer Benu
 | [Tageslimits](../spielzeit/tageslimits.md), [Ruhezeiten](../spielzeit/ruhezeiten.md), [Kachel-Limits](../spielzeit/kachel-limit.md) | die Fotoalben selbst |
 | Bildzeit und welche Fotoalben das Display zeigt | NFC-Karten, Tasten, OLED und andere Erweiterungen |
 | Theme, Lautstärken, Startseite, Uhr, Helligkeit | Telegram, Home Assistant, MQTT, Schlaftimer |
-| Einstellungen einer Erweiterung, die mit **je Benutzer** markiert sind (etwa der Verein bei [Fußball](../erweiterungen/fussball.md)) | |
+| Einstellungen einer Erweiterung, die mit **je Benutzer** markiert sind (etwa die Vereine bei [Fußball](../erweiterungen/fussball.md)) | |
 
 Eigene Dateien zeigt die Box allen Kindern. Jedes Kind hat seine eigenen ausgeblendeten Cover: Mit **Kein Cover** blendest du eines für das Kind aus, das gerade hört.
 

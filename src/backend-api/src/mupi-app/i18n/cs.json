@@ -4674,5 +4674,13 @@
  "Eredivisie": "Eredivisie",
  "Primeira Liga": "Primeira Liga",
  "Brasileirão": "Brasileirão",
- "Champions League": "Champions League"
+ "Champions League": "Champions League",
+ "Die Ergebnisse deiner Vereine, der Spieltag und die Tabelle auf dem Display. Die Box holt sie im Internet bei OpenLigaDB oder mit eigenem Schlüssel bei football-data.org; jeder Benutzer folgt seinen eigenen Vereinen.": "Výsledky tvých klubů, kolo a tabulka na displeji. Box je stahuje z internetu z OpenLigaDB nebo s vlastním klíčem z football-data.org; každý uživatel sleduje vlastní kluby.",
+ "Das Display zeigt oben den Reiter „Fußball“: deine Vereine, der Spieltag und die Tabelle. Die Ergebnisse trägt die Gemeinschaft von OpenLigaDB ein, meist wenige Minuten nach dem Tor.": "Displej nahoře ukazuje kartu „Fotbal“: tvé kluby, kolo a tabulku. Výsledky zadává komunita OpenLigaDB, většinou pár minut po gólu.",
+ "Meine Vereine": "Moje kluby",
+ "Nach dem Namen suchen: ＋ folgt einem Verein, ✕ hört auf. Bis zu fünf Vereine, auch aus beiden Quellen – etwa Bayern und Deutschland von OpenLigaDB, dazu Barcelona von football-data.org (dafür kurz die Quelle football-data.org mit dem Wettbewerb LaLiga wählen, suchen, dann zurückstellen).": "Hledej podle názvu: ＋ začne klub sledovat, ✕ přestane. Až pět klubů, i z obou zdrojů – třeba Bayern a Německo z OpenLigaDB a Barcelona z football-data.org (k tomu na chvíli vyber zdroj football-data.org se soutěží LaLiga, vyhledej a pak přepni zpět).",
+ "Was der Reiter „Fußball“ zuerst zeigt. Ohne Verein beginnt er mit dem Spieltag, beim DFB-Pokal gibt es keine Tabelle.": "Co karta „Fotbal“ ukáže nejdřív. Bez klubu začne kolem; DFB-Pokal nemá tabulku.",
+ "Während ein Spiel eines deiner Vereine läuft, stehen oben im Display die beiden Wappen und der Spielstand.": "Během zápasu některého z tvých klubů jsou nahoře na displeji oba znaky a skóre.",
+ "Schießt einer deiner Vereine ein Tor, sagt die Box es mit ihrer Stimme an, zum Beispiel „Tor für Bremen! 2 zu 1.“ Musik wird dabei leiser. Nicht in der Ruhezeit und nicht, wenn die Box gesperrt ist.": "Když některý z tvých klubů dá gól, box to oznámí svým hlasem, například „Gól pro Brémy! 2 : 1.“ Hudba se mezitím ztiší. Ne v době klidu a ne, když je box zablokovaný.",
+ "Nach dem Namen suchen: ＋ folgt einem Verein, ✕ hört auf – zum Aufhören also den Namen des Vereins suchen. Bis zu fünf Vereine, auch aus beiden Quellen: etwa Bayern und Deutschland von OpenLigaDB, dazu Barcelona von football-data.org (dafür kurz die Quelle football-data.org mit dem Wettbewerb LaLiga wählen, suchen, dann zurückstellen).": "Hledej podle názvu: ＋ začne klub sledovat, ✕ přestane – pro ukončení tedy vyhledej název klubu. Až pět klubů, i z obou zdrojů: třeba Bayern a Německo z OpenLigaDB a Barcelona z football-data.org (k tomu na chvíli vyber zdroj football-data.org se soutěží LaLiga, vyhledej a pak přepni zpět)."
 }

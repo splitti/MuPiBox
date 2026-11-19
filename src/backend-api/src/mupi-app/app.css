@@ -1568,4 +1568,6 @@ textarea[hidden] { display: none; }
 .lib-user-lbl { font-weight: 700; margin-right: 4px; }
 /* (an extension: the choice of the user above its settings, and the mark of a setting every user has for himself) */
 .ext-user { margin: 8px 0; }
-.ext-peruser { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; border: 1px solid var(--mp-border); color: var(--mp-muted); font-size: 11px; font-weight: 600; vertical-align: middle; }
+.lbl .ext-peruser, .ext-peruser { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; border: 1px solid var(--mp-border); color: var(--mp-muted); font-size: 11px; font-weight: 600; vertical-align: middle;  }
+/* (in the label of a switch it stands in the bold line, not as a line of its own like the help under it) */
+.lbl b .ext-peruser { font-size: 11px; color: var(--mp-muted); }

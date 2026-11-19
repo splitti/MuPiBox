@@ -172,3 +172,24 @@ test('a goal at the kick-off: a match on but without a score counts as 0:0, so i
   assert.equal(L.goalText(goal.goals[0], 'no'), 'Mål for Bremen! 1-0.')
   assert.equal(L.goalText(goal.goals[0], 'xx'), 'Goal for Bremen! 1 to 0.')
 })
+
+test('the clubs a user follows: read and written, each once, at most five, names without the separators', () => {
+  const list = L.clubsOf('o:40:FC Bayern München|o:139:Deutschland|f:81:FC Barcelona|o:40:again|x:1:bad|o:0:none')
+  assert.deepEqual(list.map((c) => `${c.src}${c.id}`), ['o40', 'o139', 'f81'])
+  assert.equal(L.clubNames(list), 'FC Bayern München, Deutschland, FC Barcelona')
+  assert.equal(L.clubsText([{ src: 'o', id: 1, name: 'A|B:C' }]), 'o:1:A B C')
+  assert.equal(L.clubsOf('o:1:a|o:2:b|o:3:c|o:4:d|o:5:e|o:6:f').length, 5)
+  // (long names: shortened so that the setting keeps its 300 letters)
+  const long = Array.from({ length: 5 }, (_, i) => ({ src: 'o', id: i + 1, name: 'X'.repeat(80) }))
+  assert.ok(L.clubsText(long).length <= 300)
+  assert.equal(L.clubsOf(L.clubsText(long)).length, 5)
+})
+
+test('a national team at OpenLigaDB: one entry a day (the one with a result), no under-21, no test league', () => {
+  const m = (day, competition, score, opp = 1) => ({ id: Math.random(), kickoff: `${day}T18:45:00Z`, competition, state: score ? 'finished' : 'scheduled', score, home: { id: 139 }, away: { id: opp } })
+  const days = L.clubDays(
+    [m('2026-06-14', 'dfb-wm26', null), m('2026-06-14', 'wm26', { home: 7, away: 1 }), m('2026-06-14', 'wm2026_xlife', null), m('2026-09-25', 'u21dfb', null), m('2026-10-01', 'ts2026test', null), m('2026-11-16', 'DFBN', { home: 5, away: 0 })],
+    139,
+  )
+  assert.deepEqual(days.map((x) => x.competition), ['wm26', 'DFBN'])
+})
