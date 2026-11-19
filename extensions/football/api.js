@@ -29,6 +29,11 @@ const EXT_TYPES = Object.fromEntries(Object.entries(CREST_TYPES).map(([t, e]) =>
 const HASH = /^[a-f0-9]{20}$/
 // (football-data.org allows 10 requests a minute; the box keeps to 8)
 const FD_PER_MINUTE = 8
+// (the largest answer of a source the box reads)
+const JSON_BYTES = 4 * 1024 * 1024
+// (other matchdays of OpenLigaDB the display may ask for in a minute - a device in the home network looping over them
+// would else make the box ask the source without end)
+const OTHER_DAYS_PER_MINUTE = 20
 // (the matchdays the display swiped to: kept a while, then asked again)
 const OTHER_DAY_MS = 10 * L.MIN
 
@@ -44,7 +49,13 @@ async function getJson(url, headers = {}) {
     }
     throw error
   }
-  return response.json()
+  // (a source run by volunteers, a proxy that went wrong: a huge answer would take the memory of the box's server)
+  if (Number(response.headers?.get?.('content-length')) > JSON_BYTES) throw new Error('answer too large')
+  // (no stream to read - an empty answer: as it is)
+  if (!response.body) return response.json()
+  const body = await readLimited(response, JSON_BYTES)
+  if (!body) throw new Error('answer too large')
+  return JSON.parse(body.toString('utf8'))
 }
 
 /** The season of a league that has no matchday right now (the summer break): the year it began. */
@@ -139,10 +150,13 @@ function openLigaDb(league) {
           matchday = { number: matches[0]?.matchday ?? null, name: matches[0]?.matchdayName ?? '', matches }
           dayAt = now
           if (!info?.cup && (!table || ended || prev?.season !== season || now - tableAt >= L.HOUR)) {
-            const rows = await ask(`${OLDB}/getbltable/${encodeURIComponent(league)}/${season}`)
-            if (Array.isArray(rows)) {
-              table = L.olTable(rows)
+            // (a table that does not come: tried again ten minutes later - the matchday came, the load did not fail)
+            try {
+              const rows = await getJson(`${OLDB}/getbltable/${encodeURIComponent(league)}/${season}`)
+              if (Array.isArray(rows)) table = L.olTable(rows)
               tableAt = now
+            } catch {
+              tableAt = now - L.HOUR + 10 * L.MIN
             }
           }
         }
@@ -159,7 +173,7 @@ function openLigaDb(league) {
       if (!teamId) mine = []
       if (asked > 0 && answered === 0) throw failed
       if (!matchday) throw failed ?? new Error('no matchday')
-      return { season: season ?? seasonOf(new Date(now)), matchday, dayAt, table: info?.cup ? null : table, tableAt, mine, mineAt, partial: !!failed }
+      return { season: season ?? seasonOf(new Date(now)), matchday, dayAt, table: info?.cup ? null : table, tableAt, mine, mineAt, partial: !!failed, asked }
     },
     async matchday(season, n, now = Date.now()) {
       const list = await getJson(`${OLDB}/getmatchdata/${encodeURIComponent(league)}/${season}/${n}`)
@@ -193,11 +207,17 @@ exports.activate = (host) => {
   /** hash -> when fetching it failed */
   const crestFailed = new Map()
   const otherDays = new Map()
+  /** the other matchdays asked now (one request each), and when the last ones were asked */
+  const dayRuns = new Map()
+  const dayAsked = []
   /** the tables of the clubs' leagues beside the one chosen: "o:bl2" -> { at, table } */
   const tables = new Map()
   /** the teams of a league for the app's search: key -> { at, teams } */
   const teamLists = new Map()
 
+  /** what was loaded of each club followed: "o:40" -> { matches, at, okAt, retryAt } */
+  const clubData = new Map()
+  const clubKey = (c) => `${c.src}:${c.id}`
   try {
     const kept = JSON.parse(fs.readFileSync(cacheFile, 'utf8'))
     if (kept && typeof kept.key === 'string' && kept.matchday) view = kept
@@ -214,9 +234,6 @@ exports.activate = (host) => {
   const srcOf = (s) => (fd(s) ? 'f' : 'o')
   const keyOf = (s) => `${fd(s) ? 'footballdata' : 'openligadb'}:${leagueOf(s)}`
   const clubsOfS = (s) => L.clubsOf(s?.clubs)
-  /** what was loaded of each club followed: "o:40" -> { matches, at } */
-  const clubData = new Map()
-  const clubKey = (c) => `${c.src}:${c.id}`
   // (football-data.org allows 10 requests a minute for the key: loads, swipes and the app's search together stay at 8 - one more
   // is refused here as too many, without asking, and the last values stay)
   const fdAsked = []
@@ -248,9 +265,14 @@ exports.activate = (host) => {
 
   let savedKey = ''
   let savedAt = 0
+  let savedContent = ''
   function save() {
     const now = `${view?.key ?? ''}|${[...clubData.keys()].join(',')}`
     if (now === savedKey && Date.now() - savedAt < 10 * L.MIN) return
+    // (what is the same as last time is not written again - the card is spared)
+    const content = JSON.stringify({ ...view, clubData: Object.fromEntries(clubData) })
+    if (content === savedContent) return
+    savedContent = content
     savedKey = now
     savedAt = Date.now()
     try {
@@ -293,13 +315,18 @@ exports.activate = (host) => {
       const every = on ? (c.src === 'f' ? 2 * L.MIN : L.MIN) : full ? 10 * L.MIN : L.HOUR
       // (after an error: again at retryAt - a minute after "too many", else up to five minutes)
       if (have && (have.retryAt ? now < have.retryAt : now - have.at < every)) continue
+      // (football-data.org without a key: not asked - a key saved later asks at once, see onSettings)
+      if (c.src === 'f' && !String(s.apiKey ?? '').trim()) {
+        clubData.set(clubKey(c), { at: now, okAt: have?.okAt ?? 0, matches: have?.matches ?? [], failed: true })
+        continue
+      }
       try {
         const got = await clubMatchesOf(s, c, now, have?.days)
         clubData.set(clubKey(c), { at: now, okAt: now, days: got.days, matches: got.matches })
       } catch (error) {
         failed = error
         host.log.warn(`[Extension football] club ${clubKey(c)}: ${error?.message}`)
-        const retryAt = now + (error?.status === 429 ? L.MIN : Math.min(every, 5 * L.MIN))
+        const retryAt = now + (error?.status === 429 ? L.MIN : error?.status === 401 || error?.status === 403 ? L.HOUR : Math.min(every, 5 * L.MIN))
         if (have) Object.assign(have, { at: now, retryAt })
         else clubData.set(clubKey(c), { at: now, okAt: 0, retryAt, matches: [], failed: true })
       }
@@ -317,12 +344,19 @@ exports.activate = (host) => {
     const day = (d) => new Date(now + d * 24 * L.HOUR).toISOString().slice(0, 10)
     const ask = (days) => fdGetJson(`https://api.football-data.org/v4/teams/${c.id}/matches?dateFrom=${day(-days)}&dateTo=${day(days)}`, { 'X-Auth-Token': key })
     // (a range the free tier does not take: a shorter one - and that one from then on, not two requests each time)
-    let range = days === 10 ? 10 : 21
-    const body = await ask(range).catch((error) => {
-      if (error?.status !== 400 || range === 10) throw error
-      range = 10
-      return ask(10)
-    })
+    const ranges = [21, 10, 5].filter((d) => !days || d <= days)
+    let range = ranges[0]
+    let body
+    for (;;) {
+      try {
+        body = await ask(range)
+        break
+      } catch (error) {
+        const shorter = ranges[ranges.indexOf(range) + 1]
+        if (error?.status !== 400 || !shorter) throw error
+        range = shorter
+      }
+    }
     return { days: range, matches: L.clubDays((Array.isArray(body?.matches) ? body.matches : []).map((m) => L.fdMatch(m, now)), c.id) }
   }
 
@@ -339,7 +373,7 @@ exports.activate = (host) => {
       const src = sourceOf(s)
       try {
         const got = await src.load(0, prev, { full })
-        view = { key, league: leagueOf(s), fetchedAt: Date.now(), ...got }
+        view = { key, league: leagueOf(s), ...got, fetchedAt: got.asked > 0 ? Date.now() : (prev?.fetchedAt ?? Date.now()) }
         errors = got.partial ? errors + 1 : 0
         lastError = got.partial ? lastError || 'offline' : ''
         failedKey = ''
@@ -427,9 +461,18 @@ exports.activate = (host) => {
     let wait = 5 * L.MIN
     try {
       const s = await host.settings()
-      if (!configured(s) || clubsOfS(s).length === 0) return
-      if (due(s)) await load(s)
-      wait = Math.max(5000, nextAt - Date.now())
+      if (clubsOfS(s).length === 0) return
+      if (!configured(s)) {
+        // (no league to ask - football-data.org chosen without a key: the clubs of OpenLigaDB go on)
+        await loadClubs(s, false).catch(() => undefined)
+        save()
+        void goals(s, keyOf(s)).catch((error) => host.log.warn(`[Extension football] goal: ${error?.message}`))
+        const clubsDue = Math.min(...[...clubData.values()].filter((c) => c.retryAt).map((c) => c.retryAt - Date.now()), Infinity)
+        wait = Math.max(5000, Math.min(L.nextDelay([...clubData.values()].flatMap((c) => c.matches), Date.now()), clubsDue))
+      } else {
+        if (due(s)) await load(s)
+        wait = Math.max(5000, nextAt - Date.now())
+      }
     } catch (error) {
       host.log.warn(`[Extension football] ${error?.message}`)
     }
@@ -508,7 +551,7 @@ exports.activate = (host) => {
   host.route('get', '/live', async (_req, res) => {
     res.set('Cache-Control', 'no-store')
     const s = await host.settings()
-    if (!configured(s) || s.header === false || clubsOfS(s).length === 0) {
+    if (s.header === false || clubsOfS(s).length === 0) {
       res.json({ live: [] })
       return
     }
@@ -602,8 +645,25 @@ exports.activate = (host) => {
     const key = `${keyOf(s)}:${view.season}:${n}`
     let entry = otherDays.get(key)
     if (!entry || Date.now() - entry.at > OTHER_DAY_MS) {
+      const now = Date.now()
+      while (dayAsked.length && now - dayAsked[0] > L.MIN) dayAsked.shift()
+      if (!dayRuns.has(key) && dayAsked.length >= OTHER_DAYS_PER_MINUTE) {
+        if (!entry) {
+          res.status(429).json({ error: 'too many' })
+          return
+        }
+      } else
       try {
-        entry = { at: Date.now(), day: await sourceOf(s).matchday(view.season, n) }
+        if (!dayRuns.has(key)) {
+          dayAsked.push(now)
+          dayRuns.set(
+            key,
+            sourceOf(s)
+              .matchday(view.season, n)
+              .finally(() => dayRuns.delete(key)),
+          )
+        }
+        entry = { at: Date.now(), day: await dayRuns.get(key) }
         otherDays.set(key, entry)
         // (a few only: the display swipes through some, never all)
         if (otherDays.size > 12) otherDays.delete(otherDays.keys().next().value)
@@ -778,6 +838,8 @@ exports.activate = (host) => {
             if (out.length >= 10 - followed.length) break
             if (q && !team.name.toLocaleLowerCase('de').includes(q) && !team.short.toLocaleLowerCase('de').includes(q)) continue
             if (followed.some((c) => c.src === src && c.id === team.id)) continue
+            // (a number the setting does not keep; the same club at the other source - two announcements, two headers)
+            if (team.id >= 1e8 || followed.some((c) => c.name.toLocaleLowerCase('de') === team.name.toLocaleLowerCase('de'))) continue
             out.push(entry(`＋ ${team.name}`, [...followed, { src, id: team.id, name: team.name }]))
           }
         } catch (error) {

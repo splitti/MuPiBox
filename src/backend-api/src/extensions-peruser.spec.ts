@@ -103,3 +103,33 @@ describe('settings every user has for himself (hostApi 13)', () => {
     assert.equal(ext.perUserKeys(base({ a: { type: 'string', perUser: true }, b: { type: 'number' } }) as never).join(), 'a')
   })
 })
+
+describe('the values per user through a restore and a copy of a user', () => {
+  beforeEach(async () => {
+    ext ??= await import('./app-api/extensions')
+    rmSync(dir, { recursive: true, force: true })
+    mkdirSync(path.join(dir, 'settings'), { recursive: true })
+  })
+
+  it('a restore keeps the values of users the backup does not know; the backup\'s own win', async () => {
+    writeFileSync(file(), JSON.stringify({ league: 'bl1', '@users': { main: { team: 'A' }, leni: { team: 'B' } } }))
+    const before = await ext.snapshotPerUser()
+    // (the backup's file: another league, its own values of main, no leni)
+    writeFileSync(file(), JSON.stringify({ league: 'bl2', '@users': { main: { team: 'C' } } }))
+    await ext.mergePerUser(before)
+    assert.deepEqual(stored(), { league: 'bl2', '@users': { main: { team: 'C' }, leni: { team: 'B' } } })
+    // (a backup without users at all)
+    writeFileSync(file(), JSON.stringify({ league: 'bl3' }))
+    await ext.mergePerUser(before)
+    assert.deepEqual(stored()['@users'], { main: { team: 'A' }, leni: { team: 'B' } })
+  })
+
+  it('a new user as a copy takes the values per user of the one copied', async () => {
+    writeFileSync(file(), JSON.stringify({ league: 'bl1', '@users': { main: { team: 'A', goals: true } } }))
+    await ext.copyPerUser('main', 'max')
+    assert.deepEqual(stored()['@users'].max, { team: 'A', goals: true })
+    // (nothing to copy: nothing written)
+    await ext.copyPerUser('nobody', 'tom')
+    assert.equal('tom' in stored()['@users'], false)
+  })
+})

@@ -14,7 +14,7 @@ import { DATA_LOCK, withLock } from '../file-lock'
 import { requireCsrf, requireSession } from './middleware'
 import { bootConfigPath } from './boot-paths'
 import { DATA_DIR, EXTENSIONS_DIR, LIBRARY_DIR, LOGS_DIR, SERVER_CONFIG_DIR } from '../paths'
-import { restoreKioskStart } from './extensions'
+import { mergePerUser, restoreKioskStart, snapshotPerUser } from './extensions'
 import { copyLibraryTo, freezeLibrary, thawLibrary } from './photos/store'
 import type { UsersFile } from '../users'
 
@@ -634,6 +634,7 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
     const usersListed = lines.some((l) => l.endsWith(` ${USERS_LIST}`))
     // the extensions whose settings come back (their ids)
     const extSettingsRestored: string[] = []
+    let perUserBefore: Map<string, Record<string, unknown>> | null = null
     let nfcRestored = false
     // something unpacked below data/extensions/ (unzip as root makes the folders above it root's on a fresh box)
     let extRestored = false
@@ -743,6 +744,8 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
       if (photosRestored) await freezeLibrary()
       // (unzip takes -x as patterns: the names of the entries left out with their wildcards escaped)
       const left = skipped.map((s) => s.replace(/[[\]*?]/g, (c) => `\\${c}`))
+      // (the extensions' values per user, before the backup's settings come: those of users it does not know are put back)
+      perUserBefore = await snapshotPerUser().catch(() => new Map())
       const r = rest ? await run('sudo', ['unzip', '-o', file, '-d', '/', '-x', ...LIBRARY_ENTRIES, ...left], 3600000) : { ok: true }
       if (!r.ok || !libraryEntry) return r
       return { ok: await withDataLock(() => installFileAs(`${LIBRARY}/data.json`, library)).then((done) => done === true) }
@@ -778,6 +781,7 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
     if (photosRestored) await run('sudo', ['chown', '-R', 'dietpi:dietpi', '/home/dietpi/.mupibox/data/photos'], 300000)
     // (the extensions' settings: the server writes them when they are changed in the app)
     if (extSettingsRestored.length > 0) await run('sudo', ['chown', '-R', 'dietpi:dietpi', `/${EXT_SETTINGS}`], 60000)
+    if (extSettingsRestored.length > 0 && perUserBefore) await mergePerUser(perUserBefore).catch(() => undefined)
     // (and the tag assignments: the extension replaces the file with a new one at every change)
     if (nfcRestored) await run('sudo', ['chown', '-R', 'dietpi:dietpi', `/${NFC_DATA}`], 300000)
     // (on a fresh box unzip made the folders above them as root: installing an extension, or one writing its data, then failed -

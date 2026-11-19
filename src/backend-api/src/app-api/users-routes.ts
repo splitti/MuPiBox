@@ -1,5 +1,6 @@
 import express, { type Express, type RequestHandler, type Response } from 'express'
 import { MAX_USERS, USER_COLORS, type Users, UserSwitchError } from '../users'
+import { copyPerUser } from './extensions'
 
 /**
  * The users of the box (5.1, users.ts) in the app (the parents' login) and for the display.
@@ -59,7 +60,13 @@ export function registerUserRoutes(app: Express, users: Users, guard: { session:
         fail(res, err)
       }
     })
-  post('/users/add', (b) => users.add(b.name, str(b.from) || null))
+  // (a copy: the values per user of the extensions come along)
+  post('/users/add', async (b) => {
+    const from = str(b.from) || null
+    const user = await users.add(b.name, from)
+    if (from) await copyPerUser(from, user.id).catch(() => undefined)
+    return user
+  })
   post('/users/rename', (b) => users.rename(str(b.id), b.name))
   post('/users/color', (b) => users.setColor(str(b.id), str(b.color)))
   post('/users/remove', (b) => users.remove(str(b.id)))

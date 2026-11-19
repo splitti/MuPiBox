@@ -391,6 +391,15 @@ export function gpioSettingError(manifest: Manifest, merged: Record<string, unkn
 }
 
 const settingsFile = (id: string) => path.join(EXT_DIR, 'settings', `${id}.json`)
+/** A settings file written whole or not at all (a reader in between - the server, the player - never sees half of it: it took
+ *  {} then, and its next write lost the key and every user's values) */
+async function writeSettingsFile(id: string, value: Record<string, unknown>): Promise<void> {
+  const file = settingsFile(id)
+  await fsp.mkdir(path.dirname(file), { recursive: true })
+  const tmp = `${file}.${process.pid}.tmp`
+  await fsp.writeFile(tmp, JSON.stringify(value))
+  await fsp.rename(tmp, file)
+}
 
 // (hostApi 13) The settings every user has for himself are in the same file, under this key - by the id of the user:
 // { "@users": { "<user>": { "<key>": value } } }. A setting's key cannot be it (letters and digits only), and the backup
@@ -419,6 +428,41 @@ export async function readSettings(manifest: Manifest, user?: string): Promise<R
   const keys = perUserKeys(manifest)
   const mine = who && keys.length > 0 && isObj(byUser) && isObj(byUser[who]) ? byUser[who] : {}
   return { ...defaults, ...shared, ...Object.fromEntries(keys.filter((k) => Object.hasOwn(mine, k)).map((k) => [k, mine[k]])) }
+}
+
+/** The settings files of the extensions there are (ids) */
+async function settingsIds(): Promise<string[]> {
+  const names = await fsp.readdir(path.join(EXT_DIR, 'settings')).catch(() => [] as string[])
+  return names.filter((n) => /^[a-z][a-z0-9-]{1,30}\.json$/.test(n)).map((n) => n.slice(0, -5))
+}
+/** The values per user of every extension, before a restore: id -> { user -> values } */
+export async function snapshotPerUser(): Promise<Map<string, Record<string, unknown>>> {
+  const out = new Map<string, Record<string, unknown>>()
+  for (const id of await settingsIds()) {
+    const byUser = (await readJson<Record<string, unknown>>(settingsFile(id), {}))[PER_USER]
+    if (isObj(byUser)) out.set(id, byUser)
+  }
+  return out
+}
+/** After a restore: the values of users the backup does not know put back (a user it put into the trash, a backup of a box
+ *  without users) - the backup's own values win */
+export async function mergePerUser(before: Map<string, Record<string, unknown>>): Promise<void> {
+  for (const [id, byUser] of before) {
+    const now = await readJson<Record<string, unknown>>(settingsFile(id), {})
+    const restored = isObj(now[PER_USER]) ? now[PER_USER] : {}
+    const missing = Object.keys(byUser).filter((u) => !Object.hasOwn(restored, u))
+    if (missing.length === 0) continue
+    await writeSettingsFile(id, { ...now, [PER_USER]: { ...restored, ...Object.fromEntries(missing.map((u) => [u, byUser[u]])) } }).catch(() => undefined)
+  }
+}
+/** A new user as a copy of another: his values per user too */
+export async function copyPerUser(from: string, to: string): Promise<void> {
+  for (const id of await settingsIds()) {
+    const have = await readJson<Record<string, unknown>>(settingsFile(id), {})
+    const byUser = isObj(have[PER_USER]) ? have[PER_USER] : null
+    if (!byUser || !isObj(byUser[from])) continue
+    await writeSettingsFile(id, { ...have, [PER_USER]: { ...byUser, [to]: { ...byUser[from] } } }).catch(() => undefined)
+  }
 }
 
 /** The settings as the display and the app may see them: a secret only as "<key>Set". */
@@ -1085,7 +1129,7 @@ async function installExtension(id: string, deps: ExtensionDeps, uploaded?: Pack
       }
       if (imported) {
         await fsp.mkdir(path.dirname(settingsFile(id)), { recursive: true })
-        await fsp.writeFile(settingsFile(id), JSON.stringify(have))
+        await writeSettingsFile(id, have)
       }
 
       if ((sys.units ?? []).length > 0 || (before?.system?.units ?? []).length > 0) {
@@ -1189,7 +1233,7 @@ async function removeExtension(id: string, deps: ExtensionDeps): Promise<void> {
       const have = await readJson<Record<string, unknown>>(settingsFile(id), {})
       if (gpioKeys.some((k) => typeof have[k] === 'number' && have[k] !== 0)) {
         for (const k of gpioKeys) if (k in have) have[k] = 0
-        await fsp.writeFile(settingsFile(id), JSON.stringify(have)).catch(() => undefined)
+        await writeSettingsFile(id, have).catch(() => undefined)
       }
     }
     await changeState((state) => {
@@ -1298,7 +1342,7 @@ export async function writeSettings(manifest: Manifest, clean: Record<string, un
     next[PER_USER] = byUser
   }
   await fsp.mkdir(path.dirname(settingsFile(manifest.id)), { recursive: true })
-  await fsp.writeFile(settingsFile(manifest.id), JSON.stringify(next))
+  await writeSettingsFile(manifest.id, next)
   return !user || user === extUsers?.current() || Object.keys(clean).some((k) => !own.includes(k))
 }
 
@@ -1554,7 +1598,7 @@ export function registerExtensionRoutes(router: Router, deps: ExtensionDeps): vo
       }
       changes = plan.changes
       await fsp.mkdir(path.dirname(settingsFile(id)), { recursive: true })
-      await fsp.writeFile(settingsFile(id), JSON.stringify({ ...(await readJson(settingsFile(id), {})), ...Object.fromEntries(changes.map((c) => [c.key, c.to])) }))
+      await writeSettingsFile(id, { ...(await readJson(settingsFile(id), {})), ...Object.fromEntries(changes.map((c) => [c.key, c.to])) })
       await notifySettings(manifest)
     }
     clearCrashes(EXT_DIR, id)

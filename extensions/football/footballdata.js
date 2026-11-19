@@ -71,16 +71,20 @@ function footballData(code, key, getJson) {
       const ended = before.some((old) => old.state !== 'finished' && all.some((m) => m.id === old.id && m.state === 'finished'))
       // (a competition of several groups has no one table: asked again only once a day)
       if (!tableAt || (table && ended) || now - tableAt >= (table ? L.HOUR : 24 * L.HOUR)) {
-        const body = await ask(url('/standings'))
-        if (body) {
-          table = L.fdTable(body)
+        // (a table that does not come does not make the load fail - tried again ten minutes later; the key refused or too many
+        // still end the load)
+        try {
+          table = L.fdTable(await getJson(url('/standings'), headers))
           tableAt = now
+        } catch (error) {
+          if (error?.status === 401 || error?.status === 403 || error?.status === 429) throw error
+          tableAt = now - L.HOUR + 10 * L.MIN
         }
       }
       if (asked > 0 && answered === 0) throw failed
       if (!allAt) throw failed ?? new Error('no matches')
       const matchday = matchdayOf(all, current, now)
-      return { season, all, allAt, liveAt, current, matchday, dayAt: allAt, table, tableAt, mine: teamId ? all.filter((m) => L.playsIn(m, teamId)) : [], mineAt: now, partial: !!failed }
+      return { season, all, allAt, liveAt, current, matchday, dayAt: allAt, table, tableAt, mine: teamId ? all.filter((m) => L.playsIn(m, teamId)) : [], mineAt: now, partial: !!failed, asked }
     },
     async matchday(_season, n, now = Date.now()) {
       const body = await getJson(url(`/matches?matchday=${n}`), headers)

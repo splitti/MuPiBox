@@ -29,7 +29,8 @@ const LIVE_AFTER = 150 * MIN
 const LIVE_LONGEST = 180 * MIN
 
 const int = (v) => (Number.isInteger(v) && v >= 0 && v < 1000 ? v : null)
-const text = (v, max = 60) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
+// (control characters and the separators of lines out: a name is one line - and it goes into the setting of the clubs)
+const text = (v, max = 60) => (typeof v === 'string' ? v.replace(/[\p{Cc}\u2028\u2029]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, max) : '')
 /** A short name of three letters for a team without one (the circle the display draws when there is no crest). */
 function tlaOf(team) {
   const tla = text(team?.tla, 4).toUpperCase()

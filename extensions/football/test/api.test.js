@@ -508,3 +508,24 @@ test('the tables of the clubs\' leagues: offered beside the one chosen, asked wh
   assert.equal(again.clubs.find((c) => c.team.id === 77).rank, 2)
   assert.equal((await call('get /table', { query: { l: 'o:xx' } })).status, 404)
 })
+
+test('after a restart without the internet: the clubs as the card kept them', async () => {
+  const kickoff = '2026-11-07T14:30:00Z'
+  const m = { id: 9, kickoff, state: 'finished', score: { home: 1, away: 2 }, home: { id: 81, name: 'Mainz', short: 'Mainz', tla: 'MAI', crest: '' }, away: { id: 40, name: 'Bayern', short: 'Bayern', tla: 'BAY', crest: '' }, competition: 'bl1' }
+  const first = start({ now: { clubs: 'o:40:FC Bayern München' } })
+  fs.mkdirSync(first.dataDir, { recursive: true })
+  const view = { key: 'openligadb:bl1', league: 'bl1', season: 2026, matchday: { number: 10, name: '', matches: [] }, dayAt: Date.now(), fetchedAt: Date.now() }
+  fs.writeFileSync(path.join(first.dataDir, 'cache.json'), JSON.stringify({ ...view, clubData: { 'o:40': { at: Date.now(), okAt: Date.now(), matches: [m] } }, crests: {} }))
+  // (a new start on the same card, no answer from outside)
+  global.fetch = async () => {
+    throw new Error('offline')
+  }
+  const dataDir = first.dataDir
+  const routes = {}
+  delete require.cache[require.resolve('../api.js')]
+  require('../api.js').activate({ dataDir, log: { warn: () => {} }, settings: async () => ({ league: 'bl1', clubs: 'o:40:FC Bayern München' }), config: () => ({}), onSettings: () => {}, route: (method, sub, h) => (routes[`${method} ${sub}`] = h) })
+  const out = {}
+  const res = { set: () => res, status: () => res, json: (b) => ((out.body = b), res) }
+  await routes['get /data']({ query: {} }, res)
+  assert.equal(out.body.clubs[0].last.id, 9)
+})

@@ -104,6 +104,12 @@ function createSettings(extDir, id, manifest) {
     const mine = isObj(byUser[who]) ? byUser[who] : {}
     return { ...defaults, ...shared, ...Object.fromEntries(perUser.filter((k) => Object.hasOwn(mine, k)).map((k) => [k, mine[k]])) }
   }
+  // (written whole or not at all: the server reads and writes the same file - half of it read as {} lost every user's values)
+  const write = (value) => {
+    const tmp = `${file}.${process.pid}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(value))
+    fs.renameSync(tmp, file)
+  }
   return {
     get: (key, fallback) => (key in all() ? all()[key] : fallback),
     all,
@@ -115,8 +121,8 @@ function createSettings(extDir, id, manifest) {
         const byUser = isObj(have[PER_USER]) ? { ...have[PER_USER] } : {}
         const who = current()
         byUser[who] = { ...(isObj(byUser[who]) ? byUser[who] : {}), [key]: value }
-        fs.writeFileSync(file, JSON.stringify({ ...have, [PER_USER]: byUser }))
-      } else fs.writeFileSync(file, JSON.stringify({ ...have, [key]: value }))
+        write({ ...have, [PER_USER]: byUser })
+      } else write({ ...have, [key]: value })
     },
   }
 }
