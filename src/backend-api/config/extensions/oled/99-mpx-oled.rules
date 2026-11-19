@@ -1,3 +1,0 @@
-# The I2C bus of the header: the OLED display is driven by a program of the box's user, which is not in the group i2c (the device is
-# root:i2c, mode 660). The group gpio is the one that user has for the header pins already.
-SUBSYSTEM=="i2c-dev", KERNEL=="i2c-[0-9]*", GROUP="gpio", MODE="0660"
