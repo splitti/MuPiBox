@@ -756,7 +756,8 @@ def publish_users():
                 }
             }
             client.publish(topic, json.dumps(user_select), qos=0, retain=True)
-        elif users_published:
+        elif users_published != []:
+            # (also after a new connection - None: one switched off while the broker was away kept its select)
             client.publish(topic, "", qos=0, retain=True)
         users_published = names
     current = next((str(u.get('name', '')) for u in st['users'] if u.get('id') == st.get('current')), '') if st else ''

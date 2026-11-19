@@ -1367,6 +1367,9 @@ let playtimeLastCheckpointAt = 0
 let playtimeLastCheckpointSeconds = -1
 // a switch of the user under way: nothing of the day's counts and positions written (see "Users", /user/hold)
 let userHold = false
+// (counted up at every hold and change of the user: a checkpoint written before - still on its way to the card - is not
+// put in place after one, it would land at the other user's place)
+let userGeneration = 0
 
 // Quiet hours uses the same state machine but is purely time-window-driven (no counter).
 const quietHoursState = {
@@ -1507,6 +1510,7 @@ function writePlaytimeCheckpoint() {
   tileLastCheckpointUsed = tileCheckpointText()
   // (a file of its own first, then renamed: a power cut mid-write left half a file, and the day's count began at 0)
   const tmp = `${PLAYTIME_CHECKPOINT_PATH}.tmp`
+  const generation = userGeneration
   fs.writeFile(tmp, JSON.stringify(payload), (err) => {
     if (err) {
       log.error(`${new Date().toLocaleString()}: [Playtime] Failed to write checkpoint:`, err)
@@ -1514,7 +1518,7 @@ function writePlaytimeCheckpoint() {
     }
     // (a switch of the user began meanwhile: these counts are in the file written for it already, and put now they would
     // land at the coming user's place)
-    if (userHold) {
+    if (userHold || generation !== userGeneration) {
       fs.rm(tmp, { force: true }, () => {})
       return
     }
@@ -4726,6 +4730,7 @@ let userHoldTimer = null
 app.post('/user/hold', (_req, res) => {
   try {
     // (held already - a switch before whose "changed" did not come: the counts in place may be another user's now)
+    userGeneration++
     if (!userHold) {
       playtimeCheckpointNow()
       episodePositionsDirty = true
@@ -4748,7 +4753,7 @@ app.post('/user/changed', (_req, res) => {
 // The counts of the user who goes, on the card before the files are exchanged (not with the timer of every minute)
 function playtimeCheckpointNow() {
   if (!playtimeState.date) return
-  const tmp = `${PLAYTIME_CHECKPOINT_PATH}.tmp`
+  const tmp = `${PLAYTIME_CHECKPOINT_PATH}.hold.tmp`
   const fd = fs.openSync(tmp, 'w')
   try {
     fs.writeFileSync(fd, JSON.stringify(playtimeCheckpointPayload()))
@@ -4760,6 +4765,7 @@ function playtimeCheckpointNow() {
 }
 // The coming user's counts and positions (the day's counts start at 0 where there is no checkpoint of today)
 function userChanged() {
+  userGeneration++
   clearTimeout(userHoldTimer)
   userHoldTimer = null
   // the coming user's settings at once (the watch of the file reads them a moment later: his day may begin at

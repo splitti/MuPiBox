@@ -17,6 +17,8 @@ const MANUAL_THROTTLE_PATH = '/tmp/.last_sync_trigger'
 
 let timerHandle: ReturnType<typeof setTimeout> | null = null
 let inflight: Promise<RunSyncResult> | null = null
+// (whose library the run under way is for - trailingKey)
+let inflightKey: string | null = null
 /** A run of the sync under way (a switch of the user waits for it - users.ts) */
 export const isSyncRunning = (): boolean => inflight !== null
 // Trailing-edge run: when a manual trigger is throttled, we don't drop it —
@@ -224,9 +226,13 @@ function markManualTrigger(): void {
 
 /** Internal: run sync, tracking inflight state for the running-guard. */
 async function runOnce(trigger: SyncTrigger, deps: RunSyncDeps, allowWhenOff = false): Promise<RunSyncResult> {
+  // (a run for another library under way - several users: this one after it, it is not that one's result)
+  while (inflight && inflightKey !== trailingKey(deps)) await inflight.catch(() => undefined)
   if (inflight) return inflight
+  inflightKey = trailingKey(deps)
   inflight = runSync(trigger, deps, { allowWhenOff }).finally(() => {
     inflight = null
+    inflightKey = null
   })
   return inflight
 }

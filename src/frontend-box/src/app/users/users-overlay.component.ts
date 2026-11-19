@@ -400,6 +400,8 @@ export class UsersOverlayComponent {
       return
     }
     this.switching.set(null)
+    // (the minute until it closes by itself, anew: one that ran out while it switched did not close it)
+    this.touched()
     this.digits.set('')
     switch (result.error) {
       case 'pin':

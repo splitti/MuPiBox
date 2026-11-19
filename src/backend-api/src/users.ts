@@ -636,7 +636,20 @@ export class Users {
   /** A switch cut off: finished (its files at the server's start already - again here, that does nothing) - in the
    *  order of all changes, so no switch begins on the files of one that is not finished */
   finishCutOff(): Promise<void> {
-    return this.serial(() => this.finishOpen())
+    return this.serial(() => this.finishOpenLocked())
+  }
+
+  // (under the locks of both users' libraries, as a switch: a change of the app for the coming user meanwhile went to
+  // his folder - empty, his things are in place already - and the end of the switch then put it over his library)
+  private async finishOpenLocked(): Promise<void> {
+    const s = this.files.read().switching
+    if (!s) return
+    const release = await this.hooks.lock(10_000, [s.from, s.to])
+    try {
+      await this.finishOpen()
+    } finally {
+      release?.()
+    }
   }
 
   private async finishOpen(): Promise<void> {
@@ -715,7 +728,7 @@ export class Users {
       // things of two users for one)
       if (this.files.read().switching) {
         try {
-          await this.finishOpen()
+          await this.finishOpenLocked()
         } catch (err) {
           throw new UserSwitchError('failed', `a switch before is not finished: ${(err as Error).message}`)
         }

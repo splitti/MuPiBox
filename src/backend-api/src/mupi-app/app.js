@@ -1955,6 +1955,12 @@ function errorText(r, fallback = 'Das hat nicht geklappt') {
 const caps = { config: null, status: null, sleep: null, listened: null, photos: null }
 
 async function saveCaps(body, done = 'Gespeichert') {
+  // (the values on the page are another user's than the one chosen now - his page is still loading: nothing sent, a
+  // whole quiet schedule of the one went to the other)
+  if (libView.shown && caps.user !== libView.shown) {
+    toast('Nicht gespeichert – bitte noch einmal versuchen', 'info')
+    return false
+  }
   const r = await api(`${API}/caps-config`, { method: 'POST', body })
   toast(r.ok ? done : 'Nicht gespeichert – bitte noch einmal versuchen', r.ok ? 'ok' : 'info')
   if (r.ok) setTimeout(() => refreshPlaytime(), 1500) // the player writes its status a moment later
@@ -1973,13 +1979,16 @@ async function listenedToday() {
 }
 
 async function loadCaps() {
+  // (the user shown when it began: another chosen meanwhile - his page reads his own, this answer is not kept)
+  const user = libView.shown
   const [cfg, st, sleep, power, photos] = await Promise.all([
-    api(`${API}/caps-config`),
-    api('/api/playtime'),
+    api(`${API}/caps-config`, { user }),
+    api('/api/playtime', { user }),
     api(`${API}/sleeptimer`),
     api(`${API}/power-config`),
-    api(`${API}/photos/settings`),
+    api(`${API}/photos/settings`, { user }),
   ])
+  if (user !== libView.shown) return
   // (the picture time's card: only while the photo display is on)
   if (photos.ok && photos.body?.settings?.enabled) setPhotoTimeValues(photos.body.settings)
   else caps.photos = null
@@ -1991,6 +2000,7 @@ async function loadCaps() {
   }
   if (!cfg.ok) throw new Error(`caps-config ${cfg.status}`)
   caps.config = cfg.body
+  caps.user = user
   caps.status = st.ok ? st.body : null
   caps.sleep = sleep.body?.active ? sleep.body : null
   await listenedToday()
@@ -2929,12 +2939,15 @@ const SYNC_API = '/api/spotify-sync'
 // cat / src / q: the filters; subs, nasProfile, covers: the numbers of the tiles
 const lib = { items: null, local: {}, nas: [], cat: 'all', src: 'all', q: '', sync: null, subs: null, nasProfile: '', covers: null, mounts: 0 }
 
+// Returns false when another load began meanwhile (the chooser tapped again): then this one keeps nothing - one that
+// ended last for the user chosen first showed his lists under the other one's name, and a change went to him
 async function loadLib() {
   // (the user shown when it began: all of its requests for him - see api; lib.user says whose lists lib holds)
   const user = libView.shown
-  lib.user = user
+  const gen = (lib.loadGen = (lib.loadGen ?? 0) + 1)
+  const current = () => gen === lib.loadGen
   // (what was heard: the ticks in the sheets)
-  const heardDone = loadHeard(user)
+  const heardDone = loadHeard(user, current)
   const [data, sync, nas, subs, profiles, covers, ...local] = await Promise.all([
     // (the box's names first: its own pictures go through the app's address, see ownCover)
     loadBoxHosts().then(() => api('/api/data', { user })),
@@ -2945,8 +2958,11 @@ async function loadLib() {
     api('/api/online-covers'),
     ...CATS.map(([c]) => api(`/api/library/artists?category=${c}`)),
   ])
+  if (!current()) return false
+  lib.user = user
   // (the photos' line: its numbers, without holding up the library)
-  api(`${API}/photos/overview?light=1`).then((r) => {
+  api(`${API}/photos/overview?light=1`, { user }).then((r) => {
+    if (!current()) return
     lib.photos = r.ok ? r.body : null
     drawLibPhotos()
   })
@@ -2959,6 +2975,7 @@ async function loadLib() {
   lib.covers = covers.ok ? (covers.body?.entries ?? []).filter((e) => e.status === 'found').length : null
   CATS.forEach(([c], i) => (lib.local[c] = Array.isArray(local[i].body) ? local[i].body : []))
   await heardDone
+  return current()
 }
 
 // After a change the lists of Hören are read again too
@@ -3387,9 +3404,9 @@ async function mountTileLimit(sheet, keys, name) {
    "Alle als ungehört markieren". Switched off (Bedienung › Weiterhören): nothing of it here. */
 
 const heard = { enabled: false, items: {} }
-async function loadHeard(user) {
+async function loadHeard(user, current = () => true) {
   const r = await api(`${API}/heard`, { user })
-  if (!r.ok) return
+  if (!r.ok || !current()) return
   heard.enabled = r.body?.enabled !== false
   heard.items = r.body?.items && typeof r.body.items === 'object' ? r.body.items : {}
 }
@@ -3590,8 +3607,7 @@ function libWriteOk(r) {
 
 async function libReload() {
   libChanged()
-  await loadLib()
-  if (currentPage()?.id === 'bibliothek') drawLib()
+  if ((await loadLib()) && currentPage()?.id === 'bibliothek') drawLib()
 }
 
 function catSelect(id, value, withSync) {
@@ -3993,7 +4009,8 @@ function openEntrySheet(item, back = null) {
         // (the episodes on the SD card follow the setting now, not only at the next hourly round)
         // (the choice of episodes too: other episodes to keep)
         const changedKeep = keep !== (Number(item.offline) || 0) || (updated.episodePick ?? '') !== (item.episodePick ?? '')
-        if (item.type === 'rss' && changedKeep) api(`${API}/podcast-offline/sync`, { method: 'POST', body: { feed: updated.id } })
+        // (another user's library: the box's round of every hour takes it - every library's podcasts, podcast-offline.ts)
+        if (item.type === 'rss' && changedKeep && !libView.user) api(`${API}/podcast-offline/sync`, { method: 'POST', body: { feed: updated.id } })
         libReload()
       }
       sheet.querySelector('[data-del]')?.addEventListener('click', () => {
@@ -5212,7 +5229,8 @@ const isPlaylistEntry = (it) => !!it && !it.isResume && ((it.type === 'spotify' 
 // The folders of the start page in a category: the artists of the library's entries, as the box groups them (the
 // folders of the SD card and the NAS are tiles of their own) - the most used first
 async function placeFolders(category) {
-  const items = lib.items ?? (await api('/api/data')).body
+  // (the lists held are another user's than the one chosen now: read for him)
+  const items = lib.items && lib.user === libView.shown ? lib.items : (await api('/api/data')).body
   const count = new Map()
   for (const it of Array.isArray(items) ? items : []) {
     if (!it || it.isResume === true || it.category === 'resume' || it.type === 'library') continue
@@ -5578,7 +5596,7 @@ async function openPodShow(s) {
         if (!libWriteOk(r)) return
         close()
         toast(`Hinzugefügt: ${s.title}`)
-        if (keep) api(`${API}/podcast-offline/sync`, { method: 'POST', body: {} })
+        if (keep && !libView.user) api(`${API}/podcast-offline/sync`, { method: 'POST', body: {} })
         libChanged()
         lib.items = null
       })
@@ -18746,7 +18764,10 @@ const CONTROLLERS = {
   verlauf: {
     async load() {
       // (the history of the user shown - several users: api names him, see libView)
-      const [today, week] = await Promise.all([api(`${API}/playlog?range=today`), api(`${API}/playlog?range=week`)])
+      const user = libView.shown
+      const [today, week] = await Promise.all([api(`${API}/playlog?range=today`, { user }), api(`${API}/playlog?range=week`, { user })])
+      // (another user chosen meanwhile: his page reads his own - this one's numbers are not kept)
+      if (user !== libView.shown) return
       if (!today.ok && !week.ok) throw new Error(`playlog ${today.status}`)
       listenLog.today = today.body
       listenLog.week = week.body
@@ -18791,8 +18812,8 @@ const CONTROLLERS = {
       // known state first, then read again (the sync or the box may have changed it)
       if (Date.now() - (lib.loadedAt ?? 0) > 5000 || lib.user !== libView.shown) {
         lib.loadedAt = Date.now()
-        loadLib().then(() => {
-          if (currentPage()?.id !== 'bibliothek') return
+        loadLib().then((ok) => {
+          if (!ok || currentPage()?.id !== 'bibliothek') return
           drawLib()
         })
       }
@@ -18811,7 +18832,7 @@ const CONTROLLERS = {
           const now = await token()
           if (!now || now === known) return
           known = now
-          await loadLib()
+          if (!(await loadLib())) return
           lib.loadedAt = Date.now()
           if (currentPage()?.id === 'bibliothek') drawLib()
         })

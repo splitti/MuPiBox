@@ -1321,6 +1321,9 @@ function libraryOf(req: express.Request): LibraryTarget | null {
   if (req.query?.user !== undefined && typeof req.query.user !== 'string') return null
   const raw = typeof req.query?.user === 'string' ? req.query.user : ''
   const f = userFiles.read()
+  // (a switch not finished - cut off, or its end failed: whose files are where is not sure; no change of a library now,
+  // one into the coming user's empty folder was put over his library when it ended)
+  if (raw && f.switching) return null
   if (!raw || raw === f.current) return { dataFile, lock: dataLock, current: true }
   if (!f.users.some((u) => u.id === raw)) return null
   return { dataFile: path.join(userFiles.userDir(raw), 'library', 'data.json'), lock: userLibraryLock(raw), current: false }
@@ -2546,8 +2549,10 @@ function otherUserPlaytime(id: string): Record<string, unknown> {
       counting: false,
     }
   }
+  const quietOn = (part?.sections.quietHours as { enabled?: unknown } | undefined)?.enabled === true
   return {
-    enabled,
+    // (quiet hours alone are a limit too - Telegram /status said "not set up")
+    enabled: enabled || quietOn,
     otherUser: true,
     playtime: {
       enabled,
@@ -4384,7 +4389,8 @@ function writeJsonAtomic(file: string, data: unknown, callback: (error: Error | 
       return
     }
     // The library: keep the version this write replaces (a bad edit once wiped an entry and there was nothing to go back to).
-    if (file === dataFile) backupBeforeWrite(file)
+    // (another user's library too - the app edits it without a switch; the copies move with his folder)
+    if (path.basename(file) === 'data.json') backupBeforeWrite(file)
     writeFileWhole(file, text, { ifChanged: false }).then(
       () => callback(null),
       (error: Error) => callback(error),

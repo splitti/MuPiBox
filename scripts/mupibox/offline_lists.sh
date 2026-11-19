@@ -55,6 +55,9 @@ offline_list() {
 		local was
 		was=$(stat -c '%i %y' "${src}" 2> /dev/null) || exit 1
 		touch -r "${src}" "${ref}" 2> /dev/null || exit 1
+		# (the podcasts' index newer than the list: its time - with the list's the offline list stayed older than the index
+		# and was made anew at every round, twice a minute)
+		if [ "${PODCAST_INDEX}" -nt "${ref}" ]; then touch -r "${PODCAST_INDEX}" "${ref}" 2> /dev/null || exit 1; fi
 		/usr/bin/jq -e 'type == "array"' "${src}" > /dev/null 2>&1 || exit 1
 		offline_filter "${src}" | /usr/bin/jq -s -c . > "${tmp}" || exit 1
 		/usr/bin/jq -e 'type == "array"' "${tmp}" > /dev/null 2>&1 || exit 1
