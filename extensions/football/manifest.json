@@ -43,6 +43,16 @@
         "table"
       ],
       "perUser": true
+    },
+    "header": {
+      "type": "boolean",
+      "default": true,
+      "perUser": true
+    },
+    "announce": {
+      "type": "boolean",
+      "default": false,
+      "perUser": true
     }
   },
   "ui": {
@@ -100,6 +110,16 @@
             "label": "Tabelle"
           }
         ]
+      },
+      {
+        "key": "header",
+        "label": "Ergebnis in der Kopfzeile",
+        "help": "Während ein Spiel des Lieblingsvereins läuft, stehen oben im Display die beiden Wappen und der Spielstand."
+      },
+      {
+        "key": "announce",
+        "label": "Tore ansagen",
+        "help": "Schießt der Lieblingsverein ein Tor, sagt die Box es mit ihrer Stimme an, zum Beispiel „Tor für Bremen! 2 zu 1.“ Musik wird dabei leiser. Nicht in der Ruhezeit und nicht, wenn die Box gesperrt ist."
       },
       {
         "type": "status",

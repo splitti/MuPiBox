@@ -4667,5 +4667,9 @@
  "Keinen Verein": "No club",
  "3. Liga": "3. Liga",
  "1. Bundesliga": "1. Bundesliga",
- "2. Bundesliga": "2. Bundesliga"
+ "2. Bundesliga": "2. Bundesliga",
+ "Ergebnis in der Kopfzeile": "Score in the header",
+ "Während ein Spiel des Lieblingsvereins läuft, stehen oben im Display die beiden Wappen und der Spielstand.": "While a match of the favourite club runs, the two crests and the score stand at the top of the display.",
+ "Tore ansagen": "Announce goals",
+ "Schießt der Lieblingsverein ein Tor, sagt die Box es mit ihrer Stimme an, zum Beispiel „Tor für Bremen! 2 zu 1.“ Musik wird dabei leiser. Nicht in der Ruhezeit und nicht, wenn die Box gesperrt ist.": "When the favourite club scores, the box says so with its voice, for example “Goal for Bremen! 2 to 1.” Music gets quieter meanwhile. Not during quiet hours and not while the box is blocked."
 }

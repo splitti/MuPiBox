@@ -256,6 +256,8 @@ exports.activate = (host) => {
         lastError = got.partial ? lastError || 'offline' : ''
         failedKey = ''
         save()
+        // (the voice takes a few seconds: the load does not wait for it)
+        void goals(s, key).catch((error) => host.log.warn(`[Extension football] goal: ${error?.message}`))
       } catch (error) {
         errors += 1
         lastError = error?.status === 429 ? 'too_many' : error?.status === 401 || error?.status === 403 ? 'refused' : 'offline'
@@ -271,6 +273,38 @@ exports.activate = (host) => {
     } finally {
       loading = null
     }
+  }
+
+  // ---- the goal of the club, said by the box (F4) ----
+  /** the scores of the club's matches as the last look saw them, for the settings `goalKey` (other settings: a first look again) */
+  let goalSeen = new Map()
+  let goalKey = ''
+  let saidAt = 0
+  /** The club's matches with their state anew, the club's own list last (asked more often than the matchday) */
+  const clubMatches = (now = Date.now()) => {
+    const fresh = (m) => (m.state === 'postponed' ? m : { ...m, state: L.stateOf({ kickoff: m.kickoff, finished: m.state === 'finished' }, now) })
+    const all = L.dedupe([...(view?.matchday?.matches ?? []), ...(view?.mine ?? [])].map(fresh))
+    return all.filter((m) => L.playsIn(m, view?.teamId))
+  }
+  /** After a load: a goal of the club since the last look is said - when the user wants it, not at the first look, not in the
+   *  quiet hours or while the box is blocked, at most once a minute (several at once: the last one) */
+  async function goals(s, key) {
+    if (!view?.teamId) return
+    const first = goalKey !== key
+    const before = first ? new Map() : goalSeen
+    const { goals: scored, seen } = L.newGoals(clubMatches(), view.teamId, before)
+    // (said a moment ago: the goal stays new, the next look - in a minute - says it)
+    if (scored.length > 0 && s.announce === true && Date.now() - saidAt < L.MIN) {
+      for (const g of scored) seen.set(g.match.id, before.get(g.match.id))
+    }
+    goalSeen = seen
+    goalKey = key
+    if (scored.length === 0 || s.announce !== true || Date.now() - saidAt < L.MIN) return
+    const rest = typeof host.rest === 'function' ? await host.rest() : { quiet: false, blocked: false }
+    if (rest.quiet || rest.blocked) return
+    saidAt = Date.now()
+    const lang = String(host.config()?.mupibox?.ttsLanguage ?? 'de')
+    await host.say?.(L.goalText(scored.at(-1), lang))
   }
 
   /** Whether a load for `s` is due: other settings than those loaded (unless their last try failed and waits), or the time came */
@@ -350,6 +384,23 @@ exports.activate = (host) => {
       table: view.table ? view.table.map((r) => ({ ...r, team: withCrests(r.team) })) : null,
       club: club ? { ...club, team: withCrests(club.team), live: matchOut(club.live), last: matchOut(club.last), next: matchOut(club.next) } : null,
     })
+  })
+
+  // The header of the display: the club's match that runs now - what was loaded last, never a new request (the box asks on its
+  // own every minute while the club plays). Nothing in the quiet hours, while the box is blocked, or when the user switched it off.
+  host.route('get', '/live', async (_req, res) => {
+    res.set('Cache-Control', 'no-store')
+    const s = await host.settings()
+    if (!configured(s) || s.header === false || !(Number(s.teamId) > 0) || view?.key !== keyOf(s)) {
+      res.json({ live: null })
+      return
+    }
+    const rest = typeof host.rest === 'function' ? await host.rest() : { quiet: false, blocked: false }
+    // (only from a fresh look at the club - the box asks every minute while it plays: after the source went away, or after a
+    // start with old values from the card, no match counts as running)
+    const fresh = Date.now() - (view.mineAt ?? 0) < 3 * L.MIN
+    const live = rest.quiet || rest.blocked || !fresh ? null : (clubMatches().find((m) => m.state === 'live') ?? null)
+    res.json({ live: matchOut(live) })
   })
 
   host.route('get', '/matchday', async (req, res) => {

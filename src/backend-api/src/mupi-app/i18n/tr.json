@@ -4651,5 +4651,9 @@
  "Keinen Verein": "Kulüp yok",
  "3. Liga": "3. Liga",
  "1. Bundesliga": "1. Bundesliga",
- "2. Bundesliga": "2. Bundesliga"
+ "2. Bundesliga": "2. Bundesliga",
+ "Ergebnis in der Kopfzeile": "Başlıkta skor",
+ "Während ein Spiel des Lieblingsvereins läuft, stehen oben im Display die beiden Wappen und der Spielstand.": "Favori kulübün maçı sürerken ekranın üstünde iki arma ve skor görünür.",
+ "Tore ansagen": "Golleri duyur",
+ "Schießt der Lieblingsverein ein Tor, sagt die Box es mit ihrer Stimme an, zum Beispiel „Tor für Bremen! 2 zu 1.“ Musik wird dabei leiser. Nicht in der Ruhezeit und nicht, wenn die Box gesperrt ist.": "Favori kulüp gol attığında kutu bunu kendi sesiyle söyler, örneğin “Bremen’e gol! 2–1.” Bu sırada müzik kısılır. Sessiz saatlerde ve kutu kilitliyken söylemez."
 }

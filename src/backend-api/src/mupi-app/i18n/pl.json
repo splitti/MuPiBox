@@ -4651,5 +4651,9 @@
  "Keinen Verein": "Bez klubu",
  "3. Liga": "3. Liga",
  "1. Bundesliga": "1. Bundesliga",
- "2. Bundesliga": "2. Bundesliga"
+ "2. Bundesliga": "2. Bundesliga",
+ "Ergebnis in der Kopfzeile": "Wynik w nagłówku",
+ "Während ein Spiel des Lieblingsvereins läuft, stehen oben im Display die beiden Wappen und der Spielstand.": "Gdy trwa mecz ulubionego klubu, u góry wyświetlacza widać oba herby i wynik.",
+ "Tore ansagen": "Ogłaszaj gole",
+ "Schießt der Lieblingsverein ein Tor, sagt die Box es mit ihrer Stimme an, zum Beispiel „Tor für Bremen! 2 zu 1.“ Musik wird dabei leiser. Nicht in der Ruhezeit und nicht, wenn die Box gesperrt ist.": "Gdy ulubiony klub strzeli gola, boks mówi o tym swoim głosem, np. „Gol dla Bremy! 2 do 1.” Muzyka jest wtedy ciszej. Nie w godzinach ciszy i nie wtedy, gdy boks jest zablokowany."
 }

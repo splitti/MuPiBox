@@ -160,3 +160,15 @@ test('on now: from five minutes before the kick-off until three hours after, unl
   assert.equal(L.inPlay({ ...m, state: 'finished' }, at + 100 * MIN), false)
   assert.equal(L.inPlay(m, at + 181 * MIN), false)
 })
+
+test('a goal at the kick-off: a match on but without a score counts as 0:0, so its first goal is said; the texts of the voice', () => {
+  const at = Date.parse('2026-11-21T14:30:00Z')
+  const base = { id: 7, kickoff: new Date(at).toISOString(), home: { id: 134, short: 'Bremen' }, away: { id: 87, short: 'Gladbach' } }
+  const before = L.newGoals([{ ...base, state: 'scheduled', score: null }], 134, new Map(), at - 2 * MIN)
+  assert.deepEqual(before.seen.get(7), { home: 0, away: 0, live: true })
+  const goal = L.newGoals([{ ...base, state: 'live', score: { home: 1, away: 0 } }], 134, before.seen, at + 2 * MIN)
+  assert.equal(goal.goals.length, 1)
+  assert.equal(L.goalText(goal.goals[0], 'fr'), 'But pour Bremen ! 1 à 0.')
+  assert.equal(L.goalText(goal.goals[0], 'no'), 'Mål for Bremen! 1-0.')
+  assert.equal(L.goalText(goal.goals[0], 'xx'), 'Goal for Bremen! 1 to 0.')
+})

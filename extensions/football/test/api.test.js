@@ -42,6 +42,9 @@ function start(settings) {
     config: () => ({ displayLanguage: 'de' }),
     onSettings: (fn) => listeners.push(fn),
     route: (method, sub, handler) => (routes[`${method} ${sub}`] = handler),
+    said: [],
+    say: async (text) => host.said.push(text),
+    rest: async () => settings.rest ?? { quiet: false, blocked: false },
   }
   delete require.cache[require.resolve('../api.js')]
   require('../api.js').activate(host)
@@ -75,7 +78,7 @@ function start(settings) {
     await routes[key]({ query, params }, res)
     return out
   }
-  return { call, dataDir, listeners }
+  return { call, dataDir, listeners, host }
 }
 
 const realFetch = global.fetch
@@ -266,4 +269,72 @@ test('a crest refused for too many at every address: no crest is asked for a whi
   for (const h of hashes.slice(1)) assert.equal((await call('get /crest/:hash', { params: { hash: h } })).status, 404)
   // (none of the others: the box waits a quarter of an hour)
   assert.equal(wiki(), 3)
+})
+
+test('a goal of the club while it plays: said once, not at the first look, not in the quiet hours; the header shows the match', async () => {
+  // (a match of the club that runs: Bremen at home, the source's answer changed by the test)
+  const kickoff = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+  const match = (home, away) => ({
+    matchID: 999,
+    matchDateTimeUTC: kickoff,
+    leagueShortcut: 'bl1',
+    group: { groupName: '10. Spieltag', groupOrderID: 10 },
+    team1: { teamId: 134, teamName: 'SV Werder Bremen', shortName: 'Bremen', teamIconUrl: '' },
+    team2: { teamId: 87, teamName: 'Borussia Mönchengladbach', shortName: 'Gladbach', teamIconUrl: '' },
+    matchIsFinished: false,
+    matchResults: [],
+    goals: home + away > 0 ? [{ scoreTeam1: home, scoreTeam2: away }] : [],
+  })
+  let now = match(1, 0)
+  global.fetch = async (url) => {
+    const u = String(url)
+    const body = /getmatchdata\/bl1$/.test(u) || /getmatchesbyteamid/.test(u) ? [now] : /getbltable/.test(u) ? table : []
+    return { ok: true, status: 200, headers: new Map(), json: async () => body }
+  }
+  const settings = { now: { teamId: 134, announce: true } }
+  const { call, listeners, host } = start(settings)
+  const wait = () => new Promise((r) => setTimeout(r, 20))
+  await call('get /data', { query: { open: '1' } })
+  await wait()
+  assert.deepEqual(host.said, [])
+  const live = (await call('get /live')).body.live
+  assert.equal(live.score.home, 1)
+  // (a goal: said)
+  now = match(2, 0)
+  for (const fn of listeners) fn({})
+  await call('get /data', { query: { open: '1' } })
+  await wait()
+  assert.deepEqual(host.said, ['Tor für Bremen! 2 zu 0.'])
+  // (another goal within the minute: kept - said at the next look a minute later)
+  now = match(3, 0)
+  for (const fn of listeners) fn({})
+  await call('get /data', { query: { open: '1' } })
+  await wait()
+  assert.equal(host.said.length, 1)
+  const realNow = Date.now
+  Date.now = () => realNow() + 61 * 1000
+  for (const fn of listeners) fn({})
+  await call('get /data', { query: { open: '1' } })
+  await wait()
+  Date.now = realNow
+  assert.deepEqual(host.said, ['Tor für Bremen! 2 zu 0.', 'Tor für Bremen! 3 zu 0.'])
+  host.said.length = 1
+  // (a goal of the other side: nothing)
+  now = match(2, 1)
+  for (const fn of listeners) fn({})
+  await call('get /data', { query: { open: '1' } })
+  await wait()
+  assert.equal(host.said.length, 1)
+  // (in the quiet hours: nothing said, nothing in the header)
+  settings.rest = { quiet: true, blocked: false }
+  now = match(3, 1)
+  for (const fn of listeners) fn({})
+  await call('get /data', { query: { open: '1' } })
+  await wait()
+  assert.equal(host.said.length, 1)
+  assert.equal((await call('get /live')).body.live, null)
+  // (the header switched off)
+  settings.rest = undefined
+  settings.now = { teamId: 134, header: false }
+  assert.equal((await call('get /live')).body.live, null)
 })

@@ -190,11 +190,17 @@ const anyLive = (matches, now = Date.now()) => matches.some((m) => m.state === '
  * before (an own goal of the other side counts too). `before`: Map id -> score, as the last look left it; the first look
  * (empty) never reports - a box that starts would announce old goals; a match it never saw running neither. Returns { goals: [{ match, side, score }], seen }.
  */
-function newGoals(matches, teamId, before) {
+function newGoals(matches, teamId, before, now = Date.now()) {
   const seen = new Map()
   const goals = []
   for (const m of matches) {
-    if (!playsIn(m, teamId) || !m.score || (m.state !== 'live' && m.state !== 'finished')) continue
+    if (!playsIn(m, teamId)) continue
+    // (on, but no score yet - just before or at the kick-off: 0:0 running, so the first goal counts)
+    if (!m.score && inPlay(m, now)) {
+      seen.set(m.id, { home: 0, away: 0, live: true })
+      continue
+    }
+    if (!m.score || (m.state !== 'live' && m.state !== 'finished')) continue
     seen.set(m.id, { ...m.score, live: m.state === 'live' })
     const was = before?.get(m.id)
     // (a goal in the last minute may come with the whistle: a match seen running before counts when it is over too)
@@ -206,9 +212,26 @@ function newGoals(matches, teamId, before) {
   return { goals, seen }
 }
 
+// (in the languages the box speaks - mupibox.ttsLanguage)
 const TEXTS = {
   de: { goal: (club, a, b) => `Tor für ${club}! ${a} zu ${b}.` },
   en: { goal: (club, a, b) => `Goal for ${club}! ${a} to ${b}.` },
+  fr: { goal: (club, a, b) => `But pour ${club} ! ${a} à ${b}.` },
+  es: { goal: (club, a, b) => `¡Gol de ${club}! ${a} a ${b}.` },
+  it: { goal: (club, a, b) => `Gol per ${club}! ${a} a ${b}.` },
+  nl: { goal: (club, a, b) => `Doelpunt voor ${club}! ${a} tegen ${b}.` },
+  pl: { goal: (club, a, b) => `Gol dla ${club}! ${a} do ${b}.` },
+  pt: { goal: (club, a, b) => `Golo para ${club}! ${a} a ${b}.` },
+  cs: { goal: (club, a, b) => `Gól pro ${club}! ${a} : ${b}.` },
+  da: { goal: (club, a, b) => `Mål til ${club}! ${a}-${b}.` },
+  sv: { goal: (club, a, b) => `Mål för ${club}! ${a}-${b}.` },
+  nb: { goal: (club, a, b) => `Mål for ${club}! ${a}-${b}.` },
+  no: { goal: (club, a, b) => `Mål for ${club}! ${a}-${b}.` },
+  fi: { goal: (club, a, b) => `Maali joukkueelle ${club}! ${a}-${b}.` },
+  tr: { goal: (club, a, b) => `${club} gol attı! ${a}-${b}.` },
+  ru: { goal: (club, a, b) => `Гол! ${club}, ${a}:${b}.` },
+  uk: { goal: (club, a, b) => `Гол! ${club}, ${a}:${b}.` },
+  el: { goal: (club, a, b) => `Γκολ για ${club}! ${a}-${b}.` },
 }
 /** What the box says for a goal: the club's short name, then the score with the club's goals first. */
 function goalText(goal, lang = 'de') {

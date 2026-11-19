@@ -27,7 +27,12 @@ Beim **DFB-Pokal** gibt es keine Tabelle. Ohne Lieblingsverein gibt es die Ansic
 | **Liga** | 1. Bundesliga, 2. Bundesliga, 3. Liga, DFB-Pokal oder Frauen-Bundesliga |
 | **Lieblingsverein** | nach dem Namen suchen und den Verein antippen; **Keinen Verein** nimmt ihn wieder weg |
 | **Ansicht beim Öffnen** | was der Reiter zuerst zeigt |
+| **Ergebnis in der Kopfzeile** | während ein Spiel des Vereins läuft, stehen oben im Display die beiden Wappen und der Spielstand; ein Tipp darauf öffnet die Seite (Standard: an) |
+| **Tore ansagen** | schießt der Verein ein Tor, sagt die Box es mit ihrer Stimme an, etwa „Tor für Bremen! 2 zu 1.“; Musik wird dabei leiser, angehalten wird sie nicht (Standard: aus) |
 | **Abfrage** | ob die letzte Abfrage geklappt hat, und wann sie war |
+
+> [!NOTE]
+> In der **Ruhezeit** und wenn die Box **gesperrt** ist (Spielzeit aufgebraucht, Pause der Eltern), gibt es keine Ansage und kein Ergebnis in der Kopfzeile. Die Ansage kommt höchstens einmal pro Minute und erst, nachdem die Box das Spiel einmal laufen gesehen hat: Ein Tor von vorhin sagt sie nach dem Einschalten nicht an. Das Display wird dafür nicht geweckt. Wie schnell die Ansage kommt, hängt davon ab, wann OpenLigaDB das Tor einträgt. Fallen zwei Tore kurz nacheinander, kommt das zweite eine Minute später. Die Ansage braucht die **Sprachausgabe** der Box und spricht in ihrer Sprache. Nimmt OpenLigaDB ein Tor zurück und trägt es neu ein, sagt die Box es noch einmal an.
 
 ### Mehrere Benutzer
 

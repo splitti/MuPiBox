@@ -4651,5 +4651,9 @@
  "Keinen Verein": "Καμία ομάδα",
  "3. Liga": "3. Liga",
  "1. Bundesliga": "1. Bundesliga",
- "2. Bundesliga": "2. Bundesliga"
+ "2. Bundesliga": "2. Bundesliga",
+ "Ergebnis in der Kopfzeile": "Σκορ στην κεφαλίδα",
+ "Während ein Spiel des Lieblingsvereins läuft, stehen oben im Display die beiden Wappen und der Spielstand.": "Όσο παίζει η αγαπημένη ομάδα, επάνω στην οθόνη φαίνονται τα δύο εμβλήματα και το σκορ.",
+ "Tore ansagen": "Ανακοίνωση γκολ",
+ "Schießt der Lieblingsverein ein Tor, sagt die Box es mit ihrer Stimme an, zum Beispiel „Tor für Bremen! 2 zu 1.“ Musik wird dabei leiser. Nicht in der Ruhezeit und nicht, wenn die Box gesperrt ist.": "Όταν η αγαπημένη ομάδα σκοράρει, το κουτί το λέει με τη φωνή του, για παράδειγμα «Γκολ για τη Βρέμη! 2–1.» Η μουσική χαμηλώνει στο μεταξύ. Όχι στις ώρες ησυχίας και όχι όταν το κουτί είναι κλειδωμένο."
 }

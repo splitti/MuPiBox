@@ -4651,5 +4651,9 @@
  "Keinen Verein": "Žádný klub",
  "3. Liga": "3. Liga",
  "1. Bundesliga": "1. Bundesliga",
- "2. Bundesliga": "2. Bundesliga"
+ "2. Bundesliga": "2. Bundesliga",
+ "Ergebnis in der Kopfzeile": "Skóre v záhlaví",
+ "Während ein Spiel des Lieblingsvereins läuft, stehen oben im Display die beiden Wappen und der Spielstand.": "Během zápasu oblíbeného klubu jsou nahoře na displeji oba znaky a skóre.",
+ "Tore ansagen": "Hlásit góly",
+ "Schießt der Lieblingsverein ein Tor, sagt die Box es mit ihrer Stimme an, zum Beispiel „Tor für Bremen! 2 zu 1.“ Musik wird dabei leiser. Nicht in der Ruhezeit und nicht, wenn die Box gesperrt ist.": "Když oblíbený klub dá gól, box to oznámí svým hlasem, například „Gól pro Brémy! 2 : 1.“ Hudba se mezitím ztiší. Ne v době klidu a ne, když je box zablokovaný."
 }

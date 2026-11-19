@@ -4651,5 +4651,9 @@
  "Keinen Verein": "Ingen klub",
  "3. Liga": "3. Liga",
  "1. Bundesliga": "1. Bundesliga",
- "2. Bundesliga": "2. Bundesliga"
+ "2. Bundesliga": "2. Bundesliga",
+ "Ergebnis in der Kopfzeile": "Stilling i toplinjen",
+ "Während ein Spiel des Lieblingsvereins läuft, stehen oben im Display die beiden Wappen und der Spielstand.": "Mens en kamp med yndlingsklubben spilles, står de to klubmærker og stillingen øverst på displayet.",
+ "Tore ansagen": "Annoncér mål",
+ "Schießt der Lieblingsverein ein Tor, sagt die Box es mit ihrer Stimme an, zum Beispiel „Tor für Bremen! 2 zu 1.“ Musik wird dabei leiser. Nicht in der Ruhezeit und nicht, wenn die Box gesperrt ist.": "Når yndlingsklubben scorer, siger boksen det med sin stemme, for eksempel “Mål til Bremen! 2–1.” Musikken skrues ned imens. Ikke i rotiden og ikke, når boksen er spærret."
 }

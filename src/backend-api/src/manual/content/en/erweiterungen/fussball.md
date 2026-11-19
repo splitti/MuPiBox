@@ -27,7 +27,12 @@ The **DFB Cup** has no table. Without a favourite club there is no **My club** v
 | **League** | 1. Bundesliga, 2. Bundesliga, 3. Liga, DFB Cup or Women's Bundesliga |
 | **Favourite club** | search for the name and tap the club; **No club** takes it away again |
 | **View when opening** | what the tab shows first |
+| **Score in the header** | while a match of the club runs, the two crests and the score stand at the top of the display; a tap on them opens the page (default: on) |
+| **Announce goals** | when the club scores, the box says so with its voice, for example “Goal for Bremen! 2 to 1.”; music gets quieter meanwhile but does not stop (default: off) |
 | **Requests** | whether the last request worked, and when it was |
+
+> [!NOTE]
+> During **quiet hours** and while the box is **blocked** (play time used up, a pause set by the parents) there is no announcement and no score in the header. The box announces at most once a minute and only after it has seen the match running: a goal from before is not announced after switching on. The display is not woken for it. How quickly the announcement comes depends on when OpenLigaDB enters the goal. If two goals fall shortly after each other, the second comes a minute later. The announcement needs the box's **Speech output** and speaks in its language. If OpenLigaDB takes a goal back and enters it again, the box announces it once more.
 
 ### Several users
 

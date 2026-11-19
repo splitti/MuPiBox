@@ -4651,5 +4651,9 @@
  "Keinen Verein": "Без клуба",
  "3. Liga": "3. Liga",
  "1. Bundesliga": "1. Bundesliga",
- "2. Bundesliga": "2. Bundesliga"
+ "2. Bundesliga": "2. Bundesliga",
+ "Ergebnis in der Kopfzeile": "Счёт в заголовке",
+ "Während ein Spiel des Lieblingsvereins läuft, stehen oben im Display die beiden Wappen und der Spielstand.": "Пока идёт матч любимого клуба, вверху дисплея видны обе эмблемы и счёт.",
+ "Tore ansagen": "Объявлять голы",
+ "Schießt der Lieblingsverein ein Tor, sagt die Box es mit ihrer Stimme an, zum Beispiel „Tor für Bremen! 2 zu 1.“ Musik wird dabei leiser. Nicht in der Ruhezeit und nicht, wenn die Box gesperrt ist.": "Когда любимый клуб забивает, бокс говорит об этом своим голосом, например «Гол Бремена! 2:1.» Музыка в это время звучит тише. Не в часы тишины и не когда бокс заблокирован."
 }

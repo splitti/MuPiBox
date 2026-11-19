@@ -4651,5 +4651,9 @@
  "Keinen Verein": "Aucun club",
  "3. Liga": "3. Liga",
  "1. Bundesliga": "1. Bundesliga",
- "2. Bundesliga": "2. Bundesliga"
+ "2. Bundesliga": "2. Bundesliga",
+ "Ergebnis in der Kopfzeile": "Score dans l’en-tête",
+ "Während ein Spiel des Lieblingsvereins läuft, stehen oben im Display die beiden Wappen und der Spielstand.": "Pendant un match du club préféré, les deux blasons et le score s’affichent en haut de l’écran.",
+ "Tore ansagen": "Annoncer les buts",
+ "Schießt der Lieblingsverein ein Tor, sagt die Box es mit ihrer Stimme an, zum Beispiel „Tor für Bremen! 2 zu 1.“ Musik wird dabei leiser. Nicht in der Ruhezeit und nicht, wenn die Box gesperrt ist.": "Quand le club préféré marque, la box l’annonce avec sa voix, par exemple « But pour Brême ! 2 à 1. » La musique baisse pendant ce temps. Pas pendant les heures calmes ni quand la box est bloquée."
 }

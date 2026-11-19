@@ -4651,5 +4651,9 @@
  "Keinen Verein": "Ei seuraa",
  "3. Liga": "3. Liga",
  "1. Bundesliga": "1. Bundesliga",
- "2. Bundesliga": "2. Bundesliga"
+ "2. Bundesliga": "2. Bundesliga",
+ "Ergebnis in der Kopfzeile": "Tilanne yläpalkissa",
+ "Während ein Spiel des Lieblingsvereins läuft, stehen oben im Display die beiden Wappen und der Spielstand.": "Lempiseuran ottelun aikana näytön yläreunassa näkyvät molemmat seuramerkit ja tilanne.",
+ "Tore ansagen": "Kuuluta maalit",
+ "Schießt der Lieblingsverein ein Tor, sagt die Box es mit ihrer Stimme an, zum Beispiel „Tor für Bremen! 2 zu 1.“ Musik wird dabei leiser. Nicht in der Ruhezeit und nicht, wenn die Box gesperrt ist.": "Kun lempiseura tekee maalin, laite kertoo sen äänellään, esimerkiksi ”Maali Bremenille! 2–1.” Musiikki hiljenee sillä aikaa. Ei hiljaisena aikana eikä silloin, kun laite on lukittu."
 }

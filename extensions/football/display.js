@@ -3,6 +3,8 @@
 // the table. Everything comes from the API part (/api/ext/football/data), the crests too: the display asks no server outside.
 
 const REFRESH_MS = 30 * 1000
+// (the header asks what runs as often as the box asks the source while the club plays)
+const LIVE_MS = 60 * 1000
 // (a page not touched this long counts as closed for the box: it asks only for the club then)
 const IDLE_MS = 10 * 60 * 1000
 
@@ -137,6 +139,15 @@ const STYLE = `
 .fb-msg{padding:24px 12px;text-align:center;font-size:18px;opacity:.85}
 `
 
+/** The style of the page and of the header item, once in the page of the display */
+function ensureStyle() {
+  if (document.getElementById('fb-style')) return
+  const style = document.createElement('style')
+  style.id = 'fb-style'
+  style.textContent = STYLE
+  document.head.append(style)
+}
+
 export function activate(api) {
   const settings = api.settings() ?? {}
   const configured = ['bl1', 'bl2', 'bl3', 'dfb', 'ffb1'].includes(settings.league)
@@ -189,12 +200,7 @@ export function activate(api) {
       title: textsFor('de').title,
       flush: true,
       mount(content) {
-        if (!document.getElementById('fb-style')) {
-          const style = document.createElement('style')
-          style.id = 'fb-style'
-          style.textContent = STYLE
-          document.head.append(style)
-        }
+        ensureStyle()
         const root = document.createElement('div')
         root.className = 'fb'
         const tabs = document.createElement('div')
@@ -493,4 +499,59 @@ export function activate(api) {
   }
 
   api.tabs.set({ id: 'football', src: api.url('icon.svg'), visible: configured, onSelect: open })
+
+  // The header: while a match of the club runs, its two crests and the score, small, right of the battery. The API part answers
+  // from what it loaded last (it asks every minute while the club plays) and says nothing in the quiet hours or while the box
+  // is blocked. A tap opens the page.
+  if (configured && settings.teamId > 0 && settings.header !== false) {
+    // (the header is on several pages at once - one look a minute for all of its places)
+    const places = new Set()
+    let shared = null
+    let looking = null
+    const lookAll = async () => {
+      const answer = await api.fetchApi('/live')
+      shared = answer?.live ?? null
+      for (const draw of places) draw(shared)
+    }
+    api.header.add({
+      mount(place) {
+        ensureStyle()
+        const item = document.createElement('button')
+        item.type = 'button'
+        item.style.cssText = 'display:none;align-items:center;gap:4px;padding:0 6px;border:0;background:transparent;color:inherit;font:inherit;font-weight:700;font-size:16px'
+        item.onclick = open
+        place.append(item)
+        let last = ''
+        const draw = (m) => {
+          const text = m ? `${m.id}:${scoreText(m)}` : ''
+          if (text === last) return
+          last = text
+          if (!m) {
+            item.style.display = 'none'
+            item.replaceChildren()
+            return
+          }
+          const score = document.createElement('span')
+          score.textContent = scoreText(m)
+          item.replaceChildren(crest(m.home, 22), score, crest(m.away, 22))
+          item.setAttribute('aria-label', `${m.home.short} ${scoreText(m)} ${m.away.short}`)
+          item.style.display = 'inline-flex'
+        }
+        places.add(draw)
+        if (looking) draw(shared)
+        else {
+          void lookAll()
+          looking = setInterval(() => void lookAll(), LIVE_MS)
+        }
+        return () => {
+          places.delete(draw)
+          if (places.size === 0) {
+            clearInterval(looking)
+            looking = null
+          }
+          item.remove()
+        }
+      },
+    })
+  }
 }

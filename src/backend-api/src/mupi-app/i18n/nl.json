@@ -4651,5 +4651,9 @@
  "Keinen Verein": "Geen club",
  "3. Liga": "3. Liga",
  "1. Bundesliga": "1. Bundesliga",
- "2. Bundesliga": "2. Bundesliga"
+ "2. Bundesliga": "2. Bundesliga",
+ "Ergebnis in der Kopfzeile": "Stand in de kopregel",
+ "Während ein Spiel des Lieblingsvereins läuft, stehen oben im Display die beiden Wappen und der Spielstand.": "Terwijl een wedstrijd van de favoriete club loopt, staan bovenaan het display de twee clublogo’s en de stand.",
+ "Tore ansagen": "Doelpunten aankondigen",
+ "Schießt der Lieblingsverein ein Tor, sagt die Box es mit ihrer Stimme an, zum Beispiel „Tor für Bremen! 2 zu 1.“ Musik wird dabei leiser. Nicht in der Ruhezeit und nicht, wenn die Box gesperrt ist.": "Scoort de favoriete club, dan zegt de box het met zijn stem, bijvoorbeeld „Doelpunt voor Bremen! 2 tegen 1.” Muziek wordt dan zachter. Niet tijdens de rusttijd en niet als de box geblokkeerd is."
 }
