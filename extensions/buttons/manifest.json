@@ -1,7 +1,7 @@
 {
   "id": "buttons",
   "name": "Buttons & GPIO Input",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "Physische Taster an den GPIO-Pins steuern die Box: Play/Pause, Titel, Lautstärke und mehr. Mit Tastern für kurzes und langes Drücken (Dual Action) und Doppeltastern mit sechs Funktionen. Die Einstellungen stehen unter Einstellungen › Buttons & GPIO Input.",
   "hostApi": 5,
   "resources": {},
@@ -32,6 +32,7 @@
         "shuffle",
         "repeat",
         "output",
+        "address",
         "stop",
         "shutdown"
       ]
@@ -52,6 +53,7 @@
         "shuffle",
         "repeat",
         "output",
+        "address",
         "stop",
         "shutdown"
       ]
@@ -121,6 +123,7 @@
         "shuffle",
         "repeat",
         "output",
+        "address",
         "stop",
         "shutdown"
       ]
@@ -141,6 +144,7 @@
         "shuffle",
         "repeat",
         "output",
+        "address",
         "stop",
         "shutdown"
       ]
@@ -210,6 +214,7 @@
         "shuffle",
         "repeat",
         "output",
+        "address",
         "stop",
         "shutdown"
       ]
@@ -230,6 +235,7 @@
         "shuffle",
         "repeat",
         "output",
+        "address",
         "stop",
         "shutdown"
       ]
@@ -299,6 +305,7 @@
         "shuffle",
         "repeat",
         "output",
+        "address",
         "stop",
         "shutdown"
       ]
@@ -319,6 +326,7 @@
         "shuffle",
         "repeat",
         "output",
+        "address",
         "stop",
         "shutdown"
       ]
@@ -388,6 +396,7 @@
         "shuffle",
         "repeat",
         "output",
+        "address",
         "stop",
         "shutdown"
       ]
@@ -408,6 +417,7 @@
         "shuffle",
         "repeat",
         "output",
+        "address",
         "stop",
         "shutdown"
       ]
@@ -477,6 +487,7 @@
         "shuffle",
         "repeat",
         "output",
+        "address",
         "stop",
         "shutdown"
       ]
@@ -497,6 +508,7 @@
         "shuffle",
         "repeat",
         "output",
+        "address",
         "stop",
         "shutdown"
       ]
@@ -570,6 +582,7 @@
         "shuffle",
         "repeat",
         "output",
+        "address",
         "stop",
         "shutdown"
       ]
@@ -590,6 +603,7 @@
         "shuffle",
         "repeat",
         "output",
+        "address",
         "stop",
         "shutdown"
       ]
@@ -610,6 +624,7 @@
         "shuffle",
         "repeat",
         "output",
+        "address",
         "stop",
         "shutdown"
       ]
@@ -630,6 +645,7 @@
         "shuffle",
         "repeat",
         "output",
+        "address",
         "stop",
         "shutdown"
       ]
@@ -650,6 +666,7 @@
         "shuffle",
         "repeat",
         "output",
+        "address",
         "stop",
         "shutdown"
       ]
@@ -670,6 +687,7 @@
         "shuffle",
         "repeat",
         "output",
+        "address",
         "stop",
         "shutdown"
       ]
@@ -787,6 +805,7 @@
         "shuffle",
         "repeat",
         "output",
+        "address",
         "stop",
         "shutdown"
       ]
@@ -807,6 +826,7 @@
         "shuffle",
         "repeat",
         "output",
+        "address",
         "stop",
         "shutdown"
       ]
@@ -827,6 +847,7 @@
         "shuffle",
         "repeat",
         "output",
+        "address",
         "stop",
         "shutdown"
       ]
@@ -847,6 +868,7 @@
         "shuffle",
         "repeat",
         "output",
+        "address",
         "stop",
         "shutdown"
       ]
@@ -867,6 +889,7 @@
         "shuffle",
         "repeat",
         "output",
+        "address",
         "stop",
         "shutdown"
       ]
@@ -887,6 +910,7 @@
         "shuffle",
         "repeat",
         "output",
+        "address",
         "stop",
         "shutdown"
       ]
@@ -1047,6 +1071,10 @@
             "label": "Ausgabe wechseln"
           },
           {
+            "value": "address",
+            "label": "Adresse der Box zeigen"
+          },
+          {
             "value": "stop",
             "label": "Stopp"
           },
@@ -1138,6 +1166,10 @@
           {
             "value": "output",
             "label": "Ausgabe wechseln"
+          },
+          {
+            "value": "address",
+            "label": "Adresse der Box zeigen"
           },
           {
             "value": "stop",
@@ -1277,6 +1309,10 @@
             "label": "Ausgabe wechseln"
           },
           {
+            "value": "address",
+            "label": "Adresse der Box zeigen"
+          },
+          {
             "value": "stop",
             "label": "Stopp"
           },
@@ -1368,6 +1404,10 @@
           {
             "value": "output",
             "label": "Ausgabe wechseln"
+          },
+          {
+            "value": "address",
+            "label": "Adresse der Box zeigen"
           },
           {
             "value": "stop",
@@ -1507,6 +1547,10 @@
             "label": "Ausgabe wechseln"
           },
           {
+            "value": "address",
+            "label": "Adresse der Box zeigen"
+          },
+          {
             "value": "stop",
             "label": "Stopp"
           },
@@ -1598,6 +1642,10 @@
           {
             "value": "output",
             "label": "Ausgabe wechseln"
+          },
+          {
+            "value": "address",
+            "label": "Adresse der Box zeigen"
           },
           {
             "value": "stop",
@@ -1737,6 +1785,10 @@
             "label": "Ausgabe wechseln"
           },
           {
+            "value": "address",
+            "label": "Adresse der Box zeigen"
+          },
+          {
             "value": "stop",
             "label": "Stopp"
           },
@@ -1828,6 +1880,10 @@
           {
             "value": "output",
             "label": "Ausgabe wechseln"
+          },
+          {
+            "value": "address",
+            "label": "Adresse der Box zeigen"
           },
           {
             "value": "stop",
@@ -1967,6 +2023,10 @@
             "label": "Ausgabe wechseln"
           },
           {
+            "value": "address",
+            "label": "Adresse der Box zeigen"
+          },
+          {
             "value": "stop",
             "label": "Stopp"
           },
@@ -2058,6 +2118,10 @@
           {
             "value": "output",
             "label": "Ausgabe wechseln"
+          },
+          {
+            "value": "address",
+            "label": "Adresse der Box zeigen"
           },
           {
             "value": "stop",
@@ -2197,6 +2261,10 @@
             "label": "Ausgabe wechseln"
           },
           {
+            "value": "address",
+            "label": "Adresse der Box zeigen"
+          },
+          {
             "value": "stop",
             "label": "Stopp"
           },
@@ -2288,6 +2356,10 @@
           {
             "value": "output",
             "label": "Ausgabe wechseln"
+          },
+          {
+            "value": "address",
+            "label": "Adresse der Box zeigen"
           },
           {
             "value": "stop",
@@ -2433,6 +2505,10 @@
             "label": "Ausgabe wechseln"
           },
           {
+            "value": "address",
+            "label": "Adresse der Box zeigen"
+          },
+          {
             "value": "stop",
             "label": "Stopp"
           },
@@ -2524,6 +2600,10 @@
           {
             "value": "output",
             "label": "Ausgabe wechseln"
+          },
+          {
+            "value": "address",
+            "label": "Adresse der Box zeigen"
           },
           {
             "value": "stop",
@@ -2619,6 +2699,10 @@
             "label": "Ausgabe wechseln"
           },
           {
+            "value": "address",
+            "label": "Adresse der Box zeigen"
+          },
+          {
             "value": "stop",
             "label": "Stopp"
           },
@@ -2710,6 +2794,10 @@
           {
             "value": "output",
             "label": "Ausgabe wechseln"
+          },
+          {
+            "value": "address",
+            "label": "Adresse der Box zeigen"
           },
           {
             "value": "stop",
@@ -2805,6 +2893,10 @@
             "label": "Ausgabe wechseln"
           },
           {
+            "value": "address",
+            "label": "Adresse der Box zeigen"
+          },
+          {
             "value": "stop",
             "label": "Stopp"
           },
@@ -2896,6 +2988,10 @@
           {
             "value": "output",
             "label": "Ausgabe wechseln"
+          },
+          {
+            "value": "address",
+            "label": "Adresse der Box zeigen"
           },
           {
             "value": "stop",
@@ -3040,6 +3136,10 @@
             "label": "Ausgabe wechseln"
           },
           {
+            "value": "address",
+            "label": "Adresse der Box zeigen"
+          },
+          {
             "value": "stop",
             "label": "Stopp"
           },
@@ -3131,6 +3231,10 @@
           {
             "value": "output",
             "label": "Ausgabe wechseln"
+          },
+          {
+            "value": "address",
+            "label": "Adresse der Box zeigen"
           },
           {
             "value": "stop",
@@ -3226,6 +3330,10 @@
             "label": "Ausgabe wechseln"
           },
           {
+            "value": "address",
+            "label": "Adresse der Box zeigen"
+          },
+          {
             "value": "stop",
             "label": "Stopp"
           },
@@ -3317,6 +3425,10 @@
           {
             "value": "output",
             "label": "Ausgabe wechseln"
+          },
+          {
+            "value": "address",
+            "label": "Adresse der Box zeigen"
           },
           {
             "value": "stop",
@@ -3412,6 +3524,10 @@
             "label": "Ausgabe wechseln"
           },
           {
+            "value": "address",
+            "label": "Adresse der Box zeigen"
+          },
+          {
             "value": "stop",
             "label": "Stopp"
           },
@@ -3503,6 +3619,10 @@
           {
             "value": "output",
             "label": "Ausgabe wechseln"
+          },
+          {
+            "value": "address",
+            "label": "Adresse der Box zeigen"
           },
           {
             "value": "stop",

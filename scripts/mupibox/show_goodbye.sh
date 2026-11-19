@@ -21,6 +21,9 @@ if [ "$1" = "--again" ]; then
 	exit 0
 fi
 
+# The OLED display (extension): its shutdown picture at once, in the background (nothing without the extension)
+[ -x /usr/local/bin/mupibox/oled_picture.sh ] && /usr/local/bin/mupibox/oled_picture.sh shutdown >/dev/null 2>&1 &
+
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 BS_OUT="/home/dietpi/MuPiBox/sysmedia/images/bootscreen"
 BS_SCENE=$(cat ${BS_OUT}/current 2>/dev/null)

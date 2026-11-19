@@ -92,6 +92,23 @@ function driverScript(config) {
   return SCRIPTS[config.reader] ?? null
 }
 
+/**
+ * The album knob (a rotary encoder with a push button, its own three pins): { a, b, button } when the settings name three different pins of
+ * 2-27, else null - then there is no knob.
+ */
+function knobConfig(settings) {
+  const pin = (v) => (Number.isInteger(v) && v >= 2 && v <= 27 ? v : 0)
+  const a = pin(settings?.knobA)
+  const b = pin(settings?.knobB)
+  const button = pin(settings?.knobButton)
+  return a && b && button && new Set([a, b, button]).size === 3 ? { a, b, button } : null
+}
+
+/** The command line of knob.py for the album knob (the program itself is added by the caller). */
+function knobArgs(knob, chip) {
+  return ['--chip', String(chip), '--a', String(knob.a), '--b', String(knob.b), '--button', String(knob.button)]
+}
+
 /** The command line of the driver for a configuration (the program itself is added by the caller). */
 function driverArgs(config, chip) {
   switch (config.reader) {
@@ -138,6 +155,11 @@ function readEvent(raw) {
       return /^[0-9A-F]{8,20}$/.test(String(raw.uid)) && Object.hasOwn(TECH_NAMES, String(raw.tech)) ? { event: 'tag', tech: String(raw.tech), uid: String(raw.uid) } : null
     case 'gone':
       return { event: 'gone' }
+    // (the album knob's driver, knob.py: a detent and a press of its button)
+    case 'turn':
+      return raw.direction === 1 || raw.direction === -1 ? { event: 'turn', direction: raw.direction } : null
+    case 'button':
+      return { event: 'button' }
     case 'error':
       return { event: 'error', code: text(raw.code, 30), message: text(raw.message) }
     default:
@@ -334,4 +356,4 @@ const spiRows = (state) => portRows('spi', state)
 const i2cRows = (state) => portRows('iic', state)
 const uartRows = (state) => portRows('uart', state)
 
-module.exports = { spiState, spiRows, i2cState, i2cRows, i2cKeysOn, uartState, uartRows, uartConsoles, portIsOn, portRows, TECH_NAMES, READERS, SLOTS, isUsb, readConfig, readConfigs, readerName, statusRowsAll, driverScript, driverArgs, uidText, tagNumberText, readEvent, problemText, statusRows, PROBLEMS }
+module.exports = { spiState, spiRows, i2cState, i2cRows, i2cKeysOn, uartState, uartRows, uartConsoles, portIsOn, portRows, TECH_NAMES, READERS, SLOTS, isUsb, readConfig, readConfigs, readerName, statusRowsAll, driverScript, knobConfig, knobArgs, driverArgs, uidText, tagNumberText, readEvent, problemText, statusRows, PROBLEMS }

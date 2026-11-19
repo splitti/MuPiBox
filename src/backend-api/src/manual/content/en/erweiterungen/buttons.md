@@ -79,6 +79,7 @@ A twin button needs **both** pins. As long as only one is chosen, the box does n
 | **Shuffle on/off** | toggles shuffle |
 | **Repeat all/one/off** | goes one step further with every press: first **all** (the album or playlist starts again at its end), then **one** (the track plays again and again), then **off** (no repeat). With the next album, playback starts without repeat again |
 | **Switch output** | switches to the next output: the box's sound cards and paired Bluetooth devices in turn |
+| **Show the address of the box** | shows a QR code with the address of the box on the [OLED display](oled.md) for ten seconds (nothing else); without that extension nothing happens |
 | **Stop** | ends playback |
 | **Switch off the box** | shuts the box down |
 | **No action** | the press does nothing |

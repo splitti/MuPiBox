@@ -48,11 +48,14 @@ if [ -n "${CARD}" ]; then
 fi
 
 # fan and rotary encoder: their services
+# (the rotary service also runs for the additional encoders, rotary.extra)
 for pair in 'fan.fan_active:mupi_fan' 'rotary.active:mupi_rotary'; do
 	key="${pair%%:*}"
 	svc="${pair##*:}.service"
 	[ -f "/etc/systemd/system/${svc}" ] || continue
-	if [ "$(j ".${key} // false")" = "true" ]; then
+	want=$(j ".${key} // false")
+	if [ "${key}" = "rotary.active" ] && [ "$(j '(.rotary.extra // []) | length > 0')" = "true" ]; then want=true; fi
+	if [ "${want}" = "true" ]; then
 		enabled "${svc}" || { echo "${svc} on (restored configuration)"; systemctl enable "${svc}"; }
 	elif enabled "${svc}"; then
 		echo "${svc} off (restored configuration)"

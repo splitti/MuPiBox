@@ -3,9 +3,13 @@
 Pure drawing (Pillow only): no hardware, no clock of its own besides the `now` it is given, so the screens can be tried
 and tested without a display. The layouts are made for 128 x 64 and 128 x 32 pixels.
 """
+import io
 import os
+import re
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFont
+
+import qr
 
 FONT_CANDIDATES = (
     '/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf',
@@ -16,6 +20,13 @@ BOLD_CANDIDATES = (
     '/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf',
     '/usr/share/fonts/dejavu/DejaVuSansMono-Bold.ttf',
 )
+
+# The pictures of the display (128 x 64, white on black): the ones the extension brings in images/ and, for the four the user may
+# change, their own ones in the data folder of the extension. What each view shows:
+CHANGEABLE = ('boot', 'idle', 'update', 'rest')
+VIEW_PICTURES = {'boot': 'boot', 'bye': 'shutdown', 'update': 'update', 'rest': 'rest'}
+# (the picture of the idle display: the reader that waits for a tag, the scanner that waits for a code, or the user's own one)
+IDLE_PICTURES = {'nfc': 'nfc', 'barcode': 'barcode', 'custom': 'idle'}
 
 # marquee: a long line waits a moment, scrolls to its end, waits again and starts over
 SCROLL_PX_PER_S = 28.0
@@ -46,6 +57,93 @@ class Fonts:
         self.big = _load(BOLD_CANDIDATES, 30)
         self.huge = _load(BOLD_CANDIDATES, 44)
         self.clock = _load(BOLD_CANDIDATES, 26)
+
+
+def fit_picture(image, width, height):
+    """A picture (any mode and size) as a 1-bit picture of width x height: scaled to fit (not stretched), black around it."""
+    image = image.convert('L')
+    if image.size != (width, height):
+        scale = min(width / image.width, height / image.height)
+        size = (max(1, round(image.width * scale)), max(1, round(image.height * scale)))
+        image = image.resize(size, Image.LANCZOS)
+        canvas = Image.new('L', (width, height), 0)
+        canvas.paste(image, ((width - size[0]) // 2, (height - size[1]) // 2))
+        image = canvas
+    return image.point(lambda v: 255 if v > 127 else 0).convert('1')
+
+
+class PictureError(ValueError):
+    """A picture the user chose that the display does not take: `code` says why (bad_size, not_1bit)."""
+
+    def __init__(self, code, message):
+        super().__init__(message)
+        self.code = code
+
+
+def check_picture(data, width=128, height=64):
+    """A picture the user chose (the bytes of a PNG, JPEG ...) as a 1-bit picture of width x height, white on black - only if it is one
+    already: exactly width x height points, every point pure black or pure white (no grey, no colour, nothing transparent). Nothing is
+    scaled, turned around or dithered: PictureError('bad_size' | 'not_1bit') for any other picture."""
+    source = Image.open(io.BytesIO(data))
+    source.load()
+    if source.size != (width, height):
+        raise PictureError('bad_size', 'the picture is %d x %d points, not %d x %d' % (source.width, source.height, width, height))
+    rgba = source.convert('RGBA')
+    if rgba.getchannel('A').getextrema()[0] != 255:
+        raise PictureError('not_1bit', 'the picture has transparent points')
+    red, green, blue = rgba.convert('RGB').split()
+    for channel in (red, green, blue):
+        histogram = channel.histogram()
+        if any(histogram[1:255]):
+            raise PictureError('not_1bit', 'the picture has grey or coloured points')
+    if ImageChops.difference(red, green).getbbox() or ImageChops.difference(green, blue).getbbox():
+        raise PictureError('not_1bit', 'the picture has coloured points')
+    return red.point(lambda v: 255 if v else 0).convert('1')
+
+
+class Pictures:
+    """Finds and loads the pictures: images/<name>.png of the extension, and for the changeable ones <custom>/<name>.png first.
+    A picture is read again when its file changed (the user chose another one); a file that cannot be read is no picture."""
+
+    def __init__(self, builtin=None, custom=None, width=128, height=64):
+        self.builtin = builtin if builtin is not None else os.path.join(os.path.dirname(os.path.abspath(__file__)), 'images')
+        self.custom = custom
+        self.width = width
+        self.height = height
+        self._kept = {}
+
+    def path(self, name):
+        if name in CHANGEABLE and self.custom:
+            own = os.path.join(self.custom, name + '.png')
+            if os.path.isfile(own):
+                return own
+        if name in ('idle',):
+            return None  # (no ready-made picture: the idle display shows the reader then)
+        built = os.path.join(self.builtin, name + '.png') if self.builtin else None
+        return built if built and os.path.isfile(built) else None
+
+    def is_own(self, name):
+        return name in CHANGEABLE and bool(self.custom) and os.path.isfile(os.path.join(self.custom, name + '.png'))
+
+    def get(self, name):
+        path = self.path(name)
+        if not path:
+            return None
+        try:
+            stat = os.stat(path)
+        except OSError:
+            return None
+        key = (path, stat.st_mtime_ns, stat.st_size)
+        kept = self._kept.get(name)
+        if kept and kept[0] == key:
+            return kept[1]
+        try:
+            with Image.open(path) as source:
+                image = fit_picture(source, self.width, self.height)
+        except (OSError, ValueError):
+            return None
+        self._kept[name] = (key, image)
+        return image
 
 
 def clock_text(seconds):
@@ -104,6 +202,7 @@ DIGITS = {
     '-': ('....', '....', '....', '####', '....', '....', '....'),
 }
 DIGIT_ADVANCE = 5
+IPV4 = re.compile(r'^\d{1,3}(\.\d{1,3}){3}$')
 # (the pictures of the status bar are the ones of the layout drawing, pixel by pixel; the digits of the drawing are "88" for the battery
 # and "100" for the volume - the other digits follow their style)
 ANTENNA = ('#########', '#...#...#', '.#..#..#.', '..#.#.#..', '...###...', '....#....', '....#....', '....#....', '....#....')
@@ -151,11 +250,12 @@ SPEAKER = ('......#.', '.....##.', '..#####.', '.#..###.', '.#..###.', '.#..###.
 
 
 class Screens:
-    def __init__(self, width=128, height=64, fonts=None):
+    def __init__(self, width=128, height=64, fonts=None, pictures=None):
         self.width = width
         self.height = height
         self.tall = height >= 48
         self.fonts = fonts or Fonts()
+        self.pictures = pictures or Pictures(width=width, height=height)
         # (the text of the lines that scroll and the moment it was set: a new text starts at its beginning)
         self._line_since = {}
         # (set while a picture is drawn: does a line of it scroll? Then the driver draws again soon)
@@ -335,6 +435,10 @@ class Screens:
 
     # ---- the screens ----------------------------------------------------------------------------------------------
     def boot(self):
+        # (the picture of the start: the logo, or the user's own one)
+        picture = self.pictures.get('boot')
+        if picture is not None:
+            return picture
         image, draw = self._canvas()
         self._note(draw, self.width // 2 - 14, 2 if self.tall else 0, 28 if self.tall else 24)
         if self.tall:
@@ -352,6 +456,9 @@ class Screens:
         draw.polygon([(stem_x, y + 2), (stem_x + size // 2, y + size // 3), (stem_x + size // 2 - 2, y + size // 2), (stem_x, y + size // 4)], fill=1)
 
     def poweroff(self):
+        picture = self.pictures.get('shutdown')
+        if picture is not None:
+            return picture
         image, draw = self._canvas()
         size = 30 if self.tall else 22
         cx, cy = self.width // 2, self.height // 2
@@ -363,7 +470,14 @@ class Screens:
         return Image.new('1', (self.width, self.height), 0)
 
     def idle(self, state, now):
-        """Nothing plays: the clock (with the date) when it is wanted, else the note."""
+        """Nothing plays: the picture the settings name (state['idle']: nfc, barcode or custom), the clock (with the date) when it is
+        wanted, else the note."""
+        slot = IDLE_PICTURES.get(state.get('idle'))
+        if slot:
+            # (the user's own picture, as long as there is none: the one of the reader)
+            picture = self.pictures.get(slot) or self.pictures.get('nfc')
+            if picture is not None:
+                return picture
         image, draw = self._canvas()
         if state.get('clock') and state.get('time'):
             time_text = state['time']
@@ -405,8 +519,31 @@ class Screens:
                 draw.rectangle((x0 + 2, cy - 2, max(x0 + 2, fill), cy + 2), fill=1)
         return image
 
+    def address_qr(self, ip):
+        """The address of the box as a QR code and nothing else: dark modules on a lit square (a phone reads that best), as large as the
+        display allows with a quiet zone of two modules. None when there is no address to make a code of."""
+        if not IPV4.match(str(ip or '')):
+            return None
+        matrix = qr.encode('http://%s' % ip)
+        n = len(matrix)
+        module = max(1, self.height // (n + 4))
+        side = (n + 4) * module
+        image, draw = self._canvas()
+        left, top = (self.width - side) // 2, (self.height - side) // 2
+        draw.rectangle((left, top, left + side - 1, top + side - 1), fill=1)
+        for y, row in enumerate(matrix):
+            for x, dark in enumerate(row):
+                if dark:
+                    px, py = left + (x + 2) * module, top + (y + 2) * module
+                    draw.rectangle((px, py, px + module - 1, py + module - 1), fill=0)
+        return image
+
     def info(self, state, now=0):
-        """WLAN name, address and version of the box. On 128 x 64: the layout of the status bar, three lines and the bottom row."""
+        """The address of the box as a QR code (see address_qr). Without an address (the box has no network): WLAN name, address and version -
+        on 128 x 64 the layout of the status bar, three lines and the bottom row."""
+        code = self.address_qr(state.get('ip'))
+        if code is not None:
+            return code
         image, draw = self._canvas()
         lines = ['LAN' if state.get('lan') else 'SSID:%s' % (state.get('ssid') or '-'), 'IP:%s' % (state.get('ip') or '-'), str(state.get('version') or '')]
         if self.tall:
@@ -421,6 +558,36 @@ class Screens:
             draw.text((0, 1 + i * 10), fit(line, font, draw, self.width - 8), font=font, fill=1)
         left = max(0.0, min(1.0, float(state.get('infoLeft', 1.0))))
         draw.rectangle((self.width - 4, 0, self.width - 1, int((self.height - 1) * left)), fill=1)
+        return image
+
+    def select(self, state, now):
+        """What the rotary knob is on while it chooses an album, a folder or an episode: where it is (the artist or folder), its name and
+        its place in the list. On 128 x 64 below the status bar, with the bottom row of the player when something plays."""
+        image, draw = self._canvas()
+        pick = state.get('pick') or {}
+        title, artist = pick.get('title') or '', pick.get('artist') or ''
+        index, count = pick.get('index') or 0, pick.get('count') or 0
+        place = '< %d/%d >' % (index, count) if count else ''
+        if self.tall:
+            self.status_bar(draw, state)
+            line = 12
+            if artist:
+                self._marquee(draw, ('select', 0), artist, line, self.fonts.row, now)
+                line += 13
+            self._marquee(draw, ('select', 1), title, line, self.fonts.text, now)
+            line += 14
+            if place:
+                w = draw.textlength(place, font=self.fonts.row)
+                draw.text(((self.width - w) // 2, line), place, font=self.fonts.row, fill=1)
+            if state.get('title') or state.get('playing') or state.get('elapsed') is not None:
+                self.bottom_row(draw, state)
+            return image
+        self._marquee(draw, ('select', 1), title, 2, self.fonts.text, now)
+        if artist:
+            self._marquee(draw, ('select', 0), artist, 14, self.fonts.small, now, width=self.width - 50)
+        if place:
+            w = draw.textlength(place, font=self.fonts.small)
+            draw.text((self.width - w, 14), place, font=self.fonts.small, fill=1)
         return image
 
     def play(self, state, now):
@@ -515,7 +682,7 @@ class Screens:
         return image
 
     def render(self, state, now):
-        """The picture for the state the extension reported (`view`: boot, off, overlay, info, idle or play)."""
+        """The picture for the state the extension reported (`view`: boot, off, overlay, info, select, idle or play)."""
         view = state.get('view') or 'idle'
         self.scrolling = False
         self.scroll_mode = state.get('scroll') if state.get('scroll') in ('loop', 'once', 'off') else 'loop'
@@ -525,10 +692,16 @@ class Screens:
             return self.poweroff()
         if view == 'off':
             return self.blank()
+        # (an update runs, or a rest time or the limit stops the box: the picture that says so)
+        if view in ('update', 'rest'):
+            picture = self.pictures.get(VIEW_PICTURES[view])
+            return picture if picture is not None else self.blank()
         if view == 'overlay' or state.get('overlay'):
             return self.overlay(state)
         if view == 'info':
             return self.info(state, now)
+        if view == 'select':
+            return self.select(state, now)
         if view == 'play':
             return self.play(state, now)
         return self.idle(state, now)

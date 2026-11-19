@@ -19,9 +19,10 @@
 const fs = require('node:fs')
 const path = require('node:path')
 const { execFile } = require('node:child_process')
-const { readConfigs, driverScript, driverArgs, isUsb, statusRows, statusRowsAll, tagNumberText, spiState, spiRows, i2cState, i2cRows, i2cKeysOn, uartState, uartRows, uartConsoles, portIsOn } = require('./logic.js')
+const { readConfigs, driverScript, knobConfig, knobArgs, driverArgs, isUsb, statusRows, statusRowsAll, tagNumberText, spiState, spiRows, i2cState, i2cRows, i2cKeysOn, uartState, uartRows, uartConsoles, portIsOn } = require('./logic.js')
 const { createRunner, headerChipNumber, detect } = require('./runner.js')
 const tags = require('./tags.js')
+const rotary = require('./rotary.js')
 const voice = require('./voice.js')
 
 const RESUME_WITHIN_MS = 30 * 60 * 1000
@@ -44,6 +45,15 @@ const SEEN_SAVE_MS = 6 * 60 * 60 * 1000
 // the same error of the reader (not connected, a wire loose) is logged once, then again after this time at the earliest:
 // the driver is started again every 10 minutes and says it again each time
 const ERROR_LOG_MS = 6 * 60 * 60 * 1000
+// The album knob has its own rotary encoder (knob.py, the pins knobA, knobB and knobButton of the settings): it chooses among the albums of the
+// tag that was laid on - nothing else; the box's knobs for the volume and the tracks are the core's (scripts/mupibox/rotary_control.py)
+const ROTARY_SECONDS = 20
+// (the display shows the album the knob stands on this long after the last turn: without a choice it goes back to what it showed before - the
+// player - and a press chooses nothing until the knob is turned again)
+const OLED_SELECT_S = 10
+// the albums of a collection are kept this long (the list of tags and the knob ask for them often), and no more are taken
+const ALBUMS_KEEP_MS = 60000
+const ALBUMS_MAX = 200
 
 exports.activate = (host) => {
   const log = host.log ?? console
@@ -310,6 +320,154 @@ exports.activate = (host) => {
     }
   }
 
+  // ---- collections and the rotary knob ---------------------------------------------------------------------------------------------
+  // A tag of an artist cover (or a folder) plays one of its albums; the knob steps through the others and a press plays the one it stands on.
+  // The albums are asked from the box's own API, as the app asks for them: [{ key, label, media }], the media being the album with the
+  // collection's keys - ready to be the tag's medium. Null when the list cannot be read (the box is busy, the NAS is away).
+  const albumsKept = new Map()
+  const apiJson = async (route) => {
+    try {
+      const response = await fetch(`${host.apiUrl}${route}`, { signal: AbortSignal.timeout(8000) })
+      return response.ok ? await response.json() : null
+    } catch {
+      return null
+    }
+  }
+  const byLabel = (a, b) => a.label.localeCompare(b.label, 'de', { numeric: true })
+  const listAlbums = async (collection) => {
+    const albums = []
+    const add = (raw, label) => {
+      const media = tags.inCollection(raw, collection)
+      if (media && albums.length < ALBUMS_MAX) albums.push({ key: tags.albumKey(media), label: String(label || tags.mediaLabel(media)).slice(0, 90), media })
+    }
+    if (collection.browse === 'entries') {
+      const items = await apiJson('/api/data')
+      if (!Array.isArray(items)) return null
+      for (const item of items) {
+        if (!item || typeof item !== 'object' || item.isResume === true || item.category === 'resume' || item.type === 'library') continue
+        // (what the app does: the names the parents gave a Smart-Sync entry win, a radio station is under "other")
+        const category = String(item.category_override ?? (item.category === 'radio' ? 'other' : (item.category ?? '')))
+        const title = String(item.title_override ?? item.title ?? item.artist_override ?? item.artist ?? '')
+        const artist = String(item.artist_override ?? item.artist ?? title)
+        if (artist !== collection.browseArtist || (collection.browseCategory && category !== collection.browseCategory)) continue
+        const media = { ...item }
+        for (const key of ['artist', 'title', 'cover', 'artistcover', 'category']) if (item[`${key}_override`]) media[key] = item[`${key}_override`]
+        add(media, title)
+      }
+      return albums.sort(byLabel)
+    }
+    const nas = collection.browse === 'nas'
+    // (a folder inside the folder - a series of albums - is looked into one level, its albums named "Series > Album")
+    const walk = async (folder, prefix, depth) => {
+      const children = await apiJson(`${nas ? '/api/nas/children' : '/api/library/children'}?path=${encodeURIComponent(folder)}`)
+      if (!Array.isArray(children)) return false
+      for (const child of children) {
+        if (!child || typeof child !== 'object' || child.ownFiles === true) continue
+        const address = String((nas ? child.nasPath : child.libraryPath) ?? '')
+        if (nas ? child.nasIsContainer : child.libraryIsContainer) {
+          if (depth < 2 && address) await walk(address, `${prefix}${child.title} \u203a `, depth + 1)
+        } else add(child, `${prefix}${child.title ?? ''}`)
+      }
+      return true
+    }
+    return (await walk(collection.browsePath, '', 1)) ? albums.sort(byLabel) : null
+  }
+  const albumsOf = async (collection, fresh = false) => {
+    const key = tags.collectionKey(collection)
+    const kept = albumsKept.get(key)
+    if (!fresh && kept && Date.now() - kept.at < ALBUMS_KEEP_MS) return kept.albums
+    const albums = await listAlbums(collection)
+    if (albums) {
+      albumsKept.set(key, { at: Date.now(), albums })
+      // (no more than a few collections are held)
+      for (const old of [...albumsKept.keys()].slice(0, Math.max(0, albumsKept.size - 20))) albumsKept.delete(old)
+    }
+    return albums ?? kept?.albums ?? null
+  }
+
+  // What the knob does: the state of rotary.js, and the display
+  let knob = rotary.idle()
+  // (the time of the choice is out: the knob has nothing to choose among any more, the display shows the player again)
+  const knobTimer = setInterval(() => {
+    if (knob.uid && !rotary.isActive(knob, Date.now())) endChoice()
+  }, 5000)
+  knobTimer.unref?.()
+  // (the display of the OLED extension, if it is there: what the knob stands on - or nothing, once the choice is made)
+  const showOnOled = (body) =>
+    fetch(`${host.apiUrl}/api/ext/oled/select`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(2000) }).catch(() => undefined)
+  // What the app sends for an assignment: an album, or an artist cover / folder (the first of its albums plays until the user chooses another)
+  const mediaOfRequest = async (raw) => {
+    const media = tags.sanitizeMedia(raw)
+    if (media) return media
+    const collection = tags.collectionOf(raw)
+    if (!collection) return null
+    return (await albumsOf(collection, true))?.[0]?.media ?? null
+  }
+  // The list of albums of a collection tag, to choose the one it plays when it is laid on: { label, value, choices, post } or null
+  const albumSelect = async (tag) => {
+    const collection = tags.collectionOf(tag.media)
+    if (!collection) return null
+    const albums = await albumsOf(collection)
+    if (!albums || albums.length === 0) return null
+    const current = tags.albumKey(tag.media)
+    const choices = albums.map((album) => ({ value: album.key, label: album.label }))
+    // (the album the tag plays is gone from the list - it left the box: it stays there as it is until another one is chosen)
+    if (!albums.some((album) => album.key === current)) choices.unshift({ value: current, label: String(tag.media.title ?? '').slice(0, 90) || tags.mediaLabel(tag.media) })
+    return { label: 'Album beim Auflegen', value: current, choices, post: '/api/ext/nfc/tagalbum' }
+  }
+  // The choice is over (another tag was laid on): the knob is the box's again and the display shows the player
+  const endChoice = () => {
+    clearTimeout(browseTimer)
+    knob = rotary.idle()
+    showOnOled({ clear: true })
+  }
+  // Turned but nothing chosen for OLED_SELECT_S seconds: the display goes back to the player, and the knob waits for the next turn (the album it
+  // stands on stays; a press does not choose it any more)
+  let browseTimer = null
+  const browseStart = () => {
+    clearTimeout(browseTimer)
+    browseTimer = setTimeout(() => {
+      if (knob.selecting) knob = { ...knob, selecting: false }
+      showOnOled({ clear: true })
+    }, OLED_SELECT_S * 1000)
+    browseTimer.unref?.()
+  }
+  // A tag of a collection was laid on: the knob is for its albums now (when the settings allow it)
+  const rotaryBegin = async (tag, settings) => {
+    const collection = tags.collectionOf(tag.media)
+    if (!collection || !knobConfig(settings)) return
+    const albums = await albumsOf(collection)
+    if (!albums || albums.length < 2) return
+    // (0 seconds: no limit - until a choice is made or another tag is laid on; not set at all: the default)
+    const asked = Number(settings.rotarySeconds)
+    const seconds = settings.rotarySeconds === undefined || !Number.isFinite(asked) ? ROTARY_SECONDS : Math.max(0, asked)
+    knob = rotary.begin({ uid: tag.uid, albums, currentKey: tags.albumKey(tag.media), seconds, now: Date.now() })
+  }
+  // The knob was turned by one detent: the next album or the one before, its name on the display
+  const knobTurned = (direction) => {
+    const result = rotary.turn(knob, direction, Date.now())
+    if (!result) return
+    knob = result.state
+    const { album, index, count } = result.shown
+    const collection = tags.collectionOf(album.media)
+    showOnOled({ title: album.label, artist: String(collection?.browseTitle ?? ''), index: index + 1, count, seconds: OLED_SELECT_S })
+    browseStart()
+  }
+  // The button of the knob was pressed: the album it stands on plays (only after the knob was turned)
+  const knobPressed = async () => {
+    const uid = knob.uid
+    const result = rotary.press(knob, Date.now())
+    if (!result) return
+    knob = result.state
+    clearTimeout(browseTimer)
+    showOnOled({ clear: true })
+    const tag = data.tags[uid]
+    if (tag) {
+      log.info(`[nfc] tag ${uid}: the knob chose ${result.album.label}`)
+      await start({ ...tag, media: result.album.media }, (await host.settings()) ?? {}, null, true)
+    }
+  }
+
   // (taking the tag off pauses or stops: a tag laid on only for a moment starts nothing - not for a USB reader, which never
   // says that a card went)
   const removeMatters = (settings, reader) => Boolean(reader) && !isUsb(reader.config.reader) && (settings.onRemove === 'pause' || settings.onRemove === 'stop')
@@ -490,6 +648,9 @@ exports.activate = (host) => {
     // (the tag that lay there while the driver started again: its medium plays already)
     if (again && !result.armedId) return
     if (result.kind !== 'unknown' && settings.playOnTag !== false) await start(result.tag, settings, reader)
+    // (a tag of an artist cover: the knob chooses among its albums for a while)
+    if (knob.uid && knob.uid !== result.tag.uid && !tags.collectionOf(result.tag.media)) endChoice()
+    if (result.kind !== 'unknown') rotaryBegin(result.tag, settings).catch((error) => log.warn(`[nfc] rotary: ${error?.message ?? error}`))
     // (a tag without a medium: the box says so - not while the assignment of one waits for it, then it is being given its medium)
     else if (result.kind === 'unknown' && !result.armedId) await say('tagNew', settings)
     // (a battery message held back: a child is at the box now)
@@ -567,11 +728,49 @@ exports.activate = (host) => {
   // (one change after the other: the pins and the SPI devices of the settings before are free before the new ones are taken)
   let chain = Promise.resolve()
   let running = '' // the driver and its arguments that run now
+  // the album knob's driver
+  let knobRunner = null
+  let knobRunning = ''
+  let knobError = ''
+  const onKnobEvent = (event) => {
+    if (event.event === 'turn') {
+      knobTurned(event.direction)
+    } else if (event.event === 'button') {
+      return knobPressed().catch((error) => log.warn(`[nfc] knob: ${error?.message ?? error}`))
+    } else if (event.event === 'error') {
+      if (`${event.code}` !== knobError) {
+        knobError = `${event.code}`
+        log.warn(`[nfc] album knob: ${event.code}: ${event.message}`)
+      }
+    } else if (event.event === 'ready') {
+      knobError = ''
+    }
+  }
   const apply = (settings) => {
     chain = chain
       .then(async () => {
         const configs = readConfigs(settings)
-        const chip = configs.some((config) => config.reader !== 'none' && !config.problem) ? headerChipNumber(await detect()) : 0
+        const knobWanted = knobConfig(settings)
+        const chip = knobWanted || configs.some((config) => config.reader !== 'none' && !config.problem) ? headerChipNumber(await detect()) : 0
+        // (the album knob: its driver runs while its three pins are set; another pin or none ends it first, its pins are free before the new ones are taken)
+        const knobCommand = knobWanted ? JSON.stringify(knobArgs(knobWanted, chip)) : ''
+        if (knobCommand !== knobRunning) {
+          await knobRunner?.stop()
+          knobRunner = null
+          knobRunning = ''
+          if (knobWanted) {
+            knobRunning = knobCommand
+            knobRunner = createRunner({
+              command: 'python3',
+              args: [path.join(dir, 'knob.py'), ...knobArgs(knobWanted, chip)],
+              onEvent: onKnobEvent,
+              ...(typeof host.spawnFn === 'function' ? { spawnFn: host.spawnFn } : {}),
+              log,
+            })
+            knobRunner.start()
+            log.info(`[nfc] album knob started (GPIO ${knobWanted.a}, ${knobWanted.b}, button ${knobWanted.button})`)
+          } else if (knob.uid) endChoice()
+        }
         const wantedOf = (config) => (config.reader === 'none' || config.problem ? '' : JSON.stringify([driverScript(config), ...driverArgs(config, chip)]))
         // (only another setting of the app - on taking off, start on laying on: the driver goes on, the medium plays on)
         const kept = new Map()
@@ -629,7 +828,10 @@ exports.activate = (host) => {
     return chain
   }
   // (the server ends: no driver may stay behind and hold the pins and the SPI devices)
-  process.once('exit', () => readers.forEach((reader) => reader.runner?.kill()))
+  process.once('exit', () => {
+    readers.forEach((reader) => reader.runner?.kill())
+    knobRunner?.kill()
+  })
   if (typeof host.onSettings === 'function') host.onSettings(apply)
   Promise.resolve(host.settings()).then(apply)
 
@@ -885,9 +1087,9 @@ exports.activate = (host) => {
   host.route(
     'post',
     '/arm',
-    (req, res) => {
+    async (req, res) => {
       const body = req.body && typeof req.body === 'object' ? req.body : {}
-      const media = tags.sanitizeMedia(body.media)
+      const media = await mediaOfRequest(body.media)
       if (!media) return res.status(400).json({ ok: false, error: 'not_startable', message: 'Dieses Medium lässt sich keinem Tag zuordnen' })
       if (readers.every((reader) => reader.view.phase === 'off' || reader.view.phase === 'error')) return res.status(409).json({ ok: false, error: 'no_reader', message: 'Der NFC-Leser ist nicht bereit' })
       const image = tags.sanitizeImage(body.image)
@@ -955,6 +1157,11 @@ exports.activate = (host) => {
     ],
   })
   const byRecent = (a, b) => b.assignedAt - a.assignedAt || b.lastSeen - a.lastSeen
+  // (a tag of an artist cover has the list of its albums in its row)
+  const rowWithAlbums = async (tag, page = false) => {
+    const select = await albumSelect(tag)
+    return select ? { ...tagRow(tag, page), select } : tagRow(tag, page)
+  }
 
   // The assignments as a file to keep (the page saves what this answers): { format, tags: [...] }
   host.route('get', '/tagexport', (_req, res) => res.json(tags.exportData(data)), { session: true })
@@ -983,8 +1190,9 @@ exports.activate = (host) => {
   host.route(
     'get',
     '/tags',
-    (_req, res) => {
-      res.json({ items: Object.values(data.tags).filter((tag) => tag.media).sort(byRecent).map((tag) => tagRow(tag, true)) })
+    async (_req, res) => {
+      const found = Object.values(data.tags).filter((tag) => tag.media).sort(byRecent)
+      res.json({ items: await Promise.all(found.map((tag) => rowWithAlbums(tag, true))) })
     },
     { session: true },
   )
@@ -993,11 +1201,12 @@ exports.activate = (host) => {
   host.route(
     'post',
     '/tagsfor',
-    (req, res) => {
-      const media = tags.sanitizeMedia(req.body?.media)
+    async (req, res) => {
+      const media = tags.sanitizeMedia(req.body?.media) ?? (tags.collectionOf(req.body?.media) ? req.body.media : null)
       if (!media) return res.json({ items: [] })
       const key = tags.mediumKey(media)
-      res.json({ items: Object.values(data.tags).filter((tag) => tag.media && tags.mediumKey(tag.media) === key).sort(byRecent).map((tag) => tagRow(tag)) })
+      const found = Object.values(data.tags).filter((tag) => tag.media && tags.mediumKey(tag.media) === key).sort(byRecent)
+      res.json({ items: await Promise.all(found.map((tag) => rowWithAlbums(tag))) })
     },
     { session: true },
   )
@@ -1038,15 +1247,33 @@ exports.activate = (host) => {
   host.route(
     'post',
     '/tagchange',
-    (req, res) => {
+    async (req, res) => {
       const body = req.body && typeof req.body === 'object' ? req.body : {}
       const uid = tags.normalizeUid(body.id)
       if (!uid || !data.tags[uid]?.media) return res.status(404).json({ ok: false, error: 'no_tag', message: 'Diesen Tag gibt es nicht mehr' })
-      const media = tags.sanitizeMedia(body.media)
+      const media = await mediaOfRequest(body.media)
       if (!media) return res.status(400).json({ ok: false, error: 'not_startable', message: 'Dieses Medium lässt sich keinem Tag zuordnen' })
       tags.giveToTag(data, uid, media, Date.now(), body.cover)
       saveTags()
       res.json({ ok: true, message: 'Tag geändert' })
+    },
+    { session: true },
+  )
+
+  // The album a tag of an artist cover plays when it is laid on ({ id, value } - the value is the key of one of the albums in its row)
+  host.route(
+    'post',
+    '/tagalbum',
+    async (req, res) => {
+      const uid = tags.normalizeUid(req.body?.id)
+      const tag = uid ? data.tags[uid] : null
+      const collection = tag?.media ? tags.collectionOf(tag.media) : null
+      if (!tag || !collection) return res.status(404).json({ ok: false, error: 'no_tag', message: 'Diesen Tag gibt es nicht mehr' })
+      const album = (await albumsOf(collection, true))?.find((entry) => entry.key === String(req.body?.value ?? ''))
+      if (!album) return res.status(400).json({ ok: false, error: 'no_album', message: 'Dieses Album gibt es nicht mehr' })
+      tag.media = album.media
+      saveTags()
+      res.json({ ok: true, message: 'Album gewählt' })
     },
     { session: true },
   )
@@ -1090,7 +1317,7 @@ exports.activate = (host) => {
 
   // (the reports of a driver, handed in directly: for the tests; `slot` is the reader that reports, the first by default.
   // checkBattery: one reading of the battery, as the timer makes it every half minute)
-  return { feed: (event, slot = 1) => onEvent(readers.find((reader) => reader.config.slot === slot) ?? readers[0], event), checkBattery: watchBattery }
+  return { feed: (event, slot = 1) => onEvent(readers.find((reader) => reader.config.slot === slot) ?? readers[0], event), feedKnob: onKnobEvent, checkBattery: watchBattery }
 }
 
 exports._test = { RESUME_WITHIN_MS }

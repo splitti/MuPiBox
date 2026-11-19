@@ -1,7 +1,7 @@
 {
   "id": "nfc",
   "name": "NFC-Extension",
-  "version": "0.12.4",
+  "version": "0.14.3",
   "description": "Bis zu drei NFC-Leser lesen Tags und Karten, auch gleichzeitig: der PN5180 (ISO 14443 A und ISO 15693), der RC522 und der PN532 (ISO 14443 A) oder ein USB-Leser, der die Kartennummer wie eine Tastatur tippt (auch ein USB-Barcodeleser). Jeder Tag kann ein Album, ein Hörspiel, einen Sender oder einen Podcast starten: In der Bibliothek das Medium öffnen, „NFC-Tag“ antippen und den Tag auflegen. Die Einstellungen stehen unter Einstellungen › NFC-Extension.",
   "hostApi": 12,
   "resources": {},
@@ -276,6 +276,24 @@
     "sayLowBatteryText": {
       "type": "string",
       "default": "Bitte stecke mich zum Laden an."
+    },
+    "knobA": {
+      "type": "gpio",
+      "default": 0
+    },
+    "knobB": {
+      "type": "gpio",
+      "default": 0
+    },
+    "knobButton": {
+      "type": "gpio",
+      "default": 0
+    },
+    "rotarySeconds": {
+      "type": "number",
+      "default": 20,
+      "min": 0,
+      "max": 120
     }
   },
   "system": {
@@ -835,6 +853,37 @@
           }
         ],
         "help": "Mit „Pausieren“ geht das Hörspiel weiter, wo es war, wenn der Tag innerhalb einer halben Stunde wieder aufliegt. Ein USB-Leser meldet das Abnehmen nicht: für ihn gilt das nicht."
+      },
+      {
+        "type": "heading",
+        "label": "Drehregler",
+        "page": true,
+        "help": "Ein Tag auf einem Artistcover (in der Bibliothek den Artisten öffnen, „NFC-Tag“ antippen) spielt das Album, das du in der Liste „Zugeordnete Tags“ gewählt hast. Dieser Drehregler (KY-040) ist nur für die Auswahl des Albums da: Nach dem Auflegen wählt er unter den Alben dieses Artisten, Drehen geht zum nächsten oder vorigen Album, ein Druck auf den Taster spielt es. Ein OLED-Display zeigt dabei den Namen, den der Drehregler gerade hat. Er hat eigene Pins, die nichts anderes nutzen; die Drehregler für Lautstärke und Titel stellst du unter Einstellungen › Audio › Drehregler und Taster ein. Ohne alle drei Pins gibt es den Album-Drehregler nicht."
+      },
+      {
+        "key": "knobA",
+        "label": "GPIO-Pin A (CLK)",
+        "help": "Zum Beispiel GPIO 5 (Pin 29). Nur Pins, die nichts anderes nutzt.",
+        "holder": "Drehregler NFC"
+      },
+      {
+        "key": "knobB",
+        "label": "GPIO-Pin B (DT)",
+        "help": "Zum Beispiel GPIO 6 (Pin 31).",
+        "holder": "Drehregler NFC"
+      },
+      {
+        "key": "knobButton",
+        "label": "GPIO-Pin Taster",
+        "help": "Der Taster des Drehreglers (nach Masse geschaltet) spielt das gewählte Album. Zum Beispiel GPIO 13 (Pin 33).",
+        "holder": "Drehregler NFC"
+      },
+      {
+        "key": "rotarySeconds",
+        "label": "Nach dem Auflegen aktiv (Sekunden)",
+        "dep": "knobButton",
+        "help": "So lange nach dem Auflegen, nach jedem Drehen und nach jeder Wahl wählt der Drehregler Alben. 0 heißt immer aktiv: bis du einen anderen Tag auflegst.",
+        "slider": true
       },
       {
         "type": "heading",

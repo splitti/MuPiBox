@@ -1,6 +1,6 @@
 # OLED display
 
-The **OLED display** extension shows on a small OLED display what the box plays: title, artist and album, the time, the track number, the volume, the WLAN, the battery of a MuPiHAT, shuffle and repeat, and the output (speaker, headphones, Bluetooth). When nothing plays it shows the clock. The box can also run **without the DSI display altogether** (see [Without DSI display](ohne-dsi-display.md)).
+The **OLED display** extension shows on a small OLED display what the box plays: title, artist and album, the time, the track number, the volume, the WLAN, the battery of a MuPiHAT, shuffle and repeat, and the output (speaker, headphones, Bluetooth). When nothing plays it shows a picture: by default the NFC reader, which waits for a tag. At start, during an update, in the rest time and at shutdown it has pictures of its own, which can be changed. The box can also run **without the DSI display altogether** (see [Without DSI display](ohne-dsi-display.md)).
 
 The chips **SSD1306**, **SH1106** and **SSD1309** on the **I2C connector** are supported, with **128 × 64** or **128 × 32** pixels, on the **Raspberry Pi 4 and the Pi 5**. The display needs no package apart from `python3-pil`, which the installation of the extension brings along.
 
@@ -32,7 +32,7 @@ The **status bar** at the top shows, from left to right:
 | aerial with bars | WLAN reception (without bars: no connection) |
 | screen with a network plug | the box is on the **LAN cable** (the symbol then takes the place of the aerial) |
 | number with battery | charge of the battery (only with a MuPiHAT) |
-| arrows with **A** or **1** | **repeat**: the whole list (A) or one track (1, with Spotify) |
+| arrows with **A** or **1** | **repeat**: the whole list (A) or one track (1). The repeat button of the Buttons & GPIO Input extension cycles through them: all (A), one (1), off |
 | crossed arrows | **shuffle** is on |
 | number and symbol at the right | volume and **output**: speaker, headphones or Bluetooth |
 
@@ -40,15 +40,19 @@ Below are **title**, **artist** and **album**; a long line scrolls by itself (or
 
 ![The time counts down, the output is Bluetooth](oled-play-bt.png)
 
-When nothing plays, the display shows the **clock** with the date (the weekday in the language of the box, which you choose under **Settings › System › Language**; German if none is chosen); after the time you set it switches off.
+When nothing plays, the display shows what is chosen under **Idle display**: the **NFC reader** (a hand with a card: the box waits for a tag, the default), the **barcode scanner**, the **clock** with the date (the weekday in the language of the box, which you choose under **Settings › System › Language**; German if none is chosen) or **your own picture**; after the time you set it switches off.
 
 ![The clock when idle](oled-idle.png)
 
-A short picture appears when playback starts or pauses and when the volume changes. The picture for the volume can be switched off with **Show the volume animation**. With **Show the address of the box** the **network page** appears for ten seconds: WLAN name (on the LAN cable **LAN** instead), address and version, with the symbol (i) at the top.
+A short picture appears when playback starts or pauses and when the volume changes. The picture for the volume can be switched off with **Show the volume animation**, the one for start and pause with **Show the play/pause animation**. With **Show the address of the box** a **QR code** with the address of the box appears for ten seconds, and nothing else. A phone scans it and opens the box in the browser. The same action can also be given to a button, a double button or the rotary knob ([Buttons & GPIO Input](buttons.md), [Rotary knob and button](../hardware/drehregler.md)). If the box has no network address, the display shows the **network page** instead, with WLAN name, address and version.
 
-![The network page](oled-info.png)
+![The QR code with the address of the box](oled-info.png)
+
+If the **rotary knob** chooses an album with the NFC extension ([NFC: Rotary knob](nfc-drehregler.md)), the information area shows the **name** the knob is on, with its place in the list. After the choice the normal picture comes back.
 
 ## Settings
+
+The settings are in cards: **Display** (chip, size, address, rotation), **Display** mode (what is shown), **Brightness** (brightness, darker in the evening, display off after), **Pictures** and **Without DSI display**.
 
 | Setting | Effect |
 | --- | --- |
@@ -57,8 +61,9 @@ A short picture appears when playback starts or pauses and when the volume chang
 | **I2C address** | **0x3C** or **0x3D** |
 | **Turn by 180°** | if the display is mounted upside down |
 | **Display while playing** | **Full** (the picture above), **Mix** (the track number large) or **Compact** (the time large) |
-| **Show the clock** | the clock when idle |
-| **Show the volume animation** | the short picture when the volume changes; when it is off the display stays as it is (play and pause still show theirs) |
+| **Idle display** (card **Pictures**) | what the display shows while nothing plays: **NFC reader** (default), **Barcode scanner**, **Clock** or **Own picture** |
+| **Show the volume animation** | the short picture when the volume changes; when it is off the display stays as it is |
+| **Show the play/pause animation** | the short picture with play or pause when playback starts or stops; when it is off the display stays as it is |
 | **Show the time** | **Elapsed** (counts up from the start) or **Remaining** (counts down to the end, with a minus); a station or podcast of unknown length counts up |
 | **Long texts** | **Scroll again and again** (default), **Scroll once** (the line scrolls through completely one time and then stays with "…" at the end) or **Do not scroll** (the line is cut with "…") |
 | **Brightness** | 0 to 255 |
@@ -70,6 +75,26 @@ A short picture appears when playback starts or pauses and when the volume chang
 The buttons **Show the address of the box** and **Next layout** try the display out: the second switches between **Full**, **Mix** and **Compact** until the next save. A change of chip, size, address or rotation restarts the display; the others apply at once.
 
 The **128 × 32** display shows title, artist, time, volume and WLAN in one layout.
+
+## Pictures
+
+The **Pictures** card shows the pictures of the display and where they appear. All are **128 × 64** dots, white on black.
+
+| Picture | When it appears | Changeable |
+| --- | --- | --- |
+| **Start picture** (the MuPiBox logo) | at boot, as soon as the display program starts, until the box is ready (two minutes at most) | yes |
+| **Idle: NFC reader** | when idle, if **Idle display** is **NFC reader** | no |
+| **Idle: Barcode scanner** | when idle, if **Idle display** is **Barcode scanner** | no |
+| **Idle: Own picture** | when idle, if **Idle display** is **Own picture** (until you choose one, the NFC reader stays) | yes |
+| **Update** | while an update runs | yes |
+| **Rest time and limit** (a sleeping face) | while a rest time runs or the limit is reached | yes |
+| **Shutdown** (the power symbol) | as soon as the box shuts down | no |
+
+Every picture has a button **Show picture**: the picture is then on the display for **ten seconds**, after which the display shows what it showed before. That way you see a picture without its occasion happening.
+
+For a changeable picture tap **Change picture** and choose a picture from your device. The box takes **only pictures that are exactly 128 × 64 points and consist of pure black and white only (1 bit)**; white is lit. The app checks this when you choose, the box checks again. A picture with another size, grey tones, colours or transparent parts is **refused**; nothing is scaled or converted. Prepare the picture beforehand in a graphics program (size 128 × 64, mode "black and white", with or without dithering as you like). **Reset** brings the original back.
+
+The update and shutdown pictures are drawn by the box itself, even when the server has stopped by then. The start picture appears as soon as the display program has started; a picture before that, while Linux is still starting, is not possible.
 
 ## If the display stays dark
 

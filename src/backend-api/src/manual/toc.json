@@ -460,6 +460,13 @@
         }
       },
       {
+        "id": "nfc-drehregler",
+        "title": {
+          "de": "NFC: Drehregler",
+          "en": "NFC: Rotary knob"
+        }
+      },
+      {
         "id": "nfc-leser",
         "title": {
           "de": "NFC: Leser hinzufügen",
