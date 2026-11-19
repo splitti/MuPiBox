@@ -457,6 +457,20 @@ if [ -z "$BRANCH" ]; then
       fi
       rm -f "${OWN_SCRIPT}"
       rm -rf ${PREFLIGHT_DIR}
+      # (in a systemd unit of its own without a terminal - systemd-run, as in the instructions for testing a branch: the
+      # box restarts as at the end of this script, see own_unit_restart there. That version's script only asks for it,
+      # and the display kept its maintenance screen until someone restarted the box. Not from the app or the admin
+      # interface, not in a terminal: the same checks.)
+      if [ "${rc}" = 0 ] && [ ! -L /home/dietpi/.mupibox/Sonos-Kids-Controller-master ] \
+         && [ -n "${INVOCATION_ID:-}" ] && [ -z "${MUPIBOX_UPDATE_LOCK_FOR:-}" ] && [ ! -t 1 ]; then
+        case "$(command -v whiptail)" in
+          /usr/bin/* | /bin/* | /usr/local/bin/* | "")
+            echo "Update finished - the box restarts."
+            sleep 5
+            systemctl reboot
+            ;;
+        esac
+      fi
       exit ${rc}
     fi
     echo "Error: the update script of ${TARGET_TAG} could not be downloaded - nothing was changed, please try again."
