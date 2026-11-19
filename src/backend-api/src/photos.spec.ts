@@ -300,6 +300,45 @@ test('photo Immich: the memories of the day - birthday first, then the newest ye
   } finally {
     server.close()
   }
+  // an older Immich: "for" unknown (400) - all memories, those of the day picked by the box; none at all (404): none
+  const { memoryOfDay } = await import('./app-api/photos/immich')
+  const day = localDay()
+  const iso = (offsetDays: number, h: number) => new Date(new Date(`${day}T${String(h).padStart(2, '0')}:00:00`).getTime() + offsetDays * 86_400_000).toISOString()
+  let knowsMemories = true
+  const old = http.createServer((req, res) => {
+    const url = req.url ?? ''
+    const json = (code: number, body: unknown) => {
+      res.writeHead(code, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify(body))
+    }
+    if (!knowsMemories) return json(404, { message: 'Cannot GET' })
+    if (url.includes('for=')) return json(400, { message: 'property for should not exist' })
+    if (url === '/api/memories')
+      return json(200, [
+        { type: 'on_this_day', memoryAt: '2024-01-01T00:00:00.000Z', showAt: iso(0, 0), hideAt: iso(0, 23), assets: [pic(21)] },
+        { type: 'on_this_day', memoryAt: '2024-01-01T00:00:00.000Z', showAt: iso(1, 0), hideAt: iso(1, 23), assets: [pic(22)] },
+        { type: 'on_this_day', memoryAt: '2024-01-01T00:00:00.000Z', showAt: iso(-1, 0), hideAt: iso(-1, 23), assets: [pic(23)] },
+      ])
+    json(404, {})
+  })
+  await new Promise<void>((r) => old.listen(0, '127.0.0.1', () => r()))
+  try {
+    const client = new ImmichClient(`http://127.0.0.1:${(old.address() as { port: number }).port}`, 'good-key-0123', 'en', 0)
+    const got = await client.album(MEMORIES_REF, AbortSignal.timeout(5000), false)
+    assert.equal(got.name, 'Memories')
+    assert.deepEqual(
+      got.items.map((x) => x.ref),
+      [id(21)],
+    )
+    knowsMemories = false
+    assert.deepEqual((await client.album(MEMORIES_REF, AbortSignal.timeout(5000), false)).items, [])
+  } finally {
+    old.close()
+  }
+  // without showAt/hideAt (still older): one of this day in an earlier year
+  assert.equal(memoryOfDay({ memoryAt: '2020-03-07T00:00:00.000Z' }, '2026-03-07'), true)
+  assert.equal(memoryOfDay({ memoryAt: '2026-03-07T00:00:00.000Z' }, '2026-03-07'), false)
+  assert.equal(memoryOfDay({ memoryAt: '2020-03-08T00:00:00.000Z' }, '2026-03-07'), false)
   // the switch: checked, kept, asked for by the sync, after the favourites
   const cfg: Record<string, unknown> = {}
   assert.equal(applyImmichSettings(cfg, { memories: 'yes' }), 'memories')

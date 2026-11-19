@@ -274,11 +274,26 @@ export interface ImmichAsset {
   height?: number | null
 }
 /** A memory of Immich: "on this day" (data.year) or a birthday (data.personName); shown from showAt to hideAt */
-interface ImmichMemory {
+export interface ImmichMemory {
   type?: string
   memoryAt?: string
+  showAt?: string | null
+  hideAt?: string | null
   data?: { year?: number; personName?: string }
   assets?: ImmichAsset[]
+}
+/**
+ * A memory shown on this day (YYYY-MM-DD, the box's day) - for an Immich that cannot be asked for one day: shown from
+ * showAt to hideAt; without them (older versions) one of this day of an earlier year.
+ */
+export function memoryOfDay(m: ImmichMemory, day: string): boolean {
+  if (!m || typeof m !== 'object') return false
+  const noon = new Date(`${day}T12:00:00`).getTime()
+  const show = Date.parse(String(m.showAt ?? ''))
+  const hide = Date.parse(String(m.hideAt ?? ''))
+  if (Number.isFinite(show) || Number.isFinite(hide)) return (!Number.isFinite(show) || show <= noon) && (!Number.isFinite(hide) || hide >= noon)
+  const at = String(m.memoryAt ?? '')
+  return /^\d{4}-\d{2}-\d{2}/.test(at) && at.slice(5, 10) === day.slice(5, 10) && at.slice(0, 4) < day.slice(0, 4)
 }
 
 export class ImmichClient implements RemoteClient {
@@ -398,15 +413,23 @@ export class ImmichClient implements RemoteClient {
   /**
    * The pictures of the memories Immich shows on this day (YYYY-MM-DD): the newest year first, a birthday before them;
    * each picture once. None that day: an empty list (the album is not on the display then) - so too when the key lacks
-   * memory.read (403): that is no key refused, the other albums go on (the app says what is missing).
+   * memory.read (403): that is no key refused, the other albums go on (the app says what is missing). An Immich without
+   * "for" (older, 400): all its memories, those of the day picked here; one without memories at all (404): none.
    */
   async memories(day: string, signal: AbortSignal, videos: boolean): Promise<ImmichAsset[]> {
     let list: ImmichMemory[]
     try {
       list = await this.json<ImmichMemory[]>(`/api/memories?for=${day}`, { signal })
     } catch (err) {
-      if (err instanceof ImmichRefused && err.status === 403) return []
-      throw err
+      if (!(err instanceof ImmichRefused)) throw err
+      if (err.status === 403 || err.status === 404) return []
+      if (err.status !== 400) throw err
+      try {
+        list = (await this.json<ImmichMemory[]>('/api/memories', { signal })).filter((m) => memoryOfDay(m, day))
+      } catch (again) {
+        if (again instanceof ImmichRefused && again.status >= 400 && again.status < 500) return []
+        throw again
+      }
     }
     const memories = (Array.isArray(list) ? list : []).filter((m) => m && Array.isArray(m.assets))
     const at = (m: ImmichMemory) => (typeof m.memoryAt === 'string' ? m.memoryAt : '')
@@ -549,10 +572,10 @@ export async function testImmich(client: ImmichClient): Promise<ImmichTest> {
     () => true,
     () => false,
   )
-  // (the memories: only with memory.read - the same)
+  // (the memories: only with memory.read - the same; an older Immich that does not know "for" (400) has them all the same)
   const memories = await client.json(`/api/memories?for=${localDay()}`).then(
     () => true,
-    () => false,
+    (err) => err instanceof ImmichRefused && err.status === 400,
   )
   return {
     ok: true,
