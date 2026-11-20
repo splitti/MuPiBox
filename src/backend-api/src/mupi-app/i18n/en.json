@@ -4783,5 +4783,7 @@
  "Podcast und Radio zeigen": "Show podcasts and radio",
  "Bild, falls vorhanden": "Picture, if there is one",
  "Titel und Uhrzeit": "Title and time",
- "Bei einem Podcast oder Radiosender: das Bild des Tags (siehe NFC-Extension › Zugeordnete Tags), solange der Tag das Medium gestartet hat und ein Bild hat, sonst und bei „Titel und Uhrzeit“ der Titel mit der Uhrzeit mittig darunter, doppelt so groß wie der Titel. Gilt für alle drei Anzeigen. Alben und Hörspiele zeigen ihr Bild des Tags immer.": "For a podcast or a radio station: the picture of the tag (see NFC extension › Assigned tags) while the tag started the medium and has a picture; otherwise, and with \"Title and time\", the title with the time of day centred below it, twice as large as the title. Applies to all three displays. Albums and audiobooks always show the picture of their tag."
+ "Bei einem Podcast oder Radiosender: das Bild des Tags (siehe NFC-Extension › Zugeordnete Tags), solange der Tag das Medium gestartet hat und ein Bild hat, sonst und bei „Titel und Uhrzeit“ der Titel mit der Uhrzeit mittig darunter, doppelt so groß wie der Titel. Gilt für alle drei Anzeigen. Alben und Hörspiele zeigen ihr Bild des Tags immer.": "For a podcast or a radio station: the picture of the tag (see NFC extension › Assigned tags) while the tag started the medium and has a picture; otherwise, and with \"Title and time\", the title with the time of day centred below it, twice as large as the title. Applies to all three displays. Albums and audiobooks always show the picture of their tag.",
+ "Dieser Tag hat schon ein OLED-Bild. Möchtest du es ändern?": "This tag already has an OLED picture. Do you want to change it?",
+ "Dieser Tag hat kein OLED-Bild": "This tag has no OLED picture"
 }

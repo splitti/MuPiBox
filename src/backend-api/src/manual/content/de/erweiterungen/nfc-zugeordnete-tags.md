@@ -30,7 +30,7 @@ Von links nach rechts:
 | Bild | **Bild ändern**: ein eigenes Bild für den Tag wählen, oder im selben Fenster mit **Cover des Mediums nehmen** das eigene Bild wieder abgeben, siehe [Bild des Tags ändern](nfc-bild.md) |
 | Abspielen | **Album abspielen**: startet das Medium des Tags, als hättest du den Tag aufgelegt |
 | Pfeile | **Tag ändern**: der Tag bekommt ein anderes Album, siehe unten |
-| Display | **OLED-Bild**: ein eigenes Bild für das OLED-Display, das beim Abspielen dieses Tags statt Fortschrittsbalken und Zeit steht, genau 128 × 50 Punkte, 1 Bit, siehe [OLED-Display](oled.md). Hat der Tag eins, steht daneben **OLED-Bild entfernen**. Die Knöpfe gibt es nur mit der OLED-Extension |
+| Display | **OLED-Bild**: ein eigenes Bild für das OLED-Display, das beim Abspielen dieses Tags statt Fortschrittsbalken und Zeit steht, genau 128 × 50 Punkte, 1 Bit, siehe [OLED-Display](oled.md). Hat der Tag schon eins, zeigt ein Fenster es zuerst, so wie es auf dem Display aussieht, und fragt, ob du es **ändern** oder **entfernen** möchtest. Den Knopf gibt es nur mit der OLED-Extension |
 | Papierkorb | **Entfernen**: nimmt den Tag aus der Liste, nach einer Rückfrage. Ein entfernter Tag gilt beim nächsten Auflegen wieder als neu und spielt nichts |
 
 Ein Tag, den du auflegst, der aber kein Medium hat, steht nicht in der Liste. Er spielt nichts.

@@ -4785,6 +4785,44 @@ function fillTagRows(box, rows, redraw, tiles = false) {
         add(
           String(action.label ?? ''),
           async () => {
+            // (`has`: the row already has such a picture - `view` answers it as { image }, `remove` takes it away. It is shown as it looks on
+            // the display and the user is asked: change it, take it away or leave it)
+            if (action.has === true && String(action.view ?? '').startsWith('/api/ext/')) {
+              const seen = await post(action.view, { id: row.id })
+              const shown = /^data:image\/png;base64,[A-Za-z0-9+/=]{1,300000}$/.test(String(seen.body?.image ?? '')) ? seen.body.image : ''
+              if (shown) {
+                const answer = await new Promise((resolve) => {
+                  let chosen = 'cancel'
+                  const canRemove = String(action.remove ?? '').startsWith('/api/ext/')
+                  openSheet(
+                    `<h2>${esc(tr(String(action.label ?? '')))}</h2>
+                     <img src="${shown}" alt="" style="display:block;width:100%;max-width:384px;height:auto;margin:4px auto;background:#000;border:1px solid #555;image-rendering:pixelated">
+                     <p class="help" style="margin:0">Dieser Tag hat schon ein OLED-Bild. Möchtest du es ändern?</p>
+                     <div class="btns"><button class="btn" data-close>Abbrechen</button>${canRemove ? '<button class="btn danger" data-remove>Entfernen</button>' : ''}<button class="btn primary" data-change>Ändern</button></div>`,
+                    (sheet, close) => {
+                      sheet.querySelector('[data-close]').onclick = close
+                      const removeButton = sheet.querySelector('[data-remove]')
+                      if (removeButton)
+                        removeButton.onclick = () => {
+                          chosen = 'remove'
+                          close()
+                        }
+                      sheet.querySelector('[data-change]').onclick = () => {
+                        chosen = 'change'
+                        close()
+                      }
+                    },
+                    () => setTimeout(() => resolve(chosen)),
+                  )
+                })
+                if (answer === 'remove') {
+                  const gone = await post(action.remove, { id: row.id })
+                  toast(said(gone, gone.ok ? 'Erledigt' : 'Hat nicht geklappt'), gone.ok ? 'ok' : 'info')
+                  redraw()
+                }
+                if (answer !== 'change') return
+              }
+            }
             const file = await chooseImageFile()
             if (!file) return
             if (!(exactW > 0 && exactW <= 2048 && exactH > 0 && exactH <= 2048)) return toast(tr('Hat nicht geklappt'), 'info')

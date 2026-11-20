@@ -935,6 +935,11 @@ test('the tag picture routes: a picture is checked as 128 x 50, kept by the id o
   }
   assert.deepStrictEqual((await asked('get /tagpictures')).body, { ids: ['AB12CD34'] })
   assert.strictEqual((await asked('get /tagpictures', {}, { socket: { remoteAddress: '192.168.1.9' } })).status, 403)
+  // (the page of the tags shows the picture of a tag before it is changed)
+  const seen = await pictureRoute(box, 'post /tagpictureview', { id: 'AB12CD34' })
+  assert.strictEqual(seen.body.image, 'data:image/png;base64,' + Buffer.from('PNG').toString('base64'))
+  assert.strictEqual((await pictureRoute(box, 'post /tagpictureview', { id: 'FFFFFFFF' })).status, 404)
+  assert.strictEqual((await pictureRoute(box, 'post /tagpictureview', { id: '../x' })).status, 400)
   assert.strictEqual((await asked('post /tagpictureforget', { id: 'AB12CD34' }, { headers: { 'x-forwarded-for': '10.0.0.2' } })).status, 403)
   assert.strictEqual(fsx.existsSync(pathx.join(tags, 'AB12CD34.png')), true)
   // (a tag that was removed takes its picture along; the user takes it away with the button)

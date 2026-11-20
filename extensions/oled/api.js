@@ -567,6 +567,23 @@ exports.activate = (host) => {
     { session: true },
   )
 
+  // The picture of a tag as a PNG data URL, for the page of the tags to show it before it is changed: { id } -> { image }
+  host.route(
+    'post',
+    '/tagpictureview',
+    (req, res) => {
+      const id = logic.tagIdOf(String(req.body?.id ?? ''))
+      if (!id) return res.status(400).json({ ok: false, error: 'bad_id', message: 'Dieser Tag lässt sich nicht ansprechen' })
+      try {
+        const data = fs.readFileSync(path.join(tagDir, `${id}.png`))
+        res.json({ ok: true, image: `data:image/png;base64,${data.toString('base64')}` })
+      } catch {
+        res.status(404).json({ ok: false, error: 'no_picture', message: 'Dieser Tag hat kein OLED-Bild' })
+      }
+    },
+    { session: true },
+  )
+
   // For the NFC extension, not behind the login but only from the box itself: which tags have a picture (it shows its button for them),
   // and { id } of a tag that was removed (its picture goes with it)
   host.route('get', '/tagpictures', (req, res) => {

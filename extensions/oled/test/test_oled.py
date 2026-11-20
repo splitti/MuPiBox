@@ -835,6 +835,25 @@ class BroadcastTest(unittest.TestCase):
         left, top, right, bottom = image.crop((0, 11, 128, 32)).getbbox()
         self.assertLess(abs(left - (128 - right)), 4)
 
+    def test_with_the_picture_the_time_of_day_is_where_the_track_number_was(self):
+        state = {**self.STATE, 'track': 3, 'tracks': 12, 'tagPicture': 'A1'}
+        for mode, box in (('mix', (40, 51, 77, 64)), ('full', (64, 53, 128, 64))):
+            radio = self.screens.render({**state, 'mode': mode}, 0)
+            album = self.screens.render({**state, 'mode': mode, 'broadcast': False}, 0)
+            self.assertNotEqual(radio.crop(box).tobytes(), album.crop(box).tobytes(), mode)
+            self.assertGreater(lit(radio, box), 5, mode)
+            # (another minute: only that place changes)
+            later = self.screens.render({**state, 'mode': mode, 'time': '14:36'}, 0)
+            self.assertNotEqual(radio.crop(box).tobytes(), later.crop(box).tobytes(), mode)
+            self.assertEqual(radio.crop((0, 0, 128, 50)).tobytes(), later.crop((0, 0, 128, 50)).tobytes(), mode)
+
+    def test_the_big_time_needs_no_second_one_in_the_row_below(self):
+        state = {**self.STATE, 'track': 3, 'tracks': 12}
+        mix = self.screens.render({**state, 'mode': 'mix'}, 0)
+        self.assertEqual(lit(mix, (41, 52, 76, 64)), 0, 'no track number and no second time in the middle cell')
+        full = self.screens.render({**state, 'mode': 'full'}, 0)
+        self.assertEqual(lit(full, (70, 53, 128, 64)), 0, 'nothing at the right of the bottom row')
+
     def test_without_a_time_of_day_the_usual_picture_stays(self):
         state = {**self.STATE, 'mode': 'mix', 'time': ''}
         self.assertEqual(self.screens.render(state, 0).tobytes(), self.screens.render({**state, 'broadcast': False}, 0).tobytes())

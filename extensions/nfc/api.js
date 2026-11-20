@@ -1179,8 +1179,16 @@ exports.activate = (host) => {
       // (the picture for the display of the OLED extension: exactly 128 x 50 points and 1 bit - the app checks it, the extension again)
       ...(page && oledPictures
         ? [
-            { label: 'OLED-Bild', icon: 'display', post: '/api/ext/oled/tagpicture', upload: true, exact: [128, 50], safe: true },
-            ...(oledPictures.has(tag.uid) ? [{ label: 'OLED-Bild entfernen', icon: 'undo', post: '/api/ext/oled/tagpicturereset', safe: true, confirm: 'Das OLED-Bild dieses Tags entfernen?' }] : []),
+            // (a tag that has one: the app shows it first and asks whether to change it or take it away - `view` and `remove`)
+            {
+              label: 'OLED-Bild',
+              icon: 'display',
+              post: '/api/ext/oled/tagpicture',
+              upload: true,
+              exact: [128, 50],
+              safe: true,
+              ...(oledPictures.has(tag.uid) ? { has: true, view: '/api/ext/oled/tagpictureview', remove: '/api/ext/oled/tagpicturereset' } : {}),
+            },
           ]
         : []),
       { label: 'Entfernen', icon: 'trash', post: '/api/ext/nfc/tagremove', confirm: 'Diesen Tag entfernen? Er spielt dann nichts mehr.' },

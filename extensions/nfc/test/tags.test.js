@@ -272,11 +272,13 @@ test('the API part: arm with a medium, lay a new tag on, the display is told to 
     const withOled = (await call(routes['get /tags'])).body.items[0]
     assert.deepStrictEqual(withOled.actions.map((a) => a.post ?? 'change'), ['/api/ext/nfc/tagplay', 'change', '/api/ext/oled/tagpicture', '/api/ext/nfc/tagremove'])
     const upload = withOled.actions.find((a) => a.post === '/api/ext/oled/tagpicture')
-    assert.deepStrictEqual([upload.upload, upload.exact, upload.icon], [true, [128, 50], 'display'])
+    assert.deepStrictEqual([upload.upload, upload.exact, upload.icon, upload.has], [true, [128, 50], 'display', undefined], 'no picture yet: the button goes straight to the choice')
     assert.ok(!withOled.text.includes('OLED-Bild'))
     oledIds = ['04A1B2C3']
     const hasOne = (await call(routes['get /tags'])).body.items[0]
-    assert.deepStrictEqual(hasOne.actions.map((a) => a.post ?? 'change'), ['/api/ext/nfc/tagplay', 'change', '/api/ext/oled/tagpicture', '/api/ext/oled/tagpicturereset', '/api/ext/nfc/tagremove'])
+    assert.deepStrictEqual(hasOne.actions.map((a) => a.post ?? 'change'), ['/api/ext/nfc/tagplay', 'change', '/api/ext/oled/tagpicture', '/api/ext/nfc/tagremove'])
+    const own = hasOne.actions.find((a) => a.post === '/api/ext/oled/tagpicture')
+    assert.deepStrictEqual([own.has, own.view, own.remove], [true, '/api/ext/oled/tagpictureview', '/api/ext/oled/tagpicturereset'], 'a picture there: the app shows it and asks')
     assert.ok(hasOne.text.includes('OLED-Bild'))
     assert.ok(!(await call(routes['post /tagsfor'], { body: { media: book } })).body.items[0].actions.some((a) => a.post?.startsWith('/api/ext/oled/')), 'the sheet of a medium has none')
     oledIds = null

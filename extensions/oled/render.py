@@ -523,8 +523,9 @@ class Screens:
         self._art(draw, left, 0, picture)
         self._big_digits(draw, left + first - 3, 1, '%d' % int(volume) if isinstance(volume, (int, float)) else '--', VOLUME_DIGITS, right=True)
 
-    def bottom_row(self, draw, state):
-        """The row at the bottom: what the player does and the time (up from the start, or down to the end), the track at the right."""
+    def bottom_row(self, draw, state, right=None):
+        """The row at the bottom: what the player does and the time (up from the start, or down to the end), the track at the right
+        (`right`: that text instead of the track - '' for none)."""
         font = self.fonts.row
         y = self.height - 11
         if state.get('playing'):
@@ -535,8 +536,12 @@ class Screens:
         text = shown_time(state)
         draw.text((9, y), text, font=font, fill=1)
         track, tracks = state.get('track'), state.get('tracks')
-        if track and tracks:
-            end = 9 + draw.textlength(text, font=font)
+        end = 9 + draw.textlength(text, font=font)
+        if right is not None:
+            w = draw.textlength(right, font=font)
+            if right and end + 4 + w <= self.width:
+                draw.text((self.width - w, y), right, font=font, fill=1)
+        elif track and tracks:
             for template in ('Track:%d/%d', '%d/%d'):
                 label = template % (track, tracks)
                 w = draw.textlength(label, font=font)
@@ -733,8 +738,8 @@ class Screens:
         self._row_text(draw, VOLUME_V_X, y, 'V')
         self._row_text(draw, VOLUME_END, y, '%d' % int(volume) if isinstance(volume, (int, float)) else '--', right=True)
 
-    def _status_bar(self, draw, state):
-        """The row at the bottom: time, track, volume, wireless."""
+    def _status_bar(self, draw, state, mid=None):
+        """The row at the bottom: time, track, volume, wireless. `mid`: the text of the middle cell instead of the track ('' for none)."""
         y = self.height - 11
         draw.line((0, y - 2, self.width, y - 2), fill=1)
         paused = not state.get('playing')
@@ -746,7 +751,8 @@ class Screens:
         self._row_text(draw, 1, y, left)
         draw.line((40, y - 3, 40, self.height), fill=1)
         track, tracks = state.get('track'), state.get('tracks')
-        mid = '%s/%s' % (track, tracks) if track and tracks else (str(track) if track else '')
+        if mid is None:
+            mid = '%s/%s' % (track, tracks) if track and tracks else (str(track) if track else '')
         self._row_text(draw, TRACK_END, y, mid[:5], right=True)
         draw.line((76, y - 3, 76, self.height), fill=1)
         self._volume_cell(draw, state, y)
@@ -757,7 +763,8 @@ class Screens:
         """The layout: status bar, title, artist and album (the ones there are), and the row with time and track."""
         image, draw = self._canvas()
         if self._tag_picture(image, state):
-            self.bottom_row(draw, state)
+            # (a radio station or a podcast: the time of day where the track number is)
+            self.bottom_row(draw, state, right=self._broadcast_time(state))
             return image
         self.status_bar(draw, state)
         lines = [state.get('title') or '', state.get('artist') or '', state.get('album') or '']
@@ -784,6 +791,10 @@ class Screens:
             return False
         image.paste(picture, (0, 0))
         return True
+
+    def _broadcast_time(self, state):
+        """The time of day for the place of the track number while a radio station or a podcast plays; None for any other medium."""
+        return str(state.get('time') or '') if state.get('broadcast') and state.get('time') else None
 
     def _has_tag_picture(self, state):
         """Is there a picture of the tag to show (the display is 128 x 64 and the tag has its file)?"""
@@ -822,12 +833,12 @@ class Screens:
         elif mode == 'mix':
             self._marquee(draw, ('broadcast', 0), title, 2, self.fonts.text, now)
             self._clock_centred(draw, state, 14, self.height - 13, size)
-            self._status_bar(draw, state)
+            self._status_bar(draw, state, mid='')
         else:
             self.status_bar(draw, state)
             self._marquee(draw, ('broadcast', 0), title, 13, self.fonts.text, now)
             self._clock_centred(draw, state, 27, self.height - 13, size)
-            self.bottom_row(draw, state)
+            self.bottom_row(draw, state, right='')
         return image
 
     def _play_mix(self, state):
@@ -837,7 +848,7 @@ class Screens:
             text, font = self._big_text(state)
             w = draw.textlength(text, font=font)
             draw.text(((self.width - w) // 2, 2), text, font=font, fill=1)
-        self._status_bar(draw, state)
+        self._status_bar(draw, state, mid=self._broadcast_time(state))
         return image
 
     def _play_lite(self, state):
