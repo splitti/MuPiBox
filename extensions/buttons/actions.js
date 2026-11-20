@@ -67,6 +67,11 @@ function createActions({ playerUrl, apiUrl, log = console, fetchFn = fetch }) {
       const response = await fetchFn(`${apiUrl}/api/ext/oled/address`, { method: 'POST', signal: AbortSignal.timeout(4000) })
       if (!response.ok) log.warn(`[buttons] address not shown: HTTP ${response.status}`)
     },
+    // (the next layout of the OLED display - full, mix, compact -: a route of that extension too)
+    screen: async () => {
+      const response = await fetchFn(`${apiUrl}/api/ext/oled/mode`, { method: 'POST', signal: AbortSignal.timeout(4000) })
+      if (!response.ok) log.warn(`[buttons] screen not changed: HTTP ${response.status}`)
+    },
     output: async () => {
       const response = await fetchFn(`${apiUrl}/api/audio-output`, { signal: AbortSignal.timeout(8000) })
       if (!response.ok) return

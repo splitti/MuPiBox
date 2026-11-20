@@ -24,7 +24,7 @@ The three pins are the default after installation. You can change them in the se
 | **GPIO pin A (CLK)**, **GPIO pin B (DT)**, **GPIO pin (button)** | the pins the knob is connected to (see "Changing the pins"). Each pin may also be **No pin** |
 | **Turn clockwise** (under pin A), **Turn counterclockwise** (under pin B) | what a detent in that direction does: **Louder**, **Quieter**, **Next track**, **Previous track** or **Off**. The default is louder clockwise and quieter counterclockwise |
 | **Step per detent** | how many percent each detent changes the volume, 1 to 10 (default 5); it appears only while a direction is **Louder** or **Quieter** |
-| **Function of the button (GPIO …)** | **Off**, **Play/Pause**, **Next track**, **Track selection (press to switch)**, **Fast-forward** or **Show the address of the box** |
+| **Function of the button (GPIO …)** | **Off**, **Play/Pause**, **Next track**, **Track selection (press to switch)**, **Fast-forward** or **Show the IP address of the box as a QR code** |
 
 The volume **maximum** (**Audio › Volume › Maximum (hearing protection)**) also applies to the knob: it never turns louder than allowed ([Sound and volume](sound.md)). The choice of button behaviour and the step size take effect at once. Switching the knob on and off restarts its service.
 
@@ -44,7 +44,7 @@ The rotary encoder takes the button's pin only while the button has a function; 
 | **Next track** | jumps to the next track |
 | **Track selection (press to switch)** | switches the knob between **volume** and **track selection** (see below) |
 | **Fast-forward** | jumps 30 seconds ahead |
-| **Show the address of the box** | shows a **QR code** with the address of the box on the [OLED display](../erweiterungen/oled.md) for ten seconds (nothing else) |
+| **Show the IP address of the box as a QR code** | shows a **QR code** with the IP address of the box on the [OLED display](../erweiterungen/oled.md) for ten seconds (nothing else) |
 | **Off** | does nothing |
 
 ### Choosing tracks with the knob
@@ -68,7 +68,7 @@ Below the first knob there is **Add rotary knob**. Each further knob has a card 
 | **GPIO pin A (CLK)**, **GPIO pin B (DT)**, **GPIO pin (button)** | the three pins of this knob (each may be **No pin**; a new knob is added without pins, you choose them afterwards) |
 | **Turn clockwise**, **Turn counterclockwise** | what a detent in that direction does: **Louder**, **Quieter**, **Next track**, **Previous track** or **Off** (default: louder clockwise, quieter counterclockwise) |
 | **Step per detent** | with **Louder** and **Quieter**: how many percent a detent changes |
-| **Function of the button** | **Off**, **Play/Pause**, **Next track**, **Fast-forward** or **Show the address of the box** |
+| **Function of the button** | **Off**, **Play/Pause**, **Next track**, **Fast-forward** or **Show the IP address of the box as a QR code** |
 | **Name** (top of the card) | the label of the knob |
 | Trash symbol (right of the name) | removes the knob; its pins are free again |
 

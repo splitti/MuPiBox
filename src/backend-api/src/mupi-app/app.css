@@ -1412,6 +1412,18 @@ textarea[hidden] { display: none; }
 .ext-group-del { margin-left: auto; flex: 0 0 auto; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--mp-border); border-radius: var(--mp-r); background: var(--mp-surface); color: var(--mp-muted); cursor: pointer; }
 .ext-group-del:hover, .ext-group-del:focus-visible { color: var(--mp-text); border-color: var(--mp-primary); }
 /* (a second choice beside a field - by how much, beside "louder") */
+/* a choice with a picture above each button (the display's modes) */
+.seg.seg-pics button { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 6px 8px; min-height: 0; }
+.seg.seg-pics img { display: block; width: 100%; height: auto; border-radius: 6px; background: #000; }
+/* the help of a field as a tooltip: an "i" beside the label */
+.lbl:has(.ext-tip) > b { display: inline; }
+/* a switch whose help is a tooltip: the switch follows the label (20 pixels after the "i"), not the far edge of the card */
+.row:has(.ext-tip) { justify-content: flex-start; gap: 20px; }
+.row:has(.ext-tip) .lbl { flex: 0 1 auto; }
+.ext-tip { position: relative; display: inline-block; margin-left: 6px; vertical-align: middle; }
+.ext-tip-btn { width: 18px; height: 18px; padding: 0; border-radius: 50%; border: 1px solid var(--mp-border); background: var(--mp-chip); color: var(--mp-muted); font: italic 700 12px/16px serif; cursor: help; }
+.ext-tip-text { display: none; position: absolute; z-index: 20; left: -8px; top: 24px; width: max-content; max-width: min(320px, 70vw); padding: 8px 10px; border-radius: 8px; background: var(--mp-card, #222); color: var(--mp-text, #eee); border: 1px solid var(--mp-border); box-shadow: 0 6px 20px #0006; font-size: 13px; font-weight: 400; line-height: 1.35; text-align: left; white-space: normal; }
+.ext-tip:hover .ext-tip-text, .ext-tip:focus-within .ext-tip-text { display: block; }
 .ext-with { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .ext-with > select.input:first-child { flex: 1 1 220px; min-width: 0; }
 .ext-with > .seg { flex: 1 1 auto; min-width: 0; }

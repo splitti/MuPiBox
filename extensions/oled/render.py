@@ -57,6 +57,15 @@ class Fonts:
         self.big = _load(BOLD_CANDIDATES, 30)
         self.huge = _load(BOLD_CANDIDATES, 44)
         self.clock = _load(BOLD_CANDIDATES, 26)
+        # (the number of the compact mode: the digits are 37 pixels high and 30 apart there, as measured on the photo of the display - the largest
+        # that leaves the bar of the progress above and the wireless bars below free; a long text takes a smaller size that fits)
+        self._lite = {}
+
+    def lite(self, size):
+        """The bold font of the compact mode in that size (loaded once)."""
+        if size not in self._lite:
+            self._lite[size] = _load(BOLD_CANDIDATES, size)
+        return self._lite[size]
 
 
 def fit_picture(image, width, height):
@@ -156,6 +165,20 @@ def clock_text(seconds):
     return '%d:%02d:%02d' % (h, m, s) if h else '%d:%02d' % (m, s)
 
 
+def shown_time(state, short=False):
+    """The time of the player the way the user chose ("Zeit zeigen"): up from the start, or - with `timeMode` 'down' - a minus and what is left
+    (a stream has no end to count down to: it counts up). `short` leaves out the seconds of a time with hours."""
+    elapsed, duration = state.get('elapsed'), state.get('duration')
+    if state.get('timeMode') == 'down' and isinstance(elapsed, (int, float)) and isinstance(duration, (int, float)) and duration > 0:
+        seconds, sign = max(0, duration - elapsed), '-'
+    else:
+        seconds, sign = elapsed, ''
+    text = clock_text(seconds)
+    if short and text.count(':') == 2:
+        text = text.rsplit(':', 1)[0]
+    return sign + text
+
+
 def fit(text, font, draw, width):
     """The text cut to the width with '…' at its end (for a line that does not scroll)."""
     if draw.textlength(text, font=font) <= width:
@@ -211,7 +234,13 @@ ANTENNA_BARS = (6, 8, 10, 12, 14)
 BATTERY = ('..##################', '..#................#', '###.##.##.##.##.##.#', '#.#.##.##.##.##.##.#', '#.#.##.##.##.##.##.#',
            '#.#.##.##.##.##.##.#', '###.##.##.##.##.##.#', '..#................#', '..##################')
 BATTERY_SEGMENT_X = (4, 7, 10, 13, 16)
-REPEAT = ('........#.....', '........##....', '..#########.#.', '........##..#.', '..#...#.#...#.', '.##..##.....#.', '..#.#########.', '..#..##.......', '..#...#.......')
+# (where the battery stands from the left of its two digits, the last column of the A beside the arrows of the repeat, and the gap between the
+# elements of the top row)
+BATTERY_X = 13
+REPEAT_MARK_END = 18
+STATUS_GAP = 5
+# (the loop of the two arrows without the stroke at its left, which looked like a 1 beside them)
+REPEAT = ('........#.....', '........##....', '..#########.#.', '........##..#.', '......#.#...#.', '.....##.....#.', '....#########.', '.....##.......', '......#.......')
 SHUFFLE = ('.........#...', '.........##..', '.####.######.', '....#.#..##..', '.....#...#...', '....#.#..##..', '.####.######.', '.........##..', '.........#...')
 # (nine pixels high, five wide, the battery's charge)
 CHARGE_DIGITS = {
@@ -242,11 +271,46 @@ VOLUME_DIGITS = {
     '-': ('.....', '.....', '.....', '.###.', '.....', '.....', '.....'),
 }
 BIG_ADVANCE = 6
+# (the text of the bottom row - time, track, volume - and of the network page: the chunky 5 x 7 pixels of the box's display, a step of 6;
+# copied pixel by pixel from photos of the real display. The slash goes one row below the line, the colon and the point are single dots)
+ROW_FONT = {
+    '0': ('.###.', '#...#', '#...#', '#.#.#', '#...#', '#...#', '.###.'),
+    '1': ('###..', '..#..', '..#..', '..#..', '..#..', '..#..', '#####'),
+    '2': ('.###.', '#...#', '....#', '...#.', '..#..', '.#...', '#####'),
+    '3': ('.###.', '#...#', '....#', '.###.', '....#', '#...#', '.###.'),
+    '4': ('...#.', '..##.', '.#.#.', '#..#.', '#####', '...#.', '...#.'),
+    '5': ('#####', '#....', '####.', '....#', '....#', '#...#', '.###.'),
+    '6': ('.###.', '#....', '#....', '####.', '#...#', '#...#', '.###.'),
+    '7': ('#####', '....#', '...#.', '..#..', '.#...', '.#...', '.#...'),
+    '8': ('.###.', '#...#', '#...#', '.###.', '#...#', '#...#', '.###.'),
+    '9': ('.###.', '#...#', '#...#', '.####', '....#', '....#', '.###.'),
+    'V': ('#...#', '#...#', '.#.#.', '.#.#.', '.#.#.', '..#..', '..#..'),
+    '/': ('....#', '...#.', '...#.', '..#..', '..#..', '.#...', '.#...', '#....'),
+    ':': ('.....', '.....', '..#..', '.....', '.....', '..#..', '.....'),
+    '.': ('.....', '.....', '.....', '.....', '.....', '.....', '.#...'),
+    '-': ('.....', '.....', '.....', '.###.', '.....', '.....', '.....'),
+    'P': ('####.', '#...#', '#...#', '####.', '#....', '#....', '#....'),
+    'A': ('.###.', '#...#', '#...#', '#####', '#...#', '#...#', '#...#'),
+    'U': ('#...#', '#...#', '#...#', '#...#', '#...#', '#...#', '.###.'),
+    'S': ('.####', '#....', '#....', '.###.', '....#', '....#', '####.'),
+    'E': ('#####', '#....', '#....', '####.', '#....', '#....', '#####'),
+    'I': ('.###.', '..#..', '..#..', '..#..', '..#..', '..#..', '.###.'),
+}
+# (the bottom row of the Mix mode and of the 128 x 32 display: the V of the volume, and where the track and the volume end)
+VOLUME_V_X = 79
+TRACK_END = 73
+VOLUME_END = 103
 HEADPHONES = ('..#####..', '.#.....#.', '#.......#', '#.......#', '#.......#', '##.....##', '###...###', '###...###', '##.....##')
 BLUETOOTH = ('..#....', '..##...', '#.#.#..', '.###...', '..#....', '.###...', '#.#.#..', '..##...', '..#....')
 # (a monitor with a network plug at its left and the cable going down: the box is on the wired network)
 LAN = ('###############', '#####.........#', '#.#.#.........#', '#...#.........#', '#####.........#', '..#...........#', '..#############', '..#......#.....', '..#...#####....')
 SPEAKER = ('......#.', '.....##.', '..#####.', '.#..###.', '.#..###.', '.#..###.', '..#####.', '.....##.', '......#.')
+
+
+def extent(rows):
+    """The first and the last lit column of a picture given as lines of text."""
+    lit = [i for row in rows for i, ch in enumerate(row) if ch == '#']
+    return min(lit), max(lit)
 
 
 class Screens:
@@ -346,6 +410,20 @@ class Screens:
             x += BIG_ADVANCE
         return start
 
+    @staticmethod
+    def row_width(text):
+        """How wide a text of the row font is (its last pixel included)."""
+        return len(text) * BIG_ADVANCE - 1 if text else 0
+
+    def _row_text(self, draw, x, y, text, right=False):
+        """Text in the row font (see ROW_FONT) with its top at y; with `right` its last pixel is at x. Unknown characters are a dash."""
+        text = str(text)
+        if right:
+            x -= self.row_width(text) - 1
+        for ch in text:
+            self._art(draw, x, y, ROW_FONT.get(ch.upper(), ROW_FONT['-']))
+            x += BIG_ADVANCE
+
     def _antenna(self, draw, x, y, level, lan=False):
         """The wireless access: the aerial and, to its right, five bars of growing height (the bars that carry are full).
         `level` is 0 to 4 as the extension reports it. On the wired network (`lan`) the network plug takes the place of both."""
@@ -366,7 +444,7 @@ class Screens:
         """The two digits of the charge (x is the left of the digits) and the battery with five segments."""
         value = max(0, min(99, int(percent)))
         self._big_digits(draw, x, y, '%02d' % value, CHARGE_DIGITS)
-        bx = x + 13
+        bx = x + BATTERY_X
         self._art(draw, bx, y, BATTERY)
         segments = 0 if value < 5 else min(5, (value + 15) // 20)
         # (the picture has all five segments: the ones the charge does not reach are taken out again)
@@ -389,17 +467,27 @@ class Screens:
     def status_bar(self, draw, state, info=False):
         """The top row of the 128 x 64 layout: wireless, battery (with a MuPiHAT), repeat, shuffle, the info mark while the
         network page is shown, and at the right the volume with the picture of where it plays."""
-        self._antenna(draw, 0, 0, state.get('wifi', -1), bool(state.get('lan')))
+        # (the elements stand in a row from the left, each 5 pixels after the one before - the ones that are not shown leave no gap)
+        x = 0
+        wifi, lan = state.get('wifi', -1), bool(state.get('lan'))
+        first, last = extent(LAN) if lan else extent(ANTENNA) if wifi < 0 else (0, ANTENNA_BARS[-1])
+        self._antenna(draw, x - first, 0, wifi, lan)
+        x += last - first + 1 + STATUS_GAP
         battery = state.get('battery')
         if isinstance(battery, (int, float)) and battery >= 0:
-            self._battery(draw, 17, 0, battery)
+            self._battery(draw, x, 0, battery)
+            x += BATTERY_X + extent(BATTERY)[1] + 1 + STATUS_GAP
         repeat = state.get('repeat')
         if repeat in ('all', 'track'):
-            self._repeat(draw, 51, 0, repeat)
+            first, last = extent(REPEAT)
+            self._repeat(draw, x - first, 0, repeat)
+            x += REPEAT_MARK_END - first + 1 + STATUS_GAP
         if state.get('shuffle'):
-            self._shuffle(draw, 72, 0)
+            first, last = extent(SHUFFLE)
+            self._shuffle(draw, x - first, 0)
+            x += last - first + 1 + STATUS_GAP
         if info:
-            self._info_icon(draw, 88, 0)
+            self._info_icon(draw, x, 0)
         volume = state.get('volume')
         output = state.get('output')
         # (the speaker, as drawn, ends at the edge; the picture of the headphones or of Bluetooth is a bit wider or narrower)
@@ -417,11 +505,7 @@ class Screens:
         else:
             draw.rectangle((0, y + 2, 1, y + 8), fill=1)
             draw.rectangle((4, y + 2, 5, y + 8), fill=1)
-        elapsed, duration = state.get('elapsed'), state.get('duration')
-        if state.get('timeMode') == 'down' and isinstance(elapsed, (int, float)) and isinstance(duration, (int, float)) and duration > 0:
-            text = '-' + clock_text(max(0, duration - elapsed))
-        else:
-            text = clock_text(elapsed)
+        text = shown_time(state)
         draw.text((9, y), text, font=font, fill=1)
         track, tracks = state.get('track'), state.get('tracks')
         if track and tracks:
@@ -549,7 +633,11 @@ class Screens:
         if self.tall:
             self.status_bar(draw, state, info=True)
             for i, line in enumerate(lines):
-                self._marquee(draw, ('info', i), line, 12 + i * 13, self.fonts.row, now)
+                # (the address in the pixels of the row font, as the other numbers of the display)
+                if i == 1 and re.match(r'^IP:(\d{1,3}(\.\d{1,3}){3}|-)$', line):
+                    self._row_text(draw, 0, 12 + i * 13 + 1, line)
+                else:
+                    self._marquee(draw, ('info', i), line, 12 + i * 13, self.fonts.row, now)
             if state.get('title') or state.get('playing') or state.get('elapsed') is not None:
                 self.bottom_row(draw, state)
             return image
@@ -609,22 +697,31 @@ class Screens:
         elif state.get('stream'):
             draw.rectangle((0, 0, self.width - 1, 1), fill=1)
 
+    def _volume_cell(self, draw, state, y):
+        """The volume of the bottom row: the V at the left of its cell, the number ending 3 pixels before the line that closes the cell
+        (`y` is the top of the pixel text)."""
+        volume = state.get('volume')
+        self._row_text(draw, VOLUME_V_X, y, 'V')
+        self._row_text(draw, VOLUME_END, y, '%d' % int(volume) if isinstance(volume, (int, float)) else '--', right=True)
+
     def _status_bar(self, draw, state):
         """The row at the bottom: time, track, volume, wireless."""
         y = self.height - 11
         draw.line((0, y - 2, self.width, y - 2), fill=1)
-        font = self.fonts.small
         paused = not state.get('playing')
-        left = 'PAUSE' if paused else clock_text(state.get('elapsed'))
-        draw.text((1, y), left, font=font, fill=1)
-        draw.line((40, y - 2, 40, self.height), fill=1)
+        left = 'PAUSE' if paused else shown_time(state)
+        # (the cell is 38 pixels wide: a time with hours and a minus has no room for its seconds)
+        if self.row_width(left) > 38:
+            left = shown_time(state, short=True)
+        y += 1
+        self._row_text(draw, 1, y, left)
+        draw.line((40, y - 3, 40, self.height), fill=1)
         track, tracks = state.get('track'), state.get('tracks')
         mid = '%s/%s' % (track, tracks) if track and tracks else (str(track) if track else '')
-        draw.text((43, y), mid[:5], font=font, fill=1)
-        draw.line((76, y - 2, 76, self.height), fill=1)
-        volume = state.get('volume')
-        draw.text((79, y), 'V%s' % (int(volume) if isinstance(volume, (int, float)) else '--'), font=font, fill=1)
-        draw.line((106, y - 2, 106, self.height), fill=1)
+        self._row_text(draw, TRACK_END, y, mid[:5], right=True)
+        draw.line((76, y - 3, 76, self.height), fill=1)
+        self._volume_cell(draw, state, y)
+        draw.line((106, y - 3, 106, self.height), fill=1)
         self._wifi(draw, state.get('wifi', -1), 110, self.height - 2, bool(state.get('lan')))
 
     def _play_full(self, state, now):
@@ -643,7 +740,7 @@ class Screens:
         track, tracks = state.get('track'), state.get('tracks')
         if track and tracks and tracks > 1:
             return str(track), self.fonts.huge
-        return clock_text(state.get('elapsed')), self.fonts.big
+        return shown_time(state), self.fonts.big
 
     def _play_mix(self, state):
         image, draw = self._canvas()
@@ -655,14 +752,23 @@ class Screens:
         return image
 
     def _play_lite(self, state):
+        """The compact mode: the track number (or the time) as large as the display allows, in the middle of it."""
         image, draw = self._canvas()
         self._progress(draw, state)
         text, font = self._big_text(state)
-        w = draw.textlength(text, font=font)
-        draw.text(((self.width - w) // 2, 8), text, font=font, fill=1)
+        size = 50 if font is self.fonts.huge else 34
+        font = self.fonts.lite(size)
+        # (a text that is wider than the display - a time with hours - takes the next smaller size)
+        while size > 20 and draw.textlength(text, font=font) > self.width - 4:
+            size -= 2
+            font = self.fonts.lite(size)
+        left, top, right, bottom = draw.textbbox((0, 0), text, font=font)
+        x = round((self.width - draw.textlength(text, font=font)) / 2)
+        # (centred on the display by its digits, not by the line the font reserves above and below them)
+        draw.text((x, round(self.height / 2 - (top + bottom) / 2)), text, font=font, fill=1)
         self._wifi(draw, state.get('wifi', -1), self.width - 18, self.height - 2, bool(state.get('lan')))
         if not state.get('playing'):
-            draw.text((1, self.height - 11), 'PAUSE', font=self.fonts.small, fill=1)
+            self._row_text(draw, 1, self.height - 10, 'PAUSE')
         return image
 
     def _play_compact(self, state, now):
@@ -675,9 +781,8 @@ class Screens:
         if sub and sub != title:
             self._marquee(draw, ('compact', 1), sub, 13, self.fonts.small, now)
         y = self.height - 9
-        draw.text((1, y), 'PAUSE' if not state.get('playing') else clock_text(state.get('elapsed')), font=self.fonts.small, fill=1)
-        volume = state.get('volume')
-        draw.text((60, y), 'V%s' % (int(volume) if isinstance(volume, (int, float)) else '--'), font=self.fonts.small, fill=1)
+        self._row_text(draw, 1, y + 1, 'PAUSE' if not state.get('playing') else shown_time(state))
+        self._volume_cell(draw, state, y + 1)
         self._wifi(draw, state.get('wifi', -1), self.width - 18, self.height - 2, bool(state.get('lan')))
         return image
 

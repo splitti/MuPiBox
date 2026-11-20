@@ -187,6 +187,15 @@ Die Nummer 5 (Taster) bringt im Manifest:
   Ein Feld mit `choices` kann eine zweite Auswahl neben sich haben: **`extra`** = `{ key, label?, when, choices }` – `key` ist eine eigene
   Einstellung mit `options`, `choices` nennt jede davon, und die Auswahl (eine Liste rechts neben dem Feld) steht nur da, solange das Feld
   einen der Werte aus `when` hat (bei den Tastern: der Lautstärke-Schritt neben „Lauter“ und „Leiser“).
+  Zwei Angaben, die keine neuere Box brauchen (eine Box, die sie nicht kennt, zeigt gewöhnliche Knöpfe und den Hilfetext unter dem Feld):
+  **`image`** an einem Eintrag von `choices` – ein Bild der Erweiterung (`.png`, `.jpg` oder `.svg`, ein Pfad wie `images/mode-full.png`, kein
+  `..`), das über dem Knopf steht (die OLED-Erweiterung zeigt so die Anzeige in jeder Betriebsart); und **`tip: true`** an einem Feld mit
+  `help` – der Hilfetext steht dann nicht unter dem Feld, sondern als Tooltip an einem „i“ neben der Beschriftung (Schalter).
+  Eine Überschrift mit `card: true` und **`core`** (`"brightness"` oder `"evening"`) lässt die Webapp die Karte im Aussehen der Box zeichnen
+  – Regler mit dem Wert in einer Kapsel, „Abends dunkler“ mit Sonnenuntergang, Ort und Abdunkeln – statt der Felder der Gruppe, die dann nicht
+  gezeichnet werden (eine Box, die `core` nicht kennt, zeigt sie wie gewohnt). `brightness` braucht die Einstellungen `contrast` und `sleepAfter`
+  (Zahlen), `evening` die Einstellungen `nightDim` (Schalter) und `nightContrast` (Zahl). Das Zeitfenster des Abends (Sonnenuntergang oder
+  Uhrzeiten, Abdunkeln, Ruhezeiten) ist das des Displays und wird hier wie dort eingestellt.
   Eine Überschrift und die Felder bis zur nächsten sind eine Gruppe. Mit **`rename`** (eine `string`-Einstellung) gibt der Benutzer der Gruppe
   einen Namen: die Überschrift ist dann ein Textfeld, `label` steht als Platzhalter darin. Mit **`optional`** (eine `boolean`-Einstellung) ist
   die Gruppe erst da, wenn man sie hinzufügt: aufeinanderfolgende Gruppen mit demselben `label` sind eine Reihe, unter der rechts ein
@@ -288,7 +297,7 @@ Die NFC-Extension 0.7 lässt bis zu **drei Leser gleichzeitig** laufen. Die Eins
 
 Ein Feld mit **`hideIf: { key, is: [...] }`** (ab NFC-Extension 0.9.2) wird versteckt, solange das Feld `key` – eine Einstellung mit `options` – angezeigt wird und einen der Werte aus `is` hat (ein Feld, das selbst versteckt ist, zählt nicht); zusammen mit `showIf` lassen sich so Bedingungen wie „nur beim PN532 am SPI-Anschluss“ ausdrücken: Der SPI-Pin (NSS) wird bei einem PN532 an I2C oder seriell nicht gefragt. Ein Kern, der `hideIf` nicht kennt, zeigt das Feld immer, `hostApi` bleibt 9.
 
-Die Nummer 10 (OLED-Display-Extension 0.1.3) bringt im Manifest **`slider: true`** für ein Feld einer Zahl mit `min` und `max`: ein Regler, dessen Wert man auch in das Feld daneben eintippen kann (die Zahl wird mit „Speichern“ übernommen wie jede andere), und im API-Teil `host.nightDim()` (oben).
+Die Nummer 10 (OLED-Display-Extension 0.1.3) bringt im Manifest **`slider: true`** für ein Feld einer Zahl mit `min` und `max`: ein Regler, dessen Wert man auch in das Feld daneben eintippen kann (der Wert wird gespeichert, sobald man den Regler loslässt oder das Feld verlässt – wie bei einem Schalter), und im API-Teil `host.nightDim()` (oben).
 
 Dieselbe Nummer 10 kennt bei einem Knopf (`type: "action"`) statt `post` auch **`download`** und **`upload`** (NFC-Extension 0.10.0; genau eines der drei, jeweils die Adresse einer Route der Erweiterung, `/api/ext/<id>/<name>`). **`download`** (mit **`file`**, dem Anfang des Dateinamens aus Kleinbuchstaben, Ziffern und `-`, höchstens 40 Zeichen) holt die JSON-Antwort der Route per GET und speichert sie als `<file>-JJJJ-MM-TT.json` auf dem Gerät, auf dem die Webapp läuft. **`upload`** lässt den Benutzer eine `.json`-Datei wählen (höchstens 900 kB) und schickt deren Inhalt als `{ file: <JSON> }` per POST an die Route; sie antwortet wie ein Knopf mit `{ ok, message }`, und eine Liste auf derselben Seite zeichnet sich danach neu. Dafür nimmt der Kern JSON-Bodies bis 1 MB an (vorher 100 kB). Die NFC-Extension nutzt das für „Tags exportieren“ (`GET /tagexport`) und „Tags importieren“ (`POST /tagimport`). Außerdem schreibt sie die Zuordnung bei jeder Änderung in `tag-assignments.json` (im Datenordner, mit `.bak` und Tageskopien in `backup/` für 7 Tage); die Datei ist im Backup der Box (`/api/app/backup`) und wird beim Zurückspielen wiederhergestellt, beim nächsten Start der Erweiterung übernommen, wenn sie von `tags.json` abweicht.
 

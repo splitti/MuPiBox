@@ -7,7 +7,8 @@
 //   what plays                          ->  GET <player>/local once in 0.5 s (once in 1.5 s while the display is off), and /state
 //                                           while Spotify plays, once in 20 s
 //   the status block of the page        ->  GET /state (the lines), POST /iicon (switch I2C on)
-//   the display itself                  ->  POST /info (the QR code with the address of the box), POST /mode (the next mode), POST /wake
+//   the display itself                  ->  POST /info (the QR code with the address of the box), POST /address and POST /mode (the same and the
+//                                           next mode, for a button of the box: only from the box itself), POST /wake
 //   the pictures                        ->  GET /images (the list on the page), POST /imageset (a picture the user chose), POST /imagereset;
 //                                           an update or the shutdown says itself in a file (scripts/mupibox/oled_picture.sh)
 'use strict'
@@ -308,7 +309,8 @@ exports.activate = (host) => {
     '/state',
     async (_req, res) => {
       const rows = logic.statusRows({ config, driver: phase, i2c: i2cNow(), kiosk: { headless: flagNow(), running: await kioskRunning() } })
-      res.json({ rows, mode: ui.mode ?? config.mode })
+      // (dimmed: the display is darker now because of the evening - the page says so in the card of the evening)
+      res.json({ rows, mode: ui.mode ?? config.mode, dimmed: config.nightDim && night.share > 0 })
     },
     { session: true },
   )
@@ -348,25 +350,24 @@ exports.activate = (host) => {
     { session: true },
   )
   // The same for a button of the box (the buttons extension, a knob's button): not behind the login, but only from the box itself
-  host.route('post', '/address', (req, res) => {
+  const fromTheBox = (req) => {
     const from = String(req.socket?.remoteAddress ?? '')
     // (the box's web server proxies to 8201: never from there, whatever header it sets)
-    if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(from) || req.headers['x-forwarded-for'] || req.socket?.localPort === 8201) return res.status(403).json({ ok: false })
+    return ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(from) && !req.headers['x-forwarded-for'] && req.socket?.localPort !== 8201
+  }
+  host.route('post', '/address', (req, res) => {
+    if (!fromTheBox(req)) return res.status(403).json({ ok: false })
     showAddress()
     res.json({ ok: true })
   })
 
-  // The next mode (full, mix, lite) until the settings are saved again
-  host.route(
-    'post',
-    '/mode',
-    (_req, res) => {
-      ui.mode = logic.nextMode(ui.mode ?? config.mode)
-      push(true)
-      res.json({ ok: true, mode: ui.mode, message: 'Anzeige wechselt' })
-    },
-    { session: true },
-  )
+  // The next mode (full, mix, lite) until the settings are saved again - for a button of the box (there is no button for it on the page)
+  host.route('post', '/mode', (req, res) => {
+    if (!fromTheBox(req)) return res.status(403).json({ ok: false })
+    ui.mode = logic.nextMode(ui.mode ?? config.mode)
+    push(true)
+    res.json({ ok: true, mode: ui.mode })
+  })
 
   // ---- the pictures ------------------------------------------------------------------------------------------------------------
   const ownPictures = () => logic.CHANGEABLE_IMAGES.filter((id) => fs.existsSync(path.join(customDir, `${id}.png`)))

@@ -8242,11 +8242,14 @@ const ndCurrent = () => {
 
 // "Ab"/"Bis" are only asked for when the window is not sunset to sunrise: sunset is off, or the box has no place / today no sunset or sunrise
 const ndFixedNow = (nd) => !state.values.get('ndSun') || !(nd.sunsetAt && nd.sunriseAt)
+// (the switch that says "Abends dunkler is on" for the card that is shown: the display's own, or - on the page of the OLED extension,
+// which has the same card - the extension's)
+let ndGate = 'ndOn'
 
 // the lines of the block: the place, and the sunset and sunrise of today
 function drawNdPlace() {
   const nd = disp.opts?.nightDim ?? {}
-  const fixed = !!state.values.get('ndOn') && ndFixedNow(nd)
+  const fixed = !!state.values.get(ndGate) && ndFixedNow(nd)
   state.values.set('ndFixed', fixed)
   for (const d of document.querySelectorAll('[data-dep="ndFixed"]')) d.hidden = !fixed
   const box = $('#nd-place-box')
@@ -9709,6 +9712,13 @@ async function loadDisplaySettings() {
   state.values.set('dlcdRot', rotLabel(LCD_ROT, o.rotation.display_lcd_rotate))
   state.values.set('resX', String(o.resX))
   state.values.set('resY', String(o.resY))
+  setNightValues(o)
+}
+
+// The values of "Abends dunkler" as the box has them (the display's own switch, the window, the fade, the quiet hours - which the
+// OLED extension's card shares with the display)
+function setNightValues(o) {
+  ndGate = 'ndOn'
   const nd = o.nightDim ?? {}
   state.values.set('ndOn', nd.enabled === true)
   state.values.set('ndFrom', nd.from ?? '19:00')
@@ -9879,7 +9889,7 @@ const BTN_FN = [
   // (a press switches the knob for 10 s from the volume to the tracks: one track per detent)
   ['Titelwahl (Drücken schaltet um)', 'tracks'],
   ['Vorspulen', 'ffwd'],
-  ['Adresse der Box zeigen', 'address'],
+  ['IP-Adresse der Box als QR-Code anzeigen', 'address'],
 ]
 
 // The three pins of the rotary encoder: the setting, the name in the box's answer and in its configuration, what the field is called.
@@ -9913,7 +9923,7 @@ const RK_BUTTONS = [
   ['Play/Pause', 'playpause'],
   ['Nächster Titel', 'next'],
   ['Vorspulen', 'ffwd'],
-  ['Adresse der Box zeigen', 'address'],
+  ['IP-Adresse der Box als QR-Code anzeigen', 'address'],
 ]
 const RK_PIN_PARTS = [
   ['a', 'a', 'pinA', 'GPIO-Pin A (CLK)'],
@@ -17614,7 +17624,9 @@ function extFormHtml(e, fields, cards = false) {
   }
   const one = (it, index) => {
       const k = esc(it.key)
-      const help = it.help ? `<small class="help">${esc(it.help)}</small>` : ''
+      // (tip: the help is a tooltip beside the label - an "i" that shows the text on hover, focus and tap - not a line under the field)
+      const help = it.help && !it.tip ? `<small class="help">${esc(it.help)}</small>` : ''
+      const tip = it.help && it.tip ? `<span class="ext-tip"><button type="button" class="ext-tip-btn" aria-label="${esc(it.help)}">i</button><span class="ext-tip-text" role="tooltip">${esc(it.help)}</span></span>` : ''
       if (it.type === 'heading') {
         // a line that starts a group of fields (button 1, button 2 ...): a name the user gives it (rename: the label stands there
         // while it has none), and a button that takes the group away again (optional)
@@ -17648,7 +17660,7 @@ function extFormHtml(e, fields, cards = false) {
         return `<div class="field"><label>${esc(it.label)}</label><ul class="ext-roster" data-xroster="${index}" aria-live="polite"></ul><div class="row" style="gap:8px"><input class="input" type="text" maxlength="24" data-xradd="${index}" placeholder="Name" autocomplete="off" aria-label="${esc(it.label)}" ${NO_PW_MANAGER}><button type="button" class="btn" data-xraddgo="${index}">Anlegen</button></div>${it.addFrom ? `<div class="field ext-roster-from"><label for="xrfrom-${index}">Bibliothek</label><select class="input" id="xrfrom-${index}" data-xrfrom="${index}"><option value="">Leere Bibliothek</option></select></div>` : ''}<div data-xrtrash="${index}"></div>${help}</div>`
       }
       if (type(it) === 'boolean') {
-        return `<div class="row" data-ext-dep="${esc(it.dep ?? '')}"><span class="lbl"><b>${esc(it.label)}</b>${help}</span><label class="switch"><input type="checkbox" data-xk="${k}" ${e.settings?.[it.key] ? 'checked' : ''} aria-label="${esc(it.label)}"><span></span></label></div>`
+        return `<div class="row" data-ext-dep="${esc(it.dep ?? '')}"><span class="lbl"><b>${esc(it.label)}</b>${tip}${help}</span><label class="switch"><input type="checkbox" data-xk="${k}" ${e.settings?.[it.key] ? 'checked' : ''} aria-label="${esc(it.label)}"><span></span></label></div>`
       }
       if (it.type === 'lookup') {
         // a search of the extension's own API part: a few words, then the places that fit to choose from
@@ -17673,8 +17685,11 @@ function extFormHtml(e, fields, cards = false) {
       }
       if (it.choices) {
         const now = e.settings?.[it.key]
-        const seg = `<div class="seg" data-xseg="${k}">${it.choices.map((c) => `<button type="button" aria-pressed="${c.value === now}" data-v="${esc(c.value)}">${esc(c.label)}</button>`).join('')}</div>`
-        return `<div class="field" data-ext-dep="${esc(it.dep ?? '')}"><label>${esc(it.label)}</label>${it.extra ? `<div class="ext-with">${seg}${extra(it)}</div>` : seg}${help}</div>`
+        // (a choice with a picture - the display in each of its modes: the picture stands above the button's name)
+        const pics = it.choices.some((c) => c.image)
+        const face = (c) => (c.image ? `<img src="/api/ext-files/${esc(e.id)}/${esc(c.image)}" alt="" loading="lazy"><span>${esc(c.label)}</span>` : esc(c.label))
+        const seg = `<div class="seg${pics ? ' seg-pics' : ''}" data-xseg="${k}">${it.choices.map((c) => `<button type="button" aria-pressed="${c.value === now}" data-v="${esc(c.value)}">${face(c)}</button>`).join('')}</div>`
+        return `<div class="field" data-ext-dep="${esc(it.dep ?? '')}"><label>${esc(it.label)}${tip}</label>${it.extra ? `<div class="ext-with">${seg}${extra(it)}</div>` : seg}${help}</div>`
       }
       // (a number as a slider from min to max; its value stands in a box beside the label, where it can be typed as well)
       if (it.slider && type(it) === 'number' && Number.isFinite(e.settingRanges?.[it.key]?.min) && Number.isFinite(e.settingRanges?.[it.key]?.max)) {
@@ -17830,7 +17845,7 @@ function extFormMount(sheet, e, fields, saved, redraw) {
       else input.checked = !input.checked
     }
   }
-  // (a slider with a box for its value: they follow each other; the value is saved with the rest, by the button)
+  // (a slider with a box for its value: they follow each other)
   for (const range of sheet.querySelectorAll('input[type="range"][data-xr]')) {
     const box = sheet.querySelector(`input[data-xk="${CSS.escape(range.dataset.xr)}"]`)
     if (!box) continue
@@ -17844,13 +17859,18 @@ function extFormMount(sheet, e, fields, saved, redraw) {
       range.value = String(Math.min(Number(range.max), Math.max(Number(range.min), Number(box.value))))
       fill()
     }
-    // (left with a value outside the range or none: it goes back into the range)
-    box.onchange = () => {
+    // (the value is saved as soon as the slider is let go or the box is left - like a switch, not with the button: the box then works with it
+    // at once. A value outside the range or none goes back into the range first)
+    const keep = async () => {
       const clamped = Math.min(Number(range.max), Math.max(Number(range.min), Math.round(Number(box.value) || Number(range.min))))
       box.value = String(clamped)
       range.value = box.value
       fill()
+      const ok = await save({ [range.dataset.xr]: clamped }, false)
+      if (ok) e.settings[range.dataset.xr] = clamped
     }
+    box.onchange = keep
+    range.onchange = keep
   }
   // (the name of a group: saved when the field is left or with Enter)
   for (const input of sheet.querySelectorAll('input[data-xname]')) {
@@ -18619,14 +18639,100 @@ function withoutAdopted(sections) {
   return sections.map((sec) => ((sec.items || []).some(moved) ? { ...sec, items: sec.items.filter((i) => !moved(i)) } : sec)).filter((sec, i) => sec === sections[i] || sec.items.length > 0)
 }
 
+// Cards of the box's own look that the page of an extension may ask for: a heading with `core` (and `card`) draws the card the way the
+// display's page does - sliders with the value in a pill, "Abends dunkler" with the sunset, the place and the fade - for the settings
+// the extension has (brightness: `contrast` and `sleepAfter`; evening: `nightDim` and `nightContrast`). The box that does not know it
+// draws the fields of the group as usual. The window of the evening (the sunset or the hours, the fade, the quiet hours) is the one
+// of the display: it is set there and here alike.
+const EXT_CORE_CARDS = new Set(['brightness', 'evening'])
+const extCoreKind = (it) => (it.type === 'heading' && it.card && EXT_CORE_CARDS.has(it.core) ? it.core : null)
+// (the keys of the cards on the page, and the setting of the extension each stands for)
+const EXT_CORE_KEYS = { oledBright: 'contrast', oledOff: 'sleepAfter', oledNight: 'nightDim', oledLevel: 'nightContrast' }
+const EXT_CORE_SHARED = ['ndSun', 'ndFade', 'ndQuiet', 'ndFrom', 'ndTo']
+// the fields of such a group are not drawn by the form: the card is
+function extWithoutCore(items) {
+  let skip = false
+  return items.filter((it) => {
+    if (it.type === 'heading') skip = !!extCoreKind(it)
+    return it.type === 'heading' || !skip
+  })
+}
+// The card for a heading of that kind; `dimmed`: the evening is on the display now
+function extCoreSection(e, heading, dimmed) {
+  if (heading.core === 'brightness') {
+    const range = e.settingRanges?.contrast ?? { min: 1, max: 255 }
+    const stops = (e.ui.items.find((i) => i.key === 'sleepAfter')?.choices ?? []).map((c) => Number(c.value)).sort((a, b) => a - b)
+    return {
+      title: heading.label,
+      help: 'Gilt sofort.',
+      wide: true,
+      items: [
+        { type: 'slider', key: 'oledBright', label: 'Helligkeit', min: Math.max(1, range.min), max: range.max, step: 1 },
+        { type: 'slider', key: 'oledOff', label: 'Display aus nach', stops, unit: ' min', zero: 'Nie' },
+      ],
+    }
+  }
+  const range = e.settingRanges?.nightContrast ?? { min: 1, max: 255 }
+  const on = !!state.values.get('oledNight')
+  return {
+    title: heading.label,
+    badge: on ? (dimmed ? { text: 'gerade gedimmt', kind: 'ok' } : { text: 'an', kind: 'ok' }) : { text: 'aus' },
+    wide: true,
+    items: [
+      { type: 'toggle', key: 'oledNight', label: 'Abends dunkler', help: 'Das Display wird abends dunkler und morgens wieder normal hell.' },
+      { type: 'toggle', key: 'ndSun', label: 'An Sonnenuntergang anpassen', help: 'Das Display wird dunkler, sobald die Sonne untergeht, und morgens beim Sonnenaufgang wieder heller – statt zu festen Uhrzeiten. Die Box rechnet beides selbst aus, dafür braucht sie den Ort.', dep: 'oledNight', flat: true },
+      { type: 'html', dep: 'oledNight', flat: true, html: ndPlaceHtml() },
+      { type: 'pair', keep: true, dep: 'ndFixed', flat: true, items: [{ type: 'text', kind: 'time', key: 'ndFrom', label: 'Ab' }, { type: 'text', kind: 'time', key: 'ndTo', label: 'Bis' }] },
+      { type: 'slider', key: 'oledLevel', label: 'Helligkeit am Abend', min: Math.max(1, range.min), max: range.max, step: 1, dep: 'oledNight', flat: true, help: 'Nie heller als die normale Helligkeit.' },
+      { type: 'slider', key: 'ndFade', label: 'Sanft abdunkeln über', stops: [0, 15, 30, 60], unit: ' min', zero: 'Sofort', dep: 'oledNight', flat: true },
+      { type: 'toggle', key: 'ndQuiet', label: 'Auch während der Ruhezeiten', help: 'Zum Beispiel zur Schlafenszeit, auch wenn sie außerhalb der Uhrzeiten liegt.', dep: 'oledNight', flat: true },
+    ],
+  }
+}
+// The values these cards show: the extension's, and the display's for the window of the evening
+async function extCoreLoad(e) {
+  await loadDisplayOptions()
+  setNightValues(disp.opts)
+  const s = e.settings ?? {}
+  state.values.set('oledBright', Number(s.contrast ?? 127))
+  state.values.set('oledOff', Number(s.sleepAfter ?? 0))
+  state.values.set('oledNight', s.nightDim === true)
+  state.values.set('oledLevel', Number(s.nightContrast ?? 20))
+  ndGate = 'oledNight'
+  state.values.set('ndFixed', s.nightDim === true && ndFixedNow(disp.opts?.nightDim ?? {}))
+  const st = await api(`/api/ext/${e.id}/state`)
+  return st.ok && st.body?.dimmed === true
+}
+
 function extPageController(entry, sub = 0) {
   const own = { e: null }
   // (sub page n shows the lines after the n-th heading that starts a page, up to the next one)
   const starts = () => own.e.ui.items.flatMap((it, i) => (it.type === 'heading' && it.page ? [i] : []))
-  const slice = () => {
+  const rawSlice = () => {
     if (!sub) return own.e.ui.items
     const at = starts()
     return own.e.ui.items.slice(at[sub - 1] + 1, at[sub] ?? own.e.ui.items.length)
+  }
+  // (the cards the box draws itself - see extCoreKind - and whether this page has any)
+  const coreHeadings = () => (own.e?.enabled ? rawSlice().filter(extCoreKind) : [])
+  const slice = () => (coreHeadings().length ? extWithoutCore(rawSlice()) : rawSlice())
+  const coreCards = () => coreHeadings().map((h) => extCoreSection(own.e, h, own.dimmed))
+  // (their place in the form: the card the form drew for the heading - it has no fields - is replaced by it)
+  const withCore = (form, items) =>
+    items.reduce((html, it, i) => {
+      if (!extCoreKind(it)) return html
+      const sec = extCoreSection(own.e, it, own.dimmed)
+      return html.replace(new RegExp(`<section class="card[^"]*ext-sec" data-xcard="${i}">[\\s\\S]*?</section>`), () => renderSection(sec))
+    }, form)
+  const saveCore = async (name, v, key) => {
+    const r = await api(`${API}/ext/${own.e.id}/settings`, { method: 'POST', body: { values: { [name]: v } } })
+    if (!r.ok) {
+      toast('Nicht gespeichert', 'info')
+      return false
+    }
+    own.e.settings[name] = v
+    if (key === 'oledNight') drawNdPlace()
+    toast('Gespeichert')
   }
   const adopted = () => (sub ? [] : entry.adopt).map((id) => ({ page: state.pages.get(id), ctrl: CONTROLLERS[id] })).filter((a) => a.page && a.ctrl)
   // (a page of cards that took over pages of the core: those come first - the rotary knob top left - and the cards of the
@@ -18649,6 +18755,8 @@ function extPageController(entry, sub = 0) {
       const r = await api(`${API}/ext/${entry.id}/info`)
       if (!r.ok) throw new Error(`extension ${r.status}`)
       own.e = r.body
+      own.dimmed = false
+      if (coreHeadings().length) own.dimmed = await extCoreLoad(own.e)
       // (hostApi 13: settings per user - the users for the choice above the form; whose values /info holds is not named, so
       // the form loads them for the user it shows, see extFormMount)
       if (own.e.perUser?.length) await loadUsers().catch(() => undefined)
@@ -18665,7 +18773,10 @@ function extPageController(entry, sub = 0) {
       const named = sub ? e.ui.items[starts()[sub - 1]] : null
       // (its text in a card of its own across the page; the cards follow in after())
       if (split()) return [`<section class="card wide ext-page"><h2>${esc(named ? named.label : (e.ui.heading ?? e.ui.title))}</h2><p class="help" style="margin:0">${esc(named ? (named.help ?? '') : (e.ui.help ?? ''))}</p></section>`]
-      const { form, hasText } = extFormHtml(e, e.enabled ? slice() : [], cardPage)
+      const items = e.enabled ? slice() : []
+      const built = extFormHtml(e, items, cardPage)
+      const form = withCore(built.form, items)
+      const hasText = built.hasText
       // (a page of cards: its text in a card of its own, then a card for each group; the wrapper takes no room of its own)
       if (cardPage) {
         return [
@@ -18692,8 +18803,13 @@ function extPageController(entry, sub = 0) {
       ...adopted().flatMap((a) => (a.ctrl.sections?.(a.page) ?? a.page.sections ?? []).map((sec, i) => ({ ...sec, title: i === 0 ? (EXT_ADOPTED_TITLE[a.page.id] ?? (sec.title || a.page.title)) : sec.title || '' }))),
       // (the part of a page of the core that is drawn in the card of the extension)
       ...(own.e?.enabled && merged().length ? [{ hidden: true, items: mergedSections().flatMap((x) => x.items) }] : []),
+      // (the cards the box draws itself stand in the form: here only for the handlers - see findItem)
+      ...(coreHeadings().length ? [{ hidden: true, items: coreCards().flatMap((c) => c.items) }] : []),
     ],
     change(key, v, page) {
+      if (EXT_CORE_KEYS[key] && coreHeadings().length) return saveCore(EXT_CORE_KEYS[key], v, key)
+      // (the window of the evening is the display's: its page saves it)
+      if (EXT_CORE_SHARED.includes(key) && coreHeadings().length) return CONTROLLERS.displaysettings.change(key, v, page)
       const part = own.e?.enabled ? merged().find((m) => m.keys.includes(key)) : null
       if (part) return part.ctrl.change?.(key, v, page)
       // (the fields a page of the core draws itself - the knobs it was told to add - are not in its schema: its own sections say)
@@ -18707,6 +18823,12 @@ function extPageController(entry, sub = 0) {
       // (the sub page of the tags has the player pinned at its bottom - not the page above, which lists the sub pages)
       if (card && sub && own.e?.id === 'nfc' && own.e.enabled && slice().some((it) => it.type === 'list' && it.list === `${NFC_ROUTE}/tags`)) mountMiniPlayer(root)
       for (const a of adopted()) a.ctrl.mount?.(root, a.page)
+      // (the place of the box for the sunset, as on the display's page)
+      if (coreHeadings().length) {
+        drawNdPlace()
+        $('#nd-place-btn')?.addEventListener('click', () => openNdPlaceSheet({ onChosen: drawNdPlace }))
+        $('#nd-place-del')?.addEventListener('click', () => void removeNdPlace())
+      }
       // (the knob chooses albums only while the service of the knob runs: switching it on here starts it)
       if (card && sub && own.e?.enabled && merged().length) {
         $('input[data-xk="rotary"]', card)?.addEventListener('change', async (ev) => {

@@ -44,7 +44,7 @@ When nothing plays, the display shows what is chosen under **Idle display**: the
 
 ![The clock when idle](oled-idle.png)
 
-A short picture appears when playback starts or pauses and when the volume changes. The picture for the volume can be switched off with **Show the volume animation**, the one for start and pause with **Show the play/pause animation**. With **Show the address of the box** a **QR code** with the address of the box appears for ten seconds, and nothing else. A phone scans it and opens the box in the browser. The same action can also be given to a button, a double button or the rotary knob ([Buttons & GPIO Input](buttons.md), [Rotary knob and button](../hardware/drehregler.md)). If the box has no network address, the display shows the **network page** instead, with WLAN name, address and version.
+A short picture appears when playback starts or pauses and when the volume changes. The picture for the volume can be switched off with **Show the volume animation**, the one for start and pause with **Show the play/pause animation**. With **Show the IP address of the box as a QR code** a **QR code** with the IP address of the box appears for ten seconds, and nothing else. A phone scans it and opens the box in the browser. The same action can also be given to a button, a double button or the rotary knob ([Buttons & GPIO Input](buttons.md), [Rotary knob and button](../hardware/drehregler.md)). If the box has no network address, the display shows the **network page** instead, with WLAN name, address and version.
 
 ![The QR code with the address of the box](oled-info.png)
 
@@ -52,7 +52,7 @@ If the **rotary knob** chooses an album with the NFC extension ([NFC: Rotary kno
 
 ## Settings
 
-The settings are in cards: **Display** (chip, size, address, rotation), **Display** mode (what is shown), **Brightness** (brightness, darker in the evening, display off after), **Pictures** and **Without DSI display**.
+The settings are in cards: **Display** (chip, size, address, rotation), **Display** mode (what is shown), **Brightness & switch-off** (brightness, display off after), **Evening dimming**, **Pictures** and **Without DSI display**.
 
 | Setting | Effect |
 | --- | --- |
@@ -60,19 +60,19 @@ The settings are in cards: **Display** (chip, size, address, rotation), **Displa
 | **Size** | **128 × 64** or **128 × 32** |
 | **I2C address** | **0x3C** or **0x3D** |
 | **Turn by 180°** | if the display is mounted upside down |
-| **Display while playing** | **Full** (the picture above), **Mix** (the track number large) or **Compact** (the time large) |
+| **Display while playing** | **Full** (the picture above), **Mix** (the track number large) or **Compact** (the time large). A button or double button can switch to the next one with **Switch OLED display (Full / Mix / Compact)** ([Buttons & GPIO Input](buttons.md)); that lasts until the next save |
 | **Idle display** (card **Pictures**) | what the display shows while nothing plays: **NFC reader**, **Barcode scanner**, **Clock** (default) or **Own picture** |
 | **Show the volume animation** | the short picture when the volume changes; when it is off the display stays as it is |
 | **Show the play/pause animation** | the short picture with play or pause when playback starts or stops; when it is off the display stays as it is |
 | **Show the time** | **Elapsed** (counts up from the start) or **Remaining** (counts down to the end, with a minus); a station or podcast of unknown length counts up |
 | **Long texts** | **Scroll again and again** (default), **Scroll once** (the line scrolls through completely one time and then stays with "…" at the end) or **Do not scroll** (the line is cut with "…") |
-| **Brightness** | 0 to 255 |
-| **Evening dimming** | the OLED display gets darker in the evening and normally bright again in the morning. The times are those of "Evening dimming" in the display settings (fixed times or sunset to sunrise, gradual dimming, quiet hours); whether the box's own display dims is independent of it |
+| **Brightness** | 1 to 255 |
+| **Evening dimming** | the OLED display gets darker in the evening and normally bright again in the morning. The times are those of "Evening dimming" in the display settings (fixed times or sunset to sunrise, gradual dimming, quiet hours); whether the box's own display dims is independent of it. The card **Evening dimming** shows these times too: sunset, place, times, gradual dimming and quiet hours you change here apply to the box's display as well |
 | **Evening brightness** | 1 to 255, with the slider or typed straight into the field; never brighter than the normal brightness |
 | **Display off after** | **Never**, 1, 5, 15 minutes or 1 hour, when nothing plays |
 | **Without DSI display** | only says what the box does; the switch is under **Settings › Display** (see [Without DSI display](ohne-dsi-display.md)) |
 
-The buttons **Show the address of the box** and **Next layout** try the display out: the second switches between **Full**, **Mix** and **Compact** until the next save. A change of chip, size, address or rotation restarts the display; the others apply at once.
+The button **Show the IP address of the box as a QR code** tries the QR code out. A change of chip, size, address or rotation restarts the display; the others apply at once.
 
 The **128 × 32** display shows title, artist, time, volume and WLAN in one layout.
 

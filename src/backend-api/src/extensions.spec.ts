@@ -2,7 +2,7 @@
 // No box needed; the install itself (download, sudo) is tried on a box.
 import assert from 'node:assert'
 import { createHash } from 'node:crypto'
-import { readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 import { describe, it } from 'node:test'
 import { deflateRawSync } from 'node:zlib'
@@ -161,6 +161,51 @@ describe('settings with a choice', () => {
     assert.ok(bad({ a: { type: 'string', options: ['x', 'y'] } }, { title: 'T', items: [{ key: 'a', label: 'A', choices: [{ value: 'x', label: 'X' }] }] }))
     assert.ok(bad({ a: { type: 'string', options: ['x', 'y'] } }, { title: 'T', items: [{ key: 'a', label: 'A', choices: [{ value: 'x', label: 'X' }, { value: 'z', label: 'Z' }] }] }))
     assert.strictEqual(bad({ a: { type: 'string', options: ['x', 'y'] } }, { title: 'T', items: [{ key: 'a', label: 'A', choices: [{ value: 'x', label: 'X' }, { value: 'y', label: 'Y' }] }] }), null)
+  })
+})
+
+describe('a picture above the button of a choice, and a help text as a tooltip', () => {
+  const ui = (choices: unknown, extra: Record<string, unknown> = {}) => ({ title: 'T', items: [{ key: 'a', label: 'A', choices, ...extra }] })
+  const settings = { a: { type: 'string', options: ['x', 'y'], default: 'x' } }
+  const check = (u: unknown) => checkManifest({ ...base({ settings, ui: u }) }, new Set([...files(), 'images/mode-full.png', 'pic.svg']))
+  const two = (image?: unknown) => [{ value: 'x', label: 'X', ...(image === undefined ? {} : { image }) }, { value: 'y', label: 'Y' }]
+  it('takes a picture of the extension for a choice', () => {
+    assert.strictEqual(check(ui(two('images/mode-full.png'))), null)
+    assert.strictEqual(check(ui(two('pic.svg'))), null)
+  })
+  it('refuses a picture outside the extension, of another kind, or that is no text', () => {
+    for (const bad of ['../x.png', 'images/../x.png', '/etc/x.png', 'x.exe', 'x.html', 'images/', 42, ''])
+      assert.ok(check(ui(two(bad))), String(bad))
+    // (one the package does not hold - a typo in the manifest)
+    assert.ok(check(ui(two('images/mode-ful.png'))))
+  })
+  it('takes a tip on a field with a help text and no other', () => {
+    assert.strictEqual(check(ui(two(), { tip: true, help: 'text' })), null)
+    assert.ok(check(ui(two(), { tip: true })))
+    assert.ok(check(ui(two(), { tip: 'yes', help: 'text' })))
+  })
+  it('takes a card in the look of the box for the settings it needs, and refuses it otherwise', () => {
+    const cfg = { contrast: { type: 'number', default: 1, min: 1, max: 255 }, sleepAfter: { type: 'number', default: 0, options: [0, 5] }, nightDim: { type: 'boolean', default: false }, nightContrast: { type: 'number', default: 20, min: 1, max: 255 } }
+    const page = (core: unknown, extra: Record<string, unknown> = {}, remove: string[] = []) => {
+      const s: Record<string, unknown> = { ...cfg }
+      for (const k of remove) delete s[k]
+      return checkManifest({ ...base({ hostApi: 5, settings: s, ui: { title: 'T', items: [{ type: 'heading', label: 'H', card: true, core, ...extra }, { key: 'contrast', label: 'C' }] } }) }, files())
+    }
+    assert.strictEqual(page('brightness'), null)
+    assert.strictEqual(page('evening'), null)
+    assert.ok(page('sun'))
+    assert.ok(page('brightness', { card: undefined }))
+    assert.ok(page('brightness', {}, ['sleepAfter']))
+    assert.ok(page('evening', {}, ['nightDim']))
+  })
+  it('is used by the OLED extension: a picture for each mode, which are in the package', () => {
+    const extDir = path.join(process.cwd(), '..', '..', 'extensions', 'oled')
+    const oled = JSON.parse(readFileSync(path.join(extDir, 'manifest.json'), 'utf8'))
+    const mode = oled.ui.items.find((i: { key?: string }) => i.key === 'mode')
+    assert.deepStrictEqual(mode.choices.map((c: { value: string }) => c.value), ['full', 'mix', 'lite'])
+    for (const c of mode.choices) assert.ok(existsSync(path.join(extDir, c.image)), c.image)
+    assert.strictEqual(mode.help, undefined)
+    for (const key of ['volumeOverlay', 'playOverlay']) assert.strictEqual(oled.ui.items.find((i: { key?: string }) => i.key === key).tip, true)
   })
 })
 
@@ -662,13 +707,13 @@ describe('the OLED extension of this repository', () => {
   const extDir = path.join(process.cwd(), '..', '..', 'extensions')
   const oled = JSON.parse(readFileSync(path.join(extDir, 'oled', 'manifest.json'), 'utf8')) as Manifest
   it('has a manifest the installer accepts: a status block, a page under System, Pillow as its one package', () => {
-    assert.strictEqual(checkManifest(oled, files('api.js', 'icon.svg', '99-mpx-oled.rules')), null)
+    assert.strictEqual(checkManifest(oled, files('api.js', 'icon.svg', '99-mpx-oled.rules', 'images/mode-full.svg', 'images/mode-mix.svg', 'images/mode-lite.svg')), null)
     assert.strictEqual(oled.ui?.place, 'system')
     assert.strictEqual(oled.name, 'OLED-Display')
     assert.deepStrictEqual(oled.resources, {}, 'the I2C bus is shared: it holds no pin of its own')
     assert.deepStrictEqual(oled.system?.packages, ['python3-pil'])
     assert.deepStrictEqual(oled.ui?.items.filter((i) => i.type === 'status').map((i) => i.state), ['/api/ext/oled/state'])
-    assert.deepStrictEqual(oled.ui?.items.filter((i) => i.type === 'action').map((i) => i.post), ['/api/ext/oled/info', '/api/ext/oled/mode'])
+    assert.deepStrictEqual(oled.ui?.items.filter((i) => i.type === 'action').map((i) => i.post), ['/api/ext/oled/info'])
   })
   it('has a udev rule that opens the I2C bus for the group of the header pins - and nothing that runs a program', () => {
     const rule = readFileSync(path.join(extDir, 'oled', '99-mpx-oled.rules'), 'utf8')
