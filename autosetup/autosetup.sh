@@ -552,7 +552,10 @@ STEP=0
 			echo 'SURVEY_OPTED_IN=0' >> "${DIETPI_TXT}"
 		fi
 	fi
-	/boot/dietpi/dietpi-software install 5 >&3 2>&3
+	# This script runs inside DietPi's own dietpi-software (its first run starts Automation_Custom_Script.sh). Since DietPi 10.8
+	# a second dietpi-software then waits 5 s for the first, and gives up ("Cancelled DietPi-Software due to concurrent
+	# execution"): no Chromium, no kiosk. G_INIT_ALLOW_CONCURRENT=1 lets each call run next to the one that started us.
+	G_INIT_ALLOW_CONCURRENT=1 /boot/dietpi/dietpi-software install 5 >&3 2>&3
 	/boot/dietpi/func/dietpi-set_hardware bluetooth enable >&3 2>&3
 	/boot/dietpi/func/dietpi-set_hardware soundcard "hifiberry-dac" >&3 2>&3
 	usermod -g pulse -G audio --home /var/run/pulse pulse >&3 2>&3
@@ -570,7 +573,7 @@ STEP=0
 
 	echo -e "XXX\n${STEP}\nEnable the web server... \nXXX"
 	before=$(date +%s)
-	/boot/dietpi/dietpi-software install 5 84 >&3 2>&3
+	G_INIT_ALLOW_CONCURRENT=1 /boot/dietpi/dietpi-software install 5 84 >&3 2>&3
 	# lighttpd serves the app on port 80/443 and the covers of the radio stations at /cover - no pages of its own (no
 	# PHP since 5.1: the app does everything the previous admin interface did)
 	rm -Rf /var/www/* >&3 2>&3
@@ -668,7 +671,7 @@ STEP=0
 
 	echo -e "XXX\n${STEP}\nInstall Chromium-Kiosk... \nXXX"
 	before=$(date +%s)
-	echo -ne '\n' | /boot/dietpi/dietpi-software install 113 >&3 2>&3
+	echo -ne '\n' | G_INIT_ALLOW_CONCURRENT=1 /boot/dietpi/dietpi-software install 113 >&3 2>&3
 	# Installing Chromium writes DietPi's own kiosk script, which opens SOFTWARE_CHROMIUM_AUTOSTART_URL (dietpi.com):
 	# the MuPiBox script goes in again after it (a fresh install showed the DietPi website until the first update)
 	cp -f ${MUPI_SRC}/scripts/chromium-autostart.sh /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
@@ -701,7 +704,8 @@ STEP=0
 	sed -i 's/session    optional   pam_motd.so noupdate/#session    optional   pam_motd.so noupdate/g' /etc/pam.d/login >&3 2>&3
 	sed -i 's/ExecStart\=-\/sbin\/agetty -a dietpi -J \%I \$TERM/ExecStart\=-\/sbin\/agetty --skip-login --noclear --noissue --login-options "-f dietpi" \%I \$TERM/g' /etc/systemd/system/getty@tty1.service.d/dietpi-autologin.conf >&3 2>&3
 	/boot/dietpi/func/dietpi-set_hardware gpumemsplit 128 >&3 2>&3
-	/boot/dietpi/func/dietpi-set_hardware headless 0 >&3 2>&3
+	# (DietPi 10.8 dropped "headless": it fails there with "Unknown input name", so only a DietPi that still has it gets it)
+	grep -q 'headless' /boot/dietpi/func/dietpi-set_hardware && /boot/dietpi/func/dietpi-set_hardware headless 0 >&3 2>&3
 	# The display of the firmware (the official 7" of the 1st generation, HDMI) needs no KMS - a display with KMS on the
 	# ribbon cable (Touch Display 2, Waveshare, EDATEC: its overlay in config.txt before the installation) needs it: there
 	# it stays (switched off, that display stayed dark). The model is chosen later in the app (Display-Modell).
