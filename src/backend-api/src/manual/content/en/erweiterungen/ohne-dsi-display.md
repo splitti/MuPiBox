@@ -28,7 +28,7 @@ For this the box sets DietPi's start from the kiosk login to the manual login (`
 
 When **Run without DSI display** is on, the switch **Keep Spotify ready** appears below it. With it the box starts the browser **invisibly in the background**, without a screen. The box's Spotify player runs in it as it does on the display: Spotify tiles, NFC tags with Spotify albums and Spotify Connect then play without a display too.
 
-- The browser needs about **600 MB of memory** and a little more power. On a box with 1 GB (a Raspberry Pi 3, say) it can get tight; the app points this out.
+- The browser needs about **as much memory as running with the display** (without the X server rather a little less). What runs with a display runs like this too.
 - If the box already runs without a display, Spotify is there right after switching it on. Otherwise after the next restart.
 - Switching it off ends the browser at once.
 

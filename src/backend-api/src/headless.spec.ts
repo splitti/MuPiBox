@@ -91,7 +91,7 @@ describe('the start without the DSI display: the switch of the core', () => {
   })
 
   it('the state: pending until the box restarted', async () => {
-    assert.deepEqual(await headlessState(box({ headless: true, index: null, kiosk: true }).deps, box({ headless: true, index: null, kiosk: true }).io).then(({ memoryMb: _m, ...s }) => s), { on: true, spotify: false, dsi: false, kiosk: true, browser: false, pending: true })
+    assert.deepEqual(await headlessState(box({ headless: true, index: null, kiosk: true }).deps, box({ headless: true, index: null, kiosk: true }).io), { on: true, spotify: false, dsi: false, kiosk: true, browser: false, pending: true })
     const b = box({ headless: true, index: null, kiosk: false })
     assert.equal((await headlessState(b.deps, b.io)).pending, false)
     // (off: no kiosk is the restart to come after it was switched off here)
@@ -132,7 +132,6 @@ describe('the start without the DSI display: Spotify kept there (the page withou
     assert.equal(s.browser, true)
     assert.equal(s.kiosk, false)
     assert.equal(s.pending, false)
-    assert.equal(typeof s.memoryMb, 'number')
     const k = box({ index: 11, kiosk: true })
     assert.equal((await headlessState(k.deps, { ...k.io, browserRunning: async () => true })).browser, false)
   })

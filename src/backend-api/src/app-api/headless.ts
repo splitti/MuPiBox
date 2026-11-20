@@ -6,13 +6,12 @@
 //   - refused while a DSI display is connected: the box would start with a dark display.
 //   - it counts from the next start of the box.
 //   - "Spotify bereithalten" (mupibox.headlessSpotify): the box's Spotify device is the Web Playback SDK in the display's page -
-//     mupi_spotify_browser.service runs that page in Chromium without a screen (spotify_browser.sh). About 600 MB of memory.
-//   GET  /api/app/headless  -> { on, spotify, dsi, kiosk, browser, pending, memoryMb }
+//     mupi_spotify_browser.service runs that page in Chromium without a screen (spotify_browser.sh) - no more memory than the kiosk.
+//   GET  /api/app/headless  -> { on, spotify, dsi, kiosk, browser, pending }
 //   POST /api/app/headless  { on } and/or { spotify } -> the same, or 409 { error: 'dsi_connected' } / 500 { error: 'failed' }
 
 import { execFile } from 'node:child_process'
 import { promises as fsp, readFileSync, readdirSync } from 'node:fs'
-import os from 'node:os'
 import path from 'node:path'
 import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
@@ -131,7 +130,6 @@ export async function headlessState(deps: HeadlessDeps, io: HeadlessIo = realIo)
     kiosk,
     browser,
     pending: on ? kiosk : !kiosk && switched,
-    memoryMb: Math.round(os.totalmem() / 1048576),
   }
 }
 

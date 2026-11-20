@@ -19621,12 +19621,8 @@ const CONTROLLERS = {
                           type: 'toggle',
                           key: 'headlessSpotify',
                           label: 'Spotify bereithalten',
-                          help: 'Der Spotify-Player der Box läuft im Browser. Damit Spotify auch ohne Display spielt (Kacheln, NFC-Tags, Spotify Connect), startet die Box den Browser unsichtbar im Hintergrund. Braucht rund 600 MB Arbeitsspeicher und etwas mehr Strom.',
+                          help: 'Der Spotify-Player der Box läuft im Browser. Damit Spotify auch ohne Display spielt (Kacheln, NFC-Tags, Spotify Connect), startet die Box den Browser unsichtbar im Hintergrund. Das braucht etwa so viel Arbeitsspeicher wie der Betrieb mit Display.',
                         },
-                        // (a box with 1 GB: the browser and the rest of the box hardly fit)
-                        ...(disp.headless.memoryMb > 0 && disp.headless.memoryMb < 1536
-                          ? [{ type: 'html', html: `<p class="help">${esc(tr('Diese Box hat wenig Arbeitsspeicher. Mit Spotify bereithalten kann sie langsam werden.'))}</p>` }]
-                          : []),
                       ]
                     : []),
                 ],

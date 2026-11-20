@@ -14,7 +14,7 @@ Group=dietpi
 ExecStart=/usr/local/bin/mupibox/spotify_browser.sh
 Restart=on-failure
 RestartSec=15
-# (about 600 MB: on a box with little memory the first one to go, not the server or the player)
+# (when the memory runs out: the first one to go, not the server or the player)
 OOMScoreAdjust=500
 
 [Install]

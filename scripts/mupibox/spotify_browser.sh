@@ -3,8 +3,8 @@
 # Spotify on a box without the DSI display (mupi_spotify_browser.service): the box's Spotify player is the Web Playback SDK in
 # the display's page - without the kiosk there is no Spotify device, and a Spotify tile or NFC tag plays nothing. Chromium
 # runs the page here without a screen (--headless=new: no X server; Widevine and the sound through PulseAudio work as in the
-# kiosk). It costs about 600 MB of memory, so it is a choice of its own: "Spotify bereithalten" (mupibox.headlessSpotify)
-# under Einstellungen > Display > Ohne DSI-Display.
+# kiosk; it needs about as much memory as the kiosk, without X a little less). A choice of its own: "Spotify bereithalten"
+# (mupibox.headlessSpotify) under Einstellungen > Display > Ohne DSI-Display.
 # Ends at once (nothing to do) when the box does not start without the DSI display, and while the kiosk still runs (the
 # switch counts after the restart): its page is the Spotify device then, and both would use the same profile.
 

@@ -28,7 +28,7 @@ Die Box stellt dafür den Start von DietPi von der Kiosk-Anmeldung auf die manue
 
 Ist **Ohne DSI-Display betreiben** an, erscheint darunter der Schalter **Spotify bereithalten**. Mit ihm startet die Box den Browser **unsichtbar im Hintergrund**, ohne Bildschirm. Darin läuft der Spotify-Player der Box wie sonst auf dem Display: Spotify-Kacheln, NFC-Tags mit Spotify-Alben und Spotify Connect spielen dann auch ohne Display.
 
-- Der Browser braucht rund **600 MB Arbeitsspeicher** und etwas mehr Strom. Auf einer Box mit 1 GB (etwa einem Raspberry Pi 3) kann es eng werden; die App weist darauf hin.
+- Der Browser braucht etwa **so viel Arbeitsspeicher wie der Betrieb mit Display** (ohne X-Server eher etwas weniger). Was mit Display läuft, läuft also auch so.
 - Läuft die Box schon ohne Display, ist Spotify nach dem Einschalten gleich da. Sonst nach dem nächsten Neustart.
 - Ausschalten beendet den Browser sofort.
 
