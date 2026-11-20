@@ -4623,5 +4623,9 @@
  "OLED-Bild gespeichert",
  "OLED-Bild entfernt",
  "Das Bild muss genau 128 × 50 Punkte groß sein",
- "Dieser Tag lässt sich nicht ansprechen"
+ "Dieser Tag lässt sich nicht ansprechen",
+ "Podcast und Radio zeigen",
+ "Bild, falls vorhanden",
+ "Titel und Uhrzeit",
+ "Bei einem Podcast oder Radiosender: das Bild des Tags (siehe NFC-Extension › Zugeordnete Tags), solange der Tag das Medium gestartet hat und ein Bild hat, sonst und bei „Titel und Uhrzeit“ der Titel mit der Uhrzeit mittig darunter, doppelt so groß wie der Titel. Gilt für alle drei Anzeigen. Alben und Hörspiele zeigen ihr Bild des Tags immer."
 ]

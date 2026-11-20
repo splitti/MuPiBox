@@ -754,15 +754,90 @@ class TagPictureTest(unittest.TestCase):
         self.assertNotEqual(playing.tobytes(), paused.tobytes(), 'the pause is told')
         self.assertNotEqual(playing.tobytes(), self.screens.render({**PLAY, 'mode': 'lite'}, 0).tobytes())
 
-    def test_full_mode_a_missing_picture_and_a_small_display_ignore_it(self):
+    def test_full_shows_the_picture_with_the_bottom_row(self):
         self.save('A1', self.mine)
         full = {**PLAY, 'mode': 'full'}
-        self.assertEqual(self.screens.render({**full, 'tagPicture': 'A1'}, 0).tobytes(), self.screens.render(full, 0).tobytes())
+        plain = self.screens.render(full, 0)
+        image = self.screens.render({**full, 'tagPicture': 'A1'}, 0)
+        self.assertEqual(image.crop((0, 0, 128, 50)).tobytes(), self.mine.tobytes())
+        self.assertGreater(lit(image, (0, 53, 128, 64)), 5, 'the row with the play mark and the time stays')
+        self.assertEqual(image.crop((0, 53, 128, 64)).tobytes(), plain.crop((0, 53, 128, 64)).tobytes())
+
+    def test_a_missing_picture_and_a_small_display_ignore_it(self):
+        self.save('A1', self.mine)
         mix = {**PLAY, 'mode': 'mix'}
         self.assertEqual(self.screens.render({**mix, 'tagPicture': 'NONE'}, 0).tobytes(), self.screens.render(mix, 0).tobytes())
         small = render.Screens(128, 32, pictures=render.Pictures(self.builtin, self.custom, 128, 32))
         for mode in ('mix', 'lite'):
             self.assertEqual(small.render({**PLAY, 'mode': mode, 'tagPicture': 'A1'}, 0).tobytes(), small.render({**PLAY, 'mode': mode}, 0).tobytes(), mode)
+
+
+class BroadcastTest(unittest.TestCase):
+    """A radio station or a podcast: the title and the time of day (twice the size of the title, in the middle) - or the picture of its tag."""
+
+    STATE = {'view': 'play', 'playing': True, 'title': 'Rock Antenne Bayern', 'artist': '', 'album': '', 'elapsed': 754, 'volume': 35, 'wifi': 3, 'stream': True, 'broadcast': True, 'time': '14:35'}
+
+    def setUp(self):
+        import shutil
+        import tempfile
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.custom = os.path.join(self.tmp, 'custom')
+        os.makedirs(os.path.join(self.custom, render.TAG_FOLDER))
+        self.builtin = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'images')
+        self.screens = render.Screens(128, 64, pictures=render.Pictures(self.builtin, self.custom, 128, 64))
+        self.mine = Image.new('1', (128, 50), 0)
+        self.mine.paste(1, (20, 10, 108, 40))
+        self.mine.save(os.path.join(self.custom, render.TAG_FOLDER, 'A1.png'))
+
+    def bbox(self, image, box):
+        return image.crop(box).getbbox()
+
+    def test_every_mode_shows_the_title_and_the_time_in_the_middle_at_twice_the_size(self):
+        for mode in ('full', 'mix', 'lite'):
+            image = self.screens.render({**self.STATE, 'mode': mode}, 0)
+            self.assertEqual((image.size, image.mode), ((128, 64), '1'), mode)
+            title = self.bbox(image, (0, 0, 128, 14)) if mode != 'full' else self.bbox(image, (0, 12, 128, 25))
+            self.assertIsNotNone(title, mode)
+            # (the time: the band below the title, centred - the left and the right margin are about the same)
+            band = (0, 27, 128, 47) if mode == 'full' else (0, 18, 128, 47)
+            left, top, right, bottom = self.bbox(image, band)
+            self.assertLess(abs(left - (128 - right)), 4, mode)
+            self.assertGreaterEqual(bottom - top, 12, '%s: twice the height of the title font' % mode)
+            self.assertLess(bottom - top, 24, mode)
+            self.assertNotEqual(image.tobytes(), self.screens.render({**self.STATE, 'mode': mode, 'broadcast': False}, 0).tobytes(), mode)
+
+    def test_the_time_is_the_time_of_day_and_follows_it(self):
+        a = self.screens.render({**self.STATE, 'mode': 'mix', 'time': '14:35'}, 0)
+        b = self.screens.render({**self.STATE, 'mode': 'mix', 'time': '14:36'}, 0)
+        self.assertNotEqual(a.tobytes(), b.tobytes())
+        # (not the time of the playing: that one only moves the bottom row)
+        c = self.screens.render({**self.STATE, 'mode': 'mix', 'elapsed': 999}, 0)
+        self.assertEqual(a.crop((0, 0, 128, 50)).tobytes(), c.crop((0, 0, 128, 50)).tobytes())
+
+    def test_the_picture_of_the_tag_wins_when_there_is_one_and_the_title_and_the_time_when_there_is_none(self):
+        for mode in ('full', 'mix', 'lite'):
+            with_picture = self.screens.render({**self.STATE, 'mode': mode, 'tagPicture': 'A1'}, 0)
+            self.assertEqual(with_picture.crop((0, 0, 128, 50)).tobytes(), self.mine.tobytes(), mode)
+            without = self.screens.render({**self.STATE, 'mode': mode, 'tagPicture': 'NOFILE'}, 0)
+            self.assertEqual(without.tobytes(), self.screens.render({**self.STATE, 'mode': mode}, 0).tobytes(), mode)
+
+    def test_pause_is_told_in_the_compact_mode(self):
+        playing = self.screens.render({**self.STATE, 'mode': 'lite'}, 0)
+        paused = self.screens.render({**self.STATE, 'mode': 'lite', 'playing': False}, 0)
+        self.assertGreater(lit(paused, (0, 54, 40, 64)), lit(playing, (0, 54, 40, 64)))
+
+    def test_the_small_display_shows_the_title_and_the_time_too(self):
+        screens = render.Screens(128, 32, pictures=render.Pictures(self.builtin, self.custom, 128, 32))
+        image = screens.render({**self.STATE, 'mode': 'full', 'tagPicture': 'A1'}, 0)
+        self.assertEqual(image.size, (128, 32))
+        self.assertIsNotNone(image.crop((0, 0, 128, 11)).getbbox())
+        left, top, right, bottom = image.crop((0, 11, 128, 32)).getbbox()
+        self.assertLess(abs(left - (128 - right)), 4)
+
+    def test_without_a_time_of_day_the_usual_picture_stays(self):
+        state = {**self.STATE, 'mode': 'mix', 'time': ''}
+        self.assertEqual(self.screens.render(state, 0).tobytes(), self.screens.render({**state, 'broadcast': False}, 0).tobytes())
 
 
 class CheckTest(unittest.TestCase):

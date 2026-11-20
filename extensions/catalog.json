@@ -97,13 +97,13 @@
   {
     "id": "oled",
     "name": "OLED-Display",
-    "version": "0.6.0",
+    "version": "0.7.0",
     "description": "Ein kleines OLED-Display (SSD1306, SH1106 oder SSD1309 am I2C-Anschluss, 128 × 64 oder 128 × 32) zeigt, was die Box spielt: Titel, Interpret, Laufzeit, Titelnummer, Lautstärke, WLAN, Akku, Zufall und Wiederholen, Ausgang (Lautsprecher, Kopfhörer, Bluetooth) und die Uhrzeit. Die Einstellungen stehen unter Einstellungen › OLED-Display.",
     "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48ZyBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIzMCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB4PSI1NiIgeT0iMTIwIiB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI0MCIgcng9IjM2Ii8+PHBhdGggZD0iTTEyMCAyMDBoMTEyTTEyMCAyNTBoMTgwTTEyMCAzMDBoODAiLz48cGF0aCBkPSJNMzYwIDE5MHYxMTBNMzkwIDIxNXY2ME0zMzAgMjI1djQwIi8+PHBhdGggZD0iTTIwMCA0MjBoMTEyIi8+PC9nPjwvc3ZnPgo=",
     "hostApi": 14,
-    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/oled-0.6.0.mpx",
-    "sha256": "84bc6f60db9d53ef30b685132bb98461b038c4cda69bb863cbac09173fb7332c",
-    "size": 50495,
+    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/oled-0.7.0.mpx",
+    "sha256": "682072dcf8fb8e2b76197a797a96537b01565390eb5a5570294c6956531e72ce",
+    "size": 51344,
     "resources": {},
     "system": {
       "udev": 1,

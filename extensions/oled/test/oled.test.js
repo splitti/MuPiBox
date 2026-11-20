@@ -1012,3 +1012,27 @@ test('the display shows the picture of the tag that the NFC extension says start
   assert.strictEqual('tagPicture' in extSmall.stateNow(), false)
   fsx.rmSync(dataDir, { recursive: true, force: true })
 })
+
+// ---- radio stations and podcasts: the picture of the tag, or the title and the time of day ----------------------------------------------
+test('the setting for radio and podcasts: the picture unless the user wants the title and the time', () => {
+  assert.strictEqual(logic.readConfig({}).broadcastView, 'picture')
+  assert.strictEqual(logic.readConfig({ broadcastView: 'clock' }).broadcastView, 'clock')
+  assert.strictEqual(logic.readConfig({ broadcastView: 'sideways' }).broadcastView, 'picture')
+})
+
+test('a radio station and a podcast are told to the driver; the choice "title and time" drops the picture of their tag only', () => {
+  const ui = { infoUntil: 0, overlay: null, idleSince: null, wake: 0, mode: null, ready: true, tagPicture: 'AB12CD34' }
+  const build = (kind, settings = {}) =>
+    logic.buildState({ config: logic.readConfig({ mode: 'mix', ...settings }), play: logic.readPlayback({ currentPlayer: 'mplayer', currentType: kind, playing: true, currentTrackname: 'Titel' }, null), ui, net: { ssid: '', ip: '', wifi: 2 }, date: new Date(2026, 10, 21, 14, 35), now: 1000, version: '0.7.0' })
+  for (const kind of ['radio', 'rss']) {
+    const picture = build(kind)
+    assert.deepStrictEqual([picture.broadcast, picture.tagPicture, picture.time], [true, 'AB12CD34', '14:35'], kind)
+    const clock = build(kind, { broadcastView: 'clock' })
+    assert.deepStrictEqual([clock.broadcast, 'tagPicture' in clock, clock.time], [true, false, '14:35'], kind)
+  }
+  // (an album or an audiobook: no change - its picture is always shown)
+  for (const kind of ['local', 'nas']) {
+    const album = build(kind, { broadcastView: 'clock' })
+    assert.deepStrictEqual([album.broadcast, album.tagPicture], [false, 'AB12CD34'], kind)
+  }
+})

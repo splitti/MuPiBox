@@ -4779,5 +4779,9 @@
  "OLED-Bild gespeichert": "OLED picture saved",
  "OLED-Bild entfernt": "OLED picture removed",
  "Das Bild muss genau 128 × 50 Punkte groß sein": "The picture must be exactly 128 × 50 points",
- "Dieser Tag lässt sich nicht ansprechen": "This tag cannot be addressed"
+ "Dieser Tag lässt sich nicht ansprechen": "This tag cannot be addressed",
+ "Podcast und Radio zeigen": "Show podcasts and radio",
+ "Bild, falls vorhanden": "Picture, if there is one",
+ "Titel und Uhrzeit": "Title and time",
+ "Bei einem Podcast oder Radiosender: das Bild des Tags (siehe NFC-Extension › Zugeordnete Tags), solange der Tag das Medium gestartet hat und ein Bild hat, sonst und bei „Titel und Uhrzeit“ der Titel mit der Uhrzeit mittig darunter, doppelt so groß wie der Titel. Gilt für alle drei Anzeigen. Alben und Hörspiele zeigen ihr Bild des Tags immer.": "For a podcast or a radio station: the picture of the tag (see NFC extension › Assigned tags) while the tag started the medium and has a picture; otherwise, and with \"Title and time\", the title with the time of day centred below it, twice as large as the title. Applies to all three displays. Albums and audiobooks always show the picture of their tag."
 }

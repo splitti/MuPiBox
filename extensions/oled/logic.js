@@ -8,6 +8,8 @@ const ADDRESSES = ['0x3C', '0x3D']
 const MODES = ['full', 'mix', 'lite']
 const TIME_MODES = ['up', 'down']
 const SCROLL_MODES = ['loop', 'once', 'off']
+// what a radio station or a podcast shows: the picture of its tag (the title and the time when it has none) or always the title and the time
+const BROADCAST_VIEWS = ['picture', 'clock']
 const SLEEP_MINUTES = [0, 1, 5, 15, 60]
 // what the display shows while nothing plays (nfc: the reader that waits for a tag, barcode: the scanner, clock: the time, custom: a picture
 // the user chose)
@@ -80,6 +82,7 @@ function readConfig(settings = {}) {
     nightContrast: Math.round(number(settings.nightContrast, 20, 1, 255)),
     timeMode: pick(settings.timeMode, TIME_MODES, 'up'),
     scroll: pick(settings.scroll, SCROLL_MODES, 'loop'),
+    broadcastView: pick(settings.broadcastView, BROADCAST_VIEWS, 'picture'),
     sleepAfter: pick(Number(settings.sleepAfter), SLEEP_MINUTES, 5),
   }
 }
@@ -334,6 +337,8 @@ function buildState({ config, play, ui, net, date, now, version, language }) {
     elapsed: play.elapsed,
     duration: play.duration,
     stream: play.stream,
+    // (a radio station or a podcast: the driver shows the title and the time of day unless the picture of the tag is there to show)
+    broadcast: play.kind === 'radio' || play.kind === 'rss',
   }
   // (a picture the user asked to see on the page: for a few seconds, then what was shown before)
   if (ui.preview && now < ui.preview.until) {
@@ -351,7 +356,7 @@ function buildState({ config, play, ui, net, date, now, version, language }) {
   if (ui.select && now < ui.select.until) return { ...base, view: 'select', pick: { title: ui.select.title, artist: ui.select.artist, index: ui.select.index, count: ui.select.count } }
   if (ui.overlay && now < ui.overlay.until) return { ...base, view: 'overlay', overlay: ui.overlay.kind, volume: ui.overlay.volume ?? play.volume }
   // (the picture of the tag that started the medium: the driver draws it in Mix and Compact mode, where there is room for it)
-  const tagPicture = tagIdOf(ui.tagPicture)
+  const tagPicture = base.broadcast && config.broadcastView === 'clock' ? '' : tagIdOf(ui.tagPicture)
   if (play.player !== '' && play.playing) return { ...base, view: 'play', ...(tagPicture ? { tagPicture } : {}) }
   // (nothing plays - a paused medium too, its still picture would burn in: after the time the user chose the display goes off, a
   // button, a tag or a tap wakes it)

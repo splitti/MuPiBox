@@ -708,6 +708,9 @@ class Screens:
     def play(self, state, now):
         """The picture of a medium that plays or is paused, in the chosen mode ('full', 'mix' or 'lite')."""
         mode = state.get('mode') or 'full'
+        # (a radio station or a podcast: no picture of a tag to show - or the user wants the title and the time - then the title and the clock)
+        if state.get('broadcast') and state.get('time') and not self._has_tag_picture(state):
+            return self._play_broadcast(state, now, mode)
         if not self.tall:
             return self._play_compact(state, now)
         if mode == 'lite':
@@ -753,6 +756,9 @@ class Screens:
     def _play_full(self, state, now):
         """The layout: status bar, title, artist and album (the ones there are), and the row with time and track."""
         image, draw = self._canvas()
+        if self._tag_picture(image, state):
+            self.bottom_row(draw, state)
+            return image
         self.status_bar(draw, state)
         lines = [state.get('title') or '', state.get('artist') or '', state.get('album') or '']
         # (only the lines there are, from the top: a radio station has no album)
@@ -778,6 +784,51 @@ class Screens:
             return False
         image.paste(picture, (0, 0))
         return True
+
+    def _has_tag_picture(self, state):
+        """Is there a picture of the tag to show (the display is 128 x 64 and the tag has its file)?"""
+        if (self.width, self.height) != (TAG_PICTURE_SIZE[0], 64) or not state.get('tagPicture'):
+            return False
+        return self.pictures.tag(state.get('tagPicture')) is not None
+
+    def _clock_centred(self, draw, state, top, bottom, size):
+        """The time of day in the middle of the display (by its digits), in the band from `top` to `bottom`."""
+        text = str(state.get('time') or '')
+        font = self.fonts.lite(size)
+        while size > 12 and draw.textlength(text, font=font) > self.width - 4:
+            size -= 2
+            font = self.fonts.lite(size)
+        left, ink_top, right, ink_bottom = draw.textbbox((0, 0), text, font=font)
+        x = round((self.width - draw.textlength(text, font=font)) / 2)
+        draw.text((x, round((top + bottom) / 2 - (ink_top + ink_bottom) / 2)), text, font=font, fill=1)
+
+    def _play_broadcast(self, state, now, mode):
+        """A radio station or a podcast shown as the title and the time of day: the title in the font of the text lines, the time in the
+        middle at twice its size. All three modes: Full keeps the status bar and the bottom row, Mix the status line, Compact only the
+        wireless symbol and PAUSE."""
+        image, draw = self._canvas()
+        title = state.get('title') or state.get('artist') or state.get('album') or ''
+        if not self.tall:
+            self._marquee(draw, ('broadcast', 0), title, 1, self.fonts.small, now)
+            self._clock_centred(draw, state, 11, self.height, self.fonts.small.size * 2)
+            return image
+        size = self.fonts.text.size * 2
+        if mode == 'lite':
+            self._marquee(draw, ('broadcast', 0), title, 2, self.fonts.text, now)
+            self._clock_centred(draw, state, 14, self.height - 12, size)
+            self._wifi(draw, state.get('wifi', -1), self.width - 18, self.height - 2, bool(state.get('lan')))
+            if not state.get('playing'):
+                self._row_text(draw, 1, self.height - 10, 'PAUSE')
+        elif mode == 'mix':
+            self._marquee(draw, ('broadcast', 0), title, 2, self.fonts.text, now)
+            self._clock_centred(draw, state, 14, self.height - 13, size)
+            self._status_bar(draw, state)
+        else:
+            self.status_bar(draw, state)
+            self._marquee(draw, ('broadcast', 0), title, 13, self.fonts.text, now)
+            self._clock_centred(draw, state, 27, self.height - 13, size)
+            self.bottom_row(draw, state)
+        return image
 
     def _play_mix(self, state):
         image, draw = self._canvas()
