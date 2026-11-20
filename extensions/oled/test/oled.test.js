@@ -875,3 +875,140 @@ test('a picture the program does not take is refused with the reason and leaves 
   assert.deepStrictEqual(fsx.readdirSync(pathx.join(dataDir, 'images')), [])
   fsx.rmSync(dataDir, { recursive: true, force: true })
 })
+
+// ---- the picture of a tag (128 x 50, in place of the progress bar and the big time) -------------------------------------------------
+test('a tag picture is in the state of a playing medium only, and only with a usable id', () => {
+  const playing = { infoUntil: 0, overlay: null, idleSince: null, wake: 0, mode: null, ready: true, tagPicture: 'AB12CD34' }
+  const build = (over = {}, play = { player: 'mplayer', playing: true, title: 'Kinderradio', artist: '', album: '' }) =>
+    logic.buildState({ config: logic.readConfig({ mode: 'mix' }), play: { ...logic.readPlayback(null, null), ...play }, ui: { ...playing, ...over }, net: { ssid: '', ip: '', wifi: 2 }, date: new Date(2026, 10, 20, 7, 5), now: 1000, version: '0.6.0' })
+  assert.deepStrictEqual([build().view, build().tagPicture], ['play', 'AB12CD34'])
+  // (a paused medium keeps it)
+  assert.strictEqual(build({}, { player: 'mplayer', playing: false, title: 'Kinderradio', artist: '', album: '' }).tagPicture, 'AB12CD34')
+  // (no picture: no key; an id that could point out of the folder is no id)
+  assert.strictEqual('tagPicture' in build({ tagPicture: '' }), false)
+  assert.strictEqual('tagPicture' in build({ tagPicture: '../../etc/passwd' }), false)
+  assert.strictEqual('tagPicture' in build({ tagPicture: 42 }), false)
+  // (nothing plays: no picture, whatever was asked)
+  assert.strictEqual('tagPicture' in build({}, { player: '', playing: false, title: '', artist: '', album: '' }), false)
+  assert.deepStrictEqual([logic.tagIdOf('04A1B2C3D4E5F6'), logic.tagIdOf('a/b'), logic.tagIdOf(''), logic.tagIdOf(null)], ['04A1B2C3D4E5F6', '', '', ''])
+})
+
+test('the tag picture routes: a picture is checked as 128 x 50, kept by the id of the tag and removed with it', async () => {
+  const dataDir = fsx.mkdtempSync(pathx.join(osx.tmpdir(), 'oled-tag-'))
+  const checked = []
+  const box = fakeHost(
+    {},
+    {
+      dataDir,
+      deps: {
+        execFile: (command, args, options, done) => {
+          if (args.includes('--check')) {
+            checked.push(args.slice(args.indexOf('--picture-size')))
+            fsx.writeFileSync(args[args.indexOf('--check') + 2], 'PNG')
+          }
+          done(null, '')
+        },
+      },
+    },
+  )
+  api.activate(box.host)
+  await settle()
+  await settle()
+  const tags = pathx.join(dataDir, 'images', 'tags')
+  // (no id, an id that is no file name, no picture)
+  assert.strictEqual((await pictureRoute(box, 'post /tagpicture', { id: '', image: PNG_URL })).status, 400)
+  assert.strictEqual((await pictureRoute(box, 'post /tagpicture', { id: '../boot', image: PNG_URL })).status, 400)
+  assert.strictEqual((await pictureRoute(box, 'post /tagpicture', { id: 'AB12CD34', image: 'data:image/png;base64,AAAA' })).status, 400)
+  assert.strictEqual(fsx.existsSync(pathx.join(tags, 'AB12CD34.png')), false)
+  // (a picture: the program checks it for 128 x 50, then it is the file of the tag; nothing half-done stays)
+  const saved = await pictureRoute(box, 'post /tagpicture', { id: 'AB12CD34', image: PNG_URL })
+  assert.deepStrictEqual([saved.body.ok, saved.body.message], [true, 'OLED-Bild gespeichert'])
+  assert.deepStrictEqual(checked, [['--picture-size', '128x50']])
+  assert.strictEqual(fsx.readFileSync(pathx.join(tags, 'AB12CD34.png'), 'utf8'), 'PNG')
+  assert.deepStrictEqual(fsx.readdirSync(tags), ['AB12CD34.png'])
+  // (the NFC extension asks which tags have one: only from the box itself)
+  const asked = async (key, body, req = {}) => {
+    let out
+    const res = { json: (b) => (out = { status: 200, body: b }), status: (code) => ({ json: (b) => (out = { status: code, body: b }) }) }
+    await box.routes[key]({ body, headers: {}, socket: { remoteAddress: '127.0.0.1' }, ...req }, res)
+    return out
+  }
+  assert.deepStrictEqual((await asked('get /tagpictures')).body, { ids: ['AB12CD34'] })
+  assert.strictEqual((await asked('get /tagpictures', {}, { socket: { remoteAddress: '192.168.1.9' } })).status, 403)
+  assert.strictEqual((await asked('post /tagpictureforget', { id: 'AB12CD34' }, { headers: { 'x-forwarded-for': '10.0.0.2' } })).status, 403)
+  assert.strictEqual(fsx.existsSync(pathx.join(tags, 'AB12CD34.png')), true)
+  // (a tag that was removed takes its picture along; the user takes it away with the button)
+  assert.strictEqual((await asked('post /tagpictureforget', { id: 'AB12CD34' })).body.ok, true)
+  assert.strictEqual(fsx.existsSync(pathx.join(tags, 'AB12CD34.png')), false)
+  await pictureRoute(box, 'post /tagpicture', { id: 'FF00FF00', image: PNG_URL })
+  assert.strictEqual((await pictureRoute(box, 'post /tagpicturereset', { id: '../x' })).status, 400)
+  assert.strictEqual((await pictureRoute(box, 'post /tagpicturereset', { id: 'FF00FF00' })).body.message, 'OLED-Bild entfernt')
+  assert.deepStrictEqual(fsx.readdirSync(tags), [])
+  fsx.rmSync(dataDir, { recursive: true, force: true })
+})
+
+test('a tag picture with the wrong size is refused with the reason of the 128 x 50 picture', async () => {
+  const dataDir = fsx.mkdtempSync(pathx.join(osx.tmpdir(), 'oled-tag-'))
+  const box = fakeHost({}, { dataDir, deps: { execFile: (command, args, options, done) => done(new Error('exit 3'), '{"event": "error", "code": "bad_size", "message": "x"}') } })
+  api.activate(box.host)
+  await settle()
+  await settle()
+  const refused = await pictureRoute(box, 'post /tagpicture', { id: 'AB12CD34', image: PNG_URL })
+  assert.deepStrictEqual([refused.status, refused.body.error, refused.body.message], [400, 'bad_size', 'Das Bild muss genau 128 × 50 Punkte groß sein'])
+  assert.deepStrictEqual(fsx.readdirSync(pathx.join(dataDir, 'images', 'tags')), [])
+  fsx.rmSync(dataDir, { recursive: true, force: true })
+})
+
+test('the display shows the picture of the tag that the NFC extension says started the medium', async () => {
+  const dataDir = fsx.mkdtempSync(pathx.join(osx.tmpdir(), 'oled-tag-'))
+  fsx.mkdirSync(pathx.join(dataDir, 'images', 'tags'), { recursive: true })
+  fsx.writeFileSync(pathx.join(dataDir, 'images', 'tags', 'AB12CD34.png'), 'PNG')
+  let now = 1_000_000
+  let playing = 'AB12CD34'
+  let asked = 0
+  const player = { currentPlayer: 'mplayer', currentType: 'radio', playing: true, currentTrackname: 'Kinderradio', volume: 20 }
+  const make = (settings) => {
+    const box = fakeHost(settings, { dataDir, deps: { now: () => now } })
+    box.host.deps.fetch = async (url) => {
+      if (String(url).endsWith('/api/ext/nfc/playing')) {
+        asked += 1
+        return { ok: true, json: async () => ({ uid: playing }) }
+      }
+      return { ok: true, json: async () => (String(url).endsWith('/local') ? player : {}) }
+    }
+    return box
+  }
+  const box = make({ mode: 'mix' })
+  const ext = api.activate(box.host)
+  await settle()
+  await settle()
+  ready(box)
+  await ext.tick()
+  assert.strictEqual(ext.stateNow().tagPicture, 'AB12CD34')
+  assert.strictEqual(ext.stateNow().view, 'play')
+  // (asked again only after a moment, not at every tick)
+  const before = asked
+  await ext.tick()
+  assert.strictEqual(asked, before)
+  // (another start - not by a tag, or by a tag without a picture: no picture)
+  now += 3000
+  playing = ''
+  await ext.tick()
+  assert.strictEqual('tagPicture' in ext.stateNow(), false)
+  now += 3000
+  playing = 'FFFFFFFF'
+  await ext.tick()
+  assert.strictEqual('tagPicture' in ext.stateNow(), false)
+  // (the 128 x 32 display has no room for it: not even asked)
+  const small = make({ size: '128x32', mode: 'mix' })
+  const extSmall = api.activate(small.host)
+  await settle()
+  await settle()
+  ready(small)
+  playing = 'AB12CD34'
+  asked = 0
+  await extSmall.tick()
+  assert.strictEqual(asked, 0)
+  assert.strictEqual('tagPicture' in extSmall.stateNow(), false)
+  fsx.rmSync(dataDir, { recursive: true, force: true })
+})

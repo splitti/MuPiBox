@@ -4772,5 +4772,12 @@
  "Wischt du nach links und das Bild dreht sich nach rechts, oder geht „nach oben“ in eine andere Richtung, ist der Touch-Chip anders eingebaut. Dann hier tauschen oder spiegeln.": "If you swipe to the left and the picture turns to the right, or “up” goes in another direction, the touch chip is built in differently. Then swap or mirror here.",
  "Am DSI-Anschluss ist kein Display zu erkennen (er meldet sich auch ohne Display als verbunden). Beim Einschalten fragt die App nach.": "No display can be seen on the DSI port (it reports itself as connected even without a display). The app asks when you switch it on.",
  "Ohne Display starten": "Start without a display",
- "Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?": "No display can be seen on the DSI port. If one is connected after all, it stays dark after the next restart. Start without a display?"
+ "Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?": "No display can be seen on the DSI port. If one is connected after all, it stays dark after the next restart. Start without a display?",
+ "OLED-Bild": "OLED picture",
+ "OLED-Bild entfernen": "Remove OLED picture",
+ "Das OLED-Bild dieses Tags entfernen?": "Remove the OLED picture of this tag?",
+ "OLED-Bild gespeichert": "OLED picture saved",
+ "OLED-Bild entfernt": "OLED picture removed",
+ "Das Bild muss genau 128 × 50 Punkte groß sein": "The picture must be exactly 128 × 50 points",
+ "Dieser Tag lässt sich nicht ansprechen": "This tag cannot be addressed"
 }

@@ -24,6 +24,11 @@ BOLD_CANDIDATES = (
 # The pictures of the display (128 x 64, white on black): the ones the extension brings in images/ and, for the four the user may
 # change, their own ones in the data folder of the extension. What each view shows:
 CHANGEABLE = ('boot', 'idle', 'update', 'rest')
+# The picture a tag brings: the top 50 rows of the 128 x 64 display, in place of the progress bar and the big time (Mix and Compact mode);
+# its file is <custom>/tags/<id of the tag>.png
+TAG_PICTURE_SIZE = (128, 50)
+TAG_FOLDER = 'tags'
+TAG_ID = re.compile(r'^[0-9A-Za-z_-]{1,40}$')
 VIEW_PICTURES = {'boot': 'boot', 'bye': 'shutdown', 'update': 'update', 'rest': 'rest'}
 # (the picture of the idle display: the reader that waits for a tag, the scanner that waits for a code, or the user's own one)
 IDLE_PICTURES = {'nfc': 'nfc', 'barcode': 'barcode', 'custom': 'idle'}
@@ -130,6 +135,28 @@ class Pictures:
             return None  # (no ready-made picture: the idle display shows the reader then)
         built = os.path.join(self.builtin, name + '.png') if self.builtin else None
         return built if built and os.path.isfile(built) else None
+
+    def tag(self, uid):
+        """The picture a tag has (TAG_PICTURE_SIZE, white on black) or None: <custom>/tags/<uid>.png, read again when the file changed."""
+        if not self.custom or not TAG_ID.match(str(uid or '')):
+            return None
+        path = os.path.join(self.custom, TAG_FOLDER, str(uid) + '.png')
+        try:
+            stat = os.stat(path)
+        except OSError:
+            return None
+        key = (path, stat.st_mtime_ns, stat.st_size)
+        kept = self._kept.get(('tag', uid))
+        if kept and kept[0] == key:
+            return kept[1]
+        try:
+            with Image.open(path) as source:
+                # (a file that is not of the size - made by hand in the folder - is no picture: nothing is cut or stretched)
+                image = source.convert('1') if source.size == TAG_PICTURE_SIZE else None
+        except (OSError, ValueError):
+            return None
+        self._kept[('tag', uid)] = (key, image)
+        return image
 
     def is_own(self, name):
         return name in CHANGEABLE and bool(self.custom) and os.path.isfile(os.path.join(self.custom, name + '.png'))
@@ -694,8 +721,7 @@ class Screens:
         if isinstance(pos, (int, float)) and isinstance(dur, (int, float)) and dur > 0:
             width = int(self.width * min(1.0, max(0.0, pos / dur)))
             draw.rectangle((0, 0, max(0, width - 1), 1), fill=1)
-        elif state.get('stream'):
-            draw.rectangle((0, 0, self.width - 1, 1), fill=1)
+        # (a stream has no end: no bar - a full one would only look like a medium that is over)
 
     def _volume_cell(self, draw, state, y):
         """The volume of the bottom row: the V at the left of its cell, the number ending 3 pixels before the line that closes the cell
@@ -742,18 +768,35 @@ class Screens:
             return str(track), self.fonts.huge
         return shown_time(state), self.fonts.big
 
+    def _tag_picture(self, image, state):
+        """The picture of the tag that started the medium in the top rows - only on the 128 x 64 display, whose top 50 rows it is made for.
+        True when it was drawn (then no progress bar and no big time: the picture is in their place)."""
+        if (self.width, self.height) != (TAG_PICTURE_SIZE[0], 64) or not state.get('tagPicture'):
+            return False
+        picture = self.pictures.tag(state.get('tagPicture'))
+        if picture is None:
+            return False
+        image.paste(picture, (0, 0))
+        return True
+
     def _play_mix(self, state):
         image, draw = self._canvas()
-        self._progress(draw, state)
-        text, font = self._big_text(state)
-        w = draw.textlength(text, font=font)
-        draw.text(((self.width - w) // 2, 2), text, font=font, fill=1)
+        if not self._tag_picture(image, state):
+            self._progress(draw, state)
+            text, font = self._big_text(state)
+            w = draw.textlength(text, font=font)
+            draw.text(((self.width - w) // 2, 2), text, font=font, fill=1)
         self._status_bar(draw, state)
         return image
 
     def _play_lite(self, state):
         """The compact mode: the track number (or the time) as large as the display allows, in the middle of it."""
         image, draw = self._canvas()
+        if self._tag_picture(image, state):
+            self._wifi(draw, state.get('wifi', -1), self.width - 18, self.height - 2, bool(state.get('lan')))
+            if not state.get('playing'):
+                self._row_text(draw, 1, self.height - 10, 'PAUSE')
+            return image
         self._progress(draw, state)
         text, font = self._big_text(state)
         size = 50 if font is self.fonts.huge else 34

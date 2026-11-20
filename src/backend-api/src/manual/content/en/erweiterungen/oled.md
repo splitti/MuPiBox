@@ -36,7 +36,7 @@ The **status bar** at the top shows, from left to right:
 | crossed arrows | **shuffle** is on |
 | number and symbol at the right | volume and **output**: speaker, headphones or Bluetooth |
 
-Below are **title**, **artist** and **album**; a long line scrolls by itself (or not: see **Long texts** below). At the bottom left a triangle says the box plays (two bars: paused), next to it the **time**, at the bottom right the **track number** ("Track:3/12").
+Below are **title**, **artist** and **album**; a long line scrolls by itself (or not: see **Long texts** below). A **stream** (a radio station, which has no end) gets no progress bar. At the bottom left a triangle says the box plays (two bars: paused), next to it the **time**, at the bottom right the **track number** ("Track:3/12").
 
 ![The time counts down, the output is Bluetooth](oled-play-bt.png)
 
@@ -93,6 +93,12 @@ The **Pictures** card shows the pictures of the display and where they appear. A
 Every picture has a button **Show picture**: the picture is then on the display for **ten seconds**, after which the display shows what it showed before. That way you see a picture without its occasion happening.
 
 For a changeable picture tap **Change picture** and choose a picture from your device. The box takes **only pictures that are exactly 128 × 64 points and consist of pure black and white only (1 bit)**; white is lit. The app checks this when you choose, the box checks again. A picture with another size, grey tones, colours or transparent parts is **refused**; nothing is scaled or converted. Prepare the picture beforehand in a graphics program (size 128 × 64, mode "black and white", with or without dithering as you like). **Reset** brings the original back.
+
+### The picture of a tag
+
+Every NFC tag can have a picture of its own that the display shows while **the medium of that tag** plays (an album, a stream, a podcast, whatever the tag starts). In the **Mix** and **Compact** views it replaces the progress bar and the big time; the top 50 points belong to the picture, while the status bar (Mix) or the WLAN symbol and PAUSE (Compact) stay. In the **Full** view and on a display of 128 × 32 points the picture does not appear.
+
+You choose the picture in **Settings › NFC extension › Assigned tags** with the **OLED picture** button on the tile of the tag (the button is there only when the OLED extension is installed), see [Assigned tags](nfc-zugeordnete-tags.md). The box takes **only pictures that are exactly 128 × 50 points and consist of pure black and white only (1 bit)**; white is lit. Anything else is refused, as with the other pictures. **Remove OLED picture** takes it away again; when the tag is removed, its picture goes with it. The picture appears only when the tag started the medium: if the child then chooses something else on the display, the normal picture is back. The pictures of the tags are not part of the export of the tag list.
 
 The update and shutdown pictures are drawn by the box itself, even when the server has stopped by then. The start picture appears as soon as the display program has started; a picture before that, while Linux is still starting, is not possible.
 

@@ -395,6 +395,22 @@ exports.activate = (host) => {
   // (the display of the OLED extension, if it is there: what the knob stands on - or nothing, once the choice is made)
   const showOnOled = (body) =>
     fetch(`${host.apiUrl}/api/ext/oled/select`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(2000) }).catch(() => undefined)
+  // The pictures the tags have on the display of the OLED extension (it keeps them, 128 x 50, shown in place of the progress bar and the big
+  // time while the tag's medium plays): the ids of the tags that have one, or null when the extension is not there - the list of tags
+  // offers the button only then
+  let oledPictures = null
+  const readOledPictures = async () => {
+    try {
+      const response = await fetch(`${host.apiUrl}/api/ext/oled/tagpictures`, { signal: AbortSignal.timeout(2000) })
+      const body = response.ok ? await response.json() : null
+      oledPictures = Array.isArray(body?.ids) ? new Set(body.ids.map(String)) : null
+    } catch {
+      oledPictures = null
+    }
+  }
+  // (a tag that was removed takes its picture along)
+  const forgetOledPicture = (uid) =>
+    fetch(`${host.apiUrl}/api/ext/oled/tagpictureforget`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: uid }), signal: AbortSignal.timeout(2000) }).catch(() => undefined)
   // What the app sends for an assignment: an album, or an artist cover / folder (the first of its albums plays until the user chooses another)
   const mediaOfRequest = async (raw) => {
     const media = tags.sanitizeMedia(raw)
@@ -1148,7 +1164,7 @@ exports.activate = (host) => {
   const tagRow = (tag, page = false) => ({
     id: tag.uid,
     title: tag.title,
-    text: [KINDS[tag.media.type], tagNumberText({ reader: tag.tech === 'HID' ? 'hid' : '' }, tag.uid), data.flex === tag.uid ? 'Flex-Tag' : ''].filter(Boolean),
+    text: [KINDS[tag.media.type], tagNumberText({ reader: tag.tech === 'HID' ? 'hid' : '' }, tag.uid), data.flex === tag.uid ? 'Flex-Tag' : '', page && oledPictures?.has(tag.uid) ? 'OLED-Bild' : ''].filter(Boolean),
     image: tags.tagImage(tag),
     imageOwn: Boolean(tags.sanitizeImage(tag.image)),
     coverPost: '/api/ext/nfc/tagimage',
@@ -1158,6 +1174,13 @@ exports.activate = (host) => {
         ? [
             { label: 'Album abspielen', icon: 'play', post: '/api/ext/nfc/tagplay', safe: true },
             { label: 'Tag ändern', icon: 'swap', change: true },
+          ]
+        : []),
+      // (the picture for the display of the OLED extension: exactly 128 x 50 points and 1 bit - the app checks it, the extension again)
+      ...(page && oledPictures
+        ? [
+            { label: 'OLED-Bild', icon: 'display', post: '/api/ext/oled/tagpicture', upload: true, exact: [128, 50], safe: true },
+            ...(oledPictures.has(tag.uid) ? [{ label: 'OLED-Bild entfernen', icon: 'undo', post: '/api/ext/oled/tagpicturereset', safe: true, confirm: 'Das OLED-Bild dieses Tags entfernen?' }] : []),
           ]
         : []),
       { label: 'Entfernen', icon: 'trash', post: '/api/ext/nfc/tagremove', confirm: 'Diesen Tag entfernen? Er spielt dann nichts mehr.' },
@@ -1199,6 +1222,7 @@ exports.activate = (host) => {
     '/tags',
     async (_req, res) => {
       const found = Object.values(data.tags).filter((tag) => tag.media).sort(byRecent)
+      await readOledPictures()
       res.json({ items: await Promise.all(found.map((tag) => rowWithAlbums(tag, true))) })
     },
     { session: true },
@@ -1236,6 +1260,17 @@ exports.activate = (host) => {
     { session: true },
   )
 
+  // Which tag started what plays now ({ uid }, '' when what plays is not a tag's - the display of the OLED extension asks, to show that tag's
+  // picture). Not behind the login, but only from the box itself.
+  host.route('get', '/playing', async (req, res) => {
+    const from = String(req.socket?.remoteAddress ?? '')
+    // (the box's web server proxies to 8201: never from there, whatever header it sets)
+    if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(from) || req.headers['x-forwarded-for'] || req.socket?.localPort === 8201) return res.status(403).json({ ok: false })
+    if (!handed) return res.json({ uid: '' })
+    const meta = await playerMeta()
+    res.json({ uid: ownPlayback(meta) && meta?.finished !== true ? handed.uid : '' })
+  })
+
   // A tag is taken out of the store (it is noted as new when it is laid on again)
   host.route(
     'post',
@@ -1244,6 +1279,7 @@ exports.activate = (host) => {
       const uid = tags.normalizeUid(req.body?.id)
       if (!uid || !tags.forgetTag(data, uid)) return res.status(404).json({ ok: false, error: 'no_tag', message: 'Diesen Tag gibt es nicht mehr' })
       saveTags()
+      forgetOledPicture(uid)
       res.json({ ok: true, message: 'Tag entfernt' })
     },
     { session: true },

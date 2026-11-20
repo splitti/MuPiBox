@@ -219,8 +219,16 @@ test('the API part: arm with a medium, lay a new tag on, the display is told to 
   // (the player's number of the playback: 6 before, the display's start of the tag's medium makes it 7, another start later 8)
   let generation = 6
   let playing = false
-  global.fetch = async (url) => {
+  // (the OLED extension: the ids of the tags it has a picture for, null = not installed; the tags it was told to forget)
+  let oledIds = null
+  const forgotten = []
+  global.fetch = async (url, options) => {
     const u = String(url)
+    if (u.endsWith('/api/ext/oled/tagpictures')) return oledIds ? { ok: true, json: async () => ({ ids: oledIds }) } : { ok: false, json: async () => ({}) }
+    if (u.endsWith('/api/ext/oled/tagpictureforget')) {
+      forgotten.push(JSON.parse(options.body).id)
+      return { ok: true, json: async () => ({ ok: true }) }
+    }
     if (u.startsWith('http://player.test/local')) return { ok: true, json: async () => ({ currentPlayer: 'mplayer', currentType: 'local', playing, generation, triggerAt: Date.now() }) }
     player.push(u)
     return { ok: true, json: async () => ({}) }
@@ -258,6 +266,20 @@ test('the API part: arm with a medium, lay a new tag on, the display is told to 
     assert.strictEqual(list.length, 1)
     assert.deepStrictEqual([list[0].id, list[0].title, list[0].image, list[0].text], ['04A1B2C3', 'Pippi Langstrumpf – Astrid Lindgren', 'https://i.scdn.co/own.jpg', ['SD-Karte', '04:A1:B2:C3']])
     assert.deepStrictEqual(list[0].actions.map((a) => a.post ?? 'change'), ['/api/ext/nfc/tagplay', 'change', '/api/ext/nfc/tagremove'], 'the tile: play, change, remove')
+    // the picture for the OLED display: the button only while that extension answers, and the one to take it away only for a tag that has one
+    assert.ok(!list[0].actions.some((a) => a.post?.startsWith('/api/ext/oled/')), 'no OLED extension: no button')
+    oledIds = []
+    const withOled = (await call(routes['get /tags'])).body.items[0]
+    assert.deepStrictEqual(withOled.actions.map((a) => a.post ?? 'change'), ['/api/ext/nfc/tagplay', 'change', '/api/ext/oled/tagpicture', '/api/ext/nfc/tagremove'])
+    const upload = withOled.actions.find((a) => a.post === '/api/ext/oled/tagpicture')
+    assert.deepStrictEqual([upload.upload, upload.exact, upload.icon], [true, [128, 50], 'display'])
+    assert.ok(!withOled.text.includes('OLED-Bild'))
+    oledIds = ['04A1B2C3']
+    const hasOne = (await call(routes['get /tags'])).body.items[0]
+    assert.deepStrictEqual(hasOne.actions.map((a) => a.post ?? 'change'), ['/api/ext/nfc/tagplay', 'change', '/api/ext/oled/tagpicture', '/api/ext/oled/tagpicturereset', '/api/ext/nfc/tagremove'])
+    assert.ok(hasOne.text.includes('OLED-Bild'))
+    assert.ok(!(await call(routes['post /tagsfor'], { body: { media: book } })).body.items[0].actions.some((a) => a.post?.startsWith('/api/ext/oled/')), 'the sheet of a medium has none')
+    oledIds = null
     assert.strictEqual((await call(routes['post /tagimage'], { body: { id: '04A1B2C3', image: 'javascript:alert(1)' } })).status, 400)
     assert.strictEqual((await call(routes['post /tagimage'], { body: { id: '04A1B2C3', image: '' } })).body.ok, true)
     assert.strictEqual((await call(routes['get /tags'])).body.items[0].image, '/api/rssfeed/cover?url=x&w=400', 'the cover the app showed comes back')
@@ -274,6 +296,12 @@ test('the API part: arm with a medium, lay a new tag on, the display is told to 
     generation = 8 // (the display started it anew: this start is the tag's now)
     await later(1100)
     assert.strictEqual((await call(routes['post /tagplay'], { body: { id: 'DEADBEEF' } })).status, 404)
+    // which tag started what plays: the display of the OLED extension asks, from the box itself only
+    const fromBox = { socket: { remoteAddress: '127.0.0.1', localPort: 8200 }, headers: {} }
+    assert.deepStrictEqual((await call(routes['get /playing'], fromBox)).body, { uid: '04A1B2C3' })
+    assert.strictEqual((await call(routes['get /playing'], { socket: { remoteAddress: '192.168.1.9', localPort: 8200 }, headers: {} })).status, 403)
+    assert.strictEqual((await call(routes['get /playing'], { socket: { remoteAddress: '127.0.0.1', localPort: 8200 }, headers: { 'x-forwarded-for': '192.168.1.9' } })).status, 403)
+    assert.strictEqual((await call(routes['get /playing'], { socket: { remoteAddress: '127.0.0.1', localPort: 8201 }, headers: {} })).status, 403)
     // "Tag ändern": another medium for the tag, its own picture goes and the cover of the new one comes
     assert.strictEqual((await call(routes['post /tagchange'], { body: { id: 'DEADBEEF', media: radio } })).status, 404)
     assert.strictEqual((await call(routes['post /tagchange'], { body: { id: '04A1B2C3', media: { ...book, libraryIsContainer: true } } })).status, 400)
@@ -297,6 +325,7 @@ test('the API part: arm with a medium, lay a new tag on, the display is told to 
     nfc.feed({ event: 'gone' })
     await later()
     assert.ok(!player.some((u) => u.startsWith('http://player.test/pause')), 'what the display started is not the tag of the reader')
+    assert.deepStrictEqual((await call(routes['get /playing'], fromBox)).body, { uid: '' }, 'and no tag picture for it')
     generation = 8
 
     // laid on again while it plays (a USB reader: at every hold): it plays on, nothing starts anew
@@ -322,6 +351,7 @@ test('the API part: arm with a medium, lay a new tag on, the display is told to 
     // removed, it is new again and plays nothing
     assert.strictEqual((await call(routes['post /tagremove'], { body: { id: '04A1B2C3' } })).body.ok, true)
     assert.strictEqual((await call(routes['post /tagremove'], { body: { id: '04A1B2C3' } })).status, 404)
+    assert.deepStrictEqual(forgotten, ['04A1B2C3'], 'its picture on the display goes with it (once)')
     assert.deepStrictEqual((await call(routes['get /tags'])).body.items, [])
     nfc.feed({ event: 'gone' })
     nfc.feed({ event: 'tag', tech: 'ISO14443A', uid: '04A1B2C3' })

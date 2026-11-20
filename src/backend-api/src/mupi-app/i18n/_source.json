@@ -4616,5 +4616,12 @@
  "Wischt du nach links und das Bild dreht sich nach rechts, oder geht „nach oben“ in eine andere Richtung, ist der Touch-Chip anders eingebaut. Dann hier tauschen oder spiegeln.",
  "Am DSI-Anschluss ist kein Display zu erkennen (er meldet sich auch ohne Display als verbunden). Beim Einschalten fragt die App nach.",
  "Ohne Display starten",
- "Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?"
+ "Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?",
+ "OLED-Bild",
+ "OLED-Bild entfernen",
+ "Das OLED-Bild dieses Tags entfernen?",
+ "OLED-Bild gespeichert",
+ "OLED-Bild entfernt",
+ "Das Bild muss genau 128 × 50 Punkte groß sein",
+ "Dieser Tag lässt sich nicht ansprechen"
 ]

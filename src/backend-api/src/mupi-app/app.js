@@ -4789,7 +4789,7 @@ function fillTagRows(box, rows, redraw, tiles = false) {
             if (!file) return
             if (!(exactW > 0 && exactW <= 2048 && exactH > 0 && exactH <= 2048)) return toast(tr('Hat nicht geklappt'), 'info')
             const { image, problem } = await exactPicture(file, exactW, exactH)
-            if (!image) return toast(tr(problem === 'size' ? 'Das Bild muss genau 128 × 64 Punkte groß sein' : problem === 'bits' ? 'Das Bild darf nur Schwarz und Weiß enthalten (1 Bit)' : 'Das ist kein Bild, das die Box lesen kann'), 'info')
+            if (!image) return toast(tr(problem === 'size' ? (exactH === 50 ? 'Das Bild muss genau 128 × 50 Punkte groß sein' : 'Das Bild muss genau 128 × 64 Punkte groß sein') : problem === 'bits' ? 'Das Bild darf nur Schwarz und Weiß enthalten (1 Bit)' : 'Das ist kein Bild, das die Box lesen kann'), 'info')
             const done = await post(action.post, { id: row.id, image })
             toast(said(done, done.ok ? 'Erledigt' : 'Hat nicht geklappt'), done.ok ? 'ok' : 'info')
             redraw()

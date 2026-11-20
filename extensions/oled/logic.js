@@ -13,6 +13,16 @@ const SLEEP_MINUTES = [0, 1, 5, 15, 60]
 // the user chose)
 const IDLE_SCREENS = ['nfc', 'barcode', 'clock', 'custom']
 // (why a picture of the user is not taken: oled.py --check says it as an "error" event; the words go to the app)
+// (what the page says of a picture for a tag, which is 128 x 50: the same reasons, the size named)
+const TAG_PICTURE_MESSAGES = {
+  bad_size: 'Das Bild muss genau 128 × 50 Punkte groß sein',
+  not_1bit: 'Das Bild darf nur Schwarz und Weiß enthalten (1 Bit)',
+  bad_picture: 'Das ist kein Bild, das die Box lesen kann',
+}
+/** The id of a tag as the name of its picture file: letters, digits, - and _ (the id of a tag is hex). '' for anything else. */
+const TAG_ID = /^[0-9A-Za-z_-]{1,40}$/
+const tagIdOf = (value) => (typeof value === 'string' && TAG_ID.test(value) ? value : '')
+
 const PICTURE_MESSAGES = {
   bad_size: 'Das Bild muss genau 128 × 64 Punkte groß sein',
   not_1bit: 'Das Bild darf nur Schwarz und Weiß enthalten (1 Bit)',
@@ -340,14 +350,16 @@ function buildState({ config, play, ui, net, date, now, version, language }) {
   // (the rotary knob is choosing an album, a folder or an episode: its name where the information of the medium is, until the choice is made)
   if (ui.select && now < ui.select.until) return { ...base, view: 'select', pick: { title: ui.select.title, artist: ui.select.artist, index: ui.select.index, count: ui.select.count } }
   if (ui.overlay && now < ui.overlay.until) return { ...base, view: 'overlay', overlay: ui.overlay.kind, volume: ui.overlay.volume ?? play.volume }
-  if (play.player !== '' && play.playing) return { ...base, view: 'play' }
+  // (the picture of the tag that started the medium: the driver draws it in Mix and Compact mode, where there is room for it)
+  const tagPicture = tagIdOf(ui.tagPicture)
+  if (play.player !== '' && play.playing) return { ...base, view: 'play', ...(tagPicture ? { tagPicture } : {}) }
   // (nothing plays - a paused medium too, its still picture would burn in: after the time the user chose the display goes off, a
   // button, a tag or a tap wakes it)
   if (config.sleepAfter > 0 && ui.idleSince && now - ui.idleSince >= config.sleepAfter * 60000 && !(ui.wake && now < ui.wake)) return { ...base, view: 'off' }
   // (a rest time or the limit has stopped the box: the picture that says so, instead of the one of the idle display)
   if (ui.blocked === true) return { ...base, view: 'rest' }
   const something = play.player !== '' && (play.title !== '' || play.artist !== '' || play.album !== '')
-  return { ...base, view: something ? 'play' : 'idle' }
+  return { ...base, view: something ? 'play' : 'idle', ...(something && tagPicture ? { tagPicture } : {}) }
 }
 
 /**
@@ -433,6 +445,8 @@ module.exports = {
   SLEEP_MINUTES,
   IDLE_SCREENS,
   PICTURE_MESSAGES,
+  TAG_PICTURE_MESSAGES,
+  tagIdOf,
   pictureErrorCode,
   IMAGE_ROWS,
   IMAGE_IDS,

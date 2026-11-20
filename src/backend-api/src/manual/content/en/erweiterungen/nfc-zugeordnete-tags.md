@@ -30,6 +30,7 @@ From left to right:
 | Picture | **Change picture**: choose a picture of your own for the tag, or give it up again with **Use the cover of the medium** in the same window, see [Changing the picture of a tag](nfc-bild.md) |
 | Play | **Play album**: starts the medium of the tag as if you had laid the tag on |
 | Arrows | **Change tag**: the tag gets another album, see below |
+| Display | **OLED picture**: a picture of your own for the OLED display, shown instead of the progress bar and the time while this tag plays, exactly 128 × 50 points, 1 bit, see [OLED display](oled.md). If the tag has one, **Remove OLED picture** stands next to it. These buttons exist only with the OLED extension |
 | Bin | **Remove**: takes the tag out of the list, after a question. A removed tag counts as new the next time it is laid on and plays nothing |
 
 A tag you lay on that has no medium is not in the list. It plays nothing.

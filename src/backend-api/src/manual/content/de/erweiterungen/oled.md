@@ -36,7 +36,7 @@ Die **Statusleiste** oben zeigt von links nach rechts:
 | gekreuzte Pfeile | **Zufall** ist an |
 | Zahl und Symbol rechts | Lautstärke und **Ausgang**: Lautsprecher, Kopfhörer oder Bluetooth |
 
-Darunter stehen **Titel**, **Interpret** und **Album**; eine lange Zeile läuft von selbst durch (oder auch nicht: siehe **Zu lange Texte** unten). Unten links zeigt ein Dreieck, dass die Box spielt (zwei Balken: pausiert), daneben die **Zeit**, unten rechts die **Titelnummer** („Track:3/12“).
+Darunter stehen **Titel**, **Interpret** und **Album**; eine lange Zeile läuft von selbst durch (oder auch nicht: siehe **Zu lange Texte** unten). Ein **Stream** (ein Radiosender, der kein Ende hat) bekommt keinen Fortschrittsbalken. Unten links zeigt ein Dreieck, dass die Box spielt (zwei Balken: pausiert), daneben die **Zeit**, unten rechts die **Titelnummer** („Track:3/12“).
 
 ![Die Zeit läuft rückwärts, der Ausgang ist Bluetooth](oled-play-bt.png)
 
@@ -93,6 +93,12 @@ Die Karte **Bilder** zeigt die Bilder des Displays und wo sie erscheinen. Alle s
 Jedes Bild hat einen Knopf **Zeige Bild**: Das Bild steht dann **zehn Sekunden** auf dem Display, danach zeigt es wieder, was vorher zu sehen war. So siehst du ein Bild, ohne dass der Anlass eintritt.
 
 Bei einem änderbaren Bild tippst du auf **Bild ändern** und wählst ein Bild vom Gerät. Die Box nimmt **nur Bilder, die genau 128 × 64 Punkte groß sind und nur aus reinem Schwarz und Weiß bestehen (1 Bit)**; Weiß leuchtet. Die App prüft das gleich beim Wählen, die Box noch einmal. Ein Bild mit anderer Größe, Graustufen, Farben oder durchsichtigen Stellen wird **abgelehnt**, nichts wird verkleinert oder umgewandelt. Mach das Bild vorher in einem Grafikprogramm fertig (Größe 128 × 64, Modus „Schwarzweiß“ ohne Dithering oder mit, wie du es willst). Mit **Zurücksetzen** kommt das Original wieder.
+
+### Das Bild eines Tags
+
+Jeder NFC-Tag kann ein eigenes Bild bekommen, das auf dem Display steht, solange **das Medium dieses Tags** spielt (ein Album, ein Stream, ein Podcast, was auch immer der Tag startet). Es ersetzt in den Anzeigen **Mix** und **Kompakt** den Fortschrittsbalken und die große Zeit; die oberen 50 Punkte gehören dem Bild, die Statusleiste (Mix) beziehungsweise das WLAN-Symbol und PAUSE (Kompakt) bleiben. In der Anzeige **Voll** und auf einem Display mit 128 × 32 Punkten erscheint das Bild nicht.
+
+Das Bild wählst du in **Einstellungen › NFC-Extension › Zugeordnete Tags** mit dem Knopf **OLED-Bild** der Kachel des Tags (der Knopf steht nur da, wenn die OLED-Extension installiert ist), siehe [Zugeordnete Tags](nfc-zugeordnete-tags.md). Die Box nimmt **nur Bilder, die genau 128 × 50 Punkte groß sind und nur aus reinem Schwarz und Weiß bestehen (1 Bit)**; Weiß leuchtet. Alles andere wird wie bei den anderen Bildern abgelehnt. Mit **OLED-Bild entfernen** geht das Bild wieder weg; wird der Tag entfernt, geht sein Bild mit. Das Bild kommt nur, wenn der Tag das Medium gestartet hat: Wählt das Kind danach am Display etwas anderes, ist das normale Bild wieder da. Die Bilder der Tags gehören nicht zum Export der Tag-Liste.
 
 Das Update- und das Herunterfahr-Bild zeichnet die Box selbst auf das Display, auch wenn der Server dabei schon steht. Das Startbild erscheint, sobald die Anzeige gestartet ist; ein Bild davor, während Linux noch startet, ist nicht möglich.
 
