@@ -115,6 +115,29 @@
     }
   },
   {
+    "id": "touchlcd",
+    "name": "Touch-Display Cover",
+    "version": "0.1.0",
+    "description": "Ein kleines Touch-Display (Waveshare 2,8 Zoll Capacitive Touch LCD, 240 × 320, am SPI- und I2C-Anschluss) zeigt nur das Cover. Nach links oder rechts wischen dreht es wie einen Würfel zum nächsten Artisten oder Album, ein Tippen öffnet den Artisten oder spielt das Album, nach oben wischen geht eine Ebene zurück. Die Einstellungen stehen unter Einstellungen › Touch-Display Cover.",
+    "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48ZyBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIzMCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTc2IDcwaDE2MGEzMCAzMCAwIDAgMSAzMCAzMHYzMTJhMzAgMzAgMCAwIDEtMzAgMzBIMTc2YTMwIDMwIDAgMCAxLTMwLTMwVjEwMGEzMCAzMCAwIDAgMSAzMC0zMHoiLz48cGF0aCBkPSJNMTQ2IDE1MGgyMjBNMTQ2IDM2MmgyMjAiLz48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjQyIi8+PHBhdGggZD0iTTYwIDIzMGwtMjQgMjYgMjQgMjZNNDUyIDIzMGwyNCAyNi0yNCAyNiIvPjwvZz48L3N2Zz4K",
+    "hostApi": 14,
+    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/touchlcd-0.1.0.mpx",
+    "sha256": "6ba17d1cabd62ba6e315c4dd09daa391443d91ccc5e9aa6a886b777db8644388",
+    "size": 31849,
+    "resources": {},
+    "system": {
+      "udev": 1,
+      "units": [],
+      "groups": [],
+      "packages": [
+        "python3-pil",
+        "python3-spidev",
+        "python3-lgpio",
+        "fonts-dejavu-core"
+      ]
+    }
+  },
+  {
     "id": "weather",
     "name": "Wetter",
     "version": "1.5.2",

@@ -768,6 +768,53 @@ describe('the OLED extension of this repository', () => {
   })
 })
 
+describe('the touch display extension of this repository', () => {
+  const extDir = path.join(process.cwd(), '..', '..', 'extensions')
+  const touch = JSON.parse(readFileSync(path.join(extDir, 'touchlcd', 'manifest.json'), 'utf8')) as Manifest
+  it('has a manifest the installer accepts: a status block, a page under System, the packages of the SPI and I2C programs and a font', () => {
+    assert.strictEqual(checkManifest(touch, files('api.js', 'icon.svg', '99-mpx-touchlcd.rules')), null)
+    assert.strictEqual(touch.ui?.place, 'system')
+    assert.deepStrictEqual(touch.resources, {}, 'its pins are chosen in the app, which checks them against the box')
+    assert.deepStrictEqual(touch.system?.packages, ['python3-pil', 'python3-spidev', 'python3-lgpio', 'fonts-dejavu-core'])
+    assert.deepStrictEqual(touch.ui?.items.filter((i) => i.type === 'status').map((i) => i.state), ['/api/ext/touchlcd/state'])
+    assert.deepStrictEqual(touch.ui?.items.filter((i) => i.type === 'action').map((i) => i.post), ['/api/ext/touchlcd/spion', '/api/ext/touchlcd/iicon'])
+  })
+  it('lets the user choose the pins - none is named in the manifest, so none can be one that is taken', () => {
+    for (const key of ['dcPin', 'rstPin', 'blPin', 'tpRstPin']) assert.deepStrictEqual(touch.settings?.[key], { type: 'gpio', default: 0 }, key)
+  })
+  it('has a udev rule that opens the SPI and I2C buses for the group of the header pins - and nothing that runs a program', () => {
+    const rule = readFileSync(path.join(extDir, 'touchlcd', '99-mpx-touchlcd.rules'), 'utf8')
+    assert.strictEqual(checkUdevRules(rule), null)
+    assert.match(rule, /SUBSYSTEM=="spidev"/)
+    assert.match(rule, /SUBSYSTEM=="i2c-dev"/)
+    assert.match(rule, /GROUP="gpio"/)
+  })
+  it('takes the settings the app sends: CS, pins, turn, what is shown, brightness and the touch corrections', () => {
+    assert.strictEqual(
+      checkSettings(touch, { spiDevice: '0.0', dcPin: 24, rstPin: 22, blPin: 18, tpRstPin: 17, rotation: 270, category: 'nas', showTitle: true, brightness: 50, nightDim: true, nightBrightness: 10, sleepAfter: 15, touchSwap: true, touchFlipX: true, touchFlipY: true }).ok,
+      true,
+    )
+    assert.strictEqual(checkSettings(touch, { spiDevice: '1.0' }).ok, false)
+    assert.strictEqual(checkSettings(touch, { rotation: 45 }).ok, false)
+    assert.strictEqual(checkSettings(touch, { category: 'video' }).ok, false)
+    assert.strictEqual(checkSettings(touch, { brightness: 0 }).ok, false)
+    assert.strictEqual(checkSettings(touch, { sleepAfter: 7 }).ok, false)
+    assert.strictEqual(checkSettings(touch, { dcPin: 40 }).ok, false)
+  })
+  it('is packed as the catalog says, with its Python programs in it - and no test', () => {
+    const entry = JSON.parse(readFileSync(path.join(extDir, 'catalog.json'), 'utf8')).find((e: { id: string }) => e.id === 'touchlcd')
+    const bytes = readFileSync(path.join(extDir, 'dist', `touchlcd-${entry.version}.mpx`))
+    assert.strictEqual(createHash('sha256').update(bytes).digest('hex'), entry.sha256)
+    const checked = verifyPackage(bytes)
+    assert.strictEqual(checked.ok, true)
+    if (checked.ok) {
+      assert.deepStrictEqual(checked.pkg.manifest, touch, 'the package holds the manifest of the repository')
+      for (const file of ['touchlcd.py', 'lcd.py', 'cube.py', 'gesture.py', 'driver.js', 'logic.js', 'api.js']) assert.ok(checked.pkg.files.has(file), file)
+      assert.ok(![...checked.pkg.files.keys()].some((name) => name.startsWith('test/')), 'no tests in the package')
+    }
+  })
+})
+
 describe('an uploaded extension file', () => {
   it('is read and checked without installing anything', () => {
     const extDir = path.join(process.cwd(), '..', '..', 'extensions')

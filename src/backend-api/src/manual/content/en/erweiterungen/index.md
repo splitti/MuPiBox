@@ -10,6 +10,7 @@ Since MuPiBox 5.1 you can add **extensions**: extra functions that not every box
 | [Time in the header](uhrzeit.md) | the time at the top of the display, digital or analog |
 | [Weather](wetter.md) | the weather of a place as dials on the display |
 | [Football](fussball.md) | your club, the matchday and the table on the display |
+| [Touch display cover](touch-display.md) | a touch display (Waveshare 2.8 inch) shows the cover: swiping turns it like a cube, a tap plays the album |
 | [NFC extension](nfc.md) | up to three NFC readers (PN5180, RC522, PN532, USB) start media with tags: assigning tags, connecting readers, wiring |
 
 > [!WARNING]
