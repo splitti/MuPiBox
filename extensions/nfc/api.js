@@ -542,7 +542,9 @@ exports.activate = (host) => {
     if (!force && removeMatters(settings, reader) && !inAnyField(tag.uid)) return log.info(`[nfc] tag ${tag.uid}: taken off before its start`)
     // (the time of now, not of the laying on: the network said and a feed read took seconds, and the start counted as too old)
     pending = { seq: ++seq, media, at: Date.now(), uid: tag.uid }
-    // (a box without the DSI display - the extension OLED-Display sets mupibox.headless - has no display page that asks for it: the server starts it)
+    // (a box without the DSI display - mupibox.headless, the switch of the box under Einstellungen > Display > Ohne DSI-Display - has
+    // no display page that asks for it: the server starts it. With "Spotify bereithalten" the page runs without a screen; it finds
+    // nothing then - the start is taken only once)
     if (headless()) await deliver()
   }
 
