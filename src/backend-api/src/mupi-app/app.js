@@ -17863,14 +17863,23 @@ function extFormMount(sheet, e, fields, saved, redraw) {
       fill()
     }
     // (the value is saved as soon as the slider is let go or the box is left - like a switch, not with the button: the box then works with it
-    // at once. A value outside the range or none goes back into the range first)
+    // at once. A value outside the range or none goes back into the range first; not saved, both go back to the value that is saved)
+    let saved = Number(range.value)
     const keep = async () => {
       const clamped = Math.min(Number(range.max), Math.max(Number(range.min), Math.round(Number(box.value) || Number(range.min))))
       box.value = String(clamped)
       range.value = box.value
       fill()
       const ok = await save({ [range.dataset.xr]: clamped }, false)
-      if (ok) e.settings[range.dataset.xr] = clamped
+      if (ok) {
+        e.settings[range.dataset.xr] = clamped
+        saved = clamped
+      } else if (Number(range.value) === clamped) {
+        // (unless it was moved again meanwhile: that value is on its way)
+        box.value = String(saved)
+        range.value = box.value
+        fill()
+      }
     }
     box.onchange = keep
     range.onchange = keep
@@ -18733,10 +18742,14 @@ function extCoreSection(e, heading, dimmed) {
     ],
   }
 }
-// The values these cards show: the extension's, and the display's for the window of the evening
+// The values these cards show: the extension's, and the display's for the window of the evening. `shared`: the display's are
+// there (not loaded, the page still shows the cards - its times are not saved then, they would overwrite the display's with defaults)
 async function extCoreLoad(e) {
-  await loadDisplayOptions()
-  setNightValues(disp.opts)
+  const shared = await loadDisplayOptions().then(
+    () => true,
+    () => !!disp.opts,
+  )
+  setNightValues(disp.opts ?? {})
   const s = e.settings ?? {}
   state.values.set('oledBright', Number(s.contrast ?? 127))
   state.values.set('oledOff', Number(s.sleepAfter ?? 0))
@@ -18745,7 +18758,7 @@ async function extCoreLoad(e) {
   ndGate = 'oledNight'
   state.values.set('ndFixed', s.nightDim === true && ndFixedNow(disp.opts?.nightDim ?? {}))
   const st = await api(`/api/ext/${e.id}/state`)
-  return st.ok && st.body?.dimmed === true
+  return { dimmed: st.ok && st.body?.dimmed === true, shared }
 }
 
 function extPageController(entry, sub = 0) {
@@ -18800,7 +18813,8 @@ function extPageController(entry, sub = 0) {
       if (!r.ok) throw new Error(`extension ${r.status}`)
       own.e = r.body
       own.dimmed = false
-      if (coreHeadings().length) own.dimmed = await extCoreLoad(own.e)
+      own.shared = true
+      if (coreHeadings().length) ({ dimmed: own.dimmed, shared: own.shared } = await extCoreLoad(own.e))
       // (hostApi 13: settings per user - the users for the choice above the form; whose values /info holds is not named, so
       // the form loads them for the user it shows, see extFormMount)
       if (own.e.perUser?.length) await loadUsers().catch(() => undefined)
@@ -18853,7 +18867,13 @@ function extPageController(entry, sub = 0) {
     change(key, v, page) {
       if (EXT_CORE_KEYS[key] && coreHeadings().length) return saveCore(EXT_CORE_KEYS[key], v, key)
       // (the window of the evening is the display's: its page saves it)
-      if (EXT_CORE_SHARED.includes(key) && coreHeadings().length) return CONTROLLERS.displaysettings.change(key, v, page)
+      if (EXT_CORE_SHARED.includes(key) && coreHeadings().length) {
+        if (!own.shared) {
+          toast('Nicht gespeichert', 'info')
+          return false
+        }
+        return CONTROLLERS.displaysettings.change(key, v, page)
+      }
       const part = own.e?.enabled ? merged().find((m) => m.keys.includes(key)) : null
       if (part) return part.ctrl.change?.(key, v, page)
       // (the fields a page of the core draws itself - the knobs it was told to add - are not in its schema: its own sections say)
