@@ -4769,5 +4769,8 @@
  "Was angezeigt wird": "What is shown",
  "Welche Bibliothek das Display zeigt: alles, nur Musik, nur Hörbücher oder „Sonstiges“, oder nur das NAS. Die Artisten stehen nach Namen geordnet, wie in der Bibliothek der Box.": "Which library the display shows: everything, only music, only audiobooks or “other”, or only the NAS. The artists are in the order of their names, as in the library of the box.",
  "Wenn niemand das Display berührt, geht es nach dieser Zeit aus. Eine Berührung weckt es (sie macht sonst nichts).": "If nobody touches the display, it goes off after this time. A touch wakes it (it does nothing else).",
- "Wischt du nach links und das Bild dreht sich nach rechts, oder geht „nach oben“ in eine andere Richtung, ist der Touch-Chip anders eingebaut. Dann hier tauschen oder spiegeln.": "If you swipe to the left and the picture turns to the right, or “up” goes in another direction, the touch chip is built in differently. Then swap or mirror here."
+ "Wischt du nach links und das Bild dreht sich nach rechts, oder geht „nach oben“ in eine andere Richtung, ist der Touch-Chip anders eingebaut. Dann hier tauschen oder spiegeln.": "If you swipe to the left and the picture turns to the right, or “up” goes in another direction, the touch chip is built in differently. Then swap or mirror here.",
+ "Am DSI-Anschluss ist kein Display zu erkennen (er meldet sich auch ohne Display als verbunden). Beim Einschalten fragt die App nach.": "No display can be seen on the DSI port (it reports itself as connected even without a display). The app asks when you switch it on.",
+ "Ohne Display starten": "Start without a display",
+ "Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?": "No display can be seen on the DSI port. If one is connected after all, it stays dark after the next restart. Start without a display?"
 }

@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { after, beforeEach, describe, it } from 'node:test'
-import { checkHeadlessAtStart, dsiConnected, headlessState, setHeadless, setHeadlessSpotify } from './app-api/headless'
+import { checkHeadlessAtStart, dsiConnected, dsiPanelSeen, headlessState, setHeadless, setHeadlessSpotify } from './app-api/headless'
 
 const dir = mkdtempSync(path.join(tmpdir(), 'mupibox-headless-'))
 after(() => rmSync(dir, { recursive: true, force: true }))
@@ -14,7 +14,7 @@ const keptOled = path.join(dir, 'oled-autostart.json')
 const switchedFile = path.join(dir, 'switched')
 
 /** A box: its configuration, DietPi's autostart (null: DietPi's "0", no index file), a DSI display or not, the kiosk running */
-function box({ headless, index, dsi = false, kiosk = true, ok = true }: { headless?: boolean; index: number | null; dsi?: boolean; kiosk?: boolean; ok?: boolean }) {
+function box({ headless, index, dsi = false, unconfirmed = false, kiosk = true, ok = true }: { headless?: boolean; index: number | null; dsi?: boolean; unconfirmed?: boolean; kiosk?: boolean; ok?: boolean }) {
   const b = {
     config: { mupibox: { version: '5.1.0', ...(headless === undefined ? {} : { headless }) } } as Record<string, unknown>,
     index,
@@ -28,6 +28,7 @@ function box({ headless, index, dsi = false, kiosk = true, ok = true }: { headle
       },
       readAutostartIndex: () => b.index,
       dsiConnected: () => dsi,
+      dsiUnconfirmed: () => unconfirmed,
       kioskRunning: async () => kiosk,
       keptFiles: [kept, keptOled],
       switchedFile,
@@ -91,7 +92,7 @@ describe('the start without the DSI display: the switch of the core', () => {
   })
 
   it('the state: pending until the box restarted', async () => {
-    assert.deepEqual(await headlessState(box({ headless: true, index: null, kiosk: true }).deps, box({ headless: true, index: null, kiosk: true }).io), { on: true, spotify: false, dsi: false, kiosk: true, browser: false, pending: true })
+    assert.deepEqual(await headlessState(box({ headless: true, index: null, kiosk: true }).deps, box({ headless: true, index: null, kiosk: true }).io), { on: true, spotify: false, dsi: false, dsiUnconfirmed: false, kiosk: true, browser: false, pending: true })
     const b = box({ headless: true, index: null, kiosk: false })
     assert.equal((await headlessState(b.deps, b.io)).pending, false)
     // (off: no kiosk is the restart to come after it was switched off here)
@@ -208,5 +209,72 @@ describe('the start without the DSI display: the check at the start of the serve
     writeFileSync(path.join(drm, 'card1-DSI-1', 'status'), 'connected\n')
     assert.equal(dsiConnected(drm), true)
     assert.equal(dsiConnected(path.join(dir, 'none')), false)
+  })
+})
+
+describe('a DSI display that is there, and one the kernel only reports', () => {
+  beforeEach(() => {
+    rmSync(kept, { force: true })
+    rmSync(keptOled, { force: true })
+    rmSync(switchedFile, { force: true })
+  })
+
+  /** /sys/class/drm and /sys/class/input of a box: a DSI connector that says connected (as with any DSI overlay), what else is there */
+  function sys(name: string, { edid = '', touch = false }: { edid?: string; touch?: boolean }) {
+    const root = path.join(dir, name)
+    const drm = path.join(root, 'drm')
+    const input = path.join(root, 'input')
+    mkdirSync(path.join(drm, 'card1-DSI-1'), { recursive: true })
+    writeFileSync(path.join(drm, 'card1-DSI-1', 'status'), 'connected\n')
+    writeFileSync(path.join(drm, 'card1-DSI-1', 'edid'), edid)
+    mkdirSync(path.join(input, 'input0'), { recursive: true }) // (an HDMI remote: no proof)
+    // (the real one is a link below devices/.../i2c-10/10-0038/input/input5: a folder of that path says the same to realpath)
+    if (touch) mkdirSync(path.join(root, 'devices', 'i2c-10', '10-0038', 'input', 'input5'), { recursive: true })
+    return { drm, input: touch ? path.join(root, 'devices', 'i2c-10', '10-0038', 'input') : input }
+  }
+
+  it('a connector alone is no proof: the kernel says connected for a DSI overlay without a panel', () => {
+    const { drm, input } = sys('no-panel', {})
+    assert.equal(dsiConnected(drm), true)
+    assert.equal(dsiPanelSeen(drm, input), false)
+  })
+
+  it('a panel shows itself by an EDID, or by its touch chip as an input device on an I2C bus', () => {
+    const withEdid = sys('edid', { edid: 'edid-bytes' })
+    assert.equal(dsiPanelSeen(withEdid.drm, withEdid.input), true)
+    const withTouch = sys('touch', { touch: true })
+    assert.equal(dsiPanelSeen(withTouch.drm, withTouch.input), true)
+    assert.equal(dsiPanelSeen(path.join(dir, 'none'), path.join(dir, 'none')), false)
+  })
+
+  it('unconfirmed: the switch asks for the word of the user (confirm), then it switches', async () => {
+    const b = box({ index: 11, unconfirmed: true })
+    await assert.rejects(setHeadless(b.deps, true, b.io), (e: Error & { code?: string }) => e.code === 'dsi_unconfirmed')
+    assert.equal(flag(b), undefined)
+    assert.deepEqual(b.ran, [])
+    await setHeadless(b.deps, true, b.io, true)
+    assert.equal(flag(b), true)
+    assert.deepEqual(b.ran, ['sudo -n /boot/dietpi/dietpi-autostart 0'])
+  })
+
+  it('a display that is there stays a refusal, confirmed or not', async () => {
+    const b = box({ index: 11, dsi: true })
+    await assert.rejects(setHeadless(b.deps, true, b.io, true), (e: Error & { code?: string }) => e.code === 'dsi_connected')
+    assert.equal(flag(b), undefined)
+  })
+
+  it('the state tells the app: a display is there (dsi), or the connector is only reported (dsiUnconfirmed)', async () => {
+    const a = await headlessState(box({ index: 11, dsi: true }).deps, box({ index: 11, dsi: true }).io)
+    assert.deepEqual([a.dsi, a.dsiUnconfirmed], [true, false])
+    const u = box({ index: 11, unconfirmed: true })
+    const s = await headlessState(u.deps, u.io)
+    assert.deepEqual([s.dsi, s.dsiUnconfirmed], [false, true])
+  })
+
+  it('at the start, a switched-on box with an unconfirmed connector keeps the switch', async () => {
+    const b = box({ headless: true, index: null, unconfirmed: true })
+    assert.equal(await checkHeadlessAtStart(b.deps, b.io), false)
+    assert.equal(flag(b), true)
+    assert.deepEqual(b.ran, [])
   })
 })

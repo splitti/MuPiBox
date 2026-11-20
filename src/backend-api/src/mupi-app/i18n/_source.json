@@ -4613,5 +4613,8 @@
  "Was angezeigt wird",
  "Welche Bibliothek das Display zeigt: alles, nur Musik, nur Hörbücher oder „Sonstiges“, oder nur das NAS. Die Artisten stehen nach Namen geordnet, wie in der Bibliothek der Box.",
  "Wenn niemand das Display berührt, geht es nach dieser Zeit aus. Eine Berührung weckt es (sie macht sonst nichts).",
- "Wischt du nach links und das Bild dreht sich nach rechts, oder geht „nach oben“ in eine andere Richtung, ist der Touch-Chip anders eingebaut. Dann hier tauschen oder spiegeln."
+ "Wischt du nach links und das Bild dreht sich nach rechts, oder geht „nach oben“ in eine andere Richtung, ist der Touch-Chip anders eingebaut. Dann hier tauschen oder spiegeln.",
+ "Am DSI-Anschluss ist kein Display zu erkennen (er meldet sich auch ohne Display als verbunden). Beim Einschalten fragt die App nach.",
+ "Ohne Display starten",
+ "Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?"
 ]
