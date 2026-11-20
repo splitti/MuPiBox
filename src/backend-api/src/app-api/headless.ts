@@ -3,15 +3,18 @@
 //   - on: the flag mupibox.headless in the configuration (what the scripts read: wait_display_ready.sh, restart_kiosk.sh,
 //     mupi_start_led.sh - and the NFC extension, which then starts a tag's medium itself) and DietPi's autostart 0 (no kiosk,
 //     no X server, no Chromium); the autostart that was there is kept and comes back when it is switched off.
-//   - refused while a DSI display is connected: the box would start with a dark display.
+//   - refused while a DSI display is there: the box would start with a dark display. "There" needs proof: the kernel reports a DSI
+//     connector as connected whenever a DSI overlay is in config.txt (the display model), panel or not - so the connector alone does not
+//     count. A panel shows itself by an input device on an I2C bus (its touch chip) or by an EDID. A connector without proof is
+//     "unconfirmed": the switch needs { confirm: true } (the app asks the user), else 409 { error: 'dsi_unconfirmed' }.
 //   - it counts from the next start of the box.
 //   - "Spotify bereithalten" (mupibox.headlessSpotify): the box's Spotify device is the Web Playback SDK in the display's page -
 //     mupi_spotify_browser.service runs that page in Chromium without a screen (spotify_browser.sh) - no more memory than the kiosk.
-//   GET  /api/app/headless  -> { on, spotify, dsi, kiosk, browser, pending }
-//   POST /api/app/headless  { on } and/or { spotify } -> the same, or 409 { error: 'dsi_connected' } / 500 { error: 'failed' }
+//   GET  /api/app/headless  -> { on, spotify, dsi, dsiUnconfirmed, kiosk, browser, pending }
+//   POST /api/app/headless  { on, confirm? } and/or { spotify } -> the same, or 409 { error: 'dsi_connected' | 'dsi_unconfirmed' } / 500 { error: 'failed' }
 
 import { execFile } from 'node:child_process'
-import { promises as fsp, readFileSync, readdirSync } from 'node:fs'
+import { promises as fsp, readFileSync, readdirSync, realpathSync } from 'node:fs'
 import path from 'node:path'
 import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
@@ -19,6 +22,7 @@ import { DATA_DIR } from '../paths'
 import { requireCsrf, requireSession } from './middleware'
 
 const DRM_DIR = '/sys/class/drm'
+const INPUT_DIR = '/sys/class/input'
 const AUTOSTART_INDEX_FILE = '/boot/dietpi/.dietpi-autostart_index'
 /** DietPi's autostart of the kiosk (autosetup.sh) and its "manual login" - no kiosk */
 export const KIOSK_AUTOSTART = 11
@@ -31,7 +35,10 @@ export const SPOTIFY_BROWSER_UNIT = 'mupi_spotify_browser.service'
 export interface HeadlessIo {
   run(cmd: string, args: string[]): Promise<{ ok: boolean; out: string }>
   readAutostartIndex(): number | null
+  /** a DSI display is there: the connector says connected and a panel shows itself (see dsiPanelSeen) */
   dsiConnected(): boolean
+  /** a DSI connector says connected, but nothing shows a panel (a DSI overlay without a display): the user decides */
+  dsiUnconfirmed?(): boolean
   /** the kiosk: the X server it runs in (Chromium alone may be the page without a screen for Spotify) */
   kioskRunning(): Promise<boolean>
   /** Chromium runs - without the kiosk: the page without a screen for Spotify */
@@ -45,13 +52,44 @@ export interface HeadlessIo {
 const run = (cmd: string, args: string[]): Promise<{ ok: boolean; out: string }> =>
   new Promise((resolve) => execFile(cmd, args, { timeout: 60000 }, (err, stdout, stderr) => resolve({ ok: !err, out: `${stdout ?? ''}${stderr ?? ''}` })))
 
-/** A DSI display is plugged in: one of the DSI connectors of /sys/class/drm says "connected" */
+/** One of the DSI connectors of /sys/class/drm says "connected" - the kernel says that for any DSI overlay of config.txt, with or without a panel */
 export function dsiConnected(drmDir = DRM_DIR): boolean {
   try {
     return readdirSync(drmDir).some((name) => {
       if (!/DSI/.test(name)) return false
       try {
         return readFileSync(path.join(drmDir, name, 'status'), 'utf8').trim() === 'connected'
+      } catch {
+        return false
+      }
+    })
+  } catch {
+    return false
+  }
+}
+
+/**
+ * A panel shows itself: its touch chip is an input device on an I2C bus (the official 7", Waveshare, EDATEC: /sys/class/input/inputN lies
+ * below .../i2c-10/10-0038/...), or the connector delivers an EDID. A backlight chip is no proof (its driver binds without a panel).
+ */
+export function dsiPanelSeen(drmDir = DRM_DIR, inputDir = INPUT_DIR): boolean {
+  try {
+    for (const name of readdirSync(drmDir)) {
+      if (!/DSI/.test(name)) continue
+      try {
+        if (readFileSync(path.join(drmDir, name, 'edid')).length > 0) return true
+      } catch {
+        // (no EDID file, or none readable)
+      }
+    }
+  } catch {
+    return false
+  }
+  try {
+    return readdirSync(inputDir).some((name) => {
+      if (!/^input\d+$/.test(name)) return false
+      try {
+        return /[\\/]i2c-\d+[\\/]/.test(realpathSync(path.join(inputDir, name)))
       } catch {
         return false
       }
@@ -72,7 +110,8 @@ export const realIo: HeadlessIo = {
       return null
     }
   },
-  dsiConnected: () => dsiConnected(),
+  dsiConnected: () => dsiConnected() && dsiPanelSeen(),
+  dsiUnconfirmed: () => dsiConnected() && !dsiPanelSeen(),
   // (pidof, not pgrep -x: the name of a process is cut to 15 characters, "chromium-browse" on Bookworm)
   kioskRunning: async () => (await run('pidof', ['Xorg'])).ok,
   browserRunning: async () => (await run('pidof', ['chromium', 'chromium-browser'])).ok,
@@ -127,6 +166,7 @@ export async function headlessState(deps: HeadlessDeps, io: HeadlessIo = realIo)
     on,
     spotify: spotifyOf(deps),
     dsi: io.dsiConnected(),
+    dsiUnconfirmed: io.dsiUnconfirmed?.() ?? false,
     kiosk,
     browser,
     pending: on ? kiosk : !kiosk && switched,
@@ -134,7 +174,7 @@ export async function headlessState(deps: HeadlessDeps, io: HeadlessIo = realIo)
 }
 
 export class HeadlessError extends Error {
-  constructor(readonly code: 'dsi_connected' | 'failed', message: string) {
+  constructor(readonly code: 'dsi_connected' | 'dsi_unconfirmed' | 'failed', message: string) {
     super(message)
   }
 }
@@ -163,17 +203,19 @@ async function applySpotify(deps: HeadlessDeps, on: boolean, io: HeadlessIo): Pr
 }
 
 /** Switches the start without the DSI display on or off (one change at a time) */
-export function setHeadless(deps: HeadlessDeps, on: boolean, io: HeadlessIo = realIo): Promise<void> {
-  const work = chain.then(() => applyHeadless(deps, on, io)).then(() => markSwitched(io))
+export function setHeadless(deps: HeadlessDeps, on: boolean, io: HeadlessIo = realIo, confirmed = false): Promise<void> {
+  const work = chain.then(() => applyHeadless(deps, on, io, confirmed)).then(() => markSwitched(io))
   chain = work.catch(() => undefined)
   return work
 }
 
-async function applyHeadless(deps: HeadlessDeps, on: boolean, io: HeadlessIo): Promise<void> {
+async function applyHeadless(deps: HeadlessDeps, on: boolean, io: HeadlessIo, confirmed: boolean): Promise<void> {
   const flag = flagOf(deps)
   const index = io.readAutostartIndex()
   if (on) {
     if (io.dsiConnected()) throw new HeadlessError('dsi_connected', 'a DSI display is connected')
+    // (a DSI overlay without a panel looks connected to the kernel: the user says whether a display hangs there)
+    if (!confirmed && io.dsiUnconfirmed?.()) throw new HeadlessError('dsi_unconfirmed', 'a DSI connector is reported, but no panel answers')
     if (flag && (index === null || index === NO_KIOSK_AUTOSTART)) return
     // (what was there is brought back when it is switched off: the kiosk, or a choice the user made)
     if (index !== null && index !== NO_KIOSK_AUTOSTART) await fsp.writeFile(keptOf(io)[0], JSON.stringify({ index }), { mode: 0o600 })
@@ -252,19 +294,19 @@ export function registerHeadlessRoutes(router: Router, deps: HeadlessDeps): void
     res.json(await headlessState(deps))
   })
   router.post('/headless', requireSession, requireCsrf, async (req, res) => {
-    const { on, spotify } = (req.body ?? {}) as { on?: unknown; spotify?: unknown }
+    const { on, spotify, confirm } = (req.body ?? {}) as { on?: unknown; spotify?: unknown; confirm?: unknown }
     if ((on !== undefined && typeof on !== 'boolean') || (spotify !== undefined && typeof spotify !== 'boolean') || (on === undefined && spotify === undefined)) {
       res.status(400).json({ error: 'on and/or spotify: true or false' })
       return
     }
     try {
-      if (typeof on === 'boolean') await setHeadless(deps, on)
+      if (typeof on === 'boolean') await setHeadless(deps, on, realIo, confirm === true)
       if (typeof spotify === 'boolean') await setHeadlessSpotify(deps, spotify)
       res.json({ ok: true, ...(await headlessState(deps)) })
     } catch (error) {
       const code = error instanceof HeadlessError ? error.code : 'failed'
       console.warn(`${new Date().toLocaleString()}: [headless] ${JSON.stringify({ on, spotify })}: ${(error as Error).message}`)
-      res.status(code === 'dsi_connected' ? 409 : 500).json({ error: code })
+      res.status(code === 'dsi_connected' || code === 'dsi_unconfirmed' ? 409 : 500).json({ error: code })
     }
   })
 }

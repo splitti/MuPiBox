@@ -22,6 +22,8 @@ Nach dem **nächsten Neustart**:
 
 Bis zum Neustart zeigt die Karte **gilt nach dem Neustart**. Solange ein **DSI-Display angeschlossen** ist, lässt sich der Schalter nicht einschalten: Die Box würde sonst mit dunklem Display starten.
 
+Ein Display gilt als angeschlossen, wenn sein **Touch-Chip** am I2C-Bus meldet (zum Beispiel beim offiziellen 7"-Display, bei Waveshare und EDATEC) oder der Anschluss ein **EDID** liefert. Der DSI-Anschluss selbst sagt dafür nichts: Der Kernel meldet ihn als verbunden, sobald ein DSI-Overlay in der `config.txt` steht (das **Display-Modell**), auch ohne Display. Findet die Box kein Display, steht unter dem Schalter ein Hinweis, und die App **fragt beim Einschalten nach**. Ein Display ohne Touch-Chip und ohne EDID erkennt die Box nicht: Hängt so eines dran und du bestätigst, bleibt es nach dem Neustart dunkel; dann den Schalter in der Webapp wieder ausschalten.
+
 Die Box stellt dafür den Start von DietPi von der Kiosk-Anmeldung auf die manuelle Anmeldung (`dietpi-autostart 0`) und trägt `mupibox.headless` in ihre Konfiguration ein. Was vorher eingestellt war, merkt sie sich.
 
 ## Spotify bereithalten
