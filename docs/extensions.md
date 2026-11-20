@@ -66,7 +66,9 @@ nie den Kern.
 - `ui`: die Karte der Extension auf der Seite „Erweiterungen“ der Webapp: Titel, Hilfetext und die Felder (je ein Eintrag aus
   `settings`; `dep` = ein Schalter, von dem das Feld abhängt; `choices`: `[{ value, label }]` für eine Einstellung mit `options`, sie
   erscheint als Auswahl und wird sofort gespeichert). `type: "lookup"` (mit `search: "/api/ext/<id>/<name>"`, nur für ein `string`): ein Suchfeld; die Route des API-Teils bekommt `?q=` und
-  antwortet mit `[{ label, values }]`, ein Tipp auf einen Treffer speichert dessen `values` (Einstellungen der Extension).
+  antwortet mit `[{ label, values }]`, ein Tipp auf einen Treffer speichert dessen `values` (Einstellungen der Extension). Mit
+  `list: "/api/ext/<id>/<name>"` (hostApi 15) stehen über dem Suchfeld Chips statt des gespeicherten Textes: die Route antwortet
+  ebenso mit `[{ label, values }]`, das ✕ eines Chips speichert dessen `values` (die Fußball-Erweiterung: die Liste ohne den Verein).
   Secrets haben einen eigenen „Speichern“-Knopf. Hat die Extension einen
   Display-Teil, lädt das Display nach dem Speichern der Einstellungen neu.
 - `system`: was bei der Installation als root eingerichtet wird. **Nur diese vier Arten, jede geprüft:**
@@ -139,6 +141,8 @@ bricht dabei ab; die Webapp sagt es vorher).
 ## Die Schnittstellen (`hostApi` 1 bis 13)
 
 Die Nummer 13 (Fußball) bringt **Einstellungen je Benutzer**: `"perUser": true` an einer Einstellung im Manifest (nicht bei `secret` und `gpio`, die gehören zur Box). Jeder Benutzer der Box (Mehrere Benutzer, 5.1) hat dann seinen eigenen Wert, etwa seinen Lieblingsverein. Gespeichert wird er in derselben Datei `settings/<id>.json` unter `"@users": { "<Benutzer-ID>": { … } }`; was ein Benutzer nicht selbst gesetzt hat, ist der Wert der ganzen Box, sonst der Standard. `host.settings()` im API-Teil, `settings` im Player-Teil und die Einstellungen des Displays (`/api/ext/active`) sind immer die des aktiven Benutzers. Nach einem Benutzerwechsel ruft der Kern `host.onSettings(fn)` mit den Einstellungen des neuen Benutzers auf, und das Display lädt neu. `GET/POST /api/app/ext/<id>/settings?user=<id>` liest und speichert die Werte eines anderen Benutzers, ohne zu wechseln; die Webapp zeigt dafür über dem Formular die Auswahl „Einstellungen von …“ und markiert die Felder mit „je Benutzer“, sobald mehrere Benutzer eingeschaltet sind. Eine Suche (`lookup`) für einen gewählten Benutzer schickt dessen ID als `user=` mit; `host.settings(user)` liefert dann seine Werte (eine unbekannte ID: die des aktiven Benutzers). Ein neuer Benutzer beginnt mit den Werten der Box.
+
+Die Nummer 14 (OLED-Display 0.4.0) macht den Start ohne DSI-Display zu einem Schalter des Kerns (`app-api/headless.ts`). Die Nummer 15 (Fußball 0.2.0) bringt `list` an einer Suche (`lookup`): die gewählten Einträge als Chips mit ✕, die Route bekommt wie die Suche `?user=`.
 
 Die Nummer 9 (NFC-Extension 0.7) erlaubt in den udev-Regeln einer Erweiterung **`ENV{ID_INPUT…}` als Vergleich** (`==`, `!=`; zum Beispiel
 `ENV{ID_INPUT_KEYBOARD}=="1"`: nur Tastaturen, keine Maus und kein Touch). Setzen lässt sich ein `ENV` weiter nicht (ein `ENV{SYSTEMD_WANTS}` startete

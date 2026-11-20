@@ -7,7 +7,8 @@
 //                                             matchday: { number, name, matches }, table, club: { team, live, last, next, rank, points } }
 //   GET /api/ext/football/matchday?n=    -> { number, name, matches } (another matchday: the display's swipe)
 //   GET /api/ext/football/crest/<hash>   -> the picture
-//   GET /api/ext/football/teams?q=       -> [{ label, values: { team, teamId } }] (the app's search, with the login of the parents)
+//   GET /api/ext/football/teams?q=       -> [{ label, values: { clubs, clubNames } }] (the app's search, with the login of the parents)
+//   GET /api/ext/football/followed       -> [{ label, values: { clubs, clubNames } }] (the clubs followed: the app's chips, ✕ saves)
 //   GET /api/ext/football/state          -> { rows } (the status block of the app)
 
 'use strict'
@@ -820,8 +821,8 @@ exports.activate = (host) => {
   }
 
   // The app's search of the clubs to follow: the teams of the source chosen that fit (OpenLigaDB: its leagues of the box and the
-  // national teams; football-data.org: the competition chosen) - a tap adds the club; and the clubs followed, a tap takes one
-  // away. The answer carries the whole new list (the app saves what a hit says). For the user chosen in the app (?user=).
+  // national teams; football-data.org: the competition chosen) - a tap adds the club. The answer carries the whole new list (the
+  // app saves what a hit says). For the user chosen in the app (?user=). The clubs followed are /followed, the chips above it.
   host.route(
     'get',
     '/teams',
@@ -836,7 +837,7 @@ exports.activate = (host) => {
           const teams = await searchTeams(s)
           const src = srcOf(s)
           for (const team of teams) {
-            if (out.length >= 10 - followed.length) break
+            if (out.length >= 10) break
             if (q && !team.name.toLocaleLowerCase('de').includes(q) && !team.short.toLocaleLowerCase('de').includes(q)) continue
             if (followed.some((c) => c.src === src && c.id === team.id)) continue
             // (a number the setting does not keep; the same club at the other source - two announcements, two headers)
@@ -845,14 +846,24 @@ exports.activate = (host) => {
           }
         } catch (error) {
           host.log.warn(`[Extension football] teams: ${error.message}`)
-          if (followed.length === 0) {
-            res.status(502).json({ error: 'search failed' })
-            return
-          }
+          res.status(502).json({ error: 'search failed' })
+          return
         }
       }
-      for (const c of followed) out.push(entry(`✕ ${c.name}`, followed.filter((x) => x !== c)))
       res.json(out)
+    },
+    { session: true },
+  )
+
+  // The clubs followed, for the app: one chip each, its ✕ saves the list without the club (for the user chosen in the app, ?user=)
+  host.route(
+    'get',
+    '/followed',
+    async (req, res) => {
+      const s = await host.settings(typeof req.query.user === 'string' ? req.query.user : undefined)
+      const followed = clubsOfS(s)
+      const rest = (c) => followed.filter((x) => x !== c)
+      res.json(followed.map((c) => ({ label: c.name, values: { clubs: L.clubsText(rest(c)), clubNames: L.clubNames(rest(c)) } })))
     },
     { session: true },
   )

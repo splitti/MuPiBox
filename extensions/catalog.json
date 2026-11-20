@@ -58,13 +58,13 @@
   {
     "id": "football",
     "name": "Fußball",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Die Ergebnisse deiner Vereine, der Spieltag und die Tabelle auf dem Display. Die Box holt sie im Internet bei OpenLigaDB oder mit eigenem Schlüssel bei football-data.org; jeder Benutzer folgt seinen eigenen Vereinen.",
     "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxLjYiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iOS4yIi8+PHBhdGggZD0iTTEyIDcuNmwzLjIgMi4zLTEuMiAzLjhoLTRsLTEuMi0zLjh6IiBmaWxsPSJjdXJyZW50Q29sb3IiLz48cGF0aCBkPSJNMTIgNy42VjNNMTUuMiA5LjlsNC4zLTEuNE0xNCAxMy43bDIuNyAzLjdNMTAgMTMuN2wtMi43IDMuN004LjggOS45TDQuNSA4LjUiLz48L3N2Zz4K",
-    "hostApi": 13,
-    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/football-0.1.0.mpx",
-    "sha256": "446e73c11de03a6199e6e4f7e9a60ff3eb2aec7303b58b3eb5903bedc325ed89",
-    "size": 38017,
+    "hostApi": 15,
+    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/football-0.2.0.mpx",
+    "sha256": "2645081641494343ffa23d8a900a088426c6435cb9f5ca1f1d8d49428c283886",
+    "size": 38109,
     "resources": {},
     "system": {
       "udev": 0,

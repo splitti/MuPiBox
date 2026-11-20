@@ -228,6 +228,12 @@ describe('the weather extension of this repository', () => {
     assert.ok(lookup(str, { key: 'a', label: 'A', type: 'lookup', search: 'https://example.com/x' }))
     assert.ok(lookup({ a: { type: 'boolean' } }, { key: 'a', label: 'A', type: 'lookup', search: '/api/ext/xy/places' }))
     assert.strictEqual(lookup(str, { key: 'a', label: 'A', type: 'lookup', search: '/api/ext/xy/places' }), null)
+    // (hostApi 15: what is chosen as chips - a route of the extension itself)
+    const chips = (hostApi: number, list: unknown) => checkManifest(base({ id: 'xy', hostApi, settings: str, ui: { title: 'T', items: [{ key: 'a', label: 'A', type: 'lookup', search: '/api/ext/xy/places', list }] } }), files())
+    assert.strictEqual(chips(15, '/api/ext/xy/chosen'), null)
+    assert.ok(chips(14, '/api/ext/xy/chosen'))
+    assert.ok(chips(15, '/api/ext/cd/chosen'))
+    assert.ok(chips(15, 5))
   })
   it('a roster: four routes of the extension itself, no setting', () => {
     const roster = { type: 'roster', label: 'R', list: '/api/ext/xy/list', add: '/api/ext/xy/add', remove: '/api/ext/xy/remove', select: '/api/ext/xy/select' }

@@ -29,7 +29,7 @@ Die Spiele eines Vereins kommen aus **allen Wettbewerben**, die die Quelle kennt
 | **Quelle** | **OpenLigaDB** (frei, ohne Anmeldung, vor allem deutsche Ligen) oder **football-data.org** (mit Schlüssel, siehe unten) |
 | **Liga** | 1. Bundesliga, 2. Bundesliga, 3. Liga, DFB-Pokal oder Frauen-Bundesliga |
 | **Wettbewerb** und **API-Schlüssel** | nur bei football-data.org, siehe unten |
-| **Meine Vereine** | nach dem Namen suchen: **＋** folgt einem Verein, **✕** hört auf – zum Aufhören suchst du also den Namen des Vereins. Bei fünf Vereinen kommt erst wieder ein **＋**, wenn du einen entfernt hast |
+| **Meine Vereine** | deine Vereine stehen als Namen über dem Suchfeld; das **✕** an einem Namen hört auf, ihm zu folgen. Zum Folgen nach dem Namen suchen und **＋** tippen. Bei fünf Vereinen findet die Suche erst wieder etwas, wenn du einen entfernt hast |
 | **Ansicht beim Öffnen** | was der Reiter zuerst zeigt |
 | **Ergebnis in der Kopfzeile** | während ein Spiel eines deiner Vereine läuft, stehen oben im Display die beiden Wappen und der Spielstand, bei mehreren Spielen nebeneinander; ein Tipp darauf öffnet die Seite (Standard: an) |
 | **Tore ansagen** | schießt einer deiner Vereine ein Tor, sagt die Box es mit ihrer Stimme an, etwa „Tor für Bremen! 2 zu 1.“; Musik wird dabei leiser, angehalten wird sie nicht (Standard: aus) |

@@ -154,7 +154,7 @@ test('a crest: fetched once, kept, served with the right type; one the box has n
   assert.equal((await call('get /crest/:hash', { params: { hash: '../x' } })).status, 404)
 })
 
-test('the search of the clubs: the teams that fit to follow (＋), the clubs followed to stop (✕), each with the whole new list', async () => {
+test('the search of the clubs: the teams that fit to follow (＋), with the whole new list; the clubs followed as chips (✕)', async () => {
   global.fetch = fakeFetch({ asked: [] })
   const settings = { now: {} }
   const { call } = start(settings)
@@ -165,10 +165,16 @@ test('the search of the clubs: the teams that fit to follow (＋), the clubs fol
   const add = two.find((x) => x.label.startsWith('＋'))
   assert.equal(add.values.clubs.split('|').length, 3)
   assert.match(add.values.clubNames, /^SV Werder Bremen, FC Barcelona, /)
-  // (Bremen is followed: not offered again, offered to stop)
-  assert.ok(!two.some((x) => x.label === '＋ SV Werder Bremen'))
-  assert.deepEqual(two.find((x) => x.label === '✕ SV Werder Bremen').values, { clubs: 'f:81:FC Barcelona', clubNames: 'FC Barcelona' })
+  // (Bremen is followed: not offered again; the search has no ✕ any more - the chips above it, /followed)
+  assert.ok(!two.some((x) => x.label === '＋ SV Werder Bremen' || x.label.startsWith('✕')))
   assert.ok(two.length <= 10)
+  const chips = (await call('get /followed')).body
+  assert.deepEqual(chips, [
+    { label: 'SV Werder Bremen', values: { clubs: 'f:81:FC Barcelona', clubNames: 'FC Barcelona' } },
+    { label: 'FC Barcelona', values: { clubs: 'o:134:SV Werder Bremen', clubNames: 'SV Werder Bremen' } },
+  ])
+  settings.now = {}
+  assert.deepEqual((await call('get /followed')).body, [])
 })
 
 test('another matchday (the swipe of the display)', async () => {

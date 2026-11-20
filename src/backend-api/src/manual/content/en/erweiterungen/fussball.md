@@ -29,7 +29,7 @@ A club's matches come from **every competition** the source knows: for Bayern th
 | **Source** | **OpenLigaDB** (free, no sign-up, mostly German leagues) or **football-data.org** (with a key, see below) |
 | **League** | 1. Bundesliga, 2. Bundesliga, 3. Liga, DFB Cup or Women's Bundesliga |
 | **Competition** and **API key** | only with football-data.org, see below |
-| **My clubs** | search by name: **＋** follows a club, **✕** stops following it – so to stop, search for the club's name. With five clubs there is a **＋** again only after you removed one |
+| **My clubs** | your clubs stand as names above the search field; the **✕** on a name stops following that club. To follow one, search by name and tap **＋**. With five clubs the search finds something again only after you removed one |
 | **View when opening** | what the tab shows first |
 | **Score in the header** | while a match of one of your clubs runs, the two crests and the score stand at the top of the display, several matches side by side; a tap on them opens the page (default: on) |
 | **Announce goals** | when one of your clubs scores, the box says so with its voice, for example “Goal for Bremen! 2 to 1.”; music gets quieter meanwhile but does not stop (default: off) |

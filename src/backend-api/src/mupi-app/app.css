@@ -533,6 +533,9 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius
   padding: 10px 16px calc(20px + env(safe-area-inset-bottom));
   display: flex; flex-direction: column; gap: 14px;
 }
+/* (the sheet scrolls: what is in it keeps its height - a flex column would squeeze a switch with a long help text to 44px, and
+   the next row would stand on its text) */
+.sheet > * { flex-shrink: 0; }
 .sheet .grip { width: 40px; height: 5px; border-radius: 3px; background: var(--mp-border); margin: 0 auto 4px; }
 /* pulled down to close (app.js enableSheetDrag): a touch area larger than the bar itself */
 .sheet .grip { position: relative; flex-shrink: 0; }
@@ -1522,6 +1525,17 @@ textarea[hidden] { display: none; }
 .nfc-wait { font-weight: 700; animation: nfc-pulse 1.6s ease-in-out infinite; }
 @keyframes nfc-pulse { 50% { opacity: .55; } }
 @media (prefers-reduced-motion: reduce) { .nfc-wait { animation: none; } }
+/* the entries a search chose (a lookup with `list`): one chip each, its ✕ takes it away */
+/* (the hits of a search; empty, it takes no room in the field's gap) */
+.ext-results { display: flex; flex-direction: column; gap: 6px; }
+.ext-results:empty { display: none; }
+.ext-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.ext-chips li { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; min-height: 40px; padding: 0 2px 0 14px; border: 1px solid var(--mp-border); border-radius: 999px; background: var(--mp-chip); font-size: 15px; font-weight: 600; }
+.ext-chips li > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ext-chips li > button { flex: none; width: 36px; height: 36px; border: 0; border-radius: 50%; background: none; color: var(--mp-muted); font-size: 16px; line-height: 1; display: grid; place-items: center; cursor: pointer; }
+.ext-chips li > button:hover, .ext-chips li > button:focus-visible { color: var(--mp-danger); background: var(--mp-danger-soft); }
+.ext-chips li > button:disabled { opacity: .5; cursor: default; }
+.ext-chips li.ext-chips-none { padding: 0; border: 0; background: none; min-height: 0; color: var(--mp-muted); font-weight: 400; font-size: 14px; }
 .ext-roster { list-style: none; margin: 4px 0 8px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .ext-roster li { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 12px; border: 1px solid var(--mp-border); border-radius: var(--mp-r); background: var(--mp-surface); font-size: 15px; font-weight: 600; }
 .ext-roster li.current { border-color: var(--mp-primary); }

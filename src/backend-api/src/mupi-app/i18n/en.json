@@ -4713,5 +4713,6 @@
  "Spotify ist gleich da": "Spotify will be there in a moment",
  "Spotify ohne Display aus": "Spotify without a display off",
  "Der Spotify-Player der Box läuft im Browser. Damit Spotify auch ohne Display spielt (Kacheln, NFC-Tags, Spotify Connect), startet die Box den Browser unsichtbar im Hintergrund. Das braucht etwa so viel Arbeitsspeicher wie der Betrieb mit Display.": "The box’s Spotify player runs in the browser. So that Spotify plays without a display too (tiles, NFC tags, Spotify Connect), the box starts the browser invisibly in the background. That needs about as much memory as running with the display.",
- "OLED-Anzeige wechseln (Voll / Mix / Kompakt)": "Switch OLED display (Full / Mix / Compact)"
+ "OLED-Anzeige wechseln (Voll / Mix / Kompakt)": "Switch OLED display (Full / Mix / Compact)",
+ "Nach dem Namen suchen und mit ＋ folgen; das ✕ am Namen eines Vereins hört wieder auf. Bis zu fünf Vereine, auch aus beiden Quellen: etwa Bayern und Deutschland von OpenLigaDB, dazu Barcelona von football-data.org (dafür kurz die Quelle football-data.org mit dem Wettbewerb LaLiga wählen, den Schlüssel speichern, suchen, dann zurückstellen).": "Search by name and follow with ＋; the ✕ on a club’s name stops following it. Up to five clubs, from both sources too: Bayern and Germany from OpenLigaDB, say, and Barcelona from football-data.org (for that, briefly choose the source football-data.org with the competition LaLiga, save the key, search, then switch back)."
 }

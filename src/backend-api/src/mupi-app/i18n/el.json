@@ -4697,5 +4697,6 @@
  "Spotify ist gleich da": "Το Spotify θα είναι διαθέσιμο σε λίγο",
  "Spotify ohne Display aus": "Spotify χωρίς οθόνη ανενεργό",
  "Der Spotify-Player der Box läuft im Browser. Damit Spotify auch ohne Display spielt (Kacheln, NFC-Tags, Spotify Connect), startet die Box den Browser unsichtbar im Hintergrund. Das braucht etwa so viel Arbeitsspeicher wie der Betrieb mit Display.": "Ο Spotify player του κουτιού τρέχει στον browser. Για να παίζει το Spotify και χωρίς οθόνη (πλακίδια, ετικέτες NFC, Spotify Connect), το κουτί ξεκινά τον browser αόρατα στο παρασκήνιο. Χρειάζεται περίπου όση μνήμη και η λειτουργία με οθόνη.",
- "OLED-Anzeige wechseln (Voll / Mix / Kompakt)": "Αλλαγή προβολής OLED (Πλήρης / Mix / Συμπαγής)"
+ "OLED-Anzeige wechseln (Voll / Mix / Kompakt)": "Αλλαγή προβολής OLED (Πλήρης / Mix / Συμπαγής)",
+ "Nach dem Namen suchen und mit ＋ folgen; das ✕ am Namen eines Vereins hört wieder auf. Bis zu fünf Vereine, auch aus beiden Quellen: etwa Bayern und Deutschland von OpenLigaDB, dazu Barcelona von football-data.org (dafür kurz die Quelle football-data.org mit dem Wettbewerb LaLiga wählen, den Schlüssel speichern, suchen, dann zurückstellen).": "Αναζήτηση με όνομα και παρακολούθηση με ＋· το ✕ στο όνομα μιας ομάδας τη σταματά. Έως πέντε ομάδες, και από τις δύο πηγές: π.χ. Μπάγερν και Γερμανία από το OpenLigaDB και Μπαρτσελόνα από το football-data.org (γι’ αυτό διάλεξε για λίγο την πηγή football-data.org με τη διοργάνωση LaLiga, αποθήκευσε το κλειδί, αναζήτησε και γύρισε πίσω)."
 }

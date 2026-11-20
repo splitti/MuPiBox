@@ -17665,7 +17665,10 @@ function extFormHtml(e, fields, cards = false) {
       if (it.type === 'lookup') {
         // a search of the extension's own API part: a few words, then the places that fit to choose from
         const now = e.settings?.[it.key]
-        return `<div class="field" data-ext-dep="${esc(it.dep ?? '')}"><label for="xl-${k}">${esc(it.label)}</label><p style="margin:0 0 6px"><b data-xcurrent="${k}">${esc(now || '–')}</b></p><div class="ext-results" data-xresults="${k}" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div><div class="row" style="gap:8px"><input class="input" id="xl-${k}" type="search" placeholder="Suchen …" autocomplete="off" ${NO_PW_MANAGER}><button type="button" class="btn" data-xlookup="${k}">Suchen</button></div>${help}</div>`
+        // (hostApi 15, `list`: what was chosen as chips with a ✕ - the clubs followed, say - drawn by extFormMount; without it the
+        // setting stands there as a line)
+        const current = it.list ? `<ul class="ext-chips" data-xchips="${k}" aria-live="polite"></ul>` : `<p style="margin:0 0 6px"><b data-xcurrent="${k}">${esc(now || '–')}</b></p>`
+        return `<div class="field" data-ext-dep="${esc(it.dep ?? '')}"><label for="xl-${k}">${esc(it.label)}</label>${current}<div class="ext-results" data-xresults="${k}"></div><div class="row" style="gap:8px"><input class="input" id="xl-${k}" type="search" placeholder="Suchen …" autocomplete="off" ${NO_PW_MANAGER}><button type="button" class="btn" data-xlookup="${k}">Suchen</button></div>${help}</div>`
       }
       if (it.type === 'order') {
         // a list to put in order by dragging: the setting names the choices, comma separated (a name that is missing goes last)
@@ -18019,6 +18022,46 @@ function extFormMount(sheet, e, fields, saved, redraw) {
     const list = sheet.querySelector(`[data-xresults="${CSS.escape(item.key)}"]`)
     let latest = 0
     let timer = 0
+    // (hostApi 15: the route `list` answers what is chosen now as [{ label, values }] - a chip each; its ✕ saves the values, the
+    // list without it)
+    const chips = item.list ? sheet.querySelector(`[data-xchips="${CSS.escape(item.key)}"]`) : null
+    let drawn = 0
+    const drawChips = async () => {
+      if (!chips) return
+      const mine = ++drawn
+      const r = await api(`${item.list}${formUser ? `?user=${encodeURIComponent(formUser)}` : ''}`, { timeoutMs: 15000 })
+      if (mine !== drawn || !chips.isConnected) return
+      chips.textContent = ''
+      const note = (text) => {
+        const li = document.createElement('li')
+        li.className = 'ext-chips-none'
+        li.textContent = text
+        chips.append(li)
+      }
+      if (!r.ok || !Array.isArray(r.body)) return note('Die Liste konnte nicht geladen werden.')
+      if (r.body.length === 0) return note('–')
+      for (const hit of r.body.slice(0, 20)) {
+        const li = document.createElement('li')
+        const name = document.createElement('span')
+        name.textContent = String(hit.label)
+        const x = document.createElement('button')
+        x.type = 'button'
+        x.textContent = '✕'
+        x.title = 'Entfernen'
+        x.setAttribute('aria-label', 'Entfernen')
+        x.onclick = async () => {
+          for (const b of chips.querySelectorAll('button')) b.disabled = true
+          const ok = await save(hit.values, false)
+          if (ok) Object.assign(e.settings, hit.values)
+          // (the search shows what fits the new list: a club that was taken away can be chosen again)
+          if (ok && input.value.trim().length >= 2) search()
+          drawChips()
+        }
+        li.append(name, x)
+        chips.append(li)
+      }
+    }
+    drawChips()
     const search = async () => {
       clearTimeout(timer)
       const q = input.value.trim()
@@ -18049,7 +18092,8 @@ function extFormMount(sheet, e, fields, saved, redraw) {
           const ok = await save(hit.values, false)
           if (!ok) return
           Object.assign(e.settings, hit.values)
-          sheet.querySelector(`[data-xcurrent="${CSS.escape(item.key)}"]`).textContent = String(e.settings[item.key] ?? '–')
+          if (chips) drawChips()
+          else sheet.querySelector(`[data-xcurrent="${CSS.escape(item.key)}"]`).textContent = String(e.settings[item.key] ?? '–')
           list.textContent = ''
           input.value = ''
         }

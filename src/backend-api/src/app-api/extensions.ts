@@ -38,8 +38,9 @@ if (!process.env.MUPIBOX_EXT_DIR && process.env.NODE_ENV !== 'test' && process.e
   }
 }
 // (14: the start without the DSI display is a switch of the core - app-api/headless.ts; OLED-Display 0.4.0 needs it, an older core
-// would leave a box that started without the kiosk with no switch to come back)
-export const HOST_API = 14
+// would leave a box that started without the kiosk with no switch to come back; 15: a search, lookup, may show what was chosen
+// as chips with a ✕ - its route `list` - Fußball 0.2.0 has its clubs there, an older core would leave no way to stop following one)
+export const HOST_API = 15
 // (the catalog of the MuPiBox, in its repository: what is in it is trusted - an extension can do everything on the box; while 5.1
 // is not with splitti yet, the 5.1 branch of the fork that builds it)
 const DEFAULT_CATALOG = 'https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/catalog.json'
@@ -723,6 +724,8 @@ export function checkManifest(m: unknown, files: Set<string>): string | null {
         // a search: a text field with a button; the extension's own API part answers with the places to choose from (see the app)
         if (item.type !== 'lookup' || settings[item.key].type !== 'string' || item.choices !== undefined) return `ui: bad type: ${item.key}`
         if (typeof item.search !== 'string' || !new RegExp(`^/api/ext/${x.id}/[a-z]{1,30}$`).test(item.search)) return `ui: bad search address: ${item.key}`
+        // (hostApi 15: what is chosen now as chips - the route answers [{ label, values }], a ✕ saves the values)
+        if (item.list !== undefined && (x.hostApi < 15 || typeof item.list !== 'string' || !new RegExp(`^/api/ext/${x.id}/[a-z]{1,30}$`).test(item.list))) return `ui: a lookup list needs hostApi 15 and an address of the extension: ${item.key}`
       }
       // what the pin of a field is called in the lists of the pins (a setting of the type gpio)
       if (item.holder !== undefined && (typeof item.holder !== 'string' || item.holder.length < 1 || item.holder.length > 60 || settings[item.key].type !== GPIO_SETTING)) return `ui: holder is a short text on a setting of the type gpio: ${item.key}`
