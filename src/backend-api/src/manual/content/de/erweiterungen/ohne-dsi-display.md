@@ -8,10 +8,10 @@ Seit MuPiBox 5.1 ist das ein Schalter der Box selbst. Vorher gab es ihn nur in d
 
 Nach dem **nächsten Neustart**:
 
-- Es startet **kein Kiosk**: kein X-Server und kein Chromium. Das spart Arbeitsspeicher und Strom.
+- Es startet **kein Kiosk**: kein X-Server und, ohne Spotify bereithalten, kein Chromium. Das spart Arbeitsspeicher und Strom.
 - Die Box **wartet beim Start nicht** auf das Display; die übrigen Dienste starten sofort.
 - Ein **NFC-Tag startet sein Medium direkt**, ohne dass ein Display es abholt: Der Server schickt den Start an den Player. Das geht mit eigenen Dateien, Hörspiel-Ordnern, NAS, Radio, Podcasts, TIDAL, Jellyfin und Audible.
-- **Spotify geht ohne Display nicht**: Der Spotify-Player der Box läuft im Chromium des Displays. Ein Tag mit einem Spotify-Album spielt dann nichts.
+- **Spotify** geht nur mit **Spotify bereithalten** (siehe unten): Der Spotify-Player der Box läuft im Browser des Displays. Ohne diesen Schalter spielt ein Tag mit einem Spotify-Album nichts.
 - Bedient wird die Box über die **Webapp**, **NFC**, **Taster** und, falls vorhanden, das **OLED-Display**.
 
 ## Einschalten
@@ -24,6 +24,14 @@ Bis zum Neustart zeigt die Karte **gilt nach dem Neustart**. Solange ein **DSI-D
 
 Die Box stellt dafür den Start von DietPi von der Kiosk-Anmeldung auf die manuelle Anmeldung (`dietpi-autostart 0`) und trägt `mupibox.headless` in ihre Konfiguration ein. Was vorher eingestellt war, merkt sie sich.
 
+## Spotify bereithalten
+
+Ist **Ohne DSI-Display betreiben** an, erscheint darunter der Schalter **Spotify bereithalten**. Mit ihm startet die Box den Browser **unsichtbar im Hintergrund**, ohne Bildschirm. Darin läuft der Spotify-Player der Box wie sonst auf dem Display: Spotify-Kacheln, NFC-Tags mit Spotify-Alben und Spotify Connect spielen dann auch ohne Display.
+
+- Der Browser braucht rund **600 MB Arbeitsspeicher** und etwas mehr Strom. Auf einer Box mit 1 GB (etwa einem Raspberry Pi 3) kann es eng werden; die App weist darauf hin.
+- Läuft die Box schon ohne Display, ist Spotify nach dem Einschalten gleich da. Sonst nach dem nächsten Neustart.
+- Ausschalten beendet den Browser sofort.
+
 ## Zurück zum DSI-Display
 
 Den Schalter ausschalten und die Box neu starten: Die Box stellt den Start wieder auf den Kiosk (`dietpi-autostart 11`) oder auf das, was vorher eingestellt war.
@@ -31,4 +39,4 @@ Den Schalter ausschalten und die Box neu starten: Die Box stellt den Start wiede
 Steckt beim Start ein **DSI-Display**, obwohl der Schalter an ist (etwa nach einer Wiederherstellung aus der Sicherung einer anderen Box oder wenn das Display später angeschlossen wurde), schaltet die Box den Kiosk von selbst wieder ein. Nach dem nächsten Neustart ist das Display wieder da.
 
 > [!NOTE]
-> Ohne Kiosk gibt es keine Anzeige am DSI-Display, auch nicht für Fehlermeldungen oder die Einrichtung. Prüfe vor dem Einschalten, dass die **Webapp** der Box erreichbar ist. Der Tageslimit-Zähler einer Kachel zählt bei einem NFC-Start ohne Display nicht mit.
+> Ohne Kiosk gibt es keine Anzeige am DSI-Display, auch nicht für Fehlermeldungen oder die Einrichtung. Prüfe vor dem Einschalten, dass die **Webapp** der Box erreichbar ist.

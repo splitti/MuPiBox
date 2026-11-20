@@ -267,12 +267,10 @@ exports.activate = (host) => {
   }
 
   // ---- what the status block says of the start without the DSI display (the switch of the core) -------------------------------
+  // (the kiosk is its X server: without it a Chromium is the page without a screen that keeps Spotify there - 5.1)
   const kioskRunning = async () => {
-    for (const name of ['chromium', 'chromium-browser']) {
-      const { error } = await run('pidof', [name], 3000)
-      if (!error) return true
-    }
-    return false
+    const { error } = await run('pidof', ['Xorg'], 3000)
+    return !error
   }
   // (the switch of the core - mupibox.headless, what the status block says)
   const flagNow = () => host.config?.()?.mupibox?.headless === true

@@ -480,6 +480,9 @@ if [ -z "$BRANCH" ]; then
   fi
 fi
 
+# (the page without a screen for Spotify, on a box without the DSI display: stopped, not killed - systemd would start it again
+# 15 s later and its memory were taken for the rest of the update; restart_kiosk.sh brings it back after the update)
+systemctl stop mupi_spotify_browser.service >/dev/null 2>&1
 killall -s 9 -w -q -r chromium
 # The display's console in graphics mode from here on: in text mode its driver (fbcon) draws over the maintenance picture
 # now and then (the console's blue in stripes across it, whenever the cursor blinks or a line is written to tty1).
@@ -1393,6 +1396,11 @@ rm -f /tmp/mupibox-update-failed
 		cp -f "${MUPI_SRC}/config/services/ifup@eth0.service.d/mupibox.conf" "/etc/systemd/system/ifup@eth0.service.d/mupibox.conf" >&3 2>&3
 		MUPI_ETHERNET=1
 	fi
+	# Spotify on a box without the DSI display (see config/services/mupi_spotify_browser.service): on only when the app switched
+	# it on - an update leaves that as it is
+	if [ -f ${MUPI_SRC}/config/services/mupi_spotify_browser.service ]; then
+		mv -f ${MUPI_SRC}/config/services/mupi_spotify_browser.service /etc/systemd/system/mupi_spotify_browser.service >&3 2>&3
+	fi
 	# the goodbye picture until the power is off (see config/services/mupi_goodbye.service)
 	if [ -f ${MUPI_SRC}/config/services/mupi_goodbye.service ]; then
 		mv -f ${MUPI_SRC}/config/services/mupi_goodbye.service /etc/systemd/system/mupi_goodbye.service >&3 2>&3
@@ -1595,6 +1603,8 @@ rm -f /tmp/mupibox-update-failed
 	if [ "${MUPI_GOODBYE}" = "1" ]; then
 		systemctl enable --now mupi_goodbye.service >&3 2>&3
 	fi
+	# (the new spotify_browser.sh - only where it runs)
+	systemctl try-restart mupi_spotify_browser.service >&3 2>&3
 	# TIDAL switched on in the app: its Python brought to the version the box is tested with, and the service started
 	# again with the new tidal_service.py (the sign-in stays). Without internet now: it keeps running as it was.
 	if [ -x /usr/local/bin/mupibox/tidal_setup.sh ] && [ "$(/usr/bin/jq -r '.tidal.enabled // false' /etc/mupibox/mupiboxconfig.json 2>/dev/null)" = "true" ]; then

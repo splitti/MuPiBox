@@ -134,6 +134,8 @@ export class PhotoScreensaverService {
   private async allowed(): Promise<boolean> {
     const a = this.answer()
     if (!a.enabled || this.monitorOff() || this.parentAccess.active()) return false
+    // (the page without a screen that keeps Spotify on a box without the DSI display - spotify_browser.sh: nobody looks at it)
+    if (navigator.userAgent.includes('HeadlessChrome')) return false
     // the photo albums are open: they are what is looked at (and later counted) - no screensaver over them
     if (window.location.pathname.startsWith('/photos')) return false
     const p = this.playtime.status()

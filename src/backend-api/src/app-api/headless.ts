@@ -5,11 +5,14 @@
 //     no X server, no Chromium); the autostart that was there is kept and comes back when it is switched off.
 //   - refused while a DSI display is connected: the box would start with a dark display.
 //   - it counts from the next start of the box.
-//   GET  /api/app/headless  -> { on, dsi, kiosk, pending }
-//   POST /api/app/headless  { on } -> the same, or 409 { error: 'dsi_connected' } / 500 { error: 'failed' }
+//   - "Spotify bereithalten" (mupibox.headlessSpotify): the box's Spotify device is the Web Playback SDK in the display's page -
+//     mupi_spotify_browser.service runs that page in Chromium without a screen (spotify_browser.sh). About 600 MB of memory.
+//   GET  /api/app/headless  -> { on, spotify, dsi, kiosk, browser, pending, memoryMb }
+//   POST /api/app/headless  { on } and/or { spotify } -> the same, or 409 { error: 'dsi_connected' } / 500 { error: 'failed' }
 
 import { execFile } from 'node:child_process'
 import { promises as fsp, readFileSync, readdirSync } from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
@@ -24,12 +27,16 @@ export const NO_KIOSK_AUTOSTART = 0
 /** the autostart the switch replaced (and where the extension OLED-Display kept it before 5.1's switch of the core) */
 export const KEPT_AUTOSTART = path.join(DATA_DIR, 'headless-autostart.json')
 export const KEPT_AUTOSTART_OLED = path.join(DATA_DIR, 'extensions', 'data', 'oled', 'autostart.json')
+export const SPOTIFY_BROWSER_UNIT = 'mupi_spotify_browser.service'
 
 export interface HeadlessIo {
   run(cmd: string, args: string[]): Promise<{ ok: boolean; out: string }>
   readAutostartIndex(): number | null
   dsiConnected(): boolean
+  /** the kiosk: the X server it runs in (Chromium alone may be the page without a screen for Spotify) */
   kioskRunning(): Promise<boolean>
+  /** Chromium runs - without the kiosk: the page without a screen for Spotify */
+  browserRunning?(): Promise<boolean>
   /** where the autostart the switch replaced is kept (tests: a folder of their own) */
   keptFiles?: string[]
   /** the mark of a change since the box started (tests: a file of their own) */
@@ -68,7 +75,8 @@ export const realIo: HeadlessIo = {
   },
   dsiConnected: () => dsiConnected(),
   // (pidof, not pgrep -x: the name of a process is cut to 15 characters, "chromium-browse" on Bookworm)
-  kioskRunning: async () => (await run('pidof', ['chromium', 'chromium-browser'])).ok,
+  kioskRunning: async () => (await run('pidof', ['Xorg'])).ok,
+  browserRunning: async () => (await run('pidof', ['chromium', 'chromium-browser'])).ok,
 }
 
 export interface HeadlessDeps {
@@ -76,7 +84,9 @@ export interface HeadlessDeps {
   updateMupiboxConfig?: (mutate: (cfg: Record<string, unknown>) => unknown) => Promise<void>
 }
 
-const flagOf = (deps: HeadlessDeps) => (deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined)?.headless === true
+const mupiboxOf = (deps: HeadlessDeps) => deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined
+const flagOf = (deps: HeadlessDeps) => mupiboxOf(deps)?.headless === true
+const spotifyOf = (deps: HeadlessDeps) => mupiboxOf(deps)?.headlessSpotify === true
 
 const keptOf = (io: { keptFiles?: string[] }) => io.keptFiles ?? [KEPT_AUTOSTART, KEPT_AUTOSTART_OLED]
 async function readKept(io: { keptFiles?: string[] }): Promise<number | null> {
@@ -94,12 +104,12 @@ const dropKept = async (io: { keptFiles?: string[] }) => {
   for (const file of keptOf(io)) await fsp.rm(file, { force: true }).catch(() => undefined)
 }
 
-const setFlag = (deps: HeadlessDeps, on: boolean) =>
+const setFlag = (deps: HeadlessDeps, on: boolean, key: 'headless' | 'headlessSpotify' = 'headless') =>
   deps.updateMupiboxConfig?.((cfg) => {
     const mb = (cfg.mupibox && typeof cfg.mupibox === 'object' ? cfg.mupibox : (cfg.mupibox = {})) as Record<string, unknown>
-    if (on) mb.headless = true
-    else if (mb.headless === undefined) return false
-    else delete mb.headless
+    if (on) mb[key] = true
+    else if (mb[key] === undefined) return false
+    else delete mb[key]
   }) ?? Promise.reject(new Error('the configuration cannot be changed here'))
 
 // (switched since the box started - by the app or the check at the start: off and no kiosk is then the restart that has not come
@@ -113,7 +123,16 @@ export async function headlessState(deps: HeadlessDeps, io: HeadlessIo = realIo)
   const on = flagOf(deps)
   const kiosk = await io.kioskRunning()
   const switched = await fsp.access(switchedOf(io)).then(() => true, () => false)
-  return { on, dsi: io.dsiConnected(), kiosk, pending: on ? kiosk : !kiosk && switched }
+  const browser = !kiosk && ((await io.browserRunning?.()) ?? false)
+  return {
+    on,
+    spotify: spotifyOf(deps),
+    dsi: io.dsiConnected(),
+    kiosk,
+    browser,
+    pending: on ? kiosk : !kiosk && switched,
+    memoryMb: Math.round(os.totalmem() / 1048576),
+  }
 }
 
 export class HeadlessError extends Error {
@@ -123,6 +142,28 @@ export class HeadlessError extends Error {
 }
 
 let chain: Promise<unknown> = Promise.resolve()
+/**
+ * "Spotify bereithalten": the flag, and the page without a screen as a service of its own - on from now on at every start, and
+ * started at once (it ends by itself while the box still has its kiosk: then it counts after the restart). One change at a time.
+ */
+export function setHeadlessSpotify(deps: HeadlessDeps, on: boolean, io: HeadlessIo = realIo): Promise<void> {
+  const work = chain.then(() => applySpotify(deps, on, io))
+  chain = work.catch(() => undefined)
+  return work
+}
+
+async function applySpotify(deps: HeadlessDeps, on: boolean, io: HeadlessIo): Promise<void> {
+  const was = spotifyOf(deps)
+  await setFlag(deps, on, 'headlessSpotify')
+  const r = on
+    ? (await io.run('sudo', ['-n', 'systemctl', 'enable', SPOTIFY_BROWSER_UNIT])).ok && (await io.run('sudo', ['-n', 'systemctl', 'restart', SPOTIFY_BROWSER_UNIT]))
+    : await io.run('sudo', ['-n', 'systemctl', 'disable', '--now', SPOTIFY_BROWSER_UNIT])
+  if (r === false || !r.ok) {
+    await setFlag(deps, was, 'headlessSpotify').catch(() => undefined)
+    throw new HeadlessError('failed', `systemctl: ${r === false ? 'enable failed' : r.out.slice(0, 150)}`)
+  }
+}
+
 /** Switches the start without the DSI display on or off (one change at a time) */
 export function setHeadless(deps: HeadlessDeps, on: boolean, io: HeadlessIo = realIo): Promise<void> {
   const work = chain.then(() => applyHeadless(deps, on, io)).then(() => markSwitched(io))
@@ -213,17 +254,18 @@ export function registerHeadlessRoutes(router: Router, deps: HeadlessDeps): void
     res.json(await headlessState(deps))
   })
   router.post('/headless', requireSession, requireCsrf, async (req, res) => {
-    const on = (req.body as { on?: unknown } | undefined)?.on
-    if (typeof on !== 'boolean') {
-      res.status(400).json({ error: 'on: true or false' })
+    const { on, spotify } = (req.body ?? {}) as { on?: unknown; spotify?: unknown }
+    if ((on !== undefined && typeof on !== 'boolean') || (spotify !== undefined && typeof spotify !== 'boolean') || (on === undefined && spotify === undefined)) {
+      res.status(400).json({ error: 'on and/or spotify: true or false' })
       return
     }
     try {
-      await setHeadless(deps, on)
+      if (typeof on === 'boolean') await setHeadless(deps, on)
+      if (typeof spotify === 'boolean') await setHeadlessSpotify(deps, spotify)
       res.json({ ok: true, ...(await headlessState(deps)) })
     } catch (error) {
       const code = error instanceof HeadlessError ? error.code : 'failed'
-      console.warn(`${new Date().toLocaleString()}: [headless] ${on ? 'on' : 'off'}: ${(error as Error).message}`)
+      console.warn(`${new Date().toLocaleString()}: [headless] ${JSON.stringify({ on, spotify })}: ${(error as Error).message}`)
       res.status(code === 'dsi_connected' ? 409 : 500).json({ error: code })
     }
   })

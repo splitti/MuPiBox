@@ -9699,6 +9699,7 @@ async function loadDisplaySettings() {
   // (the box without the DSI display - a switch of the core since 5.1)
   disp.headless = headless.ok ? headless.body : null
   state.values.set('headless', disp.headless?.on === true)
+  state.values.set('headlessSpotify', disp.headless?.spotify === true)
   const o = disp.opts
   disp.power = power.body ?? {}
   if (o.brightness != null) state.values.set('bright', o.brightness)
@@ -19598,7 +19599,8 @@ const CONTROLLERS = {
           ],
         },
             ]),
-        // The box without the DSI display: only NFC tags, buttons, the app - no kiosk, no Chromium (counts after a restart)
+        // The box without the DSI display: only NFC tags, buttons, the app - no kiosk (counts after a restart); Spotify only with
+        // the page without a screen ("Spotify bereithalten", mupi_spotify_browser.service)
         ...(disp.headless
           ? [
               {
@@ -19609,10 +19611,24 @@ const CONTROLLERS = {
                     type: 'toggle',
                     key: 'headless',
                     label: 'Ohne DSI-Display betreiben',
-                    help: 'Für eine Box ohne Bildschirm, etwa nur mit NFC-Tags und Tastern: Sie startet ohne Kiosk und Chromium, wartet nicht auf das Display, und ein NFC-Tag startet sein Medium direkt. Spotify braucht das Display und geht dann nicht. Gilt nach dem nächsten Neustart; ausschalten und neu starten bringt das Display zurück.',
+                    help: 'Für eine Box ohne Bildschirm, etwa nur mit NFC-Tags und Tastern: Sie startet ohne Kiosk, wartet nicht auf das Display, und ein NFC-Tag startet sein Medium direkt. Spotify geht dann nur mit „Spotify bereithalten“. Gilt nach dem nächsten Neustart; ausschalten und neu starten bringt das Display zurück.',
                     disabled: disp.headless.dsi && !disp.headless.on,
                   },
                   ...(disp.headless.dsi && !disp.headless.on ? [{ type: 'html', html: `<p class="help">${esc(tr('Ein DSI-Display ist angeschlossen. Ohne Display zu starten geht erst, wenn es abgezogen ist.'))}</p>` }] : []),
+                  ...(disp.headless.on
+                    ? [
+                        {
+                          type: 'toggle',
+                          key: 'headlessSpotify',
+                          label: 'Spotify bereithalten',
+                          help: 'Der Spotify-Player der Box läuft im Browser. Damit Spotify auch ohne Display spielt (Kacheln, NFC-Tags, Spotify Connect), startet die Box den Browser unsichtbar im Hintergrund. Braucht rund 600 MB Arbeitsspeicher und etwas mehr Strom.',
+                        },
+                        // (a box with 1 GB: the browser and the rest of the box hardly fit)
+                        ...(disp.headless.memoryMb > 0 && disp.headless.memoryMb < 1536
+                          ? [{ type: 'html', html: `<p class="help">${esc(tr('Diese Box hat wenig Arbeitsspeicher. Mit Spotify bereithalten kann sie langsam werden.'))}</p>` }]
+                          : []),
+                      ]
+                    : []),
                 ],
               },
             ]
@@ -19645,7 +19661,23 @@ const CONTROLLERS = {
           return
         }
         disp.headless = r.body
+        state.values.set('headlessSpotify', disp.headless?.spotify === true)
         toast(v ? 'Startet nach dem nächsten Neustart ohne DSI-Display' : 'Startet nach dem nächsten Neustart wieder mit DSI-Display')
+        renderPage(currentPage(), false)
+        return
+      }
+      if (key === 'headlessSpotify') {
+        const r = await api(`${API}/headless`, { method: 'POST', body: { spotify: v === true } })
+        if (!r.ok) {
+          state.values.set('headlessSpotify', !v)
+          shownValues.set('headlessSpotify', !v)
+          toast('Nicht gespeichert', 'info')
+          renderPage(currentPage(), false)
+          return
+        }
+        disp.headless = r.body
+        // (while the kiosk still runs it counts after the restart - the kiosk is the Spotify device until then)
+        toast(v ? (disp.headless.kiosk ? 'Spotify ist nach dem nächsten Neustart ohne Display da' : 'Spotify ist gleich da') : 'Spotify ohne Display aus')
         renderPage(currentPage(), false)
         return
       }

@@ -47,9 +47,10 @@ if [ -n "${CARD}" ]; then
 	fi
 fi
 
-# fan and rotary encoder: their services
+# fan and rotary encoder: their services; Spotify on a box without the DSI display (the page without a screen - it ends by
+# itself when the box has its kiosk)
 # (the rotary service also runs for the additional encoders, rotary.extra)
-for pair in 'fan.fan_active:mupi_fan' 'rotary.active:mupi_rotary'; do
+for pair in 'fan.fan_active:mupi_fan' 'rotary.active:mupi_rotary' 'mupibox.headlessSpotify:mupi_spotify_browser'; do
 	key="${pair%%:*}"
 	svc="${pair##*:}.service"
 	[ -f "/etc/systemd/system/${svc}" ] || continue

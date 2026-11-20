@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { after, beforeEach, describe, it } from 'node:test'
-import { checkHeadlessAtStart, dsiConnected, headlessState, setHeadless } from './app-api/headless'
+import { checkHeadlessAtStart, dsiConnected, headlessState, setHeadless, setHeadlessSpotify } from './app-api/headless'
 
 const dir = mkdtempSync(path.join(tmpdir(), 'mupibox-headless-'))
 after(() => rmSync(dir, { recursive: true, force: true }))
@@ -23,7 +23,7 @@ function box({ headless, index, dsi = false, kiosk = true, ok = true }: { headle
     io: {
       run: async (cmd: string, args: string[]) => {
         b.ran.push([cmd, ...args].join(' '))
-        if (ok) b.index = Number(args.at(-1))
+        if (ok && args.includes('/boot/dietpi/dietpi-autostart')) b.index = Number(args.at(-1))
         return { ok, out: ok ? '' : 'sudo: a password is required' }
       },
       readAutostartIndex: () => b.index,
@@ -91,7 +91,7 @@ describe('the start without the DSI display: the switch of the core', () => {
   })
 
   it('the state: pending until the box restarted', async () => {
-    assert.deepEqual(await headlessState(box({ headless: true, index: null, kiosk: true }).deps, box({ headless: true, index: null, kiosk: true }).io), { on: true, dsi: false, kiosk: true, pending: true })
+    assert.deepEqual(await headlessState(box({ headless: true, index: null, kiosk: true }).deps, box({ headless: true, index: null, kiosk: true }).io).then(({ memoryMb: _m, ...s }) => s), { on: true, spotify: false, dsi: false, kiosk: true, browser: false, pending: true })
     const b = box({ headless: true, index: null, kiosk: false })
     assert.equal((await headlessState(b.deps, b.io)).pending, false)
     // (off: no kiosk is the restart to come after it was switched off here)
@@ -103,6 +103,38 @@ describe('the start without the DSI display: the switch of the core', () => {
     // (no kiosk without a change since the box started: a kiosk that is just away, nothing to restart for)
     rmSync(switchedFile, { force: true })
     assert.equal((await headlessState(c.deps, c.io)).pending, false)
+  })
+})
+
+describe('the start without the DSI display: Spotify kept there (the page without a screen)', () => {
+  it('on: the flag, the service on at every start and started now; off: both gone', async () => {
+    const b = box({ headless: true, index: null, kiosk: false })
+    await setHeadlessSpotify(b.deps, true, b.io)
+    assert.equal((b.config.mupibox as Record<string, unknown>).headlessSpotify, true)
+    assert.deepEqual(b.ran, ['sudo -n systemctl enable mupi_spotify_browser.service', 'sudo -n systemctl restart mupi_spotify_browser.service'])
+    b.ran.length = 0
+    await setHeadlessSpotify(b.deps, false, b.io)
+    assert.equal((b.config.mupibox as Record<string, unknown>).headlessSpotify, undefined)
+    assert.deepEqual(b.ran, ['sudo -n systemctl disable --now mupi_spotify_browser.service'])
+    // (the flag of the start without the DSI display is not touched)
+    assert.equal(flag(b), true)
+  })
+
+  it('the flag goes back when systemctl refuses', async () => {
+    const b = box({ headless: true, index: null, ok: false })
+    await assert.rejects(setHeadlessSpotify(b.deps, true, b.io))
+    assert.equal((b.config.mupibox as Record<string, unknown>).headlessSpotify, undefined)
+  })
+
+  it('the state: the kiosk is the X server; Chromium without it is the page for Spotify', async () => {
+    const b = box({ headless: true, index: null, kiosk: false })
+    const s = await headlessState(b.deps, { ...b.io, browserRunning: async () => true })
+    assert.equal(s.browser, true)
+    assert.equal(s.kiosk, false)
+    assert.equal(s.pending, false)
+    assert.equal(typeof s.memoryMb, 'number')
+    const k = box({ index: 11, kiosk: true })
+    assert.equal((await headlessState(k.deps, { ...k.io, browserRunning: async () => true })).browser, false)
   })
 })
 
