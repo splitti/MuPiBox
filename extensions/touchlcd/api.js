@@ -82,20 +82,21 @@ exports.activate = (host) => {
   const loadTop = async () => {
     const category = config.category
     const wantLibrary = category === 'all' ? BOARD_CATEGORIES : BOARD_CATEGORIES.filter((c) => c === category)
-    const wantNas = category === 'all' || category === 'nas'
+    // (NAS folders sit in the category the parent gave them - "nas" is only the ones without one: each tab is asked on its own)
+    const wantNas = category === 'all' ? [...BOARD_CATEGORIES, 'nas'] : BOARD_CATEGORIES.includes(category) || category === 'nas' ? [category] : []
     const [data, ...lists] = await Promise.all([
       category === 'nas' ? Promise.resolve([]) : getJson('/api/data'),
       ...wantLibrary.map((c) => getJson(`/api/library/artists?category=${c}`)),
-      ...(wantNas ? [getJson('/api/nas/artists?category=nas', NAS_TIMEOUT_MS)] : []),
+      ...wantNas.map((c) => getJson(`/api/nas/artists?category=${c}`, NAS_TIMEOUT_MS)),
     ])
-    const nasList = wantNas ? lists.pop() : null
+    const nasLists = lists.splice(wantLibrary.length)
     const nodes = logic.mergeNodes([
       logic.dataNodes(data, category === 'nas' ? 'all' : category),
       ...lists.map((entries) => logic.folderNodes(entries, false, { top: true })),
-      logic.folderNodes(nasList, true, { top: true }),
+      ...nasLists.map((entries) => logic.folderNodes(entries, true, { top: true })),
     ])
     // (a library that cannot be read answers nothing: what is shown stays)
-    if (nodes.length === 0 && (data === null || !Array.isArray(data)) && lists.every((l) => l === null)) return null
+    if (nodes.length === 0 && (data === null || !Array.isArray(data)) && lists.every((l) => l === null) && nasLists.every((l) => l === null)) return null
     return nodes
   }
 

@@ -266,6 +266,9 @@ const LIBRARY = {
   '/api/library/artists?category=music': [{ type: 'library', category: 'music', artist: 'Abba', title: 'Abba', libraryPath: 'music/Abba', libraryIsContainer: false }],
   '/api/library/artists?category=audiobook': [],
   '/api/library/artists?category=other': [],
+  '/api/nas/artists?category=music': [],
+  '/api/nas/artists?category=audiobook': [],
+  '/api/nas/artists?category=other': [],
   '/api/nas/artists?category=nas': [],
   '/api/library/children?path=music%2FAbba': [
     { type: 'library', category: 'music', artist: 'Abba', title: 'Waterloo', libraryPath: 'music/Abba/Waterloo', libraryIsContainer: false, cover: '/api/library/file?path=w.jpg' },
@@ -415,10 +418,27 @@ test('a library that cannot be read shows nothing yet, and the first artist come
   assert.strictEqual(views(driver).length, 0)
   assert.strictEqual(ext.levelNow(), null)
   // (the box is up now: the data of the library, nothing on the SD card)
-  Object.assign(library, { '/api/data': DATA, '/api/library/artists?category=music': [], '/api/library/artists?category=audiobook': [], '/api/library/artists?category=other': [], '/api/nas/artists?category=nas': [] })
+  Object.assign(library, { '/api/data': DATA, '/api/library/artists?category=music': [], '/api/library/artists?category=audiobook': [], '/api/library/artists?category=other': [], '/api/nas/artists?category=music': [], '/api/nas/artists?category=audiobook': [], '/api/nas/artists?category=other': [], '/api/nas/artists?category=nas': [] })
   await ext.refreshTop()
   assert.strictEqual(views(driver).length, 1)
   assert.strictEqual(views(driver)[0].faces.cur.label, 'Batman')
+})
+
+test('NAS folders are found in the category the parent gave them (audiobook), not only the ones without a category', async () => {
+  const nas = [{ type: 'nas', category: 'nas', artist: 'Munken och Kulan', title: 'Munken och Kulan', nasPath: '/music/barn/Ljudböker/Munken och Kulan', nasIsContainer: true, nasCategory: 'audiobook' }]
+  const library = { '/api/nas/artists?category=audiobook': nas }
+  const all = await started(PINS, { library })
+  assert.ok(all.calls.includes('/api/nas/artists?category=audiobook'), 'asked for the audiobook tab of the NAS')
+  assert.ok(all.calls.includes('/api/nas/artists?category=nas'), 'and for the folders without a category')
+  assert.ok(all.ext.levelNow().nodes.some((n) => n.label === 'Munken och Kulan' && n.via?.source === 'nas'))
+  // (a tab of its own asks only for its own folders)
+  const books = await started({ ...PINS, category: 'audiobook' }, { library })
+  assert.deepStrictEqual(books.calls.filter((c) => c.startsWith('/api/nas/artists')), ['/api/nas/artists?category=audiobook'])
+  assert.deepStrictEqual(books.ext.levelNow().nodes.map((n) => n.label), ['Lumi', 'Mama', 'Munken och Kulan'])
+  const music = await started({ ...PINS, category: 'music' }, { library })
+  assert.ok(!music.ext.levelNow().nodes.some((n) => n.label === 'Munken och Kulan'))
+  const only = await started({ ...PINS, category: 'nas' }, { library })
+  assert.deepStrictEqual(only.calls.filter((c) => c.startsWith('/api/nas/artists')), ['/api/nas/artists?category=nas'])
 })
 
 test('the settings: a new brightness goes on while it runs, other pins start the driver again, no pins stop it', async () => {

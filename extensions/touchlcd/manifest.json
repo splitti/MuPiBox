@@ -1,7 +1,7 @@
 {
   "id": "touchlcd",
   "name": "Touch-Display Cover",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Ein kleines Touch-Display (Waveshare 2,8 Zoll Capacitive Touch LCD, 240 × 320, am SPI- und I2C-Anschluss) zeigt nur das Cover. Nach links oder rechts wischen dreht es wie einen Würfel zum nächsten Artisten oder Album, ein Tippen öffnet den Artisten oder spielt das Album, nach oben wischen geht eine Ebene zurück. Die Einstellungen stehen unter Einstellungen › Touch-Display Cover.",
   "hostApi": 14,
   "resources": {},
