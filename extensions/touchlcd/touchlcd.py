@@ -39,6 +39,7 @@ TOUCH_POLL_S = 0.012
 IDLE_POLL_S = 0.03
 PRESS_S = 2.5
 FLASH_S = 1.4
+BANNER_S = 1.6
 CUBE_S = 0.28
 BACK_S = 0.16
 ZOOM_S = 0.22
@@ -220,6 +221,14 @@ class App:
                 self.display.show(self.cube.with_play_symbol(current))
                 self.shown_key = None
                 self.flash_until = self.clock() + FLASH_S
+        elif cmd == 'banner':
+            text = str(message.get('text') or '')[:40]
+            if self.shown is not None and text:
+                self.press_until = 0.0
+                current = self.image_of(self.faces['cur']) or self.shown
+                self.display.show(self.cube.with_banner(current, text))
+                self.shown_key = None
+                self.flash_until = self.clock() + BANNER_S
         elif cmd == 'brightness':
             self.display.set_brightness(message.get('value', 80))
         elif cmd == 'wake':
@@ -288,6 +297,9 @@ class App:
             elif kind == 'swipe' and value == 'up':
                 self.dragging = None
                 self.send({'event': 'up'})
+            elif kind == 'category':
+                self.dragging = None
+                self.send({'event': 'category', 'dir': value})
             elif kind == 'cancel':
                 self.turn_back()
                 drag = None

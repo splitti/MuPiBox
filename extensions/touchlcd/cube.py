@@ -250,6 +250,21 @@ def with_play_symbol(face, strength=1.0):
     return Image.alpha_composite(face.convert('RGBA'), overlay).convert('RGB')
 
 
+def with_banner(face, text):
+    """The face with a name in a dark rounded box in the middle (what a change of the category says); a long name ends with an ellipsis."""
+    width, height = face.size
+    overlay = Image.new('RGBA', face.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+    font = load_font(max(18, width // 9), bold=True)
+    text = wrap(text, font, draw, width - 48, 1)[0] if text else ''
+    pad = size_of(font) // 2 + 4
+    text_width = draw.textlength(text, font=font)
+    box = (width / 2 - text_width / 2 - pad, height / 2 - size_of(font) / 2 - pad, width / 2 + text_width / 2 + pad, height / 2 + size_of(font) / 2 + pad)
+    draw.rounded_rectangle(box, radius=pad, fill=(0, 0, 0, 190))
+    centered(draw, width / 2, height / 2 - size_of(font) / 2 - 2, text, font, (255, 255, 255, 255))
+    return Image.alpha_composite(face.convert('RGBA'), overlay).convert('RGB')
+
+
 def rgb565(image):
     """The picture as bytes for the display: two per point, red 5, green 6, blue 5 bits, the high byte first."""
     red, green, blue = image.convert('RGB').split()

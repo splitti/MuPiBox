@@ -8,6 +8,7 @@ is up, and how many fingers touch) and gets events back:
     ('swipe', 'next')    let go after a swipe to the left (the next face comes), 'prev' after a swipe to the right
     ('cancel', None)     let go after a short drag: the faces turn back
     ('swipe', 'up')      a swipe up with two fingers (one level up); with one finger a swipe up does nothing
+    ('category', 'next') a swipe to the left with two fingers (the next category), 'prev' to the right
     ('tap', (x, y))      a short touch that did not move
 """
 
@@ -18,6 +19,7 @@ COMMIT_SHARE = 0.25  # the cube turns on when the finger went this share of the 
 FLICK_SPEED = 250  # ... or when a short quick flick was faster than this many points per second
 FLICK_MIN = 24
 UP_MIN = 40  # points a swipe up has to go
+CATEGORY_MIN = 60  # points a swipe to the side with two fingers has to go
 
 
 class Gesture:
@@ -62,11 +64,13 @@ class Gesture:
         self.start = self.last = self.axis = None
         self.fingers, self.dragged = 0, False
         if fingers >= 2:
-            # two fingers: only the swipe up counts (no tap, no turn); a turn that began under one finger goes back
+            # two fingers: only the swipe up and the swipe to the side count (no tap, no turn); a turn that began under one finger goes back
             if dragged:
                 events.append(('cancel', None))
             if dy <= -UP_MIN and abs(dy) >= abs(dx):
                 events.append(('swipe', 'up'))
+            elif abs(dx) >= CATEGORY_MIN and abs(dx) > abs(dy):
+                events.append(('category', 'next' if dx < 0 else 'prev'))
         elif axis == 'h':
             quick = abs(dx) >= FLICK_MIN and abs(dx) / duration >= FLICK_SPEED
             if abs(dx) >= self.width * COMMIT_SHARE or quick:

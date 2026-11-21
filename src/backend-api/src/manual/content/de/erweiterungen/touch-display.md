@@ -1,6 +1,6 @@
 # Touch-Display Cover
 
-Die Erweiterung **Touch-Display Cover** zeigt auf einem kleinen Touch-Display nur ein **Cover**: nach dem Start das des ersten Artisten. Ein **Wisch nach links oder rechts** dreht das Cover wie einen **Würfel** zum nächsten oder vorherigen; das Bild folgt dabei dem Finger. Ein **Tippen** öffnet den Artisten (seine Alben) oder, auf einem Album, **spielt es**. Mit einem **Wisch nach oben mit zwei Fingern** geht es eine Ebene zurück (ein Finger allein tut dabei nichts, damit ein Kind nicht versehentlich zurückspringt).
+Die Erweiterung **Touch-Display Cover** zeigt auf einem kleinen Touch-Display nur ein **Cover**: nach dem Start das des ersten Artisten. Ein **Wisch nach links oder rechts** dreht das Cover wie einen **Würfel** zum nächsten oder vorherigen; das Bild folgt dabei dem Finger. Ein **Tippen** öffnet den Artisten (seine Alben) oder, auf einem Album, **spielt es**. Mit einem **Wisch nach oben mit zwei Fingern** geht es eine Ebene zurück (ein Finger allein tut dabei nichts, damit ein Kind nicht versehentlich zurückspringt). Ein **Wisch nach links oder rechts mit zwei Fingern** wechselt die **Kategorie**: Alles, Musik, Hörbücher, Sonstiges, NAS, nach links zur nächsten, nach rechts zur vorherigen. Kategorien ohne Inhalt werden übersprungen. Kurz steht der Name der Kategorie mitten auf dem Display, dann zeigt es das Cover des ersten Artisten. Die Wahl bleibt nach einem Neustart erhalten; ändert man die Einstellung **Was angezeigt wird**, gilt wieder diese.
 
 Unterstützt wird das **Waveshare 2.8inch Capacitive Touch LCD** (240 × 320 Punkte, Display-Chip ST7789, Touch-Chip CST328) am **SPI-** und **I2C-Anschluss**, auf dem **Raspberry Pi 4 und dem Pi 5**. Die Erweiterung braucht die Pakete `python3-pil`, `python3-spidev` und `python3-lgpio`, die ihre Installation mitbringt.
 
@@ -56,7 +56,7 @@ Sind SPI oder I2C noch aus, zeigt die Karte **Display** den Block **SPI** oder *
 | **GPIO-Pin DC**, **RST** | nötig; verschiedene Pins, nicht die des SPI- und I2C-Anschlusses (2, 3, 7 bis 11) |
 | **GPIO-Pin BL** | die Hintergrundbeleuchtung: nur damit lässt sich das Display **dimmen** und ausschalten. Ohne Pin hängt BL an 3,3 V und das Display leuchtet immer voll |
 | **GPIO-Pin TP_RST** | Reset des Touch-Chips; ohne Pin hängt TP_RST an 3,3 V |
-| **Was angezeigt wird** | alles, nur Musik, nur Hörbücher, nur „Sonstiges“ oder nur das NAS |
+| **Was angezeigt wird** | alles, nur Musik, nur Hörbücher, nur „Sonstiges“ oder nur das NAS; am Display wechselst du mit einem Wisch zur Seite mit zwei Fingern |
 | **Namen unter dem Cover zeigen** | schreibt den Namen in den schwarzen Streifen unter dem Cover |
 | **Drehung** | Hochformat, Querformat und die gedrehten Lagen, wenn das Display anders eingebaut ist |
 | **Helligkeit**, **Display aus nach** | wie beim OLED-Display; eine Berührung weckt ein ausgeschaltetes Display (sie macht sonst nichts) |

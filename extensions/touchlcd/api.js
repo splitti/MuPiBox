@@ -1,7 +1,8 @@
 // Touch display (Waveshare 2.8 inch Capacitive Touch LCD) - the API part (runs in the server of the box): starts the driver (touchlcd.py,
 // Python: Node has no way to speak SPI or I2C), reads the library the way the box's own display does and tells the driver which cover to
 // show. The levels: the artists, then the albums of an artist (a series of albums is one more level); a tap on an album plays it, a swipe
-// up goes one level up, a swipe to the left or right turns the cube to the next or previous face.
+// up with two fingers goes one level up, a swipe to the left or right turns the cube to the next or previous face, a swipe to the left or
+// right with two fingers goes on to the next or previous category (all, music, audiobooks, other, NAS).
 //
 //   settings (pins, turn, brightness ...)  ->  logic.js readConfig
 //   the driver program                     ->  driver.js, touchlcd.py, lcd.py, cube.py, gesture.py
@@ -33,6 +34,8 @@ exports.activate = (host) => {
   const clock = deps.now ?? Date.now
 
   let config = logic.readConfig({})
+  let shown = 'all' // the category on the display: the one of the settings, or the one a two-finger swipe chose (kept in the data folder)
+  let settingsApplied = false
   let driver = null
   let started = null // the configuration the running driver was started with
   let phase = { phase: 'starting', code: '' }
@@ -79,8 +82,7 @@ exports.activate = (host) => {
     }
   }
 
-  const loadTop = async () => {
-    const category = config.category
+  const loadTop = async (category = shown) => {
     const wantLibrary = category === 'all' ? BOARD_CATEGORIES : BOARD_CATEGORIES.filter((c) => c === category)
     // (NAS folders sit in the category the parent gave them - "nas" is only the ones without one: each tab is asked on its own)
     const wantNas = category === 'all' ? [...BOARD_CATEGORIES, 'nas'] : BOARD_CATEGORIES.includes(category) || category === 'nas' ? [category] : []
@@ -180,6 +182,49 @@ exports.activate = (host) => {
     }
   }
 
+  // ---- the category the display shows -------------------------------------------------------------------------------------------
+  const savedFile = () => (host.dataDir ? path.join(host.dataDir, 'category.json') : '')
+  const savedCategory = () => {
+    try {
+      const saved = JSON.parse(readText(savedFile()))
+      return saved?.base === config.category && logic.CATEGORIES.includes(saved.current) ? saved.current : null
+    } catch {
+      return null // nothing saved
+    }
+  }
+  const saveCategory = () => {
+    const file = savedFile()
+    if (!file) return
+    try {
+      fs.mkdirSync(path.dirname(file), { recursive: true })
+      fs.writeFileSync(file, JSON.stringify({ base: config.category, current: shown }))
+    } catch (error) {
+      log.warn?.(`[touchlcd] the chosen category could not be kept: ${error?.message ?? error}`)
+    }
+  }
+  // two fingers to the side: on to the next category that has something in it (the names of the box tabs); the cover of its first artist
+  const switchCategory = async (dir) => {
+    if (busy || !driver) return
+    busy = true
+    try {
+      for (const candidate of logic.categoriesAfter(shown, dir)) {
+        const nodes = await loadTop(candidate)
+        if (!nodes || nodes.length === 0) continue
+        shown = candidate
+        stack = [{ nodes, index: 0, title: '' }]
+        childrenKept.clear()
+        topAt = clock()
+        saveCategory()
+        show('none')
+        driver?.send({ cmd: 'banner', text: logic.CATEGORY_LABELS[candidate] })
+        return
+      }
+      driver?.send({ cmd: 'banner', text: logic.CATEGORY_LABELS[shown] }) // (nothing else has anything in it: it stays, and says so)
+    } finally {
+      busy = false
+    }
+  }
+
   const up = () => {
     if (stack.length < 2) return
     stack.pop()
@@ -206,6 +251,9 @@ exports.activate = (host) => {
         break
       case 'up':
         up()
+        break
+      case 'category':
+        void switchCategory(event.dir)
         break
       default:
     }
@@ -262,6 +310,9 @@ exports.activate = (host) => {
       .then(async () => {
         const before = config
         config = logic.readConfig(settings ?? {})
+        // (the settings name a category: that is the one shown - until a swipe chooses another, which is kept for the next start)
+        if (!settingsApplied || before.category !== config.category) shown = (!settingsApplied && savedCategory()) || config.category
+        settingsApplied = true
         await readNight()
         if (config.problem) {
           await stopDriver(true)

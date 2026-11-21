@@ -5,6 +5,8 @@
 const SPI_DEVICES = ['0.0', '0.1']
 const ROTATIONS = [0, 90, 180, 270]
 const CATEGORIES = ['all', 'music', 'audiobook', 'other', 'nas']
+// what the display says when the category changes (the names of the box tabs)
+const CATEGORY_LABELS = { all: 'Alles', music: 'Musik', audiobook: 'Hörbücher', other: 'Sonstiges', nas: 'NAS' }
 const SLEEP_AFTER = [0, 1, 5, 15, 60]
 // the pins the SPI bus (BCM 7 to 11) and the I2C bus 1 (BCM 2 and 3) use: not for DC, RST, the backlight or the touch reset
 const BUS_PINS = new Set([2, 3, 7, 8, 9, 10, 11])
@@ -103,6 +105,8 @@ function readEvent(line) {
       return { event: 'ready', width: Number(event.width) || 0, height: Number(event.height) || 0 }
     case 'nav':
       return event.dir === 'next' || event.dir === 'prev' ? { event: 'nav', dir: event.dir } : null
+    case 'category':
+      return event.dir === 'next' || event.dir === 'prev' ? { event: 'category', dir: event.dir } : null
     case 'tap':
     case 'up':
       return { event: event.event }
@@ -316,6 +320,13 @@ function faceOf(node, apiUrl) {
   return { label: node.label, cover: cover.startsWith('/') ? `${apiUrl}${cover}` : cover }
 }
 
+/** The other categories in the order a two-finger swipe goes through them from `current`: 'next' forwards, 'prev' backwards, once round. */
+function categoriesAfter(current, dir) {
+  const at = Math.max(0, CATEGORIES.indexOf(current))
+  const step = dir === 'prev' ? -1 : 1
+  return Array.from({ length: CATEGORIES.length - 1 }, (_, i) => CATEGORIES[(at + step * (i + 1) + CATEGORIES.length * 2) % CATEGORIES.length])
+}
+
 /** The three faces around `index` of a level for the driver; a level of one face has no neighbours (the cube does not turn). `count` is
  *  how many faces the level has: four or fewer turn as a cube, more as a polygon whose angle is 360 / count (the covers stand flatter). */
 function facesOf(nodes, index, apiUrl) {
@@ -369,5 +380,5 @@ function statusRows(view) {
 
 module.exports = {
   readConfig, needsRestart, eveningBrightness, headerChipNumber, driverArgs, readEvent, playerPathOf, tileKeyOf, heardKeyOf, startQuery,
-  coverOf, categoryOf, dataNodes, folderNodes, mergeNodes, faceOf, facesOf, problemText, statusRows, PROBLEMS, BUS_PINS, ALBUMS_MAX,
+  coverOf, categoryOf, categoriesAfter, CATEGORIES, CATEGORY_LABELS, dataNodes, folderNodes, mergeNodes, faceOf, facesOf, problemText, statusRows, PROBLEMS, BUS_PINS, ALBUMS_MAX,
 }

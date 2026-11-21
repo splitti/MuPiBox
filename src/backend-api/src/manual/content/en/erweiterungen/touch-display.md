@@ -1,6 +1,6 @@
 # Touch display cover
 
-The **Touch display cover** extension shows only a **cover** on a small touch display: after the start the one of the first artist. A **swipe to the left or right** turns the cover like a **cube** to the next or the previous one; the picture follows the finger. A **tap** opens the artist (its albums) or, on an album, **plays it**. A **swipe up with two fingers** goes one level back (one finger alone does nothing there, so a child does not jump back by accident).
+The **Touch display cover** extension shows only a **cover** on a small touch display: after the start the one of the first artist. A **swipe to the left or right** turns the cover like a **cube** to the next or the previous one; the picture follows the finger. A **tap** opens the artist (its albums) or, on an album, **plays it**. A **swipe up with two fingers** goes one level back (one finger alone does nothing there, so a child does not jump back by accident). A **swipe to the left or right with two fingers** changes the **category**: Everything, Music, Audiobooks, Other, NAS, to the left to the next one, to the right to the previous one. Categories with nothing in them are skipped. For a moment the name of the category stands in the middle of the display, then it shows the cover of the first artist. The choice is kept over a restart; if you change the setting **What is shown**, that one counts again.
 
 It supports the **Waveshare 2.8inch Capacitive Touch LCD** (240 × 320 points, display chip ST7789, touch chip CST328) on the **SPI and I2C connectors**, on the **Raspberry Pi 4 and the Pi 5**. The extension needs the packages `python3-pil`, `python3-spidev` and `python3-lgpio`, which its installation brings along.
 
@@ -56,7 +56,7 @@ If SPI or I2C is still off, the **Display** card shows the block **SPI** or **I2
 | **GPIO pin DC**, **RST** | needed; different pins, not those of the SPI and I2C connectors (2, 3, 7 to 11) |
 | **GPIO pin BL** | the backlight: only with it can the display be **dimmed** and switched off. Without a pin BL is on 3.3 V and the display always shines at full brightness |
 | **GPIO pin TP_RST** | reset of the touch chip; without a pin TP_RST is on 3.3 V |
-| **What is shown** | everything, only music, only audiobooks, only “other” or only the NAS |
+| **What is shown** | everything, only music, only audiobooks, only “other” or only the NAS; on the display you change it with a swipe to the side with two fingers |
 | **Show names under the cover** | writes the name in the black strip under the cover |
 | **Rotation** | portrait, landscape and the turned positions, if the display is built in differently |
 | **Brightness**, **Display off after** | as with the OLED display; a touch wakes a display that is off (it does nothing else) |

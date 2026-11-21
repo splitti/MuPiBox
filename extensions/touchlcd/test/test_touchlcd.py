@@ -166,8 +166,15 @@ class GestureTest(unittest.TestCase):
     def test_two_fingers_do_not_turn_the_cube_or_tap(self):
         events = touch(gesture.Gesture(*SIZE), [(120, 250), (150, 200), (160, 140)], fingers=2)
         self.assertEqual(events, [('swipe', 'up')])
-        self.assertEqual(touch(gesture.Gesture(*SIZE), [(200, 160), (170, 160), (100, 160)], fingers=2), [])
+        self.assertEqual(touch(gesture.Gesture(*SIZE), [(200, 160), (170, 160), (150, 160)], fingers=2), [], 'too short for a category')
         self.assertEqual(touch(gesture.Gesture(*SIZE), [(100, 100), (101, 101), (100, 102)], fingers=2), [])
+
+    def test_a_swipe_to_the_side_with_two_fingers_changes_the_category(self):
+        self.assertEqual(touch(gesture.Gesture(*SIZE), [(200, 160), (170, 162), (100, 160)], fingers=2), [('category', 'next')])
+        self.assertEqual(touch(gesture.Gesture(*SIZE), [(40, 160), (80, 158), (150, 160)], fingers=2), [('category', 'prev')])
+        # (one finger the same way turns the cube; two fingers that go more up than aside are the swipe up)
+        self.assertNotIn(('category', 'next'), touch(gesture.Gesture(*SIZE), [(200, 160), (170, 160), (100, 160)], fingers=1))
+        self.assertEqual(touch(gesture.Gesture(*SIZE), [(200, 260), (170, 200), (100, 150)], fingers=2), [('swipe', 'up')])
 
     def test_a_turn_that_began_under_one_finger_goes_back_when_a_second_one_comes(self):
         events = touch(gesture.Gesture(*SIZE), [(200, 160), (180, 160), (160, 160), (150, 160)], fingers=[1, 1, 2, 2], step=0.3)
@@ -452,6 +459,23 @@ class AppTest(unittest.TestCase):
         self.assertEqual(self.sent, [{'event': 'tap'}], 'one finger up: nothing')
         self.finger([(120, 250), (121, 200), (121, 150)], fingers=2)
         self.assertEqual(self.sent, [{'event': 'tap'}, {'event': 'up'}])
+
+    def test_a_swipe_to_the_side_with_two_fingers_is_reported_and_the_banner_names_the_category(self):
+        app = self.make()
+        app.command({'cmd': 'view', 'faces': {'prev': None, 'cur': face('A'), 'next': None}, 'transition': 'none'})
+        self.finger([(200, 160), (150, 160), (90, 160)], fingers=2)
+        self.assertEqual(self.sent, [{'event': 'category', 'dir': 'next'}])
+        self.display.pictures.clear()
+        app.command({'cmd': 'banner', 'text': 'Hörbücher'})
+        self.assertEqual(len(self.display.pictures), 1)
+        plain = app.image_of(face('A'))
+        self.assertNotEqual(self.display.pictures[-1].getpixel((120, 160)), plain.getpixel((120, 160)))
+        self.assertEqual(self.display.pictures[-1].getpixel((2, 2)), plain.getpixel((2, 2)), 'only the middle changes')
+        self.clock.now += touchlcd.BANNER_S + 0.1
+        app.step()
+        self.assertEqual(len(self.display.pictures), 2, 'the cover is back')
+        app.command({'cmd': 'banner', 'text': ''})
+        self.assertEqual(len(self.display.pictures), 2, 'no text, no banner')
 
     def test_press_and_flash_answer_a_tap_and_the_cover_comes_back(self):
         app = self.make()

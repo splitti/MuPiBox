@@ -69,6 +69,11 @@ test('the reports of the driver are read; anything else is not one', () => {
   assert.deepStrictEqual(logic.readEvent('{"event":"ready","width":240,"height":320}'), { event: 'ready', width: 240, height: 320 })
   assert.deepStrictEqual(logic.readEvent('{"event":"nav","dir":"next"}'), { event: 'nav', dir: 'next' })
   assert.deepStrictEqual(logic.readEvent('{"event":"tap"}'), { event: 'tap' })
+  assert.deepStrictEqual(logic.readEvent('{"event":"category","dir":"prev"}'), { event: 'category', dir: 'prev' })
+  assert.strictEqual(logic.readEvent('{"event":"category","dir":"up"}'), null)
+  assert.deepStrictEqual(logic.categoriesAfter('all', 'next'), ['music', 'audiobook', 'other', 'nas'])
+  assert.deepStrictEqual(logic.categoriesAfter('all', 'prev'), ['nas', 'other', 'audiobook', 'music'])
+  assert.deepStrictEqual(logic.categoriesAfter('other', 'next'), ['nas', 'all', 'music', 'audiobook'])
   assert.deepStrictEqual(logic.readEvent('{"event":"up"}'), { event: 'up' })
   assert.deepStrictEqual(logic.readEvent(`{"event":"error","code":"no_touch","message":"${'x'.repeat(500)}"}`), { event: 'error', code: 'no_touch', message: 'x'.repeat(300) })
   for (const line of ['', 'hello', '{"event":5}', '{"nope":1}', '[]', 'null', '{"event":"nav","dir":"sideways"}', '{"event":"dance"}']) assert.strictEqual(logic.readEvent(line), null, line)
@@ -287,6 +292,7 @@ function fakeBox(settings = PINS, over = {}) {
     playerUrl: 'http://player',
     apiUrl: 'http://api',
     settings: async () => settings,
+    ...(over.dataDir ? { dataDir: over.dataDir } : {}),
     onSettings: (fn) => (host.changed = fn),
     route: (method, sub, handler) => (routes[`${method} ${sub}`] = handler),
     deps: {
@@ -440,6 +446,35 @@ test('NAS folders are found in the category the parent gave them (audiobook), no
   assert.ok(!music.ext.levelNow().nodes.some((n) => n.label === 'Munken och Kulan'))
   const only = await started({ ...PINS, category: 'nas' }, { library })
   assert.deepStrictEqual(only.calls.filter((c) => c.startsWith('/api/nas/artists')), ['/api/nas/artists?category=nas'])
+})
+
+test('two fingers to the side go on to the next category that has something in it, say its name and keep it for the next start', async () => {
+  const dataDir = require('node:fs').mkdtempSync(require('node:path').join(require('node:os').tmpdir(), 'touchlcd-'))
+  const { driver, ext } = await started(PINS, { dataDir })
+  const banners = () => commands(driver).filter((c) => c.cmd === 'banner').map((c) => c.text)
+  say(driver, { event: 'category', dir: 'next' })
+  for (let i = 0; i < 6; i++) await settle()
+  assert.deepStrictEqual(banners(), ['Musik'])
+  assert.ok(ext.levelNow().nodes.every((n) => ['Abba', 'Batman', 'Zebra', 'Old'].includes(n.label)), 'only music')
+  assert.strictEqual(views(driver).at(-1).faces.cur.label, ext.levelNow().nodes[0].label)
+  say(driver, { event: 'category', dir: 'next' })
+  for (let i = 0; i < 6; i++) await settle()
+  assert.deepStrictEqual(banners(), ['Musik', 'Hörbücher'])
+  // (nothing on the NAS and in "other" only the station: from "other" on, the empty NAS is left out)
+  say(driver, { event: 'category', dir: 'next' })
+  for (let i = 0; i < 6; i++) await settle()
+  say(driver, { event: 'category', dir: 'next' })
+  for (let i = 0; i < 6; i++) await settle()
+  assert.deepStrictEqual(banners().slice(-2), ['Sonstiges', 'Alles'])
+  say(driver, { event: 'category', dir: 'prev' })
+  for (let i = 0; i < 6; i++) await settle()
+  assert.strictEqual(banners().at(-1), 'Sonstiges')
+  // (kept: the next start begins there; a change of the setting itself wins)
+  const again = await started(PINS, { dataDir })
+  assert.strictEqual(again.ext.levelNow().nodes.length, 1, 'the station only')
+  const changed = await started({ ...PINS, category: 'music' }, { dataDir })
+  assert.ok(changed.ext.levelNow().nodes.length > 1, 'the setting names another category than the one kept: it wins')
+  require('node:fs').rmSync(dataDir, { recursive: true, force: true })
 })
 
 test('the settings: a new brightness goes on while it runs, other pins start the driver again, no pins stop it', async () => {
