@@ -6,7 +6,7 @@ does what api.js does (levels, play).
     python tools/touchlcd-sim.py [cover1.png cover2.png ...]
 
 Drag to the left or right: the cube turns (the picture follows the mouse). Click: open an artist / play an album (the play symbol).
-Drag up: one level up. Without covers the faces show the names on a colour. Esc ends.
+Ctrl+drag up (two fingers): one level up. Without covers the faces show the names on a colour. Esc ends.
 """
 import os
 import sys
@@ -40,6 +40,7 @@ class Window:
         self.label.pack()
         self.photo = None
         self.finger = None
+        self.fingers = 1  # hold Ctrl (or Shift) while you drag: two fingers
         self.on = True
         self.label.bind('<ButtonPress-1>', self._down)
         self.label.bind('<B1-Motion>', self._down)
@@ -47,6 +48,7 @@ class Window:
         self.root.bind('<Escape>', lambda _e: self.root.destroy())
 
     def _down(self, event):
+        self.fingers = 2 if event.state & 0x5 else 1  # (Shift = 0x1, Ctrl = 0x4)
         self.finger = (min(max(event.x // self.scale, 0), self.width - 1), min(max(event.y // self.scale, 0), self.height - 1))
 
     def _up(self, _event):

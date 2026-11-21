@@ -237,6 +237,7 @@ class Touch:
         self.rotation, self.swap, self.flip_x, self.flip_y = rotation, swap, flip_x, flip_y
         self._sleep = sleep
         self.mode = None
+        self.fingers = 0  # how many fingers the latest reading saw
         if reset_pin:
             self.pins.write(reset_pin, 0)
             self._sleep(0.001)
@@ -262,8 +263,10 @@ class Touch:
         return len(data) >= 12 and ((data[11] << 8) | data[10]) == 0xCACA
 
     def read(self):
-        """The first finger as (x, y) in points of the screen, or None while nothing touches. An OSError when the chip does not answer."""
+        """The first finger as (x, y) in points of the screen, or None while nothing touches; `fingers` says how many touch (the chip
+        reports up to five). An OSError when the chip does not answer."""
         count = self._read(self.REG_COUNT, 1)[0] & 0x0F
+        self.fingers = count if count <= 5 else 0
         if count == 0:
             return None
         if count > 5:

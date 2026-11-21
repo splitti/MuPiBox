@@ -100,12 +100,12 @@ class CubeTest(unittest.TestCase):
 
 
 # ---- the finger ---------------------------------------------------------------------------------------------------------------------
-def touch(g, points, start=0.0, step=0.02):
-    """The events of a finger that goes through `points` and lets go."""
+def touch(g, points, start=0.0, step=0.02, fingers=1):
+    """The events of a finger that goes through `points` and lets go (`fingers`: how many touch, a number or one per point)."""
     events = []
     now = start
-    for point in points:
-        events += g.feed(point, now)
+    for i, point in enumerate(points):
+        events += g.feed(point, now, fingers[i] if isinstance(fingers, (list, tuple)) else fingers)
         now += step
     events += g.feed(None, now)
     return events
@@ -133,14 +133,25 @@ class GestureTest(unittest.TestCase):
     def test_a_short_quick_flick_is_enough(self):
         self.assertEqual(touch(gesture.Gesture(*SIZE), [(150, 160), (130, 160), (118, 160)], step=0.015)[-1], ('swipe', 'next'))
 
-    def test_a_swipe_up_goes_one_level_up_but_one_down_does_nothing(self):
-        self.assertEqual(touch(gesture.Gesture(*SIZE), [(120, 250), (122, 200), (121, 150)]), [('swipe', 'up')])
-        self.assertEqual(touch(gesture.Gesture(*SIZE), [(120, 100), (122, 150), (121, 220)]), [])
+    def test_a_swipe_up_with_two_fingers_goes_one_level_up_but_one_down_does_nothing(self):
+        self.assertEqual(touch(gesture.Gesture(*SIZE), [(120, 250), (122, 200), (121, 150)], fingers=2), [('swipe', 'up')])
+        self.assertEqual(touch(gesture.Gesture(*SIZE), [(120, 100), (122, 150), (121, 220)], fingers=2), [])
+        # (the second finger may come a little after the first)
+        self.assertEqual(touch(gesture.Gesture(*SIZE), [(120, 250), (122, 220), (121, 180), (121, 140)], fingers=[1, 2, 2, 2]), [('swipe', 'up')])
 
-    def test_a_drag_that_goes_mostly_up_does_not_turn_the_cube(self):
-        events = touch(gesture.Gesture(*SIZE), [(120, 250), (150, 200), (160, 140)])
-        self.assertFalse([e for e in events if e[0] in ('drag', 'cancel')])
-        self.assertEqual(events[-1], ('swipe', 'up'))
+    def test_a_swipe_up_with_one_finger_does_nothing(self):
+        self.assertEqual(touch(gesture.Gesture(*SIZE), [(120, 250), (122, 200), (121, 150)]), [])
+
+    def test_two_fingers_do_not_turn_the_cube_or_tap(self):
+        events = touch(gesture.Gesture(*SIZE), [(120, 250), (150, 200), (160, 140)], fingers=2)
+        self.assertEqual(events, [('swipe', 'up')])
+        self.assertEqual(touch(gesture.Gesture(*SIZE), [(200, 160), (170, 160), (100, 160)], fingers=2), [])
+        self.assertEqual(touch(gesture.Gesture(*SIZE), [(100, 100), (101, 101), (100, 102)], fingers=2), [])
+
+    def test_a_turn_that_began_under_one_finger_goes_back_when_a_second_one_comes(self):
+        events = touch(gesture.Gesture(*SIZE), [(200, 160), (180, 160), (160, 160), (150, 160)], fingers=[1, 1, 2, 2], step=0.3)
+        self.assertEqual([e[0] for e in events if e[0] in ('drag', 'swipe', 'cancel')][-1], 'cancel')
+        self.assertNotIn(('swipe', 'next'), events)
 
     def test_a_second_touch_starts_afresh(self):
         g = gesture.Gesture(*SIZE)
@@ -275,6 +286,10 @@ class TouchTest(unittest.TestCase):
         # (more fingers than the chip has, or a reading with the high bits set: nothing)
         chip, _ = self.chip({0xD005: [9]})
         self.assertIsNone(chip.read())
+        self.assertEqual(chip.fingers, 0)
+        chip, _ = self.chip({0xD005: [2], 0xD000: finger_data(100, 200)})
+        self.assertEqual(chip.read(), (100, 200))
+        self.assertEqual(chip.fingers, 2)
         chip, _ = self.chip({0xD005: [1], 0xD000: finger_data(239, 319)})
         self.assertEqual(chip.read(), (239, 319))
 
@@ -320,6 +335,7 @@ class FakeDisplay:
 class FakeTouch:
     def __init__(self):
         self.point = None
+        self.fingers = 1
         self.broken = False
 
     def read(self):
@@ -362,7 +378,8 @@ class AppTest(unittest.TestCase):
         self.display.pictures.clear()
         return self.app
 
-    def finger(self, points, step=0.02):
+    def finger(self, points, step=0.02, fingers=1):
+        self.touch.fingers = fingers
         for point in points:
             self.touch.point = point
             self.clock.now += step
@@ -407,10 +424,12 @@ class AppTest(unittest.TestCase):
         self.assertEqual(self.sent, [])
         self.assertEqual(self.display.pictures, [])
 
-    def test_a_tap_and_a_swipe_up_are_reported(self):
+    def test_a_tap_and_a_swipe_up_with_two_fingers_are_reported(self):
         self.make()
         self.finger([(120, 160), (121, 161)])
         self.finger([(120, 250), (121, 200), (121, 150)])
+        self.assertEqual(self.sent, [{'event': 'tap'}], 'one finger up: nothing')
+        self.finger([(120, 250), (121, 200), (121, 150)], fingers=2)
         self.assertEqual(self.sent, [{'event': 'tap'}, {'event': 'up'}])
 
     def test_press_and_flash_answer_a_tap_and_the_cover_comes_back(self):

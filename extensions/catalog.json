@@ -117,13 +117,13 @@
   {
     "id": "touchlcd",
     "name": "Touch-Display Cover",
-    "version": "0.1.2",
-    "description": "Ein kleines Touch-Display (Waveshare 2,8 Zoll Capacitive Touch LCD, 240 × 320, am SPI- und I2C-Anschluss) zeigt nur das Cover. Nach links oder rechts wischen dreht es wie einen Würfel zum nächsten Artisten oder Album, ein Tippen öffnet den Artisten oder spielt das Album, nach oben wischen geht eine Ebene zurück. Die Einstellungen stehen unter Einstellungen › Touch-Display Cover.",
+    "version": "0.1.3",
+    "description": "Ein kleines Touch-Display (Waveshare 2,8 Zoll Capacitive Touch LCD, 240 × 320, am SPI- und I2C-Anschluss) zeigt nur das Cover. Nach links oder rechts wischen dreht es wie einen Würfel zum nächsten Artisten oder Album, ein Tippen öffnet den Artisten oder spielt das Album, mit zwei Fingern nach oben wischen geht eine Ebene zurück. Die Einstellungen stehen unter Einstellungen › Touch-Display Cover.",
     "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48ZyBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIzMCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTc2IDcwaDE2MGEzMCAzMCAwIDAgMSAzMCAzMHYzMTJhMzAgMzAgMCAwIDEtMzAgMzBIMTc2YTMwIDMwIDAgMCAxLTMwLTMwVjEwMGEzMCAzMCAwIDAgMSAzMC0zMHoiLz48cGF0aCBkPSJNMTQ2IDE1MGgyMjBNMTQ2IDM2MmgyMjAiLz48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjQyIi8+PHBhdGggZD0iTTYwIDIzMGwtMjQgMjYgMjQgMjZNNDUyIDIzMGwyNCAyNi0yNCAyNiIvPjwvZz48L3N2Zz4K",
     "hostApi": 14,
-    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/touchlcd-0.1.2.mpx",
-    "sha256": "70644b9068ee8deb1160c3f5231f3d98c8936fa43147dd1da915826097f3aacf",
-    "size": 32025,
+    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/touchlcd-0.1.3.mpx",
+    "sha256": "252f080188e6b8f60d3f7cef9fc0762e924927188c0925ccdeebdd465032515a",
+    "size": 32380,
     "resources": {},
     "system": {
       "udev": 1,

@@ -1,8 +1,8 @@
 {
   "id": "touchlcd",
   "name": "Touch-Display Cover",
-  "version": "0.1.2",
-  "description": "Ein kleines Touch-Display (Waveshare 2,8 Zoll Capacitive Touch LCD, 240 × 320, am SPI- und I2C-Anschluss) zeigt nur das Cover. Nach links oder rechts wischen dreht es wie einen Würfel zum nächsten Artisten oder Album, ein Tippen öffnet den Artisten oder spielt das Album, nach oben wischen geht eine Ebene zurück. Die Einstellungen stehen unter Einstellungen › Touch-Display Cover.",
+  "version": "0.1.3",
+  "description": "Ein kleines Touch-Display (Waveshare 2,8 Zoll Capacitive Touch LCD, 240 × 320, am SPI- und I2C-Anschluss) zeigt nur das Cover. Nach links oder rechts wischen dreht es wie einen Würfel zum nächsten Artisten oder Album, ein Tippen öffnet den Artisten oder spielt das Album, mit zwei Fingern nach oben wischen geht eine Ebene zurück. Die Einstellungen stehen unter Einstellungen › Touch-Display Cover.",
   "hostApi": 14,
   "resources": {},
   "api": "api.js",
@@ -115,7 +115,7 @@
     "title": "Touch-Display Cover",
     "heading": "Touch-Display Cover",
     "place": "system",
-    "help": "Das Touch-Display (Waveshare 2,8 Zoll Capacitive Touch LCD) zeigt das Cover eines Artisten. Nach links oder rechts wischen dreht den Würfel zum nächsten, ein Tippen öffnet den Artisten oder spielt das Album, nach oben wischen geht eine Ebene zurück. Hier schaltest du SPI und I2C ein und wählst die Pins.",
+    "help": "Das Touch-Display (Waveshare 2,8 Zoll Capacitive Touch LCD) zeigt das Cover eines Artisten. Nach links oder rechts wischen dreht den Würfel zum nächsten, ein Tippen öffnet den Artisten oder spielt das Album, mit zwei Fingern nach oben wischen geht eine Ebene zurück. Hier schaltest du SPI und I2C ein und wählst die Pins.",
     "items": [
       {
         "type": "heading",

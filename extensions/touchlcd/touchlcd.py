@@ -272,7 +272,7 @@ class App:
         else:
             if point is not None:
                 self.last_activity = now
-            events = self.gesture.feed(point, now)
+            events = self.gesture.feed(point, now, getattr(self.touch, 'fingers', 1))
         drag = None
         for kind, value in events:
             if kind == 'drag':

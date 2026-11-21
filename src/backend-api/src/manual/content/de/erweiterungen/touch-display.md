@@ -1,6 +1,6 @@
 # Touch-Display Cover
 
-Die Erweiterung **Touch-Display Cover** zeigt auf einem kleinen Touch-Display nur ein **Cover**: nach dem Start das des ersten Artisten. Ein **Wisch nach links oder rechts** dreht das Cover wie einen **Würfel** zum nächsten oder vorherigen; das Bild folgt dabei dem Finger. Ein **Tippen** öffnet den Artisten (seine Alben) oder, auf einem Album, **spielt es**. Mit einem **Wisch nach oben** geht es eine Ebene zurück.
+Die Erweiterung **Touch-Display Cover** zeigt auf einem kleinen Touch-Display nur ein **Cover**: nach dem Start das des ersten Artisten. Ein **Wisch nach links oder rechts** dreht das Cover wie einen **Würfel** zum nächsten oder vorherigen; das Bild folgt dabei dem Finger. Ein **Tippen** öffnet den Artisten (seine Alben) oder, auf einem Album, **spielt es**. Mit einem **Wisch nach oben mit zwei Fingern** geht es eine Ebene zurück (ein Finger allein tut dabei nichts, damit ein Kind nicht versehentlich zurückspringt).
 
 Unterstützt wird das **Waveshare 2.8inch Capacitive Touch LCD** (240 × 320 Punkte, Display-Chip ST7789, Touch-Chip CST328) am **SPI-** und **I2C-Anschluss**, auf dem **Raspberry Pi 4 und dem Pi 5**. Die Erweiterung braucht die Pakete `python3-pil`, `python3-spidev` und `python3-lgpio`, die ihre Installation mitbringt.
 
@@ -8,7 +8,7 @@ Nach der [Installation](installieren.md) stehen die Einstellungen unter **Einste
 
 ## Die Ebenen
 
-| Ebene | Was das Display zeigt | Tippen | Nach oben wischen |
+| Ebene | Was das Display zeigt | Tippen | Mit zwei Fingern nach oben wischen |
 | --- | --- | --- | --- |
 | **Artisten** | das Cover des Artisten, nach Namen geordnet wie in der Bibliothek der Box | öffnet die Alben des Artisten | tut nichts |
 | **Alben** | das Cover eines Albums des Artisten | **spielt das Album** (kurz erscheint ein Play-Symbol) | zurück zu den Artisten, beim selben Artisten |

@@ -1,6 +1,6 @@
 # Touch display cover
 
-The **Touch display cover** extension shows only a **cover** on a small touch display: after the start the one of the first artist. A **swipe to the left or right** turns the cover like a **cube** to the next or the previous one; the picture follows the finger. A **tap** opens the artist (its albums) or, on an album, **plays it**. A **swipe up** goes one level back.
+The **Touch display cover** extension shows only a **cover** on a small touch display: after the start the one of the first artist. A **swipe to the left or right** turns the cover like a **cube** to the next or the previous one; the picture follows the finger. A **tap** opens the artist (its albums) or, on an album, **plays it**. A **swipe up with two fingers** goes one level back (one finger alone does nothing there, so a child does not jump back by accident).
 
 It supports the **Waveshare 2.8inch Capacitive Touch LCD** (240 × 320 points, display chip ST7789, touch chip CST328) on the **SPI and I2C connectors**, on the **Raspberry Pi 4 and the Pi 5**. The extension needs the packages `python3-pil`, `python3-spidev` and `python3-lgpio`, which its installation brings along.
 
@@ -8,7 +8,7 @@ After the [installation](installieren.md) the settings are under **Settings › 
 
 ## The levels
 
-| Level | What the display shows | Tap | Swipe up |
+| Level | What the display shows | Tap | Swipe up with two fingers |
 | --- | --- | --- | --- |
 | **Artists** | the cover of the artist, in the order of the names as in the library of the box | opens the albums of the artist | does nothing |
 | **Albums** | the cover of an album of the artist | **plays the album** (a play symbol shows for a moment) | back to the artists, on the same artist |
