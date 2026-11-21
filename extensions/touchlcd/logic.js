@@ -316,11 +316,13 @@ function faceOf(node, apiUrl) {
   return { label: node.label, cover: cover.startsWith('/') ? `${apiUrl}${cover}` : cover }
 }
 
-/** The three faces around `index` of a level for the driver; a level of one face has no neighbours (the cube does not turn). */
+/** The three faces around `index` of a level for the driver; a level of one face has no neighbours (the cube does not turn). `count` is
+ *  how many faces the level has: four or fewer turn as a cube, more as a polygon whose angle is 360 / count (the covers stand flatter). */
 function facesOf(nodes, index, apiUrl) {
   const count = nodes.length
   if (count === 0) return null
   return {
+    count,
     cur: faceOf(nodes[index], apiUrl),
     prev: count > 1 ? faceOf(nodes[(index - 1 + count) % count], apiUrl) : null,
     next: count > 1 ? faceOf(nodes[(index + 1) % count], apiUrl) : null,

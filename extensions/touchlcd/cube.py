@@ -153,18 +153,34 @@ def _coefficients(target, source):
 
 
 def _warp(canvas, face, quad):
-    """The face drawn into `canvas` on the quadrilateral `quad` (top left, top right, bottom right, bottom left, in output points)."""
+    """The face drawn into `canvas` on the quadrilateral `quad` (top left, top right, bottom right, bottom left, in output points). Only the
+    box around the quadrilateral is worked on; the mask is the quadrilateral itself."""
     width, height = face.size
-    coefficients = _coefficients(quad, [(0, 0), (width, 0), (width, height), (0, height)])
-    warped = face.transform(canvas.size, Image.PERSPECTIVE, coefficients, Image.BILINEAR)
-    mask = Image.new('L', face.size, 255).transform(canvas.size, Image.PERSPECTIVE, coefficients, Image.BILINEAR)
-    canvas.paste(warped, (0, 0), mask)
+    left, top = max(0, math.floor(min(x for x, _ in quad))), max(0, math.floor(min(y for _, y in quad)))
+    right, bottom = min(canvas.width, math.ceil(max(x for x, _ in quad)) + 1), min(canvas.height, math.ceil(max(y for _, y in quad)) + 1)
+    if right <= left or bottom <= top:
+        return
+    shifted = [(x - left, y - top) for x, y in quad]
+    coefficients = _coefficients(shifted, [(0, 0), (width, 0), (width, height), (0, height)])
+    box = (right - left, bottom - top)
+    warped = face.transform(box, Image.PERSPECTIVE, coefficients, Image.BILINEAR)
+    # (the mask: a point is the face's when its middle is inside - so two faces that share an edge leave no gap and do not overlap)
+    mask = Image.new('L', face.size, 255).transform(box, Image.PERSPECTIVE, coefficients, Image.NEAREST)
+    canvas.paste(warped, (left, top), mask)
 
 
-def cube(front, side, progress, direction='left'):
-    """The cube turned by `progress` (0 = the front face fills the screen, 1 = the side face does). direction 'left': the front face goes
-    to the left and the side face comes from the right (a swipe to the left); 'right' is the mirror image. Both pictures have the size of
-    the screen."""
+def sides(count):
+    """How many sides the prism has: a cube for up to four faces, a regular polygon for more (eight faces: 45 degrees from one to the next)."""
+    return max(4, int(count or 4))
+
+
+def cube(front, side, progress, direction='left', count=4):
+    """The faces side by side on a prism, turned by `progress` (0 = the front face fills the screen, 1 = the side face does). `count` is the
+    number of faces there are: four or fewer make a cube (90 degrees from one face to the next), more make a regular polygon with
+    360 / count degrees from one face to the next (eight faces: 45 degrees), so the covers stand flatter the more there are, and they
+    always touch each other. direction 'left': the front face goes to the left and the side face comes from the right (a swipe to the
+    left); 'right' is the mirror image. Both pictures have the size of the screen. (No other face is ever on the screen: the front face
+    and the next one cover it, whatever the angle.)"""
     if progress <= 0:
         return front
     if progress >= 1:
@@ -173,27 +189,25 @@ def cube(front, side, progress, direction='left'):
         front, side = ImageOps.mirror(front), ImageOps.mirror(side)
     width, height = front.size
     half = width / 2
-    angle = progress * math.pi / 2
-    cos, sin = math.cos(angle), math.sin(angle)
-    distance = CAMERA * half
-    focal = distance - half  # (the front face has the scale 1 when the cube stands still)
+    step = 2 * math.pi / sides(count)  # (the angle from one face to the next)
+    apothem = half / math.tan(step / 2)  # (from the axis to the middle of a face)
+    radius = half / math.sin(step / 2)  # (from the axis to a corner)
+    distance = apothem + (CAMERA - 1) * half  # (the camera stands as far from the front face as it did from the cube's)
+    focal = distance - apothem  # (the front face has the scale 1 when the prism stands still)
+    turn = progress * step
+    mid = height / 2
 
-    def project(x, z):
-        # (x to the right and z to the viewer, from the axis of the cube, turned by the angle)
-        turned_x = x * cos - z * sin
-        turned_z = x * sin + z * cos
-        scale = focal / (distance - turned_z)
-        return width / 2 + turned_x * scale, scale
-
-    def quad(near, far):
-        (xl, sl), (xr, sr) = project(*near), project(*far)
-        mid = height / 2
-        return [(xl, mid - mid * sl), (xr, mid - mid * sr), (xr, mid + mid * sr), (xl, mid + mid * sl)]
+    def corner(angle):
+        # (the corner at this angle from the front, to the right of it when it is positive)
+        scale = focal / (distance - radius * math.cos(angle))
+        return width / 2 + radius * math.sin(angle) * scale, scale
 
     canvas = Image.new('RGB', front.size, BACKGROUND)
-    # the front face runs from its left edge to the corner of the cube; the side face starts at that corner and runs away
-    _warp(canvas, shade(front, SHADE_MIN + (1 - SHADE_MIN) * cos), quad((-half, half), (half, half)))
-    _warp(canvas, shade(side, SHADE_MIN + (1 - SHADE_MIN) * sin), quad((half, half), (half, -half)))
+    # the front face runs from its left corner to the one it shares with the side face, which runs on from there
+    for image, middle in ((front, -turn), (side, step - turn)):
+        (xl, sl), (xr, sr) = corner(middle - step / 2), corner(middle + step / 2)
+        light = SHADE_MIN + (1 - SHADE_MIN) * max(0.0, math.cos(middle))
+        _warp(canvas, shade(image, light), [(xl, mid - mid * sl), (xr, mid - mid * sr), (xr, mid + mid * sr), (xl, mid + mid * sl)])
     return ImageOps.mirror(canvas) if direction == 'right' else canvas
 
 

@@ -151,6 +151,7 @@ class App:
         self.clock, self.nap, self.pump = clock, nap, pump
         self.gesture = gesture.Gesture(*self.size)
         self.faces = {'prev': None, 'cur': None, 'next': None}
+        self.count = 4  # how many faces the level has: the angle of the prism follows from it (cube.cube)
         self._kept = collections.OrderedDict()  # the faces made lately
         self.shown = None  # the picture that is on the screen
         self.shown_key = None
@@ -227,6 +228,10 @@ class App:
     def view(self, faces, transition):
         old = self.shown
         self.faces = {slot: faces.get(slot) or None for slot in ('prev', 'cur', 'next')}
+        try:
+            self.count = max(1, int(faces.get('count') or 4))
+        except (TypeError, ValueError):
+            self.count = 4
         self.press_until = self.flash_until = 0.0
         if self.faces['cur'] is None:
             return
@@ -318,7 +323,7 @@ class App:
         if other is None:
             return None
         progress = min(1.0, abs(dx) / float(self.size[0]))
-        return self.cube.cube(self.image_of(self.faces['cur']), other, progress, 'left' if which == 'next' else 'right')
+        return self.cube.cube(self.image_of(self.faces['cur']), other, progress, 'left' if which == 'next' else 'right', self.count)
 
     def drag(self, dx):
         if self.faces['cur'] is None or dx == self.dragging:
@@ -339,7 +344,7 @@ class App:
         direction = 'left' if which == 'next' else 'right'
         current, other = self.image_of(self.faces['cur']), self.image_of(self.neighbour(which))
         seconds = CUBE_S * (1.0 - start) + 0.05
-        self.animate(seconds, lambda t: self.display.show(self.cube.cube(current, other, start + (1.0 - start) * self.cube.ease_out(t), direction)))
+        self.animate(seconds, lambda t: self.display.show(self.cube.cube(current, other, start + (1.0 - start) * self.cube.ease_out(t), direction, self.count)))
         self.dragging = None
         # (the picture shows the new face now; the extension says what is behind it)
         if which == 'next':
@@ -360,7 +365,7 @@ class App:
         other = self.image_of(self.neighbour('next' if dx < 0 else 'prev'))
         current = self.image_of(self.faces['cur'])
         if other is not None:
-            self.animate(BACK_S, lambda t: self.display.show(self.cube.cube(current, other, start * (1.0 - self.cube.ease_out(t)), direction)))
+            self.animate(BACK_S, lambda t: self.display.show(self.cube.cube(current, other, start * (1.0 - self.cube.ease_out(t)), direction, self.count)))
         self.shown_key = None
         self.draw_current()
 

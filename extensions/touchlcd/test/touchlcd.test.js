@@ -154,12 +154,13 @@ test('the player is told the same address the display of the box builds', () => 
 test('the driver is told three faces: the one in view and its neighbours around the ends of the list', () => {
   const nodes = ['A', 'B', 'C'].map((label) => ({ label, cover: label === 'B' ? '/api/b.jpg' : 'https://x/c.jpg' }))
   assert.deepStrictEqual(logic.facesOf(nodes, 0, 'http://box'), {
+    count: 3,
     cur: { label: 'A', cover: 'https://x/c.jpg' },
     prev: { label: 'C', cover: 'https://x/c.jpg' },
     next: { label: 'B', cover: 'http://box/api/b.jpg' },
   })
   assert.strictEqual(logic.facesOf(nodes, 2, 'http://box').next.label, 'A')
-  assert.deepStrictEqual(logic.facesOf([nodes[0]], 0, 'http://box'), { cur: { label: 'A', cover: 'https://x/c.jpg' }, prev: null, next: null }, 'one face: the cube does not turn')
+  assert.deepStrictEqual(logic.facesOf([nodes[0]], 0, 'http://box'), { count: 1, cur: { label: 'A', cover: 'https://x/c.jpg' }, prev: null, next: null }, 'one face: the cube does not turn')
   assert.strictEqual(logic.facesOf([], 0, 'http://box'), null)
 })
 

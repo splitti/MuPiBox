@@ -6,6 +6,10 @@ It supports the **Waveshare 2.8inch Capacitive Touch LCD** (240 × 320 points, d
 
 After the [installation](installieren.md) the settings are under **Settings › Touch display cover**.
 
+## How the covers turn
+
+The covers of a level stand directly next to each other like the sides of a body, with no gap between them. Up to **four** covers make a **cube**: 90 degrees from one cover to the next. With **more than four** covers it becomes a polygon whose angle follows from the number of covers (360 degrees divided by the number): with eight covers it is 45 degrees from one to the next. The more covers there are, the flatter they stand and the less they tilt away while you swipe.
+
 ## The levels
 
 | Level | What the display shows | Tap | Swipe up with two fingers |

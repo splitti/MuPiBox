@@ -39,6 +39,27 @@ class CubeTest(unittest.TestCase):
             self.assertAlmostEqual((c[0] * x + c[1] * y + c[2]) / d, u, places=6)
             self.assertAlmostEqual((c[3] * x + c[4] * y + c[5]) / d, v, places=6)
 
+    def test_more_than_four_faces_make_a_flatter_prism_whose_covers_touch(self):
+        front, side = Image.new('RGB', SIZE, (200, 40, 40)), Image.new('RGB', SIZE, (40, 200, 40))
+        self.assertEqual(cube.sides(1), 4)
+        self.assertEqual(cube.sides(4), 4)
+        self.assertEqual(cube.sides(8), 8)
+        for count in (4, 5, 8, 12, 40):
+            for direction in ('left', 'right'):
+                for progress in (0.1, 0.25, 0.5, 0.75, 0.9):
+                    image = cube.cube(front, side, progress, direction, count)
+                    for y in (80, 160, 240):
+                        row = [image.getpixel((x, y)) for x in range(SIZE[0])]
+                        # (the two covers meet: where one ends the other begins; with a cube only the corner of the box leaves the background)
+                        if count > 4:
+                            self.assertNotIn((0, 0, 0), row, (count, direction, progress, y))
+        # (the flatter the prism, the lighter the faces: they turn away less)
+        light = lambda count: sum(cube.cube(front, side, 0.5, 'left', count).getpixel((60, 160))[:1])
+        self.assertGreater(light(8), light(4))
+        self.assertGreaterEqual(light(40), light(8))
+        self.assertIs(cube.cube(front, side, 0.0, 'left', 8), front)
+        self.assertIs(cube.cube(front, side, 1.0, 'left', 8), side)
+
     def test_the_cube_starts_with_the_front_face_and_ends_with_the_side_face(self):
         front, side = plain((200, 0, 0)), plain((0, 0, 200))
         self.assertIs(cube.cube(front, side, 0.0), front)

@@ -6,6 +6,10 @@ Unterstützt wird das **Waveshare 2.8inch Capacitive Touch LCD** (240 × 320 Pun
 
 Nach der [Installation](installieren.md) stehen die Einstellungen unter **Einstellungen › Touch-Display Cover**.
 
+## Wie sich die Cover drehen
+
+Die Cover einer Ebene stehen wie die Seiten eines Körpers direkt aneinander, ohne Zwischenraum. Bis **vier** Cover ist es ein **Würfel**: von einem Cover zum nächsten sind es 90 Grad. Bei **mehr als vier** Covern wird es ein Vieleck, dessen Winkel sich aus der Zahl der Cover ergibt (360 Grad geteilt durch die Zahl): bei acht Covern sind es 45 Grad von einem zum nächsten. Je mehr Cover es sind, desto flacher stehen sie und desto weniger kippen sie beim Wischen weg.
+
 ## Die Ebenen
 
 | Ebene | Was das Display zeigt | Tippen | Mit zwei Fingern nach oben wischen |
