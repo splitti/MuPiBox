@@ -33,8 +33,18 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPLOY = os.path.join(ROOT, 'src', 'deploy')
 SERVER = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master'
 BIN = '/usr/local/bin/mupibox'
-KEY = os.path.expanduser('~/.ssh/mupibox_testbox')
-SSH = ['ssh', '-i', KEY, '-o', 'IdentitiesOnly=yes', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=8']
+KEYS = [os.environ['MUPIBOX_KEY']] if os.environ.get('MUPIBOX_KEY') else [os.path.expanduser('~/.ssh/' + name) for name in ('mupibox_testbox', 'mupibox_pi5')]
+SSH = ['ssh', '-i', KEYS[0], '-o', 'IdentitiesOnly=yes', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=8']
+
+
+def choose_key(host):
+    """The first key of the known ones that the box accepts (MUPIBOX_KEY names one)."""
+    for key in KEYS:
+        probe = subprocess.run(['ssh', '-i', key, '-o', 'IdentitiesOnly=yes', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=8', f'dietpi@{host}', 'true'], capture_output=True)
+        if probe.returncode == 0:
+            SSH[2] = key
+            return
+    sys.exit(f'no ssh key is accepted by {host} (set MUPIBOX_KEY)')
 
 TEXT_EXT = ('.sh', '.py', '.service', '.conf', '.json', '.txt')
 WWW_BUILD_FILE = re.compile(r'^[^/]+-[A-Z0-9]{8}\.(js|css)$|^(index\.html|favicon\.ico|3rdpartylicenses\.txt)$')
@@ -185,6 +195,7 @@ def main():
             sys.exit(f'nothing built for {t.name} (run without --no-build)')
 
     t0 = time.time()
+    choose_key(args.ip)
     listing = json.loads(ssh(args.ip, 'python3 -c "$(cat <<\'EOF\'\n' + LIST_SCRIPT + '\nEOF\n)" <<\'JSON\'\n' + json.dumps([{'name': t.name, 'base': t.base, 'roots': t.roots} for t in targets]) + '\nJSON\n').decode())
 
     plan, payload = [], io.BytesIO()

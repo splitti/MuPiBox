@@ -11,7 +11,15 @@ shift
 [ $# -gt 0 ] || { echo "no extension id given" >&2; exit 1; }
 
 root=$(cd "$(dirname "$0")/.." && pwd)
-ssh_opts=(-i "$HOME/.ssh/mupibox_testbox" -o IdentitiesOnly=yes -o ConnectTimeout=8 -o BatchMode=yes)
+# The key of the box: MUPIBOX_KEY, else the first of the known test box keys that the box accepts.
+key=${MUPIBOX_KEY:-}
+if [ -z "$key" ]; then
+  for candidate in mupibox_testbox mupibox_pi5; do
+    if ssh -i "$HOME/.ssh/$candidate" -o IdentitiesOnly=yes -o ConnectTimeout=8 -o BatchMode=yes "dietpi@$ip" true 2>/dev/null; then key="$HOME/.ssh/$candidate"; break; fi
+  done
+fi
+[ -n "$key" ] || { echo "no ssh key is accepted by $ip (set MUPIBOX_KEY)" >&2; exit 1; }
+ssh_opts=(-i "$key" -o IdentitiesOnly=yes -o ConnectTimeout=8 -o BatchMode=yes)
 
 for id in "$@"; do
   [ -f "$root/extensions/$id/manifest.json" ] || { echo "extensions/$id/manifest.json not found" >&2; exit 1; }
