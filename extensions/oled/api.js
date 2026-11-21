@@ -21,6 +21,7 @@ const logic = require('./logic.js')
 const { createDriver } = require('./driver.js')
 
 const TICK_MS = 500
+const TAG_ASK_MS = 2000
 const NET_MS = 15000
 // (the display is off: only /local, to notice a start)
 const ASLEEP_POLL_MS = 1500
@@ -50,10 +51,12 @@ exports.activate = (host) => {
   let play = logic.readPlayback(null, null)
   let previous = null // the reading before this one, for the short pictures
   // (ready: the box can play - the start picture stays until the player answers, but not longer than BOOT_MAX_MS)
-  const ui = { infoUntil: 0, overlay: null, select: null, idleSince: clock(), wake: 0, mode: null, ready: false, hold: null, blocked: false, preview: null }
+  const ui = { infoUntil: 0, overlay: null, select: null, idleSince: clock(), wake: 0, mode: null, ready: false, hold: null, blocked: false, preview: null, tagPicture: '' }
   const bootDeadline = clock() + logic.BOOT_MAX_MS
   const imagesDir = path.join(dir, 'images')
   const customDir = path.join(dataDir, 'images')
+  // the pictures of the tags (128 x 50, one file for each: <id of the tag>.png), beside the others the user chose
+  const tagDir = path.join(customDir, 'tags')
   const holdFile = () => deps.holdFile ?? HOLD_FILE
   const playtimeFile = () => deps.playtimeFile ?? PLAYTIME_FILE
   let net = { ssid: '', ip: '', wifi: -1, lan: false, at: 0 }
@@ -212,6 +215,35 @@ exports.activate = (host) => {
     return moving(kept.state) ? { ...kept.state, progress_ms: Math.min(progress, kept.state.item?.duration_ms ?? progress) } : kept.state
   }
 
+  // ---- the picture of a tag -------------------------------------------------------------------------------------------------
+  // (a medium that a tag started shows that tag's picture in the top 50 rows, in place of the progress bar and the big time: the NFC
+  // extension says which tag it is - only asked while a medium plays or is paused, on the 128 x 64 display, and only when a picture
+  // exists at all; the answer is kept for TAG_ASK_MS)
+  let tagAskedAt = 0
+  const tagPictureIds = () => {
+    try {
+      return fs.readdirSync(tagDir).filter((name) => name.endsWith('.png')).map((name) => name.slice(0, -4))
+    } catch {
+      return [] // no folder: no picture
+    }
+  }
+  const refreshTagPicture = async (now) => {
+    if (config.width !== 128 || config.height !== 64 || play.player === '') {
+      ui.tagPicture = ''
+      return
+    }
+    if (now - tagAskedAt < TAG_ASK_MS) return
+    tagAskedAt = now
+    const ids = tagPictureIds()
+    if (ids.length === 0) {
+      ui.tagPicture = ''
+      return
+    }
+    const answer = await getJson(`${host.apiUrl}/api/ext/nfc/playing`)
+    const id = logic.tagIdOf(answer?.uid)
+    ui.tagPicture = id && ids.includes(id) ? id : ''
+  }
+
   const tick = async () => {
     // (no display to draw on - it starts, or it failed: nothing to do)
     if (busy || !driver || phase.phase !== 'ready') return
@@ -235,6 +267,7 @@ exports.activate = (host) => {
       }
       // (the start picture goes when the player answers - or when it did not for BOOT_MAX_MS - and a rest time or an update shows its own)
       if (local || now >= bootDeadline) ui.ready = true
+      await refreshTagPicture(now)
       ui.hold = logic.holdFrom(readText(holdFile()), now)
       ui.blocked = logic.blockedFrom(readText(playtimeFile()))
       // (only what plays keeps the display on: a paused medium counts as idle and lets it go off after sleepAfter)
@@ -478,6 +511,91 @@ exports.activate = (host) => {
     },
     { session: true },
   )
+
+  // ---- a picture for a tag ----------------------------------------------------------------------------------------------------
+  // The button of the list of assigned tags (NFC-Reader) sends { id: the id of the tag, image: "data:image/png;base64,..." }: the app checked
+  // it, and oled.py --check says so again (exactly 128 x 50 points, 1 bit). It is kept as <id>.png in the folder of the tag pictures.
+  host.route(
+    'post',
+    '/tagpicture',
+    async (req, res) => {
+      const id = logic.tagIdOf(String(req.body?.id ?? ''))
+      if (!id) return res.status(400).json({ ok: false, error: 'bad_id', message: 'Dieser Tag lässt sich nicht ansprechen' })
+      const text = String(req.body?.image ?? '')
+      const bytes = text.startsWith(DATA_URL_PNG) && text.length <= MAX_PICTURE_BYTES * 1.4 ? Buffer.from(text.slice(DATA_URL_PNG.length), 'base64') : null
+      if (!bytes || bytes.length === 0 || bytes.length > MAX_PICTURE_BYTES || !bytes.subarray(0, 8).equals(PNG_SIGNATURE)) {
+        return res.status(400).json({ ok: false, error: 'not_a_picture', message: 'Das ist kein Bild, das die Box lesen kann' })
+      }
+      const upload = path.join(tagDir, `.${id}.upload`)
+      const made = path.join(tagDir, `.${id}.png.tmp`)
+      try {
+        fs.mkdirSync(tagDir, { recursive: true })
+        fs.writeFileSync(upload, bytes)
+        const result = await run('python3', [path.join(dir, 'oled.py'), '--check', upload, made, '--picture-size', '128x50'], 30000)
+        if (result.error || !fs.existsSync(made)) {
+          const code = logic.pictureErrorCode(result.stdout)
+          return res.status(400).json({ ok: false, error: code, message: logic.TAG_PICTURE_MESSAGES[code] ?? logic.TAG_PICTURE_MESSAGES.bad_picture })
+        }
+        fs.renameSync(made, path.join(tagDir, `${id}.png`))
+      } catch (error) {
+        log.warn(`[oled] tag picture ${id}: ${error?.message ?? error}`)
+        return res.status(500).json({ ok: false, error: 'failed', message: 'Das Bild ließ sich nicht speichern' })
+      } finally {
+        fs.rmSync(upload, { force: true })
+        fs.rmSync(made, { force: true })
+      }
+      tagAskedAt = 0
+      push(true)
+      res.json({ ok: true, message: 'OLED-Bild gespeichert' })
+    },
+    { session: true },
+  )
+
+  // The tag has no picture any more ({ id })
+  host.route(
+    'post',
+    '/tagpicturereset',
+    (req, res) => {
+      const id = logic.tagIdOf(String(req.body?.id ?? ''))
+      if (!id) return res.status(400).json({ ok: false, error: 'bad_id', message: 'Dieser Tag lässt sich nicht ansprechen' })
+      fs.rmSync(path.join(tagDir, `${id}.png`), { force: true })
+      tagAskedAt = 0
+      ui.tagPicture = ''
+      push(true)
+      res.json({ ok: true, message: 'OLED-Bild entfernt' })
+    },
+    { session: true },
+  )
+
+  // The picture of a tag as a PNG data URL, for the page of the tags to show it before it is changed: { id } -> { image }
+  host.route(
+    'post',
+    '/tagpictureview',
+    (req, res) => {
+      const id = logic.tagIdOf(String(req.body?.id ?? ''))
+      if (!id) return res.status(400).json({ ok: false, error: 'bad_id', message: 'Dieser Tag lässt sich nicht ansprechen' })
+      try {
+        const data = fs.readFileSync(path.join(tagDir, `${id}.png`))
+        res.json({ ok: true, image: `data:image/png;base64,${data.toString('base64')}` })
+      } catch {
+        res.status(404).json({ ok: false, error: 'no_picture', message: 'Dieser Tag hat kein OLED-Bild' })
+      }
+    },
+    { session: true },
+  )
+
+  // For the NFC extension, not behind the login but only from the box itself: which tags have a picture (it shows its button for them),
+  // and { id } of a tag that was removed (its picture goes with it)
+  host.route('get', '/tagpictures', (req, res) => {
+    if (!fromTheBox(req)) return res.status(403).json({ ok: false })
+    res.json({ ids: tagPictureIds() })
+  })
+  host.route('post', '/tagpictureforget', (req, res) => {
+    if (!fromTheBox(req)) return res.status(403).json({ ok: false })
+    const id = logic.tagIdOf(String(req.body?.id ?? ''))
+    if (id) fs.rmSync(path.join(tagDir, `${id}.png`), { force: true })
+    res.json({ ok: true })
+  })
 
   // What the rotary knob is on while it chooses an album, a folder or an episode (the NFC extension sends it): { title, artist, index, count,
   // seconds } shows it where the information of the medium is, { clear: true } brings the picture of the player back. Not behind the login,

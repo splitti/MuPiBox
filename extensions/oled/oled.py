@@ -320,7 +320,8 @@ def main(argv=None):
     parser.add_argument('--custom', help='the folder of the pictures the user chose')
     parser.add_argument('--show', metavar='NAME', help='draw one picture (boot, update, rest, shutdown, nfc, barcode, idle) and end')
     parser.add_argument('--settings', help='the settings file of the extension: the display --show draws on')
-    parser.add_argument('--check', nargs=2, metavar=('IN', 'OUT'), help='take a picture if it is a 1-bit picture of exactly 128 x 64')
+    parser.add_argument('--check', nargs=2, metavar=('IN', 'OUT'), help='take a picture if it is a 1-bit picture of exactly 128 x 64 (or --picture-size)')
+    parser.add_argument('--picture-size', default='128x64', choices=('128x64', '128x50'), help='the size --check wants: 128x64, or 128x50 for the picture of a tag')
     parser.add_argument('--preview', metavar='PNG', help='draw the state in --state (a JSON file) into a picture and end, no display needed')
     parser.add_argument('--state', help='the state to draw with --preview')
     args = parser.parse_args(argv)
@@ -335,7 +336,8 @@ def main(argv=None):
     if args.check:
         try:
             with open(args.check[0], 'rb') as handle:
-                picture = render.check_picture(handle.read(), 128, 64)
+                wanted_width, wanted_height = (int(n) for n in args.picture_size.split('x'))
+                picture = render.check_picture(handle.read(), wanted_width, wanted_height)
             picture.save(args.check[1], format='PNG')
         except render.PictureError as error:
             emit(event='error', code=error.code, message=str(error))

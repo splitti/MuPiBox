@@ -4723,5 +4723,16 @@
  "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "When nothing plays or playback is paused, the display switches off after this time (this saves it). A start, a tag or a tap on \"Show the address of the box\" wakes it.",
  "Am DSI-Anschluss ist kein Display zu erkennen (er meldet sich auch ohne Display als verbunden). Beim Einschalten fragt die App nach.": "No display can be seen on the DSI port (it reports itself as connected even without a display). The app asks when you switch it on.",
  "Ohne Display starten": "Start without a display",
- "Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?": "No display can be seen on the DSI port. If one is connected after all, it stays dark after the next restart. Start without a display?"
+ "Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?": "No display can be seen on the DSI port. If one is connected after all, it stays dark after the next restart. Start without a display?",
+ "OLED-Bild": "OLED picture",
+ "OLED-Bild gespeichert": "OLED picture saved",
+ "OLED-Bild entfernt": "OLED picture removed",
+ "Das Bild muss genau 128 × 50 Punkte groß sein": "The picture must be exactly 128 × 50 points",
+ "Dieser Tag lässt sich nicht ansprechen": "This tag cannot be addressed",
+ "Podcast und Radio zeigen": "Show podcasts and radio",
+ "Bild, falls vorhanden": "Picture, if there is one",
+ "Titel und Uhrzeit": "Title and time",
+ "Bei einem Podcast oder Radiosender: das Bild des Tags (siehe NFC-Extension › Zugeordnete Tags), solange der Tag das Medium gestartet hat und ein Bild hat, sonst und bei „Titel und Uhrzeit“ der Titel mit der Uhrzeit mittig darunter, doppelt so groß wie der Titel. Gilt für alle drei Anzeigen. Alben und Hörspiele zeigen ihr Bild des Tags immer.": "For a podcast or a radio station: the picture of the tag (see NFC extension › Assigned tags) while the tag started the medium and has a picture; otherwise, and with \"Title and time\", the title with the time of day centred below it, twice as large as the title. Applies to all three displays. Albums and audiobooks always show the picture of their tag.",
+ "Dieser Tag hat schon ein OLED-Bild. Möchtest du es ändern?": "This tag already has an OLED picture. Do you want to change it?",
+ "Dieser Tag hat kein OLED-Bild": "This tag has no OLED picture"
 }
