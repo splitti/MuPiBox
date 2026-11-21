@@ -28,6 +28,7 @@ CHANGEABLE = ('boot', 'idle', 'update', 'rest')
 # its file is <custom>/tags/<id of the tag>.png
 TAG_PICTURE_SIZE = (128, 50)
 TAG_FOLDER = 'tags'
+PODCAST_DOWN = 2  # points a podcast's title and time of day stand lower than a station's (the bar of the progress is above them)
 TAG_ID = re.compile(r'^[0-9A-Za-z_-]{1,40}$')
 VIEW_PICTURES = {'boot': 'boot', 'bye': 'shutdown', 'update': 'update', 'rest': 'rest'}
 # (the picture of the idle display: the reader that waits for a tag, the scanner that waits for a code, or the user's own one)
@@ -828,29 +829,31 @@ class Screens:
         wireless symbol and PAUSE."""
         image, draw = self._canvas()
         title = state.get('title') or state.get('artist') or state.get('album') or ''
+        # (a podcast stands 2 points lower than a station, its text and its time; a station has no bar above it)
+        down = 0 if state.get('stream') else PODCAST_DOWN
         if not self.tall:
             # (a podcast has its bar of the progress at the top; a station has no end to show)
             self._progress(draw, state)
-            self._marquee(draw, ('broadcast', 0), title, 3 if self._has_length(state) else 1, self.fonts.small, now)
-            self._clock_centred(draw, state, 11, self.height, self.fonts.small.size * 2)
+            self._marquee(draw, ('broadcast', 0), title, (3 if self._has_length(state) else 1) + down, self.fonts.small, now)
+            self._clock_centred(draw, state, 11 + down, self.height + down, self.fonts.small.size * 2)
             return image
         size = self.fonts.text.size * 2
         if mode == 'lite':
             self._progress(draw, state)
-            self._marquee(draw, ('broadcast', 0), title, 2, self.fonts.text, now)
-            self._clock_centred(draw, state, 14, self.height - 12, size)
+            self._marquee(draw, ('broadcast', 0), title, 2 + down, self.fonts.text, now)
+            self._clock_centred(draw, state, 14 + down, self.height - 12 + down, size)
             self._wifi(draw, state.get('wifi', -1), self.width - 18, self.height - 2, bool(state.get('lan')))
             if not state.get('playing'):
                 self._row_text(draw, 1, self.height - 10, 'PAUSE')
         elif mode == 'mix':
             self._progress(draw, state)
-            self._marquee(draw, ('broadcast', 0), title, 2, self.fonts.text, now)
-            self._clock_centred(draw, state, 14, self.height - 13, size)
+            self._marquee(draw, ('broadcast', 0), title, 2 + down, self.fonts.text, now)
+            self._clock_centred(draw, state, 14 + down, self.height - 13 + down, size)
             self._status_bar(draw, state, mid='')
         else:
             self.status_bar(draw, state)
-            self._marquee(draw, ('broadcast', 0), title, 13, self.fonts.text, now)
-            self._clock_centred(draw, state, 27, self.height - 13, size)
+            self._marquee(draw, ('broadcast', 0), title, 13 + down, self.fonts.text, now)
+            self._clock_centred(draw, state, 27 + down, self.height - 13 + down, size)
             self.bottom_row(draw, state, right='')
         return image
 

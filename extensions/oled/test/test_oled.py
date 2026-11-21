@@ -807,6 +807,18 @@ class BroadcastTest(unittest.TestCase):
             self.assertLess(bottom - top, 24, mode)
             self.assertNotEqual(image.tobytes(), self.screens.render({**self.STATE, 'mode': mode, 'broadcast': False}, 0).tobytes(), mode)
 
+    def test_the_title_and_the_time_of_a_podcast_stand_two_points_lower_than_those_of_a_station(self):
+        podcast = {**self.STATE, 'stream': False}
+        for mode in ('full', 'mix', 'lite'):
+            station, lower = self.screens.render({**self.STATE, 'mode': mode}, 0), self.screens.render({**podcast, 'mode': mode}, 0)
+            # (the title and the clock: the rows between the status row at the top and the one at the bottom)
+            band = (0, 14, 128, 50) if mode == 'full' else (0, 2, 128, 50)
+            a, b = station.crop(band).getbbox(), lower.crop(band).getbbox()
+            self.assertEqual((b[1] - a[1], b[3] - a[3]), (2, 2), mode)
+        small = render.Screens(128, 32, pictures=render.Pictures(self.builtin, self.custom, 128, 32))
+        a, b = small.render(self.STATE, 0).getbbox(), small.render(podcast, 0).getbbox()
+        self.assertEqual((b[1] - a[1], b[3] - a[3]), (2, 2))
+
     def test_a_podcast_has_its_bar_of_the_progress_a_station_has_none(self):
         podcast = {**self.STATE, 'stream': False, 'duration': 1000, 'elapsed': 500}
         for mode in ('mix', 'lite'):
