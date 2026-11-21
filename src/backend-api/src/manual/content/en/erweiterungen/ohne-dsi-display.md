@@ -22,6 +22,8 @@ After the **next restart**:
 
 Until the restart the card says **applies after the restart**. While a **DSI display is connected**, the switch cannot be turned on: the box would start with a dark display.
 
+A display counts as connected when its **touch chip** reports on the I2C bus (the official 7" display, Waveshare and EDATEC, for example) or the port delivers an **EDID**. The DSI port itself says nothing about it: the kernel reports it as connected as soon as a DSI overlay is in `config.txt` (the **display model**), with or without a display. When the box finds no display, a note appears under the switch and the app **asks when you switch it on**. A display without a touch chip and without an EDID is not recognised: if one is connected and you confirm, it stays dark after the restart; then switch the switch off again in the webapp.
+
 For this the box sets DietPi's start from the kiosk login to the manual login (`dietpi-autostart 0`) and enters `mupibox.headless` in its configuration. It remembers what was set before.
 
 ## Keep Spotify ready

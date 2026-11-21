@@ -19801,6 +19801,7 @@ const CONTROLLERS = {
                     disabled: disp.headless.dsi && !disp.headless.on,
                   },
                   ...(disp.headless.dsi && !disp.headless.on ? [{ type: 'html', html: `<p class="help">${esc(tr('Ein DSI-Display ist angeschlossen. Ohne Display zu starten geht erst, wenn es abgezogen ist.'))}</p>` }] : []),
+                  ...(disp.headless.dsiUnconfirmed && !disp.headless.on ? [{ type: 'html', html: `<p class="help">${esc(tr('Am DSI-Anschluss ist kein Display zu erkennen (er meldet sich auch ohne Display als verbunden). Beim Einschalten fragt die App nach.'))}</p>` }] : []),
                   ...(disp.headless.on
                     ? [
                         {
@@ -19834,19 +19835,34 @@ const CONTROLLERS = {
     async change(key, v) {
       if (key === 'bright') return saveDisplayOptions({ brightness: v }, `Helligkeit ${v} %`)
       if (key === 'headless') {
-        const r = await api(`${API}/headless`, { method: 'POST', body: { on: v === true } })
-        if (!r.ok) {
-          state.values.set('headless', !v)
-          shownValues.set('headless', !v)
-          toast(r.body?.error === 'dsi_connected' ? 'Ein DSI-Display ist angeschlossen – die Box bliebe dunkel' : 'Nicht gespeichert', 'info')
+        const send = async (confirm) => {
+          const r = await api(`${API}/headless`, { method: 'POST', body: { on: v === true, ...(confirm ? { confirm: true } : {}) } })
+          if (!r.ok) {
+            state.values.set('headless', !v)
+            shownValues.set('headless', !v)
+            toast(r.body?.error === 'dsi_connected' ? 'Ein DSI-Display ist angeschlossen – die Box bliebe dunkel' : 'Nicht gespeichert', 'info')
+            renderPage(currentPage(), false)
+            return
+          }
+          disp.headless = r.body
+          state.values.set('headlessSpotify', disp.headless?.spotify === true)
+          toast(v ? 'Startet nach dem nächsten Neustart ohne DSI-Display' : 'Startet nach dem nächsten Neustart wieder mit DSI-Display')
           renderPage(currentPage(), false)
+        }
+        // (a DSI overlay without a panel looks connected to the kernel, and a panel without a touch chip shows nothing: the user says
+        // whether a display hangs there - the switch stays off until the answer)
+        if (v === true && disp.headless?.dsiUnconfirmed && !disp.headless.on) {
+          state.values.set('headless', false)
+          shownValues.set('headless', false)
+          renderPage(currentPage(), false)
+          confirmSheet('Ohne Display starten', 'Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?', () => {
+            state.values.set('headless', true)
+            shownValues.set('headless', true)
+            void send(true)
+          })
           return
         }
-        disp.headless = r.body
-        state.values.set('headlessSpotify', disp.headless?.spotify === true)
-        toast(v ? 'Startet nach dem nächsten Neustart ohne DSI-Display' : 'Startet nach dem nächsten Neustart wieder mit DSI-Display')
-        renderPage(currentPage(), false)
-        return
+        return send(false)
       }
       if (key === 'headlessSpotify') {
         const r = await api(`${API}/headless`, { method: 'POST', body: { spotify: v === true } })
