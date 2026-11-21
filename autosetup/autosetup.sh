@@ -68,6 +68,20 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 export DEBIAN_FRONTEND=noninteractive
 apt-get() { command apt-get -o DPkg::Lock::Timeout=600 -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold "$@"; }
 
+# DietPi's software installer. On a fresh card this script runs from DietPi's first dietpi-software run (dietpi.txt
+# AUTO_SETUP_CUSTOM_SCRIPT_EXEC, /boot/Automation_Custom_Script.sh), which still holds its lock: from DietPi 10.8 on a
+# second run next to it gives up after five seconds ("Cancelled DietPi-Software due to concurrent execution") - no
+# Chromium, no kiosk, no web server. G_INIT_ALLOW_CONCURRENT lets it run: the outer run only waits for this script then
+# and writes nothing of its own afterwards. A failure goes to the log and to the check before the restart.
+dietpi_software() {
+	G_INIT_ALLOW_CONCURRENT=1 /boot/dietpi/dietpi-software "$@" >&3 2>&3 && return 0
+	local code=$?
+	echo "## dietpi-software $* failed (exit ${code}) ##" >&3 2>&3
+	echo " dietpi-software($*)" >> /tmp/autosetup.dietpi_failed
+	return ${code}
+}
+rm -f /tmp/autosetup.dietpi_failed
+
 STEP=0
 {
 	# 2026-09-20: no longer installed (nothing in MuPiBox uses them any more):
@@ -522,7 +536,7 @@ STEP=0
 			echo 'SURVEY_OPTED_IN=0' >> "${DIETPI_TXT}"
 		fi
 	fi
-	/boot/dietpi/dietpi-software install 5 >&3 2>&3
+	dietpi_software install 5
 	/boot/dietpi/func/dietpi-set_hardware bluetooth enable >&3 2>&3
 	/boot/dietpi/func/dietpi-set_hardware soundcard "hifiberry-dac" >&3 2>&3
 	usermod -g pulse -G audio --home /var/run/pulse pulse >&3 2>&3
@@ -540,7 +554,7 @@ STEP=0
 
 	echo -e "XXX\n${STEP}\nEnable Admin-Webservice... \nXXX"
 	before=$(date +%s)
-	/boot/dietpi/dietpi-software install 5 84 89 >&3 2>&3
+	dietpi_software install 5 84 89
 	rm -Rf /var/www/* >&3 2>&3
 	unzip ${MUPI_SRC}/AdminInterface/release/www.zip -d /var/www/ >&3 2>&3
 	ln -sf /home/dietpi/MuPiBox/media/cover /var/www/cover >&3 2>&3
@@ -636,7 +650,7 @@ STEP=0
 
 	echo -e "XXX\n${STEP}\nInstall Chromium-Kiosk... \nXXX"
 	before=$(date +%s)
-	echo -ne '\n' | /boot/dietpi/dietpi-software install 113 >&3 2>&3
+	echo -ne '\n' | dietpi_software install 113
 	# Installing Chromium writes DietPi's own kiosk script, which opens SOFTWARE_CHROMIUM_AUTOSTART_URL (dietpi.com):
 	# the MuPiBox script goes in again after it (a fresh install showed the DietPi website until the first update)
 	cp -f ${MUPI_SRC}/scripts/chromium-autostart.sh /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
@@ -833,6 +847,7 @@ STEP=0
 		sleep 2
 	done
 	[ -n "${ANSWER}" ] && [ "${ANSWER}" != "000" ] || MISSING="${MISSING} server(8200)"
+	[ -s /tmp/autosetup.dietpi_failed ] && MISSING="${MISSING}$(tr -d '\n' < /tmp/autosetup.dietpi_failed)"
 	echo "${MISSING}" > /tmp/autosetup.missing
 	echo "## Check before the restart: ${MISSING:-everything there} ##" >&3 2>&3
 
@@ -851,7 +866,10 @@ if [ -n "${MISSING}" ]; then
 	echo ""
 	echo "The installation is not complete, missing:${MISSING}"
 	echo "The box is NOT restarted. The log: ${BOOT_DIR}/autosetup.log (also on the boot partition of the memory card)."
-	echo "Check the internet connection and start the installation again."
+	case "${MISSING}" in
+		*dietpi-software*) echo "DietPi's software installation did not run through - the log says why. Start the installation again." ;;
+		*) echo "Check the internet connection and start the installation again." ;;
+	esac
 	exit 1
 fi
 reboot
