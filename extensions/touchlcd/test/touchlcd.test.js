@@ -167,17 +167,22 @@ test('the status block says what the user has to do', () => {
   const base = { config: logic.readConfig(PINS), phase: 'ready', code: '', spi: 'on', i2c: 'on', level: { depth: 1, count: 12, title: '' } }
   assert.deepStrictEqual(logic.statusRows(base), [
     { label: 'Display', value: 'Bereit', tone: 'ok' },
+    { label: 'SPI', value: 'An', tone: 'ok' },
+    { label: 'I2C', value: 'An', tone: 'ok' },
     { label: 'Ebene', value: 'Artisten' },
     { label: 'Titel auf der Ebene', value: '12' },
   ])
-  assert.deepStrictEqual(logic.statusRows({ ...base, level: { depth: 2, count: 3, title: 'Lumi' } }).slice(1), [
+  assert.deepStrictEqual(logic.statusRows({ ...base, level: { depth: 2, count: 3, title: 'Lumi' } }).slice(3), [
     { label: 'Ebene', value: 'Alben' },
     { label: 'Artist', value: 'Lumi' },
     { label: 'Titel auf der Ebene', value: '3' },
   ])
-  assert.strictEqual(logic.statusRows({ ...base, level: null })[1].tone, 'warn')
-  assert.deepStrictEqual(logic.statusRows({ ...base, config: logic.readConfig({}) }).map((r) => r.label), ['Display', 'Hinweis'])
+  assert.strictEqual(logic.statusRows({ ...base, level: null })[3].tone, 'warn')
+  // (pins missing: the hint, and the buses are told all the same - "An" when they are found)
+  assert.deepStrictEqual(logic.statusRows({ ...base, config: logic.readConfig({}) }).map((r) => [r.label, r.value]).slice(2), [['SPI', 'An'], ['I2C', 'An']])
+  assert.deepStrictEqual(logic.statusRows({ ...base, config: logic.readConfig({}) }).map((r) => r.label), ['Display', 'Hinweis', 'SPI', 'I2C'])
   assert.match(logic.statusRows({ ...base, phase: 'error', code: 'no_touch' })[1].value, /Touch-Chip/)
+  assert.deepStrictEqual(logic.statusRows({ ...base, phase: 'error', code: 'no_touch' }).map((r) => r.label), ['Display', 'Hinweis', 'SPI', 'I2C'])
   assert.deepStrictEqual(logic.statusRows({ ...base, phase: 'starting' })[0], { label: 'Display', value: 'Wird gestartet …', tone: 'warn' })
   const off = logic.statusRows({ ...base, spi: 'off', i2c: 'restart' })
   assert.ok(off.some((r) => r.label === 'SPI' && r.value === 'Aus'))

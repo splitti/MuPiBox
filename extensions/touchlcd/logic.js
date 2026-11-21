@@ -350,10 +350,10 @@ const problemText = (code) => PROBLEMS[code] ?? PROBLEMS.other
  */
 function statusRows(view) {
   const { config } = view
-  if (config.problem) return [{ label: 'Display', value: 'Nicht bereit', tone: 'warn' }, { label: 'Hinweis', value: problemText(config.problem), tone: 'warn' }]
-  const rows = []
-  if (view.spi !== 'on') rows.push({ label: 'SPI', value: view.spi === 'restart' ? 'Eingeschaltet, die Box muss neu starten' : 'Aus', tone: 'warn' })
-  if (view.i2c !== 'on') rows.push({ label: 'I2C', value: view.i2c === 'restart' ? 'Eingeschaltet, die Box muss neu starten' : 'Aus', tone: 'warn' })
+  // (the buses are always told, also while something else is missing: "An" says they are found, so the buttons below need no press)
+  const bus = (label, state) => ({ label, value: state === 'on' ? 'An' : state === 'restart' ? 'Eingeschaltet, die Box muss neu starten' : 'Aus', tone: state === 'on' ? 'ok' : 'warn' })
+  const rows = [bus('SPI', view.spi), bus('I2C', view.i2c)]
+  if (config.problem) return [{ label: 'Display', value: 'Nicht bereit', tone: 'warn' }, { label: 'Hinweis', value: problemText(config.problem), tone: 'warn' }, ...rows]
   if (view.phase === 'error') return [{ label: 'Display', value: 'Nicht bereit', tone: 'error' }, { label: 'Hinweis', value: problemText(view.code), tone: 'error' }, ...rows]
   if (view.phase !== 'ready') return [{ label: 'Display', value: 'Wird gestartet …', tone: 'warn' }, ...rows]
   rows.unshift({ label: 'Display', value: 'Bereit', tone: 'ok' })
