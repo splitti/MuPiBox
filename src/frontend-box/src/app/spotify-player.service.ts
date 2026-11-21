@@ -414,7 +414,14 @@ export class SpotifyPlayerService {
         await this.tryLoadSDK()
       }
 
-      // Step 2: Create player if SDK loaded but no player
+      // Step 2: Create player if SDK loaded but no player ("ready" without a player: the state of one that was dropped -
+      // a new one is made, else every start ended here with "not ready")
+      if (this.sdkState === 'ready' && !this.player) {
+        this.logService.warn('[Spotify SDK] State ready without a player - making a new one')
+        this.sdkState = 'loaded'
+        this.deviceId = null
+        this.isConnected$.next(false)
+      }
       if (this.sdkState === 'loaded' && !this.player) {
         this.logService.log('[Spotify SDK] Creating player instance')
         this.initializePlayer()
@@ -624,7 +631,7 @@ export class SpotifyPlayerService {
 
     this.logService.log('[Spotify SDK] Creating new Spotify.Player instance')
 
-    this.player = new (window.Spotify.Player as any)({
+    const player: SpotifyPlayer = new (window.Spotify.Player as any)({
       name: this.deviceName || 'MuPiBox Web Player',
       getOAuthToken: (cb: (token: string) => void) => {
         const tokenUrl = `${environment.backend.playerUrl}/spotify/token`
@@ -645,9 +652,27 @@ export class SpotifyPlayerService {
       },
       volume: 1,
     })
+    this.player = player
+    // Only the events of the player in use count. One dropped after an authentication error went on connecting by
+    // itself and said "ready" again and again (seen on a box: no new player was made after the error, and the dropped
+    // one's "ready" set the state to ready without a player - every start ended at once with "not ready", until the
+    // page was loaded again). Its "ready" disconnects it once more.
+    const own = (event: string): boolean => {
+      if (this.player === player) return true
+      this.logService.warn(`[Spotify SDK] ${event} of a player that was dropped - ignored`)
+      return false
+    }
 
     // Ready event - player connected successfully
-    this.player?.addListener('ready', ({ device_id }) => {
+    player.addListener('ready', ({ device_id }) => {
+      if (!own('ready')) {
+        try {
+          player.disconnect()
+        } catch {
+          // gone anyway
+        }
+        return
+      }
       this.logService.log('[Spotify SDK] Ready with Device ID:', device_id)
       this.deviceId = device_id
       this.sdkState = 'ready'
@@ -662,7 +687,8 @@ export class SpotifyPlayerService {
     })
 
     // Not ready event - device disconnected
-    this.player?.addListener('not_ready', ({ device_id }) => {
+    player.addListener('not_ready', ({ device_id }) => {
+      if (!own('not_ready')) return
       this.logService.log('[Spotify SDK] Device not ready:', device_id)
       this.deviceId = null
       this.sdkState = 'loaded'
@@ -670,27 +696,32 @@ export class SpotifyPlayerService {
     })
 
     // Error events
-    this.player?.addListener('initialization_error', ({ message }) => {
+    player.addListener('initialization_error', ({ message }) => {
+      if (!own('initialization_error')) return
       this.logService.error('[Spotify SDK] Initialization error:', message)
       this.cleanupBrokenPlayer()
     })
 
-    this.player?.addListener('authentication_error', ({ message }) => {
+    player.addListener('authentication_error', ({ message }) => {
+      if (!own('authentication_error')) return
       this.logService.error('[Spotify SDK] Authentication error:', message)
       this.cleanupBrokenPlayer()
     })
 
-    this.player?.addListener('account_error', ({ message }) => {
+    player.addListener('account_error', ({ message }) => {
+      if (!own('account_error')) return
       this.logService.error('[Spotify SDK] Account error:', message)
       this.cleanupBrokenPlayer()
     })
 
-    this.player?.addListener('playback_error', ({ message }) => {
+    player.addListener('playback_error', ({ message }) => {
+      if (this.player !== player) return
       this.logService.error('[Spotify SDK] Playback error:', message)
     })
 
     // State change event
-    this.player?.addListener('player_state_changed', (state: SpotifyWebPlaybackState) => {
+    player.addListener('player_state_changed', (state: SpotifyWebPlaybackState) => {
+      if (this.player !== player) return
       this.playerState$.next(state)
       this.currentTrack$.next(state.track_window.current_track)
 
@@ -817,7 +848,16 @@ export class SpotifyPlayerService {
   private setupDeviceCheck(): void {
     if (!this.shouldUsePlayer()) return
     setInterval(() => {
-      if (!this.isPlayerReady() || this.ensurePlayerReadyPromise) return
+      if (this.ensurePlayerReadyPromise) return
+      // (no player since an authentication error dropped it: made again here - else only a start on the display made
+      // one, and a start from the web app or Telegram found no device)
+      if (!this.player && (this.sdkState === 'loaded' || this.sdkState === 'ready') && this.isOnline) {
+        this.ensurePlayerReady().catch((error) => {
+          this.logService.error('[Spotify SDK] Error making the player again:', error)
+        })
+        return
+      }
+      if (!this.isPlayerReady()) return
       if (Date.now() - this.deviceCheckedAt < this.DEVICE_CHECK_FRESH_MS) return
       this.deviceKnownToSpotify().then((known) => {
         if (known !== false || this.ensurePlayerReadyPromise) return
