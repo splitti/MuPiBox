@@ -6,7 +6,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from PIL import Image  # noqa: E402
+from PIL import Image, ImageChops  # noqa: E402
 
 import oled  # noqa: E402
 import render  # noqa: E402
@@ -806,6 +806,33 @@ class BroadcastTest(unittest.TestCase):
             self.assertGreaterEqual(bottom - top, 12, '%s: twice the height of the title font' % mode)
             self.assertLess(bottom - top, 24, mode)
             self.assertNotEqual(image.tobytes(), self.screens.render({**self.STATE, 'mode': mode, 'broadcast': False}, 0).tobytes(), mode)
+
+    def test_a_podcast_has_its_bar_of_the_progress_a_station_has_none(self):
+        podcast = {**self.STATE, 'stream': False, 'duration': 1000, 'elapsed': 500}
+        for mode in ('mix', 'lite'):
+            bar = self.screens.render({**podcast, 'mode': mode}, 0).crop((0, 0, 128, 2))
+            self.assertEqual(bar.getbbox(), (0, 0, 64, 2), mode)  # (half of it played: half of the width)
+            self.assertIsNone(self.screens.render({**self.STATE, 'mode': mode}, 0).crop((0, 0, 128, 2)).getbbox(), '%s: a station has no end' % mode)
+        # (the 128 x 32 display keeps it above the title)
+        small = render.Screens(128, 32, pictures=render.Pictures(self.builtin, self.custom, 128, 32))
+        self.assertEqual(small.render(podcast, 0).crop((0, 0, 128, 2)).getbbox(), (0, 0, 64, 2))
+        self.assertIsNone(small.render(self.STATE, 0).crop((0, 0, 128, 2)).getbbox())
+        # (the bar grows with the playing)
+        later = self.screens.render({**podcast, 'mode': 'mix', 'elapsed': 900}, 0).crop((0, 0, 128, 2)).getbbox()
+        self.assertEqual(later[2], 115)
+
+    def test_a_podcast_with_the_picture_of_its_tag_has_the_bar_turned_over_it(self):
+        podcast = {**self.STATE, 'stream': False, 'duration': 1000, 'elapsed': 500, 'tagPicture': 'A1'}
+        for mode in ('mix', 'lite'):
+            shown = self.screens.render({**podcast, 'mode': mode}, 0)
+            plain = self.screens.render({**podcast, 'mode': mode, 'elapsed': None}, 0)
+            self.assertEqual(shown.crop((0, 2, 128, 50)).tobytes(), plain.crop((0, 2, 128, 50)).tobytes(), '%s: the rest of the picture is untouched' % mode)
+            changed = ImageChops.difference(shown.crop((0, 0, 128, 2)), plain.crop((0, 0, 128, 2))).getbbox()
+            self.assertEqual(changed, (0, 0, 64, 2), mode)
+            # (the picture is black there: the bar is white; where it is white the bar would be black)
+            self.assertEqual(shown.getpixel((10, 0)), 255, mode)
+        radio = {**self.STATE, 'tagPicture': 'A1', 'mode': 'mix'}
+        self.assertEqual(self.screens.render(radio, 0).crop((0, 0, 128, 50)).tobytes(), self.mine.tobytes())
 
     def test_the_time_is_the_time_of_day_and_follows_it(self):
         a = self.screens.render({**self.STATE, 'mode': 'mix', 'time': '14:35'}, 0)

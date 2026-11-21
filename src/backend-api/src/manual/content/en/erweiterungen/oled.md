@@ -36,7 +36,7 @@ The **status bar** at the top shows, from left to right:
 | crossed arrows | **shuffle** is on |
 | number and symbol at the right | volume and **output**: speaker, headphones or Bluetooth |
 
-Below are **title**, **artist** and **album**; a long line scrolls by itself (or not: see **Long texts** below). A **stream** (a radio station, which has no end) gets no progress bar. At the bottom left a triangle says the box plays (two bars: paused), next to it the **time**, at the bottom right the **track number** ("Track:3/12").
+Below are **title**, **artist** and **album**; a long line scrolls by itself (or not: see **Long texts** below). A **stream** (a radio station, which has no end) gets no progress bar; a **podcast** has one, also as the title with the time of day and over the picture of the tag (in **Mix**, **Compact** and on the display of 128 × 32 points, as a thin line at the very top). At the bottom left a triangle says the box plays (two bars: paused), next to it the **time**, at the bottom right the **track number** ("Track:3/12").
 
 ![The time counts down, the output is Bluetooth](oled-play-bt.png)
 

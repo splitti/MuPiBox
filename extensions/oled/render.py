@@ -731,6 +731,15 @@ class Screens:
             draw.rectangle((0, 0, max(0, width - 1), 1), fill=1)
         # (a stream has no end: no bar - a full one would only look like a medium that is over)
 
+    def _progress_over_picture(self, image, state):
+        """The bar of the progress over the top rows of a picture of a tag: where the bar goes, the picture's points are turned round, so it
+        shows on white as on black. Only a podcast has one (a radio station has no length; an album keeps its picture whole)."""
+        pos, dur = state.get('elapsed'), state.get('duration')
+        if state.get('broadcast') and isinstance(pos, (int, float)) and isinstance(dur, (int, float)) and dur > 0:
+            width = max(1, int(self.width * min(1.0, max(0.0, pos / dur))))
+            box = (0, 0, width, 2)
+            image.paste(ImageChops.invert(image.crop(box)), box)
+
     def _volume_cell(self, draw, state, y):
         """The volume of the bottom row: the V at the left of its cell, the number ending 3 pixels before the line that closes the cell
         (`y` is the top of the pixel text)."""
@@ -820,17 +829,21 @@ class Screens:
         image, draw = self._canvas()
         title = state.get('title') or state.get('artist') or state.get('album') or ''
         if not self.tall:
-            self._marquee(draw, ('broadcast', 0), title, 1, self.fonts.small, now)
+            # (a podcast has its bar of the progress at the top; a station has no end to show)
+            self._progress(draw, state)
+            self._marquee(draw, ('broadcast', 0), title, 3 if self._has_length(state) else 1, self.fonts.small, now)
             self._clock_centred(draw, state, 11, self.height, self.fonts.small.size * 2)
             return image
         size = self.fonts.text.size * 2
         if mode == 'lite':
+            self._progress(draw, state)
             self._marquee(draw, ('broadcast', 0), title, 2, self.fonts.text, now)
             self._clock_centred(draw, state, 14, self.height - 12, size)
             self._wifi(draw, state.get('wifi', -1), self.width - 18, self.height - 2, bool(state.get('lan')))
             if not state.get('playing'):
                 self._row_text(draw, 1, self.height - 10, 'PAUSE')
         elif mode == 'mix':
+            self._progress(draw, state)
             self._marquee(draw, ('broadcast', 0), title, 2, self.fonts.text, now)
             self._clock_centred(draw, state, 14, self.height - 13, size)
             self._status_bar(draw, state, mid='')
@@ -841,9 +854,16 @@ class Screens:
             self.bottom_row(draw, state, right='')
         return image
 
+    @staticmethod
+    def _has_length(state):
+        pos, dur = state.get('elapsed'), state.get('duration')
+        return isinstance(pos, (int, float)) and isinstance(dur, (int, float)) and dur > 0
+
     def _play_mix(self, state):
         image, draw = self._canvas()
-        if not self._tag_picture(image, state):
+        if self._tag_picture(image, state):
+            self._progress_over_picture(image, state)
+        else:
             self._progress(draw, state)
             text, font = self._big_text(state)
             w = draw.textlength(text, font=font)
@@ -855,6 +875,7 @@ class Screens:
         """The compact mode: the track number (or the time) as large as the display allows, in the middle of it."""
         image, draw = self._canvas()
         if self._tag_picture(image, state):
+            self._progress_over_picture(image, state)
             self._wifi(draw, state.get('wifi', -1), self.width - 18, self.height - 2, bool(state.get('lan')))
             if not state.get('playing'):
                 self._row_text(draw, 1, self.height - 10, 'PAUSE')

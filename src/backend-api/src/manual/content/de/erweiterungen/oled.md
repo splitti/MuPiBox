@@ -36,7 +36,7 @@ Die **Statusleiste** oben zeigt von links nach rechts:
 | gekreuzte Pfeile | **Zufall** ist an |
 | Zahl und Symbol rechts | Lautstärke und **Ausgang**: Lautsprecher, Kopfhörer oder Bluetooth |
 
-Darunter stehen **Titel**, **Interpret** und **Album**; eine lange Zeile läuft von selbst durch (oder auch nicht: siehe **Zu lange Texte** unten). Ein **Stream** (ein Radiosender, der kein Ende hat) bekommt keinen Fortschrittsbalken. Unten links zeigt ein Dreieck, dass die Box spielt (zwei Balken: pausiert), daneben die **Zeit**, unten rechts die **Titelnummer** („Track:3/12“).
+Darunter stehen **Titel**, **Interpret** und **Album**; eine lange Zeile läuft von selbst durch (oder auch nicht: siehe **Zu lange Texte** unten). Ein **Stream** (ein Radiosender, der kein Ende hat) bekommt keinen Fortschrittsbalken; ein **Podcast** hat ihn, auch als Titel mit Uhrzeit und über dem Bild des Tags (in **Mix**, **Kompakt** und auf dem Display mit 128 × 32 Punkten, ganz oben als dünne Linie). Unten links zeigt ein Dreieck, dass die Box spielt (zwei Balken: pausiert), daneben die **Zeit**, unten rechts die **Titelnummer** („Track:3/12“).
 
 ![Die Zeit läuft rückwärts, der Ausgang ist Bluetooth](oled-play-bt.png)
 
