@@ -24,6 +24,11 @@ BOLD_CANDIDATES = (
 # The pictures of the display (128 x 64, white on black): the ones the extension brings in images/ and, for the four the user may
 # change, their own ones in the data folder of the extension. What each view shows:
 CHANGEABLE = ('boot', 'idle', 'update', 'rest')
+# The picture a tag brings: the top 50 rows of the 128 x 64 display, in place of the progress bar and the big time (Mix and Compact mode);
+# its file is <custom>/tags/<id of the tag>.png
+TAG_PICTURE_SIZE = (128, 50)
+TAG_FOLDER = 'tags'
+TAG_ID = re.compile(r'^[0-9A-Za-z_-]{1,40}$')
 VIEW_PICTURES = {'boot': 'boot', 'bye': 'shutdown', 'update': 'update', 'rest': 'rest'}
 # (the picture of the idle display: the reader that waits for a tag, the scanner that waits for a code, or the user's own one)
 IDLE_PICTURES = {'nfc': 'nfc', 'barcode': 'barcode', 'custom': 'idle'}
@@ -130,6 +135,28 @@ class Pictures:
             return None  # (no ready-made picture: the idle display shows the reader then)
         built = os.path.join(self.builtin, name + '.png') if self.builtin else None
         return built if built and os.path.isfile(built) else None
+
+    def tag(self, uid):
+        """The picture a tag has (TAG_PICTURE_SIZE, white on black) or None: <custom>/tags/<uid>.png, read again when the file changed."""
+        if not self.custom or not TAG_ID.match(str(uid or '')):
+            return None
+        path = os.path.join(self.custom, TAG_FOLDER, str(uid) + '.png')
+        try:
+            stat = os.stat(path)
+        except OSError:
+            return None
+        key = (path, stat.st_mtime_ns, stat.st_size)
+        kept = self._kept.get(('tag', uid))
+        if kept and kept[0] == key:
+            return kept[1]
+        try:
+            with Image.open(path) as source:
+                # (a file that is not of the size - made by hand in the folder - is no picture: nothing is cut or stretched)
+                image = source.convert('1') if source.size == TAG_PICTURE_SIZE else None
+        except (OSError, ValueError):
+            return None
+        self._kept[('tag', uid)] = (key, image)
+        return image
 
     def is_own(self, name):
         return name in CHANGEABLE and bool(self.custom) and os.path.isfile(os.path.join(self.custom, name + '.png'))
@@ -496,8 +523,9 @@ class Screens:
         self._art(draw, left, 0, picture)
         self._big_digits(draw, left + first - 3, 1, '%d' % int(volume) if isinstance(volume, (int, float)) else '--', VOLUME_DIGITS, right=True)
 
-    def bottom_row(self, draw, state):
-        """The row at the bottom: what the player does and the time (up from the start, or down to the end), the track at the right."""
+    def bottom_row(self, draw, state, right=None):
+        """The row at the bottom: what the player does and the time (up from the start, or down to the end), the track at the right
+        (`right`: that text instead of the track - '' for none)."""
         font = self.fonts.row
         y = self.height - 11
         if state.get('playing'):
@@ -508,8 +536,12 @@ class Screens:
         text = shown_time(state)
         draw.text((9, y), text, font=font, fill=1)
         track, tracks = state.get('track'), state.get('tracks')
-        if track and tracks:
-            end = 9 + draw.textlength(text, font=font)
+        end = 9 + draw.textlength(text, font=font)
+        if right is not None:
+            w = draw.textlength(right, font=font)
+            if right and end + 4 + w <= self.width:
+                draw.text((self.width - w, y), right, font=font, fill=1)
+        elif track and tracks:
             for template in ('Track:%d/%d', '%d/%d'):
                 label = template % (track, tracks)
                 w = draw.textlength(label, font=font)
@@ -681,6 +713,9 @@ class Screens:
     def play(self, state, now):
         """The picture of a medium that plays or is paused, in the chosen mode ('full', 'mix' or 'lite')."""
         mode = state.get('mode') or 'full'
+        # (a radio station or a podcast: no picture of a tag to show - or the user wants the title and the time - then the title and the clock)
+        if state.get('broadcast') and state.get('time') and not self._has_tag_picture(state):
+            return self._play_broadcast(state, now, mode)
         if not self.tall:
             return self._play_compact(state, now)
         if mode == 'lite':
@@ -694,8 +729,7 @@ class Screens:
         if isinstance(pos, (int, float)) and isinstance(dur, (int, float)) and dur > 0:
             width = int(self.width * min(1.0, max(0.0, pos / dur)))
             draw.rectangle((0, 0, max(0, width - 1), 1), fill=1)
-        elif state.get('stream'):
-            draw.rectangle((0, 0, self.width - 1, 1), fill=1)
+        # (a stream has no end: no bar - a full one would only look like a medium that is over)
 
     def _volume_cell(self, draw, state, y):
         """The volume of the bottom row: the V at the left of its cell, the number ending 3 pixels before the line that closes the cell
@@ -704,8 +738,8 @@ class Screens:
         self._row_text(draw, VOLUME_V_X, y, 'V')
         self._row_text(draw, VOLUME_END, y, '%d' % int(volume) if isinstance(volume, (int, float)) else '--', right=True)
 
-    def _status_bar(self, draw, state):
-        """The row at the bottom: time, track, volume, wireless."""
+    def _status_bar(self, draw, state, mid=None):
+        """The row at the bottom: time, track, volume, wireless. `mid`: the text of the middle cell instead of the track ('' for none)."""
         y = self.height - 11
         draw.line((0, y - 2, self.width, y - 2), fill=1)
         paused = not state.get('playing')
@@ -717,7 +751,8 @@ class Screens:
         self._row_text(draw, 1, y, left)
         draw.line((40, y - 3, 40, self.height), fill=1)
         track, tracks = state.get('track'), state.get('tracks')
-        mid = '%s/%s' % (track, tracks) if track and tracks else (str(track) if track else '')
+        if mid is None:
+            mid = '%s/%s' % (track, tracks) if track and tracks else (str(track) if track else '')
         self._row_text(draw, TRACK_END, y, mid[:5], right=True)
         draw.line((76, y - 3, 76, self.height), fill=1)
         self._volume_cell(draw, state, y)
@@ -727,6 +762,10 @@ class Screens:
     def _play_full(self, state, now):
         """The layout: status bar, title, artist and album (the ones there are), and the row with time and track."""
         image, draw = self._canvas()
+        if self._tag_picture(image, state):
+            # (a radio station or a podcast: the time of day where the track number is)
+            self.bottom_row(draw, state, right=self._broadcast_time(state))
+            return image
         self.status_bar(draw, state)
         lines = [state.get('title') or '', state.get('artist') or '', state.get('album') or '']
         # (only the lines there are, from the top: a radio station has no album)
@@ -742,18 +781,84 @@ class Screens:
             return str(track), self.fonts.huge
         return shown_time(state), self.fonts.big
 
+    def _tag_picture(self, image, state):
+        """The picture of the tag that started the medium in the top rows - only on the 128 x 64 display, whose top 50 rows it is made for.
+        True when it was drawn (then no progress bar and no big time: the picture is in their place)."""
+        if (self.width, self.height) != (TAG_PICTURE_SIZE[0], 64) or not state.get('tagPicture'):
+            return False
+        picture = self.pictures.tag(state.get('tagPicture'))
+        if picture is None:
+            return False
+        image.paste(picture, (0, 0))
+        return True
+
+    def _broadcast_time(self, state):
+        """The time of day for the place of the track number while a radio station or a podcast plays; None for any other medium."""
+        return str(state.get('time') or '') if state.get('broadcast') and state.get('time') else None
+
+    def _has_tag_picture(self, state):
+        """Is there a picture of the tag to show (the display is 128 x 64 and the tag has its file)?"""
+        if (self.width, self.height) != (TAG_PICTURE_SIZE[0], 64) or not state.get('tagPicture'):
+            return False
+        return self.pictures.tag(state.get('tagPicture')) is not None
+
+    def _clock_centred(self, draw, state, top, bottom, size):
+        """The time of day in the middle of the display (by its digits), in the band from `top` to `bottom`."""
+        text = str(state.get('time') or '')
+        font = self.fonts.lite(size)
+        while size > 12 and draw.textlength(text, font=font) > self.width - 4:
+            size -= 2
+            font = self.fonts.lite(size)
+        left, ink_top, right, ink_bottom = draw.textbbox((0, 0), text, font=font)
+        x = round((self.width - draw.textlength(text, font=font)) / 2)
+        draw.text((x, round((top + bottom) / 2 - (ink_top + ink_bottom) / 2)), text, font=font, fill=1)
+
+    def _play_broadcast(self, state, now, mode):
+        """A radio station or a podcast shown as the title and the time of day: the title in the font of the text lines, the time in the
+        middle at twice its size. All three modes: Full keeps the status bar and the bottom row, Mix the status line, Compact only the
+        wireless symbol and PAUSE."""
+        image, draw = self._canvas()
+        title = state.get('title') or state.get('artist') or state.get('album') or ''
+        if not self.tall:
+            self._marquee(draw, ('broadcast', 0), title, 1, self.fonts.small, now)
+            self._clock_centred(draw, state, 11, self.height, self.fonts.small.size * 2)
+            return image
+        size = self.fonts.text.size * 2
+        if mode == 'lite':
+            self._marquee(draw, ('broadcast', 0), title, 2, self.fonts.text, now)
+            self._clock_centred(draw, state, 14, self.height - 12, size)
+            self._wifi(draw, state.get('wifi', -1), self.width - 18, self.height - 2, bool(state.get('lan')))
+            if not state.get('playing'):
+                self._row_text(draw, 1, self.height - 10, 'PAUSE')
+        elif mode == 'mix':
+            self._marquee(draw, ('broadcast', 0), title, 2, self.fonts.text, now)
+            self._clock_centred(draw, state, 14, self.height - 13, size)
+            self._status_bar(draw, state, mid='')
+        else:
+            self.status_bar(draw, state)
+            self._marquee(draw, ('broadcast', 0), title, 13, self.fonts.text, now)
+            self._clock_centred(draw, state, 27, self.height - 13, size)
+            self.bottom_row(draw, state, right='')
+        return image
+
     def _play_mix(self, state):
         image, draw = self._canvas()
-        self._progress(draw, state)
-        text, font = self._big_text(state)
-        w = draw.textlength(text, font=font)
-        draw.text(((self.width - w) // 2, 2), text, font=font, fill=1)
-        self._status_bar(draw, state)
+        if not self._tag_picture(image, state):
+            self._progress(draw, state)
+            text, font = self._big_text(state)
+            w = draw.textlength(text, font=font)
+            draw.text(((self.width - w) // 2, 2), text, font=font, fill=1)
+        self._status_bar(draw, state, mid=self._broadcast_time(state))
         return image
 
     def _play_lite(self, state):
         """The compact mode: the track number (or the time) as large as the display allows, in the middle of it."""
         image, draw = self._canvas()
+        if self._tag_picture(image, state):
+            self._wifi(draw, state.get('wifi', -1), self.width - 18, self.height - 2, bool(state.get('lan')))
+            if not state.get('playing'):
+                self._row_text(draw, 1, self.height - 10, 'PAUSE')
+            return image
         self._progress(draw, state)
         text, font = self._big_text(state)
         size = 50 if font is self.fonts.huge else 34

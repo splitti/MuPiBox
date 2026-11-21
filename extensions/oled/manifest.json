@@ -1,7 +1,7 @@
 {
   "id": "oled",
   "name": "OLED-Display",
-  "version": "0.5.3",
+  "version": "0.7.1",
   "description": "Ein kleines OLED-Display (SSD1306, SH1106 oder SSD1309 am I2C-Anschluss, 128 × 64 oder 128 × 32) zeigt, was die Box spielt: Titel, Interpret, Laufzeit, Titelnummer, Lautstärke, WLAN, Akku, Zufall und Wiederholen, Ausgang (Lautsprecher, Kopfhörer, Bluetooth) und die Uhrzeit. Die Einstellungen stehen unter Einstellungen › OLED-Display.",
   "hostApi": 14,
   "resources": {},
@@ -97,6 +97,14 @@
       "options": [
         "up",
         "down"
+      ]
+    },
+    "broadcastView": {
+      "type": "string",
+      "default": "picture",
+      "options": [
+        "picture",
+        "clock"
       ]
     },
     "scroll": {
@@ -227,6 +235,22 @@
         "label": "Play/Pause-Animation zeigen",
         "tip": true,
         "help": "Beim Starten und Anhalten der Wiedergabe erscheint kurz ein eigenes Bild mit Play oder Pause. Ist die Option aus, bleibt die Anzeige, wie sie ist."
+      },
+      {
+        "key": "broadcastView",
+        "label": "Podcast und Radio zeigen",
+        "help": "Bei einem Podcast oder Radiosender: das Bild des Tags (siehe NFC-Extension › Zugeordnete Tags), solange der Tag das Medium gestartet hat und ein Bild hat, sonst und bei „Titel und Uhrzeit“ der Titel mit der Uhrzeit mittig darunter, doppelt so groß wie der Titel. Gilt für alle drei Anzeigen. Alben und Hörspiele zeigen ihr Bild des Tags immer.",
+        "choices": [
+          {
+            "value": "picture",
+            "label": "Bild, falls vorhanden"
+          },
+          {
+            "value": "clock",
+            "label": "Titel und Uhrzeit"
+          }
+        ],
+        "tip": true
       },
       {
         "key": "timeMode",
