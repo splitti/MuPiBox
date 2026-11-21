@@ -4704,5 +4704,19 @@
  "Zeigt zehn Sekunden lang einen QR-Code mit der Adresse der Box und sonst nichts. Mit dem Handy scannen öffnet die Box.": "Muestra durante diez segundos un código QR con la dirección de la caja y nada más. Al escanearlo con el móvil se abre la caja.",
  "Nächste Anzeige": "Siguiente diseño",
  "Wechselt bis zum nächsten Speichern zwischen Voll, Mix und Kompakt.": "Cambia entre Completa, Mix y Compacta hasta el próximo guardado.",
- "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Cuando no suena nada o la reproducción está en pausa, la pantalla se apaga tras este tiempo (así se cuida). Un inicio, una etiqueta o un toque en «Mostrar la dirección de la caja» la despierta."
+ "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Cuando no suena nada o la reproducción está en pausa, la pantalla se apaga tras este tiempo (así se cuida). Un inicio, una etiqueta o un toque en «Mostrar la dirección de la caja» la despierta.",
+ "Am DSI-Anschluss ist kein Display zu erkennen (er meldet sich auch ohne Display als verbunden). Beim Einschalten fragt die App nach.": "No se detecta ninguna pantalla en el conector DSI (aparece como conectado incluso sin pantalla). La app preguntará al activarlo.",
+ "Ohne Display starten": "Iniciar sin pantalla",
+ "Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?": "No se detecta ninguna pantalla en el conector DSI. Si aun así hay una conectada, se quedará oscura tras el próximo reinicio. ¿Iniciar sin pantalla?",
+ "OLED-Bild": "Imagen OLED",
+ "OLED-Bild gespeichert": "Imagen OLED guardada",
+ "OLED-Bild entfernt": "Imagen OLED eliminada",
+ "Das Bild muss genau 128 × 50 Punkte groß sein": "La imagen debe medir exactamente 128 × 50 píxeles",
+ "Dieser Tag lässt sich nicht ansprechen": "No se puede acceder a esta etiqueta",
+ "Podcast und Radio zeigen": "Mostrar pódcast y radio",
+ "Bild, falls vorhanden": "Imagen, si la hay",
+ "Titel und Uhrzeit": "Título y hora",
+ "Bei einem Podcast oder Radiosender: das Bild des Tags (siehe NFC-Extension › Zugeordnete Tags), solange der Tag das Medium gestartet hat und ein Bild hat, sonst und bei „Titel und Uhrzeit“ der Titel mit der Uhrzeit mittig darunter, doppelt so groß wie der Titel. Gilt für alle drei Anzeigen. Alben und Hörspiele zeigen ihr Bild des Tags immer.": "Con un pódcast o una emisora de radio: la imagen de la etiqueta (ver extensión NFC › Etiquetas asignadas) mientras la etiqueta haya iniciado el medio y tenga imagen; si no, y con «Título y hora», el título con la hora centrada debajo, el doble de grande que el título. Vale para las tres vistas. Los álbumes y audiolibros muestran siempre la imagen de su etiqueta.",
+ "Dieser Tag hat schon ein OLED-Bild. Möchtest du es ändern?": "Esta etiqueta ya tiene una imagen OLED. ¿Quieres cambiarla?",
+ "Dieser Tag hat kein OLED-Bild": "Esta etiqueta no tiene imagen OLED"
 }

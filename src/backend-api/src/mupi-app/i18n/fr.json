@@ -4704,5 +4704,19 @@
  "Zeigt zehn Sekunden lang einen QR-Code mit der Adresse der Box und sonst nichts. Mit dem Handy scannen öffnet die Box.": "Affiche pendant dix secondes un code QR avec l'adresse de la boîte, et rien d'autre. Le scanner avec le téléphone ouvre la boîte.",
  "Nächste Anzeige": "Affichage suivant",
  "Wechselt bis zum nächsten Speichern zwischen Voll, Mix und Kompakt.": "Passe entre Complet, Mix et Compact jusqu'à la prochaine sauvegarde.",
- "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Quand rien n'est lu ou que la lecture est en pause, l'écran s'éteint après ce délai (cela le ménage). Un démarrage, un tag ou un appui sur « Afficher l'adresse de la box » le réveille."
+ "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Quand rien n'est lu ou que la lecture est en pause, l'écran s'éteint après ce délai (cela le ménage). Un démarrage, un tag ou un appui sur « Afficher l'adresse de la box » le réveille.",
+ "Am DSI-Anschluss ist kein Display zu erkennen (er meldet sich auch ohne Display als verbunden). Beim Einschalten fragt die App nach.": "Aucun écran n'est détecté sur le connecteur DSI (il se signale comme connecté même sans écran). L'app demande confirmation à l'activation.",
+ "Ohne Display starten": "Démarrer sans écran",
+ "Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?": "Aucun écran n'est détecté sur le connecteur DSI. Si un écran est tout de même branché, il restera noir après le prochain redémarrage. Démarrer sans écran ?",
+ "OLED-Bild": "Image OLED",
+ "OLED-Bild gespeichert": "Image OLED enregistrée",
+ "OLED-Bild entfernt": "Image OLED supprimée",
+ "Das Bild muss genau 128 × 50 Punkte groß sein": "L'image doit mesurer exactement 128 × 50 pixels",
+ "Dieser Tag lässt sich nicht ansprechen": "Ce tag est inaccessible",
+ "Podcast und Radio zeigen": "Affichage podcast et radio",
+ "Bild, falls vorhanden": "Image, s'il y en a une",
+ "Titel und Uhrzeit": "Titre et heure",
+ "Bei einem Podcast oder Radiosender: das Bild des Tags (siehe NFC-Extension › Zugeordnete Tags), solange der Tag das Medium gestartet hat und ein Bild hat, sonst und bei „Titel und Uhrzeit“ der Titel mit der Uhrzeit mittig darunter, doppelt so groß wie der Titel. Gilt für alle drei Anzeigen. Alben und Hörspiele zeigen ihr Bild des Tags immer.": "Pour un podcast ou une station de radio : l'image du tag (voir extension NFC › Tags attribués) tant que le tag a lancé le média et possède une image ; sinon, et avec « Titre et heure », le titre avec l'heure centrée en dessous, deux fois plus grande que le titre. S'applique aux trois affichages. Les albums et livres audio affichent toujours l'image de leur tag.",
+ "Dieser Tag hat schon ein OLED-Bild. Möchtest du es ändern?": "Ce tag a déjà une image OLED. Veux-tu la modifier ?",
+ "Dieser Tag hat kein OLED-Bild": "Ce tag n'a pas d'image OLED"
 }

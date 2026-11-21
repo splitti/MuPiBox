@@ -4704,5 +4704,19 @@
  "Zeigt zehn Sekunden lang einen QR-Code mit der Adresse der Box und sonst nichts. Mit dem Handy scannen öffnet die Box.": "Δείχνει για δέκα δευτερόλεπτα έναν κωδικό QR με τη διεύθυνση του κουτιού και τίποτα άλλο. Σαρώνοντάς τον με το κινητό ανοίγει το κουτί.",
  "Nächste Anzeige": "Επόμενη εμφάνιση",
  "Wechselt bis zum nächsten Speichern zwischen Voll, Mix und Kompakt.": "Εναλλάσσει μεταξύ Πλήρους, Mix και Συμπαγούς μέχρι την επόμενη αποθήκευση.",
- "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Όταν δεν παίζει τίποτα ή η αναπαραγωγή είναι σε παύση, η οθόνη σβήνει μετά από αυτόν τον χρόνο (αυτό την προστατεύει). Μια εκκίνηση, μια ετικέτα ή ένα άγγιγμα στο «Εμφάνιση της διεύθυνσης του κουτιού» την ξυπνά."
+ "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Όταν δεν παίζει τίποτα ή η αναπαραγωγή είναι σε παύση, η οθόνη σβήνει μετά από αυτόν τον χρόνο (αυτό την προστατεύει). Μια εκκίνηση, μια ετικέτα ή ένα άγγιγμα στο «Εμφάνιση της διεύθυνσης του κουτιού» την ξυπνά.",
+ "Am DSI-Anschluss ist kein Display zu erkennen (er meldet sich auch ohne Display als verbunden). Beim Einschalten fragt die App nach.": "Δεν φαίνεται οθόνη στη θύρα DSI (δηλώνεται συνδεδεμένη ακόμη και χωρίς οθόνη). Η εφαρμογή θα ρωτήσει κατά την ενεργοποίηση.",
+ "Ohne Display starten": "Εκκίνηση χωρίς οθόνη",
+ "Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?": "Δεν φαίνεται οθόνη στη θύρα DSI. Αν υπάρχει τελικά συνδεδεμένη, θα μείνει σκοτεινή μετά την επόμενη επανεκκίνηση. Εκκίνηση χωρίς οθόνη;",
+ "OLED-Bild": "Εικόνα OLED",
+ "OLED-Bild gespeichert": "Η εικόνα OLED αποθηκεύτηκε",
+ "OLED-Bild entfernt": "Η εικόνα OLED αφαιρέθηκε",
+ "Das Bild muss genau 128 × 50 Punkte groß sein": "Η εικόνα πρέπει να είναι ακριβώς 128 × 50 εικονοστοιχεία",
+ "Dieser Tag lässt sich nicht ansprechen": "Δεν είναι δυνατή η πρόσβαση σε αυτή την ετικέτα",
+ "Podcast und Radio zeigen": "Εμφάνιση podcast και ραδιοφώνου",
+ "Bild, falls vorhanden": "Εικόνα, αν υπάρχει",
+ "Titel und Uhrzeit": "Τίτλος και ώρα",
+ "Bei einem Podcast oder Radiosender: das Bild des Tags (siehe NFC-Extension › Zugeordnete Tags), solange der Tag das Medium gestartet hat und ein Bild hat, sonst und bei „Titel und Uhrzeit“ der Titel mit der Uhrzeit mittig darunter, doppelt so groß wie der Titel. Gilt für alle drei Anzeigen. Alben und Hörspiele zeigen ihr Bild des Tags immer.": "Για podcast ή ραδιοφωνικό σταθμό: η εικόνα της ετικέτας (βλ. επέκταση NFC › Αντιστοιχισμένες ετικέτες), όσο το μέσο ξεκίνησε από την ετικέτα και εκείνη έχει εικόνα· αλλιώς, και με «Τίτλος και ώρα», ο τίτλος με την ώρα στο κέντρο από κάτω, διπλάσια σε μέγεθος από τον τίτλο. Ισχύει και για τις τρεις προβολές. Τα άλμπουμ και τα ηχητικά βιβλία δείχνουν πάντα την εικόνα της ετικέτας τους.",
+ "Dieser Tag hat schon ein OLED-Bild. Möchtest du es ändern?": "Αυτή η ετικέτα έχει ήδη εικόνα OLED. Θέλεις να την αλλάξεις;",
+ "Dieser Tag hat kein OLED-Bild": "Αυτή η ετικέτα δεν έχει εικόνα OLED"
 }

@@ -4704,5 +4704,19 @@
  "Zeigt zehn Sekunden lang einen QR-Code mit der Adresse der Box und sonst nichts. Mit dem Handy scannen öffnet die Box.": "Visar i tio sekunder en QR-kod med lådans adress och inget annat. Skannar man den med mobilen öppnas lådan.",
  "Nächste Anzeige": "Nästa visning",
  "Wechselt bis zum nächsten Speichern zwischen Voll, Mix und Kompakt.": "Växlar mellan Fullständig, Mix och Kompakt till nästa sparning.",
- "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "När inget spelas eller uppspelningen är pausad stängs displayen av efter den här tiden (det skonar den). En start, en tagg eller ett tryck på ”Visa boxens adress” väcker den."
+ "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "När inget spelas eller uppspelningen är pausad stängs displayen av efter den här tiden (det skonar den). En start, en tagg eller ett tryck på ”Visa boxens adress” väcker den.",
+ "Am DSI-Anschluss ist kein Display zu erkennen (er meldet sich auch ohne Display als verbunden). Beim Einschalten fragt die App nach.": "Ingen display syns på DSI-kontakten (den rapporteras som ansluten även utan display). Appen frågar när du slår på det.",
+ "Ohne Display starten": "Starta utan display",
+ "Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?": "Ingen display syns på DSI-kontakten. Om det ändå sitter en där förblir den mörk efter nästa omstart. Starta utan display?",
+ "OLED-Bild": "OLED-bild",
+ "OLED-Bild gespeichert": "OLED-bild sparad",
+ "OLED-Bild entfernt": "OLED-bild borttagen",
+ "Das Bild muss genau 128 × 50 Punkte groß sein": "Bilden måste vara exakt 128 × 50 pixlar",
+ "Dieser Tag lässt sich nicht ansprechen": "Det går inte att nå den här taggen",
+ "Podcast und Radio zeigen": "Visa podd och radio",
+ "Bild, falls vorhanden": "Bild, om det finns",
+ "Titel und Uhrzeit": "Titel och klockslag",
+ "Bei einem Podcast oder Radiosender: das Bild des Tags (siehe NFC-Extension › Zugeordnete Tags), solange der Tag das Medium gestartet hat und ein Bild hat, sonst und bei „Titel und Uhrzeit“ der Titel mit der Uhrzeit mittig darunter, doppelt so groß wie der Titel. Gilt für alle drei Anzeigen. Alben und Hörspiele zeigen ihr Bild des Tags immer.": "För en podd eller radiostation: taggens bild (se NFC-tillägget › Tilldelade taggar) så länge taggen startade mediet och har en bild; annars, och med ”Titel och klockslag”, titeln med klockslaget centrerat under, dubbelt så stort som titeln. Gäller alla tre visningar. Album och ljudböcker visar alltid sin taggs bild.",
+ "Dieser Tag hat schon ein OLED-Bild. Möchtest du es ändern?": "Den här taggen har redan en OLED-bild. Vill du ändra den?",
+ "Dieser Tag hat kein OLED-Bild": "Den här taggen har ingen OLED-bild"
 }

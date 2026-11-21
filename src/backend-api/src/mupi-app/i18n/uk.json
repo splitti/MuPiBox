@@ -4704,5 +4704,19 @@
  "Zeigt zehn Sekunden lang einen QR-Code mit der Adresse der Box und sonst nichts. Mit dem Handy scannen öffnet die Box.": "Показує десять секунд QR-код з адресою коробки й більше нічого. Якщо відсканувати його телефоном, коробка відкриється.",
  "Nächste Anzeige": "Наступний вигляд",
  "Wechselt bis zum nächsten Speichern zwischen Voll, Mix und Kompakt.": "Перемикає між Повним, Mix і Компактним до наступного збереження.",
- "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Коли нічого не грає або відтворення на паузі, дисплей вимикається після цього часу (це його береже). Запуск, тег або дотик до «Показати адресу скриньки» його будить."
+ "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Коли нічого не грає або відтворення на паузі, дисплей вимикається після цього часу (це його береже). Запуск, тег або дотик до «Показати адресу скриньки» його будить.",
+ "Am DSI-Anschluss ist kein Display zu erkennen (er meldet sich auch ohne Display als verbunden). Beim Einschalten fragt die App nach.": "На роз’ємі DSI дисплей не виявлено (роз’єм повідомляє про підключення і без дисплея). Застосунок запитає під час увімкнення.",
+ "Ohne Display starten": "Запуск без дисплея",
+ "Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?": "На роз’ємі DSI дисплей не виявлено. Якщо він усе ж підключений, після наступного перезапуску залишиться темним. Запустити без дисплея?",
+ "OLED-Bild": "Зображення OLED",
+ "OLED-Bild gespeichert": "Зображення OLED збережено",
+ "OLED-Bild entfernt": "Зображення OLED видалено",
+ "Das Bild muss genau 128 × 50 Punkte groß sein": "Зображення має бути рівно 128 × 50 пікселів",
+ "Dieser Tag lässt sich nicht ansprechen": "Цей тег недоступний",
+ "Podcast und Radio zeigen": "Показ подкастів і радіо",
+ "Bild, falls vorhanden": "Зображення, якщо є",
+ "Titel und Uhrzeit": "Назва і час",
+ "Bei einem Podcast oder Radiosender: das Bild des Tags (siehe NFC-Extension › Zugeordnete Tags), solange der Tag das Medium gestartet hat und ein Bild hat, sonst und bei „Titel und Uhrzeit“ der Titel mit der Uhrzeit mittig darunter, doppelt so groß wie der Titel. Gilt für alle drei Anzeigen. Alben und Hörspiele zeigen ihr Bild des Tags immer.": "Для подкасту або радіостанції: зображення тегу (див. розширення NFC › Призначені теги), поки медіа запущено цим тегом і в нього є зображення; інакше, а також за «Назва і час», — назва і під нею по центру час, удвічі більший за назву. Діє для всіх трьох видів. Альбоми й аудіокниги завжди показують зображення свого тегу.",
+ "Dieser Tag hat schon ein OLED-Bild. Möchtest du es ändern?": "Цей тег уже має зображення OLED. Змінити його?",
+ "Dieser Tag hat kein OLED-Bild": "Цей тег не має зображення OLED"
 }

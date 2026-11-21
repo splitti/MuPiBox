@@ -612,7 +612,8 @@ describe('the NFC extension of this repository', () => {
   const nfc = JSON.parse(readFileSync(path.join(extDir, 'nfc', 'manifest.json'), 'utf8')) as Manifest
   it('has a manifest the installer accepts: a status block, two pins to choose, a page under System', () => {
     assert.strictEqual(checkManifest(nfc, files('api.js', 'display.js', 'icon.svg', '99-mpx-nfc.rules')), null)
-    assert.strictEqual(nfc.hostApi, 12)
+    // (16: the OLED picture of a tag - the row action says it has one, the app shows it and asks)
+    assert.strictEqual(nfc.hostApi, 16)
     assert.strictEqual(nfc.ui?.place, 'system')
     assert.strictEqual(nfc.name, 'NFC-Extension')
     assert.deepStrictEqual(nfc.ui?.items.filter((i) => i.type === 'heading' && i.page).map((i) => i.label), ['NFC-Reader', 'Zugeordnete Tags', 'Drehregler', 'Sprachausgabe'], 'four sub pages')

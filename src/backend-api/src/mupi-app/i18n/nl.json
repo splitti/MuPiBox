@@ -4704,5 +4704,19 @@
  "Zeigt zehn Sekunden lang einen QR-Code mit der Adresse der Box und sonst nichts. Mit dem Handy scannen öffnet die Box.": "Toont tien seconden lang een QR-code met het adres van de box en verder niets. Scannen met de telefoon opent de box.",
  "Nächste Anzeige": "Volgende weergave",
  "Wechselt bis zum nächsten Speichern zwischen Voll, Mix und Kompakt.": "Wisselt tot de volgende keer opslaan tussen Volledig, Mix en Compact.",
- "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Als er niets speelt of het afspelen gepauzeerd is, gaat het display na deze tijd uit (dat spaart het). Een start, een tag of een tik op \"Adres van de box tonen\" maakt het wakker."
+ "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Als er niets speelt of het afspelen gepauzeerd is, gaat het display na deze tijd uit (dat spaart het). Een start, een tag of een tik op \"Adres van de box tonen\" maakt het wakker.",
+ "Am DSI-Anschluss ist kein Display zu erkennen (er meldet sich auch ohne Display als verbunden). Beim Einschalten fragt die App nach.": "Op de DSI-aansluiting is geen display te zien (die meldt zich ook zonder display als verbonden). De app vraagt het bij het inschakelen.",
+ "Ohne Display starten": "Starten zonder display",
+ "Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?": "Op de DSI-aansluiting is geen display te zien. Hangt er toch een aan, dan blijft het na de volgende herstart donker. Starten zonder display?",
+ "OLED-Bild": "OLED-afbeelding",
+ "OLED-Bild gespeichert": "OLED-afbeelding opgeslagen",
+ "OLED-Bild entfernt": "OLED-afbeelding verwijderd",
+ "Das Bild muss genau 128 × 50 Punkte groß sein": "De afbeelding moet precies 128 × 50 pixels groot zijn",
+ "Dieser Tag lässt sich nicht ansprechen": "Deze tag is niet bereikbaar",
+ "Podcast und Radio zeigen": "Podcast en radio tonen",
+ "Bild, falls vorhanden": "Afbeelding, indien aanwezig",
+ "Titel und Uhrzeit": "Titel en tijd",
+ "Bei einem Podcast oder Radiosender: das Bild des Tags (siehe NFC-Extension › Zugeordnete Tags), solange der Tag das Medium gestartet hat und ein Bild hat, sonst und bei „Titel und Uhrzeit“ der Titel mit der Uhrzeit mittig darunter, doppelt so groß wie der Titel. Gilt für alle drei Anzeigen. Alben und Hörspiele zeigen ihr Bild des Tags immer.": "Bij een podcast of radiozender: de afbeelding van de tag (zie NFC-extensie › Gekoppelde tags), zolang de tag het medium heeft gestart en een afbeelding heeft; anders, en bij „Titel en tijd”, de titel met de tijd gecentreerd eronder, twee keer zo groot als de titel. Geldt voor alle drie de weergaven. Albums en luisterboeken tonen altijd de afbeelding van hun tag.",
+ "Dieser Tag hat schon ein OLED-Bild. Möchtest du es ändern?": "Deze tag heeft al een OLED-afbeelding. Wil je die wijzigen?",
+ "Dieser Tag hat kein OLED-Bild": "Deze tag heeft geen OLED-afbeelding"
 }

@@ -4704,5 +4704,19 @@
  "Zeigt zehn Sekunden lang einen QR-Code mit der Adresse der Box und sonst nichts. Mit dem Handy scannen öffnet die Box.": "Показывает десять секунд QR-код с адресом коробки и больше ничего. Если отсканировать его телефоном, коробка откроется.",
  "Nächste Anzeige": "Следующий вид",
  "Wechselt bis zum nächsten Speichern zwischen Voll, Mix und Kompakt.": "Переключает между Полным, Mix и Компактным до следующего сохранения.",
- "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Когда ничего не играет или воспроизведение на паузе, дисплей выключается через это время (это его бережёт). Запуск, метка или касание «Показать адрес коробки» его будит."
+ "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Когда ничего не играет или воспроизведение на паузе, дисплей выключается через это время (это его бережёт). Запуск, метка или касание «Показать адрес коробки» его будит.",
+ "Am DSI-Anschluss ist kein Display zu erkennen (er meldet sich auch ohne Display als verbunden). Beim Einschalten fragt die App nach.": "На разъёме DSI дисплей не обнаружен (разъём сообщает о подключении и без дисплея). Приложение спросит при включении.",
+ "Ohne Display starten": "Запуск без дисплея",
+ "Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?": "На разъёме DSI дисплей не обнаружен. Если он всё же подключён, после следующего перезапуска он останется тёмным. Запустить без дисплея?",
+ "OLED-Bild": "Картинка OLED",
+ "OLED-Bild gespeichert": "Картинка OLED сохранена",
+ "OLED-Bild entfernt": "Картинка OLED удалена",
+ "Das Bild muss genau 128 × 50 Punkte groß sein": "Картинка должна быть ровно 128 × 50 пикселей",
+ "Dieser Tag lässt sich nicht ansprechen": "К этой метке нет доступа",
+ "Podcast und Radio zeigen": "Показ подкастов и радио",
+ "Bild, falls vorhanden": "Картинка, если есть",
+ "Titel und Uhrzeit": "Название и время",
+ "Bei einem Podcast oder Radiosender: das Bild des Tags (siehe NFC-Extension › Zugeordnete Tags), solange der Tag das Medium gestartet hat und ein Bild hat, sonst und bei „Titel und Uhrzeit“ der Titel mit der Uhrzeit mittig darunter, doppelt so groß wie der Titel. Gilt für alle drei Anzeigen. Alben und Hörspiele zeigen ihr Bild des Tags immer.": "Для подкаста или радиостанции: картинка метки (см. расширение NFC › Назначенные метки), пока медиа запущено этой меткой и у неё есть картинка; иначе, а также при «Название и время», — название и под ним по центру время, вдвое крупнее названия. Действует для всех трёх видов. Альбомы и аудиокниги всегда показывают картинку своей метки.",
+ "Dieser Tag hat schon ein OLED-Bild. Möchtest du es ändern?": "У этой метки уже есть картинка OLED. Изменить её?",
+ "Dieser Tag hat kein OLED-Bild": "У этой метки нет картинки OLED"
 }

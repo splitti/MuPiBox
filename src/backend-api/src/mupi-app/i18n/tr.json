@@ -4704,5 +4704,19 @@
  "Zeigt zehn Sekunden lang einen QR-Code mit der Adresse der Box und sonst nichts. Mit dem Handy scannen öffnet die Box.": "On saniye boyunca kutunun adresini içeren bir QR kodu gösterir, başka bir şey göstermez. Telefonla taranınca kutu açılır.",
  "Nächste Anzeige": "Sonraki görünüm",
  "Wechselt bis zum nächsten Speichern zwischen Voll, Mix und Kompakt.": "Bir sonraki kaydetmeye kadar Tam, Mix ve Kompakt arasında geçiş yapar.",
- "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Hiçbir şey çalmazken veya çalma duraklatıldığında ekran bu süreden sonra kapanır (bu ekranı korur). Bir başlatma, bir etiket veya \"Kutunun adresini göster\"e dokunmak onu uyandırır."
+ "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Hiçbir şey çalmazken veya çalma duraklatıldığında ekran bu süreden sonra kapanır (bu ekranı korur). Bir başlatma, bir etiket veya \"Kutunun adresini göster\"e dokunmak onu uyandırır.",
+ "Am DSI-Anschluss ist kein Display zu erkennen (er meldet sich auch ohne Display als verbunden). Beim Einschalten fragt die App nach.": "DSI bağlantısında ekran algılanmıyor (ekran olmadan da bağlı görünür). Açarken uygulama sorar.",
+ "Ohne Display starten": "Ekransız başlat",
+ "Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?": "DSI bağlantısında ekran algılanmıyor. Yine de bir ekran takılıysa bir sonraki yeniden başlatmadan sonra karanlık kalır. Ekransız başlatılsın mı?",
+ "OLED-Bild": "OLED resmi",
+ "OLED-Bild gespeichert": "OLED resmi kaydedildi",
+ "OLED-Bild entfernt": "OLED resmi kaldırıldı",
+ "Das Bild muss genau 128 × 50 Punkte groß sein": "Resim tam olarak 128 × 50 piksel olmalı",
+ "Dieser Tag lässt sich nicht ansprechen": "Bu etikete erişilemiyor",
+ "Podcast und Radio zeigen": "Podcast ve radyo gösterimi",
+ "Bild, falls vorhanden": "Varsa resim",
+ "Titel und Uhrzeit": "Başlık ve saat",
+ "Bei einem Podcast oder Radiosender: das Bild des Tags (siehe NFC-Extension › Zugeordnete Tags), solange der Tag das Medium gestartet hat und ein Bild hat, sonst und bei „Titel und Uhrzeit“ der Titel mit der Uhrzeit mittig darunter, doppelt so groß wie der Titel. Gilt für alle drei Anzeigen. Alben und Hörspiele zeigen ihr Bild des Tags immer.": "Bir podcast veya radyo istasyonunda: etiket medyayı başlattığı ve bir resmi olduğu sürece etiketin resmi (bkz. NFC eklentisi › Atanmış etiketler); aksi halde ve „Başlık ve saat“ seçiliyken başlık ve altında ortalanmış, başlığın iki katı büyüklüğünde saat. Üç görünümün hepsi için geçerlidir. Albümler ve sesli kitaplar her zaman etiketlerinin resmini gösterir.",
+ "Dieser Tag hat schon ein OLED-Bild. Möchtest du es ändern?": "Bu etiketin zaten bir OLED resmi var. Değiştirmek istiyor musun?",
+ "Dieser Tag hat kein OLED-Bild": "Bu etiketin OLED resmi yok"
 }

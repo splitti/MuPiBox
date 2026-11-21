@@ -4704,5 +4704,19 @@
  "Zeigt zehn Sekunden lang einen QR-Code mit der Adresse der Box und sonst nichts. Mit dem Handy scannen öffnet die Box.": "Viser i ti sekunder en QR-kode med adressen til boksen og ingenting annet. Skanner du den med mobilen, åpnes boksen.",
  "Nächste Anzeige": "Neste visning",
  "Wechselt bis zum nächsten Speichern zwischen Voll, Mix und Kompakt.": "Bytter mellom Full, Mix og Kompakt til neste lagring.",
- "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Når ingenting spilles eller avspillingen er satt på pause, slås skjermen av etter denne tiden (det skåner den). En start, en tagg eller et trykk på «Vis adressen til boksen» vekker den."
+ "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Når ingenting spilles eller avspillingen er satt på pause, slås skjermen av etter denne tiden (det skåner den). En start, en tagg eller et trykk på «Vis adressen til boksen» vekker den.",
+ "Am DSI-Anschluss ist kein Display zu erkennen (er meldet sich auch ohne Display als verbunden). Beim Einschalten fragt die App nach.": "Det er ikke noe skjerm å se på DSI-kontakten (den melder seg som tilkoblet også uten skjerm). Appen spør når du slår det på.",
+ "Ohne Display starten": "Start uten skjerm",
+ "Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?": "Det er ikke noe skjerm å se på DSI-kontakten. Hvis det likevel sitter en der, blir den mørk etter neste omstart. Starte uten skjerm?",
+ "OLED-Bild": "OLED-bilde",
+ "OLED-Bild gespeichert": "OLED-bilde lagret",
+ "OLED-Bild entfernt": "OLED-bilde fjernet",
+ "Das Bild muss genau 128 × 50 Punkte groß sein": "Bildet må være nøyaktig 128 × 50 piksler",
+ "Dieser Tag lässt sich nicht ansprechen": "Denne taggen kan ikke nås",
+ "Podcast und Radio zeigen": "Vis podkast og radio",
+ "Bild, falls vorhanden": "Bilde, hvis det finnes",
+ "Titel und Uhrzeit": "Tittel og klokkeslett",
+ "Bei einem Podcast oder Radiosender: das Bild des Tags (siehe NFC-Extension › Zugeordnete Tags), solange der Tag das Medium gestartet hat und ein Bild hat, sonst und bei „Titel und Uhrzeit“ der Titel mit der Uhrzeit mittig darunter, doppelt so groß wie der Titel. Gilt für alle drei Anzeigen. Alben und Hörspiele zeigen ihr Bild des Tags immer.": "For en podkast eller radiostasjon: bildet til taggen (se NFC-utvidelsen › Tilordnede tagger) så lenge taggen startet mediet og har et bilde; ellers, og med «Tittel og klokkeslett», tittelen med klokkeslettet midtstilt under, dobbelt så stort som tittelen. Gjelder alle tre visningene. Album og lydbøker viser alltid bildet til taggen sin.",
+ "Dieser Tag hat schon ein OLED-Bild. Möchtest du es ändern?": "Denne taggen har allerede et OLED-bilde. Vil du endre det?",
+ "Dieser Tag hat kein OLED-Bild": "Denne taggen har ikke noe OLED-bilde"
 }

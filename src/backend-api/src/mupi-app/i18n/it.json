@@ -4704,5 +4704,19 @@
  "Zeigt zehn Sekunden lang einen QR-Code mit der Adresse der Box und sonst nichts. Mit dem Handy scannen öffnet die Box.": "Mostra per dieci secondi un codice QR con l'indirizzo della scatola e nient'altro. Scansionandolo con il telefono si apre la scatola.",
  "Nächste Anzeige": "Layout successivo",
  "Wechselt bis zum nächsten Speichern zwischen Voll, Mix und Kompakt.": "Passa tra Completa, Mix e Compatta fino al prossimo salvataggio.",
- "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Quando non suona nulla o la riproduzione è in pausa, il display si spegne dopo questo tempo (così si preserva). Un avvio, un tag o un tocco su «Mostra l'indirizzo della box» lo riattiva."
+ "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Quando non suona nulla o la riproduzione è in pausa, il display si spegne dopo questo tempo (così si preserva). Un avvio, un tag o un tocco su «Mostra l'indirizzo della box» lo riattiva.",
+ "Am DSI-Anschluss ist kein Display zu erkennen (er meldet sich auch ohne Display als verbunden). Beim Einschalten fragt die App nach.": "Sul connettore DSI non si rileva alcun display (risulta collegato anche senza display). L’app chiede conferma all’attivazione.",
+ "Ohne Display starten": "Avvia senza display",
+ "Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?": "Sul connettore DSI non si rileva alcun display. Se invece ce n’è uno collegato, resterà spento dopo il prossimo riavvio. Avviare senza display?",
+ "OLED-Bild": "Immagine OLED",
+ "OLED-Bild gespeichert": "Immagine OLED salvata",
+ "OLED-Bild entfernt": "Immagine OLED rimossa",
+ "Das Bild muss genau 128 × 50 Punkte groß sein": "L’immagine deve essere esattamente di 128 × 50 pixel",
+ "Dieser Tag lässt sich nicht ansprechen": "Impossibile accedere a questo tag",
+ "Podcast und Radio zeigen": "Mostra podcast e radio",
+ "Bild, falls vorhanden": "Immagine, se presente",
+ "Titel und Uhrzeit": "Titolo e ora",
+ "Bei einem Podcast oder Radiosender: das Bild des Tags (siehe NFC-Extension › Zugeordnete Tags), solange der Tag das Medium gestartet hat und ein Bild hat, sonst und bei „Titel und Uhrzeit“ der Titel mit der Uhrzeit mittig darunter, doppelt so groß wie der Titel. Gilt für alle drei Anzeigen. Alben und Hörspiele zeigen ihr Bild des Tags immer.": "Per un podcast o una stazione radio: l’immagine del tag (vedi estensione NFC › Tag assegnati) finché è stato il tag ad avviare il contenuto e ha un’immagine; altrimenti, e con «Titolo e ora», il titolo con l’ora centrata sotto, grande il doppio del titolo. Vale per tutte e tre le visualizzazioni. Album e audiolibri mostrano sempre l’immagine del loro tag.",
+ "Dieser Tag hat schon ein OLED-Bild. Möchtest du es ändern?": "Questo tag ha già un’immagine OLED. Vuoi cambiarla?",
+ "Dieser Tag hat kein OLED-Bild": "Questo tag non ha un’immagine OLED"
 }

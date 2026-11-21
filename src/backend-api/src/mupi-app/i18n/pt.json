@@ -4704,5 +4704,19 @@
  "Zeigt zehn Sekunden lang einen QR-Code mit der Adresse der Box und sonst nichts. Mit dem Handy scannen öffnet die Box.": "Mostra durante dez segundos um código QR com o endereço da caixa e nada mais. Ao digitalizá-lo com o telemóvel, a caixa abre.",
  "Nächste Anzeige": "Vista seguinte",
  "Wechselt bis zum nächsten Speichern zwischen Voll, Mix und Kompakt.": "Alterna entre Completa, Mix e Compacta até à próxima gravação.",
- "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Quando nada toca ou a reprodução está em pausa, o ecrã desliga-se após este tempo (isso poupa-o). Um arranque, uma etiqueta ou um toque em «Mostrar o endereço da caixa» acorda-o."
+ "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Quando nada toca ou a reprodução está em pausa, o ecrã desliga-se após este tempo (isso poupa-o). Um arranque, uma etiqueta ou um toque em «Mostrar o endereço da caixa» acorda-o.",
+ "Am DSI-Anschluss ist kein Display zu erkennen (er meldet sich auch ohne Display als verbunden). Beim Einschalten fragt die App nach.": "Não é detetado nenhum ecrã no conector DSI (aparece como ligado mesmo sem ecrã). A app pergunta ao ativar.",
+ "Ohne Display starten": "Iniciar sem ecrã",
+ "Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?": "Não é detetado nenhum ecrã no conector DSI. Se mesmo assim houver um ligado, ficará escuro após o próximo reinício. Iniciar sem ecrã?",
+ "OLED-Bild": "Imagem OLED",
+ "OLED-Bild gespeichert": "Imagem OLED guardada",
+ "OLED-Bild entfernt": "Imagem OLED removida",
+ "Das Bild muss genau 128 × 50 Punkte groß sein": "A imagem tem de ter exatamente 128 × 50 píxeis",
+ "Dieser Tag lässt sich nicht ansprechen": "Não é possível aceder a esta etiqueta",
+ "Podcast und Radio zeigen": "Mostrar podcast e rádio",
+ "Bild, falls vorhanden": "Imagem, se existir",
+ "Titel und Uhrzeit": "Título e hora",
+ "Bei einem Podcast oder Radiosender: das Bild des Tags (siehe NFC-Extension › Zugeordnete Tags), solange der Tag das Medium gestartet hat und ein Bild hat, sonst und bei „Titel und Uhrzeit“ der Titel mit der Uhrzeit mittig darunter, doppelt so groß wie der Titel. Gilt für alle drei Anzeigen. Alben und Hörspiele zeigen ihr Bild des Tags immer.": "Num podcast ou estação de rádio: a imagem da etiqueta (ver extensão NFC › Etiquetas atribuídas) enquanto a etiqueta tiver iniciado o conteúdo e tiver imagem; caso contrário, e com «Título e hora», o título com a hora centrada por baixo, duas vezes maior que o título. Aplica-se às três vistas. Os álbuns e audiolivros mostram sempre a imagem da sua etiqueta.",
+ "Dieser Tag hat schon ein OLED-Bild. Möchtest du es ändern?": "Esta etiqueta já tem uma imagem OLED. Queres alterá-la?",
+ "Dieser Tag hat kein OLED-Bild": "Esta etiqueta não tem imagem OLED"
 }
