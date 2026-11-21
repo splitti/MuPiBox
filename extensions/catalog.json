@@ -76,12 +76,12 @@
   {
     "id": "nfc",
     "name": "NFC-Extension",
-    "version": "0.15.1",
+    "version": "0.15.2",
     "description": "Bis zu drei NFC-Leser lesen Tags und Karten, auch gleichzeitig: der PN5180 (ISO 14443 A und ISO 15693), der RC522 und der PN532 (ISO 14443 A) oder ein USB-Leser, der die Kartennummer wie eine Tastatur tippt (auch ein USB-Barcodeleser). Jeder Tag kann ein Album, ein Hörspiel, einen Sender oder einen Podcast starten: In der Bibliothek das Medium öffnen, „NFC-Tag“ antippen und den Tag auflegen. Die Einstellungen stehen unter Einstellungen › NFC-Extension.",
     "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjE1MCAxNTAgNTAwIDUwMCI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iNDIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTI1NSA2MDBDMjE4IDU4NiAxOTggNTU4IDE5OCA1MjJWMjc1UTE5OCAxOTggMjc1IDE5OEg0MDVRNDk3IDE5OCA0OTcgMjkwVjUzN0wzNzIgNDMwIi8+PHBhdGggZD0iTTU0NSAxOThDNTgzIDIxMiA2MDIgMjQwIDYwMiAyNzdWNTI1UTYwMiA2MDIgNTI1IDYwMkg0MDBRMzAzIDYwMiAzMDMgNTEwVjI2Mkw0MzAgMzcyIi8+PC9nPjwvc3ZnPgo=",
-    "hostApi": 12,
-    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/nfc-0.15.1.mpx",
-    "sha256": "a0d036d6d9d3536e590895c371ca71091964b0323e5b495cc2d2e56034137480",
+    "hostApi": 16,
+    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/nfc-0.15.2.mpx",
+    "sha256": "34f696c0952f47e667d6fd9652be1703daf35671f3b49f6334e164b9055a450a",
     "size": 82247,
     "resources": {},
     "system": {
@@ -102,8 +102,8 @@
     "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48ZyBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIzMCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB4PSI1NiIgeT0iMTIwIiB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI0MCIgcng9IjM2Ii8+PHBhdGggZD0iTTEyMCAyMDBoMTEyTTEyMCAyNTBoMTgwTTEyMCAzMDBoODAiLz48cGF0aCBkPSJNMzYwIDE5MHYxMTBNMzkwIDIxNXY2ME0zMzAgMjI1djQwIi8+PHBhdGggZD0iTTIwMCA0MjBoMTEyIi8+PC9nPjwvc3ZnPgo=",
     "hostApi": 14,
     "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/oled-0.7.3.mpx",
-    "sha256": "dcd4c6b2eb3e71dc9674d179c07dd1bb4b4e165dcd24561ef3621834899228fb",
-    "size": 52025,
+    "sha256": "94a8da531475269976a54aedbf974c50c5b50e53691f9110c35c238c95c61571",
+    "size": 52112,
     "resources": {},
     "system": {
       "udev": 1,

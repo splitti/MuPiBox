@@ -4704,5 +4704,19 @@
  "Zeigt zehn Sekunden lang einen QR-Code mit der Adresse der Box und sonst nichts. Mit dem Handy scannen öffnet die Box.": "Na deset sekund ukáže QR kód s adresou boxu a nic jiného. Po naskenování mobilem se box otevře.",
  "Nächste Anzeige": "Další zobrazení",
  "Wechselt bis zum nächsten Speichern zwischen Voll, Mix und Kompakt.": "Přepíná mezi Plným, Mix a Kompaktním až do dalšího uložení.",
- "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Když nic nehraje nebo je přehrávání pozastavené, displej se po této době vypne (šetří se tím). Probudí ho start, tag nebo klepnutí na „Zobrazit adresu krabičky“."
+ "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Když nic nehraje nebo je přehrávání pozastavené, displej se po této době vypne (šetří se tím). Probudí ho start, tag nebo klepnutí na „Zobrazit adresu krabičky“.",
+ "Am DSI-Anschluss ist kein Display zu erkennen (er meldet sich auch ohne Display als verbunden). Beim Einschalten fragt die App nach.": "Na konektoru DSI není vidět žádný displej (hlásí se jako připojený i bez displeje). Při zapnutí se aplikace zeptá.",
+ "Ohne Display starten": "Spustit bez displeje",
+ "Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?": "Na konektoru DSI není vidět žádný displej. Pokud je přesto nějaký připojen, zůstane po příštím restartu tmavý. Spustit bez displeje?",
+ "OLED-Bild": "Obrázek pro OLED",
+ "OLED-Bild gespeichert": "Obrázek pro OLED uložen",
+ "OLED-Bild entfernt": "Obrázek pro OLED odebrán",
+ "Das Bild muss genau 128 × 50 Punkte groß sein": "Obrázek musí mít přesně 128 × 50 pixelů",
+ "Dieser Tag lässt sich nicht ansprechen": "S tímto tagem nelze pracovat",
+ "Podcast und Radio zeigen": "Zobrazení podcastu a rádia",
+ "Bild, falls vorhanden": "Obrázek, pokud existuje",
+ "Titel und Uhrzeit": "Název a čas",
+ "Bei einem Podcast oder Radiosender: das Bild des Tags (siehe NFC-Extension › Zugeordnete Tags), solange der Tag das Medium gestartet hat und ein Bild hat, sonst und bei „Titel und Uhrzeit“ der Titel mit der Uhrzeit mittig darunter, doppelt so groß wie der Titel. Gilt für alle drei Anzeigen. Alben und Hörspiele zeigen ihr Bild des Tags immer.": "U podcastu nebo rozhlasové stanice: obrázek tagu (viz rozšíření NFC › Přiřazené tagy), dokud médium spustil tag a ten má obrázek; jinak a u volby „Název a čas“ název s časem uprostřed pod ním, dvakrát větším než název. Platí pro všechna tři zobrazení. Alba a audioknihy ukazují obrázek svého tagu vždy.",
+ "Dieser Tag hat schon ein OLED-Bild. Möchtest du es ändern?": "Tento tag už má obrázek pro OLED. Chceš ho změnit?",
+ "Dieser Tag hat kein OLED-Bild": "Tento tag nemá obrázek pro OLED"
 }

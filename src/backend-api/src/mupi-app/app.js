@@ -19878,8 +19878,10 @@ const CONTROLLERS = {
           if (!r.ok) {
             state.values.set('headless', !v)
             shownValues.set('headless', !v)
-            toast(r.body?.error === 'dsi_connected' ? 'Ein DSI-Display ist angeschlossen – die Box bliebe dunkel' : 'Nicht gespeichert', 'info')
             renderPage(currentPage(), false)
+            // (the page was older than what the box knows now: it asks, as if it had known)
+            if (r.body?.error === 'dsi_unconfirmed' && !confirm) return ask()
+            toast(r.body?.error === 'dsi_connected' ? 'Ein DSI-Display ist angeschlossen – die Box bliebe dunkel' : 'Nicht gespeichert', 'info')
             return
           }
           disp.headless = r.body
@@ -19889,16 +19891,17 @@ const CONTROLLERS = {
         }
         // (a DSI overlay without a panel looks connected to the kernel, and a panel without a touch chip shows nothing: the user says
         // whether a display hangs there - the switch stays off until the answer)
-        if (v === true && disp.headless?.dsiUnconfirmed && !disp.headless.on) {
-          state.values.set('headless', false)
-          shownValues.set('headless', false)
-          renderPage(currentPage(), false)
+        const ask = () =>
           confirmSheet('Ohne Display starten', 'Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?', () => {
             state.values.set('headless', true)
             shownValues.set('headless', true)
             void send(true)
           })
-          return
+        if (v === true && disp.headless?.dsiUnconfirmed && !disp.headless.on) {
+          state.values.set('headless', false)
+          shownValues.set('headless', false)
+          renderPage(currentPage(), false)
+          return ask()
         }
         return send(false)
       }

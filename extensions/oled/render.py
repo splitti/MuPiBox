@@ -154,8 +154,10 @@ class Pictures:
             with Image.open(path) as source:
                 # (a file that is not of the size - made by hand in the folder - is no picture: nothing is cut or stretched)
                 image = source.convert('1') if source.size == TAG_PICTURE_SIZE else None
-        except (OSError, ValueError):
-            return None
+        # (anything PIL may raise on a broken or oversized file made by hand - DecompressionBombError, SyntaxError - is no picture,
+        # and kept as none: the driver must not stop on it)
+        except Exception:
+            image = None
         self._kept[('tag', uid)] = (key, image)
         return image
 

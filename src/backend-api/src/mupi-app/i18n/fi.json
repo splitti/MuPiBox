@@ -4704,5 +4704,19 @@
  "Zeigt zehn Sekunden lang einen QR-Code mit der Adresse der Box und sonst nichts. Mit dem Handy scannen öffnet die Box.": "Näyttää kymmenen sekunnin ajan QR-koodin laatikon osoitteella eikä muuta. Puhelimella skannattuna laatikko aukeaa.",
  "Nächste Anzeige": "Seuraava näkymä",
  "Wechselt bis zum nächsten Speichern zwischen Voll, Mix und Kompakt.": "Vaihtaa Täyden, Mixin ja Kompaktin välillä seuraavaan tallennukseen asti.",
- "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Kun mitään ei soi tai toisto on tauolla, näyttö sammuu tämän ajan jälkeen (se säästää sitä). Käynnistys, tagi tai napautus kohtaan \"Näytä laatikon osoite\" herättää sen."
+ "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Kun mitään ei soi tai toisto on tauolla, näyttö sammuu tämän ajan jälkeen (se säästää sitä). Käynnistys, tagi tai napautus kohtaan \"Näytä laatikon osoite\" herättää sen.",
+ "Am DSI-Anschluss ist kein Display zu erkennen (er meldet sich auch ohne Display als verbunden). Beim Einschalten fragt die App nach.": "DSI-liitännässä ei näy näyttöä (se ilmoittaa olevansa kytketty myös ilman näyttöä). Sovellus kysyy, kun kytket tämän päälle.",
+ "Ohne Display starten": "Käynnistä ilman näyttöä",
+ "Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?": "DSI-liitännässä ei näy näyttöä. Jos siinä kuitenkin on näyttö, se pysyy pimeänä seuraavan uudelleenkäynnistyksen jälkeen. Käynnistetäänkö ilman näyttöä?",
+ "OLED-Bild": "OLED-kuva",
+ "OLED-Bild gespeichert": "OLED-kuva tallennettu",
+ "OLED-Bild entfernt": "OLED-kuva poistettu",
+ "Das Bild muss genau 128 × 50 Punkte groß sein": "Kuvan on oltava tasan 128 × 50 pikseliä",
+ "Dieser Tag lässt sich nicht ansprechen": "Tähän tunnisteeseen ei saada yhteyttä",
+ "Podcast und Radio zeigen": "Podcastin ja radion näyttö",
+ "Bild, falls vorhanden": "Kuva, jos sellainen on",
+ "Titel und Uhrzeit": "Nimi ja kellonaika",
+ "Bei einem Podcast oder Radiosender: das Bild des Tags (siehe NFC-Extension › Zugeordnete Tags), solange der Tag das Medium gestartet hat und ein Bild hat, sonst und bei „Titel und Uhrzeit“ der Titel mit der Uhrzeit mittig darunter, doppelt so groß wie der Titel. Gilt für alle drei Anzeigen. Alben und Hörspiele zeigen ihr Bild des Tags immer.": "Podcastissa tai radiokanavassa: tunnisteen kuva (katso NFC-laajennus › Liitetyt tunnisteet), kun tunniste käynnisti median ja sillä on kuva; muuten, ja valinnalla ”Nimi ja kellonaika”, nimi ja sen alla keskellä kellonaika kaksi kertaa nimeä suurempana. Koskee kaikkia kolmea näkymää. Albumit ja äänikirjat näyttävät aina tunnisteensa kuvan.",
+ "Dieser Tag hat schon ein OLED-Bild. Möchtest du es ändern?": "Tällä tunnisteella on jo OLED-kuva. Haluatko vaihtaa sen?",
+ "Dieser Tag hat kein OLED-Bild": "Tällä tunnisteella ei ole OLED-kuvaa"
 }

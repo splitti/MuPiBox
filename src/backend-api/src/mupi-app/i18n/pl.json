@@ -4704,5 +4704,19 @@
  "Zeigt zehn Sekunden lang einen QR-Code mit der Adresse der Box und sonst nichts. Mit dem Handy scannen öffnet die Box.": "Pokazuje przez dziesięć sekund kod QR z adresem pudełka i nic więcej. Zeskanowanie go telefonem otwiera pudełko.",
  "Nächste Anzeige": "Następny widok",
  "Wechselt bis zum nächsten Speichern zwischen Voll, Mix und Kompakt.": "Przełącza między Pełnym, Mix i Kompaktowym do następnego zapisu.",
- "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Gdy nic nie gra lub odtwarzanie jest wstrzymane, wyświetlacz wyłącza się po tym czasie (to go oszczędza). Start, tag lub dotknięcie „Pokaż adres skrzynki” go budzi."
+ "Wenn nichts spielt oder die Wiedergabe pausiert, schaltet sich das Display nach dieser Zeit aus (das schont es). Ein Start, ein Tag oder ein Tipp auf „Adresse der Box zeigen“ weckt es.": "Gdy nic nie gra lub odtwarzanie jest wstrzymane, wyświetlacz wyłącza się po tym czasie (to go oszczędza). Start, tag lub dotknięcie „Pokaż adres skrzynki” go budzi.",
+ "Am DSI-Anschluss ist kein Display zu erkennen (er meldet sich auch ohne Display als verbunden). Beim Einschalten fragt die App nach.": "Na złączu DSI nie widać wyświetlacza (zgłasza się jako podłączone także bez wyświetlacza). Aplikacja zapyta przy włączaniu.",
+ "Ohne Display starten": "Uruchom bez wyświetlacza",
+ "Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?": "Na złączu DSI nie widać wyświetlacza. Jeśli jednak jakiś jest podłączony, po następnym restarcie pozostanie ciemny. Uruchomić bez wyświetlacza?",
+ "OLED-Bild": "Obraz OLED",
+ "OLED-Bild gespeichert": "Obraz OLED zapisany",
+ "OLED-Bild entfernt": "Obraz OLED usunięty",
+ "Das Bild muss genau 128 × 50 Punkte groß sein": "Obraz musi mieć dokładnie 128 × 50 pikseli",
+ "Dieser Tag lässt sich nicht ansprechen": "Nie można uzyskać dostępu do tego tagu",
+ "Podcast und Radio zeigen": "Wyświetlanie podcastu i radia",
+ "Bild, falls vorhanden": "Obraz, jeśli jest",
+ "Titel und Uhrzeit": "Tytuł i godzina",
+ "Bei einem Podcast oder Radiosender: das Bild des Tags (siehe NFC-Extension › Zugeordnete Tags), solange der Tag das Medium gestartet hat und ein Bild hat, sonst und bei „Titel und Uhrzeit“ der Titel mit der Uhrzeit mittig darunter, doppelt so groß wie der Titel. Gilt für alle drei Anzeigen. Alben und Hörspiele zeigen ihr Bild des Tags immer.": "Przy podcaście lub stacji radiowej: obraz tagu (zob. rozszerzenie NFC › Przypisane tagi), dopóki to tag uruchomił medium i ma obraz; w przeciwnym razie, oraz przy „Tytuł i godzina”, tytuł z godziną wyśrodkowaną pod nim, dwa razy większą niż tytuł. Dotyczy wszystkich trzech widoków. Albumy i audiobooki zawsze pokazują obraz swojego tagu.",
+ "Dieser Tag hat schon ein OLED-Bild. Möchtest du es ändern?": "Ten tag ma już obraz OLED. Chcesz go zmienić?",
+ "Dieser Tag hat kein OLED-Bild": "Ten tag nie ma obrazu OLED"
 }
