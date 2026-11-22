@@ -3589,12 +3589,7 @@ async function playNasList(nasPath, resume = null) {
     currentMeta.path = decodedPath
     currentMeta.trackFile = undefined
 
-    // mplayer takes an http URL of a .wma file for a Windows Media stream server (STREAM_ASF) and stops at once;
-    // through ffmpeg's http reader it plays as the file it is.
-    const playlistLines = (cueMode ? [tracks[0]] : tracks).map((track) => {
-      const url = `http://localhost:8200/api/nas/stream?path=${encodeURIComponent(track.path)}`
-      return /\.wma$/i.test(track.path) ? `ffmpeg://${url}` : url
-    })
+    const playlistLines = (cueMode ? [tracks[0]] : tracks).map(nasStreamUrl)
     const tmpPlaylistPath = '/tmp/nas_playlist.m3u'
     fs.writeFileSync(tmpPlaylistPath, playlistLines.join('\n'))
     currentMeta.currentTracknr = 0
@@ -4922,10 +4917,9 @@ const nasTrackByPath = new Map()
 const rememberNasTracks = (tracks) => {
   for (const track of tracks) if (track?.path) nasTrackByPath.set(track.path, track)
 }
-const nasStreamUrl = (track) => {
-  const url = `http://localhost:8200/api/nas/stream?path=${encodeURIComponent(track.path)}`
-  return /\.wma$/i.test(track.path) ? `ffmpeg://${url}` : url
-}
+// (a .wma too as it is: mpv plays it through ffmpeg's http reader. The "ffmpeg://" prefix that mplayer needed for it - it took an http
+// URL of a .wma for a Windows Media stream server - is refused by mpv as an entry of a playlist: "Refusing to load potentially unsafe URL")
+const nasStreamUrl = (track) => `http://localhost:8200/api/nas/stream?path=${encodeURIComponent(track.path)}`
 
 /** 'local', 'nas', or null: what kind of queue plays now (null - nothing, a CD, a CUE album, TIDAL, Spotify: no queue to edit) */
 function queueKind() {
