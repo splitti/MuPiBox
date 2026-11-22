@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Quick deploy of the core (backend, app, manual, kiosk frontend, scripts) to a test box - seconds instead of a full update.
 
-    python tools/deploy-core.py <ip> [target ...] [--no-build] [--quick] [--dry-run]
+    python tools/deploy-core.py <ip> [target ...] [--no-build] [--quick] [--dry-run] [--restart-player | --restart-when-idle]
 
 Targets (default: backend scripts):
   server    server.js, nas-smb-helper.js, templates/   -> the server folder         (restarts the server)
@@ -10,7 +10,10 @@ Targets (default: backend scripts):
   backend   = server + app + manual
   www       the kiosk frontend (Angular)                -> server folder/www         (keeps theme-data and active_theme.css)
   scripts   scripts/mupibox/                            -> /usr/local/bin/mupibox    (as root, line endings fixed)
-  all       = backend + www + scripts
+  player    spotify-control.js (the player, built)      -> ~/.mupibox/player         (takes effect when the player restarts:
+                                                          --restart-player now, --restart-when-idle once nothing plays - a restart
+                                                          stops what plays)
+  all       = backend + www + scripts + player
 
 Builds what the targets need first (npm run build:fast in backend-api: no type check with --quick; build:frontend-box for www),
 unless --no-build. Then compares sha256 of every file with the box and sends only what differs (one tar over one ssh stream),
@@ -33,6 +36,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPLOY = os.path.join(ROOT, 'src', 'deploy')
 SERVER = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master'
 BIN = '/usr/local/bin/mupibox'
+PLAYER = '/home/dietpi/.mupibox/player'
 KEYS = [os.environ['MUPIBOX_KEY']] if os.environ.get('MUPIBOX_KEY') else [os.path.expanduser('~/.ssh/' + name) for name in ('mupibox_testbox', 'mupibox_pi5')]
 SSH = ['ssh', '-i', KEYS[0], '-o', 'IdentitiesOnly=yes', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=8']
 
@@ -92,6 +96,8 @@ def make_targets(names):
         files = {'www/' + rel: full for rel, full in walk(src)}
         # only the hashed build files at the top may be removed; assets/, theme-data/ and active_theme.css stay
         out.append(Target('www', SERVER, files, delete=lambda rel: bool(WWW_BUILD_FILE.match(rel[len('www/'):]))))
+    if 'player' in names:
+        out.append(Target('player', PLAYER, {'spotify-control.js': os.path.join(DEPLOY, 'spotify-control.js')}))
     if 'scripts' in names:
         src = os.path.join(ROOT, 'scripts', 'mupibox')
         files = {rel: full for rel, full in walk(src) if not rel.startswith('test_')}
@@ -114,6 +120,8 @@ def build(names, quick):
         run('npm run ' + ('build:fast' if quick else 'build') + ' --workspace=mupibox-backend-api', ROOT, 'build backend-api' + (' (no type check)' if quick else ''))
     if 'www' in names:
         run('npm run build:frontend-box', ROOT, 'build frontend-box')
+    if 'player' in names:
+        run('npm run build --workspace=mupibox-backend-player', ROOT, 'build backend-player')
 
 
 LIST_SCRIPT = r'''
@@ -170,6 +178,34 @@ def ssh(host, remote, data=None):
     return res.stdout
 
 
+# Waits until nothing plays any more (not playing, not paused, not loading: twice in a row), restarts the player and removes itself.
+WAIT_SCRIPT = r'''#!/bin/bash
+log=/tmp/restart-when-idle.log
+idle=0
+for i in $(seq 1 480); do
+  s=$(curl -s -m 5 localhost:5005/local | python3 -c "import json,sys;d=json.load(sys.stdin);print('busy' if (d.get('playing') or d.get('pause') or d.get('loading')) else 'idle')" 2>/dev/null || echo unknown)
+  if [ "$s" = idle ]; then idle=$((idle+1)); else idle=0; fi
+  if [ $idle -ge 2 ]; then
+    pm2 restart spotify-control >> $log 2>&1 && echo "$(date '+%F %T') restarted spotify-control" >> $log
+    rm -f /tmp/restart-when-idle.sh; exit 0
+  fi
+  sleep 30
+done
+echo "$(date '+%F %T') gave up: still busy after 4 h" >> $log
+rm -f /tmp/restart-when-idle.sh
+'''
+
+
+def restart_player(host, now):
+    if now:
+        ssh(host, 'pm2 restart spotify-control >/dev/null && echo "player restarted"')
+        print('player restarted')
+        return
+    script = 'cat > /tmp/restart-when-idle.sh && chmod +x /tmp/restart-when-idle.sh && rm -f /tmp/restart-when-idle.log && (nohup /tmp/restart-when-idle.sh >/dev/null 2>&1 < /dev/null &) ; sleep 1; pgrep -f restart-when-idle.sh | head -1'
+    ssh(host, script, WAIT_SCRIPT.encode())
+    print('player: restarts once nothing plays any more (log: /tmp/restart-when-idle.log on the box)')
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('ip')
@@ -177,13 +213,15 @@ def main():
     ap.add_argument('--no-build', action='store_true')
     ap.add_argument('--quick', action='store_true', help='skip the type check of the backend build')
     ap.add_argument('--dry-run', action='store_true')
+    ap.add_argument('--restart-player', action='store_true', help='restart the player after sending it (stops what plays)')
+    ap.add_argument('--restart-when-idle', action='store_true', help='restart the player once nothing plays any more (a box-side script waits for it; up to 4 hours)')
     args = ap.parse_args()
 
-    groups = {'backend': {'server', 'app', 'manual'}, 'all': {'server', 'app', 'manual', 'www', 'scripts'}}
+    groups = {'backend': {'server', 'app', 'manual'}, 'all': {'server', 'app', 'manual', 'www', 'scripts', 'player'}}
     names = set()
     for t in args.targets or ['backend', 'scripts']:
         names |= groups.get(t, {t})
-    unknown = names - {'server', 'app', 'manual', 'www', 'scripts'}
+    unknown = names - {'server', 'app', 'manual', 'www', 'scripts', 'player'}
     if unknown:
         sys.exit('unknown target: ' + ', '.join(sorted(unknown)))
 
@@ -245,6 +283,10 @@ def main():
                 break
             time.sleep(2)
         print(f'www: serves {served or "nothing yet"}, built {built[0] if built else "?"}' + ('' if served in built else '  <-- MISMATCH'))
+    if 'player' in names and (args.restart_player or args.restart_when_idle):
+        restart_player(args.ip, now=args.restart_player)
+    elif 'player' in names and any(p['name'] == 'player' and p['changed'] for p in plan):
+        print('player: sent, it runs the new file after its next restart (--restart-player, or --restart-when-idle)')
     print(f'done in {time.time() - t0:.1f} s' + (' (after the build)' if not args.no_build else ''))
 
 
