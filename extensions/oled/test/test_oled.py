@@ -897,6 +897,17 @@ class BroadcastTest(unittest.TestCase):
         later = self.screens.render({**podcast, 'mode': 'mix', 'elapsed': 900}, 0).crop((0, 0, 128, 2)).getbbox()
         self.assertEqual(later[2], 115)
 
+    def test_a_radio_stream_has_no_bar_even_when_the_player_says_it_has_a_length(self):
+        station = {**self.STATE, 'duration': 1000, 'elapsed': 500}
+        for mode in ('mix', 'lite'):
+            self.assertIsNone(self.screens.render({**station, 'mode': mode}, 0).crop((0, 0, 128, 2)).getbbox(), mode)
+            self.assertIsNone(self.screens.render({**station, 'mode': mode, 'tagPicture': 'A1'}, 0).crop((0, 0, 128, 2)).getbbox(), mode)
+        # (Full has no bar anyway: the status bar is at the top - nothing about the length shows up there)
+        self.assertEqual(self.screens.render({**station, 'mode': 'full'}, 0).crop((0, 0, 128, 12)).tobytes(), self.screens.render({**station, 'mode': 'full', 'duration': None}, 0).crop((0, 0, 128, 12)).tobytes())
+        small = render.Screens(128, 32, pictures=render.Pictures(self.builtin, self.custom, 128, 32))
+        self.assertIsNone(small.render(station, 0).crop((0, 0, 128, 2)).getbbox())
+        self.assertIsNone(small.render({**station, 'time': ''}, 0).crop((0, 0, 128, 2)).getbbox())
+
     def test_a_podcast_with_the_picture_of_its_tag_has_the_bar_turned_over_it(self):
         podcast = {**self.STATE, 'stream': False, 'duration': 1000, 'elapsed': 500, 'tagPicture': 'A1'}
         for mode in ('mix', 'lite'):

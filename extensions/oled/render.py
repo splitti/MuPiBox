@@ -766,7 +766,8 @@ class Screens:
 
     def _progress(self, draw, state):
         pos, dur = state.get('elapsed'), state.get('duration')
-        if isinstance(pos, (int, float)) and isinstance(dur, (int, float)) and dur > 0:
+        # (a radio stream has none, whatever length the player thinks it has)
+        if not state.get('stream') and isinstance(pos, (int, float)) and isinstance(dur, (int, float)) and dur > 0:
             width = int(self.width * min(1.0, max(0.0, pos / dur)))
             draw.rectangle((0, 0, max(0, width - 1), 1), fill=1)
         # (a stream has no end: no bar - a full one would only look like a medium that is over)
@@ -775,7 +776,7 @@ class Screens:
         """The bar of the progress over the top rows of a picture of a tag: where the bar goes, the picture's points are turned round, so it
         shows on white as on black. Only a podcast has one (a radio station has no length; an album keeps its picture whole)."""
         pos, dur = state.get('elapsed'), state.get('duration')
-        if state.get('broadcast') and isinstance(pos, (int, float)) and isinstance(dur, (int, float)) and dur > 0:
+        if state.get('broadcast') and not state.get('stream') and isinstance(pos, (int, float)) and isinstance(dur, (int, float)) and dur > 0:
             width = max(1, int(self.width * min(1.0, max(0.0, pos / dur))))
             box = (0, 0, width, 2)
             image.paste(ImageChops.invert(image.crop(box)), box)
