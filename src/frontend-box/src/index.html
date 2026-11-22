@@ -26,14 +26,39 @@
          shows after 30 s. -->
     <link rel="preload" as="image" href="/api/bootscreen/current-splash" />
     <style>
+      /* The picture is 800 x 480 and is shown whole (contain), not cropped to fill the screen (cover): on a wider display - a bar
+         of 1920 x 480 - cover cut off the top and bottom of it. The rest of the screen gets the colour of the picture's edge (set
+         below from the picture itself; the last one meanwhile, so the start does not flash), as the console's picture does. */
       #mupi-boot {
         position: fixed; inset: 0; z-index: 2147483647; pointer-events: none; will-change: transform;
-        background: transparent url('/api/bootscreen/current-splash') center / cover no-repeat;
+        background: var(--mupi-boot-bg, #44afe2) url('/api/bootscreen/current-splash') center / contain no-repeat;
       }
       html.mupi-ready #mupi-boot { display: none; }
     </style>
     <script>
       (function () {
+        // the colour round the boot screen: the last one at once, then the one of the picture's corner (the picture is preloaded)
+        try {
+          var last = localStorage.getItem('mupi-boot-bg')
+          if (/^#[0-9a-f]{6}$/i.test(last || '')) document.documentElement.style.setProperty('--mupi-boot-bg', last)
+          var pic = new Image()
+          pic.onload = function () {
+            try {
+              var c = document.createElement('canvas')
+              c.width = c.height = 1
+              var g = c.getContext('2d')
+              // (the corner pixel itself, not the picture scaled down to one)
+              g.drawImage(pic, 0, 0, 1, 1, 0, 0, 1, 1)
+              var d = g.getImageData(0, 0, 1, 1).data
+              var hex = '#' + [d[0], d[1], d[2]].map(function (v) { return ('0' + v.toString(16)).slice(-2) }).join('')
+              if (d[3] === 255) {
+                document.documentElement.style.setProperty('--mupi-boot-bg', hex)
+                localStorage.setItem('mupi-boot-bg', hex)
+              }
+            } catch (e) {}
+          }
+          pic.src = '/api/bootscreen/current-splash'
+        } catch (e) {}
         // only for the display's start: previews of the page in a frame (MuPi-Conf's display texts, the web app) and
         // other pages opened directly never report a list, and showed the boot screen for seconds
         var path = location.pathname
