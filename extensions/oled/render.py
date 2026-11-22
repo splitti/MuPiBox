@@ -209,6 +209,11 @@ def shown_time(state, short=False):
     return sign + text
 
 
+def played_time(state, short=False):
+    """The time of the playing as the bottom row shows it: '' for a radio stream (how long it has been on says nothing), else shown_time."""
+    return '' if state.get('stream') else shown_time(state, short)
+
+
 def fit(text, font, draw, width):
     """The text cut to the width with '…' at its end (for a line that does not scroll)."""
     if draw.textlength(text, font=font) <= width:
@@ -562,7 +567,7 @@ class Screens:
         else:
             draw.rectangle((0, y + 2, 1, y + 8), fill=1)
             draw.rectangle((4, y + 2, 5, y + 8), fill=1)
-        text = shown_time(state)
+        text = played_time(state)
         draw.text((9, y), text, font=font, fill=1)
         track, tracks = state.get('track'), state.get('tracks')
         end = 9 + draw.textlength(text, font=font)
@@ -787,10 +792,10 @@ class Screens:
         y = self.height - 11
         draw.line((0, y - 2, self.width, y - 2), fill=1)
         paused = not state.get('playing')
-        left = 'PAUSE' if paused else shown_time(state)
+        left = 'PAUSE' if paused else played_time(state)
         # (the cell is 38 pixels wide: a time with hours and a minus has no room for its seconds)
         if self.row_width(left) > 38:
-            left = shown_time(state, short=True)
+            left = played_time(state, short=True)
         y += 1
         self._row_text(draw, 1, y, left)
         draw.line((40, y - 3, 40, self.height), fill=1)
@@ -939,7 +944,7 @@ class Screens:
         if sub and sub != title:
             self._marquee(draw, ('compact', 1), sub, 13, self.fonts.small, now)
         y = self.height - 9
-        self._row_text(draw, 1, y + 1, 'PAUSE' if not state.get('playing') else shown_time(state))
+        self._row_text(draw, 1, y + 1, 'PAUSE' if not state.get('playing') else played_time(state))
         self._volume_cell(draw, state, y + 1)
         self._wifi(draw, state.get('wifi', -1), self.width - 18, self.height - 2, bool(state.get('lan')))
         return image

@@ -805,8 +805,8 @@ class BroadcastTest(unittest.TestCase):
             if box is None:
                 self.assertEqual(station.tobytes(), other.tobytes(), mode)
                 continue
-            rest = lambda image: [image.crop(part).tobytes() for part in ((0, 0, 128, box[1]), (0, box[1], box[0], 64), (box[2], box[1], 128, 64))]
-            self.assertEqual(rest(station), rest(other), '%s: only the place of the time of day differs' % mode)
+            rest = lambda image: [image.crop(part).tobytes() for part in ((0, 0, 128, box[1]), (box[2], box[1], 128, 64))]  # (not the played time at the left: a station has none)
+            self.assertEqual(rest(station), rest(other), '%s: the title and the rest of the bottom row are the same' % mode)
             self.assertGreater(lit(station, box), 5, mode)
             self.assertEqual(lit(other, box), 0, mode)
             # (and it follows the time of day)
@@ -816,6 +816,20 @@ class BroadcastTest(unittest.TestCase):
         self.assertIsNotNone(self.bbox(image, (0, 38, 128, 50)))
 
     LONG = 'Die Geschichte vom kleinen Maulwurf der unbedingt wissen wollte wer ihm auf den Kopf gemacht hat'
+
+    def test_a_radio_stream_shows_no_time_of_how_long_it_has_been_on_a_podcast_does(self):
+        # (Full: the bottom row left of the middle has only the play mark; Mix: the left cell of the status line is empty)
+        for mode, box in (('full', (8, 53, 60, 64)), ('mix', (1, 54, 39, 64))):
+            station = {**self.STATE, 'mode': mode, 'elapsed': 754}
+            self.assertEqual(lit(self.screens.render(station, 0), box), 0, mode)
+            self.assertEqual(self.screens.render(station, 0).tobytes(), self.screens.render({**station, 'elapsed': 9}, 0).tobytes(), mode)
+            self.assertGreater(lit(self.screens.render({**station, 'stream': False}, 0), box), 5, mode)
+        # (the play mark stays in Full, and a paused station says PAUSE in Mix)
+        self.assertGreater(lit(self.screens.render({**self.STATE, 'mode': 'full'}, 0), (0, 55, 7, 64)), 5)
+        self.assertGreater(lit(self.screens.render({**self.STATE, 'mode': 'mix', 'playing': False}, 0), (1, 54, 39, 64)), 5)
+        # (the small display: the row with the time of the playing is empty too)
+        small = render.Screens(128, 32, pictures=render.Pictures(self.builtin, self.custom, 128, 32))
+        self.assertEqual(small.render({**self.STATE, 'time': ''}, 0).tobytes(), small.render({**self.STATE, 'time': '', 'elapsed': 9}, 0).tobytes())
 
     def test_the_title_of_a_podcast_is_wrapped_between_the_words_over_up_to_three_lines(self):
         screens = self.screens
