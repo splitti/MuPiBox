@@ -5,6 +5,7 @@ import {
   Component,
   CUSTOM_ELEMENTS_SCHEMA,
   computed,
+  DestroyRef,
   ElementRef,
   effect,
   inject,
@@ -25,6 +26,7 @@ import { environment } from '../../environments/environment'
 import type { MupiboxConfig } from '../mupibox-config.model'
 import { CoverFlipService } from '../cover-flip.service'
 import { DisplayTextsService } from '../display-texts.service'
+import { albumsPerView } from '../per-view'
 import { noCoverStyle } from '../no-cover'
 import { PlayerService } from '../player.service'
 import { KmThemeService } from '../theme/km-theme.service'
@@ -144,6 +146,8 @@ export class SwiperComponent<T> {
   // a cover that is missing (or does not load): the theme's placeholder picture
   protected readonly kmCoverPlaceholder = this.kmTheme.coverPlaceholder
   protected readonly displayTexts = inject(DisplayTextsService)
+  // how many covers a row shows: three on the 5" display (and anything narrower), more on a wider one - the covers keep their size
+  protected readonly perView = signal(albumsPerView(window.innerWidth))
   protected readonly speakingName = signal<string | undefined>(undefined)
   private speakingTimer: ReturnType<typeof setTimeout> | undefined
   // the picture addresses that did not load (by address, not by name: two entries of the same name can have different
@@ -232,6 +236,20 @@ export class SwiperComponent<T> {
     http: HttpClient,
   ) {
     addIcons({ checkmark, folder, link, play })
+    // (by the width the row really has - the list need not fill the window - as it changes: a turned or resized display)
+    let rowObserver: ResizeObserver | undefined
+    effect(() => {
+      const row = this.swiperContainer()?.nativeElement as HTMLElement | undefined
+      untracked(() => {
+        rowObserver?.disconnect()
+        if (!row || typeof ResizeObserver === 'undefined') return
+        rowObserver = new ResizeObserver(() => {
+          if (row.clientWidth > 0) this.perView.set(albumsPerView(row.clientWidth))
+        })
+        rowObserver.observe(row)
+      })
+    })
+    inject(DestroyRef).onDestroy(() => rowObserver?.disconnect())
     // the row is laid out in another width now (or again in the old one): Swiper measures it anew
     effect(() => {
       this.compactActive()
