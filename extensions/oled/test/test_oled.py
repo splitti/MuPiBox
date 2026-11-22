@@ -6,7 +6,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from PIL import Image  # noqa: E402
+from PIL import Image, ImageChops  # noqa: E402
 
 import oled  # noqa: E402
 import render  # noqa: E402
@@ -268,7 +268,10 @@ class ScreensTest(unittest.TestCase):
 
     def test_clock_text(self):
         self.assertEqual(render.clock_text(67), '1:07')
-        self.assertEqual(render.clock_text(3725), '1:02:05')
+        self.assertEqual(render.clock_text(3725), '62:05')
+        self.assertEqual(render.clock_text(5999), '99:59')
+        self.assertEqual(render.clock_text(6000), '>99:59')
+        self.assertEqual(render.clock_text(36000), '>99:59')
         self.assertEqual(render.clock_text(None), '--:--')
         self.assertEqual(render.clock_text(-1), '--:--')
 
@@ -582,8 +585,12 @@ class ScreensTest(unittest.TestCase):
         self.assertEqual(render.shown_time({'elapsed': 83, 'duration': 190, 'timeMode': 'up'}), '1:23')
         self.assertEqual(render.shown_time({'elapsed': 83, 'duration': 190, 'timeMode': 'down'}), '-1:47')
         self.assertEqual(render.shown_time({'elapsed': 83, 'duration': None, 'timeMode': 'down'}), '1:23', 'a stream counts up')
-        self.assertEqual(render.shown_time({'elapsed': 100, 'duration': 7000, 'timeMode': 'down'}), '-1:55:00')
-        self.assertEqual(render.shown_time({'elapsed': 100, 'duration': 7000, 'timeMode': 'down'}, short=True), '-1:55')
+        # (over an hour the minutes go on up to 99:59; more is '>99:59', up or down, without a minus)
+        self.assertEqual(render.shown_time({'elapsed': 100, 'duration': 4000, 'timeMode': 'down'}), '-65:00')
+        self.assertEqual(render.shown_time({'elapsed': 100, 'duration': 6099, 'timeMode': 'down'}), '-99:59')
+        self.assertEqual(render.shown_time({'elapsed': 100, 'duration': 7000, 'timeMode': 'down'}), '>99:59')
+        self.assertEqual(render.shown_time({'elapsed': 7000, 'duration': 9000, 'timeMode': 'up'}), '>99:59')
+        self.assertEqual(render.shown_time({'elapsed': 3725, 'duration': 9000, 'timeMode': 'up'}), '62:05')
         for size in ((128, 64), (128, 32)):
             screens = render.Screens(*size)
             for mode in ('mix', 'lite', 'full'):
@@ -591,9 +598,10 @@ class ScreensTest(unittest.TestCase):
                 up = screens.render({**state, 'timeMode': 'up'}, 0)
                 down = screens.render({**state, 'timeMode': 'down'}, 0)
                 self.assertNotEqual(up.tobytes(), down.tobytes(), (size, mode))
-        # (a time with hours and a minus in the narrow cell of the Mix mode still ends before its line)
-        long = render.Screens(128, 64).render({**PLAY, 'mode': 'mix', 'elapsed': 100, 'duration': 7000, 'timeMode': 'down'}, 0)
-        self.assertEqual(lit(long, (38, 53, 40, 64)), 0)
+        # (the longest times in the narrow cell of the Mix mode still end before its line)
+        for duration in (6099, 7000):
+            long = render.Screens(128, 64).render({**PLAY, 'mode': 'mix', 'elapsed': 100, 'duration': duration, 'timeMode': 'down'}, 0)
+            self.assertEqual(lit(long, (38, 53, 40, 64)), 0, duration)
 
     def test_the_bottom_row_counts_up_or_down(self):
         up = self.s.render({**PLAY, 'timeMode': 'up'}, 0)
@@ -793,19 +801,133 @@ class BroadcastTest(unittest.TestCase):
     def bbox(self, image, box):
         return image.crop(box).getbbox()
 
-    def test_every_mode_shows_the_title_and_the_time_in_the_middle_at_twice_the_size(self):
-        for mode in ('full', 'mix', 'lite'):
-            image = self.screens.render({**self.STATE, 'mode': mode}, 0)
-            self.assertEqual((image.size, image.mode), ((128, 64), '1'), mode)
-            title = self.bbox(image, (0, 0, 128, 14)) if mode != 'full' else self.bbox(image, (0, 12, 128, 25))
-            self.assertIsNotNone(title, mode)
-            # (the time: the band below the title, centred - the left and the right margin are about the same)
-            band = (0, 27, 128, 47) if mode == 'full' else (0, 18, 128, 47)
-            left, top, right, bottom = self.bbox(image, band)
-            self.assertLess(abs(left - (128 - right)), 4, mode)
-            self.assertGreaterEqual(bottom - top, 12, '%s: twice the height of the title font' % mode)
-            self.assertLess(bottom - top, 24, mode)
-            self.assertNotEqual(image.tobytes(), self.screens.render({**self.STATE, 'mode': mode, 'broadcast': False}, 0).tobytes(), mode)
+    def test_a_station_is_shown_as_a_podcast_with_the_time_of_day_in_place_of_the_episode(self):
+        radio = {**self.STATE, 'title': 'Radio mit einem recht langen Namen der in zwei Zeilen steht', 'track': 0, 'tracks': 0}
+        podcast = {**radio, 'stream': False}
+        # (the box where Full has the episode - the time of day of a station stands there; Mix: the middle cell of the status line)
+        places = {'full': (64, 53, 128, 64), 'mix': (41, 54, 76, 64), 'lite': None}
+        for mode, box in places.items():
+            station = self.screens.render({**radio, 'mode': mode}, 0)
+            other = self.screens.render({**podcast, 'mode': mode}, 0)
+            self.assertEqual((station.size, station.mode), ((128, 64), '1'), mode)
+            if box is None:
+                self.assertEqual(station.tobytes(), other.tobytes(), mode)
+                continue
+            rest = lambda image: [image.crop(part).tobytes() for part in ((0, 0, 128, box[1]), (box[2], box[1], 128, 64))]  # (not the played time at the left: a station has none)
+            self.assertEqual(rest(station), rest(other), '%s: the title and the rest of the bottom row are the same' % mode)
+            self.assertGreater(lit(station, box), 5, mode)
+            self.assertEqual(lit(other, box), 0, mode)
+            # (and it follows the time of day)
+            self.assertNotEqual(station.crop(box).tobytes(), self.screens.render({**radio, 'mode': mode, 'time': '14:36'}, 0).crop(box).tobytes(), mode)
+        # (the title wraps over lines: it has ink well below the first line)
+        image = self.screens.render({**radio, 'mode': 'full'}, 0)
+        self.assertIsNotNone(self.bbox(image, (0, 38, 128, 50)))
+
+    LONG = 'Die Geschichte vom kleinen Maulwurf der unbedingt wissen wollte wer ihm auf den Kopf gemacht hat'
+
+    def test_a_radio_stream_shows_no_time_of_how_long_it_has_been_on_a_podcast_does(self):
+        # (Full: the bottom row left of the middle has only the play mark; Mix: the left cell of the status line is empty)
+        for mode, box in (('full', (8, 53, 60, 64)), ('mix', (1, 54, 39, 64))):
+            station = {**self.STATE, 'mode': mode, 'elapsed': 754}
+            self.assertEqual(lit(self.screens.render(station, 0), box), 0, mode)
+            self.assertEqual(self.screens.render(station, 0).tobytes(), self.screens.render({**station, 'elapsed': 9}, 0).tobytes(), mode)
+            self.assertGreater(lit(self.screens.render({**station, 'stream': False}, 0), box), 5, mode)
+        # (the play mark stays in Full, and a paused station says PAUSE in Mix)
+        self.assertGreater(lit(self.screens.render({**self.STATE, 'mode': 'full'}, 0), (0, 55, 7, 64)), 5)
+        self.assertGreater(lit(self.screens.render({**self.STATE, 'mode': 'mix', 'playing': False}, 0), (1, 54, 39, 64)), 5)
+        # (the small display: the row with the time of the playing is empty too)
+        small = render.Screens(128, 32, pictures=render.Pictures(self.builtin, self.custom, 128, 32))
+        self.assertEqual(small.render({**self.STATE, 'time': ''}, 0).tobytes(), small.render({**self.STATE, 'time': '', 'elapsed': 9}, 0).tobytes())
+
+    def test_the_title_of_a_podcast_is_wrapped_between_the_words_over_up_to_three_lines(self):
+        screens = self.screens
+        image = Image.new('1', (128, 64))
+        draw = render.ImageDraw.Draw(image)
+        font = screens.fonts.text
+        lines = render.wrap_lines(self.LONG, font, draw, 128, 3)
+        self.assertEqual(len(lines), 3)
+        # (the words stay whole, in their order, and the first lines fit the width)
+        self.assertEqual(' '.join(lines), self.LONG)
+        for line in lines[:2]:
+            self.assertLessEqual(draw.textlength(line, font=font), 128)
+        self.assertEqual(render.wrap_lines('Folge 3', font, draw, 128, 3), ['Folge 3'])
+        self.assertEqual(render.wrap_lines('', font, draw, 128, 3), [''])
+        # (a word that is wider than the display alone is broken where the line ends; the third line takes all that is left)
+        broken = render.wrap_lines('Unglaublichlangeswortdasnichtindiezeilepasst ende', font, draw, 128, 3)
+        self.assertEqual(''.join(broken).replace(' ', ''), 'Unglaublichlangeswortdasnichtindiezeilepasstende')
+        self.assertLessEqual(draw.textlength(broken[0], font=font), 128)
+        self.assertEqual(len(render.wrap_lines('a ' * 60, font, draw, 128, 1)), 1)
+
+    def test_a_podcast_shows_its_title_in_three_lines_and_no_time_of_day(self):
+        podcast = {**self.STATE, 'stream': False, 'title': self.LONG, 'track': 3, 'tracks': 123}
+        for mode, band in (('full', (0, 12, 128, 51)), ('mix', (0, 3, 128, 50)), ('lite', (0, 3, 128, 50))):
+            image = self.screens.render({**podcast, 'mode': mode}, 0)
+            rows = [y for y in range(band[1], band[3]) if image.crop((0, y, 128, y + 1)).getbbox()]
+            # (three lines of text with gaps: the ink reaches the bottom of the third line, well below where a one-line title ended)
+            self.assertGreater(rows[-1], band[1] + 26, mode)
+            # (no clock: another time of day changes nothing)
+            self.assertEqual(image.tobytes(), self.screens.render({**podcast, 'mode': mode, 'time': '09:01'}, 0).tobytes(), mode)
+
+    def test_a_podcast_shows_the_episode_and_the_total_in_full_and_only_the_number_in_mix(self):
+        state = {**self.STATE, 'stream': False, 'title': 'Folge', 'track': 12, 'tracks': 123, 'mode': 'full'}
+        podcast = self.screens.render(state, 0)
+        album = self.screens.render({**state, 'broadcast': False}, 0)
+        box = (64, 53, 128, 64)
+        self.assertGreater(lit(podcast, box), 5)
+        self.assertNotEqual(podcast.crop(box).tobytes(), album.crop(box).tobytes())
+        # (Full: "Folge: 12/123" - the total shows, another one changes the picture)
+        self.assertNotEqual(podcast.tobytes(), self.screens.render({**state, 'tracks': 7}, 0).tobytes())
+        # (nothing without the total: it is not known yet)
+        self.assertEqual(lit(self.screens.render({**state, 'tracks': 0}, 0), box), 0)
+        # (Mix: only the number of the episode in the middle cell - the total changes nothing)
+        mix = {**state, 'mode': 'mix'}
+        self.assertEqual(self.screens.render(mix, 0).tobytes(), self.screens.render({**mix, 'tracks': 7}, 0).tobytes())
+        self.assertNotEqual(self.screens.render(mix, 0).tobytes(), self.screens.render({**mix, 'track': 13}, 0).tobytes())
+
+    def test_the_picture_of_a_tag_over_a_podcast_shows_the_episode_where_the_time_of_day_was(self):
+        state = {**self.STATE, 'stream': False, 'track': 3, 'tracks': 123, 'tagPicture': 'A1'}
+        for mode in ('mix', 'full'):
+            now = self.screens.render({**state, 'mode': mode}, 0)
+            later = self.screens.render({**state, 'mode': mode, 'time': '14:36'}, 0)
+            self.assertEqual(now.tobytes(), later.tobytes(), mode)
+
+    def test_a_podcast_has_its_bar_of_the_progress_a_station_has_none(self):
+        podcast = {**self.STATE, 'stream': False, 'duration': 1000, 'elapsed': 500}
+        for mode in ('mix', 'lite'):
+            bar = self.screens.render({**podcast, 'mode': mode}, 0).crop((0, 0, 128, 2))
+            self.assertEqual(bar.getbbox(), (0, 0, 64, 2), mode)  # (half of it played: half of the width)
+            self.assertIsNone(self.screens.render({**self.STATE, 'mode': mode}, 0).crop((0, 0, 128, 2)).getbbox(), '%s: a station has no end' % mode)
+        # (the 128 x 32 display keeps it above the title)
+        small = render.Screens(128, 32, pictures=render.Pictures(self.builtin, self.custom, 128, 32))
+        self.assertEqual(small.render(podcast, 0).crop((0, 0, 128, 2)).getbbox(), (0, 0, 64, 2))
+        self.assertIsNone(small.render(self.STATE, 0).crop((0, 0, 128, 2)).getbbox())
+        # (the bar grows with the playing)
+        later = self.screens.render({**podcast, 'mode': 'mix', 'elapsed': 900}, 0).crop((0, 0, 128, 2)).getbbox()
+        self.assertEqual(later[2], 115)
+
+    def test_a_radio_stream_has_no_bar_even_when_the_player_says_it_has_a_length(self):
+        station = {**self.STATE, 'duration': 1000, 'elapsed': 500}
+        for mode in ('mix', 'lite'):
+            self.assertIsNone(self.screens.render({**station, 'mode': mode}, 0).crop((0, 0, 128, 2)).getbbox(), mode)
+            self.assertIsNone(self.screens.render({**station, 'mode': mode, 'tagPicture': 'A1'}, 0).crop((0, 0, 128, 2)).getbbox(), mode)
+        # (Full has no bar anyway: the status bar is at the top - nothing about the length shows up there)
+        self.assertEqual(self.screens.render({**station, 'mode': 'full'}, 0).crop((0, 0, 128, 12)).tobytes(), self.screens.render({**station, 'mode': 'full', 'duration': None}, 0).crop((0, 0, 128, 12)).tobytes())
+        small = render.Screens(128, 32, pictures=render.Pictures(self.builtin, self.custom, 128, 32))
+        self.assertIsNone(small.render(station, 0).crop((0, 0, 128, 2)).getbbox())
+        self.assertIsNone(small.render({**station, 'time': ''}, 0).crop((0, 0, 128, 2)).getbbox())
+
+    def test_a_podcast_with_the_picture_of_its_tag_has_the_bar_turned_over_it(self):
+        podcast = {**self.STATE, 'stream': False, 'duration': 1000, 'elapsed': 500, 'tagPicture': 'A1'}
+        for mode in ('mix', 'lite'):
+            shown = self.screens.render({**podcast, 'mode': mode}, 0)
+            plain = self.screens.render({**podcast, 'mode': mode, 'elapsed': None}, 0)
+            self.assertEqual(shown.crop((0, 2, 128, 50)).tobytes(), plain.crop((0, 2, 128, 50)).tobytes(), '%s: the rest of the picture is untouched' % mode)
+            changed = ImageChops.difference(shown.crop((0, 0, 128, 2)), plain.crop((0, 0, 128, 2))).getbbox()
+            self.assertEqual(changed, (0, 0, 64, 2), mode)
+            # (the picture is black there: the bar is white; where it is white the bar would be black)
+            self.assertEqual(shown.getpixel((10, 0)), 255, mode)
+        radio = {**self.STATE, 'tagPicture': 'A1', 'mode': 'mix'}
+        self.assertEqual(self.screens.render(radio, 0).crop((0, 0, 128, 50)).tobytes(), self.mine.tobytes())
 
     def test_the_time_is_the_time_of_day_and_follows_it(self):
         a = self.screens.render({**self.STATE, 'mode': 'mix', 'time': '14:35'}, 0)
@@ -846,13 +968,6 @@ class BroadcastTest(unittest.TestCase):
             later = self.screens.render({**state, 'mode': mode, 'time': '14:36'}, 0)
             self.assertNotEqual(radio.crop(box).tobytes(), later.crop(box).tobytes(), mode)
             self.assertEqual(radio.crop((0, 0, 128, 50)).tobytes(), later.crop((0, 0, 128, 50)).tobytes(), mode)
-
-    def test_the_big_time_needs_no_second_one_in_the_row_below(self):
-        state = {**self.STATE, 'track': 3, 'tracks': 12}
-        mix = self.screens.render({**state, 'mode': 'mix'}, 0)
-        self.assertEqual(lit(mix, (41, 52, 76, 64)), 0, 'no track number and no second time in the middle cell')
-        full = self.screens.render({**state, 'mode': 'full'}, 0)
-        self.assertEqual(lit(full, (70, 53, 128, 64)), 0, 'nothing at the right of the bottom row')
 
     def test_without_a_time_of_day_the_usual_picture_stays(self):
         state = {**self.STATE, 'mode': 'mix', 'time': ''}

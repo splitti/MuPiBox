@@ -28,6 +28,7 @@ CHANGEABLE = ('boot', 'idle', 'update', 'rest')
 # its file is <custom>/tags/<id of the tag>.png
 TAG_PICTURE_SIZE = (128, 50)
 TAG_FOLDER = 'tags'
+PODCAST_LINES = 3  # lines the title of a podcast episode may take (it is wrapped at the words)
 TAG_ID = re.compile(r'^[0-9A-Za-z_-]{1,40}$')
 VIEW_PICTURES = {'boot': 'boot', 'bye': 'shutdown', 'update': 'update', 'rest': 'rest'}
 # (the picture of the idle display: the reader that waits for a tag, the scanner that waits for a code, or the user's own one)
@@ -184,28 +185,34 @@ class Pictures:
         return image
 
 
+TIME_MAX = 99 * 60 + 59  # seconds: the longest time that is shown as minutes and seconds (99:59)
+
+
 def clock_text(seconds):
-    """67 -> '1:07', 3725 -> '1:02:05' (nothing known -> '--:--')."""
+    """67 -> '1:07', 3725 -> '62:05' (minutes go on up to 99:59, no hours); more -> '>99:59' (nothing known -> '--:--')."""
     if seconds is None or seconds < 0:
         return '--:--'
     seconds = int(seconds)
-    h, rest = divmod(seconds, 3600)
-    m, s = divmod(rest, 60)
-    return '%d:%02d:%02d' % (h, m, s) if h else '%d:%02d' % (m, s)
+    if seconds > TIME_MAX:
+        return '>99:59'
+    return '%d:%02d' % divmod(seconds, 60)
 
 
-def shown_time(state, short=False):
+def shown_time(state):
     """The time of the player the way the user chose ("Zeit zeigen"): up from the start, or - with `timeMode` 'down' - a minus and what is left
-    (a stream has no end to count down to: it counts up). `short` leaves out the seconds of a time with hours."""
+    (a stream has no end to count down to: it counts up). Minutes up to 99:59; a longer time is '>99:59', without a minus."""
     elapsed, duration = state.get('elapsed'), state.get('duration')
     if state.get('timeMode') == 'down' and isinstance(elapsed, (int, float)) and isinstance(duration, (int, float)) and duration > 0:
         seconds, sign = max(0, duration - elapsed), '-'
     else:
         seconds, sign = elapsed, ''
     text = clock_text(seconds)
-    if short and text.count(':') == 2:
-        text = text.rsplit(':', 1)[0]
-    return sign + text
+    return text if text.startswith('>') else sign + text
+
+
+def played_time(state):
+    """The time of the playing as the bottom row shows it: '' for a radio stream (how long it has been on says nothing), else shown_time."""
+    return '' if state.get('stream') else shown_time(state)
 
 
 def fit(text, font, draw, width):
@@ -215,6 +222,32 @@ def fit(text, font, draw, width):
     while text and draw.textlength(text + '…', font=font) > width:
         text = text[:-1]
     return text + '…'
+
+
+def wrap_lines(text, font, draw, width, max_lines):
+    """The text in lines of at most `width` pixels, broken between the words (a word that is wider than a line alone is broken where
+    the line ends). The last of `max_lines` takes all that is left - it is longer than the width then, and scrolls."""
+    words = str(text).split()
+    lines = []
+    while words:
+        if len(lines) == max_lines - 1:
+            lines.append(' '.join(words))
+            break
+        word = words.pop(0)
+        while draw.textlength(word, font=font) > width and len(word) > 1 and len(lines) < max_lines - 1:
+            cut = len(word) - 1
+            while cut > 1 and draw.textlength(word[:cut], font=font) > width:
+                cut -= 1
+            lines.append(word[:cut])
+            word = word[cut:]
+        if len(lines) == max_lines - 1:
+            words.insert(0, word)
+            continue
+        line = word
+        while words and draw.textlength(line + ' ' + words[0], font=font) <= width:
+            line += ' ' + words.pop(0)
+        lines.append(line)
+    return lines or ['']
 
 
 def scroll_cycle(text_width, width):
@@ -535,7 +568,7 @@ class Screens:
         else:
             draw.rectangle((0, y + 2, 1, y + 8), fill=1)
             draw.rectangle((4, y + 2, 5, y + 8), fill=1)
-        text = shown_time(state)
+        text = played_time(state)
         draw.text((9, y), text, font=font, fill=1)
         track, tracks = state.get('track'), state.get('tracks')
         end = 9 + draw.textlength(text, font=font)
@@ -544,7 +577,8 @@ class Screens:
             if right and end + 4 + w <= self.width:
                 draw.text((self.width - w, y), right, font=font, fill=1)
         elif track and tracks:
-            for template in ('Track:%d/%d', '%d/%d'):
+            # (a podcast counts episodes)
+            for template in (('Folge: %d/%d', 'Folge:%d/%d', '%d/%d') if state.get('broadcast') else ('Track:%d/%d', '%d/%d')):
                 label = template % (track, tracks)
                 w = draw.textlength(label, font=font)
                 if end + 4 + w <= self.width:
@@ -715,9 +749,14 @@ class Screens:
     def play(self, state, now):
         """The picture of a medium that plays or is paused, in the chosen mode ('full', 'mix' or 'lite')."""
         mode = state.get('mode') or 'full'
-        # (a radio station or a podcast: no picture of a tag to show - or the user wants the title and the time - then the title and the clock)
-        if state.get('broadcast') and state.get('time') and not self._has_tag_picture(state):
-            return self._play_broadcast(state, now, mode)
+        # (a podcast or a radio station: no picture of a tag to show - or the user wants the title - then the whole title over up to three
+        # lines; a station without a time of day shows the usual picture)
+        if state.get('broadcast') and not self._has_tag_picture(state):
+            radio = bool(state.get('stream'))
+            if self.tall and (not radio or state.get('time')):
+                return self._play_titled(state, now, mode)
+            if radio and state.get('time'):
+                return self._play_broadcast(state, now)
         if not self.tall:
             return self._play_compact(state, now)
         if mode == 'lite':
@@ -728,10 +767,20 @@ class Screens:
 
     def _progress(self, draw, state):
         pos, dur = state.get('elapsed'), state.get('duration')
-        if isinstance(pos, (int, float)) and isinstance(dur, (int, float)) and dur > 0:
+        # (a radio stream has none, whatever length the player thinks it has)
+        if not state.get('stream') and isinstance(pos, (int, float)) and isinstance(dur, (int, float)) and dur > 0:
             width = int(self.width * min(1.0, max(0.0, pos / dur)))
             draw.rectangle((0, 0, max(0, width - 1), 1), fill=1)
         # (a stream has no end: no bar - a full one would only look like a medium that is over)
+
+    def _progress_over_picture(self, image, state):
+        """The bar of the progress over the top rows of a picture of a tag: where the bar goes, the picture's points are turned round, so it
+        shows on white as on black. Only a podcast has one (a radio station has no length; an album keeps its picture whole)."""
+        pos, dur = state.get('elapsed'), state.get('duration')
+        if state.get('broadcast') and not state.get('stream') and isinstance(pos, (int, float)) and isinstance(dur, (int, float)) and dur > 0:
+            width = max(1, int(self.width * min(1.0, max(0.0, pos / dur))))
+            box = (0, 0, width, 2)
+            image.paste(ImageChops.invert(image.crop(box)), box)
 
     def _volume_cell(self, draw, state, y):
         """The volume of the bottom row: the V at the left of its cell, the number ending 3 pixels before the line that closes the cell
@@ -745,16 +794,13 @@ class Screens:
         y = self.height - 11
         draw.line((0, y - 2, self.width, y - 2), fill=1)
         paused = not state.get('playing')
-        left = 'PAUSE' if paused else shown_time(state)
-        # (the cell is 38 pixels wide: a time with hours and a minus has no room for its seconds)
-        if self.row_width(left) > 38:
-            left = shown_time(state, short=True)
+        left = 'PAUSE' if paused else played_time(state)
         y += 1
         self._row_text(draw, 1, y, left)
         draw.line((40, y - 3, 40, self.height), fill=1)
         track, tracks = state.get('track'), state.get('tracks')
         if mid is None:
-            mid = '%s/%s' % (track, tracks) if track and tracks else (str(track) if track else '')
+            mid = '%s/%s' % (track, tracks) if track and tracks and not state.get('broadcast') else (str(track) if track else '')
         self._row_text(draw, TRACK_END, y, mid[:5], right=True)
         draw.line((76, y - 3, 76, self.height), fill=1)
         self._volume_cell(draw, state, y)
@@ -795,8 +841,9 @@ class Screens:
         return True
 
     def _broadcast_time(self, state):
-        """The time of day for the place of the track number while a radio station or a podcast plays; None for any other medium."""
-        return str(state.get('time') or '') if state.get('broadcast') and state.get('time') else None
+        """The time of day for the place of the track number while a radio station plays; None for any other medium (a podcast shows its
+        episode there)."""
+        return str(state.get('time') or '') if state.get('broadcast') and state.get('stream') and state.get('time') else None
 
     def _has_tag_picture(self, state):
         """Is there a picture of the tag to show (the display is 128 x 64 and the tag has its file)?"""
@@ -815,37 +862,44 @@ class Screens:
         x = round((self.width - draw.textlength(text, font=font)) / 2)
         draw.text((x, round((top + bottom) / 2 - (ink_top + ink_bottom) / 2)), text, font=font, fill=1)
 
-    def _play_broadcast(self, state, now, mode):
-        """A radio station or a podcast shown as the title and the time of day: the title in the font of the text lines, the time in the
-        middle at twice its size. All three modes: Full keeps the status bar and the bottom row, Mix the status line, Compact only the
-        wireless symbol and PAUSE."""
+    def _play_broadcast(self, state, now):
+        """A radio station on the 128 x 32 display: the title and the time of day in the middle at twice its size."""
         image, draw = self._canvas()
         title = state.get('title') or state.get('artist') or state.get('album') or ''
-        if not self.tall:
-            self._marquee(draw, ('broadcast', 0), title, 1, self.fonts.small, now)
-            self._clock_centred(draw, state, 11, self.height, self.fonts.small.size * 2)
-            return image
-        size = self.fonts.text.size * 2
+        self._marquee(draw, ('broadcast', 0), title, 1, self.fonts.small, now)
+        self._clock_centred(draw, state, 11, self.height, self.fonts.small.size * 2)
+        return image
+
+    def _play_titled(self, state, now, mode):
+        """A podcast or a radio station (128 x 64): the title over up to three lines, broken between the words - what does not fit in the
+        third line scrolls there. Full: the status bar at the top and the bottom row with the time of the playing and, at the right, the
+        episode of a podcast (`Folge: 3/123`) or the time of day of a station; Mix: the bar of the progress (a podcast), the status line
+        at the bottom with the number of the episode or the time of day in the middle; Compact: the bar and only the wireless symbol and PAUSE."""
+        image, draw = self._canvas()
+        title = state.get('title') or state.get('artist') or state.get('album') or ''
+        font = self.fonts.text
+        top, step = (12, 13) if mode not in ('mix', 'lite') else (4, 14)
+        if mode in ('mix', 'lite'):
+            self._progress(draw, state)
+        else:
+            self.status_bar(draw, state)
+        for i, line in enumerate(wrap_lines(title, font, draw, self.width, PODCAST_LINES)):
+            self._marquee(draw, ('broadcast', i), line, top + i * step, font, now)
         if mode == 'lite':
-            self._marquee(draw, ('broadcast', 0), title, 2, self.fonts.text, now)
-            self._clock_centred(draw, state, 14, self.height - 12, size)
             self._wifi(draw, state.get('wifi', -1), self.width - 18, self.height - 2, bool(state.get('lan')))
             if not state.get('playing'):
                 self._row_text(draw, 1, self.height - 10, 'PAUSE')
         elif mode == 'mix':
-            self._marquee(draw, ('broadcast', 0), title, 2, self.fonts.text, now)
-            self._clock_centred(draw, state, 14, self.height - 13, size)
-            self._status_bar(draw, state, mid='')
+            self._status_bar(draw, state, mid=self._broadcast_time(state))
         else:
-            self.status_bar(draw, state)
-            self._marquee(draw, ('broadcast', 0), title, 13, self.fonts.text, now)
-            self._clock_centred(draw, state, 27, self.height - 13, size)
-            self.bottom_row(draw, state, right='')
+            self.bottom_row(draw, state, right=self._broadcast_time(state))
         return image
 
     def _play_mix(self, state):
         image, draw = self._canvas()
-        if not self._tag_picture(image, state):
+        if self._tag_picture(image, state):
+            self._progress_over_picture(image, state)
+        else:
             self._progress(draw, state)
             text, font = self._big_text(state)
             w = draw.textlength(text, font=font)
@@ -857,6 +911,7 @@ class Screens:
         """The compact mode: the track number (or the time) as large as the display allows, in the middle of it."""
         image, draw = self._canvas()
         if self._tag_picture(image, state):
+            self._progress_over_picture(image, state)
             self._wifi(draw, state.get('wifi', -1), self.width - 18, self.height - 2, bool(state.get('lan')))
             if not state.get('playing'):
                 self._row_text(draw, 1, self.height - 10, 'PAUSE')
@@ -888,7 +943,7 @@ class Screens:
         if sub and sub != title:
             self._marquee(draw, ('compact', 1), sub, 13, self.fonts.small, now)
         y = self.height - 9
-        self._row_text(draw, 1, y + 1, 'PAUSE' if not state.get('playing') else shown_time(state))
+        self._row_text(draw, 1, y + 1, 'PAUSE' if not state.get('playing') else played_time(state))
         self._volume_cell(draw, state, y + 1)
         self._wifi(draw, state.get('wifi', -1), self.width - 18, self.height - 2, bool(state.get('lan')))
         return image

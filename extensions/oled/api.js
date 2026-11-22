@@ -29,6 +29,8 @@ const ASLEEP_POLL_MS = 1500
 // or when /local says it started or stopped it is asked at once, but never more than once in SPOTIFY_GAP_MS)
 const SPOTIFY_STATE_MS = 20000
 const SPOTIFY_GAP_MS = 3000
+const EPISODE_ASK_MS = 20000 // the list of the episodes of a podcast (the first look at its feed can take a while)
+const EPISODE_RETRY_MS = 60000 // when it had no answer
 // what the box's scripts say: an update runs or the box goes down (scripts/mupibox/oled_picture.sh), and the player's state of the rest times
 const HOLD_FILE = '/run/mupibox-oled-picture'
 const PLAYTIME_FILE = '/tmp/playtime.json'
@@ -215,6 +217,32 @@ exports.activate = (host) => {
     return moving(kept.state) ? { ...kept.state, progress_ms: Math.min(progress, kept.state.item?.duration_ms ?? progress) } : kept.state
   }
 
+  // ---- the place of a podcast episode ---------------------------------------------------------------------------------------------
+  // (the player knows no number of the episode: the box's API says where it is in the list of its podcast - "Folge: 3/123". Asked in the
+  // background once for each episode - the first look at a feed can take a while - and again after EPISODE_RETRY_MS when it had no answer)
+  let episodeAsk = { url: '', place: null, asked: 0, pending: false }
+  const episodePlace = (local, now) => {
+    const url = local?.currentType === 'rss' && typeof local.episode === 'string' ? local.episode : ''
+    if (!url) return null
+    if (episodeAsk.url !== url) episodeAsk = { url, place: null, asked: 0, pending: false }
+    const ask = episodeAsk
+    if (!ask.place && !ask.pending && (ask.asked === 0 || now - ask.asked >= EPISODE_RETRY_MS)) {
+      ask.pending = true
+      ask.asked = now
+      Promise.resolve()
+        .then(() => request(`${host.apiUrl}/api/rssfeed/episodes?url=${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(EPISODE_ASK_MS) }))
+        .then((response) => (response.ok ? response.json() : null))
+        .then((list) => {
+          if (list?.found && Number.isInteger(list.current) && list.current >= 0 && list.count > 0) ask.place = { track: list.current + 1, tracks: list.count }
+        })
+        .catch(() => {})
+        .finally(() => {
+          ask.pending = false
+        })
+    }
+    return ask.place
+  }
+
   // ---- the picture of a tag -------------------------------------------------------------------------------------------------
   // (a medium that a tag started shows that tag's picture in the top 50 rows, in place of the progress bar and the big time: the NFC
   // extension says which tag it is - only asked while a medium plays or is paused, on the 128 x 64 display, and only when a picture
@@ -258,6 +286,12 @@ exports.activate = (host) => {
       if (local?.currentPlayer === 'spotify') spotify = await spotifyState(local, now)
       else spotifyKept = null
       const reading = logic.readPlayback(local, spotify)
+      // (a podcast counts its episodes: the number the player has is no episode number)
+      if (reading.kind === 'rss' && reading.player === 'mplayer') {
+        const place = episodePlace(local, now)
+        reading.track = place?.track ?? 0
+        reading.tracks = place?.tracks ?? 0
+      }
       // (no answer of the player at all: the picture stays as it was - not a short picture for a volume that "changed" to nothing)
       if (local) {
         const overlay = logic.overlayFor(previous, reading, config.volumeOverlay, config.playOverlay)

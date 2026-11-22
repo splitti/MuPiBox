@@ -390,6 +390,38 @@ test('the extension starts the driver with the settings and tells it what plays'
   assert.deepStrictEqual([sent.at(-1).state.view, sent.at(-1).state.title, sent.at(-1).state.artist], ['play', 'Kapitel 1', 'b'])
 })
 
+test('a podcast shows the place of its episode in the list of the podcast ("Folge: 3/123"), not the track number of the player', async () => {
+  const asked = []
+  const episode = 'https://example.org/audio/folge-3.mp3'
+  const box = fakeHost({}, {
+    player: { currentPlayer: 'mplayer', currentType: 'rss', playing: true, currentTrackname: 'Folge drei', currentTracknr: 1, totalTracks: '', episode, volume: 40 },
+    deps: {
+      fetch: async (url) => {
+        const text = String(url)
+        if (text.includes('/api/rssfeed/episodes')) {
+          asked.push(text)
+          return { ok: true, json: async () => ({ found: true, current: 2, count: 123 }) }
+        }
+        return { ok: true, json: async () => (text.endsWith('/local') ? { currentPlayer: 'mplayer', currentType: 'rss', playing: true, currentTrackname: 'Folge drei', currentTracknr: 1, totalTracks: '', episode, volume: 40 } : {}) }
+      },
+    },
+  })
+  const ext = api.activate(box.host)
+  await started(box)
+  await ext.tick()
+  // (the first reading has no answer yet: no number - the player's 1 is not an episode number)
+  assert.deepStrictEqual(sentStates(box.procs[0]).at(-1).track, 0)
+  await settle()
+  await settle()
+  await ext.tick()
+  const last = sentStates(box.procs[0]).at(-1)
+  assert.deepStrictEqual([last.track, last.tracks], [3, 123])
+  await ext.tick()
+  await settle()
+  assert.strictEqual(asked.length, 1, 'asked once for an episode')
+  assert.ok(asked[0].endsWith(encodeURIComponent(episode)))
+})
+
 test('a change of the chip starts the driver anew, a change of the brightness only tells it', async () => {
   const box = fakeHost({})
   const ext = api.activate(box.host)
