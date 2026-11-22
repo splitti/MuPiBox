@@ -743,13 +743,14 @@ class Screens:
     def play(self, state, now):
         """The picture of a medium that plays or is paused, in the chosen mode ('full', 'mix' or 'lite')."""
         mode = state.get('mode') or 'full'
-        # (a podcast: no picture of a tag to show - or the user wants the title - then the whole title over up to three lines, no clock)
-        if state.get('broadcast') and not state.get('stream') and not self._has_tag_picture(state):
-            if self.tall:
-                return self._play_podcast(state, now, mode)
-        # (a radio station: no picture of a tag to show - or the user wants the title and the time - then the title and the clock)
-        elif state.get('broadcast') and state.get('time') and not self._has_tag_picture(state):
-            return self._play_broadcast(state, now, mode)
+        # (a podcast or a radio station: no picture of a tag to show - or the user wants the title - then the whole title over up to three
+        # lines; a station without a time of day shows the usual picture)
+        if state.get('broadcast') and not self._has_tag_picture(state):
+            radio = bool(state.get('stream'))
+            if self.tall and (not radio or state.get('time')):
+                return self._play_titled(state, now, mode)
+            if radio and state.get('time'):
+                return self._play_broadcast(state, now)
         if not self.tall:
             return self._play_compact(state, now)
         if mode == 'lite':
@@ -837,7 +838,7 @@ class Screens:
 
     def _broadcast_time(self, state):
         """The time of day for the place of the track number while a radio station plays; None for any other medium (a podcast shows its
-        episode there, not the time)."""
+        episode there)."""
         return str(state.get('time') or '') if state.get('broadcast') and state.get('stream') and state.get('time') else None
 
     def _has_tag_picture(self, state):
@@ -857,38 +858,19 @@ class Screens:
         x = round((self.width - draw.textlength(text, font=font)) / 2)
         draw.text((x, round((top + bottom) / 2 - (ink_top + ink_bottom) / 2)), text, font=font, fill=1)
 
-    def _play_broadcast(self, state, now, mode):
-        """A radio station shown as the title and the time of day: the title in the font of the text lines, the time in the middle at
-        twice its size. All three modes: Full keeps the status bar and the bottom row, Mix the status line, Compact only the wireless
-        symbol and PAUSE."""
+    def _play_broadcast(self, state, now):
+        """A radio station on the 128 x 32 display: the title and the time of day in the middle at twice its size."""
         image, draw = self._canvas()
         title = state.get('title') or state.get('artist') or state.get('album') or ''
-        if not self.tall:
-            self._marquee(draw, ('broadcast', 0), title, 1, self.fonts.small, now)
-            self._clock_centred(draw, state, 11, self.height, self.fonts.small.size * 2)
-            return image
-        size = self.fonts.text.size * 2
-        if mode == 'lite':
-            self._marquee(draw, ('broadcast', 0), title, 2, self.fonts.text, now)
-            self._clock_centred(draw, state, 14, self.height - 12, size)
-            self._wifi(draw, state.get('wifi', -1), self.width - 18, self.height - 2, bool(state.get('lan')))
-            if not state.get('playing'):
-                self._row_text(draw, 1, self.height - 10, 'PAUSE')
-        elif mode == 'mix':
-            self._marquee(draw, ('broadcast', 0), title, 2, self.fonts.text, now)
-            self._clock_centred(draw, state, 14, self.height - 13, size)
-            self._status_bar(draw, state, mid='')
-        else:
-            self.status_bar(draw, state)
-            self._marquee(draw, ('broadcast', 0), title, 13, self.fonts.text, now)
-            self._clock_centred(draw, state, 27, self.height - 13, size)
-            self.bottom_row(draw, state, right='')
+        self._marquee(draw, ('broadcast', 0), title, 1, self.fonts.small, now)
+        self._clock_centred(draw, state, 11, self.height, self.fonts.small.size * 2)
         return image
 
-    def _play_podcast(self, state, now, mode):
-        """A podcast (128 x 64): the title of the episode over up to three lines, broken between the words - what does not fit in the third
-        line scrolls there - and no time of day. Full: the status bar at the top and the bottom row with the time and `Folge: 3/123`;
-        Mix: the bar of the progress, the status line at the bottom; Compact: the bar and only the wireless symbol and PAUSE."""
+    def _play_titled(self, state, now, mode):
+        """A podcast or a radio station (128 x 64): the title over up to three lines, broken between the words - what does not fit in the
+        third line scrolls there. Full: the status bar at the top and the bottom row with the time of the playing and, at the right, the
+        episode of a podcast (`Folge: 3/123`) or the time of day of a station; Mix: the bar of the progress (a podcast), the status line
+        at the bottom with the number of the episode or the time of day in the middle; Compact: the bar and only the wireless symbol and PAUSE."""
         image, draw = self._canvas()
         title = state.get('title') or state.get('artist') or state.get('album') or ''
         font = self.fonts.text
@@ -898,15 +880,15 @@ class Screens:
         else:
             self.status_bar(draw, state)
         for i, line in enumerate(wrap_lines(title, font, draw, self.width, PODCAST_LINES)):
-            self._marquee(draw, ('podcast', i), line, top + i * step, font, now)
+            self._marquee(draw, ('broadcast', i), line, top + i * step, font, now)
         if mode == 'lite':
             self._wifi(draw, state.get('wifi', -1), self.width - 18, self.height - 2, bool(state.get('lan')))
             if not state.get('playing'):
                 self._row_text(draw, 1, self.height - 10, 'PAUSE')
         elif mode == 'mix':
-            self._status_bar(draw, state)
+            self._status_bar(draw, state, mid=self._broadcast_time(state))
         else:
-            self.bottom_row(draw, state)
+            self.bottom_row(draw, state, right=self._broadcast_time(state))
         return image
 
     def _play_mix(self, state):

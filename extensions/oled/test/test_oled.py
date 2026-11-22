@@ -793,19 +793,27 @@ class BroadcastTest(unittest.TestCase):
     def bbox(self, image, box):
         return image.crop(box).getbbox()
 
-    def test_every_mode_shows_the_title_and_the_time_in_the_middle_at_twice_the_size(self):
-        for mode in ('full', 'mix', 'lite'):
-            image = self.screens.render({**self.STATE, 'mode': mode}, 0)
-            self.assertEqual((image.size, image.mode), ((128, 64), '1'), mode)
-            title = self.bbox(image, (0, 0, 128, 14)) if mode != 'full' else self.bbox(image, (0, 12, 128, 25))
-            self.assertIsNotNone(title, mode)
-            # (the time: the band below the title, centred - the left and the right margin are about the same)
-            band = (0, 27, 128, 47) if mode == 'full' else (0, 18, 128, 47)
-            left, top, right, bottom = self.bbox(image, band)
-            self.assertLess(abs(left - (128 - right)), 4, mode)
-            self.assertGreaterEqual(bottom - top, 12, '%s: twice the height of the title font' % mode)
-            self.assertLess(bottom - top, 24, mode)
-            self.assertNotEqual(image.tobytes(), self.screens.render({**self.STATE, 'mode': mode, 'broadcast': False}, 0).tobytes(), mode)
+    def test_a_station_is_shown_as_a_podcast_with_the_time_of_day_in_place_of_the_episode(self):
+        radio = {**self.STATE, 'title': 'Radio mit einem recht langen Namen der in zwei Zeilen steht', 'track': 0, 'tracks': 0}
+        podcast = {**radio, 'stream': False}
+        # (the box where Full has the episode - the time of day of a station stands there; Mix: the middle cell of the status line)
+        places = {'full': (64, 53, 128, 64), 'mix': (41, 54, 76, 64), 'lite': None}
+        for mode, box in places.items():
+            station = self.screens.render({**radio, 'mode': mode}, 0)
+            other = self.screens.render({**podcast, 'mode': mode}, 0)
+            self.assertEqual((station.size, station.mode), ((128, 64), '1'), mode)
+            if box is None:
+                self.assertEqual(station.tobytes(), other.tobytes(), mode)
+                continue
+            rest = lambda image: [image.crop(part).tobytes() for part in ((0, 0, 128, box[1]), (0, box[1], box[0], 64), (box[2], box[1], 128, 64))]
+            self.assertEqual(rest(station), rest(other), '%s: only the place of the time of day differs' % mode)
+            self.assertGreater(lit(station, box), 5, mode)
+            self.assertEqual(lit(other, box), 0, mode)
+            # (and it follows the time of day)
+            self.assertNotEqual(station.crop(box).tobytes(), self.screens.render({**radio, 'mode': mode, 'time': '14:36'}, 0).crop(box).tobytes(), mode)
+        # (the title wraps over lines: it has ink well below the first line)
+        image = self.screens.render({**radio, 'mode': 'full'}, 0)
+        self.assertIsNotNone(self.bbox(image, (0, 38, 128, 50)))
 
     LONG = 'Die Geschichte vom kleinen Maulwurf der unbedingt wissen wollte wer ihm auf den Kopf gemacht hat'
 
@@ -837,8 +845,6 @@ class BroadcastTest(unittest.TestCase):
             self.assertGreater(rows[-1], band[1] + 26, mode)
             # (no clock: another time of day changes nothing)
             self.assertEqual(image.tobytes(), self.screens.render({**podcast, 'mode': mode, 'time': '09:01'}, 0).tobytes(), mode)
-            # (and it differs from the title and the time of a station)
-            self.assertNotEqual(image.tobytes(), self.screens.render({**self.STATE, 'title': self.LONG, 'mode': mode}, 0).tobytes(), mode)
 
     def test_a_podcast_shows_the_episode_and_the_total_in_full_and_only_the_number_in_mix(self):
         state = {**self.STATE, 'stream': False, 'title': 'Folge', 'track': 12, 'tracks': 123, 'mode': 'full'}
@@ -929,13 +935,6 @@ class BroadcastTest(unittest.TestCase):
             later = self.screens.render({**state, 'mode': mode, 'time': '14:36'}, 0)
             self.assertNotEqual(radio.crop(box).tobytes(), later.crop(box).tobytes(), mode)
             self.assertEqual(radio.crop((0, 0, 128, 50)).tobytes(), later.crop((0, 0, 128, 50)).tobytes(), mode)
-
-    def test_the_big_time_needs_no_second_one_in_the_row_below(self):
-        state = {**self.STATE, 'track': 3, 'tracks': 12}
-        mix = self.screens.render({**state, 'mode': 'mix'}, 0)
-        self.assertEqual(lit(mix, (41, 52, 76, 64)), 0, 'no track number and no second time in the middle cell')
-        full = self.screens.render({**state, 'mode': 'full'}, 0)
-        self.assertEqual(lit(full, (70, 53, 128, 64)), 0, 'nothing at the right of the bottom row')
 
     def test_without_a_time_of_day_the_usual_picture_stays(self):
         state = {**self.STATE, 'mode': 'mix', 'time': ''}
