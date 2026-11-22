@@ -185,33 +185,34 @@ class Pictures:
         return image
 
 
+TIME_MAX = 99 * 60 + 59  # seconds: the longest time that is shown as minutes and seconds (99:59)
+
+
 def clock_text(seconds):
-    """67 -> '1:07', 3725 -> '1:02:05' (nothing known -> '--:--')."""
+    """67 -> '1:07', 3725 -> '62:05' (minutes go on up to 99:59, no hours); more -> '>99:59' (nothing known -> '--:--')."""
     if seconds is None or seconds < 0:
         return '--:--'
     seconds = int(seconds)
-    h, rest = divmod(seconds, 3600)
-    m, s = divmod(rest, 60)
-    return '%d:%02d:%02d' % (h, m, s) if h else '%d:%02d' % (m, s)
+    if seconds > TIME_MAX:
+        return '>99:59'
+    return '%d:%02d' % divmod(seconds, 60)
 
 
-def shown_time(state, short=False):
+def shown_time(state):
     """The time of the player the way the user chose ("Zeit zeigen"): up from the start, or - with `timeMode` 'down' - a minus and what is left
-    (a stream has no end to count down to: it counts up). `short` leaves out the seconds of a time with hours."""
+    (a stream has no end to count down to: it counts up). Minutes up to 99:59; a longer time is '>99:59', without a minus."""
     elapsed, duration = state.get('elapsed'), state.get('duration')
     if state.get('timeMode') == 'down' and isinstance(elapsed, (int, float)) and isinstance(duration, (int, float)) and duration > 0:
         seconds, sign = max(0, duration - elapsed), '-'
     else:
         seconds, sign = elapsed, ''
     text = clock_text(seconds)
-    if short and text.count(':') == 2:
-        text = text.rsplit(':', 1)[0]
-    return sign + text
+    return text if text.startswith('>') else sign + text
 
 
-def played_time(state, short=False):
+def played_time(state):
     """The time of the playing as the bottom row shows it: '' for a radio stream (how long it has been on says nothing), else shown_time."""
-    return '' if state.get('stream') else shown_time(state, short)
+    return '' if state.get('stream') else shown_time(state)
 
 
 def fit(text, font, draw, width):
@@ -794,9 +795,6 @@ class Screens:
         draw.line((0, y - 2, self.width, y - 2), fill=1)
         paused = not state.get('playing')
         left = 'PAUSE' if paused else played_time(state)
-        # (the cell is 38 pixels wide: a time with hours and a minus has no room for its seconds)
-        if self.row_width(left) > 38:
-            left = played_time(state, short=True)
         y += 1
         self._row_text(draw, 1, y, left)
         draw.line((40, y - 3, 40, self.height), fill=1)

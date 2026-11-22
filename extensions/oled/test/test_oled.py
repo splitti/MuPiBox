@@ -268,7 +268,10 @@ class ScreensTest(unittest.TestCase):
 
     def test_clock_text(self):
         self.assertEqual(render.clock_text(67), '1:07')
-        self.assertEqual(render.clock_text(3725), '1:02:05')
+        self.assertEqual(render.clock_text(3725), '62:05')
+        self.assertEqual(render.clock_text(5999), '99:59')
+        self.assertEqual(render.clock_text(6000), '>99:59')
+        self.assertEqual(render.clock_text(36000), '>99:59')
         self.assertEqual(render.clock_text(None), '--:--')
         self.assertEqual(render.clock_text(-1), '--:--')
 
@@ -582,8 +585,12 @@ class ScreensTest(unittest.TestCase):
         self.assertEqual(render.shown_time({'elapsed': 83, 'duration': 190, 'timeMode': 'up'}), '1:23')
         self.assertEqual(render.shown_time({'elapsed': 83, 'duration': 190, 'timeMode': 'down'}), '-1:47')
         self.assertEqual(render.shown_time({'elapsed': 83, 'duration': None, 'timeMode': 'down'}), '1:23', 'a stream counts up')
-        self.assertEqual(render.shown_time({'elapsed': 100, 'duration': 7000, 'timeMode': 'down'}), '-1:55:00')
-        self.assertEqual(render.shown_time({'elapsed': 100, 'duration': 7000, 'timeMode': 'down'}, short=True), '-1:55')
+        # (over an hour the minutes go on up to 99:59; more is '>99:59', up or down, without a minus)
+        self.assertEqual(render.shown_time({'elapsed': 100, 'duration': 4000, 'timeMode': 'down'}), '-65:00')
+        self.assertEqual(render.shown_time({'elapsed': 100, 'duration': 6099, 'timeMode': 'down'}), '-99:59')
+        self.assertEqual(render.shown_time({'elapsed': 100, 'duration': 7000, 'timeMode': 'down'}), '>99:59')
+        self.assertEqual(render.shown_time({'elapsed': 7000, 'duration': 9000, 'timeMode': 'up'}), '>99:59')
+        self.assertEqual(render.shown_time({'elapsed': 3725, 'duration': 9000, 'timeMode': 'up'}), '62:05')
         for size in ((128, 64), (128, 32)):
             screens = render.Screens(*size)
             for mode in ('mix', 'lite', 'full'):
@@ -591,9 +598,10 @@ class ScreensTest(unittest.TestCase):
                 up = screens.render({**state, 'timeMode': 'up'}, 0)
                 down = screens.render({**state, 'timeMode': 'down'}, 0)
                 self.assertNotEqual(up.tobytes(), down.tobytes(), (size, mode))
-        # (a time with hours and a minus in the narrow cell of the Mix mode still ends before its line)
-        long = render.Screens(128, 64).render({**PLAY, 'mode': 'mix', 'elapsed': 100, 'duration': 7000, 'timeMode': 'down'}, 0)
-        self.assertEqual(lit(long, (38, 53, 40, 64)), 0)
+        # (the longest times in the narrow cell of the Mix mode still end before its line)
+        for duration in (6099, 7000):
+            long = render.Screens(128, 64).render({**PLAY, 'mode': 'mix', 'elapsed': 100, 'duration': duration, 'timeMode': 'down'}, 0)
+            self.assertEqual(lit(long, (38, 53, 40, 64)), 0, duration)
 
     def test_the_bottom_row_counts_up_or_down(self):
         up = self.s.render({**PLAY, 'timeMode': 'up'}, 0)
