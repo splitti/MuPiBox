@@ -570,10 +570,10 @@ class Screens:
             w = draw.textlength(right, font=font)
             if right and end + 4 + w <= self.width:
                 draw.text((self.width - w, y), right, font=font, fill=1)
-        elif track and (tracks or state.get('broadcast')):
-            # (a podcast: only the number of the episode - its list may be long, and the total says little)
-            for template in (('Folge: %d', 'Folge:%d', '%d') if state.get('broadcast') else ('Track:%d/%d', '%d/%d')):
-                label = template % ((track,) if state.get('broadcast') else (track, tracks))
+        elif track and tracks:
+            # (a podcast counts episodes)
+            for template in (('Folge: %d/%d', 'Folge:%d/%d', '%d/%d') if state.get('broadcast') else ('Track:%d/%d', '%d/%d')):
+                label = template % (track, tracks)
                 w = draw.textlength(label, font=font)
                 if end + 4 + w <= self.width:
                     draw.text((self.width - w, y), label, font=font, fill=1)

@@ -840,19 +840,21 @@ class BroadcastTest(unittest.TestCase):
             # (and it differs from the title and the time of a station)
             self.assertNotEqual(image.tobytes(), self.screens.render({**self.STATE, 'title': self.LONG, 'mode': mode}, 0).tobytes(), mode)
 
-    def test_a_podcast_shows_only_the_number_of_its_episode_not_the_total(self):
-        state = {**self.STATE, 'stream': False, 'title': 'Folge', 'track': 3, 'tracks': 123, 'mode': 'full'}
+    def test_a_podcast_shows_the_episode_and_the_total_in_full_and_only_the_number_in_mix(self):
+        state = {**self.STATE, 'stream': False, 'title': 'Folge', 'track': 12, 'tracks': 123, 'mode': 'full'}
         podcast = self.screens.render(state, 0)
         album = self.screens.render({**state, 'broadcast': False}, 0)
         box = (64, 53, 128, 64)
         self.assertGreater(lit(podcast, box), 5)
         self.assertNotEqual(podcast.crop(box).tobytes(), album.crop(box).tobytes())
-        # (the total does not show: another total changes nothing; the number does)
-        self.assertEqual(podcast.tobytes(), self.screens.render({**state, 'tracks': 7}, 0).tobytes())
-        self.assertNotEqual(podcast.tobytes(), self.screens.render({**state, 'track': 4}, 0).tobytes())
-        self.assertEqual(self.screens.render({**state, 'tracks': 0}, 0).tobytes(), podcast.tobytes())
-        # (and the number alone is narrower than "Track:3/123")
-        self.assertLess(podcast.crop((60, 53, 128, 64)).getbbox()[2] - podcast.crop((60, 53, 128, 64)).getbbox()[0], album.crop((60, 53, 128, 64)).getbbox()[2] - album.crop((60, 53, 128, 64)).getbbox()[0])
+        # (Full: "Folge: 12/123" - the total shows, another one changes the picture)
+        self.assertNotEqual(podcast.tobytes(), self.screens.render({**state, 'tracks': 7}, 0).tobytes())
+        # (nothing without the total: it is not known yet)
+        self.assertEqual(lit(self.screens.render({**state, 'tracks': 0}, 0), box), 0)
+        # (Mix: only the number of the episode in the middle cell - the total changes nothing)
+        mix = {**state, 'mode': 'mix'}
+        self.assertEqual(self.screens.render(mix, 0).tobytes(), self.screens.render({**mix, 'tracks': 7}, 0).tobytes())
+        self.assertNotEqual(self.screens.render(mix, 0).tobytes(), self.screens.render({**mix, 'track': 13}, 0).tobytes())
 
     def test_the_picture_of_a_tag_over_a_podcast_shows_the_episode_where_the_time_of_day_was(self):
         state = {**self.STATE, 'stream': False, 'track': 3, 'tracks': 123, 'tagPicture': 'A1'}
