@@ -44,7 +44,7 @@
   <!-- km themes, "Bühne": one big cover in the middle, two smaller ones on each side, the name below it (tap: read
        aloud). Only these few are in the DOM, whatever the length of the list (see stageItems). -->
     @let cur = stageCurrent();
-    <div class="km-stage-wrap" [class.km-stage-dragging]="stageDragging()">
+    <div #stageRow class="km-stage-wrap" [class.km-stage-dragging]="stageDragging()">
       <div class="km-stage" (pointerdown)="stageDown($event)" (pointermove)="stageMove($event)" (pointerup)="stageUp()" (pointerleave)="stageUp()" (pointercancel)="stageUp()">
         @for (it of stageItems(); track it.index) {
           @let src = it.data.imgSrc | async;
