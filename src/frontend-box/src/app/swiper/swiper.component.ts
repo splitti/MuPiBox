@@ -175,14 +175,6 @@ export class SwiperComponent<T> {
   private static readonly STAGE_PIXELS_PER_COVER = 180
   // Cover Flow: the strip a side cover shows on the 5" display - (800 px / 2 - 300 px / 2) / 3 covers - and the least on a wider one
   private static readonly COVERFLOW_STRIP = (800 / 2 - 300 / 2) / 3
-  // Cover Flow with only a few covers (fewer than fill a side of the screen): the most a side cover shows of itself, i.e. its distance to the
-  // next one (px) - the covers stay together next to the middle instead of spreading out to the edge of the screen
-  private static readonly COVERFLOW_FEW_STEP = 50
-  /** The strip a side cover shows (its distance to the next one) when `room` is shared by `onSide` covers; `few`: the list is too short to fill the side. */
-  public static coverflowStep(room: number, onSide: number, few: boolean): number {
-    const step = room / Math.max(onSide, 1)
-    return few ? Math.min(step, SwiperComponent.COVERFLOW_FEW_STEP) : step
-  }
   /** How many covers show on each side of the middle for a row of this width (two on 800 px and below). */
   public static stageSides(width: number): number {
     const half = (Number.isFinite(width) ? width : 0) / 2
@@ -621,7 +613,7 @@ export class SwiperComponent<T> {
     // Three covers on each side of the centered one on the 5" display (800 px). The space between the edge of the centered cover and the
     // edge of the screen is divided into three equal steps (each side cover shows a strip of one step), and
     // all side covers have the same tilt. With three covers or fewer there are less than three on a side: the space
-    // stays together: the space is divided among those that are there, but no strip is wider than COVERFLOW_FEW_STEP.
+    // is divided among those that are there, so the outermost one reaches the edge of the screen all the same.
     // On a wider display there are more covers on a side, each still showing a strip of about the same step.
     const maxAngle = 65
     const depth = 100
@@ -673,7 +665,7 @@ export class SwiperComponent<T> {
       const outerZ = z + (coverWidth / 2) * Math.sin(radians)
       const scale = perspective / (perspective - outerZ)
       // Move the outer edge of the cover to its place: one step further out for every cover.
-      const step = SwiperComponent.coverflowStep(room, coversOnSide(side), total <= visibleSides)
+      const step = room / coversOnSide(side)
       const shift = side * (((coverWidth / 2) + t * (step - unit)) / scale - (coverWidth / 2) * Math.cos(radians))
       slide.style.transform = `perspective(${perspective}px) translateX(${shift}px) translateZ(${z}px) rotateY(${-side * angle}deg)`
       // Covers nearer to the center are drawn on top of the further ones.
