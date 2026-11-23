@@ -72,3 +72,18 @@ describe('SwiperComponent.stageSides', () => {
     }
   })
 })
+
+describe('SwiperComponent.coverflowStep', () => {
+  it('shares the room among the covers of a side that fills it, as before', () => {
+    expect(SwiperComponent.coverflowStep(810, 9, false)).toBe(90)
+    expect(SwiperComponent.coverflowStep(250, 3, false)).toBeCloseTo(250 / 3, 6)
+  })
+
+  it('keeps the covers of a short list together: at most 50 px to the next one', () => {
+    expect(SwiperComponent.coverflowStep(810, 1, true)).toBe(50)
+    expect(SwiperComponent.coverflowStep(810, 2, true)).toBe(50)
+    expect(SwiperComponent.coverflowStep(250, 1, true)).toBe(50)
+    // (a strip that is narrower anyway stays as it is)
+    expect(SwiperComponent.coverflowStep(90, 3, true)).toBe(30)
+  })
+})
