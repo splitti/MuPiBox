@@ -686,6 +686,9 @@ export class SwiperComponent<T> {
       }
       // progress > 0: the cover is on the left of the centered one (as before), progress < 0: on the right.
       const side = -Math.sign(progress) // -1 left, +1 right on the screen
+      // (which side of the middle the cover is on: the badge of a folder sits at the outer corner, the free one of an overlapped cover)
+      const place = t < 0.5 ? 'c' : side < 0 ? 'l' : 'r'
+      if (slide.dataset['place'] !== place) slide.dataset['place'] = place
       const angle = maxAngle * Math.min(t, 1) // all side covers are tilted by the same angle (the first one turns in while it moves away from the center)
       const radians = (angle * Math.PI) / 180
       const z = -depth * Math.min(t, 1)

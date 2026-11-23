@@ -194,9 +194,59 @@ swiper-container.coverflow {
                 width: 100%;
                 object-fit: cover;
             }
+
+            // A folder with more below it (the km themes show it the same way): two cards stacked behind the cover, a round folder badge at its
+            // corner. The card is kept from cutting them off (Ionic contains it); `isolation` keeps the stack behind the cover but in front of the page.
+            &.cf-folder {
+                position: relative;
+                overflow: visible;
+                contain: none;
+                isolation: isolate;
+            }
+
+            .cf-stack {
+                position: absolute;
+                left: 12px;
+                right: 12px;
+                top: -11px;
+                height: 40px;
+                border-radius: 20px 20px 0 0;
+                background: #3a3a3c;
+                z-index: -1;
+            }
+
+            .cf-stack + .cf-stack {
+                left: 24px;
+                right: 24px;
+                top: -22px;
+                background: #2c2c2e;
+                z-index: -2;
+            }
+
+            .cf-badge {
+                position: absolute;
+                right: -10px;
+                bottom: -10px;
+                width: 56px;
+                height: 56px;
+                box-sizing: border-box;
+                border: 4px solid #000;
+                border-radius: 28px;
+                display: grid;
+                place-items: center;
+                background: #fff;
+                color: #1c1c1e;
+                font-size: 26px;
+                z-index: 2;
+            }
         }
     }
 
+    // (the covers left of the middle show their left strip: the badge of a folder sits on that side)
+    swiper-slide[data-place='l'] .cf-badge {
+        right: auto;
+        left: -10px;
+    }
 }
 
 // --- km themes (children's themes, body.km - see theme/km-theme.service.ts) ------------------------------------
