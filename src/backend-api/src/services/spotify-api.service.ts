@@ -7,6 +7,7 @@ import { SpotifyApi } from '@spotify/web-api-ts-sdk'
 import type { ServerConfig } from '../models/server.model'
 import { artistAlbums } from '../artist-albums-store'
 import { noteSpotifyBlock, spotifyBlock } from '../spotify-block'
+import { CACHE_DIR } from '../paths'
 import type {
   CachedSpotifyData,
   SpotifyApiAlbumDetails,
@@ -22,7 +23,7 @@ import type {
 
 export class SpotifyApiService {
   private spotifyApi: SpotifyApi
-  private cacheDir = path.join(process.cwd(), 'cache', 'spotify-api')
+  private cacheDir = path.join(CACHE_DIR, 'spotify-api')
   private cacheExpiry = {
     static: 7 * 24 * 60 * 60 * 1000, // 7 days for Albums, Shows, Artists, etc.
     semiStatic: 24 * 60 * 60 * 1000, // 24 hours for Artist Albums, Show Episodes

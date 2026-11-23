@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { createHmac } from 'node:crypto'
-import { CONSENT_VERSION, ERASE_URL, REPORT_URL, classicTelemetryVersion, consentBelongsToDevice, markNoticeShown, noticeState, primaryAudioDevice, reportDue, requestReportNow, runStatisticsOnce, setNoticeSwitches, setStatisticsConsent } from './eltern/telemetry'
+import { CONSENT_VERSION, ERASE_URL, REPORT_URL, classicTelemetryVersion, consentBelongsToDevice, markNoticeShown, noticeState, primaryAudioDevice, reportDue, requestReportNow, runStatisticsOnce, setNoticeSwitches, setStatisticsConsent } from './app-api/telemetry'
 
 const token = 'a'.repeat(64)
 const device_proof = createHmac('sha256', token).update('0000000012345678').digest('hex')

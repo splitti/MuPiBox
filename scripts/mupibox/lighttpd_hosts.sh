@@ -8,7 +8,7 @@
 # Allowed: IP addresses, localhost, a name without a dot (as the router's DNS gives it: http://mupibox/) and one with
 # an ending of the home network nobody can register on the internet (.local, .lan, .home, .home.arpa, .internal,
 # .localdomain, .fritz.box, .speedport.ip) - plus the address the parents set up for their own certificate
-# (mupiboxconfig.json tls.linkHost, see backend-api eltern/tls.ts). Written again when that changes; lighttpd is
+# (mupiboxconfig.json tls.linkHost, see backend-api app-api/tls.ts). Written again when that changes; lighttpd is
 # restarted only when the file changed (restart, not reload). Runs as root. CONFIG / CONF / NO_RESTART=1 for a test.
 # The same file refuses the box's own media players (mpv, ffmpeg, mplayer), as the app's server and the player do.
 

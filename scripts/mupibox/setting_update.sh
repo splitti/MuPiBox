@@ -3,13 +3,15 @@
 # Service: Update Mupibox Settings
 # Will be done before Shutdown, or by the Setup
 
+. /usr/local/bin/mupibox/mupi_paths.sh
+
 MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json"
-SONOS_CONFIG="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json"
+SONOS_CONFIG="${MUPI_SERVER_CONFIG}/config.json"
 NETWORK_CONFIG="/tmp/network.json"
-SPOTIFYCONTROLLER_CONFIG="/home/dietpi/.mupibox/spotifycontroller-main/config/config.json"
+SPOTIFYCONTROLLER_CONFIG="${MUPI_PLAYER}/config/config.json"
 SPOTIFYD_CONFIG="/etc/spotifyd/spotifyd.conf"
 DISPLAY_STANDBY="/etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf"
-THEME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme.css"
+THEME_FILE="${MUPI_WWW}/active_theme.css"
 NEW_THEME=$(/usr/bin/jq -r .mupibox.theme ${MUPIBOX_CONFIG})
 
 # B4: NEW_THEME comes from mupiboxconfig.json — admin-controlled.

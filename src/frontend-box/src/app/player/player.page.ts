@@ -1,6 +1,6 @@
 import { AsyncPipe, NgTemplateOutlet } from '@angular/common'
 import { HttpClient } from '@angular/common/http'
-import { AfterViewInit, Component, DestroyRef, ElementRef, effect, inject, OnInit, signal, ViewChild } from '@angular/core'
+import { AfterViewInit, Component, DestroyRef, ElementRef, effect, inject, OnInit, signal, untracked, ViewChild } from '@angular/core'
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { FormsModule } from '@angular/forms'
 import { ActivatedRoute, Router } from '@angular/router'
@@ -56,6 +56,7 @@ import { ArtworkService } from '../artwork.service'
 import { CoverFlipService } from '../cover-flip.service'
 import { DisplayTextsService } from '../display-texts.service'
 import { KmThemeService } from '../theme/km-theme.service'
+import { WinampService } from '../winamp/winamp.service'
 import { LogService } from '../log.service'
 import { isResumeEntry, type Media } from '../media'
 import { cleanResumePlaceholder } from '../resume-builder'
@@ -68,6 +69,7 @@ import { OutputSwitchComponent } from '../output-switch/output-switch.component'
 import { PlayerCmds, PlayerService } from '../player.service'
 import type { PlaytimePlayState } from '../playtime.model'
 import { PlaytimeService } from '../playtime.service'
+import { TileTimeService } from '../tile-time.service'
 import { SpotifyService } from '../spotify.service'
 
 /**
@@ -133,6 +135,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   cover = ''
   // km themes (children's themes): their own markup in the template (see theme/km-theme.service.ts)
   private readonly kmTheme = inject(KmThemeService)
+  private readonly winamp = inject(WinampService)
   protected readonly km = this.kmTheme.isKm
   /** header, controls, track list and "Hören mit" of design round 2: the km themes and coverflow */
   protected readonly r2 = this.kmTheme.roundTwo
@@ -194,7 +197,9 @@ export class PlayerPage implements OnInit, AfterViewInit {
   protected trackCounter(spotify: CurrentSpotify | null | undefined, local: CurrentMPlayer | null | undefined): string {
     const pair = (a?: number | string, b?: number | string) => (a !== undefined && a !== '' && b !== undefined && b !== '' && Number(b) > 0 ? `${a} / ${b}` : '')
     const m = this.media
-    if (m.type === 'library' || m.type === 'nas' || m.type === 'tidal') return pair(local?.currentTracknr, local?.totalTracks)
+    if (m.type === 'library' || m.type === 'nas' || m.type === 'tidal' || m.type === 'jellyfin' || m.type === 'audible') return pair(local?.currentTracknr, local?.totalTracks)
+    // (a podcast: the place of the episode in its feed, the newest being the first - as the list has it)
+    if (m.type === 'rss') return pair(this.rssPlace > 0 ? this.rssPlace : undefined, this.rssCount)
     if (m.type !== 'spotify') return ''
     if (m.playlistid && (spotify?.playlist?.total_tracks ?? 0) > 0) return pair(spotify?.playlist?.current_track_position, spotify?.playlist?.total_tracks)
     if (m.showid && spotify?.show_details) return pair(spotify.show_details.current_episode_position, spotify.show_details.total_episodes)
@@ -346,6 +351,12 @@ export class PlayerPage implements OnInit, AfterViewInit {
   private idleTicks = 0
   private isLeaving = false
   private stoppedFromOutside = false
+  // A day's limit per tile (5.1): its tile is used up - nothing was started, the page goes back at once (no STOP: what
+  // played on in the background goes on); and the page is on the screen (a refusal of the player sends it back)
+  private tileUsedUp = false
+  private onPage = false
+  private tileView = 0
+  private readonly tileTime = inject(TileTimeService)
   private contextSeenFor = ''
   private contextGone = 0
   private albumEnded = false
@@ -358,6 +369,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
   // Tracks the playtime state across ticks so we can detect transitions
   // (normal -> grace, grace -> blocked, etc.) and persist resume on time.
   private prevPlaytimeState: PlaytimePlayState | 'unknown' = 'unknown'
+  // (the same for the tile of what plays: "<key>|<state>")
+  private prevTileState = ''
   private destroyRef = inject(DestroyRef)
   private externalNavigator = inject(ExternalPlaybackNavigatorService)
   public readonly spotify$: Observable<CurrentSpotify>
@@ -367,6 +380,11 @@ export class PlayerPage implements OnInit, AfterViewInit {
   loadingTrackList = false
   // (Spotify did not answer for the list - blocking the box, offline: said so instead of "no tracks")
   trackListFailed = false
+  // The episodes of the podcast that plays (newest first) and the place of this one in them (1 = the newest, 0 = not known)
+  private rssEpisodes: TrackListEntry[] = []
+  private rssPlace = 0
+  // (all episodes of the tile - the list holds at most 300 of them)
+  private rssCount = 0
   trackList: TrackListEntry[] = []
   trackListTitle = ''
   pressingCover = false
@@ -401,6 +419,23 @@ export class PlayerPage implements OnInit, AfterViewInit {
     this.local$ = this.mediaService.local$
     // the listening-time chip lies above every page: hidden while the "Hören mit" window dims the player
     effect(() => document.body.classList.toggle('kp-out-open', this.outputOpen()))
+    // The player refused a start or a play/next of this page: its tile's day's limit is used up (5.1) - back to the
+    // list (TileTimeService shows the bar)
+    let seenRefusals = this.tileTime.refusals()
+    effect(() => {
+      const n = this.tileTime.refusals()
+      untracked(() => {
+        if (n === seenRefusals) return
+        seenRefusals = n
+        if (!this.onPage || this.isLeaving) return
+        this.isLeaving = true
+        // (the player changed nothing: no STOP on the way out - it would end what plays - and no resume saved)
+        this.stoppedFromOutside = true
+        this.playing = false
+        this.updateProgression = false
+        this.leavePage('the player refused it: its tile is used up for today')
+      })
+    })
 
     // navState is read once into a local because the external-playback flag
     // (Phase 19 Stufe B) is read from the same state object further down.
@@ -447,6 +482,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   }
 
   ngOnInit() {
+    void this.loadRssEpisodes()
     // Handle case where no media object was provided (external playback)
     if (!this.media) {
       this.handleExternalPlayback()
@@ -458,7 +494,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
         if (typeof configuredSeconds === 'number' && configuredSeconds > 0) {
           this.listViewTimerMs = configuredSeconds * 1000
         }
-        this.backAction.set(config?.mupibox?.playerBack === 'stop' ? 'stop' : 'minimize')
+        // (the Winamp theme browses the library while the music goes on: always minimise)
+        this.backAction.set(config?.mupibox?.playerBack === 'stop' && !this.winamp.active() ? 'stop' : 'minimize')
         this.coverflowTheme = config?.mupibox?.theme === 'coverflow'
       },
       error: () => {
@@ -488,7 +525,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
       // The bar also with every report of the player, not only in updateProgress's ticks: once (a NAS album paused at
       // 59 %) the dot stood at the start while the time below it showed the right place - both come from this report
       // now, so they cannot part.
-      if (this.media?.type === 'library' || this.media?.type === 'nas' || this.media?.type === 'tidal' || this.media?.type === 'rss') {
+      if (this.media?.type === 'library' || this.media?.type === 'nas' || this.media?.type === 'tidal' || this.media?.type === 'jellyfin' || this.media?.type === 'audible' || this.media?.type === 'rss') {
         this.progress = this.heldProgress(Number(local?.progressTime) || 0)
       }
     })
@@ -553,7 +590,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
       // (no track loaded yet in the display's Spotify player - after a podcast, at the start: nothing to seek in)
       const duration = this.currentPlayedSpotify?.item?.duration_ms
       if (duration) this.playerService.seekPosition(duration * (newValue / 100))
-    } else if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal' || this.media.type === 'rss') {
+    } else if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal' || this.media.type === 'jellyfin' || this.media.type === 'audible' || this.media.type === 'rss') {
       this.playerService.seekPosition(newValue)
     }
   }
@@ -719,7 +756,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
           this.updateProgress()
         }
       }, 1000)
-    } else if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal' || this.media.type === 'rss') {
+    } else if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal' || this.media.type === 'jellyfin' || this.media.type === 'audible' || this.media.type === 'rss') {
       // The player says the album or episode played to its end: back to the list at once (it waited 10 s for the
       // player to stay silent - the page looked stuck meanwhile). No resume save on the way out: the album is done.
       if (this.currentPlayedLocal?.finished && !this.isLeaving) {
@@ -731,7 +768,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
       const seek = this.currentPlayedLocal?.progressTime || 0
       this.progress = this.heldProgress(seek || 0)
       if (
-        (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal') &&
+        (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal' || this.media.type === 'jellyfin' || this.media.type === 'audible') &&
         this.playing &&
         !this.currentPlayedLocal?.playing &&
         this.currentPlayedLocal?.currentTracknr === this.currentPlayedLocal?.totalTracks
@@ -756,6 +793,18 @@ export class PlayerPage implements OnInit, AfterViewInit {
   }
 
   async ionViewWillEnter() {
+    // its tile's day's limit is used up (opened from "Weiterhören", an album of the artist, the tile ran out
+    // meanwhile): nothing starts, the bar says so
+    this.tileUsedUp = !this.isExternalPlayback && this.tileTime.blocked(this.media)
+    if (this.tileUsedUp) {
+      this.tileTime.showOver(this.media)
+      this.updateProgression = false
+      this.leavePage('its tile is used up for today')
+      return
+    }
+    this.onPage = true
+    // (its tile is the one open now: the chip shows its minutes, see TileTimeService.shown)
+    this.tileView = this.tileTime.view(this.media)
     this.updateProgression = true
     this.leftByPage = false
     // (whatever ran on in the background is on this page again - or is replaced by what starts now)
@@ -797,6 +846,9 @@ export class PlayerPage implements OnInit, AfterViewInit {
   }
 
   ionViewWillLeave() {
+    this.onPage = false
+    this.tileTime.leave(this.tileView)
+    if (this.tileUsedUp) return
     // (left within the first seconds: shuffle must not be switched on after the page is gone - the next audiobook
     // played in random order then)
     clearTimeout(this.shuffleTimer)
@@ -814,7 +866,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
       return
     }
     if (
-      (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal' || this.media.type === 'rss') &&
+      (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal' || this.media.type === 'jellyfin' || this.media.type === 'audible' || this.media.type === 'rss') &&
       !this.media.shuffle &&
       this.playing &&
       !this.albumEnded // (the SDK's position belongs to what autoplay went on with, not to this album)
@@ -904,6 +956,18 @@ export class PlayerPage implements OnInit, AfterViewInit {
         this.logService.error('[PlayerPage] Failed to start TIDAL playback')
         return
       }
+    } else if (this.media.type === 'audible') {
+      const success = await this.playerService.resumeAudibleMedia(this.media)
+      if (!success) {
+        this.logService.error('[PlayerPage] Failed to start Audible playback')
+        return
+      }
+    } else if (this.media.type === 'jellyfin') {
+      const success = await this.playerService.resumeJellyfinMedia(this.media)
+      if (!success) {
+        this.logService.error('[PlayerPage] Failed to start Jellyfin playback')
+        return
+      }
     } else if (this.media.type === 'rss') {
       const success = await this.playerService.playMedia(this.media)
       if (!success) {
@@ -925,6 +989,11 @@ export class PlayerPage implements OnInit, AfterViewInit {
   // for a ±5s position improvement that the kid won't notice.
   private checkPlaytimeForResume() {
     const status = this.playtimeService.status()
+    // a tile's day's limit (5.1) reached - also on a box with only tile limits (the listening time off): saved as for it
+    const tile = status.tiles?.current
+    const tileNow = tile ? `${tile.key}|${tile.state}` : ''
+    if (tile && tile.state !== 'normal' && this.prevTileState === `${tile.key}|normal`) this.saveResumeFiles()
+    this.prevTileState = tileNow
     if (!status.enabled) {
       this.prevPlaytimeState = 'unknown'
       return
@@ -947,7 +1016,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
     // position) - the entry of the last periodic save stands, it is not overwritten with zeros
     // (and for local media only while mplayer/mpv plays: Spotify started meanwhile wrote this page's NAS entry with
     // the zeros of the empty local player)
-    if ((this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal' || this.media.type === 'rss') && this.currentPlayedLocal?.currentPlayer !== 'mplayer') return
+    if ((this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal' || this.media.type === 'jellyfin' || this.media.type === 'audible' || this.media.type === 'rss') && this.currentPlayedLocal?.currentPlayer !== 'mplayer') return
 
     // Spotify: the track's place in its album or playlist not known (a list of more than 50 tracks, one that could not
     // be loaded): the last save stands - it was saved as track 1 at the position of track N
@@ -976,7 +1045,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
       this.resumemedia.id = `nas:${this.resumemedia.nasPath}`
       this.resumemedia.resumelocalcurrentTracknr = this.currentPlayedLocal?.currentTracknr || 0
       this.resumemedia.resumelocalprogressTime = this.currentPlayedLocal?.progressTime || 0
-    } else if (this.resumemedia.type === 'tidal') {
+    } else if (this.resumemedia.type === 'tidal' || this.resumemedia.type === 'jellyfin' || this.resumemedia.type === 'audible') {
       this.resumemedia.resumelocalcurrentTracknr = this.currentPlayedLocal?.currentTracknr || 0
       this.resumemedia.resumelocalprogressTime = this.currentPlayedLocal?.progressTime || 0
     } else if (this.resumemedia.type === 'rss') {
@@ -1020,6 +1089,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
       this.playing = true
       this.playerService.sendCmd(PlayerCmds.PREVIOUS)
     }
+    // (a podcast: the player starts the episode before this one - the page shows it as soon as it plays)
+    if (this.media.type === 'rss') this.externalNavigator.checkSoon()
   }
 
   skipNext() {
@@ -1030,6 +1101,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
       this.playing = true
       this.playerService.sendCmd(PlayerCmds.NEXT)
     }
+    if (this.media.type === 'rss') this.externalNavigator.checkSoon()
   }
 
   toggleshuffle() {
@@ -1050,7 +1122,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
     if (this.playing) {
       //this.playing = false;
       this.playerService.sendCmd(PlayerCmds.PAUSE)
-      if (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal' || this.media.type === 'rss') {
+      if (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal' || this.media.type === 'jellyfin' || this.media.type === 'audible' || this.media.type === 'rss') {
         this.saveResumeFiles()
       }
     } else {
@@ -1073,7 +1145,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   // --------------------------------------------
 
   coverPointerDown() {
-    if (this.media.type !== 'spotify' && this.media.type !== 'library' && this.media.type !== 'nas' && this.media.type !== 'tidal') {
+    if (this.media.type !== 'spotify' && this.media.type !== 'library' && this.media.type !== 'nas' && this.media.type !== 'tidal' && this.media.type !== 'jellyfin' && this.media.type !== 'audible' && this.media.type !== 'rss') {
       return
     }
     clearTimeout(this.longPressTimer)
@@ -1089,6 +1161,30 @@ export class PlayerPage implements OnInit, AfterViewInit {
     this.pressingCover = false
   }
 
+  // The episodes of this podcast (the box finds the feed from the episode); the counter under the cover and the list use them
+  private async loadRssEpisodes(): Promise<void> {
+    if (this.media?.type !== 'rss' || !this.media.id) return
+    try {
+      const feed = await firstValueFrom(this.playerService.getRssEpisodes(this.media))
+      const episodes = feed.found ? (feed.episodes ?? []) : []
+      const offset = feed.found ? (feed.offset ?? 0) : 0
+      this.rssCount = feed.found ? (feed.count ?? episodes.length) : 0
+      this.rssEpisodes = episodes.map((episode, index) => ({
+        position: offset + index + 1,
+        id: episode.url,
+        name: episode.title,
+        duration_ms: episode.seconds > 0 ? episode.seconds * 1000 : undefined,
+      }))
+      const at = this.rssEpisodes.findIndex((entry) => this.isCurrentTrack(entry))
+      this.rssPlace = at < 0 ? 0 : offset + at + 1
+    } catch {
+      // (the box could not say: no counter, an empty list)
+      this.rssEpisodes = []
+      this.rssPlace = 0
+      this.rssCount = 0
+    }
+  }
+
   async openTrackList() {
     this.updateListFontFamily()
     this.showTrackList = true
@@ -1097,7 +1193,11 @@ export class PlayerPage implements OnInit, AfterViewInit {
     this.trackListFailed = false
 
     try {
-      if (this.media.type === 'library') {
+      if (this.media.type === 'rss') {
+        await this.loadRssEpisodes()
+        this.trackListTitle = this.media.artist
+        this.trackList = this.rssEpisodes
+      } else if (this.media.type === 'library') {
         const tracks = await firstValueFrom(this.playerService.getLocalTracklist(this.media))
         this.trackListTitle = this.media.title
         this.trackList = (tracks ?? []).map((track) => ({
@@ -1113,8 +1213,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
           id: `${track.position}`,
           name: track.name,
         }))
-      } else if (this.media.type === 'tidal') {
-        const tracks = await firstValueFrom(this.playerService.getTidalTracklist(this.media))
+      } else if (this.media.type === 'tidal' || this.media.type === 'jellyfin' || this.media.type === 'audible') {
+        const tracks = await firstValueFrom(this.media.type === 'tidal' ? this.playerService.getTidalTracklist(this.media) : this.media.type === 'audible' ? this.playerService.getAudibleTracklist(this.media) : this.playerService.getJellyfinTracklist(this.media))
         this.trackListTitle = this.media.title
         this.trackList = (tracks ?? []).map((track) => ({
           position: track.position,
@@ -1183,10 +1283,13 @@ export class PlayerPage implements OnInit, AfterViewInit {
   @ViewChild('ktScroll', { static: false, read: ElementRef }) private ktScroll: ElementRef<HTMLElement> | undefined
 
   protected trackOfText(): string {
-    const total = this.trackList.length
     const index = this.trackList.findIndex((entry) => this.isCurrentTrack(entry))
+    // (a podcast's list holds at most 300 of its episodes: the place among all of them)
+    const rss = this.media.type === 'rss'
+    const total = rss ? this.rssCount : this.trackList.length
     if (total === 0 || index < 0) return ''
-    return this.displayTexts.text('trackOf').replace('{n}', String(index + 1)).replace('{t}', String(total))
+    const place = rss ? this.trackList[index].position : index + 1
+    return this.displayTexts.text('trackOf').replace('{n}', String(place)).replace('{t}', String(total))
   }
 
   protected pageTrackList(direction: 1 | -1): void {
@@ -1215,7 +1318,16 @@ export class PlayerPage implements OnInit, AfterViewInit {
   private pendingTrackTimer: ReturnType<typeof setTimeout> | undefined
 
   playTrackFromList(entry: TrackListEntry) {
-    if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal') {
+    // (a podcast: another episode - the player starts it and this page is opened again for it, see skipNext)
+    if (this.media.type === 'rss') {
+      this.closeTrackList()
+      if (!this.isCurrentTrack(entry)) {
+        this.playerService.playRssEpisode(this.media, entry)
+        this.externalNavigator.checkSoon()
+      }
+      return
+    }
+    if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal' || this.media.type === 'jellyfin' || this.media.type === 'audible') {
       clearTimeout(this.pendingTrackTimer)
       this.pendingTrackPosition = entry.position
       this.pendingTrackTimer = setTimeout(() => {
@@ -1226,7 +1338,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
   }
 
   isCurrentTrack(entry: TrackListEntry): boolean {
-    if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal') {
+    if (this.media.type === 'rss') return sameEpisode(entry.id, this.media.id)
+    if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'tidal' || this.media.type === 'jellyfin' || this.media.type === 'audible') {
       const actualPosition = this.currentPlayedLocal?.currentTracknr
       if (this.pendingTrackPosition !== undefined) {
         if (actualPosition === this.pendingTrackPosition) {
@@ -1259,5 +1372,18 @@ export class PlayerPage implements OnInit, AfterViewInit {
     const minutes = Math.floor(totalSeconds / 60)
     const seconds = totalSeconds % 60
     return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  }
+}
+
+// The same episode, as the file the feed names: host and path (the address of an episode may carry another query or scheme)
+function sameEpisode(a: string | undefined, b: string | undefined): boolean {
+  if (!a || !b) return false
+  if (a === b) return true
+  try {
+    const x = new URL(a)
+    const y = new URL(b)
+    return x.host.toLowerCase() === y.host.toLowerCase() && x.pathname === y.pathname
+  } catch {
+    return false
   }
 }

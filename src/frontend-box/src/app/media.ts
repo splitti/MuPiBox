@@ -48,10 +48,20 @@ export interface Media {
   // TIDAL (type: 'tidal'): id is TIDAL's id of the album, playlist or artist (a whole artist: the list shows its albums,
   // see MediaService.tidalArtistAlbums), played by the box's TIDAL service and mpv
   tidalKind?: 'album' | 'playlist' | 'artist'
+  // Jellyfin (type: 'jellyfin', docs/jellyfin-5.1.md): id is Jellyfin's id of the album, playlist, audiobook or artist (a
+  // whole artist: the list shows its albums, see MediaService.jellyfinArtistAlbums), played through the backend and mpv
+  jellyfinKind?: 'album' | 'playlist' | 'book' | 'artist'
+  // Audible (type: 'audible', docs/audible-5.1.md): id is the ASIN of the book or of a whole series (the list shows the
+  // account's books of it, see MediaService.audibleSeriesBooks), played through the backend and mpv - chapters are tracks
+  audibleKind?: 'book' | 'series'
   // a whole TIDAL artist: only the albums at these positions by release (1 = the oldest), and without these ids
   range_from?: number
   range_to?: number
+  /** a TIDAL artist's range counts the episodes' numbers in their names, not the positions by release */
+  range_by?: 'number'
   exclude_album_ids?: string[]
+  /** an Audible series: the books left out (ASINs) */
+  exclude_ids?: string[]
   // Full NAS path of this entry's folder, used for NAS media (type: 'nas')
   // to browse/stream it live instead of resolving a local file path.
   nasPath?: string
@@ -62,6 +72,8 @@ export interface Media {
   // "audiobook/Artist/Album", read live from disk at any depth. Entries without
   // it are old-style library entries from data.json (category/artist/title).
   libraryPath?: string
+  // Never kept for "Fortsetzen" (an extension's album that may be gone later, like the audio CD in the drive)
+  noResume?: boolean
   // True for a local folder with subfolders holding audio: it opens the next level.
   libraryIsContainer?: boolean
   // The audio files lying directly in such a folder (NAS or local), next to its subfolders: listed first.

@@ -47,6 +47,15 @@ export interface CurrentMPlayer {
   trackFile?: string
   /** Which start this is (the player counts them): a command with ?gen= is made only for this playback. */
   generation?: number
+  /** What the file that plays is: kbit/s, kHz and channels (mpv only; 0 / undefined = not known) - Winamp's little displays */
+  bitrate?: number
+  khz?: number
+  channels?: number
+  /** shuffle of a local or NAS album is on, and whether the engine can do it (mpv) */
+  shuffle?: boolean
+  shuffleSupported?: boolean
+  /** repeat is on (all or one), as the player set it - a new playback starts without, a GPIO button can change it */
+  repeat?: boolean
   /** The display's Spotify player is silent (paused, or the playback not on it), as the display told the player. */
   spotifySilent?: boolean
 }

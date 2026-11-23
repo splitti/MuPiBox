@@ -28,3 +28,9 @@ __pycache__/
 src/backend-api/cache/
 # rss covers the backend-api writes next to its sources when run locally (serverDir/www; on the box that is the install folder)
 src/backend-api/src/www/
+
+# Winamp preview and sandbox (tools/): the unpacked skin and what is built for the page
+tools/winamp-sandbox/.skin/
+tools/winamp-sandbox/.skins/
+tools/winamp-sandbox/.skin-code.cjs
+tools/winamp-preview/out/

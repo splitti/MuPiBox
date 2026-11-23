@@ -66,14 +66,13 @@ All contributions, e.g. reporting issues, are welcome.
 - `src/frontend-box` – the display UI (Angular + Ionic), what the kids see on the touch screen.
 - `src/backend-api` – the Node/Express API (port 8200). It also serves
   - **the MuPiBox app** at `/app` (`src/backend-api/src/mupi-app`): plain JavaScript, no build step.
-    It replaces the admin interface page by page and is where most new features go.
+    Since 5.1 it is the only settings interface (the old PHP admin interface is gone).
   - the manual at `/manual` (`src/backend-api/src/manual`).
 - `src/backend-player` – the player (mpv and Spotify, port 5005).
-- `AdminInterface/www` – the old PHP admin interface, kept for the pages the app does not have yet.
 - `scripts`, `config`, `autosetup`, `update` – what runs on the box itself (DietPi).
 
 ### Local development
-Develop in a GitHub codespace (`.devcontainer`) or locally with Node.js 22 (PHP 8 only for the admin interface).
+Develop in a GitHub codespace (`.devcontainer`) or locally with Node.js 22.
 
 1. Fork this repository and run `npm install` in the root folder once.
 2. Copy the config templates (the box's own `mupiboxconfig.json` too: without it the display does not know its
@@ -86,9 +85,10 @@ Develop in a GitHub codespace (`.devcontainer`) or locally with Node.js 22 (PHP 
    `src/backend-api/src/mupi-app` (edit, reload). Away from a box, pages that need its hardware or
    config show no data. `npm run serve:frontend-box` for the display UI (http://localhost:4200; it proxies `/api`
    to the backend and takes its theme from `src/frontend-box/src/dev/active_theme.css`, change the theme there),
-   `npm run serve:admin` for the admin interface (http://127.0.0.1:8000), `npm run serve` for all of them.
+   `npm run serve` for all of them.
    Your own box's library and settings: take the two files out of a backup of the box (Settings › Backup) into
    that folder, `unzip -o -j <backup>.zip etc/mupibox/mupiboxconfig.json home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json -d src/backend-api/config/`
+   (a backup keeps the library under that name of before 5.1, so older boxes can restore it too)
    (the app's own restore page works on a box only). The Spotify client id and secret go into `config.json` by hand.
    The display reads the library through `active_data.json` (and the resume list through `active_resume.json`): in
    development the backend links them to `data.json` and `resume.json` at its start when they are missing (and writes
@@ -98,62 +98,61 @@ Develop in a GitHub codespace (`.devcontainer`) or locally with Node.js 22 (PHP 
 5. Create a branch, commit, push and open a pull request.
 
 ### Testing a change on a box
-The installer and the update install from the zips in the repository (`bin/nodejs/deploy.zip`,
-`AdminInterface/release/www.zip`), not from the source. That is also how a public branch is tested on a box:
+The installer and the update install from the zip in the repository (`bin/nodejs/deploy.zip`), not from the
+source. That is also how a public branch is tested on a box:
 
 ```shell
 cd; curl -L https://raw.githubusercontent.com/<your-github-username>/MuPiBox/<branch>/update/start_mupibox_update.sh \
 | sudo bash -s -- branch <branch> <your-github-username>/MuPiBox
 ```
 
-So a pull request should include rebuilt zips, as its **last, separate commit** ("deploy.zip neu gebaut"),
+So a pull request should include a rebuilt zip, as its **last, separate commit** ("deploy.zip neu gebaut"),
 built from a clean checkout of the branch (`git status` empty, then `cd src && ./deploy.sh` for the Node
-parts and the app, `AdminInterface/zip.sh` for the admin interface). Keep source changes and the zip
+parts and the app). Keep source changes and the zip
 commit apart: zips do not merge, and the maintainers may drop and redo that commit when they merge.
 Other build output (`src/deploy/`, `src/frontend-box/www/`) stays out of the repository.
 
 While you work, copying the built files over the installed ones is faster than a full update (ssh as
-`dietpi`; the Node bundles live in `~/.mupibox/Sonos-Kids-Controller-master`, the player in
-`~/.mupibox/spotifycontroller-main`). The next update puts the released files back. Copy with rsync, which
+`dietpi`; since 5.1 the Node bundles live in `~/.mupibox/server`, the player in `~/.mupibox/player`, the library
+and what the box keeps in `~/.mupibox/data`, what it can fetch again in `~/.mupibox/cache` - the names of before,
+`Sonos-Kids-Controller-master` and `spotifycontroller-main`, are links to the first two). The next update puts the released files back. Copy with rsync, which
 sends only the files that changed (`sudo apt install rsync` on the box once if it is missing), or
 with scp. For the app, from the repository root:
 
 ```shell
-rsync -av src/backend-api/src/mupi-app/ dietpi@<box>:.mupibox/Sonos-Kids-Controller-master/mupi-app/
+rsync -av src/backend-api/src/mupi-app/ dietpi@<box>:.mupibox/server/mupi-app/
 # or
-scp -r src/backend-api/src/mupi-app/* dietpi@<box>:.mupibox/Sonos-Kids-Controller-master/mupi-app/
+scp -r src/backend-api/src/mupi-app/* dietpi@<box>:.mupibox/server/mupi-app/
 ```
 
 The other folders and files below go over the same way (`rsync -av <local>/ dietpi@<box>:<remote>/` for a
 folder, `scp <file> dietpi@<box>:<remote>` for a single file).
 
 - **App** (`src/backend-api/src/mupi-app`):
-  - copy the folder's files to `~/.mupibox/Sonos-Kids-Controller-master/mupi-app/` and reload `http://<box>/app/`.
+  - copy the folder's files to `~/.mupibox/server/mupi-app/` and reload `http://<box>/app/`.
   - No build, no restart.
 - **Backend**:
   - `npm run build:backend-api`
-  - copy `src/deploy/server.js` to `~/.mupibox/Sonos-Kids-Controller-master/server.js`
+  - copy `src/deploy/server.js` to `~/.mupibox/server/server.js`
   - then `pm2 restart server` (the manual from `src/deploy/manual/` goes to `.../manual/` the same way).
 - **Player**:
   - `npm run build:backend-player`
-  - copy `src/deploy/spotify-control.js` to `~/.mupibox/spotifycontroller-main/spotify-control.js`
+  - copy `src/deploy/spotify-control.js` to `~/.mupibox/player/spotify-control.js`
   - then `pm2 restart spotify-control`
 - **Display UI**:
   - `npm run build:frontend-box`
-  - copy the files of `src/deploy/www/browser/` into `~/.mupibox/Sonos-Kids-Controller-master/www/`
-    (leave `active_theme.css`, `cover`, `rss-covers` and `theme-data` as they are)
+  - copy the files of `src/deploy/www/browser/` into `~/.mupibox/server/www/`
+    (leave `active_theme.css`, the links `cover` and `rss-covers` and `theme-data` as they are)
   - then `/usr/local/bin/mupibox/restart_kiosk.sh`.
-- **Admin interface**:
-  - copy the changed files of `AdminInterface/www/` to `/var/www/` (owned by `www-data`, so with `sudo`).
 
 The app's texts are German in the source; the translations live in
 `src/backend-api/src/mupi-app/i18n/<lang>.json` (at least `en.json`). Add a line to `news.txt` for a change
 users will notice.
 
 Without a box, the Dockerfile in the root directory gives a production-like test of freshly built zips: it
-installs `bin/nodejs/deploy.zip` and `AdminInterface/release/www.zip` the way autosetup does (Node 22, pm2,
-lighttpd with PHP and the proxy to the app). `npm run docker:build`, then `npm run docker:start` (the container is called `mupibox` and goes when it ends); the app is at
-http://localhost/app/, the old admin interface at http://localhost/index.php, the display UI at http://localhost:8200/
+installs `bin/nodejs/deploy.zip` the way autosetup does (Node 22, pm2,
+lighttpd with the proxy to the app). `npm run docker:build`, then `npm run docker:start` (the container is called `mupibox` and goes when it ends); the app is at
+http://localhost/app/, the display UI at http://localhost:8200/
 (with the player beside it on port 5005, as the kiosk on a box has it; from another device in the network the
 display goes through the API instead, as a phone does). There is no sound device and no hardware in the container:
 Spotify plays (the display plays it in the browser, see below), while radio, local files, NAS and podcasts run through

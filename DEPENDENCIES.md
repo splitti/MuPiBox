@@ -15,11 +15,11 @@ places are listed in [Unused and deprecated](#unused-and-deprecated).
 | `frontend-box` | Display UI (Angular 20 + Ionic 8), served by the server on port 8200 | `src/frontend-box` |
 | `backend-api` | REST API (Express 5, esbuild bundle `server.js`, pm2 process `server`, port 8200) | `src/backend-api` |
 | `backend-player` | Player control (Express 4 + `mpv` over its JSON IPC socket, bundle `spotify-control.js`, pm2 process `spotify-control`, port 5005) | `src/backend-player` |
-| Admin interface | PHP pages behind lighttpd | `AdminInterface/www` |
+| Web server | lighttpd: the app on port 80/443, `/cover` (no PHP since 5.1) | `config/lighttpd` |
 | Scripts and services | Shell/Python helpers and systemd units | `scripts`, `config/services` |
 
-Built with Node.js 22 (esbuild target `node22`). The deploy zips (`bin/nodejs/deploy.zip`,
-`AdminInterface/release/www.zip`) are what an update installs.
+Built with Node.js 22 (esbuild target `node22`). The deploy zip (`bin/nodejs/deploy.zip`) is what an
+update installs.
 
 ## npm packages
 
@@ -87,17 +87,17 @@ Kept, with what uses them:
 | `mpv` | playback engine for everything but Spotify (`mpv-wrapper.js`); mplayer, the fallback until 5.0.9, is no longer installed |
 | `python3-alsaaudio` | volume in `mqtt.py` (the ALSA library itself comes with mpv and PulseAudio) |
 | `pulseaudio-module-bluetooth`, `bluez` | Bluetooth speakers (`scripts/bluetooth`, Bluetooth pages) |
-| `lighttpd-mod-openssl` | HTTPS for the admin interface (lighttpd) |
-| `git`, `zip` | admin pages (service, network, backup), update |
-| `rrdtool` | system graphs (`save_rrd.sh`, admin start page) |
-| `scrot` | screenshots (Telegram `/screen`, admin) |
+| `lighttpd-mod-openssl` | HTTPS for the app on port 443 (lighttpd) |
+| `git`, `zip` | backups and support zip of the app, update |
+| `rrdtool` | system graphs (`save_rrd.sh`) |
+| `scrot` | screenshots (Telegram `/screen`) |
 | `net-tools`, `wireless-tools` | `ifconfig`, `iwconfig`/`iwgetid` for network status and WiFi icons |
-| `raspberrypi-kernel-headers`, `dkms` | USB WiFi driver installers (`scripts/online/install_rtl88x2bu.sh`, `install_rtl8821au.sh`), installed on demand from the Network admin page - not by autosetup/update |
+| `raspberrypi-kernel-headers`, `dkms` | USB WiFi driver installers (`scripts/online/install_rtl88x2bu.sh`, `install_rtl8821au.sh`), installed on demand from the app (Netzwerk) - not by autosetup/update |
 | `bc` | `mupi_start_led.sh` |
 | `build-essential`, `pigpio`, `libjson-c-dev` | autosetup compiles `scripts/led/led_control.c` (`-lpigpio -ljson-c`) |
 | `gpiod` | power button/shim scripts (`scripts/OnOffShim`) |
 | `python3-smbus2` | MuPiHAT (`scripts/mupihat`) |
-| `python3-rpi.gpio`, `python3-lgpio` | LED and fan control (`RPi.GPIO`); `lgpio` is not imported by any script, it is kept as the GPIO backend for the Raspberry Pi 5 |
+| `python3-rpi.gpio`, `python3-lgpio` | rotary encoder, LED and fan control, through `scripts/mupibox/gpio_compat.py`: `RPi.GPIO` on a Pi 4 and older, `lgpio` on a Raspberry Pi 5 (RPi.GPIO does not know its RP1 chip) |
 | `python3-serial` | WLED scripts |
 | `python3-requests` | many scripts (Telegram, network check, MQTT) |
 | `python3-paho-mqtt`, `python3-netifaces` | `scripts/mqtt/mqtt.py` (Home Assistant) |
@@ -149,7 +149,7 @@ Python libraries used only by manual analysis tools (`scripts/mupihat/plot_*.py`
 | `pm2`, `nodejs` | run the two Node.js servers | npm / apt |
 | `dietpi-dashboard` | DietPi web dashboard | downloaded from GitHub (`nonnorm/DietPi-Dashboard`) by update/autosetup |
 | `chromium` | kiosk browser for the display UI | DietPi |
-| `lighttpd` + PHP | admin interface | DietPi |
+| `lighttpd` | the app on port 80/443, `/cover` | DietPi |
 
 ### librespot
 

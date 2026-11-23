@@ -1,0 +1,5 @@
+# The CD drive: the display's "CD" category plays an audio CD (backend-player/src/cd-drive.js). The player and mpv run as the
+# kiosk user, which is not in the group cdrom - and a drive that comes back after a USB reset (a weak power supply does that) is a
+# new device, owned by root:cdrom with mode 660. Opened for everyone at once, the CD is there again a few seconds after the reset,
+# not only after the player has noticed and fixed the rights by itself.
+SUBSYSTEM=="block", KERNEL=="sr[0-9]*", MODE="0666"

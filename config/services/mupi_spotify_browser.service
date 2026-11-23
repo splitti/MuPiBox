@@ -1,0 +1,21 @@
+[Unit]
+# Spotify on a box without the DSI display: the display's page in Chromium without a screen (headless), so that the box's
+# Spotify device is there - see /usr/local/bin/mupibox/spotify_browser.sh. Only on when "Spotify bereithalten" is switched on
+# in the app (Einstellungen > Display > Ohne DSI-Display); the script ends at once when the box has its kiosk.
+StartLimitIntervalSec=0
+Description=MuPiBox Spotify without the DSI display
+Wants=network-online.target
+After=network-online.target pulseaudio.service
+
+[Service]
+Type=simple
+User=dietpi
+Group=dietpi
+ExecStart=/usr/local/bin/mupibox/spotify_browser.sh
+Restart=on-failure
+RestartSec=15
+# (when the memory runs out: the first one to go, not the server or the player)
+OOMScoreAdjust=500
+
+[Install]
+WantedBy=multi-user.target

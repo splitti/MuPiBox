@@ -24,6 +24,7 @@
 			"mint",
 			"danger",
 			"cinema",
+			"winamp",
 			"coverflow",
 			"earth",
 			"steampunk",
@@ -456,6 +457,9 @@
 	"rotary": {
 		"active": false,
 		"button": "off",
+		"pinA": 26,
+		"pinB": 24,
+		"pinButton": 10,
 		"step": 5
 	}
 }

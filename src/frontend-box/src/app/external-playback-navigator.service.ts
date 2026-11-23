@@ -143,7 +143,10 @@ export class ExternalPlaybackNavigatorService {
           // A start from the parents' web app or Telegram is followed once it really plays. A NAS album (its
           // track list is fetched first) or a stream takes a few seconds: the trigger waits for that instead of
           // being used up by a poll that still saw nothing playing.
-          this.pendingExternalUntil = src !== 'box' ? Date.now() + 30_000 : 0
+          // ("next" at a podcast - src=skip - only moves an open player page on to the new episode: a button or the knob
+          // pressed while the child looks through the library left it there before and took the display to the player)
+          const follows = src !== 'box' && (src !== 'skip' || this.isCurrentlyOnPlayerPage())
+          this.pendingExternalUntil = follows ? Date.now() + 30_000 : 0
           this.pendingExternalSource = src
         }
         const onPlayerPage = this.isCurrentlyOnPlayerPage()
@@ -178,8 +181,14 @@ export class ExternalPlaybackNavigatorService {
   /** Which media plays, to tell a new album from a pause/resume of the same one. */
   private playingKey(data: CurrentMPlayer): string {
     if (data.currentPlayer === 'spotify') return `spotify|${data.activeSpotifyId ?? ''}`
-    if (data.currentPlayer === 'mplayer') return `${data.currentType ?? ''}|${data.path ?? ''}|${data.album ?? ''}`
+    // (a podcast: the episode too - "next" and "previous" start another one of the same podcast, and the page shows its title)
+    if (data.currentPlayer === 'mplayer') return `${data.currentType ?? ''}|${data.path ?? ''}|${data.album ?? ''}|${data.currentType === 'rss' ? (data.episode ?? '') : ''}`
     return ''
+  }
+
+  /** Ask /local again in a moment: a "next" at a podcast starts another episode in the player, and the page follows it. */
+  public checkSoon(): void {
+    for (const delay of [800, 2500]) setTimeout(() => this.pollNow$.next(), delay)
   }
 
   /** The parents' web app switched the theme and asked for it to show now. Rides on the /local poll
@@ -290,14 +299,14 @@ export class ExternalPlaybackNavigatorService {
         }
       }
     }
-    if (media?.type === 'tidal') {
+    if (media?.type === 'tidal' || media?.type === 'jellyfin' || media?.type === 'audible') {
       const entries = await firstValueFrom(
         this.http.get<Media[]>(`${environment.backend.apiUrl}/data`).pipe(
           timeout(3000),
           catchError(() => of([] as Media[])),
         ),
       )
-      const own = entries.find((e) => e.type === 'tidal' && String(e.id) === String(media.id))
+      const own = entries.find((e) => e.type === media.type && String(e.id) === String(media.id))
       if (own) {
         media.category = own.category
         media.artist = own.artist
@@ -368,6 +377,34 @@ export class ExternalPlaybackNavigatorService {
         tidalKind: tidal[1] as 'album' | 'playlist',
         id: tidal[2],
         category: 'music',
+        artist: '',
+        title: String(data.album ?? ''),
+        cover: data.cover || undefined,
+        artistcover: data.cover || undefined,
+      } as Media
+    }
+    // An Audible book: path is book:<asin> (looked up as TIDAL's)
+    const audible = /^book:([A-Z0-9]{10})$/.exec(path)
+    if ((data as { currentType?: string }).currentType === 'audible' && audible) {
+      return {
+        type: 'audible',
+        audibleKind: 'book',
+        id: audible[1],
+        category: 'audiobook',
+        artist: '',
+        title: String(data.album ?? ''),
+        cover: data.cover || undefined,
+        artistcover: data.cover || undefined,
+      } as Media
+    }
+    // A Jellyfin album, playlist or audiobook: path is <album|playlist|book>:<id> (looked up as TIDAL's)
+    const jellyfin = /^(album|playlist|book):([0-9a-f]{32})$/i.exec(path)
+    if ((data as { currentType?: string }).currentType === 'jellyfin' && jellyfin) {
+      return {
+        type: 'jellyfin',
+        jellyfinKind: jellyfin[1] as 'album' | 'playlist' | 'book',
+        id: jellyfin[2],
+        category: jellyfin[1] === 'book' ? 'audiobook' : 'music',
         artist: '',
         title: String(data.album ?? ''),
         cover: data.cover || undefined,

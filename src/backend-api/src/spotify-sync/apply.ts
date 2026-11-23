@@ -9,9 +9,9 @@
 // cover_override, artistcover_override stay untouched so user
 // adjustments survive sync runs.
 
-import * as fs from 'node:fs'
 import { promises as fsPromises } from 'node:fs'
 import { backupBeforeWrite } from '../file-backup'
+import { writeFileWhole } from '../json-file'
 import type { BoxLibraryEntry, SyncDiff, SyncItem } from './types'
 
 /**
@@ -78,11 +78,8 @@ export async function applyDiff(
     // unreadable: write it below
   }
   backupBeforeWrite(dataFilePath)
-  const tmpPath = `${dataFilePath}.tmp.${process.pid}`
-  await fsPromises.writeFile(tmpPath, serialized, 'utf8')
-  // rename on the same filesystem is atomic on POSIX — what /api/add and
-  // the Phase-3 trap-and-mv scripts rely on too.
-  fs.renameSync(tmpPath, dataFilePath)
+  // next to it, fsync, renamed over it (json-file.ts) - what /api/add and the scripts (trap-and-mv) do too
+  await writeFileWhole(dataFilePath, serialized, { ifChanged: false })
 
   return { libraryAfter: after, appliedAdditions, appliedUpdates, appliedRemovals }
 }

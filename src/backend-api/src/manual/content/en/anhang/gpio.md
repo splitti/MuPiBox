@@ -11,9 +11,9 @@ The **GPIO pins** are the connections on the Raspberry Pi's pin header. The MuPi
 
 | Accessory | Function | GPIO (BCM) | Adjustable |
 | --- | --- | --- | --- |
-| {rotary-a} Rotary knob | A (CLK) | 26 | no |
-| {rotary-b} Rotary knob | B (DT) | 24 | no |
-| {rotary-button} Rotary knob | Button | 10 | no |
+| {rotary-a} Rotary knob | A (CLK) | 26 | yes, **Settings › Audio › Rotary knob and button** |
+| {rotary-b} Rotary knob | B (DT) | 24 | yes, **Settings › Audio › Rotary knob and button** |
+| {rotary-button} Rotary knob | Button | 10 | yes, **Settings › Audio › Rotary knob and button** |
 | {poweroff} OnOff SHIM (also the MuPiHAT) | signal to shut down (`gpio-poweroff`) | 4 | in the configuration (`shim.poweroffPin`) |
 | {trigger} OnOff SHIM (also the MuPiHAT) | button (trigger) | 17 | in the configuration (`shim.triggerPin`) |
 | {cut} Power cut (set by the box, not by the SHIM; not set with the MuPiHAT) | signal when switching off | 27 | in the configuration (`shim.cutPin`) |
@@ -24,6 +24,10 @@ On your box this table shows **only the pins that are in use there** with the cu
 
 > [!WARNING]
 > Two devices must **not** share a pin. For LED and fan choose pins that are not otherwise used above. The app warns if you choose a pin for an accessory that another enabled accessory already uses.
+
+## Pins for your own buttons
+
+With the extension [Buttons & GPIO Input](../erweiterungen/buttons.md) you connect your own buttons to free GPIO pins. Which pins are free on your box is shown by the extension's own list: pins in use cannot be chosen there, and the list says who holds them. Other [extensions](../erweiterungen/index.md) can hold pins too; the box checks that before installing. The [NFC extension](../erweiterungen/nfc.md) takes the SPI port (GPIO 8, 9, 10 and 11) and two pins you choose in the extension; you can choose it as an accessory in the map above.
 
 ## Where else is the pin setting?
 

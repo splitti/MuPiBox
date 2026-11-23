@@ -32,10 +32,22 @@ TEXTS = {
     'st_ok': {'de': 'Status: <b>OK</b> (Wiedergabe erlaubt)', 'en': 'Status: <b>OK</b> (playback allowed)'},
     'st_grace': {'de': 'Status: <b>Nachspielzeit</b> (läuft aus, Grund: {source})', 'en': 'Status: <b>Grace period</b> (finishing, reason: {source})'},
     'st_blocked': {'de': 'Status: <b>GESPERRT</b> (Grund: {source})', 'en': 'Status: <b>BLOCKED</b> (reason: {source})'},
+    # (several users: whose values follow, and a name the box does not have)
+    'st_user_current': {'de': '👤 <b>{name}</b> (hört gerade)', 'en': '👤 <b>{name}</b> (listening now)'},
+    'st_user_resting': {'de': '👤 <b>{name}</b> (gerade nicht aktiv, Stand von heute)', 'en': '👤 <b>{name}</b> (not active now, today so far)'},
+    'user_unknown': {'de': 'Benutzer „{name}“ gibt es nicht. Vorhanden: {names}', 'en': 'There is no user "{name}". Users: {names}'},
     'src_playtime': {'de': 'Spielzeit', 'en': 'playtime'},
     'src_quiet': {'de': 'Ruhezeit', 'en': 'quiet time'},
     'src_override': {'de': 'Ruhe sofort', 'en': 'quiet now'},
     'st_playtime': {'de': 'Spielzeit: {used}/{limit} min, noch {left}', 'en': 'Playtime: {used}/{limit} min, {left} left'},
+    'st_photos_limit': {'de': 'Bildzeit: {used}/{limit} min, noch {left}', 'en': 'Photo time: {used}/{limit} min, {left} left'},
+    'st_photos_blocked': {'de': 'Bildzeit: <b>aufgebraucht</b> ({used}/{limit} min)', 'en': 'Photo time: <b>used up</b> ({used}/{limit} min)'},
+    'st_photos_free': {'de': 'Bildzeit: heute frei ({used} min angesehen)', 'en': 'Photo time: free today ({used} min looked at)'},
+    'st_tile_limit': {'de': '🧩 {name}: {used}/{limit} min, noch {left}', 'en': '🧩 {name}: {used}/{limit} min, {left} left'},
+    'st_tile_blocked': {'de': '🧩 {name}: <b>für heute vorbei</b> ({used}/{limit} min)', 'en': '🧩 {name}: <b>over for today</b> ({used}/{limit} min)'},
+    'st_tile_free': {'de': '🧩 {name}: heute frei ({used} min gehört)', 'en': '🧩 {name}: free today ({used} min listened)'},
+    'st_photos_unlimited': {'de': 'Bildzeit: heute {used} min (ohne Limit)', 'en': 'Photo time: {used} min today (no limit)'},
+    'st_photos_shared': {'de': 'Bildzeit: zählt zur Spielzeit (heute {used} min Fotos)', 'en': 'Photo time: counts as playtime ({used} min of photos today)'},
     'st_quiet_active': {'de': 'Ruhezeit: <b>aktiv</b>{label}', 'en': 'Quiet time: <b>active</b>{label}'},
     'st_quiet_idle': {'de': 'Ruhezeiten: an, gerade keine aktiv', 'en': 'Quiet hours: on, none active right now'},
     'st_forceblock': {'de': '⛔ Ruhe sofort aktiv, noch {mins} min', 'en': '⛔ Quiet now active, {mins} min left'},
@@ -46,9 +58,15 @@ TEXTS = {
     'help_title': {'de': 'Was möchtest du tun?', 'en': 'Possible commands:'},
     'kb_status': {'de': 'Status', 'en': 'Status'},
     'kb_screen': {'de': 'Bildschirm', 'en': 'Current screen'},
+    'screen_off': {'de': 'Das Display ist gerade aus – ohne Bild.', 'en': 'The display is off right now – no picture.'},
+    'screen_failed': {'de': 'Vom Display kam kein Bild.', 'en': 'No picture came from the display.'},
     'kb_pause': {'de': 'Pause', 'en': 'Pause'},
     'kb_play': {'de': 'Abspielen', 'en': 'Play'},
     'kb_release60': {'de': 'Freigabe 60 min', 'en': 'Release 60 min'},
+    'kb_photoextend10': {'de': 'Bildzeit +10 min', 'en': 'Photo time +10 min'},
+    'kb_photofree': {'de': 'Bildzeit heute frei', 'en': 'Photo time free today'},
+    'kb_tiles': {'de': '🧩 Kacheln mit Limit', 'en': '🧩 Tiles with a limit'},
+    'kb_tilefree': {'de': '{name} frei', 'en': '{name} free'},
     'kb_quietnow60': {'de': 'Ruhe sofort 60 min', 'en': 'Quiet now 60 min'},
     'kb_volume': {'de': 'Lautstärke', 'en': 'Set volume'},
     'kb_sleep': {'de': 'Schlaftimer', 'en': 'Sleep timer'},
@@ -75,6 +93,14 @@ TEXTS = {
     'usage_minutes': {'de': 'Nutzung: {cmd} <Minuten>  (1..1440)', 'en': 'Usage: {cmd} <minutes>  (1..1440)'},
     'extend_done': {'de': '✅ Heute +{mins} min Bonus hinzugefügt.', 'en': '✅ Added {mins} bonus minutes for today.'},
     'extend_short': {'de': '+{mins} min hinzugefügt', 'en': '+{mins} min added'},
+    'photoextend_done': {'de': '✅ Bildzeit: heute +{mins} min.', 'en': '✅ Photo time: +{mins} min today.'},
+    'photofree_done': {'de': '✅ Bildzeit: heute frei.', 'en': '✅ Photo time: free today.'},
+    'tileextend_done': {'de': '✅ {name}: heute +{mins} min.', 'en': '✅ {name}: +{mins} min today.'},
+    'tilefree_done': {'de': '✅ {name}: heute frei.', 'en': '✅ {name}: free today.'},
+    'tiles_head': {'de': '<b>Kacheln mit Limit</b> (heute):', 'en': '<b>Tiles with a limit</b> (today):'},
+    'tiles_none': {'de': 'ℹ️ Keine Kachel hat ein eigenes Tageslimit. Einstellen in der App: Bibliothek › Kachel › „Höchstens am Tag“.', 'en': 'ℹ️ No tile has a day\'s limit of its own. Set one in the app: Library › tile › "At most per day".'},
+    'tiles_gone': {'de': 'Diese Kachel hat kein Limit mehr – /tiles zeigt die aktuellen.', 'en': 'This tile has no limit any more – /tiles shows the current ones.'},
+    'photos_no_limit': {'de': 'ℹ️ Die Bildzeit hat gerade kein eigenes Limit (Fotoanzeige aus, Bildzeit ohne Limit oder sie zählt zur Spielzeit).', 'en': 'ℹ️ The photo time has no limit of its own right now (photo display off, no limit, or it counts as playtime).'},
     'release_done': {'de': '✅ Freigabe für {mins} min – alle Sperren aus.', 'en': '✅ Released for {mins} min – all blocks off.'},
     'release_short': {'de': 'Freigabe für {mins} min aktiv', 'en': 'Released for {mins} min'},
     'quietnow_done': {'de': '⛔ Ruhe sofort für {mins} min aktiviert.', 'en': '⛔ Quiet now for {mins} min.'},
@@ -153,9 +179,9 @@ TEXTS = {
     'n_battery_stale': {'de': '⚠️ Die MuPiBox liest den Akku seit {mins} Minuten nicht mehr aus – auch ein Neustart des MuPiHAT-Dienstes hat nicht geholfen.\n\nBitte die Box neu starten.', 'en': '⚠️ The MuPiBox has not read its battery for {mins} minutes – restarting the MuPiHAT service did not help either.\n\nPlease restart the box.'},
     'n_battery_not_charging': {'de': '🔌 Der MuPiBox-Akku lädt nicht ({soc}), obwohl das Netzteil steckt.\n\nBitte das Netzteil an der Box kurz abziehen und wieder anstecken.', 'en': '🔌 The MuPiBox battery is not charging ({soc}) although the power supply is plugged in.\n\nPlease unplug the power supply from the box for a moment and plug it in again.'},
     'n_spotify_login_expiring': {'de': '⏳ MuPiBox: Die Spotify-Anmeldung läuft in {days} Tagen ab (ca. {date}). Danach spielt die Box kein Spotify mehr.\n\nSpotify verlangt alle 6 Monate eine neue Anmeldung – dauert eine Minute:\n/spotify_connect', 'en': '⏳ MuPiBox: the Spotify sign-in expires in {days} days (about {date}). After that the box plays no Spotify.\n\nSpotify asks for a new sign-in every 6 months – it takes a minute:\n/spotify_connect'},
-    'n_weekly_summary': {'de': '📊 MuPiBox – die Woche: {total} gehört, an {days} von 7 Tagen (im Schnitt {avg} am Tag).\n\nAm meisten:\n{top}', 'en': '📊 MuPiBox – the week: {total} of listening, on {days} of 7 days ({avg} a day on average).\n\nMost of all:\n{top}'},
-    'n_weekly_summary_short': {'de': '📊 MuPiBox – die Woche: {total} gehört, an {days} von 7 Tagen (im Schnitt {avg} am Tag).', 'en': '📊 MuPiBox – the week: {total} of listening, on {days} of 7 days ({avg} a day on average).'},
-    'n_weekly_summary_none': {'de': '📊 MuPiBox – die Woche: Diese Woche lief nichts auf der Box.', 'en': '📊 MuPiBox – the week: nothing played on the box this week.'},
+    'n_weekly_summary': {'de': '📊 MuPiBox – die Woche{who}: {total} gehört, an {days} von 7 Tagen (im Schnitt {avg} am Tag).\n\nAm meisten:\n{top}', 'en': '📊 MuPiBox – the week{who}: {total} of listening, on {days} of 7 days ({avg} a day on average).\n\nMost of all:\n{top}'},
+    'n_weekly_summary_short': {'de': '📊 MuPiBox – die Woche{who}: {total} gehört, an {days} von 7 Tagen (im Schnitt {avg} am Tag).', 'en': '📊 MuPiBox – the week{who}: {total} of listening, on {days} of 7 days ({avg} a day on average).'},
+    'n_weekly_summary_none': {'de': '📊 MuPiBox – die Woche{who}: Diese Woche lief nichts auf der Box.', 'en': '📊 MuPiBox – the week{who}: nothing played on the box this week.'},
     'n_tls_expiring': {'de': '🔐 MuPiBox: Das eigene Zertifikat der Box läuft in {days} Tagen ab ({date}). Danach warnt der Browser bei https://… – bitte in der App unter Einstellungen › Sicherheit ein neues hochladen (oder zurück zum Zertifikat der Box).', 'en': "🔐 MuPiBox: the box's own certificate runs out in {days} days ({date}). After that browsers warn at https://… – please upload a new one in the app at Settings › Security (or go back to the box's certificate)."},
     'n_spotify_login_unknown': {'de': 'ℹ️ MuPiBox: Spotify verlangt alle 6 Monate eine neue Anmeldung. Seit wann die Anmeldung der Box besteht, weiß sie nicht – bitte einmal neu anmelden, dann erinnert sie rechtzeitig vor dem Ablauf:\n/spotify_connect', 'en': 'ℹ️ MuPiBox: Spotify asks for a new sign-in every 6 months. The box does not know when its sign-in was made – please sign in again once, then it reminds you in time before it expires:\n/spotify_connect'},
     'n_spotify_login_refused': {'de': '⚠️ MuPiBox: Spotify hat die Anmeldung der Box abgelehnt (abgelaufen oder zurückgezogen) – die Box spielt gerade kein Spotify.\n\nBitte neu anmelden:\n/spotify_connect', 'en': '⚠️ MuPiBox: Spotify refused the box\'s sign-in (expired or withdrawn) – the box plays no Spotify right now.\n\nPlease sign in again:\n/spotify_connect'},
@@ -171,11 +197,15 @@ TEXTS['commands'] = {
     'de': (
         '<b><u>Befehle:</u></b>\n\n'
         '<code><b>/help</b></code>\n<i>zeigt die Buttons</i>\n\n'
-        '<code><b>/status</b></code>\n<i>Spielzeit und Ruhezeiten jetzt</i>\n\n'
-        '<code><b>/extend</b> <i>[Minuten, Standard 30]</i></code>\n<i>Bonus-Minuten für heute</i>\n\n'
+        '<code><b>/status</b> <i>[Name]</i></code>\n<i>Spielzeit, Ruhezeiten, Bildzeit und Kacheln jetzt</i>\n\n'
+        '<code><b>/extend</b> <i>[Minuten, Standard 30] [Name]</i></code>\n<i>Bonus-Minuten für heute</i>\n\n'
+        '<code><b>/photoextend</b> <i>[Minuten, Standard 10] [Name]</i></code>\n<i>Bildzeit: Minuten für heute dazu</i>\n\n'
+        '<code><b>/photofree</b> <i>[Name]</i></code>\n<i>Bildzeit: heute ohne Limit</i>\n\n'
+        '<code><b>/tiles</b> <i>[Name]</i></code>\n<i>Kacheln mit Tageslimit: Stand, +10 min, heute frei</i>\n\n'
         '<code><b>/release</b> <i>[Minuten, Standard 60]</i></code>\n<i>alle Sperren für N Minuten aufheben</i>\n\n'
         '<code><b>/quietnow</b> <i>[Minuten, Standard 60]</i></code>\n<i>Wiedergabe für N Minuten sperren</i>\n\n'
-        '<code><b>/limit set</b> <i>&lt;Tag&gt; &lt;Minuten&gt;</i></code>\n<i>Spielzeit-Limit für einen Wochentag (mon..sun, 0..1440)</i>\n\n'
+        '<code><b>/limit set</b> <i>&lt;Tag&gt; &lt;Minuten&gt; [Name]</i></code>\n<i>Spielzeit-Limit für einen Wochentag (mon..sun, 0..1440)</i>\n\n'
+        '<i>Mit mehreren Benutzern: Name am Ende = dieser Benutzer, ohne Name = der aktive. /release und /quietnow gelten für die ganze Box.</i>\n\n'
         '<code><b>/sag</b> <i>Text</i></code>\n<i>Durchsage: die Box sagt den Text sofort</i>\n\n'
         '<b>MuPiBox-App:</b>\n'
         '<code><b>/login</b></code> – Login-Link zur MuPiBox-App\n\n'
@@ -193,11 +223,15 @@ TEXTS['commands'] = {
     'en': (
         '<b><u>Possible commands:</u></b>\n\n'
         '<code><b>/help</b></code>\n<i>shows the buttons</i>\n\n'
-        '<code><b>/status</b></code>\n<i>playtime and quiet hours right now</i>\n\n'
-        '<code><b>/extend</b> <i>[minutes, default 30]</i></code>\n<i>bonus minutes for today</i>\n\n'
+        '<code><b>/status</b> <i>[name]</i></code>\n<i>playtime, quiet hours, photo time and tiles right now</i>\n\n'
+        '<code><b>/extend</b> <i>[minutes, default 30] [name]</i></code>\n<i>bonus minutes for today</i>\n\n'
+        '<code><b>/photoextend</b> <i>[minutes, default 10] [name]</i></code>\n<i>photo time: minutes added for today</i>\n\n'
+        '<code><b>/photofree</b> <i>[name]</i></code>\n<i>photo time: no limit today</i>\n\n'
+        '<code><b>/tiles</b> <i>[name]</i></code>\n<i>tiles with a day\'s limit: state, +10 min, free today</i>\n\n'
         '<code><b>/release</b> <i>[minutes, default 60]</i></code>\n<i>lift all blocks for N minutes</i>\n\n'
         '<code><b>/quietnow</b> <i>[minutes, default 60]</i></code>\n<i>block playback for N minutes</i>\n\n'
-        '<code><b>/limit set</b> <i>&lt;day&gt; &lt;minutes&gt;</i></code>\n<i>playtime limit for one weekday (mon..sun, 0..1440)</i>\n\n'
+        '<code><b>/limit set</b> <i>&lt;day&gt; &lt;minutes&gt; [name]</i></code>\n<i>playtime limit for one weekday (mon..sun, 0..1440)</i>\n\n'
+        '<i>With several users: a name at the end = that user, no name = the active one. /release and /quietnow hold for the whole box.</i>\n\n'
         '<code><b>/say</b> <i>text</i></code>\n<i>announcement: the box says the text right away</i>\n\n'
         '<b>MuPiBox app:</b>\n'
         '<code><b>/login</b></code> – login link to the MuPiBox app\n\n'

@@ -1,12 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, Signal } from '@angular/core'
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, Signal, computed, effect, inject, viewChild } from '@angular/core'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { map, of, switchMap } from 'rxjs'
+import { ExtensionHostService } from '../extension-host.service'
 import { MediaService } from '../media.service'
 import type { Mupihat } from '../mupihat'
 import { PlayerService } from '../player.service'
+import { DisplayTextsService } from '../display-texts.service'
+import { UsersService } from '../users/users.service'
 
 // The status at the top right, the same in every theme: WiFi and battery, both 24 px high and in line, the
-// percentage inside the battery. Colours come from --st-* variables (defaults below from the toolbar colour; the
+// percentage inside the battery, and what extensions add right of them (the clock is such an extension). Colours come from --st-* variables (defaults below from the toolbar colour; the
 // kids' themes set them in theme/km.scss, the other themes in their theme file).
 // Nothing in here takes pointer events: a press anywhere on the group reaches the element around it (on the start
 // page the button that opens the admin menu when held).
@@ -93,6 +96,20 @@ function signalDbmOf(text: string | undefined): number | undefined {
           <div class="st-batt-body"><div class="st-batt-fill"></div><span class="st-batt-num">{{ percent() }}</span></div>
           <div class="st-batt-pole"></div>
         </div>
+      }
+      <span class="st-ext" #ext></span>
+      <!-- several users (5.1): the user in place, a tap opens the overview (not with "only in the app": then the dot only shows) -->
+      @if (users.apart()) {
+        <span
+          class="st-user"
+          [class.st-user--tap]="canSwitch()"
+          role="button"
+          [attr.aria-label]="texts.text('usersDot', { name: users.current()?.name ?? '' })"
+          (pointerdown)="$event.stopPropagation()"
+          (pointerup)="$event.stopPropagation()"
+          (click)="openUsers($event)"
+          ><span class="st-user-dot" [style.background]="users.current()?.color ?? '#808080'"></span
+        ></span>
       }
     </div>
   `,
@@ -186,6 +203,35 @@ function signalDbmOf(text: string | undefined): number | undefined {
       border-radius: 0 2px 2px 0;
       background: var(--st-track, color-mix(in srgb, currentColor 42%, transparent));
     }
+    /* what extensions put here (see ExtensionHostService.headerItems) */
+    .st-ext {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: 2px;
+    }
+    .st-ext:empty {
+      display: none;
+    }
+    /* the dot of the user in place (several users): the only part of the status that takes a touch - and only when it opens something */
+    .st-user {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 44px;
+      margin: 0 -4px 0 -2px;
+    }
+    .st-user--tap {
+      pointer-events: auto;
+      cursor: pointer;
+    }
+    .st-user-dot {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px var(--st-on, currentColor);
+    }
   `,
 })
 export class StatusComponent {
@@ -221,7 +267,47 @@ export class StatusComponent {
   // (not from the values of a charger that was reset: they are those of before, see Mupihat.Measurement_Valid)
   protected readonly charging = computed(() => this.hat()?.Measurement_Valid !== false && (this.hat()?.IBus ?? 0) > 0)
 
-  public constructor(playerService: PlayerService, mediaService: MediaService) {
+  // What extensions put into the header: each gets its own place, filled again when the list changes
+  private readonly extensions = inject(ExtensionHostService)
+  protected readonly users = inject(UsersService)
+  protected readonly texts = inject(DisplayTextsService)
+  // (not with "only in the app"; on the lock screen too: the play time is each user's own - a brother or sister with time
+  // left may listen, a PIN keeps a child out; a parent's pause stays, it holds for the whole box)
+  protected readonly canSwitch = computed(() => this.users.state()?.switchMode !== 'app')
+
+  protected openUsers(ev: Event): void {
+    ev.stopPropagation()
+    ev.preventDefault()
+    if (!this.canSwitch()) return
+    void this.users.load()
+    this.users.overviewOpen.set(true)
+  }
+  private readonly extSlot = viewChild<ElementRef<HTMLElement>>('ext')
+
+  public constructor(
+    playerService: PlayerService,
+    mediaService: MediaService,
+  ) {
+    const destroyRef = inject(DestroyRef)
+    let undo: (() => void)[] = []
+    const clear = () => {
+      for (const fn of undo) fn()
+      undo = []
+      this.extSlot()?.nativeElement.replaceChildren()
+    }
+    effect(() => {
+      const slot = this.extSlot()?.nativeElement
+      const items = this.extensions.headerItems()
+      clear()
+      if (!slot) return
+      for (const entry of items) {
+        const place = document.createElement('span')
+        place.dataset['ext'] = entry.id
+        slot.append(place)
+        undo.push(this.extensions.mountHeader(entry, place))
+      }
+    })
+    destroyRef.onDestroy(clear)
     this.network = toSignal(mediaService.network$, { initialValue: undefined })
     this.wifiLevel = computed(() => {
       const network = this.network()

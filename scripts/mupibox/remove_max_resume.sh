@@ -2,7 +2,9 @@
 #
 # lösche alle Einträge mit Category resume.
 
-RESUME="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/resume.json"
+. /usr/local/bin/mupibox/mupi_paths.sh
+
+RESUME="${MUPI_LIBRARY}/resume.json"
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 MAXRESUME=$(sudo /usr/bin/jq -r .mupibox.resume ${CONFIG})
 TMP_RESUME="/tmp/.resume.json"

@@ -4,7 +4,7 @@ import sys
 import subprocess
 import json
 import telepot
-from telegram_chats import normalize_chat_ids, send_to_all, photo_to_all
+from telegram_chats import normalize_chat_ids, send_to_all, photo_to_all, take_screen, SCREEN
 
 with open("/etc/mupibox/mupiboxconfig.json") as file:
     config = json.load(file)
@@ -23,6 +23,5 @@ if len(sys.argv) > 1:
     msg = "\n".join(sys.argv[1:])
     send_to_all(bot, msg, chat_ids)
 
-subprocess.run(["sudo", "rm", "-f", "/tmp/telegram_screen.png"])
-subprocess.run(["sudo", "-H", "-u", "dietpi", "bash", "-c", "DISPLAY=:0 scrot /tmp/telegram_screen.png"])
-photo_to_all(bot, '/tmp/telegram_screen.png', chat_ids)
+if take_screen() == 0:
+    photo_to_all(bot, SCREEN, chat_ids)

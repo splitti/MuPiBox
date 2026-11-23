@@ -4,7 +4,7 @@
 
 ## Passwort
 
-Unter **Passwort & Anmeldung** vergibst du das Passwort für die ganze App. Es gilt am Handy genauso wie am PC und auch für das bisherige Admin-Interface.
+Unter **Passwort & Anmeldung** vergibst du das Passwort für die ganze App. Es gilt am Handy genauso wie am PC.
 
 | Karte | Was du dort tust |
 | --- | --- |

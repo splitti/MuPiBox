@@ -47,6 +47,9 @@ The box can be controlled over the same topics with `/set` at the end:
 | `take_screenshot/set` | `take_screenshot` | picture of the display under `screenshot` |
 | `reboot/set` | `reboot` | restart |
 | `power/set` | `shutdown` | shut down |
+| `user/set` | a user's name | that child becomes the active one, without a PIN like in the app |
+
+With [several users](../bedienung/mehrere-benutzer.md) on, the box reports the active child's name under `user`. With MQTT discovery a select **User** with all names comes along.
 
 ## MQTT discovery
 

@@ -8,6 +8,7 @@
 
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { CACHE_DIR } from '../paths'
 
 export interface CachedAlbum {
   id?: string
@@ -26,7 +27,7 @@ interface MetaFile {
   playlists: Record<string, { snapshot: string; tracks: unknown[]; until: number }>
 }
 
-const FILE = path.join(process.cwd(), 'cache', 'sync-meta.json')
+const FILE = path.join(CACHE_DIR, 'sync-meta.json')
 const KEEP_MS = 30 * 24 * 60 * 60 * 1000
 
 let meta: MetaFile | undefined

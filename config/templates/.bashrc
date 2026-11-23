@@ -93,25 +93,6 @@ alias treed='tree -CAFd'
 alias mountedinfo='df -hT'
 alias reboot='sudo reboot'
 
-function mupi-update-webinterface() {
-	# Download and check first, replace /var/www only afterwards (a failed download used to leave it empty)
-	sudo rm -f /tmp/www.zip
-	sudo wget -q -O /tmp/www.zip https://github.com/splitti/MuPiBox/raw/main/AdminInterface/release/www.zip
-	if ! unzip -tq /tmp/www.zip > /dev/null 2>&1; then
-		echo "Download of the web interface failed or is incomplete - nothing was changed."
-		sudo rm -f /tmp/www.zip
-		return 1
-	fi
-	sudo rm -R /var/www/*
-	sudo unzip /tmp/www.zip -d /var/www/
-	sudo rm /tmp/www.zip
-	sudo ln -s /home/dietpi/MuPiBox/media/cover /var/www/cover
-	sudo chown -R www-data:www-data /var/www/
-	sudo chmod -R 755 /var/www/
-	sudo chown -R dietpi:www-data /home/dietpi/MuPiBox/media/cover
-
-}
-
 function mupi-info() {
 	OS=$(source /etc/os-release ; echo $PRETTY_NAME)
 	RASPI=$(cat /sys/firmware/devicetree/base/model | tr -d '\0' )
@@ -134,7 +115,7 @@ function mupi-info() {
 	echo -e "  ${BCyan}MuPiBox-Version:  ${BIGreen}$(cat /etc/mupibox/mupiboxconfig.json | jq -r .mupibox.version)${Color_Off}"
 	echo -e "  ${BCyan}jq:               ${BIGreen}$(/usr/bin/jq --version)${Color_Off}"
 	echo -e "${Color_Off}"
-	echo -e "  ${BCyan}Admin-UI:         ${BIYellow}http://$(hostname)${Color_Off}"
+	echo -e "  ${BCyan}App:              ${BIYellow}http://$(hostname)/app${Color_Off}"
 	echo -e "  ${BCyan}Web-UI:           ${BIYellow}http://$(hostname):8200${Color_Off}"
 	echo -e "${Color_Off}"
 	echo -e "  ${BCyan}visit MuPiBox:    ${BIPurple}https://mupibox.de${Color_Off}"
@@ -156,9 +137,9 @@ alias mupi-update-stable='cd; curl -L https://raw.githubusercontent.com/splitti/
 alias mupi-update-beta='cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash  -s -- beta'
 alias mupi-update-dev='cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash  -s -- dev'
 alias mupi-show-conf='sudo cat /etc/mupibox/mupiboxconfig.json | jq . -r -C'
-alias mupi-show-data='sudo cat /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json | jq . -r -C'
-alias mupi-show-network='sudo cat /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json | jq . -r -C'
-alias mupi-show-monitor='sudo cat /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json | jq . -r -C'
+alias mupi-show-data='sudo cat /home/dietpi/.mupibox/data/library/data.json | jq . -r -C'
+alias mupi-show-network='sudo cat /home/dietpi/.mupibox/server/config/network.json | jq . -r -C'
+alias mupi-show-monitor='sudo cat /home/dietpi/.mupibox/server/config/monitor.json | jq . -r -C'
 alias mupi-restart-kiosk='/usr/local/bin/mupibox/./restart_kiosk.sh'
 alias mupi-update-data='/usr/local/bin/mupibox/./m3u_generator.sh'
 

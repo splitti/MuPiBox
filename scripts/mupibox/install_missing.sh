@@ -6,7 +6,7 @@
 # rsvg-convert or Pillow the start pictures had no box name and no random scene.
 #
 #   install_missing.sh --list   the missing ones that apt can install, one per line (no root needed; the app's server
-#                               asks it for the notice on its start page, backend-api eltern/system.ts)
+#                               asks it for the notice on its start page, backend-api app-api/system.ts)
 #   install_missing.sh          installs them (root, from the app's notice); output in the log below
 #
 # What made an installation fail is handled here: the lock (waited for), a dpkg stopped halfway (finished), broken

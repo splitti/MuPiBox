@@ -148,7 +148,8 @@ function fill(dst, values) {
   return dst.replace(/\{(\d*)\}/g, (_, n) => {
     const v = values[n === '' ? i++ : Number(n)] ?? ''
     const core = v.trim()
-    if (!core || !/\p{L}/u.test(core)) return v
+    // (a name - app.js un(): as it is)
+    if (!core || !/\p{L}/u.test(core) || core.startsWith('\u2068')) return v
     const t = translateText(core)
     return t === null ? v : v.replace(core, () => t)
   })
@@ -173,15 +174,24 @@ function translateCore(s) {
   return null
 }
 
+const withStop = (text) => (text === null ? null : `${text}.`)
+
 // a text as a whole, else put together by the code: sentences one by one ("{} Das gilt erst nach einem Neustart"),
 // the longest known start before a separator and the rest ("3 angezeigt · … · anderes NAS (…)"), the parts one by one
 // ("Stabil · 4.2.4", "Netzwerk › WLAN"). null: nothing known.
 function translateText(core) {
   const whole = translateCore(core)
   if (whole !== null) return whole
+  // (one sentence with the full stop the code put after it: "Abends dunkler: von Sonnenuntergang bis Sonnenaufgang." was
+  // translated in parts - "Evening dimming: von Sonnenuntergang …")
+  if (core.endsWith('.') && !core.endsWith('..')) {
+    const bare = translateCore(core.slice(0, -1))
+    if (bare !== null) return /[.!?…]$/.test(bare) ? bare : withStop(bare)
+  }
   const sentences = core.split(/(?<=[.!?…])\s+(?=\S)/)
   if (sentences.length > 1) {
-    const done = sentences.map((x) => translateText(x))
+    // (a sentence may be known without its full stop: "Gespeichert. Das Display lädt neu." has "Gespeichert" as a text)
+    const done = sentences.map((x) => translateText(x) ?? (x.endsWith('.') ? withStop(translateText(x.slice(0, -1))) : null))
     if (done.some((d) => d !== null)) return done.map((d, i) => d ?? sentences[i]).join(' ')
   }
   const parts = core.split(SEPARATORS)

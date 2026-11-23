@@ -1,6 +1,8 @@
 #!/bin/bash
 #
 
+. /usr/local/bin/mupibox/mupi_paths.sh
+
 MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json"
 TMP_LEDFILE="/tmp/.power_led"
 OLD_STATE=1
@@ -34,8 +36,10 @@ if [ ${wled_active} = true ]; then
 	wled_brightness_def=$(/usr/bin/jq -r .wled.brightness_default ${MUPIBOX_CONFIG})
 	# (the browser's program is called chromium-browser on Debian 12 and chromium on Debian 13 - pidof by the program's
 	# name waits for the browser itself, as before; "pgrep -f chromium" also found the kiosk script starting it)
+	# (a box without the DSI display - mupibox.headless - has no browser to wait for)
+	headless=$(/usr/bin/jq -r '.mupibox.headless // false' ${MUPIBOX_CONFIG})
 	pid=$(pidof chromium-browser chromium)
-	while [ -z "${pid}" ] ;
+	while [ -z "${pid}" ] && [ "${headless}" != true ] ;
 	do
 		pid=$(pidof chromium-browser chromium)
 		sleep 3
@@ -85,7 +89,7 @@ do
 		# a display with KMS (Touch Display 2, Waveshare, EDATEC): the firmware does not know it ("Can't open device
 		# file") - what get_monitor.sh found with the X server instead
 		if [ -z "${displayState}" ]; then
-			case "$(/usr/bin/jq -r '.monitor // "On"' /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json 2>/dev/null)" in
+			case "$(/usr/bin/jq -r '.monitor // "On"' ${MUPI_SERVER_CONFIG}/monitor.json 2>/dev/null)" in
 				Off) displayState=0 ;;
 				*) displayState=1 ;;
 			esac

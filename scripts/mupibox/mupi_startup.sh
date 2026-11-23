@@ -2,6 +2,8 @@
 #
 # Set Default Volume and plays Startup sound
 
+. /usr/local/bin/mupibox/mupi_paths.sh
+
 #CONFIG="/etc/mupibox/mupiboxconfig.json"
 #LED_PIN=$(/usr/bin/jq -r .shim.ledPin ${CONFIG})
 #START_SOUND=$(/usr/bin/jq -r .mupibox.startSound ${CONFIG})
@@ -26,7 +28,7 @@
 # The display's files belong to dietpi: the app's server (dietpi) changes the theme link there. Files copied in by hand
 # (as root, or unpacked from another computer with its user's number) took that away - the app then could not switch
 # the theme. Only those are given back: on a box where all is right nothing is written.
-DISPLAY_WWW=/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www
+DISPLAY_WWW=${MUPI_WWW}
 if [ -d "${DISPLAY_WWW}" ]; then
 	find "${DISPLAY_WWW}" ! -user dietpi -exec chown -h dietpi:dietpi {} + 2>/dev/null
 fi

@@ -15,7 +15,7 @@ Every item goes into one of three **categories**: Audiobook, Music or Radio & po
 After that:
 
 - [Covers](cover.md): your own pictures, online covers and what happens when covers are missing.
-- [Managing content](verwalten.md): artist subscriptions, excluding single albums, removing.
+- [Managing content](verwalten.md): the library, artist subscriptions with range and albums, removing.
 
 > [!TIP]
 > New content appears on the display by itself. A restart is not necessary.

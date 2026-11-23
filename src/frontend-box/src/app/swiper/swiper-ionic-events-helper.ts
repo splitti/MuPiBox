@@ -18,18 +18,19 @@ export class SwiperIonicEventsHelper {
     this.swiperComponent()?.ionViewWillEnter()
   }
 
+  // (a page may show no swiper for a while - the start page's tab "Fotos" has its albums instead)
   public ionViewDidEnter(): void {
-    this.swiperComponent().ionViewDidEnter()
+    this.swiperComponent()?.ionViewDidEnter()
   }
 
   public ionViewWillLeave(): void {
-    this.swiperComponent().ionViewWillLeave()
+    this.swiperComponent()?.ionViewWillLeave()
   }
 
   /**
    * Reset swiper position to first slide.
    */
   public resetSwiperPosition(): void {
-    this.swiperComponent().resetSwiperPosition()
+    this.swiperComponent()?.resetSwiperPosition()
   }
 }

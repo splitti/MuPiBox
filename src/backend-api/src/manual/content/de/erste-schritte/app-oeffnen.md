@@ -16,7 +16,7 @@ oder mit der IP-Adresse der Box:
 http://192.168.1.50/
 ```
 
-Die Startseite der Box ist das Anmeldefenster der App. Von dort gelangst du in die App und in die ältere Admin-Oberfläche der Box. Die App liegt unter `/app/`, dieses Handbuch unter `/manual/`.
+Die Startseite der Box führt direkt in die App. Die App liegt unter `/app/`, dieses Handbuch unter `/manual/`.
 
 > [!TIP]
 > Setze ein Lesezeichen oder lege die App auf den Startbildschirm deines Handys. Mit eingerichtetem HTTPS lässt sie sich wie eine App installieren ([Passwort und HTTPS](../netzwerk/sicherheit.md)).

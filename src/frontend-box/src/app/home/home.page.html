@@ -10,9 +10,9 @@
       @if (configLoaded()) {
         <div class="km-tabs-wrap" [class.km-mini]="pillShown()">
           <div class="km-tabs" role="tablist">
-            @for (cat of visibleCategories(); track cat.key) {
-              <button class="km-tab" type="button" role="tab" [class.km-on]="cat.key === category()" [attr.aria-selected]="cat.key === category()" (click)="category.set(cat.key)">
-                <ion-icon [name]="cat.icon"></ion-icon>
+            @for (cat of headerCategories(); track cat.key) {
+              <button class="km-tab" type="button" role="tab" [class.km-on]="cat.key === category()" [attr.aria-selected]="cat.key === category()" (click)="categoryClicked(cat.key)">
+                <ion-icon [name]="cat.icon" [src]="cat.src"></ion-icon>
               </button>
             }
           </div>
@@ -36,9 +36,9 @@
       <!-- Hidden categories are left out; the remaining buttons share the width equally,
            so their icons stay evenly spaced and centered. -->
       <ion-segment value="{{this.category()}}" (ionChange)="categoryChanged($event)">
-        @for (cat of visibleCategories(); track cat.key) {
+        @for (cat of headerCategories(); track cat.key) {
           <ion-segment-button [value]="cat.key">
-            <ion-icon [name]="cat.icon"></ion-icon>
+            <ion-icon [name]="cat.icon" [src]="cat.src"></ion-icon>
           </ion-segment-button>
         }
       </ion-segment>
@@ -58,5 +58,9 @@
   @if (unavailable()) {
     <mupi-media-unavailable [nas]="category() === 'nas'"></mupi-media-unavailable>
   }
-  <mupi-swiper [data]="swiperData()" [compact]="headerHidden()" roundImages="true" (elementClicked)="this.artistCoverClicked($event.data)"></mupi-swiper>
+  @if (category() === 'photos') {
+    <mupi-photo-albums (opened)="photoAlbumOpened($event)" (toListening)="photosToListening()"></mupi-photo-albums>
+  } @else {
+    <mupi-swiper [data]="swiperData()" [compact]="headerHidden()" roundImages="true" (elementClicked)="this.artistCoverClicked($event.data)"></mupi-swiper>
+  }
 </ion-content>

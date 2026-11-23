@@ -3,7 +3,7 @@
 # Switches the MuPiHAT on: I2C, the driver of its amplifier (MAX98357A, I2S), the I2C modules, its services, and its
 # sound card - set right away (it was left to /boot/run_once.sh, which the start runs only once the box is online,
 # with a second restart; without internet the old card stayed) and noted in mupiboxconfig.json, so the app shows it.
-# Ends with an error when something did not arrive: the app (eltern/hardware.ts) and the admin interface then keep
+# Ends with an error when something did not arrive: the app (app-api/hardware.ts) and the admin interface then keep
 # the switch as it was. The box is restarted by the caller.
 # BOOT_CONFIG / DIETPI_TXT / MUPIBOX_CONFIG / DRY_RUN=1 (no services, no DietPi call) for a test on copies.
 

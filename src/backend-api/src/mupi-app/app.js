@@ -17,7 +17,7 @@ const API = '/api/app'
 const BOX_ORIGIN = location.origin
 // Where Spotify sends the browser back after the login: https through the box's web server (port 443) - Spotify takes
 // no http addresses except 127.0.0.1. It has to be entered in the Spotify app. Which one the box uses comes from the box
-// (eltern/oauth.ts redirectModeOf: /app/spotify-callback, or /spotify.php for a box set up before the app).
+// (app-api/oauth.ts redirectModeOf: /app/spotify-callback, or /spotify.php for a box set up before the app).
 const spotifyRedirect = () => spot.access?.redirectUris?.[spot.access.redirectMode] ?? `https://${location.hostname}/app/spotify-callback`
 // numbers and dates in the language of the app (see i18n.js)
 let LOCALE = localeTag()
@@ -92,6 +92,11 @@ async function boot() {
   }
   loadBoxName()
   loadVersion()
+  // (the users of the box: the chooser of the library's pages - several users, see libUserTop)
+  await withinBoot(loadUsers()).catch(() => undefined)
+  // (extensions with a page of their own: before the first page is drawn - the address may be one of theirs, and a page of the
+  // core may have moved to one; a box that does not answer this in time starts without them)
+  await withinBoot(loadExtPages()).catch(() => undefined)
   // (back and forward: popstate; an address typed or a link with #/…: hashchange)
   window.addEventListener('popstate', routeIfMoved)
   window.addEventListener('hashchange', routeIfMoved)
@@ -170,8 +175,9 @@ function currentId() {
   const name = decodeURIComponent(location.hash.replace(/^#\/?/, ''))
   // (the page "Eigenes Theme" is gone: its settings are on the theme page)
   if (name === 'custom-theme' || name === 'eigenes') return 'theme'
-  if (state.bySlug.has(name)) return state.bySlug.get(name)
-  return state.pages.has(name) ? name : 'start'
+  const id = state.bySlug.has(name) ? state.bySlug.get(name) : state.pages.has(name) ? name : 'start'
+  // (a page of the core that an extension shows on its own page while it is on, see setExtPages)
+  return extPages.adopted.get(id) ?? id
 }
 function currentPage() {
   return state.pages.get(currentId())
@@ -249,6 +255,8 @@ function route() {
   routedHash = location.hash
   stopPageTimers()
   closeSheet() // (a sheet belongs to the page it was opened on)
+  // (an upload of photos belongs to its page: left, it stops - what came stays; its summary goes with the page)
+  if (page.id !== 'fotoupload') photoUploadLeft()
   renderChrome(page)
   renderPage(page)
   window.scrollTo(0, 0)
@@ -356,10 +364,12 @@ function renderChrome(page) {
     (a) => `<button class="tab" data-go="${a.id}" ${a.id === area ? 'aria-current="page"' : ''}><span class="pill">${icon(a.icon, 21)}</span><span>${a.title}</span></button>`,
   ).join('')
 
-  const groups = area === 'einstellungen' ? state.schema.settingsGroups : []
+  // (the pages of the extensions stand under the groups: the page of the extension, or the extension a sub page belongs to, is marked)
+  const groups = area === 'einstellungen' ? [...state.schema.settingsGroups, ...extPages.list.map((e) => state.pages.get(e.pageId)).filter(Boolean)] : []
   const groupOf = (() => {
     let p = page
     while (p && p.parent && !p.parent.startsWith('g-') && p.parent !== 'einstellungen') p = state.pages.get(p.parent)
+    if (p?.extId) return p.id
     return p?.id?.startsWith('g-') ? p.id : p?.parent
   })()
   $('#sidebar').innerHTML = `
@@ -392,24 +402,50 @@ function renderPageNav(page) {
     })
     main.append(nav)
   }
-  const siblings = groupPages(page)
-  nav.dataset.sibs = String(siblings.length > 1 ? siblings.length : 0)
+  // (a sub page of an extension stands in the list under the page of its extension, which is in the list of its group)
+  const top = page.extId && page.parent === `ext-${page.extId}` ? state.pages.get(page.parent) : page
+  // (the sub pages of an extension's page; under the shown one the cards of the page to jump to - `jumps`, see updatePageNavSections)
+  const kids = (p) => state.schema.pages.filter((c) => c.parent === p.id && c.extId)
+  const siblings = top ? groupPages(top) : []
+  // (one extension alone still lists its sub pages)
+  const listed = siblings.length > 1 || (siblings.length === 1 && !!top.extId && kids(top).length > 0)
+  // (at least 2 when listed: one extension alone with sub pages shows the list too, see has-pagenav)
+  nav.dataset.sibs = String(listed ? Math.max(2, siblings.length) : 0)
+  const under = (p) => {
+    if (p.id !== top?.id) return ''
+    const list = kids(p)
+    if (!list.length) return p.id === page.id ? '<ul class="sub jumps"></ul>' : ''
+    return `<ul class="sub">${list.map((k) => `<li><button data-go="${esc(k.id)}" ${k.id === page.id ? 'aria-current="page"' : ''}>${esc(k.title)}</button>${k.id === page.id ? '<ul class="sub jumps"></ul>' : ''}</li>`).join('')}</ul>`
+  }
   nav.innerHTML = !page.parent
     ? ''
     : `<p>Auf dieser Seite</p>${
-        siblings.length > 1
-          ? `<ul>${siblings.map((p) => `<li><button data-go="${esc(p.id)}" ${p.id === page.id ? 'aria-current="page"' : ''}>${esc(p.title)}</button>${p.id === page.id ? '<ul class="sub"></ul>' : ''}</li>`).join('')}</ul>`
-          : '<ul class="sub"></ul>'
+        listed
+          ? `<ul>${siblings.map((p) => `<li><button data-go="${esc(p.id)}" ${p.id === page.id ? 'aria-current="page"' : ''}${p.id === top.id && page.id !== top.id ? ' class="parent"' : ''}>${esc(p.title)}</button>${under(p)}</li>`).join('')}</ul>`
+          : '<ul class="sub jumps"></ul>'
       }`
   updatePageNavSections(page)
 }
 
+// (a card of an extension page came or went: "Auf dieser Seite" lists the ones that are there)
+document.addEventListener('mupi-cards', () => {
+  const page = state.pages.get($('#content')?.dataset.page)
+  if (page && $('#pagenav')) updatePageNavSections(page)
+})
+
 // The pages a settings group's page leads to (its nav rows, card after card)
-const groupNav = (g) => (g?.sections || []).flatMap((s) => (s.items || []).filter((i) => i.type === 'nav').map((i) => i.target))
+// (the pages of extensions are no group of the schema: they stand on the page of the settings itself, in a group of their own here)
+const EXT_GROUP = { id: 'g-ext', sections: [] }
+const groupNav = (g) =>
+  g === EXT_GROUP
+    ? extPages.list.map((e) => e.pageId)
+    : (g?.sections || []).flatMap((s) => (s.items || []).filter((i) => i.type === 'nav' && !extPages.adopted.has(i.target)).map((i) => i.target))
 // The settings group of a page: the one it belongs to, or - a page of another area - the one listing it (Spotify and
 // the NAS are pages of the library that Dienste lists too)
 function groupOf(page) {
   if (!page) return null
+  // (the page of an extension: with the other extensions' pages - not its sub pages, which the list shows under it)
+  if (page.extId && page.parent === 'einstellungen') return EXT_GROUP
   if (page.parent?.startsWith('g-')) return state.pages.get(page.parent) ?? null
   return state.schema.pages.find((g) => g.id.startsWith('g-') && groupNav(g).includes(page.id)) ?? null
 }
@@ -436,6 +472,7 @@ function pager(page) {
 
 // The cards of the page drawn (headings of its cards) as jumps under the shown page; marks the one being read.
 // Called again whenever the page is drawn.
+let cardIdSeq = 0
 function updatePageNavSections(page) {
   pageNavSpy?.disconnect()
   pageNavSpy = null
@@ -445,12 +482,23 @@ function updatePageNavSections(page) {
   // (the page itself is drawn later: until then only its group's pages count)
   $('.main').classList.toggle('has-pagenav', Number(nav.dataset.sibs) > 1)
   if (!page.parent || content.dataset.page !== page.id) return
-  const cards = [...content.querySelectorAll('section.card')].filter((c) => !c.hidden && c.querySelector(':scope > h2, :scope > .card-head > h2'))
-  const heads = cards.map((c, i) => {
-    c.id ||= `sec-${i}`
-    return { id: c.id, text: c.querySelector('h2').textContent.trim(), card: c }
-  })
-  const sub = nav.querySelector('.sub')
+  // (the card of a group of an extension page has its title in the head of the group - a group the user can name (a button) has a
+  // field there: its name, or while it has none the placeholder, "Taster 1")
+  const title = (c) => c.querySelector(':scope > h2, :scope > .card-head > h2, :scope > .ext-group > .ext-group-head > h3, :scope > .ext-group > .ext-group-head > input.ext-group-name')
+  const titleText = (c) => {
+    const t = title(c)
+    return (t instanceof HTMLInputElement ? t.value || t.placeholder : t.textContent).trim()
+  }
+  const cards = [...content.querySelectorAll('section.card')].filter((c) => !c.hidden && title(c) && titleText(c))
+  // (a sub page of an extension: its first card has the title of the page, which is in the list above it)
+  const heads = cards
+    .map((c) => {
+      // (a number of its own: a card that appears later took the index of one that had it already as its id)
+      c.id ||= `sec-${++cardIdSeq}`
+      return { id: c.id, text: titleText(c), card: c }
+    })
+    .filter((h) => !(page.extId && page.parent === `ext-${page.extId}` && h.text === page.title))
+  const sub = nav.querySelector('.jumps')
   const useful = heads.length >= 2 && sub
   if (sub) sub.innerHTML = useful ? heads.map((h) => `<li><button data-sec="${esc(h.id)}">${esc(h.text)}</button></li>`).join('') : ''
   $('.main').classList.toggle('has-pagenav', Number(nav.dataset.sibs) > 1 || !!useful)
@@ -521,10 +569,47 @@ function toggleTheme() {
 // Counts the drawings: a page whose data arrives after the user went on is not drawn any more
 let renderToken = 0
 
+// The pages a library of another user is shown on (several users): the library, its pages to add to it and its Spotify
+// subscriptions, the history. On any other page the app is with the user in place again (Hören plays from his).
+// (not the Spotify page: its Smart-Sync - on or off, its runs and conflicts - is that of the user in place)
+const LIB_USER_PAGES = new Set(['bibliothek', 'suche', 'podsuche', 'radiosuche', 'tidalsuche', 'jellyfinsuche', 'audiblesuche', 'link', 'verlauf', 'spielzeit', 'fotos', 'fotoalbum'])
+function libUserShown(page) {
+  const s = usersState
+  const on = !!s?.enabled && (s.users?.length ?? 0) >= 2 && LIB_USER_PAGES.has(page?.id)
+  if (!on || !s.users.some((u) => u.id === libView.user) || libView.user === s.current) libView.user = null
+  libView.shown = on ? (libView.user ?? s.current) : null
+  return on
+}
+// "Bibliothek von [Leni] [Max]" at the top of those pages
+function libUserTop(page) {
+  if (!libUserShown(page)) return []
+  const s = usersState
+  const shown = libView.user ?? s.current
+  const other = s.users.find((u) => u.id === libView.user)
+  const chips = s.users
+    .map((u) => `<button type="button" class="user-chip" data-lib-user="${esc(u.id)}" aria-pressed="${u.id === shown}">${userDot(u.color)}<span translate="no">${esc(u.name)}</span>${u.id === s.current ? `<small>${esc(tr('aktiv'))}</small>` : ''}</button>`)
+    .join('')
+  const text = !other
+    ? ''
+    : page.id === 'spielzeit'
+      ? tr(`Du bearbeitest die Spielzeit von ${un(other.name)}. Sie gilt, sobald ${un(other.name)} der aktive Benutzer ist. Freigeben und Ruhe sofort gehen nur beim aktiven Benutzer, Schlaftimer und Ausschalten gelten für die ganze Box.`)
+      : page.id === 'fotos' || page.id === 'fotoalbum'
+        ? tr(`„Am Display zeigen“ gilt hier für ${un(other.name)}. Die Alben selbst gehören der ganzen Box.`)
+        : tr(`Du bearbeitest die Bibliothek von ${un(other.name)}. Abspielen geht nur aus der Bibliothek des aktiven Benutzers.`)
+  const note = other ? `<div class="note wide">${icon('info', 18)}<span>${esc(text)}</span></div>` : ''
+  const label = page.id === 'verlauf' ? 'Hör-Verlauf von' : page.id === 'spielzeit' ? 'Spielzeit von' : page.id === 'fotos' || page.id === 'fotoalbum' ? 'Fotoalben von' : 'Bibliothek von'
+  return [`<div class="user-bar wide lib-user" id="lib-user"><span class="lib-user-lbl">${esc(tr(label))}</span>${chips}</div>${note}`]
+}
+
 async function renderPage(page, reload = true) {
   const main = $('#content')
   const ctrl = ctrlOf(page)
   const token = ++renderToken
+  // (before the page loads: its requests are for the user shown - or, off the library's pages, the one in place; the
+  // list of the users as it is now - switched off or changed on another phone meanwhile)
+  if (reload && LIB_USER_PAGES.has(page.id)) await loadUsers().catch(() => undefined)
+  if (token !== renderToken) return
+  libUserShown(page)
   if (ctrl?.load && reload) {
     // another page's controls must not stay usable while this one loads
     if (main.dataset.page !== page.id) main.innerHTML = `<div class="loading"><p>Lade …</p></div>`
@@ -546,12 +631,15 @@ async function renderPage(page, reload = true) {
     parts.push(`<div class="preview-note">${icon('info', 18)}<span>Vorschau: Diese Seite ist noch nicht mit der Box verbunden. Änderungen werden nicht gespeichert.</span></div>`)
   }
   try {
+    parts.push(...libUserTop(page))
     parts.push(...customTop(page))
     // a connected page may put its own values into the schema's building blocks (lists, charts, …)
-    const sections = ctrl?.sections?.(page) ?? page.sections ?? []
+    const sections = withoutAdopted(ctrl?.sections?.(page) ?? page.sections ?? [])
     // (kept for the handlers: a select's options may come from the box, see findItem)
     state.shown = { id: page.id, sections }
     for (const sec of sections) parts.push(renderSection(sec))
+    // (a controller may draw more below its sections, the cards of an extension page that has the pages of the core above them)
+    parts.push(...(ctrl?.after?.(page) ?? []))
   } catch (err) {
     // the box's values did not come (the page cannot be drawn without them): say so, instead of "Lade …" for ever
     console.error(err)
@@ -570,6 +658,16 @@ async function renderPage(page, reload = true) {
   // (a page drawn again sets up its polling again: the timers of the drawing before go, else they pile up)
   stopPageTimers()
   wire(main, page)
+  for (const b of main.querySelectorAll('#lib-user [data-lib-user]')) {
+    b.onclick = () => {
+      const id = b.dataset.libUser
+      libView.user = id === usersState?.current ? null : id
+      // (its buttons went out for the user chosen now already - +10 min, show on the display ...)
+      main.innerHTML = `<div class="loading"><p>${esc('Lade …')}</p></div>`
+      stopPageTimers()
+      renderPage(page)
+    }
+  }
   try {
     if (page.id === 'start') mountStart(main)
     ctrl?.mount?.(main, page)
@@ -600,9 +698,13 @@ function balanceCols(main) {
   if (!WIDE_SCREEN.matches || !main.classList.contains('cols') || OWN_LAYOUT.has(main.dataset.page) || main.querySelector(':scope > .col-stack')) return
   const kids = [...main.children]
   const runs = []
+  // (the "+" of a series of cards (extension pages) goes with the last card of the series that is there, it does not split the run)
+  const follow = new Map()
   let run = []
   for (const el of kids) {
+    const last = el.matches('.ext-add') ? run.findLast((c) => !c.hidden) : null
     if (el.matches('.card') && !el.matches('.wide')) run.push(el)
+    else if (last) follow.set(last, [...(follow.get(last) ?? []), el])
     else if (run.length) {
       runs.push(run)
       run = []
@@ -614,7 +716,7 @@ function balanceCols(main) {
   if (!sorted.length) return
   main._order = kids
   for (const cards of sorted) {
-    const heights = cards.map((c) => c.getBoundingClientRect().height)
+    const heights = cards.map((c) => c.getBoundingClientRect().height + (follow.get(c) ?? []).reduce((sum, f) => sum + f.getBoundingClientRect().height, 0))
     const cols = [document.createElement('div'), document.createElement('div')]
     const h = [0, 0]
     for (const c of cols) c.className = 'col-stack auto-col'
@@ -622,6 +724,7 @@ function balanceCols(main) {
     cards.forEach((c, i) => {
       const at = c.dataset.col ? Number(c.dataset.col) - 1 : h[0] <= h[1] ? 0 : 1
       cols[at].appendChild(c)
+      for (const f of follow.get(c) ?? []) cols[at].appendChild(f)
       h[at] += heights[i]
     })
   }
@@ -679,7 +782,7 @@ function childNav(page) {
       `<div class="group-grid wide">${kids
         .map(
           (k) =>
-            `<button class="group-card" data-go="${esc(k.id)}"><span class="tile">${icon(k.icon || 'chevron', 20)}</span><span class="lbl"><b>${esc(k.title)}</b>${k.description ? `<small>${esc(k.description)}</small>` : ''}</span><span class="chev">${icon('chevron', 18)}</span></button>`,
+            `<button class="group-card" data-go="${esc(k.id)}"><span class="tile">${icon(k.icon || 'chevron', 20)}</span><span class="lbl"><b>${esc(k.title)}</b>${k.description || k.extId ? `<small>${esc(k.description || 'Einstellungen der Erweiterung')}</small>` : ''}</span><span class="chev">${icon('chevron', 18)}</span></button>`,
         )
         .join('')}</div>`,
     ]
@@ -695,13 +798,22 @@ function navRow(target, title, subtitle, ic, badge = '') {
 }
 
 function renderSection(sec) {
+  // (items that are drawn in a card of an extension: here only for the handlers, see findItem)
+  if (sec.hidden) return ''
   const items = (sec.items || []).map(renderItem).join('')
   // (the page's save button under its cards, over both columns - not in the last card, as if it saved only that)
   if (sec.bar) return `<div class="btns save-bar wide">${items}</div>`
   const wide = sec.wide === true || (sec.items || []).some((i) => ['themegrid', 'bootgrid', 'log', 'json', 'checks'].includes(i.type))
   const onlyNav = (sec.items || []).length > 0 && sec.items.every((i) => i.type === 'nav')
   // sec.col: the column on the PC (1 left, 2 right; see balanceCols), sec.badge: a chip beside the title
-  const head = sec.title
+  // sec.nameKey: the head is a field for a name the user gives the card (its title is the placeholder, as with the buttons of the
+  // extension of buttons); sec.remove: [action, label] - a trash button beside the name instead of a button in the card
+  const trash = sec.remove
+    ? `<button type="button" class="ext-group-del" data-act="${esc(sec.remove[0])}" data-label="${esc(sec.remove[1])}" aria-label="Entfernen" title="Entfernen"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`
+    : ''
+  const head = sec.nameKey
+    ? `<div class="ext-group"><div class="ext-group-head"><input class="input ext-group-name" type="text" maxlength="30" data-key="${esc(sec.nameKey)}" value="${esc(state.values.get(sec.nameKey) ?? '')}" placeholder="${esc(sec.title)}" aria-label="Name" autocomplete="off" ${NO_PW_MANAGER}>${trash}</div></div>`
+    : sec.title
     ? sec.badge
       ? `<div class="card-head"><h2>${esc(sec.title)}</h2><span class="chip ${esc(sec.badge.kind ?? '')}">${esc(sec.badge.text)}</span></div>`
       : `<h2>${esc(sec.title)}</h2>`
@@ -717,10 +829,10 @@ function value(item) {
 }
 
 // A building block that belongs to a switch (it.dep: its key): shown only while the switch is on, a little indented;
-// it.dim: shown, but dimmed while it is off (see wire)
+// it.flat: without the indent and the line at the side; it.dim: shown, but dimmed while it is off (see wire)
 function renderItem(it) {
   const html = renderItemOnly(it)
-  if (it.dep) return `<div class="dep" data-dep="${esc(it.dep)}"${state.values.get(it.dep) ? '' : ' hidden'}>${html}</div>`
+  if (it.dep) return `<div class="dep${it.flat ? ' flat' : ''}" data-dep="${esc(it.dep)}"${state.values.get(it.dep) ? '' : ' hidden'}>${html}</div>`
   if (it.dim) return `<div class="dimmable${state.values.get(it.dim) ? '' : ' off'}" data-dim="${esc(it.dim)}">${html}</div>`
   return html
 }
@@ -949,7 +1061,7 @@ function wire(root, page) {
   if (search) search.addEventListener('input', () => showHits(search.value))
 }
 
-// Pages outside the app: the previous admin interface (port 80) and the DietPi dashboard (port 5252)
+// Pages outside the app: the manual and the DietPi dashboard (port 5252)
 async function openExternal(which) {
   if (which === 'manual') return openManual()
   const host = location.hostname
@@ -970,22 +1082,6 @@ async function openExternal(which) {
     } else location.href = url
     return
   }
-  // the admin interface, signed in with a one-time ticket of this app's session (no second login there). The window
-  // opens at once: one opened after waiting for the ticket is blocked as a popup.
-  const win = window.open('', '_blank')
-  let url = `${location.protocol === 'https:' ? 'https' : 'http'}://${host}/index.php`
-  const r = await api(`${API}/admin-ticket`, { method: 'POST' })
-  if (r.status === 409 && r.body?.error === 'admin_off') {
-    win?.close()
-    return toast('Das Admin-Interface ist aus – unter System › Experten einschalten', 'info')
-  }
-  if (r.ok && r.body?.ticket) url += `?app_ticket=${r.body.ticket}`
-  if (!win) {
-    location.href = url
-    return
-  }
-  win.opener = null
-  win.location.href = url
 }
 
 // the building block as shown (a connected page may have filled in its own options), else the schema's
@@ -1030,7 +1126,36 @@ function action(act, label, page) {
 
 // JSON request with the session's CSRF token on everything that changes something. Never throws.
 // (timeoutMs: given up after it - a box that went away while restarting may leave a request open for minutes)
-async function api(path, { method = 'GET', body, timeoutMs } = {}) {
+// The user whose library the app shows (several users, 5.1 - backend users.ts): null = the one in place. Chosen at the
+// top of the library's pages and the history; the requests of the library carry ?user= then, and nothing plays from
+// it - the box plays the library of the user in place.
+// shown: the user the library's pages show (also the one in place - it is named in every request of them, so a switch
+// at the display meanwhile does not send a change to the next user); null off those pages.
+const libView = { user: null, shown: null }
+// A user's name inside a sentence for tr(): kept as it is - "Standard" became "Default" in English otherwise (i18n.js
+// fill leaves a value in these marks alone; they are invisible, made for text put into other text)
+const un = (name) => `\u2068${name}\u2069`
+const USER_LIBRARY_ROUTE =
+  /^(\/api\/(data|data-version|add|edit|delete|delete-many|playtime|playtime\/extend)|\/api\/app\/library\/(subscriptions|subscribe-artist|unsubscribe-artist|remove-synced|remove-album|artist-exclude|add-album|episodes)|\/api\/app\/(heard|tiles\/limit|tiles\/time|caps-config|playlog|photos\/settings|photos\/time|photos\/overview|photos\/albums\/[a-f0-9]{10})|\/api\/spotify-sync\/(artist-albums|my-playlists))$/
+// (what goes for the box or the user in place only: not while another user's library is shown - playing, a release or
+// "quiet now" for the box)
+const USER_PLAY_ROUTE =
+  /^(\/api\/app\/(library\/(play|play-local|play-nas)|cover-hide|podcast-offline\/(episode|sync))|\/api\/(playtime\/release|playtime\/override\/clear|quiethours\/now))$/
+let blockedNoticeAt = 0
+const withUser = (path, user) => `${path}${path.includes('?') ? '&' : '?'}user=${encodeURIComponent(user)}`
+
+// (user: the user a request is for, taken by the caller when it began - a page that loads in several requests does
+// not mix two users when the choice changes meanwhile; undefined: the one shown now)
+async function api(path, { method = 'GET', body, timeoutMs, user } = {}) {
+  const shown = user === undefined ? libView.shown : user
+  const bare = path.split('?')[0]
+  if (libView.user && USER_PLAY_ROUTE.test(bare)) {
+    toast(/\/library\/play/.test(bare) ? 'Abspielen geht nur aus der Bibliothek des aktiven Benutzers' : 'Das geht nur beim aktiven Benutzer', 'info')
+    // (the caller's own "did not work" right after it: not shown - this one says why)
+    blockedNoticeAt = Date.now()
+    return { ok: false, status: 409, body: { error: 'other_user' }, text: '' }
+  }
+  if (shown && USER_LIBRARY_ROUTE.test(bare)) path = withUser(path, shown)
   const headers = {}
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   // (also on reading: some routes of the box take the app's session only with its token, see localOrElternSession)
@@ -1076,6 +1201,7 @@ function startSkeleton() {
   return [
     `<section class="card hero now" id="now"><div class="now-idle">${icon('music')}<span>Verbinde …</span></div></section>`,
     `<div class="start-side">
+      <div class="user-bar" id="user-bar" hidden></div>
       <div id="notices"></div>
       <div class="tiles" id="tiles">
         ${tile('akku', 'bat', 'Akku', '–')}${tile('spielzeit', 'time', 'Heute gehört', '–')}
@@ -1101,8 +1227,9 @@ function startSkeleton() {
       ${navRow('telegram', 'Telegram', 'Eltern-Bot', 'tg')}
       ${navRow('g-system', 'System', 'Über die Box, Neustart, Updates', 'gear')}
       ${navRow('ext:manual', 'Handbuch', 'Anleitung zu Box, Display und App', 'book')}
-      ${startState.legacyAdmin === false ? '' : navRow('ext:admin', 'Admin-Interface', 'Legacy · die bisherige Oberfläche', 'ext')}
     </div></section>`,
+    // (no donation box here for now: one way for the notice in the app - with the statistics' switch - is still to be
+    // agreed on in the core team; the old admin interface has its monthly one)
   ]
 }
 
@@ -1113,8 +1240,7 @@ function tile(target, ic, label, val, id) {
 
 // (playtimeEnabled: the daily limit as last seen - the start page is drawn with or without "+15 min" before its status
 // has come, so the button does not show up and go again on every visit)
-// (legacyAdmin: the previous admin interface switched on - System › Experten; off, the start page does not offer it)
-const startState = { maxVolume: 100, volTimer: null, sleep: null, quietUntil: 0, playtimeEnabled: null, legacyAdmin: null }
+const startState = { maxVolume: 100, volTimer: null, sleep: null, quietUntil: 0, playtimeEnabled: null }
 
 // After a quick action: the start page's state now and twice more (the player takes a change over within seconds)
 function statusSoon(root) {
@@ -1122,14 +1248,41 @@ function statusSoon(root) {
   for (const ms of [1500, 5000]) setTimeout(() => root.isConnected && loadStatus(root), ms)
 }
 
+// The users of the box (5.1) on the start page: switched on and two or more - one chip each, the active one marked; a
+// tap on another switches after a question
+async function loadUserBar(root) {
+  const bar = $('#user-bar', root)
+  if (!bar) return
+  const r = await api(`${API}/users`)
+  const s = r.body
+  if (!r.ok || !s?.enabled || (s.users?.length ?? 0) < 2) {
+    bar.hidden = true
+    return
+  }
+  usersState = s
+  bar.hidden = false
+  // (every 30 s: drawn again only when something changed - a focus on a chip stays)
+  const sig = JSON.stringify([s.current, s.users.map((u) => [u.id, u.name, u.color])])
+  if (bar.dataset.sig === sig) return
+  bar.dataset.sig = sig
+  bar.innerHTML = s.users
+    .map((u) => `<button type="button" class="user-chip" data-user="${esc(u.id)}" aria-current="${u.id === s.current}">${userDot(u.color)}<span translate="no">${esc(u.name)}</span></button>`)
+    .join('')
+  for (const b of bar.querySelectorAll('[data-user]')) {
+    const u = s.users.find((x) => x.id === b.dataset.user)
+    b.onclick = () => {
+      if (u.id === usersState.current) return toast(tr(`${un(u.name)} ist aktiv`), 'info')
+      // (the whole start page anew: its tiles, pins and notices are the coming user's)
+      switchUserSheet(u, () => currentPage()?.id === 'start' && renderPage(currentPage()))
+    }
+  }
+}
+
 function mountStart(root) {
+  loadUserBar(root)
+  // (a switch at the display: the bar follows)
+  every(30000, () => loadUserBar(root))
   drawPins(root)
-  api(`${API}/legacy-admin`).then((r) => {
-    startState.legacyAdmin = !(r.ok && r.body?.on === false)
-    const row = $('[data-go="ext:admin"]', root)
-    if (!startState.legacyAdmin) row?.remove()
-    else if (!row) $('.start-more .navlist', root)?.insertAdjacentHTML('beforeend', navRow('ext:admin', 'Admin-Interface', 'Legacy · die bisherige Oberfläche', 'ext'))
-  })
   loadOutput(root)
   every(15000, () => loadOutput(root))
   root.addEventListener('click', (e) => {
@@ -1240,12 +1393,95 @@ async function playbackAction(root, action) {
   if (!r.ok) {
     const code = r.body?.error ?? ''
     toast(
-      { playtime_limit_reached: 'Die Hörzeit für heute ist aufgebraucht.', quiet_hours_active: 'Gerade ist Ruhezeit.', no_active_track: 'Es ist nichts zum Fortsetzen da.' }[code] ??
+      { playtime_limit_reached: 'Die Hörzeit für heute ist aufgebraucht.', tile_limit_reached: 'Diese Kachel ist für heute aufgebraucht.', quiet_hours_active: 'Gerade ist Ruhezeit.', no_active_track: 'Es ist nichts zum Fortsetzen da.' }[code] ??
         'Das hat nicht geklappt',
       'info',
     )
   }
   setTimeout(() => loadNow(root), 600)
+}
+
+// A small player pinned to the bottom of the page of tags (the player of the start page in short: back, play/pause, next, the cover and
+// the title, how far it is, the volume): a tag, a tile of the display or this page starts something - the bar shows and steers it.
+function mountMiniPlayer(root) {
+  root.querySelector('.mini-player')?.remove()
+  const bar = document.createElement('div')
+  bar.className = 'mini-player'
+  bar.setAttribute('role', 'region')
+  bar.setAttribute('aria-label', tr('Player'))
+  bar.innerHTML = `<div class="mini-ctrl">
+      <button type="button" class="mini-btn" data-a="previous" aria-label="${esc(tr('Zurück'))}">${PREV_SVG}</button>
+      <button type="button" class="mini-btn mini-main" data-a="toggle" aria-label="${esc(tr('Play/Pause'))}">${PLAY_SVG}</button>
+      <button type="button" class="mini-btn" data-a="next" aria-label="${esc(tr('Weiter'))}">${NEXT_SVG}</button>
+    </div>
+    <div class="mini-now"><span class="mini-cover"><img alt="" hidden><span>${icon('music', 20)}</span></span><b class="mini-title" translate="no">—</b></div>
+    <div class="mini-prog"><span class="mini-time">0:00 / 0:00</span><div class="track"><i></i></div></div>
+    <div class="mini-vol">${icon('vol', 20)}<input type="range" min="0" max="100" step="1" value="0" aria-label="${esc(tr('Lautstärke'))}"></div>`
+  root.append(bar)
+  const q = (sel) => bar.querySelector(sel)
+  const vol = q('.mini-vol input')
+  let busy = false
+  const refresh = async () => {
+    if (!bar.isConnected) return document.removeEventListener('mupi-nfc-played', soon)
+    const r = await api(`${API}/playback`)
+    if (!bar.isConnected || !r.ok) return
+    const b = r.body ?? {}
+    const has = !!b.player && !!(b.title || b.artist)
+    q('.mini-title').textContent = has ? b.title || b.artist : tr('Gerade läuft nichts.')
+    const img = q('.mini-cover img')
+    if (has && b.coverUrl) {
+      if (img.getAttribute('src') !== b.coverUrl) img.src = b.coverUrl
+      img.hidden = false
+    } else img.hidden = true
+    const toggle = q('[data-a="toggle"]')
+    toggle.dataset.state = b.playing ? 'playing' : 'paused'
+    toggle.innerHTML = b.playing ? PAUSE_SVG : PLAY_SVG
+    const known = Number.isFinite(b.progressMs) && Number.isFinite(b.durationMs) && b.durationMs > 0
+    q('.mini-time').textContent = known ? `${clock(b.progressMs)} / ${clock(b.durationMs)}` : has ? clock(b.progressMs || 0) : ''
+    q('.mini-prog .track i').style.width = known ? `${Math.min(100, (b.progressMs / b.durationMs) * 100)}%` : '0%'
+    if (Number.isFinite(b.volume) && vol.dataset.dragging !== '1') {
+      vol.value = b.volume
+      vol.style.setProperty('--fill', `${b.volume}%`)
+    }
+  }
+  // (a tile of this page started something: the display takes a moment, so the bar looks again a few times)
+  const soon = () => {
+    for (const ms of [1200, 2800, 5000]) setTimeout(() => void refresh(), ms)
+  }
+  document.addEventListener('mupi-nfc-played', soon)
+  for (const btn of bar.querySelectorAll('[data-a]')) {
+    btn.onclick = async () => {
+      if (busy) return
+      busy = true
+      const a = btn.dataset.a === 'toggle' ? (btn.dataset.state === 'playing' ? 'pause' : 'play') : btn.dataset.a
+      const r = await api(`${API}/playback/${a}`, { method: 'POST' })
+      if (!r.ok) {
+        const code = r.body?.error ?? ''
+        toast({ playtime_limit_reached: 'Die Hörzeit für heute ist aufgebraucht.', quiet_hours_active: 'Gerade ist Ruhezeit.', no_active_track: 'Es ist nichts zum Fortsetzen da.' }[code] ?? 'Das hat nicht geklappt', 'info')
+      }
+      busy = false
+      setTimeout(() => void refresh(), 600)
+    }
+  }
+  const hold = (on) => () => (vol.dataset.dragging = on ? '1' : '')
+  vol.addEventListener('pointerdown', hold(true))
+  for (const ev of ['pointerup', 'pointercancel', 'change']) vol.addEventListener(ev, hold(false))
+  let timer = 0
+  vol.addEventListener('input', () => {
+    const v = Number(vol.value)
+    vol.style.setProperty('--fill', `${v}%`)
+    clearTimeout(timer)
+    timer = setTimeout(async () => {
+      const r = await api(`${API}/audio/volume`, { method: 'POST', body: { volume: v } })
+      if (r.ok && r.body?.capped) {
+        toast(`Hörschutz: höchstens ${r.body.applied} %`, 'info')
+        vol.value = r.body.applied
+        vol.style.setProperty('--fill', `${r.body.applied}%`)
+      } else if (!r.ok) toast('Lautstärke ließ sich nicht setzen', 'info')
+    }, 200)
+  })
+  void refresh()
+  every(2500, refresh)
 }
 
 // Where the box plays (backend-api audio-output.ts), for the row above the volume: kept here, the card is drawn anew
@@ -1362,15 +1598,31 @@ async function loadStatus(root) {
     plus.hidden = !p.enabled
     $('#quick', root)?.classList.toggle('three', !p.enabled)
   }
+  // (what was listened: with the limit "42 / 120 min" and its bar, else the minutes)
+  let hear
   if (p.enabled && Number.isFinite(p.limitMinutes)) {
     const used = Math.floor((p.usedSeconds ?? 0) / 60)
-    setTile(root, 'tile-spielzeit', `${used} / ${p.limitMinutes} min`, p.limitMinutes > 0 ? Math.min(100, (used / p.limitMinutes) * 100) : 100, p.state === 'blocked' ? 'danger' : 'accent')
+    hear = { text: `${used} / ${p.limitMinutes} min`, short: `${used}/${p.limitMinutes}`, pct: p.limitMinutes > 0 ? Math.min(100, (used / p.limitMinutes) * 100) : 100, kind: p.state === 'blocked' ? 'danger' : 'accent' }
   } else if (Number.isFinite(p.usedSeconds)) {
-    setTile(root, 'tile-spielzeit', `${Math.floor(p.usedSeconds / 60)} min`, null)
+    hear = { text: `${Math.floor(p.usedSeconds / 60)} min`, short: `${Math.floor(p.usedSeconds / 60)} min`, pct: null }
   } else {
     // (limit and quiet times off: the player keeps no count - the listening history has it)
     const log = await api(`${API}/playlog?range=today`)
-    setTile(root, 'tile-spielzeit', Number.isFinite(log.body?.totalMinutes) ? `${log.body.totalMinutes} min` : 'Kein Limit', null)
+    const m = log.body?.totalMinutes
+    hear = Number.isFinite(m) ? { text: `${m} min`, short: `${m} min`, pct: null } : { text: 'Kein Limit', short: '–', pct: null }
+  }
+  // the photo display with a picture time of its own (5.1): the tile is "Heute" with two small bars, listening and
+  // pictures (handoff §3.7); counted on the listening time, or no photos: as before
+  const ph = pt.body?.photos
+  if (ph?.enabled && ph.mode === 'separate') {
+    const used = Math.floor((ph.usedSeconds ?? 0) / 60)
+    const pics = ph.limited
+      ? { short: `${used}/${ph.limitMinutes}`, pct: ph.limitMinutes > 0 ? Math.min(100, (used / ph.limitMinutes) * 100) : 100, kind: ph.state === 'blocked' ? 'danger' : 'primary' }
+      : { short: ph.free ? tr(`${used} min · frei`) : `${used} min`, pct: null }
+    setTodayTile(root, hear, pics)
+  } else {
+    setTodayTile(root, null)
+    setTile(root, 'tile-spielzeit', hear.text, hear.pct, hear.kind)
   }
   // quiet time
   // (a parent's "Ruhe sofort" or "Sperren aufheben" comes before the planned times)
@@ -1411,6 +1663,33 @@ function setTile(root, id, text, pct, kind) {
   }
 }
 
+// The tile "Heute gehört" as "Heute" with a small bar each for listening and pictures (the photo time of its own), or
+// back as it was (hear null)
+function setTodayTile(root, hear, pics) {
+  const el = $('#tile-spielzeit', root)
+  if (!el) return
+  const head = el.querySelector('.tile-head')
+  const label = [...head.childNodes].find((n) => n.nodeType === 3)
+  let two = el.querySelector('.tile-two')
+  if (!hear) {
+    if (label) label.textContent = tr('Heute gehört')
+    two?.remove()
+    el.querySelector('.tile-val').hidden = false
+    return
+  }
+  if (label) label.textContent = tr('Heute')
+  el.querySelector('.tile-val').hidden = true
+  el.querySelector('.tile-bar').hidden = true
+  if (!two) {
+    two = document.createElement('span')
+    two.className = 'tile-two'
+    el.append(two)
+  }
+  const row = (ic, name, x) =>
+    `<span class="tile-mini" data-kind="${x.kind ?? ''}">${icon(ic, 13)}<span class="tile-mini-name">${esc(tr(name))}</span><b>${esc(x.short)}</b>${x.pct == null ? '' : `<span class="tile-mini-bar"><i style="width:${x.pct}%"></i></span>`}</span>`
+  two.innerHTML = row('music', 'Hören', hear) + row('image', 'Bilder', pics)
+}
+
 // The next start of a quiet-time window, e.g. "ab 20:00" today or "Di ab 20:00"
 function nextQuiet(schedule) {
   if (!schedule) return null
@@ -1433,29 +1712,21 @@ function nextQuiet(schedule) {
 }
 
 async function loadNotices(root) {
-  const [hat, sync, access, auth, tools, legacy] = await Promise.all([
+  const [hat, sync, access, auth, tools, pt] = await Promise.all([
     api('/api/mupihat'),
     api('/api/spotify-sync/status'),
     api(`${API}/spotify-access`),
     api(`${API}/auth-state`),
     api(`${API}/missing-programs`),
-    api(`${API}/legacy-admin`),
+    api('/api/playtime'),
   ])
   const notes = []
-  // the update to 5.0.12 switched the previous admin interface off (no PHP in the home network): said once, until it is
-  // closed or switched (System › Experten)
-  if (legacy.ok && legacy.body?.offByUpdate && !remembered('mupi-admin-off-notice')) {
-    notes.push([
-      'lock',
-      'Admin-Interface ausgeschaltet',
-      'Seit diesem Update ist die bisherige Oberfläche aus – sicherer, diese App kann alles, was sie konnte. Antippen, um sie unter System › Experten wieder einzuschalten.',
-      'experten',
-      () => remember('mupi-admin-off-notice', '1'),
-    ])
-  }
-  // the admin interface on, and the update could not install PHP's security update: its PHP may be open to attacks
-  if (legacy.ok && legacy.body?.phpUpdateFailed) {
-    notes.push(['lock', 'PHP-Sicherheitsupdate fehlgeschlagen', 'Das Admin-Interface ist an und nutzt noch eine angreifbare PHP-Version. Antippen, um es auszuschalten – oder das Update später noch einmal starten.', 'experten'])
+  // a tile with a day's limit used up (5.1): which one, a tap to Spielzeit (+10 min, free today)
+  const usedUp = (pt.body?.tiles?.list ?? []).filter((t) => t.blocked)
+  if (usedUp.length) {
+    const names = usedUp.map((t) => t.name || t.key.replace(/^[a-z]+:/, '')).join(', ')
+    // (the names as they are, the sentence below them in the app's language)
+    notes.push(['time', names, tr('Für heute aufgebraucht. Antippen für +10 min oder „Heute frei“.'), 'spielzeit'])
   }
   // a new display model waiting for its answer (Display & Bedienung): from the start page too, first of all - without
   // an answer the box goes back to the display before
@@ -1689,6 +1960,7 @@ function errorText(r, fallback = 'Das hat nicht geklappt') {
   return (
     {
       playtime_limit_reached: 'Die Hörzeit für heute ist aufgebraucht.',
+      tile_limit_reached: 'Diese Kachel ist für heute aufgebraucht.',
       quiet_hours_active: 'Gerade ist Ruhezeit.',
       spotify_blocked: 'Spotify lässt gerade keine Anfragen zu. Bitte später noch einmal versuchen.',
       spotify_id_missing: 'Dieser Eintrag hat keine Spotify-ID.',
@@ -1703,9 +1975,15 @@ function errorText(r, fallback = 'Das hat nicht geklappt') {
 
 /* Spielzeit: ring, instant actions, sleep timer, daily limits, quiet rules */
 
-const caps = { config: null, status: null, sleep: null, listened: null }
+const caps = { config: null, status: null, sleep: null, listened: null, photos: null }
 
 async function saveCaps(body, done = 'Gespeichert') {
+  // (the values on the page are another user's than the one chosen now - his page is still loading: nothing sent, a
+  // whole quiet schedule of the one went to the other)
+  if (libView.shown && caps.user !== libView.shown) {
+    toast('Nicht gespeichert – bitte noch einmal versuchen', 'info')
+    return false
+  }
   const r = await api(`${API}/caps-config`, { method: 'POST', body })
   toast(r.ok ? done : 'Nicht gespeichert – bitte noch einmal versuchen', r.ok ? 'ok' : 'info')
   if (r.ok) setTimeout(() => refreshPlaytime(), 1500) // the player writes its status a moment later
@@ -1724,7 +2002,19 @@ async function listenedToday() {
 }
 
 async function loadCaps() {
-  const [cfg, st, sleep, power] = await Promise.all([api(`${API}/caps-config`), api('/api/playtime'), api(`${API}/sleeptimer`), api(`${API}/power-config`)])
+  // (the user shown when it began: another chosen meanwhile - his page reads his own, this answer is not kept)
+  const user = libView.shown
+  const [cfg, st, sleep, power, photos] = await Promise.all([
+    api(`${API}/caps-config`, { user }),
+    api('/api/playtime', { user }),
+    api(`${API}/sleeptimer`),
+    api(`${API}/power-config`),
+    api(`${API}/photos/settings`, { user }),
+  ])
+  if (user !== libView.shown) return
+  // (the picture time's card: only while the photo display is on)
+  if (photos.ok && photos.body?.settings?.enabled) setPhotoTimeValues(photos.body.settings)
+  else caps.photos = null
   // (the card "Ausschalten": the same values as the pages Automatisch ausschalten and Display - wish of hyperbit, all
   // the times in one place)
   if (power.ok) {
@@ -1733,6 +2023,7 @@ async function loadCaps() {
   }
   if (!cfg.ok) throw new Error(`caps-config ${cfg.status}`)
   caps.config = cfg.body
+  caps.user = user
   caps.status = st.ok ? st.body : null
   caps.sleep = sleep.body?.active ? sleep.body : null
   await listenedToday()
@@ -1751,12 +2042,17 @@ async function loadCaps() {
 async function refreshPlaytime() {
   const hero = $('#pt-hero')
   if (!hero) return
-  const [st, sleep] = await Promise.all([api('/api/playtime'), api(`${API}/sleeptimer`)])
+  // (the user shown when it began - another chosen meanwhile: his page reads his own, this answer is dropped)
+  const user = libView.shown
+  const [st, sleep] = await Promise.all([api('/api/playtime', { user }), api(`${API}/sleeptimer`)])
+  if (user !== libView.shown) return
   if (st.ok) caps.status = st.body
   caps.sleep = sleep.body?.active ? sleep.body : null
   await listenedToday()
   drawRing()
   drawSleep()
+  drawPhotoTime()
+  drawTileTime()
 }
 
 // The ring of today: minutes left of the limit, plus what else holds the box right now
@@ -1843,6 +2139,154 @@ function capMinutes() {
 
 async function capAction(path, minutes, done) {
   const r = await api(path, { method: 'POST', body: { minutes } })
+  toast(r.ok ? done : errorText(r), r.ok ? 'ok' : 'info')
+  if (r.ok) setTimeout(() => refreshPlaytime(), 1500)
+}
+
+/* the picture time ("Bildzeit", 5.1): a card of its own on this page while the photo display is on - an account of
+   its own (limit per weekday, +10 min / free / reset for today) or counted on the listening time; the warning on the
+   display and the pause of the time while the grid lies untouched. The player counts (see spotify-control.js). */
+
+const PHOTO_WARN = [
+  ['Aus', 0],
+  ['2 Minuten vorher', 2],
+  ['5 Minuten vorher', 5],
+  ['10 Minuten vorher', 10],
+]
+const PHOTO_IDLE = [
+  ['Aus', 0],
+  ['Nach 1 Minute', 60],
+  ['Nach 2 Minuten', 120],
+  ['Nach 5 Minuten', 300],
+]
+const PHOTO_MODE = [
+  ['Eigenes Limit', 'separate'],
+  ['Zählt auf die Hörzeit', 'shared'],
+]
+const labelOf = (list, v, fallback) => (list.find(([, x]) => x === v) ?? list.find(([, x]) => x === fallback))[0]
+
+function setPhotoTimeValues(s) {
+  caps.photos = s
+  state.values.set('phMode', labelOf(PHOTO_MODE, s.limitMode, 'separate'))
+  state.values.set('phLimitOn', s.limitEnabled !== false)
+  DAY_KEYS.forEach((d, i) => state.values.set(`phl${i}`, Number(s.dailyMinutes?.[d] ?? 20)))
+  state.values.set('phWarn', labelOf(PHOTO_WARN, s.warnMinutes, 5))
+  state.values.set('phIdle', labelOf(PHOTO_IDLE, s.idlePauseSeconds, 120))
+}
+
+function photoTimeSection() {
+  const shared = caps.photos?.limitMode === 'shared'
+  return {
+    title: 'Bildzeit',
+    help: 'Bildzeit zählt nur, wenn am Display ein Album offen ist.',
+    items: [
+      { type: 'html', html: '<div id="ph-time"></div>' },
+      { type: 'seg', label: 'Bildzeit', key: 'phMode', options: PHOTO_MODE.map(([l]) => l) },
+      ...(shared
+        ? [{ type: 'note', text: 'Es gibt kein eigenes Bild-Limit. Ist die Hörzeit aufgebraucht, machen auch die Fotos Pause.' }]
+        : [
+            { type: 'toggle', label: 'Eigenes Tageslimit', key: 'phLimitOn', help: 'Aus: keine Grenze für Fotos.' },
+            {
+              type: 'buttons',
+              dep: 'phLimitOn',
+              buttons: [
+                ['+10 min', 'accent', 'phExtend'],
+                ['Heute frei', 'ghost', 'phFree'],
+                ['Zurücksetzen', 'ghost', 'phReset'],
+              ],
+            },
+            { type: 'days', dep: 'phLimitOn', keyPrefix: 'phl', default: [20, 20, 20, 20, 20, 20, 20] },
+          ]),
+      { type: 'select', label: 'Warnung vor Ablauf', key: 'phWarn', options: PHOTO_WARN.map(([l]) => l) },
+      {
+        type: 'select',
+        label: 'Pause bei Leerlauf im Raster',
+        key: 'phIdle',
+        options: PHOTO_IDLE.map(([l]) => l),
+        help: 'Liegt am Display ein Album offen und niemand tippt, zählt die Zeit nicht weiter.',
+      },
+    ],
+  }
+}
+
+// Today's picture time: what is left, a bar, what was used (from the player's status)
+function drawPhotoTime() {
+  const box = $('#ph-time')
+  if (!box) return
+  const p = caps.status?.photos
+  if (!p) {
+    box.innerHTML = ''
+    return
+  }
+  const used = Math.floor((p.usedSeconds ?? 0) / 60)
+  let html
+  if (p.mode === 'shared') html = `<p class="ring-line">${esc(tr(`Heute ${used} min Bilder angeschaut – sie zählen auf die Hörzeit.`))}</p>`
+  else if (!p.limitEnabled) html = `<p class="ring-line">${esc(tr(`Heute ${used} min Bilder angeschaut – ohne Grenze.`))}</p>`
+  else if (p.free) html = `<p class="ring-line">${esc(tr(`Heute frei – ${used} min Bilder angeschaut.`))}</p>`
+  else {
+    const left = Math.max(0, Math.ceil((p.remainingSeconds ?? 0) / 60))
+    const pct = p.limitMinutes > 0 ? Math.min(100, (used / p.limitMinutes) * 100) : 100
+    html = `<div class="bar"><div class="slider-head"><b>${esc(tr(`${left} min heute übrig`))}</b>${p.state === 'blocked' ? `<span class="chip danger">${esc(tr('Aufgebraucht'))}</span>` : ''}</div>
+      <div class="track"><i style="--w:${pct}%"></i></div><small class="help">${esc(tr(`${used} von ${p.limitMinutes} Minuten genutzt`))}</small></div>`
+  }
+  box.innerHTML = html
+}
+
+async function savePhotoTime(patch, done = 'Gespeichert') {
+  const r = await api(`${API}/photos/settings`, { method: 'POST', body: patch })
+  toast(r.ok ? done : 'Nicht gespeichert – bitte noch einmal versuchen', r.ok ? 'ok' : 'info')
+  if (r.ok && r.body?.settings) caps.photos = r.body.settings
+  if (r.ok) setTimeout(() => refreshPlaytime(), 1500)
+  return r.ok
+}
+
+async function photoTimeAction(action, done) {
+  const r = await api(`${API}/photos/time`, { method: 'POST', body: action === 'extend' ? { action, minutes: 10 } : { action } })
+  toast(r.ok ? done : errorText(r), r.ok ? 'ok' : 'info')
+  if (r.ok) setTimeout(() => refreshPlaytime(), 1500)
+}
+
+/* A day's limit per tile (5.1, "Kachel-Limit"): the tiles with one, today's minutes, +10 min and free today. Set in
+   the library's sheet of a tile ("Höchstens am Tag"). */
+
+function tileTimeSection() {
+  return {
+    title: 'Kacheln mit Limit',
+    help: 'Einzelne Kacheln der Startseite, zum Beispiel eine Hörspielserie, mit eigener Grenze am Tag. Sie zählen auch zur Hörzeit.',
+    items: [{ type: 'html', html: '<div id="tile-time"></div>' }],
+  }
+}
+
+function drawTileTime() {
+  const box = $('#tile-time')
+  if (!box) return
+  const limits = caps.config?.playtimeLimit?.tileLimits ?? []
+  if (!limits.length) {
+    box.innerHTML = `<p class="help" style="margin:0">${esc(tr('Noch keine. Einstellen in der Bibliothek: die Kachel antippen › „Höchstens am Tag“.'))}</p>`
+    return
+  }
+  const today = new Map((caps.status?.tiles?.list ?? []).map((t) => [t.key, t]))
+  box.innerHTML = limits
+    .map((l) => {
+      const t = today.get(l.key)
+      const used = Math.floor((t?.usedSeconds ?? 0) / 60)
+      const limit = t?.limitMinutes ?? l.minutes
+      const pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 100
+      const line = t?.free
+        ? tr(`Heute frei – ${used} min gehört.`)
+        : t?.blocked
+          ? tr(`Aufgebraucht – ${used} von ${limit} min.`)
+          : tr(`Heute ${used} von ${limit} min${t?.bonusMinutes ? ` (+${t.bonusMinutes} min heute)` : ''}.`)
+      const name = l.name || l.key.replace(/^[a-z]+:/, '')
+      return `<div class="bar"><div class="slider-head"><b translate="no">${esc(name)}</b>${t?.blocked ? `<span class="chip danger">${esc(tr('Aufgebraucht'))}</span>` : ''}</div>
+        <div class="track"><i style="--w:${t?.free ? 0 : pct}%"></i></div><small class="help">${esc(line)}</small>
+        <div class="btns"><button class="btn accent" data-tx="${esc(l.key)}" data-name="${esc(name)}">+10 min</button>${t?.free ? '' : `<button class="btn" data-tf="${esc(l.key)}" data-name="${esc(name)}">${esc(tr('Heute frei'))}</button>`}</div></div>`
+    })
+    .join('')
+}
+
+async function tileTimeAction(key, action, done) {
+  const r = await api(`${API}/tiles/time`, { method: 'POST', body: action === 'extend' ? { key, action, minutes: 10 } : { key, action } })
   toast(r.ok ? done : errorText(r), r.ok ? 'ok' : 'info')
   if (r.ok) setTimeout(() => refreshPlaytime(), 1500)
 }
@@ -2099,8 +2543,32 @@ const tidalArtistTile = (it) => ({
   path: it.id,
   index: it._index,
 })
+// A whole Jellyfin artist (jellyfinKind 'artist'): a folder of its albums too, from Jellyfin through the box
+// A whole Audible series (audibleKind 'series'): a folder of its books too, from Audible through the box
+const isAudibleSeries = (it) => it && it.type === 'audible' && it.audibleKind === 'series' && !it.isResume
+const audibleSeriesTile = (it) => ({
+  kind: 'abseries',
+  title: itemArtist(it) || itemTitle(it),
+  sub: 'Alle Hörbücher',
+  cover: ownCover(it.artistcover_override ?? it.artistcover ?? it.cover_override ?? it.cover ?? ''),
+  badge: 'Audible',
+  folder: true,
+  path: it.id,
+  index: it._index,
+})
+const isJellyfinArtist = (it) => it && it.type === 'jellyfin' && it.jellyfinKind === 'artist' && !it.isResume
+const jellyfinArtistTile = (it) => ({
+  kind: 'jfartist',
+  title: itemArtist(it) || itemTitle(it),
+  sub: catOf(it) === 'music' ? 'Alle Alben' : 'Alle Folgen',
+  cover: ownCover(it.artistcover_override ?? it.artistcover ?? it.cover_override ?? it.cover ?? ''),
+  badge: 'Jellyfin',
+  folder: true,
+  path: it.id,
+  index: it._index,
+})
 const playable = (it) =>
-  it && typeof it === 'object' && (it.type !== 'tidal' || svc.tidal) && !it.isResume && it.category !== 'resume' && it.type !== 'library' && !(it.type === 'spotify' && !it.id && !it.playlistid && !it.showid && !it.audiobookid) && !isTidalArtist(it)
+  it && typeof it === 'object' && (it.type !== 'tidal' || svc.tidal) && (it.type !== 'jellyfin' || svc.jellyfin) && (it.type !== 'audible' || svc.audible) && !it.isResume && it.category !== 'resume' && it.type !== 'library' && !(it.type === 'spotify' && !it.id && !it.playlistid && !it.showid && !it.audiobookid) && !isTidalArtist(it) && !isJellyfinArtist(it) && !isAudibleSeries(it)
 
 async function loadHear() {
   // (whether TIDAL is on: its entries only then - see playable)
@@ -2132,6 +2600,8 @@ function topTiles() {
     for (const it of hear.items) {
       if (isSpotifyArtist(it) && (cat === 'all' || catOf(it) === cat) && match(`${itemArtist(it)} ${itemTitle(it)}`)) tiles.push(spotifyArtistTile(it))
       if (isTidalArtist(it) && svc.tidal && (cat === 'all' || catOf(it) === cat) && match(`${itemArtist(it)} ${itemTitle(it)}`)) tiles.push(tidalArtistTile(it))
+      if (isJellyfinArtist(it) && svc.jellyfin && (cat === 'all' || catOf(it) === cat) && match(`${itemArtist(it)} ${itemTitle(it)}`)) tiles.push(jellyfinArtistTile(it))
+      if (isAudibleSeries(it) && svc.audible && (cat === 'all' || catOf(it) === cat) && match(`${itemArtist(it)} ${itemTitle(it)}`)) tiles.push(audibleSeriesTile(it))
     }
     if (q) {
       for (const it of items) if (match(`${itemTitle(it)} ${itemArtist(it)}`)) tiles.push(entryTile(it))
@@ -2165,6 +2635,8 @@ function badgeOf(it) {
   if (it.type === 'radio' || it.category === 'radio') return 'Radio'
   if (it.type === 'rss') return 'Podcast'
   if (it.type === 'tidal') return 'TIDAL'
+  if (it.type === 'jellyfin') return 'Jellyfin'
+  if (it.type === 'audible') return 'Audible'
   return ''
 }
 const ENTRY_IDENT = ['type', 'id', 'playlistid', 'showid', 'audiobookid', 'artistid', 'title', 'artist']
@@ -2196,6 +2668,16 @@ function levelTiles() {
       .filter((a) => a?.id && match(a.name ?? ''))
       .map((a) => ({ kind: 'tdalbum', title: String(a.name ?? '—'), sub: a.year ? String(a.year) : '', cover: a.thumb || a.cover || '', badge: 'TIDAL', index: top.index, albumId: a.id }))
   }
+  if (top.kind === 'jfartist') {
+    return (hear.level ?? [])
+      .filter((a) => a?.id && match(a.name ?? ''))
+      .map((a) => ({ kind: 'jfalbum', title: String(a.name ?? '—'), sub: a.year ? String(a.year) : '', cover: a.image ? `/api/jellyfin/image/${a.id}?w=160` : '', badge: 'Jellyfin', index: top.index, albumId: a.id }))
+  }
+  if (top.kind === 'abseries') {
+    return (hear.level ?? [])
+      .filter((b) => b?.asin && match(b.title ?? ''))
+      .map((b) => ({ kind: 'abbook', title: String(b.title ?? '—'), sub: b.sequence ? String(b.sequence) : '', cover: b.image ? `/api/audible/image/${b.image}?w=160` : '', badge: 'Audible', index: top.index, albumId: b.asin }))
+  }
   return (hear.level ?? []).filter((f) => match(`${f.title} ${f.artist}`)).map(top.kind === 'nas' ? nasTile : localTile)
 }
 
@@ -2205,6 +2687,28 @@ async function openLevel() {
   hear.levelError = ''
   drawHear()
   if (!top || top.kind === 'artist') return
+  if (top.kind === 'abseries') {
+    // a whole Audible series: the account's books of it in the series' order
+    const r = await api(`/api/audible/series/${encodeURIComponent(top.path)}/books`)
+    if (hear.stack.at(-1) !== top) return
+    if (!r.ok) hear.levelError = r.status === 409 ? 'Audible ist ausgeschaltet.' : 'Audible antwortet gerade nicht.'
+    const entry = hear.items.find((it) => it?._index === top.index)
+    const left = new Set((entry?.exclude_ids ?? []).map(String))
+    hear.level = (r.body?.books ?? []).filter((b) => !left.has(String(b.asin)))
+    drawHear()
+    return
+  }
+  if (top.kind === 'jfartist') {
+    // a whole Jellyfin artist: its albums, newest first, without the ones left out in the library
+    const entry = hear.items.find((it) => it?._index === top.index)
+    const left = new Set((entry?.exclude_album_ids ?? []).map(String))
+    const r = await api(`/api/jellyfin/artist/${encodeURIComponent(top.path)}/albums`)
+    if (hear.stack.at(-1) !== top) return
+    if (!r.ok) hear.levelError = r.status === 409 ? 'Jellyfin ist ausgeschaltet.' : 'Jellyfin antwortet gerade nicht.'
+    hear.level = (r.body?.albums ?? []).filter((a) => !left.has(String(a.id)))
+    drawHear()
+    return
+  }
   if (top.kind === 'tdartist') {
     // a whole TIDAL artist: its albums as the box's TIDAL service lists them (albums first, then EPs and singles)
     const entry = hear.items.find((it) => it?._index === top.index)
@@ -2292,6 +2796,8 @@ function onTile(t) {
   if (t.kind === 'entry') return startPlay(t.title, `${API}/library/play`, { index: t.index, expect: t.ident })
   if (t.kind === 'spalbum') return startPlay(t.title, `${API}/library/play`, { index: t.index, albumId: t.albumId })
   if (t.kind === 'tdalbum') return startPlay(t.title, `${API}/library/play`, { index: t.index, albumId: t.albumId, cover: t.cover })
+  if (t.kind === 'jfalbum') return startPlay(t.title, `${API}/library/play`, { index: t.index, albumId: t.albumId, cover: t.cover })
+  if (t.kind === 'abbook') return startPlay(t.title, `${API}/library/play`, { index: t.index, albumId: t.albumId, cover: t.cover ? t.cover.replace(/\?w=\d+$/, '?w=500') : '' })
   if (t.kind === 'nas') return startPlay(t.title, `${API}/library/play-nas`, { path: t.path })
   return startPlay(t.title, `${API}/library/play-local`, { path: t.path })
 }
@@ -2456,17 +2962,34 @@ const SYNC_API = '/api/spotify-sync'
 // cat / src / q: the filters; subs, nasProfile, covers: the numbers of the tiles
 const lib = { items: null, local: {}, nas: [], cat: 'all', src: 'all', q: '', sync: null, subs: null, nasProfile: '', covers: null, mounts: 0 }
 
+// Returns false when another load began meanwhile (the chooser tapped again): then this one keeps nothing - one that
+// ended last for the user chosen first showed his lists under the other one's name, and a change went to him
 async function loadLib() {
+  // (the user shown when it began: all of its requests for him - see api; lib.user says whose lists lib holds)
+  const user = libView.shown
+  const gen = (lib.loadGen = (lib.loadGen ?? 0) + 1)
+  const current = () => gen === lib.loadGen
+  // (what was heard: the ticks in the sheets)
+  const heardDone = loadHeard(user, current)
   const [data, sync, nas, subs, profiles, covers, ...local] = await Promise.all([
     // (the box's names first: its own pictures go through the app's address, see ownCover)
-    loadBoxHosts().then(() => api('/api/data')),
-    api(`${SYNC_API}/status`),
+    loadBoxHosts().then(() => api('/api/data', { user })),
+    // (his Smart-Sync: on or off is each user's - the one in place's said "new ones come by themselves" for another)
+    api(`${SYNC_API}/status${user ? `?user=${encodeURIComponent(user)}` : ''}`),
     api('/api/nas/artists'),
-    api(`${API}/library/subscriptions`),
+    api(`${API}/library/subscriptions`, { user }),
     api('/api/nas/profiles'),
     api('/api/online-covers'),
     ...CATS.map(([c]) => api(`/api/library/artists?category=${c}`)),
   ])
+  if (!current()) return false
+  lib.user = user
+  // (the photos' line: its numbers, without holding up the library)
+  api(`${API}/photos/overview?light=1`, { user }).then((r) => {
+    if (!current()) return
+    lib.photos = r.ok ? r.body : null
+    drawLibPhotos()
+  })
   lib.items = Array.isArray(data.body) ? data.body : []
   lib.sync = sync.ok ? sync.body : null
   lib.nas = Array.isArray(nas.body) ? nas.body : []
@@ -2475,6 +2998,8 @@ async function loadLib() {
   lib.nasProfile = active ? (active.name === 'standard' ? 'Standard' : active.name) : ''
   lib.covers = covers.ok ? (covers.body?.entries ?? []).filter((e) => e.status === 'found').length : null
   CATS.forEach(([c], i) => (lib.local[c] = Array.isArray(local[i].body) ? local[i].body : []))
+  await heardDone
+  return current()
 }
 
 // After a change the lists of Hören are read again too
@@ -2492,6 +3017,8 @@ const LIB_SOURCES = [
   ['podcast', 'Podcasts'],
   ['radio', 'Radio'],
   ['tidal', 'TIDAL'],
+  ['jellyfin', 'Jellyfin'],
+  ['audible', 'Audible'],
   ['local', 'SD-Karte'],
   ['nas', 'NAS'],
 ]
@@ -2503,7 +3030,9 @@ const entryInSource = (it, src) =>
   (src === 'spotify-sync' && (it.source ?? 'manual') === 'spotify-sync') ||
   (src === 'podcast' && it.type === 'rss') ||
   (src === 'radio' && it.type === 'radio') ||
-  (src === 'tidal' && it.type === 'tidal')
+  (src === 'tidal' && it.type === 'tidal') ||
+  (src === 'jellyfin' && it.type === 'jellyfin') ||
+  (src === 'audible' && it.type === 'audible')
 // A show of ARD Sounds: a podcast whose "feed" is ard:<show id> (the box builds its episode list from the ARD)
 const isArdEntry = (it) => it?.type === 'rss' && String(it.id ?? '').startsWith('ard:')
 const CAT_SHORT = { audiobook: 'Hörspiel', music: 'Musik', other: 'Radio & Podcasts' }
@@ -2513,6 +3042,8 @@ const avatarColor = (name) => AVATAR_COLORS[[...String(name)].reduce((h, ch) => 
 function libTop() {
   return [
     `<button class="btn primary block lib-add" id="lib-add">${icon('plus', 18)}Hinzufügen</button>`,
+    // (the photo display's albums: a part of their own, only with the display switched on - see drawLibPhotos)
+    `<div class="wide" id="lib-photos" hidden></div>`,
     `<div class="lib-tiles wide" id="lib-tiles"></div>`,
     `<div class="search wide">${icon('search')}<input class="input" id="lib-q" type="search" placeholder="In der Bibliothek suchen" autocomplete="off" value="${esc(lib.q)}"></div>`,
     `<div class="pills wide" id="lib-cat">${[['all', 'Alle'], ...CATS.map(([c]) => [c, CAT_SHORT[c]]), ['nas', 'NAS']].map(([id, t]) => `<button aria-selected="${lib.cat === id}" data-v="${id}">${t}</button>`).join('')}</div>`,
@@ -2542,14 +3073,26 @@ function drawLibTiles() {
   const al = lib.subs?.explicit_albums?.length ?? 0
   const tiles = [
     ['spotify', 'music', 'Spotify', spotify],
-    ['verwaltet', 'lib', 'Verwaltete Inhalte', lib.subs ? `${a} ${a === 1 ? 'Abo' : 'Abos'} · ${al} ${al === 1 ? 'Album' : 'Alben'}` : ''],
+    // (what the search subscribed or added: the library shows it with the source Smart-Sync - the subscriptions' rules at
+    // their artists)
+    ['abos', 'sync', 'Abos', lib.subs ? `${a} ${a === 1 ? 'Abo' : 'Abos'} · ${al} ${al === 1 ? 'Album' : 'Alben'}` : ''],
     ['nas', 'server', 'NAS', lib.nasProfile ? `Profil ${lib.nasProfile}` : `${lib.nas.length} Ordner`],
     ['cover', 'image', 'Cover', lib.covers != null ? `${lib.covers} gefunden` : 'Eigene Bilder'],
   ]
   box.innerHTML = tiles
     .map(([id, ic, t, sub]) => `<button class="lib-tile" data-go="${id}"><span class="tile">${icon(ic, 18)}</span><span class="lbl"><b>${esc(t)}</b><small>${esc(sub)}</small></span></button>`)
     .join('')
-  for (const b of box.querySelectorAll('[data-go]')) b.onclick = () => go(b.dataset.go)
+  for (const b of box.querySelectorAll('[data-go]')) {
+    b.onclick = () => {
+      if (b.dataset.go !== 'abos') return go(b.dataset.go)
+      lib.src = 'spotify-sync'
+      lib.cat = 'all'
+      for (const x of $('#lib-src')?.children ?? []) x.setAttribute('aria-selected', String(x.dataset.v === 'spotify-sync'))
+      for (const x of $('#lib-cat')?.children ?? []) x.setAttribute('aria-selected', String(x.dataset.v === 'all'))
+      drawLib()
+      $('#lib-list')?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+    }
+  }
 }
 
 // The list: everything grouped by artist (as the box shows it), per source; a group opens its entries
@@ -2586,6 +3129,16 @@ function libGroups() {
         if (q && !norm(artist).includes(q)) continue
         // (no album yet to take the picture from: the artist's own from Spotify, cached by the box)
         add(`sub|${a.id}`, { kind: 'sub', artist, src: 'spotify-sync', cat, sub: a, cover: `/api/spotify/cover-for/artist/${encodeURIComponent(a.id)}` })
+      }
+      // an album added one by one from the search that is not on the box yet (the sync still to come, Spotify blocking
+      // the box): there all the same, to take it back
+      for (const al of lib.subs?.explicit_albums ?? []) {
+        if (!al?.id || (lib.items ?? []).some((it) => it && it.type === 'spotify' && it.id === al.id)) continue
+        const cat = al.category === 'radio' ? 'other' : al.category || 'audiobook'
+        const artist = String(al.name || al.id)
+        if (lib.cat !== 'all' && cat !== lib.cat) continue
+        if (q && !norm(artist).includes(q)) continue
+        add(`pin|${al.id}`, { kind: 'pin', artist, src: 'spotify-sync', cat, pin: al, cover: `/api/spotify/cover-for/album/${encodeURIComponent(al.id)}` })
       }
     }
   }
@@ -2627,8 +3180,13 @@ function libSub(g) {
         ? 'Radio'
         : first?.type === 'tidal'
           ? 'TIDAL'
-          : (SOURCE_LABEL[g.src] ?? '')
+          : first?.type === 'jellyfin'
+            ? 'Jellyfin'
+            : first?.type === 'audible'
+              ? 'Audible'
+              : (SOURCE_LABEL[g.src] ?? '')
   if (g.kind === 'sub') return 'Abo · noch keine Folgen · Spotify · Smart-Sync'
+  if (g.kind === 'pin') return 'Album · noch nicht auf der Box · Spotify · Smart-Sync'
   if (g.kind === 'local') return `${g.folder.libraryIsContainer ? 'Ordner' : 'Album'} · ${src}`
   if (g.kind === 'nas') return `${g.folder.nasIsContainer ? 'Ordner' : 'Album'} · ${src}`
   if (g.entries.length === 1) {
@@ -2643,12 +3201,25 @@ function libSub(g) {
   return `${g.entries.length} ${g.cat === 'music' ? 'Alben' : 'Folgen'} · ${src}`
 }
 
+function drawLibPhotos() {
+  const box = $('#lib-photos')
+  if (!box) return
+  const p = lib.photos
+  box.hidden = !p?.enabled
+  if (!p?.enabled) return
+  const t = p.totals
+  const sub = t.albums ? `${t.albums} ${t.albums === 1 ? 'Album' : 'Alben'} · ${t.photos} ${t.photos === 1 ? 'Foto' : 'Fotos'}` : 'Noch keine Fotos'
+  box.innerHTML = `<section class="card nav-card"><div class="navlist">${navRow('fotos', 'Fotos', sub, 'image')}</div></section>`
+  box.querySelector('[data-go]').onclick = () => go('fotos')
+}
+
 function drawLib() {
   const list = $('#lib-list')
   if (!list || !lib.items) return
   drawLibTiles()
+  drawLibPhotos()
   libShown = libGroups()
-  const total = libShown.reduce((n, g) => n + (g.kind === 'sub' ? 0 : g.entries?.length || 1), 0)
+  const total = libShown.reduce((n, g) => n + (g.kind === 'sub' || g.kind === 'pin' ? 0 : g.entries?.length || 1), 0)
   const all = lib.items.filter((it) => it && !it.isResume && it.category !== 'resume' && it.type !== 'library').length + Object.values(lib.local).reduce((n, l) => n + l.length, 0) + lib.nas.length
   const end = lib.sync?.state?.last_sync_end
   $('#lib-count').textContent = `${total} von ${all} Inhalten${end ? ` · letzter Sync ${hhmm(Date.parse(end))}` : ''}`
@@ -2709,6 +3280,36 @@ function endSubscription(a) {
   })
 }
 
+// An album added one by one from the search (spotify_sync.explicit_albums): taken back - out of that list only; an entry
+// that also comes from a playlist or a subscription stays, one that came only from here goes with the next sync
+async function dropPin(albumId) {
+  const r = await api(`${API}/library/remove-album`, { method: 'POST', body: { albumId } })
+  if (!r.ok) {
+    toast('Das hat nicht geklappt', 'info')
+    return false
+  }
+  return true
+}
+const isPinned = (id) => !!id && (lib.subs?.explicit_albums ?? []).some((al) => al?.id === id)
+
+// An album added from the search that is not on the box yet: what it is, and taking it back
+function openPinSheet(al) {
+  openSheet(
+    `<h2 translate="no">${esc(al.name || al.id)}</h2><p class="help" style="margin:0">${esc(`${catLabel(al.category === 'radio' ? 'other' : al.category || 'audiobook')} · Spotify`)}</p>
+     <p class="help" style="margin:0">Einzeln über die Suche hinzugefügt. Es kommt mit dem nächsten Sync auf die Box.</p>
+     <div class="btns"><button class="btn danger" data-unpin>Vormerkung aufheben</button><button class="btn" data-close>Schließen</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      sheet.querySelector('[data-unpin]').onclick = async () => {
+        close()
+        if (!(await dropPin(al.id))) return
+        toast('Vormerkung aufgehoben')
+        libReload()
+      }
+    },
+  )
+}
+
 // One of several subscriptions in a group (see openLibGroup): its rule and its end, with the way back to the group
 function openLibSubSheet(a, back) {
   openSheet(
@@ -2758,10 +3359,165 @@ async function removeLibEntries(items, { subscriptionEnded = false } = {}) {
   return done
 }
 
+/* A day's limit per tile of the start page (5.1, "Kachel-Limit"): "Höchstens am Tag" in the sheet of a tile - an
+   artist's group, a playlist or station of its own, a folder of the SD card or the NAS. The key as the display forms it
+   (frontend-box tile-key.ts): the entry's own artist and category, not the names the app gives (artist_override) -
+   the display groups its tiles by those. The player counts and ends it (Spielzeit › Kacheln mit Limit). */
+
+const tileCat = (c) => (!c ? 'audiobook' : c === 'radio' ? 'other' : String(c))
+function tileKeyOfItem(it) {
+  if (!it) return null
+  if (it.nasPath) return `nas:${it.nasPath}`
+  if (it.type === 'library') return it.libraryPath ? `lib:${it.libraryPath}` : null
+  const cat = tileCat(it.category)
+  const artist = String(it.artist ?? '')
+  if (!artist) {
+    // (as the display's isStandaloneMedia: a playlist or a station on a tile of its own)
+    if (it.playlistid) return `single:${cat}:${it.playlistid}`
+    if ((it.type === 'radio' || (it.type === 'tidal' && it.tidalKind === 'playlist') || (it.type === 'jellyfin' && it.jellyfinKind === 'playlist')) && it.id) return `single:${cat}:${it.id}`
+    return null
+  }
+  return `artist:${cat}:${artist}`
+}
+// the tile's name as the display shows it
+const tileNameOfItem = (it) => String(it?.artist || it?.title || '')
+const TILE_MINUTES = [15, 30, 45, 60, 90, 120]
+
+function tileLimitField() {
+  return `<div class="field tile-limit"><label for="tl-min">${esc(tr('Höchstens am Tag'))}</label>
+    <select class="input" id="tl-min" disabled><option>…</option></select>
+    <small id="tl-help">${esc(tr('Ist die Zeit um, ist die Kachel am Display bis morgen gesperrt. Sie zählt auch zur Hörzeit.'))}</small></div>`
+}
+
+// keys: the tiles this sheet stands for (an artist named alike in the app can be more than one on the display); name:
+// the tile's name; the choice is saved at once
+async function mountTileLimit(sheet, keys, name) {
+  const sel = sheet.querySelector('#tl-min')
+  const help = sheet.querySelector('#tl-help')
+  if (!sel || !keys.length) return
+  const [cfg, st] = await Promise.all([api(`${API}/caps-config`), api('/api/playtime')])
+  if (!sel.isConnected) return
+  if (!cfg.ok) {
+    sel.innerHTML = `<option>${esc(tr('Nicht geladen'))}</option>`
+    return
+  }
+  const limits = cfg.body?.playtimeLimit?.tileLimits ?? []
+  const mine = limits.find((t) => keys.includes(t.key))
+  const cur = mine?.minutes ?? 0
+  const opts = [...new Set([...TILE_MINUTES, ...(cur ? [cur] : [])])].sort((a, b) => a - b)
+  sel.innerHTML = `<option value="0">${esc(tr('Kein Limit'))}</option>${opts.map((m) => `<option value="${m}"${m === cur ? ' selected' : ''}>${m} min</option>`).join('')}`
+  sel.disabled = false
+  const today = (st.body?.tiles?.list ?? []).find((t) => keys.includes(t.key))
+  if (today && help) {
+    const used = Math.floor((today.usedSeconds ?? 0) / 60)
+    const line = today.free ? tr(`Heute frei – ${used} min gehört.`) : today.blocked ? tr(`Heute aufgebraucht (${used} min).`) : tr(`Heute ${used} von ${today.limitMinutes} min.`)
+    help.textContent = `${line} ${help.textContent}`
+  }
+  sel.onchange = async () => {
+    const minutes = Number(sel.value)
+    sel.disabled = true
+    const r = await api(`${API}/tiles/limit`, { method: 'POST', body: { keys, name, minutes } })
+    sel.disabled = false
+    toast(r.ok ? (minutes ? tr(`Höchstens ${minutes} min am Tag`) : tr('Kein Tageslimit mehr')) : errorText(r), r.ok ? 'ok' : 'info')
+  }
+}
+
+/* What of the library was heard (5.1, #180): a yellow tick at an album that was started, a green one at an album heard
+   to its end - the ticks the display shows in its list of episodes (the player notes them, heard.ts keeps them; the
+   keys as frontend-box heard-key.ts forms them). Per album "Als gehört / Als ungehört markieren", per artist or folder
+   "Alle als ungehört markieren". Switched off (Bedienung › Weiterhören): nothing of it here. */
+
+const heard = { enabled: false, items: {} }
+async function loadHeard(user, current = () => true) {
+  const r = await api(`${API}/heard`, { user })
+  if (!r.ok || !current()) return
+  heard.enabled = r.body?.enabled !== false
+  heard.items = r.body?.items && typeof r.body.items === 'object' ? r.body.items : {}
+}
+function heardKeyOfItem(it) {
+  if (!it) return null
+  const ok = (k) => (k.length <= 400 && !k.includes('\n') ? k : null)
+  if (it.type === 'nas' || it.nasPath) return it.nasIsContainer || !it.nasPath ? null : ok(`nas:${it.nasPath}`)
+  if (it.type === 'library') {
+    if (it.libraryIsContainer) return null
+    if (it.libraryPath) return ok(`lib:${it.libraryPath}`)
+    const cat = it.category === 'resume' ? it.resumelocalalbum : it.category
+    return it.artist && it.title ? ok(`lib:${cat || 'audiobook'}/${it.artist}/${it.title}`) : null
+  }
+  if (it.type === 'tidal') return it.tidalKind === 'artist' || !it.id ? null : ok(`tidal:${it.tidalKind === 'playlist' ? 'playlist' : 'album'}:${it.id}`)
+  if (it.type === 'jellyfin') return !['album', 'playlist', 'book'].includes(it.jellyfinKind ?? 'album') || !it.id ? null : ok(`jellyfin:${it.jellyfinKind ?? 'album'}:${it.id}`)
+  if (it.type === 'audible') return it.audibleKind === 'series' || !it.id ? null : ok(`audible:book:${it.id}`)
+  if (it.type === 'spotify') {
+    if (it.playlistid) return ok(`spotify:playlist:${it.playlistid}`)
+    if (it.id) return ok(`spotify:album:${it.id}`)
+    if (it.showid) return ok(`spotify:episode:${it.showid}`)
+    if (it.audiobookid) return ok(`spotify:show:${it.audiobookid}`)
+  }
+  return null
+}
+const heardOf = (key) => (heard.enabled && key ? (heard.items[key] ?? null) : null)
+// the tick at a row of a list ('' without one)
+function heardTick(key) {
+  const s = heardOf(key)
+  return s ? `<span class="heard-tick ${s}" title="${esc(s === 'finished' ? 'Gehört' : 'Angefangen')}">${icon('check', 14)}</span>` : ''
+}
+// an album's line in its sheet: how far it was heard, the buttons that change it
+function heardLine(key) {
+  return heard.enabled && key ? `<div class="heard-line" data-heard-key="${esc(key)}">${heardLineInner(key)}</div>` : ''
+}
+function heardLineInner(key) {
+  const s = heardOf(key)
+  const what = s === 'finished' ? 'Gehört' : s === 'started' ? 'Angefangen' : 'Noch nicht gehört'
+  return `${heardTick(key) || '<span class="heard-tick none"></span>'}<span class="lbl">${esc(what)}</span>${
+    s ? '<button type="button" class="btn sm" data-heard-set="unheard">Als ungehört markieren</button>' : ''
+  }${s === 'finished' ? '' : '<button type="button" class="btn sm" data-heard-set="finished">Als gehört markieren</button>'}`
+}
+async function setHeard(keys, state) {
+  for (let i = 0; i < keys.length; i += 2000) {
+    const r = await api(`${API}/heard`, { method: 'POST', body: { keys: keys.slice(i, i + 2000), state } })
+    if (!r.ok) {
+      toast('Das hat nicht geklappt', 'info')
+      return false
+    }
+    if (r.body?.items && typeof r.body.items === 'object') heard.items = r.body.items
+  }
+  return true
+}
+// "Alle als ungehört markieren" of an artist or a folder (keys: those of its albums) - only when one of them has a tick
+function heardAllButton(keys) {
+  return heard.enabled && keys.some((k) => heardOf(k)) ? '<button class="btn" data-heard-none>Alle als ungehört markieren</button>' : ''
+}
+// the albums' keys below a folder of the SD card or the NAS (prefix 'lib:' / 'nas:'), its own titles among them
+function heardKeysBelow(prefix, path) {
+  const own = `${prefix}${path}`
+  return Object.keys(heard.items).filter((k) => k === own || k.startsWith(`${own}/`))
+}
+// a sheet's line and its "Alle als ungehört" (reopen: the sheet drawn again, its ticks with it)
+function wireHeard(sheet, allKeys, reopen) {
+  for (const line of sheet.querySelectorAll('[data-heard-key]')) {
+    line.addEventListener('click', async (e) => {
+      const b = e.target.closest('[data-heard-set]')
+      if (!b) return
+      b.disabled = true
+      const done = await setHeard([line.dataset.heardKey], b.dataset.heardSet)
+      if (!line.isConnected) return
+      line.innerHTML = heardLineInner(line.dataset.heardKey)
+      if (done) toast(b.dataset.heardSet === 'finished' ? 'Als gehört markiert' : 'Als ungehört markiert')
+    })
+  }
+  sheet.querySelector('[data-heard-none]')?.addEventListener('click', async (e) => {
+    e.currentTarget.disabled = true
+    const marked = allKeys.filter((k) => heardOf(k))
+    if (marked.length && (await setHeard(marked, 'unheard'))) toast(tr(`${marked.length} als ungehört markiert`))
+    reopen()
+  })
+}
+
 // A group: one entry opens right away, several are listed first
 function openLibGroup(g) {
   if (g.kind === 'local') return openLocalSheet(g.folder)
   if (g.kind === 'nas') return openNasSheet(g.folder)
+  if (g.kind === 'pin') return openPinSheet(g.pin)
   const entries = [...(g.entries ?? [])].sort((a, b) => a.title.localeCompare(b.title, 'de', { numeric: true }))
   // Taking the whole group off: a subscribed artist's albums by ending the subscription, else every entry that can go
   // here (a playlist's entries of the sync stay - they go in Spotify)
@@ -2790,19 +3546,29 @@ function openLibGroup(g) {
           .join('')}</div>
          <div class="section-label" style="margin:0">Auf der Box</div>`
       : ''
+  // (the display's tiles of these entries: a day's limit for them)
+  const tileKeys = [...new Set(items.map(tileKeyOfItem).filter(Boolean))]
+  // (what was heard of them: a tick at each, all as not heard at once)
+  const heardKeys = [...new Set(items.map(heardKeyOfItem).filter(Boolean))]
   openSheet(
     `<h2 translate="no">${esc(g.artist)}</h2><p class="help" style="margin:0">${esc(libSub(g))}${g.src === 'spotify-sync' && !sub ? ' – kommt vom Spotify-Sync.' : ''}</p>
+     ${tileKeys.length ? tileLimitField() : ''}
      ${subBlock}
      ${
        entries.length
          ? `<div class="rows">${entries
-             .map((e, i) => `<button class="entry lib-row" data-e="${i}"><span class="lbl"><b translate="no">${esc(e.title)}</b></span><span class="chev">${icon('chevron', 18)}</span></button>`)
+             .map((e, i) => `<button class="entry lib-row" data-e="${i}"><span class="lbl"><b translate="no">${esc(e.title)}</b></span>${heardTick(heardKeyOfItem(e.item))}<span class="chev">${icon('chevron', 18)}</span></button>`)
              .join('')}</div>`
          : `<p class="help" style="margin:0">Keine Folgen auf der Box. Was der Bereich und die Schalter zulassen, bringt der nächste Sync.</p>`
      }
-     <div class="btns">${groupBtn}<button class="btn" data-close>Schließen</button></div>`,
+     ${entries.length > 1 && !subsHere.length ? `<div class="btns">${nfcButtonHtml()}</div>` : ''}
+     <div class="btns">${heardAllButton(heardKeys)}${groupBtn}<button class="btn" data-close>Schließen</button></div>`,
     (sheet, close) => {
       sheet.querySelector('[data-close]').onclick = close
+      // (a tag for the whole artist cover: it plays an album, the rotary knob chooses among the others)
+      wireNfc(sheet, close, nfcMediaOfCollection('entries', { title: g.artist, artist: g.artist, category: g.cat, cover: nfcGroupCover(g) }), () => openLibGroup(g))
+      // (each tile with its own name - the display's name of it - when the group is several of them)
+      void mountTileLimit(sheet, tileKeys, Object.fromEntries(tileKeys.map((k) => [k, tileNameOfItem(items.find((it) => tileKeyOfItem(it) === k)) || g.artist])))
       if (sub) mountSubControls(sheet, sub, close, libSubDone)
       sheet.querySelector('[data-unsub]')?.addEventListener('click', () => {
         close()
@@ -2827,6 +3593,7 @@ function openLibGroup(g) {
         )
       })
       // (back from an entry: the list where it was)
+      wireHeard(sheet, heardKeys, () => openLibGroup(g))
       if (g.scrollTop) sheet.scrollTop = g.scrollTop
       for (const b of sheet.querySelectorAll('[data-e]')) {
         b.onclick = () => {
@@ -2838,11 +3605,14 @@ function openLibGroup(g) {
   )
 }
 
-// Starts a sync run and says what happens; used after every change of the managed content
-// (subs: after a change of the artists or albums managed here - those come also with Smart-Sync off, only the
+// Starts a sync run and says what happens; used after every change of a subscription or an album from the search
+// (subs: after a change of the subscribed artists or albums - those come also with Smart-Sync off, only the
 // playlists then stay as they are; "Jetzt abgleichen" on the Spotify page asks without it)
 async function fireSync(subs = true) {
-  const r = await api(`${SYNC_API}/trigger?source=webapp${subs ? '&subscriptions=1' : ''}`, { method: 'POST' })
+  // (another user's subscriptions: the sync runs for his library - the box syncs every user's)
+  // (the user shown, also the one in place: switched at the display meanwhile, the subscription went to him - see api)
+  const shown = libView.shown
+  const r = await api(`${SYNC_API}/trigger?source=webapp${subs ? '&subscriptions=1' : ''}${shown ? `&user=${encodeURIComponent(shown)}` : ''}`, { method: 'POST' })
   const b = r.body ?? {}
   if (r.status === 202 && b.subscriptionsOnly) {
     return b.status === 'scheduled'
@@ -2865,8 +3635,7 @@ function libWriteOk(r) {
 
 async function libReload() {
   libChanged()
-  await loadLib()
-  if (currentPage()?.id === 'bibliothek') drawLib()
+  if ((await loadLib()) && currentPage()?.id === 'bibliothek') drawLib()
 }
 
 function catSelect(id, value, withSync) {
@@ -3030,17 +3799,21 @@ async function loadArtistAlbums(item, box) {
     box.innerHTML = '<p class="help">Keine Alben gefunden.</p>'
     return
   }
-  // (the first ten, the others on request: an artist with hundreds of albums would push the sheet's buttons far down)
+  // (the albums' ticks as the display shows them; the first ten, the others on request: an artist with hundreds of albums
+  // would push the sheet's buttons far down)
+  const heardKeys = albums.map((al) => `spotify:album:${al.id}`)
   const draw = (all) => {
     const shown = all ? albums : albums.slice(0, 10)
     box.innerHTML = `<p class="help" style="margin:0 0 6px">${esc(`${albums.length} ${albums.length === 1 ? 'Album' : 'Alben'}`)}</p><div class="rows">${shown
       .map(
         (al) => `<div class="entry"><span class="lib-thumb">${al.cover ? `<img src="${esc(al.cover)}" alt="" loading="lazy">` : ''}</span>
-          <span class="lbl"><b translate="no">${esc(al.name || al.id)}</b>${al.release_date ? `<small>${esc(String(al.release_date).slice(0, 4))}</small>` : ''}</span></div>`,
+          <span class="lbl"><b translate="no">${esc(al.name || al.id)}</b>${al.release_date ? `<small>${esc(String(al.release_date).slice(0, 4))}</small>` : ''}</span>${heardTick(`spotify:album:${al.id}`)}</div>`,
       )
-      .join('')}</div>${shown.length < albums.length ? `<div class="btns"><button class="btn" data-all-albums>${esc(`Alle ${albums.length} Alben zeigen`)}</button></div>` : ''}`
+      .join('')}</div>${shown.length < albums.length || heardAllButton(heardKeys) ? `<div class="btns">${heardAllButton(heardKeys)}${shown.length < albums.length ? `<button class="btn" data-all-albums>${esc(`Alle ${albums.length} Alben zeigen`)}</button>` : ''}</div>` : ''}`
     for (const img of box.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
     box.querySelector('[data-all-albums]')?.addEventListener('click', () => draw(true))
+    // (all of the artist's albums as not heard: the list drawn again)
+    wireHeard(box, heardKeys, () => draw(all))
   }
   draw(false)
 }
@@ -3052,6 +3825,10 @@ function openEntrySheet(item, back = null) {
   const wholeArtist = item.type === 'spotify' && item.artistid && !item.id && !item.playlistid && !item.showid && !item.audiobookid
   // a whole TIDAL artist: its range and the albums left out
   const tidalArtist = item.type === 'tidal' && item.tidalKind === 'artist'
+  // a whole Jellyfin artist: its order and the albums left out
+  const jellyfinArtist = item.type === 'jellyfin' && item.jellyfinKind === 'artist'
+  // a whole Audible series: its order and the books left out
+  const audibleSeries = item.type === 'audible' && item.audibleKind === 'series'
   // (order, shuffle, a part of the episodes: of the entries one adds by hand - Spotify and podcasts)
   const playOptions = !isSync && (item.type === 'spotify' || item.type === 'rss')
   // a radio station or a podcast: its address (stream / feed) can be changed too
@@ -3077,10 +3854,14 @@ function openEntrySheet(item, back = null) {
   const folder = place ? String(item.artist ?? '').trim() : ''
   // (alone in its folder - as the app added playlists before, in one of their own name: a tile spares a tap)
   const aloneInFolder = !!folder && (lib.items ?? []).filter((it) => it && !it.isResume && it.category === item.category && String(it.artist ?? '').trim() === folder).length === 1
+  // (the only entry of its group, opened right away: the day's limit of its tile here - else in the group's sheet)
+  const tileKeys = back ? [] : [tileKeyOfItem(item)].filter(Boolean)
   openSheet(
     `${back ? `<button class="sheet-back" data-back>${icon('back', 18)}<span translate="no">${esc(back.title)}</span></button>` : ''}
      <h2 translate="no">${esc(item.title_override ?? item.title ?? item.artist_override ?? item.artist ?? 'Eintrag')}</h2>
      <p class="help" style="margin:0">${isSync ? 'Kommt vom Spotify-Sync. Was du hier einträgst, gilt statt der Werte von Spotify; leer = der Wert von Spotify.' : 'Von Hand hinzugefügt.'}</p>
+     ${heardLine(heardKeyOfItem(item))}
+     ${tileKeys.length ? tileLimitField() : ''}
      ${fields
        .map(([k, l]) => {
          const input = `<input class="input" id="e-${k}"${k === 'id' ? ' type="url" inputmode="url" spellcheck="false" translate="no"' : ''} value="${esc(val(k))}" placeholder="${esc(isSync ? item[k] ?? '' : place && k === 'title' && item.type === 'spotify' ? 'leer = Name der Playlist' : '')}" autocomplete="off">`
@@ -3100,16 +3881,32 @@ function openEntrySheet(item, back = null) {
      ${playOptions ? entryPlayFields(item) : ''}
      ${item.type === 'rss' ? offlineField(item) : ''}
      ${isSync && !syncRemovable(item) ? `<p class="help" style="margin:0">Kommt aus einer deiner Spotify-Playlists: Entfernen geht dort – in Spotify aus der Playlist nehmen, der nächste Sync nimmt es dann von der Box.</p>` : ''}
+     ${isSync && !syncRemovable(item) && isPinned(item.id) ? `<p class="help" style="margin:0">Außerdem einzeln über die Suche hinzugefügt: Das hält es auf der Box, auch wenn es aus der Playlist geht.</p><div class="btns"><button type="button" class="btn" data-unpin>Einzeln hinzugefügt aufheben</button></div>` : ''}
      ${wholeArtist ? `<div class="section-label" style="margin:0">Alben</div><div id="e-albums"><p class="help">Lade die Alben von Spotify …</p></div>` : ''}
      ${tidalArtist ? tidalRangeFields(item) : ''}
+     ${jellyfinArtist ? jellyfinArtistFields(item) : ''}
+     ${audibleSeries ? audibleSeriesFields(item) : ''}
+     ${wholeArtist || tidalArtist || jellyfinArtist || audibleSeries || item.isResume || !item.type ? '' : `<div class="btns">${nfcButtonHtml()}</div>`}
      <div class="btns">${!isSync || syncRemovable(item) ? `<button class="btn danger" data-del>${isSync ? 'Entfernen' : 'Löschen'}</button>` : ''}<button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Speichern</button></div>`,
     (sheet, close) => {
       sheet.querySelector('[data-close]').onclick = back ? back.open : close
       sheet.querySelector('[data-back]')?.addEventListener('click', back?.open)
+      void mountTileLimit(sheet, tileKeys, tileNameOfItem(item))
+      wireHeard(sheet, [], () => openEntrySheet(item, back))
       const placer = place ? wirePlace(sheet, 'e', () => sheet.querySelector('#e-cat').value) : null
       if (placer) sheet.querySelector('#e-cat').addEventListener('change', () => void placer.reload())
       if (wholeArtist) loadArtistAlbums(item, sheet.querySelector('#e-albums'))
+      wireNfc(sheet, close, nfcMediaOfEntry(item), () => openEntrySheet(item, back))
       if (tidalArtist) wireTidalRange(item, sheet)
+      if (jellyfinArtist) wireJellyfinArtist(item, sheet)
+      if (audibleSeries) wireAudibleSeries(item, sheet)
+      // (only the mark of "added one by one" goes - the entry stays while the playlist has it)
+      sheet.querySelector('[data-unpin]')?.addEventListener('click', async () => {
+        close()
+        if (!(await dropPin(item.id))) return
+        toast('Aufgehoben – das Album bleibt, solange es in der Playlist ist')
+        libReload()
+      })
       // (the own pictures out of the fields - saved with "Speichern", then the box shows Spotify's picture again)
       sheet.querySelector('[data-svc-pic]')?.addEventListener('click', (e) => {
         for (const k of ['cover', 'artistcover']) {
@@ -3191,7 +3988,7 @@ function openEntrySheet(item, back = null) {
           if (to) updated.artist = to
           else delete updated.artist
           // (a TIDAL playlist has its name only from here - the box asks Spotify for a playlist's, TIDAL's not)
-          if (item.type === 'tidal' && !updated.title && item.title) updated.title = item.title
+          if ((item.type === 'tidal' || item.type === 'jellyfin' || item.type === 'audible') && !updated.title && item.title) updated.title = item.title
         }
         if (playOptions) {
           const sorting = sheet.querySelector('#e-sort').value
@@ -3231,6 +4028,8 @@ function openEntrySheet(item, back = null) {
         if (keep) updated.offline = keep
         else delete updated.offline
         if (tidalArtist && !readTidalRange(sheet, updated)) return toast('Der Bereich passt nicht (von 1 an, „bis“ nicht vor „von“)', 'info')
+        if (jellyfinArtist) readJellyfinArtist(sheet, updated)
+        if (audibleSeries) readAudibleSeries(sheet, updated)
         const r = await api('/api/edit', { method: 'POST', body: { index: libPlace(item), data: updated, original: item } })
         if (!libWriteOk(r)) return
         close()
@@ -3238,7 +4037,8 @@ function openEntrySheet(item, back = null) {
         // (the episodes on the SD card follow the setting now, not only at the next hourly round)
         // (the choice of episodes too: other episodes to keep)
         const changedKeep = keep !== (Number(item.offline) || 0) || (updated.episodePick ?? '') !== (item.episodePick ?? '')
-        if (item.type === 'rss' && changedKeep) api(`${API}/podcast-offline/sync`, { method: 'POST', body: { feed: updated.id } })
+        // (another user's library: the box's round of every hour takes it - every library's podcasts, podcast-offline.ts)
+        if (item.type === 'rss' && changedKeep && !libView.user) api(`${API}/podcast-offline/sync`, { method: 'POST', body: { feed: updated.id } })
         libReload()
       }
       sheet.querySelector('[data-del]')?.addEventListener('click', () => {
@@ -3336,24 +4136,30 @@ function pickLocalCover(folder, parent, done) {
 // own sheet; a folder that is an album itself opens as one. parent: the folder above, to go back to.
 async function openLocalSheet(folder, parent = null) {
   if (!folder.libraryIsContainer) return openLocalAlbumSheet(folder, parent)
-  const r = await api(`/api/library/children?path=${encodeURIComponent(folder.libraryPath)}`)
+  const [r] = await Promise.all([api(`/api/library/children?path=${encodeURIComponent(folder.libraryPath)}`), loadHeard()])
   const albums = (Array.isArray(r.body) ? r.body : []).filter((a) => !a.ownFiles)
+  const heardKeys = heardKeysBelow('lib:', folder.libraryPath)
   const thumb = (cover) => `<span class="lib-thumb">${cover ? `<img src="${esc(stampedCover(cover))}" alt="" loading="lazy">` : icon('image', 18)}</span>`
   openSheet(
     `${parent ? `<button class="sheet-back" data-back>${icon('back', 18)}<span translate="no">${esc(parent.title)}</span></button>` : ''}
      <div class="local-head"><span class="local-cover">${folder.cover ? `<img src="${esc(stampedCover(folder.cover))}" alt="">` : icon('image', 28)}</span>
        <div class="lbl"><h2 translate="no">${esc(folder.title)}</h2><p class="help" style="margin:0">${esc(['Ordner auf der SD-Karte', catLabel(folder.category), `${albums.length} ${albums.length === 1 ? 'Album' : 'Alben'}`].join(' · '))}</p>
        <button class="btn sm" data-cover>${icon('image', 16)}${folder.cover ? 'Cover ändern' : 'Cover wählen'}</button></div></div>
-     ${albums.length ? `<div class="section-label" style="margin:0">Alben</div><div class="rows">${albums.map((a, i) => `<button class="entry lib-row" data-a="${i}">${thumb(a.cover)}<span class="lbl"><b translate="no">${esc(a.title)}</b>${a.libraryIsContainer ? '<small>Ordner</small>' : ''}</span><span class="chev">${icon('chevron', 18)}</span></button>`).join('')}</div>` : ''}
+     ${parent ? '' : tileLimitField()}
+     ${albums.length ? `<div class="section-label" style="margin:0">Alben</div><div class="rows">${albums.map((a, i) => `<button class="entry lib-row" data-a="${i}">${thumb(a.cover)}<span class="lbl"><b translate="no">${esc(a.title)}</b>${a.libraryIsContainer ? '<small>Ordner</small>' : ''}</span>${a.libraryIsContainer ? '' : heardTick(`lib:${a.libraryPath}`)}<span class="chev">${icon('chevron', 18)}</span></button>`).join('')}</div>` : ''}
      <div class="dl-card" id="dl-card" hidden></div>
-     <div class="btns"><button class="btn danger" data-all>Ganzen Ordner löschen</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
+     ${albums.length > 1 ? `<div class="btns">${nfcButtonHtml()}</div>` : ''}
+     <div class="btns">${heardAllButton(heardKeys)}<button class="btn danger" data-all>Ganzen Ordner löschen</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
     (sheet, close) => {
       for (const img of sheet.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+      wireNfc(sheet, close, nfcMediaOfCollection('folder', { title: folder.title, path: folder.libraryPath, category: folder.category, cover: folder.cover }), () => openLocalSheet(folder, parent))
       const back = () => (parent ? openLocalSheet(parent) : close())
       sheet.querySelector('[data-close]').onclick = back
       sheet.querySelector('[data-back]')?.addEventListener('click', back)
       sheet.querySelector('[data-cover]').onclick = () => pickLocalCover(folder, parent, (f) => openLocalSheet(f, parent))
+      if (!parent) void mountTileLimit(sheet, [`lib:${folder.libraryPath}`], String(folder.title ?? ''))
       for (const b of sheet.querySelectorAll('[data-a]')) b.onclick = () => openLocalSheet(albums[Number(b.dataset.a)], folder)
+      wireHeard(sheet, heardKeys, () => openLocalSheet(folder, parent))
       fillFolderDownloads(sheet, folder, albums)
       sheet.querySelector('[data-all]').onclick = () => {
         close()
@@ -3422,8 +4228,9 @@ function changeNasPlace(folder, reopen) {
 // and plays. The NAS administration (login, shown folders, downloads) is a button away.
 async function openNasSheet(folder, parent = null) {
   if (!folder.nasIsContainer) return openNasAlbumSheet(folder, parent)
-  const r = await api(`/api/nas/children?path=${encodeURIComponent(folder.nasPath)}`)
+  const [r] = await Promise.all([api(`/api/nas/children?path=${encodeURIComponent(folder.nasPath)}`), loadHeard()])
   const albums = Array.isArray(r.body) ? r.body : []
+  const heardKeys = heardKeysBelow('nas:', folder.nasPath)
   const thumb = (cover) => `<span class="lib-thumb">${cover ? `<img src="${esc(cover)}" alt="" loading="lazy">` : icon('folder', 18)}</span>`
   openSheet(
     `${parent ? `<button class="sheet-back" data-back>${icon('back', 18)}<span translate="no">${esc(parent.title)}</span></button>` : ''}
@@ -3431,11 +4238,14 @@ async function openNasSheet(folder, parent = null) {
        <div class="lbl"><h2 translate="no">${esc(folder.title)}</h2><p class="help" style="margin:0">${esc(['Ordner auf dem NAS', `${albums.length} ${albums.length === 1 ? 'Album' : 'Alben'}`].join(' · '))}</p>
        <button class="btn sm" data-cover>${icon('image', 16)}${folder.cover ? 'Cover ändern' : 'Cover wählen'}</button></div></div>
      ${parent ? '' : nasPlaceLine(folder)}
+     ${parent ? '' : tileLimitField()}
      ${r.ok ? '' : `<p class="help" style="margin:0">Das NAS antwortet gerade nicht.</p>`}
-     ${albums.length ? `<div class="section-label" style="margin:0">Alben</div><div class="rows">${albums.map((a, i) => `<button class="entry lib-row" data-a="${i}">${thumb(a.cover)}<span class="lbl"><b translate="no">${esc(a.title)}</b>${a.nasIsContainer ? '<small>Ordner</small>' : ''}</span><span class="chev">${icon('chevron', 18)}</span></button>`).join('')}</div>` : ''}
-     <div class="btns"><button class="btn" data-admin>NAS-Verwaltung</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
+     ${albums.length ? `<div class="section-label" style="margin:0">Alben</div><div class="rows">${albums.map((a, i) => `<button class="entry lib-row" data-a="${i}">${thumb(a.cover)}<span class="lbl"><b translate="no">${esc(a.title)}</b>${a.nasIsContainer ? '<small>Ordner</small>' : ''}</span>${a.nasIsContainer ? '' : heardTick(`nas:${a.nasPath}`)}<span class="chev">${icon('chevron', 18)}</span></button>`).join('')}</div>` : ''}
+     <div class="btns">${heardAllButton(heardKeys)}${albums.length > 1 ? nfcButtonHtml() : ''}<button class="btn" data-admin>NAS-Verwaltung</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
     (sheet, close) => {
       for (const img of sheet.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+      wireNfc(sheet, close, nfcMediaOfCollection('nas', { title: folder.title, path: folder.nasPath, category: folder.nasCategory ?? '', cover: folder.cover }), () => openNasSheet(folder, parent))
+      wireHeard(sheet, heardKeys, () => openNasSheet(folder, parent))
       const back = () => (parent ? openNasSheet(parent) : close())
       sheet.querySelector('[data-close]').onclick = back
       sheet.querySelector('[data-back]')?.addEventListener('click', back)
@@ -3444,6 +4254,8 @@ async function openNasSheet(folder, parent = null) {
         go('nas')
       }
       for (const b of sheet.querySelectorAll('[data-a]')) b.onclick = () => openNasSheet(albums[Number(b.dataset.a)], folder)
+      // (a collection shown as its folders one by one: the limit counts them all together)
+      if (!parent) void mountTileLimit(sheet, [`nas:${folder.nasPath}`], String(folder.title ?? ''))
       sheet.querySelector('[data-cover]').onclick = () => pickNasCover(folder, parent, (f) => openNasSheet(f, parent))
       sheet.querySelector('[data-place]')?.addEventListener('click', () => changeNasPlace(folder, (f) => openNasSheet(f)))
     },
@@ -3456,9 +4268,11 @@ function openNasAlbumSheet(album, parent) {
     `${parent ? `<button class="sheet-back" data-back>${icon('back', 18)}<span translate="no">${esc(parent.title)}</span></button>` : ''}
      <span class="album-cover">${album.cover ? `<img src="${esc(album.cover)}" alt="">` : icon('folder', 40)}</span>
      <div class="album-title"><h2 translate="no">${esc(album.title)}</h2><p class="help" style="margin:0">${esc(['Album auf dem NAS', parent?.title].filter(Boolean).join(' · '))}</p></div>
+     ${heardLine(`nas:${album.nasPath}`)}
      ${parent ? '' : nasPlaceLine(album)}
+     ${parent ? '' : tileLimitField()}
      <button class="btn primary block" data-play>${icon('phones', 18)}Abspielen</button>
-     <div class="btns"><button class="btn" data-cover>${icon('image', 18)}${album.cover ? 'Cover ändern' : 'Cover wählen'}</button><button class="btn" data-admin>NAS-Verwaltung</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
+     <div class="btns"><button class="btn" data-cover>${icon('image', 18)}${album.cover ? 'Cover ändern' : 'Cover wählen'}</button>${nfcButtonHtml()}<button class="btn" data-admin>NAS-Verwaltung</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
     (sheet, close) => {
       for (const img of sheet.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
       const back = () => (parent ? openNasSheet(parent) : close())
@@ -3473,6 +4287,9 @@ function openNasAlbumSheet(album, parent) {
         startPlay(album.title, `${API}/library/play-nas`, { path: album.nasPath })
       }
       sheet.querySelector('[data-cover]').onclick = () => pickNasCover(album, parent, (f) => openNasAlbumSheet(f, parent))
+      if (!parent) void mountTileLimit(sheet, [`nas:${album.nasPath}`], String(album.title ?? ''))
+      wireHeard(sheet, [], () => openNasAlbumSheet(album, parent))
+      wireNfc(sheet, close, album, () => openNasAlbumSheet(album, parent))
       sheet.querySelector('[data-place]')?.addEventListener('click', () => changeNasPlace(album, (f) => openNasAlbumSheet(f, null)))
     },
   )
@@ -3549,7 +4366,10 @@ function openLocalAlbumSheet(album, parent) {
     `${parent ? `<button class="sheet-back" data-back>${icon('back', 18)}<span translate="no">${esc(parent.title)}</span></button>` : ''}
      <span class="album-cover">${album.cover ? `<img src="${esc(stampedCover(album.cover))}" alt="">` : icon('image', 40)}</span>
      <div class="album-title"><h2 translate="no">${esc(album.title)}</h2><p class="help" style="margin:0">${esc(['Album auf der SD-Karte', catLabel(album.category), parent?.title].filter(Boolean).join(' · '))}</p></div>
+     ${heardLine(`lib:${album.libraryPath}`)}
      <button class="btn primary block" data-cover>${icon('image', 18)}${album.cover ? 'Cover ändern' : 'Cover wählen'}</button>
+     ${parent ? '' : tileLimitField()}
+     ${nfcButtonHtml() ? `<div class="btns">${nfcButtonHtml()}</div>` : ''}
      <div id="dl-album"></div><div class="section-label dl-head" id="dl-head" hidden><span>Titel</span><span></span></div><div class="rows" id="dl-tracks"></div>
      <div class="btns"><button class="btn danger" data-del>Album löschen</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
     (sheet, close) => {
@@ -3558,6 +4378,9 @@ function openLocalAlbumSheet(album, parent) {
       sheet.querySelector('[data-close]').onclick = back
       sheet.querySelector('[data-back]')?.addEventListener('click', back)
       sheet.querySelector('[data-cover]').onclick = () => pickLocalCover(album, parent, (f) => openLocalAlbumSheet(f, parent))
+      if (!parent) void mountTileLimit(sheet, [`lib:${album.libraryPath}`], String(album.title ?? ''))
+      wireHeard(sheet, [], () => openLocalAlbumSheet(album, parent))
+      wireNfc(sheet, close, album, () => openLocalAlbumSheet(album, parent))
       fillAlbumDownloads(sheet, album)
       sheet.querySelector('[data-del]').onclick = () => {
         close()
@@ -3565,6 +4388,473 @@ function openLocalAlbumSheet(album, parent) {
       }
     },
   )
+}
+
+/* NFC extension (hostApi 8): "NFC-Tag hinzufügen" on the sheet of an album, a station or a podcast. The extension's API part
+   keeps the tags (extensions/nfc/api.js): the sheet asks it to give this medium to the next tag that is laid on the reader, and
+   watches what comes of it. */
+const NFC_ROUTE = '/api/ext/nfc'
+const nfcExt = () => extPages.list.find((e) => e.id === 'nfc') ?? null
+
+// the button, when the extension is on (the sheets put it among their buttons and wire it with wireNfc)
+function nfcButtonHtml() {
+  const ext = nfcExt()
+  if (!ext) return ''
+  // ("change tag" waits for the album: its button sits right under "NFC-Tag")
+  return `<button type="button" class="btn" data-nfc>${icon(ext.icon || 'plug', 18)}NFC-Tag</button>${nfcChange ? `<button type="button" class="btn nfc-change-here" data-nfc-change>${icon('check', 18)}Weise den NFC-Tag diesem Album zu</button>` : ''}`
+}
+
+// "Tag ändern" on the page of tags: the app goes to the library and waits for the album the tag is to get - { id, title, from }, or null.
+// A bar at the bottom says so (and cancels); the sheets of the library show "Weise den NFC-Tag diesem Album zu" under "NFC-Tag".
+let nfcChange = null
+function endNfcChange() {
+  nfcChange = null
+  document.getElementById('nfc-change-bar')?.remove()
+}
+function startNfcChange(row) {
+  endNfcChange()
+  nfcChange = { id: String(row.id), title: String(row.title ?? ''), from: currentPage()?.id ?? '' }
+  const bar = document.createElement('div')
+  bar.id = 'nfc-change-bar'
+  bar.className = 'nfc-change-bar'
+  bar.setAttribute('role', 'status')
+  bar.innerHTML = `<div class="nfc-change-text"><b>Tag ändern</b><span class="nfc-change-title" translate="no">${esc(nfcChange.title)}</span><span>Öffne das neue Album und tippe auf „Weise den NFC-Tag diesem Album zu“.</span></div><button type="button" class="btn sm">Abbrechen</button>`
+  bar.querySelector('button').onclick = () => {
+    const from = nfcChange?.from
+    endNfcChange()
+    if (from) go(from)
+  }
+  document.body.append(bar)
+  go('bibliothek')
+}
+// (an entry of data.json: what a Smart-Sync entry has been given instead - the display shows it so, and so the tag should)
+function nfcMediaOfEntry(item) {
+  const media = { ...item }
+  for (const k of ['artist', 'title', 'cover', 'artistcover', 'category']) if (item[`${k}_override`]) media[k] = item[`${k}_override`]
+  return media
+}
+// An artist cover or a folder as what a tag is given: no album of its own - the extension looks up the albums (the first one plays until
+// the user chooses another in the list of the tag, the rotary knob steps through them). kind: 'entries' (the entries of the box by
+// artist and category), 'folder' (a folder of the SD card) or 'nas'.
+function nfcMediaOfCollection(kind, { title, artist = '', category = '', path = '', cover = '' }) {
+  return { browse: kind, browseTitle: title, browseArtist: artist, browseCategory: category, browsePath: path, browseCover: cover, title, cover, artistcover: cover, category }
+}
+const nfcGroupCover = (g) => String(ownCover(g.cover ?? '') || '')
+// the picture the tiles show for the medium (a podcast or a Spotify entry has none in its data: the app asks the service) - the tag
+// takes it along when it is assigned, so the list shows it too
+const nfcCover = (media) => String(coverOf(media) || '')
+
+// media: what the display starts (the entry, or the folder of the NAS or the SD card); back: reopens the sheet this came from
+function wireNfc(sheet, close, media, back) {
+  sheet.querySelector('[data-nfc]')?.addEventListener('click', () => {
+    close()
+    openNfcTagsSheet(media, back)
+  })
+  const here = sheet.querySelector('[data-nfc-change]')
+  if (here) {
+    here.addEventListener('click', async () => {
+      const mode = nfcChange
+      if (!mode) return
+      here.disabled = true
+      const r = await api(`${NFC_ROUTE}/tagchange`, { method: 'POST', body: { id: mode.id, media, cover: nfcCover(media) }, timeoutMs: 20000 })
+      toast(typeof r.body?.message === 'string' ? tr(r.body.message.slice(0, 120)) : tr(r.ok ? 'Tag geändert' : 'Hat nicht geklappt'), r.ok ? 'ok' : 'info')
+      if (!r.ok) {
+        here.disabled = false
+        return
+      }
+      endNfcChange()
+      close()
+      if (mode.from) go(mode.from)
+    })
+  }
+}
+
+// "NFC-Tag" in the library: the tags this medium has (a picture for each, the picture can be changed, the tag taken away), and
+// "add a tag" - which opens the sheet that waits for the next tag. back: reopens the sheet this came from.
+function openNfcTagsSheet(media, back = null) {
+  const title = String(media.title_override ?? media.title ?? media.artist ?? '')
+  const again = () => openNfcTagsSheet(media, back)
+  const cover = nfcCover(media)
+  openSheet(
+    `<div class="nfc-head"><span class="album-cover" id="nt-pic">${cover ? `<img src="${esc(cover)}" alt="">` : icon('image', 40)}</span>
+       <div class="album-title"><h2 translate="no">${esc(title)}</h2><p class="help" style="margin:0">Diesem Medium zugeordnete NFC-Tags</p></div></div>
+     <ul class="ext-tags" id="nt-list" aria-live="polite"><li class="help">Lade …</li></ul>
+     <div class="btns"><button type="button" class="btn primary" id="nt-add">${icon('plus', 18)}<span>NFC-Tag hinzufügen</span></button><button type="button" class="btn" data-close>${back ? 'Zurück' : 'Schließen'}</button></div>`,
+    (sheet, close) => {
+      for (const img of sheet.querySelectorAll('#nt-pic img')) img.addEventListener('error', () => img.remove(), { once: true })
+      sheet.querySelector('[data-close]').onclick = back ? back : close
+      // (the sheet that waits for a tag: its "Zurück" and "Fertig" come back here, where the new tag is in the list)
+      sheet.querySelector('#nt-add').onclick = () => {
+        close()
+        openNfcSheet(media, { back: again })
+      }
+      const list = sheet.querySelector('#nt-list')
+      void api(`${NFC_ROUTE}/tagsfor`, { method: 'POST', body: { media }, timeoutMs: 15000 }).then((r) => {
+        if (!list.isConnected) return
+        list.textContent = ''
+        if (!r.ok || !Array.isArray(r.body?.items)) {
+          const failed = document.createElement('li')
+          failed.className = 'help'
+          failed.textContent = tr('Die Liste konnte nicht geladen werden.')
+          return list.append(failed)
+        }
+        if (r.body.items.length === 0) {
+          const none = document.createElement('li')
+          none.className = 'help'
+          none.textContent = tr('Für dieses Medium gibt es noch keinen NFC-Tag.')
+          return list.append(none)
+        }
+        sheet.querySelector('#nt-add span').textContent = tr('Weiteren NFC-Tag hinzufügen')
+        fillTagRows(list, r.body.items, again)
+      })
+    },
+  )
+}
+
+function openNfcSheet(media, { back = null, image = '' } = {}) {
+  const title = String(media.title_override ?? media.title ?? media.artist ?? '')
+  const cover = nfcCover(media)
+  let alive = true
+  let id = 0
+  let timer = 0
+  let finished = false
+  const cancel = () => {
+    if (id && !finished) void api(`${NFC_ROUTE}/cancel`, { method: 'POST', body: { id } })
+  }
+  openSheet(
+    `<span class="album-cover" id="nfc-pic"></span>
+     <div class="album-title"><h2 translate="no">${esc(title)}</h2><p class="help" style="margin:0" id="nfc-line" aria-live="polite"></p></div>
+     <label class="nfc-flex" id="nfc-flexrow"><input type="checkbox" id="nfc-flex"><span>Flex-Tag</span></label>
+     <p class="help" style="margin:0" id="nfc-flexhelp">Ein Flex-Tag hat immer das Medium, das du zuletzt dafür gewählt hast.</p>
+     <div class="btns"><button type="button" class="btn" id="nfc-image">${icon('image', 18)}Bild wählen</button><button type="button" class="btn" id="nfc-retry" hidden>Nochmal</button><button type="button" class="btn primary" data-close>${back ? 'Zurück' : 'Abbrechen'}</button></div>`,
+    (sheet, close) => {
+      const line = sheet.querySelector('#nfc-line')
+      const say = (text, tone = '') => {
+        line.textContent = tr(text)
+        line.className = `help${tone ? ` nfc-${tone}` : ''}`
+      }
+      const shown = () => image || cover
+      const drawPic = () => {
+        const pic = sheet.querySelector('#nfc-pic')
+        pic.innerHTML = shown() ? `<img src="${esc(shown())}" alt="">` : icon('image', 40)
+        for (const img of pic.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+        sheet.querySelector('#nfc-image').lastChild.textContent = tr(shown() ? 'Bild ändern' : 'Bild wählen')
+      }
+      const leave = () => (back ? back() : close())
+      sheet.querySelector('[data-close]').onclick = leave
+      drawPic()
+      const done = (r) => {
+        clearInterval(timer)
+        finished = true
+        for (const sel of ['#nfc-flexrow', '#nfc-flexhelp', '#nfc-image', '#nfc-retry']) sheet.querySelector(sel).hidden = true
+        // (with the number of the tag, as it is in the list - a box that does not send it says the sentence without)
+        const tagId = typeof r.id === 'string' ? r.id : ''
+        say(tagId ? (r.flex ? `Fertig – der Flex-Tag (ID ${tagId}) hat jetzt dieses Medium.` : `Fertig – der Tag (ID ${tagId}) gehört jetzt zu diesem Medium.`) : r.flex ? 'Fertig – der Flex-Tag hat jetzt dieses Medium.' : 'Fertig – der Tag gehört jetzt zu diesem Medium.', 'ok')
+        if (r.previous) {
+          const was = document.createElement('p')
+          was.className = 'help'
+          was.style.margin = '0'
+          was.append(`${tr('Vorher')}: `)
+          const name = document.createElement('span')
+          name.translate = false
+          name.textContent = String(r.previous)
+          was.append(name)
+          line.after(was)
+        }
+        const ok = sheet.querySelector('[data-close]')
+        ok.textContent = tr('Fertig')
+        ok.onclick = leave
+      }
+      const poll = async () => {
+        const r = await api(`${NFC_ROUTE}/armstate?id=${id}`, { timeoutMs: 5000 })
+        if (!alive || finished || !r.ok) return
+        if (r.body?.state === 'done') done(r.body)
+        else if (r.body?.state === 'gone') {
+          clearInterval(timer)
+          say('Die Zuordnung ist abgelaufen.', 'warn')
+          sheet.querySelector('#nfc-retry').hidden = false
+        }
+      }
+      const arm = async () => {
+        clearInterval(timer)
+        cancel()
+        id = 0
+        sheet.querySelector('#nfc-retry').hidden = true
+        say('Wird vorbereitet …')
+        const r = await api(`${NFC_ROUTE}/arm`, { method: 'POST', body: { media, image, cover, flex: sheet.querySelector('#nfc-flex').checked }, timeoutMs: 15000 })
+        if (!alive) {
+          if (r.ok && r.body?.id) void api(`${NFC_ROUTE}/cancel`, { method: 'POST', body: { id: r.body.id } })
+          return
+        }
+        if (!r.ok) {
+          // (Jellyfin and Audible: a NFC extension before 0.8 does not know them)
+          const newKind = media.type === 'jellyfin' || media.type === 'audible'
+          const why = { no_reader: 'Der NFC-Leser ist nicht bereit – bitte unter Einstellungen › NFC-Extension einrichten.', not_startable: newKind ? 'Dafür braucht es die NFC-Extension ab Version 0.8 – bitte unter Erweiterungen aktualisieren.' : 'Dieses Medium lässt sich keinem Tag zuordnen.' }
+          return say(why[r.body?.error] ?? 'Das hat nicht geklappt', 'warn')
+        }
+        id = r.body.id
+        if (r.body.state === 'done') return done({ flex: true })
+        say('Lege jetzt den NFC-Tag auf den Leser.', 'wait')
+        timer = setInterval(poll, 1000)
+      }
+      sheet.querySelector('#nfc-flex').onchange = arm
+      sheet.querySelector('#nfc-retry').onclick = arm
+      // (the picture of the tag: this sheet makes room for the picker and comes back with the picture, or as it was)
+      sheet.querySelector('#nfc-image').onclick = () => {
+        const reopen = (next) => () => openNfcSheet(media, { back, image: next })
+        close()
+        openCoverPicker({
+          target: 'own:nfc-tag',
+          title,
+          query: title.replace(/\s+–\s+/, ' '),
+          fallbacks: [],
+          current: shown(),
+          onDone: (body) => reopen(String(body?.url ?? image))(),
+          onCancel: reopen(image),
+        })
+      }
+      arm()
+    },
+    () => {
+      alive = false
+      clearInterval(timer)
+      cancel()
+    },
+  )
+}
+
+// A picture of the device: the file chooser (a promise of the file, null when it was left without one)
+function chooseImageFile() {
+  return new Promise((resolve) => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+    input.onchange = () => resolve(input.files?.[0] ?? null)
+    input.addEventListener('cancel', () => resolve(null))
+    input.click()
+  })
+}
+
+// The picture of a file as a PNG data URL, only when it is exactly w x h points and 1 bit - every point pure black or pure white, nothing
+// transparent. Nothing is scaled or changed. { image } when it is, else { problem }: 'unreadable' (no picture the browser can read), 'size'
+// or 'bits' (the box checks again, see the OLED extension's oled.py --check).
+async function exactPicture(file, w, h) {
+  try {
+    const bitmap = await createImageBitmap(file)
+    const size = bitmap.width === w && bitmap.height === h
+    if (!size) {
+      bitmap.close?.()
+      return { problem: 'size' }
+    }
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    const context = canvas.getContext('2d', { willReadFrequently: true })
+    context.drawImage(bitmap, 0, 0)
+    bitmap.close?.()
+    const data = context.getImageData(0, 0, w, h).data
+    for (let i = 0; i < data.length; i += 4) {
+      const [r, g, b, a] = [data[i], data[i + 1], data[i + 2], data[i + 3]]
+      if (a !== 255 || (r !== 0 && r !== 255) || g !== r || b !== r) return { problem: 'bits' }
+    }
+    return { image: canvas.toDataURL('image/png') }
+  } catch {
+    return { problem: 'unreadable' }
+  }
+}
+
+// The rows of a list of tags (the list of the extension page, hostApi 8 `list`, and the sheet "NFC-Tag" of a medium): a picture for each
+// row, a button for the picture and the extension's own buttons; each posts { id }. redraw(): the list asks again after a change.
+// tiles (the page): each row is a tile - the title, the picture, the text and a row of buttons with symbols; an own button of the
+// extension may bring `icon` (a symbol of the app) and `change` (it is "Tag ändern": the app goes to the library to choose the new album).
+function fillTagRows(box, rows, redraw, tiles = false) {
+  const post = (route, body) => api(route, { method: 'POST', body, timeoutMs: 20000 })
+  const said = (r, fallback) => (typeof r.body?.message === 'string' ? tr(r.body.message.slice(0, 120)) : tr(fallback))
+  for (const row of rows) {
+    const li = document.createElement('li')
+    li.className = tiles ? 'ext-tag tag-tile' : 'ext-tag'
+    const pic = document.createElement('span')
+    pic.className = tiles ? 'lib-thumb ext-tag-pic tag-tile-pic' : 'lib-thumb ext-tag-pic'
+    // (wide: the picture is a display picture of 2:1 - the OLED extension's pictures - and is not cut square)
+    if (row.wide === true) pic.classList.add('ext-tag-wide')
+    // (an own picture is /cover/<name>, the others come through /api/ or from the web; a PNG as a data URL is a picture the extension drew itself)
+    if (/^(\/api\/|\/cover\/|https:\/\/|http:\/\/|data:image\/png;base64,)/.test(String(row.image ?? ''))) {
+      const img = document.createElement('img')
+      img.src = row.image
+      img.alt = ''
+      img.loading = 'lazy'
+      img.referrerPolicy = 'no-referrer'
+      img.addEventListener('error', () => img.remove(), { once: true })
+      pic.append(img)
+    }
+    pic.insertAdjacentHTML('afterbegin', icon('image', tiles ? 40 : 22))
+    const main = document.createElement('div')
+    main.className = 'ext-tag-main'
+    const name = document.createElement('b')
+    name.translate = false
+    // (translate: the title is a text of the extension that the app translates)
+    name.textContent = row.translate === true ? tr(String(row.title ?? '')) : String(row.title ?? '')
+    // (the tile cuts a long title off: the whole title is in the tooltip)
+    if (tiles) name.title = name.textContent
+    const sub = document.createElement('small')
+    sub.textContent = (Array.isArray(row.text) ? row.text : []).map((t) => tr(String(t))).join(' · ')
+    // a tag of an artist cover: the album it plays when it is laid on (the rotary knob chooses among the others)
+    let albums = null
+    if (row.select && Array.isArray(row.select.choices) && row.select.choices.length > 0 && typeof row.select.post === 'string') {
+      albums = document.createElement('select')
+      albums.className = 'input tag-album'
+      albums.title = tr(String(row.select.label ?? 'Album beim Auflegen'))
+      albums.setAttribute('aria-label', albums.title)
+      for (const choice of row.select.choices.slice(0, 200)) {
+        const option = document.createElement('option')
+        option.value = String(choice.value)
+        option.textContent = String(choice.label ?? '')
+        option.selected = option.value === String(row.select.value)
+        albums.append(option)
+      }
+      albums.onchange = async () => {
+        albums.disabled = true
+        const saved = await post(row.select.post, { id: row.id, value: albums.value })
+        toast(said(saved, saved.ok ? 'Album gewählt' : 'Hat nicht geklappt'), saved.ok ? 'ok' : 'info')
+        if (!saved.ok) redraw()
+        else albums.disabled = false
+      }
+    }
+    const buttons = document.createElement('div')
+    buttons.className = tiles ? 'tag-tile-btns' : 'ext-tag-btns'
+    const add = (label, onclick, { danger = false, glyph = 'info', off = false } = {}) => {
+      const b = document.createElement('button')
+      b.type = 'button'
+      if (tiles) {
+        b.className = `icon-btn tag-tile-btn${danger ? ' danger' : ''}`
+        b.innerHTML = icon(glyph, 20)
+        b.title = tr(label)
+        b.setAttribute('aria-label', tr(label))
+      } else {
+        b.className = `btn sm${danger ? ' danger' : ''}`
+        b.textContent = tr(label)
+      }
+      b.disabled = off
+      b.onclick = async () => {
+        b.disabled = true
+        await onclick()
+        if (b.isConnected) b.disabled = off
+      }
+      buttons.append(b)
+    }
+    if (typeof row.coverPost === 'string') {
+      add(
+        row.image ? 'Bild ändern' : 'Bild wählen',
+        async () => {
+          openCoverPicker({
+            target: `own:nfc-${String(row.id).slice(0, 20)}`,
+            title: String(row.title ?? ''),
+            query: String(row.title ?? '').replace(/\s+–\s+/, ' '),
+            fallbacks: [],
+            current: String(row.image ?? ''),
+            onDone: async (body) => {
+              const saved = await post(row.coverPost, { id: row.id, image: String(body?.url ?? '') })
+              toast(said(saved, 'Hat nicht geklappt'), saved.ok ? 'ok' : 'info')
+              redraw()
+            },
+            // ("Cover des Mediums nehmen": beside "Eigenes Bild" in the picker, greyed out while the tag has no picture of its own)
+            reset: {
+              off: !row.imageOwn,
+              run: async () => {
+                const saved = await post(row.coverPost, { id: row.id, image: '' })
+                toast(said(saved, 'Hat nicht geklappt'), saved.ok ? 'ok' : 'info')
+                redraw()
+              },
+            },
+            onCancel: redraw,
+          })
+        },
+        { glyph: 'image' },
+      )
+    }
+    for (const action of Array.isArray(row.actions) ? row.actions.slice(0, 6) : []) {
+      const glyph = /^[a-z0-9]{1,12}$/.test(String(action.icon ?? '')) ? action.icon : 'info'
+      if (action.change === true) {
+        add('Tag ändern', async () => startNfcChange(row), { glyph })
+        continue
+      }
+      // upload: a picture of the device that has exactly the size the action says (`exact`: [w, h]) and is 1 bit - checked here, nothing is
+      // scaled or converted - and sent as a PNG { id, image }
+      if (action.upload === true) {
+        const [exactW, exactH] = Array.isArray(action.exact) ? action.exact.map((n) => Math.trunc(Number(n))) : [0, 0]
+        add(
+          String(action.label ?? ''),
+          async () => {
+            // (`has`: the row already has such a picture - `view` answers it as { image }, `remove` takes it away. It is shown as it looks on
+            // the display and the user is asked: change it, take it away or leave it)
+            if (action.has === true && String(action.view ?? '').startsWith('/api/ext/')) {
+              const seen = await post(action.view, { id: row.id })
+              const shown = /^data:image\/png;base64,[A-Za-z0-9+/=]{1,300000}$/.test(String(seen.body?.image ?? '')) ? seen.body.image : ''
+              if (shown) {
+                const answer = await new Promise((resolve) => {
+                  let chosen = 'cancel'
+                  const canRemove = String(action.remove ?? '').startsWith('/api/ext/')
+                  openSheet(
+                    `<h2>${esc(tr(String(action.label ?? '')))}</h2>
+                     <img src="${shown}" alt="" style="display:block;width:100%;max-width:384px;height:auto;margin:4px auto;background:#000;border:1px solid #555;image-rendering:pixelated">
+                     <p class="help" style="margin:0">Dieser Tag hat schon ein OLED-Bild. Möchtest du es ändern?</p>
+                     <div class="btns"><button class="btn" data-close>Abbrechen</button>${canRemove ? '<button class="btn danger" data-remove>Entfernen</button>' : ''}<button class="btn primary" data-change>Ändern</button></div>`,
+                    (sheet, close) => {
+                      sheet.querySelector('[data-close]').onclick = close
+                      const removeButton = sheet.querySelector('[data-remove]')
+                      if (removeButton)
+                        removeButton.onclick = () => {
+                          chosen = 'remove'
+                          close()
+                        }
+                      sheet.querySelector('[data-change]').onclick = () => {
+                        chosen = 'change'
+                        close()
+                      }
+                    },
+                    () => setTimeout(() => resolve(chosen)),
+                  )
+                })
+                if (answer === 'remove') {
+                  const gone = await post(action.remove, { id: row.id })
+                  toast(said(gone, gone.ok ? 'Erledigt' : 'Hat nicht geklappt'), gone.ok ? 'ok' : 'info')
+                  redraw()
+                }
+                if (answer !== 'change') return
+              }
+            }
+            const file = await chooseImageFile()
+            if (!file) return
+            if (!(exactW > 0 && exactW <= 2048 && exactH > 0 && exactH <= 2048)) return toast(tr('Hat nicht geklappt'), 'info')
+            const { image, problem } = await exactPicture(file, exactW, exactH)
+            if (!image) return toast(tr(problem === 'size' ? (exactH === 50 ? 'Das Bild muss genau 128 × 50 Punkte groß sein' : 'Das Bild muss genau 128 × 64 Punkte groß sein') : problem === 'bits' ? 'Das Bild darf nur Schwarz und Weiß enthalten (1 Bit)' : 'Das ist kein Bild, das die Box lesen kann'), 'info')
+            const done = await post(action.post, { id: row.id, image })
+            toast(said(done, done.ok ? 'Erledigt' : 'Hat nicht geklappt'), done.ok ? 'ok' : 'info')
+            redraw()
+          },
+          { glyph: /^[a-z0-9]{1,12}$/.test(String(action.icon ?? '')) ? action.icon : 'image' },
+        )
+        continue
+      }
+      add(
+        String(action.label ?? ''),
+        async () => {
+          if (action.confirm && !(await ask(tr(action.label), tr(action.confirm), tr('OK')))) return
+          const done = await post(action.post, { id: row.id })
+          toast(said(done, done.ok ? 'Erledigt' : 'Hat nicht geklappt'), done.ok ? 'ok' : 'info')
+          if (done.ok && String(action.post).endsWith('/tagplay')) document.dispatchEvent(new Event('mupi-nfc-played'))
+          redraw()
+        },
+        { glyph, danger: !action.safe },
+      )
+    }
+    if (tiles) li.append(name, pic, sub, ...(albums ? [albums] : []), buttons)
+    else {
+      main.append(name, sub, ...(albums ? [albums] : []), buttons)
+      li.append(pic, main)
+    }
+    box.append(li)
+  }
 }
 
 // the services of the cover search, as their badge on a result
@@ -3575,7 +4865,9 @@ const COVER_SOURCES = { itunes: 'iTunes', deezer: 'Deezer', spotify: 'Spotify' }
 // target: 'local:<path>' (the folder gets it as cover.jpg) or 'own:<name>' (stored among the own pictures, onDone gets
 // its address); query: the search it starts with, fallbacks: shorter ones when it finds nothing; current: the picture
 // shown now. onHide (folders): "Kein Cover" (hide true) or, when hidden, "Cover wieder zeigen" (false); true when done
-function openCoverPicker({ target, title, query, fallbacks, current, hidden = false, onDone, onHide }) {
+// reset: { off, run } - a button beside "Eigenes Bild" that takes the picture away again (the medium's own cover shows then)
+function openCoverPicker({ target, title, query, fallbacks, current, hidden = false, onDone, onHide, onCancel, reset }) {
+  let finished = false // (done or hidden: onCancel is for a picker that was left without)
   let results = []
   let chosen = null // { i } of a result, or { blob, url } of an own picture
   const coverError = (r) =>
@@ -3599,7 +4891,7 @@ function openCoverPicker({ target, title, query, fallbacks, current, hidden = fa
      <p class="help" style="margin:0">Sucht bei iTunes, Deezer und Spotify – der Suchbegriff geht dafür an Apple, Deezer und Spotify.</p>
      <div class="covers cover-pick" id="cp-list"></div>
      <input type="file" id="cp-file" accept="image/*" hidden>
-     <div class="btns cover-actions"><button class="btn" id="cp-own">${icon('image', 18)}Eigenes Bild</button><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="cp-ok" disabled>Übernehmen</button></div>`,
+     <div class="btns cover-actions"><button class="btn" id="cp-own">${icon('image', 18)}Eigenes Bild</button>${reset ? `<button class="btn" id="cp-reset"${reset.off ? ' disabled' : ''}>${icon('undo', 18)}Cover des Mediums nehmen</button>` : ''}<button class="btn" data-close>Abbrechen</button><button class="btn primary" id="cp-ok" disabled>Übernehmen</button></div>`,
     (sheet, close) => {
       const list = $('#cp-list', sheet)
       const ok = $('#cp-ok', sheet)
@@ -3659,10 +4951,20 @@ function openCoverPicker({ target, title, query, fallbacks, current, hidden = fa
         draw()
       }
       sheet.querySelector('[data-close]').onclick = close
+      const resetButton = $('#cp-reset', sheet)
+      if (resetButton) {
+        resetButton.onclick = async () => {
+          resetButton.disabled = true
+          finished = true
+          close()
+          await reset.run()
+        }
+      }
       const hideButton = $('#cp-hide', sheet)
       if (hideButton) {
         hideButton.onclick = async () => {
           hideButton.disabled = true
+          finished = true
           close()
           await onHide(!hidden)
         }
@@ -3686,6 +4988,7 @@ function openCoverPicker({ target, title, query, fallbacks, current, hidden = fa
           ok.textContent = 'Übernehmen'
           return toast(coverError(r), 'info')
         }
+        finished = true
         close()
         onDone?.(r.body)
       }
@@ -3696,6 +4999,8 @@ function openCoverPicker({ target, title, query, fallbacks, current, hidden = fa
     },
     () => {
       if (chosen?.url) URL.revokeObjectURL(chosen.url)
+      // (after the sheet is gone: the caller may open one)
+      if (!finished && onCancel) setTimeout(onCancel, 0)
     },
   )
 }
@@ -3726,49 +5031,8 @@ async function squareImage(file, max = 1000) {
   }
 }
 
-/* Verwaltete Inhalte: the artist subscriptions and albums added from the search */
-
-const managed = { subs: null }
-
-function managedTop() {
-  const s = managed.subs ?? {}
-  const artists = s.artists ?? []
-  const albums = s.explicit_albums ?? []
-  const range = subRange
-  return [
-    `<p class="page-intro">Über die Suche hinzugefügte Künstler-Abos und Alben. Beim Künstler den Bereich (Folge von–bis) eingrenzen und einzelne Alben aus- oder einschließen.</p>`,
-    `<section class="card"><h2>Künstler-Abos</h2>${
-      artists.length
-        ? `<div class="rows">${artists
-            .map((a, i) => `<button class="entry lib-row" data-sub="${i}"><span class="avatar">${esc(initials(a.name || a.id))}</span><span class="lbl"><b translate="no">${esc(a.name || a.id)}</b><small>${esc(range(a))} · ${esc(catLabel(a.category))}${a.exclude_album_ids?.length ? ` · ${a.exclude_album_ids.length} ausgeschlossen` : ''}</small></span><span class="chev">${icon('chevron', 18)}</span></button>`)
-            .join('')}</div>`
-        : `<p class="help" style="margin:0">Noch keine. Über „Auf Spotify suchen“ einen Künstler mit ＋ abonnieren.</p>`
-    }</section>`,
-    `<section class="card"><h2>Einzelne Alben</h2>${
-      albums.length
-        ? `<div class="rows">${albums
-            .map((a, i) => `<div class="entry"><span class="avatar">${esc(initials(a.name || a.id))}</span><span class="lbl"><b translate="no">${esc(a.name || a.id)}</b><small>${esc(catLabel(a.category))}</small></span><button class="btn danger sm" data-album="${i}">Entfernen</button></div>`)
-            .join('')}</div>`
-        : `<p class="help" style="margin:0">Noch keine.</p>`
-    }</section>`,
-  ]
-}
-
-async function loadManaged() {
-  const r = await api(`${API}/library/subscriptions`)
-  if (!r.ok) throw new Error(`subscriptions ${r.status}`)
-  managed.subs = r.body ?? {}
-}
-
-async function managedDone(text, page) {
-  const sync = await fireSync()
-  toast(`${text} ${sync}`)
-  libChanged()
-  if (currentPage()?.id === page.id) renderPage(page)
-}
-
 // The rule of a subscription (what the Smart-Sync brings of the artist): the range of episodes and the albums let in or
-// left out. The same in the library (the artist's group) and on "Verwaltete Inhalte".
+// left out - in the library, at the artist (openLibGroup, openLibSubSheet).
 const subRange = (a) => (a.range_from || a.range_to ? `Folgen ${a.range_from ?? 1}–${a.range_to ?? '…'}` : 'alle Folgen')
 function subControlsHtml(a) {
   return `<p class="help" style="margin:0">„Folge“ ist die Position nach Erscheinungsdatum (1 = die älteste). Leer = offen.</p>
@@ -3793,25 +5057,6 @@ function mountSubControls(sheet, a, close, done) {
     done('Bereich übernommen.')
   }
   sheet.querySelector('[data-albums]').onclick = () => loadSubAlbums(a, sheet.querySelector('#s-albums'))
-}
-
-function openSubSheet(a, page) {
-  openSheet(
-    `<h2 translate="no">${esc(a.name || a.id)}</h2>${subControlsHtml(a)}
-     <div class="btns"><button class="btn danger" data-unsub>Abo entfernen</button><button class="btn" data-close>Schließen</button></div>`,
-    (sheet, close) => {
-      sheet.querySelector('[data-close]').onclick = close
-      mountSubControls(sheet, a, close, (text) => managedDone(text, page))
-      sheet.querySelector('[data-unsub]').onclick = () => {
-        close()
-        confirmSheet('Abo entfernen', `„${a.name || a.id}“ abbestellen? Der nächste Sync nimmt die Alben von der Box.`, async () => {
-          const r = await api(`${API}/library/unsubscribe-artist`, { method: 'POST', body: { artistId: a.id } })
-          if (!r.ok) return toast('Das hat nicht geklappt', 'info')
-          managedDone('Abo entfernt.', page)
-        })
-      }
-    },
-  )
 }
 
 async function loadSubAlbums(a, box) {
@@ -3886,6 +5131,9 @@ async function loadSpotifyMine() {
   const [r, have] = await Promise.all([api(`${SYNC_API}/my-playlists`), libraryHave('spotify')])
   if (!el.isConnected) return
   search.have = have
+  // (the results show what the library has: another user's of before otherwise - not while a search runs, its
+  // "Suche …" or its answer stays)
+  if (!search.busy) drawSearch()
   if (!r.ok) {
     // (no connection any more - disconnected, or the sign-in refused: the list of before goes, it was that account's)
     const gone = r.status === 409 || r.status === 401
@@ -3963,6 +5211,8 @@ async function libraryHave(source) {
     }
     // (TIDAL: its entries - albums, playlists, whole artists)
     if (source === 'tidal' && it.type === 'tidal' && it.id) have.add(`${it.tidalKind ?? 'album'}:${it.id}`)
+    if (source === 'jellyfin' && it.type === 'jellyfin' && it.id) have.add(`${it.jellyfinKind ?? 'album'}:${it.id}`)
+    if (source === 'audible' && it.type === 'audible' && it.id) have.add(`${it.audibleKind === 'series' ? 'series' : 'book'}:${it.id}`)
   }
   for (const a of subs?.body?.artists ?? []) have.add(`artist:${a.id ?? a.artistId}`)
   for (const a of subs?.body?.explicit_albums ?? []) have.add(`album:${a.id}`)
@@ -3975,7 +5225,10 @@ async function doSpotifySearch() {
   const types = { Alle: 'artist,album,track,playlist', Künstler: 'artist', Alben: 'album', Titel: 'track', Playlists: 'playlist' }[search.type]
   const box = $('#s-results')
   box.innerHTML = `<div class="loading"><p>Suche …</p></div>`
-  const [r, have] = await Promise.all([api(`/api/spotify/search?q=${encodeURIComponent(q)}&types=${types}&limit=8`), libraryHave('spotify')])
+  search.busy = true
+  const [r, have] = await Promise.all([api(`/api/spotify/search?q=${encodeURIComponent(q)}&types=${types}&limit=8`), libraryHave('spotify')]).finally(() => {
+    search.busy = false
+  })
   if (!r.ok) {
     // (the backend's reason is English, e.g. "Failed to search"; 503: Spotify is not set up)
     box.innerHTML = `<p class="help">${r.status === 503 ? 'Die Suche braucht eine eingerichtete Spotify-Verbindung (Bibliothek › Spotify).' : 'Die Suche hat nicht geklappt.'}</p>`
@@ -4138,12 +5391,13 @@ async function openSpotifyArtist(r) {
 }
 
 // A playlist of Spotify or TIDAL: on the box's start page a tile of its own (no artist) or in a folder (its artist)
-const isPlaylistEntry = (it) => !!it && !it.isResume && ((it.type === 'spotify' && !!it.playlistid) || (it.type === 'tidal' && it.tidalKind === 'playlist'))
+const isPlaylistEntry = (it) => !!it && !it.isResume && ((it.type === 'spotify' && !!it.playlistid) || (it.type === 'tidal' && it.tidalKind === 'playlist') || (it.type === 'jellyfin' && it.jellyfinKind === 'playlist'))
 
 // The folders of the start page in a category: the artists of the library's entries, as the box groups them (the
 // folders of the SD card and the NAS are tiles of their own) - the most used first
 async function placeFolders(category) {
-  const items = lib.items ?? (await api('/api/data')).body
+  // (the lists held are another user's than the one chosen now: read for him)
+  const items = lib.items && lib.user === libView.shown ? lib.items : (await api('/api/data')).body
   const count = new Map()
   for (const it of Array.isArray(items) ? items : []) {
     if (!it || it.isResume === true || it.category === 'resume' || it.type === 'library') continue
@@ -4509,7 +5763,7 @@ async function openPodShow(s) {
         if (!libWriteOk(r)) return
         close()
         toast(`Hinzugefügt: ${s.title}`)
-        if (keep) api(`${API}/podcast-offline/sync`, { method: 'POST', body: {} })
+        if (keep && !libView.user) api(`${API}/podcast-offline/sync`, { method: 'POST', body: {} })
         libChanged()
         lib.items = null
       })
@@ -4638,7 +5892,7 @@ async function openRadioStation(s) {
   )
 }
 
-/* Auf TIDAL suchen (the box's TIDAL service through eltern/tidal.ts; switched on and signed in on Dienste › TIDAL) */
+/* Auf TIDAL suchen (the box's TIDAL service through app-api/tidal.ts; switched on and signed in on Dienste › TIDAL) */
 
 // the last search (type: what of it is shown), and an artist opened from it (its albums, with the way back); the
 // category is chosen when adding (addSheet) - the one chosen last starts the next sheet, as on Spotify (search.cat)
@@ -4705,8 +5959,10 @@ async function loadTidalMine() {
   if (!el) return
   if (!tds.mine) el.innerHTML = `<div class="loading"><p>${esc('Lade …')}</p></div>`
   const [r, have] = await Promise.all([api(`${API}/tidal/mine`), libraryHave('tidal')])
-  tds.have = have
   if (!el.isConnected) return
+  tds.have = have
+  // (not while a search runs: see loadSpotifyMine)
+  if (!tds.busy) drawTidal()
   if (!r.ok) {
     el.innerHTML = `<p class="help" style="margin:0">${esc(tidalFailText(r))}</p>`
     return
@@ -4877,22 +6133,26 @@ async function openTidalItem(x) {
   )
 }
 
-// The range (positions by release, 1 = the oldest) and the left-out albums of an entry of a whole TIDAL artist, as the
-// box's TIDAL service takes them (tidal_service.py narrowed) - '' without any
+// The range (positions by release, 1 = the oldest, or the episodes' numbers: range_by "number") and the left-out albums
+// of an entry of a whole TIDAL artist, as the box's TIDAL service takes them (tidal_service.py narrowed) - '' without any
 function tidalRangeQuery(it) {
   const q = new URLSearchParams()
   if (Number(it?.range_from) >= 1) q.set('from', String(Math.floor(it.range_from)))
   if (Number(it?.range_to) >= 1) q.set('to', String(Math.floor(it.range_to)))
+  if (it?.range_by === 'number' && q.size) q.set('by', 'number')
   const ex = (Array.isArray(it?.exclude_album_ids) ? it.exclude_album_ids : []).filter((x) => /^\d{1,15}$/.test(String(x)))
   if (ex.length) q.set('exclude', ex.join(','))
   return q.toString()
 }
 
 // The library's sheet of a whole TIDAL artist: the range and the albums left out (as a Spotify subscription has them
-// on "Verwaltete Inhalte") - saved with the sheet. The albums with their positions come from the service.
+// at its artist in the library) - saved with the sheet. The albums with their positions come from the service.
 function tidalRangeFields(item) {
-  return `<div class="section-label" style="margin:0">${esc('Folgen und Alben')}</div>
-    <p class="help" style="margin:0">${esc('„Folge“ ist die Position nach Erscheinungsdatum (1 = die älteste). Leer = alle.')}</p>
+  const opts = SORTINGS.map(([v, l]) => `<option value="${v}"${(item.sorting ?? '') === v ? ' selected' : ''}>${esc(tr(l))}</option>`).join('')
+  return `<div class="field"><label for="e-tsort">${esc(tr('Reihenfolge am Display'))}</label><select class="input" id="e-tsort">${opts}</select>
+      <small>${esc(tr('Standard: alphabetisch, Zahlen als Zahlen – „Folge 2“ vor „Folge 10“.'))}</small></div>
+    <div class="section-label" style="margin:0">${esc('Folgen und Alben')}</div>
+    <p class="help" style="margin:0" id="e-thelp">${esc('„Folge“ ist die Position nach Erscheinungsdatum (1 = die älteste). Leer = alle.')}</p>
     <div class="rule-times"><div class="field"><label for="e-tfrom">Folge von</label><input class="input" id="e-tfrom" type="number" min="1" value="${esc(item.range_from ?? '')}"></div>
       <div class="field"><label for="e-tto">Folge bis</label><input class="input" id="e-tto" type="number" min="1" value="${esc(item.range_to ?? '')}"></div></div>
     <div id="e-talbums"><p class="help">${esc('Lade die Alben von TIDAL …')}</p></div>`
@@ -4906,7 +6166,17 @@ async function wireTidalRange(item, sheet) {
     box.innerHTML = `<p class="help">${esc(tidalFailText(r))}</p>`
     return
   }
-  const albums = [...(r.body?.albums ?? [])].sort((a, b) => a.position - b.position)
+  // (an artist whose albums carry their episode's number: the range counts those - for an entry without a range yet, or
+  // one saved that way; a range saved by positions before stays as it is)
+  const hasRange = Number(item.range_from) >= 1 || Number(item.range_to) >= 1
+  // (one saved by numbers stays so while any album has a number, as the box counts it - "numbered" may flip with new
+  // singles; "numbered" only chooses for a new range)
+  const anyNumber = (r.body?.albums ?? []).some((al) => al.number != null)
+  const byNumber = item.range_by === 'number' ? anyNumber : !!r.body?.numbered && !hasRange
+  sheet.tidalByNumber = byNumber
+  const keyOf = (al) => (byNumber ? (al.number ?? null) : al.position)
+  const albums = [...(r.body?.albums ?? [])].sort((a, b) => (keyOf(a) ?? Infinity) - (keyOf(b) ?? Infinity) || a.position - b.position)
+  if (byNumber) sheet.querySelector('#e-thelp').textContent = tr('„Folge“ ist die Nummer im Titel (z. B. „Folge 12“). Leer = alle; Alben ohne Nummer gehören dann zu keinem Bereich.')
   const num = (id) => {
     const v = Number(sheet.querySelector(id).value)
     return v >= 1 ? Math.floor(v) : null
@@ -4917,8 +6187,9 @@ async function wireTidalRange(item, sheet) {
     box.innerHTML = albums.length
       ? `<div class="rows">${albums
           .map((al, i) => {
-            const inRange = (lo === null || al.position >= lo) && (hi === null || al.position <= hi)
-            return `<div class="entry${inRange ? '' : ' out'}"><span class="pos">${al.position}</span><span class="lib-thumb">${al.thumb || al.cover ? `<img src="${esc(al.thumb || al.cover)}" alt="" loading="lazy">` : ''}</span>
+            const key = keyOf(al)
+            const inRange = key === null ? lo === null && hi === null : (lo === null || key >= lo) && (hi === null || key <= hi)
+            return `<div class="entry${inRange ? '' : ' out'}"><span class="pos">${key ?? '–'}</span><span class="lib-thumb">${al.thumb || al.cover ? `<img src="${esc(al.thumb || al.cover)}" alt="" loading="lazy">` : ''}</span>
               <span class="lbl"><b translate="no">${esc(al.name)}</b><small>${esc([al.date?.slice(0, 4), inRange ? '' : 'außerhalb des Bereichs'].filter(Boolean).join(' · '))}</small></span>
               <label class="switch"><input type="checkbox" data-tal="${i}" ${inRange && !sheet.tidalExcluded.has(al.id) ? 'checked' : ''} ${inRange ? '' : 'disabled'} aria-label="${esc(al.name)} auf der Box"><span></span></label></div>`
           })
@@ -4949,10 +6220,114 @@ function readTidalRange(sheet, updated) {
   else delete updated.range_from
   if (to) updated.range_to = to
   else delete updated.range_to
+  // (counted by the episodes' numbers: kept with the entry, so the display and the box ask the same way)
+  if (sheet.tidalByNumber && (from || to)) updated.range_by = 'number'
+  else if (from || to) {
+    if (sheet.tidalByNumber === false) delete updated.range_by
+  } else delete updated.range_by
+  const sort = sheet.querySelector('#e-tsort')
+  if (sort) {
+    if (sort.value) updated.sorting = sort.value
+    else delete updated.sorting
+  }
   const ex = [...(sheet.tidalExcluded ?? [])]
   if (ex.length) updated.exclude_album_ids = ex
   else delete updated.exclude_album_ids
   return updated
+}
+
+// The library's sheet of a whole Jellyfin artist: the order on the display and the albums left out - saved with the sheet
+function jellyfinArtistFields(item) {
+  const opts = SORTINGS.map(([v, l]) => `<option value="${v}"${(item.sorting ?? '') === v ? ' selected' : ''}>${esc(tr(l))}</option>`).join('')
+  return `<div class="field"><label for="e-jsort">${esc(tr('Reihenfolge am Display'))}</label><select class="input" id="e-jsort">${opts}</select>
+      <small>${esc(tr('Standard: alphabetisch, Zahlen als Zahlen – „Folge 2“ vor „Folge 10“.'))}</small></div>
+    <div class="section-label" style="margin:0">${esc(tr('Alben'))}</div>
+    <div id="e-jalbums"><p class="help">${esc(tr('Lade die Alben von Jellyfin …'))}</p></div>`
+}
+async function wireJellyfinArtist(item, sheet) {
+  const box = sheet.querySelector('#e-jalbums')
+  sheet.jellyfinExcluded = new Set((item.exclude_album_ids ?? []).map(String))
+  const r = await api(`/api/jellyfin/artist/${encodeURIComponent(item.id)}/albums`)
+  if (!box.isConnected) return
+  if (!r.ok) {
+    box.innerHTML = `<p class="help">${esc(tr(jellyfinFailText(r)))}</p>`
+    return
+  }
+  const albums = r.body?.albums ?? []
+  box.innerHTML = albums.length
+    ? `<div class="rows">${albums
+        .map(
+          (al, i) => `<div class="entry"><span class="lib-thumb">${al.image ? `<img src="${esc(`/api/jellyfin/image/${al.id}?w=160`)}" alt="" loading="lazy">` : ''}</span>
+            <span class="lbl"><b translate="no">${esc(al.name)}</b><small>${esc(al.date?.slice(0, 4) ?? '')}</small></span>
+            <label class="switch"><input type="checkbox" data-jal="${i}" ${sheet.jellyfinExcluded.has(al.id) ? '' : 'checked'} aria-label="${esc(al.name)} ${esc(tr('auf der Box'))}"><span></span></label></div>`,
+        )
+        .join('')}</div>`
+    : `<p class="help">${esc(tr('Keine Alben gefunden.'))}</p>`
+  for (const img of box.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+  for (const cb of box.querySelectorAll('[data-jal]')) {
+    cb.onchange = () => {
+      const id = albums[Number(cb.dataset.jal)].id
+      if (cb.checked) sheet.jellyfinExcluded.delete(id)
+      else sheet.jellyfinExcluded.add(id)
+    }
+  }
+}
+function readJellyfinArtist(sheet, updated) {
+  const sort = sheet.querySelector('#e-jsort')
+  if (sort) {
+    if (sort.value) updated.sorting = sort.value
+    else delete updated.sorting
+  }
+  const ex = [...(sheet.jellyfinExcluded ?? [])]
+  if (ex.length) updated.exclude_album_ids = ex
+  else delete updated.exclude_album_ids
+}
+
+// The library's sheet of a whole Audible series: the order on the display and the books left out - saved with the sheet
+function audibleSeriesFields(item) {
+  const opts = SORTINGS.map(([v, l]) => `<option value="${v}"${(item.sorting ?? '') === v ? ' selected' : ''}>${esc(tr(l))}</option>`).join('')
+  return `<div class="field"><label for="e-asort">${esc(tr('Reihenfolge am Display'))}</label><select class="input" id="e-asort">${opts}</select>
+      <small>${esc(tr('„Älteste zuerst“ ist die Reihenfolge der Serie.'))}</small></div>
+    <div class="section-label" style="margin:0">${esc(tr('Hörbücher'))}</div>
+    <div id="e-abooks"><p class="help">${esc(tr('Lade die Hörbücher von Audible …'))}</p></div>`
+}
+async function wireAudibleSeries(item, sheet) {
+  const box = sheet.querySelector('#e-abooks')
+  sheet.audibleExcluded = new Set((item.exclude_ids ?? []).map(String))
+  const r = await api(`/api/audible/series/${encodeURIComponent(item.id)}/books`)
+  if (!box.isConnected) return
+  if (!r.ok) {
+    box.innerHTML = `<p class="help">${esc(tr(audibleFailText(r)))}</p>`
+    return
+  }
+  const books = r.body?.books ?? []
+  box.innerHTML = books.length
+    ? `<div class="rows">${books
+        .map(
+          (b, i) => `<div class="entry"><span class="lib-thumb">${b.image ? `<img src="${esc(abImg(b.image))}" alt="" loading="lazy">` : ''}</span>
+            <span class="lbl"><b translate="no">${esc(b.title)}</b><small>${esc(b.sequence ?? '')}</small></span>
+            <label class="switch"><input type="checkbox" data-abk="${i}" ${sheet.audibleExcluded.has(b.asin) ? '' : 'checked'} aria-label="${esc(b.title)} ${esc(tr('auf der Box'))}"><span></span></label></div>`,
+        )
+        .join('')}</div>`
+    : `<p class="help">${esc(tr('In deinem Konto gehört kein Hörbuch zu dieser Serie.'))}</p>`
+  for (const img of box.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+  for (const cb of box.querySelectorAll('[data-abk]')) {
+    cb.onchange = () => {
+      const id = books[Number(cb.dataset.abk)].asin
+      if (cb.checked) sheet.audibleExcluded.delete(id)
+      else sheet.audibleExcluded.add(id)
+    }
+  }
+}
+function readAudibleSeries(sheet, updated) {
+  const sort = sheet.querySelector('#e-asort')
+  if (sort) {
+    if (sort.value) updated.sorting = sort.value
+    else delete updated.sorting
+  }
+  const ex = [...(sheet.audibleExcluded ?? [])]
+  if (ex.length) updated.exclude_ids = ex
+  else delete updated.exclude_ids
 }
 
 /* Link einfügen (Spotify-Link, Radiosender, Podcast) */
@@ -5107,7 +6482,11 @@ const up = { cat: 'audiobook', artist: '', album: '', items: [], cover: null, sk
 function formatBytes(n) {
   if (!Number.isFinite(n)) return '–'
   const gb = n / 1024 ** 3
-  return gb >= 1 ? `${gb.toLocaleString(LOCALE, { maximumFractionDigits: 1 })} GB` : `${Math.round(n / 1024 ** 2)} MB`
+  if (gb >= 1) return `${gb.toLocaleString(LOCALE, { maximumFractionDigits: 1 })} GB`
+  // (a photo or two: KB, below 10 MB with a decimal - "0 MB" for seven photos said nothing)
+  if (n < 1024 ** 2) return `${n > 0 ? Math.max(1, Math.round(n / 1024)) : 0} KB`
+  const mb = n / 1024 ** 2
+  return `${mb.toLocaleString(LOCALE, { maximumFractionDigits: mb < 10 ? 1 : 0 })} MB`
 }
 
 function uploadTop() {
@@ -5478,7 +6857,7 @@ const NO_PW_MANAGER = 'autocomplete="off" data-1p-ignore data-lpignore="true" da
 
 const spDate = (iso) => (iso ? new Date(iso).toLocaleDateString(LOCALE) : '')
 
-// The player's Spotify login: since when, until when (Spotify: 6 months), refused (see eltern/spotify-auth-age.ts)
+// The player's Spotify login: since when, until when (Spotify: 6 months), refused (see app-api/spotify-auth-age.ts)
 function spotifyLogin(a = spot.access ?? {}) {
   const l = a.login ?? {}
   if (!a.connected) return { state: 'none', text: 'Nicht angemeldet' }
@@ -6217,15 +7596,32 @@ function nasTop() {
   return [
     `<section class="card"><h2>Anmeldung</h2>${
       loginForm
-        ? `<p class="help">Die Box meldet sich per WebDAV beim NAS an (z. B. Synology: WebDAV-Server einschalten, Port 5005 bzw. 5006 für HTTPS).</p>
-          <div class="field"><label for="n-addr">Server (Adresse:Port)</label><input class="input" id="n-addr" value="${esc(st.address ?? '')}" placeholder="z. B. 192.168.1.10:5005" autocomplete="off"></div>
-          ${sw('n-https', 'HTTPS', st.https)}
+        ? `${st.loginError && !nas.loginOpen ? `<p class="help" style="margin:0"><b>${esc(st.loginError === 'installing' ? tr('Die Box richtet SMB ein – das dauert beim ersten Mal ein, zwei Minuten …') : tr(`Anmeldung fehlgeschlagen: ${st.protocol === 'smb' ? nasSmbError(st.loginError) : tr('Benutzer oder Passwort falsch – oder der Benutzer darf WebDAV nicht nutzen.')}`))}</b></p>` : ''}<div class="field"><label>Wie erreicht die Box dein NAS?</label><div class="seg" id="n-proto">${[
+            ['smb', 'Windows-Freigabe (SMB)'],
+            ['webdav', 'WebDAV'],
+          ]
+            .map(([v, label]) => `<button aria-pressed="${nasProto() === v}" data-v="${v}">${label}</button>`)
+            .join('')}</div></div>
+          <div id="n-smb" ${nasProto() === 'smb' ? '' : 'hidden'}>
+            <p class="help">Die Freigabe wie im Windows-Explorer, z. B. <b translate="no">\\\\192.168.1.10\\Musik</b> – Synology, QNAP, FRITZ!Box und Windows können das ohne Einrichtung. Am sichersten mit der IP-Adresse des NAS. Ein Unterordner darf dahinter stehen.</p>
+            <div class="field"><label for="n-unc">Freigabe</label><input class="input" id="n-unc" value="${esc(st.protocol === 'smb' ? (st.unc ?? '') : '')}" placeholder="\\\\192.168.1.10\\Musik" autocomplete="off" autocapitalize="off" spellcheck="false" translate="no"></div>
+            <div class="field"><label for="n-dom">Domäne (meist leer)</label><input class="input" id="n-dom" value="${esc(st.domain ?? '')}" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+          </div>
+          <div id="n-dav" ${nasProto() === 'webdav' ? '' : 'hidden'}>
+            <p class="help">Die Box meldet sich per WebDAV beim NAS an (z. B. Synology: WebDAV-Server einschalten, Port 5005 bzw. 5006 für HTTPS).</p>
+            <div class="field"><label for="n-addr">Server (Adresse:Port)</label><input class="input" id="n-addr" value="${esc(st.protocol === 'smb' ? '' : (st.address ?? ''))}" placeholder="z. B. 192.168.1.10:5005" autocomplete="off"></div>
+            ${sw('n-https', 'HTTPS', st.https)}
+          </div>
           <div class="field"><label for="n-acc">Benutzer</label><input class="input" id="n-acc" value="${esc(st.account ?? '')}" autocomplete="off"></div>
           <div class="field"><label for="n-pw">Passwort</label><div class="input-wrap"><input class="input has-eye" id="n-pw" type="password" autocomplete="new-password"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>
           ${sw('n-remember', 'Anmeldung merken', st.rememberMe || !st.address)}
           <p class="help" style="margin:0">Ohne „merken“ vergisst die Box das Passwort beim nächsten Neustart – der NAS-Reiter ist dann leer. Gespeichert wird es verschlüsselt.</p>
           <div class="btns"><button class="btn primary" id="n-login">Anmelden</button>${nas.loginOpen ? '<button class="btn" id="n-cancel">Abbrechen</button>' : ''}</div>`
-        : `<dl class="kv"><div><dt>Server</dt><dd>${esc(st.address)}${st.https ? ' (HTTPS)' : ''}</dd></div><div><dt>Benutzer</dt><dd>${esc(st.account)}</dd></div>
+        : `<dl class="kv">${
+            st.protocol === 'smb'
+              ? `<div><dt>Freigabe</dt><dd translate="no">${esc(st.unc)}</dd></div><div><dt>Verbindung</dt><dd>SMB</dd></div>`
+              : `<div><dt>Server</dt><dd>${esc(st.address)}${st.https ? ' (HTTPS)' : ''}</dd></div><div><dt>Verbindung</dt><dd>WebDAV</dd></div>`
+          }<div><dt>Benutzer</dt><dd>${esc(st.account)}</dd></div>
             <div><dt>Status</dt><dd>${st.offline ? 'Gerade nicht erreichbar' : 'Angemeldet'}</dd></div></dl>
           <div class="btns"><button class="btn" id="n-other">Andere Anmeldung</button><button class="btn" id="n-logout">Abmelden</button></div>`
     }</section>`,
@@ -6241,7 +7637,7 @@ function nasTop() {
       : '',
     st.loggedIn
       ? `<section class="card wide"><h2>Ordner</h2><p class="help">Anzeigen = erscheint auf der Box – antippen und wählen, wo: in Hörspiele, Musik oder Radio & Podcasts (neben SD-Karte und Spotify) oder im NAS-Reiter. Ausblenden = bleibt verborgen (auch alles darunter). Laden = auf die SD-Karte kopieren, damit es auch ohne NAS spielt.</p>
-        <div class="search">${icon('search')}<input class="input" id="n-q" type="search" placeholder="Ordner auf dem ganzen NAS suchen" autocomplete="off" value="${esc(nas.q)}"></div>
+        <div class="search">${icon('search')}<input class="input" id="n-q" type="search" placeholder="In den angezeigten Ordnern suchen" autocomplete="off" value="${esc(nas.q)}"></div>
         <p class="help" id="n-index" style="margin:0"></p>
         ${sw('n-only', 'Nur die Auswahl zeigen', nas.onlySel)}
         <div class="rows" id="n-list"><div class="loading"><p>Lade …</p></div></div>
@@ -6396,7 +7792,7 @@ function drawNasIndex() {
   const el = $('#n-index')
   const ix = nas.index
   if (!el || !ix) return
-  el.textContent = ix.running ? `Suchindex wird erstellt … (${ix.folders ?? 0} Ordner)` : ix.exists ? `Suchindex: ${ix.count} Ordner, Stand ${relTime(new Date(ix.updated).toISOString())}` : 'Noch kein Suchindex – „Index aktualisieren“.'
+  el.textContent = !ix.running && ix.roots === 0 ? 'Noch kein Ordner angezeigt – die Suche findet nur Ordner unter angezeigten.' : ix.running ? `Suchindex wird erstellt … (${ix.folders ?? 0} Ordner)` : ix.exists ? (ix.roots > 0 ? `Suchindex der angezeigten Ordner: ${ix.count} Ordner, Stand ${relTime(new Date(ix.updated).toISOString())}` : `Suchindex: ${ix.count} Ordner, Stand ${relTime(new Date(ix.updated).toISOString())}`) : 'Noch kein Suchindex – „Index aktualisieren“.'
 }
 
 function drawNasDownload() {
@@ -6549,22 +7945,40 @@ async function saveNasSelection() {
   return true
 }
 
+// How the login form reaches the NAS: as chosen there, else as the box does now - a box without NAS starts with SMB
+function nasProto() {
+  const st = nas.st ?? {}
+  return nas.proto ?? (st.address ? st.protocol || 'webdav' : 'smb')
+}
+
 async function nasLogin(root, page, fingerprint) {
-  const address = $('#n-addr', root).value.trim()
+  const smb = nasProto() === 'smb'
+  const address = $(smb ? '#n-unc' : '#n-addr', root).value.trim()
   const account = $('#n-acc', root).value.trim()
   const password = $('#n-pw', root).value
-  if (!address || !account || !password) return toast('Bitte Server, Benutzer und Passwort eintragen', 'info')
-  const body = { address, https: $('#n-https', root).checked, account, password, rememberMe: $('#n-remember', root).checked, ...(fingerprint ? { certFingerprint: fingerprint } : {}) }
+  if (!address || !account || !password) return toast(smb ? 'Bitte Freigabe, Benutzer und Passwort eintragen' : 'Bitte Server, Benutzer und Passwort eintragen', 'info')
+  const body = smb
+    ? { protocol: 'smb', address, domain: $('#n-dom', root).value.trim(), account, password, rememberMe: $('#n-remember', root).checked }
+    : { address, https: $('#n-https', root).checked, account, password, rememberMe: $('#n-remember', root).checked, ...(fingerprint ? { certFingerprint: fingerprint } : {}) }
   const btn = $('#n-login', root)
   btn.disabled = true
   btn.textContent = 'Melde an …'
+  // (the first SMB login installs its part of the box first: a minute or two)
+  const slow = smb ? setTimeout(() => toast('Die Box richtet SMB ein – das dauert beim ersten Mal ein, zwei Minuten …', 'info'), 8000) : 0
   const r = await api('/api/nas/login', { method: 'POST', body })
+  clearTimeout(slow)
   btn.disabled = false
   btn.textContent = 'Anmelden'
   if (r.body?.success) {
     nas.loginOpen = false
+    nas.proto = undefined
     nas.path = ''
     nas.edits.clear()
+    // (a folder below the share in the address: the tree opens there)
+    if (r.body.folder) {
+      nas.open.add(r.body.folder)
+      openNasPath(r.body.folder)
+    }
     toast('Beim NAS angemeldet')
     libChanged()
     await loadNas().catch(() => undefined)
@@ -6586,7 +8000,37 @@ async function nasLogin(root, page, fingerprint) {
       },
     )
   }
-  toast(r.body?.error ? `Anmeldung fehlgeschlagen: ${r.body.error}` : 'Anmeldung fehlgeschlagen', 'info')
+  const why = r.body?.reason ? nasSmbError(r.body.reason) : r.body?.error ? nasLoginError(r.body.error) : ''
+  toast(why ? tr(`Anmeldung fehlgeschlagen: ${why}`) : 'Anmeldung fehlgeschlagen', 'info')
+}
+
+// Why a share could not be used (the server's `reason`, nas/smb.ts)
+function nasSmbError(reason) {
+  return (
+    {
+      address: tr('Das ist keine Freigabe-Adresse. Schreib sie wie im Windows-Explorer: zwei Schrägstriche, NAS, Freigabe.'),
+      unreachable: tr('Das NAS ist nicht erreichbar. Prüfe die Adresse und ob SMB (Windows-Dateifreigabe) auf dem NAS an ist.'),
+      resolve: tr('Den Namen des NAS kennt die Box nicht. Nimm die IP-Adresse des NAS (oder name.local).'),
+      auth: tr('Benutzer oder Passwort falsch – oder der Benutzer darf diese Freigabe nicht nutzen.'),
+      notfound: tr('Eine Freigabe mit diesem Namen gibt es auf dem NAS nicht.'),
+      smb1: tr('Das NAS kann nur SMB1, das die Box nicht nutzt. Schalte SMB2 oder SMB3 auf dem NAS ein.'),
+      install: tr('Die Box konnte SMB nicht einrichten. Ist sie mit dem Internet verbunden?'),
+    }[reason] ?? tr('Die Freigabe ließ sich nicht einbinden.')
+  )
+}
+
+// The server's reasons for a failed NAS sign-in (English, also for the admin interface) in the app's words
+function nasLoginError(msg) {
+  const m = String(msg)
+  const status = /HTTP (\d+)/.exec(m)
+  if (/^Could not reach the NAS/.test(m)) return tr('Das NAS ist nicht erreichbar. Prüfe die Adresse (mit WebDAV-Port) und ob die Box das NAS im Netz erreichen darf.')
+  if (/^Wrong account name or password/.test(m)) return tr('Benutzer oder Passwort falsch – oder der Benutzer darf WebDAV nicht nutzen.')
+  if (/lists no folders/.test(m)) return tr('Das NAS antwortet, zeigt aber keine Ordner. Prüfe den WebDAV-Port (Synology: 5006 für HTTPS, 5005 für HTTP) und ob der Benutzer WebDAV nutzen darf.')
+  if (/^WebDAV service not found/.test(m)) return tr('Unter dieser Adresse läuft kein WebDAV. Prüfe Adresse und Port und ob WebDAV auf dem NAS eingeschaltet ist.')
+  if (/not the one confirmed before/.test(m)) return tr('Das Zertifikat des NAS ist ein anderes als das bestätigte. Wurde es auf dem NAS erneuert, vergleiche den neuen Fingerabdruck und bestätige ihn.')
+  if (/not signed by a known authority/.test(m)) return tr('Das NAS nutzt ein selbst ausgestelltes Zertifikat. Prüfe den Fingerabdruck und bestätige ihn – oder nutze HTTP.')
+  if (status) return tr(`Das NAS antwortet mit HTTP ${status[1]}. Ist das die WebDAV-Adresse mit Port?`)
+  return m
 }
 
 function mountNas(root, page) {
@@ -6596,8 +8040,18 @@ function mountNas(root, page) {
     if (currentPage()?.id === page.id) renderPage(page, false)
   }
   $('#n-login', root)?.addEventListener('click', () => nasLogin(root, page))
+  // SMB or WebDAV: only the fields of the one chosen (what is typed in the others stays)
+  $('#n-proto', root)?.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-v]')
+    if (!b) return
+    nas.proto = b.dataset.v
+    for (const x of $('#n-proto', root).querySelectorAll('button')) x.setAttribute('aria-pressed', String(x === b))
+    $('#n-smb', root).hidden = nas.proto !== 'smb'
+    $('#n-dav', root).hidden = nas.proto !== 'webdav'
+  })
   $('#n-cancel', root)?.addEventListener('click', () => {
     nas.loginOpen = false
+    nas.proto = undefined
     renderPage(page, false)
   })
   $('#n-other', root)?.addEventListener('click', () => {
@@ -6786,6 +8240,8 @@ async function loadTheme() {
   disp.theme = r.body
   const c = await api(`${API}/display/custom-theme`)
   disp.custom = c.ok ? c.body : null
+  const w = await api(`${API}/display/winamp-skin`)
+  disp.winamp = w.ok ? w.body : null
 }
 async function loadDisplayOptions() {
   const r = await api(`${API}/display-options`)
@@ -6803,13 +8259,166 @@ function displayNote(b) {
   return ''
 }
 
+/* "Abends dunkler" at sunset: the place of the box. The box works the sunset out itself (night-dim.ts); here the parents say where it
+   stands - a place looked up by name (the name goes to Open-Meteo's search, nothing else), the position of this phone or tablet when the
+   browser allows it (only on a secure page), or typed coordinates. */
+const ndCurrent = () => {
+  const nd = disp.opts?.nightDim ?? {}
+  return {
+    enabled: !!state.values.get('ndOn'),
+    from: String(state.values.get('ndFrom')),
+    to: String(state.values.get('ndTo')),
+    level: Number(state.values.get('ndLevel')),
+    fade: Number(state.values.get('ndFade')),
+    withQuiet: !!state.values.get('ndQuiet'),
+    sunset: !!state.values.get('ndSun'),
+    lat: nd.lat ?? null,
+    lon: nd.lon ?? null,
+    place: nd.place ?? '',
+  }
+}
+
+// "Ab"/"Bis" are only asked for when the window is not sunset to sunrise: sunset is off, or the box has no place / today no sunset or sunrise
+const ndFixedNow = (nd) => !state.values.get('ndSun') || !(nd.sunsetAt && nd.sunriseAt)
+// (the switch that says "Abends dunkler is on" for the card that is shown: the display's own, or - on the page of the OLED extension,
+// which has the same card - the extension's)
+let ndGate = 'ndOn'
+
+// the lines of the block: the place, and the sunset and sunrise of today
+function drawNdPlace() {
+  const nd = disp.opts?.nightDim ?? {}
+  const fixed = !!state.values.get(ndGate) && ndFixedNow(nd)
+  state.values.set('ndFixed', fixed)
+  for (const d of document.querySelectorAll('[data-dep="ndFixed"]')) d.hidden = !fixed
+  const box = $('#nd-place-box')
+  if (!box) return
+  box.hidden = !state.values.get('ndSun')
+  const has = typeof nd.lat === 'number' && typeof nd.lon === 'number'
+  const del = $('#nd-place-del')
+  if (del) del.hidden = !has
+  $('#nd-place-line').innerHTML = has ? `<b translate="no">${esc(nd.place || `${nd.lat.toFixed(2)}, ${nd.lon.toFixed(2)}`)}</b>` : esc(tr('Noch kein Ort gewählt'))
+  $('#nd-sun-line').textContent = !has ? '' : nd.sunsetAt && nd.sunriseAt ? `${tr('Sonnenuntergang heute')}: ${nd.sunsetAt} · ${tr('Sonnenaufgang heute')}: ${nd.sunriseAt}` : tr('Heute geht die Sonne nicht auf oder unter – es gilt die Uhrzeit bei „Ab“ und „Bis“.')
+}
+
+function ndPlaceHtml() {
+  return `<div class="field" id="nd-place-box" hidden><label>Ort der Box</label><p style="margin:0 0 4px" id="nd-place-line"></p><p class="help" style="margin:0 0 8px" id="nd-sun-line"></p><div class="btns"><button type="button" class="btn" id="nd-place-btn">Ort wählen</button><button type="button" class="btn" id="nd-place-del" hidden>Ort entfernen</button></div></div>`
+}
+
+// The place is taken away again (it was kept for good once chosen): "Abends dunkler" goes by "Ab" and "Bis" then
+async function removeNdPlace() {
+  // (without the sun "Ab" and "Bis" count again - the same time for both is refused)
+  const nd = ndCurrent()
+  if (nd.from === nd.to) return toast('Beginn und Ende brauchen verschiedene Uhrzeiten', 'info')
+  const r = await saveDisplayOptions({ nightDim: { ...ndCurrent(), sunset: false, lat: null, lon: null, place: '' } }, 'Ort entfernt')
+  if (!r) return
+  disp.opts.nightDim = { ...(disp.opts.nightDim ?? {}), sunset: false, lat: null, lon: null, place: '', sunsetAt: null, sunriseAt: null, dimmed: r.dimmed === true }
+  state.values.set('ndSun', false)
+  shownValues.set('ndSun', false)
+  const box = document.querySelector('input[data-key="ndSun"]')
+  if (box) box.checked = false
+  drawNdPlace()
+}
+
+// the sheet that chooses the place; onChosen(): the place is saved; onCancel(): it was left without one
+function openNdPlaceSheet({ onChosen, onCancel }) {
+  let chosen = false
+  // (left with "Abbrechen" or beside it: a search, a position or a save still on its way saves nothing any more - the box
+  // went by the sun after all)
+  let closed = false
+  let saving = false
+  let results = []
+  const geo = window.isSecureContext && navigator.geolocation
+  openSheet(
+    `<h2>Ort der Box</h2>
+     <p class="help" style="margin:0">Für den Sonnenuntergang braucht die Box den Ort, an dem sie steht. Der Ortsname geht für die Suche an Open-Meteo, sonst nichts.</p>
+     <form class="cover-search" id="nd-form"><div class="search">${icon('search')}<input class="input" id="nd-q" type="search" autocomplete="off" enterkeyhint="search" placeholder="Ort suchen" aria-label="Ort suchen"></div><button class="btn" type="submit">Suchen</button></form>
+     <div class="opts" id="nd-results" role="listbox"></div>
+     ${geo ? `<div class="btns"><button type="button" class="btn" id="nd-here">${icon('globe', 18)}Standort dieses Geräts</button></div>` : ''}
+     <details class="more"><summary>Koordinaten eingeben</summary>
+       <div class="rule-times"><div class="field"><label for="nd-lat">Breitengrad</label><input class="input" id="nd-lat" inputmode="decimal" placeholder="52.52" autocomplete="off"></div>
+         <div class="field"><label for="nd-lon">Längengrad</label><input class="input" id="nd-lon" inputmode="decimal" placeholder="13.40" autocomplete="off"></div></div>
+       <p class="help" style="margin:0">Norden und Osten sind positiv (Süden und Westen negativ), zum Beispiel 52.52 und 13.40 für Berlin.</p>
+       <div class="btns"><button type="button" class="btn" id="nd-coords">Übernehmen</button></div></details>
+     <div class="btns"><button class="btn" data-close>Abbrechen</button></div>`,
+    (sheet, close) => {
+      const list = $('#nd-results', sheet)
+      const buttons = (on) => {
+        for (const b of sheet.querySelectorAll('button:not([data-close])')) b.disabled = !on
+      }
+      const save = async (lat, lon, place) => {
+        if (closed || saving) return
+        saving = true
+        buttons(false)
+        const r = await saveDisplayOptions({ nightDim: { ...ndCurrent(), sunset: true, lat, lon, place: String(place).slice(0, 80) } }, 'Ort gespeichert')
+        saving = false
+        if (!closed) buttons(true)
+        if (!r) {
+          // (closed while it was refused: left without a place after all)
+          if (closed && !chosen) onCancel?.()
+          return
+        }
+        disp.opts.nightDim = { ...(disp.opts.nightDim ?? {}), sunset: true, lat, lon, place: String(place).slice(0, 80), sunsetAt: r.sunsetAt ?? null, sunriseAt: r.sunriseAt ?? null, dimmed: r.dimmed === true }
+        // (closed while it was saved: it is saved - the page shows it so, nothing is taken back)
+        const wasClosed = closed
+        chosen = true
+        if (!wasClosed) close()
+        onChosen?.()
+      }
+      const nameOf = (r) => [r.name, r.region].filter(Boolean).join(', ')
+      $('#nd-form', sheet).onsubmit = async (e) => {
+        e.preventDefault()
+        $('#nd-q', sheet).blur()
+        const q = $('#nd-q', sheet).value.trim()
+        if (q.length < 2) return
+        list.innerHTML = `<div class="loading"><p>${esc(tr('Suche …'))}</p></div>`
+        const r = await api(`${API}/geocode?q=${encodeURIComponent(q)}&lang=${getLang()}`, { timeoutMs: 15000 })
+        if (!sheet.contains(list)) return
+        if (!r.ok) {
+          list.innerHTML = `<p class="help covers-empty">${esc(tr('Die Suche hat nicht geklappt – sind Box und Internet erreichbar? Die Koordinaten lassen sich auch eintippen.'))}</p>`
+          return
+        }
+        results = r.body?.results ?? []
+        list.innerHTML = results.length
+          ? results.map((x, i) => `<button type="button" class="opt" role="option" data-i="${i}"><span translate="no">${esc([nameOf(x), x.country].filter(Boolean).join(' · '))}</span></button>`).join('')
+          : `<p class="help covers-empty">${esc(tr('Nichts gefunden – anders suchen oder die Koordinaten eintippen.'))}</p>`
+        for (const b of list.querySelectorAll('[data-i]')) b.onclick = () => save(results[Number(b.dataset.i)].lat, results[Number(b.dataset.i)].lon, nameOf(results[Number(b.dataset.i)]))
+      }
+      $('#nd-here', sheet)?.addEventListener('click', () => {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => closed || save(Math.round(pos.coords.latitude * 1000) / 1000, Math.round(pos.coords.longitude * 1000) / 1000, tr('Standort dieses Geräts')),
+          () => toast('Der Standort ließ sich nicht abfragen', 'info'),
+          { timeout: 15000 },
+        )
+      })
+      $('#nd-coords', sheet).onclick = () => {
+        const lat = Number($('#nd-lat', sheet).value.trim().replace(',', '.'))
+        const lon = Number($('#nd-lon', sheet).value.trim().replace(',', '.'))
+        if ($('#nd-lat', sheet).value.trim() === '' || $('#nd-lon', sheet).value.trim() === '' || !(Math.abs(lat) <= 90) || !(Math.abs(lon) <= 180)) return toast('Bitte gültige Koordinaten eintragen', 'info')
+        save(lat, lon, `${lat.toFixed(2)}, ${lon.toFixed(2)}`)
+      }
+      sheet.querySelector('[data-close]').onclick = () => {
+        closed = true
+        close()
+      }
+    },
+    // (after the sheet is gone: the caller may change the page)
+    () => {
+      closed = true
+      // (a save on its way: what it brings counts - onChosen when it was saved)
+      if (!chosen && !saving) setTimeout(() => onCancel?.(), 0)
+    },
+  )
+}
+
 async function saveDisplayOptions(body, done = 'Gespeichert') {
   const r = await api(`${API}/display-options`, { method: 'POST', body })
   if (!r.ok) {
     toast(r.body?.error === 'at least one category must stay visible' ? 'Mindestens eine Kategorie bleibt sichtbar' : 'Nicht gespeichert', 'info')
     return false
   }
-  toast(`${done}. ${displayNote(r.body)}`.trim())
+  // (a full stop only before a note: a text alone is found as it is in the translations)
+  const note = displayNote(r.body)
+  toast(note ? `${done}. ${note}` : done)
   return r.body
 }
 
@@ -6839,6 +8448,8 @@ function themeTop() {
             <b translate="no">${esc(themeLabel(n))}</b>${n === t.current ? '<small>aktiv</small>' : ''}</button>`,
         )
         .join('')}</div></section>`,
+    // (below the themes, while "winamp" is the theme: the skins are kept when another theme is chosen)
+    ...(t.current === 'winamp' && disp.winamp ? [winampCard()] : []),
   ]
 }
 
@@ -6884,11 +8495,121 @@ function mountTheme(root, page) {
       )
   }
   mountCustomCard(root)
+  mountWinampCard(root, page)
+}
+
+/* Winamp theme: the player of a classic Winamp 2.x skin (.wsz) on the left half of a 1920 × 480 display. The skin is
+   unpacked by the box (app-api/winamp-skin.ts); the display loads it at once. Shown on the theme page while "winamp" is
+   the theme. */
+
+function winampCard() {
+  const w = disp.winamp
+  const skins = w?.skins ?? []
+  const shown = !!w?.active
+  return `<section class="card wide" id="wa-card"><h2>Winamp-Skin</h2>
+    <p class="help">Das Theme „Winamp“ zeichnet den Player mit einem klassischen Winamp-Skin (.wsz). Alle Skins, die du hochlädst, bleiben in dieser Liste und lassen sich jederzeit wieder auswählen.</p>
+    ${
+      skins.length
+        ? `<ul class="wa-list">${skins
+            .map(
+              (s) => `<li class="wa-row${s.active ? ' on' : ''}"><button class="wa-pickrow" type="button" data-id="${esc(s.id)}" aria-pressed="${s.active}" aria-label="${esc(s.name)}">
+                <span class="wa-prev"><canvas width="275" height="116" data-base="/theme-data/winamp/skins/${encodeURIComponent(s.id)}" data-v="${s.version}"></canvas></span>
+                <span class="wa-name"><b translate="no">${esc(s.name)}</b>${s.active ? `<small>${shown ? 'wird angezeigt' : 'ausgewählt'}</small>` : ''}</span></button>
+                <button class="btn sm danger" type="button" data-del="${esc(s.id)}" aria-label="${esc(s.name)} entfernen">${icon('close', 18)}Entfernen</button></li>`,
+            )
+            .join('')}</ul>`
+        : '<p class="help"><b>Noch kein Skin installiert.</b> Ohne Skin zeigt die Box nur einen Hinweis.</p>'
+    }
+    <div class="btns"><button class="btn sm primary" type="button" id="wa-pick">${icon('up', 18)}Skin hochladen (.wsz)</button></div>
+    <input type="file" id="wa-file" accept=".wsz,.zip,application/zip" hidden>
+    <small>Mehr Skins zum Herunterladen: <a href="https://skins.webamp.org/" target="_blank" rel="noopener" translate="no">Winamp Skin Museum</a></small></section>`
+}
+
+/* The picture of a skin: main.bmp alone is only the background - the buttons, sliders, clock and title bar are in the skin's
+   other bitmaps, so they are put on it here (the same places as the display draws them: winamp-main-view.ts). */
+async function drawSkinPreview(canvas) {
+  const { base, v } = canvas.dataset
+  const load = (name) =>
+    new Promise((resolve) => {
+      const img = new Image()
+      img.onload = () => resolve(img)
+      img.onerror = () => resolve(null)
+      img.src = `${base}/${name}?v=${v}`
+    })
+  const names = ['main', 'titlebar', 'cbuttons', 'shufrep', 'volume', 'balance', 'posbar', 'numbers', 'nums_ex', 'playpaus', 'monoster']
+  const pic = Object.fromEntries(await Promise.all(names.map(async (n) => [n, await load(`${n}.bmp`)])))
+  const ctx = canvas.getContext('2d')
+  ctx.imageSmoothingEnabled = false
+  const put = (name, sx, sy, w, h, dx, dy) => pic[name] && ctx.drawImage(pic[name], sx, sy, w, h, dx, dy, w, h)
+  put('main', 0, 0, 275, 116, 0, 0)
+  put('titlebar', 27, 0, 275, 14, 0, 0)
+  for (let i = 0; i < 5; i++) put('cbuttons', i * 23, 0, 23, 18, 16 + i * 23, 88)
+  put('cbuttons', 114, 0, 22, 16, 136, 89)
+  put('shufrep', 28, 0, 47, 15, 164, 89)
+  put('shufrep', 0, 0, 28, 15, 210, 89)
+  put('shufrep', 0, 61, 23, 12, 219, 58)
+  put('shufrep', 23, 61, 23, 12, 242, 58)
+  // volume at about half, balance in the middle (the handle is a picture of its own in the taller sheets)
+  put('volume', 0, 14 * 15, 68, 13, 107, 57)
+  put('balance', 9, 0, 38, 13, 177, 57)
+  if (pic.volume?.naturalHeight >= 433) put('volume', 15, 422, 14, 11, 107 + 27, 58)
+  if (pic.balance?.naturalHeight >= 433) put('balance', 15, 422, 14, 11, 177 + 12, 58)
+  // (a 1 x 1 posbar.bmp is a skin that hides the knob)
+  if (pic.posbar?.naturalWidth >= 100) put('posbar', 248, 0, 29, 10, 16, 72)
+  const digits = pic.numbers ? 'numbers' : 'nums_ex'
+  for (const [i, x] of [48, 60, 78, 90].entries()) put(digits, 0, 0, 9, 13, x, 26)
+  put('playpaus', 18, 0, 9, 9, 26, 28)
+  put('monoster', 0, 12, 29, 12, 239, 41)
+}
+
+function mountWinampCard(root, page) {
+  const card = $('#wa-card', root)
+  if (!card) return
+  for (const canvas of card.querySelectorAll('canvas[data-base]')) drawSkinPreview(canvas)
+  const refresh = async () => {
+    await loadTheme()
+    if (currentPage()?.id === page.id) renderPage(page, false)
+  }
+  $('#wa-pick', card).onclick = () => $('#wa-file', card).click()
+  $('#wa-file', card).onchange = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (file.size > 8 * 1024 * 1024) return toast('Die Datei ist zu groß (höchstens 8 MB).', 'info')
+    const r = await fetch(`${API}/display/winamp-skin`, {
+      method: 'PUT',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/zip', 'x-mupibox-csrf': state.csrf, 'x-skin-name': encodeURIComponent(file.name) },
+      body: file,
+    }).catch(() => null)
+    const body = r ? await r.json().catch(() => ({})) : {}
+    if (!r?.ok) return toast(body.error === 'not a Winamp skin' || body.error === 'not a zip' ? 'Das ist kein Winamp-Skin (.wsz).' : 'Hochladen ging nicht', 'info')
+    toast(`Skin „${body.name}“ ist installiert. ${body.reloaded ? 'Das Display zeigt es gleich.' : 'Das Display zeigt es nach dem nächsten Neuladen.'}`)
+    await refresh()
+  }
+  for (const row of card.querySelectorAll('.wa-pickrow')) {
+    row.onclick = async () => {
+      if (row.getAttribute('aria-pressed') === 'true') return
+      const r = await api(`${API}/display/winamp-skin/select`, { method: 'POST', body: { id: row.dataset.id } })
+      if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+      toast(`Skin „${r.body.name}“ ist ausgewählt. ${r.body.reloaded ? 'Das Display zeigt es gleich.' : 'Das Display zeigt es nach dem nächsten Neuladen.'}`)
+      await refresh()
+    }
+  }
+  for (const del of card.querySelectorAll('[data-del]')) {
+    del.onclick = async () => {
+      const skin = (disp.winamp?.skins ?? []).find((s) => s.id === del.dataset.del)
+      if (!(await ask('Skin entfernen?', `„${skin?.name ?? ''}“ wird aus der Liste gelöscht.`, 'Entfernen'))) return
+      const r = await api(`${API}/display/winamp-skin?id=${encodeURIComponent(del.dataset.del)}`, { method: 'DELETE', body: {} })
+      toast(r.ok ? 'Skin entfernt' : 'Das hat nicht geklappt', r.ok ? undefined : 'info')
+      await refresh()
+    }
+  }
 }
 
 /* Eigenes Theme ("custom"): the parents' picture and its settings - on the theme page, only while "custom" is the
    theme. A live preview draws the display with the demo covers (tools/theme-preview); every change is saved at once
-   and the box shows it (eltern/custom-theme.ts writes the stylesheet the display adds). */
+   and the box shows it (app-api/custom-theme.ts writes the stylesheet the display adds). */
 
 const CT_FONTS = [
   ['fredoka', 'Fredoka', '"Fredoka", sans-serif', 600],
@@ -6901,7 +8622,7 @@ const CT_SIZES = [
   ['m', 'Normal', 21],
   ['l', 'Groß', 24],
 ]
-// (the same rule as eltern/custom-theme.ts: the dark symbols on the accent must stay readable)
+// (the same rule as app-api/custom-theme.ts: the dark symbols on the accent must stay readable)
 function ctReadable(hex) {
   const lum = (h) => {
     const [r, g, b] = [1, 3, 5].map((i) => Number.parseInt(h.slice(i, i + 2), 16) / 255).map((s) => (s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4))
@@ -7137,7 +8858,7 @@ function ctAskPicture(page) {
 
 /* Startbilder › Eigene Bilder: a photo or logo instead of the design's start, goodbye and empty-battery picture. The
    app fits it to the display (fill: cut at the edges; whole: a border in the colour of the picture's edge) and sends a
-   PNG of the display's size; the box puts it in place (eltern/bootscreen-custom.ts, bootscreen_update.sh). */
+   PNG of the display's size; the box puts it in place (app-api/bootscreen-custom.ts, bootscreen_update.sh). */
 
 const BS_OWN = [
   ['splash', 'Start'],
@@ -8015,7 +9736,11 @@ const rotLabel = (list, v) => list.find(([, x]) => x === String(v))?.[0] ?? list
 const rotValue = (list, label) => list.find(([l]) => l === label)?.[1] ?? '0'
 
 async function loadDisplaySettings() {
-  const [, power] = await Promise.all([loadDisplayOptions(), api(`${API}/power-config`), loadDisplayModel()])
+  const [, power, headless] = await Promise.all([loadDisplayOptions(), api(`${API}/power-config`), api(`${API}/headless`), loadDisplayModel()])
+  // (the box without the DSI display - a switch of the core since 5.1)
+  disp.headless = headless.ok ? headless.body : null
+  state.values.set('headless', disp.headless?.on === true)
+  state.values.set('headlessSpotify', disp.headless?.spotify === true)
   const o = disp.opts
   disp.power = power.body ?? {}
   if (o.brightness != null) state.values.set('bright', o.brightness)
@@ -8025,6 +9750,13 @@ async function loadDisplaySettings() {
   state.values.set('dlcdRot', rotLabel(LCD_ROT, o.rotation.display_lcd_rotate))
   state.values.set('resX', String(o.resX))
   state.values.set('resY', String(o.resY))
+  setNightValues(o)
+}
+
+// The values of "Abends dunkler" as the box has them (the display's own switch, the window, the fade, the quiet hours - which the
+// OLED extension's card shares with the display)
+function setNightValues(o) {
+  ndGate = 'ndOn'
   const nd = o.nightDim ?? {}
   state.values.set('ndOn', nd.enabled === true)
   state.values.set('ndFrom', nd.from ?? '19:00')
@@ -8032,6 +9764,8 @@ async function loadDisplaySettings() {
   state.values.set('ndLevel', nd.level ?? 30)
   state.values.set('ndFade', nd.fade ?? 30)
   state.values.set('ndQuiet', nd.withQuiet === true)
+  state.values.set('ndSun', nd.sunset === true)
+  state.values.set('ndFixed', nd.enabled === true && (nd.sunset !== true || !(nd.sunsetAt && nd.sunriseAt)))
 }
 
 async function loadControls() {
@@ -8052,6 +9786,7 @@ async function loadControls() {
   state.values.set('epNew', o.newEpisodes !== false)
   state.values.set('epNewDays', `${o.newEpisodeDays ?? 7} Tage`)
   state.values.set('epProgress', o.episodeProgress !== false)
+  state.values.set('heardMarks', o.heardMarks !== false)
 }
 
 // The category of each tab (by its hidden key)
@@ -8094,7 +9829,7 @@ function mountLive(root) {
     const r = await fetch(`${API}/display/screenshot?t=${Date.now()}`, { credentials: 'same-origin', cache: 'no-store' }).catch(() => null)
     if (!img.isConnected) return
     if (!r?.ok) {
-      $('#lv-note', root).textContent = 'Das Bild ließ sich nicht holen.'
+      $('#lv-note', root).textContent = r?.headers.get('x-display') === 'off' ? 'Das Display ist aus.' : 'Das Bild ließ sich nicht holen.'
       return
     }
     const at = Number(r.headers.get('x-shot-at')) || Date.now()
@@ -8102,7 +9837,9 @@ function mountLive(root) {
     if (img.dataset.url) URL.revokeObjectURL(img.dataset.url)
     img.src = url
     img.dataset.url = url
-    $('#lv-note', root).textContent = `Stand ${new Date(at).toLocaleTimeString(LOCALE)}`
+    // (the display is off - a picture would be black: the last one, said so)
+    const time = new Date(at).toLocaleTimeString(LOCALE)
+    $('#lv-note', root).textContent = r.headers.get('x-display') === 'off' ? `Das Display ist aus – Stand ${time}` : `Stand ${time}`
   }
   shot()
   every(5000, () => document.visibilityState === 'visible' && shot())
@@ -8190,7 +9927,85 @@ const BTN_FN = [
   // (a press switches the knob for 10 s from the volume to the tracks: one track per detent)
   ['Titelwahl (Drücken schaltet um)', 'tracks'],
   ['Vorspulen', 'ffwd'],
+  ['IP-Adresse der Box als QR-Code anzeigen', 'address'],
 ]
+
+// The three pins of the rotary encoder: the setting, the name in the box's answer and in its configuration, what the field is called.
+// The fields offer only pins the box found free (the header's pins that nothing else holds: the core, the boot configuration, the
+// extensions, a running program) - and the pin the encoder has now.
+const ROTARY_PIN_ITEMS = [
+  ['rotPinA', 'a', 'pinA', 'GPIO-Pin A (CLK)'],
+  ['rotPinB', 'b', 'pinB', 'GPIO-Pin B (DT)'],
+  ['rotPinBtn', 'button', 'pinButton', 'GPIO-Pin Taster'],
+]
+// (a pin may be left out: "Kein Pin" is 0 - without pin A or B the knob does not turn, without the button's pin it has no button)
+const ROTARY_NONE = 'Kein Pin'
+const rotaryPinText = (pin) => (Number(pin) === 0 ? ROTARY_NONE : `GPIO ${pin} (Pin ${GPIO_HEADER[pin] ?? '?'})`)
+const rotaryPinNumber = (text) => (String(text ?? '') === ROTARY_NONE ? 0 : Number(/GPIO (\d+)/.exec(String(text ?? ''))?.[1]))
+
+// What a turn of a knob does, for each direction (rotary.right / rotary.left, and right / left of an entry of rotary.extra)
+const RK_DIRECTIONS = [
+  ['Aus', 'off'],
+  ['Lauter', 'up'],
+  ['Leiser', 'down'],
+  ['Nächster Titel', 'next'],
+  ['Voriger Titel', 'previous'],
+]
+const directionText = (value, fallback) => (RK_DIRECTIONS.find(([, v]) => v === value) ?? RK_DIRECTIONS.find(([, v]) => v === fallback))[0]
+const directionValue = (text) => RK_DIRECTIONS.find(([l]) => l === text)?.[1]
+const directionUsesVolume = (...texts) => texts.some((text) => text === 'Lauter' || text === 'Leiser')
+
+// More rotary encoders (rotary.extra): what each does, and what its push button does. Their settings are called rk_<id>_<what>.
+const RK_BUTTONS = [
+  ['Aus', 'off'],
+  ['Play/Pause', 'playpause'],
+  ['Nächster Titel', 'next'],
+  ['Vorspulen', 'ffwd'],
+  ['IP-Adresse der Box als QR-Code anzeigen', 'address'],
+]
+const RK_PIN_PARTS = [
+  ['a', 'a', 'pinA', 'GPIO-Pin A (CLK)'],
+  ['b', 'b', 'pinB', 'GPIO-Pin B (DT)'],
+  ['btn', 'button', 'pinButton', 'GPIO-Pin Taster'],
+]
+const rkKey = (id, part) => `rk_${id}_${part}`
+const rkParse = (key) => /^rk_([a-z0-9]+)_(name|right|left|a|b|btn|step|bfn)$/.exec(String(key))
+
+async function loadRotary() {
+  await loadHardware()
+  const r = hw.data.rotary
+  state.values.set('rotary', r.active)
+  state.values.set('rotStep', r.step)
+  state.values.set('rotName', r.name ?? '')
+  state.values.set('rotRight', directionText(r.right, 'up'))
+  state.values.set('rotLeft', directionText(r.left, 'down'))
+  state.values.set('btnFn', BTN_FN.find(([, v]) => v === r.button)?.[0] ?? 'Aus')
+  const free = await api(`${API}/rotary-pins`, { timeoutMs: 20000 })
+  // (no answer: the pins it has stay, nothing else is offered)
+  hw.rotaryFree = free.ok && Array.isArray(free.body?.pins) ? free.body.pins.filter((p) => !(p.holders ?? []).length).map((p) => Number(p.pin)) : []
+  // (a pin of its own that something else uses as well - the SPI bus switched on for an NFC reader on GPIO 10, its default
+  // button pin: neither works; the page says so at the pin). The button's pin only while the button does something: with
+  // it off the encoder leaves its pin alone.
+  const own = new Set([
+    ...(r.active ? Object.entries(r.pins ?? {}).filter(([name]) => name !== 'button' || (r.button && r.button !== 'off')).map(([, pin]) => Number(pin)) : []),
+    ...(r.extra ?? []).flatMap((k) => Object.entries(k.pins).filter(([name]) => name !== 'button' || k.button !== 'off').map(([, pin]) => Number(pin))),
+  ])
+  own.delete(0)
+  hw.rotaryClash = new Map(free.ok && Array.isArray(free.body?.pins) ? free.body.pins.filter((p) => own.has(Number(p.pin)) && (p.holders ?? []).length).map((p) => [Number(p.pin), p.holders]) : [])
+  // (an encoder only added - no pin yet - runs nothing: not "stopped")
+  hw.rotaryStopped = (r.active === true || (r.extra ?? []).some((k) => Object.values(k.pins ?? {}).some((p) => Number(p) !== 0))) && r.running === false
+  for (const [key, name] of ROTARY_PIN_ITEMS) state.values.set(key, rotaryPinText(r.pins[name]))
+  hw.rotaryExtra = r.extra ?? []
+  hw.rotaryExtraMax = r.extraMax ?? 4
+  for (const k of hw.rotaryExtra) {
+    state.values.set(rkKey(k.id, 'name'), k.name ?? '')
+    state.values.set(rkKey(k.id, 'right'), directionText(k.right, 'up'))
+    state.values.set(rkKey(k.id, 'left'), directionText(k.left, 'down'))
+    for (const [part, name] of RK_PIN_PARTS) state.values.set(rkKey(k.id, part), rotaryPinText(k.pins[name]))
+    state.values.set(rkKey(k.id, 'step'), k.step)
+    state.values.set(rkKey(k.id, 'bfn'), RK_BUTTONS.find(([, v]) => v === k.button)?.[0] ?? RK_BUTTONS[0][0])
+  }
+}
 
 /* Bluetooth */
 
@@ -8586,7 +10401,11 @@ function pinsInUse(without) {
   const used = [...(d.shim?.reserved ?? [])]
   if (without !== 'led' && d.shim?.ledPin) used.push(String(d.shim.ledPin))
   if (without !== 'fan' && d.fan?.active && d.fan?.gpio) used.push(String(d.fan.gpio))
-  if (d.rotary?.active) used.push('26', '24', '10')
+  if (d.rotary?.active) used.push(...Object.values(d.rotary.pins ?? { a: 26, b: 24, button: 10 }).filter((p) => Number(p) !== 0).map(String))
+  // (the other encoders: theirs also while the first one is off)
+  for (const k of d.rotary?.extra ?? []) used.push(...Object.values(k.pins ?? {}).filter((p) => Number(p) !== 0).map(String))
+  // (pins an extension holds - the buttons of the buttons extension, say)
+  used.push(...(d.extPins ?? []).map(String))
   return used
 }
 
@@ -8602,7 +10421,8 @@ async function loadWlan() {
   // (the WiFi as it is now: the address in network.json is the box's first one, with a cable that of the cable)
   net.wifi = wifi.ok ? wifi.body : null
   net.saved = saved.ok ? saved.body?.networks ?? [] : null
-  // (the networks with a fixed address, by name - see eltern/wifi-static.ts; reverted: one the box took back to DHCP)
+  net.trying = saved.ok ? saved.body?.trying ?? null : null
+  // (the networks with a fixed address, by name - see app-api/wifi-static.ts; reverted: one the box took back to DHCP)
   net.fixed = fixed.ok ? fixed.body?.networks ?? {} : {}
   net.reverted = fixed.ok ? fixed.body?.reverted ?? null : null
 }
@@ -8617,7 +10437,7 @@ const WIFI_STATIC_ERRORS = {
   same: 'Die Adresse ist die des Routers',
   host: 'Diese Adresse ist im Netz reserviert – bitte eine andere',
 }
-// The checks of the test before saving (see test in eltern/wifi-static.ts): [text when fine, text when not]
+// The checks of the test before saving (see test in app-api/wifi-static.ts): [text when fine, text when not]
 const WIFI_TESTS = {
   network: ['Router und Adressbereich wie im Netz jetzt', 'Router oder Adressbereich anders als im Netz jetzt – Tippfehler?'],
   own: ['Die Adresse hat die Box gerade selbst', ''],
@@ -8766,8 +10586,7 @@ function wlanTop() {
           ? `<div class="rows">${net.saved
               .map((w, i) => {
                 const sig = inRange.get(w.ssid)
-                // (a hidden network is never in the scan: "not found", not "out of reach")
-                const where = w.active ? 'verbunden' : sig !== undefined ? `in Reichweite · ${signalWord(sig)}` : net.scan ? 'nicht gefunden' : ''
+                const where = w.active ? 'verbunden' : net.trying === w.ssid ? 'wird ausprobiert …' : w.disabled ? 'Keine Verbindung – Passwort prüfen' : sig !== undefined ? `in Reichweite · ${signalWord(sig)}` : net.scan ? 'nicht gefunden' : ''
                 const fixed = net.fixed?.[w.ssid]
                 // (the buttons in a group of their own: on a phone it goes below the name, see .wifi-net)
                 return `<div class="entry wifi-net"><span class="avatar">${icon('wifi', 16)}</span><span class="lbl"><b translate="no">${esc(w.ssid)}</b>${where ? `<small>${sig !== undefined && !w.active ? signalBars(sig) : ''} ${esc(where)}</small>` : ''}${fixed ? `<small>${esc(fixed.paused ? `feste Adresse ${fixed.ip} pausiert` : `feste Adresse ${fixed.ip}`)}</small>` : ''}</span>
@@ -8803,7 +10622,7 @@ function wlanTop() {
         <div class="field"><label for="w-ssid">Netzname (SSID)</label><input class="input" id="w-ssid" maxlength="32" ${NO_PW_MANAGER}></div>
         <div class="field"><label for="w-pw2">Passwort</label><div class="input-wrap"><input class="input has-eye" id="w-pw2" type="password" maxlength="63" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div><small>8–63 Zeichen, leer bei einem offenen Netz.</small></div>
         <div class="btns"><button class="btn primary" id="w-add2">Hinzufügen</button></div></details>
-      <p class="help" style="margin:0">Nach dem Hinzufügen wählt die Box ihr Netz neu und kann dabei kurz die Verbindung verlieren.</p></section>`,
+      <p class="help" style="margin:0">Die Box probiert ein neues Netz gleich aus. Klappt es, bleibt sie dort. Klappt es nicht, geht sie ins bisherige Netz zurück.</p></section>`,
   ]
 }
 
@@ -8866,12 +10685,33 @@ function mountWlan(root, page) {
   const add = async (ssid, password) => {
     if (!ssid.trim()) return toast('Bitte den Netznamen eintragen', 'info')
     if (password && (password.length < 8 || password.length > 63)) return toast('Das Passwort hat 8 bis 63 Zeichen', 'info')
-    const r = await api(`${API}/wifi/add`, { method: 'POST', body: { ssid, password } })
+    // (add_wifi.sh leaves the connected network as it is: a mistyped password would take the box offline)
+    if (net.saved?.some((w) => w.active && w.ssid === ssid)) return toast('Mit diesem Netz ist die Box gerade verbunden', 'info')
+    // (one at a time: a second tap while the answer was on its way queued the network twice - two tries in a row)
+    if (net.adding) return
+    net.adding = true
+    const r = await api(`${API}/wifi/add`, { method: 'POST', body: { ssid, password } }).finally(() => {
+      net.adding = false
+    })
     if (!r.ok) return toast(r.body?.error ?? 'Das hat nicht geklappt', 'info')
     net.pick = null
-    setTimeout(() => again(), 8000)
-    toast(`„${ssid}“ wird eingetragen`)
+    toast(`„${ssid}“ wird ausprobiert. Die App kann dabei kurz die Verbindung verlieren.`)
     renderPage(page, false)
+    // add_wifi.sh tries the network (up to 30 s): its result, also when the box was out of reach for a moment
+    for (let i = 0; i < 20; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 3000))
+      if (currentPage()?.id !== page.id) return
+      await loadWlan().catch(() => undefined)
+      renderPage(page, false)
+      const saved = net.saved?.find((w) => w.ssid === ssid)
+      // (right after the try the box can be between two connections for a few seconds - the address is set up anew in
+      // the new network: asked on until it is connected or the try failed; out of reach, the entry just stays)
+      if (i >= 1 && saved && !net.trying && (saved.active || saved.disabled)) {
+        if (saved.active) toast(`Mit „${ssid}“ verbunden`)
+        else toast(`„${ssid}“: keine Verbindung. Bitte das Passwort prüfen.`, 'info')
+        return
+      }
+    }
   }
   $('#w-add', root).onclick = async () => {
     if (!net.pwChange) return add(net.pick ?? '', $('#w-pw', root).value)
@@ -8915,8 +10755,10 @@ async function loadTelegram() {
 // The bot's commands a parent uses most (the whole list: /command in Telegram, see telegram_i18n.py)
 const TG_COMMANDS = [
   ['/help', 'die wichtigsten Befehle als Knöpfe'],
-  ['/status', 'Spielzeit und Ruhezeiten jetzt'],
+  ['/status', 'Spielzeit, Ruhezeiten, Bildzeit und Kacheln jetzt'],
   ['/extend 30', 'Bonus-Minuten für heute'],
+  ['/photoextend 10', 'Bildzeit: Minuten für heute dazu'],
+  ['/tiles', 'Kacheln mit Tageslimit: Stand, +10 min, heute frei'],
   ['/release 60', 'alle Sperren für eine Weile aufheben'],
   ['/quietnow 60', 'Wiedergabe für eine Weile sperren'],
   ['/pause', 'Wiedergabe anhalten'],
@@ -9177,7 +11019,7 @@ function securityTop() {
     : `<p class="help">${st.keptDevices ? (st.keptDevices === 1 ? '1 Gerät bleibt angemeldet („Angemeldet bleiben“).' : `${st.keptDevices} Geräte bleiben angemeldet („Angemeldet bleiben“).`) : 'Kein Gerät bleibt dauerhaft angemeldet.'}</p>`
   return [
     `<section class="card" data-col="1"><div class="card-head"><h2>Passwort</h2><span class="chip ${st.passwordSet && !st.defaultPassword ? 'ok' : 'warn'}">${st.passwordSet ? (st.defaultPassword ? 'Standardpasswort' : 'gesetzt') : 'nicht gesetzt'}</span></div>
-      <p class="help">Ein Passwort für diese App und das bisherige Admin-Interface.</p>
+      <p class="help">Ein Passwort für diese App.</p>
       ${st.defaultPassword ? `<div class="note warn">${icon('info', 18)}<span>${st.defaultOnly ? 'Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest – das bisherige brauchst du dafür nicht.' : 'Es gilt noch das Standardpasswort, das in jeder Anleitung steht. Leg hier ein eigenes fest.'}</span></div>` : ''}
       ${st.resetOpen && !st.defaultOnly ? `<div class="note">${icon('info', 18)}<span>Du bist über den QR-Code oder Telegram hereingekommen: Ein paar Minuten lang geht ein neues Passwort ohne das alte.</span></div>` : ''}
       ${st.passwordSet && !st.resetOpen && !st.defaultOnly ? `<div class="field"><label for="sec-cur">Aktuelles Passwort</label><div class="input-wrap"><input class="input has-eye" id="sec-cur" type="password" autocomplete="current-password">${eye}</div></div>` : ''}
@@ -9203,7 +11045,7 @@ function askLoginOff() {
     let answer = false
     openSheet(
       `<h2>${esc('Anmeldung ausschalten?')}</h2>
-       <div class="note warn">${icon('info', 18)}<span>${esc('Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und das Admin-Interface mit allen Rechten bedienen.')}</span></div>
+       <div class="note warn">${icon('info', 18)}<span>${esc('Ohne Anmeldung kann jeder im Heimnetz die Box einstellen – auch Gäste im WLAN und Geräte, die du nicht kennst: Inhalte löschen, Spotify verbinden, die Box ausschalten und ihre Einstellungen mit allen Rechten ändern.')}</span></div>
        <div class="row"><span class="lbl"><b>${esc('Verstanden')}</b><small>${esc('Ich möchte die Box trotzdem ohne Passwort betreiben.')}</small></span>
          <label class="switch"><input type="checkbox" data-agree aria-label="${esc('Verstanden')}"><span></span></label></div>
        <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn danger" data-ok disabled>${esc('Ausschalten')}</button></div>`,
@@ -9263,7 +11105,7 @@ function mountSecurity(root, page) {
     if (password !== $('#sec-new2', root).value) return toast('Die beiden neuen Passwörter sind verschieden', 'info')
     const r = await api(`${API}/auth/password`, { method: 'POST', body: { current, password } })
     if (!r.ok) return toast(r.body?.error === 'wrong_password' ? 'Das aktuelle Passwort stimmt nicht' : r.status === 429 ? 'Zu viele Versuche – bitte kurz warten' : 'Nicht gespeichert', 'info')
-    toast('Passwort gespeichert – es gilt auch im Admin-Interface')
+    toast('Passwort gespeichert')
     await loadAuthState()
     renderPage(page, false)
   }
@@ -9277,7 +11119,7 @@ function mountSecurity(root, page) {
     })
   $('#sec-login', root).onchange = async (e) => {
     const required = e.target.checked
-    const agreed = required ? await ask('Anmeldung einschalten', 'Die App und das Admin-Interface fragen dann nach dem Passwort.', 'Einschalten') : await askLoginOff()
+    const agreed = required ? await ask('Anmeldung einschalten', 'Die App fragt dann nach dem Passwort.', 'Einschalten') : await askLoginOff()
     if (!agreed) {
       e.target.checked = !required
       return
@@ -9302,7 +11144,7 @@ function mountSecurity(root, page) {
   }
 }
 
-/* Einstellungen › Sicherheit › Verschlüsselung (HTTPS): the box's certificate (eltern/tls.ts, tls_cert.sh) - to
+/* Einstellungen › Sicherheit › Verschlüsselung (HTTPS): the box's certificate (app-api/tls.ts, tls_cert.sh) - to
    install on the phones (then https shows no warning, and Android installs the app), "Nur sichere Verbindung", the
    address for links, an own certificate */
 
@@ -9490,13 +11332,14 @@ function mountTls(root, page) {
 /* Einstellungen › System: its pages in four groups, a short state beside some (version, health, update) */
 
 const SYS_GROUPS = [
-  ['Die Box', ['ueber', 'zustand', 'updates', 'backup']],
+  ['Die Box', ['ueber', 'zustand', 'updates', 'erweiterungen', 'backup']],
   ['Betrieb', ['neustart', 'protokolle', 'systemopt']],
   ['Für Fortgeschrittene', ['browser', 'experten']],
   ['Allgemein', ['sprache', 'rechtliches']],
 ]
 
 function systemTop() {
+  // (the pages of extensions that have one are not here: they stand on the page of the settings, beside the groups)
   return SYS_GROUPS.map(([title, ids]) => {
     const rows = ids
       .map((id) => state.pages.get(id))
@@ -9528,7 +11371,7 @@ function mountSystem(root) {
 }
 
 /* Einstellungen › Audio › Sprachausgabe: the voice (Piper on the box, Google, silent), the voices per language, the
-   automatic announcements and the parents' ones (speech.ts, eltern/speech-routes.ts) */
+   automatic announcements and the parents' ones (speech.ts, app-api/speech-routes.ts) */
 
 const speech = { data: null, lang: null, voices: {}, known: {}, licenses: {}, showAll: false, poll: null }
 const SPEECH_QUALITY = { x_low: 'sehr niedrig', low: 'niedrig', medium: 'mittel', high: 'hoch' }
@@ -10256,7 +12099,7 @@ function restartTop() {
     ['display', 'display', 'Display neu starten', 'Chromium startet neu (ein paar Sekunden schwarz). Die Wiedergabe läuft weiter.'],
     ['player', 'music', 'Player neu starten', 'Spotify und die lokale Wiedergabe starten neu – was läuft, stoppt.'],
     ['services', 'sync', 'Dienste neu starten', 'Player und Server der Box; die App ist dabei kurz nicht erreichbar.'],
-    ['apply', 'gear', 'Einstellungen übernehmen', 'Schreibt alle Einstellungen neu in die Dienste und startet das Display neu (wie „Update settings“ im Admin-Interface).'],
+    ['apply', 'gear', 'Einstellungen übernehmen', 'Schreibt alle Einstellungen neu in die Dienste und startet das Display neu.'],
   ]
   // (both across the whole width; on a wide screen their entries in two columns - no small card beside a long one)
   return [
@@ -10843,7 +12686,7 @@ async function saveLan(page) {
   }, 5000)
 }
 
-// The address of the WiFi (lan: of the cable) fetched anew from the router (see dhcp/renew in eltern/network.ts)
+// The address of the WiFi (lan: of the cable) fetched anew from the router (see dhcp/renew in app-api/network.ts)
 async function renewAddress(lan) {
   const text = lan
     ? 'Die Box holt sich ihre Adresse am Kabel neu vom Router. Die Verbindung ist dabei für einen Moment weg.'
@@ -10924,13 +12767,11 @@ const lanCtrl = {
 /* Experten */
 
 async function loadExperts() {
-  const [json, info, dash, legacy] = await Promise.all([
+  const [json, info, dash] = await Promise.all([
     api(`${API}/json-file?key=${adm.json.key}`),
     api(`${API}/system`),
     api(`${API}/dietpi-dashboard`),
-    api(`${API}/legacy-admin`),
   ])
-  adm.legacy = legacy.ok ? legacy.body?.on !== false : true
   adm.json.keys = json.body?.keys ?? []
   adm.json.text = json.body?.text ?? ''
   adm.host = info.body?.hostname ?? ''
@@ -10959,11 +12800,10 @@ function expertsTop() {
       <div class="btns"><button class="btn primary" id="ex-hostsave">Speichern</button></div></section>`,
     // (beside the host name: both short)
     // (the DietPi-Dashboard has a terminal with root rights: off by default, and switched on reached from here only -
-    // a one-time ticket signs in, see backend-api eltern/dietpi-dashboard.ts)
+    // a one-time ticket signs in, see backend-api app-api/dietpi-dashboard.ts)
     `<section class="card"><h2>Weitere Werkzeuge</h2>
       <div class="row"><span class="lbl"><b>DietPi-Dashboard erlauben</b><small>Systemverwaltung von DietPi mit einem Terminal mit Root-Rechten. Erreichbar nur über diese App, nicht direkt im Netz.</small></span><label class="switch"><input type="checkbox" id="ex-dash" ${adm.dash?.enabled ? 'checked' : ''} aria-label="DietPi-Dashboard erlauben"><span></span></label></div>
-      <div class="row"><span class="lbl"><b>Admin-Interface</b><small>${esc('Die bisherige Oberfläche mit PHP. Diese App kann alles, was sie konnte. Aus antwortet auf der Box nichts mehr mit PHP – eine Sicherheitslücke in PHP trifft sie dann nicht.')}</small></span><label class="switch"><input type="checkbox" id="ex-admin" ${adm.legacy ? 'checked' : ''} aria-label="Admin-Interface"><span></span></label></div>
-      <div class="navlist">${adm.dash?.enabled ? navRow('ext:dietpi', 'DietPi-Dashboard', adm.dash.active ? 'öffnet sich in einem neuen Fenster' : 'startet gerade …', 'ext') : ''}${adm.legacy ? navRow('ext:admin', 'Admin-Interface', 'Legacy · die bisherige Oberfläche', 'ext') : ''}</div></section>`,
+      <div class="navlist">${adm.dash?.enabled ? navRow('ext:dietpi', 'DietPi-Dashboard', adm.dash.active ? 'öffnet sich in einem neuen Fenster' : 'startet gerade …', 'ext') : ''}</div></section>`,
     `<section class="card wide"><h2>Konfiguration direkt bearbeiten</h2>
       <div class="note warn">${icon('info', 18)}<span>Fehler hier können die Box lahmlegen. Nur ändern, was du kennst – vorher ein Backup ziehen.</span></div>
       <div class="field"><label for="ex-file">Datei</label><select class="input" id="ex-file">${adm.json.keys.map((k) => `<option value="${k}"${k === adm.json.key ? ' selected' : ''}>${esc(JSON_LABEL[k] ?? k)}</option>`).join('')}</select></div>
@@ -10978,18 +12818,6 @@ function expertsTop() {
 }
 
 function mountExperts(root, page) {
-  $('#ex-admin', root).onchange = async (e) => {
-    const on = e.target.checked
-    e.target.disabled = true
-    const r = await api(`${API}/legacy-admin`, { method: 'POST', body: { on } })
-    toast(r.ok && r.body?.ok ? (on ? 'Admin-Interface eingeschaltet' : 'Admin-Interface aus') : 'Das hat nicht geklappt', r.ok && r.body?.ok ? 'ok' : 'info')
-    // (not asked again at once: the web server reads its config again right after the answer - see legacy-admin.ts)
-    if (r.ok && r.body?.ok) {
-      adm.legacy = on
-      startState.legacyAdmin = on
-    }
-    if (currentPage()?.id === page.id) renderPage(page, false)
-  }
   $('#ex-dash', root).onchange = async (e) => {
     const on = e.target.checked
     e.target.disabled = true
@@ -11055,7 +12883,7 @@ function backupTop() {
   return [
     `<section class="card"><h2>Sichern</h2>
       <div class="rows"><div class="entry"><span class="lbl"><b>Konfigurations-Backup</b><small>Einstellungen (mupiboxconfig.json), Bibliothek (data.json) und eigene Cover. Enthält auch Passwörter und Zugänge – gut aufbewahren.</small></span><a class="btn primary sm" href="${API}/backup?kind=config" download>Herunterladen</a></div>
-        <div class="entry"><span class="lbl"><b>Voll-Backup</b><small>Dazu alle Medien der SD-Karte – kann mehrere GB groß sein und dauern.</small></span><a class="btn sm" href="${API}/backup?kind=full" download>Herunterladen</a></div></div></section>`,
+        <div class="entry"><span class="lbl"><b>Voll-Backup</b><small>Dazu alle Medien der SD-Karte und die hochgeladenen Fotos – kann mehrere GB groß sein und dauern.</small></span><a class="btn sm" href="${API}/backup?kind=full" download>Herunterladen</a></div></div></section>`,
     `<section class="card"><h2>Einspielen</h2><p class="help">Eine Backup-Datei dieser App oder des Admin-Interface. Sie überschreibt Einstellungen und Bibliothek; danach startet die Box neu.</p>
       <input type="file" id="bk-file" accept=".zip,application/zip" hidden>
       <div class="btns"><button class="btn" id="bk-pick">Backup-Datei wählen</button><button class="btn danger" id="bk-go" disabled>Backup einspielen</button></div>
@@ -11093,7 +12921,11 @@ function mountBackup(root) {
         // no JSON
       }
       if (xhr.status === 200) {
-        $('#bk-text', root).textContent = 'Eingespielt – die Box startet gleich neu.'
+        // (the settings of extensions not installed here came back: installed again, they find them in place)
+        const ext = Array.isArray(b.extensionsToInstall) ? b.extensionsToInstall.filter((x) => typeof x === 'string') : []
+        $('#bk-text', root).textContent = ext.length
+          ? tr(`Eingespielt – die Box startet gleich neu. Danach diese Erweiterungen neu installieren (Einstellungen › System › Erweiterungen), ihre Einstellungen sind schon da: ${ext.join(', ')}`)
+          : 'Eingespielt – die Box startet gleich neu.'
         return toast('Backup eingespielt – die Box startet neu')
       }
       $('#bk-bar', root).hidden = true
@@ -11361,7 +13193,3028 @@ function mountHa(root, page) {
   }
 }
 
-/* TIDAL (backend-api eltern/tidal.ts, unofficial: python-tidal): switched on with a hint, the sign-in with a code */
+/* Bibliothek › Fotos (5.1, backend-api app-api/photos/albums.ts): the albums of the photo display - the overview with
+   its numbers and the card's space, an album with its pictures, uploading into it. A part of its own, beside the
+   radio plays and the music: never in their lists, filters or "Hören". */
+
+const photoLib = { overview: null, nas: null, immich: null, synology: null, nextcloud: null, icloud: null, photoprism: null, stale: false, album: null, albumId: null, selecting: false, chosen: new Set() }
+const PHOTO_SOURCE = { upload: ['mobile', 'Hochgeladen'], nas: ['server', 'NAS'], immich: ['grid', 'Immich'], synology: ['image', 'Synology Photos'], nextcloud: ['cloud', 'Nextcloud'], icloud: ['share', 'iCloud'], photoprism: ['prism', 'PhotoPrism'] }
+const photoFile = (albumId, assetId, size) => `${API}/photos/file/${albumId}/${assetId}/${size}`
+
+async function loadPhotoOverview() {
+  const user = libView.shown
+  const [r, nas, immich, synology, nextcloud, icloud, photoprism] = await Promise.all([api(`${API}/photos/overview`), api(`${API}/photos/nas`), api(`${API}/photos/immich`), api(`${API}/photos/synology`), api(`${API}/photos/nextcloud`), api(`${API}/photos/icloud`), api(`${API}/photos/photoprism`)])
+  // (another user chosen meanwhile: his page reads his own - which albums he sees on the display)
+  if (user !== libView.shown) return
+  if (!r.ok) throw new Error(`photos ${r.status}`)
+  photoLib.overview = r.body
+  photoLib.user = user
+  // (the photo services: the NAS folders and Immich - their lines in the overview)
+  photoLib.nas = nas.ok ? nas.body : null
+  photoLib.immich = immich.ok ? immich.body : null
+  photoLib.synology = synology.ok ? synology.body : null
+  photoLib.nextcloud = nextcloud.ok ? nextcloud.body : null
+  photoLib.icloud = icloud.ok ? icloud.body : null
+  photoLib.photoprism = photoprism.ok ? photoprism.body : null
+  photoLib.stale = false
+}
+
+// "Foto-Dienste": the NAS folders and Immich - a line each with its state (Immich only once connected; before, the
+// button "Foto-Dienst verbinden" leads there)
+function photoServicesCard() {
+  const n = photoLib.nas
+  const im = photoLib.immich
+  const rows = []
+  if (n) {
+    const folders = n.settings.folders.length
+    let sub = folders ? tr(`${folders} Ordner · ${n.albums} ${n.albums === 1 ? 'Album' : 'Alben'}`) : tr('Ordner vom NAS als Alben')
+    if (!n.nas.connected) sub = tr('Noch kein NAS verbunden')
+    else if (folders && n.sync.offlineSince) sub = tr(`Nicht erreichbar seit ${relTime(n.sync.offlineSince).replace(/^vor /, '')}`)
+    rows.push(navRow('fotonas', 'NAS-Ordner', sub, 'server'))
+  }
+  if (im?.connected) rows.push(navRow('fotoimmich', 'Immich', immichLine(im), 'grid'))
+  const sy = photoLib.synology
+  if (sy?.connected) rows.push(navRow('fotosynology', 'Synology Photos', synologyLine(sy), 'image'))
+  const nc = photoLib.nextcloud
+  if (nc?.connected) rows.push(navRow('fotonextcloud', 'Nextcloud', synologyLine(nc), 'cloud'))
+  const pp = photoLib.photoprism
+  if (pp?.connected) rows.push(navRow('fotophotoprism', 'PhotoPrism', synologyLine(pp), 'prism'))
+  const ic = photoLib.icloud
+  if (ic?.connected) rows.push(navRow('fotoicloud', 'iCloud', ic.sync.offlineSince ? tr(`Nicht erreichbar seit ${relTime(ic.sync.offlineSince).replace(/^vor /, '')}`) : tr(`${ic.albumList.length} ${ic.albumList.length === 1 ? 'geteiltes Album' : 'geteilte Alben'}`), 'share'))
+  return rows.length ? `<section class="card wide"><h2>Foto-Dienste</h2><div class="navlist">${rows.join('')}</div></section>` : ''
+}
+
+// Immich's line: connected with its albums, or why not
+function immichLine(im) {
+  if (im.sync.unauthorized) return tr('Schlüssel abgelehnt')
+  if (im.sync.offlineSince) return tr(`Nicht erreichbar seit ${relTime(im.sync.offlineSince).replace(/^vor /, '')}`)
+  return tr(`Verbunden · ${im.settings.albumIds.length} ${im.settings.albumIds.length === 1 ? 'Album' : 'Alben'}`)
+}
+
+// Synology Photos' line: switched on with its albums, or why not
+function synologyLine(sy) {
+  if (sy.sync.unauthorized) return tr('Anmeldung abgelehnt')
+  // (renewed at the service - its page tests it anew and asks to confirm it)
+  if (sy.sync.certificate) return tr('Zertifikat geändert – bitte neu bestätigen')
+  if (sy.sync.offlineSince) return tr(`Nicht erreichbar seit ${relTime(sy.sync.offlineSince).replace(/^vor /, '')}`)
+  return tr(`Verbunden · ${sy.settings.albumIds.length} ${sy.settings.albumIds.length === 1 ? 'Album' : 'Alben'}`)
+}
+
+function photoAlbumRow(a, { toggle = true, sub = '' } = {}) {
+  const [ic, src] = PHOTO_SOURCE[a.source] ?? PHOTO_SOURCE.upload
+  const counts = `${a.count} ${a.count === 1 ? 'Foto' : 'Fotos'}${a.videos ? ` · ${a.videos} ${a.videos === 1 ? 'Video' : 'Videos'}` : ''} · ${src}`
+  const state = a.display ? `<small class="ph-state ok">Auf der Box</small>` : `<small class="ph-state">Am Display ausgeblendet</small>`
+  return `<div class="entry ph-album${a.display ? '' : ' hidden-album'}" data-album="${esc(a.id)}">
+    <button class="ph-album-open" data-open="${esc(a.id)}" aria-label="${esc(a.title)}">
+      <span class="ph-thumb">${a.cover ? `<img src="${esc(photoFile(a.id, a.cover, 's'))}" alt="" loading="lazy">` : icon('image', 22)}${
+        // (an album of people: the face over the picture - one not kept yet shows nothing, the picture stays)
+        a.faces ? `<img src="${esc(`${API}/photos/face/${a.id}/0`)}" alt="" loading="lazy">` : ''
+      }<span class="ph-src" title="${esc(src)}">${icon(ic, 13)}</span></span>
+      <span class="lbl"><b translate="no">${esc(a.title)}</b><small>${esc(sub || counts)}</small>${state}</span></button>
+    ${toggle ? `<label class="switch"><input type="checkbox" role="switch" data-show="${esc(a.id)}" ${a.display ? 'checked' : ''} aria-label="${esc(tr('Am Display zeigen'))}: ${esc(a.title)}"><span></span></label>` : ''}</div>`
+}
+
+function photoStorageBar(s) {
+  if (!s?.total) return ''
+  const used = s.total - s.free
+  const other = Math.max(0, used - s.photos)
+  const pct = (n) => `${Math.max(0, Math.min(100, (n / s.total) * 100)).toFixed(2)}%`
+  return `<div class="ph-storage"><div class="slider-head"><b>Speicher auf der Box</b><span class="help" style="margin:0">${esc(`${formatBytes(s.free)} frei von ${formatBytes(s.total)}`)}</span></div>
+    <div class="ph-bar" role="img" aria-label="${esc(`${formatBytes(s.photos)} Fotos, ${formatBytes(other)} anderes, ${formatBytes(s.free)} frei`)}"><i class="ph-b-photos" style="width:${pct(s.photos)}"></i><i class="ph-b-other" style="width:${pct(other)}"></i></div>
+    <div class="ph-legend"><span><i class="ph-b-photos"></i>${esc(`Fotos ${formatBytes(s.photos)}`)}</span><span><i class="ph-b-other"></i>${esc(`Hörspiele, Musik und System ${formatBytes(other)}`)}</span><span><i></i>frei</span></div></div>`
+}
+
+function photoOverviewTop() {
+  const o = photoLib.overview
+  if (!o) return []
+  if (!o.enabled) {
+    return [`<section class="card wide"><p class="help" style="margin:0">Die Fotoanzeige ist aus.</p><div class="navlist">${navRow('g-fotos', 'Fotoanzeige einschalten', 'Einstellungen › Fotos', 'image')}</div></section>`]
+  }
+  const buttons = `<div class="btns wide ph-actions"><button class="btn primary" id="ph-upload">${icon('up', 18)}Fotos hochladen</button><button class="btn" id="ph-connect">${icon('link', 18)}Foto-Dienst verbinden</button></div>`
+  if (!o.albums.length) {
+    return [
+      buttons,
+      `<section class="card wide"><div class="photo-hero"><span class="photo-hero-ic">${icon('image', 30)}</span><h2>Noch keine Fotos</h2>
+        <p class="help">Lade Fotos vom Handy hoch oder wähle Ordner von deinem NAS. Die Box zeigt sie als Alben am Display.</p></div>${photoStorageBar(o.storage)}</section>`,
+      photoServicesCard(),
+      `<div class="note wide">${icon('lock', 18)}<span>Fotos bleiben auf der Box in deinem Heimnetz. Es gibt keine Links zum Teilen.</span></div>`,
+    ]
+  }
+  const t = o.totals
+  const stat = (label, n) => `<div class="ph-stat"><small>${esc(tr(label))}</small><b>${esc(String(n))}</b></div>`
+  return [
+    buttons,
+    `<section class="card wide"><h2>Überblick</h2><div class="ph-stats">${stat('Fotos', t.photos)}${stat('Videos', t.videos)}${stat('Alben', t.albums)}</div>${photoStorageBar(o.storage)}</section>`,
+    `<section class="card wide"><div class="card-head"><h2>Alben am Display</h2>${o.albums.length > 1 ? '<button class="btn sm" id="ph-order">Reihenfolge</button>' : ''}</div>
+      <div class="rows">${o.albums.map((a) => photoAlbumRow(a)).join('')}</div>
+      <p class="help" style="margin:0">Ausgeblendete Alben bleiben auf der Box, am Display erscheinen sie nicht.</p></section>`,
+    photoServicesCard(),
+    `<section class="card wide"><h2>Anzeige</h2><div class="navlist">${navRow('g-fotos', 'Einstellungen der Fotoanzeige', 'Diashow, Videos, Bildschirmschoner', 'gear')}</div></section>`,
+  ]
+}
+
+async function photoShowSwitch(input, after) {
+  const r = await api(`${API}/photos/albums/${input.dataset.show}`, { method: 'POST', body: { display: input.checked } })
+  if (!r.ok) {
+    input.checked = !input.checked
+    return toast('Nicht gespeichert', 'info')
+  }
+  toast(input.checked ? 'Am Display sichtbar' : 'Am Display ausgeblendet')
+  after?.()
+}
+
+function mountPhotoOverview(root, page) {
+  const again = async () => {
+    await loadPhotoOverview().catch(() => undefined)
+    if (currentPage()?.id === page.id) renderPage(page, false)
+  }
+  for (const b of root.querySelectorAll('[data-open]')) b.onclick = () => openPhotoAlbum(b.dataset.open)
+  for (const s of root.querySelectorAll('[data-show]')) s.onchange = () => photoShowSwitch(s, again)
+  $('#ph-upload', root)?.addEventListener('click', () => openPhotoUpload(null))
+  // (which service: the NAS folders, or Immich - its assistant)
+  $('#ph-connect', root)?.addEventListener('click', () =>
+    openSheet(
+      `<h2>Foto-Dienst verbinden</h2><p class="help" style="margin:0">Fotos werden nur aus deinem Heimnetz geladen.</p>
+       <div class="navlist"><button class="navrow" data-svc="fotonas"><span class="tile">${icon('server', 18)}</span><span class="lbl"><b>NAS-Ordner</b><small>Ordner vom verbundenen NAS als Alben</small></span><span class="chev">${icon('chevron', 18)}</span></button>
+       <button class="navrow" data-svc="fotoimmich"><span class="tile">${icon('grid', 18)}</span><span class="lbl"><b>Immich</b><small>Dein eigener Fotodienst, per API-Schlüssel</small></span><span class="chev">${icon('chevron', 18)}</span></button>
+       <button class="navrow" data-svc="fotosynology"><span class="tile">${icon('image', 18)}</span><span class="lbl"><b>Synology Photos</b><small>Alben deines Synology-NAS, mit eigenem Konto</small></span><span class="chev">${icon('chevron', 18)}</span></button>
+       <button class="navrow" data-svc="fotonextcloud"><span class="tile">${icon('cloud', 18)}</span><span class="lbl"><b>Nextcloud</b><small>Alben der Nextcloud-App „Fotos“, per App-Passwort</small></span><span class="chev">${icon('chevron', 18)}</span></button>
+       <button class="navrow" data-svc="fotophotoprism"><span class="tile">${icon('prism', 18)}</span><span class="lbl"><b>PhotoPrism</b><small>Alben deines PhotoPrism, per App-Passwort</small></span><span class="chev">${icon('chevron', 18)}</span></button>
+       <button class="navrow" data-svc="fotoicloud"><span class="tile">${icon('share', 18)}</span><span class="lbl"><b>iCloud</b><small>Geteilte Alben vom iPhone, per Link</small></span><span class="chev">${icon('chevron', 18)}</span></button></div>`,
+      (sheet, close) => {
+        for (const b of sheet.querySelectorAll('[data-svc]')) {
+          b.onclick = () => {
+            close()
+            go(b.dataset.svc)
+          }
+        }
+      },
+    ),
+  )
+  $('#ph-order', root)?.addEventListener('click', () => photoOrderSheet(again))
+}
+
+function openPhotoAlbum(id) {
+  // (another album: the question for the one before ends here - its answer must not draw it again)
+  window.clearTimeout(photoPrepTimer)
+  photoLib.albumId = id
+  photoLib.selecting = false
+  photoLib.chosen.clear()
+  try {
+    sessionStorage.setItem('mupi-photo-album', id)
+  } catch {}
+  go('fotoalbum')
+}
+
+// The order on the display: up and down - saved with "Fertig"
+function photoOrderSheet(after) {
+  const list = [...(photoLib.overview?.albums ?? [])]
+  const draw = (sheet) => {
+    sheet.querySelector('#ph-order-rows').innerHTML = list
+      .map(
+        (a, i) => `<div class="entry ph-album" data-i="${i}"><span class="ph-grip" aria-hidden="true">${icon('grid', 16)}</span>
+          <span class="ph-thumb">${a.cover ? `<img src="${esc(photoFile(a.id, a.cover, 's'))}" alt="">` : icon('image', 22)}</span>
+          <span class="lbl"><b translate="no">${esc(a.title)}</b></span>
+          <button class="icon-btn soft" data-up="${i}" ${i ? '' : 'disabled'} aria-label="${esc(tr('Nach oben'))}">${icon('up', 16)}</button>
+          <button class="icon-btn soft ph-down" data-down="${i}" ${i < list.length - 1 ? '' : 'disabled'} aria-label="${esc(tr('Nach unten'))}">${icon('up', 16)}</button></div>`,
+      )
+      .join('')
+    for (const b of sheet.querySelectorAll('[data-up]')) b.onclick = () => move(sheet, Number(b.dataset.up), -1)
+    for (const b of sheet.querySelectorAll('[data-down]')) b.onclick = () => move(sheet, Number(b.dataset.down), 1)
+  }
+  const move = (sheet, i, by) => {
+    const j = i + by
+    if (j < 0 || j >= list.length) return
+    ;[list[i], list[j]] = [list[j], list[i]]
+    draw(sheet)
+    sheet.querySelector(`[data-i="${j}"] [data-${by < 0 ? 'up' : 'down'}]`)?.focus()
+  }
+  openSheet(
+    `<h2>Reihenfolge</h2><p class="help" style="margin:0">Nutze die Pfeile. So erscheinen die Alben am Display.</p><div class="rows" id="ph-order-rows"></div>
+     <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Fertig</button></div>`,
+    (sheet, close) => {
+      draw(sheet)
+      sheet.querySelector('[data-close]').onclick = close
+      sheet.querySelector('[data-ok]').onclick = async () => {
+        const r = await api(`${API}/photos/albums/order`, { method: 'POST', body: { ids: list.map((a) => a.id) } })
+        if (!r.ok) return toast('Nicht gespeichert', 'info')
+        close()
+        toast('Gespeichert')
+        after?.()
+      }
+    },
+  )
+}
+
+// Uploading (Bibliothek › Fotos › Fotos hochladen): into an album chosen or a new one, the files one after the other with
+// their progress, the whole at the top; at the end what came and what was left out with its reason. Leaving the page
+// stops it (the file on its way too, on the box as well - see the upload's route and its ticket); what came stays.
+// Every upload is a run of its own: a stopped one still waiting for the box's answer never takes over the page's next
+// choice, and a new visit never brings an old run back to life.
+const PHOTO_SKIP = { format: 'Format wird nicht unterstützt', duplicate: 'Schon im Album', broken: 'Datei beschädigt', space: 'Kein Platz mehr', aborted: 'Abgebrochen', heif: 'HEIC wird gerade eingerichtet', failed: 'Hochladen fehlgeschlagen', large: 'Datei zu groß' }
+const PHOTO_UPLOAD_EXT = /\.(jpe?g|png|hei[cf]|webp|mp4|mov|m4v)$/i
+// (clips: kept as they come, made into what the Pi plays on the box - "Wird vorbereitet")
+const PHOTO_VIDEO_EXT = /\.(mp4|mov|m4v)$/i
+const photoVideoBytes = (items) => items.reduce((n, it) => n + (PHOTO_VIDEO_EXT.test(it.file.name) ? it.file.size : 0), 0)
+// (pictures the browser can show itself for the list - an iPhone's HEIC it cannot)
+const PHOTO_PREVIEW_EXT = /\.(jpe?g|png|webp)$/i
+const PHOTO_UNCONFIRMED = 'Abbruch von der Box nicht bestätigt – ein abgebrochenes Foto kann trotzdem im Album erscheinen.'
+const photoTicket = () => [...crypto.getRandomValues(new Uint8Array(8))].map((b) => b.toString(16).padStart(2, '0')).join('')
+// the page's choice (form), and the run it started
+const photoUp = { mode: 'existing', albumId: '', newName: '', items: [], check: null, run: null }
+let photoRunSeq = 0
+// runs not ended yet (also stopped ones waiting for the box): the browser asks before the tab is closed
+const photoRunsActive = new Set()
+window.addEventListener('beforeunload', (e) => {
+  // (also a stopped run still waiting for the box: closed now, its cancel would not be asked again)
+  if (!photoRunsActive.size) return
+  e.preventDefault()
+  e.returnValue = ''
+})
+
+// a new visit of the page (from the overview, an album: with that album chosen)
+function openPhotoUpload(albumId) {
+  photoUploadReset()
+  photoUp.albumId = albumId ?? ''
+  go('fotoupload')
+}
+
+// the page's choice anew; a run still going (should one be) is stopped - it ends on its own, apart from the page
+function photoUploadReset() {
+  const run = photoUp.run
+  if (run && run.phase !== 'done') stopPhotoRun(run)
+  for (const it of photoUp.items) if (it.url) URL.revokeObjectURL(it.url)
+  Object.assign(photoUp, { mode: 'existing', newName: '', items: [], check: null, run: null })
+}
+
+// left for another page: a run stops (what came stays), a summary goes
+function photoUploadLeft() {
+  const run = photoUp.run
+  if (!run) return
+  if (run.phase === 'done') photoUploadReset()
+  else stopPhotoRun(run)
+}
+
+async function loadPhotoUpload() {
+  // (the overview: the albums to choose from and the card's space; not while a run shows - nothing changes then)
+  if (photoUp.run) return
+  await loadPhotoOverview()
+  const uploads = (photoLib.overview?.albums ?? []).filter((a) => a.source === 'upload')
+  if (!uploads.some((a) => a.id === photoUp.albumId)) photoUp.albumId = uploads[0]?.id ?? ''
+  if (!uploads.length) photoUp.mode = 'new'
+}
+
+const photoBytes = (items) => items.reduce((n, it) => n + it.file.size, 0)
+const photoCountText = (n) => tr(`${n} ${n === 1 ? 'Datei' : 'Dateien'}`)
+
+function photoUploadTop() {
+  const run = photoUp.run
+  if (run?.phase === 'running') return photoUploadRunningTop(run)
+  if (run?.phase === 'done') return photoUploadDoneTop(run)
+  const o = photoLib.overview
+  if (o && !o.enabled) {
+    return [`<section class="card wide"><p class="help" style="margin:0">Die Fotoanzeige ist aus.</p><div class="navlist">${navRow('g-fotos', 'Fotoanzeige einschalten', 'Einstellungen › Fotos', 'image')}</div></section>`]
+  }
+  const uploads = (o?.albums ?? []).filter((a) => a.source === 'upload')
+  const n = photoUp.items.length
+  const full = photoUp.check && photoUp.check.enough === false
+  // (getting ready - the album is made, the room checked: nothing to change meanwhile)
+  const busy = run?.phase === 'preparing'
+  return [
+    `<section class="card wide"><h2>Wohin?</h2>
+      ${uploads.length ? `<div class="seg" id="pu-mode"><button aria-pressed="${photoUp.mode === 'existing'}" data-v="existing">Vorhandenes Album</button><button aria-pressed="${photoUp.mode === 'new'}" data-v="new">Neues Album</button></div>` : ''}
+      ${photoUp.mode === 'existing' && uploads.length
+        ? `<div class="field"><label for="pu-album">Album</label><select class="input" id="pu-album">${uploads.map((a) => `<option value="${esc(a.id)}"${a.id === photoUp.albumId ? ' selected' : ''}>${esc(a.title)}</option>`).join('')}</select></div>`
+        : `<div class="field"><label for="pu-name">Name des Albums</label><input class="input" id="pu-name" maxlength="40" autocomplete="off" value="${esc(photoUp.newName)}"><small>So heißt das Album am Display.</small></div>`}
+    </section>`,
+    `<section class="card wide"><h2>Dateien</h2>
+      <div class="btns"><button class="btn block soft" id="pu-pick">${icon('image', 18)}Fotos &amp; Videos wählen</button></div>
+      <input type="file" id="pu-files" multiple accept="image/jpeg,image/png,image/heic,image/heif,image/webp,video/mp4,video/quicktime,.jpg,.jpeg,.png,.heic,.heif,.webp,.mp4,.mov,.m4v" hidden>
+      <div class="drop${n ? ' chosen' : ''}" id="pu-drop">Oder Fotos hierher ziehen.</div>
+      <small class="help" style="margin:0">JPEG, PNG, HEIC (iPhone), MP4, MOV</small>
+      ${n ? `<dl class="kv"><div><dt>Ausgewählt</dt><dd>${esc(`${photoCountText(n)} · ${formatBytes(photoBytes(photoUp.items))}`)}</dd></div></dl>` : ''}
+    </section>`,
+    full
+      ? `<div class="note danger wide">${icon('info', 18)}<span><b>Nicht genug Platz auf der Box</b><br>${esc(tr(`Für diese Auswahl fehlen etwa ${formatBytes(photoUp.check.missing || 0)}.`))} ${esc(tr('Wähle weniger Dateien oder lösche Alben, die du nicht mehr brauchst.'))}<br><button class="link-btn danger-text" id="pu-manage">Alben verwalten</button></span></div>`
+      : '',
+    `<section class="card wide"><div class="note">${icon('lock', 18)}<span>Die Box speichert Fotos verkleinert (ca. 1280 px) und entfernt Standortdaten. Die Originale bleiben auf deinem Gerät.</span></div>${photoStorageBar(o?.storage)}</section>`,
+    `<div class="btns wide"><button class="btn primary block" id="pu-start"${!n || full || busy ? ' disabled' : ''}>${icon('up', 18)}Hochladen</button></div>`,
+  ]
+}
+
+function photoUploadRow(it, i) {
+  const heic = /\.hei[cf]$/i.test(it.file.name)
+  const size = `${formatBytes(it.file.size)}${heic && it.state === 'ok' ? ` · ${tr('umgewandelt')}` : ''}`
+  let right
+  if (it.state === 'ok' && it.prep) right = `<span class="chip accent">${esc(tr('Wird vorbereitet'))}</span>`
+  else if (it.state === 'ok') right = `<span class="chip ok">${icon('check', 14)}${esc(tr('Fertig'))}</span>`
+  else if (it.state === 'skip') right = `<span class="chip danger">${esc(tr('Übersprungen'))}</span>`
+  else if (it.state === 'up') right = `<span class="pu-pct"><span class="track"><i style="--w:${it.pct}%"></i></span><small>${it.pct} %</small></span>`
+  else right = `<span class="chip">${esc(tr('Wartet'))}</span>`
+  return `<div class="entry pu-row" data-pu-row="${i}"><span class="pu-thumb">${it.url ? `<img src="${esc(it.url)}" alt="" loading="lazy">` : icon('image', 20)}</span>
+    <span class="lbl"><b translate="no">${esc(it.file.name)}</b><small${it.state === 'skip' ? ' class="danger-text"' : ''}>${esc(it.state === 'skip' ? tr(PHOTO_SKIP[it.reason] ?? 'Hochladen fehlgeschlagen') : size)}</small></span>${right}</div>`
+}
+
+function photoRunProgress(run) {
+  const total = photoBytes(run.items) || 1
+  const done = run.items.reduce((n, it) => n + (it.state === 'ok' || it.state === 'skip' ? it.file.size : it.state === 'up' ? (it.file.size * it.pct) / 100 : 0), 0)
+  const files = run.items.filter((it) => it.state === 'ok' || it.state === 'skip').length
+  return { pct: Math.min(100, Math.floor((done / total) * 100)), done, files }
+}
+
+const photoRunSumText = (run, p) => tr(`${p.files} von ${run.items.length} Dateien · ${formatBytes(p.done)} von ${formatBytes(photoBytes(run.items))}`)
+
+function photoUploadRunningTop(run) {
+  const p = photoRunProgress(run)
+  return [
+    `<section class="card wide"><h2>Wird hochgeladen</h2>
+      <div class="pu-big"><b id="pu-pct">${p.pct} %</b><span>${esc(tr(`nach „${run.targetTitle}“`))}</span></div>
+      <div class="bar"><div class="track"><i id="pu-fill" style="--w:${p.pct}%"></i></div><small id="pu-sum">${esc(photoRunSumText(run, p))}</small></div>
+      <div class="btns"><button class="btn block" id="pu-stop"${run.stopped ? ' disabled' : ''}>${icon('close', 18)}Abbrechen</button></div></section>`,
+    `<div class="note wide">${icon('info', 18)}<span>Lass diese Seite offen, bis alles übertragen ist.</span></div>`,
+    `<section class="card wide"><h2>Dateien</h2><div class="rows" id="pu-rows">${run.items.map(photoUploadRow).join('')}</div></section>`,
+  ]
+}
+
+function photoUploadDoneTop(run) {
+  const ok = run.items.filter((it) => it.state === 'ok').length
+  const skipped = run.items.filter((it) => it.state === 'skip')
+  const vids = run.items.filter((it) => it.state === 'ok' && it.prep).length
+  const pics = ok - vids
+  const head = !ok
+    ? tr('Keine Fotos übernommen')
+    : !vids
+      ? tr(`${pics} ${pics === 1 ? 'Foto' : 'Fotos'} übernommen`)
+      : !pics
+        ? tr(`${vids} ${vids === 1 ? 'Video' : 'Videos'} übernommen`)
+        : tr(`${pics} ${pics === 1 ? 'Foto' : 'Fotos'} und ${vids} ${vids === 1 ? 'Video' : 'Videos'} übernommen`)
+  return [
+    `<section class="card wide"><div class="photo-hero"><span class="photo-hero-ic${ok ? ' ok' : ''}">${icon(ok ? 'check' : 'info', 34)}</span><h2>${esc(head)}</h2>
+      ${run.targetTitle ? `<p class="help">${esc(tr(`Im Album „${run.targetTitle}“.`))}${vids ? ` ${esc(tr('Videos bereitet die Box danach noch vor.'))}` : ''}</p>` : ''}
+      <div class="btns">${run.target ? '<button class="btn primary" id="pu-album">Zum Album</button>' : ''}<button class="btn" id="pu-more">Weitere hochladen</button></div></div></section>`,
+    run.unconfirmed ? `<div class="note warn wide">${icon('info', 18)}<span>${esc(tr(PHOTO_UNCONFIRMED))}</span></div>` : '',
+    skipped.length
+      ? `<section class="card wide"><div class="card-head"><h2>Übersprungen</h2><span class="chip danger">${skipped.length}</span></div><div class="rows">${skipped.map((it) => photoUploadRow(it, run.items.indexOf(it))).join('')}</div></section>`
+      : '',
+  ]
+}
+
+function mountPhotoUpload(root, page) {
+  const redraw = () => currentPage()?.id === page.id && renderPage(page, false)
+  const run = photoUp.run
+  if (run?.phase === 'running') {
+    $('#pu-stop', root)?.addEventListener('click', () => {
+      stopPhotoRun(run)
+      redraw()
+    })
+    return
+  }
+  if (run?.phase === 'done') {
+    $('#pu-album', root)?.addEventListener('click', () => openPhotoAlbum(run.target))
+    $('#pu-more', root)?.addEventListener('click', () => {
+      const keep = run.target
+      photoUploadReset()
+      photoUp.albumId = keep
+      loadPhotoUpload().finally(redraw)
+    })
+    return
+  }
+  const mode = $('#pu-mode', root)
+  if (mode) {
+    mode.onclick = (e) => {
+      const b = e.target.closest('button')
+      if (!b || photoUp.run) return
+      photoUp.mode = b.dataset.v
+      redraw()
+    }
+  }
+  $('#pu-album', root)?.addEventListener('change', (e) => (photoUp.albumId = e.target.value))
+  $('#pu-name', root)?.addEventListener('input', (e) => (photoUp.newName = e.target.value))
+  $('#pu-manage', root)?.addEventListener('click', () => go('fotos'))
+  const input = $('#pu-files', root)
+  let choice = 0
+  const choose = async (list) => {
+    if (photoUp.run) return
+    const mine = ++choice
+    for (const it of photoUp.items) if (it.url) URL.revokeObjectURL(it.url)
+    const files = [...list]
+    const wrong = files.filter((f) => !PHOTO_UPLOAD_EXT.test(f.name))
+    photoUp.items = files.filter((f) => PHOTO_UPLOAD_EXT.test(f.name)).map((file) => ({ file, url: PHOTO_PREVIEW_EXT.test(file.name) ? URL.createObjectURL(file) : '', state: 'wait', pct: 0, reason: '' }))
+    if (wrong.length) toast(tr(`${wrong.length} ${wrong.length === 1 ? 'Datei' : 'Dateien'} in einem anderen Format ausgelassen`), 'info')
+    // (is there room for it on the box - before it starts, not halfway)
+    photoUp.check = null
+    if (photoUp.items.length) {
+      const r = await api(`${API}/photos/upload/check`, { method: 'POST', body: { files: photoUp.items.length, videoBytes: photoVideoBytes(photoUp.items) } })
+      // (a newer choice meanwhile: its own check counts)
+      if (mine !== choice) return
+      if (r.ok) photoUp.check = r.body
+    }
+    redraw()
+  }
+  $('#pu-pick', root)?.addEventListener('click', () => input.click())
+  input?.addEventListener('change', () => {
+    choose(input.files ?? [])
+    input.value = ''
+  })
+  const drop = $('#pu-drop', root)
+  if (drop) {
+    drop.ondragover = (e) => {
+      e.preventDefault()
+      drop.classList.add('over')
+    }
+    drop.ondragleave = () => drop.classList.remove('over')
+    drop.ondrop = (e) => {
+      e.preventDefault()
+      drop.classList.remove('over')
+      choose(e.dataTransfer?.files ?? [])
+    }
+  }
+  $('#pu-start', root)?.addEventListener('click', () => startPhotoUpload(page))
+}
+
+// the run is the one on the page: it may draw there
+const photoRunShown = (run) => photoUp.run === run && currentPage()?.id === 'fotoupload'
+
+async function startPhotoUpload(page) {
+  if (photoUp.run) return
+  if (!photoUp.items.length) return toast('Bitte Fotos wählen', 'info')
+  // the run starts here already: making the album and checking the room can be stopped like the files after them
+  const run = { id: ++photoRunSeq, phase: 'preparing', items: photoUp.items, target: '', targetTitle: '', stopped: false, unconfirmed: 0, current: null }
+  photoUp.run = run
+  photoRunsActive.add(run)
+  if (photoRunShown(run)) renderPage(page, false)
+  // (stopped while it got ready - the page left: nothing more; given back to the page's choice when it was the check)
+  const still = () => !run.stopped && photoUp.run === run
+  let target = photoUp.mode === 'existing' ? photoUp.albumId : ''
+  let title = (photoLib.overview?.albums ?? []).find((a) => a.id === target)?.title ?? ''
+  if (!target) {
+    title = photoUp.newName.trim()
+    if (!title) return photoRunGiveBack(run, page, 'Bitte einen Namen für das Album eintragen')
+    const r = await api(`${API}/photos/albums`, { method: 'POST', body: { title } })
+    if (!still()) return photoRunEnd(run, page)
+    if (!r.ok) return photoRunGiveBack(run, page, 'Das Album ließ sich nicht anlegen')
+    target = r.body.id
+    title = r.body.title
+  }
+  run.target = target
+  run.targetTitle = title
+  const check = await api(`${API}/photos/upload/check`, { method: 'POST', body: { files: run.items.length, videoBytes: photoVideoBytes(run.items) } })
+  if (!still()) return photoRunEnd(run, page)
+  if (check.ok && check.body?.enough === false) {
+    photoUp.check = check.body
+    return photoRunGiveBack(run, page)
+  }
+  run.phase = 'running'
+  if (photoRunShown(run)) renderPage(page, false)
+  for (const [i, it] of run.items.entries()) {
+    if (run.stopped) {
+      Object.assign(it, { state: 'skip', reason: 'aborted' })
+      photoRunPaint(run, i)
+      continue
+    }
+    it.state = 'up'
+    photoRunPaint(run, i)
+    const r = await photoPut(run, target, it, i)
+    // (this file was stopped or lost on its way - stopped, its time ran out, the WLAN went: the box has to confirm
+    // that it did not keep it; without, it may still turn up)
+    if (r.cancelling && !(await r.cancelling)) run.unconfirmed++
+    if (r.ok && r.body?.ok) Object.assign(it, { state: 'ok', pct: 100, prep: r.body.preparing === true })
+    else Object.assign(it, { state: 'skip', reason: r.aborted ? 'aborted' : (r.body?.skipped ?? (r.body?.error === 'heif_missing' ? 'heif' : 'failed')) })
+    photoRunPaint(run, i)
+  }
+  photoRunEnd(run, page)
+}
+
+// back to the page's choice (the name missing, no room, the album not made): nothing was sent
+function photoRunGiveBack(run, page, message) {
+  photoRunsActive.delete(run)
+  if (photoUp.run === run) photoUp.run = null
+  if (message) toast(message, 'info')
+  if (currentPage()?.id === page.id) renderPage(page, false)
+}
+
+function photoRunEnd(run, page) {
+  photoRunsActive.delete(run)
+  run.phase = 'done'
+  // (the overview is asked anew where it is needed next - not taken away: a new visit of this page may show it)
+  photoLib.stale = true
+  const ok = run.items.filter((it) => it.state === 'ok').length
+  if (photoRunShown(run)) return renderPage(page, false)
+  // (the page was left meanwhile, or opened anew: a toast says how it ended - the box's missing answer first)
+  if (run.unconfirmed) toast(PHOTO_UNCONFIRMED, 'info')
+  else if (run.stopped) toast(ok ? tr(`Hochladen abgebrochen – ${ok} übernommen`) : 'Hochladen abgebrochen', 'info')
+}
+
+// one file: PUT with its progress (fetch has none for what it sends), at most 5 minutes - a slow WLAN and the Pi's work
+// on a big picture; then the next one. Not ended by an answer (stopped, timed out, the connection lost): the box is
+// told with the ticket - it does not make the picture, or takes it out again when it was just placed.
+function photoPut(run, target, it, i) {
+  return new Promise((resolve) => {
+    const ticket = photoTicket()
+    const xhr = new XMLHttpRequest()
+    const cur = { xhr, ticket, cancelling: null, aborted: false }
+    run.current = cur
+    const done = (res) => {
+      run.current = null
+      resolve({ ...res, cancelling: cur.cancelling, aborted: cur.aborted })
+    }
+    const lost = () => {
+      cur.cancelling ??= cancelPhotoUpload(ticket)
+      done({ ok: false, body: {} })
+    }
+    xhr.open('PUT', `${API}/photos/upload?album=${encodeURIComponent(target)}&name=${encodeURIComponent(it.file.name)}&ticket=${ticket}`)
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream')
+    if (state.csrf) xhr.setRequestHeader('x-mupibox-csrf', state.csrf)
+    // (a clip: up to 1 GB over the WLAN - more time)
+    xhr.timeout = PHOTO_VIDEO_EXT.test(it.file.name) ? 45 * 60_000 : 5 * 60_000
+    xhr.upload.onprogress = (e) => {
+      if (!e.lengthComputable) return
+      // (sent is not yet made: 95 % at most until the box answers)
+      it.pct = Math.min(95, Math.floor((e.loaded / e.total) * 95))
+      photoRunPaint(run, i)
+    }
+    xhr.onload = () => {
+      let body = {}
+      try {
+        body = JSON.parse(xhr.responseText)
+      } catch {}
+      done({ ok: xhr.status >= 200 && xhr.status < 300, body })
+    }
+    xhr.onerror = lost
+    xhr.onabort = lost
+    xhr.ontimeout = lost
+    xhr.send(it.file)
+  })
+}
+
+// stopped (Abbrechen, the page left): no further file, the one on its way is stopped - in the browser and on the box
+function stopPhotoRun(run) {
+  if (run.stopped || run.phase === 'done') return
+  run.stopped = true
+  const cur = run.current
+  if (cur) {
+    cur.aborted = true
+    cur.cancelling ??= cancelPhotoUpload(cur.ticket)
+    cur.xhr.abort()
+  }
+}
+
+// the running page drawn anew in its parts only (a whole new page for every percent would flicker)
+function photoRunPaint(run, i) {
+  if (!photoRunShown(run) || run.phase !== 'running') return
+  const row = document.querySelector(`[data-pu-row="${i}"]`)
+  if (row) row.outerHTML = photoUploadRow(run.items[i], i)
+  const p = photoRunProgress(run)
+  const pct = document.getElementById('pu-pct')
+  if (pct) pct.textContent = `${p.pct} %`
+  document.getElementById('pu-fill')?.style.setProperty('--w', `${p.pct}%`)
+  const sum = document.getElementById('pu-sum')
+  if (sum) sum.textContent = photoRunSumText(run, p)
+}
+
+// a few tries (the phone's WLAN may be gone for a moment): true when the box confirmed it
+async function cancelPhotoUpload(ticket) {
+  for (let i = 0; i < 4; i++) {
+    if (i) await new Promise((r) => setTimeout(r, 2000))
+    const r = await api(`${API}/photos/upload/cancel`, { method: 'POST', body: { ticket }, timeoutMs: 8000 }).catch(() => null)
+    if (r?.ok && r.body?.ok) return true
+  }
+  return false
+}
+
+/* Bibliothek › Fotos › NAS-Ordner (5.1): folders of the NAS the box is signed in to as albums - the tree to choose
+   them (loaded when opened), subfolders as albums of their own or not, how often the box syncs, what the cache may
+   take; the sync's state. The access to the NAS is the one of Bibliothek › NAS. */
+
+const photoNas = { data: null, tree: new Map(), open: new Set(), chosen: null, subs: true, timer: 0 }
+const NAS_SYNC = [
+  ['Alle 15 Min.', 15],
+  ['Jede Stunde', 60],
+  ['Alle 6 Stunden', 360],
+  ['Täglich', 1440],
+  ['Nur von Hand', 0],
+]
+const NAS_CACHE = [
+  ['500 MB', 500],
+  ['1 GB', 1024],
+  ['2 GB', 2048],
+  ['4 GB', 4096],
+  ['8 GB', 8192],
+  ['Ohne Grenze', 0],
+]
+
+async function loadPhotoNas() {
+  const r = await api(`${API}/photos/nas`)
+  if (!r.ok) throw new Error(`photos nas ${r.status}`)
+  photoNas.data = r.body
+  // (the choice on this page: what the box has, until "Übernehmen")
+  photoNas.chosen = new Set(r.body.settings.folders)
+  photoNas.subs = r.body.settings.subfoldersAsAlbums
+  // (every visit asks the NAS anew: folders added or renamed there meanwhile, or it was away the last time)
+  photoNas.tree.clear()
+  photoNas.open.clear()
+  if (r.body.nas.connected) await photoNasBrowse('/')
+}
+
+async function photoNasBrowse(path) {
+  const r = await api(`${API}/photos/nas/browse?path=${encodeURIComponent(path)}`)
+  photoNas.tree.set(path, r.ok ? r.body : { error: r.body?.error ?? 'nas_unreachable', folders: [] })
+}
+
+function photoNasStatus(d) {
+  const s = d.sync
+  if (s.running) return [`${icon('sync', 16)}${esc(s.total ? tr(`Abgleich läuft · ${s.done} von ${s.total} Fotos`) : tr('Abgleich läuft …'))}`, 'accent']
+  if (s.offlineSince) return [`${icon('info', 16)}${esc(tr(`Nicht erreichbar seit ${relTime(s.offlineSince).replace(/^vor /, '')}`))}`, 'danger']
+  if (s.lastSync) return [`${icon('check', 16)}${esc(tr(`Abgeglichen ${relTime(s.lastSync)}`))}`, 'ok']
+  return [esc(tr('Noch nicht abgeglichen')), '']
+}
+
+function photoNasFolderRows(path, depth) {
+  const node = photoNas.tree.get(path)
+  if (!node) return `<div class="ph-tree-row" style="--d:${depth}"><span class="help">${esc(tr('Wird geladen …'))}</span></div>`
+  if (node.error) return `<div class="ph-tree-row" style="--d:${depth}"><span class="help danger-text" style="flex:1">${esc(tr('Dieser Ordner lässt sich gerade nicht lesen.'))}</span><button class="btn sm" data-retry="${esc(path)}">${esc(tr('Erneut versuchen'))}</button></div>`
+  if (!node.folders.length && depth === 0) return `<p class="help" style="margin:0">Auf dem NAS gibt es hier keine Ordner.</p>`
+  return node.folders
+    .map((f) => {
+      const open = photoNas.open.has(f.path)
+      const on = photoNas.chosen.has(f.path)
+      // (a folder below one that is chosen: in it already)
+      const inside = [...photoNas.chosen].some((c) => f.path.startsWith(`${c}/`))
+      const more = f.folders !== 0
+      const count = f.pictures === null ? '' : tr(`${f.pictures} ${f.pictures === 1 ? 'Foto' : 'Fotos'}`)
+      return `<div class="ph-tree-row" style="--d:${depth}">
+          <button class="icon-btn ph-tree-arrow${open ? ' open' : ''}" data-tree="${esc(f.path)}" ${more ? '' : 'disabled'} aria-label="${esc(tr(open ? 'Zuklappen' : 'Aufklappen'))}" aria-expanded="${open}">${more ? icon('chevron', 16) : ''}</button>
+          <span class="ph-tree-ic">${icon('folder', 18)}</span>
+          <span class="lbl"><b translate="no">${esc(f.name)}</b>${count ? `<small>${esc(count)}</small>` : ''}</span>
+          <button class="ph-check-box" role="checkbox" aria-checked="${on ? 'true' : inside ? 'mixed' : 'false'}" data-pick="${esc(f.path)}" ${inside ? 'disabled' : ''} aria-label="${esc(f.name)}">${on || inside ? icon('check', 16) : ''}</button>
+        </div>${open ? photoNasFolderRows(f.path, depth + 1) : ''}`
+    })
+    .join('')
+}
+
+function photoNasTop() {
+  const d = photoNas.data
+  if (!d) return []
+  if (!d.nas.connected) {
+    return [
+      `<section class="card wide"><div class="photo-hero"><span class="photo-hero-ic">${icon('server', 30)}</span><h2>Noch kein NAS verbunden</h2>
+        <p class="help">Verbinde zuerst dein NAS. Danach kannst du hier Ordner als Alben wählen.</p></div>
+        <div class="navlist">${navRow('nas', 'Zu Bibliothek › NAS', 'Zugang zum NAS', 'server')}</div></section>`,
+    ]
+  }
+  const s = d.sync
+  const [status, kind] = photoNasStatus(d)
+  const saved = d.settings.folders
+  const changed = saved.length !== photoNas.chosen.size || saved.some((f) => !photoNas.chosen.has(f)) || d.settings.subfoldersAsAlbums !== photoNas.subs
+  const limit = d.settings.cacheLimitMb * 1024 * 1024
+  return [
+    `<section class="card wide"><p class="help" style="margin:0">${esc(tr(`Verbunden mit dem NAS „${d.nas.name ?? ''}“. Zugang ändern unter Bibliothek › NAS.`))}</p>
+      <div class="ph-nas-state ${kind}">${status}</div>
+      <dl class="kv"><div><dt>Ordner</dt><dd>${esc(String(saved.length))}</dd></div><div><dt>Alben</dt><dd>${esc(tr(`${d.albums} · ${d.pictures} ${d.pictures === 1 ? 'Foto' : 'Fotos'}`))}</dd></div></dl>
+      ${s.offlineSince ? `<div class="note danger">${icon('info', 18)}<span>Die Box zeigt weiter die gespeicherten Fotos. Prüfe, ob das NAS läuft.</span></div>` : ''}
+      ${!s.running && !s.offlineSince && saved.length && s.found === 0 ? `<div class="note warn">${icon('info', 18)}<span>In den gewählten Ordnern wurden keine Fotos gefunden. Prüfe die Leserechte des Benutzers auf dem NAS – auch für die Dateien in den Ordnern, nicht nur für die Ordner.</span></div>` : ''}
+      ${s.cacheFull ? `<div class="note warn">${icon('info', 18)}<span>Der Zwischenspeicher ist voll. Nicht alle Fotos sind auf der Box – erhöhe die Grenze oder wähle weniger Ordner.</span></div>` : ''}
+      ${s.failed?.length ? `<div class="note warn">${icon('info', 18)}<span>${esc(tr(`Nicht lesbar: ${s.failed.join(', ')}`))}</span></div>` : ''}
+      <div class="btns"><button class="btn primary" id="nas-sync" ${s.running || !saved.length ? 'disabled' : ''}>${icon('sync', 18)}Jetzt abgleichen</button>${syncCancelButton('nas', s.running)}</div></section>`,
+    `<section class="card wide"><h2>Ordner</h2><p class="help">Jeder gewählte Ordner wird ein Album.</p>
+      ${photoNas.chosen.size ? `<div class="ph-chosen"><b>${esc(tr('Gewählt'))}</b>${[...photoNas.chosen].sort().map((f) => `<span class="chip"><span translate="no">${esc(f)}</span><button class="ph-chip-x" data-unpick="${esc(f)}" aria-label="${esc(tr('Abwählen'))}">${icon('close', 14)}</button></span>`).join('')}</div>` : ''}
+      <div class="ph-tree">${photoNasFolderRows('/', 0)}</div>
+      <div class="row"><span class="lbl"><b>Unterordner als eigene Alben</b><small>An: Jeder Unterordner wird ein eigenes Album. Aus: Fotos aus Unterordnern landen im Album des Ordners.</small></span>
+        <label class="switch"><input type="checkbox" id="nas-subs" ${photoNas.subs ? 'checked' : ''} aria-label="${esc(tr('Unterordner als eigene Alben'))}"><span></span></label></div>
+      <p class="help" style="margin:0">${esc(tr(`${photoNas.chosen.size} ${photoNas.chosen.size === 1 ? 'Ordner' : 'Ordner'} gewählt`))}</p>
+      <div class="btns"><button class="btn primary" id="nas-apply" ${changed ? '' : 'disabled'}>Übernehmen</button></div></section>`,
+    `<section class="card"><h2>Abgleich</h2>
+      <div class="field"><label>Intervall</label><button class="select-btn" id="nas-every"><span>${esc(tr(NAS_SYNC.find(([, m]) => m === d.settings.syncMinutes)?.[0] ?? 'Alle 6 Stunden'))}</span>${icon('chevron', 18)}</button>
+      <small>Neue Fotos vom NAS erscheinen spätestens nach dieser Zeit am Display.</small></div></section>`,
+    `<section class="card"><h2>Zwischenspeicher</h2>
+      <div class="bar"><div class="slider-head"><b>${esc(limit ? tr(`${formatBytes(d.cacheBytes)} von ${formatBytes(limit)} belegt`) : tr(`${formatBytes(d.cacheBytes)} belegt`))}</b></div>
+      <div class="track"><i style="--w:${limit ? Math.min(100, (d.cacheBytes / limit) * 100).toFixed(1) : 0}%"></i></div></div>
+      <p class="help">Fotos vom NAS liegen in Anzeigegröße auf der Box und sind auch ohne Netz da.</p>
+      <div class="field"><label>Höchstens belegen</label><button class="select-btn" id="nas-cache"><span>${esc(tr(NAS_CACHE.find(([, m]) => m === d.settings.cacheLimitMb)?.[0] ?? '2 GB'))}</span>${icon('chevron', 18)}</button>
+      <small>Ist die Grenze erreicht, lädt die Box keine weiteren Fotos und zeigt hier einen Hinweis.</small></div></section>`,
+    saved.length || d.albums
+      ? `<section class="card wide"><div class="navlist"><button class="navrow" id="nas-remove"><span class="tile danger">${icon('close', 18)}</span><span class="lbl"><b class="danger-text">Ordner nicht mehr verwenden</b><small>Die Alben vom NAS werden von der Box entfernt. Auf dem NAS bleibt alles.</small></span></button></div></section>`
+      : '',
+  ]
+}
+
+function mountPhotoNas(root, page) {
+  const d = photoNas.data
+  window.clearTimeout(photoNas.timer)
+  if (!d?.nas.connected) return
+  const redraw = () => currentPage()?.id === page.id && renderPage(page, false)
+  const fresh = async () => {
+    const r = await api(`${API}/photos/nas`)
+    if (r.ok) photoNas.data = r.body
+    photoLib.stale = true
+    redraw()
+  }
+  // (while a sync runs: its state every 3 s)
+  if (d.sync.running) photoNas.timer = window.setTimeout(() => currentPage()?.id === page.id && fresh(), 3000)
+  for (const b of root.querySelectorAll('[data-tree]')) {
+    b.onclick = async () => {
+      const p = b.dataset.tree
+      if (photoNas.open.has(p)) photoNas.open.delete(p)
+      else {
+        photoNas.open.add(p)
+        // (not listed yet, or the NAS did not answer the last time: asked again)
+        if (!photoNas.tree.has(p) || photoNas.tree.get(p).error) {
+          photoNas.tree.delete(p)
+          redraw()
+          await photoNasBrowse(p)
+        }
+      }
+      redraw()
+    }
+  }
+  // (a folder chosen deep in the tree: taken off here without opening the tree down to it)
+  for (const b of root.querySelectorAll('[data-unpick]')) {
+    b.onclick = () => {
+      photoNas.chosen.delete(b.dataset.unpick)
+      redraw()
+    }
+  }
+  for (const b of root.querySelectorAll('[data-retry]')) {
+    b.onclick = async () => {
+      b.disabled = true
+      await photoNasBrowse(b.dataset.retry)
+      redraw()
+    }
+  }
+  for (const b of root.querySelectorAll('[data-pick]')) {
+    b.onclick = () => {
+      const p = b.dataset.pick
+      if (photoNas.chosen.has(p)) photoNas.chosen.delete(p)
+      else {
+        // (a folder takes in the ones below it that were chosen)
+        for (const c of [...photoNas.chosen]) if (c.startsWith(`${p}/`)) photoNas.chosen.delete(c)
+        photoNas.chosen.add(p)
+      }
+      redraw()
+    }
+  }
+  $('#nas-subs', root)?.addEventListener('change', (e) => {
+    photoNas.subs = e.target.checked
+    redraw()
+  })
+  const save = async (body, done) => {
+    const r = await api(`${API}/photos/nas`, { method: 'POST', body })
+    if (!r.ok) return toast('Nicht gespeichert', 'info')
+    photoNas.data = r.body
+    photoNas.chosen = new Set(r.body.settings.folders)
+    photoNas.subs = r.body.settings.subfoldersAsAlbums
+    photoLib.stale = true
+    toast(done)
+    redraw()
+  }
+  $('#nas-apply', root)?.addEventListener('click', () => save({ folders: [...photoNas.chosen], subfoldersAsAlbums: photoNas.subs }, 'Gespeichert – Abgleich gestartet'))
+  $('#nas-sync', root)?.addEventListener('click', async () => {
+    const r = await api(`${API}/photos/nas/sync`, { method: 'POST', body: {} })
+    if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+    photoNas.data = r.body
+    toast('Abgleich gestartet')
+    redraw()
+  })
+  const choose = (title, list, current, key) =>
+    openSheet(
+      `<h2>${esc(tr(title))}</h2><div class="navlist">${list
+        .map(([l, v]) => `<button class="navrow" data-v="${v}"><span class="lbl"><b>${esc(tr(l))}</b></span>${v === current ? `<span class="chev">${icon('check', 18)}</span>` : ''}</button>`)
+        .join('')}</div>`,
+      (sheet, close) => {
+        for (const b of sheet.querySelectorAll('[data-v]')) {
+          b.onclick = () => {
+            close()
+            save({ [key]: Number(b.dataset.v) }, 'Gespeichert')
+          }
+        }
+      },
+    )
+  $('#nas-every', root)?.addEventListener('click', () => choose('Intervall', NAS_SYNC, d.settings.syncMinutes, 'syncMinutes'))
+  $('#nas-cache', root)?.addEventListener('click', () => choose('Höchstens belegen', NAS_CACHE, d.settings.cacheLimitMb, 'cacheLimitMb'))
+  $('#nas-remove', root)?.addEventListener('click', () =>
+    confirmSheet('Ordner nicht mehr verwenden', tr(`Die ${d.albums} ${d.albums === 1 ? 'Album' : 'Alben'} vom NAS und ihre Fotos werden von der Box entfernt. Auf dem NAS bleibt alles erhalten.`), async () => {
+      const r = await api(`${API}/photos/nas/remove`, { method: 'POST', body: {} })
+      if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+      photoNas.data = r.body
+      photoNas.chosen = new Set()
+      photoLib.stale = true
+      toast('NAS-Ordner entfernt')
+      redraw()
+    }),
+  )
+}
+
+/* Bibliothek › Fotos › Immich (5.1): the assistant (address, key, test, albums) and, once connected, the service's page
+   (state, keep the pictures on the box or show them live, sync, cache, access, disconnect). The key goes to the box
+   once and is never shown again. */
+
+// (the last step: albums and people - tab; people: the list of Immich, groups: the albums of people chosen, each one
+// to three ids; fav: the favourites)
+const photoImmich = { data: null, step: 0, url: '', key: '', test: null, testing: false, albums: null, chosen: new Set(), timer: 0, tab: 'albums', people: null, groups: [], fav: false, mem: false, q: '' }
+
+async function loadPhotoImmich() {
+  const r = await api(`${API}/photos/immich`)
+  if (!r.ok) throw new Error(`photos immich ${r.status}`)
+  photoImmich.data = r.body
+  // (a new visit: the service's page when connected, else the assistant from its start)
+  photoImmich.step = r.body.connected ? 0 : 1
+  photoImmich.url = r.body.settings.url || ''
+  photoImmich.key = ''
+  photoImmich.test = null
+  photoImmich.albums = null
+}
+
+const IMMICH_ERRORS = {
+  unreachable: ['Server nicht erreichbar', 'Prüfe die Adresse und ob Immich läuft. Die Box muss im selben Netz sein.'],
+  unauthorized: ['Schlüssel ungültig', 'Immich hat den Schlüssel abgelehnt. Prüfe, ob du den ganzen Schlüssel kopiert hast.'],
+  permissions: ['Rechte fehlen', 'Der Schlüssel passt, aber ihm fehlen Rechte. Lege in Immich einen Schlüssel mit album.read, asset.read und asset.view an.'],
+  unsupportedVersion: ['Immich-Version zu alt', 'Diese Version wird nicht unterstützt. Bitte Immich aktualisieren (ab Version {}).'],
+}
+
+// The assistant as the Spotify one (.wz): the steps on top (done ones ticked, one already passed can be opened
+// again), "Schritt x von 4", the step, and below Zurück on the left, the way on at the right
+const IMMICH_STEPS = [
+  ['url', 'Adresse'],
+  ['key', 'Schlüssel'],
+  ['test', 'Test'],
+  ['albums', 'Auswahl'],
+]
+
+// a limit of the pictures of an album of people (0: all - up to the limit of every album)
+const imLimitText = (n, max = 20000) => (n ? `${n} Bilder` : `Alle (bis ${max})`)
+const imLimitLabel = (n, max) => tr(imLimitText(n, max))
+
+const photoImmichTabs = () =>
+  `<div class="seg ph-tabs" id="im-tab">${[
+    ['albums', 'Alben'],
+    ['people', 'Personen'],
+  ]
+    .map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${photoImmich.tab === v}">${esc(tr(l))}</button>`)
+    .join('')}</div>`
+
+// a group of people as one key (the same people in another order: the same album)
+const imGroupKey = (g) => [...g].sort().join()
+const imPersonName = (id) => photoImmich.people?.people?.find((p) => p.id === id)?.name ?? '…'
+const imFace = (id, size = 40) => `<span class="ph-face" style="--s:${size}px"><img src="${esc(`${API}/photos/immich/face/${id}`)}" alt="" loading="lazy"></span>`
+
+// Schritt 4, "Personen": one album per person ticked, albums of two or three together, the favourites on the albums' tab
+function photoImmichPeopleTab() {
+  const list = photoImmich.people
+  const max = photoImmich.data?.peopleMax ?? 20
+  if (!list) return `<p class="help" style="margin:0">${esc(tr('Wird geladen …'))}</p>`
+  if (list.error === 'permissions')
+    return `<div class="note warn">${icon('info', 18)}<span>${esc(tr('Dem Schlüssel fehlt das Recht person.read. Ergänze es in Immich unter Kontoeinstellungen › API-Schlüssel › Bearbeiten.'))}</span></div>`
+  if (list.error) return `<div class="note danger">${icon('info', 18)}<span>${esc(tr('Die Personen lassen sich gerade nicht laden.'))}</span></div>`
+  if (!list.people.length) return `<p class="help" style="margin:0">${esc(tr('In Immich hat noch keine Person einen Namen.'))}</p>`
+  const single = new Set(photoImmich.groups.filter((g) => g.length === 1).map((g) => g[0]))
+  const together = photoImmich.groups.filter((g) => g.length > 1)
+  const q = photoImmich.q.trim().toLowerCase()
+  const shown = q ? list.people.filter((p) => p.name.toLowerCase().includes(q)) : list.people
+  const groups = together.length
+    ? `<div class="rows">${together
+        .map(
+          (g) => `<div class="entry ph-im-album"><span class="ph-faces">${g.map((id) => imFace(id, 32)).join('')}</span>
+          <span class="lbl"><b translate="no">${esc(g.map(imPersonName).join(' & '))}</b><small>${esc(tr('Fotos, auf denen alle zusammen sind'))}</small></span>
+          <button class="icon-btn" data-imungroup="${esc(imGroupKey(g))}" aria-label="${esc(tr('Entfernen'))}">${icon('close', 18)}</button></div>`,
+        )
+        .join('')}</div>`
+    : ''
+  return `<p class="help" style="margin:0">${esc(tr('Jede gewählte Person wird ein eigenes Album mit ihren Fotos. Am Display zeigt es ihr Gesicht.'))}</p>
+    <div class="card-head"><h3>${esc(tr('Gemeinsame Alben'))}</h3><button class="btn sm" id="im-group" ${photoImmich.groups.length >= max ? 'disabled' : ''}>${icon('plus', 16)}${esc(tr('Gemeinsames Album'))}</button></div>
+    ${groups || `<p class="help" style="margin:0">${esc(tr('Zwei oder drei Personen zusammen, z. B. Oma und Opa.'))}</p>`}
+    <div class="search">${icon('search')}<input class="input" id="im-q" type="search" placeholder="${esc(tr('Person suchen'))}" autocomplete="off" value="${esc(photoImmich.q)}"></div>
+    <div id="im-people">${
+      shown.length
+        ? `<div class="rows">${shown
+            .map(
+              (p) => `<div class="entry ph-im-album">${imFace(p.id)}
+        <span class="lbl"><b translate="no">${esc(p.name)}</b></span>
+        <button class="ph-check-box" role="checkbox" aria-checked="${single.has(p.id)}" data-imp="${esc(p.id)}" aria-label="${esc(p.name)}">${single.has(p.id) ? icon('check', 16) : ''}</button></div>`,
+            )
+            .join('')}</div>`
+        : `<p class="help" style="margin:0">${esc(tr('Keine Person gefunden.'))}</p>`
+    }</div>`
+}
+
+// the sheet for an album of people together: two or three ticked, then "Anlegen"
+function photoImmichGroupSheet(redraw) {
+  const pick = new Set()
+  const togetherMax = photoImmich.data?.togetherMax ?? 3
+  let q = ''
+  openSheet(`<h2>${esc(tr('Gemeinsames Album'))}</h2><p class="help">${esc(tr('Wähle zwei oder drei Personen. Das Album zeigt die Fotos, auf denen alle zusammen sind.'))}</p>
+    <div class="search">${icon('search')}<input class="input" id="img-q" type="search" placeholder="${esc(tr('Person suchen'))}" autocomplete="off"></div>
+    <div class="rows" id="img-list"></div><div class="btns"><button class="btn primary" id="img-ok" disabled>${esc(tr('Anlegen'))}</button></div>`, (sheet, close) => {
+    const draw = () => {
+      const shown = (photoImmich.people?.people ?? []).filter((p) => !q || p.name.toLowerCase().includes(q)).slice(0, 200)
+      $('#img-list', sheet).innerHTML = shown
+        .map(
+          (p) => `<div class="entry ph-im-album">${imFace(p.id)}<span class="lbl"><b translate="no">${esc(p.name)}</b></span>
+          <button class="ph-check-box" role="checkbox" aria-checked="${pick.has(p.id)}" data-pick="${esc(p.id)}" aria-label="${esc(p.name)}" ${!pick.has(p.id) && pick.size >= togetherMax ? 'disabled' : ''}>${pick.has(p.id) ? icon('check', 16) : ''}</button></div>`,
+        )
+        .join('')
+      $('#img-ok', sheet).disabled = pick.size < 2
+      for (const b of sheet.querySelectorAll('[data-pick]')) {
+        b.onclick = () => {
+          if (pick.has(b.dataset.pick)) pick.delete(b.dataset.pick)
+          else if (pick.size < togetherMax) pick.add(b.dataset.pick)
+          draw()
+        }
+      }
+    }
+    $('#img-q', sheet).addEventListener('input', (e) => {
+      q = e.target.value.trim().toLowerCase()
+      draw()
+    })
+    $('#img-ok', sheet).onclick = () => {
+      const g = [...pick]
+      if (!photoImmich.groups.some((x) => imGroupKey(x) === imGroupKey(g))) photoImmich.groups.push(g)
+      close()
+      redraw()
+    }
+    draw()
+  })
+}
+
+function photoImmichSteps() {
+  const s = photoImmichImmichStep()
+  const t = photoImmich.test
+  const bar = `<ol class="wz-steps" style="grid-template-columns:repeat(${IMMICH_STEPS.length}, minmax(0, 1fr))">${IMMICH_STEPS.map(([, label], i) => {
+    const n = i + 1
+    const done = n < s
+    return `<li class="${done ? 'done' : ''}${n === s ? ' current' : ''}"><button type="button" data-imstep="${n}"${n === s ? ' aria-current="step"' : ''}${done ? '' : ' disabled'}><span class="bar"></span><span class="lbl">${done ? icon('check', 14) : `<i>${n}</i>`}${esc(tr(label))}</span></button></li>`
+  }).join('')}</ol>`
+  let body
+  let next
+  if (s === 1) {
+    body = `<h2>Wo läuft dein Immich?</h2>
+      <div class="field"><label for="im-url">Server-Adresse</label><input class="input mono" id="im-url" placeholder="http://192.168.1.20:2283" value="${esc(photoImmich.url)}" ${NO_PW_MANAGER} spellcheck="false">
+      <small>Mit http:// oder https:// und Port. Ein Server nur im Heimnetz reicht.</small></div>`
+    next = `<button class="btn primary" id="im-next1">Weiter</button>`
+  } else if (s === 2) {
+    const kept = photoImmichKeyKept()
+    body = `<h2>API-Schlüssel anlegen</h2><p class="help">Damit die Box deine Alben lesen darf.</p>
+      <ol class="ph-howto"><li>Immich im Browser öffnen und anmelden.</li><li>Kontoeinstellungen › API-Schlüssel › „Neuer API-Schlüssel“.</li>
+      <li>Name „MuPiBox“ eingeben. Fragt Immich nach Rechten, nur diese anhaken: album.read, asset.read und asset.view (gern auch user.read, dann zeigt der Test deinen Kontonamen).</li><li>Für Alben von Personen zusätzlich person.read anhaken.</li><li>Für die Erinnerungen zusätzlich memory.read anhaken.</li><li>Schlüssel kopieren und hier einfügen.</li></ol>
+      <div class="field"><label for="im-key">API-Schlüssel</label><div class="input-wrap"><input class="input mono has-eye" id="im-key" type="password" value="${esc(photoImmich.key)}" placeholder="${esc(kept ? tr('Gespeichert – leer lassen, um ihn zu behalten') : '')}" ${NO_PW_MANAGER} spellcheck="false"><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div>
+      <small>Wird nur auf der Box gespeichert und hier nie wieder angezeigt.</small></div>`
+    next = `<button class="btn primary" id="im-test" ${photoImmich.testing ? 'disabled' : ''}>${esc(tr(photoImmich.testing ? 'Wird getestet …' : 'Verbindung testen'))}</button>`
+  } else if (s === 3) {
+    if (t?.ok) {
+      body = `<h2>Verbindung steht</h2><p class="help">Die Box kann deine Alben lesen.</p>
+        <dl class="kv">${t.account ? `<div><dt>Konto</dt><dd translate="no">${esc(t.account)}</dd></div>` : ''}<div><dt>Alben</dt><dd>${esc(String(t.albums))}</dd></div><div><dt>Fotos und Videos</dt><dd>${esc(String(t.assets))}</dd></div><div><dt>Version</dt><dd>${esc(t.version)}</dd></div></dl>
+        ${t.people === false ? `<div class="note warn">${icon('info', 18)}<span>${esc(tr('Alben von Personen brauchen zusätzlich das Recht person.read. Die Alben gehen auch ohne.'))}</span></div>` : ''}
+        ${t.memories === false ? `<div class="note warn">${icon('info', 18)}<span>${esc(tr('Die Erinnerungen brauchen zusätzlich das Recht memory.read. Die Alben gehen auch ohne.'))}</span></div>` : ''}`
+      next = `<button class="btn primary" id="im-next3">Weiter</button>`
+    } else {
+      const [head, text] = IMMICH_ERRORS[t?.error] ?? IMMICH_ERRORS.unreachable
+      body = `<h2>${esc(tr(head))}</h2><div class="note danger">${icon('info', 18)}<span>${esc(tr(text.replace('{}', photoImmich.data?.minVersion ?? '1.106')))}</span></div>`
+      next = t?.error === 'unauthorized' || t?.error === 'permissions' ? `<button class="btn primary" data-imstep="2">Schlüssel ändern</button>` : `<button class="btn primary" data-imstep="1">Adresse ändern</button>`
+    }
+  } else if (photoImmich.tab === 'people') {
+    const n = photoImmich.groups.length
+    body = `<div class="ph-im-pick">${photoImmichTabs()}${photoImmichPeopleTab()}
+      <p class="help" style="margin:0">${esc(tr(`${n} ${n === 1 ? 'Personen-Album' : 'Personen-Alben'} gewählt`))}</p></div>`
+    next = `<button class="btn primary" id="im-done">Fertig</button>`
+  } else {
+    const list = photoImmich.albums
+    const rows = !list
+      ? `<p class="help" style="margin:0">${esc(tr('Wird geladen …'))}</p>`
+      : list.error
+        ? `<div class="note danger">${icon('info', 18)}<span>${esc(tr('Die Alben lassen sich gerade nicht laden.'))}</span></div>`
+        : list.albums.length
+          ? `<div class="rows">${list.albums
+              .map(
+                (a) => `<div class="entry ph-im-album"><span class="ph-thumb">${a.thumb ? `<img src="${esc(`${API}/photos/immich/thumb/${a.thumb}`)}" alt="" loading="lazy">` : icon('image', 20)}</span>
+                <span class="lbl"><b translate="no">${esc(a.name)}</b><small>${esc(tr(`${a.count} ${a.count === 1 ? 'Foto' : 'Fotos'}`))}</small></span>
+                <button class="ph-check-box" role="checkbox" aria-checked="${photoImmich.chosen.has(a.id)}" data-im="${esc(a.id)}" aria-label="${esc(a.name)}">${photoImmich.chosen.has(a.id) ? icon('check', 16) : ''}</button></div>`,
+              )
+              .join('')}</div>`
+          : `<p class="help" style="margin:0">In Immich gibt es noch keine Alben.</p>`
+    // (the favourites and the memories of the day: albums of their own, above the albums)
+    const fav = `<div class="rows"><div class="entry ph-im-album"><span class="ph-thumb">${icon('heart', 20)}</span>
+      <span class="lbl"><b>${esc(tr('Favoriten'))}</b><small>${esc(tr('Alle Fotos mit Herz in Immich'))}</small></span>
+      <button class="ph-check-box" role="checkbox" aria-checked="${photoImmich.fav}" id="im-fav" aria-label="${esc(tr('Favoriten'))}">${photoImmich.fav ? icon('check', 16) : ''}</button></div>
+      <div class="entry ph-im-album"><span class="ph-thumb">${icon('hist', 20)}</span>
+      <span class="lbl"><b>${esc(tr('Erinnerungen'))}</b><small>${esc(tr('Die Fotos von heute vor einem Jahr und mehr – jeden Tag neu, wie in Immich'))}</small></span>
+      <button class="ph-check-box" role="checkbox" aria-checked="${photoImmich.mem}" id="im-mem" aria-label="${esc(tr('Erinnerungen'))}">${photoImmich.mem ? icon('check', 16) : ''}</button></div></div>`
+    body = `<div class="ph-im-pick">${photoImmichTabs()}${fav}<div class="card-head"><h2>${esc(tr(list?.albums ? `${list.albums.length} Alben in Immich` : 'Alben in Immich'))}</h2>${list?.albums?.length ? '<button class="btn sm" id="im-all">Alle wählen</button>' : ''}</div>
+      ${rows}<p class="help" style="margin:0">${esc(tr(`${photoImmich.chosen.size} ${photoImmich.chosen.size === 1 ? 'Album' : 'Alben'} gewählt`))}</p></div>`
+    next = `<button class="btn primary" id="im-done">Fertig</button>`
+  }
+  // (the first step's way back: out of the assistant - to the service's page when connected, else to the photos)
+  const back = s === 1 ? `<button class="btn" id="im-cancel">Abbrechen</button>` : `<button class="btn" id="im-back">${icon('back', 18)}Zurück</button>`
+  return [
+    `<section class="card wide wz">${bar}<div class="wz-count">${esc(tr(`Schritt ${s} von ${IMMICH_STEPS.length}`))}</div>${body}
+      <div class="wz-foot">${back}<span class="wz-next">${next}</span></div></section>`,
+  ]
+}
+
+// a key kept on the box, for the address typed in (another server gets it only typed in anew - see immich.ts)
+const immichUrl = (v) => {
+  const t = String(v ?? '').trim().replace(/\/+$/, '').replace(/\/api$/i, '')
+  return /^https?:\/\//i.test(t) ? t.toLowerCase() : `http://${t}`.toLowerCase()
+}
+const photoImmichKeyKept = () => !!photoImmich.data?.settings.hasKey && immichUrl(photoImmich.url) === immichUrl(photoImmich.data.settings.url)
+
+// the step shown (3, the test, only with a result)
+const photoImmichImmichStep = () => (photoImmich.step === 3 && !photoImmich.test ? 2 : photoImmich.step)
+
+function photoImmichTop() {
+  const d = photoImmich.data
+  if (!d) return []
+  if (photoImmich.step) return photoImmichSteps()
+  const s = d.sync
+  const st = d.settings
+  const status = photoServiceStatus(s, 'Schlüssel abgelehnt')
+  const limit = st.cacheLimitMb * 1024 * 1024
+  return [
+    `<section class="card wide"><h2>${esc(st.account ? tr(`Verbunden – Konto „${st.account}“`) : tr('Verbunden'))}</h2>
+      <div class="ph-nas-state ${status[1]}">${status[0]}</div>
+      <dl class="kv"><div><dt>Alben</dt><dd>${esc(tr(`${st.albumIds.length} · ${d.pictures} ${d.pictures === 1 ? 'Foto' : 'Fotos'}`))}</dd></div>${
+        st.people?.length ? `<div><dt>Personen</dt><dd>${esc(tr(`${st.people.length} ${st.people.length === 1 ? 'Album' : 'Alben'}`))}</dd></div>` : ''
+      }${st.favorites ? `<div><dt>Favoriten</dt><dd>${esc(tr('Eingeschaltet'))}</dd></div>` : ''}${st.memories ? `<div><dt>Erinnerungen</dt><dd>${esc(tr('Eingeschaltet'))}</dd></div>` : ''}</dl>
+      ${s.unauthorized ? `<div class="note danger">${icon('info', 18)}<span>Immich nimmt den Schlüssel nicht mehr an. Die Box zeigt weiter die gespeicherten Fotos. Lege in Immich einen neuen Schlüssel an und ersetze ihn unten.</span></div>` : ''}
+      ${s.offlineSince ? `<div class="note danger">${icon('info', 18)}<span>Die Box zeigt weiter die gespeicherten Fotos. Prüfe, ob Immich läuft und die Adresse stimmt.</span></div>` : ''}
+      ${s.missing ? `<div class="note warn">${icon('info', 18)}<span>${esc(s.missing === 1 ? tr('Ein gewähltes Album gibt es in Immich nicht mehr.') : tr(`${s.missing} gewählte Alben gibt es in Immich nicht mehr.`))}</span></div>` : ''}
+      ${s.cacheFull && st.keepCopy ? `<div class="note warn">${icon('info', 18)}<span>Der Zwischenspeicher ist voll. Nicht alle Fotos sind auf der Box – erhöhe die Grenze oder wähle weniger Alben.</span></div>` : ''}
+      <div class="btns"><button class="btn primary" id="im-sync" ${s.running ? 'disabled' : ''}>${icon('sync', 18)}Jetzt abgleichen</button>${syncCancelButton('immich', s.running)}<button class="btn" id="im-albums">Alben und Personen</button></div></section>`,
+    `<section class="card wide"><h2>Fotos</h2>
+      <div class="row"><span class="lbl"><b>Fotos auf der Box speichern</b><small>An: Die Box speichert die Fotos in Anzeigegröße und zeigt sie auch ohne Netz. Aus: Die Fotos kommen beim Anzeigen live von Immich – ohne Netz sind diese Alben gerade nicht da.</small></span>
+        <label class="switch"><input type="checkbox" id="im-keep" ${st.keepCopy ? 'checked' : ''} aria-label="${esc(tr('Fotos auf der Box speichern'))}"><span></span></label></div>
+      ${
+        // the pictures at most of an album of people and of the favourites (immich.ts SEARCH_LIMITS)
+        st.people?.length || st.favorites
+          ? `<div class="field"><label>${esc(tr('Bilder je Personen-Album'))}</label><button class="select-btn" id="im-limit"><span>${esc(imLimitLabel(d.searchLimit, d.picturesMax))}</span>${icon('chevron', 18)}</button>
+      <small>${esc(tr('Gilt auch für die Favoriten. Gibt es mehr, wählt die Box gleichmäßig aus allen Jahren aus – bei jedem Abgleich dieselben.'))}</small></div>`
+          : ''
+      }</section>`,
+    `<section class="card"><h2>Abgleich</h2>
+      <div class="field"><label>Intervall</label><button class="select-btn" id="im-every"><span>${esc(tr(NAS_SYNC.find(([, m]) => m === st.syncMinutes)?.[0] ?? 'Alle 6 Stunden'))}</span>${icon('chevron', 18)}</button>
+      <small>Neue Fotos aus Immich erscheinen spätestens nach dieser Zeit am Display.</small></div></section>`,
+    `<section class="card"><h2>Zwischenspeicher</h2>
+      <div class="bar"><div class="slider-head"><b>${esc(st.keepCopy && limit ? tr(`${formatBytes(d.cacheBytes)} von ${formatBytes(limit)} belegt`) : tr(`${formatBytes(d.cacheBytes)} belegt`))}</b></div>
+      <div class="track"><i style="--w:${st.keepCopy && limit ? Math.min(100, (d.cacheBytes / limit) * 100).toFixed(1) : 0}%"></i></div></div>
+      ${st.keepCopy
+        ? `<p class="help">Fotos aus Immich liegen in Anzeigegröße auf der Box und sind auch ohne Netz da.</p>
+      <div class="field"><label>Höchstens belegen</label><button class="select-btn" id="im-cache"><span>${esc(tr(NAS_CACHE.find(([, m]) => m === st.cacheLimitMb)?.[0] ?? '2 GB'))}</span>${icon('chevron', 18)}</button>
+      <small>Ist die Grenze erreicht, lädt die Box keine weiteren Fotos und zeigt hier einen Hinweis.</small></div>`
+        : `<p class="help">Live behält die Box nur die zuletzt gezeigten Fotos (höchstens 200 MB).</p>`}</section>`,
+    `<section class="card wide"><h2>Zugang</h2>
+      <dl class="kv"><div><dt>Server-Adresse</dt><dd translate="no">${esc(st.url)}</dd></div><div><dt>API-Schlüssel</dt><dd>${esc(tr(st.hasKey ? 'gesetzt' : 'fehlt'))}</dd></div></dl>
+      <p class="help">Der Schlüssel wird aus Sicherheitsgründen nicht mehr angezeigt.</p>
+      <div class="btns"><button class="btn" id="im-url-change">Adresse ändern</button><button class="btn" id="im-key-change">Schlüssel ersetzen</button></div></section>`,
+    `<section class="card wide"><div class="navlist"><button class="navrow" id="im-remove"><span class="tile danger">${icon('close', 18)}</span><span class="lbl"><b class="danger-text">Verbindung trennen</b><small>Die Alben aus Immich und ihre Fotos werden von der Box entfernt. In Immich bleibt alles erhalten.</small></span></button></div></section>`,
+  ]
+}
+
+async function photoImmichLoadAlbums() {
+  photoImmich.albums = null
+  const r = await api(`${API}/photos/immich/albums`)
+  photoImmich.albums = r.ok ? r.body : { error: true }
+}
+
+async function photoImmichLoadPeople() {
+  photoImmich.people = null
+  const r = await api(`${API}/photos/immich/people`)
+  photoImmich.people = r.ok ? r.body : { error: r.status === 403 ? 'permissions' : 'error' }
+}
+
+// the last step from the start: albums, people and favourites as saved, the albums' tab
+async function photoImmichOpenChoice(redraw) {
+  const st = photoImmich.data.settings
+  photoImmich.chosen = new Set(st.albumIds)
+  photoImmich.groups = (st.people ?? []).map((g) => [...g])
+  photoImmich.fav = st.favorites === true
+  photoImmich.mem = st.memories === true
+  photoImmich.tab = 'albums'
+  photoImmich.q = ''
+  photoImmich.people = null
+  photoImmich.step = 4
+  redraw()
+  await photoImmichLoadAlbums()
+  redraw()
+}
+
+function mountPhotoImmich(root, page) {
+  const d = photoImmich.data
+  window.clearTimeout(photoImmich.timer)
+  if (!d) return
+  const redraw = () => currentPage()?.id === page.id && renderPage(page, false)
+  const take = (body) => {
+    photoImmich.data = body
+    photoLib.stale = true
+  }
+  const save = async (body, done) => {
+    const r = await api(`${API}/photos/immich`, { method: 'POST', body })
+    if (!r.ok) {
+      toast('Nicht gespeichert', 'info')
+      return false
+    }
+    take(r.body)
+    if (done) toast(done)
+    return true
+  }
+  // the assistant
+  $('#im-cancel', root)?.addEventListener('click', () => (d.connected ? ((photoImmich.step = 0), redraw()) : go('fotos')))
+  $('#im-next1', root)?.addEventListener('click', () => {
+    const v = $('#im-url', root).value.trim()
+    if (!/^(https?:\/\/)?[^\s/:]+(:\d+)?(\/\S*)?$/i.test(v)) return toast('Bitte die Adresse von Immich eintragen, z. B. http://192.168.1.20:2283', 'info')
+    photoImmich.url = v
+    photoImmich.test = null
+    photoImmich.step = 2
+    redraw()
+  })
+  // back one step (the key typed is kept while the assistant is open); a step passed already, from the steps on top
+  const goStep = (n) => {
+    const key = $('#im-key', root)
+    if (key) photoImmich.key = key.value
+    photoImmich.step = n
+    redraw()
+    window.scrollTo(0, 0)
+  }
+  $('#im-back', root)?.addEventListener('click', () => goStep(photoImmichImmichStep() === 4 && d.connected && !photoImmich.test ? 0 : photoImmichImmichStep() - 1))
+  for (const b of root.querySelectorAll('[data-imstep]')) b.onclick = () => goStep(Number(b.dataset.imstep))
+  $('#im-test', root)?.addEventListener('click', async () => {
+    photoImmich.key = $('#im-key', root).value.trim()
+    if (!photoImmich.key && !photoImmichKeyKept()) return toast('Bitte den API-Schlüssel einfügen', 'info')
+    photoImmich.testing = true
+    redraw()
+    const r = await api(`${API}/photos/immich/test`, { method: 'POST', body: { url: photoImmich.url, apiKey: photoImmich.key }, timeoutMs: 30000 })
+    photoImmich.testing = false
+    photoImmich.test = r.ok ? r.body : { ok: false, error: 'unreachable' }
+    photoImmich.step = 3
+    redraw()
+  })
+  $('#im-next3', root)?.addEventListener('click', async () => {
+    // (address and key are saved now - the album list comes from the box with them)
+    const body = { url: photoImmich.url, account: photoImmich.test?.account ?? null }
+    if (photoImmich.key) body.apiKey = photoImmich.key
+    if (!(await save(body))) return
+    photoImmich.key = ''
+    await photoImmichOpenChoice(redraw)
+  })
+  // Schritt 4: albums or people
+  for (const b of root.querySelectorAll('#im-tab [data-v]')) {
+    b.onclick = async () => {
+      if (photoImmich.tab === b.dataset.v) return
+      photoImmich.tab = b.dataset.v
+      redraw()
+      if (photoImmich.tab === 'people' && !photoImmich.people) {
+        await photoImmichLoadPeople()
+        redraw()
+      }
+    }
+  }
+  $('#im-fav', root)?.addEventListener('click', () => {
+    photoImmich.fav = !photoImmich.fav
+    redraw()
+  })
+  $('#im-mem', root)?.addEventListener('click', () => {
+    photoImmich.mem = !photoImmich.mem
+    redraw()
+  })
+  const peopleMax = d.peopleMax ?? 20
+  const bindPeople = () => {
+    for (const b of root.querySelectorAll('[data-imp]')) {
+      b.onclick = () => {
+        const id = b.dataset.imp
+        const at = photoImmich.groups.findIndex((g) => g.length === 1 && g[0] === id)
+        if (at >= 0) photoImmich.groups.splice(at, 1)
+        else if (photoImmich.groups.length >= peopleMax) return toast(tr(`Höchstens ${peopleMax} Alben von Personen`), 'info')
+        else photoImmich.groups.push([id])
+        const q = $('#im-q', root)
+        const keep = q && document.activeElement === q
+        redraw()
+        if (keep) $('#im-q', root)?.focus()
+      }
+    }
+  }
+  bindPeople()
+  // (the search: only the list drawn anew - the field keeps the focus)
+  $('#im-q', root)?.addEventListener('input', (e) => {
+    photoImmich.q = e.target.value
+    const fresh = document.createElement('div')
+    fresh.innerHTML = photoImmichPeopleTab()
+    const list = $('#im-people', fresh)
+    if (list) $('#im-people', root).replaceWith(list)
+    bindPeople()
+  })
+  for (const b of root.querySelectorAll('[data-imungroup]')) {
+    b.onclick = () => {
+      photoImmich.groups = photoImmich.groups.filter((g) => imGroupKey(g) !== b.dataset.imungroup)
+      redraw()
+    }
+  }
+  $('#im-group', root)?.addEventListener('click', () => {
+    if (photoImmich.groups.length >= peopleMax) return toast(tr(`Höchstens ${peopleMax} Alben von Personen`), 'info')
+    photoImmichGroupSheet(redraw)
+  })
+  for (const b of root.querySelectorAll('[data-im]')) {
+    b.onclick = () => {
+      const id = b.dataset.im
+      if (photoImmich.chosen.has(id)) photoImmich.chosen.delete(id)
+      else photoImmich.chosen.add(id)
+      redraw()
+    }
+  }
+  $('#im-all', root)?.addEventListener('click', () => {
+    for (const a of photoImmich.albums?.albums ?? []) photoImmich.chosen.add(a.id)
+    redraw()
+  })
+  $('#im-done', root)?.addEventListener('click', async () => {
+    const any = photoImmich.chosen.size || photoImmich.groups.length || photoImmich.fav || photoImmich.mem
+    if (!(await save({ albumIds: [...photoImmich.chosen], people: photoImmich.groups, favorites: photoImmich.fav, memories: photoImmich.mem }, any ? 'Gespeichert – Abgleich gestartet' : 'Gespeichert'))) return
+    photoImmich.step = 0
+    redraw()
+  })
+  if (photoImmich.step) return
+  // the service's page
+  if (d.sync.running) photoImmich.timer = window.setTimeout(async () => {
+    if (currentPage()?.id !== page.id || photoImmich.step) return
+    const r = await api(`${API}/photos/immich`)
+    if (r.ok) take(r.body)
+    redraw()
+  }, 3000)
+  $('#im-sync', root)?.addEventListener('click', async () => {
+    const r = await api(`${API}/photos/immich/sync`, { method: 'POST', body: {} })
+    if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+    take(r.body)
+    toast('Abgleich gestartet')
+    redraw()
+  })
+  $('#im-albums', root)?.addEventListener('click', async () => {
+    photoImmich.test = null
+    await photoImmichOpenChoice(redraw)
+  })
+  $('#im-keep', root)?.addEventListener('change', async (e) => {
+    const on = e.target.checked
+    if (!(await save({ keepCopy: on }, on ? 'Fotos werden auf der Box gespeichert' : 'Fotos kommen live von Immich'))) e.target.checked = !on
+    redraw()
+  })
+  const choose = (title, list, current, key) =>
+    openSheet(
+      `<h2>${esc(tr(title))}</h2><div class="navlist">${list
+        .map(([l, v]) => `<button class="navrow" data-v="${v}"><span class="lbl"><b>${esc(tr(l))}</b></span>${v === current ? `<span class="chev">${icon('check', 18)}</span>` : ''}</button>`)
+        .join('')}</div>`,
+      (sheet, close) => {
+        for (const b of sheet.querySelectorAll('[data-v]')) {
+          b.onclick = async () => {
+            close()
+            if (await save({ [key]: Number(b.dataset.v) }, 'Gespeichert')) redraw()
+          }
+        }
+      },
+    )
+  $('#im-every', root)?.addEventListener('click', () => choose('Intervall', NAS_SYNC, d.settings.syncMinutes, 'syncMinutes'))
+  $('#im-cache', root)?.addEventListener('click', () => choose('Höchstens belegen', NAS_CACHE, d.settings.cacheLimitMb, 'cacheLimitMb'))
+  $('#im-limit', root)?.addEventListener('click', () =>
+    choose(
+      'Bilder je Personen-Album',
+      (d.searchLimits ?? [500, 1000, 2000, 5000, 0]).map((n) => [imLimitText(n, d.picturesMax), n]),
+      d.searchLimit,
+      'searchLimit',
+    ),
+  )
+  $('#im-url-change', root)?.addEventListener('click', () => {
+    photoImmich.url = d.settings.url
+    photoImmich.test = null
+    photoImmich.step = 1
+    redraw()
+  })
+  $('#im-key-change', root)?.addEventListener('click', () => {
+    photoImmich.url = d.settings.url
+    photoImmich.key = ''
+    photoImmich.test = null
+    photoImmich.step = 2
+    redraw()
+  })
+  $('#im-remove', root)?.addEventListener('click', () =>
+    confirmSheet('Verbindung trennen', tr(`Die ${d.albums} ${d.albums === 1 ? 'Album' : 'Alben'} aus Immich und ihre Fotos werden von der Box entfernt. In Immich bleibt alles erhalten.`), async () => {
+      const r = await api(`${API}/photos/immich/remove`, { method: 'POST', body: {} })
+      if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+      photoLib.stale = true
+      toast('Immich getrennt')
+      go('fotos')
+    }),
+  )
+}
+
+/* Bibliothek › Fotos › Synology Photos (5.1): a login of its own at DSM (address, account, password) - the assistant
+   (login, test with the certificate, albums) and, once switched on, the service's page as Immich's (synology.ts) */
+const photoSyno = { data: null, step: 0, url: '', account: '', password: '', fingerprint: '', test: null, testing: false, albums: null, chosen: new Set(), timer: 0, tab: 'albums', tree: new Map(), open: new Set(), parent: new Map(), smart: null, smartOpen: new Set() }
+
+async function loadPhotoSynology() {
+  const r = await api(`${API}/photos/synology`)
+  if (!r.ok) throw new Error(`photos synology ${r.status}`)
+  const d = r.body
+  photoSyno.data = d
+  // (not switched on yet: the assistant)
+  photoSyno.step = d.connected ? 0 : 1
+  photoSyno.url = d.settings.url || (d.nasHost ? `https://${d.nasHost}:5001` : '')
+  photoSyno.account = d.settings.account || ''
+  photoSyno.password = ''
+  photoSyno.fingerprint = d.settings.certFingerprint || ''
+  photoSyno.test = null
+  photoSyno.albums = null
+  Object.assign(photoSyno, { tab: 'albums', tree: new Map(), open: new Set(), parent: new Map(), smart: null, smartOpen: new Set() })
+}
+
+// the choice is albums and folders: the albums the account sees, the folders of its personal space and the ones of the
+// shared space ("Team" for Synology). A folder is a choice as "f<id>" (personal) or "t<id>" (shared).
+const SYNO_TABS = [
+  ['albums', 'Alben'],
+  ['personal', 'Persönlicher Bereich'],
+  ['shared', 'Gemeinsamer Bereich'],
+  ['smart', 'Intelligent'],
+]
+// the smart albums Synology Photos makes of the personal space: what the box offers besides the lists below
+const SYNO_SMART = { recent: ['Zuletzt hinzugefügt', 'time'], videos: ['Videos', 'image'] }
+// the lists of what Synology's recognition found (or the user named): [key of the answer, heading]
+const SYNO_SMART_LISTS = [
+  ['people', 'Personen'],
+  ['places', 'Orte'],
+  ['tags', 'Tags'],
+  ['subjects', 'Motive'],
+]
+
+async function photoSynoLoadSmart() {
+  photoSyno.smart = null
+  const r = await api(`${API}/photos/synology/smart`)
+  photoSyno.smart = r.ok ? r.body : { error: true }
+  // (a list opens by itself when something in it is chosen already; the others stay closed - they are long)
+  photoSyno.smartOpen = new Set(r.ok ? SYNO_SMART_LISTS.filter(([key]) => (r.body[key] ?? []).some((x) => photoSyno.chosen.has(x.ref))).map(([key]) => key) : [])
+}
+
+function photoSynoSmartRows() {
+  const d = photoSyno.smart
+  if (!d) return `<p class="help" style="margin:0">${esc(tr('Wird geladen …'))}</p>`
+  if (d.error) return `<div class="note danger">${icon('info', 18)}<span>${esc(tr('Die Alben lassen sich gerade nicht laden.'))}</span></div>`
+  const row = (ref, name, sub, ic) => `<div class="entry ph-im-album"><span class="ph-thumb">${icon(ic, 20)}</span>
+      <span class="lbl"><b translate="no">${esc(name)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>
+      <button class="ph-check-box" role="checkbox" aria-checked="${photoSyno.chosen.has(ref)}" data-sypick="${esc(ref)}" aria-label="${esc(name)}">${photoSyno.chosen.has(ref) ? icon('check', 16) : ''}</button></div>`
+  const collections = d.collections.map((c) => row(c.ref, tr(SYNO_SMART[c.kind]?.[0] ?? c.kind), '', SYNO_SMART[c.kind]?.[1] ?? 'image')).join('')
+  // (a list the DSM does not have, or an empty one, is left out)
+  // each list can be folded; the one with the most pictures first
+  const lists = SYNO_SMART_LISTS.filter(([key]) => Array.isArray(d[key]) && d[key].length)
+    .map(([key, head]) => {
+      const open = photoSyno.smartOpen.has(key)
+      const sorted = [...d[key]].sort((a, b) => (b.count || 0) - (a.count || 0) || a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
+      const rows = sorted.map((x) => row(x.ref, x.name, [x.space === 'shared' ? tr('Gemeinsamer Bereich') : '', x.note, x.count ? tr(`${x.count} ${x.count === 1 ? 'Foto' : 'Fotos'}`) : ''].filter(Boolean).join(' · '), 'image')).join('')
+      return `<button class="ph-sec" data-sysec="${key}" aria-expanded="${open}" aria-label="${esc(tr(open ? 'Zuklappen' : 'Aufklappen'))}: ${esc(tr(head))}" style="display:flex;align-items:center;gap:6px;width:100%;margin-top:8px;padding:6px 0;background:none;border:0;color:inherit;font:inherit;text-align:left;cursor:pointer">
+          <span class="ph-tree-arrow${open ? ' open' : ''}" style="display:inline-flex;align-items:center;justify-content:center">${icon('chevron', 16)}</span>
+          <b>${esc(tr(head))}</b><small style="opacity:.7">${sorted.length}</small></button>${open ? `<div class="rows">${rows}</div>` : ''}`
+    })
+    .join('')
+  const none = lists ? '' : `<p class="help" style="margin:12px 0 0">${esc(tr('Nichts gefunden: Die Erkennung von Synology Photos (Personen, Orte, Motive) ist für das Konto der Box aus, oder es gibt noch nichts mit Namen.'))}</p>`
+  return `<div class="rows">${collections}</div>${lists}${none}
+    <p class="help" style="margin:8px 0 0">${esc(tr('Intelligente Alben ändern sich von selbst: Die Box gleicht sie wie alle anderen ab.'))}</p>`
+}
+const synoRef = (space, id) => `${space === 'shared' ? 't' : 'f'}${id}`
+
+async function photoSynoBrowse(space, id) {
+  const r = await api(`${API}/photos/synology/folders?space=${space}&id=${id}`)
+  photoSyno.tree.set(`${space}:${id}`, r.ok ? r.body : { error: r.body?.error ?? 'unreachable', folders: [] })
+  if (r.ok) for (const f of r.body.folders) photoSyno.parent.set(f.ref, id === '0' ? '' : synoRef(space, id))
+}
+
+// the folders above a folder (as far as they were listed)
+function synoAbove(ref) {
+  const out = []
+  for (let p = photoSyno.parent.get(ref); p; p = photoSyno.parent.get(p)) out.push(p)
+  return out
+}
+
+function photoSynoFolderRows(space, id, depth) {
+  const node = photoSyno.tree.get(`${space}:${id}`)
+  if (!node) return `<div class="ph-tree-row" style="--d:${depth}"><span class="help">${esc(tr('Wird geladen …'))}</span></div>`
+  if (node.error === 'not_available' && depth === 0) return `<div class="note warn">${icon('info', 18)}<span>${esc(tr('Dieser Bereich ist nicht verfügbar: Synology Photos hat ihn nicht eingerichtet, oder das Konto der Box darf ihn nicht sehen.'))}</span></div>`
+  if (node.error) return `<div class="ph-tree-row" style="--d:${depth}"><span class="help danger-text" style="flex:1">${esc(tr('Dieser Ordner lässt sich gerade nicht lesen.'))}</span><button class="btn sm" data-syretry="${space}:${id}">${esc(tr('Erneut versuchen'))}</button></div>`
+  if (!node.folders.length) return depth === 0 ? `<p class="help" style="margin:0">${esc(tr('In diesem Bereich gibt es keine Ordner.'))}</p>` : `<div class="ph-tree-row" style="--d:${depth}"><span class="help">${esc(tr('Keine weiteren Ordner'))}</span></div>`
+  return node.folders
+    .map((f) => {
+      const open = photoSyno.open.has(`${space}:${f.id}`)
+      const on = photoSyno.chosen.has(f.ref)
+      // (a folder below one that is chosen: in it already)
+      const inside = synoAbove(f.ref).some((a) => photoSyno.chosen.has(a))
+      return `<div class="ph-tree-row" style="--d:${depth}">
+          <button class="icon-btn ph-tree-arrow${open ? ' open' : ''}" data-sytree="${space}:${f.id}" aria-label="${esc(tr(open ? 'Zuklappen' : 'Aufklappen'))}" aria-expanded="${open}">${icon('chevron', 16)}</button>
+          <span class="ph-tree-ic">${icon('folder', 18)}</span>
+          <span class="lbl"><b translate="no">${esc(f.name)}</b></span>
+          <button class="ph-check-box" role="checkbox" aria-checked="${on ? 'true' : inside ? 'mixed' : 'false'}" data-sypick="${esc(f.ref)}" ${inside ? 'disabled' : ''} aria-label="${esc(f.name)}">${on || inside ? icon('check', 16) : ''}</button>
+        </div>${open ? photoSynoFolderRows(space, f.id, depth + 1) : ''}`
+    })
+    .join('')
+}
+
+const SYNO_ERRORS = {
+  unauthorized: ['Anmeldung abgelehnt', 'DSM nimmt Benutzername oder Passwort nicht an. Prüfe beides und ob das Konto aktiv ist.'],
+  noPhotos: ['Synology Photos nicht erlaubt', 'Erlaube dem Konto der Box in DSM unter Systemsteuerung › Benutzer und Gruppe › Bearbeiten › Anwendungen die App Synology Photos.'],
+  twoFactor: ['Zweite Bestätigung verlangt', 'Das Konto der Box nutzt die Zwei-Faktor-Anmeldung. Lege für die Box ein eigenes Konto ohne sie an.'],
+  blocked: ['Box von DSM gesperrt', 'DSM hat die Box nach zu vielen Fehlversuchen gesperrt. Gib sie in DSM unter Sicherheit › Schutz › Automatische Blockierung wieder frei.'],
+  expired: ['Passwort abgelaufen', 'Das Passwort des Kontos ist abgelaufen. Lege in DSM ein neues fest und trage es hier ein.'],
+  certificate: ['Zertifikat passt nicht', 'DSM zeigt ein anderes Zertifikat als das bestätigte. Wurde es auf dem NAS erneuert, prüfe den neuen Fingerabdruck und bestätige ihn.'],
+  unreachable: ['DSM nicht erreichbar', 'Die Box erreicht DSM unter dieser Adresse nicht. Prüfe Adresse, Port (meist 5001 mit https, 5000 ohne) und Firewall.'],
+}
+
+const SYNO_STEPS = [
+  ['login', 'Anmeldung'],
+  ['test', 'Test'],
+  ['albums', 'Alben'],
+]
+
+// the password kept on the box, for the address and the account typed in (another one gets it only typed in anew)
+const photoSynoPasswordKept = () => {
+  const st = photoSyno.data?.settings
+  return !!st?.hasPassword && photoSyno.url.trim().replace(/\/+$/, '').toLowerCase() === String(st.url).toLowerCase() && photoSyno.account.trim() === st.account
+}
+
+function photoSynologySteps() {
+  const s = photoSyno.step
+  const t = photoSyno.test
+  const bar = `<ol class="wz-steps" style="grid-template-columns:repeat(${SYNO_STEPS.length}, minmax(0, 1fr))">${SYNO_STEPS.map(([, label], i) => {
+    const n = i + 1
+    const done = n < s
+    return `<li class="${done ? 'done' : ''}${n === s ? ' current' : ''}"><button type="button" data-systep="${n}"${n === s ? ' aria-current="step"' : ''}${done ? '' : ' disabled'}><span class="bar"></span><span class="lbl">${done ? icon('check', 14) : `<i>${n}</i>`}${esc(tr(label))}</span></button></li>`
+  }).join('')}</ol>`
+  let body
+  let next = ''
+  if (s === 1) {
+    const kept = photoSynoPasswordKept()
+    body = `<h2>Bei Synology Photos anmelden</h2><p class="help">Die Box zeigt die Alben dieses Kontos und alle Alben, die mit ihm geteilt sind. Am besten legst du in DSM ein eigenes Konto nur für die Box an: ohne Zwei-Faktor-Anmeldung, mit Synology Photos erlaubt. Teile dann in Synology Photos die Alben mit diesem Konto (als Betrachter).</p>
+      <div class="field"><label for="sy-url">DSM-Adresse</label><input class="input mono" id="sy-url" placeholder="https://192.168.1.10:5001" value="${esc(photoSyno.url)}" ${NO_PW_MANAGER} spellcheck="false">
+      <small>Wie im Browser für DSM, meist mit Port 5001. Ohne Angabe nimmt die Box https und 5001.</small></div>
+      <div class="field"><label for="sy-account">Benutzername</label><input class="input" id="sy-account" value="${esc(photoSyno.account)}" autocomplete="off" spellcheck="false"></div>
+      <div class="field"><label for="sy-pass">Passwort</label><div class="input-wrap"><input class="input has-eye" id="sy-pass" type="password" value="${esc(photoSyno.password)}" placeholder="${esc(kept ? tr('Gespeichert – leer lassen, um es zu behalten') : '')}" autocomplete="new-password"><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div>
+      <small>Wird nur auf der Box gespeichert und hier nie wieder angezeigt.</small></div>`
+    next = `<button class="btn primary" id="sy-test" ${photoSyno.testing ? 'disabled' : ''}>${esc(tr(photoSyno.testing ? 'Wird getestet …' : 'Verbindung testen'))}</button>`
+  } else if (s === 2 && t?.ok) {
+    body = `<h2>Verbindung steht</h2><p class="help">Die Box kann die Alben des Kontos lesen.</p>
+      <dl class="kv"><div><dt>Konto</dt><dd translate="no">${esc(t.account ?? '–')}</dd></div><div><dt>Alben</dt><dd>${esc(String(t.albums))}</dd></div><div><dt>Davon mit dem Konto geteilt</dt><dd>${esc(String(t.shared))}</dd></div><div><dt>Fotos und Videos</dt><dd>${esc(String(t.pictures))}</dd></div></dl>
+      ${t.albums ? '' : `<div class="note warn">${icon('info', 18)}<span>${esc(tr('Noch keine Alben. Ordner kannst du trotzdem wählen.'))}</span></div>`}`
+    next = `<button class="btn primary" id="sy-next">Weiter</button>`
+  } else if (s === 2) {
+    const [head, text] = SYNO_ERRORS[t?.error] ?? SYNO_ERRORS.unreachable
+    // (a certificate not confirmed yet: shown to be compared and trusted, as for the NAS)
+    const cert = t?.error === 'certificate' ? t.certificate : null
+    body = cert
+      ? `<h2>Zertifikat bestätigen</h2><p class="help" style="margin:0">Das NAS nutzt ein eigenes (selbst signiertes) Zertifikat. Vergleiche den Fingerabdruck mit dem im NAS (bzw. im Browser über das Schloss-Symbol). Nur wenn er übereinstimmt:</p>
+        <dl class="kv"><div><dt>Ausgestellt für</dt><dd>${esc(cert.subject)}</dd></div><div><dt>Gültig bis</dt><dd>${esc(cert.validTo)}</dd></div></dl>
+        <p class="mono-block">${esc(cert.fingerprint)}</p>
+        ${photoSyno.fingerprint ? `<div class="note warn">${icon('info', 18)}<span>${esc(tr(text))}</span></div>` : ''}`
+      : `<h2>${esc(tr(head))}</h2><div class="note danger">${icon('info', 18)}<span>${esc(tr(text))}</span></div>`
+    next = cert
+      ? `<button class="btn primary" id="sy-trust" data-fp="${esc(cert.fingerprint)}">${esc(tr('Vertrauen und testen'))}</button>`
+      : `<button class="btn primary" data-systep="1">${esc(tr('Anmeldung ändern'))}</button>`
+  } else {
+    const list = photoSyno.albums
+    const rows = !list
+      ? `<p class="help" style="margin:0">${esc(tr('Wird geladen …'))}</p>`
+      : list.error
+        ? `<div class="note danger">${icon('info', 18)}<span>${esc(tr('Die Alben lassen sich gerade nicht laden.'))}</span></div>`
+        : list.albums.length
+          ? `<div class="rows">${list.albums
+              .map(
+                (a) => `<div class="entry ph-im-album"><span class="ph-thumb">${a.thumb ? `<img src="${esc(`${API}/photos/synology/thumb/${a.thumb}`)}" alt="" loading="lazy">` : icon('image', 20)}</span>
+                <span class="lbl"><b translate="no">${esc(a.name)}</b><small>${esc(tr(`${a.count} ${a.count === 1 ? 'Foto' : 'Fotos'}`))}${a.shared ? ` · ${esc(tr('Geteilt'))}` : ''}</small></span>
+                <button class="ph-check-box" role="checkbox" aria-checked="${photoSyno.chosen.has(a.id)}" data-sy="${esc(a.id)}" aria-label="${esc(a.name)}">${photoSyno.chosen.has(a.id) ? icon('check', 16) : ''}</button></div>`,
+              )
+              .join('')}</div>`
+          : `<p class="help" style="margin:0">Das Konto sieht noch keine Alben.</p>`
+    const tab = photoSyno.tab
+    const tabs = `<div class="seg" role="tablist">${SYNO_TABS.map(([id, label]) => `<button role="tab" aria-pressed="${tab === id}" aria-selected="${tab === id}" data-sytab="${id}">${esc(tr(label))}</button>`).join('')}</div>`
+    const inner = tab === 'albums' ? rows : tab === 'smart' ? photoSynoSmartRows() : `<div class="ph-tree">${photoSynoFolderRows(tab, '0', 0)}</div><p class="help" style="margin:0">${esc(tr('Ein gewählter Ordner zeigt auch die Fotos in den Ordnern darin.'))}</p>`
+    body = `<div class="card-head"><h2>${esc(tr(tab === 'albums' ? (list?.albums ? `${list.albums.length} Alben in Synology Photos` : 'Alben in Synology Photos') : tab === 'smart' ? 'Intelligente Alben in Synology Photos' : 'Ordner in Synology Photos'))}</h2>${tab === 'albums' && list?.albums?.length ? '<button class="btn sm" id="sy-all">Alle wählen</button>' : ''}</div>
+      ${tabs}${inner}<p class="help" style="margin:0">${esc(tr(`${photoSyno.chosen.size} gewählt`))}</p>`
+    next = `<button class="btn primary" id="sy-done">Fertig</button>`
+  }
+  // (the first step's way back: out of the assistant - to the service's page when switched on, else to the photos)
+  const back = s === 1 ? `<button class="btn" id="sy-cancel">Abbrechen</button>` : `<button class="btn" id="sy-back">${icon('back', 18)}Zurück</button>`
+  return [
+    `<section class="card wide wz">${bar}<div class="wz-count">${esc(tr(`Schritt ${s} von ${SYNO_STEPS.length}`))}</div>${body}
+      <div class="wz-foot">${back}<span class="wz-next">${next}</span></div></section>`,
+  ]
+}
+
+// the state of a photo service's sync as a line (the service's page, Immich and Synology Photos)
+function photoServiceStatus(s, refused) {
+  if (s.running) return [`${icon('sync', 16)}${esc(s.total ? tr(`Abgleich läuft · ${s.done} von ${s.total} Fotos`) : tr('Abgleich läuft …'))}`, 'accent']
+  if (s.unauthorized) return [`${icon('info', 16)}${esc(tr(refused))}`, 'danger']
+  if (s.offlineSince) return [`${icon('info', 16)}${esc(tr(`Nicht erreichbar seit ${relTime(s.offlineSince).replace(/^vor /, '')}`))}`, 'danger']
+  // (the last sync stopped before its end - the service had trouble: it tries again soon)
+  if (s.retry) return [`${icon('info', 16)}${esc(tr('Abgleich unterbrochen · neuer Versuch in Kürze'))}`, 'warn']
+  if (s.lastSync) return [`${icon('check', 16)}${esc(tr(`Abgeglichen ${relTime(s.lastSync)}`))}`, 'ok']
+  return [esc(tr('Noch nicht abgeglichen')), '']
+}
+
+function photoSynologyTop() {
+  const d = photoSyno.data
+  if (!d) return []
+  if (photoSyno.step) return photoSynologySteps()
+  const s = d.sync
+  const st = d.settings
+  const status = photoServiceStatus(s, 'Anmeldung abgelehnt')
+  const limit = st.cacheLimitMb * 1024 * 1024
+  return [
+    `<section class="card wide"><h2>${esc(st.account ? tr(`Verbunden – Konto „${st.account}“`) : tr('Verbunden'))}</h2>
+      <div class="ph-nas-state ${status[1]}">${status[0]}</div>
+      <dl class="kv"><div><dt>Alben</dt><dd>${esc(tr(`${st.albumIds.length} · ${d.pictures} ${d.pictures === 1 ? 'Foto' : 'Fotos'}`))}</dd></div></dl>
+      ${s.unauthorized ? `<div class="note danger">${icon('info', 18)}<span>DSM nimmt die Anmeldung nicht mehr an. Die Box zeigt weiter die gespeicherten Fotos. Prüfe Konto und Passwort unten.</span></div>` : ''}
+      ${s.offlineSince ? `<div class="note danger">${icon('info', 18)}<span>Die Box zeigt weiter die gespeicherten Fotos. Prüfe, ob das NAS läuft.</span></div>` : ''}
+      ${s.missing ? `<div class="note warn">${icon('info', 18)}<span>${esc(s.missing === 1 ? tr('Ein gewähltes Album gibt es nicht mehr oder es ist nicht mehr geteilt.') : tr(`${s.missing} gewählte Alben gibt es nicht mehr oder sie sind nicht mehr geteilt.`))}</span></div>` : ''}
+      ${s.cacheFull && st.keepCopy ? `<div class="note warn">${icon('info', 18)}<span>Der Zwischenspeicher ist voll. Nicht alle Fotos sind auf der Box – erhöhe die Grenze oder wähle weniger Alben.</span></div>` : ''}
+      <div class="btns"><button class="btn primary" id="sy-sync" ${s.running ? 'disabled' : ''}>${icon('sync', 18)}Jetzt abgleichen</button>${syncCancelButton('synology', s.running)}<button class="btn" id="sy-albums">Alben ändern</button></div></section>`,
+    `<section class="card wide"><h2>Fotos</h2>
+      <div class="row"><span class="lbl"><b>Fotos auf der Box speichern</b><small>An: Die Box speichert Fotos und Videos in Anzeigegröße und zeigt sie auch ohne Netz. Aus: Die Fotos kommen beim Anzeigen live vom NAS – Videos gibt es dann nicht, und ohne Netz sind diese Alben gerade nicht da.</small></span>
+        <label class="switch"><input type="checkbox" id="sy-keep" ${st.keepCopy ? 'checked' : ''} aria-label="${esc(tr('Fotos auf der Box speichern'))}"><span></span></label></div></section>`,
+    `<section class="card"><h2>Abgleich</h2>
+      <div class="field"><label>Intervall</label><button class="select-btn" id="sy-every"><span>${esc(tr(NAS_SYNC.find(([, m]) => m === st.syncMinutes)?.[0] ?? 'Alle 6 Stunden'))}</span>${icon('chevron', 18)}</button>
+      <small>Neue Fotos aus Synology Photos erscheinen spätestens nach dieser Zeit am Display.</small></div></section>`,
+    `<section class="card"><h2>Zwischenspeicher</h2>
+      <div class="bar"><div class="slider-head"><b>${esc(st.keepCopy && limit ? tr(`${formatBytes(d.cacheBytes)} von ${formatBytes(limit)} belegt`) : tr(`${formatBytes(d.cacheBytes)} belegt`))}</b></div>
+      <div class="track"><i style="--w:${st.keepCopy && limit ? Math.min(100, (d.cacheBytes / limit) * 100).toFixed(1) : 0}%"></i></div></div>
+      ${st.keepCopy
+        ? `<p class="help">Fotos aus Synology Photos liegen in Anzeigegröße auf der Box und sind auch ohne Netz da.</p>
+      <div class="field"><label>Höchstens belegen</label><button class="select-btn" id="sy-cache"><span>${esc(tr(NAS_CACHE.find(([, m]) => m === st.cacheLimitMb)?.[0] ?? '2 GB'))}</span>${icon('chevron', 18)}</button>
+      <small>Ist die Grenze erreicht, lädt die Box keine weiteren Fotos und zeigt hier einen Hinweis.</small></div>`
+        : `<p class="help">Live behält die Box nur die zuletzt gezeigten Fotos (höchstens 200 MB).</p>`}</section>`,
+    `<section class="card wide"><h2>Zugang</h2>
+      <dl class="kv"><div><dt>DSM-Adresse</dt><dd translate="no">${esc(st.url)}</dd></div><div><dt>Konto</dt><dd translate="no">${esc(st.account || '–')}</dd></div><div><dt>Passwort</dt><dd>${esc(tr(st.hasPassword ? 'gesetzt' : 'fehlt'))}</dd></div>${st.certFingerprint ? `<div><dt>Zertifikat</dt><dd>${esc(tr('bestätigt'))}</dd></div>` : ''}</dl>
+      <p class="help">Das Passwort wird aus Sicherheitsgründen nicht mehr angezeigt.</p>
+      <div class="btns"><button class="btn" id="sy-login">Anmeldung ändern</button></div></section>`,
+    `<section class="card wide"><div class="navlist"><button class="navrow" id="sy-remove"><span class="tile danger">${icon('close', 18)}</span><span class="lbl"><b class="danger-text">Verbindung trennen</b><small>Die Alben aus Synology Photos und ihre Fotos werden von der Box entfernt. Auf dem NAS bleibt alles erhalten.</small></span></button></div></section>`,
+  ]
+}
+
+async function photoSynologyLoadAlbums() {
+  photoSyno.albums = null
+  const r = await api(`${API}/photos/synology/albums`)
+  photoSyno.albums = r.ok ? r.body : { error: true }
+}
+
+function mountPhotoSynology(root, page) {
+  const d = photoSyno.data
+  window.clearTimeout(photoSyno.timer)
+  if (!d) return
+  const redraw = () => currentPage()?.id === page.id && renderPage(page, false)
+  const take = (body) => {
+    photoSyno.data = body
+    photoLib.stale = true
+  }
+  const save = async (body, done) => {
+    const r = await api(`${API}/photos/synology`, { method: 'POST', body })
+    if (!r.ok) {
+      toast('Nicht gespeichert', 'info')
+      return false
+    }
+    take(r.body)
+    if (done) toast(done)
+    return true
+  }
+  // (what is typed in stays while the assistant is open)
+  const keep = () => {
+    const url = $('#sy-url', root)
+    if (url) photoSyno.url = url.value.trim()
+    const account = $('#sy-account', root)
+    if (account) photoSyno.account = account.value.trim()
+    const pass = $('#sy-pass', root)
+    if (pass) photoSyno.password = pass.value
+  }
+  const goStep = (n) => {
+    keep()
+    photoSyno.step = n
+    redraw()
+    window.scrollTo(0, 0)
+  }
+  // the assistant
+  $('#sy-cancel', root)?.addEventListener('click', () => (d.connected ? goStep(0) : go('fotos')))
+  $('#sy-back', root)?.addEventListener('click', () => goStep(photoSyno.step === 3 && d.connected && !photoSyno.test ? 0 : photoSyno.step - 1))
+  for (const b of root.querySelectorAll('[data-systep]')) b.onclick = () => goStep(Number(b.dataset.systep))
+  const test = async (fingerprint) => {
+    photoSyno.testing = true
+    photoSyno.test = null
+    redraw()
+    const body = { url: photoSyno.url, account: photoSyno.account, ...(photoSyno.password ? { password: photoSyno.password } : {}), ...(fingerprint ? { fingerprint } : {}) }
+    const r = await api(`${API}/photos/synology/test`, { method: 'POST', body, timeoutMs: 45000 })
+    photoSyno.testing = false
+    photoSyno.test = r.ok ? r.body : { ok: false, error: 'unreachable' }
+    if (r.ok && r.body.ok) photoSyno.fingerprint = r.body.fingerprint || ''
+    photoSyno.step = 2
+    redraw()
+  }
+  $('#sy-test', root)?.addEventListener('click', () => {
+    keep()
+    if (!/^(https?:\/\/)?[^\s/:]+(:\d+)?\/?$/i.test(photoSyno.url)) return toast('Bitte die Adresse von DSM eintragen, z. B. https://192.168.1.10:5001', 'info')
+    if (!photoSyno.account) return toast('Bitte den Benutzernamen eintragen', 'info')
+    if (!photoSyno.password && !photoSynoPasswordKept()) return toast('Bitte das Passwort eintragen', 'info')
+    // (another address: the certificate confirmed for the one before does not count)
+    if (photoSyno.url.replace(/\/+$/, '').toLowerCase() !== String(d.settings.url).toLowerCase()) photoSyno.fingerprint = ''
+    void test(photoSyno.fingerprint)
+  })
+  $('#sy-trust', root)?.addEventListener('click', (e) => {
+    photoSyno.fingerprint = e.currentTarget.dataset.fp
+    void test(photoSyno.fingerprint)
+  })
+  $('#sy-retry', root)?.addEventListener('click', () => void test(photoSyno.fingerprint))
+  $('#sy-next', root)?.addEventListener('click', async () => {
+    // (the login is saved now - the album list comes from the box with it)
+    const body = { url: photoSyno.url, account: photoSyno.account, certFingerprint: photoSyno.fingerprint }
+    if (photoSyno.password) body.password = photoSyno.password
+    if (!(await save(body))) return
+    photoSyno.password = ''
+    photoSyno.chosen = new Set(photoSyno.data.settings.albumIds)
+    photoSyno.step = 3
+    redraw()
+    await photoSynologyLoadAlbums()
+    redraw()
+  })
+  for (const b of root.querySelectorAll('[data-sy]')) {
+    b.onclick = () => {
+      const id = b.dataset.sy
+      if (photoSyno.chosen.has(id)) photoSyno.chosen.delete(id)
+      else photoSyno.chosen.add(id)
+      redraw()
+    }
+  }
+  for (const b of root.querySelectorAll('[data-sytab]')) {
+    b.onclick = async () => {
+      const tab = b.dataset.sytab
+      photoSyno.tab = tab
+      redraw()
+      if (tab === 'smart') {
+        if (!photoSyno.smart) {
+          await photoSynoLoadSmart()
+          redraw()
+        }
+      } else if (tab !== 'albums' && !photoSyno.tree.has(`${tab}:0`)) {
+        await photoSynoBrowse(tab, '0')
+        redraw()
+      }
+    }
+  }
+  for (const b of root.querySelectorAll('[data-sytree]')) {
+    b.onclick = async () => {
+      const key = b.dataset.sytree
+      if (photoSyno.open.has(key)) photoSyno.open.delete(key)
+      else {
+        photoSyno.open.add(key)
+        if (!photoSyno.tree.has(key) || photoSyno.tree.get(key).error) {
+          photoSyno.tree.delete(key)
+          redraw()
+          const [space, id] = key.split(':')
+          await photoSynoBrowse(space, id)
+        }
+      }
+      redraw()
+    }
+  }
+  for (const b of root.querySelectorAll('[data-sysec]')) {
+    b.onclick = () => {
+      const key = b.dataset.sysec
+      if (photoSyno.smartOpen.has(key)) photoSyno.smartOpen.delete(key)
+      else photoSyno.smartOpen.add(key)
+      redraw()
+    }
+  }
+  for (const b of root.querySelectorAll('[data-syretry]')) {
+    b.onclick = async () => {
+      b.disabled = true
+      const [space, id] = b.dataset.syretry.split(':')
+      await photoSynoBrowse(space, id)
+      redraw()
+    }
+  }
+  for (const b of root.querySelectorAll('[data-sypick]')) {
+    b.onclick = () => {
+      const ref = b.dataset.sypick
+      if (photoSyno.chosen.has(ref)) photoSyno.chosen.delete(ref)
+      else {
+        // (a folder takes in the ones below it that were chosen)
+        for (const c of [...photoSyno.chosen]) if (synoAbove(c).includes(ref)) photoSyno.chosen.delete(c)
+        photoSyno.chosen.add(ref)
+      }
+      redraw()
+    }
+  }
+  $('#sy-all', root)?.addEventListener('click', () => {
+    for (const a of photoSyno.albums?.albums ?? []) photoSyno.chosen.add(a.id)
+    redraw()
+  })
+  $('#sy-done', root)?.addEventListener('click', async () => {
+    if (!(await save({ enabled: true, albumIds: [...photoSyno.chosen] }, photoSyno.chosen.size ? 'Gespeichert – Abgleich gestartet' : 'Gespeichert'))) return
+    photoSyno.step = 0
+    photoSyno.test = null
+    redraw()
+  })
+  if (photoSyno.step) return
+  // the service's page
+  if (d.sync.running) photoSyno.timer = window.setTimeout(async () => {
+    if (currentPage()?.id !== page.id || photoSyno.step) return
+    const r = await api(`${API}/photos/synology`)
+    if (r.ok) take(r.body)
+    redraw()
+  }, 3000)
+  $('#sy-sync', root)?.addEventListener('click', async () => {
+    const r = await api(`${API}/photos/synology/sync`, { method: 'POST', body: {} })
+    if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+    take(r.body)
+    toast('Abgleich gestartet')
+    redraw()
+  })
+  $('#sy-albums', root)?.addEventListener('click', async () => {
+    photoSyno.chosen = new Set(d.settings.albumIds)
+    photoSyno.test = null
+    photoSyno.step = 3
+    redraw()
+    await photoSynologyLoadAlbums()
+    redraw()
+  })
+  $('#sy-login', root)?.addEventListener('click', () => {
+    Object.assign(photoSyno, { url: d.settings.url, account: d.settings.account, password: '', fingerprint: d.settings.certFingerprint || '', test: null })
+    goStep(1)
+  })
+  $('#sy-keep', root)?.addEventListener('change', async (e) => {
+    const on = e.target.checked
+    if (!(await save({ keepCopy: on }, on ? 'Fotos werden auf der Box gespeichert' : 'Fotos kommen live vom NAS'))) e.target.checked = !on
+    redraw()
+  })
+  const choose = (title, list, current, key) =>
+    openSheet(
+      `<h2>${esc(tr(title))}</h2><div class="navlist">${list
+        .map(([l, v]) => `<button class="navrow" data-v="${v}"><span class="lbl"><b>${esc(tr(l))}</b></span>${v === current ? `<span class="chev">${icon('check', 18)}</span>` : ''}</button>`)
+        .join('')}</div>`,
+      (sheet, close) => {
+        for (const b of sheet.querySelectorAll('[data-v]')) {
+          b.onclick = async () => {
+            close()
+            if (await save({ [key]: Number(b.dataset.v) }, 'Gespeichert')) redraw()
+          }
+        }
+      },
+    )
+  $('#sy-every', root)?.addEventListener('click', () => choose('Intervall', NAS_SYNC, d.settings.syncMinutes, 'syncMinutes'))
+  $('#sy-cache', root)?.addEventListener('click', () => choose('Höchstens belegen', NAS_CACHE, d.settings.cacheLimitMb, 'cacheLimitMb'))
+  $('#sy-remove', root)?.addEventListener('click', () =>
+    confirmSheet('Verbindung trennen', tr(`Die ${d.albums} ${d.albums === 1 ? 'Album' : 'Alben'} aus Synology Photos und ihre Fotos werden von der Box entfernt. Auf dem NAS bleibt alles erhalten.`), async () => {
+      const r = await api(`${API}/photos/synology/remove`, { method: 'POST', body: {} })
+      if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+      photoLib.stale = true
+      toast('Synology Photos getrennt')
+      go('fotos')
+    }),
+  )
+}
+
+/* Bibliothek › Fotos › Nextcloud (5.1): a login of its own (address, user name, app password) - the assistant (login,
+   test with the certificate, albums of the Photos app) and, once switched on, the service's page as Immich's (nextcloud.ts) */
+const photoNc = { data: null, step: 0, url: '', account: '', password: '', fingerprint: '', test: null, testing: false, albums: null, chosen: new Set(), timer: 0 }
+
+async function loadPhotoNextcloud() {
+  const r = await api(`${API}/photos/nextcloud`)
+  if (!r.ok) throw new Error(`photos nextcloud ${r.status}`)
+  const d = r.body
+  photoNc.data = d
+  // (not switched on yet: the assistant)
+  photoNc.step = d.connected ? 0 : 1
+  photoNc.url = d.settings.url || ''
+  photoNc.account = d.settings.account || ''
+  photoNc.password = ''
+  photoNc.fingerprint = d.settings.certFingerprint || ''
+  photoNc.test = null
+  photoNc.albums = null
+}
+
+const NC_ERRORS = {
+  unauthorized: ['Anmeldung abgelehnt', 'Nextcloud nimmt Benutzername oder App-Passwort nicht an. Prüfe beides, oder erstelle ein neues App-Passwort.'],
+  noPhotos: ['Fotos-App fehlt', 'In dieser Nextcloud ist die App „Fotos“ nicht eingeschaltet. Schalte sie unter Apps ein.'],
+  certificate: ['Zertifikat passt nicht', 'Die Nextcloud zeigt ein anderes Zertifikat als das bestätigte. Wurde es erneuert, prüfe den neuen Fingerabdruck und bestätige ihn.'],
+  unreachable: ['Nextcloud nicht erreichbar', 'Die Box erreicht die Nextcloud unter dieser Adresse nicht. Prüfe Adresse und Netz.'],
+}
+
+const NC_STEPS = [
+  ['login', 'Anmeldung'],
+  ['test', 'Test'],
+  ['albums', 'Alben'],
+]
+
+// the password kept on the box, for the address and the account typed in (another one gets it only typed in anew)
+const photoNcPasswordKept = () => {
+  const st = photoNc.data?.settings
+  return !!st?.hasPassword && photoNc.url.trim().replace(/\/+$/, '').toLowerCase() === String(st.url).toLowerCase() && photoNc.account.trim() === st.account
+}
+
+function photoNextcloudSteps() {
+  const s = photoNc.step
+  const t = photoNc.test
+  const bar = `<ol class="wz-steps" style="grid-template-columns:repeat(${NC_STEPS.length}, minmax(0, 1fr))">${NC_STEPS.map(([, label], i) => {
+    const n = i + 1
+    const done = n < s
+    return `<li class="${done ? 'done' : ''}${n === s ? ' current' : ''}"><button type="button" data-ncstep="${n}"${n === s ? ' aria-current="step"' : ''}${done ? '' : ' disabled'}><span class="bar"></span><span class="lbl">${done ? icon('check', 14) : `<i>${n}</i>`}${esc(tr(label))}</span></button></li>`
+  }).join('')}</ol>`
+  let body
+  let next = ''
+  if (s === 1) {
+    const kept = photoNcPasswordKept()
+    body = `<h2>Bei Nextcloud anmelden</h2><p class="help">Die Box zeigt die Alben der Nextcloud-App „Fotos“ dieses Kontos und alle Alben, die mit ihm geteilt sind. Am besten legst du in Nextcloud ein eigenes Konto nur für die Box an und teilst ihm die Alben.</p>
+      <div class="field"><label for="nc-url">Nextcloud-Adresse</label><input class="input mono" id="nc-url" placeholder="https://cloud.example.de" value="${esc(photoNc.url)}" ${NO_PW_MANAGER} spellcheck="false">
+      <small>Wie im Browser, ohne /apps/… dahinter.</small></div>
+      <div class="field"><label for="nc-account">Benutzername</label><input class="input" id="nc-account" value="${esc(photoNc.account)}" autocomplete="off" spellcheck="false"></div>
+      <div class="field"><label for="nc-pass">App-Passwort</label><div class="input-wrap"><input class="input has-eye" id="nc-pass" type="password" value="${esc(photoNc.password)}" placeholder="${esc(kept ? tr('Gespeichert – leer lassen, um es zu behalten') : '')}" autocomplete="new-password"><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div>
+      <small>In Nextcloud unter Persönliche Einstellungen › Sicherheit › „Neues App-Passwort erstellen“. Wird nur auf der Box gespeichert und hier nie wieder angezeigt.</small></div>`
+    next = `<button class="btn primary" id="nc-test" ${photoNc.testing ? 'disabled' : ''}>${esc(tr(photoNc.testing ? 'Wird getestet …' : 'Verbindung testen'))}</button>`
+  } else if (s === 2 && t?.ok) {
+    body = `<h2>Verbindung steht</h2><p class="help">Die Box kann die Alben des Kontos lesen.</p>
+      <dl class="kv"><div><dt>Konto</dt><dd translate="no">${esc(t.account ?? '–')}</dd></div><div><dt>Alben</dt><dd>${esc(String(t.albums))}</dd></div><div><dt>Davon mit dem Konto geteilt</dt><dd>${esc(String(t.shared))}</dd></div><div><dt>Fotos und Videos</dt><dd>${esc(String(t.pictures))}</dd></div></dl>
+      ${t.albums ? '' : `<div class="note warn">${icon('info', 18)}<span>Noch keine Alben. Lege in der Nextcloud-App „Fotos“ ein Album an oder teile eines mit diesem Konto und teste erneut.</span></div>`}`
+    next = t.albums ? `<button class="btn primary" id="nc-next">Weiter</button>` : `<button class="btn primary" id="nc-retry">${esc(tr('Erneut testen'))}</button>`
+  } else if (s === 2) {
+    const [head, text] = NC_ERRORS[t?.error] ?? NC_ERRORS.unreachable
+    // (a certificate not confirmed yet: shown to be compared and trusted, as for the NAS)
+    const cert = t?.error === 'certificate' ? t.certificate : null
+    body = cert
+      ? `<h2>Zertifikat bestätigen</h2><p class="help" style="margin:0">Die Nextcloud nutzt ein eigenes (selbst signiertes) Zertifikat. Vergleiche den Fingerabdruck mit dem im Browser über das Schloss-Symbol. Nur wenn er übereinstimmt:</p>
+        <dl class="kv"><div><dt>Ausgestellt für</dt><dd>${esc(cert.subject)}</dd></div><div><dt>Gültig bis</dt><dd>${esc(cert.validTo)}</dd></div></dl>
+        <p class="mono-block">${esc(cert.fingerprint)}</p>
+        ${photoNc.fingerprint ? `<div class="note warn">${icon('info', 18)}<span>${esc(tr(text))}</span></div>` : ''}`
+      : `<h2>${esc(tr(head))}</h2><div class="note danger">${icon('info', 18)}<span>${esc(tr(text))}</span></div>`
+    next = cert
+      ? `<button class="btn primary" id="nc-trust" data-fp="${esc(cert.fingerprint)}">${esc(tr('Vertrauen und testen'))}</button>`
+      : `<button class="btn primary" data-ncstep="1">${esc(tr('Anmeldung ändern'))}</button>`
+  } else {
+    const list = photoNc.albums
+    const rows = !list
+      ? `<p class="help" style="margin:0">${esc(tr('Wird geladen …'))}</p>`
+      : list.error
+        ? `<div class="note danger">${icon('info', 18)}<span>${esc(tr('Die Alben lassen sich gerade nicht laden.'))}</span></div>`
+        : list.albums.length
+          ? `<div class="rows">${list.albums
+              .map(
+                (a) => `<div class="entry ph-im-album"><span class="ph-thumb">${a.thumb ? `<img src="${esc(`${API}/photos/nextcloud/thumb/${a.thumb}`)}" alt="" loading="lazy">` : icon('image', 20)}</span>
+                <span class="lbl"><b translate="no">${esc(a.name)}</b><small>${esc(tr(`${a.count} ${a.count === 1 ? 'Foto' : 'Fotos'}`))}${a.shared ? ` · ${esc(tr('Geteilt'))}` : ''}</small></span>
+                <button class="ph-check-box" role="checkbox" aria-checked="${photoNc.chosen.has(a.id)}" data-nc="${esc(a.id)}" aria-label="${esc(a.name)}">${photoNc.chosen.has(a.id) ? icon('check', 16) : ''}</button></div>`,
+              )
+              .join('')}</div>`
+          : `<p class="help" style="margin:0">Das Konto sieht noch keine Alben.</p>`
+    body = `<div class="card-head"><h2>${esc(tr(list?.albums ? `${list.albums.length} Alben in Nextcloud` : 'Alben in Nextcloud'))}</h2>${list?.albums?.length ? '<button class="btn sm" id="nc-all">Alle wählen</button>' : ''}</div>
+      ${rows}<p class="help" style="margin:0">${esc(tr(`${photoNc.chosen.size} ${photoNc.chosen.size === 1 ? 'Album' : 'Alben'} gewählt`))}</p>`
+    next = `<button class="btn primary" id="nc-done">Fertig</button>`
+  }
+  // (the first step's way back: out of the assistant - to the service's page when switched on, else to the photos)
+  const back = s === 1 ? `<button class="btn" id="nc-cancel">Abbrechen</button>` : `<button class="btn" id="nc-back">${icon('back', 18)}Zurück</button>`
+  return [
+    `<section class="card wide wz">${bar}<div class="wz-count">${esc(tr(`Schritt ${s} von ${NC_STEPS.length}`))}</div>${body}
+      <div class="wz-foot">${back}<span class="wz-next">${next}</span></div></section>`,
+  ]
+}
+
+function photoNextcloudTop() {
+  const d = photoNc.data
+  if (!d) return []
+  if (photoNc.step) return photoNextcloudSteps()
+  const s = d.sync
+  const st = d.settings
+  const status = photoServiceStatus(s, 'Anmeldung abgelehnt')
+  const limit = st.cacheLimitMb * 1024 * 1024
+  return [
+    `<section class="card wide"><h2>${esc(st.account ? tr(`Verbunden – Konto „${st.account}“`) : tr('Verbunden'))}</h2>
+      <div class="ph-nas-state ${status[1]}">${status[0]}</div>
+      <dl class="kv"><div><dt>Alben</dt><dd>${esc(tr(`${st.albumIds.length} · ${d.pictures} ${d.pictures === 1 ? 'Foto' : 'Fotos'}`))}</dd></div></dl>
+      ${s.unauthorized ? `<div class="note danger">${icon('info', 18)}<span>Nextcloud nimmt die Anmeldung nicht mehr an. Die Box zeigt weiter die gespeicherten Fotos. Prüfe Konto und App-Passwort unten.</span></div>` : ''}
+      ${s.offlineSince ? `<div class="note danger">${icon('info', 18)}<span>Die Box zeigt weiter die gespeicherten Fotos. Prüfe, ob die Nextcloud läuft.</span></div>` : ''}
+      ${s.missing ? `<div class="note warn">${icon('info', 18)}<span>${esc(s.missing === 1 ? tr('Ein gewähltes Album gibt es nicht mehr oder es ist nicht mehr geteilt.') : tr(`${s.missing} gewählte Alben gibt es nicht mehr oder sie sind nicht mehr geteilt.`))}</span></div>` : ''}
+      ${s.cacheFull && st.keepCopy ? `<div class="note warn">${icon('info', 18)}<span>Der Zwischenspeicher ist voll. Nicht alle Fotos sind auf der Box – erhöhe die Grenze oder wähle weniger Alben.</span></div>` : ''}
+      <div class="btns"><button class="btn primary" id="nc-sync" ${s.running ? 'disabled' : ''}>${icon('sync', 18)}Jetzt abgleichen</button>${syncCancelButton('nextcloud', s.running)}<button class="btn" id="nc-albums">Alben ändern</button></div></section>`,
+    `<section class="card wide"><h2>Fotos</h2>
+      <div class="row"><span class="lbl"><b>Fotos auf der Box speichern</b><small>An: Die Box speichert Fotos und Videos in Anzeigegröße und zeigt sie auch ohne Netz. Aus: Die Fotos kommen beim Anzeigen live von der Nextcloud – Videos gibt es dann nicht, und ohne Netz sind diese Alben gerade nicht da.</small></span>
+        <label class="switch"><input type="checkbox" id="nc-keep" ${st.keepCopy ? 'checked' : ''} aria-label="${esc(tr('Fotos auf der Box speichern'))}"><span></span></label></div></section>`,
+    `<section class="card"><h2>Abgleich</h2>
+      <div class="field"><label>Intervall</label><button class="select-btn" id="nc-every"><span>${esc(tr(NAS_SYNC.find(([, m]) => m === st.syncMinutes)?.[0] ?? 'Alle 6 Stunden'))}</span>${icon('chevron', 18)}</button>
+      <small>Neue Fotos aus Nextcloud erscheinen spätestens nach dieser Zeit am Display.</small></div></section>`,
+    `<section class="card"><h2>Zwischenspeicher</h2>
+      <div class="bar"><div class="slider-head"><b>${esc(st.keepCopy && limit ? tr(`${formatBytes(d.cacheBytes)} von ${formatBytes(limit)} belegt`) : tr(`${formatBytes(d.cacheBytes)} belegt`))}</b></div>
+      <div class="track"><i style="--w:${st.keepCopy && limit ? Math.min(100, (d.cacheBytes / limit) * 100).toFixed(1) : 0}%"></i></div></div>
+      ${st.keepCopy
+        ? `<p class="help">Fotos aus Nextcloud liegen in Anzeigegröße auf der Box und sind auch ohne Netz da.</p>
+      <div class="field"><label>Höchstens belegen</label><button class="select-btn" id="nc-cache"><span>${esc(tr(NAS_CACHE.find(([, m]) => m === st.cacheLimitMb)?.[0] ?? '2 GB'))}</span>${icon('chevron', 18)}</button>
+      <small>Ist die Grenze erreicht, lädt die Box keine weiteren Fotos und zeigt hier einen Hinweis.</small></div>`
+        : `<p class="help">Live behält die Box nur die zuletzt gezeigten Fotos (höchstens 200 MB).</p>`}</section>`,
+    `<section class="card wide"><h2>Zugang</h2>
+      <dl class="kv"><div><dt>Nextcloud-Adresse</dt><dd translate="no">${esc(st.url)}</dd></div><div><dt>Konto</dt><dd translate="no">${esc(st.account || '–')}</dd></div><div><dt>App-Passwort</dt><dd>${esc(tr(st.hasPassword ? 'gesetzt' : 'fehlt'))}</dd></div>${st.certFingerprint ? `<div><dt>Zertifikat</dt><dd>${esc(tr('bestätigt'))}</dd></div>` : ''}</dl>
+      <p class="help">Das App-Passwort wird aus Sicherheitsgründen nicht mehr angezeigt.</p>
+      <div class="btns"><button class="btn" id="nc-login">Anmeldung ändern</button></div></section>`,
+    `<section class="card wide"><div class="navlist"><button class="navrow" id="nc-remove"><span class="tile danger">${icon('close', 18)}</span><span class="lbl"><b class="danger-text">Verbindung trennen</b><small>Die Alben aus Nextcloud und ihre Fotos werden von der Box entfernt. In der Nextcloud bleibt alles erhalten.</small></span></button></div></section>`,
+  ]
+}
+
+async function photoNextcloudLoadAlbums() {
+  photoNc.albums = null
+  const r = await api(`${API}/photos/nextcloud/albums`)
+  photoNc.albums = r.ok ? r.body : { error: true }
+}
+
+function mountPhotoNextcloud(root, page) {
+  const d = photoNc.data
+  window.clearTimeout(photoNc.timer)
+  if (!d) return
+  const redraw = () => currentPage()?.id === page.id && renderPage(page, false)
+  const take = (body) => {
+    photoNc.data = body
+    photoLib.stale = true
+  }
+  const save = async (body, done) => {
+    const r = await api(`${API}/photos/nextcloud`, { method: 'POST', body })
+    if (!r.ok) {
+      toast('Nicht gespeichert', 'info')
+      return false
+    }
+    take(r.body)
+    if (done) toast(done)
+    return true
+  }
+  // (what is typed in stays while the assistant is open)
+  const keep = () => {
+    const url = $('#nc-url', root)
+    if (url) photoNc.url = url.value.trim()
+    const account = $('#nc-account', root)
+    if (account) photoNc.account = account.value.trim()
+    const pass = $('#nc-pass', root)
+    if (pass) photoNc.password = pass.value
+  }
+  const goStep = (n) => {
+    keep()
+    photoNc.step = n
+    redraw()
+    window.scrollTo(0, 0)
+  }
+  // the assistant
+  $('#nc-cancel', root)?.addEventListener('click', () => (d.connected ? goStep(0) : go('fotos')))
+  $('#nc-back', root)?.addEventListener('click', () => goStep(photoNc.step === 3 && d.connected && !photoNc.test ? 0 : photoNc.step - 1))
+  for (const b of root.querySelectorAll('[data-ncstep]')) b.onclick = () => goStep(Number(b.dataset.ncstep))
+  const test = async (fingerprint) => {
+    photoNc.testing = true
+    photoNc.test = null
+    redraw()
+    const body = { url: photoNc.url, account: photoNc.account, ...(photoNc.password ? { password: photoNc.password } : {}), ...(fingerprint ? { fingerprint } : {}) }
+    const r = await api(`${API}/photos/nextcloud/test`, { method: 'POST', body, timeoutMs: 45000 })
+    photoNc.testing = false
+    photoNc.test = r.ok ? r.body : { ok: false, error: 'unreachable' }
+    if (r.ok && r.body.ok) photoNc.fingerprint = r.body.fingerprint || ''
+    photoNc.step = 2
+    redraw()
+  }
+  $('#nc-test', root)?.addEventListener('click', () => {
+    keep()
+    if (!/^(https?:\/\/)?[^\s/:]+(:\d+)?(\/\S*)?$/i.test(photoNc.url)) return toast('Bitte die Adresse der Nextcloud eintragen, z. B. https://cloud.example.de', 'info')
+    if (!photoNc.account) return toast('Bitte den Benutzernamen eintragen', 'info')
+    if (!photoNc.password && !photoNcPasswordKept()) return toast('Bitte das App-Passwort eintragen', 'info')
+    // (another address: the certificate confirmed for the one before does not count)
+    if (photoNc.url.replace(/\/+$/, '').toLowerCase() !== String(d.settings.url).toLowerCase()) photoNc.fingerprint = ''
+    void test(photoNc.fingerprint)
+  })
+  $('#nc-trust', root)?.addEventListener('click', (e) => {
+    photoNc.fingerprint = e.currentTarget.dataset.fp
+    void test(photoNc.fingerprint)
+  })
+  $('#nc-retry', root)?.addEventListener('click', () => void test(photoNc.fingerprint))
+  $('#nc-next', root)?.addEventListener('click', async () => {
+    // (the login is saved now - the album list comes from the box with it)
+    const body = { url: photoNc.url, account: photoNc.account, userId: photoNc.test?.userId, certFingerprint: photoNc.fingerprint }
+    if (photoNc.password) body.password = photoNc.password
+    if (!(await save(body))) return
+    photoNc.password = ''
+    photoNc.chosen = new Set(photoNc.data.settings.albumIds)
+    photoNc.step = 3
+    redraw()
+    await photoNextcloudLoadAlbums()
+    redraw()
+  })
+  for (const b of root.querySelectorAll('[data-nc]')) {
+    b.onclick = () => {
+      const id = b.dataset.nc
+      if (photoNc.chosen.has(id)) photoNc.chosen.delete(id)
+      else photoNc.chosen.add(id)
+      redraw()
+    }
+  }
+  $('#nc-all', root)?.addEventListener('click', () => {
+    for (const a of photoNc.albums?.albums ?? []) photoNc.chosen.add(a.id)
+    redraw()
+  })
+  $('#nc-done', root)?.addEventListener('click', async () => {
+    if (!(await save({ enabled: true, albumIds: [...photoNc.chosen] }, photoNc.chosen.size ? 'Gespeichert – Abgleich gestartet' : 'Gespeichert'))) return
+    photoNc.step = 0
+    photoNc.test = null
+    redraw()
+  })
+  if (photoNc.step) return
+  // the service's page
+  if (d.sync.running) photoNc.timer = window.setTimeout(async () => {
+    if (currentPage()?.id !== page.id || photoNc.step) return
+    const r = await api(`${API}/photos/nextcloud`)
+    if (r.ok) take(r.body)
+    redraw()
+  }, 3000)
+  $('#nc-sync', root)?.addEventListener('click', async () => {
+    const r = await api(`${API}/photos/nextcloud/sync`, { method: 'POST', body: {} })
+    if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+    take(r.body)
+    toast('Abgleich gestartet')
+    redraw()
+  })
+  $('#nc-albums', root)?.addEventListener('click', async () => {
+    photoNc.chosen = new Set(d.settings.albumIds)
+    photoNc.test = null
+    photoNc.step = 3
+    redraw()
+    await photoNextcloudLoadAlbums()
+    redraw()
+  })
+  $('#nc-login', root)?.addEventListener('click', () => {
+    Object.assign(photoNc, { url: d.settings.url, account: d.settings.account, password: '', fingerprint: d.settings.certFingerprint || '', test: null })
+    goStep(1)
+  })
+  $('#nc-keep', root)?.addEventListener('change', async (e) => {
+    const on = e.target.checked
+    if (!(await save({ keepCopy: on }, on ? 'Fotos werden auf der Box gespeichert' : 'Fotos kommen live von der Nextcloud'))) e.target.checked = !on
+    redraw()
+  })
+  const choose = (title, list, current, key) =>
+    openSheet(
+      `<h2>${esc(tr(title))}</h2><div class="navlist">${list
+        .map(([l, v]) => `<button class="navrow" data-v="${v}"><span class="lbl"><b>${esc(tr(l))}</b></span>${v === current ? `<span class="chev">${icon('check', 18)}</span>` : ''}</button>`)
+        .join('')}</div>`,
+      (sheet, close) => {
+        for (const b of sheet.querySelectorAll('[data-v]')) {
+          b.onclick = async () => {
+            close()
+            if (await save({ [key]: Number(b.dataset.v) }, 'Gespeichert')) redraw()
+          }
+        }
+      },
+    )
+  $('#nc-every', root)?.addEventListener('click', () => choose('Intervall', NAS_SYNC, d.settings.syncMinutes, 'syncMinutes'))
+  $('#nc-cache', root)?.addEventListener('click', () => choose('Höchstens belegen', NAS_CACHE, d.settings.cacheLimitMb, 'cacheLimitMb'))
+  $('#nc-remove', root)?.addEventListener('click', () =>
+    confirmSheet('Verbindung trennen', tr(`Die ${d.albums} ${d.albums === 1 ? 'Album' : 'Alben'} aus Nextcloud und ihre Fotos werden von der Box entfernt. In der Nextcloud bleibt alles erhalten.`), async () => {
+      const r = await api(`${API}/photos/nextcloud/remove`, { method: 'POST', body: {} })
+      if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+      photoLib.stale = true
+      toast('Nextcloud getrennt')
+      go('fotos')
+    }),
+  )
+}
+
+
+/* Bibliothek › Fotos › PhotoPrism (5.1): a login of its own (address, app password) - the assistant (login, test with the
+   certificate, albums) and, once switched on, the service's page as Immich's (photoprism.ts) */
+const photoPp = { data: null, step: 0, url: '', password: '', fingerprint: '', test: null, testing: false, albums: null, chosen: new Set(), timer: 0 }
+
+async function loadPhotoPhotoprism() {
+  const r = await api(`${API}/photos/photoprism`)
+  if (!r.ok) throw new Error(`photos photoprism ${r.status}`)
+  const d = r.body
+  photoPp.data = d
+  // (not switched on yet: the assistant)
+  photoPp.step = d.connected ? 0 : 1
+  photoPp.url = d.settings.url || ''
+  photoPp.password = ''
+  photoPp.fingerprint = d.settings.certFingerprint || ''
+  photoPp.test = null
+  photoPp.albums = null
+}
+
+const PP_ERRORS = {
+  unauthorized: ['App-Passwort abgelehnt', 'PhotoPrism nimmt das App-Passwort nicht an. Prüfe es, oder erstelle ein neues. Das Anmeldepasswort funktioniert hier nicht.'],
+  notPhotoprism: ['Kein PhotoPrism gefunden', 'Unter dieser Adresse antwortet kein PhotoPrism. Prüfe die Adresse, meist endet sie auf :2342.'],
+  certificate: ['Zertifikat passt nicht', 'PhotoPrism zeigt ein anderes Zertifikat als das bestätigte. Wurde es erneuert, prüfe den neuen Fingerabdruck und bestätige ihn.'],
+  unreachable: ['PhotoPrism nicht erreichbar', 'Die Box erreicht PhotoPrism unter dieser Adresse nicht. Prüfe Adresse und Netz.'],
+}
+
+const PP_STEPS = [
+  ['login', 'Anmeldung'],
+  ['test', 'Test'],
+  ['albums', 'Alben'],
+]
+
+// the password kept on the box, for the address typed in (another one gets it only typed in anew)
+const photoPpPasswordKept = () => {
+  const st = photoPp.data?.settings
+  return !!st?.hasPassword && photoPp.url.trim().replace(/\/+$/, '').toLowerCase() === String(st.url).toLowerCase()
+}
+
+function photoPhotoprismSteps() {
+  const s = photoPp.step
+  const t = photoPp.test
+  const bar = `<ol class="wz-steps" style="grid-template-columns:repeat(${PP_STEPS.length}, minmax(0, 1fr))">${PP_STEPS.map(([, label], i) => {
+    const n = i + 1
+    const done = n < s
+    return `<li class="${done ? 'done' : ''}${n === s ? ' current' : ''}"><button type="button" data-ppstep="${n}"${n === s ? ' aria-current="step"' : ''}${done ? '' : ' disabled'}><span class="bar"></span><span class="lbl">${done ? icon('check', 14) : `<i>${n}</i>`}${esc(tr(label))}</span></button></li>`
+  }).join('')}</ol>`
+  let body
+  let next = ''
+  if (s === 1) {
+    const kept = photoPpPasswordKept()
+    body = `<h2>Mit PhotoPrism verbinden</h2><p class="help">Die Box zeigt die Alben aus PhotoPrism, die du gleich auswählst. Private und archivierte Fotos bleiben draußen.</p>
+      <div class="field"><label for="pp-url">PhotoPrism-Adresse</label><input class="input mono" id="pp-url" placeholder="http://192.168.1.20:2342" value="${esc(photoPp.url)}" ${NO_PW_MANAGER} spellcheck="false">
+      <small>Wie im Browser, ohne /library/… dahinter.</small></div>
+      <div class="field"><label for="pp-pass">App-Passwort</label><div class="input-wrap"><input class="input has-eye" id="pp-pass" type="password" value="${esc(photoPp.password)}" placeholder="${esc(kept ? tr('Gespeichert – leer lassen, um es zu behalten') : '')}" autocomplete="new-password"><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div>
+      <small>In PhotoPrism unter Einstellungen › Konto › Apps und Geräte › Hinzufügen erstellen: Berechtigung „Voller Zugriff“, Ablaufdatum am besten „Nie“. Die Box liest damit nur. Wird nur auf der Box gespeichert und hier nie wieder angezeigt.</small></div>`
+    next = `<button class="btn primary" id="pp-test" ${photoPp.testing ? 'disabled' : ''}>${esc(tr(photoPp.testing ? 'Wird getestet …' : 'Verbindung testen'))}</button>`
+  } else if (s === 2 && t?.ok) {
+    body = `<h2>Verbindung steht</h2><p class="help">Die Box kann die Alben lesen.</p>
+      <dl class="kv"><div><dt>Konto</dt><dd translate="no">${esc(t.account ?? '–')}</dd></div><div><dt>Alben</dt><dd>${esc(String(t.albums))}</dd></div><div><dt>Fotos und Videos</dt><dd>${esc(String(t.pictures))}</dd></div></dl>
+      ${t.albums ? '' : `<div class="note warn">${icon('info', 18)}<span>Noch keine Alben. Lege in PhotoPrism unter Alben eines an und teste erneut.</span></div>`}`
+    next = t.albums ? `<button class="btn primary" id="pp-next">Weiter</button>` : `<button class="btn primary" id="pp-retry">${esc(tr('Erneut testen'))}</button>`
+  } else if (s === 2) {
+    const [head, text] = PP_ERRORS[t?.error] ?? PP_ERRORS.unreachable
+    // (a certificate not confirmed yet: shown to be compared and trusted, as for the NAS)
+    const cert = t?.error === 'certificate' ? t.certificate : null
+    body = cert
+      ? `<h2>Zertifikat bestätigen</h2><p class="help" style="margin:0">PhotoPrism nutzt ein eigenes (selbst signiertes) Zertifikat. Vergleiche den Fingerabdruck mit dem im Browser über das Schloss-Symbol. Nur wenn er übereinstimmt:</p>
+        <dl class="kv"><div><dt>Ausgestellt für</dt><dd>${esc(cert.subject)}</dd></div><div><dt>Gültig bis</dt><dd>${esc(cert.validTo)}</dd></div></dl>
+        <p class="mono-block">${esc(cert.fingerprint)}</p>
+        ${photoPp.fingerprint ? `<div class="note warn">${icon('info', 18)}<span>${esc(tr(text))}</span></div>` : ''}`
+      : `<h2>${esc(tr(head))}</h2><div class="note danger">${icon('info', 18)}<span>${esc(tr(text))}</span></div>`
+    next = cert
+      ? `<button class="btn primary" id="pp-trust" data-fp="${esc(cert.fingerprint)}">${esc(tr('Vertrauen und testen'))}</button>`
+      : `<button class="btn primary" data-ppstep="1">${esc(tr('Anmeldung ändern'))}</button>`
+  } else {
+    const list = photoPp.albums
+    const rows = !list
+      ? `<p class="help" style="margin:0">${esc(tr('Wird geladen …'))}</p>`
+      : list.error
+        ? `<div class="note danger">${icon('info', 18)}<span>${esc(tr('Die Alben lassen sich gerade nicht laden.'))}</span></div>`
+        : list.albums.length
+          ? `<div class="rows">${list.albums
+              .map(
+                (a) => `<div class="entry ph-im-album"><span class="ph-thumb">${a.thumb ? `<img src="${esc(`${API}/photos/photoprism/thumb/${a.thumb}`)}" alt="" loading="lazy">` : icon('image', 20)}</span>
+                <span class="lbl"><b translate="no">${esc(a.name)}</b><small>${esc(tr(`${a.count} ${a.count === 1 ? 'Foto' : 'Fotos'}`))}</small></span>
+                <button class="ph-check-box" role="checkbox" aria-checked="${photoPp.chosen.has(a.id)}" data-pp="${esc(a.id)}" aria-label="${esc(a.name)}">${photoPp.chosen.has(a.id) ? icon('check', 16) : ''}</button></div>`,
+              )
+              .join('')}</div>`
+          : `<p class="help" style="margin:0">In PhotoPrism gibt es noch keine Alben.</p>`
+    body = `<div class="card-head"><h2>${esc(tr(list?.albums ? `${list.albums.length} Alben in PhotoPrism` : 'Alben in PhotoPrism'))}</h2>${list?.albums?.length ? '<button class="btn sm" id="pp-all">Alle wählen</button>' : ''}</div>
+      ${rows}<p class="help" style="margin:0">${esc(tr(`${photoPp.chosen.size} ${photoPp.chosen.size === 1 ? 'Album' : 'Alben'} gewählt`))}</p>`
+    next = `<button class="btn primary" id="pp-done">Fertig</button>`
+  }
+  // (the first step's way back: out of the assistant - to the service's page when switched on, else to the photos)
+  const back = s === 1 ? `<button class="btn" id="pp-cancel">Abbrechen</button>` : `<button class="btn" id="pp-back">${icon('back', 18)}Zurück</button>`
+  return [
+    `<section class="card wide wz">${bar}<div class="wz-count">${esc(tr(`Schritt ${s} von ${PP_STEPS.length}`))}</div>${body}
+      <div class="wz-foot">${back}<span class="wz-next">${next}</span></div></section>`,
+  ]
+}
+
+function photoPhotoprismTop() {
+  const d = photoPp.data
+  if (!d) return []
+  if (photoPp.step) return photoPhotoprismSteps()
+  const s = d.sync
+  const st = d.settings
+  const status = photoServiceStatus(s, 'Anmeldung abgelehnt')
+  const limit = st.cacheLimitMb * 1024 * 1024
+  return [
+    `<section class="card wide"><h2>${esc(st.account ? tr(`Verbunden – Konto „${st.account}“`) : tr('Verbunden'))}</h2>
+      <div class="ph-nas-state ${status[1]}">${status[0]}</div>
+      <dl class="kv"><div><dt>Alben</dt><dd>${esc(tr(`${st.albumIds.length} · ${d.pictures} ${d.pictures === 1 ? 'Foto' : 'Fotos'}`))}</dd></div></dl>
+      ${s.unauthorized ? `<div class="note danger">${icon('info', 18)}<span>PhotoPrism nimmt das App-Passwort nicht mehr an. Die Box zeigt weiter die gespeicherten Fotos. Prüfe das App-Passwort unten.</span></div>` : ''}
+      ${s.offlineSince ? `<div class="note danger">${icon('info', 18)}<span>Die Box zeigt weiter die gespeicherten Fotos. Prüfe, ob PhotoPrism läuft.</span></div>` : ''}
+      ${s.missing ? `<div class="note warn">${icon('info', 18)}<span>${esc(s.missing === 1 ? tr('Ein gewähltes Album gibt es nicht mehr.') : tr(`${s.missing} gewählte Alben gibt es nicht mehr.`))}</span></div>` : ''}
+      ${s.cacheFull && st.keepCopy ? `<div class="note warn">${icon('info', 18)}<span>Der Zwischenspeicher ist voll. Nicht alle Fotos sind auf der Box – erhöhe die Grenze oder wähle weniger Alben.</span></div>` : ''}
+      <div class="btns"><button class="btn primary" id="pp-sync" ${s.running ? 'disabled' : ''}>${icon('sync', 18)}Jetzt abgleichen</button>${syncCancelButton('photoprism', s.running)}<button class="btn" id="pp-albums">Alben ändern</button></div></section>`,
+    `<section class="card wide"><h2>Fotos</h2>
+      <div class="row"><span class="lbl"><b>Fotos auf der Box speichern</b><small>An: Die Box speichert Fotos und Videos in Anzeigegröße und zeigt sie auch ohne Netz. Aus: Fotos und Videos kommen beim Anzeigen live von PhotoPrism – ohne Netz sind diese Alben gerade nicht da.</small></span>
+        <label class="switch"><input type="checkbox" id="pp-keep" ${st.keepCopy ? 'checked' : ''} aria-label="${esc(tr('Fotos auf der Box speichern'))}"><span></span></label></div></section>`,
+    `<section class="card"><h2>Abgleich</h2>
+      <div class="field"><label>Intervall</label><button class="select-btn" id="pp-every"><span>${esc(tr(NAS_SYNC.find(([, m]) => m === st.syncMinutes)?.[0] ?? 'Alle 6 Stunden'))}</span>${icon('chevron', 18)}</button>
+      <small>Neue Fotos aus PhotoPrism erscheinen spätestens nach dieser Zeit am Display.</small></div></section>`,
+    `<section class="card"><h2>Zwischenspeicher</h2>
+      <div class="bar"><div class="slider-head"><b>${esc(st.keepCopy && limit ? tr(`${formatBytes(d.cacheBytes)} von ${formatBytes(limit)} belegt`) : tr(`${formatBytes(d.cacheBytes)} belegt`))}</b></div>
+      <div class="track"><i style="--w:${st.keepCopy && limit ? Math.min(100, (d.cacheBytes / limit) * 100).toFixed(1) : 0}%"></i></div></div>
+      ${st.keepCopy
+        ? `<p class="help">Fotos aus PhotoPrism liegen in Anzeigegröße auf der Box und sind auch ohne Netz da.</p>
+      <div class="field"><label>Höchstens belegen</label><button class="select-btn" id="pp-cache"><span>${esc(tr(NAS_CACHE.find(([, m]) => m === st.cacheLimitMb)?.[0] ?? '2 GB'))}</span>${icon('chevron', 18)}</button>
+      <small>Ist die Grenze erreicht, lädt die Box keine weiteren Fotos und zeigt hier einen Hinweis.</small></div>`
+        : `<p class="help">Live behält die Box nur die zuletzt gezeigten Fotos (höchstens 200 MB).</p>`}</section>`,
+    `<section class="card wide"><h2>Zugang</h2>
+      <dl class="kv"><div><dt>PhotoPrism-Adresse</dt><dd translate="no">${esc(st.url)}</dd></div><div><dt>Konto</dt><dd translate="no">${esc(st.account || '–')}</dd></div><div><dt>App-Passwort</dt><dd>${esc(tr(st.hasPassword ? 'gesetzt' : 'fehlt'))}</dd></div>${st.certFingerprint ? `<div><dt>Zertifikat</dt><dd>${esc(tr('bestätigt'))}</dd></div>` : ''}</dl>
+      <p class="help">Das App-Passwort wird aus Sicherheitsgründen nicht mehr angezeigt.</p>
+      <div class="btns"><button class="btn" id="pp-login">Anmeldung ändern</button></div></section>`,
+    `<section class="card wide"><div class="navlist"><button class="navrow" id="pp-remove"><span class="tile danger">${icon('close', 18)}</span><span class="lbl"><b class="danger-text">Verbindung trennen</b><small>Die Alben aus PhotoPrism und ihre Fotos werden von der Box entfernt. In PhotoPrism bleibt alles erhalten.</small></span></button></div></section>`,
+  ]
+}
+
+async function photoPhotoprismLoadAlbums() {
+  photoPp.albums = null
+  const r = await api(`${API}/photos/photoprism/albums`)
+  photoPp.albums = r.ok ? r.body : { error: true }
+}
+
+function mountPhotoPhotoprism(root, page) {
+  const d = photoPp.data
+  window.clearTimeout(photoPp.timer)
+  if (!d) return
+  const redraw = () => currentPage()?.id === page.id && renderPage(page, false)
+  const take = (body) => {
+    photoPp.data = body
+    photoLib.stale = true
+  }
+  const save = async (body, done) => {
+    const r = await api(`${API}/photos/photoprism`, { method: 'POST', body })
+    if (!r.ok) {
+      toast('Nicht gespeichert', 'info')
+      return false
+    }
+    take(r.body)
+    if (done) toast(done)
+    return true
+  }
+  // (what is typed in stays while the assistant is open)
+  const keep = () => {
+    const url = $('#pp-url', root)
+    if (url) photoPp.url = url.value.trim()
+    const pass = $('#pp-pass', root)
+    if (pass) photoPp.password = pass.value
+  }
+  const goStep = (n) => {
+    keep()
+    photoPp.step = n
+    redraw()
+    window.scrollTo(0, 0)
+  }
+  // the assistant
+  $('#pp-cancel', root)?.addEventListener('click', () => (d.connected ? goStep(0) : go('fotos')))
+  $('#pp-back', root)?.addEventListener('click', () => goStep(photoPp.step === 3 && d.connected && !photoPp.test ? 0 : photoPp.step - 1))
+  for (const b of root.querySelectorAll('[data-ppstep]')) b.onclick = () => goStep(Number(b.dataset.ppstep))
+  const test = async (fingerprint) => {
+    photoPp.testing = true
+    photoPp.test = null
+    redraw()
+    const body = { url: photoPp.url, ...(photoPp.password ? { password: photoPp.password } : {}), ...(fingerprint ? { fingerprint } : {}) }
+    const r = await api(`${API}/photos/photoprism/test`, { method: 'POST', body, timeoutMs: 45000 })
+    photoPp.testing = false
+    photoPp.test = r.ok ? r.body : { ok: false, error: 'unreachable' }
+    if (r.ok && r.body.ok) photoPp.fingerprint = r.body.fingerprint || ''
+    photoPp.step = 2
+    redraw()
+  }
+  $('#pp-test', root)?.addEventListener('click', () => {
+    keep()
+    if (!/^(https?:\/\/)?[^\s/:]+(:\d+)?(\/\S*)?$/i.test(photoPp.url)) return toast('Bitte die Adresse von PhotoPrism eintragen, z. B. http://192.168.1.20:2342', 'info')
+    if (!photoPp.password && !photoPpPasswordKept()) return toast('Bitte das App-Passwort eintragen', 'info')
+    // (another address: the certificate confirmed for the one before does not count)
+    if (photoPp.url.replace(/\/+$/, '').toLowerCase() !== String(d.settings.url).toLowerCase()) photoPp.fingerprint = ''
+    void test(photoPp.fingerprint)
+  })
+  $('#pp-trust', root)?.addEventListener('click', (e) => {
+    photoPp.fingerprint = e.currentTarget.dataset.fp
+    void test(photoPp.fingerprint)
+  })
+  $('#pp-retry', root)?.addEventListener('click', () => void test(photoPp.fingerprint))
+  $('#pp-next', root)?.addEventListener('click', async () => {
+    // (the login is saved now - the album list comes from the box with it)
+    const body = { url: photoPp.url, account: photoPp.test?.account ?? '', certFingerprint: photoPp.fingerprint }
+    if (photoPp.password) body.password = photoPp.password
+    if (!(await save(body))) return
+    photoPp.password = ''
+    photoPp.chosen = new Set(photoPp.data.settings.albumIds)
+    photoPp.step = 3
+    redraw()
+    await photoPhotoprismLoadAlbums()
+    redraw()
+  })
+  for (const b of root.querySelectorAll('[data-pp]')) {
+    b.onclick = () => {
+      const id = b.dataset.pp
+      if (photoPp.chosen.has(id)) photoPp.chosen.delete(id)
+      else photoPp.chosen.add(id)
+      redraw()
+    }
+  }
+  $('#pp-all', root)?.addEventListener('click', () => {
+    for (const a of photoPp.albums?.albums ?? []) photoPp.chosen.add(a.id)
+    redraw()
+  })
+  $('#pp-done', root)?.addEventListener('click', async () => {
+    if (!(await save({ enabled: true, albumIds: [...photoPp.chosen] }, photoPp.chosen.size ? 'Gespeichert – Abgleich gestartet' : 'Gespeichert'))) return
+    photoPp.step = 0
+    photoPp.test = null
+    redraw()
+  })
+  if (photoPp.step) return
+  // the service's page
+  if (d.sync.running) photoPp.timer = window.setTimeout(async () => {
+    if (currentPage()?.id !== page.id || photoPp.step) return
+    const r = await api(`${API}/photos/photoprism`)
+    if (r.ok) take(r.body)
+    redraw()
+  }, 3000)
+  $('#pp-sync', root)?.addEventListener('click', async () => {
+    const r = await api(`${API}/photos/photoprism/sync`, { method: 'POST', body: {} })
+    if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+    take(r.body)
+    toast('Abgleich gestartet')
+    redraw()
+  })
+  $('#pp-albums', root)?.addEventListener('click', async () => {
+    photoPp.chosen = new Set(d.settings.albumIds)
+    photoPp.test = null
+    photoPp.step = 3
+    redraw()
+    await photoPhotoprismLoadAlbums()
+    redraw()
+  })
+  $('#pp-login', root)?.addEventListener('click', () => {
+    Object.assign(photoPp, { url: d.settings.url, password: '', fingerprint: d.settings.certFingerprint || '', test: null })
+    goStep(1)
+  })
+  $('#pp-keep', root)?.addEventListener('change', async (e) => {
+    const on = e.target.checked
+    if (!(await save({ keepCopy: on }, on ? 'Fotos werden auf der Box gespeichert' : 'Fotos kommen live von PhotoPrism'))) e.target.checked = !on
+    redraw()
+  })
+  const choose = (title, list, current, key) =>
+    openSheet(
+      `<h2>${esc(tr(title))}</h2><div class="navlist">${list
+        .map(([l, v]) => `<button class="navrow" data-v="${v}"><span class="lbl"><b>${esc(tr(l))}</b></span>${v === current ? `<span class="chev">${icon('check', 18)}</span>` : ''}</button>`)
+        .join('')}</div>`,
+      (sheet, close) => {
+        for (const b of sheet.querySelectorAll('[data-v]')) {
+          b.onclick = async () => {
+            close()
+            if (await save({ [key]: Number(b.dataset.v) }, 'Gespeichert')) redraw()
+          }
+        }
+      },
+    )
+  $('#pp-every', root)?.addEventListener('click', () => choose('Intervall', NAS_SYNC, d.settings.syncMinutes, 'syncMinutes'))
+  $('#pp-cache', root)?.addEventListener('click', () => choose('Höchstens belegen', NAS_CACHE, d.settings.cacheLimitMb, 'cacheLimitMb'))
+  $('#pp-remove', root)?.addEventListener('click', () =>
+    confirmSheet('Verbindung trennen', tr(`Die ${d.albums} ${d.albums === 1 ? 'Album' : 'Alben'} aus PhotoPrism und ihre Fotos werden von der Box entfernt. In PhotoPrism bleibt alles erhalten.`), async () => {
+      const r = await api(`${API}/photos/photoprism/remove`, { method: 'POST', body: {} })
+      if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+      photoLib.stale = true
+      toast('PhotoPrism getrennt')
+      go('fotos')
+    }),
+  )
+}
+
+
+/* Bibliothek › Fotos › iCloud (5.1): shared albums of the iPhone's Photos app by their public link - a list of them, a
+   link to add, and the service's page as Immich's (icloud.ts). Not an official interface of Apple: said on the page. */
+const photoIc = { data: null, adding: false, timer: 0 }
+
+async function loadPhotoIcloud() {
+  const r = await api(`${API}/photos/icloud`)
+  if (!r.ok) throw new Error(`photos icloud ${r.status}`)
+  photoIc.data = r.body
+}
+
+const IC_ERRORS = {
+  link: 'Das ist kein Link zu einem geteilten iCloud-Album. Er beginnt mit https://photos.icloud.com/shared/album/',
+  oldLink: 'Das ist ein Link der früheren Art. Öffne das Album auf dem iPhone und teile den Link der öffentlichen Website neu.',
+  gone: 'Unter diesem Link gibt es kein öffentliches Album (mehr). Prüfe, ob „Öffentliche Website“ eingeschaltet ist.',
+  unreachable: 'iCloud ist gerade nicht erreichbar. Prüfe die Internetverbindung der Box.',
+  full: 'Es sind schon 30 Alben verbunden.',
+}
+
+function photoIcloudTop() {
+  const d = photoIc.data
+  if (!d) return []
+  const s = d.sync
+  const st = d.settings
+  const status = photoServiceStatus(s, 'Nicht erreichbar')
+  const limit = st.cacheLimitMb * 1024 * 1024
+  const rows = d.albumList.length
+    ? `<div class="rows">${d.albumList
+        .map(
+          (a) => `<div class="entry"><span class="tile">${icon('share', 18)}</span>
+            <span class="lbl"><b translate="no">${esc(a.title || tr('Geteiltes Album'))}</b><small>${esc(a.count === null ? tr('Wird abgeglichen …') : tr(`${a.count} ${a.count === 1 ? 'Foto' : 'Fotos'}`))}</small></span>
+            <button class="btn sm" data-ic-remove="${esc(a.key)}" aria-label="${esc(tr('Album entfernen'))}">${icon('close', 16)}</button></div>`,
+        )
+        .join('')}</div>`
+    : `<p class="help" style="margin:0">Noch kein Album verbunden.</p>`
+  return [
+    `<section class="card wide"><h2>Geteilte Alben</h2>
+      ${d.connected ? `<div class="ph-nas-state ${status[1]}">${status[0]}</div>` : ''}
+      ${rows}
+      ${s.offlineSince ? `<div class="note danger">${icon('info', 18)}<span>Die Box zeigt weiter die gespeicherten Fotos. Prüfe die Internetverbindung der Box.</span></div>` : ''}
+      ${s.missing ? `<div class="note warn">${icon('info', 18)}<span>${esc(s.missing === 1 ? tr('Ein Album ist nicht mehr öffentlich oder gelöscht.') : tr(`${s.missing} Alben sind nicht mehr öffentlich oder gelöscht.`))}</span></div>` : ''}
+      ${s.cacheFull && st.keepCopy ? `<div class="note warn">${icon('info', 18)}<span>Der Zwischenspeicher ist voll. Nicht alle Fotos sind auf der Box – erhöhe die Grenze oder wähle weniger Alben.</span></div>` : ''}
+      ${d.connected ? `<div class="btns"><button class="btn" id="ic-sync" ${s.running ? 'disabled' : ''}>${icon('sync', 18)}Jetzt abgleichen</button>${syncCancelButton('icloud', s.running)}</div>` : ''}</section>`,
+    `<section class="card wide"><h2>Album hinzufügen</h2>
+      <ol class="ph-howto"><li>Auf dem iPhone in Fotos ein geteiltes Album öffnen.</li><li>Oben auf das Personen-Symbol tippen und „Öffentliche Website“ einschalten.</li><li>„Link teilen“ wählen und den Link hier einfügen.</li></ol>
+      <div class="field"><label for="ic-link">Link zum Album</label><input class="input mono" id="ic-link" placeholder="https://photos.icloud.com/shared/album/…" ${NO_PW_MANAGER} spellcheck="false" autocomplete="off"></div>
+      <div class="btns"><button class="btn primary" id="ic-add" ${photoIc.adding ? 'disabled' : ''}>${icon('plus', 18)}${esc(tr(photoIc.adding ? 'Wird geprüft …' : 'Album hinzufügen'))}</button></div>
+      <div class="note">${icon('info', 18)}<span>Die Box liest das Album so wie die öffentliche Website von Apple. Eine offizielle Schnittstelle dafür gibt es nicht: Ändert Apple etwas, sind diese Alben vielleicht eine Weile nicht da. Jeder mit dem Link kann das Album sehen.</span></div></section>`,
+    ...(d.connected
+      ? [
+          `<section class="card wide"><h2>Fotos</h2>
+      <div class="row"><span class="lbl"><b>Fotos auf der Box speichern</b><small>An: Die Box speichert Fotos und Videos in Anzeigegröße und zeigt sie auch ohne Internet. Aus: Fotos und Videos kommen beim Anzeigen live von iCloud – ohne Internet sind diese Alben gerade nicht da.</small></span>
+        <label class="switch"><input type="checkbox" id="ic-keep" ${st.keepCopy ? 'checked' : ''} aria-label="${esc(tr('Fotos auf der Box speichern'))}"><span></span></label></div></section>`,
+          `<section class="card"><h2>Abgleich</h2>
+      <div class="field"><label>Intervall</label><button class="select-btn" id="ic-every"><span>${esc(tr(NAS_SYNC.find(([, m]) => m === st.syncMinutes)?.[0] ?? 'Alle 6 Stunden'))}</span>${icon('chevron', 18)}</button>
+      <small>Neue Fotos aus iCloud erscheinen spätestens nach dieser Zeit am Display.</small></div></section>`,
+          `<section class="card"><h2>Zwischenspeicher</h2>
+      <div class="bar"><div class="slider-head"><b>${esc(st.keepCopy && limit ? tr(`${formatBytes(d.cacheBytes)} von ${formatBytes(limit)} belegt`) : tr(`${formatBytes(d.cacheBytes)} belegt`))}</b></div>
+      <div class="track"><i style="--w:${st.keepCopy && limit ? Math.min(100, (d.cacheBytes / limit) * 100).toFixed(1) : 0}%"></i></div></div>
+      ${st.keepCopy
+        ? `<p class="help">Fotos aus iCloud liegen in Anzeigegröße auf der Box und sind auch ohne Internet da.</p>
+      <div class="field"><label>Höchstens belegen</label><button class="select-btn" id="ic-cache"><span>${esc(tr(NAS_CACHE.find(([, m]) => m === st.cacheLimitMb)?.[0] ?? '2 GB'))}</span>${icon('chevron', 18)}</button>
+      <small>Ist die Grenze erreicht, lädt die Box keine weiteren Fotos und zeigt hier einen Hinweis.</small></div>`
+        : `<p class="help">Live behält die Box nur die zuletzt gezeigten Fotos (höchstens 200 MB).</p>`}</section>`,
+          `<section class="card wide"><div class="navlist"><button class="navrow" id="ic-remove"><span class="tile danger">${icon('close', 18)}</span><span class="lbl"><b class="danger-text">Verbindung trennen</b><small>Alle Alben aus iCloud und ihre Fotos werden von der Box entfernt. In iCloud bleibt alles erhalten.</small></span></button></div></section>`,
+        ]
+      : []),
+  ]
+}
+
+function mountPhotoIcloud(root, page) {
+  const d = photoIc.data
+  window.clearTimeout(photoIc.timer)
+  if (!d) return
+  const redraw = () => currentPage()?.id === page.id && renderPage(page, false)
+  const take = (body) => {
+    photoIc.data = body
+    photoLib.stale = true
+  }
+  const save = async (body, done) => {
+    const r = await api(`${API}/photos/icloud`, { method: 'POST', body })
+    if (!r.ok) {
+      toast('Nicht gespeichert', 'info')
+      return false
+    }
+    take(r.body)
+    if (done) toast(done)
+    return true
+  }
+  // (an album just added, a sync running: the page asks again)
+  if (d.sync.running || d.albumList.some((a) => a.count === null)) photoIc.timer = window.setTimeout(async () => {
+    if (currentPage()?.id !== page.id) return
+    const r = await api(`${API}/photos/icloud`)
+    if (r.ok) take(r.body)
+    redraw()
+  }, 3000)
+  $('#ic-add', root)?.addEventListener('click', async () => {
+    const link = $('#ic-link', root).value.trim()
+    if (!link) return toast('Bitte den Link zum Album einfügen', 'info')
+    photoIc.adding = true
+    redraw()
+    const r = await api(`${API}/photos/icloud/add`, { method: 'POST', body: { link }, timeoutMs: 60000 })
+    photoIc.adding = false
+    if (r.ok) take(r.body)
+    if (r.ok && r.body.ok) toast(tr(`„${r.body.title || tr('Geteiltes Album')}“ hinzugefügt – Abgleich gestartet`))
+    else toast(tr(IC_ERRORS[r.body?.error] ?? IC_ERRORS.unreachable), 'info')
+    redraw()
+  })
+  for (const b of root.querySelectorAll('[data-ic-remove]')) {
+    b.onclick = () => {
+      const a = d.albumList.find((x) => x.key === b.dataset.icRemove)
+      confirmSheet('Album entfernen', tr(`„${a?.title || tr('Geteiltes Album')}“ und seine Fotos werden von der Box entfernt. In iCloud bleibt alles erhalten.`), async () => {
+        if (await save({ remove: b.dataset.icRemove }, 'Album entfernt')) redraw()
+      })
+    }
+  }
+  $('#ic-sync', root)?.addEventListener('click', async () => {
+    const r = await api(`${API}/photos/icloud/sync`, { method: 'POST', body: {} })
+    if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+    take(r.body)
+    toast('Abgleich gestartet')
+    redraw()
+  })
+  $('#ic-keep', root)?.addEventListener('change', async (e) => {
+    const on = e.target.checked
+    if (!(await save({ keepCopy: on }, on ? 'Fotos werden auf der Box gespeichert' : 'Fotos kommen live von iCloud'))) e.target.checked = !on
+    redraw()
+  })
+  const choose = (title, list, current, key) =>
+    openSheet(
+      `<h2>${esc(tr(title))}</h2><div class="navlist">${list
+        .map(([l, v]) => `<button class="navrow" data-v="${v}"><span class="lbl"><b>${esc(tr(l))}</b></span>${v === current ? `<span class="chev">${icon('check', 18)}</span>` : ''}</button>`)
+        .join('')}</div>`,
+      (sheet, close) => {
+        for (const b of sheet.querySelectorAll('[data-v]')) {
+          b.onclick = async () => {
+            close()
+            if (await save({ [key]: Number(b.dataset.v) }, 'Gespeichert')) redraw()
+          }
+        }
+      },
+    )
+  $('#ic-every', root)?.addEventListener('click', () => choose('Intervall', NAS_SYNC, d.settings.syncMinutes, 'syncMinutes'))
+  $('#ic-cache', root)?.addEventListener('click', () => choose('Höchstens belegen', NAS_CACHE, d.settings.cacheLimitMb, 'cacheLimitMb'))
+  $('#ic-remove', root)?.addEventListener('click', () =>
+    confirmSheet('Verbindung trennen', tr(`Die ${d.albums} ${d.albums === 1 ? 'Album' : 'Alben'} aus iCloud und ihre Fotos werden von der Box entfernt. In iCloud bleibt alles erhalten.`), async () => {
+      const r = await api(`${API}/photos/icloud/remove`, { method: 'POST', body: {} })
+      if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+      photoLib.stale = true
+      toast('iCloud getrennt')
+      go('fotos')
+    }),
+  )
+}
+
+async function loadPhotoAlbum() {
+  let id = photoLib.albumId
+  if (!id) {
+    try {
+      id = sessionStorage.getItem('mupi-photo-album')
+    } catch {}
+  }
+  if (!id) throw new Error('no album')
+  const user = libView.shown
+  const [a, o] = await Promise.all([api(`${API}/photos/albums/${id}`), photoLib.overview && !photoLib.stale && photoLib.user === user ? null : api(`${API}/photos/overview`)])
+  // (another user chosen meanwhile: his page reads his own - whether the album shows on his display)
+  if (user !== libView.shown) return
+  if (!a.ok) throw new Error(`album ${a.status}`)
+  if (o?.ok) Object.assign(photoLib, { overview: o.body, stale: false, user })
+  photoLib.albumId = id
+  photoLib.album = a.body
+  // (a NAS or Immich album: the sync's state for its card "Quelle")
+  if (a.body.source === 'nas') {
+    const nas = await api(`${API}/photos/nas`)
+    if (nas.ok) photoLib.nas = nas.body
+  }
+  if (PHOTO_SERVICE[a.body.source]) {
+    const sv = await api(`${API}/photos/${a.body.source}`)
+    if (sv.ok) photoLib[a.body.source] = sv.body
+  }
+}
+
+function photoAlbumTop() {
+  const a = photoLib.album
+  if (!a) return []
+  const upload = a.source === 'upload'
+  const sel = photoLib.selecting
+  const n = photoLib.chosen.size
+  const grid = a.assets.length
+    ? `<div class="ph-grid${sel ? ' selecting' : ''}">${a.assets
+        .map(
+          (x) => `<button class="ph-tile${photoLib.chosen.has(x.id) ? ' chosen' : ''}" data-asset="${esc(x.id)}" aria-label="${esc(tr('Foto'))}" ${sel ? `aria-pressed="${photoLib.chosen.has(x.id)}"` : ''}>
+            ${x.ready === false ? `<span class="ph-prep">${icon('sync', 18)}<small>${esc(tr('Wird vorbereitet'))}</small></span>` : `<img src="${esc(photoFile(a.id, x.id, 's'))}" alt="" loading="lazy">`}${x.kind === 'video' && x.ready !== false ? `<span class="ph-video-pill">▶ ${esc(clipLength(x.duration))}</span>` : ''}${x.id === a.cover ? `<span class="ph-cover-pill">${esc(tr('Titelbild'))}</span>` : ''}${sel ? `<span class="ph-check">${icon('check', 16)}</span>` : ''}</button>`,
+        )
+        .join('')}</div>`
+    : `<p class="help" style="margin:0">Noch keine Fotos in diesem Album.</p>`
+  return [
+    `<section class="card wide">${photoAlbumRow(a, { sub: a.display ? 'Am Display sichtbar' : 'Am Display ausgeblendet' })}
+      ${upload ? `<div class="btns"><button class="btn primary" id="ph-add">${icon('plus', 18)}Fotos hinzufügen</button>${a.assets.length ? `<button class="btn" id="ph-select">${icon('check', 18)}${sel ? 'Fertig' : 'Auswählen'}</button>` : ''}</div>` : ''}</section>`,
+    a.source === 'nas' ? photoNasAlbumCard(a) : PHOTO_SERVICE[a.source] ? photoServiceAlbumCard(a) : '',
+    upload
+      ? `<section class="card wide"><h2>Album</h2><div class="navlist">
+          <button class="navrow" id="ph-rename"><span class="tile">${icon('text', 18)}</span><span class="lbl"><b>Umbenennen</b></span><span class="chev">${icon('chevron', 18)}</span></button>
+          <button class="navrow" id="ph-delete"><span class="tile danger">${icon('close', 18)}</span><span class="lbl"><b class="danger-text">Album löschen</b></span></button></div></section>`
+      : '',
+    `<section class="card wide"><div class="card-head"><h2>${esc(sel ? tr(`${n} ausgewählt`) : (a.videos ? tr(`${a.assets.length} Fotos und Videos`) : tr(`${a.assets.length} Fotos`)))}</h2>${sel ? '<button class="btn sm" id="ph-all">Alle</button>' : ''}</div>${grid}</section>`,
+    sel
+      ? `<div class="ph-actionbar wide"><button class="btn" id="ph-sel-cancel">Abbrechen</button>${n === 1 ? '<button class="btn" id="ph-sel-cover">Titelbild</button>' : ''}<button class="btn danger" id="ph-sel-delete" ${n ? '' : 'disabled'}>${esc(tr(`Löschen (${n})`))}</button></div>`
+      : '',
+  ]
+}
+
+// "Abgleich abbrechen" beside "Jetzt abgleichen" while a photo service's sync runs (a big NAS takes hours the first
+// time): what came so far stays, the next sync at its time. One handler for all of them; the page is read anew.
+function syncCancelButton(source, running) {
+  return running ? `<button class="btn danger" data-sync-cancel="${esc(source)}">${esc(tr('Abgleich abbrechen'))}</button>` : ''
+}
+document.addEventListener('click', async (e) => {
+  const b = e.target instanceof Element ? e.target.closest('[data-sync-cancel]') : null
+  if (!b || b.disabled) return
+  b.disabled = true
+  const r = await api(`${API}/photos/${encodeURIComponent(b.dataset.syncCancel)}/sync/cancel`, { method: 'POST', body: {} })
+  toast(r.ok ? tr('Abgleich abgebrochen – die geholten Fotos bleiben') : errorText(r), r.ok ? 'ok' : 'info')
+  photoLib.stale = true
+  const page = currentPage()
+  if (page) void renderPage(page, true)
+})
+
+// A NAS album: only looked at here - its folder, the last sync, "Jetzt abgleichen"
+function photoNasAlbumCard(a) {
+  const n = photoLib.nas
+  const running = !!n?.sync.running
+  const last = n?.sync.lastSync ? relTime(n.sync.lastSync) : '–'
+  return `<section class="card wide"><h2>Quelle</h2>
+    <div class="note">${icon('info', 18)}<span>Dieses Album ist ein Ordner auf dem NAS. Fotos dort hinzufügen oder löschen. Die Box gleicht den Ordner regelmäßig ab.</span></div>
+    <dl class="kv"><div><dt>Dienst</dt><dd>NAS</dd></div><div><dt>Ordner</dt><dd translate="no">${esc(a.ref ?? '–')}</dd></div><div><dt>Zuletzt abgeglichen</dt><dd>${esc(running ? tr('Abgleich läuft …') : last)}</dd></div></dl>
+    <div class="btns"><button class="btn" id="ph-nas-sync" ${running ? 'disabled' : ''}>${icon('sync', 18)}Jetzt abgleichen</button>${syncCancelButton('nas', running)}</div>
+    <div class="navlist">${navRow('fotonas', 'NAS-Ordner', 'Ordner, Abgleich, Zwischenspeicher', 'server')}</div></section>`
+}
+
+// An album of a photo service (Immich, Synology Photos): only looked at here - kept on the box or shown live, the last
+// sync, "Jetzt abgleichen"
+// the photo services: their name, page, icon, the note on an album of theirs and how live is said
+const PHOTO_SERVICE = {
+  immich: { name: 'Immich', page: 'fotoimmich', icon: 'grid', live: 'Live von Immich', note: 'Dieses Album wird in Immich verwaltet. Fotos hinzufügen oder löschen geht dort. Die Box übernimmt Änderungen beim nächsten Abgleich.' },
+  synology: { name: 'Synology Photos', page: 'fotosynology', icon: 'image', live: 'Live vom NAS', note: 'Dieses Album wird in Synology Photos verwaltet. Fotos hinzufügen oder löschen geht dort. Die Box übernimmt Änderungen beim nächsten Abgleich.' },
+  nextcloud: { name: 'Nextcloud', page: 'fotonextcloud', icon: 'cloud', live: 'Live von der Nextcloud', note: 'Dieses Album wird in Nextcloud verwaltet. Fotos hinzufügen oder löschen geht dort. Die Box übernimmt Änderungen beim nächsten Abgleich.' },
+  photoprism: { name: 'PhotoPrism', page: 'fotophotoprism', icon: 'prism', live: 'Live von PhotoPrism', note: 'Dieses Album wird in PhotoPrism verwaltet. Fotos hinzufügen oder löschen geht dort. Die Box übernimmt Änderungen beim nächsten Abgleich.' },
+  icloud: { name: 'iCloud', page: 'fotoicloud', icon: 'share', live: 'Live von iCloud', note: 'Dieses Album wird auf dem iPhone verwaltet. Fotos hinzufügen oder löschen geht dort. Die Box übernimmt Änderungen beim nächsten Abgleich.' },
+}
+
+function photoServiceAlbumCard(a) {
+  const svc = PHOTO_SERVICE[a.source]
+  const sv = photoLib[a.source]
+  const running = !!sv?.sync.running
+  const last = sv?.sync.lastSync ? relTime(sv.sync.lastSync) : '–'
+  return `<section class="card wide"><h2>Quelle</h2>
+    <div class="note">${icon('info', 18)}<span>${esc(tr(svc.note))}</span></div>
+    <dl class="kv"><div><dt>Dienst</dt><dd>${esc(svc.name)}</dd></div><div><dt>Fotos</dt><dd>${esc(tr(a.live ? svc.live : 'Auf der Box gespeichert'))}</dd></div><div><dt>Zuletzt abgeglichen</dt><dd>${esc(running ? tr('Abgleich läuft …') : last)}</dd></div></dl>
+    <div class="btns"><button class="btn" id="ph-service-sync" data-source="${esc(a.source)}" ${running ? 'disabled' : ''}>${icon('sync', 18)}Jetzt abgleichen</button>${syncCancelButton(a.source, running)}</div>
+    <div class="navlist">${navRow(svc.page, svc.name, 'Alben, Abgleich, Zugang', svc.icon)}</div></section>`
+}
+
+let photoPrepTimer = 0
+// the open full view: shown anew when a clip in it is made meanwhile (null while it is closed)
+let photoViewerRefresh = null
+function mountPhotoAlbum(root, page) {
+  const a = photoLib.album
+  window.clearTimeout(photoPrepTimer)
+  if (!a) return
+  if (a.assets.some((x) => x.ready === false)) {
+    // while clips are being made: their state every 5 s, taken into this album (an answer for an album left meanwhile
+    // is dropped); the open full view shows a clip made meanwhile, the page is drawn anew when no sheet is over it
+    let stale = false
+    const ask = () => {
+      photoPrepTimer = window.setTimeout(async () => {
+        if (currentPage()?.id !== page.id || photoLib.album !== a || photoLib.albumId !== a.id) return
+        const r = await api(`${API}/photos/albums/${a.id}`)
+        if (currentPage()?.id !== page.id || photoLib.album !== a || photoLib.albumId !== a.id) return
+        if (r.ok) {
+          const now = new Map(r.body.assets.map((y) => [y.id, y]))
+          const changed = new Set()
+          for (const x of a.assets) {
+            const y = now.get(x.id)
+            if (!y || (x.ready === false && y.ready !== false)) changed.add(x.id)
+            if (y && x.ready === false && y.ready !== false) Object.assign(x, y)
+          }
+          // (a clip that could not be made: gone)
+          if (a.assets.some((x) => !now.has(x.id))) a.assets = a.assets.filter((x) => now.has(x.id))
+          if (changed.size) {
+            stale = true
+            photoViewerRefresh?.(changed)
+          }
+        }
+        if (stale && $('#sheet').hidden) return renderPage(page, false)
+        if (a.assets.some((x) => x.ready === false) || stale) ask()
+      }, 5000)
+    }
+    ask()
+  }
+  $('#ph-service-sync', root)?.addEventListener('click', async (e) => {
+    const source = e.currentTarget.dataset.source
+    e.currentTarget.disabled = true
+    const r = await api(`${API}/photos/${source}/sync`, { method: 'POST', body: {} })
+    if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+    photoLib[source] = r.body
+    toast('Abgleich gestartet')
+    if (currentPage()?.id === page.id) renderPage(page, false)
+  })
+  $('#ph-nas-sync', root)?.addEventListener('click', async (e) => {
+    e.currentTarget.disabled = true
+    const r = await api(`${API}/photos/nas/sync`, { method: 'POST', body: {} })
+    if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+    photoLib.nas = r.body
+    toast('Abgleich gestartet')
+    if (currentPage()?.id === page.id) renderPage(page, false)
+  })
+  const title = $('#topbar .title')
+  if (title) {
+    title.textContent = a.title
+    title.setAttribute('translate', 'no')
+  }
+  const redraw = () => currentPage()?.id === page.id && renderPage(page, false)
+  const reload = async () => {
+    photoLib.overview = null
+    await loadPhotoAlbum().catch(() => undefined)
+    redraw()
+  }
+  for (const s of root.querySelectorAll('[data-show]')) s.onchange = () => photoShowSwitch(s, reload)
+  $('#ph-add', root)?.addEventListener('click', () => openPhotoUpload(a.id))
+  $('#ph-select', root)?.addEventListener('click', () => {
+    photoLib.selecting = !photoLib.selecting
+    photoLib.chosen.clear()
+    redraw()
+  })
+  $('#ph-all', root)?.addEventListener('click', () => {
+    for (const x of a.assets) photoLib.chosen.add(x.id)
+    redraw()
+  })
+  $('#ph-sel-cancel', root)?.addEventListener('click', () => {
+    photoLib.selecting = false
+    photoLib.chosen.clear()
+    redraw()
+  })
+  const setCover = async (assetId) => {
+    const r = await api(`${API}/photos/albums/${a.id}`, { method: 'POST', body: { cover: assetId } })
+    if (!r.ok) return toast('Nicht gespeichert', 'info')
+    toast('Titelbild geändert')
+    photoLib.selecting = false
+    photoLib.chosen.clear()
+    reload()
+  }
+  const deleteAssets = (ids) =>
+    confirmSheet('Löschen', tr(`${ids.length} ${ids.length === 1 ? 'Foto' : 'Fotos'} löschen? Sie werden von der Box gelöscht. Das lässt sich nicht rückgängig machen.`), async () => {
+      const r = await api(`${API}/photos/albums/${a.id}/assets/delete`, { method: 'POST', body: { ids } })
+      if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+      toast(tr(`${ids.length} ${ids.length === 1 ? 'Foto' : 'Fotos'} gelöscht`))
+      photoLib.selecting = false
+      photoLib.chosen.clear()
+      reload()
+    })
+  $('#ph-sel-cover', root)?.addEventListener('click', () => setCover([...photoLib.chosen][0]))
+  $('#ph-sel-delete', root)?.addEventListener('click', () => deleteAssets([...photoLib.chosen]))
+  for (const t of root.querySelectorAll('[data-asset]')) {
+    t.onclick = () => {
+      const id = t.dataset.asset
+      if (!photoLib.selecting) return photoViewer(a, a.assets.findIndex((x) => x.id === id), { setCover, deleteAssets })
+      if (photoLib.chosen.has(id)) photoLib.chosen.delete(id)
+      else photoLib.chosen.add(id)
+      redraw()
+    }
+  }
+  $('#ph-rename', root)?.addEventListener('click', () =>
+    openSheet(
+      `<h2>Umbenennen</h2><div class="field"><label for="ph-name">Name des Albums</label><input class="input" id="ph-name" maxlength="40" value="${esc(a.title)}" autocomplete="off"><small>So heißt das Album am Display.</small></div>
+       <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Speichern</button></div>`,
+      (sheet, close) => {
+        sheet.querySelector('[data-close]').onclick = close
+        sheet.querySelector('[data-ok]').onclick = async () => {
+          const title = sheet.querySelector('#ph-name').value.trim()
+          if (!title) return toast('Bitte einen Namen für das Album eintragen', 'info')
+          const r = await api(`${API}/photos/albums/${a.id}`, { method: 'POST', body: { title } })
+          if (!r.ok) return toast('Nicht gespeichert', 'info')
+          close()
+          toast('Album umbenannt')
+          reload()
+        }
+      },
+    ),
+  )
+  $('#ph-delete', root)?.addEventListener('click', () =>
+    confirmSheet('Album löschen', tr(`Album „${a.title}“ löschen? ${a.count} ${a.count === 1 ? 'Foto wird' : 'Fotos werden'} von der Box gelöscht. Das lässt sich nicht rückgängig machen.`), async () => {
+      const r = await api(`${API}/photos/albums/${a.id}/delete`, { method: 'POST', body: {} })
+      if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+      toast('Album gelöscht')
+      photoLib.overview = null
+      go('fotos')
+    }),
+  )
+}
+
+// The app's full view of a picture: swiping (or the arrows) to the next, "Als Titelbild" and "Löschen" - nothing else
+const clipLength = (sec) => {
+  const n = Math.max(0, Math.round(Number(sec) || 0))
+  return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`
+}
+
+function photoViewer(a, start, { setCover, deleteAssets }) {
+  let i = Math.max(0, start)
+  openSheet(
+    `<div class="ph-view"><img id="ph-view-img" alt=""><video id="ph-view-vid" controls playsinline preload="metadata" hidden></video><p class="ph-view-prep" hidden>${esc(tr('Wird vorbereitet'))}</p><button class="icon-btn soft ph-prev" aria-label="${esc(tr('Voriges Bild'))}">${icon('back', 18)}</button><button class="icon-btn soft ph-next" aria-label="${esc(tr('Nächstes Bild'))}">${icon('chevron', 18)}</button></div>
+     <p class="help" id="ph-view-n" style="margin:0;text-align:center"></p>
+     <div class="btns">${a.source === 'upload' ? '<button class="btn danger" data-del>Löschen</button>' : ''}<button class="btn" data-cover>Als Titelbild</button><button class="btn primary" data-close>Schließen</button></div>`,
+    (sheet, close) => {
+      const img = sheet.querySelector('#ph-view-img')
+      const vid = sheet.querySelector('#ph-view-vid')
+      const prep = sheet.querySelector('.ph-view-prep')
+      let shownId = null
+      const show = () => {
+        const x = a.assets[i]
+        shownId = x.id
+        const clip = x.kind === 'video'
+        vid.pause()
+        vid.hidden = !clip || x.ready === false
+        img.hidden = clip
+        prep.hidden = !(clip && x.ready === false)
+        if (clip && x.ready !== false) {
+          vid.poster = photoFile(a.id, x.id, 'f')
+          vid.src = photoFile(a.id, x.id, 'v')
+        } else if (!clip) img.src = photoFile(a.id, x.id, 'f')
+        // (a clip still being made has no picture for the album yet)
+        const cover = sheet.querySelector('[data-cover]')
+        if (cover) cover.disabled = x.ready === false
+        sheet.querySelector('#ph-view-n').textContent = `${i + 1} / ${a.assets.length}`
+      }
+      const step = (by) => {
+        i = (i + by + a.assets.length) % a.assets.length
+        show()
+      }
+      sheet.querySelector('.ph-prev').onclick = () => step(-1)
+      sheet.querySelector('.ph-next').onclick = () => step(1)
+      let x0 = null
+      img.addEventListener('pointerdown', (e) => (x0 = e.clientX))
+      img.addEventListener('pointerup', (e) => {
+        if (x0 !== null && Math.abs(e.clientX - x0) > 50) step(e.clientX < x0 ? 1 : -1)
+        x0 = null
+      })
+      sheet.querySelector('[data-close]').onclick = () => {
+        vid.pause()
+        close()
+      }
+      // (a clip made while it is open: shown when it is the one on the screen; one taken out: the place stays in the list)
+      photoViewerRefresh = (changed) => {
+        if (!a.assets.length) return close()
+        if (i >= a.assets.length) i = a.assets.length - 1
+        if (a.assets[i].id !== shownId || changed.has(shownId)) show()
+        else sheet.querySelector('#ph-view-n').textContent = `${i + 1} / ${a.assets.length}`
+      }
+      sheet.querySelector('[data-cover]').onclick = () => {
+        close()
+        setCover(a.assets[i].id)
+      }
+      sheet.querySelector('[data-del]')?.addEventListener('click', () => {
+        close()
+        deleteAssets([a.assets[i].id])
+      })
+      show()
+    },
+    () => {
+      photoViewerRefresh = null
+      const v = document.querySelector('#ph-view-vid')
+      if (!v) return
+      v.pause()
+      v.removeAttribute('src')
+      v.load()
+    },
+  )
+}
+
+/* Fotos (5.1, backend-api app-api/photos): Einstellungen › Fotos switches the photo display on (off by default) and
+   holds how it shows them - albums and slideshow, videos, the screensaver. While it is off nothing else about photos
+   shows anywhere; switching it off keeps albums, photos and connections. */
+
+const photoState = { data: null }
+const PHOTO_TEMPO = [
+  ['Langsam · 8 s', 8],
+  ['Mittel · 5 s', 5],
+  ['Schnell · 3 s', 3],
+]
+const PHOTO_ORDER = [
+  ['Gemischt', 'shuffle'],
+  ['Neueste zuerst', 'newest'],
+  ['Nach Aufnahmedatum', 'taken'],
+]
+
+async function loadPhotoSettings() {
+  const r = await api(`${API}/photos/settings`)
+  if (!r.ok) throw new Error(`photos ${r.status}`)
+  setPhotoState(r.body)
+}
+function setPhotoState(body) {
+  photoState.data = body
+  const s = body.settings
+  state.values.set('phSlideStart', s.startAsSlideshow)
+  state.values.set('phTempo', (PHOTO_TEMPO.find(([, v]) => v === s.slideshowSeconds) ?? PHOTO_TEMPO[1])[0])
+  state.values.set('phOrder', (PHOTO_ORDER.find(([, v]) => v === s.order) ?? PHOTO_ORDER[0])[0])
+  state.values.set('phVideos', s.showVideos)
+  state.values.set('phSaver', s.screensaver.enabled)
+  state.values.set('phSaverMin', s.screensaver.afterMinutes)
+  state.values.set('phSaverPlay', s.screensaver.duringPlayback)
+}
+
+// what a program being installed, or one that could not be, means for the parents
+function photoToolNotes(d) {
+  const notes = []
+  const t = d.tools ?? {}
+  const busy = (x, what) => x?.installing && notes.push(`<div class="status-line"><span class="dot"></span><span>${esc(tr(what))}</span></div>`)
+  busy(t.heif, 'Die Box richtet die Umwandlung von iPhone-Fotos (HEIC) ein …')
+  if (d.settings.showVideos) busy(t.video, 'Die Box richtet die Wiedergabe von Videos ein (ffmpeg, braucht Internet) …')
+  // (missing and not being installed: a try that failed now, or one before a restart, or the update's - the state of
+  // the box counts, not only what this server tried)
+  const missing = (x) => x && !x.installed && !x.installing
+  const failed = missing(t.heif) || (d.settings.showVideos && missing(t.video))
+  if (failed) {
+    notes.push(
+      `<div class="note warn">${icon('info', 18)}<span>${esc(tr('Ein Programm für die Fotoanzeige ließ sich nicht installieren (kein Internet?). Fotos ohne HEIC und ohne Video gehen trotzdem.'))}</span></div><div class="btns"><button class="btn" id="ph-install">Erneut versuchen</button></div>`,
+    )
+  }
+  return notes.join('')
+}
+
+function photoSettingsTop() {
+  const d = photoState.data
+  if (!d) return []
+  if (!d.settings.enabled) {
+    return [
+      `<section class="card photo-off"><div class="photo-hero"><span class="photo-hero-ic">${icon('image', 30)}</span><h2>Fotos am Display</h2>
+        <p class="help">Zeige Fotos und kurze Videos am Display der Box: vom Handy hochgeladen, aus einem NAS-Ordner, aus Immich, Synology Photos, Nextcloud, PhotoPrism oder iCloud.</p></div>
+        <div class="row"><span class="lbl"><b>Fotoanzeige</b><small>Standardmäßig aus.</small></span><label class="switch"><input type="checkbox" id="ph-on" role="switch" aria-label="Fotoanzeige"><span></span></label></div></section>`,
+      `<div class="note wide">${icon('info', 18)}<span>Nach dem Einschalten erscheinen „Fotos“ in der Bibliothek und die Bildzeit unter Spielzeit. Am Display kommt der Reiter „Fotos“ dazu, sobald ein Album freigegeben ist.</span></div>`,
+      `<div class="note wide">${icon('lock', 18)}<span>Fotos bleiben auf der Box in deinem Heimnetz. Es gibt keine Links zum Teilen.</span></div>`,
+    ]
+  }
+  return [
+    `<section class="card wide"><div class="row"><span class="lbl"><b>Fotoanzeige</b><small>Fotos am Display, Bibliothek › Fotos und Bildzeit sind eingeschaltet.</small></span><label class="switch"><input type="checkbox" id="ph-on" role="switch" checked aria-label="Fotoanzeige"><span></span></label></div>${photoToolNotes(d)}</section>`,
+  ]
+}
+
+function photoSettingsSections() {
+  if (!photoState.data?.settings.enabled) return []
+  return [
+    {
+      title: 'Alben und Diashow',
+      col: 1,
+      items: [
+        { type: 'toggle', label: 'Album startet als Diashow', key: 'phSlideStart', help: 'Für die Kleinsten: ohne Bildübersicht direkt los.' },
+        { type: 'seg', label: 'Tempo der Diashow', key: 'phTempo', options: PHOTO_TEMPO.map(([l]) => l) },
+        { type: 'select', label: 'Reihenfolge', key: 'phOrder', options: PHOTO_ORDER.map(([l]) => l), help: 'Gemischt · Neueste zuerst · Nach Aufnahmedatum' },
+      ],
+    },
+    {
+      title: 'Videos',
+      col: 2,
+      items: [{ type: 'toggle', label: 'Videos anzeigen', key: 'phVideos', help: 'Clips laufen im Album mit Ton, in der Diashow stumm. Live-Fotos zeigen nur das Standbild.' }],
+    },
+    {
+      title: 'Bildschirmschoner',
+      col: 2,
+      items: [
+        { type: 'toggle', label: 'Bildschirmschoner', key: 'phSaver', help: 'Zeigt eine Diashow, wenn an der Box eine Weile niemand etwas tut.' },
+        { type: 'slider', label: 'Startet nach', key: 'phSaverMin', min: 1, max: 30, step: 1, unit: ' Min.', dep: 'phSaver' },
+        { type: 'toggle', label: 'Auch während der Wiedergabe', key: 'phSaverPlay', help: 'Läuft auch, wenn ein Hörspiel spielt.', dep: 'phSaver' },
+        {
+          type: 'note',
+          text: 'Der Bildschirmschoner endet, wenn das Display wie gewohnt ausschaltet (Display & Bedienung › Display). Er zählt nicht als Bildzeit und läuft nicht in Ruhezeiten.',
+          dep: 'phSaver',
+        },
+      ],
+    },
+  ]
+}
+
+async function savePhotoSettings(patch, done = 'Gespeichert') {
+  const r = await api(`${API}/photos/settings`, { method: 'POST', body: patch })
+  if (!r.ok || !r.body?.settings) {
+    toast('Nicht gespeichert', 'info')
+    return false
+  }
+  setPhotoState(r.body)
+  toast(done)
+  return true
+}
+
+function mountPhotoSettings(root, page) {
+  const again = () => currentPage()?.id === page.id && renderPage(page, false)
+  $('#ph-on', root)?.addEventListener('change', async (e) => {
+    const on = e.target.checked
+    if (on) {
+      if (await savePhotoSettings({ enabled: true }, 'Fotoanzeige eingeschaltet')) again()
+      else e.target.checked = false
+      return
+    }
+    // (switching off asks first: the display loses its tab, the app its photo pages - nothing is deleted)
+    e.target.checked = true
+    const yes = await ask(
+      'Fotoanzeige ausschalten?',
+      'Alben, Fotos und Verbindungen bleiben auf der Box gespeichert. Sie sind am Display und in der App ausgeblendet, bis du die Fotoanzeige wieder einschaltest. Der Abgleich mit NAS und Immich pausiert.',
+      'Ausschalten',
+    )
+    if (yes && (await savePhotoSettings({ enabled: false }, 'Fotoanzeige ausgeschaltet'))) again()
+  })
+  $('#ph-install', root)?.addEventListener('click', async () => {
+    const r = await api(`${API}/photos/install`, { method: 'POST', body: {} })
+    if (r.ok && r.body?.settings) setPhotoState(r.body)
+    again()
+  })
+  // a program being installed: its state again in a while (the note goes when it is there)
+  const t = photoState.data?.tools ?? {}
+  if (t.heif?.installing || t.video?.installing) {
+    every(5000, async () => {
+      const r = await api(`${API}/photos/settings`)
+      if (!r.ok || !r.body?.settings) return
+      const was = JSON.stringify(photoState.data?.tools)
+      setPhotoState(r.body)
+      if (JSON.stringify(r.body.tools) !== was) again()
+    })
+  }
+}
+
+async function changePhotoSetting(key, v, page) {
+  const patch =
+    key === 'phSlideStart'
+      ? { startAsSlideshow: v }
+      : key === 'phTempo'
+        ? { slideshowSeconds: (PHOTO_TEMPO.find(([l]) => l === v) ?? PHOTO_TEMPO[1])[1] }
+        : key === 'phOrder'
+          ? { order: (PHOTO_ORDER.find(([l]) => l === v) ?? PHOTO_ORDER[0])[1] }
+          : key === 'phVideos'
+            ? { showVideos: v }
+            : key === 'phSaver'
+              ? { screensaver: { enabled: v } }
+              : key === 'phSaverMin'
+                ? { screensaver: { afterMinutes: Number(v) } }
+                : key === 'phSaverPlay'
+                  ? { screensaver: { duringPlayback: v } }
+                  : null
+  if (!patch) return
+  const ok = await savePhotoSettings(patch)
+  // (videos on: ffmpeg is installed - its note shows on the page)
+  if (ok && key === 'phVideos' && v && currentPage()?.id === page.id) renderPage(page, false)
+  // (not saved: the switch goes back)
+  return ok
+}
+
+/* TIDAL (backend-api app-api/tidal.ts, unofficial: python-tidal): switched on with a hint, the sign-in with a code */
 
 const tidalState = { data: null }
 
@@ -11462,14 +16315,2935 @@ function mountTidal(root, page) {
   }
 }
 
+/* Jellyfin (5.1, docs/jellyfin-5.1.md): Dienste › Jellyfin - the assistant (server, sign-in with Quick Connect or a
+   password, libraries) and the page of the connected server. The box keeps only the token. */
+
+const jf = { data: null, step: 0, found: null, finding: false, address: '', fingerprint: '', probe: null, probing: false, mode: 'qc', qc: null, qcError: '', user: '', signing: false, libs: null, chosen: new Set(), changeAddress: false }
+
+const JF_STEPS = [
+  ['server', 'Server'],
+  ['login', 'Anmelden'],
+  ['libs', 'Bibliotheken'],
+]
+
+const JF_ERRORS = {
+  unreachable: ['Server nicht erreichbar', 'Prüfe die Adresse und ob Jellyfin läuft. Die Box muss Jellyfin im Heimnetz erreichen (Port 8096, Firewall).'],
+  notJellyfin: ['Kein Jellyfin', 'Unter dieser Adresse antwortet kein Jellyfin-Server. Prüfe Adresse und Port.'],
+  version: ['Jellyfin-Version zu alt', 'Diese Version wird nicht unterstützt. Bitte Jellyfin aktualisieren (ab Version {}).'],
+  certificate: ['Zertifikat passt nicht', 'Jellyfin zeigt ein anderes Zertifikat als das bestätigte. Wurde es erneuert, prüfe den neuen Fingerabdruck und bestätige ihn.'],
+  unauthorized: ['Anmeldung abgelehnt', 'Benutzername oder Passwort stimmen nicht.'],
+  quickConnectOff: ['Quick Connect ist aus', 'In Jellyfin ist Quick Connect ausgeschaltet (Dashboard › Allgemein). Melde dich mit Benutzername und Passwort an.'],
+  otherServer: ['Anderer Server', 'Unter dieser Adresse läuft ein anderer Jellyfin-Server. Für ihn ist eine neue Anmeldung nötig.'],
+  refused: ['Das hat nicht geklappt', 'Jellyfin hat die Anfrage abgelehnt.'],
+  expired: ['Code abgelaufen', 'Der Code ist abgelaufen. Hol dir einen neuen.'],
+}
+
+async function loadJellyfin() {
+  const r = await api(`${API}/jellyfin`)
+  if (!r.ok) throw new Error(`jellyfin ${r.status}`)
+  jf.data = r.body
+  const s = r.body.settings
+  // (a new visit: the server's page when signed in, a code still waiting its step, else the assistant from its start)
+  jf.step = s.hasToken ? 0 : 1
+  jf.address = s.address || ''
+  jf.fingerprint = s.fingerprint || ''
+  jf.probe = null
+  jf.qc = r.body.quickConnect ? { id: r.body.quickConnect.id, code: r.body.quickConnect.code } : null
+  if (jf.qc) {
+    // (a code still waiting - the page left and opened again: its server as checked then)
+    const w = r.body.quickConnect
+    jf.address = w.address
+    jf.fingerprint = w.fingerprint || ''
+    jf.probe = { ok: true, address: w.address, fingerprint: jf.fingerprint, server: w.server }
+    jf.mode = 'qc'
+    jf.step = 2
+  }
+  jf.libs = null
+  jf.found = null
+  jf.changeAddress = false
+}
+
+const jfError = (e) => JF_ERRORS[e] ?? JF_ERRORS.unreachable
+const jfStep = () => (jf.step === 2 && !jf.probe?.ok && !jf.qc ? 1 : jf.step)
+
+function jellyfinSteps() {
+  const s = jfStep()
+  const bar = `<ol class="wz-steps" style="grid-template-columns:repeat(${JF_STEPS.length}, minmax(0, 1fr))">${JF_STEPS.map(([, label], i) => {
+    const n = i + 1
+    const done = n < s
+    return `<li class="${done ? 'done' : ''}${n === s ? ' current' : ''}"><button type="button" data-jfstep="${n}"${n === s ? ' aria-current="step"' : ''}${done ? '' : ' disabled'}><span class="bar"></span><span class="lbl">${done ? icon('check', 14) : `<i>${n}</i>`}${esc(tr(label))}</span></button></li>`
+  }).join('')}</ol>`
+  let body
+  let next
+  const p = jf.probe
+  if (s === 1) {
+    const found = jf.found
+    const list = found?.length
+      ? `<div class="rows">${found
+          .map(
+            (f) => `<button type="button" class="entry jf-found" data-jfaddr="${esc(f.address)}"><span class="ph-thumb">${icon('server', 20)}</span><span class="lbl"><b translate="no">${esc(f.name || f.address)}</b><small translate="no">${esc(f.address)}</small></span>${icon('chevron', 18)}</button>`,
+          )
+          .join('')}</div>`
+      : found
+        ? `<p class="help" style="margin:0">${esc(tr('Im Heimnetz hat sich kein Jellyfin gemeldet. Trag die Adresse unten ein.'))}</p>`
+        : ''
+    const cert = p?.error === 'certificate' ? p.certificate : null
+    const problem = p && !p.ok && !cert ? jfError(p.error) : null
+    body = `<h2>${esc(tr(jf.changeAddress ? 'Neue Adresse von Jellyfin' : 'Wo läuft dein Jellyfin?'))}</h2>
+      <div class="btns"><button class="btn" id="jf-find" ${jf.finding ? 'disabled' : ''}>${icon('search', 18)}${esc(tr(jf.finding ? 'Wird gesucht …' : 'Im Heimnetz suchen'))}</button></div>${list}
+      <div class="field"><label for="jf-addr">Server-Adresse</label><input class="input mono" id="jf-addr" placeholder="http://192.168.1.20:8096" value="${esc(jf.address)}" ${NO_PW_MANAGER} spellcheck="false">
+      <small>${esc(tr('Ohne Port nimmt die Box 8096. Ein Server nur im Heimnetz reicht.'))}</small></div>
+      ${
+        cert
+          ? `<h2>Zertifikat bestätigen</h2><p class="help" style="margin:0">${esc(tr('Jellyfin nutzt ein eigenes (selbst signiertes) Zertifikat. Vergleiche den Fingerabdruck mit dem im Browser über das Schloss-Symbol. Nur wenn er übereinstimmt:'))}</p>
+        <dl class="kv"><div><dt>Ausgestellt für</dt><dd>${esc(cert.subject)}</dd></div><div><dt>Gültig bis</dt><dd>${esc(cert.validTo)}</dd></div></dl>
+        <p class="mono-block">${esc(cert.fingerprint)}</p>${jf.fingerprint ? `<div class="note warn">${icon('info', 18)}<span>${esc(tr(JF_ERRORS.certificate[1]))}</span></div>` : ''}`
+          : problem
+            ? `<div class="note danger">${icon('info', 18)}<span><b>${esc(tr(problem[0]))}</b> ${esc(tr(problem[1]).replace('{}', jf.data?.minVersion ?? '10.8.0'))}</span></div>`
+            : ''
+      }`
+    next = cert
+      ? `<button class="btn primary" id="jf-trust" data-fp="${esc(cert.fingerprint)}">${esc(tr('Vertrauen und weiter'))}</button>`
+      : `<button class="btn primary" id="jf-next1" ${jf.probing ? 'disabled' : ''}>${esc(tr(jf.probing ? 'Wird geprüft …' : 'Weiter'))}</button>`
+  } else if (s === 2) {
+    const srv = p?.server
+    const head = srv ? `<dl class="kv"><div><dt>Server</dt><dd translate="no">${esc(srv.name || jf.address)}</dd></div><div><dt>Version</dt><dd>${esc(srv.version)}</dd></div></dl>` : ''
+    const err = jf.qcError ? jfError(jf.qcError) : null
+    const errHtml = err ? `<div class="note danger">${icon('info', 18)}<span><b>${esc(tr(err[0]))}</b> ${esc(tr(err[1]))}</span></div>` : ''
+    if (jf.mode === 'qc') {
+      body = `<h2>Mit Quick Connect anmelden</h2>${head}
+        <p class="help">${esc(tr('Öffne Jellyfin auf dem Handy oder im Browser, angemeldet mit dem Konto, dessen Bibliothek die Box spielen soll. Dort unter Profil › Quick Connect diesen Code eingeben:'))}</p>
+        ${jf.qc ? `<p class="mono-block" translate="no" style="font-size:32px;letter-spacing:6px;text-align:center">${esc(jf.qc.code)}</p><p class="help" style="margin:0">${esc(tr('Die Box wartet auf die Bestätigung …'))}</p>` : `<p class="help" style="margin:0">${esc(tr('Wird geladen …'))}</p>`}
+        ${errHtml}<div class="btns"><button class="btn" id="jf-pw">${esc(tr('Stattdessen mit Benutzername und Passwort'))}</button>${jf.qcError ? `<button class="btn" id="jf-qc-again">${esc(tr('Neuer Code'))}</button>` : ''}</div>`
+      next = ''
+    } else {
+      body = `<h2>Mit Benutzername und Passwort anmelden</h2>${head}
+        <div class="field"><label for="jf-user">Benutzername</label><input class="input" id="jf-user" value="${esc(jf.user)}" autocomplete="username" spellcheck="false"></div>
+        <div class="field"><label for="jf-pass">Passwort</label><div class="input-wrap"><input class="input has-eye" id="jf-pass" type="password" autocomplete="current-password"><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div>
+        <small>${esc(tr('Das Passwort wird nur für die Anmeldung genutzt und nicht auf der Box gespeichert.'))}</small></div>
+        ${errHtml}<div class="btns"><button class="btn" id="jf-qc">${esc(tr('Stattdessen mit Quick Connect'))}</button></div>`
+      next = `<button class="btn primary" id="jf-login" ${jf.signing ? 'disabled' : ''}>${esc(tr(jf.signing ? 'Wird angemeldet …' : 'Anmelden'))}</button>`
+    }
+  } else {
+    const list = jf.libs
+    const rows = !list
+      ? `<p class="help" style="margin:0">${esc(tr('Wird geladen …'))}</p>`
+      : list.error
+        ? `<div class="note danger">${icon('info', 18)}<span>${esc(tr('Die Bibliotheken lassen sich gerade nicht laden.'))}</span></div>`
+        : list.libraries.length
+          ? `<div class="rows">${list.libraries
+              .map(
+                (l) => `<div class="entry ph-im-album${l.playable ? '' : ' off'}"><span class="ph-thumb">${icon(l.type === 'books' ? 'book' : l.type === 'playlists' ? 'grid' : 'music', 20)}</span>
+                <span class="lbl"><b translate="no">${esc(l.name)}</b><small>${esc(tr(JF_LIB_TYPES[l.type] ?? 'Kann die Box nicht abspielen'))}</small></span>
+                ${l.playable ? `<button class="ph-check-box" role="checkbox" aria-checked="${jf.chosen.has(l.id)}" data-jflib="${esc(l.id)}" aria-label="${esc(l.name)}">${jf.chosen.has(l.id) ? icon('check', 16) : ''}</button>` : ''}</div>`,
+              )
+              .join('')}</div>`
+          : `<p class="help" style="margin:0">${esc(tr('Jellyfin zeigt diesem Konto noch keine Bibliothek. Jellyfin liest eine neue Bibliothek vielleicht noch ein.'))}</p>`
+    body = `<h2>Welche Bibliotheken?</h2><p class="help">${esc(tr('Nur aus diesen bietet die Bibliothek der App Inhalte zum Hinzufügen an. Keine gewählt: alle, die die Box abspielen kann.'))}</p>${rows}`
+    next = `<button class="btn primary" id="jf-done">Fertig</button>`
+  }
+  const back = s === 1 ? `<button class="btn" id="jf-cancel">Abbrechen</button>` : `<button class="btn" id="jf-back">${icon('back', 18)}Zurück</button>`
+  return [
+    `<section class="card wide wz">${bar}<div class="wz-count">${esc(tr(`Schritt ${s} von ${JF_STEPS.length}`))}</div>${body}
+      <div class="wz-foot">${back}<span class="wz-next">${next}</span></div></section>`,
+  ]
+}
+
+const JF_LIB_TYPES = { music: 'Musik', books: 'Hörbücher', playlists: 'Playlists', mixed: 'Gemischte Inhalte' }
+
+function jellyfinTop() {
+  const d = jf.data
+  if (!d) return []
+  if (jf.step) return jellyfinSteps()
+  const s = d.settings
+  const chip = !s.enabled ? 'aus' : d.state === 'ok' ? 'verbunden' : 'gestört'
+  const notes = {
+    unreachable: `<div class="note danger">${icon('info', 18)}<span>${esc(tr('Jellyfin ist gerade nicht erreichbar. Prüfe, ob der Server läuft und die Adresse stimmt.'))}</span></div>`,
+    unauthorized: `<div class="note danger">${icon('info', 18)}<span>${esc(tr('Jellyfin nimmt die Anmeldung der Box nicht mehr an (in Jellyfin abgemeldet oder ein Backup einer anderen Box). Bitte neu anmelden.'))}</span></div>`,
+    certificate: `<div class="note danger">${icon('info', 18)}<span>${esc(tr(JF_ERRORS.certificate[1]))}</span></div>`,
+  }
+  const libs = s.libraries.length ? tr(`${s.libraries.length} gewählt`) : tr('Alle')
+  return [
+    `<section class="card wide"><div class="card-head"><h2>Jellyfin</h2><span class="chip ${chip === 'verbunden' ? 'ok' : ''}">${esc(tr(chip))}</span></div>
+      <div class="row"><span class="lbl"><b>Jellyfin verwenden</b><small>${esc(tr('Aus: Einträge aus Jellyfin bleiben in der Bibliothek, werden aber nicht angezeigt und nicht gespielt.'))}</small></span><label class="switch"><input type="checkbox" id="jf-on" ${s.enabled ? 'checked' : ''} aria-label="${esc(tr('Jellyfin verwenden'))}"><span></span></label></div>
+      ${notes[d.state] ?? ''}
+      <dl class="kv"><div><dt>Server</dt><dd translate="no">${esc(s.serverName || s.address)}</dd></div><div><dt>Adresse</dt><dd translate="no">${esc(s.address)}</dd></div><div><dt>Version</dt><dd>${esc(s.version)}</dd></div><div><dt>Konto</dt><dd translate="no">${esc(s.userName)}</dd></div><div><dt>Bibliotheken</dt><dd>${esc(libs)}</dd></div></dl>
+      <div class="btns">${d.state === 'unauthorized' ? `<button class="btn primary" id="jf-relogin">${esc(tr('Neu anmelden'))}</button>` : ''}<button class="btn" id="jf-libs">${esc(tr('Bibliotheken wählen'))}</button><button class="btn" id="jf-addr-change">${esc(tr('Adresse ändern'))}</button></div></section>`,
+    `<section class="card wide"><h2>Wiedergabe</h2>
+      <div class="row"><span class="lbl"><b>${esc(tr('Für schwaches WLAN umwandeln'))}</b><small>${esc(tr('Jellyfin wandelt jeden Titel in MP3 mit 192 kbit um. Hilft bei großen Dateien (FLAC) und schlechtem Empfang. Dafür geht Spulen nicht, und Weiterhören beginnt den Titel von vorn.'))}</small></span><label class="switch"><input type="checkbox" id="jf-transcode" ${s.transcode ? 'checked' : ''} aria-label="${esc(tr('Für schwaches WLAN umwandeln'))}"><span></span></label></div>
+      <div class="row"><span class="lbl"><b>${esc(tr('Fortschritt mit Jellyfin teilen'))}</b><small>${esc(tr('Die Box meldet Jellyfin, wo sie in einem Titel ist und was zu Ende gehört ist. Startest du ein Album oder Hörbuch an der Box, beginnt es dort, wo das Konto aufgehört hat – auch wenn am Handy weitergehört wurde. In Jellyfin ganz gespielte Alben bekommen an der Box den grünen Haken.'))}</small></span><label class="switch"><input type="checkbox" id="jf-share" ${s.shareProgress ? 'checked' : ''} aria-label="${esc(tr('Fortschritt mit Jellyfin teilen'))}"><span></span></label></div></section>`,
+    `<section class="card wide"><div class="navlist"><button class="navrow" id="jf-logout"><span class="tile danger">${icon('close', 18)}</span><span class="lbl"><b class="danger-text">Abmelden</b><small>${esc(tr('Die Box meldet sich bei Jellyfin ab (das Gerät verschwindet dort). Einträge aus Jellyfin bleiben in der Bibliothek, spielen aber erst nach einer neuen Anmeldung.'))}</small></span></button></div></section>`,
+  ]
+}
+
+async function jellyfinLoadLibs(redraw) {
+  jf.libs = null
+  redraw()
+  const r = await api(`${API}/jellyfin/libraries`)
+  jf.libs = r.ok ? r.body : { error: true }
+  redraw()
+}
+
+function mountJellyfin(root, page) {
+  const d = jf.data
+  window.clearTimeout(jf.timer)
+  if (!d) return
+  const redraw = () => currentPage()?.id === page.id && renderPage(page, false)
+  const reload = async (text, kind) => {
+    if (text) toast(text, kind)
+    await loadJellyfin().catch(() => undefined)
+    svc.at = 0
+    redraw()
+  }
+  const goStep = (n) => {
+    const addr = $('#jf-addr', root)
+    if (addr) jf.address = addr.value.trim()
+    jf.step = n
+    redraw()
+    window.scrollTo(0, 0)
+  }
+  // Schritt 1: find, type, check the server
+  $('#jf-cancel', root)?.addEventListener('click', () => (d.settings.hasToken ? ((jf.step = 0), redraw()) : go('g-dienste')))
+  $('#jf-back', root)?.addEventListener('click', () => {
+    // (the step to go to first - with the code given up, the step shown changes)
+    const to = jfStep() === 3 && d.settings.hasToken ? 0 : jfStep() - 1
+    if (jfStep() === 2) api(`${API}/jellyfin/quickconnect`, { method: 'DELETE' })
+    jf.qc = null
+    goStep(to)
+  })
+  for (const b of root.querySelectorAll('[data-jfstep]')) b.onclick = () => goStep(Number(b.dataset.jfstep))
+  $('#jf-find', root)?.addEventListener('click', async () => {
+    jf.address = $('#jf-addr', root).value.trim()
+    jf.finding = true
+    redraw()
+    const r = await api(`${API}/jellyfin/discover`, { method: 'POST', body: {}, timeoutMs: 10000 })
+    jf.finding = false
+    jf.found = r.ok ? r.body.servers : []
+    redraw()
+  })
+  for (const b of root.querySelectorAll('[data-jfaddr]')) {
+    b.onclick = () => {
+      jf.address = b.dataset.jfaddr
+      jf.fingerprint = ''
+      jf.probe = null
+      redraw()
+      $('#jf-next1', root)?.click()
+    }
+  }
+  const probe = async () => {
+    jf.probing = true
+    redraw()
+    const r = await api(`${API}/jellyfin/probe`, { method: 'POST', body: { address: jf.address, fingerprint: jf.fingerprint || undefined }, timeoutMs: 20000 })
+    jf.probing = false
+    jf.probe = r.ok ? r.body : { ok: false, error: r.status === 400 ? 'notJellyfin' : 'unreachable' }
+    if (!jf.probe.ok) return redraw()
+    jf.address = jf.probe.address
+    if (jf.changeAddress) {
+      const a = await api(`${API}/jellyfin/address`, { method: 'POST', body: { address: jf.address, fingerprint: jf.fingerprint || undefined }, timeoutMs: 20000 })
+      if (a.ok && a.body.ok) return reload('Adresse gespeichert', 'ok')
+      // (another server: signed in anew there)
+      if (a.body?.error !== 'otherServer') {
+        jf.probe = { ok: false, error: a.body?.error ?? 'unreachable' }
+        return redraw()
+      }
+      toast(tr(JF_ERRORS.otherServer[1]), 'info')
+      jf.changeAddress = false
+    }
+    jf.mode = 'qc'
+    jf.step = 2
+    startQuickConnect()
+  }
+  $('#jf-next1', root)?.addEventListener('click', () => {
+    const v = $('#jf-addr', root).value.trim()
+    if (!v) return toast('Bitte die Adresse von Jellyfin eintragen, z. B. http://192.168.1.20:8096', 'info')
+    if (v !== jf.address) jf.fingerprint = ''
+    jf.address = v
+    probe()
+  })
+  $('#jf-trust', root)?.addEventListener('click', (e) => {
+    jf.fingerprint = e.currentTarget.dataset.fp
+    probe()
+  })
+  // Schritt 2: Quick Connect - a code, then asking every 2 s whether it was confirmed
+  const startQuickConnect = async () => {
+    jf.qc = null
+    jf.qcError = ''
+    redraw()
+    const r = await api(`${API}/jellyfin/quickconnect`, { method: 'POST', body: { address: jf.address, fingerprint: jf.fingerprint || undefined }, timeoutMs: 20000 })
+    if (r.ok && r.body.ok) jf.qc = { id: r.body.id, code: r.body.code }
+    else {
+      jf.qcError = r.body?.error ?? 'unreachable'
+      if (jf.qcError === 'quickConnectOff') jf.mode = 'password'
+    }
+    redraw()
+  }
+  // (one asking at a time: each drawing of the page starts its own and ends the one before - an answer still on its way
+  // finds another generation and stops)
+  const gen = (jf.pollGen = (jf.pollGen ?? 0) + 1)
+  if (jfStep() === 2 && jf.mode === 'qc' && jf.qc) {
+    const id = jf.qc.id
+    const poll = async () => {
+      if (currentPage()?.id !== page.id || jf.qc?.id !== id || jf.pollGen !== gen) return
+      const r = await api(`${API}/jellyfin/quickconnect/${encodeURIComponent(id)}`)
+      if (jf.qc?.id !== id || jf.pollGen !== gen) return
+      const st = r.ok ? r.body.state : 'waiting'
+      if (st === 'done') {
+        jf.qc = null
+        await loadJellyfin().catch(() => undefined)
+        toast('Mit Jellyfin verbunden', 'ok')
+        jf.chosen = new Set(jf.data?.settings.libraries ?? [])
+        jf.step = 3
+        return jellyfinLoadLibs(redraw)
+      }
+      if (st === 'expired') {
+        jf.qc = null
+        jf.qcError = 'expired'
+        return redraw()
+      }
+      if (st === 'error') {
+        jf.qc = null
+        jf.qcError = r.body?.error ?? 'refused'
+        return redraw()
+      }
+      jf.timer = window.setTimeout(poll, 2000)
+    }
+    jf.timer = window.setTimeout(poll, 2000)
+  }
+  $('#jf-qc-again', root)?.addEventListener('click', () => startQuickConnect())
+  $('#jf-pw', root)?.addEventListener('click', () => {
+    api(`${API}/jellyfin/quickconnect`, { method: 'DELETE' })
+    jf.qc = null
+    jf.qcError = ''
+    jf.mode = 'password'
+    redraw()
+  })
+  $('#jf-qc', root)?.addEventListener('click', () => {
+    jf.mode = 'qc'
+    startQuickConnect()
+  })
+  $('#jf-login', root)?.addEventListener('click', async () => {
+    jf.user = $('#jf-user', root).value.trim()
+    const password = $('#jf-pass', root).value
+    if (!jf.user) return toast('Bitte den Benutzernamen eintragen', 'info')
+    jf.signing = true
+    jf.qcError = ''
+    redraw()
+    const r = await api(`${API}/jellyfin/login`, { method: 'POST', body: { address: jf.address, fingerprint: jf.fingerprint || undefined, user: jf.user, password }, timeoutMs: 30000 })
+    jf.signing = false
+    if (!(r.ok && r.body.ok)) {
+      jf.qcError = r.body?.error ?? 'unreachable'
+      return redraw()
+    }
+    await loadJellyfin().catch(() => undefined)
+    toast('Mit Jellyfin verbunden', 'ok')
+    jf.chosen = new Set(jf.data?.settings.libraries ?? [])
+    jf.step = 3
+    jellyfinLoadLibs(redraw)
+  })
+  // Schritt 3: the libraries
+  for (const b of root.querySelectorAll('[data-jflib]')) {
+    b.onclick = () => {
+      const id = b.dataset.jflib
+      if (jf.chosen.has(id)) jf.chosen.delete(id)
+      else jf.chosen.add(id)
+      redraw()
+    }
+  }
+  $('#jf-done', root)?.addEventListener('click', async () => {
+    const r = await api(`${API}/jellyfin/settings`, { method: 'POST', body: { libraries: [...jf.chosen] } })
+    if (!r.ok) return toast('Nicht gespeichert', 'info')
+    reload('Gespeichert', 'ok')
+  })
+  // the page of the connected server
+  $('#jf-on', root)?.addEventListener('change', async (e) => {
+    const r = await api(`${API}/jellyfin/settings`, { method: 'POST', body: { enabled: e.target.checked } })
+    reload(r.ok ? '' : 'Nicht gespeichert', 'info')
+  })
+  $('#jf-transcode', root)?.addEventListener('change', async (e) => {
+    const r = await api(`${API}/jellyfin/settings`, { method: 'POST', body: { transcode: e.target.checked } })
+    reload(r.ok ? (e.target.checked ? 'Ab dem nächsten Titel umgewandelt' : 'Ab dem nächsten Titel im Original') : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+  })
+  $('#jf-share', root)?.addEventListener('change', async (e) => {
+    const r = await api(`${API}/jellyfin/settings`, { method: 'POST', body: { shareProgress: e.target.checked } })
+    reload(r.ok ? 'Gespeichert' : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+  })
+  $('#jf-libs', root)?.addEventListener('click', () => {
+    jf.chosen = new Set(d.settings.libraries)
+    jf.step = 3
+    jellyfinLoadLibs(redraw)
+  })
+  $('#jf-addr-change', root)?.addEventListener('click', () => {
+    jf.changeAddress = true
+    jf.probe = null
+    jf.found = null
+    goStep(1)
+  })
+  $('#jf-relogin', root)?.addEventListener('click', () => {
+    jf.changeAddress = false
+    jf.probe = null
+    goStep(1)
+  })
+  $('#jf-logout', root)?.addEventListener('click', async () => {
+    if (!(await ask('Von Jellyfin abmelden?', 'Die Box meldet sich bei Jellyfin ab. Einträge aus Jellyfin bleiben in der Bibliothek und spielen nach einer neuen Anmeldung wieder.', 'Abmelden'))) return
+    const r = await api(`${API}/jellyfin/logout`, { method: 'POST', body: {} })
+    reload(r.ok ? 'Von Jellyfin abgemeldet' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+  })
+}
+
+/* Audible (5.1, docs/audible-5.1.md): Dienste › Audible - the store, the sign-in in the parents' own browser (they paste
+   the address Amazon lands on, the box registers a device of its own with the code in it) and the page of the connected
+   account. Unofficial; the box keeps only its device's key. */
+
+const ab = { data: null, step: 0, country: '', login: null, busy: false, error: '', address: '' }
+
+const AB_STEPS = [
+  ['country', 'Land'],
+  ['login', 'Anmelden'],
+]
+
+const AB_COUNTRIES = {
+  de: 'Deutschland, Österreich, Schweiz (audible.de)',
+  uk: 'Großbritannien (audible.co.uk)',
+  us: 'USA (audible.com)',
+  fr: 'Frankreich (audible.fr)',
+  it: 'Italien (audible.it)',
+  es: 'Spanien (audible.es)',
+  ca: 'Kanada (audible.ca)',
+  au: 'Australien (audible.com.au)',
+  in: 'Indien (audible.in)',
+  jp: 'Japan (audible.co.jp)',
+}
+
+const AB_ERRORS = {
+  badCode: ['Keine Anmelde-Adresse', 'In dem eingefügten Text steckt kein Anmeldecode. Kopiere die komplette Adresse aus der Adresszeile der Seite, auf der Amazon nach der Anmeldung landet.'],
+  refused: ['Amazon hat abgelehnt', 'Der Code ist abgelaufen oder schon benutzt. Melde dich über den Knopf noch einmal an und füge die neue Adresse gleich danach ein.'],
+  expired: ['Anmeldung abgelaufen', 'Die Anmeldung hat zu lange gewartet. Starte sie neu.'],
+  unreachable: ['Amazon nicht erreichbar', 'Die Box erreicht Amazon gerade nicht. Prüfe ihre Internetverbindung.'],
+  rateLimited: ['Zu viele Versuche', 'Audible bittet um eine Pause. Versuche es in ein paar Minuten noch einmal.'],
+}
+
+// the store that fits the app's language and region (the parents can choose another)
+function abDefaultCountry() {
+  const [l, r] = String(LOCALE || 'de-DE').split('-')
+  const byRegion = { DE: 'de', AT: 'de', CH: 'de', GB: 'uk', US: 'us', FR: 'fr', IT: 'it', ES: 'es', CA: 'ca', AU: 'au', IN: 'in', JP: 'jp' }
+  const byLang = { de: 'de', en: 'us', fr: 'fr', it: 'it', es: 'es', ja: 'jp' }
+  return byRegion[String(r ?? '').toUpperCase()] ?? byLang[String(l ?? '').toLowerCase()] ?? 'de'
+}
+
+async function loadAudible() {
+  const r = await api(`${API}/audible`)
+  if (!r.ok) throw new Error(`audible ${r.status}`)
+  ab.data = r.body
+  const s = r.body.settings
+  // (a sign-in still waiting - the parents were in the browser and came back: its step; else the account or the start)
+  ab.login = r.body.login ?? null
+  ab.step = ab.login ? 2 : s.signedIn ? 0 : 1
+  ab.country = ab.login?.country || (s.signedIn ? s.country : abDefaultCountry())
+  ab.error = ''
+}
+
+const abError = (e) => AB_ERRORS[e] ?? AB_ERRORS.unreachable
+const abUnofficial = () =>
+  `<div class="note warn">${icon('info', 18)}<span>${esc(tr('Inoffiziell: Audible hat keine öffentliche Schnittstelle. Die Box nutzt die der Audible-App und spielt nur, was Audible zum Streamen ausliefert. Das kann jederzeit aufhören zu funktionieren. Nutzung auf eigene Gefahr.'))}</span></div>`
+
+function audibleSteps() {
+  const s = ab.step
+  const bar = `<ol class="wz-steps" style="grid-template-columns:repeat(${AB_STEPS.length}, minmax(0, 1fr))">${AB_STEPS.map(([, label], i) => {
+    const n = i + 1
+    const done = n < s
+    return `<li class="${done ? 'done' : ''}${n === s ? ' current' : ''}"><button type="button" disabled${n === s ? ' aria-current="step"' : ''}><span class="bar"></span><span class="lbl">${done ? icon('check', 14) : `<i>${n}</i>`}${esc(tr(label))}</span></button></li>`
+  }).join('')}</ol>`
+  const err = ab.error ? abError(ab.error) : null
+  const errHtml = err ? `<div class="note danger">${icon('info', 18)}<span><b>${esc(tr(err[0]))}</b> ${esc(tr(err[1]))}</span></div>` : ''
+  let body
+  let next
+  if (s === 1) {
+    const countries = ab.data?.countries ?? Object.keys(AB_COUNTRIES)
+    body = `<h2>${esc(tr('Wo ist dein Audible-Konto?'))}</h2>${abUnofficial()}
+      <div class="field"><label for="ab-country">${esc(tr('Audible-Shop'))}</label><select class="input" id="ab-country">${countries
+        .map((c) => `<option value="${esc(c)}" ${c === ab.country ? 'selected' : ''}>${esc(tr(AB_COUNTRIES[c] ?? c))}</option>`)
+        .join('')}</select>
+      <small>${esc(tr('Der Shop, bei dem deine Hörbücher gekauft sind. Österreich und die Schweiz nutzen audible.de.'))}</small></div>${errHtml}`
+    next = `<button class="btn primary" id="ab-next" ${ab.busy ? 'disabled' : ''}>${esc(tr(ab.busy ? 'Wird vorbereitet …' : 'Weiter'))}</button>`
+  } else {
+    const url = ab.login?.url ?? ''
+    body = `<h2>${esc(tr('Bei Amazon anmelden'))}</h2>
+      <ol class="help steps-list">
+        <li>${esc(tr('Öffne die Anmeldung und melde dich mit dem Konto an, dessen Audible-Hörbücher die Box spielen soll – auch mit dem Bestätigungscode, falls Amazon danach fragt.'))}</li>
+        <li>${esc(tr('Bietet Amazon an, einen Passkey einzurichten, wähle „Nicht jetzt“ bzw. „Überspringen“.'))}</li>
+        <li>${esc(tr('Am Ende zeigt Amazon eine leere Seite oder „Seite nicht gefunden“. Das ist richtig. Kopiere die komplette Adresse aus der Adresszeile (sie enthält „maplanding“) und füge sie hier ein.'))}</li>
+      </ol>
+      <p class="help" style="margin:0">${esc(tr('Keine Adresszeile zu sehen (etwa in der App vom Home-Bildschirm): über „Teilen“ › „Kopieren“. Öffnet sich stattdessen die Amazon-App, öffne die Anmeldung im Browser oder am Computer.'))}</p>
+      <div class="btns"><a class="btn" id="ab-open" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${icon('link', 18)}${esc(tr('Anmeldung bei Amazon öffnen'))}</a></div>
+      <div class="field"><label for="ab-address">${esc(tr('Adresse der letzten Seite'))}</label><textarea class="input mono" id="ab-address" rows="3" spellcheck="false" placeholder="https://www.amazon.de/ap/maplanding?…" ${NO_PW_MANAGER}>${esc(ab.address)}</textarea>
+      <small>${esc(tr('Dein Passwort bleibt bei Amazon. Die Box bekommt nur einen einmaligen Code und meldet sich damit als eigenes Gerät an. Die Adresse wird nirgends gespeichert.'))}</small></div>${errHtml}`
+    next = `<button class="btn primary" id="ab-finish" ${ab.busy ? 'disabled' : ''}>${esc(tr(ab.busy ? 'Wird verbunden …' : 'Verbinden'))}</button>`
+  }
+  const back = s === 1 ? `<button class="btn" id="ab-cancel">Abbrechen</button>` : `<button class="btn" id="ab-back" ${ab.busy ? 'disabled' : ''}>${icon('back', 18)}Zurück</button>`
+  return [
+    `<section class="card wide wz">${bar}<div class="wz-count">${esc(tr(`Schritt ${s} von ${AB_STEPS.length}`))}</div>${body}
+      <div class="wz-foot">${back}<span class="wz-next">${next}</span></div></section>`,
+  ]
+}
+
+function audibleTop() {
+  const d = ab.data
+  if (!d) return []
+  if (ab.step) return audibleSteps()
+  const s = d.settings
+  const chip = !s.enabled ? 'aus' : d.state === 'ok' ? 'verbunden' : 'gestört'
+  const notes = {
+    unreachable: `<div class="note danger">${icon('info', 18)}<span>${esc(tr('Audible ist gerade nicht erreichbar. Prüfe die Internetverbindung der Box.'))}</span></div>`,
+    unauthorized: `<div class="note danger">${icon('info', 18)}<span>${esc(tr('Audible nimmt die Anmeldung der Box nicht mehr an (das Gerät wurde bei Amazon entfernt oder es ist ein Backup einer anderen Box). Bitte neu anmelden.'))}</span></div>`,
+  }
+  return [
+    `<section class="card wide"><div class="card-head"><h2>Audible</h2><span class="chip ${chip === 'verbunden' ? 'ok' : ''}">${esc(tr(chip))}</span></div>
+      <div class="row"><span class="lbl"><b>${esc(tr('Audible verwenden'))}</b><small>${esc(tr('Aus: Einträge aus Audible bleiben in der Bibliothek, werden aber nicht angezeigt und nicht gespielt.'))}</small></span><label class="switch"><input type="checkbox" id="ab-on" ${s.enabled ? 'checked' : ''} aria-label="${esc(tr('Audible verwenden'))}"><span></span></label></div>
+      ${notes[d.state] ?? ''}
+      <dl class="kv"><div><dt>${esc(tr('Shop'))}</dt><dd>${esc(tr(AB_COUNTRIES[s.country] ?? s.country))}</dd></div><div><dt>${esc(tr('Konto'))}</dt><dd translate="no">${esc(s.customerName || '—')}</dd></div><div><dt>${esc(tr('Gerät bei Amazon'))}</dt><dd translate="no">${esc(s.deviceName || '—')}</dd></div></dl>
+      ${abUnofficial()}
+      <div class="btns">${d.state === 'unauthorized' ? `<button class="btn primary" id="ab-relogin">${esc(tr('Neu anmelden'))}</button>` : ''}</div></section>`,
+    `<section class="card wide"><h2>${esc(tr('Wiedergabe'))}</h2>
+      <div class="row"><span class="lbl"><b>${esc(tr('Hörposition mit Audible teilen'))}</b><small>${esc(tr('Die Box meldet Audible, wo sie in einem Hörbuch ist. Startest du ein Hörbuch an der Box neu, beginnt es dort, wo das Konto aufgehört hat – auch wenn am Handy weitergehört wurde. In Audible zu Ende gehörte Bücher bekommen an der Box den grünen Haken. Hört ihr im selben Konto dasselbe Buch, überschreibt die Box eure Stelle.'))}</small></span><label class="switch"><input type="checkbox" id="ab-share" ${s.shareProgress ? 'checked' : ''} aria-label="${esc(tr('Hörposition mit Audible teilen'))}"><span></span></label></div></section>`,
+    `<section class="card wide"><div class="navlist"><button class="navrow" id="ab-logout"><span class="tile danger">${icon('close', 18)}</span><span class="lbl"><b class="danger-text">${esc(tr('Abmelden'))}</b><small>${esc(tr('Die Box entfernt ihr Gerät aus deinem Amazon-Konto. Einträge aus Audible bleiben in der Bibliothek, spielen aber erst nach einer neuen Anmeldung.'))}</small></span></button></div></section>`,
+  ]
+}
+
+function mountAudible(root, page) {
+  const d = ab.data
+  if (!d) return
+  const redraw = () => currentPage()?.id === page.id && renderPage(page, false)
+  const reload = async (text, kind) => {
+    if (text) toast(text, kind)
+    await loadAudible().catch(() => undefined)
+    svc.at = 0
+    redraw()
+  }
+  $('#ab-cancel', root)?.addEventListener('click', () => (d.settings.signedIn ? ((ab.step = 0), (ab.error = ''), redraw()) : go('g-dienste')))
+  $('#ab-back', root)?.addEventListener('click', () => {
+    api(`${API}/audible/login`, { method: 'DELETE' })
+    ab.login = null
+    ab.error = ''
+    ab.address = ''
+    ab.step = 1
+    redraw()
+  })
+  // (what was pasted stays when the page is drawn anew - e.g. back from another app)
+  $('#ab-address', root)?.addEventListener('input', (e) => (ab.address = e.target.value))
+  $('#ab-country', root)?.addEventListener('change', (e) => (ab.country = e.target.value))
+  $('#ab-next', root)?.addEventListener('click', async () => {
+    ab.country = $('#ab-country', root).value
+    ab.busy = true
+    ab.error = ''
+    redraw()
+    const r = await api(`${API}/audible/login`, { method: 'POST', body: { country: ab.country } })
+    ab.busy = false
+    if (!(r.ok && r.body.ok)) {
+      ab.error = 'unreachable'
+      return redraw()
+    }
+    ab.login = { id: r.body.id, country: ab.country, url: r.body.url, until: r.body.until }
+    ab.step = 2
+    redraw()
+    window.scrollTo(0, 0)
+  })
+  $('#ab-finish', root)?.addEventListener('click', async () => {
+    const address = $('#ab-address', root).value.trim()
+    if (!address) return toast('Bitte die Adresse der letzten Amazon-Seite einfügen', 'info')
+    ab.busy = true
+    ab.error = ''
+    redraw()
+    const r = await api(`${API}/audible/login/finish`, { method: 'POST', body: { id: ab.login?.id, address }, timeoutMs: 30000 })
+    ab.busy = false
+    if (!(r.ok && r.body.ok)) {
+      // (a second tap while it registers: the first one answers)
+      if (r.body?.error === 'busy') return redraw()
+      ab.error = r.body?.error ?? 'unreachable'
+      // (the sign-in itself expired: back to its start)
+      if (ab.error === 'expired') ab.step = 1
+      return redraw()
+    }
+    ab.address = ''
+    reload('Mit Audible verbunden', 'ok')
+  })
+  $('#ab-on', root)?.addEventListener('change', async (e) => {
+    const r = await api(`${API}/audible/settings`, { method: 'POST', body: { enabled: e.target.checked } })
+    reload(r.ok ? '' : 'Nicht gespeichert', 'info')
+  })
+  $('#ab-share', root)?.addEventListener('change', async (e) => {
+    const r = await api(`${API}/audible/settings`, { method: 'POST', body: { shareProgress: e.target.checked } })
+    reload(r.ok ? 'Gespeichert' : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+  })
+  $('#ab-relogin', root)?.addEventListener('click', () => {
+    ab.country = d.settings.country
+    ab.error = ''
+    ab.step = 1
+    redraw()
+  })
+  $('#ab-logout', root)?.addEventListener('click', async () => {
+    if (!(await ask('Von Audible abmelden?', 'Die Box entfernt ihr Gerät aus deinem Amazon-Konto. Einträge aus Audible bleiben in der Bibliothek und spielen nach einer neuen Anmeldung wieder.', 'Abmelden'))) return
+    const r = await api(`${API}/audible/logout`, { method: 'POST', body: {}, timeoutMs: 30000 })
+    if (r.ok && r.body.removed !== true) return reload('Abgemeldet. Das Gerät ließ sich nicht aus dem Amazon-Konto austragen – entferne es bei Bedarf unter „Geräte verwalten“.', 'info')
+    reload(r.ok ? 'Von Audible abgemeldet' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+  })
+}
+
+/* Jellyfin, Bibliothek › Hinzufügen › Aus Jellyfin (J2): the chosen libraries and a search; an album, a playlist, an
+   audiobook or a whole artist becomes an entry of the box's library (type 'jellyfin', see docs/jellyfin-5.1.md) */
+
+const jfs = { q: '', result: null, busy: false, libs: null, libsError: '', lib: null, view: '', list: null, listError: '', artist: null, have: new Set(), gen: 0 }
+
+// (a library of mixed content: Jellyfin makes audiobooks only in a books library - its albums)
+const JFS_VIEWS = { music: [['artists', 'Künstler'], ['albums', 'Alben']], books: [['books', 'Hörbücher']], playlists: [['playlists', 'Playlists']], mixed: [['albums', 'Alben']] }
+
+// why Jellyfin could not answer
+function jellyfinFailText(r) {
+  if (r.status === 409) return 'Jellyfin ist ausgeschaltet oder die Box ist nicht angemeldet – unter Einstellungen › Dienste › Jellyfin.'
+  if (r.status === 401) return 'Jellyfin nimmt die Anmeldung der Box nicht mehr an – unter Einstellungen › Dienste › Jellyfin neu anmelden.'
+  return 'Jellyfin ist gerade nicht erreichbar.'
+}
+
+const jfImg = (x, w = 160) => (x.image ? `/api/jellyfin/image/${encodeURIComponent(x.id)}?w=${w}` : '')
+const jfSub = (x) =>
+  x.kind === 'artist'
+    ? x.count
+      ? `Künstler · ${x.count} ${x.count === 1 ? 'Album' : 'Alben'}`
+      : 'Künstler'
+    : [x.kind === 'playlist' ? 'Playlist' : x.kind === 'book' ? 'Hörbuch' : '', x.artist, x.year, x.count ? `${x.count} ${x.kind === 'book' && x.count === 1 ? 'Datei' : x.kind === 'book' ? 'Dateien' : 'Titel'}` : ''].filter(Boolean).join(' · ')
+// (as resultRow wants it; an album of an artist that is in the library as a whole: there through that entry)
+const jfRow = (x) => ({ ...x, t: x.name, s: jfSub(x), img: jfImg(x), name: x.name, date: x.date || (x.year ? String(x.year) : ''), single: false })
+
+function jellyfinSearchTop() {
+  if (!svc.jellyfin) {
+    return [
+      `<section class="card wide"><p class="help" style="margin:0">${esc('Jellyfin ist ausgeschaltet oder die Box ist nicht angemeldet. Einrichten unter Einstellungen › Dienste › Jellyfin.')}</p>
+        <div class="btns"><button class="btn primary" id="jfs-services">Jellyfin öffnen</button></div></section>`,
+    ]
+  }
+  return [
+    `<section class="card wide">
+      <p class="help" style="margin:0">${esc('Alben, Hörbücher, Künstler und Playlists deines Jellyfin-Servers. Was du hinzufügst, spielt die Box von dort.')}</p>
+      <div class="search">${icon('search')}<input class="input" id="jfs-q" type="search" placeholder="${esc('Suchen – z. B. ein Hörspiel oder eine Band')}" autocomplete="off" value="${esc(jfs.q)}" enterkeyhint="search"></div>
+      <div class="btns"><button class="btn primary" id="jfs-go">Suchen</button></div>
+    </section>`,
+    `<div id="jfs-results" class="wide-stack"></div>`,
+  ]
+}
+
+async function loadJellyfinLibs() {
+  const [r, have] = await Promise.all([api(`${API}/jellyfin/browse`), libraryHave('jellyfin')])
+  jfs.have = have
+  jfs.libs = r.ok ? r.body.libraries : []
+  jfs.libsError = r.ok ? '' : jellyfinFailText(r)
+}
+
+async function openJellyfinLibrary(lib, view) {
+  const gen = ++jfs.gen
+  jfs.lib = lib
+  jfs.view = view ?? JFS_VIEWS[lib.type]?.[0]?.[0] ?? 'albums'
+  jfs.list = null
+  jfs.listError = ''
+  jfs.artist = null
+  jfs.result = null
+  artistView.q = ''
+  drawJellyfin()
+  const r = await api(`${API}/jellyfin/library/${encodeURIComponent(lib.id)}?view=${jfs.view}`)
+  if (gen !== jfs.gen) return
+  jfs.list = r.ok ? r.body.items : []
+  jfs.listError = r.ok ? '' : jellyfinFailText(r)
+  drawJellyfin()
+}
+
+async function openJellyfinArtist(a) {
+  const gen = ++jfs.gen
+  artistView.q = ''
+  jfs.artist = { ...a, albums: null }
+  drawJellyfin()
+  $('#jfs-results')?.scrollIntoView({ block: 'start' })
+  const r = await api(`${API}/jellyfin/artist/${encodeURIComponent(a.id)}/albums`)
+  if (gen !== jfs.gen || jfs.artist?.id !== a.id) return
+  jfs.artist.albums = r.ok ? r.body.items : []
+  jfs.artist.error = r.ok ? '' : jellyfinFailText(r)
+  drawJellyfin()
+}
+
+async function doJellyfinSearch() {
+  const q = jfs.q.trim()
+  if (q.length < 2) return toast('Bitte mindestens 2 Zeichen eingeben', 'info')
+  if (jfs.busy) return
+  const box = $('#jfs-results')
+  box.innerHTML = `<div class="loading"><p>Suche …</p></div>`
+  jfs.busy = true
+  const gen = ++jfs.gen
+  const [r, have] = await Promise.all([api(`${API}/jellyfin/search?${new URLSearchParams({ q })}`, { timeoutMs: 30000 }), libraryHave('jellyfin')])
+  jfs.busy = false
+  if (gen !== jfs.gen || !box.isConnected) return
+  jfs.have = have
+  if (!r.ok) {
+    box.innerHTML = `<p class="help">${esc(jellyfinFailText(r))}</p>`
+    return
+  }
+  jfs.result = r.body
+  jfs.artist = null
+  jfs.lib = null
+  drawJellyfin()
+}
+
+function drawJellyfin() {
+  const box = $('#jfs-results')
+  if (!box) return
+  const lists = {}
+  const rowsOf = (key, items) => {
+    lists[key] = items
+    return items.map((x, i) => resultRow(x, i, key, jfs.have)).join('')
+  }
+  const card = (key, title, items) => (items.length ? `<section class="card"><h2>${esc(title)}</h2><div class="rows">${rowsOf(key, items.map(jfRow))}</div></section>` : '')
+  const wire = () => {
+    for (const img of box.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+    for (const b of box.querySelectorAll('[data-list]')) {
+      const x = lists[b.dataset.list][Number(b.dataset.i)]
+      b.onclick = () => (x.kind === 'artist' ? openJellyfinArtist(x) : openJellyfinItem(x))
+    }
+    for (const b of box.querySelectorAll('[data-jflibopen]')) b.onclick = () => openJellyfinLibrary(jfs.libs[Number(b.dataset.jflibopen)])
+    // (onclick: wire() runs again with each keystroke in the artist's album filter - one handler, not one per run)
+    const backBtn = $('#jfs-back', box)
+    if (backBtn) backBtn.onclick = () => {
+      jfs.gen++
+      if (jfs.artist && (jfs.lib || jfs.result)) jfs.artist = null
+      else {
+        jfs.artist = null
+        jfs.lib = null
+        jfs.result = null
+      }
+      drawJellyfin()
+    }
+  }
+  const back = (text) => `<div class="btns"><button class="btn" id="jfs-back">${icon('back', 18)}${esc(text)}</button></div>`
+  if (jfs.artist) {
+    const a = jfs.artist
+    const whole = jfs.have.has(`artist:${a.id}`)
+    box.innerHTML = `${back(jfs.lib ? `Zurück zu ${jfs.lib.name}` : 'Zurück zur Suche')}
+      <section class="card"><div class="ard-head">${a.image ? `<img src="${esc(jfImg(a, 400))}" alt="">` : ''}<span class="lbl"><h2 translate="no" style="margin:0">${esc(a.name)}</h2><small>${esc(whole ? 'Künstler in Jellyfin · ganz in der Bibliothek' : 'Künstler in Jellyfin')}</small></span></div>
+        <p class="help" style="margin:0">${esc('Ganz hinzugefügt zeigt die Box alle Alben des Künstlers, auch neue. Einzelne Alben fügst du unten hinzu.')}</p>
+        <div class="btns"><button class="btn primary" id="jfs-whole">${icon(whole ? 'check' : 'plus', 18)}${esc(whole ? 'In der Bibliothek' : 'Ganzen Künstler hinzufügen')}</button></div></section>
+      <section class="card"><h2>${esc('Alben')}</h2>${artistControls('jfs')}<div class="rows" id="jfs-alist"></div></section>`
+    const list = () => {
+      const el = $('#jfs-alist', box)
+      if (!a.albums) el.innerHTML = '<div class="loading"><p>Lade …</p></div>'
+      else {
+        const rows = filterAlbums(a.albums.map((x) => ({ ...jfRow(x), ...(whole ? { via: a.id, viaText: 'Künstler in der Bibliothek' } : {}) })))
+        el.innerHTML = rows.length ? rowsOf('albums', rows) : `<p class="help" style="margin:0">${esc(a.error || (a.albums.length ? 'Nichts gefunden.' : 'Keine Alben gefunden.'))}</p>`
+      }
+      wire()
+    }
+    list()
+    wireArtistControls(box, 'jfs', list)
+    $('#jfs-whole', box).onclick = () => openJellyfinItem({ ...a, kind: 'artist' })
+    return
+  }
+  if (jfs.result) {
+    const res = jfs.result
+    const html = card('artists', 'Künstler', res.artists ?? []) + card('albums', 'Alben', res.albums ?? []) + card('books', 'Hörbücher', res.books ?? []) + card('playlists', 'Playlists', res.playlists ?? [])
+    box.innerHTML = back('Zu den Bibliotheken') + (html || `<p class="help">${esc('Nichts gefunden.')}</p>`)
+    return wire()
+  }
+  if (jfs.lib) {
+    const views = JFS_VIEWS[jfs.lib.type] ?? JFS_VIEWS.mixed
+    const seg = views.length > 1 ? `<div class="seg" id="jfs-view">${views.map(([v, l]) => `<button aria-pressed="${jfs.view === v}" data-v="${v}">${esc(l)}</button>`).join('')}</div>` : ''
+    const items = jfs.list
+    const body = !items
+      ? '<div class="loading"><p>Lade …</p></div>'
+      : jfs.listError
+        ? `<p class="help" style="margin:0">${esc(jfs.listError)}</p>`
+        : items.length
+          ? `<div class="rows">${rowsOf('lib', items.map(jfRow))}</div>`
+          : `<p class="help" style="margin:0">${esc('Hier ist nichts. Jellyfin liest eine neue Bibliothek vielleicht noch ein.')}</p>`
+    box.innerHTML = `${back('Zu den Bibliotheken')}<section class="card"><h2 translate="no">${esc(jfs.lib.name)}</h2>${seg}${body}</section>`
+    for (const b of box.querySelectorAll('#jfs-view [data-v]')) b.onclick = () => openJellyfinLibrary(jfs.lib, b.dataset.v)
+    return wire()
+  }
+  const libs = jfs.libs
+  box.innerHTML = `<section class="card"><h2>${esc('Bibliotheken')}</h2>${
+    !libs
+      ? '<div class="loading"><p>Lade …</p></div>'
+      : jfs.libsError
+        ? `<p class="help" style="margin:0">${esc(jfs.libsError)}</p>`
+        : libs.length
+          ? `<div class="rows">${libs
+              .map(
+                (l, i) =>
+                  `<button class="entry lib-row" data-jflibopen="${i}"><span class="lib-thumb">${icon(l.type === 'books' ? 'book' : l.type === 'playlists' ? 'grid' : 'music', 18)}</span><span class="lbl"><b translate="no">${esc(l.name)}</b><small>${esc(JF_LIB_TYPES[l.type] ?? '')}</small></span><span class="chev">${icon('chevron', 18)}</span></button>`,
+              )
+              .join('')}</div>`
+          : `<p class="help" style="margin:0">${esc('Keine Bibliothek gewählt, die die Box abspielen kann – unter Einstellungen › Dienste › Jellyfin.')}</p>`
+  }</section>`
+  wire()
+}
+
+// An album, a playlist, an audiobook or a whole artist onto the box, in the category chosen in the sheet
+function openJellyfinItem(x) {
+  const kind = ['artist', 'playlist', 'book'].includes(x.kind) ? x.kind : 'album'
+  const have = jfs.have.has(`${kind}:${x.id}`)
+  addSheet(
+    {
+      title: x.name,
+      sub: kind === 'artist' ? 'Künstler in Jellyfin' : jfSub(x),
+      img: jfImg(x, 400),
+      have,
+      cat: kind === 'book' ? 'audiobook' : kind === 'playlist' ? 'music' : search.cat,
+      text: kind === 'artist' ? 'Die Box zeigt alle Alben des Künstlers als einen Eintrag, auch Alben, die später dazukommen.' : '',
+      place: kind === 'playlist',
+    },
+    async (category, folder) => {
+      // (a playlist has no artist of its own: a tile of its own, or in the folder chosen)
+      const artist = kind === 'playlist' ? folder : x.artist || x.name
+      const body = { type: 'jellyfin', jellyfinKind: kind, id: x.id, ...(artist ? { artist } : {}), title: x.name, category, source: 'manual', ...(x.image ? { cover: jfImg(x, 400) } : {}) }
+      const r = await api('/api/add', { method: 'POST', body })
+      if (!libWriteOk(r)) return false
+      search.cat = category
+      jfs.have.add(`${kind}:${x.id}`)
+      drawJellyfin()
+      toast(`Hinzugefügt: ${x.name}`)
+      libChanged()
+      lib.items = null
+      return true
+    },
+  )
+}
+
+function mountJellyfinSearch(root) {
+  const q = $('#jfs-q', root)
+  if (!q) return $('#jfs-services', root)?.addEventListener('click', () => go('jellyfin'))
+  q.addEventListener('input', () => (jfs.q = q.value))
+  q.addEventListener('keydown', (e) => e.key === 'Enter' && doJellyfinSearch())
+  $('#jfs-go', root).onclick = doJellyfinSearch
+  drawJellyfin()
+  // (the libraries anew on each visit - chosen otherwise meanwhile; what is in the library anew too - removed meanwhile.
+  // A search started before the answer keeps its place - gen)
+  const gen = jfs.gen
+  if (!jfs.lib && !jfs.result && !jfs.artist) {
+    jfs.libs = null
+    loadJellyfinLibs().then(() => gen === jfs.gen && drawJellyfin())
+  } else
+    libraryHave('jellyfin').then((have) => {
+      jfs.have = have
+      if (gen === jfs.gen) drawJellyfin()
+    })
+}
+
+/* Audible, Bibliothek › Hinzufügen › Aus Audible (A2, docs/audible-5.1.md): the account's audiobooks and series, filtered
+   here (the library comes whole, kept by the box 30 min); a book or a whole series becomes an entry of the box's library
+   (type 'audible', audibleKind 'book' | 'series'). Podcasts of Audible are left out (decided). */
+
+const abs = { q: '', view: 'books', data: null, error: '', have: new Set(), series: null, gen: 0, loading: false, limit: 150, timer: 0 }
+// (a big library: the first 150 rows, the rest on a tap - 2000 rows at each keystroke made a phone slow)
+const ABS_ROWS = 150
+
+function audibleFailText(r) {
+  if (r.status === 409) return 'Audible ist ausgeschaltet oder die Box ist nicht angemeldet – unter Einstellungen › Dienste › Audible.'
+  if (r.status === 401) return 'Audible nimmt die Anmeldung der Box nicht mehr an – unter Einstellungen › Dienste › Audible neu anmelden.'
+  if (r.status === 429) return 'Audible bittet um eine Pause. Versuche es in ein paar Minuten noch einmal.'
+  return 'Audible ist gerade nicht erreichbar.'
+}
+
+const abImg = (id, w = 160) => (id ? `/api/audible/image/${encodeURIComponent(id)}?w=${w}` : '')
+const abLength = (min) => (!min ? '' : min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')} min`)
+const abSeriesOf = (b) => b.series?.[0] ?? null
+// the whole series in the box's library this book is part of (its asin, '' none)
+const abWholeSeries = (b) => b.series?.find((x) => abs.have.has(`series:${x.asin}`))?.asin ?? ''
+const abBookRow = (b, via) => {
+  const s = abSeriesOf(b)
+  return {
+    kind: 'book',
+    id: b.asin,
+    t: b.title,
+    s: [s ? `${s.title}${s.sequence ? ` ${s.sequence}` : ''}` : '', b.authors.slice(0, 2).join(', '), abLength(b.minutes), b.finished ? tr('gehört') : ''].filter(Boolean).join(' · '),
+    img: abImg(b.image),
+    name: b.title,
+    date: b.released,
+    book: b,
+    ...(via ? { via, viaText: 'Serie in der Bibliothek' } : {}),
+  }
+}
+const abSeriesRow = (x) => ({ kind: 'series', id: x.asin, t: x.title, s: x.books.length === 1 ? tr(`Serie · ${x.books.length} Hörbuch`) : tr(`Serie · ${x.books.length} Hörbücher`), img: abImg(x.image), name: x.title, series: x })
+
+function audibleSearchTop() {
+  if (!svc.audible) {
+    return [
+      `<section class="card wide"><p class="help" style="margin:0">${esc(tr('Audible ist ausgeschaltet oder die Box ist nicht angemeldet. Einrichten unter Einstellungen › Dienste › Audible.'))}</p>
+        <div class="btns"><button class="btn primary" id="abs-services">${esc(tr('Audible öffnen'))}</button></div></section>`,
+    ]
+  }
+  return [
+    `<section class="card wide">
+      <p class="help" style="margin:0">${esc(tr('Die Hörbücher deines Audible-Kontos. Was du hinzufügst, spielt die Box über das Internet von Audible.'))}</p>
+      <div class="search">${icon('search')}<input class="input" id="abs-q" type="search" placeholder="${esc(tr('Titel, Autor, Sprecher oder Serie'))}" autocomplete="off" value="${esc(abs.q)}" enterkeyhint="search"></div>
+      <div class="seg" id="abs-view">${[
+        ['books', 'Hörbücher'],
+        ['series', 'Serien'],
+      ]
+        .map(([v, l]) => `<button aria-pressed="${abs.view === v}" data-v="${v}">${esc(tr(l))}</button>`)
+        .join('')}</div>
+      <div class="btns"><button class="btn" id="abs-fresh" ${abs.loading ? 'disabled' : ''}>${icon('sync', 18)}${esc(tr(abs.loading ? 'Wird geladen …' : 'Neu laden'))}</button></div>
+    </section>`,
+    `<div id="abs-results" class="wide-stack"></div>`,
+  ]
+}
+
+async function loadAudibleLibrary(fresh) {
+  const gen = ++abs.gen
+  abs.loading = true
+  const [r, have] = await Promise.all([api(`${API}/audible/library${fresh ? '?fresh=1' : ''}`, { timeoutMs: 90000 }), libraryHave('audible')])
+  if (gen !== abs.gen) return false
+  abs.loading = false
+  abs.have = have
+  if (r.ok) {
+    abs.data = r.body
+    abs.error = r.body.stale ? 'Audible antwortet gerade nicht – das ist der zuletzt geladene Stand.' : ''
+  } else {
+    abs.error = audibleFailText(r)
+    // (signed out or another account meanwhile: the books of before are not offered any more)
+    if (r.status === 401 || r.status === 409) abs.data = null
+  }
+  return true
+}
+
+function drawAudible() {
+  const box = $('#abs-results')
+  if (!box) return
+  const lists = {}
+  const rowsOf = (key, rows) => {
+    lists[key] = rows
+    return rows.map((x, i) => resultRow(x, i, key, abs.have)).join('')
+  }
+  const wire = () => {
+    for (const img of box.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+    for (const b of box.querySelectorAll('[data-list]')) {
+      const x = lists[b.dataset.list][Number(b.dataset.i)]
+      b.onclick = () => (x.kind === 'series' ? openAudibleSeries(x.series) : openAudibleItem(x))
+    }
+    const backBtn = $('#abs-back', box)
+    if (backBtn)
+      backBtn.onclick = () => {
+        abs.series = null
+        drawAudible()
+      }
+  }
+  const d = abs.data
+  const note = abs.error ? `<p class="help">${esc(tr(abs.error))}</p>` : ''
+  if (!d) {
+    box.innerHTML = abs.error ? note : '<div class="loading"><p>Lade …</p></div>'
+    return
+  }
+  const byAsin = new Map(d.books.map((b) => [b.asin, b]))
+  if (abs.series) {
+    // (looked up anew: after "Neu laden" with the books bought since)
+    const x = d.series.find((y) => y.asin === abs.series.asin) ?? abs.series
+    const whole = abs.have.has(`series:${x.asin}`)
+    const books = x.books.map((y) => byAsin.get(y.asin)).filter(Boolean)
+    box.innerHTML = `<div class="btns"><button class="btn" id="abs-back">${icon('back', 18)}${esc(tr('Zurück'))}</button></div>${note}
+      <section class="card"><div class="ard-head">${x.image ? `<img src="${esc(abImg(x.image, 500))}" alt="">` : ''}<span class="lbl"><h2 translate="no" style="margin:0">${esc(x.title)}</h2><small>${esc(tr(whole ? 'Serie · ganz in der Bibliothek' : 'Serie in Audible'))}</small></span></div>
+        <p class="help" style="margin:0">${esc(tr('Ganz hinzugefügt zeigt die Box alle Hörbücher der Serie aus deinem Konto, in der Reihenfolge der Serie – auch welche, die du später kaufst. Einzelne fügst du unten hinzu.'))}</p>
+        <div class="btns"><button class="btn primary" id="abs-whole">${icon(whole ? 'check' : 'plus', 18)}${esc(tr(whole ? 'In der Bibliothek' : 'Ganze Serie hinzufügen'))}</button></div></section>
+      <section class="card"><h2>${esc(tr('Hörbücher'))}</h2><div class="rows">${rowsOf('series', books.map((b) => abBookRow(b, whole ? x.asin : '')))}</div></section>`
+    wire()
+    $('#abs-whole', box).onclick = () => openAudibleItem(abSeriesRow(x))
+    return
+  }
+  const q = norm(abs.q.trim())
+  const hit = (...texts) => !q || norm(texts.join(' ')).includes(q)
+  const more = (n) => (n > abs.limit ? `<div class="btns"><button class="btn" id="abs-more">${esc(tr(`Alle ${n} zeigen`))}</button></div>` : '')
+  const wireMore = () => {
+    const b = $('#abs-more', box)
+    if (b) b.onclick = () => {
+      abs.limit = Number.POSITIVE_INFINITY
+      drawAudible()
+    }
+  }
+  if (abs.view === 'series') {
+    const rows = d.series.filter((x) => hit(x.title, ...x.books.map((y) => byAsin.get(y.asin)?.title ?? ''))).map(abSeriesRow)
+    box.innerHTML = `${note}<section class="card"><h2>${esc(tr('Serien'))}</h2>${
+      rows.length ? `<div class="rows">${rowsOf('series-list', rows.slice(0, abs.limit))}</div>${more(rows.length)}` : `<p class="help" style="margin:0">${esc(tr(d.series.length ? 'Nichts gefunden.' : 'In deinem Konto gehört kein Hörbuch zu einer Serie.'))}</p>`
+    }</section>`
+    wireMore()
+    return wire()
+  }
+  const rows = d.books.filter((b) => hit(b.title, b.subtitle, ...b.authors, ...b.narrators, ...b.series.map((s) => s.title))).map((b) => abBookRow(b, abWholeSeries(b)))
+  box.innerHTML = `${note}<section class="card"><h2>${esc(tr('Hörbücher'))}</h2>${
+    rows.length ? `<div class="rows">${rowsOf('books', rows.slice(0, abs.limit))}</div>${more(rows.length)}` : `<p class="help" style="margin:0">${esc(tr(d.books.length ? 'Nichts gefunden.' : 'In deinem Audible-Konto ist noch kein Hörbuch.'))}</p>`
+  }</section>`
+  wireMore()
+  wire()
+}
+
+function openAudibleSeries(x) {
+  abs.series = x
+  drawAudible()
+  $('#abs-results')?.scrollIntoView({ block: 'start' })
+}
+
+// A book or a whole series onto the box, in the category chosen in the sheet
+function openAudibleItem(x) {
+  const kind = x.kind === 'series' ? 'series' : 'book'
+  const b = x.book
+  const inSeries = kind === 'book' && b ? abWholeSeries(b) : ''
+  const have = abs.have.has(`${kind}:${x.id}`) || !!inSeries
+  addSheet(
+    {
+      title: x.t,
+      sub: kind === 'series' ? tr('Serie in Audible') : x.s,
+      img: x.img ? x.img.replace(/\?w=\d+$/, '?w=500') : '',
+      have,
+      ...(inSeries && !abs.have.has(`book:${x.id}`) ? { haveText: 'Schon in der Bibliothek: die ganze Serie ist dort.' } : {}),
+      cat: 'audiobook',
+      text: kind === 'series' ? 'Die Box zeigt alle Hörbücher der Serie aus deinem Konto als einen Eintrag, auch welche, die du später kaufst.' : '',
+    },
+    async (category) => {
+      // (the series is the name of the folder on the display - a book of a series lands next to its siblings)
+      const artist = kind === 'series' ? x.t : abSeriesOf(b)?.title || b.authors[0] || x.t
+      const image = kind === 'series' ? x.series.image : b.image
+      // (a whole series in the order of the series: the display sorts its books "by release", the series' places)
+      const body = { type: 'audible', audibleKind: kind, id: x.id, artist, title: x.t, category, source: 'manual', ...(kind === 'series' ? { sorting: 'ReleaseDateAscending' } : {}), ...(image ? { cover: abImg(image, 500) } : {}) }
+      const r = await api('/api/add', { method: 'POST', body })
+      if (!libWriteOk(r)) return false
+      abs.have.add(`${kind}:${x.id}`)
+      drawAudible()
+      toast(`${tr('Hinzugefügt')}: ${x.t}`)
+      libChanged()
+      lib.items = null
+      return true
+    },
+  )
+}
+
+function mountAudibleSearch(root) {
+  const q = $('#abs-q', root)
+  if (!q) return $('#abs-services', root)?.addEventListener('click', () => go('audible'))
+  // (typing filters the list - the field keeps its focus)
+  q.addEventListener('input', () => {
+    abs.q = q.value
+    abs.series = null
+    abs.limit = ABS_ROWS
+    window.clearTimeout(abs.timer)
+    abs.timer = window.setTimeout(drawAudible, 150)
+  })
+  for (const b of root.querySelectorAll('#abs-view [data-v]')) {
+    b.onclick = () => {
+      abs.view = b.dataset.v
+      abs.series = null
+      abs.limit = ABS_ROWS
+      for (const x of root.querySelectorAll('#abs-view [data-v]')) x.setAttribute('aria-pressed', String(x === b))
+      drawAudible()
+    }
+  }
+  const fetchAgain = async (fresh) => {
+    const btn = $('#abs-fresh', root)
+    if (btn) btn.disabled = true
+    drawAudible()
+    if (await loadAudibleLibrary(fresh)) drawAudible()
+    if (btn?.isConnected) btn.disabled = false
+  }
+  $('#abs-fresh', root).onclick = () => fetchAgain(true)
+  drawAudible()
+  // (on each visit: what is in the library anew - removed meanwhile; the books from the box's copy)
+  fetchAgain(false)
+}
+
+/* Extensions (docs/extensions.md): the catalog on GitHub, install / switch off / remove, and the settings the installed ones declare */
+
+// the guideline for people who write extensions (English), in the repository
+const EXT_GUIDELINE_URL = 'https://github.com/wowa1990/MuPiBox/blob/upstream-v5.1-pr/extensions/README.md'
+const exts = { installed: [], catalog: [], catalogError: null }
+async function loadExtensions() {
+  const r = await api(`${API}/extensions`)
+  if (!r.ok) throw new Error(`extensions ${r.status}`)
+  Object.assign(exts, { installed: [], catalog: [], catalogError: null }, r.body)
+  // (an extension switched on or off, installed or removed: its page comes or goes with it)
+  setExtPages(exts.installed.filter((e) => e.enabled && e.ui?.place === 'system').map((e) => ({ id: e.id, title: e.ui.title, icon: e.icon, adopt: e.ui.adopt ?? [], pages: e.ui.items.filter((i) => i.type === 'heading' && i.page).map((i) => ({ title: i.label, help: i.help ?? '' })) })))
+  for (const e of exts.installed) {
+    for (const [k, t] of Object.entries(e.settingTypes ?? {})) state.values.set(`ext.${e.id}.${k}`, t === 'secret' ? '' : e.settings?.[k])
+  }
+  // (hostApi 13: settings every user has for himself - the list of the users for the choice above them, and those of the user
+  // chosen there when it is not the one in place)
+  const perUser = exts.installed.filter((e) => e.perUser?.length)
+  if (perUser.length) {
+    await loadUsers().catch(() => undefined)
+    // (the list holds those of the user in place; the forms load another's themselves when he is chosen - extFormMount)
+    for (const e of perUser) e.settingsUser = usersState?.current
+  }
+}
+
+// (hostApi 13) Whose settings per user the forms of the extensions show: null = the user in place. Chosen above the form, when
+// the box has several users switched on.
+const extView = { user: null }
+// the user chosen there, while he is one of the box and not the one in place (else null again)
+function extUserShown() {
+  const s = usersState
+  if (!s?.enabled || (s.users?.length ?? 0) < 2 || !s.users.some((u) => u.id === extView.user) || extView.user === s.current) extView.user = null
+  return extView.user
+}
+// "Einstellungen von [Leni] [Max]" above the form of an extension with settings per user
+function extUserBar(e) {
+  const s = usersState
+  if (!e.perUser?.length || !s?.enabled || (s.users?.length ?? 0) < 2) return ''
+  const shown = extUserShown() ?? s.current
+  const other = s.users.find((u) => u.id === extView.user)
+  const chips = s.users
+    .map((u) => `<button type="button" class="user-chip" data-ext-user="${esc(u.id)}" aria-pressed="${u.id === shown}">${userDot(u.color)}<span translate="no">${esc(u.name)}</span>${u.id === s.current ? `<small>${esc(tr('aktiv'))}</small>` : ''}</button>`)
+    .join('')
+  const text = other
+    ? tr(`Du bearbeitest, was ${un(other.name)} für sich einstellt. Es gilt, sobald dieser Benutzer aktiv ist.`)
+    : tr('Was mit „je Benutzer“ markiert ist, stellt jeder Benutzer für sich ein. Alles andere gilt für die ganze Box.')
+  return `<div class="user-bar lib-user ext-user"><span class="lib-user-lbl">${esc(tr('Einstellungen von'))}</span>${chips}</div><div class="note">${icon('info', 18)}<span>${esc(text)}</span></div>`
+}
+
+// "1.4.2" > "1.4.1": true when version a is newer than b (numbers part by part; a missing part is 0)
+function versionNewer(a, b) {
+  const pa = String(a).split('.').map((n) => parseInt(n, 10) || 0)
+  const pb = String(b).split('.').map((n) => parseInt(n, 10) || 0)
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] ?? 0) - (pb[i] ?? 0)
+    if (d) return d > 0
+  }
+  return false
+}
+
+// The catalog's entry for an installed extension, when it is a newer version than the installed one
+function newerInCatalog(installedExt) {
+  const c = exts.catalog.find((x) => x.id === installedExt.id)
+  return c && versionNewer(c.version, installedExt.version) ? c : null
+}
+
+/* The report about what an extension needs, sets up and collides with. Its words are German (the language the app's texts are written in)
+   and go through tr() here, piece by piece: the report puts sentences together from what the box says, and the page's own translation
+   (which cuts a text at its separators) must not do it a second time - so the report is marked translate="no". */
+
+// Who holds a port or a pin, as the box says it (English, a fixed set of phrases) -> the app's text
+const EXT_WHO = {
+  'MuPiBox (web server)': 'MuPiBox (Webserver)',
+  'MuPiBox (SSH)': 'MuPiBox (SSH)',
+  'MuPiBox (server and display)': 'MuPiBox (Server und Display)',
+  'MuPiBox (server behind the web server)': 'MuPiBox (Server hinter dem Webserver)',
+  'MuPiBox (player)': 'MuPiBox (Player)',
+  'MuPiBox (remote display, VNC)': 'MuPiBox (Display aus der Ferne, VNC)',
+  'MuPiBox (remote display, noVNC)': 'MuPiBox (Display aus der Ferne, noVNC)',
+  'MuPiBox (DietPi dashboard)': 'MuPiBox (DietPi-Dashboard)',
+  'MuPiBox (power button, shim)': 'MuPiBox (Ein-/Aus-Taster, Shim)',
+  'MuPiBox (power LED)': 'MuPiBox (Betriebs-LED)',
+  'MuPiBox (fan)': 'MuPiBox (Lüfter)',
+  'MuPiBox (rotary encoder)': 'MuPiBox (Drehgeber)',
+  'MuPiBox (rotary encoder, switched off)': 'Drehregler (ausgeschaltet)',
+  'MuPiBox (MuPiHAT, I2C)': 'MuPiBox (MuPiHAT, I²C)',
+  'the boot configuration (spi: SPI bus)': 'die Boot-Konfiguration (spi: SPI-Bus)',
+  'the boot configuration (enable_uart: serial port)': 'die Boot-Konfiguration (enable_uart: serielle Schnittstelle)',
+  'installed on the box': 'auf der Box installiert',
+  'a running program': 'ein laufendes Programm',
+}
+const EXT_WHO_PATTERNS = [
+  [/^extension (.+)$/, 'Erweiterung {}'],
+  [/^the boot configuration \((i2c\w*): I2C bus\)$/, 'die Boot-Konfiguration ({}: I²C-Bus)'],
+  [/^the boot configuration \(dtoverlay (.+)\)$/, 'die Boot-Konfiguration (dtoverlay {})'],
+  [/^(.+) \(running\)$/, '{} (läuft)'],
+  [/^(.+) \(in use\)$/, '{} (in Benutzung)'],
+]
+// what the test could not look at
+const EXT_BLIND = { 'the boot configuration': 'die Boot-Konfiguration', 'the open ports': 'die offenen Ports', 'the GPIO lines': 'die GPIO-Leitungen', 'the services': 'die Dienste' }
+
+const extWho = (by) => {
+  if (EXT_WHO[by]) return tr(EXT_WHO[by])
+  for (const [re, de] of EXT_WHO_PATTERNS) {
+    const m = re.exec(by)
+    if (m) return tr(de.replace('{}', m[1]))
+  }
+  return by
+}
+
+// One finding of the test, as a sentence in the language of the user
+function extConflictText(c) {
+  const what = String(c.what).replace(/^(port|GPIO|service) /, '')
+  const who = (c.holders ?? []).map(extWho).join(', ')
+  if (c.blind) return tr(`Nicht alles ließ sich prüfen (${c.blind.map((b) => tr(EXT_BLIND[b] ?? b)).join(', ')}). Der Test ist weniger sicher.`)
+  if (c.kind === 'service') return tr(c.severity === 'error' ? `Der Dienst ${what} gibt es schon (${who}).` : `Der Dienst ${what} ist (noch) nicht auf der Box.`)
+  return tr(c.kind === 'gpio' ? `GPIO ${what} ist schon belegt von ${who}.` : `Port ${what} ist schon belegt von ${who}.`)
+}
+
+// What an extension sets up on the system, as list items
+function extSystemItems(system) {
+  const items = []
+  const rules = Array.isArray(system?.udev) ? system.udev.length : Number(system?.udev ?? 0)
+  if (rules === 1) items.push(tr('Legt eine Geräteregel an (Zugriffsrechte für ein Gerät)'))
+  else if (rules > 1) items.push(tr('Legt Geräteregeln an (Zugriffsrechte für Geräte)'))
+  // (the catalog names the units as text, an installed extension has the objects of its manifest)
+  const units = (system?.units ?? []).map((u) => (typeof u === 'string' ? u : u.name))
+  if (units.length) items.push(tr(units.length === 1 ? `Legt den systemd-Dienst ${units[0]} an und startet ihn` : `Legt die systemd-Dienste ${units.join(', ')} an und startet sie`))
+  if (system?.groups?.length) items.push(tr(`Nimmt den Benutzer der Box in die Gruppe ${system.groups.join(', ')} auf`))
+  if (system?.packages?.length) items.push(tr(`Installiert Pakete: ${system.packages.join(', ')}`))
+  return items
+}
+
+// The report as HTML: what it needs (ports, GPIO pins, services), what it sets up and - with a test result - what is taken already
+function extReportHtml({ resources, system, conflicts }) {
+  const list = (items) => `<ul class="ext-list">${items.map((i) => `<li>${i}</li>`).join('')}</ul>`
+  // (the purpose is a text of the extension: shown as it is, translated when the app knows it)
+  const why = (purpose) => (purpose ? `<span class="ext-why"> – ${esc(tr(purpose))}</span>` : '')
+  const group = (head, items) => (items.length ? `<p class="ext-sub">${esc(tr(head))}</p>${list(items)}` : '')
+  const r = resources ?? {}
+  const needs = [
+    group('Ports', (r.ports ?? []).map((p) => `${esc(`${p.port}/${p.proto}`)}${why(p.purpose)}`)),
+    group('GPIO-Pins', (r.gpio ?? []).map((g) => `${esc(`GPIO ${g.pin}`)}${why(g.purpose)}`)),
+    group('Dienste', (r.services ?? []).map((s) => `${esc(s.name)} <span class="ext-why">(${esc(tr(s.provides ? 'wird mitgebracht' : 'wird gebraucht'))})</span>${why(s.purpose)}`)),
+  ].join('')
+  const setup = system ? extSystemItems(system) : []
+  const errors = (conflicts ?? []).filter((c) => c.severity === 'error')
+  const warns = (conflicts ?? []).filter((c) => c.severity !== 'error')
+  const h3 = (text) => `<h3>${esc(tr(text))}</h3>`
+  return [
+    `${h3('Braucht')}${needs || `<p class="help" style="margin:0">${esc(tr('Keine Ports, GPIO-Pins oder Dienste.'))}</p>`}`,
+    system ? `${h3('Richtet ein')}${setup.length ? list(setup.map(esc)) : `<p class="help" style="margin:0">${esc(tr('Nichts am System.'))}</p>`}` : '',
+    errors.length ? `${h3('Kollidiert mit der Box')}${list(errors.map((c) => esc(extConflictText(c))))}` : '',
+    warns.length ? `${h3('Hinweise')}${list(warns.map((c) => esc(extConflictText(c))))}` : '',
+    conflicts ? `<p class="ext-verdict ${errors.length ? 'bad' : 'ok'}">${esc(tr(errors.length ? 'Entferne oder ändere zuerst, was das belegt.' : 'Keine Konflikte gefunden.'))}</p>` : '',
+  ].join('')
+}
+
+// The question before an install (or the reason why it cannot be): the report, then "Abbrechen" and the button - or only "Verstanden" when
+// something it needs is taken. Resolves true when the user goes on. `extra`: further lines (already in the language of the user).
+function extReview({ title, resources, system, conflicts, okLabel, extra = [] }) {
+  const blocked = (conflicts ?? []).some((c) => c.severity === 'error')
+  return new Promise((resolve) => {
+    let answer = false
+    openSheet(
+      `<div class="ext-review" translate="no"><h2>${esc(title)}</h2>${extReportHtml({ resources, system, conflicts })}${extra.map((x) => `<p class="help" style="margin:0">${esc(x)}</p>`).join('')}
+       <div class="btns">${blocked ? `<button class="btn primary" data-close>${esc(tr('Verstanden'))}</button>` : `<button class="btn" data-close>${esc(tr('Abbrechen'))}</button><button class="btn primary" data-ok>${esc(tr(okLabel))}</button>`}</div></div>`,
+      (sheet, close) => {
+        sheet.querySelector('[data-close]').onclick = close
+        const ok = sheet.querySelector('[data-ok]')
+        if (ok)
+          ok.onclick = () => {
+            answer = true
+            close()
+          }
+      },
+      () => setTimeout(() => resolve(answer)),
+    )
+  })
+}
+
+const extRestartNote = () => tr('Danach starten die Dienste der Box neu; eine Wiedergabe bricht dabei ab.')
+
+// A pin of an extension that something else holds (the HAT of the box, say): the report of what collides, and the choice - the pin goes
+// to a free one, or the connection is taken away. The box carries it out (POST /extensions/resolve) and switches the extension on.
+async function resolveGpioConflict(e, conflicts) {
+  const pick = await new Promise((resolve) => {
+    let answer = null
+    openSheet(
+      `<div class="ext-review" translate="no"><h2>${esc(tr(`${e.name} kann nicht eingeschaltet werden`))}</h2>${extReportHtml({ resources: e.resources, conflicts })}<p class="help" style="margin:0">${esc(tr('Was soll mit dem belegten Pin geschehen?'))}</p>
+       <div class="btns"><button class="btn" data-close>${esc(tr('Abbrechen'))}</button><button class="btn" data-pick="remove">${esc(tr('Anschluss entfernen'))}</button><button class="btn primary" data-pick="move">${esc(tr('Auf freien Pin umstellen'))}</button></div></div>`,
+      (sheet, close) => {
+        sheet.querySelector('[data-close]').onclick = close
+        for (const b of sheet.querySelectorAll('[data-pick]'))
+          b.onclick = () => {
+            answer = b.dataset.pick
+            close()
+          }
+      },
+      () => setTimeout(() => resolve(answer)),
+    )
+  })
+  if (!pick) return
+  const r = await api(`${API}/extensions/resolve`, { method: 'POST', body: { id: e.id, action: pick }, timeoutMs: 60000 })
+  if (!r.ok) {
+    if (r.body?.error === 'no_free_pin') return toast(tr('Es ist kein freier Pin mehr da.'), 'info')
+    if (r.body?.error === 'not_resolvable') return toast(tr('Das lässt sich nicht von selbst lösen: etwas anderes als ein Pin ist belegt.'), 'info')
+    if (r.body?.error === 'problem' && r.body.problem?.message) return toast(tr(r.body.problem.message), 'info')
+    return toast('Hat nicht geklappt', 'info')
+  }
+  const lines = (r.body.changes ?? []).map((c) => (c.to ? `${c.label}: GPIO ${c.from} → GPIO ${c.to}` : `${c.label}: GPIO ${c.from} → –`))
+  // (where the device has to be connected now: said in a dialog, not a toast that is gone before it is read)
+  await new Promise((resolve) => {
+    openSheet(
+      `<h2>${esc(tr(pick === 'move' ? 'Pin umgestellt' : 'Anschluss entfernt'))}</h2>${lines.map((l) => `<p style="margin:0" translate="no"><b>${esc(l)}</b></p>`).join('')}<p class="help" style="margin:0">${esc(tr(pick === 'move' ? 'Bitte schließe das Gerät am neuen Pin an. Die Dienste der Box starten gleich neu.' : 'Der Anschluss ist jetzt leer. Die Dienste der Box starten gleich neu.'))}</p>
+       <div class="btns"><button class="btn primary" data-close>${esc(tr('OK'))}</button></div>`,
+      (sheet, close) => {
+        sheet.querySelector('[data-close]').onclick = close
+      },
+      () => setTimeout(resolve),
+    )
+  })
+  toast('Die Dienste starten neu …')
+  setTimeout(() => currentPage()?.id === 'erweiterungen' && renderPage(currentPage(), true), 13000)
+}
+
+// Installs (or updates) an extension of the catalog: the test against the box first, then the report and the question
+async function installExtension(e, kind, doneText) {
+  const check = await api(`${API}/extensions/check`, { method: 'POST', body: { id: e.id } })
+  if (!check.ok) return toast('Die Prüfung auf Konflikte hat nicht geklappt', 'info')
+  const update = kind === 'Update installieren'
+  const go = await extReview({
+    title: tr(update ? `${e.name} auf ${e.version} aktualisieren?` : `${e.name} ${e.version} installieren?`),
+    resources: check.body.resources,
+    system: e.system ?? {},
+    conflicts: check.body.conflicts ?? [],
+    okLabel: kind,
+    extra: [extRestartNote()],
+  })
+  if (!go) return
+  const r = await api(`${API}/extensions/install`, { method: 'POST', body: { id: e.id } })
+  if (!r.ok) return toast(r.body?.error === 'busy' ? 'Es läuft gerade etwas anderes' : 'Hat nicht geklappt', 'info')
+  toast('Wird erledigt …')
+  watchExtensionJob(e.id, doneText)
+}
+
+// The install or removal runs on the box (a download, the setup, then the services start again): watched until it is over
+async function watchExtensionJob(id, doneText) {
+  for (let i = 0; i < 400; i++) {
+    await new Promise((r) => setTimeout(r, 1500))
+    const r = await api(`${API}/extensions`)
+    // (the services start again at the end: the box does not answer for a moment - that is the end)
+    if (!r.ok) {
+      toast(`${doneText} Die Dienste starten neu …`)
+      await new Promise((resolve) => setTimeout(resolve, 12000))
+      break
+    }
+    const all = [...(r.body.installed ?? []), ...(r.body.catalog ?? [])]
+    const job = all.find((e) => e.id === id)?.job
+    if (job && !job.running) {
+      if (job.ok === false) {
+        toast(`Hat nicht geklappt: ${job.error ?? ''}`, 'info')
+        return renderPage(currentPage(), true)
+      }
+      toast(`${doneText} Die Dienste starten neu …`)
+      await new Promise((resolve) => setTimeout(resolve, 12000))
+      break
+    }
+    if (!job) break
+  }
+  if (currentPage()?.id === 'erweiterungen') renderPage(currentPage(), true)
+}
+
+async function extensionAction(path, id, askTitle, askText, askOk, doneText) {
+  if (!(await ask(askTitle, askText, askOk))) return
+  const r = await api(`${API}/extensions/${path}`, { method: 'POST', body: { id } })
+  if (!r.ok) return toast(r.body?.error === 'busy' ? 'Es läuft gerade etwas anderes' : 'Hat nicht geklappt', 'info')
+  toast('Wird erledigt …')
+  watchExtensionJob(id, doneText)
+}
+
+// The fields of an extension's settings as its manifest declares them (ui.items): the HTML of the form, and whether it has text
+// fields - they are saved with a "Speichern" button (data-xsave), everything else at once
+// The groups of a form: a heading and the fields after it, up to the next heading. Groups that follow each other with the same
+// label, the later ones optional ("Taster", "Taster", "Taster" ...), are a series: one "+" adds the next of them.
+function extGroups(fields) {
+  const groups = []
+  fields.forEach((it, index) => {
+    if (it.type === 'heading') {
+      const before = groups[groups.length - 1]
+      const follows = before && it.optional && before.heading.label === it.label
+      groups.push({ index, heading: it, keys: [], last: index, series: follows ? before.series : index, nr: follows ? before.nr + 1 : 1 })
+    } else if (groups.length) {
+      const g = groups[groups.length - 1]
+      if (it.key) g.keys.push(it.key)
+      g.last = index
+    }
+  })
+  return groups
+}
+
+function extFormHtml(e, fields, cards = false) {
+  const type = (it) => e.settingTypes?.[it.key]
+  const groups = extGroups(fields)
+  // (a second choice beside a field with choices - by how much, beside "louder": a list, shown while the field has one of the
+  // values of `when`, see dep() in extFormMount)
+  const extra = (it) => {
+    const x = it.extra
+    if (!x) return ''
+    const now = e.settings?.[x.key]
+    return `<select class="input ext-extra" data-xsel="${esc(x.key)}" data-xof="${esc(it.key)}" data-xwhen="${esc(JSON.stringify(x.when.map(String)))}" aria-label="${esc(x.label ?? it.label)}" title="${esc(x.label ?? '')}">${x.choices.map((c) => `<option value="${esc(c.value)}"${c.value === now ? ' selected' : ''}>${esc(c.label)}</option>`).join('')}</select>`
+  }
+  const one = (it, index) => {
+      const k = esc(it.key)
+      // (tip: the help is a tooltip beside the label - an "i" that shows the text on hover, focus and tap - not a line under the field)
+      const help = it.help && !it.tip ? `<small class="help">${esc(it.help)}</small>` : ''
+      const tip = it.help && it.tip ? `<span class="ext-tip"><button type="button" class="ext-tip-btn" aria-label="${esc(it.help)}">i</button><span class="ext-tip-text" role="tooltip">${esc(it.help)}</span></span>` : ''
+      if (it.type === 'heading') {
+        // a line that starts a group of fields (button 1, button 2 ...): a name the user gives it (rename: the label stands there
+        // while it has none), and a button that takes the group away again (optional)
+        // (one of a series has its number: "Taster 1", "Taster 2")
+        const g = groups.find((x) => x.index === index)
+        const title = groups.filter((x) => x.series === g.series).length > 1 ? `${it.label} ${g.nr}` : it.label
+        const name = it.rename ? `<input class="input ext-group-name" type="text" maxlength="30" data-xname="${esc(it.rename)}" value="${esc(e.settings?.[it.rename] ?? '')}" placeholder="${esc(title)}" aria-label="Name" autocomplete="off" ${NO_PW_MANAGER}>` : `<h3>${esc(title)}</h3>`
+        const del = it.optional ? `<button type="button" class="ext-group-del" data-xdel="${index}" aria-label="Entfernen" title="Entfernen"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>` : ''
+        return `<div class="ext-group" data-ext-dep="${esc(it.dep ?? '')}"><div class="ext-group-head">${name}${del}</div>${help}</div>`
+      }
+      if (type(it) === 'gpio') {
+        // a GPIO pin: chosen from the pins of the box - the ones that are taken cannot be chosen (filled in by extFormMount).
+        // The label stands left of the list.
+        return `<div class="field ext-pin" data-ext-dep="${esc(it.dep ?? '')}"><label for="xg-${k}">${esc(it.label)}</label><select class="input" id="xg-${k}" data-xgpio="${k}" translate="no"><option value="0">–</option></select>${help}</div>`
+      }
+      if (it.type === 'status') {
+        // a few lines the extension reports about itself (hostApi 6: is the device there, what did it see last): filled in and kept up
+        // to date by extFormMount
+        return `<div class="field ext-status" data-ext-dep=""><label>${esc(it.label)}</label><dl class="ext-status-rows" data-xstatus="${index}" aria-live="polite"></dl>${help}</div>`
+      }
+      if (it.type === 'action') {
+        // a button (hostApi 7): a tap asks a route of the extension's own API part (wired by extFormMount); nothing is saved
+        return `<div class="field ext-action" data-ext-dep="${esc(it.dep ?? '')}"><button type="button" class="btn" data-xaction="${index}">${esc(it.label)}</button>${help}</div>`
+      }
+      if (it.type === 'list') {
+        // a list with a picture for each entry (hostApi 8): drawn by extFormMount from what the extension's route answers
+        return `<div class="field ext-list"><label>${esc(it.label)}</label><ul class="ext-tags tag-grid" data-xlist="${index}" aria-live="polite"></ul>${help}</div>`
+      }
+      if (it.type === 'roster') {
+        // a list the extension keeps itself (the users of the box, say): to look at, to add to, to take from and to choose from
+        return `<div class="field"><label>${esc(it.label)}</label><ul class="ext-roster" data-xroster="${index}" aria-live="polite"></ul><div class="row" style="gap:8px"><input class="input" type="text" maxlength="24" data-xradd="${index}" placeholder="Name" autocomplete="off" aria-label="${esc(it.label)}" ${NO_PW_MANAGER}><button type="button" class="btn" data-xraddgo="${index}">Anlegen</button></div>${it.addFrom ? `<div class="field ext-roster-from"><label for="xrfrom-${index}">Bibliothek</label><select class="input" id="xrfrom-${index}" data-xrfrom="${index}"><option value="">Leere Bibliothek</option></select></div>` : ''}<div data-xrtrash="${index}"></div>${help}</div>`
+      }
+      if (type(it) === 'boolean') {
+        return `<div class="row" data-ext-dep="${esc(it.dep ?? '')}"><span class="lbl"><b>${esc(it.label)}</b>${tip}${help}</span><label class="switch"><input type="checkbox" data-xk="${k}" ${e.settings?.[it.key] ? 'checked' : ''} aria-label="${esc(it.label)}"><span></span></label></div>`
+      }
+      if (it.type === 'lookup') {
+        // a search of the extension's own API part: a few words, then the places that fit to choose from
+        const now = e.settings?.[it.key]
+        // (hostApi 15, `list`: what was chosen as chips with a ✕ - the clubs followed, say - drawn by extFormMount; without it the
+        // setting stands there as a line)
+        const current = it.list ? `<ul class="ext-chips" data-xchips="${k}" aria-live="polite"></ul>` : `<p style="margin:0 0 6px"><b data-xcurrent="${k}">${esc(now || '–')}</b></p>`
+        return `<div class="field" data-ext-dep="${esc(it.dep ?? '')}"><label for="xl-${k}">${esc(it.label)}</label>${current}<div class="ext-results" data-xresults="${k}"></div><div class="row" style="gap:8px"><input class="input" id="xl-${k}" type="search" placeholder="Suchen …" autocomplete="off" ${NO_PW_MANAGER}><button type="button" class="btn" data-xlookup="${k}">Suchen</button></div>${help}</div>`
+      }
+      if (it.type === 'order') {
+        // a list to put in order by dragging: the setting names the choices, comma separated (a name that is missing goes last)
+        const names = it.choices.map((c) => c.value)
+        const have = String(e.settings?.[it.key] ?? '').split(',').filter((v, i, all) => names.includes(v) && all.indexOf(v) === i)
+        const sorted = [...have, ...names.filter((v) => !have.includes(v))]
+        const label = (v) => it.choices.find((c) => c.value === v).label
+        return `<div class="field" data-ext-dep="${esc(it.dep ?? '')}"><label>${esc(it.label)}</label><ol class="ext-order" data-xorder="${k}">${sorted.map((v) => `<li data-v="${esc(v)}"><button type="button" class="ext-grip" aria-label="Verschieben"></button><span>${esc(label(v))}</span></li>`).join('')}</ol>${help}</div>`
+      }
+      if (it.choices && it.choices.length > 5) {
+        // (a choice from many: a list to pick from instead of a row of buttons)
+        const now = e.settings?.[it.key]
+        // (live: a route that says which choices are there now and what they are called - wired by extFormMount)
+        const live = it.live ? ` data-xlive="${esc(it.live)}"` : ''
+        const select = `<select class="input" id="xs-${k}" data-xsel="${k}"${live}>${it.choices.map((c) => `<option value="${esc(c.value)}"${c.value === now ? ' selected' : ''}>${esc(c.label)}</option>`).join('')}</select>`
+        return `<div class="field" data-ext-dep="${esc(it.dep ?? '')}"><label for="xs-${k}">${esc(it.label)}</label>${it.extra ? `<div class="ext-with">${select}${extra(it)}</div>` : select}${help}</div>`
+      }
+      if (it.choices) {
+        const now = e.settings?.[it.key]
+        // (a choice with a picture - the display in each of its modes: the picture stands above the button's name)
+        const pics = it.choices.some((c) => c.image)
+        const face = (c) => (c.image ? `<img src="/api/ext-files/${esc(e.id)}/${esc(c.image)}" alt="" loading="lazy"><span>${esc(c.label)}</span>` : esc(c.label))
+        const seg = `<div class="seg${pics ? ' seg-pics' : ''}" data-xseg="${k}">${it.choices.map((c) => `<button type="button" aria-pressed="${c.value === now}" data-v="${esc(c.value)}">${face(c)}</button>`).join('')}</div>`
+        return `<div class="field" data-ext-dep="${esc(it.dep ?? '')}"><label>${esc(it.label)}${tip}</label>${it.extra ? `<div class="ext-with">${seg}${extra(it)}</div>` : seg}${help}</div>`
+      }
+      // (a number as a slider from min to max; its value stands in a box beside the label, where it can be typed as well)
+      if (it.slider && type(it) === 'number' && Number.isFinite(e.settingRanges?.[it.key]?.min) && Number.isFinite(e.settingRanges?.[it.key]?.max)) {
+        const { min, max } = e.settingRanges[it.key]
+        const now = Math.min(max, Math.max(min, Number(e.settings?.[it.key] ?? min)))
+        return `<div class="field" data-ext-dep="${esc(it.dep ?? '')}"><div class="slider-head"><label for="xk-${k}">${esc(it.label)}</label><input class="input value-num" id="xk-${k}" type="number" min="${min}" max="${max}" step="1" inputmode="numeric" data-xk="${k}" data-secret="false" value="${now}" ${NO_PW_MANAGER}></div>
+          <input type="range" data-xr="${k}" min="${min}" max="${max}" step="1" value="${now}" style="--fill:${((now - min) / (max - min)) * 100}%" aria-label="${esc(it.label)}">
+          <div class="range-ends"><span>${min}</span><span>${max}</span></div>${help}</div>`
+      }
+      const secret = type(it) === 'secret'
+      const kind = secret ? 'password' : type(it) === 'number' ? 'number' : 'text'
+      return `<div class="field" data-ext-dep="${esc(it.dep ?? '')}"><label for="xk-${k}">${esc(it.label)}</label><input class="input" id="xk-${k}" type="${kind}" data-xk="${k}" data-secret="${secret}" value="${secret ? '' : esc(e.settings?.[it.key] ?? '')}" placeholder="${secret && e.settings?.[`${it.key}Set`] ? 'gespeichert' : ''}" ${NO_PW_MANAGER}>${help}</div>`
+  }
+  // (cards: a heading with `card` starts a card of its own - the page of an extension with several readers shows each in one; the
+  // "+" of a series stands between the cards, a card that is not there yet is hidden by extFormMount)
+  const cardMode = cards && fields.some((it) => it.type === 'heading' && it.card)
+  // (hostApi 13: the choice of the user above the fields - only when one of them is a setting per user)
+  const userBar = fields.some((it) => e.perUser?.includes(it.key)) ? extUserBar(e) : ''
+  let cardOpen = false
+  const closeCard = () => {
+    const end = cardOpen ? '</section>' : ''
+    cardOpen = false
+    return end
+  }
+  // (on a page of cards the choice is a card of its own)
+  const form = (userBar && cardMode ? `<section class="card wide ext-page">${userBar}</section>` : userBar) + fields
+    .map((it, index) => {
+      // (every field knows its group, data-xgroup: the index of its heading; after the last field of a series stands its "+")
+      const g = groups.findLast((x) => x.index <= index)
+      // (cards === 'half': the page shares the screen with pages of the core - the cards are one column wide and fall into the two columns)
+      const begin = cardMode && it.type === 'heading' && it.card ? `${closeCard()}<section class="card${cards === 'half' ? '' : ' wide'} ext-page ext-sec" data-xcard="${index}">` : ''
+      if (begin) cardOpen = true
+      // (showIf: a field of one of several readers, shown while the choice has one of its values - see dep() in extFormMount)
+      const showIf = (it.showIf ? ` data-xshow="${esc(JSON.stringify(it.showIf))}"` : '') + (it.hideIf ? ` data-xhide="${esc(JSON.stringify(it.hideIf))}"` : '')
+      // (hostApi 11: a button that stands beside the one before it - the two are one row)
+      const pairOpen = it.type === 'action' && fields[index + 1]?.type === 'action' && fields[index + 1].beside === true
+      const pairClose = it.type === 'action' && it.beside === true && fields[index - 1]?.type === 'action'
+      // (hostApi 13: a setting every user has for himself - marked beside its name while there is a choice of users)
+      let field = one(it, index)
+      if (userBar && it.key && e.perUser.includes(it.key)) field = field.replace(/<\/(label|b)>/, (end) => ` <small class="ext-peruser">${esc(tr('je Benutzer'))}</small>${end}`)
+      const html = `${pairOpen ? '<div class="ext-actions">' : ''}${field.replace('<div ', `<div data-xgroup="${g ? g.index : ''}"${showIf} `)}${pairClose ? '</div>' : ''}`
+      const lastOfSeries = g && g.last === index && groups.findLast((x) => x.series === g.series) === g && groups.some((x) => x.series === g.series && x.heading.optional)
+      const add = lastOfSeries ? `<div class="ext-add" data-xaddrow="${g.series}"><button type="button" class="btn" data-xadd="${g.series}"><span aria-hidden="true">+</span> <span>${esc(g.heading.label)}</span></button></div>` : ''
+      return `${begin}${html}${cardMode && add ? closeCard() : ''}${add}`
+    })
+    .join('') + closeCard()
+  const hasText = fields.some((it) => type(it) !== 'boolean' && type(it) !== 'gpio' && !it.choices && it.type !== 'lookup' && it.type !== 'roster' && it.type !== 'heading' && it.type !== 'status' && it.type !== 'action' && it.type !== 'list')
+  return { form, hasText }
+}
+
+// ... and the form set up: `sheet` is the element the form is in (the sheet of the details, or the card on the extension's own
+// page), saved() is called after the "Speichern" button stored its fields
+function extFormMount(sheet, e, fields, saved, redraw) {
+  const type = (it) => e.settingTypes?.[it.key]
+  // (a group that is optional is there when its switch says so - or while one of its pins is chosen: settings from before the
+  // switch existed)
+  const groups = extGroups(fields)
+  const groupOn = (g) => !g.heading.optional || e.settings?.[g.heading.optional] === true || g.keys.some((k) => e.settingTypes?.[k] === 'gpio' && Number(e.settings?.[k] ?? 0) !== 0)
+  // (a field that depends on a switch is shown while the switch is on, one that depends on a pin while a pin is chosen - and
+  // only while its group is there)
+  // (what a group is called: the name the user gave it, else its heading - with its number when it is one of a series)
+  const groupTitle = (g) => {
+    const named = g.heading.rename ? String(e.settings?.[g.heading.rename] ?? '') : ''
+    const many = groups.filter((x) => x.series === g.series).length > 1
+    return named || (many ? `${tr(g.heading.label)} ${g.nr}` : tr(g.heading.label))
+  }
+  const dep = () => {
+    for (const d of sheet.querySelectorAll('[data-xgroup]')) {
+      const name = d.dataset.extDep
+      const g = d.dataset.xgroup === '' ? null : groups.find((x) => String(x.index) === d.dataset.xgroup)
+      const on = !name ? true : e.settingTypes?.[name] === 'gpio' ? Number(e.settings?.[name] ?? 0) !== 0 : sheet.querySelector(`[data-xk="${CSS.escape(name)}"]`)?.checked !== false
+      // (shown only while a choice has one of the values: the fields of the reader that is chosen)
+      const only = d.dataset.xshow ? JSON.parse(d.dataset.xshow) : null
+      const shown = !only || only.is.includes(String(e.settings?.[only.key]))
+      d.hidden = !on || !shown || (g ? !groupOn(g) : false)
+    }
+    // (hideIf: hidden while the field it names is shown and has one of the values - a field that is not there takes no part)
+    for (const d of sheet.querySelectorAll('[data-xhide]')) {
+      const hide = JSON.parse(d.dataset.xhide)
+      const named = sheet.querySelector(['xk', 'xseg', 'xsel'].map((a) => `[data-${a}="${CSS.escape(hide.key)}"]`).join(','))?.closest('[data-xgroup]')
+      if (named && !named.hidden && hide.is.includes(String(e.settings?.[hide.key]))) d.hidden = true
+    }
+    // (the second choice beside a field: there while the field has one of its values)
+    for (const x of sheet.querySelectorAll('[data-xwhen]')) x.hidden = !JSON.parse(x.dataset.xwhen).includes(String(e.settings?.[x.dataset.xof]))
+    // (a card of a group that is not there yet)
+    for (const c of sheet.querySelectorAll('[data-xcard]')) {
+      const g = groups.find((x) => String(x.index) === c.dataset.xcard)
+      c.hidden = g ? !groupOn(g) : false
+    }
+    // (the "+" of a series, while one of its groups is not there yet)
+    for (const row of sheet.querySelectorAll('[data-xaddrow]')) row.hidden = !groups.some((g) => String(g.series) === row.dataset.xaddrow && !groupOn(g))
+    // ("Auf dieser Seite" lists the cards that are there)
+    document.dispatchEvent(new Event('mupi-cards'))
+  }
+  dep()
+  // (hostApi 13) The user whose settings per user the form shows and saves: the one chosen above it, else the one in place -
+  // always named in the requests, so a switch at the display meanwhile does not send one user's values to the other. The
+  // values the form was drawn with must be his (e.settingsUser): else they are loaded first and the form is drawn anew - the
+  // extension's own page has them from /info, a sheet from the list, both for the user in place.
+  const formUser = e.perUser?.length ? (extUserShown() ?? usersState?.current ?? null) : null
+  let ready = !formUser || e.settingsUser === formUser
+  const loadFor = async (id, chosen) => {
+    const r = await api(`${API}/ext/${e.id}/settings?user=${encodeURIComponent(id)}`)
+    if (!r.ok) {
+      // (a user deleted meanwhile: back to the one in place)
+      if (r.body?.error === 'unknown user') {
+        extView.user = null
+        await loadUsers().catch(() => undefined)
+        e.settingsUser = undefined
+        if (redraw && usersState?.current && usersState.current !== id) return loadFor(usersState.current, false)
+      }
+      toast('Nicht geladen', 'info')
+      return
+    }
+    if (chosen) extView.user = id === usersState?.current ? null : id
+    e.settings = r.body
+    e.settingsUser = id
+    redraw?.()
+  }
+  if (!ready && redraw) void loadFor(formUser, false)
+  for (const chip of sheet.querySelectorAll('[data-ext-user]')) {
+    chip.onclick = () => loadFor(chip.dataset.extUser, true)
+  }
+  // (the list of the pins is drawn again when a name or a group changes: it names the groups)
+  let redrawPins = () => {}
+  const save = async (values, quiet) => {
+    // (the form shows another user's values than it would save for: nothing saved - it is being drawn anew)
+    if (!ready) {
+      toast('Nicht geladen', 'info')
+      return false
+    }
+    const r = await api(`${API}/ext/${e.id}/settings${formUser ? `?user=${encodeURIComponent(formUser)}` : ''}`, { method: 'POST', body: { values } })
+    if (!r.ok) {
+      if (r.body?.error === 'unknown user') {
+        ready = false
+        void loadFor(usersState?.current ?? formUser, false)
+        return false
+      }
+      // (a pin: the box says who has it)
+      if (r.body?.error === 'gpio_taken') toast(`GPIO ${r.body.pin} ist schon belegt: ${(r.body.holders ?? []).map(extWho).join(', ')}`, 'info')
+      else if (r.body?.error === 'gpio_twice') toast(`GPIO ${r.body.pin} ist in dieser Erweiterung schon vergeben`, 'info')
+      else toast(r.body?.error ? 'Das sieht nicht richtig aus' : 'Nicht gespeichert', 'info')
+      return false
+    }
+    if (!quiet) toast('Gespeichert')
+    return r.body
+  }
+  for (const input of sheet.querySelectorAll('input[type="checkbox"][data-xk]')) {
+    input.onchange = async () => {
+      dep()
+      const ok = await save({ [input.dataset.xk]: input.checked }, false)
+      if (ok) e.settings[input.dataset.xk] = input.checked
+      else input.checked = !input.checked
+    }
+  }
+  // (a slider with a box for its value: they follow each other)
+  for (const range of sheet.querySelectorAll('input[type="range"][data-xr]')) {
+    const box = sheet.querySelector(`input[data-xk="${CSS.escape(range.dataset.xr)}"]`)
+    if (!box) continue
+    const fill = () => range.style.setProperty('--fill', `${((Number(range.value) - Number(range.min)) / (Number(range.max) - Number(range.min))) * 100}%`)
+    range.oninput = () => {
+      box.value = range.value
+      fill()
+    }
+    box.oninput = () => {
+      if (box.value === '' || !Number.isFinite(Number(box.value))) return
+      range.value = String(Math.min(Number(range.max), Math.max(Number(range.min), Number(box.value))))
+      fill()
+    }
+    // (the value is saved as soon as the slider is let go or the box is left - like a switch, not with the button: the box then works with it
+    // at once. A value outside the range or none goes back into the range first; not saved, both go back to the value that is saved)
+    let saved = Number(range.value)
+    const keep = async () => {
+      const clamped = Math.min(Number(range.max), Math.max(Number(range.min), Math.round(Number(box.value) || Number(range.min))))
+      box.value = String(clamped)
+      range.value = box.value
+      fill()
+      const ok = await save({ [range.dataset.xr]: clamped }, false)
+      if (ok) {
+        e.settings[range.dataset.xr] = clamped
+        saved = clamped
+      } else if (Number(range.value) === clamped) {
+        // (unless it was moved again meanwhile: that value is on its way)
+        box.value = String(saved)
+        range.value = box.value
+        fill()
+      }
+    }
+    box.onchange = keep
+    range.onchange = keep
+  }
+  // (the name of a group: saved when the field is left or with Enter)
+  for (const input of sheet.querySelectorAll('input[data-xname]')) {
+    const key = input.dataset.xname
+    input.onchange = async () => {
+      const value = input.value.trim()
+      if (value === (e.settings?.[key] ?? '')) return
+      const ok = await save({ [key]: value }, false)
+      if (ok) e.settings[key] = value
+      input.value = e.settings?.[key] ?? ''
+      redrawPins()
+      // ("Auf dieser Seite" names the card by it)
+      document.dispatchEvent(new Event('mupi-cards'))
+    }
+    input.onkeydown = (ev) => {
+      if (ev.key === 'Enter') input.blur()
+    }
+  }
+  // (one more of a series: the first that is not there yet)
+  for (const button of sheet.querySelectorAll('button[data-xadd]')) {
+    button.onclick = async () => {
+      const g = groups.find((x) => String(x.series) === button.dataset.xadd && !groupOn(x))
+      if (!g) return
+      const ok = await save({ [g.heading.optional]: true }, true)
+      if (!ok) return
+      e.settings[g.heading.optional] = true
+      dep()
+      const head = sheet.querySelector(`.ext-group[data-xgroup="${g.index}"]`)
+      head?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      head?.querySelector('input[data-xname]')?.focus({ preventScroll: true })
+    }
+  }
+  // (a group taken away: its pins are free again and its name is gone; what its presses do stays as it was set)
+  for (const button of sheet.querySelectorAll('button[data-xdel]')) {
+    button.onclick = async () => {
+      const g = groups.find((x) => String(x.index) === button.dataset.xdel)
+      if (!g) return
+      const pins = g.keys.filter((k) => e.settingTypes?.[k] === 'gpio')
+      const name = g.heading.rename ? String(e.settings?.[g.heading.rename] ?? '') : ''
+      const used = name !== '' || pins.some((k) => Number(e.settings?.[k] ?? 0) !== 0)
+      if (used && !(await ask('Entfernen', `„${groupTitle(g)}“ wird entfernt, seine Pins sind danach wieder frei.`, 'Entfernen'))) return
+      const values = { [g.heading.optional]: false, ...Object.fromEntries(pins.map((k) => [k, 0])) }
+      if (g.heading.rename) values[g.heading.rename] = ''
+      const ok = await save(values, true)
+      if (!ok) return
+      Object.assign(e.settings, values)
+      const input = g.heading.rename ? sheet.querySelector(`input[data-xname="${CSS.escape(g.heading.rename)}"]`) : null
+      if (input) input.value = ''
+      redrawPins()
+      dep()
+    }
+  }
+  // (a choice from many: saved at once, as a switch is)
+  for (const select of sheet.querySelectorAll('select[data-xsel]')) {
+    const key = select.dataset.xsel
+    select.onchange = async () => {
+      const value = type({ key }) === 'number' ? Number(select.value) : select.value
+      const ok = await save({ [key]: value }, false)
+      if (ok) e.settings[key] = value
+      else select.value = String(e.settings?.[key] ?? '')
+      dep()
+    }
+  }
+  // (a choice that follows what the box finds, `live`: its route says which choices are there now and what they are called - a USB
+  // reader that is not plugged in is greyed out, one that is has the name of the device. The choice that is made stays.)
+  for (const select of sheet.querySelectorAll('select[data-xlive]')) {
+    const route = select.dataset.xlive
+    let timer = 0
+    const draw = async () => {
+      if (!select.isConnected) return clearInterval(timer)
+      const r = await api(route, { timeoutMs: 8000 })
+      if (!select.isConnected || !r.ok || typeof r.body?.options !== 'object' || r.body.options === null) return
+      for (const option of select.options) {
+        const live = r.body.options[option.value]
+        if (!live || typeof live !== 'object') continue
+        if (typeof live.label === 'string' && live.label !== '') option.textContent = live.label.slice(0, 100)
+        option.disabled = live.disabled === true && option.value !== select.value
+      }
+    }
+    draw()
+    timer = setInterval(draw, 4000)
+  }
+  // (GPIO pins: every pin of the header to choose from. A pin something else holds - the box says who - and a pin another field
+  // of this extension has cannot be chosen. Saved at once; the fields that depend on the pin show then.)
+  const pinSelects = [...sheet.querySelectorAll('select[data-xgpio]')]
+  if (pinSelects.length) {
+    let taken = new Map()
+    // (pins that are free but meant for something that is switched off, the rotary encoder: they can be chosen, with a word)
+    let hints = new Map()
+    // (what a field is called in the list of another one: the name of its group, "Taster 2")
+    const groupOf = (key) => {
+      const g = groups.find((x) => x.keys.includes(key))
+      const named = fields.find((it) => it.key === key)
+      // (`holder`: what the field's pin is called in the lists - "Drehregler NFC" - instead of the field's own name)
+      return named?.holder ? tr(named.holder) : g ? groupTitle(g) : tr(named?.label ?? key)
+    }
+    const draw = () => {
+      for (const select of pinSelects) {
+        const now = Number(e.settings?.[select.dataset.xgpio] ?? 0)
+        select.textContent = ''
+        const add = (value, text, disabled) => {
+          const option = document.createElement('option')
+          option.value = String(value)
+          option.textContent = text
+          option.disabled = disabled
+          option.selected = value === now
+          select.append(option)
+        }
+        add(0, tr('Kein Pin'), false)
+        for (const pin of Object.keys(GPIO_HEADER).map(Number)) {
+          const other = pinSelects.find((o) => o !== select && Number(e.settings?.[o.dataset.xgpio] ?? 0) === pin)
+          // (its own pin stays its own, whatever holds it right now - the extension itself reads it)
+          const who = pin === now ? '' : other ? groupOf(other.dataset.xgpio) : (taken.get(pin) ?? []).map(extWho).join(', ')
+          // (its own pin says what it is for, if the field names that: "Drehregler NFC" - not what the box would use it for otherwise)
+          const own = pin === now ? fields.find((it) => it.key === select.dataset.xgpio)?.holder : ''
+          const hint = who ? '' : own ? tr(own) : (hints.get(pin) ?? []).map(extWho).join(', ')
+          add(pin, `GPIO ${pin} (Pin ${GPIO_HEADER[pin]})${who ? ` – ${tr('belegt')}: ${who}` : hint ? ` – ${hint}` : ''}`, !!who)
+        }
+      }
+    }
+    const loadTaken = async () => {
+      const r = await api(`${API}/ext/${e.id}/gpio`, { timeoutMs: 20000 })
+      if (r.ok && Array.isArray(r.body?.pins)) taken = new Map(r.body.pins.map((p) => [Number(p.pin), p.holders ?? []]))
+      if (r.ok) hints = new Map((r.body?.hints ?? []).map((p) => [Number(p.pin), p.holders ?? []]))
+      draw()
+    }
+    for (const select of pinSelects) {
+      select.onchange = async () => {
+        const key = select.dataset.xgpio
+        const value = Number(select.value)
+        const ok = await save({ [key]: value }, false)
+        if (ok) e.settings[key] = value
+        // (not saved: who holds what may have changed meanwhile)
+        else await loadTaken()
+        draw()
+        dep()
+      }
+    }
+    redrawPins = draw
+    draw()
+    loadTaken()
+  }
+  // (a search: the places that fit, one tap takes one - its values are saved at once)
+  for (const item of fields.filter((it) => it.type === 'lookup')) {
+    const input = sheet.querySelector(`#xl-${CSS.escape(item.key)}`)
+    const list = sheet.querySelector(`[data-xresults="${CSS.escape(item.key)}"]`)
+    let latest = 0
+    let timer = 0
+    // (hostApi 15: the route `list` answers what is chosen now as [{ label, values }] - a chip each; its ✕ saves the values, the
+    // list without it)
+    const chips = item.list ? sheet.querySelector(`[data-xchips="${CSS.escape(item.key)}"]`) : null
+    let drawn = 0
+    const drawChips = async () => {
+      if (!chips) return
+      const mine = ++drawn
+      const r = await api(`${item.list}${formUser ? `?user=${encodeURIComponent(formUser)}` : ''}`, { timeoutMs: 15000 })
+      if (mine !== drawn || !chips.isConnected) return
+      chips.textContent = ''
+      const note = (text) => {
+        const li = document.createElement('li')
+        li.className = 'ext-chips-none'
+        li.textContent = text
+        chips.append(li)
+      }
+      if (!r.ok || !Array.isArray(r.body)) return note('Die Liste konnte nicht geladen werden.')
+      if (r.body.length === 0) return note('–')
+      for (const hit of r.body.slice(0, 20)) {
+        const li = document.createElement('li')
+        const name = document.createElement('span')
+        name.textContent = String(hit.label)
+        const x = document.createElement('button')
+        x.type = 'button'
+        x.textContent = '✕'
+        x.title = 'Entfernen'
+        x.setAttribute('aria-label', 'Entfernen')
+        x.onclick = async () => {
+          for (const b of chips.querySelectorAll('button')) b.disabled = true
+          const ok = await save(hit.values, false)
+          if (ok) Object.assign(e.settings, hit.values)
+          // (the search shows what fits the new list: a club that was taken away can be chosen again)
+          if (ok && input.value.trim().length >= 2) search()
+          drawChips()
+        }
+        li.append(name, x)
+        chips.append(li)
+      }
+    }
+    drawChips()
+    const search = async () => {
+      clearTimeout(timer)
+      const q = input.value.trim()
+      const mine = ++latest
+      // (the hint stands under the field, where it is seen; a toast is gone before it is read)
+      if (q.length < 2) {
+        list.textContent = 'Bitte mindestens zwei Buchstaben eingeben.'
+        return
+      }
+      list.textContent = 'Suche …'
+      // (hostApi 13: for the user chosen above the form - his league, say)
+      const r = await api(`${item.search}?q=${encodeURIComponent(q)}${formUser ? `&user=${encodeURIComponent(formUser)}` : ''}`, { timeoutMs: 20000 })
+      // (a newer search was started while this one ran: its answer counts)
+      if (mine !== latest) return
+      list.textContent = ''
+      if (!r.ok || !Array.isArray(r.body)) {
+        list.textContent = 'Die Suche hat nicht geklappt. Die Box braucht dafür das Internet.'
+        return
+      }
+      if (r.body.length === 0) list.textContent = 'Nichts gefunden.'
+      for (const hit of r.body.slice(0, 10)) {
+        const b = document.createElement('button')
+        b.type = 'button'
+        b.className = 'btn'
+        b.style.textAlign = 'left'
+        b.textContent = String(hit.label)
+        b.onclick = async () => {
+          const ok = await save(hit.values, false)
+          if (!ok) return
+          Object.assign(e.settings, hit.values)
+          if (chips) drawChips()
+          else sheet.querySelector(`[data-xcurrent="${CSS.escape(item.key)}"]`).textContent = String(e.settings[item.key] ?? '–')
+          list.textContent = ''
+          input.value = ''
+        }
+        list.append(b)
+      }
+    }
+    sheet.querySelector(`[data-xlookup="${CSS.escape(item.key)}"]`).onclick = search
+    // (a block body: an arrow that returns false for the other keys would cancel them, and no letter would appear)
+    input.onkeydown = (ev) => {
+      if (ev.key === 'Enter') search()
+    }
+    // (it searches while one types, a moment after the last letter)
+    input.oninput = () => {
+      clearTimeout(timer)
+      if (input.value.trim().length < 2) {
+        latest++
+        list.textContent = ''
+        return
+      }
+      timer = setTimeout(search, 400)
+    }
+  }
+  // (a list to put in order: a row is taken at its grip and dragged - finger or mouse - or moved with the arrow keys; saved when it is let go)
+  for (const list of sheet.querySelectorAll('[data-xorder]')) {
+    const key = list.dataset.xorder
+    const order = () => [...list.children].map((li) => li.dataset.v)
+    let saved = order()
+    const keep = async () => {
+      const now = order()
+      if (now.join() === saved.join()) return
+      const ok = await save({ [key]: now.join(',') }, false)
+      if (ok) {
+        saved = now
+        e.settings[key] = now.join(',')
+        return
+      }
+      // (not saved: the list goes back to the order it had)
+      for (const v of saved) list.append(list.querySelector(`[data-v="${CSS.escape(v)}"]`))
+    }
+    let drag = null
+    list.addEventListener('pointerdown', (ev) => {
+      const grip = ev.target.closest?.('.ext-grip')
+      if (!grip || (ev.pointerType === 'mouse' && ev.button !== 0)) return
+      const li = grip.closest('li')
+      drag = { li, grab: ev.clientY - li.getBoundingClientRect().top }
+      li.classList.add('dragging')
+      grip.setPointerCapture(ev.pointerId)
+      ev.preventDefault()
+    })
+    list.addEventListener('pointermove', (ev) => {
+      if (!drag) return
+      const { li } = drag
+      li.style.transform = ''
+      // (it stands before the first other row whose middle is below the pointer)
+      const next = [...list.children].find((o) => o !== li && o.getBoundingClientRect().top + o.offsetHeight / 2 > ev.clientY)
+      if (next !== li.nextElementSibling) list.insertBefore(li, next ?? null)
+      li.style.transform = `translateY(${ev.clientY - drag.grab - li.getBoundingClientRect().top}px)`
+    })
+    const letGo = () => {
+      if (!drag) return
+      drag.li.classList.remove('dragging')
+      drag.li.style.transform = ''
+      drag = null
+      keep()
+    }
+    list.addEventListener('pointerup', letGo)
+    list.addEventListener('pointercancel', letGo)
+    list.addEventListener('keydown', (ev) => {
+      const li = ev.target.closest?.('li')
+      if (!li || (ev.key !== 'ArrowUp' && ev.key !== 'ArrowDown')) return
+      ev.preventDefault()
+      if (ev.key === 'ArrowUp' && li.previousElementSibling) list.insertBefore(li, li.previousElementSibling)
+      else if (ev.key === 'ArrowDown' && li.nextElementSibling) list.insertBefore(li.nextElementSibling, li)
+      else return
+      li.querySelector('.ext-grip').focus()
+      keep()
+    })
+  }
+  // (a status: the route of the extension answers { rows: [{ label, value, tone }] }; drawn now and again every few seconds for as
+  // long as the card is on the page)
+  fields.forEach((item, index) => {
+    if (item.type !== 'status') return
+    const box = sheet.querySelector(`[data-xstatus="${index}"]`)
+    if (!box) return
+    let timer = 0
+    let busy = false
+    const draw = async () => {
+      if (!box.isConnected) return clearInterval(timer)
+      const r = await api(item.state, { timeoutMs: 8000 })
+      if (!box.isConnected) return clearInterval(timer)
+      // (a button of a row is being used: the rows stay as they are until it is done)
+      if (busy) return
+      const rows = r.ok && Array.isArray(r.body?.rows) ? r.body.rows : [{ label: 'Status', value: 'Nicht erreichbar', tone: 'warn' }]
+      box.textContent = ''
+      for (const row of rows.slice(0, 12)) {
+        const dt = document.createElement('dt')
+        dt.textContent = tr(String(row.label ?? ''))
+        const dd = document.createElement('dd')
+        const text = document.createElement('span')
+        text.textContent = tr(String(row.value ?? ''))
+        if (['ok', 'warn', 'error'].includes(row.tone)) text.className = `ext-status-${row.tone}`
+        dd.append(text)
+        // (a button at the right of the value, hostApi 8: { label, post, confirm } - a route of an extension, asked with POST like an action)
+        const act = row.button
+        if (act && typeof act.label === 'string' && /^\/api\/ext\/[a-z][a-z0-9-]*\/[a-z]{1,30}$/.test(String(act.post))) {
+          const button = document.createElement('button')
+          button.type = 'button'
+          button.className = 'btn ext-status-btn'
+          button.textContent = tr(act.label.slice(0, 60))
+          button.onclick = async () => {
+            if (act.confirm && !(await ask(tr(act.label), tr(String(act.confirm).slice(0, 300)), tr('OK')))) return
+            busy = true
+            button.disabled = true
+            const done = await api(act.post, { method: 'POST', body: {}, timeoutMs: 60000 })
+            busy = false
+            const said = typeof done.body?.message === 'string' ? tr(done.body.message.slice(0, 120)) : ''
+            toast(said || tr(done.ok ? 'Erledigt' : 'Hat nicht geklappt'), done.ok ? 'ok' : 'info')
+            draw()
+          }
+          dd.append(button)
+        }
+        box.append(dt, dd)
+      }
+    }
+    draw()
+    timer = setInterval(draw, 2500)
+  })
+  // (a button: it asks the POST route of the extension and shows the answer { ok, message }; the status above it shows what changed)
+  fields.forEach((item, index) => {
+    if (item.type !== 'action') return
+    const button = sheet.querySelector(`[data-xaction="${index}"]`)
+    if (!button) return
+    button.onclick = async () => {
+      if (item.confirm && !(await ask(tr(item.label), tr(item.confirm), tr('OK')))) return
+      // (hostApi 10: a file the extension makes is saved by the browser)
+      if (item.download) {
+        button.disabled = true
+        const r = await api(item.download, { timeoutMs: 20000 })
+        button.disabled = false
+        if (!r.ok || r.body === null || typeof r.body !== 'object') return toast(tr('Hat nicht geklappt'), 'info')
+        // (hostApi 11: a file of another kind than JSON - a table - comes as { text }, saved as it is)
+        const kind = item.ext && item.ext !== 'json' ? item.ext : 'json'
+        if (kind !== 'json' && typeof r.body.text !== 'string') return toast(tr('Hat nicht geklappt'), 'info')
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(kind === 'json' ? new Blob([JSON.stringify(r.body, null, 2)], { type: 'application/json' }) : new Blob([r.body.text], { type: kind === 'csv' ? 'text/csv;charset=utf-8' : 'text/plain;charset=utf-8' }))
+        link.download = `${item.file}-${new Date().toISOString().slice(0, 10)}.${kind}`
+        document.body.append(link)
+        link.click()
+        link.remove()
+        setTimeout(() => URL.revokeObjectURL(link.href), 10000)
+        return toast(tr('Datei gespeichert'), 'ok')
+      }
+      // (hostApi 10: a file the user chooses goes to the extension as { file }; a list on the page draws itself again)
+      if (item.upload) {
+        const input = document.createElement('input')
+        input.type = 'file'
+        // (hostApi 11: `accept` names the kinds of files; one that is not JSON goes to the route as { text })
+        input.accept = item.accept ?? '.json,application/json'
+        input.onchange = async () => {
+          const chosen = input.files?.[0]
+          if (!chosen) return
+          if (chosen.size > 900000) return toast(tr('Die Datei ist zu groß'), 'info')
+          let body
+          // (a table saved by Excel is often not UTF-8 but Windows-1252: its umlauts came as replacement characters - read as that then)
+          if (item.accept && !/\.json$/i.test(chosen.name)) body = { text: decodeTable(await chosen.arrayBuffer()) }
+          else {
+            try {
+              body = { file: JSON.parse(await chosen.text()) }
+            } catch {
+              return toast(tr('Das ist keine gültige Datei'), 'info')
+            }
+          }
+          button.disabled = true
+          const r = await api(item.upload, { method: 'POST', body, timeoutMs: 30000 })
+          button.disabled = false
+          const said = typeof r.body?.message === 'string' ? tr(r.body.message.slice(0, 120)) : ''
+          toast(said || tr(r.ok ? 'Erledigt' : 'Hat nicht geklappt'), r.ok ? 'ok' : 'info')
+          if (r.ok) sheet.dispatchEvent(new Event('xlist-refresh'))
+        }
+        input.click()
+        return
+      }
+      button.disabled = true
+      const r = await api(item.post, { method: 'POST', body: {}, timeoutMs: 20000 })
+      button.disabled = false
+      const said = typeof r.body?.message === 'string' ? tr(r.body.message.slice(0, 120)) : ''
+      toast(said || tr(r.ok ? 'Erledigt' : 'Hat nicht geklappt'), r.ok ? 'ok' : 'info')
+    }
+  })
+  // (a list, hostApi 8: the extension's route answers { items: [{ id, title, text: [..], image, imageOwn, coverPost, actions: [{ label,
+  // post, confirm }] }] } - a picture for each entry, a button for the picture and the extension's own buttons; each posts { id })
+  fields.forEach((item, index) => {
+    if (item.type !== 'list') return
+    const box = sheet.querySelector(`[data-xlist="${index}"]`)
+    if (!box) return
+    const draw = async () => {
+      const r = await api(item.list, { timeoutMs: 15000 })
+      if (!box.isConnected) return
+      box.textContent = ''
+      if (!r.ok || !Array.isArray(r.body?.items)) {
+        box.textContent = tr('Die Liste konnte nicht geladen werden.')
+        return
+      }
+      if (r.body.items.length === 0) {
+        const empty = document.createElement('li')
+        empty.className = 'help'
+        empty.textContent = tr(item.empty ?? 'Hier ist noch nichts.')
+        box.append(empty)
+        return
+      }
+      // (as tiles with picture buttons only when every action brings its picture - an older extension's buttons keep their words)
+      const allGlyphs = r.body.items.every((row) => (Array.isArray(row?.actions) ? row.actions : []).every((a) => /^[a-z0-9]{1,12}$/.test(String(a?.icon ?? ''))))
+      fillTagRows(box, r.body.items.slice(0, 300), draw, allGlyphs)
+    }
+    draw()
+    // (after a file was taken in by a button of the page)
+    sheet.addEventListener('xlist-refresh', draw)
+  })
+  // (a roster: the extension's list route says who is there and who is the current one; a change goes through the add, remove
+  // and select routes. Choosing takes the box a while - it restarts - so the app waits for it and then loads itself again.)
+  fields.forEach((item, index) => {
+    if (item.type !== 'roster') return
+    const list = sheet.querySelector(`[data-xroster="${index}"]`)
+    const input = sheet.querySelector(`[data-xradd="${index}"]`)
+    const from = sheet.querySelector(`[data-xrfrom="${index}"]`)
+    const bin = sheet.querySelector(`[data-xrtrash="${index}"]`)
+    // (the entries of an entry's library, when the list names them)
+    const countText = (n) => (Number.isInteger(n) ? tr(`${n} ${n === 1 ? 'Eintrag' : 'Einträge'}`) : '')
+    let busy = false
+    const post = (route, body) => api(route, { method: 'POST', body, timeoutMs: 20000 })
+    const draw = async () => {
+      const r = await api(item.list, { timeoutMs: 15000 })
+      if (!r.ok || !Array.isArray(r.body?.users)) {
+        list.textContent = 'Die Liste konnte nicht geladen werden.'
+        return null
+      }
+      list.textContent = ''
+      for (const u of r.body.users) {
+        const li = document.createElement('li')
+        // (the colour the user has on the display; a tap on it offers the colours nobody has)
+        if (/^#[0-9a-fA-F]{6}$/.test(String(u.color ?? ''))) {
+          const dot = document.createElement(item.color ? 'button' : 'span')
+          dot.className = 'ext-roster-dot'
+          dot.style.background = u.color
+          if (item.color) {
+            dot.type = 'button'
+            dot.setAttribute('aria-label', `${u.name}: Farbe wählen`)
+            dot.onclick = () => {
+              const open = li.nextElementSibling?.classList.contains('ext-roster-palette')
+              for (const old of list.querySelectorAll('.ext-roster-palette')) old.remove()
+              if (open) return
+              const free = (r.body.colors ?? []).filter((c) => !r.body.users.some((o) => o.id !== u.id && o.color === c))
+              const palette = document.createElement('li')
+              palette.className = 'ext-roster-palette'
+              for (const c of free) {
+                const swatch = document.createElement('button')
+                swatch.type = 'button'
+                swatch.className = 'ext-roster-dot'
+                swatch.style.background = c
+                swatch.setAttribute('aria-pressed', String(c === u.color))
+                swatch.setAttribute('aria-label', c)
+                swatch.onclick = async () => {
+                  if (c !== u.color) {
+                    const done = await post(item.color, { id: u.id, color: c })
+                    if (!done.ok) toast('Hat nicht geklappt', 'info')
+                  }
+                  draw()
+                }
+                palette.append(swatch)
+              }
+              li.after(palette)
+            }
+          }
+          li.append(dot)
+        }
+        const name = document.createElement('span')
+        name.className = 'ext-roster-name'
+        name.textContent = u.name
+        if (countText(u.count)) {
+          const small = document.createElement('small')
+          small.textContent = countText(u.count)
+          name.append(small)
+        }
+        li.append(name)
+        if (u.id === r.body.current) {
+          li.classList.add('current')
+          const mark = document.createElement('span')
+          mark.className = 'ext-roster-mark'
+          mark.textContent = 'Aktiv'
+          li.append(mark)
+        } else {
+          const go = document.createElement('button')
+          go.type = 'button'
+          go.className = 'btn'
+          go.textContent = 'Wechseln'
+          go.onclick = () => choose(u)
+          li.append(go)
+        }
+        const del = document.createElement('button')
+        del.type = 'button'
+        del.className = 'btn'
+        del.textContent = 'Löschen'
+        del.setAttribute('aria-label', `${u.name}: Löschen`)
+        del.disabled = u.id === r.body.current || r.body.users.length < 2
+        del.onclick = () => remove(u, r.body)
+        li.append(del)
+        list.append(li)
+      }
+      // (a new one as a copy: whose library - the choice stays while the list is drawn again)
+      if (from) {
+        const was = from.value
+        from.textContent = ''
+        from.append(new Option(tr('Leere Bibliothek'), ''))
+        for (const u of r.body.users) from.append(new Option(`${tr(`Kopie der Bibliothek von „${u.name}“`)}${countText(u.count) ? ` (${countText(u.count)})` : ''}`, u.id))
+        from.value = r.body.users.some((u) => u.id === was) ? was : ''
+      }
+      // (the trash: deleted ones, restored within the days the list names)
+      if (bin) {
+        bin.textContent = ''
+        const gone = item.restore && Array.isArray(r.body.trash) ? r.body.trash : []
+        if (gone.length) {
+          const head = document.createElement('label')
+          head.textContent = tr('Papierkorb')
+          const ul = document.createElement('ul')
+          ul.className = 'ext-roster ext-roster-trash'
+          for (const t of gone) {
+            const li = document.createElement('li')
+            if (/^#[0-9a-fA-F]{6}$/.test(String(t.color ?? ''))) {
+              const dot = document.createElement('span')
+              dot.className = 'ext-roster-dot'
+              dot.style.background = t.color
+              li.append(dot)
+            }
+            const name = document.createElement('span')
+            name.className = 'ext-roster-name'
+            name.textContent = t.name
+            const small = document.createElement('small')
+            small.textContent = [tr(`gelöscht am ${new Date(t.deletedAt).toLocaleDateString(LOCALE)}`), countText(t.count)].filter(Boolean).join(' · ')
+            name.append(small)
+            const back = document.createElement('button')
+            back.type = 'button'
+            back.className = 'btn'
+            back.textContent = tr('Wiederherstellen')
+            back.setAttribute('aria-label', `${t.name}: ${tr('Wiederherstellen')}`)
+            back.onclick = () => restore(t)
+            li.append(name, back)
+            ul.append(li)
+          }
+          const hint = document.createElement('small')
+          hint.className = 'help'
+          hint.textContent = tr(`Gelöschte bleiben ${r.body.trashDays ?? 30} Tage im Papierkorb, dann sind sie endgültig weg.`)
+          bin.append(head, ul, hint)
+        }
+      }
+      return r.body
+    }
+    const restore = async (t) => {
+      if (busy) return
+      const r = await post(item.restore, { id: t.id })
+      if (!r.ok) return toast(r.body?.error === 'full' ? 'Es gibt schon so viele Einträge, wie möglich sind' : r.body?.error === 'busy' ? 'Es läuft gerade etwas anderes' : 'Hat nicht geklappt', 'info')
+      toast(tr(`„${r.body?.name ?? t.name}“ wiederhergestellt`))
+      draw()
+    }
+    const choose = async (u) => {
+      if (busy) return
+      if (!(await ask('Benutzer wechseln', `Die Box lädt die Einstellungen und die Bibliothek von „${u.name}“ und startet dabei neu. Das dauert etwa eine halbe Minute.`, 'Wechseln'))) return
+      busy = true
+      const r = await post(item.select, { id: u.id })
+      if (!r.ok) {
+        busy = false
+        return toast(r.body?.error === 'busy' ? 'Es läuft gerade etwas anderes' : 'Hat nicht geklappt', 'info')
+      }
+      toast('Wird gewechselt …')
+      list.textContent = 'Wird gewechselt …'
+      // (the box restarts: it answers again when it is through; the app loads itself again then, with the settings of the user)
+      const until = Date.now() + 120_000
+      const wait = async () => {
+        const st = await api(item.list, { timeoutMs: 5000 })
+        if (st.ok && st.body?.current === u.id && !st.body?.busy) return location.reload()
+        if (Date.now() < until) setTimeout(wait, 3000)
+        else {
+          busy = false
+          toast('Die Box antwortet nicht – bitte kurz warten und die App neu laden.', 'info')
+        }
+      }
+      setTimeout(wait, 8000)
+    }
+    const remove = async (u, body) => {
+      if (busy) return
+      const n = Number.isInteger(u.count) ? ` (${countText(u.count)})` : ''
+      const text = item.restore
+        ? tr(`„${u.name}“ kommt mit seinen Einstellungen und seiner Bibliothek${n} in den Papierkorb. Dort lässt er sich ${body?.trashDays ?? 30} Tage lang wiederherstellen.`)
+        : tr(`„${u.name}“ wird mit seinen Einstellungen und seiner Bibliothek${n} gelöscht. Das lässt sich nicht rückgängig machen.`)
+      if (!(await ask('Benutzer löschen', text, 'Löschen'))) return
+      const r = await post(item.remove, { id: u.id })
+      if (!r.ok) toast(r.body?.error === 'busy' ? 'Es läuft gerade etwas anderes' : 'Hat nicht geklappt', 'info')
+      else toast('Gelöscht')
+      draw()
+    }
+    const add = async () => {
+      const name = input.value.trim()
+      if (!name || busy) return
+      const r = await post(item.add, { name, ...(from?.value ? { from: from.value } : {}) })
+      if (!r.ok) return toast(r.body?.error === 'exists' ? 'Den Namen gibt es schon' : r.body?.error === 'busy' ? 'Es läuft gerade etwas anderes' : 'Hat nicht geklappt', 'info')
+      input.value = ''
+      if (from) from.value = ''
+      toast('Angelegt')
+      draw()
+    }
+    if (item.color) {
+      const hint = document.createElement('small')
+      hint.className = 'help'
+      hint.textContent = 'Tippe auf einen Farbpunkt, um die Farbe zu ändern.'
+      list.after(hint)
+    }
+    sheet.querySelector(`[data-xraddgo="${index}"]`).onclick = add
+    input.onkeydown = (ev) => {
+      if (ev.key === 'Enter') add()
+    }
+    draw()
+  })
+  // (a choice from a few: saved at once, as a switch is)
+  for (const group of sheet.querySelectorAll('[data-xseg]')) {
+    const key = group.dataset.xseg
+    for (const b of group.querySelectorAll('button')) {
+      b.onclick = async () => {
+        const value = type({ key }) === 'number' ? Number(b.dataset.v) : b.dataset.v
+        const ok = await save({ [key]: value }, false)
+        if (!ok) return
+        e.settings[key] = value
+        for (const o of group.querySelectorAll('button')) o.setAttribute('aria-pressed', String(o === b))
+        dep()
+      }
+    }
+  }
+  const saveButton = sheet.querySelector('[data-xsave]')
+  if (saveButton) {
+    saveButton.onclick = async () => {
+      const values = {}
+      for (const input of sheet.querySelectorAll('input.input[data-xk]')) {
+        // (a secret that was not typed stays as it is)
+        if (input.dataset.secret === 'true' && !input.value.trim()) continue
+        values[input.dataset.xk] = input.type === 'number' ? Number(input.value) : input.value.trim()
+      }
+      if (!Object.keys(values).length) return toast('Bitte etwas eintragen', 'info')
+      const ok = await save(values, false)
+      if (!ok) return
+      await saved?.()
+    }
+  }
+}
+
+// The "Details" of an extension: what it is and sets up, and - when it is installed and on - its settings (declared in its manifest)
+function extensionDetails(e, installed) {
+  // (an extension with a page of its own has its settings there: the details lead to it)
+  const ownPage = installed && e.enabled && e.ui?.place === 'system' && state.pages.has(`ext-${e.id}`) ? `ext-${e.id}` : null
+  const fields = installed && e.enabled && e.ui && !ownPage ? e.ui.items : []
+  const { form, hasText } = extFormHtml(e, fields)
+  openSheet(
+    `<h2>${esc(e.name)} <small>${esc(e.version)}</small></h2>
+     <p class="help" style="margin:0">${esc(e.description)}</p>
+     <div class="ext-review" translate="no">${extReportHtml({ resources: e.resources, system: e.system ?? {} })}</div>
+     ${e.ui ? `<h3>${esc(e.ui.title)}</h3><p class="help" style="margin:0">${esc(e.ui.help ?? '')}</p>` : ''}
+     ${installed && !e.enabled && e.ui ? '<p class="help" style="margin:0">Die Einstellungen gibt es, solange die Erweiterung an ist.</p>' : ''}
+     ${ownPage ? `<div class="btns"><button class="btn primary" data-xpage>Zu den Einstellungen</button></div>` : ''}
+     ${form}
+     <div class="btns">${hasText ? '<button class="btn primary" data-xsave>Speichern</button>' : ''}<button class="btn" data-close>Schließen</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      const page = sheet.querySelector('[data-xpage]')
+      if (page) {
+        page.onclick = () => {
+          close()
+          go(ownPage)
+        }
+      }
+      extFormMount(
+        sheet,
+        e,
+        fields,
+        async () => {
+          await loadExtensions()
+          close()
+          renderPage(currentPage(), false)
+        },
+        () => {
+          close()
+          extensionDetails(e, installed)
+        },
+      )
+    },
+  )
+}
+
+/* Extensions with a page of their own (manifest: ui.place "system", hostApi 5): a page on Einstellungen, beside the groups
+   (Audio, System ...), with the settings of the extension - and with the pages of the core it takes over while it is on (ui.adopt): "Drehregler und
+   Taster" is shown there instead of under Audio while the buttons extension is on. */
+
+// the pins of the header: BCM number -> the number of the pin on the board
+const GPIO_HEADER = { 2: 3, 3: 5, 4: 7, 5: 29, 6: 31, 7: 26, 8: 24, 9: 21, 10: 19, 11: 23, 12: 32, 13: 33, 14: 8, 15: 10, 16: 36, 17: 11, 18: 12, 19: 35, 20: 38, 21: 40, 22: 15, 23: 16, 24: 18, 25: 22, 26: 37, 27: 13 }
+// what an extension may take over: the name in its manifest -> the page of the core
+const EXT_ADOPTABLE = { rotary: 'drehregler' }
+// (what the first card of such a page is called on the page of the extension: short, beside the extension's own card)
+const EXT_ADOPTED_TITLE = { drehregler: 'Drehregler' }
+// (a page of an extension that shows a page of the core in its own card - the heading's ui.adopt - shows only these items of it: the pins of
+// the knob; not its volume switch, its step or the function of its button)
+const EXT_ADOPT_ITEMS = { rotary: ['rotPinA', 'rotPinB', 'rotPinBtn'] }
+// The text of a table file the user chose: UTF-8 (with or without BOM), else Windows-1252 - what Excel writes for "CSV" on a
+// German Windows; read as UTF-8 its umlauts became replacement characters and the tags with them played nothing any more
+function decodeTable(buffer) {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(buffer)
+  } catch {
+    return new TextDecoder('windows-1252').decode(buffer)
+  }
+}
+// list: the pages there are now; adopted: page of the core -> the page of the extension that shows it
+const extPages = { list: [], adopted: new Map() }
+// (the picture of an extension: a file of its own, shown through a mask in the colour of the text, see icon())
+const EXT_ICON = /^\/api\/ext-files\/[a-z][a-z0-9-]*\/[A-Za-z0-9._-]+$/
+
+// list: [{ id, title, adopt }] - the extensions that are on and have a page of their own
+function setExtPages(list) {
+  for (const old of extPages.list) {
+    for (const id of [old.pageId, ...old.subIds]) {
+      state.pages.delete(id)
+      state.bySlug.delete(id)
+      delete CONTROLLERS[id]
+    }
+  }
+  state.schema.pages = state.schema.pages.filter((p) => !p.extId)
+  extPages.adopted.clear()
+  extPages.list = list
+    .filter((e) => /^[a-z][a-z0-9-]{1,30}$/.test(String(e?.id)))
+    .map((e) => ({ id: e.id, title: String(e.title ?? e.id), pageId: `ext-${e.id}`, subIds: [], icon: EXT_ICON.test(String(e.icon)) ? e.icon : '', pages: (Array.isArray(e.pages) ? e.pages : []).slice(0, 6).map((p) => ({ title: String(p?.title ?? '').slice(0, 100), help: String(p?.help ?? '').slice(0, 800) })), adopt: (Array.isArray(e.adopt) ? e.adopt : []).map((a) => EXT_ADOPTABLE[a]).filter((id) => id && state.pages.has(id)) }))
+  for (const e of extPages.list) {
+    // (a page of the core goes to one extension only: the first that asks)
+    for (const id of e.adopt) if (!extPages.adopted.has(id)) extPages.adopted.set(id, e.pageId)
+    e.adopt = e.adopt.filter((id) => extPages.adopted.get(id) === e.pageId)
+    const symbol = e.icon || state.pages.get(e.adopt[0])?.icon || 'plug'
+    const page = { id: e.pageId, slug: e.pageId, area: 'einstellungen', parent: 'einstellungen', title: e.title, description: '', icon: symbol, sections: [], extId: e.id }
+    state.pages.set(page.id, page)
+    state.bySlug.set(page.slug, page.id)
+    state.schema.pages.push(page)
+    CONTROLLERS[page.id] = extPageController(e, 0)
+    // (the sub pages of the extension, hostApi 7: the page above lists them, each shows its part of the settings)
+    e.pages.forEach((sub, n) => {
+      const child = { id: `${e.pageId}-${n + 1}`, slug: `${e.pageId}-${n + 1}`, area: 'einstellungen', parent: e.pageId, title: sub.title, description: '', icon: symbol, sections: [], extId: e.id }
+      state.pages.set(child.id, child)
+      state.bySlug.set(child.slug, child.id)
+      state.schema.pages.push(child)
+      CONTROLLERS[child.id] = extPageController(e, n + 1)
+      e.subIds.push(child.id)
+    })
+  }
+}
+
+// (when the app starts: without the catalog of the extensions page, which waits for GitHub)
+async function loadExtPages() {
+  const r = await api(`${API}/extensions/pages`)
+  if (r.ok && Array.isArray(r.body)) setExtPages(r.body)
+  // (an extension the box switched off by itself: said once for each time it happened, whenever the app is opened)
+  const p = await api(`${API}/extensions/problems`)
+  if (p.ok && Array.isArray(p.body) && p.body.length > 0) {
+    let shown = ''
+    try {
+      shown = sessionStorage.getItem('mupi.extProblems') ?? ''
+    } catch {
+      // (no storage: said at every start)
+    }
+    const key = p.body.map((x) => `${x.id}@${x.at}`).join(',')
+    if (key !== shown) {
+      try {
+        sessionStorage.setItem('mupi.extProblems', key)
+      } catch {
+        // (as above)
+      }
+      toast(`${p.body.map((x) => x.name).join(', ')}: ${tr('wurde ausgeschaltet – Details unter Erweiterungen')}`, 'info')
+    }
+  }
+}
+
+// A page an extension took over is not listed where it was: no nav row leads to it there
+function withoutAdopted(sections) {
+  if (!extPages.adopted.size) return sections
+  const moved = (i) => i.type === 'nav' && extPages.adopted.has(i.target)
+  return sections.map((sec) => ((sec.items || []).some(moved) ? { ...sec, items: sec.items.filter((i) => !moved(i)) } : sec)).filter((sec, i) => sec === sections[i] || sec.items.length > 0)
+}
+
+// Cards of the box's own look that the page of an extension may ask for: a heading with `core` (and `card`) draws the card the way the
+// display's page does - sliders with the value in a pill, "Abends dunkler" with the sunset, the place and the fade - for the settings
+// the extension has (brightness: `contrast` and `sleepAfter`; evening: `nightDim` and `nightContrast`). The box that does not know it
+// draws the fields of the group as usual. The window of the evening (the sunset or the hours, the fade, the quiet hours) is the one
+// of the display: it is set there and here alike.
+const EXT_CORE_CARDS = new Set(['brightness', 'evening'])
+const extCoreKind = (it) => (it.type === 'heading' && it.card && EXT_CORE_CARDS.has(it.core) ? it.core : null)
+// (the keys of the cards on the page, and the setting of the extension each stands for)
+const EXT_CORE_KEYS = { oledBright: 'contrast', oledOff: 'sleepAfter', oledNight: 'nightDim', oledLevel: 'nightContrast' }
+const EXT_CORE_SHARED = ['ndSun', 'ndFade', 'ndQuiet', 'ndFrom', 'ndTo']
+// the fields of such a group are not drawn by the form: the card is
+function extWithoutCore(items) {
+  let skip = false
+  return items.filter((it) => {
+    if (it.type === 'heading') skip = !!extCoreKind(it)
+    return it.type === 'heading' || !skip
+  })
+}
+// The card for a heading of that kind; `dimmed`: the evening is on the display now
+function extCoreSection(e, heading, dimmed) {
+  if (heading.core === 'brightness') {
+    const range = e.settingRanges?.contrast ?? { min: 1, max: 255 }
+    const stops = (e.ui.items.find((i) => i.key === 'sleepAfter')?.choices ?? []).map((c) => Number(c.value)).sort((a, b) => a - b)
+    return {
+      title: heading.label,
+      help: 'Gilt sofort.',
+      wide: true,
+      items: [
+        { type: 'slider', key: 'oledBright', label: 'Helligkeit', min: Math.max(1, range.min), max: range.max, step: 1 },
+        { type: 'slider', key: 'oledOff', label: 'Display aus nach', stops, unit: ' min', zero: 'Nie' },
+      ],
+    }
+  }
+  const range = e.settingRanges?.nightContrast ?? { min: 1, max: 255 }
+  const on = !!state.values.get('oledNight')
+  return {
+    title: heading.label,
+    badge: on ? (dimmed ? { text: 'gerade gedimmt', kind: 'ok' } : { text: 'an', kind: 'ok' }) : { text: 'aus' },
+    wide: true,
+    items: [
+      { type: 'toggle', key: 'oledNight', label: 'Abends dunkler', help: 'Das Display wird abends dunkler und morgens wieder normal hell.' },
+      { type: 'toggle', key: 'ndSun', label: 'An Sonnenuntergang anpassen', help: 'Das Display wird dunkler, sobald die Sonne untergeht, und morgens beim Sonnenaufgang wieder heller – statt zu festen Uhrzeiten. Die Box rechnet beides selbst aus, dafür braucht sie den Ort.', dep: 'oledNight', flat: true },
+      { type: 'html', dep: 'oledNight', flat: true, html: ndPlaceHtml() },
+      { type: 'pair', keep: true, dep: 'ndFixed', flat: true, items: [{ type: 'text', kind: 'time', key: 'ndFrom', label: 'Ab' }, { type: 'text', kind: 'time', key: 'ndTo', label: 'Bis' }] },
+      { type: 'slider', key: 'oledLevel', label: 'Helligkeit am Abend', min: Math.max(1, range.min), max: range.max, step: 1, dep: 'oledNight', flat: true, help: 'Nie heller als die normale Helligkeit.' },
+      { type: 'slider', key: 'ndFade', label: 'Sanft abdunkeln über', stops: [0, 15, 30, 60], unit: ' min', zero: 'Sofort', dep: 'oledNight', flat: true },
+      { type: 'toggle', key: 'ndQuiet', label: 'Auch während der Ruhezeiten', help: 'Zum Beispiel zur Schlafenszeit, auch wenn sie außerhalb der Uhrzeiten liegt.', dep: 'oledNight', flat: true },
+    ],
+  }
+}
+// The values these cards show: the extension's, and the display's for the window of the evening. `shared`: the display's are
+// there (not loaded, the page still shows the cards - its times are not saved then, they would overwrite the display's with defaults)
+async function extCoreLoad(e) {
+  const shared = await loadDisplayOptions().then(
+    () => true,
+    () => !!disp.opts,
+  )
+  setNightValues(disp.opts ?? {})
+  const s = e.settings ?? {}
+  state.values.set('oledBright', Number(s.contrast ?? 127))
+  state.values.set('oledOff', Number(s.sleepAfter ?? 0))
+  state.values.set('oledNight', s.nightDim === true)
+  state.values.set('oledLevel', Number(s.nightContrast ?? 20))
+  ndGate = 'oledNight'
+  state.values.set('ndFixed', s.nightDim === true && ndFixedNow(disp.opts?.nightDim ?? {}))
+  const st = await api(`/api/ext/${e.id}/state`)
+  return { dimmed: st.ok && st.body?.dimmed === true, shared }
+}
+
+function extPageController(entry, sub = 0) {
+  const own = { e: null }
+  // (sub page n shows the lines after the n-th heading that starts a page, up to the next one)
+  const starts = () => own.e.ui.items.flatMap((it, i) => (it.type === 'heading' && it.page ? [i] : []))
+  const rawSlice = () => {
+    if (!sub) return own.e.ui.items
+    const at = starts()
+    return own.e.ui.items.slice(at[sub - 1] + 1, at[sub] ?? own.e.ui.items.length)
+  }
+  // (the cards the box draws itself - see extCoreKind - and whether this page has any)
+  const coreHeadings = () => (own.e?.enabled ? rawSlice().filter(extCoreKind) : [])
+  const slice = () => (coreHeadings().length ? extWithoutCore(rawSlice()) : rawSlice())
+  const coreCards = () => coreHeadings().map((h) => extCoreSection(own.e, h, own.dimmed))
+  // (their place in the form: the card the form drew for the heading - it has no fields - is replaced by it)
+  const withCore = (form, items) =>
+    items.reduce((html, it, i) => {
+      if (!extCoreKind(it)) return html
+      const sec = extCoreSection(own.e, it, own.dimmed)
+      return html.replace(new RegExp(`<section class="card[^"]*ext-sec" data-xcard="${i}">[\\s\\S]*?</section>`), () => renderSection(sec))
+    }, form)
+  const saveCore = async (name, v, key) => {
+    const r = await api(`${API}/ext/${own.e.id}/settings`, { method: 'POST', body: { values: { [name]: v } } })
+    if (!r.ok) {
+      toast('Nicht gespeichert', 'info')
+      return false
+    }
+    own.e.settings[name] = v
+    if (key === 'oledNight') drawNdPlace()
+    toast('Gespeichert')
+  }
+  const adopted = () => (sub ? [] : entry.adopt).map((id) => ({ page: state.pages.get(id), ctrl: CONTROLLERS[id] })).filter((a) => a.page && a.ctrl)
+  // (a page of cards that took over pages of the core: those come first - the rotary knob top left - and the cards of the
+  // extension after them, in the two columns; else its cards would be below the pages of the core, or beside them in rows)
+  const split = () => !!own.e?.enabled && adopted().length > 0 && slice().some((it) => it.type === 'heading' && it.card)
+  // (a sub page can show a part of a page of the core in its own card: its heading says which - the knob's pins on the page of the knob)
+  const merged = () => {
+    const heading = sub && own.e?.ui ? own.e.ui.items[starts()[sub - 1]] : null
+    return (Array.isArray(heading?.adopt) ? heading.adopt : [])
+      .map((a) => ({ keys: EXT_ADOPT_ITEMS[a], page: state.pages.get(EXT_ADOPTABLE[a]), ctrl: CONTROLLERS[EXT_ADOPTABLE[a]] }))
+      .filter((m) => m.keys && m.page && m.ctrl)
+  }
+  const mergedSections = () => merged().flatMap((m) => (m.ctrl.sections?.(m.page) ?? m.page.sections ?? []).map((sec) => ({ m, sec, items: (sec.items || []).filter((it) => m.keys.includes(it.key)) })).filter((x) => x.items.length))
+  const mergedHtml = () => {
+    const parts = mergedSections()
+    return parts.map((x) => `${x.items.map(renderItem).join('')}${x.sec.help ? `<p class="help">${esc(x.sec.help)}</p>` : ''}`).join('')
+  }
+  return {
+    async load() {
+      const r = await api(`${API}/ext/${entry.id}/info`)
+      if (!r.ok) throw new Error(`extension ${r.status}`)
+      own.e = r.body
+      own.dimmed = false
+      own.shared = true
+      if (coreHeadings().length) ({ dimmed: own.dimmed, shared: own.shared } = await extCoreLoad(own.e))
+      // (hostApi 13: settings per user - the users for the choice above the form; whose values /info holds is not named, so
+      // the form loads them for the user it shows, see extFormMount)
+      if (own.e.perUser?.length) await loadUsers().catch(() => undefined)
+      await Promise.all([...adopted(), ...merged()].map((a) => a.ctrl.load?.(a.page)))
+    },
+    top() {
+      const e = own.e
+      if (!e?.ui) return []
+      // (the page above the sub pages: its text, and the rows that lead to them - see childNav)
+      if (!sub && entry.pages.length) {
+        return [`<section class="card wide ext-page" id="ext-page-card"><h2>${esc(e.ui.heading ?? e.ui.title)}</h2><p class="help" style="margin:0">${esc(e.ui.help ?? '')}</p>${e.enabled ? '' : '<p class="help" style="margin:0">Die Einstellungen gibt es, solange die Erweiterung an ist.</p>'}</section>`]
+      }
+      const cardPage = !!e.enabled && slice().some((it) => it.type === 'heading' && it.card)
+      const named = sub ? e.ui.items[starts()[sub - 1]] : null
+      // (its text in a card of its own across the page; the cards follow in after())
+      if (split()) return [`<section class="card wide ext-page"><h2>${esc(named ? named.label : (e.ui.heading ?? e.ui.title))}</h2><p class="help" style="margin:0">${esc(named ? (named.help ?? '') : (e.ui.help ?? ''))}</p></section>`]
+      const items = e.enabled ? slice() : []
+      const built = extFormHtml(e, items, cardPage)
+      const form = withCore(built.form, items)
+      const hasText = built.hasText
+      // (a page of cards: its text in a card of its own, then a card for each group; the wrapper takes no room of its own)
+      if (cardPage) {
+        return [
+          `<div id="ext-page-card" class="ext-cards"><section class="card wide ext-page"><h2>${esc(named ? named.label : (e.ui.heading ?? e.ui.title))}</h2><p class="help" style="margin:0">${esc(named ? (named.help ?? '') : (e.ui.help ?? ''))}</p></section>${form}${hasText ? '<div class="btns"><button class="btn primary" data-xsave>Speichern</button></div>' : ''}</div>`,
+        ]
+      }
+      // (an extension that took over pages of the core - the buttons with the rotary knob - has its card in one column on a wide screen,
+      // so that the cards of the pages it took over stand beside it; else it would take both columns and they would all be below)
+      return [
+        `<section class="card${adopted().length ? '' : ' wide'} ext-page" id="ext-page-card"><h2>${esc(named ? named.label : (e.ui.heading ?? e.ui.title))}</h2><p class="help" style="margin:0">${esc(named ? (named.help ?? '') : (e.ui.help ?? ''))}</p>
+         ${e.enabled ? form + mergedHtml() : '<p class="help" style="margin:0">Die Einstellungen gibt es, solange die Erweiterung an ist.</p>'}
+         ${hasText ? '<div class="btns"><button class="btn primary" data-xsave>Speichern</button></div>' : ''}</section>`,
+      ]
+    },
+    after() {
+      if (!split()) return []
+      const { form, hasText } = extFormHtml(own.e, slice(), 'half')
+      return [form, hasText ? '<div class="btns wide"><button class="btn primary" data-xsave>Speichern</button></div>' : '']
+    },
+    // (the buttons of the pages of the core that moved here - "Drehregler hinzufügen" - are run by the page that owns them)
+    act: new Proxy({}, { get: (_, kind) => adopted().map((a) => a.ctrl.act?.[kind]).find(Boolean) }),
+    // (the pages of the core that moved here: their cards under the extension's own, the first with the title of its page)
+    sections: () => [
+      ...adopted().flatMap((a) => (a.ctrl.sections?.(a.page) ?? a.page.sections ?? []).map((sec, i) => ({ ...sec, title: i === 0 ? (EXT_ADOPTED_TITLE[a.page.id] ?? (sec.title || a.page.title)) : sec.title || '' }))),
+      // (the part of a page of the core that is drawn in the card of the extension)
+      ...(own.e?.enabled && merged().length ? [{ hidden: true, items: mergedSections().flatMap((x) => x.items) }] : []),
+      // (the cards the box draws itself stand in the form: here only for the handlers - see findItem)
+      ...(coreHeadings().length ? [{ hidden: true, items: coreCards().flatMap((c) => c.items) }] : []),
+    ],
+    change(key, v, page) {
+      if (EXT_CORE_KEYS[key] && coreHeadings().length) return saveCore(EXT_CORE_KEYS[key], v, key)
+      // (the window of the evening is the display's: its page saves it)
+      if (EXT_CORE_SHARED.includes(key) && coreHeadings().length) {
+        if (!own.shared) {
+          toast('Nicht gespeichert', 'info')
+          return false
+        }
+        return CONTROLLERS.displaysettings.change(key, v, page)
+      }
+      const part = own.e?.enabled ? merged().find((m) => m.keys.includes(key)) : null
+      if (part) return part.ctrl.change?.(key, v, page)
+      // (the fields a page of the core draws itself - the knobs it was told to add - are not in its schema: its own sections say)
+      const owner = adopted().find((a) => (a.ctrl.sections?.(a.page) ?? a.page.sections ?? []).some((sec) => sec.nameKey === key || (sec.items || []).some((it) => it.key === key)))
+      return owner?.ctrl.change?.(key, v, page)
+    },
+    mount(root, page) {
+      // (the cards of a split page are among the cards of the pages of the core: the whole page is the form)
+      const card = split() ? root : $('#ext-page-card', root)
+      if (card && own.e?.enabled && own.e.ui && (sub || !entry.pages.length)) extFormMount(card, own.e, slice(), () => renderPage(page, true), () => renderPage(page, false))
+      // (the sub page of the tags has the player pinned at its bottom - not the page above, which lists the sub pages)
+      if (card && sub && own.e?.id === 'nfc' && own.e.enabled && slice().some((it) => it.type === 'list' && it.list === `${NFC_ROUTE}/tags`)) mountMiniPlayer(root)
+      for (const a of adopted()) a.ctrl.mount?.(root, a.page)
+      // (the place of the box for the sunset, as on the display's page)
+      if (coreHeadings().length) {
+        drawNdPlace()
+        $('#nd-place-btn')?.addEventListener('click', () => openNdPlaceSheet({ onChosen: drawNdPlace }))
+        $('#nd-place-del')?.addEventListener('click', () => void removeNdPlace())
+      }
+      // (the knob chooses albums only while the service of the knob runs: switching it on here starts it)
+      if (card && sub && own.e?.enabled && merged().length) {
+        $('input[data-xk="rotary"]', card)?.addEventListener('change', async (ev) => {
+          if (!ev.target.checked || hw.data?.rotary?.active !== false) return
+          const r = await api(`${API}/rotary`, { method: 'POST', body: { active: true } })
+          if (r.ok) {
+            hw.data.rotary.active = true
+            toast('Drehregler an')
+          }
+        })
+      }
+    },
+  }
+}
+
+/* ---------- users (5.1: several children share the box - backend users.ts) ---------- */
+
+// The list as the box has it (GET /api/app/users): switched on, who is in place, how the display switches, the users
+// with the count of their library, the trash
+let usersState = null
+async function loadUsers() {
+  const r = await api(`${API}/users`)
+  if (!r.ok) throw new Error('users')
+  usersState = r.body
+}
+const userDot = (color, size = 14) => `<span class="user-dot" style="--user-color:${esc(color)};width:${size}px;height:${size}px" aria-hidden="true"></span>`
+const USER_SWITCH_MODES = [
+  ['free', 'Antippen'],
+  ['hold', 'Halten'],
+  ['app', 'Nur in der App'],
+]
+// What the box answered to a change of the users, as a message
+function userError(r) {
+  const e = r.body?.error
+  const reason = String(r.body?.reason ?? '')
+  if (e === 'busy') return 'Die Box ist gerade beschäftigt. Bitte gleich noch einmal.'
+  if (reason === 'too_many') return 'Mehr Benutzer gehen nicht – es gibt nur neun Farben.'
+  if (reason === 'name') return 'Bitte einen Namen mit 1 bis 24 Zeichen eingeben'
+  if (reason === 'name_taken') return 'Diesen Namen hat schon jemand.'
+  if (reason === 'current') return 'Der aktive Benutzer lässt sich nicht entfernen.'
+  if (reason === 'color') return 'Diese Farbe hat schon jemand.'
+  if (reason === 'pin') return 'Bitte vier Ziffern eingeben'
+  // (the list changed meanwhile - on another phone, at the display: it is loaded anew)
+  if (e === 'unknown_user' || e === 'disabled') return 'Die Liste hat sich inzwischen geändert.'
+  return 'Das hat nicht geklappt'
+}
+// A change of the users: the answer is the new list; the page is drawn again. One at a time (a double tap made a user
+// twice); a change that did not happen: the list as the box has it, so the page shows what is true (the switch)
+let userBusy = false
+async function userAction(path, body, okText) {
+  if (userBusy) return false
+  userBusy = true
+  const r = await api(`${API}/users/${path}`, { method: 'POST', body, timeoutMs: 60_000 }).finally(() => {
+    userBusy = false
+  })
+  if (!r.ok) {
+    toast(userError(r), 'info')
+    await loadUsers().catch(() => undefined)
+    if (currentPage()?.id === 'g-benutzer') renderPage(currentPage(), false)
+    return false
+  }
+  usersState = r.body
+  if (okText) toast(okText)
+  if (currentPage()?.id === 'g-benutzer') renderPage(currentPage(), false)
+  return true
+}
+// The switch to another user (page Benutzer, start page): after a question - playback stops, the display loads anew
+// (not confirmSheet: its button is the red one of deleting - a switch deletes nothing)
+function switchUserSheet(u, after) {
+  openSheet(
+    `<h2>${esc(tr('Wechseln'))}</h2><p class="help" style="margin:0">${esc(tr(`Zu ${un(u.name)} wechseln? Die Wiedergabe hält an, und das Display zeigt dann die Bibliothek von ${un(u.name)}.`))}</p>
+     <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Wechseln</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      sheet.querySelector('[data-ok]').onclick = async () => {
+        close()
+        toast(tr(`Wechsle zu ${un(u.name)} …`), 'info')
+        if (await userAction('switch', { id: u.id }, tr(`${un(u.name)} ist jetzt aktiv`))) {
+          // (Hören showed the user of before until it read its list again)
+          libChanged()
+          after?.()
+        }
+      }
+    },
+  )
+}
+// A name: a new user (with an empty library or a copy of another's), or another name for one
+function userNameSheet(u) {
+  const others = usersState?.users ?? []
+  const copy = !u
+    ? `<div class="field"><label for="user-from">Bibliothek</label><select class="input" id="user-from">
+        <option value="">Leer anfangen</option>${others.map((o) => `<option value="${esc(o.id)}">${esc(tr(`Kopie der Bibliothek von ${un(o.name)}`))}</option>`).join('')}
+       </select><small>Die Einstellungen kommen vom aktiven Benutzer, bei einer Kopie von dem kopierten. Spotify-Abos gibt es nur mit einer Kopie.</small></div>`
+    : ''
+  openSheet(
+    `<h2>${esc(u ? 'Umbenennen' : 'Benutzer anlegen')}</h2>
+     <div class="field"><label for="user-name">Name</label><input class="input" id="user-name" maxlength="24" autocomplete="off" value="${esc(u?.name ?? '')}"></div>
+     ${copy}
+     <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>${esc(u ? 'Speichern' : 'Anlegen')}</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      const ok = async () => {
+        const name = sheet.querySelector('#user-name').value.trim()
+        if (!name) return toast('Bitte einen Namen eingeben', 'info')
+        const done = u
+          ? await userAction('rename', { id: u.id, name }, 'Gespeichert')
+          : await userAction('add', { name, from: sheet.querySelector('#user-from')?.value || undefined }, tr(`${un(name)} ist angelegt`))
+        if (done) close()
+      }
+      sheet.querySelector('[data-ok]').onclick = ok
+      sheet.querySelector('#user-name').addEventListener('keydown', (e) => e.key === 'Enter' && ok())
+    },
+  )
+}
+// A colour nobody else has
+function userColorSheet(u) {
+  const taken = new Set((usersState?.users ?? []).filter((o) => o.id !== u.id).map((o) => o.color))
+  const colors = usersState?.colors ?? []
+  openSheet(
+    `<h2>Farbe</h2><p class="help" style="margin:0">Das Display zeigt die Farbe des aktiven Benutzers als Punkt oben.</p>
+     <div class="user-colors">${colors
+       .map((c, i) => `<button type="button" class="user-color${c === u.color ? ' on' : ''}" aria-pressed="${c === u.color}" data-color="${esc(c)}" ${taken.has(c) ? 'disabled' : ''} aria-label="${esc(tr('Farbe'))} ${i + 1}${taken.has(c) ? ` – ${esc(tr('Diese Farbe hat schon jemand.'))}` : ''}" ${taken.has(c) ? `title="${esc(tr('Diese Farbe hat schon jemand.'))}"` : ''}>${userDot(c, 28)}</button>`)
+       .join('')}</div>
+     <div class="btns"><button class="btn" data-close>Abbrechen</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      for (const b of sheet.querySelectorAll('[data-color]')) {
+        b.onclick = async () => {
+          if (await userAction('color', { id: u.id, color: b.dataset.color }, 'Gespeichert')) close()
+        }
+      }
+    },
+  )
+}
+// The PIN of a user: the display asks it before it switches to him (not the app - the parents' password is enough)
+function userPinSheet(u) {
+  openSheet(
+    `<h2>PIN</h2><p class="help" style="margin:0">${esc(tr(`Vier Ziffern, die das Display verlangt, bevor es zu ${un(u.name)} wechselt. Zurück zu einem anderen Benutzer geht ohne PIN, und hier in der App fragt niemand danach.`))}</p>
+     <div class="field"><label for="user-pin">${esc(u.pin ? tr('Neue PIN') : 'PIN')}</label><input class="input user-pin-input" id="user-pin" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="0000" aria-describedby="user-pin-help"><small id="user-pin-help">Nur Ziffern von 0 bis 9, genau vier.</small></div>
+     <div class="btns"><button class="btn" data-close>Abbrechen</button>${u.pin ? '<button class="btn danger" data-clear>PIN entfernen</button>' : ''}<button class="btn primary" data-ok>Speichern</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      const input = sheet.querySelector('#user-pin')
+      const help = sheet.querySelector('#user-pin-help')
+      // (anything but a digit does not get in - typed or pasted; the note under the field says so for a moment)
+      let flash
+      input.addEventListener('input', () => {
+        const digits = input.value.replace(/\D/g, '').slice(0, 4)
+        if (digits === input.value) return
+        input.value = digits
+        input.classList.add('bad')
+        help.classList.add('err')
+        clearTimeout(flash)
+        flash = setTimeout(() => {
+          input.classList.remove('bad')
+          help.classList.remove('err')
+        }, 1500)
+      })
+      const ok = async () => {
+        const pin = input.value.trim()
+        if (!/^\d{4}$/.test(pin)) return toast('Bitte vier Ziffern eingeben', 'info')
+        if (await userAction('pin', { id: u.id, pin }, 'PIN gespeichert')) close()
+      }
+      sheet.querySelector('[data-ok]').onclick = ok
+      input.addEventListener('keydown', (e) => e.key === 'Enter' && ok())
+      const clear = sheet.querySelector('[data-clear]')
+      if (clear) clear.onclick = async () => (await userAction('pin', { id: u.id, pin: '' }, 'PIN entfernt')) && close()
+    },
+  )
+}
+// Several users off: with whom the box goes on - the others rest with their things
+function usersOffSheet() {
+  const list = usersState?.users ?? []
+  openSheet(
+    `<h2>Mehrere Benutzer ausschalten</h2>
+     <p class="help" style="margin:0">Mit wem läuft die Box weiter? Die anderen bleiben mit ihrer Bibliothek gespeichert und sind wieder da, wenn du es wieder einschaltest.</p>
+     <div class="opts">${list
+       .map((u) => `<button class="opt" data-keep="${esc(u.id)}">${userDot(u.color)}<span translate="no">${esc(u.name)}</span>${u.id === usersState.current ? `<small>${esc(tr('aktiv'))}</small>` : ''}</button>`)
+       .join('')}</div>
+     <div class="btns"><button class="btn" data-close>Abbrechen</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      for (const b of sheet.querySelectorAll('[data-keep]')) {
+        b.onclick = async () => {
+          close()
+          const keep = list.find((u) => u.id === b.dataset.keep)
+          if (keep && keep.id !== usersState.current) toast(tr(`Wechsle zu ${un(keep.name)} …`), 'info')
+          await userAction('enable', { enabled: false, keep: b.dataset.keep }, 'Mehrere Benutzer aus')
+        }
+      }
+    },
+    () => currentPage()?.id === 'g-benutzer' && renderPage(currentPage(), false),
+  )
+}
+function usersSections() {
+  const s = usersState
+  const on = `<div class="row"><span class="lbl"><b>Mehrere Benutzer</b><small>Jedes Kind hat seine eigene Bibliothek, Spielzeit, Ruhezeit und eigene Einstellungen (Theme, Lautstärke, Startseite). Gemeinsam bleiben Spotify, WLAN, NAS und die Hardware.</small></span><label class="switch"><input type="checkbox" id="users-on" ${s.enabled ? 'checked' : ''} aria-label="Mehrere Benutzer"><span></span></label></div>`
+  if (!s.enabled) return [{ title: '', items: [{ type: 'html', html: on }] }]
+  const date = (ms) => new Date(ms).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })
+  const rows = s.users
+    .map((u) => {
+      const active = u.id === s.current
+      // (name, its library and "aktiv" in one line with the dot; switching at its end; what can be changed below, under
+      // the name)
+      return `<div class="entry user-row${active ? ' is-active' : ''}">${userDot(u.color, 28)}<span class="lbl"><b><span translate="no">${esc(u.name)}</span>${active ? `<span class="chip ok">${esc(tr('aktiv'))}</span>` : ''}</b><small>${esc(u.count === 1 ? tr('Ein Eintrag in der Bibliothek') : tr(`${u.count} Einträge in der Bibliothek`))}${u.pin ? ` · ${esc(tr('mit PIN'))}` : ''}</small></span>
+        ${active ? '' : `<button class="btn sm primary" data-user-switch="${esc(u.id)}">Wechseln</button>`}
+        <span class="user-acts"><button class="btn sm" data-user-rename="${esc(u.id)}">${icon('edit', 16)}Umbenennen</button><button class="btn sm" data-user-color="${esc(u.id)}">${userDot(u.color, 14)}Farbe</button><button class="btn sm" data-user-pin="${esc(u.id)}">${icon('lock', 16)}PIN</button>
+        ${active ? '' : `<button class="btn sm danger" data-user-remove="${esc(u.id)}">${icon('trash', 16)}Entfernen</button>`}</span></div>`
+    })
+    .join('')
+  const full = s.users.length >= s.max
+  const sections = [
+    { title: '', items: [{ type: 'html', html: on }] },
+    {
+      title: 'Benutzer der Box',
+      items: [
+        { type: 'html', html: `<div class="user-list">${rows}</div>` },
+        {
+          type: 'html',
+          html: `<div class="btns"><button class="btn primary" id="user-add" ${full ? 'disabled' : ''}>${icon('plus', 18)}Benutzer anlegen</button></div>${full ? `<p class="help">${esc(tr('Mehr Benutzer gehen nicht – es gibt nur neun Farben.'))}</p>` : ''}`,
+        },
+      ],
+    },
+    {
+      title: 'Wechsel am Display',
+      help: 'Wie das Kind am Display den Benutzer wechselt: über den Punkt in seiner Farbe oben.',
+      items: [
+        {
+          type: 'html',
+          html: `<div class="seg" id="user-mode" role="group" aria-label="${esc(tr('Wechsel am Display'))}">${USER_SWITCH_MODES.map(([v, l]) => `<button type="button" aria-pressed="${s.switchMode === v}" data-mode="${v}">${esc(tr(l))}</button>`).join('')}</div>
+            <p class="help">${esc(tr({ free: 'Ein Tipp auf den Punkt öffnet die Auswahl.', hold: 'Der Punkt öffnet die Auswahl, dort eine Kachel drei Sekunden halten – so wechselt niemand aus Versehen.', app: 'Am Display gibt es keinen Wechsel, nur hier in der App.' }[s.switchMode] ?? ''))}</p>`,
+        },
+      ],
+    },
+  ]
+  if (s.trash.length) {
+    sections.push({
+      title: 'Papierkorb',
+      help: 'Entfernte Benutzer bleiben 30 Tage mit ihrer Bibliothek hier.',
+      items: [
+        {
+          type: 'html',
+          html: s.trash
+            .map((t) => `<div class="entry user-row">${userDot(t.color, 18)}<span class="lbl"><b translate="no">${esc(t.name)}</b><small>${esc(tr(`entfernt am ${date(t.deletedAt)}`))}</small></span>
+              <span class="user-acts"><button class="btn sm" data-user-restore="${esc(t.key)}" ${full ? 'disabled' : ''}>Wiederherstellen</button></span></div>`)
+            .join(''),
+        },
+      ],
+    })
+  }
+  return sections
+}
+function mountUsers(root) {
+  const s = usersState
+  const byId = (id) => s.users.find((u) => u.id === id)
+  const on = $('#users-on', root)
+  on.onchange = async () => {
+    // (nothing done - another change of the users still running: the switch as it is)
+    if (on.checked) return (await userAction('enable', { enabled: true }, 'Mehrere Benutzer an')) || (on.checked = s.enabled)
+    // (with only one user nothing has to be chosen)
+    if (s.users.length <= 1) return (await userAction('enable', { enabled: false }, 'Mehrere Benutzer aus')) || (on.checked = s.enabled)
+    on.checked = true
+    usersOffSheet()
+  }
+  $('#user-add', root)?.addEventListener('click', () => userNameSheet(null))
+  for (const b of root.querySelectorAll('[data-user-switch]')) b.onclick = () => switchUserSheet(byId(b.dataset.userSwitch))
+  for (const b of root.querySelectorAll('[data-user-rename]')) b.onclick = () => userNameSheet(byId(b.dataset.userRename))
+  for (const b of root.querySelectorAll('[data-user-color]')) b.onclick = () => userColorSheet(byId(b.dataset.userColor))
+  for (const b of root.querySelectorAll('[data-user-pin]')) b.onclick = () => userPinSheet(byId(b.dataset.userPin))
+  for (const b of root.querySelectorAll('[data-user-remove]')) {
+    const u = byId(b.dataset.userRemove)
+    b.onclick = () =>
+      confirmSheet('Entfernen', tr(`${un(u.name)} entfernen? Die Bibliothek und die Einstellungen bleiben 30 Tage im Papierkorb.`), () =>
+        userAction('remove', { id: u.id }, tr(`${un(u.name)} ist im Papierkorb`)),
+      )
+  }
+  for (const b of root.querySelectorAll('[data-user-restore]')) b.onclick = () => userAction('restore', { key: b.dataset.userRestore }, 'Wiederhergestellt')
+  for (const b of root.querySelectorAll('#user-mode [data-mode]')) b.onclick = () => userAction('switch-mode', { mode: b.dataset.mode }, 'Gespeichert')
+}
+
 const CONTROLLERS = {
+  'g-benutzer': {
+    load: loadUsers,
+    sections: usersSections,
+    mount: mountUsers,
+  },
   spielzeit: {
     load: loadCaps,
     // ("Display aus nach" in the steps of its own page)
-    sections: (page) => page.sections.map((sec) => (sec.title === 'Ausschalten' ? { ...sec, items: sec.items.map((it) => (it.key === 'dispOff' ? { ...it, stops: DISPLAY_OFF_STOPS } : it)) } : sec)),
+    sections: (page) => {
+      const list = page.sections.map((sec) => (sec.title === 'Ausschalten' ? { ...sec, items: sec.items.map((it) => (it.key === 'dispOff' ? { ...it, stops: DISPLAY_OFF_STOPS } : it)) } : sec))
+      // the tiles with a day's limit (5.1) after the daily limits
+      const at = list.findIndex((sec) => sec.title === 'Tageslimits')
+      list.splice(at < 0 ? list.length : at + 1, 0, tileTimeSection())
+      if (!caps.photos) return list
+      // the picture time after the daily limits; the quiet times say that they hold the photos too
+      list.splice(at < 0 ? list.length : at + 1, 0, photoTimeSection())
+      return list.map((sec) => (sec.title === 'Ruhezeiten' ? { ...sec, help: `${sec.help} ${tr('Während einer Ruhezeit sind auch die Fotos gesperrt.')}` } : sec))
+    },
     mount(root) {
       drawRing()
       drawSleep()
+      drawPhotoTime()
+      drawTileTime()
+      $('#tile-time', root)?.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-tx], [data-tf]')
+        if (!b) return
+        const key = b.dataset.tx ?? b.dataset.tf
+        const name = b.dataset.name ?? ''
+        // (the name as it is, the rest in the app's language)
+        if (b.dataset.tx !== undefined) tileTimeAction(key, 'extend', `${name}: ${tr('+10 min für heute')}`)
+        else tileTimeAction(key, 'free', `${name}: ${tr('heute frei')}`)
+      })
       bonusButton(root)
       every(20000, refreshPlaytime)
     },
@@ -11496,6 +19270,19 @@ const CONTROLLERS = {
           return saveCaps({ playtimeLimit: { graceMaxMinutes: graceMaxOf(v) } }, `Höchstens ${v} weiter`)
         case 'quietGraceMax':
           return saveCaps({ quietHours: { graceMaxMinutes: graceMaxOf(v) } }, `Höchstens ${v} weiter`)
+        case 'phMode': {
+          const mode = PHOTO_MODE.find(([l]) => l === v)?.[1] ?? 'separate'
+          const ok = await savePhotoTime({ limitMode: mode }, mode === 'shared' ? 'Bildzeit zählt auf die Hörzeit' : 'Bildzeit mit eigenem Limit')
+          // (the card shows what belongs to the mode)
+          if (ok) renderPage(currentPage(), false)
+          return ok
+        }
+        case 'phLimitOn':
+          return savePhotoTime({ limitEnabled: v }, v ? 'Bildzeit-Limit an' : 'Bildzeit ohne Grenze')
+        case 'phWarn':
+          return savePhotoTime({ warnMinutes: PHOTO_WARN.find(([l]) => l === v)?.[1] ?? 5 })
+        case 'phIdle':
+          return savePhotoTime({ idlePauseSeconds: PHOTO_IDLE.find(([l]) => l === v)?.[1] ?? 120 })
         case 'resetHour': {
           const h = Number(v)
           // (an emptied field is no "0:00")
@@ -11507,6 +19294,11 @@ const CONTROLLERS = {
           }
           return saveCaps({ playtimeLimit: { resetHour: h } }, `Neuer Tag beginnt um ${h}:00 Uhr`)
         }
+      }
+      const phDay = /^phl([0-6])$/.exec(key)
+      if (phDay) {
+        const i = Number(phDay[1])
+        return savePhotoTime({ dailyMinutes: { [DAY_KEYS[i]]: Number(v) } }, `${DAY_LONG[i]}: ${Number(v) === 0 ? tr('keine Bilder') : `${v} min`}`)
       }
       const day = /^lim([0-6])$/.exec(key)
       if (day) {
@@ -11537,6 +19329,9 @@ const CONTROLLERS = {
       sheet(arg, _label, page) {
         if (arg === 'rule-new') openRule(null, page)
       },
+      phExtend: () => photoTimeAction('extend', '+10 Minuten Bildzeit für heute'),
+      phFree: () => photoTimeAction('free', 'Bildzeit heute frei'),
+      phReset: () => confirmSheet('Bildzeit zurücksetzen?', 'Die heute schon angeschauten Minuten zählen nicht mehr, die Bildzeit beginnt von vorn.', () => photoTimeAction('reset', 'Bildzeit zurückgesetzt')),
     },
     byLabel: {
       'Sperren aufheben'() {
@@ -11547,7 +19342,11 @@ const CONTROLLERS = {
   },
   verlauf: {
     async load() {
-      const [today, week] = await Promise.all([api(`${API}/playlog?range=today`), api(`${API}/playlog?range=week`)])
+      // (the history of the user shown - several users: api names him, see libView)
+      const user = libView.shown
+      const [today, week] = await Promise.all([api(`${API}/playlog?range=today`, { user }), api(`${API}/playlog?range=week`, { user })])
+      // (another user chosen meanwhile: his page reads his own - this one's numbers are not kept)
+      if (user !== libView.shown) return
       if (!today.ok && !week.ok) throw new Error(`playlog ${today.status}`)
       listenLog.today = today.body
       listenLog.week = week.body
@@ -11556,7 +19355,8 @@ const CONTROLLERS = {
   },
   bibliothek: {
     async load() {
-      if (!lib.items) {
+      // (another user's lists than the one shown now: read anew - see libView)
+      if (!lib.items || lib.user !== libView.shown) {
         await loadLib()
         lib.loadedAt = Date.now()
       }
@@ -11589,10 +19389,10 @@ const CONTROLLERS = {
       }
       drawLib()
       // known state first, then read again (the sync or the box may have changed it)
-      if (Date.now() - (lib.loadedAt ?? 0) > 5000) {
+      if (Date.now() - (lib.loadedAt ?? 0) > 5000 || lib.user !== libView.shown) {
         lib.loadedAt = Date.now()
-        loadLib().then(() => {
-          if (currentPage()?.id !== 'bibliothek') return
+        loadLib().then((ok) => {
+          if (!ok || currentPage()?.id !== 'bibliothek') return
           drawLib()
         })
       }
@@ -11611,28 +19411,11 @@ const CONTROLLERS = {
           const now = await token()
           if (!now || now === known) return
           known = now
-          await loadLib()
+          if (!(await loadLib())) return
           lib.loadedAt = Date.now()
           if (currentPage()?.id === 'bibliothek') drawLib()
         })
       })
-    },
-  },
-  verwaltet: {
-    load: loadManaged,
-    top: managedTop,
-    sections: () => [],
-    mount(root, page) {
-      for (const b of root.querySelectorAll('[data-sub]')) b.onclick = () => openSubSheet(managed.subs.artists[Number(b.dataset.sub)], page)
-      for (const b of root.querySelectorAll('[data-album]')) {
-        const al = managed.subs.explicit_albums[Number(b.dataset.album)]
-        b.onclick = () =>
-          confirmSheet('Entfernen', `„${al.name || al.id}“ entfernen? Der nächste Sync nimmt es von der Box.`, async () => {
-            const r = await api(`${API}/library/remove-album`, { method: 'POST', body: { albumId: al.id } })
-            if (!r.ok) return toast('Das hat nicht geklappt', 'info')
-            managedDone('Entfernt.', page)
-          })
-      }
     },
   },
   suche: {
@@ -11805,7 +19588,9 @@ const CONTROLLERS = {
         save({ url: /^https?:\/\//i.test(v) ? v : `http://${v}`, allow: true }, 'Erlaubt')
       }
       $('#fh-add', root).onclick = add
-      $('#fh-new', root).onkeydown = (e) => e.key === 'Enter' && add()
+      $('#fh-new', root).onkeydown = (e) => {
+        if (e.key === 'Enter') add()
+      }
     },
     async change(key, v) {
       const field = { svcPod: 'podcastSearch', svcRadio: 'radioSearch' }[key]
@@ -11888,7 +19673,7 @@ const CONTROLLERS = {
     sections: (page) =>
       page.sections.map((sec) => ({
         ...sec,
-        items: sec.items.map((it) => (it.key === 'syncOn' ? { ...it, help: 'Aus = kein Abgleich der Playlists, auch nicht von Hand (Knopf, Telegram /resync), und keine später erschienenen Folgen von selbst. Was du unter „Verwaltete Inhalte“ abonnierst oder hinzufügst, kommt trotzdem auf die Box. Die Inhalte auf der Box bleiben.' } : it)),
+        items: sec.items.map((it) => (it.key === 'syncOn' ? { ...it, help: 'Aus = kein Abgleich der Playlists, auch nicht von Hand (Knopf, Telegram /resync), und keine später erschienenen Folgen von selbst. Was du über die Suche abonnierst oder hinzufügst, kommt trotzdem auf die Box. Die Inhalte auf der Box bleiben.' } : it)),
       })),
     byLabel: {
       async Speichern() {
@@ -11998,10 +19783,12 @@ const CONTROLLERS = {
           badge: state.values.get('ndOn') ? (disp.opts?.nightDim?.dimmed ? { text: 'gerade gedimmt', kind: 'ok' } : { text: 'an', kind: 'ok' }) : { text: 'aus' },
           items: [
             { type: 'toggle', key: 'ndOn', label: 'Abends dunkler', help: 'Das Display wird abends dunkler und morgens wieder normal hell.', disabled: disp.opts?.brightness == null },
-            { type: 'pair', keep: true, dep: 'ndOn', items: [{ type: 'text', kind: 'time', key: 'ndFrom', label: 'Ab' }, { type: 'text', kind: 'time', key: 'ndTo', label: 'Bis' }] },
-            { type: 'slider', key: 'ndLevel', label: 'Helligkeit am Abend', min: 5, max: 100, step: 5, unit: ' %', dep: 'ndOn', help: 'Nie heller als die normale Helligkeit.' },
-            { type: 'slider', key: 'ndFade', label: 'Sanft abdunkeln über', stops: [0, 15, 30, 60], unit: ' min', zero: 'Sofort', dep: 'ndOn' },
-            { type: 'toggle', key: 'ndQuiet', label: 'Auch während der Ruhezeiten', help: 'Zum Beispiel zur Schlafenszeit, auch wenn sie außerhalb der Uhrzeiten liegt.', dep: 'ndOn' },
+            { type: 'toggle', key: 'ndSun', label: 'An Sonnenuntergang anpassen', help: 'Das Display wird dunkler, sobald die Sonne untergeht, und morgens beim Sonnenaufgang wieder heller – statt zu festen Uhrzeiten. Die Box rechnet beides selbst aus, dafür braucht sie den Ort.', dep: 'ndOn', flat: true },
+            { type: 'html', dep: 'ndOn', flat: true, html: ndPlaceHtml() },
+            { type: 'pair', keep: true, dep: 'ndFixed', flat: true, items: [{ type: 'text', kind: 'time', key: 'ndFrom', label: 'Ab' }, { type: 'text', kind: 'time', key: 'ndTo', label: 'Bis' }] },
+            { type: 'slider', key: 'ndLevel', label: 'Helligkeit am Abend', min: 5, max: 100, step: 5, unit: ' %', dep: 'ndOn', flat: true, help: 'Nie heller als die normale Helligkeit.' },
+            { type: 'slider', key: 'ndFade', label: 'Sanft abdunkeln über', stops: [0, 15, 30, 60], unit: ' min', zero: 'Sofort', dep: 'ndOn', flat: true },
+            { type: 'toggle', key: 'ndQuiet', label: 'Auch während der Ruhezeiten', help: 'Zum Beispiel zur Schlafenszeit, auch wenn sie außerhalb der Uhrzeiten liegt.', dep: 'ndOn', flat: true },
           ],
         },
         dp?.kms
@@ -12036,10 +19823,44 @@ const CONTROLLERS = {
           ],
         },
             ]),
+        // The box without the DSI display: only NFC tags, buttons, the app - no kiosk (counts after a restart); Spotify only with
+        // the page without a screen ("Spotify bereithalten", mupi_spotify_browser.service)
+        ...(disp.headless
+          ? [
+              {
+                title: 'Ohne DSI-Display',
+                badge: disp.headless.pending ? { text: 'gilt nach dem Neustart', kind: 'warn' } : disp.headless.on ? { text: 'an', kind: 'ok' } : { text: 'aus' },
+                items: [
+                  {
+                    type: 'toggle',
+                    key: 'headless',
+                    label: 'Ohne DSI-Display betreiben',
+                    help: 'Für eine Box ohne Bildschirm, etwa nur mit NFC-Tags und Tastern: Sie startet ohne Kiosk, wartet nicht auf das Display, und ein NFC-Tag startet sein Medium direkt. Spotify geht dann nur mit „Spotify bereithalten“. Gilt nach dem nächsten Neustart; ausschalten und neu starten bringt das Display zurück.',
+                    disabled: disp.headless.dsi && !disp.headless.on,
+                  },
+                  ...(disp.headless.dsi && !disp.headless.on ? [{ type: 'html', html: `<p class="help">${esc(tr('Ein DSI-Display ist angeschlossen. Ohne Display zu starten geht erst, wenn es abgezogen ist.'))}</p>` }] : []),
+                  ...(disp.headless.dsiUnconfirmed && !disp.headless.on ? [{ type: 'html', html: `<p class="help">${esc(tr('Am DSI-Anschluss ist kein Display zu erkennen (er meldet sich auch ohne Display als verbunden). Beim Einschalten fragt die App nach.'))}</p>` }] : []),
+                  ...(disp.headless.on
+                    ? [
+                        {
+                          type: 'toggle',
+                          key: 'headlessSpotify',
+                          label: 'Spotify bereithalten',
+                          help: 'Der Spotify-Player der Box läuft im Browser. Damit Spotify auch ohne Display spielt (Kacheln, NFC-Tags, Spotify Connect), startet die Box den Browser unsichtbar im Hintergrund. Das braucht etwa so viel Arbeitsspeicher wie der Betrieb mit Display.',
+                        },
+                      ]
+                    : []),
+                ],
+              },
+            ]
+          : []),
       ]
     },
     mount(root, page) {
       mountDisplayModel(root, page)
+      drawNdPlace()
+      $('#nd-place-btn')?.addEventListener('click', () => openNdPlaceSheet({ onChosen: drawNdPlace }))
+      $('#nd-place-del')?.addEventListener('click', () => void removeNdPlace())
       for (const b of root.querySelectorAll('[data-rot-key]')) {
         b.onclick = () => {
           const key = b.dataset.rotKey
@@ -12051,10 +19872,80 @@ const CONTROLLERS = {
     },
     async change(key, v) {
       if (key === 'bright') return saveDisplayOptions({ brightness: v }, `Helligkeit ${v} %`)
-      if (['ndOn', 'ndFrom', 'ndTo', 'ndLevel', 'ndFade', 'ndQuiet'].includes(key)) {
-        const nightDim = { enabled: !!state.values.get('ndOn'), from: String(state.values.get('ndFrom')), to: String(state.values.get('ndTo')), level: Number(state.values.get('ndLevel')), fade: Number(state.values.get('ndFade')), withQuiet: !!state.values.get('ndQuiet') }
-        if (nightDim.from === nightDim.to) return toast('Beginn und Ende brauchen verschiedene Uhrzeiten', 'info')
-        return saveDisplayOptions({ nightDim }, key === 'ndOn' ? (nightDim.enabled ? `Abends dunkler: ${nightDim.from}–${nightDim.to} Uhr` : 'Abends dunkler ist aus') : 'Gespeichert')
+      if (key === 'headless') {
+        const send = async (confirm) => {
+          const r = await api(`${API}/headless`, { method: 'POST', body: { on: v === true, ...(confirm ? { confirm: true } : {}) } })
+          if (!r.ok) {
+            state.values.set('headless', !v)
+            shownValues.set('headless', !v)
+            renderPage(currentPage(), false)
+            // (the page was older than what the box knows now: it asks, as if it had known)
+            if (r.body?.error === 'dsi_unconfirmed' && !confirm) return ask()
+            toast(r.body?.error === 'dsi_connected' ? 'Ein DSI-Display ist angeschlossen – die Box bliebe dunkel' : 'Nicht gespeichert', 'info')
+            return
+          }
+          disp.headless = r.body
+          state.values.set('headlessSpotify', disp.headless?.spotify === true)
+          toast(v ? 'Startet nach dem nächsten Neustart ohne DSI-Display' : 'Startet nach dem nächsten Neustart wieder mit DSI-Display')
+          renderPage(currentPage(), false)
+        }
+        // (a DSI overlay without a panel looks connected to the kernel, and a panel without a touch chip shows nothing: the user says
+        // whether a display hangs there - the switch stays off until the answer)
+        const ask = () =>
+          confirmSheet('Ohne Display starten', 'Am DSI-Anschluss ist kein Display zu erkennen. Hängt doch eines dran, bleibt es nach dem nächsten Neustart dunkel. Ohne Display starten?', () => {
+            state.values.set('headless', true)
+            shownValues.set('headless', true)
+            void send(true)
+          })
+        if (v === true && disp.headless?.dsiUnconfirmed && !disp.headless.on) {
+          state.values.set('headless', false)
+          shownValues.set('headless', false)
+          renderPage(currentPage(), false)
+          return ask()
+        }
+        return send(false)
+      }
+      if (key === 'headlessSpotify') {
+        const r = await api(`${API}/headless`, { method: 'POST', body: { spotify: v === true } })
+        if (!r.ok) {
+          state.values.set('headlessSpotify', !v)
+          shownValues.set('headlessSpotify', !v)
+          toast('Nicht gespeichert', 'info')
+          renderPage(currentPage(), false)
+          return
+        }
+        disp.headless = r.body
+        // (while the kiosk still runs it counts after the restart - the kiosk is the Spotify device until then)
+        toast(v ? (disp.headless.kiosk ? 'Spotify ist nach dem nächsten Neustart ohne Display da' : 'Spotify ist gleich da') : 'Spotify ohne Display aus')
+        renderPage(currentPage(), false)
+        return
+      }
+      if (['ndOn', 'ndFrom', 'ndTo', 'ndLevel', 'ndFade', 'ndQuiet', 'ndSun'].includes(key)) {
+        const nightDim = ndCurrent()
+        // (at sunset without a place: the place is asked for first, and the switch goes back when there is none)
+        if (key === 'ndSun' && nightDim.sunset && nightDim.lat === null) {
+          openNdPlaceSheet({
+            onChosen: drawNdPlace,
+            onCancel: () => {
+              state.values.set('ndSun', false)
+              shownValues.set('ndSun', false)
+              const box = document.querySelector('input[data-key="ndSun"]')
+              if (box) box.checked = false
+              drawNdPlace()
+            },
+          })
+          drawNdPlace()
+          return
+        }
+        drawNdPlace()
+        if (!nightDim.sunset && nightDim.from === nightDim.to) return toast('Beginn und Ende brauchen verschiedene Uhrzeiten', 'info')
+        const saved = await saveDisplayOptions({ nightDim }, key === 'ndOn' ? (nightDim.enabled ? (nightDim.sunset ? 'Abends dunkler: von Sonnenuntergang bis Sonnenaufgang' : `Abends dunkler: ${nightDim.from}–${nightDim.to} Uhr`) : 'Abends dunkler ist aus') : 'Gespeichert')
+        // (what the page shows: the sunset of today follows the place and the switch)
+        if (saved) {
+          disp.opts.nightDim = { ...(disp.opts.nightDim ?? {}), ...nightDim, sunsetAt: saved.sunsetAt ?? null, sunriseAt: saved.sunriseAt ?? null, dimmed: saved.dimmed === true }
+          drawNdPlace()
+        }
+        return saved
       }
       if (key === 'dispOff') {
         const r = await api(`${API}/power-config`, { method: 'POST', body: { idleDisplayOff: Number(v) } })
@@ -12085,6 +19976,190 @@ const CONTROLLERS = {
         if (!(await ask('Auflösung ändern', `Das Display startet mit ${resX} × ${resY} Pixeln neu. Das dauert ein paar Sekunden.`, 'Übernehmen'))) return
         if (await saveDisplayOptions({ resX, resY }, 'Auflösung gespeichert')) Object.assign(disp.opts, { resX, resY })
       },
+    },
+  },
+  erweiterungen: {
+    load: loadExtensions,
+    // like the extensions page of a browser: a search field and a grid of cards - icon, name, description, Details, Entfernen and
+    // the switch; the ones the catalog offers stand behind the installed ones with an Installieren button
+    sections: () => {
+      const card = (e, installed) => {
+        const q = `${e.name} ${e.description}`.toLowerCase()
+        const ico = e.icon
+          ? `<span class="ext-ico" style="--ext-icon:url('${esc(e.icon)}')" aria-hidden="true"></span>`
+          : `<span class="ext-ico letter" aria-hidden="true">${esc(String(e.name).slice(0, 1).toUpperCase())}</span>`
+        // (an extension that is not installed yet has its switch too: off - switching it on installs it, after the question)
+        const action = installed
+          ? `<button type="button" class="btn sm danger" data-ext-remove="${esc(e.id)}">Entfernen</button>`
+          : `<button type="button" class="btn sm primary" data-ext-install="${esc(e.id)}">Installieren</button>`
+        const sw = installed
+          ? `<label class="switch"><input type="checkbox" data-ext-toggle="${esc(e.id)}" ${e.enabled ? 'checked' : ''} aria-label="${esc(e.name)}"><span></span></label>`
+          : `<label class="switch"><input type="checkbox" data-ext-install-toggle="${esc(e.id)}" aria-label="${esc(e.name)}"><span></span></label>`
+        // a newer version in the catalog: a line of text under the buttons (like the notice of WordPress), no card of its own
+        const next = installed ? newerInCatalog(e) : null
+        // ("{} oder {}." is cut at the {}: the two links stand in the places the language gives them)
+        const [lead, mid, tail] = tr('{} oder {}.').split('{}')
+        const upd = next
+          ? `<p class="ext-update">${icon('sync', 16)}<span translate="no">${esc(tr(`Es gibt eine neue Version von ${e.name}: ${next.version}.`))} ${esc(lead)}<button type="button" class="linkbtn" data-ext-details="${esc(e.id)}" data-installed="false" data-ext-new="true">${esc(tr('Details ansehen'))}</button>${esc(mid)}<button type="button" class="linkbtn" data-ext-update="${esc(e.id)}">${esc(tr('jetzt aktualisieren'))}</button>${esc(tail)}</span></p>`
+          : ''
+        // (the box switched it off by itself - after an update, say: what went wrong, in the words of the box, and a way to try again;
+        // the detail is the technical line, in English, for whoever has to report it)
+        const bad = installed && e.problem
+          ? `<div class="note warn ext-problem">${icon('info', 18)}<span><b>${esc(tr('Die MuPiBox hat diese Erweiterung ausgeschaltet.'))}</b> ${esc(tr(e.problem.message))}${e.problem.detail ? ` <small translate="no">(${esc(e.problem.detail)})</small>` : ''}</span></div>`
+          : ''
+        const retry = installed && e.problem ? `<button type="button" class="btn sm" data-ext-retry="${esc(e.id)}">Erneut versuchen</button>` : ''
+        return `<div class="ext-card${installed ? '' : ' offer'}" data-q="${esc(q)}">
+          <div class="ext-head">${ico}<div class="ext-text"><b>${esc(e.name)}</b> <small>${esc(e.version)}</small><p>${esc(e.description)}</p></div></div>
+          ${bad}
+          <div class="ext-foot"><button type="button" class="btn sm" data-ext-details="${esc(e.id)}" data-installed="${installed}">Details</button>${retry}${action}<span class="grow"></span>${sw}</div>
+          ${upd}
+        </div>`
+      }
+      // (what the catalog offers and is not installed; a newer version of an installed one shows in its own card)
+      // ("Bitte lies mehr dazu in der {}." is cut at the {}: the link stands in the place the language gives it)
+      const guide = tr('Bitte lies mehr dazu in der {}.').split('{}')
+      const offered = exts.catalog.filter((e) => !e.installedVersion)
+      const note = exts.catalogError ? '<p class="help">Der Katalog ist gerade nicht erreichbar. Die Box braucht dafür das Internet.</p>' : ''
+      const cards = [...exts.installed.map((e) => card(e, true)), ...offered.map((e) => card(e, false))]
+      return [
+        {
+          title: '',
+          items: [
+            {
+              type: 'html',
+              html: `<div class="ext-bar"><div class="search">${icon('search')}<input class="input" id="ext-q" type="search" placeholder="Erweiterungen suchen" autocomplete="off"></div>
+                ${exts.devMode ? `<button type="button" class="btn" data-ext-upload>Datei hochladen</button><input type="file" id="ext-file" accept=".mpx,.zip,application/zip" hidden>` : ''}</div>`,
+            },
+            { type: 'html', html: `<h2 class="ext-title">Alle Erweiterungen</h2>${note}<div class="ext-grid">${cards.join('') || '<p class="help">Keine Erweiterungen verfügbar.</p>'}</div>` },
+            {
+              type: 'html',
+              html: `<div class="note">${icon('info', 18)}<span>Aus dem <a href="${esc(exts.catalogPage || 'https://github.com/wowa1990/MuPiBox/tree/upstream-v5.1-pr/extensions')}" target="_blank" rel="noopener noreferrer">Katalog</a> auf GitHub. Eine Erweiterung ist eine einzige Datei; die Box prüft ihre Prüfsumme, bevor sie sie installiert. Ein Wechsel startet die Dienste der Box neu; eine Wiedergabe bricht dabei ab. <span translate="no">${esc(guide[0])}<a href="${EXT_GUIDELINE_URL}" target="_blank" rel="noopener noreferrer">${esc(tr('Richtlinie für Erweiterungen'))}</a>${esc(guide[1])}</span></span></div>`,
+            },
+            // (own extension files only in developer mode: an extension can do everything on the box)
+            {
+              type: 'html',
+              html: `<div class="row"><span class="lbl"><b>Entwicklermodus</b><small>Eigene Erweiterungsdateien hochladen und installieren, nicht nur aus dem Katalog.</small></span><label class="switch"><input type="checkbox" data-ext-devmode ${exts.devMode ? 'checked' : ''} aria-label="Entwicklermodus"><span></span></label></div>`,
+            },
+          ],
+        },
+      ]
+    },
+    mount(root) {
+      const entry = (id) => exts.installed.find((e) => e.id === id) ?? exts.catalog.find((e) => e.id === id)
+      // developer mode: switched on only after the warning
+      $('[data-ext-devmode]', root)?.addEventListener('change', (ev) => {
+        const cb = ev.target
+        const set = async (on) => {
+          const r = await api(`${API}/extensions/devmode`, { method: 'POST', body: { on } })
+          if (!r.ok) {
+            cb.checked = !on
+            return toast('Das hat nicht geklappt', 'info')
+          }
+          renderPage(currentPage(), true)
+        }
+        if (!cb.checked) return set(false)
+        cb.checked = false
+        confirmSheet(
+          'Entwicklermodus',
+          'Im Entwicklermodus kannst du eigene Erweiterungsdateien hochladen. Eine Erweiterung kann auf der Box alles – auch als Administrator (root). Lade nur Dateien hoch, die du selbst gebaut hast oder deren Quelle du vertraust.',
+          () => {
+            cb.checked = true
+            return set(true)
+          },
+        )
+      })
+      $('#ext-q', root)?.addEventListener('input', (ev) => {
+        const q = ev.target.value.trim().toLowerCase()
+        for (const c of root.querySelectorAll('.ext-card')) c.hidden = !!q && !c.dataset.q.includes(q)
+      })
+      for (const b of root.querySelectorAll('[data-ext-install]')) {
+        const e = entry(b.dataset.extInstall)
+        b.onclick = () =>
+          installExtension(e, 'Installieren', `${e.name} ist installiert.`)
+      }
+      for (const input of root.querySelectorAll('[data-ext-install-toggle]')) {
+        const e = entry(input.dataset.extInstallToggle)
+        input.onchange = async () => {
+          // (the switch stays off until the box has installed it: the page is drawn again afterwards)
+          input.checked = false
+          await installExtension(e, 'Installieren', `${e.name} ist installiert.`)
+        }
+      }
+      // (try again = switch it on, with the same question as the switch)
+      for (const b of root.querySelectorAll('[data-ext-retry]')) {
+        b.onclick = () => {
+          const input = [...root.querySelectorAll('[data-ext-toggle]')].find((i) => i.dataset.extToggle === b.dataset.extRetry)
+          if (!input) return
+          input.checked = true
+          input.dispatchEvent(new Event('change'))
+        }
+      }
+      for (const b of root.querySelectorAll('[data-ext-remove]')) {
+        const e = entry(b.dataset.extRemove)
+        b.onclick = () => extensionAction('remove', e.id, `${e.name} entfernen`, 'Die Erweiterung und ihre Geräteregeln werden entfernt. Ihre Einstellungen bleiben, falls du sie wieder installierst. Danach starten die Dienste der Box neu.', 'Entfernen', `${e.name} ist entfernt.`)
+      }
+      for (const input of root.querySelectorAll('[data-ext-toggle]')) {
+        const e = entry(input.dataset.extToggle)
+        input.onchange = async () => {
+          const enabled = input.checked
+          if (!(await ask(`${e.name} ${enabled ? 'einschalten' : 'ausschalten'}`, 'Danach starten die Dienste der Box neu; eine Wiedergabe bricht dabei ab.', enabled ? 'Einschalten' : 'Ausschalten'))) {
+            input.checked = !enabled
+            return
+          }
+          const r = await api(`${API}/extensions/enable`, { method: 'POST', body: { id: e.id, enabled } })
+          if (!r.ok) {
+            input.checked = !enabled
+            if (r.body?.error === 'conflict') {
+              // (only pins of its settings in the way: the box can put it right - the pin to a free one, or the connection away)
+              const errors = (r.body.conflicts ?? []).filter((c) => c.severity === 'error')
+              if (errors.length > 0 && errors.every((c) => c.kind === 'gpio') && Object.values(e.settingTypes ?? {}).includes('gpio')) return resolveGpioConflict(e, r.body.conflicts)
+              return extReview({ title: tr(`${e.name} kann nicht eingeschaltet werden`), resources: e.resources, conflicts: r.body.conflicts })
+            }
+            // (the files say it cannot run on this box: the same sentence as on the card)
+            if (r.body?.error === 'problem' && r.body.problem?.message) return toast(tr(r.body.problem.message), 'info')
+            return toast('Hat nicht geklappt', 'info')
+          }
+          toast('Die Dienste starten neu …')
+          setTimeout(() => currentPage()?.id === 'erweiterungen' && renderPage(currentPage(), true), 13000)
+        }
+      }
+      // an extension file from the user's own computer: read and checked by the box first, installed only after the question
+      const picker = $('#ext-file', root)
+      $('[data-ext-upload]', root)?.addEventListener('click', () => picker.click())
+      picker?.addEventListener('change', async () => {
+        const file = picker.files?.[0]
+        picker.value = ''
+        if (!file) return
+        if (file.size > 16 * 1024 * 1024) return toast('Die Datei ist zu groß (höchstens 16 MB)', 'info')
+        toast('Wird geprüft …')
+        const r = await fetch(`${API}/extensions/upload`, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/octet-stream', 'x-mupibox-csrf': state.csrf }, body: file }).catch(() => null)
+        const body = await r?.json().catch(() => null)
+        if (!r || !r.ok) return toast(`Das ist keine passende Erweiterung: ${body?.error ?? ''}`.trim(), 'info')
+        const what = `${body.name} ${body.version}${body.installedVersion ? tr(` (ersetzt ${body.installedVersion})`) : ''}`
+        const blocked = (body.conflicts ?? []).some((c) => c.severity === 'error')
+        const go1 = await extReview({
+          title: tr(blocked ? `${what} kann nicht installiert werden` : `${what} installieren?`),
+          resources: body.resources,
+          system: body.system ?? {},
+          conflicts: body.conflicts ?? [],
+          okLabel: 'Installieren',
+          extra: [tr('Eine Erweiterung läuft auf der Box ohne Schutz: Installiere nur Dateien aus Quellen, denen du vertraust.'), tr(`Prüfsumme (SHA-256): ${body.sha256.slice(0, 16)}…`), extRestartNote()],
+        })
+        if (!go1) return
+        const go = await api(`${API}/extensions/install`, { method: 'POST', body: { token: body.token } })
+        if (!go.ok) return toast(go.body?.error === 'busy' ? 'Es läuft gerade etwas anderes' : 'Hat nicht geklappt', 'info')
+        toast('Wird erledigt …')
+        watchExtensionJob(go.body.id, `${body.name} ist installiert.`)
+      })
+      for (const b of root.querySelectorAll('[data-ext-details]')) {
+        // ("Details ansehen" in the update line shows the new version, as the catalog describes it)
+        b.onclick = () => (b.dataset.extNew ? extensionDetails(exts.catalog.find((x) => x.id === b.dataset.extDetails), false) : extensionDetails(entry(b.dataset.extDetails), b.dataset.installed === 'true'))
+      }
+      for (const b of root.querySelectorAll('[data-ext-update]')) {
+        const c = exts.catalog.find((x) => x.id === b.dataset.extUpdate)
+        b.onclick = () =>
+          installExtension(c, 'Update installieren', `${c.name} ist aktualisiert.`)
+      }
     },
   },
   bedienung: {
@@ -12126,6 +20201,8 @@ const CONTROLLERS = {
             { type: 'stepper', key: 'resume', label: 'Einträge unter „Fortsetzen“', help: 'So viele zuletzt gehörte Titel bietet das Display zum Weiterhören an.', min: 1, max: 99 },
             it('epResume', { label: 'Podcast-Folgen an der letzten Stelle weiterhören' }),
             it('epDays', { dep: 'epResume' }),
+            // (5.1, #180: the ticks of heard.ts - on the display's list of episodes and in the library)
+            { type: 'toggle', key: 'heardMarks', label: 'Haken an angefangenen und gehörten Folgen', help: 'Gelb: angefangen, grün: zu Ende gehört – in der Folgenliste des Displays und in der Bibliothek. Ändern in der Bibliothek beim Album.' },
           ],
         },
         {
@@ -12194,6 +20271,10 @@ const CONTROLLERS = {
         if ([3, 7, 14].includes(days)) return saveDisplayOptions({ newEpisodeDays: days })
       }
       if (key === 'epProgress') return saveDisplayOptions({ episodeProgress: !!v })
+      if (key === 'heardMarks') {
+        heard.enabled = !!v
+        return saveDisplayOptions({ heardMarks: !!v }, v ? 'Haken an' : 'Haken aus')
+      }
     },
   },
   displaylive: { top: liveTop, sections: () => [], mount: mountLive },
@@ -12404,23 +20485,175 @@ const CONTROLLERS = {
     },
   },
   drehregler: {
-    async load() {
-      await loadHardware()
-      const r = hw.data.rotary
-      state.values.set('rotary', r.active)
-      state.values.set('rotStep', r.step)
-      state.values.set('btnFn', BTN_FN.find(([, v]) => v === r.button)?.[0] ?? 'Aus')
-    },
-    sections: (page) =>
-      withoutSave(page).map((sec) => ({
+    load: loadRotary,
+    sections: (page) => {
+      const chosen = new Map(ROTARY_PIN_ITEMS.map(([key]) => [key, rotaryPinNumber(state.values.get(key))]))
+      const clash = [...(hw.rotaryClash ?? new Map())].map(([pin, holders]) => `GPIO ${pin} nutzt auch: ${holders.map(extWho).join(', ')}`)
+      // (the pins of all encoders, each by one only: what another one has is not offered)
+      const extras = hw.rotaryExtra ?? []
+      const everyPin = new Map([...chosen, ...extras.flatMap((k) => RK_PIN_PARTS.map(([part]) => [rkKey(k.id, part), rotaryPinNumber(state.values.get(rkKey(k.id, part)))]))])
+      const pinOptions = (key) => {
+        const mine = everyPin.get(key)
+        return [
+          rotaryPinText(0),
+          ...[...new Set([mine, ...(hw.rotaryFree ?? [])])]
+            .filter((pin) => Number.isInteger(pin) && GPIO_HEADER[pin] && (pin === mine || ![...everyPin].some(([other, p]) => other !== key && p === pin)))
+            .sort((x, y) => x - y)
+            .map(rotaryPinText),
+        ]
+      }
+      // The fields of one knob: each pin (or none), under the two of the knob what a turn in that direction does, the step while the volume
+      // is set, and under the button's pin what the button does - a function is offered only where its pin is there
+      const knobItems = ({ a, b, btn, right, left, step, stepItem, buttonItem }) => {
+        const pin = (label, key) => ({ type: 'select', label, key, default: state.values.get(key), options: pinOptions(key) })
+        const direction = (label, key) => ({ type: 'select', label, key, default: state.values.get(key), options: RK_DIRECTIONS.map(([l]) => l) })
+        const hasA = everyPin.get(a) > 0
+        const hasB = everyPin.get(b) > 0
+        const usesVolume = (hasA && directionUsesVolume(state.values.get(right))) || (hasB && directionUsesVolume(state.values.get(left)))
+        return [
+          pin(RK_PIN_PARTS[0][3], a),
+          ...(hasA ? [direction('Rechts herum drehen', right)] : []),
+          pin(RK_PIN_PARTS[1][3], b),
+          ...(hasB ? [direction('Links herum drehen', left)] : []),
+          ...(usesVolume ? [stepItem(step)] : []),
+          pin(RK_PIN_PARTS[2][3], btn),
+          ...(everyPin.get(btn) > 0 ? [buttonItem(everyPin.get(btn))] : []),
+        ]
+      }
+      const extraSections = extras.map((k, i) => ({
+        title: `${tr('Drehregler')} ${i + 2}`,
+        // (a name of its own in the head, as the buttons have, and the trash beside it - no button in the card)
+        nameKey: rkKey(k.id, 'name'),
+        remove: [`rkdel:${k.id}`, String(state.values.get(rkKey(k.id, 'name')) || `${tr('Drehregler')} ${i + 2}`)],
+        help: tr('Dieser Drehregler tut, was du für jede Drehrichtung wählst. Zum Drehen braucht er Pin A und Pin B.'),
+        items: [
+          ...knobItems({
+            a: rkKey(k.id, 'a'),
+            b: rkKey(k.id, 'b'),
+            btn: rkKey(k.id, 'btn'),
+            right: rkKey(k.id, 'right'),
+            left: rkKey(k.id, 'left'),
+            step: rkKey(k.id, 'step'),
+            stepItem: (key) => ({ type: 'slider', label: 'Schritt pro Raste', key, default: k.step, min: 1, max: 10, step: 1, unit: ' %' }),
+            buttonItem: (pin) => ({ type: 'select', label: `Funktion des Tasters (GPIO ${pin})`, key: rkKey(k.id, 'bfn'), default: state.values.get(rkKey(k.id, 'bfn')), options: RK_BUTTONS.map(([label]) => label) }),
+          }),
+        ],
+      }))
+      const addSection = {
+        title: '',
+        help: tr(extras.length >= (hw.rotaryExtraMax ?? 4) ? 'Mehr Drehregler gehen nicht.' : 'Ein weiterer Drehregler kommt ohne Pins dazu: Die Pins wählst du danach selbst.'),
+        items: extras.length >= (hw.rotaryExtraMax ?? 4) ? [] : [{ type: 'buttons', buttons: [['Drehregler hinzufügen', 'primary', 'rkadd']] }],
+      }
+      return [...withoutSave(page).map((sec) => ({
         ...sec,
-        help: 'Drehregler an GPIO 26/24, Taster an GPIO 10.',
-        items: sec.items.map((it) => (it.key === 'btnFn' ? { ...it, label: 'Funktion des Tasters (GPIO 10)' } : it)),
-      })),
+        // (the first knob can be named too: its head is the field - the title is its placeholder)
+        nameKey: 'rotName',
+        title: sec.title || 'Drehregler',
+        help: [
+          'Zur Wahl stehen nur Pins, die nichts anderes nutzt. „Kein Pin“ lässt einen Anschluss weg. Zum Drehen braucht der Drehregler Pin A und Pin B, für jede Drehrichtung wählst du, was passiert.',
+          ...clash,
+          ...(clash.length ? ['So geht beides nicht: den Pin des Drehreglers unten umstellen und danach die Box neu starten.'] : []),
+          ...(hw.rotaryStopped ? ['Der Drehregler läuft gerade nicht. Einen anderen Pin wählen oder die Box neu starten.'] : []),
+        ]
+          .map((part) => tr(part))
+          .join(' '),
+        items: [
+          ...sec.items.filter((it) => it.key === 'rotary').map((it) => ({ ...it, label: 'Drehregler' })),
+          ...knobItems({
+            a: 'rotPinA',
+            b: 'rotPinB',
+            btn: 'rotPinBtn',
+            right: 'rotRight',
+            left: 'rotLeft',
+            step: 'rotStep',
+            stepItem: () => sec.items.find((it) => it.key === 'rotStep'),
+            buttonItem: (pin) => ({ ...sec.items.find((it) => it.key === 'btnFn'), label: `Funktion des Tasters (GPIO ${pin})` }),
+          }),
+        ],
+      })), ...extraSections, addSection]
+    },
+    act: {
+      // another encoder: it comes without pins (volume up and down), the person chooses them afterwards
+      async rkadd() {
+        const r = await api(`${API}/rotary-extra`, { method: 'POST', body: { right: 'up', left: 'down', pinA: 0, pinB: 0, pinButton: 0, button: 'off' }, timeoutMs: 30000 })
+        if (!r.ok) return toast(r.body?.error === 'gpio_taken' ? `GPIO ${r.body.pin} ist schon belegt: ${String(r.body.by ?? '').split(', ').map(extWho).join(', ')}` : 'Nicht gespeichert', 'info')
+        await loadRotary()
+        renderPage(currentPage(), false)
+        toast(r.body?.running === false ? 'Gespeichert – der Drehregler startet gerade nicht' : 'Drehregler hinzugefügt', r.body?.running === false ? 'info' : 'ok')
+      },
+      async rkdel(id, label) {
+        if (!(await ask(tr(label), tr('Diesen Drehregler entfernen? Seine Pins sind danach wieder frei.'), tr('Entfernen')))) return
+        const r = await api(`${API}/rotary-extra/${encodeURIComponent(id)}`, { method: 'DELETE', timeoutMs: 30000 })
+        await loadRotary()
+        renderPage(currentPage(), false)
+        toast(r.ok ? 'Drehregler entfernt' : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+      },
+    },
     async change(key, v) {
-      const body = key === 'rotary' ? { active: v } : key === 'rotStep' ? { step: v } : key === 'btnFn' ? { button: BTN_FN.find(([l]) => l === v)?.[1] } : null
+      const extra = rkParse(key)
+      if (extra) {
+        const [, id, what] = extra
+        const part = RK_PIN_PARTS.find(([name]) => name === what)
+        const body = { id }
+        if (what === 'name') body.name = String(v ?? '').trim()
+        else if (what === 'right' || what === 'left') body[what] = directionValue(v)
+        else if (part) body[part[2]] = rotaryPinNumber(v)
+        else if (what === 'step') body.step = v
+        else if (what === 'bfn') body.button = RK_BUTTONS.find(([l]) => l === v)?.[1]
+        const r = await api(`${API}/rotary-extra`, { method: 'POST', body, timeoutMs: 30000 })
+        if (!r.ok) {
+          // (nothing is saved: the fields show what is)
+          await loadRotary()
+          renderPage(currentPage(), false)
+          return toast(r.body?.error === 'gpio_twice' ? 'Dieser Pin gehört schon einem anderen Drehregler' : r.body?.error === 'gpio_taken' ? `GPIO ${r.body.pin} ist schon belegt: ${String(r.body.by ?? '').split(', ').map(extWho).join(', ')}` : 'Nicht gespeichert', 'info')
+        }
+        // (the function, a pin or the button given or taken away: the page shows the right fields and what the pins share)
+        if (what === 'name') {
+          // (the cards of the page - "Auf dieser Seite" - are named by it)
+          state.values.set(key, body.name)
+          document.dispatchEvent(new Event('mupi-cards'))
+        } else if (what !== 'step') {
+          await loadRotary()
+          renderPage(currentPage(), false)
+        }
+        return toast(r.body?.running === false ? 'Gespeichert – der Drehregler startet gerade nicht' : 'Gespeichert', r.body?.running === false ? 'info' : 'ok')
+      }
+      if (key === 'rotName') {
+        const name = String(v ?? '').trim()
+        const r = await api(`${API}/rotary`, { method: 'POST', body: { name } })
+        if (!r.ok) return toast('Nicht gespeichert', 'info')
+        state.values.set('rotName', name)
+        document.dispatchEvent(new Event('mupi-cards'))
+        return toast('Gespeichert')
+      }
+      const pinItem = ROTARY_PIN_ITEMS.find(([k]) => k === key)
+      const body = pinItem ? { [pinItem[2]]: rotaryPinNumber(v) } : key === 'rotary' ? { active: v } : key === 'rotStep' ? { step: v } : key === 'rotRight' ? { right: directionValue(v) } : key === 'rotLeft' ? { left: directionValue(v) } : key === 'btnFn' ? { button: BTN_FN.find(([l]) => l === v)?.[1] } : null
       if (!body) return
       const r = await api(`${API}/rotary`, { method: 'POST', body })
+      if (r.body?.error === 'gpio_taken' || r.body?.error === 'gpio_twice') {
+        // (a pin something else holds - or one the encoder has twice: nothing is saved, the fields show what is)
+        if (key === 'rotary') {
+          state.values.set('rotary', false)
+          const el = $('input[data-key="rotary"]')
+          if (el) el.checked = false
+        } else {
+          await loadRotary()
+          renderPage(currentPage(), false)
+        }
+        return toast(r.body.error === 'gpio_twice' ? 'Die drei Pins müssen verschieden sein' : `GPIO ${r.body.pin} ist schon belegt: ${String(r.body.by ?? '').split(', ').map(extWho).join(', ')}`, 'info')
+      }
+      // (saved, but the service did not start - the pins changed too often in a row, say: the page says it)
+      if (r.ok && r.body?.running === false) {
+        await loadRotary()
+        renderPage(currentPage(), false)
+        return toast('Gespeichert – der Drehregler startet gerade nicht', 'info')
+      }
+      if (r.ok && (pinItem || key === 'rotary' || key === 'btnFn' || key === 'rotRight' || key === 'rotLeft')) {
+        // (the pin it let go is free for the others, the one it took is not; switched on or off: whether it runs, what it shares;
+        // the button switched off or on: its pin is let go or taken)
+        await loadRotary()
+        renderPage(currentPage(), false)
+      }
       return toast(r.ok ? (key === 'rotary' ? (v ? 'Drehregler an' : 'Drehregler aus') : 'Gespeichert') : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
     },
   },
@@ -12728,6 +20961,20 @@ const CONTROLLERS = {
   telegram: { load: loadTelegram, top: tgTop, sections: () => [], mount: mountTelegram },
   homeassistant: { load: loadHa, top: haTop, sections: () => [], mount: mountHa },
   tidal: { load: loadTidal, top: tidalTop, sections: () => [], mount: mountTidal },
+  jellyfin: { load: loadJellyfin, top: jellyfinTop, sections: () => [], mount: mountJellyfin },
+  audible: { load: loadAudible, top: audibleTop, sections: () => [], mount: mountAudible },
+  jellyfinsuche: { load: loadServices, top: jellyfinSearchTop, sections: () => [], mount: mountJellyfinSearch },
+  audiblesuche: { load: loadServices, top: audibleSearchTop, sections: () => [], mount: mountAudibleSearch },
+  fotos: { load: loadPhotoOverview, top: photoOverviewTop, sections: () => [], mount: mountPhotoOverview, ownNav: true },
+  fotoalbum: { load: loadPhotoAlbum, top: photoAlbumTop, sections: () => [], mount: mountPhotoAlbum },
+  fotoupload: { load: loadPhotoUpload, top: photoUploadTop, sections: () => [], mount: mountPhotoUpload },
+  fotonas: { load: loadPhotoNas, top: photoNasTop, sections: () => [], mount: mountPhotoNas },
+  fotoimmich: { load: loadPhotoImmich, top: photoImmichTop, sections: () => [], mount: mountPhotoImmich },
+  fotosynology: { load: loadPhotoSynology, top: photoSynologyTop, sections: () => [], mount: mountPhotoSynology },
+  fotonextcloud: { load: loadPhotoNextcloud, top: photoNextcloudTop, sections: () => [], mount: mountPhotoNextcloud },
+  fotophotoprism: { load: loadPhotoPhotoprism, top: photoPhotoprismTop, sections: () => [], mount: mountPhotoPhotoprism },
+  fotoicloud: { load: loadPhotoIcloud, top: photoIcloudTop, sections: () => [], mount: mountPhotoIcloud },
+  'g-fotos': { load: loadPhotoSettings, top: photoSettingsTop, sections: photoSettingsSections, mount: mountPhotoSettings, change: changePhotoSetting },
   mqtt: {
     load: loadMqtt,
     // the connection (broker and login), the box's names in MQTT, how often, Home Assistant - saved together
@@ -13171,7 +21418,7 @@ function openDay(el, page) {
 // only those - a Spotify search without a Spotify login only ends in an error.
 // podcasts: the podcast search (Apple's directory, for German with the ARD Audiothek); available: the languages it
 // offers ({code, name})
-const svc = { spotify: true, podcasts: true, radio: true, tidal: false, available: [], at: 0 }
+const svc = { spotify: true, podcasts: true, radio: true, tidal: false, jellyfin: false, audible: false, available: [], at: 0 }
 async function loadServices() {
   if (Date.now() - svc.at < 30_000) return svc
   const [access, sources] = await Promise.all([api(`${API}/spotify-access`), api(`${API}/sources`)])
@@ -13185,6 +21432,8 @@ function setSources(b) {
   svc.podcasts = b.podcastSearch !== false
   svc.radio = b.radioSearch !== false
   svc.tidal = b.tidal === true
+  svc.jellyfin = b.jellyfin === true
+  svc.audible = b.audible === true
   if (Array.isArray(b.available)) svc.available = b.available
 }
 
@@ -13195,6 +21444,8 @@ async function openAdd() {
     ...(svc.podcasts ? [['podsuche', 'globe', 'Podcasts suchen', 'Kinderpodcasts und Hörspiele in vielen Sprachen']] : []),
     ...(svc.radio ? [['radiosuche', 'vol', 'Radiosender suchen', 'Kinderradio und Sender aus vielen Ländern']] : []),
     ...(svc.tidal ? [['tidalsuche', 'search', 'Auf TIDAL suchen', 'Hörspiele, Alben, Künstler und Playlists finden']] : []),
+    ...(svc.jellyfin ? [['jellyfinsuche', 'server', 'Aus Jellyfin', 'Alben, Hörbücher, Künstler und Playlists deines Servers']] : []),
+    ...(svc.audible ? [['audiblesuche', 'book', 'Aus Audible', 'Hörbücher und Serien deines Audible-Kontos']] : []),
     ['link', 'link', 'Link einfügen', svc.spotify ? 'Spotify-Link, Radiosender oder Podcast' : 'Radiosender oder Podcast'],
     ['upload', 'up', 'Vom Gerät hochladen', 'Titel oder ganze Ordner auf die SD-Karte'],
   ]
@@ -13277,6 +21528,11 @@ async function copyText(text, shown) {
 // A message at the bottom. Answers whether it was a success ('ok'): a page's change() that ends with
 // "return toast(…, 'info')" so says the box did not take the change (see commitChange)
 function toast(text, kind = 'ok') {
+  // (a request refused because another user's library is shown: api() said so already - see there)
+  if (kind !== 'ok' && Date.now() - blockedNoticeAt < 1000) {
+    blockedNoticeAt = 0
+    return false
+  }
   const el = document.createElement('div')
   el.className = `toast ${kind}`
   el.innerHTML = `${icon(kind === 'ok' ? 'check' : 'info', 18)}<span>${esc(text)}</span>`
@@ -13294,70 +21550,6 @@ function renderLoginBar() {
   $('#theme-btn').addEventListener('click', toggleTheme)
 }
 
-// Where the login leads: this app (the recommended one) or the previous admin interface (legacy: PHP on port 80/443,
-// same password). The choice
-// is remembered in this browser. The start page of port 80 (/) opens the login with ?portal, also when signed in.
-const PORTALS = [
-  ['app', 'Web-App', 'Empfohlen', 'grid'],
-  ['admin', 'Admin-Interface', 'Legacy · die bisherige Oberfläche', 'gear'],
-]
-const adminUrl = () => `${location.protocol}//${location.hostname}/index.php`
-
-function portalChoice() {
-  try {
-    return localStorage.getItem('mupi-portal') === 'admin' ? 'admin' : 'app'
-  } catch {
-    return 'app'
-  }
-}
-
-function setPortalChoice(v) {
-  try {
-    localStorage.setItem('mupi-portal', v)
-  } catch {
-    // private mode: only for this visit
-  }
-}
-
-// The admin interface takes the password in a form of its own (field "password", any of its pages) - with its CSRF
-// token, like every form it takes: its login page carries it. So the page is read first; that works where the admin
-// interface is the same origin, i.e. on port 80/443. From port 8200 the login of port 80 does it (admin chosen).
-async function openAdmin(password) {
-  const url = adminUrl()
-  if (password === undefined) {
-    location.href = url
-    return
-  }
-  if (new URL(url).origin !== location.origin) {
-    location.href = `${location.protocol}//${location.hostname}/app/?portal=admin`
-    return
-  }
-  // (?login_form: the admin interface sends anyone not signed in to this login - but not this request)
-  const html = await fetch(`${url}?login_form=1`, { credentials: 'same-origin', cache: 'no-store' }).then((r) => r.text(), () => '')
-  const token = /name="csrf_token" value="([^"]+)"/.exec(html)?.[1]
-  // (no login form: signed in there already, or no login asked for)
-  if (!token || !/name="password"/.test(html)) {
-    location.href = url
-    return
-  }
-  const form = document.createElement('form')
-  form.method = 'post'
-  form.action = url
-  form.hidden = true
-  for (const [name, value] of [
-    ['password', password],
-    ['csrf_token', token],
-  ]) {
-    const input = document.createElement('input')
-    input.type = 'hidden'
-    input.name = name
-    input.value = value
-    form.append(input)
-  }
-  document.body.append(form)
-  form.submit()
-}
-
 // "Angemeldet bleiben": as chosen last time on this device; the first time on when the app runs from the home screen
 function keepSignedIn() {
   const last = remembered('mupi-keep-signed-in')
@@ -13373,32 +21565,17 @@ async function renderLogin(hasSession = state.loginHasSession ?? false) {
   $('#shell').classList.add('no-nav')
   renderLoginBar()
   const info = (await fetch(`${API}/auth-info`, { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null), () => null)) ?? {}
-  // (?portal=admin: sent here from port 8200 with the admin interface chosen)
-  if (new URLSearchParams(location.search).get('portal') === 'admin') setPortalChoice('admin')
-  // (the admin interface switched off - System › Experten: only the app; the choice is not offered)
-  const portals = info.legacyAdmin === false ? PORTALS.filter(([id]) => id !== 'admin') : PORTALS
-  let choice = info.legacyAdmin === false ? 'app' : portalChoice()
   const draw = () => {
     // Without a password there is nothing to type in: for the app the page says how to get in instead (a password field
     // that can only fail made people think there was a default password)
-    const noPassword = choice === 'app' && !hasSession && info.passwordConfigured === false
-    const needPassword = choice === 'admin' ? info.loginRequired === true : !hasSession && !noPassword
+    const noPassword = !hasSession && info.passwordConfigured === false
+    const needPassword = !hasSession && !noPassword
     $('#content').innerHTML = `
     <div class="login">
       <div class="logo">${mupiImg('width="64" height="67"')}</div>
       <div class="login-brand">${LOGO}<span class="ed-tag" translate="no">CLASSIC</span></div>
-      <div class="login-head"><h1>Willkommen zurück</h1>${portals.length > 1 ? '<p class="help">Wohin möchtest du?</p>' : ''}</div>
+      <div class="login-head"><h1>Willkommen zurück</h1></div>
       <form class="card" id="login-form">
-        ${
-          portals.length > 1
-            ? `<div class="portal-pick" role="radiogroup" aria-label="Wohin möchtest du?">${portals
-                .map(
-                  ([id, name, sub, ic]) =>
-                    `<button type="button" class="portal-opt" role="radio" data-portal="${id}" aria-checked="${id === choice}">${icon(ic, 22)}<span class="lbl"><b>${esc(name)}</b><small>${esc(sub)}</small></span></button>`,
-                )
-                .join('')}</div>`
-            : ''
-        }
         ${
           noPassword
             ? `<p class="help" style="margin:0">Auf dieser Box ist noch kein Passwort gesetzt. Hinein geht es mit dem QR-Code am Display oder dem Telegram-Bot (unten), danach diese Seite neu laden.</p>
@@ -13406,11 +21583,10 @@ async function renderLogin(hasSession = state.loginHasSession ?? false) {
             : `${
                 needPassword
                   ? `<div class="field"><label for="pw">Passwort</label>
-                      <div class="input-wrap"><input class="input has-eye" id="pw" type="password" autocomplete="current-password" required><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div>
-                      ${portals.length > 1 ? '<small>Dasselbe Passwort für die Web-App und das Admin-Interface.</small>' : ''}</div>`
+                      <div class="input-wrap"><input class="input has-eye" id="pw" type="password" autocomplete="current-password" required><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>`
                   : ''
               }${
-                needPassword && choice === 'app'
+                needPassword
                   ? `<div class="row login-keep"><span class="lbl"><b>Angemeldet bleiben</b><small>90 Tage ab der letzten Nutzung, auch nach einem Neustart der Box</small></span>
                       <label class="switch"><input type="checkbox" id="login-keep" ${keepSignedIn() ? 'checked' : ''} aria-label="Angemeldet bleiben"><span></span></label></div>`
                   : ''
@@ -13420,7 +21596,7 @@ async function renderLogin(hasSession = state.loginHasSession ?? false) {
         }
       </form>
       ${
-        choice === 'app' && !hasSession
+        !hasSession
           ? `<div class="login-other">
         <p class="eyebrow">Ohne Passwort</p>
         <div class="entry">${icon('display', 18)}<span class="lbl"><b>QR-Code am Display</b><small>Die Statusanzeige oben am Display lange drücken, dann den Code scannen.</small></span></div>
@@ -13429,14 +21605,6 @@ async function renderLogin(hasSession = state.loginHasSession ?? false) {
           : ''
       }
     </div>`
-    for (const b of document.querySelectorAll('[data-portal]')) {
-      b.onclick = () => {
-        if (b.dataset.portal === choice) return
-        choice = b.dataset.portal
-        setPortalChoice(choice)
-        draw()
-      }
-    }
     $('#login-reload')?.addEventListener('click', () => location.reload())
     const pw = $('#pw')
     // the cursor in the field at once, but not on a phone (the keyboard would cover the page)
@@ -13447,15 +21615,12 @@ async function renderLogin(hasSession = state.loginHasSession ?? false) {
     $('#login-form').addEventListener('submit', async (e) => {
       e.preventDefault()
       if (!needPassword) {
-        if (choice === 'admin') openAdmin()
-        else location.href = location.pathname // the app, without ?portal
+        location.href = location.pathname // the app, without ?portal
         return
       }
       const msg = $('#login-msg')
       const keep = $('#login-keep')
       if (keep) remember('mupi-keep-signed-in', keep.checked ? '1' : '0')
-      // (also for the admin interface: the password is checked here first, a typo shows on this page and not on the
-      // admin interface's own login; a correct one signs in to the app as well)
       const r = await fetch(`${API}/login`, {
         method: 'POST',
         credentials: 'same-origin',
@@ -13463,8 +21628,7 @@ async function renderLogin(hasSession = state.loginHasSession ?? false) {
         body: JSON.stringify({ password: pw.value, remember: keep?.checked === true }),
       }).catch(() => null)
       if (r?.ok) {
-        if (choice === 'admin') openAdmin(pw.value)
-        else location.href = location.pathname
+        location.href = location.pathname
         return
       }
       msg.hidden = false
@@ -13486,7 +21650,7 @@ boot().catch((err) => {
   wireBootWays()
 })
 
-/* ---------- Start › "Angepinnt" (see eltern/pinned-cards.ts) ----------
+/* ---------- Start › "Angepinnt" (see app-api/pinned-cards.ts) ----------
  * Every card with a heading gets a pin. Pinned, it is on the start page
  *   - as a link (any card): a tile with its heading and page; a tap opens the page, goes to the card and marks it for
  *     a moment - the card is always the real one, nothing is copied;

@@ -72,10 +72,24 @@
         }
       },
       {
+        "id": "winamp",
+        "title": {
+          "de": "Das Winamp-Theme",
+          "en": "The Winamp theme"
+        }
+      },
+      {
         "id": "eltern-zugang",
         "title": {
           "de": "Einstellungen am Display",
           "en": "Settings on the display"
+        }
+      },
+      {
+        "id": "mehrere-benutzer",
+        "title": {
+          "de": "Mehrere Benutzer",
+          "en": "Several users"
         }
       }
     ]
@@ -123,6 +137,20 @@
         }
       },
       {
+        "id": "jellyfin",
+        "title": {
+          "de": "Jellyfin",
+          "en": "Jellyfin"
+        }
+      },
+      {
+        "id": "audible",
+        "title": {
+          "de": "Audible",
+          "en": "Audible"
+        }
+      },
+      {
         "id": "cover",
         "title": {
           "de": "Cover",
@@ -153,6 +181,13 @@
         }
       },
       {
+        "id": "kachel-limit",
+        "title": {
+          "de": "Kacheln mit Tageslimit",
+          "en": "Tiles with a day's limit"
+        }
+      },
+      {
         "id": "ruhezeiten",
         "title": {
           "de": "Ruhezeiten",
@@ -171,6 +206,106 @@
         "title": {
           "de": "Hör-Verlauf",
           "en": "Listening history"
+        }
+      }
+    ]
+  },
+  {
+    "id": "fotos",
+    "title": {
+      "de": "Fotos",
+      "en": "Photos"
+    },
+    "children": [
+      {
+        "id": "einschalten",
+        "title": {
+          "de": "Einschalten und Einstellungen",
+          "en": "Switching on and settings"
+        }
+      },
+      {
+        "id": "am-display",
+        "title": {
+          "de": "Fotos am Display",
+          "en": "Photos on the display"
+        }
+      },
+      {
+        "id": "hochladen",
+        "title": {
+          "de": "Fotos hochladen",
+          "en": "Uploading photos"
+        }
+      },
+      {
+        "id": "bildzeit",
+        "title": {
+          "de": "Bildzeit",
+          "en": "Picture time"
+        }
+      },
+      {
+        "id": "bildschirmschoner",
+        "title": {
+          "de": "Bildschirmschoner",
+          "en": "Screensaver"
+        }
+      },
+      {
+        "id": "nas-ordner",
+        "title": {
+          "de": "NAS-Ordner",
+          "en": "NAS folders"
+        }
+      },
+      {
+        "id": "immich",
+        "title": {
+          "de": "Immich",
+          "en": "Immich"
+        }
+      },
+      {
+        "id": "synology-photos",
+        "title": {
+          "de": "Synology Photos",
+          "en": "Synology Photos"
+        }
+      },
+      {
+        "id": "nextcloud",
+        "title": {
+          "de": "Nextcloud",
+          "en": "Nextcloud"
+        }
+      },
+      {
+        "id": "photoprism",
+        "title": {
+          "de": "PhotoPrism",
+          "en": "PhotoPrism"
+        }
+      },
+      {
+        "id": "icloud",
+        "title": {
+          "de": "iCloud (geteilte Alben)",
+          "en": "iCloud (shared albums)"
+        }
+      },
+      {
+        "id": "speichern-oder-live",
+        "title": {
+          "de": "Foto-Dienste: speichern oder live",
+          "en": "Photo services: keep or live"
+        }
+      },
+      {
+        "id": "probleme",
+        "title": {
+          "de": "Wenn Fotos fehlen",
+          "en": "When photos are missing"
         }
       }
     ]
@@ -229,6 +364,148 @@
         "title": {
           "de": "WLED",
           "en": "WLED"
+        }
+      }
+    ]
+  },
+  {
+    "id": "erweiterungen",
+    "title": {
+      "de": "Erweiterungen",
+      "en": "Extensions"
+    },
+    "children": [
+      {
+        "id": "installieren",
+        "title": {
+          "de": "Installieren und verwalten",
+          "en": "Installing and managing"
+        }
+      },
+      {
+        "id": "buttons",
+        "title": {
+          "de": "Buttons & GPIO Input",
+          "en": "Buttons & GPIO Input"
+        }
+      },
+      {
+        "id": "cd-laufwerk",
+        "title": {
+          "de": "USB-CD-Laufwerk",
+          "en": "USB CD drive"
+        }
+      },
+      {
+        "id": "uhrzeit",
+        "title": {
+          "de": "Uhrzeit in der Kopfzeile",
+          "en": "Time in the header"
+        }
+      },
+      {
+        "id": "wetter",
+        "title": {
+          "de": "Wetter",
+          "en": "Weather"
+        }
+      },
+      {
+        "id": "fussball",
+        "title": {
+          "de": "Fußball",
+          "en": "Football"
+        }
+      },
+      {
+        "id": "oled",
+        "title": {
+          "de": "OLED-Display",
+          "en": "OLED display"
+        }
+      },
+      {
+        "id": "ohne-dsi-display",
+        "title": {
+          "de": "Ohne DSI-Display",
+          "en": "Without DSI display"
+        }
+      },
+      {
+        "id": "nfc",
+        "title": {
+          "de": "NFC-Extension",
+          "en": "NFC extension"
+        }
+      },
+      {
+        "id": "nfc-tag-zuordnen",
+        "title": {
+          "de": "NFC: Tag mit einem Album verknüpfen",
+          "en": "NFC: Linking a tag to an album"
+        }
+      },
+      {
+        "id": "nfc-bild",
+        "title": {
+          "de": "NFC: Bild des Tags ändern",
+          "en": "NFC: Changing the picture of a tag"
+        }
+      },
+      {
+        "id": "nfc-zugeordnete-tags",
+        "title": {
+          "de": "NFC: Zugeordnete Tags",
+          "en": "NFC: Assigned tags"
+        }
+      },
+      {
+        "id": "nfc-sprachnachrichten",
+        "title": {
+          "de": "NFC: Sprachnachrichten",
+          "en": "NFC: Spoken messages"
+        }
+      },
+      {
+        "id": "nfc-drehregler",
+        "title": {
+          "de": "NFC: Drehregler",
+          "en": "NFC: Rotary knob"
+        }
+      },
+      {
+        "id": "nfc-leser",
+        "title": {
+          "de": "NFC: Leser hinzufügen",
+          "en": "NFC: Adding readers"
+        }
+      },
+      {
+        "id": "nfc-pn5180",
+        "title": {
+          "de": "NFC: PN5180 anschließen",
+          "en": "NFC: Connecting the PN5180"
+        }
+      },
+      {
+        "id": "nfc-rc522",
+        "title": {
+          "de": "NFC: RC522 anschließen",
+          "en": "NFC: Connecting the RC522"
+        }
+      },
+      {
+        "id": "nfc-pn532",
+        "title": {
+          "de": "NFC: PN532 anschließen",
+          "en": "NFC: Connecting the PN532"
+        }
+      },
+      {
+        "id": "nfc-usb",
+        "title": {
+          "de": "NFC: USB-Leser anschließen",
+          "en": "NFC: Connecting a USB reader"
         }
       }
     ]

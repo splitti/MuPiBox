@@ -7,8 +7,10 @@ This page is for everyone who wants to look “under the hood” of the box, for
 | Path | Content |
 | --- | --- |
 | `/etc/mupibox/mupiboxconfig.json` | the box's configuration. The app writes into it, and so does the editor under **Experts** |
-| `/home/dietpi/.mupibox/Sonos-Kids-Controller-master/` | the installed software: server, app (`mupi-app/`), display (`www/`) and this manual (`manual/`) |
-| `/home/dietpi/.mupibox/spotifycontroller-main/` | the player (Spotify and local playback) |
+| `/home/dietpi/.mupibox/server/` | the installed software: server, app (`mupi-app/`), display (`www/`) and this manual (`manual/`). An update replaces the folder |
+| `/home/dietpi/.mupibox/player/` | the player (Spotify and local playback) |
+| `/home/dietpi/.mupibox/data/` | what the box keeps: the library with the resume points and episode positions (`library/`), the covers of the local albums (`covers/`), the play and battery logs (`logs/`). An update never touches the folder |
+| `/home/dietpi/.mupibox/cache/` | what the box can fetch or make again (Spotify answers, thumbnails, podcast pictures). May be emptied at any time |
 | `/home/dietpi/MuPiBox/media/` | the media on the memory card (this is also the Samba share `mupibox`) |
 | `/home/dietpi/MuPiBox/sysmedia/` | system files: boot screens, sounds |
 | `/home/dietpi/mupibox-backups/` | the backups made before an update (`before-update-….zip`, the newest three) |
@@ -24,7 +26,7 @@ This page is for everyone who wants to look “under the hood” of the box, for
 
 | Port | Who | Purpose |
 | --- | --- | --- |
-| 80 and 443 | web server | the app (`/app/`), this manual (`/manual/`) and the admin interface. It passes requests for the app and the interface on to the server |
+| 80 and 443 | web server | the app (`/app/`), this manual (`/manual/`) and the covers of the radio stations (`/cover/`). It passes requests for the app and the interface on to the server |
 | 8200 | server | display and the box's own interface. The display runs via `http://localhost:8200`. The app can always be reached here via http (`/app/`) |
 | 5005 | player | the player's interface. It only accepts commands from the box itself, not from the network |
 

@@ -1,8 +1,8 @@
 #!/bin/bash
 #
 
-
-until pids=$(pgrep -f "chromium")
+# (after the kiosk is up - a box without the DSI display has none: mupibox.headless)
+until pids=$(pgrep -f "chromium") || [ "$(/usr/bin/jq -r '.mupibox.headless // false' /etc/mupibox/mupiboxconfig.json 2>/dev/null)" = "true" ]
 do
 	sleep 1
 done

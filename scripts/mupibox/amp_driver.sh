@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # The I2S driver of the MAX98357A amplifier (the MuPiHAT's, also sold as a board of its own) in the boot configuration,
-# for the admin interface's choice of the sound card (mupi.php) - the app does the same in eltern/hardware.ts:
+# for the admin interface's choice of the sound card (mupi.php) - the app does the same in app-api/hardware.ts:
 #   on   the driver lines where they count for every Pi (before the first [section] or under an [all] of their own);
 #        DietPi does not know the card's name and leaves the drivers alone, so without the HAT the box had no sound
 #   off  out again when another card is chosen and the MuPiHAT is not on (it would clash with another I2S card)

@@ -24,6 +24,25 @@ Der **Eltern-Bot** verbindet die Box mit Telegram. Er schickt dir Nachrichten un
 
 Beim Ausschalten sagt die Nachricht auch warum: leerer Akku, zu lange keine Wiedergabe (Leerlauf) oder ein normales Ausschalten.
 
+## Bildzeit
+
+Ist die [Fotoanzeige](../fotos/index.md) an, nennt `/status` auch die **Bildzeit** von heute: wie lange schon Fotos angesehen wurden, und mit eigenem Limit, wie viel noch übrig ist. Hat die Bildzeit ein eigenes Limit ([Bildzeit](../fotos/bildzeit.md)), gibt es dafür zwei Befehle, die auch als Knöpfe unter `/help` stehen:
+
+| Befehl | Wirkung |
+| --- | --- |
+| `/photoextend 10` | heute 10 Minuten Bildzeit dazu (ohne Zahl 10) |
+| `/photofree` | Bildzeit heute ohne Limit |
+
+Beides gilt nur heute, wie **+10 min** und **Heute frei** in der App.
+
+## Kacheln mit Tageslimit
+
+Haben einzelne Kacheln eine eigene Grenze am Tag ([Kacheln mit Tageslimit](../spielzeit/kachel-limit.md)), nennt `/status` sie mit den Minuten von heute. `/tiles` (auch als Knopf **Kacheln mit Limit** unter `/help`) zeigt sie mit je zwei Knöpfen: **+10** gibt der Kachel heute 10 Minuten mehr, **frei** hebt ihre Grenze für heute auf.
+
+## Mehrere Benutzer
+
+Sind [mehrere Benutzer](../bedienung/mehrere-benutzer.md) an, meint ein **Name am Ende** eines Befehls dieses Kind, ohne Namen gilt der Befehl für das aktive. Das geht bei `/status`, `/extend`, `/photoextend`, `/photofree`, `/tiles` und `/limit set`, zum Beispiel `/status Leni` oder `/extend 30 Leni`. Für ein Kind, das gerade nicht hört, nennt `/status` seinen Stand von heute. Bonus-Minuten zählen, sobald es an der Reihe ist. `/release` und `/quietnow` gelten für die ganze Box. Der Wochenrückblick kommt für jedes Kind einzeln.
+
 ## Anmelden mit einem Link
 
 Der Bot schickt dir mit `/login` einen **Link**, der dich in der App anmeldet, auch ohne Passwort ([Die App öffnen und anmelden](../erste-schritte/app-oeffnen.md)).

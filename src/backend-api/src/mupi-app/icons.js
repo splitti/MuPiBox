@@ -16,6 +16,7 @@ export const ICONS = {
   pal: "M12 3a9 9 0 1 0 0 18c1 0 1.5-.8 1.5-1.5 0-1.2-1-1.5-1-2.5s.8-1.5 2-1.5h2a4 4 0 0 0 4-4C20.5 6.5 16.7 3 12 3zM7.5 11h.01M10 7.5h.01M15 7.5h.01",
   sync: "M20 11a8 8 0 0 0-14-4.5L4 9M4 4v5h5M4 13a8 8 0 0 0 14 4.5L20 15M20 20v-5h-5",
   ext: "M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5",
+  heart: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21.2l7.8-7.7 1-1.1a5.5 5.5 0 0 0 0-7.8z",
   hist: "M4 20V10M10 20V4M16 20v-7M22 20H2",
   music: "M9 18V6l12-2v12M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z",
   folder: "M3 6h6l2 2h10v11H3z",
@@ -27,6 +28,7 @@ export const ICONS = {
   vol: "M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6",
   plug: "M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0zM12 18v4",
   lock: "M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4",
+  users: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8",
   server: "M4 4h16v6H4zM4 14h16v6H4zM8 7h.01M8 17h.01",
   grid: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
   boot: "M4 5h16v14H4zM9 12l2 2 4-4",
@@ -47,6 +49,8 @@ export const ICONS = {
   download: "M12 4v11M7 10l5 5 5-5M5 20h14",
   doc: "M6 2h9l5 5v15H6zM14 2v6h6M9 13h6M9 17h6",
   globe: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18",
+  prism: "M12 3 2.5 20h19zM12 3l3.5 17",
+  cloud: "M7 18h10.5a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.4 9.1 4.5 4.5 0 0 0 7 18z",
   pulse: "M3 12h4l3-7 4 14 3-7h4",
   mobile: "M8 2.5h8a1.5 1.5 0 0 1 1.5 1.5v16a1.5 1.5 0 0 1-1.5 1.5H8A1.5 1.5 0 0 1 6.5 20V4A1.5 1.5 0 0 1 8 2.5zM11 18h2",
   lang: "M4 5h9M8.5 3v2M6 9c1.5 2.5 3.5 4.3 6 5.3M11 5c-.8 4.2-3.3 7.6-7 9.3M13 21l4-9 4 9M14.5 18h5",
@@ -58,9 +62,18 @@ export const ICONS = {
   close: "M6 6l12 12M18 6L6 18",
   check: "M5 12l5 5 9-10",
   book: "M4 19V5a2 2 0 0 1 2-2h14v14H6a2 2 0 0 0-2 2zM4 19a2 2 0 0 0 2 2h14v-4",
+  play: "M7 4l13 8-13 8z",
+  trash: "M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6",
+  swap: "M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4",
+  undo: "M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3",
+  edit: "M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4",
 }
 
 export function icon(name, size = 20) {
+  // (the picture of an extension - a file of the box, drawn through a mask in the colour of the text)
+  if (/^\/api\/ext-files\/[a-z][a-z0-9-]*\/[A-Za-z0-9._-]+$/.test(String(name))) {
+    return `<span class="ic ext-glyph" style="width:${size}px;height:${size}px;--g:url('${name}')" aria-hidden="true"></span>`
+  }
   const d = ICONS[name] ?? ICONS.info
   return `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`
 }

@@ -2,7 +2,9 @@
 #
 # Numbers the entries of the library: "index" 0, 1, … (the resume list and the display address an entry by it).
 
-DATA="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json"
+. /usr/local/bin/mupibox/mupi_paths.sh
+
+DATA="${MUPI_LIBRARY}/data.json"
 DATA_LOCK="/tmp/.data.lock"
 
 if [ "$EUID" -ne 0 ]

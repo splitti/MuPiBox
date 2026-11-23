@@ -12,7 +12,7 @@ Die Seite zeigt die **installierte Version** und die verfügbaren Versionen aus 
 | **Beta** | neuere Funktionen, noch in der Erprobung |
 | **Entwicklung** | die Entwicklungsversion. Auf eigenes Risiko |
 
-Tippe beim gewünschten Kanal auf **Installieren** (oder **Neu installieren**, wenn diese Version schon drauf ist). Während das Update läuft, zeigt die Seite den Fortschritt und das Display das Wartungsbild ([Cover und Themes](../bedienung/cover-und-themes.md)). Die Box ist dabei 10 bis 30 Minuten nicht nutzbar und startet danach von selbst neu. Einstellungen und Bibliothek bleiben erhalten.
+Tippe beim gewünschten Kanal auf **Installieren** (oder **Neu installieren**, wenn diese Version schon drauf ist). Während das Update läuft, zeigt die Seite den Fortschritt und das Display das Wartungsbild ([Cover und Themes](../bedienung/cover-und-themes.md)), unten mit einem Balken: was gerade geschieht (vorbereiten, laden, Pakete, Programme, Einstellungen) und wie weit es ist. Bricht das Update ab, bleibt die Box auf der bisherigen Version und ihre Oberfläche kommt von selbst zurück. Nur wenn die Box danach neu gestartet werden muss, steht das in der Leiste. Die Box ist dabei 10 bis 30 Minuten nicht nutzbar und startet danach von selbst neu. Einstellungen und Bibliothek bleiben erhalten.
 
 > [!WARNING]
 > **Mache vorher ein Backup** ([Backup](backup.md)). Die **Entwicklungsversion kann die Installation beschädigen.** Stelle bei einem Update sicher, dass die Box nicht unterbrochen wird: Strom und WLAN müssen bis zum Ende halten. Am besten hängt die Box am Netzteil.

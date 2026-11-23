@@ -1,0 +1,489 @@
+// Settings of the box display that only the admin interface could change (MuPi-Conf, admin.php): the view of the
+// cover flow, the categories and hold times on the display, resolution, brightness, rotation, the reading-aloud
+// language, the custom theme's background picture, and a look at the display (screenshot, VNC).
+//
+// The display reads most of these only when a page is loaded: the admin interface restarted the whole kiosk for every
+// save (several seconds black). Here the display page is reloaded instead (player /display/reload-page, picked up
+// by the display within a few seconds), which keeps playback running.
+
+import { execFile, spawn } from 'node:child_process'
+import { promises as fsp } from 'node:fs'
+import type { Router } from 'express'
+import type { MupiboxConfig } from '../models/mupibox-config.model'
+import { imageSize } from './covers'
+import { requireCsrf, requireSession } from './middleware'
+import { episodeStateSettings } from '../episode-state'
+import { heardSettings } from '../heard'
+import { applyNightDim, nightDimmed, nightDimOf, parseNightDim, sunriseLabel, sunsetLabel } from './night-dim'
+import { CUSTOM_THEME_CSS, customThemeCss, customThemeOf } from './custom-theme'
+import { bootConfigPath } from './boot-paths'
+import { activateSkin, addSkin, ensureDefaultSkin, listSkins, removeSkinById } from './winamp-skin'
+import { WWW_DIR } from '../paths'
+
+export interface DisplayDeps {
+  getMupiboxConfig: () => MupiboxConfig | undefined
+  updateMupiboxConfig: (mutate: (cfg: Record<string, unknown>) => void) => Promise<void>
+}
+
+const CATEGORIES = ['audiobook', 'music', 'nas', 'other']
+const ROTATIONS: Record<string, string[]> = {
+  display_hdmi_rotate: ['0', '1', '2', '3', '0x10000', '0x20000'],
+  lcd_rotate: ['0', '2'],
+  display_lcd_rotate: ['0', '2'],
+}
+const BACKGROUND = '/home/dietpi/MuPiBox/themes/custom-bg.jpg'
+const SCREENSHOT = '/tmp/mupibox-app-screenshot.png'
+const SCREENSHOT_SH = '/usr/local/bin/mupibox/screenshot.sh'
+
+function run(cmd: string, args: string[], timeoutMs = 15000): Promise<{ ok: boolean; stdout: string }> {
+  return new Promise((resolve) => {
+    execFile(cmd, args, { timeout: timeoutMs, maxBuffer: 1024 * 1024 }, (err, stdout) => resolve({ ok: !err, stdout: stdout ?? '' }))
+  })
+}
+
+// In the background: what takes a while or restarts something must not hold the answer
+function detached(script: string): void {
+  const child = spawn('sh', ['-c', script], { detached: true, stdio: 'ignore' })
+  child.on('error', () => undefined)
+  child.unref()
+}
+
+/** The skin changed: when the box shows the Winamp theme, the display takes it over at once. */
+async function winampReload(deps: DisplayDeps): Promise<boolean> {
+  if (mupibox(deps).theme !== 'winamp') return false
+  try {
+    return (await fetch('http://127.0.0.1:5005/display/reload-theme', { method: 'POST', signal: AbortSignal.timeout(3000) })).ok
+  } catch {
+    return false
+  }
+}
+
+/** Asks the display to load its page again (it then reads the changed settings); false when the player did not answer. */
+export async function reloadDisplayPage(): Promise<boolean> {
+  try {
+    const r = await fetch('http://127.0.0.1:5005/display/reload-page', { method: 'POST', signal: AbortSignal.timeout(3000) })
+    return r.ok
+  } catch {
+    return false
+  }
+}
+
+async function readBrightness(): Promise<number | null> {
+  try {
+    const dir = (await fsp.readdir('/sys/class/backlight'))[0]
+    if (!dir) return null
+    const [now, max] = await Promise.all(['brightness', 'max_brightness'].map((f) => fsp.readFile(`/sys/class/backlight/${dir}/${f}`, 'utf8')))
+    const m = Number.parseInt(max, 10)
+    return m > 0 ? Math.round((Number.parseInt(now, 10) / m) * 100) : null
+  } catch {
+    return null
+  }
+}
+
+async function readRotations(): Promise<Record<string, string>> {
+  let text = ''
+  try {
+    text = await fsp.readFile(await bootConfigPath(), 'utf8')
+  } catch {
+    // not a Raspberry Pi (development)
+  }
+  const out: Record<string, string> = {}
+  for (const key of Object.keys(ROTATIONS)) out[key] = new RegExp(`^[ \\t]*${key}=(\\S+)`, 'm').exec(text)?.[1] ?? '0'
+  return out
+}
+
+const mupibox = (deps: DisplayDeps) => (deps.getMupiboxConfig()?.mupibox ?? {}) as Record<string, unknown>
+
+const num = (v: unknown, min: number, max: number, step = 1): number | undefined => {
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : Number.NaN
+  if (!Number.isFinite(n) || n < min || n > max) return undefined
+  return Math.round(n / step) * step
+}
+
+export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
+  // (the theme "winamp" shows the classic base skin until the parents upload another one)
+  ensureDefaultSkin().catch((err: Error) => console.error(`[display] default Winamp skin: ${err.message}`))
+  /** GET /api/app/display-options - everything the pages Ansicht, Vorlesen, Display and Bedienung show. */
+  router.get('/display-options', requireSession, async (_req, res) => {
+    const cfg = deps.getMupiboxConfig() as Record<string, Record<string, unknown> | undefined> | undefined
+    const mb = cfg?.mupibox ?? {}
+    const chromium = cfg?.chromium ?? {}
+    const langs = Array.isArray(mb.googlettslanguages) ? (mb.googlettslanguages as Record<string, unknown>[]) : []
+    res.json({
+      coverflowShowNames: mb.coverflowShowNames === true,
+      hideScrollbar: mb.hideScrollbar === true,
+      // (the scrollbar of the cover lists in every theme: the theme's own, or across the width and thicker)
+      scrollbarStyle: mb.scrollbarStyle === 'full' ? 'full' : 'standard',
+      hiddenCategories: Array.isArray(mb.hiddenCategories) ? (mb.hiddenCategories as unknown[]).filter((c) => CATEGORIES.includes(String(c))) : [],
+      // (the tab the display opens with; a hidden one: the display takes the first shown tab)
+      startCategory: CATEGORIES.includes(String(mb.startCategory)) ? String(mb.startCategory) : 'audiobook',
+      resume: num(mb.resume, 1, 99) ?? 9,
+      listviewTimer: num(mb.listviewTimer, 0.5, 5, 0.5) ?? 2.5,
+      settingsAccessTimer: num(mb.settingsAccessTimer, 1, 10, 0.5) ?? 3,
+      // podcast episodes go on where they were left (the player, spotify-control.js), remembered for so many days
+      // (0: without end)
+      episodeResume: mb.episodeResume !== false,
+      // ("Hören mit" on the display's player: a tap on the volume chooses speaker or Bluetooth - audio-output.ts)
+      outputPicker: mb.outputPicker !== false,
+      episodeResumeDays: num(mb.episodeResumeDays, 0, 3650) ?? 180,
+      // new episodes marked (for so many days) and how far an episode was heard shown on the display (episode-state.ts)
+      ...episodeStateSettings(mb),
+      // ticks at the albums of a list: started (yellow), heard to the end (green) - heard.ts
+      heardMarks: heardSettings(mb).enabled,
+      resX: num(chromium.resX, 200, 7680) ?? 800,
+      resY: num(chromium.resY, 200, 4320) ?? 480,
+      // (the normal brightness, not the one of the evening: that is lower while "Abends dunkler" dims)
+      brightness: await readBrightness().then((now) => (now === null ? null : typeof mb.displayBrightness === 'number' ? mb.displayBrightness : now)),
+      nightDim: { ...nightDimOf(cfg), dimmed: nightDimmed(), sunsetAt: sunsetLabel(nightDimOf(cfg), new Date()), sunriseAt: sunriseLabel(nightDimOf(cfg), new Date()) },
+      rotation: await readRotations(),
+      ttsLanguage: typeof mb.ttsLanguage === 'string' ? mb.ttsLanguage : 'en',
+      ttsLanguages: langs.map((l) => ({ code: String(l['iso639-1'] ?? ''), name: String(l.Language ?? '') })).filter((l) => l.code),
+    })
+  })
+
+  /**
+   * POST /api/app/display-options  (any part of what GET shows)
+   * Answer: what happened on top of saving - reloaded (the display page), restartKiosk (resolution), reboot (rotation),
+   * restartPlayer (reading-aloud language).
+   */
+  // The place of the box for "Abends dunkler" at sunset: a name looked up at Open-Meteo's geocoding (only the name the parents typed
+  // goes out - no coordinates, nothing of the box). The app can also take the coordinates from the phone or have them typed.
+  router.get('/geocode', requireSession, async (req, res) => {
+    const q = String(req.query.q ?? '').trim().slice(0, 80)
+    if (q.length < 2) return res.status(400).json({ error: 'query too short' })
+    const language = /^[a-z]{2}$/.test(String(req.query.lang ?? '')) ? String(req.query.lang) : 'en'
+    try {
+      const response = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&format=json&language=${language}`, { signal: AbortSignal.timeout(8000) })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const body = (await response.json()) as { results?: { name?: string; admin1?: string; country?: string; latitude?: number; longitude?: number }[] }
+      const results = (Array.isArray(body.results) ? body.results : [])
+        .filter((r) => typeof r.name === 'string' && typeof r.latitude === 'number' && typeof r.longitude === 'number' && Math.abs(r.latitude) <= 90 && Math.abs(r.longitude) <= 180)
+        .map((r) => ({ name: String(r.name), region: typeof r.admin1 === 'string' ? r.admin1 : '', country: typeof r.country === 'string' ? r.country : '', lat: Math.round((r.latitude as number) * 1000) / 1000, lon: Math.round((r.longitude as number) * 1000) / 1000 }))
+      res.json({ results })
+    } catch (error) {
+      res.status(502).json({ error: `geocoding: ${(error as Error).message}` })
+    }
+  })
+
+  router.post('/display-options', requireSession, requireCsrf, async (req, res) => {
+    const body = (req.body ?? {}) as Record<string, unknown>
+    const mb: Record<string, unknown> = {}
+    const chromium: Record<string, unknown> = {}
+    const bad = (what: string) => res.status(400).json({ error: `invalid ${what}` })
+    for (const key of ['coverflowShowNames', 'hideScrollbar', 'episodeResume', 'newEpisodes', 'episodeProgress', 'outputPicker', 'heardMarks']) {
+      if (body[key] === undefined) continue
+      if (typeof body[key] !== 'boolean') return bad(key)
+      mb[key] = body[key]
+    }
+    if (body.scrollbarStyle !== undefined) {
+      if (body.scrollbarStyle !== 'standard' && body.scrollbarStyle !== 'full') return bad('scrollbarStyle')
+      mb.scrollbarStyle = body.scrollbarStyle
+    }
+    if (body.hiddenCategories !== undefined) {
+      const list = body.hiddenCategories
+      if (!Array.isArray(list) || !list.every((c) => CATEGORIES.includes(String(c)))) return bad('hiddenCategories')
+      const unique = [...new Set(list.map(String))]
+      // at least one tab stays on the display
+      if (unique.length >= CATEGORIES.length) return res.status(400).json({ error: 'at least one category must stay visible' })
+      mb.hiddenCategories = unique
+    }
+    if (body.startCategory !== undefined) {
+      if (!CATEGORIES.includes(String(body.startCategory))) return bad('startCategory')
+      mb.startCategory = String(body.startCategory)
+    }
+    const numbers: [string, number, number, number, Record<string, unknown>][] = [
+      ['resume', 1, 99, 1, mb],
+      ['listviewTimer', 0.5, 5, 0.5, mb],
+      ['settingsAccessTimer', 1, 10, 0.5, mb],
+      ['episodeResumeDays', 0, 3650, 1, mb],
+      ['newEpisodeDays', 3, 14, 1, mb],
+      ['resX', 200, 7680, 1, chromium],
+      ['resY', 200, 4320, 1, chromium],
+    ]
+    for (const [key, min, max, step, target] of numbers) {
+      if (body[key] === undefined) continue
+      const v = num(body[key], min, max, step)
+      if (v === undefined) return bad(key)
+      // (the resolution stays text in the config, as the admin interface stores it and chromium-autostart.sh reads it)
+      target[key] = target === chromium ? String(v) : v
+    }
+    let brightness: number | undefined
+    if (body.brightness !== undefined) {
+      brightness = num(body.brightness, 5, 100)
+      if (brightness === undefined) return bad('brightness')
+      mb.displayBrightness = brightness
+    }
+    // "Abends dunkler" (night-dim.ts)
+    if (body.nightDim !== undefined) {
+      const nd = parseNightDim(body.nightDim)
+      if (!nd) return bad('nightDim')
+      mb.nightDim = nd
+    }
+    let tts: string | undefined
+    if (body.ttsLanguage !== undefined) {
+      const list = mupibox(deps).googlettslanguages
+      const langs = Array.isArray(list) ? (list as Record<string, unknown>[]).map((l) => String(l['iso639-1'])) : []
+      if (typeof body.ttsLanguage !== 'string' || !langs.includes(body.ttsLanguage)) return bad('ttsLanguage')
+      tts = body.ttsLanguage
+      mb.ttsLanguage = tts
+    }
+    const rotation: Record<string, string> = {}
+    if (body.rotation !== undefined) {
+      const r = body.rotation as Record<string, unknown>
+      if (!r || typeof r !== 'object') return bad('rotation')
+      for (const [key, allowed] of Object.entries(ROTATIONS)) {
+        if (r[key] === undefined) continue
+        if (!allowed.includes(String(r[key]))) return bad(key)
+        rotation[key] = String(r[key])
+      }
+    }
+
+    if (Object.keys(mb).length || Object.keys(chromium).length) {
+      await deps.updateMupiboxConfig((cfg) => {
+        cfg.mupibox = { ...((cfg.mupibox as Record<string, unknown>) ?? {}), ...mb }
+        if (Object.keys(chromium).length) cfg.chromium = { ...((cfg.chromium as Record<string, unknown>) ?? {}), ...chromium }
+      })
+    }
+    const result: Record<string, unknown> = { ok: true }
+    // brightness: right away (it is set again at the next start from mupibox.displayBrightness, see mupi_startup.sh)
+    if (brightness !== undefined) {
+      const dirs = await fsp.readdir('/sys/class/backlight').catch(() => [] as string[])
+      for (const dir of dirs) {
+        const max = Number.parseInt(await fsp.readFile(`/sys/class/backlight/${dir}/max_brightness`, 'utf8').catch(() => '255'), 10) || 255
+        const value = String(Math.round((brightness / 100) * max))
+        await run('sudo', ['sh', '-c', `echo ${value} > /sys/class/backlight/${dir}/brightness`])
+      }
+    }
+    // the evening's dimming at once (also over a new normal brightness, which was just written as it is)
+    if (brightness !== undefined || body.nightDim !== undefined) {
+      await applyNightDim(deps.getMupiboxConfig(), true)
+      result.dimmed = nightDimmed()
+      result.sunsetAt = sunsetLabel(nightDimOf(deps.getMupiboxConfig()), new Date())
+      result.sunriseAt = sunriseLabel(nightDimOf(deps.getMupiboxConfig()), new Date())
+    }
+    // rotation: into config.txt as the admin interface does (DietPi's G_CONFIG_INJECT); needs a restart
+    const bootConfig = await bootConfigPath()
+    for (const [key, value] of Object.entries(rotation)) {
+      await run('sudo', ['su', '-', 'dietpi', '-c', `. /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT '${key}=' '${key}=${value}' ${bootConfig}`], 30000)
+      result.reboot = true
+    }
+    if (tts !== undefined) {
+      // the player reads the language from its own config at its start: spoken names of the old language go
+      detached('sudo rm -f /home/dietpi/MuPiBox/tts_files/*.mp3; sudo /usr/local/bin/mupibox/setting_update.sh >/dev/null 2>&1; PM2=$(command -v pm2 || echo /usr/local/bin/pm2); "$PM2" restart spotify-control >/dev/null 2>&1')
+      result.restartPlayer = true
+    }
+    if (chromium.resX !== undefined || chromium.resY !== undefined) {
+      // the window size of the kiosk is set when chromium starts
+      // (as the admin interface: with dietpi's login environment, so chromium finds its display)
+      detached('sudo /usr/local/bin/mupibox/setting_update.sh >/dev/null 2>&1; sudo -i -u dietpi bash -c "setsid nohup /usr/local/bin/mupibox/restart_kiosk.sh >/dev/null 2>&1 < /dev/null &"')
+      result.restartKiosk = true
+    } else if (['coverflowShowNames', 'hideScrollbar', 'scrollbarStyle', 'hiddenCategories', 'startCategory', 'listviewTimer', 'settingsAccessTimer'].some((k) => k in mb)) {
+      result.reloaded = await reloadDisplayPage()
+    }
+    res.json(result)
+  })
+
+  /** POST /api/app/display/reload-page - the display loads its page again (e.g. after "Display off after"). */
+  router.post('/display/reload-page', requireSession, requireCsrf, async (_req, res) => {
+    res.json({ ok: await reloadDisplayPage() })
+  })
+
+  /**
+   * PUT /api/app/display/background  body: a JPEG
+   * The background picture of the theme "custom". The admin interface scaled smaller pictures up to 800 x 480 with
+   * PHP's GD; the theme shows it with background-size: cover, so any JPEG of at least 400 x 240 is taken as it is.
+   */
+  router.put('/display/background', requireSession, requireCsrf, async (req, res) => {
+    const chunks: Buffer[] = []
+    let size = 0
+    for await (const chunk of req) {
+      size += (chunk as Buffer).length
+      if (size > 15 * 1024 * 1024) {
+        res.status(413).json({ error: 'too_large' })
+        req.destroy()
+        return
+      }
+      chunks.push(chunk as Buffer)
+    }
+    const bytes = Buffer.concat(chunks)
+    const info = imageSize(bytes)
+    if (info?.type !== 'jpeg') {
+      res.status(415).json({ error: 'not_jpeg' })
+      return
+    }
+    if (info.width < 400 || info.height < 240) {
+      res.status(422).json({ error: 'too_small', width: info.width, height: info.height })
+      return
+    }
+    const tmp = `/tmp/mupibox-custom-bg-${process.pid}.jpg`
+    await fsp.writeFile(tmp, bytes)
+    // the file belongs to www-data (written by the admin interface so far)
+    const moved = await run('sudo', ['install', '-m', '644', '-o', 'www-data', '-g', 'www-data', tmp, BACKGROUND])
+    await fsp.unlink(tmp).catch(() => undefined)
+    if (!moved.ok) {
+      res.status(500).json({ error: 'write_failed' })
+      return
+    }
+    const theme = String(mupibox(deps).theme ?? '')
+    res.json({ ok: true, width: info.width, height: info.height, active: theme === 'custom', reloaded: theme === 'custom' ? await reloadDisplayPage() : false })
+  })
+
+  /**
+   * The skins of the theme "winamp" (classic Winamp 2.x skins, see winamp-skin.ts): all that were uploaded are kept in a
+   * list, one of them is shown.
+   * GET    /api/app/display/winamp-skin          the list ({skins: [{id, name, version, active}]}) and the one shown
+   * PUT    /api/app/display/winamp-skin          body: a .wsz, header X-Skin-Name: its file name - added and shown
+   * POST   /api/app/display/winamp-skin/select   {id} - shown from now on
+   * DELETE /api/app/display/winamp-skin?id=...   taken out of the list (the one shown goes too, when it is that one)
+   * The theme works on a display of 1920 x 480 and, one window at a time, on smaller ones; the skin is copied into the
+   * display's theme data and the display loads it again at once (no page reload) when "winamp" is the theme on the box.
+   */
+  router.get('/display/winamp-skin', requireSession, async (_req, res) => {
+    const skins = await listSkins()
+    const shown = skins.find((s) => s.active)
+    res.json({ installed: !!shown, name: shown?.name ?? null, version: shown?.version ?? null, id: shown?.id ?? null, skins, active: mupibox(deps).theme === 'winamp' })
+  })
+
+  router.put('/display/winamp-skin', requireSession, requireCsrf, async (req, res) => {
+    const chunks: Buffer[] = []
+    let size = 0
+    for await (const chunk of req) {
+      size += (chunk as Buffer).length
+      if (size > 8 * 1024 * 1024) {
+        res.status(413).json({ error: 'too_large' })
+        req.destroy()
+        return
+      }
+      chunks.push(chunk as Buffer)
+    }
+    const name = decodeURIComponent(String(req.headers['x-skin-name'] ?? 'Skin'))
+    try {
+      const { id, meta } = await addSkin(Buffer.concat(chunks), name)
+      res.json({ ok: true, id, name: meta.name, files: Object.keys(meta.files).length, reloaded: await winampReload(deps) })
+    } catch (err) {
+      const message = (err as Error).message
+      res.status(message === 'not a Winamp skin' || message === 'not a zip' || message === 'broken zip' ? 422 : 500).json({ error: message })
+    }
+  })
+
+  router.post('/display/winamp-skin/select', requireSession, requireCsrf, async (req, res) => {
+    const id = typeof (req.body as { id?: unknown } | undefined)?.id === 'string' ? (req.body as { id: string }).id : ''
+    const meta = await activateSkin(id)
+    if (!meta) {
+      res.status(404).json({ error: 'no such skin' })
+      return
+    }
+    res.json({ ok: true, id, name: meta.name, reloaded: await winampReload(deps) })
+  })
+
+  router.delete('/display/winamp-skin', requireSession, requireCsrf, async (req, res) => {
+    const id = typeof req.query.id === 'string' ? req.query.id : ''
+    if (!(await removeSkinById(id))) {
+      res.status(404).json({ error: 'no such skin' })
+      return
+    }
+    res.json({ ok: true, reloaded: await winampReload(deps) })
+  })
+
+  /** GET /api/app/display/custom-theme - the own theme's settings (light/dark, veil, accent, font, size). */
+  router.get('/display/custom-theme', requireSession, async (_req, res) => {
+    const hasPicture = await fsp
+      .stat(BACKGROUND)
+      .then(() => true)
+      .catch(() => false)
+    res.json({ ...customThemeOf(mupibox(deps).customTheme), hasPicture, active: mupibox(deps).theme === 'custom' })
+  })
+
+  /**
+   * POST /api/app/display/custom-theme  {mode, resolved, veil, accent, font, size}
+   * Kept in mupibox.customTheme (also while another theme is chosen) and written as the stylesheet the display adds
+   * to the theme "custom"; is it the theme on the box, the display takes it over at once (no page reload).
+   */
+  router.post('/display/custom-theme', requireSession, requireCsrf, async (req, res) => {
+    const settings = { ...customThemeOf(req.body), v: Date.now() }
+    try {
+      await fsp.writeFile(CUSTOM_THEME_CSS, customThemeCss(settings))
+    } catch {
+      res.status(500).json({ error: 'write_failed' })
+      return
+    }
+    await deps.updateMupiboxConfig((cfg) => {
+      const mb = (cfg.mupibox ?? {}) as Record<string, unknown>
+      mb.customTheme = settings
+      cfg.mupibox = mb
+    })
+    let displayUpdated = false
+    if (mupibox(deps).theme === 'custom') {
+      try {
+        displayUpdated = (await fetch('http://127.0.0.1:5005/display/reload-theme', { method: 'POST', signal: AbortSignal.timeout(3000) })).ok
+      } catch {
+        // the display takes it over on its next start
+      }
+    }
+    res.json({ ok: true, settings, displayUpdated })
+  })
+
+  /** GET /api/app/theme-font/:name - a font of the own theme for the app's preview (from the display's theme data). */
+  const THEME_FONTS: Record<string, string> = { baloo: '_fonts/Baloo2-Variable.ttf', rye: 'steampunk/Rye-Regular.ttf' }
+  router.get('/theme-font/:name', requireSession, (req, res) => {
+    const file = THEME_FONTS[String(req.params.name)]
+    if (!file) {
+      res.status(404).end()
+      return
+    }
+    res.sendFile(`${WWW_DIR}/theme-data/${file}`, { headers: { 'Content-Type': 'font/ttf', 'Cache-Control': 'public, max-age=86400' } }, (err) => {
+      if (err && !res.headersSent) res.status(404).end()
+    })
+  })
+
+  // (the stylesheet after an update or a restore: written again from the settings when it is missing)
+  void fsp.access(CUSTOM_THEME_CSS).catch(async () => {
+    const stored = mupibox(deps).customTheme
+    if (stored) await fsp.writeFile(CUSTOM_THEME_CSS, customThemeCss(customThemeOf(stored))).catch(() => undefined)
+  })
+
+  /** GET /api/app/display/background - the current background picture (for the preview). */
+  router.get('/display/background', requireSession, (_req, res) => {
+    res.setHeader('Cache-Control', 'no-cache')
+    res.sendFile(BACKGROUND, (err) => {
+      if (err && !res.headersSent) res.status(404).end()
+    })
+  })
+
+  /**
+   * GET /api/app/display/screenshot - what the display shows right now (PNG, screenshot.sh: scrot on the kiosk's X
+   * display; with the display off - a picture would be black - "X-Display: off" with the last picture and its time).
+   * One picture at most every 2 seconds; a request in between gets the last one.
+   */
+  let lastShot = 0
+  let displayOff = false
+  let shooting: Promise<boolean> | undefined
+  router.get('/display/screenshot', requireSession, async (_req, res) => {
+    if (Date.now() - lastShot > 2000) {
+      shooting ??= run('sh', ['-c', `${SCREENSHOT_SH} ${SCREENSHOT}; echo "rc=$?"`], 15000).then((r) => {
+        shooting = undefined
+        const rc = /rc=(\d+)/.exec(r.stdout)?.[1]
+        displayOff = rc === '3'
+        if (rc === '0') lastShot = Date.now()
+        return rc === '0'
+      })
+      await shooting
+    }
+    res.setHeader('Cache-Control', 'no-store')
+    // (when the last shot failed the one before comes: its time goes along, the app shows it instead of "now")
+    if (lastShot > 0) res.setHeader('X-Shot-At', String(lastShot))
+    if (displayOff) res.setHeader('X-Display', 'off')
+    res.sendFile(SCREENSHOT, (err) => {
+      if (err && !res.headersSent) res.status(503).json({ error: 'no_screenshot' })
+    })
+  })
+
+  /** GET /api/app/display/vnc - whether the remote control runs; it opens under /app/vnc/ (server.ts proxyVncUpgrade:
+   *  only with the app's login, x11vnc and websockify listen on the box itself only). */
+  router.get('/display/vnc', requireSession, async (_req, res) => {
+    const r = await run('systemctl', ['is-active', 'mupi_novnc'], 5000)
+    // (on the app's own port 8200: the websocket through the web server of port 80/443 stalled; the login cookie is the
+    // box's, whatever the port)
+    res.json({ active: r.stdout.trim() === 'active', port: 8200, path: '/app/vnc/vnc.html?path=websockify&autoconnect=1&resize=scale&reconnect=1' })
+  })
+}

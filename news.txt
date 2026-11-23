@@ -1,3 +1,118 @@
+<h3>DEV 5.1.0 - changes compared to 5.0.17</h3>
+<b>Folders of the box</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Program, data and cache are kept apart below ~/.mupibox: server/ and player/ (the programs - an update replaces them), data/ (what the box keeps: the library, the covers of the local albums, the logs, the sessions of the app - an update never touches it) and cache/ (what can be fetched or made again). Before, they were mixed in Sonos-Kids-Controller-master and spotifycontroller-main, and every update had to save the data, replace the program and put the data back - its most delicate step. The update moves a box over by itself; a move cut off (a power cut) is finished at the next start. The names of before stay as links, so scripts and commands that use them go on working. Backups keep the library under its name of before, so an older box restores them too. Going back from 5.1 goes to 5.0.14 (the stable version made for it; the update puts PHP and its switched-off admin interface back for it), and the next update to 5.1 moves the box over again. Older versions do not know the box of 5.1: the update refuses them and changes nothing - to use one of them, install it anew.</li>
+</ul>
+<b>Previous admin interface</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>The previous admin interface (the PHP pages, off by default since 5.0.12) is gone: the app does everything it did. The update removes it together with PHP - nothing on the box answers with PHP any more - and the web server's right to run anything as root, which only the PHP pages used. The box's start page leads straight into the app. A Spotify login through the old address https://&lt;box&gt;/spotify.php goes on to the app, and backups made in the admin interface can still be restored in the app. The pictures of the theme tiles in the app now come with the themes.</li>
+</ul>
+<b>Extensions</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New: extensions - add-on features that are installed only on the boxes that want them (System › Erweiterungen). The page works like a browser's extensions page: search, a card per extension with Details, Entfernen and a switch; switching on one that is not installed installs it after a question, a newer version shows as a line on its card. Extensions come from the catalog of the MuPiBox; own files and an own catalog only in developer mode (a switch in the app, with a warning).</li>
+<li id='linews' class='linews'>Before an install or switching on, the box checks what an extension needs (ports, GPIO pins, services) against what it already uses, and says what clashes. GPIO pins are chosen in the app: the list shows every pin of the header and greys out those in use, with who holds them (the box itself, the boot configuration, another extension); the box checks again when it is saved. An update of an extension that fails puts the version before back.</li>
+<li id='linews' class='linews'>A backup keeps the settings of the installed extensions (pins, the place of the weather ...); restored on a new card, an extension that is installed again finds its settings.</li>
+<li id='linews' class='linews'>In the catalog: "USB-CD-Laufwerk" (audio CDs from a USB drive: a "CD" tab on the display, names, artist and cover from Discogs or MusicBrainz, seeking inside a track, the tray opens from the Winamp theme), "Uhrzeit in der Kopfzeile" (the clock right of the battery, digits or dial, 12/24 hours), "Wetter" (the weather of a place as dials on the display, Open-Meteo or MET Norway, units and order to choose), "Buttons &amp; GPIO Input" (up to six buttons and two twin buttons on GPIO pins, short and long press, repeat while held), "OLED-Display" (a small OLED on I2C - SSD1306, SH1106 or SSD1309 - shows title, artist, time and the state of the box; podcast and radio view, an own picture per NFC tag, the address of the box as a QR code), "Fußball" (results of the clubs one follows, the matchday and the table on the display, the score in the header and a spoken goal; OpenLigaDB or football-data.org with an own key) and the NFC extension (below).</li>
+</ul>
+<b>NFC</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New extension: an NFC reader starts albums, folders, radio stations and podcasts with tags and cards. Readers: PN5180 (ISO 14443 A and ISO 15693), RC522 and PN532 (I2C, SPI or serial), or a USB reader that types the card number. In the library, "NFC-Tag" at a medium gives it to the next tag laid on the reader, with a picture for each tag; a flex tag always has the medium chosen for it last. Settings under System › NFC-Extension.</li>
+<li id='linews' class='linews'>Taking the tag off pauses - only what the tag started (something else started on the display meanwhile goes on); laying it on again goes on. A tag laid on again while its medium plays lets it play on, one laid on only for a moment starts nothing. A podcast tag plays an episode of the tile's choice.</li>
+<li id='linews' class='linews'>NFC extension 0.8: a tag can also start a Jellyfin album, playlist or audiobook and an Audible book (not a whole artist or series).</li>
+</ul>
+<b>Photos</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New: a photo display (Settings › Fotos, off by default). Photos and short videos are uploaded from the phone into albums (Library › Fotos), with a check for space before the upload, progress per file and cancel. Pictures are kept in three sizes, turned as the camera says, without location. iPhone photos (HEIC) are read, also those of newer iPhones on Debian 12. Videos (MP4, MOV, M4V up to 3 minutes) are prepared in the background for the Pi.</li>
+<li id='linews' class='linews'>On the display: a "Fotos" tab right of Radio, the albums as stacks of pictures (a tap on the name reads it out), an album as a grid, full screen with swipe, two-finger zoom and double tap, a slideshow with fading and gentle zoom in three speeds; videos with sound and their own volume buttons, muted while something plays. Only albums released for the display are shown.</li>
+<li id='linews' class='linews'>Screensaver: after a set time without touch a slideshow of the display's albums with a small clock - only in silence (or also during playback), never in quiet hours, under the playtime lock or with the display off.</li>
+<li id='linews' class='linews'>Picture time: counted like the listening time while an album is open on the display - its own limit per weekday or counted on the listening time; +10 min, free today and reset in the app and by Telegram (/photoextend, /photofree). The start tile of the app shows listening and pictures. The box stays on while someone looks at photos.</li>
+<li id='linews' class='linews'>Photo services: folders of the NAS, Immich (albums, people recognised by their face - also two or three together - and favourites), Synology Photos (albums, folders of the personal and shared space, smart albums of people, places, tags and subjects), Nextcloud (albums of the Photos app), PhotoPrism (albums) and shared iCloud albums (by the link of their public website, no Apple ID). Each is kept on the box in display size or shown live, synced at start, at a chosen interval or by hand, a sync can be cancelled. A service that is away changes nothing on the box; passwords and keys are stored encrypted, self-signed certificates are confirmed by their fingerprint.</li>
+<li id='linews' class='linews'>The full backup holds the uploaded photos and videos with their albums (photos of services are fetched again).</li>
+</ul>
+<b>Daily limit per tile</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New: every tile of the start page (an artist, a folder of the SD card or the NAS, a single playlist or station) can get a daily limit (15 to 120 minutes) in its sheet in the library. The box counts while it really plays; at the end the title or album finishes as with the listening time, radio stops at once. On the display a used-up tile stays, paler and with a lock, a bar says "&lt;tile&gt; ist für heute vorbei", and "Noch 5 Minuten &lt;tile&gt;" comes before; the pill top right shows what runs out first. In the app under Spielzeit › Kacheln mit Limit (+10 min, free today), in Telegram with /status and /tiles. It counts on the listening time too.</li>
+</ul>
+<b>Several users</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New: several children share one box, each with their own library, Spotify subscriptions, recently played, listening history, listening time, quiet hours, tile limits, picture time, visible photo albums and their own settings (theme, volumes, start page, clock, brightness). Shared stay the sign-ins, WiFi, NAS, the box's own files, the photo albums, NFC cards and extensions. Off by default (Settings › Mehrere Benutzer); switched off, the box goes on with one child and the others rest until it is switched on again. Up to nine users, each with a colour; removed ones stay in a trash for 30 days.</li>
+<li id='linews' class='linews'>Switching takes about a second, without a restart: in the app on the start page or the users' page, on the display with the dot in the child's colour top right ("Wer hört?") - by a tap, by holding a tile three seconds, or only in the app. Also from the lock screen: the listening time is each child's own, a parent's "Ruhe sofort" holds for the whole box. A four-digit PIN per user is asked on the display before switching to that user (five wrong tries, then a minute's pause); the app, Telegram, Home Assistant and MQTT ask none.</li>
+<li id='linews' class='linews'>The library, the listening time and the history of a child can be edited in the app without switching (a choice at the top of the pages); it applies when that child is in place. Smart-Sync syncs every child's subscriptions into their own library, offline podcast episodes are kept as long as any child keeps them, Spotify albums added by link get name and cover in every library. An NFC card whose medium is not in the active child's library plays nothing and the display says so.</li>
+<li id='linews' class='linews'>Telegram: a name at the end of a command means that child (/status Leni, /extend 30 Leni, /photoextend, /photofree, /tiles, /limit set); the weekly summary comes per child. Home Assistant (API) and MQTT report the active child and switch (MQTT: user and user/set, a select with discovery). A backup holds all users; restored, users the backup does not know go to the trash.</li>
+</ul>
+<b>Heard marks</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>What of the library was started or heard to the end (issue #180): an album of the SD card, the NAS, TIDAL or Spotify counts as started after a minute and as heard when its last title ran to its last 30 seconds. On the display a yellow or green tick at the cover in the list, in the app too, with "Als gehört markieren" / "Als ungehört markieren" (also for a whole artist or folder). Switch under Bedienung am Display › Weiterhören (on by default).</li>
+</ul>
+<b>Podcasts</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>The player shows the list of episodes; next goes to the older episode, previous to the newer one, as at an album - also with the box's buttons and the rotary encoder. They keep to the tile: its choice of episodes (e.g. the 5 newest), its order and, without internet, the episodes on the SD card. At the end of the list the episode plays on.</li>
+</ul>
+<b>Library</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>"Verwaltete Inhalte" is gone: subscriptions, their range and their albums are changed at the artist in the library, the tile "Abos" shows the library filtered to Smart-Sync. Albums added one by one show there too.</li>
+<li id='linews' class='linews'>TIDAL, a whole artist: the order on the display can be set in its sheet (A-Z with numbers as numbers, Z-A, oldest or newest first by the full release date). "Episode from/to" of audio plays counts the number in the title (Folge 12, 012/..., Teil 3) instead of the place by release date.</li>
+</ul>
+<b>NAS</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Windows share (SMB) besides WebDAV: Synology, QNAP, FRITZ!Box with USB storage and Windows PCs offer SMB without setting anything up. Library › NAS asks how the box reaches the NAS; the share is written as in Windows Explorer (\\192.168.1.10\Musik). Errors with their reason (name unknown, not reachable, login refused, no such share, NAS only speaks SMB1). A refused login is not repeated for 10 minutes, so the NAS does not lock the box out.</li>
+<li id='linews' class='linews'>The folder search of the NAS page searches in the folders shown (and below them); without a shown folder it no longer walks through the whole NAS. While the NAS does not answer, the app says "Gerade nicht erreichbar" instead of "Angemeldet" or the login form.</li>
+</ul>
+<b>Jellyfin</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New: Jellyfin as a source (Settings › Services › Jellyfin). The box finds the server in the home network and signs in with a Quick Connect code confirmed in a Jellyfin app (or user name and password, used only for signing in); it keeps only an encrypted token and appears in Jellyfin as a device of its own. Self-signed certificates are confirmed by their fingerprint. No internet needed, only the home network.</li>
+<li id='linews' class='linews'>Library › Add › From Jellyfin: albums, whole artists (also albums added later; order and single albums left out in the library), audio playlists and audiobooks (a folder of files is one book; several books in one folder are kept apart by their album tag) from the libraries chosen, with search and covers kept on the box. While the server does not answer, the display leaves its entries out.</li>
+<li id='linews' class='linews'>Played like an album of the memory card: track list, next/previous, seeking, continue listening, heard ticks, daily limit per tile, playing time and quiet hours; from the app under Listen too. The token never leaves the box. "Convert for weak Wi-Fi" lets Jellyfin make MP3 at 192 kbit (no seeking then).</li>
+<li id='linews' class='linews'>"Share progress with Jellyfin" (off by default): the box reports what it plays and where, so tracks heard at the box count as played in Jellyfin; an album or audiobook started anew at the box begins where the account left off (heard on a phone meanwhile), and albums played completely in Jellyfin get the green tick.</li>
+</ul>
+<b>Audible</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New: Audible as a source (Settings › Services › Audible) - unofficial, at your own risk, off by default. The parents sign in on Amazon's page in their own browser and paste the address it ends on; the box registers as a device of its own and keeps only that device's key, encrypted. Password and verification code stay with Amazon. Signing out removes only this device from the account. All Audible stores.</li>
+<li id='linews' class='linews'>Library › Add › From Audible: the audiobooks of the account (no podcasts) and their series, with search and covers kept on the box. A whole series is one entry with all its books in the series' order, also ones bought later.</li>
+<li id='linews' class='linews'>Played like an album, the chapters as tracks: chapter list, next/previous chapter, seeking, continue listening, heard ticks, daily limit per tile, playing time and quiet hours; from the app under Listen too. Audible's stream is played as it is delivered (nothing is decrypted); needs internet - without it the display leaves the entries out.</li>
+<li id='linews' class='linews'>"Share listening position with Audible" (off by default): the box reports where it is in a book, a book started anew at the box begins where the account left off (heard on a phone meanwhile), and books finished in Audible get the green tick.</li>
+</ul>
+<b>Display</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New theme Winamp: a Winamp skin player with equaliser (presets, also per album) and playlist, whose menus edit the queue of local and NAS albums. Skins are uploaded and chosen in the app (link to the Winamp Skin Museum), the base skin comes with it; a compact layout for 800 × 480 displays.</li>
+<li id='linews' class='linews'>Shuffle for local and NAS albums: next and the end of a title choose one not played in this round, previous goes back through the played ones.</li>
+<li id='linews' class='linews'>"Abends dunkler" can follow sunset and sunrise of a place (place search in the app, "Ort entfernen").</li>
+<li id='linews' class='linews'>New switch under Settings › Display: "Ohne DSI-Display" - a box without a display starts without the kiosk, NFC tags and buttons start their media directly. With "Spotify bereithalten" the display page runs in Chromium without a screen, so Spotify tiles, NFC tags and Spotify Connect play without a display too. Locked while a display is proven to be there (its touch chip or the picture data of the connector); a connector without such proof is asked about first.</li>
+<li id='linews' class='linews'>Displays wider than 5:3 (for example 1920 × 480 or 1920 × 720) show more covers side by side, Cover Flow too; the usual displays stay at three. The start picture is shown whole on every display, the space around it in its own colour.</li>
+<li id='linews' class='linews'>Updates from the app show their progress on the display: a bar at the foot of the maintenance picture, in the colours of the scene, with a sentence about the step and percent. The percent follows the time of the steps (it raced to 30 % and jumped to 100 at the end). No more blue stripes over the maintenance picture.</li>
+</ul>
+<b>Hardware</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>The three pins of the rotary encoder are chosen in the app; it runs on a Raspberry Pi 5, as do the fan and the power LED. Its button takes its pin only when it has a function and never an SPI or I2C pin, so GPIO 10 stays free for an NFC reader.</li>
+</ul>
+<b>WiFi</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>WPA3: a network that only offers WPA3 could not be used, the box saved every network for WPA2. It now sees what the network offers and saves it for that, also when a password is changed. On the Pi's own WiFi (driver brcmfmac: Pi 3B+, 4, 5) a network that offers both is used with WPA2: that chip cannot move to another access point of a WPA3 network while connected (the box was gone for 12 to 16 s every minute), with WPA2 it moves without a gap. A USB stick uses WPA3 there while the Pi's own WiFi is off (both read the same saved networks). In a WPA3-only network the Pi's own WiFi does not look for a better access point in the background; if the signal stays below -75 dBm for two minutes, it connects anew once (about 3 s). A network it cannot see at the moment, a hidden one for example, is saved for both. For WPA3 the password is kept as plain text in the box's WiFi configuration, readable by root only: WPA3 needs it that way. Networks saved before stay as they are.</li>
+<li id='linews' class='linews'>A new network is tried right away: connected, the box stays there; not connected (a typing mistake, most likely), it goes back to the previous network and the new one is listed with "No connection - check the password". Before, the box kept leaving the working network for another try.</li>
+<li id='linews' class='linews'>A network added a second time had two entries. Its entry is now replaced; the settings kept with it (band, fixed address) stay. The network the box is connected to right now is left as it is, so a typing mistake cannot take the box offline.</li>
+<li id='linews' class='linews'>With a USB WiFi stick next to the Pi's own WiFi, a network added, changed or removed through one stayed as it was for the other until the next restart; with the stick pulled out later, a network added in between could be gone again. After every change both now read the saved networks anew.</li>
+</ul>
+<b>Updates</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>An update started without a terminal (systemd-run, as in the instructions for testing a branch) writes its progress into the journal and restarts the box at its end, as from the app; one that stops before it replaced anything brings the display back.</li>
+</ul>
 <h3>DEV 5.0.15 - changes compared to 5.0.14</h3>
 <b>WiFi and LAN</b>
 </ul>

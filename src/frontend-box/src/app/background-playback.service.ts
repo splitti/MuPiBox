@@ -13,7 +13,7 @@ import type { SpotifyWebPlaybackState } from './spotify'
 import { SpotifyService } from './spotify.service'
 
 /** Whatever the player reports as playing: mplayer says "playing", Spotify (the display's Web Playback SDK) "pause". */
-function isPlaying(data: CurrentMPlayer): boolean {
+export function isPlaying(data: CurrentMPlayer): boolean {
   if (data.loading === true) return true // (a stream that is still buffering)
   return data.currentPlayer === 'spotify' ? data.pause === false && data.spotifySilent !== true : data.playing === true
 }
@@ -264,7 +264,7 @@ export class BackgroundPlaybackService {
   async stop(): Promise<void> {
     const stopping = this.media()
     const source = this.currentMediaService.get()
-    const resumable = source && ['spotify', 'library', 'nas', 'tidal', 'rss'].includes(source.type) && !this.shuffled
+    const resumable = source && ['spotify', 'library', 'nas', 'tidal', 'jellyfin', 'audible', 'rss'].includes(source.type) && !this.shuffled
     if (source && resumable && this.currentMediaService.shouldPersistResume()) {
       // The place where it is now, read before the stop (afterwards it is gone). Each look has a time limit: the
       // stop must not wait for a player that does not answer, and without a position nothing is saved.

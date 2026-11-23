@@ -402,6 +402,66 @@
           }
         }
       ]
+    },
+    {
+      "id": "nfc",
+      "color": "#C77DFF",
+      "name": {
+        "de": "NFC-Leser PN5180",
+        "en": "NFC reader PN5180"
+      },
+      "short": {
+        "de": "NFC-Leser",
+        "en": "NFC reader"
+      },
+      "pins": [
+        {
+          "gpio": 10,
+          "bus": "spi",
+          "fn": {
+            "de": "MOSI",
+            "en": "MOSI"
+          }
+        },
+        {
+          "gpio": 9,
+          "bus": "spi",
+          "fn": {
+            "de": "MISO",
+            "en": "MISO"
+          }
+        },
+        {
+          "gpio": 11,
+          "bus": "spi",
+          "fn": {
+            "de": "SCK",
+            "en": "SCK"
+          }
+        },
+        {
+          "gpio": 8,
+          "bus": "spi",
+          "fn": {
+            "de": "NSS (CE0)",
+            "en": "NSS (CE0)"
+          }
+        },
+        {
+          "gpio": 25,
+          "fn": {
+            "de": "BUSY (Vorschlag, in der Erweiterung wählbar)",
+            "en": "BUSY (suggestion, chosen in the extension)"
+          }
+        },
+        {
+          "gpio": 23,
+          "fn": {
+            "de": "RST (Vorschlag, in der Erweiterung wählbar)",
+            "en": "RST (suggestion, chosen in the extension)"
+          }
+        }
+      ]
     }
   ]
 }

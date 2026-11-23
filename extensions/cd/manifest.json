@@ -1,0 +1,51 @@
+{
+  "id": "cd",
+  "name": "USB-CD-Laufwerk",
+  "version": "1.0.1",
+  "description": "Audio-CDs vom USB-Laufwerk abspielen, mit Titelnamen und Cover aus dem Internet.",
+  "hostApi": 1,
+  "player": "player.js",
+  "api": "api.js",
+  "display": "display.js",
+  "icon": "icon.svg",
+  "settings": {
+    "cdLookup": {
+      "type": "boolean",
+      "default": true,
+      "legacy": "mupibox.cdLookup"
+    },
+    "discogsToken": {
+      "type": "secret",
+      "pattern": "^[A-Za-z0-9]{0,80}$",
+      "legacy": "discogs.token"
+    }
+  },
+  "resources": {},
+  "system": {
+    "udev": [
+      {
+        "name": "99-mpx-cd.rules",
+        "file": "99-mpx-cd.rules"
+      }
+    ],
+    "groups": [
+      "cdrom"
+    ]
+  },
+  "ui": {
+    "title": "Audio-CD",
+    "help": "Liegt eine Audio-CD im USB-Laufwerk, zeigt das Display oben den Reiter „CD“. Die Box sucht dann im Internet nach den Namen der Titel und nach dem Cover: zuerst bei Discogs, danach bei MusicBrainz.",
+    "items": [
+      {
+        "key": "cdLookup",
+        "label": "Titel und Cover im Internet suchen"
+      },
+      {
+        "key": "discogsToken",
+        "label": "Discogs-Token",
+        "dep": "cdLookup",
+        "help": "Discogs lässt nur Angemeldete suchen und findet eine CD nur über den Strichcode, den manche CDs mitbringen. Den Token erzeugst du auf discogs.com unter Settings › Developers › „Generate new token“. Ohne Token oder wenn Discogs nichts findet, fragt die Box MusicBrainz – das erkennt eine CD an ihrem Inhaltsverzeichnis."
+      }
+    ]
+  }
+}

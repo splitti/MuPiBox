@@ -1,11 +1,12 @@
 #!/bin/bash
 
-# docker:start mounts the host's src/backend-api over server/: its config folder then lacks the server's own config
-# files the image put there (config.json, monitor.json) - without config.json the server answered /api/sonos with
-# "Could not load server config." and Spotify never started. Taken from the templates when missing, never over a file
-# that is there (the Spotify client id and secret go into config.json by hand, see README).
+# The server's own config files (config.json, monitor.json; the folders of 5.1, see scripts/mupibox/mupi_paths.sh): taken
+# from the templates when missing, never over a file that is there - without config.json the server answered
+# /api/sonos with "Could not load server config." and Spotify never started (the Spotify client id and secret go into
+# config.json by hand, see README). docker:start mounts the host's src/backend-api/config as the library.
 TEMPLATES=/home/dietpi/MuPiBoxSource/config/templates
-SERVER_CONFIG=/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config
+SERVER_CONFIG=/home/dietpi/.mupibox/server/config
+LIBRARY=/home/dietpi/.mupibox/data/library
 mkdir -p "${SERVER_CONFIG}"
 [ -f "${SERVER_CONFIG}/config.json" ] || cp "${TEMPLATES}/www.json" "${SERVER_CONFIG}/config.json"
 [ -f "${SERVER_CONFIG}/monitor.json" ] || cp "${TEMPLATES}/monitor.json" "${SERVER_CONFIG}/monitor.json"
@@ -13,7 +14,7 @@ mkdir -p "${SERVER_CONFIG}"
 # The API serves the library from active_data.json (and the resume list from active_resume.json), symlinks that the
 # box's network check (scripts/mupibox/check_network.sh) points at data.json or offline_data.json. No such service
 # runs here, so they are set once, to the online files - without them the library stays empty.
-cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config
+cd "${LIBRARY}"
 [ -f data.json ] || echo -n "[]" > data.json
 [ -f resume.json ] || echo -n "[]" > resume.json
 ln -sfn data.json active_data.json
@@ -22,18 +23,17 @@ ln -sfn resume.json active_resume.json
 # The display takes the box for offline until /api/network says onlinestate "online" (then no radio, and the Spotify
 # player is not even started). On a box the network check (check_network.sh, get_network.sh) writes /tmp/network.json;
 # here it is written once with what the container has.
-# (a file in server/config, not the box's symlink to /tmp: with docker:start that folder is the host's
-# src/backend-api/config, and a symlink into the container's /tmp would be dangling for a backend run on the host)
+# (a file in server/config, not the box's symlink to /tmp)
 ip=$(hostname -I | awk '{print $1}')
 jq -n --arg host "$(hostname)" --arg ip "$ip" \
   '{onlinestate: "online", host: $host, ip: $ip, mac: "", wifi: "", wifilink: "", wifisignal: "", gateway: "", dns: "", subnet: "", interface: "eth0"}' \
-  > /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json
-cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json /tmp/network.json
+  > "${SERVER_CONFIG}/network.json.new" && mv -f "${SERVER_CONFIG}/network.json.new" "${SERVER_CONFIG}/network.json"
+cp "${SERVER_CONFIG}/network.json" /tmp/network.json
 chmod 666 /tmp/network.json
 
-cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master
+cd /home/dietpi/.mupibox/server
 pm2 start server.js
-cd /home/dietpi/.mupibox/spotifycontroller-main
+cd /home/dietpi/.mupibox/player
 pm2 start spotify-control.js
 
 # The player listens on the container's loopback only, as on a box. Docker's port mapping cannot reach that, so the

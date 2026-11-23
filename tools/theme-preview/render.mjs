@@ -25,7 +25,7 @@ const arg = (name, fallback) => {
   return i > 0 ? process.argv[i + 1] : fallback
 }
 const www = path.resolve(arg('www', path.join(repo, 'src', 'frontend-box', 'www', 'browser')))
-const out = path.resolve(arg('out', path.join(repo, 'AdminInterface', 'www', 'images')))
+const out = path.resolve(arg('out', path.join(repo, 'themes', 'previews')))
 const themesDir = path.join(repo, 'themes')
 const demoDir = path.join(here, 'demo-bibliothek')
 const only = arg('only', '')
@@ -96,6 +96,71 @@ const api = {
   '/api/sonos': { server: 'MuPiBox', ip: '', port: '5005', rooms: [], tts: { enabled: false }, hat_active: true },
   '/api/spotify/config': { clientId: '', deviceName: 'MuPiBox' },
 }
+// Winamp: the theme's own base skin (themes/winamp/base-2.91.wsz), unpacked here as the box does it
+// (backend-api app-api/winamp-skin.ts: lower-case bitmaps the display uses, skin.json with sizes and colours), and a
+// made-up track that plays - the main window with its clock, the analyser and the title running
+const WINAMP_KEEP = /^(main|cbuttons|titlebar|shufrep|numbers|nums_ex|playpaus|posbar|volume|balance|monoster|text|eqmain|eq_ex|pledit|gen|genex|mb|video|avs)\.bmp$/
+const winampSkin = (() => {
+  const file = path.join(themesDir, 'winamp', 'base-2.91.wsz')
+  if (!fs.existsSync(file)) return null
+  const buf = fs.readFileSync(file)
+  let eocd = buf.length - 22
+  while (eocd >= 0 && buf.readUInt32LE(eocd) !== 0x06054b50) eocd--
+  const files = new Map()
+  const sizes = {}
+  let viscolors = []
+  let pledit = ''
+  for (let n = 0, pos = buf.readUInt32LE(eocd + 16); n < buf.readUInt16LE(eocd + 10); n++) {
+    const method = buf.readUInt16LE(pos + 10)
+    const compressed = buf.readUInt32LE(pos + 20)
+    const nameLen = buf.readUInt16LE(pos + 28)
+    const local = buf.readUInt32LE(pos + 42)
+    const name = path.posix.basename(buf.toString('utf8', pos + 46, pos + 46 + nameLen).replace(/\\/g, '/')).toLowerCase()
+    pos += 46 + nameLen + buf.readUInt16LE(pos + 30) + buf.readUInt16LE(pos + 32)
+    const start = local + 30 + buf.readUInt16LE(local + 26) + buf.readUInt16LE(local + 28)
+    const raw = buf.subarray(start, start + compressed)
+    const data = method === 0 ? raw : method === 8 ? zlib.inflateRawSync(raw) : null
+    if (!data) continue
+    if (WINAMP_KEEP.test(name) && data.toString('latin1', 0, 2) === 'BM') {
+      files.set(name, data)
+      sizes[name] = [data.readInt32LE(18), Math.abs(data.readInt32LE(22))]
+    } else if (name === 'viscolor.txt') {
+      viscolors = [...data.toString('latin1').matchAll(/^\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/gm)]
+        .slice(0, 24)
+        .map((m) => `#${[m[1], m[2], m[3]].map((x) => Math.min(255, Number(x)).toString(16).padStart(2, '0')).join('')}`)
+    } else if (name === 'pledit.txt') pledit = data.toString('latin1')
+  }
+  const color = (key, fallback) => {
+    const m = pledit.match(new RegExp(`^\\s*${key}\\s*=\\s*(#?[0-9a-fA-F]{6})\\s*$`, 'm'))
+    return m ? `#${m[1].replace('#', '').toUpperCase()}` : fallback
+  }
+  const font = pledit.match(/^\s*Font\s*=\s*([^\r\n]+)/m)?.[1]?.trim().replace(/[^\w \-]/g, '') || 'Arial'
+  const meta = {
+    name: 'Base 2.91',
+    version: 1,
+    files: sizes,
+    viscolors,
+    pledit: { normal: color('Normal', '#00FF00'), current: color('Current', '#FFFFFF'), normalBg: color('NormalBG', '#000000'), selectedBg: color('SelectedBG', '#0000C6'), font },
+  }
+  files.set('skin.json', Buffer.from(JSON.stringify(meta)))
+  return files
+})()
+const winampPlaying = {
+  currentPlayer: 'mplayer',
+  currentType: 'local',
+  playing: true,
+  pause: false,
+  album: demo[0].name,
+  currentTrackname: `${demo[0].name} am Meer`,
+  currentTracknr: 3,
+  totalTracks: 12,
+  positionSeconds: 153,
+  durationSeconds: 754,
+  volume: 70,
+  bitrate: 192,
+  khz: 44,
+  channels: 2,
+}
 const answer = (pathname, search, theme) => {
   if (pathname === '/api/config') return configFor(theme)
   if (pathname === '/api/library/artists') return new URLSearchParams(search).get('category') === 'audiobook' ? library : []
@@ -115,6 +180,13 @@ const server = http.createServer((req, res) => {
   if (p === '/active_theme.css') return sendFile(res, path.join(themesDir, `${current}.css`))
   // "custom" shows the parents' own picture: here the example landscape
   if (p === '/theme-data/custom/custom-bg.jpg') return sendFile(res, path.join(demoDir, 'custom-beispiel.svg'))
+  if (p.startsWith('/theme-data/winamp/skin/')) {
+    const data = winampSkin?.get(p.slice('/theme-data/winamp/skin/'.length))
+    if (data) {
+      res.writeHead(200, { 'Content-Type': p.endsWith('.json') ? 'application/json' : 'image/bmp', 'Cache-Control': 'no-store' })
+      return res.end(data)
+    }
+  }
   if (p.startsWith('/theme-data/')) {
     const f = path.join(themesDir, p.slice('/theme-data/'.length))
     if (inside(themesDir, f)) return sendFile(res, f)
@@ -187,8 +259,11 @@ ws.onmessage = (message) => {
       ],
     })
   }
-  // the player (port 5005): nothing plays
-  if (u.port === '5005') return json(requestId, u.pathname === '/local' ? { playing: false, currentPlayer: '' } : {})
+  // the player (port 5005): nothing plays (Winamp: the made-up track, so the main window shows what it does)
+  if (u.port === '5005') {
+    if (u.pathname !== '/local') return json(requestId, {})
+    return json(requestId, current === 'winamp' ? winampPlaying : { playing: false, currentPlayer: '' })
+  }
   // (the display asks its backend on port 8200 of the same host: answered here)
   const local = ['127.0.0.1', 'localhost'].includes(u.hostname)
   if (local && u.pathname.startsWith('/api/')) {
@@ -320,6 +395,9 @@ for (const theme of themes) {
     }
   }
   if (theme === 'custom') await evaluate(exampleBadge)
+  // Winamp: the start page shows the library under the windows (as on the box) - the button that brings the player back,
+  // so the picture shows the main window
+  if (theme === 'winamp') await evaluate(`(() => { document.querySelector('mupi-winamp-shell .wa-back')?.click(); return 'ok' })()`)
   await sleep(1800)
   const shot = await send('Page.captureScreenshot', { format: 'png', clip: { x: 0, y: 0, width: 800, height: 480, scale: 0.8 } })
   const file = path.join(out, `${theme}.png`)

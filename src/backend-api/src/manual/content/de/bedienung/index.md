@@ -8,4 +8,5 @@ Das Display ist für das Kind gemacht: große Cover, wenig Text, alles mit einem
 - [Der Player](player.md): abspielen, springen, Titelliste, Ausgabegerät.
 - [Fortsetzen und „Läuft gerade“](fortsetzen.md): dort weiterhören, wo es aufgehört hat.
 - [Cover und Themes](cover-und-themes.md): wie die Box aussieht und woher die Cover kommen.
+- [Das Winamp-Theme](winamp.md): der Player im Aussehen des klassischen Winamp, mit Skins, Equalizer und Playlist.
 - [Einstellungen am Display](eltern-zugang.md): WLAN einrichten, Bluetooth, Neustart und der QR-Code für die App, direkt an der Box.

@@ -31,7 +31,14 @@ Eigene Playlists findet die TIDAL-Suche nicht. Dafür gibt es auf derselben Seit
 
 TIDAL führt manche Alben mehrfach (in verschiedenen Qualitäten); die Box zeigt jedes nur einmal.
 
-Bei einem ganzen Künstler stellst du in der **Bibliothek** (Eintrag antippen) unter **Folgen und Alben** einen Bereich ein, **Folge von** und **Folge bis**: „Folge“ ist die Position nach Erscheinungsdatum, 1 ist das älteste Album. Einzelne Alben schaltest du dort mit ihrem Schalter ab. **Speichern** übernimmt beides; Box und App zeigen dann nur diese Alben.
+Bei einem ganzen Künstler stellst du in der **Bibliothek** (Eintrag antippen) unter **Folgen und Alben** einen Bereich ein, **Folge von** und **Folge bis**. Was „Folge“ zählt, steht direkt darüber:
+
+- **Die Nummer im Titel:** wenn fast alle Alben eine tragen („Folge 12: …“, „012/…“, „Teil 3“), etwa bei Hörspielen. „1 bis 20“ sind dann die Folgen 1 bis 20. Alben ohne Nummer gehören zu keinem Bereich.
+- **Sonst die Position nach Erscheinungsdatum:** 1 ist das älteste Album. Ein Bereich, der vor dieser Änderung gespeichert wurde, zählt weiter so, bis du ihn leerst und neu einträgst.
+
+Einzelne Alben schaltest du dort mit ihrem Schalter ab. **Speichern** übernimmt beides; Box und App zeigen dann nur diese Alben.
+
+Die **Reihenfolge am Display** stellst du im selben Blatt ein. **Standard** ist alphabetisch, wobei Zahlen als Zahlen zählen: „Folge 2“ kommt vor „Folge 10“. Daneben gibt es Z–A, älteste und neueste zuerst.
 
 Der Eintrag erscheint danach auf dem Display in der gewählten Kategorie und in der Bibliothek der App mit der Quelle **TIDAL**. Dort kannst du ihn wie jeden anderen Eintrag bearbeiten oder löschen ([Inhalte verwalten](verwalten.md)).
 

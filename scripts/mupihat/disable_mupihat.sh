@@ -5,7 +5,7 @@
 # of enable_mupihat.sh: it wrote the amplifier's driver and the I2C lines in instead of taking them out (the
 # amplifier stayed a second sound card, and the sound could still go to it) and put the I2C modules back into
 # /etc/modules. I2C stays on (harmless, and other hardware may use it).
-# Ends with an error when something did not arrive: the app (eltern/hardware.ts) and the admin interface then keep
+# Ends with an error when something did not arrive: the app (app-api/hardware.ts) and the admin interface then keep
 # the switch as it was. The box is restarted by the caller.
 # BOOT_CONFIG / DIETPI_TXT / MUPIBOX_CONFIG / DRY_RUN=1 (no services, no DietPi call) for a test on copies.
 

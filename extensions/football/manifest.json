@@ -1,0 +1,263 @@
+{
+  "id": "football",
+  "name": "Fußball",
+  "version": "0.2.0",
+  "description": "Die Ergebnisse deiner Vereine, der Spieltag und die Tabelle auf dem Display. Die Box holt sie im Internet bei OpenLigaDB oder mit eigenem Schlüssel bei football-data.org; jeder Benutzer folgt seinen eigenen Vereinen.",
+  "hostApi": 15,
+  "resources": {},
+  "api": "api.js",
+  "display": "display.js",
+  "icon": "icon.svg",
+  "settings": {
+    "source": {
+      "type": "string",
+      "default": "openligadb",
+      "options": [
+        "openligadb",
+        "footballdata"
+      ],
+      "perUser": true
+    },
+    "league": {
+      "type": "string",
+      "default": "bl1",
+      "options": [
+        "bl1",
+        "bl2",
+        "bl3",
+        "dfb",
+        "ffb1"
+      ],
+      "perUser": true
+    },
+    "clubs": {
+      "type": "string",
+      "default": "",
+      "pattern": "^.{0,300}$",
+      "perUser": true
+    },
+    "clubNames": {
+      "type": "string",
+      "default": "",
+      "pattern": "^.{0,300}$",
+      "perUser": true
+    },
+    "startView": {
+      "type": "string",
+      "default": "club",
+      "options": [
+        "club",
+        "matchday",
+        "table"
+      ],
+      "perUser": true
+    },
+    "header": {
+      "type": "boolean",
+      "default": true,
+      "perUser": true
+    },
+    "announce": {
+      "type": "boolean",
+      "default": false,
+      "perUser": true
+    },
+    "fdLeague": {
+      "type": "string",
+      "default": "PL",
+      "options": [
+        "PL",
+        "ELC",
+        "BL1",
+        "PD",
+        "SA",
+        "FL1",
+        "DED",
+        "PPL",
+        "BSA",
+        "CL",
+        "WC",
+        "EC"
+      ],
+      "perUser": true
+    },
+    "apiKey": {
+      "type": "secret"
+    },
+    "crests": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "ui": {
+    "title": "Fußball",
+    "help": "Das Display zeigt oben den Reiter „Fußball“: deine Vereine, der Spieltag und die Tabelle. Die Ergebnisse trägt die Gemeinschaft von OpenLigaDB ein, meist wenige Minuten nach dem Tor.",
+    "items": [
+      {
+        "key": "source",
+        "label": "Quelle",
+        "help": "OpenLigaDB ist frei und braucht keine Anmeldung, kennt aber vor allem deutsche Ligen. football-data.org hat die großen Ligen Europas und die Champions League, braucht einen eigenen kostenlosen Schlüssel und liefert die Ergebnisse mit Verzögerung.",
+        "choices": [
+          {
+            "value": "openligadb",
+            "label": "OpenLigaDB"
+          },
+          {
+            "value": "footballdata",
+            "label": "football-data.org"
+          }
+        ]
+      },
+      {
+        "key": "league",
+        "label": "Liga",
+        "choices": [
+          {
+            "value": "bl1",
+            "label": "1. Bundesliga"
+          },
+          {
+            "value": "bl2",
+            "label": "2. Bundesliga"
+          },
+          {
+            "value": "bl3",
+            "label": "3. Liga"
+          },
+          {
+            "value": "dfb",
+            "label": "DFB-Pokal"
+          },
+          {
+            "value": "ffb1",
+            "label": "Frauen-Bundesliga"
+          }
+        ],
+        "showIf": {
+          "key": "source",
+          "is": [
+            "openligadb"
+          ]
+        }
+      },
+      {
+        "key": "fdLeague",
+        "label": "Wettbewerb",
+        "showIf": {
+          "key": "source",
+          "is": [
+            "footballdata"
+          ]
+        },
+        "choices": [
+          {
+            "value": "PL",
+            "label": "Premier League"
+          },
+          {
+            "value": "ELC",
+            "label": "Championship"
+          },
+          {
+            "value": "BL1",
+            "label": "Bundesliga"
+          },
+          {
+            "value": "PD",
+            "label": "LaLiga"
+          },
+          {
+            "value": "SA",
+            "label": "Serie A"
+          },
+          {
+            "value": "FL1",
+            "label": "Ligue 1"
+          },
+          {
+            "value": "DED",
+            "label": "Eredivisie"
+          },
+          {
+            "value": "PPL",
+            "label": "Primeira Liga"
+          },
+          {
+            "value": "BSA",
+            "label": "Brasileirão"
+          },
+          {
+            "value": "CL",
+            "label": "Champions League"
+          },
+          {
+            "value": "WC",
+            "label": "Weltmeisterschaft"
+          },
+          {
+            "value": "EC",
+            "label": "Europameisterschaft"
+          }
+        ]
+      },
+      {
+        "key": "apiKey",
+        "label": "API-Schlüssel",
+        "showIf": {
+          "key": "source",
+          "is": [
+            "footballdata"
+          ]
+        },
+        "help": "Kostenlos auf football-data.org anmelden („Register“), der Schlüssel kommt per E-Mail. Er gilt für die ganze Box. Die Ergebnisse kommen hier mit Verzögerung, auch die Tor-Ansage."
+      },
+      {
+        "key": "clubNames",
+        "label": "Meine Vereine",
+        "type": "lookup",
+        "search": "/api/ext/football/teams",
+        "list": "/api/ext/football/followed",
+        "help": "Nach dem Namen suchen und mit ＋ folgen; das ✕ am Namen eines Vereins hört wieder auf. Bis zu fünf Vereine, auch aus beiden Quellen: etwa Bayern und Deutschland von OpenLigaDB, dazu Barcelona von football-data.org (dafür kurz die Quelle football-data.org mit dem Wettbewerb LaLiga wählen, den Schlüssel speichern, suchen, dann zurückstellen)."
+      },
+      {
+        "key": "startView",
+        "label": "Ansicht beim Öffnen",
+        "help": "Was der Reiter „Fußball“ zuerst zeigt. Ohne Verein beginnt er mit dem Spieltag; beim DFB-Pokal zeigt die Tabelle die Ligen deiner Vereine.",
+        "choices": [
+          {
+            "value": "club",
+            "label": "Meine Vereine"
+          },
+          {
+            "value": "matchday",
+            "label": "Spieltag"
+          },
+          {
+            "value": "table",
+            "label": "Tabelle"
+          }
+        ]
+      },
+      {
+        "key": "header",
+        "label": "Ergebnis in der Kopfzeile",
+        "help": "Während ein Spiel eines deiner Vereine läuft, stehen oben im Display die beiden Wappen und der Spielstand."
+      },
+      {
+        "key": "announce",
+        "label": "Tore ansagen",
+        "help": "Schießt einer deiner Vereine ein Tor, sagt die Box es mit ihrer Stimme an, zum Beispiel „Tor für Bremen! 2 zu 1.“ Musik wird dabei leiser. Nicht in der Ruhezeit und nicht, wenn die Box gesperrt ist."
+      },
+      {
+        "key": "crests",
+        "label": "Wappen zeigen",
+        "help": "Die Wappen der Vereine sind urheberrechtlich geschützt. Die Box holt sie nur für ihr eigenes Display und gibt sie nicht weiter. Ausgeschaltet steht dort ein Kreis mit dem Kürzel des Vereins. Gilt für die ganze Box."
+      },
+      {
+        "type": "status",
+        "label": "Abfrage",
+        "state": "/api/ext/football/state"
+      }
+    ]
+  }
+}

@@ -4,6 +4,7 @@ import type { SpotifyPlaylistData, SpotifyPlaylistMetadata } from '../models/spo
 import type { SpotifyTrack } from '../models/spotify-shared.model'
 import { SpotifyApiException } from '../spotify-sync/playlists'
 import type { FullPlaylist } from './spotify-playlist-full'
+import { CACHE_DIR } from '../paths'
 
 export class SpotifyMediaInfo {
   // The embed page gives 100 tracks at most; a list that long is probably cut (see fetchPlaylistDataSync)
@@ -17,7 +18,7 @@ export class SpotifyMediaInfo {
    */
   public fullPlaylistTracks: ((playlistId: string, kept?: FullPlaylist) => Promise<FullPlaylist | undefined>) | undefined
 
-  private cacheDir = path.join(process.cwd(), 'cache', 'spotify')
+  private cacheDir = path.join(CACHE_DIR, 'spotify')
   private cacheExpiry = 12 * 60 * 60 * 1000 // 12 hours in milliseconds
 
   // Track ongoing background updates to prevent duplicate requests

@@ -1,0 +1,11 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Winamp preview</title>
+<style>
+  html, body { margin: 0; background: #111; }
+  #stage { position: relative; width: 1920px; height: 480px; overflow: hidden; background: #000; }
+  .half { position: absolute; top: 0; width: 960px; height: 480px; }
+  .wa-knob-fallback { background: linear-gradient(#d8d8d8, #8a8a8a); border: 1px solid #333; border-radius: 1px; }
+</style>
+<div id="stage"><div class="half" id="left" style="left:0"></div><div class="half" id="right" style="left:960px"></div></div>
+<script type="module" src="preview.js"></script>

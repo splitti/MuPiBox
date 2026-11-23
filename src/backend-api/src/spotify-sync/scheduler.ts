@@ -17,12 +17,32 @@ const MANUAL_THROTTLE_PATH = '/tmp/.last_sync_trigger'
 
 let timerHandle: ReturnType<typeof setTimeout> | null = null
 let inflight: Promise<RunSyncResult> | null = null
+// (whose library the run under way is for - trailingKey)
+let inflightKey: string | null = null
+/** A run of the sync under way (a switch of the user waits for it - users.ts) */
+export const isSyncRunning = (): boolean => inflight !== null
 // Trailing-edge run: when a manual trigger is throttled, we don't drop it —
 // we arm a single timer that fires one run when the cooldown elapses, so a
 // burst of WebApp edits still all land without waiting for the next poll.
-let trailingTimer: ReturnType<typeof setTimeout> | null = null
-// (the armed trailing run may run with Smart-Sync off - asked so by the app, see triggerManualSync)
-let trailingAllowWhenOff = false
+// One per library (several users: the one in place and each one not in place - a request for one did not
+// take over or drop the one armed for another), with whether it may run with Smart-Sync off (asked so by the app, see
+// triggerManualSync).
+interface Trailing {
+  timer: ReturnType<typeof setTimeout> | null
+  allowWhenOff: boolean
+}
+const trailing = new Map<string, Trailing>()
+const trailingKey = (deps: RunSyncDeps) => deps.stateFilePath ?? ''
+
+/** A user who is not in place (several users, users.ts): his library and his subscriptions, synced as well */
+export interface OtherSyncUser {
+  id: string
+  deps: RunSyncDeps
+}
+// (the users not in place now - read at every run: one may have come into place meanwhile; none without several users)
+let othersOf: () => OtherSyncUser[] = () => []
+// when each of them was synced last (his own interval counts)
+const otherLastRun = new Map<string, number>()
 
 /**
  * Schedule the next sync after `delaySeconds`. Re-arms itself after each
@@ -30,7 +50,8 @@ let trailingAllowWhenOff = false
  * polling interval too, no exponential back-off; rate-limit returns from
  * runSync include the retryAfterSeconds value which we honour.
  */
-export function startScheduler(deps: RunSyncDeps): void {
+export function startScheduler(deps: RunSyncDeps, opts: { others?: () => OtherSyncUser[] } = {}): void {
+  if (opts.others) othersOf = opts.others
   if (timerHandle) {
     // Already running — defensively clear so we don't end up with two
     // overlapping cycles after a hot-reload.
@@ -73,6 +94,14 @@ function scheduleNext(delaySeconds: number, deps: RunSyncDeps): void {
       // wäre bis zum nächsten Backend-Neustart still tot -- ohne Hinweis im
       // UI, weil /status weiter den letzten erfolgreichen Lauf zeigt.
       console.error(`${new Date().toLocaleString()}: [spotify-sync] scheduled run threw: ${(err as Error).message}`)
+    }
+    // (the users not in place: each one with Smart-Sync on, when his interval is over - at least a minute later the next
+    // look, so one whose interval is shorter than that of the one in place is not kept waiting)
+    try {
+      const soonest = await runOthersDue()
+      if (soonest !== null) next = Math.min(next, Math.max(60, soonest))
+    } catch (err) {
+      console.error(`${new Date().toLocaleString()}: [spotify-sync] run of another user threw: ${(err as Error).message}`)
     }
     // Muss in JEDEM Pfad passieren, sonst endet die Kette hier.
     // (at most a day: a Retry-After of weeks overflowed setTimeout, which then fired at once - again and again)
@@ -123,11 +152,11 @@ export async function triggerManualSync(
   markManualTrigger()
   // An immediate run supersedes any pending trailing run.
   let allow = allowWhenOff
-  if (trailingTimer) {
-    clearTimeout(trailingTimer)
-    trailingTimer = null
-    allow = allow || trailingAllowWhenOff
-    trailingAllowWhenOff = false
+  const armed = trailing.get(trailingKey(deps))
+  if (armed) {
+    if (armed.timer) clearTimeout(armed.timer)
+    trailing.delete(trailingKey(deps))
+    allow = allow || armed.allowWhenOff
   }
   // Fire and forget — caller polls /status. Estimate is a hand-tuned
   // ~3s typical run; not load-bearing for correctness, only for UX.
@@ -144,26 +173,31 @@ export async function triggerManualSync(
  * always gets a run that starts *after* it.
  */
 function armTrailingRun(source: SyncTrigger, deps: RunSyncDeps, delaySeconds: number, allowWhenOff = false): void {
-  // (one asked with allowWhenOff while another is armed: the armed one takes it on)
-  if (allowWhenOff) trailingAllowWhenOff = true
-  if (trailingTimer) return
+  const key = trailingKey(deps)
+  const armed = trailing.get(key)
+  // (one asked with allowWhenOff while another is armed for the same library: the armed one takes it on)
+  if (armed) {
+    armed.allowWhenOff ||= allowWhenOff
+    return
+  }
+  const entry: Trailing = { timer: null, allowWhenOff }
+  trailing.set(key, entry)
   const fire = (): void => {
+    if (trailing.get(key) !== entry) return
     if (inflight) {
       // Current run still going — wait and retry so our edit gets a fresh run.
-      trailingTimer = setTimeout(fire, 5000)
-      if (typeof trailingTimer.unref === 'function') trailingTimer.unref()
+      entry.timer = setTimeout(fire, 5000)
+      if (typeof entry.timer.unref === 'function') entry.timer.unref()
       return
     }
-    trailingTimer = null
+    trailing.delete(key)
     markManualTrigger()
-    const allow = trailingAllowWhenOff
-    trailingAllowWhenOff = false
-    runOnce(source, deps, allow).catch((err) => {
+    runOnce(source, deps, entry.allowWhenOff).catch((err) => {
       console.error(`${new Date().toLocaleString()}: [spotify-sync] trailing run threw: ${(err as Error).message}`)
     })
   }
-  trailingTimer = setTimeout(fire, Math.max(0, delaySeconds) * 1000 + 250)
-  if (typeof trailingTimer.unref === 'function') trailingTimer.unref()
+  entry.timer = setTimeout(fire, Math.max(0, delaySeconds) * 1000 + 250)
+  if (typeof entry.timer.unref === 'function') entry.timer.unref()
 }
 
 /** Returns the seconds left on the manual-trigger cooldown, or 0 if free. */
@@ -192,11 +226,45 @@ function markManualTrigger(): void {
 
 /** Internal: run sync, tracking inflight state for the running-guard. */
 async function runOnce(trigger: SyncTrigger, deps: RunSyncDeps, allowWhenOff = false): Promise<RunSyncResult> {
+  // (a run for another library under way - several users: this one after it, it is not that one's result)
+  while (inflight && inflightKey !== trailingKey(deps)) await inflight.catch(() => undefined)
   if (inflight) return inflight
+  inflightKey = trailingKey(deps)
   inflight = runSync(trigger, deps, { allowWhenOff }).finally(() => {
     inflight = null
+    inflightKey = null
   })
   return inflight
+}
+
+/**
+ * The users not in place whose interval is over: synced one after the other (one run at a time - a switch of the user
+ * waits for it). Returns the seconds until the next of them is due, or null when none has Smart-Sync on.
+ */
+async function runOthersDue(now = Date.now): Promise<number | null> {
+  let soonest: number | null = null
+  const others = othersOf()
+  for (const id of [...otherLastRun.keys()]) if (!others.some((o) => o.id === id)) otherLastRun.delete(id)
+  for (const o of others) {
+    const config = loadSpotifySyncConfig(o.deps.getMupiboxConfig())
+    if (!config.enabled) continue
+    const due = (otherLastRun.get(o.id) ?? 0) + config.polling_interval_seconds * 1000
+    if (due <= now()) {
+      if (inflight) await inflight.catch(() => undefined)
+      otherLastRun.set(o.id, now())
+      const result = await runOnce('cron', o.deps)
+      // (Spotify asks the box to wait: the others wait as well)
+      if (result.state === 'RATE_LIMITED') return result.retryAfterSeconds ?? config.polling_interval_seconds
+    }
+    const left = Math.ceil(((otherLastRun.get(o.id) ?? 0) + config.polling_interval_seconds * 1000 - now()) / 1000)
+    soonest = soonest === null ? left : Math.min(soonest, left)
+  }
+  return soonest
+}
+
+/** The deps of a user not in place, or undefined (the one in place, or none such) */
+export function otherSyncUser(id: string): RunSyncDeps | undefined {
+  return othersOf().find((o) => o.id === id)?.deps
 }
 
 /** Stop the scheduler — only used in tests. */

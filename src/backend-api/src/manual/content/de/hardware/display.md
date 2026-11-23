@@ -37,6 +37,7 @@ Das Display schaltet sich nach der eingestellten Zeit ohne Bedienung aus, die Bo
 
 Mit **Abends dunkler** wird das Display abends dunkler und morgens wieder normal hell:
 
+- **An Sonnenuntergang anpassen**: das Display wird dunkler, sobald die Sonne untergeht, und morgens beim Sonnenaufgang wieder normal hell. Die Felder **Ab** und **Bis** verschwinden dann. Dazu sagst du der Box, wo sie steht (**Ort wählen**): Ort suchen, den **Standort dieses Geräts** nehmen (nur wenn die Webapp über eine sichere Adresse, also `https://`, geöffnet ist) oder **Koordinaten eingeben** (Breitengrad und Längengrad, etwa 52.52 und 13.40 für Berlin). Die Box rechnet den Sonnenuntergang selbst aus und zeigt dir den von heute; sie braucht dafür kein Internet. Nur für die Ortssuche geht der getippte Ortsname an Open-Meteo, sonst nichts. Geht die Sonne an einem Tag nicht auf oder unter (Polartag oder Polarnacht), und solange noch kein Ort gewählt ist, gelten **Ab** und **Bis**; die Felder erscheinen dann wieder.
 - **Ab** und **Bis**: die Uhrzeiten,
 - **Helligkeit am Abend**: 5 bis 100 %, nie heller als die normale Helligkeit,
 - **Sanft abdunkeln über**: sofort oder über 15, 30 oder 60 Minuten,
@@ -59,8 +60,12 @@ Ist die Auflösung größer als 800 × 480, vergrößert die Box die Oberfläche
 
 ## Display live
 
-Unter **Einstellungen › Display & Bedienung › Display live** siehst du das aktuelle Bild des Displays (es aktualisiert sich alle 5 Sekunden, solange die Seite offen ist) und kannst das Display im Browser **fernsteuern**. Die Fernsteuerung braucht VNC ([Freigaben und Fernsteuerung](../netzwerk/freigaben.md)).
+Unter **Einstellungen › Display & Bedienung › Display live** siehst du das aktuelle Bild des Displays (es aktualisiert sich alle 5 Sekunden, solange die Seite offen ist) und kannst das Display im Browser **fernsteuern**. Ist das Display aus, steht dort „Das Display ist aus“ mit dem letzten Bild und seiner Uhrzeit: Ein ausgeschaltetes Display liefert nur ein schwarzes Bild. Das gilt auch für Telegram (der Titel kommt dann ohne Bild, **/screen** meldet „Display aus“), MQTT (das letzte Bild bleibt) und Home Assistant. Die Fernsteuerung braucht VNC ([Freigaben und Fernsteuerung](../netzwerk/freigaben.md)).
 
 ## Browser-Einstellungen
 
 Das Display ist ein Browser im Vollbildmodus (Chromium). Dessen Einstellungen, etwa GPU-Unterstützung und Cache, findest du unter **Einstellungen › System › Browser (Chromium)** ([System- und Experteneinstellungen](../wartung/system.md)).
+
+## Ganz ohne Display
+
+Eine Box ohne Bildschirm, etwa nur mit NFC-Tags und Tastern, startet mit dem Schalter **Ohne DSI-Display betreiben** unter **Einstellungen › Display** ohne Kiosk und Chromium. Mehr dazu unter [Ohne DSI-Display](../erweiterungen/ohne-dsi-display.md).

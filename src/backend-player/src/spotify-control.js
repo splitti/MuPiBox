@@ -5,6 +5,8 @@ const path = require('node:path')
 const dns = require('node:dns')
 const SpotifyWebApi = require('spotify-web-api-node')
 const createMpv = require('./mpv-wrapper.js')
+const { createExtensionHost, redactSecrets } = require('./extensions.js')
+const Q = require('./queue.js')
 const { isPlaylistUrl, pointsAtBox, resolveStreamUrl } = require('./playlist-url.js')
 const googleTTS = require('google-tts-api')
 const fs = require('node:fs')
@@ -15,11 +17,16 @@ const childProcess = require('node:child_process')
 dns.setDefaultResultOrder('ipv4first')
 
 let configBasePath = './config'
-//let networkConfigBasePath = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config'
 if (process.env.NODE_ENV === 'development') {
   configBasePath = '../config'
-  //networkConfigBasePath = '../../backend-api/config'
 }
+// What the box keeps and what it can fetch again, since 5.1 beside the player's folder (~/.mupibox/player):
+// ~/.mupibox/data (an update never touches it) and ~/.mupibox/cache - as the server's paths.ts. In development
+// next to the player's config.
+const MUPI_HOME = '/home/dietpi/.mupibox'
+const DATA_DIR = process.env.NODE_ENV === 'development' ? configBasePath : `${MUPI_HOME}/data`
+const LIBRARY_DIR = process.env.NODE_ENV === 'development' ? configBasePath : `${DATA_DIR}/library`
+const CACHE_DIR = process.env.NODE_ENV === 'development' ? configBasePath : `${MUPI_HOME}/cache`
 
 // mupiboxconfig.json supports live reload — admin saves take effect within ~50ms
 // without a pm2 restart. config.json (Spotify creds, log level, port) is read once
@@ -186,9 +193,20 @@ function applyLoudness() {
   player.setLoudness?.(mode)
   console.log(`${new Date().toLocaleString()}: [Player] loudness levelling: ${mode}`)
 }
+// The Winamp theme's equaliser and balance (the display's windows, see frontend-box/src/app/winamp): kept in a file so
+// they come back after a restart; only mpv has the filters
+const WINAMP_SOUND_FILE = '/home/dietpi/.mupibox/winamp-sound.json'
+const winampSound = { on: false, auto: false, preamp: 0, bands: new Array(10).fill(0), balance: 0 }
+try {
+  Object.assign(winampSound, JSON.parse(fs.readFileSync(WINAMP_SOUND_FILE, 'utf8')))
+} catch {
+  // none saved yet
+}
+const applyWinampSound = () => player.setSound?.(winampSound)
 player.on('ready', () => {
   loudnessApplied = null // (a new mpv process after a respawn starts without the filter)
   applyLoudness()
+  applyWinampSound()
 })
 
 // Refuse commands a foreign web page sends through a visitor's browser; CORS only for the box's
@@ -219,7 +237,8 @@ const apiAccessToken = {
 
 player.on('percent_pos', (val) => {
   //console.log('track progress is', val);
-  if (!isCuePlayback()) currentMeta.progressTime = val
+  // (a Jellyfin track without a length of its own: its part from the listed length, see time_pos)
+  if (!isCuePlayback() && !albumNow()?.progress && !jellyfinListedLength() && !isAudible()) currentMeta.progressTime = val
 })
 
 // --- CUE albums (one audio file, tracks by start time - see /api/nas/tracklist) ---
@@ -254,14 +273,55 @@ function cueSeek(seconds) {
   pendingCueSeek = { seconds, at: Date.now(), tries: 0 }
 }
 
+// the length mpv read from the file that plays (none for a stream made while it plays - Jellyfin's MP3 for a weak WiFi)
+let mpvLength = 0
+// A Jellyfin track without a length of its own: the one Jellyfin listed (0 when mpv has one, or none is listed)
+function jellyfinListedLength() {
+  if (currentMeta.currentType !== 'jellyfin' || mpvLength > 0) return 0
+  const track = currentJellyfinTracks[Number(currentMeta.currentTracknr) - 1]
+  return track?.duration > 0 ? track.duration : 0
+}
+// (a new file: its own length first - the one before must not stand for a file mpv cannot measure)
+player.on('track-change', () => {
+  mpvLength = 0
+})
 player.on('length', (val) => {
+  mpvLength = Number(val) > 0 ? Number(val) : 0
   if (currentCue) currentCue.fileLength = val
-  if (!isCuePlayback()) currentMeta.durationSeconds = val
+  if (!isCuePlayback() && !albumNow()?.progress && !isAudible()) currentMeta.durationSeconds = val
 })
 player.on('time_pos', (seconds) => {
+  // an album that is no folder (an extension's: the audio CD) says where in its track the playing time of the whole is
+  const album = currentMeta.currentPlayer === 'mplayer' ? albumNow() : undefined
+  if (album?.progress) {
+    const at = album.progress(seconds, player.trackIndex?.() ?? currentMeta.currentTracknr - 1)
+    if (at) {
+      currentMeta.positionSeconds = at.position
+      if (at.duration !== undefined) currentMeta.durationSeconds = at.duration
+      if (at.progress !== undefined) currentMeta.progressTime = at.progress
+    } else currentMeta.positionSeconds = seconds
+    return
+  }
+  if (isAudible()) {
+    const chapter = audibleChapter()
+    const place = audiblePlace(seconds)
+    currentMeta.positionSeconds = place
+    if (chapter?.duration > 0) {
+      currentMeta.durationSeconds = chapter.duration
+      currentMeta.progressTime = Math.max(0, Math.min(100, (place * 100) / chapter.duration))
+    }
+    return
+  }
   if (!isCuePlayback()) {
     pendingCueSeek = null
     currentMeta.positionSeconds = seconds
+    // (a Jellyfin track made into MP3 for a weak WiFi has no length mpv could read: the one Jellyfin listed, so the bar,
+    // "weiterhören" and the heard tick still work)
+    const listed = jellyfinListedLength()
+    if (listed) {
+      currentMeta.durationSeconds = listed
+      currentMeta.progressTime = Math.max(0, Math.min(100, (Number(seconds) * 100) / listed))
+    }
     noteEpisodePosition(seconds)
     return
   }
@@ -344,6 +404,15 @@ player.on('metadata', (val) => {
   } else if (currentMeta.currentType === 'tidal') {
     const track = currentTidalTracks[currentMeta.currentTracknr - 1]
     if (track) currentMeta.currentTrackname = track.name
+  } else if (currentMeta.currentType === 'jellyfin') {
+    const track = currentJellyfinTracks[currentMeta.currentTracknr - 1]
+    if (track) currentMeta.currentTrackname = track.name
+  } else if (currentMeta.currentType === 'audible') {
+    const chapter = currentAudibleChapters[currentMeta.currentTracknr - 1]
+    if (chapter) currentMeta.currentTrackname = chapter.name
+  } else if (albumNow()) {
+    // (an album that is no folder - an extension's - names its tracks)
+    currentMeta.currentTrackname = albumNow().trackName?.(currentMeta.currentTracknr, val) || val.Title
   } else if (currentMeta.currentType !== 'rss' && currentMeta.currentType !== 'radio') {
     currentMeta.currentTrackname = val.Title
   }
@@ -436,6 +505,8 @@ function finishLoading() {
 // mpv says file-loaded (track-change) as soon as the stream is OPEN and fills its cache after that - the dots ended in
 // that moment, and the display showed nothing for the seconds until the sound came. The loading ends with the cache
 // filled, or, for a stream that reports no buffering, with the sound running (time_pos past where it started).
+// what the file is, for the Winamp theme's little displays (kbit/s, kHz, mono / stereo)
+player.on('audio-info', (info) => Object.assign(currentMeta, info))
 player.on('cache-fill', (percent) => {
   if (currentMeta.loading) {
     currentMeta.loadProgress = Math.min(100, Math.round((percent / cachePrefillPercent) * 100))
@@ -456,7 +527,7 @@ player.on('time_pos', checkSilence)
 
 player.on('filename', (val) => {
   log.debug('track name is', val)
-  if (!currentMeta.currentTrackname && currentMeta.currentPlayer !== 'spotify') {
+  if (!currentMeta.currentTrackname && currentMeta.currentPlayer !== 'spotify' && !albumNow()) {
     currentMeta.currentTrackname = val
       .split('.mp3')[0]
       .split('.flac')[0]
@@ -475,7 +546,7 @@ player.on('path', (val) => {
     currentMeta.trackFile =
       typeof val === 'string' && val.startsWith(mediaRoot) ? `local:${val.slice(mediaRoot.length)}` : undefined
   }
-  if (!['rss', 'radio', 'nas', 'tidal'].includes(currentMeta.currentType)) {
+  if (!['rss', 'radio', 'nas', 'tidal', 'jellyfin', 'audible'].includes(currentMeta.currentType) && !albumNow()) {
     // The folder holding the file, whatever the folder depth (was: fixed 7th segment).
     const pathParts = val.split('/')
     if (pathParts.length > 2) {
@@ -500,11 +571,15 @@ player.on('track-change', () => {
 // The next song is about to start: in "let the song finish" mode this is the moment to stop. In "let the album
 // finish" mode songs simply run on until the playlist is over.
 function graceSongBoundary() {
+  if (isAudible() && audibleReloading()) return
   if (playtimeState.state === 'grace' && playtimeState.graceMode === 'track') {
     finalizePlaytimeBlock('next track would start during grace period', true)
   }
   if (quietHoursState.state === 'grace' && quietHoursState.graceMode === 'track') {
     finalizeQuietHoursBlock('next track would start during grace period', true)
+  }
+  if (tileState.state === 'grace' && tileState.graceMode === 'track') {
+    finalizeTileBlock('next track would start during grace period', true)
   }
 }
 player.on('track-change', graceSongBoundary)
@@ -515,6 +590,9 @@ player.on('playlist-finish', () => {
   if (quietHoursState.state === 'grace') {
     finalizeQuietHoursBlock('playlist finished during grace period', true)
   }
+  if (tileState.state === 'grace') {
+    finalizeTileBlock('playlist finished during grace period', true)
+  }
   // (a stream that ended or broke off before it played: no loading any more - it stayed on until the 90-s guard, and
   // the display took the box for playing meanwhile. A reconnect below starts a loading of its own.)
   stopLoading()
@@ -524,6 +602,9 @@ player.on('playlist-finish', () => {
   // the album or episode played to its end (not a stop: that empties currentPlayer first) - the display goes back
   // to its list at once instead of waiting 10 s for the player to stay silent
   if (currentMeta.currentPlayer === 'mplayer') currentMeta.finished = true
+  albumNow()?.onFinished?.() // (an album that is no folder: it played to its end)
+  heardPlaylistFinished()
+  extensions.emit('finished')
   // Library album finished naturally — drop its resume entry so the user
   // isn't offered "weiterhören" at the very end next time. Spotify and RSS
   // are skipped: Spotify gives no clean end-of-album signal via the
@@ -539,12 +620,32 @@ function deleteResumeForFinishedLibraryAlbum() {
   if (currentMeta.currentPlayer !== 'mplayer') return
   const rawPath = currentMeta.path
   if (!rawPath) return
+  // (a streamed list - TIDAL, Jellyfin - also runs out when every track after one fails: the server asleep, the token
+  // gone, another access point. Its place stays then; only a last track that really played to its end ends it, as for
+  // the heard tick - see heardPlaylistFinished)
+  if (currentMeta.currentType === 'tidal' || currentMeta.currentType === 'jellyfin' || currentMeta.currentType === 'audible') {
+    const nr = Number(currentMeta.currentTracknr)
+    const total = Number(currentMeta.totalTracks)
+    const dur = Number(currentMeta.durationSeconds)
+    const pos = Number(currentMeta.positionSeconds)
+    if (!(dur > 0 && pos >= dur - HEARD_END_S) || (!currentMeta.shuffle && !(total > 0 && nr >= total))) return
+  }
   let body
   if (currentMeta.currentType === 'tidal') {
     // a TIDAL album or playlist: its resume entry is keyed by TIDAL's id (path is <album|playlist>:<id>)
     const id = String(rawPath).split(':')[1]
     if (!id) return
     body = JSON.stringify({ type: 'tidal', id })
+  } else if (currentMeta.currentType === 'jellyfin') {
+    // (the same for Jellyfin: <album|playlist|book>:<id>)
+    const id = String(rawPath).split(':')[1]
+    if (!id) return
+    body = JSON.stringify({ type: 'jellyfin', id })
+  } else if (currentMeta.currentType === 'audible') {
+    // (an Audible book: book:<asin>)
+    const id = String(rawPath).split(':')[1]
+    if (!id) return
+    body = JSON.stringify({ type: 'audible', id })
   } else {
     if (currentMeta.currentType !== 'local') return
     const parts = String(rawPath).split('/')
@@ -578,6 +679,166 @@ function deleteResumeForFinishedLibraryAlbum() {
   })
   req.write(body)
   req.end()
+}
+
+// --- Heard (5.1, issue #180): the ticks at the covers of a list on the display ---
+// What plays counts as "started" after a minute of playing and as "finished" when its last track played to its last 30 s
+// (or to its end); the two moments go to the backend (heard.ts), which keeps them. What plays is named with its start
+// (?heard=, by the display and the app), else it is formed from what plays (a start from Telegram, Home Assistant, an
+// extension) - the same keys: lib:<folder>, nas:<path>, tidal:<album|playlist>:<id>, jellyfin:<album|playlist|book>:<id>,
+// audible:book:<asin>, spotify:<kind>:<id>.
+// Podcast episodes have their own (the episode positions); radio has none.
+const HEARD_KEY = /^(lib|nas|tidal|jellyfin|audible|spotify):[^\n]{1,400}$/
+const HEARD_STARTED_S = 60
+const HEARD_END_S = 30
+// given: the key the start named, for the playback it started (gen); key: what is counted now
+const heardState = { given: null, gen: -1, key: null, played: 0, started: false, finished: false, track: 0, settle: 0 }
+// what the display's Spotify player last told of what it plays (see /display/spotify-progress)
+let spotifyProgress = null
+const spotifyLastFetchFailed = new Map() // album id -> when asking for its last track failed (not again for a while)
+
+function startHeard(given) {
+  Object.assign(heardState, { given, gen: playbackRequest, key: null, played: 0, started: false, finished: false, track: 0, settle: 0 })
+  spotifyProgress = null
+}
+
+// What plays now, as its key (the same as the display's: the folder, the NAS path, TIDAL's kind:id, Spotify's uri)
+function heardKeyPlaying() {
+  const p = currentMeta.path
+  if (currentMeta.currentPlayer === 'mplayer') {
+    if (!p) return null
+    if (currentMeta.currentType === 'local') return `lib:${p}`
+    if (currentMeta.currentType === 'nas') return `nas:${p}`
+    if (currentMeta.currentType === 'tidal') return `tidal:${p}`
+    if (currentMeta.currentType === 'jellyfin') return `jellyfin:${p}`
+    // (an Audible start that failed while something else plays on: no key - not the failed book's, see heardKeyNow)
+    if (currentMeta.currentType === 'audible') return isAudible() ? `audible:${p}` : 'none:'
+    return null
+  }
+  if (currentMeta.currentPlayer === 'spotify') {
+    const m = /^spotify:(album|playlist|episode|show):([A-Za-z0-9]+)/.exec(currentMeta.activeSpotifyId || '')
+    return m ? `spotify:${m[1]}:${m[2]}` : null
+  }
+  return null
+}
+
+function heardKeyNow() {
+  // What plays first: a start that failed (the NAS away, TIDAL not signed in, Spotify blocking) left the album before
+  // playing - counted under the key the failed start named - and another episode chosen in the player's list came with
+  // the key of the one opened. The key the start named only when what plays has none of its own (the same playback).
+  const playing = heardKeyPlaying()
+  if (playing) return playing
+  return heardState.given && heardState.gen === playbackRequest ? heardState.given : null
+}
+
+function noteHeard(key, state) {
+  if (!HEARD_KEY.test(key)) return
+  const body = JSON.stringify({ key, state })
+  const req = http.request(
+    { host: '127.0.0.1', port: 8200, path: '/api/heard/note', method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } },
+    (response) => {
+      response.resume()
+      log.debug(`${now()}: [Spotify Control] heard ${state} ${key}: ${response.statusCode}`)
+    },
+  )
+  req.on('error', (err) => log.debug(`${now()}: [Spotify Control] heard note failed: ${err.message}`))
+  req.write(body)
+  req.end()
+}
+
+// Whether the Spotify track that plays is the last of what was started: an episode is its own; an album's last track as
+// Spotify lists it (asked once per album); else the display's player has nothing after it
+function spotifyIsLast(p) {
+  const m = /^spotify:(album|playlist|episode|show):([A-Za-z0-9]+)/.exec(currentMeta.activeSpotifyId || '')
+  if (!m) return false
+  if (m[1] === 'episode') return true
+  // (Spotify went on with something else - its autoplay: not what was started)
+  if (p.ctx && p.ctx !== `spotify:${m[1]}:${m[2]}`) return false
+  // (nothing after it in what was started; or an album's last track - Spotify's autoplay may line up others after it.
+  // Shuffled: the album's last track comes at any place - only nothing after it counts, as for the box's own player)
+  if (p.shuffle) return p.next === 0
+  return p.next === 0 || (m[1] === 'album' && !!p.track && spotifyAlbumLastTrack.get(m[2]) === p.track)
+}
+
+// The last track of an album by its id, for spotifyIsLast (kept with the grace check's, see spotifyLastTrackOfAlbum)
+async function learnSpotifyAlbumEnd(id) {
+  if (spotifyAlbumLastTrack.has(id) || spotifyBlockedUntil()) return
+  const failed = spotifyLastFetchFailed.get(id)
+  if (failed && Date.now() - failed < 10 * 60_000) return
+  spotifyLastFetchFailed.set(id, Date.now()) // (also while it is asked: once at a time)
+  try {
+    const { body } = await spotifyApi.getAlbum(id)
+    const total = body?.tracks?.total ?? body?.total_tracks ?? 0
+    const items = body?.tracks?.items ?? []
+    if (total > 0 && items.length >= total && items[total - 1]?.id) {
+      if (spotifyAlbumLastTrack.size > 200) spotifyAlbumLastTrack.clear()
+      spotifyAlbumLastTrack.set(id, items[total - 1].id)
+    } else await spotifyLastTrackOfAlbum({ id, total_tracks: total })
+    if (spotifyAlbumLastTrack.has(id)) spotifyLastFetchFailed.delete(id)
+  } catch (err) {
+    log.debug(`${now()}: [Spotify Control] heard: the album's last track not known (${err?.message ?? err})`)
+  }
+}
+
+function heardNearEnd() {
+  if (currentMeta.currentPlayer === 'mplayer') {
+    // (shuffled: its last track is any - only the end of the list counts, see heardPlaylistFinished)
+    if (currentMeta.shuffle || heardState.settle > 0) return false
+    const nr = Number(currentMeta.currentTracknr)
+    const total = Number(currentMeta.totalTracks)
+    const dur = Number(currentMeta.durationSeconds)
+    const pos = Number(currentMeta.positionSeconds)
+    return total > 0 && nr >= total && dur > 0 && pos > 0 && pos >= dur - HEARD_END_S
+  }
+  if (currentMeta.currentPlayer === 'spotify') {
+    const p = spotifyProgress
+    if (!p || p.paused || !(p.durMs > 0)) return false
+    const at = p.posMs + (Date.now() - p.at)
+    return at >= p.durMs - HEARD_END_S * 1000 && spotifyIsLast(p)
+  }
+  return false
+}
+
+// every second (combinedTick): a minute played - started; the last 30 s of the last track - finished
+function heardTickStep() {
+  const key = heardKeyNow()
+  if (key !== heardState.key) Object.assign(heardState, { key, played: 0, started: false, finished: false, track: 0, settle: 0 })
+  if (!key || heardState.finished) return
+  // (a track that just began: the times of the one before stand for a moment - the last one began, with the position of
+  // the end of the one before it, was taken for its end)
+  const nr = Number(currentMeta.currentTracknr) || 0
+  if (nr !== heardState.track) {
+    heardState.track = nr
+    heardState.settle = 3
+  } else if (heardState.settle > 0) heardState.settle--
+  if (!isActuallyPlaying()) return
+  heardState.played++
+  if (!heardState.started && heardState.played >= HEARD_STARTED_S) {
+    heardState.started = true
+    noteHeard(key, 'started')
+  }
+  if (heardNearEnd()) {
+    heardState.finished = true
+    noteHeard(key, 'finished')
+  }
+}
+
+// the box's player came to the end of its list (not a stop): what played is heard to its end
+function heardPlaylistFinished() {
+  if (currentMeta.currentPlayer !== 'mplayer') return
+  // (only when the last track really played to its end: the list also runs out when every track after one fails - the
+  // NAS gone, the WiFi moving to another access point, TIDAL's sign-in expired - an audio play broken off after its
+  // third episode was green. Shuffled: any track is the last one, its end counts)
+  const nr = Number(currentMeta.currentTracknr)
+  const total = Number(currentMeta.totalTracks)
+  const dur = Number(currentMeta.durationSeconds)
+  const pos = Number(currentMeta.positionSeconds)
+  if (!(dur > 0 && pos >= dur - HEARD_END_S) || (!currentMeta.shuffle && !(total > 0 && nr >= total))) return
+  const key = heardKeyNow()
+  if (!key || (heardState.key === key && heardState.finished)) return
+  if (heardState.key !== key) Object.assign(heardState, { key, played: 0, started: true })
+  heardState.finished = true
+  noteHeard(key, 'finished')
 }
 
 // H1: amixer was forked once per second to mirror the system volume into
@@ -667,6 +928,16 @@ const currentMeta = {
   positionSeconds: 0,
   durationSeconds: 0,
   volume: 0,
+  // the file that plays (mpv): kbit/s, kHz, channels - 0 when not known
+  bitrate: 0,
+  khz: 0,
+  channels: 0,
+  // the playlist starts again at its end (Winamp theme's REP button; also true while one track repeats)
+  repeat: false,
+  // 'off', 'all' (the album or playlist starts again at its end) or 'one' (the track plays again and again)
+  repeatMode: 'off',
+  // Shuffle of a local or NAS album (mpv): "next" and the end of a track choose a track not played yet; the numbers stay
+  shuffle: false,
   // Radio streams and podcasts are buffered before they start: how far along that is.
   loading: false,
   // Cover of a radio station or podcast episode started by the parents' app (?cover=): the display shows it when it
@@ -699,6 +970,220 @@ let currentNasTracks = []
 let currentTidalTracks = []
 // the box's TIDAL service (scripts/mupibox/tidal_service.py)
 const TIDAL_SERVICE = 'http://127.0.0.1:5011'
+// Audible (docs/audible-5.1.md, A3): a book's chapters are its tracks; mpv plays an m3u of the backend's
+// /api/audible/stream/<asin>/<chapter>. mpv cannot jump inside a chapter (plain AAC without an index: it would read up to the
+// place), so a place inside one - going on, seeking - is asked of the backend (?at=<seconds>, it starts the chapter there)
+// and the list is loaded anew at that chapter; audibleAt says where the chapter that began inside starts in mpv's time.
+let currentAudibleChapters = []
+// the book whose chapters these are (a start that failed leaves the type 'audible' on what still plays - not Audible's)
+let audibleBook = ''
+const AUDIBLE_API = 'http://127.0.0.1:8200/api/audible'
+const audibleAt = { index: -1, at: 0 }
+// mpv's last time in the file that plays: a jump back to its beginning is "repeat one" starting the file again
+// (and the entry of the list it plays, for "repeat all" coming round again)
+const audibleLoop = { last: 0, index: -1 }
+// A list loaded anew (a start, a seek, a jump): the chapter it goes to, until mpv plays there - meanwhile mpv's place in the
+// list can still be the old one (or 0 between loading the list and choosing the entry). Also no new song for the grace
+// "until the end of the song" and no report of a place until then.
+let audiblePending = null // { index, until, loaded }
+// A5: the book whose place in Audible was not known at its start (Audible did not answer) - nothing is told for it until the
+// child chooses a place (a seek, a jump): the box's beginning would overwrite the account's place
+let audibleNoReport = ''
+const isAudible = () =>
+  currentMeta.currentPlayer === 'mplayer' && currentMeta.currentType === 'audible' && !!audibleBook && currentMeta.path === `book:${audibleBook}` && currentAudibleChapters.length > 0
+const audibleReloading = () => !!audiblePending && Date.now() < audiblePending.until
+const audibleIndex = () => {
+  const i = player.trackIndex?.() ?? -1
+  if (audibleReloading() && i !== audiblePending.index) return audiblePending.index
+  return i >= 0 ? i : Number(currentMeta.currentTracknr) - 1
+}
+const audibleChapter = () => currentAudibleChapters[audibleIndex()]
+// the place in the chapter: mpv's time, plus where the chapter began when it was started inside
+const audiblePlace = (seconds) => Math.max(0, Number(seconds) || 0) + (audibleIndex() === audibleAt.index ? audibleAt.at : 0)
+// (a new chapter: its place is its beginning - not the end of the one before - until mpv tells its time)
+player.on('track-change', () => {
+  if (!isAudible()) return
+  const index = player.trackIndex?.() ?? -1
+  if (audiblePending && index === audiblePending.index) audiblePending.loaded = true
+  currentMeta.positionSeconds = audibleIndex() === audibleAt.index ? audibleAt.at : 0
+  // "Repeat all" goes round again (the last chapter over, back to the first) while a chapter begun inside (going on, a seek) is
+  // in the list with its place: the list is loaded anew without it, from the chapter mpv went round to
+  const before = audibleLoop.index
+  audibleLoop.index = index
+  if (currentMeta.repeatMode === 'all' && !audibleReloading() && audibleAt.index >= 0 && index >= 0 && before > index) {
+    audiblePlayFrom(index, 0)
+  }
+})
+player.on('time_pos', (seconds) => {
+  // (a list loaded anew - a seek, a jump - starts its file at 0 too: no repeat; only once it plays there)
+  if (audibleReloading()) audibleLoop.last = 0
+  // (mpv plays the chapter the list was loaded for, its file loaded after the reload: arrived)
+  if (audiblePending?.loaded && Number(seconds) > 0 && (player.trackIndex?.() ?? -1) === audiblePending.index) audiblePending = null
+  // "Repeat one" of a chapter begun inside (going on, a seek): mpv repeats its file, which starts at that place - once it
+  // jumped back to the file's beginning, the chapter is loaded anew from its own beginning (repeated whole from then on)
+  const t = Number(seconds) || 0
+  if (isAudible() && currentMeta.repeatMode === 'one' && !audibleReloading() && audibleAt.index >= 0 && audibleAt.index === audibleIndex()) {
+    // (back by more than a second to the beginning - also when only the last seconds of the chapter were left)
+    if (audibleLoop.last > t + 1 && t < 2) {
+      audibleLoop.last = 0
+      audiblePlayFrom(audibleAt.index, 0)
+      return
+    }
+  }
+  audibleLoop.last = t
+})
+// The book from chapter <index> (0-based) at <at> seconds into it: the whole list anew, that chapter starting there.
+// fromStart: the book's own start (a start held while paused begins here; a seek meanwhile waits for it)
+function audiblePlayFrom(index, at = 0, fromStart = false) {
+  const chapters = currentAudibleChapters
+  if (!isAudible() || !Number.isFinite(Number(index))) return
+  if (heldStart && !fromStart) return
+  const i = Math.max(0, Math.min(chapters.length - 1, Math.trunc(Number(index))))
+  // (another chapter chosen - a jump, back, a seek over its border: a new song for the grace "until the end of the song",
+  // as a track change of the other sources; the reload itself is none)
+  if (!fromStart && i !== audibleIndex()) {
+    graceSongBoundary()
+    if (isPlaybackBlocked()) return
+  }
+  const place = Math.max(0, Math.min(Math.floor(Number(at) || 0), Math.floor(chapters[i].duration) - 2))
+  audibleAt.index = place > 0 ? i : -1
+  audibleAt.at = place > 0 ? place : 0
+  const tmpPlaylistPath = '/tmp/audible_playlist.m3u'
+  fs.writeFileSync(tmpPlaylistPath, chapters.map((c, k) => `${AUDIBLE_API}/stream/${audibleBook}/${c.number}${k === i && place > 0 ? `?at=${place}` : ''}`).join('\n'))
+  audiblePending = { index: i, until: Date.now() + 30000, loaded: false }
+  // (a place the child chose: from now on the box tells Audible where it is)
+  if (!fromStart) audibleNoReport = ''
+  currentMeta.currentTracknr = i + 1
+  currentMeta.currentTrackname = chapters[i].name
+  currentMeta.positionSeconds = place
+  currentMeta.durationSeconds = chapters[i].duration
+  currentMeta.progressTime = chapters[i].duration > 0 ? (place * 100) / chapters[i].duration : 0
+  // (loading a list lets mpv play: a seek while paused stays paused, as for the other sources)
+  const paused = !fromStart && currentMeta.pause === true
+  player.playList(tmpPlaylistPath, i > 0 ? { track: i + 1 } : undefined)
+  if (paused) player.command?.(['set_property', 'pause', true])
+}
+// A seek in the playing chapter (progress > 1: a place in percent; 1 / 0: 30 s forward / back) - past its end: the next one
+function audibleSeek(progress) {
+  const i = audibleIndex()
+  const chapter = currentAudibleChapters[i]
+  if (!chapter) return
+  const pos = Number(currentMeta.positionSeconds) || 0
+  const target = progress > 1 ? (Number(progress) * chapter.duration) / 100 : progress ? pos + 30 : pos - 30
+  if (!Number.isFinite(target)) return
+  if (target >= chapter.duration - 1) {
+    if (i + 1 < currentAudibleChapters.length) audiblePlayFrom(i + 1, target - chapter.duration)
+    return
+  }
+  if (target < 0 && progress <= 1 && i > 0) return audiblePlayFrom(i - 1, currentAudibleChapters[i - 1].duration + target)
+  audiblePlayFrom(i, Math.max(0, target))
+}
+
+// A5, "Hörposition mit Audible teilen": where the box is in a book goes to the backend (it passes it on only with the switch
+// on) - every 30 s while it plays, at a pause, and when the book stops or another one starts. Audible keeps one place per
+// book (seconds from its start). Only once mpv plays the chapter: until then the position is the one of before.
+const audibleReport = { asin: null, pos: 0, paused: false, sentAt: 0 }
+let audiblePlaying = false
+player.on('track-change', () => {
+  audiblePlaying = false
+})
+player.on('time_pos', (seconds) => {
+  if (Number(seconds) > 0) audiblePlaying = true
+})
+function sendAudible(asin, position) {
+  fetch(`${AUDIBLE_API}/progress`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ asin, position: Math.max(0, Math.round(position)) }),
+    signal: AbortSignal.timeout(15000),
+  }).catch(() => undefined)
+}
+setInterval(() => {
+  const r = audibleReport
+  const now = isAudible() && !currentMeta.finished ? String(currentMeta.path ?? '').split(':')[1] : null
+  const chapter = now ? audibleChapter() : undefined
+  // (the book before: its last place - stopped, another one started, played to its end)
+  if (r.asin && r.asin !== now) {
+    sendAudible(r.asin, r.pos)
+    r.asin = null
+  }
+  // (a start held while paused: mpv still has the book before; a place not known at the start; mpv not at the chapter
+  // the player counts - a chapter that did not open)
+  if (!now || !chapter || !audiblePlaying || audibleReloading() || heldStart || audibleNoReport === now) return
+  if ((player.trackIndex?.() ?? -1) + 1 !== Number(currentMeta.currentTracknr)) return
+  const pos = chapter.start + Math.min(Number(currentMeta.positionSeconds) || 0, chapter.duration)
+  const paused = currentMeta.pause === true
+  if (r.asin !== now) {
+    Object.assign(r, { asin: now, pos, paused, sentAt: Date.now() })
+    return
+  }
+  r.pos = pos
+  // (a pause at once; while paused nothing more - a long pause is no news)
+  if (paused !== r.paused || (!paused && Date.now() - r.sentAt >= 30000)) {
+    r.paused = paused
+    r.sentAt = Date.now()
+    sendAudible(now, pos)
+  }
+}, 5000)
+
+// the same for a Jellyfin album, playlist or audiobook (playJellyfinList): mpv plays the backend's /api/jellyfin/stream/<id>,
+// which brings the track from Jellyfin with the box's token (docs/jellyfin-5.1.md)
+let currentJellyfinTracks = []
+const JELLYFIN_API = 'http://127.0.0.1:8200/api/jellyfin'
+
+// J5, "Fortschritt mit Jellyfin teilen": what plays of Jellyfin goes to the backend (it passes it on only with the
+// switch on) - a track's start, every 30 s where it is, a pause, and its stop. Jellyfin sets "played" itself for a track
+// stopped near its end. Looked at every 5 s: a track that changed on its own is reported at its full length.
+const jellyfinReport = { id: null, nr: 0, duration: 0, pos: 0, paused: false, sentAt: 0 }
+// (a track counts only once mpv plays it: the number is set ahead at a start, a jump and "previous", and the position of
+// the track before stays until the first playing time of the new one - reported early, Jellyfin took a track not heard
+// for started (an audiobook's chapter as not played again) or for played to its end)
+let jellyfinPlaying = false
+player.on('track-change', () => {
+  jellyfinPlaying = false
+  if (currentMeta.currentType === 'jellyfin') currentMeta.positionSeconds = 0
+})
+player.on('time_pos', (seconds) => {
+  if (Number(seconds) > 0) jellyfinPlaying = true
+})
+function sendJellyfin(id, event, position, paused) {
+  fetch(`${JELLYFIN_API}/progress`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, event, position, paused }),
+    signal: AbortSignal.timeout(10000),
+  }).catch(() => undefined)
+}
+setInterval(() => {
+  const r = jellyfinReport
+  const nr = Number(currentMeta.currentTracknr)
+  const jellyfinNow = currentMeta.currentPlayer === 'mplayer' && currentMeta.currentType === 'jellyfin' && !currentMeta.finished
+  // (the same track mpv has, and it plays already - see jellyfinPlaying; meanwhile nothing is said, also no stop)
+  const index = player.trackIndex?.() ?? -1
+  if (jellyfinNow && (!jellyfinPlaying || (index >= 0 && index + 1 !== nr))) return
+  const track = jellyfinNow ? currentJellyfinTracks[nr - 1] : undefined
+  const pos = Number(currentMeta.positionSeconds) || 0
+  if (r.id && r.id !== track?.id) {
+    // (the next track came on its own, or the list played to its end: the one before played to its end)
+    const toEnd = ((track && nr === r.nr + 1) || currentMeta.finished) && r.duration > 0 && r.pos >= r.duration - 15
+    sendJellyfin(r.id, 'stop', toEnd ? r.duration : r.pos, false)
+    r.id = null
+  }
+  if (!track) return
+  const paused = currentMeta.pause === true
+  if (r.id !== track.id) {
+    Object.assign(r, { id: track.id, nr, duration: Number(track.duration) || Number(currentMeta.durationSeconds) || 0, pos, paused, sentAt: Date.now() })
+    sendJellyfin(track.id, 'start', pos, paused)
+    return
+  }
+  r.pos = pos
+  // (a pause and its end at once; while paused nothing more - a long pause is no news)
+  if (paused !== r.paused || (!paused && Date.now() - r.sentAt >= 30000)) {
+    r.paused = paused
+    r.sentAt = Date.now()
+    sendJellyfin(track.id, 'progress', pos, paused)
+  }
+}, 5000)
 
 // === Playtime Limit (daily listening cap) ===
 // Per-weekday limit on active playback time. Configured in mupiboxconfig.json
@@ -708,7 +1193,7 @@ const TIDAL_SERVICE = 'http://127.0.0.1:5011'
 const PLAYTIME_DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 const PLAYTIME_DEFAULT_LIMITS = { mon: 60, tue: 60, wed: 60, thu: 60, fri: 60, sat: 60, sun: 60 }
 const PLAYTIME_WORKING_PATH = '/tmp/playtime.json'
-const PLAYTIME_CHECKPOINT_PATH = path.join(configBasePath, 'playtime-checkpoint.json')
+const PLAYTIME_CHECKPOINT_PATH = path.join(DATA_DIR, 'playtime-checkpoint.json')
 const PLAYTIME_CHECKPOINT_INTERVAL_MS = 60_000
 
 // What may happen when a limit is reached (play time used up / a quiet window starts):
@@ -880,6 +1365,16 @@ const playtimeState = {
 }
 let playtimeLastCheckpointAt = 0
 let playtimeLastCheckpointSeconds = -1
+// a switch of the user under way: nothing of the day's counts and positions written (see "Users", /user/hold)
+let userHold = false
+// (counted up at every hold and change of the user: a checkpoint written before - still on its way to the card - is not
+// put in place after one, it would land at the other user's place)
+let userGeneration = 0
+// (right after a change of the user: the first tick finds the coming user's day used up or his quiet hours on and
+// blocks again - without telling the parents once more, they had it when it began; children switching back and forth
+// at the lock screen sent it at every switch)
+let playtimeNoticeSkip = false
+let quietNoticeSkip = false
 
 // Quiet hours uses the same state machine but is purely time-window-driven (no counter).
 const quietHoursState = {
@@ -895,6 +1390,22 @@ function loadPlaytimeCheckpoint() {
     if (!fs.existsSync(PLAYTIME_CHECKPOINT_PATH)) return
     const data = JSON.parse(fs.readFileSync(PLAYTIME_CHECKPOINT_PATH, 'utf8'))
     const today = getLogicalDay(new Date(), readPlaytimeConfig().resetHour)
+    // (the photo time's count of the same day, and the last reset of it the parents asked for that was done)
+    photoTimeState.resetApplied = Number(data?.photoResetApplied) || 0
+    if (data && data.photoDate === today.dateStr) {
+      photoTimeState.date = data.photoDate
+      photoTimeState.dayKey = data.photoDayKey || today.dayKey
+      photoTimeState.usedSeconds = Number(data.photoUsedSeconds) || 0
+    }
+    // (the tiles' counts of the same day)
+    if (data && data.tileDate === today.dateStr && data.tileUsed && typeof data.tileUsed === 'object') {
+      tileState.date = data.tileDate
+      for (const [k, v] of Object.entries(data.tileUsed)) {
+        if (TILE_KEY.test(k) && Number.isFinite(Number(v)) && Number(v) >= 0) tileState.used[k] = Math.floor(Number(v))
+      }
+      // (what is on the card already: not written again)
+      tileLastCheckpointUsed = tileCheckpointText()
+    }
     if (data && data.date === today.dateStr) {
       playtimeState.date = data.date
       playtimeState.dayKey = data.dayKey || today.dayKey
@@ -918,7 +1429,7 @@ function writeCombinedWorking() {
   const inAllowOverride = now < ovr.allowUntil
 
   if (!ptCfg.enabled && !qhCfg.enabled && !inForceBlock && !inAllowOverride) {
-    fs.writeFile(PLAYTIME_WORKING_PATH, JSON.stringify({ enabled: false }), () => {})
+    fs.writeFile(PLAYTIME_WORKING_PATH, JSON.stringify({ enabled: false, photos: photoTimeStatus(), tiles: tileStatus() }), () => {})
     return
   }
 
@@ -976,21 +1487,44 @@ function writeCombinedWorking() {
       allowUntil: ovr.allowUntil,
       forceBlockUntil: ovr.forceBlockUntil,
     },
+    photos: photoTimeStatus(),
+    tiles: tileStatus(),
   }
   fs.writeFile(PLAYTIME_WORKING_PATH, JSON.stringify(payload), () => {})
 }
 
-function writePlaytimeCheckpoint() {
-  const payload = {
+function playtimeCheckpointPayload() {
+  return {
     date: playtimeState.date,
     dayKey: playtimeState.dayKey,
     usedSeconds: playtimeState.usedSeconds,
+    photoDate: photoTimeState.date,
+    photoDayKey: photoTimeState.dayKey,
+    photoUsedSeconds: photoTimeState.usedSeconds,
+    photoResetApplied: photoTimeState.resetApplied,
+    tileDate: tileState.date,
+    tileUsed: tileState.used,
   }
+}
+
+function writePlaytimeCheckpoint() {
+  // (a switch of the user under way: the counts were written for the user who goes, the files are being exchanged -
+  // see "Users")
+  if (userHold) return
+  const payload = playtimeCheckpointPayload()
+  tileLastCheckpointUsed = tileCheckpointText()
   // (a file of its own first, then renamed: a power cut mid-write left half a file, and the day's count began at 0)
   const tmp = `${PLAYTIME_CHECKPOINT_PATH}.tmp`
+  const generation = userGeneration
   fs.writeFile(tmp, JSON.stringify(payload), (err) => {
     if (err) {
       log.error(`${new Date().toLocaleString()}: [Playtime] Failed to write checkpoint:`, err)
+      return
+    }
+    // (a switch of the user began meanwhile: these counts are in the file written for it already, and put now they would
+    // land at the coming user's place)
+    if (userHold || generation !== userGeneration) {
+      fs.rm(tmp, { force: true }, () => {})
       return
     }
     fs.rename(tmp, PLAYTIME_CHECKPOINT_PATH, (e) => {
@@ -999,6 +1533,319 @@ function writePlaytimeCheckpoint() {
   })
   playtimeLastCheckpointAt = Date.now()
   playtimeLastCheckpointSeconds = playtimeState.usedSeconds
+  photoLastCheckpointSeconds = photoTimeState.usedSeconds
+}
+
+// === Photo time ("Bildzeit", 5.1: Einstellungen › Fotoanzeige, Spielzeit › Bildzeit) ===
+// Counted while an album is open on the display (its grid, a picture, the slideshow - not the choice of albums, not
+// with the display off, not in the grid untouched for a while): the display says so every few seconds
+// (POST /photos/active); no word for 12 s and it is closed - a display that hangs does not count on.
+//   'separate': a day's account of its own (limit per weekday, +minutes / free / reset for today from the app); at 0
+//               only the photos pause - the display shows its pause page, listening goes on.
+//   'shared':   no account of its own: the photos use the listening time; a second with both counts once.
+// The day changes with the listening time's reset hour. Kept in the same checkpoint as the listening time.
+const PHOTO_DAY_DEFAULT_MINUTES = 20
+const PHOTO_ACTIVE_MS = 12_000
+const photoTimeState = { date: '', dayKey: 'mon', usedSeconds: 0, resetApplied: 0 }
+let photoActiveUntil = 0
+let photoLastCheckpointSeconds = -1
+
+function readPhotoTimeConfig() {
+  const raw = muPiBoxConfig?.photos || {}
+  const days = raw.dailyMinutes && typeof raw.dailyMinutes === 'object' ? raw.dailyMinutes : {}
+  const dailyMinutes = {}
+  for (const d of PLAYTIME_DAY_KEYS) {
+    const m = Number(days[d])
+    dailyMinutes[d] = Number.isInteger(m) && m >= 0 && m <= 1440 ? m : PHOTO_DAY_DEFAULT_MINUTES
+  }
+  const warn = Number(raw.warnMinutes)
+  const idle = Number(raw.idlePauseSeconds)
+  return {
+    enabled: raw.enabled === true,
+    mode: raw.limitMode === 'shared' ? 'shared' : 'separate',
+    limitEnabled: raw.limitEnabled !== false,
+    dailyMinutes,
+    warnMinutes: [0, 2, 5, 10].includes(warn) ? warn : 5,
+    idlePauseSeconds: [0, 60, 120, 300].includes(idle) ? idle : 120,
+    today: raw.today && typeof raw.today === 'object' ? raw.today : {},
+  }
+}
+
+const photosOpen = () => Date.now() < photoActiveUntil
+// the photos count on the listening time ('shared')
+function photosUseListeningTime() {
+  const cfg = readPhotoTimeConfig()
+  return cfg.enabled && cfg.mode === 'shared' && photosOpen()
+}
+
+function photoTimeTickStep() {
+  const cfg = readPhotoTimeConfig()
+  if (!cfg.enabled) {
+    photoActiveUntil = 0
+    return
+  }
+  const today = getLogicalDay(new Date(), readPlaytimeConfig().resetHour)
+  if (today.dateStr !== photoTimeState.date) {
+    photoTimeState.date = today.dateStr
+    photoTimeState.dayKey = today.dayKey
+    photoTimeState.usedSeconds = 0
+    writePlaytimeCheckpoint()
+  }
+  // "Zurücksetzen" in the app: today's count from 0 again (once per press - the time of the press is kept as done)
+  const reset = Number(cfg.today.reset) || 0
+  if (cfg.today.date === today.dateStr && reset > photoTimeState.resetApplied) {
+    photoTimeState.usedSeconds = 0
+    photoTimeState.resetApplied = reset
+    console.log(`${new Date().toLocaleString()}: [PhotoTime] Reset for today by the parents`)
+    writePlaytimeCheckpoint()
+  }
+  // (also with 'shared' and without a limit: the app shows how long the photos were looked at)
+  if (photosOpen()) photoTimeState.usedSeconds++
+  if (
+    Date.now() - playtimeLastCheckpointAt >= PLAYTIME_CHECKPOINT_INTERVAL_MS &&
+    photoTimeState.usedSeconds !== photoLastCheckpointSeconds
+  ) {
+    writePlaytimeCheckpoint()
+  }
+}
+
+// What the display and the app read (in /tmp/playtime.json, under photos)
+function photoTimeStatus() {
+  const cfg = readPhotoTimeConfig()
+  if (!cfg.enabled) return undefined
+  const t = cfg.today
+  const isToday = t.date === photoTimeState.date
+  const free = isToday && t.free === true
+  const bonusRaw = Number(t.bonusMinutes)
+  const bonusMinutes = isToday && Number.isFinite(bonusRaw) && bonusRaw > 0 ? Math.min(1440, bonusRaw) : 0
+  const limitMinutes = cfg.dailyMinutes[photoTimeState.dayKey] + bonusMinutes
+  const limited = cfg.mode === 'separate' && cfg.limitEnabled && !free
+  const remainingSeconds = limited ? Math.max(0, limitMinutes * 60 - photoTimeState.usedSeconds) : null
+  return {
+    enabled: true,
+    mode: cfg.mode,
+    limitEnabled: cfg.limitEnabled,
+    free,
+    limited,
+    limitMinutes,
+    bonusMinutes,
+    usedSeconds: photoTimeState.usedSeconds,
+    remainingSeconds,
+    state: limited && remainingSeconds <= 0 ? 'blocked' : 'normal',
+    counting: photosOpen(),
+    warnMinutes: cfg.warnMinutes,
+    idlePauseSeconds: cfg.idlePauseSeconds,
+  }
+}
+
+// === Tile time (5.1, "Kachel-Limit": a day's limit per tile of the start page) ===
+// The display, the app and Home Assistant say with every start which tile of the start page it belongs to (?tile=, the
+// key as the display forms it: artist:<category>:<name>, lib:<category>/<folder>, nas:<path>, single:<category>:<id>).
+// The time is counted per tile while something plays - every tile played today, also one without a limit (the app shows
+// it). A tile with a limit (playtimeLimit.tileLimits) used up: what plays of it ends as at the end of the listening time
+// (its grace mode, radio at once), then its starts are refused (423 tile_limit_reached) until the next day, minutes
+// added or "free today" (playtimeLimit.tileToday). It counts on the listening time as before; starts without a tile
+// count for the listening time only. The parents' release (allowUntil) lifts these blocks too.
+const TILE_KEY = /^(artist|lib|nas|single):[^\n]{1,400}$/
+const tileState = {
+  date: '',
+  used: {}, // key -> seconds today
+  current: null, // the tile of what plays (or was played last)
+  state: 'normal', // of the current tile: 'normal' | 'grace' | 'blocked'
+  graceMode: null,
+  stopUnlessEpisode: false,
+  graceEndsAt: null,
+  // the key the start named (an album inside a folder: its own folder) - current is the tile with a limit it belongs to,
+  // found anew every second (a limit set while it plays counts at once)
+  raw: null,
+}
+let tileGraceIdle = 0
+
+// What a second of playing counts for: the key the start named and, for a folder, every folder above it - a limit set
+// later on one of them starts from what was heard of it today
+function tileCountKeys(raw) {
+  const m = /^(lib|nas):(.*)$/.exec(raw ?? '')
+  if (!m) return raw ? [raw] : []
+  const parts = m[2].split('/').filter(Boolean)
+  return parts.map((_, i) => `${m[1]}:${parts.slice(0, i + 1).join('/')}`)
+}
+// (what the last checkpoint held of them - none at the start: no write at every start of the box)
+let tileLastCheckpointUsed = '{}'
+
+function readTileConfig() {
+  const raw = muPiBoxConfig?.playtimeLimit || {}
+  const limits = new Map()
+  for (const t of Array.isArray(raw.tileLimits) ? raw.tileLimits : []) {
+    const m = Number(t?.minutes)
+    if (typeof t?.key === 'string' && TILE_KEY.test(t.key) && Number.isInteger(m) && m >= 1 && m <= 1440) {
+      limits.set(t.key, { name: typeof t.name === 'string' ? t.name.slice(0, 200) : '', minutes: m })
+    }
+  }
+  const today = raw.tileToday && typeof raw.tileToday === 'object' ? raw.tileToday : {}
+  return { limits, today }
+}
+
+// What makes a checkpoint worth writing: the counts of the tiles with a limit. The others are counted too (a limit
+// set later in the day starts from what was heard), but only kept in memory - else every minute of every playback was
+// a write to the SD card, also on a box without any tile limit.
+function tileCheckpointText(cfg = readTileConfig()) {
+  const out = {}
+  for (const k of cfg.limits.keys()) if (tileState.used[k]) out[k] = tileState.used[k]
+  return JSON.stringify(out)
+}
+
+// a tile's allowance today: its minutes with the ones added for today, and whether it is free today; null: no limit
+function tileAllowance(cfg, key, dateStr) {
+  const l = cfg.limits.get(key)
+  if (!l) return null
+  const t = cfg.today.date === dateStr ? cfg.today : {}
+  const b = Number(t.bonus && typeof t.bonus === 'object' ? t.bonus[key] : 0)
+  const bonus = Number.isFinite(b) && b > 0 ? Math.min(1440, b) : 0
+  return { name: l.name, minutes: Math.min(1440, l.minutes + bonus), bonus, free: Array.isArray(t.free) && t.free.includes(key) }
+}
+
+function tileUsedUp(key, cfg = readTileConfig()) {
+  if (!key || isAllowOverrideActive()) return false
+  const a = tileAllowance(cfg, key, tileState.date)
+  if (!a || a.free) return false
+  return (tileState.used[key] ?? 0) >= a.minutes * 60
+}
+
+// A folder (lib:, nas:) is named as what plays - an album inside the tile's folder: it counts for the tile with a limit
+// whose folder it is in (the start page's tile; a NAS collection split into its subfolders has one per subfolder)
+function resolveTile(key, cfg = readTileConfig()) {
+  if (!key) return null
+  const m = /^(lib|nas):(.*)$/.exec(key)
+  if (!m) return key
+  let best = null
+  for (const k of cfg.limits.keys()) {
+    if (!k.startsWith(`${m[1]}:`)) continue
+    const p = k.slice(m[1].length + 1)
+    if ((m[2] === p || m[2].startsWith(`${p}/`)) && (!best || k.length > best.length)) best = k
+  }
+  return best ?? key
+}
+
+// What plays of the current tile ends: as finalizePlaytimeBlock, for this tile only
+function finalizeTileBlock(reason, immediate = false) {
+  if (isAllowOverrideActive()) return
+  console.log(`${new Date().toLocaleString()}: [TileTime] Finalizing block of ${tileState.current} (${reason})`)
+  tileState.state = 'blocked'
+  tileState.graceEndsAt = null
+  const stopNow = () => {
+    const wasSpotify = currentMeta.currentPlayer === 'spotify'
+    try {
+      stop()
+    } catch (e) {
+      console.error(`${new Date().toLocaleString()}: [TileTime] Error stopping playback:`, e)
+    }
+    if (wasSpotify) silenceSpotifyOnDisplay('tile limit')
+  }
+  if (immediate) stopNow()
+  else fadeOutThen(stopNow)
+  writePlaytimeCheckpoint()
+}
+
+// The tile of a new start (or none): its state machine starts anew
+// raw: the key the start named (or none); current is the tile with a limit it belongs to (see tileTickStep)
+function setCurrentTile(raw) {
+  tileState.raw = raw
+  switchTile(resolveTile(raw))
+}
+
+function switchTile(key) {
+  if (key === tileState.current) return
+  tileState.current = key
+  tileState.state = 'normal'
+  tileState.graceMode = null
+  tileState.stopUnlessEpisode = false
+  tileState.graceEndsAt = null
+  tileGraceIdle = 0
+}
+
+function tileTickStep() {
+  const pt = readPlaytimeConfig()
+  const now = new Date()
+  const today = getLogicalDay(now, pt.resetHour)
+  if (today.dateStr !== tileState.date) {
+    // (a new day - or the first tick after a start without a count of today: nothing to write then)
+    const hadCounts = tileCheckpointText() !== '{}'
+    tileState.date = today.dateStr
+    tileState.used = {}
+    tileState.state = 'normal'
+    tileState.graceEndsAt = null
+    if (hadCounts) writePlaytimeCheckpoint()
+  }
+  if (!tileState.raw) return
+  const cfg = readTileConfig()
+  // (the limits as they are now: one set on its folder while it plays takes over at once)
+  switchTile(resolveTile(tileState.raw, cfg))
+  const key = tileState.current
+  if (isActuallyPlaying()) for (const k of tileCountKeys(tileState.raw)) tileState.used[k] = (tileState.used[k] ?? 0) + 1
+  const a = tileAllowance(cfg, key, today.dateStr)
+  const reached = !isAllowOverrideActive() && !!a && !a.free && tileState.used[key] >= a.minutes * 60
+  if (reached) {
+    if (tileState.state === 'normal') {
+      const graceMode = effectiveGraceMode(pt.graceMode)
+      if (graceMode !== 'stop' && isActuallyPlaying()) {
+        tileState.state = 'grace'
+        tileState.graceMode = graceMode
+        tileState.stopUnlessEpisode = stopUnlessEpisode(pt.graceMode)
+        tileState.graceEndsAt = Date.now() + graceCapMs(pt)
+        endRepeatForGrace()
+        console.log(`${now.toLocaleString()}: [TileTime] Limit of ${key} reached (${a.minutes} min). Letting the ${graceMode} finish.`)
+        writePlaytimeCheckpoint()
+      } else if (isActuallyPlaying()) {
+        finalizeTileBlock(`limit reached (${a.minutes} min, ${currentMeta.currentType === 'radio' ? 'radio stream' : 'no grace configured'})`)
+      } else {
+        // (nothing of it plays: nothing to stop - its starts are refused from now on)
+        tileState.state = 'blocked'
+      }
+    } else if (tileState.state === 'grace') {
+      tileGraceIdle = isActuallyPlaying() ? 0 : tileGraceIdle + 1
+      if (tileState.graceEndsAt !== null && Date.now() >= tileState.graceEndsAt) {
+        finalizeTileBlock(`grace safety limit reached (${tileState.graceMode})`)
+      } else if (tileGraceIdle >= GRACE_IDLE_LIMIT_S) {
+        tileGraceIdle = 0
+        finalizeTileBlock('nothing playing any more during the grace period')
+      }
+    }
+  } else if (tileState.state !== 'normal') {
+    // (minutes added, free today, the limit raised or the parents' release)
+    console.log(`${now.toLocaleString()}: [TileTime] ${key} released`)
+    tileState.state = 'normal'
+    tileState.graceEndsAt = null
+  }
+  if (Date.now() - playtimeLastCheckpointAt >= PLAYTIME_CHECKPOINT_INTERVAL_MS && tileCheckpointText(cfg) !== tileLastCheckpointUsed) {
+    writePlaytimeCheckpoint()
+  }
+}
+
+// What the display, the app and the bot read (in /tmp/playtime.json, under tiles): every tile with a limit, and the
+// tile of what plays
+function tileStatus() {
+  const cfg = readTileConfig()
+  const list = []
+  for (const [key, l] of cfg.limits) {
+    const a = tileAllowance(cfg, key, tileState.date)
+    const used = tileState.used[key] ?? 0
+    list.push({
+      key,
+      name: l.name,
+      limitMinutes: a.minutes,
+      bonusMinutes: a.bonus,
+      free: a.free,
+      usedSeconds: used,
+      remainingSeconds: a.free ? null : Math.max(0, a.minutes * 60 - used),
+      blocked: tileUsedUp(key, cfg),
+    })
+  }
+  const cur = tileState.current
+  return {
+    list,
+    // (playing: the display's warning "Noch 5 Minuten" comes only while it plays)
+    current: cur ? { key: cur, state: tileState.state, usedSeconds: tileState.used[cur] ?? 0, limited: cfg.limits.has(cur), playing: isActuallyPlaying() } : null,
+  }
 }
 
 // Used by the catch-all to decide whether to refuse new play/resume/skip commands.
@@ -1022,7 +1869,7 @@ function isPlaybackBlocked() {
 // While allowUntil-override is active, transitions are suppressed — the parent has
 // explicitly green-lit playback for this window, so neither grace nor stop fire.
 // immediate: the song is over (the next one is starting) - stopped at once; else faded out, as a cut into a song
-function finalizePlaytimeBlock(reason, immediate = false) {
+function finalizePlaytimeBlock(reason, immediate = false, silent = false) {
   if (isAllowOverrideActive()) return
   console.log(`${new Date().toLocaleString()}: [Playtime] Finalizing block (${reason})`)
   playtimeState.state = 'blocked'
@@ -1045,18 +1892,18 @@ function finalizePlaytimeBlock(reason, immediate = false) {
   // Notify parents that today's listening time is up. telegram_send_message.py
   // loops over all configured chatIds, so both Family group and individual DMs
   // receive the message.
-  if (hasConfiguredTelegram()) {
+  if (hasConfiguredTelegram() && !silent) {
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py --key n_playtime_used_up')
   }
 }
 
-function finalizeQuietHoursBlock(reason, immediate = false) {
+function finalizeQuietHoursBlock(reason, immediate = false, silent = false) {
   if (isAllowOverrideActive()) return
   console.log(`${new Date().toLocaleString()}: [QuietHours] Finalizing block (${reason})`)
   const label = quietHoursState.activeWindow?.label
   quietHoursState.state = 'blocked'
   quietHoursState.graceEndsAt = null
-  if (hasConfiguredTelegram()) {
+  if (hasConfiguredTelegram() && !silent) {
     // Sent as a text key: telegram_send_message.py puts it into the bot's language (German/English).
     const msg = label ? ['--key', 'n_quiet_started_label', `label=${label}`] : ['--key', 'n_quiet_started']
     // No shell: the label is free text from the parents' UI, and escaping only `"` left
@@ -1118,6 +1965,7 @@ async function spotifyLastTrackOfAlbum(album) {
 function spotifyGraceFinalize(reason) {
   if (playtimeState.state === 'grace') finalizePlaytimeBlock(reason, true)
   if (quietHoursState.state === 'grace') finalizeQuietHoursBlock(reason, true)
+  if (tileState.state === 'grace') finalizeTileBlock(reason, true)
   spotifyGraceItemId = null
   spotifyGracePos = null
   spotifyGraceMisses = 0
@@ -1129,7 +1977,8 @@ function spotifyGraceMissed(why) {
   spotifyGraceMisses++
   const waitingForKind =
     (playtimeState.state === 'grace' && playtimeState.stopUnlessEpisode) ||
-    (quietHoursState.state === 'grace' && quietHoursState.stopUnlessEpisode)
+    (quietHoursState.state === 'grace' && quietHoursState.stopUnlessEpisode) ||
+    (tileState.state === 'grace' && tileState.stopUnlessEpisode)
   if (waitingForKind && spotifyGraceMisses >= SPOTIFY_GRACE_MAX_MISSES) {
     log.warn(`${now()}: [Spotify Control] Grace check: no playback state (${why}) - "stop" chosen, stopping now`)
     spotifyGraceFinalize('spotify: no playback state, "stop" chosen')
@@ -1140,6 +1989,7 @@ async function spotifyGraceCheck() {
   const modes = []
   if (playtimeState.state === 'grace') modes.push(playtimeState.graceMode)
   if (quietHoursState.state === 'grace') modes.push(quietHoursState.graceMode)
+  if (tileState.state === 'grace') modes.push(tileState.graceMode)
   if (modes.length === 0) {
     spotifyGraceItemId = null
     spotifyGracePos = null
@@ -1173,7 +2023,8 @@ async function spotifyGraceCheck() {
       // "stop" was chosen and it is a song, not a podcast episode: no grace at all
       if (playtimeState.state === 'grace' && playtimeState.stopUnlessEpisode) finalizePlaytimeBlock('spotify: song, "stop" chosen')
       if (quietHoursState.state === 'grace' && quietHoursState.stopUnlessEpisode) finalizeQuietHoursBlock('spotify: song, "stop" chosen')
-      if (playtimeState.state !== 'grace' && quietHoursState.state !== 'grace') {
+      if (tileState.state === 'grace' && tileState.stopUnlessEpisode) finalizeTileBlock('spotify: song, "stop" chosen')
+      if (playtimeState.state !== 'grace' && quietHoursState.state !== 'grace' && tileState.state !== 'grace') {
         spotifyGraceItemId = null
         spotifyGracePos = null
         return
@@ -1216,7 +2067,7 @@ async function spotifyGraceCheck() {
   } finally {
     spotifyGraceBusy = false
     // (the grace period over: the next one starts with a poll at once)
-    const stillGrace = playtimeState.state === 'grace' || quietHoursState.state === 'grace'
+    const stillGrace = playtimeState.state === 'grace' || quietHoursState.state === 'grace' || tileState.state === 'grace'
     spotifyGraceNextAt = stillGrace ? Date.now() + nextInMs : 0
   }
 }
@@ -1235,10 +2086,10 @@ function hasDirSegment(command, segment) {
 function isPlayInitiatingCommand(command) {
   if (command.name?.includes('spotify:')) return true
   // 'nas' was missing: NAS playback ignored the playtime limit and quiet hours
-  if (['library', 'nas', 'tidal', 'radio', 'rss', 'say'].some((segment) => hasDirSegment(command, segment))) {
+  if (['library', 'nas', 'tidal', 'jellyfin', 'audible', 'radio', 'rss', 'say'].some((segment) => hasDirSegment(command, segment))) {
     return true
   }
-  if (['play', 'next', 'previous', 'seek+30', 'seek-30'].includes(command.name)) return true
+  if (['play', 'next', 'previous', 'replay', 'seek+30', 'seek-30'].includes(command.name)) return true
   if (command.name?.startsWith('seekpos:')) return true
   return false
 }
@@ -1247,6 +2098,9 @@ function isPlayInitiatingCommand(command) {
 // Working-state file is written separately by writeCombinedWorking once both
 // sub-systems have ticked, so the payload is consistent.
 function playtimeTickStep() {
+  // (the first tick after a change of the user: see playtimeNoticeSkip)
+  const afterSwitch = playtimeNoticeSkip
+  playtimeNoticeSkip = false
   const cfg = readPlaytimeConfig()
   if (!cfg.enabled) {
     if (playtimeState.state !== 'normal' || playtimeState.graceEndsAt !== null) {
@@ -1267,8 +2121,9 @@ function playtimeTickStep() {
     writePlaytimeCheckpoint()
     console.log(`${now.toLocaleString()}: [Playtime] New day: ${today.dateStr} (${today.dayKey})`)
   }
-  // Increment counter only when actually playing
-  if (isActuallyPlaying()) {
+  // Increment counter only when actually playing - or an album is open on the display and the photos use the listening
+  // time (once, when both)
+  if (isActuallyPlaying() || photosUseListeningTime()) {
     playtimeState.usedSeconds++
   }
   // Effective limit = base + bonus (bonus auto-zeroes when its date doesn't match today)
@@ -1286,12 +2141,13 @@ function playtimeTickStep() {
         playtimeState.graceMode = graceMode
         playtimeState.stopUnlessEpisode = stopUnlessEpisode(cfg.graceMode)
         playtimeState.graceEndsAt = Date.now() + graceCapMs(cfg)
+        endRepeatForGrace()
         console.log(
           `${now.toLocaleString()}: [Playtime] Daily limit reached (${limit} min for ${today.dayKey}${bonus > 0 ? `, +${bonus} bonus` : ''}). Letting the ${graceMode} finish.`,
         )
         writePlaytimeCheckpoint()
       } else {
-        finalizePlaytimeBlock(`limit reached (${limit} min, ${!isActuallyPlaying() ? 'nothing playing' : currentMeta.currentType === 'radio' ? 'radio stream' : 'no grace configured'})`)
+        finalizePlaytimeBlock(`limit reached (${limit} min, ${!isActuallyPlaying() ? 'nothing playing' : currentMeta.currentType === 'radio' ? 'radio stream' : 'no grace configured'})`, false, afterSwitch)
       }
     } else if (playtimeState.state === 'grace') {
       // (the song / album ending is handled by the player events and the Spotify check below)
@@ -1337,6 +2193,9 @@ function quietHoursTickStep() {
   // (state already 'blocked'). Skipping the tick keeps state at 'normal'
   // throughout the override, so the post-override tick walks the proper
   // normal -> grace -> blocked path again.
+  // (the first tick after a change of the user: see quietNoticeSkip)
+  const afterSwitch = quietNoticeSkip
+  quietNoticeSkip = false
   if (isAllowOverrideActive()) return
   const cfg = readQuietHoursConfig()
   if (!cfg.enabled) {
@@ -1361,11 +2220,12 @@ function quietHoursTickStep() {
         quietHoursState.graceMode = graceMode
         quietHoursState.stopUnlessEpisode = stopUnlessEpisode(cfg.graceMode)
         quietHoursState.graceEndsAt = Date.now() + graceCapMs(cfg)
+        endRepeatForGrace()
         console.log(
           `${now.toLocaleString()}: [QuietHours] Entered window ${window.from}-${window.to}${window.label ? ` (${window.label})` : ''}. Letting the ${graceMode} finish.`,
         )
       } else {
-        finalizeQuietHoursBlock(`entered window ${window.from}-${window.to} (${!isActuallyPlaying() ? 'nothing playing' : currentMeta.currentType === 'radio' ? 'radio stream' : 'no grace configured'})`)
+        finalizeQuietHoursBlock(`entered window ${window.from}-${window.to} (${!isActuallyPlaying() ? 'nothing playing' : currentMeta.currentType === 'radio' ? 'radio stream' : 'no grace configured'})`, false, afterSwitch)
       }
     } else if (quietHoursState.state === 'grace') {
       // (the window as the settings have it now: its name changed in the app while it runs is the display's heading
@@ -1394,7 +2254,14 @@ function quietHoursTickStep() {
 // once on entry (not every second while it's still in effect).
 let forceBlockWasActive = false
 
+let graceRepeatTriedAt = 0
 function combinedTick() {
+  // (a repeat still on during a grace - Spotify blocked when the grace began: tried again once it takes requests)
+  // (at most every 30 s: a refused one is not asked again every second)
+  if (inGrace() && (currentMeta.repeatMode !== 'off' || currentMeta.repeat) && !spotifyBlockedUntil() && Date.now() - graceRepeatTriedAt > 30000) {
+    graceRepeatTriedAt = Date.now()
+    endRepeatForGrace()
+  }
   if (isForceBlockActive()) {
     if (!forceBlockWasActive) {
       const until = readPlaybackOverrides().forceBlockUntil
@@ -1417,8 +2284,14 @@ function combinedTick() {
     console.log(`${new Date().toLocaleString()}: [Override] Force-block ended.`)
     forceBlockWasActive = false
   }
+  // (a switch of the user under way: the coming user's limits are in the config already, the counts still the going
+  // user's - one tick then blocked the box and said "used up" in Telegram; counted again once the counts are his)
+  if (userHold) return
+  photoTimeTickStep()
   playtimeTickStep()
   quietHoursTickStep()
+  tileTickStep()
+  heardTickStep()
   writeCombinedWorking()
 }
 
@@ -1474,7 +2347,7 @@ async function refreshToken() {
 }
 
 // Spotify refused the login (invalid_grant: its 6 months are over, or it was withdrawn): the backend tells the parents
-// (app, Telegram) - see backend-api eltern/spotify-auth-age.ts. The mark goes when a refresh works again.
+// (app, Telegram) - see backend-api app-api/spotify-auth-age.ts. The mark goes when a refresh works again.
 const AUTH_REFUSED_FLAG = '/tmp/.spotify_auth_invalid'
 function markLoginRefused(refused) {
   try {
@@ -1694,7 +2567,7 @@ function mplayerToggle() {
 // went on asking (the grace check every 3 s, the app's state, the pauses). Read again when the file changed; a 429
 // here (with a wait of more than a few seconds) is written into it, so the server and the Smart-Sync wait as well.
 const SPOTIFY_BLOCK_FILE =
-  process.env.SPOTIFY_BLOCK_FILE || path.resolve(__dirname, '..', 'Sonos-Kids-Controller-master', 'cache', 'spotify-block.json')
+  process.env.SPOTIFY_BLOCK_FILE || path.join(CACHE_DIR, 'spotify-block.json')
 let spotifyBlockKept = { mtimeMs: -1, until: 0 }
 function spotifyBlockedUntil() {
   try {
@@ -1842,6 +2715,9 @@ let playbackGeneration = 0
 // Begins at the start time of this process: after a restart of the player the numbers are new - a stop the display
 // still had for a playback before the restart stopped the first new one, which had the same number.
 let playbackRequest = Date.now()
+// the start what plays comes from (/local "origin"): the number of that start - kept by a podcast's next episode (src=skip),
+// so an NFC tag taken off still pauses the podcast it started after "next"
+let playbackOrigin = playbackRequest
 // Bumped by every play and pause: a play that waited for the box's device is not made after a pause meanwhile
 let playPauseRequest = 0
 // An album paused while its track list was loading (NAS): not started then - the start of the list takes a
@@ -1890,6 +2766,7 @@ function stop() {
   forgetSpotifyState()
   playbackGeneration++
   playbackRequest++
+  playbackOrigin = playbackRequest
   currentMeta.finished = false
   clearLibraryResumeTimers()
   if (telegramPlaybackNotices())
@@ -1912,6 +2789,8 @@ function stop() {
     currentMeta.pause = false
     spotifyRunning = false
   } else if (currentMeta.currentPlayer === 'mplayer') {
+    resetLocalShuffle()
+    resetRepeat()
     stopLoading()
     player.stop()
     // mplayer ignores 'stop' while it is still opening a playlist; it then starts playing after all, and
@@ -1923,8 +2802,13 @@ function stop() {
         if (stopGeneration === playbackGeneration) player.stop()
       }, delay)
     }
+    albumNow()?.onStop?.()
+    extensions.emit('stop')
     //currentMeta.playing = false;
     writeplayerstatePause()
+    currentMeta.bitrate = 0
+    currentMeta.khz = 0
+    currentMeta.channels = 0
     forgetLocalTrack()
     currentMeta.currentPlayer = ''
     currentMeta.pause = false
@@ -2010,12 +2894,82 @@ function play() {
   }
 }
 
+// "next" and "previous" at a podcast episode: the episode below (above) in the list of its tile, as the display lists it
+// - the parents' choice of episodes, the entry's sorting, without internet the episodes on the SD card. The backend API
+// knows the list (/api/rssfeed/neighbour: the player knows no feed address). At an end of the list the episode plays on
+// where it is (it started again from its beginning before - the place in a long episode was gone). It is started as the display starts an episode (the same route), so the tile time, the listening
+// time and the pause rules count as for any start; the source "skip" makes the display's player page follow to the new
+// episode (the navigator). Presses while one is asked are added up: three detents of the knob go three episodes.
+const episodeSkip = { pending: 0, running: false }
+function skipEpisode(steps) {
+  episodeSkip.pending += steps
+  if (!episodeSkip.running) void runEpisodeSkips()
+}
+
+async function runEpisodeSkips() {
+  episodeSkip.running = true
+  let base = currentMeta.episode
+  // (the episode that played and the ones these presses started: another start than these ends the presses)
+  const ours = new Set([base])
+  // (a stop or a pause while the neighbour was asked for - up to 20 s after a restart of the box: nothing starts; the stop
+  // and the pause left the episode named, the next one started after the child had left the player)
+  let request = playbackRequest
+  let playPause = playPauseRequest
+  try {
+    while (episodeSkip.pending !== 0) {
+      const steps = episodeSkip.pending
+      episodeSkip.pending = 0
+      const query = new URLSearchParams({ url: base, dir: steps > 0 ? 'next' : 'previous', steps: String(Math.abs(steps)) })
+      const tile = tileState.raw || tileState.current
+      if (tile) query.set('tile', tile)
+      const response = await fetch(`http://127.0.0.1:8200/api/rssfeed/neighbour?${query}`, { signal: AbortSignal.timeout(20000) })
+      const found = response.ok ? await response.json() : null
+      if (!found?.found || typeof found.url !== 'string') {
+        log.debug(`${now()}: [Spotify Control] skip at an episode: no neighbour found`)
+        break
+      }
+      // (another start came meanwhile: it stays)
+      if (currentMeta.currentType !== 'rss' || !ours.has(currentMeta.episode)) break
+      if (request !== playbackRequest || playPause !== playPauseRequest) {
+        log.debug(`${now()}: [Spotify Control] skip at an episode: stopped or paused meanwhile - nothing starts`)
+        break
+      }
+      if (found.same) {
+        log.debug(`${now()}: [Spotify Control] skip at an episode: at the end of the list - it plays on`)
+        break
+      }
+      const start = new URLSearchParams({ src: 'skip' })
+      if (typeof found.cover === 'string' && found.cover.startsWith('/api/')) start.set('cover', found.cover)
+      // (the key the first start named - the tile it was resolved to would be taken as a start of that tile itself)
+      const startTile = tileState.raw || tileState.current
+      if (startTile) start.set('tile', startTile)
+      const started = await fetch(
+        `http://127.0.0.1:${config.server.port}/rss/${encodeURIComponent(found.url)}/${encodeURIComponent(String(found.title ?? ''))}:title:artist:${encodeURIComponent(String(currentMeta.album || found.artist || ''))}?${start}`,
+        { signal: AbortSignal.timeout(4000) },
+      )
+      if (!started.ok) break
+      base = found.url
+      ours.add(found.url)
+      request = playbackRequest
+      playPause = playPauseRequest
+    }
+  } catch (err) {
+    log.debug(`${now()}: [Spotify Control] skip at an episode failed: ${err}`)
+  } finally {
+    episodeSkip.pending = 0
+    episodeSkip.running = false
+  }
+}
+
 function next() {
   forgetSpotifyState()
+  if (currentMeta.currentPlayer === 'mplayer' && currentMeta.currentType === 'rss' && currentMeta.episode) return void skipEpisode(1)
   if (currentMeta.currentPlayer === 'spotify') {
     if (spotifyBlockedUntil()) return log.debug(`${now()}: [Spotify Control] next: Spotify blocks the requests`)
     spotifyApi.skipToNext(ownSpotifyDeviceOptions()).then(
       () => {
+        // (what was asked while the skip was on its way is the track before: asked anew)
+        forgetSpotifyState()
         counter.countskipToNext++
         if (config.server.logLevel === 'debug') {
           writeCounter()
@@ -2039,10 +2993,12 @@ function next() {
 
 function previous() {
   forgetSpotifyState()
+  if (currentMeta.currentPlayer === 'mplayer' && currentMeta.currentType === 'rss' && currentMeta.episode) return void skipEpisode(-1)
   if (currentMeta.currentPlayer === 'spotify') {
     if (spotifyBlockedUntil()) return log.debug(`${now()}: [Spotify Control] previous: Spotify blocks the requests`)
     spotifyApi.skipToPrevious(ownSpotifyDeviceOptions()).then(
       () => {
+        forgetSpotifyState()
         counter.countskipToPrevious++
         if (config.server.logLevel === 'debug') {
           writeCounter()
@@ -2058,6 +3014,8 @@ function previous() {
       seekToCueTrack(currentMeta.currentTracknr - 1) // on the first track this restarts it
       return
     }
+    // (an Audible book: the chapter before, from its start - a list loaded anew, so no chapter keeps a place inside)
+    if (isAudible() && !player.shuffling?.()) return audiblePlayFrom(audibleIndex() - 1, 0)
     if (currentMeta.currentTracknr > 1) {
       currentMeta.currentTracknr = currentMeta.currentTracknr - 2
     }
@@ -2066,11 +3024,41 @@ function previous() {
   }
 }
 
+// "From the beginning" (a long press on a button of the box, see the buttons extension): the album or the playlist starts
+// again with its first track. A radio station has no beginning; with nothing loaded there is nothing to start.
+function replay() {
+  if (currentMeta.currentPlayer === 'spotify') {
+    // spotify:<kind>:<id>[:<track>:<position>] - without the place to go on at it is the first track, from its start
+    const parts = String(currentMeta.activeSpotifyId ?? '').split(':')
+    if (parts.length < 3 || parts[0] !== 'spotify' || !parts[2]) return
+    forgetSpotifyState()
+    currentMeta.activeSpotifyId = parts.slice(0, 3).join(':')
+    playbackGeneration++
+    currentMeta.finished = false
+    currentMeta.pause = false
+    log.debug(`${now()}: [Spotify Control] From the beginning: ${currentMeta.activeSpotifyId}`)
+    playMe()
+  } else if (currentMeta.currentPlayer === 'mplayer') {
+    if (currentMeta.currentType === 'radio') return
+    log.debug(`${now()}: [Spotify Control] From the beginning (track ${currentMeta.currentTracknr})`)
+    if (isCuePlayback()) return seekToCueTrack(1)
+    if (isAudible()) return audiblePlayFrom(0, 0)
+    // (the first track is playing: back to its start - a jump to the track one is on does nothing)
+    if (currentMeta.currentTracknr > 1) return jumpToTrack(1)
+    // (an album that is no folder - a CD - knows where its track starts in the whole, as in seek())
+    const albumStart = albumNow()?.seek?.(0, player.trackIndex?.() ?? 0)
+    if (typeof albumStart === 'number') player.exec('seek', [albumStart, '2'])
+    else player.seekPercent(0)
+  }
+}
+
 function jumpToTrack(targetPosition) {
   if (isCuePlayback()) {
     seekToCueTrack(targetPosition)
     return
   }
+  // (an Audible chapter from its start, also the one that plays)
+  if (isAudible()) return audiblePlayFrom(targetPosition - 1, 0)
   if (currentMeta.currentPlayer === 'mplayer') {
     const offset = targetPosition - currentMeta.currentTracknr
     if (offset !== 0) {
@@ -2084,7 +3072,104 @@ function jumpToTrack(targetPosition) {
   }
 }
 
+// Shuffle of a local or NAS album: only the engine's choice of the next track (mpv-wrapper.js), nothing at Spotify
+function localShuffle(on) {
+  if (currentMeta.currentPlayer !== 'mplayer' || typeof player.setShuffle !== 'function' || isCuePlayback()) return false
+  currentMeta.shuffle = on
+  player.setShuffle(on)
+  log.debug(`${now()}: [Spotify Control] Shuffle of the album: ${on ? 'on' : 'off'}`)
+  return true
+}
+// (every playback starts without shuffle, as the player page switches Spotify's off when it is left)
+function resetLocalShuffle() {
+  if (currentMeta.shuffle || player.shuffling?.()) {
+    currentMeta.shuffle = false
+    player.setShuffle?.(false)
+  }
+}
+
+// Spotify keeps its repeat over playbacks and devices: possibly still on - set by the box, a switch-off that failed or was not
+// sent while Spotify blocked, a restart of this process that forgot it. Switched off after the box's next Spotify start.
+let spotifyRepeatMaybeOn = true
+function clearSpotifyRepeat() {
+  if (!spotifyRepeatMaybeOn || currentMeta.repeatMode !== 'off' || spotifyBlockedUntil()) return
+  spotifyApi.setRepeat('off', ownSpotifyDeviceOptions()).then(
+    () => {
+      if (currentMeta.repeatMode === 'off') spotifyRepeatMaybeOn = false
+    },
+    () => undefined,
+  )
+}
+// (a limit, the quiet hours or a tile's time running out with "let the song / album finish": a repeat would never let it
+// finish - mpv never reaches the end of the song or the list - so it ends, and stays off until the grace is over)
+const inGrace = () => playtimeState.state === 'grace' || quietHoursState.state === 'grace' || tileState.state === 'grace'
+function endRepeatForGrace() {
+  if (currentMeta.repeatMode !== 'off' || currentMeta.repeat) setRepeatMode('off')
+}
+
+// Repeat: an album of the box by the engine (mpv-wrapper.js), Spotify by its own setting
+// (counts every change of the repeat: an answer of Spotify that comes late does not take back a newer one)
+let repeatSeq = 0
+function setRepeatMode(mode) {
+  if (mode !== 'off' && mode !== 'all' && mode !== 'one') return
+  repeatSeq++
+  if (mode !== 'off' && inGrace()) {
+    log.debug(`${now()}: [Spotify Control] Repeat ${mode} not set: the grace of a limit runs`)
+    return
+  }
+  if (currentMeta.currentPlayer === 'mplayer') {
+    const supported = typeof player.setRepeatMode === 'function'
+    // (a CUE album is one file: "one" would repeat the whole album - as shuffle, not for it)
+    const next = !supported || (mode === 'one' && isCuePlayback()) ? 'off' : mode
+    currentMeta.repeatMode = next
+    currentMeta.repeat = next !== 'off'
+    audibleLoop.last = 0
+    player.setRepeatMode?.(next)
+    log.debug(`${now()}: [Spotify Control] Repeat of the album: ${next}`)
+    return
+  }
+  forgetSpotifyState()
+  // (what /local says is what Spotify was told: not while it blocks, and back when it refused)
+  if (spotifyBlockedUntil()) return
+  const before = { repeatMode: currentMeta.repeatMode, repeat: currentMeta.repeat }
+  const seq = repeatSeq
+  currentMeta.repeatMode = mode
+  currentMeta.repeat = mode !== 'off'
+  if (mode !== 'off') spotifyRepeatMaybeOn = true
+  spotifyApi.setRepeat(mode === 'one' ? 'track' : mode === 'all' ? 'context' : 'off', ownSpotifyDeviceOptions()).then(
+    () => {
+      log.debug(`${now()}: [Spotify Control] Repeat: ${mode}`)
+      if (mode === 'off' && currentMeta.repeatMode === 'off') spotifyRepeatMaybeOn = false
+    },
+    (err) => {
+      if (repeatSeq === seq) Object.assign(currentMeta, before)
+      if (mode === 'off') spotifyRepeatMaybeOn = true
+      handleSpotifyError(err, 'repeat')
+    },
+  )
+}
+// (every playback starts without repeat, as without shuffle: a track that repeats must not hold the next album back)
+function resetRepeat() {
+  if (currentMeta.repeatMode === 'off' && !currentMeta.repeat) return
+  repeatSeq++
+  const spotify = currentMeta.currentPlayer !== 'mplayer'
+  currentMeta.repeatMode = 'off'
+  currentMeta.repeat = false
+  audibleLoop.last = 0
+  player.setRepeatMode?.('off')
+  // (Spotify: also after the next start of the box's own player, see clearSpotifyRepeat - this one may come too early)
+  if (spotify) spotifyRepeatMaybeOn = true
+  if (spotify && !spotifyBlockedUntil())
+    spotifyApi.setRepeat('off', ownSpotifyDeviceOptions()).then(
+      () => {
+        if (currentMeta.repeatMode === 'off') spotifyRepeatMaybeOn = false
+      },
+      () => undefined,
+    )
+}
+
 function shuffleon() {
+  if (localShuffle(true)) return
   forgetSpotifyState()
   if (spotifyBlockedUntil()) return
   spotifyApi.setShuffle(true, ownSpotifyDeviceOptions()).then(
@@ -2102,6 +3187,8 @@ function shuffleon() {
 }
 
 function shuffleoff() {
+  if (localShuffle(false)) return
+  resetLocalShuffle()
   forgetSpotifyState()
   if (spotifyBlockedUntil()) return
   spotifyApi.setShuffle(false, ownSpotifyDeviceOptions()).then(
@@ -2182,7 +3269,7 @@ async function playOnDevice(playOptions) {
     activeDevice = own
     playOptions = { ...playOptions, device_id: own }
   }
-  return spotifyApi.play(playOptions).catch(async (err) => {
+  const started = spotifyApi.play(playOptions).catch(async (err) => {
     if (err?.statusCode !== 404) throw err
     // the display's device (or, without one, no active device at all): the display signs in anew first
     if (playOptions.device_id === displaySpotifyDevice) {
@@ -2200,6 +3287,18 @@ async function playOnDevice(playOptions) {
     if (activeDevice === playOptions.device_id) activeDevice = null
     throw err
   })
+  // (a repeat Spotify may still have from before: off once the box's player plays - a moment later, it is the active one then)
+  started.then(
+    () => {
+      if (generation !== playbackGeneration) return
+      // (still this playback, on the box: another start meanwhile is not told anything)
+      setTimeout(() => {
+        if (generation === playbackGeneration && currentMeta.currentPlayer === 'spotify') clearSpotifyRepeat()
+      }, 1500).unref?.()
+    },
+    () => undefined,
+  )
+  return started
 }
 
 function playMe() {
@@ -2405,6 +3504,8 @@ function scheduleResumeJumps(trackNr, progressPct, firstJumpMs) {
 
 // resume: { track, percent } - where the album goes on (only an engine that starts there takes it, see playListAtTrack)
 function playList(playedList, resume) {
+  const album = extensions.albumFor(decodeURI(playedList).replace(/:/g, '/'))
+  if (album) return playAlbumProvider(album)
   playbackGeneration++
   currentMeta.trackFile = undefined // the new album's first file sets it (see the path event)
   clearLibraryResumeTimers()
@@ -2473,6 +3574,7 @@ async function playNasList(nasPath, resume = null) {
       return
     }
     currentNasTracks = tracks
+    rememberNasTracks(tracks)
     // Tracks of a CUE album all point at the same file: it is loaded once and the tracks are found by time.
     const cueMode = tracks.length > 1 && tracks.every((track) => track.cue === true)
     currentCue = cueMode ? { tracks, fileLength: 0 } : null
@@ -2487,9 +3589,7 @@ async function playNasList(nasPath, resume = null) {
     currentMeta.path = decodedPath
     currentMeta.trackFile = undefined
 
-    // (a .wma too as it is: mpv plays it through ffmpeg's http reader. The "ffmpeg://" prefix that mplayer needed for it - it took an http
-    // URL of a .wma for a Windows Media stream server - is refused by mpv as an entry of a playlist: "Refusing to load potentially unsafe URL")
-    const playlistLines = (cueMode ? [tracks[0]] : tracks).map((track) => `http://localhost:8200/api/nas/stream?path=${encodeURIComponent(track.path)}`)
+    const playlistLines = (cueMode ? [tracks[0]] : tracks).map(nasStreamUrl)
     const tmpPlaylistPath = '/tmp/nas_playlist.m3u'
     fs.writeFileSync(tmpPlaylistPath, playlistLines.join('\n'))
     currentMeta.currentTracknr = 0
@@ -2568,6 +3668,123 @@ async function playTidalList(ref, resume = null) {
     begin()
   } catch (error) {
     console.warn(`${now()}: [Spotify Control] TIDAL ${kind} ${id} not started: ${error}`)
+  }
+}
+
+// Plays a Jellyfin album, playlist or audiobook ("album:<id>", "playlist:<id>", "book:<id>"): the backend lists its tracks
+// (from Jellyfin, with the box's token), and mpv plays an m3u of the backend's /api/jellyfin/stream/<track>. Like TIDAL:
+// the list is fetched on every start, a start overtaken meanwhile is dropped. resume: {trackNr, progressPct}
+async function playJellyfinList(ref, resume = null) {
+  const [kind, id] = String(ref).split(':')
+  if (!['album', 'playlist', 'book'].includes(kind) || !/^[0-9a-f]{32}$/i.test(id ?? '')) {
+    console.warn(`${now()}: [Spotify Control] Jellyfin: not a list to play: ${ref}`)
+    return
+  }
+  const generation = ++playbackGeneration
+  // (a pause while the list loads: the start is held until "play" - see heldStart)
+  const asked = playPauseRequest
+  clearLibraryResumeTimers()
+  try {
+    const response = await fetch(`${JELLYFIN_API}/tracks?kind=${kind}&id=${id}`, { signal: AbortSignal.timeout(30000) })
+    const body = response.ok ? await response.json() : null
+    const tracks = Array.isArray(body?.tracks) ? body.tracks.filter((t) => /^[0-9a-f]{32}$/i.test(t?.id ?? '')) : []
+    if (tracks.length === 0) {
+      console.warn(`${now()}: [Spotify Control] Jellyfin ${kind} ${id} not started: ${response.ok ? 'no tracks' : `the backend answered ${response.status} (Jellyfin away or not signed in?)`}`)
+      return
+    }
+    if (generation !== playbackGeneration || isPlaybackBlocked()) {
+      log.debug(`${now()}: [Spotify Control] Jellyfin ${kind} ${id} dropped (stopped, replaced or blocked meanwhile)`)
+      return
+    }
+    // (a start of its own, not "weiterhören": where the account left it in Jellyfin - heard on a phone; the backend says
+    // it only with "Fortschritt mit Jellyfin teilen" on)
+    const at = body.resumeAt
+    if (!resume && Number(at?.track) >= 1 && Number.isFinite(Number(at?.percent))) resume = { trackNr: Number(at.track), progressPct: Number(at.percent) }
+    currentJellyfinTracks = tracks
+    currentMeta.currentType = 'jellyfin'
+    currentMeta.album = body.name || ''
+    currentMeta.path = `${kind}:${id}`
+    currentMeta.trackFile = undefined
+    const first = resume ? Math.min(Math.max(1, resume.trackNr), tracks.length) : 1
+    currentMeta.currentTrackname = tracks[first - 1].name
+    const tmpPlaylistPath = '/tmp/jellyfin_playlist.m3u'
+    fs.writeFileSync(tmpPlaylistPath, tracks.map((track) => `${JELLYFIN_API}/stream/${track.id}`).join('\n'))
+    currentMeta.currentTracknr = first - 1
+    currentMeta.totalTracks = tracks.length
+    const begin = () => {
+      writeplayerstatePlay()
+      const startAt = resume && (first > 1 || resume.progressPct > 1) ? { track: first, percent: resume.progressPct } : null
+      player.playList(tmpPlaylistPath, startAt ?? undefined)
+      player.setVolume(volumeStart)
+    }
+    if (pausedSince(asked)) {
+      heldStart = { generation, begin }
+      log.debug(`${now()}: [Spotify Control] Jellyfin ${kind} ${id} paused while loading - starts with "play"`)
+      return
+    }
+    begin()
+  } catch (error) {
+    console.warn(`${now()}: [Spotify Control] Jellyfin ${kind} ${id} not started: ${error}`)
+  }
+}
+
+// Plays an Audible book ("book:<asin>"): the backend lists its chapters (from Audible, with the box's device key), mpv plays
+// them as tracks (audiblePlayFrom). Like Jellyfin: the list is fetched on every start, a start overtaken meanwhile is dropped.
+// resume: {trackNr, progressPct}
+async function playAudibleBook(ref, resume = null) {
+  const [kind, asin] = String(ref).split(':')
+  if (kind !== 'book' || !/^[A-Z0-9]{10}$/.test(asin ?? '')) {
+    console.warn(`${now()}: [Spotify Control] Audible: not a book to play: ${ref}`)
+    return
+  }
+  const generation = ++playbackGeneration
+  // (a pause while the list loads: the start is held until "play" - see heldStart)
+  const asked = playPauseRequest
+  clearLibraryResumeTimers()
+  try {
+    const response = await fetch(`${AUDIBLE_API}/tracks?id=${asin}`, { signal: AbortSignal.timeout(30000) })
+    const body = response.ok ? await response.json() : null
+    const chapters = Array.isArray(body?.tracks) ? body.tracks.filter((t) => Number(t?.duration) > 0 && Number.isInteger(t?.number)) : []
+    if (chapters.length === 0) {
+      console.warn(`${now()}: [Spotify Control] Audible ${asin} not started: ${response.ok ? 'no chapters' : `the backend answered ${response.status} (Audible away, not signed in or not in the library?)`}`)
+      return
+    }
+    if (generation !== playbackGeneration || isPlaybackBlocked()) {
+      log.debug(`${now()}: [Spotify Control] Audible ${asin} dropped (stopped, replaced or blocked meanwhile)`)
+      return
+    }
+    // (a start of its own, not "weiterhören": where the account left the book in Audible - heard on a phone; the backend
+    // says it only with "Hörposition mit Audible teilen" on)
+    const at0 = body.resumeAt
+    if (Number(at0?.track) >= 1 && Number(at0.track) <= chapters.length && Number.isFinite(Number(at0?.percent))) {
+      const placeOf = (r) => chapters[r.trackNr - 1].start + (chapters[r.trackNr - 1].duration * (Number(r.progressPct) || 0)) / 100
+      const account = { trackNr: Number(at0.track), progressPct: Number(at0.percent) }
+      // (the box's own place too: the one further on wins - heard on at the phone or at the box)
+      if (!resume || resume.trackNr < 1 || resume.trackNr > chapters.length || placeOf(account) > placeOf(resume)) resume = account
+    }
+    audibleNoReport = body.positionUnknown === true ? asin : ''
+    currentAudibleChapters = chapters
+    audibleBook = asin
+    currentMeta.currentType = 'audible'
+    currentMeta.album = body.name || ''
+    currentMeta.path = `book:${asin}`
+    currentMeta.trackFile = undefined
+    currentMeta.totalTracks = chapters.length
+    const first = resume ? Math.min(Math.max(1, resume.trackNr), chapters.length) : 1
+    const at = resume ? (Math.max(0, Math.min(99, Number(resume.progressPct) || 0)) * chapters[first - 1].duration) / 100 : 0
+    const begin = () => {
+      writeplayerstatePlay()
+      audiblePlayFrom(first - 1, at, true)
+      player.setVolume(volumeStart)
+    }
+    if (pausedSince(asked)) {
+      heldStart = { generation, begin }
+      log.debug(`${now()}: [Spotify Control] Audible ${asin} paused while loading - starts with "play"`)
+      return
+    }
+    begin()
+  } catch (error) {
+    console.warn(`${now()}: [Spotify Control] Audible ${asin} not started: ${error}`)
   }
 }
 
@@ -2722,7 +3939,7 @@ function playRadioURL(radioURL) {
 // for mupibox.episodeResumeDays days after it was last heard (0: without end). Started again - from the episode
 // list, the app or a resume tile - it goes on there. An episode heard to its last half minute counts as heard and
 // starts from the beginning next time. The backend reads the file for the app's episode list.
-const EPISODE_POSITIONS_FILE = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/episode-positions.json'
+const EPISODE_POSITIONS_FILE = path.join(LIBRARY_DIR, 'episode-positions.json')
 const EPISODE_POSITIONS_MAX = 5000
 let episodePositions = null // { [episode key]: { pos, len, at, done } } (by the address, from before the keys)
 // What stays the same of an episode's address from one fetch of its feed to the next - the same as backend-api's
@@ -2774,7 +3991,7 @@ function loadEpisodePositions() {
 }
 // Written at most once a minute while an episode plays (and when it ends), not every second: the SD card
 function saveEpisodePositions() {
-  if (!episodePositionsDirty || !episodePositions) return
+  if (userHold || !episodePositionsDirty || !episodePositions) return
   episodePositionsDirty = false
   const days = Number(muPiBoxConfig?.mupibox?.episodeResumeDays ?? 180)
   const oldest = days > 0 ? Date.now() - days * 24 * 3600 * 1000 : 0
@@ -3008,8 +4225,13 @@ function seek(progress) {
         )
     }
   } else if (currentMeta.currentPlayer === 'mplayer') {
+    if (isAudible()) return audibleSeek(Number(progress))
     if (progress > 1) {
-      if (isCuePlayback()) {
+      // (an album that is no folder: a place in its track, as an absolute time of the whole)
+      const albumSeek = albumNow()?.seek?.(progress, player.trackIndex?.() ?? currentMeta.currentTracknr - 1)
+      if (typeof albumSeek === 'number') {
+        player.exec('seek', [albumSeek, '2'])
+      } else if (isCuePlayback()) {
         const index = Math.max(0, currentMeta.currentTracknr - 1)
         const track = currentCue.tracks[index]
         const end = cueTrackEnd(index)
@@ -3164,6 +4386,19 @@ async function volumeCap() {
 }
 
 /*gets available devices, searches for the active one and returns its volume*/
+// An absolute volume (the Winamp theme's slider), in the same queue as the steps and under the same maximum
+async function setVolumeTo(percent) {
+  _volumeOpQueue = _volumeOpQueue.then(async () => {
+    const cap = await volumeCap()
+    const target = Math.max(0, Math.min(cap, percent))
+    await cmdCall(`/usr/bin/amixer sset Master ${target}%`)
+    currentMeta.volume = target
+  }).catch((err) => {
+    log.warn(`${now()}: [setVolumeTo] op failed:`, err?.message || err)
+  })
+  return _volumeOpQueue
+}
+
 async function setVolume(volume, step = 5) {
   // step: percent per change (5 for the +5 / -5 commands, 1..10 for the rotary encoder)
   const volumeUp = `/usr/bin/amixer sset Master ${step}%+`
@@ -3463,6 +4698,28 @@ app.get('/display/spotify-silent/:on', (req, res) => {
   res.json({ ok: true })
 })
 
+// The display's Spotify player says where it is (at each change of its state: a track, a pause, a seek), for the ticks of
+// what was heard (see "Heard"): track, pos and dur (ms), paused, next (tracks after it), ctx (what plays), album (its id).
+// Only from the display's own device, as /display/spotify-silent.
+app.get('/display/spotify-progress', (req, res) => {
+  if (!displaySpotifyDevice || req.query.device !== displaySpotifyDevice) {
+    res.status(409).json({ error: 'not the display device' })
+    return
+  }
+  const q = req.query
+  const id = (v) => (typeof v === 'string' && /^[A-Za-z0-9]{1,64}$/.test(v) ? v : '')
+  const num = (v) => {
+    const n = Number(v)
+    return Number.isFinite(n) && n >= 0 ? n : 0
+  }
+  const ctx = typeof q.ctx === 'string' && /^spotify:[a-z]+:[A-Za-z0-9]{1,64}$/.test(q.ctx) ? q.ctx : ''
+  spotifyProgress = { track: id(q.track), posMs: num(q.pos), durMs: num(q.dur), paused: q.paused === '1', next: num(q.next), ctx, shuffle: q.shuffle === '1', at: Date.now() }
+  // (an album's last track: asked once, when an album plays)
+  const album = id(q.album)
+  if (album && ctx === `spotify:album:${album}`) learnSpotifyAlbumEnd(album)
+  res.json({ ok: true })
+})
+
 // Called by the backend on the box (the parents' web app's "reload the display now").
 app.post('/display/reload-theme', (_req, res) => {
   currentMeta.themeReloadAt = Date.now()
@@ -3471,6 +4728,466 @@ app.post('/display/reload-theme', (_req, res) => {
 app.post('/display/reload-page', (_req, res) => {
   currentMeta.pageReloadAt = Date.now()
   res.json({ ok: true })
+})
+
+// === Users (5.1, backend users.ts): several children share the box, each with their own library and settings. A
+// switch exchanges the files of the library and of the box's data (the day's counts in the checkpoint, the episodes'
+// positions) for those of the coming user. Before it the player writes what it holds for the user who goes and stops
+// writing (hold) - a write a moment later landed in the coming user's file; after it it reads the coming user's
+// (changed). After a switch that did not happen the same: the files are those of before (changed reads them again).
+let userHoldTimer = null
+app.post('/user/hold', (_req, res) => {
+  try {
+    // (held already - a switch before whose "changed" did not come: the counts in place may be another user's now)
+    userGeneration++
+    if (!userHold) {
+      playtimeCheckpointNow()
+      episodePositionsDirty = true
+      saveEpisodePositions()
+    }
+    userHold = true
+    // (a backend that went away in the middle: the player writes again after 2 minutes - reading what is there then)
+    clearTimeout(userHoldTimer)
+    userHoldTimer = setTimeout(() => userChanged(), 2 * 60 * 1000)
+    res.json({ ok: true })
+  } catch (err) {
+    res.status(500).json({ ok: false, error: String(err?.message ?? err) })
+  }
+})
+app.post('/user/changed', (req, res) => {
+  // (no hold before - it failed: nothing was exchanged, the counts in memory are the newest. force: a switch cut off and
+  // finished at the start - the player read the files that were in place then, read them again)
+  if (userHold || req.query?.force === '1') userChanged()
+  res.json({ ok: true })
+})
+// The counts of the user who goes, on the card before the files are exchanged (not with the timer of every minute)
+function playtimeCheckpointNow() {
+  // (also with only the tiles' or the photos' time counted - no day's limit: their last minute went otherwise)
+  if (!playtimeState.date && !photoTimeState.date && !tileState.date) return
+  const tmp = `${PLAYTIME_CHECKPOINT_PATH}.hold.tmp`
+  const fd = fs.openSync(tmp, 'w')
+  try {
+    fs.writeFileSync(fd, JSON.stringify(playtimeCheckpointPayload()))
+    fs.fsyncSync(fd)
+  } finally {
+    fs.closeSync(fd)
+  }
+  fs.renameSync(tmp, PLAYTIME_CHECKPOINT_PATH)
+}
+// The coming user's counts and positions (the day's counts start at 0 where there is no checkpoint of today)
+function userChanged() {
+  userGeneration++
+  clearTimeout(userHoldTimer)
+  userHoldTimer = null
+  // the coming user's settings at once (the watch of the file reads them a moment later: his day may begin at
+  // another hour)
+  const fresh = readMupiBoxConfigFromDisk()
+  if (fresh) muPiBoxConfig = fresh
+  Object.assign(playtimeState, { date: '', dayKey: 'mon', usedSeconds: 0, state: 'normal', graceEndsAt: null, graceMode: null, stopUnlessEpisode: false })
+  Object.assign(quietHoursState, { state: 'normal', graceEndsAt: null, graceMode: null, stopUnlessEpisode: false, activeWindow: null })
+  Object.assign(photoTimeState, { date: '', dayKey: 'mon', usedSeconds: 0, resetApplied: 0 })
+  Object.assign(tileState, { date: '', used: {}, current: null, state: 'normal', graceMode: null, stopUnlessEpisode: false, graceEndsAt: null, raw: null })
+  playtimeGraceIdle = 0
+  quietGraceIdle = 0
+  tileGraceIdle = 0
+  photoActiveUntil = 0
+  playtimeLastCheckpointSeconds = -1
+  photoLastCheckpointSeconds = -1
+  tileLastCheckpointUsed = '{}'
+  episodePositions = null
+  episodePositionsDirty = false
+  userHold = false
+  playtimeNoticeSkip = true
+  quietNoticeSkip = true
+  loadPlaytimeCheckpoint()
+}
+
+// The display: an album is open and the photo time counts (every few seconds while it does - see photoTimeTickStep);
+// {active: false} when it stops counting (the album left, the display off, the grid idle): it stops at once
+app.post('/photos/active', (req, res) => {
+  photoActiveUntil = req.body?.active !== false && readPhotoTimeConfig().enabled ? Date.now() + PHOTO_ACTIVE_MS : 0
+  res.json({ ok: true })
+})
+
+// The Winamp theme's equaliser and balance: GET reads them (supported: false = mplayer, which has no filter), POST sets
+// them live and keeps them in a file
+app.get('/winamp/sound', (_req, res) => {
+  res.json({ supported: typeof player.setSound === 'function', ...winampSound })
+})
+app.post('/winamp/sound', (req, res) => {
+  const body = req.body ?? {}
+  const num = (v, lo, hi) => Math.max(lo, Math.min(hi, Number(v) || 0))
+  winampSound.on = body.on === true
+  winampSound.auto = body.auto === true
+  winampSound.preamp = num(body.preamp, -12, 12)
+  winampSound.bands = Array.from({ length: 10 }, (_, i) => num(Array.isArray(body.bands) ? body.bands[i] : 0, -12, 12))
+  winampSound.balance = num(body.balance, -100, 100)
+  applyWinampSound()
+  fs.writeFile(WINAMP_SOUND_FILE, JSON.stringify(winampSound), () => undefined)
+  res.json({ ok: true })
+})
+
+// The equaliser's presets of the Winamp theme: the ones the children / parents saved (named), the auto-load ones (one per
+// album: AUTO loads them when the album plays) and the default. The display keeps the whole set and sends it back whole.
+const WINAMP_PRESETS_FILE = '/home/dietpi/.mupibox/winamp-presets.json'
+const cleanValues = (v) => {
+  const num = (x) => Math.max(-12, Math.min(12, Math.round((Number(x) || 0) * 2) / 2))
+  return { preamp: num(v?.preamp), bands: Array.from({ length: 10 }, (_, i) => num(Array.isArray(v?.bands) ? v.bands[i] : 0)) }
+}
+const cleanSet = (body, max) => {
+  const out = {}
+  for (const [name, v] of Object.entries(body && typeof body === 'object' ? body : {}).slice(0, max)) {
+    const key = [...String(name)].filter((c) => c.charCodeAt(0) >= 32).join('').trim().slice(0, 80)
+    if (key) out[key] = cleanValues(v)
+  }
+  return out
+}
+function readPresets() {
+  try {
+    const f = JSON.parse(fs.readFileSync(WINAMP_PRESETS_FILE, 'utf8'))
+    return { presets: cleanSet(f.presets, 60), auto: cleanSet(f.auto, 300), default: f.default ? cleanValues(f.default) : null }
+  } catch {
+    return { presets: {}, auto: {}, default: null }
+  }
+}
+app.get('/winamp/presets', (_req, res) => res.json(readPresets()))
+app.post('/winamp/presets', (req, res) => {
+  const b = req.body ?? {}
+  const set = { presets: cleanSet(b.presets, 60), auto: cleanSet(b.auto, 300), default: b.default ? cleanValues(b.default) : null }
+  fs.writeFile(WINAMP_PRESETS_FILE, JSON.stringify(set), (err) => (err ? res.status(500).json({ error: 'write_failed' }) : res.json({ ok: true })))
+})
+
+// --- Extensions (docs/extensions.md) ---
+// Files that extensions bring along (~/.mupibox/data/extensions/<id>/player.js) are loaded here: they add routes (/ext/<id>/...), listen to
+// what the player does and may be the source of albums that are no folders - the player asks them where it has a folder name
+// (albumFor). The audio CD is such an extension. An error in one of them is caught and switches it off, not the player.
+const extensions = createExtensionHost({
+  app,
+  log: {
+    debug: (text) => log.debug(`${now()}: [Spotify Control] ${text}`),
+    info: (text) => log.info(`${now()}: [Spotify Control] ${text}`),
+    warn: (text) => console.warn(`${now()}: [Spotify Control] ${text}`),
+  },
+  getConfig: () => redactSecrets(muPiBoxConfig ?? {}),
+  getMeta: () => currentMeta,
+  engine: {
+    command: (command) => (typeof player.command === 'function' ? player.command(command) : Promise.resolve(null)),
+    playEntries: (entries) => player.playEntries?.(entries),
+    setVolume: (percent) => player.setVolume(percent),
+    startVolume: () => volumeStart,
+    trackIndex: () => player.trackIndex?.() ?? -1,
+  },
+  stop: () => stop(),
+  generation: () => playbackGeneration,
+})
+extensions.load()
+
+/** The album that plays, when its folder name is an extension's (the audio CD), else undefined. */
+const albumNow = () => extensions.albumFor(currentMeta.path)
+
+// An album of an extension starts: it puts its tracks in mpv's playlist (host.engine.playEntries) and says what it is; the rest -
+// counting, the volume, the state - is as for a folder. Nothing to play (no disc): nothing changes.
+async function playAlbumProvider(album) {
+  playbackGeneration++
+  currentMeta.trackFile = undefined
+  clearLibraryResumeTimers()
+  const started = await album.play()
+  if (!started) return
+  writeplayerstatePlay()
+  player.setVolume(volumeStart)
+  currentMeta.currentTracknr = 0
+  currentMeta.path = album.folder
+  if (started.album) currentMeta.album = started.album
+  if (started.totalTracks) currentMeta.totalTracks = started.totalTracks
+}
+
+// --- The queue: the Winamp playlist window edits what plays ---
+// The playlist of a local album (a folder of the library) or of a NAS album is mpv's own playlist; the display's Winamp playlist
+// window selects entries, removes them (remove, crop, new list), sorts them, adds a folder (of the library, or of the NAS) and
+// saves and loads lists (queue.js has the logic around it). Nothing here touches a file or a folder, on the box or on the NAS:
+// only what is queued changes. An audio CD, a CUE album of the NAS, TIDAL and Spotify have no such queue (their lists are not
+// files); /queue says so (editable: false). A queue holds files of one kind: the library's, or the NAS's.
+const MEDIA_ROOT = '/home/dietpi/MuPiBox/media'
+const NAS_PREFIX = 'nas:' // (in a path of the folder browser and in a saved list: a path on the NAS)
+const queueLists = Q.createListStore('/home/dietpi/.mupibox/winamp-lists')
+
+// The tracks of the NAS, by their path: kept from every NAS list that was played or added, so the names of a queue that was
+// sorted or cut down are known (the playlist of mpv holds only the stream addresses)
+const nasTrackByPath = new Map()
+const rememberNasTracks = (tracks) => {
+  for (const track of tracks) if (track?.path) nasTrackByPath.set(track.path, track)
+}
+// (a .wma too as it is: mpv plays it through ffmpeg's http reader. The "ffmpeg://" prefix that mplayer needed for it - it took an http
+// URL of a .wma for a Windows Media stream server - is refused by mpv as an entry of a playlist: "Refusing to load potentially unsafe URL")
+const nasStreamUrl = (track) => `http://localhost:8200/api/nas/stream?path=${encodeURIComponent(track.path)}`
+
+/** 'local', 'nas', or null: what kind of queue plays now (null - nothing, a CD, a CUE album, TIDAL, Spotify: no queue to edit) */
+function queueKind() {
+  if (currentMeta.currentPlayer !== 'mplayer' || typeof player.list !== 'object') return null
+  if (currentMeta.currentType === 'local' && !albumNow()) return 'local'
+  if (currentMeta.currentType === 'nas' && currentCue === null) return 'nas'
+  return null
+}
+const queueEditable = () => queueKind() !== null
+
+/** [{ position, id, file, source, name, current }] of the playlist as it is now; null when mpv did not answer */
+async function queueEntries() {
+  const entries = await player.list.entries()
+  if (!entries) return null
+  return entries.map((e, i) => {
+    const source = Q.describeSource(e.filename, MEDIA_ROOT)
+    const nas = nasTrackByPath.get(source.full)
+    return { position: i + 1, id: e.id, file: e.filename, source, name: nas ? String(nas.name).replace(/\.[^./]+$/, '') : Q.nameOfFile(source.full), current: e.current }
+  })
+}
+
+// After an edit: the player's own count and place follow the playlist (the next track change would only tell it later); a NAS
+// queue's track list (the names the player shows) is put in the order of the playlist
+async function queueFollowEdit() {
+  const entries = await queueEntries()
+  if (!entries) return null
+  currentMeta.totalTracks = entries.length
+  const at = entries.findIndex((e) => e.current)
+  if (at >= 0) currentMeta.currentTracknr = at + 1
+  if (currentMeta.currentType === 'nas') currentNasTracks = entries.map((e) => nasTrackByPath.get(e.source.full) ?? { path: e.source.full, name: e.source.file })
+  return entries
+}
+
+const queueNotEditable = (res) => res.status(409).json({ ok: false, error: 'not editable' })
+
+app.get('/queue', async (_req, res) => {
+  if (!queueEditable()) return res.json({ editable: false, entries: [] })
+  const entries = await queueEntries()
+  if (!entries) return res.json({ editable: false, entries: [] })
+  res.json({ editable: true, current: entries.findIndex((e) => e.current) + 1, entries: entries.map(({ position, name, source }) => ({ position, name, file: source.file })) })
+})
+
+// remove the entries at ?pos=1,3 (1-based, as the display counts), or everything else (crop)
+for (const [route, keepChosen] of [['remove', false], ['crop', true]]) {
+  app.get(`/queue/${route}`, async (req, res) => {
+    if (!queueEditable()) return queueNotEditable(res)
+    const entries = await queueEntries()
+    if (!entries) return res.status(503).json({ ok: false })
+    const chosen = Q.indexesOf(req.query.pos, entries.length)
+    const gone = keepChosen ? Q.others(chosen, entries.length) : chosen
+    if (gone.length >= entries.length || gone.length === 0) {
+      // (nothing chosen, or everything: the list is not emptied by accident - "new list" does that)
+      return res.json({ ok: gone.length === 0, removed: 0 })
+    }
+    await player.list.remove(gone)
+    await queueFollowEdit()
+    res.json({ ok: true, removed: gone.length })
+  })
+}
+
+// sort: title, file, path, reverse, random - the entry that plays keeps playing (mpv moves entries, it does not restart them)
+app.get('/queue/sort/:mode', async (req, res) => {
+  if (!queueEditable()) return queueNotEditable(res)
+  const entries = await queueEntries()
+  if (!entries) return res.status(503).json({ ok: false })
+  let target
+  try {
+    // (the title of a NAS entry is the NAS's own name for it; the file and path are those on the NAS)
+    target = Q.sortedIds(entries.map((e) => ({ id: e.id, filename: e.source.full, title: e.name })), req.params.mode)
+  } catch {
+    return res.status(400).json({ ok: false, error: 'unknown sort' })
+  }
+  for (const [from, to] of Q.movesFor(entries.map((e) => e.id), target)) await player.list.move(from, to)
+  await queueFollowEdit()
+  res.json({ ok: true })
+})
+
+// a new list: what plays stops, nothing is queued
+app.get('/queue/new', async (_req, res) => {
+  if (!queueEditable()) return queueNotEditable(res)
+  const nas = currentMeta.currentType === 'nas'
+  stop()
+  await new Promise((resolve) => setTimeout(resolve, 300))
+  await player.list.clear()
+  if (nas) currentNasTracks = []
+  currentMeta.totalTracks = 0
+  currentMeta.currentTracknr = 0
+  res.json({ ok: true })
+})
+
+// ---- the folders to add from: the library's, or the NAS's (a path that starts with "nas:") ----
+
+// the NAS's own lists (the box's backend API; they cost a call to the NAS): the folders shown on the box, or the ones below a folder
+async function nasFolders(nasPath, ms = 25000) {
+  const url = nasPath ? `http://localhost:8200/api/nas/children?path=${encodeURIComponent(nasPath)}` : 'http://localhost:8200/api/nas/artists?expand=1'
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(ms) })
+    const list = response.ok ? await response.json() : null
+    if (!Array.isArray(list)) return null
+    return list
+      .filter((entry) => entry?.nasPath)
+      .map((entry) => ({ name: String(entry.title || entry.artist || path.posix.basename(entry.nasPath)), path: `${NAS_PREFIX}${entry.nasPath}`, audio: 0 }))
+  } catch {
+    return null
+  }
+}
+
+// the audio tracks of a NAS folder, as the NAS tab plays them (an album with a cue sheet is one file: it is not added)
+async function nasFolderTracks(nasPath) {
+  try {
+    const response = await fetch(`http://localhost:8200/api/nas/tracklist?path=${encodeURIComponent(nasPath)}`, { signal: AbortSignal.timeout(25000) })
+    const list = response.ok ? await response.json() : null
+    return Array.isArray(list) ? list.filter((t) => t?.path && t.cue !== true) : []
+  } catch {
+    return []
+  }
+}
+
+// the folders of the library to add from (?path= the folder, '' the library itself). A queue of the NAS adds from the NAS; with nothing
+// queued the browser starts at the library and has the NAS (when it has folders to show) as a folder of its own.
+app.get('/queue/dirs', async (req, res) => {
+  const wanted = String(req.query.path ?? '')
+  const kind = queueKind()
+  if (wanted.startsWith(NAS_PREFIX) || (kind === 'nas' && wanted === '')) {
+    const nasPath = wanted.slice(NAS_PREFIX.length)
+    const folders = await nasFolders(nasPath)
+    if (!folders) return res.status(502).json({ ok: false, error: 'NAS not reachable' })
+    return res.json({ ok: true, path: wanted, audio: 0, canAdd: nasPath !== '', folders })
+  }
+  if (kind === 'nas') return res.status(409).json({ ok: false, error: 'not the same kind' })
+  const listing = Q.listFolders(MEDIA_ROOT, wanted)
+  if (!listing) return res.status(404).json({ ok: false })
+  // (the library's root holds the three categories - the other folders there are the box's own: covers, the NAS copy, downloads)
+  if (wanted === '') listing.folders = listing.folders.filter((f) => ['audiobook', 'music', 'other'].includes(f.name))
+  if (wanted === '' && kind === null && (await nasFolders('', 4000))?.length) listing.folders.push({ name: 'NAS', path: NAS_PREFIX, audio: 0 })
+  res.json({ ok: true, ...listing, canAdd: listing.audio > 0 })
+})
+
+// the audio files directly in ?path= are queued after the last entry (an empty queue: they start playing)
+app.get('/queue/add', async (req, res) => {
+  const wanted = String(req.query.path ?? '')
+  if (typeof player.list !== 'object') return res.status(409).json({ ok: false })
+  const kind = queueKind()
+  if (wanted.startsWith(NAS_PREFIX)) {
+    const nasPath = wanted.slice(NAS_PREFIX.length)
+    if (!nasPath) return res.status(400).json({ ok: false })
+    if (kind === 'local') return res.status(409).json({ ok: false, error: 'not the same kind' })
+    if (kind === null) {
+      // nothing queued: the folder plays as an album of the NAS does (its list is asked for, the start held while paused, ...)
+      switchToMplayer()
+      currentMeta.currentType = 'nas'
+      await playNasList(encodeURIComponent(nasPath))
+      return res.json({ ok: true })
+    }
+    const tracks = await nasFolderTracks(nasPath)
+    if (tracks.length === 0) return res.status(404).json({ ok: false, error: 'no audio there' })
+    rememberNasTracks(tracks)
+    await player.list.append(tracks.map(nasStreamUrl))
+    await queueFollowEdit()
+    return res.json({ ok: true, added: tracks.length })
+  }
+  if (kind === 'nas') return res.status(409).json({ ok: false, error: 'not the same kind' })
+  const files = Q.audioFilesIn(MEDIA_ROOT, wanted)
+  if (!files || files.length === 0) return res.status(404).json({ ok: false, error: 'no audio there' })
+  if (kind === 'local') {
+    await player.list.append(files)
+    await queueFollowEdit()
+  } else {
+    await playQueueFiles(files, wanted)
+  }
+  res.json({ ok: true, added: files.length })
+})
+
+// these files are the playlist and play from the first (a folder added to an empty queue, a loaded list)
+async function playQueueFiles(files, label) {
+  playbackGeneration++
+  playbackRequest++
+  playbackOrigin = playbackRequest
+  resetLocalShuffle()
+  resetRepeat()
+  clearLibraryResumeTimers()
+  switchToMplayer()
+  currentCue = null
+  currentMeta.currentType = 'local'
+  currentMeta.trackFile = undefined
+  currentMeta.finished = false
+  currentMeta.pause = false
+  currentMeta.currentTracknr = 0
+  currentMeta.path = label
+  currentMeta.totalTracks = files.length
+  writeplayerstatePlay()
+  await player.list.replace(files)
+  player.setVolume(volumeStart)
+}
+
+// the same for tracks of the NAS (a loaded list of the NAS)
+async function playQueueNas(tracks, label) {
+  playbackGeneration++
+  playbackRequest++
+  playbackOrigin = playbackRequest
+  resetLocalShuffle()
+  resetRepeat()
+  clearLibraryResumeTimers()
+  switchToMplayer()
+  currentCue = null
+  rememberNasTracks(tracks)
+  currentNasTracks = tracks
+  currentMeta.currentType = 'nas'
+  currentMeta.trackFile = undefined
+  currentMeta.finished = false
+  currentMeta.pause = false
+  currentMeta.currentTracknr = 0
+  currentMeta.path = label
+  currentMeta.album = label
+  currentMeta.totalTracks = tracks.length
+  currentMeta.currentTrackname = String(tracks[0]?.name ?? label).replace(/\.[^./]+$/, '')
+  writeplayerstatePlay()
+  await player.list.replace(tracks.map(nasStreamUrl))
+  player.setVolume(volumeStart)
+}
+
+// save the queue under a name (?name=; without one: the album and the day). A NAS queue is saved as paths on the NAS.
+app.get('/queue/save', async (req, res) => {
+  if (!queueEditable()) return queueNotEditable(res)
+  const entries = await queueEntries()
+  if (!entries || entries.length === 0) return res.status(409).json({ ok: false, error: 'nothing to save' })
+  const stamp = new Date().toISOString().slice(0, 16).replace('T', ' ').replace(':', '.')
+  const fallback = `${String(currentMeta.album || 'List').replace(/[^\p{L}\p{N} ._()-]/gu, ' ').trim().slice(0, 40) || 'List'} ${stamp}`
+  const nas = currentMeta.currentType === 'nas'
+  const name = queueLists.save(req.query.name ?? fallback, entries.map((e) => (nas ? `${NAS_PREFIX}${e.source.full}` : e.file)))
+  if (!name) return res.status(400).json({ ok: false, error: 'bad name' })
+  res.json({ ok: true, name })
+})
+
+app.get('/queue/lists', (_req, res) => res.json({ ok: true, lists: queueLists.list() }))
+
+app.get('/queue/load', async (req, res) => {
+  const saved = queueLists.load(req.query.name) ?? []
+  if (typeof player.list !== 'object') return res.status(409).json({ ok: false })
+  if (saved[0]?.startsWith(NAS_PREFIX)) {
+    // (a list of the NAS: its tracks - a track the NAS does not have any more is skipped by mpv when it comes to it)
+    const tracks = saved.filter((f) => f.startsWith(NAS_PREFIX)).map((f) => f.slice(NAS_PREFIX.length)).map((p) => nasTrackByPath.get(p) ?? { path: p, name: path.posix.basename(p) })
+    await playQueueNas(tracks, String(req.query.name))
+    return res.json({ ok: true, count: tracks.length })
+  }
+  // (a file that is gone from the box is left out of the list)
+  const files = saved.filter((f) => f.startsWith(`${MEDIA_ROOT}/`) && !f.includes('..') && fs.existsSync(f))
+  if (files.length === 0) return res.status(404).json({ ok: false, error: 'list not found or empty' })
+  await playQueueFiles(files, String(req.query.name))
+  res.json({ ok: true, count: files.length })
+})
+
+app.get('/queue/deletelist', (req, res) => res.json({ ok: queueLists.remove(req.query.name) }))
+
+// what is known of the entry at ?pos=
+app.get('/queue/info', async (req, res) => {
+  const entries = await queueEntries()
+  const entry = entries?.[Q.indexesOf(req.query.pos, entries?.length ?? 0)[0]]
+  if (!entry) return res.status(404).json({ ok: false })
+  let size = 0
+  if (entry.source.inLibrary) {
+    try {
+      size = fs.statSync(entry.source.full).size
+    } catch {
+      // gone
+    }
+  }
+  res.json({ ok: true, position: entry.position, name: entry.name, file: entry.source.file, folder: entry.source.folder, size, extension: entry.source.extension })
 })
 
 /*endpoint to return all local metainformation*/
@@ -3482,7 +5199,7 @@ app.get('/local', (_req, res) => {
   // landen nicht in der Response, obwohl die Mutationen am Objekt
   // ankommen.
   // (generation: which start this is - a stop of the display's background playback names it, see ?gen=)
-  res.json({ ...currentMeta, generation: playbackRequest })
+  res.json({ ...currentMeta, generation: playbackRequest, origin: playbackOrigin, shuffleSupported: typeof player.setShuffle === 'function' })
 })
 
 app.get('/spotify/token', (_req, res) => {
@@ -3503,6 +5220,11 @@ app.get('/local/tracklist/:encoded', (req, res) => {
   const playedTitelmod = decodeURI(req.params.encoded).replace(/:/g, '/')
   if (playedTitelmod.split('/').includes('..')) {
     res.status(400).json({ error: 'invalid path' })
+    return
+  }
+  const album = extensions.albumFor(playedTitelmod)
+  if (album?.tracklist) {
+    res.json(album.tracklist())
     return
   }
 
@@ -3564,6 +5286,53 @@ app.get('/tidal/tracklist/:ref', async (req, res) => {
   }
 })
 
+/*returns the chapters of an Audible book (book:<asin>) as its track list, from the backend*/
+app.get('/audible/tracklist/:ref', async (req, res) => {
+  const [kind, asin] = String(req.params.ref).split(':')
+  if (kind !== 'book' || !/^[A-Z0-9]{10}$/.test(asin ?? '')) {
+    res.status(400).json([])
+    return
+  }
+  if (currentMeta.currentType === 'audible' && currentMeta.path === `book:${asin}` && currentAudibleChapters.length > 0) {
+    res.json(currentAudibleChapters.map((c) => ({ position: c.number, name: c.name })))
+    return
+  }
+  try {
+    const response = await fetch(`${AUDIBLE_API}/tracks?id=${asin}`, { signal: AbortSignal.timeout(30000) })
+    const body = response.ok ? await response.json() : null
+    res.json(Array.isArray(body?.tracks) ? body.tracks.map((c) => ({ position: c.number, name: c.name })) : [])
+  } catch (error) {
+    log.debug(`${now()}: [Spotify Control] Error fetching Audible chapters for ${asin}: ${error}`)
+    res.json([])
+  }
+})
+
+/*returns the track list of a Jellyfin album, playlist or audiobook (<album|playlist|book>:<id>), from the backend*/
+app.get('/jellyfin/tracklist/:ref', async (req, res) => {
+  const [kind, id] = String(req.params.ref).split(':')
+  if (!['album', 'playlist', 'book'].includes(kind) || !/^[0-9a-f]{32}$/i.test(id ?? '')) {
+    res.status(400).json({ error: 'invalid list' })
+    return
+  }
+  // (the list that plays: as mpv has it - jellyfintrack:N jumps by position)
+  if (currentMeta.currentType === 'jellyfin' && currentMeta.path === `${kind}:${id}` && currentJellyfinTracks.length > 0) {
+    res.json(currentJellyfinTracks.map((track, i) => ({ position: i + 1, name: track.name })))
+    return
+  }
+  try {
+    const response = await fetch(`${JELLYFIN_API}/tracks?kind=${kind}&id=${id}`, { signal: AbortSignal.timeout(30000) })
+    const body = response.ok ? await response.json() : null
+    if (!Array.isArray(body?.tracks)) {
+      res.status(response.status === 401 ? 401 : 502).json({ error: 'tracklist not available' })
+      return
+    }
+    res.json(body.tracks.map((track) => ({ position: track.number, name: track.name })))
+  } catch (error) {
+    log.debug(`${now()}: [Spotify Control] Error fetching Jellyfin tracklist for ${kind}:${id}: ${error}`)
+    res.status(502).json({ error: 'tracklist not available' })
+  }
+})
+
 /*returns the albums of a TIDAL artist (a whole artist in the library: the display lists them), from the box's TIDAL service*/
 app.get('/tidal/artist/:id/albums', async (req, res) => {
   const id = String(req.params.id)
@@ -3576,13 +5345,15 @@ app.get('/tidal/artist/:id/albums', async (req, res) => {
     const q = new URLSearchParams()
     for (const k of ['from', 'to']) if (typeof req.query[k] === 'string' && /^\d{1,5}$/.test(req.query[k])) q.set(k, req.query[k])
     if (typeof req.query.exclude === 'string' && /^\d{1,15}(,\d{1,15}){0,499}$/.test(req.query.exclude)) q.set('exclude', req.query.exclude)
+    if (req.query.by === 'number') q.set('by', 'number')
     const response = await fetch(`${TIDAL_SERVICE}/artist/${id}/albums${q.size ? `?${q}` : ''}`, { signal: AbortSignal.timeout(45000) })
     const body = response.ok ? await response.json() : null
     if (!Array.isArray(body?.albums)) {
       res.status(response.status === 401 ? 401 : 502).json({ error: 'albums not available' })
       return
     }
-    res.json({ albums: body.albums.map((a) => ({ id: a.id, name: a.name, cover: a.cover ?? null, year: a.year ?? null })) })
+    // (the full date too: "Älteste zuerst" of an entry orders the episodes of one year by it)
+    res.json({ albums: body.albums.map((a) => ({ id: a.id, name: a.name, cover: a.cover ?? null, year: a.year ?? null, date: typeof a.date === 'string' && /^\d{4}(-\d\d){0,2}$/.test(a.date) ? a.date : null })) })
   } catch (error) {
     log.debug(`${now()}: [Spotify Control] Error fetching TIDAL albums of artist ${id}: ${error}`)
     res.status(502).json({ error: 'albums not available' })
@@ -3623,9 +5394,17 @@ app.use((req, res) => {
   let pathname = req.url
   let triggerSource = 'box'
   let triggerCover = ''
+  // the tile of the start page what starts belongs to (5.1, see "Tile time")
+  let triggerTile = null
+  // what of the library starts, for the ticks of what was heard (5.1, see "Heard")
+  let triggerHeard = null
   try {
     const u = new URL(req.url, 'http://localhost')
     pathname = u.pathname
+    const tile = u.searchParams.get('tile')
+    if (tile && TILE_KEY.test(tile)) triggerTile = tile
+    const heard = u.searchParams.get('heard')
+    if (heard && HEARD_KEY.test(heard)) triggerHeard = heard
     const src = u.searchParams.get('src')
     if (src && /^[a-z0-9_-]{1,20}$/i.test(src)) triggerSource = src
     // (an announcement pauses the music and goes on afterwards: no start - the display jumped to the big player after
@@ -3641,8 +5420,12 @@ app.use((req, res) => {
     /* malformed — bleibt 'box', pathname bleibt req.url */
   }
   if (triggerSource !== null) {
-    currentMeta.triggerSource = triggerSource
-    currentMeta.triggerAt = Date.now()
+    // (louder, quieter, a jump within the track, shuffle, repeat, pause, stop: nothing new plays - a button or the rotary
+    // encoder pressed while the child browsed the library took the display to the player at every press)
+    if (!/\/(?:[+-]\d{1,2}|=\d{1,3}|seek[+-]\d+|seekpos:[^/]*|shuffle(?:on|off)|repeat(?:on|off|all|one)|pause|stop|shutoff)$/.test(pathname)) {
+      currentMeta.triggerSource = triggerSource
+      currentMeta.triggerAt = Date.now()
+    }
     // (a command of the display, the app, Telegram …: the pause for names read out is not the backend's any more)
     speechPauseToken = 0
   }
@@ -3662,6 +5445,19 @@ app.use((req, res) => {
     )
     res.status(423).send({ status: 'blocked', error: reason })
     return
+  }
+
+  // Tile time: a start of something new names its tile (or none: it counts for the listening time only); play, next,
+  // previous, seek go on with the current one. Its time used up (or what plays of it finishing in its grace period): refused.
+  const newStart = command.name.includes('spotify:') || ['library', 'nas', 'tidal', 'jellyfin', 'audible', 'radio', 'rss'].some((s) => hasDirSegment(command, s))
+  if (isPlayInitiatingCommand(command) && !hasDirSegment(command, 'say')) {
+    const tile = newStart ? resolveTile(triggerTile) : tileState.current
+    const inGrace = tile !== null && tile === tileState.current && tileState.state === 'grace' && !isAllowOverrideActive()
+    if (tile && (tileUsedUp(tile) || inGrace)) {
+      console.log(`${new Date().toLocaleString()}: [TileTime] Rejected command (tile_limit_reached ${tile}): name=${command.name} dir=${command.dir}`)
+      res.status(423).send({ status: 'blocked', error: 'tile_limit_reached', tile })
+      return
+    }
   }
 
   // A Spotify start while Spotify blocks the requests: refused before anything changes (the pause flag of what was
@@ -3689,11 +5485,18 @@ app.use((req, res) => {
   // A new playback starts unpaused and without the picture of the one before: a "pause" of the playback before stayed
   // set (the display showed the play button while the new one played), and a local or NAS album kept the episode
   // picture of a podcast played before it (radio and podcasts set their own below, Spotify brings its own).
-  const newMedia = command.name.includes('spotify:') || ['library', 'nas', 'tidal', 'radio', 'rss'].some((segment) => hasDirSegment(command, segment))
+  const newMedia = command.name.includes('spotify:') || ['library', 'nas', 'tidal', 'jellyfin', 'audible', 'radio', 'rss'].some((segment) => hasDirSegment(command, segment))
+  // (the tile of what starts now - only here, once the start is not refused any more: a Spotify start refused while
+  // Spotify blocks the box left what played counting for the other tile)
+  if (newStart && isPlayInitiatingCommand(command) && !hasDirSegment(command, 'say')) setCurrentTile(triggerTile)
   if (newMedia) {
+    resetLocalShuffle()
+    resetRepeat()
     playbackRequest++
+    if (triggerSource !== 'skip') playbackOrigin = playbackRequest
+    startHeard(triggerHeard)
     currentMeta.pause = false
-    if (['library', 'nas', 'tidal'].some((segment) => hasDirSegment(command, segment))) currentMeta.cover = triggerCover
+    if (['library', 'nas', 'tidal', 'jellyfin', 'audible'].some((segment) => hasDirSegment(command, segment))) currentMeta.cover = triggerCover
   }
 
   /*this is the first command to be received. It always includes the device id encoded in between two /*/
@@ -3753,11 +5556,35 @@ app.use((req, res) => {
     } else playTidalList(`${parts[0]}:${parts[1]}`)
   }
 
+  if (hasDirSegment(command, 'jellyfin')) {
+    switchToMplayer()
+    currentMeta.currentType = 'jellyfin'
+    // /musicsearch/jellyfin/<album|playlist|book>:<id>, to go on: /musicsearch/jellyfin/resume/<kind>:<id>:<trackNr>:<progressPct>
+    const parts = command.base.split(':')
+    const trackNr = Number.parseInt(parts[2], 10)
+    const progressPct = Number.parseFloat(parts[3])
+    if (hasDirSegment(command, 'resume') && parts.length === 4 && trackNr >= 1 && Number.isFinite(progressPct)) {
+      playJellyfinList(`${parts[0]}:${parts[1]}`, { trackNr, progressPct })
+    } else playJellyfinList(`${parts[0]}:${parts[1]}`)
+  }
+
+  if (hasDirSegment(command, 'audible')) {
+    switchToMplayer()
+    currentMeta.currentType = 'audible'
+    // /musicsearch/audible/book:<asin>, to go on: /musicsearch/audible/resume/book:<asin>:<chapterNr>:<progressPct>
+    const parts = command.base.split(':')
+    const trackNr = Number.parseInt(parts[2], 10)
+    const progressPct = Number.parseFloat(parts[3])
+    if (hasDirSegment(command, 'resume') && parts.length === 4 && trackNr >= 1 && Number.isFinite(progressPct)) {
+      playAudibleBook(`${parts[0]}:${parts[1]}`, { trackNr, progressPct })
+    } else playAudibleBook(`${parts[0]}:${parts[1]}`)
+  }
+
   if (hasDirSegment(command, 'radio')) {
     switchToMplayer()
     currentMeta.currentType = 'radio'
     currentMeta.cover = triggerCover
-    const parts = decodeURIComponent(command.name).split(':title:artist:')
+    const parts = decodeURIComponent(command.base).split(':title:artist:')
     currentMeta.currentTrackname = parts[0]
     currentMeta.album = parts[1]
     const dir = command.dir
@@ -3772,9 +5599,12 @@ app.use((req, res) => {
     switchToMplayer()
     currentMeta.currentType = 'rss'
     currentMeta.cover = triggerCover
-    const parts = decodeURIComponent(command.name).split(':title:artist:')
+    // (command.base, not command.name: path.parse() took everything after the last dot as an extension - "Folge 12. Der
+    // Dachs" became "Folge 12" and the podcast's name was gone; the display builds its player page from these since
+    // "next" at an episode)
+    const parts = decodeURIComponent(command.base).split(':title:artist:')
     currentMeta.currentTrackname = parts[0]
-    currentMeta.album = parts[1]
+    currentMeta.album = parts[1] ?? ''
     const dir = command.dir
     let rssURL = dir.split('rss/').pop()
     rssURL = decodeURIComponent(rssURL)
@@ -3796,18 +5626,27 @@ app.use((req, res) => {
     sayName(nameTTS).catch((err) => console.error(err))
   }
 
-  if (hasDirSegment(command, 'deletelocal')) {
+  // (a start or a name read out is done above: the end of its title after a last dot - "pause. Teil 2", "stop" as a name - is
+  // no command of its own)
+  if (newMedia || hasDirSegment(command, 'say')) {
+    // started above
+  } else if (hasDirSegment(command, 'deletelocal')) {
     deleteLocal(command.name)
   } else if (command.name === 'pause') pause()
   else if (command.name === 'play') play()
   else if (command.name === 'stop') stop()
   else if (command.name === 'next') next()
   else if (command.name === 'previous') previous()
+  else if (command.name === 'replay') replay()
   else if (/^[+-]\d{1,2}$/.test(command.name)) {
     // +5 / -5 as before; other steps (1..10) come from the rotary encoder
     const step = Math.min(10, Math.max(1, Math.abs(Number.parseInt(command.name, 10))))
     setVolume(command.name.startsWith('+') ? 1 : 0, step)
   }
+  else if (/^=\d{1,3}$/.test(command.name)) setVolumeTo(Number.parseInt(command.name.slice(1), 10))
+  else if (command.name === 'repeaton' || command.name === 'repeatall') setRepeatMode('all')
+  else if (command.name === 'repeatone') setRepeatMode('one')
+  else if (command.name === 'repeatoff') setRepeatMode('off')
   else if (command.name === 'shuffleon') shuffleon()
   else if (command.name === 'shuffleoff') shuffleoff()
   else if (command.name === 'shutoff') cmdCall('sudo su - -c "/usr/local/bin/mupibox/./shutdown.sh &"')
@@ -3834,7 +5673,7 @@ app.use((req, res) => {
   else if (command.name.includes('localtrack:')) {
     const targetPosition = Number.parseInt(command.name.split(':')[1], 10)
     jumpToTrack(targetPosition)
-  } else if (command.name.includes('nastrack:') || command.name.includes('tidaltrack:')) {
+  } else if (command.name.includes('nastrack:') || command.name.includes('tidaltrack:') || command.name.includes('jellyfintrack:') || command.name.includes('audibletrack:')) {
     const targetPosition = Number.parseInt(command.name.split(':')[1], 10)
     jumpToTrack(targetPosition)
   }

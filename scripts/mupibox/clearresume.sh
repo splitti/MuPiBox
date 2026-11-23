@@ -2,7 +2,9 @@
 #
 # lösche alle Einträge mit Category resume.
 
-DATA="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/resume.json"
+. /usr/local/bin/mupibox/mupi_paths.sh
+
+DATA="${MUPI_LIBRARY}/resume.json"
 DATA_LOCK="/tmp/.resume.lock"
 
 if [ "$EUID" -ne 0 ]

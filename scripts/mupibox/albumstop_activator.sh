@@ -2,7 +2,9 @@
 #
 # Activates the shutdown after the end of the current album.
 
-ALBUMSTOP_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/albumstop.json"
+. /usr/local/bin/mupibox/mupi_paths.sh
+
+ALBUMSTOP_FILE="${MUPI_LIBRARY}/albumstop.json"
 
 # Atomic-update pattern (HIGH-8): same as albumstop.sh.
 if [ ! -f ${ALBUMSTOP_FILE} ]; then

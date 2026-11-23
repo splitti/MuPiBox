@@ -25,7 +25,7 @@ In den letzten 20 Sekunden vor dem Ende blendet die Box die Lautstärke langsam 
 
 ### Ein Timer für alle Wege
 
-Die Box hat immer **genau einen** Schlaftimer. Die App, Telegram (`/sleep` und die Knöpfe), das alte Admin-Interface und [Home Assistant](../netzwerk/home-assistant.md) stellen alle denselben Timer und sehen dieselbe Restzeit:
+Die Box hat immer **genau einen** Schlaftimer. Die App, Telegram (`/sleep` und die Knöpfe) und [Home Assistant](../netzwerk/home-assistant.md) stellen alle denselben Timer und sehen dieselbe Restzeit:
 
 - **Ein neuer Timer ersetzt den laufenden.** Stellst du 30 Minuten und danach 60, gilt nur noch die 60. Der alte Timer kann die Box nicht mehr ausschalten.
 - **Stoppen** bricht ihn ab, egal wo er gestellt wurde. Auch zweimal hintereinander ist kein Fehler. Kurz vor dem Ende, während der Ausblendung, kommt die Lautstärke wieder auf den Wert davor.

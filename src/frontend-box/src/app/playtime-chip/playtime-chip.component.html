@@ -1,6 +1,9 @@
 @if (visible()) {
-  <div class="playtime-chip" [attr.data-level]="level()" aria-label="Verbleibende Hörzeit">
-    @if (r2()) {
+  <div class="playtime-chip" [attr.data-level]="level()" [class.tile-chip]="tile() !== null" [attr.aria-label]="tile() ? tile()?.name : 'Verbleibende Hörzeit'">
+    @if (tile() && tileCover()) {
+      <!-- a tile with a day's limit ends first: its cover in place of the clock -->
+      <img class="tile-cover" [src]="tileCover()" alt="" draggable="false" />
+    } @else if (r2()) {
       <!-- km themes (design round 2, "Vorschlag D"): the clock as drawn - circle r 9, hands, stroke 2.6 -->
       <svg class="km-clock" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
     } @else {

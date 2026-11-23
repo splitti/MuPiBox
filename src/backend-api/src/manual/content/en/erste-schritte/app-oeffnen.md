@@ -16,7 +16,7 @@ or with the box's IP address:
 http://192.168.1.50/
 ```
 
-The box's start page is the app's sign-in window. From there you get into the app and into the box's older admin interface. The app lives at `/app/`, this manual at `/manual/`.
+The box's start page leads straight into the app. The app lives at `/app/`, this manual at `/manual/`.
 
 > [!TIP]
 > Set a bookmark or put the app on your phone's home screen. With HTTPS set up it can be installed like an app ([Password and HTTPS](../netzwerk/sicherheit.md)).

@@ -1,0 +1,666 @@
+// System pages of the app: news, support infos, restarting parts of the box, logs, the player's debug log, the
+// browser (Chromium) options and the language of the box - what the admin interface's start page, admin.php,
+// backend.php and MuPi-Conf did.
+
+import { execFile, spawn } from 'node:child_process'
+import { writeFileSync, promises as fsp } from 'node:fs'
+import * as os from 'node:os'
+import * as path from 'node:path'
+import type { Router } from 'express'
+import type { MupiboxConfig } from '../models/mupibox-config.model'
+import { requireCsrf, requireSession } from './middleware'
+import { LIBRARY_DIR, PLAYER_DIR, SERVER_CONFIG_DIR, WWW_DIR } from '../paths'
+import { supportSummary } from './support-summary'
+
+export interface SystemDeps {
+  getMupiboxConfig: () => MupiboxConfig | undefined
+  updateMupiboxConfig: (mutate: (cfg: Record<string, unknown>) => void) => Promise<void>
+}
+
+// Access data a log may carry, blacked out before it goes into the support zip (it is shared on Discord): a user and
+// password in an address (http://user:pass@…), token-like parameters of an address (a radio stream's ?token=…, a
+// feed's key, Spotify's code) - also URL-encoded, as the player logs an address it got from the display
+// (%3Ftoken%3D…) -, Bearer tokens, Telegram bot tokens. Every pattern starts at a fixed word and stops at a separator:
+// linear in the text (an open scheme name like [a-z][a-z0-9+.-]*:// tried the rest of every long word again - a log of
+// such lines held the whole server up).
+const SECRET_PARAMS = 'token|access_token|refresh_token|id_token|auth|authorization|key|apikey|api_key|secret|client_secret|password|passwd|pass|pw|pwd|sig|signature|session|sessionid|sid|code|ticket'
+// (the whole part before the host - user, password, a token as password -, of any length; it ends at the next / so the
+// search stays short, and at the end of the string it stands in: the characters that are never part of an address
+// unencoded - double quotes, backticks, the delimiters of JSON and HTML - else a JSON line ran on to an @ fields later
+// ("contact":"help@…") and lost everything in between. An apostrophe may be part of the credentials (and
+// encodeURIComponent leaves it as it is): it ends them only where the address itself stands in single quotes
+// (href='…'). Plain and URL-encoded: %3A%2F%2F … %40.)
+const SCHEMES = 'https?|rtsp|rtmp|mms|icy|ftps?|sftp|smb|nfs|wss?|davs?'
+const NOT_IN_URL = '\\s/@?#"`<>{}\\[\\]\\\\'
+const URL_CREDENTIALS = new RegExp(`(?<!')\\b(${SCHEMES}):\\/\\/[^${NOT_IN_URL}]+@`, 'gi')
+const URL_CREDENTIALS_QUOTED = new RegExp(`(?<=')(${SCHEMES}):\\/\\/[^${NOT_IN_URL}']+@`, 'gi')
+const URL_CREDENTIALS_ENCODED = new RegExp(`(?<!')\\b(${SCHEMES})%3A%2F%2F(?:(?!%2F|%40|%3F|%23|%22)[^${NOT_IN_URL}&])+%40`, 'gi')
+const URL_CREDENTIALS_ENCODED_QUOTED = new RegExp(`(?<=')(${SCHEMES})%3A%2F%2F(?:(?!%2F|%40|%3F|%23|%22)[^${NOT_IN_URL}&'])+%40`, 'gi')
+const PARAM_PLAIN = new RegExp(`([?&;](?:${SECRET_PARAMS})=)[^&;\\s"'<>]+`, 'gi')
+// (encoded: ? & ; = as %3F %26 %3B %3D - the value ends at the next encoded separator)
+const PARAM_ENCODED = new RegExp(`((?:%3F|%26|%3B)(?:${SECRET_PARAMS})%3D)(?:(?!%26|%3B)[^&;\\s"'<>])+`, 'gi')
+export function withoutLogSecrets(text: string): string {
+  return text
+    .replace(URL_CREDENTIALS, '$1://***@')
+    .replace(URL_CREDENTIALS_QUOTED, '$1://***@')
+    .replace(URL_CREDENTIALS_ENCODED, '$1%3A%2F%2F***%40')
+    .replace(URL_CREDENTIALS_ENCODED_QUOTED, '$1%3A%2F%2F***%40')
+    .replace(PARAM_PLAIN, '$1***')
+    .replace(PARAM_ENCODED, '$1***')
+    .replace(/\b(Bearer\s+)[A-Za-z0-9._~+/=-]{8,}/g, '$1***')
+    .replace(/\bbot\d{6,}:[A-Za-z0-9_-]{20,}/g, 'bot***')
+}
+
+// The end of a log (at most maxBytes): a log of days can be large, the support zip goes to Discord - without the
+// access data in it (withoutLogSecrets)
+async function copyTail(from: string, to: string, maxBytes: number): Promise<void> {
+  const fh = await fsp.open(from, 'r')
+  try {
+    const { size } = await fh.stat()
+    const length = Math.min(size, maxBytes)
+    const buf = Buffer.alloc(length)
+    await fh.read(buf, 0, length, size - length)
+    await fsp.writeFile(to, withoutLogSecrets(keptTail(buf, size > length)))
+  } finally {
+    await fh.close()
+  }
+}
+
+// The end of a log as text. Cut off at its start: the first, partial line goes - a token whose ?token= lay before the
+// cut stayed unnoticed, and a character cut in two came out broken. (No line break at all in a cut window: all of it is
+// that one partial line - it goes as well.)
+function keptTail(buf: Buffer, cut: boolean): string {
+  if (!cut) return buf.toString('utf8')
+  const nl = buf.indexOf(0x0a)
+  return nl >= 0 ? buf.subarray(nl + 1).toString('utf8') : '[the last line of this log is longer than the part kept and is left out]\n'
+}
+
+// The library for the support zip: every address in it down to its scheme and the end of its host
+// (https://ddns.net/…): access data can be in its query, its path or before the host, in any spelling (%74oken=), and
+// a host of its own can carry a name. Wherever it stands in a value - at its start, after a space, without a scheme
+// (//host/…) or within a text. Read as JSON and written as JSON - a pattern over the text cut a title with quotes in it
+// and left a file that did not parse. The rest (types, titles, folders) stays for the support.
+//
+// Found by its "//", not by a pattern over the whole value: one that looked for a scheme at every letter took seconds
+// for a long title, with the server held up meanwhile. An address runs to the next space and is read once (each
+// character once - no search over the rest for every "//"). Its host is what follows the last @ before the path (as
+// URL has it: a password may hold an @ itself), without its port, and after any further slashes (https:///user:pw@host
+// is read by URL as well). An address without a host to be found goes whole, down to its "//". Tabs and line breaks
+// belong to it, also between its two slashes: URL takes them out (https:/\n/user:pw@host is https://user:pw@host) -
+// the next line goes with it then.
+const SLASHES = /\/[\t\n\r]*\//g
+const HAS_SLASHES = /\/[\t\n\r]*\//
+const NOT_SPACE = /[^ \f\v\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]*/y
+function cutAddresses(value: string): string {
+  let out = ''
+  let from = 0
+  SLASHES.lastIndex = 0
+  for (let m = SLASHES.exec(value); m; m = SLASHES.exec(value)) {
+    const i = m.index
+    NOT_SPACE.lastIndex = i + m[0].length
+    const address = NOT_SPACE.exec(value)?.[0] ?? ''
+    // ("a // b": no address)
+    if (!address) continue
+    const authority = address.replace(/[\t\n\r]/g, '').replace(/^\/+/, '').split(/[/?#]/, 1)[0]
+    const hostPort = authority.slice(authority.lastIndexOf('@') + 1)
+    const rawHost = hostPort.startsWith('[') ? hostPort.slice(0, hostPort.indexOf(']') + 1) : hostPort.split(':', 1)[0]
+    // (the scheme right in front, a word of at most 32 characters ending in ':')
+    const scheme = /[a-z][a-z0-9+.-]{0,31}:$/i.exec(value.slice(Math.max(from, i - 33), i))?.[0] ?? ''
+    const host = !rawHost ? '' : /^[\d.]*$|^\[/.test(rawHost) ? rawHost : rawHost.split('.').slice(-2).join('.')
+    out += `${value.slice(from, i - scheme.length)}${scheme}//${host ? `${host}/` : ''}…`
+    from = i + m[0].length + address.length
+    SLASHES.lastIndex = from
+  }
+  return out + value.slice(from)
+}
+function libraryForSupport(text: string): string {
+  const cut = (value: unknown): unknown => {
+    if (typeof value === 'string') return HAS_SLASHES.test(value) ? cutAddresses(value) : value
+    if (Array.isArray(value)) return value.map(cut)
+    if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, cut(v)]))
+    return value
+  }
+  try {
+    return JSON.stringify(cut(JSON.parse(text)), null, 2)
+  } catch {
+    return JSON.stringify({ error: 'the library could not be read' })
+  }
+}
+
+// A command's output as bytes (a log's end through sudo); null when it failed
+function runBuffer(cmd: string, args: string[], timeoutMs: number): Promise<Buffer | null> {
+  return new Promise((resolve) => {
+    execFile(cmd, args, { timeout: timeoutMs, maxBuffer: 6 * 1024 * 1024, encoding: 'buffer' }, (err, stdout) => resolve(err ? null : stdout))
+  })
+}
+
+function run(cmd: string, args: string[], timeoutMs = 30000): Promise<{ ok: boolean; stdout: string }> {
+  return new Promise((resolve) => {
+    execFile(cmd, args, { timeout: timeoutMs, maxBuffer: 8 * 1024 * 1024 }, (err, stdout) => resolve({ ok: !err, stdout: stdout ?? '' }))
+  })
+}
+
+// In the background and out of this process' tree: a restart of this very process (pm2 restart server) must not be
+// cut off by it
+function detached(script: string): void {
+  const child = spawn('sh', ['-c', `setsid sh -c '${script.replace(/'/g, `'\\''`)}' >/dev/null 2>&1 < /dev/null &`], { detached: true, stdio: 'ignore' })
+  child.on('error', () => undefined)
+  child.unref()
+}
+
+const PM2 = 'PM2=$(command -v pm2 || echo /usr/local/bin/pm2); "$PM2"'
+// installing what is missing from the app's notice (see /missing-programs)
+// (programs: what it installs)
+const installJob: { running: boolean; ok?: boolean; at?: number; programs?: string[] } = { running: false }
+const INSTALL_MISSING = '/usr/local/bin/mupibox/install_missing.sh'
+// the programs without which a part of the box does not work and that apt can install (install_missing.sh --list)
+async function missingPrograms(): Promise<string[]> {
+  const r = await run('bash', [INSTALL_MISSING, '--list'], 20000)
+  return r.stdout
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => /^[a-z0-9.+-]+$/.test(l))
+}
+const PLAYER_CONFIG = `${PLAYER_DIR}/config/config.json`
+
+// The logs and services the admin interface's log viewer offers (backend.php)
+const LOGS: Record<string, string> = {
+  'server-error': '/home/dietpi/.pm2/logs/server-error.log',
+  'server-out': '/home/dietpi/.pm2/logs/server-out.log',
+  'spotify-control-error': '/home/dietpi/.pm2/logs/spotify-control-error.log',
+  'spotify-control-out': '/home/dietpi/.pm2/logs/spotify-control-out.log',
+  shutdown_control: '/tmp/shutdown_control.log',
+  idle_shutdown: '/tmp/idle_shutdown.log',
+}
+const SERVICES = [
+  'mupi_autoconnect_bt',
+  'mupi_autoconnect-wifi',
+  'mupi_check_internet',
+  'mupi_check_monitor',
+  'mupi_fan',
+  'mupi_hat_control',
+  'mupi_hat',
+  'mupi_idle_shutdown',
+  'mupi_mqtt',
+  'mupi_novnc',
+  'mupi_rotary',
+  'mupi_powerled',
+  'mupi_splash',
+  'mupi_startstop',
+  'mupi_telegram',
+  'mupi_vnc',
+  'mupi_wifi',
+  'pm2-dietpi',
+  'wpa_supplicant',
+  'proftpd',
+  'smbd',
+]
+
+// Keys whose values never leave the box (support infos): tokens, passwords, ids of accounts and chats
+// (proof: the voluntary statistics' device_proof, see telemetry.ts; customerName/deviceName: the Audible account holder's
+// first name, in the device's name too)
+const SECRET = /pass|token|secret|clientid|deviceid|username|chatid|account|hash|salt|fingerprint|proof|customername|devicename/i
+function withoutSecrets(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(withoutSecrets)
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(value)) out[k] = SECRET.test(k) ? '(entfernt)' : withoutSecrets(v)
+    return out
+  }
+  return value
+}
+
+let newsCache: { at: number; text: string } | undefined
+
+// ---------- CPU, RAM and temperature over the last 24 hours (as the admin interface's rrd graphs, which kept 20 min) ----------
+// Measured once a minute and kept in memory, and in /tmp (RAM as well, nothing on the SD card) every 5 minutes and
+// when the process ends: an update of the backend keeps the history, a restart of the box starts it again.
+// cpu: the share of the minute the CPUs were busy (from /proc/stat), ram: used share (MemAvailable), temp: °C.
+
+type SystemSample = [at: number, temp: number | null, cpu: number | null, ram: number | null]
+const SAMPLE_MS = 60_000
+const KEEP_SAMPLES = 24 * 60
+const samples: SystemSample[] = []
+let lastCpu: { busy: number; total: number } | undefined
+let sampler: ReturnType<typeof setInterval> | undefined
+const KEPT_FILE = '/tmp/.mupibox-system-history.json'
+const KEEP_EVERY = 5 // (samples: every 5 minutes)
+let sinceKept = 0
+
+function keepSamples(): void {
+  try {
+    writeFileSync(KEPT_FILE, JSON.stringify(samples))
+  } catch {
+    // no /tmp to write: the history lives on in memory
+  }
+}
+
+// The history kept before this process started (see keepSamples); only the last 24 hours, only well-formed rows
+async function readKeptSamples(): Promise<number> {
+  try {
+    const kept = JSON.parse(await fsp.readFile(KEPT_FILE, 'utf8'))
+    if (!Array.isArray(kept)) return 0
+    const from = Date.now() - KEEP_SAMPLES * SAMPLE_MS
+    const first = samples[0]?.[0] ?? Number.POSITIVE_INFINITY
+    const ok = (v: unknown) => v === null || (typeof v === 'number' && Number.isFinite(v))
+    const rows = kept.filter(
+      (s): s is SystemSample =>
+        Array.isArray(s) && s.length === 4 && typeof s[0] === 'number' && s[0] >= from && s[0] < first && ok(s[1]) && ok(s[2]) && ok(s[3]),
+    )
+    samples.unshift(...rows)
+    return rows.length
+  } catch {
+    // nothing kept (the first start after a restart of the box)
+    return 0
+  }
+}
+
+async function cpuTimes(): Promise<{ busy: number; total: number } | undefined> {
+  try {
+    const line = (await fsp.readFile('/proc/stat', 'utf8')).split('\n')[0]
+    const v = line.trim().split(/\s+/).slice(1).map(Number)
+    if (v.length < 4 || v.some((n) => !Number.isFinite(n))) return undefined
+    const idle = v[3] + (v[4] ?? 0) // idle + iowait
+    const total = v.reduce((a, b) => a + b, 0)
+    return { busy: total - idle, total }
+  } catch {
+    return undefined
+  }
+}
+
+async function sampleSystem(): Promise<void> {
+  let temp: number | null = null
+  try {
+    const milli = Number.parseInt((await fsp.readFile('/sys/class/thermal/thermal_zone0/temp', 'utf8')).trim(), 10)
+    if (Number.isFinite(milli)) temp = Math.round(milli / 100) / 10
+  } catch {
+    // no thermal node
+  }
+  let ram: number | null = null
+  try {
+    const info = await fsp.readFile('/proc/meminfo', 'utf8')
+    const kb = (key: string) => Number(new RegExp(`^${key}:\\s+(\\d+)`, 'm').exec(info)?.[1])
+    const total = kb('MemTotal')
+    const available = kb('MemAvailable')
+    if (total > 0 && Number.isFinite(available)) ram = Math.round(((total - available) / total) * 1000) / 10
+  } catch {
+    // no /proc (not Linux)
+  }
+  let cpu: number | null = null
+  const now = await cpuTimes()
+  if (now && lastCpu && now.total > lastCpu.total) cpu = Math.round(((now.busy - lastCpu.busy) / (now.total - lastCpu.total)) * 1000) / 10
+  lastCpu = now
+  samples.push([Date.now(), temp, cpu, ram])
+  if (samples.length > KEEP_SAMPLES) samples.splice(0, samples.length - KEEP_SAMPLES)
+  if (++sinceKept >= KEEP_EVERY) {
+    sinceKept = 0
+    keepSamples()
+  }
+}
+
+function startSystemSampler(): void {
+  if (sampler) return
+  void cpuTimes().then((t) => {
+    lastCpu = t
+  })
+  // (what was kept before; else the last 20 minutes of the box's rrd files)
+  void readKeptSamples().then((kept) => (kept ? undefined : seedFromRrd()))
+  // (process.exit in server.ts's SIGINT/SIGTERM handler: 'exit' still comes, writing has to be synchronous there)
+  process.once('exit', keepSamples)
+  // (a first CPU share soon after the start, not only after a minute)
+  setTimeout(() => void sampleSystem(), 5000).unref()
+  sampler = setInterval(() => void sampleSystem(), SAMPLE_MS)
+  sampler.unref()
+}
+
+// After a restart of this process (every update of it) the box's own rrd files still hold the last 20 minutes of
+// temperature and RAM (save_rrd.sh, cron): taken as the start, a minute apart (the CPU share is not in there)
+async function seedFromRrd(): Promise<void> {
+  const fetch = async (file: string): Promise<Map<number, number[]>> => {
+    const out = new Map<number, number[]>()
+    const r = await new Promise<string>((resolve) =>
+      execFile('rrdtool', ['fetch', file, 'AVERAGE', '-s', '-20min', '-r', '60'], { timeout: 5000, env: { ...process.env, LC_ALL: 'C' } }, (err, stdout) =>
+        resolve(err ? '' : String(stdout)),
+      ),
+    )
+    for (const line of r.split('\n')) {
+      const m = /^(\d+):\s+(.+)$/.exec(line.trim())
+      if (!m) continue
+      const vals = m[2].split(/\s+/).map(Number)
+      if (vals.every((v) => Number.isFinite(v))) out.set(Number(m[1]) * 1000, vals)
+    }
+    return out
+  }
+  const [temps, rams] = await Promise.all([fetch('/tmp/.rrd/cputemp.rrd'), fetch('/tmp/.rrd/ram.rrd')])
+  const seeded: SystemSample[] = []
+  for (const [at, [temp]] of temps) {
+    const ram = rams.get(at)?.[0]
+    // (one a minute, as the samples of this process)
+    if (seeded.length && at - seeded[seeded.length - 1][0] < SAMPLE_MS) continue
+    seeded.push([at, Math.round(temp * 10) / 10, null, ram !== undefined ? Math.round(ram * 10) / 10 : null])
+  }
+  // (only what is older than the first own sample)
+  const first = samples[0]?.[0] ?? Number.POSITIVE_INFINITY
+  samples.unshift(...seeded.filter((s) => s[0] < first))
+}
+
+/** The samples of the last `hours`, at most `points` of them (averages of equal slices when there are more), and
+ *  how far apart they are meant to be (the app breaks its line only at a gap bigger than that). */
+function systemHistory(hours: number, points = 240): { step: number; samples: SystemSample[] } {
+  const from = Date.now() - hours * 3600e3
+  const inRange = samples.filter((s) => s[0] >= from)
+  if (inRange.length <= points) return { step: SAMPLE_MS, samples: inRange }
+  const size = Math.ceil(inRange.length / points)
+  const out: SystemSample[] = []
+  for (let i = 0; i < inRange.length; i += size) {
+    const slice = inRange.slice(i, i + size)
+    const avg = (k: 1 | 2 | 3) => {
+      const vals = slice.map((s) => s[k]).filter((v): v is number => v !== null)
+      return vals.length ? Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10 : null
+    }
+    out.push([slice[slice.length - 1][0], avg(1), avg(2), avg(3)])
+  }
+  return { step: size * SAMPLE_MS, samples: out }
+}
+
+const CACHE_SIZES = ['0', '8', '16', '32', '64', '128', '256', '512']
+
+export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
+  startSystemSampler()
+
+  /** GET /api/app/system-history?hours=1|6|24 - [time, temp °C, cpu %, ram %] a minute apart (fewer for 24 h). */
+  router.get('/system-history', requireSession, (req, res) => {
+    const hours = [1, 6, 24].includes(Number(req.query.hours)) ? Number(req.query.hours) : 1
+    res.json({ hours, now: Date.now(), since: samples[0]?.[0] ?? null, ...systemHistory(hours) })
+  })
+
+  /** GET /api/app/version - the installed MuPiBox version (mupibox.version). */
+  router.get('/version', requireSession, (_req, res) => {
+    res.json({ version: String((deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined)?.version ?? '') })
+  })
+
+  /** GET /api/app/news - the MuPiBox news (news.txt on GitHub), as text (the admin interface printed it as HTML). */
+  router.get('/news', requireSession, async (_req, res) => {
+    if (!newsCache || Date.now() - newsCache.at > 3600_000) {
+      try {
+        const r = await fetch('https://raw.githubusercontent.com/splitti/MuPiBox/main/news.txt', { signal: AbortSignal.timeout(8000) })
+        if (r.ok) newsCache = { at: Date.now(), text: (await r.text()).slice(0, 100000) }
+      } catch {
+        // no internet: the last text, if any
+      }
+    }
+    res.json({ text: newsCache?.text ?? null })
+  })
+
+  /**
+   * GET /api/app/support-summary - the box's profile for a report in the Discord, as text (see support-summary.ts):
+   * the app copies it. Nothing in it names the box, the home or a person.
+   */
+  router.get('/support-summary', requireSession, async (_req, res) => {
+    res.set('Cache-Control', 'no-store').json({ text: await supportSummary(deps.getMupiboxConfig()) })
+  })
+
+  /**
+   * GET /api/app/support-info - a zip for the support (Discord): the library, the config without secrets, the
+   * monitor and network state, versions, the logs (pm2, Chromium's debug log). As the admin interface's support_data.php, but the secrets are removed by
+   * key (its line filter let multi-line values through).
+   */
+  router.get('/support-info', requireSession, async (_req, res) => {
+    const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'mupibox-support-'))
+    try {
+      const server = SERVER_CONFIG_DIR
+      // (the library with its addresses cut down: a private radio stream's or feed's access data is its entry's id)
+      await fsp
+        .readFile(`${LIBRARY_DIR}/data.json`, 'utf8')
+        .then((text) => fsp.writeFile(`${dir}/data.json`, libraryForSupport(text)))
+        .catch(() => undefined)
+      await fsp.writeFile(`${dir}/mupiboxconfig.json`, JSON.stringify(withoutSecrets(deps.getMupiboxConfig() ?? {}), null, 2))
+      for (const f of ['monitor.json', 'network.json']) {
+        try {
+          const json = JSON.parse(await fsp.readFile(`${server}/${f}`, 'utf8')) as Record<string, unknown>
+          delete json.mac
+          await fsp.writeFile(`${dir}/${f}`, JSON.stringify(json, null, 2))
+        } catch {
+          // not there
+        }
+      }
+      const osRelease = (await fsp.readFile('/etc/os-release', 'utf8').catch(() => '')).match(/^PRETTY_NAME=.*$/m)?.[0] ?? ''
+      const model = (await fsp.readFile('/sys/firmware/devicetree/base/model', 'utf8').catch(() => '')).replace(/\0/g, '')
+      const jq = await run('jq', ['--version'], 5000)
+      const version = String((deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined)?.version ?? '')
+      const boot = await run('systemd-analyze', ['time'], 5000)
+      // (the profile the app copies for the Discord, as text)
+      await fsp.writeFile(`${dir}/steckbrief.txt`, `${await supportSummary(deps.getMupiboxConfig()).catch(() => '')}
+`)
+      await fsp.writeFile(`${dir}/mupi.info`, [osRelease, model, os.hostname(), os.arch(), os.machine(), `MuPiBox ${version}`, jq.stdout.trim(), boot.stdout.trim()].join('\n'))
+      // The sound: the box's volume is the output's (PulseAudio, system-wide), every program plays as a stream of its own
+      // with a volume of its own that PulseAudio keeps - Chromium (Spotify) or mpv far below 100 % makes only that quiet
+      // (issue #191). Read while it plays: a stream shows only then. (Fixed text, nothing of a request in it.) Not the
+      // stream's title (media.name): mpv names a stream without a title of its own by its address, a private stream's
+      // access token with it - and what is left goes through the logs' filter too.
+      const audio = await run(
+        'sh',
+        [
+          '-c',
+          `export PULSE_SERVER=unix:/var/run/pulse/native LC_ALL=C
+echo "== pactl info"; pactl info 2>&1 | grep -E "Server Name|Server Version|Default Sink"
+echo "== sinks"; pactl list sinks 2>&1 | grep -E "^Sink|^[[:space:]]*(State|Name|Mute|Volume|Base Volume):"
+echo "== sink inputs (only while something plays)"; pactl list sink-inputs 2>&1 | grep -E "^Sink Input|^[[:space:]]*(Mute|Volume):|application.name|module-stream-restore.id"
+echo "== amixer Master"; amixer sget Master 2>&1 | tail -n 4
+echo "== cards"; aplay -l 2>&1 | grep -E "^card"
+echo "== packages"; dpkg-query -W -f='\${Package} \${Version}\\n' chromium chromium-browser mpv pulseaudio 2>/dev/null`,
+        ],
+        10000,
+      )
+      await fsp.writeFile(`${dir}/audio.txt`, withoutLogSecrets(audio.stdout))
+      // The logs of the server and the player, also the rotated ones (the app's log page shows their last lines only),
+      // and Chromium's debug log when its switch is on (System › Experten) - each its last 5 MB (as the admin
+      // interface's pm2logs.php and debug.php, which sent them whole)
+      const logs = '/home/dietpi/.pm2/logs'
+      const names = await fsp.readdir(logs).catch(() => [] as string[])
+      if (names.length) await fsp.mkdir(`${dir}/pm2-logs`)
+      for (const name of names) {
+        if (!/^[\w.-]+$/.test(name)) continue
+        await copyTail(path.join(logs, name), path.join(dir, 'pm2-logs', name), 5 * 1024 * 1024).catch(() => undefined)
+      }
+      // (a display that logs in as root - AUTO_SETUP_AUTOSTART_LOGIN_USER=root in dietpi.txt, set up before 5.0.14 -
+      // writes it under /root, which this server cannot read: its end read through sudo, into memory only - no copy of
+      // it on the card, whole or unfiltered)
+      const chromeLog = `${dir}/chrome_debug.log`
+      const fromDietpi = await copyTail('/home/dietpi/.config/chromium/chrome_debug.log', chromeLog, 5 * 1024 * 1024).then(
+        () => true,
+        () => false,
+      )
+      if (!fromDietpi) {
+        const max = 5 * 1024 * 1024
+        const end = await runBuffer('sudo', ['tail', '-c', String(max + 1), '/root/.config/chromium/chrome_debug.log'], 15000)
+        if (end) await fsp.writeFile(chromeLog, withoutLogSecrets(keptTail(end.subarray(Math.max(0, end.length - max)), end.length > max)))
+      }
+      const zip = `${dir}.zip`
+      const z = await run('sh', ['-c', `cd '${dir}' && zip -q -r '${zip}' .`], 30000)
+      if (!z.ok) {
+        res.status(500).json({ error: 'zip failed' })
+        return
+      }
+      res.download(zip, 'support_data.zip', () => {
+        fsp.rm(zip, { force: true }).catch(() => undefined)
+      })
+    } finally {
+      fsp.rm(dir, { recursive: true, force: true }).catch(() => undefined)
+    }
+  })
+
+  /**
+   * GET /api/app/missing-programs - the programs a part of the box needs and that are not installed (mpv: without it,
+   * and without mplayer since 5.0.10, the box plays Spotify only; rsvg-convert and Pillow: the start pictures), and an
+   * installation at work - the app's start page says so and installs them
+   */
+  router.get('/missing-programs', requireSession, async (_req, res) => {
+    res.json({ missing: installJob.running ? [] : await missingPrograms(), job: installJob })
+  })
+
+  /** POST /api/app/missing-programs/install - installs them in the background (a few minutes); mpv: the player restarts */
+  router.post('/missing-programs/install', requireSession, requireCsrf, async (_req, res) => {
+    if (installJob.running) {
+      res.status(409).json({ error: 'already installing' })
+      return
+    }
+    Object.assign(installJob, { running: true, ok: undefined, at: Date.now(), programs: [] })
+    const programs = await missingPrograms()
+    installJob.programs = programs
+    // (the player only when mpv was missing: a restart ends what plays)
+    const restart = programs.includes('mpv') ? ` && { ${PM2} restart spotify-control >/dev/null 2>&1; true; }` : ''
+    const child = spawn('sh', ['-c', `sudo bash ${INSTALL_MISSING}${restart}`], { stdio: 'ignore' })
+    child.on('error', () => Object.assign(installJob, { running: false, ok: false }))
+    child.on('exit', (code) => Object.assign(installJob, { running: false, ok: code === 0 }))
+    res.json({ ok: true, started: true })
+  })
+
+  /**
+   * POST /api/app/restart {what} - display (Chromium kiosk), player (spotify-control) or services (player and this
+   * backend, what the admin interface's "Restart services" should have done - its button called a script name with a
+   * typo). Reboot and shutdown stay /api/reboot and /api/shutdown.
+   */
+  router.post('/restart', requireSession, requireCsrf, (req, res) => {
+    const what = String((req.body as { what?: unknown } | undefined)?.what ?? '')
+    const scripts: Record<string, string> = {
+      display: 'sudo -i -u dietpi /usr/local/bin/mupibox/restart_kiosk.sh',
+      player: `${PM2} restart spotify-control`,
+      services: `sleep 1; ${PM2} restart spotify-control; ${PM2} restart server`,
+    }
+    if (!scripts[what]) {
+      res.status(400).json({ error: 'what must be display, player or services' })
+      return
+    }
+    detached(scripts[what])
+    res.json({ ok: true })
+  })
+
+  /**
+   * GET /api/app/logs - the logs and services that can be looked at, with the state of each service (states:
+   * {name: active | inactive | failed | activating …}, from one systemctl call; missing when it cannot be read)
+   */
+  router.get('/logs', requireSession, async (_req, res) => {
+    const r = await run('systemctl', ['is-active', ...SERVICES.map((s) => `${s}.service`)], 5000)
+    const lines = r.stdout.split('\n')
+    const states = Object.fromEntries(SERVICES.map((s, i) => [s, (lines[i] ?? '').trim()]).filter(([, st]) => st))
+    res.json({ logs: Object.keys(LOGS), services: SERVICES, states })
+  })
+
+  /** GET /api/app/logs/view?kind=log|service&key=&grep=&lines= - the end of a log or the state of a service, as text. */
+  router.get('/logs/view', requireSession, async (req, res) => {
+    const kind = String(req.query.kind ?? 'log')
+    // (only a key of the table - 'constructor' and the like are inherited by every object; a service is checked against
+    // its own list: checked against the logs' table, every service came back as unknown - "Das Protokoll ließ sich
+    // nicht lesen")
+    const rawKey = String(req.query.key ?? '')
+    const key = kind === 'service' ? (SERVICES.includes(rawKey) ? rawKey : '') : Object.hasOwn(LOGS, rawKey) ? rawKey : ''
+    const grep = String(req.query.grep ?? '').slice(0, 100)
+    const lines = Math.max(20, Math.min(2000, Number.parseInt(String(req.query.lines ?? '200'), 10) || 200))
+    let text = ''
+    if (kind === 'log' && LOGS[key] && grep) {
+      // a search goes through the whole log, then its last lines (not only the last lines searched)
+      const r = await run('grep', ['-i', '-F', '--', grep, LOGS[key]], 10000)
+      const hits = r.stdout.split('\n').filter((l) => l !== '')
+      res.type('text/plain; charset=utf-8').send(hits.slice(-lines).join('\n'))
+      return
+    }
+    if (kind === 'log' && LOGS[key]) {
+      const r = await run('tail', ['-n', String(lines), LOGS[key]], 10000)
+      text = r.stdout
+    } else if (kind === 'service' && SERVICES.includes(key)) {
+      const r = await run('sudo', ['systemctl', 'status', `${key}.service`, '--no-pager', '-n', '40'], 10000)
+      text = r.stdout
+    } else {
+      res.status(400).json({ error: 'unknown log or service' })
+      return
+    }
+    if (grep) {
+      const g = grep.toLowerCase()
+      text = text
+        .split('\n')
+        .filter((l) => l.toLowerCase().includes(g))
+        .join('\n')
+    }
+    res.type('text/plain; charset=utf-8').send(text)
+  })
+
+  /** GET/POST /api/app/controller-debug {on} - the player's debug log (its config.json logLevel), player restarts. */
+  router.get('/controller-debug', requireSession, async (_req, res) => {
+    const text = await fsp.readFile(PLAYER_CONFIG, 'utf8').catch(() => '')
+    res.json({ on: /"logLevel"\s*:\s*"debug"/.test(text) })
+  })
+  router.post('/controller-debug', requireSession, requireCsrf, async (req, res) => {
+    const on = (req.body as { on?: unknown } | undefined)?.on
+    if (typeof on !== 'boolean') {
+      res.status(400).json({ error: 'on must be true or false' })
+      return
+    }
+    const from = on ? 'error' : 'debug'
+    const to = on ? 'debug' : 'error'
+    await run('sudo', ['sed', '-i', `s/"logLevel": "${from}"/"logLevel": "${to}"/g`, PLAYER_CONFIG])
+    detached(`${PM2} restart spotify-control`)
+    res.json({ ok: true })
+  })
+
+  /** GET/POST /api/app/browser - the kiosk's Chromium options (chromium-autostart.sh reads them at its start). */
+  router.get('/browser', requireSession, (_req, res) => {
+    const c = ((deps.getMupiboxConfig() as Record<string, unknown> | undefined)?.chromium ?? {}) as Record<string, unknown>
+    res.json({ gpu: c.gpu === true, smooth: c.sccrollanimation === true, kiosk: c.kiosk !== false, cachesize: String(c.cachesize ?? '128'), debug: String(c.debug ?? '0') === '1' })
+  })
+  router.post('/browser', requireSession, requireCsrf, async (req, res) => {
+    const b = (req.body ?? {}) as Record<string, unknown>
+    const values: Record<string, unknown> = {}
+    // (chromium-autostart.sh runs the booleans as commands and computes with the cache size: only true/false and
+    // a size of the list go in - the admin interface stored the cache size unchecked)
+    for (const [key, field] of [
+      ['gpu', 'gpu'],
+      ['smooth', 'sccrollanimation'],
+      ['kiosk', 'kiosk'],
+    ] as const) {
+      if (b[key] === undefined) continue
+      if (typeof b[key] !== 'boolean') return void res.status(400).json({ error: `${key} must be true or false` })
+      values[field] = b[key]
+    }
+    if (b.cachesize !== undefined) {
+      if (!CACHE_SIZES.includes(String(b.cachesize))) return void res.status(400).json({ error: 'invalid cachesize' })
+      values.cachesize = String(b.cachesize)
+    }
+    if (b.debug !== undefined) {
+      if (typeof b.debug !== 'boolean') return void res.status(400).json({ error: 'debug must be true or false' })
+      values.debug = b.debug ? '1' : '0'
+    }
+    await deps.updateMupiboxConfig((cfg) => {
+      cfg.chromium = { ...((cfg.chromium as Record<string, unknown>) ?? {}), ...values }
+    })
+    if (b.restart === true) detached('sudo /usr/local/bin/mupibox/setting_update.sh; sudo -i -u dietpi /usr/local/bin/mupibox/restart_kiosk.sh')
+    res.json({ ok: true, restarted: b.restart === true })
+  })
+
+  /**
+   * POST /api/app/box-language {code} - the language of the box: the texts on the display (displayLanguage) and
+   * the boot and maintenance pictures (mupibox.bootscreenLanguage) together; the pictures are made again.
+   */
+  router.post('/box-language', requireSession, requireCsrf, async (req, res) => {
+    const code = String((req.body as { code?: unknown } | undefined)?.code ?? '')
+    let languages: Record<string, unknown> = {}
+    try {
+      languages =
+        (JSON.parse(await fsp.readFile(`${WWW_DIR}/assets/i18n/display-texts.json`, 'utf8')) as { languages?: Record<string, unknown> }).languages ?? {}
+    } catch {
+      languages = { en: {}, de: {} }
+    }
+    if (!/^[a-z]{2}(-[a-z]{2})?$/.test(code) || !(code in languages)) {
+      res.status(400).json({ error: 'unknown language' })
+      return
+    }
+    await deps.updateMupiboxConfig((cfg) => {
+      cfg.displayLanguage = code
+      cfg.mupibox = { ...((cfg.mupibox as Record<string, unknown>) ?? {}), bootscreenLanguage: code }
+    })
+    const child = spawn('sudo', ['/usr/local/bin/mupibox/bootscreen_update.sh'], { detached: true, stdio: 'ignore' })
+    child.on('error', () => undefined)
+    child.unref()
+    res.json({ ok: true })
+  })
+}

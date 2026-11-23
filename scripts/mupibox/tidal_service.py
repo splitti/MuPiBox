@@ -17,6 +17,7 @@ import email.utils
 import json
 import math
 import os
+import re
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -489,12 +490,51 @@ def artist_albums(artist_id):
     for i, al in enumerate(sorted(out, key=lambda x: (x["date"] or "9999", x["name"].casefold()))):
         al["position"] = i + 1
     out.sort(key=lambda x: (x["date"] or "", x["name"].casefold()), reverse=True)
-    return {"artist": artist.name, "albums": out}
+    # An episode's number from its name ("Folge 12: ...", "012/...") - only in the main series: the names with the same
+    # text before the number (without the artist's name) that most albums share; a series beside it ("Minis - Folge 1",
+    # "Gute-Nacht-Geschichten - Folge 1") and specials have none. An artist whose main series is at least half of its
+    # albums, with its numbers (nearly) each once, is "numbered": its range may count by them (by=number)
+    found = [(al, episode_number(al["name"], artist.name)) for al in out]
+    series = {}
+    for _, hit in found:
+        if hit:
+            series[hit[0]] = series.get(hit[0], 0) + 1
+    main = max(series, key=series.get) if series else None
+    for al, hit in found:
+        al["number"] = hit[1] if hit and hit[0] == main else None
+    nums = [al["number"] for al in out if al["number"] is not None]
+    numbered = len(nums) >= 3 and len(nums) >= 0.5 * len(out) and len(set(nums)) >= 0.9 * len(nums)
+    return {"artist": artist.name, "albums": out, "numbered": numbered}
+
+
+EPISODE_WORD = re.compile(r"(?:^|[\s(\[\-–:,.])(?:folge|episode|teil|fall|band|nr\.?|no\.?|#)\s*0*(\d{1,4})(?!\d)", re.I)
+EPISODE_LEAD = re.compile(r"^\s*0*(\d{1,4})\s*[/:.\-–]\s*\S")
+
+
+def episode_number(name, artist=""):
+    """The number of an episode in its name ("Folge 12", "Episode 3", "Teil 2", "Nr. 7", "#4", or a leading "012/...")
+    with the series it counts in: the text before it, without the artist's name and punctuation - (series, number);
+    None without a number."""
+    text = name or ""
+    # (the number that comes first: "012/Die Schatzinsel (Teil 2)" is episode 12, not part 2)
+    word, lead = EPISODE_WORD.search(text), EPISODE_LEAD.search(text)
+    m = lead if lead and (not word or lead.start(1) < word.start(1)) else word
+    if not m:
+        return None
+    n = int(m.group(1))
+    if n < 1:
+        return None
+    before = text[: m.start(1)].casefold()
+    before = re.sub(r"((folge|episode|teil|fall|band|nr\.?|no\.?|#)\s*)?0*$", "", before.strip())
+    if artist:
+        before = before.replace(artist.casefold(), "")
+    return (re.sub(r"[\W_]+", "", before), n)
 
 
 def narrowed(result, q):
-    """An entry of a whole artist with a range (from, to: positions) and albums left out (exclude: ids): only what
-    is in it. Without them: all, each marked (in_range, excluded) for the app's editor."""
+    """An entry of a whole artist with a range (from, to: positions - or with by=number the episodes' numbers of a
+    numbered artist; one without a number is then outside a range) and albums left out (exclude: ids): only what is
+    in it. Without them: all, each marked (in_range, excluded) for the app's editor."""
     def num(v):
         try:
             n = int(v)
@@ -503,8 +543,15 @@ def narrowed(result, q):
             return None
     lo, hi = num(q.get("from")), num(q.get("to"))
     excluded = {x for x in (q.get("exclude") or "").split(",") if x.isdigit()}
+    # (a range saved by numbers stays one while any album has a number: "numbered" is worked out anew on every call and
+    # could flip with new singles - "Folge 1-20" then meant positions 1-20, other albums without a word)
+    by_number = q.get("by") == "number" and any(al.get("number") is not None for al in result["albums"])
     for al in result["albums"]:
-        al["in_range"] = (lo is None or al["position"] >= lo) and (hi is None or al["position"] <= hi)
+        key = al.get("number") if by_number else al["position"]
+        if key is None:
+            al["in_range"] = lo is None and hi is None
+        else:
+            al["in_range"] = (lo is None or key >= lo) and (hi is None or key <= hi)
         al["excluded"] = al["id"] in excluded
     if q.get("all") == "1":
         return result

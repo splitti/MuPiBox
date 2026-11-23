@@ -36,7 +36,7 @@ import type {
   WifiStatus,
 } from '../wifi-network'
 
-/** The address form of a saved WiFi network: DHCP or a fixed address (see backend eltern/wifi-static.ts) */
+/** The address form of a saved WiFi network: DHCP or a fixed address (see backend app-api/wifi-static.ts) */
 interface AddressForm extends WifiStaticAddress {
   ssid: string
   /** the network the box is in now: only there the test runs and saving switches at once */

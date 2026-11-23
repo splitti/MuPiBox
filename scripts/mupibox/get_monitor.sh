@@ -9,7 +9,9 @@
 # backlight goes off (bl_power 4), does a tap wake it, the backlight comes back - and only when it was this script
 # that switched it off. Stopped (shutdown, restart), the backlight comes back too.
 
-MONITOR_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json"
+. /usr/local/bin/mupibox/mupi_paths.sh
+
+MONITOR_FILE="${MUPI_SERVER_CONFIG}/monitor.json"
 minimumsize=18
 
 # M7: track the last persisted state in-process so we only write monitor.json
@@ -94,7 +96,9 @@ do
         if [ -n "${BACKLIGHT}" ]; then
                 if [ "${X_STATE}" = "Off" ] && [ "${BL_OURS}" = 0 ] && [ "${POWER}" = "0" ]; then
                         set_backlight 4 && BL_OURS=1 && POWER=4 && MONITOR=0
-                elif [ "${X_STATE}" != "Off" ] && [ "${BL_OURS}" = 1 ]; then
+                elif { [ "${X_STATE}" != "Off" ] && [ "${BL_OURS}" = 1 ]; } || { [ "${X_STATE}" = "On" ] && [ "${POWER}" = "4" ]; }; then
+                        # (the second case: the backlight was off while the X server says the monitor is on, and this script did not switch it
+                        # off - the kernel does at boot when the framebuffer blanks (Waveshare DSI): nothing else in the box does, the display stayed dark)
                         set_backlight 0
                         BL_OURS=0
                         POWER=0

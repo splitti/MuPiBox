@@ -361,6 +361,161 @@
         "Η μπαταρία άδειασε",
         "Φόρτισέ με – η συσκευή σβήνει"
       ]
+    },
+    "progress": {
+      "de": {
+        "prepare": "Update wird vorbereitet …",
+        "download": "Neue Version wird geladen …",
+        "packages": "Systempakete werden aktualisiert …",
+        "install": "Programme werden installiert …",
+        "settings": "Einstellungen werden übernommen …",
+        "done": "Fertig – die Box startet gleich neu",
+        "failed": "Update abgebrochen – bitte die Box neu starten"
+      },
+      "en": {
+        "prepare": "Preparing the update …",
+        "download": "Downloading the new version …",
+        "packages": "Updating system packages …",
+        "install": "Installing programs …",
+        "settings": "Applying settings …",
+        "done": "Done – the box restarts in a moment",
+        "failed": "Update stopped – please restart the box"
+      },
+      "fr": {
+        "prepare": "Préparation de la mise à jour …",
+        "download": "Téléchargement de la nouvelle version …",
+        "packages": "Mise à jour des paquets système …",
+        "install": "Installation des programmes …",
+        "settings": "Application des réglages …",
+        "done": "Terminé – la box redémarre dans un instant",
+        "failed": "Mise à jour interrompue – merci de redémarrer la box"
+      },
+      "es": {
+        "prepare": "Preparando la actualización …",
+        "download": "Descargando la nueva versión …",
+        "packages": "Actualizando paquetes del sistema …",
+        "install": "Instalando programas …",
+        "settings": "Aplicando ajustes …",
+        "done": "Listo: la caja se reinicia enseguida",
+        "failed": "Actualización interrumpida: reinicia la caja"
+      },
+      "it": {
+        "prepare": "Preparazione dell’aggiornamento …",
+        "download": "Download della nuova versione …",
+        "packages": "Aggiornamento dei pacchetti di sistema …",
+        "install": "Installazione dei programmi …",
+        "settings": "Applicazione delle impostazioni …",
+        "done": "Fatto – il box si riavvia tra poco",
+        "failed": "Aggiornamento interrotto – riavvia il box"
+      },
+      "nl": {
+        "prepare": "Update wordt voorbereid …",
+        "download": "Nieuwe versie wordt geladen …",
+        "packages": "Systeempakketten worden bijgewerkt …",
+        "install": "Programma’s worden geïnstalleerd …",
+        "settings": "Instellingen worden overgenomen …",
+        "done": "Klaar – de box start zo opnieuw",
+        "failed": "Update afgebroken – start de box opnieuw"
+      },
+      "sv": {
+        "prepare": "Uppdateringen förbereds …",
+        "download": "Den nya versionen hämtas …",
+        "packages": "Systempaket uppdateras …",
+        "install": "Program installeras …",
+        "settings": "Inställningar tillämpas …",
+        "done": "Klart – boxen startar om strax",
+        "failed": "Uppdateringen avbröts – starta om boxen"
+      },
+      "da": {
+        "prepare": "Opdateringen forberedes …",
+        "download": "Den nye version hentes …",
+        "packages": "Systempakker opdateres …",
+        "install": "Programmer installeres …",
+        "settings": "Indstillinger anvendes …",
+        "done": "Færdig – boksen genstarter om lidt",
+        "failed": "Opdatering afbrudt – genstart boksen"
+      },
+      "nb": {
+        "prepare": "Oppdateringen forberedes …",
+        "download": "Den nye versjonen lastes ned …",
+        "packages": "Systempakker oppdateres …",
+        "install": "Programmer installeres …",
+        "settings": "Innstillinger tas i bruk …",
+        "done": "Ferdig – boksen starter på nytt om litt",
+        "failed": "Oppdatering avbrutt – start boksen på nytt"
+      },
+      "fi": {
+        "prepare": "Päivitystä valmistellaan …",
+        "download": "Uutta versiota ladataan …",
+        "packages": "Järjestelmäpaketteja päivitetään …",
+        "install": "Ohjelmia asennetaan …",
+        "settings": "Asetuksia otetaan käyttöön …",
+        "done": "Valmis – laite käynnistyy kohta uudelleen",
+        "failed": "Päivitys keskeytyi – käynnistä laite uudelleen"
+      },
+      "pl": {
+        "prepare": "Przygotowanie aktualizacji …",
+        "download": "Pobieranie nowej wersji …",
+        "packages": "Aktualizacja pakietów systemu …",
+        "install": "Instalowanie programów …",
+        "settings": "Zapisywanie ustawień …",
+        "done": "Gotowe – urządzenie zaraz uruchomi się ponownie",
+        "failed": "Aktualizacja przerwana – uruchom urządzenie ponownie"
+      },
+      "pt": {
+        "prepare": "A preparar a atualização …",
+        "download": "A transferir a nova versão …",
+        "packages": "A atualizar pacotes do sistema …",
+        "install": "A instalar programas …",
+        "settings": "A aplicar definições …",
+        "done": "Pronto – a caixa reinicia daqui a pouco",
+        "failed": "Atualização interrompida – reinicia a caixa"
+      },
+      "tr": {
+        "prepare": "Güncelleme hazırlanıyor …",
+        "download": "Yeni sürüm indiriliyor …",
+        "packages": "Sistem paketleri güncelleniyor …",
+        "install": "Programlar kuruluyor …",
+        "settings": "Ayarlar uygulanıyor …",
+        "done": "Bitti – kutu birazdan yeniden başlıyor",
+        "failed": "Güncelleme durdu – lütfen kutuyu yeniden başlat"
+      },
+      "uk": {
+        "prepare": "Підготовка оновлення …",
+        "download": "Завантаження нової версії …",
+        "packages": "Оновлення системних пакетів …",
+        "install": "Встановлення програм …",
+        "settings": "Застосування налаштувань …",
+        "done": "Готово – пристрій зараз перезапуститься",
+        "failed": "Оновлення перервано – перезапусти пристрій"
+      },
+      "ru": {
+        "prepare": "Подготовка обновления …",
+        "download": "Загрузка новой версии …",
+        "packages": "Обновление системных пакетов …",
+        "install": "Установка программ …",
+        "settings": "Применение настроек …",
+        "done": "Готово – устройство сейчас перезапустится",
+        "failed": "Обновление прервано – перезапустите устройство"
+      },
+      "cs": {
+        "prepare": "Příprava aktualizace …",
+        "download": "Stahování nové verze …",
+        "packages": "Aktualizace systémových balíčků …",
+        "install": "Instalace programů …",
+        "settings": "Použití nastavení …",
+        "done": "Hotovo – box se za chvíli restartuje",
+        "failed": "Aktualizace přerušena – restartuj box"
+      },
+      "el": {
+        "prepare": "Προετοιμασία ενημέρωσης …",
+        "download": "Λήψη της νέας έκδοσης …",
+        "packages": "Ενημέρωση πακέτων συστήματος …",
+        "install": "Εγκατάσταση προγραμμάτων …",
+        "settings": "Εφαρμογή ρυθμίσεων …",
+        "done": "Έτοιμο – το κουτί επανεκκινεί σε λίγο",
+        "failed": "Η ενημέρωση διακόπηκε – κάνε επανεκκίνηση του κουτιού"
+      }
     }
   },
   "bootscreens": [

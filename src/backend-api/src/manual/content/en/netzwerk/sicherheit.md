@@ -4,7 +4,7 @@
 
 ## Password
 
-Under **Password & sign-in** you set the password for the whole app. It applies on the phone as on the PC, and also to the previous admin interface.
+Under **Password & sign-in** you set the password for the whole app. It applies on the phone as on the PC.
 
 | Card | What you do there |
 | --- | --- |

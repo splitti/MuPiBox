@@ -11,6 +11,7 @@
 
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { CACHE_DIR } from './paths'
 
 export interface StoredAlbum {
   id?: string
@@ -30,7 +31,7 @@ export interface AlbumPage {
 /** One page of the artist's albums from `offset` on (the caller picks how many per page). */
 export type FetchAlbumPage = (offset: number) => Promise<AlbumPage>
 
-const DIR = path.join(process.cwd(), 'cache', 'artist-albums')
+const DIR = path.join(CACHE_DIR, 'artist-albums')
 const CHECK_EVERY_MS = 6 * 60 * 60 * 1000
 const FULL_EVERY_MS = 28 * 24 * 60 * 60 * 1000
 

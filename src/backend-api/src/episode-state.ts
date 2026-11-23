@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { writeJsonSync } from './json-file'
 import { episodeKey } from './podcast-offline'
 
 /**
@@ -65,13 +66,23 @@ export class EpisodeState {
     return now
   }
 
+  /** What is kept of the user in place, on the card - before a switch of the user moves the files (users.ts) */
+  flush(): void {
+    this.saveFirstSeen()
+  }
+
+  /** Read anew when next asked (another user's files are in place now) */
+  forget(): void {
+    this.firstSeen = null
+    this.firstSeenDirty = false
+    this.positions = { mtime: -1, data: {} }
+  }
+
   private saveFirstSeen() {
     if (!this.firstSeenDirty || !this.firstSeen) return
     this.firstSeenDirty = false
-    const tmp = `${this.firstSeenFile}.tmp`
     try {
-      fs.writeFileSync(tmp, JSON.stringify(this.firstSeen))
-      fs.renameSync(tmp, this.firstSeenFile)
+      writeJsonSync(this.firstSeenFile, this.firstSeen)
     } catch {
       this.firstSeenDirty = true
     }

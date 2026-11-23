@@ -6,6 +6,9 @@ Aufruf:
   compose_bootscreen.py wartung <bootscreen-id> <update|install|wlan> <sprache> <out.png>
   compose_bootscreen.py screen  <bootscreen-id> <goodbye|battery> <sprache> <out.png>
   compose_bootscreen.py apply   [<ausgabe-ordner>]   alle Bilder nach /etc/mupibox/mupiboxconfig.json
+  compose_bootscreen.py fortschritt <wartungsbild.png> <bootscreen-id> <prozent> <abschnitt> <sprache> <out.png>
+      das Wartungsbild des Updates mit Fortschrittsleiste (abschnitt: prepare download packages install settings
+      done failed - Texte in texts.progress)
 
 Benötigt: python3-pil, librsvg2-bin (rsvg-convert), Fredoka als Systemschrift (fontconfig) und als Datei.
 Text in Schriften, die Fredoka nicht hat (Kyrillisch, Griechisch), in DejaVu Sans.
@@ -18,7 +21,7 @@ CFG = json.load(open(os.path.join(BASE, "..", "bootscreens.json"), encoding="utf
 FONT_CANDIDATES = [
     "/usr/local/share/fonts/mupibox/Fredoka-Variable.ttf",
     CFG["font"]["file"],
-    "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/_fonts/Fredoka-Variable.ttf",
+    "/home/dietpi/.mupibox/server/www/theme-data/_fonts/Fredoka-Variable.ttf",
     os.path.join(BASE, "..", "..", "..", "themes", "_fonts", "Fredoka-Variable.ttf"),
 ]
 FONT = next((f for f in FONT_CANDIDATES if os.path.isfile(f)), CFG["font"]["file"])
@@ -156,6 +159,76 @@ def wartung(bid, kind, lang, out):
         y += lh + p["lineGap"]
     render(os.path.join(BASE, "..", b[scene]), ov, out)
 
+def css_rgba(c, default=(255, 255, 255, 235)):
+    """#RRGGBB or rgba(r, g, b, a) as an RGBA tuple for PIL."""
+    c = (c or "").strip()
+    if re.fullmatch(r"#[0-9a-fA-F]{6}", c):
+        return tuple(int(c[i : i + 2], 16) for i in (1, 3, 5)) + (255,)
+    m = re.fullmatch(r"rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)", c)
+    if m:
+        return (int(m.group(1)), int(m.group(2)), int(m.group(3)), round(float(m.group(4) or 1) * 255))
+    return default
+
+def fortschritt(picture, bid, pct, phase, lang, out):
+    """The maintenance picture of the update with the progress at its foot: a bar of the scene's pill (the colours of
+    its line of text), a sentence on the part of the update and the percent, under it the bar - in the title's colour
+    when that is dark, else in the pill's text colour. Where the maintenance text reaches down into the foot, the bar
+    goes beside it (text on the right: the left half) or to the top. phase "failed" (an abort after which the box
+    has to be restarted - any other abort brings the display back by itself): the sentence in red, no percent.
+    The picture as it is (the boot screen's maintenance picture), so this takes about half a second."""
+    from PIL import Image, ImageDraw
+    try:
+        b = bs(bid)
+    except SystemExit:
+        b = {}
+    m = b.get("maintenanceText", {})
+    p = m.get("subPill", {})
+    texts = CFG["texts"].get("progress", {})
+    text = (texts.get(lang) or texts.get("en") or {}).get(phase, "")
+    use_family_for(text)
+    failed = phase == "failed"
+    pct = max(0, min(100, int(pct)))
+    img = Image.open(picture).convert("RGBA")
+    W, H = img.size
+    layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    bg = css_rgba(p.get("background"), (255, 255, 255, 235))
+    ink = (0xB4, 0x3C, 0x2E, 255) if failed else css_rgba(p.get("color"), (0x1E, 0x2A, 0x44, 255))
+    title = css_rgba(m.get("color"), (0x1E, 0x2A, 0x44, 255))
+    bar = title if (0.299 * title[0] + 0.587 * title[1] + 0.114 * title[2]) / 255 < 0.55 else ink
+    if failed:
+        bar = ink
+    # where: the foot over the whole width - unless the maintenance text (title and up to its lines of the pill) is there
+    x0, x1 = 46, W - 46
+    y1 = H - 22
+    y0 = y1 - 74
+    text_bottom = m.get("y", 50) + m.get("titleSize", 50) + m.get("gap", 10) + m.get("subMaxLines", 2) * (m.get("subSize", 21) + 2 * p.get("padY", 6) + p.get("lineGap", 6))
+    if text_bottom > y0 - 8:
+        if m.get("x", 46) >= W / 2 and m.get("align", "left") == "left":
+            x1 = m["x"] - 16
+        else:
+            y0, y1 = 22, 96
+    d.rounded_rectangle((x0, y0, x1, y1), radius=p.get("radius", 16) + 2, fill=bg)
+    label = "" if failed else f"{pct} %"
+    # (a narrow bar: the text smaller until text and percent fit side by side; at the smallest cut with "…")
+    for size in (21, 19, 17, 15):
+        f_text, f_pct = font(size, 500), font(size, 600)
+        room = x1 - x0 - 36 - (d.textlength(label, font=f_pct) + 16 if label else 0)
+        if d.textlength(text, font=f_text) <= room:
+            break
+    while len(text) > 1 and d.textlength(text, font=f_text) > room:
+        text = text[:-2].rstrip() + "…"
+    d.text((x0 + 18, y0 + 12), text, font=f_text, fill=ink)
+    if label:
+        d.text((x1 - 18 - d.textlength(label, font=f_pct), y0 + 12), label, font=f_pct, fill=ink)
+    bx0, bx1, by0, by1 = x0 + 18, x1 - 18, y0 + 46, y0 + 58
+    d.rounded_rectangle((bx0, by0, bx1, by1), radius=6, fill=bar[:3] + (60,))
+    if failed:
+        d.rounded_rectangle((bx0, by0, bx1, by1), radius=6, fill=bar[:3] + (120,))
+    elif pct > 0:
+        d.rounded_rectangle((bx0, by0, bx0 + max(12, round((bx1 - bx0) * pct / 100)), by1), radius=6, fill=bar[:3] + (255,))
+    Image.alpha_composite(img, layer).convert("RGB").save(out, "PNG")
+
 def apply(outdir):
     """All pictures the box needs for its settings (mupibox.bootscreen, maintenanceScreen, boxName,
     bootscreenLanguage): splash-<id>.png for the boot screen (all 15 for "random") and maintenance-<id>-<kind>.png
@@ -198,6 +271,8 @@ if __name__ == "__main__":
         wartung(a[1], a[2], a[3], a[4])
     elif a[:1] == ["screen"] and len(a) == 5:
         wartung(a[1], a[2], a[3], a[4])
+    elif a[:1] == ["fortschritt"] and len(a) == 7:
+        fortschritt(a[1], a[2], a[3], a[4], a[5], a[6])
     elif a[:1] == ["apply"] and len(a) <= 2:
         apply(a[1] if len(a) == 2 else "/home/dietpi/MuPiBox/sysmedia/images/bootscreen")
     else:

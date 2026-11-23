@@ -16,7 +16,12 @@ export interface NasProfile {
 export type NasBoxCategory = 'audiobook' | 'music' | 'other'
 
 export interface NasConfig {
+  // how the box reaches the NAS: WebDAV (address = host:port, the default of older configs) or SMB (address = host,
+  // share = the share, domain = workgroup/domain if the NAS needs one)
+  protocol?: 'webdav' | 'smb'
   address?: string
+  share?: string
+  domain?: string
   https?: boolean
   account?: string
   password?: string

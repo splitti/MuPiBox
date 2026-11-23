@@ -20,6 +20,19 @@ Podcasts have extra rules that apply episode by episode. They are on the same pa
 
 Only what was published after the podcast was added counts as new. The dot disappears as soon as the episode has been played or the time is up.
 
+## Listened ticks
+
+In the display's list of episodes, a tick at the bottom right of a cover shows what has already been listened to:
+
+- **yellow**: started, after one minute of playback
+- **green**: listened to the end, once only the last 30 seconds of the last track are left or the album has played to its end
+
+This applies to albums on the SD card and USB stick, on the NAS, on Spotify and on TIDAL. A green album stays green when it is played again. Podcast episodes keep the listening progress above, with a bar and a green tick. The start page shows no ticks.
+
+You change the ticks in the app under **Library**: at an album there are **Mark as listened** and **Mark as not listened**; at an artist or a folder, **Mark all as not listened** resets everything in it.
+
+They can be switched off under **Settings › Display & controls › Controls on the display › Continue listening › Ticks on started and finished episodes**.
+
 ## “Now playing”
 
 ![“Now playing” at the top of the start page's header](display-now-playing.png)

@@ -1,0 +1,242 @@
+{
+  "id": "weather",
+  "name": "Wetter",
+  "version": "1.5.2",
+  "description": "Das Wetter eines Ortes als Messuhren auf dem Display: Temperatur, Luftfeuchte, Wind, Luftdruck und Regen. Wetterserver und Ort wählst du in der Webapp.",
+  "hostApi": 3,
+  "resources": {},
+  "api": "api.js",
+  "display": "display.js",
+  "icon": "icon.svg",
+  "settings": {
+    "provider": {
+      "type": "string",
+      "default": "openmeteo",
+      "options": [
+        "openmeteo",
+        "metno"
+      ]
+    },
+    "placeName": {
+      "type": "string",
+      "default": "",
+      "pattern": "^.{0,120}$"
+    },
+    "lat": {
+      "type": "number",
+      "min": -90,
+      "max": 90
+    },
+    "lon": {
+      "type": "number",
+      "min": -180,
+      "max": 180
+    },
+    "refreshEvery": {
+      "type": "number",
+      "default": 10,
+      "min": 1,
+      "max": 999
+    },
+    "refreshUnit": {
+      "type": "string",
+      "default": "minutes",
+      "options": [
+        "seconds",
+        "minutes"
+      ]
+    },
+    "tempUnit": {
+      "type": "string",
+      "default": "c",
+      "options": [
+        "c",
+        "f"
+      ]
+    },
+    "rainUnit": {
+      "type": "string",
+      "default": "mm",
+      "options": [
+        "mm",
+        "inch"
+      ]
+    },
+    "pressUnit": {
+      "type": "string",
+      "default": "hpa",
+      "options": [
+        "hpa",
+        "inhg",
+        "mb",
+        "kpa"
+      ]
+    },
+    "windUnit": {
+      "type": "string",
+      "default": "kmh",
+      "options": [
+        "kmh",
+        "ms",
+        "mph",
+        "kn"
+      ]
+    },
+    "order": {
+      "type": "string",
+      "default": "temp,hum,wind,dir,baro,rain",
+      "pattern": "^[a-z]{2,10}(,[a-z]{2,10}){0,11}$"
+    }
+  },
+  "ui": {
+    "title": "Wetter",
+    "help": "Ist ein Ort gewählt, zeigt das Display oben den Reiter „Wetter“. Ein Tipp darauf öffnet die Messuhren. Die Box holt die Werte im Internet und aktualisiert sie alle zehn Minuten.",
+    "items": [
+      {
+        "key": "provider",
+        "label": "Wetterserver",
+        "help": "Open-Meteo liefert Messwerte der letzten 24 Stunden und Böen. Bei MET Norway (yr.no) sind es Werte des Wettermodells; der Regen ist dort die Vorhersage für die nächsten 24 Stunden.",
+        "choices": [
+          {
+            "value": "openmeteo",
+            "label": "Open-Meteo"
+          },
+          {
+            "value": "metno",
+            "label": "MET Norway (yr.no)"
+          }
+        ]
+      },
+      {
+        "key": "placeName",
+        "label": "Ort",
+        "type": "lookup",
+        "search": "/api/ext/weather/places",
+        "help": "Nach dem Namen suchen und einen Treffer antippen."
+      },
+      {
+        "key": "refreshEvery",
+        "label": "Aktualisieren alle …",
+        "help": "Wie oft die geöffnete Wetteranzeige neue Werte holt (Zahl eintragen, dann Speichern; mindestens alle 10 Sekunden). Die Wetterserver liefern neue Werte nur etwa stündlich, die Box fragt sie höchstens einmal pro Minute ab."
+      },
+      {
+        "key": "refreshUnit",
+        "label": "Einheit",
+        "choices": [
+          {
+            "value": "seconds",
+            "label": "Sekunden"
+          },
+          {
+            "value": "minutes",
+            "label": "Minuten"
+          }
+        ]
+      },
+      {
+        "key": "tempUnit",
+        "label": "Temperatur",
+        "choices": [
+          {
+            "value": "c",
+            "label": "°C"
+          },
+          {
+            "value": "f",
+            "label": "°F"
+          }
+        ]
+      },
+      {
+        "key": "rainUnit",
+        "label": "Regen",
+        "choices": [
+          {
+            "value": "mm",
+            "label": "mm"
+          },
+          {
+            "value": "inch",
+            "label": "Zoll"
+          }
+        ]
+      },
+      {
+        "key": "pressUnit",
+        "label": "Luftdruck",
+        "choices": [
+          {
+            "value": "hpa",
+            "label": "hPa"
+          },
+          {
+            "value": "inhg",
+            "label": "inHg"
+          },
+          {
+            "value": "mb",
+            "label": "mb"
+          },
+          {
+            "value": "kpa",
+            "label": "kPa"
+          }
+        ]
+      },
+      {
+        "key": "windUnit",
+        "label": "Windstärke",
+        "choices": [
+          {
+            "value": "kmh",
+            "label": "km/h"
+          },
+          {
+            "value": "ms",
+            "label": "m/s"
+          },
+          {
+            "value": "mph",
+            "label": "mph"
+          },
+          {
+            "value": "kn",
+            "label": "Knoten"
+          }
+        ]
+      },
+      {
+        "key": "order",
+        "label": "Reihenfolge der Uhren",
+        "help": "Fasse eine Uhr am Griff an und schiebe sie an eine andere Stelle. Ein kleines Display zeigt zwei Uhren nebeneinander, ein breites so viele, wie hineinpassen.",
+        "type": "order",
+        "choices": [
+          {
+            "value": "temp",
+            "label": "Temperatur"
+          },
+          {
+            "value": "hum",
+            "label": "Luftfeuchte"
+          },
+          {
+            "value": "wind",
+            "label": "Windstärke"
+          },
+          {
+            "value": "dir",
+            "label": "Windrichtung"
+          },
+          {
+            "value": "baro",
+            "label": "Luftdruck"
+          },
+          {
+            "value": "rain",
+            "label": "Regenmenge"
+          }
+        ]
+      }
+    ]
+  }
+}

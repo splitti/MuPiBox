@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http'
+import { HttpClient, type HttpErrorResponse } from '@angular/common/http'
 import { Injectable } from '@angular/core'
 import type { ServerHttpApiConfig } from '@backend-api/server.model'
 import { firstValueFrom, type Observable, timeout } from 'rxjs'
@@ -8,6 +8,9 @@ import { CurrentMediaService } from './current-media.service'
 import { LogService } from './log.service'
 import type { Media } from './media'
 import { SpotifyService } from './spotify.service'
+import { heardQuery } from './heard-key'
+import { tileQuery } from './tile-key'
+import { TileTimeService } from './tile-time.service'
 
 export enum PlayerCmds {
   PLAY = 'play',
@@ -44,6 +47,7 @@ export class PlayerService {
     private logService: LogService,
     private spotifyService: SpotifyService,
     private currentMediaService: CurrentMediaService,
+    private tileTime: TileTimeService,
   ) {}
 
   getConfig() {
@@ -99,6 +103,16 @@ export class PlayerService {
     }
   }
 
+  /** The volume of the box as a percentage (the Winamp theme's slider); the player keeps it under its maximum. */
+  setVolume(percent: number) {
+    this.sendRequest(`volume/=${Math.max(0, Math.min(100, Math.round(percent)))}`)
+  }
+
+  /** Repeat of the local playlist (the Winamp theme's REP button); Spotify has its own. */
+  setRepeat(on: boolean) {
+    this.sendRequest(on ? 'repeaton' : 'repeatoff')
+  }
+
   seekPosition(pos: number) {
     const seekpos = `seekpos:${pos}`
     this.sendRequest(seekpos)
@@ -126,6 +140,14 @@ export class PlayerService {
       }
       case 'tidal': {
         url = `musicsearch/tidal/${tidalRef(media)}${this.coverQuery(media)}`
+        break
+      }
+      case 'jellyfin': {
+        url = `musicsearch/jellyfin/${jellyfinRef(media)}${this.coverQuery(media)}`
+        break
+      }
+      case 'audible': {
+        url = `musicsearch/audible/book:${encodeURIComponent(media.id)}${this.coverQuery(media)}`
         break
       }
       case 'spotify': {
@@ -161,7 +183,7 @@ export class PlayerService {
     // knows what was playing if playtime/quiet stops it while the user is
     // off the player page.
     this.currentMediaService.set(media)
-    this.sendRequest(url)
+    this.sendRequest(url, media)
     return true
   }
 
@@ -186,7 +208,7 @@ export class PlayerService {
     }
 
     this.currentMediaService.set(media)
-    this.sendRequest(url)
+    this.sendRequest(url, media)
     return true
   }
 
@@ -202,7 +224,7 @@ export class PlayerService {
     // category:artist:title pointed at a folder that does not exist for them
     const url = `musicsearch/library/resume/${this.libraryFolderParam(media)}:${trackNr}:${progressPct}`
     this.currentMediaService.set(media)
-    this.sendRequest(url)
+    this.sendRequest(url, media)
     return true
   }
 
@@ -212,7 +234,7 @@ export class PlayerService {
     const trackNr = media.resumelocalcurrentTracknr || 1
     const progressPct = Math.round(media.resumelocalprogressTime || 0)
     this.currentMediaService.set(media)
-    this.sendRequest(`musicsearch/nas/resume/${encodeURIComponent(media.nasPath)}:${trackNr}:${progressPct}`)
+    this.sendRequest(`musicsearch/nas/resume/${encodeURIComponent(media.nasPath)}:${trackNr}:${progressPct}`, media)
     return true
   }
 
@@ -221,7 +243,25 @@ export class PlayerService {
     const trackNr = media.resumelocalcurrentTracknr || 1
     const progressPct = Math.round(media.resumelocalprogressTime || 0)
     this.currentMediaService.set(media)
-    this.sendRequest(`musicsearch/tidal/resume/${tidalRef(media)}:${trackNr}:${progressPct}${this.coverQuery(media)}`)
+    this.sendRequest(`musicsearch/tidal/resume/${tidalRef(media)}:${trackNr}:${progressPct}${this.coverQuery(media)}`, media)
+    return true
+  }
+
+  // A Jellyfin album, playlist or audiobook where it was left (as TIDAL)
+  async resumeJellyfinMedia(media: Media): Promise<boolean> {
+    const trackNr = media.resumelocalcurrentTracknr || 1
+    const progressPct = Math.round(media.resumelocalprogressTime || 0)
+    this.currentMediaService.set(media)
+    this.sendRequest(`musicsearch/jellyfin/resume/${jellyfinRef(media)}:${trackNr}:${progressPct}${this.coverQuery(media)}`, media)
+    return true
+  }
+
+  // An Audible book where it was left: its chapter and the part of it (as TIDAL)
+  async resumeAudibleMedia(media: Media): Promise<boolean> {
+    const trackNr = media.resumelocalcurrentTracknr || 1
+    const progressPct = Math.round(media.resumelocalprogressTime || 0)
+    this.currentMediaService.set(media)
+    this.sendRequest(`musicsearch/audible/resume/book:${encodeURIComponent(media.id)}:${trackNr}:${progressPct}${this.coverQuery(media)}`, media)
     return true
   }
 
@@ -242,6 +282,10 @@ export class PlayerService {
       url = `nastrack:${entry.position}`
     } else if (media.type === 'tidal') {
       url = `tidaltrack:${entry.position}`
+    } else if (media.type === 'jellyfin') {
+      url = `jellyfintrack:${entry.position}`
+    } else if (media.type === 'audible') {
+      url = `audibletrack:${entry.position}`
     } else if (media.playlistid) {
       url = `spotify/now/spotify:playlist:${encodeURIComponent(media.playlistid)}:${entry.position}:0`
     } else if (media.audiobookid) {
@@ -255,7 +299,26 @@ export class PlayerService {
       return
     }
 
-    this.sendRequest(url)
+    // (a Spotify jump is a start of its own for the player: it goes on with the tile of what plays)
+    this.sendRequest(url, media)
+  }
+
+  /**
+   * The episodes of the podcast tile an episode belongs to, as its list shows them (the parents' choice, the entry's
+   * sorting) - found by the box from the episode and the tile (no feed address here). At most 300 around the one that
+   * plays: offset is the place of the first, count the number of all.
+   */
+  getRssEpisodes(media: Media): Observable<RssEpisodeList> {
+    return this.http.get<RssEpisodeList>(`${environment.backend.apiUrl}/rssfeed/episodes?url=${encodeURIComponent(media.id)}${tileQuery('?', media)}`)
+  }
+
+  /**
+   * Another episode of the podcast, chosen in the list of the player. Started like "next" at an episode: with the source "skip" the display's
+   * player page follows to it (ExternalPlaybackNavigatorService) and shows its title. The picture of the episode before does not go along.
+   */
+  playRssEpisode(media: Media, episode: { id: string; name: string }): void {
+    const started: Media = { ...media, id: episode.id, title: episode.name }
+    this.sendRequest(`rss/${encodeURIComponent(episode.id)}/${encodeURIComponent(episode.name)}:title:artist:${encodeURIComponent(media.artist)}?src=skip`, started)
   }
 
   /**
@@ -293,6 +356,16 @@ export class PlayerService {
     return this.http.get<{ position: number; name: string }[]>(`${environment.backend.playerUrl}/tidal/tracklist/${tidalRef(media)}`)
   }
 
+  /** The tracks of a Jellyfin album, playlist or audiobook, through the player (the one that plays as mpv has it). */
+  getJellyfinTracklist(media: Media): Observable<{ position: number; name: string }[]> {
+    return this.http.get<{ position: number; name: string }[]>(`${environment.backend.playerUrl}/jellyfin/tracklist/${jellyfinRef(media)}`)
+  }
+
+  /** The chapters of an Audible book, through the player (the one that plays as mpv has it). */
+  getAudibleTracklist(media: Media): Observable<{ position: number; name: string }[]> {
+    return this.http.get<{ position: number; name: string }[]>(`${environment.backend.playerUrl}/audible/tracklist/book:${encodeURIComponent(media.id)}`)
+  }
+
   private say(text: string) {
     this.getConfig().subscribe((config) => {
       let url = `say/${encodeURIComponent(text)}`
@@ -312,11 +385,42 @@ export class PlayerService {
     return cover ? `?cover=${encodeURIComponent(cover)}` : ''
   }
 
-  private sendRequest(url: string) {
+  // media: what starts - the tile of the start page it belongs to goes with it (?tile=, see tile-key.ts)
+  private sendRequest(url: string, media?: Media) {
     const room = this.spotifyService.isPlayerReady() ? this.spotifyService.getDeviceId() : 'current'
     const baseUrl = `${environment.backend.playerUrl}/${room}/`
-    this.http.get(baseUrl + url).subscribe()
+    if (media) this.tileTime.noteStart(media)
+    // (and what of the library it is, for the ticks of what was heard - heard-key.ts)
+    const tile = media ? tileQuery(url, media) : ''
+    const heard = media ? heardQuery(url + tile, media) : ''
+    this.http.get(baseUrl + url + tile + heard).subscribe({
+      // (its tile's day's limit is used up: the player refused it - the bar says so, the player page goes back)
+      error: (e: HttpErrorResponse) => {
+        const body = e.error as { error?: unknown; tile?: unknown } | null
+        // (only a start: a play, next or seek refused while the tile's last track finishes - its grace - changes nothing,
+        // as for the listening time; taken for a refused start, the page left and stopped that track)
+        if (media && e.status === 423 && body?.error === 'tile_limit_reached') {
+          this.logService.log(`[PlayerService] start refused, the tile is used up for today: ${String(body.tile ?? '')}`)
+          this.tileTime.refused(typeof body.tile === 'string' ? body.tile : null, media ?? null)
+        }
+      },
+    })
   }
+}
+
+export interface RssEpisodeList {
+  found: boolean
+  artist?: string
+  current?: number
+  count?: number
+  offset?: number
+  episodes?: { url: string; title: string; seconds: number }[]
+}
+
+// A Jellyfin entry for the player: <album|playlist|book>:<id>
+function jellyfinRef(media: Media): string {
+  const kind = media.jellyfinKind === 'playlist' || media.jellyfinKind === 'book' ? media.jellyfinKind : 'album'
+  return `${kind}:${encodeURIComponent(media.id)}`
 }
 
 // A TIDAL entry for the player: <album|playlist>:<id>

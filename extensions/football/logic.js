@@ -1,0 +1,395 @@
+// Football, the pure part: what the sources answer turned into one plain form (matches, table, teams), the state of a match, how
+// often to ask, what "my club" means right now and which goals are new. No network, no files, no timers - tested on its own
+// (node --test extensions/football/test/*.test.js).
+//
+// The form the display knows (both sources give it):
+//   match: { id, kickoff (ISO, UTC), state: 'scheduled' | 'live' | 'finished' | 'postponed', home: team, away: team,
+//            score: { home, away } | null, halftime: { home, away } | null, matchday, competition }
+//   team:  { id, name, short, tla, crest }   (crest: the address of the picture at the source - the API part keeps a copy)
+//   row:   { rank, team, played, won, draw, lost, goals, against, diff, points }
+
+'use strict'
+
+const MIN = 60 * 1000
+const HOUR = 60 * MIN
+
+/** The leagues of OpenLigaDB the box offers (the list of the source holds hundreds that people keep for themselves). A cup has no table. */
+const OPENLIGADB_LEAGUES = {
+  bl1: { name: '1. Bundesliga' },
+  bl2: { name: '2. Bundesliga' },
+  bl3: { name: '3. Liga' },
+  dfb: { name: 'DFB-Pokal', cup: true },
+  ffb1: { name: 'Frauen-Bundesliga' },
+}
+
+// (a match is "on" from a little before the kick-off until it is over; without word that it is over, at most this long - extra
+// time and penalties of a cup included)
+const LIVE_BEFORE = 5 * MIN
+const LIVE_AFTER = 150 * MIN
+const LIVE_LONGEST = 180 * MIN
+
+const int = (v) => (Number.isInteger(v) && v >= 0 && v < 1000 ? v : null)
+// (control characters and the separators of lines out: a name is one line - and it goes into the setting of the clubs)
+const text = (v, max = 60) => (typeof v === 'string' ? v.replace(/[\p{Cc}\u2028\u2029]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, max) : '')
+/** A short name of three letters for a team without one (the circle the display draws when there is no crest). */
+function tlaOf(team) {
+  const tla = text(team?.tla, 4).toUpperCase()
+  if (/^[A-Z0-9]{2,4}$/.test(tla)) return tla
+  const base = text(team?.short || team?.name, 40)
+    .replace(/^(1\.|SV|FC|VfB|VfL|TSG|SC|BV|RB|FSV|SpVgg|SG|TSV|Borussia|Eintracht|Hertha|Bayer)\s+/i, '')
+    .replace(/[^\p{L}\p{N}]/gu, '')
+  return base.slice(0, 3).toUpperCase() || '?'
+}
+const httpsOrEmpty = (v) => (typeof v === 'string' && /^https:\/\/[^\s"'<>]{4,500}$/.test(v) ? v : '')
+
+/** A team of OpenLigaDB (team1, team2, a row of the table, an entry of the teams). */
+function olTeam(t) {
+  const id = Number(t?.teamId ?? t?.teamInfoId)
+  const name = text(t?.teamName, 80)
+  const team = { id: Number.isInteger(id) && id > 0 ? id : null, name, short: text(t?.shortName, 40) || name, tla: '', crest: httpsOrEmpty(t?.teamIconUrl) }
+  team.tla = tlaOf({ tla: t?.tla, short: team.short, name })
+  return team
+}
+
+/** The state of a match at `now`: from the word of the source, else from the time of the kick-off. */
+function stateOf({ kickoff, finished, postponed }, now) {
+  if (postponed) return 'postponed'
+  if (finished) return 'finished'
+  const at = Date.parse(kickoff)
+  if (!Number.isFinite(at)) return 'scheduled'
+  if (now < at) return 'scheduled'
+  // (no word that it is over after the longest a match can take: it is over, the score as it stood)
+  return now - at > LIVE_LONGEST ? 'finished' : 'live'
+}
+
+/** A match of OpenLigaDB in the plain form. */
+function olMatch(m, now = Date.now()) {
+  // (a date the source got wrong: no kick-off - the match counts as not begun)
+  const at = typeof m?.matchDateTimeUTC === 'string' ? Date.parse(m.matchDateTimeUTC) : NaN
+  const kickoff = Number.isFinite(at) ? new Date(at).toISOString() : null
+  const results = Array.isArray(m?.matchResults) ? m.matchResults : []
+  const pair = (r) => (r && int(r.pointsTeam1) !== null && int(r.pointsTeam2) !== null ? { home: r.pointsTeam1, away: r.pointsTeam2 } : null)
+  // (the half time; the result at the end is the last one the source has - after 90 minutes, after extra time, after penalties)
+  const half = pair(results.find((x) => Number(x?.resultTypeID) === 1))
+  // (a penalty shoot-out is a result of its own: shown beside the score, never as the score - nor as goals)
+  const shootout = (x) => /elfmeter|penalt/i.test(`${x?.resultName ?? ''} ${x?.resultTypeKind ?? ''}`)
+  const ends = results.filter((x) => Number(x?.resultTypeID) !== 1 && !shootout(x) && pair(x)).sort((a, b) => (Number(a?.resultOrderID) || 0) - (Number(b?.resultOrderID) || 0))
+  const penalties = pair(results.find((x) => shootout(x) && pair(x)))
+  const goals = (Array.isArray(m?.goals) ? m.goals : []).filter((g) => int(g?.scoreTeam1) !== null && int(g?.scoreTeam2) !== null)
+  const lastGoal = goals.reduce((last, g) => (!last || g.scoreTeam1 + g.scoreTeam2 >= last.scoreTeam1 + last.scoreTeam2 ? g : last), null)
+  const finished = m?.matchIsFinished === true
+  const state = stateOf({ kickoff, finished }, now)
+  // (over: the result at the end; while it runs whichever has more goals - the goals or a result the source keeps up to date)
+  const final = pair(ends.at(-1))
+  const byGoal = lastGoal ? { home: lastGoal.scoreTeam1, away: lastGoal.scoreTeam2 } : null
+  const sum = (s) => (s ? s.home + s.away : -1)
+  // (none known: 0:0 while it runs; over without a result - the source has not got it yet, or the match did not take place
+  // - no score at all, never a 0:0 that did not happen)
+  const known = finished && final ? final : sum(final) >= sum(byGoal) ? final : byGoal
+  const score = state === 'scheduled' ? null : (known ?? (state === 'live' ? { home: 0, away: 0 } : null))
+  return {
+    id: Number(m?.matchID) || null,
+    kickoff,
+    state,
+    home: olTeam(m?.team1),
+    away: olTeam(m?.team2),
+    score,
+    halftime: half,
+    penalties,
+    matchday: Number(m?.group?.groupOrderID) || null,
+    matchdayName: text(m?.group?.groupName, 40),
+    competition: text(m?.leagueShortcut, 20),
+  }
+}
+
+/** The table of OpenLigaDB (in the order of the source, which is the order of the places). */
+function olTable(rows) {
+  return (Array.isArray(rows) ? rows : []).slice(0, 40).map((r, i) => ({
+    rank: i + 1,
+    team: olTeam(r),
+    played: int(r?.matches) ?? 0,
+    won: int(r?.won) ?? 0,
+    draw: int(r?.draw) ?? 0,
+    lost: int(r?.lost) ?? 0,
+    goals: int(r?.goals) ?? 0,
+    against: int(r?.opponentGoals) ?? 0,
+    diff: Number.isInteger(r?.goalDiff) ? r.goalDiff : (int(r?.goals) ?? 0) - (int(r?.opponentGoals) ?? 0),
+    points: int(r?.points) ?? 0,
+  }))
+}
+
+/** The teams of a league of OpenLigaDB, sorted by name, each once. */
+function olTeams(rows) {
+  const seen = new Set()
+  return (Array.isArray(rows) ? rows : [])
+    .map(olTeam)
+    .filter((t) => t.id && t.name && !seen.has(t.id) && seen.add(t.id))
+    .sort((a, b) => a.name.localeCompare(b.name, 'de'))
+}
+
+// ---- football-data.org (v4, with a key of the user's own) ----
+
+/** The competitions of the free tier of football-data.org. A cup has no table of one league. */
+const FOOTBALLDATA_LEAGUES = {
+  PL: { name: 'Premier League' },
+  ELC: { name: 'Championship' },
+  BL1: { name: 'Bundesliga' },
+  PD: { name: 'LaLiga' },
+  SA: { name: 'Serie A' },
+  FL1: { name: 'Ligue 1' },
+  DED: { name: 'Eredivisie' },
+  PPL: { name: 'Primeira Liga' },
+  BSA: { name: 'Brasileirão' },
+  CL: { name: 'Champions League', cup: true },
+  WC: { name: 'Weltmeisterschaft', cup: true },
+  EC: { name: 'Europameisterschaft', cup: true },
+}
+
+/** A team of football-data.org */
+function fdTeam(t) {
+  const id = Number(t?.id)
+  const name = text(t?.name, 80)
+  const team = { id: Number.isInteger(id) && id > 0 ? id : null, name, short: text(t?.shortName, 40) || name, tla: '', crest: httpsOrEmpty(t?.crest) }
+  team.tla = tlaOf({ tla: t?.tla, short: team.short, name })
+  return team
+}
+
+const FD_STATE = { SCHEDULED: 'scheduled', TIMED: 'scheduled', IN_PLAY: 'live', PAUSED: 'live', LIVE: 'live', FINISHED: 'finished', AWARDED: 'finished', POSTPONED: 'postponed', SUSPENDED: 'postponed', CANCELLED: 'postponed' }
+
+/** A match of football-data.org in the plain form */
+function fdMatch(m, now = Date.now()) {
+  const at = typeof m?.utcDate === 'string' ? Date.parse(m.utcDate) : NaN
+  const kickoff = Number.isFinite(at) ? new Date(at).toISOString() : null
+  const pair = (p) => (p && int(p.home) !== null && int(p.away) !== null ? { home: p.home, away: p.away } : null)
+  const told = FD_STATE[String(m?.status ?? '')]
+  // (the source's word; one it does not give - a status of its own - from the time as with OpenLigaDB)
+  const state = told ?? stateOf({ kickoff, finished: false }, now)
+  const s = m?.score ?? {}
+  // (after a shoot-out the full time holds its goals too: the score is that of the play, the shoot-out beside it)
+  const shootout = s.duration === 'PENALTY_SHOOTOUT' ? pair(s.penalties) : null
+  const played = shootout && pair(s.regularTime) ? { home: s.regularTime.home + (pair(s.extraTime)?.home ?? 0), away: s.regularTime.away + (pair(s.extraTime)?.away ?? 0) } : pair(s.fullTime)
+  const score = state === 'scheduled' || state === 'postponed' ? null : (played ?? (state === 'live' ? { home: 0, away: 0 } : null))
+  return {
+    id: Number(m?.id) || null,
+    kickoff,
+    state,
+    home: fdTeam(m?.homeTeam),
+    away: fdTeam(m?.awayTeam),
+    score,
+    halftime: pair(s.halfTime),
+    penalties: shootout,
+    matchday: Number(m?.matchday) || null,
+    matchdayName: '',
+    competition: text(m?.competition?.code, 20),
+  }
+}
+
+/** The table of football-data.org: the one total table (a competition of groups has several - none then) */
+function fdTable(body) {
+  const totals = (Array.isArray(body?.standings) ? body.standings : []).filter((s) => s?.type === 'TOTAL')
+  if (totals.length !== 1 || !Array.isArray(totals[0].table)) return null
+  return totals[0].table.slice(0, 40).map((r, i) => ({
+    rank: int(r?.position) ?? i + 1,
+    team: fdTeam(r?.team),
+    played: int(r?.playedGames) ?? 0,
+    won: int(r?.won) ?? 0,
+    draw: int(r?.draw) ?? 0,
+    lost: int(r?.lost) ?? 0,
+    goals: int(r?.goalsFor) ?? 0,
+    against: int(r?.goalsAgainst) ?? 0,
+    diff: Number.isInteger(r?.goalDifference) ? r.goalDifference : (int(r?.goalsFor) ?? 0) - (int(r?.goalsAgainst) ?? 0),
+    points: int(r?.points) ?? 0,
+  }))
+}
+
+/** The teams of a competition of football-data.org, sorted by name */
+function fdTeams(body) {
+  const seen = new Set()
+  return (Array.isArray(body?.teams) ? body.teams : [])
+    .map(fdTeam)
+    .filter((t) => t.id && t.name && !seen.has(t.id) && seen.add(t.id))
+    .sort((a, b) => a.name.localeCompare(b.name, 'de'))
+}
+
+// ---- the clubs a user follows (F7) ----
+
+/** At most this many clubs per user */
+const MAX_CLUBS = 5
+const SRC = { o: 'openligadb', f: 'footballdata' }
+
+/**
+ * The clubs of the setting `clubs`: "o:40:FC Bayern München|f:81:FC Barcelona" - the source (o OpenLigaDB, f football-data.org),
+ * the number of the club there, its name. Each club once, at most MAX_CLUBS; what does not fit is left out.
+ */
+function clubsOf(textValue) {
+  const out = []
+  for (const part of String(textValue ?? '').split('|')) {
+    const m = /^([of]):(\d{1,8}):(.{0,60})$/.exec(part.trim())
+    if (!m) continue
+    const club = { src: m[1], id: Number(m[2]), name: m[3].trim() || m[2] }
+    if (club.id > 0 && !out.some((c) => c.src === club.src && c.id === club.id)) out.push(club)
+    if (out.length >= MAX_CLUBS) break
+  }
+  return out
+}
+/** The setting `clubs` of a list (names without the separators, short enough for the setting's 300 letters) */
+function clubsText(list) {
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: the control characters are what is taken out
+  const clean = (n) => String(n ?? '').replace(/[|:\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim()
+  let len = 40
+  for (;;) {
+    const text = list.slice(0, MAX_CLUBS).map((c) => `${c.src}:${c.id}:${clean(c.name).slice(0, len)}`).join('|')
+    if (text.length <= 300 || len <= 8) return text.slice(0, 300)
+    len -= 4
+  }
+}
+/** The names for the app: "FC Bayern München, Deutschland" */
+const clubNames = (list) => list.map((c) => c.name).join(', ').slice(0, 300)
+
+// (OpenLigaDB: what its people keep for a national team is spread over several leagues - the same match up to four times - and
+// the under-21 is kept under the same number: those go, and of one day the entry that says most stays)
+const PREFERRED = ['bl1', 'bl2', 'bl3', 'dfb', 'ffb1', 'ucl', 'DFBN', 'wm26']
+function clubDays(matches, teamId) {
+  const best = new Map()
+  const rank = (m) => (m.score ? 0 : 2) + (m.state === 'finished' && !m.score ? 1 : 0) + (PREFERRED.includes(m.competition) ? 0 : 0.5)
+  for (const m of matches) {
+    if (!playsIn(m, teamId) || /(^|[^a-z])u\d{2}/i.test(m.competition ?? '') || /test/i.test(m.competition ?? '')) continue
+    const day = String(m.kickoff ?? '').slice(0, 10)
+    const have = best.get(day)
+    if (!have || rank(m) < rank(have)) best.set(day, m)
+  }
+  return [...best.values()].sort(byKickoff)
+}
+
+// ---- the tables of the clubs' leagues (F8) ----
+
+/** The competitions with a table of one league, by source (a cup, the Champions League, a national team have none to show) */
+const TABLE_LEAGUES = { o: ['bl1', 'bl2', 'bl3', 'ffb1'], f: ['PL', 'ELC', 'BL1', 'PD', 'SA', 'FL1', 'DED', 'PPL', 'BSA'] }
+/** The league of a club: the competition with a table most of its matches are in; null for none */
+function clubLeague(src, matches) {
+  const allowed = TABLE_LEAGUES[src] ?? []
+  const count = new Map()
+  for (const m of matches ?? []) if (allowed.includes(m.competition)) count.set(m.competition, (count.get(m.competition) ?? 0) + 1)
+  let best = null
+  for (const [code, n] of count) if (!best || n > count.get(best)) best = code
+  return best
+}
+/** The name of a league of a source */
+const leagueName = (src, code) => (src === 'f' ? FOOTBALLDATA_LEAGUES[code]?.name : OPENLIGADB_LEAGUES[code]?.name) ?? code
+
+/** Matches sorted by kick-off (then by id: the same order on every call). */
+const byKickoff = (a, b) => (Date.parse(a.kickoff) || 0) - (Date.parse(b.kickoff) || 0) || (a.id ?? 0) - (b.id ?? 0)
+
+/** Is the match one of the club `teamId`? */
+const playsIn = (m, teamId) => !!teamId && (m.home.id === teamId || m.away.id === teamId)
+
+/**
+ * What the page "Mein Verein" shows: the last match that is over, the next one, one that runs now, and the place in the table.
+ * `matches`: the club's matches (any competition) and those of the matchday - each once.
+ */
+function myClub(matches, table, teamId, now = Date.now()) {
+  if (!teamId) return null
+  const mine = dedupe(matches.filter((m) => playsIn(m, teamId))).sort(byKickoff)
+  const live = mine.find((m) => m.state === 'live') ?? null
+  // (the last one over that has a result; one without - not known yet - only when there is none with)
+  const over = [...mine].reverse().filter((m) => m.state === 'finished')
+  const last = over.find((m) => m.score) ?? over[0] ?? null
+  const next = mine.find((m) => m.state === 'scheduled' && Date.parse(m.kickoff) > now) ?? null
+  const row = (table ?? []).find((r) => r.team.id === teamId) ?? null
+  const team = row?.team ?? (mine[0] ? (mine[0].home.id === teamId ? mine[0].home : mine[0].away) : null)
+  return { team, live, last, next, rank: row?.rank ?? null, points: row?.points ?? null }
+}
+
+function dedupe(matches) {
+  const seen = new Map()
+  for (const m of matches) if (m?.id) seen.set(m.id, m)
+  return [...seen.values()]
+}
+
+/**
+ * How long until the box asks the source again: often while a match of interest runs (or is about to), less on a day with
+ * matches, else once an hour; after errors longer, doubled each time, at most half an hour. `minGap`: the least the source
+ * allows (football-data: 2 min).
+ */
+function nextDelay(matches, now = Date.now(), { errors = 0, minGap = 0 } = {}) {
+  if (errors > 0) return Math.min(30 * MIN, Math.max(MIN, minGap) * 2 ** Math.min(errors, 5))
+  let delay = HOUR
+  const today = new Date(now).toDateString()
+  for (const m of matches) {
+    const at = Date.parse(m.kickoff)
+    if (!Number.isFinite(at) || m.state === 'finished' || m.state === 'postponed') continue
+    if (m.state === 'live' || (now >= at - LIVE_BEFORE && now <= at + LIVE_AFTER)) return Math.max(MIN, minGap)
+    // (the kick-off coming: ask again just before it)
+    if (at > now && at - now < delay) delay = Math.max(MIN, at - LIVE_BEFORE - now)
+    if (new Date(at).toDateString() === today) delay = Math.min(delay, 15 * MIN)
+  }
+  return Math.max(delay, minGap, MIN)
+}
+
+/** Is the match on now - from a little before the kick-off until it is over (at the longest a match takes)? */
+function inPlay(m, now = Date.now()) {
+  if (m?.state === 'finished' || m?.state === 'postponed') return false
+  const at = Date.parse(m?.kickoff)
+  return Number.isFinite(at) && now >= at - LIVE_BEFORE && now <= at + LIVE_LONGEST
+}
+
+/** Is any of the matches running (or about to)? - then the box asks often, see nextDelay. */
+const anyLive = (matches, now = Date.now()) => matches.some((m) => m.state === 'live' || (m.state === 'scheduled' && Date.parse(m.kickoff) - now <= LIVE_BEFORE && Date.parse(m.kickoff) > now))
+
+/**
+ * The goals of the club `teamId` since the last look: for each match of the club that runs, the goals it has more now than
+ * before (an own goal of the other side counts too). `before`: Map id -> score, as the last look left it; the first look
+ * (empty) never reports - a box that starts would announce old goals; a match it never saw running neither. Returns { goals: [{ match, side, score }], seen }.
+ */
+function newGoals(matches, teamId, before, now = Date.now()) {
+  const seen = new Map()
+  const goals = []
+  for (const m of matches) {
+    if (!playsIn(m, teamId)) continue
+    // (on, but no score yet - just before or at the kick-off: 0:0 running, so the first goal counts)
+    if (!m.score && inPlay(m, now)) {
+      seen.set(m.id, { home: 0, away: 0, live: true })
+      continue
+    }
+    if (!m.score || (m.state !== 'live' && m.state !== 'finished')) continue
+    seen.set(m.id, { ...m.score, live: m.state === 'live' })
+    const was = before?.get(m.id)
+    // (a goal in the last minute may come with the whistle: a match seen running before counts when it is over too)
+    // (not one that was over already: a result the source puts right days later is no goal)
+    if (!was || (m.state !== 'live' && !was.live)) continue
+    const side = m.home.id === teamId ? 'home' : 'away'
+    if (m.score[side] > was[side]) goals.push({ match: m, side, score: m.score })
+  }
+  return { goals, seen }
+}
+
+// (in the languages the box speaks - mupibox.ttsLanguage)
+const TEXTS = {
+  de: { goal: (club, a, b) => `Tor für ${club}! ${a} zu ${b}.` },
+  en: { goal: (club, a, b) => `Goal for ${club}! ${a} to ${b}.` },
+  fr: { goal: (club, a, b) => `But pour ${club} ! ${a} à ${b}.` },
+  es: { goal: (club, a, b) => `¡Gol de ${club}! ${a} a ${b}.` },
+  it: { goal: (club, a, b) => `Gol per ${club}! ${a} a ${b}.` },
+  nl: { goal: (club, a, b) => `Doelpunt voor ${club}! ${a} tegen ${b}.` },
+  pl: { goal: (club, a, b) => `Gol dla ${club}! ${a} do ${b}.` },
+  pt: { goal: (club, a, b) => `Golo para ${club}! ${a} a ${b}.` },
+  cs: { goal: (club, a, b) => `Gól pro ${club}! ${a} : ${b}.` },
+  da: { goal: (club, a, b) => `Mål til ${club}! ${a}-${b}.` },
+  sv: { goal: (club, a, b) => `Mål för ${club}! ${a}-${b}.` },
+  nb: { goal: (club, a, b) => `Mål for ${club}! ${a}-${b}.` },
+  no: { goal: (club, a, b) => `Mål for ${club}! ${a}-${b}.` },
+  fi: { goal: (club, a, b) => `Maali joukkueelle ${club}! ${a}-${b}.` },
+  tr: { goal: (club, a, b) => `${club} gol attı! ${a}-${b}.` },
+  ru: { goal: (club, a, b) => `Гол! ${club}, ${a}:${b}.` },
+  uk: { goal: (club, a, b) => `Гол! ${club}, ${a}:${b}.` },
+  el: { goal: (club, a, b) => `Γκολ για ${club}! ${a}-${b}.` },
+}
+/** What the box says for a goal: the club's short name, then the score with the club's goals first. */
+function goalText(goal, lang = 'de') {
+  const t = TEXTS[String(lang).slice(0, 2)] ?? TEXTS.en
+  const mine = goal.side === 'home' ? goal.match.home : goal.match.away
+  const other = goal.side === 'home' ? 'away' : 'home'
+  return t.goal(mine.short || mine.name, goal.score[goal.side], goal.score[other])
+}
+
+module.exports = { TABLE_LEAGUES, clubLeague, leagueName, MAX_CLUBS, SRC, clubsOf, clubsText, clubNames, clubDays, OPENLIGADB_LEAGUES, FOOTBALLDATA_LEAGUES, fdTeam, fdMatch, fdTable, fdTeams, olTeam, olMatch, olTable, olTeams, stateOf, myClub, nextDelay, anyLive, inPlay, newGoals, goalText, byKickoff, playsIn, dedupe, tlaOf, MIN, HOUR }

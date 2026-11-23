@@ -1,4 +1,7 @@
 import { execFile } from 'node:child_process'
+import { pbkdf2Sync } from 'node:crypto'
+import { existsSync, readdirSync, realpathSync } from 'node:fs'
+import { basename } from 'node:path'
 
 // save_config writes the WiFi configuration anew, readable by everyone (wpa_supplicant's umask): back to root only - it
 // holds the key of every network. Everything that reads it goes through sudo. (While it is written, the folder keeps
@@ -10,6 +13,25 @@ export function wifiConfigPrivate(): Promise<void> {
       resolve()
     }),
   )
+}
+
+// Two WiFi adapters (a USB stick next to the Pi's own WiFi): each has its own wpa_supplicant, both read the same
+// configuration - but only when they start. A network saved, changed or removed through one stayed as it was in the
+// other's memory, and that one's next save_config (the stick pulled out, the Pi's own WiFi used again) wrote its old list
+// back: a network added in between was gone. After every change to the file, the others read it anew (a connected one
+// reconnects, ~3 s; the address stays, see wpa_action_guard.sh). Call it once the file is complete (band choices back).
+export function wifiSyncOthers(wifi: string): Promise<void> {
+  let others: string[] = []
+  try {
+    others = readdirSync('/sys/class/net').filter((n) => n !== wifi && /^[\w.-]+$/.test(n) && existsSync(`/sys/class/net/${n}/phy80211`))
+  } catch {
+    // (no list of adapters: nothing to do)
+  }
+  return Promise.all(
+    others.map(
+      (n) => new Promise<void>((resolve) => execFile('sudo', ['/usr/sbin/wpa_cli', '-i', n, 'reconfigure'], { timeout: 5000 }, () => resolve())),
+    ),
+  ).then(() => undefined)
 }
 
 /**
@@ -25,6 +47,9 @@ export function decodeWpaSsid(raw: string): string {
     } else if (raw[i] === '\\' && raw[i + 1] === '\\') {
       bytes.push(0x5c)
       i += 1
+    } else if (raw[i] === '\\' && raw[i + 1] === '"') {
+      bytes.push(0x22)
+      i += 1
     } else {
       bytes.push(...Buffer.from(raw[i]))
     }
@@ -32,7 +57,7 @@ export function decodeWpaSsid(raw: string): string {
   return Buffer.from(bytes).toString('utf8')
 }
 
-// wpa_cli's scan_results (the box's WiFi page, server.ts, and the app's scan, eltern/routes.ts)
+// wpa_cli's scan_results (the box's WiFi page, server.ts, and the app's scan, app-api/routes.ts)
 
 export interface WifiScanEntry {
   signalDbm: number
@@ -81,4 +106,94 @@ export function parseWpaCliScanResults(stdout: string): Map<string, WifiScanEntr
     }
   }
   return networks
+}
+
+export type WifiKeyKind = 'psk' | 'sae' | 'both'
+
+// The Pi's own WiFi (driver brcmfmac: Pi 3B+, 4, 5) is there? It cannot move to another access point of a WPA3 network
+// while it is connected (the authentication there times out; Raspberry Pi sets roamoff=1, the WPA3 handshake runs in
+// wpa_supplicant) - see roams_badly in add_wifi.sh. A USB stick does, but next to the Pi's own WiFi both read the same
+// configuration (and the stick may be pulled out later): the entry has to suit the Pi's own WiFi too.
+export function wifiRoamsBadly(): boolean {
+  try {
+    return readdirSync('/sys/class/net').some((n) => {
+      try {
+        return basename(realpathSync(`/sys/class/net/${n}/device/driver`)) === 'brcmfmac'
+      } catch {
+        return false
+      }
+    })
+  } catch {
+    return false
+  }
+}
+
+// What the network asks for by the flags of its access points in the scan ("[WPA2-PSK+SAE-CCMP][ESS]"); null when it
+// is not in the scan (hidden, out of reach). A network that offers both is taken as WPA2 on the Pi's own WiFi
+// (roamsBadly, see wifiRoamsBadly).
+export function wifiKeyKindOf(stdout: string, ssid: string, roamsBadly = false): WifiKeyKind | null {
+  let psk = false
+  let sae = false
+  for (const line of stdout.split('\n').slice(1)) {
+    const parts = line.trim().split('\t')
+    if (parts.length < 5 || decodeWpaSsid(parts.slice(4).join('\t')) !== ssid) continue
+    if (/SAE/.test(parts[3])) sae = true
+    if (/PSK/.test(parts[3])) psk = true
+    if (!/SAE/.test(parts[3]) && !/PSK/.test(parts[3])) psk = true
+  }
+  if (!psk && !sae) return null
+  if (sae && psk) return roamsBadly ? 'psk' : 'both'
+  return sae ? 'sae' : 'psk'
+}
+
+// The commands that give a saved network its key. WPA3 cannot use the key worked out from the password that WPA2 keeps
+// (psk): it needs the password itself (sae_password, here in hex: no character of it can break the command). A password
+// with a quote and later a #: save_config writes it as it is, and that line would be cut when it is read again (a
+// comment outside a quoted part) - such a password stays with WPA2; null where the network has nothing else.
+// On the Pi's own WiFi (roamsBadly) WPA3 gets bgscan="" (no moving to another access point while connected; add_wifi.sh
+// reconnects where the signal stays weak). A network that had it (quiet) and does not need it any more gets bgscan as the
+// configuration sets it for all - wpa_cli cannot take the setting away from one network.
+export const WIFI_BGSCAN = 'simple:30:-70:60'
+export function wifiKeyCommands(
+  id: string,
+  kind: WifiKeyKind,
+  ssid: Buffer,
+  password: string,
+  { quiet = false, roamsBadly = false }: { quiet?: boolean; roamsBadly?: boolean } = {},
+): string[] | null {
+  const usable = !/".*#/.test(password)
+  if (kind === 'sae' && !usable) return null
+  const effective: WifiKeyKind = usable ? kind : 'psk'
+  const psk = pbkdf2Sync(password, ssid, 4096, 32, 'sha1').toString('hex')
+  const sae = Buffer.from(password, 'utf8').toString('hex')
+  const set = (name: string, value: string) => `set_network ${id} ${name} ${value}`
+  const bgscan = effective !== 'psk' && roamsBadly ? [set('bgscan', '""')] : quiet ? [set('bgscan', `"${WIFI_BGSCAN}"`)] : []
+  if (effective === 'psk') return [set('key_mgmt', 'WPA-PSK'), set('ieee80211w', '0'), set('sae_password', '""'), set('psk', psk), ...bgscan]
+  if (effective === 'sae') return [set('key_mgmt', 'SAE'), set('ieee80211w', '2'), ...bgscan, set('sae_password', sae)]
+  return [set('key_mgmt', 'WPA-PSK SAE'), set('ieee80211w', '1'), ...bgscan, set('psk', psk), set('sae_password', sae)]
+}
+
+// A new password for a saved network, for what the network asks for now (the router may have moved to WPA3); not in the
+// scan: what the saved network was set up for. The commands go to wpa_cli by its input - sudo writes a command line into
+// the system log, and this one holds the password. A network disabled because its old password failed (add_wifi.sh) is
+// enabled again. Not saved here: the caller does that with what else it changes.
+export async function wifiSetPassword(wifi: string, id: string, ssid: Buffer, password: string): Promise<boolean> {
+  const cli = (args: string[]) =>
+    new Promise<string>((resolve) => execFile('sudo', ['/usr/sbin/wpa_cli', '-i', wifi, ...args], { timeout: 5000 }, (err, out) => resolve(err ? '' : out)))
+  const roamsBadly = wifiRoamsBadly()
+  let kind = wifiKeyKindOf(await cli(['scan_results']), ssid.toString('utf8'), roamsBadly)
+  if (!kind) {
+    const saved = await cli(['get_network', id, 'key_mgmt'])
+    kind = /SAE/.test(saved) ? (/WPA-PSK/.test(saved) ? 'both' : 'sae') : 'psk'
+  }
+  const quiet = (await cli(['get_network', id, 'bgscan'])).trim() === '""'
+  const keys = wifiKeyCommands(id, kind, ssid, password, { quiet, roamsBadly })
+  if (!keys) return false
+  const commands = [...keys, `enable_network ${id}`]
+  return new Promise<boolean>((resolve) => {
+    const child = execFile('sudo', ['/usr/sbin/wpa_cli', '-i', wifi], { timeout: 5000 }, (err, out) => {
+      resolve(!err && (out.match(/^(?:> ?)*OK\s*$/gm)?.length ?? 0) === commands.length && !/FAIL/.test(out))
+    })
+    child.stdin?.end(`${commands.join('\n')}\nquit\n`)
+  })
 }

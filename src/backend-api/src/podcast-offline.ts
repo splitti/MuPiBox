@@ -74,6 +74,13 @@ interface Job {
 /** Whether an episode may be kept on the card now */
 export const mayKeep = (e: OfflineEpisode, now = Date.now()) => e.download !== null && !(e.until && e.until <= now)
 
+/** A podcast of a library: how many of its newest episodes to keep and its choice of episodes */
+export interface FeedSetting {
+  feed: string
+  keep: number
+  pick?: string
+}
+
 export interface OfflineDeps {
   dir: string
   /** A GET of an address the box did not choose, checked on every hop (server.ts, openRemote) */
@@ -81,11 +88,11 @@ export interface OfflineDeps {
   /** A podcast's episodes, newest first (from the feed cache), or null when it cannot be read now */
   episodes: (feed: string) => Promise<OfflineEpisode[] | null>
   /**
-   * Every podcast of the library, how many of its newest episodes to keep and its choice of episodes, or null when
+   * Every podcast of every library (each user's), how many of its newest episodes to keep and its choice of episodes, or null when
    * the library cannot be read now (then nothing is removed: an empty list would mean "no podcast any more" and
    * delete every file)
    */
-  feeds: () => Promise<{ feed: string; keep: number; pick?: string }[] | null>
+  feeds: () => Promise<FeedSetting[] | null>
   /** Something was added or removed (the display reads its lists again) */
   changed: () => void
 }
@@ -370,11 +377,16 @@ export class PodcastOffline {
    * (the missing ones queued), the others that came that way deleted. Pinned ones stay - unless their source no
    * longer releases them.
    */
-  async syncFeed(feed: string, keep: number, pick?: string): Promise<void> {
+  async syncFeed(feed: string, keep: number, pick?: string, all?: FeedSetting[] | null): Promise<void> {
     await this.load()
     const episodes = await this.deps.episodes(feed)
     if (!episodes) return // (feed not readable now: nothing is deleted on that basis)
-    const wanted = pickEpisodes(episodes, pick).filter((e) => mayKeep(e)).slice(0, Math.max(0, Math.min(keep, MAX_KEEP)))
+    // (the same podcast on another tile, in the library of another user: what each one keeps is kept - the files are the
+    // box's. The settings of all not readable now: the files of this one added, none deleted)
+    const others = all !== undefined ? all : await this.deps.feeds().catch(() => null)
+    const settings = [{ keep, pick }, ...(others ?? []).filter((f) => f.feed === feed)]
+    const chosen = settings.flatMap((s) => pickEpisodes(episodes, s.pick).filter((e) => mayKeep(e)).slice(0, Math.max(0, Math.min(s.keep, MAX_KEEP))))
+    const wanted = [...new Map(chosen.map((e) => [episodeKey(e.url), e] as const)).values()]
     const wantedKeys = new Set(wanted.map((e) => episodeKey(e.url)))
     for (const e of wanted) await this.add(e, feed, false)
     this.queue = this.queue.filter((j) => j.feed !== feed || j.pinned || wantedKeys.has(episodeKey(j.url)))
@@ -384,7 +396,7 @@ export class PodcastOffline {
       const now = byKey.get(key)
       // (released no longer, or its end date moved: taken from the feed as it is now)
       if (now && !mayKeep(now)) await this.remove(f.url)
-      else if (!f.pinned && !wantedKeys.has(key)) await this.remove(f.url)
+      else if (!f.pinned && !wantedKeys.has(key) && others) await this.remove(f.url)
       else if (now && (now.until ?? undefined) !== f.until) await this.add(now, feed, f.pinned)
     }
   }
@@ -406,9 +418,12 @@ export class PodcastOffline {
       if (!feeds) return
       const inLibrary = new Set(feeds.map((f) => f.feed))
       for (const f of Object.values(this.files)) if (!inLibrary.has(f.feed)) await this.remove(f.url)
+      const done = new Set<string>()
       for (const { feed, keep, pick } of feeds) {
+        if (done.has(feed)) continue
+        done.add(feed)
         const has = Object.values(this.files).some((f) => f.feed === feed)
-        if (keep > 0 || has) await this.syncFeed(feed, keep, pick).catch(() => undefined)
+        if (feeds.some((f) => f.feed === feed && f.keep > 0) || has) await this.syncFeed(feed, keep, pick, feeds).catch(() => undefined)
       }
       await this.cleanStrays()
     } finally {

@@ -18,11 +18,19 @@ import { HaPairingOverlayComponent } from './ha-pairing/ha-pairing-overlay.compo
 import { DisplayTestOverlayComponent } from './display-test/display-test-overlay.component'
 import { ParentAccessBarComponent } from './parent-access/parent-access-bar.component'
 import { ParentAccessService } from './parent-access/parent-access.service'
+import { PhotoScreensaverComponent } from './photos/photo-screensaver.component'
+import { PhotoScreensaverService } from './photos/photo-screensaver.service'
+import { PhotoTimeChipComponent } from './photos/photo-time-chip.component'
+import { PhotoTimeWarningComponent } from './photos/photo-time-warning.component'
+import { TileTimeNoticeComponent } from './tile-time-notice.component'
 import { PlaytimeBlockedOverlayComponent } from './playtime-blocked-overlay/playtime-blocked-overlay.component'
 import { PlaytimeChipComponent } from './playtime-chip/playtime-chip.component'
 import { buildResumeMedia } from './resume-builder'
 import { StalePageReloadService } from './stale-page-reload.service'
 import { KmThemeService } from './theme/km-theme.service'
+import { WinampService } from './winamp/winamp.service'
+import { WinampShellComponent } from './winamp/winamp-shell.component'
+import { UsersOverlayComponent } from './users/users-overlay.component'
 
 @Component({
   selector: 'app-root',
@@ -37,6 +45,12 @@ import { KmThemeService } from './theme/km-theme.service'
     HaPairingOverlayComponent,
     DisplayTestOverlayComponent,
     ParentAccessBarComponent,
+    WinampShellComponent,
+    PhotoScreensaverComponent,
+    PhotoTimeChipComponent,
+    PhotoTimeWarningComponent,
+    TileTimeNoticeComponent,
+    UsersOverlayComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -50,6 +64,10 @@ export class AppComponent {
   protected readonly textPreview = window.location.pathname.startsWith('/text-preview')
   protected playtimeBlocked: Signal<boolean>
   protected readonly parentAccess = inject(ParentAccessService)
+  // the Winamp theme on a 1920 x 480 display: the player of a Winamp skin on the left half of the screen
+  protected readonly winamp = inject(WinampService)
+  // the photo display's screensaver (5.1)
+  protected readonly saver = inject(PhotoScreensaverService)
 
   // Track previous playtime state to detect normal -> grace/blocked transitions.
   // 'unknown' on first tick avoids spurious save before we know the baseline.
@@ -90,6 +108,12 @@ export class AppComponent {
     effect(() => {
       if (!this.monitorReportedOff()) this.wakeReleased.set(false)
     })
+    // (the display went off: the screensaver ends with it, and does not start while it is off)
+    effect(() => {
+      const off = this.monitorReportedOff()
+      this.saver.monitorOff.set(off)
+      if (off && this.saver.active()) this.saver.end()
+    })
     this.watchWakeTaps()
     this.playtimeBlocked = computed(() => {
       const s = playtimeService.status()
@@ -127,6 +151,18 @@ export class AppComponent {
       this.prevPlaytimeState = cur
       if (prev === 'unknown' || prev === cur) return
       if (cur !== 'grace' && cur !== 'blocked') return
+      if (!this.currentMediaService.shouldPersistResume()) return
+      void this.persistResumeOnCap()
+    })
+    // The same when a tile's day's limit (5.1) ends what plays - also on a box with only tile limits (the listening time
+    // off: the effect above returns early) and while it plays on in the background
+    let prevTile = ''
+    effect(() => {
+      const tile = playtimeService.status().tiles?.current
+      const now = tile ? `${tile.key}|${tile.state}` : ''
+      const before = prevTile
+      prevTile = now
+      if (!tile || tile.state === 'normal' || before !== `${tile.key}|normal`) return
       if (!this.currentMediaService.shouldPersistResume()) return
       void this.persistResumeOnCap()
     })

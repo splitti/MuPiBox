@@ -717,6 +717,52 @@ def mqtt_systeminfo():
     client.publish(mqtt_topic + '/' + mqtt_clientId + '/version', mupi_version, qos=0)
     client.publish(mqtt_topic + '/' + mqtt_clientId + '/admininterface', 'http://' + ip, qos=0)
 
+# Several users (5.1): who is in place, as a select in Home Assistant - its options the users' names, a choice there
+# switches (as the app: no PIN). Only while several users are on with at least two; the select goes away otherwise.
+users_published = None
+
+def users_state():
+    try:
+        b = requests.get('http://127.0.0.1:8200/api/users/state', timeout=5).json()
+        if isinstance(b, dict) and isinstance(b.get('users'), list) and b.get('enabled') and len(b['users']) >= 2:
+            return b
+    except Exception:
+        pass
+    return None
+
+def publish_users():
+    global users_published
+    st = users_state()
+    names = [str(u.get('name', '')) for u in st['users']] if st else []
+    if mqtt_ha_active and names != users_published:
+        topic = mqtt_ha_topic + "/select/" + mqtt_clientId + "_user/config"
+        if names:
+            user_select = {
+                "name": "User",
+                "state_topic": mqtt_topic + '/' + mqtt_clientId + '/user',
+                "command_topic": mqtt_topic + '/' + mqtt_clientId + '/user/set',
+                "availability_topic": mqtt_topic + '/' + mqtt_clientId + '/state',
+                "options": names,
+                "unique_id": mqtt_clientId + '_mupibox_user',
+                "icon": "mdi:account-switch",
+                "platform": "mqtt",
+                "device": {
+                    "identifiers": mqtt_clientId + "_mupibox",
+                    "name": mqtt_name,
+                    "manufacturer": "MuPiBox.de",
+                    "model": "Your MuPiBox: " + mupi_host,
+                    "sw_version": mupi_version,
+                    "configuration_url": "http://" + mupi_host
+                }
+            }
+            client.publish(topic, json.dumps(user_select), qos=0, retain=True)
+        elif users_published != []:
+            # (also after a new connection - None: one switched off while the broker was away kept its select)
+            client.publish(topic, "", qos=0, retain=True)
+        users_published = names
+    current = next((str(u.get('name', '')) for u in st['users'] if u.get('id') == st.get('current')), '') if st else ''
+    client.publish(mqtt_topic + '/' + mqtt_clientId + '/user', current, qos=0)
+
 # Callback function for when the client receives a CONNACK response from the server - at the first connection and at
 # every one after the broker was gone (restarted, the network lost): the subscriptions, the Home Assistant discovery
 # and "online" again each time. They were set once at the start: after a reconnect the box sent its values on, but no
@@ -725,7 +771,10 @@ def on_connect(client, userdata, flags, rc):
     print("Connected to MQTT broker with result code: " + str(rc), flush=True)
     if rc != 0:
         return
-    for command in ('power', 'volume', 'reboot', 'pause', 'play', 'take_screenshot'):
+    global users_published
+    # (the select of the users published anew after every connection - a broker restarted without its retained ones)
+    users_published = None
+    for command in ('power', 'volume', 'reboot', 'pause', 'play', 'take_screenshot', 'user'):
         client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/' + command + '/set')
     try:
         if mqtt_ha_active:
@@ -894,7 +943,21 @@ def on_message(client, userdata, msg):
         print("Button: play")
         url = 'http://127.0.0.1:5005/play'
         requests.get(url, timeout=5)
+    if msg.topic == mqtt_topic + '/' + mqtt_clientId + '/user/set':
+        # a user's name (the select in Home Assistant): that user into place - as the app, no PIN
+        name = msg.payload.decode("utf-8").strip()
+        if name:
+            print("User: " + name)
+            try:
+                r = requests.post('http://127.0.0.1:8200/api/users/select', json={'name': name}, timeout=60)
+                if not r.ok:
+                    print("User: the switch answered " + str(r.status_code), flush=True)
+            except Exception as e:
+                print(f"User: the switch failed: {e!r}", flush=True)
+            publish_users()
     if msg.topic == mqtt_topic + '/' + mqtt_clientId + '/take_screenshot/set' and str(msg.payload.decode("utf-8")) == "take_screenshot":
+        # (asked for: a picture now - with the display off the last one stays)
+        subprocess.run(["sudo", "-H", "-u", "dietpi", "/usr/local/bin/mupibox/screenshot.sh", "/tmp/mqtt_screen.png"])
         screenshot = get_screenshot()
         client.publish(mqtt_topic + '/' + mqtt_clientId + '/screenshot', screenshot, qos=0)
 
@@ -936,7 +999,8 @@ def main():
     playerstate = "/tmp/playerstate"
     fan = "/tmp/fan.json"
     mupihat = "/tmp/mupihat.json"
-    data = "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json"
+    # the library (since 5.1 in data/library - scripts/mupibox/mupi_paths.sh)
+    data = "/home/dietpi/.mupibox/data/library/data.json"
 
     # Load MQTT configuration from JSON file
     with open(config) as file:
@@ -1017,9 +1081,10 @@ def main():
                 client.publish(mqtt_topic + '/' + mqtt_clientId + '/bat_type', bat_type, qos=0)
                 client.publish(mqtt_topic + '/' + mqtt_clientId + '/battery_connected', battery_connected, qos=0)
                 send_play_information()
+                publish_users()
 
-                subprocess.run(["sudo", "rm", "/tmp/mqtt_screen.png"])
-                subprocess.run(["sudo", "-H", "-u", "dietpi", "bash", "-c", "DISPLAY=:0 scrot /tmp/mqtt_screen.png"])
+                # (screenshot.sh: with the display off the last picture stays rather than a black one)
+                subprocess.run(["sudo", "-H", "-u", "dietpi", "/usr/local/bin/mupibox/screenshot.sh", "/tmp/mqtt_screen.png"])
 
                 if player_active():
                     sleeptime = mqtt_refresh

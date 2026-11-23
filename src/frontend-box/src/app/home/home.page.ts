@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http'
-import { ChangeDetectionStrategy, Component, computed, effect, inject, Signal, signal, WritableSignal } from '@angular/core'
+import { ChangeDetectionStrategy, Component, computed, effect, inject, Signal, signal, untracked, WritableSignal } from '@angular/core'
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { NavigationExtras, Router } from '@angular/router'
 import {
@@ -16,6 +16,7 @@ import {
 import { addIcons } from 'ionicons'
 import {
   bookOutline,
+  discOutline,
   musicalNotesOutline,
   radioOutline,
   serverOutline,
@@ -30,6 +31,7 @@ import { CoverFlipService } from '../cover-flip.service'
 import { HeaderVisibilityService } from '../header-visibility.service'
 import { LoadingComponent } from '../loading/loading.component'
 import type { CategoryType } from '../media'
+import { ExtensionHostService } from '../extension-host.service'
 import { isStandaloneMedia, MediaService } from '../media.service'
 import { MediaUnavailableComponent } from '../media-unavailable/media-unavailable.component'
 import type { MupiboxConfig } from '../mupibox-config.model'
@@ -40,6 +42,13 @@ import { NowPlayingPillComponent } from '../now-playing-pill/now-playing-pill.co
 import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
 import { KmThemeService } from '../theme/km-theme.service'
+import { TileTimeService } from '../tile-time.service'
+import { PhotoAlbumsComponent } from '../photos/photo-albums.component'
+import { PhotoTimeService } from '../photos/photo-time.service'
+import { type PhotoAlbumSummary, PhotosService } from '../photos/photos.service'
+
+/** a tab of the start page: a list of the library, or the photo display's albums */
+type HomeTab = CategoryType | 'photos'
 
 @Component({
   selector: 'app-home',
@@ -59,6 +68,7 @@ import { KmThemeService } from '../theme/km-theme.service'
     IonSegment,
     IonSegmentButton,
     SwiperComponent,
+    PhotoAlbumsComponent,
     IonContent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -97,6 +107,22 @@ export class HomePage extends SwiperIonicEventsHelper {
   protected visibleCategories = computed(() =>
     this.categories.filter((c) => !this.hiddenCategories().includes(c.key) && (c.key !== 'nas' || this.nasTabWanted())),
   )
+  // Tabs of extensions (the audio CD in the drive, for one) after the others, so none of them moves; they are no list - a tap runs
+  // what the extension does
+  private readonly extensions = inject(ExtensionHostService)
+  // the photo display (5.1): its tab right of radio, while it is switched on and at least one album is shown here
+  protected readonly photos = inject(PhotosService)
+  private readonly photoTime = inject(PhotoTimeService)
+  // a day's limit per tile (5.1): the used-up ones carry a lock
+  private readonly tileTime = inject(TileTimeService)
+  protected readonly headerCategories = computed<{ key: string; icon?: string; src?: string }[]>(() => [
+    ...this.visibleCategories(),
+    ...(this.photos.available() ? [{ key: 'photos', src: 'assets/photos.svg' }] : []),
+    ...this.extensions
+      .tabs()
+      .filter((t) => t.visible)
+      .map((t) => ({ key: t.id, src: t.src })),
+  ])
 
   protected artists: Signal<Artist[]>
   // Category of the list currently shown; a reload of the same category keeps the scroll position.
@@ -106,7 +132,7 @@ export class HomePage extends SwiperIonicEventsHelper {
   protected swiperData: Signal<SwiperData<Artist>[]>
   protected isOnline: Signal<boolean>
   protected isLoading: WritableSignal<boolean> = signal(false)
-  protected category: WritableSignal<CategoryType> = signal('audiobook')
+  protected category: WritableSignal<HomeTab> = signal('audiobook')
   // a tab chosen on the display (tap or swipe): the start tab of the settings, read a moment later, does not replace it
   private categoryChosen = false
   // The picture that stands for a whole list that could not be loaded (once, not per station / podcast):
@@ -124,7 +150,7 @@ export class HomePage extends SwiperIonicEventsHelper {
     private coverFlip: CoverFlipService,
   ) {
     super()
-    addIcons({ timerOutline, bookOutline, musicalNotesOutline, radioOutline, serverOutline })
+    addIcons({ timerOutline, bookOutline, discOutline, musicalNotesOutline, radioOutline, serverOutline })
 
     this.http.get<MupiboxConfig>(`${environment.backend.apiUrl}/config`).subscribe({
       next: (config) => {
@@ -143,8 +169,9 @@ export class HomePage extends SwiperIonicEventsHelper {
           this.category.set(start.key)
         }
         // Do not start on a category that is hidden.
+        // (the photos' tab is not one of these: it goes by itself, see below)
         const visible = this.visibleCategories()
-        if (visible.length > 0 && !visible.some((c) => c.key === this.category())) {
+        if (visible.length > 0 && this.category() !== 'photos' && !visible.some((c) => c.key === this.category())) {
           this.category.set(visible[0].key)
         }
         this.configLoaded.set(true)
@@ -159,9 +186,22 @@ export class HomePage extends SwiperIonicEventsHelper {
     this.mediaService.getNasTabWanted().pipe(takeUntilDestroyed()).subscribe((wanted) => {
       this.nasTabWanted.set(wanted)
       const visible = this.visibleCategories()
-      if (visible.length > 0 && !visible.some((c) => c.key === this.category())) {
+      if (visible.length > 0 && this.category() !== 'photos' && !visible.some((c) => c.key === this.category())) {
         this.category.set(visible[0].key)
       }
+    })
+
+    // back from a photo album: the tab "Fotos" again (also when this page is made afresh); and when the photo display
+    // goes (switched off, no album shown any more) while its tab is on the screen: the first tab
+    if (this.photos.backToTab()) {
+      this.photos.backToTab.set(false)
+      this.categoryChosen = true
+      this.category.set('photos')
+    }
+    effect(() => {
+      if (this.category() !== 'photos' || this.photos.available() || !this.photos.loaded()) return
+      const visible = this.visibleCategories()
+      if (visible.length > 0) this.category.set(visible[0].key)
     })
 
     this.isOnline = toSignal(this.mediaService.isOnline())
@@ -193,6 +233,8 @@ export class HomePage extends SwiperIonicEventsHelper {
           if (!background) this.isLoading.set(true)
         }),
         switchMap(({ category, background }) => {
+          // (the photos' tab has its albums, no list of artists)
+          if (category === 'photos') return of({ category, artists: [] as Artist[], json: '[]' })
           return this.mediaService.fetchArtistData(category, background).pipe(
             catchError((error): Observable<Artist[]> => {
               console.error(error)
@@ -235,7 +277,7 @@ export class HomePage extends SwiperIonicEventsHelper {
       onCleanup(() => window.clearInterval(timer))
     })
 
-    this.swiperData = computed(() => {
+    const tiles = computed(() => {
       return this.artists()?.map((artist) => {
         return {
           name: artist.name,
@@ -246,25 +288,90 @@ export class HomePage extends SwiperIonicEventsHelper {
         }
       })
     })
+    // (the tiles' pictures for the chip and the bars of a day's limit, whatever started them)
+    effect(() => {
+      const list = this.artists()
+      if (list?.length) untracked(() => this.tileTime.noteStartPage(list.map((a) => a.coverMedia)))
+    })
+    // a tile whose day's limit is used up (5.1): with its lock - the same cover (imgSrc) as before, it is not loaded anew
+    this.swiperData = computed(() => {
+      const locks = this.tileTime.locks()
+      return tiles()?.map((t) => (this.tileTime.isLocked(t.data.coverMedia, locks) ? { ...t, locked: true } : t))
+    })
   }
 
   private switchCategory(step: 1 | -1): void {
-    const visible = this.visibleCategories()
+    const visible: HomeTab[] = [...this.visibleCategories().map((c) => c.key), ...(this.photos.available() ? (['photos'] as const) : [])]
     if (visible.length < 2) return
-    const index = Math.max(
-      0,
-      visible.findIndex((c) => c.key === this.category()),
-    )
+    const index = Math.max(0, visible.indexOf(this.category()))
     this.categoryChosen = true
-    this.category.set(visible[(index + step + visible.length) % visible.length].key)
+    this.category.set(visible[(index + step + visible.length) % visible.length])
+  }
+
+  // the start page shows again (back from an album, a list or the player): the photo albums are asked for again
+  override ionViewWillEnter(): void {
+    this.pageVisible = true
+    this.pageShown.set(true)
+    super.ionViewWillEnter()
+    this.photos.refresh()
+  }
+
+  override ionViewWillLeave(): void {
+    this.pageVisible = false
+    this.pageShown.set(false)
+    super.ionViewWillLeave()
+  }
+
+  // the list's swiper is made afresh when the tab "Fotos" gives way to a list: it has not had the page's "it comes"
+  // (Ionic sends it once per visit) and would stay empty - it gets it here
+  private pageVisible = false
+  // (the same as a signal: the photo time's chip shows on the tab "Fotos" while this page is on the screen)
+  private readonly pageShown = signal(false)
+  private readonly photoTabShown = effect(() => {
+    const on = this.pageShown() && this.category() === 'photos'
+    untracked(() => this.photoTime.shown.set(on))
+  })
+
+  // the photos pause (the photo time is used up): "Zu den Hörspielen" - that tab, or the first one there is
+  protected photosToListening(): void {
+    const visible = this.visibleCategories()
+    const tab = visible.find((c) => c.key === 'audiobook') ?? visible[0]
+    if (tab) this.category.set(tab.key)
+  }
+  private readonly swiperAfterPhotos = effect(() => {
+    const swiper = this.swiperComponent()
+    if (swiper && untracked(() => this.pageVisible)) untracked(() => swiper.ionViewWillEnter())
+  })
+
+  protected photoAlbumOpened(album: PhotoAlbumSummary): void {
+    void this.navController.navigateForward(['/photos'], {
+      queryParams: { album: album.id, ...(this.photos.startAsSlideshow() ? { show: '1' } : {}) },
+    })
   }
 
   protected categoryChanged(event: any): void {
+    if (this.extensions.tabs().some((t) => t.id === event.detail.value)) {
+      // (the tab is a button, not a list: the segment goes back to the list that is shown)
+      if (event.target) event.target.value = this.category()
+      this.extensions.select(event.detail.value)
+      return
+    }
     this.categoryChosen = true
     this.category.set(event.detail.value)
   }
 
+  protected categoryClicked(key: string): void {
+    if (this.extensions.tabs().some((t) => t.id === key)) return this.extensions.select(key)
+    this.categoryChosen = true
+    this.category.set(key as HomeTab)
+  }
+
   protected async artistCoverClicked(artist: Artist): Promise<void> {
+    // its day's limit is used up (5.1): it opens nothing, the bar says so
+    if (this.tileTime.isLocked(artist.coverMedia, this.tileTime.locks())) {
+      this.tileTime.showOver(artist.coverMedia)
+      return
+    }
     // Check if this is a standalone playlist (playlist without artist)
     const isPlayableNasFolder = artist.coverMedia?.type === 'nas' && !artist.coverMedia.nasIsContainer
     const isPlayableLibraryFolder =

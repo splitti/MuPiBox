@@ -442,6 +442,95 @@ swiper-container.coverflow {
         }
     }
 
+    // a photo album on the stage: its stack of pictures, as in the tab's row (photo-albums.component.ts) at the stage's
+    // size - a card behind, the picture before the last turned, the front one, the number of pictures
+    .km-photo-stack {
+        position: absolute;
+        inset: 0;
+        transition: transform 150ms var(--km-spring);
+
+        .kps-back,
+        .kps-mid,
+        .kps-front {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            border-radius: 38px;
+            -webkit-user-select: none;
+            user-select: none;
+            pointer-events: none;
+        }
+
+        .kps-back {
+            background: var(--km-cream);
+            transform: rotate(-6deg);
+            box-shadow: 0 5px 0 var(--km-shadow);
+        }
+
+        .kps-mid,
+        .kps-front {
+            object-fit: cover;
+            border: 7px solid var(--km-ring, var(--km-cream));
+            background: var(--km-night-3);
+        }
+
+        .kps-mid {
+            transform: rotate(4deg);
+            box-shadow: 0 5px 0 var(--km-shadow);
+        }
+
+        .kps-front {
+            box-shadow: 0 8px 0 var(--km-shadow);
+        }
+
+        .kps-badge {
+            position: absolute;
+            right: -10px;
+            bottom: -10px;
+            min-width: 58px;
+            height: 58px;
+            padding: 0 12px;
+            box-sizing: border-box;
+            border-radius: 29px;
+            background: var(--km-apricot);
+            color: var(--km-ink);
+            font-size: 24px;
+            font-weight: 700;
+            display: grid;
+            place-items: center;
+            box-shadow: 0 4px 0 var(--km-shadow);
+        }
+
+        .kps-away {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            padding: 10px 20px;
+            border-radius: 24px;
+            background: var(--km-cream);
+            color: var(--km-ink);
+            font-size: 20px;
+            font-weight: 700;
+            white-space: nowrap;
+            box-shadow: 0 3px 0 var(--km-shadow);
+        }
+
+        // (an album not there: grey, with its note)
+        &.km-away .kps-back,
+        &.km-away .kps-mid,
+        &.km-away .kps-front {
+            filter: grayscale(1);
+            opacity: 0.55;
+        }
+    }
+
+    .km-stage-item:active .km-photo-stack {
+        transform: scale(0.95);
+    }
+
     .km-stage-name {
         position: absolute;
         left: calc(50% - 220px);
@@ -607,6 +696,7 @@ swiper-container.coverflow {
     }
 }
 
+// heard to its end: green (an album and a podcast's episode alike); an album started: yellow (5.1, #180)
 .ep-done {
     position: absolute;
     right: 10px;
@@ -614,10 +704,54 @@ swiper-container.coverflow {
     width: 34px;
     height: 34px;
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.6);
+    background: #2f9e5b;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
     color: #fff;
     display: grid;
     place-items: center;
     font-size: 22px;
     z-index: 3;
+}
+
+.ep-started {
+    background: #f2c12e;
+    color: #3a2c00;
+}
+
+// A tile whose day's limit is used up (5.1, "Kachel-Limit"): the cover paler, a lock in its middle - it stays where it
+// is, a tap says "ist für heute vorbei" (HomePage)
+.tile-locked {
+    img,
+    .mupi-no-cover {
+        opacity: 0.45;
+        filter: grayscale(0.6);
+    }
+}
+
+.tile-lock {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 64px;
+    height: 64px;
+    margin: -32px 0 0 -32px;
+    border-radius: 50%;
+    background: var(--km-cream, rgba(255, 255, 255, 0.92));
+    color: var(--km-ink, #2b2240);
+    display: grid;
+    place-items: center;
+    box-shadow: 0 3px 0 var(--km-shadow, rgba(0, 0, 0, 0.3));
+    pointer-events: none;
+    z-index: 4;
+
+    svg {
+        width: 32px;
+        height: 32px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2.4;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
 }

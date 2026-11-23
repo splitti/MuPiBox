@@ -6,6 +6,8 @@ The **theme** determines colours, backgrounds and fonts of the display. There ar
 
 ![A selection of the themes](Themes.png)
 
+A special theme is **Winamp**: it draws the player like the classic Winamp, with equaliser, playlist and skins of your own. It has a page of its own: [The Winamp theme](winamp.md).
+
 ### Custom theme
 
 The theme **Custom** shows a background picture of your own. Tap **Custom** on the theme page and choose a photo or picture from your device. The app crops it to the display's format.

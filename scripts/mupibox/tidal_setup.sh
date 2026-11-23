@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # TIDAL (unofficial, python-tidal): its own Python next to the system's, the service on or off. Run as root by the
-# app's server (backend-api eltern/tidal.ts) when TIDAL is switched on or off in the app.
+# app's server (backend-api app-api/tidal.ts) when TIDAL is switched on or off in the app.
 #
 #   tidal_setup.sh on      /opt/mupibox-tidal with tidalapi in the version below (only what is missing), the service on
 #   tidal_setup.sh off     the service off - the Python and the sign-in stay, switching on again is quick

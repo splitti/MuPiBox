@@ -15,7 +15,7 @@ Jeder Inhalt kommt in eine von drei **Kategorien**: Hörbuch/Hörspiel, Musik od
 Danach:
 
 - [Cover](cover.md): eigene Bilder, Online-Cover und was bei fehlenden Covern passiert.
-- [Inhalte verwalten](verwalten.md): Künstler-Abos, einzelne Alben ausschließen, entfernen.
+- [Inhalte verwalten](verwalten.md): Bibliothek, Künstler-Abos mit Bereich und Alben, entfernen.
 
 > [!TIP]
 > Neue Inhalte erscheinen von selbst auf dem Display. Ein Neustart ist nicht nötig.

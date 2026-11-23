@@ -44,6 +44,30 @@ else
 	BOOT_CMDLINE="/boot/cmdline.txt"
 fi
 
+# A version before 5.1 is installed by its own autosetup.sh (from its tag): this one comes from main and puts a version
+# into the folders of 5.1 (server/, player/, data/, cache/ - scripts/mupibox/migrate_layout.sh), which the programs
+# before 5.1 do not know. version.json read without jq (it comes with the installation below). (A branch is taken for
+# one of 5.1 or later.)
+if [ -z "${BRANCH}" ]; then
+	TARGET_TAG=$(curl -fsSL --retry 3 --retry-delay 3 -m 60 https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json | tr -d "\r\n" \
+		| grep -oE "\"${RELEASE}\"[[:space:]]*:[[:space:]]*\[[^]]*\]" | grep -oE "archive/refs/tags/[A-Za-z0-9._-]+\.zip" | tail -n 1 \
+		| sed -E "s#archive/refs/tags/(.*)\.zip#\1#")
+	if [ -z "${TARGET_TAG}" ]; then
+		echo "Error: the ${RELEASE} version could not be read from version.json (internet?) - please try again." >&2
+		exit 1
+	fi
+	if [ "$(printf "%s\n" "${TARGET_TAG#v}" 5.1 | sort -V | head -n 1)" != "5.1" ]; then
+		OWN_SCRIPT=$(mktemp /tmp/mupibox-autosetup-${TARGET_TAG}.XXXXXX)
+		if curl -fsSL --retry 3 --retry-delay 3 -m 120 -o "${OWN_SCRIPT}" "https://raw.githubusercontent.com/splitti/MuPiBox/${TARGET_TAG}/autosetup/autosetup.sh" \
+			&& bash -n "${OWN_SCRIPT}"; then
+			echo "MuPiBox ${TARGET_TAG} is installed by its own installer"
+			exec bash "${OWN_SCRIPT}" "${RELEASE}"
+		fi
+		echo "Error: the installer of ${TARGET_TAG} could not be downloaded - please try again." >&2
+		exit 1
+	fi
+fi
+
 LOG="/tmp/autosetup.log"
 # (only once LOG is set: opened before, the redirect failed - and every step with ">&3 2>&3" was skipped, not run)
 exec 3>${LOG}
@@ -304,7 +328,7 @@ STEP=0
 	before=$(date +%s)
 	rm -Rf /home/dietpi/.mupibox /home/dietpi/MuPiBox >&3 2>&3
 
-	mkdir -p /home/dietpi/.mupibox/{chromium_cache,Sonos-Kids-Controller-master,spotifycontroller-main/config} >&3 2>&3
+	mkdir -p /home/dietpi/.mupibox/{chromium_cache,server,player/config} >&3 2>&3
 	mkdir -p /home/dietpi/.cache/spotify >&3 2>&3
 	mkdir -p /home/dietpi/MuPiBox/{tts_files,themes,sysmedia/{sound,images},media/{audiobook,music,other,NAS,cover,youtube-dl}} >&3 2>&3
 
@@ -335,15 +359,18 @@ STEP=0
 
 	echo -e "XXX\n${STEP}\nInstall frontend, backend-api, and backend-player... \nXXX"
 	before=$(date +%s)
-	unzip ${MUPI_SRC}/bin/nodejs/deploy.zip -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
-	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config >&3 2>&3
-	cp ${MUPI_SRC}/config/templates/www.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
-	cp ${MUPI_SRC}/config/templates/monitor.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json >&3 2>&3
-	cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/spotify-control.js /home/dietpi/.mupibox/spotifycontroller-main/spotify-control.js >&3 2>&3
-	cp ${MUPI_SRC}/config/templates/spotifycontroller.json /home/dietpi/.mupibox/spotifycontroller-main/config/config.json >&3 2>&3
-	ln -sf /etc/mupibox/mupiboxconfig.json /home/dietpi/.mupibox/spotifycontroller-main/config/mupiboxconfig.json >&3 2>&3
-	ln -sf /var/www/images/mupif.png /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/mupi.png >&3 2>&3
+	# the folders of 5.1 below ~/.mupibox (scripts/mupibox/mupi_paths.sh): the program in server/ and player/, then
+	# data/ and cache/ and the names of before as links (migrate_layout.sh)
+	. ${MUPI_SRC}/scripts/mupibox/mupi_paths.sh
+	unzip ${MUPI_SRC}/bin/nodejs/deploy.zip -d "${MUPI_SERVER}/" >&3 2>&3
+	mkdir -p "${MUPI_SERVER_CONFIG}" >&3 2>&3
+	cp ${MUPI_SRC}/config/templates/www.json "${MUPI_SERVER_CONFIG}/config.json" >&3 2>&3
+	cp ${MUPI_SRC}/config/templates/monitor.json "${MUPI_SERVER_CONFIG}/monitor.json" >&3 2>&3
+	cp "${MUPI_SERVER}/spotify-control.js" "${MUPI_PLAYER}/spotify-control.js" >&3 2>&3
+	cp ${MUPI_SRC}/config/templates/spotifycontroller.json "${MUPI_PLAYER}/config/config.json" >&3 2>&3
+	ln -sf /etc/mupibox/mupiboxconfig.json "${MUPI_PLAYER}/config/mupiboxconfig.json" >&3 2>&3
 	chown -R dietpi:dietpi /home/dietpi/.mupibox >&3 2>&3
+	NO_PM2=1 bash ${MUPI_SRC}/scripts/mupibox/migrate_layout.sh >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Install frontend, backend-api, and backend-player ## finished after $((after - before)) seconds" >&3 2>&3
 	STEP=$((STEP + 1))
@@ -401,7 +428,7 @@ STEP=0
 	echo -e "XXX\n${STEP}\nPreconfigure Samba, FTP and VNC... \nXXX"
 	before=$(date +%s)
 	# The Samba share (the box in the Windows network) installed and set up, but off: the app switches it on
-	# (Einstellungen › Dienste, eltern/services.ts) - then at once and without internet. Nothing was installed for it
+	# (Einstellungen › Dienste, app-api/services.ts) - then at once and without internet. Nothing was installed for it
 	# before (smb.conf and the password went nowhere, smbd was "switched on" without being there), the app installed it
 	# at its first switch-on. With it its announcement (WS-Discovery): wsdd2 (Debian 12 and 13), else wsdd.
 	# Debian's packages start their service when they are installed: policy-rc.d keeps them from it meanwhile (else
@@ -436,7 +463,7 @@ STEP=0
 		systemctl disable --now ${u}.service >&3 2>&3
 	done
 	# FTP (proftpd) and VNC (x11vnc, websockify and noVNC for the browser) the same way, issue #178: installed and set up,
-	# off - the app's switches (eltern/services.ts) then only start and stop them, at once and without internet
+	# off - the app's switches (app-api/services.ts) then only start and stop them, at once and without internet
 	DEBIAN_FRONTEND=noninteractive apt-get --yes install proftpd-core x11vnc websockify >&3 2>&3
 	if [ -d /etc/proftpd ] && { [ "${FTP_CONF_HAD}" = 0 ] || conf_untouched /etc/proftpd/proftpd.conf /usr/share/proftpd/templates/proftpd.conf; }; then
 		cp -f ${MUPI_SRC}/config/templates/proftpd.conf /etc/proftpd/proftpd.conf >&3 2>&3
@@ -484,15 +511,18 @@ STEP=0
 	KM_THEMES="kuschelmond moosnest sonnenhof pferdehof fussball fahrzeuge buecherregal kassettenrekorder unterwasser bastelpapier prinzessin einhorn feenschloss weltraum dinoland piratenbucht tagundnacht feuerwehr ritterburg eisenbahn roboter heldenstadt safari eiswelt zirkus meerjungfrau ballett kaetzchen zuckerland schmetterlinge"
 	
 	# the old themes in the km layout (legacy in km-themes.json): their mascots and cover placeholders; coverflow stays
-	KM_LEGACY_THEMES="axolotl blue captainamerica chocolate cinema clone-wars comic custom danger dark darkred deepblue dinosaur earth enterprise fantasybutterflies forms green ironman light lines matrix mint mystic orange pikachu pink purple red spiderman steampunk supermario unicorn vintage wall-e wood xmas"
+	KM_LEGACY_THEMES="axolotl blue captainamerica chocolate cinema winamp clone-wars comic custom danger dark darkred deepblue dinosaur earth enterprise fantasybutterflies forms green ironman light lines matrix mint mystic orange pikachu pink purple red spiderman steampunk supermario unicorn vintage wall-e wood xmas"
 	for theme in ${KM_THEMES} ${KM_LEGACY_THEMES} _fonts; do
-		mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/${theme} >&3 2>&3
-		cp -f ${MUPI_SRC}/themes/${theme}/* /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/${theme}/ >&3 2>&3
+		mkdir -p ${MUPI_WWW}/theme-data/${theme} >&3 2>&3
+		cp -f ${MUPI_SRC}/themes/${theme}/* ${MUPI_WWW}/theme-data/${theme}/ >&3 2>&3
 	done
-	ln -sf /home/dietpi/MuPiBox/themes/custom-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/custom/custom-bg.jpg >&3 2>&3
+	ln -sf /home/dietpi/MuPiBox/themes/custom-bg.jpg ${MUPI_WWW}/theme-data/custom/custom-bg.jpg >&3 2>&3
 	
 	cp -f ${MUPI_SRC}/themes/km-themes.json /home/dietpi/MuPiBox/themes/km-themes.json >&3 2>&3
 	mv ${MUPI_SRC}/themes/*.css /home/dietpi/MuPiBox/themes/ >&3 2>&3
+	# the pictures of the theme tiles in the app (tools/theme-preview)
+	mkdir -p /home/dietpi/MuPiBox/themes/previews >&3 2>&3
+	cp -f ${MUPI_SRC}/themes/previews/*.png /home/dietpi/MuPiBox/themes/previews/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/mupibox/* /usr/local/bin/mupibox/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/bluetooth/* /usr/local/bin/mupibox/ >&3 2>&3
 	# The battery of Bluetooth headphones (display and app, issue #176): BlueZ 5.66 takes it from PulseAudio only with
@@ -512,7 +542,7 @@ STEP=0
 	# (on the partition a PC sees - /boot/firmware on DietPi 10; startup.sh reads it there)
 	mv ${MUPI_SRC}/config/templates/add_wifi.json "${BOOT_DIR}/add_wifi.json" >&3 2>&3
 	mv ${MUPI_SRC}/config/templates/.bashrc /home/dietpi/.bashrc >&3 2>&3
-	chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ /home/dietpi/MuPiBox /home/dietpi/.bashrc >&3 2>&3
+	chown -R dietpi:dietpi "${MUPI_SERVER}/" /home/dietpi/MuPiBox /home/dietpi/.bashrc >&3 2>&3
 	chmod 755 /usr/local/bin/mupibox/* >&3 2>&3
 	# the WiFi guard in front of Debian's wpa_action (a late "disconnected" took a working WiFi down at the start)
 	/usr/local/bin/mupibox/mupi_wpa_guard.sh install >&3 2>&3 || echo "## WiFi guard not installed - Debian's wpa_action stays as it was ##" >&3 2>&3
@@ -540,7 +570,7 @@ STEP=0
 	/boot/dietpi/func/dietpi-set_hardware bluetooth enable >&3 2>&3
 	/boot/dietpi/func/dietpi-set_hardware soundcard "hifiberry-dac" >&3 2>&3
 	usermod -g pulse -G audio --home /var/run/pulse pulse >&3 2>&3
-	usermod -a -G audio,bluetooth,pulse,pulse-access,gpio,dialout,tty dietpi >&3 2>&3
+	usermod -a -G audio,bluetooth,pulse,pulse-access,gpio,dialout,tty,cdrom dietpi >&3 2>&3
 	usermod -a -G pulse,pulse-access,gpio root >&3 2>&3
 	sed -i 's/; system-instance = no/system-instance = yes/g' /etc/pulse/daemon.conf >&3 2>&3
 	sed -i 's/; default-server =/default-server = \/var\/run\/pulse\/native/g' /etc/pulse/client.conf >&3 2>&3
@@ -552,17 +582,20 @@ STEP=0
 
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nEnable Admin-Webservice... \nXXX"
+	echo -e "XXX\n${STEP}\nEnable the web server... \nXXX"
 	before=$(date +%s)
-	dietpi_software install 5 84 89
+	dietpi_software install 5 84
+	# lighttpd serves the app on port 80/443 and the covers of the radio stations at /cover - no pages of its own (no
+	# PHP since 5.1: the app does everything the previous admin interface did)
 	rm -Rf /var/www/* >&3 2>&3
-	unzip ${MUPI_SRC}/AdminInterface/release/www.zip -d /var/www/ >&3 2>&3
 	ln -sf /home/dietpi/MuPiBox/media/cover /var/www/cover >&3 2>&3
-	chown -R www-data:www-data /var/www/ >&3 2>&3
-	chmod -R 755 /var/www/ >&3 2>&3
+	chown -h www-data:www-data /var/www/cover >&3 2>&3
 	chown -R dietpi:www-data /home/dietpi/MuPiBox/media/cover >&3 2>&3
+	# (the web server runs as www-data and must pass /home/dietpi to reach the covers: a home directory with mode 0700, as newer
+	# Debian makes it, answers every /cover/... with 403 - the pictures of radio stations and of NFC tags)
+	chmod o+x /home/dietpi >&3 2>&3
 	after=$(date +%s)
-	echo -e "## Admin-Webinterface ## finished after $((after - before)) seconds" >&3 2>&3
+	echo -e "## Web server ## finished after $((after - before)) seconds" >&3 2>&3
 	STEP=$((STEP + 1))
 
 	###############################################################################################
@@ -579,14 +612,13 @@ STEP=0
 
 	echo -e "XXX\n${STEP}\nSet environment... \nXXX"
 	before=$(date +%s)
-	THEME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme.css"
+	THEME_FILE="${MUPI_WWW}/active_theme.css"
 	ln -sf /home/dietpi/MuPiBox/themes/blue.css ${THEME_FILE} >&3 2>&3
-	echo "www-data ALL=(ALL:ALL) NOPASSWD: ALL" | tee /etc/sudoers.d/www-data >&3 2>&3
 	mv -f ${MUPI_SRC}/config/templates/crontab.template /tmp/crontab.template >&3 2>&3
 	chmod 755 /tmp/crontab.template >&3 2>&3
 	chown dietpi:dietpi /tmp/crontab.template >&3 2>&3
 	su dietpi -c "/usr/bin/crontab /tmp/crontab.template" >&3 2>&3
-	ln -sf /tmp/network.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json >&3 2>&3
+	ln -sf /tmp/network.json "${MUPI_SERVER_CONFIG}/network.json" >&3 2>&3
 	# What the update does with the settings (conf_update.sh) also on a new box: the template lacks entries only the
 	# update added - the newer themes among them, so the admin interface showed only the old ones until the first update
 	bash /usr/local/bin/mupibox/conf_update.sh >&3 2>&3
@@ -754,7 +786,7 @@ STEP=0
 	done
 	
 	# The DietPi-Dashboard: a password nobody knows, an inner port, off - the app switches it on and opens it with a
-	# one-time ticket (dietpi_dashboard.sh, backend-api eltern/dietpi-dashboard.ts)
+	# one-time ticket (dietpi_dashboard.sh, backend-api app-api/dietpi-dashboard.ts)
 	if [ -x /opt/dietpi-dashboard/dietpi-dashboard ]; then
 		/usr/local/bin/mupibox/dietpi_dashboard.sh setup >&3 2>&3
 		/usr/local/bin/mupibox/dietpi_dashboard.sh off >&3 2>&3
@@ -792,21 +824,18 @@ STEP=0
 	fi
 	# no scripts or pages from the media folder behind /cover (see the file)
 	cp -f ${MUPI_SRC}/config/lighttpd/99-mupibox-media-noexec.conf /etc/lighttpd/conf-enabled/99-mupibox-media-noexec.conf >&3 2>&3
-	# the app on port 80/443 too: its login at /, the app at /app (see the file)
+	# the app on port 80/443 too: / leads to the app at /app (see the file)
 	cp -f ${MUPI_SRC}/config/lighttpd/90-mupibox-app.conf /etc/lighttpd/conf-enabled/90-mupibox-app.conf >&3 2>&3
+	# no PHP on the box: a .php address goes to the app, the Spotify login of before (/spotify.php) to its callback (in
+	# conf-available too: remove_legacy_admin.sh takes it from there)
+	cp -f ${MUPI_SRC}/config/lighttpd/92-mupibox-no-php.conf /etc/lighttpd/conf-available/92-mupibox-no-php.conf >&3 2>&3
+	cp -f ${MUPI_SRC}/config/lighttpd/92-mupibox-no-php.conf /etc/lighttpd/conf-enabled/92-mupibox-no-php.conf >&3 2>&3
 	# only names of the home network: a foreign name pointed at the box gets 403 (DNS rebinding, lighttpd_hosts.sh)
 	NO_RESTART=1 /usr/local/bin/mupibox/lighttpd_hosts.sh >&3 2>&3
 	lighty-enable-mod proxy >&3 2>&3
 	lighty-enable-mod ssl >&3 2>&3
 	# restart, not reload: new modules and the new certificate (root only) are only taken over by a new start
 	systemctl restart lighttpd >&3 2>&3
-	# The previous admin interface (PHP) is off on a new box: the app does everything it did, and no PHP answers in the
-	# home network (switch: app › System › Experten; see scripts/mupibox/legacy_admin.sh)
-	tmp_cfg=$(mktemp /etc/mupibox/.cfg.XXXXXX) && jq '.mupibox.legacyAdmin = false' /etc/mupibox/mupiboxconfig.json > "$tmp_cfg" && chown --reference=/etc/mupibox/mupiboxconfig.json "$tmp_cfg" && chmod --reference=/etc/mupibox/mupiboxconfig.json "$tmp_cfg" && mv -f "$tmp_cfg" /etc/mupibox/mupiboxconfig.json
-	rm -f "$tmp_cfg"
-	/usr/local/bin/mupibox/legacy_admin.sh off >&3 2>&3
-	# (the update switches it off once on boxes of before - not here again)
-	touch /etc/mupibox/legacy-admin-default.done
 	after=$(date +%s)
 	echo -e "## Activate SSL ## finished after $((after - before)) seconds" >&3 2>&3
 	STEP=$((STEP + 1))
@@ -819,9 +848,14 @@ STEP=0
 	/usr/local/bin/mupibox/./setting_update.sh >&3 2>&3
 	# boot and maintenance screens for the settings (box name, scene, language)
 	/usr/local/bin/mupibox/bootscreen_update.sh >&3 2>&3
-	# by path: on a fresh box pm2 knows neither process yet ("pm2 start server" looked for a file "server")
-	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && if pm2 describe server >/dev/null 2>&1; then pm2 restart server; else pm2 start server.js --name server; fi" >&3 2>&3
-	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/spotifycontroller-main && if pm2 describe spotify-control >/dev/null 2>&1; then pm2 restart spotify-control; else pm2 start spotify-control.js --name spotify-control; fi" >&3 2>&3
+	# by path: on a fresh box pm2 knows neither process yet ("pm2 start server" looked for a file "server"). By the names
+	# of before (links to server/ and player/), as the update: an update to a version before 5.1 puts its program there
+	# (registered anew every time, script and --cwd given by these names: pm2 keeps the path it started from, and
+	# "cd" through the link gave it the real one - server/ - so a later "pm2 restart" ran the program left there after a
+	# way back to a version before 5.1, not the one installed under the old name. A box with the real path saved gets
+	# the right one here too.)
+	sudo -H -u dietpi bash -c "pm2 delete server >/dev/null 2>&1; pm2 start /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server.js --name server --cwd /home/dietpi/.mupibox/Sonos-Kids-Controller-master" >&3 2>&3
+	sudo -H -u dietpi bash -c "pm2 delete spotify-control >/dev/null 2>&1; pm2 start /home/dietpi/.mupibox/spotifycontroller-main/spotify-control.js --name spotify-control --cwd /home/dietpi/.mupibox/spotifycontroller-main" >&3 2>&3
 	sudo -H -u dietpi bash -c "pm2 save" >&3 2>&3
 	chown -R dietpi:dietpi /home/dietpi/.mupibox /home/dietpi/MuPiBox >&3 2>&3
 	chown dietpi:dietpi ${CONFIG} >&3 2>&3
@@ -838,8 +872,8 @@ STEP=0
 	command -v node >/dev/null 2>&1 || MISSING="${MISSING} Node.js"
 	command -v mpv >/dev/null 2>&1 || MISSING="${MISSING} mpv"
 	command -v chromium >/dev/null 2>&1 || command -v chromium-browser >/dev/null 2>&1 || MISSING="${MISSING} Chromium"
-	[ -f /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server.js ] || MISSING="${MISSING} server.js"
-	[ -f /home/dietpi/.mupibox/spotifycontroller-main/spotify-control.js ] || MISSING="${MISSING} spotify-control.js"
+	[ -f /home/dietpi/.mupibox/server/server.js ] || MISSING="${MISSING} server.js"
+	[ -f /home/dietpi/.mupibox/player/spotify-control.js ] || MISSING="${MISSING} spotify-control.js"
 	ANSWER=""
 	for _ in $(seq 1 20); do
 		ANSWER=$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 http://127.0.0.1:8200/ 2>/dev/null)

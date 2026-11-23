@@ -2,7 +2,9 @@
 #
 # Shuts down the MupiBox after finishing the album
 
-ALBUMSTOP_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/albumstop.json"
+. /usr/local/bin/mupibox/mupi_paths.sh
+
+ALBUMSTOP_FILE="${MUPI_LIBRARY}/albumstop.json"
 
 
 # Atomic-update pattern (HIGH-8): write jq output to a same-dir tempfile,

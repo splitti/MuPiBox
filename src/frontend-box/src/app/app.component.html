@@ -5,6 +5,14 @@
     } @else {
       <!-- (not over the dark layer of a switched-off display: it stood out bright there, on the display's pictures too) -->
       <mupi-playtime-chip></mupi-playtime-chip>
+      <!-- the photo time (5.1): its chip on the photos' screens, its warning -->
+      <mupi-photo-time-chip></mupi-photo-time-chip>
+      <mupi-photo-time-warning></mupi-photo-time-warning>
+      <!-- a day's limit per tile (5.1): "<tile> ist für heute vorbei", "Noch 5 Minuten <tile>" -->
+      <mupi-tile-time-notice></mupi-tile-time-notice>
+    }
+    @if (saver.active() && !monitorOff() && !playtimeBlocked()) {
+      <mupi-photo-screensaver></mupi-photo-screensaver>
     }
     @if (playtimeBlocked()) {
       <!-- held on WiFi/battery of the lock screen: it stands back for the settings (parent-access.service.ts) -->
@@ -17,6 +25,13 @@
   }
   <mupi-eltern-magic-link-overlay></mupi-eltern-magic-link-overlay>
   <mupi-ha-pairing-overlay></mupi-ha-pairing-overlay>
+  @if (!textPreview && winamp.active()) {
+    <mupi-winamp-shell></mupi-winamp-shell>
+  }
+  <!-- several users (5.1): the overview behind the dot in the header, the note on a card of another library -->
+  @if (!textPreview && !monitorOff()) {
+    <mupi-users-overlay></mupi-users-overlay>
+  }
   <!-- a new display model waiting for its answer (app: Display-Modell) -->
   <mupi-display-test-overlay></mupi-display-test-overlay>
   <ion-router-outlet></ion-router-outlet>

@@ -28,16 +28,31 @@
 # finished: the update then stops before it touches anything. The app's server and the player are stopped first when
 # they run (and started again after). Runs as root.
 #   --no-restart   kept for the callers of before; the apps are only started again when this script stopped them
+# Since 5.1 (the folders server/, player/, data/, cache/ - migrate_layout.sh) the update moves only the program aside,
+# to server.upd-bak; the data stays where it is, and there is no userdata.upd-bak. Before the folders of 5.1 the
+# program is Sonos-Kids-Controller-master (on a box of 5.1 that went back to an older version too: its update puts a
+# folder there in place of the link). A move to the folders of 5.1 that was cut off is finished first.
+#
 # SKC / USERDATA_BAK / UPDATE_STATE / PLAYER_DIR / LOCK_DIR for a test on copies, NO_PM2=1 leaves the running apps
 # and cron alone (NO_CRON=0 holds cron all the same), TEST_PAUSE=<s> waits there between the two moves,
 # SKIP_POLICY_RC=1 leaves a policy-rc.d and the services the update masked alone.
 
-SKC="${SKC:-/home/dietpi/.mupibox/Sonos-Kids-Controller-master}"
+MUPI_HOME="${MUPI_HOME:-/home/dietpi/.mupibox}"
+if [ -e "${MUPI_HOME}/.layout-moving" ] && [ -z "${SKC:-}" ]; then
+	echo "restore_interrupted_update: a move to the folders of 5.1 was cut off - it is finished"
+	bash "$(dirname "$(readlink -f "$0")")/migrate_layout.sh" || { echo "restore_interrupted_update: the move could not be finished"; exit 1; }
+fi
+if [ -L "${MUPI_HOME}/Sonos-Kids-Controller-master" ]; then
+	SKC="${SKC:-${MUPI_HOME}/server}"
+	PLAYER_DIR="${PLAYER_DIR:-${MUPI_HOME}/player}"
+fi
+SKC="${SKC:-${MUPI_HOME}/Sonos-Kids-Controller-master}"
 OLD="${SKC}.upd-bak"
-USERDATA_BAK="${USERDATA_BAK:-/home/dietpi/.mupibox/userdata.upd-bak}"
-UPDATE_STATE="${UPDATE_STATE:-/home/dietpi/.mupibox/update-state}"
-PLAYER_DIR="${PLAYER_DIR:-/home/dietpi/.mupibox/spotifycontroller-main}"
-# the right of PHP pages to run commands as root, and the note that the update running wrote it (see roll_back)
+USERDATA_BAK="${USERDATA_BAK:-${MUPI_HOME}/userdata.upd-bak}"
+UPDATE_STATE="${UPDATE_STATE:-${MUPI_HOME}/update-state}"
+PLAYER_DIR="${PLAYER_DIR:-${MUPI_HOME}/spotifycontroller-main}"
+# the right of PHP pages to run commands as root, and the note that an update of 5.0.14 or later wrote it on its way
+# back from 5.1 (see roll_back): a way back to 5.1 takes it away again, "done" keeps it and drops the note
 SUDOERS_WWW="${SUDOERS_WWW:-/etc/sudoers.d/www-data}"
 SUDOERS_BY_UPDATE="${SUDOERS_BY_UPDATE:-/etc/mupibox/sudoers-www-data.by-update}"
 JQ=/usr/bin/jq
@@ -188,6 +203,13 @@ clear_state() {
 	rm -f "${UPDATE_STATE}" "${UPDATE_STATE}.new"
 	sync
 }
+# 0 when the version installed is 5.1 or later, as the config says (an update writes it before its "done"; one from a
+# branch has no number there and is taken for 5.1 or later, as the update takes it)
+installed_5_1() {
+	local v
+	v=$(jq -r '.mupibox.version // empty' "${MUPI_CONFIG:-/etc/mupibox/mupiboxconfig.json}" 2>/dev/null | grep -oE '(^| )[0-9]+\.[0-9]+(\.[0-9]+)?( |$)' | head -n 1 | tr -d ' ')
+	[ -z "${v}" ] || [ "$(printf '%s\n' "${v}" 5.1 | sort -V | head -n 1)" = "5.1" ]
+}
 
 # The old installation back in place of the new one. Marked "rollback" first: stopped anywhere in between (a power
 # cut again), the next run takes it up where it stopped - the new installation aside (as .broken), the old one back
@@ -311,11 +333,36 @@ if [ -e "${UPDATE_STATE}" ]; then
 	STATE=$(head -n 1 "${UPDATE_STATE}" 2>/dev/null | tr -d '[:space:]')
 	case "${STATE}" in
 		done)
-			# the update got to its end; stopped while it cleared up: only what is left over goes, nothing goes back
+			# the update got to its end; stopped while it cleared up: only what is left over goes, nothing goes back. An
+			# old program with data of its own in it (its library, covers or cache not a link to data/ and cache/) is kept,
+			# as the update keeps it. (Not after an update from before the folders of 5.1: it took the data over from its
+			# own backup, userdata.upd-bak - its old program always holds the data of before.)
 			log "an update finished, clearing up what it left"
-			# (the right it gave the PHP pages stays: the note goes)
+			old_ok=0
+			if [ -d "${OLD}" ]; then
+				old_own=0
+				[ -d "${USERDATA_BAK}" ] || for d in "${OLD}/server/config" "${OLD}/www/cover" "${OLD}/www/rss-covers" "${OLD}/cache"; do
+					[ -e "${d}" ] && [ ! -L "${d}" ] && old_own=1
+				done
+				if [ "${old_own}" = 1 ]; then
+					mv "${OLD}" "${SKC}.kept-${STAMP}" && log "the previous installation holds data of its own - kept as ${SKC}.kept-${STAMP}" || old_ok=1
+				else
+					rm -rf "${OLD}" || old_ok=1
+				fi
+			fi
+			# (the previous admin interface goes after "done" of an update of 5.1, which says so on the mark's second line
+			# - cut off before or while it went: all of it again, it does nothing twice; the PHP packages left to the next
+			# update, they take too long for the start; lighttpd anew afterwards. A "done" of an older update has no such
+			# line, and a version before 5.1 in place - the mark left, an older one installed over it - keeps its admin
+			# interface too.)
+			if [ "$(sed -n 2p "${UPDATE_STATE}" 2>/dev/null | tr -d '[:space:]')" = "legacy-admin" ] && installed_5_1 \
+				&& [ -x /usr/local/bin/mupibox/remove_legacy_admin.sh ]; then
+				/usr/local/bin/mupibox/remove_legacy_admin.sh --keep-packages
+				systemctl --no-block try-restart lighttpd >/dev/null 2>&1
+			fi
+			# (the right an update of 5.0.14 gave the PHP pages stays: the note goes)
 			rm -f "${SUDOERS_BY_UPDATE}"
-			rm -rf "${USERDATA_BAK}" "${OLD}" && clear_state || RESULT=1
+			[ "${old_ok}" = 0 ] && rm -rf "${USERDATA_BAK}" && clear_state || RESULT=1
 			;;
 		rollback)
 			log "a way back to the previous installation stopped halfway - it goes on"

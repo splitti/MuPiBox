@@ -8,4 +8,5 @@ The display is made for the child: big covers, little text, everything with a si
 - [The player](player.md): play, skip, track list, output device.
 - [Continue and “Now playing”](fortsetzen.md): carry on listening where you left off.
 - [Covers and themes](cover-und-themes.md): how the box looks and where the covers come from.
+- [The Winamp theme](winamp.md): the player in the look of the classic Winamp, with skins, equaliser and playlist.
 - [Settings on the display](eltern-zugang.md): Wi-Fi, Bluetooth, restart and the QR code for the app, right on the box.

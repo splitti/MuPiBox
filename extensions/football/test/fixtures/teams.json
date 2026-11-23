@@ -1,0 +1,164 @@
+[
+ {
+  "teamId": 65,
+  "teamName": "1. FC Köln",
+  "shortName": "Köln",
+  "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/0/01/1._FC_Koeln_Logo_2014%E2%80%93.svg",
+  "teamGroupName": null,
+  "tla": null,
+  "wikidataId": "Q104770"
+ },
+ {
+  "teamId": 80,
+  "teamName": "1. FC Union Berlin",
+  "shortName": "Union Berlin",
+  "teamIconUrl": "https://assets.dfb.de/uploads/000/018/232/small_union-Berlin.jpg",
+  "teamGroupName": null,
+  "tla": null,
+  "wikidataId": "Q141971"
+ },
+ {
+  "teamId": 81,
+  "teamName": "1. FSV Mainz 05",
+  "shortName": "Mainz",
+  "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/9/9e/Logo_Mainz_05.svg",
+  "teamGroupName": null,
+  "tla": null,
+  "wikidataId": "Q105254"
+ },
+ {
+  "teamId": 6,
+  "teamName": "Bayer 04 Leverkusen",
+  "shortName": "Leverkusen",
+  "teamIconUrl": "https://upload.wikimedia.org/wikipedia/de/f/f7/Bayer_Leverkusen_Logo.svg",
+  "teamGroupName": null,
+  "tla": null,
+  "wikidataId": "Q104761"
+ },
+ {
+  "teamId": 7,
+  "teamName": "Borussia Dortmund",
+  "shortName": "Dortmund",
+  "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Borussia_Dortmund_logo.svg/960px-Borussia_Dortmund_logo.svg.png",
+  "teamGroupName": null,
+  "tla": null,
+  "wikidataId": "Q41420"
+ },
+ {
+  "teamId": 87,
+  "teamName": "Borussia Mönchengladbach",
+  "shortName": "Gladbach",
+  "teamIconUrl": "https://i.imgur.com/KSIk0Eu.png",
+  "teamGroupName": null,
+  "tla": null,
+  "wikidataId": null
+ },
+ {
+  "teamId": 91,
+  "teamName": "Eintracht Frankfurt",
+  "shortName": "Frankfurt",
+  "teamIconUrl": "https://i.imgur.com/X8NFkOb.png",
+  "teamGroupName": null,
+  "tla": null,
+  "wikidataId": "Q38245"
+ },
+ {
+  "teamId": 95,
+  "teamName": "FC Augsburg",
+  "shortName": "Augsburg",
+  "teamIconUrl": "https://i.imgur.com/sdE62e2.png",
+  "teamGroupName": null,
+  "tla": null,
+  "wikidataId": "Q15755"
+ },
+ {
+  "teamId": 40,
+  "teamName": "FC Bayern München",
+  "shortName": "Bayern",
+  "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/1/1f/Logo_FC_Bayern_M%C3%BCnchen_%282002%E2%80%932017%29.svg",
+  "teamGroupName": null,
+  "tla": null,
+  "wikidataId": "Q15789"
+ },
+ {
+  "teamId": 9,
+  "teamName": "FC Schalke 04",
+  "shortName": "S04",
+  "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/9/97/FC_Schalke_04_Logo.png",
+  "teamGroupName": null,
+  "tla": null,
+  "wikidataId": "Q32494"
+ },
+ {
+  "teamId": 100,
+  "teamName": "Hamburger SV",
+  "shortName": "HSV",
+  "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/f/f7/Hamburger_SV_logo.svg",
+  "teamGroupName": null,
+  "tla": null,
+  "wikidataId": "Q51974"
+ },
+ {
+  "teamId": 1635,
+  "teamName": "RB Leipzig",
+  "shortName": "Leipzig",
+  "teamIconUrl": "https://i.imgur.com/Rpwsjz1.png",
+  "teamGroupName": null,
+  "tla": null,
+  "wikidataId": null
+ },
+ {
+  "teamId": 112,
+  "teamName": "SC Freiburg",
+  "shortName": "Freiburg",
+  "teamIconUrl": "https://i.imgur.com/r3mvi0h.png",
+  "teamGroupName": null,
+  "tla": null,
+  "wikidataId": "Q106394"
+ },
+ {
+  "teamId": 31,
+  "teamName": "SC Paderborn 07",
+  "shortName": "Paderborn",
+  "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/e/e3/SC_Paderborn_07_Logo.svg",
+  "teamGroupName": null,
+  "tla": null,
+  "wikidataId": "Q160532"
+ },
+ {
+  "teamId": 198,
+  "teamName": "SV 07 Elversberg",
+  "shortName": "Elversberg",
+  "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/SV_Elversberg_Logo.svg/500px-SV_Elversberg_Logo.svg.png",
+  "teamGroupName": null,
+  "tla": null,
+  "wikidataId": null
+ },
+ {
+  "teamId": 134,
+  "teamName": "SV Werder Bremen",
+  "shortName": "Bremen",
+  "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/b/be/SV-Werder-Bremen-Logo.svg",
+  "teamGroupName": null,
+  "tla": null,
+  "wikidataId": null
+ },
+ {
+  "teamId": 175,
+  "teamName": "TSG Hoffenheim",
+  "shortName": "Hoffenheim",
+  "teamIconUrl": "https://i.imgur.com/gF0PfEl.png",
+  "teamGroupName": null,
+  "tla": null,
+  "wikidataId": null
+ },
+ {
+  "teamId": 16,
+  "teamName": "VfB Stuttgart",
+  "shortName": "Stuttgart",
+  "teamIconUrl": "https://i.imgur.com/v0tkpNx.png",
+  "teamGroupName": null,
+  "tla": null,
+  "wikidataId": "Q4512"
+ }
+]

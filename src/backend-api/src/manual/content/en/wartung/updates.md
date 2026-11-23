@@ -12,7 +12,7 @@ The page shows the **installed version** and the available versions from the off
 | **Beta** | newer features, still being tried out |
 | **Development** | the development version. At your own risk |
 
-Tap **Install** at the channel you want (or **Reinstall** if this version is already on the box). While the update runs, the page shows the progress and the display shows the maintenance screen ([Covers and themes](../bedienung/cover-und-themes.md)). The box cannot be used for 10 to 30 minutes and then restarts by itself. Settings and library are kept.
+Tap **Install** at the channel you want (or **Reinstall** if this version is already on the box). While the update runs, the page shows the progress and the display shows the maintenance screen ([Covers and themes](../bedienung/cover-und-themes.md)), with a bar at its foot: what is happening (preparing, downloading, packages, programs, settings) and how far it is. If the update stops, the box stays on its previous version and its interface comes back by itself. Only when the box has to be restarted afterwards, the bar says so. The box cannot be used for 10 to 30 minutes and then restarts by itself. Settings and library are kept.
 
 > [!WARNING]
 > **Make a backup first** ([Backup](backup.md)). The **development version can damage the installation.** For an update make sure the box is not interrupted: power and Wi-Fi must hold until the end. Ideally the box is on the power supply.

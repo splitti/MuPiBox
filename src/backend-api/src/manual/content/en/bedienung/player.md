@@ -45,6 +45,8 @@ By default the music goes on when the child leaves the player with the back butt
 
 For podcasts the box remembers where an episode stopped and marks new episodes with a dot. A bar shows episodes that have been started, a tick those that were listened to the end. You set this under **Controls on the display › Continue listening** and **› Podcasts** ([Podcasts and radio](../inhalte/podcasts-und-radio.md)).
 
+A podcast has a **track list** in the player too: it shows the episodes as the tile does – your **choice of episodes** (the newest 5, say) and the entry's **sorting** count, without a sorting of your own the newest is at the top. Without internet it holds only the episodes on the SD card. The button below the cover gives the place of the episode ("3 / 120"); for very long podcasts the list shows the 300 episodes around the one that plays. Tap an episode to play it. As with an album, **Next track** goes one episode down the list (without a sorting of your own to the **older** one), **Previous track** one up. This is the same on the display and with the keys of the box (buttons, rotary encoder, NFC); turn the rotary encoder quickly by several detents and it jumps as many episodes. At the top and at the bottom of the list the episode simply plays on. Episodes outside your choice cannot be reached this way. The box finds the episodes in the podcast feeds it has already loaded; a podcast whose feed it has never loaded has no list and does not jump.
+
 ## When the playtime is used up
 
 If the daily limit is reached or a quiet time is running, the display shows a message for the child instead of the player. You can change the text under **Settings › Appearance › Text on the display** ([Playtime and quiet times](../spielzeit/index.md)).

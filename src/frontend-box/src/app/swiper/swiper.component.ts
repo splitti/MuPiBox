@@ -5,6 +5,7 @@ import {
   Component,
   CUSTOM_ELEMENTS_SCHEMA,
   computed,
+  DestroyRef,
   ElementRef,
   effect,
   inject,
@@ -25,6 +26,7 @@ import { environment } from '../../environments/environment'
 import type { MupiboxConfig } from '../mupibox-config.model'
 import { CoverFlipService } from '../cover-flip.service'
 import { DisplayTextsService } from '../display-texts.service'
+import { albumsPerView } from '../per-view'
 import { noCoverStyle } from '../no-cover'
 import { PlayerService } from '../player.service'
 import { KmThemeService } from '../theme/km-theme.service'
@@ -47,8 +49,15 @@ export interface SwiperData<T> {
   isNew?: boolean
   progress?: number
   done?: boolean
+  // an album of a list (5.1, #180): started (a yellow tick) - heard to its end is `done` (a green one)
+  started?: boolean
+  // a tile of the start page whose day's limit is used up (5.1): paler, with a lock (a tap says so, see HomePage)
+  locked?: boolean
   // (set by the swiper itself: what the list keeps a slide by - its name, see entryKeys)
   trackKey?: string
+  // a photo album on the stage (5.1, tab "Fotos" with the stage on): drawn as its stack of pictures - imgSrc the front
+  // one, mid the one behind it, the number of pictures as a badge; away: grey with its note (as in the tab's row)
+  stack?: { mid?: string; count: number; away?: boolean; awayLabel?: string }
 }
 
 @Component({
@@ -137,6 +146,11 @@ export class SwiperComponent<T> {
   // a cover that is missing (or does not load): the theme's placeholder picture
   protected readonly kmCoverPlaceholder = this.kmTheme.coverPlaceholder
   protected readonly displayTexts = inject(DisplayTextsService)
+  // The width the row of covers has (the list, the Cover Flow or the stage); how many covers a row shows follows it: three on the 5" display
+  // (and anything narrower), more on a wider one - the covers keep their size
+  protected readonly rowWidth = signal(window.innerWidth)
+  protected readonly perView = computed(() => albumsPerView(this.rowWidth()))
+  private readonly stageRow = viewChild<ElementRef>('stageRow')
   protected readonly speakingName = signal<string | undefined>(undefined)
   private speakingTimer: ReturnType<typeof setTimeout> | undefined
   // the picture addresses that did not load (by address, not by name: two entries of the same name can have different
@@ -151,30 +165,52 @@ export class SwiperComponent<T> {
   protected readonly stageDragging = computed(() => this.stageDragDx() !== 0)
   private stagePointerX: number | undefined
   private stageDragged = false
-  // centre distance, size and opacity of the covers 0, 1, 2 and 3 places away from the middle (3: fading in / out)
+  // Centre distance, size and opacity of the covers 0, 1, 2 and 3 places away from the middle (3: fading in / out). On the 5" display (800 px)
+  // two covers show on each side; on a wider one the row goes on the same way: every further cover another STAGE_STEP out, as small as the
+  // third one, and as clear as the second one until the last one that fits, which fades out.
   private static readonly STAGE_OFFSET = [0, 250, 420, 560]
+  private static readonly STAGE_STEP = 140
   private static readonly STAGE_SCALE = [1, 0.65, 0.45, 0.35]
   private static readonly STAGE_OPACITY = [1, 0.6, 0.3, 0]
   private static readonly STAGE_PIXELS_PER_COVER = 180
+  // Cover Flow: the strip a side cover shows on the 5" display - (800 px / 2 - 300 px / 2) / 3 covers - and the least on a wider one
+  private static readonly COVERFLOW_STRIP = (800 / 2 - 300 / 2) / 3
+  /** How many covers show on each side of the middle for a row of this width (two on 800 px and below). */
+  public static stageSides(width: number): number {
+    const half = (Number.isFinite(width) ? width : 0) / 2
+    // (a cover shows when its centre is a little more than half a (small) cover inside the edge)
+    return Math.max(2, Math.floor((half - SwiperComponent.STAGE_OFFSET[2] - 30) / SwiperComponent.STAGE_STEP) + 2)
+  }
   protected readonly stageItems = computed(() => {
     const data = this.shownData()
     // while dragging the position lies between two covers: every cover is where it would be at that position
     // (a cover coming to the middle grows on the way), so the stage follows the finger
     const last = data.length - 1
     const position = Math.max(-0.4, Math.min(this.stageClamp(this.stageIndex(), data.length) - this.stageDragDx() / SwiperComponent.STAGE_PIXELS_PER_COVER, last + 0.4))
-    const at = (table: number[], a: number): number => {
+    const sides = SwiperComponent.stageSides(this.rowWidth())
+    const reach = sides + 1 // the covers this far from the middle are drawn (the last one fades in and out)
+    const o = SwiperComponent.STAGE_OFFSET
+    const between = (table: number[], a: number): number => {
       const i = Math.min(Math.floor(a), 2)
       return table[i] + (table[i + 1] - table[i]) * Math.min(a - i, 1)
     }
+    // (up to the third cover as before; further out: the same step, the size of the third cover, the clearness of the second one)
+    const offsetOf = (a: number): number => (a <= 3 ? between(o, a) : o[3] + (a - 3) * SwiperComponent.STAGE_STEP)
+    const scaleOf = (a: number): number => (a <= 3 ? between(SwiperComponent.STAGE_SCALE, a) : SwiperComponent.STAGE_SCALE[3])
+    const opacityOf = (a: number): number => {
+      const clear = SwiperComponent.STAGE_OPACITY[2]
+      if (a <= 2) return between(SwiperComponent.STAGE_OPACITY, a)
+      return a <= sides ? clear : clear * Math.max(0, sides + 1 - a)
+    }
     const items: { index: number; data: SwiperData<T>; transform: string; opacity: number; z: number }[] = []
-    for (let i = Math.max(0, Math.floor(position) - 3); i <= Math.min(last, Math.ceil(position) + 3); i++) {
+    for (let i = Math.max(0, Math.floor(position) - reach); i <= Math.min(last, Math.ceil(position) + reach); i++) {
       const off = i - position
-      const a = Math.min(Math.abs(off), 3)
+      const a = Math.min(Math.abs(off), reach)
       items.push({
         index: i,
         data: data[i],
-        transform: `translateX(${Math.sign(off) * at(SwiperComponent.STAGE_OFFSET, a)}px) scale(${at(SwiperComponent.STAGE_SCALE, a)})`,
-        opacity: at(SwiperComponent.STAGE_OPACITY, a),
+        transform: `translateX(${Math.sign(off) * offsetOf(a)}px) scale(${scaleOf(a)})`,
+        opacity: opacityOf(a),
         z: 10 - Math.round(a * 2),
       })
     }
@@ -225,6 +261,23 @@ export class SwiperComponent<T> {
     http: HttpClient,
   ) {
     addIcons({ checkmark, folder, link, play })
+    // (by the width the row really has - the list need not fill the window - as it changes: a turned or resized display)
+    let rowObserver: ResizeObserver | undefined
+    effect(() => {
+      const row = (this.swiperContainer() ?? this.stageRow())?.nativeElement as HTMLElement | undefined
+      untracked(() => {
+        rowObserver?.disconnect()
+        if (!row || typeof ResizeObserver === 'undefined') return
+        rowObserver = new ResizeObserver(() => {
+          if (row.clientWidth <= 0 || row.clientWidth === this.rowWidth()) return
+          this.rowWidth.set(row.clientWidth)
+          // (the Cover Flow places its covers by hand: again for the new width, once Swiper has measured it)
+          setTimeout(() => this.applyCoverflow(), 0)
+        })
+        rowObserver.observe(row)
+      })
+    })
+    inject(DestroyRef).onDestroy(() => rowObserver?.disconnect())
     // the row is laid out in another width now (or again in the old one): Swiper measures it anew
     effect(() => {
       this.compactActive()
@@ -557,12 +610,11 @@ export class SwiperComponent<T> {
       return
     }
     this.watchCoverSources(this.swiperContainer()?.nativeElement as HTMLElement)
-    this.loadNearCovers(swiper, 9)
-    // Three covers on each side of the centered one. The space between the edge of the centered cover and the
+    // Three covers on each side of the centered one on the 5" display (800 px). The space between the edge of the centered cover and the
     // edge of the screen is divided into three equal steps (each side cover shows a strip of one step), and
     // all side covers have the same tilt. With three covers or fewer there are less than three on a side: the space
     // is divided among those that are there, so the outermost one reaches the edge of the screen all the same.
-    const visibleSides = 3
+    // On a wider display there are more covers on a side, each still showing a strip of about the same step.
     const maxAngle = 65
     const depth = 100
     const perspective = 1000
@@ -578,13 +630,15 @@ export class SwiperComponent<T> {
     const unit = coverWidth + (Number(swiper.params.spaceBetween) || 0) // distance of two neighbouring covers in the row
     const screenHalf = swiper.width / 2
     const room = screenHalf - coverWidth / 2 // from the edge of the centered cover to the edge of the screen
+    const visibleSides = Math.max(3, Math.floor(room / SwiperComponent.COVERFLOW_STRIP))
+    this.loadNearCovers(swiper, visibleSides + 6)
     const total = (this.shownData() ?? []).length
     // Where the list stands (the index of the cover in the middle, fractional while it moves): slide 0 has it as its progress.
     const position = slides[0].progress ?? 0
     // How many covers there are on the side of the screen `side` points to (-1 left, +1 right), at least 1 and at most
     // 3 - kept steady while the list moves, so the covers glide instead of jumping when another one reaches the middle.
     const coversOnSide = (side: number): number =>
-      total > 3 ? visibleSides : Math.min(visibleSides, Math.max(1, side > 0 ? total - 1 - position : position))
+      total > visibleSides ? visibleSides : Math.min(visibleSides, Math.max(1, side > 0 ? total - 1 - position : position))
     for (const slide of slides) {
       const progress = slide.progress ?? 0
       const t = Math.abs(progress)

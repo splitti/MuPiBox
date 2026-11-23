@@ -1,5 +1,6 @@
-import { Injectable } from '@angular/core'
+import { Injectable, inject } from '@angular/core'
 import { BehaviorSubject } from 'rxjs'
+import { ExtensionHostService } from './extension-host.service'
 import type { Media } from './media'
 
 // Tracks the Media that the player most recently started playing. Set by
@@ -30,13 +31,23 @@ export class CurrentMediaService {
   private static readonly RESUME_THRESHOLD_S = 30
 
   readonly currentMedia$ = new BehaviorSubject<Media | null>(null)
+  private readonly extensions = inject(ExtensionHostService)
 
   private activeSeconds = 0
   private worthResume = false
+  // the queue was edited in the Winamp playlist (entries removed, sorted, added, another list loaded): the album's own track
+  // numbers no longer fit it
+  private queueEdited = false
+
+  /** the playing list is not the album any more (see queueEdited) */
+  markQueueEdited(): void {
+    this.queueEdited = true
+  }
 
   set(media: Media | null): void {
     this.activeSeconds = 0
     this.worthResume = false
+    this.queueEdited = false
     this.currentMedia$.next(media ? { ...media } : null)
   }
 
@@ -66,6 +77,7 @@ export class CurrentMediaService {
   // saveResumeFiles, AppComponent global cap saver) so the gating is
   // consistent and based on actual listening, not wall-clock time.
   shouldPersistResume(): boolean {
-    return this.worthResume
+    // (an extension's album like the audio CD is not kept for "Fortsetzen": the disc may be gone, or another one in the drive, when it is picked)
+    return this.worthResume && !this.extensions.noResume(this.currentMedia$.value) && !this.queueEdited
   }
 }

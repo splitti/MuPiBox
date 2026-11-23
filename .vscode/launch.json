@@ -28,16 +28,6 @@
       "cwd": "${workspaceFolder}/src/backend-player/"
     },
     {
-      "name": "Launch: php admin page",
-      "type": "php",
-      "request": "launch",
-      "runtimeArgs": ["-S", "localhost:8000", "-t", "AdminInterface/www/"],
-      "port": 9003,
-      "serverReadyAction": {
-        "action": "openExternally"
-      }
-    },
-    {
       "name": "Launch: Edge",
       "request": "launch",
       "type": "msedge",

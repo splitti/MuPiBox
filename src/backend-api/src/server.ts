@@ -9,7 +9,6 @@ import os from 'node:os'
 import path from 'node:path'
 import { Readable, Transform } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
-import tls from 'node:tls'
 import { promisify } from 'node:util'
 import { fileURLToPath } from 'node:url'
 import cors from 'cors'
@@ -35,38 +34,63 @@ import { getValidAccessToken } from './spotify-sync/auth'
 import { SpotifyApiException } from './spotify-sync/playlists'
 import { loadSpotifyTokenStore } from './spotify-sync/config-loader'
 import { createSpotifySyncRouter } from './spotify-sync/routes'
-import { startScheduler } from './spotify-sync/scheduler'
+import { isSyncRunning, startScheduler } from './spotify-sync/scheduler'
+import { acquireSyncLock, releaseSyncLock } from './spotify-sync/sync-lock'
 import type { RunSyncDeps } from './spotify-sync/state-machine'
-import { buildElternLandingHandler, createElternApiRouter, registerDisplayNetworkRoutes, setOnSpotifyCacheCleared } from './eltern/routes'
-import { startSpotifyLoginWatch } from './eltern/spotify-auth-age'
-import { startTlsWatch } from './eltern/tls'
-import { startWeeklySummary } from './eltern/weekly-summary'
-import { startInstallationStatistics } from './eltern/telemetry'
-import { startNightDim } from './eltern/night-dim'
-import { bootConfigPath } from './eltern/boot-paths'
+import { mountExtensions, notifyUserChanged, noteExtensionCrash, setExtensionUsers } from './app-api/extensions'
+import { buildElternLandingHandler, createElternApiRouter, registerDisplayNetworkRoutes, runSettingUpdate, setOnSpotifyCacheCleared } from './app-api/routes'
+import { isRestoreRunning } from './app-api/admin'
+import { updateRunning } from './app-api/updates'
+import { registerUserRoutes } from './app-api/users-routes'
+import { CUSTOM_THEME_CSS, customThemeCss, customThemeOf } from './app-api/custom-theme'
+import { UserFiles, userLibraryLock, Users } from './users'
+import { startSpotifyLoginWatch } from './app-api/spotify-auth-age'
+import { startTlsWatch } from './app-api/tls'
+import { startWeeklySummary } from './app-api/weekly-summary'
+import { startInstallationStatistics } from './app-api/telemetry'
+import { registerPhotoDisplayRoutes } from './app-api/photos/albums'
+import type { PhotoNasAccess } from './app-api/photos/nas'
+import { NasAccess, type NasConnectResult } from './nas/access'
+import { NasApiError, type NasFileEntry, type NasProvider, NasSessionExpiredError } from './nas/provider'
+import { parseSmbAddress, smbConnect, smbDisconnect, smbDisplayAddress, smbErrorText, smbSystem, smbWaiting } from './nas/smb'
+import { nasResolveBase, webdavLogin } from './nas/webdav'
+import { applyPhotoTimeAction } from './app-api/photos/settings'
+import { applyTileTimeAction } from './app-api/tile-limits'
+import { startNightDim } from './app-api/night-dim'
+import { bootConfigPath } from './app-api/boot-paths'
 import { startSpeech } from './speech'
-import { startBucketCleanup, parseCookie, requireCsrf, requireSession } from './eltern/middleware'
+import { startBucketCleanup, parseCookie, requireCsrf, requireSession } from './app-api/middleware'
 import { registerHaAppRoutes, registerHaDisplayRoute, startHaApi } from './ha/ha-api'
-import { isLoginRequired, SESSION_COOKIE, validateSession } from './eltern/auth'
-import { type IncomingMessage, request as httpRequest } from 'node:http'
+import { isLoginRequired, SESSION_COOKIE, validateSession } from './app-api/auth'
+import http, { type IncomingMessage, request as httpRequest } from 'node:http'
 import type { Duplex } from 'node:stream'
 import { SUDO_BACKUP_SNIPPET, backupBeforeWrite } from './file-backup'
 import { readEmbeddedPicture } from './embedded-cover'
-import { acquireLock, releaseLock, staleReason } from './file-lock'
+import { acquireLock, DATA_LOCK, RESUME_LOCK, releaseLock, staleReason } from './file-lock'
+import { sweepTempFiles, writeFileWhole } from './json-file'
 import { type AlbumFillDeps, fillSpotifyAlbums, isBareAlbum, startSpotifyAlbumFill } from './spotify-album-fill'
-import { coverHidden } from './hidden-covers'
+import { coverHidden, forgetHiddenCovers, hiddenCoversWritten } from './hidden-covers'
 import { OnlineCovers } from './online-covers'
 import { ardFeed, isArdFeed } from './ard-sounds'
 import { isEpisodePick } from './episode-pick'
 import { feedHostKey, feedHostsOf, isPrivateHost, neverFetched } from './lan-feeds'
-import { decodeWpaSsid, parseWpaCliScanResults, type WifiScanEntry, wifiBandOf, wifiConfigPrivate } from'./wpa-ssid'
+import { decodeWpaSsid, parseWpaCliScanResults, type WifiScanEntry, wifiBandOf, wifiConfigPrivate, wifiSetPassword, wifiSyncOthers } from './wpa-ssid'
 import { registerAudioOutputRoutes, startAudioWatch } from './audio-output'
 import { episodeKey, MAX_KEEP, type OfflineEpisode, PodcastOffline } from './podcast-offline'
 import { setFeedHeadReader } from './podcast-search'
 import { EpisodeState, episodeStateSettings } from './episode-state'
+import { HEARD_KEY, HeardStore, heardSettings } from './heard'
+import { feedItems, listOf, locateIn, neighbourOf, type Located, type PodcastEntry } from './episode-neighbour'
+import { tileKeyOfRow } from './app-api/tile-key'
 import { uiScale } from './ui-scale'
-import { confirmDisplayTest, displayTestState } from './eltern/display-profile'
+import { confirmDisplayTest, displayTestState } from './app-api/display-profile'
 import { browserGuard, corsOptionsFor, isAllowedHost, isLoopback, localOnly, localOrElternSession, logValue, PROXY_PORT, setConfiguredHosts, viaProxy } from './request-guard'
+import { CACHE_DIR, COVERS_DIR, DATA_DIR, LIBRARY_DIR, LOGS_DIR, SERVER_CONFIG_DIR, WWW_DIR } from './paths'
+import { jellyfinSession } from './app-api/jellyfin'
+import { registerJellyfinMedia } from './jellyfin/media'
+import { jellyfinSettings, signedIn } from './jellyfin/settings'
+import { registerAudibleMedia } from './audible/media'
+import { audibleSession, audibleSettings } from './audible/settings'
 
 // Force IPv4 for DNS lookups to avoid EAI_AGAIN errors on Raspberry Pi
 // This fixes issues where IPv6 is misconfigured or not supported
@@ -78,11 +102,10 @@ const testServe = process.env.NODE_ENV === 'test'
 const devServe = process.env.NODE_ENV === 'development'
 const productionServe = !(testServe || devServe)
 
-// Configuration files.
-let configBasePath = './server/config'
-if (!productionServe) {
-  configBasePath = './config' // This uses the package.json path as pwd.
-}
+// Configuration files: what the box writes for the server (config.json, monitor.json, network.json, wlan.json) in
+// server/config, the library and what belongs to it in data/library (paths.ts; in development both config/ below the
+// package.json path as pwd)
+const configBasePath = SERVER_CONFIG_DIR
 
 // "Clear cache" in the app: the lookups' memory too
 setOnSpotifyCacheCleared(() => spotifyApiService?.clearMemory())
@@ -133,11 +156,11 @@ readJsonFile(`${configBasePath}/config.json`).then((configFile) => {
 // i.scdn.co URLs to /api/spotify/cover/:imageId so the box serves covers
 // from its own SD+RAM after the first miss -- caps Chromium's parallel
 // connection limit to one host and saves repeat CDN round-trips.
-const coverCacheService = new CoverCacheService(path.join(process.cwd(), 'cache'))
+const coverCacheService = new CoverCacheService(CACHE_DIR)
 // Covers from iTunes/Deezer for NAS and local albums without a picture (see online-covers.ts). Off unless
 // mupibox.onlineCovers is switched on in the admin interface (Cover page).
 const onlineCovers = new OnlineCovers(
-  path.join(process.cwd(), 'cache', 'online-covers'),
+  path.join(CACHE_DIR, 'online-covers'),
   () => (getMupiboxConfigSync()?.mupibox as { onlineCovers?: boolean } | undefined)?.onlineCovers === true,
   (key) => saveOnlineCoverToFolder(key),
 )
@@ -148,7 +171,7 @@ const ONLINE_COVER_FILE_NAME = 'cover.jpg'
 const ONLINE_COVER_NEXT_TO_SCAN = 'cover-online.jpg'
 
 // Stores a found online cover as cover.jpg in its album folder - only when the folder has no picture of its own, never
-// over an existing file (WebDAV "Overwrite: F", local "wx"). Then the album has its cover on the NAS / on disk for
+// over an existing file (NAS: overwrite off, local "wx"). Then the album has its cover on the NAS / on disk for
 // every player, not just in this box's cache. A NAS account without write permission is noted ('denied').
 async function saveOnlineCoverToFolder(key: string, evenIfDenied = false): Promise<void> {
   if (!onlineCoversSaveEnabled()) return
@@ -167,26 +190,20 @@ async function saveOnlineCoverToFolder(key: string, evenIfDenied = false): Promi
 
   if (type === 'nas') {
     if (!(await nasPathSelected(folder))) return
-    const session = await getActiveNasSession()
+    const session = await nasAccess.active()
     if (!session) return
-    const files = await withNasSession((s) => nasListFilesLive(s, folder))
+    const files = await nasAccess.withSession((s) => s.list(folder))
     if (!files || !mayWrite(files)) return // not readable now, or it has a picture meanwhile
-    const response = await nasFetch(session, `${nasUrl(session, folder)}/${name}`, {
-      method: 'PUT',
-      headers: { Authorization: session.auth, 'Content-Type': 'image/jpeg', Overwrite: 'F' },
-      body: data,
-      signal: AbortSignal.timeout(20000),
-    })
-    await response.arrayBuffer().catch(() => undefined)
-    if (response.ok) {
+    const written = await session.write(`${normalizeNasPath(folder)}/${name}`, data, { contentType: 'image/jpeg', overwrite: false })
+    if (written === 'ok') {
       onlineCovers.update(key, { savedTo: 'nas', savedName: name })
       nasListCache.delete(normalizeNasPath(folder))
       console.log(`${new Date().toLocaleString()}: [OnlineCovers] saved ${folder}/${name} on the NAS`)
-    } else if (response.status === 401 || response.status === 403 || response.status === 405) {
+    } else if (written === 'denied') {
       onlineCovers.update(key, { savedTo: 'denied' })
-      console.log(`${new Date().toLocaleString()}: [OnlineCovers] no write permission on the NAS for ${folder} (${response.status})`)
+      console.log(`${new Date().toLocaleString()}: [OnlineCovers] no write permission on the NAS for ${folder}`)
     } else {
-      console.warn(`${new Date().toLocaleString()}: [OnlineCovers] saving ${folder}/${ONLINE_COVER_FILE_NAME} failed: HTTP ${response.status}`)
+      console.warn(`${new Date().toLocaleString()}: [OnlineCovers] saving ${folder}/${ONLINE_COVER_FILE_NAME} failed: ${written}`)
     }
     return
   }
@@ -215,17 +232,12 @@ async function removeSavedOnlineCover(key: string): Promise<void> {
   if (size === undefined) return
   const folder = key.slice(key.indexOf(':') + 1)
   if (entry.savedTo === 'nas') {
-    const session = await getActiveNasSession()
+    const session = await nasAccess.active()
     if (!session) return
-    const files = await withNasSession((s) => nasListFilesLive(s, folder))
+    const files = await nasAccess.withSession((s) => s.list(folder))
     const ours = files?.find((f) => f.name === (entry.savedName ?? ONLINE_COVER_FILE_NAME) && f.additional?.size === size)
     if (!ours) return
-    const response = await nasFetch(session, nasUrl(session, ours.path), {
-      method: 'DELETE',
-      headers: { Authorization: session.auth },
-      signal: AbortSignal.timeout(15000),
-    })
-    await response.arrayBuffer().catch(() => undefined)
+    await session.remove(ours.path, AbortSignal.timeout(15000))
     nasListCache.delete(normalizeNasPath(folder))
     return
   }
@@ -242,10 +254,10 @@ async function removeSavedOnlineCover(key: string): Promise<void> {
 const mupiboxConfigPath = productionServe ? '/etc/mupibox/mupiboxconfig.json' : path.resolve(configBasePath, 'mupiboxconfig.json')
 const mupiboxConfigDir = path.dirname(mupiboxConfigPath)
 const mupiboxConfigFile = path.basename(mupiboxConfigPath)
-const dataFile = `${configBasePath}/data.json`
-const resumeFile = `${configBasePath}/resume.json`
-const activedataFile = `${configBasePath}/active_data.json`
-const activeresumeFile = `${configBasePath}/active_resume.json`
+const dataFile = `${LIBRARY_DIR}/data.json`
+const resumeFile = `${LIBRARY_DIR}/resume.json`
+const activedataFile = `${LIBRARY_DIR}/active_data.json`
+const activeresumeFile = `${LIBRARY_DIR}/active_resume.json`
 // The display reads the library and the resume list through the active files, links a box's network check
 // (check_network.sh) points at the online or the offline lists. In development no such check runs: the links to the
 // online lists are made here once, when they are missing - else a library put into config/ (README, Contributing)
@@ -265,23 +277,46 @@ if (devServe) {
     }
   }
 }
+// The users of the box (5.1, users.ts): their things exchanged in place at a switch. One cut off (a power cut) is
+// finished here, before anything reads the library - the configuration's part when the server runs (see listen).
+const userFiles = new UserFiles({ usersDir: path.join(DATA_DIR, 'users'), libraryDir: LIBRARY_DIR, dataDir: DATA_DIR, logsDir: LOGS_DIR })
+// (the trash's 30 days: counted only with the clock set by the time server - not known (no timesyncd): taken as right)
+userFiles.clockSure = () => clockSynced() !== false
+let userSwitchCutOff: { from: string; to: string } | null = null
+// (a restore cut off and put back at the start: the settings of the user in place in the config again, see listen)
+let userRestoreUndone = false
+let userSwitchRunning = false
+try {
+  // (a restore of a backup cut off: the users of before back first - admin.ts, users.ts prepareRestore)
+  if (userFiles.recoverRestore()) {
+    userRestoreUndone = true
+    console.warn(`${new Date().toLocaleString()}: [users] a restore was cut off - the users of before are back`)
+  }
+  userSwitchCutOff = userFiles.recover()
+  if (userSwitchCutOff) {
+    console.warn(`${new Date().toLocaleString()}: [users] a switch from ${userSwitchCutOff.from} to ${userSwitchCutOff.to} was cut off - finished`)
+  }
+} catch (err) {
+  console.error(`${new Date().toLocaleString()}: [users] a switch cut off could not be finished: ${(err as Error).message}`)
+}
 const networkFile = `${configBasePath}/network.json`
 const wlanFile = `${configBasePath}/wlan.json`
 const monitorFile = `${configBasePath}/monitor.json`
-const albumstopFile = `${configBasePath}/albumstop.json`
+const albumstopFile = `${LIBRARY_DIR}/albumstop.json`
 const mupihat = '/tmp/mupihat.json'
 const playtimeFile = '/tmp/playtime.json'
-const dataLock = '/tmp/.data.lock'
-const resumeLock = '/tmp/.resume.lock'
+const dataLock = DATA_LOCK
+const resumeLock = RESUME_LOCK
 
 // RSS feed cache: persisted on disk (not /tmp) so cached podcast covers and feed
-// data survive a reboot.
-const rssCacheDataDir = `${configBasePath}/rss-cache`
+// data survive a reboot - in cache/, which an update leaves alone (a missing picture is fetched again, see
+// rssCoverFileMissing)
+const rssCacheDataDir = path.join(CACHE_DIR, 'rss-cache')
 const podcastOfflineDir = '/home/dietpi/MuPiBox/podcasts'
 // The folder of this file: __dirname in the bundle (esbuild, CommonJS); run directly as an ES module (the tests, via
 // tsx) there is no __dirname, and the tests failed before the first one ran.
 const serverDir = typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url))
-const rssCoverDir = path.join(serverDir, 'www', 'rss-covers')
+const rssCoverDir = path.join(CACHE_DIR, 'rss-covers')
 const rssCoverPublicBase = '/rss-covers'
 
 // AR5-6: proactively clear any lock file left behind by a previous pm2 crash.
@@ -394,7 +429,7 @@ export const app = express()
 // req.ip from X-Forwarded-For only when the request came from the box itself: the web server of port 80 passing the
 // app on (see PROXY_PORT). From anywhere else the header is ignored, a client on the network cannot forge its address.
 app.set('trust proxy', 'loopback')
-// Spotify's way back after the login (the Redirect URI in the parents' Spotify app, see eltern/oauth.ts
+// Spotify's way back after the login (the Redirect URI in the parents' Spotify app, see app-api/oauth.ts
 // buildRedirectUri): https://<box>/app/spotify-callback is handled as /api/app/spotify-oauth/callback; the addresses
 // of before (/api/eltern/…) stay for Spotify apps that still name them
 app.use((req, _res, next) => {
@@ -471,24 +506,15 @@ app.use('/api/player', (req, res) => {
 // them again in the background when data.json changed or they are old. They are kept here as well, so a display
 // that starts (or is reloaded) has them from the first tap. Only the display writes them; one file on the SD,
 // written when a list was made again (not on every switch).
-// In server/config, which the update keeps and puts back: in cache/ it was gone after every update, and a big library
-// (many Spotify entries) was made from scratch at the first tap - minutes of loading dots.
-const homeCacheFile = path.join(configBasePath, 'home-lists.json')
-const homeCacheFileBefore = path.join(process.cwd(), 'cache', 'home-lists.json')
+// In cache/, which an update leaves alone (before 5.1 the update replaced the cache, and a big library - many Spotify
+// entries - was made from scratch at the first tap: minutes of loading dots).
+const homeCacheFile = path.join(CACHE_DIR, 'home-lists.json')
 const homeCacheCategories = ['audiobook', 'music', 'other']
 let homeCache: Record<string, { version: string; at: number; media: unknown[] }> = {}
-for (const file of [homeCacheFile, homeCacheFileBefore]) {
-  try {
-    homeCache = JSON.parse(fs.readFileSync(file, 'utf8'))
-    // (from the place of before: moved over at once, so the next update keeps it already)
-    if (file === homeCacheFileBefore) {
-      fs.writeFileSync(homeCacheFile, JSON.stringify(homeCache))
-      fs.rmSync(homeCacheFileBefore, { force: true })
-    }
-    break
-  } catch {
-    // none yet (there)
-  }
+try {
+  homeCache = JSON.parse(fs.readFileSync(homeCacheFile, 'utf8'))
+} catch {
+  // none yet
 }
 let homeCacheWrite: Promise<void> = Promise.resolve()
 
@@ -518,7 +544,10 @@ app.put('/api/home-lists/:category', express.json({ limit: '20mb' }), (req, res)
   res.json({ ok: true })
 })
 
-app.use(express.json())
+// (the default of 100 kB, also for what is reached without a login; the routes of the extensions under /api/ext/ read their bodies
+// themselves - up to 1 MB behind the session, see mountExtensions)
+const jsonBody = express.json()
+app.use((req, res, next) => (req.path.startsWith('/api/ext/') ? next() : jsonBody(req, res, next)))
 app.use(express.urlencoded({ extended: false }))
 
 // We only want to serve the Angular app as static files in production so that we can start
@@ -526,6 +555,10 @@ app.use(express.urlencoded({ extended: false }))
 // We explicitely check for !== 'development' for now so we do not need to set this env in
 // production.
 if (productionServe) {
+  // the covers of the local albums (m3u_generator.sh copies them from the media folders) and the podcasts' pictures:
+  // at the addresses of before, from data/ and cache/ (before 5.1 they lay in www/ - an update had to save them)
+  app.use('/cover', express.static(COVERS_DIR))
+  app.use(rssCoverPublicBase, express.static(rssCoverDir))
   // Static path to compiled Angular app
   app.use(express.static(path.join(serverDir, 'www')))
 }
@@ -636,7 +669,8 @@ const guardedLookupFor = (lanAllowed: boolean): net.LookupFunction => (hostname,
 // checks every hop). No Accept-Encoding: the body comes as it is.
 function fetchPinned(url: URL, signal: AbortSignal, lanAllowed = false): Promise<Response> {
   return new Promise((resolve, reject) => {
-    const request = url.protocol === 'https:' ? https.request : httpRequest
+    // (taken from the module when called, as https.request: the tests' stand-in for a feed server (nock) is seen)
+    const request = url.protocol === 'https:' ? https.request : http.request
     const req = request(url, { method: 'GET', lookup: guardedLookupFor(lanAllowed), signal, headers: { 'user-agent': 'MuPiBox', accept: '*/*' } }, (res) => {
       const headers = new Headers()
       for (const [name, value] of Object.entries(res.headers)) {
@@ -1161,20 +1195,18 @@ const podcastOffline = new PodcastOffline({
   dir: podcastOfflineDir,
   openRemote,
   episodes: feedEpisodes,
+  // (the podcasts of every user's library: the files on the SD card are the box's - one kept by a user who is not in place
+  // now stays. A library not readable right now - being written, broken, a switch under way: the sync leaves the files alone)
   feeds: async () => {
-    try {
-      const data = JSON.parse(await readFile(dataFile, 'utf8')) as { type?: string; id?: unknown; offline?: unknown; episodePick?: unknown }[]
-      return data
-        .filter((e) => e.type === 'rss' && typeof e.id === 'string')
-        .map((e) => ({
-          feed: e.id as string,
-          keep: Math.max(0, Math.min(MAX_KEEP, Number(e.offline) || 0)),
-          ...(isEpisodePick(e.episodePick) ? { pick: e.episodePick } : {}),
-        }))
-    } catch {
-      // (not readable right now - being written, or broken: the sync leaves the files alone)
-      return null
-    }
+    const libraries = await allLibraries()
+    if (!libraries) return null
+    return (libraries.flat() as { type?: string; id?: unknown; offline?: unknown; episodePick?: unknown }[])
+      .filter((e) => e?.type === 'rss' && typeof e.id === 'string')
+      .map((e) => ({
+        feed: e.id as string,
+        keep: Math.max(0, Math.min(MAX_KEEP, Number(e.offline) || 0)),
+        ...(isEpisodePick(e.episodePick) ? { pick: e.episodePick } : {}),
+      }))
   },
   changed: () => undefined,
 })
@@ -1200,6 +1232,170 @@ registerHaDisplayRoute(app)
 const haRouter = express.Router()
 registerHaAppRoutes(haRouter, haDeps, { session: requireSession, csrf: requireCsrf })
 app.use('/api/app', haRouter)
+
+// The users of the box (5.1, users.ts): what the server does around a switch
+// The Smart-Sync's state file of the user in place (/tmp/.spotify_sync_state.json, state-file.ts) and those of the
+// others (.<id>.json): exchanged at a switch - whose it holds is kept here, so a switch finished twice (cut off) swaps
+// nothing back
+const SYNC_STATE = '/tmp/.spotify_sync_state.json'
+let syncStateOwner = userFiles.read().current
+function swapSyncState(to: string): void {
+  if (to === syncStateOwner) return
+  try {
+    if (fs.existsSync(SYNC_STATE)) fs.renameSync(SYNC_STATE, `/tmp/.spotify_sync_state.${syncStateOwner}.json`)
+    const theirs = `/tmp/.spotify_sync_state.${to}.json`
+    if (fs.existsSync(theirs)) fs.renameSync(theirs, SYNC_STATE)
+  } catch (err) {
+    console.warn(`${new Date().toLocaleString()}: [users] Smart-Sync state: ${(err as Error).message}`)
+  }
+  syncStateOwner = to
+}
+const PLAYER_BASE = 'http://127.0.0.1:5005'
+const users = new Users(userFiles, {
+  busy: async () => {
+    if (isRestoreRunning()) return 'a backup is being restored'
+    if (isSyncRunning()) return 'the Spotify sync runs'
+    if (await updateRunning().catch(() => false)) return 'an update runs'
+    return null
+  },
+  // The library's locks and the Spotify sync's: a run of the sync that began after the check of busy() read the going
+  // user's subscriptions and wrote them into the coming user's library
+  // (and the locks of both users' libraries: the app may edit the library of the one who comes - its file moves now)
+  lock: async (waitMs, ids) => {
+    const until = Date.now() + waitMs
+    const locks = [dataLock, resumeLock, ...ids.map(userLibraryLock)]
+    for (;;) {
+      if (acquireSyncLock(10 * 60 * 1000) === 'acquired') {
+        const held: string[] = []
+        for (const l of locks) {
+          if (acquireLock(l, 'users switch') !== 'acquired') break
+          held.push(l)
+        }
+        if (held.length === locks.length) {
+          return () => {
+            for (const l of held.reverse()) releaseLock(l, 'users switch')
+            releaseSyncLock()
+          }
+        }
+        for (const l of held.reverse()) releaseLock(l, 'users switch')
+        releaseSyncLock()
+      }
+      if (Date.now() >= until) return null
+      await new Promise((r) => setTimeout(r, 300))
+    }
+  },
+  playerHold: async () => {
+    // the going user's track in his history, his first sightings of podcasts and hidden covers on the card
+    userSwitchRunning = true
+    closePlayLogEntry(false, true)
+    episodeState.flush()
+    await hiddenCoversWritten()
+    // (a player that does not run - the connection refused - writes nothing; one that answers with an error or not in
+    // time may write later, into the coming user's files: the switch does not go on)
+    const ask = async (pathName: string, init?: RequestInit) => {
+      try {
+        return await fetch(`${PLAYER_BASE}${pathName}`, { ...init, signal: AbortSignal.timeout(8000) })
+      } catch (err) {
+        const code = ((err as { cause?: { code?: string } }).cause ?? {}).code
+        if (code === 'ECONNREFUSED') return null
+        throw err
+      }
+    }
+    try {
+      await ask('/stop?src=users')
+      const r = await ask('/user/hold', { method: 'POST' })
+      if (r && !r.ok) throw new Error(`the player did not hold (${r.status})`)
+    } catch (err) {
+      userSwitchRunning = false
+      throw err
+    }
+  },
+  playerChanged: async (force) => {
+    userSwitchRunning = false
+    await fetch(`${PLAYER_BASE}/user/changed${force ? '?force=1' : ''}`, { method: 'POST', signal: AbortSignal.timeout(8000) }).catch(() => undefined)
+  },
+  readConfig: async () => (await readJsonFile(mupiboxConfigPath)) as Record<string, unknown>,
+  updateConfig: (mutate) => updateMupiboxConfig((cfg) => mutate(cfg)),
+  forgetCaches: () => {
+    // (the Smart-Sync's state of the user in place - its last run, its conflicts: under its own name, the box's file is
+    // read by the app, the bot and the reminders - the going user's under his, the coming user's in its place)
+    const s = userFiles.read().switching
+    if (s) swapSyncState(s.to)
+    heardStore.forget()
+    episodeState.forget()
+    forgetHiddenCovers()
+    homeCache = {}
+    jellyfinMedia.forgetTicks()
+    audibleMedia.forgetTicks()
+  },
+  reload: async () => {
+    await fs.promises.rm(homeCacheFile, { force: true }).catch(() => undefined)
+    await applyThemeOfConfig().catch((err) => console.warn(`${new Date().toLocaleString()}: [users] theme: ${(err as Error).message}`))
+    // (the own theme's settings are the user's, its stylesheet the box's one file: written for the coming user)
+    const mb = (getMupiboxConfigSync()?.mupibox ?? {}) as Record<string, unknown>
+    if (mb.theme === 'custom') await fs.promises.writeFile(CUSTOM_THEME_CSS, customThemeCss(customThemeOf(mb.customTheme))).catch(() => undefined)
+    // (volumes and the rest the system and the player take from the config)
+    runSettingUpdate()
+    await fetch(`${PLAYER_BASE}/display/reload-page`, { method: 'POST', signal: AbortSignal.timeout(8000) }).catch(() => undefined)
+    // (the extensions with settings per user: their API parts hear the coming user's)
+    await notifyUserChanged().catch(() => undefined)
+  },
+})
+// (the settings of the extensions that every user has for himself, hostApi 13)
+setExtensionUsers({ current: () => userFiles.read().current, exists: (id) => userFiles.read().users.some((u) => u.id === id) })
+registerUserRoutes(app, users, { session: requireSession, csrf: requireCsrf, local: localOnly })
+
+// The library a request is for (the app edits the library of a user who is not in place - users.ts): ?user=<id>, none
+// or the one in place = data.json in place under the library's lock; another = his data.json under a lock of his own
+// (a switch of the user takes it too). null: no such user.
+interface LibraryTarget {
+  dataFile: string
+  lock: string
+  current: boolean
+}
+function libraryOf(req: express.Request): LibraryTarget | null {
+  // (named twice - ?user=a&user=b: no user)
+  if (req.query?.user !== undefined && typeof req.query.user !== 'string') return null
+  const raw = typeof req.query?.user === 'string' ? req.query.user : ''
+  const f = userFiles.read()
+  // (a switch not finished - cut off, or its end failed: whose files are where is not sure; no change of a library now,
+  // one into the coming user's empty folder was put over his library when it ended)
+  if (raw && f.switching) return null
+  if (!raw || raw === f.current) return { dataFile, lock: dataLock, current: true }
+  if (!f.users.some((u) => u.id === raw)) return null
+  return { dataFile: path.join(userFiles.userDir(raw), 'library', 'data.json'), lock: userLibraryLock(raw), current: false }
+}
+// Several users on and at least two: what the app tells apart per user (its chooser, the albums each one sees) - with
+// one user left the box is as one without users, nothing hidden for him alone stays hidden
+function usersShownApart(): boolean {
+  const f = userFiles.read()
+  return f.enabled && f.users.length >= 2
+}
+
+// (another user's library may have no data.json yet - a new user: an empty one)
+function readLibraryFile(lib: LibraryTarget, done: (error: Error | null, data: unknown) => void): void {
+  jsonfile.readFile(lib.dataFile, (error, data) => {
+    if (error && !lib.current && (error as NodeJS.ErrnoException).code === 'ENOENT') {
+      fs.mkdirSync(path.dirname(lib.dataFile), { recursive: true })
+      done(null, [])
+      return
+    }
+    done(error, data)
+  })
+}
+
+// The theme the config names, as the display's link (after a switch of the user - his theme; see /api/app/theme)
+async function applyThemeOfConfig(): Promise<void> {
+  const cfg = (await readJsonFile(mupiboxConfigPath)) as { mupibox?: { theme?: unknown } }
+  const theme = typeof cfg.mupibox?.theme === 'string' ? cfg.mupibox.theme : ''
+  const target = `/home/dietpi/MuPiBox/themes/${theme}.css`
+  if (!/^[A-Za-z0-9_-]{1,40}$/.test(theme) || !fs.existsSync(target)) return
+  const link = `${WWW_DIR}/active_theme.css`
+  if ((await fs.promises.readlink(link).catch(() => '')) === target) return
+  await fs.promises.rm(`${link}.new`, { force: true })
+  await fs.promises.symlink(target, `${link}.new`)
+  await fs.promises.rename(`${link}.new`, link)
+}
 
 // Whether the box has no internet right now (network.json, written every minute by get_network.sh)
 let offlineCheck = { at: 0, offline: false }
@@ -1265,10 +1461,197 @@ app.get('/api/rssfeed/episode-duration', async (req, res) => {
   res.json({ seconds: feedDurations.byKey.get(episodeKey(url)) ?? 0 })
 })
 
+// A cached feed read and parsed - one read at a time per file as it is now (the list in the player, its counter and a skip
+// ask at once). (By its size and time too: a read begun before the refresh replaced the file gave the old episodes, kept
+// under the new file's stat until the next refresh.)
+const feedReads = new Map<string, Promise<unknown | undefined>>()
+function readFeedFile(file: string, info: { mtimeMs: number; size: number }): Promise<unknown | undefined> {
+  const key = `${info.mtimeMs}|${info.size}|${file}`
+  const running = feedReads.get(key)
+  if (running) return running
+  const read = readFile(file, 'utf8')
+    .then((text) => JSON.parse(text) as unknown)
+    .catch(() => undefined) // (being written: the next time)
+    .finally(() => feedReads.delete(key))
+  feedReads.set(key, read)
+  return read
+}
+
+// A cached feed, parsed once while its file stays the same: a skip, the list in the player and its counter ask often,
+// and a feed of thousands of episodes takes a while to parse on a Pi. Only the last few are kept - a parsed feed of
+// thousands of episodes is many MB, too much to keep dozens of on a Pi 3 (the search for an episode's feed uses the small
+// index below).
+const parsedFeeds = new Map<string, { mtimeMs: number; size: number; feed: unknown }>()
+async function parsedFeed(file: string): Promise<unknown | undefined> {
+  const info = await stat(file).catch(() => undefined)
+  if (!info) return undefined
+  const hit = parsedFeeds.get(file)
+  if (hit && hit.mtimeMs === info.mtimeMs && hit.size === info.size) return hit.feed
+  const feed = await readFeedFile(file, info)
+  if (feed === undefined) return undefined
+  parsedFeeds.delete(file)
+  parsedFeeds.set(file, { mtimeMs: info.mtimeMs, size: info.size, feed })
+  while (parsedFeeds.size > 3) parsedFeeds.delete(parsedFeeds.keys().next().value as string)
+  return feed
+}
+
+// Which episodes a cached feed has, and its title: small, kept for every feed while its file stays the same - the search
+// for the feed of an episode goes through all podcasts of the library (more than the parsed feeds kept above)
+const feedIndex = new Map<string, { mtimeMs: number; size: number; keys: Set<string>; title?: string }>()
+async function feedIndexOf(file: string): Promise<{ keys: Set<string>; title?: string } | undefined> {
+  const info = await stat(file).catch(() => undefined)
+  if (!info) {
+    feedIndex.delete(file)
+    return undefined
+  }
+  const hit = feedIndex.get(file)
+  if (hit && hit.mtimeMs === info.mtimeMs && hit.size === info.size) return hit
+  // (read for its index only - not kept parsed: the search goes through every podcast of the library)
+  const kept = parsedFeeds.get(file)
+  const feed = kept && kept.mtimeMs === info.mtimeMs && kept.size === info.size ? kept.feed : await readFeedFile(file, info)
+  if (!feed) return undefined
+  const { channel, items } = feedItems(feed)
+  const url = (item: Record<string, unknown>) => String((item.enclosure as { _attributes?: { url?: unknown } } | undefined)?._attributes?.url ?? '')
+  const index = { mtimeMs: info.mtimeMs, size: info.size, keys: new Set(items.map((item) => episodeKey(url(item)))), title: extractRssText(channel?.title) || undefined }
+  feedIndex.set(file, index)
+  return index
+}
+
+/**
+ * The episodes of the podcast tile an episode belongs to, in the order of its list on the display (episode-neighbour.ts):
+ * the library entry whose cached feed has the episode - with several (the same feed on two tiles) the one of `tile`
+ * (the key the start named). Without internet only the episodes on the SD card, as the display lists them then. Not in
+ * the library (started from the app's search): all of its feed, the newest first.
+ */
+async function podcastTileEpisodes(url: string, tile: string): Promise<Located | null> {
+  let entries: (PodcastEntry & Record<string, unknown>)[] = []
+  try {
+    const data = JSON.parse(await readFile(dataFile, 'utf8')) as unknown
+    if (Array.isArray(data)) entries = data.filter((e) => e?.type === 'rss' && typeof e.id === 'string' && e.id !== '')
+  } catch {
+    // (being written: as if not in the library)
+  }
+  const wanted = episodeKey(url)
+  // (the entries that can be the tile first - its key without the feed's title, or one that needs it: after a restart of
+  // the box every feed looked at is read once, a long while on a Pi 3 with many podcasts)
+  if (tile) {
+    const maybeMine = (e: Record<string, unknown>) => {
+      const key = tileKeyOfRow(e)
+      return key === null || key === tile
+    }
+    entries = [...entries.filter(maybeMine), ...entries.filter((e) => !maybeMine(e))]
+  }
+  let chosen: { entry: PodcastEntry & Record<string, unknown>; file: string } | undefined
+  for (const entry of entries) {
+    const file = rssCacheFilePath(rssCacheKeyFor(entry.id as string))
+    const index = await feedIndexOf(file)
+    if (!index?.keys.has(wanted)) continue
+    const mine = tile !== '' && tileKeyOfRow(entry, index.title) === tile
+    if (!chosen || mine) chosen = { entry, file }
+    if (!tile || mine) break
+  }
+  const feed = chosen ? await parsedFeed(chosen.file) : undefined
+  if (chosen && feed) {
+    let onCard: Set<string> | undefined
+    if (boxOffline()) {
+      const files = await podcastOffline.list(chosen.entry.id as string)
+      if (Object.keys(files).length > 0) onCard = new Set(Object.keys(files))
+    }
+    return locateIn(feed, url, chosen.entry, onCard)
+  }
+  for (const name of await readdir(rssCacheDataDir).catch(() => [] as string[])) {
+    if (!name.endsWith('.json')) continue
+    const file = path.join(rssCacheDataDir, name)
+    if (!(await feedIndexOf(file))?.keys.has(wanted)) continue
+    const other = await parsedFeed(file)
+    const found = other ? locateIn(other, url) : null
+    if (found) return found
+  }
+  return null
+}
+
+const queryText = (value: unknown, max = 2000): string => (typeof value === 'string' && value.length <= max ? value : '')
+
+// The episode next to the one that plays - for "next" (dir=next, steps places further) and "previous" at a podcast,
+// asked by the player. { found: false } when no feed has it. (older/newer: the first names, the list being newest first)
+app.get('/api/rssfeed/neighbour', async (req, res) => {
+  const url = queryText(req.query.url)
+  const dir = req.query.dir === 'next' || req.query.dir === 'older' ? 1 : req.query.dir === 'previous' || req.query.dir === 'newer' ? -1 : 0
+  const steps = Math.max(1, Math.min(50, Math.floor(Number(req.query.steps) || 1)))
+  if (!url || !dir) {
+    res.status(400).json({ error: 'url or dir missing' })
+    return
+  }
+  const located = await podcastTileEpisodes(url, queryText(req.query.tile, 400))
+  const found = located ? neighbourOf(located, dir * steps) : null
+  res.json(found ? { found: true, ...found } : { found: false })
+})
+
+// The episodes of the podcast tile the episode belongs to (as its list on the display), for the list in the display's
+// player and its counter - at most 300 around the one that plays
+app.get('/api/rssfeed/episodes', async (req, res) => {
+  const url = queryText(req.query.url)
+  if (!url) {
+    res.status(400).json({ error: 'url missing' })
+    return
+  }
+  const located = await podcastTileEpisodes(url, queryText(req.query.tile, 400))
+  res.json(located ? { found: true, ...listOf(located) } : { found: false })
+})
+
 // "New" and how far heard at a podcast's episodes (episode-state.ts)
-const episodeState = new EpisodeState(configBasePath, () =>
+const episodeState = new EpisodeState(LIBRARY_DIR, () =>
   episodeStateSettings(getMupiboxConfigSync()?.mupibox as Record<string, unknown> | undefined),
 )
+
+// What of the library was started or heard to its end (heard.ts, 5.1): the player tells it, the display shows ticks at
+// the covers of the list. The first time, what "Weiterhören" holds counts as started.
+const heardStore = new HeardStore(LIBRARY_DIR, () => {
+  try {
+    const list = JSON.parse(fs.readFileSync(resumeFile, 'utf8'))
+    return Array.isArray(list) ? list : []
+  } catch {
+    return []
+  }
+})
+
+// the display: every tick (none when the parents switched them off)
+app.get('/api/heard', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store')
+  const { enabled } = heardSettings(getMupiboxConfigSync()?.mupibox as Record<string, unknown> | undefined)
+  // ("played" in Jellyfin as ticks too - at most every 10 minutes, see jellyfin/media.ts syncTicks)
+  if (enabled)
+    jellyfinMedia.syncTicks(() => {
+      try {
+        const rows = JSON.parse(fs.readFileSync(dataFile, 'utf8')) as Record<string, unknown>[]
+        return rows.filter((r) => r?.type === 'jellyfin' && !r.isResume).map((r) => ({ kind: String(r.jellyfinKind ?? 'album'), id: String(r.id ?? '') }))
+      } catch {
+        return []
+      }
+    })
+  // ("heard through" in Audible the same - see audible/media.ts syncTicks)
+  if (enabled)
+    audibleMedia.syncTicks(() => {
+      try {
+        const rows = JSON.parse(fs.readFileSync(dataFile, 'utf8')) as Record<string, unknown>[]
+        return rows.filter((r) => r?.type === 'audible' && !r.isResume).map((r) => ({ kind: r.audibleKind === 'series' ? 'series' : 'book', id: String(r.id ?? '') }))
+      } catch {
+        return []
+      }
+    })
+  res.json({ enabled, items: enabled ? heardStore.all() : {} })
+})
+
+// the player: {key, state: started|finished} - a minute of it played, its end reached
+app.post('/api/heard/note', (req, res) => {
+  const key = typeof req.body?.key === 'string' ? req.body.key : ''
+  const state = req.body?.state
+  if (!HEARD_KEY.test(key) || (state !== 'started' && state !== 'finished')) {
+    res.status(400).json({ error: 'invalid' })
+    return
+  }
+  res.json({ changed: heardStore.note(key, state) })
+})
 
 app.get('/api/rssfeed/cached', async (req, res) => {
   const rssUrl = req.query.url
@@ -1668,13 +2051,44 @@ async function rssPictureFiles(feedUrl: string): Promise<string[]> {
   return [...files]
 }
 
-// A podcast was taken out of the library: its pictures go with it - the cover folder kept one file for every picture
-// ever shown, for ever, and so did the small copies of them (thumbs). The same podcast twice in the library keeps them.
-// (The feed itself stays in the cache; episodes kept on the SD card are not touched.)
-async function removeRssPictures(removed: unknown, remaining: unknown[]): Promise<void> {
+/**
+ * Every user's library (several users, users.ts): the one in place and those of the others in their folders, read while
+ * no switch moves them (a user without a library yet: an empty one). null: one is not readable now - being written,
+ * broken, a switch cut off: whatever would be deleted on that basis stays.
+ */
+async function allLibraries(): Promise<unknown[][] | null> {
+  return users.hold(async () => {
+    const f = userFiles.read()
+    // (a restore under way: the libraries of before are aside, the backup's not whole yet - a library made empty by a
+    // script meanwhile took every kept podcast episode with it)
+    if (f.switching || isRestoreRunning() || userFiles.restoreHeld()) return null
+    const others = f.users.filter((u) => u.id !== f.current).map((u) => path.join(userFiles.userDir(u.id), 'library', 'data.json'))
+    const out: unknown[][] = []
+    for (const file of [dataFile, ...others]) {
+      try {
+        const data = JSON.parse(await readFile(file, 'utf8')) as unknown
+        if (!Array.isArray(data)) return null
+        out.push(data)
+      } catch (error) {
+        if (file !== dataFile && (error as NodeJS.ErrnoException).code === 'ENOENT') out.push([])
+        else return null
+      }
+    }
+    return out
+  })
+}
+
+// A podcast was taken out of a library: its pictures go with it - the cover folder kept one file for every picture
+// ever shown, for ever, and so did the small copies of them (thumbs). The same podcast twice in a library, or in the
+// library of another user, keeps them. (The feed itself stays in the cache; episodes kept on the SD card are not touched.)
+async function removeRssPictures(removed: unknown): Promise<void> {
   const entry = removed as { type?: unknown; id?: unknown } | undefined
   if (entry?.type !== 'rss' || typeof entry.id !== 'string' || !entry.id) return
-  const otherFeeds = remaining
+  // (read after the library was written: without the podcast taken out)
+  const libraries = await allLibraries()
+  if (!libraries) return
+  const otherFeeds = libraries
+    .flat()
     .filter((e) => (e as { type?: unknown } | undefined)?.type === 'rss')
     .map((e) => (e as { id?: unknown }).id)
     .filter((id): id is string => typeof id === 'string' && id !== '')
@@ -1711,7 +2125,17 @@ async function removeRssPictures(removed: unknown, remaining: unknown[]): Promis
   if (gone) console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Podcast removed: ${gone} cover file(s) deleted (feed ${cacheKey})`)
 }
 
-app.get('/api/data', (_req, res) => {
+app.get('/api/data', (req, res) => {
+  // (?user=: the library of another user than the one in place, as it is - users.ts)
+  const lib = libraryOf(req)
+  if (!lib) {
+    res.status(404).json({ error: 'no such user' })
+    return
+  }
+  if (!lib.current) {
+    readLibraryFile(lib, (error, data) => (error ? res.status(503).json({ error: 'library_not_readable' }) : res.json(data)))
+    return
+  }
   // Mirror /api/resume: when active_data.json is missing the frontend would
   // otherwise hang on its loading spinner, because the previous code's missing
   // else-branch never sent a response. Only a box without a library is an empty list: a library that cannot be read
@@ -1753,7 +2177,7 @@ app.get('/api/bootscreen/current-splash', (_req, res) => {
 // Spotify part would be looked up again for nothing).
 let localLibraryVersion = Date.now()
 
-app.get('/api/data-version', (_req, res) => {
+app.get('/api/data-version', (req, res) => {
   // Cheap change-token for the box frontend's library-change poll (Phase 17g).
   // activedataFile is a symlink to data.json (or offline_data.json) reconciled
   // by check_network.sh; statSync follows it. mtime+size flips whenever the
@@ -1763,12 +2187,26 @@ app.get('/api/data-version', (_req, res) => {
   // made again when it is switched)
   const cfg = getMupiboxConfigSync() as (Record<string, unknown> & { tidal?: { enabled?: unknown } }) | undefined
   const tidal = cfg?.tidal?.enabled === true
+  // (Jellyfin the same: switched on and signed in - see jellyfin/settings.ts)
+  const jf = jellyfinSettings(cfg)
+  // (and its server answers: off or asleep, the display leaves the entries out until it is back - see jellyfin/media.ts)
+  const jellyfin = jf.enabled && signedIn(jf) && jellyfinNow() !== null && jellyfinMedia.reachable()
+  // (Audible: switched on, signed in and its server answers - no internet, the display leaves its entries out)
+  const ab = audibleSettings(cfg)
+  const audible = ab.enabled && audibleNow() !== null && audibleMedia.reachable()
+  const flags = `${tidal ? 't' : 'n'}${jellyfin ? 'j' : 'n'}${audible ? 'a' : 'n'}`
   const nasTab = nasTabWanted(nasSettings(getMupiboxConfigSync()))
+  // (?user=: the version of another user's library - the app's list of it)
+  const lib = libraryOf(req)
+  if (!lib) {
+    res.status(404).json({ error: 'no such user' })
+    return
+  }
   try {
-    const st = fs.statSync(activedataFile)
-    res.json({ version: `${Math.floor(st.mtimeMs)}-${st.size}-${tidal ? 't' : 'n'}`, local: String(localLibraryVersion), nasTab, tidal })
+    const st = fs.statSync(lib && !lib.current ? lib.dataFile : activedataFile)
+    res.json({ version: `${Math.floor(st.mtimeMs)}-${st.size}-${flags}`, local: String(localLibraryVersion), nasTab, tidal, jellyfin, audible })
   } catch {
-    res.json({ version: `0-${tidal ? 't' : 'n'}`, local: String(localLibraryVersion), nasTab, tidal })
+    res.json({ version: `0-${flags}`, local: String(localLibraryVersion), nasTab, tidal, jellyfin, audible })
   }
 })
 
@@ -1850,7 +2288,7 @@ async function listForWalk(
         console.warn(`${new Date().toLocaleString()}: [MuPiBox-Server] library walk: cannot read ${folder}: ${error}`)
         return undefined
       }
-      await new Promise((resolve) => setTimeout(resolve, Math.max(0, nasOfflineUntil - Date.now()) + 5000))
+      await new Promise((resolve) => setTimeout(resolve, Math.max(0, nasAccess.awayUntilMs - Date.now()) + 5000))
     }
   }
   return undefined
@@ -1902,7 +2340,7 @@ async function scanAlbumsForOnlineCovers(): Promise<void> {
   try {
     const nas = nasSettings(await getMupiboxConfig())
     const hidden = (nas?.hiddenFolders ?? []).map(normalizeNasPath)
-    if ((nas?.artistFolders ?? []).length > 0 && (await getActiveNasSession())) {
+    if ((nas?.artistFolders ?? []).length > 0 && (await nasAccess.active())) {
       for (const folder of nas?.artistFolders ?? []) {
         await nasIndexWalk(normalizeNasPath(folder), undefined, 0, hidden)
       }
@@ -2088,7 +2526,103 @@ function clockSynced(): boolean | undefined {
   return fs.existsSync(TIMESYNC_DIR) ? false : undefined
 }
 
-app.get('/api/playtime', (_req, res) => {
+// Today's play time of a user who is not in place (several users - the app's page Spielzeit for him): from his
+// settings and his counts as he left them (users/<id>/data/playtime-checkpoint.json) - read only, nothing counts for him now
+function otherUserPlaytime(id: string): Record<string, unknown> {
+  const part = userFiles.readConfigPart(id)
+  const pl = ((part?.sections.playtimeLimit as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
+  const resetHour = Number.isInteger(pl.resetHour) ? (pl.resetHour as number) : 0
+  const today = computeLogicalDate(new Date(), resetHour)
+  const dayKey = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][new Date(`${today}T12:00:00`).getDay()]
+  let cp: Record<string, unknown> = {}
+  try {
+    cp = JSON.parse(fs.readFileSync(path.join(userFiles.userDir(id), 'data', 'playtime-checkpoint.json'), 'utf8')) as Record<string, unknown>
+  } catch {
+    // none yet: nothing heard
+  }
+  const used = cp.date === today ? Number(cp.usedSeconds) || 0 : 0
+  const bonus = (pl.todayBonus as { date?: string; minutes?: number } | undefined)?.date === today ? Number((pl.todayBonus as { minutes?: number }).minutes) || 0 : 0
+  const base = Number((pl.limitsMinutes as Record<string, unknown> | undefined)?.[dayKey] ?? 60)
+  const limit = (Number.isFinite(base) ? base : 60) + bonus
+  const enabled = pl.enabled === true
+  const tileUsed = cp.tileDate === today && cp.tileUsed && typeof cp.tileUsed === 'object' ? (cp.tileUsed as Record<string, number>) : {}
+  const tileToday = (pl.tileToday as { date?: string; bonus?: Record<string, number>; free?: string[] } | undefined) ?? {}
+  const tilesToday = tileToday.date === today ? tileToday : {}
+  const tiles = (Array.isArray(pl.tileLimits) ? (pl.tileLimits as { key?: string; name?: string; minutes?: number }[]) : [])
+    .filter((t) => typeof t?.key === 'string')
+    .map((t) => {
+      const key = t.key as string
+      const usedSeconds = Number(tileUsed[key]) || 0
+      const bonusMinutes = Number(tilesToday.bonus?.[key]) || 0
+      const limitMinutes = (Number(t.minutes) || 0) + bonusMinutes
+      const free = (tilesToday.free ?? []).includes(key)
+      return { key, ...(typeof t.name === 'string' ? { name: t.name } : {}), usedSeconds, limitMinutes, bonusMinutes, free, remainingSeconds: Math.max(0, limitMinutes * 60 - usedSeconds), blocked: !free && usedSeconds >= limitMinutes * 60 }
+    })
+  // (his photo time, as the player says it for the user in place - photoTimeStatus there: the box's switch of the photos,
+  // his own limit)
+  const livePhotos = ((getMupiboxConfigSync() as Record<string, unknown> | undefined)?.photos ?? {}) as Record<string, unknown>
+  const ph = (part?.photos ?? {}) as Record<string, unknown>
+  let photos: Record<string, unknown> | undefined
+  if (livePhotos.enabled === true) {
+    const t = ((ph.today as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
+    const isToday = t.date === today
+    const free = isToday && t.free === true
+    const photoBonus = isToday && Number(t.bonusMinutes) > 0 ? Math.min(1440, Number(t.bonusMinutes)) : 0
+    const dayMinutes = Number((ph.dailyMinutes as Record<string, unknown> | undefined)?.[dayKey])
+    const photoLimit = (Number.isInteger(dayMinutes) && dayMinutes >= 0 ? dayMinutes : 20) + photoBonus
+    const mode = ph.limitMode === 'shared' ? 'shared' : 'separate'
+    const limited = mode === 'separate' && ph.limitEnabled !== false && !free
+    const photoUsed = cp.photoDate === today ? Number(cp.photoUsedSeconds) || 0 : 0
+    const remaining = limited ? Math.max(0, photoLimit * 60 - photoUsed) : null
+    photos = {
+      enabled: true,
+      mode,
+      limitEnabled: ph.limitEnabled !== false,
+      free,
+      limited,
+      limitMinutes: photoLimit,
+      bonusMinutes: photoBonus,
+      usedSeconds: photoUsed,
+      remainingSeconds: remaining,
+      state: limited && remaining !== null && remaining <= 0 ? 'blocked' : 'normal',
+      counting: false,
+    }
+  }
+  const quietOn = (part?.sections.quietHours as { enabled?: unknown } | undefined)?.enabled === true
+  return {
+    // (quiet hours alone are a limit too - Telegram /status said "not set up")
+    enabled: enabled || quietOn,
+    otherUser: true,
+    playtime: {
+      enabled,
+      date: today,
+      // (the player counts only with a limit on - without one, the app takes the minutes from his history)
+      ...(enabled ? { usedSeconds: used } : {}),
+      limitMinutes: limit,
+      remainingSeconds: Math.max(0, limit * 60 - used),
+      state: enabled && used >= limit * 60 ? 'blocked' : 'normal',
+      bonusMinutes: bonus,
+    },
+    quiet: { enabled: (part?.sections.quietHours as { enabled?: unknown } | undefined)?.enabled === true },
+    tiles: { list: tiles },
+    ...(photos ? { photos } : {}),
+  }
+}
+
+app.get('/api/playtime', (req, res) => {
+  // (?user=: another user than the one in place - his day as he left it; the one in place: the player's live state)
+  if (req.query?.user !== undefined) {
+    const lib = libraryOf(req)
+    if (!lib) {
+      res.status(404).json({ error: 'no such user' })
+      return
+    }
+    if (!lib.current) {
+      res.setHeader('Cache-Control', 'no-store')
+      res.json(otherUserPlaytime(String(req.query.user)))
+      return
+    }
+  }
   const disabled: PlaytimeStatus = { enabled: false }
   if (!fs.existsSync(playtimeFile)) {
     res.json(disabled)
@@ -2213,7 +2747,7 @@ function updateMupiboxConfig(mutate: (cfg: Record<string, unknown>) => void | fa
 // deliberately do NOT modify spotify-control.js — that runs the audio and
 // must stay rock-solid.
 
-const PLAY_LOG_PATH = '/home/dietpi/.mupibox/play_log.jsonl'
+const PLAY_LOG_PATH = path.join(LOGS_DIR, 'play_log.jsonl')
 const PLAY_LOG_POLL_MS = 10_000
 const PLAYER_HOST = 'http://127.0.0.1:5005'
 
@@ -2356,7 +2890,11 @@ function currentPlayLogStart(): number | null {
 }
 
 async function tickPlayLog(): Promise<void> {
+  // (a switch of the user moves the file - users.ts; the going user's track was closed before it)
+  if (userSwitchRunning) return
   const state = await fetchCurrentPlayerState()
+  // (a switch began while the player was asked: what it said is the going user's)
+  if (userSwitchRunning) return
   const now = Date.now()
   if (state === null) {
     // transient — skip this tick, unless the player has been gone for a while
@@ -2433,7 +2971,7 @@ function startPlayLogPoller(): void {
 // roughly the last 8 days (more than enough for a 24h chart; cap stops
 // the file growing without bound).
 
-const BATTERY_LOG_PATH = '/home/dietpi/.mupibox/battery_log.jsonl'
+const BATTERY_LOG_PATH = path.join(LOGS_DIR, 'battery_log.jsonl')
 const BATTERY_LOG_POLL_MS = 60_000
 const BATTERY_LOG_KEEP_DAYS = 8
 const BATTERY_LOG_TRIM_EVERY_TICKS = 60 // ≈ every hour
@@ -2614,14 +3152,32 @@ function computeLogicalDate(now: Date, resetHour: number): string {
 // Calling extend repeatedly accumulates: existing bonus for today is kept and
 // added to. Always uses the *current* day at the time of call, so e.g. an
 // /extend at 23:30 with resetHour=4 still applies to "today" until 04:00.
+// The configuration a change of the play time is for: ?user= names a user (the Telegram bot: "/extend 30 Leni") - one
+// not in place in his kept part, which counts when he is (users.ts); none or the one in place: in place. null: no such user.
+function playtimeConfigOf(req: express.Request): ((mutate: (cfg: Record<string, unknown>) => void) => Promise<void>) | null {
+  if (req.query?.user === undefined) return updateMupiboxConfig
+  if (!libraryOf(req)) return null
+  // (also for the one in place through the users: in the order of a switch - one meanwhile does not get his change)
+  const id = String(req.query.user)
+  return (mutate) => users.updateUserConfig(id, mutate)
+}
+
 app.post('/api/playtime/extend', localOrElternSession, async (req, res) => {
   const minutes = Number(req.body?.minutes)
   if (!Number.isFinite(minutes) || minutes <= 0 || minutes > 1440) {
     res.status(400).json({ error: 'minutes must be a positive number <= 1440' })
     return
   }
+  // (?user=: today's bonus of the user the app named - also one who is not in place: it counts when he is, today)
+  const named = req.query?.user !== undefined ? libraryOf(req) : null
+  if (req.query?.user !== undefined && !named) {
+    res.status(404).json({ error: 'no such user' })
+    return
+  }
+  const change = (mutate: (cfg: Record<string, unknown>) => void) =>
+    named ? users.updateUserConfig(String(req.query.user), mutate) : updateMupiboxConfig(mutate)
   try {
-    await updateMupiboxConfig((cfg) => {
+    await change((cfg) => {
       let pl = cfg.playtimeLimit as Record<string, unknown> | undefined
       if (!pl || typeof pl !== 'object') {
         pl = {}
@@ -2691,8 +3247,13 @@ app.post('/api/playtime/limit', localOrElternSession, async (req, res) => {
     res.status(400).json({ error: 'minutes must be in [0, 1440]' })
     return
   }
+  const change = playtimeConfigOf(req)
+  if (!change) {
+    res.status(404).json({ error: 'no such user' })
+    return
+  }
   try {
-    await updateMupiboxConfig((cfg) => {
+    await change((cfg) => {
       let pl = cfg.playtimeLimit as Record<string, unknown> | undefined
       if (!pl || typeof pl !== 'object') {
         pl = {}
@@ -2711,6 +3272,67 @@ app.post('/api/playtime/limit', localOrElternSession, async (req, res) => {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/playtime/limit failed:`, err)
     res.status(500).json({ error: 'internal error' })
   }
+})
+
+// POST /api/phototime  body: { action: 'extend' | 'free', minutes?: number }
+// Today's photo time (5.1, Spielzeit › Bildzeit) for the Telegram bot: as the app's /api/app/photos/time, from the box
+// itself (the bot) or with the parents' sign-in. "extend" adds minutes for today, "free" lifts the limit for today;
+// the player takes it within a second.
+app.post('/api/phototime', localOrElternSession, async (req, res) => {
+  const action = req.body?.action
+  if (action !== 'extend' && action !== 'free') {
+    res.status(400).json({ error: 'action must be extend or free' })
+    return
+  }
+  const change = playtimeConfigOf(req)
+  if (!change) {
+    res.status(404).json({ error: 'no such user' })
+    return
+  }
+  let error: string | null = null
+  try {
+    await change((cfg) => {
+      error = applyPhotoTimeAction(cfg as Record<string, unknown>, action, req.body?.minutes)
+    })
+  } catch (err) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/phototime failed:`, err)
+    res.status(500).json({ error: 'internal error' })
+    return
+  }
+  if (error) {
+    res.status(400).json({ error })
+    return
+  }
+  console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/phototime ${action}${action === 'extend' ? ` +${req.body?.minutes} min` : ''}`)
+  res.status(200).json({ ok: true })
+})
+
+// POST /api/tiletime  body: { key, action: 'extend' | 'free', minutes?: number }
+// Today's time of a tile with a day's limit (5.1, "Kachel-Limit") for the Telegram bot: as the app's
+// /api/app/tiles/time, from the box itself (the bot) or with the parents' sign-in.
+app.post('/api/tiletime', localOrElternSession, async (req, res) => {
+  const action = req.body?.action
+  const change = playtimeConfigOf(req)
+  if (!change) {
+    res.status(404).json({ error: 'no such user' })
+    return
+  }
+  let error: string | null = null
+  try {
+    await change((cfg) => {
+      error = applyTileTimeAction(cfg as Record<string, unknown>, req.body?.key, action, req.body?.minutes)
+    })
+  } catch (err) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/tiletime failed:`, err)
+    res.status(500).json({ error: 'internal error' })
+    return
+  }
+  if (error) {
+    res.status(400).json({ error })
+    return
+  }
+  console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/tiletime ${action}${action === 'extend' ? ` +${req.body?.minutes} min` : ''}`)
+  res.status(200).json({ ok: true })
 })
 
 // POST /api/quiethours/now  body: { minutes?: number }
@@ -2981,7 +3603,7 @@ app.get('/api/network/link', async (_req, res) => {
 // adapter that may also be plugged in. Immediate, no reboot needed.
 const ONBOARD_WIFI_SCRIPT = '/usr/local/bin/mupibox/mupi_onboard_wifi.sh'
 
-// The app's switch (eltern/network.ts) also switches the chip off at the start (dtoverlay=disable-wifi): after a restart
+// The app's switch (app-api/network.ts) also switches the chip off at the start (dtoverlay=disable-wifi): after a restart
 // the box had no onboard adapter, the display hid its button - and without LAN or a USB adapter nothing could switch it
 // on again. Such a chip counts as there and off; on takes the line out, and the radio comes after a restart.
 const onboardWifiBootDisabled = async () => /^dtoverlay=disable-wifi\s*$/m.test(await readFile(await bootConfigPath(), 'utf8').catch(() => ''))
@@ -3228,6 +3850,8 @@ function wifiSaveConfig(wifi: string, adjust?: (entries: WifiBandEntry[]) => voi
     } catch (error) {
       console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Could not keep the WLAN band choices: ${error}`)
       return false
+    } finally {
+      await wifiSyncOthers(wifi)
     }
   })
   wifiSaveChain = run.catch(() => undefined)
@@ -3503,7 +4127,7 @@ app.post('/api/network/ethernet/power', localOrElternSession, async (req, res) =
 })
 
 // The display's WiFi page: a fixed address per WiFi network (/api/wifi/static*), fetching the address anew
-// (/api/network/dhcp/renew) - see eltern/wifi-static.ts and eltern/network.ts
+// (/api/network/dhcp/renew) - see app-api/wifi-static.ts and app-api/network.ts
 registerDisplayNetworkRoutes(app, localOrElternSession)
 
 // Restarts the ethernet interface so a saved config takes effect, mirroring the WiFi "Restart" button.
@@ -3700,13 +4324,12 @@ app.post('/api/wifi/configured/:id/password', async (req, res) => {
   }
 
   try {
-    // The key worked out here as wpa_passphrase does, from the network's name: no character of the password can
+    // The key for what the network asks for (WPA2, WPA3 or both, see wifiSetPassword): no character of the password can
     // break the command (a quote in it ended the quoted value before)
     const rawSsid = (await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'get_network', String(id), 'ssid'])).stdout.trim()
     const ssid = rawSsid.startsWith('"') ? Buffer.from(decodeWpaSsid(rawSsid.slice(1, -1)), 'utf8') : Buffer.from(rawSsid, 'hex')
     if (ssid.length === 0 || ssid.length > 32) throw new Error(`network ${id}: ssid not readable (${rawSsid})`)
-    const psk = crypto.pbkdf2Sync(password, ssid, 4096, 32, 'sha1').toString('hex')
-    await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'set_network', String(id), 'psk', psk])
+    if (!(await wifiSetPassword(await wifiInterface(), String(id), ssid, password))) throw new Error(`network ${id}: key not set`)
     await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'enable_network', String(id)])
     await wifiSaveConfig(await wifiInterface())
     console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Updated password for wifi network ${id}`)
@@ -3718,7 +4341,13 @@ app.post('/api/wifi/configured/:id/password', async (req, res) => {
 })
 
 app.post('/api/add', (req, res) => {
-  const lockResult = acquireLock(dataLock, '/api/add')
+  // (?user=: another user than the one in place - his library, under its own lock; users.ts)
+  const lib = libraryOf(req)
+  if (!lib) {
+    res.status(404).send('no such user')
+    return
+  }
+  const lockResult = acquireLock(lib.lock, '/api/add')
   if (lockResult === 'locked') {
     console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/add data.json is locked`)
     res.status(200).send('locked')
@@ -3728,18 +4357,18 @@ app.post('/api/add', (req, res) => {
     res.status(200).send('error')
     return
   }
-  jsonfile.readFile(dataFile, (error, data) => {
+  readLibraryFile(lib, (error, data) => {
     if (error) {
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/add read data.json`)
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
-      releaseLock(dataLock, '/api/add')
+      releaseLock(lib.lock, '/api/add')
       res.status(200).send('error')
       return
     }
     // (a data.json that is not a list: said, not thrown - a throw in this callback ended the server, pm2 started it
     // again, and the next attempt did the same)
     if (!Array.isArray(data)) {
-      releaseLock(dataLock, '/api/add')
+      releaseLock(lib.lock, '/api/add')
       res.status(500).send('data.json is not a list')
       return
     }
@@ -3755,8 +4384,8 @@ app.post('/api/add', (req, res) => {
     }
     data.push(newEntry)
     renumberLibrary(data)
-    writeJsonAtomic(dataFile, data, (writeError) => {
-      releaseLock(dataLock, '/api/add')
+    writeJsonAtomic(lib.dataFile, data, (writeError) => {
+      releaseLock(lib.lock, '/api/add')
       if (writeError) {
         console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/add write failed:`, writeError)
         res.status(500).send('error')
@@ -3764,7 +4393,10 @@ app.post('/api/add', (req, res) => {
       }
       res.status(200).send('ok')
       // a Spotify album added by its link: its name and cover right away (see spotify-album-fill.ts)
-      if (isBareAlbum(newEntry)) setTimeout(() => void fillSpotifyAlbums(albumFillDeps, 'added'), 1000)
+      if (isBareAlbum(newEntry)) {
+        const fill = lib.current ? albumFillDeps : albumFillDepsOf(lib.dataFile, lib.lock)
+        setTimeout(() => void fillSpotifyAlbums(fill, 'added'), 1000)
+      }
     })
   })
 })
@@ -3773,28 +4405,39 @@ const albumFillDeps: AlbumFillDeps = {
   dataFile,
   dataLock,
   spotify: () => spotifyApiService,
-  write: (data) => new Promise((resolve, reject) => writeJsonAtomic(dataFile, data, (error) => (error ? reject(error) : resolve()))),
+  // (a switch of the user not finished: the library in place is not yet whose the box thinks - see spotifySyncDeps)
+  write: (data) =>
+    userFiles.read().switching
+      ? Promise.reject(new Error('a switch of the user is not finished'))
+      : new Promise((resolve, reject) => writeJsonAtomic(dataFile, data, (error) => (error ? reject(error) : resolve()))),
 }
+// (the library of a user who is not in place: under his own lock - a switch takes it too; gone meanwhile, the fill ends)
+const albumFillDepsOf = (file: string, lock: string): AlbumFillDeps => ({
+  dataFile: file,
+  dataLock: lock,
+  spotify: () => spotifyApiService,
+  write: (data) => new Promise((resolve, reject) => writeJsonAtomic(file, data, (error) => (error ? reject(error) : resolve()))),
+})
 
 // data.json, resume.json and wlan.json were written straight into the target file: a power cut
 // or a crash mid-write left a cut-off JSON (the library or the resume list unreadable). Written
 // next to the target and renamed over it instead, so a reader sees the old or the new file.
+// (json-file.ts: onto the card with fsync, and not at all when the file holds the same already. Two spaces as Smart Sync
+// (spotify-sync/apply.ts) and jq in the scripts write it: with 4 here, each of them wrote the same library again)
 function writeJsonAtomic(file: string, data: unknown, callback: (error: Error | null) => void): void {
-  // The library: keep the version this write replaces (a bad edit once wiped an entry and there was nothing to go back to).
-  if (file === dataFile) backupBeforeWrite(file)
-  const tmp = `${file}.tmp.${process.pid}.${Date.now()}`
-  jsonfile.writeFile(tmp, data, { spaces: 4 }, (writeError) => {
-    if (writeError) {
-      fs.rm(tmp, { force: true }, () => callback(writeError))
+  const text = `${JSON.stringify(data, null, 2)}\n`
+  fs.readFile(file, 'utf8', (_readError, before) => {
+    if (before === text) {
+      callback(null)
       return
     }
-    fs.rename(tmp, file, (renameError) => {
-      if (renameError) {
-        fs.rm(tmp, { force: true }, () => callback(renameError))
-        return
-      }
-      callback(null)
-    })
+    // The library: keep the version this write replaces (a bad edit once wiped an entry and there was nothing to go back to).
+    // (another user's library too - the app edits it without a switch; the copies move with his folder)
+    if (path.basename(file) === 'data.json') backupBeforeWrite(file)
+    writeFileWhole(file, text, { ifChanged: false }).then(
+      () => callback(null),
+      (error: Error) => callback(error),
+    )
   })
 }
 
@@ -4053,7 +4696,13 @@ function libraryIndexProblem(data: unknown, index: unknown, original: unknown): 
 }
 
 app.post('/api/delete', (req, res) => {
-  const lockResult = acquireLock(dataLock, '/api/delete')
+  // (?user=: another user than the one in place - his library, under its own lock; users.ts)
+  const lib = libraryOf(req)
+  if (!lib) {
+    res.status(404).send('no such user')
+    return
+  }
+  const lockResult = acquireLock(lib.lock, '/api/delete')
   if (lockResult === 'locked') {
     console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/delete data.json is locked`)
     res.status(200).send('locked')
@@ -4063,36 +4712,36 @@ app.post('/api/delete', (req, res) => {
     res.status(200).send('error')
     return
   }
-  jsonfile.readFile(dataFile, (error, data) => {
+  readLibraryFile(lib, (error, data) => {
     if (error) {
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/delete read data.json`)
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
-      releaseLock(dataLock, '/api/delete')
+      releaseLock(lib.lock, '/api/delete')
       res.status(200).send('error')
       return
     }
     if (!Array.isArray(data)) {
-      releaseLock(dataLock, '/api/delete')
+      releaseLock(lib.lock, '/api/delete')
       res.status(500).send('data.json is not a list')
       return
     }
     const problem = libraryIndexProblem(data, req.body?.index, req.body?.original)
     if (problem) {
-      releaseLock(dataLock, '/api/delete')
+      releaseLock(lib.lock, '/api/delete')
       res.status(problem === 'library changed' ? 409 : 400).send(problem)
       return
     }
     const [removed] = data.splice(req.body.index, 1)
     renumberLibrary(data)
-    writeJsonAtomic(dataFile, data, (writeError) => {
-      releaseLock(dataLock, '/api/delete')
+    writeJsonAtomic(lib.dataFile, data, (writeError) => {
+      releaseLock(lib.lock, '/api/delete')
       if (writeError) {
         console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/delete write failed:`, writeError)
         res.status(500).send('error')
         return
       }
       // a podcast: its pictures go as well (in the background - the answer does not wait for them)
-      removeRssPictures(removed, data).catch((error) => {
+      removeRssPictures(removed).catch((error) => {
         console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Could not remove the pictures of a podcast: ${error}`)
       })
       res.status(200).send('ok')
@@ -4104,12 +4753,18 @@ app.post('/api/delete', (req, res) => {
 // - checked all first, and the library written once (one by one, a subscription of 250 albums wrote it 250 times and
 // took minutes). Nothing is deleted when one of them does not match any more (409, as /api/delete).
 app.post('/api/delete-many', (req, res) => {
+  // (?user=: another user than the one in place - his library, under its own lock; users.ts)
+  const lib = libraryOf(req)
+  if (!lib) {
+    res.status(404).send('no such user')
+    return
+  }
   const list = req.body?.entries
   if (!Array.isArray(list) || list.length === 0 || list.length > 2000) {
     res.status(400).send('entries missing')
     return
   }
-  const lockResult = acquireLock(dataLock, '/api/delete-many')
+  const lockResult = acquireLock(lib.lock, '/api/delete-many')
   if (lockResult === 'locked') {
     res.status(200).send('locked')
     return
@@ -4118,9 +4773,9 @@ app.post('/api/delete-many', (req, res) => {
     res.status(200).send('error')
     return
   }
-  jsonfile.readFile(dataFile, (error, data) => {
+  readLibraryFile(lib, (error, data) => {
     if (error || !Array.isArray(data)) {
-      releaseLock(dataLock, '/api/delete-many')
+      releaseLock(lib.lock, '/api/delete-many')
       res.status(error ? 200 : 500).send(error ? 'error' : 'data.json is not a list')
       return
     }
@@ -4128,7 +4783,7 @@ app.post('/api/delete-many', (req, res) => {
     for (const e of list) {
       const problem = libraryIndexProblem(data, e?.index, e?.original)
       if (problem || places.has(e.index)) {
-        releaseLock(dataLock, '/api/delete-many')
+        releaseLock(lib.lock, '/api/delete-many')
         res.status(problem === 'library changed' ? 409 : 400).send(problem ?? 'twice')
         return
       }
@@ -4138,15 +4793,15 @@ app.post('/api/delete-many', (req, res) => {
     const removed: unknown[] = []
     for (const i of [...places].sort((a, b) => b - a)) removed.push(...data.splice(i, 1))
     renumberLibrary(data)
-    writeJsonAtomic(dataFile, data, (writeError) => {
-      releaseLock(dataLock, '/api/delete-many')
+    writeJsonAtomic(lib.dataFile, data, (writeError) => {
+      releaseLock(lib.lock, '/api/delete-many')
       if (writeError) {
         console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/delete-many write failed:`, writeError)
         res.status(500).send('error')
         return
       }
       for (const entry of removed) {
-        removeRssPictures(entry, data).catch((e) => {
+        removeRssPictures(entry).catch((e) => {
           console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Could not remove the pictures of a podcast: ${e}`)
         })
       }
@@ -4156,6 +4811,12 @@ app.post('/api/delete-many', (req, res) => {
 })
 
 app.post('/api/edit', (req, res) => {
+  // (?user=: another user than the one in place - his library, under its own lock; users.ts)
+  const lib = libraryOf(req)
+  if (!lib) {
+    res.status(404).send('no such user')
+    return
+  }
   // The new entry comes as { index, data }. Without data (the web app used to send the fields next to
   // index) splice() put null into the library, and that entry was gone.
   const entry = req.body?.data
@@ -4165,7 +4826,7 @@ app.post('/api/edit', (req, res) => {
   }
   // (a podcast's choice of episodes only in its form - see episode-pick.ts)
   if ('episodePick' in entry && !isEpisodePick(entry.episodePick)) delete entry.episodePick
-  const lockResult = acquireLock(dataLock, '/api/edit')
+  const lockResult = acquireLock(lib.lock, '/api/edit')
   if (lockResult === 'locked') {
     console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/edit data.json is locked`)
     res.status(200).send('locked')
@@ -4175,29 +4836,29 @@ app.post('/api/edit', (req, res) => {
     res.status(200).send('error')
     return
   }
-  jsonfile.readFile(dataFile, (error, data) => {
+  readLibraryFile(lib, (error, data) => {
     if (error) {
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/edit read data.json`)
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
-      releaseLock(dataLock, '/api/edit')
+      releaseLock(lib.lock, '/api/edit')
       res.status(200).send('error')
       return
     }
     if (!Array.isArray(data)) {
-      releaseLock(dataLock, '/api/edit')
+      releaseLock(lib.lock, '/api/edit')
       res.status(500).send('data.json is not a list')
       return
     }
     const problem = libraryIndexProblem(data, req.body.index, req.body.original)
     if (problem) {
-      releaseLock(dataLock, '/api/edit')
+      releaseLock(lib.lock, '/api/edit')
       res.status(problem === 'library changed' ? 409 : 400).send(problem)
       return
     }
     data.splice(req.body.index, 1, entry)
     renumberLibrary(data)
-    writeJsonAtomic(dataFile, data, (writeError) => {
-      releaseLock(dataLock, '/api/edit')
+    writeJsonAtomic(lib.dataFile, data, (writeError) => {
+      releaseLock(lib.lock, '/api/edit')
       if (writeError) {
         console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/edit write failed:`, writeError)
         res.status(500).send('error')
@@ -5026,10 +5687,11 @@ app.post('/api/bluetooth/remove', async (req, res) => {
 // --------------------------------------------
 // NAS integration
 // --------------------------------------------
-// Browses and streams media from a NAS live over WebDAV (works with Synology,
-// QNAP, TrueNAS, ...) - no SMB/CIFS mount, no data.json caching. Every read hits
+// Browses and streams media from a NAS live - no data.json caching. Every read hits
 // the NAS directly, so changes made on the NAS show up the next time a
 // category/page is opened, with no manual "update media" step required.
+// The NAS itself is reached through the provider layer in nas/ (provider.ts: what a
+// NAS can do, webdav.ts: WebDAV, access.ts: the shared login and "away").
 
 // Runs fn over items with at most `limit` calls in flight at once. An artist folder with two
 // dozen albums used to fire one WebDAV request per album (plus one more for each album's cover)
@@ -5057,168 +5719,6 @@ function nasSettings(config: MupiboxConfig | undefined): NasConfig | undefined {
   return config?.synology ?? config?.nas
 }
 
-interface NasSession {
-  base: string // WebDAV base URL without trailing slash, may contain a path prefix
-  auth: string // Authorization header value (HTTP Basic)
-  // SHA-256 fingerprint of the NAS's own (self-signed) certificate the parents confirmed: https then trusts exactly
-  // this certificate (see nasFetch)
-  fingerprint?: string
-}
-
-// The certificate of an https NAS is not trusted (self-signed, as Synology's own), or not the one confirmed.
-class NasCertificateError extends Error {
-  constructor(readonly certificate: NasCertificateInfo | undefined) {
-    super('NAS certificate not trusted')
-  }
-}
-
-interface NasCertificateInfo {
-  fingerprint: string
-  subject: string
-  issuer: string
-  validTo: string
-}
-
-// What the NAS presents on https, without trusting it: shown in the admin interface to be confirmed.
-function nasPeekCertificate(base: string, timeoutMs = 8000): Promise<NasCertificateInfo | undefined> {
-  const url = new URL(base)
-  if (url.protocol !== 'https:') return Promise.resolve(undefined)
-  return new Promise((resolve) => {
-    const socket = tls.connect({
-      host: url.hostname,
-      port: Number(url.port || 443),
-      servername: net.isIP(url.hostname) ? undefined : url.hostname,
-      rejectUnauthorized: false,
-      timeout: timeoutMs,
-    })
-    const done = (info: NasCertificateInfo | undefined) => {
-      socket.destroy()
-      resolve(info)
-    }
-    socket.once('secureConnect', () => {
-      const cert = socket.getPeerCertificate()
-      done(
-        cert?.fingerprint256
-          ? {
-              fingerprint: cert.fingerprint256,
-              subject: String(cert.subject?.CN ?? cert.subject?.O ?? ''),
-              issuer: String(cert.issuer?.CN ?? cert.issuer?.O ?? ''),
-              validTo: String(cert.valid_to ?? ''),
-            }
-          : undefined,
-      )
-    })
-    socket.once('timeout', () => done(undefined))
-    socket.once('error', () => done(undefined))
-  })
-}
-
-// Every request to the NAS goes through here. With a confirmed certificate (https with Synology's own, self-signed
-// one - fetch() refuses it) the TLS connection is made first, its certificate compared with the confirmed
-// fingerprint, and only then is the request - with the login - sent over it. Anything else goes through fetch().
-async function nasFetch(
-  session: NasSession,
-  url: string,
-  init: { method?: string; headers?: Record<string, string>; body?: string | Buffer; signal?: AbortSignal } = {},
-): Promise<Response> {
-  const target = new URL(url)
-  if (!session.fingerprint || target.protocol !== 'https:') {
-    return await fetch(url, { ...init, body: init.body as RequestInit['body'] })
-  }
-  const fingerprint = session.fingerprint
-  const socket = await new Promise<tls.TLSSocket>((resolve, reject) => {
-    const s = tls.connect({
-      host: target.hostname,
-      port: Number(target.port || 443),
-      servername: net.isIP(target.hostname) ? undefined : target.hostname,
-      rejectUnauthorized: false, // checked by the fingerprint below
-    })
-    const onAbort = () => {
-      s.destroy()
-      reject(init.signal?.reason ?? new Error('aborted'))
-    }
-    if (init.signal?.aborted) return onAbort()
-    init.signal?.addEventListener('abort', onAbort, { once: true })
-    s.once('secureConnect', () => {
-      init.signal?.removeEventListener('abort', onAbort)
-      const cert = s.getPeerCertificate()
-      if (!cert?.fingerprint256 || cert.fingerprint256.toUpperCase() !== fingerprint.toUpperCase()) {
-        s.destroy()
-        reject(
-          new NasCertificateError(
-            cert?.fingerprint256
-              ? {
-                  fingerprint: cert.fingerprint256,
-                  subject: String(cert.subject?.CN ?? ''),
-                  issuer: String(cert.issuer?.CN ?? ''),
-                  validTo: String(cert.valid_to ?? ''),
-                }
-              : undefined,
-          ),
-        )
-        return
-      }
-      resolve(s)
-    })
-    s.once('error', (error) => {
-      init.signal?.removeEventListener('abort', onAbort)
-      reject(error)
-    })
-  })
-  return await new Promise<Response>((resolve, reject) => {
-    const req = https.request(
-      {
-        method: init.method ?? 'GET',
-        hostname: target.hostname,
-        port: Number(target.port || 443),
-        path: `${target.pathname}${target.search}`,
-        headers: init.headers,
-        createConnection: () => socket,
-        signal: init.signal,
-      },
-      (res) => {
-        const headers = new Headers()
-        for (const [name, value] of Object.entries(res.headers)) {
-          if (Array.isArray(value)) value.forEach((v) => headers.append(name, v))
-          else if (value !== undefined) headers.set(name, String(value))
-        }
-        const status = res.statusCode ?? 502
-        // (no body allowed with 204, 205 and 304, and a status outside 200-599 is refused: the Response constructor
-        // threw here, in a callback nothing caught - the whole server ended. As fetchPinned: a failed fetch instead.)
-        const noBody = status === 204 || status === 205 || status === 304 || init.method === 'HEAD'
-        try {
-          if (status < 200 || status > 599) throw new Error(`unexpected status ${status}`)
-          if (noBody) res.resume()
-          resolve(
-            new Response(noBody ? null : (Readable.toWeb(res) as unknown as ReadableStream), {
-              status,
-              statusText: res.statusMessage,
-              headers,
-            }),
-          )
-        } catch (err) {
-          res.destroy()
-          reject(err)
-        }
-      },
-    )
-    req.once('error', (error) => {
-      socket.destroy()
-      reject(error)
-    })
-    if (init.body !== undefined) req.write(init.body)
-    req.end()
-  })
-}
-
-let nasSessionCache: NasSession | undefined
-
-class NasSessionExpiredError extends Error {}
-
-// The NAS answered, but with an API-level error (e.g. folder no longer exists) -
-// unlike a network failure this does not mean the NAS is offline.
-class NasApiError extends Error {}
-
 // Local copies of NAS folders ("Download local") live here, mirroring the NAS
 // path (e.g. /music/Artist/Album -> <root>/music/Artist/Album), so they stay
 // playable when the NAS or the network is not available.
@@ -5227,258 +5727,59 @@ const nasDownloadMarker = '.mupibox-nas-download'
 
 const nasAudioExtensions = ['.mp3', '.flac', '.wav', '.wma', '.ogg', '.m4a']
 
-// Resolves the address field into a WebDAV base URL. Accepts "host", "host:port",
-// "host:port/path" or a complete http(s):// URL. The HTTPS checkbox picks the
-// scheme when the address itself has none.
-function nasResolveBase(address: string, useHttps: boolean): string {
-  const trimmed = address.trim().replace(/\/+$/, '')
-  if (/^https?:\/\//i.test(trimmed)) {
-    return trimmed
-  }
-  return `${useHttps ? 'https' : 'http'}://${trimmed}`
-}
+// The share of an SMB NAS is mounted by nas_smb.sh and read by a helper process next to server.js (nas/smb.ts).
+const nasSmb = smbSystem(path.join(serverDir, 'nas-smb-helper.js'))
+let nasSmbLogged: string | undefined // (the reason logged last: not every 30 s again)
 
-function nasBasicAuth(account: string, password: string): string {
-  return `Basic ${Buffer.from(`${account}:${password}`, 'utf8').toString('base64')}`
-}
-
-function nasUrl(session: NasSession, nasPath: string): string {
-  const encoded = nasPath
-    .split('/')
-    .filter(Boolean)
-    .map((part) => encodeURIComponent(part))
-    .join('/')
-  return `${session.base}/${encoded}`
-}
-
-async function nasLogin(
-  base: string,
-  account: string,
-  password: string,
-  timeoutMs = 10000,
-  fingerprint?: string,
-): Promise<{ success: boolean; session?: NasSession; error?: string; certificate?: NasCertificateInfo }> {
-  const session: NasSession = { base, auth: nasBasicAuth(account, password), fingerprint: fingerprint || undefined }
-  try {
-    const response = await nasFetch(session, nasUrl(session, '/'), {
-      method: 'PROPFIND',
-      headers: { Authorization: session.auth, Depth: '1' },
-      signal: AbortSignal.timeout(timeoutMs),
-    })
-    const body = await response.text().catch(() => '')
-    if (response.status === 401 || response.status === 403) {
-      return { success: false, error: 'Wrong account name or password (or no WebDAV permission for this account).' }
-    }
-    if (response.status === 207 || response.status === 200) {
-      // A NAS always shows at least one folder. An empty answer means this is not the WebDAV
-      // service (e.g. the DSM web page on port 443 answers, but lists nothing), or the account
-      // may not use WebDAV.
-      if (parsePropfind(body, session, '/').length === 0) {
-        return {
-          success: false,
-          error: 'The NAS answered but lists no folders - check the WebDAV port in the address (Synology: 5006 for https, 5005 for http) and that the account may use WebDAV.',
-        }
-      }
-      return { success: true, session }
-    }
-    if (response.status === 404) {
-      return { success: false, error: 'WebDAV service not found at this address/port - check the address and that WebDAV is enabled on the NAS.' }
-    }
-    return { success: false, error: `The NAS answered with HTTP ${response.status}. Is this the WebDAV address/port?` }
-  } catch (error) {
-    if (error instanceof NasCertificateError) {
-      // A confirmed certificate, but the NAS now shows another one (renewed on the NAS - or not the NAS).
-      return {
-        success: false,
-        error: 'The certificate of the NAS is not the one confirmed before. If it was renewed on the NAS, compare the new fingerprint below and confirm it.',
-        certificate: error.certificate,
-      }
-    }
-    const cause = error instanceof Error ? `${error.message} ${String((error as { cause?: unknown }).cause ?? '')}` : ''
-    if (/certificate|SELF_SIGNED|UNABLE_TO_VERIFY|CERT_/i.test(cause)) {
-      // Synology's own certificate is self-signed: show it, so it can be confirmed once (then trusted by its
-      // fingerprint, see nasFetch).
-      return {
-        success: false,
-        error:
-          "The NAS uses a certificate that is not signed by a known authority (e.g. Synology's own). Check its fingerprint below and confirm it - or use HTTP.",
-        certificate: await nasPeekCertificate(base),
-      }
-    }
-    return { success: false, error: 'Could not reach the NAS. Check the address (with WebDAV port) and network connection.' }
-  }
-}
-
-let nasSessionPromise: Promise<NasSession | undefined> | undefined
-let nasOfflineUntil = 0
-// The last session that worked. A stream keeps using it while the NAS is marked offline: one slow folder listing
-// (another request) must not cut off the album that is playing - the stream has its own retries.
-let nasLastSession: NasSession | undefined
-
-// After a network failure, skip the NAS for a short while so the kids' UI can fall
-// back to the local downloads immediately instead of waiting on timeouts every time.
-function nasMarkOffline(): void {
-  nasOfflineUntil = Date.now() + 30000
-  nasSessionCache = undefined
-}
-
-async function nasLoginWithRememberedCredentials(): Promise<NasSession | undefined> {
+// Signs in with the login remembered in the config. Shared by all requests and marked away after a failure, see
+// nas/access.ts.
+async function nasConnectRemembered(): Promise<NasConnectResult> {
+  // (a login made in the app is not signed in here: NasAccess keeps using it until signed off or restarted)
   const config = await getMupiboxConfig()
   const syn = nasSettings(config)
   if (!syn?.rememberMe || !syn.address || !syn.account || !syn.password) {
-    return undefined
+    return {}
   }
   const password = nasDecrypt(syn.password)
   if (password === undefined) {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] The stored NAS password can not be decrypted on this box - please sign in to the NAS again.`)
-    return undefined
+    return {}
   }
+  if (syn.protocol === 'smb') {
+    if (!syn.share) return {}
+    const result = await smbConnect({ host: syn.address, share: syn.share, account: syn.account, password, domain: syn.domain || undefined }, nasSmb)
+    if (!result.provider) {
+      if (nasSmbLogged !== result.error) {
+        console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS (SMB): ${smbErrorText(result.error ?? 'other')}`)
+        nasSmbLogged = result.error
+      }
+      // (a refused login waits 10 minutes - the connection itself does too; else away for the usual 30 s)
+      return result.error === 'auth' || result.error === 'notfound' ? { refused: true } : { unreachable: true }
+    }
+    nasSmbLogged = undefined
+    return { provider: result.provider }
+  }
+  // (no smbDisconnect here: a login in the app over SMB may be under way, or one made without "merken" - a share is
+  // unmounted by a WebDAV login in the app and by signing off)
   const base = nasResolveBase(syn.address, Boolean(syn.https))
   // A NAS that is switched off answers at once (no route / refused); one whose disks sleep needs 10-20 s to wake
   // up. 4 s marked such a NAS offline for 30 s, and every tap in that time failed.
-  const result = await nasLogin(base, syn.account, password, 15000, syn.certFingerprint)
-  if (!result.success || !result.session) {
-    if (/reach/i.test(result.error ?? '')) {
-      nasMarkOffline()
-    }
-    return undefined
+  const result = await webdavLogin(base, syn.account, password, 15000, syn.certFingerprint)
+  if (!result.success || !result.provider) {
+    return { unreachable: result.unreachable, refused: result.refused }
   }
-  nasSessionCache = result.session
-  nasLastSession = result.session
   if (!syn.password.startsWith(nasSecretPrefix)) {
     // A clear-text password from an older config: store it encrypted from now on.
     updateNasConfig({ password: nasEncrypt(password) }).catch(() => undefined)
   }
-  return nasSessionCache
+  return { provider: result.provider }
 }
 
-// Returns a cached session, or transparently logs back in using the
-// remembered credentials (if any) - existing installs won't have a
-// "nas" config section at all, so every field is read defensively.
-async function getActiveNasSession(): Promise<NasSession | undefined> {
-  if (nasSessionCache) {
-    return nasSessionCache
-  }
-  if (Date.now() < nasOfflineUntil) {
-    return undefined
-  }
-  // Several requests often arrive at once (e.g. one per artist): share one login.
-  if (!nasSessionPromise) {
-    nasSessionPromise = nasLoginWithRememberedCredentials().finally(() => {
-      nasSessionPromise = undefined
-    })
-  }
-  return await nasSessionPromise
-}
+const nasAccess = new NasAccess(nasConnectRemembered)
 
-// Runs `fn` with an active session, retrying exactly once (with a fresh
-// login) if the session turned out to be expired.
-async function withNasSession<T>(fn: (session: NasSession) => Promise<T>): Promise<T | undefined> {
-  let session = await getActiveNasSession()
-  if (!session) {
-    return undefined
-  }
-  try {
-    return await fn(session)
-  } catch (error) {
-    if (error instanceof NasSessionExpiredError) {
-      nasSessionCache = undefined
-      session = await getActiveNasSession()
-      if (!session) {
-        return undefined
-      }
-      return await fn(session)
-    }
-    throw error
-  }
-}
-
-interface NasFileEntry {
-  name: string
-  path: string
-  isdir: boolean
-  additional?: { size?: number }
-  // ETag or last-modified date from the NAS: changes when the file changes (thumbnail cache key)
-  version?: string
-}
-
-// Not shown and not played: hidden files (macOS "._01.mp3" companions, ".DS_Store"), DSM's "@eaDir" thumbnail
-// folders, recycle bin and snapshots.
-function nasIsSystemEntry(name: string): boolean {
-  return name.startsWith('.') || name.startsWith('@') || name === '#recycle' || name === '#snapshot'
-}
-
-const xmlEntities: Record<string, string> = { '&lt;': '<', '&gt;': '>', '&amp;': '&', '&quot;': '"', '&apos;': "'" }
-
-function decodeXml(text: string): string {
-  return text.replace(/&(lt|gt|amp|quot|apos);/g, (m) => xmlEntities[m] ?? m)
-}
-
-// Parses a WebDAV PROPFIND (Depth: 1) answer into the children of `folderPath`.
-function parsePropfind(xml: string, session: NasSession, folderPath: string): NasFileEntry[] {
-  const basePrefix = decodeURIComponent(new URL(session.base).pathname).replace(/\/+$/, '')
-  const folder = `/${folderPath.split('/').filter(Boolean).join('/')}`
-  const entries: NasFileEntry[] = []
-  const responses = xml.match(/<(?:\w+:)?response[\s>][\s\S]*?<\/(?:\w+:)?response>/gi) ?? []
-  for (const block of responses) {
-    const hrefMatch = block.match(/<(?:\w+:)?href[^>]*>([\s\S]*?)<\/(?:\w+:)?href>/i)
-    if (!hrefMatch) {
-      continue
-    }
-    let hrefPath = decodeXml(hrefMatch[1].trim())
-    if (/^https?:\/\//i.test(hrefPath)) {
-      hrefPath = new URL(hrefPath).pathname
-    }
-    try {
-      hrefPath = decodeURIComponent(hrefPath)
-    } catch {
-      // keep as is
-    }
-    if (basePrefix && hrefPath.startsWith(basePrefix)) {
-      hrefPath = hrefPath.slice(basePrefix.length)
-    }
-    hrefPath = `/${hrefPath.split('/').filter(Boolean).join('/')}`
-    if (hrefPath === folder) {
-      continue // the folder itself
-    }
-    const name = hrefPath.split('/').pop() ?? hrefPath
-    if (nasIsSystemEntry(name)) {
-      continue
-    }
-    const isdir = /<(?:\w+:)?collection\s*\/?>/i.test(block)
-    const sizeMatch = block.match(/<(?:\w+:)?getcontentlength[^>]*>(\d+)</i)
-    const versionMatch =
-      block.match(/<(?:\w+:)?getetag[^>]*>([^<]+)</i) ?? block.match(/<(?:\w+:)?getlastmodified[^>]*>([^<]+)</i)
-    entries.push({
-      name,
-      path: hrefPath,
-      isdir,
-      additional: sizeMatch ? { size: Number(sizeMatch[1]) } : undefined,
-      version: versionMatch ? decodeXml(versionMatch[1].trim()) : undefined,
-    })
-  }
-  return entries
-}
-
-async function nasListFilesLive(session: NasSession, folderPath: string, _withSize = false): Promise<NasFileEntry[]> {
-  const response = await nasFetch(session, `${nasUrl(session, folderPath)}/`, {
-    method: 'PROPFIND',
-    headers: { Authorization: session.auth, Depth: '1', 'Content-Type': 'application/xml' },
-    body: '<?xml version="1.0"?><propfind xmlns="DAV:"><prop><resourcetype/><getcontentlength/><getetag/><getlastmodified/></prop></propfind>',
-    // 20 s: a NAS waking its disks answers after 10-20 s (8 s marked it offline for 30 s)
-    signal: AbortSignal.timeout(20000),
-  })
-  const text = await response.text()
-  if (response.status === 401) {
-    // The login is no longer accepted (password changed, session on the NAS side gone): withNasSession()
-    // signs in again once.
-    throw new NasSessionExpiredError('WebDAV 401')
-  }
-  if (response.status !== 207 && response.status !== 200) {
-    // Folder gone / no permission: the NAS answered, so it is not offline.
-    throw new NasApiError(`WebDAV error ${response.status}`)
-  }
-  return parsePropfind(text, session, folderPath)
+/** The box has a login while the NAS is away: one that worked before (also without "merken"), or a remembered one. */
+function nasHasLogin(syn: NasConfig | undefined): boolean {
+  return nasAccess.last !== undefined || Boolean(syn?.address && syn.account && syn.password && syn.rememberMe)
 }
 
 // --- Local copies ("Download local") --------------------------------------
@@ -5506,45 +5807,90 @@ async function nasPathSelected(raw: string): Promise<boolean> {
   return selected.some((folder) => wanted === folder || wanted.startsWith(`${folder}/`)) && !nasIsHidden(wanted, hidden)
 }
 
-// A cover chosen in the app for a folder of the NAS (the cover picker, see eltern/covers.ts): written as cover.jpg
+// A cover chosen in the app for a folder of the NAS (the cover picker, see app-api/covers.ts): written as cover.jpg
 // (cover.png) into that folder with the box's NAS login - only in the folders the parents selected. A cover there
 // before is kept as cover-previous.*, the box's own cover-online.jpg goes (it would come first); when the upload fails
 // the cover before comes back. An account without write permission: 'denied'.
+// The NAS for the photo display's NAS folders (5.1, app-api/photos/nas.ts): the same access as the audio folders, its
+// own choice of folders. A listing (undefined: no NAS signed in, or away), a file into a local one, whether one is set up.
+const photoNas: PhotoNasAccess = {
+  async list(folder) {
+    let files: NasFileEntry[] | undefined
+    try {
+      files = await nasAccess.withSession((s) => s.list(folder))
+    } catch (err) {
+      // (the NAS answered with an error for this folder: thrown on; no answer at all - it is away)
+      if (err instanceof NasApiError) throw err
+      return undefined
+    }
+    return files?.map((f) => ({ name: f.name, path: f.path, isdir: f.isdir, size: f.additional?.size, version: f.version }))
+  },
+  async download(file, dest, maxBytes, signal) {
+    const session = await nasAccess.active()
+    if (!session) return false
+    let response: Response
+    try {
+      response = await session.read(file, { signal: AbortSignal.any([signal, AbortSignal.timeout(120_000)]) })
+    } catch {
+      return false
+    }
+    const size = Number(response.headers.get('content-length'))
+    if (response.status !== 200 || !response.body || (Number.isFinite(size) && size > maxBytes)) {
+      await response.body?.cancel().catch(() => undefined)
+      return false
+    }
+    const out = await fs.promises.open(dest, 'wx')
+    let written = 0
+    try {
+      for await (const chunk of Readable.fromWeb(response.body as import('node:stream/web').ReadableStream)) {
+        const piece = chunk as Buffer
+        written += piece.length
+        if (written > maxBytes) throw new Error('too big')
+        await out.write(piece)
+      }
+      return true
+    } catch {
+      return false
+    } finally {
+      await out.close().catch(() => undefined)
+    }
+  },
+  info() {
+    const c = nasSettings(getMupiboxConfigSync())
+    // (signed in now - also a login without "merken" -, or one remembered)
+    return { connected: Boolean(c?.address && c.account && (nasAccess.signedIn || (c.password && c.rememberMe))), name: c?.address ?? null }
+  },
+}
+
 async function writeNasCover(folder: string, bytes: Buffer, ext: '.jpg' | '.png'): Promise<'ok' | 'not_selected' | 'offline' | 'denied' | 'failed'> {
   if (!(await nasPathSelected(folder))) return 'not_selected'
-  const session = await getActiveNasSession()
+  const session = await nasAccess.active()
   if (!session) return 'offline'
-  const files = await withNasSession((s) => nasListFilesLive(s, folder))
+  const files = await nasAccess.withSession((s) => s.list(folder))
   if (!files) return 'offline'
-  const dir = nasUrl(session, folder)
-  const denied = (status: number) => status === 401 || status === 403 || status === 405
-  const call = async (url: string, method: string, headers: Record<string, string> = {}, body?: Buffer) => {
-    const r = await nasFetch(session, url, { method, headers: { Authorization: session.auth, ...headers }, body, signal: AbortSignal.timeout(20000) })
-    await r.arrayBuffer().catch(() => undefined)
-    return r.status
-  }
+  const dir = normalizeNasPath(folder)
   const moved: Array<{ from: string; to: string }> = []
   try {
     for (const f of files) {
       if (f.isdir) continue
       const e = path.extname(f.name).toLowerCase()
       if (!['.jpg', '.jpeg', '.jfif', '.png', '.webp'].includes(e)) continue
-      const from = `${dir}/${encodeURIComponent(f.name)}`
+      const from = `${dir}/${f.name}`
       if (f.name.slice(0, -e.length).toLowerCase() === 'cover') {
         const to = `${dir}/cover-previous${e}`
-        const status = await call(from, 'MOVE', { Destination: to, Overwrite: 'T' })
-        if (denied(status)) return 'denied'
-        if (status >= 300) return 'failed'
+        const result = await session.move(from, to, { overwrite: true })
+        if (result === 'denied') return 'denied'
+        if (result !== 'ok') return 'failed'
         moved.push({ from, to })
       } else if (f.name.toLowerCase() === 'cover-online.jpg') {
-        await call(from, 'DELETE')
+        await session.remove(from)
       }
     }
-    const status = await call(`${dir}/cover${ext}`, 'PUT', { 'Content-Type': ext === '.png' ? 'image/png' : 'image/jpeg', Overwrite: 'T' }, bytes)
-    if (status >= 300) {
+    const result = await session.write(`${dir}/cover${ext}`, bytes, { contentType: ext === '.png' ? 'image/png' : 'image/jpeg', overwrite: true })
+    if (result !== 'ok') {
       // (the cover before back in its place)
-      for (const m of moved) await call(m.to, 'MOVE', { Destination: m.from, Overwrite: 'T' }).catch(() => undefined)
-      return denied(status) ? 'denied' : 'failed'
+      for (const m of moved) await session.move(m.to, m.from, { overwrite: true }).catch(() => undefined)
+      return result === 'denied' ? 'denied' : 'failed'
     }
   } catch (error) {
     console.warn(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS cover ${folder}: ${(error as Error).message}`)
@@ -5617,7 +5963,7 @@ function nasListFilesLiveCached(folderPath: string): Promise<NasFileEntry[] | un
   if (hit && Date.now() - hit.at < NAS_LIST_CACHE_MS) {
     return hit.files
   }
-  const entry = { at: Date.now(), files: withNasSession((session) => nasListFilesLive(session, folderPath)) }
+  const entry = { at: Date.now(), files: nasAccess.withSession((session) => session.list(folderPath)) }
   nasListCache.delete(key) // re-insert: the map's order is the age order for the eviction below
   nasListCache.set(key, entry)
   const forget = () => {
@@ -5637,7 +5983,7 @@ function nasListFilesLiveCached(folderPath: string): Promise<NasFileEntry[] | un
 // /api/nas/stream). Without an active session it is listed from the copy straight away - no waiting on a NAS that
 // is off.
 async function nasListFiles(folderPath: string): Promise<NasFileEntry[]> {
-  if (nasIsDownloaded(folderPath) && (!nasSessionCache || Date.now() < nasOfflineUntil)) {
+  if (nasIsDownloaded(folderPath) && (!nasAccess.signedIn || nasAccess.isAway())) {
     const local = await nasLocalListFiles(folderPath)
     if (local) {
       return local
@@ -5650,7 +5996,7 @@ async function nasListFiles(folderPath: string): Promise<NasFileEntry[]> {
     }
   } catch (error) {
     if (!(error instanceof NasApiError || error instanceof NasSessionExpiredError)) {
-      nasMarkOffline()
+      nasAccess.markAway()
     }
   }
   const local = await nasLocalListFiles(folderPath)
@@ -5767,7 +6113,7 @@ interface NasFolderFacts {
   below?: string // without an own picture: one found in a subfolder (see nasFindCoverBelow)
   at: number
 }
-const nasFolderIndexFile = path.join(process.cwd(), 'cache', 'nas-folders.json')
+const nasFolderIndexFile = path.join(CACHE_DIR, 'nas-folders.json')
 let nasFolderIndex: Record<string, NasFolderFacts> = (() => {
   try {
     return JSON.parse(fs.readFileSync(nasFolderIndexFile, 'utf8')) as Record<string, NasFolderFacts>
@@ -5891,7 +6237,7 @@ function onlineAlbumCover(
 // Width / height of the albums' own pictures, measured on their thumbnails (made by the library walk). A picture far
 // from square - mostly a scanned cassette inlay - gets the album's online cover in its place (when one is found and
 // not discarded); the picture on the NAS / on disk stays as it is. Keys: nas:<NAS path> / local:<library path>.
-const coverShapesFile = path.join(process.cwd(), 'cache', 'cover-shapes.json')
+const coverShapesFile = path.join(CACHE_DIR, 'cover-shapes.json')
 let coverShapes: Record<string, number> = (() => {
   try {
     return JSON.parse(fs.readFileSync(coverShapesFile, 'utf8')) as Record<string, number>
@@ -6033,8 +6379,14 @@ function updateNasConfig(
 const nasDefaultProfile = 'standard'
 const nasProfileNamePattern = /^[\p{L}\p{N}][\p{L}\p{N} .()-]{0,39}$/u
 
+// The NAS of an address: "nas:5005" (WebDAV) and "nas" (SMB) are the same NAS - its shares are the top folders both
+// ways, so a profile made over WebDAV fits the SMB login too.
 function nasAddressKey(address: string | undefined): string {
-  return (address ?? '').trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '').toLowerCase()
+  const text = (address ?? '').trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '').toLowerCase()
+  const slash = text.indexOf('/')
+  const host = slash < 0 ? text : text.slice(0, slash)
+  const rest = slash < 0 ? '' : text.slice(slash)
+  return host.replace(/^\[(.*)\](?::\d+)?$/, '$1').replace(/^([^:]*):\d+$/, '$1') + rest
 }
 
 // A profile created before any login (no address/account yet) is not bound to a NAS and fits any login.
@@ -6103,24 +6455,6 @@ function nasTrackActiveProfile(settings: NasConfig | undefined, changes: Record<
   }
 }
 
-async function nasFolderExists(session: NasSession, folderPath: string): Promise<boolean> {
-  const response = await nasFetch(session, `${nasUrl(session, folderPath)}/`, {
-    method: 'PROPFIND',
-    headers: { Authorization: session.auth, Depth: '0' },
-    signal: AbortSignal.timeout(8000),
-  })
-  await response.text().catch(() => '')
-  // A folder that is gone is a 404; a share (top level) that does not exist is answered with 405 by Synology.
-  const topLevel = folderPath.split('/').filter(Boolean).length <= 1
-  if (response.status === 404 || response.status === 410 || (response.status === 405 && topLevel)) {
-    return false
-  }
-  if (response.status === 207 || response.status === 200) {
-    return true
-  }
-  throw new NasApiError(`WebDAV error ${response.status}`)
-}
-
 app.get('/api/nas/profiles', localOrElternSession, async (_req, res) => {
   try {
     // Store the profile list once, so "standard" exists in the config (and thus in the backup).
@@ -6158,7 +6492,7 @@ app.post('/api/nas/profiles/create', localOrElternSession, async (req, res) => {
     res.status(400).json({ success: false, error: 'invalid_name' })
     return
   }
-  if (!(await getActiveNasSession())) {
+  if (!(await nasAccess.active())) {
     res.status(401).json({ success: false, error: 'not_logged_in' })
     return
   }
@@ -6184,7 +6518,7 @@ app.post('/api/nas/profiles/create', localOrElternSession, async (req, res) => {
 // profile was made with. Folders that no longer exist on the NAS are reported (`missing`), not removed.
 app.post('/api/nas/profiles/load', localOrElternSession, async (req, res) => {
   const name = typeof req.body?.name === 'string' ? req.body.name : ''
-  const session = await getActiveNasSession()
+  const session = await nasAccess.active()
   if (!session) {
     res.status(401).json({ success: false, error: 'not_logged_in' })
     return
@@ -6218,7 +6552,7 @@ app.post('/api/nas/profiles/load', localOrElternSession, async (req, res) => {
     let unverified = 0
     const exists = await mapWithConcurrency(paths, 4, async (folderPath) => {
       try {
-        return await nasFolderExists(session, folderPath)
+        return await session.folderExists(folderPath)
       } catch {
         unverified++ // could not be checked (network) - not reported as missing
         return true
@@ -6306,9 +6640,13 @@ app.post('/api/nas/profiles/delete', localOrElternSession, async (req, res) => {
 // interface calls these routes server-side through localhost (nas.php), the new app with its parents' session and
 // CSRF token (localOrElternSession). Open to the LAN they exposed the box's NAS login and the whole NAS to anyone.
 app.post('/api/nas/login', localOrElternSession, async (req, res) => {
-  const { address, https: useHttps, account, password, rememberMe, certFingerprint } = req.body ?? {}
+  const { address, https: useHttps, account, password, rememberMe, certFingerprint, protocol, domain } = req.body ?? {}
   if (typeof address !== 'string' || !address || typeof account !== 'string' || !account || typeof password !== 'string' || !password) {
     res.status(400).json({ success: false, error: 'address, account and password are required.' })
+    return
+  }
+  if (protocol === 'smb') {
+    await nasLoginSmb(res, { address, account, password, rememberMe: rememberMe === true, domain: typeof domain === 'string' ? domain.trim() : '' })
     return
   }
 
@@ -6330,34 +6668,91 @@ app.post('/api/nas/login', localOrElternSession, async (req, res) => {
       ? certFingerprint.toUpperCase()
       : undefined
   // A wrong password may be answered slowly by some NAS models: be generous here.
-  const result = await nasLogin(base, account, password, 25000, fingerprint)
-  if (!result.success || !result.session) {
+  const result = await webdavLogin(base, account, password, 25000, fingerprint)
+  if (!result.success || !result.provider) {
     res.json({ success: false, error: result.error, certificate: result.certificate })
     return
   }
 
-  nasSessionCache = result.session
-  nasLastSession = result.session
-  nasOfflineUntil = 0
+  // (without "merken": kept in memory until signed off or restarted - its password is in no config)
+  nasAccess.use(result.provider, rememberMe !== true)
   nasListCacheClear() // another NAS or account: its folders
+  smbDisconnect(nasSmb).catch(() => undefined) // (a share mounted before is not needed any more)
 
-  if (rememberMe === true) {
-    try {
-      await updateNasConfig({
-        address,
-        https: Boolean(useHttps),
-        account,
-        password: nasEncrypt(password),
-        rememberMe: true,
-        certFingerprint: fingerprint ?? '',
-      })
-    } catch (error) {
-      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to save NAS login: ${error}`)
-    }
+  // The config holds the latest login in any case (the NAS page, profiles, photos and the backup read it there) - its
+  // password only with "merken".
+  try {
+    await updateNasConfig({
+      protocol: 'webdav',
+      address,
+      https: Boolean(useHttps),
+      account,
+      password: rememberMe === true ? nasEncrypt(password) : '',
+      rememberMe: rememberMe === true,
+      certFingerprint: fingerprint ?? '',
+      share: '',
+      domain: '',
+    })
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to save NAS login: ${error}`)
   }
 
   res.json({ success: true })
 })
+
+// The login to a share (\\nas\Musik): mounted anew with this login - cifs-utils installed first when the box has none
+// (a minute or two, once). The reason of a failure goes to the app as `reason`.
+async function nasLoginSmb(
+  res: express.Response,
+  login: { address: string; account: string; password: string; rememberMe: boolean; domain: string },
+): Promise<void> {
+  const target = parseSmbAddress(login.address)
+  if (!target || neverFetched(target.host)) {
+    res.status(400).json({ success: false, reason: 'address', error: 'address is not a share address (\\\\NAS\\share).' })
+    return
+  }
+  if (login.domain.length > 64 || /[\r\n]/.test(login.domain) || /[\r\n]/.test(login.account) || /[\r\n]/.test(login.password)) {
+    res.status(400).json({ success: false, reason: 'auth', error: 'account, password or domain not usable.' })
+    return
+  }
+  // (SMB does not care about upper and lower case, the box's paths do: the share as the folders chosen before spell
+  // it - "\\nas\Music" for a share whose folders were chosen over WebDAV as "/music/...")
+  const chosen = nasSettings(await getMupiboxConfig())
+  const spelled = [...(chosen?.artistFolders ?? []), ...(chosen?.hiddenFolders ?? []), ...(chosen?.downloadFolders ?? [])]
+    .map((p) => p.split('/').filter(Boolean)[0])
+    .find((first) => first && first !== target.share && first.toLowerCase() === target.share.toLowerCase())
+  if (spelled) target.share = spelled
+  const result = await smbConnect(
+    { host: target.host, share: target.share, account: login.account, password: login.password, domain: login.domain || undefined },
+    nasSmb,
+    true,
+  )
+  if (!result.provider) {
+    const reason = result.error ?? 'other'
+    res.json({ success: false, reason, error: smbErrorText(reason) })
+    return
+  }
+  nasAccess.use(result.provider, !login.rememberMe)
+  nasListCacheClear()
+  // (the latest login in the config in any case, its password only with "merken" - see the WebDAV login)
+  try {
+    await updateNasConfig({
+      protocol: 'smb',
+      address: target.host,
+      share: target.share,
+      domain: login.domain,
+      https: false,
+      account: login.account,
+      password: login.rememberMe ? nasEncrypt(login.password) : '',
+      rememberMe: login.rememberMe,
+      certFingerprint: '',
+    })
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to save NAS login: ${error}`)
+  }
+  // (the folder given below the share: the app opens the tree there)
+  res.json({ success: true, folder: `/${[target.share, ...target.folder.split('/').filter(Boolean)].join('/')}` })
+}
 
 // --- Folder index for the admin page's "Filter folders" ----------------------
 // Walking a big NAS folder by folder takes minutes, so the admin page filters against an index
@@ -6365,7 +6760,7 @@ app.post('/api/nas/login', localOrElternSession, async (req, res) => {
 // It is only used for that filter - the tree and the kids' NAS tab always list the NAS live.
 // Rebuilt on demand ("Refresh index") and automatically once it is older than a day.
 
-const nasIndexPath = '/home/dietpi/.mupibox/nas-folder-index.json'
+const nasIndexPath = path.join(DATA_DIR, 'nas-folder-index.json')
 const nasIndexMaxAgeMs = 24 * 60 * 60 * 1000
 const nasIndexRetryMs = 10 * 60 * 1000
 const nasIndexMaxDepth = 12
@@ -6374,11 +6769,31 @@ const nasIndexMaxFolders = 200000
 interface NasFolderIndex {
   updated: number
   folders: string[]
+  // the folders it was made below (the shown ones)
+  roots?: string[]
+  // 2: made below the shown folders (before: the whole NAS, also with roots [])
+  v?: number
 }
+
+// What the search of the app's NAS page looks through: the shown folders and all below them - the box needs no index
+// for showing them (it lists them live), the search is for picking subfolders there. Nothing shown: nothing to
+// search, the NAS is not walked at all (the tree of the page shows its folders). NAS paths, none inside another.
+function nasIndexRoots(settings: NasConfig | undefined): string[] {
+  const paths = nasShownFolders(settings)
+    .filter((v) => typeof v === 'string')
+    .map((v) => v.split('/').filter(Boolean))
+    .filter((parts) => parts.length > 0 && !parts.some((p) => p === '.' || p === '..'))
+    .map((parts) => `/${parts.join('/')}`)
+  const unique = [...new Set(paths)].sort()
+  return unique.filter((p) => !unique.some((q) => q !== p && p.startsWith(`${q}/`)))
+}
+
+const sameRoots = (a: string[] | undefined, b: string[]) => (a ?? []).length === b.length && (a ?? []).every((p, i) => p === b[i])
 
 let nasIndexCache: NasFolderIndex | undefined
 let nasIndexLoaded = false
 let nasIndexLastAttempt = 0
+let nasIndexLastRoots: string[] | undefined // the shown folders the last run was for
 const nasIndexJob = { running: false, folders: 0, error: '' }
 
 async function loadNasIndex(): Promise<NasFolderIndex | undefined> {
@@ -6409,32 +6824,43 @@ async function buildNasIndex(): Promise<void> {
   nasIndexJob.folders = 0
   nasIndexJob.error = ''
   nasIndexLastAttempt = Date.now()
+  let again = false
   try {
-    const found: string[] = []
+    const settings = nasSettings(await getMupiboxConfig())
+    const roots = nasIndexRoots(settings)
+    const hiddenFolders = settings?.hiddenFolders ?? []
+    nasIndexLastRoots = roots
+    // (the shown folders themselves are found too - the search finds "Hörspiele" as well)
+    const found: string[] = [...roots]
     let skipped = 0
-    let level = ['/']
+    let unanswered = 0 // of those: the NAS did not answer at all (not "gone" or "no permission")
+    let level = roots // (none shown: an empty index at once)
     // Level by level, at most 4 requests in flight (same limit as elsewhere: a big NAS behind a
-    // DDNS address does not cope with bursts).
+    // DDNS address does not cope with bursts). Over SMB too: with 8 the kernel's requests to the NAS piled up until
+    // a listing ran into its time limit and the NAS counted as away.
     for (let depth = 0; level.length > 0 && depth < nasIndexMaxDepth && found.length < nasIndexMaxFolders; depth++) {
       const listings = await mapWithConcurrency(level, 4, async (folder) => {
         try {
-          const files = await withNasSession((session) => nasListFilesLive(session, folder))
+          const list = () => nasAccess.withSession((session) => session.list(folder, undefined, { foldersOnly: true }))
+          // (a shown folder on a disk that wakes up: once more after a moment before the run fails)
+          const files = depth === 0 ? await list().catch(async () => (await new Promise((r) => setTimeout(r, 3000)), list())) : await list()
           if (files === undefined) {
             throw new Error('Not logged in to the NAS')
           }
           return files
         } catch (error) {
-          if (folder === '/') {
-            throw error
+          if (folder === '/' || (depth === 0 && !(error instanceof NasApiError || error instanceof NasSessionExpiredError))) {
+            throw error // (a shown folder the NAS did not answer for: no index of the start folders only)
           }
           skipped++ // one unreadable folder must not fail the whole run
+          if (!(error instanceof NasApiError || error instanceof NasSessionExpiredError)) unanswered++
           return []
         }
       })
       const next: string[] = []
       for (const files of listings) {
         for (const file of files) {
-          if (file.isdir && !nasIndexSkip(file.name)) {
+          if (file.isdir && !nasIndexSkip(file.name) && !nasIsHidden(file.path, hiddenFolders)) {
             found.push(file.path)
             next.push(file.path)
           }
@@ -6442,8 +6868,18 @@ async function buildNasIndex(): Promise<void> {
       }
       nasIndexJob.folders = found.length
       level = next
+      // (other folders shown in the meantime: started again for them)
+      if (!sameRoots(roots, nasIndexRoots(nasSettings(await getMupiboxConfig())))) {
+        again = true
+        throw new Error('The shown folders changed - started again')
+      }
     }
-    const index: NasFolderIndex = { updated: Date.now(), folders: found }
+    // The NAS went away during the run: the folders skipped are not unreadable, they were not asked - the index
+    // before is kept, the run is tried again later (one in such a gap saved 13 of 44,000 folders).
+    if (unanswered > 0 && (nasAccess.isAway() || unanswered >= 10)) {
+      throw new Error(`The NAS stopped answering during the index (${unanswered} folders not read)`)
+    }
+    const index: NasFolderIndex = { updated: Date.now(), folders: found, roots, v: 2 }
     await mkdir(path.dirname(nasIndexPath), { recursive: true })
     const tmp = `${nasIndexPath}.tmp`
     await writeFile(tmp, JSON.stringify(index), 'utf8')
@@ -6452,27 +6888,41 @@ async function buildNasIndex(): Promise<void> {
     nasIndexLoaded = true
     console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS folder index built: ${found.length} folders (${skipped} unreadable skipped)`)
   } catch (error) {
-    nasIndexJob.error = error instanceof Error ? error.message : String(error)
-    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS folder index failed: ${nasIndexJob.error}`)
+    nasIndexJob.error = again ? '' : error instanceof Error ? error.message : String(error)
+    if (!again) console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS folder index failed: ${nasIndexJob.error}`)
   } finally {
     nasIndexJob.running = false
   }
+  if (again) void buildNasIndex()
 }
 
 // The NAS login as it is stored (never the password) and whether the box is signed in, plus the saved selection,
 // for the NAS page of the app. A remembered login is tried here if there is no session yet (at most 8 s).
 app.get('/api/nas/state', localOrElternSession, async (_req, res) => {
   const syn = nasSettings(await getMupiboxConfig())
-  const session = nasSessionCache ?? (await Promise.race([getActiveNasSession(), new Promise<undefined>((r) => setTimeout(() => r(undefined), 8000))]))
+  const session = nasAccess.signedIn ?? (await Promise.race([nasAccess.active(), new Promise<undefined>((r) => setTimeout(() => r(undefined), 8000))]))
+  const protocol = syn?.protocol === 'smb' ? 'smb' : 'webdav'
+  const address = syn?.address ?? ''
+  const share = syn?.share ?? ''
+  // why the box is not signed in although it has a login: refused (WebDAV and SMB), SMB being set up or not installable
+  const smbWhy = protocol === 'smb' ? smbWaiting() : undefined
+  const why = smbWhy && smbWhy !== 'unreachable' && smbWhy !== 'resolve' && smbWhy !== 'other' ? smbWhy : nasAccess.refused ? 'auth' : ''
   res.json({
     success: true,
-    address: syn?.address ?? '',
+    address,
     https: syn?.https === true,
+    protocol,
+    share,
+    domain: syn?.domain ?? '',
+    unc: protocol === 'smb' && address && share ? smbDisplayAddress(address, share) : '',
     account: syn?.account ?? '',
     rememberMe: syn?.rememberMe === true,
     hasPassword: Boolean(syn?.password),
-    loggedIn: Boolean(session),
-    offline: Date.now() < nasOfflineUntil,
+    // (a login the NAS refuses is no login: the app shows the form with the reason; while the NAS is away the login
+    // the box keeps still is one - the app shows "not reachable", not the form)
+    loggedIn: (Boolean(session) || (nasAccess.isAway() && nasHasLogin(syn))) && !why,
+    offline: nasAccess.isAway() && !why,
+    loginError: why,
     artistFolders: syn?.artistFolders ?? [],
     hiddenFolders: syn?.hiddenFolders ?? [],
     downloadFolders: syn?.downloadFolders ?? [],
@@ -6485,9 +6935,7 @@ app.get('/api/nas/state', localOrElternSession, async (_req, res) => {
 // request would just sign in again). Address and account stay for the next login; the NAS tab of the box is empty
 // until then, the downloaded folders stay playable.
 app.post('/api/nas/logout', localOrElternSession, async (_req, res) => {
-  nasSessionCache = undefined
-  nasLastSession = undefined
-  nasListCacheClear()
+  // (the remembered password first: a request between dropping the session and deleting it signed in again with it)
   try {
     await updateNasConfig({ password: '', rememberMe: false })
   } catch (error) {
@@ -6495,14 +6943,21 @@ app.post('/api/nas/logout', localOrElternSession, async (_req, res) => {
     res.status(500).json({ success: false })
     return
   }
+  nasAccess.clear()
+  nasListCacheClear()
+  await smbDisconnect(nasSmb).catch(() => undefined)
   console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS: signed out, remembered password deleted`)
   res.json({ success: true })
 })
 
 app.get('/api/nas/index/status', localOrElternSession, async (_req, res) => {
   const index = await loadNasIndex()
-  const stale = !index || Date.now() - index.updated > nasIndexMaxAgeMs
-  if (stale && !nasIndexJob.running && Date.now() - nasIndexLastAttempt > nasIndexRetryMs && (await getActiveNasSession())) {
+  const roots = nasIndexRoots(nasSettings(await getMupiboxConfig()))
+  // (made for other shown folders than now: made anew at once)
+  const changed = Boolean(index) && (index?.v !== 2 || !sameRoots(index?.roots, roots))
+  const stale = !index || Date.now() - index.updated > nasIndexMaxAgeMs || changed
+  const firstForThese = changed && !sameRoots(nasIndexLastRoots, roots)
+  if (stale && !nasIndexJob.running && (firstForThese || Date.now() - nasIndexLastAttempt > nasIndexRetryMs) && (await nasAccess.active())) {
     void buildNasIndex()
   }
   res.json({
@@ -6512,12 +6967,14 @@ app.get('/api/nas/index/status', localOrElternSession, async (_req, res) => {
     count: index?.folders.length ?? 0,
     running: nasIndexJob.running,
     folders: nasIndexJob.folders,
+    // below how many shown folders the search looks (0: the whole NAS - nothing shown yet)
+    roots: roots.length,
     error: nasIndexJob.running ? '' : nasIndexJob.error,
   })
 })
 
 app.post('/api/nas/index/refresh', localOrElternSession, async (_req, res) => {
-  if (!(await getActiveNasSession())) {
+  if (!(await nasAccess.active())) {
     res.status(401).json({ success: false, error: 'not_logged_in' })
     return
   }
@@ -6536,8 +6993,10 @@ app.get('/api/nas/index/search', localOrElternSession, async (req, res) => {
   const limit = 3000
   const paths: string[] = []
   let truncated = false
+  const roots = nasIndexRoots(nasSettings(await getMupiboxConfig()))
+  const below = (folder: string) => roots.some((r) => folder === r || folder.startsWith(`${r}/`))
   for (const folder of index.folders) {
-    if (folder.slice(folder.lastIndexOf('/') + 1).toLowerCase().includes(q)) {
+    if (below(folder) && folder.slice(folder.lastIndexOf('/') + 1).toLowerCase().includes(q)) {
       if (paths.length >= limit) {
         truncated = true
         break
@@ -6591,13 +7050,13 @@ app.get('/api/nas/browse', localOrElternSession, async (req, res) => {
   const folderPath = typeof req.query.path === 'string' ? req.query.path : ''
 
   try {
-    const result = await withNasSession(async (session) => {
+    const result = await nasAccess.withSession(async (session) => {
       const config = await getMupiboxConfig()
       const markedFolders = new Set(nasSettings(config)?.artistFolders ?? [])
       const downloadFolders = new Set(nasSettings(config)?.downloadFolders ?? [])
       const hiddenFolders = new Set(nasSettings(config)?.hiddenFolders ?? [])
 
-      const files = await nasListFilesLive(session, folderPath || '/')
+      const files = await session.list(folderPath || '/')
       // alphabetically, as people look for a folder ("Folge 2" before "Folge 10", upper and lower case alike) - the NAS
       // hands them out in its own order (reported by Andreas)
       const entries = files
@@ -6615,12 +7074,20 @@ app.get('/api/nas/browse', localOrElternSession, async (req, res) => {
     })
 
     if (result === undefined) {
+      // (the NAS is away with a login the box keeps: not answering, not signed off)
+      if (nasAccess.isAway() && !nasAccess.refused && nasHasLogin(nasSettings(await getMupiboxConfig()))) {
+        res.status(502).json({ success: false, error: 'nas_unreachable' })
+        return
+      }
       res.status(401).json({ success: false, error: 'not_logged_in' })
       return
     }
     res.json({ success: true, path: folderPath, entries: result })
   } catch (error) {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to browse NAS path ${folderPath}: ${error}`)
+    // the NAS did not answer (not: it answered with an error): away for a while, as for the box's own listings - the
+    // app shows "not reachable", the kids' screens use the copies on the SD card at once
+    if (!(error instanceof NasApiError || error instanceof NasSessionExpiredError)) nasAccess.markAway()
     res.status(502).json({ success: false, error: 'nas_unreachable' })
   }
 })
@@ -6762,7 +7229,7 @@ async function nasFolderEntries(folderPath: string, asTiles = false): Promise<{ 
       return undefined
     }
   })
-  const offline = entries.some((entry) => entry === undefined) && Date.now() < nasOfflineUntil
+  const offline = entries.some((entry) => entry === undefined) && nasAccess.isAway()
   // Audio files next to subfolders with albums: first comes an entry that plays them.
   if (nasHasAudio(files) && subfolders.some((sub) => factsOf.get(sub.path)?.audio || factsOf.get(sub.path)?.container)) {
     const own = pickCoverImage(files)
@@ -6916,10 +7383,10 @@ async function nasReadTextFile(nasPath: string): Promise<string | undefined> {
   if (local && localSize !== undefined) {
     return localSize > NAS_TEXT_MAX_BYTES ? undefined : nasDecodeText(await readFile(local))
   }
-  const buffer = await withNasSession(async (session) => {
-    const response = await nasFetch(session, nasUrl(session, nasPath), { headers: { Authorization: session.auth }, signal: AbortSignal.timeout(8000) })
+  const buffer = await nasAccess.withSession(async (session) => {
+    const response = await session.read(nasPath, { signal: AbortSignal.timeout(8000) })
     if (!response.ok) {
-      throw new NasApiError(`WebDAV error ${response.status}`)
+      throw new NasApiError(`NAS error ${response.status}`)
     }
     if (Number(response.headers.get('content-length') ?? 0) > NAS_TEXT_MAX_BYTES) {
       await response.body?.cancel().catch(() => {})
@@ -7100,7 +7567,7 @@ async function nasPrefetchNext(filePath: string): Promise<void> {
   const nextLocal = nextPath ? nasLocalPath(nextPath) : undefined
   if (!nextPath || nasPrefetched.some((entry) => entry.path === nextPath) || (nextLocal && fs.existsSync(nextLocal))) return
 
-  const session = (await getActiveNasSession()) ?? nasLastSession
+  const session = (await nasAccess.active()) ?? nasAccess.last
   if (!session) return
   const entry: NasPrefetch = { path: nextPath, loading: new AbortController() }
   nasPrefetched.push(entry)
@@ -7112,7 +7579,7 @@ async function nasPrefetchNext(filePath: string): Promise<void> {
   }
   try {
     armStall()
-    const response = await nasFetch(session, nasUrl(session, nextPath), { headers: { Authorization: session.auth }, signal: abort.signal })
+    const response = await session.read(nextPath, { signal: abort.signal })
     const size = Number(response.headers.get('content-length'))
     if (response.status !== 200 || !response.body || !Number.isFinite(size) || size <= 0 || size > NAS_PREFETCH_MAX_BYTES || availableMemoryBytes() - size < NAS_PREFETCH_KEEP_FREE_BYTES) {
       abort.abort()
@@ -7153,7 +7620,7 @@ async function nasPrefetchNext(filePath: string): Promise<void> {
 const NAS_STALL_MS = 15000
 const NAS_OUTAGE_GIVE_UP_MS = 5 * 60 * 1000
 
-async function nasStreamWithResume(req: express.Request, res: express.Response, firstSession: NasSession, filePath: string): Promise<void> {
+async function nasStreamWithResume(req: express.Request, res: express.Response, firstSession: NasProvider, filePath: string): Promise<void> {
   let session = firstSession
   let clientGone = false
   let controller: AbortController | undefined
@@ -7179,11 +7646,7 @@ async function nasStreamWithResume(req: express.Request, res: express.Response, 
     }
     try {
       armStall()
-      const headers: Record<string, string> = { Authorization: session.auth }
-      if (range) {
-        headers.Range = range
-      }
-      const upstream = await nasFetch(session, nasUrl(session, filePath), { headers, signal: abort.signal })
+      const upstream = await session.read(filePath, { range, signal: abort.signal })
 
       if (!started) {
         if (upstream.status === 404 || upstream.status === 401 || upstream.status === 403) {
@@ -7262,7 +7725,7 @@ async function nasStreamWithResume(req: express.Request, res: express.Response, 
           return
         }
         await new Promise((resolve) => setTimeout(resolve, 1500))
-        session = (await getActiveNasSession()) ?? session
+        session = (await nasAccess.active()) ?? session
         continue
       }
       if (last === undefined) {
@@ -7282,7 +7745,7 @@ async function nasStreamWithResume(req: express.Request, res: express.Response, 
         console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Lost the NAS connection at byte ${next} of ${last + 1} (${filePath}): ${error}. Resuming ...`)
       }
       await new Promise((resolve) => setTimeout(resolve, Math.min(5000, 1000 * attempt)))
-      session = (await getActiveNasSession()) ?? session
+      session = (await nasAccess.active()) ?? session
       range = `bytes=${next}-${last}`
     }
   }
@@ -7337,7 +7800,7 @@ app.get('/api/nas/stream', nasPathWithinSelection, async (req, res) => {
 
   // While the NAS is marked offline (after another request failed), a stream still tries with the last session
   // that worked: the album that is playing must not skip every track for 30 s.
-  const session = (await getActiveNasSession()) ?? nasLastSession
+  const session = (await nasAccess.active()) ?? nasAccess.last
   if (!session) {
     res.status(401).send('Not logged in to the NAS, or the NAS is not reachable.')
     return
@@ -7379,16 +7842,13 @@ async function nasCoverThumbnail(
   filePath: string,
   size: number,
   version: string | undefined,
-  session?: NasSession,
+  session?: NasProvider,
 ): Promise<string | undefined> {
   const seed = `nas|${filePath}|${version ?? Math.floor(Date.now() / 86400000)}`
   return await getThumbnail(`nas:${filePath}`, size, seed, async () => {
-    const active = session ?? (await getActiveNasSession()) ?? nasLastSession
+    const active = session ?? (await nasAccess.active()) ?? nasAccess.last
     if (!active) return undefined
-    const full = await nasFetch(active, nasUrl(active, filePath), {
-      headers: { Authorization: active.auth },
-      signal: AbortSignal.timeout(20000),
-    })
+    const full = await active.read(filePath, { signal: AbortSignal.timeout(20000) })
     if (!full.ok) {
       return undefined
     }
@@ -7477,12 +7937,12 @@ interface NasFileToDownload {
 // A subfolder that cannot be read is noted in `failed` (its folder then gets no marker and nothing is removed
 // locally) instead of ending the whole download.
 async function nasCollectFiles(
-  session: NasSession,
+  session: NasProvider,
   folderPath: string,
   out: NasFileToDownload[],
   failed: string[],
 ): Promise<void> {
-  const files = await nasListFilesLive(session, folderPath, true)
+  const files = await session.list(folderPath)
   for (const file of files) {
     if (file.isdir) {
       try {
@@ -7517,7 +7977,7 @@ async function nasDownloadFile(nasPath: string, size: number, force = false, sig
   }
   await mkdir(path.dirname(target), { recursive: true })
 
-  const done = await withNasSession(async (session) => {
+  const done = await nasAccess.withSession(async (session) => {
     // No data for NAS_STALL_MS = a dead connection (WiFi gone without a reset): without this the download hung for
     // ever, "running" stayed set, and every later download was refused.
     const stall = new AbortController()
@@ -7528,16 +7988,13 @@ async function nasDownloadFile(nasPath: string, size: number, force = false, sig
     }
     const outer = signal ?? nasDownloadAbort?.signal
     armStall()
-    const response = await nasFetch(session, nasUrl(session, nasPath), {
-      headers: { Authorization: session.auth },
-      signal: outer ? AbortSignal.any([outer, stall.signal]) : stall.signal,
-    }).catch((error) => {
+    const response = await session.read(nasPath, { signal: outer ? AbortSignal.any([outer, stall.signal]) : stall.signal }).catch((error) => {
       clearTimeout(stallTimer)
       throw error
     })
     if (!response.ok || !response.body) {
       clearTimeout(stallTimer)
-      throw new NasApiError(`WebDAV download error ${response.status}`)
+      throw new NasApiError(`NAS download error ${response.status}`)
     }
     // Write to a temp name first so a half-finished file is never mistaken for a
     // complete one (and never gets played).
@@ -7625,7 +8082,7 @@ async function nasDownloadParentCovers(folder: string, checked: Set<string>): Pr
     if (dir && (await nasLocalHasImage(dir))) {
       continue
     }
-    const files = await withNasSession((session) => nasListFilesLive(session, ancestor, true))
+    const files = await nasAccess.withSession((session) => session.list(ancestor))
     const cover = files ? pickCoverImage(files) : undefined
     if (cover) {
       await nasDownloadFile(cover.path, cover.additional?.size ?? -1)
@@ -7695,7 +8152,7 @@ async function runNasSync(): Promise<void> {
     // The (small) covers of the parent folders are fetched after the space check below, so a
     // download that does not fit really leaves nothing behind.
     const downloadParentCovers = async (): Promise<void> => {
-      if (desired.length === 0 || !(await getActiveNasSession())) {
+      if (desired.length === 0 || !(await nasAccess.active())) {
         return
       }
       status.message = 'Downloading covers of parent folders...'
@@ -7714,7 +8171,7 @@ async function runNasSync(): Promise<void> {
       return
     }
 
-    if (!(await getActiveNasSession())) {
+    if (!(await nasAccess.active())) {
       throw new Error('The NAS is not reachable - nothing was downloaded.')
     }
 
@@ -7731,7 +8188,7 @@ async function runNasSync(): Promise<void> {
       const failedFolders: string[] = []
       let collected: boolean | undefined
       try {
-        collected = await withNasSession(async (session) => {
+        collected = await nasAccess.withSession(async (session) => {
           files.length = 0
           failedFolders.length = 0
           await nasCollectFiles(session, folder, files, failedFolders)
@@ -7872,7 +8329,7 @@ async function clearThumbnails(): Promise<number> {
 }
 
 async function nasRefreshLocalCovers(): Promise<{ updated: number; reachable: boolean }> {
-  if (!(await getActiveNasSession())) {
+  if (!(await nasAccess.active())) {
     return { updated: 0, reachable: false }
   }
   let updated = 0
@@ -7884,7 +8341,7 @@ async function nasRefreshLocalCovers(): Promise<{ updated: number; reachable: bo
       return
     }
     // Only folders that exist on the NAS and here; a listing that fails (folder gone) is skipped.
-    const files = await withNasSession((session) => nasListFilesLive(session, nasDir === '' ? '/' : nasDir, true)).catch(() => undefined)
+    const files = await nasAccess.withSession((session) => session.list(nasDir === '' ? '/' : nasDir)).catch(() => undefined)
     for (const file of files ?? []) {
       if (!file.isdir && /\.(jpe?g|jfif|png|webp)$/i.test(file.name)) {
         // only pictures that are here already: the walk also lists folders above downloaded ones (and the NAS root),
@@ -8005,9 +8462,9 @@ async function libraryFindCoverBelow(files: NasFileEntry[], depth: number): Prom
 // that are made once with Python's PIL (package python3-pil) and kept in a cache folder.
 // If PIL is missing or a picture cannot be converted, the original file is sent instead.
 
-// (in development next to the cover cache below cwd, see configBasePath: /home/dietpi does not exist there, and the
-// mkdir below failed every picture request of the display - radio logos showed the name card)
-const thumbDir = productionServe ? '/home/dietpi/.mupibox/thumbs' : path.join(process.cwd(), 'cache', 'thumbs')
+// (in cache/; in development below cwd, see paths.ts: /home/dietpi does not exist there, and the mkdir below failed
+// every picture request of the display - radio logos showed the name card)
+const thumbDir = path.join(CACHE_DIR, 'thumbs')
 const thumbMaxParallel = 2
 let thumbsUnavailableUntil = 0
 let thumbRunning = 0
@@ -8190,12 +8647,9 @@ async function trackCover(file: string): Promise<string | undefined> {
     const localCopy = local && fs.existsSync(local) ? local : undefined
     read = async (start, end) => {
       if (localCopy) return await readFileRange(localCopy, start, end)
-      const session = (await getActiveNasSession()) ?? nasLastSession
+      const session = (await nasAccess.active()) ?? nasAccess.last
       if (!session) throw new Error('NAS not reachable')
-      const response = await nasFetch(session, nasUrl(session, normalized), {
-        headers: { Authorization: session.auth, Range: `bytes=${start}-${end}` },
-        signal: AbortSignal.timeout(15000),
-      })
+      const response = await session.read(normalized, { range: `bytes=${start}-${end}`, signal: AbortSignal.timeout(15000) })
       if (response.status !== 206 && response.status !== 200) throw new Error(`HTTP ${response.status}`)
       const data = Buffer.from(await response.arrayBuffer())
       // a server that ignores the range sends the whole file from the start
@@ -8248,6 +8702,7 @@ app.get('/api/track-cover', async (req, res) => {
   }
   await sendThumbnail(res, thumb)
 })
+
 
 function sendThumbnail(res: express.Response, thumb: string): Promise<void> {
   return stat(thumb).then((info) => {
@@ -8438,6 +8893,9 @@ app.get('/api/library/children', async (req, res) => {
 })
 
 // Cover images (and audio) of library folders, with Range support.
+// The photo display's albums for the box's display (only with the display switched on - app-api/photos/albums.ts)
+registerPhotoDisplayRoutes(app, { getMupiboxConfig: () => getMupiboxConfigSync(), usersOn: usersShownApart })
+
 app.get('/api/library/file', async (req, res) => {
   const rel = libraryRel(typeof req.query.path === 'string' ? req.query.path : '')
   const contentType = rel ? nasContentTypes[path.extname(rel).toLowerCase()] : undefined
@@ -8595,10 +9053,35 @@ const spotifySyncDeps: RunSyncDeps = {
   dataFile,
   getMupiboxConfig: getMupiboxConfigSync,
   updateMupiboxConfig,
-  acquireDataLock: () => acquireLock(dataLock, '/api/spotify-sync'),
+  // (a switch of the user not finished - its end failed twice: the library in place is the coming user's, the config
+  // still the going one's; his subscriptions put into the other's library otherwise. Again at the next run.)
+  acquireDataLock: () => (userFiles.read().switching ? 'locked' : acquireLock(dataLock, '/api/spotify-sync')),
   releaseDataLock: () => releaseLock(dataLock, '/api/spotify-sync'),
 }
 app.use('/api/spotify-sync', createSpotifySyncRouter(spotifySyncDeps))
+
+// The sync for a user who is not in place: his library under his own lock (a switch takes it too), the box's config with
+// his subscriptions in it (read anew at every look), the box's sign-in at Spotify (a new token is the box's: written
+// in place), and a state of his own (what the app and /syncstatus show stays that of the one in place)
+function spotifySyncDepsOf(id: string): RunSyncDeps {
+  const lock = userLibraryLock(id)
+  return {
+    dataFile: path.join(userFiles.userDir(id), 'library', 'data.json'),
+    getMupiboxConfig: () => {
+      const cfg = getMupiboxConfigSync()
+      if (!cfg) return cfg
+      const mine = userFiles.readConfigPart(id)?.sections.spotify_sync
+      const out = { ...cfg } as Record<string, unknown>
+      if (mine === undefined) delete out.spotify_sync
+      else out.spotify_sync = mine
+      return out as MupiboxConfig
+    },
+    updateMupiboxConfig,
+    acquireDataLock: () => acquireLock(lock, '/api/spotify-sync user'),
+    releaseDataLock: () => releaseLock(lock, '/api/spotify-sync user'),
+    stateFilePath: `/tmp/.spotify_sync_state.${id}.json`,
+  }
+}
 
 // Phase 14c — the routes of the app (JSON API under /api/app/*; /api/eltern/* the address of before, for links and
 // scripts still using it). The magic-link landing handler at /app redeems
@@ -8617,6 +9100,49 @@ app.use(
     nasCover: writeNasCover,
     nasSelected: nasPathSelected,
     podcastOffline,
+    photoNas,
+    // (the Immich key kept as the NAS password: encrypted with this box's own key)
+    photoSecret: { encrypt: nasEncrypt, decrypt: nasDecrypt },
+    heard: heardStore,
+    // (several users: the app's library of another user than the one in place - users.ts)
+    otherUser: (req) => {
+      const lib = libraryOf(req)
+      if (!lib) return undefined
+      return lib.current ? null : String(req.query.user)
+    },
+    userConfig: (id) => users.userConfig(id),
+    updateUserConfig: (id, mutate) => users.updateUserConfig(id, mutate),
+    userPlayLog: (id) => path.join(userFiles.userDir(id), 'logs', 'play_log.jsonl'),
+    usersOn: usersShownApart,
+    userIds: () => userFiles.read().users.map((u) => u.id),
+    requestedUser: (req) => {
+      if (req.query?.user === undefined) return null
+      const lib = libraryOf(req)
+      if (!lib) return undefined
+      return { id: String(req.query.user), current: lib.current }
+    },
+    userLibraryDir: (id) => path.join(userFiles.userDir(id), 'library'),
+    heardOf: (id) => new HeardStore(path.join(userFiles.userDir(id), 'library')),
+    backupUsers: {
+      hold: (work) => users.hold(work),
+      read: () => userFiles.read(),
+      prepareRestore: () => userFiles.prepareRestore(getMupiboxConfigSync() as Record<string, unknown> | undefined),
+      finishRestore: (held, before) => userFiles.finishRestore(held, before),
+      undoRestore: (held, before) => {
+        userFiles.undoRestore(held, before)
+        void users.reapplyKept().catch((err) => console.error(`${new Date().toLocaleString()}: [users] settings after a failed restore: ${(err as Error).message}`))
+      },
+    },
+    withUserLock: (id, work) => {
+      const lock = userLibraryLock(id)
+      if (acquireLock(lock, 'user library') !== 'acquired') return 'locked'
+      try {
+        fs.mkdirSync(path.join(userFiles.userDir(id), 'library'), { recursive: true })
+        return work()
+      } finally {
+        releaseLock(lock, 'user library')
+      }
+    },
     localLibrary: {
       root: libraryRoot,
       categories: libraryCategories,
@@ -8626,6 +9152,40 @@ app.use(
     },
   }),
 )
+// Jellyfin (docs/jellyfin-5.1.md): its pictures, its tracks and their audio for the display, the app and the player - with
+// the box's token, which never leaves the box. Switched off in the app: nothing of Jellyfin is served.
+const jellyfinNow = () => {
+  const cfg = getMupiboxConfigSync()
+  return jellyfinSettings(cfg as Record<string, unknown> | undefined).enabled ? jellyfinSession(cfg, nasDecrypt) : null
+}
+const jellyfinMedia = registerJellyfinMedia(app, {
+  session: jellyfinNow,
+  transcode: () => jellyfinSettings(getMupiboxConfigSync() as Record<string, unknown> | undefined).transcode,
+  shareProgress: () => jellyfinSettings(getMupiboxConfigSync() as Record<string, unknown> | undefined).shareProgress,
+  // (only with the ticks switched on, as the player's own notes - and never back from finished)
+  heardFinished: (key) => {
+    if (heardSettings(getMupiboxConfigSync()?.mupibox as Record<string, unknown> | undefined).enabled && heardStore.stateOf(key) !== 'finished') heardStore.note(key, 'finished')
+  },
+  cacheDir: CACHE_DIR,
+})
+// Audible (docs/audible-5.1.md): its covers for the display and the app - switched off or signed out: nothing of Audible
+const audibleNow = () => {
+  const cfg = getMupiboxConfigSync() as Record<string, unknown> | undefined
+  return audibleSettings(cfg).enabled ? audibleSession(cfg, nasDecrypt) : null
+}
+const audibleMedia = registerAudibleMedia(app, {
+  session: audibleNow,
+  deviceKey: () => audibleSettings(getMupiboxConfigSync() as Record<string, unknown> | undefined).serial,
+  shareProgress: () => audibleSettings(getMupiboxConfigSync() as Record<string, unknown> | undefined).shareProgress,
+  // (only with the ticks switched on, as the player's own notes - and never back from finished)
+  heardFinished: (key) => {
+    if (heardSettings(getMupiboxConfigSync()?.mupibox as Record<string, unknown> | undefined).enabled && heardStore.stateOf(key) !== 'finished') heardStore.note(key, 'finished')
+  },
+  cacheDir: CACHE_DIR,
+})
+// Extensions (docs/extensions.md): their files for the display and the app (/ext/<id>/...), the list of the ones that are on
+// (/api/ext/active) and the API parts they bring along (/api/ext/<id>/...). Installing and removing is in the app's routes.
+mountExtensions(app, { getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
 // The parents' web app (/parents, first /eltern) is replaced by the app: its addresses lead there, with a login link's
 // token (bookmarks, home-screen icons, Telegram messages sent before)
 app.use(['/parents', '/eltern'], (req, res) => {
@@ -8756,6 +9316,9 @@ process.on('unhandledRejection', (reason) => {
 })
 process.on('uncaughtException', (err) => {
   console.error(`${new Date().toLocaleString()}: [mupibox-backend-api] uncaught exception: ${err.message}`, err.stack)
+  // (an error that went through the files of an extension is written down: one that keeps ending the server is switched off at the
+  // next start - extension-health.ts)
+  noteExtensionCrash(err)
   process.exit(1)
 })
 
@@ -8765,6 +9328,23 @@ if (!testServe) {
   // A request may take up to 5 minutes by default: too short for a large file uploaded from the web app over WiFi
   server.requestTimeout = 60 * 60 * 1000
   console.log(`${new Date().toLocaleString()}: [mupibox-backend-api] Server started at http://localhost:8200`)
+  // (what a power cut left of its writes - json-file.ts)
+  for (const dir of [LIBRARY_DIR, DATA_DIR]) void sweepTempFiles(dir)
+  // (a switch of the user cut off: its files were finished at the start - the configuration's part now; the users'
+  // trash of more than 30 days emptied, then once a day)
+  if (userRestoreUndone) users.reapplyKept().catch((err) => console.error(`${new Date().toLocaleString()}: [users] settings after a restore: ${(err as Error).message}`))
+  if (userSwitchCutOff) {
+    users.finishCutOff().catch((err) => console.error(`${new Date().toLocaleString()}: [users] finishing the switch: ${(err as Error).message}`))
+  }
+  const purgeUserTrash = () => {
+    try {
+      userFiles.purgeTrash()
+    } catch (err) {
+      console.warn(`${new Date().toLocaleString()}: [users] trash: ${(err as Error).message}`)
+    }
+  }
+  purgeUserTrash()
+  setInterval(purgeUserTrash, 24 * 60 * 60 * 1000).unref()
   // the same app for the web server of port 80/443 (lighttpd proxies /app, /api, ... here; see request-guard.ts)
   const proxied = app.listen(PROXY_PORT, '127.0.0.1')
   proxied.on('upgrade', proxyVncUpgrade)
@@ -8773,17 +9353,41 @@ if (!testServe) {
   // Spotify-sync scheduler — only in production / dev, not under tests.
   // Boot-after-60s lead-in inside startScheduler so initial config load
   // has time to finish before the first sync attempt.
-  startScheduler(spotifySyncDeps)
+  // (several users on: the subscriptions of those not in place too, each in his own library - users.ts; switched off,
+  // the others rest: their files stay, nothing is fetched for them)
+  startScheduler(spotifySyncDeps, {
+    others: () => {
+      const f = userFiles.read()
+      if (f.switching || !f.enabled) return []
+      return f.users.filter((u) => u.id !== f.current).map((u) => ({ id: u.id, deps: spotifySyncDepsOf(u.id) }))
+    },
+  })
   // Spotify albums kept as their id only: name and cover into data.json (spotify-album-fill.ts)
-  startSpotifyAlbumFill(albumFillDeps)
-  // The Spotify login's 6 months: reminders before the end, a message when Spotify refused it (eltern/spotify-auth-age.ts)
+  startSpotifyAlbumFill(albumFillDeps, () => {
+    const f = userFiles.read()
+    if (f.switching || !f.enabled) return []
+    return f.users.filter((u) => u.id !== f.current).map((u) => albumFillDepsOf(path.join(userFiles.userDir(u.id), 'library', 'data.json'), userLibraryLock(u.id)))
+  })
+  // The Spotify login's 6 months: reminders before the end, a message when Spotify refused it (app-api/spotify-auth-age.ts)
   startSpotifyLoginWatch({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
   startTlsWatch({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
   // the Home Assistant API, when it is switched on (ha/ha-api.ts)
   startHaApi(haDeps)
-  startWeeklySummary({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig, currentPlayLogStart })
+  startWeeklySummary({
+    getMupiboxConfig: getMupiboxConfigSync,
+    updateMupiboxConfig,
+    currentPlayLogStart,
+    hold: (work) => users.hold(work),
+    users: () => {
+      if (!usersShownApart()) return null
+      const f = userFiles.read()
+      return f.users.map((u) =>
+        u.id === f.current ? { name: u.name, current: true } : { name: u.name, file: path.join(userFiles.userDir(u.id), 'logs', 'play_log.jsonl'), current: false },
+      )
+    },
+  })
   startInstallationStatistics({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
-  // "Abends dunkler": the display's brightness in the evening (eltern/night-dim.ts)
+  // "Abends dunkler": the display's brightness in the evening (app-api/night-dim.ts)
   startNightDim(getMupiboxConfigSync)
   // the automatic announcements (speech.ts)
   startSpeech(getMupiboxConfigSync)

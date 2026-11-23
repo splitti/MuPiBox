@@ -104,8 +104,12 @@ export async function fillSpotifyAlbums(deps: AlbumFillDeps, why: string): Promi
   }
 }
 
-/** Once shortly after the start (the old rows), then every 6 h (rows a block kept from being filled). */
-export function startSpotifyAlbumFill(deps: AlbumFillDeps): void {
-  setTimeout(() => void fillSpotifyAlbums(deps, 'start'), FIRST_AFTER_MS).unref()
-  setInterval(() => void fillSpotifyAlbums(deps, 'every 6 h'), EVERY_MS).unref()
+/** Once shortly after the start (the old rows), then every 6 h (rows a block kept from being filled) - the library in
+ *  place, then those of the users not in place (several users, users.ts: `others`, asked anew each time). */
+export function startSpotifyAlbumFill(deps: AlbumFillDeps, others: () => AlbumFillDeps[] = () => []): void {
+  const all = async (why: string) => {
+    for (const d of [deps, ...others()]) await fillSpotifyAlbums(d, why)
+  }
+  setTimeout(() => void all('start'), FIRST_AFTER_MS).unref()
+  setInterval(() => void all('every 6 h'), EVERY_MS).unref()
 }

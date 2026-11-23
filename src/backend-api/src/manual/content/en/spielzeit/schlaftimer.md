@@ -25,7 +25,7 @@ In the last 20 seconds before the end the box fades the volume out slowly, so pl
 
 ### One timer, whoever sets it
 
-The box always has **exactly one** sleep timer. The app, Telegram (`/sleep` and the buttons), the old admin interface and [Home Assistant](../netzwerk/home-assistant.md) all set the same timer and see the same time left:
+The box always has **exactly one** sleep timer. The app, Telegram (`/sleep` and the buttons) and [Home Assistant](../netzwerk/home-assistant.md) all set the same timer and see the same time left:
 
 - **A new timer replaces the running one.** Set 30 minutes and then 60, and only the 60 count. The old timer can no longer switch the box off.
 - **Stop** cancels it, wherever it was set. Stopping twice in a row is no error either. Shortly before the end, while the volume fades, it goes back to where it was.

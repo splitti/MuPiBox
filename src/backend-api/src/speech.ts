@@ -17,6 +17,7 @@ import * as path from 'node:path'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { sleepTimerState } from './sleep-timer'
+import { LIBRARY_DIR } from './paths'
 
 const PIPER_DIR = '/home/dietpi/.mupibox/piper'
 const PIPER_BIN = `${PIPER_DIR}/piper/piper`
@@ -601,7 +602,7 @@ async function clearUnusedNames(sp: SpeechConfig, active: string): Promise<void>
 // The names the display reads out (the library's artists and albums), made in advance in the background: then they
 // come as fast as before with Google's saved files. After the start, after a voice was loaded or chosen, and whenever
 // the library changed (added in the app or the admin interface, an index update, the Smart-Sync): only the new names.
-const LIBRARY_FILE = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json'
+const LIBRARY_FILE = `${LIBRARY_DIR}/data.json`
 let preparing = false
 let prepareAgain = false
 export async function prepareNames(getConfig: () => unknown): Promise<void> {

@@ -23,12 +23,14 @@ Der Code steht nur auf dem Display der Box. Wer ihn eingibt, hat die Box also vo
 
 ## Was Home Assistant noch kann
 
-- **Bildschirmfoto**: Home Assistant kann zeigen, was gerade auf dem Display der Box steht. Während eine Kopplung offen ist, gibt es kein Bildschirmfoto: Der Code ist nur für den, der vor der Box steht.
+- **Bildschirmfoto**: Home Assistant kann zeigen, was gerade auf dem Display der Box steht. Während eine Kopplung offen ist, gibt es kein Bildschirmfoto: Der Code ist nur für den, der vor der Box steht. Ist das Display aus, gibt es auch keins (es wäre schwarz).
 - **Update**: Home Assistant zeigt, ob es eine neuere Version der Box gibt. Installiert wird das Update weiter in der App.
 - **Nachrichten** (Recht „Nachrichten und Ansagen“): Ein kurzer Text erscheint auf dem Display, bis seine Zeit um ist oder jemand darauf tippt.
 - **Ansagen** (Recht „Nachrichten und Ansagen“): Die Box spricht einen Text mit der Sprachausgabe. Dafür muss unter **Einstellungen › Audio › Sprachausgabe** eine Stimme eingestellt sein.
 - **Neustart und Ausschalten** (Recht „Neustart und Ausschalten“): Die Box startet neu oder fährt herunter, wie mit dem Knopf in der App.
 - **Ausschalt-Timer** (Recht „Neustart und Ausschalten“): Home Assistant stellt den [Schlaftimer](../spielzeit/schlaftimer.md) der Box, ersetzt ihn oder stoppt ihn (0 Minuten), bis 720 Minuten. Es ist derselbe Timer wie in der App und bei Telegram: Wer ihn wo stellt, alle sehen dieselbe Restzeit. Die Restzeit und das Ende sieht Home Assistant auch nur mit dem Recht zum Anzeigen. Ab Version 5.0.12 der Box, mit der Integration ab der Version, die den Timer kennt.
+
+- **Mehrere Benutzer**: Sind [mehrere Benutzer](../bedienung/mehrere-benutzer.md) an, meldet die Box, welches Kind gerade hört, und Home Assistant kann wechseln, ohne PIN wie die App. Anzeigen kann das die Integration, sobald sie diesen Teil der Schnittstelle kennt.
 
 Während einer Ruhezeit zeigt die Box keine Nachrichten und spricht keine Ansagen.
 

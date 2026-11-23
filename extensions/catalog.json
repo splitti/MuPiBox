@@ -1,0 +1,135 @@
+[
+  {
+    "id": "buttons",
+    "name": "Buttons & GPIO Input",
+    "version": "1.6.0",
+    "description": "Physische Taster an den GPIO-Pins steuern die Box: Play/Pause, Titel, Lautstärke und mehr. Mit Tastern für kurzes und langes Drücken (Dual Action) und Doppeltastern mit sechs Funktionen. Die Einstellungen stehen unter Einstellungen › Buttons & GPIO Input.",
+    "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB4PSI3NiIgeT0iMzAwIiB3aWR0aD0iMzYwIiBoZWlnaHQ9IjEyMCIgcng9IjI4IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyOCIvPjxwYXRoIGQ9Ik0xNTYgMzAwdi02NGExMDAgMTAwIDAgMCAxIDIwMCAwdjY0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyOCIvPjxwYXRoIGQ9Ik0yNTYgOTJWNDRNMTUwIDEyNGwtMzAtMzZNMzYyIDEyNGwzMC0zNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMjgiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPgo=",
+    "hostApi": 5,
+    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/buttons-1.6.0.mpx",
+    "sha256": "d1254f4bcd60221206a77c3e4d4128feb6f29527eaf62b44377b6aa6da9ad14d",
+    "size": 13509,
+    "resources": {},
+    "system": {
+      "udev": 0,
+      "units": [],
+      "groups": [],
+      "packages": []
+    }
+  },
+  {
+    "id": "cd",
+    "name": "USB-CD-Laufwerk",
+    "version": "1.0.1",
+    "description": "Audio-CDs vom USB-Laufwerk abspielen, mit Titelnamen und Cover aus dem Internet.",
+    "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjE5MiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMzIiLz48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjQ4IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIzMiIvPjxwYXRoIGQ9Ik0yNTYgMTEyYTE0NCAxNDQgMCAwIDEgMTQ0IDE0NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg0K",
+    "hostApi": 1,
+    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/cd-1.0.1.mpx",
+    "sha256": "6d59fb59da32b4d58a0d37e5663d7672ac3684254b89958524a2eefbc382dd4f",
+    "size": 14364,
+    "resources": {},
+    "system": {
+      "udev": 1,
+      "units": [],
+      "groups": [
+        "cdrom"
+      ],
+      "packages": []
+    }
+  },
+  {
+    "id": "clock",
+    "name": "Uhrzeit in der Kopfzeile",
+    "version": "1.0.1",
+    "description": "Zeigt die Uhrzeit oben im Display, rechts neben der Akkuanzeige – als Ziffern oder als Zifferblatt.",
+    "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjE5MiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMzIiLz48cGF0aCBkPSJNMjU2IDI1NlYxNDRNMjU2IDI1Nmw4MCA0OCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMzIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg0K",
+    "hostApi": 1,
+    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/clock-1.0.1.mpx",
+    "sha256": "35572447eb81754cd44505b536ceea4b561b2be13682da77bc97562e0ae80ee0",
+    "size": 2893,
+    "resources": {},
+    "system": {
+      "udev": 0,
+      "units": [],
+      "groups": [],
+      "packages": []
+    }
+  },
+  {
+    "id": "football",
+    "name": "Fußball",
+    "version": "0.2.0",
+    "description": "Die Ergebnisse deiner Vereine, der Spieltag und die Tabelle auf dem Display. Die Box holt sie im Internet bei OpenLigaDB oder mit eigenem Schlüssel bei football-data.org; jeder Benutzer folgt seinen eigenen Vereinen.",
+    "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxLjYiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iOS4yIi8+PHBhdGggZD0iTTEyIDcuNmwzLjIgMi4zLTEuMiAzLjhoLTRsLTEuMi0zLjh6IiBmaWxsPSJjdXJyZW50Q29sb3IiLz48cGF0aCBkPSJNMTIgNy42VjNNMTUuMiA5LjlsNC4zLTEuNE0xNCAxMy43bDIuNyAzLjdNMTAgMTMuN2wtMi43IDMuN004LjggOS45TDQuNSA4LjUiLz48L3N2Zz4K",
+    "hostApi": 15,
+    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/football-0.2.0.mpx",
+    "sha256": "2645081641494343ffa23d8a900a088426c6435cb9f5ca1f1d8d49428c283886",
+    "size": 38109,
+    "resources": {},
+    "system": {
+      "udev": 0,
+      "units": [],
+      "groups": [],
+      "packages": []
+    }
+  },
+  {
+    "id": "nfc",
+    "name": "NFC-Extension",
+    "version": "0.15.2",
+    "description": "Bis zu drei NFC-Leser lesen Tags und Karten, auch gleichzeitig: der PN5180 (ISO 14443 A und ISO 15693), der RC522 und der PN532 (ISO 14443 A) oder ein USB-Leser, der die Kartennummer wie eine Tastatur tippt (auch ein USB-Barcodeleser). Jeder Tag kann ein Album, ein Hörspiel, einen Sender oder einen Podcast starten: In der Bibliothek das Medium öffnen, „NFC-Tag“ antippen und den Tag auflegen. Die Einstellungen stehen unter Einstellungen › NFC-Extension.",
+    "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjE1MCAxNTAgNTAwIDUwMCI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iNDIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTI1NSA2MDBDMjE4IDU4NiAxOTggNTU4IDE5OCA1MjJWMjc1UTE5OCAxOTggMjc1IDE5OEg0MDVRNDk3IDE5OCA0OTcgMjkwVjUzN0wzNzIgNDMwIi8+PHBhdGggZD0iTTU0NSAxOThDNTgzIDIxMiA2MDIgMjQwIDYwMiAyNzdWNTI1UTYwMiA2MDIgNTI1IDYwMkg0MDBRMzAzIDYwMiAzMDMgNTEwVjI2Mkw0MzAgMzcyIi8+PC9nPjwvc3ZnPgo=",
+    "hostApi": 16,
+    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/nfc-0.15.2.mpx",
+    "sha256": "34f696c0952f47e667d6fd9652be1703daf35671f3b49f6334e164b9055a450a",
+    "size": 82247,
+    "resources": {},
+    "system": {
+      "udev": 1,
+      "units": [],
+      "groups": [],
+      "packages": [
+        "python3-spidev",
+        "python3-lgpio"
+      ]
+    }
+  },
+  {
+    "id": "oled",
+    "name": "OLED-Display",
+    "version": "0.7.10",
+    "description": "Ein kleines OLED-Display (SSD1306, SH1106 oder SSD1309 am I2C-Anschluss, 128 × 64 oder 128 × 32) zeigt, was die Box spielt: Titel, Interpret, Laufzeit, Titelnummer, Lautstärke, WLAN, Akku, Zufall und Wiederholen, Ausgang (Lautsprecher, Kopfhörer, Bluetooth) und die Uhrzeit. Die Einstellungen stehen unter Einstellungen › OLED-Display.",
+    "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48ZyBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIzMCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB4PSI1NiIgeT0iMTIwIiB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI0MCIgcng9IjM2Ii8+PHBhdGggZD0iTTEyMCAyMDBoMTEyTTEyMCAyNTBoMTgwTTEyMCAzMDBoODAiLz48cGF0aCBkPSJNMzYwIDE5MHYxMTBNMzkwIDIxNXY2ME0zMzAgMjI1djQwIi8+PHBhdGggZD0iTTIwMCA0MjBoMTEyIi8+PC9nPjwvc3ZnPgo=",
+    "hostApi": 14,
+    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/oled-0.7.10.mpx",
+    "sha256": "4e4fb14ca2a093046079b60ced68d64db69728ef9b8c5b08c87cf45a365f70e9",
+    "size": 53184,
+    "resources": {},
+    "system": {
+      "udev": 1,
+      "units": [],
+      "groups": [],
+      "packages": [
+        "python3-pil"
+      ]
+    }
+  },
+  {
+    "id": "weather",
+    "name": "Wetter",
+    "version": "1.5.2",
+    "description": "Das Wetter eines Ortes als Messuhren auf dem Display: Temperatur, Luftfeuchte, Wind, Luftdruck und Regen. Wetterserver und Ort wählst du in der Webapp.",
+    "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48Y2lyY2xlIGN4PSIxNzYiIGN5PSIxNzIiIHI9IjYwIiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyOCIvPjxwYXRoIGQ9Ik0xNzYgNjR2MjRNMTc2IDI1NnYyNE02OCAxNzJINDRNMzA4IDE3MmgtMjRNOTkgOTVsLTE3LTE3TTI1MyA5NWwxNy0xN005OSAyNDlsLTE3IDE3IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyOCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PHBhdGggZD0iTTE4MCA0MjBhNzIgNzIgMCAwIDEtOC0xNDMgMTAwIDEwMCAwIDAgMSAxOTIgMTYgNjIgNjIgMCAwIDEgNCAxMjd6IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyOCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPgo=",
+    "hostApi": 3,
+    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/weather-1.5.2.mpx",
+    "sha256": "0f915067837e29995502bb99a7878354c0d6b4e48325f28653c5a9b80293042a",
+    "size": 117160,
+    "resources": {},
+    "system": {
+      "udev": 0,
+      "units": [],
+      "groups": [],
+      "packages": []
+    }
+  }
+]

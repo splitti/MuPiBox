@@ -6,6 +6,7 @@ CONFIG="/etc/mupibox/mupiboxconfig.json"
 LOG="/tmp/idle_shutdown.log"
 current_idle_time=0
 PLAYERSTATE="/tmp/playerstate"
+PHOTOS_AWAKE="/tmp/mupibox-photos-awake"
 # The log got one or two lines every 10 s ("CURRENT IDLE TIME = 0" over and over); now only when the idle minutes
 # change (and at start and shutdown).
 last_logged=""
@@ -27,7 +28,11 @@ do
   max_idle_time=$(/usr/bin/jq -r .timeout.idlePiShutdown ${CONFIG})
   if (( $max_idle_time > 0 ))
   then
-    if [[ $(head -n1 ${PLAYERSTATE}) != "play" ]]
+    # (photos looked at on the display - touched within the last minutes - count as not idle: the display touches
+    # PHOTOS_AWAKE every minute while that lasts, backend-api app-api/photos/albums.ts)
+    photos_awake=0
+    if [ -e "${PHOTOS_AWAKE}" ] && (( $(date +%s) - $(stat -c %Y "${PHOTOS_AWAKE}" 2>/dev/null || echo 0) < 150 )); then photos_awake=1; fi
+    if [[ $(head -n1 ${PLAYERSTATE}) != "play" ]] && (( photos_awake == 0 ))
     then
 		((current_idle_time++))
 		idle=$(( current_idle_time / 6 ))

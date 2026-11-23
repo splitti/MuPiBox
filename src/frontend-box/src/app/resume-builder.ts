@@ -53,7 +53,7 @@ export function buildResumeMedia(
     resume.id = `nas:${resume.nasPath}`
     resume.resumelocalcurrentTracknr = local?.currentTracknr || 0
     resume.resumelocalprogressTime = local?.progressTime || 0
-  } else if (resume.type === 'tidal') {
+  } else if (resume.type === 'tidal' || resume.type === 'jellyfin' || resume.type === 'audible') {
     resume.resumelocalcurrentTracknr = local?.currentTracknr || 0
     resume.resumelocalprogressTime = local?.progressTime || 0
   } else if (resume.type === 'rss') {

@@ -2,7 +2,9 @@
 #
 # Config repair in node-sonos-config
 
-FRONTENDCONFIG="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json"
+. /usr/local/bin/mupibox/mupi_paths.sh
+
+FRONTENDCONFIG="${MUPI_SERVER_CONFIG}/config.json"
 SRC="https://mupibox.de/version/latest"
 HOSTN=$(/usr/bin/hostname)
 

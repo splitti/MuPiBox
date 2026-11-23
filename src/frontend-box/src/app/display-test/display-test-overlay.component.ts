@@ -5,7 +5,7 @@ import { catchError, interval, of, startWith, switchMap } from 'rxjs'
 import { environment } from 'src/environments/environment'
 import { DisplayTextsService } from '../display-texts.service'
 
-/** A new display model waiting for its answer (backend-api eltern/display-profile.ts displayTestState) */
+/** A new display model waiting for its answer (backend-api app-api/display-profile.ts displayTestState) */
 interface DisplayTest {
   running: boolean
   /** when the box goes back to the display of before (ms); null before the restart */

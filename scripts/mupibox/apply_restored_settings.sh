@@ -1,14 +1,16 @@
 #!/bin/bash
 #
-# After a backup was restored (the app's eltern/admin.ts and the admin interface's admin.php): what the restored
+# After a backup was restored (the app's app-api/admin.ts and the admin interface's admin.php): what the restored
 # configuration switches on but lives outside it is set up the way the configuration says. A fresh box restored from
 # a backup showed the MuPiHAT as active in the app, while its services, driver and sound card had never been set up
 # ("no HAT found" on the battery page until it was switched off and on in the admin interface). The caller restarts
 # the box afterwards. Runs as root.
 
+. /usr/local/bin/mupibox/mupi_paths.sh
+
 CONFIG=/etc/mupibox/mupiboxconfig.json
 B=/usr/local/bin/mupibox
-CUSTOM_CSS=/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/custom/custom-settings.css
+CUSTOM_CSS=${MUPI_WWW}/theme-data/custom/custom-settings.css
 
 j() { /usr/bin/jq -r "$1" "${CONFIG}" 2>/dev/null; }
 enabled() { systemctl is-enabled "$1" >/dev/null 2>&1; }
@@ -32,7 +34,7 @@ elif enabled mupi_hat.service; then
 	"${B}/disable_mupihat.sh" "${CARD_ARG[@]}"
 fi
 
-# the restored sound card in DietPi's configuration (dietpi.txt), as the app chooses it (eltern/hardware.ts), and the
+# the restored sound card in DietPi's configuration (dietpi.txt), as the app chooses it (app-api/hardware.ts), and the
 # MAX98357A's driver for it - or out again for another card while the MuPiHAT is off (amp_driver.sh)
 if [ -n "${CARD}" ]; then
 	current=$(sed -n '/^[[:blank:]]*CONFIG_SOUNDCARD=/{s/^[^=]*=//p;q}' /boot/dietpi.txt 2>/dev/null)
@@ -45,12 +47,16 @@ if [ -n "${CARD}" ]; then
 	fi
 fi
 
-# fan and rotary encoder: their services
-for pair in 'fan.fan_active:mupi_fan' 'rotary.active:mupi_rotary'; do
+# fan and rotary encoder: their services; Spotify on a box without the DSI display (the page without a screen - it ends by
+# itself when the box has its kiosk)
+# (the rotary service also runs for the additional encoders, rotary.extra)
+for pair in 'fan.fan_active:mupi_fan' 'rotary.active:mupi_rotary' 'mupibox.headlessSpotify:mupi_spotify_browser'; do
 	key="${pair%%:*}"
 	svc="${pair##*:}.service"
 	[ -f "/etc/systemd/system/${svc}" ] || continue
-	if [ "$(j ".${key} // false")" = "true" ]; then
+	want=$(j ".${key} // false")
+	if [ "${key}" = "rotary.active" ] && [ "$(j '(.rotary.extra // []) | length > 0')" = "true" ]; then want=true; fi
+	if [ "${want}" = "true" ]; then
 		enabled "${svc}" || { echo "${svc} on (restored configuration)"; systemctl enable "${svc}"; }
 	elif enabled "${svc}"; then
 		echo "${svc} off (restored configuration)"

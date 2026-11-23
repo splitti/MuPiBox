@@ -24,6 +24,11 @@ export const routes: Routes = [
     loadComponent: () => import('./medialist/medialist.page').then((m) => m.MedialistPage),
   },
   {
+    // an album of the photo display: ?album=<id>, &show=1 starts the slideshow at once
+    path: 'photos',
+    loadComponent: () => import('./photos/photo-album.page').then((m) => m.PhotoAlbumPage),
+  },
+  {
     path: 'player',
     loadComponent: () => import('./player/player.page').then((m) => m.PlayerPage),
   },

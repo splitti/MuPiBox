@@ -30,6 +30,10 @@ export class KmThemeService {
 
   readonly theme = computed<KmTheme | undefined>(() => kmTheme(this.themeId()))
   readonly isKm = computed(() => this.theme() !== undefined)
+  /** The Winamp theme: on a 1920 x 480 display the player of a Winamp skin fills the left half (see winamp/) */
+  readonly isWinamp = computed(() => this.themeId() === 'winamp')
+  /** counts up with every reading of the settings - the Winamp skin is loaded again with it (a new upload) */
+  readonly refreshes = signal(0)
   /** Andreas' "coverflow": its own look and cover band, no km theme - but the header, "Läuft gerade", the player,
    *  "Hören mit" and the track list of design round 2 in its colours (body.cf) */
   readonly isCoverflow = computed(() => this.themeId() === 'coverflow')
@@ -70,6 +74,7 @@ export class KmThemeService {
       .pipe(retry({ delay: (_err, n) => timer(Math.min(30000, 2000 * n)) }))
       .subscribe({
       next: (config) => {
+        this.refreshes.update((n) => n + 1)
         const m = config?.mupibox as
           | { theme?: string; themeStage?: boolean; themeStageAutoRead?: boolean; headerBand?: boolean; playerPanel?: boolean; fullscreenGestures?: boolean }
           | undefined

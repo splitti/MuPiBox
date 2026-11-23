@@ -11,7 +11,9 @@
 #
 # What: a "DISCONNECTED" is let go when the box is connected again (within up to 6 s) to the same network it was
 # connected to - the DHCP lease is still valid there - and the "CONNECTED" that follows it then keeps the address.
-# Connected to another network, or not connected again: Debian's script does as always. "The same network" is
+# Connected to another saved network meanwhile: let go as well, the CONNECTED of that one sets up its address. Not
+# connected again: Debian's script does as always. While a new network is tried (add_wifi.sh), a DISCONNECTED of that
+# adapter is let go without waiting. "The same network" is
 # wpa_supplicant's number of the saved network (WPA_ID of the event, "id=" of its status) with its name: the profile
 # (id_str, a fixed address) belongs to that number.
 
@@ -38,22 +40,42 @@ is_event_net() { [ -z "${WPA_ID}" ] || [ "${WPA_ID}" = "${1%% *}" ]; }
 case "${ACTION}" in
 	DISCONNECTED)
 		last=$(cat "${LAST}" 2>/dev/null)
-		if [ -n "${last}" ]; then
-			i=0
-			while [ ${i} -lt 6 ]; do
-				net=$(connected_net)
-				if [ -n "${net}" ]; then
-					if [ "${net}" = "${last}" ]; then
-						log "${IFACE} DISCONNECTED let go - connected to \"${net#* }\" again, the address stays"
-						: > "${SKIPPED}"
-						exit 0
-					fi
-					break
-				fi
-				sleep 1
-				i=$((i + 1))
-			done
+		# A new network is tried on this adapter (add_wifi.sh, try_network): it left the network it was in on purpose,
+		# and the try ends connected - to the new one, or back in the one before. Not let go, Debian's ifdown took the
+		# adapter's link down in the middle of the try whenever the new connection took longer than the wait below (a
+		# slow USB stick, a weak signal). Let go; the CONNECTED that follows keeps the address (back in the same network)
+		# or sets up the new one's.
+		if [ -f /run/mupibox-wifi-try ] && [ "$(/usr/local/bin/mupibox/mupi_wifi_iface.sh 2>/dev/null)" = "${IFACE}" ]; then
+			log "${IFACE} DISCONNECTED let go - a new network is tried"
+			[ -n "${last}" ] && : > "${SKIPPED}"
+			exit 0
 		fi
+		i=0
+		while [ ${i} -lt 6 ]; do
+			net=$(connected_net)
+			if [ -n "${net}" ]; then
+				if [ -n "${last}" ] && [ "${net}" = "${last}" ]; then
+					log "${IFACE} DISCONNECTED let go - connected to \"${net#* }\" again, the address stays"
+					: > "${SKIPPED}"
+					exit 0
+				fi
+				# The box moved to another saved network meanwhile (a new one tried, wpa_supplicant's choice): this event is
+				# the late one of the network left. Its ifdown took the link down - the new connection with it - and the
+				# box came back in the other network, whose late event did the same: a circle between the two, every ~10 s
+				# (seen with two networks in reach). Let go: the CONNECTED of the new network follows and sets up its
+				# address (Debian's ifup --force for wpa-roam, a new DHCP lease without taking the link down).
+				if [ -n "${WPA_ID}" ] && [ "${WPA_ID}" != "${net%% *}" ]; then
+					log "${IFACE} DISCONNECTED of network ${WPA_ID} let go - connected to \"${net#* }\" meanwhile"
+					rm -f "${SKIPPED}" "${LAST}"
+					exit 0
+				fi
+				break
+			fi
+			# (nothing to compare: the event goes to Debian's script without waiting, as before)
+			[ -n "${last}" ] || [ -n "${WPA_ID}" ] || break
+			sleep 1
+			i=$((i + 1))
+		done
 		rm -f "${SKIPPED}"
 		;;
 	CONNECTED)

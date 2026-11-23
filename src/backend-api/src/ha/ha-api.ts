@@ -24,10 +24,11 @@ import { createServer as createHttpsServer, type Server as HttpsServer } from 'n
 import os from 'node:os'
 import express, { type Express, type NextFunction, type Request, type RequestHandler, type Response, type Router } from 'express'
 import { headphonesPlaying } from '../audio-output'
-import { displayLoginLinkShown } from '../eltern/auth'
-import { compareVersions, officialVersions, parseInstalled } from '../eltern/updates'
+import { displayLoginLinkShown } from '../app-api/auth'
+import { compareVersions, officialVersions, parseInstalled } from '../app-api/updates'
 import { announce, speechOf } from '../speech'
 import { isLoopback } from '../request-guard'
+import { tileKeyOfRow } from '../app-api/tile-key'
 import { type PlaybackCovers, playbackSnapshot } from '../playback-snapshot'
 import { withVolumeLock } from '../volume-lock'
 import { haSleepTimer, parseHaSleepTimerRequest, SleepTimerError, sleepTimerAvailable, sleepTimerState, startSleepTimer, stopSleepTimer } from '../sleep-timer'
@@ -43,7 +44,7 @@ const CA_FILE = '/etc/mupibox/tls/ca.crt'
 const BASIC: Scope[] = ['read', 'control']
 /** granted only when allowed on the display as well */
 const EXTRA: Scope[] = ['notify', 'power']
-const CAPABILITIES = ['play', 'pause', 'stop', 'next', 'previous', 'set_volume', 'mute', 'unmute', 'seek', 'media_metadata', 'outputs', 'screenshot', 'update', 'message', 'speak', 'reboot', 'poweroff']
+const CAPABILITIES = ['play', 'pause', 'stop', 'next', 'previous', 'set_volume', 'mute', 'unmute', 'seek', 'media_metadata', 'outputs', 'screenshot', 'update', 'message', 'speak', 'reboot', 'poweroff', 'users']
 const SCREENSHOT_FILE = '/tmp/mupibox-ha-screenshot.png'
 const PAIRING_WINDOW_S = 60
 const PAIRING_TTL_S = 300
@@ -70,6 +71,26 @@ function run(cmd: string, args: string[], timeout = 30000): Promise<{ ok: boolea
 }
 
 const enabledIn = (deps: HaDeps) => ((deps.getMupiboxConfig()?.homeAssistant as { enabled?: unknown } | undefined)?.enabled ?? false) === true
+
+// ---- several users (5.1, users.ts) -----------------------------------------------------------------------------------
+
+interface BoxUsers {
+  enabled: boolean
+  current: string
+  users: { id: string; name: string; color: string }[]
+}
+/** the users as the display gets them (GET /api/users/state; none while several users are off), or null */
+async function boxUsers(): Promise<BoxUsers | null> {
+  try {
+    const r = await fetch(`${SELF}/api/users/state`, { signal: AbortSignal.timeout(3000) })
+    if (!r.ok) return null
+    const b = (await r.json()) as Partial<BoxUsers>
+    if (!Array.isArray(b.users) || typeof b.current !== 'string') return null
+    return { enabled: b.enabled === true, current: b.current, users: b.users.map((u) => ({ id: String(u.id), name: String(u.name), color: String(u.color) })) }
+  } catch {
+    return null
+  }
+}
 
 // ---- errors (contract §6) -------------------------------------------------------------------------------------------
 
@@ -433,18 +454,21 @@ async function lastResumeStart(deps: HaDeps): Promise<{ url: string; type: strin
   const track = Math.max(1, int(m.resumelocalcurrentTracknr, 1))
   const pct = Math.max(0, Math.min(100, Math.round(Number(m.resumelocalprogressTime) || 0)))
   const type = String(m.type ?? '')
+  // the tile of the start page it belongs to (5.1, a day's limit per tile): the player counts and limits by it
+  const tileKey = tileKeyOfRow(m)
+  const tile = tileKey ? `?tile=${enc(tileKey)}` : ''
   if (type === 'library') {
     const folder =
       typeof m.libraryPath === 'string' && m.libraryPath
         ? m.libraryPath.split('/').filter(Boolean).map(enc).join(':')
         : `${enc(String(m.category ?? ''))}:${enc(String(m.artist ?? ''))}:${enc(String(m.title ?? ''))}`
-    return { url: `musicsearch/library/resume/${folder}:${track}:${pct}`, type }
+    return { url: `musicsearch/library/resume/${folder}:${track}:${pct}${tile}`, type }
   }
-  if (type === 'nas' && typeof m.nasPath === 'string' && m.nasPath) return { url: `musicsearch/nas/resume/${enc(m.nasPath)}:${track}:${pct}`, type }
+  if (type === 'nas' && typeof m.nasPath === 'string' && m.nasPath) return { url: `musicsearch/nas/resume/${enc(m.nasPath)}:${track}:${pct}${tile}`, type }
   if (type === 'spotify') {
     const ref = m.playlistid ? `playlist:${enc(String(m.playlistid))}` : m.id ? `album:${enc(String(m.id))}` : m.showid ? `episode:${enc(String(m.showid))}` : m.audiobookid ? `show:${enc(String(m.audiobookid))}` : ''
     if (!ref) return null
-    return { url: `spotify/now/spotify:${ref}:${Math.max(1, int(m.resumespotifytrack_number, 1))}:${Math.max(0, int(m.resumespotifyprogress_ms, 0))}`, type }
+    return { url: `spotify/now/spotify:${ref}:${Math.max(1, int(m.resumespotifytrack_number, 1))}:${Math.max(0, int(m.resumespotifyprogress_ms, 0))}${tile}`, type }
   }
   return null
 }
@@ -452,6 +476,7 @@ async function lastResumeStart(deps: HaDeps): Promise<{ url: string; type: strin
 // ---- phase 2: screenshot, message, quiet time, power -----------------------------------------------------------------
 
 let lastShot = 0
+let displayOff = false
 let shooting: Promise<boolean> | undefined
 /** a message for the display (POST /message), shown until `until` */
 let message: { title: string; text: string; until: number } | null = null
@@ -532,14 +557,17 @@ export function buildApp(deps: HaDeps): Express {
   })
 
   v1.get('/state', requireScope('read'), async (_req, res) => {
-    const [snap, bat, dbm, mute, sys, timer] = await Promise.all([
+    const [snap, bat, dbm, mute, sys, timer, people] = await Promise.all([
       playbackSnapshot(deps.covers).catch(() => null),
       battery(deps),
       wifiSignalDbm(),
       muted(),
       metrics(),
       sleepTimerState().catch(() => null),
+      boxUsers(),
     ])
+    // (several users on and at least two: the one in place - an addition to the contract, null otherwise)
+    const inPlace = people?.enabled && people.users.length >= 2 ? (people.users.find((u) => u.id === people.current) ?? null) : null
     // (Spotify's cover as its own address - splitti's integration takes only i.scdn.co/mosaic.scdn.co; the box's own
     // pictures through /media/cover/current)
     const spotifyCover = snap?.coverUrl && /^https:\/\/(i|mosaic)\.scdn\.co\//.test(snap.coverUrl) ? snap.coverUrl : null
@@ -572,7 +600,39 @@ export function buildApp(deps: HaDeps): Express {
       metrics: sys,
       // the box's power-off timer - the same one the app, Telegram and the admin interface set (contract: sleep timer)
       sleep_timer: haSleepTimer(timer ?? { active: false, ends_at: null, remaining_s: 0, shutting_down: false }),
+      user: inPlace ? { id: inPlace.id, name: inPlace.name } : null,
     })
+  })
+
+  /** GET /users (read) - several users (5.1): switched on, who is in place, the users (none while it is off) */
+  v1.get('/users', requireScope('read'), async (_req, res) => {
+    const people = await boxUsers()
+    if (!people) return fail(res, 503, 'temporarily_unavailable', 'The users could not be read')
+    res.json(people)
+  })
+
+  /** POST /users/select {user_id} or {name} (control) - that user into place, as the app: no PIN; the box plays his
+   *  library from then on (the playback stops) */
+  v1.post('/users/select', requireScope('control'), async (req, res) => {
+    const b = (req.body as { user_id?: unknown; name?: unknown } | undefined) ?? {}
+    const body = typeof b.user_id === 'string' && b.user_id ? { id: b.user_id } : typeof b.name === 'string' && b.name.trim() ? { name: b.name } : null
+    if (!body) return fail(res, 400, 'invalid_request', 'user_id or name is missing')
+    try {
+      const r = await fetch(`${SELF}/api/users/select`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(60000),
+      })
+      if (r.ok) return void res.json({ success: true })
+      const e = ((await r.json().catch(() => ({}))) as { error?: string }).error
+      if (e === 'unknown_user') return fail(res, 400, 'invalid_value', 'Unknown user')
+      if (e === 'disabled') return fail(res, 422, 'unsupported_command', 'Several users are switched off')
+      if (e === 'busy') return fail(res, 409, 'provider_unavailable', 'The box is busy - try again in a moment')
+      return fail(res, 503, 'temporarily_unavailable', `The switch answered ${r.status}`)
+    } catch {
+      fail(res, 503, 'temporarily_unavailable', 'The switch did not answer')
+    }
   })
 
   v1.get('/media/cover/current', requireScope('read'), async (_req, res) => {
@@ -648,11 +708,14 @@ export function buildApp(deps: HaDeps): Express {
       return busy()
     }
     if (Date.now() - lastShot > 2000) {
-      shooting ??= run('sh', ['-c', `DISPLAY=:0 XAUTHORITY=/home/dietpi/.Xauthority scrot -o ${SCREENSHOT_FILE}`], 8000).then((r) => {
+      // (screenshot.sh: with the display off exit 3 - no picture rather than a black one)
+      shooting ??= run('sh', ['-c', `/usr/local/bin/mupibox/screenshot.sh ${SCREENSHOT_FILE}; echo "rc=$?"`], 15000).then((r) => {
         shooting = undefined
-        lastShot = r.ok && !displaySecret() ? Date.now() : 0
+        const rc = /rc=(\d+)/.exec(r.stdout)?.[1]
+        displayOff = rc === '3'
+        lastShot = rc === '0' && !displaySecret() ? Date.now() : 0
         if (!lastShot) fsp.rm(SCREENSHOT_FILE, { force: true }).catch(() => undefined)
-        return r.ok
+        return rc === '0'
       })
       await shooting
     }
@@ -661,7 +724,7 @@ export function buildApp(deps: HaDeps): Express {
       fsp.rm(SCREENSHOT_FILE, { force: true }).catch(() => undefined)
       return busy()
     }
-    if (!lastShot) return fail(res, 503, 'temporarily_unavailable', 'No picture of the display')
+    if (!lastShot) return fail(res, 503, 'temporarily_unavailable', displayOff ? 'The display is off' : 'No picture of the display')
     res.type('image/png').sendFile(SCREENSHOT_FILE, (err) => {
       if (err && !res.headersSent) fail(res, 503, 'temporarily_unavailable', 'No picture of the display')
     })
@@ -754,13 +817,15 @@ export function buildApp(deps: HaDeps): Express {
           const last = command === 'play' ? await lastResumeStart(deps) : null
           if (!last) return fail(res, 409, 'provider_unavailable', 'Nothing is loaded to play - start something on the box first')
           const r = await playerCommand(`current/${last.url}`)
-          if (r.status === 423) return fail(res, 409, 'provider_unavailable', 'Playing is blocked right now (listening time or quiet hours)')
+          if (r.status === 423)
+            return fail(res, 409, 'provider_unavailable', r.body.error === 'tile_limit_reached' ? 'This tile is used up for today' : 'Playing is blocked right now (listening time or quiet hours)')
           if (!r.ok) return fail(res, 503, 'temporarily_unavailable', `The player answered ${r.status}`)
           log(`play from "${client.client_name}": goes on with the last listened (${last.type})`)
           return void res.json({ success: true })
         }
         const r = await playerCommand(command)
-        if (r.status === 423) return fail(res, 409, 'provider_unavailable', 'Playing is blocked right now (listening time or quiet hours)')
+        if (r.status === 423)
+          return fail(res, 409, 'provider_unavailable', r.body.error === 'tile_limit_reached' ? 'This tile is used up for today' : 'Playing is blocked right now (listening time or quiet hours)')
         if (!r.ok) return fail(res, 503, 'temporarily_unavailable', `The player answered ${r.status}`)
         log(`${command} from "${client.client_name}"`)
         return void res.json({ success: true })

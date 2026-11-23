@@ -2,11 +2,13 @@
 #
 # Generate M3U Playlist and Covers
 
-DATA="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json"
+. /usr/local/bin/mupibox/mupi_paths.sh
+
+DATA="${MUPI_LIBRARY}/data.json"
 TMP_DATA="/tmp/cleaned_data.json"
 
 echo "####    CHECKING COVER IMAGES    ####"
-for i in "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/audiobook/"* ; do
+for i in "${MUPI_COVERS}/audiobook/"* ; do
 	artist=$(/usr/bin/basename "${i}")
 	if [[ -d "${i}" ]]
 	then
@@ -33,7 +35,7 @@ for i in "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/audiobook
 		rm -R "${i}" 
 	fi
 done
-for i in "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/music/"* ; do
+for i in "${MUPI_COVERS}/music/"* ; do
 	artist=$(/usr/bin/basename "${i}")
 	if [[ -d "${i}" ]]
 	then

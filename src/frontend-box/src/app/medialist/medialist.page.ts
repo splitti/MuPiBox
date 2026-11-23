@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, Signal, signal, WritableSignal } from '@angular/core'
+import { ChangeDetectionStrategy, Component, computed, effect, inject, Signal, signal, WritableSignal } from '@angular/core'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { ActivatedRoute, NavigationExtras, Router } from '@angular/router'
 import {
@@ -23,12 +23,14 @@ import { newestFirst, pickEpisodes } from '../episode-pick'
 import { LoadingComponent } from '../loading/loading.component'
 import { CategoryType, isSyncManaged, Media, MediaSorting } from '../media'
 import { HeaderVisibilityService } from '../header-visibility.service'
+import { HeardService } from '../heard.service'
 import { MediaService } from '../media.service'
 import { MediaUnavailableComponent } from '../media-unavailable/media-unavailable.component'
 import { StatusComponent } from '../status/status.component'
 import { KmStatusGroupComponent } from '../km-header/km-status-group.component'
 import { NowPlayingPillComponent } from '../now-playing-pill/now-playing-pill.component'
 import { KmThemeService } from '../theme/km-theme.service'
+import { TileTimeService } from '../tile-time.service'
 import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
 
@@ -83,8 +85,13 @@ export class MedialistPage extends SwiperIonicEventsHelper {
     const type = this.artist()?.coverMedia?.type
     return (!this.isLoading() && this.media()?.length === 0 && (type === 'rss' || type === 'nas')) || this.spotifyUnavailable()
   })
+  // what was heard of the albums (5.1, #180): a yellow tick when started, a green one when heard to its end
+  private readonly heard = inject(HeardService)
   protected swiperData: Signal<SwiperData<Media>[]> = computed(() => {
+    const heard = this.heard.items()
     return this.media()?.map((media) => {
+      // (a podcast's episodes keep their own: episodeDone / episodeProgress - they have no key here)
+      const state = this.heard.stateOf(media, heard)
       return {
         // Phase 14e: display title falls back to title_override when the
         // parent has customised it via the Eltern-WebApp; keeps the
@@ -105,7 +112,8 @@ export class MedialistPage extends SwiperIonicEventsHelper {
         synced: isSyncManaged(media),
         isNew: media.episodeNew === true,
         progress: media.episodeProgress,
-        done: media.episodeDone === true,
+        done: media.episodeDone === true || state === 'finished',
+        started: state === 'started',
       }
     })
   })
@@ -114,6 +122,34 @@ export class MedialistPage extends SwiperIonicEventsHelper {
   private readonly outlet = inject(IonRouterOutlet, { optional: true })
   // the top bar is folded away (HeaderVisibilityService): the covers are drawn larger
   protected readonly headerHidden = inject(HeaderVisibilityService).hidden
+
+  // A day's limit per tile (5.1): this tile is open while the page is on the screen - the chip shows its minutes (and
+  // the listening time's on the start page, see TileTimeService.shown)
+  private readonly tileTime = inject(TileTimeService)
+  private readonly tileOpen = signal(false)
+  protected readonly tileViewSync = effect((onCleanup) => {
+    if (!this.tileOpen()) return
+    const token = this.tileTime.view(this.artist()?.coverMedia)
+    onCleanup(() => this.tileTime.leave(token))
+  })
+
+  // the ticks asked for again while the list is open: a player window over it (Winamp) leaves the page where it is
+  protected readonly heardSync = effect((onCleanup) => {
+    if (!this.tileOpen()) return
+    this.heard.refresh()
+    const timer = setInterval(() => this.heard.refresh(), 30_000)
+    onCleanup(() => clearInterval(timer))
+  })
+
+  override ionViewWillEnter(): void {
+    super.ionViewWillEnter()
+    this.tileOpen.set(true)
+  }
+
+  override ionViewWillLeave(): void {
+    super.ionViewWillLeave()
+    this.tileOpen.set(false)
+  }
 
   constructor(
     private router: Router,
@@ -299,6 +335,14 @@ export class MedialistPage extends SwiperIonicEventsHelper {
   }
 
   private sortMedia(coverMedia: Media, media: Media[], defaultSorting: MediaSorting): Media[] {
+    // by date (sign 1: the oldest first); one without a date after all dated ones, in the order it came (as the server
+    // orders a podcast's episodes for "next" in the player, episode-neighbour.ts)
+    const byDate = (a: Media, b: Media, sign: 1 | -1) => {
+      const x = new Date(a.release_date).getTime()
+      const y = new Date(b.release_date).getTime()
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return (Number.isFinite(x) ? 0 : 1) - (Number.isFinite(y) ? 0 : 1)
+      return sign * (x - y)
+    }
     // The folder's own audio files (next to its subfolders) stay in front, whatever the order of the rest.
     const own = media.filter((m) => m.ownFiles)
     if (own.length > 0) {
@@ -314,9 +358,9 @@ export class MedialistPage extends SwiperIonicEventsHelper {
           }),
         )
       case MediaSorting.ReleaseDateAscending:
-        return media.sort((a, b) => new Date(a.release_date).getTime() - new Date(b.release_date).getTime())
+        return media.sort((a, b) => byDate(a, b, 1))
       case MediaSorting.ReleaseDateDescending:
-        return media.sort((a, b) => new Date(b.release_date).getTime() - new Date(a.release_date).getTime())
+        return media.sort((a, b) => byDate(a, b, -1))
       default: // MediaList.Alphabetical.Ascending
         return media.sort((a, b) =>
           a.title.localeCompare(b.title, undefined, {

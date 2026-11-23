@@ -31,7 +31,14 @@ When a playlist changes on TIDAL, the box plays its new state the next time it s
 
 TIDAL lists some albums several times (in different qualities); the box shows each one once.
 
-For a whole artist, set a range in the **Library** (tap the entry) under **Episodes and albums**, **Episode from** and **Episode to**: “episode” is the position by release date, 1 is the oldest album. Switch off single albums there with their switch. **Save** applies both; the box and the app then show only these albums.
+For a whole artist, set a range in the **Library** (tap the entry) under **Episodes and albums**, **Episode from** and **Episode to**. What “episode” counts is said right above:
+
+- **The number in the title:** when nearly all albums carry one (“Folge 12: …”, “012/…”, “Teil 3”), as with audio dramas. “1 to 20” are then episodes 1 to 20. Albums without a number belong to no range.
+- **Otherwise the position by release date:** 1 is the oldest album. A range saved before this change keeps counting that way until you empty it and enter it anew.
+
+Switch off single albums there with their switch. **Save** applies both; the box and the app then show only these albums.
+
+The **Order on the display** is set in the same sheet. **Default** is alphabetical, with numbers counted as numbers: “Folge 2” comes before “Folge 10”. Besides there are Z–A, oldest and newest first.
 
 The entry then appears on the display in the chosen category, and in the app's library with the source **TIDAL**. There you can edit or delete it like any other entry ([Managing content](verwalten.md)).
 

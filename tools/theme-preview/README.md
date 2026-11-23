@@ -1,18 +1,18 @@
 # Theme previews
 
-The pictures of the theme tiles in the parents' app (Settings › Appearance › Theme) and in MuPi-Conf are made from
+The pictures of the theme tiles in the parents' app (Settings › Appearance › Theme) are made from
 the real display: every theme photographed with the same neutral demo library, so the tiles only differ in what the
 theme changes (colours, background, ring, name bars, font).
 
 ```
 cd src/frontend-box && npx ng build      # the display build the pictures are made from
 cd ../..
-node tools/theme-preview/render.mjs      # all themes -> AdminInterface/www/images/<id>.png
+node tools/theme-preview/render.mjs      # all themes -> themes/previews/<id>.png
 node tools/theme-preview/render.mjs --only blue,kuschelmond
 ```
 
 Options: `--www <display build>` (default `src/frontend-box/www/browser`), `--out <folder>` (default
-`AdminInterface/www/images`), `--only <ids>`, `--chrome <path>` (or `CHROME=`). Needs Node 22+ and Chrome or Chromium.
+`themes/previews`), `--only <ids>`, `--chrome <path>` (or `CHROME=`). Needs Node 22+ and Chrome or Chromium.
 
 ## What a preview shows
 
@@ -24,6 +24,8 @@ Options: `--www <display build>` (default `src/frontend-box/www/browser`), `--ou
 - `custom`: the example landscape `demo-bibliothek/custom-beispiel.svg` instead of the parents' picture, with the hint
   "Beispiel".
 - `tagundnacht`: the day (the script sets the clock to 12:00).
+- `winamp`: the main window with the theme's base skin (`themes/winamp/base-2.91.wsz`, unpacked by the script as the
+  box does it) and a made-up track that plays ("3. Lumi am Meer"), so the clock, the analyser and the title show.
 
 The demo library (`demo-bibliothek/`) is made up: six covers without text and short invented names, no real audio
 plays, characters or brands. The pictures may go into the public repository.
@@ -31,7 +33,7 @@ plays, characters or brands. The pictures may go into the public repository.
 ## A new theme
 
 Nothing to do here: the script takes every `themes/<id>.css`. Add the theme, build the display, run the script and
-commit `AdminInterface/www/images/<id>.png` together with the theme (and the rebuilt `AdminInterface/release/www.zip`).
+commit `themes/previews/<id>.png` together with the theme.
 
 ## How it works
 

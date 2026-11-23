@@ -11,9 +11,9 @@ Die **GPIO-Pins** sind die Anschlüsse auf der Stiftleiste des Raspberry Pi. Zub
 
 | Zubehör | Funktion | GPIO (BCM) | Einstellbar |
 | --- | --- | --- | --- |
-| {rotary-a} Drehregler | A (CLK) | 26 | nein |
-| {rotary-b} Drehregler | B (DT) | 24 | nein |
-| {rotary-button} Drehregler | Taster | 10 | nein |
+| {rotary-a} Drehregler | A (CLK) | 26 | ja, **Einstellungen › Audio › Drehregler und Taster** |
+| {rotary-b} Drehregler | B (DT) | 24 | ja, **Einstellungen › Audio › Drehregler und Taster** |
+| {rotary-button} Drehregler | Taster | 10 | ja, **Einstellungen › Audio › Drehregler und Taster** |
 | {poweroff} OnOff SHIM (auch das MuPiHAT) | Signal zum Ausschalten (`gpio-poweroff`) | 4 | in der Konfiguration (`shim.poweroffPin`) |
 | {trigger} OnOff SHIM (auch das MuPiHAT) | Taster (Trigger) | 17 | in der Konfiguration (`shim.triggerPin`) |
 | {cut} Stromabschaltung (setzt die Box, nicht der SHIM; mit MuPiHAT nicht gesetzt) | Signal bei Ausschalten | 27 | in der Konfiguration (`shim.cutPin`) |
@@ -24,6 +24,10 @@ Auf deiner Box zeigt diese Tabelle **nur die Pins, die dort mit den aktuellen Ei
 
 > [!WARNING]
 > Zwei Geräte dürfen sich **keinen** Pin teilen. Wähle für LED und Lüfter Pins, die oben nicht anderweitig stehen. Die App warnt, wenn du für ein Zubehör einen Pin wählst, den ein aktiviertes anderes Zubehör schon nutzt.
+
+## Pins für eigene Taster
+
+Mit der Erweiterung [Buttons & GPIO Input](../erweiterungen/buttons.md) schließt du eigene Taster an freie GPIO-Pins an. Welche Pins auf deiner Box frei sind, zeigt die Auswahl der Erweiterung selbst: Belegte Pins lassen sich dort nicht wählen, und die Liste nennt, wer sie hält. Auch andere [Erweiterungen](../erweiterungen/index.md) können Pins belegen; die Box prüft das vor der Installation. Der [NFC-Extension](../erweiterungen/nfc.md) belegt den SPI-Anschluss (GPIO 8, 9, 10 und 11) und zwei Pins, die du in der Erweiterung wählst; in der Karte oben ist er als Zubehör zu wählen.
 
 ## Wo steht die Pin-Einstellung noch?
 

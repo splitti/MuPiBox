@@ -343,6 +343,12 @@ function themeFonts() {
 const STATIC = {
   shipped: [
     [
+      'Winamp base skin (base-2.91)',
+      'theme "winamp": the skin shown until another one is uploaded (`themes/winamp/base-2.91.wsz`)',
+      'Nullsoft (the default skin of Winamp 2.91, freely distributed with it)',
+      'bitmaps only, unchanged; the parents can upload any other .wsz skin',
+    ],
+    [
       'Fredoka font',
       "web app and kids' themes (`mupi-app/fonts`, `themes/_fonts`)",
       'SIL Open Font License 1.1',
@@ -385,32 +391,6 @@ const STATIC = {
       'shutdown by button, battery low',
       'TODO: origin and license to be cleared (added in 2024, "Better sounds")',
       '',
-    ],
-    [
-      'jQuery 3.7.1, jQuery UI 1.13.2',
-      'admin interface, `AdminInterface/www/vendor/jquery`, `vendor/jquery-ui`',
-      'MIT',
-      '`LICENSE.txt` next to each',
-    ],
-    ['Popper.js 1.16.0', 'admin interface, `AdminInterface/www/vendor/popper`', 'MIT', '`LICENSE` next to it'],
-    [
-      'Bootstrap 3.4.1 (CSS), 4.5.2 (JavaScript), 5.3.3 (CSS)',
-      'admin interface, `AdminInterface/www/vendor/bootstrap`',
-      'MIT',
-      '`LICENSE` next to them',
-    ],
-    [
-      'Font Awesome Free 6.5.1',
-      'admin interface, `AdminInterface/www/vendor/fontawesome` (CSS and WOFF2 fonts)',
-      'icons CC BY 4.0, fonts SIL OFL 1.1, code MIT',
-      '`LICENSE.txt` next to it',
-    ],
-    ['CodeMirror 5.65.15', 'admin interface, `AdminInterface/www/vendor/codemirror` (editor of the settings file)', 'MIT', '`LICENSE` next to it'],
-    [
-      'Icons: Material Design Icons, Material Symbols, Google Material Icons; Tabler Icons',
-      'admin interface (battery, WiFi, fan, power), 19 icons in `AdminInterface/www/vendor/icons/icons.js`',
-      'Apache-2.0; Tabler: MIT',
-      '`LICENSES.md` and the licence texts next to it',
     ],
   ],
   installer: [
@@ -456,7 +436,6 @@ const STATIC = {
       'proprietary (Google), redistributed by Raspberry Pi',
     ],
     ['lighttpd, lighttpd-mod-openssl (DietPi software 84)', 'web server, https', 'BSD-3-Clause'],
-    ['PHP (DietPi software 89)', 'admin interface', 'PHP License 3.01'],
     [
       'ALSA (DietPi software 5), PulseAudio, pulseaudio-module-bluetooth',
       'sound, Bluetooth audio',

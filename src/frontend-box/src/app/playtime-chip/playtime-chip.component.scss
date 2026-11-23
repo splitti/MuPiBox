@@ -26,6 +26,16 @@
     font-size: 16px;
   }
 
+  // a tile with a day's limit (5.1): its round cover in place of the clock
+  .tile-cover {
+    width: 20px;
+    height: 20px;
+    margin-left: -4px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 0 0 1.5px currentColor;
+  }
+
   &[data-level='warning'] {
     background: rgba(255, 193, 7, 0.9);
     color: #1a1a1a;
@@ -54,6 +64,12 @@
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow: 0 3px 0 var(--km-shadow);
+
+  .tile-cover {
+    width: 22px;
+    height: 22px;
+    margin-left: -5px;
+  }
 
   .km-clock {
     width: 15px;

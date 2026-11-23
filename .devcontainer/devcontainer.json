@@ -7,10 +7,6 @@
     "ghcr.io/devcontainers/features/common-utils:2": {
       "username": "codespace"
     },
-    "ghcr.io/devcontainers/features/php:1": {
-      "version": "8.3.0",
-      "installComposer": "true"
-    },
     "ghcr.io/devcontainers/features/node:1": {
       "version": "22",
       "additionalVersions": "20"
@@ -43,7 +39,7 @@
       "settings": {
         "files.insertFinalNewline": true
       },
-      "extensions": ["eamodio.gitlens", "devsense.phptools-vscode", "biomejs.biome", "Angular.ng-template"]
+      "extensions": ["eamodio.gitlens", "biomejs.biome", "Angular.ng-template"]
     }
   }
 }

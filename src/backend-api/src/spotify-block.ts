@@ -9,8 +9,9 @@
 
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { CACHE_DIR } from './paths'
 
-const BLOCK_FILE = path.join(process.cwd(), 'cache', 'spotify-block.json')
+const BLOCK_FILE = path.join(CACHE_DIR, 'spotify-block.json')
 // (where the block was kept before: taken over once)
 const OLD_BLOCK_FILE = '/tmp/.spotify_block.json'
 

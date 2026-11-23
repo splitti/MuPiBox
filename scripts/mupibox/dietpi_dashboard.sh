@@ -2,7 +2,7 @@
 #
 # The DietPi-Dashboard behind the MuPiBox app. Without a password it gave everyone in the Wi-Fi a web terminal as
 # dietpi (sudo without a password): root on the box. Now it has a random password nobody knows and listens on an inner
-# port (5253); the server of the box (backend-api eltern/dietpi-dashboard.ts) answers on 5252, passes everything on and
+# port (5253); the server of the box (backend-api app-api/dietpi-dashboard.ts) answers on 5252, passes everything on and
 # signs a parent of the app in with a one-time ticket - so it is reached from the app only. Off by default.
 #
 #   dietpi_dashboard.sh setup   its config.toml written (inner port, password hash, secret) - the password made once

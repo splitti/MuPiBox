@@ -10,6 +10,9 @@ import { randomBytes } from 'node:crypto'
 // own, and takes one over only when its holder is gone: the process no longer runs, or (an empty lock of a script) it
 // was not touched for 30 s.
 const STALE_MS = 30_000
+/** The locks of the library (data.json and what goes with it) and of the resume list */
+export const DATA_LOCK = '/tmp/.data.lock'
+export const RESUME_LOCK = '/tmp/.resume.lock'
 const OWNED_STALE_MS = 10 * 60_000 // a living pid whose lock is not touched any more: a reused pid, not a holder
 const REFRESH_MS = 10_000
 

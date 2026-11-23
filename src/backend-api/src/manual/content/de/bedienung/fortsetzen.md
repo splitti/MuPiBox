@@ -20,6 +20,19 @@ Podcasts haben zusätzliche Regeln, die Folge für Folge gelten. Sie stehen auf 
 
 Als neu gilt nur, was nach dem Hinzufügen des Podcasts erschienen ist. Der Punkt verschwindet, sobald die Folge angespielt wurde oder die Zeit um ist.
 
+## Gehört-Haken
+
+In der Folgenliste am Display zeigt ein Haken unten rechts am Cover, was schon gehört wurde:
+
+- **gelb**: angefangen, nach einer Minute Wiedergabe
+- **grün**: zu Ende gehört, sobald vom letzten Titel nur noch 30 Sekunden fehlen oder das Album zu Ende gelaufen ist
+
+Das gilt für Alben von SD-Karte und USB-Stick, vom NAS, von Spotify und TIDAL. Ein grünes Album bleibt grün, auch wenn es noch einmal gehört wird. Bei Podcast-Folgen gilt weiter der Hörstand oben, mit Balken und grünem Haken. Auf der Startseite gibt es keine Haken.
+
+Ändern kannst du die Haken in der App unter **Bibliothek**: Beim Album stehen **Als gehört markieren** und **Als ungehört markieren**, bei einem Interpreten oder Ordner setzt **Alle als ungehört markieren** alles darin zurück.
+
+Ausschalten lassen sie sich unter **Einstellungen › Display & Bedienung › Bedienung am Display › Weiterhören › Haken an angefangenen und gehörten Folgen**.
+
 ## „Läuft gerade“
 
 ![„Läuft gerade“ oben in der Kopfleiste der Startseite](display-now-playing.png)

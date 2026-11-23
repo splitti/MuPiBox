@@ -405,6 +405,17 @@ export const KM_THEMES: readonly KmTheme[] = [
     coverPlaceholder: '/theme-data/cinema/cover-platzhalter.svg',
   },
   {
+    id: 'winamp',
+    label: 'winamp',
+    light: false,
+    legacy: true,
+    mascot: {
+      sleeping: '/theme-data/winamp/maskottchen.svg',
+      awake: '/theme-data/winamp/maskottchen-wach.svg',
+    },
+    coverPlaceholder: '/theme-data/winamp/cover-platzhalter.svg',
+  },
+  {
     id: 'clone-wars',
     label: 'clone-wars',
     light: false,

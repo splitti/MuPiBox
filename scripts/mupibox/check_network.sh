@@ -2,22 +2,18 @@
 #
 # Get Network-Data and create Online / Offline Data.json for showing Media in MuPiBox
 
-DATA_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json"
-ACTIVE_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/active_data.json"
-OFFLINE_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/offline_data.json"
-RESUME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/resume.json"
-ACTIVERESUME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/active_resume.json"
-OFFLINERESUME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/offline_resume.json"
+. /usr/local/bin/mupibox/mupi_paths.sh
 
-# The library without what needs the internet (Spotify, radio, TIDAL). Podcasts with episodes on the SD card stay
-# (their list then shows those only, see podcast-offline.ts; a resume tile of a kept episode too, by its address); the
-# list is made again when that changes too.
-PODCAST_INDEX="/home/dietpi/MuPiBox/podcasts/index.json"
-offline_filter() {
-	local index="${PODCAST_INDEX}"
-	/usr/bin/jq -e 'type == "object"' "${index}" > /dev/null 2>&1 || index=/dev/null
-	/usr/bin/jq --slurpfile off "${index}" '([$off[0].files[]?.feed] + [$off[0].files[]?.url]) as $feeds | .[] | select(.type != "spotify" and .type != "radio" and .type != "tidal" and (.type != "rss" or (.id as $i | any($feeds[]; . == $i))))' < "$1"
-}
+DATA_FILE="${MUPI_LIBRARY}/data.json"
+ACTIVE_FILE="${MUPI_LIBRARY}/active_data.json"
+OFFLINE_FILE="${MUPI_LIBRARY}/offline_data.json"
+RESUME_FILE="${MUPI_LIBRARY}/resume.json"
+ACTIVERESUME_FILE="${MUPI_LIBRARY}/active_resume.json"
+OFFLINERESUME_FILE="${MUPI_LIBRARY}/offline_resume.json"
+
+# The library and the resume list without what needs the internet (Spotify, radio, TIDAL, Audible): offline_list, shared
+# with get_network.sh
+. /usr/local/bin/mupibox/offline_lists.sh
 
 NETWORKCONFIG="/tmp/network.json"
 OLDSTATE="starting"
@@ -27,29 +23,8 @@ MISSES=0                 # checks in a row without an answer
 DATA_LOCK="/tmp/.data.lock"
 RESUME_LOCK="/tmp/.resume.lock"
 
-if [ ! -f ${DATA_FILE} ]; then
-	if [ -f "${DATA_LOCK}" ]; then
-		echo "Data-file locked."
-		exit
-	else
-		touch ${DATA_LOCK}
-        echo -n "[]" > ${DATA_FILE}
-        chown dietpi:dietpi ${DATA_FILE}
-		rm ${DATA_LOCK}
-	fi
-fi
-
-if [ ! -f ${RESUME_FILE} ]; then
-	if [ -f "${RESUME_LOCK}" ]; then
-		echo "Resume-file locked."
-		exit
-	else
-		touch ${RESUME_LOCK}
-        echo -n "[]" > ${RESUME_FILE}
-        chown dietpi:dietpi ${RESUME_FILE}
-		rm ${RESUME_LOCK}
-	fi
-fi
+make_empty "${DATA_FILE}" "${DATA_LOCK}"
+make_empty "${RESUME_FILE}" "${RESUME_LOCK}"
 
 # The file lives in /tmp and is gone after a reboot. It must be created when it is missing AND when
 # it is empty or not a JSON object: every writer below uses jq on the existing file, so once an empty
@@ -120,44 +95,8 @@ do
 			continue
 		fi
 		ONLINESTATE=${FALSESTATE}
-		if [ ! -f ${OFFLINE_FILE} ]; then
-			echo -n "[" > ${OFFLINE_FILE}
-			printf '%s' "$(offline_filter ${DATA_FILE} | /usr/bin/jq -c . | paste -sd,)" >> ${OFFLINE_FILE}
-			echo -n "]" >> ${OFFLINE_FILE}
-			sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
-			chown dietpi:dietpi ${OFFLINE_FILE}
-		elif [ ! -s ${OFFLINE_FILE} ]; then
-			rm ${OFFLINE_FILE}
-			echo -n "[" > ${OFFLINE_FILE}
-			printf '%s' "$(offline_filter ${DATA_FILE} | /usr/bin/jq -c . | paste -sd,)" >> ${OFFLINE_FILE}
-			echo -n "]" >> ${OFFLINE_FILE}
-			sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
-			chown dietpi:dietpi ${OFFLINE_FILE}
-		elif [ $(stat --format='%Y' "${DATA_FILE}") -gt $(stat --format='%Y' "${OFFLINE_FILE}") ] || [ "${PODCAST_INDEX}" -nt "${OFFLINE_FILE}" ]; then
-			echo -n "[" > ${OFFLINE_FILE}
-			printf '%s' "$(offline_filter ${DATA_FILE} | /usr/bin/jq -c . | paste -sd,)" >> ${OFFLINE_FILE}
-			echo -n "]" >> ${OFFLINE_FILE}
-			sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
-		fi
-		if [ ! -f ${OFFLINERESUME_FILE} ]; then
-			echo -n "[" > ${OFFLINERESUME_FILE}
-			printf '%s' "$(offline_filter ${RESUME_FILE} | /usr/bin/jq -c . | paste -sd,)" >> ${OFFLINERESUME_FILE}
-			echo -n "]" >> ${OFFLINERESUME_FILE}
-			sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
-			chown dietpi:dietpi ${OFFLINERESUME_FILE}
-		elif [ ! -s ${OFFLINERESUME_FILE} ]; then
-			rm ${OFFLINERESUME_FILE}
-			echo -n "[" > ${OFFLINERESUME_FILE}
-			printf '%s' "$(offline_filter ${RESUME_FILE} | /usr/bin/jq -c . | paste -sd,)" >> ${OFFLINERESUME_FILE}
-			echo -n "]" >> ${OFFLINERESUME_FILE}
-			sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
-			chown dietpi:dietpi ${OFFLINERESUME_FILE}
-		elif [ $(stat --format='%Y' "${RESUME_FILE}") -gt $(stat --format='%Y' "${OFFLINERESUME_FILE}") ] || [ "${PODCAST_INDEX}" -nt "${OFFLINERESUME_FILE}" ]; then
-			echo -n "[" > ${OFFLINERESUME_FILE}
-			printf '%s' "$(offline_filter ${RESUME_FILE} | /usr/bin/jq -c . | paste -sd,)" >> ${OFFLINERESUME_FILE}
-			echo -n "]" >> ${OFFLINERESUME_FILE}
-			sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
-		fi
+		offline_list "${DATA_FILE}" "${OFFLINE_FILE}"
+		offline_list "${RESUME_FILE}" "${OFFLINERESUME_FILE}"
 		# Self-healing reconciliation, see ensure_symlink comment above.
 		ensure_symlink "${OFFLINE_FILE}" "${ACTIVE_FILE}"
 		ensure_symlink "${OFFLINERESUME_FILE}" "${ACTIVERESUME_FILE}"

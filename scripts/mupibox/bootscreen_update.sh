@@ -1,9 +1,9 @@
 #!/bin/bash
 #
-# Boot and maintenance screens: puts the pictures for the settings of MuPi-Conf together (boot screen, maintenance
+# Boot and maintenance screens: puts the pictures for the settings of the app together (boot screen, maintenance
 # screen, box name, language; see /home/dietpi/MuPiBox/sysmedia/bootscreens/tools/compose_bootscreen.py) and sets
 # the colour of the console and of the browser start to the boot screen's base colour, so the start does not flash.
-# Run as root after the settings were saved (MuPi-Conf does it in the background) and by the install/update.
+# Run as root after the settings were saved (the app does it in the background) and by the install/update.
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 BS_DIR="/home/dietpi/MuPiBox/sysmedia/bootscreens"
@@ -14,11 +14,6 @@ exec >"${LOG}" 2>&1
 [ -f "${BS_DIR}/bootscreens.json" ] || { echo "no bootscreens installed"; exit 1; }
 # the default boot screen: used when mupibox.bootscreen is missing, empty or unknown
 DEFAULT=$(/usr/bin/jq -r '.defaultBootscreen // "karte"' "${BS_DIR}/bootscreens.json")
-
-# the previews in MuPi-Conf use the installed scenes and font (no copies in the admin interface)
-mkdir -p /var/www/images /var/www/fonts
-ln -sfn "${BS_DIR}" /var/www/images/bootscreens
-ln -sfn /usr/local/share/fonts/mupibox/Fredoka-Variable.ttf /var/www/fonts/Fredoka-Variable.ttf
 
 # what putting them together needs (install_missing.sh installs it; the app's start page offers that): said in the log
 WHY=""
