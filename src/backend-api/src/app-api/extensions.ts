@@ -41,8 +41,10 @@ if (!process.env.MUPIBOX_EXT_DIR && process.env.NODE_ENV !== 'test' && process.e
 // would leave a box that started without the kiosk with no switch to come back; 15: a search, lookup, may show what was chosen
 // as chips with a ✕ - its route `list` - Fußball 0.2.0 has its clubs there, an older core would leave no way to stop following one;
 // 16: an upload action of a row may say the row `has` a picture - `view` shows it, `remove` takes it away - and asks for its exact
-// size (128 × 50): NFC 0.15.2 has the OLED picture of a tag there, an older app went straight to the file and named 128 × 64)
-export const HOST_API = 16
+// size (128 × 50): NFC 0.15.2 has the OLED picture of a tag there, an older app went straight to the file and named 128 × 64;
+// 17: a `form` item - a button that opens a dialog the extension describes (fields, a table of rows, a picture) - and `host.libraryChanged()`,
+// `host.paths.media`: the USB CD drive 1.1.0 rips a CD into a folder of the media, asking for the album's data first)
+export const HOST_API = 17
 // (the catalog of the MuPiBox, in its repository: what is in it is trusted - an extension can do everything on the box; while 5.1
 // is not with splitti yet, the 5.1 branch of the fork that builds it)
 const DEFAULT_CATALOG = 'https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/catalog.json'
@@ -50,6 +52,8 @@ const DEFAULT_CATALOG = 'https://raw.githubusercontent.com/wowa1990/MuPiBox/upst
 const MAX_MPX = 16 * 1024 * 1024
 const ID = /^[a-z][a-z0-9-]{1,30}$/
 // (folders of EXT_DIR that are not an extension: an extension of that name replaced the settings or the data of all of them)
+// (hostApi 17) the local media folders (media/<category>/<artist>/<album>), as the app's upload writes there
+const MEDIA_DIR = '/home/dietpi/MuPiBox/media'
 const RESERVED_IDS = new Set(['settings', 'data', 'state', 'backup', 'cache', 'tmp'])
 const validId = (id: string) => ID.test(id) && !RESERVED_IDS.has(id)
 const VERSION = /^\d{1,4}\.\d{1,4}\.\d{1,4}$/
@@ -90,7 +94,7 @@ export interface Manifest {
   icon?: string
   // the settings page of the extension in the app, declared (no code of the extension runs in the app): a card with these fields
   // (place, adopt - hostApi 5: the settings as a page of their own under Einstellungen > System, and pages of the core shown there)
-  ui?: { title: string; heading?: string; help?: string; place?: 'system'; adopt?: string[]; items: { key: string; label: string; help?: string; dep?: string; showIf?: { key: string; is: string[] }; hideIf?: { key: string; is: string[] }; live?: string; choices?: { value: string | number; label: string; image?: string }[]; tip?: boolean; core?: string; type?: 'lookup' | 'order' | 'roster' | 'heading' | 'status' | 'action' | 'list'; state?: string; post?: string; confirm?: string; empty?: string; page?: boolean; card?: boolean; rename?: string; optional?: string; extra?: { key: string; label?: string; when: (string | number)[]; choices: { value: string | number; label: string }[] }; search?: string; list?: string; add?: string; remove?: string; select?: string; color?: string; restore?: string; addFrom?: boolean; slider?: boolean; adopt?: string[]; download?: string; upload?: string; file?: string; ext?: string; accept?: string; beside?: boolean; holder?: string }[] }
+  ui?: { title: string; heading?: string; help?: string; place?: 'system'; adopt?: string[]; items: { key: string; label: string; help?: string; dep?: string; showIf?: { key: string; is: string[] }; hideIf?: { key: string; is: string[] }; live?: string; choices?: { value: string | number; label: string; image?: string }[]; tip?: boolean; core?: string; type?: 'lookup' | 'order' | 'roster' | 'heading' | 'status' | 'action' | 'list' | 'form'; state?: string; post?: string; form?: string; confirm?: string; empty?: string; page?: boolean; card?: boolean; rename?: string; optional?: string; extra?: { key: string; label?: string; when: (string | number)[]; choices: { value: string | number; label: string }[] }; search?: string; list?: string; add?: string; remove?: string; select?: string; color?: string; restore?: string; addFrom?: boolean; slider?: boolean; adopt?: string[]; download?: string; upload?: string; file?: string; ext?: string; accept?: string; beside?: boolean; holder?: string }[] }
   settings?: Record<string, { type: 'boolean' | 'string' | 'number' | 'secret' | 'gpio'; default?: unknown; pattern?: string; options?: (string | number)[]; min?: number; max?: number; legacy?: string; perUser?: boolean }>
   system?: { udev?: { name: string; file: string }[]; units?: { name: string; file: string }[]; groups?: string[]; packages?: string[] }
   /** what it needs from the box: ports, GPIO pins, services (required; {} for nothing) - tested against the box before it is installed */
@@ -114,6 +118,8 @@ export interface CatalogEntry {
 
 export interface ExtensionDeps {
   getMupiboxConfig: () => MupiboxConfig | undefined
+  /** (hostApi 17) An extension added files to the local media: the display reads its lists again. */
+  libraryChanged?: () => void
   updateMupiboxConfig?: (mutate: (cfg: Record<string, unknown>) => void) => Promise<void>
 }
 
@@ -614,7 +620,7 @@ export function checkManifest(m: unknown, files: Set<string>): string | null {
     const settings = x.settings ?? {}
     for (const [position, item] of ui.items.entries()) {
       // (a roster is a list of things the extension keeps itself - users, say - and needs no setting; a heading is only a line of text)
-      if (item?.type !== 'roster' && item?.type !== 'heading' && item?.type !== 'status' && item?.type !== 'action' && item?.type !== 'list' && !Object.hasOwn(settings, String(item?.key))) return `ui: no such setting: ${item?.key}`
+      if (item?.type !== 'roster' && item?.type !== 'heading' && item?.type !== 'status' && item?.type !== 'action' && item?.type !== 'list' && item?.type !== 'form' && !Object.hasOwn(settings, String(item?.key))) return `ui: no such setting: ${item?.key}`
       if (typeof item.label !== 'string' || item.label.length > 100 || (item.help !== undefined && (typeof item.help !== 'string' || item.help.length > 800))) return `ui: bad text: ${item.key}`
       if (item.tip !== undefined && (item.tip !== true || item.help === undefined)) return `ui: tip needs a help text: ${item.key}`
       // (a field that is shown only while a choice has one of the values named: `showIf: { key, is: [...] }`, the key a setting with
@@ -689,6 +695,14 @@ export function checkManifest(m: unknown, files: Set<string>): string | null {
         if (item.accept !== undefined && (item.upload === undefined || x.hostApi < 11 || !/^\.[a-z]{2,5}(,\.[a-z]{2,5}){0,3}$/.test(String(item.accept)))) return `ui: accept belongs to an upload, from hostApi 11: ${item.label}`
         if (item.beside !== undefined && (item.beside !== true || x.hostApi < 11 || ui.items[position - 1]?.type !== 'action')) return `ui: beside needs hostApi 11 and a button before it: ${item.label}`
         if (item.confirm !== undefined && (typeof item.confirm !== 'string' || item.confirm.length < 1 || item.confirm.length > 160)) return `ui: bad action question: ${item.label}`
+        continue
+      }
+      if (item.type === 'form') {
+        // (hostApi 17) a button that opens a dialog the extension describes: the app asks `form` (GET) for { title, message?, fields, rows?,
+        // image?, links?, submit } and POSTs what the user entered to `post` ({ values, rows }); the route answers { ok, message }.
+        // Nothing is saved in the settings.
+        if (x.hostApi < 17 || item.key !== undefined || item.choices !== undefined || item.extra !== undefined || item.state !== undefined || item.dep !== undefined || item.list !== undefined) return `ui: a form needs hostApi 17 and has no setting: ${item.label}`
+        for (const part of ['form', 'post'] as const) if (typeof item[part] !== 'string' || !new RegExp(`^/api/ext/${x.id}/[a-z]{1,30}$`).test(item[part] as string)) return `ui: bad form address (${part}): ${item.label}`
         continue
       }
       if (item.type === 'list') {
@@ -1809,7 +1823,9 @@ export function mountExtensions(app: express.Express, deps: ExtensionDeps): void
             if (!deps.updateMupiboxConfig) return Promise.reject(new Error('the box cannot change its configuration here'))
             return deps.updateMupiboxConfig(mutate)
           },
-          paths: { library: LIBRARY_DIR, data: DATA_DIR, extensions: EXT_DIR },
+          // (hostApi 17: `media` - the local media folders, media/<category>/<artist>/<album>; `libraryChanged()` after files were added there)
+          paths: { library: LIBRARY_DIR, data: DATA_DIR, extensions: EXT_DIR, media: MEDIA_DIR },
+          libraryChanged: () => deps.libraryChanged?.(),
           restartServices,
           lockLibrary: () => lockLibrary(manifest.id),
           // (hostApi 5) the server itself, for its routes the display uses too (/api/audio-output ...); and what is called after

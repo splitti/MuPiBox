@@ -20,13 +20,13 @@
   {
     "id": "cd",
     "name": "USB-CD-Laufwerk",
-    "version": "1.0.1",
-    "description": "Audio-CDs vom USB-Laufwerk abspielen, mit Titelnamen und Cover aus dem Internet.",
-    "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjE5MiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMzIiLz48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjQ4IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIzMiIvPjxwYXRoIGQ9Ik0yNTYgMTEyYTE0NCAxNDQgMCAwIDEgMTQ0IDE0NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg0K",
-    "hostApi": 1,
-    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/cd-1.0.1.mpx",
-    "sha256": "6d59fb59da32b4d58a0d37e5663d7672ac3684254b89958524a2eefbc382dd4f",
-    "size": 14364,
+    "version": "1.1.0",
+    "description": "Audio-CDs vom USB-Laufwerk abspielen, mit Titelnamen und Cover aus dem Internet – und als MP3, AAC, WMA, FLAC oder ALAC in einen Medien-Ordner der Box rippen.",
+    "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjE5MiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMzIiLz48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjQ4IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIzMiIvPjxwYXRoIGQ9Ik0yNTYgMTEyYTE0NCAxNDQgMCAwIDEgMTQ0IDE0NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPgo=",
+    "hostApi": 17,
+    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/cd-1.1.0.mpx",
+    "sha256": "19ead95ff7ad57073acb57127e5d682d0f476d55d6e6280a6a3d4ea2c1215971",
+    "size": 27264,
     "resources": {},
     "system": {
       "udev": 1,
@@ -34,7 +34,10 @@
       "groups": [
         "cdrom"
       ],
-      "packages": []
+      "packages": [
+        "cdparanoia",
+        "ffmpeg"
+      ]
     }
   },
   {

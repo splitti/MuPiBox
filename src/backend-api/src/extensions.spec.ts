@@ -863,3 +863,39 @@ describe('systemd units of an extension', () => {
     assert.match(String(checkManifest({ ...ok, resources: { services: [{ name: 'mpx-xy.service' }] } }, files)), /not in resources.services/)
   })
 })
+
+describe('a form (hostApi 17)', () => {
+  const form = { type: 'form', label: 'CD rippen', form: '/api/ext/xy/ripform', post: '/api/ext/xy/rip' }
+  const manifest = (items: unknown[], hostApi = 17) => base({ id: 'xy', hostApi, settings: { t: { type: 'string' } }, ui: { title: 'T', items } })
+  it('is a button with the routes that describe the dialog and take it', () => {
+    assert.strictEqual(checkManifest(manifest([form]), files()), null)
+    assert.match(String(checkManifest(manifest([form], 16), files())), /a form needs hostApi 17/)
+    assert.match(String(checkManifest(manifest([{ ...form, key: 't' }]), files())), /a form needs hostApi 17 and has no setting/)
+    assert.match(String(checkManifest(manifest([{ ...form, form: '/api/ext/other/ripform' }]), files())), /bad form address \(form\)/)
+    assert.match(String(checkManifest(manifest([{ ...form, post: 'https://example.com/rip' }]), files())), /bad form address \(post\)/)
+    assert.match(String(checkManifest(manifest([{ type: 'form', label: 'x', form: '/api/ext/xy/a' }]), files())), /bad form address \(post\)/)
+  })
+  it('is the host API of this box', () => {
+    assert.ok(HOST_API >= 17)
+  })
+})
+
+describe('the CD extension rips (hostApi 17)', () => {
+  const dir = path.join(process.cwd(), '..', '..', 'extensions', 'cd')
+  const cd = JSON.parse(readFileSync(path.join(dir, 'manifest.json'), 'utf8')) as Manifest
+  it('has a manifest the installer accepts, with the programs it needs as packages', () => {
+    assert.strictEqual(checkManifest(cd, new Set(readdirSync(dir))), null)
+    assert.deepStrictEqual(cd.system?.packages, ['cdparanoia', 'ffmpeg'])
+    assert.ok(cd.hostApi >= 17)
+  })
+  it('lets the user choose the format and the quality, and takes only the ones the ripper knows', () => {
+    assert.strictEqual(checkSettings(cd, { ripFormat: 'flac', ripBitrate: 192 }).ok, true)
+    assert.strictEqual(checkSettings(cd, { ripFormat: 'ogg' }).ok, false)
+    assert.strictEqual(checkSettings(cd, { ripBitrate: 100 }).ok, false)
+  })
+  it('has the dialog, the status and the routes of its API part', () => {
+    const items = cd.ui?.items ?? []
+    assert.deepStrictEqual(items.filter((i) => i.type === 'form').map((i) => [i.form, i.post]), [['/api/ext/cd/ripform', '/api/ext/cd/rip']])
+    assert.deepStrictEqual(items.filter((i) => i.type === 'status').map((i) => i.state), ['/api/ext/cd/ripstatus'])
+  })
+})

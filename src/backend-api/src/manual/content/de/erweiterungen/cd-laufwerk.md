@@ -31,6 +31,23 @@ Die Box fragt zuerst **Discogs**, danach **MusicBrainz**:
 
 Für beides braucht die Box Internet. Ohne Internet spielt die CD trotzdem, nur ohne Namen und Cover.
 
+## Eine CD rippen
+
+Die Box kann eine Audio-CD auch **in die Bibliothek kopieren**: Die Titel liegen danach als Dateien im Medien-Ordner der Box und spielen auch ohne CD ([Eigene Hörspiele und Musik](../inhalte/lokale-medien.md)).
+
+1. CD einlegen. Unter **Einstellungen › System › Erweiterungen › USB-CD-Laufwerk** stellst du bei **CD rippen** das **Format** und die **Qualität** ein.
+2. **CD rippen …** antippen. Die Box zeigt einen Dialog mit Album, Albuminterpret, Genre, Jahr, **Cover** (der Stift darunter wählt ein anderes) und dem Namen jedes Titels samt beteiligtem Interpreten. Was das Internet zur CD weiß, ist schon eingetragen; mit **Albuminformationen online aktualisieren** fragt die Box noch einmal nach.
+3. Bei **Speichern in** wählst du **Hörspiele**, **Musik** oder **Sonstiges**. Der **Ordner des Interpreten** zeigt beim Tippen die vorhandenen Ordner dieser Kategorie; ein neuer Name legt einen neuen Ordner an. Ebenso der **Ordner des Albums**. Darunter steht, ob der Ordner schon da ist oder neu angelegt wird.
+4. **Rippen** antippen. Den Fortschritt zeigt die Karte der Erweiterung, dort bricht **Abbrechen** das Rippen auch ab: Was bis dahin gerippt war, löscht die Box wieder.
+
+| Format | Gut für |
+| --- | --- |
+| **MP3**, **AAC** | jedes Gerät; die Qualität (128 bis 320 kbit/s) bestimmt die Größe |
+| **WMA** | alte Player; ohne Cover in der Datei |
+| **FLAC**, **ALAC** | ohne Qualitätsverlust, etwa das Dreifache an Platz |
+
+Die Dateien heißen „01 Titel.mp3“ und tragen Titel, Interpret, Album, Genre, Jahr und Titelnummer; das Cover steckt in der Datei und liegt als `cover.jpg` im Albumordner. Während des Rippens spielt die CD nicht und das Laufwerk lässt sich nicht öffnen. Gibt es im Albumordner schon eine Datei mit demselben Namen, rippt die Box nicht: Wähle dann einen anderen Ordner (zum Beispiel „Album CD 2“). Das Rippen braucht ein paar Minuten und etwas Platz auf der Speicherkarte; bei der Installation holt die Box dafür die Programme `cdparanoia` und `ffmpeg`.
+
 ## Wenn die CD nicht erscheint
 
 - Dreht das Laufwerk an? Wenn nicht, bekommt es vielleicht zu wenig Strom (siehe oben).

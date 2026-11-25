@@ -4623,6 +4623,150 @@ function openNfcSheet(media, { back = null, image = '' } = {}) {
   )
 }
 
+// A dialog an extension describes (hostApi 17, ui item `form`): the route `form` answers
+//   { ok, message?, title, fields: [{ key, label, type: 'text' | 'select' | 'combo' | 'number', value, options?, optionsBy?, keep?, help?, required?, maxLength? }],
+//     image?: { url, label, picker: { target, title, query } }, rows?: { label, columns: [{ key, label, readonly? }], items: [{ ... }] },
+//     links?: [{ label, get }], submit }
+// `options` of a select are [{ value, label }], of a combo plain texts (a text field that suggests them - an existing folder, or a new
+// name); `optionsBy: { key, map: { <value of that field>: [...] } }` takes them from another field's value. The user's entries go to
+// the item's `post` as { values, rows, image }; it answers { ok, message }. A link asks its `get` for a new description (the
+// fields that are `keep` stay as the user has them).
+async function openExtForm(item, state = null) {
+  let desc = state?.desc
+  if (!desc) {
+    const r = await api(item.form, { timeoutMs: 30000 })
+    if (!r.ok || r.body?.ok === false || !Array.isArray(r.body?.fields)) {
+      const said = typeof r.body?.message === 'string' ? tr(r.body.message.slice(0, 160)) : ''
+      return toast(said || tr('Hat nicht geklappt'), 'info')
+    }
+    desc = r.body
+  }
+  const values = { ...(state?.values ?? Object.fromEntries(desc.fields.map((f) => [f.key, f.value ?? '']))) }
+  const rows = state?.rows ?? (desc.rows?.items ?? []).map((x) => ({ ...x }))
+  const image = state?.image ?? desc.image?.url ?? null
+  const picked = state?.picked ?? null
+  // (a field that `follows` another - the folder of the album follows its name - takes over what is typed there until the user typed in it himself)
+  const touched = new Set(state?.touched ?? [])
+  const reopen = (patch) => () => openExtForm(item, { desc, values, rows, image, picked, touched: [...touched], ...patch })
+  const optionsOf = (f) => (f.optionsBy ? (f.optionsBy.map[String(values[f.optionsBy.key])] ?? []) : (f.options ?? []))
+  const fieldHtml = (f) => {
+    const id = `xf-${esc(f.key)}`
+    const help = f.help ? `<small class="help">${esc(tr(f.help))}</small>` : ''
+    let input
+    if (f.type === 'select') {
+      input = `<select class="input" id="${id}" data-xfk="${esc(f.key)}">${(f.options ?? []).map((o) => `<option value="${esc(o.value)}"${String(o.value) === String(values[f.key]) ? ' selected' : ''}>${esc(tr(o.label))}</option>`).join('')}</select>`
+    } else if (f.type === 'combo') {
+      input = `<input class="input" id="${id}" data-xfk="${esc(f.key)}" list="${id}-list" type="text" maxlength="${Number(f.maxLength) || 120}" value="${esc(values[f.key])}" ${NO_PW_MANAGER}><datalist id="${id}-list">${optionsOf(f).map((o) => `<option value="${esc(o)}"></option>`).join('')}</datalist><small class="help xf-new" data-xfnew="${esc(f.key)}"></small>`
+    } else {
+      input = `<input class="input" id="${id}" data-xfk="${esc(f.key)}" type="${f.type === 'number' ? 'number' : 'text'}" maxlength="${Number(f.maxLength) || 200}" value="${esc(values[f.key])}" ${NO_PW_MANAGER}>`
+    }
+    return `<div class="field xf-field"><label for="${id}">${esc(tr(f.label))}</label>${input}${help}</div>`
+  }
+  const table = desc.rows
+    ? `<div class="xf-rows" role="table" aria-label="${esc(tr(desc.rows.label ?? ''))}"><div class="xf-row xf-row-head" role="row">${desc.rows.columns.map((c) => `<span role="columnheader">${esc(tr(c.label))}</span>`).join('')}</div>${rows
+        .map(
+          (row, i) =>
+            `<div class="xf-row" role="row">${desc.rows.columns
+              .map((c) => (c.readonly ? `<span class="xf-nr" role="cell">${esc(row[c.key] ?? '')}</span>` : `<input class="input" type="text" maxlength="200" data-xfrow="${i}" data-xfcol="${esc(c.key)}" value="${esc(row[c.key] ?? '')}" aria-label="${esc(tr(c.label))} ${i + 1}" ${NO_PW_MANAGER}>`))
+              .join('')}</div>`,
+        )
+        .join('')}</div>`
+    : ''
+  openSheet(
+    `<h2>${esc(tr(desc.title ?? ''))}</h2>
+     ${desc.message ? `<p class="help" style="margin:0">${esc(tr(desc.message))}</p>` : ''}
+     <div class="xf-head">
+       ${desc.image ? `<div class="xf-image"><button type="button" class="xf-cover" id="xf-image" aria-label="${esc(tr(desc.image.label ?? 'Cover'))}">${image ? `<img src="${esc(image)}" alt="">` : `<span class="xf-nocover">${icon('image', 32)}</span>`}<span class="xf-pen">${icon('edit', 16)}</span></button></div>` : ''}
+       <div class="xf-fields">${desc.fields.map(fieldHtml).join('')}</div>
+     </div>
+     ${table}
+     ${(desc.links ?? []).map((l, i) => `<p class="xf-link"><button type="button" class="btn sm" data-xflink="${i}">${esc(tr(l.label))}</button></p>`).join('')}
+     <div class="btns"><button class="btn" data-close>${tr('Abbrechen')}</button><button class="btn primary" id="xf-ok">${esc(tr(desc.submit ?? 'OK'))}</button></div>`,
+    (sheet, close) => {
+      for (const input of sheet.querySelectorAll('[data-xfk]')) {
+        const field = desc.fields.find((f) => f.key === input.dataset.xfk)
+        const note = sheet.querySelector(`[data-xfnew="${CSS.escape(field.key)}"]`)
+        const mark = () => {
+          if (!note) return
+          const text = String(input.value).trim()
+          note.textContent = text === '' ? '' : optionsOf(field).some((o) => o.toLowerCase() === text.toLowerCase()) ? tr('Vorhandener Ordner') : tr('Wird neu angelegt')
+        }
+        const sync = () => {
+          values[field.key] = input.value
+          touched.add(field.key)
+          mark()
+          for (const next of desc.fields.filter((f) => f.follows === field.key && !touched.has(f.key))) {
+            values[next.key] = input.value
+            const el = sheet.querySelector(`[data-xfk="${CSS.escape(next.key)}"]`)
+            if (el) {
+              el.value = input.value
+              el.dispatchEvent(new Event('xf-mark'))
+            }
+          }
+          // (the suggestions of another field follow this one: the artists of a category)
+          for (const other of desc.fields.filter((f) => f.optionsBy?.key === field.key)) {
+            const list = sheet.querySelector(`#xf-${CSS.escape(other.key)}-list`)
+            if (list) list.innerHTML = optionsOf(other).map((o) => `<option value="${esc(o)}"></option>`).join('')
+            sheet.querySelector(`[data-xfk="${CSS.escape(other.key)}"]`)?.dispatchEvent(new Event('xf-mark'))
+          }
+        }
+        input.addEventListener('input', sync)
+        input.addEventListener('change', sync)
+        input.addEventListener('xf-mark', mark)
+        mark()
+      }
+      for (const input of sheet.querySelectorAll('[data-xfrow]')) input.addEventListener('input', () => (rows[Number(input.dataset.xfrow)][input.dataset.xfcol] = input.value))
+      sheet.querySelector('[data-close]').onclick = close
+      const pick = sheet.querySelector('#xf-image')
+      if (pick) {
+        pick.onclick = () => {
+          const p = desc.image.picker ?? {}
+          close()
+          openCoverPicker({
+            target: String(p.target ?? 'own:cover'),
+            title: String(p.title ?? desc.title ?? ''),
+            query: String(p.query ?? ''),
+            fallbacks: [],
+            current: image,
+            onDone: (body) => reopen({ image: String(body?.url ?? image), picked: String(body?.url ?? '') || picked })(),
+            onCancel: reopen({}),
+          })
+        }
+      }
+      for (const button of sheet.querySelectorAll('[data-xflink]')) {
+        button.onclick = async () => {
+          const link = desc.links[Number(button.dataset.xflink)]
+          button.disabled = true
+          const r = await api(link.get, { timeoutMs: 60000 })
+          button.disabled = false
+          if (!r.ok || r.body?.ok === false || !Array.isArray(r.body?.fields)) return toast(tr(typeof r.body?.message === 'string' ? r.body.message.slice(0, 160) : 'Hat nicht geklappt'), 'info')
+          const next = r.body
+          const kept = Object.fromEntries(next.fields.map((f) => [f.key, f.keep && f.key in values && !(f.follows && !touched.has(f.key)) ? values[f.key] : (f.value ?? '')]))
+          close()
+          openExtForm(item, { desc: next, values: kept, rows: (next.rows?.items ?? []).map((x) => ({ ...x })), image: picked ?? next.image?.url ?? null, picked, touched: [...touched] })
+        }
+      }
+      const ok = sheet.querySelector('#xf-ok')
+      ok.onclick = async () => {
+        const missing = desc.fields.find((f) => f.required && String(values[f.key] ?? '').trim() === '')
+        if (missing) {
+          sheet.querySelector(`[data-xfk="${CSS.escape(missing.key)}"]`)?.focus()
+          return toast(`${tr(missing.label)}: ${tr('bitte ausfüllen')}`, 'info')
+        }
+        ok.disabled = true
+        const r = await api(item.post, { method: 'POST', body: { values, rows, image: picked }, timeoutMs: 60000 })
+        const said = typeof r.body?.message === 'string' ? tr(r.body.message.slice(0, 200)) : ''
+        if (r.ok && r.body?.ok !== false) {
+          close()
+          return toast(said || tr('Erledigt'), 'ok')
+        }
+        ok.disabled = false
+        toast(said || tr('Hat nicht geklappt'), 'info')
+      }
+    },
+  )
+}
+
 // A picture of the device: the file chooser (a promise of the file, null when it was left without one)
 function chooseImageFile() {
   return new Promise((resolve) => {
@@ -17689,6 +17833,10 @@ function extFormHtml(e, fields, cards = false) {
         // a button (hostApi 7): a tap asks a route of the extension's own API part (wired by extFormMount); nothing is saved
         return `<div class="field ext-action" data-ext-dep="${esc(it.dep ?? '')}"><button type="button" class="btn" data-xaction="${index}">${esc(it.label)}</button>${help}</div>`
       }
+      if (it.type === 'form') {
+        // a button that opens a dialog the extension describes (hostApi 17): wired by extFormMount, see openExtForm
+        return `<div class="field ext-action" data-ext-dep=""><button type="button" class="btn" data-xform="${index}">${esc(it.label)}</button>${help}</div>`
+      }
       if (it.type === 'list') {
         // a list with a picture for each entry (hostApi 8): drawn by extFormMount from what the extension's route answers
         return `<div class="field ext-list"><label>${esc(it.label)}</label><ul class="ext-tags tag-grid" data-xlist="${index}" aria-live="polite"></ul>${help}</div>`
@@ -18328,6 +18476,20 @@ function extFormMount(sheet, e, fields, saved, redraw) {
       button.disabled = false
       const said = typeof r.body?.message === 'string' ? tr(r.body.message.slice(0, 120)) : ''
       toast(said || tr(r.ok ? 'Erledigt' : 'Hat nicht geklappt'), r.ok ? 'ok' : 'info')
+    }
+  })
+  // (a form, hostApi 17: the dialog the extension describes opens on a tap)
+  fields.forEach((item, index) => {
+    if (item.type !== 'form') return
+    const button = sheet.querySelector(`[data-xform="${index}"]`)
+    if (!button) return
+    button.onclick = async () => {
+      button.disabled = true
+      try {
+        await openExtForm(item)
+      } finally {
+        button.disabled = false
+      }
     }
   })
   // (a list, hostApi 8: the extension's route answers { items: [{ id, title, text: [..], image, imageOwn, coverPost, actions: [{ label,

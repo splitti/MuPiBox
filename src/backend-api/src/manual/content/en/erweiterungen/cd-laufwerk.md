@@ -31,6 +31,23 @@ The box asks **Discogs** first, then **MusicBrainz**:
 
 Both need the internet. Without it the CD still plays, only without names and cover.
 
+## Ripping a CD
+
+The box can also **copy an audio CD into the library**: afterwards the tracks are files in the box's media folder and play without the CD ([Your own audiobooks and music](../inhalte/lokale-medien.md)).
+
+1. Put the CD in. Under **Settings › System › Extensions › USB CD drive** you choose the **format** and the **quality** under **Rip a CD**.
+2. Tap **Rip a CD …**. The box shows a dialog with album, album artist, genre, year, the **cover** (the pencil below it picks another) and the name of every track with its contributing artist. What the internet knows about the CD is filled in already; **Update album info online** asks again.
+3. Under **Save in** you choose **Audiobooks**, **Music** or **Other**. The **artist folder** suggests the existing folders of that category as you type; a new name creates a new folder. The same goes for the **album folder**. A line below says whether the folder exists or will be created.
+4. Tap **Rip**. The extension's card shows the progress, and **Cancel** there stops the rip: whatever was ripped until then is deleted again.
+
+| Format | Good for |
+| --- | --- |
+| **MP3**, **AAC** | every device; the quality (128 to 320 kbit/s) sets the size |
+| **WMA** | old players; no cover inside the file |
+| **FLAC**, **ALAC** | no loss of quality, about three times the space |
+
+The files are named "01 Title.mp3" and carry title, artist, album, genre, year and track number; the cover is inside the file and lies as `cover.jpg` in the album folder. While ripping, the CD does not play and the drive cannot be opened. If the album folder already has a file of the same name, the box does not rip: pick another folder then (for example "Album CD 2"). Ripping takes a few minutes and some room on the memory card; at installation the box fetches the programs `cdparanoia` and `ffmpeg` for it.
+
 ## If the CD does not appear
 
 - Does the drive spin up? If not, it may be getting too little power (see above).
