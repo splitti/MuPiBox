@@ -246,13 +246,12 @@ body.cf {
     display: none;
   }
 
-  // the controls: left 384, right 30, top 136.5, centred, gap 10 - with and without the panel, the same space above
-  // and below them on it
+  // the controls (the media control, its times and the shuffle key): left 384, right 30, centred, gap 10
   .kp-ctrl {
     position: absolute;
     left: 384px;
     right: 30px;
-    top: 64.5px;
+    top: 12px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -300,6 +299,14 @@ body.cf {
   &.km-light:not(.km-legacy) .kp-time ion-range,
   &.km-theme-light .kp-time ion-range {
     --bar-background: rgba(0, 0, 0, 0.14) !important;
+  }
+
+  // the shuffle key under the media control (Spotify music): a small round key
+  .kp-shuffle {
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    margin-top: -2px;
   }
 
   .kp-live {

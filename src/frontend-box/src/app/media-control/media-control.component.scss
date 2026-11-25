@@ -1,0 +1,179 @@
+// The multimedia control: a silver frame, a ring that lights up blue, a black pad with four wedges and play / pause in the middle.
+// Sizes are shares of the width, so it scales with whatever space it is given.
+:host {
+  display: block;
+  width: 100%;
+}
+
+.mc-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.mc {
+  position: relative;
+  width: min(100%, 300px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+// the frame: brushed silver - a conic gradient with a few bright and dark stretches
+.mc-bezel {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    conic-gradient(from 20deg, #f4f5f7, #a9adb4 14%, #eceef1 27%, #8d9198 41%, #f7f8fa 55%, #a4a8af 70%, #e9ebee 84%, #f4f5f7),
+    #c9ccd2;
+  box-shadow:
+    0 6px 14px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.55),
+    inset 0 -3px 5px rgba(0, 0, 0, 0.18);
+}
+
+// the groove between the frame and the pad: black, filling blue clockwise from the top (--p = percent of the track)
+.mc-ring {
+  position: absolute;
+  inset: 3.2%;
+  border-radius: 50%;
+  background: #08090b;
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.9),
+    0 0 0 1px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.mc-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  filter: drop-shadow(0 0 5px rgba(60, 140, 255, 0.85));
+}
+
+.mc-lit {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  // (nothing lit at 0: a stop at 0 % would show a hairline)
+  background: conic-gradient(from 0deg, #1d63ff 0, #4aa3ff calc(var(--p, 0) * 1%), transparent calc(var(--p, 0) * 1%));
+  opacity: calc(min(var(--p, 0), 0.4) * 2.5);
+  transition: background 0.2s linear;
+}
+
+// a stream: no end, so the ring stays black
+.mc-live .mc-lit {
+  display: none;
+}
+
+.mc-seekable .mc-ring {
+  cursor: pointer;
+}
+
+.mc-pad {
+  position: absolute;
+  inset: 12.5%;
+  width: 75%;
+  height: 75%;
+  overflow: visible;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.6));
+}
+
+.mc-dome {
+  fill: #0d0e10;
+}
+
+// the four wedges: dark, a little lighter at the top; pressed in they darken
+.mc-seg {
+  cursor: pointer;
+  outline: none;
+
+  path:first-child {
+    fill: url(#mc-seg);
+    stroke: rgba(255, 255, 255, 0.06);
+    stroke-width: 0.5;
+    transition: fill 0.12s;
+  }
+
+  text {
+    fill: #e7e9ee;
+    font: 700 7.4px/1 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    letter-spacing: 0.04em;
+    text-anchor: middle;
+    pointer-events: none;
+  }
+
+  .mc-icon {
+    fill: #eef0f4;
+    pointer-events: none;
+  }
+
+  &.mc-down path:first-child {
+    fill: #07080a;
+  }
+
+  &.mc-off {
+    opacity: 0.35;
+    cursor: default;
+  }
+}
+
+.mc-speed {
+  fill: #5fb0ff !important;
+  font-size: 8px !important;
+}
+
+// the track buttons: they follow the finger (the page sets the shift) and spring back with an overshoot when let go
+.mc-track {
+  transition: transform 0.55s cubic-bezier(0.3, 1.9, 0.45, 1);
+  touch-action: none;
+
+  &.mc-pulled {
+    transition: none;
+
+    path:first-child {
+      fill: #1b2a3f;
+      stroke: rgba(95, 176, 255, 0.55);
+    }
+  }
+}
+
+// play / pause: a round key in the middle
+.mc-hub {
+  cursor: pointer;
+
+  circle {
+    fill: url(#mc-hub);
+    stroke: rgba(255, 255, 255, 0.1);
+    stroke-width: 0.6;
+    filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.8));
+    transition: transform 0.12s;
+    transform-origin: 50px 50px;
+  }
+
+  .mc-icon {
+    fill: #ffffff;
+    pointer-events: none;
+  }
+
+  &.mc-down circle {
+    transform: scale(0.94);
+  }
+}
+
+.mc-times {
+  width: min(100%, 300px);
+  display: flex;
+  justify-content: space-between;
+  padding: 0 6%;
+  box-sizing: border-box;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--km-on-band-2, rgba(255, 255, 255, 0.7));
+  font-variant-numeric: tabular-nums;
+}

@@ -65,6 +65,7 @@ import { noCoverStyle } from '../no-cover'
 import type { MupiboxConfig } from '../mupibox-config.model'
 import { StatusComponent } from '../status/status.component'
 import { KmStatusGroupComponent } from '../km-header/km-status-group.component'
+import { MediaControlComponent } from '../media-control/media-control.component'
 import { OutputSwitchComponent } from '../output-switch/output-switch.component'
 import { PlayerCmds, PlayerService } from '../player.service'
 import type { PlaytimePlayState } from '../playtime.model'
@@ -103,6 +104,7 @@ export interface TrackListEntry {
     StatusComponent,
     KmStatusGroupComponent,
     OutputSwitchComponent,
+    MediaControlComponent,
     IonHeader,
     IonToolbar,
     IonButtons,
@@ -595,10 +597,51 @@ export class PlayerPage implements OnInit, AfterViewInit {
     }
   }
 
+  /** The length of the track in seconds (0 when it is not known). */
+  private trackSeconds(): number {
+    if (this.media?.type === 'spotify') return (this.currentPlayedSpotify?.item?.duration_ms ?? 0) / 1000
+    return this.currentPlayedLocal?.durationSeconds ?? 0
+  }
+
+  /** Whether a place in the track can be chosen (the same players that have the progress bar). */
+  protected canSeekHere(): boolean {
+    const type = this.media?.type
+    return type === 'spotify' || type === 'library' || type === 'nas' || type === 'tidal' || type === 'jellyfin' || type === 'audible' || type === 'rss'
+  }
+
+  /** A place on the ring of the media control (percent). */
+  protected seekToPercent(percent: number) {
+    this.cancelAlbumEnd()
+    this.progress = percent
+    this.seekHold = { value: percent, until: Date.now() + 3000 }
+    if (this.media.type === 'spotify') {
+      const duration = this.currentPlayedSpotify?.item?.duration_ms
+      if (duration) this.playerService.seekPosition(duration * (percent / 100))
+    } else if (this.canSeekHere()) this.playerService.seekPosition(percent)
+  }
+
+  /** Winding at 2× / 4× (media control): moves the place by `seconds` on top of the normal playing. */
+  protected scrubSeconds(seconds: number) {
+    const total = this.trackSeconds()
+    if (!(total > 0)) return
+    // The place the winding has reached is kept here: the player reports the place late, and a stale report must not pull it back.
+    // (the control's steps are relative to the true place, which moves on by itself meanwhile - so the base takes that time too)
+    const now = Date.now()
+    const held = this.scrubBase && now < this.scrubBase.until ? this.scrubBase : null
+    const base = held ? held.value + (this.playing ? ((now - held.at) / 1000 / total) * 100 : 0) : this.progress
+    const target = Math.max(0, Math.min(99.5, base + (seconds / total) * 100))
+    this.scrubBase = { value: target, at: now, until: now + 1500 }
+    this.seekToPercent(target)
+  }
+
+  private scrubBase: { value: number; at: number; until: number } | null = null
+
   // A reported place (percent) - or the one just chosen, while the report has not reached it yet (see seekHold)
   private heldProgress(reported: number): number {
     const hold = this.seekHold
     if (!hold) return reported
+    // (winding: the ring follows the place of the winding, not the late reports)
+    if (this.scrubBase && Date.now() < this.scrubBase.until) return hold.value
     if (Math.abs(reported - hold.value) <= 2 || Date.now() > hold.until) {
       this.seekHold = null
       return reported

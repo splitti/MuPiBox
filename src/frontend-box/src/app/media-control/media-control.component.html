@@ -1,0 +1,101 @@
+<!-- The frame is silver, the ring in it is dark and lights up blue clockwise, the black pad has the four buttons and play / pause. -->
+<div class="mc-wrap">
+  <div
+    class="mc"
+    [class.mc-live]="live()"
+    [class.mc-seekable]="canSeek() && !live()"
+    [style.--p]="lit()"
+    (pointerdown)="ringDown($event)"
+    (pointermove)="ringMove($event)"
+    (pointerup)="ringUp($event)"
+    (pointercancel)="ringUp($event)"
+  >
+    <div class="mc-bezel"></div>
+    <div class="mc-ring"><div class="mc-glow"><div class="mc-lit"></div></div></div>
+    <svg class="mc-pad" viewBox="0 0 100 100" aria-hidden="false">
+      <defs>
+        <linearGradient id="mc-seg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#303236" />
+          <stop offset="1" stop-color="#141517" />
+        </linearGradient>
+        <radialGradient id="mc-hub" cx="0.5" cy="0.35" r="0.8">
+          <stop offset="0" stop-color="#383a3f" />
+          <stop offset="1" stop-color="#111214" />
+        </radialGradient>
+      </defs>
+      <circle class="mc-dome" cx="50" cy="50" r="50" />
+
+      <!-- volume up -->
+      <g class="mc-seg" [class.mc-down]="pressed() === 'up'" role="button" aria-label="Volume up"
+         (pointerdown)="volPress($event, 'up')" (pointerup)="volRelease()" (pointercancel)="volRelease()" (lostpointercapture)="volRelease()">
+        <path [attr.d]="paths.up" />
+        <text x="50" y="16.2">VOL+</text>
+      </g>
+      <!-- volume down -->
+      <g class="mc-seg" [class.mc-down]="pressed() === 'down'" role="button" aria-label="Volume down"
+         (pointerdown)="volPress($event, 'down')" (pointerup)="volRelease()" (pointercancel)="volRelease()" (lostpointercapture)="volRelease()">
+        <path [attr.d]="paths.down" />
+        <text x="50" y="87.2">VOL−</text>
+      </g>
+
+      <!-- back: tap = the track before, pulled to the left = winding back at 2× and 4× -->
+      <g
+        class="mc-seg mc-track"
+        [class.mc-down]="pressed() === 'prev'"
+        [class.mc-off]="!canSkip() || live()"
+        [class.mc-pulled]="wound('prev')"
+        [style.transform]="shift('prev')"
+        role="button"
+        aria-label="Previous"
+        (pointerdown)="trackDown($event, 'prev')"
+        (pointermove)="trackMove($event, 'prev')"
+        (pointerup)="trackUp($event, 'prev')"
+        (pointercancel)="trackUp($event, 'prev')"
+      >
+        <path [attr.d]="paths.left" />
+        @if (speedLabel('prev'); as label) {
+          <path class="mc-icon" d="M15.5 45.5v9l-6-4.5zM9.5 45.5v9l-6-4.5z" />
+          <text class="mc-speed" x="12" y="62.5">{{ label }}</text>
+        } @else {
+          <g class="mc-icon"><rect x="9" y="44" width="1.8" height="12" rx="0.6" /><path d="M20.5 44v12L11.5 50z" /></g>
+        }
+      </g>
+      <!-- forward -->
+      <g
+        class="mc-seg mc-track"
+        [class.mc-down]="pressed() === 'next'"
+        [class.mc-off]="!canSkip() || live()"
+        [class.mc-pulled]="wound('next')"
+        [style.transform]="shift('next')"
+        role="button"
+        aria-label="Next"
+        (pointerdown)="trackDown($event, 'next')"
+        (pointermove)="trackMove($event, 'next')"
+        (pointerup)="trackUp($event, 'next')"
+        (pointercancel)="trackUp($event, 'next')"
+      >
+        <path [attr.d]="paths.right" />
+        @if (speedLabel('next'); as label) {
+          <path class="mc-icon" d="M84.5 45.5v9l6-4.5zM90.5 45.5v9l6-4.5z" />
+          <text class="mc-speed" x="88" y="62.5">{{ label }}</text>
+        } @else {
+          <g class="mc-icon"><rect x="89.2" y="44" width="1.8" height="12" rx="0.6" /><path d="M79.5 44v12L88.5 50z" /></g>
+        }
+      </g>
+
+      <!-- play / pause -->
+      <g class="mc-hub" [class.mc-down]="pressed() === 'play'" role="button" aria-label="Play / pause"
+         (pointerdown)="centreTap($event)" (pointerup)="centreUp($event)" (pointercancel)="pressed.set(null)">
+        <circle cx="50" cy="50" r="19.5" />
+        @if (playing()) {
+          <g class="mc-icon"><rect x="42.8" y="42" width="4.6" height="16" rx="1.2" /><rect x="52.6" y="42" width="4.6" height="16" rx="1.2" /></g>
+        } @else {
+          <path class="mc-icon" d="M43.5 41.5v17l14.5-8.5z" />
+        }
+      </g>
+    </svg>
+  </div>
+  @if (position() || duration()) {
+    <div class="mc-times"><span>{{ position() }}</span><span>{{ duration() }}</span></div>
+  }
+</div>
