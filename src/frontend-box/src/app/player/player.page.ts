@@ -65,7 +65,7 @@ import { noCoverStyle } from '../no-cover'
 import type { MupiboxConfig } from '../mupibox-config.model'
 import { StatusComponent } from '../status/status.component'
 import { KmStatusGroupComponent } from '../km-header/km-status-group.component'
-import { MediaControlComponent } from '../media-control/media-control.component'
+import { MediaControlComponent, type RepeatMode } from '../media-control/media-control.component'
 import { OutputSwitchComponent } from '../output-switch/output-switch.component'
 import { PlayerCmds, PlayerService } from '../player.service'
 import type { PlaytimePlayState } from '../playtime.model'
@@ -607,6 +607,51 @@ export class PlayerPage implements OnInit, AfterViewInit {
   protected canSeekHere(): boolean {
     const type = this.media?.type
     return type === 'spotify' || type === 'library' || type === 'nas' || type === 'tidal' || type === 'jellyfin' || type === 'audible' || type === 'rss'
+  }
+
+  // ---------- the second set of the media control: shuffle, repeat, eject ----------
+
+  private repeatTap: { mode: RepeatMode; until: number } | null = null
+  private repeatSet: RepeatMode = 'off'
+  /** A CD drive is on the box (the cd extension), so the eject key can be used. */
+  protected readonly cdDrive = signal(false)
+
+  /** How the playlist repeats: what the player says (an album of the box), but what was just chosen until it has taken it. */
+  protected repeatShown(): RepeatMode {
+    if (this.repeatTap && Date.now() < this.repeatTap.until) return this.repeatTap.mode
+    if (this.media?.type !== 'spotify') {
+      if (this.currentPlayedLocal?.repeat === false) this.repeatSet = 'off'
+      else if (this.currentPlayedLocal?.repeat === true && this.repeatSet === 'off') this.repeatSet = 'all'
+    }
+    return this.repeatSet
+  }
+
+  /** The repeat key: all, then one, then none. */
+  protected cycleRepeat() {
+    const next: RepeatMode = this.repeatShown() === 'off' ? 'all' : this.repeatShown() === 'all' ? 'one' : 'off'
+    this.repeatSet = next
+    this.repeatTap = { mode: next, until: Date.now() + 2500 }
+    this.playerService.setRepeatMode(next)
+  }
+
+  /** Whether shuffle can be used: Spotify music, or an album of the box when its player can do it - not a stream. */
+  protected canShuffle(): boolean {
+    if (this.media?.type === 'radio') return false
+    if (this.media?.type === 'spotify') return this.media.category === 'music' || this.media.category === 'other'
+    return this.currentPlayedLocal?.shuffleSupported === true
+  }
+
+  /** Whether the box has a CD drive (asked when the second set is opened). */
+  protected refreshDrive() {
+    this.http.get<{ drive?: boolean }>(`${environment.backend.playerUrl}/ext/cd/state`).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (state) => this.cdDrive.set(!!state?.drive),
+      error: () => this.cdDrive.set(false),
+    })
+  }
+
+  /** The eject key: the drive's tray opens (the player stops a CD that plays first). */
+  protected ejectCd() {
+    this.http.get(`${environment.backend.playerUrl}/ext/cd/eject`).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ error: () => undefined })
   }
 
   /** A place on the ring of the media control (percent). */

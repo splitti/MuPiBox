@@ -93,7 +93,7 @@
   cursor: pointer;
   outline: none;
 
-  path:first-child {
+  > path:first-child {
     fill: url(#mc-seg);
     stroke: rgba(255, 255, 255, 0.06);
     stroke-width: 0.5;
@@ -113,7 +113,7 @@
     pointer-events: none;
   }
 
-  &.mc-down path:first-child {
+  &.mc-down > path:first-child {
     fill: #07080a;
   }
 
@@ -136,7 +136,7 @@
   &.mc-pulled {
     transition: none;
 
-    path:first-child {
+    > path:first-child {
       fill: #1b2a3f;
       stroke: rgba(95, 176, 255, 0.55);
     }
@@ -179,4 +179,46 @@
   font-weight: 500;
   color: var(--km-on-band-2, rgba(255, 255, 255, 0.7));
   font-variant-numeric: tabular-nums;
+}
+
+// the second set: line icons, "on" lit blue
+.mc-line {
+  fill: none;
+  stroke: #eef0f4;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.mc-on {
+  .mc-line {
+    stroke: #5fb0ff;
+  }
+
+  > path:first-child {
+    fill: #15263b;
+  }
+}
+
+.mc-state {
+  font-size: 6.4px !important;
+  fill: #aab0ba !important;
+}
+
+.mc-on .mc-state {
+  fill: #5fb0ff !important;
+}
+
+.mc-one {
+  fill: #5fb0ff !important;
+  font-size: 7px !important;
+}
+
+// the centre key held: it sinks and glows until the second set shows
+.mc-hub.mc-holding circle {
+  transform: scale(0.94);
+  stroke: rgba(95, 176, 255, 0.9);
+  stroke-width: 1.4;
+  transition: stroke 1.9s linear;
 }

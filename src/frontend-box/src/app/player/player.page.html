@@ -258,11 +258,18 @@
           (next)="skipNext()"
           (scrub)="scrubSeconds($event)"
           (seekTo)="seekToPercent($event)"
+          [shuffle]="!!media.shuffle"
+          [repeatMode]="repeatShown()"
+          [canShuffle]="canShuffle()"
+          [canRepeat]="!radio"
+          [canEject]="cdDrive()"
+          (shuffleToggle)="toggleshuffle()"
+          (repeatCycle)="cycleRepeat()"
+          (eject)="ejectCd()"
+          (altOpened)="refreshDrive()"
         />
         @if (radio) {
           <span class="km-live kp-live" [class.km-buffering]="currentPlayedLocal?.loading"><i></i>{{ currentPlayedLocal?.loading ? displayTexts.text('connectingLabel') : displayTexts.text('liveLabel') }}</span>
-        } @else if (media.type === 'spotify' && (media.category == 'music' || media.category == 'other')) {
-          <button class="kp-btn kp-seek kp-shuffle" type="button" [class.kp-on]="media.shuffle" (click)="toggleshuffle()"><ion-icon name="shuffle-outline"></ion-icon></button>
         }
       </div>
     </div>

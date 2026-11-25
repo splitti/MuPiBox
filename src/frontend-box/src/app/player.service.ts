@@ -113,6 +113,11 @@ export class PlayerService {
     this.sendRequest(on ? 'repeaton' : 'repeatoff')
   }
 
+  /** Repeat of the playlist that plays: 'all', 'one' (the track again and again) or 'off' (Spotify has its own, the player sets it). */
+  setRepeatMode(mode: 'off' | 'all' | 'one') {
+    this.sendRequest(mode === 'all' ? 'repeatall' : mode === 'one' ? 'repeatone' : 'repeatoff')
+  }
+
   seekPosition(pos: number) {
     const seekpos = `seekpos:${pos}`
     this.sendRequest(seekpos)

@@ -336,13 +336,6 @@ body.cf {
     }
   }
 
-  // the shuffle key in the corner of the media control (after .kp-seek, which would make it 64)
-  .kp-shuffle {
-    width: 38px;
-    height: 38px;
-    border-radius: 19px;
-  }
-
   .kp-live {
     background: var(--km-night-2);
     color: #ffffff;

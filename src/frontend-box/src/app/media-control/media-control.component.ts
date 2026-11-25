@@ -12,6 +12,9 @@ const TAP_MS = 500
 const TAP_MOVE = 0.025
 const HOLD_MS = 450
 const REPEAT_MS = 200
+// play / pause held this long switches the outer buttons to the second set (and back after IDLE_MS without a press)
+const LONG_PRESS_MS = 2000
+const ALT_IDLE_MS = 12000
 // how far the button follows the finger (in units of the 100 wide pad) and how far it has to be pulled for the two steps (shares of the width)
 const MAX_PULL = 13
 const STAGE_1 = 0.07
@@ -38,6 +41,8 @@ export function sectorPath(angle: number, gap = 3, hub = 19.5, outer = 49): stri
   return `M${point(outer, -1)}A${outer} ${outer} 0 0 1 ${point(outer, 1)}L${point(inner, 1)}A${inner} ${inner} 0 0 0 ${point(inner, -1)}Z`
 }
 
+export type RepeatMode = 'off' | 'all' | 'one'
+
 /**
  * The multimedia button of the player: a round control in a silver frame - volume up and down, the two track buttons and play / pause on a
  * black pad, and between pad and frame a ring that lights up blue clockwise as the track plays (a whole circle is the whole track; a
@@ -46,6 +51,10 @@ export function sectorPath(angle: number, gap = 3, hub = 19.5, outer = 49): stri
  * A track button pressed and pulled to its own side (left for back, right for forward) winds: the first step plays at 2×, the second at
  * 4×. The button follows the finger and springs back when it is let go. A tap on it steps to the track before / after. The volume buttons
  * repeat while held. A tap or a pull on the ring itself chooses a place in the track.
+ *
+ * Play / pause held for two seconds switches the four outer buttons to a second set: shuffle (instead of back), repeat - all, one,
+ * none, round and round - (instead of forward), eject the CD (instead of volume down) and "back" (instead of volume up), which
+ * returns to the first set (so does twelve seconds without a press).
  */
 @Component({
   selector: 'mupi-media-control',
@@ -66,6 +75,12 @@ export class MediaControlComponent {
   /** "1:23" and "4:56" under the control (empty: none). */
   readonly position = input('')
   readonly duration = input('')
+  /** The second set: shuffle is on, how the playlist repeats, whether each can be used, whether a CD drive is there. */
+  readonly shuffle = input(false)
+  readonly repeatMode = input<RepeatMode>('off')
+  readonly canShuffle = input(true)
+  readonly canRepeat = input(true)
+  readonly canEject = input(false)
 
   readonly playPause = output<void>()
   readonly volUp = output<void>()
@@ -76,10 +91,19 @@ export class MediaControlComponent {
   readonly scrub = output<number>()
   /** A place chosen on the ring (percent). */
   readonly seekTo = output<number>()
+  readonly shuffleToggle = output<void>()
+  readonly repeatCycle = output<void>()
+  readonly eject = output<void>()
+  /** The second set was opened (the page looks whether a drive is there). */
+  readonly altOpened = output<void>()
 
   protected readonly pulled = signal<{ side: 'prev' | 'next'; units: number; stage: ScrubStage } | null>(null)
   protected readonly pressed = signal<Side | 'play' | null>(null)
   private readonly chosen = signal<number | null>(null)
+  /** The second set of the outer buttons is shown. */
+  protected readonly alt = signal(false)
+  /** The centre key is held (it turns to the second set at LONG_PRESS_MS). */
+  protected readonly holding = signal(false)
 
   /** The ring: percent lit. */
   protected readonly lit = computed(() => {
@@ -169,15 +193,70 @@ export class MediaControlComponent {
     this.ticker = undefined
   }
 
+  private longTimer: ReturnType<typeof setTimeout> | undefined
+  private altTimer: ReturnType<typeof setTimeout> | undefined
+  private longDone = false
+
   protected centreTap(event: PointerEvent) {
     event.stopPropagation()
     this.pressed.set('play')
+    this.holding.set(true)
+    this.longDone = false
+    clearTimeout(this.longTimer)
+    this.longTimer = setTimeout(() => {
+      this.longDone = true
+      this.holding.set(false)
+      this.setAlt(!this.alt())
+    }, LONG_PRESS_MS)
   }
 
   protected centreUp(event: PointerEvent) {
     event.stopPropagation()
-    if (this.pressed() === 'play') this.playPause.emit()
+    clearTimeout(this.longTimer)
+    this.holding.set(false)
+    // (a hold that turned the set over is not a tap: play / pause stays as it is)
+    if (this.pressed() === 'play' && !this.longDone) this.playPause.emit()
+    this.longDone = false
     this.pressed.set(null)
+  }
+
+  protected centreCancel() {
+    clearTimeout(this.longTimer)
+    this.holding.set(false)
+    this.pressed.set(null)
+  }
+
+  private setAlt(on: boolean) {
+    clearTimeout(this.altTimer)
+    this.alt.set(on)
+    this.pressed.set(null)
+    if (on) {
+      this.altOpened.emit()
+      this.altTimer = setTimeout(() => this.alt.set(false), ALT_IDLE_MS)
+    }
+  }
+
+  /** A press of the second set: the idle time starts anew. */
+  private altBusy() {
+    clearTimeout(this.altTimer)
+    this.altTimer = setTimeout(() => this.alt.set(false), ALT_IDLE_MS)
+  }
+
+  protected altDown(event: PointerEvent, which: 'shuffle' | 'repeat' | 'eject' | 'back') {
+    event.stopPropagation()
+    this.pressed.set(which === 'shuffle' ? 'prev' : which === 'repeat' ? 'next' : which === 'eject' ? 'down' : 'up')
+    this.altBusy()
+  }
+
+  protected altUp(event: PointerEvent, which: 'shuffle' | 'repeat' | 'eject' | 'back') {
+    event.stopPropagation()
+    const wasPressed = this.pressed() !== null
+    this.pressed.set(null)
+    if (!wasPressed) return
+    if (which === 'back') this.setAlt(false)
+    else if (which === 'shuffle' && this.canShuffle()) this.shuffleToggle.emit()
+    else if (which === 'repeat' && this.canRepeat()) this.repeatCycle.emit()
+    else if (which === 'eject' && this.canEject()) this.eject.emit()
   }
 
   private origin = { x: 0, t: 0, moved: false }
