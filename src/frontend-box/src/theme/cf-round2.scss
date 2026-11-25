@@ -224,6 +224,11 @@ body.cf {
     -webkit-box-reflect: below 2px linear-gradient(transparent 68%, rgba(255, 255, 255, 0.3));
   }
 
+  .kp-radio .kp-ctrl {
+    --mc-size: 300px;
+    top: 40px;
+  }
+
   .kp-radio .kp-cover {
     left: 42px;
     top: 40px;
@@ -255,8 +260,10 @@ body.cf {
   .kp-ctrl {
     left: 400px;
     right: 40px;
-    top: 12px;
-    gap: 10px;
+    // level with the cover (316 square at y 18; radio 300 at y 40)
+    --mc-size: 316px;
+    top: 18px;
+    gap: 6px;
   }
 
   .kp-time {

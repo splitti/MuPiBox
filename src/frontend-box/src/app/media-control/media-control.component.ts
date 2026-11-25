@@ -17,13 +17,25 @@ const MAX_PULL = 13
 const STAGE_1 = 0.07
 const STAGE_2 = 0.16
 
-/** The path of a ring segment between two radii and two angles (degrees, 0 = up, clockwise) in a 100 × 100 box. */
-export function sectorPath(from: number, to: number, inner = 23, outer = 49): string {
-  const point = (r: number, a: number) => {
-    const rad = ((a - 90) * Math.PI) / 180
-    return `${(50 + r * Math.cos(rad)).toFixed(2)} ${(50 + r * Math.sin(rad)).toFixed(2)}`
+/**
+ * The path of one of the four wedges of the pad (100 × 100 box), `angle` = the direction of its middle (degrees, 0 = up, clockwise).
+ * The channels between the wedges are as wide everywhere (`gap` units, not wider towards the rim), and the channel to the centre key
+ * (radius `hub`) is as wide as they are.
+ */
+export function sectorPath(angle: number, gap = 3, hub = 19.5, outer = 49): string {
+  const inner = hub + gap
+  const rad = (angle * Math.PI) / 180
+  const along = [Math.sin(rad), -Math.cos(rad)]
+  const across = [Math.cos(rad), Math.sin(rad)]
+  const h = gap / 2
+  // a point on the edge of the wedge, `side` = -1 / 1 the edge on the left / right, at the radius r: the edge is parallel to the diagonal
+  const point = (r: number, side: -1 | 1) => {
+    const t = Math.sqrt(r * r - h * h)
+    const x = (t + h) / Math.SQRT2
+    const y = side * ((t - h) / Math.SQRT2)
+    return `${(50 + along[0] * x + across[0] * y).toFixed(2)} ${(50 + along[1] * x + across[1] * y).toFixed(2)}`
   }
-  return `M${point(outer, from)}A${outer} ${outer} 0 0 1 ${point(outer, to)}L${point(inner, to)}A${inner} ${inner} 0 0 0 ${point(inner, from)}Z`
+  return `M${point(outer, -1)}A${outer} ${outer} 0 0 1 ${point(outer, 1)}L${point(inner, 1)}A${inner} ${inner} 0 0 0 ${point(inner, -1)}Z`
 }
 
 /**
@@ -77,10 +89,10 @@ export class MediaControlComponent {
   })
 
   protected readonly paths = {
-    up: sectorPath(-43.5, 43.5),
-    right: sectorPath(46.5, 133.5),
-    down: sectorPath(136.5, 223.5),
-    left: sectorPath(226.5, 313.5),
+    up: sectorPath(0),
+    right: sectorPath(90),
+    down: sectorPath(180),
+    left: sectorPath(270),
   }
 
   protected speedLabel(side: 'prev' | 'next'): string {

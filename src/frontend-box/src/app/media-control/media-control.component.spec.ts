@@ -34,7 +34,7 @@ describe('MediaControlComponent (the pure parts)', () => {
   })
 
   it('draws a closed segment', () => {
-    const path = sectorPath(46.5, 133.5)
+    const path = sectorPath(90)
     expect(path.startsWith('M')).toBe(true)
     expect(path.endsWith('Z')).toBe(true)
     expect(path).not.toContain('NaN')

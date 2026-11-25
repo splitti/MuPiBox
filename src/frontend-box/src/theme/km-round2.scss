@@ -251,11 +251,13 @@ body.cf {
     position: absolute;
     left: 384px;
     right: 30px;
-    top: 12px;
+    // level with the cover and as big as it is
+    --mc-size: 324px;
+    top: 40px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 6px;
   }
 
   .kp-time {
@@ -303,14 +305,17 @@ body.cf {
 
   // the shuffle key under the media control (Spotify music): a small round key
   .kp-shuffle {
-    width: 44px;
-    height: 44px;
-    border-radius: 22px;
-    margin-top: -2px;
+    // in the upper right corner of the control's square, outside its circle (the times have the lower ones)
+    position: absolute;
+    left: calc(50% + var(--mc-size) / 2 - 38px);
+    top: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 19px;
   }
 
   .kp-live {
-    height: 48px;
+    height: 34px;
     padding: 0 20px;
     border-radius: 24px;
     display: inline-flex;

@@ -6,15 +6,15 @@
 }
 
 .mc-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
+  position: relative;
+  width: min(100%, var(--mc-size, 300px));
+  margin: 0 auto;
 }
 
 .mc {
   position: relative;
-  width: min(100%, 300px);
+  // (the page sets --mc-size to the size of the cover)
+  width: min(100%, var(--mc-size, 300px));
   aspect-ratio: 1;
   border-radius: 50%;
   touch-action: none;
@@ -166,12 +166,15 @@
   }
 }
 
+// the times sit in the two lower corners of the control's square, outside its circle: the place left, the length right
 .mc-times {
-  width: min(100%, 300px);
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   justify-content: space-between;
-  padding: 0 6%;
-  box-sizing: border-box;
+  pointer-events: none;
   font-size: 14px;
   font-weight: 500;
   color: var(--km-on-band-2, rgba(255, 255, 255, 0.7));
