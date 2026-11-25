@@ -23,29 +23,65 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-// the frame: brushed silver - a conic gradient with a few bright and dark stretches
+// the frame: brushed metal in the colour of the ring around the round covers of the theme (--km-ring; the older themes: their dark colour),
+// with a light and a dark side, fine brushing, a gloss at the top left and a bevel on the inside edge
+.mc {
+  --mc-metal: var(--km-ring, var(--ion-color-dark, #c9ccd2));
+  --mc-hi: color-mix(in srgb, var(--mc-metal) 45%, white);
+  --mc-lo: color-mix(in srgb, var(--mc-metal) 62%, black);
+}
+
 .mc-bezel {
   position: absolute;
   inset: 0;
   border-radius: 50%;
   background:
-    conic-gradient(from 20deg, #f4f5f7, #a9adb4 14%, #eceef1 27%, #8d9198 41%, #f7f8fa 55%, #a4a8af 70%, #e9ebee 84%, #f4f5f7),
-    #c9ccd2;
+    // the gloss
+    radial-gradient(ellipse 75% 40% at 32% 10%, rgba(255, 255, 255, 0.7), transparent 72%),
+    radial-gradient(ellipse 60% 30% at 70% 96%, rgba(0, 0, 0, 0.35), transparent 75%),
+    // fine brushing
+    repeating-conic-gradient(from 0deg, rgba(255, 255, 255, 0.1) 0 0.5deg, rgba(0, 0, 0, 0.08) 0.5deg 1.2deg),
+    // the metal: bright and dark stretches around the ring
+    conic-gradient(
+      from 25deg,
+      var(--mc-hi),
+      color-mix(in srgb, var(--mc-metal) 82%, black) 12%,
+      color-mix(in srgb, var(--mc-metal) 70%, white) 26%,
+      var(--mc-lo) 40%,
+      color-mix(in srgb, var(--mc-metal) 35%, white) 54%,
+      color-mix(in srgb, var(--mc-metal) 74%, black) 68%,
+      color-mix(in srgb, var(--mc-metal) 62%, white) 83%,
+      var(--mc-hi)
+    ),
+    var(--mc-metal);
   box-shadow:
-    0 6px 14px rgba(0, 0, 0, 0.45),
-    inset 0 0 0 1.5px rgba(255, 255, 255, 0.55),
-    inset 0 -3px 5px rgba(0, 0, 0, 0.18);
+    0 6px 14px rgba(0, 0, 0, 0.5),
+    0 1px 0 rgba(255, 255, 255, 0.25) inset,
+    inset 0 0 0 1.5px color-mix(in srgb, var(--mc-metal) 40%, white),
+    inset 0 -3px 5px rgba(0, 0, 0, 0.28);
+}
+
+// the bevel on the inner edge: light on the upper left, dark on the lower right, as if the metal were cut
+.mc-bezel::after {
+  content: '';
+  position: absolute;
+  inset: 1.6%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.55));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
 }
 
 // the groove between the frame and the pad: black, filling blue clockwise from the top (--p = percent of the track)
 .mc-ring {
   position: absolute;
-  inset: 3.2%;
+  inset: 5.6%;
   border-radius: 50%;
   background: #08090b;
   box-shadow:
     inset 0 2px 5px rgba(0, 0, 0, 0.9),
-    0 0 0 1px rgba(0, 0, 0, 0.35);
+    0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 1px 1px 1px rgba(255, 255, 255, 0.35);
   overflow: hidden;
 }
 
