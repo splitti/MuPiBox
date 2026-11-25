@@ -1,8 +1,8 @@
 {
   "id": "mediacontrol",
   "name": "Media-Control",
-  "version": "1.1.0",
-  "description": "Ein runder Bedienknopf für den Player: Lautstärke, Titelwechsel und Play/Pause auf einer Scheibe, darum ein Ring, der sich mit dem Titel blau füllt. Ersetzt die normalen Tasten, solange die Erweiterung an ist.",
+  "version": "1.1.1",
+  "description": "Ein runder Bedienknopf für den Player: Lautstärke, Titelwechsel und Play/Pause auf einer Scheibe, darum ein Ring, der sich mit dem Titel füllt. Ersetzt die normalen Tasten, solange die Erweiterung an ist.",
   "hostApi": 18,
   "resources": {},
   "display": "display.js",

@@ -79,13 +79,13 @@
   {
     "id": "mediacontrol",
     "name": "Media-Control",
-    "version": "1.1.0",
-    "description": "Ein runder Bedienknopf für den Player: Lautstärke, Titelwechsel und Play/Pause auf einer Scheibe, darum ein Ring, der sich mit dem Titel blau füllt. Ersetzt die normalen Tasten, solange die Erweiterung an ist.",
+    "version": "1.1.1",
+    "description": "Ein runder Bedienknopf für den Player: Lautstärke, Titelwechsel und Play/Pause auf einer Scheibe, darum ein Ring, der sich mit dem Titel füllt. Ersetzt die normalen Tasten, solange die Erweiterung an ist.",
     "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS44IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIi8+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMy4yIiBmaWxsPSJjdXJyZW50Q29sb3IiIHN0cm9rZT0ibm9uZSIvPjxwYXRoIGQ9Ik0xMiA1djIuMk0xMiAxNi44VjE5TTUgMTJoMi4yTTE2LjggMTJIMTkiLz48L3N2Zz4K",
     "hostApi": 18,
-    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/mediacontrol-1.1.0.mpx",
-    "sha256": "2d07ee662e506859e0e78b65a0b885896c86ade248420546b3286e96c68ed6cb",
-    "size": 15366,
+    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/mediacontrol-1.1.1.mpx",
+    "sha256": "4a80e6ba6c44f34307db06723435c6d8d3ec5d799a93b58bdbedd3426c82e4d5",
+    "size": 15362,
     "resources": {},
     "system": {
       "udev": 0,
