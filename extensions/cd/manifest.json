@@ -1,7 +1,7 @@
 {
   "id": "cd",
   "name": "USB-CD-Laufwerk",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Audio-CDs vom USB-Laufwerk abspielen, mit Titelnamen und Cover aus dem Internet – und als MP3, AAC, WMA, FLAC oder ALAC in einen Medien-Ordner der Box rippen.",
   "hostApi": 17,
   "player": "player.js",
@@ -60,8 +60,13 @@
   },
   "ui": {
     "title": "Audio-CD",
-    "help": "Liegt eine Audio-CD im USB-Laufwerk, zeigt das Display oben den Reiter „CD“. Die Box sucht dann im Internet nach den Namen der Titel und nach dem Cover: zuerst bei Discogs, danach bei MusicBrainz. Zum Rippen die CD einlegen und unten „CD rippen“ antippen: Die Box fragt Album, Interpret, Titel und Cover ab und legt die Dateien in einem Ordner der Medien an.",
+    "help": "Liegt eine Audio-CD im USB-Laufwerk, zeigt das Display oben den Reiter „CD“. Die Box sucht dann im Internet nach den Namen der Titel und nach dem Cover. Eine CD lässt sich auch in die Bibliothek rippen: unter „CD rippen“ das Format wählen und „CD rippen …“ antippen.",
     "items": [
+      {
+        "type": "heading",
+        "label": "Titel und Cover",
+        "card": true
+      },
       {
         "key": "cdLookup",
         "label": "Titel und Cover im Internet suchen"
@@ -74,7 +79,8 @@
       },
       {
         "type": "heading",
-        "label": "CD rippen"
+        "label": "CD rippen",
+        "card": true
       },
       {
         "key": "ripFormat",
@@ -150,6 +156,8 @@
         "post": "/api/ext/cd/rip",
         "help": "Fragt zuerst Album, Interpret, Titel, Cover und den Ordner ab, in den die Dateien kommen."
       }
-    ]
+    ],
+    "heading": "USB-CD-Laufwerk",
+    "place": "system"
   }
 }

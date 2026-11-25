@@ -7,7 +7,7 @@ The extension **USB CD drive** plays **audio CDs** from a CD drive connected to 
 - an external CD or DVD drive with a USB connection. Some drives need more power than a USB port of the Raspberry Pi supplies: in that case use a drive with its own power supply or a powered USB hub
 - the extension, [installed](installieren.md) under **Settings › System › Extensions**
 
-When it is installed, the box sets up access to the drive (an access rule and the group `cdrom`). The app shows that beforehand.
+When it is installed, the box sets up access to the drive (an access rule and the group `cdrom`) and fetches the programs for ripping. The app shows that beforehand. Afterwards the settings are on a page **Settings › USB CD drive**, with a card **Titles and cover** and a card **Rip a CD**.
 
 ## Playing a CD
 
@@ -35,10 +35,10 @@ Both need the internet. Without it the CD still plays, only without names and co
 
 The box can also **copy an audio CD into the library**: afterwards the tracks are files in the box's media folder and play without the CD ([Your own audiobooks and music](../inhalte/lokale-medien.md)).
 
-1. Put the CD in. Under **Settings › System › Extensions › USB CD drive** you choose the **format** and the **quality** under **Rip a CD**.
+1. Put the CD in. Under **Settings › USB CD drive** you choose the **format** and the **quality** on the card **Rip a CD**.
 2. Tap **Rip a CD …**. The box shows a dialog with album, album artist, genre, year, the **cover** (the pencil below it picks another) and the name of every track with its contributing artist. What the internet knows about the CD is filled in already; **Update album info online** asks again.
 3. Under **Save in** you choose **Audiobooks**, **Music** or **Other**. The **artist folder** suggests the existing folders of that category as you type; a new name creates a new folder. The same goes for the **album folder**. A line below says whether the folder exists or will be created.
-4. Tap **Rip**. The extension's card shows the progress, and **Cancel** there stops the rip: whatever was ripped until then is deleted again.
+4. Tap **Rip**. The card **Rip a CD** shows the progress, and **Cancel** there stops the rip: whatever was ripped until then is deleted again.
 
 | Format | Good for |
 | --- | --- |
