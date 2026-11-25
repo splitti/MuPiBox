@@ -19,6 +19,11 @@
   --mc-metal: var(--km-ring, var(--ion-color-dark, #c9ccd2));
   --mc-hi: color-mix(in srgb, var(--mc-metal) 45%, white);
   --mc-lo: color-mix(in srgb, var(--mc-metal) 62%, black);
+  /* the colour of the ring: set by the script from the settings; the others are made from it */
+  --mc-a: #2878ff;
+  --mc-a-dark: color-mix(in srgb, var(--mc-a) 88%, black);
+  --mc-a-light: color-mix(in srgb, var(--mc-a) 68%, white);
+  --mc-on: color-mix(in srgb, var(--mc-a) 62%, white);
 }
 
 .mc-bezel {
@@ -75,7 +80,7 @@
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  filter: drop-shadow(0 0 5px rgba(60, 140, 255, 0.85));
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--mc-a) 85%, transparent));
 }
 
 .mc-lit {
@@ -83,7 +88,7 @@
   inset: 0;
   border-radius: 50%;
   /* (nothing lit at 0: a stop at 0 % would show a hairline) */
-  background: conic-gradient(from 0deg, #1d63ff 0, #4aa3ff calc(var(--p, 0) * 1%), transparent calc(var(--p, 0) * 1%));
+  background: conic-gradient(from 0deg, var(--mc-a-dark) 0, var(--mc-a-light) calc(var(--p, 0) * 1%), transparent calc(var(--p, 0) * 1%));
   opacity: calc(min(var(--p, 0), 0.4) * 2.5);
   transition: background 0.2s linear;
 }
@@ -146,7 +151,7 @@
 }
 
 .mc-seg text.mc-speed {
-  fill: #5fb0ff;
+  fill: var(--mc-on);
   font-size: 8px;
 }
 
@@ -161,8 +166,8 @@
 }
 
 .mc-track.mc-pulled > path:first-child {
-  fill: #1b2a3f;
-  stroke: rgba(95, 176, 255, 0.55);
+  fill: color-mix(in srgb, var(--mc-a) 22%, #101114);
+  stroke: color-mix(in srgb, var(--mc-on) 55%, transparent);
 }
 
 /* play / pause: a round key in the middle */
@@ -214,11 +219,11 @@
 }
 
 .mc-on .mc-line {
-  stroke: #5fb0ff;
+  stroke: var(--mc-on);
 }
 
 .mc-on > path:first-child {
-  fill: #15263b;
+  fill: color-mix(in srgb, var(--mc-a) 18%, #101114);
 }
 
 .mc-seg text.mc-state {
@@ -227,18 +232,18 @@
 }
 
 .mc-on text.mc-state {
-  fill: #5fb0ff;
+  fill: var(--mc-on);
 }
 
 .mc-seg text.mc-one {
-  fill: #5fb0ff;
+  fill: var(--mc-on);
   font-size: 7px;
 }
 
 /* the centre key held: it sinks and glows until the second set shows */
 .mc-hub.mc-holding circle {
   transform: scale(0.94);
-  stroke: rgba(95, 176, 255, 0.9);
+  stroke: color-mix(in srgb, var(--mc-on) 90%, transparent);
   stroke-width: 1.4;
   transition: stroke var(--mc-hold, 1.9s) linear;
 }

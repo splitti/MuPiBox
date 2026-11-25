@@ -79,3 +79,26 @@ export function holdMs(settings) {
   const s = Number(settings?.holdSeconds)
   return s === 1 || s === 3 ? s * 1000 : LONG_PRESS_MS
 }
+
+// The colours of the ring (and of what is lit in the second set), chosen in the settings: a palette, the accent colour of the theme
+// (the one of its own progress bar) or the background colour of the player (lightened - on the black groove the plain colour would not show).
+export const RING_COLORS = {
+  blue: '#2878ff',
+  red: '#ff3b3b',
+  orange: '#ff8a1f',
+  yellow: '#ffd21f',
+  green: '#34d058',
+  mint: '#1fd1b0',
+  cyan: '#22c7ff',
+  purple: '#9b5cff',
+  pink: '#ff5fb0',
+  white: '#e8ecf2',
+  theme: 'var(--km-apricot, var(--ion-color-primary, #2878ff))',
+  background: 'color-mix(in srgb, var(--km-night, var(--ion-background-color, #1d2b27)) 55%, white)',
+}
+
+/** The colour (a CSS value) of the ring for the setting "ringColor"; anything unknown is blue. */
+export function ringColor(settings) {
+  const name = settings?.ringColor
+  return Object.hasOwn(RING_COLORS, name) ? RING_COLORS[name] : RING_COLORS.blue
+}

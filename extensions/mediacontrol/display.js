@@ -18,6 +18,7 @@ import {
   holdMs,
   onRing,
   percentAt,
+  ringColor,
   scrubSeconds,
   sectorPath,
   stageFor,
@@ -50,7 +51,8 @@ function build(api, host, ctl) {
   let holding = false
   let canEject = false
   let gone = false
-  const longMs = holdMs(api.settings?.())
+  const settings = api.settings?.()
+  const longMs = holdMs(settings)
 
   // ---------- the picture ----------
   const paths = { up: sectorPath(0), right: sectorPath(90), down: sectorPath(180), left: sectorPath(270) }
@@ -127,6 +129,7 @@ function build(api, host, ctl) {
   const durationLabel = node(false, 'span')
   const times = node(false, 'div', { class: 'mc-times' }, positionLabel, durationLabel)
   const wrap = node(false, 'div', { class: 'mc-wrap' }, root, times)
+  root.style.setProperty('--mc-a', ringColor(settings))
   root.style.setProperty('--mc-hold', `${Math.max(0.5, longMs / 1000 - 0.1)}s`)
   host.replaceChildren(wrap)
 

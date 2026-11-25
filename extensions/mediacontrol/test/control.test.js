@@ -69,3 +69,13 @@ test('takes 1, 2 or 3 seconds for the hold, anything else is 2', async () => {
   assert.equal(holdMs({ holdSeconds: 7 }), 2000)
   assert.equal(holdMs(undefined), 2000)
 })
+
+test('takes the colour of the ring from the setting: a palette colour, the theme, the background - blue for anything else', async () => {
+  const { ringColor, RING_COLORS } = await load()
+  assert.equal(ringColor({ ringColor: 'red' }), RING_COLORS.red)
+  assert.ok(ringColor({ ringColor: 'theme' }).includes('--km-apricot'))
+  assert.ok(ringColor({ ringColor: 'background' }).includes('color-mix'))
+  assert.equal(ringColor({ ringColor: 'nonsense' }), RING_COLORS.blue)
+  assert.equal(ringColor(undefined), RING_COLORS.blue)
+  assert.equal(ringColor({ ringColor: 'toString' }), RING_COLORS.blue)
+})
