@@ -20,9 +20,9 @@ const WIND_BEAT_MS = 500
 // how far the button follows the finger (in units of the 100 wide pad) and how far it has to be pulled for the two steps (shares of the width)
 const MAX_PULL = 13
 // the button follows the finger at 0.9 of its way (see trackMove), the pad is 0.75 of the control: the full stretch is reached at this
-// share of the control's width - 4x starts there, 2x already at half of it
+// share of the control's width - 4x starts there, 2x early, at 30 % of it (a tap stays below: TAP_MOVE is 23 % of it)
 const STAGE_2 = (MAX_PULL / 90) * 0.75
-const STAGE_1 = STAGE_2 / 2
+const STAGE_1 = STAGE_2 * 0.3
 
 /**
  * The path of one of the four wedges of the pad (100 × 100 box), `angle` = the direction of its middle (degrees, 0 = up, clockwise).
