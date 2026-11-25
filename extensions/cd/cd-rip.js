@@ -253,17 +253,25 @@ const hasCoverFile = (dir) => {
  * The job. `plan`: { dir, format, bitrate, album, albumArtist, genre, year, tracks: [{ nr, number (of the disc), title, artist, bytes }],
  * cover?: { bytes, replace } }. `rip(track, outFile, args, onBytes, signal)` does one track (ripTrack in the box, pretended in a test).
  * `report(state)` hears every change: { state: 'running' | 'done' | 'failed' | 'cancelled', track, tracks, percent, message? }.
- * Returns { cancel(), done: Promise }. A job that does not end well leaves nothing behind: its files and the folders it made are gone.
+ * Returns { cancel(), done: Promise }. A job that does not end well keeps the tracks that are done - only the half written one goes -
+ * and when not one track was done, nothing is left of it: no picture, no folder it made.
  */
 function startJob(plan, { rip, report = () => {}, device = '/dev/sr0' }) {
   const controller = new AbortController()
-  const made = []
+  const made = [] // (the picture of the album, written by this job)
+  const hidden = [] // (the half files and the picture for embedding: never left behind)
   const madeDirs = []
   const total = plan.tracks.reduce((sum, t) => sum + t.bytes, 0) || 1
   let before = 0
-  const tell = (extra) => report({ album: plan.album, tracks: plan.tracks.length, ...extra })
+  // how far each track is (0 to 100) - the app shows every one of them
+  const percents = plan.tracks.map(() => 0)
+  const tell = (extra) => report({ album: plan.album, tracks: plan.tracks.length, percents: [...percents], finished: percents.filter((p) => p === 100).length, ...extra })
 
+  // A job that does not end well keeps the tracks that are done: only what was half written goes. When not one track was done, the
+  // picture and the folders it made go as well - nothing is left of it.
   const cleanUp = () => {
+    for (const file of hidden.splice(0)) fs.rmSync(file, { force: true })
+    if (percents.some((p) => p === 100)) return
     for (const file of made.splice(0)) fs.rmSync(file, { force: true })
     for (const dir of madeDirs.splice(0).reverse()) {
       try {
@@ -289,7 +297,7 @@ function startJob(plan, { rip, report = () => {}, device = '/dev/sr0' }) {
         // (the picture is embedded from a hidden file of its own; the album's own cover.* only when there is none or the user chose this one)
         coverFile = path.join(plan.dir, `.rip-cover.${kind}`)
         fs.writeFileSync(coverFile, plan.cover.bytes)
-        made.push(coverFile)
+        hidden.push(coverFile)
         if (plan.cover.replace || !hasCoverFile(plan.dir)) {
           for (const old of ['cover.jpg', 'cover.png']) fs.rmSync(path.join(plan.dir, old), { force: true })
           const own = path.join(plan.dir, `cover.${kind}`)
@@ -302,7 +310,7 @@ function startJob(plan, { rip, report = () => {}, device = '/dev/sr0' }) {
       if (controller.signal.aborted) throw Object.assign(new Error('cancelled'), { cancelled: true })
       const final = path.join(plan.dir, track.file)
       const part = path.join(plan.dir, `.${track.file}.part`)
-      made.push(part)
+      hidden.push(part)
       const args = ffmpegArgs({
         format: plan.format,
         bitrate: plan.bitrate,
@@ -311,15 +319,27 @@ function startJob(plan, { rip, report = () => {}, device = '/dev/sr0' }) {
         outFile: part,
       })
       tell({ state: 'running', track: index + 1, percent: Math.floor((before / total) * 100) })
-      await rip(track, part, args, (bytes) => tell({ state: 'running', track: index + 1, percent: Math.min(99, Math.floor(((before + Math.min(bytes, track.bytes)) / total) * 100)) }), controller.signal, device)
+      await rip(
+        track,
+        part,
+        args,
+        (bytes) => {
+          // (99 until the file is renamed: a track is done when its file is there)
+          percents[index] = Math.min(99, Math.floor((Math.min(bytes, track.bytes) / track.bytes) * 100))
+          tell({ state: 'running', track: index + 1, percent: Math.min(99, Math.floor(((before + Math.min(bytes, track.bytes)) / total) * 100)) })
+        },
+        controller.signal,
+        device,
+      )
       fs.renameSync(part, final)
-      made.splice(made.indexOf(part), 1, final)
+      hidden.splice(hidden.indexOf(part), 1)
+      percents[index] = 100
       before += track.bytes
     }
     // (the hidden picture was only for embedding)
     if (coverFile) {
       fs.rmSync(coverFile, { force: true })
-      made.splice(made.indexOf(coverFile), 1)
+      hidden.splice(hidden.indexOf(coverFile), 1)
     }
   }
 
@@ -329,9 +349,11 @@ function startJob(plan, { rip, report = () => {}, device = '/dev/sr0' }) {
       return { ok: true }
     },
     (error) => {
+      const finished = percents.filter((p) => p === 100).length
       cleanUp()
       const cancelled = !!error?.cancelled || controller.signal.aborted
-      tell({ state: cancelled ? 'cancelled' : 'failed', track: 0, percent: 0, message: cancelled ? '' : String(error?.message ?? error), missing: error?.missing })
+      percents.forEach((p, i) => p !== 100 && (percents[i] = 0))
+      tell({ state: cancelled ? 'cancelled' : 'failed', track: 0, percent: 0, finished, message: cancelled ? '' : String(error?.message ?? error), missing: error?.missing })
       return { ok: false, cancelled, error: String(error?.message ?? error) }
     },
   )

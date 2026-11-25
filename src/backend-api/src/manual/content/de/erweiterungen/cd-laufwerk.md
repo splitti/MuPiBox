@@ -38,7 +38,7 @@ Die Box kann eine Audio-CD auch **in die Bibliothek kopieren**: Die Titel liegen
 1. CD einlegen. Unter **Einstellungen › USB-CD-Laufwerk** stellst du auf der Karte **Format und Qualität** das **Format** und die **Qualität** ein.
 2. Die Karte **CD rippen** zeigt, sobald die CD erkannt ist (ein paar Sekunden), das Formular mit Album, Albuminterpret, Genre, Jahr, **Cover** (der Stift darunter wählt ein anderes) und dem Namen jedes Titels samt beteiligtem Interpreten. Was das Internet zur CD weiß, ist schon eingetragen; mit **Albuminformationen online aktualisieren** fragt die Box noch einmal nach.
 3. Bei **Speichern in** wählst du **Hörspiele**, **Musik** oder **Sonstiges**. Der **Ordner des Interpreten** zeigt beim Tippen die vorhandenen Ordner dieser Kategorie; ein neuer Name legt einen neuen Ordner an. Ebenso der **Ordner des Albums**. Darunter steht, ob der Ordner schon da ist oder neu angelegt wird.
-4. **Rippen** antippen. Den Fortschritt zeigt die Karte **Format und Qualität**, dort bricht **Abbrechen** das Rippen auch ab: Was bis dahin gerippt war, löscht die Box wieder.
+4. **Rippen** antippen. Den Fortschritt zeigt die Karte **Format und Qualität**: für jeden Titel, wie weit er schon ist. Dort bricht **Abbrechen** das Rippen auch ab; die schon fertigen Titel bleiben im Ordner, nur der angefangene fällt weg.
 
 | Format | Gut für |
 | --- | --- |

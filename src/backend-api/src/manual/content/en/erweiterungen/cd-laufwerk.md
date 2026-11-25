@@ -38,7 +38,7 @@ The box can also **copy an audio CD into the library**: afterwards the tracks ar
 1. Put the CD in. Under **Settings › USB CD drive** you choose the **format** and the **quality** on the card **Format and quality**.
 2. As soon as the CD is recognised (a few seconds), the card **Rip a CD** shows the form with album, album artist, genre, year, the **cover** (the pencil below it picks another) and the name of every track with its contributing artist. What the internet knows about the CD is filled in already; **Update album info online** asks again.
 3. Under **Save in** you choose **Audiobooks**, **Music** or **Other**. The **artist folder** suggests the existing folders of that category as you type; a new name creates a new folder. The same goes for the **album folder**. A line below says whether the folder exists or will be created.
-4. Tap **Rip**. The card **Format and quality** shows the progress, and **Cancel** there stops the rip: whatever was ripped until then is deleted again.
+4. Tap **Rip**. The card **Format and quality** shows the progress: how far each track is. **Cancel** there stops the rip as well; the tracks that are done stay in the folder, only the one in progress is dropped.
 
 | Format | Good for |
 | --- | --- |

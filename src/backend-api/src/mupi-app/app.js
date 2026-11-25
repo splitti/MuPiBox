@@ -18399,7 +18399,7 @@ function extFormMount(sheet, e, fields, saved, redraw) {
       if (busy) return
       const rows = r.ok && Array.isArray(r.body?.rows) ? r.body.rows : [{ label: 'Status', value: 'Nicht erreichbar', tone: 'warn' }]
       box.textContent = ''
-      for (const row of rows.slice(0, 12)) {
+      for (const row of rows.slice(0, 120)) {
         const dt = document.createElement('dt')
         dt.textContent = tr(String(row.label ?? ''))
         const dd = document.createElement('dd')

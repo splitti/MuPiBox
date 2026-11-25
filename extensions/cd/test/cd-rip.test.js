@@ -187,20 +187,53 @@ test('the job: the album keeps its own cover unless the user chose another', asy
   assert.deepEqual(fs.readFileSync(path.join(dir, 'cover.jpg')), JPEG)
 })
 
-test('the job: a track that fails takes everything of the job away - the files, the hidden ones, the folders it made', async () => {
+test('the job: a track that fails keeps the tracks that are done - only the half written one goes', async () => {
   const root = tmp()
   const dir = path.join(root, 'music', 'New Artist', 'New Album')
   const heard = []
   const failing = async (track, out, args, onBytes) => {
-    if (track.nr === 3) throw new Error('cdparanoia: scsi error')
+    if (track.nr === 3) {
+      fs.writeFileSync(out, 'half')
+      throw new Error('cdparanoia: scsi error')
+    }
     await writes([])(track, out, args, onBytes)
   }
   const result = await R.startJob(plan(dir, { cover: { bytes: JPEG, replace: true } }), { rip: failing, report: (s) => heard.push(s) }).done
   assert.equal(result.ok, false)
   assert.match(result.error, /scsi error/)
-  assert.equal(fs.existsSync(path.join(root, 'music')), false, 'the folders it made are gone')
+  assert.deepEqual(fs.readdirSync(dir).sort(), ['01 Song 1.mp3', '02 Song 2.mp3', 'cover.jpg'], 'the finished tracks and the picture stay, nothing hidden is left')
   assert.equal(heard.at(-1).state, 'failed')
+  assert.equal(heard.at(-1).finished, 2)
+  assert.deepEqual(heard.at(-1).percents, [100, 100, 0])
   assert.match(heard.at(-1).message, /scsi error/)
+})
+
+test('the job: when not one track was done, nothing is left - no picture, no folder it made', async () => {
+  const root = tmp()
+  const dir = path.join(root, 'music', 'New Artist', 'New Album')
+  const heard = []
+  const failing = async (track, out) => {
+    fs.writeFileSync(out, 'half')
+    throw new Error('scsi error')
+  }
+  await R.startJob(plan(dir, { cover: { bytes: JPEG, replace: true } }), { rip: failing, report: (s) => heard.push(s) }).done
+  assert.equal(fs.existsSync(path.join(root, 'music')), false)
+  assert.equal(heard.at(-1).finished, 0)
+})
+
+test('the job: every track tells how far it is', async () => {
+  const dir = tmp()
+  const heard = []
+  const rip = async (track, out, args, onBytes) => {
+    onBytes(250)
+    onBytes(500)
+    fs.writeFileSync(out, 'x')
+  }
+  await R.startJob(plan(dir), { rip, report: (s) => heard.push(s) }).done
+  const during = heard.find((s) => s.track === 2 && s.percents[1] === 25)
+  assert.deepEqual(during.percents, [100, 25, 0])
+  assert.equal(during.finished, 1)
+  assert.deepEqual(heard.at(-1).percents, [100, 100, 100])
 })
 
 test('the job: what was in the folder before stays when the job fails', async () => {
@@ -210,7 +243,7 @@ test('the job: what was in the folder before stays when the job fails', async ()
   assert.deepEqual(fs.readdirSync(dir), ['01 Old.mp3'])
 })
 
-test('the job: cancelling ends it as cancelled and leaves nothing', async () => {
+test('the job: cancelling ends it as cancelled; the tracks that were done stay', async () => {
   const dir = path.join(tmp(), 'a', 'b')
   const heard = []
   let job
@@ -218,7 +251,8 @@ test('the job: cancelling ends it as cancelled and leaves nothing', async () => 
     fs.writeFileSync(out, 'half')
     if (track.nr === 2) {
       job.cancel()
-      await new Promise((resolve, reject) => signal.addEventListener('abort', () => reject(Object.assign(new Error('cancelled'), { cancelled: true }))) || resolve())
+      // (as the real ripper: the programs are stopped, the track ends with an error)
+      if (signal.aborted) throw Object.assign(new Error('cancelled'), { cancelled: true })
     }
     onBytes(1000)
   }
@@ -226,7 +260,8 @@ test('the job: cancelling ends it as cancelled and leaves nothing', async () => 
   const result = await job.done
   assert.equal(result.cancelled, true)
   assert.equal(heard.at(-1).state, 'cancelled')
-  assert.equal(fs.existsSync(path.join(dir, '..', '..')) && fs.readdirSync(path.join(dir, '..', '..')).length, 0)
+  assert.equal(heard.at(-1).finished, 1)
+  assert.deepEqual(fs.readdirSync(dir), ['01 Song 1.mp3'])
 })
 
 test('the job: the programs are named when one is missing', async () => {

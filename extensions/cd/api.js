@@ -159,7 +159,7 @@ exports.activate = (host) => {
       const taken = await player('/ripping?on=1', 15000)
       if (!taken?.ok) return res.json({ ok: false, message: 'Der Player gibt die CD nicht frei.' })
       const rel = path.relative(media, plan.dir)
-      status = { state: 'running', album: plan.album, track: 0, tracks: plan.tracks.length, percent: 0, dir: rel }
+      status = { state: 'running', album: plan.album, track: 0, tracks: plan.tracks.length, percent: 0, dir: rel, names: plan.tracks.map((t) => t.title || `Track ${String(t.nr).padStart(2, '0')}`), percents: plan.tracks.map(() => 0) }
       const beat = setInterval(() => void player('/ripping?on=1'), HEARTBEAT_MS)
       beat.unref?.()
       job = startJob({ ...plan, cover }, {
@@ -200,20 +200,28 @@ exports.activate = (host) => {
     async (_req, res) => {
       const s = status
       if (s.state === 'running') {
+        // (every track with how far it is, as the app lists them)
+        const list = (s.names ?? []).map((name, i) => {
+          const p = s.percents?.[i] ?? 0
+          return { label: `${i + 1}. ${name}`.slice(0, 50), value: p >= 100 ? 'fertig' : p > 0 ? `${p} %` : 'wartet', ...(p >= 100 ? { tone: 'ok' } : {}) }
+        })
         return res.json({
           rows: [
             { label: 'Rippen', value: `${s.album || 'Audio-CD'}: Titel ${Math.max(1, s.track)} von ${s.tracks} (${s.percent} %)` },
+            { label: 'Abbrechen', value: 'Fertige Titel bleiben erhalten.', button: { label: 'Abbrechen', post: '/api/ext/cd/ripcancel', confirm: 'Das Rippen abbrechen? Die schon fertigen Titel bleiben im Ordner.' } },
             { label: 'Ziel', value: s.dir },
-            { label: 'Abbrechen', value: 'Bereits fertige Dateien werden gelöscht.', button: { label: 'Abbrechen', post: '/api/ext/cd/ripcancel', confirm: 'Das Rippen abbrechen? Die bisher gerippten Dateien werden gelöscht.' } },
+            ...list,
           ],
         })
       }
+      // (what a rip that stopped left: the tracks that were done stay in the folder)
+      const kept = (s.finished ?? 0) > 0 ? `${s.finished} von ${s.tracks} Titeln sind fertig und bleiben im Ordner` : 'es wurde nichts gespeichert'
       if (s.state === 'done') return res.json({ rows: [{ label: 'Letztes Rippen', value: `${s.album || 'Audio-CD'}: fertig (${s.tracks} Titel)`, tone: 'ok' }, { label: 'Ordner', value: s.dir }] })
       if (s.state === 'failed') {
         const missing = s.missing ? missingText([s.missing]) : ''
-        return res.json({ rows: [{ label: 'Letztes Rippen', value: `${s.album || 'Audio-CD'}: nicht geklappt`, tone: 'error' }, { label: 'Grund', value: missing || String(s.message ?? '').slice(0, 200) }] })
+        return res.json({ rows: [{ label: 'Letztes Rippen', value: `${s.album || 'Audio-CD'}: nicht geklappt – ${kept}`, tone: 'error' }, { label: 'Grund', value: missing || String(s.message ?? '').slice(0, 200) }, ...((s.finished ?? 0) > 0 ? [{ label: 'Ordner', value: s.dir }] : [])] })
       }
-      if (s.state === 'cancelled') return res.json({ rows: [{ label: 'Letztes Rippen', value: 'Abgebrochen', tone: 'warn' }] })
+      if (s.state === 'cancelled') return res.json({ rows: [{ label: 'Letztes Rippen', value: `Abgebrochen – ${kept}`, tone: 'warn' }, ...((s.finished ?? 0) > 0 ? [{ label: 'Ordner', value: s.dir }] : [])] })
       const disc = await player('/info', 2500)
       const missing = tools()
       res.json({
