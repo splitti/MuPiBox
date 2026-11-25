@@ -23,8 +23,8 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-// the frame: brushed metal in the colour of the ring around the round covers of the theme (--km-ring; the older themes: their dark colour),
-// with a light and a dark side, fine brushing, a gloss at the top left and a bevel on the inside edge
+// the frame: smooth metal in the colour of the ring around the round covers of the theme (--km-ring; the older themes: their dark colour),
+// with a light and a dark side, a smooth gloss at the top left and a bevel on the inside edge
 .mc {
   --mc-metal: var(--km-ring, var(--ion-color-dark, #c9ccd2));
   --mc-hi: color-mix(in srgb, var(--mc-metal) 45%, white);
@@ -39,8 +39,6 @@
     // the gloss
     radial-gradient(ellipse 75% 40% at 32% 10%, rgba(255, 255, 255, 0.7), transparent 72%),
     radial-gradient(ellipse 60% 30% at 70% 96%, rgba(0, 0, 0, 0.35), transparent 75%),
-    // fine brushing
-    repeating-conic-gradient(from 0deg, rgba(255, 255, 255, 0.1) 0 0.5deg, rgba(0, 0, 0, 0.08) 0.5deg 1.2deg),
     // the metal: bright and dark stretches around the ring
     conic-gradient(
       from 25deg,
