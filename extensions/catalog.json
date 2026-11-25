@@ -20,13 +20,13 @@
   {
     "id": "cd",
     "name": "USB-CD-Laufwerk",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "description": "Audio-CDs vom USB-Laufwerk abspielen, mit Titelnamen und Cover aus dem Internet – und als MP3, AAC, WMA, FLAC oder ALAC in einen Medien-Ordner der Box rippen.",
     "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjE5MiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMzIiLz48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjQ4IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIzMiIvPjxwYXRoIGQ9Ik0yNTYgMTEyYTE0NCAxNDQgMCAwIDEgMTQ0IDE0NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPgo=",
     "hostApi": 17,
-    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/cd-1.1.1.mpx",
-    "sha256": "513ca00d4e7afbb12a852fe2b37c80a04cbc275887d7e3e7e2fab70199cd3fdd",
-    "size": 27269,
+    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/cd-1.1.2.mpx",
+    "sha256": "f79c231b6b05af2d9ff7ba6e2435a6ba4798abf287f12cff7745becfb222fe1c",
+    "size": 27323,
     "resources": {},
     "system": {
       "udev": 1,

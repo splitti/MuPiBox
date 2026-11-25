@@ -1,7 +1,7 @@
 {
   "id": "cd",
   "name": "USB-CD-Laufwerk",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Audio-CDs vom USB-Laufwerk abspielen, mit Titelnamen und Cover aus dem Internet – und als MP3, AAC, WMA, FLAC oder ALAC in einen Medien-Ordner der Box rippen.",
   "hostApi": 17,
   "player": "player.js",
@@ -60,7 +60,7 @@
   },
   "ui": {
     "title": "Audio-CD",
-    "help": "Liegt eine Audio-CD im USB-Laufwerk, zeigt das Display oben den Reiter „CD“. Die Box sucht dann im Internet nach den Namen der Titel und nach dem Cover. Eine CD lässt sich auch in die Bibliothek rippen: unter „CD rippen“ das Format wählen und „CD rippen …“ antippen.",
+    "help": "Liegt eine Audio-CD im USB-Laufwerk, zeigt das Display oben den Reiter „CD“. Die Box sucht dann im Internet nach den Namen der Titel und nach dem Cover. Eine CD lässt sich auch in die Bibliothek rippen: Format und Qualität stehen auf der Karte „Format und Qualität“, Album, Titel, Cover und Zielordner auf der Karte „CD rippen“.",
     "items": [
       {
         "type": "heading",
@@ -79,7 +79,7 @@
       },
       {
         "type": "heading",
-        "label": "CD rippen",
+        "label": "Format und Qualität",
         "card": true
       },
       {
@@ -150,11 +150,17 @@
         "state": "/api/ext/cd/ripstatus"
       },
       {
+        "type": "heading",
+        "label": "CD rippen",
+        "card": true
+      },
+      {
         "type": "form",
-        "label": "CD rippen …",
+        "label": "CD rippen",
         "form": "/api/ext/cd/ripform",
         "post": "/api/ext/cd/rip",
-        "help": "Fragt zuerst Album, Interpret, Titel, Cover und den Ordner ab, in den die Dateien kommen."
+        "help": "Sobald eine Audio-CD im Laufwerk liegt, erscheinen hier Album, Titel, Cover und der Ordner der Medien, in den die Dateien kommen.",
+        "inline": true
       }
     ],
     "heading": "USB-CD-Laufwerk",

@@ -18,7 +18,7 @@ function buildForm({ disc, info, settings, artists, hasCover }) {
   return {
     ok: true,
     title: 'CD rippen',
-    message: `Die Titel werden als ${how} gespeichert (oben bei den Einstellungen änderbar). Die Angaben unten stehen später in den Dateien.`,
+    message: `Die Titel werden als ${how} gespeichert (auf der Karte „Format und Qualität“ änderbar). Die Angaben unten stehen später in den Dateien.`,
     submit: 'Rippen',
     fields: [
       { key: 'album', label: 'Album', type: 'text', value: album, required: true },

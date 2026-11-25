@@ -4631,23 +4631,31 @@ function openNfcSheet(media, { back = null, image = '' } = {}) {
 // name); `optionsBy: { key, map: { <value of that field>: [...] } }` takes them from another field's value. The user's entries go to
 // the item's `post` as { values, rows, image }; it answers { ok, message }. A link asks its `get` for a new description (the
 // fields that are `keep` stay as the user has them).
-async function openExtForm(item, state = null) {
+async function openExtForm(item, state = null, box = null) {
+  // (`box`: the form lies in a card of the page - the item is `inline` - and not in a dialog. It draws itself again where it is; while the
+  // route says it cannot be filled in now (no CD in the drive) it says why and asks again every few seconds.)
   let desc = state?.desc
   if (!desc) {
     const r = await api(item.form, { timeoutMs: 30000 })
     if (!r.ok || r.body?.ok === false || !Array.isArray(r.body?.fields)) {
       const said = typeof r.body?.message === 'string' ? tr(r.body.message.slice(0, 160)) : ''
-      return toast(said || tr('Hat nicht geklappt'), 'info')
+      if (!box) return toast(said || tr('Hat nicht geklappt'), 'info')
+      if (!box.isConnected) return
+      box.innerHTML = `<p class="help" style="margin:0">${esc(said || tr('Hat nicht geklappt'))}</p>`
+      clearTimeout(box._xfTimer)
+      box._xfTimer = setTimeout(() => box.isConnected && openExtForm(item, null, box), 4000)
+      return
     }
     desc = r.body
   }
+  if (box && !box.isConnected) return
   const values = { ...(state?.values ?? Object.fromEntries(desc.fields.map((f) => [f.key, f.value ?? '']))) }
   const rows = state?.rows ?? (desc.rows?.items ?? []).map((x) => ({ ...x }))
   const image = state?.image ?? desc.image?.url ?? null
   const picked = state?.picked ?? null
   // (a field that `follows` another - the folder of the album follows its name - takes over what is typed there until the user typed in it himself)
   const touched = new Set(state?.touched ?? [])
-  const reopen = (patch) => () => openExtForm(item, { desc, values, rows, image, picked, touched: [...touched], ...patch })
+  const reopen = (patch) => () => openExtForm(item, { desc, values, rows, image, picked, touched: [...touched], ...patch }, box)
   const optionsOf = (f) => (f.optionsBy ? (f.optionsBy.map[String(values[f.optionsBy.key])] ?? []) : (f.options ?? []))
   const fieldHtml = (f) => {
     const id = `xf-${esc(f.key)}`
@@ -4672,8 +4680,15 @@ async function openExtForm(item, state = null) {
         )
         .join('')}</div>`
     : ''
-  openSheet(
-    `<h2>${esc(tr(desc.title ?? ''))}</h2>
+  const draw = (html, onOpen) => {
+    if (!box) return openSheet(html, onOpen)
+    clearTimeout(box._xfTimer)
+    box.innerHTML = html
+    // (closing a form in a card: it is filled in again from what the box says now)
+    onOpen(box, () => openExtForm(item, null, box))
+  }
+  draw(
+    `${box ? '' : `<h2>${esc(tr(desc.title ?? ''))}</h2>`}
      ${desc.message ? `<p class="help" style="margin:0">${esc(tr(desc.message))}</p>` : ''}
      <div class="xf-head">
        ${desc.image ? `<div class="xf-image"><button type="button" class="xf-cover" id="xf-image" aria-label="${esc(tr(desc.image.label ?? 'Cover'))}">${image ? `<img src="${esc(image)}" alt="">` : `<span class="xf-nocover">${icon('image', 32)}</span>`}<span class="xf-pen">${icon('edit', 16)}</span></button></div>` : ''}
@@ -4681,7 +4696,7 @@ async function openExtForm(item, state = null) {
      </div>
      ${table}
      ${(desc.links ?? []).map((l, i) => `<p class="xf-link"><button type="button" class="btn sm" data-xflink="${i}">${esc(tr(l.label))}</button></p>`).join('')}
-     <div class="btns"><button class="btn" data-close>${tr('Abbrechen')}</button><button class="btn primary" id="xf-ok">${esc(tr(desc.submit ?? 'OK'))}</button></div>`,
+     <div class="btns"><button class="btn" data-close>${tr(box ? 'Zurücksetzen' : 'Abbrechen')}</button><button class="btn primary" id="xf-ok">${esc(tr(desc.submit ?? 'OK'))}</button></div>`,
     (sheet, close) => {
       for (const input of sheet.querySelectorAll('[data-xfk]')) {
         const field = desc.fields.find((f) => f.key === input.dataset.xfk)
@@ -4721,7 +4736,7 @@ async function openExtForm(item, state = null) {
       if (pick) {
         pick.onclick = () => {
           const p = desc.image.picker ?? {}
-          close()
+          if (!box) close()
           openCoverPicker({
             target: String(p.target ?? 'own:cover'),
             title: String(p.title ?? desc.title ?? ''),
@@ -4742,8 +4757,8 @@ async function openExtForm(item, state = null) {
           if (!r.ok || r.body?.ok === false || !Array.isArray(r.body?.fields)) return toast(tr(typeof r.body?.message === 'string' ? r.body.message.slice(0, 160) : 'Hat nicht geklappt'), 'info')
           const next = r.body
           const kept = Object.fromEntries(next.fields.map((f) => [f.key, f.keep && f.key in values && !(f.follows && !touched.has(f.key)) ? values[f.key] : (f.value ?? '')]))
-          close()
-          openExtForm(item, { desc: next, values: kept, rows: (next.rows?.items ?? []).map((x) => ({ ...x })), image: picked ?? next.image?.url ?? null, picked, touched: [...touched] })
+          if (!box) close()
+          openExtForm(item, { desc: next, values: kept, rows: (next.rows?.items ?? []).map((x) => ({ ...x })), image: picked ?? next.image?.url ?? null, picked, touched: [...touched] }, box)
         }
       }
       const ok = sheet.querySelector('#xf-ok')
@@ -17835,6 +17850,7 @@ function extFormHtml(e, fields, cards = false) {
       }
       if (it.type === 'form') {
         // a button that opens a dialog the extension describes (hostApi 17): wired by extFormMount, see openExtForm
+        if (it.inline) return `<div class="field ext-form-inline" data-ext-dep="" data-xforminline="${index}"></div>`
         return `<div class="field ext-action" data-ext-dep=""><button type="button" class="btn" data-xform="${index}">${esc(it.label)}</button>${help}</div>`
       }
       if (it.type === 'list') {
@@ -18481,6 +18497,9 @@ function extFormMount(sheet, e, fields, saved, redraw) {
   // (a form, hostApi 17: the dialog the extension describes opens on a tap)
   fields.forEach((item, index) => {
     if (item.type !== 'form') return
+    // (an inline form lies in the card and loads itself)
+    const inline = sheet.querySelector(`[data-xforminline="${index}"]`)
+    if (inline) return void openExtForm(item, null, inline)
     const button = sheet.querySelector(`[data-xform="${index}"]`)
     if (!button) return
     button.onclick = async () => {

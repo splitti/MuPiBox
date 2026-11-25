@@ -875,6 +875,10 @@ describe('a form (hostApi 17)', () => {
     assert.match(String(checkManifest(manifest([{ ...form, post: 'https://example.com/rip' }]), files())), /bad form address \(post\)/)
     assert.match(String(checkManifest(manifest([{ type: 'form', label: 'x', form: '/api/ext/xy/a' }]), files())), /bad form address \(post\)/)
   })
+  it('may lie in the card of the page instead of a popup (inline)', () => {
+    assert.strictEqual(checkManifest(manifest([{ ...form, inline: true }]), files()), null)
+    assert.match(String(checkManifest(manifest([{ ...form, inline: 'yes' }]), files())), /inline is true/)
+  })
   it('is the host API of this box', () => {
     assert.ok(HOST_API >= 17)
   })
