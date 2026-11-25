@@ -17,8 +17,10 @@ const LONG_PRESS_MS = 2000
 const ALT_IDLE_MS = 12000
 // how far the button follows the finger (in units of the 100 wide pad) and how far it has to be pulled for the two steps (shares of the width)
 const MAX_PULL = 13
-const STAGE_1 = 0.07
-const STAGE_2 = 0.16
+// the button follows the finger at 0.9 of its way (see trackMove), the pad is 0.75 of the control: the full stretch is reached at this
+// share of the control's width - 4x starts there, 2x already at half of it
+const STAGE_2 = (MAX_PULL / 90) * 0.75
+const STAGE_1 = STAGE_2 / 2
 
 /**
  * The path of one of the four wedges of the pad (100 × 100 box), `angle` = the direction of its middle (degrees, 0 = up, clockwise).

@@ -1,12 +1,13 @@
 import { MediaControlComponent, sectorPath } from './media-control.component'
 
 describe('MediaControlComponent (the pure parts)', () => {
-  it('has no step for a tap or a little pull, then 2× and 4× for a longer one', () => {
+  it('has no step for a tap or a little pull, 2x from half the stretch of the button and 4x from the full stretch', () => {
+    // (the full stretch of the button is about 10.8 % of the control's width: 32.5 px at 300 px)
     expect(MediaControlComponent.stageFor(0, 300)).toBe(0)
     expect(MediaControlComponent.stageFor(10, 300)).toBe(0)
-    expect(MediaControlComponent.stageFor(22, 300)).toBe(1)
-    expect(MediaControlComponent.stageFor(47, 300)).toBe(1)
-    expect(MediaControlComponent.stageFor(49, 300)).toBe(2)
+    expect(MediaControlComponent.stageFor(17, 300)).toBe(1)
+    expect(MediaControlComponent.stageFor(32, 300)).toBe(1)
+    expect(MediaControlComponent.stageFor(33, 300)).toBe(2)
     expect(MediaControlComponent.stageFor(200, 300)).toBe(2)
   })
 
