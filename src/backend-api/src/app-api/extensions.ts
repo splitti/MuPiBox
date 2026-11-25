@@ -43,8 +43,9 @@ if (!process.env.MUPIBOX_EXT_DIR && process.env.NODE_ENV !== 'test' && process.e
 // 16: an upload action of a row may say the row `has` a picture - `view` shows it, `remove` takes it away - and asks for its exact
 // size (128 × 50): NFC 0.15.2 has the OLED picture of a tag there, an older app went straight to the file and named 128 × 64;
 // 17: a `form` item - a button that opens a dialog the extension describes (fields, a table of rows, a picture) - and `host.libraryChanged()`,
-// `host.paths.media`: the USB CD drive 1.1.0 rips a CD into a folder of the media, asking for the album's data first)
-export const HOST_API = 17
+// `host.paths.media`: the USB CD drive 1.1.0 rips a CD into a folder of the media, asking for the album's data first;
+// 18: `api.player.controls` on the display - the buttons of the player page, in place of the normal ones: Media-Control 1.0.0)
+export const HOST_API = 18
 // (the catalog of the MuPiBox, in its repository: what is in it is trusted - an extension can do everything on the box; while 5.1
 // is not with splitti yet, the 5.1 branch of the fork that builds it)
 const DEFAULT_CATALOG = 'https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/catalog.json'

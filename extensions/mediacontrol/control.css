@@ -1,10 +1,5 @@
-// The multimedia control: a silver frame, a ring that lights up blue, a black pad with four wedges and play / pause in the middle.
-// Sizes are shares of the width, so it scales with whatever space it is given.
-:host {
-  display: block;
-  width: 100%;
-}
-
+/* The multimedia control: a metal frame, a ring that lights up blue, a black pad with four wedges and play / pause in the middle.
+ * Sizes are shares of the width, so it scales with whatever space it is given (the page sets --mc-size to the size of the cover). */
 .mc-wrap {
   position: relative;
   width: min(100%, var(--mc-size, 300px));
@@ -13,7 +8,6 @@
 
 .mc {
   position: relative;
-  // (the page sets --mc-size to the size of the cover)
   width: min(100%, var(--mc-size, 300px));
   aspect-ratio: 1;
   border-radius: 50%;
@@ -21,11 +15,7 @@
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
-}
-
-// the frame: smooth metal in the colour of the ring around the round covers of the theme (--km-ring; the older themes: their dark colour),
-// with a light and a dark side, a smooth gloss at the top left and a bevel on the inside edge
-.mc {
+  /* the frame: smooth metal in the colour of the ring around the round covers of the theme (--km-ring; older themes: their dark colour) */
   --mc-metal: var(--km-ring, var(--ion-color-dark, #c9ccd2));
   --mc-hi: color-mix(in srgb, var(--mc-metal) 45%, white);
   --mc-lo: color-mix(in srgb, var(--mc-metal) 62%, black);
@@ -36,10 +26,8 @@
   inset: 0;
   border-radius: 50%;
   background:
-    // the gloss
     radial-gradient(ellipse 75% 40% at 32% 10%, rgba(255, 255, 255, 0.7), transparent 72%),
     radial-gradient(ellipse 60% 30% at 70% 96%, rgba(0, 0, 0, 0.35), transparent 75%),
-    // the metal: bright and dark stretches around the ring
     conic-gradient(
       from 25deg,
       var(--mc-hi),
@@ -59,7 +47,7 @@
     inset 0 -3px 5px rgba(0, 0, 0, 0.28);
 }
 
-// the bevel on the inner edge: light on the upper left, dark on the lower right, as if the metal were cut
+/* the bevel on the inner edge: light on the upper left, dark on the lower right, as if the metal were cut */
 .mc-bezel::after {
   content: '';
   position: absolute;
@@ -70,7 +58,7 @@
   mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
 }
 
-// the groove between the frame and the pad: black, filling blue clockwise from the top (--p = percent of the track)
+/* the groove between the frame and the pad: black, filling blue clockwise from the top (--p = percent of the track) */
 .mc-ring {
   position: absolute;
   inset: 5.6%;
@@ -94,13 +82,13 @@
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  // (nothing lit at 0: a stop at 0 % would show a hairline)
+  /* (nothing lit at 0: a stop at 0 % would show a hairline) */
   background: conic-gradient(from 0deg, #1d63ff 0, #4aa3ff calc(var(--p, 0) * 1%), transparent calc(var(--p, 0) * 1%));
   opacity: calc(min(var(--p, 0), 0.4) * 2.5);
   transition: background 0.2s linear;
 }
 
-// a stream: no end, so the ring stays black
+/* a stream: no end, so the ring stays black */
 .mc-live .mc-lit {
   display: none;
 }
@@ -122,85 +110,85 @@
   fill: #0d0e10;
 }
 
-// the four wedges: dark, a little lighter at the top; pressed in they darken
+/* the four wedges: dark, a little lighter at the top; pressed in they darken */
 .mc-seg {
   cursor: pointer;
   outline: none;
-
-  > path:first-child {
-    fill: url(#mc-seg);
-    stroke: rgba(255, 255, 255, 0.06);
-    stroke-width: 0.5;
-    transition: fill 0.12s;
-  }
-
-  text {
-    fill: #e7e9ee;
-    font: 700 11px/1 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-    letter-spacing: 0.04em;
-    text-anchor: middle;
-    pointer-events: none;
-  }
-
-  .mc-icon {
-    fill: #eef0f4;
-    pointer-events: none;
-  }
-
-  &.mc-down > path:first-child {
-    fill: #07080a;
-  }
-
-  &.mc-off {
-    opacity: 0.35;
-    cursor: default;
-  }
 }
 
-.mc-speed {
-  fill: #5fb0ff !important;
-  font-size: 8px !important;
+.mc-seg > path:first-child {
+  fill: url(#mc-seg);
+  stroke: rgba(255, 255, 255, 0.06);
+  stroke-width: 0.5;
+  transition: fill 0.12s;
 }
 
-// the track buttons: they follow the finger (the page sets the shift) and spring back with an overshoot when let go
+.mc-seg text {
+  fill: #e7e9ee;
+  font: 700 11px/1 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: 0.04em;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.mc-seg .mc-icon {
+  fill: #eef0f4;
+  pointer-events: none;
+}
+
+.mc-seg.mc-down > path:first-child {
+  fill: #07080a;
+}
+
+.mc-seg.mc-off {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.mc-seg text.mc-speed {
+  fill: #5fb0ff;
+  font-size: 8px;
+}
+
+/* the track buttons: they follow the finger (the shift is set by the script) and spring back with an overshoot when let go */
 .mc-track {
   transition: transform 0.55s cubic-bezier(0.3, 1.9, 0.45, 1);
   touch-action: none;
-
-  &.mc-pulled {
-    transition: none;
-
-    > path:first-child {
-      fill: #1b2a3f;
-      stroke: rgba(95, 176, 255, 0.55);
-    }
-  }
 }
 
-// play / pause: a round key in the middle
+.mc-track.mc-pulled {
+  transition: none;
+}
+
+.mc-track.mc-pulled > path:first-child {
+  fill: #1b2a3f;
+  stroke: rgba(95, 176, 255, 0.55);
+}
+
+/* play / pause: a round key in the middle */
 .mc-hub {
   cursor: pointer;
-
-  circle {
-    fill: url(#mc-hub);
-    stroke: rgba(255, 255, 255, 0.1);
-    stroke-width: 0.6;
-    filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.8));
-    transition: transform 0.12s;
-    transform-origin: 50px 50px;
-  }
-
-  .mc-icon {
-    fill: #ffffff;
-    pointer-events: none;
-  }
-
-  &.mc-down circle {
-    transform: scale(0.94);
-  }
 }
 
-// the times sit in the two lower corners of the control's square, outside its circle: the place left, the length right
+.mc-hub circle {
+  fill: url(#mc-hub);
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 0.6;
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.8));
+  transition: transform 0.12s;
+  transform-origin: 50px 50px;
+}
+
+.mc-hub .mc-icon {
+  fill: #ffffff;
+  pointer-events: none;
+}
+
+.mc-hub.mc-down circle {
+  transform: scale(0.94);
+}
+
+/* the times sit in the two lower corners of the control's square, outside its circle: the place left, the length right */
 .mc-times {
   position: absolute;
   left: 0;
@@ -215,7 +203,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-// the second set: line icons, "on" lit blue
+/* the second set: line icons, "on" lit blue */
 .mc-line {
   fill: none;
   stroke: #eef0f4;
@@ -225,34 +213,37 @@
   pointer-events: none;
 }
 
-.mc-on {
-  .mc-line {
-    stroke: #5fb0ff;
-  }
-
-  > path:first-child {
-    fill: #15263b;
-  }
+.mc-on .mc-line {
+  stroke: #5fb0ff;
 }
 
-.mc-state {
-  font-size: 6.4px !important;
-  fill: #aab0ba !important;
+.mc-on > path:first-child {
+  fill: #15263b;
 }
 
-.mc-on .mc-state {
-  fill: #5fb0ff !important;
+.mc-seg text.mc-state {
+  font-size: 6.4px;
+  fill: #aab0ba;
 }
 
-.mc-one {
-  fill: #5fb0ff !important;
-  font-size: 7px !important;
+.mc-on text.mc-state {
+  fill: #5fb0ff;
 }
 
-// the centre key held: it sinks and glows until the second set shows
+.mc-seg text.mc-one {
+  fill: #5fb0ff;
+  font-size: 7px;
+}
+
+/* the centre key held: it sinks and glows until the second set shows */
 .mc-hub.mc-holding circle {
   transform: scale(0.94);
   stroke: rgba(95, 176, 255, 0.9);
   stroke-width: 1.4;
-  transition: stroke 1.9s linear;
+  transition: stroke var(--mc-hold, 1.9s) linear;
+}
+
+/* (the hidden attribute: SVG elements have no style of their own for it, and a flex box would override it) */
+.mc-wrap [hidden] {
+  display: none;
 }

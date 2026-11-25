@@ -1,6 +1,6 @@
 import { AsyncPipe, NgTemplateOutlet } from '@angular/common'
 import { HttpClient } from '@angular/common/http'
-import { AfterViewInit, Component, DestroyRef, ElementRef, effect, inject, OnInit, signal, untracked, ViewChild } from '@angular/core'
+import { AfterViewInit, Component, DestroyRef, DoCheck, ElementRef, effect, inject, OnInit, signal, untracked, ViewChild } from '@angular/core'
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { FormsModule } from '@angular/forms'
 import { ActivatedRoute, Router } from '@angular/router'
@@ -65,7 +65,7 @@ import { noCoverStyle } from '../no-cover'
 import type { MupiboxConfig } from '../mupibox-config.model'
 import { StatusComponent } from '../status/status.component'
 import { KmStatusGroupComponent } from '../km-header/km-status-group.component'
-import { MediaControlComponent, type RepeatMode } from '../media-control/media-control.component'
+import { ExtensionHostService, type PlayerControlsHandle, type PlayerControlsState, type RepeatMode } from '../extension-host.service'
 import { OutputSwitchComponent } from '../output-switch/output-switch.component'
 import { PlayerCmds, PlayerService } from '../player.service'
 import type { PlaytimePlayState } from '../playtime.model'
@@ -104,7 +104,6 @@ export interface TrackListEntry {
     StatusComponent,
     KmStatusGroupComponent,
     OutputSwitchComponent,
-    MediaControlComponent,
     IonHeader,
     IonToolbar,
     IonButtons,
@@ -124,7 +123,7 @@ export interface TrackListEntry {
     IonSpinner,
   ],
 })
-export class PlayerPage implements OnInit, AfterViewInit {
+export class PlayerPage implements OnInit, AfterViewInit, DoCheck {
   @ViewChild('range', { static: false }) range: IonRange
   @ViewChild('themeFontSource', { static: false, read: ElementRef }) themeFontSource: ElementRef<HTMLElement>
 
@@ -137,6 +136,9 @@ export class PlayerPage implements OnInit, AfterViewInit {
   cover = ''
   // km themes (children's themes): their own markup in the template (see theme/km-theme.service.ts)
   private readonly kmTheme = inject(KmThemeService)
+  private readonly extensionHost = inject(ExtensionHostService)
+  /** The buttons an extension gives this page (the media control): they replace the normal ones. */
+  protected readonly extControls = this.extensionHost.playerControls
   private readonly winamp = inject(WinampService)
   protected readonly km = this.kmTheme.isKm
   /** header, controls, track list and "Hören mit" of design round 2: the km themes and coverflow */
@@ -421,6 +423,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
     this.local$ = this.mediaService.local$
     // the listening-time chip lies above every page: hidden while the "Hören mit" window dims the player
     effect(() => document.body.classList.toggle('kp-out-open', this.outputOpen()))
+    this.destroyRef.onDestroy(() => this.controlsEnd?.())
     // The player refused a start or a play/next of this page: its tile's day's limit is used up (5.1) - back to the
     // list (TileTimeService shows the bar)
     let seenRefusals = this.tileTime.refusals()
@@ -609,13 +612,10 @@ export class PlayerPage implements OnInit, AfterViewInit {
     return type === 'spotify' || type === 'library' || type === 'nas' || type === 'tidal' || type === 'jellyfin' || type === 'audible' || type === 'rss'
   }
 
-  // ---------- the second set of the media control: shuffle, repeat, eject ----------
+  // ---------- what the media control of an extension (api.player.controls) uses: shuffle, repeat, winding, places ----------
 
   private repeatTap: { mode: RepeatMode; until: number } | null = null
   private repeatSet: RepeatMode = 'off'
-  /** A CD drive is on the box (the cd extension), so the eject key can be used. */
-  protected readonly cdDrive = signal(false)
-
   /** How the playlist repeats: what the player says (an album of the box), but what was just chosen until it has taken it. */
   protected repeatShown(): RepeatMode {
     if (this.repeatTap && Date.now() < this.repeatTap.until) return this.repeatTap.mode
@@ -641,17 +641,85 @@ export class PlayerPage implements OnInit, AfterViewInit {
     return this.currentPlayedLocal?.shuffleSupported === true
   }
 
-  /** Whether the box has a CD drive (asked when the second set is opened). */
-  protected refreshDrive() {
-    this.http.get<{ drive?: boolean }>(`${environment.backend.playerUrl}/ext/cd/state`).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (state) => this.cdDrive.set(!!state?.drive),
-      error: () => this.cdDrive.set(false),
-    })
+  // ---------- the controls of an extension ----------
+
+  private controlsHost: HTMLElement | undefined
+  private controlsEnd: (() => void) | undefined
+  private controlsMounted: unknown
+  private controlsLast = ''
+  private controlsNow: PlayerControlsState | null = null
+  private readonly controlsListeners = new Set<(state: PlayerControlsState) => void>()
+
+  /** The place the extension's controls are drawn in (it is there while an extension gives them, see the template). */
+  @ViewChild('extControlsHost')
+  protected set extControlsHost(element: ElementRef<HTMLElement> | undefined) {
+    this.controlsHost = element?.nativeElement
+    this.mountControls()
   }
 
-  /** The eject key: the drive's tray opens (the player stops a CD that plays first). */
-  protected ejectCd() {
-    this.http.get(`${environment.backend.playerUrl}/ext/cd/eject`).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ error: () => undefined })
+  private controlsState(): PlayerControlsState {
+    const times = this.kmTimes()
+    const type = this.media?.type
+    return {
+      playing: !!this.playing,
+      progress: Number.isFinite(this.progress) ? this.progress : 0,
+      live: type === 'radio',
+      canSkip: !this.media?.showid,
+      canSeek: this.canSeekHere(),
+      smooth: this.canSeekHere() && type !== 'spotify',
+      position: times?.position ?? '',
+      duration: times?.duration ?? '',
+      shuffle: !!this.media?.shuffle,
+      canShuffle: this.canShuffle(),
+      repeat: this.repeatShown(),
+      canRepeat: type !== 'radio',
+    }
+  }
+
+  /** Every change of what the controls show goes to them (the page's fields are no signals, so it is looked at on every check). */
+  ngDoCheck() {
+    if (this.controlsListeners.size === 0 && !this.controlsHost) return
+    const state = this.controlsState()
+    const key = JSON.stringify(state)
+    if (key === this.controlsLast) return
+    this.controlsLast = key
+    this.controlsNow = state
+    for (const fn of [...this.controlsListeners]) {
+      try {
+        fn(state)
+      } catch (error) {
+        console.warn('[PlayerPage] controls of an extension failed:', error)
+      }
+    }
+  }
+
+  private mountControls() {
+    const entry = this.extControls()
+    if (this.controlsMounted === entry && this.controlsEnd && this.controlsHost?.isConnected) return
+    this.controlsEnd?.()
+    this.controlsEnd = undefined
+    this.controlsMounted = undefined
+    this.controlsListeners.clear()
+    if (!entry || !this.controlsHost) return
+    const handle: PlayerControlsHandle = {
+      state: () => this.controlsNow ?? this.controlsState(),
+      onState: (fn) => {
+        this.controlsListeners.add(fn)
+        return () => this.controlsListeners.delete(fn)
+      },
+      playPause: () => this.playPause(),
+      volUp: () => this.volUp(),
+      volDown: () => this.volDown(),
+      prev: () => this.skipPrev(),
+      next: () => this.skipNext(),
+      toggleShuffle: () => this.toggleshuffle(),
+      cycleRepeat: () => this.cycleRepeat(),
+      wind: (mode) => this.windBox(mode),
+      scrub: (seconds) => this.scrubSeconds(seconds),
+      seekTo: (percent) => this.seekToPercent(percent),
+    }
+    this.controlsMounted = entry
+    this.controlsEnd = this.extensionHost.mountControls(entry, this.controlsHost, handle)
   }
 
   /** A place on the ring of the media control (percent). */
