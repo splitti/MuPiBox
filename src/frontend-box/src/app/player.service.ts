@@ -118,6 +118,11 @@ export class PlayerService {
     this.sendRequest(mode === 'all' ? 'repeatall' : mode === 'one' ? 'repeatone' : 'repeatoff')
   }
 
+  /** The winding of the media control for an album of the box: 'f2' / 'f4' faster playback, 'b2' / 'b4' a silent run back, '0' the end. */
+  wind(mode: string) {
+    this.sendRequest(`wind:${mode}`)
+  }
+
   seekPosition(pos: number) {
     const seekpos = `seekpos:${pos}`
     this.sendRequest(seekpos)

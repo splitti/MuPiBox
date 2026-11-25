@@ -2083,6 +2083,51 @@ function hasDirSegment(command, segment) {
   return typeof command.dir === 'string' && command.dir.split('/').includes(segment)
 }
 
+// The winding of the display's media control, for an album of the box (mpv): forward at 2x / 4x is real faster playback with the pitch
+// kept, back is a silent run back (mpv cannot play backwards: a small step every 200 ms is a smooth run, not jumps). The display says
+// it every half second while its button is pulled; when it stops (a lost release, a closed page) the playback goes back to normal.
+// mode: f2, f4, b2, b4 or 0 (stop).
+const WIND_TICK_MS = 200
+const WIND_HOLD_MS = 1500
+let windTimer
+let windRun
+let windMode = ''
+function windStop() {
+  clearTimeout(windTimer)
+  clearInterval(windRun)
+  windTimer = undefined
+  windRun = undefined
+  windMode = ''
+  if (typeof player.setSpeed === 'function') {
+    player.setSpeed(1)
+    player.setMute?.(false)
+  }
+}
+function windBox(mode) {
+  const match = /^([fb])([24])$/.exec(mode)
+  if (!match || currentMeta.currentPlayer !== 'mplayer' || typeof player.setSpeed !== 'function') {
+    if (windTimer) windStop()
+    return
+  }
+  const forward = match[1] === 'f'
+  const speed = Number(match[2])
+  clearTimeout(windTimer)
+  windTimer = setTimeout(windStop, WIND_HOLD_MS)
+  if (windMode === mode) return
+  clearInterval(windRun)
+  windRun = undefined
+  windMode = mode
+  if (forward) {
+    player.setMute?.(false)
+    player.setSpeed(speed)
+    return
+  }
+  player.setSpeed(1)
+  player.setMute?.(true)
+  // (the playing itself goes on at 1x: a step of speed + 1 seconds per second takes the place back at that speed)
+  windRun = setInterval(() => player.seek(-((speed + 1) * WIND_TICK_MS) / 1000), WIND_TICK_MS)
+}
+
 function isPlayInitiatingCommand(command) {
   if (command.name?.includes('spotify:')) return true
   // 'nas' was missing: NAS playback ignored the playtime limit and quiet hours
@@ -5422,7 +5467,7 @@ app.use((req, res) => {
   if (triggerSource !== null) {
     // (louder, quieter, a jump within the track, shuffle, repeat, pause, stop: nothing new plays - a button or the rotary
     // encoder pressed while the child browsed the library took the display to the player at every press)
-    if (!/\/(?:[+-]\d{1,2}|=\d{1,3}|seek[+-]\d+|seekpos:[^/]*|shuffle(?:on|off)|repeat(?:on|off|all|one)|pause|stop|shutoff)$/.test(pathname)) {
+    if (!/\/(?:[+-]\d{1,2}|=\d{1,3}|seek[+-]\d+|seekpos:[^/]*|wind:[a-z0-9]+|shuffle(?:on|off)|repeat(?:on|off|all|one)|pause|stop|shutoff)$/.test(pathname)) {
       currentMeta.triggerSource = triggerSource
       currentMeta.triggerAt = Date.now()
     }
@@ -5655,6 +5700,7 @@ app.use((req, res) => {
   else if (command.name === 'networkrestart') cmdCall('WIFI_IF=$(/usr/local/bin/mupibox/mupi_wifi_iface.sh); sudo service ifup@$WIFI_IF stop && sudo service ifup@$WIFI_IF start')
   else if (command.name === 'reboot') cmdCall('sudo su - -c "/usr/local/bin/mupibox/./restart.sh &"')
   else if (command.name === 'index') cmdCall('sudo bash /usr/local/bin/mupibox/add_index.sh')
+  else if (command.name.startsWith('wind:')) windBox(command.name.slice(5))
   else if (command.name === 'seek+30') seek(1)
   else if (command.name === 'seek-30') seek(0)
   else if (command.name.includes('seekpos:')) {

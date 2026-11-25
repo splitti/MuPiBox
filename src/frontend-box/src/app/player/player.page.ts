@@ -665,6 +665,12 @@ export class PlayerPage implements OnInit, AfterViewInit {
     } else if (this.canSeekHere()) this.playerService.seekPosition(percent)
   }
 
+  /** Winding of an album of the box (media control): the player plays faster (forward) or runs back silently - see windBox in the player. */
+  protected windBox(mode: string) {
+    this.cancelAlbumEnd()
+    this.playerService.wind(mode)
+  }
+
   /** Winding at 2× / 4× (media control): moves the place by `seconds` on top of the normal playing. */
   protected scrubSeconds(seconds: number) {
     const total = this.trackSeconds()

@@ -15,6 +15,8 @@ const REPEAT_MS = 200
 // play / pause held this long switches the outer buttons to the second set (and back after IDLE_MS without a press)
 const LONG_PRESS_MS = 2000
 const ALT_IDLE_MS = 12000
+// while the box winds by itself the control says so this often (the box stops by itself when it does not hear it for 1.5 s)
+const WIND_BEAT_MS = 500
 // how far the button follows the finger (in units of the 100 wide pad) and how far it has to be pulled for the two steps (shares of the width)
 const MAX_PULL = 13
 // the button follows the finger at 0.9 of its way (see trackMove), the pad is 0.75 of the control: the full stretch is reached at this
@@ -83,6 +85,8 @@ export class MediaControlComponent {
   readonly canShuffle = input(true)
   readonly canRepeat = input(true)
   readonly canEject = input(false)
+  /** The box winds by itself (faster playback, a silent run back): the control says the mode now and then instead of the steps. */
+  readonly smooth = input(false)
 
   readonly playPause = output<void>()
   readonly volUp = output<void>()
@@ -91,6 +95,8 @@ export class MediaControlComponent {
   readonly next = output<void>()
   /** While a track button is pulled: seconds the place moves on top of the normal playing (negative: back), about every 250 ms. */
   readonly scrub = output<number>()
+  /** While a track button is pulled and the box winds by itself (`smooth`): the mode, every half second ('f2', 'f4', 'b2', 'b4'), and '0' at the end. */
+  readonly wind = output<string>()
   /** A place chosen on the ring (percent). */
   readonly seekTo = output<number>()
   readonly shuffleToggle = output<void>()
@@ -302,15 +308,28 @@ export class MediaControlComponent {
     if (wasTap) (side === 'next' ? this.next : this.prev).emit()
   }
 
+  private winding = false
+
   private startScrub(dir: -1 | 1, stage: ScrubStage) {
     this.stopScrub()
     if (stage === 0) return
+    if (this.smooth()) {
+      const mode = `${dir === 1 ? 'f' : 'b'}${stage === 1 ? 2 : 4}`
+      this.winding = true
+      this.wind.emit(mode)
+      this.ticker = setInterval(() => this.wind.emit(mode), WIND_BEAT_MS)
+      return
+    }
     this.ticker = setInterval(() => this.scrub.emit(MediaControlComponent.scrubSeconds(dir, stage, SCRUB_TICK_MS)), SCRUB_TICK_MS)
   }
 
   private stopScrub() {
     clearInterval(this.ticker)
     this.ticker = undefined
+    if (this.winding) {
+      this.winding = false
+      this.wind.emit('0')
+    }
   }
 
   // ---------- the ring: choose a place ----------
