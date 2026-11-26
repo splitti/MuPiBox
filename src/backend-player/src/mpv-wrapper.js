@@ -199,10 +199,15 @@ const createPlayer = (options = {}) => {
       case 'loadfile':
         shuffler.reset()
         send(['set_property', 'pause', false])
+        // (a winding that was still on - faster or silent - does not go on in the next file)
+        send(['set_property', 'speed', 1])
+        send(['set_property', 'mute', false])
         return send(['loadfile', String(a[0]), a[1] === 1 || a[1] === '1' ? 'append-play' : 'replace'])
       case 'loadlist':
         shuffler.reset()
         send(['set_property', 'pause', false])
+        send(['set_property', 'speed', 1])
+        send(['set_property', 'mute', false])
         return send(['loadlist', String(a[0]), 'replace'])
       case 'pt_step': {
         const step = Number.parseInt(String(a[0] ?? '1'), 10) || 0
@@ -448,6 +453,9 @@ const createPlayer = (options = {}) => {
   out.getProps = getProps
   out.seek = (pos) => exec('seek', [pos, '0'])
   out.seekPercent = (pos) => exec('seek', [pos, '1'])
+  // Faster playback with the pitch kept (mpv's scaletempo: speech stays understandable), and silence for a rewind.
+  out.setSpeed = (speed) => send(['set_property', 'speed', Math.max(1, Math.min(4, Number(speed) || 1))])
+  out.setMute = (on) => send(['set_property', 'mute', !!on])
   // opts.startSeconds: the file begins there (a podcast episode, a CUE album where it was left) - no seek after the
   // start, nothing of the beginning is heard. opts.track (1-based) and opts.percent for a playlist: the album goes
   // on with that track at that part of it; only that track is opened (see setStart).

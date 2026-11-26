@@ -1,0 +1,418 @@
+/* The multimedia control: a metal frame, a ring that lights up blue, a black pad with four wedges and play / pause in the middle.
+ * Sizes are shares of the width, so it scales with whatever space it is given (the page sets --mc-size to the size of the cover). */
+.mc-wrap {
+  position: relative;
+  width: min(100%, var(--mc-size, 300px));
+  margin: 0 auto;
+}
+
+.mc {
+  position: relative;
+  width: min(100%, var(--mc-size, 300px));
+  aspect-ratio: 1;
+  border-radius: 50%;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  /* the frame: smooth metal in the colour of the ring around the round covers of the theme (--km-ring; older themes: their dark colour) */
+  --mc-metal: var(--km-ring, var(--ion-color-dark, #c9ccd2));
+  --mc-hi: color-mix(in srgb, var(--mc-metal) 45%, white);
+  --mc-lo: color-mix(in srgb, var(--mc-metal) 62%, black);
+  /* the colour of the ring: set by the script from the settings; the others are made from it */
+  --mc-a: #2878ff;
+  --mc-a-dark: color-mix(in srgb, var(--mc-a) 88%, black);
+  --mc-a-light: color-mix(in srgb, var(--mc-a) 68%, white);
+  --mc-on: color-mix(in srgb, var(--mc-a) 62%, white);
+}
+
+.mc-bezel {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse 75% 40% at 32% 10%, rgba(255, 255, 255, 0.7), transparent 72%),
+    radial-gradient(ellipse 60% 30% at 70% 96%, rgba(0, 0, 0, 0.35), transparent 75%),
+    conic-gradient(
+      from 25deg,
+      var(--mc-hi),
+      color-mix(in srgb, var(--mc-metal) 82%, black) 12%,
+      color-mix(in srgb, var(--mc-metal) 70%, white) 26%,
+      var(--mc-lo) 40%,
+      color-mix(in srgb, var(--mc-metal) 35%, white) 54%,
+      color-mix(in srgb, var(--mc-metal) 74%, black) 68%,
+      color-mix(in srgb, var(--mc-metal) 62%, white) 83%,
+      var(--mc-hi)
+    ),
+    var(--mc-metal);
+  box-shadow:
+    0 6px 14px rgba(0, 0, 0, 0.5),
+    0 1px 0 rgba(255, 255, 255, 0.25) inset,
+    inset 0 0 0 1.5px color-mix(in srgb, var(--mc-metal) 40%, white),
+    inset 0 -3px 5px rgba(0, 0, 0, 0.28);
+}
+
+/* the bevel on the inner edge: light on the upper left, dark on the lower right, as if the metal were cut */
+.mc-bezel::after {
+  content: '';
+  position: absolute;
+  inset: 1.6%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.55));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+}
+
+/* the groove between the frame and the pad: black, filling blue clockwise from the top (--p = percent of the track) */
+.mc-ring {
+  position: absolute;
+  inset: 5.6%;
+  border-radius: 50%;
+  background: #08090b;
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.9),
+    0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 1px 1px 1px rgba(255, 255, 255, 0.35);
+  overflow: hidden;
+}
+
+.mc-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--mc-a) 85%, transparent));
+}
+
+.mc-lit {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  /* (nothing lit at 0: a stop at 0 % would show a hairline) */
+  background: conic-gradient(from 0deg, var(--mc-a-dark) 0, var(--mc-a-light) calc(var(--p, 0) * 1%), transparent calc(var(--p, 0) * 1%));
+  opacity: calc(min(var(--p, 0), 0.4) * 2.5);
+  transition: background 0.2s linear;
+}
+
+/* a stream: no end, so the ring stays black */
+.mc-live .mc-lit {
+  display: none;
+}
+
+.mc-seekable .mc-ring {
+  cursor: pointer;
+}
+
+.mc-pad {
+  position: absolute;
+  inset: 12.5%;
+  width: 75%;
+  height: 75%;
+  overflow: visible;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.6));
+}
+
+.mc-dome {
+  fill: var(--dome, #0d0e10);
+}
+
+/* the four wedges: dark, a little lighter at the top; pressed in they darken */
+.mc-seg {
+  cursor: pointer;
+  outline: none;
+}
+
+.mc-seg > path:first-child {
+  fill: var(--seg-fill, url(#mc-seg));
+  stroke: var(--seg-stroke, rgba(255, 255, 255, 0.06));
+  stroke-width: var(--seg-sw, 0.5);
+  transition: fill 0.12s;
+}
+
+.mc-seg text {
+  fill: var(--ink, #e7e9ee);
+  font: 700 11px/1 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: 0.04em;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.mc-seg .mc-icon {
+  fill: var(--ink, #eef0f4);
+  pointer-events: none;
+}
+
+.mc-seg.mc-down > path:first-child {
+  fill: var(--seg-down, #07080a);
+}
+
+.mc-seg.mc-off {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.mc-seg text.mc-speed {
+  fill: var(--mc-on);
+  font-size: 8px;
+}
+
+/* the track buttons: they follow the finger (the shift is set by the script) and spring back with an overshoot when let go */
+.mc-track {
+  transition: transform 0.55s cubic-bezier(0.3, 1.9, 0.45, 1);
+  touch-action: none;
+}
+
+.mc-track.mc-pulled {
+  transition: none;
+}
+
+.mc-track.mc-pulled > path:first-child {
+  fill: var(--seg-pulled, color-mix(in srgb, var(--mc-a) 22%, #101114));
+  stroke: var(--seg-pulled-stroke, color-mix(in srgb, var(--mc-on) 55%, transparent));
+}
+
+/* play / pause: a round key in the middle */
+.mc-hub {
+  cursor: pointer;
+}
+
+.mc-hub circle {
+  fill: var(--hub-fill, url(#mc-hub));
+  stroke: var(--hub-stroke, rgba(255, 255, 255, 0.1));
+  stroke-width: var(--hub-sw, 0.6);
+  filter: var(--hub-filter, drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.8)));
+  transition: transform 0.12s;
+  transform-origin: 50px 50px;
+}
+
+.mc-hub .mc-icon {
+  fill: var(--hub-ink, #ffffff);
+  pointer-events: none;
+}
+
+.mc-hub.mc-down circle {
+  transform: scale(0.94);
+}
+
+/* the times sit in the two lower corners of the control's square, outside its circle: the place left, the length right */
+.mc-times {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--km-on-band-2, rgba(255, 255, 255, 0.7));
+  font-variant-numeric: tabular-nums;
+}
+
+/* the second set: line icons, "on" lit blue */
+.mc-line {
+  fill: none;
+  stroke: var(--ink, #eef0f4);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.mc-on .mc-line {
+  stroke: var(--mc-on);
+}
+
+.mc-on > path:first-child {
+  fill: var(--seg-on, color-mix(in srgb, var(--mc-a) 18%, #101114));
+}
+
+.mc-seg text.mc-state {
+  font-size: 6.4px;
+  fill: var(--state-ink, #aab0ba);
+}
+
+.mc-on text.mc-state {
+  fill: var(--mc-on);
+}
+
+.mc-seg text.mc-one {
+  fill: var(--mc-on);
+  font-size: 5.4px;
+}
+
+/* the centre key held: it sinks and glows until the second set shows */
+.mc-hub.mc-holding circle {
+  transform: scale(0.94);
+  stroke: color-mix(in srgb, var(--mc-on) 90%, transparent);
+  stroke-width: 1.4;
+  transition: stroke var(--mc-hold, 1.9s) linear;
+}
+
+/* (the hidden attribute: SVG elements have no style of their own for it, and a flex box would override it) */
+.mc-wrap [hidden] {
+  display: none;
+}
+
+/* a winding held at its speed: the button stays out, lit, with a padlock over the arrows */
+.mc-track.mc-locked > path:first-child {
+  fill: var(--seg-locked, color-mix(in srgb, var(--mc-a) 32%, #101114));
+  stroke: var(--seg-locked-stroke, var(--mc-on));
+  stroke-width: 1.2;
+}
+
+.mc-lock rect {
+  fill: var(--mc-on);
+}
+
+.mc-lock path {
+  fill: none;
+  stroke: var(--mc-on);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+}
+
+/* ---------- the designs (setting "design"): only colours and finish - the shapes and what the buttons do stay the same ---------- */
+
+/* colourful, for children: a rainbow frame, a purple dome, candy-coloured wedges with a white edge, a sun-yellow centre key */
+.mc-design-kids {
+  --mc-a: #ff9f1c;
+  --mc-on: #fff35c;
+  --dome: #3b2a86;
+  --ink: #ffffff;
+  --state-ink: #ffe9a8;
+  --hub-fill: #ffd23f;
+  --hub-stroke: #ffffff;
+  --hub-sw: 1.6;
+  --hub-ink: #7a2cbf;
+  --seg-stroke: #ffffff;
+  --seg-sw: 1.1;
+}
+
+.mc-design-kids .mc-seg {
+  --seg-fill: var(--c);
+  --seg-down: color-mix(in srgb, var(--c) 62%, black);
+  --seg-pulled: color-mix(in srgb, var(--c) 70%, white);
+  --seg-pulled-stroke: #ffffff;
+  --seg-on: color-mix(in srgb, var(--c) 55%, black);
+  --seg-locked: color-mix(in srgb, var(--c) 70%, white);
+  --seg-locked-stroke: #fff35c;
+}
+
+.mc-design-kids .mc-w-up { --c: #34c759; }
+.mc-design-kids .mc-w-down { --c: #ff9500; }
+.mc-design-kids .mc-w-left { --c: #2f8cff; }
+.mc-design-kids .mc-w-right { --c: #ff4fa3; }
+
+.mc-design-kids .mc-bezel {
+  background:
+    radial-gradient(ellipse 75% 40% at 32% 10%, rgba(255, 255, 255, 0.55), transparent 72%),
+    conic-gradient(from 0deg, #ff4d6d, #ff9f1c, #ffe14d, #4ade80, #22d3ee, #6366f1, #d946ef, #ff4d6d);
+  box-shadow:
+    0 6px 14px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.7),
+    inset 0 -4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.mc-design-kids .mc-ring {
+  background: #251a5c;
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.6),
+    0 0 0 2px rgba(255, 255, 255, 0.75);
+}
+
+.mc-design-kids.mc-auto .mc-lit {
+  background: conic-gradient(from 0deg, #ff4d6d 0deg, #ff9f1c 50deg, #ffe14d 100deg, #4ade80 160deg, #22d3ee 220deg, #6366f1 280deg, #d946ef 340deg);
+  -webkit-mask: conic-gradient(#000 calc(var(--p, 0) * 1%), transparent calc(var(--p, 0) * 1%));
+  mask: conic-gradient(#000 calc(var(--p, 0) * 1%), transparent calc(var(--p, 0) * 1%));
+}
+
+.mc-design-kids .mc-seg text {
+  font-family: 'Baloo 2', 'Arial Rounded MT Bold', 'Comic Sans MS', system-ui, sans-serif;
+  font-weight: 900;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.35);
+  stroke-width: 1.2px;
+  stroke-linejoin: round;
+}
+
+.mc-design-kids .mc-seg .mc-icon {
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.3);
+  stroke-width: 0.9;
+  stroke-linejoin: round;
+}
+
+/* neon, for teenagers: black glass with glowing edges - cyan, magenta, lime and violet - and a ring that runs from cyan to magenta */
+.mc-design-neon {
+  --n1: #00f0ff;
+  --n2: #ff2bd6;
+  --mc-a: #00f0ff;
+  --mc-on: #9cfbff;
+  --dome: #050508;
+  --state-ink: #7fdde6;
+  --hub-fill: #07070c;
+  --hub-stroke: #ff2bd6;
+  --hub-sw: 1.3;
+  --hub-ink: #ffd9fa;
+  --hub-filter: drop-shadow(0 0 3px #ff2bd6);
+  --seg-fill: #07070d;
+  --seg-sw: 0.9;
+}
+
+.mc-design-neon .mc-seg {
+  --seg-stroke: var(--wc);
+  --ink: color-mix(in srgb, var(--wc) 55%, white);
+  --seg-down: color-mix(in srgb, var(--wc) 30%, #07070d);
+  --seg-pulled: color-mix(in srgb, var(--wc) 22%, #07070d);
+  --seg-pulled-stroke: var(--wc);
+  --seg-on: color-mix(in srgb, var(--wc) 18%, #07070d);
+  --seg-locked: color-mix(in srgb, var(--wc) 28%, #07070d);
+  --seg-locked-stroke: var(--wc);
+}
+
+.mc-design-neon .mc-w-up { --wc: #00f0ff; }
+.mc-design-neon .mc-w-right { --wc: #ff2bd6; }
+.mc-design-neon .mc-w-down { --wc: #b6ff3c; }
+.mc-design-neon .mc-w-left { --wc: #a259ff; }
+
+.mc-design-neon .mc-seg > path:first-child {
+  filter: drop-shadow(0 0 2.2px var(--wc));
+}
+
+.mc-design-neon .mc-seg text,
+.mc-design-neon .mc-seg .mc-icon,
+.mc-design-neon .mc-seg .mc-line {
+  filter: drop-shadow(0 0 1.6px var(--wc));
+}
+
+.mc-design-neon .mc-bezel {
+  background: conic-gradient(from 20deg, #0a0a14, #14142e 20%, #0a0a14 45%, #1c0b26 70%, #0a0a14);
+  box-shadow:
+    0 0 0 1.5px var(--n1),
+    0 0 12px 2px color-mix(in srgb, var(--n1) 65%, transparent),
+    0 0 26px color-mix(in srgb, var(--n2) 45%, transparent),
+    inset 0 0 9px color-mix(in srgb, var(--n2) 65%, transparent);
+}
+
+.mc-design-neon .mc-bezel::after {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--n1) 70%, transparent), transparent 45%, transparent 55%, color-mix(in srgb, var(--n2) 70%, transparent));
+}
+
+.mc-design-neon .mc-ring {
+  background: #020204;
+  box-shadow:
+    inset 0 0 6px #000,
+    0 0 0 1px color-mix(in srgb, var(--n1) 45%, black);
+}
+
+.mc-design-neon.mc-auto .mc-lit {
+  background: conic-gradient(from 0deg, var(--n1) 0, var(--n2) calc(var(--p, 0) * 1%), transparent calc(var(--p, 0) * 1%));
+}
+
+.mc-design-neon.mc-auto .mc-glow {
+  filter: drop-shadow(0 0 6px var(--n1)) drop-shadow(0 0 13px color-mix(in srgb, var(--n2) 60%, transparent));
+}
+
+.mc-design-neon .mc-hub .mc-icon {
+  filter: drop-shadow(0 0 2px #ff2bd6);
+}

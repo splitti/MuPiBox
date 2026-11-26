@@ -2320,7 +2320,16 @@ async function nasIndexWalk(folder: string, version: string | undefined, depth: 
       if (below) break
     }
   }
-  const facts: NasFolderFacts = { v: version, audio, container, own: own?.path, ownV: own?.version, below, at: Date.now() }
+  const facts: NasFolderFacts = {
+    v: version,
+    audio,
+    container,
+    own: own?.path,
+    ownV: own?.version,
+    below,
+    ...(own ? {} : coverTrackFacts(files)),
+    at: Date.now(),
+  }
   nasFolderIndexStore(normalizeNasPath(folder), facts)
   if (own) {
     const thumb = await nasCoverThumbnail(own.path, NAS_COVER_THUMB_SIZE, own.version).catch(() => undefined)
@@ -2328,8 +2337,11 @@ async function nasIndexWalk(folder: string, version: string | undefined, depth: 
     // an album whose picture is far from square (scanned cassette inlay): its online cover is shown instead
     if (audio && !container && coverIsNotSquare(`nas:${own.path}`)) onlineAlbumCover('nas', folder, 'notSquare')
   }
-  // an album (or a folder with titles of its own next to subfolders) without a picture
-  if (audio && !own) onlineAlbumCover('nas', folder)
+  // an album (or a folder with titles of its own next to subfolders) without a picture: the one in its first audio file
+  // (looked at now, once per file), else from the internet
+  if (audio && !own && !(container || below ? false : await embeddedCoverCheck('nas', facts.track, facts.trackV))) {
+    onlineAlbumCover('nas', folder)
+  }
   return facts
 }
 
@@ -2352,7 +2364,11 @@ async function scanAlbumsForOnlineCovers(): Promise<void> {
         if (!files) return
         onlineCoverScan.folders++
         const own = pickCoverImage(files)
-        if (nasHasAudio(files) && !own) onlineAlbumCover('local', folder)
+        if (nasHasAudio(files) && !own) {
+          const track = coverTrackFacts(files).track
+          const embedded = track ? await embeddedCoverCheck('local', track, await localTrackVersion(track)) : false
+          if (!embedded) onlineAlbumCover('local', folder)
+        }
         if (own && nasHasAudio(files)) {
           // measured on its thumbnail (the one the lists show); not square: its online cover is shown instead
           const absolute = path.join(libraryRoot, own.path)
@@ -6111,6 +6127,8 @@ interface NasFolderFacts {
   own?: string // its own picture
   ownV?: string // that picture's ETag/date (thumbnail cache key)
   below?: string // without an own picture: one found in a subfolder (see nasFindCoverBelow)
+  track?: string | null // without an own picture: its first MP3 / FLAC, whose embedded picture can be the cover (null: none)
+  trackV?: string // that file's ETag/date
   at: number
 }
 const nasFolderIndexFile = path.join(CACHE_DIR, 'nas-folders.json')
@@ -6156,7 +6174,8 @@ function nasFolderIndexSaveSoon(): void {
 async function nasFolderFacts(folderPath: string, version?: string): Promise<NasFolderFacts> {
   const key = normalizeNasPath(folderPath)
   const known = nasFolderIndex[key]
-  if (known && version !== undefined && known.v === version) return known
+  // (an album without a picture read before the box looked at the first audio file: read again once)
+  if (known && version !== undefined && known.v === version && (known.own || !known.audio || known.track !== undefined)) return known
   const files = await nasListFiles(folderPath)
   const own = pickCoverImage(files)
   const facts: NasFolderFacts = {
@@ -6166,6 +6185,7 @@ async function nasFolderFacts(folderPath: string, version?: string): Promise<Nas
     own: own?.path,
     ownV: own?.version,
     below: own ? undefined : await nasFindCoverBelow(files),
+    ...(own ? {} : coverTrackFacts(files)),
     at: Date.now(),
   }
   nasFolderIndexStore(key, facts)
@@ -6197,12 +6217,14 @@ function nasEntryFromFacts(
   const isContainer = !ownFilesOnly && facts.container
   // (the parents chose "no cover" for this folder in the app: none, whatever pictures it has)
   const hidden = coverHidden('nas', folderPath)
-  // An album without a picture: its own cover from the internet beats the series' picture from the folder above.
+  // An album without a picture: the one embedded in its first audio file, else its own cover from the internet - both
+  // beat the series' picture from the folder above.
   // An album whose picture is not square (scanned cassette inlay): its online cover, if one was found.
   const cover = hidden
     ? undefined
     : ((facts.own && !isContainer ? onlineInsteadOfOwn('nas', folderPath, facts.own) : undefined) ??
       (ownCoverPath ? nasStreamUrl(ownCoverPath) : undefined) ??
+      (isContainer ? undefined : embeddedAlbumCover('nas', facts.track, facts.trackV)) ??
       (isContainer ? undefined : onlineAlbumCover('nas', folderPath)) ??
       (fallbackCoverPath ? nasStreamUrl(fallbackCoverPath) : undefined))
   return {
@@ -7233,7 +7255,14 @@ async function nasFolderEntries(folderPath: string, asTiles = false): Promise<{ 
   // Audio files next to subfolders with albums: first comes an entry that plays them.
   if (nasHasAudio(files) && subfolders.some((sub) => factsOf.get(sub.path)?.audio || factsOf.get(sub.path)?.container)) {
     const own = pickCoverImage(files)
-    const ownFacts: NasFolderFacts = { audio: true, container: false, own: own?.path, ownV: own?.version, at: Date.now() }
+    const ownFacts: NasFolderFacts = {
+      audio: true,
+      container: false,
+      own: own?.path,
+      ownV: own?.version,
+      ...(own ? {} : coverTrackFacts(files)),
+      at: Date.now(),
+    }
     entries.unshift(nasEntryFromFacts(folderPath, parentName, parentName, ownFacts, undefined, true))
   }
   return { entries: entries.filter((entry): entry is Record<string, unknown> => !!entry), offline }
@@ -8629,7 +8658,8 @@ function isThumbnailable(file: string): boolean {
 const trackCoverMissing = new Map<string, number>()
 const TRACK_COVER_MISSING_MS = 6 * 3600 * 1000
 
-async function trackCover(file: string): Promise<string | undefined> {
+// seen.none: the file was read and holds no picture (not: it could not be read now - the NAS away, a timeout)
+async function trackCover(file: string, seen?: { none?: boolean }): Promise<string | undefined> {
   const colon = file.indexOf(':')
   const type = file.slice(0, colon)
   const filePath = file.slice(colon + 1)
@@ -8669,8 +8699,15 @@ async function trackCover(file: string): Promise<string | undefined> {
   const missingSince = trackCoverMissing.get(seed)
   if (missingSince && Date.now() - missingSince < TRACK_COVER_MISSING_MS) return undefined
   const thumb = await getThumbnail(`track:${file}`, NAS_COVER_THUMB_SIZE, seed, async () => {
-    const picture = await readEmbeddedPicture(read).catch(() => undefined)
-    if (!picture) return undefined
+    let failed = false
+    const picture = await readEmbeddedPicture(read).catch(() => {
+      failed = true
+      return undefined
+    })
+    if (!picture) {
+      if (!failed && seen) seen.none = true
+      return undefined
+    }
     const tmp = path.join('/tmp', `.trackcover-${crypto.randomBytes(6).toString('hex')}${picture.mime === 'image/png' ? '.png' : '.jpg'}`)
     await writeFile(tmp, picture.data)
     return tmp
@@ -8680,6 +8717,106 @@ async function trackCover(file: string): Promise<string | undefined> {
     trackCoverMissing.set(seed, Date.now())
   }
   return thumb
+}
+
+// --- Album covers from the audio files ------------------------------------------------------------------------------
+// An album folder without a picture of its own (no cover.jpg, none in a "Scans" folder below it) shows the picture embedded
+// in its first MP3 / FLAC - many rippers put the cover only there. Whether that file has one is known per file and version
+// (kept on the SD, so it is read once): looked at by the library walk, and in the background, one at a time, for an album
+// a list shows before the walk got to it (the list shows the picture from its next opening on). Until then, and without
+// one, the album's online cover as before.
+const embeddedCoversFile = path.join(CACHE_DIR, 'embedded-covers.json')
+let embeddedCovers: Record<string, 0 | 1> = (() => {
+  try {
+    const known = JSON.parse(fs.readFileSync(embeddedCoversFile, 'utf8'))
+    return known && typeof known === 'object' && !Array.isArray(known) ? (known as Record<string, 0 | 1>) : {}
+  } catch {
+    return {}
+  }
+})()
+let embeddedCoversTimer: NodeJS.Timeout | undefined
+const embeddedCoverWaiting: { type: 'nas' | 'local'; track: string; version?: string }[] = []
+const embeddedCoverQueued = new Set<string>()
+let embeddedCoverRunning = false
+
+// The first MP3 / FLAC of a folder (the order the player plays it in), for its picture: { track: null } when there is none.
+function coverTrackFacts(files: NasFileEntry[]): { track: string | null; trackV?: string } {
+  const first = files
+    .filter((f) => !f.isdir && /\.(mp3|flac)$/i.test(f.name))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))[0]
+  if (!first) return { track: null }
+  const version = first.version ?? (first.additional?.size !== undefined ? String(first.additional.size) : undefined)
+  return { track: first.path, ...(version ? { trackV: version } : {}) }
+}
+
+// (a file of the SD card: its date and size)
+async function localTrackVersion(track: string): Promise<string | undefined> {
+  const rel = libraryRel(track)
+  const info = rel ? await stat(path.join(libraryRoot, rel)).catch(() => undefined) : undefined
+  return info ? `${info.mtimeMs}|${info.size}` : undefined
+}
+
+const embeddedCoverKey = (type: string, track: string, version?: string) => `${type}:${track}|${version ?? ''}`
+
+function embeddedCoversSaveSoon(): void {
+  if (embeddedCoversTimer) return
+  embeddedCoversTimer = setTimeout(() => {
+    embeddedCoversTimer = undefined
+    void (async () => {
+      try {
+        await mkdir(path.dirname(embeddedCoversFile), { recursive: true })
+        const tmp = `${embeddedCoversFile}.tmp`
+        await writeFile(tmp, JSON.stringify(embeddedCovers))
+        await rename(tmp, embeddedCoversFile)
+      } catch (error) {
+        console.warn(`${new Date().toLocaleString()}: [MuPiBox-Server] saving the embedded covers failed: ${error}`)
+      }
+    })()
+  }, 60 * 1000)
+}
+
+// Does the file hold a picture? Read now when not known; true / false - false too when it could not be read now (then
+// not noted: asked again later).
+async function embeddedCoverCheck(type: 'nas' | 'local', track: string | null | undefined, version?: string): Promise<boolean> {
+  if (!track) return false
+  const key = embeddedCoverKey(type, track, version)
+  const known = embeddedCovers[key]
+  if (known !== undefined) return known === 1
+  const seen: { none?: boolean } = {}
+  const thumb = await trackCover(`${type}:${track}`, seen).catch(() => undefined)
+  if (!thumb && !seen.none) return false
+  // (a library that was renamed leaves its old names behind: started anew at some point)
+  if (Object.keys(embeddedCovers).length >= 20000) embeddedCovers = {}
+  embeddedCovers[key] = thumb ? 1 : 0
+  embeddedCoversSaveSoon()
+  return !!thumb
+}
+
+// The cover address of an album from its first audio file - when that is known to hold a picture. Not known yet: it is
+// looked at in the background (one at a time) and the list goes on without it.
+function embeddedAlbumCover(type: 'nas' | 'local', track: string | null | undefined, version?: string): string | undefined {
+  if (!track) return undefined
+  const key = embeddedCoverKey(type, track, version)
+  const known = embeddedCovers[key]
+  if (known === 1) return `/api/track-cover?file=${encodeURIComponent(`${type}:${track}`)}`
+  if (known === undefined && !embeddedCoverQueued.has(key) && embeddedCoverQueued.size < 500) {
+    embeddedCoverQueued.add(key)
+    embeddedCoverWaiting.push({ type, track, version })
+    if (!embeddedCoverRunning) {
+      embeddedCoverRunning = true
+      void (async () => {
+        try {
+          for (let next = embeddedCoverWaiting.shift(); next; next = embeddedCoverWaiting.shift()) {
+            await embeddedCoverCheck(next.type, next.track, next.version).catch(() => false)
+            embeddedCoverQueued.delete(embeddedCoverKey(next.type, next.track, next.version))
+          }
+        } finally {
+          embeddedCoverRunning = false
+        }
+      })()
+    }
+  }
+  return undefined
 }
 
 async function readFileRange(file: string, start: number, end: number): Promise<Buffer> {
@@ -8801,10 +8938,13 @@ async function libraryBuildEntry(
   const hidden = coverHidden('local', relPath)
   const ownPicture = hidden ? undefined : libraryFindCover(files)
   const ownCoverPath = hidden ? undefined : (ownPicture ?? (isContainer ? await libraryFindCoverBelow(files, 2) : undefined))
+  // (an album without a picture: the one embedded in its first audio file, as on the NAS)
+  const track = hidden || ownCoverPath || isContainer ? undefined : coverTrackFacts(files).track
   const cover = hidden
     ? undefined
     : ((ownPicture && !isContainer ? onlineInsteadOfOwn('local', relPath, ownPicture) : undefined) ??
       (ownCoverPath ? libraryFileUrl(ownCoverPath) : undefined) ??
+      (track ? embeddedAlbumCover('local', track, await localTrackVersion(track)) : undefined) ??
       (isContainer ? undefined : onlineAlbumCover('local', relPath)) ??
       (fallbackCoverPath ? libraryFileUrl(fallbackCoverPath) : undefined))
   return {
@@ -9185,7 +9325,13 @@ const audibleMedia = registerAudibleMedia(app, {
 })
 // Extensions (docs/extensions.md): their files for the display and the app (/ext/<id>/...), the list of the ones that are on
 // (/api/ext/active) and the API parts they bring along (/api/ext/<id>/...). Installing and removing is in the app's routes.
-mountExtensions(app, { getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
+mountExtensions(app, {
+  getMupiboxConfig: getMupiboxConfigSync,
+  updateMupiboxConfig,
+  libraryChanged: () => {
+    localLibraryVersion = Date.now()
+  },
+})
 // The parents' web app (/parents, first /eltern) is replaced by the app: its addresses lead there, with a login link's
 // token (bookmarks, home-screen icons, Telegram messages sent before)
 app.use(['/parents', '/eltern'], (req, res) => {

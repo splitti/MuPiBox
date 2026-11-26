@@ -42,6 +42,57 @@ export interface OverlayPage {
   flush?: boolean
 }
 
+/** How the playlist repeats. */
+export type RepeatMode = 'off' | 'all' | 'one'
+
+/** What the player page tells the controls of an extension (`api.player.controls`); every change is passed on to `onState`. */
+export interface PlayerControlsState {
+  playing: boolean
+  /** How far into the track (percent). */
+  progress: number
+  /** A stream: no end, no other track. */
+  live: boolean
+  /** The buttons for the track before / after do something. */
+  canSkip: boolean
+  /** A place can be chosen and the track wound. */
+  canSeek: boolean
+  /** The box winds by itself (`wind`: faster playback, a silent run back); false: only steps with `scrub`. */
+  smooth: boolean
+  /** "1:23" and "4:56" ("" when not known). */
+  position: string
+  duration: string
+  shuffle: boolean
+  canShuffle: boolean
+  repeat: RepeatMode
+  canRepeat: boolean
+}
+
+/** What the controls of an extension can do on the player page. */
+export interface PlayerControlsHandle {
+  state(): PlayerControlsState
+  /** `fn(state)` after every change; returns what ends it. */
+  onState(fn: (state: PlayerControlsState) => void): () => void
+  playPause(): void
+  volUp(): void
+  volDown(): void
+  prev(): void
+  next(): void
+  toggleShuffle(): void
+  /** The next repeat mode: all, one, none. */
+  cycleRepeat(): void
+  /** Winding of an album of the box: 'f2' / 'f4' faster playback, 'b2' / 'b4' a silent run back, '0' the end - said every half second. */
+  wind(mode: string): void
+  /** Moves the place by `seconds` (negative: back) - for what cannot wind by itself (Spotify). */
+  scrub(seconds: number): void
+  /** A place in the track (percent). */
+  seekTo(percent: number): void
+}
+
+/** The buttons of the player page in place of the normal ones (the media control): `mount` fills `host`, what it returns is called when it goes. */
+export interface PlayerControls {
+  mount(host: HTMLElement, controls: PlayerControlsHandle): (() => void) | void
+}
+
 /** What an extension's display.js gets (docs/extensions.md, "Display"). */
 export interface DisplayExtensionApi {
   id: string
@@ -66,6 +117,8 @@ export interface DisplayExtensionApi {
     open(media: Media): void
     /** Albums of this folder name (`libraryPath`) are never kept for "Fortsetzen" - however they were started. */
     noResumeFolder(folder: string): void
+    /** The buttons of the player page (hostApi 18): they take the place of the normal ones while the extension is on. One at a time (the last wins). */
+    controls(controls: PlayerControls): void
   }
 }
 
@@ -80,6 +133,8 @@ export class ExtensionHostService {
   readonly tabs = signal<ExtensionTab[]>([])
   /** What the extensions put into the header (in the order of the extensions). */
   readonly headerItems = signal<{ id: string; item: HeaderItem }[]>([])
+  /** The buttons an extension gives the player page (they replace the normal ones). */
+  readonly playerControls = signal<{ id: string; controls: PlayerControls } | null>(null)
   private readonly ejectHandlers: { id: string; fn: () => boolean }[] = []
   private readonly navController = inject(NavController)
   private readonly router = inject(Router)
@@ -116,6 +171,14 @@ export class ExtensionHostService {
     const cleanup = this.guard(entry.id, 'header', () => entry.item.mount(host))
     return () => {
       if (typeof cleanup === 'function') this.guard(entry.id, 'header', cleanup)
+    }
+  }
+
+  /** Fills a place on the player page with the controls of an extension; returns what undoes it. An error ends only the controls. */
+  mountControls(entry: { id: string; controls: PlayerControls }, host: HTMLElement, handle: PlayerControlsHandle): () => void {
+    const cleanup = this.guard(entry.id, 'controls', () => entry.controls.mount(host, handle))
+    return () => {
+      if (typeof cleanup === 'function') this.guard(entry.id, 'controls', cleanup)
     }
   }
 
@@ -252,6 +315,7 @@ export class ExtensionHostService {
           })
         },
         noResumeFolder: (folder) => void this.noResumeFolders.add(folder),
+        controls: (controls) => this.playerControls.set({ id, controls }),
       },
     }
   }

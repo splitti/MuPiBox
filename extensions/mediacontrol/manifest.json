@@ -1,0 +1,166 @@
+{
+  "id": "mediacontrol",
+  "name": "Media-Control",
+  "version": "1.3.2",
+  "description": "Ein runder Bedienknopf für den Player: Lautstärke, Titelwechsel und Play/Pause auf einer Scheibe, darum ein Ring, der sich mit dem Titel füllt. Drei Designs: Metall, bunt für Kinder, Neon für Teenager. Ersetzt die normalen Tasten, solange die Erweiterung an ist.",
+  "hostApi": 18,
+  "resources": {},
+  "display": "display.js",
+  "icon": "icon.svg",
+  "settings": {
+    "holdSeconds": {
+      "type": "number",
+      "default": 2,
+      "options": [
+        1,
+        2,
+        3
+      ]
+    },
+    "ringColor": {
+      "type": "string",
+      "default": "auto",
+      "options": [
+        "auto",
+        "blue",
+        "red",
+        "orange",
+        "yellow",
+        "green",
+        "mint",
+        "cyan",
+        "purple",
+        "pink",
+        "white",
+        "theme",
+        "background"
+      ]
+    },
+    "design": {
+      "type": "string",
+      "default": "classic",
+      "options": [
+        "classic",
+        "kids",
+        "neon"
+      ]
+    }
+  },
+  "ui": {
+    "title": "Media-Control",
+    "help": "Auf dem Player-Bildschirm ersetzt der runde Knopf die normalen Tasten. Tippen: Lautstärke, Titel davor und danach, Play/Pause. Eine Titeltaste nach außen ziehen spult (erste Stufe 2×, zweite 4×). Zieht man dabei die Taste nach unten, rastet das Spulen ein (Schloss-Symbol) und läuft in dieser Geschwindigkeit weiter, bis man kurz auf die Taste tippt. Auf dem Ring einen Punkt antippen springt dorthin. Play/Pause lange halten zeigt den zweiten Satz: Zufall, Wiederholen, CD auswerfen, zurück. Eine Änderung gilt sofort, das Display lädt dafür kurz neu.",
+    "items": [
+      {
+        "key": "design",
+        "label": "Design",
+        "help": "Nur Farben und Optik ändern sich, die Tasten und ihre Funktionen bleiben gleich. Metall: schwarze Scheibe im Rahmen in der Farbe des Themes. Bunt: Regenbogenrahmen und farbige Tasten, für Kinder. Neon: schwarzes Glas mit leuchtenden Kanten, für Teenager.",
+        "choices": [
+          {
+            "value": "classic",
+            "label": "Metall",
+            "image": "images/design-classic.svg"
+          },
+          {
+            "value": "kids",
+            "label": "Bunt (Kinder)",
+            "image": "images/design-kids.svg"
+          },
+          {
+            "value": "neon",
+            "label": "Neon (Teenager)",
+            "image": "images/design-neon.svg"
+          }
+        ]
+      },
+      {
+        "key": "ringColor",
+        "label": "Farbe des Fortschrittsrings",
+        "help": "Der Ring um die Tasten füllt sich mit dieser Farbe, auch „ON“ im zweiten Satz und die Spulstufe. „Passend zum Design“: blau bei Metall, Regenbogen bei Bunt, Cyan zu Magenta bei Neon. „Farbe des Themes“ nimmt die Hervorhebung des Themes (die Farbe des normalen Fortschrittsbalkens), „Hintergrund des Players“ den Hintergrund, aufgehellt, damit der Ring sichtbar bleibt.",
+        "choices": [
+          {
+            "value": "auto",
+            "label": "Passend zum Design"
+          },
+          {
+            "value": "blue",
+            "label": "Blau",
+            "image": "images/color-blue.svg"
+          },
+          {
+            "value": "red",
+            "label": "Rot",
+            "image": "images/color-red.svg"
+          },
+          {
+            "value": "orange",
+            "label": "Orange",
+            "image": "images/color-orange.svg"
+          },
+          {
+            "value": "yellow",
+            "label": "Gelb",
+            "image": "images/color-yellow.svg"
+          },
+          {
+            "value": "green",
+            "label": "Grün",
+            "image": "images/color-green.svg"
+          },
+          {
+            "value": "mint",
+            "label": "Türkis",
+            "image": "images/color-mint.svg"
+          },
+          {
+            "value": "cyan",
+            "label": "Himmelblau",
+            "image": "images/color-cyan.svg"
+          },
+          {
+            "value": "purple",
+            "label": "Lila",
+            "image": "images/color-purple.svg"
+          },
+          {
+            "value": "pink",
+            "label": "Rosa",
+            "image": "images/color-pink.svg"
+          },
+          {
+            "value": "white",
+            "label": "Weiß",
+            "image": "images/color-white.svg"
+          },
+          {
+            "value": "theme",
+            "label": "Farbe des Themes",
+            "image": "images/color-theme.svg"
+          },
+          {
+            "value": "background",
+            "label": "Hintergrund des Players",
+            "image": "images/color-background.svg"
+          }
+        ]
+      },
+      {
+        "key": "holdSeconds",
+        "label": "Play/Pause halten für den zweiten Satz",
+        "choices": [
+          {
+            "value": 1,
+            "label": "1 Sekunde"
+          },
+          {
+            "value": 2,
+            "label": "2 Sekunden"
+          },
+          {
+            "value": 3,
+            "label": "3 Sekunden"
+          }
+        ]
+      }
+    ]
+  }
+}

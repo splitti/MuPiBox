@@ -1,9 +1,9 @@
 {
   "id": "cd",
   "name": "USB-CD-Laufwerk",
-  "version": "1.0.1",
-  "description": "Audio-CDs vom USB-Laufwerk abspielen, mit Titelnamen und Cover aus dem Internet.",
-  "hostApi": 1,
+  "version": "1.1.3",
+  "description": "Audio-CDs vom USB-Laufwerk abspielen, mit Titelnamen und Cover aus dem Internet – und als MP3, AAC, WMA, FLAC oder ALAC in einen Medien-Ordner der Box rippen.",
+  "hostApi": 17,
   "player": "player.js",
   "api": "api.js",
   "display": "display.js",
@@ -18,6 +18,28 @@
       "type": "secret",
       "pattern": "^[A-Za-z0-9]{0,80}$",
       "legacy": "discogs.token"
+    },
+    "ripFormat": {
+      "type": "string",
+      "default": "mp3",
+      "options": [
+        "mp3",
+        "aac",
+        "wma",
+        "flac",
+        "alac"
+      ]
+    },
+    "ripBitrate": {
+      "type": "number",
+      "default": 320,
+      "options": [
+        128,
+        160,
+        192,
+        256,
+        320
+      ]
     }
   },
   "resources": {},
@@ -30,12 +52,21 @@
     ],
     "groups": [
       "cdrom"
+    ],
+    "packages": [
+      "cdparanoia",
+      "ffmpeg"
     ]
   },
   "ui": {
     "title": "Audio-CD",
-    "help": "Liegt eine Audio-CD im USB-Laufwerk, zeigt das Display oben den Reiter „CD“. Die Box sucht dann im Internet nach den Namen der Titel und nach dem Cover: zuerst bei Discogs, danach bei MusicBrainz.",
+    "help": "Liegt eine Audio-CD im USB-Laufwerk, zeigt das Display oben den Reiter „CD“. Die Box sucht dann im Internet nach den Namen der Titel und nach dem Cover. Eine CD lässt sich auch in die Bibliothek rippen: Format und Qualität stehen auf der Karte „Format und Qualität“, Album, Titel, Cover und Zielordner auf der Karte „CD rippen“.",
     "items": [
+      {
+        "type": "heading",
+        "label": "Titel und Cover",
+        "card": true
+      },
       {
         "key": "cdLookup",
         "label": "Titel und Cover im Internet suchen"
@@ -45,7 +76,94 @@
         "label": "Discogs-Token",
         "dep": "cdLookup",
         "help": "Discogs lässt nur Angemeldete suchen und findet eine CD nur über den Strichcode, den manche CDs mitbringen. Den Token erzeugst du auf discogs.com unter Settings › Developers › „Generate new token“. Ohne Token oder wenn Discogs nichts findet, fragt die Box MusicBrainz – das erkennt eine CD an ihrem Inhaltsverzeichnis."
+      },
+      {
+        "type": "heading",
+        "label": "Format und Qualität",
+        "card": true
+      },
+      {
+        "key": "ripFormat",
+        "label": "Format",
+        "help": "MP3 und AAC laufen auf jedem Gerät, WMA ist für alte Player. FLAC und ALAC sind ohne Qualitätsverlust, brauchen aber etwa das Dreifache an Platz.",
+        "choices": [
+          {
+            "value": "mp3",
+            "label": "MP3"
+          },
+          {
+            "value": "aac",
+            "label": "AAC"
+          },
+          {
+            "value": "wma",
+            "label": "WMA"
+          },
+          {
+            "value": "flac",
+            "label": "FLAC"
+          },
+          {
+            "value": "alac",
+            "label": "ALAC"
+          }
+        ]
+      },
+      {
+        "key": "ripBitrate",
+        "label": "Qualität",
+        "help": "Je höher, desto besser der Klang und desto größer die Dateien. 320 kbit/s ist die höchste Stufe; 192 reicht meist.",
+        "showIf": {
+          "key": "ripFormat",
+          "is": [
+            "mp3",
+            "aac",
+            "wma"
+          ]
+        },
+        "choices": [
+          {
+            "value": 128,
+            "label": "128 kbit/s"
+          },
+          {
+            "value": 160,
+            "label": "160 kbit/s"
+          },
+          {
+            "value": 192,
+            "label": "192 kbit/s"
+          },
+          {
+            "value": 256,
+            "label": "256 kbit/s"
+          },
+          {
+            "value": 320,
+            "label": "320 kbit/s"
+          }
+        ]
+      },
+      {
+        "type": "status",
+        "label": "Rippen",
+        "state": "/api/ext/cd/ripstatus"
+      },
+      {
+        "type": "heading",
+        "label": "CD rippen",
+        "card": true
+      },
+      {
+        "type": "form",
+        "label": "CD rippen",
+        "form": "/api/ext/cd/ripform",
+        "post": "/api/ext/cd/rip",
+        "help": "Sobald eine Audio-CD im Laufwerk liegt, erscheinen hier Album, Titel, Cover und der Ordner der Medien, in den die Dateien kommen.",
+        "inline": true
       }
-    ]
+    ],
+    "heading": "USB-CD-Laufwerk",
+    "place": "system"
   }
 }

@@ -61,6 +61,10 @@ async function getJson(fetchImpl, url, headers = {}) {
 const creditOf = (credit) =>
   Array.isArray(credit) ? credit.map((c) => `${c.name ?? c.artist?.name ?? ''}${c.joinphrase ?? ''}`).join('').trim() : ''
 
+/** The year of "1991-09-24", 1991 or "1991": a text of four digits, or '' */
+const yearOf = (value) => (/^(\d{4})/.exec(String(value ?? ''))?.[1] ?? '')
+const capitalized = (text) => (typeof text === 'string' && text ? text.charAt(0).toUpperCase() + text.slice(1) : '')
+
 /** Do the lengths of a list of tracks fit the disc's? (same count; most of them within 4 seconds - a pressing may differ) */
 function fitsDisc(seconds, disc) {
   if (!disc || seconds.length !== disc.length) return false
@@ -93,7 +97,9 @@ async function lookupDiscogs({ barcode, token, lbas }, fetchImpl) {
       source: 'discogs',
       artist: (release.artists ?? []).map((a) => `${a.name.replace(/\s\(\d+\)$/, '')}${a.join && a.join !== ',' ? ` ${a.join} ` : ', '}`).join('').replace(/[,\s]+$/, ''),
       album: release.title,
-      tracks: tracks.map((t, i) => ({ position: i + 1, title: t.title })),
+      year: yearOf(release.year),
+      genre: release.genres?.[0] ?? '',
+      tracks: tracks.map((t, i) => ({ position: i + 1, title: t.title, ...(Array.isArray(t.artists) && t.artists.length ? { artist: t.artists.map((a) => String(a.name ?? '').replace(/\s\(\d+\)$/, '')).filter(Boolean).join(', ') } : {}) })),
       coverUrl: image?.uri ?? hit.cover_image ?? null,
       coverHeaders: auth,
     }
@@ -105,7 +111,7 @@ async function lookupDiscogs({ barcode, token, lbas }, fetchImpl) {
 async function lookupMusicBrainz({ first, last, lbas }, fetchImpl) {
   const id = musicBrainzDiscId(first, last, lbas)
   const toc = musicBrainzToc(first, last, lbas)
-  const url = `https://musicbrainz.org/ws/2/discid/${id}?toc=${toc}&inc=recordings+artist-credits&fmt=json`
+  const url = `https://musicbrainz.org/ws/2/discid/${id}?toc=${toc}&inc=recordings+artist-credits+genres&fmt=json`
   const found = await getJson(fetchImpl, url)
   const count = last - first + 1
   for (const release of found?.releases ?? []) {
@@ -117,7 +123,9 @@ async function lookupMusicBrainz({ first, last, lbas }, fetchImpl) {
       source: 'musicbrainz',
       artist: creditOf(release['artist-credit']),
       album: release.title,
-      tracks: medium.tracks.map((t, i) => ({ position: i + 1, title: t.title })),
+      year: yearOf(release.date),
+      genre: capitalized(release.genres?.[0]?.name),
+      tracks: medium.tracks.map((t, i) => ({ position: i + 1, title: t.title, ...(creditOf(t['artist-credit']) ? { artist: creditOf(t['artist-credit']) } : {}) })),
       coverUrl: release['cover-art-archive']?.front ? `https://coverartarchive.org/release/${release.id}/front-500` : null,
       coverHeaders: {},
     }

@@ -20,13 +20,13 @@
   {
     "id": "cd",
     "name": "USB-CD-Laufwerk",
-    "version": "1.0.1",
-    "description": "Audio-CDs vom USB-Laufwerk abspielen, mit Titelnamen und Cover aus dem Internet.",
-    "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjE5MiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMzIiLz48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjQ4IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIzMiIvPjxwYXRoIGQ9Ik0yNTYgMTEyYTE0NCAxNDQgMCAwIDEgMTQ0IDE0NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg0K",
-    "hostApi": 1,
-    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/cd-1.0.1.mpx",
-    "sha256": "6d59fb59da32b4d58a0d37e5663d7672ac3684254b89958524a2eefbc382dd4f",
-    "size": 14364,
+    "version": "1.1.3",
+    "description": "Audio-CDs vom USB-Laufwerk abspielen, mit Titelnamen und Cover aus dem Internet – und als MP3, AAC, WMA, FLAC oder ALAC in einen Medien-Ordner der Box rippen.",
+    "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjE5MiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMzIiLz48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjQ4IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIzMiIvPjxwYXRoIGQ9Ik0yNTYgMTEyYTE0NCAxNDQgMCAwIDEgMTQ0IDE0NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPgo=",
+    "hostApi": 17,
+    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/cd-1.1.3.mpx",
+    "sha256": "744682cc824572d7cb6e455df55aff31f2322589f357aa6c627182e71c510dba",
+    "size": 27926,
     "resources": {},
     "system": {
       "udev": 1,
@@ -34,7 +34,10 @@
       "groups": [
         "cdrom"
       ],
-      "packages": []
+      "packages": [
+        "cdparanoia",
+        "ffmpeg"
+      ]
     }
   },
   {
@@ -65,6 +68,24 @@
     "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/football-0.2.0.mpx",
     "sha256": "2645081641494343ffa23d8a900a088426c6435cb9f5ca1f1d8d49428c283886",
     "size": 38109,
+    "resources": {},
+    "system": {
+      "udev": 0,
+      "units": [],
+      "groups": [],
+      "packages": []
+    }
+  },
+  {
+    "id": "mediacontrol",
+    "name": "Media-Control",
+    "version": "1.3.2",
+    "description": "Ein runder Bedienknopf für den Player: Lautstärke, Titelwechsel und Play/Pause auf einer Scheibe, darum ein Ring, der sich mit dem Titel füllt. Drei Designs: Metall, bunt für Kinder, Neon für Teenager. Ersetzt die normalen Tasten, solange die Erweiterung an ist.",
+    "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS44IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIi8+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMy4yIiBmaWxsPSJjdXJyZW50Q29sb3IiIHN0cm9rZT0ibm9uZSIvPjxwYXRoIGQ9Ik0xMiA1djIuMk0xMiAxNi44VjE5TTUgMTJoMi4yTTE2LjggMTJIMTkiLz48L3N2Zz4K",
+    "hostApi": 18,
+    "url": "https://raw.githubusercontent.com/wowa1990/MuPiBox/upstream-v5.1-pr/extensions/dist/mediacontrol-1.3.2.mpx",
+    "sha256": "961e3c8279a35fe893057f80ad69ea7e493bee750ac2dcfee4d13239ffd2e6d6",
+    "size": 19908,
     "resources": {},
     "system": {
       "udev": 0,

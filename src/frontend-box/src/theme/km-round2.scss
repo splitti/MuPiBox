@@ -259,6 +259,21 @@ body.cf {
     gap: 10px;
   }
 
+  // the controls of an extension (api.player.controls - the media control): level with the cover and as big as it is
+  .kp-ctrl-ext {
+    --mc-size: 324px;
+    top: 40px;
+    gap: 6px;
+
+    .kp-ext-host {
+      width: 100%;
+    }
+
+    .kp-live {
+      height: 34px;
+    }
+  }
+
   .kp-time {
     width: 100%;
     // the bar's top edge is the column's top, the 32 px range around it starts 10 px higher

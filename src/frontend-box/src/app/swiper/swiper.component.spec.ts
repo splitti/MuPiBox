@@ -72,3 +72,36 @@ describe('SwiperComponent.stageSides', () => {
     }
   })
 })
+
+describe('SwiperComponent.coverflowFewStep', () => {
+  // (a cover as the component draws it: tilted by 65 degrees, 100 px back, in perspective of 1000 about the middle of the screen)
+  const inner = (cover: number, strip: number) => {
+    const lift = (cover / 2) * Math.sin((65 * Math.PI) / 180)
+    const reach = (cover / 2) * Math.cos((65 * Math.PI) / 180)
+    const outer = (cover / 2 + strip) // the outer edge stands here
+    const centre = outer / (1000 / (1000 + 100 - lift)) - reach
+    return ((centre - reach) * 1000) / (1000 + 100 + lift)
+  }
+
+  it('shows a single cover on a side whole, 50 px from the cover in the middle', () => {
+    expect(inner(300, SwiperComponent.coverflowFewStep(810, 1, 9, 300))).toBeCloseTo(150 + 50, 6)
+  })
+
+  it('moves the covers closer together with every further cover, until a full side shows the strips of a full list', () => {
+    let before = Infinity
+    for (let n = 1; n <= 9; n++) {
+      const step = SwiperComponent.coverflowFewStep(810, n, 9, 300)
+      expect(step).toBeLessThan(before)
+      before = step
+    }
+    expect(SwiperComponent.coverflowFewStep(810, 9, 9, 300)).toBeCloseTo(810 / 9, 6)
+    // (and with a part of a cover in between, while the list moves)
+    const half = SwiperComponent.coverflowFewStep(810, 1.5, 9, 300)
+    expect(half).toBeLessThan(SwiperComponent.coverflowFewStep(810, 1, 9, 300))
+    expect(half).toBeGreaterThan(SwiperComponent.coverflowFewStep(810, 2, 9, 300))
+  })
+
+  it('never puts the covers further out than the edge of the screen', () => {
+    for (const room of [60, 90, 250, 810]) for (let n = 1; n <= 6; n++) expect(SwiperComponent.coverflowFewStep(room, n, 6, 300) * n).toBeLessThanOrEqual(room + 1e-9)
+  })
+})

@@ -1,6 +1,6 @@
 import { AsyncPipe, NgTemplateOutlet } from '@angular/common'
 import { HttpClient } from '@angular/common/http'
-import { AfterViewInit, Component, DestroyRef, ElementRef, effect, inject, OnInit, signal, untracked, ViewChild } from '@angular/core'
+import { AfterViewInit, Component, DestroyRef, DoCheck, ElementRef, effect, inject, OnInit, signal, untracked, ViewChild } from '@angular/core'
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { FormsModule } from '@angular/forms'
 import { ActivatedRoute, Router } from '@angular/router'
@@ -65,6 +65,7 @@ import { noCoverStyle } from '../no-cover'
 import type { MupiboxConfig } from '../mupibox-config.model'
 import { StatusComponent } from '../status/status.component'
 import { KmStatusGroupComponent } from '../km-header/km-status-group.component'
+import { ExtensionHostService, type PlayerControlsHandle, type PlayerControlsState, type RepeatMode } from '../extension-host.service'
 import { OutputSwitchComponent } from '../output-switch/output-switch.component'
 import { PlayerCmds, PlayerService } from '../player.service'
 import type { PlaytimePlayState } from '../playtime.model'
@@ -122,7 +123,7 @@ export interface TrackListEntry {
     IonSpinner,
   ],
 })
-export class PlayerPage implements OnInit, AfterViewInit {
+export class PlayerPage implements OnInit, AfterViewInit, DoCheck {
   @ViewChild('range', { static: false }) range: IonRange
   @ViewChild('themeFontSource', { static: false, read: ElementRef }) themeFontSource: ElementRef<HTMLElement>
 
@@ -135,6 +136,9 @@ export class PlayerPage implements OnInit, AfterViewInit {
   cover = ''
   // km themes (children's themes): their own markup in the template (see theme/km-theme.service.ts)
   private readonly kmTheme = inject(KmThemeService)
+  private readonly extensionHost = inject(ExtensionHostService)
+  /** The buttons an extension gives this page (the media control): they replace the normal ones. */
+  protected readonly extControls = this.extensionHost.playerControls
   private readonly winamp = inject(WinampService)
   protected readonly km = this.kmTheme.isKm
   /** header, controls, track list and "Hören mit" of design round 2: the km themes and coverflow */
@@ -419,6 +423,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
     this.local$ = this.mediaService.local$
     // the listening-time chip lies above every page: hidden while the "Hören mit" window dims the player
     effect(() => document.body.classList.toggle('kp-out-open', this.outputOpen()))
+    this.destroyRef.onDestroy(() => this.controlsEnd?.())
     // The player refused a start or a play/next of this page: its tile's day's limit is used up (5.1) - back to the
     // list (TileTimeService shows the bar)
     let seenRefusals = this.tileTime.refusals()
@@ -595,10 +600,167 @@ export class PlayerPage implements OnInit, AfterViewInit {
     }
   }
 
+  /** The length of the track in seconds (0 when it is not known). */
+  private trackSeconds(): number {
+    if (this.media?.type === 'spotify') return (this.currentPlayedSpotify?.item?.duration_ms ?? 0) / 1000
+    return this.currentPlayedLocal?.durationSeconds ?? 0
+  }
+
+  /** Whether a place in the track can be chosen (the same players that have the progress bar). */
+  protected canSeekHere(): boolean {
+    const type = this.media?.type
+    return type === 'spotify' || type === 'library' || type === 'nas' || type === 'tidal' || type === 'jellyfin' || type === 'audible' || type === 'rss'
+  }
+
+  // ---------- what the media control of an extension (api.player.controls) uses: shuffle, repeat, winding, places ----------
+
+  private repeatTap: { mode: RepeatMode; until: number } | null = null
+  private repeatSet: RepeatMode = 'off'
+  /** How the playlist repeats: what the player says (an album of the box), but what was just chosen until it has taken it. */
+  protected repeatShown(): RepeatMode {
+    if (this.repeatTap && Date.now() < this.repeatTap.until) return this.repeatTap.mode
+    if (this.media?.type !== 'spotify') {
+      if (this.currentPlayedLocal?.repeat === false) this.repeatSet = 'off'
+      else if (this.currentPlayedLocal?.repeat === true && this.repeatSet === 'off') this.repeatSet = 'all'
+    }
+    return this.repeatSet
+  }
+
+  /** The repeat key: all, then one, then none. */
+  protected cycleRepeat() {
+    const next: RepeatMode = this.repeatShown() === 'off' ? 'all' : this.repeatShown() === 'all' ? 'one' : 'off'
+    this.repeatSet = next
+    this.repeatTap = { mode: next, until: Date.now() + 2500 }
+    this.playerService.setRepeatMode(next)
+  }
+
+  /** Whether shuffle can be used: Spotify music, or an album of the box when its player can do it - not a stream. */
+  protected canShuffle(): boolean {
+    if (this.media?.type === 'radio') return false
+    if (this.media?.type === 'spotify') return this.media.category === 'music' || this.media.category === 'other'
+    return this.currentPlayedLocal?.shuffleSupported === true
+  }
+
+  // ---------- the controls of an extension ----------
+
+  private controlsHost: HTMLElement | undefined
+  private controlsEnd: (() => void) | undefined
+  private controlsMounted: unknown
+  private controlsLast = ''
+  private controlsNow: PlayerControlsState | null = null
+  private readonly controlsListeners = new Set<(state: PlayerControlsState) => void>()
+
+  /** The place the extension's controls are drawn in (it is there while an extension gives them, see the template). */
+  @ViewChild('extControlsHost')
+  protected set extControlsHost(element: ElementRef<HTMLElement> | undefined) {
+    this.controlsHost = element?.nativeElement
+    this.mountControls()
+  }
+
+  private controlsState(): PlayerControlsState {
+    const times = this.kmTimes()
+    const type = this.media?.type
+    return {
+      playing: !!this.playing,
+      progress: Number.isFinite(this.progress) ? this.progress : 0,
+      live: type === 'radio',
+      canSkip: !this.media?.showid,
+      canSeek: this.canSeekHere(),
+      smooth: this.canSeekHere() && type !== 'spotify',
+      position: times?.position ?? '',
+      duration: times?.duration ?? '',
+      shuffle: !!this.media?.shuffle,
+      canShuffle: this.canShuffle(),
+      repeat: this.repeatShown(),
+      canRepeat: type !== 'radio',
+    }
+  }
+
+  /** Every change of what the controls show goes to them (the page's fields are no signals, so it is looked at on every check). */
+  ngDoCheck() {
+    if (this.controlsListeners.size === 0 && !this.controlsHost) return
+    const state = this.controlsState()
+    const key = JSON.stringify(state)
+    if (key === this.controlsLast) return
+    this.controlsLast = key
+    this.controlsNow = state
+    for (const fn of [...this.controlsListeners]) {
+      try {
+        fn(state)
+      } catch (error) {
+        console.warn('[PlayerPage] controls of an extension failed:', error)
+      }
+    }
+  }
+
+  private mountControls() {
+    const entry = this.extControls()
+    if (this.controlsMounted === entry && this.controlsEnd && this.controlsHost?.isConnected) return
+    this.controlsEnd?.()
+    this.controlsEnd = undefined
+    this.controlsMounted = undefined
+    this.controlsListeners.clear()
+    if (!entry || !this.controlsHost) return
+    const handle: PlayerControlsHandle = {
+      state: () => this.controlsNow ?? this.controlsState(),
+      onState: (fn) => {
+        this.controlsListeners.add(fn)
+        return () => this.controlsListeners.delete(fn)
+      },
+      playPause: () => this.playPause(),
+      volUp: () => this.volUp(),
+      volDown: () => this.volDown(),
+      prev: () => this.skipPrev(),
+      next: () => this.skipNext(),
+      toggleShuffle: () => this.toggleshuffle(),
+      cycleRepeat: () => this.cycleRepeat(),
+      wind: (mode) => this.windBox(mode),
+      scrub: (seconds) => this.scrubSeconds(seconds),
+      seekTo: (percent) => this.seekToPercent(percent),
+    }
+    this.controlsMounted = entry
+    this.controlsEnd = this.extensionHost.mountControls(entry, this.controlsHost, handle)
+  }
+
+  /** A place on the ring of the media control (percent). */
+  protected seekToPercent(percent: number) {
+    this.cancelAlbumEnd()
+    this.progress = percent
+    this.seekHold = { value: percent, until: Date.now() + 3000 }
+    if (this.media.type === 'spotify') {
+      const duration = this.currentPlayedSpotify?.item?.duration_ms
+      if (duration) this.playerService.seekPosition(duration * (percent / 100))
+    } else if (this.canSeekHere()) this.playerService.seekPosition(percent)
+  }
+
+  /** Winding of an album of the box (media control): the player plays faster (forward) or runs back silently - see windBox in the player. */
+  protected windBox(mode: string) {
+    this.cancelAlbumEnd()
+    this.playerService.wind(mode)
+  }
+
+  /** Winding at 2× / 4× (media control): moves the place by `seconds` on top of the normal playing. */
+  protected scrubSeconds(seconds: number) {
+    const total = this.trackSeconds()
+    if (!(total > 0)) return
+    // The place the winding has reached is kept here: the player reports the place late, and a stale report must not pull it back.
+    // (the control's steps are relative to the true place, which moves on by itself meanwhile - so the base takes that time too)
+    const now = Date.now()
+    const held = this.scrubBase && now < this.scrubBase.until ? this.scrubBase : null
+    const base = held ? held.value + (this.playing ? ((now - held.at) / 1000 / total) * 100 : 0) : this.progress
+    const target = Math.max(0, Math.min(99.5, base + (seconds / total) * 100))
+    this.scrubBase = { value: target, at: now, until: now + 1500 }
+    this.seekToPercent(target)
+  }
+
+  private scrubBase: { value: number; at: number; until: number } | null = null
+
   // A reported place (percent) - or the one just chosen, while the report has not reached it yet (see seekHold)
   private heldProgress(reported: number): number {
     const hold = this.seekHold
     if (!hold) return reported
+    // (winding: the ring follows the place of the winding, not the late reports)
+    if (this.scrubBase && Date.now() < this.scrubBase.until) return hold.value
     if (Math.abs(reported - hold.value) <= 2 || Date.now() > hold.until) {
       this.seekHold = null
       return reported
@@ -847,6 +1009,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
 
   ionViewWillLeave() {
     this.onPage = false
+    this.windHoldEnd()
     this.tileTime.leave(this.tileView)
     if (this.tileUsedUp) return
     // (left within the first seconds: shuffle must not be switched on after the page is gone - the next audiobook
@@ -1131,11 +1294,69 @@ export class PlayerPage implements OnInit, AfterViewInit {
     }
   }
 
+  // ---------- the keys for winding: a tap jumps 30 seconds, held down they wind at 2x (forward and back) ----------
+
+  /** How long a key is held before the winding starts (a tap stays a tap). */
+  private static readonly HOLD_WIND_AFTER_MS = 450
+  private static readonly HOLD_WIND_BEAT_MS = 500
+  private static readonly HOLD_WIND_TICK_MS = 250
+  private holdWindTimer: ReturnType<typeof setTimeout> | undefined
+  private holdWindTicker: ReturnType<typeof setInterval> | undefined
+  private holdWindBox = false
+  private holdWindSwallowUntil = 0
+
+  /** A finger / the mouse goes down on a winding key: after a moment of holding it, the winding starts (see windHoldEnd). */
+  protected windHoldStart(dir: 1 | -1) {
+    this.windHoldEnd()
+    this.holdWindSwallowUntil = 0
+    if (!this.canSeekHere()) return
+    this.holdWindTimer = setTimeout(() => {
+      this.holdWindTimer = undefined
+      this.beginHoldWind(dir)
+    }, PlayerPage.HOLD_WIND_AFTER_MS)
+  }
+
+  private beginHoldWind(dir: 1 | -1) {
+    if (!this.onPage || !this.canSeekHere()) return
+    if (this.media?.type !== 'spotify') {
+      // (an album of the box: the player plays faster, or runs back silently - said every half second, like the media control does)
+      const mode = dir === 1 ? 'f2' : 'b2'
+      this.holdWindBox = true
+      this.windBox(mode)
+      this.holdWindTicker = setInterval(() => this.windBox(mode), PlayerPage.HOLD_WIND_BEAT_MS)
+    } else {
+      // (Spotify cannot play faster: the place is moved on top of the normal playing - forward gains 1x, back loses 3x of the time)
+      const seconds = (dir === 1 ? 1 : -3) * (PlayerPage.HOLD_WIND_TICK_MS / 1000)
+      this.holdWindTicker = setInterval(() => this.scrubSeconds(seconds), PlayerPage.HOLD_WIND_TICK_MS)
+    }
+  }
+
+  /** The key is let go (or the finger leaves it): a winding stops, the click that follows it is no 30-second jump. */
+  protected windHoldEnd() {
+    clearTimeout(this.holdWindTimer)
+    this.holdWindTimer = undefined
+    if (this.holdWindTicker === undefined) return
+    clearInterval(this.holdWindTicker)
+    this.holdWindTicker = undefined
+    if (this.holdWindBox) {
+      this.holdWindBox = false
+      this.windBox('0')
+    }
+    this.holdWindSwallowUntil = Date.now() + 400
+  }
+
+  /** Whether the click of a key just is the end of a winding (then there is no jump). */
+  private windHoldClick(): boolean {
+    return Date.now() < this.holdWindSwallowUntil
+  }
+
   seekForward() {
+    if (this.windHoldClick()) return
     this.playerService.sendCmd(PlayerCmds.SEEKFORWARD)
   }
 
   seekBack() {
+    if (this.windHoldClick()) return
     this.cancelAlbumEnd()
     this.playerService.sendCmd(PlayerCmds.SEEKBACK)
   }

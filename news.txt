@@ -1,3 +1,31 @@
+<h3>DEV 5.1.2 - changes compared to 5.1.1</h3>
+<b>Covers</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>An album without a picture of its own (no cover.jpg or folder.jpg in its folder, none in a folder below it) shows the cover embedded in its first MP3 or FLAC file - on the display and in the app, for the NAS and the SD card. The box reads each file once (only its beginning) and remembers whether it has a picture; an album shown before the library walk got to it has its cover from the next time the list is opened. Without one, its cover from the internet as before.</li>
+</ul>
+<b>Extensions</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New in the catalog: "Media-Control" - one round control replaces the keys of the player: volume, track change and play/pause on one disc, a ring around it that fills with the track (tap or drag it to choose a place). Pull a track key sideways to wind at 2x or 4x, pull it down to latch the winding, tap to release. Hold the middle for a second set: back, eject (USB CD drive), shuffle, repeat. Three designs (metal, colourful for kids, neon for teenagers) and a colour for the ring to choose.</li>
+<li id='linews' class='linews'>"USB-CD-Laufwerk" 1.1: an audio CD can be ripped into a folder of the box (category, artist, album) as MP3, AAC, WMA, FLAC or ALAC. The names, the artist and the cover from Discogs or MusicBrainz are offered first and can be changed in a form in the app; every track shows its progress, and the tracks that are finished stay when a rip is cancelled or fails. Its settings have a page of their own.</li>
+</ul>
+<b>Display</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>The keys for rewind and fast-forward in the player: a tap still jumps 30 seconds, held down they now wind at 2x until let go.</li>
+<li id='linews' class='linews'>Cover Flow: a folder looks as in the other themes (a stack of cards with a badge); a short list shows a single cover on one side whole.</li>
+</ul>
+<b>Installation</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>A box installed with DietPi 10.8 (Debian 13) showed no pictures of radio stations, podcasts and NFC tags: the web server answered every picture below /cover with 404. It now serves /cover wherever its document root is.</li>
+</ul>
+<b>Manual</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>The manual is now also available in Swedish (Svenska): all pages are translated, and Swedish is in the language list of the manual; screenshots show the English display where no Swedish one exists. The translation is not yet checked by a native speaker.</li>
+</ul>
 <h3>DEV 5.1.1 - changes compared to 5.1.0</h3>
 <b>Updates</b>
 </ul>
