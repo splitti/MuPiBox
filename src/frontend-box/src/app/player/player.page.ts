@@ -1009,6 +1009,7 @@ export class PlayerPage implements OnInit, AfterViewInit, DoCheck {
 
   ionViewWillLeave() {
     this.onPage = false
+    this.windHoldEnd()
     this.tileTime.leave(this.tileView)
     if (this.tileUsedUp) return
     // (left within the first seconds: shuffle must not be switched on after the page is gone - the next audiobook
@@ -1293,11 +1294,69 @@ export class PlayerPage implements OnInit, AfterViewInit, DoCheck {
     }
   }
 
+  // ---------- the keys for winding: a tap jumps 30 seconds, held down they wind at 2x (forward and back) ----------
+
+  /** How long a key is held before the winding starts (a tap stays a tap). */
+  private static readonly HOLD_WIND_AFTER_MS = 450
+  private static readonly HOLD_WIND_BEAT_MS = 500
+  private static readonly HOLD_WIND_TICK_MS = 250
+  private holdWindTimer: ReturnType<typeof setTimeout> | undefined
+  private holdWindTicker: ReturnType<typeof setInterval> | undefined
+  private holdWindBox = false
+  private holdWindSwallowUntil = 0
+
+  /** A finger / the mouse goes down on a winding key: after a moment of holding it, the winding starts (see windHoldEnd). */
+  protected windHoldStart(dir: 1 | -1) {
+    this.windHoldEnd()
+    this.holdWindSwallowUntil = 0
+    if (!this.canSeekHere()) return
+    this.holdWindTimer = setTimeout(() => {
+      this.holdWindTimer = undefined
+      this.beginHoldWind(dir)
+    }, PlayerPage.HOLD_WIND_AFTER_MS)
+  }
+
+  private beginHoldWind(dir: 1 | -1) {
+    if (!this.onPage || !this.canSeekHere()) return
+    if (this.media?.type !== 'spotify') {
+      // (an album of the box: the player plays faster, or runs back silently - said every half second, like the media control does)
+      const mode = dir === 1 ? 'f2' : 'b2'
+      this.holdWindBox = true
+      this.windBox(mode)
+      this.holdWindTicker = setInterval(() => this.windBox(mode), PlayerPage.HOLD_WIND_BEAT_MS)
+    } else {
+      // (Spotify cannot play faster: the place is moved on top of the normal playing - forward gains 1x, back loses 3x of the time)
+      const seconds = (dir === 1 ? 1 : -3) * (PlayerPage.HOLD_WIND_TICK_MS / 1000)
+      this.holdWindTicker = setInterval(() => this.scrubSeconds(seconds), PlayerPage.HOLD_WIND_TICK_MS)
+    }
+  }
+
+  /** The key is let go (or the finger leaves it): a winding stops, the click that follows it is no 30-second jump. */
+  protected windHoldEnd() {
+    clearTimeout(this.holdWindTimer)
+    this.holdWindTimer = undefined
+    if (this.holdWindTicker === undefined) return
+    clearInterval(this.holdWindTicker)
+    this.holdWindTicker = undefined
+    if (this.holdWindBox) {
+      this.holdWindBox = false
+      this.windBox('0')
+    }
+    this.holdWindSwallowUntil = Date.now() + 400
+  }
+
+  /** Whether the click of a key just is the end of a winding (then there is no jump). */
+  private windHoldClick(): boolean {
+    return Date.now() < this.holdWindSwallowUntil
+  }
+
   seekForward() {
+    if (this.windHoldClick()) return
     this.playerService.sendCmd(PlayerCmds.SEEKFORWARD)
   }
 
   seekBack() {
+    if (this.windHoldClick()) return
     this.cancelAlbumEnd()
     this.playerService.sendCmd(PlayerCmds.SEEKBACK)
   }

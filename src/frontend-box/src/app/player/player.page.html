@@ -277,11 +277,11 @@
               <button class="kp-btn kp-skip" type="button" [disabled]="this.media.showid" (click)="skipNext()"><svg class="kp-solid" viewBox="0 0 24 24" aria-hidden="true"><rect x="16.2" y="5" width="2.8" height="14" rx="1" /><path d="M5 5v14l10.5-7z" /></svg></button>
             </div>
             <div class="kp-row kp-row-seek">
-              <button class="kp-btn kp-seek" type="button" (click)="seekBack()"><svg class="kp-solid" viewBox="0 0 24 24" aria-hidden="true"><path d="M11.5 6v12L3 12zM21 6v12l-8.5-6z" /></svg></button>
+              <button class="kp-btn kp-seek" type="button" (click)="seekBack()" (pointerdown)="windHoldStart(-1)" (pointerup)="windHoldEnd()" (pointercancel)="windHoldEnd()" (pointerleave)="windHoldEnd()" (contextmenu)="$event.preventDefault()"><svg class="kp-solid" viewBox="0 0 24 24" aria-hidden="true"><path d="M11.5 6v12L3 12zM21 6v12l-8.5-6z" /></svg></button>
               @if (media.type === 'spotify' && (media.category == 'music' || media.category == 'other')) {
                 <button class="kp-btn kp-seek" type="button" [class.kp-on]="media.shuffle" (click)="toggleshuffle()"><ion-icon name="shuffle-outline"></ion-icon></button>
               }
-              <button class="kp-btn kp-seek" type="button" (click)="seekForward()"><svg class="kp-solid" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.5 6v12L21 12zM3 6v12l8.5-6z" /></svg></button>
+              <button class="kp-btn kp-seek" type="button" (click)="seekForward()" (pointerdown)="windHoldStart(1)" (pointerup)="windHoldEnd()" (pointercancel)="windHoldEnd()" (pointerleave)="windHoldEnd()" (contextmenu)="$event.preventDefault()"><svg class="kp-solid" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.5 6v12L21 12zM3 6v12l8.5-6z" /></svg></button>
             </div>
           }
         </div>
@@ -374,7 +374,7 @@
           @if (media.type ==='spotify' && (media.category =='music' || media.category =='other')) {
             <ion-row class="controls-row">
               <ion-col size="4" class="ion-text-center">
-                <ion-button class="km-minor" (click)="seekBack()" color="light">
+                <ion-button class="km-minor" (click)="seekBack()" (pointerdown)="windHoldStart(-1)" (pointerup)="windHoldEnd()" (pointercancel)="windHoldEnd()" (pointerleave)="windHoldEnd()" (contextmenu)="$event.preventDefault()" color="light">
                   <ion-icon slot="icon-only" name="play-back" class="small-icon"></ion-icon>
                 </ion-button>
               </ion-col>
@@ -391,7 +391,7 @@
                 }
               </ion-col>
               <ion-col size="4" class="ion-text-center">
-                <ion-button class="km-minor" (click)="seekForward()" color="light">
+                <ion-button class="km-minor" (click)="seekForward()" (pointerdown)="windHoldStart(1)" (pointerup)="windHoldEnd()" (pointercancel)="windHoldEnd()" (pointerleave)="windHoldEnd()" (contextmenu)="$event.preventDefault()" color="light">
                   <ion-icon slot="icon-only" name="play-forward" class="small-icon"></ion-icon>
                 </ion-button>
               </ion-col>
@@ -399,12 +399,12 @@
           } @else {
             <ion-row class="controls-row">
               <ion-col size="6" class="ion-text-center">
-                <ion-button class="km-minor" (click)="seekBack()" color="light">
+                <ion-button class="km-minor" (click)="seekBack()" (pointerdown)="windHoldStart(-1)" (pointerup)="windHoldEnd()" (pointercancel)="windHoldEnd()" (pointerleave)="windHoldEnd()" (contextmenu)="$event.preventDefault()" color="light">
                   <ion-icon slot="icon-only" name="play-back" class="small-icon"></ion-icon>
                 </ion-button>
               </ion-col>
               <ion-col size="6" class="ion-text-center">
-                <ion-button class="km-minor" (click)="seekForward()" color="light">
+                <ion-button class="km-minor" (click)="seekForward()" (pointerdown)="windHoldStart(1)" (pointerup)="windHoldEnd()" (pointercancel)="windHoldEnd()" (pointerleave)="windHoldEnd()" (contextmenu)="$event.preventDefault()" color="light">
                   <ion-icon slot="icon-only" name="play-forward" class="small-icon"></ion-icon>
                 </ion-button>
               </ion-col>
