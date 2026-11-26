@@ -11,7 +11,6 @@ Seit MuPiBox 5.1 lassen sich **Erweiterungen** nachinstallieren: Zusatzfunktione
 | [Uhrzeit in der Kopfzeile](uhrzeit.md) | die Uhrzeit oben im Display, digital oder analog |
 | [Wetter](wetter.md) | das Wetter eines Ortes als Messuhren auf dem Display |
 | [Fußball](fussball.md) | der eigene Verein, der Spieltag und die Tabelle auf dem Display |
-| [Touch-Display Cover](touch-display.md) | ein Touch-Display (Waveshare 2,8 Zoll) zeigt das Cover: wischen dreht es wie einen Würfel, tippen spielt das Album |
 | [NFC-Extension](nfc.md) | bis zu drei NFC-Leser (PN5180, RC522, PN532, USB) starten Medien mit Tags: Tags zuordnen, Leser anschließen, Verdrahtung |
 
 > [!WARNING]

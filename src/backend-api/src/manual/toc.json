@@ -432,13 +432,6 @@
         }
       },
       {
-        "id": "touch-display",
-        "title": {
-          "de": "Touch-Display Cover",
-          "en": "Touch display cover"
-        }
-      },
-      {
         "id": "ohne-dsi-display",
         "title": {
           "de": "Ohne DSI-Display",

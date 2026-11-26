@@ -326,13 +326,6 @@ Schritten, 30 s vor/zurück, Mischen, Ausgabegerät wechseln, Stopp, Ausschalten
 die Logik (`logic.js`) ist ohne Hardware getestet (`node --test extensions/buttons/test/buttons.test.js`). Das Manifest wird erzeugt:
 `node extensions/buttons/test/manifest-source.js --write`. Die Seite steht unter System › „Die Box“ und nimmt „Drehregler und Taster“ mit.
 
-Das Touch-Display (`extensions/touchlcd/`, „Touch-Display Cover“, `hostApi` 14): ein Waveshare 2.8inch Capacitive Touch LCD (ST7789 am SPI, Touch-Chip CST328 am I2C)
-zeigt nur ein Cover. Wischen nach links oder rechts dreht es als Würfel (`cube.py`, Pillow, das Bild folgt dem Finger), ein Tippen öffnet den Artisten oder spielt das Album
-(derselbe Pfad wie beim Display der Box, `logic.js` `playerPathOf`), ein Wisch nach oben geht eine Ebene zurück. Die Ebenen kommen aus `/api/data`, `/api/library/*` und `/api/nas/*`.
-Der Python-Teil (`touchlcd.py`, `lcd.py`, `gesture.py`) schreibt über `spidev` und `lgpio`; DC, RST, BL und TP_RST sind `gpio`-Einstellungen (Standard 0, die App prüft sie gegen die Box),
-CS ist CE0 oder CE1. Ohne Hardware getestet: `node --test extensions/touchlcd/test/touchlcd.test.js` und `python -m unittest discover -s extensions/touchlcd/test`. Am PC:
-`python tools/touchlcd-sim.py [Cover.png …]` (Fenster, Maus als Finger) und `python tools/touchlcd-preview.py` (die Bewegungen als GIF).
-
 ## Offen (für Foto/Immich, NFC)
 
 Was eine Foto- oder Immich-Extension noch bräuchte (Ruhezustand im Display, eigene Nutzungsdauer, ein `lookup` ohne Suchwort) und was NFC

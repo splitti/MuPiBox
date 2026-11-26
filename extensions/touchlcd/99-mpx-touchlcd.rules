@@ -1,4 +1,0 @@
-# The SPI bus and the I2C bus of the header: the touch display is driven by a program of the box's user, which is not in the groups
-# spi and i2c (the devices are root:spi and root:i2c, mode 660). The group gpio is the one that user has for the header pins already.
-SUBSYSTEM=="spidev", KERNEL=="spidev[0-9]*.[0-9]*", GROUP="gpio", MODE="0660"
-SUBSYSTEM=="i2c-dev", KERNEL=="i2c-[0-9]*", GROUP="gpio", MODE="0660"
