@@ -51,6 +51,7 @@ IDENTICAL=()
 PLACING_CACHE=0
 STOPPED=0
 CRON_STOPPED=0
+STOPPED_UNITS=()
 LOCKED=0
 STEP=""
 # a run before this one was cut off halfway (its mark is there), and the way back of this run is whole
@@ -224,6 +225,17 @@ quiet() {
 	if [ "${NO_PM2:-0}" != 1 ] && systemctl is-active --quiet cron 2>/dev/null; then
 		systemctl stop cron && CRON_STOPPED=1
 	fi
+	# The services of a version before 5.1 that write into the program's config folder by its name of before while they
+	# run - also while the update runs: get_monitor.sh made monitor.json there again within a second, check_network.sh
+	# its links every 10 s. That folder then was not empty after the move, and the update stopped. (Not on a test copy.)
+	local unit
+	if [ "${H}" = /home/dietpi/.mupibox ]; then
+		for unit in mupi_check_monitor.service mupi_check_internet.service; do
+			if systemctl is-active --quiet "${unit}" 2>/dev/null; then
+				systemctl stop "${unit}" && STOPPED_UNITS+=("${unit}")
+			fi
+		done
+	fi
 	local i
 	for i in $(seq 1 60); do
 		pgrep -f 'mupibox/(\./)?(get_network|check_network|m3u_generator|add_index|data_clean)\.sh' >/dev/null 2>&1 || break
@@ -241,6 +253,10 @@ finish() {
 		done
 	fi
 	[ "${CRON_STOPPED}" = 1 ] && systemctl start cron
+	# (--no-block: at the start of the box this runs in mupi_update_recover.service, which the network check waits for)
+	for l in "${STOPPED_UNITS[@]}"; do
+		systemctl start --no-block "${l}"
+	done
 	[ "${STOPPED}" = 1 ] && sudo -H -u dietpi bash -c 'pm2 start server spotify-control >/dev/null 2>&1'
 	exit "$1"
 }
@@ -309,7 +325,7 @@ if [ -d "${CONF_BEFORE}" ] && [ ! -L "${CONF_BEFORE}" ]; then
 		esac
 	done
 	remove_empty_dir "${CONF_BEFORE}"
-	[ -e "${CONF_BEFORE}" ] && fail "${CONF_BEFORE} is not empty after the move"
+	[ -e "${CONF_BEFORE}" ] && fail "${CONF_BEFORE} is not empty after the move: $(ls -A "${CONF_BEFORE}" 2>/dev/null | head -n 10 | tr '\n' ' ')"
 fi
 if [ -d "${MUPI_SERVER}" ]; then
 	link "${MUPI_LIBRARY}" "${CONF_BEFORE}"
