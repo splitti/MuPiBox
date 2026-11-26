@@ -3,35 +3,40 @@
     "id": "erste-schritte",
     "title": {
       "de": "Erste Schritte",
-      "en": "Getting started"
+      "en": "Getting started",
+      "sv": "Komma igång"
     },
     "children": [
       {
         "id": "was-ist-die-mupibox",
         "title": {
           "de": "Was ist die MuPiBox?",
-          "en": "What is the MuPiBox?"
+          "en": "What is the MuPiBox?",
+          "sv": "Vad är MuPiBox?"
         }
       },
       {
         "id": "was-du-brauchst",
         "title": {
           "de": "Was du brauchst",
-          "en": "What you need"
+          "en": "What you need",
+          "sv": "Det här behöver du"
         }
       },
       {
         "id": "erster-start",
         "title": {
           "de": "Der erste Start",
-          "en": "The first start"
+          "en": "The first start",
+          "sv": "Första starten"
         }
       },
       {
         "id": "app-oeffnen",
         "title": {
           "de": "Die App öffnen und anmelden",
-          "en": "Opening the app and signing in"
+          "en": "Opening the app and signing in",
+          "sv": "Öppna appen och logga in"
         }
       }
     ]
@@ -40,56 +45,64 @@
     "id": "bedienung",
     "title": {
       "de": "Das Display bedienen",
-      "en": "Using the display"
+      "en": "Using the display",
+      "sv": "Använda displayen"
     },
     "children": [
       {
         "id": "startseite",
         "title": {
           "de": "Die Startseite",
-          "en": "The start page"
+          "en": "The start page",
+          "sv": "Startsidan"
         }
       },
       {
         "id": "player",
         "title": {
           "de": "Der Player",
-          "en": "The player"
+          "en": "The player",
+          "sv": "Spelaren"
         }
       },
       {
         "id": "fortsetzen",
         "title": {
           "de": "Fortsetzen und „Läuft gerade“",
-          "en": "Continue and “Now playing”"
+          "en": "Continue and “Now playing”",
+          "sv": "Fortsätt och ”Körs just nu”"
         }
       },
       {
         "id": "cover-und-themes",
         "title": {
           "de": "Cover und Themes",
-          "en": "Covers and themes"
+          "en": "Covers and themes",
+          "sv": "Omslag och teman"
         }
       },
       {
         "id": "winamp",
         "title": {
           "de": "Das Winamp-Theme",
-          "en": "The Winamp theme"
+          "en": "The Winamp theme",
+          "sv": "Winamp-temat"
         }
       },
       {
         "id": "eltern-zugang",
         "title": {
           "de": "Einstellungen am Display",
-          "en": "Settings on the display"
+          "en": "Settings on the display",
+          "sv": "Inställningar på displayen"
         }
       },
       {
         "id": "mehrere-benutzer",
         "title": {
           "de": "Mehrere Benutzer",
-          "en": "Several users"
+          "en": "Several users",
+          "sv": "Flera användare"
         }
       }
     ]
@@ -98,70 +111,80 @@
     "id": "inhalte",
     "title": {
       "de": "Inhalte hinzufügen",
-      "en": "Adding content"
+      "en": "Adding content",
+      "sv": "Lägga till innehåll"
     },
     "children": [
       {
         "id": "lokale-medien",
         "title": {
           "de": "Eigene Hörspiele und Musik",
-          "en": "Your own audiobooks and music"
+          "en": "Your own audiobooks and music",
+          "sv": "Egna ljudböcker och egen musik"
         }
       },
       {
         "id": "spotify",
         "title": {
           "de": "Spotify",
-          "en": "Spotify"
+          "en": "Spotify",
+          "sv": "Spotify"
         }
       },
       {
         "id": "podcasts-und-radio",
         "title": {
           "de": "Podcasts und Radio",
-          "en": "Podcasts and radio"
+          "en": "Podcasts and radio",
+          "sv": "Poddar och radio"
         }
       },
       {
         "id": "nas",
         "title": {
           "de": "NAS",
-          "en": "NAS"
+          "en": "NAS",
+          "sv": "NAS"
         }
       },
       {
         "id": "tidal",
         "title": {
           "de": "TIDAL",
-          "en": "TIDAL"
+          "en": "TIDAL",
+          "sv": "TIDAL"
         }
       },
       {
         "id": "jellyfin",
         "title": {
           "de": "Jellyfin",
-          "en": "Jellyfin"
+          "en": "Jellyfin",
+          "sv": "Jellyfin"
         }
       },
       {
         "id": "audible",
         "title": {
           "de": "Audible",
-          "en": "Audible"
+          "en": "Audible",
+          "sv": "Audible"
         }
       },
       {
         "id": "cover",
         "title": {
           "de": "Cover",
-          "en": "Covers"
+          "en": "Covers",
+          "sv": "Omslag"
         }
       },
       {
         "id": "verwalten",
         "title": {
           "de": "Inhalte verwalten",
-          "en": "Managing content"
+          "en": "Managing content",
+          "sv": "Hantera innehåll"
         }
       }
     ]
@@ -170,42 +193,48 @@
     "id": "spielzeit",
     "title": {
       "de": "Spielzeit und Ruhezeiten",
-      "en": "Playtime and quiet times"
+      "en": "Playtime and quiet times",
+      "sv": "Speltid och tysta tider"
     },
     "children": [
       {
         "id": "tageslimits",
         "title": {
           "de": "Tageslimits",
-          "en": "Daily limits"
+          "en": "Daily limits",
+          "sv": "Dagsgränser"
         }
       },
       {
         "id": "kachel-limit",
         "title": {
           "de": "Kacheln mit Tageslimit",
-          "en": "Tiles with a day's limit"
+          "en": "Tiles with a day's limit",
+          "sv": "Brickor med dagsgräns"
         }
       },
       {
         "id": "ruhezeiten",
         "title": {
           "de": "Ruhezeiten",
-          "en": "Quiet times"
+          "en": "Quiet times",
+          "sv": "Vilotider"
         }
       },
       {
         "id": "schlaftimer",
         "title": {
           "de": "Sofort-Aktionen und Schlaftimer",
-          "en": "Instant actions and sleep timer"
+          "en": "Instant actions and sleep timer",
+          "sv": "Snabbåtgärder och insomningstimer"
         }
       },
       {
         "id": "hoer-verlauf",
         "title": {
           "de": "Hör-Verlauf",
-          "en": "Listening history"
+          "en": "Listening history",
+          "sv": "Lyssningshistorik"
         }
       }
     ]
@@ -214,98 +243,112 @@
     "id": "fotos",
     "title": {
       "de": "Fotos",
-      "en": "Photos"
+      "en": "Photos",
+      "sv": "Foton"
     },
     "children": [
       {
         "id": "einschalten",
         "title": {
           "de": "Einschalten und Einstellungen",
-          "en": "Switching on and settings"
+          "en": "Switching on and settings",
+          "sv": "Slå på och inställningar"
         }
       },
       {
         "id": "am-display",
         "title": {
           "de": "Fotos am Display",
-          "en": "Photos on the display"
+          "en": "Photos on the display",
+          "sv": "Foton på displayen"
         }
       },
       {
         "id": "hochladen",
         "title": {
           "de": "Fotos hochladen",
-          "en": "Uploading photos"
+          "en": "Uploading photos",
+          "sv": "Ladda upp foton"
         }
       },
       {
         "id": "bildzeit",
         "title": {
           "de": "Bildzeit",
-          "en": "Picture time"
+          "en": "Picture time",
+          "sv": "Bildtid"
         }
       },
       {
         "id": "bildschirmschoner",
         "title": {
           "de": "Bildschirmschoner",
-          "en": "Screensaver"
+          "en": "Screensaver",
+          "sv": "Skärmsläckare"
         }
       },
       {
         "id": "nas-ordner",
         "title": {
           "de": "NAS-Ordner",
-          "en": "NAS folders"
+          "en": "NAS folders",
+          "sv": "NAS-mappar"
         }
       },
       {
         "id": "immich",
         "title": {
           "de": "Immich",
-          "en": "Immich"
+          "en": "Immich",
+          "sv": "Immich"
         }
       },
       {
         "id": "synology-photos",
         "title": {
           "de": "Synology Photos",
-          "en": "Synology Photos"
+          "en": "Synology Photos",
+          "sv": "Synology Photos"
         }
       },
       {
         "id": "nextcloud",
         "title": {
           "de": "Nextcloud",
-          "en": "Nextcloud"
+          "en": "Nextcloud",
+          "sv": "Nextcloud"
         }
       },
       {
         "id": "photoprism",
         "title": {
           "de": "PhotoPrism",
-          "en": "PhotoPrism"
+          "en": "PhotoPrism",
+          "sv": "PhotoPrism"
         }
       },
       {
         "id": "icloud",
         "title": {
           "de": "iCloud (geteilte Alben)",
-          "en": "iCloud (shared albums)"
+          "en": "iCloud (shared albums)",
+          "sv": "iCloud (delade album)"
         }
       },
       {
         "id": "speichern-oder-live",
         "title": {
           "de": "Foto-Dienste: speichern oder live",
-          "en": "Photo services: keep or live"
+          "en": "Photo services: keep or live",
+          "sv": "Fototjänster: spara eller live"
         }
       },
       {
         "id": "probleme",
         "title": {
           "de": "Wenn Fotos fehlen",
-          "en": "When photos are missing"
+          "en": "When photos are missing",
+          "sv": "När foton saknas"
         }
       }
     ]
@@ -314,56 +357,64 @@
     "id": "hardware",
     "title": {
       "de": "Hardware und Zubehör",
-      "en": "Hardware and accessories"
+      "en": "Hardware and accessories",
+      "sv": "Hårdvara och tillbehör"
     },
     "children": [
       {
         "id": "display",
         "title": {
           "de": "Display",
-          "en": "Display"
+          "en": "Display",
+          "sv": "Display"
         }
       },
       {
         "id": "sound",
         "title": {
           "de": "Sound und Lautstärke",
-          "en": "Sound and volume"
+          "en": "Sound and volume",
+          "sv": "Ljud och volym"
         }
       },
       {
         "id": "drehregler",
         "title": {
           "de": "Drehregler und Taster",
-          "en": "Rotary knob and button"
+          "en": "Rotary knob and button",
+          "sv": "Vridratt och knapp"
         }
       },
       {
         "id": "strom",
         "title": {
           "de": "Akku, MuPiHAT und Ausschalter",
-          "en": "Battery, MuPiHAT and power button"
+          "en": "Battery, MuPiHAT and power button",
+          "sv": "Batteri, MuPiHAT och strömbrytare"
         }
       },
       {
         "id": "luefter",
         "title": {
           "de": "Lüfter",
-          "en": "Fan"
+          "en": "Fan",
+          "sv": "Fläkt"
         }
       },
       {
         "id": "bluetooth",
         "title": {
           "de": "Bluetooth",
-          "en": "Bluetooth"
+          "en": "Bluetooth",
+          "sv": "Bluetooth"
         }
       },
       {
         "id": "wled",
         "title": {
           "de": "WLED",
-          "en": "WLED"
+          "en": "WLED",
+          "sv": "WLED"
         }
       }
     ]
@@ -372,147 +423,168 @@
     "id": "erweiterungen",
     "title": {
       "de": "Erweiterungen",
-      "en": "Extensions"
+      "en": "Extensions",
+      "sv": "Tillägg"
     },
     "children": [
       {
         "id": "installieren",
         "title": {
           "de": "Installieren und verwalten",
-          "en": "Installing and managing"
+          "en": "Installing and managing",
+          "sv": "Installera och hantera"
         }
       },
       {
         "id": "buttons",
         "title": {
           "de": "Buttons & GPIO Input",
-          "en": "Buttons & GPIO Input"
+          "en": "Buttons & GPIO Input",
+          "sv": "Buttons & GPIO Input"
         }
       },
       {
         "id": "cd-laufwerk",
         "title": {
           "de": "USB-CD-Laufwerk",
-          "en": "USB CD drive"
+          "en": "USB CD drive",
+          "sv": "USB-cd-enhet"
         }
       },
       {
         "id": "media-control",
         "title": {
           "de": "Media-Control",
-          "en": "Media control"
+          "en": "Media control",
+          "sv": "Media-Control"
         }
       },
       {
         "id": "uhrzeit",
         "title": {
           "de": "Uhrzeit in der Kopfzeile",
-          "en": "Time in the header"
+          "en": "Time in the header",
+          "sv": "Klockan i sidhuvudet"
         }
       },
       {
         "id": "wetter",
         "title": {
           "de": "Wetter",
-          "en": "Weather"
+          "en": "Weather",
+          "sv": "Väder"
         }
       },
       {
         "id": "fussball",
         "title": {
           "de": "Fußball",
-          "en": "Football"
+          "en": "Football",
+          "sv": "Fotboll"
         }
       },
       {
         "id": "oled",
         "title": {
           "de": "OLED-Display",
-          "en": "OLED display"
+          "en": "OLED display",
+          "sv": "OLED-display"
         }
       },
       {
         "id": "ohne-dsi-display",
         "title": {
           "de": "Ohne DSI-Display",
-          "en": "Without DSI display"
+          "en": "Without DSI display",
+          "sv": "Utan DSI-display"
         }
       },
       {
         "id": "nfc",
         "title": {
           "de": "NFC-Extension",
-          "en": "NFC extension"
+          "en": "NFC extension",
+          "sv": "NFC-tillägg"
         }
       },
       {
         "id": "nfc-tag-zuordnen",
         "title": {
           "de": "NFC: Tag mit einem Album verknüpfen",
-          "en": "NFC: Linking a tag to an album"
+          "en": "NFC: Linking a tag to an album",
+          "sv": "NFC: Koppla en tagg till ett album"
         }
       },
       {
         "id": "nfc-bild",
         "title": {
           "de": "NFC: Bild des Tags ändern",
-          "en": "NFC: Changing the picture of a tag"
+          "en": "NFC: Changing the picture of a tag",
+          "sv": "NFC: Byta bild på en tagg"
         }
       },
       {
         "id": "nfc-zugeordnete-tags",
         "title": {
           "de": "NFC: Zugeordnete Tags",
-          "en": "NFC: Assigned tags"
+          "en": "NFC: Assigned tags",
+          "sv": "NFC: Tilldelade taggar"
         }
       },
       {
         "id": "nfc-sprachnachrichten",
         "title": {
           "de": "NFC: Sprachnachrichten",
-          "en": "NFC: Spoken messages"
+          "en": "NFC: Spoken messages",
+          "sv": "NFC: Talade meddelanden"
         }
       },
       {
         "id": "nfc-drehregler",
         "title": {
           "de": "NFC: Drehregler",
-          "en": "NFC: Rotary knob"
+          "en": "NFC: Rotary knob",
+          "sv": "NFC: Vridratt"
         }
       },
       {
         "id": "nfc-leser",
         "title": {
           "de": "NFC: Leser hinzufügen",
-          "en": "NFC: Adding readers"
+          "en": "NFC: Adding readers",
+          "sv": "NFC: Lägga till läsare"
         }
       },
       {
         "id": "nfc-pn5180",
         "title": {
           "de": "NFC: PN5180 anschließen",
-          "en": "NFC: Connecting the PN5180"
+          "en": "NFC: Connecting the PN5180",
+          "sv": "NFC: Ansluta PN5180"
         }
       },
       {
         "id": "nfc-rc522",
         "title": {
           "de": "NFC: RC522 anschließen",
-          "en": "NFC: Connecting the RC522"
+          "en": "NFC: Connecting the RC522",
+          "sv": "NFC: Ansluta RC522"
         }
       },
       {
         "id": "nfc-pn532",
         "title": {
           "de": "NFC: PN532 anschließen",
-          "en": "NFC: Connecting the PN532"
+          "en": "NFC: Connecting the PN532",
+          "sv": "NFC: Ansluta PN532"
         }
       },
       {
         "id": "nfc-usb",
         "title": {
           "de": "NFC: USB-Leser anschließen",
-          "en": "NFC: Connecting a USB reader"
+          "en": "NFC: Connecting a USB reader",
+          "sv": "NFC: Ansluta en USB-läsare"
         }
       }
     ]
@@ -521,49 +593,56 @@
     "id": "netzwerk",
     "title": {
       "de": "Netzwerk und Fernzugriff",
-      "en": "Network and remote access"
+      "en": "Network and remote access",
+      "sv": "Nätverk och fjärråtkomst"
     },
     "children": [
       {
         "id": "wlan-und-lan",
         "title": {
           "de": "WLAN und LAN",
-          "en": "Wi-Fi and LAN"
+          "en": "Wi-Fi and LAN",
+          "sv": "Wi-Fi och LAN"
         }
       },
       {
         "id": "freigaben",
         "title": {
           "de": "Freigaben und Fernsteuerung",
-          "en": "Shares and remote control"
+          "en": "Shares and remote control",
+          "sv": "Delningar och fjärrstyrning"
         }
       },
       {
         "id": "sicherheit",
         "title": {
           "de": "Passwort und HTTPS",
-          "en": "Password and HTTPS"
+          "en": "Password and HTTPS",
+          "sv": "Lösenord och HTTPS"
         }
       },
       {
         "id": "telegram",
         "title": {
           "de": "Telegram",
-          "en": "Telegram"
+          "en": "Telegram",
+          "sv": "Telegram"
         }
       },
       {
         "id": "mqtt",
         "title": {
           "de": "MQTT",
-          "en": "MQTT"
+          "en": "MQTT",
+          "sv": "MQTT"
         }
       },
       {
         "id": "home-assistant",
         "title": {
           "de": "Home Assistant",
-          "en": "Home Assistant"
+          "en": "Home Assistant",
+          "sv": "Home Assistant"
         }
       }
     ]
@@ -572,42 +651,48 @@
     "id": "wartung",
     "title": {
       "de": "Wartung",
-      "en": "Maintenance"
+      "en": "Maintenance",
+      "sv": "Underhåll"
     },
     "children": [
       {
         "id": "updates",
         "title": {
           "de": "Updates",
-          "en": "Updates"
+          "en": "Updates",
+          "sv": "Uppdateringar"
         }
       },
       {
         "id": "backup",
         "title": {
           "de": "Backup",
-          "en": "Backup"
+          "en": "Backup",
+          "sv": "Säkerhetskopia"
         }
       },
       {
         "id": "neustart",
         "title": {
           "de": "Neu starten und Ausschalten",
-          "en": "Restart and shut down"
+          "en": "Restart and shut down",
+          "sv": "Starta om och stänga av"
         }
       },
       {
         "id": "protokolle",
         "title": {
           "de": "Protokolle und Zustand",
-          "en": "Logs and status"
+          "en": "Logs and status",
+          "sv": "Loggar och status"
         }
       },
       {
         "id": "system",
         "title": {
           "de": "System- und Experteneinstellungen",
-          "en": "System and expert settings"
+          "en": "System and expert settings",
+          "sv": "System- och expertinställningar"
         }
       }
     ]
@@ -616,49 +701,56 @@
     "id": "referenz",
     "title": {
       "de": "Einstellungs-Referenz",
-      "en": "Settings reference"
+      "en": "Settings reference",
+      "sv": "Inställningsreferens"
     }
   },
   {
     "id": "fehlerbehebung",
     "title": {
       "de": "Fehlerbehebung",
-      "en": "Troubleshooting"
+      "en": "Troubleshooting",
+      "sv": "Felsökning"
     },
     "children": [
       {
         "id": "kein-ton",
         "title": {
           "de": "Kein Ton",
-          "en": "No sound"
+          "en": "No sound",
+          "sv": "Inget ljud"
         }
       },
       {
         "id": "app-nicht-erreichbar",
         "title": {
           "de": "Die App ist nicht erreichbar",
-          "en": "The app is not reachable"
+          "en": "The app is not reachable",
+          "sv": "Appen går inte att nå"
         }
       },
       {
         "id": "spotify-probleme",
         "title": {
           "de": "Spotify spielt nicht",
-          "en": "Spotify does not play"
+          "en": "Spotify does not play",
+          "sv": "Spotify spelar inte"
         }
       },
       {
         "id": "haengt-beim-ausschalten",
         "title": {
           "de": "Die Box hängt beim Ausschalten",
-          "en": "The box hangs when shutting down"
+          "en": "The box hangs when shutting down",
+          "sv": "Boxen hänger sig vid avstängning"
         }
       },
       {
         "id": "weitere-faelle",
         "title": {
           "de": "Weitere Fälle",
-          "en": "More cases"
+          "en": "More cases",
+          "sv": "Fler fall"
         }
       }
     ]
@@ -667,28 +759,32 @@
     "id": "anhang",
     "title": {
       "de": "Anhang",
-      "en": "Appendix"
+      "en": "Appendix",
+      "sv": "Bilaga"
     },
     "children": [
       {
         "id": "gpio",
         "title": {
           "de": "GPIO-Belegung",
-          "en": "GPIO assignment"
+          "en": "GPIO assignment",
+          "sv": "GPIO-belägg"
         }
       },
       {
         "id": "dateien-und-dienste",
         "title": {
           "de": "Dateien, Ports und Dienste",
-          "en": "Files, ports and services"
+          "en": "Files, ports and services",
+          "sv": "Filer, portar och tjänster"
         }
       },
       {
         "id": "glossar",
         "title": {
           "de": "Glossar",
-          "en": "Glossary"
+          "en": "Glossary",
+          "sv": "Ordlista"
         }
       }
     ]

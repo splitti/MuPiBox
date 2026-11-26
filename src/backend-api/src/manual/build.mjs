@@ -23,6 +23,15 @@ const gpioData = JSON.parse(fs.readFileSync(path.join(here, 'gpio-map.json'), 'u
 const enApp = JSON.parse(fs.readFileSync(path.join(here, '../mupi-app/i18n/en.json'), 'utf8'))
 const LANGS = Object.keys(strings) // the first one is the source language
 const SOURCE = LANGS[0]
+// the app's own translations (German text -> text of the language), for the settings reference; English is the fallback, as in the app
+const appI18n = {}
+for (const l of LANGS) {
+  try {
+    appI18n[l] = JSON.parse(fs.readFileSync(path.join(here, `../mupi-app/i18n/${l}.json`), 'utf8'))
+  } catch {
+    // no translation file of the app for this language
+  }
+}
 
 // The version this manual describes: the newest heading of news.txt ("DEV 5.0.7 - changes compared to ...")
 function manualVersion() {
@@ -213,13 +222,15 @@ function markdown(src, ctx) {
 // ---------------------------------------------------------------- reference pages built from the schema
 
 const mdEscape = (s) => String(s ?? '').replace(/\|/g, '\\|').replace(/\n+/g, ' ')
-const num = (v, lang) => (typeof v === 'number' && lang === 'de' ? String(v).replace('.', ',') : String(v))
+const num = (v, lang) => (typeof v === 'number' && (lang === 'de' || lang === 'sv') ? String(v).replace('.', ',') : String(v))
 const groups = schema.settingsGroups
 const missingTranslations = new Set()
 
 // the app's own translation (German text -> English text); what it does not know stays as it is (theme names ...)
 function tr(text, lang) {
   if (lang === SOURCE || typeof text !== 'string' || !text.trim()) return text
+  const own = appI18n[lang]
+  if (own && text in own) return own[text]
   if (text in enApp) return enApp[text]
   missingTranslations.add(text)
   return text
@@ -292,7 +303,7 @@ const HEADER_PINS = [
 // Buttons for the accessories you can choose, the pin header and the table of their pins. manual.js makes the buttons
 // work (it reads the data from the script tag); without it the table still tells everything.
 function gpioMap(lang, t) {
-  const loc = (v) => (typeof v === 'string' ? v : (v[lang] ?? v[SOURCE]))
+  const loc = (v) => (typeof v === 'string' ? v : (v[lang] ?? v.en ?? v[SOURCE]))
   const prepare = (list) =>
     list.map((a) => ({
       id: a.id,
@@ -350,7 +361,7 @@ const CHAPTER_ICONS = {
 
 function buildToc(lang) {
   const toc = JSON.parse(fs.readFileSync(path.join(here, 'toc.json'), 'utf8'))
-  const title = (n) => (typeof n.title === 'string' ? n.title : (n.title[lang] ?? n.title[SOURCE]))
+  const title = (n) => (typeof n.title === 'string' ? n.title : (n.title[lang] ?? n.title.en ?? n.title[SOURCE]))
   const prepare = (nodes) =>
     nodes.map((n) => {
       const node = { id: n.id, title: title(n), icon: n.icon ?? CHAPTER_ICONS[n.id] }
@@ -546,7 +557,7 @@ function buildLanguage(lang) {
         if (fs.existsSync(path.join(here, 'img', lang, name))) return toRoot(node.out, `img/${lang}/${name}`)
         if (fs.existsSync(path.join(here, 'img', name))) return toRoot(node.out, `img/${name}`)
         // a picture only another language has (a screenshot of its display): better than none
-        for (const other of LANGS) if (fs.existsSync(path.join(here, 'img', other, name))) return toRoot(node.out, `img/${other}/${name}`)
+        for (const other of ['en', ...LANGS]) if (fs.existsSync(path.join(here, 'img', other, name))) return toRoot(node.out, `img/${other}/${name}`)
         problems.push(`${lang}: picture ${name} in ${node.rel}`)
         return toRoot(node.out, `img/${name}`)
       },
