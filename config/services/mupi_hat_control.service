@@ -12,7 +12,8 @@ Type=simple
 WorkingDirectory=/tmp/
 User=root
 ExecStart=/bin/bash -c '/usr/local/bin/mupibox/mupihat_automation.sh'
-ExecStop=/bin/kill -TERM $(cat /run/mupi_hat_control.pid)
+# (no ExecStop: systemd ends the script itself. The one before - kill $(cat <pid file>) - knows no "$(...)" in systemd
+# and failed on every stop, so a script that had ended was "failed" and started again every 30 s)
 # Phase 13b (B4): on-abort only fires on SIGABRT — it misses normal
 # non-zero exits and the typical set-e bash exit code path. This service
 # drives Low-Battery warnings and auto-shutdown; a stuck-dead service

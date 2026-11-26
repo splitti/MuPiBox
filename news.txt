@@ -1,3 +1,14 @@
+<h3>DEV 5.1.1 - changes compared to 5.1.0</h3>
+<b>Updates</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>The update from 5.0 to 5.1 could stop while the folders were moved ("... is not empty after the move" in the log) and took everything back - the more likely, the slower the box and the larger its library: two services of the version before (the check of the display and the internet check) went on writing into the old folder while it was emptied. They are paused for the move now and started again after it, and the log names what was left in the folder.</li>
+</ul>
+<b>MuPiHAT</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>A MuPiHAT without a battery (USB-C mode): its control service ended, failed when it was stopped and was started again every 30 s, without end. It now waits for a battery instead (checked once a minute); with one, the low-battery warning and the shutdown work as before.</li>
+</ul>
 <h3>DEV 5.1.0 - changes compared to 5.0.17</h3>
 <b>Folders of the box</b>
 </ul>
