@@ -237,7 +237,7 @@
 
 .mc-seg text.mc-one {
   fill: var(--mc-on);
-  font-size: 7px;
+  font-size: 5.4px;
 }
 
 /* the centre key held: it sinks and glows until the second set shows */

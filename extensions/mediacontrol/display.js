@@ -61,19 +61,19 @@ function build(api, host, ctl) {
   const paths = { up: sectorPath(0), right: sectorPath(90), down: sectorPath(180), left: sectorPath(270) }
   const seg = (label, d, ...kids) => s('g', { class: 'mc-seg', role: 'button', 'aria-label': label }, s('path', { d }), ...kids)
 
-  const upSeg = seg('Volume up', paths.up, text({ x: 50, y: 18.4 }, 'VOL+'))
-  const downSeg = seg('Volume down', paths.down, text({ x: 50, y: 89.6 }, 'VOL−'))
-  const speedPrev = text({ class: 'mc-speed', x: 12, y: 62.5 }, '')
-  const speedNext = text({ class: 'mc-speed', x: 88, y: 62.5 }, '')
-  const iconPrev = s('g', { class: 'mc-icon' }, s('rect', { x: 9, y: 44, width: 1.8, height: 12, rx: 0.6 }), s('path', { d: 'M20.5 44v12L11.5 50z' }))
-  const iconNext = s('g', { class: 'mc-icon' }, s('rect', { x: 89.2, y: 44, width: 1.8, height: 12, rx: 0.6 }), s('path', { d: 'M79.5 44v12L88.5 50z' }))
+  const upSeg = seg('Volume up', paths.up, text({ x: 50, y: 20.5 }, 'VOL+'))
+  const downSeg = seg('Volume down', paths.down, text({ x: 50, y: 87.5 }, 'VOL−'))
+  const speedPrev = text({ class: 'mc-speed', x: 16.5, y: 59 }, '')
+  const speedNext = text({ class: 'mc-speed', x: 83.5, y: 59 }, '')
+  const iconPrev = s('g', { class: 'mc-icon' }, s('rect', { x: 10.75, y: 44, width: 1.8, height: 12, rx: 0.6 }), s('path', { d: 'M22.25 44v12L13.25 50z' }))
+  const iconNext = s('g', { class: 'mc-icon' }, s('rect', { x: 87.45, y: 44, width: 1.8, height: 12, rx: 0.6 }), s('path', { d: 'M77.75 44v12L86.75 50z' }))
   // (a padlock above the arrows while the winding is held)
   const padlock = (cx) =>
-    s('g', { class: 'mc-lock', hidden: '' }, s('rect', { x: cx - 3, y: 37, width: 6, height: 4.8, rx: 0.9 }), s('path', { d: `M${cx - 1.8} 37v-1.7a1.8 1.8 0 0 1 3.6 0V37` }))
-  const lockPrev = padlock(12)
-  const lockNext = padlock(88)
-  const windPrev = s('g', { hidden: '' }, s('path', { class: 'mc-icon', d: 'M15.5 45.5v9l-6-4.5zM9.5 45.5v9l-6-4.5z' }), speedPrev, lockPrev)
-  const windNext = s('g', { hidden: '' }, s('path', { class: 'mc-icon', d: 'M84.5 45.5v9l6-4.5zM90.5 45.5v9l6-4.5z' }), speedNext, lockNext)
+    s('g', { class: 'mc-lock', hidden: '' }, s('rect', { x: cx - 3, y: 33.2, width: 6, height: 4.8, rx: 0.9 }), s('path', { d: `M${cx - 1.8} 33.2v-1.7a1.8 1.8 0 0 1 3.6 0v1.7` }))
+  const lockPrev = padlock(16.5)
+  const lockNext = padlock(83.5)
+  const windPrev = s('g', { hidden: '' }, s('path', { class: 'mc-icon', d: 'M22.5 41v9l-6-4.5zM16.5 41v9l-6-4.5z' }), speedPrev, lockPrev)
+  const windNext = s('g', { hidden: '' }, s('path', { class: 'mc-icon', d: 'M77.5 41v9l6-4.5zM83.5 41v9l6-4.5z' }), speedNext, lockNext)
   const prevSeg = seg('Previous', paths.left, iconPrev, windPrev)
   const nextSeg = seg('Next', paths.right, iconNext, windNext)
   prevSeg.classList.add('mc-track')
@@ -89,22 +89,22 @@ function build(api, host, ctl) {
   const backSeg = seg(
     'Back',
     paths.up,
-    s('g', { class: 'mc-line', transform: 'translate(3.9 -3)' }, s('path', { d: 'M44.2 11.2l-4.2 4.2 4.2 4.2M40.4 15.4h11.1a4.2 4.2 0 0 1 0 8.4h-3.6' })),
+    s('g', { class: 'mc-line', transform: 'translate(2.15 -1)' }, s('path', { d: 'M44.2 11.2l-4.2 4.2 4.2 4.2M40.4 15.4h11.1a4.2 4.2 0 0 1 0 8.4h-3.6' })),
   )
-  const ejectSeg = seg('Eject CD', paths.down, s('path', { class: 'mc-icon', transform: 'translate(-5 -2.1) scale(1.1)', d: 'M50 74.2l-5 7.4h10zM45 83.6h10v1.8H45z' }))
-  const shuffleState = text({ class: 'mc-state', x: 12, y: 62.5 }, 'OFF')
+  const ejectSeg = seg('Eject CD', paths.down, s('path', { class: 'mc-icon', transform: 'translate(-5 -4.28) scale(1.1)', d: 'M50 74.2l-5 7.4h10zM45 83.6h10v1.8H45z' }))
+  const shuffleState = text({ class: 'mc-state', x: 16.5, y: 59 }, 'OFF')
   const shuffleSeg = seg(
     'Shuffle',
     paths.left,
-    s('g', { class: 'mc-line', style: 'stroke-width: 3.2px', transform: 'translate(6 44) scale(0.5)' }, s('path', { d: 'M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5' })),
+    s('g', { class: 'mc-line', style: 'stroke-width: 3.2px', transform: 'translate(10.25 40.5) scale(0.5)' }, s('path', { d: 'M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5' })),
     shuffleState,
   )
-  const repeatOne = text({ class: 'mc-one', x: 88, y: 52.4 }, '1')
-  const repeatState = text({ class: 'mc-state', x: 88, y: 62.5 }, 'OFF')
+  const repeatOne = text({ class: 'mc-one', x: 83.5, y: 48.5 }, '1')
+  const repeatState = text({ class: 'mc-state', x: 83.5, y: 59 }, 'OFF')
   const repeatSeg = seg(
     'Repeat',
     paths.right,
-    s('g', { class: 'mc-line', style: 'stroke-width: 3.2px', transform: 'translate(82 44) scale(0.5)' }, s('path', { d: 'm17 2 4 4-4 4M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4M21 13v1a4 4 0 0 1-4 4H3' })),
+    s('g', { class: 'mc-line', style: 'stroke-width: 3.2px', transform: 'translate(77.5 40.5) scale(0.5)' }, s('path', { d: 'm17 2 4 4-4 4M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4M21 13v1a4 4 0 0 1-4 4H3' })),
     repeatOne,
     repeatState,
   )
@@ -187,6 +187,7 @@ function build(api, host, ctl) {
       el.style.transform = mine ? `translate(${pulled.units}px, 0)` : 'translate(0, 0)'
       const fast = mine && pulled.stage > 0
       icon.toggleAttribute('hidden', fast)
+      if (fast) wind.setAttribute('transform', locked && locked.side === side ? 'translate(0 5.65)' : 'translate(0 0)')
       wind.toggleAttribute('hidden', !fast)
       if (fast) label.textContent = `${pulled.stage === 1 ? 2 : 4}×`
     }
