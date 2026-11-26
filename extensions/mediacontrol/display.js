@@ -16,6 +16,7 @@ import {
   TAP_MS,
   WIND_BEAT_MS,
   holdMs,
+  latched,
   onRing,
   percentAt,
   ringColor,
@@ -50,6 +51,7 @@ function build(api, host, ctl) {
   let chosen = null
   let holding = false
   let canEject = false
+  let locked = null // a winding held at its speed: { side, dir, stage }
   let gone = false
   const settings = api.settings?.()
   const longMs = holdMs(settings)
@@ -64,8 +66,13 @@ function build(api, host, ctl) {
   const speedNext = text({ class: 'mc-speed', x: 88, y: 62.5 }, '')
   const iconPrev = s('g', { class: 'mc-icon' }, s('rect', { x: 9, y: 44, width: 1.8, height: 12, rx: 0.6 }), s('path', { d: 'M20.5 44v12L11.5 50z' }))
   const iconNext = s('g', { class: 'mc-icon' }, s('rect', { x: 89.2, y: 44, width: 1.8, height: 12, rx: 0.6 }), s('path', { d: 'M79.5 44v12L88.5 50z' }))
-  const windPrev = s('g', { hidden: '' }, s('path', { class: 'mc-icon', d: 'M15.5 45.5v9l-6-4.5zM9.5 45.5v9l-6-4.5z' }), speedPrev)
-  const windNext = s('g', { hidden: '' }, s('path', { class: 'mc-icon', d: 'M84.5 45.5v9l6-4.5zM90.5 45.5v9l6-4.5z' }), speedNext)
+  // (a padlock above the arrows while the winding is held)
+  const padlock = (cx) =>
+    s('g', { class: 'mc-lock', hidden: '' }, s('rect', { x: cx - 3, y: 37, width: 6, height: 4.8, rx: 0.9 }), s('path', { d: `M${cx - 1.8} 37v-1.7a1.8 1.8 0 0 1 3.6 0V37` }))
+  const lockPrev = padlock(12)
+  const lockNext = padlock(88)
+  const windPrev = s('g', { hidden: '' }, s('path', { class: 'mc-icon', d: 'M15.5 45.5v9l-6-4.5zM9.5 45.5v9l-6-4.5z' }), speedPrev, lockPrev)
+  const windNext = s('g', { hidden: '' }, s('path', { class: 'mc-icon', d: 'M84.5 45.5v9l6-4.5zM90.5 45.5v9l6-4.5z' }), speedNext, lockNext)
   const prevSeg = seg('Previous', paths.left, iconPrev, windPrev)
   const nextSeg = seg('Next', paths.right, iconNext, windNext)
   prevSeg.classList.add('mc-track')
@@ -154,11 +161,13 @@ function build(api, host, ctl) {
     flag(hub, 'mc-down', pressed === 'play')
     flag(hub, 'mc-holding', holding)
 
-    for (const [side, el, icon, wind, label] of [
-      ['prev', prevSeg, iconPrev, windPrev, speedPrev],
-      ['next', nextSeg, iconNext, windNext, speedNext],
+    for (const [side, el, icon, wind, label, lock] of [
+      ['prev', prevSeg, iconPrev, windPrev, speedPrev, lockPrev],
+      ['next', nextSeg, iconNext, windNext, speedNext, lockNext],
     ]) {
       const mine = pulled && pulled.side === side
+      flag(el, 'mc-locked', locked && locked.side === side)
+      lock.toggleAttribute('hidden', !(locked && locked.side === side))
       flag(el, 'mc-down', pressed === side)
       flag(el, 'mc-off', !st.canSkip || live)
       flag(el, 'mc-pulled', mine)
@@ -186,7 +195,9 @@ function build(api, host, ctl) {
   }
   const unsubscribe = ctl.onState((next) => {
     st = next
-    render()
+    // a held winding ends by itself when there is nothing left to wind (a stream, the start or the end of the track)
+    if (locked && (!st.canSkip || st.live || (locked.dir === -1 && st.progress <= 0.3) || (locked.dir === 1 && st.progress >= 99.7))) unlock()
+    else render()
   })
 
   // ---------- the volume buttons: they go on while held, the way a button on a car's steering wheel does ----------
@@ -256,6 +267,7 @@ function build(api, host, ctl) {
   }
   hub.addEventListener('pointerdown', (event) => {
     event.stopPropagation()
+    if (locked) unlock()
     pressed = 'play'
     holding = true
     longDone = false
@@ -322,7 +334,8 @@ function build(api, host, ctl) {
   }
 
   // ---------- the track buttons: tap = the track before / after, pulled to their own side = winding at 2× and 4× ----------
-  let origin = { x: 0, t: 0, moved: false }
+  let origin = { x: 0, y: 0, t: 0, moved: false }
+  let tapToRelease = false
   let scrubTicker
   let winding = false
   const stopScrub = () => {
@@ -345,6 +358,15 @@ function build(api, host, ctl) {
     }
     scrubTicker = setInterval(() => ctl.scrub(scrubSeconds(dir, stage, SCRUB_TICK_MS)), SCRUB_TICK_MS)
   }
+  /** Lets a held winding go: it stops and the button springs back. */
+  const unlock = () => {
+    locked = null
+    tapToRelease = false
+    stopScrub()
+    pulled = null
+    pressed = null
+    render()
+  }
   for (const [el, side] of [
     [prevSeg, 'prev'],
     [nextSeg, 'next'],
@@ -353,13 +375,25 @@ function build(api, host, ctl) {
       event.stopPropagation()
       if (!st.canSkip || st.live) return
       el.setPointerCapture?.(event.pointerId)
-      origin = { x: event.clientX, t: Date.now(), moved: false }
+      origin = { x: event.clientX, y: event.clientY, t: Date.now(), moved: false }
+      // a press on the button that holds the winding: a short tap lets it go (see `up`)
+      if (locked && locked.side === side) {
+        tapToRelease = true
+        pressed = side
+        render()
+        return
+      }
+      // (the other button: the held winding ends, this one starts as usual)
+      if (locked) unlock()
       pressed = side
       pulled = { side, units: 0, stage: 0 }
       render()
     })
     el.addEventListener('pointermove', (event) => {
-      if (!pulled || pulled.side !== side) return
+      if (tapToRelease || !pulled || pulled.side !== side || locked) {
+        if (tapToRelease && Math.abs(event.clientX - origin.x) + Math.abs(event.clientY - origin.y) > (pad.getBoundingClientRect().width || 240) * TAP_MOVE) origin.moved = true
+        return
+      }
       const width = pad.getBoundingClientRect().width || 240
       const control = width / 0.74
       const dx = (event.clientX - origin.x) * (side === 'next' ? 1 : -1)
@@ -370,11 +404,29 @@ function build(api, host, ctl) {
       const changed = stage !== pulled.stage
       pulled = { side, units, stage }
       if (changed) startScrub(side === 'next' ? 1 : -1, stage)
+      // pulled on and then swiped down: the winding is held at this speed until the button is tapped
+      if (stage > 0 && latched(event.clientY - origin.y, control)) locked = { side, dir: side === 'next' ? 1 : -1, stage }
       render()
     })
     const up = (event) => {
       event.stopPropagation()
+      if (tapToRelease) {
+        tapToRelease = false
+        const tap = !origin.moved && Date.now() - origin.t < TAP_MS && event.type !== 'pointercancel'
+        if (tap) unlock()
+        else {
+          pressed = null
+          render()
+        }
+        return
+      }
       if (!pulled || pulled.side !== side) return
+      // (let go of while held: the winding goes on and the button stays out)
+      if (locked && locked.side === side) {
+        pressed = null
+        render()
+        return
+      }
       const wasTap = pulled.stage === 0 && !origin.moved && Date.now() - origin.t < TAP_MS && event.type !== 'pointercancel'
       stopScrub()
       // (released: the button springs back - the style goes, the transition of the CSS does the rest)
@@ -420,6 +472,7 @@ function build(api, host, ctl) {
   return () => {
     gone = true
     stopRepeat()
+    locked = null
     stopScrub()
     clearTimeout(longTimer)
     clearTimeout(altTimer)

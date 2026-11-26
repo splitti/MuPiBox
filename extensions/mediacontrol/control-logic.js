@@ -46,6 +46,14 @@ export function stageFor(dx, width) {
   return 0
 }
 
+// swiped down by this share of the control's width after a pull to the side, the winding is held (it stays at its speed until a tap)
+export const LOCK_PULL = 0.1
+
+/** Whether a swipe down of `dy` pixels (from where the press began) holds the winding, for a control `width` pixels wide. */
+export function latched(dy, width) {
+  return dy >= width * LOCK_PULL
+}
+
 /** How far the place moves on top of the normal playing in `ms`: forward at 2× / 4× gains 1× / 3× of the time, back at 2× / 4× loses 3× / 5×. */
 export function scrubSeconds(dir, stage, ms) {
   if (stage === 0) return 0

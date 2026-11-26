@@ -252,3 +252,21 @@
 .mc-wrap [hidden] {
   display: none;
 }
+
+/* a winding held at its speed: the button stays out, lit, with a padlock over the arrows */
+.mc-track.mc-locked > path:first-child {
+  fill: color-mix(in srgb, var(--mc-a) 32%, #101114);
+  stroke: var(--mc-on);
+  stroke-width: 1.2;
+}
+
+.mc-lock rect {
+  fill: var(--mc-on);
+}
+
+.mc-lock path {
+  fill: none;
+  stroke: var(--mc-on);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+}

@@ -79,3 +79,13 @@ test('takes the colour of the ring from the setting: a palette colour, the theme
   assert.equal(ringColor(undefined), RING_COLORS.blue)
   assert.equal(ringColor({ ringColor: 'toString' }), RING_COLORS.blue)
 })
+
+test('holds the winding when the button is swiped down far enough, not for a little drift', async () => {
+  const { latched } = await load()
+  // (a tenth of the control's width: 30 px at 300 px)
+  assert.equal(latched(0, 300), false)
+  assert.equal(latched(12, 300), false)
+  assert.equal(latched(-40, 300), false)
+  assert.equal(latched(30, 300), true)
+  assert.equal(latched(90, 300), true)
+})

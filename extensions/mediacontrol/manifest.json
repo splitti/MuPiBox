@@ -1,7 +1,7 @@
 {
   "id": "mediacontrol",
   "name": "Media-Control",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Ein runder Bedienknopf für den Player: Lautstärke, Titelwechsel und Play/Pause auf einer Scheibe, darum ein Ring, der sich mit dem Titel füllt. Ersetzt die normalen Tasten, solange die Erweiterung an ist.",
   "hostApi": 18,
   "resources": {},
@@ -38,7 +38,7 @@
   },
   "ui": {
     "title": "Media-Control",
-    "help": "Auf dem Player-Bildschirm ersetzt der runde Knopf die normalen Tasten. Tippen: Lautstärke, Titel davor und danach, Play/Pause. Eine Titeltaste nach außen ziehen spult (erste Stufe 2×, zweite 4×). Auf dem Ring einen Punkt antippen springt dorthin. Play/Pause lange halten zeigt den zweiten Satz: Zufall, Wiederholen, CD auswerfen, zurück. Eine Änderung gilt sofort, das Display lädt dafür kurz neu.",
+    "help": "Auf dem Player-Bildschirm ersetzt der runde Knopf die normalen Tasten. Tippen: Lautstärke, Titel davor und danach, Play/Pause. Eine Titeltaste nach außen ziehen spult (erste Stufe 2×, zweite 4×). Zieht man dabei die Taste nach unten, rastet das Spulen ein (Schloss-Symbol) und läuft in dieser Geschwindigkeit weiter, bis man kurz auf die Taste tippt. Auf dem Ring einen Punkt antippen springt dorthin. Play/Pause lange halten zeigt den zweiten Satz: Zufall, Wiederholen, CD auswerfen, zurück. Eine Änderung gilt sofort, das Display lädt dafür kurz neu.",
     "items": [
       {
         "key": "ringColor",
