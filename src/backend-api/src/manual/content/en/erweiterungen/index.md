@@ -7,6 +7,7 @@ Since MuPiBox 5.1 you can add **extensions**: extra functions that not every box
 | [Installing and managing](installieren.md) | catalog, installing, switching on and off, removing, your own files |
 | [Buttons & GPIO Input](buttons.md) | buttons on the GPIO pins control the box: short and long press, twin buttons |
 | [USB CD drive](cd-laufwerk.md) | play audio CDs from a USB drive |
+| [Media control](media-control.md) | a round control replaces the keys in the player: volume, tracks, winding with a latch, three designs |
 | [Time in the header](uhrzeit.md) | the time at the top of the display, digital or analog |
 | [Weather](wetter.md) | the weather of a place as dials on the display |
 | [Football](fussball.md) | your club, the matchday and the table on the display |

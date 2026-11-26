@@ -397,6 +397,13 @@
         }
       },
       {
+        "id": "media-control",
+        "title": {
+          "de": "Media-Control",
+          "en": "Media control"
+        }
+      },
+      {
         "id": "uhrzeit",
         "title": {
           "de": "Uhrzeit in der Kopfzeile",

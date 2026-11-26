@@ -10,7 +10,7 @@ A tap on an album or a track opens the player and starts playback.
 | --- | --- |
 | Play / Pause | start or pause playback |
 | Previous / next track | jump to the track before or after |
-| Rewind / fast-forward | jump back or forward within the track |
+| Rewind / fast-forward | tap: 30 seconds back or forward within the track. **Hold**: winds at 2× speed until you let go |
 | Shuffle | play tracks in random order; only for Spotify in the categories Music and Radio & podcasts |
 | Louder / quieter | change the volume, limited by the maximum the parents have set |
 | Volume at the top | shows the volume in percent; with a paired Bluetooth device you choose next to it where the music plays (see below) |
