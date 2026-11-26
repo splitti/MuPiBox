@@ -1,4 +1,9 @@
 <h3>DEV 5.1.2 - changes compared to 5.1.1</h3>
+<b>Covers</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>An album without a picture of its own (no cover.jpg or folder.jpg in its folder, none in a folder below it) shows the cover embedded in its first MP3 or FLAC file - on the display and in the app, for the NAS and the SD card. The box reads each file once (only its beginning) and remembers whether it has a picture; an album shown before the library walk got to it has its cover from the next time the list is opened. Without one, its cover from the internet as before.</li>
+</ul>
 <b>Extensions</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
