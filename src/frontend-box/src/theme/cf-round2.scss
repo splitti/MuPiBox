@@ -259,6 +259,18 @@ body.cf {
     gap: 20px;
   }
 
+  // the controls of an extension (the media control): level with the cover (316 square at y 18; radio 300 at y 40)
+  .kp-ctrl-ext {
+    --mc-size: 316px;
+    top: 18px;
+    gap: 6px;
+  }
+
+  .kp-radio .kp-ctrl-ext {
+    --mc-size: 300px;
+    top: 40px;
+  }
+
   .kp-time {
     ion-range {
       --bar-height: 4px;

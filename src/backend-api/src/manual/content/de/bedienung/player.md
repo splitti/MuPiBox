@@ -10,7 +10,7 @@ Ein Tipp auf ein Album oder einen Titel öffnet den Player und startet die Wiede
 | --- | --- |
 | Play / Pause | Wiedergabe starten oder anhalten |
 | Vorheriger / nächster Titel | zum Titel davor oder danach springen |
-| Zurück- / Vorspulen | im Titel zurück oder vor springen |
+| Zurück- / Vorspulen | antippen: 30 Sekunden im Titel zurück oder vor. **Gedrückt halten**: Spulen mit 2× Geschwindigkeit, bis du loslässt |
 | Zufall | Titel in zufälliger Reihenfolge abspielen; nur bei Spotify in den Kategorien Musik und Radio & Podcasts |
 | Lauter / leiser | Lautstärke ändern, begrenzt durch das Maximum, das Eltern festgelegt haben |
 | Lautstärke oben | zeigt die Lautstärke in Prozent; mit einem gekoppelten Bluetooth-Gerät wählst du daneben, wo die Musik spielt (siehe unten) |

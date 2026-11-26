@@ -9185,7 +9185,13 @@ const audibleMedia = registerAudibleMedia(app, {
 })
 // Extensions (docs/extensions.md): their files for the display and the app (/ext/<id>/...), the list of the ones that are on
 // (/api/ext/active) and the API parts they bring along (/api/ext/<id>/...). Installing and removing is in the app's routes.
-mountExtensions(app, { getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
+mountExtensions(app, {
+  getMupiboxConfig: getMupiboxConfigSync,
+  updateMupiboxConfig,
+  libraryChanged: () => {
+    localLibraryVersion = Date.now()
+  },
+})
 // The parents' web app (/parents, first /eltern) is replaced by the app: its addresses lead there, with a login link's
 // token (bookmarks, home-screen icons, Telegram messages sent before)
 app.use(['/parents', '/eltern'], (req, res) => {

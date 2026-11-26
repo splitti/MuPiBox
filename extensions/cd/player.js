@@ -15,6 +15,9 @@ const COVER_FILE = '/tmp/mupibox-cd-cover.jpg'
 // discs the internet did not know, and when it was asked (not again for half an hour: a drive that flaps - a weak power supply
 // resets its USB port every now and then - would ask MusicBrainz and Discogs over and over)
 const MISS_MS = 30 * 60 * 1000
+// While the disc is ripped (api.js) the player leaves it alone: nothing plays from it and the tray stays shut. The ripper says so now and
+// then; a ripper that is gone (the server restarted) is not waited for longer than this.
+const RIP_HOLD_MS = 30 * 1000
 
 exports.activate = (host) => {
   // What the internet knows about the disc: artist, album, the names of the tracks and a cover. Kept on the card by the disc's
@@ -26,12 +29,12 @@ exports.activate = (host) => {
 
   const trackTitle = (nr) => info?.tracks?.[nr - 1]?.title || `Track ${nr}`
 
-  async function startLookup(state) {
+  async function startLookup(state, { force = false } = {}) {
     const run = ++lookupRun
     info = null
     // (at once, not later: the picture of this disc may be written right below)
     fs.rmSync(COVER_FILE, { force: true })
-    if (!state.present || host.settings.get('cdLookup', true) === false || !Array.isArray(state.lbas)) return
+    if (!state.present || (host.settings.get('cdLookup', true) === false && !force) || !Array.isArray(state.lbas)) return
     const first = state.first ?? 1
     const disc = { first, last: first + state.tracks - 1, lbas: state.lbas, barcode: state.mcn }
     const key = musicBrainzDiscId(disc.first, disc.last, disc.lbas).replace(/[^A-Za-z0-9._-]/g, '_')
@@ -43,6 +46,12 @@ exports.activate = (host) => {
         host.setMeta({ ...(title ? { currentTrackname: title } : {}), ...(found.album ? { album: found.album } : {}) })
       }
       return true
+    }
+    if (force) {
+      // (asked again on purpose: what the card kept and the half hour of "not found" do not count)
+      misses.delete(key)
+      fs.rmSync(path.join(cacheDir, `${key}.json`), { force: true })
+      fs.rmSync(path.join(cacheDir, `${key}.jpg`), { force: true })
     }
     try {
       const cached = JSON.parse(fs.readFileSync(path.join(cacheDir, `${key}.json`), 'utf8'))
@@ -72,7 +81,7 @@ exports.activate = (host) => {
     if (run !== lookupRun) return
     const cover = await downloadCover(found)
     if (run !== lookupRun) return
-    const stored = { source: found.source, artist: found.artist, album: found.album, tracks: found.tracks, hasCover: !!cover }
+    const stored = { source: found.source, artist: found.artist, album: found.album, year: found.year, genre: found.genre, tracks: found.tracks, hasCover: !!cover }
     if (!done(stored)) return
     try {
       fs.mkdirSync(cacheDir, { recursive: true })
@@ -99,16 +108,50 @@ exports.activate = (host) => {
   })
   watcher.start()
 
+  let ripUntil = 0
+  const ripping = () => Date.now() < ripUntil
+
   // what the display needs: the disc and what is known of it (the table of contents stays here)
   host.route('get', '/state', (_req, res) => {
     const { present, tracks, id, starts } = watcher.state
-    res.json({ present, tracks, id, drive: watcher.drive, ...(starts ? { starts } : {}), ...(info ? { artist: info.artist, album: info.album, source: info.source, cover: !!info.hasCover } : {}) })
+    res.json({ present, tracks, id, drive: watcher.drive, ...(starts ? { starts } : {}), ...(info ? { artist: info.artist, album: info.album, source: info.source, cover: !!info.hasCover } : {}), ...(ripping() ? { ripping: true } : {}) })
+  })
+
+  // For the ripper (api.js): the disc with its table of contents and everything the internet told about it.
+  host.route('get', '/info', (_req, res) => {
+    const { present, tracks, id, first, lbas, mcn } = watcher.state
+    res.json({ present, tracks, id, first, lbas, mcn, drive: watcher.drive, ripping: ripping(), info })
+  })
+
+  // The ripper takes the disc (on=1: what plays from it stops first - mpv has to let go of the drive) and keeps it (asked again every few
+  // seconds), or gives it back (on=0).
+  host.route('get', '/ripping', async (req, res) => {
+    if (String(req.query.on) !== '1') {
+      ripUntil = 0
+      return res.json({ ok: true })
+    }
+    if (!watcher.state.present) return res.status(404).json({ ok: false, error: 'no disc' })
+    const wasRipping = ripping()
+    ripUntil = Date.now() + RIP_HOLD_MS
+    if (!wasRipping && host.meta().path === FOLDER) {
+      host.playback.stop()
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+    }
+    res.json({ ok: true })
+  })
+
+  // "update album info online": the internet is asked again for this disc
+  host.route('get', '/relookup', async (_req, res) => {
+    if (!watcher.state.present) return res.status(404).json({ ok: false, error: 'no disc' })
+    await startLookup(watcher.state, { force: true }).catch((err) => host.log.debug(`lookup failed: ${err.message}`))
+    res.json({ ok: true, info })
   })
 
   // the tray opens (or closes, when it is open) from the display's eject button; what plays from the disc stops first - a disc
   // that is read cannot be taken out
   host.route('get', '/eject', async (_req, res) => {
     if (!watcher.drive) return res.status(404).json({ ok: false, error: 'no drive' })
+    if (ripping()) return res.status(409).json({ ok: false, error: 'ripping' })
     if (host.meta().path === FOLDER && host.meta().currentPlayer === 'mplayer') {
       host.playback.stop()
       await new Promise((resolve) => setTimeout(resolve, 1500))
@@ -140,6 +183,10 @@ exports.activate = (host) => {
     folder: FOLDER,
     play() {
       const count = watcher.state.tracks
+      if (ripping()) {
+        host.log.debug('the disc is being ripped')
+        return null
+      }
       if (!watcher.state.present || count < 1) {
         host.log.debug('nothing to play')
         return null
