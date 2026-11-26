@@ -105,8 +105,16 @@ export const RING_COLORS = {
   background: 'color-mix(in srgb, var(--km-night, var(--ion-background-color, #1d2b27)) 55%, white)',
 }
 
-/** The colour (a CSS value) of the ring for the setting "ringColor"; anything unknown is blue. */
+/** The colour (a CSS value) of the ring for the setting "ringColor"; null: the one of the design (the default); anything unknown is blue. */
 export function ringColor(settings) {
   const name = settings?.ringColor
+  if (name === undefined || name === 'auto') return null
   return Object.hasOwn(RING_COLORS, name) ? RING_COLORS[name] : RING_COLORS.blue
+}
+
+export const DESIGNS = ['classic', 'kids', 'neon']
+
+/** The design of the knob for the setting "design": classic (metal), kids (colourful) or neon; anything else is classic. */
+export function designOf(settings) {
+  return DESIGNS.includes(settings?.design) ? settings.design : 'classic'
 }

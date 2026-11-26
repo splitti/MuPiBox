@@ -1,8 +1,8 @@
 {
   "id": "mediacontrol",
   "name": "Media-Control",
-  "version": "1.2.0",
-  "description": "Ein runder Bedienknopf für den Player: Lautstärke, Titelwechsel und Play/Pause auf einer Scheibe, darum ein Ring, der sich mit dem Titel füllt. Ersetzt die normalen Tasten, solange die Erweiterung an ist.",
+  "version": "1.3.0",
+  "description": "Ein runder Bedienknopf für den Player: Lautstärke, Titelwechsel und Play/Pause auf einer Scheibe, darum ein Ring, der sich mit dem Titel füllt. Drei Designs: Metall, bunt für Kinder, Neon für Teenager. Ersetzt die normalen Tasten, solange die Erweiterung an ist.",
   "hostApi": 18,
   "resources": {},
   "display": "display.js",
@@ -19,8 +19,9 @@
     },
     "ringColor": {
       "type": "string",
-      "default": "blue",
+      "default": "auto",
       "options": [
+        "auto",
         "blue",
         "red",
         "orange",
@@ -34,6 +35,15 @@
         "theme",
         "background"
       ]
+    },
+    "design": {
+      "type": "string",
+      "default": "classic",
+      "options": [
+        "classic",
+        "kids",
+        "neon"
+      ]
     }
   },
   "ui": {
@@ -41,10 +51,36 @@
     "help": "Auf dem Player-Bildschirm ersetzt der runde Knopf die normalen Tasten. Tippen: Lautstärke, Titel davor und danach, Play/Pause. Eine Titeltaste nach außen ziehen spult (erste Stufe 2×, zweite 4×). Zieht man dabei die Taste nach unten, rastet das Spulen ein (Schloss-Symbol) und läuft in dieser Geschwindigkeit weiter, bis man kurz auf die Taste tippt. Auf dem Ring einen Punkt antippen springt dorthin. Play/Pause lange halten zeigt den zweiten Satz: Zufall, Wiederholen, CD auswerfen, zurück. Eine Änderung gilt sofort, das Display lädt dafür kurz neu.",
     "items": [
       {
+        "key": "design",
+        "label": "Design",
+        "help": "Nur Farben und Optik ändern sich, die Tasten und ihre Funktionen bleiben gleich. Metall: schwarze Scheibe im Rahmen in der Farbe des Themes. Bunt: Regenbogenrahmen und farbige Tasten, für Kinder. Neon: schwarzes Glas mit leuchtenden Kanten, für Teenager.",
+        "choices": [
+          {
+            "value": "classic",
+            "label": "Metall",
+            "image": "images/design-classic.svg"
+          },
+          {
+            "value": "kids",
+            "label": "Bunt (Kinder)",
+            "image": "images/design-kids.svg"
+          },
+          {
+            "value": "neon",
+            "label": "Neon (Teenager)",
+            "image": "images/design-neon.svg"
+          }
+        ]
+      },
+      {
         "key": "ringColor",
         "label": "Farbe des Fortschrittsrings",
-        "help": "Der Ring um die Tasten füllt sich mit dieser Farbe, auch „an“ im zweiten Satz und die Spulstufe. „Farbe des Themes“ nimmt die Hervorhebung des Themes (die Farbe des normalen Fortschrittsbalkens), „Hintergrund des Players“ den Hintergrund, aufgehellt, damit der Ring sichtbar bleibt.",
+        "help": "Der Ring um die Tasten füllt sich mit dieser Farbe, auch „an“ im zweiten Satz und die Spulstufe. „Passend zum Design“: blau bei Metall, Regenbogen bei Bunt, Cyan zu Magenta bei Neon. „Farbe des Themes“ nimmt die Hervorhebung des Themes (die Farbe des normalen Fortschrittsbalkens), „Hintergrund des Players“ den Hintergrund, aufgehellt, damit der Ring sichtbar bleibt.",
         "choices": [
+          {
+            "value": "auto",
+            "label": "Passend zum Design"
+          },
           {
             "value": "blue",
             "label": "Blau",

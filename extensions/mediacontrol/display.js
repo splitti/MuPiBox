@@ -15,6 +15,7 @@ import {
   TAP_MOVE,
   TAP_MS,
   WIND_BEAT_MS,
+  designOf,
   holdMs,
   latched,
   onRing,
@@ -77,6 +78,11 @@ function build(api, host, ctl) {
   const nextSeg = seg('Next', paths.right, iconNext, windNext)
   prevSeg.classList.add('mc-track')
   nextSeg.classList.add('mc-track')
+  // (the place of each wedge, for the colours of the designs: the same in both sets)
+  upSeg.classList.add('mc-w-up')
+  downSeg.classList.add('mc-w-down')
+  prevSeg.classList.add('mc-w-left')
+  nextSeg.classList.add('mc-w-right')
   const set1 = s('g', { class: 'mc-set' }, upSeg, downSeg, prevSeg, nextSeg)
 
   // the second set: back, eject, shuffle, repeat
@@ -102,6 +108,10 @@ function build(api, host, ctl) {
     repeatOne,
     repeatState,
   )
+  backSeg.classList.add('mc-w-up')
+  ejectSeg.classList.add('mc-w-down')
+  shuffleSeg.classList.add('mc-w-left')
+  repeatSeg.classList.add('mc-w-right')
   const set2 = s('g', { class: 'mc-set', hidden: '' }, backSeg, ejectSeg, shuffleSeg, repeatSeg)
 
   const playIcon = s('path', { class: 'mc-icon', d: 'M43.5 41.5v17l14.5-8.5z' })
@@ -136,7 +146,10 @@ function build(api, host, ctl) {
   const durationLabel = node(false, 'span')
   const times = node(false, 'div', { class: 'mc-times' }, positionLabel, durationLabel)
   const wrap = node(false, 'div', { class: 'mc-wrap' }, root, times)
-  root.style.setProperty('--mc-a', ringColor(settings))
+  const colour = ringColor(settings)
+  root.classList.add(`mc-design-${designOf(settings)}`)
+  if (colour === null) root.classList.add('mc-auto')
+  else root.style.setProperty('--mc-a', colour)
   root.style.setProperty('--mc-hold', `${Math.max(0.5, longMs / 1000 - 0.1)}s`)
   host.replaceChildren(wrap)
 

@@ -76,7 +76,8 @@ test('takes the colour of the ring from the setting: a palette colour, the theme
   assert.ok(ringColor({ ringColor: 'theme' }).includes('--km-apricot'))
   assert.ok(ringColor({ ringColor: 'background' }).includes('color-mix'))
   assert.equal(ringColor({ ringColor: 'nonsense' }), RING_COLORS.blue)
-  assert.equal(ringColor(undefined), RING_COLORS.blue)
+  assert.equal(ringColor(undefined), null)
+  assert.equal(ringColor({ ringColor: 'auto' }), null)
   assert.equal(ringColor({ ringColor: 'toString' }), RING_COLORS.blue)
 })
 
@@ -88,4 +89,13 @@ test('holds the winding when the button is swiped down far enough, not for a lit
   assert.equal(latched(-40, 300), false)
   assert.equal(latched(30, 300), true)
   assert.equal(latched(90, 300), true)
+})
+
+test('takes the design from the setting: metal, kids or neon - metal for anything else', async () => {
+  const { designOf } = await load()
+  assert.equal(designOf({ design: 'kids' }), 'kids')
+  assert.equal(designOf({ design: 'neon' }), 'neon')
+  assert.equal(designOf({ design: 'classic' }), 'classic')
+  assert.equal(designOf({ design: 'rainbow' }), 'classic')
+  assert.equal(designOf(undefined), 'classic')
 })
